@@ -1,0 +1,15 @@
+{
+  "nodeModulesDir": "auto",
+  "tasks": {
+    "copy:shared": "deno run --check --allow-read --allow-write scripts/copy-shared-sources.ts",
+    "dev:watch": "deno run --inspect --check --env-file --allow-read --allow-net --allow-env --watch src/server.ts"
+  },
+  "imports": {
+    "es-toolkit": "jsr:@es-toolkit/es-toolkit@^1.33.0",
+    "@std/path": "https://deno.land/std/path/mod.ts",
+    "socket.io": "https://deno.land/x/socket_io@0.2.1/mod.ts",
+    "shared/": "../shared/src/",
+    "lodash-es": "npm:lodash-es@4.17.21",
+    "nanostores/": "npm:nanostores@0.11.4/"
+  }
+}

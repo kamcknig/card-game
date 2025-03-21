@@ -1,0 +1,31 @@
+undo
+
+UserChoiceEffect - when lots of cards for harbinger - need to scroll or something
+
+"set aside" area and update the one ability that uses it right now.
+    maybe "arbitrary zones"
+        if so then current zones can be converted to use the feature too.
+
+ask to resign feature
+
+need to wait for all users to join match before beginning - this is done but need a "ready" button
+
+when can't load assets (expansion modules) it still just goes on rather than stopping
+
+create a "card display" component. this component can be used within things like the userPromptModal or reactModal.
+
+deck, trash, discard, can be turned into a single class
+
+the user prompt modal needs to be able to show the background around all card content.
+
+play all treasure
+
+move phases when nothing to do for a player
+
+==============================
+
+warnings to players
+
+- don't refresh
+- there's no undo
+- the done selecting menu

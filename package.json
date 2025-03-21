@@ -1,0 +1,21 @@
+{
+  "name": "my-multiplayer-game",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "server:watch": "cd server && deno task deno:dev",
+    "web:watch": "webpack serve --mode=development --config ./app/webpack.config.mjs",
+    "watch": "concurrently \"npm run watch:server\" \"npm run watch:web\""
+  },
+  "dependencies": {
+    "lodash-es": "^4.17.21",
+    "nanostores": "^0.11.4",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "@types/lodash-es": "^4.17.12",
+    "concurrently": "^9.1.2",
+    "typescript": "^5.8.2"
+  }
+}

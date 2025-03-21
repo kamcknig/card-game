@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "server:watch": "concurrently \"deno task copy:shared\" \"deno task dev:watch\""
+  },
+  "dependencies": {
+    "lodash-es": "^4.17.21",
+    "nanostores": "^0.11.4"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

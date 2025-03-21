@@ -1,0 +1,1062 @@
+import {
+    DiscardCardEffect,
+    DrawCardEffect,
+    GainActionEffect,
+    GainBuyEffect,
+    GainCardEffect,
+    GainTreasureEffect,
+    MoveCardEffect,
+    PlayCardEffect,
+    RevealCardEffect,
+    SelectCardEffect,
+    TrashCardEffect,
+    UserPromptEffect,
+} from "../../effect.ts";
+import {
+  AsyncEffectGeneratorFn,
+  EffectGeneratorFn, LifecycleCallbackMap,
+} from "../../types.ts";
+import {findOrderedEffectTargets} from "../../utils/find-ordered-effect-targets.ts";
+import {getPlayerById} from "../../utils/get-player-by-id.ts";
+import { isUndefined } from 'es-toolkit';
+import {fisherYatesShuffle} from "../../utils/fisher-yates-shuffler.ts";
+import { Match } from "shared/types.ts";
+
+export default {
+  registerCardLifeCycles: (): Record<string, LifecycleCallbackMap> => ({
+    "moat": {
+      onEnterHand: (playerId, cardId) => {
+        return {
+          registerTriggers: [{
+            id: `moat-${cardId}`,
+            playerId,
+            listeningFor: "cardPlayed",
+            condition: (match, trigger) => {
+              return match.cardsById[trigger.cardId].type.includes("ATTACK") && trigger.playerId !== playerId;
+            },
+            generatorFn: function* (match, trigger, reaction) {
+              console.log(
+                  `confirming player ${
+                      getPlayerById(reaction.playerId)
+                  } to reveal moat`,
+              );
+
+              const results = yield new UserPromptEffect({
+                confirmLabel: "YES",
+                declineLabel: "NO",
+                sourceCardId: trigger.cardId,
+                sourcePlayerId: trigger.playerId,
+                prompt: "Reveal moat?",
+                playerId: reaction.playerId,
+              });
+
+              console.log("player response to reveal moat", results.results);
+
+              const sourceId = reaction.getSourceId();
+              if (results.results && sourceId) {
+                yield new RevealCardEffect({
+                  sourceCardId: trigger.cardId,
+                  sourcePlayerId: trigger.playerId,
+                  cardId: sourceId,
+                  playerId: reaction.playerId,
+                });
+              }
+
+              return { match, results: results.results };
+            },
+          }]
+        }
+      },
+      onLeaveHand: (playerId, cardId) => {
+        return {
+          unregisterTriggers: [`moat-${cardId}`],
+        }
+      }
+    },
+  }),
+  registerScoringFunctions: () => ({
+    "gardens": function (match: Match, cardOwnerId: number) {
+      const cards = match
+        .playerHands[cardOwnerId]
+        .concat(match.playerDecks[cardOwnerId])
+        .concat(match.playerDiscards[cardOwnerId])
+        .concat(match.playArea);
+
+      return Math.floor(cards.length / 10);
+    },
+  }),
+  registerEffects: (): Record<
+    string,
+    EffectGeneratorFn | AsyncEffectGeneratorFn
+  > => ({
+    "adventurer": function* (matchState, sourcePlayerId, sourceCardId) {
+      // DONE!!
+      const name = "adventurer - ";
+      let treasuresRevealed = 0;
+
+      const deck = matchState.playerDecks[sourcePlayerId];
+
+      while (treasuresRevealed < 2 && deck.length > 0) {
+        const cardId = deck[deck.length - 1];
+        console.log(name, `revealing card ${matchState.cardsById[cardId]}`);
+        yield new RevealCardEffect({
+          playerId: sourcePlayerId,
+          cardId,
+          sourcePlayerId,
+          sourceCardId: cardId,
+        });
+        const card = matchState.cardsById[cardId];
+        if (card.type.includes("TREASURE")) {
+          console.log(name, "card revealed is a treasure, drawing");
+          yield new DrawCardEffect({
+            playerId: sourcePlayerId,
+            sourcePlayerId,
+            sourceCardId: cardId,
+          });
+          ++treasuresRevealed;
+        } else {
+          console.log(name, "card revealed is not a treasure, discarding");
+          yield new DiscardCardEffect({
+            playerId: sourcePlayerId,
+            cardId,
+            sourcePlayerId,
+            sourceCardId: cardId,
+          });
+        }
+      }
+    },
+    "bureaucrat": function* (matchState, sourcePlayerId, sourceCardId) {
+      const name = "bureaucrat - ";
+      console.log(name, "gaining a silver...");
+
+      const supply = matchState.supply;
+      const l = matchState.supply.length;
+
+      for (let i = l - 1; i >= 0; i--) {
+        const card = matchState.cardsById[supply[i]];
+        if (card.cardKey === "silver") {
+          yield new GainCardEffect({
+            playerId: sourcePlayerId,
+            cardId: supply[i],
+            to: { location: "playerDecks" },
+            sourceCardId,
+            sourcePlayerId,
+          });
+          break;
+        }
+
+        console.log(name, "no silver in supply");
+      }
+
+      console.log(name, "obtaining attack targets...");
+
+      let playerIds = findOrderedEffectTargets(
+          sourcePlayerId,
+          "ALL_OTHER",
+          matchState,
+      );
+      console.log(name, `all available targets ${playerIds}`);
+
+      for (const playerId of playerIds) {
+        const victoryCards = matchState.playerHands[playerId].filter((c) =>
+            matchState.cardsById[c].type.includes("VICTORY")
+        );
+        if (victoryCards.length === 0) {
+          console.log(
+              `${name} ${
+                  getPlayerById(playerId)
+              } has no victory cards, revealing all ${victoryCards}`,
+          );
+          for (const cardId of victoryCards) {
+            yield new RevealCardEffect({
+              playerId,
+              cardId,
+              sourcePlayerId,
+              sourceCardId,
+            });
+          }
+        } else {
+          const { results: cardIds } = yield new SelectCardEffect({
+            playerId,
+            count: 1,
+            sourcePlayerId,
+            sourceCardId,
+            restrict: {
+              from: {
+                location: 'playerHands',
+              },
+              card: {
+                type: "VICTORY",
+              },
+            },
+          });
+
+          if (!(cardIds as number[]).length) {
+            console.warn(
+                "player selected no cards, that shouldn't have happened",
+            );
+            return;
+          }
+
+          yield new RevealCardEffect({
+            playerId,
+            cardId: (cardIds as number[])[0],
+            sourcePlayerId,
+            sourceCardId,
+          });
+
+          yield new MoveCardEffect({
+            playerId,
+            sourceCardId,
+            sourcePlayerId,
+            cardId: (cardIds as number[])[0],
+            to: {
+              location: "playerDecks",
+            },
+          });
+        }
+      }
+    },
+    "cellar": function* (matchState, sourcePlayerId, sourceCardId) {
+      const name = "cellar - ";
+
+      console.debug(name, "gaining action...");
+      yield new GainActionEffect({ sourcePlayerId, sourceCardId, count: 1 });
+
+      const hasCards = matchState.playerHands[sourcePlayerId].length > 0;
+      if (!hasCards) {
+        console.log(name, "no cards to choose from");
+        return;
+      }
+
+      console.log(
+          `${name} ${getPlayerById(sourcePlayerId)} selecting cards...`,
+      );
+      const { results: cardIds } = yield new SelectCardEffect({
+        playerId: sourcePlayerId,
+        sourceCardId,
+        sourcePlayerId,
+        count: { kind: "variable" },
+        restrict: { from: { location: "playerHands" } },
+      });
+      console.log(name, "player", sourcePlayerId, "selected", cardIds);
+
+      for (const [idx, cardId] of (cardIds as number[]).entries()) {
+        console.log(
+            `discarding ${idx + 1} of ${
+                (cardIds as number[]).length
+            } cards, current card ${matchState.cardsById[cardId]}`,
+        );
+        yield new DiscardCardEffect({
+          cardId,
+          playerId: sourcePlayerId,
+          sourceCardId,
+          sourcePlayerId,
+        });
+      }
+
+      if (!(cardIds as number[]).length) {
+        console.log(name, "no cards discarded, so no cards drawn");
+        return;
+      }
+
+      for (let i = 0; i < (cardIds as number[]).length; i++) {
+        console.log(
+            `player ${getPlayerById(sourcePlayerId)} drawing card ${i + 1} of ${
+                (cardIds as number[]).length
+            }`,
+        );
+        yield new DrawCardEffect({
+          playerId: sourcePlayerId,
+          sourcePlayerId,
+          sourceCardId,
+        });
+      }
+    },
+    "chancellor": function* (matchState, sourcePlayerId, sourceCardId) {
+      const name = "chancellor - ";
+      yield new GainTreasureEffect({ count: 2, sourceCardId, sourcePlayerId });
+
+      let deck = matchState.playerDecks[sourcePlayerId];
+      if (deck.length === 0) {
+        console.log(`${name}player has no cards in deck to discard`);
+        return;
+      }
+
+      const { results: confirm } = yield new UserPromptEffect({
+        prompt: "Discard deck?",
+        declineLabel: "NO",
+        confirmLabel: "YES",
+        sourcePlayerId,
+        sourceCardId,
+        playerId: sourcePlayerId,
+      });
+
+      if (!confirm) {
+        console.log(`${name} selected no`);
+        return;
+      }
+
+      console.log(`${name} selected yes`);
+
+      while (deck.length > 0) {
+        const cardId = deck.slice(-1)?.[0];
+        yield new DiscardCardEffect({
+          sourcePlayerId,
+          sourceCardId,
+          playerId: sourcePlayerId,
+          cardId,
+        });
+        deck = matchState.playerDecks[sourcePlayerId];
+      }
+    },
+    "chapel": function* (matchState, sourcePlayerId, sourceCardId) {
+      const name = "chapel - ";
+
+      console.log(`${name}trashing up to four cards`);
+
+      const hand = matchState.playerHands[sourcePlayerId];
+
+      if (!hand.length) {
+        console.log(`${name}player has no cards in hand`);
+        return;
+      }
+
+      const { results: cardIds } = yield new SelectCardEffect({
+        playerId: sourcePlayerId,
+        sourcePlayerId,
+        sourceCardId,
+        count: { kind: "upTo", count: 4 },
+        restrict: { from: { location: "playerHands" } },
+      });
+
+      console.log(
+          `${name}${getPlayerById(sourcePlayerId)} chose ${
+              (cardIds as number[]).length
+          } cards to trash`,
+      );
+      if ((cardIds as number[])?.length > 0) {
+        for (const cardId of (cardIds as number[])) {
+          console.log(`${name}trashing card ${matchState.cardsById[cardId]}`);
+          yield new TrashCardEffect({
+            sourcePlayerId,
+            sourceCardId,
+            playerId: sourcePlayerId,
+            cardId,
+          });
+        }
+      }
+    },
+    "copper": function* (matchState, sourcePlayerId, sourceCardId) {
+      // DONE!
+      yield new GainTreasureEffect({ sourcePlayerId, sourceCardId, count: 1 });
+    },
+    "council-room": function* (matchState, sourcePlayerId, sourceCardId) {
+      const name = "council-room - ";
+      // "Each other player draws a card."
+
+      console.log(name, "draw four cards");
+      for (let i = 0; i < 4; i++) {
+        yield new DrawCardEffect({
+          playerId: sourcePlayerId,
+          sourcePlayerId,
+          sourceCardId,
+        });
+      }
+
+      console.log(name, "gain one buy");
+      yield new GainBuyEffect({ sourcePlayerId, sourceCardId, count: 1 });
+
+      const playerIds = findOrderedEffectTargets(
+          sourcePlayerId,
+          "ALL_OTHER",
+          matchState,
+      );
+
+      console.log(name, "all other players", playerIds, "draw one card");
+      for (const playerId of playerIds) {
+        console.log(name, "player", playerId, "gains one card");
+        yield new DrawCardEffect({ playerId, sourcePlayerId, sourceCardId });
+      }
+    },
+    "feast": function* (matchState, sourcePlayerId, sourceCardId) {
+      const name = "feast - ";
+
+      if (!sourceCardId) {
+        throw new Error("feast ability requires a sourceCardId");
+      }
+
+      console.log(`${name}trashing feast card`);
+      yield new TrashCardEffect({
+        playerId: sourcePlayerId,
+        cardId: sourceCardId,
+        sourceCardId,
+        sourcePlayerId,
+      });
+
+      console.log("gain a card costing up to five treasure");
+      const { results: cardIds } = yield new SelectCardEffect({
+        sourcePlayerId,
+        sourceCardId,
+        playerId: sourcePlayerId,
+        restrict: {
+          from: { location: ["supply", "kingdom"] },
+          cost: { kind: "upTo", amount: 5 },
+        },
+        count: 1,
+      });
+
+      if ((cardIds as number[]).length > 0) {
+        console.log(
+          `${name} ${getPlayerById(sourcePlayerId)} chose ${
+            matchState.cardsById[(cardIds as number[])[0]]
+          }`,
+        );
+        yield new GainCardEffect({
+          sourcePlayerId,
+          sourceCardId,
+          playerId: sourcePlayerId,
+          cardId: (cardIds as number[])[0],
+          to: {
+            location: 'playerDiscards',
+          },
+        });
+      }
+    },
+    "festival": function* (matchState, sourcePlayerId, sourceCardId) {
+      yield new GainActionEffect({ count: 2, sourcePlayerId, sourceCardId });
+      yield new GainBuyEffect({ sourcePlayerId, sourceCardId, count: 1 });
+      yield new GainTreasureEffect({ count: 2, sourcePlayerId, sourceCardId });
+    },
+    "gardens": function* () {
+      // has no effects, calculates score as game plays
+    },
+    "gold": function* (matchState, sourcePlayerId, sourceCardId) {
+      yield new GainTreasureEffect({ count: 3, sourcePlayerId, sourceCardId });
+    },
+    "laboratory": function* (matchState, sourcePlayerId, sourceCardId) {
+      for (let i = 0; i < 2; i++) {
+        yield new DrawCardEffect({
+          playerId: sourcePlayerId,
+          sourcePlayerId,
+          sourceCardId,
+        });
+      }
+      yield new GainActionEffect({ sourcePlayerId, sourceCardId, count: 1 });
+    },
+    "library": function* (matchState, sourcePlayerId, sourceCardId) {
+      const name = "library - ";
+
+      // TODO: do the set aside stuff
+      // "Draw until you have 7 cards in hand, skipping any Action cards you choose to; set those aside, discarding them afterward."
+      const setAside: number[] = [];
+
+      let hand = matchState.playerHands[sourcePlayerId];
+      let deck = matchState.playerDecks[sourcePlayerId];
+      let newHandSize = 7;
+      if (hand.length + deck.length > newHandSize) {
+        console.log(
+            `${name}total size of hand + deck is less than ${newHandSize}`,
+        );
+        newHandSize = Math.min(7, hand.length + deck.length);
+        console.log(`${name}new hand size ${newHandSize}`);
+      }
+
+      while (hand.length < newHandSize + setAside.length && deck.length > 0) {
+        const results = yield new DrawCardEffect({
+          playerId: sourcePlayerId,
+          sourceCardId,
+          sourcePlayerId,
+        });
+        const drawnCardId = results.results as number;
+        console.log(`${name}drew card, new hand size`);
+
+        const drawnCard = matchState.cardsById[drawnCardId];
+
+        // If it's an Action card, allow the user to decide whether to set it aside.
+        if (drawnCard.type.includes("ACTION")) {
+          console.log(`${name} card is an action card`);
+
+          // A yes/no prompt. If user returns true, we set it aside.
+          const { results } = yield new UserPromptEffect({
+            sourcePlayerId,
+            sourceCardId,
+            playerId: sourcePlayerId,
+            prompt:
+                `You drew ${drawnCard.cardName}. Set it aside (skip putting it in your hand)?`,
+            confirmLabel: "SET ASIDE",
+            declineLabel: "KEEP",
+          });
+          const shouldSetAside = results as boolean;
+
+          console.log(`${name}setting card aside`, shouldSetAside);
+
+          // If user picked yes, move the card to a temporary 'aside' location, then continue.
+          if (shouldSetAside) {
+            setAside.push(drawnCardId);
+          }
+        }
+      }
+
+      // Finally, discard all set-aside cards.
+      if (setAside.length > 0) {
+        console.log(`${name}discarding set aside cards ${setAside}`);
+        for (const cardId of setAside) {
+          yield new DiscardCardEffect({
+            sourceCardId,
+            sourcePlayerId,
+            cardId,
+            playerId: sourcePlayerId,
+          });
+        }
+      }
+    },
+    "market": function* (matchState, sourcePlayerId, sourceCardId) {
+      yield new GainActionEffect({ sourcePlayerId, sourceCardId, count: 1 });
+      yield new DrawCardEffect({
+        playerId: sourcePlayerId,
+        sourcePlayerId,
+        sourceCardId,
+      });
+      yield new GainBuyEffect({ sourcePlayerId, sourceCardId, count: 1 });
+      yield new GainTreasureEffect({ sourcePlayerId, sourceCardId, count: 1 });
+    },
+    "militia": function* (matchState, sourcePlayerId, sourceCardId) {
+      const name = "militia - ";
+
+      yield new GainTreasureEffect({ sourcePlayerId, sourceCardId, count: 2 });
+
+      const playerIds = findOrderedEffectTargets(
+          sourcePlayerId,
+          "ALL_OTHER",
+          matchState,
+      );
+      console.log(`${name}other players`, playerIds, "discard down to 3 cards");
+
+      for (const playerId of playerIds) {
+        const handCount = matchState.playerHands[playerId].length;
+        console.log(`${name}${getPlayerById(playerId)} has ${handCount} cards`);
+        if (handCount > 3) {
+          const results = yield new SelectCardEffect({
+            playerId,
+            sourceCardId,
+            sourcePlayerId,
+            count: handCount - 3,
+            restrict: {
+              from: {
+                location: "playerHands",
+              },
+            },
+          });
+
+          const cardIds = results.results as number[];
+          console.log(
+              `${name}${getPlayerById(playerId)} chose ${cardIds} to discard`,
+          );
+          for (const cardId of cardIds) {
+            yield new DiscardCardEffect({
+              sourceCardId,
+              sourcePlayerId,
+              cardId,
+              playerId,
+            });
+          }
+        }
+      }
+    },
+    "mine": function* (matchState, sourcePlayerId, sourceCardId) {
+      const name = "mine - ";
+
+      const hand = matchState.playerHands[sourcePlayerId];
+      const hasTreasureCards = hand.some((c) =>
+          matchState.cardsById[c].type.includes("TREASURE")
+      );
+
+      if (hasTreasureCards) {
+        let results = yield new SelectCardEffect({
+          playerId: sourcePlayerId,
+          sourcePlayerId,
+          sourceCardId,
+          count: {
+            kind: "upTo",
+            count: 1,
+          },
+          restrict: {
+            from: { location: "playerHands" },
+            card: { type: ["TREASURE"] },
+          },
+        });
+
+        let cardIds = results.results as number[];
+        let cardId = cardIds[0];
+
+        if (!cardId) {
+          console.log(`${name}player selected no card`);
+          return;
+        }
+
+        console.log(`${name}player selected ${matchState.cardsById[cardId]}`);
+
+        yield new TrashCardEffect({
+          sourcePlayerId,
+          sourceCardId,
+          playerId: sourcePlayerId,
+          cardId,
+        });
+
+        const card = matchState.cardsById[cardId];
+
+        results = yield new SelectCardEffect({
+          playerId: sourcePlayerId,
+          sourcePlayerId,
+          sourceCardId,
+          count: 1,
+          restrict: {
+            from: { location: ["supply", "kingdom"] },
+            card: { type: ["TREASURE"] },
+            cost: { kind: "upTo", amount: card.cost.treasure + 3 },
+          },
+        });
+        cardIds = results.results as number[];
+        cardId = cardIds[0];
+        console.log(`${name}player selected ${card}`);
+        yield new GainCardEffect({
+          sourceCardId,
+          sourcePlayerId,
+          playerId: sourcePlayerId,
+          cardId,
+          to: { location: "playerHands" },
+        });
+      } else {
+        console.log(`${name}player has no treasure cards in hand`);
+      }
+    },
+    "moat": function* (matchState, sourcePlayerId, sourceCardId) {
+      yield new DrawCardEffect({
+        playerId: sourcePlayerId,
+        sourcePlayerId,
+        sourceCardId,
+      });
+      yield new DrawCardEffect({
+        playerId: sourcePlayerId,
+        sourcePlayerId,
+        sourceCardId,
+      });
+    },
+    "moneylender": function* (matchState, sourcePlayerId, sourceCardId) {
+      const name = "moneylender - ";
+
+      const hand = matchState.playerHands[sourcePlayerId];
+      const hasCopper = hand.some((c) =>
+          matchState.cardsById[c].cardKey === "copper"
+      );
+      if (hasCopper) {
+        const results = yield new SelectCardEffect({
+          sourceCardId,
+          sourcePlayerId,
+          playerId: sourcePlayerId,
+          count: { kind: "upTo", count: 1 },
+          restrict: {
+            from: { location: "playerHands" },
+            card: { cardKeys: ["copper"] },
+          },
+        });
+        const cardIds = results.results as number[];
+
+        if (cardIds.length > 0) {
+          console.log(`${name}player selected a copper`);
+          yield new TrashCardEffect({
+            playerId: sourcePlayerId,
+            sourceCardId,
+            sourcePlayerId,
+            cardId: cardIds[0],
+          });
+          yield new GainTreasureEffect({
+            sourcePlayerId,
+            sourceCardId,
+            count: 3,
+          });
+        } else {
+          console.log(`${name}player chose no copper`);
+        }
+      } else {
+        console.log(`${name}player has no copper in hand`);
+      }
+    },
+    "remodel": function* (matchState, sourcePlayerId, sourceCardId) {
+      const name = "remodel - ";
+
+      if (matchState.playerHands[sourcePlayerId].length === 0) {
+        console.log(`${name}player has no cards in hand`);
+        return;
+      }
+
+      let results = yield new SelectCardEffect({
+        sourceCardId,
+        sourcePlayerId,
+        playerId: sourcePlayerId,
+        count: 1,
+        restrict: { from: { location: "playerHands" } },
+      });
+
+      let cardIds = results.results as number[];
+      let cardId = cardIds[0];
+      const card = matchState.cardsById[cardId];
+
+      console.log(`${name}player chose card ${card} to trash`);
+
+      yield new TrashCardEffect({
+        sourceCardId,
+        sourcePlayerId,
+        playerId: sourcePlayerId,
+        cardId: cardIds[0],
+      });
+
+      results = yield new SelectCardEffect({
+        sourcePlayerId,
+        sourceCardId,
+        playerId: sourcePlayerId,
+        count: 1,
+        restrict: {
+          from: { location: ["supply", "kingdom"] },
+          cost: { kind: "upTo", amount: card.cost.treasure + 2 },
+        },
+      });
+
+      cardIds = results.results as number[];
+      cardId = cardIds[0];
+
+      console.log(
+          `${name}player chose card ${matchState.cardsById[cardId]} to gain`,
+      );
+
+      yield new GainCardEffect({
+        sourceCardId,
+        sourcePlayerId,
+        playerId: sourcePlayerId,
+        cardId,
+        to: { location: 'playerDiscards' },
+      });
+    },
+    "silver": function* (matchState, sourcePlayerId, sourceCardId) {
+      yield new GainTreasureEffect({ count: 2, sourcePlayerId, sourceCardId });
+    },
+    "smithy": function* (matchState, sourcePlayerId, sourceCardId) {
+      for (let i = 0; i < 3; i++) {
+        yield new DrawCardEffect({
+          playerId: sourcePlayerId,
+          sourcePlayerId,
+          sourceCardId,
+        });
+      }
+    },
+    "spy": function* (matchState, sourcePlayerId, sourceCardId) {
+      const name = "spy - ";
+      yield new GainActionEffect({ sourcePlayerId, sourceCardId, count: 1 });
+      yield new DrawCardEffect({
+        sourceCardId,
+        sourcePlayerId,
+        playerId: sourcePlayerId,
+      });
+
+      const playerIds = findOrderedEffectTargets(sourcePlayerId, "ALL", matchState);
+      for (const playerId of playerIds) { // loop all players
+        const player = getPlayerById(playerId);
+        let deck = matchState.playerDecks[playerId];
+        if (deck.length === 0) {
+          console.log(
+            `${name}player does not have enough cards in dec, resetting discard`,
+          );
+          matchState.playerDecks[playerId] = fisherYatesShuffle(
+            matchState.playerDiscards[playerId],
+          );
+          matchState.playerDiscards[playerId] = [];
+          deck = matchState.playerDecks[playerId];
+        }
+        const cardId = deck.slice(-1)[0];
+
+        yield new RevealCardEffect({
+          sourcePlayerId,
+          sourceCardId,
+          cardId,
+          playerId,
+        });
+
+        const results = yield new UserPromptEffect({
+          sourceCardId,
+          sourcePlayerId,
+          playerId: sourcePlayerId,
+          prompt: `Discard or put on ${player?.name}'s deck?`,
+          confirmLabel: "DISCARD",
+          declineLabel: "DECK",
+          content: {
+            cardSelection: {
+              cardIds: [cardId],
+            },
+          },
+        });
+
+        const discard = results.results as boolean;
+
+        if (discard) {
+          console.log(`${name}player chose to discard`);
+          yield new DiscardCardEffect({
+            sourceCardId,
+            sourcePlayerId,
+            cardId,
+            playerId,
+          });
+        }
+      }
+    },
+    "thief": function* (matchState, sourcePlayerId, sourceCardId) {
+      const name = "thief - ";
+
+      // "Each other player reveals the top 2 cards of his deck.
+      // If they revealed any Treasure cards, they trash one of them that you choose.
+      // You may gain any or all of these trashed cards.
+      // They discard the other revealed cards."
+
+      const targetPlayerIds = findOrderedEffectTargets(
+        sourcePlayerId,
+        "ALL_OTHER",
+        matchState,
+      );
+      const cardsToGain: number[] = [];
+
+      let results;
+      for (const playerId of targetPlayerIds) {
+        let cardsToDiscard: number[] = [];
+
+        let deck = matchState.playerDecks[playerId];
+        const discard = matchState.playerDiscards[playerId];
+
+        // num to reveal is 2 or the number of cards we have to choose from (including a reshuffle if need be)
+        const numToReveal = Math.min(2, deck.length + discard.length);
+
+        if (numToReveal === 0) {
+          console.log(`${name}player has no cards to reveal`);
+          continue;
+        }
+
+        // shuffle discard back into deck (make sure deck is on top)
+        if (deck.length < numToReveal) {
+          matchState.playerDecks[playerId] = fisherYatesShuffle(
+            matchState.playerDiscards[playerId],
+          ).concat(deck);
+          deck = matchState.playerDecks[playerId];
+        }
+
+        const cardsToReveal = deck.slice(-numToReveal);
+        console.log(`${name}cards to reveal ${cardsToReveal}`);
+
+        const treasureCardIds = cardsToReveal.filter((id) =>
+          matchState.cardsById[id].type.includes("TREASURE")
+        );
+        cardsToDiscard = cardsToDiscard.concat(
+          cardsToReveal.filter((id) =>
+            !matchState.cardsById[id].type.includes("TREASURE")
+          ),
+        );
+
+        let results;
+
+        for (const e of cardsToReveal) {
+          yield new RevealCardEffect({
+            sourcePlayerId,
+            sourceCardId,
+            cardId: e,
+            playerId
+          })
+        }
+
+        if (treasureCardIds.length > 0) {
+          console.log(`${name}found ${treasureCardIds.length} treasure cards`);
+          // if more than one, choose, otherwise auto-choose the only one
+          results = treasureCardIds.length === 1
+            ? { match: matchState, results: [treasureCardIds[0]] }
+            : yield new UserPromptEffect({
+              content: {
+                cardSelection: {
+                  cardIds: treasureCardIds,
+                  selectCount: 1,
+                },
+              },
+              playerId: sourcePlayerId,
+              sourcePlayerId,
+              sourceCardId,
+              prompt: `${
+                getPlayerById(playerId)?.name
+              } revealed these cards. Choose one to trash.`,
+              confirmLabel: "DONE",
+              showDeclineOption: false,
+            });
+
+          const cardIds = results.results as number[];
+          const cardId = cardIds[0];
+
+          console.log(
+            `${name}chose card ${matchState.cardsById[cardId]} to trash`,
+          );
+
+          yield new TrashCardEffect({
+            playerId,
+            sourcePlayerId,
+            sourceCardId,
+            cardId,
+          });
+
+          cardsToGain.push(cardId);
+          console.log(
+            `${name} adding card ${
+              matchState.cardsById[cardId]
+            } to list to possibly gain`,
+          );
+        } else {
+          console.log(`${name} no treasure cards in player's hand`);
+        }
+
+        for (const cardId of cardsToDiscard) {
+          yield new DiscardCardEffect({
+            sourceCardId,
+            sourcePlayerId,
+            cardId,
+            playerId,
+          });
+        }
+      }
+
+      if (cardsToGain.length > 0) {
+        results = yield new UserPromptEffect({
+          sourceCardId,
+          sourcePlayerId,
+          playerId: sourcePlayerId,
+          prompt: "Select which cards to keep.",
+          confirmLabel: "DONE",
+          content: {
+            cardSelection: {
+              cardIds: cardsToGain,
+              selectCount: cardsToGain.length,
+            },
+          },
+          showDeclineOption: false,
+        });
+
+        const cardIds = results.results as number[];
+        for (const cardId of cardIds) {
+          yield new GainCardEffect({
+            sourcePlayerId,
+            sourceCardId,
+            playerId: sourcePlayerId,
+            cardId,
+            to: { location: 'playerDiscards' },
+          });
+        }
+      }
+    },
+    "throne-room": function* (matchState, sourcePlayerId, sourceCardId) {
+      const name = "throne-room - ";
+      const results = yield new SelectCardEffect({
+        sourcePlayerId,
+        sourceCardId,
+        playerId: sourcePlayerId,
+        count: { kind: "upTo", count: 1 },
+        restrict: { from: { location: "playerHands" }, card: { type: ["ACTION"] } },
+      });
+
+      const cardIds = results.results as number[];
+      const cardId = cardIds?.[0];
+
+      if (isUndefined(cardId)) {
+        console.log(`${name}player chose no cards`);
+        return;
+      }
+
+      yield new PlayCardEffect({
+        sourceCardId,
+        sourcePlayerId,
+        cardId: cardIds[0],
+        playerId: sourcePlayerId,
+      });
+      yield new PlayCardEffect({
+        sourceCardId,
+        sourcePlayerId,
+        cardId: cardIds[0],
+        playerId: sourcePlayerId,
+      });
+    },
+    "village": function* (matchState, sourcePlayerId, sourceCardId) {
+      yield new GainActionEffect({ count: 2, sourcePlayerId, sourceCardId });
+      yield new DrawCardEffect({
+        playerId: sourcePlayerId,
+        sourcePlayerId,
+        sourceCardId,
+      });
+    },
+    "witch": function* (matchState, sourcePlayerId, sourceCardId, reactionContext: Record<number, boolean>) {
+      const name = "witch - ";
+      // "Each other player gains a Curse card."
+
+      for (let i = 0; i < 2; i++) {
+        yield new DrawCardEffect({
+          playerId: sourcePlayerId,
+          sourcePlayerId,
+          sourceCardId,
+        });
+      }
+
+      // get list of potential players
+      const playerIds = findOrderedEffectTargets(
+          sourcePlayerId,
+          'ALL_OTHER',
+          matchState,
+      ).filter(id => reactionContext[id]);
+
+      console.log(name, "obtaining targets, initial available", playerIds);
+
+      for (const playerId of playerIds) {
+        const supply = matchState.supply;
+        const l = supply.length;
+        for (let i = l - 1; i >= 0; i--) {
+          if (matchState.cardsById[supply[i]].cardKey === "curse") {
+            yield new GainCardEffect({
+              playerId,
+              cardId: supply[i],
+              to: { location: 'playerDiscards' },
+              sourcePlayerId,
+              sourceCardId,
+            });
+            break;
+          }
+
+          console.log(name, "no curses found in supply");
+        }
+      }
+    },
+    "woodcutter": function* (matchState, sourcePlayerId, sourceCardId) {
+      yield new GainBuyEffect({ count: 1, sourcePlayerId, sourceCardId });
+      yield new GainTreasureEffect({ count: 2, sourcePlayerId, sourceCardId });
+    },
+    "workshop": function* (matchState, sourcePlayerId, sourceCardId) {
+      const results = yield new SelectCardEffect({
+        sourcePlayerId,
+        sourceCardId,
+        playerId: sourcePlayerId,
+        count: 1,
+        restrict: {
+          cost: { kind: "upTo", amount: 4 },
+          from: { location: ["supply", "kingdom"] },
+        },
+      });
+      const cardIds = results.results as number[];
+      const cardId = cardIds[0];
+      yield new GainCardEffect({
+        playerId: sourcePlayerId,
+        sourceCardId,
+        sourcePlayerId,
+        cardId,
+        to: { location: 'playerDiscards' },
+      });
+    },
+  }),
+};
