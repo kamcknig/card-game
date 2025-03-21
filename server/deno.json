@@ -10,6 +10,6 @@
     "socket.io": "https://deno.land/x/socket_io@0.2.1/mod.ts",
     "shared/": "../shared/src/",
     "lodash-es": "npm:lodash-es@4.17.21",
-    "nanostores/": "npm:nanostores@0.11.4/"
+    "nanostores": "npm:nanostores@0.11.4"
   }
 }
