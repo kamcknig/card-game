@@ -166,7 +166,7 @@ export const createEffectHandlerMap =
                     reactionManager
                 );
             },
-            async drawCard(effect, match) {
+            async drawCard(effect, match, acc) {
                 const deck = match.playerDecks[effect.playerId];
                 const discard = match.playerDiscards[effect.playerId];
 

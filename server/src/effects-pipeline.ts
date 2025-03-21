@@ -3,6 +3,7 @@ import {GameEffects} from './effect.ts';
 import {AppSocket, EffectGenerator, EffectHandlerMap, EffectHandlerResult} from "./types.ts";
 import {Match, MatchUpdate} from "shared/types.ts";
 import {sendToSockets} from "./utils/send-to-sockets.ts";
+import { isUndefined } from "es-toolkit";
 
 export class EffectsPipeline {
     constructor(
@@ -11,10 +12,12 @@ export class EffectsPipeline {
         private readonly sockets: AppSocket[],
     ) {}
 
-    public async runGenerator(generator: EffectGenerator<GameEffects>, match: Match): EffectHandlerResult {
+    public async runGenerator(generator: EffectGenerator<GameEffects>, match: Match, acc?: MatchUpdate): EffectHandlerResult {
+        const topLevel = isUndefined(acc);
+        acc ??= {};
+        
         let nextEffect = generator.next();
-        let rollingMatchUpdate: MatchUpdate = {};
-
+        
         while (!nextEffect.done) {
             const effect = nextEffect.value as GameEffects;
 
@@ -25,22 +28,13 @@ export class EffectsPipeline {
                 continue;
             }
             
-            const effectResults = await handler(effect as unknown as any, match);
-            rollingMatchUpdate = {
-                ...rollingMatchUpdate,
-                ...effectResults.match
-            };
+            const effectResults = await handler(effect as unknown as any, match, acc);
             
-            match = {
-                ...match,
-                ...rollingMatchUpdate,
-            }
-            
-            nextEffect = generator.next(effectResults);
+            nextEffect = generator.next(effectResults.results);
         }
         
-        if (Object.keys(rollingMatchUpdate).length > 0) {
-            sendToSockets(this.sockets.values(), 'matchUpdated', rollingMatchUpdate);
+        if (topLevel && Object.keys(acc).length > 0) {
+            sendToSockets(this.sockets.values(), 'matchUpdated', acc);
             this.$matchState.set(match);
         }
         

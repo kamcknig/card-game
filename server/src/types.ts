@@ -132,7 +132,7 @@ export type AsyncReactionEffectGeneratorFn = (
 export type EffectGenerator<T> = Generator<
   T,
   unknown,
-  { match: Partial<Match>; results?: unknown }
+  unknown
 >;
 export type EffectGeneratorFn = (
   matchState: Match,
@@ -151,14 +151,17 @@ export type AsyncEffectGeneratorFn = (
 
 export type EffectTypes = GameEffects["type"];
 
+export type EffectHandler<T> = (
+  effect: Extract<GameEffects, { type: T }>,
+  match: Match,
+  acc: MatchUpdate
+) => EffectHandlerResult;
+
 export type EffectHandlerMap = {
-  [K in EffectTypes]: (
-    effect: Extract<GameEffects, { type: K }>,
-    match: Match,
-  ) => EffectHandlerResult;
+  [T in EffectTypes]: EffectHandler<T>;
 };
 
-export type EffectHandlerResult = Promise<{ match: MatchUpdate; results?: unknown }>;
+export type EffectHandlerResult = Promise<unknown>;
 
 export type TriggerEventType =
   | "cardPlayed";
