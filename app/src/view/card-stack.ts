@@ -5,6 +5,7 @@ import {$playerDiscardStore} from "../state/player-state";
 import {$cardsById} from "../state/card-state";
 import {CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP} from '../app-contants';
 import { PreinitializedWritableAtom } from 'nanostores';
+import { isUndefined } from 'es-toolkit';
 
 export type CardStackArgs = {
   scale?: number;
@@ -22,6 +23,7 @@ export class CardStackView extends Container {
   private readonly _cardScale: number;
   private readonly _showCountBadge: boolean = true;
   private readonly _label: string;
+  private readonly _labelText: Text;
   
   constructor(private args: CardStackArgs) {
     super();
@@ -39,8 +41,8 @@ export class CardStackView extends Container {
     
     this.createBackground();
     
-    if (this._label) {
-      const t = new Text({
+    if (!isUndefined(this._label)) {
+      this._labelText = new Text({
         x: STANDARD_GAP * this._cardScale,
         y: STANDARD_GAP * this._cardScale,
         text: this._label,
@@ -48,10 +50,12 @@ export class CardStackView extends Container {
           fontSize: 14,
           fill: 'white'
         }
-      })
-      this.addChild(t);
-      this._cardContainer.y = t.y + t.height + STANDARD_GAP * this._cardScale;
+      });
+      this.addChild(this._labelText);
     }
+    
+    this._cardContainer.y = STANDARD_GAP * this._cardScale;
+    this._cardContainer.x = STANDARD_GAP * this._cardScale;
     
     this.addChild(this._cardContainer);
     this._cleanup = this._cardStore.subscribe(this.drawDeck.bind(this));
@@ -96,5 +100,21 @@ export class CardStackView extends Container {
       const b = new CountBadgeView(val.length ?? 0);
       this._cardContainer.addChild(b);
     }
+    
+    this._cardContainer.x = STANDARD_GAP * this._cardScale;
+    this._cardContainer.y = STANDARD_GAP * this._cardScale;
+    
+    const g = this._background.getChildAt(0) as Graphics;
+    g.clear();
+    g.roundRect(
+      0,
+      0,
+      CARD_WIDTH * this._cardScale + STANDARD_GAP * 2 * this._cardScale,
+      Math.max(CARD_HEIGHT * this._cardScale + STANDARD_GAP * 2 * this._cardScale, this.height + STANDARD_GAP * 2 * this._cardScale)
+    )
+      .fill({
+        color: 0x000000,
+        alpha: .6
+      });
   }
 }

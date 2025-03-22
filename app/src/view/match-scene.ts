@@ -6,7 +6,7 @@ import {createAppButton} from "../core/create-app-button";
 import {$supplyStore, $trashStore} from "../state/match-state";
 import {app} from "../core/create-app";
 import {createCardView} from "../core/card/create-card-view";
-import {$selfPlayerId} from "../state/player-state";
+import { $playerDeckStore, $playerDiscardStore, $selfPlayerId } from "../state/player-state";
 import {gameEvents} from "../core/event/events";
 import {PlayAreaView} from "./play-area";
 import {KingdomSupplyView} from "./kingdom-supply";
@@ -33,10 +33,9 @@ export class MatchScene extends Scene {
     private _board: Container = new Container();
     private _baseSupply: Container = new Container();
     private _playerHand: PlayerHandView | undefined;
-    private _trash: CardStackView = new CardStackView({
-        label: 'TRASH',
-        cardStore: $trashStore
-    });
+    private _trash: CardStackView | undefined;
+    private _deck: CardStackView | undefined;
+    private _discard: CardStackView | undefined;
     private _cleanup: (() => void)[] = [];
     private _playArea: PlayAreaView | undefined;
     private _kingdomView: KingdomSupplyView | undefined;
@@ -82,8 +81,27 @@ export class MatchScene extends Scene {
         this._cleanup.push($supplyStore.subscribe(this.drawBaseSupply.bind(this)));
         app.renderer.on('resize', this.onRendererResize.bind(this));
 
-        $selfPlayerId.subscribe(this.createPlayerHand.bind(this));
-
+        this._deck = new CardStackView({
+            cardStore: $playerDeckStore($selfPlayerId.get()),
+            label: 'DECK'
+        });
+        this.addChild(this._deck);
+        
+        this._discard = new CardStackView({
+            cardStore: $playerDiscardStore($selfPlayerId.get()),
+            label: 'DISCARD'
+        });
+        this.addChild(this._discard);
+        
+        this._trash = new CardStackView({
+            label: 'TRASH',
+            cardStore: $trashStore
+        });
+        this.addChild(this._trash);
+        
+        this._playerHand = new PlayerHandView($selfPlayerId.get());
+        this.addChild(this._playerHand);
+        
         // todo: clean up listener
         gameEvents.on('matchStarted', this.onMatchStarted.bind(this));
         gameEvents.on('selectCard', this.doSelectCards.bind(this));
@@ -129,7 +147,6 @@ export class MatchScene extends Scene {
 
         this.createBaseSupplyView();
         this.createKingdomSupplyView();
-        this.createTrashView();
         this.createPlayArea();
     }
 
@@ -219,19 +236,6 @@ export class MatchScene extends Scene {
         this._kingdomView = this._board.addChild(new KingdomSupplyView());
     }
 
-    private createTrashView() {
-        console.log('MatchScene createTrashView');
-        this._board.addChild(this._trash);
-        // todo: clean up listener
-        this._trash.on('pointerdown', () => {
-            console.log('display trash');
-            if ($trashStore.get().length === 0) {
-                return;
-            }
-            displayTrash();
-        });
-    }
-
     private createPlayArea() {
         console.log('MatchScene createPlayArea');
         this._playArea = this.addChild(new PlayAreaView());
@@ -258,21 +262,7 @@ export class MatchScene extends Scene {
             c.y = Math.floor(oIdx / columns) * SMALL_CARD_HEIGHT + Math.floor(oIdx / columns) * STANDARD_GAP;
             this._baseSupply.addChild(c);
         });
-        this._baseSupply.scale = .9;
-    }
-
-    private createPlayerHand(id?: number) {
-        console.log(`MatchScene createPlayerHand for player ${id}`);
-        if (!id) {
-            console.log('no id');
-            return;
-        }
-
-        if (isUndefined(id)) {
-            return;
-        }
-        this._playerHand = new PlayerHandView(id);
-        this.addChild(this._playerHand);
+        this._baseSupply.scale = .8;
     }
 
     private onRendererResize(w?: number, h?: number): void {
@@ -291,14 +281,20 @@ export class MatchScene extends Scene {
         this._playerHand.x = this._baseSupply.x;
         this._playerHand.y = app.renderer.height - this._playerHand.height - STANDARD_GAP;
 
-        this._trash.x = this._playerHand.x + this._playerHand.width + STANDARD_GAP;
-        this._trash.y = h - this._trash.height - STANDARD_GAP;
-
         this._playArea.x = this._kingdomView.x + this._kingdomView.width * .5 - this._playArea.width * .5;
         this._playArea.y = this._playerHand.y - this._playArea.height - STANDARD_GAP;
 
         this._nextPhaseButton.x = this._playArea.x + this._playArea.width + STANDARD_GAP;
         this._nextPhaseButton.y = this._playArea.y + this._playArea.height - this._nextPhaseButton.height;
+        
+        this._deck.y = app.renderer.height - CARD_HEIGHT * .75;
+        this._deck.x = STANDARD_GAP;
+        
+        this._discard.y = this._deck.y;
+        this._discard.x = this._deck.x + this._deck.width + STANDARD_GAP * 3;
+        
+        this._trash.y = this._deck.y;
+        this._trash.x = this._kingdomView.x + this._kingdomView.width + STANDARD_GAP;
     }
 
     private createDoneSelectingButton() {

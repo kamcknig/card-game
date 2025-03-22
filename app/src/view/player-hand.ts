@@ -1,12 +1,11 @@
 import {Container, DestroyOptions, Graphics} from "pixi.js";
 import {createCardView} from "../core/card/create-card-view";
-import { $playerDeckStore, $playerDiscardStore, $playerHandStore } from "../state/player-state";
+import { $playerHandStore } from "../state/player-state";
 import {$cardsById} from "../state/card-state";
 import {Card} from "shared/types";
 import {batched} from 'nanostores';
 import {$selectedCards} from '../state/interactive-state';
 import {CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP} from '../app-contants';
-import { CardStackView } from './card-stack';
 
 export class PlayerHandView extends Container {
     private readonly _background: Container = new Container({
@@ -17,16 +16,12 @@ export class PlayerHandView extends Container {
         label: `PlayerHandView${this.playerId!}`
     });
     private readonly _cleanup: (() => void)[] = [];
-    private _discard: CardStackView | undefined;
-    private _deck: CardStackView | undefined;
-
+    
     constructor(private playerId: number) {
         super();
 
         this.label = `PlayerHand ${this.playerId}`;
         this.addChild(this._background);
-        this.createPlayerDeck();
-        this.createPlayerDiscard();
         this.addChild(this._handContainer);
 
         const $handState = $playerHandStore(playerId);
@@ -37,22 +32,6 @@ export class PlayerHandView extends Container {
         console.log(`PlayerHandView [${this.playerId}] destroy`);
         super.destroy(options);
         this._cleanup.forEach(c => c());
-    }
-
-    private createPlayerDiscard() {
-        console.log(`PlayerHand createPlayerDiscard for player ${this.playerId}`);
-        this._discard = new CardStackView({
-            cardStore: $playerDiscardStore(this.playerId)
-        });
-        this.addChild(this._discard);
-    }
-
-    private createPlayerDeck() {
-        console.log(`PlayerHand createPlayerDeck for player ${this.playerId}`);
-        this._deck = new CardStackView({
-            cardStore: $playerDeckStore(this.playerId),
-        });
-        this.addChild(this._deck);
     }
 
     private drawBackground(): void {
@@ -107,13 +86,5 @@ export class PlayerHandView extends Container {
         });
 
         this.drawBackground();
-
-        if (this._discard) {
-            this._discard.x = this._background.x + this._background.width + STANDARD_GAP;
-        }
-
-        if (this._deck) {
-            this._deck.x = this._background.x - this._deck.width - STANDARD_GAP;
-        }
     }
 }
