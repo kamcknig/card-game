@@ -42,7 +42,7 @@ export class MatchScene extends Scene {
     ///private _selectionMode: boolean = false;
     private _scoreView: ScoreView = new ScoreView();
     private _gameLog: GameLogView = new GameLogView();
-    private _nextPhaseButton: ButtonContainer = createAppButton({text: 'NEXT'});
+    private _ctaButton: ButtonContainer = createAppButton({text: 'NEXT'});
 
     constructor(stage: Container) {
         super(stage);
@@ -68,13 +68,13 @@ export class MatchScene extends Scene {
         this.createDoneSelectingButton();
         this.createScoreView();
 
-        this.addChild(this._nextPhaseButton);
+        this.addChild(this._ctaButton);
 
         $currentPlayerTurnId.subscribe(playerId => {
             if (playerId === $selfPlayerId.get()) {
-                this.addChild(this._nextPhaseButton);
+                this.addChild(this._ctaButton);
             } else {
-                this.removeChild(this._nextPhaseButton);
+                this.removeChild(this._ctaButton);
             }
         });
 
@@ -112,12 +112,7 @@ export class MatchScene extends Scene {
         gameEvents.on('cardsSelected', this.onUserDoneSelecting.bind(this));
         gameEvents.on('userPromptResponse', this.onUserDoneSelecting.bind(this));
 
-        this._nextPhaseButton.on('pointerdown', (e) => {
-            console.log('MatchScene next phase button pressed');
-            if (this._selecting) return;
-
-            gameEvents.emit('nextPhase');
-        });
+        this._ctaButton.on('pointerdown', this.onCallToAction.bind(this));
 
         gameEvents.emit('ready', $selfPlayerId.get());
 
@@ -125,6 +120,16 @@ export class MatchScene extends Scene {
             const {width, height} = app.renderer;
             this.onRendererResize(width, height);
         })
+    }
+    
+    private onCallToAction(evt: PointerEvent) {
+        console.log('call to action pressed');
+        if (this._selecting) {
+            console.log('in selection mode, ignoring');
+            return
+        }
+        
+        gameEvents.emit('nextPhase');
     }
 
     private onDisplayCardDetail(cardId: number) {
@@ -284,8 +289,8 @@ export class MatchScene extends Scene {
         this._playArea.x = this._kingdomView.x + this._kingdomView.width * .5 - this._playArea.width * .5;
         this._playArea.y = this._playerHand.y - this._playArea.height - STANDARD_GAP;
 
-        this._nextPhaseButton.x = this._playArea.x + this._playArea.width + STANDARD_GAP;
-        this._nextPhaseButton.y = this._playArea.y + this._playArea.height - this._nextPhaseButton.height;
+        this._ctaButton.x = this._playArea.x + this._playArea.width + STANDARD_GAP;
+        this._ctaButton.y = this._playArea.y + this._playArea.height - this._ctaButton.height;
         
         this._deck.y = app.renderer.height - CARD_HEIGHT * .75;
         this._deck.x = STANDARD_GAP;

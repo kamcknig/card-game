@@ -237,7 +237,13 @@ export class MatchController {
 
         this.$matchState.set({...match});
         this.$matchState.listen(this.onMatchUpdated.bind(this));
+        
+        playerId = match.players[match.currentPlayerTurnIndex % match.players.length];
+        if (!match.playerHands[playerId].some(c => match.cardsById[c].type.includes('ACTION'))) {
+            void this.onNextPhase();
+        }
     }
+    
     private onSelectableCardsUpdated(cards: readonly { playerId: number, cardId: number }[]) {
         sendToSockets(this.sockets.values(), 'selectableCardsUpdated', [...cards]);
     }
@@ -291,16 +297,33 @@ export class MatchController {
                     match.playerTreasure = 0;
                     match.currentPlayerTurnIndex = currentMatch.currentPlayerTurnIndex + 1;
 
-                    playerId = currentMatch.players[match.currentPlayerTurnIndex % currentMatch.players.length];
-                    console.log(`starting ${newPhase} phase for ${getPlayerById(playerId)}`);
-
                     if (match.currentPlayerTurnIndex % getGameState().players.length === 0) {
                         match.turnNumber = currentMatch.turnNumber + 1;
                         console.log(`Starting new round ${match.turnNumber}`);
                     }
+                    
+                    playerId = currentMatch.players[match.currentPlayerTurnIndex % currentMatch.players.length];
+                    console.log(`starting ${newPhase} phase for ${getPlayerById(playerId)}`);
+                    
+                    if (!currentMatch.playerHands[playerId].some(c => currentMatch.cardsById[c].type.includes('ACTION'))) {
+                        console.log(`player ${getPlayerById(playerId)} has no actions, skipping to next phase`);
+                        this.$matchState.set({...this.$matchState.get(), ...match});
+                        await this.onNextPhase();
+                        return;
+                    }
                     break;
                 case 'buy':
                     console.log(`starting ${newPhase} phase for ${getPlayerById(playerId)}`);
+                    if (!currentMatch.playerHands[playerId].some(c => currentMatch.cardsById[c].type.includes('TREASURE')) && currentMatch.playerTreasure <= 0) {
+                        // todo: i don't know what future cards might hold, they might be able to buy without treasure or something
+                        // might have to have expansions register functions for cards to find out if they have special cases.
+                        // right now just making an assumption that in order to do something in the buy phase you must have treasure
+                        // or treasure cards
+                        console.log(`player ${getPlayerById(playerId)} has no treasure or treasure cards, skipping to next phase`);
+                        this.$matchState.set({...this.$matchState.get(), ...match});
+                        await this.onNextPhase();
+                        return;
+                    }
                     break;
                 case 'cleanup': {
                     console.log(`starting ${newPhase} phase for ${getPlayerById(playerId)}`);
