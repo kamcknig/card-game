@@ -232,21 +232,23 @@ export interface IEffectRunner {
   runCardEffects(
     match: Match,
     playerId: number,
-    cardId?: number,
+    cardId: number,
+    acc: MatchUpdate,
     reactionContext?: unknown,
-  ): Promise<EffectRunnerResults>;
-
+  ): Promise<unknown>;
+  
   runGameActionEffects(
     effectName: string,
     match: Match,
     playerId: number,
     cardId?: number,
-  ): Promise<EffectRunnerResults>;
+  ): Promise<unknown>;
 
   runGenerator(
     generator: EffectGenerator<GameEffects>,
     match: Match,
-  ): Promise<EffectRunnerResults>;
+    acc: MatchUpdate,
+  ): Promise<unknown>;
 }
 
 export type ReactionTemplate = Omit<Reaction, 'getSourceId' | 'getSourceKey'>;

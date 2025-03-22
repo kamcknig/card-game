@@ -29,13 +29,12 @@ export class EffectsPipeline {
             }
             
             const effectResults = await handler(effect as unknown as any, match, acc);
-            
-            nextEffect = generator.next(effectResults.results);
+            nextEffect = generator.next(effectResults);
         }
         
         if (topLevel && Object.keys(acc).length > 0) {
             sendToSockets(this.sockets.values(), 'matchUpdated', acc);
-            this.$matchState.set(match);
+            this.$matchState.set({ ...match });
         }
         
         return { match, results: (nextEffect.value as any)?.results };

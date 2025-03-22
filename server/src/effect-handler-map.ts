@@ -15,21 +15,25 @@ import { isUndefined } from 'es-toolkit';
 
 // separated this function out so that I could invoke it from within other effect handlers.
 // otherwise I wasn't able to invoke it via this.moveCard because this wasn't bound within the handlers
-async function moveCard(effect: MoveCardEffect, match: Match, reactionManager: ReactionManager) {
+async function moveCard(effect: MoveCardEffect, match: Match, reactionManager: ReactionManager, acc: MatchUpdate) {
     const card = match.cardsById[effect.cardId];
 
-    const {sourceStore: oldStore, index, storeKey: oldStoreKey} = findSourceByCardId(effect.cardId, match);
+    const {
+        sourceStore: oldStore,
+        index,
+        storeKey: oldStoreKey
+    } = findSourceByCardId(effect.cardId, match);
 
     if (!oldStoreKey || isUndefined(index)) {
         console.log('could not find card in a store to move it');
-        return {match: {} };
+        return;
     }
 
     const newStore = findSourceByLocationSpec({playerId: effect.playerId!, spec: effect.to}, match);
 
     if (!newStore) {
         console.log('could not find new store');
-        return {match: {} };
+        return;
     }
 
     oldStore.splice(index, 1);
@@ -48,11 +52,7 @@ async function moveCard(effect: MoveCardEffect, match: Match, reactionManager: R
             break;
     }
 
-    if (unregisterIds !== undefined && unregisterIds?.length > 0) {
-        for (const id of unregisterIds) {
-            reactionManager.unregisterTrigger(id);
-        }
-    }
+    unregisterIds?.forEach(id => reactionManager.unregisterTrigger((id)));
 
     newStore.push(effect.cardId);
 
@@ -68,72 +68,62 @@ async function moveCard(effect: MoveCardEffect, match: Match, reactionManager: R
                     cardLifecycleMap[card.cardKey]?.['onEnterPlay']?.(effect.playerId, effect.cardId)?.registerTriggers;
         }
 
-        if (triggerTemplates && triggerTemplates.length > 0) {
-            for (const triggerTemplate of triggerTemplates) {
-                reactionManager.registerReactionTemplate(triggerTemplate);
-            }
-        }
+        triggerTemplates?.forEach((triggerTemplate) => reactionManager.registerReactionTemplate(triggerTemplate));
     }
 
-    const newMatch: MatchUpdate = {};
     if (['playerHands', 'playerDecks', 'playerDiscards'].includes(oldStoreKey)) {
         if (effect.playerId) {
             switch (oldStoreKey) {
                 case 'playerHands':
-                    newMatch.playerHands = {
-                        ...match.playerHands,
+                    acc.playerHands = {
+                        ...acc.playerHands,
                         [effect.playerId]: oldStore
                     }
                     break;
                 case 'playerDiscards':
-                    newMatch.playerDiscards = {
-                        ...match.playerDiscards,
+                    acc.playerDiscards = {
+                        ...acc.playerDiscards,
                         [effect.playerId]: oldStore
                     }
                     break;
                 case 'playerDecks':
-                    newMatch.playerDecks = {
-                        ...match.playerDecks,
+                    acc.playerDecks = {
+                        ...acc.playerDecks,
                         [effect.playerId]: oldStore
                     }
                     break;
             }
         }
     } else {
-        newMatch[oldStoreKey] = oldStore;
+        acc[oldStoreKey] = oldStore;
     }
 
     if (['playerHands', 'playerDecks', 'playerDiscards'].includes(effect.to.location)) {
         if (effect.playerId) {
             switch (effect.to.location) {
                 case 'playerHands':
-                    newMatch.playerHands = {
-                        ...match.playerHands,
+                    acc.playerHands = {
+                        ...acc.playerHands,
                         [effect.playerId]: newStore
                     }
                     break;
                 case 'playerDiscards':
-                    newMatch.playerDiscards = {
-                        ...match.playerDiscards,
+                    acc.playerDiscards = {
+                        ...acc.playerDiscards,
                         [effect.playerId]: newStore
                     }
                     break;
                 case 'playerDecks':
-                    newMatch.playerDecks = {
-                        ...match.playerDecks,
+                    acc.playerDecks = {
+                        ...acc.playerDecks,
                         [effect.playerId]: newStore
                     }
                     break;
             }
         }
     } else {
-        newMatch[effect.to.location] = newStore as unknown as any;
+        acc[effect.to.location] = newStore as unknown as any;
     }
-
-    return {
-        match: newMatch,
-        results: []
-    };
 }
 
 /**
@@ -146,8 +136,7 @@ export const createEffectHandlerMap =
      cardEffectRunner: IEffectRunner
     ): EffectHandlerMap => {
         return {
-            async discardCard(effect, match) {
-
+            async discardCard(effect, match, acc) {
                 sendToSockets(sockets.values(), 'addLogEntry', {
                     type: 'discard',
                     playerSourceId: effect.playerId,
@@ -163,7 +152,8 @@ export const createEffectHandlerMap =
                         to: {location: 'playerDiscards'}
                     }),
                     match,
-                    reactionManager
+                    reactionManager,
+                    acc
                 );
             },
             async drawCard(effect, match, acc) {
@@ -172,7 +162,7 @@ export const createEffectHandlerMap =
 
                 if (discard.length + deck.length === 0) {
                     console.log('not enough cards to draw in deck + hand');
-                    return {match: {}, results: undefined};
+                    return;
                 }
 
                 // todo: here and other places, i'm manually shuffling the discard into the deck.
@@ -184,21 +174,28 @@ export const createEffectHandlerMap =
                     console.log('player', effect.playerId, 'does not have enough cards to draw, moving discard to deck');
                     const discard = match.playerDiscards[effect.playerId];
                     fisherYatesShuffle(discard);
-                    sendToSockets(sockets.values(), 'matchUpdated', { playerDiscards: { [effect.playerId]: []}});
+                    //sendToSockets(sockets.values(), 'matchUpdated', { playerDiscards: { [effect.playerId]: []}});
 
                     for (const card of discard) {
                         deck.push(card);
                     }
 
                     match.playerDiscards[effect.playerId] = [];
+                    
+                    acc.playerDecks = {
+                        ...(acc.playerDecks ?? {}),
+                        [effect.playerId]: deck
+                    };
+                    
+                    acc.playerDiscards = {
+                        ...(acc.playerDiscards ?? {}),
+                        [effect.playerId]: []
+                    };
                 }
 
                 const drawnCardId = deck.slice(-1)?.[0]
                 if (!drawnCardId) {
-                    return {
-                        match: {playerDecks: match.playerDecks, playerHands: match.playerHands},
-                        results: undefined
-                    };
+                    return
                 }
 
                 sendToSockets(sockets.values(), 'addLogEntry', {
@@ -216,28 +213,32 @@ export const createEffectHandlerMap =
                         to: {location: 'playerHands'},
                     }),
                     match,
-                    reactionManager
+                    reactionManager,
+                    acc
                 );
             },
-            async gainAction(effect, match) {
-                const playerActions = match.playerActions + effect.count;
+            async gainAction(effect, match, acc) {
+                acc.playerActions = match.playerActions + effect.count;
+                match.playerActions = acc.playerActions;
+                
                 sendToSockets(sockets.values(), 'addLogEntry', {
                     type: 'gainAction',
                     count: effect.count,
                     playerSourceId: effect.sourcePlayerId
                 });
-                return {match: {playerActions}, results: null};
+                return;
             },
-            async gainBuy(effect, match) {
-                const playerBuys = match.playerBuys + effect.count;
+            async gainBuy(effect, match, acc) {
+                acc.playerBuys = match.playerBuys + effect.count;
+                match.playerBuys = acc.playerBuys;
                 sendToSockets(sockets.values(), 'addLogEntry', {
                     type: 'gainBuy',
                     count: effect.count,
                     playerSourceId: effect.sourcePlayerId
                 });
-                return {match: {playerBuys}, results: null};
+                return;
             },
-            async gainCard(effect, match) {
+            async gainCard(effect, match, acc) {
                 effect.to.location ??= 'playerDiscards';
 
                 sendToSockets(sockets.values(), 'addLogEntry', {
@@ -255,22 +256,24 @@ export const createEffectHandlerMap =
                         cardId: effect.sourceCardId
                     }),
                     match,
-                    reactionManager
+                    reactionManager,
+                    acc
                 );
             },
-            async gainTreasure(effect, match) {
-                const playerTreasure = match.playerTreasure + effect.count;
+            async gainTreasure(effect, match, acc) {
+                acc.playerTreasure = match.playerTreasure + effect.count;
+                match.playerTreasure = acc.playerTreasure;
                 sendToSockets(sockets.values(), 'addLogEntry', {
                     type: 'gainTreasure',
                     count: effect.count,
                     playerSourceId: effect.sourcePlayerId
                 });
-                return {match: {playerTreasure}, results: null};
+                return null;
             },
-            async moveCard(effect, match) {
-                return moveCard(effect, match, reactionManager);
+            async moveCard(effect, match, acc) {
+                return moveCard(effect, match, reactionManager, acc);
             },
-            async playCard(effect, match) {
+            async playCard(effect, match, acc) {
                 const {playerId, sourceCardId, sourcePlayerId, cardId} = effect;
 
                 sendToSockets(sockets.values(), 'addLogEntry', {
@@ -279,7 +282,7 @@ export const createEffectHandlerMap =
                     playerSourceId: effect.sourcePlayerId
                 });
 
-                let {match: newMatch} = await moveCard(
+                await moveCard(
                     new MoveCardEffect({
                         cardId,
                         playerId,
@@ -288,15 +291,11 @@ export const createEffectHandlerMap =
                         to: {location: 'playArea'}
                     }),
                     match,
-                    reactionManager
+                    reactionManager,
+                    acc
                 );
 
-                sendToSockets(sockets.values(), 'matchUpdated', newMatch);
-
-                match = {
-                    ...match,
-                    ...newMatch
-                }
+                //sendToSockets(sockets.values(), 'matchUpdated', newMatch);
 
                 const trigger: ReactionTrigger = {eventType: 'cardPlayed', playerId, cardId};
                 let reactions = reactionManager.getReactions(
@@ -320,27 +319,25 @@ export const createEffectHandlerMap =
                     // sort reactions based on the order of the potential targets
                     for (const reaction of reactions) {
                         const reactionGenerator = await reaction.generatorFn(match, trigger, reaction);
-                        const reactionResults = await cardEffectRunner.runGenerator(reactionGenerator, match);
+                        const reactionResults = await cardEffectRunner.runGenerator(reactionGenerator, match, acc);
                         if (reaction.once) {
                             reactionManager.unregisterTrigger(reaction.id);
                         }
-                        match = {...match, ...reactionResults.match};
-                        reactionContext[reaction.playerId] = reactionResults.results;
+                        reactionContext[reaction.playerId] = reactionResults;
                     }
                 }
 
                 // We just call the runner’s method:
-                return await cardEffectRunner.runCardEffects(match, sourcePlayerId, cardId, reactionContext);
+                return await cardEffectRunner.runCardEffects(match, sourcePlayerId, cardId, acc, reactionContext);
             },
-            async revealCard(effect, match) {
-                console.log('effectHandler revealCard', effect);
+            async revealCard(effect) {
                 sendToSockets(sockets.values(), 'addLogEntry', {
                     type: 'revealCard',
                     cardId: effect.cardId,
                     playerSourceId: effect.playerId
                 });
 
-                return {match: {}, results: null};
+                return null;
             },
             async selectCard(effect, match) {
                 console.log('effectHandler selectCard', effect);
@@ -406,15 +403,13 @@ export const createEffectHandlerMap =
                     }
                 });
             },
-            async trashCard(effect, match) {
-                console.log('effectHandler trashCard', effect);
-
+            async trashCard(effect, match, acc) {
                 const cardId = effect.cardId;
                 const {sourceStore} = findSourceByCardId(cardId, match);
 
                 if (sourceStore === match.trash) {
                     console.log(`Card is already in trash`)
-                    return {match: {}, results: null};
+                    return;
                 }
 
                 sendToSockets(sockets.values(), 'addLogEntry', {
@@ -432,7 +427,8 @@ export const createEffectHandlerMap =
                         cardId: effect.cardId
                     }),
                     match,
-                    reactionManager
+                    reactionManager,
+                    acc
                 );
             },
             async userPrompt(effect, match) {

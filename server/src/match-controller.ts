@@ -115,7 +115,7 @@ export class MatchController {
     private createKingdom() {
         const kingdomCards: Card[] = [];
         // todo: remove testing code
-        const keepers: string[] = [];
+        const keepers: string[] = ['village'];
         const chosenKingdom =
             Object.keys(cardLibrary["kingdom"])
                 .sort((a, b) => keepers.includes(a) ? 1 : keepers.includes(b) ? -1 : Math.random() > .5 ? 1 : -1)
@@ -275,7 +275,7 @@ export class MatchController {
     private async onNextPhase() {
         console.log('beginning next phase');
 
-        let currentMatch = this.$matchState.get() as Match;
+        const currentMatch = this.$matchState.get() as Match;
 
         try {
             const match: MatchUpdate = {};
@@ -308,23 +308,21 @@ export class MatchController {
                     const cardsToDiscard = currentMatch.playArea.concat(currentMatch.playerHands[playerId]);
 
                     for (const cardId of cardsToDiscard) {
-                        const results = await this.cardEffectsController!.runGameActionEffects('discardCard', currentMatch, playerId, cardId);
-                        currentMatch = {...currentMatch, ...results.match};
+                        await this.cardEffectsController!.runGameActionEffects('discardCard', this.$matchState.get(), playerId, cardId);
                     }
 
                     for (let i = 0; i < 5; i++) {
-                        const results = await this.cardEffectsController!.runGameActionEffects('drawCard', currentMatch, playerId);
-                        currentMatch = {...currentMatch, ...results.match};
+                        await this.cardEffectsController!.runGameActionEffects('drawCard', this.$matchState.get(), playerId);
                     }
 
-                    this.$matchState.set({...currentMatch, ...match});
+                    this.$matchState.set({...this.$matchState.get(), ...match});
                     await this.onNextPhase();
                     return;
                 }
             }
 
             sendToSockets(this.sockets.values(), 'matchUpdated', match);
-            this.$matchState.set({...currentMatch, ...match});
+            this.$matchState.set({...this.$matchState.get(), ...match});
         } catch (e) {
             console.error('Could not move to next phase', e);
             console.error(e);

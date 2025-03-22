@@ -1,7 +1,7 @@
 import {EffectGenerator, EffectHandlerResult, IEffectRunner} from "./types.ts";
 import {PreinitializedWritableAtom} from "nanostores";
 import {GameEffects} from './effect.ts';
-import { Match } from "shared/types.ts";
+import { Match, MatchUpdate } from "shared/types.ts";
 import { effectGeneratorMap } from './effect-generator-map.ts';
 
 export class CardEffectController implements IEffectRunner {
@@ -17,7 +17,7 @@ export class CardEffectController implements IEffectRunner {
         const generatorFn = effectGeneratorMap[effectName];
         if (!generatorFn) {
             console.log(`No effect generator found for game event ${effectName}`);
-            return {match, results: []};
+            return;
         }
         console.log('running game action effects for', effectName);
         const gen = await generatorFn(match, playerId, cardId);
@@ -28,6 +28,7 @@ export class CardEffectController implements IEffectRunner {
         match: Match,
         playerId: number,
         cardId: number,
+        acc: MatchUpdate,
         reactionContext?: unknown,
     ): EffectHandlerResult {
         const cardsById = this.$matchState.get().cardsById;
@@ -35,33 +36,29 @@ export class CardEffectController implements IEffectRunner {
         const generatorFn = effectGeneratorMap[card?.cardKey ?? ''];
         if (!generatorFn) {
             console.log(`No effect generator found for ${card}`);
-            return {match, results: []};
+            return;
         }
         console.log(`running game action for ${card}`);
         const gen = await generatorFn(match, playerId, cardId, reactionContext);
-        return this.runGenerator(gen, match);
+        return this.runGenerator(gen, match, acc);
     }
 
-    public async runGenerator(generator: EffectGenerator<GameEffects>, match: Match) {
+    public async runGenerator(generator: EffectGenerator<GameEffects>, match: Match, acc?: MatchUpdate) {
         if (!generator) {
             console.log(`No effect generator found`);
-            return {match, results: []};
+            return;
         }
 
-        let results;
         if (this.runGeneratorImpl) {
-            results = await this.runGeneratorImpl(generator, match);
+            await this.runGeneratorImpl(generator, match, acc);
         } else {
             console.warn("No runGenerator set on CardEffectController; skipping generator");
         }
-
-        results ??= {match, results: []};
-        return results;
     }
 
-    private runGeneratorImpl?: (gen: EffectGenerator<GameEffects>, match: Match) => EffectHandlerResult;
+    private runGeneratorImpl?: (gen: EffectGenerator<GameEffects>, match: Match, acc?: MatchUpdate) => EffectHandlerResult;
 
-    public setRunGenerator(fn: (gen: EffectGenerator<GameEffects>, match: Match) => EffectHandlerResult) {
+    public setRunGenerator(fn: (gen: EffectGenerator<GameEffects>, match: Match, acc?: MatchUpdate) => EffectHandlerResult) {
         this.runGeneratorImpl = fn;
     }
 }
