@@ -21,15 +21,15 @@ export function findSourceByLocationSpec(specOrArgs: {
     }
 
     if (isArray(spec.location)) {
-        throw new Error('findSourceByLocationSpec cannot accept multiple locations in a spec');
+        console.log('findSourceByLocationSpec cannot accept multiple locations in a spec, using first available location', spec.location[0]);
     }
 
-    if (['playerDecks', 'playerHands', 'playerDiscards'].includes(spec.location)) {
+    if (['playerDecks', 'playerHands', 'playerDiscards'].includes(spec.location[0])) {
         if (isNaN(playerId)) {
             throw new Error('findSourceByLocationSpec requires a playerID when a spec location is deck, hand, or discard')
         }
 
-        switch (spec.location) {
+        switch (spec.location[0]) {
             case 'playerDecks':
                 return match.playerDecks[playerId];
             case 'playerHands':
@@ -38,7 +38,7 @@ export function findSourceByLocationSpec(specOrArgs: {
                 return match.playerDiscards[playerId];
         }
     } else {
-        switch (spec.location) {
+        switch (spec.location[0]) {
             case 'kingdom':
                 return match.kingdom;
             case 'supply':

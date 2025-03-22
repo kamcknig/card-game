@@ -303,9 +303,7 @@ const wrapHandler = <F extends (this: null, ...args: any[]) => any>(
 };
 
 export const createSocket = () => {
-    // http://97.87.64.162:3000
-    console.log(process.env.WS_HOST);
-    socket = io("http://localhost:3000", {
+    socket = io(process.env.WS_HOST, {
         timeout: 5000,
         requestTimeout: 5000,
         query: {sessionId},

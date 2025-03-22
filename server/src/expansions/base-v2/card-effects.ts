@@ -18,6 +18,7 @@ import {getPlayerById} from "../../utils/get-player-by-id.ts";
 import {isUndefined} from "lodash-es";
 import {Match} from "shared/types.ts";
 import {fisherYatesShuffle} from "../../utils/fisher-yates-shuffler.ts";
+import { getGameState } from '../../utils/get-game-state.ts';
 
 export default {
   registerCardLifeCycles: (): Record<string, LifecycleCallbackMap> => ({
@@ -79,10 +80,10 @@ export default {
                 playerId: reaction.playerId,
               });
 
-              console.log("player response to reveal moat", results.results);
+              console.log("player response to reveal moat", results);
 
               const sourceId = reaction.getSourceId();
-              if (results.results && sourceId) {
+              if (results && sourceId) {
                 yield new RevealCardEffect({
                   sourceCardId: trigger.cardId,
                   sourcePlayerId: trigger.playerId,
@@ -90,8 +91,6 @@ export default {
                   playerId: reaction.playerId,
                 });
               }
-
-              return { match, results: results.results };
             },
           }]
         }
@@ -136,7 +135,7 @@ export default {
           },
         },
       });
-      let selectedCardIds = results.results as number[];
+      let selectedCardIds = results as number[];
       let selectedCardId = selectedCardIds[0];
       console.log(`${name}card chosen ${match.cardsById[selectedCardId]}`);
       yield new GainCardEffect({
@@ -160,7 +159,7 @@ export default {
           },
         },
       });
-      selectedCardIds = results.results as number[];
+      selectedCardIds = results as number[];
       selectedCardId = selectedCardIds[0];
       console.log(`${name}card chosen ${match.cardsById[selectedCardId]}`);
       yield new MoveCardEffect({
@@ -265,7 +264,7 @@ export default {
             },
           });
 
-          const selectedIds = results.results as number[];
+          const selectedIds = results as number[];
           const selectedId = selectedIds[0];
           const otherCardId = possibleCardsToTrash.find((id) =>
             id !== selectedId
@@ -346,7 +345,7 @@ export default {
             });
           }
         } else {
-          const { results: cardIds } = yield new SelectCardEffect({
+          const cardIds = yield new SelectCardEffect({
             playerId,
             count: 1,
             sourcePlayerId,
@@ -402,13 +401,15 @@ export default {
       console.log(
         `${name} ${getPlayerById(sourcePlayerId)} selecting cards...`,
       );
-      const { results: cardIds } = yield new SelectCardEffect({
+      
+      const cardIds = yield new SelectCardEffect({
         playerId: sourcePlayerId,
         sourceCardId,
         sourcePlayerId,
         count: { kind: "variable" },
         restrict: { from: { location: "playerHands" } },
       });
+      
       console.log(name, "player", sourcePlayerId, "selected", cardIds);
 
       for (const [idx, cardId] of (cardIds as number[]).entries()) {
@@ -455,7 +456,7 @@ export default {
         return;
       }
 
-      const { results: cardIds } = yield new SelectCardEffect({
+      const cardIds = yield new SelectCardEffect({
         playerId: sourcePlayerId,
         sourcePlayerId,
         sourceCardId,
@@ -549,7 +550,7 @@ export default {
         },
       });
 
-      const selectedId = (results.results as number[])?.[0];
+      const selectedId = (results as number[])?.[0];
       if (selectedId) {
         yield new MoveCardEffect({
           sourcePlayerId,
@@ -596,7 +597,7 @@ export default {
           sourceCardId,
           sourcePlayerId,
         });
-        const drawnCardId = results.results as number;
+        const drawnCardId = results as number;
         console.log(`${name}drew card, new hand size`);
 
         const drawnCard = matchState.cardsById[drawnCardId];
@@ -606,7 +607,7 @@ export default {
           console.log(`${name} card is an action card`);
 
           // A yes/no prompt. If user returns true, we set it aside.
-          const { results } = yield new UserPromptEffect({
+          const results = yield new UserPromptEffect({
             sourcePlayerId,
             sourceCardId,
             playerId: sourcePlayerId,
@@ -690,7 +691,7 @@ export default {
             },
           });
 
-          const cardIds = results.results as number[];
+          const cardIds = results as number[];
           console.log(
             `${name}${getPlayerById(playerId)} chose ${cardIds} to discard`,
           );
@@ -728,7 +729,7 @@ export default {
           },
         });
 
-        let cardIds = results.results as number[];
+        let cardIds = results as number[];
         let cardId = cardIds[0];
 
         if (!cardId) {
@@ -758,7 +759,7 @@ export default {
             cost: { kind: "upTo", amount: card.cost.treasure + 3 },
           },
         });
-        cardIds = results.results as number[];
+        cardIds = results as number[];
         cardId = cardIds[0];
         console.log(`${name}player selected ${card}`);
         yield new GainCardEffect({
@@ -802,7 +803,7 @@ export default {
             card: { cardKeys: ["copper"] },
           },
         });
-        const cardIds = results.results as number[];
+        const cardIds = results as number[];
 
         if (cardIds.length > 0) {
           console.log(`${name}player selected a copper`);
@@ -847,8 +848,8 @@ export default {
       );
 
       const cardsById = matchState.cardsById;
-      const allSupplyCardKeys = matchState.supplyCardKeys.concat(
-        matchState.kingdomCardKeys,
+      const allSupplyCardKeys = getGameState().matchConfig.supplyCardKeys.concat(
+        getGameState().matchConfig.kingdomCardKeys,
       );
       const remainingSupplyCardKeys = matchState.supply.concat(
         matchState.kingdom,
@@ -878,7 +879,7 @@ export default {
         },
       });
 
-      const cardIds = results.results as number[];
+      const cardIds = results as number[];
       for (const cardId of cardIds) {
         yield new DiscardCardEffect({
           sourceCardId,
@@ -904,7 +905,7 @@ export default {
         restrict: { from: { location: "playerHands" } },
       });
 
-      let cardIds = results.results as number[];
+      let cardIds = results as number[];
       let cardId = cardIds[0];
       const card = matchState.cardsById[cardId];
 
@@ -928,7 +929,7 @@ export default {
         },
       });
 
-      cardIds = results.results as number[];
+      cardIds = results as number[];
       cardId = cardIds[0];
 
       console.log(
@@ -1002,7 +1003,7 @@ export default {
         },
       });
 
-      let selectedCardIds = results.results as number[];
+      let selectedCardIds = results as number[];
       console.log(`${name}player selected ${selectedCardIds}`);
 
       if (selectedCardIds.length > 0) {
@@ -1044,7 +1045,7 @@ export default {
         },
       });
 
-      selectedCardIds = results.results as number[];
+      selectedCardIds = results as number[];
 
       console.log(`${name}player chose ${selectedCardIds}`);
 
@@ -1076,7 +1077,7 @@ export default {
         restrict: { from: { location: "playerHands" }, card: { type: ["ACTION"] } },
       });
 
-      const cardIds = results.results as number[];
+      const cardIds = results as number[];
       const cardId = cardIds?.[0];
 
 
@@ -1140,7 +1141,7 @@ export default {
         declineLabel: "NO",
       });
 
-      const confirm = !!results.results;
+      const confirm = !!results;
 
       if (!confirm) {
         return;
@@ -1212,7 +1213,7 @@ export default {
           from: { location: ["supply", "kingdom"] },
         },
       });
-      const cardIds = results.results as number[];
+      const cardIds = results as number[];
       const cardId = cardIds[0];
       yield new GainCardEffect({
         playerId: sourcePlayerId,

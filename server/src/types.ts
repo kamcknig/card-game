@@ -15,7 +15,7 @@ import { toNumber } from 'es-toolkit/compat';
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
 
 export type LocationSpec = {
-  location: CardLocation;
+  location: CardLocation | CardLocation[];
   index?: number;
 };
 export type CountSpec =
@@ -28,7 +28,6 @@ export type CostSpec =
   | { kind: "exact"; amount: number }
   | { kind: "upTo"; amount: number }
   | number;
-export type EffectExceptionSpec = { kind: "player"; playerIds: number[] };
 
 export type CardData = Omit<
   Card,

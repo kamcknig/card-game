@@ -6,12 +6,15 @@ import {$cardsById} from "../state/card-state";
 import {CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP} from '../app-contants';
 import { PreinitializedWritableAtom } from 'nanostores';
 import { isUndefined } from 'es-toolkit';
+import { Card } from 'shared/types';
+import { CardView } from './card-view';
 
 export type CardStackArgs = {
   scale?: number;
   label?: string;
   cardStore: PreinitializedWritableAtom<number[]>;
   showCountBadge?: boolean;
+  cardFacing: CardView['facing'];
 }
 
 export class CardStackView extends Container {
@@ -25,6 +28,9 @@ export class CardStackView extends Container {
   private readonly _label: string;
   private readonly _labelText: Text;
   
+  // todo: probably need the server to handle which way cards are facing later on
+  private readonly _cardFacing: CardView['facing'];
+  
   constructor(private args: CardStackArgs) {
     super();
     
@@ -32,8 +38,10 @@ export class CardStackView extends Container {
       cardStore,
       scale,
       showCountBadge,
-      label
+      label,
+      cardFacing
     } = args;
+    this._cardFacing = cardFacing;
     this._showCountBadge = showCountBadge ?? true;
     this._cardStore = cardStore;
     this._cardScale = scale ?? 1;
@@ -96,9 +104,9 @@ export class CardStackView extends Container {
     
     if (cardId) {
       const c = this._cardContainer.addChild(createCardView($cardsById.get()[cardId]));
+      c.facing = this._cardFacing
       c.scale = this._cardScale;
       c.size = 'full';
-      c.facing = 'front';
     }
     
     if (this._showCountBadge && val.length > 0) {

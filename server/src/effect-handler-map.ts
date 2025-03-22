@@ -12,6 +12,7 @@ import {findSpecLocationBySource} from "./utils/find-spec-location-by-source.ts"
 import {findSourceByLocationSpec} from "./utils/find-source-by-location-spec.ts";
 import {playerSocketMap} from './player-socket-map.ts';
 import { isUndefined } from 'es-toolkit';
+import { castArray } from "es-toolkit/compat";
 
 /**
  * Returns an object whose properties are functions. The names are a union of Effect types
@@ -35,6 +36,8 @@ export const createEffectHandlerMap =
                 console.log('could not find card in a store to move it');
                 return;
             }
+            
+            effect.to.location = castArray(effect.to.location);
             
             const newStore = findSourceByLocationSpec({playerId: effect.playerId!, spec: effect.to}, match);
             
@@ -71,7 +74,7 @@ export const createEffectHandlerMap =
             // todo: this can also remove triggers, not just add
             if (effect.playerId) {
                 let triggerTemplates: ReactionTemplate[] | void = undefined;
-                switch (effect.to.location) {
+                switch (effect.to.location[0]) {
                     case 'playerHands':
                         triggerTemplates =
                           cardLifecycleMap[card.cardKey]?.['onEnterHand']?.(effect.playerId, effect.cardId)?.registerTriggers;
@@ -119,15 +122,15 @@ export const createEffectHandlerMap =
             }
             
             // update the accumulator with the cards new location
-            if (['playerHands', 'playerDecks', 'playerDiscards'].includes(effect.to.location)) {
+            if (effect.to.location.some(l => ['playerHands', 'playerDecks', 'playerDiscards'].includes(l))) {
                 if (effect.playerId) {
-                    switch (effect.to.location) {
+                    switch (effect.to.location[0]) {
                         case 'playerHands':
                             acc.playerHands = {
                                 ...acc.playerHands,
                                 [effect.playerId]: newStore
                             };
-                            interimUpdate.playerDecks = {[effect.playerId]: newStore};
+                            interimUpdate.playerHands = {[effect.playerId]: newStore};
                             break;
                         case 'playerDiscards':
                             acc.playerDiscards = {
@@ -146,8 +149,8 @@ export const createEffectHandlerMap =
                     }
                 }
             } else {
-                acc[effect.to.location] = newStore as unknown as any;
-                interimUpdate[effect.to.location] = newStore as unknown as any;
+                acc[effect.to.location[0]] = newStore as unknown as any;
+                interimUpdate[effect.to.location[0]] = newStore as unknown as any;
             }
             
             sendToSockets(sockets.values(), 'matchUpdated', interimUpdate)
@@ -270,7 +273,7 @@ export const createEffectHandlerMap =
                         sourcePlayerId: effect.sourcePlayerId,
                         sourceCardId: effect.sourceCardId,
                         playerId: effect.playerId,
-                        cardId: effect.sourceCardId
+                        cardId: effect.cardId
                     }),
                     match,
                     reactionManager,
@@ -410,7 +413,7 @@ export const createEffectHandlerMap =
 
                         const socketListener = (selectedCards: number[]) => {
                             socket?.off('selectCardResponse', socketListener);
-                            resolve({match: {}, results: selectedCards ?? []});
+                            resolve(selectedCards);
                         }
                         socket?.on('selectCardResponse', socketListener);
 
@@ -457,7 +460,7 @@ export const createEffectHandlerMap =
 
                         const socketListener = (result: unknown) => {
                             socket?.off('userPromptResponse', socketListener);
-                            resolve({match: {}, results: result});
+                            resolve(result);
                         }
                         socket?.on('userPromptResponse', socketListener);
 

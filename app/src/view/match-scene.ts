@@ -1,32 +1,29 @@
-import {Assets, Container, DestroyOptions, Graphics, Text} from "pixi.js";
-import {Scene} from "../core/scene/scene";
-import {CountBadgeView} from "./count-badge-view";
-import {PlayerHandView} from "./player-hand";
-import {createAppButton} from "../core/create-app-button";
-import {$supplyStore, $trashStore} from "../state/match-state";
-import {app} from "../core/create-app";
-import {createCardView} from "../core/card/create-card-view";
+import { Assets, Container, DestroyOptions } from "pixi.js";
+import { Scene } from "../core/scene/scene";
+import { PlayerHandView } from "./player-hand";
+import { createAppButton } from "../core/create-app-button";
+import { $supplyStore, $trashStore } from "../state/match-state";
+import { app } from "../core/create-app";
 import { $playerDeckStore, $playerDiscardStore, $selfPlayerId } from "../state/player-state";
-import {gameEvents} from "../core/event/events";
-import {PlayAreaView} from "./play-area";
-import {KingdomSupplyView} from "./kingdom-supply";
-import {PileView} from "./pile";
-import {$cardsById} from "../state/card-state";
-import {Card, CountSpec, UserPromptArgs} from "shared/types";
-import {$selectableCards, $selectedCards} from '../state/interactive-state';
-import {CardView} from './card-view';
-import {userPromptModal} from './modal/user-prompt-modal';
-import {CARD_HEIGHT, CARD_WIDTH, SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP} from '../app-contants';
-import {ScoreView} from './score-view';
-import {GameLogView} from './game-log-view';
-import {displayCardDetail} from './modal/display-card-detail';
-import {ButtonContainer} from '@pixi/ui';
-import {$currentPlayerTurnId} from '../state/turn-state';
-import {displayTrash} from './modal/display-trash';
-import {validateCountSpec} from "../shared/validate-count-spec";
+import { gameEvents } from "../core/event/events";
+import { PlayAreaView } from "./play-area";
+import { KingdomSupplyView } from "./kingdom-supply";
+import { PileView } from "./pile";
+import { $cardsById } from "../state/card-state";
+import { Card, CountSpec, UserPromptArgs } from "shared/types";
+import { $selectableCards, $selectedCards } from '../state/interactive-state';
+import { CardView } from './card-view';
+import { userPromptModal } from './modal/user-prompt-modal';
+import { CARD_HEIGHT, SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP } from '../app-contants';
+import { ScoreView } from './score-view';
+import { GameLogView } from './game-log-view';
+import { displayCardDetail } from './modal/display-card-detail';
+import { ButtonContainer } from '@pixi/ui';
+import { $currentPlayerTurnId } from '../state/turn-state';
+import { validateCountSpec } from "../shared/validate-count-spec";
 import { socket } from '../client-socket';
-import { isUndefined } from 'es-toolkit';
 import { CardStackView } from './card-stack';
+import { displayTrash } from './modal/display-trash';
 
 export class MatchScene extends Scene {
     private _doneSelectingBtn: Container = new Container();
@@ -83,21 +80,31 @@ export class MatchScene extends Scene {
 
         this._deck = new CardStackView({
             cardStore: $playerDeckStore($selfPlayerId.get()),
-            label: 'DECK'
+            label: 'DECK',
+            cardFacing: 'back'
         });
         this.addChild(this._deck);
         
         this._discard = new CardStackView({
             cardStore: $playerDiscardStore($selfPlayerId.get()),
-            label: 'DISCARD'
+            label: 'DISCARD',
+            cardFacing: 'front'
         });
         this.addChild(this._discard);
         
         this._trash = new CardStackView({
             label: 'TRASH',
-            cardStore: $trashStore
+            cardStore: $trashStore,
+            cardFacing: 'front'
         });
         this.addChild(this._trash);
+        this._trash.eventMode = 'static';
+        this._trash.on('pointerdown', () => {
+            if ($trashStore.get().length === 0) {
+                return;
+            }
+            displayTrash()
+        });
         
         this._playerHand = new PlayerHandView($selfPlayerId.get());
         this.addChild(this._playerHand);
