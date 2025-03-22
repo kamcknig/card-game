@@ -55,6 +55,11 @@ export class CardStackView extends Container {
     }
     
     this._cardContainer.y = STANDARD_GAP * this._cardScale;
+    
+    if (this._labelText) {
+      this._cardContainer.y = this._labelText.y + this._labelText.height + STANDARD_GAP * this._cardScale;
+    }
+    
     this._cardContainer.x = STANDARD_GAP * this._cardScale;
     
     this.addChild(this._cardContainer);
@@ -103,6 +108,9 @@ export class CardStackView extends Container {
     
     this._cardContainer.x = STANDARD_GAP * this._cardScale;
     this._cardContainer.y = STANDARD_GAP * this._cardScale;
+    if (this._labelText) {
+      this._cardContainer.y = this._labelText.y + this._labelText.height + STANDARD_GAP * this._cardScale;
+    }
     
     const g = this._background.getChildAt(0) as Graphics;
     g.clear();
