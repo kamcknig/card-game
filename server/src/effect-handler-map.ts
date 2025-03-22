@@ -15,7 +15,7 @@ import { isUndefined } from 'es-toolkit';
 
 // separated this function out so that I could invoke it from within other effect handlers.
 // otherwise I wasn't able to invoke it via this.moveCard because this wasn't bound within the handlers
-async function moveCard(effect: MoveCardEffect, match: Match, reactionManager: ReactionManager, acc: MatchUpdate) {
+/*async function moveCard(effect: MoveCardEffect, match: Match, reactionManager: ReactionManager, acc: MatchUpdate) {
     const card = match.cardsById[effect.cardId];
 
     const {
@@ -40,7 +40,10 @@ async function moveCard(effect: MoveCardEffect, match: Match, reactionManager: R
 
     const oldLoc = findSpecLocationBySource(match, oldStore);
     let unregisterIds: string[] | undefined = undefined;
-
+    
+    // when a card moves out of a location, check if we need to unregister any triggers for the card
+    // todo: account for moves to non-player locations i.e., deck, trash, discard, etc.
+    // todo: this can also add triggers, not just remove
     switch (oldLoc) {
         case 'playerHands':
             unregisterIds =
@@ -56,6 +59,9 @@ async function moveCard(effect: MoveCardEffect, match: Match, reactionManager: R
 
     newStore.push(effect.cardId);
 
+    // when a card moves to a new location, check if we need to register any triggers for the card
+    // todo: account for moves to non-player locations i.e., deck, trash, discard, etc.
+    // todo: this can also remove triggers, not just add
     if (effect.playerId) {
         let triggerTemplates: ReactionTemplate[] | void = undefined;
         switch (effect.to.location) {
@@ -71,6 +77,7 @@ async function moveCard(effect: MoveCardEffect, match: Match, reactionManager: R
         triggerTemplates?.forEach((triggerTemplate) => reactionManager.registerReactionTemplate(triggerTemplate));
     }
 
+    // update the accumulator with the card's old location
     if (['playerHands', 'playerDecks', 'playerDiscards'].includes(oldStoreKey)) {
         if (effect.playerId) {
             switch (oldStoreKey) {
@@ -97,7 +104,8 @@ async function moveCard(effect: MoveCardEffect, match: Match, reactionManager: R
     } else {
         acc[oldStoreKey] = oldStore;
     }
-
+    
+    // update the accumulator with the cards new location
     if (['playerHands', 'playerDecks', 'playerDiscards'].includes(effect.to.location)) {
         if (effect.playerId) {
             switch (effect.to.location) {
@@ -124,7 +132,7 @@ async function moveCard(effect: MoveCardEffect, match: Match, reactionManager: R
     } else {
         acc[effect.to.location] = newStore as unknown as any;
     }
-}
+}*/
 
 /**
  * Returns an object whose properties are functions. The names are a union of Effect types
@@ -135,6 +143,137 @@ export const createEffectHandlerMap =
      reactionManager: ReactionManager,
      cardEffectRunner: IEffectRunner
     ): EffectHandlerMap => {
+        async function moveCard(effect: MoveCardEffect, match: Match, reactionManager: ReactionManager, acc: MatchUpdate) {
+            const card = match.cardsById[effect.cardId];
+            
+            const {
+                sourceStore: oldStore,
+                index,
+                storeKey: oldStoreKey
+            } = findSourceByCardId(effect.cardId, match);
+            
+            if (!oldStoreKey || isUndefined(index)) {
+                console.log('could not find card in a store to move it');
+                return;
+            }
+            
+            const newStore = findSourceByLocationSpec({playerId: effect.playerId!, spec: effect.to}, match);
+            
+            if (!newStore) {
+                console.log('could not find new store');
+                return;
+            }
+            
+            oldStore.splice(index, 1);
+            
+            const oldLoc = findSpecLocationBySource(match, oldStore);
+            let unregisterIds: string[] | undefined = undefined;
+            
+            // when a card moves out of a location, check if we need to unregister any triggers for the card
+            // todo: account for moves to non-player locations i.e., deck, trash, discard, etc.
+            // todo: this can also add triggers, not just remove
+            switch (oldLoc) {
+                case 'playerHands':
+                    unregisterIds =
+                      cardLifecycleMap[card.cardKey]?.['onLeaveHand']?.(effect.playerId!, effect.cardId)?.unregisterTriggers;
+                    break;
+                case 'playArea':
+                    unregisterIds =
+                      cardLifecycleMap[card.cardKey]?.['onLeavePlay']?.(effect.playerId!, effect.cardId)?.unregisterTriggers;
+                    break;
+            }
+            
+            unregisterIds?.forEach(id => reactionManager.unregisterTrigger((id)));
+            
+            newStore.push(effect.cardId);
+            
+            // when a card moves to a new location, check if we need to register any triggers for the card
+            // todo: account for moves to non-player locations i.e., deck, trash, discard, etc.
+            // todo: this can also remove triggers, not just add
+            if (effect.playerId) {
+                let triggerTemplates: ReactionTemplate[] | void = undefined;
+                switch (effect.to.location) {
+                    case 'playerHands':
+                        triggerTemplates =
+                          cardLifecycleMap[card.cardKey]?.['onEnterHand']?.(effect.playerId, effect.cardId)?.registerTriggers;
+                        break;
+                    case 'playArea':
+                        triggerTemplates =
+                          cardLifecycleMap[card.cardKey]?.['onEnterPlay']?.(effect.playerId, effect.cardId)?.registerTriggers;
+                }
+                
+                triggerTemplates?.forEach((triggerTemplate) => reactionManager.registerReactionTemplate(triggerTemplate));
+            }
+            
+            const interimUpdate: MatchUpdate = {};
+            
+            // update the accumulator with the card's old location
+            if (['playerHands', 'playerDecks', 'playerDiscards'].includes(oldStoreKey)) {
+                if (effect.playerId) {
+                    switch (oldStoreKey) {
+                        case 'playerHands':
+                            acc.playerHands = {
+                                ...acc.playerHands,
+                                [effect.playerId]: oldStore
+                            };
+                            interimUpdate.playerHands = {[effect.playerId]: oldStore};
+                            break;
+                        case 'playerDiscards':
+                            acc.playerDiscards = {
+                                ...acc.playerDiscards,
+                                [effect.playerId]: oldStore
+                            };
+                            interimUpdate.playerDiscards = {[effect.playerId]: oldStore};
+                            break;
+                        case 'playerDecks':
+                            acc.playerDecks = {
+                                ...acc.playerDecks,
+                                [effect.playerId]: oldStore
+                            };
+                            interimUpdate.playerDecks = {[effect.playerId]: oldStore};
+                            break;
+                    }
+                }
+            } else {
+                acc[oldStoreKey] = oldStore;
+                interimUpdate[oldStoreKey] = oldStore;
+            }
+            
+            // update the accumulator with the cards new location
+            if (['playerHands', 'playerDecks', 'playerDiscards'].includes(effect.to.location)) {
+                if (effect.playerId) {
+                    switch (effect.to.location) {
+                        case 'playerHands':
+                            acc.playerHands = {
+                                ...acc.playerHands,
+                                [effect.playerId]: newStore
+                            };
+                            interimUpdate.playerDecks = {[effect.playerId]: newStore};
+                            break;
+                        case 'playerDiscards':
+                            acc.playerDiscards = {
+                                ...acc.playerDiscards,
+                                [effect.playerId]: newStore
+                            };
+                            interimUpdate.playerDiscards = {[effect.playerId]: newStore};
+                            break;
+                        case 'playerDecks':
+                            acc.playerDecks = {
+                                ...acc.playerDecks,
+                                [effect.playerId]: newStore
+                            };
+                            interimUpdate.playerDecks = {[effect.playerId]: newStore};
+                            break;
+                    }
+                }
+            } else {
+                acc[effect.to.location] = newStore as unknown as any;
+                interimUpdate[effect.to.location] = newStore as unknown as any;
+            }
+            
+            sendToSockets(sockets.values(), 'matchUpdated', interimUpdate)
+        }
+        
         return {
             async discardCard(effect, match, acc) {
                 sendToSockets(sockets.values(), 'addLogEntry', {
