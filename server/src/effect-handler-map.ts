@@ -174,7 +174,6 @@ export const createEffectHandlerMap =
                     console.log('player', effect.playerId, 'does not have enough cards to draw, moving discard to deck');
                     const discard = match.playerDiscards[effect.playerId];
                     fisherYatesShuffle(discard);
-                    //sendToSockets(sockets.values(), 'matchUpdated', { playerDiscards: { [effect.playerId]: []}});
 
                     for (const card of discard) {
                         deck.push(card);
