@@ -141,7 +141,7 @@ export class MatchController {
     private createPlayerHands(cardsById: Record<number, Card>) {
         return Object.values(getGameState().players).reduce((prev, p, idx) => {
             console.log('initializing player', p.id, 'cards...');
-            let blah = {};
+            /*let blah = {};
             // todo remove testing code
             if (idx === 0) {
                 blah = {
@@ -154,8 +154,8 @@ export class MatchController {
                     silver: 10
                 };
             }
-            Object.entries(blah).forEach(([key, count]) => {
-            // Object.entries(MatchBaseConfiguration.playerStartingHand).forEach(([key, count]) => {
+            Object.entries(blah).forEach(([key, count]) => {*/
+            Object.entries(MatchBaseConfiguration.playerStartingHand).forEach(([key, count]) => {
                 console.log('adding', count, key, 'to deck');
                 prev['playerDecks'][p.id] ??= [];
                 let deck = prev['playerDecks'][p.id];
@@ -275,13 +275,15 @@ export class MatchController {
         sendToSockets(this.sockets.values(), 'scoresUpdated', scores);
     }
 
-    private async onNextPhase() {
+    private async onNextPhase(update?: MatchUpdate) {
         console.log('beginning next phase');
 
         const currentMatch = this.$matchState.get() as Match;
 
         try {
-            const match: MatchUpdate = {};
+            const match: MatchUpdate = {
+                ...update
+            };
             match.turnPhaseIndex = currentMatch.turnPhaseIndex + 1;
 
             const newPhase = TurnPhaseOrderValues[match.turnPhaseIndex % TurnPhaseOrderValues.length];
@@ -305,7 +307,7 @@ export class MatchController {
                     if (!currentMatch.playerHands[playerId].some(c => currentMatch.cardsById[c].type.includes('ACTION'))) {
                         console.log(`player ${getPlayerById(playerId)} has no actions, skipping to next phase`);
                         this.$matchState.set({...this.$matchState.get(), ...match});
-                        await this.onNextPhase();
+                        await this.onNextPhase(match);
                         return;
                     }
                     break;
@@ -318,7 +320,7 @@ export class MatchController {
                         // or treasure cards
                         console.log(`player ${getPlayerById(playerId)} has no treasure or treasure cards, skipping to next phase`);
                         this.$matchState.set({...this.$matchState.get(), ...match});
-                        await this.onNextPhase();
+                        await this.onNextPhase(match);
                         return;
                     }
                     break;
@@ -336,7 +338,7 @@ export class MatchController {
                     }
 
                     this.$matchState.set({...this.$matchState.get(), ...match});
-                    await this.onNextPhase();
+                    await this.onNextPhase(match);
                     return;
                 }
             }
