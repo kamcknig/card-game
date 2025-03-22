@@ -8,14 +8,7 @@
     "web:watch": "webpack serve --mode=development --config ./app/webpack.config.mjs",
     "watch": "concurrently \"npm run watch:server\" \"npm run watch:web\""
   },
-  "dependencies": {
-    "lodash-es": "^4.17.21",
-    "nanostores": "^0.11.4",
-    "socket.io": "^4.8.1"
-  },
   "devDependencies": {
-    "@types/lodash-es": "^4.17.12",
-    "concurrently": "^9.1.2",
-    "typescript": "^5.8.2"
+    "concurrently": "^9.1.2"
   }
 }

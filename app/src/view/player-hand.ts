@@ -1,13 +1,12 @@
 import {Container, DestroyOptions, Graphics} from "pixi.js";
 import {createCardView} from "../core/card/create-card-view";
-import {DiscardView} from "./discard-view";
-import {DeckView} from "./deck-view";
-import {$playerHandStore} from "../state/player-state";
+import { $playerDeckStore, $playerDiscardStore, $playerHandStore } from "../state/player-state";
 import {$cardsById} from "../state/card-state";
 import {Card} from "shared/types";
 import {batched} from 'nanostores';
 import {$selectedCards} from '../state/interactive-state';
-import {CARD_HEIGHT, CARD_WIDTH, SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP} from '../app-contants';
+import {CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP} from '../app-contants';
+import { CardStackView } from './card-stack';
 
 export class PlayerHandView extends Container {
     private readonly _background: Container = new Container({
@@ -18,18 +17,17 @@ export class PlayerHandView extends Container {
         label: `PlayerHandView${this.playerId!}`
     });
     private readonly _cleanup: (() => void)[] = [];
-    private _discard: DiscardView | undefined;
-    private _deck: DeckView | undefined;
+    private _discard: CardStackView | undefined;
+    private _deck: CardStackView | undefined;
 
     constructor(private playerId: number) {
         super();
 
         this.label = `PlayerHand ${this.playerId}`;
         this.addChild(this._background);
-        this.addChild(this._handContainer);
-
         this.createPlayerDeck();
         this.createPlayerDiscard();
+        this.addChild(this._handContainer);
 
         const $handState = $playerHandStore(playerId);
         this._cleanup.push(batched([$handState, $selectedCards], (...args) => args).subscribe(this.drawHand.bind(this)));
@@ -43,13 +41,17 @@ export class PlayerHandView extends Container {
 
     private createPlayerDiscard() {
         console.log(`PlayerHand createPlayerDiscard for player ${this.playerId}`);
-        this._discard = new DiscardView({owner: this.playerId});
+        this._discard = new CardStackView({
+            cardStore: $playerDiscardStore(this.playerId)
+        });
         this.addChild(this._discard);
     }
 
     private createPlayerDeck() {
         console.log(`PlayerHand createPlayerDeck for player ${this.playerId}`);
-        this._deck = new DeckView({owner: this.playerId});
+        this._deck = new CardStackView({
+            cardStore: $playerDeckStore(this.playerId),
+        });
         this.addChild(this._deck);
     }
 

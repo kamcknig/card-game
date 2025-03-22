@@ -26,13 +26,17 @@ import {displayTrash} from './modal/display-trash';
 import {validateCountSpec} from "../shared/validate-count-spec";
 import { socket } from '../client-socket';
 import { isUndefined } from 'es-toolkit';
+import { CardStackView } from './card-stack';
 
 export class MatchScene extends Scene {
     private _doneSelectingBtn: Container = new Container();
     private _board: Container = new Container();
     private _baseSupply: Container = new Container();
-    private _playerHand: Container = new Container();
-    private _trash: Container = new Container();
+    private _playerHand: PlayerHandView | undefined;
+    private _trash: CardStackView = new CardStackView({
+        label: 'TRASH',
+        cardStore: $trashStore
+    });
     private _cleanup: (() => void)[] = [];
     private _playArea: PlayAreaView | undefined;
     private _kingdomView: KingdomSupplyView | undefined;
@@ -76,7 +80,6 @@ export class MatchScene extends Scene {
         });
 
         this._cleanup.push($supplyStore.subscribe(this.drawBaseSupply.bind(this)));
-        this._cleanup.push($trashStore.subscribe(this.drawTrashPile.bind(this)));
         app.renderer.on('resize', this.onRendererResize.bind(this));
 
         $selfPlayerId.subscribe(this.createPlayerHand.bind(this));
@@ -258,47 +261,6 @@ export class MatchScene extends Scene {
         this._baseSupply.scale = .9;
     }
 
-    private drawTrashPile(newVal: ReadonlyArray<number>) {
-        const cards = newVal.map(id => $cardsById.get()[id]);
-
-        // TODO: move to a TrashView class?
-        this._trash.removeChildren().forEach(c => c.destroy());
-        this._trash.eventMode = 'static';
-
-        const c = new Container();
-        c.x = 10;
-        c.y = 30;
-        for (const card of cards) {
-            const view = c.addChild(createCardView(card));
-            view.size = 'full';
-        }
-
-        const g = new Graphics()
-            .roundRect(0, 0, CARD_WIDTH + STANDARD_GAP * 2, CARD_HEIGHT + STANDARD_GAP * 2)
-            .fill({color: 0x000000, alpha: .6});
-
-        this._trash.addChild(g);
-
-        if (newVal.length > 0) {
-            const b = new CountBadgeView(newVal.length);
-            b.x = 0;
-            b.y = 0;
-            c.addChild(b);
-        }
-
-        const t = new Text({
-            x: 20,
-            y: 5,
-            text: `TRASH`,
-            style: {
-                fontSize: 20,
-                fill: 0xFFFFFF,
-            }
-        });
-        this._trash.addChild(t);
-        this._trash.addChild(c);
-    }
-
     private createPlayerHand(id?: number) {
         console.log(`MatchScene createPlayerHand for player ${id}`);
         if (!id) {
@@ -309,9 +271,8 @@ export class MatchScene extends Scene {
         if (isUndefined(id)) {
             return;
         }
+        this._playerHand = new PlayerHandView(id);
         this.addChild(this._playerHand);
-        const hand = new PlayerHandView(id);
-        this._playerHand.addChild(hand);
     }
 
     private onRendererResize(w?: number, h?: number): void {

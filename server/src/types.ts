@@ -226,8 +226,6 @@ export class Reaction {
   }
 }
 
-export type EffectRunnerResults = { match: MatchUpdate; results?: unknown };
-
 export interface IEffectRunner {
   runCardEffects(
     match: Match,

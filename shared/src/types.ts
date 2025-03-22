@@ -148,7 +148,7 @@ export class Player {
         return `[PLAYER ${this.id} - ${this.name}]`;
     }
 
-    [Symbol.for('nodejs.util.inspect.custom')]() {
+    [Symbol.for('Deno.customInspect')]() {
         return this.toString();
     }
 }
@@ -247,8 +247,8 @@ export class Card {
     toString() {
         return `[CARD ${this.id} - ${this.cardKey}]`;
     }
-
-    [Symbol.for('nodejs.util.inspect.custom')]() {
+    
+    [Symbol.for("Deno.customInspect")]() {
         return this.toString();
     }
 }
