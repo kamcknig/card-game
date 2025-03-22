@@ -23,3 +23,5 @@ move phases when nothing to do for a player
 send client updates when doing asynchronous effects
 
 if game log is collapsed, and window resizes, the arrow to expand it disappears
+
+library might not work
