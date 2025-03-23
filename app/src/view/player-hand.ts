@@ -1,15 +1,18 @@
-import {Container, DestroyOptions, Graphics} from "pixi.js";
+import {Text, Container, DestroyOptions, Graphics} from "pixi.js";
 import {createCardView} from "../core/card/create-card-view";
-import { $playerHandStore } from "../state/player-state";
+import { $playerHandStore, $selfPlayerId } from "../state/player-state";
 import {$cardsById} from "../state/card-state";
 import {Card} from "shared/types";
 import {batched} from 'nanostores';
 import {$selectedCards} from '../state/interactive-state';
 import {CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP} from '../app-contants';
 import { PhaseStatus } from './phase-status';
+import { AppButton, createAppButton } from '../core/create-app-button';
+import { $currentPlayerTurnId, $turnPhase } from '../state/turn-state';
 
 export class PlayerHandView extends Container {
     private _phaseStatus: PhaseStatus = new PhaseStatus();
+    private _nextPhaseButton: AppButton = createAppButton({text: 'NEXT'});
     
     private readonly _background: Container = new Container();
     private readonly _handContainer: Container = new Container({
@@ -23,22 +26,6 @@ export class PlayerHandView extends Container {
         this.label = `PlayerHand ${this.playerId}`;
         this.addChild(this._background);
         this._background.addChild(new Graphics());
-        this.addChild(this._handContainer);
-        this.addChild(this._phaseStatus);
-        this._background.y = this._phaseStatus.y + this._phaseStatus.height;
-        this._handContainer.y = this._background.y + STANDARD_GAP;
-
-        const $handState = $playerHandStore(playerId);
-        this._cleanup.push(batched([$handState, $selectedCards], (...args) => args).subscribe(this.drawHand.bind(this)));
-    }
-
-    destroy(options?: DestroyOptions) {
-        console.log(`PlayerHandView [${this.playerId}] destroy`);
-        super.destroy(options);
-        this._cleanup.forEach(c => c());
-    }
-
-    private drawBackground(): void {
         const g = this._background.getChildAt(0) as Graphics;
         g.clear();
         g.roundRect(
@@ -49,10 +36,49 @@ export class PlayerHandView extends Container {
           5
         )
           .fill({color: 0, alpha: .6});
+        this.addChild(this._handContainer);
+        this.addChild(this._phaseStatus);
+        this._background.y = this._phaseStatus.y + this._phaseStatus.height;
+        this._handContainer.y = this._background.y + STANDARD_GAP;
+        
+        
+        this.addChild(this._nextPhaseButton.button);
+        $currentPlayerTurnId.subscribe(playerId => {
+            this._nextPhaseButton.button.visible = playerId === $selfPlayerId.get();
+        });
+        $turnPhase.subscribe((phase) => {
+            this.removeChild(this._nextPhaseButton.button);
+            switch (phase) {
+                case 'action':
+                    this._nextPhaseButton.text('END ACTIONS');
+                    break;
+                case 'buy':
+                    this._nextPhaseButton.text('END BUYS');
+                    break;
+            }
+            
+            this._nextPhaseButton.button.x = this.width - this._nextPhaseButton.button.width - STANDARD_GAP;
+            this.addChild(this._nextPhaseButton.button);
+        });
+        
+        const $handState = $playerHandStore(playerId);
+        this._cleanup.push(batched([$handState, $selectedCards], (...args) => args).subscribe(this.drawHand.bind(this)));
+        
+        this._nextPhaseButton.button.on('pointerdown', this.onNextPhasePressed.bind(this));
+    }
+    
+    private onNextPhasePressed() {
+        this.emit('nextPhase');
+    }
+
+    destroy(options?: DestroyOptions) {
+        super.destroy(options);
+        this._cleanup.forEach(c => c());
     }
 
     private drawHand([hand, selectedCardIds]: ReadonlyArray<number[]>) {
         this._handContainer.removeChildren().forEach(c => c.destroy());
+        this.removeChild(this._handContainer);
 
         const cardsById = $cardsById.get();
 
@@ -92,7 +118,8 @@ export class PlayerHandView extends Container {
             c.x = idx * CARD_WIDTH + idx * STANDARD_GAP;
             c.y -= selectedCardIds.includes(c.card.id) ? 0 : -10;
         });
-
-        this.drawBackground();
+        
+        this._handContainer.x = this.width * .5 - this._handContainer.width * .5;
+        this.addChild(this._handContainer);
     }
 }

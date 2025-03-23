@@ -1,6 +1,11 @@
 import {Graphics, Text, TextOptions} from "pixi.js";
 import {ButtonContainer} from "@pixi/ui";
 
+export interface AppButton {
+    button: ButtonContainer;
+    text: (val: string) => void;
+}
+
 export const createAppButton = (textOpts?: TextOptions) => {
     const button = new ButtonContainer();
     const text = new Text({
@@ -19,5 +24,18 @@ export const createAppButton = (textOpts?: TextOptions) => {
     text.x = button.width * .5;
     text.y = button.height * .5;
     button.addChild(text);
-    return button;
+    return {
+        button,
+        text: (val: string) => {
+            button.removeChild(text);
+            text.text = val;
+            background
+              .clear()
+              .roundRect(0, 0, text.width + 20, text.height + 20, 10)
+              .fill({color: 'black', alpha: .9});
+            text.x = button.width * .5;
+            text.y = button.height * .5;
+            button.addChild(text);
+        }
+    };
 };

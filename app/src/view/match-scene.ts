@@ -1,7 +1,7 @@
 import { Assets, Container, DestroyOptions, Graphics, Text } from "pixi.js";
 import { Scene } from "../core/scene/scene";
 import { PlayerHandView } from "./player-hand";
-import { createAppButton } from "../core/create-app-button";
+import { AppButton, createAppButton } from "../core/create-app-button";
 import { $supplyStore, $trashStore } from "../state/match-state";
 import { app } from "../core/create-app";
 import { $playerDeckStore, $playerDiscardStore, $selfPlayerId } from "../state/player-state";
@@ -39,8 +39,7 @@ export class MatchScene extends Scene {
     ///private _selectionMode: boolean = false;
     private _scoreView: ScoreView = new ScoreView();
     private _gameLog: GameLogView = new GameLogView();
-    private _nextPhaseButton: ButtonContainer = createAppButton({text: 'NEXT'});
-    private _ctaButton: ButtonContainer = createAppButton();
+    private _ctaButton: AppButton = createAppButton();
 
     constructor(stage: Container) {
         super(stage);
@@ -56,7 +55,6 @@ export class MatchScene extends Scene {
     }
 
     async initialize() {
-        console.log('MatchScene initialize');
         super.initialize();
 
         const c = new Container();
@@ -77,7 +75,6 @@ export class MatchScene extends Scene {
         const i = setInterval(() => {
             ellipsisCount = (ellipsisCount % 3) + 1; // Cycles: 1 → 2 → 3 → 1 ...
             const dots = '.'.repeat(ellipsisCount);
-            console.log(dots);
             t.text = `LOADING${dots}`;
         }, 300);
         
@@ -92,16 +89,6 @@ export class MatchScene extends Scene {
         this.createGameLog();
         this.createScoreView();
         this.createDoneSelectingButton();
-
-        this.addChild(this._nextPhaseButton);
-
-        $currentPlayerTurnId.subscribe(playerId => {
-            if (playerId === $selfPlayerId.get()) {
-                this.addChild(this._nextPhaseButton);
-            } else {
-                this.removeChild(this._nextPhaseButton);
-            }
-        });
 
         this._cleanup.push($supplyStore.subscribe(this.drawBaseSupply.bind(this)));
         app.renderer.on('resize', this.onRendererResize.bind(this));
@@ -135,6 +122,8 @@ export class MatchScene extends Scene {
         });
         
         this._playerHand = new PlayerHandView($selfPlayerId.get());
+        this._playerHand.on('nextPhase', this.onNextPhasePressed.bind(this));
+        
         this.addChild(this._playerHand);
         
         // todo: clean up listener
@@ -147,21 +136,8 @@ export class MatchScene extends Scene {
         gameEvents.on('cardsSelected', this.onUserDoneSelecting.bind(this));
         gameEvents.on('userPromptResponse', this.onUserDoneSelecting.bind(this));
 
-        this._nextPhaseButton.on('pointerdown', this.onNextPhasePressed.bind(this));
-
         gameEvents.emit('ready', $selfPlayerId.get());
 
-        $turnPhase.subscribe((phase) => {
-            switch (phase) {
-                case 'action':
-                    (this._nextPhaseButton.getChildAt(1) as Text).text = 'END ACTIONS';
-                    break;
-                case 'buy':
-                    (this._nextPhaseButton.getChildAt(1) as Text).text = 'END BUYS';
-                    break;
-            }
-        });
-        
         setTimeout(() => {
             this.onRendererResize();
         });
@@ -169,6 +145,7 @@ export class MatchScene extends Scene {
     
     private onNextPhasePressed() {
         console.log('call to action pressed');
+        
         if (this._selecting) {
             console.log('in selection mode, ignoring');
             return
@@ -176,7 +153,7 @@ export class MatchScene extends Scene {
         
         gameEvents.emit('nextPhase');
     }
-
+    
     private onDisplayCardDetail(cardId: number) {
         displayCardDetail(cardId);
     }
@@ -192,7 +169,6 @@ export class MatchScene extends Scene {
     }
 
     private createBoard() {
-        console.log('MatchScene createBoard');
         this.addChild(this._board);
 
         this.createBaseSupplyView();
@@ -257,7 +233,6 @@ export class MatchScene extends Scene {
         const view: CardView = event.target as CardView;
         const cardId = view.card.id;
 
-        console.log('selecting is', this._selecting);
         if (this._selecting) {
             let current = $selectedCards.get();
             const idx = current.findIndex(c => c === cardId);
@@ -277,22 +252,18 @@ export class MatchScene extends Scene {
     }
 
     private createBaseSupplyView() {
-        console.log('MatchScene createBaseSupplyView');
         this._board.addChild(this._baseSupply);
     }
 
     private createKingdomSupplyView() {
-        console.log('MatchScene createKingdomSupplyView');
         this._kingdomView = this._board.addChild(new KingdomSupplyView());
     }
 
     private createPlayArea() {
-        console.log('MatchScene createPlayArea');
         this._playArea = this.addChild(new PlayAreaView());
     }
 
     private drawBaseSupply(newVal: ReadonlyArray<number>) {
-        console.warn('When a pile runs out, the rest will move to fill in. I have not accounted for this yet.');
         this._baseSupply.removeChildren().forEach(c => c.destroy());
 
         const cards = newVal.map(id => $cardsById.get()[id]);
@@ -334,9 +305,6 @@ export class MatchScene extends Scene {
         this._playArea.x = this._kingdomView.x + this._kingdomView.width * .5 - this._playArea.width * .5;
         this._playArea.y = this._playerHand.y - this._playArea.height - STANDARD_GAP;
 
-        this._nextPhaseButton.x = this._playArea.x + this._playArea.width + STANDARD_GAP;
-        this._nextPhaseButton.y = this._playArea.y + this._playArea.height - this._nextPhaseButton.height;
-        
         this._discard.y = app.renderer.height - CARD_HEIGHT * .75;
         this._discard.x = this._playerHand.x - this._discard.width - STANDARD_GAP;
         
@@ -358,7 +326,7 @@ export class MatchScene extends Scene {
             y: 20,
         });
         this._doneSelectingBtn.eventMode = 'static';
-        this._doneSelectingBtn.addChild(b);
+        this._doneSelectingBtn.addChild(b.button);
     }
 
     private createScoreView() {

@@ -17,6 +17,7 @@ export type CardChoiceModalArgs = {
     cardSelect?: boolean;
     count?: CountSpec;
 }
+
 export let cardChoiceModal: (args: CardChoiceModalArgs) => Promise<boolean | number[]>;
 
 export const createCardChoiceModal = () => {
@@ -82,12 +83,12 @@ export const createCardChoiceModal = () => {
             }
         });
         if (!cardSelect) {
-            modalBackground.addChild(confirmButton);
-            confirmButton.on('destroyed', () => confirmButton.removeAllListeners());
+            modalBackground.addChild(confirmButton.button);
+            confirmButton.button.on('destroyed', () => confirmButton.button.removeAllListeners());
 
-            declineButton.on('destroyed', () => declineButton.removeAllListeners());
+            declineButton.button.on('destroyed', () => declineButton.button.removeAllListeners());
             if (showDeclineOption) {
-                modalBackground.addChild(declineButton);
+                modalBackground.addChild(declineButton.button);
             }
         }
 
@@ -98,17 +99,17 @@ export const createCardChoiceModal = () => {
                     count: count ?? 1,
                 }).then(resolve);*/
             } else {
-                confirmButton.on('pointerdown', () => {
+                confirmButton.button.on('pointerdown', () => {
                     resolve(true);
                 });
-                declineButton.on('pointerdown', () => {
+                declineButton.button.on('pointerdown', () => {
                     resolve(false);
                 });
             }
         }).finally(() => {
             modalBackground.removeChildren().forEach((card) => card.destroy());
-            confirmButton.destroy();
-            declineButton.destroy();
+            confirmButton.button.destroy();
+            declineButton.button.destroy();
             modalBackground.removeFromParent();
             modalBackground.destroy();
         });

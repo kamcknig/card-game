@@ -45,9 +45,9 @@ export const userPromptModal = (args: UserPromptArgs): Promise<unknown> => {
         const validate = () => {
             if (args.content?.cardSelection?.selectCount) {
                 if(validateCountSpec(args.content?.cardSelection?.selectCount, selectedCards.size)) {
-                    confirmBtn.alpha = 1;
+                    confirmBtn.button.alpha = 1;
                 } else {
-                    confirmBtn.alpha = .6;
+                    confirmBtn.button.alpha = .6;
                 }
             }
         };
@@ -81,14 +81,14 @@ export const userPromptModal = (args: UserPromptArgs): Promise<unknown> => {
         prompt.x = -prompt.width * .5
         contentContainer.x = -contentContainer.width * .5;
         contentContainer.y = prompt.height + 40;
-        declineBtn.y = confirmBtn.y = contentContainer.children.length > 0 ? contentContainer.y + contentContainer.height + 40 : prompt.height + 40;
-        declineBtn.x = -declineBtn.width - 20;
-        confirmBtn.x = (args.showDeclineOption ? 20 : -confirmBtn.width * .5);
+        declineBtn.button.y = confirmBtn.button.y = contentContainer.children.length > 0 ? contentContainer.y + contentContainer.height + 40 : prompt.height + 40;
+        declineBtn.button.x = -declineBtn.button.width - 20;
+        confirmBtn.button.x = (args.showDeclineOption ? 20 : -confirmBtn.button.width * .5);
 
         hudContainer.addChild(prompt);
 
         if (args.showDeclineOption) {
-            hudContainer.addChild(declineBtn);
+            hudContainer.addChild(declineBtn.button);
         }
 
         background.roundRect(
@@ -98,7 +98,7 @@ export const userPromptModal = (args: UserPromptArgs): Promise<unknown> => {
             hudContainer.height + 40 + contentContainer.children.length > 0 ? 400 + 40 : 0
         ).fill({color: 'black', alpha: .8});
 
-        hudContainer.addChild(confirmBtn);
+        hudContainer.addChild(confirmBtn.button);
         modalContainer.addChild(background);
         modalContainer.addChild(hudContainer);
         modalContainer.addChild(contentContainer);
@@ -106,8 +106,8 @@ export const userPromptModal = (args: UserPromptArgs): Promise<unknown> => {
         const cleanup = (confirm: boolean) => {
             app.stage.removeChild(modalContainer);
             modalContainer.destroy();
-            confirmBtn.removeAllListeners();
-            declineBtn.removeAllListeners();
+            confirmBtn.button.removeAllListeners();
+            declineBtn.button.removeAllListeners();
 
             if (args.content?.cardSelection) {
                 resolve([...selectedCards]);
@@ -116,11 +116,11 @@ export const userPromptModal = (args: UserPromptArgs): Promise<unknown> => {
             }
         };
 
-        declineBtn.on('pointerdown', () => {
+        declineBtn.button.on('pointerdown', () => {
             cleanup(false)
         });
 
-        confirmBtn.on('pointerdown', () => {
+        confirmBtn.button.on('pointerdown', () => {
             cleanup(true);
         });
 

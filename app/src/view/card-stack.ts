@@ -47,7 +47,23 @@ export class CardStackView extends Container {
     this._cardScale = scale ?? 1;
     this._label = label;
     
-    this.createBackground();
+    this._background.addChild(
+      new Graphics()
+        .roundRect(
+          0,
+          0,
+          CARD_WIDTH * this._cardScale + STANDARD_GAP * this._cardScale * 2,
+          CARD_HEIGHT * this._cardScale + STANDARD_GAP * this._cardScale * 2
+        )
+        .fill({
+          color: 0x000000,
+          alpha: .6
+        })
+    );
+    
+    this.addChild(this._background);
+    console.log('kyle', this._background.width);
+    console.log(this.width);
     
     if (!isUndefined(this._label)) {
       this._labelText = new Text({
@@ -79,24 +95,6 @@ export class CardStackView extends Container {
     this._cleanup();
   }
   
-  private createBackground() {
-    this._background.addChild(
-      new Graphics()
-        .roundRect(
-          0,
-          0,
-          CARD_WIDTH * this._cardScale + STANDARD_GAP * this._cardScale * 2,
-          CARD_HEIGHT * this._cardScale + STANDARD_GAP * this._cardScale * 2
-        )
-        .fill({
-          color: 0x000000,
-          alpha: .6
-        })
-    );
-    
-    this.addChild(this._background);
-  }
-  
   private drawDeck(val: ReadonlyArray<number>) {
     this._cardContainer.removeChildren().forEach(c => c.destroy());
     
@@ -119,18 +117,5 @@ export class CardStackView extends Container {
     if (this._labelText) {
       this._cardContainer.y = this._labelText.y + this._labelText.height + STANDARD_GAP * this._cardScale;
     }
-    
-    const g = this._background.getChildAt(0) as Graphics;
-    g.clear();
-    g.roundRect(
-      0,
-      0,
-      CARD_WIDTH * this._cardScale + STANDARD_GAP * 2 * this._cardScale,
-      Math.max(CARD_HEIGHT * this._cardScale + STANDARD_GAP * 2 * this._cardScale, this.height + STANDARD_GAP * 2 * this._cardScale)
-    )
-      .fill({
-        color: 0x000000,
-        alpha: .6
-      });
   }
 }

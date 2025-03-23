@@ -1,5 +1,5 @@
 import {Assets, Container, DestroyOptions, Graphics, Sprite, Text} from "pixi.js";
-import { createAppButton } from "../core/create-app-button";
+import { AppButton, createAppButton } from "../core/create-app-button";
 import { Scene } from "../core/scene/scene";
 import { $players, $selfPlayerId } from "../state/player-state";
 import { socket } from "../client-socket";
@@ -11,7 +11,7 @@ import { isUndefined } from 'es-toolkit';
 export class MatchConfigurationScene extends Scene {
     private readonly _playerNameContainer: Container = new Container({x: 300, y: 20});
     private readonly _cleanup: (() => void)[] = [];
-    private readonly _startGameBtn = createAppButton({text: 'START', style: {fontSize: 24}});
+    private readonly _startGameBtn: AppButton = createAppButton({text: 'START', style: {fontSize: 24}});
     private _expansionContainer: Container = new Container({x:600, y:20});
     private _expansionHighlight: Graphics = new Graphics();
 
@@ -23,7 +23,7 @@ export class MatchConfigurationScene extends Scene {
         super.destroy(options);
 
         this._cleanup.forEach(c => c());
-        this._startGameBtn.removeAllListeners();
+        this._startGameBtn.button.removeAllListeners();
     }
 
     initialize(data?: unknown) {
@@ -34,9 +34,9 @@ export class MatchConfigurationScene extends Scene {
 
         this.addChild(this._playerNameContainer);
 
-        this._startGameBtn.x = 20;
-        this._startGameBtn.y = 20;
-        this._startGameBtn.on('pointerdown', this.onStartGame.bind(this));
+        this._startGameBtn.button.x = 20;
+        this._startGameBtn.button.y = 20;
+        this._startGameBtn.button.on('pointerdown', this.onStartGame.bind(this));
         
         $expansionList.subscribe(this.createExpansionList.bind(this));
         $selectedExpansions.subscribe(this.setSelectedExpansion.bind(this));
@@ -92,11 +92,6 @@ export class MatchConfigurationScene extends Scene {
             this._expansionHighlight.clear();
         }
 
-        /*const t = this._expansionContainer.getChildByLabel(val[0]);
-        const point = t.getGlobalPosition();
-        this._expansionHighlight.x = point.x;
-        this._expansionHighlight.y = point.y;
-        this._expansionHighlight.roundRect(-STANDARD_GAP, -STANDARD_GAP, this._expansionContainer.width + STANDARD_GAP * 2, t.height + STANDARD_GAP * 2, 5).stroke('white');*/
         this.addChild(this._expansionHighlight);
     }
     
@@ -125,10 +120,10 @@ export class MatchConfigurationScene extends Scene {
 
         const ownerId = $gameOwner.get();
         if (!isUndefined(ownerId)) {
-            this._startGameBtn.removeFromParent();
+            this._startGameBtn.button.removeFromParent();
 
             if (ownerId === $selfPlayerId.get()) {
-                this.addChild(this._startGameBtn);
+                this.addChild(this._startGameBtn.button);
             }
         }
     }
