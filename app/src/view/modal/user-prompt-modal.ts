@@ -41,15 +41,18 @@ export const userPromptModal = (args: UserPromptArgs): Promise<unknown> => {
                 fontSize: 24,
             }
         });
-
+        
         const validate = () => {
-            if (args.content?.cardSelection?.selectCount) {
-                if(validateCountSpec(args.content?.cardSelection?.selectCount, selectedCards.size)) {
+            let validated = true;
+            if (args.content?.cardSelection) {
+                validated = validateCountSpec(args.content?.cardSelection?.selectCount, selectedCards.size)
+                if(validated) {
                     confirmBtn.button.alpha = 1;
                 } else {
                     confirmBtn.button.alpha = .6;
                 }
             }
+            return validated;
         };
 
         const cardPointerDownListener = (event: FederatedPointerEvent) => {
@@ -67,6 +70,7 @@ export const userPromptModal = (args: UserPromptArgs): Promise<unknown> => {
         };
 
         if (args.content?.cardSelection) {
+            args.content.cardSelection.selectCount ??= 1;
             $selectableCards.set(args.content.cardSelection.cardIds);
             for (const [idx, cardId] of args.content.cardSelection.cardIds.entries()) {
                 const view = createCardView(cardId);
@@ -121,6 +125,9 @@ export const userPromptModal = (args: UserPromptArgs): Promise<unknown> => {
         });
 
         confirmBtn.button.on('pointerdown', () => {
+            if (!validate()) {
+                return;
+            }
             cleanup(true);
         });
 
