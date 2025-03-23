@@ -19,7 +19,7 @@ import { ScoreView } from './score-view';
 import { GameLogView } from './game-log-view';
 import { displayCardDetail } from './modal/display-card-detail';
 import { ButtonContainer } from '@pixi/ui';
-import { $currentPlayerTurnId } from '../state/turn-state';
+import { $currentPlayerTurnId, $turnPhase } from '../state/turn-state';
 import { validateCountSpec } from "../shared/validate-count-spec";
 import { socket } from '../client-socket';
 import { CardStackView } from './card-stack';
@@ -39,7 +39,8 @@ export class MatchScene extends Scene {
     ///private _selectionMode: boolean = false;
     private _scoreView: ScoreView = new ScoreView();
     private _gameLog: GameLogView = new GameLogView();
-    private _ctaButton: ButtonContainer = createAppButton({text: 'NEXT'});
+    private _nextPhaseButton: ButtonContainer = createAppButton({text: 'NEXT'});
+    private _ctaButton: ButtonContainer = createAppButton();
 
     constructor(stage: Container) {
         super(stage);
@@ -89,16 +90,16 @@ export class MatchScene extends Scene {
         
         this.createBoard();
         this.createGameLog();
-        this.createDoneSelectingButton();
         this.createScoreView();
+        this.createDoneSelectingButton();
 
-        this.addChild(this._ctaButton);
+        this.addChild(this._nextPhaseButton);
 
         $currentPlayerTurnId.subscribe(playerId => {
             if (playerId === $selfPlayerId.get()) {
-                this.addChild(this._ctaButton);
+                this.addChild(this._nextPhaseButton);
             } else {
-                this.removeChild(this._ctaButton);
+                this.removeChild(this._nextPhaseButton);
             }
         });
 
@@ -146,17 +147,27 @@ export class MatchScene extends Scene {
         gameEvents.on('cardsSelected', this.onUserDoneSelecting.bind(this));
         gameEvents.on('userPromptResponse', this.onUserDoneSelecting.bind(this));
 
-        this._ctaButton.on('pointerdown', this.onCallToAction.bind(this));
+        this._nextPhaseButton.on('pointerdown', this.onNextPhasePressed.bind(this));
 
         gameEvents.emit('ready', $selfPlayerId.get());
 
+        $turnPhase.subscribe((phase) => {
+            switch (phase) {
+                case 'action':
+                    (this._nextPhaseButton.getChildAt(1) as Text).text = 'END ACTIONS';
+                    break;
+                case 'buy':
+                    (this._nextPhaseButton.getChildAt(1) as Text).text = 'END BUYS';
+                    break;
+            }
+        });
+        
         setTimeout(() => {
-            const {width, height} = app.renderer;
-            this.onRendererResize(width, height);
-        })
+            this.onRendererResize();
+        });
     }
     
-    private onCallToAction(evt: PointerEvent) {
+    private onNextPhasePressed() {
         console.log('call to action pressed');
         if (this._selecting) {
             console.log('in selection mode, ignoring');
@@ -304,36 +315,36 @@ export class MatchScene extends Scene {
         this._baseSupply.scale = .8;
     }
 
-    private onRendererResize(w?: number, h?: number): void {
+    private onRendererResize(): void {
         this._gameLog.x = app.renderer.width - this._gameLog.width - STANDARD_GAP;
         this._gameLog.y = STANDARD_GAP;
 
         this._scoreView.x = STANDARD_GAP;
         this._scoreView.y = STANDARD_GAP;
 
-        this._baseSupply.y = STANDARD_GAP;
-        this._baseSupply.x = this._scoreView!.x + this._scoreView.width + STANDARD_GAP;
-
         this._kingdomView.y = STANDARD_GAP;
-        this._kingdomView.x = this._baseSupply.x + this._baseSupply.width + STANDARD_GAP;
+        this._kingdomView.x = app.renderer.width * .5 - this._kingdomView.width * .5;
+        
+        this._baseSupply.y = this._kingdomView.y;
+        this._baseSupply.x = this._kingdomView.x - this._baseSupply.width - STANDARD_GAP;
 
-        this._playerHand.x = this._baseSupply.x;
-        this._playerHand.y = app.renderer.height - this._playerHand.height - STANDARD_GAP;
-
+        this._playerHand.x = app.renderer.width * .5 - this._playerHand.width * .5;
+        this._playerHand.y = app.renderer.height - this._playerHand.height;
+        
         this._playArea.x = this._kingdomView.x + this._kingdomView.width * .5 - this._playArea.width * .5;
         this._playArea.y = this._playerHand.y - this._playArea.height - STANDARD_GAP;
 
-        this._ctaButton.x = this._playArea.x + this._playArea.width + STANDARD_GAP;
-        this._ctaButton.y = this._playArea.y + this._playArea.height - this._ctaButton.height;
+        this._nextPhaseButton.x = this._playArea.x + this._playArea.width + STANDARD_GAP;
+        this._nextPhaseButton.y = this._playArea.y + this._playArea.height - this._nextPhaseButton.height;
+        
+        this._discard.y = app.renderer.height - CARD_HEIGHT * .75;
+        this._discard.x = this._playerHand.x - this._discard.width - STANDARD_GAP;
         
         this._deck.y = app.renderer.height - CARD_HEIGHT * .75;
-        this._deck.x = STANDARD_GAP;
-        
-        this._discard.y = this._deck.y;
-        this._discard.x = this._deck.x + this._deck.width + STANDARD_GAP * 3;
+        this._deck.x = this._discard.x - this._deck.width - STANDARD_GAP;
         
         this._trash.y = this._deck.y;
-        this._trash.x = this._kingdomView.x + this._kingdomView.width + STANDARD_GAP;
+        this._trash.x = this._playerHand.x + this._playerHand.width + STANDARD_GAP;
     }
 
     private createDoneSelectingButton() {

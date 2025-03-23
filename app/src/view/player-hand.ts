@@ -6,13 +6,13 @@ import {Card} from "shared/types";
 import {batched} from 'nanostores';
 import {$selectedCards} from '../state/interactive-state';
 import {CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP} from '../app-contants';
+import { PhaseStatus } from './phase-status';
 
 export class PlayerHandView extends Container {
-    private readonly _background: Container = new Container({
-        x: 180,
-    });
+    private _phaseStatus: PhaseStatus = new PhaseStatus();
+    
+    private readonly _background: Container = new Container();
     private readonly _handContainer: Container = new Container({
-        x: 190,
         label: `PlayerHandView${this.playerId!}`
     });
     private readonly _cleanup: (() => void)[] = [];
@@ -22,7 +22,11 @@ export class PlayerHandView extends Container {
 
         this.label = `PlayerHand ${this.playerId}`;
         this.addChild(this._background);
+        this._background.addChild(new Graphics());
         this.addChild(this._handContainer);
+        this.addChild(this._phaseStatus);
+        this._background.y = this._phaseStatus.y + this._phaseStatus.height;
+        this._handContainer.y = this._background.y + STANDARD_GAP;
 
         const $handState = $playerHandStore(playerId);
         this._cleanup.push(batched([$handState, $selectedCards], (...args) => args).subscribe(this.drawHand.bind(this)));
@@ -35,12 +39,16 @@ export class PlayerHandView extends Container {
     }
 
     private drawBackground(): void {
-        this._background.removeChildren().forEach(c => c.destroy());
-
-        const bgGraphics = new Graphics()
-            .roundRect(0, 0, (CARD_WIDTH * 5) + (STANDARD_GAP * 4) + (STANDARD_GAP * 2), CARD_HEIGHT + STANDARD_GAP * 2)
-            .fill({color: 0, alpha: .6});
-        this._background.addChild(bgGraphics);
+        const g = this._background.getChildAt(0) as Graphics;
+        g.clear();
+        g.roundRect(
+          0,
+          0,
+          this._phaseStatus.width,
+          CARD_HEIGHT + STANDARD_GAP * 4,
+          5
+        )
+          .fill({color: 0, alpha: .6});
     }
 
     private drawHand([hand, selectedCardIds]: ReadonlyArray<number[]>) {
