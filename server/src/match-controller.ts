@@ -199,8 +199,13 @@ export class MatchController {
             effectsController
         );
         
-        const pipeline = new EffectsPipeline(this.effectHandlerMap, this.$matchState, this.sockets);
-        this.cardEffectsController.setRunGenerator(pipeline.runGenerator.bind(pipeline));
+        const pipeline = new EffectsPipeline(
+          this.effectHandlerMap,
+          this.$matchState,
+          this.sockets,
+          this.onCheckForPlayerActions.bind(this)
+        );
+        this.cardEffectsController.setEffectPipeline(pipeline);
         
         new CardInteractivityController(
             this.cardEffectsController,
@@ -223,12 +228,14 @@ export class MatchController {
         };
 
         sendToSockets(this.sockets.values(), 'matchStarted', match as Match);
-
-        for (const playerId of match.players!) {
-            for (let i = 0; i < 5; i++) {
-                await effectsController.runGameActionEffects('drawCard', match as Match, playerId);
+        
+        await this.cardEffectsController?.suspendedCallbackRunner(async () => {
+            for (const playerId of match.players!) {
+                for (let i = 0; i < 5; i++) {
+                    await effectsController.runGameActionEffects('drawCard', match as Match, playerId);
+                }
             }
-        }
+        });
 
         $selectableCards.listen(this.onSelectableCardsUpdated.bind(this));
 
@@ -275,9 +282,43 @@ export class MatchController {
         sendToSockets(this.sockets.values(), 'scoresUpdated', scores);
     }
 
+    private async onCheckForPlayerActions() {
+        console.log('checking for remaining player actions');
+        const match = this.$matchState.get();
+        const newPhase = TurnPhaseOrderValues[match.turnPhaseIndex % TurnPhaseOrderValues.length];
+        const playerId = match.players[match.currentPlayerTurnIndex % match.players.length];
+        
+        switch (newPhase) {
+            case 'action': {
+                const numActionCards = match.playerHands[playerId].filter(c =>
+                  match.cardsById[c].type.includes('ACTION')).length;
+                
+                if (numActionCards <= 0 || match.playerActions <= 0) {
+                    console.log(`player ${getPlayerById(playerId)} has ${match.playerActions} actions and ${numActionCards} action cards, skipping to next phase`);
+                    this.$matchState.set({ ...this.$matchState.get(), ...match });
+                    await this.onNextPhase(match);
+                    return;
+                }
+                break;
+            }
+            case 'buy': {
+                const treasureCardCount = match.playerHands[playerId].filter(c => match.cardsById[c].type.includes('TREASURE')).length;
+                
+                if (
+                  (treasureCardCount <= 0 && match.playerTreasure <= 0)
+                  || match.playerBuys <= 0
+                ) {
+                    console.log(`player ${getPlayerById(playerId)} has ${treasureCardCount} treasure cards in hand, ${match.playerTreasure} treasure, and ${match.playerBuys} buys`);
+                    this.$matchState.set({ ...this.$matchState.get(), ...match });
+                    await this.onNextPhase(match);
+                    return;
+                }
+                break;
+            }
+        }
+    }
+    
     private async onNextPhase(update?: MatchUpdate) {
-        console.log('beginning next phase');
-
         const currentMatch = this.$matchState.get() as Match;
 
         try {
@@ -303,42 +344,28 @@ export class MatchController {
                     
                     playerId = currentMatch.players[match.currentPlayerTurnIndex % currentMatch.players.length];
                     console.log(`starting ${newPhase} phase for ${getPlayerById(playerId)}`);
-                    
-                    if (!currentMatch.playerHands[playerId].some(c => currentMatch.cardsById[c].type.includes('ACTION'))) {
-                        console.log(`player ${getPlayerById(playerId)} has no actions, skipping to next phase`);
-                        this.$matchState.set({...this.$matchState.get(), ...match});
-                        await this.onNextPhase(match);
-                        return;
-                    }
                     break;
                 case 'buy':
                     console.log(`starting ${newPhase} phase for ${getPlayerById(playerId)}`);
-                    if (!currentMatch.playerHands[playerId].some(c => currentMatch.cardsById[c].type.includes('TREASURE')) && currentMatch.playerTreasure <= 0) {
-                        // todo: i don't know what future cards might hold, they might be able to buy without treasure or something
-                        // might have to have expansions register functions for cards to find out if they have special cases.
-                        // right now just making an assumption that in order to do something in the buy phase you must have treasure
-                        // or treasure cards
-                        console.log(`player ${getPlayerById(playerId)} has no treasure or treasure cards, skipping to next phase`);
-                        this.$matchState.set({...this.$matchState.get(), ...match});
-                        await this.onNextPhase(match);
-                        return;
-                    }
                     break;
                 case 'cleanup': {
                     console.log(`starting ${newPhase} phase for ${getPlayerById(playerId)}`);
 
                     const cardsToDiscard = currentMatch.playArea.concat(currentMatch.playerHands[playerId]);
 
-                    for (const cardId of cardsToDiscard) {
-                        await this.cardEffectsController!.runGameActionEffects('discardCard', this.$matchState.get(), playerId, cardId);
-                    }
-
-                    for (let i = 0; i < 5; i++) {
-                        await this.cardEffectsController!.runGameActionEffects('drawCard', this.$matchState.get(), playerId);
-                    }
-
-                    this.$matchState.set({...this.$matchState.get(), ...match});
-                    await this.onNextPhase(match);
+                    await this.cardEffectsController?.suspendedCallbackRunner(async () => {
+                        for (const cardId of cardsToDiscard) {
+                            await this.cardEffectsController!.runGameActionEffects('discardCard', this.$matchState.get(), playerId, cardId);
+                        }
+                        
+                        for (let i = 0; i < 5; i++) {
+                            await this.cardEffectsController!.runGameActionEffects('drawCard', this.$matchState.get(), playerId);
+                        }
+                        
+                        this.$matchState.set({...this.$matchState.get(), ...match});
+                        await this.onNextPhase(match);
+                    });
+                    
                     return;
                 }
             }

@@ -3,8 +3,11 @@ import {PreinitializedWritableAtom} from "nanostores";
 import {GameEffects} from './effect.ts';
 import { Match, MatchUpdate } from "shared/types.ts";
 import { effectGeneratorMap } from './effect-generator-map.ts';
+import { EffectsPipeline } from './effects-pipeline.ts';
 
 export class CardEffectController implements IEffectRunner {
+    private _effectsPipeline: EffectsPipeline | undefined;
+    
     constructor(private $matchState: PreinitializedWritableAtom<Partial<Match>>) {
     }
 
@@ -42,23 +45,33 @@ export class CardEffectController implements IEffectRunner {
         const gen = await generatorFn(match, playerId, cardId, reactionContext);
         return this.runGenerator(gen, match, acc);
     }
-
+    
+    
     public async runGenerator(generator: EffectGenerator<GameEffects>, match: Match, acc?: MatchUpdate) {
         if (!generator) {
             console.log(`No effect generator found`);
             return;
         }
-
-        if (this.runGeneratorImpl) {
-            await this.runGeneratorImpl(generator, match, acc);
+        
+        if (!this._effectsPipeline) {
+            console.warn("EffectPipeline not assigned to CardEffectController; skipping generator");
+            return;
+        }
+        
+        await this._effectsPipeline.runGenerator(generator, match, acc);
+    }
+    
+    public async suspendedCallbackRunner(fn: () => Promise<void>): Promise<void> {
+        console.log(`running complete callback suspended effects`)
+        if (this._effectsPipeline) {
+            await this._effectsPipeline.suspendCallback(fn);
         } else {
-            console.warn("No runGenerator set on CardEffectController; skipping generator");
+            console.warn("EffectPipeline not assigned to CardEffectController");
+            await fn();
         }
     }
-
-    private runGeneratorImpl?: (gen: EffectGenerator<GameEffects>, match: Match, acc?: MatchUpdate) => EffectHandlerResult;
-
-    public setRunGenerator(fn: (gen: EffectGenerator<GameEffects>, match: Match, acc?: MatchUpdate) => EffectHandlerResult) {
-        this.runGeneratorImpl = fn;
+    
+    public setEffectPipeline(pipeline: EffectsPipeline) {
+        this._effectsPipeline = pipeline;
     }
 }

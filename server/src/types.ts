@@ -240,12 +240,14 @@ export interface IEffectRunner {
     playerId: number,
     cardId?: number,
   ): Promise<unknown>;
-
+  
   runGenerator(
     generator: EffectGenerator<GameEffects>,
     match: Match,
     acc: MatchUpdate,
   ): Promise<unknown>;
+  
+  suspendedCallbackRunner(fn: () => Promise<void>): Promise<unknown>;
 }
 
 export type ReactionTemplate = Omit<Reaction, 'getSourceId' | 'getSourceKey'>;

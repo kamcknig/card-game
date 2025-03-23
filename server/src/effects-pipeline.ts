@@ -6,10 +6,12 @@ import {sendToSockets} from "./utils/send-to-sockets.ts";
 import { isUndefined } from "es-toolkit";
 
 export class EffectsPipeline {
+    private _suspendEffectCallback: boolean = false;
     constructor(
         private effectHandlerMap: EffectHandlerMap,
         private readonly $matchState: PreinitializedWritableAtom<Partial<Match>>,
         private readonly sockets: AppSocket[],
+        private readonly effectCompleteCallback?: () => void
     ) {}
 
     public async runGenerator(generator: EffectGenerator<GameEffects>, match: Match, acc?: MatchUpdate): EffectHandlerResult {
@@ -35,8 +37,16 @@ export class EffectsPipeline {
         if (topLevel && Object.keys(acc).length > 0) {
             sendToSockets(this.sockets.values(), 'matchUpdated', acc);
             this.$matchState.set({ ...match });
+            !this._suspendEffectCallback && this.effectCompleteCallback?.();
         }
         
-        return { match, results: (nextEffect.value as any)?.results };
+        return;
+    }
+    
+    public async suspendCallback(fn: () => Promise<void>) {
+        this._suspendEffectCallback = true;
+        await fn();
+        this._suspendEffectCallback = false;
+        this.effectCompleteCallback?.();
     }
 }

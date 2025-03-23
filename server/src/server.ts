@@ -11,6 +11,13 @@ import {playerSocketMap} from './player-socket-map.ts';
 import {createGame, getGameState} from "./utils/get-game-state.ts";
 import {getExpansionList} from "./utils/get-expansion-lists.ts";
 import { toNumber } from 'es-toolkit/compat';
+import * as dl from "@timepp/zero-config-deno-log";
+
+// change date format:
+dl.setDateFormat('m-d H:M:S');
+
+// set empty line prefix behavior:
+dl.prefixEmptyLines(true);
 
 const PORT = toNumber(process.env.PORT) || 3000;
 
