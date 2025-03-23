@@ -22,4 +22,4 @@ if game log is collapsed, and window resizes, the arrow to expand it disappears
 
 pause front-end interaction when awaiting user input from server
 
-hands
+stack cards in the hand just like other piles
