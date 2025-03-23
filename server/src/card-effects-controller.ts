@@ -58,7 +58,7 @@ export class CardEffectController implements IEffectRunner {
             return;
         }
         
-        await this._effectsPipeline.runGenerator(generator, match, acc);
+        return await this._effectsPipeline.runGenerator(generator, match, acc);
     }
     
     public async suspendedCallbackRunner(fn: () => Promise<void>): Promise<void> {

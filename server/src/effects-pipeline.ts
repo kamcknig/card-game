@@ -18,6 +18,7 @@ export class EffectsPipeline {
         const topLevel = isUndefined(acc);
         acc ??= {};
         
+        let effectResults;
         let nextEffect = generator.next();
         
         while (!nextEffect.done) {
@@ -30,7 +31,7 @@ export class EffectsPipeline {
                 continue;
             }
             
-            const effectResults = await handler(effect as unknown as any, match, acc);
+            effectResults = await handler(effect as unknown as any, match, acc);
             nextEffect = generator.next(effectResults);
         }
         
@@ -40,7 +41,7 @@ export class EffectsPipeline {
             !this._suspendEffectCallback && this.effectCompleteCallback?.();
         }
         
-        return;
+        return nextEffect.value;
     }
     
     public async suspendCallback(fn: () => Promise<void>) {

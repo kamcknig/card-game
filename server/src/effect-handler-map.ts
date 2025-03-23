@@ -317,8 +317,6 @@ export const createEffectHandlerMap =
                     acc
                 );
 
-                //sendToSockets(sockets.values(), 'matchUpdated', newMatch);
-
                 const trigger: ReactionTrigger = {eventType: 'cardPlayed', playerId, cardId};
                 let reactions = reactionManager.getReactions(
                     match,
