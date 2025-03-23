@@ -274,10 +274,6 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
         $selectableCards.set(selectableCardIds);
         gameEvents.emit('selectCard', count);
         gameEvents.on('cardsSelected', eventListener);
-        // dumb
-        // todo: selection in general will be reworked? Gotta figure out all the types of selection.
-        // this type shows the whole board you can select from. there are reactions (show the card you're reacting to
-        // and cards you can select to react with), and more
     },
     userPrompt: userPromptArgs => {
         const userPromptResponseListener = (result: unknown) => {

@@ -115,7 +115,18 @@ export class MatchController {
     private createKingdom() {
         const kingdomCards: Card[] = [];
         // todo: remove testing code
-        const keepers: string[] = ['library'];
+        const keepers: string[] = [
+          'artisan',
+          'bandit',
+          'bureaucrat',
+          'cellar',
+          'chapel',
+          'council-room',
+          'festival',
+          'harbinger',
+          'laboratory',
+          'moat'
+        ];
         const chosenKingdom =
             Object.keys(cardLibrary["kingdom"])
                 .sort((a, b) => keepers.includes(a) ? 1 : keepers.includes(b) ? -1 : Math.random() > .5 ? 1 : -1)

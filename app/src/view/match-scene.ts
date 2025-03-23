@@ -1,4 +1,4 @@
-import { Assets, Container, DestroyOptions } from "pixi.js";
+import { Assets, Container, DestroyOptions, Graphics, Text } from "pixi.js";
 import { Scene } from "../core/scene/scene";
 import { PlayerHandView } from "./player-hand";
 import { createAppButton } from "../core/create-app-button";
@@ -58,8 +58,35 @@ export class MatchScene extends Scene {
         console.log('MatchScene initialize');
         super.initialize();
 
+        const c = new Container();
+        const g= c.addChild(new Graphics());
+        g.rect(0, 0, app.renderer.width, app.renderer.height).fill({color: 'black', alpha: .6});
+        let ellipsisCount = 0;
+        const t = new Text({
+            text: 'LOADING...',
+            style: {
+                fontSize: 24,
+                fill: 'white',
+            },
+            x: app.renderer.width * .5,
+            y: app.renderer.height * .5,
+            anchor: .5
+        });
+        c.addChild(t);
+        const i = setInterval(() => {
+            ellipsisCount = (ellipsisCount % 3) + 1; // Cycles: 1 → 2 → 3 → 1 ...
+            const dots = '.'.repeat(ellipsisCount);
+            console.log(dots);
+            t.text = `LOADING${dots}`;
+        }, 300);
+        
+        this.addChild(c);
+        
         await Assets.loadBundle('cardLibrary');
 
+        this.removeChild(c);
+        clearInterval(i);
+        
         this.createBoard();
         this.createGameLog();
         this.createDoneSelectingButton();
