@@ -115,7 +115,7 @@ export class MatchController {
     private createKingdom() {
         const kingdomCards: Card[] = [];
         // todo: remove testing code
-        const keepers: string[] = [];
+        const keepers: string[] = ['library'];
         const chosenKingdom =
             Object.keys(cardLibrary["kingdom"])
                 .sort((a, b) => keepers.includes(a) ? 1 : keepers.includes(b) ? -1 : Math.random() > .5 ? 1 : -1)
@@ -141,7 +141,7 @@ export class MatchController {
     private createPlayerHands(cardsById: Record<number, Card>) {
         return Object.values(getGameState().players).reduce((prev, p, idx) => {
             console.log('initializing player', p.id, 'cards...');
-            /*let blah = {};
+            let blah = {};
             // todo remove testing code
             if (idx === 0) {
                 blah = {
@@ -154,8 +154,8 @@ export class MatchController {
                     silver: 10
                 };
             }
-            Object.entries(blah).forEach(([key, count]) => {*/
-            Object.entries(MatchBaseConfiguration.playerStartingHand).forEach(([key, count]) => {
+            Object.entries(blah).forEach(([key, count]) => {
+            // Object.entries(MatchBaseConfiguration.playerStartingHand).forEach(([key, count]) => {
                 console.log('adding', count, key, 'to deck');
                 prev['playerDecks'][p.id] ??= [];
                 let deck = prev['playerDecks'][p.id];

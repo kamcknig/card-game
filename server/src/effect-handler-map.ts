@@ -224,7 +224,7 @@ export const createEffectHandlerMap =
                     cardId: drawnCardId
                 });
 
-                return moveCard(
+                await moveCard(
                     new MoveCardEffect({
                         sourceCardId: effect.sourceCardId,
                         sourcePlayerId: effect.sourcePlayerId,
@@ -236,6 +236,8 @@ export const createEffectHandlerMap =
                     reactionManager,
                     acc
                 );
+                
+                return drawnCardId;
             },
             async gainAction(effect, match, acc) {
                 acc.playerActions = match.playerActions + effect.count;

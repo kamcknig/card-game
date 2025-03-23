@@ -598,7 +598,7 @@ export default {
           sourcePlayerId,
         });
         const drawnCardId = results as number;
-        console.log(`${name}drew card, new hand size`);
+        console.log(`${name}drew card, new hand size ${hand.length}`);
 
         const drawnCard = matchState.cardsById[drawnCardId];
 

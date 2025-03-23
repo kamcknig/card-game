@@ -285,8 +285,9 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
             socket.emit('userPromptResponse', result);
         };
 
+        console.log('kyle');
         gameEvents.on('userPromptResponse', userPromptResponseListener);
-        gameEvents.emit('userPrompt', userPromptArgs)
+        gameEvents.emit('userPrompt', userPromptArgs);
     }
 }
 
@@ -315,6 +316,7 @@ export const createSocket = () => {
 
 
     (Object.keys(socketToGameEventMap) as ServerEmitEventNames[]).forEach(eventName => {
+        console.log('creating handler for event', eventName);
         const handler = socketToGameEventMap[eventName];
         socket.on(eventName, wrapHandler(eventName, handler));
     });
