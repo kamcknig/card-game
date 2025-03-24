@@ -3,12 +3,13 @@ import {createCardView} from "../core/card/create-card-view";
 import { $playerHandStore, $selfPlayerId } from "../state/player-state";
 import {$cardsById} from "../state/card-state";
 import {Card} from "shared/types";
-import {batched} from 'nanostores';
+import { atom, batched } from 'nanostores';
 import {$selectedCards} from '../state/interactive-state';
 import {CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP} from '../app-contants';
 import { PhaseStatus } from './phase-status';
 import { AppButton, createAppButton } from '../core/create-app-button';
 import { $currentPlayerTurnId, $turnPhase } from '../state/turn-state';
+import { CardStackView } from './card-stack';
 
 export class PlayerHandView extends Container {
     private _phaseStatus: PhaseStatus = new PhaseStatus();
@@ -101,7 +102,7 @@ export class PlayerHandView extends Container {
         // now sort within each type. actions by name, treasure and victory by predefined rankings,
         // then flatten to a single dimensional array. probably better to type this array or something
         // elsewhere later on
-        const treasureOrderRanking = ['copper', 'silver', 'gold'].reduce((prev, curr, idx) => ({...prev, [curr]: idx}), {} as Record<TreasureName, number>);
+        const treasureOrderRanking =['copper', 'silver', 'gold'].reduce((prev, curr, idx) => ({...prev, [curr]: idx}), {} as Record<TreasureName, number>);
         const victoryOrderRanking = ['estate', 'duchy', 'province'].reduce((prev, curr, idx) => ({...prev, [curr]: idx}), {} as Record<VictoryName, number>);
 
         const sortedCards = [
@@ -109,15 +110,33 @@ export class PlayerHandView extends Container {
             categorized[1].sort((a, b) => treasureOrderRanking[a.cardKey as TreasureName] - treasureOrderRanking[b.cardKey as TreasureName]), // treasures ordered by ranking
             categorized[2].sort((a, b) => victoryOrderRanking[a.cardKey as VictoryName] - victoryOrderRanking[b.cardKey as VictoryName]) // victory ordered by ranking
         ].flat();
-
-        // now display them
+        
+        let cardStackCards: Card[][] = [];
+        let lastCardKey: string;
+        
         sortedCards.forEach((card, idx) => {
-            const c = this._handContainer.addChild(createCardView(card));
-            c.size = 'full';
-            c.facing = 'front';
-            c.x = idx * CARD_WIDTH + idx * STANDARD_GAP;
-            c.y -= selectedCardIds.includes(c.card.id) ? 0 : -10;
+            const nextCardKey = card.cardKey;
+            
+            if (nextCardKey === lastCardKey) {
+                cardStackCards[cardStackCards.length - 1].push(card);
+            } else {
+                cardStackCards.push([card]);
+            }
+            
+            lastCardKey = nextCardKey;
         });
+        
+        for (const [idx, cards] of cardStackCards.entries()) {
+            const a = atom<number[]>(cards.map(c => c.id));
+            const c = new CardStackView({
+                cardStore: a,
+                cardFacing: 'front',
+                showBackground: false,
+            });
+            c.x = idx * CARD_WIDTH + idx * STANDARD_GAP;
+            c.y -= cards.some(e => selectedCardIds.includes(e.id)) ? 0 : -10;
+            this._handContainer.addChild(c);
+        }
         
         this._handContainer.x = this.width * .5 - this._handContainer.width * .5;
         this.addChild(this._handContainer);

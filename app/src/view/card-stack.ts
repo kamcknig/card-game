@@ -15,6 +15,7 @@ export type CardStackArgs = {
   cardStore: PreinitializedWritableAtom<number[]>;
   showCountBadge?: boolean;
   cardFacing: CardView['facing'];
+  showBackground?: boolean;
 }
 
 export class CardStackView extends Container {
@@ -31,6 +32,8 @@ export class CardStackView extends Container {
   // todo: probably need the server to handle which way cards are facing later on
   private readonly _cardFacing: CardView['facing'];
   
+  private readonly _showBackground: boolean;
+  
   constructor(private args: CardStackArgs) {
     super();
     
@@ -39,31 +42,33 @@ export class CardStackView extends Container {
       scale,
       showCountBadge,
       label,
-      cardFacing
+      cardFacing,
+      showBackground
     } = args;
     this._cardFacing = cardFacing;
     this._showCountBadge = showCountBadge ?? true;
     this._cardStore = cardStore;
     this._cardScale = scale ?? 1;
     this._label = label;
+    this._showBackground = showBackground ?? true;
     
-    this._background.addChild(
-      new Graphics()
-        .roundRect(
-          0,
-          0,
-          CARD_WIDTH * this._cardScale + STANDARD_GAP * this._cardScale * 2,
-          CARD_HEIGHT * this._cardScale + STANDARD_GAP * this._cardScale * 2
-        )
-        .fill({
-          color: 0x000000,
-          alpha: .6
-        })
-    );
-    
-    this.addChild(this._background);
-    console.log('kyle', this._background.width);
-    console.log(this.width);
+    if (this._showBackground) {
+      this._background.addChild(
+        new Graphics()
+          .roundRect(
+            0,
+            0,
+            CARD_WIDTH * this._cardScale + STANDARD_GAP * this._cardScale * 2,
+            CARD_HEIGHT * this._cardScale + STANDARD_GAP * this._cardScale * 2
+          )
+          .fill({
+            color: 0x000000,
+            alpha: .6
+          })
+      );
+      
+      this.addChild(this._background);
+    }
     
     if (!isUndefined(this._label)) {
       this._labelText = new Text({
