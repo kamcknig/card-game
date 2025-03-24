@@ -1,8 +1,9 @@
 import { Assets, Container, ContainerChild, DestroyOptions, Graphics, Sprite } from "pixi.js";
-import { $selectableCards } from "../state/interactive-state";
+import { $selectableCards, $selectedCards } from "../state/interactive-state";
 import { Card } from "shared/types";
 import { CARD_HEIGHT, CARD_WIDTH, SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH } from '../app-contants';
 import { gameEvents } from '../core/event/events';
+import { batched } from 'nanostores';
 
 type CardArgs = Card;
 
@@ -63,7 +64,7 @@ export class CardView extends Container<ContainerChild> {
         this.facing = 'front';
         this.size  = 'normal'
 
-        this._cleanup = $selectableCards.subscribe(this.onCardUpdated.bind(this));
+        this._cleanup = batched([$selectableCards, $selectedCards], (...args) => args).subscribe(this.onCardUpdated.bind(this));
 
         this.on('pointerdown', (e) => {
             if (e.button === 2 && this.facing !== 'back') {
@@ -78,16 +79,30 @@ export class CardView extends Container<ContainerChild> {
         this.removeAllListeners();
     }
 
-    private onCardUpdated(cardIds?: ReadonlyArray<number>) {
-
-        if (!cardIds?.length) {
-            cardIds = $selectableCards.get();
+    private onCardUpdated([selectable, selected]: ReadonlyArray<number[]> = [[],[]]) {
+        if (!selectable?.length) {
+            selectable = $selectableCards.get();
         }
+        
+        if (!selected?.length) {
+            selected = $selectedCards.get();
+        }
+        
+        selectable = selectable.filter(s => !selected.includes(s));
 
         (this._highlight.getChildAt(0) as Graphics).clear();
-        for (const cardId of cardIds) {
+        for (const cardId of selectable) {
             if (cardId === this.card.id) {
-                (this._highlight.getChildAt(0) as Graphics).roundRect(-3, -3, this._cardView.width + 6, this._cardView.height + 6, 5).fill(0xffaaaa);
+                (this._highlight.getChildAt(0) as Graphics)
+                  .roundRect(-3, -3, this._cardView.width + 6, this._cardView.height + 6, 5)
+                  .fill(0xffaaaa);
+            }
+        }
+        for (const cardId of selected) {
+            if (cardId === this.card.id) {
+                (this._highlight.getChildAt(0) as Graphics)
+                  .roundRect(-3, -3, this._cardView.width + 6, this._cardView.height + 6, 5)
+                  .fill(0x6DFF8C);
             }
         }
     }
