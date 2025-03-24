@@ -248,14 +248,21 @@ export class MatchScene extends Scene {
                 current.push(cardId);
             }
             $selectedCards.set([...current]);
-        } else if ($selectableCards.get().includes(cardId)) {
-            $runningCardActions.set(true);
-            const updated = () => {
-                gameEvents.off('cardEffectsComplete', updated)
-                $runningCardActions.set(false);
+        } else {
+            if (!this.uiInteractive) {
+                console.log('awaiting server response');
+                return;
             }
-            gameEvents.on('cardEffectsComplete', updated);
-            gameEvents.emit('cardTapped', $selfPlayerId.get(), cardId);
+            
+            if ($selectableCards.get().includes(cardId)) {
+                $runningCardActions.set(true);
+                const updated = () => {
+                    gameEvents.off('cardEffectsComplete', updated)
+                    $runningCardActions.set(false);
+                }
+                gameEvents.on('cardEffectsComplete', updated);
+                gameEvents.emit('cardTapped', $selfPlayerId.get(), cardId);
+            }
         }
     }
 
