@@ -225,10 +225,10 @@ export default {
         }
 
         const cardsById = matchState.cardsById;
-        const possibleCardsToTrash = cardIdsToReveal.filter((id) =>
-          cardsById[id].cardKey !== 'copper' &&
-          cardsById[id].type.includes('TREASURE')
-        );
+        const possibleCardsToTrash = cardIdsToReveal.filter((id) => {
+          console.debug(`checking if ${cardsById[id]} can be trashed`);
+          return cardsById[id].cardKey !== 'copper' && cardsById[id].type.includes('TREASURE')
+        });
         
         if (possibleCardsToTrash.length > 0) {
           console.debug(`cards that can be trashed ${possibleCardsToTrash.map((cardId) => cardsById[cardId])}`);
@@ -238,7 +238,7 @@ export default {
           !possibleCardsToTrash.includes(id)
         );
         
-        if (possibleCardsToTrash.length > 0) {
+        if (cardsToDiscard.length > 0) {
           console.debug(`cards that will be discarded ${cardsToDiscard.map((cardId) => cardsById[cardId])}`);
         }
         
@@ -274,7 +274,7 @@ export default {
           }
           
           cardsToTrash.push(selectedId);
-        } else {
+        } else if (possibleCardsToTrash.length > 0) {
           cardsToTrash.push(possibleCardsToTrash[0]);
         }
 
@@ -1152,7 +1152,7 @@ export default {
         sourcePlayerId,
         'ALL_OTHER',
         matchState,
-      ).filter(id => reactionContext[id]);
+      ).filter(id => !reactionContext[id]);
 
       console.debug(`targets ${playerIds.map(id => getPlayerById(id))}`);
 

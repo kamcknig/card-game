@@ -149,25 +149,23 @@ export class MatchController {
     private createPlayerHands(cardsById: Record<number, Card>) {
         return Object.values(getGameState().players).reduce((prev, player, idx) => {
             console.log('initializing player', player.id, 'cards...');
-            /*let blah = {};
+            let blah = {};
             // todo remove testing code
             if (idx === 0) {
                 blah = {
-                    moat: 2,
-                    bandit: 2,
-                    silver: 6
+                    bandit: 5,
+                    witch: 5
                 };
             }
             
             if (idx === 1) {
                 blah = {
-                    moat: 2,
-                    bandit: 2,
-                    silver: 6
+                    estate: 5,
+                    copper: 5
                 };
-            }*/
-            // Object.entries(blah).forEach(([key, count]) => {
-            Object.entries(MatchBaseConfiguration.playerStartingHand).forEach(([key, count]) => {
+            }
+            Object.entries(blah).forEach(([key, count]) => {
+            // Object.entries(MatchBaseConfiguration.playerStartingHand).forEach(([key, count]) => {
                 console.log('adding', count, key, 'to deck');
                 prev['playerDecks'][player.id] ??= [];
                 let deck = prev['playerDecks'][player.id];

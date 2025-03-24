@@ -80,7 +80,7 @@ export type ServerEmitEvents = {
     playerSet: (player: Player) => void;
     reconnectedToGame: (player: Player, state?: Match) => void;
     scoresUpdated: (scores: Record<number, number>) => void;
-    selectableCardsUpdated: (cards: { playerId: number, cardId: number }[]) => void;
+    selectableCardsUpdated: (cards: number[]) => void;
     selectCard: (selectCardArgs: { selectableCardIds: number[], count: CountSpec }) => void;
     userPrompt: (userPromptArgs: UserPromptArgs) => void;
 }

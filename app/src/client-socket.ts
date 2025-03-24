@@ -259,10 +259,7 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
         // todo: maybe server really should send only the cards for this player. but right now it's a limitation
         // on how the back-end is storing some data for itself. the sending of data needs an overhaul anyway
         // rather than sending this update as a whole
-        const playerId = $selfPlayerId.get();
-        const selectableCards = cards.reduce((prev, s) =>
-            s.playerId === playerId ? prev.concat(s.cardId) : prev, [] as number[]);
-        $selectableCards.set(selectableCards);
+        $selectableCards.set(cards);
     },
     selectCard: ({selectableCardIds, count}) => {
         const eventListener = (cardIds: number[]) => {

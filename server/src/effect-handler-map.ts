@@ -220,7 +220,7 @@ export const createEffectHandlerMap =
                 );
             },
             async drawCard(effect, match, acc) {
-                const deck = match.playerDecks[effect.playerId];
+                let deck = match.playerDecks[effect.playerId];
                 const discard = match.playerDiscards[effect.playerId];
 
                 if (discard.length + deck.length === 0) {
@@ -236,6 +236,7 @@ export const createEffectHandlerMap =
                 if (deck.length === 0) {
                     console.debug(`not enough cards in deck, shuffling`);
                     await shuffleDeck(effect.playerId, match, acc);
+                    deck = match.playerDecks[effect.playerId];
                 }
 
                 const drawnCardId = deck.slice(-1)?.[0]
@@ -382,7 +383,8 @@ export const createEffectHandlerMap =
 
                 return await cardEffectRunner.runCardEffects(match, sourcePlayerId, cardId, acc, reactionContext);
             },
-            async revealCard(effect) {
+            async revealCard(effect, match) {
+                console.debug(`revealing card ${match.cardsById[effect.cardId]}`)
                 sendToSockets(sockets.values(), 'addLogEntry', {
                     type: 'revealCard',
                     cardId: effect.cardId,

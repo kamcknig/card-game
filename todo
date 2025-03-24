@@ -24,4 +24,8 @@ pause front-end interaction when awaiting user input from server
  - some of this is implemented
  - tell all players who we are waiting on
 
-stack cards in the hand just like other piles
+add check back in for interacting so that you can't double click cards
+
+witch is not giving curses
+
+make some selections non-toggleable like when playing throne room and picking a card
