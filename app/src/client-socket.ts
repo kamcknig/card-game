@@ -182,7 +182,7 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
                     $turnNumber.set(match.turnNumber);
                     break;
                 case 'turnPhaseIndex':
-                    $turnPhase.set(TurnPhaseOrderValues[match.turnPhaseIndex % TurnPhaseOrderValues.length]);
+                    $turnPhase.set(TurnPhaseOrderValues[match.turnPhaseIndex]);
                     break;
                 case 'currentPlayerTurnIndex':
                     $currentPlayerTurnIndexActual.set(match.currentPlayerTurnIndex);

@@ -339,8 +339,10 @@ export class MatchController {
                 ...update
             };
             match.turnPhaseIndex = currentMatch.turnPhaseIndex + 1;
+            if (match.turnPhaseIndex === TurnPhaseOrderValues.length) match.turnPhaseIndex = 0;
 
-            const newPhase = getTurnPhase(this.$matchState.get());
+            const newPhase = getTurnPhase(match as unknown as any);
+            
             let playerId = getCurrentPlayerId(currentMatch);
 
             switch (newPhase) {

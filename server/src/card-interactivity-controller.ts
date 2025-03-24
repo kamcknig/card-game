@@ -31,11 +31,6 @@ export class CardInteractivityController {
 
         console.log(`player ${player} tapped card ${card}`);
 
-        if (!match.turnPhaseIndex) {
-            console.log(`could not determine current turn phase index`);
-            return;
-        }
-
         const turnPhase = getTurnPhase(match);
         
         if (turnPhase === 'action') {

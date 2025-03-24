@@ -50,7 +50,7 @@ export class EffectsPipeline {
         
         const playerSocket = playerSocketMap.get(playerId)
         if (!isUndefined(playerSocket)) {
-            sendToSockets([].values(), 'cardEffectsComplete');
+            sendToSockets([playerSocket].values(), 'cardEffectsComplete');
         }
         
         return nextEffect.value;

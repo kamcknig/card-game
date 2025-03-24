@@ -36,10 +36,9 @@ export class MatchScene extends Scene {
     private _scoreView: ScoreView = new ScoreView();
     private _gameLog: GameLogView = new GameLogView();
     private _selecting: boolean = false;
-    private _awaitingServerResponse: boolean = false;
     
     private get uiInteractive(): boolean {
-        return !this._selecting && !this._awaitingServerResponse;
+        return !this._selecting && !$runningCardActions.get();
     }
     
     constructor(stage: Container) {

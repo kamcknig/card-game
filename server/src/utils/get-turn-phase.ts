@@ -1,5 +1,5 @@
-import { Match, TurnPhaseOrderValues } from 'shared/types.ts';
+import { TurnPhaseOrderValues } from 'shared/types.ts';
 
-export const getTurnPhase = (match: Match) => {
-  return TurnPhaseOrderValues[(match.turnPhaseIndex) % TurnPhaseOrderValues.length];
+export const getTurnPhase = (match: { turnPhaseIndex: number }) => {
+  return TurnPhaseOrderValues[match.turnPhaseIndex];
 }
