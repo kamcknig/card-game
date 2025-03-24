@@ -6,6 +6,8 @@ import {$selectableCards} from './state/selectable-cards.ts';
 import {Match} from "shared/types.ts";
 import { getTurnPhase } from './utils/get-turn-phase.ts';
 import { getCurrentPlayerId } from './utils/get-current-player-id.ts';
+import { sendToSockets } from './utils/send-to-sockets.ts';
+import { playerSocketMap } from './player-socket-map.ts';
 
 export class CardInteractivityController {
 
@@ -37,7 +39,7 @@ export class CardInteractivityController {
             await this.cardEffectController.runGameActionEffects('playCard', match, triggerPlayerId, tappedCardId);
         } else if (turnPhase === 'buy') {
             if (!match.playerHands?.[triggerPlayerId]) {
-                console.log(`could not find player hand for ${getPlayerById(triggerPlayerId)}`);
+                console.debug(`could not find player hand for ${getPlayerById(triggerPlayerId)}`);
                 return;
             }
             if (match.playerHands[triggerPlayerId].includes(tappedCardId)) {
@@ -47,7 +49,7 @@ export class CardInteractivityController {
             }
         }
 
-        console.log('card tapped handler complete');
+        console.log(`card tapped handler complete ${card} for ${player}`);
     }
 
     private onMatchStateUpdated(match: Match, _oldMatch?: Match): void {
@@ -61,7 +63,7 @@ export class CardInteractivityController {
         const turnPhase = getTurnPhase(match);
 
         console.log(`determining selectable cards - phase '${turnPhase}, player ${currentPlayer}', player Index '${match.currentPlayerTurnIndex}'`);
-        const selectableCards: { playerId: number, cardId: number }[] = [];
+        const selectableCards: number[] = [];
 
         const hand = match.playerHands[currentPlayerId].map(id => cardsById[id]);
 
@@ -76,33 +78,26 @@ export class CardInteractivityController {
                 }
 
                 if (card.cost.treasure <= match.playerTreasure && match.playerBuys > 0) {
-                    selectableCards.push({
-                        playerId: currentPlayerId,
-                        cardId: card.id
-                    });
+                    selectableCards.push(card.id);
                     cardsAdded.push(card.cardKey);
                 }
             }
 
             for (const card of hand) {
                 if (card.type.includes('TREASURE')) {
-                    selectableCards.push({
-                        playerId: currentPlayerId,
-                        cardId: card.id
-                    });
+                    selectableCards.push(card.id);
                 }
             }
         } else if (turnPhase === 'action') {
             for (const card of hand) {
                 if (card.type.includes('ACTION') && match.playerActions > 0) {
-                    selectableCards.push({
-                        playerId: currentPlayerId,
-                        cardId: card.id
-                    });
+                    selectableCards.push(card.id);
                 }
             }
         }
 
-        $selectableCards.set(selectableCards);
+        match.players.forEach(playerId => {
+            playerSocketMap.get(playerId)?.emit('selectableCardsUpdated', playerId === currentPlayerId ? selectableCards : []);
+        });
     }
 }

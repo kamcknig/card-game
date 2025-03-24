@@ -1,23 +1,21 @@
-import {Card, Match, MatchConfiguration, MatchUpdate, Player, TurnPhaseOrderValues} from "shared/types.ts";
-import {EffectHandlerMap, MatchBaseConfiguration} from "./types.ts";
-import {CardEffectController} from "./card-effects-controller.ts";
-import {cardLibrary, loadExpansion} from "./utils/load-expansion.ts";
-import {CardInteractivityController} from "./card-interactivity-controller.ts";
-import {createCard} from "./utils/create-card.ts";
-import {createEffectHandlerMap} from "./effect-handler-map.ts";
-import {EffectsPipeline} from "./effects-pipeline.ts";
-import {fisherYatesShuffle} from "./utils/fisher-yates-shuffler.ts";
-import {getPlayerById} from "./utils/get-player-by-id.ts";
-import {ReactionManager} from "./reaction-manager.ts";
-import {scoringFunctionMap} from "./scoring-function-map.ts";
-import {sendToSockets} from "./utils/send-to-sockets.ts";
-import {$selectableCards} from "./state/selectable-cards.ts";
-import {Socket} from "socket.io";
-import {getGameState} from "./utils/get-game-state.ts";
+import { Card, Match, MatchConfiguration, MatchUpdate, Player, TurnPhaseOrderValues } from "shared/types.ts";
+import { EffectHandlerMap, MatchBaseConfiguration } from "./types.ts";
+import { CardEffectController } from "./card-effects-controller.ts";
+import { cardLibrary, loadExpansion } from "./utils/load-expansion.ts";
+import { CardInteractivityController } from "./card-interactivity-controller.ts";
+import { createCard } from "./utils/create-card.ts";
+import { createEffectHandlerMap } from "./effect-handler-map.ts";
+import { EffectsPipeline } from "./effects-pipeline.ts";
+import { fisherYatesShuffle } from "./utils/fisher-yates-shuffler.ts";
+import { getPlayerById } from "./utils/get-player-by-id.ts";
+import { ReactionManager } from "./reaction-manager.ts";
+import { scoringFunctionMap } from "./scoring-function-map.ts";
+import { sendToSockets } from "./utils/send-to-sockets.ts";
+import { Socket } from "socket.io";
+import { getGameState } from "./utils/get-game-state.ts";
 import { map } from 'nanostores';
 import { getTurnPhase } from './utils/get-turn-phase.ts';
 import { getCurrentPlayerId } from './utils/get-current-player-id.ts';
-import { findSourceByCardId } from './utils.find-source-by-card-id.ts';
 
 export class MatchController {
     private $matchState = map<Match>();
@@ -151,7 +149,7 @@ export class MatchController {
     private createPlayerHands(cardsById: Record<number, Card>) {
         return Object.values(getGameState().players).reduce((prev, player, idx) => {
             console.log('initializing player', player.id, 'cards...');
-            let blah = {};
+            /*let blah = {};
             // todo remove testing code
             if (idx === 0) {
                 blah = {
@@ -167,9 +165,9 @@ export class MatchController {
                     bandit: 2,
                     silver: 6
                 };
-            }
-            Object.entries(blah).forEach(([key, count]) => {
-            // Object.entries(MatchBaseConfiguration.playerStartingHand).forEach(([key, count]) => {
+            }*/
+            // Object.entries(blah).forEach(([key, count]) => {
+            Object.entries(MatchBaseConfiguration.playerStartingHand).forEach(([key, count]) => {
                 console.log('adding', count, key, 'to deck');
                 prev['playerDecks'][player.id] ??= [];
                 let deck = prev['playerDecks'][player.id];
@@ -254,8 +252,6 @@ export class MatchController {
             }
         });
 
-        $selectableCards.listen(this.onSelectableCardsUpdated.bind(this));
-
         this.$matchState.set({...match});
         this.$matchState.listen(this.onMatchUpdated.bind(this));
         
@@ -265,22 +261,6 @@ export class MatchController {
         }
     }
     
-    private onSelectableCardsUpdated(cards: readonly { playerId: number, cardId: number }[]) {
-        const cardsById = this.$matchState.get().cardsById;
-        
-        if (!cards.length) {
-            console.debug(`no selectable cards`);
-        } else {
-            console.debug(`sending selectable cards to clients`);
-        }
-        
-        cards.forEach((selection) => {
-            console.debug(`${getPlayerById(selection.playerId)} can select ${cardsById[selection.cardId]} from ${findSourceByCardId(selection.cardId, this.$matchState.get())?.storeKey}`);
-            
-        });
-        sendToSockets(this.sockets.values(), 'selectableCardsUpdated', [...cards]);
-    }
-
     private onMatchUpdated(match: MatchUpdate) {
         this.calculateScores(match);
     }
