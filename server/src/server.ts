@@ -43,8 +43,8 @@ io.on('connection', async (socket) => {
     getGameState().started = true;
   });
 
-  socket.on('expansionSelected', (val) => {
-    sendToSockets(sessionSocketMap.values(), 'expansionSelected', val);
+  socket.on('matchConfigurationUpdated', (val) => {
+    sendToSockets(sessionSocketMap.values(), 'matchConfigurationUpdated', val);
   })
 
   socket.on('disconnect', function (arg) {

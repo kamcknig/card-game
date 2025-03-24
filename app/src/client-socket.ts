@@ -9,7 +9,7 @@ import {
     PlayerState
 } from "./state/player-state";
 import {
-    $expansionList, $selectedExpansions
+    $expansionList
 } from './state/expansion-list-state';
 import {v4 as uuidv4} from 'uuid'
 import {
@@ -25,7 +25,7 @@ import {displayScene} from "./core/scene/display-scene";
 import {$gameOwner} from "./state/game-state";
 import {io, Socket} from "socket.io-client";
 import {$cardsById} from "./state/card-state";
-import {$kingdomStore, $playAreaStore, $supplyStore, $trashStore} from "./state/match-state";
+import { $kingdomStore, $matchConfiguration, $playAreaStore, $supplyStore, $trashStore } from "./state/match-state";
 import {$selectableCards, $selectedCards} from "./state/interactive-state";
 import {gameEvents} from "./core/event/events";
 import {Assets} from 'pixi.js';
@@ -142,11 +142,11 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
     expansionList: val => {
         $expansionList.set(val);
     },
-    expansionSelected: val => {
-        $selectedExpansions.set(val);
-    },
     gameOwnerUpdated: playerId => {
         $gameOwner.set(playerId);
+    },
+    matchConfigurationUpdated: val => {
+        $matchConfiguration.set(val);
     },
     matchReady: match => {
         $supplyStore.set(match.supply);
