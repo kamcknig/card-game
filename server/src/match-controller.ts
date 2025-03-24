@@ -17,6 +17,7 @@ import {getGameState} from "./utils/get-game-state.ts";
 import { map } from 'nanostores';
 import { getTurnPhase } from './utils/get-turn-phase.ts';
 import { getCurrentPlayerId } from './utils/get-current-player-id.ts';
+import { findSourceByCardId } from './utils.find-source-by-card-id.ts';
 
 export class MatchController {
     private $matchState = map<Match>();
@@ -106,10 +107,12 @@ export class MatchController {
                 }
 
                 for (let i = 0; i < count; i++) {
-                    supplyCards.push(createCard(key));
+                    const c = createCard(key);
+                    console.debug(`created card ${c}`);
+                    supplyCards.push(c);
                 }
 
-                console.log('creating', count, key);
+                console.log(`created ${count} of card ${key}`);
             });
         return supplyCards;
     }
@@ -118,15 +121,7 @@ export class MatchController {
         const kingdomCards: Card[] = [];
         // todo: remove testing code
         const keepers: string[] = [
-          'artisan',
           'bandit',
-          'bureaucrat',
-          'cellar',
-          'chapel',
-          'council-room',
-          'festival',
-          'harbinger',
-          'laboratory',
           'moat'
         ];
         const chosenKingdom =
@@ -144,7 +139,9 @@ export class MatchController {
             .forEach(([key, count]) => {
                 console.log('creating', count, key);
                 for (let i = 0; i < count; i++) {
-                    kingdomCards.push(createCard(key));
+                    const c = createCard(key);
+                    console.debug(`created kingdom card ${c}`);
+                    kingdomCards.push(c);
                 }
             });
 
@@ -152,37 +149,41 @@ export class MatchController {
     }
     
     private createPlayerHands(cardsById: Record<number, Card>) {
-        return Object.values(getGameState().players).reduce((prev, p, idx) => {
-            console.log('initializing player', p.id, 'cards...');
+        return Object.values(getGameState().players).reduce((prev, player, idx) => {
+            console.log('initializing player', player.id, 'cards...');
             let blah = {};
             // todo remove testing code
             if (idx === 0) {
                 blah = {
-                    silver: 10
+                    moat: 2,
+                    bandit: 2,
+                    silver: 6
                 };
             }
             
             if (idx === 1) {
                 blah = {
-                    silver: 10
+                    moat: 2,
+                    bandit: 2,
+                    silver: 6
                 };
             }
             Object.entries(blah).forEach(([key, count]) => {
             // Object.entries(MatchBaseConfiguration.playerStartingHand).forEach(([key, count]) => {
                 console.log('adding', count, key, 'to deck');
-                prev['playerDecks'][p.id] ??= [];
-                let deck = prev['playerDecks'][p.id];
+                prev['playerDecks'][player.id] ??= [];
+                let deck = prev['playerDecks'][player.id];
                 deck = deck.concat(new Array(count).fill(0).map(_ => {
                     const c = createCard(key);
+                    console.debug(`adding card ${c} to ${player}`);
                     cardsById[c.id] = c;
                     return c.id
                 }));
-                prev['playerDecks'][p.id] = fisherYatesShuffle(deck);
-                console.log('new deck', deck);
+                prev['playerDecks'][player.id] = fisherYatesShuffle(deck);
             });
             
-            prev['playerHands'][p.id] = [];
-            prev['playerDiscards'][p.id] = [];
+            prev['playerHands'][player.id] = [];
+            prev['playerDiscards'][player.id] = [];
             return prev;
         }, {
             playerHands: {},
@@ -196,6 +197,9 @@ export class MatchController {
         if (player) {
             player.ready = true;
         }
+        
+        console.log(`${player} has been marked read`);
+        
         if (getGameState().players.some(p => !p.ready)) {
             return;
         }
@@ -262,6 +266,18 @@ export class MatchController {
     }
     
     private onSelectableCardsUpdated(cards: readonly { playerId: number, cardId: number }[]) {
+        const cardsById = this.$matchState.get().cardsById;
+        
+        if (!cards.length) {
+            console.debug(`no selectable cards`);
+        } else {
+            console.debug(`sending selectable cards to clients`);
+        }
+        
+        cards.forEach((selection) => {
+            console.debug(`${getPlayerById(selection.playerId)} can select ${cardsById[selection.cardId]} from ${findSourceByCardId(selection.cardId, this.$matchState.get())?.storeKey}`);
+            
+        });
         sendToSockets(this.sockets.values(), 'selectableCardsUpdated', [...cards]);
     }
 
@@ -297,18 +313,20 @@ export class MatchController {
 
     private async onCheckForPlayerActions() {
         console.log('checking for remaining player actions');
-        const match = this.$matchState.get();
-        const newPhase = getTurnPhase(match);
-        const playerId = match.players[match.currentPlayerTurnIndex % match.players.length];
         
-        switch (newPhase) {
+        const match = this.$matchState.get();
+        const turnPhase = getTurnPhase(match);
+        const playerId = getCurrentPlayerId(match);
+        
+        switch (turnPhase) {
             case 'action': {
                 const numActionCards = match.playerHands[playerId].filter(c =>
                   match.cardsById[c].type.includes('ACTION')).length;
                 
+                console.debug(`player ${getPlayerById(playerId)} has ${match.playerActions} actions and ${numActionCards} action cards`);
+                
                 if (numActionCards <= 0 || match.playerActions <= 0) {
-                    console.log(`player ${getPlayerById(playerId)} has ${match.playerActions} actions and ${numActionCards} action cards, skipping to next phase`);
-                    this.$matchState.set({ ...this.$matchState.get(), ...match });
+                    console.log(`skipping to next phase`);
                     await this.onNextPhase(match);
                     return;
                 }
@@ -317,12 +335,13 @@ export class MatchController {
             case 'buy': {
                 const treasureCardCount = match.playerHands[playerId].filter(c => match.cardsById[c].type.includes('TREASURE')).length;
                 
+                console.debug(`player ${getPlayerById(playerId)} has ${treasureCardCount} treasure cards in hand, ${match.playerTreasure} treasure, and ${match.playerBuys} buys`);
+                
                 if (
                   (treasureCardCount <= 0 && match.playerTreasure <= 0)
                   || match.playerBuys <= 0
                 ) {
-                    console.log(`player ${getPlayerById(playerId)} has ${treasureCardCount} treasure cards in hand, ${match.playerTreasure} treasure, and ${match.playerBuys} buys`);
-                    this.$matchState.set({ ...this.$matchState.get(), ...match });
+                    console.log('skipping to next phase');
                     await this.onNextPhase(match);
                     return;
                 }
@@ -338,10 +357,19 @@ export class MatchController {
             const match: MatchUpdate = {
                 ...update
             };
+            
             match.turnPhaseIndex = currentMatch.turnPhaseIndex + 1;
-            if (match.turnPhaseIndex === TurnPhaseOrderValues.length) match.turnPhaseIndex = 0;
+            
+            if (match.turnPhaseIndex === TurnPhaseOrderValues.length) {
+                console.debug('no more phases in turn, resetting turn phase to 0');
+                match.turnPhaseIndex = 0;
+            }
+            
+            console.debug(`new turn phase index ${match.turnPhaseIndex}`);
 
             const newPhase = getTurnPhase(match as unknown as any);
+            
+            console.log(`new turn phase ${newPhase}`);
             
             let playerId = getCurrentPlayerId(currentMatch);
 
@@ -351,21 +379,21 @@ export class MatchController {
                     match.playerBuys = 1
                     match.playerTreasure = 0;
                     match.currentPlayerTurnIndex = currentMatch.currentPlayerTurnIndex + 1;
+                    
+                    if (match.currentPlayerTurnIndex === currentMatch.players.length) {
+                        match.currentPlayerTurnIndex = 0;
+                    }
 
-                    if (getCurrentPlayerId(currentMatch) === 0) {
+                    if (match.currentPlayerTurnIndex === 0) {
                         match.turnNumber = currentMatch.turnNumber + 1;
-                        console.log(`Starting new round ${match.turnNumber}`);
+                        console.log(`starting new round ${match.turnNumber}`);
                     }
                     
-                    playerId = getCurrentPlayerId(currentMatch);
-                    console.log(`starting ${newPhase} phase for ${getPlayerById(playerId)}`);
+                    playerId = getCurrentPlayerId({ ...currentMatch, ...match } as unknown as any);
                     break;
                 case 'buy':
-                    console.log(`starting ${newPhase} phase for ${getPlayerById(playerId)}`);
                     break;
                 case 'cleanup': {
-                    console.log(`starting ${newPhase} phase for ${getPlayerById(playerId)}`);
-
                     const cardsToDiscard = currentMatch.playArea.concat(currentMatch.playerHands[playerId]);
 
                     await this.cardEffectsController?.suspendedCallbackRunner(async () => {

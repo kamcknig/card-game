@@ -21,5 +21,7 @@ play all treasure
 if game log is collapsed, and window resizes, the arrow to expand it disappears
 
 pause front-end interaction when awaiting user input from server
+ - some of this is implemented
+ - tell all players who we are waiting on
 
 stack cards in the hand just like other piles

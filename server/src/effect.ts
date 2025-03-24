@@ -1,5 +1,5 @@
 import { Card } from "shared/types.ts";
-import {CountSpec, EffectRestrictionSpec, LocationSpec, TriggerEventType} from "./types.ts";
+import { CountSpec, EffectRestrictionSpec, LocationSpec } from "./types.ts";
 
 export type GameEffects =
     | DrawCardEffect
@@ -13,6 +13,7 @@ export type GameEffects =
     | PlayCardEffect
     | RevealCardEffect
     | SelectCardEffect
+    | ShuffleDeckEffect
     | UserPromptEffect;
 
 type EffectBaseArgs = { sourcePlayerId: number, sourceCardId?: number };
@@ -167,6 +168,16 @@ export class SelectCardEffect extends EffectBase {
         this.restrict = restrict;
         this.count = count;
         this.autoSelect = autoSelect;
+        this.playerId = playerId;
+    }
+}
+
+export class ShuffleDeckEffect extends EffectBase {
+    type = 'shuffleDeck' as const;
+    playerId: number;
+    
+    constructor({playerId}: {playerId: number}) {
+        super({sourcePlayerId: playerId});
         this.playerId = playerId;
     }
 }

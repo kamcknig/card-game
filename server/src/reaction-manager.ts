@@ -25,6 +25,12 @@ export class ReactionManager {
   getReactions(match: Match, trigger: ReactionTrigger) {
     const out = this._triggers.filter((t) => {
       if (t.listeningFor !== trigger.eventType) return false;
+      
+      console.log(`checking trigger condition for ${t.id} reaction`);
+      console.debug(`trigger ${trigger}`);
+      console.debug(`trigger card ${match.cardsById[trigger.cardId]}`);
+      console.debug(`trigger player ${getPlayerById(trigger.playerId)}`);
+      
       return !(t.condition !== undefined && !t.condition(match, trigger));
     });
 

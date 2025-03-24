@@ -38,6 +38,7 @@ export class EffectsPipeline {
                 continue;
             }
             
+            console.log(`running effect handler for ${effect.type}`);
             effectResults = await handler(effect as unknown as any, match, acc);
             nextEffect = generator.next(effectResults);
         }

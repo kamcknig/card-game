@@ -12,7 +12,8 @@
     "npm:concurrently@^9.1.2": "9.1.2",
     "npm:esbuild@*": "0.25.1",
     "npm:lodash-es@4.17.21": "4.17.21",
-    "npm:nanostores@0.11.4": "0.11.4"
+    "npm:nanostores@0.11.4": "0.11.4",
+    "npm:rxjs@7.8.2": "7.8.2"
   },
   "jsr": {
     "@es-toolkit/es-toolkit@1.33.0": {

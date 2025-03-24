@@ -22,7 +22,7 @@ export class CardEffectController implements IEffectRunner {
             console.log(`No effect generator found for game event ${effectName}`);
             return;
         }
-        console.log('running game action effects for', effectName);
+        console.log(`running game action effect generator for ${effectName}`);
         const gen = await generatorFn(match, playerId, cardId);
         return this.runGenerator(gen, match, playerId, cardId);
     }
@@ -41,7 +41,7 @@ export class CardEffectController implements IEffectRunner {
             console.log(`No effect generator found for ${card}`);
             return;
         }
-        console.log(`running game action for ${card}`);
+        console.log(`running effect generator for ${card}`);
         const gen = await generatorFn(match, playerId, cardId, reactionContext);
         return this.runGenerator(gen, match, playerId, cardId, acc);
     }

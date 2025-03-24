@@ -1,6 +1,5 @@
 import {LocationSpec} from "../types.ts";
 import {Match} from "shared/types.ts";
-import { isArray } from 'es-toolkit/compat';
 
 export function findSourceByLocationSpec(specOrArgs: {
     playerId: number,
@@ -18,10 +17,6 @@ export function findSourceByLocationSpec(specOrArgs: {
         playerId = specOrArgs.playerId;
     } else {
         spec = specOrArgs;
-    }
-
-    if (isArray(spec.location)) {
-        console.log('findSourceByLocationSpec cannot accept multiple locations in a spec, using first available location', spec.location[0]);
     }
 
     if (['playerDecks', 'playerHands', 'playerDiscards'].includes(spec.location[0])) {

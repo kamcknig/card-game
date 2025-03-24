@@ -32,6 +32,12 @@ io.on('connection', async (socket) => {
     socket.disconnect();
     return;
   }
+  
+  if (getGameState()?.started) {
+    console.log('game already started, rejecting');
+    socket.disconnect();
+    return;
+  }
 
   socket.on('startMatch', async function (matchConfig: MatchConfiguration) {
     const player = sessionPlayerMap.get(sessionId);

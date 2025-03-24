@@ -1,5 +1,6 @@
 import {CardLocation, Match} from "shared/types.ts";
 import { isUndefined } from 'es-toolkit';
+import { getPlayerById } from './utils/get-player-by-id.ts';
 
 export const findSourceByCardId = (
   cardId: number,
@@ -11,25 +12,25 @@ export const findSourceByCardId = (
   if (match.supply.includes(cardId)) {
     sourceStore = match.supply;
     storeKey = 'supply';
-    console.log("found card", cardId, "in the supply");
+    console.debug(`found card ${match.cardsById[cardId]} in the supply`);
   } else if (match.kingdom.includes(cardId)) {
     sourceStore = match.kingdom;
     storeKey = "kingdom";
-    console.log("found card", cardId, "in the kingdom");
+    console.debug(`found card ${match.cardsById[cardId]} in the kingdom`);
   } else if (match.playArea.includes(cardId)) {
     sourceStore = match.playArea;
     storeKey = "playArea";
-    console.log("found card", cardId, "in the play area");
+    console.debug(`found card ${match.cardsById[cardId]} in the play area`);
   } else if (match.trash.includes(cardId)) {
     sourceStore = match.trash;
     storeKey = "trash";
-    console.log("found card", cardId, "in the trash");
+    console.debug(`found card ${match.cardsById[cardId]} in the trash`);
   } else {
     for (const [playerId, hand] of Object.entries(match.playerHands)) {
       if (hand.includes(cardId)) {
         sourceStore = hand;
         storeKey = "playerHands";
-        console.log("found card", cardId, "in player", playerId, "hand");
+        console.debug(`found card ${match.cardsById[cardId]} in ${getPlayerById(+playerId)} hand`);
         break;
       }
     }
@@ -39,7 +40,7 @@ export const findSourceByCardId = (
         if (deck.includes(cardId)) {
           storeKey = "playerDecks";
           sourceStore = deck;
-          console.log("found card", cardId, "in player", playerId, "deck");
+          console.debug(`found card ${match.cardsById[cardId]} in ${getPlayerById(+playerId)} deck`);
           break;
         }
       }
@@ -50,7 +51,7 @@ export const findSourceByCardId = (
         if (discard.includes(cardId)) {
           storeKey = "playerDiscards";
           sourceStore = discard;
-          console.log("found card", cardId, "in player", playerId, "discard");
+          console.debug(`found card ${match.cardsById[cardId]} in ${getPlayerById(+playerId)} discard`);
           break;
         }
       }
@@ -61,7 +62,7 @@ export const findSourceByCardId = (
   if (!isUndefined(sourceStore)) {
     idx = sourceStore?.findIndex((e) => e === cardId);
   } else {
-    console.error("could not find card source for");
+    console.error(`could not find card store for ${match.cardsById[cardId]}`);
   }
 
   return { sourceStore, index: idx, storeKey };
