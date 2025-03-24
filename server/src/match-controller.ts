@@ -15,6 +15,8 @@ import {$selectableCards} from "./state/selectable-cards.ts";
 import {Socket} from "socket.io";
 import {getGameState} from "./utils/get-game-state.ts";
 import { map } from 'nanostores';
+import { getTurnPhase } from './utils/get-turn-phase.ts';
+import { getCurrentPlayerId } from './utils/get-current-player-id.ts';
 
 export class MatchController {
     private $matchState = map<Match>();
@@ -253,7 +255,7 @@ export class MatchController {
         this.$matchState.set({...match});
         this.$matchState.listen(this.onMatchUpdated.bind(this));
         
-        playerId = match.players[match.currentPlayerTurnIndex % match.players.length];
+        playerId = getCurrentPlayerId(match);
         if (!match.playerHands[playerId].some(c => match.cardsById[c].type.includes('ACTION'))) {
             void this.onNextPhase();
         }
@@ -296,7 +298,7 @@ export class MatchController {
     private async onCheckForPlayerActions() {
         console.log('checking for remaining player actions');
         const match = this.$matchState.get();
-        const newPhase = TurnPhaseOrderValues[match.turnPhaseIndex % TurnPhaseOrderValues.length];
+        const newPhase = getTurnPhase(match);
         const playerId = match.players[match.currentPlayerTurnIndex % match.players.length];
         
         switch (newPhase) {
@@ -338,8 +340,8 @@ export class MatchController {
             };
             match.turnPhaseIndex = currentMatch.turnPhaseIndex + 1;
 
-            const newPhase = TurnPhaseOrderValues[match.turnPhaseIndex % TurnPhaseOrderValues.length];
-            let playerId = currentMatch.players[currentMatch.currentPlayerTurnIndex % currentMatch.players.length];
+            const newPhase = getTurnPhase(this.$matchState.get());
+            let playerId = getCurrentPlayerId(currentMatch);
 
             switch (newPhase) {
                 case 'action':
@@ -348,12 +350,12 @@ export class MatchController {
                     match.playerTreasure = 0;
                     match.currentPlayerTurnIndex = currentMatch.currentPlayerTurnIndex + 1;
 
-                    if (match.currentPlayerTurnIndex % getGameState().players.length === 0) {
+                    if (getCurrentPlayerId(currentMatch) === 0) {
                         match.turnNumber = currentMatch.turnNumber + 1;
                         console.log(`Starting new round ${match.turnNumber}`);
                     }
                     
-                    playerId = currentMatch.players[match.currentPlayerTurnIndex % currentMatch.players.length];
+                    playerId = getCurrentPlayerId(currentMatch);
                     console.log(`starting ${newPhase} phase for ${getPlayerById(playerId)}`);
                     break;
                 case 'buy':

@@ -4,6 +4,7 @@ import {AppSocket, EffectGenerator, EffectHandlerMap, EffectHandlerResult} from 
 import {Match, MatchUpdate} from "shared/types.ts";
 import {sendToSockets} from "./utils/send-to-sockets.ts";
 import { isUndefined } from "es-toolkit";
+import { playerSocketMap } from './player-socket-map.ts';
 
 export class EffectsPipeline {
     private _suspendEffectCallback: boolean = false;
@@ -14,7 +15,13 @@ export class EffectsPipeline {
         private readonly effectCompleteCallback?: () => void
     ) {}
 
-    public async runGenerator(generator: EffectGenerator<GameEffects>, match: Match, acc?: MatchUpdate): EffectHandlerResult {
+    public async runGenerator(
+      generator: EffectGenerator<GameEffects>,
+      match: Match,
+      playerId: number,
+      cardId?: number,
+      acc?: MatchUpdate
+    ): EffectHandlerResult {
         const topLevel = isUndefined(acc);
         acc ??= {};
         
@@ -39,6 +46,11 @@ export class EffectsPipeline {
             sendToSockets(this.sockets.values(), 'matchUpdated', acc);
             this.$matchState.set({ ...match });
             !this._suspendEffectCallback && this.effectCompleteCallback?.();
+        }
+        
+        const playerSocket = playerSocketMap.get(playerId)
+        if (!isUndefined(playerSocket)) {
+            sendToSockets([].values(), 'cardEffectsComplete');
         }
         
         return nextEffect.value;

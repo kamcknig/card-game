@@ -68,6 +68,7 @@ export type TurnPhase = typeof TurnPhaseOrderValues[number] | undefined; // Defi
 
 export type ServerEmitEvents = {
     addLogEntry: (logEntry: LogEntry) => void;
+    cardEffectsComplete: () => void;
     expansionList: (val: any[]) => void;
     expansionSelected: (val: string[]) => void;
     gameOwnerUpdated: (playerId: number) => void;
@@ -258,6 +259,7 @@ export type ClientListenEventNames = ServerEmitEventNames;
 
 export interface GameEvents {
     addLogEntry: (logEntry: string) => void;
+    cardEffectsComplete: () => void;
     cardsSelected: (cardIds: number[]) => void;
     cardTapped: (playerId: number, cardId: number) => void;
     displayCardDetail: (cardId: number) => void;

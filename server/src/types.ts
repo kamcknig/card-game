@@ -244,7 +244,9 @@ export interface IEffectRunner {
   runGenerator(
     generator: EffectGenerator<GameEffects>,
     match: Match,
-    acc: MatchUpdate,
+    playerId: number,
+    cardId?: number,
+    acc?: MatchUpdate,
   ): Promise<unknown>;
   
   suspendedCallbackRunner(fn: () => Promise<void>): Promise<unknown>;

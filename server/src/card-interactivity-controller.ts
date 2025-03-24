@@ -3,7 +3,9 @@ import {AppSocket} from "./types.ts";
 import {CardEffectController} from "./card-effects-controller.ts";
 import {getPlayerById} from './utils/get-player-by-id.ts';
 import {$selectableCards} from './state/selectable-cards.ts';
-import {Match, TurnPhaseOrderValues} from "shared/types.ts";
+import {Match} from "shared/types.ts";
+import { getTurnPhase } from './utils/get-turn-phase.ts';
+import { getCurrentPlayerId } from './utils/get-current-player-id.ts';
 
 export class CardInteractivityController {
 
@@ -34,7 +36,7 @@ export class CardInteractivityController {
             return;
         }
 
-        const turnPhase = TurnPhaseOrderValues[(match.turnPhaseIndex) % TurnPhaseOrderValues.length];
+        const turnPhase = getTurnPhase(match);
         
         if (turnPhase === 'action') {
             await this.cardEffectController.runGameActionEffects('playCard', match, triggerPlayerId, tappedCardId);
@@ -59,9 +61,9 @@ export class CardInteractivityController {
         }
 
         const cardsById = this.$matchState.get().cardsById;
-        const currentPlayerId = match.players[match.currentPlayerTurnIndex % match.players.length];
+        const currentPlayerId = getCurrentPlayerId(match);
         const currentPlayer = getPlayerById(currentPlayerId);
-        const turnPhase = TurnPhaseOrderValues[match.turnPhaseIndex % TurnPhaseOrderValues.length];
+        const turnPhase = getTurnPhase(match);
 
         console.log(`determining selectable cards - phase '${turnPhase}, player ${currentPlayer}', player Index '${match.currentPlayerTurnIndex}'`);
         const selectableCards: { playerId: number, cardId: number }[] = [];

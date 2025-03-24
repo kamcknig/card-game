@@ -1,7 +1,7 @@
 import { Assets, Container, DestroyOptions, Graphics, Text } from "pixi.js";
 import { Scene } from "../core/scene/scene";
 import { PlayerHandView } from "./player-hand";
-import { AppButton, createAppButton } from "../core/create-app-button";
+import { createAppButton } from "../core/create-app-button";
 import { $supplyStore, $trashStore } from "../state/match-state";
 import { app } from "../core/create-app";
 import { $playerDeckStore, $playerDiscardStore, $selfPlayerId } from "../state/player-state";
@@ -11,17 +11,14 @@ import { KingdomSupplyView } from "./kingdom-supply";
 import { PileView } from "./pile";
 import { $cardsById } from "../state/card-state";
 import { Card, CountSpec, UserPromptArgs } from "shared/types";
-import { $selectableCards, $selectedCards } from '../state/interactive-state';
+import { $runningCardActions, $selectableCards, $selectedCards } from '../state/interactive-state';
 import { CardView } from './card-view';
 import { userPromptModal } from './modal/user-prompt-modal';
 import { CARD_HEIGHT, SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP } from '../app-contants';
 import { ScoreView } from './score-view';
 import { GameLogView } from './game-log-view';
 import { displayCardDetail } from './modal/display-card-detail';
-import { ButtonContainer } from '@pixi/ui';
-import { $currentPlayerTurnId, $turnPhase } from '../state/turn-state';
 import { validateCountSpec } from "../shared/validate-count-spec";
-import { socket } from '../client-socket';
 import { CardStackView } from './card-stack';
 import { displayTrash } from './modal/display-trash';
 
@@ -36,27 +33,43 @@ export class MatchScene extends Scene {
     private _cleanup: (() => void)[] = [];
     private _playArea: PlayAreaView | undefined;
     private _kingdomView: KingdomSupplyView | undefined;
-    ///private _selectionMode: boolean = false;
     private _scoreView: ScoreView = new ScoreView();
     private _gameLog: GameLogView = new GameLogView();
-    private _ctaButton: AppButton = createAppButton();
-
+    private _selecting: boolean = false;
+    private _awaitingServerResponse: boolean = false;
+    
+    private get uiInteractive(): boolean {
+        return !this._selecting && !this._awaitingServerResponse;
+    }
+    
     constructor(stage: Container) {
         super(stage);
-    }
-
-    private _selecting: boolean = false;
-    private onUserDoneSelecting() {
-        this._selecting = false;
-    }
-
-    private onUserSelecting() {
-        this._selecting = true;
     }
 
     async initialize() {
         super.initialize();
 
+        await this.loadAssets();
+        
+        this.createBoard();
+        this.createGameLog();
+        this.createScoreView();
+        this.createDoneSelectingButton();
+
+        this._cleanup.push($supplyStore.subscribe(this.drawBaseSupply.bind(this)));
+        app.renderer.on('resize', this.onRendererResize.bind(this));
+        gameEvents.on('matchStarted', this.onMatchStarted.bind(this));
+        gameEvents.on('selectCard', this.doSelectCards.bind(this));
+        gameEvents.on('userPrompt', this.onUserPrompt.bind(this));
+        gameEvents.on('displayCardDetail', this.onDisplayCardDetail.bind(this));
+
+        setTimeout(() => {
+            this.onRendererResize();
+            gameEvents.emit('ready', $selfPlayerId.get());
+        });
+    }
+    
+    private async loadAssets() {
         const c = new Container();
         const g= c.addChild(new Graphics());
         g.rect(0, 0, app.renderer.width, app.renderer.height).fill({color: 'black', alpha: .6});
@@ -81,18 +94,17 @@ export class MatchScene extends Scene {
         this.addChild(c);
         
         await Assets.loadBundle('cardLibrary');
-
+        
         this.removeChild(c);
         clearInterval(i);
+    }
+    private createBoard() {
+        this.addChild(this._board);
         
-        this.createBoard();
-        this.createGameLog();
-        this.createScoreView();
-        this.createDoneSelectingButton();
-
-        this._cleanup.push($supplyStore.subscribe(this.drawBaseSupply.bind(this)));
-        app.renderer.on('resize', this.onRendererResize.bind(this));
-
+        this._board.addChild(this._baseSupply);
+        this._kingdomView = this._board.addChild(new KingdomSupplyView());
+        this._playArea = this.addChild(new PlayAreaView());
+        
         this._deck = new CardStackView({
             cardStore: $playerDeckStore($selfPlayerId.get()),
             label: 'DECK',
@@ -123,31 +135,36 @@ export class MatchScene extends Scene {
         
         this._playerHand = new PlayerHandView($selfPlayerId.get());
         this._playerHand.on('nextPhase', this.onNextPhasePressed.bind(this));
-        
         this.addChild(this._playerHand);
-        
-        // todo: clean up listener
-        gameEvents.on('matchStarted', this.onMatchStarted.bind(this));
-        gameEvents.on('selectCard', this.doSelectCards.bind(this));
-        gameEvents.on('selectCard', this.onUserSelecting.bind(this));
-        gameEvents.on('userPrompt', this.onUserPrompt.bind(this));
-        gameEvents.on('userPrompt', this.onUserSelecting.bind(this));
-        gameEvents.on('displayCardDetail', this.onDisplayCardDetail.bind(this));
-        gameEvents.on('cardsSelected', this.onUserDoneSelecting.bind(this));
-        gameEvents.on('userPromptResponse', this.onUserDoneSelecting.bind(this));
-
-        gameEvents.emit('ready', $selfPlayerId.get());
-
-        setTimeout(() => {
-            this.onRendererResize();
+    }
+    private createGameLog() {
+        this.addChild(this._gameLog);
+    }
+    private createScoreView() {
+        this._scoreView = new ScoreView();
+        this.addChild(this._scoreView);
+        this._scoreView.x = STANDARD_GAP;
+        this._scoreView.y = STANDARD_GAP;
+    }
+    private createDoneSelectingButton() {
+        const b = createAppButton({
+            text: 'DONE SELECTING',
+            style: {
+                fill: 'white',
+                fontSize: 36,
+            },
+            x: 20,
+            y: 100,
         });
+        this._doneSelectingBtn.eventMode = 'static';
+        this._doneSelectingBtn.addChild(b.button);
     }
     
     private onNextPhasePressed() {
         console.log('call to action pressed');
         
-        if (this._selecting) {
-            console.log('in selection mode, ignoring');
+        if (!this.uiInteractive) {
+            console.log('GUI non-interactive, ignoring');
             return
         }
         
@@ -168,21 +185,10 @@ export class MatchScene extends Scene {
         this._cleanup.forEach(c => c());
     }
 
-    private createBoard() {
-        this.addChild(this._board);
-
-        this.createBaseSupplyView();
-        this.createKingdomSupplyView();
-        this.createPlayArea();
-    }
-
-    private createGameLog() {
-        this.addChild(this._gameLog);
-    }
-
     private async onUserPrompt(args: UserPromptArgs) {
+        this._selecting = true;
         const result = await userPromptModal(args);
-        this.onUserDoneSelecting();
+        this._selecting = false;
         gameEvents.emit('userPromptResponse', result);
     }
 
@@ -193,14 +199,15 @@ export class MatchScene extends Scene {
             this.removeChild(this._doneSelectingBtn);
             return;
         }
-
-        //this._selectionMode = true;
-
+        
+        this._selecting = true;
+        
         const doneListener = () => {
             this._doneSelectingBtn.off('pointerdown', doneListener);
             this.removeChild(this._doneSelectingBtn);
             selectedCardsListenerCleanup();
             gameEvents.emit('cardsSelected', $selectedCards.get());
+            this._selecting = false;
         }
 
         // listen for cards being selected
@@ -243,24 +250,14 @@ export class MatchScene extends Scene {
             }
             $selectedCards.set([...current]);
         } else if ($selectableCards.get().includes(cardId)) {
+            $runningCardActions.set(true);
             const updated = () => {
-                socket.off('matchUpdated', updated)
+                gameEvents.off('cardEffectsComplete', updated)
+                $runningCardActions.set(false);
             }
-            socket.on('matchUpdated', updated);
+            gameEvents.on('cardEffectsComplete', updated);
             gameEvents.emit('cardTapped', $selfPlayerId.get(), cardId);
         }
-    }
-
-    private createBaseSupplyView() {
-        this._board.addChild(this._baseSupply);
-    }
-
-    private createKingdomSupplyView() {
-        this._kingdomView = this._board.addChild(new KingdomSupplyView());
-    }
-
-    private createPlayArea() {
-        this._playArea = this.addChild(new PlayAreaView());
     }
 
     private drawBaseSupply(newVal: ReadonlyArray<number>) {
@@ -313,26 +310,5 @@ export class MatchScene extends Scene {
         
         this._trash.y = this._deck.y;
         this._trash.x = this._playerHand.x + this._playerHand.width + STANDARD_GAP;
-    }
-
-    private createDoneSelectingButton() {
-        const b = createAppButton({
-            text: 'DONE SELECTING',
-            style: {
-                fill: 'white',
-                fontSize: 36,
-            },
-            x: 20,
-            y: 20,
-        });
-        this._doneSelectingBtn.eventMode = 'static';
-        this._doneSelectingBtn.addChild(b.button);
-    }
-
-    private createScoreView() {
-        this._scoreView = new ScoreView();
-        this.addChild(this._scoreView);
-        this._scoreView.x = STANDARD_GAP;
-        this._scoreView.y = STANDARD_GAP;
     }
 }

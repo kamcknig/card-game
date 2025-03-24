@@ -24,7 +24,7 @@ export class CardEffectController implements IEffectRunner {
         }
         console.log('running game action effects for', effectName);
         const gen = await generatorFn(match, playerId, cardId);
-        return this.runGenerator(gen, match);
+        return this.runGenerator(gen, match, playerId, cardId);
     }
 
     public async runCardEffects(
@@ -43,11 +43,17 @@ export class CardEffectController implements IEffectRunner {
         }
         console.log(`running game action for ${card}`);
         const gen = await generatorFn(match, playerId, cardId, reactionContext);
-        return this.runGenerator(gen, match, acc);
+        return this.runGenerator(gen, match, playerId, cardId, acc);
     }
     
     
-    public async runGenerator(generator: EffectGenerator<GameEffects>, match: Match, acc?: MatchUpdate) {
+    public async runGenerator(
+      generator: EffectGenerator<GameEffects>,
+      match: Match,
+      playerId: number,
+      cardId?: number,
+      acc?: MatchUpdate,
+    ) {
         if (!generator) {
             console.log(`No effect generator found`);
             return;
@@ -58,7 +64,7 @@ export class CardEffectController implements IEffectRunner {
             return;
         }
         
-        return await this._effectsPipeline.runGenerator(generator, match, acc);
+        return await this._effectsPipeline.runGenerator(generator, match, playerId, cardId, acc);
     }
     
     public async suspendedCallbackRunner(fn: () => Promise<void>): Promise<void> {

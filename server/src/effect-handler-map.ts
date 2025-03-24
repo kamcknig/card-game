@@ -339,7 +339,7 @@ export const createEffectHandlerMap =
                     // sort reactions based on the order of the potential targets
                     for (const reaction of reactions) {
                         const reactionGenerator = await reaction.generatorFn(match, trigger, reaction);
-                        const reactionResults = await cardEffectRunner.runGenerator(reactionGenerator, match, acc);
+                        const reactionResults = await cardEffectRunner.runGenerator(reactionGenerator, match, reaction.playerId, undefined, acc);
                         if (reaction.once) {
                             reactionManager.unregisterTrigger(reaction.id);
                         }
