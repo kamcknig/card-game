@@ -62,14 +62,3 @@ export const loadExpansion = async (expansionName: string) => {
         return {};
     }
 };
-
-const expansions: Record<string, any> = {
-    'base-v1': {
-        supply: 'base-v1/base-supply.json',
-        kingdom: 'base-v1/base-kingdom-v1.json',
-    },
-    'base-v2': {
-        supply: 'base-v1/base-supply.json',
-        kingdom: 'base-v2/base-kingdom-v2.json',
-    }
-};

@@ -144,6 +144,10 @@ export class MatchConfigurationScene extends Scene {
   }
   
   private onStartGame() {
+    if ($matchConfiguration.get().expansions.length === 0) {
+      alert('choose at least one expansion');
+      return;
+    }
     socket.emit('startMatch', $matchConfiguration.get());
   }
   

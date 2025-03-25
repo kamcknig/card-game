@@ -65,13 +65,34 @@ io.on("connection", async (socket) => {
     getGameState().started = true;
   });
 
-  socket.on("matchConfigurationUpdated", (val) => {
+  socket.on("matchConfigurationUpdated", async (val) => {
     console.log('match configuration has been updated');
     console.debug(val);
-    getGameState().matchConfig = {
-      ...getGameState().matchConfig,
-      ...val
+    
+    const gameState = getGameState();
+    
+    const newExpansions = val.expansions.filter(e => !gameState.matchConfig.expansions.includes(e));
+    
+    const expansionsToRemove: string[] = [];
+    for (const expansion of newExpansions) {
+      const configModule = (await import (`./expansions/${expansion}/configuration.json`, { with: { type: 'json'}}))?.default;
+      
+      if (!configModule || !configModule.mutuallyExclusiveExpansions) continue;
+      
+      for (const exclusiveExpansion of configModule.mutuallyExclusiveExpansions) {
+        if (val.expansions.includes(exclusiveExpansion) && !expansionsToRemove.includes(exclusiveExpansion)) {
+          expansionsToRemove.push(exclusiveExpansion);
+        }
+      }
+    }
+    
+    const expansions = val.expansions.filter(e => !expansionsToRemove.includes(e));
+    
+    gameState.matchConfig = {
+      ...gameState.matchConfig,
+      expansions
     };
+    
     sendToSockets(sessionSocketMap.values(), "matchConfigurationUpdated", getGameState().matchConfig);
   });
 
