@@ -18,10 +18,10 @@ export class CardView extends Container<ContainerChild> {
 
     private _facing: 'back' | 'front' = 'back';
     public set facing(value: 'front' | 'back') {
-        this._cardView.removeChildren();
+        this._cardView.getChildByLabel('view')?.removeFromParent();
         this._cardView.addChild(value === 'front' ? this._frontView : this._backView);
-        this.onCardUpdated();
         this._facing = value;
+        this.onCardUpdated();
     }
     public get facing(): 'front' | 'back' {
         return this._facing;
@@ -36,8 +36,8 @@ export class CardView extends Container<ContainerChild> {
 
         this._backView.width = value === 'full' ? CARD_WIDTH : SMALL_CARD_WIDTH;
         this._backView.height = value === 'full' ? CARD_HEIGHT : SMALL_CARD_HEIGHT;
-        this.onCardUpdated();
         this._size = value;
+        this.onCardUpdated();
     }
     public get size(): 'full' | 'normal' {
         return this._size;
@@ -47,19 +47,23 @@ export class CardView extends Container<ContainerChild> {
         super();
 
         this.label = this.card.toString();
+        
         this.eventMode = 'static';
 
-        this._highlight.addChild(new Graphics());
-        this.addChild(this._highlight);
+        this._highlight.addChild(new Graphics({label: 'highlight'}));
+        
         this.addChild(this._cardView);
+        this._cardView.addChild(this._highlight);
 
         try {
             this._frontView = Sprite.from(Assets.get(card.cardKey));
+            this._frontView.label = 'view';
         } catch {
             console.log("could not find asset for card", card.cardKey);
         }
 
         this._backView = Sprite.from(Assets.get('card-back'));
+        this._backView.label = 'view';
 
         this.facing = 'front';
         this.size  = 'normal'

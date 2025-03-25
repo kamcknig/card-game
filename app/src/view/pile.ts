@@ -7,7 +7,7 @@ export class PileView extends Container {
     constructor(card: Card, count: number) {
         super();
 
-        const c = this.addChild(createCardView(card));
+        this.addChild(createCardView(card));
 
         const b = new CountBadgeView(count);
         b.x = 0;

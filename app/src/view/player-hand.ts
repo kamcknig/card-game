@@ -134,7 +134,6 @@ export class PlayerHandView extends Container {
                 showBackground: false,
             });
             c.x = idx * CARD_WIDTH + idx * STANDARD_GAP;
-            c.y -= cards.some(e => selectedCardIds.includes(e.id)) ? 0 : -10;
             this._handContainer.addChild(c);
         }
         
