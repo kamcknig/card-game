@@ -19,6 +19,8 @@ export class ScoreView extends Container {
         $players.subscribe(this.onTrackScores.bind(this));
         $currentPlayerTurnIndex.subscribe(this.onPlayerTurnUpdated.bind(this));
         $turnNumber.subscribe(this.onTurnNumberUpdated.bind(this));
+        
+        setTimeout(() => {this.onUpdateScore(1, 100)}, 5000)
     }
 
     private onTurnNumberUpdated(turn: number) {
@@ -42,9 +44,13 @@ export class ScoreView extends Container {
     private onUpdateScore(playerId: number, score: number) {
         const scoreText = this._playerNameContainer.getChildByName(`player-${playerId}`)?.getChildByName('score-text') as Text;
 
-        if (scoreText) {
-            scoreText.text = score;
+        if (!scoreText) {
+            return;
         }
+        
+        scoreText.x -= 50;
+        scoreText.text = score;
+        scoreText.x = 200 - scoreText.width - STANDARD_GAP;
     }
 
     private onPlayersUpdated([players, turnOrder]: readonly [PlayerState, number[]]) {
@@ -76,7 +82,7 @@ export class ScoreView extends Container {
                 label: 'score-text',
                 style: {fontSize: 18, fill: {color: 'white'}}
             });
-            scoreText.x = playerContainer.width - scoreText.width - STANDARD_GAP;
+            scoreText.x = 200 - scoreText.width - STANDARD_GAP;
             scoreText.y = playerContainer.height * .5 - scoreText.height * .5;
             playerContainer.addChild(scoreText);
 
