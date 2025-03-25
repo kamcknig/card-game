@@ -1,8 +1,6 @@
 import { Container, DestroyOptions, Graphics, Text } from 'pixi.js';
 import { batched } from 'nanostores';
-import { $currentPlayerTurnId, $playerActions, $playerBuys, $playerTreasure, $turnPhase } from '../state/turn-state';
-import { $selfPlayerId } from '../state/player-state';
-import { TurnPhase } from 'shared/types';
+import { $playerActions, $playerBuys, $playerTreasure } from '../state/turn-state';
 import { STANDARD_GAP } from '../app-contants';
 
 export class PhaseStatus extends Container {

@@ -4,7 +4,7 @@ import { createCardView } from "../core/card/create-card-view";
 import { $playerDiscardStore } from "../state/player-state";
 import { $cardsById } from "../state/card-state";
 import { CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP } from '../app-contants';
-import { PreinitializedWritableAtom } from 'nanostores';
+import { batched, PreinitializedWritableAtom } from 'nanostores';
 import { isUndefined } from 'es-toolkit';
 import { Card } from 'shared/types';
 import { CardView } from './card-view';
@@ -93,7 +93,7 @@ export class CardStackView extends Container {
     this._cardContainer.x = STANDARD_GAP * this._cardScale;
     
     this.addChild(this._cardContainer);
-    this._cleanup = this._cardStore.subscribe(this.drawDeck.bind(this));
+    this._cleanup = batched([this._cardStore, $selectedCards], (...args) => args).subscribe(this.drawDeck.bind(this));
   }
   
   destroy(options?: DestroyOptions) {
@@ -101,19 +101,17 @@ export class CardStackView extends Container {
     this._cleanup();
   }
   
-  private drawDeck(val: ReadonlyArray<number>) {
+  private drawDeck([cardIds, selectedCardIds]: ReadonlyArray<number[]>) {
     this._cardContainer.removeChildren()
       .forEach(c => c.destroy());
     
-    const selectedCards = $selectedCards.get();
-    
-    const sorted = val.concat()
-      .sort((a, b) => selectedCards.includes(a) && selectedCards.includes(b) ? 0 : selectedCards.includes(
-        a) ? -1 : selectedCards.includes(b) ? 1 : 0)
+    const sorted = cardIds.concat()
+      .sort((a, b) => selectedCardIds.includes(a) && selectedCardIds.includes(b) ? 0 : selectedCardIds.includes(
+        a) ? -1 : selectedCardIds.includes(b) ? 1 : 0)
     
     for (const cardId of sorted) {
       const c = this._cardContainer.addChild(createCardView($cardsById.get()[cardId]));
-      if (selectedCards.includes(cardId)) {
+      if (selectedCardIds.includes(cardId)) {
         c.y -= 60;
       }
       c.facing = this._cardFacing
@@ -121,9 +119,9 @@ export class CardStackView extends Container {
       c.size = 'full';
     }
     
-    const selectedCardCountInStack = val.filter(e => selectedCards.includes(e)).length
-    if (this._showCountBadge && val.length - selectedCardCountInStack > 0) {
-      const b = new CountBadgeView(val.length - selectedCardCountInStack);
+    const selectedCardCountInStack = cardIds.filter(e => selectedCardIds.includes(e)).length
+    if (this._showCountBadge && cardIds.length - selectedCardCountInStack > 0) {
+      const b = new CountBadgeView(cardIds.length - selectedCardCountInStack);
       this._cardContainer.addChild(b);
     }
     

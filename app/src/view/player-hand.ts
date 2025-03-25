@@ -1,11 +1,9 @@
-import {Text, Container, DestroyOptions, Graphics} from "pixi.js";
-import {createCardView} from "../core/card/create-card-view";
+import { Container, DestroyOptions, Graphics } from "pixi.js";
 import { $playerHandStore, $selfPlayerId } from "../state/player-state";
-import {$cardsById} from "../state/card-state";
-import {Card} from "shared/types";
-import { atom, batched } from 'nanostores';
-import {$selectedCards} from '../state/interactive-state';
-import {CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP} from '../app-contants';
+import { $cardsById } from "../state/card-state";
+import { Card } from "shared/types";
+import { atom } from 'nanostores';
+import { CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP } from '../app-contants';
 import { PhaseStatus } from './phase-status';
 import { AppButton, createAppButton } from '../core/create-app-button';
 import { $currentPlayerTurnId, $turnPhase } from '../state/turn-state';
@@ -62,8 +60,7 @@ export class PlayerHandView extends Container {
             this.addChild(this._nextPhaseButton.button);
         });
         
-        const $handState = $playerHandStore(playerId);
-        this._cleanup.push(batched([$handState, $selectedCards], (...args) => args).subscribe(this.drawHand.bind(this)));
+        this._cleanup.push($playerHandStore(playerId).subscribe(this.drawHand.bind(this)));
         
         this._nextPhaseButton.button.on('pointerdown', this.onNextPhasePressed.bind(this));
     }
@@ -77,7 +74,7 @@ export class PlayerHandView extends Container {
         this._cleanup.forEach(c => c());
     }
 
-    private drawHand([hand, selectedCardIds]: ReadonlyArray<number[]>) {
+    private drawHand(hand: ReadonlyArray<number>) {
         this._handContainer.removeChildren().forEach(c => c.destroy());
         this.removeChild(this._handContainer);
 
