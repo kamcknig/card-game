@@ -118,7 +118,7 @@ export class MatchController {
     private createKingdom() {
         const kingdomCards: Card[] = [];
         // todo: remove testing code
-        const keepers: string[] = ['chapel'];
+        const keepers: string[] = [];
         const chosenKingdom =
             Object.keys(cardLibrary["kingdom"])
                 .sort((a, b) => keepers.includes(a) ? 1 : keepers.includes(b) ? -1 : Math.random() > .5 ? 1 : -1)
@@ -150,7 +150,7 @@ export class MatchController {
             // todo remove testing code
             if (idx === 0) {
                 blah = {
-                    chapel: 3,
+                    mine: 3,
                     copper: 7
                 };
             }

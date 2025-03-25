@@ -5,7 +5,7 @@
     "dev:watch": "deno run --inspect --check --env-file --allow-read --allow-write --allow-net --allow-env --watch src/server.ts"
   },
   "imports": {
-    "@timepp/zero-config-deno-log": "jsr:@timepp/zero-config-deno-log@^0.1.7",
+    "@timepp/enhanced-deno-log": "jsr:@timepp/enhanced-deno-log@^0.4.1",
     "es-toolkit": "jsr:@es-toolkit/es-toolkit@^1.33.0",
     "@std/path": "https://deno.land/std/path/mod.ts",
     "socket.io": "https://deno.land/x/socket_io@0.2.1/mod.ts",

@@ -9,6 +9,7 @@ import { STANDARD_GAP } from '../app-contants';
 import { isUndefined } from 'es-toolkit';
 import { $matchConfiguration } from '../state/match-state';
 import { MatchConfiguration } from 'shared/types';
+import { Input } from "@pixi/ui";
 
 export class MatchConfigurationScene extends Scene {
   private readonly _playerNameContainer: Container = new Container({ x: 300, y: 20 });
@@ -33,7 +34,6 @@ export class MatchConfigurationScene extends Scene {
     
     this._cleanup.push($players.subscribe(this.draw.bind(this)));
     this._cleanup.push($gameOwner.subscribe(this.draw.bind(this)));
-    
     this.addChild(this._playerNameContainer);
     
     this._startGameBtn.button.x = 20;
@@ -43,6 +43,18 @@ export class MatchConfigurationScene extends Scene {
     $expansionList.subscribe(this.createExpansionList.bind(this));
     
     $matchConfiguration.subscribe(this.onMatchConfigurationUpdated.bind(this));
+    
+    /*const i = new Input({
+      bg: new Graphics().roundRect(0, 0, 100, 50, 5).fill('white'),
+      placeholder: 'Enter text',
+      padding: {
+        top: 11,
+        right: 11,
+        bottom: 11,
+        left: 11
+      } // alternatively you can use [11, 11, 11, 11] or [11, 11] or just 11
+    });
+    this.addChild(i);*/
   }
   
   private async createExpansionList(val: readonly any[]) {

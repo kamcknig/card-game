@@ -4,9 +4,10 @@
     "jsr:@es-toolkit/es-toolkit@^1.33.0": "1.33.0",
     "jsr:@luca/esbuild-deno-loader@*": "0.11.1",
     "jsr:@std/bytes@^1.0.2": "1.0.5",
+    "jsr:@std/datetime@0.224.3": "0.224.3",
     "jsr:@std/encoding@^1.0.5": "1.0.7",
     "jsr:@std/path@^1.0.6": "1.0.8",
-    "jsr:@timepp/zero-config-deno-log@~0.1.7": "0.1.7",
+    "jsr:@timepp/enhanced-deno-log@~0.4.1": "0.4.1",
     "npm:@types/node@*": "22.12.0",
     "npm:concurrently@9.1.2": "9.1.2",
     "npm:concurrently@^9.1.2": "9.1.2",
@@ -30,14 +31,20 @@
     "@std/bytes@1.0.5": {
       "integrity": "4465dd739d7963d964c809202ebea6d5c6b8e3829ef25c6a224290fbb8a1021e"
     },
+    "@std/datetime@0.224.3": {
+      "integrity": "43197d0b2e00444fb169275b79a3e8fa506fd65c92398a207d71fd3e69b26c5b"
+    },
     "@std/encoding@1.0.7": {
       "integrity": "f631247c1698fef289f2de9e2a33d571e46133b38d042905e3eac3715030a82d"
     },
     "@std/path@1.0.8": {
       "integrity": "548fa456bb6a04d3c1a1e7477986b6cffbce95102d0bb447c67c4ee70e0364be"
     },
-    "@timepp/zero-config-deno-log@0.1.7": {
-      "integrity": "6c4a9f9ef7a6eb14c47cbb9e85a5b75218fdee35cc5e42e45e89cb54c8fdc5a5"
+    "@timepp/enhanced-deno-log@0.4.1": {
+      "integrity": "781098fbc673e97000f469bab012154d4bb8325040dcb710214d86fac80f1bbc",
+      "dependencies": [
+        "jsr:@std/datetime"
+      ]
     }
   },
   "npm": {
@@ -463,7 +470,7 @@
   "workspace": {
     "dependencies": [
       "jsr:@es-toolkit/es-toolkit@^1.33.0",
-      "jsr:@timepp/zero-config-deno-log@~0.1.7",
+      "jsr:@timepp/enhanced-deno-log@~0.4.1",
       "npm:lodash-es@4.17.21",
       "npm:nanostores@0.11.4"
     ],

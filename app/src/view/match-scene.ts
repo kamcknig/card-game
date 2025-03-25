@@ -272,6 +272,10 @@ export class MatchScene extends Scene {
         const cardId = view.card.id;
 
         if (this._selecting) {
+            if (!$selectableCards.get().includes(cardId)) {
+                console.log(`Card selected is not in the list of selectable cards`);
+                return;
+            }
             let current = $selectedCards.get();
             const idx = current.findIndex(c => c === cardId);
             if (idx > -1) {
