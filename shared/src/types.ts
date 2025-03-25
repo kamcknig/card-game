@@ -95,6 +95,7 @@ export type ServerListenEvents = {
     matchConfigurationUpdated: (val: Pick<MatchConfiguration, 'expansions'>) => void;
     nextPhase: () => void;
     ready: (playerId: number) => void;
+    playAllTreasure: (playerId: number) => void;
     selectCardResponse: (selectedCards: number[]) => void;
     startMatch: (configuration: MatchConfiguration) => void;
     updatePlayerName: (playerId: number, name: string) => void;

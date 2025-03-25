@@ -1,5 +1,5 @@
 import {PreinitializedWritableAtom} from 'nanostores';
-import {GameEffects} from './effect.ts';
+import { GameEffects, MoveCardEffect } from './effect.ts';
 import {AppSocket, EffectGenerator, EffectHandlerMap, EffectHandlerResult} from "./types.ts";
 import {Match, MatchUpdate} from "shared/types.ts";
 import {sendToSockets} from "./utils/send-to-sockets.ts";
@@ -40,6 +40,7 @@ export class EffectsPipeline {
             
             console.log(`running effect handler for ${effect.type}`);
             effectResults = await handler(effect as unknown as any, match, acc);
+            
             nextEffect = generator.next(effectResults);
         }
         
