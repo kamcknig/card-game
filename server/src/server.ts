@@ -16,11 +16,12 @@ import { createGame, getGameState } from "./utils/get-game-state.ts";
 import { getExpansionList } from "./utils/get-expansion-lists.ts";
 import { toNumber } from "es-toolkit/compat";
 import * as log from "@timepp/enhanced-deno-log/auto-init";
-import { match } from "node:assert";
 
-log.setConfig({
-  enabledLevels: [],
-}, "file");
+if (Deno.env.get('LOG_TO_FILE')?.toLowerCase() === 'false') {
+  log.setConfig({
+    enabledLevels: [],
+  }, "file");
+}
 
 log.init();
 
