@@ -69,6 +69,7 @@ export type TurnPhase = typeof TurnPhaseOrderValues[number] | undefined; // Defi
 export type ServerEmitEvents = {
     addLogEntry: (logEntry: LogEntry) => void;
     cardEffectsComplete: () => void;
+    doneWaitingForPlayer: (playerId?: number) => void;
     expansionList: (val: any[]) => void;
     matchConfigurationUpdated: (val: Pick<MatchConfiguration, 'expansions'>) => void;
     gameOwnerUpdated: (playerId: number) => void;
@@ -83,6 +84,7 @@ export type ServerEmitEvents = {
     selectableCardsUpdated: (cards: number[]) => void;
     selectCard: (selectCardArgs: { selectableCardIds: number[], count: CountSpec }) => void;
     userPrompt: (userPromptArgs: UserPromptArgs) => void;
+    waitingForPlayer: (playerId: number) => void;
 }
 export type ServerEmitEventNames = keyof ServerEmitEvents;
 
@@ -264,13 +266,15 @@ export interface GameEvents {
     cardsSelected: (cardIds: number[]) => void;
     cardTapped: (playerId: number, cardId: number) => void;
     displayCardDetail: (cardId: number) => void;
+    doneWaitingForPlayer: (playerId?: number) => void;
     matchStarted: () => void;
     nextPhase: () => void;
+    playCard: (playerId: number, cardId: number) => void;
     ready: (playerId: number) => void;
     selectCard: (count: CountSpec) => void;
     userPrompt: (userPromptArgs: UserPromptArgs) => void;
     userPromptResponse: (confirm: unknown) => void;
-    playCard: (playerId: number, cardId: number) => void;
+    waitingForPlayer: (playerId: number) => void;
 }
 
 export type CardKey = string;

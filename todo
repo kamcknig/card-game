@@ -25,3 +25,5 @@ pause front-end interaction when awaiting user input from server
  - tell all players who we are waiting on
 
 make some selections non-toggleable like when playing throne room and picking a card
+
+when plaing militia - the militia goes to play area but is still "marked as selectable"

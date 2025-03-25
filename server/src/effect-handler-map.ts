@@ -448,10 +448,13 @@ export const createEffectHandlerMap =
                             console.debug(`player selected ${selectedCards.map(id => match.cardsById[id])}`);
                             socket?.off('selectCardResponse', socketListener);
                             resolve(selectedCards);
+                            sendToSockets(sockets.filter(s => s !== socket).values(), 'doneWaitingForPlayer', playerId);
                         }
                         socket?.on('selectCardResponse', socketListener);
 
                         socket?.emit('selectCard', {selectableCardIds, count: effect.count ?? 1});
+                        
+                        sendToSockets(sockets.filter(s => s !== socket).values(), 'waitingForPlayer', playerId);
                     } catch (e) {
                         reject(new Error(`could not find player socket in game state... ${e}`));
                     }
@@ -498,10 +501,12 @@ export const createEffectHandlerMap =
                             console.debug(`player responded with ${result}`);
                             socket?.off('userPromptResponse', socketListener);
                             resolve(result);
+                            sendToSockets(sockets.filter(s => s !== socket).values(), 'doneWaitingForPlayer', effect.playerId);
                         }
                         socket?.on('userPromptResponse', socketListener);
 
                         socket?.emit('userPrompt', {...effect});
+                        sendToSockets(sockets.filter(s => s !== socket).values(), 'waitingForPlayer', effect.playerId);
                     } catch (e) {
                         reject(new Error(`could not find player socket in game state... ${e}`));
                     }

@@ -139,6 +139,12 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
         gameEvents.emit('addLogEntry', msg);
     },
     cardEffectsComplete: () => gameEvents.emit('cardEffectsComplete'),
+    doneWaitingForPlayer: playerId => {
+        gameEvents.emit('doneWaitingForPlayer', playerId);
+    },
+    waitingForPlayer: playerId => {
+        gameEvents.emit('waitingForPlayer', playerId);
+    },
     expansionList: val => {
         $expansionList.set(val);
     },

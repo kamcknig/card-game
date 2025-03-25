@@ -4,7 +4,7 @@ import { PlayerHandView } from "./player-hand";
 import { createAppButton } from "../core/create-app-button";
 import { $supplyStore, $trashStore } from "../state/match-state";
 import { app } from "../core/create-app";
-import { $playerDeckStore, $playerDiscardStore, $selfPlayerId } from "../state/player-state";
+import { $playerDeckStore, $playerDiscardStore, $players, $selfPlayerId } from "../state/player-state";
 import { gameEvents } from "../core/event/events";
 import { PlayAreaView } from "./play-area";
 import { KingdomSupplyView } from "./kingdom-supply";
@@ -61,6 +61,8 @@ export class MatchScene extends Scene {
         gameEvents.on('selectCard', this.doSelectCards.bind(this));
         gameEvents.on('userPrompt', this.onUserPrompt.bind(this));
         gameEvents.on('displayCardDetail', this.onDisplayCardDetail.bind(this));
+        gameEvents.on('waitingForPlayer', this.onWaitingOnPlayer.bind(this));
+        gameEvents.on('doneWaitingForPlayer', this.onDoneWaitingForPlayer.bind(this));
 
         setTimeout(() => {
             this.onRendererResize();
@@ -173,10 +175,40 @@ export class MatchScene extends Scene {
     private onDisplayCardDetail(cardId: number) {
         displayCardDetail(cardId);
     }
+    
+    private onWaitingOnPlayer(playerId: number) {
+        const c = new Container({label: 'waitingOnPlayer'});
+        
+        const t = new Text({
+            text: `Waiting for ${$players.get()[playerId].name}`,
+            style: {
+                fontSize: 36,
+                fill: 'white',
+            },
+            anchor: .5,
+        });
+        
+        const g = new Graphics();
+        g.roundRect(0, 0, t.width + STANDARD_GAP * 2, t.height + STANDARD_GAP * 2)
+          .fill({color: 'black', alpha: .8});
+        
+        c.addChild(g);
+        t.x = c.width * .5;
+        t.y = c.height * .5;
+        c.addChild(t);
+        
+        this.addChild(c);
+        c.x = app.renderer.width * .5 - c.width * .5;
+        c.y = app.renderer.height * .5 - c.height * .5;
+    }
+    
+    private onDoneWaitingForPlayer() {
+        this.getChildByLabel('waitingOnPlayer')?.removeFromParent();
+    }
 
     private onMatchStarted() {
         this.eventMode = 'static';
-        this.on('pointerdown', this.onPointerDown.bind(this))
+        this.on('pointerdown', this.onPointerDown.bind(this));
     }
 
     destroy(options?: DestroyOptions) {
