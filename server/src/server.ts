@@ -47,6 +47,13 @@ io.on("connection", async (socket) => {
     return;
   }
 
+  socket.on('updatePlayerName', (playerId: number, name: string) => {
+    const player = getGameState().players.find(p => p.id === playerId);
+    if (!player) return;
+    player.name = name;
+    sendToSockets(sessionSocketMap.values(), 'playerNameUpdated', playerId, name);
+  });
+  
   socket.on("startMatch", async function (matchConfig: MatchConfiguration) {
     const player = sessionPlayerMap.get(sessionId);
     console.log(`Received startMatch event from ${player} with configuration`);

@@ -78,6 +78,7 @@ export type ServerEmitEvents = {
     matchUpdated: (match: MatchUpdate) => void;
     playerConnected: (player: Player, players: Player[]) => void;
     playerDisconnected: (player: Player, players: Player[]) => void;
+    playerNameUpdated: (playerId: number, name: string) => void;
     playerSet: (player: Player) => void;
     reconnectedToGame: (player: Player, state?: Match) => void;
     scoresUpdated: (scores: Record<number, number>) => void;
@@ -96,6 +97,7 @@ export type ServerListenEvents = {
     ready: (playerId: number) => void;
     selectCardResponse: (selectedCards: number[]) => void;
     startMatch: (configuration: MatchConfiguration) => void;
+    updatePlayerName: (playerId: number, name: string) => void;
     userPromptResponse: (result: unknown) => void;
 }
 export type ClientEmitEvents = Omit<ServerListenEvents, 'startMatch'> & {

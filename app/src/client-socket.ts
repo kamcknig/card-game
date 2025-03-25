@@ -142,9 +142,6 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
     doneWaitingForPlayer: playerId => {
         gameEvents.emit('doneWaitingForPlayer', playerId);
     },
-    waitingForPlayer: playerId => {
-        gameEvents.emit('waitingForPlayer', playerId);
-    },
     expansionList: val => {
         $expansionList.set(val);
     },
@@ -244,6 +241,15 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
             return prev;
         }, {} as PlayerState));
     },
+    playerNameUpdated: (playerId: number, name: string) => {
+        $players.set({
+            ...$players.get(),
+          [playerId]: {
+              ...$players.get()[playerId],
+            name
+          }
+        })
+    },
     playerSet: player => {
         $selfPlayer.set({...player});
         void displayScene('matchConfiguration');
@@ -288,7 +294,10 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
         console.log('kyle');
         gameEvents.on('userPromptResponse', userPromptResponseListener);
         gameEvents.emit('userPrompt', userPromptArgs);
-    }
+    },
+    waitingForPlayer: playerId => {
+        gameEvents.emit('waitingForPlayer', playerId);
+    },
 }
 
 const wrapHandler = <F extends (this: null, ...args: any[]) => any>(

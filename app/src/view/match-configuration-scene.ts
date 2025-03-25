@@ -43,18 +43,16 @@ export class MatchConfigurationScene extends Scene {
     $expansionList.subscribe(this.createExpansionList.bind(this));
     
     $matchConfiguration.subscribe(this.onMatchConfigurationUpdated.bind(this));
+  }
+  
+  private _updateNameTimeout: any;
+  
+  private updateName(val: string) {
+    clearTimeout(this._updateNameTimeout);
     
-    /*const i = new Input({
-      bg: new Graphics().roundRect(0, 0, 100, 50, 5).fill('white'),
-      placeholder: 'Enter text',
-      padding: {
-        top: 11,
-        right: 11,
-        bottom: 11,
-        left: 11
-      } // alternatively you can use [11, 11, 11, 11] or [11, 11] or just 11
-    });
-    this.addChild(i);*/
+    this._updateNameTimeout = setTimeout(() => {
+      socket.emit('updatePlayerName', $selfPlayerId.get(), val)
+    }, 200);
   }
   
   private async createExpansionList(val: readonly any[]) {
@@ -93,7 +91,7 @@ export class MatchConfigurationScene extends Scene {
           expansions = expansions.splice(idx, 1);
         }
         
-        socket.emit('matchConfigurationUpdated', {expansions});
+        socket.emit('matchConfigurationUpdated', { expansions });
       });
       c.on('destroyed', () => {
         c.removeAllListeners();
@@ -112,7 +110,7 @@ export class MatchConfigurationScene extends Scene {
     }
     
     for (const expansionContainer of this._expansionContainer.children) {
-      const highlight = new Graphics({label: 'highlight'});
+      const highlight = new Graphics({ label: 'highlight' });
       highlight.roundRect(0, 0, maxWidth + STANDARD_GAP * 2, expansionContainer.height + STANDARD_GAP * 2, 5)
         .stroke({
           color: 0xffffff,
@@ -154,13 +152,34 @@ export class MatchConfigurationScene extends Scene {
   
   private draw() {
     const players = $players.get();
-    if (!isUndefined(players)) {
-      this._playerNameContainer.removeChildren()
-        .forEach(c => c.destroy());
-      Object.values(players)
-        .forEach((player, idx) => {
+    
+    if (isUndefined(players)) {
+      return;
+    }
+    
+    this._playerNameContainer.removeChildren().forEach(c => c.destroy());
+    
+    Object.values(players)
+      .forEach((player, idx) => {
+        if (player.id === $selfPlayerId.get()) {
+          const i = new Input({
+            textStyle: {
+              fontSize: 24,
+              fill: 'black'
+            },
+            addMask: true,
+            bg: new Graphics().roundRect(0, 0, 200, 40, 5)
+              .fill('white'),
+            placeholder: player.name,
+            padding: STANDARD_GAP
+          });
+          i.y = idx * 40 + idx * STANDARD_GAP;
+          const s = i.onChange.connect(this.updateName.bind(this));
+          this._cleanup.push(() => s.disconnect());
+          this._playerNameContainer.addChild(i);
+        } else {
           const t = new Text({
-            y: idx * 30,
+            y: idx * 40 + idx * STANDARD_GAP,
             text: `${player.name}${player.connected ? '' : ' - disconnected'}`,
             style: {
               fontSize: 24,
@@ -168,8 +187,8 @@ export class MatchConfigurationScene extends Scene {
             }
           });
           this._playerNameContainer.addChild(t);
-        });
-    }
+        }
+      });
     
     const ownerId = $gameOwner.get();
     if (!isUndefined(ownerId)) {
