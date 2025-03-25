@@ -67,7 +67,7 @@ export class MatchConfigurationScene extends Scene {
     
     for (const [idx, expansion] of val.entries()) {
       const c = new Container({
-        y: this._expansionContainer.height + (STANDARD_GAP * 2) * idx
+        y: this._expansionContainer.height + (STANDARD_GAP * 3) * idx
       });
       c.eventMode = 'static';
       c.label = expansion.expansionName;
@@ -88,7 +88,7 @@ export class MatchConfigurationScene extends Scene {
         if (expansionIdx === -1) {
           expansions.push(c.label);
         } else {
-          expansions = expansions.splice(idx, 1);
+          expansions = expansions.filter(e => e !== c.label);
         }
         
         socket.emit('matchConfigurationUpdated', { expansions });
@@ -99,7 +99,8 @@ export class MatchConfigurationScene extends Scene {
       
       const texture = await Assets.load(`./assets/expansion-icons/${expansion.expansionName}.png`)
       const s = Sprite.from(texture);
-      s.scale = .7;
+      const maxSide = 30;
+      s.scale = Math.min(maxSide / s.width, maxSide / s.height);
       s.x = t.x + t.width + STANDARD_GAP;
       s.y = Math.floor(t.y + t.height * .5 - s.height * .5);
       c.addChild(s);
@@ -116,7 +117,8 @@ export class MatchConfigurationScene extends Scene {
           color: 0xffffff,
           width: 2,
         });
-      highlight.visible = false;
+      highlight.visible = $matchConfiguration.get().expansions.includes(expansionContainer.label);
+
       expansionContainer.addChild(highlight);
     }
     
@@ -135,19 +137,14 @@ export class MatchConfigurationScene extends Scene {
       return;
     }
     
+    console.log('kyle config updated', val);
     for (const c of this._expansionContainer.children) {
       c.getChildByLabel('highlight').visible = val.expansions.includes(c.label);
     }
-    
-    /*this._expansionContainer.*/
-    
-    /*this.addChild(this._expansionHighlight);*/
   }
   
   private onStartGame() {
-    socket.emit('startMatch', {
-      expansions: ['base-v2']
-    });
+    socket.emit('startMatch', $matchConfiguration.get());
   }
   
   private draw() {

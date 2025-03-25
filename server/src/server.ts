@@ -16,6 +16,7 @@ import { createGame, getGameState } from "./utils/get-game-state.ts";
 import { getExpansionList } from "./utils/get-expansion-lists.ts";
 import { toNumber } from "es-toolkit/compat";
 import * as log from "@timepp/enhanced-deno-log/auto-init";
+import { match } from "node:assert";
 
 log.setConfig({
   enabledLevels: [],
@@ -57,7 +58,7 @@ io.on("connection", async (socket) => {
   socket.on("startMatch", async function (matchConfig: MatchConfiguration) {
     const player = sessionPlayerMap.get(sessionId);
     console.log(`Received startMatch event from ${player} with configuration`);
-    console.log(matchConfig);
+    console.debug(matchConfig);
     const match = new MatchController([...sessionSocketMap.values()]);
     await match.initialize(matchConfig);
 
@@ -65,7 +66,13 @@ io.on("connection", async (socket) => {
   });
 
   socket.on("matchConfigurationUpdated", (val) => {
-    sendToSockets(sessionSocketMap.values(), "matchConfigurationUpdated", val);
+    console.log('match configuration has been updated');
+    console.debug(val);
+    getGameState().matchConfig = {
+      ...getGameState().matchConfig,
+      ...val
+    };
+    sendToSockets(sessionSocketMap.values(), "matchConfigurationUpdated", getGameState().matchConfig);
   });
 
   socket.on("disconnect", function (arg) {
@@ -171,7 +178,8 @@ io.on("connection", async (socket) => {
   }
 
   const expansionList = await getExpansionList();
-  sendToSockets(sessionSocketMap.values(), "expansionList", [...expansionList]);
+  sendToSockets([socket].values(), "expansionList", [...expansionList]);
+  sendToSockets([socket].values(), "matchConfigurationUpdated", getGameState().matchConfig);
 });
 
 Deno.serve({
