@@ -142,6 +142,9 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
     expansionList: val => {
         $expansionList.set(val);
     },
+    gameOver: () => {
+        void displayScene('gameOver');
+    },
     gameOwnerUpdated: playerId => {
         $gameOwner.set(playerId);
     },

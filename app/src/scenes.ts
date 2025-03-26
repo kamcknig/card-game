@@ -1,7 +1,8 @@
-import {MatchConfigurationScene} from "./view/match-configuration-scene";
-import {MatchScene} from "./view/match-scene";
+import {MatchConfigurationScene} from "./view/scenes/match-configuration-scene";
+import {MatchScene} from "./view/scenes/match-scene";
 import {registerScenes} from "./core/scene/scene";
 import {createReactModal} from "./view/modal/react-modal";
+import { GameOverScene } from './view/scenes/game-over-scene';
 
 export const scenes = registerScenes({
     matchConfiguration: MatchConfigurationScene, // a constructor or instance
@@ -10,4 +11,5 @@ export const scenes = registerScenes({
         createReactModal();
         return scene;
     },
+    gameOver: GameOverScene
 });

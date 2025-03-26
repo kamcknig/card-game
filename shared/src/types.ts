@@ -72,6 +72,7 @@ export type ServerEmitEvents = {
     doneWaitingForPlayer: (playerId?: number) => void;
     expansionList: (val: any[]) => void;
     matchConfigurationUpdated: (val: Pick<MatchConfiguration, 'expansions'>) => void;
+    gameOver: () => void;
     gameOwnerUpdated: (playerId: number) => void;
     matchReady: (match: Match) => void;
     matchStarted: (match: Match) => void;

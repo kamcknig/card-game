@@ -44,7 +44,7 @@ export class MatchController {
 
     const supplyCards = this.createBaseSupply();
 
-    const kingdomCards = this.createKingdom();
+    const kingdomCards = this.createKingdom(getGameState().players);
 
     const cardsById: Record<number, Card> = {};
     supplyCards.forEach((card) => {
@@ -133,7 +133,7 @@ export class MatchController {
     return supplyCards;
   }
 
-  private createKingdom() {
+  private createKingdom(players: Player[]) {
     const kingdomCards: Card[] = [];
     // todo: remove testing code
     const keepers: string[] = [];
@@ -149,7 +149,7 @@ export class MatchController {
       )
       .slice(-MatchBaseConfiguration.numberOfKingdomPiles)
       .reduce((prev, key) => {
-        prev[key] = 10;
+        prev[key] = cardLibrary['kingdom'][key].type.includes('VICTORY') ? (players.length < 3 ? 8 : 12) : 10;
         return prev;
       }, {} as Record<string, number>);
 
@@ -171,12 +171,11 @@ export class MatchController {
   private createPlayerHands(cardsById: Record<number, Card>) {
     return Object.values(getGameState().players).reduce((prev, player, idx) => {
       console.log("initializing player", player.id, "cards...");
-      /*let blah = {};
+      let blah = {};
       // todo remove testing code
       if (idx === 0) {
         blah = {
-          poacher: 3,
-          copper: 7,
+          gold: 10,
         };
       }
 
@@ -186,8 +185,8 @@ export class MatchController {
           copper: 5,
         };
       }
-      Object.entries(blah).forEach(([key, count]) => {*/
-        Object.entries(MatchBaseConfiguration.playerStartingHand).forEach(([key, count]) => {
+      Object.entries(blah).forEach(([key, count]) => {
+        // Object.entries(MatchBaseConfiguration.playerStartingHand).forEach(([key, count]) => {
         console.log("adding", count, key, "to deck");
         prev["playerDecks"][player.id] ??= [];
         let deck = prev["playerDecks"][player.id];
@@ -295,8 +294,9 @@ export class MatchController {
 
   private onMatchUpdated(match: MatchUpdate) {
     this.calculateScores(match);
+    this.checkGameEnd();
   }
-
+  
   private calculateScores(match: MatchUpdate) {
     const scores: Record<number, number> = {};
 
@@ -322,7 +322,49 @@ export class MatchController {
     // todo only send update if scores differ
     sendToSockets(this.sockets.values(), "scoresUpdated", scores);
   }
-
+  
+  private checkGameEnd() {
+    console.log(`checking if the game has ended`);
+    
+    const match = this.$matchState.get();
+    const cardsById = match.cardsById;
+    if (match.supply.map(c => cardsById[c]).filter(c => c.cardKey === 'province').length === 0) {
+      console.log(`supply has no more provinces, game over`);
+      this.endGame();
+      return;
+    }
+    const allSupplyCardKeys = match.config.supplyCardKeys.concat(
+      match.config.kingdomCardKeys,
+    );
+    
+    console.debug(`original supply card piles ${allSupplyCardKeys}`);
+    
+    const remainingSupplyCardKeys = match.supply.concat(
+      match.kingdom,
+    ).map((id) => cardsById[id].cardKey).reduce((prev, cardKey) => {
+      if (prev.includes(cardKey)) {
+        return prev;
+      }
+      return prev.concat(cardKey);
+    }, [] as string[]);
+    
+    console.debug(`remaining supply card piles ${remainingSupplyCardKeys}`);
+    
+    const emptyPileCount = allSupplyCardKeys.length -
+      remainingSupplyCardKeys.length;
+    
+    console.debug(`empty pile count ${emptyPileCount}`);
+    
+    if (emptyPileCount === 3) {
+      console.log(`three supply piles are empty, game over`);
+      this.endGame();
+    }
+  }
+  
+  private endGame() {
+    sendToSockets(this.sockets.values(), 'gameOver');
+  }
+  
   private async onCheckForPlayerActions() {
     console.log("checking for remaining player actions");
 
