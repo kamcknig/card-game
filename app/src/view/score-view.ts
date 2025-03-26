@@ -19,8 +19,6 @@ export class ScoreView extends Container {
         $players.subscribe(this.onTrackScores.bind(this));
         $currentPlayerTurnIndex.subscribe(this.onPlayerTurnUpdated.bind(this));
         $turnNumber.subscribe(this.onTurnNumberUpdated.bind(this));
-        
-        setTimeout(() => {this.onUpdateScore(1, 100)}, 5000)
     }
 
     private onTurnNumberUpdated(turn: number) {

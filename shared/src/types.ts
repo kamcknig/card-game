@@ -79,6 +79,7 @@ export type ServerEmitEvents = {
     playerConnected: (player: Player, players: Player[]) => void;
     playerDisconnected: (player: Player, players: Player[]) => void;
     playerNameUpdated: (playerId: number, name: string) => void;
+    playerReady: (playerId: number, ready: boolean) => void;
     playerSet: (player: Player) => void;
     reconnectedToGame: (player: Player, state?: Match) => void;
     scoresUpdated: (scores: Record<number, number>) => void;

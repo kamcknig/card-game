@@ -250,6 +250,15 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
           }
         })
     },
+    playerReady: (playerId, ready) => {
+      $players.set({
+          ...$players.get(),
+          [playerId]: {
+              ...$players.get()[playerId],
+              ready
+          }
+      })
+    },
     playerSet: player => {
         $selfPlayer.set({...player});
         void displayScene('matchConfiguration');
@@ -291,7 +300,6 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
             socket.emit('userPromptResponse', result);
         };
 
-        console.log('kyle');
         gameEvents.on('userPromptResponse', userPromptResponseListener);
         gameEvents.emit('userPrompt', userPromptArgs);
     },

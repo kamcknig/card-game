@@ -9,7 +9,7 @@ import { STANDARD_GAP } from '../app-contants';
 import { isUndefined } from 'es-toolkit';
 import { $matchConfiguration } from '../state/match-state';
 import { MatchConfiguration } from 'shared/types';
-import { Input } from "@pixi/ui";
+import { Input, Switcher } from "@pixi/ui";
 
 export class MatchConfigurationScene extends Scene {
   private readonly _playerNameContainer: Container = new Container({ x: 300, y: 20 });
@@ -17,6 +17,7 @@ export class MatchConfigurationScene extends Scene {
   private readonly _startGameBtn: AppButton = createAppButton({ text: 'START', style: { fontSize: 24 } });
   private _expansionContainer: Container = new Container({ x: 600, y: 20 });
   private _expansionHighlight: Graphics = new Graphics();
+  private _readyButton: Switcher;
   
   constructor(stage: Container) {
     super(stage);
@@ -39,6 +40,17 @@ export class MatchConfigurationScene extends Scene {
     this._startGameBtn.button.x = 20;
     this._startGameBtn.button.y = 20;
     this._startGameBtn.button.on('pointerdown', this.onStartGame.bind(this));
+    
+    this._readyButton = new Switcher([
+      createAppButton({text: 'READY'}).button,
+      createAppButton({text: 'READY', style: { fill: 'black' }}, { color: 'white', alpha: .9}).button
+    ]);
+    this._readyButton.y = this._startGameBtn.button.y + this._startGameBtn.button.height + STANDARD_GAP;
+    this._readyButton.x = STANDARD_GAP;
+    this.addChild(this._readyButton);
+    this._readyButton.onChange.connect((arg) => {
+      socket.emit('ready', $selfPlayerId.get());
+    });
     
     $expansionList.subscribe(this.createExpansionList.bind(this));
     
@@ -81,21 +93,23 @@ export class MatchConfigurationScene extends Scene {
       });
       c.addChild(t);
       
-      c.on('pointerdown', () => {
-        let expansions = $matchConfiguration.get().expansions;
-        const expansionIdx = expansions.findIndex(e => e === c.label);
-        
-        if (expansionIdx === -1) {
-          expansions.push(c.label);
-        } else {
-          expansions = expansions.filter(e => e !== c.label);
-        }
-        
-        socket.emit('matchConfigurationUpdated', { expansions });
-      });
-      c.on('destroyed', () => {
-        c.removeAllListeners();
-      })
+      if ($selfPlayerId.get() === $gameOwner.get()) {
+        c.on('pointerdown', () => {
+          let expansions = $matchConfiguration.get().expansions;
+          const expansionIdx = expansions.findIndex(e => e === c.label);
+          
+          if (expansionIdx === -1) {
+            expansions.push(c.label);
+          } else {
+            expansions = expansions.filter(e => e !== c.label);
+          }
+          
+          socket.emit('matchConfigurationUpdated', { expansions });
+        });
+        c.on('destroyed', () => {
+          c.removeAllListeners();
+        })
+      }
       
       const texture = await Assets.load(`./assets/expansion-icons/${expansion.expansionName}.png`)
       const s = Sprite.from(texture);
@@ -137,7 +151,6 @@ export class MatchConfigurationScene extends Scene {
       return;
     }
     
-    console.log('kyle config updated', val);
     for (const c of this._expansionContainer.children) {
       c.getChildByLabel('highlight').visible = val.expansions.includes(c.label);
     }
@@ -160,6 +173,9 @@ export class MatchConfigurationScene extends Scene {
     
     this._playerNameContainer.removeChildren().forEach(c => c.destroy());
     
+    
+    //******* nest step display the player is ready, you have the player sending to the serer and theserver telling
+    // the client they are ready, now dispay it
     Object.values(players)
       .forEach((player, idx) => {
         if (player.id === $selfPlayerId.get()) {

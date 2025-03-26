@@ -72,6 +72,19 @@ export class MatchScene extends Scene {
       gameEvents.emit('ready', $selfPlayerId.get());
     });
     
+    $currentPlayerTurnId.subscribe(playerId => {
+      if (playerId !== $selfPlayerId.get()) return;
+      
+      document.title = `Dominion - ${$players.get()[playerId].name}`;
+      
+      try {
+        const s= new Audio(`./assets/sounds/your-turn.ogg`);
+        s?.play();
+      } catch {
+        console.error('Could not play start turn sound');
+      }
+    });
+    
     $turnPhase.subscribe(phase => {
       if (phase === 'buy' && $currentPlayerTurnId.get() === $selfPlayerId.get()) {
         this._playAllTreasuresButton = createAppButton(
@@ -82,6 +95,13 @@ export class MatchScene extends Scene {
         b.y = this._playerHand.y - b.height - STANDARD_GAP;
         b.on('pointerdown', () => {
             socket.emit('playAllTreasure', $selfPlayerId.get());
+          const b = this._playAllTreasuresButton?.button;
+          if (!b) {
+            return;
+          }
+          b.removeFromParent();
+          b.removeAllListeners();
+          this._playAllTreasuresButton = null;
         });
         this.addChild(b);
       } else {

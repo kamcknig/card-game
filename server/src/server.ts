@@ -16,6 +16,7 @@ import { createGame, getGameState } from "./utils/get-game-state.ts";
 import { getExpansionList } from "./utils/get-expansion-lists.ts";
 import { toNumber } from "es-toolkit/compat";
 import * as log from "@timepp/enhanced-deno-log/auto-init";
+import { getCurrentPlayerId } from './utils/get-current-player-id.ts';
 
 if (Deno.env.get('LOG_TO_FILE')?.toLowerCase() === 'false') {
   log.setConfig({
@@ -35,8 +36,6 @@ export const io = new Server<ServerListenEvents, ServerEmitEvents>({
 io.on("connection", async (socket) => {
   const sessionId = socket.handshake.query.get("sessionId");
 
-  if (socket.handshake.address === "104.51.177.75") socket.disconnect();
-
   if (!sessionId) {
     console.error("no session ID, rejecting");
     socket.disconnect();
@@ -54,6 +53,12 @@ io.on("connection", async (socket) => {
     if (!player) return;
     player.name = name;
     sendToSockets(sessionSocketMap.values(), 'playerNameUpdated', playerId, name);
+  });
+  
+  socket.on('ready', playerId => {
+    const ready = !getGameState().players[playerId].ready;
+    getGameState().players[playerId].ready = ready;
+    sendToSockets(sessionSocketMap.values().filter(s => s !== socket), 'playerReady', playerId, ready);
   });
   
   socket.on("startMatch", async function (matchConfig: MatchConfiguration) {
