@@ -8,8 +8,6 @@ UserChoiceEffect - when lots of cards for harbinger - need to scroll or somethin
 
 ask to resign feature
 
-need to wait for all users to join match before beginning - this is done but need a "ready" button
-
 when can't load assets (expansion modules) it still just goes on rather than stopping
 
 create a "card display" component. this component can be used within things like the userPromptModal or reactModal.
@@ -22,9 +20,5 @@ make some selections non-toggleable like when playing throne room and picking a 
 
 i played artisan and got to choose a card, but it didn't update my actions first so it seemed like i still would have an action afterward when i wouldn't
 
-ready button - on match config screen
-
 need to detect end of game
   - end game screen to show stats
-
-scores - players names gaps get bigger the more players there are

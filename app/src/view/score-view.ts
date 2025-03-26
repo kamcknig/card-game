@@ -12,10 +12,13 @@ export class ScoreView extends Container {
     constructor() {
         super();
         this._currentPlayerHighlight.addChild(new Graphics());
-        this.addChild(this._playerNameContainer);
         this.addChild(this._turnLabel);
-        const tmp = batched([$players, $playerTurnOrder], (...arg) => arg);
-        tmp.subscribe(this.onPlayersUpdated.bind(this));
+        
+        this.addChild(this._playerNameContainer);
+        this._playerNameContainer.y = this._turnLabel.y + this._turnLabel.height + STANDARD_GAP;
+        
+        batched([$players, $playerTurnOrder], (...arg) => arg).subscribe(this.onPlayersUpdated.bind(this));
+        
         $players.subscribe(this.onTrackScores.bind(this));
         $currentPlayerTurnIndex.subscribe(this.onPlayerTurnUpdated.bind(this));
         $turnNumber.subscribe(this.onTurnNumberUpdated.bind(this));
@@ -51,8 +54,10 @@ export class ScoreView extends Container {
         scoreText.x = 200 - scoreText.width - STANDARD_GAP;
     }
 
-    private onPlayersUpdated([players, turnOrder]: readonly [PlayerState, number[]]) {
-        const playerValues = Object.values(players);
+    private onPlayersUpdated([playerState, turnOrder]: readonly [PlayerState, number[]]) {
+        this._playerNameContainer.removeChildren().forEach(c => c.destroy());
+        console.log(this._playerNameContainer.height);
+        const playerValues = Object.values(playerState);
 
         for (const [idx, playerId] of turnOrder.entries()) {
             const playerContainer = new Container({label: `player-${playerId}`});
@@ -83,12 +88,10 @@ export class ScoreView extends Container {
             scoreText.x = 200 - scoreText.width - STANDARD_GAP;
             scoreText.y = playerContainer.height * .5 - scoreText.height * .5;
             playerContainer.addChild(scoreText);
-
-            playerContainer.y = this._playerNameContainer.height + STANDARD_GAP * .5 * idx;
+            
+            playerContainer.y = playerContainer.height * idx + STANDARD_GAP * idx;
             this._playerNameContainer.addChild(playerContainer);
         }
-
-        this._playerNameContainer.y = this._turnLabel.y + this._turnLabel.height + STANDARD_GAP;
     }
 
     private onPlayerTurnUpdated(turnIndex: number) {
