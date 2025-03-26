@@ -56,19 +56,30 @@ io.on("connection", async (socket) => {
   });
   
   socket.on('ready', playerId => {
-    const ready = !getGameState().players[playerId].ready;
-    getGameState().players[playerId].ready = ready;
+    const player = getPlayerById(playerId);
+    if (!player) {
+      console.debug(`received player ready event from ${playerId} but could not find Player object`);
+      return;
+    }
+    
+    console.log(`received ready event from ${player}`);
+    
+    const ready = !player?.ready;
+    player.ready = ready;
     sendToSockets(sessionSocketMap.values().filter(s => s !== socket), 'playerReady', playerId, ready);
-  });
-  
-  socket.on("startMatch", async function (matchConfig: MatchConfiguration) {
-    const player = sessionPlayerMap.get(sessionId);
-    console.log(`Received startMatch event from ${player} with configuration`);
-    console.debug(matchConfig);
-    const match = new MatchController([...sessionSocketMap.values()]);
-    await match.initialize(matchConfig);
-
+    
+    if (getGameState().players.some(p => !p.ready)) {
+      console.log(`not all players ready yet`);
+      return;
+    }
+    
+    console.log(`all players ready, proceeding to start match`);
+    
+    const config = getGameState().matchConfig;
+    console.debug(config);
     getGameState().started = true;
+    const match = new MatchController([...sessionSocketMap.values()]);
+    match.initialize(config);
   });
 
   socket.on("matchConfigurationUpdated", async (val) => {

@@ -1,5 +1,4 @@
-import { Assets, Container, DestroyOptions, Graphics, Sprite, Text } from "pixi.js";
-import { AppButton, createAppButton } from "../core/create-app-button";
+import { Assets, Color, Container, DestroyOptions, Graphics, Sprite, Text } from "pixi.js";
 import { Scene } from "../core/scene/scene";
 import { $players, $selfPlayerId } from "../state/player-state";
 import { socket } from "../client-socket";
@@ -9,15 +8,18 @@ import { STANDARD_GAP } from '../app-contants';
 import { isUndefined } from 'es-toolkit';
 import { $matchConfiguration } from '../state/match-state';
 import { MatchConfiguration } from 'shared/types';
-import { Input, Switcher } from "@pixi/ui";
+import { CheckBox, Input, List } from "@pixi/ui";
 
 export class MatchConfigurationScene extends Scene {
-  private readonly _playerNameContainer: Container = new Container({ x: 300, y: 20 });
+  private readonly _playerList: List = new List({
+    type: 'vertical',
+    padding: STANDARD_GAP,
+    elementsMargin: STANDARD_GAP,
+  });
   private readonly _cleanup: (() => void)[] = [];
-  private readonly _startGameBtn: AppButton = createAppButton({ text: 'START', style: { fontSize: 24 } });
-  private _expansionContainer: Container = new Container({ x: 600, y: 20 });
+  private _expansionContainer: Container = new Container({ x: 700, y: 20 });
   private _expansionHighlight: Graphics = new Graphics();
-  private _readyButton: Switcher;
+  private _updateNameTimeout: any;
   
   constructor(stage: Container) {
     super(stage);
@@ -27,37 +29,20 @@ export class MatchConfigurationScene extends Scene {
     super.destroy(options);
     
     this._cleanup.forEach(c => c());
-    this._startGameBtn.button.removeAllListeners();
   }
   
   initialize(data?: unknown) {
     super.initialize(data);
     
-    this._cleanup.push($players.subscribe(this.draw.bind(this)));
-    this._cleanup.push($gameOwner.subscribe(this.draw.bind(this)));
-    this.addChild(this._playerNameContainer);
-    
-    this._startGameBtn.button.x = 20;
-    this._startGameBtn.button.y = 20;
-    this._startGameBtn.button.on('pointerdown', this.onStartGame.bind(this));
-    
-    this._readyButton = new Switcher([
-      createAppButton({text: 'READY'}).button,
-      createAppButton({text: 'READY', style: { fill: 'black' }}, { color: 'white', alpha: .9}).button
-    ]);
-    this._readyButton.y = this._startGameBtn.button.y + this._startGameBtn.button.height + STANDARD_GAP;
-    this._readyButton.x = STANDARD_GAP;
-    this.addChild(this._readyButton);
-    this._readyButton.onChange.connect((arg) => {
-      socket.emit('ready', $selfPlayerId.get());
-    });
+    this._cleanup.push($players.subscribe(this.updatePlayerList.bind(this)));
+    this._playerList.x = 300;
+    this._playerList.y = STANDARD_GAP;
+    this.addChild(this._playerList);
     
     $expansionList.subscribe(this.createExpansionList.bind(this));
     
     $matchConfiguration.subscribe(this.onMatchConfigurationUpdated.bind(this));
   }
-  
-  private _updateNameTimeout: any;
   
   private updateName(val: string) {
     clearTimeout(this._updateNameTimeout);
@@ -131,14 +116,16 @@ export class MatchConfigurationScene extends Scene {
           color: 0xffffff,
           width: 2,
         });
-      highlight.visible = $matchConfiguration.get().expansions.includes(expansionContainer.label);
-
+      highlight.visible = $matchConfiguration.get()
+        .expansions
+        .includes(expansionContainer.label);
+      
       expansionContainer.addChild(highlight);
     }
     
     if ($gameOwner.get() === $selfPlayerId.get()) {
       socket.emit('matchConfigurationUpdated', {
-        expansions: ['base-v2'],
+        expansions: $matchConfiguration.get().expansions.length ? $matchConfiguration.get().expansions : ['base-v2'],
       });
     }
     
@@ -156,64 +143,92 @@ export class MatchConfigurationScene extends Scene {
     }
   }
   
-  private onStartGame() {
-    if ($matchConfiguration.get().expansions.length === 0) {
-      alert('choose at least one expansion');
-      return;
-    }
-    socket.emit('startMatch', $matchConfiguration.get());
-  }
-  
-  private draw() {
+  private async updatePlayerList() {
     const players = $players.get();
+    
+    this._playerList.removeChildren()
+      .forEach(c => c.destroy());
+    const selfId = $selfPlayerId.get();
     
     if (isUndefined(players)) {
       return;
     }
     
-    this._playerNameContainer.removeChildren().forEach(c => c.destroy());
-    
-    
-    //******* nest step display the player is ready, you have the player sending to the serer and theserver telling
-    // the client they are ready, now dispay it
-    Object.values(players)
-      .forEach((player, idx) => {
-        if (player.id === $selfPlayerId.get()) {
-          const i = new Input({
-            textStyle: {
-              fontSize: 24,
-              fill: 'black'
-            },
-            addMask: true,
-            bg: new Graphics().roundRect(0, 0, 200, 40, 5)
-              .fill('white'),
-            placeholder: player.name,
-            padding: STANDARD_GAP
-          });
-          i.y = idx * 40 + idx * STANDARD_GAP;
-          const s = i.onChange.connect(this.updateName.bind(this));
-          this._cleanup.push(() => s.disconnect());
-          this._playerNameContainer.addChild(i);
-        } else {
-          const t = new Text({
-            y: idx * 40 + idx * STANDARD_GAP,
-            text: `${player.name}${player.connected ? '' : ' - disconnected'}`,
-            style: {
-              fontSize: 24,
-              fill: 'black'
-            }
-          });
-          this._playerNameContainer.addChild(t);
+    for (const player of Object.values(players)) {
+      let item: List = new List({
+        type: 'horizontal',
+        elementsMargin: STANDARD_GAP
+      });
+      
+      const checked = Sprite.from(await Assets.load('./assets/ui-icons/check-box-checked.png'));
+      const unchecked = Sprite.from(await Assets.load('./assets/ui-icons/check-box-unchecked.png'));
+      
+      const readyCheck = new CheckBox({
+        checked: player.ready,
+        style: {
+          checked,
+          unchecked
         }
       });
-    
-    const ownerId = $gameOwner.get();
-    if (!isUndefined(ownerId)) {
-      this._startGameBtn.button.removeFromParent();
       
-      if (ownerId === $selfPlayerId.get()) {
-        this.addChild(this._startGameBtn.button);
+      if (selfId === player.id) {
+        readyCheck.onChange.connect((checked) => {
+          $players.set({
+            ...$players.get(),
+            [selfId]: {
+              ...$players.get()[selfId],
+              ready: checked as boolean
+            }
+          });
+          socket.emit('ready', selfId, checked as boolean);
+        });
+      } else {
+        // i don't see a way in the docs to disable the switcher. so instead when it's switched by someone
+        // who it's not just change it back immediately
+        readyCheck.onChange.connect(() => {
+          readyCheck.forceCheck(!readyCheck.checked)
+        });
       }
+      
+      item.addChild(readyCheck);
+      
+      let nameItem: Container;
+      
+      if (player.id === selfId) {
+        nameItem = new Input({
+          textStyle: {
+            fontSize: 24,
+            fill: 'black'
+          },
+          addMask: true,
+          bg: new Graphics().roundRect(0, 0, 200, 40, 5)
+            .fill('white'),
+          placeholder: player.name,
+          padding: STANDARD_GAP
+        });
+        const s = (nameItem as Input).onChange.connect(this.updateName.bind(this));
+        nameItem.on('destroyed', () => s.disconnect());
+      } else {
+        nameItem = new Container();
+        const g = new Graphics().roundRect(0, 0, 200, 40, 5)
+          .fill(new Color('0x00000000'));
+        nameItem.addChild(g);
+        const t = new Text({
+          x: STANDARD_GAP,
+          text: `${player.name}${player.connected ? '' : ' - disconnected'}`,
+          style: {
+            fontSize: 24,
+            fill: 'black'
+          }
+        });
+        t.y = nameItem.height * .5 - t.height * .5;
+        nameItem.addChild(t);
+      }
+      
+      item.addChild(nameItem);
+      checked.y = unchecked.y = Math.floor(item.height * .5 - checked.height * .5);
+      
+      this._playerList.addChild(item);
     }
   }
 }

@@ -69,7 +69,7 @@ export class MatchScene extends Scene {
     
     setTimeout(() => {
       this.onRendererResize();
-      gameEvents.emit('ready', $selfPlayerId.get());
+      gameEvents.emit('ready', $selfPlayerId.get(), true);
     });
     
     $currentPlayerTurnId.subscribe(playerId => {

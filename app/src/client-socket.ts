@@ -4,14 +4,11 @@ import {
     $playerHandStore,
     $players,
     $playerScoreStore,
-    $selfPlayer,
     $selfPlayerId,
     PlayerState
 } from "./state/player-state";
-import {
-    $expansionList
-} from './state/expansion-list-state';
-import {v4 as uuidv4} from 'uuid'
+import { $expansionList } from './state/expansion-list-state';
+import { v4 as uuidv4 } from 'uuid'
 import {
     $currentPlayerTurnIndexActual,
     $playerActions,
@@ -21,14 +18,14 @@ import {
     $turnNumber,
     $turnPhase
 } from "./state/turn-state";
-import {displayScene} from "./core/scene/display-scene";
-import {$gameOwner} from "./state/game-state";
-import {io, Socket} from "socket.io-client";
-import {$cardsById} from "./state/card-state";
+import { displayScene } from "./core/scene/display-scene";
+import { $gameOwner } from "./state/game-state";
+import { io, Socket } from "socket.io-client";
+import { $cardsById } from "./state/card-state";
 import { $kingdomStore, $matchConfiguration, $playAreaStore, $supplyStore, $trashStore } from "./state/match-state";
-import {$selectableCards, $selectedCards} from "./state/interactive-state";
-import {gameEvents} from "./core/event/events";
-import {Assets} from 'pixi.js';
+import { $selectableCards, $selectedCards } from "./state/interactive-state";
+import { gameEvents } from "./core/event/events";
+import { Assets } from 'pixi.js';
 import {
     ClientEmitEvents,
     ClientListenEventNames,
@@ -260,7 +257,7 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
       })
     },
     playerSet: player => {
-        $selfPlayer.set({...player});
+        $selfPlayerId.set(player.id);
         void displayScene('matchConfiguration');
     },
     reconnectedToGame: (player, state?: Match) => {
@@ -342,7 +339,7 @@ export const createSocket = () => {
         console.log('SOCKET disconnected reason', arg1, 'description', arg2);
     });
 
-    gameEvents.on('ready', playerId => socket.emit('ready', playerId));
+    gameEvents.on('ready', (playerId, ready) => socket.emit('ready', playerId, ready));
     gameEvents.on('nextPhase', () => socket.emit('nextPhase'));
     gameEvents.on('cardTapped', (playerId, cardId) => socket.emit('cardTapped', playerId, cardId));
 }

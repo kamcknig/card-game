@@ -95,10 +95,9 @@ export type ServerListenEvents = {
     expansionSelected: (val: string[]) => void;
     matchConfigurationUpdated: (val: Pick<MatchConfiguration, 'expansions'>) => void;
     nextPhase: () => void;
-    ready: (playerId: number) => void;
+    ready: (playerId: number, ready: boolean) => void;
     playAllTreasure: (playerId: number) => void;
     selectCardResponse: (selectedCards: number[]) => void;
-    startMatch: (configuration: MatchConfiguration) => void;
     updatePlayerName: (playerId: number, name: string) => void;
     userPromptResponse: (result: unknown) => void;
 }
@@ -274,7 +273,7 @@ export interface GameEvents {
     matchStarted: () => void;
     nextPhase: () => void;
     playCard: (playerId: number, cardId: number) => void;
-    ready: (playerId: number) => void;
+    ready: (playerId: number, ready: boolean) => void;
     selectCard: (count: CountSpec) => void;
     userPrompt: (userPromptArgs: UserPromptArgs) => void;
     userPromptResponse: (confirm: unknown) => void;

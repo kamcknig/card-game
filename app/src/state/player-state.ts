@@ -3,9 +3,7 @@ import {Player} from "shared/types";
 
 export type PlayerState = Record<number, Player>;
 
-export const $selfPlayer = atom<Player>(undefined as unknown as Player);
-
-export const $selfPlayerId = computed($selfPlayer, player => player?.id);
+export const $selfPlayerId = atom<number>();
 
 export const $players = map<PlayerState>({});
 
