@@ -2,6 +2,7 @@ import {Color, Container, Graphics, Text} from 'pixi.js';
 import {ScrollBox} from '@pixi/ui';
 import {STANDARD_GAP} from '../app-contants';
 import {gameEvents} from '../core/event/events';
+import { app } from '../core/create-app';
 
 export class GameLogView extends Container {
     private readonly _scrollBox: ScrollBox;
@@ -25,11 +26,11 @@ export class GameLogView extends Container {
         this._expandCollapse = new Graphics();
         this._expandCollapse.eventMode = 'static';
         this._expandCollapse.on('pointerdown', this.onToggleCollapse.bind(this));
-        this._expandCollapse
-          .lineTo(10, 10)
-          .lineTo(0, 20)
-          .lineTo(0, 0)
-          .fill('white');
+        this._expandCollapse.moveTo(0, 0)
+        this._expandCollapse.lineTo(10, 10);
+        this._expandCollapse.lineTo(0, 20);
+        this._expandCollapse.lineTo(0, 0)
+        this._expandCollapse.fill('white');
         this._expandCollapse.x = this._scrollBox.width - this._expandCollapse.width - STANDARD_GAP;
         this._expandCollapse.y = STANDARD_GAP;
         this.addChild(this._expandCollapse);
@@ -63,7 +64,8 @@ export class GameLogView extends Container {
     
     private onToggleCollapse() {
         this._collapsed = !this._collapsed;
-        this._scrollBox.visible = this._collapsed ? false : true;
+        this._scrollBox.width = this._collapsed ? 0 : 350;
         this.drawCollapseIcon();
+        this.x = app.renderer.width - this.width - STANDARD_GAP;
     }
 }

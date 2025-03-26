@@ -383,6 +383,7 @@ export class MatchScene extends Scene {
   }
   
   private onRendererResize(): void {
+    console.log(this._gameLog.width);
     this._gameLog.x = app.renderer.width - this._gameLog.width - STANDARD_GAP;
     this._gameLog.y = STANDARD_GAP;
     

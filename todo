@@ -12,10 +12,6 @@ when can't load assets (expansion modules) it still just goes on rather than sto
 
 create a "card display" component. this component can be used within things like the userPromptModal or reactModal.
 
-the user prompt modal needs to be able to show the background around all card content.
-
-if game log is collapsed, and window resizes, the arrow to expand it disappears
-
 make some selections non-toggleable like when playing throne room and picking a card
 
 need to detect end of game
