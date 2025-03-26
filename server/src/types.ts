@@ -245,7 +245,6 @@ export interface IEffectRunner {
     generator: EffectGenerator<GameEffects>,
     match: Match,
     playerId: number,
-    cardId?: number,
     acc?: MatchUpdate,
   ): Promise<unknown>;
   

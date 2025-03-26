@@ -24,7 +24,7 @@ export class CardEffectController implements IEffectRunner {
         }
         console.log(`running game action effect generator for ${effectName}`);
         const gen = await generatorFn(match, playerId, cardId);
-        return this.runGenerator(gen, match, playerId, cardId);
+        return this.runGenerator(gen, match, playerId);
     }
 
     public async runCardEffects(
@@ -43,7 +43,7 @@ export class CardEffectController implements IEffectRunner {
         }
         console.log(`running effect generator for ${card}`);
         const gen = await generatorFn(match, playerId, cardId, reactionContext);
-        return this.runGenerator(gen, match, playerId, cardId, acc);
+        return this.runGenerator(gen, match, playerId, acc);
     }
     
     
@@ -51,7 +51,6 @@ export class CardEffectController implements IEffectRunner {
       generator: EffectGenerator<GameEffects>,
       match: Match,
       playerId: number,
-      cardId?: number,
       acc?: MatchUpdate,
     ) {
         if (!generator) {
@@ -64,7 +63,7 @@ export class CardEffectController implements IEffectRunner {
             return;
         }
         
-        return await this._effectsPipeline.runGenerator(generator, match, playerId, cardId, acc);
+        return await this._effectsPipeline.runGenerator(generator, match, playerId, acc);
     }
     
     public async suspendedCallbackRunner(fn: () => Promise<void>): Promise<void> {

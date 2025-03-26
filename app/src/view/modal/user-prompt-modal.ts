@@ -3,13 +3,12 @@ import {createAppButton} from '../../core/create-app-button';
 import {app} from '../../core/create-app';
 import {createCardView} from '../../core/card/create-card-view';
 import {CardView} from '../card-view';
-import {$selectableCards} from '../../state/interactive-state';
-import {SMALL_CARD_WIDTH} from '../../app-contants';
+import { $selectableCards, $selectedCards } from '../../state/interactive-state';
+import { SMALL_CARD_WIDTH, STANDARD_GAP } from '../../app-contants';
 import {UserPromptArgs} from "shared/types";
 import {validateCountSpec} from "../../shared/validate-count-spec";
 
 export const userPromptModal = (args: UserPromptArgs): Promise<unknown> => {
-    let selectedCards = new Set<number>();
     return new Promise((resolve) => {
         const modalContainer = new Container();
         const hudContainer = new Container();
@@ -45,7 +44,7 @@ export const userPromptModal = (args: UserPromptArgs): Promise<unknown> => {
         const validate = () => {
             let validated = true;
             if (args.content?.cardSelection) {
-                validated = validateCountSpec(args.content?.cardSelection?.selectCount, selectedCards.size)
+                validated = validateCountSpec(args.content?.cardSelection?.selectCount, $selectedCards.get().length)
                 if(validated) {
                     confirmBtn.button.alpha = 1;
                 } else {
@@ -56,13 +55,14 @@ export const userPromptModal = (args: UserPromptArgs): Promise<unknown> => {
         };
 
         const cardPointerDownListener = (event: FederatedPointerEvent) => {
+            if (event.button === 2) return;
             const target = event.target as CardView;
             const cardId = target.card.id;
-            if (selectedCards.has(cardId)) {
-                selectedCards.delete(cardId);
+            if ($selectedCards.get().includes(cardId)) {
+                $selectedCards.set($selectedCards.get().filter(c => c !== cardId));
                 target.y = 0;
             } else {
-                selectedCards.add(cardId);
+                $selectedCards.set($selectedCards.get().concat(cardId));
                 target.y = -10;
             }
 
@@ -70,12 +70,15 @@ export const userPromptModal = (args: UserPromptArgs): Promise<unknown> => {
         };
 
         if (args.content?.cardSelection) {
+            const cardCount = args.content.cardSelection.cardIds.length;
             args.content.cardSelection.selectCount ??= 1;
             $selectableCards.set(args.content.cardSelection.cardIds);
             for (const [idx, cardId] of args.content.cardSelection.cardIds.entries()) {
                 const view = createCardView(cardId);
                 view.on('pointerdown', cardPointerDownListener)
-                view.x = idx * SMALL_CARD_WIDTH + idx * 20;
+                view.x = cardCount > 5
+                  ? idx * SMALL_CARD_WIDTH * .25 + idx * STANDARD_GAP
+                  : idx * SMALL_CARD_WIDTH + idx * STANDARD_GAP;
                 contentContainer.addChild(view);
             }
 
@@ -95,17 +98,20 @@ export const userPromptModal = (args: UserPromptArgs): Promise<unknown> => {
             hudContainer.addChild(declineBtn.button);
         }
 
-        background.roundRect(
-            -hudContainer.width * .5 - 20,
-            -20,
-            hudContainer.width + 40,
-            hudContainer.height + 40 + contentContainer.children.length > 0 ? 400 + 40 : 0
-        ).fill({color: 'black', alpha: .8});
-
         hudContainer.addChild(confirmBtn.button);
-        modalContainer.addChild(background);
+        
         modalContainer.addChild(hudContainer);
         modalContainer.addChild(contentContainer);
+        
+        background.roundRect(
+          -modalContainer.width * .5 - STANDARD_GAP,
+          -STANDARD_GAP,
+          modalContainer.width + STANDARD_GAP,
+          modalContainer.height + STANDARD_GAP,
+          5
+        ).fill({color: 'black', alpha: .8});
+        
+        modalContainer.addChildAt(background, 0);
 
         const cleanup = (confirm: boolean) => {
             app.stage.removeChild(modalContainer);
@@ -114,7 +120,7 @@ export const userPromptModal = (args: UserPromptArgs): Promise<unknown> => {
             declineBtn.button.removeAllListeners();
 
             if (args.content?.cardSelection) {
-                resolve([...selectedCards]);
+                resolve($selectedCards.get());
             } else {
                 resolve(confirm);
             }

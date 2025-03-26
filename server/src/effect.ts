@@ -16,7 +16,11 @@ export type GameEffects =
     | ShuffleDeckEffect
     | UserPromptEffect;
 
-type EffectBaseArgs = { sourcePlayerId: number, sourceCardId?: number };
+type EffectBaseArgs = {
+    sourcePlayerId: number,
+    sourceCardId?: number,
+    triggerImmediateUpdate?: boolean,
+};
 
 /**
  * Base class for all effects.
@@ -26,10 +30,12 @@ export abstract class EffectBase {
     abstract type: string;
     public sourceCardId!: number;
     public sourcePlayerId!: number;
+    public triggerUpdate: boolean;
 
-    protected constructor({sourcePlayerId, sourceCardId}: EffectBaseArgs) {
+    protected constructor({sourcePlayerId, sourceCardId, triggerImmediateUpdate}: EffectBaseArgs) {
         this.sourcePlayerId = sourcePlayerId;
         this.sourceCardId = sourceCardId!;
+        this.triggerUpdate = triggerImmediateUpdate!
     }
 
     toString() {
@@ -46,8 +52,8 @@ export class DiscardCardEffect extends EffectBase {
     cardId: number;
     playerId: number;
 
-    constructor({sourcePlayerId, sourceCardId, cardId, playerId}: { cardId: number; playerId: number } & EffectBaseArgs) {
-        super({sourcePlayerId, sourceCardId});
+    constructor({cardId, playerId, ...arg}: { cardId: number; playerId: number } & EffectBaseArgs) {
+        super(arg);
         this.cardId = cardId;
         this.playerId = playerId;
     }
@@ -57,8 +63,8 @@ export class DrawCardEffect extends EffectBase {
     type = 'drawCard' as const;
     playerId: number;
 
-    constructor({sourcePlayerId, sourceCardId, playerId}: { playerId: number } & EffectBaseArgs) {
-        super({sourcePlayerId, sourceCardId});
+    constructor({playerId, ...arg}: { playerId: number } & EffectBaseArgs) {
+        super(arg);
         this.playerId = playerId;
     }
 }
@@ -67,8 +73,8 @@ export class GainActionEffect extends EffectBase {
     type = 'gainAction' as const;
     count: number;
 
-    constructor({sourcePlayerId, sourceCardId, count}: { count: number } & EffectBaseArgs) {
-        super({sourcePlayerId, sourceCardId});
+    constructor({count, ...arg}: { count: number } & EffectBaseArgs) {
+        super(arg);
         this.count = count;
     }
 }
@@ -77,8 +83,8 @@ export class GainBuyEffect extends EffectBase {
     type = 'gainBuy' as const;
     count: number;
 
-    constructor({sourcePlayerId, sourceCardId, count}: { count: number } & EffectBaseArgs) {
-        super({sourcePlayerId, sourceCardId});
+    constructor({count, ...arg}: { count: number } & EffectBaseArgs) {
+        super(arg);
         this.count = count;
     }
 }
@@ -90,13 +96,13 @@ export class GainCardEffect extends EffectBase {
     to: LocationSpec;
     playerId: number;
 
-    constructor({sourcePlayerId, sourceCardId, cardId, cost, to, playerId}: {
+    constructor({cardId, cost, to, playerId, ...arg}: {
         cardId: number;
         cost?: Card['cost'],
         to: LocationSpec,
         playerId: number;
     } & EffectBaseArgs) {
-        super({sourcePlayerId, sourceCardId});
+        super(arg);
         this.cardId = cardId;
         this.cost = cost;
         this.to = to;
@@ -108,8 +114,8 @@ export class GainTreasureEffect extends EffectBase {
     type = 'gainTreasure' as const;
     count: number;
 
-    constructor({sourcePlayerId, sourceCardId, count}: { count: number } & EffectBaseArgs) {
-        super({sourcePlayerId, sourceCardId});
+    constructor({count, ...arg}: { count: number } & EffectBaseArgs) {
+        super(arg);
         this.count = count ?? 1;
     }
 }
@@ -119,8 +125,8 @@ export class MoveCardEffect extends EffectBase {
     to: LocationSpec;
     playerId: number | undefined;
 
-    constructor({playerId, sourcePlayerId, sourceCardId, cardId, to}: { cardId: number; to: LocationSpec, playerId?: number } & EffectBaseArgs) {
-        super({sourcePlayerId, sourceCardId});
+    constructor({playerId, cardId, to, ...arg}: { cardId: number; to: LocationSpec, playerId?: number } & EffectBaseArgs) {
+        super(arg);
         this.cardId = cardId;
         this.to = to;
         this.playerId = playerId;
@@ -132,8 +138,8 @@ export class PlayCardEffect extends EffectBase {
     cardId: number;
     playerId: number;
 
-    constructor({sourcePlayerId, sourceCardId, cardId, playerId}: { cardId: number; playerId: number } & EffectBaseArgs) {
-        super({sourcePlayerId, sourceCardId});
+    constructor({cardId, playerId, ...arg}: { cardId: number; playerId: number } & EffectBaseArgs) {
+        super(arg);
         this.cardId = cardId;
         this.playerId = playerId;
     }
@@ -144,8 +150,8 @@ export class RevealCardEffect extends EffectBase {
     cardId: number;
     playerId: number;
 
-    constructor({sourcePlayerId, sourceCardId, cardId, playerId}: { playerId: number, cardId: number } & EffectBaseArgs) {
-        super({sourcePlayerId, sourceCardId});
+    constructor({cardId, playerId, ...arg}: { playerId: number, cardId: number } & EffectBaseArgs) {
+        super(arg);
         this.cardId = cardId;
         this.playerId = playerId;
     }
@@ -158,13 +164,13 @@ export class SelectCardEffect extends EffectBase {
     restrict: EffectRestrictionSpec | number[];
     playerId: number;
 
-    constructor({playerId, sourcePlayerId, sourceCardId, restrict, count, autoSelect}: {
+    constructor({playerId, restrict, count, autoSelect, ...arg}: {
         restrict: EffectRestrictionSpec | number[],
         count?: CountSpec | number,
         autoSelect?: boolean,
         playerId: number,
     } & EffectBaseArgs) {
-        super({sourcePlayerId, sourceCardId});
+        super(arg);
         this.restrict = restrict;
         this.count = count;
         this.autoSelect = autoSelect;
@@ -187,8 +193,8 @@ export class TrashCardEffect extends EffectBase {
     cardId: number;
     playerId?: number;
 
-    constructor({sourcePlayerId, sourceCardId, cardId, playerId}: { cardId: number, playerId?: number } & EffectBaseArgs) {
-        super({sourcePlayerId, sourceCardId});
+    constructor({cardId, playerId, ...arg}: { cardId: number, playerId?: number } & EffectBaseArgs) {
+        super(arg);
         this.cardId = cardId;
         this.playerId = playerId;
     }
@@ -216,8 +222,8 @@ export class UserPromptEffect extends EffectBase {
     showDeclineOption?: boolean;
     content?: UserPromptArgs['content'];
 
-    constructor({content, showDeclineOption, declineLabel, confirmLabel, playerId, prompt, sourcePlayerId, sourceCardId}: {playerId: number} & UserPromptArgs & EffectBaseArgs) {
-        super({sourcePlayerId, sourceCardId});
+    constructor({content, showDeclineOption, declineLabel, confirmLabel, playerId, prompt, ...arg}: {playerId: number} & UserPromptArgs & EffectBaseArgs) {
+        super(arg);
         this.playerId = playerId;
         this.prompt = prompt;
         this.declineLabel = declineLabel;

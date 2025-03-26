@@ -22,7 +22,12 @@ export const effectGeneratorMap: Record<string, EffectGeneratorFn | AsyncEffectG
         }
 
         if (matchState.cardsById[sourceCardId].type.includes('ACTION')) {
-            yield new GainActionEffect({count: -1, sourcePlayerId: sourcePlayerId, sourceCardId});
+            yield new GainActionEffect({
+                count: -1,
+                sourcePlayerId: sourcePlayerId,
+                sourceCardId,
+                triggerImmediateUpdate: true
+            });
         }
 
         yield new PlayCardEffect({
@@ -32,7 +37,7 @@ export const effectGeneratorMap: Record<string, EffectGeneratorFn | AsyncEffectG
             playerId: sourcePlayerId
         });
     },
-    'discardCard': function* (matchState, sourcePlayerId, sourceCardId) {
+    'discardCard': function* (_matchState, sourcePlayerId, sourceCardId) {
         if (!sourceCardId) {
             throw new Error('discardCard requires a card ID');
         }
@@ -51,7 +56,7 @@ export const effectGeneratorMap: Record<string, EffectGeneratorFn | AsyncEffectG
                 sourceCardId
             });
         }
-        yield new GainBuyEffect({count: -1, sourcePlayerId, sourceCardId});
+        yield new GainBuyEffect({count: -1, sourcePlayerId, sourceCardId, triggerImmediateUpdate: true});
         yield new GainCardEffect({
             playerId: sourcePlayerId,
             cardId: sourceCardId,
@@ -60,10 +65,10 @@ export const effectGeneratorMap: Record<string, EffectGeneratorFn | AsyncEffectG
             sourceCardId
         });
     },
-    'drawCard': function* (matchState, sourcePlayerId, sourceCardId) {
+    'drawCard': function* (_matchState, sourcePlayerId, sourceCardId) {
         yield new DrawCardEffect({playerId: sourcePlayerId, sourceCardId, sourcePlayerId});
     },
-    'gainCard': function* (matchState, sourcePlayerId, sourceCardId) {
+    'gainCard': function* (_matchState, sourcePlayerId, sourceCardId) {
         if (!sourceCardId) {
             throw new Error('gainCard requires a card ID');
         }

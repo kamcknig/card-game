@@ -430,7 +430,6 @@ export const createEffectHandlerMap = (
             reactionGenerator,
             match,
             reaction.playerId,
-            undefined,
             acc,
           );
           if (reaction.once) {

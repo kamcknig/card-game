@@ -1,5 +1,5 @@
 import {PreinitializedWritableAtom} from 'nanostores';
-import { GameEffects, MoveCardEffect } from './effect.ts';
+import { GameEffects } from './effect.ts';
 import {AppSocket, EffectGenerator, EffectHandlerMap, EffectHandlerResult} from "./types.ts";
 import {Match, MatchUpdate} from "shared/types.ts";
 import {sendToSockets} from "./utils/send-to-sockets.ts";
@@ -19,7 +19,6 @@ export class EffectsPipeline {
       generator: EffectGenerator<GameEffects>,
       match: Match,
       playerId: number,
-      cardId?: number,
       acc?: MatchUpdate
     ): EffectHandlerResult {
         const topLevel = isUndefined(acc);
@@ -40,6 +39,10 @@ export class EffectsPipeline {
             
             console.log(`running effect handler for ${effect.type}`);
             effectResults = await handler(effect as unknown as any, match, acc);
+            
+            if (effect.triggerUpdate) {
+                sendToSockets(this.sockets.values(), 'matchUpdated', acc);
+            }
             
             nextEffect = generator.next(effectResults);
         }
