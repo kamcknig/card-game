@@ -121,6 +121,7 @@ export const userPromptModal = (args: UserPromptArgs): Promise<unknown> => {
 
             if (args.content?.cardSelection) {
                 resolve($selectedCards.get());
+                $selectedCards.set([]);
             } else {
                 resolve(confirm);
             }
