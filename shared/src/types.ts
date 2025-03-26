@@ -49,7 +49,7 @@ export type Match = {
     playerHands: Record<number, number[]>;
     playerDecks: Record<number, number[]>;
     playerDiscards: Record<number, number[]>;
-    expansions: MatchConfiguration['expansions'];
+    config: MatchConfiguration,
     turnNumber: number;
     // this is the index within the turn order array of whose turn it is. - note this number never resets - modulus is used to determine the actual index
     currentPlayerTurnIndex: number;

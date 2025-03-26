@@ -23,6 +23,7 @@ import { getGameState } from "./utils/get-game-state.ts";
 import { map } from "nanostores";
 import { getTurnPhase } from "./utils/get-turn-phase.ts";
 import { getCurrentPlayerId } from "./utils/get-current-player-id.ts";
+import { match } from "node:assert";
 
 export class MatchController {
   private $matchState = map<Match>();
@@ -43,7 +44,7 @@ export class MatchController {
 
     const supplyCards = this.createBaseSupply();
 
-    const kingdomCards: Card[] = this.createKingdom();
+    const kingdomCards = this.createKingdom();
 
     const cardsById: Record<number, Card> = {};
     supplyCards.forEach((card) => {
@@ -52,7 +53,7 @@ export class MatchController {
     kingdomCards.forEach((card) => {
       cardsById[card.id] = card;
     });
-
+    
     const playerCards = this.createPlayerHands(cardsById);
 
     matchConfig = {
@@ -70,7 +71,7 @@ export class MatchController {
         return prev.concat(card.cardKey);
       }, [] as string[]),
     };
-
+    
     this.$matchState.set({
       trash: [],
       players: fisherYatesShuffle(
@@ -79,7 +80,7 @@ export class MatchController {
       supply: supplyCards.map((c) => c.id),
       kingdom: kingdomCards.map((c) => c.id),
       ...playerCards,
-      expansions: matchConfig.expansions,
+      config: matchConfig,
       turnNumber: 0,
       currentPlayerTurnIndex: 0,
       activePlayerId: 0,
@@ -135,7 +136,7 @@ export class MatchController {
   private createKingdom() {
     const kingdomCards: Card[] = [];
     // todo: remove testing code
-    const keepers: string[] = ['artisan'];
+    const keepers: string[] = [];
     const chosenKingdom = Object.keys(cardLibrary["kingdom"])
       .sort((a, b) =>
         keepers.includes(a)
@@ -170,12 +171,12 @@ export class MatchController {
   private createPlayerHands(cardsById: Record<number, Card>) {
     return Object.values(getGameState().players).reduce((prev, player, idx) => {
       console.log("initializing player", player.id, "cards...");
-      let blah = {};
+      /*let blah = {};
       // todo remove testing code
       if (idx === 0) {
         blah = {
-          harbinger: 5,
-          copper: 15,
+          poacher: 3,
+          copper: 7,
         };
       }
 
@@ -185,8 +186,8 @@ export class MatchController {
           copper: 5,
         };
       }
-      Object.entries(blah).forEach(([key, count]) => {
-        // Object.entries(MatchBaseConfiguration.playerStartingHand).forEach(([key, count]) => {
+      Object.entries(blah).forEach(([key, count]) => {*/
+        Object.entries(MatchBaseConfiguration.playerStartingHand).forEach(([key, count]) => {
         console.log("adding", count, key, "to deck");
         prev["playerDecks"][player.id] ??= [];
         let deck = prev["playerDecks"][player.id];

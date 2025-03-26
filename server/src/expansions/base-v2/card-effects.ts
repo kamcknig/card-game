@@ -817,8 +817,8 @@ export default {
 
       const cardsById = matchState.cardsById;
       
-      const allSupplyCardKeys = getGameState().matchConfig.supplyCardKeys.concat(
-        getGameState().matchConfig.kingdomCardKeys,
+      const allSupplyCardKeys = matchState.config.supplyCardKeys.concat(
+        matchState.config.kingdomCardKeys,
       );
       
       console.debug(`original supply card piles ${allSupplyCardKeys}`);
