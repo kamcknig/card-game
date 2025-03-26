@@ -273,7 +273,6 @@ export interface GameEvents {
     matchStarted: () => void;
     nextPhase: () => void;
     playCard: (playerId: number, cardId: number) => void;
-    ready: (playerId: number, ready: boolean) => void;
     selectCard: (count: CountSpec) => void;
     userPrompt: (userPromptArgs: UserPromptArgs) => void;
     userPromptResponse: (confirm: unknown) => void;

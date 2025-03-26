@@ -55,7 +55,7 @@ io.on("connection", async (socket) => {
     sendToSockets(sessionSocketMap.values(), 'playerNameUpdated', playerId, name);
   });
   
-  socket.on('ready', playerId => {
+  const onReady = (playerId: number) => {
     const player = getPlayerById(playerId);
     if (!player) {
       console.debug(`received player ready event from ${playerId} but could not find Player object`);
@@ -80,7 +80,12 @@ io.on("connection", async (socket) => {
     getGameState().started = true;
     const match = new MatchController([...sessionSocketMap.values()]);
     match.initialize(config);
-  });
+    
+    getGameState().players.forEach(p => p.ready = false);
+    sessionSocketMap.values().forEach(s => s.off('ready', onReady));
+  }
+  
+  socket.on('ready', onReady);
 
   socket.on("matchConfigurationUpdated", async (val) => {
     console.log('match configuration has been updated');

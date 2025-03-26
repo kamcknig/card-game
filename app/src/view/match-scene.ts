@@ -67,11 +67,6 @@ export class MatchScene extends Scene {
     gameEvents.on('waitingForPlayer', this.onWaitingOnPlayer.bind(this));
     gameEvents.on('doneWaitingForPlayer', this.onDoneWaitingForPlayer.bind(this));
     
-    setTimeout(() => {
-      this.onRendererResize();
-      gameEvents.emit('ready', $selfPlayerId.get(), true);
-    });
-    
     $currentPlayerTurnId.subscribe(playerId => {
       if (playerId !== $selfPlayerId.get()) return;
       
@@ -113,6 +108,11 @@ export class MatchScene extends Scene {
           b.removeAllListeners();
           this._playAllTreasuresButton = null;
       }
+    });
+    
+    setTimeout(() => {
+      this.onRendererResize();
+      socket.emit('ready', $selfPlayerId.get(), true);
     });
   }
   

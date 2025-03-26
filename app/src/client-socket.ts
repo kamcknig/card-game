@@ -339,7 +339,6 @@ export const createSocket = () => {
         console.log('SOCKET disconnected reason', arg1, 'description', arg2);
     });
 
-    gameEvents.on('ready', (playerId, ready) => socket.emit('ready', playerId, ready));
     gameEvents.on('nextPhase', () => socket.emit('nextPhase'));
     gameEvents.on('cardTapped', (playerId, cardId) => socket.emit('cardTapped', playerId, cardId));
 }
