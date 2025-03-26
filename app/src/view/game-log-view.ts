@@ -8,12 +8,13 @@ export class GameLogView extends Container {
     private readonly _scrollBox: ScrollBox;
     private readonly _expandCollapse: Graphics;
     private _collapsed: Boolean = false;
+    private readonly _startWidth: number = 300;
 
     constructor() {
         super();
 
         this._scrollBox = new ScrollBox({
-            width: 350,
+            width: this._startWidth,
             height: 800,
             radius: 5,
             elementsMargin: STANDARD_GAP * .5,
@@ -64,7 +65,7 @@ export class GameLogView extends Container {
     
     private onToggleCollapse() {
         this._collapsed = !this._collapsed;
-        this._scrollBox.width = this._collapsed ? 0 : 350;
+        this._scrollBox.width = this._collapsed ? 0 : this._startWidth;
         this.drawCollapseIcon();
         this.x = app.renderer.width - this.width - STANDARD_GAP;
     }
