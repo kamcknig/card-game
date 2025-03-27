@@ -1,20 +1,16 @@
-undo
-
-UserChoiceEffect - when lots of cards for harbinger - need to scroll or something
-
-"set aside" area and update the one ability that uses it right now.
+TODO lower priority
+- undo
+- "set aside" area and update the one ability that uses it right now.
     maybe "arbitrary zones"
         if so then current zones can be converted to use the feature too.
+- when can't load assets (expansion modules) it still just goes on rather than stopping
+- create a "card display" component. this component can be used within things like the userPromptModal or reactModal.
+- need to allow user to select another username inorder to see their discard?
 
-ask to resign feature
+TODO higher priority
+- make some selections non-toggleable like when playing throne room and picking a card
+- ask to resign feature
+  - remove player that resigns - or just make them skip their turn each time
 
-when can't load assets (expansion modules) it still just goes on rather than stopping
-
-create a "card display" component. this component can be used within things like the userPromptModal or reactModal.
-
-make some selections non-toggleable like when playing throne room and picking a card
-
-need to detect end of game
-  - end game screen to show stats
-
-need to allow user to select another username inorder to see their discard?
+CURRENTLY WORKING ON
+end game screen to show stats
