@@ -1,4 +1,4 @@
-import {isSceneCtor, Scene, SceneData, SceneNames} from "./scene";
+import { isSceneCtor, Scene, SceneData, SceneFactory, SceneNames } from "./scene";
 import {scenes} from "../../scenes";
 import {app} from "../create-app";
 
@@ -10,14 +10,14 @@ export async function displayScene<K extends SceneNames>(
 ) {
     console.log('display scene', sceneName, sceneConfig);
     if (scene) {
-        app.stage.removeChild(scene);
+        app.stage.removeChild(scene).destroy();
     }
 
     const sceneValue = scenes[sceneName];
 
     // 1) If it's a function that returns a scene-or-constructor, call it first
-    if (typeof sceneValue === "function" && !isSceneCtor(sceneValue)) {
-        const result = sceneValue(app.stage);
+    if (typeof sceneValue === 'function' && !isSceneCtor(sceneValue)) {
+        const result = (sceneValue as SceneFactory<Scene<any>>)(app.stage);
         if (isSceneCtor(result)) {
             scene = new result(app.stage, sceneConfig);
         } else {
@@ -33,6 +33,6 @@ export async function displayScene<K extends SceneNames>(
         scene = sceneValue;
     }
 
-    await scene.initialize();
+    await scene.initialize(sceneConfig);
     app.stage.addChild(scene);
 }

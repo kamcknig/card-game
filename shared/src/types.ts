@@ -72,7 +72,7 @@ export type ServerEmitEvents = {
     doneWaitingForPlayer: (playerId?: number) => void;
     expansionList: (val: any[]) => void;
     matchConfigurationUpdated: (val: Pick<MatchConfiguration, 'expansions'>) => void;
-    gameOver: () => void;
+    gameOver: (summary: MatchSummary) => void;
     gameOwnerUpdated: (playerId: number) => void;
     matchReady: (match: Match) => void;
     matchStarted: (match: Match) => void;
@@ -161,6 +161,12 @@ export class Player {
     }
 }
 
+export type MatchSummary = {
+    players: Record<number, {
+        turnsTaken: number;
+        deck: number[];
+    }>;
+}
 
 /**
  * CARD TYPES

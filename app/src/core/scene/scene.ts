@@ -16,13 +16,13 @@ export class Scene<D = unknown> extends Container {
  */
 export type SceneFactory<S extends Scene<any>> = (
     stage: Container,
-    data: S extends Scene<infer D> ? D : never,
-    ...args: unknown[]
+    data?: S extends Scene<infer D> ? D : never,
+    ...args: any[]
 ) => S;
 export type SceneConstructor<D = unknown> = new (
     stage: Container,
     data: D,
-    ...args: unknown[]
+  ...args: any[]
 ) => Scene<D>;
 /**
  * A single scene entry can be:
@@ -49,18 +49,21 @@ export function isSceneCtor(value: unknown): value is SceneConstructor {
     return typeof value === "function" && value.prototype instanceof Scene;
 }
 
+// Helper type to extract the data parameter from the initialize method.
+type ExtractInitData<S> = S extends { initialize(data?: infer D): any } ? D : never;
+
+// Updated ExtractData type.
 type ExtractData<T> =
-// Case A: T is a factory function?
-    T extends (stage: Container, data: infer FData, ...args: any[]) => Scene<infer _>
-        ? FData
-        // Case B: T is a constructor?
-        : T extends new (stage: Container, ...args: infer CData) => Scene<infer _>
-            ? CData
-            // Case C: T is already a Scene<SceneData> instance?
-            : T extends Scene<infer IData>
-                ? IData
-                // fallback
-                : never;
+// Case A: T is a factory function returning a Scene instance.
+  T extends (stage: Container, ...args: any[]) => infer S
+    ? ExtractInitData<S>
+    // Case B: T is a constructor returning a Scene instance.
+    : T extends new (stage: Container, ...args: any[]) => infer S
+      ? ExtractInitData<S>
+      // Case C: T is already a Scene instance.
+      : T extends { initialize(data?: infer D): any }
+        ? D
+        : never;
 
 export type SceneNames = keyof typeof scenes;
 

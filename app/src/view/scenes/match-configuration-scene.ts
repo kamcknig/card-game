@@ -31,8 +31,8 @@ export class MatchConfigurationScene extends Scene {
     this._cleanup.forEach(cb => cb());
   }
   
-  initialize(data?: unknown) {
-    super.initialize(data);
+  initialize() {
+    super.initialize();
     
     this._cleanup.push($players.subscribe(this.updatePlayerList.bind(this)));
     this._playerList.x = 300;

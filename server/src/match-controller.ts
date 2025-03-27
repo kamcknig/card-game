@@ -2,6 +2,7 @@ import {
   Card,
   Match,
   MatchConfiguration,
+  MatchSummary,
   MatchUpdate,
   Player,
   TurnPhaseOrderValues,
@@ -23,7 +24,7 @@ import { getGameState } from "./utils/get-game-state.ts";
 import { map } from "nanostores";
 import { getTurnPhase } from "./utils/get-turn-phase.ts";
 import { getCurrentPlayerId } from "./utils/get-current-player-id.ts";
-import { match } from "node:assert";
+import { isUndefined } from "node:util";
 
 export class MatchController {
   private $matchState = map<Match>();
@@ -53,7 +54,7 @@ export class MatchController {
     kingdomCards.forEach((card) => {
       cardsById[card.id] = card;
     });
-    
+
     const playerCards = this.createPlayerHands(cardsById);
 
     matchConfig = {
@@ -71,7 +72,7 @@ export class MatchController {
         return prev.concat(card.cardKey);
       }, [] as string[]),
     };
-    
+
     this.$matchState.set({
       trash: [],
       players: fisherYatesShuffle(
@@ -149,7 +150,9 @@ export class MatchController {
       )
       .slice(-MatchBaseConfiguration.numberOfKingdomPiles)
       .reduce((prev, key) => {
-        prev[key] = cardLibrary['kingdom'][key].type.includes('VICTORY') ? (players.length < 3 ? 8 : 12) : 10;
+        prev[key] = cardLibrary["kingdom"][key].type.includes("VICTORY")
+          ? (players.length < 3 ? 8 : 12)
+          : 10;
         return prev;
       }, {} as Record<string, number>);
 
@@ -296,7 +299,7 @@ export class MatchController {
     this.calculateScores(match);
     this.checkGameEnd();
   }
-  
+
   private calculateScores(match: MatchUpdate) {
     const scores: Record<number, number> = {};
 
@@ -322,13 +325,17 @@ export class MatchController {
     // todo only send update if scores differ
     sendToSockets(this.sockets.values(), "scoresUpdated", scores);
   }
-  
+
   private checkGameEnd() {
     console.log(`checking if the game has ended`);
-    
+
     const match = this.$matchState.get();
     const cardsById = match.cardsById;
-    if (match.supply.map(c => cardsById[c]).filter(c => c.cardKey === 'province').length === 0) {
+    if (
+      match.supply.map((c) => cardsById[c]).filter((c) =>
+        c.cardKey === "province"
+      ).length === 0
+    ) {
       console.log(`supply has no more provinces, game over`);
       this.endGame();
       return;
@@ -336,9 +343,9 @@ export class MatchController {
     const allSupplyCardKeys = match.config.supplyCardKeys.concat(
       match.config.kingdomCardKeys,
     );
-    
+
     console.debug(`original supply card piles ${allSupplyCardKeys}`);
-    
+
     const remainingSupplyCardKeys = match.supply.concat(
       match.kingdom,
     ).map((id) => cardsById[id].cardKey).reduce((prev, cardKey) => {
@@ -347,24 +354,38 @@ export class MatchController {
       }
       return prev.concat(cardKey);
     }, [] as string[]);
-    
+
     console.debug(`remaining supply card piles ${remainingSupplyCardKeys}`);
-    
+
     const emptyPileCount = allSupplyCardKeys.length -
       remainingSupplyCardKeys.length;
-    
+
     console.debug(`empty pile count ${emptyPileCount}`);
-    
+
     if (emptyPileCount === 3) {
       console.log(`three supply piles are empty, game over`);
       this.endGame();
     }
   }
-  
+
   private endGame() {
-    sendToSockets(this.sockets.values(), 'gameOver');
+    const match = this.$matchState.get();
+    const currentTurn = match.turnNumber;
+    const currentPlayerTurnIndex = match.currentPlayerTurnIndex;
+    
+    const summary: MatchSummary = {
+      players: match.players.reduce((prev, playerId) => {
+        prev[playerId] = {
+          deck: match.playerDecks[playerId],
+          turnsTaken: match.players.findIndex(p => p === playerId) <= currentPlayerTurnIndex ? currentTurn : currentTurn - 1
+        }
+        return prev;
+      }, {} as MatchSummary['players'])
+    };
+
+    sendToSockets(this.sockets.values(), 'gameOver', summary);
   }
-  
+
   private async onCheckForPlayerActions() {
     console.log("checking for remaining player actions");
 
