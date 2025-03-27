@@ -68,6 +68,10 @@ export const userPromptModal = (args: UserPromptArgs): Promise<unknown> => {
 
             validate();
         };
+        const cardRemovedListener = (view: Container) => {
+            view.off('removed', cardRemovedListener);
+            view.off('pointerdown', cardPointerDownListener);
+        }
 
         if (args.content?.cardSelection) {
             const cardCount = args.content.cardSelection.cardIds.length;
@@ -76,6 +80,7 @@ export const userPromptModal = (args: UserPromptArgs): Promise<unknown> => {
             for (const [idx, cardId] of args.content.cardSelection.cardIds.entries()) {
                 const view = createCardView(cardId);
                 view.on('pointerdown', cardPointerDownListener)
+                view.on('removed', cardRemovedListener);
                 view.x = cardCount > 5
                   ? idx * SMALL_CARD_WIDTH * .25 + idx * STANDARD_GAP
                   : idx * SMALL_CARD_WIDTH + idx * STANDARD_GAP;
@@ -127,16 +132,28 @@ export const userPromptModal = (args: UserPromptArgs): Promise<unknown> => {
             }
         };
 
-        declineBtn.button.on('pointerdown', () => {
-            cleanup(false)
-        });
-
-        confirmBtn.button.on('pointerdown', () => {
+        const declinePointerDown = () => {
+            cleanup(false);
+        };
+        const confirmPointerDown = () => {
             if (!validate()) {
                 return;
             }
             cleanup(true);
-        });
+        };
+        const onConfirmRemoved = () => {
+            confirmBtn.button.off('pointerdown', confirmPointerDown);
+            confirmBtn.button.off('removed', onConfirmRemoved);
+        }
+        const onDeclineRemoved = () => {
+            declineBtn.button.off('pointerdown', declinePointerDown);
+            declineBtn.button.off('removed', onDeclineRemoved);
+        }
+        
+        declineBtn.button.on('pointerdown', declinePointerDown);
+        confirmBtn.button.on('pointerdown', () => confirmPointerDown);
+        confirmBtn.button.on('removed', onConfirmRemoved);
+        declineBtn.button.on('removed', onDeclineRemoved);
 
         modalContainer.addChild(hudContainer);
         modalContainer.x = app.renderer.width * .5;

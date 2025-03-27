@@ -1,16 +1,16 @@
-import { Assets, Container, DestroyOptions, Graphics, Text } from "pixi.js";
-import { Scene } from "../../core/scene/scene";
-import { PlayerHandView } from "../player-hand";
-import { AppButton, createAppButton } from "../../core/create-app-button";
-import { $supplyStore, $trashStore } from "../../state/match-state";
-import { app } from "../../core/create-app";
-import { $playerDeckStore, $playerDiscardStore, $players, $selfPlayerId } from "../../state/player-state";
-import { gameEvents } from "../../core/event/events";
-import { PlayAreaView } from "../play-area";
-import { KingdomSupplyView } from "../kingdom-supply";
-import { PileView } from "../pile";
-import { $cardsById } from "../../state/card-state";
-import { Card, CountSpec, UserPromptArgs } from "shared/types";
+import { Assets, Container, Graphics, Text } from 'pixi.js';
+import { Scene } from '../../core/scene/scene';
+import { PlayerHandView } from '../player-hand';
+import { AppButton, createAppButton } from '../../core/create-app-button';
+import { $supplyStore, $trashStore } from '../../state/match-state';
+import { app } from '../../core/create-app';
+import { $playerDeckStore, $playerDiscardStore, $players, $selfPlayerId } from '../../state/player-state';
+import { gameEvents } from '../../core/event/events';
+import { PlayAreaView } from '../play-area';
+import { KingdomSupplyView } from '../kingdom-supply';
+import { PileView } from '../pile';
+import { $cardsById } from '../../state/card-state';
+import { Card, CountSpec, UserPromptArgs } from 'shared/types';
 import { $runningCardActions, $selectableCards, $selectedCards } from '../../state/interactive-state';
 import { CardView } from '../card-view';
 import { userPromptModal } from '../modal/user-prompt-modal';
@@ -18,11 +18,12 @@ import { CARD_HEIGHT, SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP } from '
 import { ScoreView } from '../score-view';
 import { GameLogView } from '../game-log-view';
 import { displayCardDetail } from '../modal/display-card-detail';
-import { validateCountSpec } from "../../shared/validate-count-spec";
+import { validateCountSpec } from '../../shared/validate-count-spec';
 import { CardStackView } from '../card-stack';
 import { displayTrash } from '../modal/display-trash';
 import { $currentPlayerTurnId, $turnPhase } from '../../state/turn-state';
 import { socket } from '../../client-socket';
+import { isUndefined } from 'es-toolkit/compat';
 
 export class MatchScene extends Scene {
   private _doneSelectingBtn: Container = new Container();
@@ -46,6 +47,8 @@ export class MatchScene extends Scene {
   
   constructor(stage: Container) {
     super(stage);
+    
+    this.on('removed', this.onRemoved);
   }
   
   async initialize() {
@@ -58,16 +61,26 @@ export class MatchScene extends Scene {
     this.createScoreView();
     this.createDoneSelectingButton();
     
-    this._cleanup.push($supplyStore.subscribe(this.drawBaseSupply.bind(this)));
-    app.renderer.on('resize', this.onRendererResize.bind(this));
-    gameEvents.on('matchStarted', this.onMatchStarted.bind(this));
-    gameEvents.on('selectCard', this.doSelectCards.bind(this));
-    gameEvents.on('userPrompt', this.onUserPrompt.bind(this));
-    gameEvents.on('displayCardDetail', this.onDisplayCardDetail.bind(this));
-    gameEvents.on('waitingForPlayer', this.onWaitingOnPlayer.bind(this));
-    gameEvents.on('doneWaitingForPlayer', this.onDoneWaitingForPlayer.bind(this));
+    this._cleanup.push($supplyStore.subscribe(this.drawBaseSupply));
+    app.renderer.on('resize', this.onRendererResize);
+    gameEvents.on('matchStarted', this.onMatchStarted);
+    gameEvents.on('selectCard', this.doSelectCards);
+    gameEvents.on('userPrompt', this.onUserPrompt);
+    gameEvents.on('displayCardDetail', this.onDisplayCardDetail);
+    gameEvents.on('waitingForPlayer', this.onWaitingOnPlayer);
+    gameEvents.on('doneWaitingForPlayer', this.onDoneWaitingForPlayer);
     
-    $currentPlayerTurnId.subscribe(playerId => {
+    this._cleanup.push(() => {
+      app.renderer.off('resize', this.onRendererResize);
+      gameEvents.off('matchStarted', this.onMatchStarted);
+      gameEvents.off('selectCard', this.doSelectCards);
+      gameEvents.off('userPrompt', this.onUserPrompt);
+      gameEvents.off('displayCardDetail', this.onDisplayCardDetail);
+      gameEvents.off('waitingForPlayer', this.onWaitingOnPlayer);
+      gameEvents.off('doneWaitingForPlayer', this.onDoneWaitingForPlayer);
+    });
+    
+    this._cleanup.push($currentPlayerTurnId.subscribe(playerId => {
       if (playerId !== $selfPlayerId.get()) return;
       
       document.title = `Dominion - ${$players.get()[playerId].name}`;
@@ -79,9 +92,11 @@ export class MatchScene extends Scene {
       } catch {
         console.error('Could not play start turn sound');
       }
-    });
+    }));
     
-    $turnPhase.subscribe(phase => {
+    this._cleanup.push($turnPhase.subscribe(phase => {
+      if (isUndefined(phase)) return;
+      
       if (phase === 'buy' && $currentPlayerTurnId.get() === $selfPlayerId.get()) {
         this._playAllTreasuresButton = createAppButton(
           { text: 'PLAY ALL TREASURES', style: { fill: 'white', fontSize: 24 } });
@@ -109,11 +124,11 @@ export class MatchScene extends Scene {
           b.removeAllListeners();
           this._playAllTreasuresButton = null;
       }
-    });
+    }));
     
     setTimeout(() => {
       this.onRendererResize();
-      socket.emit('ready', $selfPlayerId.get(), true);
+      socket.emit('clientReady', $selfPlayerId.get(), true);
     });
   }
   
@@ -176,16 +191,20 @@ export class MatchScene extends Scene {
     });
     this.addChild(this._trash);
     this._trash.eventMode = 'static';
-    this._trash.on('pointerdown', () => {
-      if ($trashStore.get().length === 0) {
-        return;
-      }
-      displayTrash()
-    });
+    this._trash.on('pointerdown', this.onTrashPressed);
+    this._cleanup.push(() => this._trash.off('pointerdown', this.onTrashPressed));
     
     this._playerHand = new PlayerHandView($selfPlayerId.get());
-    this._playerHand.on('nextPhase', this.onNextPhasePressed.bind(this));
+    this._playerHand.on('nextPhase', this.onNextPhasePressed);
+    this._cleanup.push(() => this._playerHand.off('nextPhase', this.onNextPhasePressed));
     this.addChild(this._playerHand);
+  }
+  
+  private onTrashPressed = (e: PointerEvent) => {
+    if ($trashStore.get().length === 0) {
+      return;
+    }
+    displayTrash()
   }
   
   private createGameLog() {
@@ -213,7 +232,7 @@ export class MatchScene extends Scene {
     this._doneSelectingBtn.addChild(b.button);
   }
   
-  private onNextPhasePressed() {
+  private onNextPhasePressed = (e: PointerEvent) => {
     console.log('call to action pressed');
     
     if (!this.uiInteractive) {
@@ -224,11 +243,11 @@ export class MatchScene extends Scene {
     gameEvents.emit('nextPhase');
   }
   
-  private onDisplayCardDetail(cardId: number) {
+  private onDisplayCardDetail = (cardId: number) => {
     displayCardDetail(cardId);
   }
   
-  private onWaitingOnPlayer(playerId: number) {
+  private onWaitingOnPlayer = (playerId: number) => {
     const c = new Container({ label: 'waitingOnPlayer' });
     
     const t = new Text({
@@ -254,29 +273,28 @@ export class MatchScene extends Scene {
     c.y = app.renderer.height * .5 - c.height * .5;
   }
   
-  private onDoneWaitingForPlayer() {
+  private onDoneWaitingForPlayer = () => {
     this.getChildByLabel('waitingOnPlayer')
       ?.removeFromParent();
   }
   
-  private onMatchStarted() {
+  private onMatchStarted = () => {
     this.eventMode = 'static';
     this.on('pointerdown', this.onPointerDown.bind(this));
   }
   
-  destroy(options?: DestroyOptions) {
-    super.destroy(options);
+  private onRemoved = () => {
     this._cleanup.forEach(c => c());
   }
   
-  private async onUserPrompt(args: UserPromptArgs) {
+  private onUserPrompt = async (args: UserPromptArgs) => {
     this._selecting = true;
     const result = await userPromptModal(args);
     this._selecting = false;
     gameEvents.emit('userPromptResponse', result);
   }
   
-  private async doSelectCards(count: CountSpec) {
+  private doSelectCards = async (count: CountSpec) => {
     const cardIds = $selectableCards.get();
     
     if (cardIds.length === 0) {
@@ -296,6 +314,8 @@ export class MatchScene extends Scene {
     
     // listen for cards being selected
     const selectedCardsListenerCleanup = $selectedCards.subscribe(cardIds => {
+      if (isUndefined(cardIds) || cardIds.length === 0) return;
+      
       this._doneSelectingBtn.off('pointerdown', doneListener);
       // if they are valid, allow button press
       if (validateCountSpec(count, cardIds?.length ?? 0)) {
@@ -357,14 +377,20 @@ export class MatchScene extends Scene {
     }
   }
   
-  private drawBaseSupply(newVal: ReadonlyArray<number>) {
+  private drawBaseSupply = (newVal: ReadonlyArray<number>) => {
+    if (!newVal || newVal.length === 0) {
+      return;
+    }
+    
     this._baseSupply.removeChildren()
       .forEach(c => c.destroy());
     
+    console.log('kyle', JSON.parse(JSON.stringify($cardsById.get())));
     const cards = newVal.map(id => $cardsById.get()[id]);
     
     // reduce to Record of card name to a Card array of those named cards
     const piles = cards.reduce((prev, card) => {
+      console.log(JSON.parse(JSON.stringify(card)));
       prev[card.cardKey] ||= [];
       prev[card.cardKey].push(card);
       return prev;
@@ -382,7 +408,7 @@ export class MatchScene extends Scene {
     this._baseSupply.scale = .8;
   }
   
-  private onRendererResize(): void {
+  private onRendererResize = (): void => {
     console.log(this._gameLog.width);
     this._gameLog.x = app.renderer.width - this._gameLog.width - STANDARD_GAP;
     this._gameLog.y = STANDARD_GAP;

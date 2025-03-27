@@ -14,10 +14,12 @@ export class CardView extends Container<ContainerChild> {
     private readonly _backView: Sprite;
     private _size: 'full' | 'normal';
 
-    private readonly _cleanup: () => void;
+    private readonly _cleanup: (() => void)[] = [];
 
     private _facing: 'back' | 'front' = 'back';
     public set facing(value: 'front' | 'back') {
+        if (!this._frontView || !this._backView) return;
+        
         this._cardView.getChildByLabel('view')?.removeFromParent();
         this._cardView.addChild(value === 'front' ? this._frontView : this._backView);
         this._facing = value;
@@ -29,13 +31,19 @@ export class CardView extends Container<ContainerChild> {
 
     public set size(value: 'full' | 'normal') {
         this._size = value;
-        this._frontView.texture = Assets.get(`${this.card.cardKey}${value === 'full' ? '-full' : ''}`);
+        
+        if (this._frontView) {
+            this._frontView.texture = Assets.get(`${this.card.cardKey}${value === 'full' ? '-full' : ''}`);
+            this._frontView.width = value === 'full' ? CARD_WIDTH : SMALL_CARD_WIDTH;
+            this._frontView.height = value === 'full' ? CARD_HEIGHT : SMALL_CARD_HEIGHT;
+        }
+        
 
-        this._frontView.width = value === 'full' ? CARD_WIDTH : SMALL_CARD_WIDTH;
-        this._frontView.height = value === 'full' ? CARD_HEIGHT : SMALL_CARD_HEIGHT;
-
-        this._backView.width = value === 'full' ? CARD_WIDTH : SMALL_CARD_WIDTH;
-        this._backView.height = value === 'full' ? CARD_HEIGHT : SMALL_CARD_HEIGHT;
+        if (this._backView) {
+            this._backView.width = value === 'full' ? CARD_WIDTH : SMALL_CARD_WIDTH;
+            this._backView.height = value === 'full' ? CARD_HEIGHT : SMALL_CARD_HEIGHT;
+        }
+        
         this._size = value;
         this.onCardUpdated();
     }
@@ -68,19 +76,22 @@ export class CardView extends Container<ContainerChild> {
         this.facing = 'front';
         this.size  = 'normal'
 
-        this._cleanup = batched([$selectableCards, $selectedCards], (...args) => args).subscribe(this.onCardUpdated.bind(this));
+        this._cleanup.push(batched([$selectableCards, $selectedCards], (...args) => args).subscribe(this.onCardUpdated.bind(this)));
 
-        this.on('pointerdown', (e) => {
-            if (e.button === 2 && this.facing !== 'back') {
-                gameEvents.emit('displayCardDetail', this.card.id);
-            }
-        })
+        this.on('pointerdown', this.onPressed);
+        this._cleanup.push(() => this.off('pointerdown', this.onPressed));
+        this.off('removed', this.onRemoved);
     }
 
-    destroy(options?: DestroyOptions) {
-        super.destroy(options);
-        this._cleanup();
-        this.removeAllListeners();
+    private onPressed = (e: PointerEvent) => {
+        if (e.button === 2 && this.facing !== 'back') {
+            gameEvents.emit('displayCardDetail', this.card.id);
+        }
+    }
+    
+    private onRemoved = () => {
+        this._cleanup.forEach(cb => cb());
+        this.off('removed', this.onRemoved);
     }
 
     private onCardUpdated([selectable, selected]: ReadonlyArray<number[]> = [[],[]]) {

@@ -46,7 +46,7 @@ export const MatchBaseConfiguration = {
     supply: {
       baseCards: [
         {
-          "province": 8,
+          "province": 1,
           "gold": 30,
           "duchy": 8,
           "silver": 40,

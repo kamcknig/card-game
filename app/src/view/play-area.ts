@@ -6,7 +6,8 @@ import { $cardsById } from "../state/card-state";
 export class PlayAreaView extends Container {
     private _background: Graphics = new Graphics();
     private _cardView: Container = new Container();
-
+    private readonly _cleanup: (() => void)[] = [];
+    
     constructor() {
         super();
 
@@ -20,9 +21,15 @@ export class PlayAreaView extends Container {
         this._cardView.y = 60;
         this.addChild(this._cardView);
 
-        $playAreaStore.subscribe(this.drawCards.bind(this));
+        this._cleanup.push($playAreaStore.subscribe(this.drawCards.bind(this)));
+        this.on('removed', this.onRemoved);
     }
 
+    private onRemoved = () => {
+        this._cleanup.forEach(cb => cb());
+        this.off('removed', this.onRemoved);
+    }
+    
     private drawCards(val: ReadonlyArray<number>) {
         this._cardView.removeChildren()
           .forEach(c => c.destroy());

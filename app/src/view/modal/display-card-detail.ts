@@ -25,8 +25,14 @@ export const displayCardDetail = (cardId: number): void => {
     container.addChild(view);
     app.stage.addChild(container);
 
-    container.on('pointerdown', () => {
-        container.removeAllListeners();
+    const onPointerDown = () => {
         app.stage.removeChild(container);
-    });
+    };
+    const onRemoved = () => {
+        container.off('pointerdown', onPointerDown);
+        container.off('removed', onRemoved);
+    }
+    
+    container.on('pointerdown', onPointerDown);
+    container.on('removed', onRemoved)
 }

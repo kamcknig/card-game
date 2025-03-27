@@ -1,4 +1,4 @@
-import {Container, Graphics, Text} from 'pixi.js';
+import {Container, DestroyOptions, Graphics, Text} from 'pixi.js';
 import {$players, $playerScoreStore, PlayerState} from '../state/player-state';
 import {batched} from 'nanostores';
 import {$currentPlayerTurnIndex, $playerTurnOrder, $turnNumber} from '../state/turn-state';
@@ -8,6 +8,8 @@ export class ScoreView extends Container {
     private _playerNameContainer: Container = new Container();
     private _currentPlayerHighlight: Container = new Container();
     private _turnLabel: Text = new Text({style: {fontSize: 18, fill: {color: 'black'}}});
+    private _cleanup: (() => void)[] = [];
+    private _scoreListeners: (() => void)[] = [];
 
     constructor() {
         super();
@@ -17,18 +19,23 @@ export class ScoreView extends Container {
         this.addChild(this._playerNameContainer);
         this._playerNameContainer.y = this._turnLabel.y + this._turnLabel.height + STANDARD_GAP;
         
-        batched([$players, $playerTurnOrder], (...arg) => arg).subscribe(this.onPlayersUpdated.bind(this));
+        this._cleanup.push(batched([$players, $playerTurnOrder], (...arg) => arg).subscribe(this.onPlayersUpdated.bind(this)));
+        this._cleanup.push($players.subscribe(this.onTrackScores.bind(this)));
+        this._cleanup.push($currentPlayerTurnIndex.subscribe(this.onPlayerTurnUpdated.bind(this)));
+        this._cleanup.push($turnNumber.subscribe(this.onTurnNumberUpdated.bind(this)));
         
-        $players.subscribe(this.onTrackScores.bind(this));
-        $currentPlayerTurnIndex.subscribe(this.onPlayerTurnUpdated.bind(this));
-        $turnNumber.subscribe(this.onTurnNumberUpdated.bind(this));
+        this.on('removed', this.onRemoved);
     }
 
+    private onRemoved = () => {
+        this._cleanup.forEach(cb => cb());
+        this._scoreListeners.forEach(cb => cb());
+        this.off('removed', this.onRemoved);
+    }
+    
     private onTurnNumberUpdated(turn: number) {
         this._turnLabel.text = `TURN ${turn}`;
     }
-
-    private _scoreListeners: (() => void)[] = [];
 
     private cleanupScoreListeners() {
         this._scoreListeners.forEach(c => c());
@@ -43,7 +50,13 @@ export class ScoreView extends Container {
     }
 
     private onUpdateScore(playerId: number, score: number) {
-        const scoreText = this._playerNameContainer.getChildByName(`player-${playerId}`)?.getChildByName('score-text') as Text;
+        let scoreText;
+        try {
+            scoreText = this._playerNameContainer.getChildByName(`player-${playerId}`)?.getChildByName('score-text') as Text;
+        } catch {
+            // meh
+        }
+        
 
         if (!scoreText) {
             return;
@@ -56,7 +69,6 @@ export class ScoreView extends Container {
 
     private onPlayersUpdated([playerState, turnOrder]: readonly [PlayerState, number[]]) {
         this._playerNameContainer.removeChildren().forEach(c => c.destroy());
-        console.log(this._playerNameContainer.height);
         const playerValues = Object.values(playerState);
 
         for (const [idx, playerId] of turnOrder.entries()) {
@@ -97,11 +109,12 @@ export class ScoreView extends Container {
     private onPlayerTurnUpdated(turnIndex: number) {
         const g = this._currentPlayerHighlight.getChildAt(0) as Graphics;
 
-        const c: Container = this._playerNameContainer.getChildAt(turnIndex);
+        const c: Container = this._playerNameContainer?.getChildAt(turnIndex);
 
-        if (!c) {
+        if (!c || !g) {
             return;
         }
+        
         this._currentPlayerHighlight.x = c.x;
         this._currentPlayerHighlight.y = c.y;
 

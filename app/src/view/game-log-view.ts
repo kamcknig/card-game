@@ -7,8 +7,9 @@ import { app } from '../core/create-app';
 export class GameLogView extends Container {
     private readonly _scrollBox: ScrollBox;
     private readonly _expandCollapse: Graphics;
-    private _collapsed: Boolean = false;
     private readonly _startWidth: number = 300;
+    private readonly _cleanup: (() => void)[] = [];
+    private _collapsed: Boolean = false;
 
     constructor() {
         super();
@@ -26,7 +27,8 @@ export class GameLogView extends Container {
         
         this._expandCollapse = new Graphics();
         this._expandCollapse.eventMode = 'static';
-        this._expandCollapse.on('pointerdown', this.onToggleCollapse.bind(this));
+        this._expandCollapse.on('pointerdown', this.onToggleCollapse);
+        this._cleanup.push(() => this._expandCollapse.off('pointerdown', this.onToggleCollapse));
         this._expandCollapse.moveTo(0, 0)
         this._expandCollapse.lineTo(10, 10);
         this._expandCollapse.lineTo(0, 20);
@@ -36,12 +38,17 @@ export class GameLogView extends Container {
         this._expandCollapse.y = STANDARD_GAP;
         this.addChild(this._expandCollapse);
         
-        gameEvents.on('addLogEntry', (logEntry: string) => {
-            this.addEntry(logEntry);
-        });
+        gameEvents.on('addLogEntry', this.addEntry);
+        this._cleanup.push(() => gameEvents.off('addLogEntry', this.addEntry));
+        this.on('removed', this.onRemoved);
+    }
+    
+    private onRemoved = () => {
+        this._cleanup.forEach(cb => cb());
+        this.off('removed', this.onRemoved);
     }
 
-    public addEntry(entry: string) {
+    public addEntry = (entry: string) => {
         const t = new Text({
             text: entry,
             style: { fontSize: 16, fill: 'white'}
@@ -63,7 +70,7 @@ export class GameLogView extends Container {
         this._expandCollapse.x += this._collapsed ? 5 : -5
     }
     
-    private onToggleCollapse() {
+    private onToggleCollapse = () => {
         this._collapsed = !this._collapsed;
         this._scrollBox.width = this._collapsed ? 0 : this._startWidth;
         this.drawCollapseIcon();

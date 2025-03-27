@@ -32,10 +32,16 @@ export const displayTrash = () => {
         scrollBox.addItem(view);
     }
 
-    c.on('pointerdown', () => {
-        c.removeAllListeners();
+    const onPointerDown = () => {
         app.stage.removeChild(c);
-    });
+    };
+    const onRemoved = () => {
+        c.off('pointerdown', onPointerDown);
+        c.off('removed', onRemoved);
+    }
+    
+    c.on('pointerdown', onPointerDown);
+    c.on('removed', onRemoved);
 
     app.stage.addChild(c);
 }

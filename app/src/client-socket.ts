@@ -10,7 +10,7 @@ import {
 import { $expansionList } from './state/expansion-list-state';
 import { v4 as uuidv4 } from 'uuid'
 import {
-    $currentPlayerTurnIndexActual,
+    $currentPlayerTurnIndex,
     $playerActions,
     $playerBuys,
     $playerTreasure,
@@ -152,6 +152,7 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
         $matchConfiguration.set(val);
     },
     matchReady: match => {
+        $cardsById.set(match.cardsById);
         $supplyStore.set(match.supply);
         $kingdomStore.set(match.kingdom);
         $playerTurnOrder.set(match.players);
@@ -162,8 +163,6 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
             $playerDiscardStore(pId).set(match?.playerDiscards[pId] ?? []);
             $playerDeckStore(pId).set(match?.playerDecks[pId] ?? []);
         });
-
-        $cardsById.set(match.cardsById);
 
         Assets.addBundle('cardLibrary', Object.values(match.cardsById).reduce((prev, c) => {
             prev[c.cardKey] = `./assets/${c.cardKey}.jpg`;
@@ -188,7 +187,7 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
                     $turnPhase.set(TurnPhaseOrderValues[match.turnPhaseIndex]);
                     break;
                 case 'currentPlayerTurnIndex':
-                    $currentPlayerTurnIndexActual.set(match.currentPlayerTurnIndex);
+                    $currentPlayerTurnIndex.set(match.currentPlayerTurnIndex);
                     break;
                 case 'playerBuys':
                     $playerBuys.set(match.playerBuys);
@@ -313,7 +312,8 @@ const wrapHandler = <F extends (this: null, ...args: any[]) => any>(
     handler: F
 ): F => {
     const wrapped = function (this: null, ...args: Parameters<F>): ReturnType<F> {
-        console.log(`Socket event '${eventName}' invoked with arguments:`, ...args);
+        console.log(`Socket event '${eventName}' invoked with arguments:`);
+        console.log(JSON.parse(JSON.stringify(args)));
         return handler.apply(null, args);
     };
     // First cast to unknown, then to F.

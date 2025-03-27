@@ -1,9 +1,5 @@
 import { Server } from "socket.io";
-import {
-  MatchConfiguration,
-  ServerEmitEvents,
-  ServerListenEvents,
-} from "shared/types.ts";
+import { ServerEmitEvents, ServerListenEvents, } from "shared/types.ts";
 import { MatchController } from "./match-controller.ts";
 import { sendToSockets } from "./utils/send-to-sockets.ts";
 import { getPlayerById } from "./utils/get-player-by-id.ts";
@@ -16,7 +12,6 @@ import { createGame, getGameState } from "./utils/get-game-state.ts";
 import { getExpansionList } from "./utils/get-expansion-lists.ts";
 import { toNumber } from "es-toolkit/compat";
 import * as log from "@timepp/enhanced-deno-log/auto-init";
-import { getCurrentPlayerId } from './utils/get-current-player-id.ts';
 
 if (Deno.env.get('LOG_TO_FILE')?.toLowerCase() === 'false') {
   log.setConfig({
@@ -55,7 +50,7 @@ io.on("connection", async (socket) => {
     sendToSockets(sessionSocketMap.values(), 'playerNameUpdated', playerId, name);
   });
   
-  const onReady = (playerId: number) => {
+  const onPlayerReady = (playerId: number) => {
     const player = getPlayerById(playerId);
     if (!player) {
       console.debug(`received player ready event from ${playerId} but could not find Player object`);
@@ -82,10 +77,10 @@ io.on("connection", async (socket) => {
     match.initialize(config);
     
     getGameState().players.forEach(p => p.ready = false);
-    sessionSocketMap.values().forEach(s => s.off('ready', onReady));
+    sessionSocketMap.values().forEach(s => s.off('playerReady', onPlayerReady));
   }
   
-  socket.on('ready', onReady);
+  socket.on('playerReady', onPlayerReady);
 
   socket.on("matchConfigurationUpdated", async (val) => {
     console.log('match configuration has been updated');
@@ -125,7 +120,9 @@ io.on("connection", async (socket) => {
 
     // any new connection will be a new socket ID, so we can delete the old ones
     sessionSocketMap.delete(sessionId);
-    // playerSocketMap.delete(disconnectedPlayer.id);
+    if (disconnectedPlayer) {
+      playerSocketMap.delete(disconnectedPlayer.id);
+    }
 
     if (disconnectedPlayer) {
       disconnectedPlayer.connected = false;

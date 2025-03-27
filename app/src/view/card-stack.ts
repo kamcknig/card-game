@@ -1,12 +1,10 @@
 import { Container, DestroyOptions, Graphics, Text } from "pixi.js";
 import { CountBadgeView } from "./count-badge-view";
 import { createCardView } from "../core/card/create-card-view";
-import { $playerDiscardStore } from "../state/player-state";
 import { $cardsById } from "../state/card-state";
 import { CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP } from '../app-contants';
 import { batched, PreinitializedWritableAtom } from 'nanostores';
 import { isUndefined } from 'es-toolkit';
-import { Card } from 'shared/types';
 import { CardView } from './card-view';
 import { $selectedCards } from '../state/interactive-state';
 
@@ -22,7 +20,7 @@ export type CardStackArgs = {
 export class CardStackView extends Container {
   private readonly _background: Container = new Container();
   private readonly _cardContainer: Container = new Container({ x: STANDARD_GAP * .8, y: STANDARD_GAP * .8 });
-  private readonly _cleanup: () => void;
+  private readonly _cleanup: (() => void)[] = [];
   
   private readonly _cardStore: PreinitializedWritableAtom<number[]>;
   private readonly _cardScale: number;
@@ -35,7 +33,7 @@ export class CardStackView extends Container {
   
   private readonly _showBackground: boolean;
   
-  constructor(private args: CardStackArgs) {
+  constructor(args: CardStackArgs) {
     super();
     
     const {
@@ -93,12 +91,13 @@ export class CardStackView extends Container {
     this._cardContainer.x = STANDARD_GAP * this._cardScale;
     
     this.addChild(this._cardContainer);
-    this._cleanup = batched([this._cardStore, $selectedCards], (...args) => args).subscribe(this.drawDeck.bind(this));
+    this._cleanup.push(batched([this._cardStore, $selectedCards], (...args) => args).subscribe(this.drawDeck.bind(this)));
+    this.on('removed', this.onRemoved);
   }
   
-  destroy(options?: DestroyOptions) {
-    super.destroy(options);
-    this._cleanup();
+  private onRemoved = () => {
+    this._cleanup.forEach(cb => cb());
+    this.off('removed', this.onRemoved);
   }
   
   private drawDeck([cardIds, selectedCardIds]: ReadonlyArray<number[]>) {

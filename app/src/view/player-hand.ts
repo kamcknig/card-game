@@ -1,4 +1,4 @@
-import { Container, DestroyOptions, Graphics } from "pixi.js";
+import { Container, Graphics } from "pixi.js";
 import { $playerHandStore, $selfPlayerId } from "../state/player-state";
 import { $cardsById } from "../state/card-state";
 import { Card } from "shared/types";
@@ -13,11 +13,11 @@ export class PlayerHandView extends Container {
     private _phaseStatus: PhaseStatus = new PhaseStatus();
     private _nextPhaseButton: AppButton = createAppButton({text: 'NEXT'});
     
+    private readonly _cleanup: (() => void)[] = [];
     private readonly _background: Container = new Container();
     private readonly _handContainer: Container = new Container({
         label: `PlayerHandView${this.playerId!}`
     });
-    private readonly _cleanup: (() => void)[] = [];
     
     constructor(private playerId: number) {
         super();
@@ -42,10 +42,10 @@ export class PlayerHandView extends Container {
         
         
         this.addChild(this._nextPhaseButton.button);
-        $currentPlayerTurnId.subscribe(playerId => {
+        this._cleanup.push($currentPlayerTurnId.subscribe(playerId => {
             this._nextPhaseButton.button.visible = playerId === $selfPlayerId.get();
-        });
-        $turnPhase.subscribe((phase) => {
+        }));
+        this._cleanup.push($turnPhase.subscribe((phase) => {
             this.removeChild(this._nextPhaseButton.button);
             switch (phase) {
                 case 'action':
@@ -58,23 +58,25 @@ export class PlayerHandView extends Container {
             
             this._nextPhaseButton.button.x = this.width - this._nextPhaseButton.button.width - STANDARD_GAP;
             this.addChild(this._nextPhaseButton.button);
-        });
+        }));
         
-        this._cleanup.push($playerHandStore(playerId).subscribe(this.drawHand.bind(this)));
+        this._cleanup.push($playerHandStore(playerId).subscribe(this.drawHand));
         
-        this._nextPhaseButton.button.on('pointerdown', this.onNextPhasePressed.bind(this));
+        this._nextPhaseButton.button.on('pointerdown', this.onNextPhasePressed);
+        this._cleanup.push(() => this._nextPhaseButton.button.off('pointerdown', this.onNextPhasePressed));
+        this.on('removed', this.onRemoved);
     }
     
-    private onNextPhasePressed() {
+    private onNextPhasePressed = () => {
         this.emit('nextPhase');
     }
 
-    destroy(options?: DestroyOptions) {
-        super.destroy(options);
+    private onRemoved = () => {
         this._cleanup.forEach(c => c());
+        this.off('removed', this.onRemoved);
     }
 
-    private drawHand(hand: ReadonlyArray<number>) {
+    private drawHand = (hand: ReadonlyArray<number>) => {
         this._handContainer.removeChildren().forEach(c => c.destroy());
         this.removeChild(this._handContainer);
 

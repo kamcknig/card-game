@@ -27,11 +27,13 @@ export class PhaseStatus extends Container {
       buys,
       actions,
     })).subscribe(this.drawPhase.bind(this)));
+    
+    this.on('removed', this.onRemoved);
   }
   
-  destroy(options?: DestroyOptions) {
-    super.destroy(options);
+  private onRemoved = () => {
     this._cleanup.forEach(c => c());
+    this.off('removed', this.onRemoved);
   }
   
   private drawPhase({treasure, buys, actions}: { treasure: number; buys: number; actions: number;}) {

@@ -39,6 +39,7 @@ export type GameState = {
 export type MatchUpdate = Partial<Match>;
 
 export type Match = {
+    scores: Record<number, number>,
     cardsById: Record<number, Card>,
     selectableCards: { playerId: number; cardId: number }[];
     players: number[];
@@ -93,10 +94,11 @@ export type ServerEmitEventNames = keyof ServerEmitEvents;
 
 export type ServerListenEvents = {
     cardTapped: (playerId: number, cardId: number) => void;
+    clientReady: (playerId: number, ready: boolean) => void;
     expansionSelected: (val: string[]) => void;
     matchConfigurationUpdated: (val: Pick<MatchConfiguration, 'expansions'>) => void;
     nextPhase: () => void;
-    ready: (playerId: number, ready: boolean) => void;
+    playerReady: (playerId: number, ready: boolean) => void;
     playAllTreasure: (playerId: number) => void;
     selectCardResponse: (selectedCards: number[]) => void;
     updatePlayerName: (playerId: number, name: string) => void;
@@ -162,10 +164,12 @@ export class Player {
 }
 
 export type MatchSummary = {
-    players: Record<number, {
+    scores: {
+        playerId: number;
         turnsTaken: number;
+        score: number;
         deck: number[];
-    }>;
+    }[]
 }
 
 /**

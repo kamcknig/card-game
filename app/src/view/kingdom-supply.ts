@@ -1,4 +1,4 @@
-import {Container, Graphics} from "pixi.js";
+import {Container, DestroyOptions, Graphics} from "pixi.js";
 import {PileView} from "./pile";
 import {$kingdomStore} from "../state/match-state";
 import {$cardsById} from "../state/card-state";
@@ -8,6 +8,7 @@ import {SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP} from '../app-contants
 export class KingdomSupplyView extends Container {
     private _background: Container;
     private _cardContainer: Container;
+    private _cleanup: (() => void)[] = [];
 
     constructor() {
         super();
@@ -17,10 +18,18 @@ export class KingdomSupplyView extends Container {
 
         this._cardContainer = this.addChild(new Container({x: STANDARD_GAP, y: STANDARD_GAP}));
 
-        $kingdomStore.subscribe(this.draw.bind(this));
+        this._cleanup.push($kingdomStore.subscribe(this.draw.bind(this)));
+        this.off('removed', this.onRemoved);
+    }
+    
+    private onRemoved = () => {
+        this._cleanup.forEach(cb => cb());
+        this.on('removed', this.onRemoved);
     }
 
     private draw(val: ReadonlyArray<number>) {
+        if (!val || val.length === 0) return;
+        
         this._cardContainer.removeChildren().forEach(card => card.destroy());
 
         const cards = val.map(id => $cardsById.get()[id]);

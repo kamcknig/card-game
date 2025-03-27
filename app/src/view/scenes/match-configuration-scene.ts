@@ -7,7 +7,7 @@ import { $expansionList } from '../../state/expansion-list-state';
 import { STANDARD_GAP } from '../../app-contants';
 import { isUndefined } from 'es-toolkit';
 import { $matchConfiguration } from '../../state/match-state';
-import { MatchConfiguration } from 'shared/types';
+import { MatchConfiguration, Player } from 'shared/types';
 import { CheckBox, Input, List } from "@pixi/ui";
 
 export class MatchConfigurationScene extends Scene {
@@ -23,12 +23,12 @@ export class MatchConfigurationScene extends Scene {
   
   constructor(stage: Container) {
     super(stage);
+    this.on('removed', this.onRemoved);
   }
   
-  destroy(options?: DestroyOptions) {
-    super.destroy(options);
-    
+  private onRemoved = () => {
     this._cleanup.forEach(cb => cb());
+    this.off('removed', this.onRemoved);
   }
   
   initialize() {
@@ -57,7 +57,7 @@ export class MatchConfigurationScene extends Scene {
     }
     
     this._expansionContainer.removeChildren()
-      .forEach(c => c.destroy({children: true}));
+      .forEach(c => c.destroy());
     
     let maxWidth: number = 0;
     
@@ -146,7 +146,7 @@ export class MatchConfigurationScene extends Scene {
     const players = $players.get();
     
     this._playerList.removeChildren()
-      .forEach(c => c.destroy({children: true}));
+      .forEach(c => c.destroy());
     const selfId = $selfPlayerId.get();
     
     if (isUndefined(players)) {
@@ -158,43 +158,6 @@ export class MatchConfigurationScene extends Scene {
         type: 'horizontal',
         elementsMargin: STANDARD_GAP
       });
-      
-      const checked = Sprite.from(await Assets.load('./assets/ui-icons/check-box-checked.png'));
-      const unchecked = Sprite.from(await Assets.load('./assets/ui-icons/check-box-unchecked.png'));
-      
-      const readyCheck = new CheckBox({
-        checked: player.ready,
-        style: {
-          checked,
-          unchecked
-        }
-      });
-      
-      let readyCheckSignal;
-      if (selfId === player.id) {
-        readyCheckSignal = readyCheck.onChange.connect((checked) => {
-          $players.set({
-            ...$players.get(),
-            [selfId]: {
-              ...$players.get()[selfId],
-              ready: checked as boolean
-            }
-          });
-          socket.emit('ready', selfId, checked as boolean);
-        });
-      } else {
-        // i don't see a way in the docs to disable the switcher. so instead when it's switched by someone
-        // who it's not just change it back immediately
-        readyCheckSignal = readyCheck.onChange.connect(() => {
-          readyCheck.forceCheck(!readyCheck.checked)
-        });
-      }
-      
-      readyCheck.on('destroyed', () => {
-        readyCheckSignal.disconnect();
-      });
-      
-      item.addChild(readyCheck);
       
       let nameItem: Container;
       
@@ -230,9 +193,50 @@ export class MatchConfigurationScene extends Scene {
       }
       
       item.addChild(nameItem);
-      checked.y = unchecked.y = Math.floor(item.height * .5 - checked.height * .5);
+      
+      await this.drawReadySelect(player, item);
       
       this._playerList.addChild(item);
     }
+  }
+  
+  private async drawReadySelect(player: Player, item: List) {
+    const checked = Sprite.from(await Assets.load('./assets/ui-icons/check-box-checked.png'));
+    const unchecked = Sprite.from(await Assets.load('./assets/ui-icons/check-box-unchecked.png'));
+    const selfId = $selfPlayerId.get();
+    
+    const readyCheck = new CheckBox({
+      checked: player.ready,
+      style: {
+        checked,
+        unchecked
+      }
+    });
+    
+    let readyCheckSignal;
+    if (selfId === player.id) {
+      readyCheckSignal = readyCheck.onChange.connect((checked) => {
+        $players.set({
+          ...$players.get(),
+          [selfId]: {
+            ...$players.get()[selfId],
+            ready: checked as boolean
+          }
+        });
+        socket.emit('playerReady', selfId, checked as boolean);
+      });
+    } else {
+      // i don't see a way in the docs to disable the switcher. so instead when it's switched by someone
+      // who it's not just change it back immediately
+      readyCheckSignal = readyCheck.onChange.connect(() => {
+        readyCheck.forceCheck(!readyCheck.checked)
+      });
+    }
+    
+    this._cleanup.push(() => readyCheckSignal.disconnect());
+    
+    readyCheck.visible = selfId === player.id;
+    item.addChildAt(readyCheck, 0);
+    checked.y = unchecked.y = Math.floor(item.height * .5 - checked.height * .5);
   }
 }
