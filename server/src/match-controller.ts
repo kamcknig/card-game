@@ -334,6 +334,12 @@ export class MatchController {
   private checkGameEnd() {
     console.log(`checking if the game has ended`);
 
+    if (this.$matchState.get().turnNumber === 2) {
+      // testing code
+      this.endGame();
+      return;
+    }
+    
     const match = this.$matchState.get();
     const cardsById = match.cardsById;
     if (

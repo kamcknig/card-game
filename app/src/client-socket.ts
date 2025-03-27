@@ -165,10 +165,10 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
         });
 
         Assets.addBundle('cardLibrary', Object.values(match.cardsById).reduce((prev, c) => {
-            prev[c.cardKey] = `./assets/${c.cardKey}.jpg`;
-            prev[`${c.cardKey}-full`] = `./assets/full-size/${c.cardKey}.jpg`;
+            prev[c.cardKey] = `./assets/card-images/half-size/${c.cardKey}.jpg`;
+            prev[`${c.cardKey}-full`] = `./assets/card-images/full-size/${c.cardKey}.jpg`;
             return prev;
-        }, {'card-back': './assets/full-size/card-back.jpg'} as Record<string, string>));
+        }, {'card-back': './assets/card-images/full-size/card-back.jpg'} as Record<string, string>));
 
         void displayScene('match', match);
     },
