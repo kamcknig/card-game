@@ -1,4 +1,4 @@
-import {Match} from "shared/types.ts";
+import {Match} from "shared/shared-types.ts";
 import {PreinitializedWritableAtom} from "nanostores";
 import {getPlayerById} from "./utils/get-player-by-id.ts";
 import {ReactionTrigger, Reaction, ReactionTemplate} from "./types.ts";

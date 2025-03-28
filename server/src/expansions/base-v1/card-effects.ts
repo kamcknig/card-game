@@ -20,7 +20,7 @@ import {findOrderedEffectTargets} from "../../utils/find-ordered-effect-targets.
 import {getPlayerById} from "../../utils/get-player-by-id.ts";
 import { isUndefined } from 'es-toolkit';
 import {fisherYatesShuffle} from "../../utils/fisher-yates-shuffler.ts";
-import { Match } from "shared/types.ts";
+import { Match } from "shared/shared-types.ts";
 
 export default {
   registerCardLifeCycles: (): Record<string, LifecycleCallbackMap> => ({

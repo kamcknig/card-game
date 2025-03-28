@@ -1,4 +1,4 @@
-import { Player } from 'shared/types.ts';
+import { Player } from 'shared/shared-types.ts';
 
 let PLAYER_ID: number = 0;
 

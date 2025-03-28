@@ -1,3 +1,3 @@
-import { Player } from '../../shared/src/types.ts';
+import { Player } from 'shared/shared-types.ts';
 
-export let sessionPlayerMap: Map<string, Player> = new Map()
+export const sessionPlayerMap: Map<string, Player> = new Map();

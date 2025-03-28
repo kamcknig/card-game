@@ -1,7 +1,7 @@
 import { Container, Graphics } from "pixi.js";
 import { $playerHandStore, $selfPlayerId } from "../state/player-state";
 import { $cardsById } from "../state/card-state";
-import { Card } from "shared/types";
+import { Card } from "shared/shared-types";
 import { atom } from 'nanostores';
 import { CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP } from '../app-contants';
 import { PhaseStatus } from './phase-status';

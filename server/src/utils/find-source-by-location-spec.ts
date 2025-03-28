@@ -1,5 +1,4 @@
-import {LocationSpec} from "../types.ts";
-import {Match} from "shared/types.ts";
+import { LocationSpec, Match } from "shared/shared-types.ts";
 
 export function findSourceByLocationSpec(specOrArgs: {
     playerId: number,

@@ -1,4 +1,4 @@
-import {GameState, Match, Player} from "shared/types.ts";
+import {GameState, Match, Player} from "shared/shared-types.ts";
 
 let gameState: GameState;
 export const getGameState = () => gameState;

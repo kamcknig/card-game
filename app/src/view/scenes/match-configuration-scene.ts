@@ -7,7 +7,7 @@ import { $expansionList } from '../../state/expansion-list-state';
 import { STANDARD_GAP } from '../../app-contants';
 import { isUndefined } from 'es-toolkit';
 import { $matchConfiguration } from '../../state/match-state';
-import { MatchConfiguration, Player } from 'shared/types';
+import { MatchConfiguration, Player } from 'shared/shared-types';
 import { CheckBox, Input, List } from "@pixi/ui";
 
 export class MatchConfigurationScene extends Scene {

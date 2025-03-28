@@ -1,7 +1,7 @@
 import {EffectGenerator, EffectHandlerResult, IEffectRunner} from "./types.ts";
 import {PreinitializedWritableAtom} from "nanostores";
 import {GameEffects} from './effect.ts';
-import { Match, MatchUpdate } from "shared/types.ts";
+import { Match, MatchUpdate } from "shared/shared-types.ts";
 import { effectGeneratorMap } from './effect-generator-map.ts';
 import { EffectsPipeline } from './effects-pipeline.ts';
 

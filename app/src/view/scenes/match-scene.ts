@@ -16,7 +16,7 @@ import { PlayAreaView } from '../play-area';
 import { KingdomSupplyView } from '../kingdom-supply';
 import { PileView } from '../pile';
 import { $cardsById } from '../../state/card-state';
-import { Card, CountSpec, UserPromptArgs } from 'shared/types';
+import { Card, SelectCardEffectArgs, UserPromptEffectArgs } from 'shared/shared-types';
 import { $runningCardActions, $selectableCards, $selectedCards } from '../../state/interactive-state';
 import { CardView } from '../card-view';
 import { userPromptModal } from '../modal/user-prompt-modal';
@@ -32,7 +32,7 @@ import { socket } from '../../client-socket';
 import { isUndefined } from 'es-toolkit/compat';
 
 export class MatchScene extends Scene {
-  private _doneSelectingBtn: Container = new Container();
+  private _doneSelectingBtn: Container;
   private _board: Container = new Container();
   private _baseSupply: Container = new Container();
   private _playerHand: PlayerHandView | undefined;
@@ -65,7 +65,6 @@ export class MatchScene extends Scene {
     this.createBoard();
     this.createGameLog();
     this.createScoreView();
-    this.createDoneSelectingButton();
     
     this._cleanup.push($supplyStore.subscribe(this.drawBaseSupply));
     app.renderer.on('resize', this.onRendererResize);
@@ -228,20 +227,6 @@ export class MatchScene extends Scene {
     this._scoreView.y = STANDARD_GAP;
   }
   
-  private createDoneSelectingButton() {
-    const b = createAppButton({
-      text: 'DONE SELECTING',
-      style: {
-        fill: 'white',
-        fontSize: 36,
-      },
-      x: 20,
-      y: 100,
-    });
-    this._doneSelectingBtn.eventMode = 'static';
-    this._doneSelectingBtn.addChild(b.button);
-  }
-  
   private onNextPhasePressed = (e: PointerEvent) => {
     console.log('call to action pressed');
     
@@ -297,48 +282,71 @@ export class MatchScene extends Scene {
     this._cleanup.forEach(c => c());
   }
   
-  private onUserPrompt = async (args: UserPromptArgs) => {
+  private onUserPrompt = async (args: UserPromptEffectArgs) => {
     this._selecting = true;
     const result = await userPromptModal(args);
     this._selecting = false;
     gameEvents.emit('userPromptResponse', result);
   }
   
-  private doSelectCards = async (count: CountSpec) => {
+  private doSelectCards = async (arg: SelectCardEffectArgs) => {
     const cardIds = $selectableCards.get();
     
-    if (cardIds.length === 0) {
+    if (cardIds.length === 0 && !isUndefined(this._doneSelectingBtn)) {
       this.removeChild(this._doneSelectingBtn);
+      this._doneSelectingBtn.destroy();
       return;
     }
     
     this._selecting = true;
     
+    const button = createAppButton({
+      text: arg.prompt,
+      style: {
+        fill: 'white',
+        fontSize: 36,
+      },
+    });
+    this._doneSelectingBtn = new Container();
+    this._doneSelectingBtn.eventMode = 'static';
+    this._doneSelectingBtn.y = this._playArea.y + this._playArea.height + STANDARD_GAP;
+    this._doneSelectingBtn.addChild(button.button);
+    this._doneSelectingBtn.x = Math.floor(this._playArea.x + this._playArea.width * .5 - this._doneSelectingBtn.width * .5)
+    
     const doneListener = () => {
       this._doneSelectingBtn.off('pointerdown', doneListener);
       this.removeChild(this._doneSelectingBtn);
+      this._doneSelectingBtn.destroy();
       selectedCardsListenerCleanup();
       gameEvents.emit('cardsSelected', $selectedCards.get());
       this._selecting = false;
     }
     
-    // listen for cards being selected
-    const selectedCardsListenerCleanup = $selectedCards.subscribe(cardIds => {
-      if (isUndefined(cardIds) || cardIds.length === 0) return;
-      
-      this._doneSelectingBtn.off('pointerdown', doneListener);
+    const validate = (selectedCards: readonly number[]) => {
       // if they are valid, allow button press
-      if (validateCountSpec(count, cardIds?.length ?? 0)) {
+      if (validateCountSpec(arg.count, selectedCards?.length ?? 0)) {
+        if (!isUndefined(arg.validPrompt) && selectedCards?.length > 0) {
+          button.text(arg.validPrompt);
+        } else {
+          button.text(arg.prompt);
+        }
+        
         this._doneSelectingBtn.alpha = 1;
         this._doneSelectingBtn.on('pointerdown', doneListener);
       } else {
+        button.text(arg.prompt);
         this._doneSelectingBtn.alpha = .6;
         this._doneSelectingBtn.off('pointerdown', doneListener);
       }
+    };
+    
+    // listen for cards being selected
+    const selectedCardsListenerCleanup = $selectedCards.subscribe(cardIds => {
+      this._doneSelectingBtn.off('pointerdown', doneListener);
+      validate(cardIds);
     });
     
-    this._doneSelectingBtn.x = app.renderer.width * .5 - this._doneSelectingBtn.width * .5;
-    this._doneSelectingBtn.y = 20;
+    validate($selectedCards.get());
     this.addChild(this._doneSelectingBtn);
   }
   

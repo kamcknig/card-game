@@ -1,33 +1,9 @@
-import {Socket} from "socket.io";
-import {
-  Card,
-  CardKey,
-  CardLocation,
-  CardType,
-  Match,
-  MatchUpdate,
-  ServerEmitEvents,
-  ServerListenEvents,
-} from "shared/types.ts";
-import {GameEffects} from "./effect.ts";
+import { Socket } from "socket.io";
+import { Card, Match, MatchUpdate, ServerEmitEvents, ServerListenEvents, } from "shared/shared-types.ts";
+import { GameEffects } from "./effect.ts";
 import { toNumber } from 'es-toolkit/compat';
 
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
-
-export type LocationSpec = {
-  location: CardLocation | CardLocation[];
-  index?: number;
-};
-export type CountSpec =
-  | { kind: "exact"; count: number }
-  | { kind: "upTo"; count: number }
-  | { kind: "all" }
-  | { kind: "variable" }
-  | number;
-export type CostSpec =
-  | { kind: "exact"; amount: number }
-  | { kind: "upTo"; amount: number }
-  | number;
 
 export type CardData = Omit<
   Card,
@@ -106,15 +82,6 @@ export type ReactionTrigger = {
   // who triggered this?
   playerId: number;
 }
-
-export type EffectRestrictionSpec = "SELF" | {
-  from?: LocationSpec;
-  card?: {
-    cardKeys?: CardKey | CardKey[];
-    type?: CardType | CardType[];
-  };
-  cost?: CostSpec;
-};
 
 export type ReactionEffectGeneratorFn = (
   match: Match,

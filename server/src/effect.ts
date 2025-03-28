@@ -1,5 +1,4 @@
-import { Card } from "shared/types.ts";
-import { CountSpec, EffectRestrictionSpec, LocationSpec } from "./types.ts";
+import { Card, CountSpec, EffectRestrictionSpec, LocationSpec, SelectCardEffectArgs } from "shared/shared-types.ts";
 
 export type GameEffects =
     | DrawCardEffect
@@ -163,18 +162,17 @@ export class SelectCardEffect extends EffectBase {
     autoSelect?: boolean;
     restrict: EffectRestrictionSpec | number[];
     playerId: number;
+    prompt: string;
+    validPrompt?: string;
 
-    constructor({playerId, restrict, count, autoSelect, ...arg}: {
-        restrict: EffectRestrictionSpec | number[],
-        count?: CountSpec | number,
-        autoSelect?: boolean,
-        playerId: number,
-    } & EffectBaseArgs) {
+    constructor({validPrompt, prompt, playerId, restrict, count, autoSelect, ...arg}: SelectCardEffectArgs & EffectBaseArgs) {
         super(arg);
         this.restrict = restrict;
         this.count = count;
         this.autoSelect = autoSelect;
         this.playerId = playerId;
+        this.prompt = prompt;
+        this.validPrompt = validPrompt;
     }
 }
 

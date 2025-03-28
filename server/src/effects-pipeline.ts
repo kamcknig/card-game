@@ -1,7 +1,7 @@
 import {PreinitializedWritableAtom} from 'nanostores';
 import { GameEffects } from './effect.ts';
 import {AppSocket, EffectGenerator, EffectHandlerMap, EffectHandlerResult} from "./types.ts";
-import {Match, MatchUpdate} from "shared/types.ts";
+import {Match, MatchUpdate} from "shared/shared-types.ts";
 import {sendToSockets} from "./utils/send-to-sockets.ts";
 import { isUndefined } from "es-toolkit";
 import { playerSocketMap } from './player-socket-map.ts';
@@ -65,9 +65,12 @@ export class EffectsPipeline {
     }
     
     private effectCompleted(match: Match, acc: MatchUpdate) {
+        console.log(`effects runner has completed`);
         if (Object.keys(acc).length > 0) {
             sendToSockets(this.sockets.values(), 'matchUpdated', acc);
             this.$matchState.set({ ...match });
+        } else {
+            console.debug(`effect has no updates in the partial update, not trigger match state update`);
         }
     }
 }

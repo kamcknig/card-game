@@ -2,7 +2,7 @@ import {Container, DestroyOptions, Graphics} from "pixi.js";
 import {PileView} from "./pile";
 import {$kingdomStore} from "../state/match-state";
 import {$cardsById} from "../state/card-state";
-import {Card, CardKey} from "shared/types";
+import {Card, CardKey} from "shared/shared-types";
 import {SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP} from '../app-contants';
 
 export class KingdomSupplyView extends Container {

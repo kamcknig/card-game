@@ -1,22 +1,22 @@
-import { Server } from "socket.io";
-import { ServerEmitEvents, ServerListenEvents, } from "shared/types.ts";
-import { MatchController } from "./match-controller.ts";
-import { sendToSockets } from "./utils/send-to-sockets.ts";
-import { getPlayerById } from "./utils/get-player-by-id.ts";
-import process from "node:process";
-import { createNewPlayer } from "./utils/create-new-player.ts";
-import { sessionPlayerMap } from "./session-player-map.ts";
-import { sessionSocketMap } from "./session-socket-map.ts";
-import { playerSocketMap } from "./player-socket-map.ts";
-import { createGame, getGameState } from "./utils/get-game-state.ts";
-import { getExpansionList } from "./utils/get-expansion-lists.ts";
-import { toNumber } from "es-toolkit/compat";
-import * as log from "@timepp/enhanced-deno-log/auto-init";
+import { Server } from 'socket.io';
+import { ServerEmitEvents, ServerListenEvents, } from 'shared/shared-types.ts';
+import { MatchController } from './match-controller.ts';
+import { sendToSockets } from './utils/send-to-sockets.ts';
+import { getPlayerById } from './utils/get-player-by-id.ts';
+import process from 'node:process';
+import { createNewPlayer } from './utils/create-new-player.ts';
+import { sessionPlayerMap } from './session-player-map.ts';
+import { sessionSocketMap } from './session-socket-map.ts';
+import { playerSocketMap } from './player-socket-map.ts';
+import { createGame, getGameState } from './utils/get-game-state.ts';
+import { getExpansionList } from './utils/get-expansion-lists.ts';
+import { toNumber } from 'es-toolkit/compat';
+import * as log from '@timepp/enhanced-deno-log/auto-init';
 
 if (Deno.env.get('LOG_TO_FILE')?.toLowerCase() === 'false') {
   log.setConfig({
     enabledLevels: [],
-  }, "file");
+  }, 'file');
 }
 
 log.init();
@@ -28,17 +28,17 @@ export const io = new Server<ServerListenEvents, ServerEmitEvents>({
 });
 
 // When a socket client connects
-io.on("connection", async (socket) => {
-  const sessionId = socket.handshake.query.get("sessionId");
+io.on('connection', async (socket) => {
+  const sessionId = socket.handshake.query.get('sessionId');
 
   if (!sessionId) {
-    console.error("no session ID, rejecting");
+    console.error('no session ID, rejecting');
     socket.disconnect();
     return;
   }
 
   if (getGameState()?.started) {
-    console.log("game already started, rejecting");
+    console.log('game already started, rejecting');
     socket.disconnect();
     return;
   }
@@ -82,7 +82,7 @@ io.on("connection", async (socket) => {
   
   socket.on('playerReady', onPlayerReady);
 
-  socket.on("matchConfigurationUpdated", async (val) => {
+  socket.on('matchConfigurationUpdated', async (val) => {
     console.log('match configuration has been updated');
     console.debug(val);
     
@@ -110,11 +110,11 @@ io.on("connection", async (socket) => {
       expansions
     };
     
-    sendToSockets(sessionSocketMap.values(), "matchConfigurationUpdated", getGameState().matchConfig);
+    sendToSockets(sessionSocketMap.values(), 'matchConfigurationUpdated', getGameState().matchConfig);
   });
 
-  socket.on("disconnect", function (arg) {
-    console.log("Client disconnected:", socket.id, "reason", arg);
+  socket.on('disconnect', function (arg) {
+    console.log('Client disconnected:', socket.id, 'reason', arg);
 
     const disconnectedPlayer = sessionPlayerMap.get(sessionId);
 
@@ -128,14 +128,14 @@ io.on("connection", async (socket) => {
       disconnectedPlayer.connected = false;
       sendToSockets(
         sessionSocketMap.values(),
-        "playerDisconnected",
+        'playerDisconnected',
         disconnectedPlayer,
         getGameState().players,
       );
     }
 
     if (!getGameState().players.some((p) => p.connected)) {
-      console.log("no players left in game, clearing game state completely");
+      console.log('no players left in game, clearing game state completely');
       sessionSocketMap.forEach((s) => s.disconnect(true));
       sessionSocketMap.clear();
       sessionPlayerMap.clear();
@@ -154,7 +154,7 @@ io.on("connection", async (socket) => {
           getGameState().owner = checkPlayer.id;
           sendToSockets(
             sessionSocketMap.values(),
-            "gameOwnerUpdated",
+            'gameOwnerUpdated',
             getGameState().owner,
           );
           break;
@@ -166,22 +166,22 @@ io.on("connection", async (socket) => {
   sessionSocketMap.set(sessionId, socket);
 
   console.log(
-    "New client connected from",
+    'New client connected from',
     socket.handshake.address,
-    "session ID",
+    'session ID',
     sessionId,
   );
 
   // create the game if it doesn't exist
   if (!getGameState()) {
-    console.log("No game available");
+    console.log('No game available');
     createGame();
   }
 
   let player = sessionPlayerMap.get(sessionId);
 
   if (!player) {
-    console.log("player not found, creating new player and adding to game");
+    console.log('player not found, creating new player and adding to game');
     player = createNewPlayer(sessionId, socket.id);
     getGameState().players = getGameState().players.concat(player);
     sessionPlayerMap.set(sessionId, player);
@@ -195,20 +195,20 @@ io.on("connection", async (socket) => {
 
   sendToSockets(
     sessionSocketMap.values(),
-    "playerConnected",
+    'playerConnected',
     player,
     getGameState().players,
   );
 
   // let the player's client know which player they are
-  socket.emit("playerSet", player);
+  socket.emit('playerSet', player);
 
   if (!getGameState().owner) {
     console.log(`game currently has no owner, assigning player ${player}`);
     getGameState().owner = player.id;
     sendToSockets(
       sessionSocketMap.values(),
-      "gameOwnerUpdated",
+      'gameOwnerUpdated',
       getGameState().owner,
     );
   } else {
@@ -218,8 +218,8 @@ io.on("connection", async (socket) => {
   }
 
   const expansionList = await getExpansionList();
-  sendToSockets([socket].values(), "expansionList", [...expansionList]);
-  sendToSockets([socket].values(), "matchConfigurationUpdated", getGameState().matchConfig);
+  sendToSockets([socket].values(), 'expansionList', [...expansionList]);
+  sendToSockets([socket].values(), 'matchConfigurationUpdated', getGameState().matchConfig);
 });
 
 Deno.serve({

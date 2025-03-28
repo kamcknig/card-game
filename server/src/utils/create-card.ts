@@ -1,5 +1,5 @@
 import {cardLibrary} from "./load-expansion.ts";
-import {Card} from "shared/types.ts";
+import {Card} from "shared/shared-types.ts";
 
 let CARD_COUNT: number = 0;
 

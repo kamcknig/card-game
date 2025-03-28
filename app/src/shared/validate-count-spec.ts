@@ -1,4 +1,4 @@
-import {CountSpec} from "shared/types";
+import {CountSpec} from "shared/shared-types";
 import { isNumber } from 'es-toolkit/compat';
 
 export const validateCountSpec = (spec: CountSpec, count: number): boolean => {

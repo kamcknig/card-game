@@ -1,7 +1,6 @@
-import {EffectRestrictionSpec} from "../types.ts";
 import { castArray } from 'es-toolkit/compat';
 import { isUndefined } from 'es-toolkit';
-import { Card, Match } from "shared/types.ts";
+import { Card, EffectRestrictionSpec, Match } from "shared/shared-types.ts";
 
 import {validateCostSpec} from "../shared/validate-cost-spec.ts";
 

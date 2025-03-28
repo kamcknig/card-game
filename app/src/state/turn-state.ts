@@ -1,6 +1,6 @@
 import { atom, computed } from "nanostores";
 import { $players } from "./player-state";
-import { TurnPhase } from "shared/types";
+import { TurnPhase } from "shared/shared-types";
 
 export const $playerTreasure = atom<number>(0);
 

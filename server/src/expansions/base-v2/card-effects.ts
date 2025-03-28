@@ -16,8 +16,7 @@ import {AsyncEffectGeneratorFn, EffectGeneratorFn, LifecycleCallbackMap,} from "
 import {findOrderedEffectTargets} from "../../utils/find-ordered-effect-targets.ts";
 import {getPlayerById} from "../../utils/get-player-by-id.ts";
 import {isUndefined} from "lodash-es";
-import {Match} from "shared/types.ts";
-import { getGameState } from '../../utils/get-game-state.ts';
+import {Match} from "shared/shared-types.ts";
 
 export default {
   registerCardLifeCycles: (): Record<string, LifecycleCallbackMap> => ({
@@ -112,6 +111,7 @@ export default {
     "artisan": function* (match, sourcePlayerId, sourceCardId) {
       console.debug(`choosing card to gain...`);
       let results = (yield new SelectCardEffect({
+        prompt: 'Choose card to gain',
         playerId: sourcePlayerId,
         sourcePlayerId,
         sourceCardId,
@@ -139,6 +139,7 @@ export default {
 
       console.debug(`choosing card to put on deck...`);
       results = (yield new SelectCardEffect({
+        prompt: 'Confirm top-deck card',
         playerId: sourcePlayerId,
         sourcePlayerId,
         sourceCardId,
@@ -343,6 +344,7 @@ export default {
           }
         } else {
           const cardIds = (yield new SelectCardEffect({
+            prompt: 'Reveal victory card',
             playerId,
             count: 1,
             sourcePlayerId,
@@ -386,6 +388,8 @@ export default {
       }
 
       const cardIds = (yield new SelectCardEffect({
+        prompt: 'Cancel discard',
+        validPrompt: 'Confirm discard',
         playerId: sourcePlayerId,
         sourceCardId,
         sourcePlayerId,
@@ -424,6 +428,8 @@ export default {
       }
 
       const cardIds = (yield new SelectCardEffect({
+        prompt: 'Cancel trash',
+        validPrompt: 'Confirm trash',
         playerId: sourcePlayerId,
         sourcePlayerId,
         sourceCardId,
@@ -643,6 +649,7 @@ export default {
         const handCount = matchState.playerHands[playerId].length;
         if (handCount > 3) {
           const cardIds = (yield new SelectCardEffect({
+            prompt: 'Confirm discard',
             playerId,
             sourceCardId,
             sourcePlayerId,
@@ -684,6 +691,8 @@ export default {
       }
       
       let cardIds = (yield new SelectCardEffect({
+        prompt: 'Cancel trash',
+        validPrompt: 'Confirm trash',
         playerId: sourcePlayerId,
         sourcePlayerId,
         sourceCardId,
@@ -716,6 +725,7 @@ export default {
       const card = matchState.cardsById[cardId];
 
       cardIds = (yield new SelectCardEffect({
+        prompt: 'Confirm gain card',
         playerId: sourcePlayerId,
         sourcePlayerId,
         sourceCardId,
@@ -763,6 +773,7 @@ export default {
       }
       
       const cardIds = (yield new SelectCardEffect({
+        prompt: 'Confirm trash',
         sourceCardId,
         sourcePlayerId,
         playerId: sourcePlayerId,
@@ -844,6 +855,7 @@ export default {
       }
 
       const cardIds = (yield new SelectCardEffect({
+        prompt: 'Confirm discard',
         sourcePlayerId,
         sourceCardId,
         playerId: sourcePlayerId,
@@ -871,6 +883,7 @@ export default {
       }
 
       let cardIds = (yield new SelectCardEffect({
+        prompt: 'Confirm trash',
         sourceCardId,
         sourcePlayerId,
         playerId: sourcePlayerId,
@@ -891,6 +904,7 @@ export default {
       });
 
       cardIds = (yield new SelectCardEffect({
+        prompt: 'Gain card',
         sourcePlayerId,
         sourceCardId,
         playerId: sourcePlayerId,
@@ -1041,6 +1055,7 @@ export default {
     },
     "throne-room": function* (_matchState, sourcePlayerId, sourceCardId) {
       const cardIds = (yield new SelectCardEffect({
+        prompt: 'Confirm action',
         sourcePlayerId,
         sourceCardId,
         playerId: sourcePlayerId,
@@ -1177,6 +1192,7 @@ export default {
     },
     "workshop": function* (_matchState, sourcePlayerId, sourceCardId) {
       const cardIds = (yield new SelectCardEffect({
+        prompt: 'Gain card',
         sourcePlayerId,
         sourceCardId,
         playerId: sourcePlayerId,

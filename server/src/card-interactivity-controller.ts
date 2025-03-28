@@ -2,7 +2,7 @@ import { PreinitializedWritableAtom } from "nanostores";
 import { AppSocket } from "./types.ts";
 import { CardEffectController } from "./card-effects-controller.ts";
 import { getPlayerById } from './utils/get-player-by-id.ts';
-import { Match } from "shared/types.ts";
+import { Match } from "shared/shared-types.ts";
 import { getTurnPhase } from './utils/get-turn-phase.ts';
 import { getCurrentPlayerId } from './utils/get-current-player-id.ts';
 import { playerSocketMap } from './player-socket-map.ts';

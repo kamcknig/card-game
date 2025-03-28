@@ -1,6 +1,6 @@
 import { Assets, Container, ContainerChild, DestroyOptions, Graphics, Sprite } from "pixi.js";
 import { $selectableCards, $selectedCards } from "../state/interactive-state";
-import { Card } from "shared/types";
+import { Card } from "shared/shared-types";
 import { CARD_HEIGHT, CARD_WIDTH, SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH } from '../app-contants';
 import { gameEvents } from '../core/event/events';
 import { batched } from 'nanostores';

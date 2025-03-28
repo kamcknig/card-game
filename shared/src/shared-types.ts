@@ -9,7 +9,16 @@ export type LogEntry =
     | { type: 'revealCard'; cardId: number; playerSourceId: number;}
     | { type: 'trashCard'; cardId: number; playerSourceId: number;}
 
-export type UserPromptArgs = {
+export type SelectCardEffectArgs = {
+    restrict: EffectRestrictionSpec | number[],
+    count?: CountSpec | number,
+    autoSelect?: boolean,
+    playerId: number,
+    prompt: string,
+    validPrompt?: string,
+}
+
+export type UserPromptEffectArgs = {
     prompt: string;
     confirmLabel: string;
     declineLabel?: string;
@@ -86,8 +95,8 @@ export type ServerEmitEvents = {
     reconnectedToGame: (player: Player, state?: Match) => void;
     scoresUpdated: (scores: Record<number, number>) => void;
     selectableCardsUpdated: (cards: number[]) => void;
-    selectCard: (selectCardArgs: { selectableCardIds: number[], count: CountSpec }) => void;
-    userPrompt: (userPromptArgs: UserPromptArgs) => void;
+    selectCard: (selectCardArgs: SelectCardEffectArgs & { selectableCardIds: number[] }) => void;
+    userPrompt: (userPromptArgs: UserPromptEffectArgs) => void;
     waitingForPlayer: (playerId: number) => void;
 }
 export type ServerEmitEventNames = keyof ServerEmitEvents;
@@ -284,8 +293,8 @@ export interface GameEvents {
     matchStarted: () => void;
     nextPhase: () => void;
     playCard: (playerId: number, cardId: number) => void;
-    selectCard: (count: CountSpec) => void;
-    userPrompt: (userPromptArgs: UserPromptArgs) => void;
+    selectCard: (selectCardArgs: SelectCardEffectArgs) => void;
+    userPrompt: (userPromptArgs: UserPromptEffectArgs) => void;
     userPromptResponse: (confirm: unknown) => void;
     waitingForPlayer: (playerId: number) => void;
 }
@@ -294,3 +303,11 @@ export type CardKey = string;
 
 const EffectTargetValues = ["ANY", "ALL_OTHER", "ALL"] as const;
 export type EffectTarget = typeof EffectTargetValues[number] | string;
+export type EffectRestrictionSpec = "SELF" | {
+    from?: LocationSpec;
+    card?: {
+        cardKeys?: CardKey | CardKey[];
+        type?: CardType | CardType[];
+    };
+    cost?: CostSpec;
+};

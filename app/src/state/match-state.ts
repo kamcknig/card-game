@@ -1,5 +1,5 @@
 import { atom } from "nanostores";
-import { MatchConfiguration } from "shared/types";
+import { MatchConfiguration } from "shared/shared-types";
 
 export const $supplyStore = atom<number[]>([]);
 

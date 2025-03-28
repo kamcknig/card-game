@@ -6,7 +6,7 @@ import {
   MatchUpdate,
   Player,
   TurnPhaseOrderValues,
-} from 'shared/types.ts';
+} from 'shared/shared-types.ts';
 import { EffectHandlerMap, MatchBaseConfiguration } from './types.ts';
 import { CardEffectController } from './card-effects-controller.ts';
 import { cardLibrary, loadExpansion } from './utils/load-expansion.ts';
@@ -138,7 +138,7 @@ export class MatchController {
   private createKingdom(players: Player[]) {
     const kingdomCards: Card[] = [];
     // todo: remove testing code
-    const keepers: string[] = ['harbinger'];
+    const keepers: string[] = ['militia'];
     const chosenKingdom = Object.keys(cardLibrary['kingdom'])
       .sort((a, b) =>
         keepers.includes(a)
@@ -175,23 +175,22 @@ export class MatchController {
   private createPlayerHands(cardsById: Record<number, Card>) {
     return Object.values(getGameState().players).reduce((prev, player, idx) => {
       console.log('initializing player', player.id, 'cards...');
-      let blah = {};
-      // todo remove testing code
-      if (idx === 0) {
-        blah = {
-          harbinger: 10,
-          copper: 5
-        };
-      }
-
-      if (idx === 1) {
-        blah = {
-          estate: 5,
-          copper: 5,
-        };
-      }
-      Object.entries(blah).forEach(([key, count]) => {
-        // Object.entries(MatchBaseConfiguration.playerStartingHand).forEach(([key, count]) => {
+      // let blah = {};
+      // // todo remove testing code
+      // if (idx === 0) {
+      //   blah = {
+      //     silver: 10,
+      //   };
+      // }
+      //
+      // if (idx === 1) {
+      //   blah = {
+      //     estate: 5,
+      //     copper: 5,
+      //   };
+      // }
+      // Object.entries(blah).forEach(([key, count]) => {
+        Object.entries(MatchBaseConfiguration.playerStartingHand).forEach(([key, count]) => {
         console.log('adding', count, key, 'to deck');
         prev['playerDecks'][player.id] ??= [];
         let deck = prev['playerDecks'][player.id];
@@ -289,14 +288,7 @@ export class MatchController {
 
     this.$matchState.set({ ...match });
 
-    playerId = getCurrentPlayerId(match);
-    if (
-      !match.playerHands[playerId].some((c) =>
-        match.cardsById[c].type.includes('ACTION')
-      )
-    ) {
-      void this.onNextPhase();
-    }
+    void this.onCheckForPlayerActions();
   }
 
   private onMatchUpdated = (match: MatchUpdate) => {

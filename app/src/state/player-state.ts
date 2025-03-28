@@ -1,5 +1,5 @@
 import {atom, computed, map, PreinitializedWritableAtom} from "nanostores";
-import {Player} from "shared/types";
+import {Player} from "shared/shared-types";
 
 export type PlayerState = Record<number, Player>;
 

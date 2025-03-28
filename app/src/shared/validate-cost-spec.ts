@@ -1,4 +1,4 @@
-import { CostSpec } from "shared/types";
+import { CostSpec } from "shared/shared-types";
 import { isNumber } from 'es-toolkit/compat';
 
 export const validateCostSpec = (spec: CostSpec, amount: number): boolean => {

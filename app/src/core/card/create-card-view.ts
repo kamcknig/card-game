@@ -1,6 +1,6 @@
 import {$cardsById} from "../../state/card-state";
 import {CardView} from "../../view/card-view";
-import {Card} from "shared/types";
+import {Card} from "shared/shared-types";
 import { isNumber } from 'es-toolkit/compat';
 
 export const createCardView = (cardOrCardId: Card | number) => {

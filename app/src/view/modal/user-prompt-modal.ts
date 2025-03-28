@@ -5,10 +5,10 @@ import {createCardView} from '../../core/card/create-card-view';
 import {CardView} from '../card-view';
 import { $selectableCards, $selectedCards } from '../../state/interactive-state';
 import { SMALL_CARD_WIDTH, STANDARD_GAP } from '../../app-contants';
-import {UserPromptArgs} from "shared/types";
+import {UserPromptEffectArgs} from "shared/shared-types";
 import {validateCountSpec} from "../../shared/validate-count-spec";
 
-export const userPromptModal = (args: UserPromptArgs): Promise<unknown> => {
+export const userPromptModal = (args: UserPromptEffectArgs): Promise<unknown> => {
     return new Promise((resolve) => {
         const modalContainer = new Container();
         const hudContainer = new Container();

@@ -34,7 +34,7 @@ import {
     Match,
     ServerEmitEventNames,
     TurnPhaseOrderValues
-} from "shared/types";
+} from "shared/shared-types";
 import { toNumber } from 'es-toolkit/compat';
 
 export let socket: Socket<ClientListenEvents, ClientEmitEvents>;
@@ -281,7 +281,7 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
         // rather than sending this update as a whole
         $selectableCards.set(cards);
     },
-    selectCard: ({selectableCardIds, count}) => {
+    selectCard: selectCardArgs => {
         const eventListener = (cardIds: number[]) => {
             gameEvents.off('cardsSelected', eventListener);
             $selectedCards.set([]);
@@ -289,8 +289,8 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
         };
 
         // warning, state must be updated currently before emitting 'selectCard' event
-        $selectableCards.set(selectableCardIds);
-        gameEvents.emit('selectCard', count);
+        $selectableCards.set(selectCardArgs.selectableCardIds);
+        gameEvents.emit('selectCard', selectCardArgs);
         gameEvents.on('cardsSelected', eventListener);
     },
     userPrompt: userPromptArgs => {

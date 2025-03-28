@@ -1,4 +1,4 @@
-import { CardLocation, Match } from "shared/types.ts";
+import { CardLocation, Match } from "shared/shared-types.ts";
 
 export const findSpecLocationBySource = (
   match: Match,

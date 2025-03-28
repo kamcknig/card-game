@@ -1,4 +1,4 @@
-import {CardLocation, Match} from "shared/types.ts";
+import {CardLocation, Match} from "shared/shared-types.ts";
 import { isUndefined } from 'es-toolkit';
 import { getPlayerById } from './utils/get-player-by-id.ts';
 
