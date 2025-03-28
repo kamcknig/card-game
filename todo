@@ -11,9 +11,7 @@ TODO higher priority
 - make some selections non-toggleable like when playing throne room and picking a card
 - ask to resign feature
   - remove player that resigns - or just make them skip their turn each time
-
-CURRENTLY WORKING ON
-end game screen to show stats
+- end game - make a sound and maybe prompt to go to end game screen
 
 
 
@@ -23,8 +21,9 @@ harbinger doesn't allow pressing done - i suspect the entire modal regardless of
 
 cards like militia don't tell the player what to do
 
-play treasures button shows when no treasures in hand see screenshot
+play treasures button shows when no treasures in hand see screenshot on laptop
 
 if play treasure button is visiblwe and you end turn, it stays visible as it discards and draws new cards
 
-looks like game scoring on game over screen doesn't sort winner properly - see screnshot
+looks like game scoring on game over screen doesn't sort winner properly - see screenshot on laptop
+
