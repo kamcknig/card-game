@@ -9,7 +9,8 @@ import { playerSocketMap } from './player-socket-map.ts';
 import { isUndefined } from "es-toolkit/compat";
 
 export class CardInteractivityController {
-
+    private _gameOver: boolean = false;
+    
     constructor(
         private readonly cardEffectController: CardEffectController,
         private readonly $matchState: PreinitializedWritableAtom<Match>,
@@ -24,8 +25,18 @@ export class CardInteractivityController {
         }
     }
 
+    public endGame() {
+        this._gameOver = true;
+    }
+    
     private async onPlayAllTreasure() {
         console.log('playing all treasures for current player');
+        
+        if (this._gameOver) {
+            console.debug(`game is over, not playing treasures`);
+            return;
+        }
+        
         const currentPlayerId = getCurrentPlayerId(this.$matchState.get());
         if (isUndefined(currentPlayerId)) {
             console.debug(`could not find current player`)
@@ -53,6 +64,11 @@ export class CardInteractivityController {
         const card = cardsById?.[tappedCardId];
 
         console.log(`player ${player} tapped card ${card}`);
+        
+        if (this._gameOver) {
+            console.debug(`game is over, not processing card tap`);
+            return;
+        }
 
         const turnPhase = getTurnPhase(match);
         
@@ -75,6 +91,11 @@ export class CardInteractivityController {
 
     private onMatchStateUpdated(match: Match, _oldMatch?: Match): void {
         if (!match) {
+            return;
+        }
+        
+        if (this._gameOver) {
+            console.debug(`game is over, not processing match update`);
             return;
         }
 

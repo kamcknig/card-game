@@ -9,6 +9,10 @@ export class ReactionManager {
   constructor(private readonly $matchState: PreinitializedWritableAtom<Partial<Match>>) {
   }
 
+  public endGame() {
+  
+  }
+  
   unregisterTrigger(triggerId: string) {
     const idx = this._triggers.findIndex((trigger) => trigger.id === triggerId);
     if (idx > -1) {

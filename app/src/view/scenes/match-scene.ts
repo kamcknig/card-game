@@ -4,7 +4,13 @@ import { PlayerHandView } from '../player-hand';
 import { AppButton, createAppButton } from '../../core/create-app-button';
 import { $supplyStore, $trashStore } from '../../state/match-state';
 import { app } from '../../core/create-app';
-import { $playerDeckStore, $playerDiscardStore, $players, $selfPlayerId } from '../../state/player-state';
+import {
+  $playerDeckStore,
+  $playerDiscardStore,
+  $playerHandStore,
+  $players,
+  $selfPlayerId
+} from '../../state/player-state';
 import { gameEvents } from '../../core/event/events';
 import { PlayAreaView } from '../play-area';
 import { KingdomSupplyView } from '../kingdom-supply';
@@ -97,7 +103,11 @@ export class MatchScene extends Scene {
     this._cleanup.push($turnPhase.subscribe(phase => {
       if (isUndefined(phase)) return;
       
-      if (phase === 'buy' && $currentPlayerTurnId.get() === $selfPlayerId.get()) {
+      if (
+        phase === 'buy' &&
+        $currentPlayerTurnId.get() === $selfPlayerId.get() &&
+        $playerHandStore($selfPlayerId.get()).get().some(cardId => $cardsById.get()[cardId].type.includes('TREASURE'))
+      ) {
         this._playAllTreasuresButton = createAppButton(
           { text: 'PLAY ALL TREASURES', style: { fill: 'white', fontSize: 24 } });
         const b = this._playAllTreasuresButton.button;

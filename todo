@@ -14,16 +14,7 @@ TODO higher priority
 - end game - make a sound and maybe prompt to go to end game screen
 
 
-
-
-
-harbinger doesn't allow pressing done - i suspect the entire modal regardless of card won't allow it
-
 cards like militia don't tell the player what to do
-
-play treasures button shows when no treasures in hand see screenshot on laptop
-
-if play treasure button is visiblwe and you end turn, it stays visible as it discards and draws new cards
 
 looks like game scoring on game over screen doesn't sort winner properly - see screenshot on laptop
 

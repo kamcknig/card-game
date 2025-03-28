@@ -10,7 +10,7 @@ import { fisherYatesShuffle } from "./utils/fisher-yates-shuffler.ts";
 import { findCards } from "./utils/find-cards.ts";
 import { ReactionManager } from "./reaction-manager.ts";
 import { Match, MatchUpdate } from "shared/types.ts";
-import { MoveCardEffect, ShuffleDeckEffect } from "./effect.ts";
+import { MoveCardEffect } from "./effect.ts";
 import { cardLifecycleMap } from "./effect-generator-map.ts";
 import { findOrderedEffectTargets } from "./utils/find-ordered-effect-targets.ts";
 import { findSourceByCardId } from "./utils.find-source-by-card-id.ts";
@@ -193,8 +193,6 @@ export const createEffectHandlerMap = (
     // TODO: can this go in the effects pipeline? Maybe checking if the effect was a move effect and if
     // so send the interim update there? Having it here special-cases it and that's rarely good
     sendToSockets(sockets.values(), "matchUpdated", interimUpdate);
-    // TODO; same as above comment maybe
-    $match.set({ ...match })
   }
 
   async function shuffleDeck(playerId: number, match: Match, acc: MatchUpdate) {

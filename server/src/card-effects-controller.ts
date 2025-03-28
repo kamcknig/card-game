@@ -10,6 +10,10 @@ export class CardEffectController implements IEffectRunner {
     
     constructor(private $matchState: PreinitializedWritableAtom<Partial<Match>>) {
     }
+    
+    public endGame() {
+    
+    }
 
     public async runGameActionEffects(
         effectName: string,

@@ -12,7 +12,6 @@ export class EffectsPipeline {
         private effectHandlerMap: EffectHandlerMap,
         private readonly $matchState: PreinitializedWritableAtom<Partial<Match>>,
         private readonly sockets: AppSocket[],
-        private readonly effectCompleteCallback?: () => void
     ) {}
 
     public async runGenerator(
@@ -40,17 +39,15 @@ export class EffectsPipeline {
             console.log(`running effect handler for ${effect.type}`);
             effectResults = await handler(effect as unknown as any, match, acc);
             
-            if (effect.triggerUpdate) {
+            if (effect.triggerImmediateUpdate) {
                 sendToSockets(this.sockets.values(), 'matchUpdated', acc);
             }
             
             nextEffect = generator.next(effectResults);
         }
         
-        if (topLevel && Object.keys(acc).length > 0) {
-            sendToSockets(this.sockets.values(), 'matchUpdated', acc);
-            this.$matchState.set({ ...match });
-            !this._suspendEffectCallback && this.effectCompleteCallback?.();
+        if (topLevel) {
+            !this._suspendEffectCallback && this.effectCompleted(match, acc);
         }
         
         const playerSocket = playerSocketMap.get(playerId)
@@ -65,6 +62,12 @@ export class EffectsPipeline {
         this._suspendEffectCallback = true;
         await fn();
         this._suspendEffectCallback = false;
-        this.effectCompleteCallback?.();
+    }
+    
+    private effectCompleted(match: Match, acc: MatchUpdate) {
+        if (Object.keys(acc).length > 0) {
+            sendToSockets(this.sockets.values(), 'matchUpdated', acc);
+            this.$matchState.set({ ...match });
+        }
     }
 }

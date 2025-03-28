@@ -30,12 +30,12 @@ export abstract class EffectBase {
     abstract type: string;
     public sourceCardId!: number;
     public sourcePlayerId!: number;
-    public triggerUpdate: boolean;
+    public triggerImmediateUpdate: boolean;
 
     protected constructor({sourcePlayerId, sourceCardId, triggerImmediateUpdate}: EffectBaseArgs) {
         this.sourcePlayerId = sourcePlayerId;
         this.sourceCardId = sourceCardId!;
-        this.triggerUpdate = triggerImmediateUpdate!
+        this.triggerImmediateUpdate = triggerImmediateUpdate!
     }
 
     toString() {

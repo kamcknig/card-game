@@ -151,7 +151,7 @@ export const userPromptModal = (args: UserPromptArgs): Promise<unknown> => {
         }
         
         declineBtn.button.on('pointerdown', declinePointerDown);
-        confirmBtn.button.on('pointerdown', () => confirmPointerDown);
+        confirmBtn.button.on('pointerdown', confirmPointerDown);
         confirmBtn.button.on('removed', onConfirmRemoved);
         declineBtn.button.on('removed', onDeclineRemoved);
 
