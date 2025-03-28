@@ -32,7 +32,9 @@ export const io = new Server<ServerListenEvents, ServerEmitEvents>({
 
 // When a socket client connects
 io.on('connection', async (socket) => {
+  console.log('new client connected');
   const sessionId = socket.handshake.query.get('sessionId');
+  console.debug(`connection from ${socket.handshake.address} - session ID ${sessionId}`);
   
   if (!sessionId) {
     console.error('no session ID, rejecting');
@@ -121,6 +123,7 @@ io.on('connection', async (socket) => {
   };
   
   if (getGameState()?.started) {
+    console.log(`client reconnected with sessio`)
     console.log('game already started');
     
     const player = getPlayerBySessionId(sessionId);
@@ -184,13 +187,6 @@ io.on('connection', async (socket) => {
   socket.on('disconnect', onSocketDisconnect);
 
   sessionSocketMap.set(sessionId, socket);
-
-  console.log(
-    'New client connected from',
-    socket.handshake.address,
-    'session ID',
-    sessionId,
-  );
 
   // create the game if it doesn't exist
   if (!getGameState()) {
