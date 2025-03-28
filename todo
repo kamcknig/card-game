@@ -14,3 +14,17 @@ TODO higher priority
 
 CURRENTLY WORKING ON
 end game screen to show stats
+
+
+
+
+
+harbinger doesn't allow pressing done - i suspect the entire modal regardless of card won't allow it
+
+cards like militia don't tell the player what to do
+
+play treasures button shows when no treasures in hand see screenshot
+
+if play treasure button is visiblwe and you end turn, it stays visible as it discards and draws new cards
+
+looks like game scoring on game over screen doesn't sort winner properly - see screnshot

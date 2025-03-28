@@ -385,12 +385,10 @@ export class MatchScene extends Scene {
     this._baseSupply.removeChildren()
       .forEach(c => c.destroy());
     
-    console.log('kyle', JSON.parse(JSON.stringify($cardsById.get())));
     const cards = newVal.map(id => $cardsById.get()[id]);
     
     // reduce to Record of card name to a Card array of those named cards
     const piles = cards.reduce((prev, card) => {
-      console.log(JSON.parse(JSON.stringify(card)));
       prev[card.cardKey] ||= [];
       prev[card.cardKey].push(card);
       return prev;
@@ -409,7 +407,6 @@ export class MatchScene extends Scene {
   }
   
   private onRendererResize = (): void => {
-    console.log(this._gameLog.width);
     this._gameLog.x = app.renderer.width - this._gameLog.width - STANDARD_GAP;
     this._gameLog.y = STANDARD_GAP;
     

@@ -13,7 +13,7 @@ export class GameOverScene extends Scene {
   private _summary: MatchSummary;
   private _scoresContainer: List;
   private _divider: Graphics;
-  private _deckContainer: List
+  private _playerDeckList: List
   
   constructor(stage: Container) {
     super(stage);
@@ -36,8 +36,12 @@ export class GameOverScene extends Scene {
     this._divider = new Graphics();
     this.addChild(this._divider);
     
-    this._deckContainer = new List();
-    this.addChild(this._deckContainer);
+    this._playerDeckList = new List({
+      type: 'vertical',
+      elementsMargin: LARGE_GAP
+    });
+    this._playerDeckList.y = LARGE_GAP
+    this.addChild(this._playerDeckList);
     
     void this.draw();
     
@@ -141,10 +145,20 @@ export class GameOverScene extends Scene {
   private async drawPlayerDecks() {
     const cardsById = $cardsById.get();
     
-    const playerDeckContainer = new List({type: 'vertical'});
+    const playerNameDeckContainerList = new List({type: 'vertical', elementsMargin: STANDARD_GAP});
     
     for (const playerSummary of this._summary.scores) {
       const playerId = playerSummary.playerId;
+      const deckList = new List({type: 'vertical'});
+      const deckContainer = new Container();
+      
+      const playerNameText = new Text({
+        text: $players.get()[playerId].name,
+        style: {
+          fill: 'black',
+          fontSize: 24
+        }
+      });
       
       const cardCounts = playerSummary.deck.map(cId => cardsById[cId]).reduce((prev, card) => {
         prev[card.cardKey] ??= 0;
@@ -152,18 +166,19 @@ export class GameOverScene extends Scene {
         return prev;
       }, {} as Record<string, number>);
       
-      const cardList: List = new List();
+      const cardList: List = new List({elementsMargin: LARGE_GAP, maxWidth: 450});
       for (const cardKey of Object.keys(cardCounts)) {
         const s = Sprite.from(await Assets.load(`./assets/card-images/full-size/${cardKey}.jpg`));
+        s.scale = .7;
         const sMask = new Graphics()
-          .rect(0, 0, s.width, s.height * .2)
+          .rect(0, 0, s.width, s.height * .13)
           .fill('black');
         s.mask = sMask;
         const cardImageContainer = new Container();
         cardImageContainer.addChild(s);
         cardImageContainer.addChild(sMask);
         
-        const cardCountList = new List({type: 'horizontal'});
+        const cardCountList = new AppList({type: 'horizontal', elementsMargin: STANDARD_GAP});
         const countText = new Text({
           text: cardCounts[cardKey],
           style: {
@@ -173,12 +188,25 @@ export class GameOverScene extends Scene {
         })
         cardCountList.addChild(countText);
         cardCountList.addChild(cardImageContainer);
+        cardList.addChild(cardCountList);
       }
-      playerDeckContainer.addChild(cardList);
+      deckList.y = LARGE_GAP;
+      deckList.x = LARGE_GAP;
+      deckList.addChild(cardList);
+      
+      const g = new Graphics()
+        .roundRect(0, 0, deckList.width + LARGE_GAP * 2, deckList.height + LARGE_GAP * 2, 5)
+        .stroke({width: 3, color: 'white'});
+      
+      deckContainer.addChild(g);
+      deckContainer.addChild(deckList);
+      
+      playerNameDeckContainerList.addChild(playerNameText);
+      playerNameDeckContainerList.addChild(deckContainer);
     }
     
-    this._deckContainer.addChild(playerDeckContainer);
-    this._deckContainer.x = this._divider.getBounds().right + LARGE_GAP;
-    this._deckContainer.y = LARGE_GAP;
+    this._playerDeckList.addChild(playerNameDeckContainerList);
+    this._playerDeckList.x = this._divider.getBounds().right + LARGE_GAP;
+    this._playerDeckList.y = LARGE_GAP;
   }
 }
