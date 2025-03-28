@@ -68,7 +68,7 @@ export class ScoreView extends Container {
     }
 
     private onPlayersUpdated([playerState, turnOrder]: readonly [PlayerState, number[]]) {
-        this._playerNameContainer.removeChildren().forEach(c => c.destroy());
+        this._playerNameContainer.removeChildren();
         const playerValues = Object.values(playerState);
 
         for (const [idx, playerId] of turnOrder.entries()) {
@@ -108,7 +108,9 @@ export class ScoreView extends Container {
 
     private onPlayerTurnUpdated(turnIndex: number) {
         const g = this._currentPlayerHighlight.getChildAt(0) as Graphics;
-
+        
+        if (!this._playerNameContainer.children.length) return;
+        
         const c: Container = this._playerNameContainer?.getChildAt(turnIndex);
 
         if (!c || !g) {

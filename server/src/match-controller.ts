@@ -24,6 +24,7 @@ import { getGameState } from './utils/get-game-state.ts';
 import { map } from 'nanostores';
 import { getTurnPhase } from './utils/get-turn-phase.ts';
 import { getCurrentPlayerId } from './utils/get-current-player-id.ts';
+import { io } from './server.ts';
 
 export class MatchController {
   private $matchState = map<Match>();
@@ -35,7 +36,7 @@ export class MatchController {
   private _cleanup: (() => void)[] = [];
 
   constructor(
-    private readonly sockets: Socket[],
+    private sockets: Socket[],
   ) {
     (globalThis as any).matchState = this.$matchState;
   }
@@ -467,7 +468,7 @@ export class MatchController {
       }
     }
   }
-
+  
   private onNextPhase = async (update?: MatchUpdate) => {
     const currentMatch = this.$matchState.get() as Match;
 
@@ -553,5 +554,28 @@ export class MatchController {
       console.error('Could not move to next phase', e);
       console.error(e);
     }
+  }
+  
+  public async playerReconnected(player: Player) {
+    const sockets = await io.fetchSockets();
+    const newSocket = sockets.find(s => s.id === player.socketId);
+    if (!newSocket) {
+      console.debug(`could not find socket for ${player}`);
+      return;
+    }
+    
+    player.ready = true;
+    player.connected = true;
+    
+    this.sockets = this.sockets.concat(newSocket as unknown as any);
+    
+    // let the player's client know which player they are
+    newSocket.emit('playerSet', player);
+    newSocket.emit('matchReady', this.$matchState.get());
+    newSocket.emit('matchStarted', this.$matchState.get());
+  }
+  
+  public playerDisconnected(player: Player) {
+    this.sockets = this.sockets.filter(s => s.id !== player.socketId);
   }
 }

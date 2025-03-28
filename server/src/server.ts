@@ -12,6 +12,7 @@ import { createGame, getGameState } from './utils/get-game-state.ts';
 import { getExpansionList } from './utils/get-expansion-lists.ts';
 import { toNumber } from 'es-toolkit/compat';
 import * as log from '@timepp/enhanced-deno-log/auto-init';
+import { getPlayerBySessionId } from './utils/get-player-by-session-id.ts';
 
 if (Deno.env.get('LOG_TO_FILE')?.toLowerCase() === 'false') {
   log.setConfig({
@@ -23,6 +24,8 @@ log.init();
 
 const PORT = toNumber(process.env.PORT) || 3000;
 
+let matchController: MatchController | undefined;
+
 export const io = new Server<ServerListenEvents, ServerEmitEvents>({
   pingTimeout: 1000 * 60 * 10,
 });
@@ -30,25 +33,12 @@ export const io = new Server<ServerListenEvents, ServerEmitEvents>({
 // When a socket client connects
 io.on('connection', async (socket) => {
   const sessionId = socket.handshake.query.get('sessionId');
-
+  
   if (!sessionId) {
     console.error('no session ID, rejecting');
     socket.disconnect();
     return;
   }
-
-  if (getGameState()?.started) {
-    console.log('game already started, rejecting');
-    socket.disconnect();
-    return;
-  }
-
-  socket.on('updatePlayerName', (playerId: number, name: string) => {
-    const player = getGameState().players.find(p => p.id === playerId);
-    if (!player) return;
-    player.name = name;
-    sendToSockets(sessionSocketMap.values(), 'playerNameUpdated', playerId, name);
-  });
   
   const onPlayerReady = (playerId: number) => {
     const player = getPlayerById(playerId);
@@ -73,15 +63,94 @@ io.on('connection', async (socket) => {
     const config = getGameState().matchConfig;
     console.debug(config);
     getGameState().started = true;
-    const match = new MatchController([...sessionSocketMap.values()]);
-    match.initialize(config);
+    matchController = new MatchController([...sessionSocketMap.values()]);
+    matchController.initialize(config);
     
     getGameState().players.forEach(p => p.ready = false);
     sessionSocketMap.values().forEach(s => s.off('playerReady', onPlayerReady));
-  }
+  };
+  const onSocketDisconnect = (arg: any) => {
+    console.log('Client disconnected:', socket.id, 'reason', arg);
+    
+    const disconnectedPlayer = sessionPlayerMap.get(sessionId);
+    
+    // any new connection will be a new socket ID, so we can delete the old ones
+    sessionSocketMap.delete(sessionId);
+    
+    if (disconnectedPlayer) {
+      playerSocketMap.delete(disconnectedPlayer.id);
+      disconnectedPlayer.connected = false;
+      
+      matchController?.playerDisconnected(disconnectedPlayer);
+      
+      sendToSockets(
+        sessionSocketMap.values(),
+        'playerDisconnected',
+        disconnectedPlayer,
+        getGameState().players,
+      );
+    }
+    
+    if (!getGameState().players.some((p) => p.connected)) {
+      console.log('no players left in game, clearing game state completely');
+      sessionSocketMap.forEach((s) => s.disconnect(true));
+      sessionSocketMap.clear();
+      sessionPlayerMap.clear();
+      playerSocketMap.clear();
+      createGame();
+      return;
+    }
+    
+    if (disconnectedPlayer && disconnectedPlayer.id === getGameState().owner) {
+      for (
+        const checkPlayer of getGameState().players.filter((p) =>
+        p.id !== disconnectedPlayer.id
+      )
+        ) {
+        if (checkPlayer.connected) {
+          getGameState().owner = checkPlayer.id;
+          sendToSockets(
+            sessionSocketMap.values(),
+            'gameOwnerUpdated',
+            getGameState().owner,
+          );
+          break;
+        }
+      }
+    }
+  };
   
-  socket.on('playerReady', onPlayerReady);
+  if (getGameState()?.started) {
+    console.log('game already started');
+    
+    const player = getPlayerBySessionId(sessionId);
+    
+    if (!player) {
+      console.debug('player not already in game, rejecting');
+      socket.disconnect();
+      return;
+    }
+    
+    console.debug(`${player} belongs to running game, reconnecting`);
+    
+    sessionSocketMap.set(sessionId, socket);
+    playerSocketMap.set(player.id, socket);
+    player.connected = true;
+    player.socketId = socket.id;
+    socket.on('disconnect', onSocketDisconnect)
+    
+    await matchController?.playerReconnected(player);
+    sendToSockets(sessionSocketMap.values(), 'playerConnected', player, getGameState().players);
+    return;
+  }
 
+  socket.on('updatePlayerName', (playerId: number, name: string) => {
+    const player = getGameState().players.find(p => p.id === playerId);
+    if (!player) return;
+    player.name = name;
+    sendToSockets(sessionSocketMap.values(), 'playerNameUpdated', playerId, name);
+  });
+  socket.on('playerReady', onPlayerReady);
   socket.on('matchConfigurationUpdated', async (val) => {
     console.log('match configuration has been updated');
     console.debug(val);
@@ -112,56 +181,7 @@ io.on('connection', async (socket) => {
     
     sendToSockets(sessionSocketMap.values(), 'matchConfigurationUpdated', getGameState().matchConfig);
   });
-
-  socket.on('disconnect', function (arg) {
-    console.log('Client disconnected:', socket.id, 'reason', arg);
-
-    const disconnectedPlayer = sessionPlayerMap.get(sessionId);
-
-    // any new connection will be a new socket ID, so we can delete the old ones
-    sessionSocketMap.delete(sessionId);
-    if (disconnectedPlayer) {
-      playerSocketMap.delete(disconnectedPlayer.id);
-    }
-
-    if (disconnectedPlayer) {
-      disconnectedPlayer.connected = false;
-      sendToSockets(
-        sessionSocketMap.values(),
-        'playerDisconnected',
-        disconnectedPlayer,
-        getGameState().players,
-      );
-    }
-
-    if (!getGameState().players.some((p) => p.connected)) {
-      console.log('no players left in game, clearing game state completely');
-      sessionSocketMap.forEach((s) => s.disconnect(true));
-      sessionSocketMap.clear();
-      sessionPlayerMap.clear();
-      playerSocketMap.clear();
-      createGame();
-      return;
-    }
-
-    if (disconnectedPlayer && disconnectedPlayer.id === getGameState().owner) {
-      for (
-        const checkPlayer of getGameState().players.filter((p) =>
-          p.id !== disconnectedPlayer.id
-        )
-      ) {
-        if (checkPlayer.connected) {
-          getGameState().owner = checkPlayer.id;
-          sendToSockets(
-            sessionSocketMap.values(),
-            'gameOwnerUpdated',
-            getGameState().owner,
-          );
-          break;
-        }
-      }
-    }
-  });
+  socket.on('disconnect', onSocketDisconnect);
 
   sessionSocketMap.set(sessionId, socket);
 
@@ -220,6 +240,7 @@ io.on('connection', async (socket) => {
   const expansionList = await getExpansionList();
   sendToSockets([socket].values(), 'expansionList', [...expansionList]);
   sendToSockets([socket].values(), 'matchConfigurationUpdated', getGameState().matchConfig);
+  sendToSockets([socket].values(), 'displayMatchConfiguration');
 });
 
 Deno.serve({

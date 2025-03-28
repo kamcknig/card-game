@@ -10,3 +10,5 @@ export const $trashStore = atom<number[]>([]);
 export const $playAreaStore = atom<number[]>([]);
 
 export const $matchConfiguration = atom<Pick<MatchConfiguration, 'expansions'>>();
+
+export const $matchStarted = atom<boolean>(false);

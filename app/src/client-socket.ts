@@ -22,7 +22,14 @@ import { displayScene } from "./core/scene/display-scene";
 import { $gameOwner } from "./state/game-state";
 import { io, Socket } from "socket.io-client";
 import { $cardsById } from "./state/card-state";
-import { $kingdomStore, $matchConfiguration, $playAreaStore, $supplyStore, $trashStore } from "./state/match-state";
+import {
+    $kingdomStore,
+    $matchConfiguration,
+    $matchStarted,
+    $playAreaStore,
+    $supplyStore,
+    $trashStore
+} from "./state/match-state";
 import { $selectableCards, $selectedCards } from "./state/interactive-state";
 import { gameEvents } from "./core/event/events";
 import { Assets } from 'pixi.js';
@@ -151,7 +158,7 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
     matchConfigurationUpdated: val => {
         $matchConfiguration.set(val);
     },
-    matchReady: match => {
+    matchReady: async match => {
         $cardsById.set(match.cardsById);
         $supplyStore.set(match.supply);
         $kingdomStore.set(match.kingdom);
@@ -170,11 +177,12 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
             return prev;
         }, {'card-back': './assets/card-images/full-size/card-back.jpg'} as Record<string, string>));
 
-        void displayScene('match', match);
+        await displayScene('match', match);
     },
     matchStarted: match => {
         socketToGameEventMap.matchUpdated(match);
         gameEvents.emit('matchStarted');
+        $matchStarted.set(true);
     },
     matchUpdated: match => {
         const keys = Object.keys(match);
@@ -233,12 +241,22 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
             prev[nextPlayer.id] = nextPlayer;
             return prev;
         }, {} as PlayerState));
+        
+        if (Object.keys($players.get()).some(id => !$players.get()[toNumber(id)].connected)) {
+            return;
+        }
+        
+        gameEvents.emit('unpauseGame');
     },
     playerDisconnected: (player, players) => {
         $players.set(players.reduce((prev, nextPlayer) => {
             prev[nextPlayer.id] = nextPlayer;
             return prev;
         }, {} as PlayerState));
+        
+        if ($matchStarted.get()) {
+            gameEvents.emit('pauseGame');
+        }
     },
     playerNameUpdated: (playerId: number, name: string) => {
         $players.set({
@@ -260,6 +278,9 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
     },
     playerSet: player => {
         $selfPlayerId.set(player.id);
+        
+    },
+    displayMatchConfiguration: () => {
         void displayScene('matchConfiguration');
     },
     reconnectedToGame: (player, state?: Match) => {

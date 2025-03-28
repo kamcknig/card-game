@@ -79,6 +79,7 @@ export type TurnPhase = typeof TurnPhaseOrderValues[number] | undefined; // Defi
 export type ServerEmitEvents = {
     addLogEntry: (logEntry: LogEntry) => void;
     cardEffectsComplete: () => void;
+    displayMatchConfiguration: () => void;
     doneWaitingForPlayer: (playerId?: number) => void;
     expansionList: (val: any[]) => void;
     matchConfigurationUpdated: (val: Pick<MatchConfiguration, 'expansions'>) => void;
@@ -167,6 +168,7 @@ export class Player {
         return `[PLAYER ${this.id} - ${this.name}]`;
     }
 
+    // @ts-ignore
     [Symbol.for('Deno.customInspect')]() {
         return this.toString();
     }
@@ -275,6 +277,7 @@ export class Card {
         return `[CARD ${this.id} - ${this.cardKey}]`;
     }
     
+    // @ts-ignore
     [Symbol.for("Deno.customInspect")]() {
         return this.toString();
     }
@@ -292,8 +295,10 @@ export interface GameEvents {
     doneWaitingForPlayer: (playerId?: number) => void;
     matchStarted: () => void;
     nextPhase: () => void;
+    pauseGame: () => void;
     playCard: (playerId: number, cardId: number) => void;
     selectCard: (selectCardArgs: SelectCardEffectArgs) => void;
+    unpauseGame: () => void;
     userPrompt: (userPromptArgs: UserPromptEffectArgs) => void;
     userPromptResponse: (confirm: unknown) => void;
     waitingForPlayer: (playerId: number) => void;

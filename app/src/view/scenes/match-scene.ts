@@ -74,6 +74,8 @@ export class MatchScene extends Scene {
     gameEvents.on('displayCardDetail', this.onDisplayCardDetail);
     gameEvents.on('waitingForPlayer', this.onWaitingOnPlayer);
     gameEvents.on('doneWaitingForPlayer', this.onDoneWaitingForPlayer);
+    gameEvents.on('pauseGame', this.onPauseGame);
+    gameEvents.on('unpauseGame', this.onUnpauseGame);
     
     this._cleanup.push(() => {
       app.renderer.off('resize', this.onRendererResize);
@@ -83,6 +85,8 @@ export class MatchScene extends Scene {
       gameEvents.off('displayCardDetail', this.onDisplayCardDetail);
       gameEvents.off('waitingForPlayer', this.onWaitingOnPlayer);
       gameEvents.off('doneWaitingForPlayer', this.onDoneWaitingForPlayer);
+      gameEvents.off('pauseGame', this.onPauseGame);
+      gameEvents.off('unpauseGame', this.onUnpauseGame);
     });
     
     this._cleanup.push($currentPlayerTurnId.subscribe(playerId => {
@@ -93,7 +97,7 @@ export class MatchScene extends Scene {
       try {
         const s= new Audio(`./assets/sounds/your-turn.ogg`);
         s.volume = .2;
-        s?.play();
+        //s?.play();
       } catch {
         console.error('Could not play start turn sound');
       }
@@ -139,6 +143,30 @@ export class MatchScene extends Scene {
       this.onRendererResize();
       socket.emit('clientReady', $selfPlayerId.get(), true);
     });
+  }
+  
+  private onPauseGame = () => {
+    const c = new Container({label: 'pause'});
+    const g = new Graphics({label: 'pause'});
+    g.rect(0, 0, app.renderer.width, app.renderer.height).fill({color: 'black', alpha: .5});
+    c.addChild(g);
+    
+    const t = new Text({
+      text: 'PLAYER DISCONNECTED',
+      style: { fill: 'white', fontSize: 36 },
+      anchor: .5
+    });
+    
+    t.x = Math.floor(app.renderer.width * .5);
+    t.y = Math.floor(app.renderer.height * .5);
+    c.addChild(t);
+    this.addChild(c);
+  }
+  
+  private onUnpauseGame = () => {
+    const c = this.getChildByLabel('pause');
+    c?.removeFromParent();
+    c?.destroy();
   }
   
   private async loadAssets() {
