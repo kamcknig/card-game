@@ -3,6 +3,7 @@ import {$players, $playerScoreStore, PlayerState} from '../state/player-state';
 import {batched} from 'nanostores';
 import {$currentPlayerTurnIndex, $playerTurnOrder, $turnNumber} from '../state/turn-state';
 import {STANDARD_GAP} from '../app-contants';
+import { Player } from 'shared/shared-types';
 
 export class ScoreView extends Container {
     private _playerNameContainer: Container = new Container();
@@ -19,7 +20,7 @@ export class ScoreView extends Container {
         this.addChild(this._playerNameContainer);
         this._playerNameContainer.y = this._turnLabel.y + this._turnLabel.height + STANDARD_GAP;
         
-        this._cleanup.push(batched([$players, $playerTurnOrder], (...arg) => arg).subscribe(this.onPlayersUpdated.bind(this)));
+        this._cleanup.push($playerTurnOrder.subscribe(this.onPlayersUpdated.bind(this)));
         this._cleanup.push($players.subscribe(this.onTrackScores.bind(this)));
         this._cleanup.push($currentPlayerTurnIndex.subscribe(this.onPlayerTurnUpdated.bind(this)));
         this._cleanup.push($turnNumber.subscribe(this.onTurnNumberUpdated.bind(this)));
@@ -67,14 +68,12 @@ export class ScoreView extends Container {
         scoreText.x = 200 - scoreText.width - STANDARD_GAP;
     }
 
-    private onPlayersUpdated([playerState, turnOrder]: readonly [PlayerState, number[]]) {
+    private onPlayersUpdated(turnOrder: readonly Player[]) {
         this._playerNameContainer.removeChildren();
-        const playerValues = Object.values(playerState);
 
-        for (const [idx, playerId] of turnOrder.entries()) {
-            const playerContainer = new Container({label: `player-${playerId}`});
+        for (const [idx, player] of turnOrder.entries()) {
+            const playerContainer = new Container({label: `player-${player.id}`});
 
-            const player = playerValues.find(p => p.id === playerId);
             if (!player) {
                 continue;
             }

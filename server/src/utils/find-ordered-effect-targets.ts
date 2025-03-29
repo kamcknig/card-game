@@ -20,7 +20,7 @@ export const findOrderedEffectTargets =
         switch (target) {
             case 'ALL': {
                 console.log('find targets for ALL');
-                const startIndex = currentTurnOrder.indexOf(currentPlayerTurnId);
+                const startIndex = currentTurnOrder.findIndex(player => player.id === currentPlayerTurnId);
                 const l = currentTurnOrder.length;
                 for (let i = 0; i < l; i++) {
                     const idx = (startIndex + i) % currentTurnOrder.length;
@@ -34,8 +34,8 @@ export const findOrderedEffectTargets =
                 return [1];
             case 'ALL_OTHER': {
                 console.log('find targets for ALL_OTHER');
-                const startIndex = currentTurnOrder.indexOf(currentPlayerTurnId);
-                const turnOrder = currentTurnOrder.filter(id => id !== currentPlayerTurnId);
+                const startIndex = currentTurnOrder.findIndex(player => player.id === currentPlayerTurnId);
+                const turnOrder = currentTurnOrder.filter(player => player.id !== currentPlayerTurnId);
 
                 const l = turnOrder.length;
                 for (let i = 0; i < l; i++) {
@@ -55,8 +55,8 @@ export const findOrderedEffectTargets =
         }
 
         if (exception?.kind === 'player') {
-            result = result.filter(id => !exception.playerIds.includes(id));
+            result = result.filter(player => !exception.playerIds.includes(player.id));
         }
 
-        return result;
+        return result.map(player => player.id);
     }

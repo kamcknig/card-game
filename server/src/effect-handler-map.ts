@@ -21,7 +21,7 @@ import { isUndefined } from 'es-toolkit';
 import { castArray } from 'es-toolkit/compat';
 import { getPlayerById } from './utils/get-player-by-id.ts';
 import { PreinitializedWritableAtom } from 'nanostores';
-import { getCurrentPlayerId } from './utils/get-current-player-id.ts';
+import { getCurrentPlayer } from './utils/get-current-player.ts';
 
 /**
  * Returns an object whose properties are functions. The names are a union of Effect types
@@ -31,7 +31,6 @@ export const createEffectHandlerMap = (
   sockets: AppSocket[],
   reactionManager: ReactionManager,
   cardEffectRunner: IEffectRunner,
-  $match: PreinitializedWritableAtom<Match>,
 ): EffectHandlerMap => {
   async function moveCard(
     effect: MoveCardEffect,
@@ -546,7 +545,7 @@ export const createEffectHandlerMap = (
             );
             socket?.off('selectCardResponse', socketListener);
             resolve(selectedCards);
-            if (getCurrentPlayerId(match) !== playerId) {
+            if (getCurrentPlayer(match).id !== playerId) {
               sendToSockets(
                 sockets.filter((s) => s !== socket)
                   .values(),
@@ -559,7 +558,7 @@ export const createEffectHandlerMap = (
 
           socket?.emit('selectCard', { ...effect, selectableCardIds });
 
-          if (getCurrentPlayerId(match) !== playerId) {
+          if (getCurrentPlayer(match).id !== playerId) {
             sendToSockets(
               sockets.filter((s) => s !== socket).values(),
               'waitingForPlayer',
@@ -614,7 +613,7 @@ export const createEffectHandlerMap = (
             console.debug(`player responded with ${result}`);
             socket?.off('userPromptResponse', socketListener);
             resolve(result);
-            if (getCurrentPlayerId(match) !== effect.playerId) {
+            if (getCurrentPlayer(match).id !== effect.playerId) {
               sendToSockets(
                 sockets.filter((s) => s !== socket)
                   .values(),
@@ -627,7 +626,7 @@ export const createEffectHandlerMap = (
 
           socket?.emit('userPrompt', { ...effect });
           
-          if (getCurrentPlayerId(match) !== effect.playerId) {
+          if (getCurrentPlayer(match).id !== effect.playerId) {
             sendToSockets(
               sockets.filter((s) => s !== socket).values(),
               'waitingForPlayer',

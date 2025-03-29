@@ -23,7 +23,7 @@ import { Socket } from 'socket.io';
 import { getGameState } from './utils/get-game-state.ts';
 import { map } from 'nanostores';
 import { getTurnPhase } from './utils/get-turn-phase.ts';
-import { getCurrentPlayerId } from './utils/get-current-player-id.ts';
+import { getCurrentPlayer } from './utils/get-current-player.ts';
 import { io } from './server.ts';
 
 export class MatchController {
@@ -79,9 +79,7 @@ export class MatchController {
     this.$matchState.set({
       scores: [],
       trash: [],
-      players: fisherYatesShuffle(
-        getGameState().players.filter((p) => p.connected),
-      ).map((p: Player) => p.id),
+      players: fisherYatesShuffle(getGameState().players.filter((p) => p.connected)),
       supply: supplyCards.map((c) => c.id),
       kingdom: kingdomCards.map((c) => c.id),
       ...playerCards,
@@ -242,8 +240,7 @@ export class MatchController {
     this.effectHandlerMap = createEffectHandlerMap(
       this.sockets,
       this._reactionManager,
-      this._effectsController,
-      this.$matchState,
+      this._effectsController
     );
 
     this._effectsPipeline = new EffectsPipeline(
@@ -276,12 +273,12 @@ export class MatchController {
     sendToSockets(this.sockets.values(), 'matchStarted', match as Match);
 
     await this._effectsController?.suspendedCallbackRunner(async () => {
-      for (const playerId of match.players!) {
+      for (const player of match.players!) {
         for (let i = 0; i < 5; i++) {
           await this._effectsController?.runGameActionEffects(
             'drawCard',
             match as Match,
-            playerId,
+            player.id,
           );
         }
       }
@@ -301,11 +298,13 @@ export class MatchController {
   private calculateScores(match: MatchUpdate) {
     const scores: Record<number, number> = {};
 
-    for (const playerId of match.players ?? []) {
+    for (const player of match.players ?? []) {
+      const playerId = player.id;
       const cards = (match.playerHands?.[playerId] ?? [])
         .concat(match.playerDecks?.[playerId] ?? [])
         .concat(match.playerDiscards?.[playerId] ?? [])
         .concat(match.playArea ?? []);
+      
       let score = 0;
       for (const cardId of cards) {
         const card = match.cardsById?.[cardId];
@@ -322,8 +321,7 @@ export class MatchController {
     
     match.scores = scores;
 
-    // todo only send update if scores differ
-    sendToSockets(this.sockets.values(), 'scoresUpdated', scores);
+    sendToSockets(this.sockets.values(), 'matchUpdated', match);
   }
 
   private checkGameEnd() {
@@ -388,8 +386,9 @@ export class MatchController {
     const currentPlayerTurnIndex = match.currentPlayerTurnIndex;
     
     const summary: MatchSummary = {
-      scores: match.players.reduce((prev, playerId) => {
-        const turnsTaken = match.players.findIndex(p => p === playerId) <= currentPlayerTurnIndex ? currentTurn : currentTurn - 1;
+      scores: match.players.reduce((prev, player) => {
+        const playerId = player.id;
+        const turnsTaken = match.players.findIndex(p => p.id === playerId) <= currentPlayerTurnIndex ? currentTurn : currentTurn - 1;
         
         prev.push({
           playerId,
@@ -404,8 +403,8 @@ export class MatchController {
           if (b.score < a.score) return -1;
           if (a.turnsTaken < b.turnsTaken) return -1;
           if (b.turnsTaken < a.turnsTaken) return 1;
-          const aIdx = match.players.findIndex(id => id === a.playerId);
-          const bIdx = match.players.findIndex(id => id === b.playerId);
+          const aIdx = match.players.findIndex(player => player.id === a.playerId);
+          const bIdx = match.players.findIndex(player => player.id === b.playerId);
           if (aIdx < bIdx) return -1;
           if (bIdx < aIdx) return 1;
           return 0;
@@ -422,18 +421,18 @@ export class MatchController {
 
     const match = this.$matchState.get();
     const turnPhase = getTurnPhase(match);
-    const playerId = getCurrentPlayerId(match);
+    const player = getCurrentPlayer(match);
 
     switch (turnPhase) {
       case 'action': {
         const numActionCards =
-          match.playerHands[playerId].filter((c) =>
+          match.playerHands[player.id].filter((c) =>
             match.cardsById[c].type.includes('ACTION')
           ).length;
 
         console.debug(
           `player ${
-            getPlayerById(playerId)
+            player.id
           } has ${match.playerActions} actions and ${numActionCards} action cards`,
         );
 
@@ -446,13 +445,13 @@ export class MatchController {
       }
       case 'buy': {
         const treasureCardCount =
-          match.playerHands[playerId].filter((c) =>
+          match.playerHands[player.id].filter((c) =>
             match.cardsById[c].type.includes('TREASURE')
           ).length;
 
         console.debug(
           `player ${
-            getPlayerById(playerId)
+            player.id
           } has ${treasureCardCount} treasure cards in hand, ${match.playerTreasure} treasure, and ${match.playerBuys} buys`,
         );
 
@@ -490,7 +489,7 @@ export class MatchController {
 
       console.log(`new turn phase ${newPhase}`);
 
-      let playerId = getCurrentPlayerId(currentMatch);
+      let player = getCurrentPlayer(currentMatch);
 
       switch (newPhase) {
         case 'action':
@@ -509,15 +508,12 @@ export class MatchController {
             console.log(`starting new round ${match.turnNumber}`);
           }
 
-          playerId = getCurrentPlayerId(
-            { ...currentMatch, ...match } as unknown as any,
-          );
           break;
         case 'buy':
           break;
         case 'cleanup': {
           const cardsToDiscard = currentMatch.playArea.concat(
-            currentMatch.playerHands[playerId],
+            currentMatch.playerHands[player.id],
           );
 
           await this._effectsController?.suspendedCallbackRunner(
@@ -526,7 +522,7 @@ export class MatchController {
                 await this._effectsController!.runGameActionEffects(
                   'discardCard',
                   this.$matchState.get(),
-                  playerId,
+                  player.id,
                   cardId,
                 );
               }
@@ -535,7 +531,7 @@ export class MatchController {
                 await this._effectsController!.runGameActionEffects(
                   'drawCard',
                   this.$matchState.get(),
-                  playerId,
+                  player.id,
                 );
               }
 

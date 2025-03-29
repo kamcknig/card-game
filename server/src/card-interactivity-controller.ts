@@ -4,7 +4,7 @@ import { CardEffectController } from "./card-effects-controller.ts";
 import { getPlayerById } from './utils/get-player-by-id.ts';
 import { Match } from "shared/shared-types.ts";
 import { getTurnPhase } from './utils/get-turn-phase.ts';
-import { getCurrentPlayerId } from './utils/get-current-player-id.ts';
+import { getCurrentPlayer } from './utils/get-current-player.ts';
 import { playerSocketMap } from './player-socket-map.ts';
 import { isUndefined } from "es-toolkit/compat";
 
@@ -37,21 +37,21 @@ export class CardInteractivityController {
             return;
         }
         
-        const currentPlayerId = getCurrentPlayerId(this.$matchState.get());
-        if (isUndefined(currentPlayerId)) {
+        const currentPlayer = getCurrentPlayer(this.$matchState.get());
+        if (isUndefined(currentPlayer)) {
             console.debug(`could not find current player`)
             return;
         }
         
         const match = this.$matchState.get();
-        const hand = match.playerHands[currentPlayerId];
+        const hand = match.playerHands[currentPlayer.id];
         const treasureCards = hand.filter(e => match.cardsById[e].type.includes('TREASURE'))
         if (hand.length === 0 || treasureCards.length === 0) {
-            console.debug(`${getPlayerById(currentPlayerId)} has no cards or no treasures in hand`);
+            console.debug(`${currentPlayer} has no cards or no treasures in hand`);
             return;
         }
         for (const cardId of treasureCards) {
-            await this.onCardTapped(currentPlayerId, cardId);
+            await this.onCardTapped(currentPlayer.id, cardId);
         }
         
     }
@@ -100,14 +100,13 @@ export class CardInteractivityController {
         }
 
         const cardsById = this.$matchState.get().cardsById;
-        const currentPlayerId = getCurrentPlayerId(match);
-        const currentPlayer = getPlayerById(currentPlayerId);
+        const currentPlayer = getCurrentPlayer(match);
         const turnPhase = getTurnPhase(match);
 
         console.log(`determining selectable cards - phase '${turnPhase}, player ${currentPlayer}', player Index '${match.currentPlayerTurnIndex}'`);
         const selectableCards: number[] = [];
 
-        const hand = match.playerHands[currentPlayerId].map(id => cardsById[id]);
+        const hand = match.playerHands[currentPlayer.id].map(id => cardsById[id]);
 
         if (turnPhase === 'buy') {
             const cardsAdded: string[] = [];
@@ -138,8 +137,8 @@ export class CardInteractivityController {
             }
         }
 
-        match.players.forEach(playerId => {
-            playerSocketMap.get(playerId)?.emit('selectableCardsUpdated', playerId === currentPlayerId ? selectableCards : []);
+        match.players.forEach(player => {
+            playerSocketMap.get(player.id)?.emit('selectableCardsUpdated', player === currentPlayer ? selectableCards : []);
         });
     }
 }

@@ -188,6 +188,9 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
         const keys = Object.keys(match);
         for (const key of keys) {
             switch (key) {
+                case 'scores':
+                    socketToGameEventMap.scoresUpdated(match.scores);
+                    break;
                 case 'turnNumber':
                     $turnNumber.set(match.turnNumber);
                     break;
