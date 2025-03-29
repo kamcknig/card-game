@@ -21,6 +21,16 @@ export class CardInteractivityController {
       s.on('playAllTreasure', this.onPlayAllTreasure);
     });
   }
+  
+  public playerAdded(playerId: number, socket: AppSocket | undefined) {
+    socket?.on('cardTapped', this.onCardTapped);
+    socket?.on('playAllTreasure', this.onPlayAllTreasure);
+    
+  }
+  public playerRemoved(playerId: number, socket: AppSocket | undefined) {
+    socket?.off('cardTapped', this.onCardTapped);
+    socket?.off('playAllTreasure', this.onPlayAllTreasure);
+  }
 
   public endGame() {
     console.log(

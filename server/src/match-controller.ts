@@ -48,7 +48,7 @@ export class MatchController {
   private _cardLibrary: CardLibrary = new CardLibrary();
   private _config: MatchConfiguration | undefined;
 
-  constructor(private readonly _socketMap: Map<PlayerID, AppSocket>) {}
+    constructor(private readonly _socketMap: Map<PlayerID, AppSocket>) {}
 
   public async initialize(config: MatchConfiguration) {
     for (const expansionName of config.expansions) {
@@ -603,26 +603,33 @@ export class MatchController {
     }
   };
 
-  /*public async playerReconnected(player: Player) {
-    const sockets = await io.fetchSockets();
-    const newSocket = sockets.find((s) => s.id === player.socketId);
-    if (!newSocket) {
-      console.debug(`could not find socket for ${player}`);
-      return;
-    }
+  public playerReconnected(playerId: number, socket: AppSocket) {
+    console.log(`[MATCH] player ${playerId} reconnecting`);
+    this._socketMap.set(playerId, socket);
+    
+    const match = this.$matchState.get();
+    
+    socket.emit('setCardLibrary', this._cardLibrary.getAllCards());
+    socket.emit('matchReady', match);
+    socket.on('clientReady', (_playerId: number, _ready: boolean) => {
+      console.log(`[MATCH] ${match.players.find(player => player.id === playerId)} marked ready`);
+      socket.emit('matchStarted', match);
+      socket.off('clientReady');
+      
+      socket.on('nextPhase', this.onNextPhase);
+      
+      this._interactivityController?.playerAdded(playerId, socket);
+      
+      if (match.players[match.currentPlayerTurnIndex].id === playerId) {
+        void this.onCheckForPlayerActions();
+      }
+      
+      this.$matchState.set({ ...this.$matchState.get() });
+    });
+  }
 
-    player.ready = true;
-    player.connected = true;
-
-    this._sockets = this._sockets.concat(newSocket as unknown as any);
-
-    // let the player's client know which player they are
-    newSocket.emit('setPlayer', player);
-    newSocket.emit('matchReady', this.$matchState.get());
-    newSocket.emit('matchStarted', this.$matchState.get());
-  }*/
-
-  /*public playerDisconnected(player: Player) {
-    this._sockets = this._sockets.filter((s) => s.id !== player.socketId);
-  }*/
+  public playerDisconnected(playerId: number, socket: AppSocket | undefined) {
+    this._interactivityController?.playerRemoved(playerId, socket);
+    this._socketMap.delete(playerId);
+  }
 }
