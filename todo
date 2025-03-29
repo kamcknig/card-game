@@ -14,6 +14,4 @@ TODO higher priority
 - end game - make a sound and maybe prompt to go to end game screen
 
 
-update selection to show count needed to do the action
-
 when disconnecting/reconnecting, need to handle scenarios when waiting on input from the user that disconnected (from card effects - like the user prompt, or select card effects)
