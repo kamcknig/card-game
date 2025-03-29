@@ -14,8 +14,6 @@ TODO higher priority
 - end game - make a sound and maybe prompt to go to end game screen
 
 
-looks like game scoring on game over screen doesn't sort winner properly - see screenshot on laptop
-
-
 update selection to show count needed to do the action
 
+when disconnecting/reconnecting, need to handle scenarios when waiting on input from the user that disconnected (from card effects - like the user prompt, or select card effects)
