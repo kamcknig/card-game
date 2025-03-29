@@ -11,7 +11,7 @@ TODO higher priority
 - make some selections non-toggleable like when playing throne room and picking a card
 - ask to resign feature
   - remove player that resigns - or just make them skip their turn each time
-- end game - make a sound and maybe prompt to go to end game screen
+
 
 
 when disconnecting/reconnecting, need to handle scenarios when waiting on input from the user that disconnected (from card effects - like the user prompt, or select card effects)
