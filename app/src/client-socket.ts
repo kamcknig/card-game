@@ -149,7 +149,15 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
     expansionList: val => {
         $expansionList.set(val);
     },
-    gameOver: summary => {
+    gameOver: async summary => {
+        try {
+            const s = new Audio('./assets/sounds/game-over.mp3');
+            await s?.play();
+        } catch (error) {
+            console.error('error playing game over sound');
+            console.error(error);
+        }
+        
         void displayScene('gameOver', summary);
     },
     gameOwnerUpdated: playerId => {

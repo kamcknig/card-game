@@ -96,7 +96,7 @@ export class MatchScene extends Scene {
       document.title = `Dominion - ${$players.get()[playerId].name}`;
       
       try {
-        const s = new Audio(`./assets/sounds/your-turn.ogg`);
+        const s = new Audio(`./assets/sounds/your-turn.mp3`);
         s.volume = .2;
         await s?.play();
       } catch {
