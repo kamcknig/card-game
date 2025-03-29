@@ -1,4 +1,4 @@
-import { Assets, Container, Graphics, Text } from 'pixi.js';
+import { Assets, Container, Graphics, Sprite, Text } from 'pixi.js';
 import { Scene } from '../../core/scene/scene';
 import { PlayerHandView } from '../player-hand';
 import { AppButton, createAppButton } from '../../core/create-app-button';
@@ -339,22 +339,45 @@ export class MatchScene extends Scene {
         fontSize: 36,
       },
     });
+    button.button.label = 'doneSelectingButton';
     this._doneSelectingBtn = new AppList({ type: 'horizontal', elementsMargin: STANDARD_GAP, padding: STANDARD_GAP });
     this._doneSelectingBtn.eventMode = 'static';
     this._doneSelectingBtn.y = this._playArea.y + this._playArea.height + STANDARD_GAP;
     this._doneSelectingBtn.addChild(button.button);
     
     if (isNumber(arg.count) || arg.count.kind === 'exact') {
+      const c = new Container({label:'cardCountContainer'});
+      
+      let s: Sprite;
+      console.warn('very hacky way of getting this icon');
+      if (arg.prompt.includes('trash')) {
+        s = Sprite.from(await Assets.load(`./assets/ui-icons/trash-card-count.png`));
+      } else if (arg.prompt.includes('discard')) {
+        s = Sprite.from(await Assets.load(`./assets/ui-icons/discard-card-count.png`));
+      }
+      
       const count = isNumber(arg.count) ? arg.count : arg.count.count;
       const countText = new Text({
         label: 'count',
         text: count,
         style: {
-          fontSize: 24,
+          fontSize: 26,
           fill: 'white'
         }
       });
-      this._doneSelectingBtn.addChild(countText);
+      
+      s.x = 5;
+      s.y = 5;
+      c.addChild(s);
+      
+      const g = new Graphics();
+      g.roundRect(0, 0, s.x + s.width + 5, s.y + s.height + 5, 5);
+      g.fill(0xaaaaaa);
+      c.addChildAt(g, 0);
+      countText.x = Math.floor(c.width - countText.width * .5);
+      countText.y = -Math.floor(countText.height * .5);
+      c.addChild(countText);
+      this._doneSelectingBtn.addChild(c);
     }
     
     this._doneSelectingBtn.x = Math.floor(
@@ -382,11 +405,11 @@ export class MatchScene extends Scene {
           button.text(arg.prompt);
         }
         
-        this._doneSelectingBtn.alpha = 1;
+        this._doneSelectingBtn.getChildByLabel('doneSelectingButton').alpha = 1;
         this._doneSelectingBtn.on('pointerdown', doneListener);
       } else {
         button.text(arg.prompt);
-        this._doneSelectingBtn.alpha = .6;
+        this._doneSelectingBtn.getChildByLabel('doneSelectingButton').alpha = .6;
         this._doneSelectingBtn.off('pointerdown', doneListener);
       }
     };
@@ -395,11 +418,11 @@ export class MatchScene extends Scene {
     const selectedCardsListenerCleanup = $selectedCards.subscribe(cardIds => {
       this._doneSelectingBtn.off('pointerdown', doneListener);
       
-      const countText = this._doneSelectingBtn.getChildByLabel('count') as Text;
+      const countText = this._doneSelectingBtn.getChildByLabel('cardCountContainer')?.getChildByLabel('count') as Text;
       if (countText) {
         if (isNumber(arg.count) || arg.count.kind === 'exact') {
           const count = isNumber(arg.count) ? arg.count : arg.count.count;
-          updateCountText(countText, count - cardIds.length);
+          updateCountText(countText, Math.max(count - cardIds.length, 0));
         }
       }
       
