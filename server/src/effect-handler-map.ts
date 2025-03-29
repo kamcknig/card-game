@@ -1,11 +1,10 @@
 import {
   AppSocket,
   EffectHandlerMap,
-  IEffectRunner,
+  IEffectRunner, PlayerID,
   ReactionTemplate,
   ReactionTrigger,
 } from './types.ts';
-import { sendToSockets } from './utils/send-to-sockets.ts';
 import { fisherYatesShuffle } from './utils/fisher-yates-shuffler.ts';
 import { findCards } from './utils/find-cards.ts';
 import { ReactionManager } from './reaction-manager.ts';
@@ -16,34 +15,31 @@ import { findOrderedEffectTargets } from './utils/find-ordered-effect-targets.ts
 import { findSourceByCardId } from './utils.find-source-by-card-id.ts';
 import { findSpecLocationBySource } from './utils/find-spec-location-by-source.ts';
 import { findSourceByLocationSpec } from './utils/find-source-by-location-spec.ts';
-import { playerSocketMap } from './player-socket-map.ts';
-import { isUndefined } from 'es-toolkit';
-import { castArray } from 'es-toolkit/compat';
-import { getPlayerById } from './utils/get-player-by-id.ts';
-import { PreinitializedWritableAtom } from 'nanostores';
-import { getCurrentPlayer } from './utils/get-current-player.ts';
+import { castArray, isUndefined } from 'es-toolkit/compat';
+import { CardLibrary } from "./match-controller.ts";
 
 /**
  * Returns an object whose properties are functions. The names are a union of Effect types
  * and whose values are functions to implement that Effect within the system
  */
 export const createEffectHandlerMap = (
-  sockets: AppSocket[],
+  socketMap: Map<PlayerID, AppSocket>,
   reactionManager: ReactionManager,
   cardEffectRunner: IEffectRunner,
+  cardLibrary: CardLibrary,
 ): EffectHandlerMap => {
   async function moveCard(
     effect: MoveCardEffect,
     match: Match,
     acc: MatchUpdate,
   ) {
-    const card = match.cardsById[effect.cardId];
+    const card = cardLibrary.getCard(effect.cardId);
 
     const {
       sourceStore: oldStore,
       index,
       storeKey: oldStoreKey,
-    } = findSourceByCardId(effect.cardId, match);
+    } = findSourceByCardId(effect.cardId, match, cardLibrary);
 
     if (!oldStoreKey || isUndefined(index)) {
       console.debug('could not find card in a store to move it');
@@ -191,11 +187,11 @@ export const createEffectHandlerMap = (
     // clients to visually update them. normally we'd wait.
     // TODO: can this go in the effects pipeline? Maybe checking if the effect was a move effect and if
     // so send the interim update there? Having it here special-cases it and that's rarely good
-    sendToSockets(sockets.values(), 'matchUpdated', interimUpdate);
+    socketMap.forEach(s => s.emit('matchUpdated', interimUpdate));
   }
 
   async function shuffleDeck(playerId: number, match: Match, acc: MatchUpdate) {
-    console.log(`shuffling deck for ${getPlayerById(playerId)}`);
+    console.log(`shuffling deck for ${match.players.find(player => player.id === playerId)}`);
 
     let interimUpdate: MatchUpdate = {};
 
@@ -227,16 +223,16 @@ export const createEffectHandlerMap = (
     // clients to visually update them. normally we'd wait.
     // TODO: can this go in the effects pipeline? Maybe checking if the effect was a move effect and if
     // so send the interim update there? Having it here special-cases it and that's rarely good
-    sendToSockets(sockets.values(), 'matchUpdated', interimUpdate);
+    socketMap.forEach(s => s.emit('matchUpdated', interimUpdate));
   }
 
   return {
     async discardCard(effect, match, acc) {
-      sendToSockets(sockets.values(), 'addLogEntry', {
+      socketMap.forEach(s => s.emit('addLogEntry', {
         type: 'discard',
         playerSourceId: effect.playerId,
         cardId: effect.cardId,
-      });
+      }));
 
       return moveCard(
         new MoveCardEffect({
@@ -276,13 +272,13 @@ export const createEffectHandlerMap = (
         return;
       }
 
-      console.debug(`card drawn ${match.cardsById[drawnCardId]}`);
+      console.debug(`card drawn ${cardLibrary.getCard(drawnCardId)}`);
 
-      sendToSockets(sockets.values(), 'addLogEntry', {
+      socketMap.forEach(s => s.emit('addLogEntry', {
         type: 'draw',
         playerSourceId: effect.playerId,
         cardId: drawnCardId,
-      });
+      }));
 
       await moveCard(
         new MoveCardEffect({
@@ -302,31 +298,31 @@ export const createEffectHandlerMap = (
       acc.playerActions = match.playerActions + effect.count;
       match.playerActions = acc.playerActions;
 
-      sendToSockets(sockets.values(), 'addLogEntry', {
+      socketMap.forEach(s => s.emit('addLogEntry', {
         type: 'gainAction',
         count: effect.count,
         playerSourceId: effect.sourcePlayerId,
-      });
+      }));
       return;
     },
     async gainBuy(effect, match, acc) {
       acc.playerBuys = match.playerBuys + effect.count;
       match.playerBuys = acc.playerBuys;
-      sendToSockets(sockets.values(), 'addLogEntry', {
+      socketMap.forEach(s => s.emit('addLogEntry', {
         type: 'gainBuy',
         count: effect.count,
         playerSourceId: effect.sourcePlayerId,
-      });
+      }));
       return;
     },
     async gainCard(effect, match, acc) {
       effect.to.location ??= 'playerDiscards';
 
-      sendToSockets(sockets.values(), 'addLogEntry', {
+      socketMap.forEach(s => s.emit('addLogEntry', {
         type: 'gainCard',
         cardId: effect.cardId,
         playerSourceId: effect.playerId,
-      });
+      }));
 
       return moveCard(
         new MoveCardEffect({
@@ -343,11 +339,11 @@ export const createEffectHandlerMap = (
     async gainTreasure(effect, match, acc) {
       acc.playerTreasure = match.playerTreasure + effect.count;
       match.playerTreasure = acc.playerTreasure;
-      sendToSockets(sockets.values(), 'addLogEntry', {
+      socketMap.forEach(s => s.emit('addLogEntry', {
         type: 'gainTreasure',
         count: effect.count,
         playerSourceId: effect.sourcePlayerId,
-      });
+      }));
       return null;
     },
     async moveCard(effect, match, acc) {
@@ -356,11 +352,11 @@ export const createEffectHandlerMap = (
     async playCard(effect, match, acc) {
       const { playerId, sourceCardId, sourcePlayerId, cardId } = effect;
 
-      sendToSockets(sockets.values(), 'addLogEntry', {
+      socketMap.forEach(s => s.emit('addLogEntry', {
         type: 'playCard',
         cardId: effect.cardId,
         playerSourceId: effect.sourcePlayerId,
-      });
+      }));
 
       await moveCard(
         new MoveCardEffect({
@@ -387,7 +383,7 @@ export const createEffectHandlerMap = (
         trigger,
       );
 
-      const card = match.cardsById[cardId];
+      const card = cardLibrary.getCard(cardId);
 
       if (!isUndefined(card.targetScheme)) {
         const targetScheme = card.targetScheme ?? 'ALL_OTHER';
@@ -399,7 +395,7 @@ export const createEffectHandlerMap = (
         );
         console.debug(
           `potential card targets ${
-            potentialTargets.map((id) => getPlayerById(id))
+            potentialTargets.map((id) => match.players.find(player => player.id === id))
           }`,
         );
         reactions = reactions.filter((r) =>
@@ -420,6 +416,7 @@ export const createEffectHandlerMap = (
           console.log(`running reaction generator for ${reaction.id}`);
           const reactionGenerator = await reaction.generatorFn(
             match,
+            cardLibrary,
             trigger,
             reaction,
           );
@@ -445,13 +442,13 @@ export const createEffectHandlerMap = (
         reactionContext,
       );
     },
-    async revealCard(effect, match) {
-      console.debug(`revealing card ${match.cardsById[effect.cardId]}`);
-      sendToSockets(sockets.values(), 'addLogEntry', {
+    async revealCard(effect, _match) {
+      console.debug(`revealing card ${cardLibrary.getCard(effect.cardId)}`);
+      socketMap.forEach(s => s.emit('addLogEntry', {
         type: 'revealCard',
         cardId: effect.cardId,
         playerSourceId: effect.playerId,
-      });
+      }));
 
       return null;
     },
@@ -465,7 +462,7 @@ export const createEffectHandlerMap = (
         if (effect.sourceCardId) {
           console.debug(
             `setting selection to effect's source card ${
-              match.cardsById[effect.sourceCardId]
+              cardLibrary.getCard(effect.sourceCardId)
             }`,
           );
           selectableCardIds = [effect.sourceCardId];
@@ -477,7 +474,7 @@ export const createEffectHandlerMap = (
       } else if (Array.isArray(effect.restrict)) { // should be a list of card IDs
         console.debug(
           `setting selection to list of cards ${
-            effect.restrict.map((id) => match.cardsById[id])
+            effect.restrict.map((id) => cardLibrary.getCard(id))
           }`,
         );
         return effect.restrict;
@@ -491,12 +488,12 @@ export const createEffectHandlerMap = (
         selectableCardIds = findCards(
           match,
           effect.restrict,
-          match.cardsById,
+          cardLibrary,
           playerId,
         );
         console.debug(
           `found selectable cards ${
-            selectableCardIds.map((id) => match.cardsById[id])
+            selectableCardIds.map((id) => cardLibrary.getCard(id))
           }`,
         );
       }
@@ -535,35 +532,29 @@ export const createEffectHandlerMap = (
 
       return new Promise((resolve, reject) => {
         try {
-          const socket = playerSocketMap.get(playerId);
-
+          const socket = socketMap.get(playerId);
+          const currentPlayer = match.players[match.currentPlayerTurnIndex];
+          
           const socketListener = (selectedCards: number[]) => {
             console.debug(
               `player selected ${
-                selectedCards.map((id) => match.cardsById[id])
+                selectedCards.map((id) => cardLibrary.getCard(id))
               }`,
             );
             socket?.off('selectCardResponse', socketListener);
             resolve(selectedCards);
-            if (getCurrentPlayer(match).id !== playerId) {
-              sendToSockets(
-                sockets.filter((s) => s !== socket)
-                  .values(),
-                'doneWaitingForPlayer',
-                playerId,
-              );
+            
+            // if player selecting isn't the current player, let everyone else know we're done waiting
+            if (currentPlayer.id !== playerId) {
+              socketMap.forEach(s => s !== socket && s.emit('doneWaitingForPlayer', playerId));
             }
           };
+          
           socket?.on('selectCardResponse', socketListener);
-
           socket?.emit('selectCard', { ...effect, selectableCardIds });
-
-          if (getCurrentPlayer(match).id !== playerId) {
-            sendToSockets(
-              sockets.filter((s) => s !== socket).values(),
-              'waitingForPlayer',
-              playerId,
-            );
+          
+          if (currentPlayer.id !== playerId) {
+            socketMap.forEach(s => s !== socket && s.emit('waitingForPlayer', playerId));
           }
         } catch (e) {
           reject(
@@ -577,18 +568,18 @@ export const createEffectHandlerMap = (
     },
     async trashCard(effect, match, acc) {
       const cardId = effect.cardId;
-      const { sourceStore } = findSourceByCardId(cardId, match);
+      const { sourceStore } = findSourceByCardId(cardId, match, cardLibrary);
 
       if (sourceStore === match.trash) {
         console.debug(`Card is already in trash`);
         return;
       }
 
-      sendToSockets(sockets.values(), 'addLogEntry', {
+      socketMap.forEach(s => s.emit('addLogEntry', {
         type: 'trashCard',
         cardId: effect.cardId,
         playerSourceId: effect.playerId!,
-      });
+      }));
 
       return moveCard(
         new MoveCardEffect({
@@ -607,31 +598,23 @@ export const createEffectHandlerMap = (
 
       return new Promise((resolve, reject) => {
         try {
-          const socket = playerSocketMap.get(effect.playerId);
-
+          const socket = socketMap.get(effect.playerId);
+          const currentPlayer = match.players[match.currentPlayerTurnIndex];
+          
           const socketListener = (result: unknown) => {
             console.debug(`player responded with ${result}`);
             socket?.off('userPromptResponse', socketListener);
             resolve(result);
-            if (getCurrentPlayer(match).id !== effect.playerId) {
-              sendToSockets(
-                sockets.filter((s) => s !== socket)
-                  .values(),
-                'doneWaitingForPlayer',
-                effect.playerId,
-              );
+            if (currentPlayer.id !== effect.playerId) {
+              socketMap.forEach(s => s !== socket && s.emit('doneWaitingForPlayer', effect.playerId));
             }
           };
+          
           socket?.on('userPromptResponse', socketListener);
-
           socket?.emit('userPrompt', { ...effect });
           
-          if (getCurrentPlayer(match).id !== effect.playerId) {
-            sendToSockets(
-              sockets.filter((s) => s !== socket).values(),
-              'waitingForPlayer',
-              effect.playerId,
-            );
+          if (currentPlayer.id !== effect.playerId) {
+            socketMap.forEach(s => s !== socket && s.emit('waitingForPlayer', effect.playerId));
           }
         } catch (e) {
           reject(

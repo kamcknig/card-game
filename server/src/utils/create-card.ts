@@ -11,5 +11,6 @@ export const createCard = (cardName: string, card?: Omit<Card, 'id'>): Card => {
         id: ++CARD_COUNT,
         cardKey: cardName
     });
+    console.debug(`[createCard] created ${c}`);
     return c;
 }

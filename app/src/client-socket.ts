@@ -158,8 +158,10 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
     matchConfigurationUpdated: val => {
         $matchConfiguration.set(val);
     },
+    setCardLibrary: cards => {
+      $cardsById.set(cards);
+    },
     matchReady: async match => {
-        $cardsById.set(match.cardsById);
         $supplyStore.set(match.supply);
         $kingdomStore.set(match.kingdom);
         $playerTurnOrder.set(match.players);
@@ -171,7 +173,9 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
             $playerDeckStore(pId).set(match?.playerDecks[pId] ?? []);
         });
 
-        Assets.addBundle('cardLibrary', Object.values(match.cardsById).reduce((prev, c) => {
+        if (!$cardsById.get()) throw new Error('missing card library');
+        const cardsById = $cardsById.get();
+        Assets.addBundle('cardLibrary', Object.values(cardsById).reduce((prev, c) => {
             prev[c.cardKey] = `./assets/card-images/half-size/${c.cardKey}.jpg`;
             prev[`${c.cardKey}-full`] = `./assets/card-images/full-size/${c.cardKey}.jpg`;
             return prev;
@@ -284,7 +288,7 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
     },
     displayMatchConfiguration: config => {
         $matchConfiguration.set(config);
-        void displayScene('matchConfiguration', config);
+        void displayScene('matchConfiguration');
     },
     reconnectedToGame: (player, state?: Match) => {
         $players.setKey(player.id, player);

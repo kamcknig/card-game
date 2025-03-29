@@ -1,12 +1,15 @@
-import {Match} from "shared/shared-types.ts";
-import {PreinitializedWritableAtom} from "nanostores";
-import {getPlayerById} from "./utils/get-player-by-id.ts";
-import {ReactionTrigger, Reaction, ReactionTemplate} from "./types.ts";
+import { Match } from "shared/shared-types.ts";
+import { PreinitializedWritableAtom } from "nanostores";
+import { Reaction, ReactionTemplate, ReactionTrigger } from "./types.ts";
+import { CardLibrary } from './match-controller.ts';
 
 export class ReactionManager {
   private readonly _triggers: Reaction[] = [];
 
-  constructor(private readonly $matchState: PreinitializedWritableAtom<Partial<Match>>) {
+  constructor(
+    private readonly _$matchState: PreinitializedWritableAtom<Partial<Match>>,
+    private readonly _cardLibrary: CardLibrary,
+  ) {
   }
 
   public endGame() {
@@ -19,7 +22,7 @@ export class ReactionManager {
       const trigger = this._triggers[idx];
       console.log(
         `removing trigger reaction ${triggerId} for player ${
-          getPlayerById(trigger.playerId)
+          this._$matchState.get().players?.find(player => player.id === trigger.playerId)
         }`,
       );
       this._triggers.splice(idx, 1);
@@ -32,10 +35,10 @@ export class ReactionManager {
       
       console.log(`checking trigger condition for ${t.id} reaction`);
       console.debug(`trigger ${trigger}`);
-      console.debug(`trigger card ${match.cardsById[trigger.cardId]}`);
-      console.debug(`trigger player ${getPlayerById(trigger.playerId)}`);
+      console.debug(`trigger card ${this._cardLibrary.getCard(trigger.cardId)}`);
+      console.debug(`trigger player ${match.players.find(player => player.id === trigger.playerId)}`);
       
-      return !(t.condition !== undefined && !t.condition(match, trigger));
+      return !(t.condition !== undefined && !t.condition(match, this._cardLibrary, trigger));
     });
 
     return out.filter((item, index, self) => index === self.findIndex(t => t.getSourceKey() === item.getSourceKey()))

@@ -32,6 +32,7 @@ export type UserPromptEffectArgs = {
 }
 
 export type MatchConfiguration = {
+    players: Player[];
     expansions: string[];
     supplyCardKeys: string[];
     kingdomCardKeys: string[];
@@ -48,28 +49,22 @@ export type GameState = {
 export type MatchUpdate = Partial<Match>;
 
 export type Match = {
-    scores: Record<number, number>,
-    cardsById: Record<number, Card>,
-    selectableCards: { playerId: number; cardId: number }[];
-    players: Player[];
-    playArea: number[];
-    supply: number[];
-    kingdom: number[];
-    trash: number[];
-    playerHands: Record<number, number[]>;
-    playerDecks: Record<number, number[]>;
-    playerDiscards: Record<number, number[]>;
     config: MatchConfiguration,
-    turnNumber: number;
-    // this is the index within the turn order array of whose turn it is. - note this number never resets - modulus is used to determine the actual index
     currentPlayerTurnIndex: number;
-    // could be used to differentiate between the original player's turn vs who is
-    // currently playing cards like when reacting
-    activePlayerId: number;
+    kingdom: number[];
+    playArea: number[];
     playerActions: number;
     playerBuys: number;
+    playerDecks: Record<number, number[]>;
+    playerDiscards: Record<number, number[]>;
+    playerHands: Record<number, number[]>;
     playerTreasure: number;
-    // the current phase's index within the TurnPhaseValues array. - note this number never resets - modulus is used to determine the actual index
+    players: Player[];
+    scores: Record<number, number>,
+    selectableCards: { playerId: number; cardId: number }[];
+    supply: number[];
+    trash: number[];
+    turnNumber: number;
     turnPhaseIndex: number;
 }
 
@@ -96,6 +91,7 @@ export type ServerEmitEvents = {
     scoresUpdated: (scores: Record<number, number>) => void;
     selectableCardsUpdated: (cards: number[]) => void;
     selectCard: (selectCardArgs: SelectCardEffectArgs & { selectableCardIds: number[] }) => void;
+    setCardLibrary: (cardLibrary: Record<number, Card>) => void;
     setPlayer: (player: Player) => void;
     userPrompt: (userPromptArgs: UserPromptEffectArgs) => void;
     waitingForPlayer: (playerId: number) => void;

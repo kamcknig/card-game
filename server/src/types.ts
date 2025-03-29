@@ -2,6 +2,7 @@ import { Socket } from "socket.io";
 import { Card, Match, MatchUpdate, ServerEmitEvents, ServerListenEvents, } from "shared/shared-types.ts";
 import { GameEffects } from "./effect.ts";
 import { toNumber } from 'es-toolkit/compat';
+import { CardLibrary } from './match-controller.ts';
 
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
 
@@ -85,12 +86,14 @@ export type ReactionTrigger = {
 
 export type ReactionEffectGeneratorFn = (
   match: Match,
+  cardLibrary: CardLibrary,
   trigger: ReactionTrigger,
   reaction: Reaction,
 ) => EffectGenerator<GameEffects>;
 
 export type AsyncReactionEffectGeneratorFn = (
   match: Match,
+  cardLibrary: CardLibrary,
   trigger: ReactionTrigger,
   reaction: Reaction,
 ) => Promise<EffectGenerator<GameEffects>>;
@@ -102,6 +105,7 @@ export type EffectGenerator<T> = Generator<
 >;
 export type EffectGeneratorFn = (
   matchState: Match,
+  cardLibrary: CardLibrary,
   triggerPlayerId: number,
   triggerCardId?: number,
   // deno-lint-ignore no-explicit-any
@@ -109,6 +113,7 @@ export type EffectGeneratorFn = (
 ) => EffectGenerator<GameEffects>;
 export type AsyncEffectGeneratorFn = (
   matchState: Match,
+  cardLibrary: CardLibrary,
   triggerPlayerId: number,
   triggerCardId?: number,
   // deno-lint-ignore no-explicit-any
@@ -145,7 +150,7 @@ export class Reaction {
   // todo working on moat right now which has no condition other than it be an attack.
   // in the future we might need to define this condition method elsewhere such as
   // in the expansion's module? need to wait to see what kind of conditions there are i think
-  public condition?: (match: Match, trigger: ReactionTrigger) => boolean;
+  public condition?: (match: Match, cardLibrary: CardLibrary, trigger: ReactionTrigger) => boolean;
 
   // todo defined in a map somewhere just like registered card effects. so maybe another export
   // from teh expansion module that defines what happens when you ccn react?
@@ -232,3 +237,5 @@ export type LifecycleCallbackMap = {
   onEnterPlay?: LifecycleCallback;
   onLeavePlay?: LifecycleCallback;
 };
+export type PlayerID = number;
+export type CardId = number;

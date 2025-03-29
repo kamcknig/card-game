@@ -16,12 +16,12 @@ import {
 export const cardLifecycleMap: Record<string, Partial<LifecycleCallbackMap>> = {}
 
 export const effectGeneratorMap: Record<string, EffectGeneratorFn | AsyncEffectGeneratorFn> = {
-    'playCard': function* (matchState, sourcePlayerId, sourceCardId) {
+    'playCard': function* (matchState, cardLibrary, sourcePlayerId, sourceCardId) {
         if (!sourceCardId) {
             throw new Error('playCard requires a card ID');
         }
 
-        if (matchState.cardsById[sourceCardId].type.includes('ACTION')) {
+        if (cardLibrary.getCard(sourceCardId).type.includes('ACTION')) {
             yield new GainActionEffect({
                 count: -1,
                 sourcePlayerId: sourcePlayerId,
@@ -37,21 +37,21 @@ export const effectGeneratorMap: Record<string, EffectGeneratorFn | AsyncEffectG
             playerId: sourcePlayerId
         });
     },
-    'discardCard': function* (_matchState, sourcePlayerId, sourceCardId) {
+    'discardCard': function* (_matchState, cardLibrary, sourcePlayerId, sourceCardId) {
         if (!sourceCardId) {
             throw new Error('discardCard requires a card ID');
         }
 
         yield new DiscardCardEffect({playerId: sourcePlayerId, cardId: sourceCardId, sourcePlayerId, sourceCardId});
     },
-    'buyCard': function* (matchState, sourcePlayerId, sourceCardId) {
+    'buyCard': function* (matchState, cardLibrary, sourcePlayerId, sourceCardId) {
         if (!sourceCardId) {
             throw new Error('buyCard requires a card ID');
         }
 
-        if (matchState.cardsById[sourceCardId].cost.treasure !== 0) {
+        if (cardLibrary.getCard(sourceCardId).cost.treasure !== 0) {
             yield new GainTreasureEffect({
-                count: -(matchState.cardsById[sourceCardId].cost.treasure ?? 0),
+                count: -(cardLibrary.getCard(sourceCardId).cost.treasure ?? 0),
                 sourcePlayerId,
                 sourceCardId
             });
@@ -65,10 +65,10 @@ export const effectGeneratorMap: Record<string, EffectGeneratorFn | AsyncEffectG
             sourceCardId
         });
     },
-    'drawCard': function* (_matchState, sourcePlayerId, sourceCardId) {
+    'drawCard': function* (_matchState, cardLibrary, sourcePlayerId, sourceCardId) {
         yield new DrawCardEffect({playerId: sourcePlayerId, sourceCardId, sourcePlayerId});
     },
-    'gainCard': function* (_matchState, sourcePlayerId, sourceCardId) {
+    'gainCard': function* (_matchState, cardLibrary, sourcePlayerId, sourceCardId) {
         if (!sourceCardId) {
             throw new Error('gainCard requires a card ID');
         }

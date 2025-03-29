@@ -1,15 +1,8 @@
 import { Server } from 'socket.io';
 import { ServerEmitEvents, ServerListenEvents, } from 'shared/shared-types.ts';
-import { MatchController } from './match-controller.ts';
-import { sendToSockets } from './utils/send-to-sockets.ts';
 import process from 'node:process';
-import { sessionPlayerMap } from './session-player-map.ts';
-import { sessionSocketMap } from './session-socket-map.ts';
-import { playerSocketMap } from './player-socket-map.ts';
-import { createGame, getGameState } from './utils/get-game-state.ts';
 import { toNumber } from 'es-toolkit/compat';
 import * as log from '@timepp/enhanced-deno-log/auto-init';
-import { getPlayerBySessionId } from './utils/get-player-by-session-id.ts';
 import { Game } from './game.ts';
 
 if (Deno.env.get('LOG_TO_FILE')?.toLowerCase() === 'false') {

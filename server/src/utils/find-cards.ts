@@ -1,19 +1,16 @@
 import { castArray } from 'es-toolkit/compat';
 import { isUndefined } from 'es-toolkit';
-import { Card, EffectRestrictionSpec, Match } from "shared/shared-types.ts";
+import { EffectRestrictionSpec, Match } from "shared/shared-types.ts";
 
-import {validateCostSpec} from "../shared/validate-cost-spec.ts";
+import { validateCostSpec } from "../shared/validate-cost-spec.ts";
+import { CardLibrary } from '../match-controller.ts';
 
 export const findCards = (
     match: Match,
     effectRestriction: EffectRestrictionSpec,
-    cardsById: Record<number, Card>,
+    cardLibrary: CardLibrary,
     playerId?: number,
 ) => {
-    if (isUndefined(cardsById)) {
-        throw new Error('findCards requires cardsById parameter');
-    }
-
     if (effectRestriction === 'SELF') {
         throw new Error(`findCards cannot accept a restriction of type 'SELF'`);
     }
@@ -45,16 +42,16 @@ export const findCards = (
     }
 
     if (!isUndefined(effectRestriction?.cost)) {
-        cardIds = cardIds.filter(id => validateCostSpec(effectRestriction.cost!, cardsById[id].cost.treasure));
+        cardIds = cardIds.filter(id => validateCostSpec(effectRestriction.cost!, cardLibrary.getCard(id).cost.treasure));
     }
     if (!isUndefined(effectRestriction.card)) {
         if (!isUndefined(effectRestriction.card?.cardKeys)) {
             const keys = castArray(effectRestriction.card.cardKeys);
-            cardIds = cardIds.filter(id => keys.includes(cardsById[id].cardKey))
+            cardIds = cardIds.filter(id => keys.includes(cardLibrary.getCard(id).cardKey))
         }
         if (!isUndefined(effectRestriction.card?.type)) {
             const types = castArray(effectRestriction.card.type);
-            cardIds = cardIds.filter(id => cardsById[id].type.some(t => types.includes(t)));
+            cardIds = cardIds.filter(id => cardLibrary.getCard(id).type.some(t => types.includes(t)));
         }
     }
 
