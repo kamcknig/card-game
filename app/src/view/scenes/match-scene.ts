@@ -29,7 +29,8 @@ import { CardStackView } from '../card-stack';
 import { displayTrash } from '../modal/display-trash';
 import { $currentPlayerTurnId, $turnPhase } from '../../state/turn-state';
 import { socket } from '../../client-socket';
-import { isUndefined } from 'es-toolkit/compat';
+import { isNumber, isUndefined } from 'es-toolkit/compat';
+import { AppList } from '../../app-list';
 
 export class MatchScene extends Scene {
   private _doneSelectingBtn: Container;
@@ -95,7 +96,7 @@ export class MatchScene extends Scene {
       document.title = `Dominion - ${$players.get()[playerId].name}`;
       
       try {
-        const s= new Audio(`./assets/sounds/your-turn.ogg`);
+        const s = new Audio(`./assets/sounds/your-turn.ogg`);
         s.volume = .2;
         await s?.play();
       } catch {
@@ -109,7 +110,9 @@ export class MatchScene extends Scene {
       if (
         phase === 'buy' &&
         $currentPlayerTurnId.get() === $selfPlayerId.get() &&
-        $playerHandStore($selfPlayerId.get()).get().some(cardId => $cardsById.get()[cardId].type.includes('TREASURE'))
+        $playerHandStore($selfPlayerId.get())
+          .get()
+          .some(cardId => $cardsById.get()[cardId].type.includes('TREASURE'))
       ) {
         this._playAllTreasuresButton = createAppButton(
           { text: 'PLAY ALL TREASURES', style: { fill: 'white', fontSize: 24 } });
@@ -118,7 +121,7 @@ export class MatchScene extends Scene {
         b.x = this._playerHand.x + this._playerHand.width * .5 - b.width * .5;
         b.y = this._playerHand.y - b.height - STANDARD_GAP;
         b.on('pointerdown', () => {
-            socket.emit('playAllTreasure', $selfPlayerId.get());
+          socket.emit('playAllTreasure', $selfPlayerId.get());
           const b = this._playAllTreasuresButton?.button;
           if (!b) {
             return;
@@ -129,13 +132,13 @@ export class MatchScene extends Scene {
         });
         this.addChild(b);
       } else {
-          const b = this._playAllTreasuresButton?.button;
-          if (!b) {
-              return;
-          }
-          b.removeFromParent();
-          b.removeAllListeners();
-          this._playAllTreasuresButton = null;
+        const b = this._playAllTreasuresButton?.button;
+        if (!b) {
+          return;
+        }
+        b.removeFromParent();
+        b.removeAllListeners();
+        this._playAllTreasuresButton = null;
       }
     }));
     
@@ -146,9 +149,10 @@ export class MatchScene extends Scene {
   }
   
   private onPauseGame = () => {
-    const c = new Container({label: 'pause'});
-    const g = new Graphics({label: 'pause'});
-    g.rect(0, 0, app.renderer.width, app.renderer.height).fill({color: 'black', alpha: .5});
+    const c = new Container({ label: 'pause' });
+    const g = new Graphics({ label: 'pause' });
+    g.rect(0, 0, app.renderer.width, app.renderer.height)
+      .fill({ color: 'black', alpha: .5 });
     c.addChild(g);
     
     const t = new Text({
@@ -335,11 +339,26 @@ export class MatchScene extends Scene {
         fontSize: 36,
       },
     });
-    this._doneSelectingBtn = new Container();
+    this._doneSelectingBtn = new AppList({ type: 'horizontal', elementsMargin: STANDARD_GAP, padding: STANDARD_GAP });
     this._doneSelectingBtn.eventMode = 'static';
     this._doneSelectingBtn.y = this._playArea.y + this._playArea.height + STANDARD_GAP;
     this._doneSelectingBtn.addChild(button.button);
-    this._doneSelectingBtn.x = Math.floor(this._playArea.x + this._playArea.width * .5 - this._doneSelectingBtn.width * .5)
+    
+    if (isNumber(arg.count) || arg.count.kind === 'exact') {
+      const count = isNumber(arg.count) ? arg.count : arg.count.count;
+      const countText = new Text({
+        label: 'count',
+        text: count,
+        style: {
+          fontSize: 24,
+          fill: 'white'
+        }
+      });
+      this._doneSelectingBtn.addChild(countText);
+    }
+    
+    this._doneSelectingBtn.x = Math.floor(
+      this._playArea.x + this._playArea.width * .5 - this._doneSelectingBtn.width * .5)
     
     const doneListener = () => {
       this._doneSelectingBtn.off('pointerdown', doneListener);
@@ -348,6 +367,10 @@ export class MatchScene extends Scene {
       selectedCardsListenerCleanup();
       gameEvents.emit('cardsSelected', $selectedCards.get());
       this._selecting = false;
+    }
+    
+    const updateCountText = (countText: Text, count: number) => {
+      countText.text = count;
     }
     
     const validate = (selectedCards: readonly number[]) => {
@@ -371,6 +394,15 @@ export class MatchScene extends Scene {
     // listen for cards being selected
     const selectedCardsListenerCleanup = $selectedCards.subscribe(cardIds => {
       this._doneSelectingBtn.off('pointerdown', doneListener);
+      
+      const countText = this._doneSelectingBtn.getChildByLabel('count') as Text;
+      if (countText) {
+        if (isNumber(arg.count) || arg.count.kind === 'exact') {
+          const count = isNumber(arg.count) ? arg.count : arg.count.count;
+          updateCountText(countText, count - cardIds.length);
+        }
+      }
+      
       validate(cardIds);
     });
     
