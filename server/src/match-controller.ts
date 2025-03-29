@@ -566,7 +566,7 @@ export class MatchController {
     this.sockets = this.sockets.concat(newSocket as unknown as any);
     
     // let the player's client know which player they are
-    newSocket.emit('playerSet', player);
+    newSocket.emit('setPlayer', player);
     newSocket.emit('matchReady', this.$matchState.get());
     newSocket.emit('matchStarted', this.$matchState.get());
   }

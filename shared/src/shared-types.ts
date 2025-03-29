@@ -79,10 +79,10 @@ export type TurnPhase = typeof TurnPhaseOrderValues[number] | undefined; // Defi
 export type ServerEmitEvents = {
     addLogEntry: (logEntry: LogEntry) => void;
     cardEffectsComplete: () => void;
-    displayMatchConfiguration: () => void;
+    displayMatchConfiguration: (config: MatchConfiguration) => void;
     doneWaitingForPlayer: (playerId?: number) => void;
     expansionList: (val: any[]) => void;
-    matchConfigurationUpdated: (val: Pick<MatchConfiguration, 'expansions'>) => void;
+    matchConfigurationUpdated: (val: MatchConfiguration) => void;
     gameOver: (summary: MatchSummary) => void;
     gameOwnerUpdated: (playerId: number) => void;
     matchReady: (match: Match) => void;
@@ -92,11 +92,11 @@ export type ServerEmitEvents = {
     playerDisconnected: (player: Player, players: Player[]) => void;
     playerNameUpdated: (playerId: number, name: string) => void;
     playerReady: (playerId: number, ready: boolean) => void;
-    playerSet: (player: Player) => void;
     reconnectedToGame: (player: Player, state?: Match) => void;
     scoresUpdated: (scores: Record<number, number>) => void;
     selectableCardsUpdated: (cards: number[]) => void;
     selectCard: (selectCardArgs: SelectCardEffectArgs & { selectableCardIds: number[] }) => void;
+    setPlayer: (player: Player) => void;
     userPrompt: (userPromptArgs: UserPromptEffectArgs) => void;
     waitingForPlayer: (playerId: number) => void;
 }
@@ -106,7 +106,7 @@ export type ServerListenEvents = {
     cardTapped: (playerId: number, cardId: number) => void;
     clientReady: (playerId: number, ready: boolean) => void;
     expansionSelected: (val: string[]) => void;
-    matchConfigurationUpdated: (val: Pick<MatchConfiguration, 'expansions'>) => void;
+    matchConfigurationUpdated: (val: MatchConfiguration) => void;
     nextPhase: () => void;
     playerReady: (playerId: number, ready: boolean) => void;
     playAllTreasure: (playerId: number) => void;
@@ -114,8 +114,10 @@ export type ServerListenEvents = {
     updatePlayerName: (playerId: number, name: string) => void;
     userPromptResponse: (result: unknown) => void;
 }
-export type ClientEmitEvents = Omit<ServerListenEvents, 'startMatch'> & {
+
+export type ClientEmitEvents = Omit<ServerListenEvents, 'startMatch' | 'matchConfigurationUpdated'> & {
     startMatch: (configuration: Pick<MatchConfiguration, 'expansions'>) => void;
+    matchConfigurationUpdated: (config: Pick<MatchConfiguration, 'expansions'>) => void;
 };
 
 const CardLocationValues = ['playerDiscards', 'playerHands', 'trash', 'playArea', 'playerDecks', 'supply', 'kingdom'] as const;

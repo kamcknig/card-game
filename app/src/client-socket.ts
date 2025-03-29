@@ -279,12 +279,12 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
           }
       })
     },
-    playerSet: player => {
+    setPlayer: player => {
         $selfPlayerId.set(player.id);
-        
     },
-    displayMatchConfiguration: () => {
-        void displayScene('matchConfiguration');
+    displayMatchConfiguration: config => {
+        $matchConfiguration.set(config);
+        void displayScene('matchConfiguration', config);
     },
     reconnectedToGame: (player, state?: Match) => {
         $players.setKey(player.id, player);

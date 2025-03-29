@@ -1,18 +1,18 @@
 import { Player } from 'shared/shared-types.ts';
+import { AppSocket } from '../types.ts';
 
 let PLAYER_ID: number = 0;
 
-export const createNewPlayer = (sessionId: string, socketId: string) => {
-  console.log('creating new player with session', sessionId);
+export const createNewPlayer = (sessionId: string, socket: AppSocket) => {
   const newId = ++PLAYER_ID;
-  console.log('assigning id', newId);
-  const p = new Player({
+  const p =  new Player({
     name: `Player ${newId}`,
     id: newId,
     sessionId,
     connected: false,
     ready: false,
-    socketId
+    socketId: socket.id
   });
+  console.debug(`[createNewPlayer] new player created ${p}`);
   return p;
 }
