@@ -89,7 +89,7 @@ export class MatchScene extends Scene {
       gameEvents.off('unpauseGame', this.onUnpauseGame);
     });
     
-    this._cleanup.push($currentPlayerTurnId.subscribe(playerId => {
+    this._cleanup.push($currentPlayerTurnId.subscribe(async playerId => {
       if (playerId !== $selfPlayerId.get()) return;
       
       document.title = `Dominion - ${$players.get()[playerId].name}`;
@@ -97,7 +97,7 @@ export class MatchScene extends Scene {
       try {
         const s= new Audio(`./assets/sounds/your-turn.ogg`);
         s.volume = .2;
-        //s?.play();
+        await s?.play();
       } catch {
         console.error('Could not play start turn sound');
       }
