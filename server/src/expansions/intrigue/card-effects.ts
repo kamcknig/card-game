@@ -1,13 +1,11 @@
 import { AsyncEffectGeneratorFn, EffectGeneratorFn } from '../../types.ts';
-import {
-  DiscardCardEffect,
-  GainBuyEffect,
-  GainCardEffect,
-  GainTreasureEffect,
-  ShuffleDeckEffect,
-  UserPromptEffect
-} from '../../effect.ts';
 import { sourceMapsEnabled } from "node:process";
+import { DiscardCardEffect } from '../../effects/discard-card.ts';
+import { GainBuyEffect } from '../../effects/gain-buy.ts';
+import { GainCardEffect } from '../../effects/gain-card.ts';
+import { GainTreasureEffect } from '../../effects/gain-treasure.ts';
+import { ShuffleDeckEffect } from '../../effects/shuffle-card.ts';
+import { UserPromptEffect } from '../../effects/user-prompt.ts';
 
 export default {
   registerEffects: (): Record<

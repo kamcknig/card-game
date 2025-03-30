@@ -1,5 +1,5 @@
 import { PreinitializedWritableAtom } from "nanostores";
-import { GameEffects } from "./effect.ts";
+import { GameEffects } from "./effects/game-effects.ts";
 import {
   AppSocket,
   EffectGenerator,

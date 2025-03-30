@@ -3,15 +3,13 @@ import {
     EffectGeneratorFn,
     LifecycleCallbackMap
 } from './types.ts';
-import {
-    DiscardCardEffect,
-    DrawCardEffect,
-    GainActionEffect,
-    GainBuyEffect,
-    GainCardEffect,
-    GainTreasureEffect,
-    PlayCardEffect
-} from './effect.ts';
+import { DiscardCardEffect } from './effects/discard-card.ts';
+import { DrawCardEffect } from './effects/draw-card.ts';
+import { GainActionEffect } from './effects/gain-action.ts';
+import { GainBuyEffect } from './effects/gain-buy.ts';
+import { GainCardEffect } from './effects/gain-card.ts';
+import { GainTreasureEffect } from './effects/gain-treasure.ts';
+import { PlayCardEffect } from './effects/play-card.ts';
 
 export const cardLifecycleMap: Record<string, Partial<LifecycleCallbackMap>> = {}
 

@@ -9,7 +9,6 @@ import { fisherYatesShuffle } from './utils/fisher-yates-shuffler.ts';
 import { findCards } from './utils/find-cards.ts';
 import { ReactionManager } from './reaction-manager.ts';
 import { Match, MatchUpdate } from 'shared/shared-types.ts';
-import { MoveCardEffect } from './effect.ts';
 import { cardLifecycleMap } from './effect-generator-map.ts';
 import { findOrderedEffectTargets } from './utils/find-ordered-effect-targets.ts';
 import { findSourceByCardId } from './utils.find-source-by-card-id.ts';
@@ -17,6 +16,7 @@ import { findSpecLocationBySource } from './utils/find-spec-location-by-source.t
 import { findSourceByLocationSpec } from './utils/find-source-by-location-spec.ts';
 import { castArray, isUndefined } from 'es-toolkit/compat';
 import { CardLibrary } from "./match-controller.ts";
+import { MoveCardEffect } from './effects/move-card.ts';
 
 /**
  * Returns an object whose properties are functions. The names are a union of Effect types

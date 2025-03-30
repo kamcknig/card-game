@@ -1,5 +1,5 @@
 import { EffectGenerator, EffectHandlerResult, IEffectRunner } from "./types.ts";
-import { GameEffects } from './effect.ts';
+import { GameEffects } from './effects/game-effects.ts';
 import { Match, MatchUpdate } from "shared/shared-types.ts";
 import { effectGeneratorMap } from './effect-generator-map.ts';
 import { EffectsPipeline } from './effects-pipeline.ts';

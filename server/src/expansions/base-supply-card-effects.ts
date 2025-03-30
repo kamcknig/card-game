@@ -1,5 +1,6 @@
 import { AsyncEffectGeneratorFn, EffectGeneratorFn } from '../types.ts';
-import { GainTreasureEffect } from '../effect.ts';
+
+import { GainTreasureEffect } from '../effects/gain-treasure.ts';
 
 export default {
   registerEffects: (): Record<
