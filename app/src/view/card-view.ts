@@ -1,4 +1,4 @@
-import { Assets, Container, ContainerChild, DestroyOptions, Graphics, Sprite } from "pixi.js";
+import { Assets, Container, ContainerChild, DestroyOptions, Graphics, Sprite, Text } from 'pixi.js';
 import { $selectableCards, $selectedCards } from "../state/interactive-state";
 import { Card } from "shared/shared-types";
 import { CARD_HEIGHT, CARD_WIDTH, SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH } from '../app-contants';
@@ -8,10 +8,12 @@ import { batched } from 'nanostores';
 type CardArgs = Card;
 
 export class CardView extends Container<ContainerChild> {
-    private readonly _highlight: Container = new Container();
-    private readonly _cardView: Container = new Container();
+    private readonly _highlight: Container = new Container({label: 'highlight'});
+    private readonly _cardView: Container = new Container({label: 'cardView'});
     private readonly _frontView: Sprite;
     private readonly _backView: Sprite;
+    private readonly _costView: Container = new Container({label: 'costView'});
+    
     private _size: 'full' | 'normal';
 
     private readonly _cleanup: (() => void)[] = [];
@@ -21,7 +23,7 @@ export class CardView extends Container<ContainerChild> {
         if (!this._frontView || !this._backView) return;
         
         this._cardView.getChildByLabel('view')?.removeFromParent();
-        this._cardView.addChild(value === 'front' ? this._frontView : this._backView);
+        this._cardView.addChildAt(value === 'front' ? this._frontView : this._backView, 1);
         this._facing = value;
         this.onCardUpdated();
     }
@@ -44,6 +46,7 @@ export class CardView extends Container<ContainerChild> {
             this._backView.height = value === 'full' ? CARD_HEIGHT : SMALL_CARD_HEIGHT;
         }
         
+        this._costView.visible = this.facing === 'front';
         this._size = value;
         this.onCardUpdated();
     }
@@ -61,18 +64,35 @@ export class CardView extends Container<ContainerChild> {
         this._highlight.addChild(new Graphics({label: 'highlight'}));
         
         this.addChild(this._cardView);
-        this._cardView.addChild(this._highlight);
+        this._cardView.addChildAt(this._highlight, 0);
 
         try {
             this._frontView = Sprite.from(Assets.get(card.cardKey));
-            this._frontView.label = 'view';
+            this._frontView.label = 'cardView';
         } catch {
             console.log("could not find asset for card", card.cardKey);
         }
 
         this._backView = Sprite.from(Assets.get('card-back'));
-        this._backView.label = 'view';
+        this._backView.label = 'cardView';
 
+        const costBgSprite = Sprite.from(Assets.get('treasure-bg'));
+        const maxSide = 32;
+        costBgSprite.scale = Math.min(maxSide / costBgSprite.width, maxSide / costBgSprite.height);
+        this._costView.addChild(costBgSprite);
+        
+        const costText = new Text({
+            text: card.cost.treasure,
+            style: {
+                fill: 'black'
+            },
+            anchor: .5,
+        });
+        costText.x = Math.floor(costBgSprite.width * .5);
+        costText.y = Math.floor(costBgSprite.height * .5);
+        this._costView.addChild(costText);
+        this.addChild(this._costView)
+        
         this.facing = 'front';
         this.size  = 'normal'
 
@@ -120,5 +140,8 @@ export class CardView extends Container<ContainerChild> {
                   .fill(0x6DFF8C);
             }
         }
+        
+        this._costView.x = 2;
+        this._costView.y = this.height - this._costView.height - 12 ;
     }
 }

@@ -187,7 +187,10 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
             prev[c.cardKey] = c.halfImagePath;
             prev[`${c.cardKey}-full`] = c.imagePath;
             return prev;
-        }, {'card-back': `./assets/card-images/full-size/card-back.jpg`} as Record<string, string>));
+        }, {
+            'card-back': `./assets/card-images/full-size/card-back.jpg`,
+            'treasure-bg': './assets/ui-icons/treasure-bg.png',
+        } as Record<string, string>));
 
         await displayScene('match', match);
     },
