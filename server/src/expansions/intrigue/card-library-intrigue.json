@@ -145,13 +145,13 @@
     },
     "cardName": "Replace"
   },
-  "secret-passage\n": {
+  "secret-passage": {
     "abilityText": "+2 Cards\n+1 Action\nTake a card from your hand and put it anywhere in your deck.",
     "type": ["ACTION"],
     "cost": {
       "treasure": 4
     },
-    "cardName": "Secret Passage\n"
+    "cardName": "Secret Passage"
   },
   "shanty-town": {
     "abilityText": "+2 Actions\nReveal your hand. If you have no Action cards in hand, +2 Cards.",

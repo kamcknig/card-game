@@ -104,7 +104,7 @@ export type EffectGenerator<T> = Generator<
   unknown
 >;
 export type EffectGeneratorFn = (
-  matchState: Match,
+  match: Match,
   cardLibrary: CardLibrary,
   triggerPlayerId: number,
   triggerCardId?: number,
@@ -112,7 +112,7 @@ export type EffectGeneratorFn = (
   reactionContext?: any,
 ) => EffectGenerator<GameEffects>;
 export type AsyncEffectGeneratorFn = (
-  matchState: Match,
+  match: Match,
   cardLibrary: CardLibrary,
   triggerPlayerId: number,
   triggerCardId?: number,
