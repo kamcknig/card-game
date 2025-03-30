@@ -21,10 +21,7 @@ import {
 import { findOrderedEffectTargets } from '../../utils/find-ordered-effect-targets.ts';
 import { isUndefined } from 'lodash-es';
 import { Match } from 'shared/shared-types.ts';
-
-function getPlayerById(match: Match, playerId: number) {
-  return match.players.find((player) => player.id === playerId);
-}
+import { getPlayerById } from '../../utils/get-player-by-id.ts';
 
 export default {
   registerCardLifeCycles: (): Record<string, LifecycleCallbackMap> => ({
@@ -36,7 +33,7 @@ export default {
             id,
             playerId,
             once: true,
-            condition: (match, cardLibrary, trigger) => {
+            condition: (_match, cardLibrary, trigger) => {
               const card = cardLibrary.getCard(trigger.cardId);
               return card.cardKey === 'silver' && trigger.playerId === playerId;
             },
@@ -64,12 +61,12 @@ export default {
             id: `moat-${cardId}`,
             playerId,
             listeningFor: 'cardPlayed',
-            condition: (match, cardLibrary, trigger) => {
+            condition: (_match, cardLibrary, trigger) => {
               return cardLibrary.getCard(trigger.cardId).type.includes(
                 'ATTACK',
               ) && trigger.playerId !== playerId;
             },
-            generatorFn: function* (_match, cardLibrary, trigger, reaction) {
+            generatorFn: function* (_match, _cardLibrary, trigger, reaction) {
               const results = yield new UserPromptEffect({
                 confirmLabel: 'YES',
                 declineLabel: 'NO',
@@ -118,7 +115,7 @@ export default {
     string,
     EffectGeneratorFn | AsyncEffectGeneratorFn
   > => ({
-    'artisan': function* (match, cardLibrary, sourcePlayerId, sourceCardId) {
+    'artisan': function* (_match, cardLibrary, sourcePlayerId, sourceCardId) {
       console.debug(`choosing card to gain...`);
       let results = (yield new SelectCardEffect({
         prompt: 'Choose card to gain',
@@ -172,13 +169,13 @@ export default {
       });
     },
     'bandit': function* (
-      matchState,
+      match,
       cardLibrary,
       sourcePlayerId,
       sourceCardId,
       reactionContext: Record<number, boolean>,
     ) {
-      const goldCardId = matchState.supply.find((c) =>
+      const goldCardId = match.supply.find((c) =>
         cardLibrary.getCard(c).cardKey === 'gold'
       );
       if (goldCardId) {
@@ -200,14 +197,14 @@ export default {
       const targetPlayerIds = findOrderedEffectTargets(
         sourcePlayerId,
         'ALL_OTHER',
-        matchState,
+        match,
       ).filter((id) => !reactionContext[id]);
 
       console.debug(` ordered targets ${targetPlayerIds}`);
 
       for (const targetPlayerId of targetPlayerIds) {
-        let playerDeck = matchState.playerDecks[targetPlayerId];
-        let playerDiscard = matchState.playerDiscards[targetPlayerId];
+        let playerDeck = match.playerDecks[targetPlayerId];
+        let playerDiscard = match.playerDiscards[targetPlayerId];
 
         let numToReveal = 2;
         const totalCards = playerDiscard.length + playerDeck.length;
@@ -225,8 +222,8 @@ export default {
             playerId: targetPlayerId,
           });
 
-          playerDeck = matchState.playerDecks[targetPlayerId];
-          playerDiscard = matchState.playerDiscards[targetPlayerId];
+          playerDeck = match.playerDecks[targetPlayerId];
+          playerDiscard = match.playerDiscards[targetPlayerId];
         }
 
         const cardIdsToReveal = playerDeck.slice(-numToReveal);
@@ -324,14 +321,14 @@ export default {
       }
     },
     'bureaucrat': function* (
-      matchState,
+      match,
       cardLibrary,
       sourcePlayerId,
       sourceCardId,
       reactionContext: Record<number, boolean>,
     ) {
-      const supply = matchState.supply;
-      const l = matchState.supply.length;
+      const supply = match.supply;
+      const l = match.supply.length;
 
       for (let i = l - 1; i >= 0; i--) {
         const card = cardLibrary.getCard(supply[i]);
@@ -352,26 +349,26 @@ export default {
       const playerIds = findOrderedEffectTargets(
         sourcePlayerId,
         'ALL_OTHER',
-        matchState,
+        match,
       ).filter((id) => !reactionContext[id]);
 
       console.debug(
         name,
-        `targeting ${playerIds.map((id) => getPlayerById(matchState, id))}`,
+        `targeting ${playerIds.map((id) => getPlayerById(match, id))}`,
       );
 
       for (const playerId of playerIds) {
-        let cardsToReveal = matchState.playerHands[playerId].filter((c) =>
+        let cardsToReveal = match.playerHands[playerId].filter((c) =>
           cardLibrary.getCard(c).type.includes('VICTORY')
         );
 
         if (cardsToReveal.length === 0) {
           console.debug(
             `${
-              getPlayerById(matchState, playerId)
+              getPlayerById(match, playerId)
             } has no victory cards, revealing all`,
           );
-          cardsToReveal = matchState.playerHands[playerId];
+          cardsToReveal = match.playerHands[playerId];
           for (const cardId of cardsToReveal) {
             yield new RevealCardEffect({
               playerId,
@@ -417,14 +414,14 @@ export default {
       }
     },
     'cellar': function* (
-      matchState,
-      cardLibrary,
+      match,
+      _cardLibrary,
       sourcePlayerId,
       sourceCardId,
     ) {
       yield new GainActionEffect({ sourcePlayerId, sourceCardId, count: 1 });
 
-      const hasCards = matchState.playerHands[sourcePlayerId].length > 0;
+      const hasCards = match.playerHands[sourcePlayerId].length > 0;
       if (!hasCards) {
         console.debug(name, 'player has no cards to choose from');
         return;
@@ -463,12 +460,12 @@ export default {
       }
     },
     'chapel': function* (
-      matchState,
-      cardLibrary,
+      match,
+      _cardLibrary,
       sourcePlayerId,
       sourceCardId,
     ) {
-      const hand = matchState.playerHands[sourcePlayerId];
+      const hand = match.playerHands[sourcePlayerId];
 
       if (!hand.length) {
         console.debug(`player has no cards in hand`);
@@ -499,16 +496,16 @@ export default {
       }
     },
     'copper': function* (
-      _matchState,
-      cardLibrary,
+      _match,
+      _cardLibrary,
       sourcePlayerId,
       sourceCardId,
     ) {
       yield new GainTreasureEffect({ sourcePlayerId, sourceCardId, count: 1 });
     },
     'council-room': function* (
-      matchState,
-      cardLibrary,
+      match,
+      _cardLibrary,
       sourcePlayerId,
       sourceCardId,
     ) {
@@ -525,11 +522,11 @@ export default {
       const playerIds = findOrderedEffectTargets(
         sourcePlayerId,
         'ALL_OTHER',
-        matchState,
+        match,
       );
 
       console.debug(
-        `targets ${playerIds.map((id) => getPlayerById(matchState, id))}`,
+        `targets ${playerIds.map((id) => getPlayerById(match, id))}`,
       );
 
       for (const playerId of playerIds) {
@@ -537,8 +534,8 @@ export default {
       }
     },
     'festival': function* (
-      _matchState,
-      cardLibrary,
+      _match,
+      _cardLibrary,
       sourcePlayerId,
       sourceCardId,
     ) {
@@ -549,12 +546,12 @@ export default {
     'gardens': function* () {
       // has no effects, calculates score as game plays
     },
-    'gold': function* (_matchState, cardLibrary, sourcePlayerId, sourceCardId) {
+    'gold': function* (_match, _cardLibrary, sourcePlayerId, sourceCardId) {
       yield new GainTreasureEffect({ count: 3, sourcePlayerId, sourceCardId });
     },
     'harbinger': function* (
-      matchState,
-      cardLibrary,
+      match,
+      _cardLibrary,
       sourcePlayerId,
       sourceCardId,
     ) {
@@ -566,7 +563,7 @@ export default {
 
       yield new GainActionEffect({ count: 1, sourcePlayerId, sourceCardId });
 
-      if (matchState.playerDiscards[sourcePlayerId].length === 0) {
+      if (match.playerDiscards[sourcePlayerId].length === 0) {
         console.debug('player has no cards in discard, done processing');
         return;
       }
@@ -580,7 +577,7 @@ export default {
         declineLabel: 'NO',
         content: {
           cardSelection: {
-            cardIds: matchState.playerDiscards[sourcePlayerId],
+            cardIds: match.playerDiscards[sourcePlayerId],
           },
         },
       })) as number[];
@@ -601,8 +598,8 @@ export default {
       }
     },
     'laboratory': function* (
-      _matchState,
-      cardLibrary,
+      _match,
+      _cardLibrary,
       sourcePlayerId,
       sourceCardId,
     ) {
@@ -616,7 +613,7 @@ export default {
       yield new GainActionEffect({ sourcePlayerId, sourceCardId, count: 1 });
     },
     'library': function* (
-      matchState,
+      match,
       cardLibrary,
       sourcePlayerId,
       sourceCardId,
@@ -625,8 +622,8 @@ export default {
       // 'Draw until you have 7 cards in hand, skipping any Action cards you choose to; set those aside, discarding them afterward.'
       const setAside: number[] = [];
 
-      const hand = matchState.playerHands[sourcePlayerId];
-      const deck = matchState.playerDecks[sourcePlayerId];
+      const hand = match.playerHands[sourcePlayerId];
+      const deck = match.playerDecks[sourcePlayerId];
 
       let newHandSize = 7;
 
@@ -697,8 +694,8 @@ export default {
       }
     },
     'market': function* (
-      _matchState,
-      cardLibrary,
+      _match,
+      _cardLibrary,
       sourcePlayerId,
       sourceCardId,
     ) {
@@ -712,8 +709,8 @@ export default {
       yield new GainTreasureEffect({ sourcePlayerId, sourceCardId, count: 1 });
     },
     'merchant': function* (
-      _matchState,
-      cardLibrary,
+      _match,
+      _cardLibrary,
       sourcePlayerId,
       sourceCardId,
     ) {
@@ -729,7 +726,7 @@ export default {
       });
     },
     'militia': function* (
-      matchState,
+      match,
       cardLibrary,
       sourcePlayerId,
       sourceCardId,
@@ -740,15 +737,15 @@ export default {
       const playerIds = findOrderedEffectTargets(
         sourcePlayerId,
         'ALL_OTHER',
-        matchState,
+        match,
       ).filter((id) => !reactionContext[id]);
 
       console.debug(
-        `targets ${playerIds.map((id) => getPlayerById(matchState, id))}`,
+        `targets ${playerIds.map((id) => getPlayerById(match, id))}`,
       );
 
       for (const playerId of playerIds) {
-        const handCount = matchState.playerHands[playerId].length;
+        const handCount = match.playerHands[playerId].length;
         if (handCount > 3) {
           const cardIds = (yield new SelectCardEffect({
             prompt: 'Confirm discard',
@@ -764,7 +761,7 @@ export default {
           })) as number[];
 
           console.log(
-            `${getPlayerById(matchState, playerId)} chose ${
+            `${getPlayerById(match, playerId)} chose ${
               cardIds.map((id) => cardLibrary.getCard(id))
             } to discard`,
           );
@@ -782,8 +779,8 @@ export default {
         }
       }
     },
-    'mine': function* (matchState, cardLibrary, sourcePlayerId, sourceCardId) {
-      const hand = matchState.playerHands[sourcePlayerId];
+    'mine': function* (match, cardLibrary, sourcePlayerId, sourceCardId) {
+      const hand = match.playerHands[sourcePlayerId];
 
       const hasTreasureCards = hand.some((c) =>
         cardLibrary.getCard(c).type.includes('TREASURE')
@@ -853,7 +850,7 @@ export default {
         to: { location: 'playerHands' },
       });
     },
-    'moat': function* (_matchState, cardLibrary, sourcePlayerId, sourceCardId) {
+    'moat': function* (_match, _cardLibrary, sourcePlayerId, sourceCardId) {
       yield new DrawCardEffect({
         playerId: sourcePlayerId,
         sourcePlayerId,
@@ -866,12 +863,12 @@ export default {
       });
     },
     'moneylender': function* (
-      matchState,
+      match,
       cardLibrary,
       sourcePlayerId,
       sourceCardId,
     ) {
-      const hand = matchState.playerHands[sourcePlayerId];
+      const hand = match.playerHands[sourcePlayerId];
       const hasCopper = hand.some((c) =>
         cardLibrary.getCard(c).cardKey === 'copper'
       );
@@ -913,7 +910,7 @@ export default {
       });
     },
     'poacher': function* (
-      matchState,
+      match,
       cardLibrary,
       sourcePlayerId,
       sourceCardId,
@@ -941,14 +938,14 @@ export default {
         `this algorithm needs to change when 'piles' are properly implemented.`,
       );
 
-      const allSupplyCardKeys = matchState.config.supplyCardKeys.concat(
-        matchState.config.kingdomCardKeys,
+      const allSupplyCardKeys = match.config.supplyCardKeys.concat(
+        match.config.kingdomCardKeys,
       );
 
       console.debug(`original supply card piles ${allSupplyCardKeys}`);
 
-      const remainingSupplyCardKeys = matchState.supply.concat(
-        matchState.kingdom,
+      const remainingSupplyCardKeys = match.supply.concat(
+        match.kingdom,
       ).map((id) => cardLibrary.getCard(id).cardKey).reduce((prev, cardKey) => {
         if (prev.includes(cardKey)) {
           return prev;
@@ -990,12 +987,12 @@ export default {
       }
     },
     'remodel': function* (
-      matchState,
+      match,
       cardLibrary,
       sourcePlayerId,
       sourceCardId,
     ) {
-      if (matchState.playerHands[sourcePlayerId].length === 0) {
+      if (match.playerHands[sourcePlayerId].length === 0) {
         console.debug(`player has no cards in hand`);
         return;
       }
@@ -1048,15 +1045,15 @@ export default {
       });
     },
     'silver': function* (
-      _matchState,
-      cardLibrary,
+      _match,
+      _cardLibrary,
       sourcePlayerId,
       sourceCardId,
     ) {
       yield new GainTreasureEffect({ count: 2, sourcePlayerId, sourceCardId });
     },
     'sentry': function* (
-      matchState,
+      match,
       cardLibrary,
       sourcePlayerId,
       sourceCardId,
@@ -1073,8 +1070,8 @@ export default {
         count: 1,
       });
 
-      let playerDeck = matchState.playerDecks[sourcePlayerId];
-      const playerDiscard = matchState.playerDiscards[sourcePlayerId];
+      let playerDeck = match.playerDecks[sourcePlayerId];
+      const playerDiscard = match.playerDiscards[sourcePlayerId];
 
       let numToLookAt = 2;
       const cardCount = playerDeck.length + playerDiscard.length;
@@ -1098,7 +1095,7 @@ export default {
           playerId: sourcePlayerId,
         });
 
-        playerDeck = matchState.playerDecks[sourcePlayerId];
+        playerDeck = match.playerDecks[sourcePlayerId];
       }
 
       let cardsToLookAtIds = playerDeck.slice(-numToLookAt);
@@ -1187,8 +1184,8 @@ export default {
       }
     },
     'smithy': function* (
-      _matchState,
-      cardLibrary,
+      _match,
+      _cardLibrary,
       sourcePlayerId,
       sourceCardId,
     ) {
@@ -1201,8 +1198,8 @@ export default {
       }
     },
     'throne-room': function* (
-      _matchState,
-      cardLibrary,
+      _match,
+      _cardLibrary,
       sourcePlayerId,
       sourceCardId,
     ) {
@@ -1240,7 +1237,7 @@ export default {
       });
     },
     'vassal': function* (
-      matchState,
+      match,
       cardLibrary,
       sourcePlayerId,
       sourceCardId,
@@ -1251,14 +1248,14 @@ export default {
         count: 2,
       });
 
-      let playerDeck = matchState.playerDecks[sourcePlayerId];
+      let playerDeck = match.playerDecks[sourcePlayerId];
 
       if (playerDeck.length === 0) {
         console.debug(`not enough cards in deck, shuffling`);
         yield new ShuffleDeckEffect({
           playerId: sourcePlayerId,
         });
-        playerDeck = matchState.playerDecks[sourcePlayerId];
+        playerDeck = match.playerDecks[sourcePlayerId];
       }
 
       const cardToDiscardId = playerDeck.slice(-1)?.[0];
@@ -1306,8 +1303,8 @@ export default {
       });
     },
     'village': function* (
-      _matchState,
-      cardLibrary,
+      _match,
+      _cardLibrary,
       sourcePlayerId,
       sourceCardId,
     ) {
@@ -1319,7 +1316,7 @@ export default {
       });
     },
     'witch': function* (
-      matchState,
+      match,
       cardLibrary,
       sourcePlayerId,
       sourceCardId,
@@ -1337,15 +1334,15 @@ export default {
       const playerIds = findOrderedEffectTargets(
         sourcePlayerId,
         'ALL_OTHER',
-        matchState,
+        match,
       ).filter((id) => !reactionContext[id]);
 
       console.debug(
-        `targets ${playerIds.map((id) => getPlayerById(matchState, id))}`,
+        `targets ${playerIds.map((id) => getPlayerById(match, id))}`,
       );
 
       for (const playerId of playerIds) {
-        const supply = matchState.supply;
+        const supply = match.supply;
         const l = supply.length;
         for (let i = l - 1; i >= 0; i--) {
           if (cardLibrary.getCard(supply[i]).cardKey === 'curse') {
@@ -1364,8 +1361,8 @@ export default {
       }
     },
     'workshop': function* (
-      _matchState,
-      cardLibrary,
+      _match,
+      _cardLibrary,
       sourcePlayerId,
       sourceCardId,
     ) {
