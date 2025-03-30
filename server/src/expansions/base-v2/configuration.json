@@ -1,5 +1,5 @@
 {
-  "supply": "../base-v1/base-supply.json",
-  "kingdom": "base-kingdom-v2.json",
+  "supply": "../card-library-base-supply.json",
+  "kingdom": "card-library-base-v2.json",
   "mutuallyExclusiveExpansions": ["base-v1"]
 }

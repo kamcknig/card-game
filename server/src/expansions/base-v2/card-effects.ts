@@ -495,14 +495,6 @@ export default {
         console.debug('no cards selected');
       }
     },
-    'copper': function* (
-      _match,
-      _cardLibrary,
-      sourcePlayerId,
-      sourceCardId,
-    ) {
-      yield new GainTreasureEffect({ sourcePlayerId, sourceCardId, count: 1 });
-    },
     'council-room': function* (
       match,
       _cardLibrary,
@@ -545,9 +537,6 @@ export default {
     },
     'gardens': function* () {
       // has no effects, calculates score as game plays
-    },
-    'gold': function* (_match, _cardLibrary, sourcePlayerId, sourceCardId) {
-      yield new GainTreasureEffect({ count: 3, sourcePlayerId, sourceCardId });
     },
     'harbinger': function* (
       match,
@@ -1043,14 +1032,6 @@ export default {
         cardId,
         to: { location: 'playerDiscards' },
       });
-    },
-    'silver': function* (
-      _match,
-      _cardLibrary,
-      sourcePlayerId,
-      sourceCardId,
-    ) {
-      yield new GainTreasureEffect({ count: 2, sourcePlayerId, sourceCardId });
     },
     'sentry': function* (
       match,

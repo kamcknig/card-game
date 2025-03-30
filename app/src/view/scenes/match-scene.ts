@@ -321,6 +321,7 @@ export class MatchScene extends Scene {
     gameEvents.emit('userPromptResponse', result);
   }
   
+  // todo move the selection stuff to another class, SelectionManager?
   private doSelectCards = async (arg: SelectCardEffectArgs) => {
     const cardIds = $selectableCards.get();
     
@@ -407,6 +408,12 @@ export class MatchScene extends Scene {
         
         this._doneSelectingBtn.getChildByLabel('doneSelectingButton').alpha = 1;
         this._doneSelectingBtn.on('pointerdown', doneListener);
+        
+        if (isNumber(arg.count) || arg.count.kind === 'exact') {
+          const count = isNumber(arg.count) ? arg.count : arg.count.count;
+          if (count === 1) doneListener();
+        }
+        
       } else {
         button.text(arg.prompt);
         this._doneSelectingBtn.getChildByLabel('doneSelectingButton').alpha = .6;

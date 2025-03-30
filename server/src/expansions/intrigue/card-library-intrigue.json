@@ -1,0 +1,214 @@
+{
+  "baron": {
+    "abilityText": "+1 Buy\nYou may discard an Estate for +$4. If you don't, gain an Estate.",
+    "type": ["ACTION"],
+    "cost": {
+      "treasure": 4
+    },
+    "cardName": "Baron"
+  },
+  "bridge": {
+    "abilityText": "+1 Buy\n+$1\nThis turn, cards (everywhere) cost $1 less.",
+    "type": ["ACTION"],
+    "cardName": "Bridge",
+    "cost": {
+      "treasure": 4
+    }
+  },
+  "conspirator": {
+    "abilityText": "+$2\nIf you've played 3 or more Actions this turn (counting this), +1 Card and +1 Action.",
+    "cost": {
+      "treasure": 4
+    },
+    "cardName": "Conspirator",
+    "type": ["ACTION"]
+  },
+  "courtier": {
+    "abilityText": "Reveal a card from your hand. For each type it has (Action, Attack, etc.), choose one: +1 Action; or +1 Buy; or +$3; or gain a Gold. The choices must be different.",
+    "type": ["ACTION"],
+    "cost": {
+      "treasure": 5
+    },
+    "cardName": "Courtier"
+  },
+  "courtyard": {
+    "abilityText": "+3 Cards\nPut a card from your hand onto your deck.",
+    "type": ["ACTION"],
+    "cost": {
+      "treasure": 2
+    },
+    "cardName": "Courtyard"
+  },
+  "diplomat": {
+    "abilityText": "+2 Cards\nIf you have 5 or fewer cards in hand (after drawing), +2 Actions.\n\nWhen another player plays an Attack card, you may first reveal this from a hand of 5 or more cards, to draw 2 cards then discard 3.",
+    "type": ["ACTION", "REACTION"],
+    "cost": {
+      "treasure": 4
+    },
+    "cardName": "Diplomat"
+  },
+  "duke": {
+    "abilityText": "Worth 1VP per Duchy you have.",
+    "type": ["VICTORY"],
+    "cost": {
+      "treasure": 5
+    },
+    "cardName": "Duke"
+  },
+  "farm": {
+    "abilityText": "$2\n2VP",
+    "type": ["TREASURE", "VICTORY"],
+    "cost": {
+      "treasure": 6
+    },
+    "cardName": "Farm"
+  },
+  "ironworks": {
+    "abilityText": "Gain a card costing up to $4.\nIf the gained card is an…\n\nAction card, +1 Action\nTreasure card, +$1\nVictory card, +1 Card",
+    "type": ["ACTION"],
+    "cost": {
+      "treasure": 4
+    },
+    "cardName": "Ironworks"
+  },
+  "lurker": {
+    "abilityText": "+1 Action\nChoose one: Trash an Action card from the Supply; or gain an Action card from the trash.",
+    "type": ["ACTION"],
+    "cost": {
+      "treasure": 2
+    },
+    "cardName": "Lurker"
+  },
+  "masquerade": {
+    "abilityText": "+2 Cards\nEach player with any cards in hand passes one to the next such player to their left, at once. Then you may trash a card from your hand.",
+    "type": ["ACTION"],
+    "cost": {
+      "treasure": 3
+    },
+    "cardName": "Masquerade"
+  },
+  "mill": {
+    "abilityText": "+1 Card\n+1 Action\nYou may discard 2 cards. If you do, +$2.\n\n1VP",
+    "type": ["ACTION", "VICTORY"],
+    "cost": {
+      "treasure": 4
+    },
+    "cardName": "Mill"
+  },
+  "mining-village": {
+    "abilityText": "+1 Card\n+2 Actions\nYou may trash this for +$2.",
+    "type": ["ACTION"],
+    "cost": {
+      "treasure": 4
+    },
+    "cardName": "Mining Village\n"
+  },
+  "minion": {
+    "abilityText": "+1 Action\nChoose one: +$2; or discard your hand, +4 Cards, and each other player with at least 5 cards in hand discards their hand and draws 4 cards.",
+    "type": ["ACTION", "ATTACK"],
+    "targetScheme": "ALL_OTHER",
+    "cost": {
+      "treasure": 5
+    },
+    "cardName": "Minion"
+  },
+  "nobles": {
+    "abilityText": "Choose one: +3 Cards; or +2 Actions.\n\n2VP",
+    "type": ["ACTION", "VICTORY"],
+    "cost": {
+      "treasure": 6
+    },
+    "cardName": "Nobles"
+  },
+  "patrol": {
+    "abilityText": "+3 Cards\nReveal the top 4 cards of your deck. Put the Victory cards and Curses into your hand. Put the rest back in any order.",
+    "type": ["ACTION"],
+    "cost": {
+      "treasure": 5
+    },
+    "cardName": "Patrol"
+  },
+  "pawn": {
+    "abilityText": "Choose two: +1 Card; +1 Action; +1 Buy; +$1. The choices must be different.",
+    "type": ["ACTION"],
+    "cost": {
+      "treasure": 2
+    },
+    "cardName": "Pawn"
+  },
+  "replace": {
+    "abilityText": "Trash a card from your hand. Gain a card costing up to $2 more than it. If the gained card is an Action or Treasure, put it onto your deck; if it's a Victory card, each other player gains a Curse.",
+    "type": ["ACTION", "ATTACK"],
+    "targetScheme": "ALL_OTHER",
+    "cost": {
+      "treasure": 5
+    },
+    "cardName": "Replace"
+  },
+  "secret-passage\n": {
+    "abilityText": "+2 Cards\n+1 Action\nTake a card from your hand and put it anywhere in your deck.",
+    "type": ["ACTION"],
+    "cost": {
+      "treasure": 4
+    },
+    "cardName": "Secret Passage\n"
+  },
+  "shanty-town": {
+    "abilityText": "+2 Actions\nReveal your hand. If you have no Action cards in hand, +2 Cards.",
+    "type": ["ACTION"],
+    "cost": {
+      "treasure": 3
+    },
+    "cardName": "Shanty Town"
+  },
+  "steward": {
+    "abilityText": "",
+    "type": ["ACTION"],
+    "cost": {
+      "treasure": 3
+    },
+    "cardName": "Steward"
+  },
+  "swindler": {
+    "abilityText": "+$2\nEach other player trashes the top card of their deck and gains a card with the same cost that you choose.",
+    "type": ["ACTION", "ATTACK"],
+    "targetScheme": "ALL_OTHER",
+    "cost": {
+      "treasure": 3
+    },
+    "cardName": "Swindler"
+  },
+  "torturer": {
+    "abilityText": "+3 Cards\nEach other player either discards 2 cards or gains a Curse to their hand, their choice. (They may pick an option they can't do.)",
+    "type": ["ACTION", "ATTACK"],
+    "targetScheme": "ALL_OTHER",
+    "cost": {
+      "treasure": 5
+    },
+    "cardName": "Torturer"
+  },
+  "trading-post": {
+    "abilityText": "Trash 2 cards from your hand. If you did, gain a Silver to your hand.",
+    "type": ["ACTION"],
+    "cost": {
+      "treasure": 5
+    },
+    "cardName": "Trading Post\n"
+  },
+  "upgrade": {
+    "abilityText": "+1 Card\n+1 Action\nTrash a card from your hand. Gain a card costing exactly $1 more than it.",
+    "type": ["ACTION"],
+    "cost": {
+      "treasure": 5
+    },
+    "cardName": "Upgrade"
+  },
+  "wishing-well": {
+    "abilityText": "+1 Card\n+1 Action\nName a card, then reveal the top card of your deck. If you named it, put it into your hand.",
+    "type": ["ACTION"],
+    "cost": {
+      "treasure": 3
+    },
+    "cardName": "wishing-well"
+  }
+}

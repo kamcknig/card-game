@@ -9,6 +9,7 @@ import { isUndefined } from 'es-toolkit';
 import { $matchConfiguration } from '../../state/match-state';
 import { MatchConfiguration, Player } from 'shared/shared-types';
 import { CheckBox, Input, List } from "@pixi/ui";
+import { AppList } from '../../app-list';
 
 export class MatchConfigurationScene extends Scene {
   private readonly _playerList: List = new List({
@@ -17,7 +18,7 @@ export class MatchConfigurationScene extends Scene {
     elementsMargin: STANDARD_GAP,
   });
   private readonly _cleanup: (() => void)[] = [];
-  private _expansionContainer: Container = new Container({ x: 700, y: 20 });
+  private _expansionList: List = new List({type: 'vertical', padding: STANDARD_GAP, elementsMargin: STANDARD_GAP});
   private _expansionHighlight: Graphics = new Graphics();
   private _updateNameTimeout: any;
   
@@ -52,74 +53,75 @@ export class MatchConfigurationScene extends Scene {
   }
   
   private async createExpansionList(val: readonly any[]) {
+    this._expansionList.removeChildren();
+    
     if (!val || val.length === 0) {
       return;
     }
     
-    this._expansionContainer.removeChildren()
-      .forEach(c => c.destroy());
-    
-    let maxWidth: number = 0;
-    
-    for (const [idx, expansion] of val.entries()) {
-      const c = new Container({
-        y: this._expansionContainer.height + (STANDARD_GAP * 3) * idx
-      });
-      c.eventMode = 'static';
-      c.label = expansion.expansionName;
+    for (const expansion of val) {
+      const expansionList = new AppList({ type:'horizontal', elementsMargin: STANDARD_GAP});
+      expansionList.eventMode = 'static';
+      expansionList.label = expansion.expansionName;
+      
+      const texture = await Assets.load(`./assets/expansion-icons/${expansion.expansionName}.png`)
+      const s = Sprite.from(texture);
+      s.label = 'expansionIcon';
+      const maxSide = 25;
+      s.scale = Math.min(maxSide / s.width, maxSide / s.height);
+      const spriteContainer = new Container({label: 'expansionIconContainer'});
+      spriteContainer.addChild(s);
+      expansionList.addChild(spriteContainer);
       
       const t = new Text({
-        x: STANDARD_GAP,
-        y: STANDARD_GAP,
         style: { fontSize: 24, fill: 'black' },
         text: expansion.title,
         label: expansion.expansionName
       });
-      c.addChild(t);
+      expansionList.addChild(t);
       
       if ($selfPlayerId.get() === $gameOwner.get()) {
-        c.on('pointerdown', () => {
+        expansionList.on('pointerdown', () => {
           let expansions = $matchConfiguration.get().expansions;
-          const expansionIdx = expansions.findIndex(e => e === c.label);
+          const expansionIdx = expansions.findIndex(e => e === expansionList.label);
           
           if (expansionIdx === -1) {
-            expansions.push(c.label);
+            expansions.push(expansionList.label);
           } else {
-            expansions = expansions.filter(e => e !== c.label);
+            expansions = expansions.filter(e => e !== expansionList.label);
           }
           
           socket.emit('matchConfigurationUpdated', { expansions });
         });
-        c.on('destroyed', () => {
-          c.removeAllListeners();
+        expansionList.on('destroyed', () => {
+          expansionList.removeAllListeners();
         })
       }
       
-      const texture = await Assets.load(`./assets/expansion-icons/${expansion.expansionName}.png`)
-      const s = Sprite.from(texture);
-      const maxSide = 30;
-      s.scale = Math.min(maxSide / s.width, maxSide / s.height);
-      s.x = t.x + t.width + STANDARD_GAP;
-      s.y = Math.floor(t.y + t.height * .5 - s.height * .5);
-      c.addChild(s);
-      
-      maxWidth = Math.max(maxWidth, c.width);
-      
-      this._expansionContainer.addChild(c);
+      this._expansionList.addChild(expansionList);
+      this._expansionList.y = STANDARD_GAP;
+      this._expansionList.x = 700;
     }
     
-    for (const expansionContainer of this._expansionContainer.children) {
+    for (const expansionContainer of this._expansionList.children) {
+      const expansionIconContainer = expansionContainer.getChildByLabel('expansionIconContainer');
+      if (!expansionIconContainer) continue;
+      
+      const sprite = expansionIconContainer.getChildByLabel('expansionIcon');
+      if (!sprite) continue;
+      
       const highlight = new Graphics({ label: 'highlight' });
-      highlight.roundRect(0, 0, maxWidth + STANDARD_GAP * 2, expansionContainer.height + STANDARD_GAP * 2, 5)
-        .stroke({
-          color: 0xffffff,
-          width: 2,
-        });
+      highlight.roundRect(0, 0, sprite.width, sprite.height, 5);
+      highlight.stroke({
+        color: 0xffffff,
+        width: 2,
+        alignment: -3,
+      });
       highlight.visible = $matchConfiguration.get()
         .expansions
         .includes(expansionContainer.label);
       
-      expansionContainer.addChild(highlight);
+      expansionIconContainer.addChild(highlight);
     }
     
     if ($gameOwner.get() === $selfPlayerId.get()) {
@@ -128,7 +130,7 @@ export class MatchConfigurationScene extends Scene {
       });
     }
     
-    this.addChild(this._expansionContainer);
+    this.addChild(this._expansionList);
   }
   
   private onMatchConfigurationUpdated(val: Readonly<Pick<MatchConfiguration, 'expansions'>>) {
@@ -137,8 +139,11 @@ export class MatchConfigurationScene extends Scene {
       return;
     }
     
-    for (const c of this._expansionContainer.children) {
-      c.getChildByLabel('highlight').visible = val.expansions.includes(c.label);
+    for (const c of this._expansionList.children) {
+      const highlight = c.getChildByLabel('expansionIconContainer')?.getChildByLabel('highlight');
+      if (highlight) {
+        highlight.visible = val.expansions.includes(c.label);
+      }
     }
   }
   
