@@ -360,7 +360,7 @@ export const createEffectHandlerMap = (
         playerSourceId: effect.sourcePlayerId,
       }));
 
-      await moveCard(
+      moveCard(
         new MoveCardEffect({
           cardId,
           playerId,
@@ -371,7 +371,10 @@ export const createEffectHandlerMap = (
         match,
         acc,
       );
-
+      
+      match.cardsPlayed[sourcePlayerId] ??= [];
+      match.cardsPlayed[sourcePlayerId].push(sourceCardId);
+      
       const trigger: ReactionTrigger = {
         eventType: 'cardPlayed',
         playerId,
@@ -435,7 +438,7 @@ export const createEffectHandlerMap = (
           reactionContext[reaction.playerId] = reactionResults;
         }
       }
-
+      
       return await cardEffectRunner.runCardEffects(
         match,
         sourcePlayerId,

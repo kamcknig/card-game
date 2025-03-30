@@ -66,6 +66,7 @@ export type Match = {
     trash: number[];
     turnNumber: number;
     turnPhaseIndex: number;
+    cardsPlayed: Record<PlayerID, CardId[]>;
 }
 
 export const TurnPhaseOrderValues = ["action", "buy", "cleanup"] as const;
