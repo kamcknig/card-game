@@ -170,7 +170,6 @@ export class MatchScene extends Scene {
   private onUnpauseGame = () => {
     const c = this.getChildByLabel('pause');
     c?.removeFromParent();
-    c?.destroy();
   }
   
   private async loadAssets() {
@@ -327,7 +326,6 @@ export class MatchScene extends Scene {
     
     if (cardIds.length === 0 && !isUndefined(this._doneSelectingBtn)) {
       this.removeChild(this._doneSelectingBtn);
-      this._doneSelectingBtn.destroy();
       return;
     }
     
@@ -387,7 +385,6 @@ export class MatchScene extends Scene {
     const doneListener = () => {
       this._doneSelectingBtn.off('pointerdown', doneListener);
       this.removeChild(this._doneSelectingBtn);
-      this._doneSelectingBtn.destroy();
       selectedCardsListenerCleanup();
       gameEvents.emit('cardsSelected', $selectedCards.get());
       this._selecting = false;
@@ -490,8 +487,7 @@ export class MatchScene extends Scene {
       return;
     }
     
-    this._baseSupply.removeChildren()
-      .forEach(c => c.destroy());
+    this._baseSupply.removeChildren();
     
     const cards = newVal.map(id => $cardsById.get()[id]);
     

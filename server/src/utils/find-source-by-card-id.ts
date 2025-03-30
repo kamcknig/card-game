@@ -1,6 +1,6 @@
 import {CardLocation, Match} from "shared/shared-types.ts";
 import { isUndefined } from 'es-toolkit';
-import { CardLibrary } from './match-controller.ts';
+import { CardLibrary } from '../match-controller.ts';
 
 export const findSourceByCardId = (
   cardId: number,

@@ -1,12 +1,12 @@
 import {
-  Card,
+  Card, CardId,
   Match,
   MatchConfiguration,
   MatchSummary,
-  MatchUpdate,
+  MatchUpdate, PlayerID,
   TurnPhaseOrderValues,
 } from 'shared/shared-types.ts';
-import { AppSocket, CardId, EffectHandlerMap, MatchBaseConfiguration, PlayerID } from './types.ts';
+import { AppSocket, EffectHandlerMap, MatchBaseConfiguration } from './types.ts';
 import { CardEffectController } from './card-effects-controller.ts';
 import { cardLibrary, loadExpansion } from './utils/load-expansion.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';
@@ -17,6 +17,7 @@ import { fisherYatesShuffle } from './utils/fisher-yates-shuffler.ts';
 import { ReactionManager } from './reaction-manager.ts';
 import { scoringFunctionMap } from './scoring-function-map.ts';
 import { map } from 'nanostores';
+import { getCardOverrides, removeOverrideEffects } from './card-data-overrides.ts';
 
 export class CardLibrary {
   private readonly _library: Map<CardId, Card> = new Map();
@@ -144,7 +145,7 @@ export class MatchController {
     const kingdomCards: Card[] = [];
     
     // todo: remove testing code
-    const keepers: string[] = ['militia'];
+    const keepers: string[] = ['bridge'];
     
     if (keepers.length) {
       console.warn(`[MATCH] using hard-coded list of cards to create ${keepers}`);
@@ -275,10 +276,18 @@ export class MatchController {
     
     this._effectsController = new CardEffectController(this._cardLibrary);
     
+    this._interactivityController = new CardInteractivityController(
+      this._effectsController,
+      this.$matchState,
+      this._socketMap,
+      this._cardLibrary
+    );
+    
     this.effectHandlerMap = createEffectHandlerMap(
       this._socketMap,
       this._reactionManager,
       this._effectsController,
+      this._interactivityController,
       this._cardLibrary
     );
     
@@ -289,12 +298,7 @@ export class MatchController {
     );
     this._effectsController.setEffectPipeline(this._effectsPipeline);
     
-    this._interactivityController = new CardInteractivityController(
-      this._effectsController,
-      this.$matchState,
-      this._socketMap,
-      this._cardLibrary
-    );
+    
     
     for (const socket of this._socketMap.values()) {
       socket.on('nextPhase', this.onNextPhase);
@@ -586,7 +590,9 @@ export class MatchController {
                 );
               }
 
-              this.$matchState.set({ ...this.$matchState.get(), ...match });
+              const newMatch = { ...this.$matchState.get(), ...match };
+              this.$matchState.set(newMatch);
+              this.endTurn(newMatch);
               await this.onNextPhase(match);
             },
           );
@@ -603,6 +609,17 @@ export class MatchController {
     }
   };
 
+  private endTurn = (match: Match) => {
+    removeOverrideEffects('TURN_END');
+    
+    const overrides = getCardOverrides(match, this._cardLibrary);
+    for (const { id } of match.players) {
+      const playerOverrides = overrides?.[id];
+      const socket = this._socketMap.get(id);
+      socket?.emit('setCardDataOverrides', playerOverrides)
+    }
+  }
+  
   public playerReconnected(playerId: number, socket: AppSocket) {
     console.log(`[MATCH] player ${playerId} reconnecting`);
     this._socketMap.set(playerId, socket);

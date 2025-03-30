@@ -10,7 +10,7 @@ export async function displayScene<K extends SceneNames>(
 ) {
     console.log('display scene', sceneName, sceneConfig);
     if (scene) {
-        app.stage.removeChild(scene).destroy();
+        app.stage.removeChild(scene);
     }
 
     const sceneValue = scenes[sceneName];

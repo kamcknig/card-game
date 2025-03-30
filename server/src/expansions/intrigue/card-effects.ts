@@ -1,18 +1,17 @@
 import { AsyncEffectGeneratorFn, EffectGeneratorFn } from '../../types.ts';
-import { sourceMapsEnabled } from "node:process";
 import { DiscardCardEffect } from '../../effects/discard-card.ts';
 import { GainBuyEffect } from '../../effects/gain-buy.ts';
 import { GainCardEffect } from '../../effects/gain-card.ts';
 import { GainTreasureEffect } from '../../effects/gain-treasure.ts';
-import { ShuffleDeckEffect } from '../../effects/shuffle-card.ts';
 import { UserPromptEffect } from '../../effects/user-prompt.ts';
+import { ModifyCostEffect } from '../../effects/modify-cost.ts';
 
 export default {
   registerEffects: (): Record<
     string,
     EffectGeneratorFn | AsyncEffectGeneratorFn
   > => ({
-    'baron': function* (match, cardLibrary, triggerPlayerId, triggerCardId, reactionContext) {
+    'baron': function* (match, cardLibrary, triggerPlayerId, triggerCardId, _reactionContext) {
       yield new GainBuyEffect({
         count: 1,
         sourcePlayerId: triggerPlayerId
@@ -60,12 +59,19 @@ export default {
         console.debug(`[BARON EFFECT] player has no estates in hand`);
       }
     },
-    'bridge': function* (match, cardLibrary, triggerPlayerId, triggerCardId, reactionContext) {
+    'bridge': function* (_match, _cardLibrary, triggerPlayerId, triggerCardId, _reactionContext) {
       yield new GainBuyEffect({count: 1, sourcePlayerId: triggerPlayerId});
       
       yield new GainTreasureEffect({count: 1, sourcePlayerId: triggerPlayerId});
       
-      
+      yield new ModifyCostEffect({
+        appliesToCard: 'ALL',
+        appliesToPlayer: 'ALL',
+        amount: -1,
+        sourceCardId: triggerCardId!,
+        sourcePlayerId: triggerPlayerId,
+        expiresAt: 'TURN_END'
+      });
     },
     'conspirator': function* (match, cardLibrary, triggerPlayerId, triggerCardId, reactionContext) {
     

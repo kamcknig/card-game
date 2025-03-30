@@ -71,6 +71,8 @@ export type Match = {
 export const TurnPhaseOrderValues = ["action", "buy", "cleanup"] as const;
 export type TurnPhase = typeof TurnPhaseOrderValues[number] | undefined; // Define Effect as a union of all effect classes.
 
+export type CardOverrides = Record<PlayerID, Record<CardId, Card>>;
+
 export type ServerEmitEvents = {
     addLogEntry: (logEntry: LogEntry) => void;
     cardEffectsComplete: () => void;
@@ -91,6 +93,7 @@ export type ServerEmitEvents = {
     scoresUpdated: (scores: Record<number, number>) => void;
     selectableCardsUpdated: (cards: number[]) => void;
     selectCard: (selectCardArgs: SelectCardEffectArgs & { selectableCardIds: number[] }) => void;
+    setCardDataOverrides: (overrides: Record<CardId, Partial<Card>> | undefined) => void;
     setCardLibrary: (cardLibrary: Record<number, Card>) => void;
     setPlayer: (player: Player) => void;
     userPrompt: (userPromptArgs: UserPromptEffectArgs) => void;
@@ -324,3 +327,5 @@ export type EffectRestrictionSpec = "SELF" | {
     };
     cost?: CostSpec;
 };
+export type PlayerID = number;
+export type CardId = number;

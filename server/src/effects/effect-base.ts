@@ -10,9 +10,9 @@ export type EffectBaseArgs = {
  */
 export abstract class EffectBase {
   abstract type: string;
-  public sourceCardId!: number;
-  public sourcePlayerId!: number;
-  public triggerImmediateUpdate: boolean;
+  public sourceCardId: number;
+  public sourcePlayerId: number;
+  public triggerImmediateUpdate?: boolean;
 
   protected constructor(
     { sourcePlayerId, sourceCardId, triggerImmediateUpdate }: EffectBaseArgs,

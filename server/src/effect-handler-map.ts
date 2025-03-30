@@ -1,22 +1,23 @@
 import {
   AppSocket,
   EffectHandlerMap,
-  IEffectRunner, PlayerID,
-  ReactionTemplate,
+  IEffectRunner, ReactionTemplate,
   ReactionTrigger,
 } from './types.ts';
 import { fisherYatesShuffle } from './utils/fisher-yates-shuffler.ts';
 import { findCards } from './utils/find-cards.ts';
 import { ReactionManager } from './reaction-manager.ts';
-import { Match, MatchUpdate } from 'shared/shared-types.ts';
+import { Match, MatchUpdate, PlayerID } from 'shared/shared-types.ts';
 import { cardLifecycleMap } from './effect-generator-map.ts';
 import { findOrderedEffectTargets } from './utils/find-ordered-effect-targets.ts';
-import { findSourceByCardId } from './utils.find-source-by-card-id.ts';
+import { findSourceByCardId } from './utils/find-source-by-card-id.ts';
 import { findSpecLocationBySource } from './utils/find-spec-location-by-source.ts';
 import { findSourceByLocationSpec } from './utils/find-source-by-location-spec.ts';
 import { castArray, isUndefined } from 'es-toolkit/compat';
 import { CardLibrary } from "./match-controller.ts";
 import { MoveCardEffect } from './effects/move-card.ts';
+import { cardDataOverrides, getCardOverrides } from './card-data-overrides.ts';
+import { CardInteractivityController } from './card-interactivity-controller.ts';
 
 /**
  * Returns an object whose properties are functions. The names are a union of Effect types
@@ -26,9 +27,10 @@ export const createEffectHandlerMap = (
   socketMap: Map<PlayerID, AppSocket>,
   reactionManager: ReactionManager,
   cardEffectRunner: IEffectRunner,
+  interactivityController: CardInteractivityController,
   cardLibrary: CardLibrary,
 ): EffectHandlerMap => {
-  async function moveCard(
+  function moveCard(
     effect: MoveCardEffect,
     match: Match,
     acc: MatchUpdate,
@@ -190,7 +192,7 @@ export const createEffectHandlerMap = (
     socketMap.forEach(s => s.emit('matchUpdated', interimUpdate));
   }
 
-  async function shuffleDeck(playerId: number, match: Match, acc: MatchUpdate) {
+  function shuffleDeck(playerId: number, match: Match, acc: MatchUpdate) {
     console.log(`shuffling deck for ${match.players.find(player => player.id === playerId)}`);
 
     let interimUpdate: MatchUpdate = {};
@@ -227,7 +229,7 @@ export const createEffectHandlerMap = (
   }
 
   return {
-    async discardCard(effect, match, acc) {
+    discardCard(effect, match, acc) {
       socketMap.forEach(s => s.emit('addLogEntry', {
         type: 'discard',
         playerSourceId: effect.playerId,
@@ -294,7 +296,7 @@ export const createEffectHandlerMap = (
 
       return drawnCardId;
     },
-    async gainAction(effect, match, acc) {
+    gainAction(effect, match, acc) {
       acc.playerActions = match.playerActions + effect.count;
       match.playerActions = acc.playerActions;
 
@@ -305,7 +307,7 @@ export const createEffectHandlerMap = (
       }));
       return;
     },
-    async gainBuy(effect, match, acc) {
+    gainBuy(effect, match, acc) {
       acc.playerBuys = match.playerBuys + effect.count;
       match.playerBuys = acc.playerBuys;
       socketMap.forEach(s => s.emit('addLogEntry', {
@@ -315,7 +317,7 @@ export const createEffectHandlerMap = (
       }));
       return;
     },
-    async gainCard(effect, match, acc) {
+    gainCard(effect, match, acc) {
       effect.to.location ??= 'playerDiscards';
 
       socketMap.forEach(s => s.emit('addLogEntry', {
@@ -336,7 +338,7 @@ export const createEffectHandlerMap = (
         acc,
       );
     },
-    async gainTreasure(effect, match, acc) {
+    gainTreasure(effect, match, acc) {
       acc.playerTreasure = match.playerTreasure + effect.count;
       match.playerTreasure = acc.playerTreasure;
       socketMap.forEach(s => s.emit('addLogEntry', {
@@ -346,8 +348,8 @@ export const createEffectHandlerMap = (
       }));
       return null;
     },
-    async moveCard(effect, match, acc) {
-      return await moveCard(effect, match, acc);
+    moveCard(effect, match, acc) {
+      return moveCard(effect, match, acc);
     },
     async playCard(effect, match, acc) {
       const { playerId, sourceCardId, sourcePlayerId, cardId } = effect;
@@ -442,7 +444,7 @@ export const createEffectHandlerMap = (
         reactionContext,
       );
     },
-    async revealCard(effect, _match) {
+    revealCard(effect, _match) {
       console.debug(`revealing card ${cardLibrary.getCard(effect.cardId)}`);
       socketMap.forEach(s => s.emit('addLogEntry', {
         type: 'revealCard',
@@ -452,7 +454,7 @@ export const createEffectHandlerMap = (
 
       return null;
     },
-    async selectCard(effect, match) {
+    selectCard(effect, match) {
       effect.count ??= 1;
 
       let selectableCardIds: number[] = [];
@@ -563,10 +565,10 @@ export const createEffectHandlerMap = (
         }
       });
     },
-    async shuffleDeck(effect, match, acc) {
-      return await shuffleDeck(effect.playerId, match, acc);
+    shuffleDeck(effect, match, acc) {
+      return shuffleDeck(effect.playerId, match, acc);
     },
-    async trashCard(effect, match, acc) {
+    trashCard(effect, match, acc) {
       const cardId = effect.cardId;
       const { sourceStore } = findSourceByCardId(cardId, match, cardLibrary);
 
@@ -593,7 +595,7 @@ export const createEffectHandlerMap = (
         acc,
       );
     },
-    async userPrompt(effect, match) {
+    userPrompt(effect, match) {
       console.log('effectHandler userPrompt', effect);
 
       return new Promise((resolve, reject) => {
@@ -623,5 +625,20 @@ export const createEffectHandlerMap = (
         }
       });
     },
+    modifyCost(effect, match, _acc) {
+      const targets = findOrderedEffectTargets(match.currentPlayerTurnIndex, effect.appliesTo, match);
+      
+      cardDataOverrides.push({targets, overrideEffect: effect});
+      
+      const overrides = getCardOverrides(match, cardLibrary);
+      
+      for (const targetId of targets) {
+        const playerOverrides = overrides?.[targetId];
+        const socket = socketMap.get(targetId);
+        socket?.emit('setCardDataOverrides', playerOverrides)
+      }
+      
+      interactivityController.checkCardInteractivity(match);
+    }
   };
 };

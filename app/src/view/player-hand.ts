@@ -77,7 +77,7 @@ export class PlayerHandView extends Container {
     }
 
     private drawHand = (hand: ReadonlyArray<number>) => {
-        this._handContainer.removeChildren().forEach(c => c.destroy());
+        this._handContainer.removeChildren()    ;
         this.removeChild(this._handContainer);
 
         const cardsById = $cardsById.get();

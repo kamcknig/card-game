@@ -5,9 +5,9 @@ import {
   EffectGenerator,
   EffectHandlerMap,
   EffectHandlerResult,
-  PlayerID,
+  
 } from "./types.ts";
-import { Match, MatchUpdate } from "shared/shared-types.ts";
+import { Match, MatchUpdate, PlayerID } from 'shared/shared-types.ts';
 import { isUndefined } from "es-toolkit";
 
 export class EffectsPipeline {
@@ -24,7 +24,7 @@ export class EffectsPipeline {
     match: Match,
     playerId: number,
     acc?: MatchUpdate,
-  ): EffectHandlerResult {
+  ): Promise<unknown> {
     const topLevel = isUndefined(acc);
     acc ??= {};
 

@@ -31,8 +31,7 @@ export class PlayAreaView extends Container {
     }
     
     private drawCards(val: ReadonlyArray<number>) {
-        this._cardView.removeChildren()
-          .forEach(c => c.destroy());
+        this._cardView.removeChildren();
         const cards = val.concat()
           .map(id => $cardsById.get()[id]);
         for (const [idx, card] of cards.entries()) {

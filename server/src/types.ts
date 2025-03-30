@@ -1,6 +1,6 @@
-import { Socket } from "socket.io";
-import { Card, Match, MatchUpdate, ServerEmitEvents, ServerListenEvents, } from "shared/shared-types.ts";
-import { GameEffects } from "./effects/game-effects.ts";
+import { Socket } from 'socket.io';
+import { Card, Match, MatchUpdate, ServerEmitEvents, ServerListenEvents, } from 'shared/shared-types.ts';
+import { GameEffects } from './effects/game-effects.ts';
 import { toNumber } from 'es-toolkit/compat';
 import { CardLibrary } from './match-controller.ts';
 
@@ -132,7 +132,7 @@ export type EffectHandlerMap = {
   [T in EffectTypes]: EffectHandler<T>;
 };
 
-export type EffectHandlerResult = Promise<unknown>;
+export type EffectHandlerResult = Promise<unknown> | unknown;
 
 export type TriggerEventType =
   | "cardPlayed";
@@ -237,5 +237,3 @@ export type LifecycleCallbackMap = {
   onEnterPlay?: LifecycleCallback;
   onLeavePlay?: LifecycleCallback;
 };
-export type PlayerID = number;
-export type CardId = number;

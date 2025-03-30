@@ -22,7 +22,7 @@ export class CardEffectController implements IEffectRunner {
         match: Match,
         playerId: number,
         cardId?: number
-    ): EffectHandlerResult {
+    ): Promise<unknown> {
         const generatorFn = effectGeneratorMap[effectName];
         if (!generatorFn) {
             console.log(`[EFFECT CONTROLLER] No effect generator found for game event ${effectName}`);
@@ -39,7 +39,7 @@ export class CardEffectController implements IEffectRunner {
         cardId: number,
         acc: MatchUpdate,
         reactionContext?: unknown,
-    ): EffectHandlerResult {
+    ): Promise<unknown> {
         const card = this._cardLibrary.getCard(cardId);
         const generatorFn = effectGeneratorMap[card?.cardKey ?? ''];
         if (!generatorFn) {

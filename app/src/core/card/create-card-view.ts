@@ -6,7 +6,7 @@ import { isNumber } from 'es-toolkit/compat';
 export const createCardView = (cardOrCardId: Card | number) => {
     const actualCard = isNumber(cardOrCardId) ? $cardsById.get()[cardOrCardId] : cardOrCardId;
     const c = new CardView(actualCard);
-    c.on('destroyed', () => {
+    c.on('removed', () => {
         c.removeAllListeners();
     });
     return c;

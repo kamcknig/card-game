@@ -93,7 +93,7 @@ export class MatchConfigurationScene extends Scene {
           
           socket.emit('matchConfigurationUpdated', { expansions });
         });
-        expansionList.on('destroyed', () => {
+        expansionList.on('removed', () => {
           expansionList.removeAllListeners();
         })
       }
@@ -150,8 +150,7 @@ export class MatchConfigurationScene extends Scene {
   private async updatePlayerList() {
     const players = $players.get();
     
-    this._playerList.removeChildren()
-      .forEach(c => c.destroy());
+    this._playerList.removeChildren();
     const selfId = $selfPlayerId.get();
     
     if (isUndefined(players)) {

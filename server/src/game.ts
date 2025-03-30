@@ -1,5 +1,5 @@
-import { AppSocket, PlayerID } from './types.ts';
-import { MatchConfiguration, Player } from 'shared/shared-types.ts';
+import { AppSocket } from './types.ts';
+import { MatchConfiguration, Player, PlayerID } from 'shared/shared-types.ts';
 import { createNewPlayer } from './utils/create-new-player.ts';
 import { io } from './server.ts';
 import { MatchController } from './match-controller.ts';

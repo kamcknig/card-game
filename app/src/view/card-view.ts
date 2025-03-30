@@ -4,6 +4,7 @@ import { Card } from "shared/shared-types";
 import { CARD_HEIGHT, CARD_WIDTH, SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH } from '../app-contants';
 import { gameEvents } from '../core/event/events';
 import { batched } from 'nanostores';
+import { $cardOverrides } from '../state/card-state';
 
 type CardArgs = Card;
 
@@ -25,7 +26,7 @@ export class CardView extends Container<ContainerChild> {
         this._cardView.getChildByLabel('view')?.removeFromParent();
         this._cardView.addChildAt(value === 'front' ? this._frontView : this._backView, 1);
         this._facing = value;
-        this.onCardUpdated();
+        this.onDraw();
     }
     public get facing(): 'front' | 'back' {
         return this._facing;
@@ -48,7 +49,7 @@ export class CardView extends Container<ContainerChild> {
         
         this._costView.visible = this.facing === 'front';
         this._size = value;
-        this.onCardUpdated();
+        this.onDraw();
     }
     public get size(): 'full' | 'normal' {
         return this._size;
@@ -82,6 +83,7 @@ export class CardView extends Container<ContainerChild> {
         this._costView.addChild(costBgSprite);
         
         const costText = new Text({
+            label: 'costText',
             text: card.cost.treasure,
             style: {
                 fill: 'black'
@@ -96,8 +98,8 @@ export class CardView extends Container<ContainerChild> {
         this.facing = 'front';
         this.size  = 'normal'
 
-        this._cleanup.push(batched([$selectableCards, $selectedCards], (...args) => args).subscribe(this.onCardUpdated.bind(this)));
-
+        this._cleanup.push(batched([$selectableCards, $selectedCards], (...args) => args).subscribe(this.onDraw));
+        this._cleanup.push($cardOverrides.subscribe(this.onDraw));
         this.on('pointerdown', this.onPressed);
         this._cleanup.push(() => this.off('pointerdown', this.onPressed));
         this.off('removed', this.onRemoved);
@@ -114,17 +116,11 @@ export class CardView extends Container<ContainerChild> {
         this.off('removed', this.onRemoved);
     }
 
-    private onCardUpdated([selectable, selected]: ReadonlyArray<number[]> = [[],[]]) {
-        if (!selectable?.length) {
-            selectable = $selectableCards.get();
-        }
+    private onDraw = () => {
+        const selected = $selectedCards.get();
+        const selectable = $selectableCards.get().filter(s => !selected.includes(s));
+        const overrides = $cardOverrides.get();
         
-        if (!selected?.length) {
-            selected = $selectedCards.get();
-        }
-        
-        selectable = selectable.filter(s => !selected.includes(s));
-
         (this._highlight.getChildAt(0) as Graphics).clear();
         for (const cardId of selectable) {
             if (cardId === this.card.id) {
@@ -139,6 +135,11 @@ export class CardView extends Container<ContainerChild> {
                   .roundRect(-3, -3, this._cardView.width + 6, this._cardView.height + 6, 5)
                   .fill(0x6DFF8C);
             }
+        }
+        
+        const costText = this._costView.getChildByLabel('costText') as Text;
+        if (costText) {
+            costText.text = overrides?.[this.card.id]?.cost?.treasure ?? this.card.cost.treasure;
         }
         
         this._costView.x = 2;

@@ -21,7 +21,7 @@ import {
 import { displayScene } from "./core/scene/display-scene";
 import { $gameOwner } from "./state/game-state";
 import { io, Socket } from "socket.io-client";
-import { $cardsById } from "./state/card-state";
+import { $cardOverrides, $cardsById } from './state/card-state';
 import {
     $kingdomStore,
     $matchConfiguration,
@@ -168,6 +168,9 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
     },
     setCardLibrary: cards => {
       $cardsById.set(cards);
+    },
+    setCardDataOverrides: overrides => {
+        $cardOverrides.set(overrides);
     },
     matchReady: async match => {
         $supplyStore.set(match.supply);

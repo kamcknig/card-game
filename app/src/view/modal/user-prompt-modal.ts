@@ -120,7 +120,6 @@ export const userPromptModal = (args: UserPromptEffectArgs): Promise<unknown> =>
 
         const cleanup = (confirm: boolean) => {
             app.stage.removeChild(modalContainer);
-            modalContainer.destroy();
             confirmBtn.button.removeAllListeners();
             declineBtn.button.removeAllListeners();
 

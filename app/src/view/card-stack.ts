@@ -1,4 +1,4 @@
-import { Container, DestroyOptions, Graphics, Text } from "pixi.js";
+import { Container, Graphics, Text } from "pixi.js";
 import { CountBadgeView } from "./count-badge-view";
 import { createCardView } from "../core/card/create-card-view";
 import { $cardsById } from "../state/card-state";
@@ -101,8 +101,7 @@ export class CardStackView extends Container {
   }
   
   private drawDeck([cardIds, selectedCardIds]: ReadonlyArray<number[]>) {
-    this._cardContainer.removeChildren()
-      .forEach(c => c.destroy());
+    this._cardContainer.removeChildren();
     
     const sorted = cardIds.concat()
       .sort((a, b) => selectedCardIds.includes(a) && selectedCardIds.includes(b) ? 0 : selectedCardIds.includes(

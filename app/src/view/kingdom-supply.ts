@@ -30,7 +30,7 @@ export class KingdomSupplyView extends Container {
     private draw(val: ReadonlyArray<number>) {
         if (!val || val.length === 0) return;
         
-        this._cardContainer.removeChildren().forEach(card => card.destroy());
+        this._cardContainer.removeChildren();
 
         const cards = val.map(id => $cardsById.get()[id]);
         const piles = cards.reduce((prev, card) => {

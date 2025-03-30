@@ -1,9 +1,10 @@
 import { PreinitializedWritableAtom } from 'nanostores';
-import { AppSocket, PlayerID } from './types.ts';
+import { AppSocket } from './types.ts';
 import { CardEffectController } from './card-effects-controller.ts';
-import { Match, TurnPhaseOrderValues } from 'shared/shared-types.ts';
+import { Match, PlayerID, TurnPhaseOrderValues } from 'shared/shared-types.ts';
 import { isUndefined } from 'es-toolkit/compat';
 import { CardLibrary } from './match-controller.ts';
+import { getEffectiveCardCost } from './utils/get-effective-card-cost.ts';
 
 export class CardInteractivityController {
   private _gameOver: boolean = false;
@@ -14,7 +15,7 @@ export class CardInteractivityController {
     private readonly _socketMap: Map<PlayerID, AppSocket>,
     private readonly _cardLibrary: CardLibrary,
   ) {
-    _$matchState.subscribe(this.onMatchStateUpdated.bind(this));
+    _$matchState.subscribe(this.checkCardInteractivity.bind(this));
 
     this._socketMap.forEach((s) => {
       s.on('cardTapped', this.onCardTapped);
@@ -131,7 +132,7 @@ export class CardInteractivityController {
     );
   }
 
-  private onMatchStateUpdated(match: Match, _oldMatch?: Match): void {
+  public checkCardInteractivity(match: Match, _oldMatch?: Match): void {
     if (!match) {
       return;
     }
@@ -166,9 +167,11 @@ export class CardInteractivityController {
         if (cardsAdded.includes(card.cardKey)) {
           continue;
         }
-
+        
+        const cardCost = getEffectiveCardCost(currentPlayer.id, card.id, match, this._cardLibrary);
+        
         if (
-          card.cost.treasure <= match.playerTreasure && match.playerBuys > 0
+          cardCost <= match.playerTreasure && match.playerBuys > 0
         ) {
           selectableCards.push(card.id);
           cardsAdded.push(card.cardKey);
