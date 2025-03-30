@@ -20,7 +20,7 @@ export const loadExpansion = async (expansionName: string) => {
         let module = await import(`${expansionPath}/${expansionConfiguration.supply}`, { with: { type: 'json' }});
         let cards = module.default as Record<string, CardData>;
         Object.keys(cards).forEach((key) => {
-            cardLibrary.supply[key] = cards[key];
+            cardLibrary.supply[key] = { ...cards[key], expansionName };
         });
         console.log('supply loaded');
 
@@ -28,7 +28,7 @@ export const loadExpansion = async (expansionName: string) => {
         module = await import(`${expansionPath}/${expansionConfiguration.kingdom}`, { with: { type: 'json' }});
         cards = module.default as Record<string, CardData>;
         Object.keys(cards).forEach((key) => {
-            cardLibrary.kingdom[key] = cards[key];
+            cardLibrary.kingdom[key] = { ...cards[key], expansionName };
         });
         console.log('kingdom loaded');
 

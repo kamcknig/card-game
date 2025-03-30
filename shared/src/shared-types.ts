@@ -245,6 +245,7 @@ export type CardArgs = {
     cardKey: string;
     victoryPoints?: number;
     targetScheme?: EffectTarget;
+    expansionName: string;
 }
 
 export class Card {
@@ -259,6 +260,7 @@ export class Card {
     order: number;
     cardKey: string;
     targetScheme?: EffectTarget;
+    expansionName: string;
 
     constructor(args: CardArgs) {
         this.id = args.id;
@@ -270,6 +272,7 @@ export class Card {
         this.cardName = args.cardName;
         this.victoryPoints = args.victoryPoints ?? 0;
         this.targetScheme = args.targetScheme;
+        this.expansionName = args.expansionName;
     }
 
     toString() {
