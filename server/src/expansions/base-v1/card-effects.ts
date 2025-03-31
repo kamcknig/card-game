@@ -919,24 +919,30 @@ export default {
         if (treasureCardIds.length > 0) {
           console.debug(`Revealed ${treasureCardIds.length} treasure cards`);
           // if more than one, choose, otherwise auto-choose the only one
-          const result = treasureCardIds.length === 1
-            ? [treasureCardIds[0]]
-            : (yield new UserPromptEffect({
-              content: {
-                cardSelection: {
-                  cardIds: treasureCardIds,
-                  selectCount: 1,
+          let result: number[] | { action: number; cardIds: number[] };
+          if (treasureCardIds.length === 1) {
+            result = [treasureCardIds[0]];
+          } else {
+            if (cardLibrary.getCard(treasureCardIds[0]).cardKey === cardLibrary.getCard(treasureCardIds[1]).cardKey) {
+              result = [treasureCardIds[0]];
+            } else {
+              result = (yield new UserPromptEffect({
+                content: {
+                  cardSelection: {
+                    cardIds: treasureCardIds,
+                    selectCount: 1,
+                  },
                 },
-              },
-              playerId: sourcePlayerId,
-              sourcePlayerId,
-              sourceCardId,
-              prompt: `${
-                getPlayerById(matchState, playerId)?.name
-              } revealed these cards. Choose one to trash.`,
-              actionButtons: [{label: 'DONE', action: 1}],
-            })) as { action: number; cardIds: number[] };
-
+                playerId: sourcePlayerId,
+                sourcePlayerId,
+                sourceCardId,
+                prompt: `${
+                  getPlayerById(matchState, playerId)?.name
+                } revealed these cards. Choose one to trash.`
+              })) as { action: number; cardIds: number[] };
+            }
+          }
+          
           const cardId = Array.isArray(result) ? result[0] : result.cardIds[0];
 
           console.debug(
@@ -977,7 +983,10 @@ export default {
           content: {
             cardSelection: {
               cardIds: cardsToGain,
-              selectCount: cardsToGain.length,
+              selectCount: {
+                kind: 'upTo',
+                count: cardsToGain.length
+              },
             },
           },
         })) as { action: number; cardIds: number[] };

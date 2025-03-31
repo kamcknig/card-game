@@ -5,7 +5,7 @@ export class UserPromptEffect extends EffectBase {
   type = "userPrompt" as const;
   playerId: number;
   prompt: string;
-  actionButtons: ActionButtons;
+  actionButtons?: ActionButtons;
   content?: UserPromptEffectArgs["content"];
   validationAction?: number;
 

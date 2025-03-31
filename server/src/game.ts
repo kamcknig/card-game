@@ -3,6 +3,7 @@ import { MatchConfiguration, Player, PlayerID } from 'shared/shared-types.ts';
 import { createNewPlayer } from './utils/create-new-player.ts';
 import { io } from './server.ts';
 import { MatchController } from './match-controller.ts';
+import { cardLibrary } from './utils/load-expansion.ts';
 
 const defaultMatchConfiguration = {
   expansions: ['base-v2'],
@@ -120,8 +121,10 @@ export class Game {
         socket.off('updatePlayerName');
         socket.off('playerReady');
         socket.off('disconnect');
-        socket.leave('room');
+        socket.leave('game');
       });
+      cardLibrary.supply = {};
+      cardLibrary.kingdom = {}
       this._socketMap.clear();
       this.players = [];
       this.owner = undefined;

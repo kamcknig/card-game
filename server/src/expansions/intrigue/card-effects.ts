@@ -9,7 +9,6 @@ import { DrawCardEffect } from '../../effects/draw-card.ts';
 import { GainActionEffect } from '../../effects/gain-action.ts';
 import { RevealCardEffect } from '../../effects/reveal-card.ts';
 import { SelectCardEffect } from '../../effects/select-card.ts';
-import { match } from "node:assert";
 
 export default {
   registerEffects: (): Record<

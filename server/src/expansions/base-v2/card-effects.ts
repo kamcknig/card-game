@@ -271,11 +271,11 @@ export default {
             sourcePlayerId,
             sourceCardId,
             playerId: targetPlayerId,
-            actionButtons: [{label: 'TRASH', action: 1}],
             prompt: 'Choose a treasure to trash',
             content: {
               cardSelection: {
                 cardIds: possibleCardsToTrash,
+                selectCount: 1
               },
             },
           })) as { action: number, cardIds: number[] };
@@ -558,17 +558,18 @@ export default {
         sourceCardId,
         playerId: sourcePlayerId,
         prompt: 'Choose card to put on deck?',
-        actionButtons: [{label: 'NO', action: 2}, {label: 'DONE', action: 1}],
+        actionButtons: [{label: 'CANCEL', action: 2}],
         validationAction: 1,
         content: {
           cardSelection: {
             cardIds: match.playerDiscards[sourcePlayerId],
+            selectCount: 1
           },
         },
       })) as { action: number, cardIds: number[] };
 
       const selectedId = results?.cardIds?.[0];
-      if (results.action === 1) {
+      if (selectedId) {
         yield new MoveCardEffect({
           sourcePlayerId,
           sourceCardId,

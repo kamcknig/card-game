@@ -9,7 +9,7 @@ import { CardId, UserPromptEffectArgs } from 'shared/shared-types';
 import { validateCountSpec } from '../../shared/validate-count-spec';
 import { List } from '@pixi/ui';
 import { $cardsById } from '../../state/card-state';
-import { toNumber } from 'es-toolkit/compat';
+import { isNumber, toNumber } from 'es-toolkit/compat';
 import { gameEvents } from '../../core/event/events';
 
 export const userPromptModal = (args: UserPromptEffectArgs): Promise<unknown> => {
@@ -48,6 +48,14 @@ export const userPromptModal = (args: UserPromptEffectArgs): Promise<unknown> =>
                 validated = validateCountSpec(args.content?.cardSelection?.selectCount, $selectedCards.get().length)
                 validationBtn && (validationBtn.button.alpha = validated ? 1 : .6);
                 validationBtn && (validationBtn.button.eventMode = validated ? 'static' : 'none');
+                
+                if (validated) {
+                    const count = args.content.cardSelection.selectCount;
+                    
+                    if ((isNumber(count) && count === 1) || (!isNumber(count) && count.kind === 'exact' && count.count === 1)) {
+                        actionButtonListener();
+                    }
+                }
             }
             return validated;
         };
@@ -106,12 +114,12 @@ export const userPromptModal = (args: UserPromptEffectArgs): Promise<unknown> =>
             modalContainer.addChild(cardList);
         }
 
-        const actionButtonListener = (actionButton: UserPromptEffectArgs['actionButtons'][number]) => {
-            resolve({action: actionButton.action, cardIds: $selectedCards.get().map(id => newCardToOldCardMap.get(id))});
+        const actionButtonListener = (actionButton?: UserPromptEffectArgs['actionButtons'][number]) => {
+            resolve({action: actionButton?.action, cardIds: $selectedCards.get().map(id => newCardToOldCardMap.get(id))});
             cleanup();
         }
         
-        args.actionButtons.forEach(actionButton => {
+        args.actionButtons?.forEach(actionButton => {
             const btn = createAppButton({
                 text: actionButton.label,
                 style: {

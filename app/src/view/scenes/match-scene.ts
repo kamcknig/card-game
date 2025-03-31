@@ -67,6 +67,16 @@ export class MatchScene extends Scene {
     this.createGameLog();
     this.createScoreView();
     
+    this._playAllTreasuresButton = createAppButton(
+      { text: 'PLAY ALL TREASURES', style: { fill: 'white', fontSize: 24 } }
+    );
+    this._playAllTreasuresButton.button.label = 'playAllTreasureButton';
+    this._playAllTreasuresButton.button.visible = false;
+    this._playAllTreasuresButton.button.on('pointerdown', () => {
+      socket.emit('playAllTreasure', $selfPlayerId.get());
+    });
+    this.addChild(this._playAllTreasuresButton.button);
+    
     this._cleanup.push($supplyStore.subscribe(this.drawBaseSupply));
     app.renderer.on('resize', this.onRendererResize);
     gameEvents.on('matchStarted', this.onMatchStarted);
@@ -79,68 +89,22 @@ export class MatchScene extends Scene {
     gameEvents.on('unpauseGame', this.onUnpauseGame);
     
     this._cleanup.push(() => {
-      app.renderer.off('resize', this.onRendererResize);
-      gameEvents.off('matchStarted', this.onMatchStarted);
-      gameEvents.off('selectCard', this.doSelectCards);
-      gameEvents.off('userPrompt', this.onUserPrompt);
-      gameEvents.off('displayCardDetail', this.onDisplayCardDetail);
-      gameEvents.off('waitingForPlayer', this.onWaitingOnPlayer);
-      gameEvents.off('doneWaitingForPlayer', this.onDoneWaitingForPlayer);
-      gameEvents.off('pauseGame', this.onPauseGame);
-      gameEvents.off('unpauseGame', this.onUnpauseGame);
+      app.renderer.off('resize');
+      gameEvents.off('matchStarted');
+      gameEvents.off('selectCard');
+      gameEvents.off('userPrompt');
+      gameEvents.off('displayCardDetail');
+      gameEvents.off('waitingForPlayer');
+      gameEvents.off('doneWaitingForPlayer');
+      gameEvents.off('pauseGame');
+      gameEvents.off('unpauseGame');
+      this._playAllTreasuresButton.button.off('pointerdown');
     });
     
-    this._cleanup.push($currentPlayerTurnId.subscribe(async playerId => {
-      if (playerId !== $selfPlayerId.get()) return;
-      
-      document.title = `Dominion - ${$players.get()[playerId].name}`;
-      
-      try {
-        const s = new Audio(`./assets/sounds/your-turn.mp3`);
-        s.volume = .2;
-        await s?.play();
-      } catch {
-        console.error('Could not play start turn sound');
-      }
-    }));
+    this._cleanup.push($currentPlayerTurnId.subscribe(this.onCurrentPlayerTurnUpdated));
     
-    this._cleanup.push($turnPhase.subscribe(phase => {
-      if (isUndefined(phase)) return;
-      
-      if (
-        phase === 'buy' &&
-        $currentPlayerTurnId.get() === $selfPlayerId.get() &&
-        $playerHandStore($selfPlayerId.get())
-          .get()
-          .some(cardId => $cardsById.get()[cardId].type.includes('TREASURE'))
-      ) {
-        this._playAllTreasuresButton = createAppButton(
-          { text: 'PLAY ALL TREASURES', style: { fill: 'white', fontSize: 24 } });
-        const b = this._playAllTreasuresButton.button;
-        b.label = 'playAllTreasureButton';
-        b.x = this._playerHand.x + this._playerHand.width * .5 - b.width * .5;
-        b.y = this._playerHand.y - b.height - STANDARD_GAP;
-        b.on('pointerdown', () => {
-          socket.emit('playAllTreasure', $selfPlayerId.get());
-          const b = this._playAllTreasuresButton?.button;
-          if (!b) {
-            return;
-          }
-          b.removeFromParent();
-          b.removeAllListeners();
-          this._playAllTreasuresButton = null;
-        });
-        this.addChild(b);
-      } else {
-        const b = this._playAllTreasuresButton?.button;
-        if (!b) {
-          return;
-        }
-        b.removeFromParent();
-        b.removeAllListeners();
-        this._playAllTreasuresButton = null;
-      }
-    }));
+    this._cleanup.push($turnPhase.subscribe(this.onTurnPhaseUpdated));
+    this._cleanup.push($playerHandStore($selfPlayerId.get()).subscribe(this.onTurnPhaseUpdated));
     
     setTimeout(() => {
       this.onRendererResize();
@@ -165,6 +129,34 @@ export class MatchScene extends Scene {
     t.y = Math.floor(app.renderer.height * .5);
     c.addChild(t);
     this.addChild(c);
+  }
+  
+  private onCurrentPlayerTurnUpdated = (playerId: number) => {
+    if (playerId !== $selfPlayerId.get()) return;
+    
+    document.title = `Dominion - ${$players.get()[playerId].name}`;
+    
+    try {
+      const s = new Audio(`./assets/sounds/your-turn.mp3`);
+      s.volume = .2;
+      void s?.play();
+    } catch {
+      console.error('Could not play start turn sound');
+    }
+  }
+  
+  private onTurnPhaseUpdated = () => {
+    const phase = $turnPhase.get();
+    if (isUndefined(phase)) return;
+    
+    const playerHand = $playerHandStore($selfPlayerId.get())
+      .get();
+    
+    this._playAllTreasuresButton.button.visible = !!(
+      phase === 'buy' &&
+      $currentPlayerTurnId.get() === $selfPlayerId.get() &&
+      playerHand.some(cardId => $cardsById.get()[cardId].type.includes('TREASURE'))
+    );
   }
   
   private onUnpauseGame = () => {
@@ -345,7 +337,7 @@ export class MatchScene extends Scene {
     this._doneSelectingBtn.addChild(button.button);
     
     if (isNumber(arg.count) || arg.count.kind === 'exact') {
-      const c = new Container({label:'cardCountContainer'});
+      const c = new Container({ label: 'cardCountContainer' });
       
       let s: Sprite;
       console.warn('very hacky way of getting this icon');
@@ -424,7 +416,8 @@ export class MatchScene extends Scene {
     const selectedCardsListenerCleanup = $selectedCards.subscribe(cardIds => {
       this._doneSelectingBtn.off('pointerdown', doneListener);
       
-      const countText = this._doneSelectingBtn.getChildByLabel('cardCountContainer')?.getChildByLabel('count') as Text;
+      const countText = this._doneSelectingBtn.getChildByLabel('cardCountContainer')
+        ?.getChildByLabel('count') as Text;
       if (countText) {
         if (isNumber(arg.count) || arg.count.kind === 'exact') {
           const count = isNumber(arg.count) ? arg.count : arg.count.count;
@@ -528,9 +521,9 @@ export class MatchScene extends Scene {
     this._playerHand.x = app.renderer.width * .5 - this._playerHand.getLocalBounds().width * .5;
     this._playerHand.y = app.renderer.height - this._playerHand.getLocalBounds().height;
     
-    if (this._playAllTreasuresButton?.button) {
-      this._playAllTreasuresButton.button.x = this._playerHand.x + this._playerHand.width * .5 - this._playAllTreasuresButton.button.width * .5;
-    }
+    this._playAllTreasuresButton.button.x = this._playerHand.x + this._playerHand.width * .5 - this._playAllTreasuresButton.button.width * .5;
+    this._playAllTreasuresButton.button.y = this._playerHand.y - this._playAllTreasuresButton.button.height - STANDARD_GAP;
+    
     
     this._playArea.x = this._playerHand.x + this._playerHand.width * .5 - this._playArea.width * .5;
     this._playArea.y = this._playerHand.y - this._playArea.height - 75;

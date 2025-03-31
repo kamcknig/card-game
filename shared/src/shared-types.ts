@@ -26,7 +26,7 @@ export type UserPromptEffectArgs = {
             selectCount?: CountSpec
         }
     };
-    actionButtons: ActionButtons;
+    actionButtons?: ActionButtons;
     validationAction?: number;
 }
 
@@ -169,9 +169,9 @@ export class Player {
     toString() {
         return `[PLAYER ${this.id} - ${this.name}]`;
     }
-
+    
     // @ts-ignore
-    [Symbol.for('Deno.customInspect')]() {
+    [Symbol.for("Deno.customInspect")]() {
         return this.toString();
     }
 }
