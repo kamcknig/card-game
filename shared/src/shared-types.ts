@@ -333,3 +333,5 @@ export type ActionButtons = {
     action: number;
     validationAction: number;
 }[];
+export type CardFacing = 'front' | 'back';
+export type CardSize = 'full' | 'half';

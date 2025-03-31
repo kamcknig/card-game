@@ -3,45 +3,41 @@ import { $playerHandStore, $selfPlayerId } from "../state/player-state";
 import { $cardsById } from "../state/card-state";
 import { Card } from "shared/shared-types";
 import { atom } from 'nanostores';
-import { CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP } from '../app-contants';
+import { CARD_HEIGHT, CARD_WIDTH, SMALL_CARD_WIDTH, STANDARD_GAP } from '../app-contants';
 import { PhaseStatus } from './phase-status';
 import { AppButton, createAppButton } from '../core/create-app-button';
 import { $currentPlayerTurnId, $turnPhase } from '../state/turn-state';
 import { CardStackView } from './card-stack';
+import { List } from "@pixi/ui";
 
 export class PlayerHandView extends Container {
     private _phaseStatus: PhaseStatus = new PhaseStatus();
     private _nextPhaseButton: AppButton = createAppButton({text: 'NEXT'});
     
     private readonly _cleanup: (() => void)[] = [];
-    private readonly _background: Container = new Container();
-    private readonly _handContainer: Container = new Container({
-        label: `PlayerHandView${this.playerId!}`
-    });
+    private readonly _background: Graphics = new Graphics({label: 'background'});
+    private readonly _cardList: List = new List({ type: 'horizontal', elementsMargin: STANDARD_GAP });
     
     constructor(private playerId: number) {
         super();
 
-        this.label = `PlayerHand ${this.playerId}`;
+        this._cardList.label = `cardList`;
+        this._cardList.elementsMargin = STANDARD_GAP;
+        
+        this.label = `player-hand-${this.playerId}`;
+        
         this.addChild(this._background);
-        this._background.addChild(new Graphics());
-        const g = this._background.getChildAt(0) as Graphics;
-        g.clear();
-        g.roundRect(
-          0,
-          0,
-          this._phaseStatus.width,
-          CARD_HEIGHT + STANDARD_GAP * 4,
-          5
-        )
-          .fill({color: 0, alpha: .6});
-        this.addChild(this._handContainer);
         this.addChild(this._phaseStatus);
-        this._background.y = this._phaseStatus.y + this._phaseStatus.height;
-        this._handContainer.y = this._background.y + STANDARD_GAP;
-        
-        
+        this.addChild(this._cardList);
         this.addChild(this._nextPhaseButton.button);
+        
+        this._background.y = this._phaseStatus.y + this._phaseStatus.height;
+        this._cardList.y = this._background.y + STANDARD_GAP;
+        
+        this._background.clear();
+        this._background.roundRect(0, 0, this._phaseStatus.width, CARD_HEIGHT + STANDARD_GAP * 4, 5);
+        this._background.fill({color: 0, alpha: .6});
+        
         this._cleanup.push($currentPlayerTurnId.subscribe(playerId => {
             this._nextPhaseButton.button.visible = playerId === $selfPlayerId.get();
         }));
@@ -59,11 +55,8 @@ export class PlayerHandView extends Container {
             this._nextPhaseButton.button.x = this.width - this._nextPhaseButton.button.width - STANDARD_GAP;
             this.addChild(this._nextPhaseButton.button);
         }));
-        
         this._cleanup.push($playerHandStore(playerId).subscribe(this.drawHand));
-        
         this._nextPhaseButton.button.on('pointerdown', this.onNextPhasePressed);
-        this._cleanup.push(() => this._nextPhaseButton.button.off('pointerdown', this.onNextPhasePressed));
         this.on('removed', this.onRemoved);
     }
     
@@ -73,12 +66,12 @@ export class PlayerHandView extends Container {
 
     private onRemoved = () => {
         this._cleanup.forEach(c => c());
-        this.off('removed', this.onRemoved);
+        this._nextPhaseButton.button.off('pointerdown');
+        this.off('removed');
     }
 
     private drawHand = (hand: ReadonlyArray<number>) => {
-        this._handContainer.removeChildren()    ;
-        this.removeChild(this._handContainer);
+        this._cardList.removeChildren();
 
         const cardsById = $cardsById.get();
 
@@ -125,18 +118,16 @@ export class PlayerHandView extends Container {
             lastCardKey = nextCardKey;
         });
         
-        for (const [idx, cards] of cardStackCards.entries()) {
-            const a = atom<number[]>(cards.map(c => c.id));
+        for (const cards of cardStackCards) {
             const c = new CardStackView({
-                cardStore: a,
+                $cardIds: atom(cards.map(c => c.id)),
                 cardFacing: 'front',
                 showBackground: false,
             });
-            c.x = idx * CARD_WIDTH + idx * STANDARD_GAP;
-            this._handContainer.addChild(c);
+            this._cardList.addChild(c);
         }
         
-        this._handContainer.x = this.width * .5 - this._handContainer.width * .5;
-        this.addChild(this._handContainer);
+        this._cardList.elementsMargin = cardStackCards.length > 5 ? -SMALL_CARD_WIDTH * .50 : STANDARD_GAP
+        this._cardList.x = Math.floor(this.width * .5 - this._cardList.width * .5);
     }
 }

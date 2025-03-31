@@ -1,81 +1,73 @@
-import { Assets, Container, ContainerChild, DestroyOptions, Graphics, Sprite, Text } from 'pixi.js';
-import { $selectableCards, $selectedCards } from "../state/interactive-state";
-import { Card } from "shared/shared-types";
-import { CARD_HEIGHT, CARD_WIDTH, SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH } from '../app-contants';
+import { Assets, Container, ContainerChild, Graphics, Sprite, Text, Texture } from 'pixi.js';
+import { $selectableCards, $selectedCards } from '../state/interactive-state';
+import { Card, CardFacing, CardSize } from 'shared/shared-types';
 import { gameEvents } from '../core/event/events';
 import { batched } from 'nanostores';
 import { $cardOverrides } from '../state/card-state';
 
 type CardArgs = Card;
 
+type CardViewArgs = {
+    size?: CardSize;
+    facing?: CardFacing;
+}
+
 export class CardView extends Container<ContainerChild> {
-    private readonly _highlight: Container = new Container({label: 'highlight'});
-    private readonly _cardView: Container = new Container({label: 'cardView'});
-    private readonly _frontView: Sprite;
-    private readonly _backView: Sprite;
+    private readonly _highlight: Graphics = new Graphics({label: 'highlight'});
+    private readonly _cardView: Sprite = new Sprite({label: 'caredView'});
+    private _frontImage: Texture;
+    private readonly _backImage: Texture;
     private readonly _costView: Container = new Container({label: 'costView'});
-    
-    private _size: 'full' | 'normal';
-
     private readonly _cleanup: (() => void)[] = [];
-
-    private _facing: 'back' | 'front' = 'back';
-    public set facing(value: 'front' | 'back') {
-        if (!this._frontView || !this._backView) return;
-        
-        this._cardView.getChildByLabel('view')?.removeFromParent();
-        this._cardView.addChildAt(value === 'front' ? this._frontView : this._backView, 1);
+    
+    private _facing: CardFacing = 'back';
+    private _size: CardSize;
+    
+    public card: Card;
+    
+    public set facing(value: CardFacing) {
+        if (!this._frontImage || !this._backImage) return;
+        this._cardView.texture = value === 'front' ? this._frontImage : this._backImage;
         this._facing = value;
         this.onDraw();
     }
-    public get facing(): 'front' | 'back' {
+    public get facing(): CardFacing {
         return this._facing;
     }
 
-    public set size(value: 'full' | 'normal') {
+    public set size(value: CardSize) {
         this._size = value;
         
-        if (this._frontView) {
-            this._frontView.texture = Assets.get(`${this.card.cardKey}${value === 'full' ? '-full' : ''}`);
-            this._frontView.width = value === 'full' ? CARD_WIDTH : SMALL_CARD_WIDTH;
-            this._frontView.height = value === 'full' ? CARD_HEIGHT : SMALL_CARD_HEIGHT;
-        }
-        
-
-        if (this._backView) {
-            this._backView.width = value === 'full' ? CARD_WIDTH : SMALL_CARD_WIDTH;
-            this._backView.height = value === 'full' ? CARD_HEIGHT : SMALL_CARD_HEIGHT;
-        }
-        
-        this._costView.visible = this.facing === 'front';
+        this._frontImage = Assets.get(`${this.card.cardKey}${this.size === 'full' ? '-full' : ''}`);
+        this._cardView.texture = this._facing === 'front' ? this._frontImage : this._backImage;
         this._size = value;
         this.onDraw();
     }
-    public get size(): 'full' | 'normal' {
+    public get size(): CardSize {
         return this._size;
     }
 
-    constructor(public card: CardArgs) {
+    constructor({ size, facing, ...card }: CardArgs & CardViewArgs) {
         super();
-
-        this.label = this.card.toString();
+        
+        this.card = card;
+        
+        this.label = `${card.cardKey}-${card.id}`;
         
         this.eventMode = 'static';
 
-        this._highlight.addChild(new Graphics({label: 'highlight'}));
-        
+        this.addChild(this._highlight);
         this.addChild(this._cardView);
-        this._cardView.addChildAt(this._highlight, 0);
-
+        
         try {
-            this._frontView = Sprite.from(Assets.get(card.cardKey));
-            this._frontView.label = 'cardView';
+            this._frontImage = Assets.get(`${card.cardKey}${size === 'full' ? '-full' : ''}`);
+            this._frontImage.label = 'frontImageSprite';
         } catch {
             console.log("could not find asset for card", card.cardKey);
         }
 
-        this._backView = Sprite.from(Assets.get('card-back'));
-        this._backView.label = 'cardView';
+        this._backImage = Assets.get('card-back');
+        this._backImage.label = 'backImageSprite';
 
         const costBgSprite = Sprite.from(Assets.get('treasure-bg'));
         const maxSide = 32;
@@ -96,24 +88,25 @@ export class CardView extends Container<ContainerChild> {
         this.addChild(this._costView)
         
         this.facing = 'front';
-        this.size  = 'normal'
+        this.size  = 'full'
 
         this._cleanup.push(batched([$selectableCards, $selectedCards], (...args) => args).subscribe(this.onDraw));
         this._cleanup.push($cardOverrides.subscribe(this.onDraw));
+        
         this.on('pointerdown', this.onPressed);
-        this._cleanup.push(() => this.off('pointerdown', this.onPressed));
-        this.off('removed', this.onRemoved);
+        this.on('removed', this.onRemoved);
     }
 
+    private onRemoved = () => {
+        this._cleanup.forEach(cb => cb());
+        this.off('pointerdown');
+        this.off('removed');
+    }
+    
     private onPressed = (e: PointerEvent) => {
         if (e.button === 2 && this.facing !== 'back') {
             gameEvents.emit('displayCardDetail', this.card.id);
         }
-    }
-    
-    private onRemoved = () => {
-        this._cleanup.forEach(cb => cb());
-        this.off('removed', this.onRemoved);
     }
 
     private onDraw = () => {
@@ -121,17 +114,17 @@ export class CardView extends Container<ContainerChild> {
         const selectable = $selectableCards.get().filter(s => !selected.includes(s));
         const overrides = $cardOverrides.get();
         
-        (this._highlight.getChildAt(0) as Graphics).clear();
+        this._highlight.clear();
         for (const cardId of selectable) {
             if (cardId === this.card.id) {
-                (this._highlight.getChildAt(0) as Graphics)
+                this._highlight
                   .roundRect(-3, -3, this._cardView.width + 6, this._cardView.height + 6, 5)
                   .fill(0xffaaaa);
             }
         }
         for (const cardId of selected) {
             if (cardId === this.card.id) {
-                (this._highlight.getChildAt(0) as Graphics)
+                this._highlight
                   .roundRect(-3, -3, this._cardView.width + 6, this._cardView.height + 6, 5)
                   .fill(0x6DFF8C);
             }
@@ -143,6 +136,7 @@ export class CardView extends Container<ContainerChild> {
         }
         
         this._costView.x = 2;
-        this._costView.y = this.height - this._costView.height - 12 ;
+        this._costView.y = this._cardView.y + this._cardView.height - this._costView.height - 5 ;
+        this._costView.visible = this.facing === 'front';
     }
 }

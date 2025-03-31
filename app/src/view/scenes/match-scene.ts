@@ -211,14 +211,14 @@ export class MatchScene extends Scene {
     this._playArea = this.addChild(new PlayAreaView());
     
     this._deck = new CardStackView({
-      cardStore: $playerDeckStore($selfPlayerId.get()),
+      $cardIds: $playerDeckStore($selfPlayerId.get()),
       label: 'DECK',
       cardFacing: 'back'
     });
     this.addChild(this._deck);
     
     this._discard = new CardStackView({
-      cardStore: $playerDiscardStore($selfPlayerId.get()),
+      $cardIds: $playerDiscardStore($selfPlayerId.get()),
       label: 'DISCARD',
       cardFacing: 'front'
     });
@@ -226,7 +226,7 @@ export class MatchScene extends Scene {
     
     this._trash = new CardStackView({
       label: 'TRASH',
-      cardStore: $trashStore,
+      $cardIds: $trashStore,
       cardFacing: 'front'
     });
     this.addChild(this._trash);
@@ -504,12 +504,11 @@ export class MatchScene extends Scene {
     Object.entries(piles)
       .forEach(([_cardKey, pile], oIdx) => {
         const card = pile[pile.length - 1];
-        const c = new PileView(card, pile.length);
+        const c = new PileView(card, pile.length, 'half');
         c.x = oIdx % columns * SMALL_CARD_WIDTH + oIdx % columns * STANDARD_GAP;
         c.y = Math.floor(oIdx / columns) * SMALL_CARD_HEIGHT + Math.floor(oIdx / columns) * STANDARD_GAP;
         this._baseSupply.addChild(c);
       });
-    this._baseSupply.scale = .8;
   }
   
   private onRendererResize = (): void => {
