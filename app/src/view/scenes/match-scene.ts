@@ -337,44 +337,49 @@ export class MatchScene extends Scene {
     this._doneSelectingBtn.addChild(button.button);
     
     if (isNumber(arg.count) || arg.count.kind === 'exact') {
-      const c = new Container({ label: 'cardCountContainer' });
-      
-      let s: Sprite;
-      console.warn('very hacky way of getting this icon');
-      if (arg.prompt.includes('trash')) {
-        s = Sprite.from(await Assets.load(`./assets/ui-icons/trash-card-count.png`));
-      } else if (arg.prompt.includes('discard')) {
-        s = Sprite.from(await Assets.load(`./assets/ui-icons/discard-card-count.png`));
-      }
-      if (s) {
-        s.x = 5;
-        s.y = 5;
-        c.addChild(s);
-        
-        const g = new Graphics();
-        g.roundRect(0, 0, s.x + s.width + 5, s.y + s.height + 5, 5);
-        g.fill(0xaaaaaa);
-        c.addChildAt(g, 0);
-      }
-      
       const count = isNumber(arg.count) ? arg.count : arg.count.count;
-      const countText = new Text({
-        label: 'count',
-        text: count,
-        style: {
-          fontSize: 26,
-          fill: 'white'
-        }
-      });
       
-      countText.x = Math.floor(c.width - countText.width * .5);
-      countText.y = -Math.floor(countText.height * .5);
-      c.addChild(countText);
-      this._doneSelectingBtn.addChild(c);
+      if (count > 1) {
+        const c = new Container({ label: 'cardCountContainer' });
+        
+        let s: Sprite;
+        console.warn('very hacky way of getting this icon');
+        if (arg.prompt.includes('trash')) {
+          s = Sprite.from(await Assets.load(`./assets/ui-icons/trash-card-count.png`));
+        } else if (arg.prompt.includes('discard')) {
+          s = Sprite.from(await Assets.load(`./assets/ui-icons/discard-card-count.png`));
+        }
+        if (s) {
+          s.x = 5;
+          s.y = 5;
+          c.addChild(s);
+          
+          const g = new Graphics();
+          g.roundRect(0, 0, s.x + s.width + 5, s.y + s.height + 5, 5);
+          g.fill(0xaaaaaa);
+          c.addChildAt(g, 0);
+        }
+        
+        const countText = new Text({
+          label: 'count',
+          text: count,
+          style: {
+            fontSize: 26,
+            fill: 'white'
+          }
+        });
+        
+        countText.x = Math.floor(c.width - countText.width * .5);
+        countText.y = -Math.floor(countText.height * .5);
+        c.addChild(countText);
+        this._doneSelectingBtn.addChild(c);
+      }
     }
     
     this._doneSelectingBtn.x = Math.floor(
-      this._playArea.x + this._playArea.width * .5 - this._doneSelectingBtn.width * .5)
+      this._playerHand.x + this._playerHand.width * .5 - this._doneSelectingBtn.width * .5
+    );
+    this._doneSelectingBtn.y = Math.floor(this._playerHand.y - this._doneSelectingBtn.height - STANDARD_GAP);
     
     const doneListener = () => {
       this._doneSelectingBtn.off('pointerdown', doneListener);
@@ -523,7 +528,6 @@ export class MatchScene extends Scene {
     
     this._playAllTreasuresButton.button.x = this._playerHand.x + this._playerHand.width * .5 - this._playAllTreasuresButton.button.width * .5;
     this._playAllTreasuresButton.button.y = this._playerHand.y - this._playAllTreasuresButton.button.height - STANDARD_GAP;
-    
     
     this._playArea.x = this._playerHand.x + this._playerHand.width * .5 - this._playArea.width * .5;
     this._playArea.y = this._playerHand.y - this._playArea.height - 75;

@@ -9,6 +9,7 @@ import { DrawCardEffect } from '../../effects/draw-card.ts';
 import { GainActionEffect } from '../../effects/gain-action.ts';
 import { RevealCardEffect } from '../../effects/reveal-card.ts';
 import { SelectCardEffect } from '../../effects/select-card.ts';
+import { MoveCardEffect } from '../../effects/move-card.ts';
 
 export default {
   registerEffects: (): Record<
@@ -210,12 +211,39 @@ export default {
       }
     },
     'courtyard': function* (
-      match,
-      cardLibrary,
+      _match,
+      _cardLibrary,
       triggerPlayerId,
       triggerCardId,
-      reactionContext,
+      _reactionContext,
     ) {
+      yield new DrawCardEffect({playerId: triggerPlayerId, sourcePlayerId: triggerPlayerId});
+      yield new DrawCardEffect({playerId: triggerPlayerId, sourcePlayerId: triggerPlayerId});
+      yield new DrawCardEffect({playerId: triggerPlayerId, sourcePlayerId: triggerPlayerId});
+      
+      const result = (yield new SelectCardEffect({
+        prompt: 'Top deck',
+        sourcePlayerId: triggerPlayerId,
+        sourceCardId: triggerCardId,
+        count: 1,
+        playerId: triggerPlayerId,
+        restrict: {
+          from: {
+            location: 'playerHands',
+          }
+        }
+      })) as number[];
+      
+      const cardId = result[0];
+      
+      yield new MoveCardEffect({
+        cardId,
+        playerId: triggerPlayerId,
+        sourcePlayerId: triggerPlayerId,
+        to: {
+          location: 'playerDecks',
+        }
+      })
     },
     'diplomat': function* (
       match,
