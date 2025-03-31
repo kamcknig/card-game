@@ -7,6 +7,9 @@ import { UserPromptEffect } from '../../effects/user-prompt.ts';
 import { ModifyCostEffect } from '../../effects/modify-cost.ts';
 import { DrawCardEffect } from '../../effects/draw-card.ts';
 import { GainActionEffect } from '../../effects/gain-action.ts';
+import { RevealCardEffect } from '../../effects/reveal-card.ts';
+import { SelectCardEffect } from '../../effects/select-card.ts';
+import { match } from "node:assert";
 
 export default {
   registerEffects: (): Record<
@@ -35,11 +38,10 @@ export default {
           sourcePlayerId: triggerPlayerId,
           sourceCardId: triggerCardId,
           prompt: 'Discard estate?',
-          confirmLabel: 'DISCARD',
-          declineLabel: 'NO',
-        })) as boolean;
+          actionButtons: [{label: 'NO', action: 1}, {label: 'DISCARD', action: 2}],
+        })) as { action: number };
 
-        if (confirm) {
+        if (confirm.action === 2) {
           console.debug(`[BARON EFFECT] player discarded estate`);
           yield new DiscardCardEffect({
             cardId: idx,
@@ -131,8 +133,82 @@ export default {
       cardLibrary,
       triggerPlayerId,
       triggerCardId,
-      reactionContext,
+      _reactionContext,
     ) {
+      const cardIds = (yield new SelectCardEffect({
+        prompt: 'Reveal card',
+        sourcePlayerId: triggerPlayerId,
+        sourceCardId: triggerCardId,
+        count: 1,
+        playerId: triggerPlayerId,
+        restrict: {
+          from: {
+            location: 'playerHands'
+          }
+        }
+      })) as number[];
+      
+      const cardId = cardIds[0];
+      
+      yield new RevealCardEffect({
+        cardId,
+        playerId: triggerPlayerId,
+        sourcePlayerId: triggerPlayerId,
+      });
+      
+      const cardTypeCount = cardLibrary.getCard(cardId).type.length;
+      console.log(`[COURTIER EFFECT] card has ${cardTypeCount} types`);
+      
+      const choices = [
+        {label: '+1 Action', action: 1},
+        {label: '+1 Buy', action: 2},
+        {label: '+3 Treasure', action: 3},
+        {label: 'Gain a gold', action: 4},
+      ];
+      
+      for (let i = 0; i < cardTypeCount; i++) {
+        const result = (yield new UserPromptEffect({
+          playerId: triggerPlayerId,
+          prompt: 'Choose one',
+          sourcePlayerId: triggerPlayerId,
+          actionButtons: choices
+        })) as { action: number };
+        
+        const resultAction = result.action;
+        
+        console.debug(`[COURTIER EFFECT] player chose ${resultAction}`);
+        
+        const idx = choices.findIndex(c => c.action === resultAction);
+        choices.splice(idx, 1);
+        
+        switch (resultAction) {
+          case 1:
+            yield new GainActionEffect({count: 1, sourcePlayerId: triggerPlayerId});
+            break;
+          case 2:
+            yield new GainBuyEffect({count: 1, sourcePlayerId: triggerPlayerId});
+            break;
+          case 3:
+            yield new GainTreasureEffect({count: 3, sourcePlayerId: triggerPlayerId});
+            break;
+          case 4:
+            for (let i = match.kingdom.length - 1; i >= 0; i--) {
+              const card = cardLibrary.getCard(match.kingdom[i]);
+              if (card.cardKey === 'gold') {
+                yield new GainCardEffect({
+                  cardId: card.id,
+                  playerId: triggerPlayerId,
+                  to: {
+                    location: 'playerDiscards'
+                  },
+                  sourcePlayerId: triggerPlayerId
+                })
+                break;
+              }
+            }
+            break;
+        }
+      }
     },
     'courtyard': function* (
       match,

@@ -65,19 +65,18 @@ export default {
               ) && trigger.playerId !== playerId;
             },
             generatorFn: function* (_match, _cardLibrary, trigger, reaction) {
-              const results = yield new UserPromptEffect({
-                confirmLabel: 'YES',
-                declineLabel: 'NO',
+              const results = (yield new UserPromptEffect({
+                actionButtons: [{ label: 'YES', action: 1}, {label: 'NO', action: 2}],
                 sourceCardId: trigger.cardId,
                 sourcePlayerId: trigger.playerId,
                 prompt: 'Reveal moat?',
                 playerId: reaction.playerId,
-              });
+              })) as { action: number };
 
-              console.log('player response to reveal moat', results);
+              console.log('player response to reveal moat', results.action === 1);
 
               const sourceId = reaction.getSourceId();
-              if (results && sourceId) {
+              if (results.action === 1 && sourceId) {
                 yield new RevealCardEffect({
                   sourceCardId: trigger.cardId,
                   sourcePlayerId: trigger.playerId,
@@ -272,17 +271,16 @@ export default {
             sourcePlayerId,
             sourceCardId,
             playerId: targetPlayerId,
-            confirmLabel: 'TRASH',
-            showDeclineOption: false,
+            actionButtons: [{label: 'TRASH', action: 1}],
             prompt: 'Choose a treasure to trash',
             content: {
               cardSelection: {
                 cardIds: possibleCardsToTrash,
               },
             },
-          })) as number[];
+          })) as { action: number, cardIds: number[] };
 
-          const selectedId = results[0];
+          const selectedId = results.cardIds?.[0];
 
           console.debug(`chose card ${cardLibrary.getCard(selectedId)}`);
 
@@ -560,17 +558,16 @@ export default {
         sourceCardId,
         playerId: sourcePlayerId,
         prompt: 'Choose card to put on deck?',
-        confirmLabel: 'DONE',
-        declineLabel: 'NO',
+        actionButtons: [{label: 'NO', action: 2}, {label: 'DONE', action: 1}],
         content: {
           cardSelection: {
             cardIds: match.playerDiscards[sourcePlayerId],
           },
         },
-      })) as number[];
+      })) as { action: number, cardIds: number[] };
 
-      const selectedId = results?.[0];
-      if (selectedId) {
+      const selectedId = results?.cardIds?.[0];
+      if (results.action === 1) {
         yield new MoveCardEffect({
           sourcePlayerId,
           sourceCardId,
@@ -643,20 +640,18 @@ export default {
             sourcePlayerId,
             sourceCardId,
             playerId: sourcePlayerId,
-            prompt:
-              `You drew ${drawnCard.cardName}. Set it aside (skip putting it in your hand)?`,
-            confirmLabel: 'SET ASIDE',
-            declineLabel: 'KEEP',
-          })) as boolean;
+            prompt: `You drew ${drawnCard.cardName}. Set it aside (skip putting it in your hand)?`,
+            actionButtons: [{label: 'KEEP', action: 1}, {label: 'SET ASIDE', action: 2}],
+          })) as { action: number };
 
-          if (shouldSetAside) {
+          if (shouldSetAside.action === 2) {
             console.debug(`setting card aside`);
           } else {
             console.debug('keeping card in hand');
           }
 
           // If user picked yes, move the card to a temporary 'aside' location, then continue.
-          if (shouldSetAside) {
+          if (shouldSetAside.action === 2) {
             setAside.push(drawnCardId);
             console.log(`new set aside length ${setAside.length}`);
           }
@@ -1085,13 +1080,12 @@ export default {
         }`,
       );
 
-      let selectedCardIds = (yield new UserPromptEffect({
+      let result = (yield new UserPromptEffect({
         sourcePlayerId,
         sourceCardId,
         playerId: sourcePlayerId,
         prompt: 'Choose a card/s to trash?',
-        confirmLabel: 'TRASH',
-        showDeclineOption: false,
+        actionButtons: [{label: 'TRASH', action: 1}],
         content: {
           cardSelection: {
             cardIds: cardsToLookAtIds,
@@ -1101,7 +1095,9 @@ export default {
             },
           },
         },
-      })) as number[];
+      })) as { action: number; cardIds: number[] };
+      
+      let selectedCardIds = result.cardIds;
 
       console.debug(
         `player selected ${
@@ -1129,13 +1125,12 @@ export default {
         return;
       }
 
-      selectedCardIds = (yield new UserPromptEffect({
+      result = (yield new UserPromptEffect({
         sourcePlayerId,
         sourceCardId,
         playerId: sourcePlayerId,
         prompt: 'Choose card/s to discard?',
-        confirmLabel: 'DISCARD',
-        showDeclineOption: false,
+        actionButtons: [{label: 'DISCARD', action: 1}],
         content: {
           cardSelection: {
             cardIds: cardsToLookAtIds,
@@ -1145,8 +1140,10 @@ export default {
             },
           },
         },
-      })) as number[];
+      })) as { action: number; cardIds: number[] };
 
+      selectedCardIds = result.cardIds;
+      
       console.debug(
         `player chose ${
           selectedCardIds.map((id) => cardLibrary.getCard(id))
@@ -1265,11 +1262,10 @@ export default {
         sourceCardId,
         playerId: sourcePlayerId,
         prompt: `Play card ${card.cardName}?`,
-        confirmLabel: 'PLAY',
-        declineLabel: 'NO',
-      })) as boolean;
+        actionButtons: [{label: 'NO', action: 1}, {label: 'PLAY', action: 2}],
+      })) as { action: number };
 
-      if (!confirm) {
+      if (confirm.action !== 2) {
         console.debug(`player chose not to play card`);
         return;
       }

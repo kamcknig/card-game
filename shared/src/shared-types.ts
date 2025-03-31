@@ -20,15 +20,13 @@ export type SelectCardEffectArgs = {
 
 export type UserPromptEffectArgs = {
     prompt: string;
-    confirmLabel: string;
-    declineLabel?: string;
-    showDeclineOption?: boolean;
     content?: {
         cardSelection?: {
             cardIds: number[],
             selectCount?: CountSpec
         }
-    }
+    };
+    actionButtons: ActionButtons
 }
 
 export type MatchConfiguration = {
@@ -330,3 +328,8 @@ export type EffectRestrictionSpec = "SELF" | {
 };
 export type PlayerID = number;
 export type CardId = number;
+export type ActionButtons = {
+    label: string;
+    action: number;
+    validationAction: number;
+}[];
