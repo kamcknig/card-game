@@ -17,7 +17,7 @@ export const userPromptModal = (args: UserPromptEffectArgs): Promise<unknown> =>
         let validationBtn: AppButton;
         const modalContainer = new Container();
         const actionList = new List({
-            maxWidth: 200,
+            maxWidth: 250,
             type: 'bidirectional',
             elementsMargin: STANDARD_GAP
         });
@@ -59,6 +59,11 @@ export const userPromptModal = (args: UserPromptEffectArgs): Promise<unknown> =>
             }
             return validated;
         };
+        
+        const actionButtonListener = (actionButton?: UserPromptEffectArgs['actionButtons'][number]) => {
+            resolve({action: actionButton?.action, cardIds: $selectedCards.get().map(id => newCardToOldCardMap.get(id))});
+            cleanup();
+        }
         
         // super hacky. $selectable cards is "global". and in cases where we are showing cards
         // from places like a user's discard for the harbinger card then the IDs of the cards used to create
@@ -113,32 +118,30 @@ export const userPromptModal = (args: UserPromptEffectArgs): Promise<unknown> =>
             cardList.y = modalContainer.height + STANDARD_GAP;
             modalContainer.addChild(cardList);
         }
-
-        const actionButtonListener = (actionButton?: UserPromptEffectArgs['actionButtons'][number]) => {
-            resolve({action: actionButton?.action, cardIds: $selectedCards.get().map(id => newCardToOldCardMap.get(id))});
-            cleanup();
-        }
         
-        args.actionButtons?.forEach(actionButton => {
-            const btn = createAppButton({
-                text: actionButton.label,
-                style: {
-                    wordWrap: true,
-                    wordWrapWidth: 100,
-                    fill: 'white',
-                    fontSize: 24,
+        if (args.actionButtons) {
+            args.actionButtons?.forEach(actionButton => {
+                const btn = createAppButton({
+                    text: actionButton.label,
+                    style: {
+                        wordWrap: true,
+                        wordWrapWidth: 100,
+                        fill: 'white',
+                        fontSize: 24,
+                    }
+                });
+                if (args.validationAction === actionButton.action) {
+                    validationBtn = btn;
                 }
+                btn.button.on('pointerdown', () => actionButtonListener(actionButton));
+                btn.button.on('removed', () => btn.button.removeAllListeners());
+                actionList.addChild(btn.button);
             });
-            if (args.validationAction === actionButton.action) {
-                validationBtn = btn;
-            }
-            btn.button.on('pointerdown', () => actionButtonListener(actionButton));
-            btn.button.on('removed', () => btn.button.removeAllListeners());
-            actionList.addChild(btn.button);
+            
             actionList.y = modalContainer.height + STANDARD_GAP;
             actionList.x = Math.floor(-actionList.width * .5);
             modalContainer.addChild(actionList);
-        });
+        }
         
         validate();
         

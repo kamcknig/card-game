@@ -329,7 +329,8 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
             $selectedCards.set([]);
             socket.emit('selectCardResponse', cardIds);
         };
-
+        
+        $selectableCards.set(selectCardArgs.selectableCardIds);
         gameEvents.emit('selectCard', selectCardArgs);
         gameEvents.on('cardsSelected', eventListener);
     },

@@ -191,8 +191,8 @@ export default {
             yield new GainTreasureEffect({count: 3, sourcePlayerId: triggerPlayerId});
             break;
           case 4:
-            for (let i = match.kingdom.length - 1; i >= 0; i--) {
-              const card = cardLibrary.getCard(match.kingdom[i]);
+            for (let i = match.supply.length - 1; i >= 0; i--) {
+              const card = cardLibrary.getCard(match.supply[i]);
               if (card.cardKey === 'gold') {
                 yield new GainCardEffect({
                   cardId: card.id,
