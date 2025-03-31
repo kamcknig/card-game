@@ -15,8 +15,6 @@ TODO higher priority
 
 when playing treasures if you manually play them all the play treasure button doesn't disappear
 
-the deck doesn't show back of cards
-
 use harbinger to test select card prompt with multiple cards in discard
 
 validationButton for select prompot hass bee set to required so that you can find the places where you need to set it for card selection

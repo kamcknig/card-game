@@ -12,6 +12,7 @@ export const
 
     // Initialize the application
     await app.init({
+        antialias: true,
         background: "#1099bb",
         resizeTo: document.getElementById("pixi-container")!
     });

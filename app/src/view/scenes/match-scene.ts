@@ -518,16 +518,20 @@ export class MatchScene extends Scene {
     this._scoreView.x = STANDARD_GAP;
     this._scoreView.y = STANDARD_GAP;
     
-    this._kingdomView.y = STANDARD_GAP;
-    this._kingdomView.x = app.renderer.width * .5 - this._kingdomView.width * .5;
+    this._baseSupply.y = STANDARD_GAP;
+    this._baseSupply.x = this._scoreView.x + this._scoreView.width + STANDARD_GAP;
     
-    this._baseSupply.y = this._kingdomView.y;
-    this._baseSupply.x = this._kingdomView.x - this._baseSupply.width - STANDARD_GAP;
+    this._kingdomView.y = STANDARD_GAP;
+    this._kingdomView.x = this._baseSupply.x + this._baseSupply.width + STANDARD_GAP;
     
     this._playerHand.x = app.renderer.width * .5 - this._playerHand.getLocalBounds().width * .5;
     this._playerHand.y = app.renderer.height - this._playerHand.getLocalBounds().height;
     
-    this._playArea.x = this._kingdomView.x + this._kingdomView.width * .5 - this._playArea.width * .5;
+    if (this._playAllTreasuresButton?.button) {
+      this._playAllTreasuresButton.button.x = this._playerHand.x + this._playerHand.width * .5 - this._playAllTreasuresButton.button.width * .5;
+    }
+    
+    this._playArea.x = this._playerHand.x + this._playerHand.width * .5 - this._playArea.width * .5;
     this._playArea.y = this._playerHand.y - this._playArea.height - 75;
     
     this._discard.y = app.renderer.height - CARD_HEIGHT * .75;
