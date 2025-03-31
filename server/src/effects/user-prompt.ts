@@ -7,6 +7,7 @@ export class UserPromptEffect extends EffectBase {
   prompt: string;
   actionButtons: ActionButtons;
   content?: UserPromptEffectArgs["content"];
+  validationAction?: number;
 
   constructor(
     {
@@ -14,6 +15,7 @@ export class UserPromptEffect extends EffectBase {
       actionButtons,
       playerId,
       prompt,
+      validationAction,
       ...arg
     }: { playerId: number } & UserPromptEffectArgs & EffectBaseArgs,
   ) {
@@ -22,5 +24,6 @@ export class UserPromptEffect extends EffectBase {
     this.prompt = prompt;
     this.content = content;
     this.actionButtons = actionButtons;
+    this.validationAction = validationAction;
   }
 }

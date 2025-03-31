@@ -26,7 +26,8 @@ export type UserPromptEffectArgs = {
             selectCount?: CountSpec
         }
     };
-    actionButtons: ActionButtons
+    actionButtons: ActionButtons;
+    validationAction?: number;
 }
 
 export type MatchConfiguration = {
@@ -331,7 +332,6 @@ export type CardId = number;
 export type ActionButtons = {
     label: string;
     action: number;
-    validationAction: number;
 }[];
 export type CardFacing = 'front' | 'back';
 export type CardSize = 'full' | 'half';

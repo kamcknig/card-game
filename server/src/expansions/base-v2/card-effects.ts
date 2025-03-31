@@ -559,6 +559,7 @@ export default {
         playerId: sourcePlayerId,
         prompt: 'Choose card to put on deck?',
         actionButtons: [{label: 'NO', action: 2}, {label: 'DONE', action: 1}],
+        validationAction: 1,
         content: {
           cardSelection: {
             cardIds: match.playerDiscards[sourcePlayerId],

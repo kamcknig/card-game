@@ -445,6 +445,7 @@ export class MatchScene extends Scene {
     }
     
     if (event.button === 2) {
+      gameEvents.emit('displayCardDetail', (event.target as CardView).card.id);
       return;
     }
     

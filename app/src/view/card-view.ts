@@ -93,22 +93,14 @@ export class CardView extends Container<ContainerChild> {
         this._cleanup.push(batched([$selectableCards, $selectedCards], (...args) => args).subscribe(this.onDraw));
         this._cleanup.push($cardOverrides.subscribe(this.onDraw));
         
-        this.on('pointerdown', this.onPressed);
         this.on('removed', this.onRemoved);
     }
 
     private onRemoved = () => {
         this._cleanup.forEach(cb => cb());
-        this.off('pointerdown');
         this.off('removed');
     }
     
-    private onPressed = (e: PointerEvent) => {
-        if (e.button === 2 && this.facing !== 'back') {
-            gameEvents.emit('displayCardDetail', this.card.id);
-        }
-    }
-
     private onDraw = () => {
         const selected = $selectedCards.get();
         const selectable = $selectableCards.get().filter(s => !selected.includes(s));

@@ -14,7 +14,3 @@ TODO higher priority
 - when disconnecting/reconnecting, need to handle scenarios when waiting on input from the user that disconnected (from card effects - like the user prompt, or select card effects)
 
 when playing treasures if you manually play them all the play treasure button doesn't disappear
-
-use harbinger to test select card prompt with multiple cards in discard
-
-validationButton for select prompot hass bee set to required so that you can find the places where you need to set it for card selection

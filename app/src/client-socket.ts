@@ -330,8 +330,6 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
             socket.emit('selectCardResponse', cardIds);
         };
 
-        // warning, state must be updated currently before emitting 'selectCard' event
-        $selectableCards.set(selectCardArgs.selectableCardIds);
         gameEvents.emit('selectCard', selectCardArgs);
         gameEvents.on('cardsSelected', eventListener);
     },

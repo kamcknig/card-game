@@ -146,7 +146,7 @@ export class MatchController {
     const kingdomCards: Card[] = [];
     
     // todo: remove testing code
-    const keepers: string[] = ['conspirator, pawn'];
+    const keepers: string[] = ['harbinger'];
     
     if (keepers.length) {
       console.warn(`[MATCH] using hard-coded list of cards to create ${keepers}`);
@@ -194,12 +194,12 @@ export class MatchController {
     
     return Object.values(config.players).reduce((prev, player, _idx) => {
       console.log('initializing player', player.id, 'cards...');
-      /*let blah = {};
+      let blah = {};
       // todo remove testing code
       if (_idx === 0) {
         blah = {
-          conspirator: 3,
-          pawn: 7
+          harbinger: 10,
+          copper: 15
         };
       }
 
@@ -209,9 +209,9 @@ export class MatchController {
           copper: 5,
         };
       }
-      Object.entries(blah).forEach(([key, count]) => {*/
-      Object.entries(playerStartHand).forEach(
-        ([key, count]) => {
+      Object.entries(blah).forEach(([key, count]) => {
+      /*Object.entries(playerStartHand).forEach(
+        ([key, count]) => {*/
           prev['playerDecks'][player.id] ??= [];
           let deck = prev['playerDecks'][player.id];
           deck = deck.concat(
