@@ -336,44 +336,45 @@ export class MatchScene extends Scene {
     this._doneSelectingBtn.y = this._playArea.y + this._playArea.height + STANDARD_GAP;
     this._doneSelectingBtn.addChild(button.button);
     
-    if (isNumber(arg.count) || arg.count.kind === 'exact') {
-      const count = isNumber(arg.count) ? arg.count : arg.count.count;
+    const count = isNumber(arg.count) ? arg.count : arg.count.kind === 'exact' || arg.count.kind === 'upTo' ? arg.count.count : -1;
+    if (count === -1) {
+      throw new Error('Haven\'t dealt with "all" or "variable" yet');
+    }
+    
+    if (count > 1) {
+      const c = new Container({ label: 'cardCountContainer' });
       
-      if (count > 1) {
-        const c = new Container({ label: 'cardCountContainer' });
-        
-        let s: Sprite;
-        console.warn('very hacky way of getting this icon');
-        if (arg.prompt.includes('trash')) {
-          s = Sprite.from(await Assets.load(`./assets/ui-icons/trash-card-count.png`));
-        } else if (arg.prompt.includes('discard')) {
-          s = Sprite.from(await Assets.load(`./assets/ui-icons/discard-card-count.png`));
-        }
-        if (s) {
-          s.x = 5;
-          s.y = 5;
-          c.addChild(s);
-          
-          const g = new Graphics();
-          g.roundRect(0, 0, s.x + s.width + 5, s.y + s.height + 5, 5);
-          g.fill(0xaaaaaa);
-          c.addChildAt(g, 0);
-        }
-        
-        const countText = new Text({
-          label: 'count',
-          text: count,
-          style: {
-            fontSize: 26,
-            fill: 'white'
-          }
-        });
-        
-        countText.x = Math.floor(c.width - countText.width * .5);
-        countText.y = -Math.floor(countText.height * .5);
-        c.addChild(countText);
-        this._doneSelectingBtn.addChild(c);
+      let s: Sprite;
+      console.warn('very hacky way of getting this icon');
+      if (arg.prompt.includes('trash')) {
+        s = Sprite.from(await Assets.load(`./assets/ui-icons/trash-card-count.png`));
+      } else if (arg.prompt.includes('discard')) {
+        s = Sprite.from(await Assets.load(`./assets/ui-icons/discard-card-count.png`));
       }
+      if (s) {
+        s.x = 5;
+        s.y = 5;
+        c.addChild(s);
+        
+        const g = new Graphics();
+        g.roundRect(0, 0, s.x + s.width + 5, s.y + s.height + 5, 5);
+        g.fill(0xaaaaaa);
+        c.addChildAt(g, 0);
+      }
+      
+      const countText = new Text({
+        label: 'count',
+        text: count,
+        style: {
+          fontSize: 26,
+          fill: 'white'
+        }
+      });
+      
+      countText.x = Math.floor(c.width - countText.width * .5);
+      countText.y = -Math.floor(countText.height * .5);
+      c.addChild(countText);
+      this._doneSelectingBtn.addChild(c);
     }
     
     this._doneSelectingBtn.x = Math.floor(

@@ -527,14 +527,42 @@ const expansionModule: CardExpansionModule = {
       }
     },
     'mill': function* (
-      match,
-      cardLibrary,
+      _match,
+      _cardLibrary,
       triggerPlayerId,
-      triggerCardId,
-      reactionContext,
+      _triggerCardId,
+      _reactionContext,
     ) {
       yield new DrawCardEffect({playerId: triggerPlayerId, sourcePlayerId: triggerPlayerId});
       yield new GainActionEffect({count: 1, sourcePlayerId: triggerPlayerId});
+      
+      const results = (yield new SelectCardEffect({
+        prompt: 'Cancel discard',
+        validPrompt: 'Confirm discard',
+        playerId: triggerPlayerId,
+        sourcePlayerId: triggerPlayerId,
+        restrict: {
+          from: {
+            location: 'playerHands'
+          }
+        },
+        count: {
+          kind: 'upTo',
+          count: 2
+        }
+      })) as number[];
+      
+      for (const cardId of results) {
+        yield new DiscardCardEffect({
+          cardId,
+          sourcePlayerId: triggerPlayerId,
+          playerId: triggerPlayerId
+        });
+      }
+      
+      if (results.length === 2) {
+        yield new GainTreasureEffect({count: 2, sourcePlayerId: triggerPlayerId});
+      }
     },
     'mining-village': function* (
       match,

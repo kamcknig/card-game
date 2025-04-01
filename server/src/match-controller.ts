@@ -69,9 +69,6 @@ export class MatchController {
     const kingdomCards = this.createKingdom(config);
     const playerCards = this.createPlayerDecks(config);
     
-    let player = config.players[0];
-    console.log(player instanceof Player);
-    
     config = {
       ...config,
       supplyCardKeys: supplyCards.reduce((prev, card) => {
@@ -87,9 +84,6 @@ export class MatchController {
         return prev.concat(card.cardKey);
       }, [] as string[]),
     };
-    
-    player = config.players[0];
-    console.log(player instanceof Player);
     
     this.$matchState.set({
       scores: [],
@@ -111,10 +105,6 @@ export class MatchController {
     });
 
     this._config = config;
-    
-    const blah = this.$matchState.get();
-    player = blah.players[0];
-    console.log(player instanceof Player);
     
     console.log(
       `[MATCH] ready, sending to clients and listening for when clients are ready`,
@@ -167,7 +157,7 @@ export class MatchController {
     const kingdomCards: Card[] = [];
 
     // todo: remove testing code
-    const keepers: string[] = ['masquerade'];
+    const keepers: string[] = ['mill'];
 
     console.debug(
       `[MATCH] choosing ${MatchBaseConfiguration.numberOfKingdomPiles} kingdom cards`,
@@ -235,7 +225,7 @@ export class MatchController {
       // todo remove testing code
       if (_idx === 0) {
         blah = {
-          masquerade: 3,
+          mill: 3,
           copper: 7,
         };
       } else {
