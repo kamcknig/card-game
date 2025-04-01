@@ -155,7 +155,6 @@ export class Player {
     socketId: string;
     connected: boolean;
     ready: boolean;
-    score: number = 0;
 
     constructor({id, name, sessionId, socketId, connected, ready}: PlayerArgs) {
         this.id = id;

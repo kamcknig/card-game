@@ -12,6 +12,8 @@ import { SelectCardEffect } from '../../effects/select-card.ts';
 import { MoveCardEffect } from '../../effects/move-card.ts';
 import { CardExpansionModule } from '../card-expansion-module.ts';
 import { getPlayerById } from "../../utils/get-player-by-id.ts";
+import { TrashCardEffect } from "../../effects/trash-card.ts";
+import { ActionButtons } from '../../../../shared/src/shared-types.ts';
 
 const expansionModule: CardExpansionModule = {
   registerCardLifeCycles: () => ({
@@ -387,11 +389,74 @@ const expansionModule: CardExpansionModule = {
     },
     'lurker': function* (
       match,
-      cardLibrary,
+      _cardLibrary,
       triggerPlayerId,
-      triggerCardId,
-      reactionContext,
+      _triggerCardId,
+      _reactionContext,
     ) {
+      yield new GainActionEffect({count: 1, sourcePlayerId: triggerPlayerId});
+      
+      let result = { action: 1 };
+      
+      const actionButtons: ActionButtons = [
+        { action: 1, label: 'TRASH CARD'},
+      ];
+      
+      if (match.trash.length > 0) {
+        actionButtons.push({ action: 2, label: 'GAIN CARD' });
+        
+        result = (yield new UserPromptEffect({
+          playerId: triggerPlayerId,
+          prompt: 'Trash action from supply, or gain Action card from trash?',
+          actionButtons,
+          sourcePlayerId: triggerPlayerId,
+        })) as { action: number };
+      } else {
+        console.debug(`[LURKER EFFECT] no cards in trash to select`);
+      }
+      
+      console.debug(`[LURKER EFFECT] user choose action ${actionButtons.find(a => a.action === result.action)?.label}`);
+      
+      if (result.action === 1) {
+        const result = (yield new SelectCardEffect({
+          prompt: 'Confirm trash',
+          playerId: triggerPlayerId,
+          sourcePlayerId: triggerPlayerId,
+          count: 1,
+          restrict: {
+            from: {
+              location: ['kingdom', 'supply']
+            }
+          }
+        })) as number[];
+        const cardId = result[0];
+        yield new TrashCardEffect({
+          cardId,
+          playerId: triggerPlayerId,
+          sourcePlayerId: triggerPlayerId,
+        });
+      } else {
+        const result = (yield new UserPromptEffect({
+          prompt: 'Choose card to gain',
+          playerId: triggerPlayerId,
+          sourcePlayerId: triggerPlayerId,
+          content: {
+            cardSelection: {
+              selectCount: 1,
+              cardIds: match.trash
+            }
+          }
+        })) as { cardIds: number[] };
+        const cardId = result.cardIds[0];
+        yield new GainCardEffect({
+          cardId,
+          playerId: triggerPlayerId,
+          sourcePlayerId: triggerPlayerId,
+          to: {
+            location: 'playerDiscards'
+          }
+        });
+      }
     },
     'masquerade': function* (
       match,
