@@ -15,18 +15,18 @@ type CardViewArgs = {
 export class CardView extends Container<ContainerChild> {
     private readonly _highlight: Graphics = new Graphics({label: 'highlight'});
     private readonly _cardView: Sprite = new Sprite({label: 'caredView'});
-    private _frontImage: Texture;
-    private readonly _backImage: Texture;
     private readonly _costView: Container = new Container({label: 'costView'});
     private readonly _cleanup: (() => void)[] = [];
     
+    private _frontImage: Texture;
+    private _backImage: Texture;
     private _facing: CardFacing = 'back';
-    private _size: CardSize;
+    private _size: CardSize = 'full';
     
     public card: Card;
     
     public set facing(value: CardFacing) {
-        if (!this._frontImage || !this._backImage) return;
+        if ((value === 'front' && !this._frontImage) || (value === 'back' && !this._backImage)) return;
         this._cardView.texture = value === 'front' ? this._frontImage : this._backImage;
         this._facing = value;
         this.onDraw();
@@ -38,7 +38,18 @@ export class CardView extends Container<ContainerChild> {
     public set size(value: CardSize) {
         this._size = value;
         
-        this._frontImage = Assets.get(`${this.card.cardKey}${this.size === 'full' ? '-full' : ''}`);
+        if (value === 'full') {
+            this._cardView.scale = 155/600;
+        } else {
+            this._cardView.scale = 1;
+            
+            if (value === 'detail') {
+                value = 'full';
+            }
+        }
+        
+        this._frontImage = Assets.get(`${this.card.cardKey}-${value}`);
+        this._backImage = Assets.get(`card-back-${value}`);
         this._cardView.texture = this._facing === 'front' ? this._frontImage : this._backImage;
         this._size = value;
         this.onDraw();
@@ -58,15 +69,8 @@ export class CardView extends Container<ContainerChild> {
 
         this.addChild(this._highlight);
         this.addChild(this._cardView);
-        
-        try {
-            this._frontImage = Assets.get(`${card.cardKey}${size === 'full' ? '-full' : ''}`);
-            this._frontImage.label = 'frontImageSprite';
-        } catch {
-            console.log("could not find asset for card", card.cardKey);
-        }
 
-        this._backImage = Assets.get('card-back');
+        this._backImage = Assets.get('card-back-full');
         this._backImage.label = 'backImageSprite';
 
         const costBgSprite = Sprite.from(Assets.get('treasure-bg'));
@@ -87,8 +91,8 @@ export class CardView extends Container<ContainerChild> {
         this._costView.addChild(costText);
         this.addChild(this._costView)
         
-        this.facing = 'front';
         this.size  = 'full'
+        this.facing = 'front';
 
         this._cleanup.push(batched([$selectableCards, $selectedCards], (...args) => args).subscribe(this.onDraw));
         this._cleanup.push($cardOverrides.subscribe(this.onDraw));

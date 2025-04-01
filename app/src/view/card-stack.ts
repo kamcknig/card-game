@@ -112,8 +112,8 @@ export class CardStackView extends Container {
     
     for (const cardId of cardIds) {
       const c = this._cardContainer.addChild(createCardView($cardsById.get()[cardId]));
-      c.facing = this._cardFacing
       c.size = 'full';
+      c.facing = this._cardFacing
     }
   }
   

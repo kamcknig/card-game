@@ -283,7 +283,7 @@ export class Card {
         this.imagePath = args.imagePath;
         this.halfImagePath = args.halfImagePath;
     }
-
+    
     toString() {
         return `[CARD ${this.id} - ${this.cardKey}]`;
     }
@@ -334,4 +334,4 @@ export type ActionButtons = {
     action: number;
 }[];
 export type CardFacing = 'front' | 'back';
-export type CardSize = 'full' | 'half';
+export type CardSize = 'full' | 'half' | 'detail';

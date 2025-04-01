@@ -187,14 +187,16 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
         if (!$cardsById.get()) throw new Error('missing card library');
         const cardsById = $cardsById.get();
         Assets.addBundle('cardLibrary', Object.values(cardsById).reduce((prev, c) => {
-            prev[c.cardKey] = c.halfImagePath;
-            prev[`${c.cardKey}-full`] = c.imagePath;
+            prev[`${c.cardKey}-full`] ??= c.imagePath;
+            prev[`${c.cardKey}-half`] ??= c.halfImagePath;
             return prev;
         }, {
-            'card-back': `./assets/card-images/full-size/card-back.jpg`,
+            'card-back-full': `./assets/card-images/base-supply/detail/card-back.jpg`,
+            'card-back-half': `./assets/card-images/base-supply/half-size/card-back.jpg`,
             'treasure-bg': './assets/ui-icons/treasure-bg.png',
         } as Record<string, string>));
 
+        console.log(Assets);
         await displayScene('match', match);
     },
     matchStarted: match => {

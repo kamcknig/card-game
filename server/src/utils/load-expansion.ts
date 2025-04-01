@@ -26,7 +26,7 @@ export const loadExpansion = async (expansionName: string) => {
             cardLibrary.supply[key] = {
                 ...cards[key],
                 expansionName,
-                imagePath: `./assets/card-images/base-supply/full-size/${key}.jpg`,
+                imagePath: `./assets/card-images/base-supply/detail/${key}.jpg`,
                 halfImagePath: `./assets/card-images/base-supply/half-size/${key}.jpg`
             };
         });
@@ -41,7 +41,7 @@ export const loadExpansion = async (expansionName: string) => {
             cardLibrary.kingdom[key] = {
                 ...cards[key],
                 expansionName,
-                imagePath: `./assets/card-images/${expansionName}/full-size/${key}.jpg`,
+                imagePath: `./assets/card-images/${expansionName}/detail/${key}.jpg`,
                 halfImagePath: `./assets/card-images/${expansionName}/half-size/${key}.jpg`,
             };
         });

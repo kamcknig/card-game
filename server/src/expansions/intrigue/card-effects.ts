@@ -11,6 +11,7 @@ import { RevealCardEffect } from '../../effects/reveal-card.ts';
 import { SelectCardEffect } from '../../effects/select-card.ts';
 import { MoveCardEffect } from '../../effects/move-card.ts';
 import { CardExpansionModule } from '../card-expansion-module.ts';
+import { getPlayerById } from "../../utils/get-player-by-id.ts";
 
 const expansionModule: CardExpansionModule = {
   registerCardLifeCycles: () => ({
@@ -62,6 +63,18 @@ const expansionModule: CardExpansionModule = {
       onLeaveHand: (_playerId, cardId) => ({
         unregisterTriggers: [`diplomat-${cardId}`],
       })
+    }
+  }),
+  registerScoringFunctions: () => ({
+    'duke': function(match, cardLibrary, ownerId) {
+      const duchies =
+        match.playerHands[ownerId]?.concat(match.playerDecks[ownerId], match.playerDiscards[ownerId], match.playArea)
+          .map(cardLibrary.getCard)
+          .filter(card => card.cardKey === 'duchy');
+      
+      console.debug(`[DUKE SCORING] player ${getPlayerById(match, ownerId)} has ${duchies.length} Duchies`);
+      
+      return duchies.length;
     }
   }),
   registerEffects: (): Record<
@@ -299,19 +312,18 @@ const expansionModule: CardExpansionModule = {
     },
     'diplomat': function* (
       match,
-      cardLibrary,
+      _cardLibrary,
       triggerPlayerId,
-      triggerCardId,
-      reactionContext,
+      _triggerCardId,
+      _reactionContext,
     ) {
       yield new DrawCardEffect({playerId: triggerPlayerId, sourcePlayerId: triggerPlayerId});
       
       if (match.playerHands[triggerPlayerId].length <= 5) {
         yield new GainActionEffect({count: 2, sourcePlayerId: triggerPlayerId});
       } else {
-        console.debug(`[DIPLOMAT EFFECT] player has more than 5 cards in hand`);
+        console.debug(`[DIPLOMAT EFFECT] player has more than 5 cards in hand, can't perform diplomat`);
       }
-      
     },
     'duke': function* (
       match,

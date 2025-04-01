@@ -19,3 +19,4 @@ when a game ends, the server side needs to clean up the cardLibrary object (righ
 
 need larger image sizes fo details view
 
+card expansion module's scoring functions currently only look in the hand, discard, deck. what about the play area? what about other random areas later? probably need to add an ownerId to Card class and then just look at all cards and their owners

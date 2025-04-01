@@ -31,18 +31,18 @@ import {
 export class CardLibrary {
   private readonly _library: Map<CardId, Card> = new Map();
 
-  public addCard(card: Card) {
+  public addCard = (card: Card) => {
     console.log(`[CARD LIBRARY] adding ${card} to library`);
     this._library.set(card.id, card);
   }
 
-  public getCard(cardId: CardId): Card {
+  public getCard = (cardId: CardId): Card => {
     const c = this._library.get(cardId);
     if (!c) throw new Error(`[CARD LIBRARY] unable to locate card ${cardId}`);
     return c;
   }
 
-  public getAllCards(): Record<number, Card> {
+  public getAllCards = (): Record<number, Card> => {
     return Object.fromEntries(this._library) as Record<number, Card>;
   }
 }
@@ -157,7 +157,7 @@ export class MatchController {
     const kingdomCards: Card[] = [];
 
     // todo: remove testing code
-    const keepers: string[] = ['diplomat', 'bandit'];
+    const keepers: string[] = ['duke'];
 
     console.debug(
       `[MATCH] choosing ${MatchBaseConfiguration.numberOfKingdomPiles} kingdom cards`,
@@ -225,15 +225,15 @@ export class MatchController {
       // todo remove testing code
       if (_idx === 0) {
         blah = {
-          diplomat: 5,
-          silver: 5
+          estate: 3,
+          copper: 7,
         };
       }
 
       if (_idx === 1) {
         blah = {
-          bandit: 5,
-          silver: 5
+          estate: 3,
+          copper: 7
         };
       }
       Object.entries(blah).forEach(([key, count]) => {
@@ -348,7 +348,7 @@ export class MatchController {
 
     await this._effectsController?.suspendedCallbackRunner(async () => {
       for (const player of match.players!) {
-        for (let i = 0; i < 7; i++) {
+        for (let i = 0; i < 5; i++) {
           await this._effectsController?.runGameActionEffects(
             "drawCard",
             match as Match,
@@ -390,7 +390,7 @@ export class MatchController {
         const customScoringFn = scoringFunctionMap[card?.cardKey ?? ""];
         if (customScoringFn) {
           console.log(`[MATCH] processing scoring function for ${card}`);
-          score += customScoringFn(match as Match, playerId);
+          score += customScoringFn(match as Match, this._cardLibrary, playerId);
         }
       }
       scores[playerId] = score;
@@ -619,7 +619,7 @@ export class MatchController {
                 );
               }
 
-              for (let i = 0; i < 7; i++) {
+              for (let i = 0; i < 5; i++) {
                 await this._effectsController!.runGameActionEffects(
                   "drawCard",
                   this.$matchState.get(),

@@ -8,8 +8,9 @@ export const displayCardDetail = (cardId: number): void => {
     container.eventMode = 'static';
     const card = $cardsById.get()[cardId];
     const view = createCardView(card);
-    view.size = 'full';
-    view.scale = 2;
+    view.size = 'detail';
+    view.facing = 'front'
+    
     view.eventMode = 'none';
 
     const background = new Graphics()
