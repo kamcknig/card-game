@@ -388,7 +388,7 @@ export const createEffectHandlerMap = (
       const card = cardLibrary.getCard(cardId);
 
       if (!isUndefined(card.targetScheme)) {
-        const targetScheme = card.targetScheme ?? 'ALL_OTHER';
+        const targetScheme = card.targetScheme;
         console.debug(`card's target scheme ${targetScheme}`);
         const potentialTargets = findOrderedEffectTargets(
           sourcePlayerId,
@@ -413,25 +413,52 @@ export const createEffectHandlerMap = (
       }
 
       const reactionContext: any = {};
-      if (reactions.length > 0) {
-        for (const reaction of reactions) {
-          console.log(`running reaction generator for ${reaction.id}`);
-          const reactionGenerator = await reaction.generatorFn(
-            match,
-            cardLibrary,
-            trigger,
-            reaction,
-          );
-          const reactionResults = await cardEffectRunner.runGenerator(
-            reactionGenerator,
-            match,
-            reaction.playerId,
-            acc,
-          );
-          if (reaction.once) {
-            console.debug(`reaction registered as a 'once', removing reaction`);
-            reactionManager.unregisterTrigger(reaction.id);
-          }
+      const usedSingleReactions = new Set<string>();
+      
+      for (const reaction of reactions) {
+        console.log(`running reaction generator for ${reaction.id}`);
+        
+        const cardKey = reaction.getSourceKey();
+        
+        if (!cardKey) throw new Error(`[PLAY CARD EFFECT] can't find card key on reaction`);
+        
+        const isMultiReveal = reaction.multipleUse ?? true;
+        
+        if (!isMultiReveal && usedSingleReactions.has(cardKey)) {
+          console.debug(`[PLAY CARD EFFECT HANDLER] skipping duplicate reveal of ${cardKey}`);
+          continue;
+        }
+        
+        usedSingleReactions.add(cardKey);
+        
+        // get the generator
+        const reactionGenerator = await reaction.generatorFn(
+          match,
+          cardLibrary,
+          trigger,
+          reaction,
+        );
+        
+        // run the generator
+        const reactionResults = await cardEffectRunner.runGenerator(
+          reactionGenerator,
+          match,
+          reaction.playerId,
+          acc,
+        );
+        
+        // if it only runs once, de-register it from happening again.
+        if (reaction.once) {
+          console.debug(`reaction registered as a 'once', removing reaction`);
+          reactionManager.unregisterTrigger(reaction.id);
+        }
+        
+        // add results associated with the player
+        // right now a reaction generator will only return 'immunity' (in the case of moat) or undefined.
+        // current other reaction examples are diplomat that give you effects, but don't give immunity.
+        // those are the only two types of reactions right now. so we only add the reaction to the context
+        // if it's an 'immunity' results.
+        if (!isUndefined(reactionResults)) {
           reactionContext[reaction.playerId] = reactionResults;
         }
       }

@@ -55,6 +55,7 @@ const expansionModule: CardExpansionModule = {
           registerTriggers: [{
             id: `moat-${cardId}`,
             playerId,
+            multipleUse: false,
             listeningFor: 'cardPlayed',
             condition: (_match, cardLibrary, trigger) => {
               return cardLibrary.getCard(trigger.cardId).type.includes(
@@ -82,7 +83,7 @@ const expansionModule: CardExpansionModule = {
                 });
               }
 
-              return results;
+              return results.action === 1 ? 'immunity' : undefined;
             },
           }],
         };
@@ -164,7 +165,7 @@ const expansionModule: CardExpansionModule = {
       cardLibrary,
       sourcePlayerId,
       sourceCardId,
-      reactionContext: Record<number, boolean>,
+      reactionContext
     ) {
       const goldCardId = match.supply.find((c) =>
         cardLibrary.getCard(c).cardKey === 'gold'
@@ -189,7 +190,7 @@ const expansionModule: CardExpansionModule = {
         sourcePlayerId,
         'ALL_OTHER',
         match,
-      ).filter((id) => !reactionContext[id]);
+      ).filter((id) => reactionContext[id] !== 'immunity');
 
       console.debug(` ordered targets ${targetPlayerIds}`);
 
@@ -315,7 +316,7 @@ const expansionModule: CardExpansionModule = {
       cardLibrary,
       sourcePlayerId,
       sourceCardId,
-      reactionContext: Record<number, boolean>,
+      reactionContext
     ) {
       const supply = match.supply;
       const l = match.supply.length;
@@ -340,7 +341,7 @@ const expansionModule: CardExpansionModule = {
         sourcePlayerId,
         'ALL_OTHER',
         match,
-      ).filter((id) => !reactionContext[id]);
+      ).filter((id) => reactionContext[id] !== 'immunity');
 
       console.debug(
         name,
@@ -708,7 +709,7 @@ const expansionModule: CardExpansionModule = {
       cardLibrary,
       sourcePlayerId,
       sourceCardId,
-      reactionContext: Record<number, boolean>,
+      reactionContext
     ) {
       yield new GainTreasureEffect({ sourcePlayerId, sourceCardId, count: 2 });
 
@@ -716,7 +717,7 @@ const expansionModule: CardExpansionModule = {
         sourcePlayerId,
         'ALL_OTHER',
         match,
-      ).filter((id) => !reactionContext[id]);
+      ).filter((id) => reactionContext[id] !== 'immunity');
 
       console.debug(
         `targets ${playerIds.map((id) => getPlayerById(match, id))}`,
@@ -1291,7 +1292,7 @@ const expansionModule: CardExpansionModule = {
       cardLibrary,
       sourcePlayerId,
       sourceCardId,
-      reactionContext: Record<number, boolean>,
+      reactionContext
     ) {
       for (let i = 0; i < 2; i++) {
         yield new DrawCardEffect({
@@ -1306,7 +1307,7 @@ const expansionModule: CardExpansionModule = {
         sourcePlayerId,
         'ALL_OTHER',
         match,
-      ).filter((id) => !reactionContext[id]);
+      ).filter((id) => reactionContext[id] !== 'immunity');
 
       console.debug(
         `targets ${playerIds.map((id) => getPlayerById(match, id))}`,

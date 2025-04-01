@@ -19,7 +19,7 @@ export type SelectCardEffectArgs = {
 }
 
 export type UserPromptEffectArgs = {
-    prompt: string;
+    prompt?: string;
     content?: {
         cardSelection?: {
             cardIds: number[],

@@ -463,8 +463,8 @@ const expansionModule: CardExpansionModule = {
       match,
       cardLibrary,
       triggerPlayerId,
-      triggerCardId,
-      reactionContext,
+      _triggerCardId,
+      _reactionContext,
     ) {
       yield new DrawCardEffect({playerId: triggerPlayerId, sourcePlayerId: triggerPlayerId});
       yield new DrawCardEffect({playerId: triggerPlayerId, sourcePlayerId: triggerPlayerId});
@@ -566,19 +566,57 @@ const expansionModule: CardExpansionModule = {
     },
     'mining-village': function* (
       match,
-      cardLibrary,
+      _cardLibrary,
       triggerPlayerId,
-      triggerCardId,
+      _triggerCardId,
       reactionContext,
     ) {
+    
     },
     'minion': function* (
       match,
-      cardLibrary,
+      _cardLibrary,
       triggerPlayerId,
-      triggerCardId,
+      _triggerCardId,
       reactionContext,
     ) {
+      yield new GainActionEffect({count: 1, sourcePlayerId: triggerPlayerId});
+      const results = (yield new UserPromptEffect({
+        playerId: triggerPlayerId,
+        sourcePlayerId: triggerPlayerId,
+        actionButtons: [
+          { action: 1, label: '+2 Treasure'},
+          { action: 2, label: 'Discard hand'}
+        ],
+      })) as { action: number, cardIds: number[] };
+      
+      if (results.action === 1) {
+        yield new GainTreasureEffect({count: 2, sourcePlayerId: triggerPlayerId});
+      } else {
+        const targets =
+          findOrderedEffectTargets(triggerPlayerId, 'ALL', match)
+            .filter(playerId =>
+              playerId === triggerPlayerId || (match.playerHands[playerId].length >= 5 && reactionContext[playerId] !== 'immunity'));
+        
+        for (const playerId of targets) {
+          const hand = match.playerHands[playerId];
+          const l = hand.length
+          for (let i = l - 1; i >= 0; i--) {
+            const cardId = hand[i];
+            yield new DiscardCardEffect({
+              cardId,
+              playerId,
+              sourcePlayerId: triggerPlayerId,
+            });
+          }
+          for (let i = 0; i < 4; i++) {
+            yield new DrawCardEffect({
+              playerId,
+              sourcePlayerId: triggerPlayerId
+            });
+          }
+        }
+      }
     },
     'nobles': function* (
       match,

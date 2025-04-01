@@ -4,7 +4,7 @@ import { EffectBase, EffectBaseArgs } from './effect-base.ts';
 export class UserPromptEffect extends EffectBase {
   type = "userPrompt" as const;
   playerId: number;
-  prompt: string;
+  prompt?: string;
   actionButtons?: ActionButtons;
   content?: UserPromptEffectArgs["content"];
   validationAction?: number;

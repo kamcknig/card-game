@@ -23,18 +23,19 @@ export const userPromptModal = (args: UserPromptEffectArgs): Promise<unknown> =>
         });
         const background = new Graphics();
 
-        const prompt = new Text({
-            text: args.prompt,
-            style: {
-                fontSize: 36,
-                fill: 'white',
-                wordWrap: true,
-                wordWrapWidth: 400,
-            }
-        });
-        prompt.x = Math.floor(-prompt.width * .5);
-        
-        modalContainer.addChild(prompt);
+        if (args.prompt) {
+            const prompt = new Text({
+                text: args.prompt,
+                style: {
+                    fontSize: 36,
+                    fill: 'white',
+                    wordWrap: true,
+                    wordWrapWidth: 400,
+                }
+            });
+            prompt.x = Math.floor(-prompt.width * .5);
+            modalContainer.addChild(prompt);
+        }
         
         const cleanup = () => {
             app.stage.removeChild(modalContainer);

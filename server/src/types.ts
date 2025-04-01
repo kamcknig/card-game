@@ -146,6 +146,8 @@ export class Reaction {
   public listeningFor: TriggerEventType;
 
   public once?: boolean = false;
+  
+  public multipleUse?: boolean = true;
 
   // todo working on moat right now which has no condition other than it be an attack.
   // in the future we might need to define this condition method elsewhere such as
@@ -166,6 +168,7 @@ export class Reaction {
       condition?: Reaction["condition"];
       generatorFn: ReactionEffectGeneratorFn | AsyncReactionEffectGeneratorFn;
       once?: boolean;
+      multipleUse?: boolean;
     },
   ) {
     this.id = arg.id;
@@ -174,6 +177,7 @@ export class Reaction {
     this.condition = arg.condition ?? (() => true);
     this.generatorFn = arg.generatorFn;
     this.once = arg.once;
+    this.multipleUse = arg.multipleUse;
   }
 
   public getSourceKey() {
