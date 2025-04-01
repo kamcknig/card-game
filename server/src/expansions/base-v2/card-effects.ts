@@ -152,7 +152,7 @@ const expansionModule: CardExpansionModule = {
       yield new MoveCardEffect({
         sourcePlayerId,
         sourceCardId,
-        playerId: sourcePlayerId,
+        toPlayerId: sourcePlayerId,
         cardId: selectedCardId,
         to: {
           location: 'playerDecks',
@@ -392,7 +392,7 @@ const expansionModule: CardExpansionModule = {
           });
 
           yield new MoveCardEffect({
-            playerId,
+            toPlayerId: playerId,
             sourceCardId,
             sourcePlayerId,
             cardId: cardIds[0],
@@ -568,7 +568,7 @@ const expansionModule: CardExpansionModule = {
           sourcePlayerId,
           sourceCardId,
           cardId: selectedId,
-          playerId: sourcePlayerId,
+          toPlayerId: sourcePlayerId,
           to: {
             location: 'playerDecks',
           },

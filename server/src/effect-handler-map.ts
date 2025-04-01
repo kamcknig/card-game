@@ -48,14 +48,11 @@ export const createEffectHandlerMap = (
       return;
     }
 
-    console.log(`moving card ${card} from ${oldStoreKey} to ${effect.to}`);
+    console.log(`moving card ${card} from ${oldStoreKey} to ${effect.to.location}`);
 
-    effect.to.location = castArray(effect.to.location);
+      effect.to.location = castArray(effect.to.location);
 
-    const newStore = findSourceByLocationSpec({
-      playerId: effect.playerId!,
-      spec: effect.to,
-    }, match);
+    const newStore = findSourceByLocationSpec({ spec: effect.to, playerId: effect.toPlayerId }, match);
 
     if (!newStore) {
       console.debug('could not find new store to move card to');
@@ -73,13 +70,13 @@ export const createEffectHandlerMap = (
     switch (oldLoc) {
       case 'playerHands':
         unregisterIds = cardLifecycleMap[card.cardKey]?.['onLeaveHand']?.(
-          effect.playerId!,
+          effect.toPlayerId!,
           effect.cardId,
         )?.unregisterTriggers;
         break;
       case 'playArea':
         unregisterIds = cardLifecycleMap[card.cardKey]?.['onLeavePlay']?.(
-          effect.playerId!,
+          effect.toPlayerId!,
           effect.cardId,
         )?.unregisterTriggers;
         break;
@@ -92,18 +89,18 @@ export const createEffectHandlerMap = (
     // when a card moves to a new location, check if we need to register any triggers for the card
     // todo: account for moves to non-player locations i.e., deck, trash, discard, etc.
     // todo: this can also remove triggers, not just add
-    if (effect.playerId) {
+    if (effect.toPlayerId) {
       let triggerTemplates: ReactionTemplate[] | void = undefined;
       switch (effect.to.location[0]) {
         case 'playerHands':
           triggerTemplates = cardLifecycleMap[card.cardKey]?.['onEnterHand']?.(
-            effect.playerId,
+            effect.toPlayerId,
             effect.cardId,
           )?.registerTriggers;
           break;
         case 'playArea':
           triggerTemplates = cardLifecycleMap[card.cardKey]?.['onEnterPlay']?.(
-            effect.playerId,
+            effect.toPlayerId,
             effect.cardId,
           )?.registerTriggers;
       }
@@ -119,28 +116,28 @@ export const createEffectHandlerMap = (
     if (
       ['playerHands', 'playerDecks', 'playerDiscards'].includes(oldStoreKey)
     ) {
-      if (effect.playerId) {
+      if (effect.toPlayerId) {
         switch (oldStoreKey) {
           case 'playerHands':
             acc.playerHands = {
               ...acc.playerHands,
-              [effect.playerId]: oldStore,
+              [effect.toPlayerId]: oldStore,
             };
-            interimUpdate.playerHands = { [effect.playerId]: oldStore };
+            interimUpdate.playerHands = { [effect.toPlayerId]: oldStore };
             break;
           case 'playerDiscards':
             acc.playerDiscards = {
               ...acc.playerDiscards,
-              [effect.playerId]: oldStore,
+              [effect.toPlayerId]: oldStore,
             };
-            interimUpdate.playerDiscards = { [effect.playerId]: oldStore };
+            interimUpdate.playerDiscards = { [effect.toPlayerId]: oldStore };
             break;
           case 'playerDecks':
             acc.playerDecks = {
               ...acc.playerDecks,
-              [effect.playerId]: oldStore,
+              [effect.toPlayerId]: oldStore,
             };
-            interimUpdate.playerDecks = { [effect.playerId]: oldStore };
+            interimUpdate.playerDecks = { [effect.toPlayerId]: oldStore };
             break;
         }
       }
@@ -155,28 +152,28 @@ export const createEffectHandlerMap = (
         ['playerHands', 'playerDecks', 'playerDiscards'].includes(l)
       )
     ) {
-      if (effect.playerId) {
+      if (effect.toPlayerId) {
         switch (effect.to.location[0]) {
           case 'playerHands':
             acc.playerHands = {
               ...acc.playerHands,
-              [effect.playerId]: newStore,
+              [effect.toPlayerId]: newStore,
             };
-            interimUpdate.playerHands = { [effect.playerId]: newStore };
+            interimUpdate.playerHands = { [effect.toPlayerId]: newStore };
             break;
           case 'playerDiscards':
             acc.playerDiscards = {
               ...acc.playerDiscards,
-              [effect.playerId]: newStore,
+              [effect.toPlayerId]: newStore,
             };
-            interimUpdate.playerDiscards = { [effect.playerId]: newStore };
+            interimUpdate.playerDiscards = { [effect.toPlayerId]: newStore };
             break;
           case 'playerDecks':
             acc.playerDecks = {
               ...acc.playerDecks,
-              [effect.playerId]: newStore,
+              [effect.toPlayerId]: newStore,
             };
-            interimUpdate.playerDecks = { [effect.playerId]: newStore };
+            interimUpdate.playerDecks = { [effect.toPlayerId]: newStore };
             break;
         }
       }
@@ -241,14 +238,14 @@ export const createEffectHandlerMap = (
           sourceCardId: effect.sourceCardId,
           sourcePlayerId: effect.sourcePlayerId,
           cardId: effect.cardId,
-          playerId: effect.playerId,
+          toPlayerId: effect.playerId,
           to: { location: 'playerDiscards' },
         }),
         match,
         acc,
       );
     },
-    async drawCard(effect, match, acc) {
+    drawCard(effect, match, acc) {
       let deck = match.playerDecks[effect.playerId];
       const discard = match.playerDiscards[effect.playerId];
 
@@ -264,7 +261,7 @@ export const createEffectHandlerMap = (
       // via reactions and triggers then their reactions wont' get registered properly
       if (deck.length === 0) {
         console.debug(`not enough cards in deck, shuffling`);
-        await shuffleDeck(effect.playerId, match, acc);
+        shuffleDeck(effect.playerId, match, acc);
         deck = match.playerDecks[effect.playerId];
       }
 
@@ -282,12 +279,12 @@ export const createEffectHandlerMap = (
         cardId: drawnCardId,
       }));
 
-      await moveCard(
+      moveCard(
         new MoveCardEffect({
           sourceCardId: effect.sourceCardId,
           sourcePlayerId: effect.sourcePlayerId,
           cardId: drawnCardId,
-          playerId: effect.playerId,
+          toPlayerId: effect.playerId,
           to: { location: 'playerHands' },
         }),
         match,
@@ -331,7 +328,7 @@ export const createEffectHandlerMap = (
           to: effect.to,
           sourcePlayerId: effect.sourcePlayerId,
           sourceCardId: effect.sourceCardId,
-          playerId: effect.playerId,
+          toPlayerId: effect.playerId,
           cardId: effect.cardId,
         }),
         match,
@@ -363,7 +360,7 @@ export const createEffectHandlerMap = (
       moveCard(
         new MoveCardEffect({
           cardId,
-          playerId,
+          toPlayerId: playerId,
           sourcePlayerId,
           sourceCardId,
           to: { location: 'playArea' },
@@ -591,7 +588,7 @@ export const createEffectHandlerMap = (
           to: { location: 'trash' },
           sourcePlayerId: effect.sourcePlayerId,
           sourceCardId: effect.sourceCardId,
-          playerId: effect.playerId,
+          toPlayerId: effect.playerId,
           cardId: effect.cardId,
         }),
         match,

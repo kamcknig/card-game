@@ -5,18 +5,18 @@ export class MoveCardEffect extends EffectBase {
   type = "moveCard" as const;
   cardId: number;
   to: LocationSpec;
-  playerId: number | undefined;
+  toPlayerId: number | undefined;
 
   constructor(
-    { playerId, cardId, to, ...arg }: {
+    { toPlayerId, cardId, to, ...arg }: {
       cardId: number;
       to: LocationSpec;
-      playerId?: number;
+      toPlayerId?: number;
     } & EffectBaseArgs,
   ) {
     super(arg);
     this.cardId = cardId;
     this.to = to;
-    this.playerId = playerId;
+    this.toPlayerId = toPlayerId;
   }
 }

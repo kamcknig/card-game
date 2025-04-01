@@ -1,46 +1,42 @@
 import { LocationSpec, Match } from "shared/shared-types.ts";
 
-export function findSourceByLocationSpec(specOrArgs: {
-    playerId: number,
-    spec: LocationSpec
-}, match: Match): number[] | undefined;
-export function findSourceByLocationSpec(specOrArgs: LocationSpec, match: Match, playerId?: number): number[] | undefined;
-export function findSourceByLocationSpec(specOrArgs: {
-    playerId: number,
-    spec: LocationSpec
-} | LocationSpec, match: Match): number[] | undefined {
-    let spec: LocationSpec;
-    let playerId: number = NaN;
-    if ('playerId' in specOrArgs) {
-        spec = specOrArgs.spec;
-        playerId = specOrArgs.playerId;
-    } else {
-        spec = specOrArgs;
+export function findSourceByLocationSpec(
+  spec: { spec: LocationSpec; playerId?: number },
+  match: Match,
+): number[] | undefined {
+  if (spec.spec.location.length > 1) {
+    throw new Error("findSourceByLocationSpec can only accept one location");
+  }
+
+  if (
+    ["playerDecks", "playerHands", "playerDiscards"].includes(
+      spec.spec.location[0],
+    )
+  ) {
+    if (isNaN(spec.playerId ?? NaN)) {
+      throw new Error(
+        "findSourceByLocationSpec with a player spec location needs a player ID",
+      );
     }
 
-    if (['playerDecks', 'playerHands', 'playerDiscards'].includes(spec.location[0])) {
-        if (isNaN(playerId)) {
-            throw new Error('findSourceByLocationSpec requires a playerID when a spec location is deck, hand, or discard')
-        }
-
-        switch (spec.location[0]) {
-            case 'playerDecks':
-                return match.playerDecks[playerId];
-            case 'playerHands':
-                return match.playerHands[playerId];
-            case 'playerDiscards':
-                return match.playerDiscards[playerId];
-        }
-    } else {
-        switch (spec.location[0]) {
-            case 'kingdom':
-                return match.kingdom;
-            case 'supply':
-                return match.supply;
-            case 'trash':
-                return match.trash;
-            case 'playArea':
-                return match.playArea;
-        }
+    switch (spec.spec.location[0]) {
+      case "playerDecks":
+        return match.playerDecks[spec.playerId!];
+      case "playerHands":
+        return match.playerHands[spec.playerId!];
+      case "playerDiscards":
+        return match.playerDiscards[spec.playerId!];
     }
+  } else {
+    switch (spec.spec.location[0]) {
+      case "kingdom":
+        return match.kingdom;
+      case "supply":
+        return match.supply;
+      case "trash":
+        return match.trash;
+      case "playArea":
+        return match.playArea;
+    }
+  }
 }

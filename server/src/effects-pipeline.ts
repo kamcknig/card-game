@@ -4,7 +4,6 @@ import {
   AppSocket,
   EffectGenerator,
   EffectHandlerMap,
-  EffectHandlerResult,
   
 } from "./types.ts";
 import { Match, MatchUpdate, PlayerID } from 'shared/shared-types.ts';

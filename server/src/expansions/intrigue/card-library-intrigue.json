@@ -95,6 +95,7 @@
     "cost": {
       "treasure": 4
     },
+    "victoryPoints": 1,
     "cardName": "Mill"
   },
   "mining-village": {

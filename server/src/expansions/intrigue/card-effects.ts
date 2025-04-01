@@ -13,7 +13,8 @@ import { MoveCardEffect } from '../../effects/move-card.ts';
 import { CardExpansionModule } from '../card-expansion-module.ts';
 import { getPlayerById } from "../../utils/get-player-by-id.ts";
 import { TrashCardEffect } from "../../effects/trash-card.ts";
-import { ActionButtons } from '../../../../shared/src/shared-types.ts';
+import { ActionButtons, CardId, PlayerID } from "shared/shared-types.ts";
+import { findOrderedEffectTargets } from '../../utils/find-ordered-effect-targets.ts';
 
 const expansionModule: CardExpansionModule = {
   registerCardLifeCycles: () => ({
@@ -305,7 +306,7 @@ const expansionModule: CardExpansionModule = {
       
       yield new MoveCardEffect({
         cardId,
-        playerId: triggerPlayerId,
+        toPlayerId: triggerPlayerId,
         sourcePlayerId: triggerPlayerId,
         to: {
           location: 'playerDecks',
@@ -465,6 +466,65 @@ const expansionModule: CardExpansionModule = {
       triggerCardId,
       reactionContext,
     ) {
+      yield new DrawCardEffect({playerId: triggerPlayerId, sourcePlayerId: triggerPlayerId});
+      yield new DrawCardEffect({playerId: triggerPlayerId, sourcePlayerId: triggerPlayerId});
+      
+      const targets =
+        findOrderedEffectTargets(triggerPlayerId, 'ALL', match)
+          .filter(playerId => match.playerHands[playerId].length > 0);
+      
+      const playerCardMap = new Map<PlayerID, CardId>();
+      for (const playerId of targets) {
+        const cardIds = (yield new SelectCardEffect({
+          prompt: 'Confirm pass',
+          sourcePlayerId: triggerPlayerId,
+          playerId,
+          count: 1,
+          restrict: {
+            from: {
+              location: 'playerHands',
+            }
+          }
+        })) as number[];
+        playerCardMap.set(playerId, cardIds[0]);
+        console.debug(`[MASQUERADE EFFECT] ${getPlayerById(match, playerId)} chose ${cardLibrary.getCard(cardIds[0])}`);
+      }
+      
+      for (let i = 0; i < targets.length; i++) {
+        yield new MoveCardEffect({
+          cardId: playerCardMap.get(targets[i])!,
+          toPlayerId: targets[(i + 1) % targets.length],
+          sourcePlayerId: triggerPlayerId,
+          to: {
+            location: 'playerHands'
+          },
+        });
+      }
+      
+      const cardIds = (yield new SelectCardEffect({
+        prompt: 'Cancel trash',
+        validPrompt: 'Confirm trash',
+        count: {
+          kind: 'upTo',
+          count: 1
+        },
+        playerId: triggerPlayerId,
+        sourcePlayerId: triggerPlayerId,
+        restrict: {
+          from: {
+            location: 'playerHands',
+          }
+        }
+      })) as number[];
+      console.debug(`[MASQUERADE EFFECT] player chose ${cardIds.length ? cardLibrary.getCard(cardIds[0]) : 'not to trash'}`);
+      
+      if (cardIds[0]) {
+        yield new TrashCardEffect({
+          cardId: cardIds[0],
+          sourcePlayerId: triggerPlayerId,
+          playerId: triggerPlayerId
+        });
+      }
     },
     'mill': function* (
       match,
@@ -473,6 +533,8 @@ const expansionModule: CardExpansionModule = {
       triggerCardId,
       reactionContext,
     ) {
+      yield new DrawCardEffect({playerId: triggerPlayerId, sourcePlayerId: triggerPlayerId});
+      yield new GainActionEffect({count: 1, sourcePlayerId: triggerPlayerId});
     },
     'mining-village': function* (
       match,

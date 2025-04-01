@@ -1,4 +1,4 @@
-import {CardLocation, Match} from "shared/shared-types.ts";
+import { CardLocation, Match } from 'shared/shared-types.ts';
 import { isUndefined } from 'es-toolkit';
 import { CardLibrary } from '../match-controller.ts';
 

@@ -267,10 +267,10 @@ export class Game {
 
     void this._match.initialize({
       ...this._matchConfiguration,
-      players: this.players.map((player) => ({
-        ...player,
-        ready: false,
-      })),
+      players: this.players.map((player) => {
+        player.ready = false;
+        return player;
+      }),
     });
   };
 }

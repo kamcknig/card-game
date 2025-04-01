@@ -51,8 +51,8 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
         let msg: string;
         switch (logEntry.type) {
             case 'draw': {
-                const playerName = $players.get()[logEntry.playerSourceId].name;
-                const cardName = $cardsById.get()[logEntry.cardId].cardName;
+                const playerName = $players.get()[logEntry.playerSourceId]?.name;
+                const cardName = $cardsById.get()[logEntry.cardId]?.cardName;
                 if ($selfPlayerId.get() === logEntry.playerSourceId) {
                     msg = `You drew a ${cardName}`;
                 } else {
@@ -61,8 +61,8 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
                 break;
             }
             case 'discard': {
-                const playerName = $players.get()[logEntry.playerSourceId].name;
-                const cardName = $cardsById.get()[logEntry.cardId].cardName;
+                const playerName = $players.get()[logEntry.playerSourceId]?.name;
+                const cardName = $cardsById.get()[logEntry.cardId]?.cardName;
                 if ($selfPlayerId.get() === logEntry.playerSourceId) {
                     msg = `You discarded a ${cardName}`;
                 } else {
@@ -71,7 +71,7 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
                 break;
             }
             case 'gainBuy': {
-                const playerName = $players.get()[logEntry.playerSourceId].name;
+                const playerName = $players.get()[logEntry.playerSourceId]?.name;
                 if ($selfPlayerId.get() === logEntry.playerSourceId) {
                     msg = `You gained ${logEntry.count} buy/s`;
                 } else {
@@ -80,7 +80,7 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
                 break;
             }
             case 'gainTreasure': {
-                const playerName = $players.get()[logEntry.playerSourceId].name;
+                const playerName = $players.get()[logEntry.playerSourceId]?.name;
                 if ($selfPlayerId.get() === logEntry.playerSourceId) {
                     msg = `You gained ${logEntry.count} treasure`;
                 } else {
@@ -89,7 +89,7 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
                 break;
             }
             case 'gainAction': {
-                const playerName = $players.get()[logEntry.playerSourceId].name;
+                const playerName = $players.get()[logEntry.playerSourceId]?.name;
                 if ($selfPlayerId.get() === logEntry.playerSourceId) {
                     msg = `You gained ${logEntry.count} action/s`;
                 } else {
@@ -98,8 +98,8 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
                 break;
             }
             case 'gainCard': {
-                const playerName = $players.get()[logEntry.playerSourceId].name;
-                const cardName = $cardsById.get()[logEntry.cardId].cardName;
+                const playerName = $players.get()[logEntry.playerSourceId]?.name;
+                const cardName = $cardsById.get()[logEntry.cardId]?.cardName;
                 if ($selfPlayerId.get() === logEntry.playerSourceId) {
                     msg = `You gained a ${cardName}`;
                 } else {
@@ -108,7 +108,7 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
                 break;
             }
             case 'playCard': {
-                const playerName = $players.get()[logEntry.playerSourceId].name;
+                const playerName = $players.get()[logEntry.playerSourceId]?.name;
                 const cardName = $cardsById.get()[logEntry.cardId].cardName;
                 if ($selfPlayerId.get() === logEntry.playerSourceId) {
                     msg = `You played a ${cardName}`;
@@ -118,8 +118,8 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
                 break;
             }
             case 'revealCard': {
-                const playerName = $players.get()[logEntry.playerSourceId].name;
-                const cardName = $cardsById.get()[logEntry.cardId].cardName;
+                const playerName = $players.get()[logEntry.playerSourceId]?.name;
+                const cardName = $cardsById.get()[logEntry.cardId]?.cardName;
                 if ($selfPlayerId.get() === logEntry.playerSourceId) {
                     msg = `You revealed a ${cardName}`;
                 } else {
@@ -128,8 +128,8 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
                 break;
             }
             case 'trashCard': {
-                const playerName = $players.get()[logEntry.playerSourceId].name;
-                const cardName = $cardsById.get()[logEntry.cardId].cardName;
+                const playerName = $players.get()[logEntry.playerSourceId]?.name;
+                const cardName = $cardsById.get()[logEntry.cardId]?.cardName;
                 if ($selfPlayerId.get() === logEntry.playerSourceId) {
                     msg = `You trashed a ${cardName}`;
                 } else {
