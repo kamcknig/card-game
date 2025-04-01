@@ -343,12 +343,47 @@ const expansionModule: CardExpansionModule = {
       yield new GainTreasureEffect({count: 2, sourcePlayerId: triggerPlayerId});
     },
     'ironworks': function* (
-      match,
+      _match,
       cardLibrary,
       triggerPlayerId,
-      triggerCardId,
-      reactionContext,
+      _triggerCardId,
+      _reactionContext,
     ) {
+      const cardIds = (yield new SelectCardEffect({
+        prompt: 'Choose card',
+        count: 1,
+        restrict: {
+          cost: 4,
+          from: {
+            location: ['supply', 'kingdom'],
+          }
+        },
+        playerId: triggerPlayerId,
+        sourcePlayerId: triggerPlayerId,
+      })) as number[];
+      
+      yield new GainCardEffect({
+        cardId: cardIds[0],
+        playerId: triggerPlayerId,
+        to: {
+          location: 'playerDiscards'
+        },
+        sourcePlayerId: triggerPlayerId,
+      });
+      
+      const card = cardLibrary.getCard(cardIds[0]);
+      
+      if (card.type.includes('ACTION')) {
+        yield new GainActionEffect({count: 1, sourcePlayerId: triggerPlayerId});
+      }
+      
+      if (card.type.includes('TREASURE')) {
+        yield new GainTreasureEffect({count: 1, sourcePlayerId: triggerPlayerId});
+      }
+      
+      if (card.type.includes('VICTORY')) {
+        yield new DrawCardEffect({sourcePlayerId: triggerPlayerId, playerId: triggerPlayerId});
+      }
     },
     'lurker': function* (
       match,
