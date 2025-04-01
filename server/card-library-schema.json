@@ -110,6 +110,19 @@
         "then": {
           "required": ["targetScheme"]
         }
+      },
+      {
+        "if": {
+          "properties": {
+            "type": {
+              "contains": {"const": "VICTORY"}
+            }
+          },
+          "required": ["type"]
+        },
+        "then": {
+          "required": ["victoryPoints"]
+        }
       }
     ]
   }

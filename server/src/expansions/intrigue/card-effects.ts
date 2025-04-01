@@ -326,20 +326,21 @@ const expansionModule: CardExpansionModule = {
       }
     },
     'duke': function* (
-      match,
-      cardLibrary,
-      triggerPlayerId,
-      triggerCardId,
-      reactionContext,
+      _match,
+      _cardLibrary,
+      _triggerPlayerId,
+      _triggerCardId,
+      _reactionContext,
     ) {
     },
     'farm': function* (
-      match,
-      cardLibrary,
+      _match,
+      _cardLibrary,
       triggerPlayerId,
-      triggerCardId,
-      reactionContext,
+      _triggerCardId,
+      _reactionContext,
     ) {
+      yield new GainTreasureEffect({count: 2, sourcePlayerId: triggerPlayerId});
     },
     'ironworks': function* (
       match,
