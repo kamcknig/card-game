@@ -1,4 +1,3 @@
-import { AsyncEffectGeneratorFn, EffectGeneratorFn, LifecycleCallbackMap, } from '../../types.ts';
 import { findOrderedEffectTargets } from '../../utils/find-ordered-effect-targets.ts';
 import { isUndefined } from 'es-toolkit';
 import { Match } from 'shared/shared-types.ts';
@@ -17,9 +16,10 @@ import { SelectCardEffect } from '../../effects/select-card.ts';
 import { ShuffleDeckEffect } from '../../effects/shuffle-card.ts';
 import { TrashCardEffect } from '../../effects/trash-card.ts';
 import { UserPromptEffect } from '../../effects/user-prompt.ts';
+import { CardExpansionModule } from '../card-expansion-module.ts';
 
-export default {
-  registerCardLifeCycles: (): Record<string, LifecycleCallbackMap> => {
+const expansionModule: CardExpansionModule = {
+  registerCardLifeCycles: () => {
     return {
       'moat': {
         onEnterHand: (playerId, cardId) => {
@@ -82,10 +82,7 @@ export default {
       return Math.floor(cards.length / 10);
     },
   }),
-  registerEffects: (): Record<
-    string,
-    EffectGeneratorFn | AsyncEffectGeneratorFn
-  > => ({
+  registerEffects: () => ({
     'adventurer': function* (
       matchState,
       cardLibrary,
@@ -1140,3 +1137,5 @@ export default {
     },
   }),
 };
+
+export default expansionModule;

@@ -1,8 +1,3 @@
-import {
-  AsyncEffectGeneratorFn,
-  EffectGeneratorFn,
-  LifecycleCallbackMap,
-} from '../../types.ts';
 import { findOrderedEffectTargets } from '../../utils/find-ordered-effect-targets.ts';
 import { isUndefined } from 'lodash-es';
 import { Match } from 'shared/shared-types.ts';
@@ -20,9 +15,11 @@ import { SelectCardEffect } from '../../effects/select-card.ts';
 import { ShuffleDeckEffect } from '../../effects/shuffle-card.ts';
 import { TrashCardEffect } from '../../effects/trash-card.ts';
 import { UserPromptEffect } from '../../effects/user-prompt.ts';
+import { CardExpansionModule } from '../card-expansion-module.ts';
+import { CardLibrary } from '../../match-controller.ts';
 
-export default {
-  registerCardLifeCycles: (): Record<string, LifecycleCallbackMap> => ({
+const expansionModule: CardExpansionModule = {
+  registerCardLifeCycles: () => ({
     'merchant': {
       onEnterPlay: (playerId, cardId) => {
         const id = `merchant-${cardId}`;
@@ -98,7 +95,7 @@ export default {
     },
   }),
   registerScoringFunctions: () => ({
-    'gardens': function (match: Match, cardOwnerId: number) {
+    'gardens': function (match: Match, _cardLibrary: CardLibrary, cardOwnerId: number) {
       const cards = match
         .playerHands[cardOwnerId]
         .concat(match.playerDecks[cardOwnerId])
@@ -108,10 +105,7 @@ export default {
       return Math.floor(cards.length / 10);
     },
   }),
-  registerEffects: (): Record<
-    string,
-    EffectGeneratorFn | AsyncEffectGeneratorFn
-  > => ({
+  registerEffects: () => ({
     'artisan': function* (_match, cardLibrary, sourcePlayerId, sourceCardId) {
       console.debug(`choosing card to gain...`);
       let results = (yield new SelectCardEffect({
@@ -1367,3 +1361,6 @@ export default {
     },
   }),
 };
+
+export default expansionModule;
+

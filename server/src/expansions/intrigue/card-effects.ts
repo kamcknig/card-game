@@ -10,8 +10,60 @@ import { GainActionEffect } from '../../effects/gain-action.ts';
 import { RevealCardEffect } from '../../effects/reveal-card.ts';
 import { SelectCardEffect } from '../../effects/select-card.ts';
 import { MoveCardEffect } from '../../effects/move-card.ts';
+import { CardExpansionModule } from '../card-expansion-module.ts';
 
-export default {
+const expansionModule: CardExpansionModule = {
+  registerCardLifeCycles: () => ({
+    'diplomat': {
+      onEnterHand: (playerId, cardId) => ({
+        registerTriggers: [{
+          id: `diplomat-${cardId}`,
+          playerId,
+          listeningFor: 'cardPlayed',
+          condition: (match, _cardLibrary, _trigger) =>
+            match.playerHands[playerId].length >= 5,
+          generatorFn: function* (_match, _cardLibrary, trigger, _reaction) {
+            const result = (yield new UserPromptEffect({
+              playerId,
+              sourcePlayerId: trigger.playerId,
+              prompt: 'Reveal Diplomat?',
+              actionButtons: [
+                {action: 2, label: 'CANCEL'},
+                {action: 1, label: 'REVEAL'}
+              ]
+            })) as { action: number };
+            
+            if (result.action !== 1) {
+              console.debug(`[DIPLOMAT REACTION] player chooses not to reveal`);
+              return;
+            }
+            
+            yield new DrawCardEffect({playerId, sourceCardId: trigger.cardId, sourcePlayerId: trigger.playerId});
+            yield new DrawCardEffect({playerId, sourceCardId: trigger.cardId, sourcePlayerId: trigger.playerId});
+            const cardIds = (yield new SelectCardEffect({
+              prompt: 'Confirm discard',
+              playerId,
+              sourceCardId: trigger.playerId,
+              restrict: {
+                from: {
+                  location: 'playerHands'
+                }
+              },
+              count: 3,
+              sourcePlayerId: trigger.playerId,
+            })) as number[];
+            
+            for (const cardId of cardIds) {
+              yield new DiscardCardEffect({playerId, sourcePlayerId: trigger.playerId, cardId});
+            }
+          }
+        }]
+      }),
+      onLeaveHand: (_playerId, cardId) => ({
+        unregisterTriggers: [`diplomat-${cardId}`],
+      })
+    }
+  }),
   registerEffects: (): Record<
     string,
     EffectGeneratorFn | AsyncEffectGeneratorFn
@@ -252,6 +304,14 @@ export default {
       triggerCardId,
       reactionContext,
     ) {
+      yield new DrawCardEffect({playerId: triggerPlayerId, sourcePlayerId: triggerPlayerId});
+      
+      if (match.playerHands[triggerPlayerId].length <= 5) {
+        yield new GainActionEffect({count: 2, sourcePlayerId: triggerPlayerId});
+      } else {
+        console.debug(`[DIPLOMAT EFFECT] player has more than 5 cards in hand`);
+      }
+      
     },
     'duke': function* (
       match,
@@ -415,3 +475,5 @@ export default {
     },
   }),
 };
+
+export default expansionModule;

@@ -40,8 +40,8 @@ export class ReactionManager {
       
       return !(t.condition !== undefined && !t.condition(match, this._cardLibrary, trigger));
     });
-
-    return out.filter((item, index, self) => index === self.findIndex(t => t.getSourceKey() === item.getSourceKey()))
+    
+    return out.filter((item, index, self) => index === self.findIndex(t => t.id === item.id))
   }
 
   registerReactionTemplate(reactionTemplate: ReactionTemplate) {

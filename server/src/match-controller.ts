@@ -157,7 +157,7 @@ export class MatchController {
     const kingdomCards: Card[] = [];
 
     // todo: remove testing code
-    const keepers: string[] = ['courtyard'];
+    const keepers: string[] = ['diplomat', 'bandit'];
 
     console.debug(
       `[MATCH] choosing ${MatchBaseConfiguration.numberOfKingdomPiles} kingdom cards`,
@@ -225,14 +225,14 @@ export class MatchController {
       // todo remove testing code
       if (_idx === 0) {
         blah = {
-          courtyard: 5,
+          diplomat: 5,
           silver: 5
         };
       }
 
       if (_idx === 1) {
         blah = {
-          gold: 5,
+          bandit: 5,
           silver: 5
         };
       }
@@ -348,7 +348,7 @@ export class MatchController {
 
     await this._effectsController?.suspendedCallbackRunner(async () => {
       for (const player of match.players!) {
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 7; i++) {
           await this._effectsController?.runGameActionEffects(
             "drawCard",
             match as Match,
@@ -619,7 +619,7 @@ export class MatchController {
                 );
               }
 
-              for (let i = 0; i < 5; i++) {
+              for (let i = 0; i < 7; i++) {
                 await this._effectsController!.runGameActionEffects(
                   "drawCard",
                   this.$matchState.get(),
