@@ -14,7 +14,6 @@ import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { TrashCardEffect } from '../../effects/trash-card.ts';
 import { ActionButtons, Card, CardId, PlayerID } from 'shared/shared-types.ts';
 import { findOrderedEffectTargets } from '../../utils/find-ordered-effect-targets.ts';
-import { ShuffleDeckEffect } from '../../effects/shuffle-card.ts';
 
 const expansionModule: CardExpansionModule = {
   registerCardLifeCycles: () => ({
@@ -235,13 +234,13 @@ const expansionModule: CardExpansionModule = {
         
         switch (resultAction) {
           case 1:
-            yield new GainActionEffect({count: 1, sourcePlayerId: triggerPlayerId});
+            yield new GainActionEffect({count: 1, sourcePlayerId: triggerPlayerId, triggerImmediateUpdate: true});
             break;
           case 2:
-            yield new GainBuyEffect({count: 1, sourcePlayerId: triggerPlayerId});
+            yield new GainBuyEffect({count: 1, sourcePlayerId: triggerPlayerId, triggerImmediateUpdate: true});
             break;
           case 3:
-            yield new GainTreasureEffect({count: 3, sourcePlayerId: triggerPlayerId});
+            yield new GainTreasureEffect({count: 3, sourcePlayerId: triggerPlayerId, triggerImmediateUpdate: true});
             break;
           case 4:
             for (let i = match.supply.length - 1; i >= 0; i--) {
@@ -254,7 +253,7 @@ const expansionModule: CardExpansionModule = {
                     location: 'playerDiscards'
                   },
                   sourcePlayerId: triggerPlayerId
-                })
+                });
                 break;
               }
             }
@@ -720,6 +719,43 @@ const expansionModule: CardExpansionModule = {
       triggerCardId,
       reactionContext,
     }) {
+      const actions = [
+        { action: 1, label: '+1 Card' },
+        { action: 2, label: '+1 Action' },
+        { action: 3, label: '+1 Buy' },
+        { action: 4, label: '+1 Treasure' },
+      ]
+      
+      for (let i = 0; i < 2; i++) {
+        const result = (yield new UserPromptEffect({
+          playerId: triggerPlayerId,
+          sourcePlayerId: triggerPlayerId,
+          sourceCardId: triggerCardId,
+          actionButtons: actions,
+          prompt: 'Choose one',
+        })) as { action: number, cardIds: number[] };
+        
+        switch (result.action) {
+          case 1:
+            yield new DrawCardEffect({
+              playerId: triggerPlayerId,
+              sourcePlayerId: triggerPlayerId,
+              sourceCardId: triggerCardId
+            });
+            break;
+          case 2:
+            yield new GainActionEffect({ count: 1, sourcePlayerId: triggerPlayerId, triggerImmediateUpdate: true });
+            break;
+          case 3:
+            yield new GainBuyEffect({count: 1, sourcePlayerId: triggerPlayerId, triggerImmediateUpdate: true});
+            break;
+          case 4:
+            yield new GainTreasureEffect({ count: 1, sourcePlayerId: triggerPlayerId, triggerImmediateUpdate: true });
+            break;
+        }
+        
+        actions.splice(actions.findIndex(a => a.action === result.action), 1);
+      }
     },
     'replace': function* ({
       match,
