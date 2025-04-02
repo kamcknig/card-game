@@ -963,6 +963,28 @@ const expansionModule: CardExpansionModule = {
       triggerCardId,
       reactionContext,
     }) {
+      yield new GainActionEffect({ count: 2, sourcePlayerId: triggerPlayerId });
+      
+      const hand = match.playerHands[triggerPlayerId];
+      
+      for (const cardId of hand) {
+        yield new RevealCardEffect({
+          sourceCardId: triggerCardId,
+          sourcePlayerId: triggerPlayerId,
+          cardId,
+          playerId: triggerPlayerId,
+        });
+      }
+      
+      if (!hand.some(cardId => cardLibrary.getCard(cardId).type.includes('ACTION'))) {
+        for (let i = 0; i < 2; i++) {
+          yield new DrawCardEffect({
+            playerId: triggerPlayerId,
+            sourcePlayerId: triggerPlayerId,
+            sourceCardId: triggerCardId
+          });
+        }
+      }
     },
     "steward": function* ({
       match,

@@ -150,7 +150,7 @@ export class MatchController {
     const kingdomCards: Card[] = [];
 
     // todo: remove testing code
-    const keepers: string[] = ['militia', 'moat', 'harbinger', 'sentry', 'pawn', 'replace'];
+    const keepers: string[] = ['shanty-town'];
 
     console.debug(
       `[MATCH] choosing ${MatchBaseConfiguration.numberOfKingdomPiles} kingdom cards`,
@@ -218,14 +218,11 @@ export class MatchController {
       // todo remove testing code
       if (_idx === 0) {
         blah = {
-          replace: 1,
-          copper: 1,
-          province: 1,
-          estate: 1,
-          duchy: 1,
-          militia: 1,
-          moat: 1,
-          laboratory: 1
+          estate: 3,
+          copper: 3,
+          duchy: 3,
+          militia: 3,
+          'shanty-town': 1,
         };
       } else {
         blah = {
