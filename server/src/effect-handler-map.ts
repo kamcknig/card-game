@@ -1,7 +1,7 @@
 import {
   AppSocket,
   EffectHandlerMap,
-  IEffectRunner, ReactionTemplate,
+  IEffectRunner, Reaction, ReactionTemplate,
   ReactionTrigger,
 } from './types.ts';
 import { fisherYatesShuffle } from './utils/fisher-yates-shuffler.ts';
@@ -18,6 +18,9 @@ import { CardLibrary } from "./match-controller.ts";
 import { MoveCardEffect } from './effects/move-card.ts';
 import { cardDataOverrides, getCardOverrides } from './card-data-overrides.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';
+import { getOrderStartingFrom } from './utils/get-order-starting-from.ts';
+import { UserPromptEffect } from './effects/user-prompt.ts';
+import { EffectBase } from './effects/effect-base.ts';
 
 /**
  * Returns an object whose properties are functions. The names are a union of Effect types
@@ -187,6 +190,37 @@ export const createEffectHandlerMap = (
     // TODO: can this go in the effects pipeline? Maybe checking if the effect was a move effect and if
     // so send the interim update there? Having it here special-cases it and that's rarely good
     socketMap.forEach(s => s.emit('matchUpdated', interimUpdate));
+  }
+  
+  function userPrompt(effect: UserPromptEffect, match: Match) {
+    console.log('effectHandler userPrompt', effect);
+    
+    return new Promise((resolve, reject) => {
+      try {
+        const socket = socketMap.get(effect.playerId);
+        const currentPlayer = match.players[match.currentPlayerTurnIndex];
+        
+        const socketListener = (result: unknown) => {
+          console.debug(`player responded with ${result}`);
+          socket?.off('userPromptResponse', socketListener);
+          resolve(result);
+          if (currentPlayer.id !== effect.playerId) {
+            socketMap.forEach(s => s !== socket && s.emit('doneWaitingForPlayer', effect.playerId));
+          }
+        };
+        
+        socket?.on('userPromptResponse', socketListener);
+        socket?.emit('userPrompt', { ...effect });
+        
+        if (currentPlayer.id !== effect.playerId) {
+          socketMap.forEach(s => s !== socket && s.emit('waitingForPlayer', effect.playerId));
+        }
+      } catch (e) {
+        reject(
+          new Error(`could not find player socket in game state... ${e}`),
+        );
+      }
+    });
   }
 
   function shuffleDeck(playerId: number, match: Match, acc: MatchUpdate) {
@@ -378,88 +412,126 @@ export const createEffectHandlerMap = (
         cardId,
       };
 
-      console.debug(`finding reactions for 'cardPlayed' trigger`);
-
-      let reactions = reactionManager.getReactions(
-        match,
-        trigger,
-      );
-
-      const card = cardLibrary.getCard(cardId);
-
-      if (!isUndefined(card.targetScheme)) {
-        const targetScheme = card.targetScheme;
-        console.debug(`card's target scheme ${targetScheme}`);
-        const potentialTargets = findOrderedEffectTargets(
-          sourcePlayerId,
-          targetScheme,
-          match,
-        );
-        console.debug(
-          `potential card targets ${
-            potentialTargets.map((id) => match.players.find(player => player.id === id))
-          }`,
-        );
-        reactions = reactions.filter((r) =>
-          potentialTargets.includes(r.playerId)
-        );
-        console.debug(`found ${reactions.length} reactions`);
-        reactions.sort((a, b) =>
-          potentialTargets.findIndex((p) => p === a.playerId) -
-          potentialTargets.findIndex((p) => p === b.playerId)
-        );
-      } else {
-        console.debug(`card ${card} has no targetScheme`);
-      }
-
-      const reactionContext: any = {};
-      const usedSingleReactions = new Set<string>();
+      const targetOrder = getOrderStartingFrom(match.players, match.currentPlayerTurnIndex).filter(player => player.id !== sourcePlayerId);
       
-      for (const reaction of reactions) {
-        console.log(`running reaction generator for ${reaction.id}`);
+      console.debug(`[PLAY CARD EFFECT HANDLER] player order for reaction targets ${targetOrder}`);
+      
+      const reactionContext: any = {};
+      
+      for (const targetPlayer of targetOrder) {
+        let reactions = reactionManager.getReactionsForPlayer(match, trigger, targetPlayer.id);
         
-        const cardKey = reaction.getSourceKey();
+        console.debug(`[PLAY CARD EFFECT HANDLER] found ${reactions.length} for ${targetPlayer}`);
         
-        if (!cardKey) throw new Error(`[PLAY CARD EFFECT] can't find card key on reaction`);
+        if (reactions.length === 0) continue;
         
-        const isMultiReveal = reaction.multipleUse ?? true;
+        const usedReactionMap = new Map<string, number>(); // key: cardKey, value: usage count
         
-        if (!isMultiReveal && usedSingleReactions.has(cardKey)) {
-          console.debug(`[PLAY CARD EFFECT HANDLER] skipping duplicate reveal of ${cardKey}`);
-          continue;
-        }
-        
-        usedSingleReactions.add(cardKey);
-        
-        // get the generator
-        const reactionGenerator = await reaction.generatorFn(
-          match,
-          cardLibrary,
-          trigger,
-          reaction,
-        );
-        
-        // run the generator
-        const reactionResults = await cardEffectRunner.runGenerator(
-          reactionGenerator,
-          match,
-          reaction.playerId,
-          acc,
-        );
-        
-        // if it only runs once, de-register it from happening again.
-        if (reaction.once) {
-          console.debug(`reaction registered as a 'once', removing reaction`);
-          reactionManager.unregisterTrigger(reaction.id);
-        }
-        
-        // add results associated with the player
-        // right now a reaction generator will only return 'immunity' (in the case of moat) or undefined.
-        // current other reaction examples are diplomat that give you effects, but don't give immunity.
-        // those are the only two types of reactions right now. so we only add the reaction to the context
-        // if it's an 'immunity' results.
-        if (!isUndefined(reactionResults)) {
-          reactionContext[reaction.playerId] = reactionResults;
+        while (true) {
+          const actionButtons: { action: number; label: string }[] = [];
+          const actionMap = new Map<number, Reaction>();
+          const grouped = new Map<string, { count: number; reaction: Reaction }>();
+          
+          console.debug(`[PLAY CARD EFFECT HANDLER] grouping reactions by card key`);
+          
+          // Group available reactions by cardKey
+          for (const reaction of reactions) {
+            const key = reaction.getSourceKey();
+            if (!grouped.has(key)) {
+              grouped.set(key, { count: 1, reaction });
+            } else {
+              grouped.get(key)!.count++;
+            }
+          }
+          
+          console.debug(`[PLAY CARD EFFECT HANDLER] reactions grouped by card key ${grouped}`);
+          
+          let actionId = 1;
+          
+          for (const [cardKey, { count, reaction }] of grouped.entries()) {
+            console.debug(`[PLAY CARD EFFECT HANDLER] build action buttons and mapping for ${cardKey}`);
+            
+            const usedCount = usedReactionMap.get(cardKey) ?? 0;
+            console.debug(`[PLAY CARD EFFECT HANDLER] ${usedCount} already used for ${cardKey}`);
+            
+            const multipleUse = reaction.multipleUse ?? true;
+            console.debug(`[PLAY CARD EFFECT HANDLER] ${cardKey} can be used multiple? ${multipleUse}`);
+            
+            const canUse = multipleUse
+              ? usedCount < count
+              : usedCount === 0;
+            
+            console.debug(`[PLAY CARD EFFECT HANDLER] ${cardKey} can be used? ${canUse}`);
+            
+            if (!canUse) continue;
+            
+            const remainingCount = count - usedCount;
+            console.debug(`[PLAY CARD EFFECT HANDLER] ${usedCount} remaining for ${cardKey}`);
+            
+            if (remainingCount <= 0) continue; // All copies used, skip
+            
+            const card = cardLibrary.getCard(reaction.getSourceId());
+            const label = `${card.cardName} (${remainingCount})`;
+            
+            const action = { action: actionId, label }
+            console.debug(`[PLAY CARD EFFECT HANDLER] adding action ${action.action} with label '${action.label}'`);
+            actionButtons.push(action);
+            actionMap.set(actionId, reaction); // Any one reaction from that group
+            actionId++;
+          }
+          
+          if (actionButtons.length === 0) break; // out of while loop
+          
+          const cancelAction = ++actionId;
+          
+          actionButtons.unshift({action: cancelAction, label: 'Cancel'});
+          
+          console.debug(`[PLAY CARD EFFECT HANDLER] adding cancel action ${cancelAction} with label 'Cancel'`);
+          
+          const result = (await userPrompt(
+            new UserPromptEffect({
+              playerId: targetPlayer.id,
+              sourcePlayerId,
+              actionButtons,
+              prompt: 'Choose reaction?',
+            }),
+            match,
+          )) as { action: number };
+          
+          if (result.action === cancelAction) {
+            break; // out of the while loop
+          }
+          
+          const selectedReaction = actionMap.get(result.action);
+          if (!selectedReaction) throw new Error('[PLAY CARD EFFECT HANDLER] could not find reaction for selected action');
+          
+          const cardKey = selectedReaction.getSourceKey();
+          usedReactionMap.set(cardKey, (usedReactionMap.get(cardKey) ?? 0) + 1);
+          
+          const reactionGenerator = await selectedReaction.generatorFn(
+            match,
+            cardLibrary,
+            trigger,
+            selectedReaction,
+          );
+          
+          const reactionResults = await cardEffectRunner.runGenerator(
+            reactionGenerator,
+            match,
+            selectedReaction.playerId,
+            acc,
+          );
+          
+          if (selectedReaction.once) {
+            console.debug(`reaction registered as a 'once', removing reaction`);
+            reactionManager.unregisterTrigger(selectedReaction.id);
+          }
+          
+          if (!isUndefined(reactionResults)) {
+            reactionContext[selectedReaction.playerId] = reactionResults;
+          }
+          
+          reactions = reactionManager.getReactions(match, trigger);
         }
       }
       
@@ -622,35 +694,8 @@ export const createEffectHandlerMap = (
         acc,
       );
     },
-    userPrompt(effect, match) {
-      console.log('effectHandler userPrompt', effect);
-
-      return new Promise((resolve, reject) => {
-        try {
-          const socket = socketMap.get(effect.playerId);
-          const currentPlayer = match.players[match.currentPlayerTurnIndex];
-          
-          const socketListener = (result: unknown) => {
-            console.debug(`player responded with ${result}`);
-            socket?.off('userPromptResponse', socketListener);
-            resolve(result);
-            if (currentPlayer.id !== effect.playerId) {
-              socketMap.forEach(s => s !== socket && s.emit('doneWaitingForPlayer', effect.playerId));
-            }
-          };
-          
-          socket?.on('userPromptResponse', socketListener);
-          socket?.emit('userPrompt', { ...effect });
-          
-          if (currentPlayer.id !== effect.playerId) {
-            socketMap.forEach(s => s !== socket && s.emit('waitingForPlayer', effect.playerId));
-          }
-        } catch (e) {
-          reject(
-            new Error(`could not find player socket in game state... ${e}`),
-          );
-        }
-      });
+    async userPrompt(effect, match) {
+      return await userPrompt(effect, match);
     },
     modifyCost(effect, match, _acc) {
       const targets = findOrderedEffectTargets(match.currentPlayerTurnIndex, effect.appliesTo, match);

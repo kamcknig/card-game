@@ -185,8 +185,8 @@ export class Reaction {
     try {
       out = this.id.split("-")?.[0];
       return out;
-    } catch {
-      return undefined;
+    } catch (e) {
+      throw e
     }
   }
 
@@ -195,8 +195,8 @@ export class Reaction {
     try {
       out = toNumber(this.id.split("-")?.[1]);
       return out;
-    } catch {
-      return undefined;
+    } catch (e) {
+      throw e;
     }
   }
 }

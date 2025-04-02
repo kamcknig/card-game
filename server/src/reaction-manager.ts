@@ -30,7 +30,7 @@ export class ReactionManager {
   }
 
   getReactions(match: Match, trigger: ReactionTrigger) {
-    const out = this._triggers.filter((t) => {
+    return this._triggers.filter((t) => {
       if (t.listeningFor !== trigger.eventType) return false;
       
       console.log(`checking trigger condition for ${t.id} reaction`);
@@ -40,8 +40,10 @@ export class ReactionManager {
       
       return !(t.condition !== undefined && !t.condition(match, this._cardLibrary, trigger));
     });
-    
-    return out.filter((item, index, self) => index === self.findIndex(t => t.id === item.id))
+  }
+  
+  getReactionsForPlayer(match: Match, trigger: ReactionTrigger, playerId: number) {
+    return this.getReactions(match, trigger).filter((item) => item.playerId === playerId);
   }
 
   registerReactionTemplate(reactionTemplate: ReactionTemplate) {

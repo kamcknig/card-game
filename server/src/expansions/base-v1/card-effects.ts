@@ -34,27 +34,15 @@ const expansionModule: CardExpansionModule = {
                   .getCard(trigger.cardId).type.includes('ATTACK') && trigger.playerId !== playerId;
               },
               generatorFn: function* (_match, _cardLibrary, trigger, reaction) {
-                const results = (yield new UserPromptEffect({
-                  actionButtons: [{label: 'NO', action: 1}, {label: 'YES', action: 2}],
+                const sourceId = reaction.getSourceId();
+                yield new RevealCardEffect({
                   sourceCardId: trigger.cardId,
                   sourcePlayerId: trigger.playerId,
-                  prompt: 'Reveal moat?',
+                  cardId: sourceId,
                   playerId: reaction.playerId,
-                })) as { action: number };
+                });
                 
-                console.log('player response to reveal moat', results.action === 2);
-                
-                const sourceId = reaction.getSourceId();
-                if (results.action === 2 && sourceId) {
-                  yield new RevealCardEffect({
-                    sourceCardId: trigger.cardId,
-                    sourcePlayerId: trigger.playerId,
-                    cardId: sourceId,
-                    playerId: reaction.playerId,
-                  });
-                }
-                
-                return results.action === 1 ? 'immunity' : undefined;
+                return 'immunity';
               },
             }],
           };
