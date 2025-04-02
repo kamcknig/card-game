@@ -1088,11 +1088,32 @@ const expansionModule: CardExpansionModule = {
     },
     "trading-post": function* ({
       match,
-      cardLibrary,
       triggerPlayerId,
-      triggerCardId,
-      reactionContext,
+      triggerCardId
     }) {
+      const cardIds = (yield new SelectCardEffect({
+        prompt: 'Confirm trash',
+        playerId: triggerPlayerId,
+        sourcePlayerId: triggerPlayerId,
+        restrict: { from: { location: 'playerHands' } },
+        count: Math.min(2, match.playerDecks[triggerPlayerId].length),
+        sourceCardId: triggerCardId
+      })) as number[];
+      
+      for (const cardId of cardIds) {
+        yield new TrashCardEffect({
+          sourcePlayerId: triggerPlayerId,
+          playerId: triggerPlayerId,
+          cardId,
+          sourceCardId: triggerCardId!
+        });
+      }
+      
+      if (cardIds.length === 2) {
+        yield new GainTreasureEffect({ count: 2, sourcePlayerId: triggerPlayerId });
+      } else {
+        console.debug(`[TRADING POST EFFECT] player trashed ${cardIds.length}, so no treasure gained`);
+      }
     },
     "upgrade": function* ({
       match,
