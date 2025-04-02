@@ -12,8 +12,9 @@ import { MoveCardEffect } from '../../effects/move-card.ts';
 import { CardExpansionModule } from '../card-expansion-module.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { TrashCardEffect } from '../../effects/trash-card.ts';
-import { ActionButtons, CardId, PlayerID } from 'shared/shared-types.ts';
+import { ActionButtons, Card, CardId, PlayerID } from 'shared/shared-types.ts';
 import { findOrderedEffectTargets } from '../../utils/find-ordered-effect-targets.ts';
+import { ShuffleDeckEffect } from '../../effects/shuffle-card.ts';
 
 const expansionModule: CardExpansionModule = {
   registerCardLifeCycles: () => ({
@@ -402,7 +403,7 @@ const expansionModule: CardExpansionModule = {
           playerId: triggerPlayerId,
           sourcePlayerId: triggerPlayerId,
           content: {
-            cardSelection: {
+            cards: {
               selectCount: 1,
               cardIds: match.trash
             }
@@ -626,6 +627,91 @@ const expansionModule: CardExpansionModule = {
       triggerCardId,
       reactionContext,
     }) {
+      for (let i = 0; i < 3; i++) {
+        yield new DrawCardEffect({
+          playerId: triggerPlayerId,
+          sourcePlayerId: triggerPlayerId,
+          sourceCardId: triggerCardId
+        });
+      }
+      
+      const revealedCardIds: number[] = [];
+      
+      for (let i = 0; i < 4; i++) {
+        let cardIds = match.playerDecks[triggerPlayerId].slice(-1);
+        
+        if (cardIds.length === 0) {
+          yield new ShuffleDeckEffect({
+            playerId: triggerPlayerId,
+          });
+        }
+        
+        cardIds = match.playerDecks[triggerPlayerId].slice(-1);
+        
+        const cardId = cardIds[0];
+        
+        if (!cardId) {
+          console.debug(`[PATROL EFFECT] no card to reveal`);
+          return;
+        }
+        
+        revealedCardIds.push(cardId);
+        
+        yield new RevealCardEffect({
+          sourceCardId: triggerCardId,
+          sourcePlayerId: triggerPlayerId,
+          cardId,
+          playerId: triggerPlayerId,
+        });
+      }
+      
+      const [victoryCards, nonVictoryCards] =
+        revealedCardIds
+          .map(cardLibrary.getCard)
+          .reduce((prev, card) => {
+            if (card.type.includes('VICTORY') || card.cardKey === 'curse') {
+              prev[0].push(card);
+            } else {
+              prev[1].push(card);
+            }
+            return prev;
+          }, [[], []] as Card[][]);
+      
+      for (const card of victoryCards) {
+        yield new MoveCardEffect({
+          cardId: card.id,
+          toPlayerId: triggerPlayerId,
+          sourcePlayerId: triggerPlayerId,
+          sourceCardId: triggerCardId,
+          to: {
+            location: 'playerHands',
+          }
+        });
+      }
+      
+      const result = (yield new UserPromptEffect({
+        playerId: triggerPlayerId,
+        sourcePlayerId: triggerPlayerId,
+        prompt: 'Choose order to put back on deck',
+        content: {
+          cards: {
+            action: 'rearrange',
+            cardIds: nonVictoryCards.map(card => card.id)
+          }
+        }
+      })) as { action: number, cardIds: number[] };
+      
+      for (const cardId of result.cardIds) {
+        yield new MoveCardEffect({
+          cardId,
+          toPlayerId: triggerPlayerId,
+          sourcePlayerId: triggerPlayerId,
+          sourceCardId: triggerCardId,
+          to: {
+            location: 'playerHands',
+          }
+        });
+      }
     },
     'pawn': function* ({
       match,

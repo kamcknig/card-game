@@ -255,7 +255,7 @@ const expansionModule: CardExpansionModule = {
             playerId: targetPlayerId,
             prompt: 'Choose a treasure to trash',
             content: {
-              cardSelection: {
+              cards: {
                 cardIds: possibleCardsToTrash,
                 selectCount: 1
               },
@@ -530,7 +530,7 @@ const expansionModule: CardExpansionModule = {
         actionButtons: [{label: 'CANCEL', action: 2}],
         validationAction: 1,
         content: {
-          cardSelection: {
+          cards: {
             cardIds: match.playerDiscards[triggerPlayerId],
             selectCount: 1
           },
@@ -1043,7 +1043,7 @@ const expansionModule: CardExpansionModule = {
         prompt: 'Choose a card/s to trash?',
         actionButtons: [{label: 'TRASH', action: 1}],
         content: {
-          cardSelection: {
+          cards: {
             cardIds: cardsToLookAtIds,
             selectCount: {
               kind: 'upTo',
@@ -1088,7 +1088,7 @@ const expansionModule: CardExpansionModule = {
         prompt: 'Choose card/s to discard?',
         actionButtons: [{label: 'DISCARD', action: 1}],
         content: {
-          cardSelection: {
+          cards: {
             cardIds: cardsToLookAtIds,
             selectCount: {
               kind: 'upTo',

@@ -21,7 +21,8 @@ export type SelectCardEffectArgs = {
 export type UserPromptEffectArgs = {
     prompt?: string;
     content?: {
-        cardSelection?: {
+        cards?: {
+            action?: 'rearrange' | undefined;
             cardIds: number[],
             selectCount?: CountSpec
         }

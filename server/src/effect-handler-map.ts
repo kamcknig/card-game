@@ -1,9 +1,4 @@
-import {
-  AppSocket,
-  EffectHandlerMap,
-  IEffectRunner, Reaction, ReactionTemplate,
-  ReactionTrigger,
-} from './types.ts';
+import { AppSocket, EffectHandlerMap, IEffectRunner, Reaction, ReactionTemplate, ReactionTrigger, } from './types.ts';
 import { fisherYatesShuffle } from './utils/fisher-yates-shuffler.ts';
 import { findCards } from './utils/find-cards.ts';
 import { ReactionManager } from './reaction-manager.ts';
@@ -14,13 +9,12 @@ import { findSourceByCardId } from './utils/find-source-by-card-id.ts';
 import { findSpecLocationBySource } from './utils/find-spec-location-by-source.ts';
 import { findSourceByLocationSpec } from './utils/find-source-by-location-spec.ts';
 import { castArray, isUndefined } from 'es-toolkit/compat';
-import { CardLibrary } from "./match-controller.ts";
+import { CardLibrary } from './match-controller.ts';
 import { MoveCardEffect } from './effects/move-card.ts';
 import { cardDataOverrides, getCardOverrides } from './card-data-overrides.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';
 import { getOrderStartingFrom } from './utils/get-order-starting-from.ts';
 import { UserPromptEffect } from './effects/user-prompt.ts';
-import { EffectBase } from './effects/effect-base.ts';
 
 /**
  * Returns an object whose properties are functions. The names are a union of Effect types
@@ -72,16 +66,16 @@ export const createEffectHandlerMap = (
     // todo: this can also add triggers, not just remove
     switch (oldLoc) {
       case 'playerHands':
-        unregisterIds = cardLifecycleMap[card.cardKey]?.['onLeaveHand']?.(
-          effect.toPlayerId!,
-          effect.cardId,
-        )?.unregisterTriggers;
+        unregisterIds = cardLifecycleMap[card.cardKey]?.['onLeaveHand']?.({
+          playerId: effect.toPlayerId!,
+          cardId: effect.cardId,
+        })?.unregisterTriggers;
         break;
       case 'playArea':
-        unregisterIds = cardLifecycleMap[card.cardKey]?.['onLeavePlay']?.(
-          effect.toPlayerId!,
-          effect.cardId,
-        )?.unregisterTriggers;
+        unregisterIds = cardLifecycleMap[card.cardKey]?.['onLeavePlay']?.({
+          playerId: effect.toPlayerId!,
+          cardId: effect.cardId,
+        })?.unregisterTriggers;
         break;
     }
 
@@ -96,16 +90,16 @@ export const createEffectHandlerMap = (
       let triggerTemplates: ReactionTemplate[] | void = undefined;
       switch (effect.to.location[0]) {
         case 'playerHands':
-          triggerTemplates = cardLifecycleMap[card.cardKey]?.['onEnterHand']?.(
-            effect.toPlayerId,
-            effect.cardId,
-          )?.registerTriggers;
+          triggerTemplates = cardLifecycleMap[card.cardKey]?.['onEnterHand']?.({
+            playerId: effect.toPlayerId,
+            cardId: effect.cardId,
+          })?.registerTriggers;
           break;
         case 'playArea':
-          triggerTemplates = cardLifecycleMap[card.cardKey]?.['onEnterPlay']?.(
-            effect.toPlayerId,
-            effect.cardId,
-          )?.registerTriggers;
+          triggerTemplates = cardLifecycleMap[card.cardKey]?.['onEnterPlay']?.({
+            playerId: effect.toPlayerId,
+            cardId: effect.cardId,
+          })?.registerTriggers;
       }
 
       triggerTemplates?.forEach((triggerTemplate) =>
@@ -508,12 +502,12 @@ export const createEffectHandlerMap = (
           const cardKey = selectedReaction.getSourceKey();
           usedReactionMap.set(cardKey, (usedReactionMap.get(cardKey) ?? 0) + 1);
           
-          const reactionGenerator = await selectedReaction.generatorFn(
+          const reactionGenerator = await selectedReaction.generatorFn({
             match,
             cardLibrary,
             trigger,
-            selectedReaction,
-          );
+            reaction: selectedReaction,
+          });
           
           const reactionResults = await cardEffectRunner.runGenerator(
             reactionGenerator,

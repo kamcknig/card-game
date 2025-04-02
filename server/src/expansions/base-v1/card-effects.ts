@@ -802,7 +802,7 @@ const expansionModule: CardExpansionModule = {
           prompt: `Discard or put on ${player?.name}'s deck?`,
           actionButtons: [{label: 'DECK', action: 1}, {label: 'DISCARD', action: 2}],
           content: {
-            cardSelection: {
+            cards: {
               cardIds: [cardId],
             },
           },
@@ -883,7 +883,7 @@ const expansionModule: CardExpansionModule = {
             } else {
               result = (yield new UserPromptEffect({
                 content: {
-                  cardSelection: {
+                  cards: {
                     cardIds: treasureCardIds,
                     selectCount: 1,
                   },
@@ -936,7 +936,7 @@ const expansionModule: CardExpansionModule = {
           prompt: 'Select which cards to keep.',
           actionButtons: [{label: 'DONE', action: 1}],
           content: {
-            cardSelection: {
+            cards: {
               cardIds: cardsToGain,
               selectCount: {
                 kind: 'upTo',

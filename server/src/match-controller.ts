@@ -150,7 +150,7 @@ export class MatchController {
     const kingdomCards: Card[] = [];
 
     // todo: remove testing code
-    const keepers: string[] = ['militia', 'minion', 'moat', 'diplomat'];
+    const keepers: string[] = ['militia', 'moat', 'harbinger', 'sentry'];
 
     console.debug(
       `[MATCH] choosing ${MatchBaseConfiguration.numberOfKingdomPiles} kingdom cards`,
@@ -214,25 +214,26 @@ export class MatchController {
 
     return Object.values(config.players).reduce((prev, player, _idx) => {
       console.log("initializing player", player.id, "cards...");
-      /*let blah = {};
+      let blah = {};
       // todo remove testing code
       if (_idx === 0) {
         blah = {
-          diplomat: 2,
-          copper: 5,
-          moat: 3,
+          moat: 5,
+          harbinger: 4,
+          gold: 2,
+          sentry: 2,
         };
       } else {
         blah = {
           militia: 3,
-          copper: 2,
-          minion: 3,
-          masquerade: 2,
+          copper: 3,
+          silver: 3,
+          estate: 3
         };
       }
-      Object.entries(blah).forEach(([key, count]) => {*/
-        Object.entries(playerStartHand).forEach(
-        ([key, count]) => {
+      Object.entries(blah).forEach(([key, count]) => {
+        /*Object.entries(playerStartHand).forEach(
+        ([key, count]) => {*/
         prev["playerDecks"][player.id] ??= [];
         let deck = prev["playerDecks"][player.id];
         deck = deck.concat(

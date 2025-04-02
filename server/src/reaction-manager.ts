@@ -38,7 +38,7 @@ export class ReactionManager {
       console.debug(`trigger card ${this._cardLibrary.getCard(trigger.cardId)}`);
       console.debug(`trigger player ${match.players.find(player => player.id === trigger.playerId)}`);
       
-      return !(t.condition !== undefined && !t.condition(match, this._cardLibrary, trigger));
+      return !(t.condition !== undefined && !t.condition({ match, cardLibrary: this._cardLibrary, trigger }));
     });
   }
   
