@@ -84,19 +84,19 @@ export type ReactionTrigger = {
   playerId: number;
 }
 
-export type ReactionEffectGeneratorFn = (
+export type ReactionEffectGeneratorFn = (args: {
   match: Match,
   cardLibrary: CardLibrary,
   trigger: ReactionTrigger,
   reaction: Reaction,
-) => EffectGenerator<GameEffects>;
+}) => EffectGenerator<GameEffects>;
 
-export type AsyncReactionEffectGeneratorFn = (
+export type AsyncReactionEffectGeneratorFn = (args: {
   match: Match,
   cardLibrary: CardLibrary,
   trigger: ReactionTrigger,
   reaction: Reaction,
-) => Promise<EffectGenerator<GameEffects>>;
+}) => Promise<EffectGenerator<GameEffects>>;
 
 export type EffectGenerator<T> = Generator<
   T,
@@ -154,7 +154,7 @@ export class Reaction {
   // todo working on moat right now which has no condition other than it be an attack.
   // in the future we might need to define this condition method elsewhere such as
   // in the expansion's module? need to wait to see what kind of conditions there are i think
-  public condition?: (match: Match, cardLibrary: CardLibrary, trigger: ReactionTrigger) => boolean;
+  public condition?: (args: { match: Match, cardLibrary: CardLibrary, trigger: ReactionTrigger }) => boolean;
 
   // todo defined in a map somewhere just like registered card effects. so maybe another export
   // from teh expansion module that defines what happens when you ccn react?
@@ -235,7 +235,7 @@ export type LifecycleResult = {
   registerTriggers?: ReactionTemplate[];
   unregisterTriggers?: string[];
 }
-export type LifecycleCallback = (playerId: number, cardId: number) => LifecycleResult | void;
+export type LifecycleCallback = (args: { playerId: number, cardId: number }) => LifecycleResult | void;
 
 export type LifecycleCallbackMap = {
   onEnterHand?: LifecycleCallback;

@@ -18,14 +18,14 @@ import { findOrderedEffectTargets } from '../../utils/find-ordered-effect-target
 const expansionModule: CardExpansionModule = {
   registerCardLifeCycles: () => ({
     'diplomat': {
-      onEnterHand: (playerId, cardId) => ({
+      onEnterHand: ({ playerId, cardId }) => ({
         registerTriggers: [{
           id: `diplomat-${cardId}`,
           playerId,
           listeningFor: 'cardPlayed',
-          condition: (match, _cardLibrary, _trigger) =>
+          condition: ({ match}) =>
             match.playerHands[playerId].length >= 5,
-          generatorFn: function* (_match, _cardLibrary, trigger, reaction) {
+          generatorFn: function* ({ trigger, reaction }) {
             const sourceId = reaction.getSourceId();
             
             yield new RevealCardEffect({
@@ -56,7 +56,7 @@ const expansionModule: CardExpansionModule = {
           }
         }]
       }),
-      onLeaveHand: (_playerId, cardId) => ({
+      onLeaveHand: ({ cardId }) => ({
         unregisterTriggers: [`diplomat-${cardId}`],
       })
     }
