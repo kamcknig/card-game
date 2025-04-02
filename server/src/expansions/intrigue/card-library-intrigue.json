@@ -121,6 +121,7 @@
     "cost": {
       "treasure": 6
     },
+    "victoryPoints": 2,
     "cardName": "Nobles"
   },
   "patrol": {

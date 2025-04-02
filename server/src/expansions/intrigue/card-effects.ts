@@ -612,8 +612,11 @@ const expansionModule: CardExpansionModule = {
       } else {
         const targets =
           findOrderedEffectTargets(triggerPlayerId, 'ALL', match)
-            .filter(playerId =>
-              playerId === triggerPlayerId || (match.playerHands[playerId].length >= 5 && reactionContext[playerId] !== 'immunity'));
+            .filter(playerId => {
+              const handCount = match.playerHands[playerId].length;
+              console.debug(`[MINION EFFECT HANDLER] ${getPlayerById(match, playerId)} has ${handCount} cards in hand`);
+              return playerId === triggerPlayerId || (handCount >= 5 && reactionContext[playerId] !== 'immunity')
+            });
         
         for (const playerId of targets) {
           const hand = match.playerHands[playerId];
@@ -636,12 +639,34 @@ const expansionModule: CardExpansionModule = {
       }
     },
     'nobles': function* (
-      match,
-      cardLibrary,
+      _match,
+      _cardLibrary,
       triggerPlayerId,
-      triggerCardId,
-      reactionContext,
+      _triggerCardId,
+      _reactionContext,
     ) {
+      const result = (yield new UserPromptEffect({
+          playerId: triggerPlayerId,
+          sourcePlayerId: triggerPlayerId,
+          actionButtons: [
+            {action: 1, label: '+3 Cards'},
+            {action: 2, label: '+2 Actions'}
+          ],
+          prompt: 'Choose one'
+      })) as { action: number, cardIds: number[] };
+      
+      console.debug(`[NOBLES EFFECT] player chose ${result.action}`);
+      
+      if (result.action === 1) {
+        for (let i = 0; i < 3; i++) {
+          yield new DrawCardEffect({
+            playerId: triggerPlayerId,
+            sourcePlayerId: triggerPlayerId
+          });
+        }
+      } else {
+        yield new GainActionEffect({ count: 2, sourcePlayerId: triggerPlayerId });
+      }
     },
     'patrol': function* (
       match,
