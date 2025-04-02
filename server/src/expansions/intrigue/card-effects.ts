@@ -726,7 +726,6 @@ const expansionModule: CardExpansionModule = {
       cardLibrary,
       triggerPlayerId,
       triggerCardId,
-      reactionContext,
     }) {
       for (let i = 0; i < 3; i++) {
         yield new DrawCardEffect({
@@ -931,7 +930,7 @@ const expansionModule: CardExpansionModule = {
       });
       
       if (card.type.includes('VICTORY')) {
-        const targets = findOrderedEffectTargets(triggerPlayerId, 'ALL_OTHER', match).filter(id => !reactionContext[id]);
+        const targets = findOrderedEffectTargets(triggerPlayerId, 'ALL_OTHER', match).filter(id => reactionContext[id] !== 'immunity');
         for (const targetId of targets) {
           for (let i = match.supply.length - 1; i >= 0; i--) {
             const potentialCard = cardLibrary.getCard(match.supply[i]);
@@ -1044,6 +1043,40 @@ const expansionModule: CardExpansionModule = {
       triggerCardId,
       reactionContext,
     }) {
+      yield new GainTreasureEffect({ count: 2, sourcePlayerId: triggerPlayerId });
+      
+      const targets = findOrderedEffectTargets(triggerPlayerId, 'ALL_OTHER', match).filter(id => reactionContext[id] !== 'immunity')
+      for (const target of targets) {
+        let cardId = match.playerDecks[target].slice(-1)?.[0];
+        if (!cardId) continue;
+        yield new TrashCardEffect({
+          sourcePlayerId: triggerPlayerId,
+          playerId: target,
+          cardId: cardId,
+          sourceCardId: triggerCardId!
+        });
+        const card = cardLibrary.getCard(cardId);
+        const cardIds = (yield new SelectCardEffect({
+          prompt: 'Choose card',
+          validPrompt: '',
+          playerId: triggerPlayerId,
+          sourcePlayerId: triggerPlayerId,
+          restrict: { from: { location: ['supply', 'kingdom'] }, cost: card.cost.treasure },
+          count: 1,
+          sourceCardId: triggerCardId
+        })) as number[];
+        cardId = cardIds[0];
+        if (!cardId) {
+          return;
+        }
+        yield new GainCardEffect({
+          playerId: target,
+          sourcePlayerId: triggerPlayerId,
+          sourceCardId: triggerCardId!,
+          cardId,
+          to: { location: 'playerDiscards' },
+        });
+      }
     },
     "torturer": function* ({
       match,
