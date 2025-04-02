@@ -4,29 +4,22 @@ import {
   Match,
   MatchConfiguration,
   MatchSummary,
-  MatchUpdate, Player,
+  MatchUpdate,
   PlayerID,
   TurnPhaseOrderValues,
 } from 'shared/shared-types.ts';
-import {
-  AppSocket,
-  EffectHandlerMap,
-  MatchBaseConfiguration,
-} from "./types.ts";
-import { CardEffectController } from "./card-effects-controller.ts";
-import { cardLibrary, loadExpansion } from "./utils/load-expansion.ts";
-import { CardInteractivityController } from "./card-interactivity-controller.ts";
-import { createCard } from "./utils/create-card.ts";
-import { createEffectHandlerMap } from "./effect-handler-map.ts";
-import { EffectsPipeline } from "./effects-pipeline.ts";
-import { fisherYatesShuffle } from "./utils/fisher-yates-shuffler.ts";
-import { ReactionManager } from "./reaction-manager.ts";
-import { scoringFunctionMap } from "./scoring-function-map.ts";
-import { map } from "nanostores";
-import {
-  getCardOverrides,
-  removeOverrideEffects,
-} from "./card-data-overrides.ts";
+import { AppSocket, EffectHandlerMap, MatchBaseConfiguration, } from './types.ts';
+import { CardEffectController } from './card-effects-controller.ts';
+import { cardLibrary, loadExpansion } from './utils/load-expansion.ts';
+import { CardInteractivityController } from './card-interactivity-controller.ts';
+import { createCard } from './utils/create-card.ts';
+import { createEffectHandlerMap } from './effect-handler-map.ts';
+import { EffectsPipeline } from './effects-pipeline.ts';
+import { fisherYatesShuffle } from './utils/fisher-yates-shuffler.ts';
+import { ReactionManager } from './reaction-manager.ts';
+import { scoringFunctionMap } from './scoring-function-map.ts';
+import { map } from 'nanostores';
+import { getCardOverrides, removeOverrideEffects, } from './card-data-overrides.ts';
 
 export class CardLibrary {
   private readonly _library: Map<CardId, Card> = new Map();
@@ -88,7 +81,7 @@ export class MatchController {
     this.$matchState.set({
       scores: [],
       trash: [],
-      players: /*fisherYatesShuffle(*/config.players/*)*/,
+      players: fisherYatesShuffle(config.players),
       supply: supplyCards.map((c) => c.id),
       kingdom: kingdomCards.map((c) => c.id),
       ...playerCards,

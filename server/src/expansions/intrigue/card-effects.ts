@@ -559,13 +559,36 @@ const expansionModule: CardExpansionModule = {
       }
     },
     'mining-village': function* (
-      match,
+      _match,
       _cardLibrary,
       triggerPlayerId,
-      _triggerCardId,
-      reactionContext,
+      triggerCardId,
+      _reactionContext,
     ) {
-    
+      yield new DrawCardEffect({
+        playerId: triggerPlayerId,
+        sourcePlayerId: triggerPlayerId
+      });
+      yield new GainActionEffect({ count: 2, sourcePlayerId: triggerPlayerId });
+      const results = (yield new UserPromptEffect({
+          playerId: triggerPlayerId,
+          sourcePlayerId: triggerPlayerId,
+          actionButtons: [
+            {action: 1, label: 'NO'},
+            {action: 1, label: 'YES'},
+          ],
+          prompt: 'Trash Mining Village?'
+      })) as { action: number, cardIds: number[] };
+      if (results.action === 2) {
+        yield new TrashCardEffect({
+          sourcePlayerId: triggerPlayerId,
+          playerId: triggerPlayerId,
+          cardId: triggerCardId!
+        });
+        yield new GainTreasureEffect({ count: 2, sourcePlayerId: triggerPlayerId });
+      } else {
+        console.debug(`[MINING VILLAGE EFFECT] player chose not to trash mining village`);
+      }
     },
     'minion': function* (
       match,
