@@ -961,7 +961,6 @@ const expansionModule: CardExpansionModule = {
       cardLibrary,
       triggerPlayerId,
       triggerCardId,
-      reactionContext,
     }) {
       yield new GainActionEffect({ count: 2, sourcePlayerId: triggerPlayerId });
       
@@ -988,11 +987,55 @@ const expansionModule: CardExpansionModule = {
     },
     "steward": function* ({
       match,
-      cardLibrary,
       triggerPlayerId,
       triggerCardId,
-      reactionContext,
     }) {
+      const result = (yield new UserPromptEffect({
+        playerId: triggerPlayerId,
+        sourcePlayerId: triggerPlayerId,
+        sourceCardId: triggerCardId,
+        actionButtons: [
+          {action: 1, label: '+2 Card'},
+          {action: 2, label: '+2 Treasure'},
+          {action: 3, label: 'Trash 2 cards'}
+        ],
+        prompt: 'Choose on',
+      })) as { action: number, cardIds: number[] };
+      
+      switch (result.action) {
+        case 1:
+          for (let i = 0; i < 2; i++) {
+            yield new DrawCardEffect({
+              playerId: triggerPlayerId,
+              sourcePlayerId: triggerPlayerId,
+              sourceCardId: triggerCardId
+            });
+          }
+          break;
+        case 2:
+          yield new GainTreasureEffect({ count: 2, sourcePlayerId: triggerPlayerId });
+          break;
+        case 3: {
+          const cardIds = (yield new SelectCardEffect({
+            prompt: 'Confirm trash',
+            playerId: triggerPlayerId,
+            sourcePlayerId: triggerPlayerId,
+            restrict: { from: { location: 'playerHands' } },
+            count: Math.min(2, match.playerHands[triggerPlayerId].length),
+            sourceCardId: triggerCardId
+          })) as number[];
+          
+          for (const cardId of cardIds) {
+            yield new TrashCardEffect({
+              sourcePlayerId: triggerPlayerId,
+              playerId: triggerPlayerId,
+              cardId,
+              sourceCardId: triggerCardId!
+            });
+          }
+          break;
+        }
+      }
     },
     "swindler": function* ({
       match,

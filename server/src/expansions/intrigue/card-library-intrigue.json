@@ -166,7 +166,7 @@
     "cardName": "Shanty Town"
   },
   "steward": {
-    "abilityText": "",
+    "abilityText": "Choose one: +2 Cards; or +$2; or trash 2 cards from your hand.",
     "type": ["ACTION"],
     "cost": {
       "treasure": 3
