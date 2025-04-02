@@ -214,7 +214,7 @@ export class MatchController {
 
     return Object.values(config.players).reduce((prev, player, _idx) => {
       console.log("initializing player", player.id, "cards...");
-      let blah = {};
+      /*let blah = {};
       // todo remove testing code
       if (_idx === 0) {
         blah = {
@@ -230,9 +230,9 @@ export class MatchController {
           masquerade: 2,
         };
       }
-      Object.entries(blah).forEach(([key, count]) => {
-        /*Object.entries(playerStartHand).forEach(
-        ([key, count]) => {*/
+      Object.entries(blah).forEach(([key, count]) => {*/
+        Object.entries(playerStartHand).forEach(
+        ([key, count]) => {
         prev["playerDecks"][player.id] ??= [];
         let deck = prev["playerDecks"][player.id];
         deck = deck.concat(
@@ -613,11 +613,7 @@ export class MatchController {
                 );
               }
 
-              let count = 5;
-              if (currentMatch.currentPlayerTurnIndex === 0) {
-                count = 8
-              }
-              for (let i = 0; i < count; i++) {
+              for (let i = 0; i < 5; i++) {
                 await this._effectsController!.runGameActionEffects(
                   "drawCard",
                   this.$matchState.get(),

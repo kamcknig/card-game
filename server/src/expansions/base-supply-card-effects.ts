@@ -1,30 +1,36 @@
-import { AsyncEffectGeneratorFn, EffectGeneratorFn } from '../types.ts';
+import { GainTreasureEffect } from "../effects/gain-treasure.ts";
+import { CardExpansionModule } from "./card-expansion-module.ts";
 
-import { GainTreasureEffect } from '../effects/gain-treasure.ts';
+const expansionModule: CardExpansionModule = {
+  registerEffects: () => ({
+    "copper": function* ({
+      triggerPlayerId,
+      triggerCardId,
+    }) {
+      yield new GainTreasureEffect({
+        sourcePlayerId: triggerPlayerId,
+        sourceCardId: triggerCardId,
+        count: 1,
+      });
+    },
+    "gold": function* ({ triggerCardId, triggerPlayerId }) {
+      yield new GainTreasureEffect({
+        count: 3,
+        sourcePlayerId: triggerPlayerId,
+        sourceCardId: triggerCardId,
+      });
+    },
+    "silver": function* ({
+      triggerPlayerId,
+      triggerCardId,
+    }) {
+      yield new GainTreasureEffect({
+        count: 2,
+        sourcePlayerId: triggerPlayerId,
+        sourceCardId: triggerCardId,
+      });
+    },
+  }),
+};
 
-export default {
-  registerEffects: (): Record<
-    string,
-    EffectGeneratorFn | AsyncEffectGeneratorFn
-  > => ({
-    'copper': function* (
-      _match,
-      _cardLibrary,
-      sourcePlayerId,
-      sourceCardId,
-    ) {
-      yield new GainTreasureEffect({ sourcePlayerId, sourceCardId, count: 1 });
-    },
-    'gold': function* (_match, _cardLibrary, sourcePlayerId, sourceCardId) {
-      yield new GainTreasureEffect({ count: 3, sourcePlayerId, sourceCardId });
-    },
-    'silver': function* (
-      _match,
-      _cardLibrary,
-      sourcePlayerId,
-      sourceCardId,
-    ) {
-      yield new GainTreasureEffect({ count: 2, sourcePlayerId, sourceCardId });
-    },
-  })
-}
+export default expansionModule;

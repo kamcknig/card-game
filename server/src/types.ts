@@ -103,22 +103,24 @@ export type EffectGenerator<T> = Generator<
   unknown,
   unknown
 >;
-export type EffectGeneratorFn = (
+
+export type EffectGeneratorFn = (args: {
   match: Match,
   cardLibrary: CardLibrary,
   triggerPlayerId: number,
   triggerCardId?: number,
   // deno-lint-ignore no-explicit-any
   reactionContext?: any,
-) => EffectGenerator<GameEffects>;
-export type AsyncEffectGeneratorFn = (
+}) => EffectGenerator<GameEffects>;
+
+export type AsyncEffectGeneratorFn = (args: {
   match: Match,
   cardLibrary: CardLibrary,
   triggerPlayerId: number,
   triggerCardId?: number,
   // deno-lint-ignore no-explicit-any
   reactionContext?: any,
-) => Promise<EffectGenerator<GameEffects>>;
+}) => Promise<EffectGenerator<GameEffects>>;
 
 export type EffectTypes = GameEffects["type"];
 

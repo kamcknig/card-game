@@ -1,4 +1,3 @@
-import { AsyncEffectGeneratorFn, EffectGeneratorFn } from '../../types.ts';
 import { DiscardCardEffect } from '../../effects/discard-card.ts';
 import { GainBuyEffect } from '../../effects/gain-buy.ts';
 import { GainCardEffect } from '../../effects/gain-card.ts';
@@ -11,9 +10,9 @@ import { RevealCardEffect } from '../../effects/reveal-card.ts';
 import { SelectCardEffect } from '../../effects/select-card.ts';
 import { MoveCardEffect } from '../../effects/move-card.ts';
 import { CardExpansionModule } from '../card-expansion-module.ts';
-import { getPlayerById } from "../../utils/get-player-by-id.ts";
-import { TrashCardEffect } from "../../effects/trash-card.ts";
-import { ActionButtons, CardId, PlayerID } from "shared/shared-types.ts";
+import { getPlayerById } from '../../utils/get-player-by-id.ts';
+import { TrashCardEffect } from '../../effects/trash-card.ts';
+import { ActionButtons, CardId, PlayerID } from 'shared/shared-types.ts';
 import { findOrderedEffectTargets } from '../../utils/find-ordered-effect-targets.ts';
 
 const expansionModule: CardExpansionModule = {
@@ -63,7 +62,7 @@ const expansionModule: CardExpansionModule = {
     }
   }),
   registerScoringFunctions: () => ({
-    'duke': function(match, cardLibrary, ownerId) {
+    'duke': function({ match, cardLibrary, ownerId }) {
       const duchies =
         match.playerHands[ownerId]?.concat(match.playerDecks[ownerId], match.playerDiscards[ownerId], match.playArea)
           .map(cardLibrary.getCard)
@@ -74,17 +73,13 @@ const expansionModule: CardExpansionModule = {
       return duchies.length;
     }
   }),
-  registerEffects: (): Record<
-    string,
-    EffectGeneratorFn | AsyncEffectGeneratorFn
-  > => ({
-    'baron': function* (
+  registerEffects: () => ({
+    'baron': function* ({
       match,
       cardLibrary,
       triggerPlayerId,
       triggerCardId,
-      _reactionContext,
-    ) {
+    }) {
       yield new GainBuyEffect({
         count: 1,
         sourcePlayerId: triggerPlayerId,
@@ -138,13 +133,10 @@ const expansionModule: CardExpansionModule = {
         console.debug(`[BARON EFFECT] player has no estates in hand`);
       }
     },
-    'bridge': function* (
-      _match,
-      _cardLibrary,
+    'bridge': function* ({
       triggerPlayerId,
       triggerCardId,
-      _reactionContext,
-    ) {
+    }) {
       yield new GainBuyEffect({ count: 1, sourcePlayerId: triggerPlayerId });
 
       yield new GainTreasureEffect({
@@ -161,13 +153,11 @@ const expansionModule: CardExpansionModule = {
         expiresAt: 'TURN_END',
       });
     },
-    'conspirator': function* (
+    'conspirator': function* ({
       match,
       cardLibrary,
       triggerPlayerId,
-      _triggerCardId,
-      _reactionContext,
-    ) {
+    }) {
       yield new GainTreasureEffect({
         count: 2,
         sourcePlayerId: triggerPlayerId,
@@ -190,13 +180,12 @@ const expansionModule: CardExpansionModule = {
         });
       }
     },
-    'courtier': function* (
+    'courtier': function* ({
       match,
       cardLibrary,
       triggerPlayerId,
       triggerCardId,
-      _reactionContext,
-    ) {
+    }) {
       const cardIds = (yield new SelectCardEffect({
         prompt: 'Reveal card',
         sourcePlayerId: triggerPlayerId,
@@ -272,13 +261,10 @@ const expansionModule: CardExpansionModule = {
         }
       }
     },
-    'courtyard': function* (
-      _match,
-      _cardLibrary,
+    'courtyard': function* ({
       triggerPlayerId,
       triggerCardId,
-      _reactionContext,
-    ) {
+    }) {
       yield new DrawCardEffect({playerId: triggerPlayerId, sourcePlayerId: triggerPlayerId});
       yield new DrawCardEffect({playerId: triggerPlayerId, sourcePlayerId: triggerPlayerId});
       yield new DrawCardEffect({playerId: triggerPlayerId, sourcePlayerId: triggerPlayerId});
@@ -307,13 +293,10 @@ const expansionModule: CardExpansionModule = {
         }
       })
     },
-    'diplomat': function* (
+    'diplomat': function* ({
       match,
-      _cardLibrary,
       triggerPlayerId,
-      _triggerCardId,
-      _reactionContext,
-    ) {
+    }) {
       yield new DrawCardEffect({playerId: triggerPlayerId, sourcePlayerId: triggerPlayerId});
       
       if (match.playerHands[triggerPlayerId].length <= 5) {
@@ -322,30 +305,16 @@ const expansionModule: CardExpansionModule = {
         console.debug(`[DIPLOMAT EFFECT] player has more than 5 cards in hand, can't perform diplomat`);
       }
     },
-    'duke': function* (
-      _match,
-      _cardLibrary,
-      _triggerPlayerId,
-      _triggerCardId,
-      _reactionContext,
-    ) {
-    },
-    'farm': function* (
-      _match,
-      _cardLibrary,
+    'duke': function* () {},
+    'farm': function* ({
       triggerPlayerId,
-      _triggerCardId,
-      _reactionContext,
-    ) {
+    }) {
       yield new GainTreasureEffect({count: 2, sourcePlayerId: triggerPlayerId});
     },
-    'ironworks': function* (
-      _match,
+    'ironworks': function* ({
       cardLibrary,
       triggerPlayerId,
-      _triggerCardId,
-      _reactionContext,
-    ) {
+    }) {
       const cardIds = (yield new SelectCardEffect({
         prompt: 'Choose card',
         count: 1,
@@ -382,13 +351,10 @@ const expansionModule: CardExpansionModule = {
         yield new DrawCardEffect({sourcePlayerId: triggerPlayerId, playerId: triggerPlayerId});
       }
     },
-    'lurker': function* (
+    'lurker': function* ({
       match,
-      _cardLibrary,
       triggerPlayerId,
-      _triggerCardId,
-      _reactionContext,
-    ) {
+    }) {
       yield new GainActionEffect({count: 1, sourcePlayerId: triggerPlayerId});
       
       let result = { action: 1 };
@@ -453,13 +419,11 @@ const expansionModule: CardExpansionModule = {
         });
       }
     },
-    'masquerade': function* (
+    'masquerade': function* ({
       match,
       cardLibrary,
       triggerPlayerId,
-      _triggerCardId,
-      _reactionContext,
-    ) {
+    }) {
       yield new DrawCardEffect({playerId: triggerPlayerId, sourcePlayerId: triggerPlayerId});
       yield new DrawCardEffect({playerId: triggerPlayerId, sourcePlayerId: triggerPlayerId});
       
@@ -520,13 +484,9 @@ const expansionModule: CardExpansionModule = {
         });
       }
     },
-    'mill': function* (
-      _match,
-      _cardLibrary,
+    'mill': function* ({
       triggerPlayerId,
-      _triggerCardId,
-      _reactionContext,
-    ) {
+    }) {
       yield new DrawCardEffect({playerId: triggerPlayerId, sourcePlayerId: triggerPlayerId});
       yield new GainActionEffect({count: 1, sourcePlayerId: triggerPlayerId});
       
@@ -558,13 +518,10 @@ const expansionModule: CardExpansionModule = {
         yield new GainTreasureEffect({count: 2, sourcePlayerId: triggerPlayerId});
       }
     },
-    'mining-village': function* (
-      _match,
-      _cardLibrary,
+    'mining-village': function* ({
       triggerPlayerId,
       triggerCardId,
-      _reactionContext,
-    ) {
+    }) {
       yield new DrawCardEffect({
         playerId: triggerPlayerId,
         sourcePlayerId: triggerPlayerId
@@ -590,13 +547,11 @@ const expansionModule: CardExpansionModule = {
         console.debug(`[MINING VILLAGE EFFECT] player chose not to trash mining village`);
       }
     },
-    'minion': function* (
+    'minion': function* ({
       match,
-      _cardLibrary,
       triggerPlayerId,
-      _triggerCardId,
       reactionContext,
-    ) {
+    }) {
       yield new GainActionEffect({count: 1, sourcePlayerId: triggerPlayerId});
       const results = (yield new UserPromptEffect({
         playerId: triggerPlayerId,
@@ -638,13 +593,9 @@ const expansionModule: CardExpansionModule = {
         }
       }
     },
-    'nobles': function* (
-      _match,
-      _cardLibrary,
+    'nobles': function* ({
       triggerPlayerId,
-      _triggerCardId,
-      _reactionContext,
-    ) {
+    }) {
       const result = (yield new UserPromptEffect({
           playerId: triggerPlayerId,
           sourcePlayerId: triggerPlayerId,
@@ -668,93 +619,93 @@ const expansionModule: CardExpansionModule = {
         yield new GainActionEffect({ count: 2, sourcePlayerId: triggerPlayerId });
       }
     },
-    'patrol': function* (
+    'patrol': function* ({
       match,
       cardLibrary,
       triggerPlayerId,
       triggerCardId,
       reactionContext,
-    ) {
+    }) {
     },
-    'pawn': function* (
+    'pawn': function* ({
       match,
       cardLibrary,
       triggerPlayerId,
       triggerCardId,
       reactionContext,
-    ) {
+    }) {
     },
-    'replace': function* (
+    'replace': function* ({
       match,
       cardLibrary,
       triggerPlayerId,
       triggerCardId,
       reactionContext,
-    ) {
+    }) {
     },
-    'secret-passage': function* (
+    'secret-passage': function* ({
       match,
       cardLibrary,
       triggerPlayerId,
       triggerCardId,
       reactionContext,
-    ) {
+    }) {
     },
-    'shanty-town': function* (
+    'shanty-town': function* ({
       match,
       cardLibrary,
       triggerPlayerId,
       triggerCardId,
       reactionContext,
-    ) {
+    }) {
     },
-    'steward': function* (
+    'steward': function* ({
       match,
       cardLibrary,
       triggerPlayerId,
       triggerCardId,
       reactionContext,
-    ) {
+    }) {
     },
-    'swindler': function* (
+    'swindler': function* ({
       match,
       cardLibrary,
       triggerPlayerId,
       triggerCardId,
       reactionContext,
-    ) {
+    }) {
     },
-    'torturer': function* (
+    'torturer': function* ({
       match,
       cardLibrary,
       triggerPlayerId,
       triggerCardId,
       reactionContext,
-    ) {
+    }) {
     },
-    'trading-post': function* (
+    'trading-post': function* ({
       match,
       cardLibrary,
       triggerPlayerId,
       triggerCardId,
       reactionContext,
-    ) {
+    }) {
     },
-    'upgrade': function* (
+    'upgrade': function* ({
       match,
       cardLibrary,
       triggerPlayerId,
       triggerCardId,
       reactionContext,
-    ) {
+    }) {
     },
-    'wishing-well': function* (
+    'wishing-well': function* ({
       match,
       cardLibrary,
       triggerPlayerId,
       triggerCardId,
       reactionContext,
-    ) {
+    }) {
     },
   }),
 };
