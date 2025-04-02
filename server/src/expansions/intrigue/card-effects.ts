@@ -636,27 +636,19 @@ const expansionModule: CardExpansionModule = {
       }
       
       const revealedCardIds: number[] = [];
-      
-      for (let i = 0; i < 4; i++) {
-        let cardIds = match.playerDecks[triggerPlayerId].slice(-1);
-        
-        if (cardIds.length === 0) {
-          yield new ShuffleDeckEffect({
-            playerId: triggerPlayerId,
-          });
-        }
-        
-        cardIds = match.playerDecks[triggerPlayerId].slice(-1);
-        
-        const cardId = cardIds[0];
+      const deck = match.playerDecks[triggerPlayerId];
+      for (let i = 0; i < Math.min(4, deck.length); i++) {
+        const cardId = deck[deck.length - 1 - i];
         
         if (!cardId) {
           console.debug(`[PATROL EFFECT] no card to reveal`);
-          return;
+          break;
         }
         
         revealedCardIds.push(cardId);
-        
+      }
+      
+      for (const cardId of revealedCardIds) {
         yield new RevealCardEffect({
           sourceCardId: triggerCardId,
           sourcePlayerId: triggerPlayerId,
@@ -689,6 +681,11 @@ const expansionModule: CardExpansionModule = {
         });
       }
       
+      if (nonVictoryCards.length < 2) {
+        console.debug(`[PATROL EFFECT] non-victory card count is ${nonVictoryCards.length}, no need to rearrange`);
+        return;
+      }
+      
       const result = (yield new UserPromptEffect({
         playerId: triggerPlayerId,
         sourcePlayerId: triggerPlayerId,
@@ -698,17 +695,20 @@ const expansionModule: CardExpansionModule = {
             action: 'rearrange',
             cardIds: nonVictoryCards.map(card => card.id)
           }
-        }
+        },
+        actionButtons: [
+          { action: 1, label: 'DONE'}
+        ]
       })) as { action: number, cardIds: number[] };
       
-      for (const cardId of result.cardIds) {
+      for (const cardId of result.cardIds ?? nonVictoryCards.map(card => card.id)) {
         yield new MoveCardEffect({
           cardId,
           toPlayerId: triggerPlayerId,
           sourcePlayerId: triggerPlayerId,
           sourceCardId: triggerCardId,
           to: {
-            location: 'playerHands',
+            location: 'playerDecks',
           }
         });
       }

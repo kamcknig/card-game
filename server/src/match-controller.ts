@@ -218,10 +218,17 @@ export class MatchController {
       // todo remove testing code
       if (_idx === 0) {
         blah = {
-          moat: 5,
-          harbinger: 4,
-          gold: 2,
-          sentry: 2,
+          patrol: 3,
+          harbinger: 1,
+          gold: 1,
+          sentry: 1,
+          copper: 1,
+          province: 1,
+          estate: 1,
+          duchy: 1,
+          militia: 1,
+          moat: 2,
+          laboratory: 2
         };
       } else {
         blah = {

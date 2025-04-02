@@ -6,6 +6,7 @@ import { STANDARD_GAP } from '../../app-contants';
 import { UserPromptEffectArgs } from 'shared/shared-types';
 import { List } from '@pixi/ui';
 import { cardSelectionView } from './card-selection-view';
+import { cardRearrangeView } from './card-rearrange-view';
 
 export const userPromptModal = (args: UserPromptEffectArgs): Promise<unknown> => {
   return new Promise((resolve) => {
@@ -49,28 +50,32 @@ export const userPromptModal = (args: UserPromptEffectArgs): Promise<unknown> =>
       if (args.content.cards.action !== 'rearrange') {
         contentView = cardSelectionView(args.content.cards);
         
+        contentView.on('finished', () => {
+          actionButtonListener()
+        });
+        
         contentView.on('validationUpdated', valid => {
           if (validationBtn) {
             validationBtn.button.alpha = valid ? 1 : .6;
             validationBtn.button.eventMode = valid ? 'static' : 'none';
           }
         });
+      } else {
+        contentView = cardRearrangeView(args.content.cards);
+      }
+      
+      if (contentView) {
+        contentView.on('removed', () => {
+          contentView.removeAllListeners();
+        });
         
         contentView.on('resultsUpdated', result => {
           contentResults = result;
         });
         
-        contentView.on('finished', () => {
-          actionButtonListener()
-        });
-        
-        contentView.on('removed', () => {
-          contentView.removeAllListeners();
-        });
+        contentView.y = modalContainer.height + STANDARD_GAP;
+        modalContainer.addChild(contentView);
       }
-      
-      contentView.y = modalContainer.height + STANDARD_GAP;
-      modalContainer.addChild(contentView);
     }
     
     if (args.actionButtons) {
