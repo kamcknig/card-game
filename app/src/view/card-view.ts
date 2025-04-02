@@ -37,17 +37,6 @@ export class CardView extends Container<ContainerChild> {
 
     public set size(value: CardSize) {
         this._size = value;
-        
-        if (value === 'full') {
-            this._cardView.scale = 155/600;
-        } else {
-            this._cardView.scale = 1;
-            
-            if (value === 'detail') {
-                value = 'full';
-            }
-        }
-        
         this._frontImage = Assets.get(`${this.card.cardKey}-${value}`);
         this._backImage = Assets.get(`card-back-${value}`);
         this._cardView.texture = this._facing === 'front' ? this._frontImage : this._backImage;

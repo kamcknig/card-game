@@ -35,8 +35,10 @@ export class PlayerHandView extends Container {
         this._cardList.y = this._background.y + STANDARD_GAP;
         
         this._background.clear();
-        this._background.roundRect(0, 0, this._phaseStatus.width, CARD_HEIGHT + STANDARD_GAP * 4, 5);
+        this._background.roundRect(0, 0, CARD_WIDTH * 6 + STANDARD_GAP * 6, CARD_HEIGHT + STANDARD_GAP * 4, 5);
         this._background.fill({color: 0, alpha: .6});
+        
+        this._phaseStatus.x = this._background.width * .5 - this._phaseStatus.width * .5;
         
         this._cleanup.push($currentPlayerTurnId.subscribe(playerId => {
             this._nextPhaseButton.button.visible = playerId === $selfPlayerId.get();
@@ -52,7 +54,7 @@ export class PlayerHandView extends Container {
                     break;
             }
             
-            this._nextPhaseButton.button.x = this.width - this._nextPhaseButton.button.width - STANDARD_GAP;
+            this._nextPhaseButton.button.x = this._phaseStatus.x + this._phaseStatus.width - this._nextPhaseButton.button.width;
             this.addChild(this._nextPhaseButton.button);
         }));
         this._cleanup.push($playerHandStore(playerId).subscribe(this.drawHand));

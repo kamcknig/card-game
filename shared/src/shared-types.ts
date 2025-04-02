@@ -249,8 +249,9 @@ export type CardArgs = {
     victoryPoints?: number;
     targetScheme?: EffectTarget;
     expansionName: string;
-    imagePath: string;
+    fullImagePath: string;
     halfImagePath: string;
+    detailImagePath: string;
 }
 
 export class Card {
@@ -266,7 +267,8 @@ export class Card {
     cardKey: string;
     targetScheme?: EffectTarget;
     expansionName: string;
-    imagePath: string;
+    fullImagePath: string;
+    detailImagePath: string;
     halfImagePath: string;
 
     constructor(args: CardArgs) {
@@ -280,8 +282,9 @@ export class Card {
         this.victoryPoints = args.victoryPoints ?? 0;
         this.targetScheme = args.targetScheme;
         this.expansionName = args.expansionName;
-        this.imagePath = args.imagePath;
+        this.fullImagePath = args.fullImagePath;
         this.halfImagePath = args.halfImagePath;
+        this.detailImagePath = args.detailImagePath;
     }
     
     toString() {
