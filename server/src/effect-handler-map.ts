@@ -107,8 +107,6 @@ export const createEffectHandlerMap = (
       );
     }
 
-    const interimUpdate: MatchUpdate = {};
-
     // update the accumulator with the card's old location
     if (
       ['playerHands', 'playerDecks', 'playerDiscards'].includes(oldStoreKey)
@@ -120,27 +118,23 @@ export const createEffectHandlerMap = (
               ...acc.playerHands,
               [effect.toPlayerId]: oldStore,
             };
-            interimUpdate.playerHands = { [effect.toPlayerId]: oldStore };
             break;
           case 'playerDiscards':
             acc.playerDiscards = {
               ...acc.playerDiscards,
               [effect.toPlayerId]: oldStore,
             };
-            interimUpdate.playerDiscards = { [effect.toPlayerId]: oldStore };
             break;
           case 'playerDecks':
             acc.playerDecks = {
               ...acc.playerDecks,
               [effect.toPlayerId]: oldStore,
             };
-            interimUpdate.playerDecks = { [effect.toPlayerId]: oldStore };
             break;
         }
       }
     } else {
       acc[oldStoreKey] = oldStore;
-      interimUpdate[oldStoreKey] = oldStore;
     }
 
     // update the accumulator with the cards new location
@@ -156,34 +150,30 @@ export const createEffectHandlerMap = (
               ...acc.playerHands,
               [effect.toPlayerId]: newStore,
             };
-            interimUpdate.playerHands = { [effect.toPlayerId]: newStore };
             break;
           case 'playerDiscards':
             acc.playerDiscards = {
               ...acc.playerDiscards,
               [effect.toPlayerId]: newStore,
             };
-            interimUpdate.playerDiscards = { [effect.toPlayerId]: newStore };
             break;
           case 'playerDecks':
             acc.playerDecks = {
               ...acc.playerDecks,
               [effect.toPlayerId]: newStore,
             };
-            interimUpdate.playerDecks = { [effect.toPlayerId]: newStore };
             break;
         }
       }
     } else {
       acc[effect.to.location[0]] = newStore as unknown as any;
-      interimUpdate[effect.to.location[0]] = newStore as unknown as any;
     }
 
     // because where a card is on the board, we immediately send an update with the new cards location to
     // clients to visually update them. normally we'd wait.
     // TODO: can this go in the effects pipeline? Maybe checking if the effect was a move effect and if
     // so send the interim update there? Having it here special-cases it and that's rarely good
-    socketMap.forEach(s => s.emit('matchUpdated', interimUpdate));
+    socketMap.forEach(s => s.emit('matchUpdated', acc));
   }
   
   function userPrompt(effect: UserPromptEffect, match: Match) {
@@ -220,8 +210,6 @@ export const createEffectHandlerMap = (
   function shuffleDeck(playerId: number, match: Match, acc: MatchUpdate) {
     console.log(`[SHUFFLE DECK EFFECT HANDLER] shuffling deck for ${match.players.find(player => player.id === playerId)}`);
 
-    let interimUpdate: MatchUpdate = {};
-
     const deck = match.playerDecks[playerId];
     const discard = match.playerDiscards[playerId];
 
@@ -237,20 +225,11 @@ export const createEffectHandlerMap = (
       [playerId]: [],
     };
 
-    interimUpdate = {
-      playerDecks: {
-        [playerId]: match.playerDecks[playerId],
-      },
-      playerDiscards: {
-        [playerId]: [],
-      },
-    };
-
     // because where a card is on the board, we immediately send an update with the new cards location to
     // clients to visually update them. normally we'd wait.
     // TODO: can this go in the effects pipeline? Maybe checking if the effect was a move effect and if
     // so send the interim update there? Having it here special-cases it and that's rarely good
-    socketMap.forEach(s => s.emit('matchUpdated', interimUpdate));
+    socketMap.forEach(s => s.emit('matchUpdated', acc));
   }
 
   return {
@@ -413,7 +392,7 @@ export const createEffectHandlerMap = (
       const reactionContext: any = {};
       
       for (const targetPlayer of targetOrder) {
-        let reactions = reactionManager.getReactionsForPlayer(match, trigger, targetPlayer.id);
+        let reactions = reactionManager.getReactionsForPlayer(trigger, targetPlayer.id);
         
         console.debug(`[PLAY CARD EFFECT HANDLER] found ${reactions.length} reactions for ${targetPlayer}`);
         
@@ -525,7 +504,7 @@ export const createEffectHandlerMap = (
             reactionContext[selectedReaction.playerId] = reactionResults;
           }
           
-          reactions = reactionManager.getReactions(match, trigger);
+          reactions = reactionManager.getReactions(trigger);
         }
       }
       

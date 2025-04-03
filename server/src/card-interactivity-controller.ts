@@ -1,4 +1,3 @@
-import { PreinitializedWritableAtom } from 'nanostores';
 import { AppSocket } from './types.ts';
 import { CardEffectController } from './card-effects-controller.ts';
 import { Match, PlayerID, TurnPhaseOrderValues } from 'shared/shared-types.ts';
@@ -11,11 +10,12 @@ export class CardInteractivityController {
 
   constructor(
     private readonly _cardEffectController: CardEffectController,
-    private readonly _$matchState: PreinitializedWritableAtom<Match>,
+    private readonly match: Match,
     private readonly _socketMap: Map<PlayerID, AppSocket>,
     private readonly _cardLibrary: CardLibrary,
   ) {
-    _$matchState.subscribe(this.checkCardInteractivity.bind(this));
+    // todo
+    //match.subscribe(this.checkCardInteractivity.bind(this));
 
     this._socketMap.forEach((s) => {
       s.on('cardTapped', this.onCardTapped);
@@ -23,12 +23,11 @@ export class CardInteractivityController {
     });
   }
   
-  public playerAdded(playerId: number, socket: AppSocket | undefined) {
+  public playerAdded(socket: AppSocket | undefined) {
     socket?.on('cardTapped', this.onCardTapped);
     socket?.on('playAllTreasure', this.onPlayAllTreasure);
-    
   }
-  public playerRemoved(playerId: number, socket: AppSocket | undefined) {
+  public playerRemoved(socket: AppSocket | undefined) {
     socket?.off('cardTapped', this.onCardTapped);
     socket?.off('playAllTreasure', this.onPlayAllTreasure);
   }
@@ -54,7 +53,7 @@ export class CardInteractivityController {
       return;
     }
 
-    const match = this._$matchState.get();
+    const match = this.match;
     const currentPlayer = match.players[match.currentPlayerTurnIndex];
 
     if (isUndefined(currentPlayer)) {
@@ -76,7 +75,7 @@ export class CardInteractivityController {
   }
 
   private onCardTapped = async (triggerPlayerId: number, tappedCardId: number) => {
-    const match = this._$matchState.get();
+    const match = this.match;
     const player = match.players.find(player => player.id === triggerPlayerId);
 
     const card = this._cardLibrary.getCard(tappedCardId);

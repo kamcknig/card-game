@@ -131,13 +131,12 @@ export class Game {
       this.players = [];
       this.owner = undefined;
       this.started = false;
-      // todo stop match controller
       this._match = undefined;
       this._matchConfiguration = defaultMatchConfiguration;
       return;
     }
     
-    this._match?.playerDisconnected(player.id, this._socketMap.get(playerId));
+    this._match?.playerDisconnected(player.id);
     
     io.in('game').emit('playerDisconnected', player);
     

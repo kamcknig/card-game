@@ -1,20 +1,14 @@
-import { PreinitializedWritableAtom } from "nanostores";
-import { GameEffects } from "./effects/game-effects.ts";
-import {
-  AppSocket,
-  EffectGenerator,
-  EffectHandlerMap,
-  
-} from "./types.ts";
+import { GameEffects } from './effects/game-effects.ts';
+import { AppSocket, EffectGenerator, EffectHandlerMap, } from './types.ts';
 import { Match, MatchUpdate, PlayerID } from 'shared/shared-types.ts';
-import { isUndefined } from "es-toolkit";
+import { isUndefined } from 'es-toolkit';
 
 export class EffectsPipeline {
   private _suspendEffectCallback: boolean = false;
 
   constructor(
     private readonly _effectHandlerMap: EffectHandlerMap,
-    private readonly _$matchState: PreinitializedWritableAtom<Partial<Match>>,
+    private readonly match: Match,
     private readonly _socketMap: Map<PlayerID, AppSocket>,
   ) {}
 
@@ -59,7 +53,7 @@ export class EffectsPipeline {
 
     if (topLevel) {
       if (!this._suspendEffectCallback) {
-        this.effectCompleted(match, acc);
+        this.effectCompleted();
         console.debug(
           `[EFFECT PIPELINE] topLevel effect pipeline complete, send client update`,
         );
@@ -80,17 +74,11 @@ export class EffectsPipeline {
     await fn();
     console.log(`[EFFECT PIPELINE] un-suspending call back`);
     this._suspendEffectCallback = false;
+    this.effectCompleted();
   }
 
-  private effectCompleted(match: Match, acc: MatchUpdate) {
+  private effectCompleted() {
     console.log(`[EFFECT PIPELINE] effects runner has completed`);
-    if (Object.keys(acc).length > 0) {
-      this._socketMap.forEach(s => s.emit('matchUpdated', acc));
-      this._$matchState.set({ ...match });
-    } else {
-      console.debug(
-        `[EFFECT PIPELINE] effect has no updates in the partial update, not trigger match state update`,
-      );
-    }
+    this._socketMap.forEach(s => s.emit('matchUpdated', this.match));
   }
 }
