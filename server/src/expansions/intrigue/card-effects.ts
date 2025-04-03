@@ -1,19 +1,19 @@
-import { DiscardCardEffect } from "../../effects/discard-card.ts";
-import { GainBuyEffect } from "../../effects/gain-buy.ts";
-import { GainCardEffect } from "../../effects/gain-card.ts";
-import { GainTreasureEffect } from "../../effects/gain-treasure.ts";
-import { UserPromptEffect } from "../../effects/user-prompt.ts";
-import { ModifyCostEffect } from "../../effects/modify-cost.ts";
-import { DrawCardEffect } from "../../effects/draw-card.ts";
-import { GainActionEffect } from "../../effects/gain-action.ts";
-import { RevealCardEffect } from "../../effects/reveal-card.ts";
-import { SelectCardEffect } from "../../effects/select-card.ts";
-import { MoveCardEffect } from "../../effects/move-card.ts";
-import { CardExpansionModule } from "../card-expansion-module.ts";
-import { getPlayerById } from "../../utils/get-player-by-id.ts";
-import { TrashCardEffect } from "../../effects/trash-card.ts";
-import { ActionButtons, Card, CardId, PlayerID } from "shared/shared-types.ts";
-import { findOrderedEffectTargets } from "../../utils/find-ordered-effect-targets.ts";
+import { DiscardCardEffect } from '../../effects/discard-card.ts';
+import { GainBuyEffect } from '../../effects/gain-buy.ts';
+import { GainCardEffect } from '../../effects/gain-card.ts';
+import { GainTreasureEffect } from '../../effects/gain-treasure.ts';
+import { UserPromptEffect } from '../../effects/user-prompt.ts';
+import { ModifyCostEffect } from '../../effects/modify-cost.ts';
+import { DrawCardEffect } from '../../effects/draw-card.ts';
+import { GainActionEffect } from '../../effects/gain-action.ts';
+import { RevealCardEffect } from '../../effects/reveal-card.ts';
+import { SelectCardEffect } from '../../effects/select-card.ts';
+import { MoveCardEffect } from '../../effects/move-card.ts';
+import { CardExpansionModule } from '../card-expansion-module.ts';
+import { getPlayerById } from '../../utils/get-player-by-id.ts';
+import { TrashCardEffect } from '../../effects/trash-card.ts';
+import { ActionButtons, Card, CardId, PlayerID } from 'shared/shared-types.ts';
+import { findOrderedEffectTargets } from '../../utils/find-ordered-effect-targets.ts';
 
 const expansionModule: CardExpansionModule = {
   registerCardLifeCycles: () => ({
@@ -78,8 +78,7 @@ const expansionModule: CardExpansionModule = {
         match.playerDecks[ownerId],
         match.playerDiscards[ownerId],
         match.playArea,
-      )
-        .map(cardLibrary.getCard)
+      ).map(cardLibrary.getCard)
         .filter((card) => card.cardKey === "duchy");
 
       console.debug(
@@ -101,57 +100,78 @@ const expansionModule: CardExpansionModule = {
       yield new GainBuyEffect({
         count: 1,
         sourcePlayerId: triggerPlayerId,
+        sourceCardId: triggerCardId
       });
 
       const hand = match.playerHands[triggerPlayerId];
-      const idx = hand.findIndex((cId) =>
+      
+      const handEstateIdx = hand.findLast((cId) =>
         cardLibrary.getCard(cId).cardKey === "estate"
       );
-      if (idx !== -1) {
-        const confirm = (yield new UserPromptEffect({
+      
+      const supplyEstateIdx = match.supply.findLast((cId) =>
+        cardLibrary.getCard(cId).cardKey === "estate"
+      );
+      
+      if (!handEstateIdx) {
+        console.debug(`[BARON EFFECT] player has no estates in hand, they gain one`);
+        
+        if (!supplyEstateIdx) {
+          console.debug(`[BARON EFFECT] no estates in supply`);
+          return;
+        }
+        
+        yield new GainCardEffect({
+          playerId: triggerPlayerId,
+          sourcePlayerId: triggerPlayerId,
+          sourceCardId: triggerCardId!,
+          cardId: supplyEstateIdx,
+          to: { location: 'playerDiscards' },
+        });
+        return;
+      }
+      
+      console.debug(`[BARON EFFECT] player has an estate in hand`);
+      
+      const confirm = (yield new UserPromptEffect({
+        playerId: triggerPlayerId,
+        sourcePlayerId: triggerPlayerId,
+        sourceCardId: triggerCardId,
+        prompt: "Discard estate?",
+        actionButtons: [
+          { label: "NO", action: 1 },
+          { label: "DISCARD", action: 2, }
+        ],
+      })) as { action: number };
+
+      if (confirm.action === 2) {
+        console.debug(`[BARON EFFECT] player chooses to discard estate, gain 4 treasure`);
+        
+        yield new DiscardCardEffect({
+          cardId: handEstateIdx,
+          sourceCardId: triggerCardId,
+          sourcePlayerId: triggerPlayerId,
+          playerId: triggerPlayerId,
+        });
+        
+        yield new GainTreasureEffect({
+          count: 4,
+          sourcePlayerId: triggerPlayerId,
+        });
+      } else if (supplyEstateIdx) {
+        console.debug(`[BARON EFFECT] player not discarding estate, gaining one`);
+        
+        yield new GainCardEffect({
           playerId: triggerPlayerId,
           sourcePlayerId: triggerPlayerId,
           sourceCardId: triggerCardId,
-          prompt: "Discard estate?",
-          actionButtons: [{ label: "NO", action: 1 }, {
-            label: "DISCARD",
-            action: 2,
-          }],
-        })) as { action: number };
-
-        if (confirm.action === 2) {
-          console.debug(`[BARON EFFECT] player discarded estate`);
-          yield new DiscardCardEffect({
-            cardId: idx,
-            sourceCardId: triggerCardId,
-            sourcePlayerId: triggerPlayerId,
-            playerId: triggerPlayerId,
-          });
-          yield new GainTreasureEffect({
-            count: 4,
-            sourcePlayerId: triggerPlayerId,
-          });
-        } else {
-          console.debug(`[BARON EFFECT] player not discarding estate`);
-          const idx = match.supply.findLastIndex((cId) =>
-            cardLibrary.getCard(cId).cardKey === "estate"
-          );
-          if (idx !== -1) {
-            yield new GainCardEffect({
-              playerId: triggerPlayerId,
-              sourcePlayerId: triggerPlayerId,
-              sourceCardId: triggerCardId,
-              cardId: idx,
-              to: {
-                location: "playerDiscards",
-              },
-            });
-          } else {
-            console.debug(`[BARON EFFECT] supply has no estates`);
-          }
-        }
+          cardId: supplyEstateIdx,
+          to: {
+            location: "playerDiscards",
+          },
+        });
       } else {
-        console.debug(`[BARON EFFECT] player has no estates in hand`);
+        console.debug(`[BARON EFFECT] no estate in supply`)
       }
     },
     "bridge": function* ({
@@ -357,7 +377,7 @@ const expansionModule: CardExpansionModule = {
         );
       }
     },
-    "duke": function* () {},
+    /*"duke": function* () {},*/
     "farm": function* ({
       triggerPlayerId,
     }) {
@@ -619,7 +639,7 @@ const expansionModule: CardExpansionModule = {
         sourcePlayerId: triggerPlayerId,
         actionButtons: [
           { action: 1, label: "NO" },
-          { action: 1, label: "YES" },
+          { action: 2, label: "YES" },
         ],
         prompt: "Trash Mining Village?",
       })) as { action: number; cardIds: number[] };
@@ -910,8 +930,8 @@ const expansionModule: CardExpansionModule = {
             location: ["kingdom", "supply"],
           },
           cost: {
-            kind: 'upTo',
-            amount: card.cost.treasure + 2
+            kind: "upTo",
+            amount: card.cost.treasure + 2,
           },
         },
         count: 1,
@@ -920,41 +940,49 @@ const expansionModule: CardExpansionModule = {
 
       cardId = result[0];
       card = cardLibrary.getCard(cardId);
-      
+
       yield new GainCardEffect({
         playerId: triggerPlayerId,
         sourcePlayerId: triggerPlayerId,
         sourceCardId: triggerCardId!,
         cardId,
-        to: { location: card.type.some(t => ['ACTION', 'TREASURE'].includes(t)) ? "playerDecks" : 'playerDiscards' },
+        to: {
+          location: card.type.some((t) => ["ACTION", "TREASURE"].includes(t))
+            ? "playerDecks"
+            : "playerDiscards",
+        },
       });
-      
-      if (card.type.includes('VICTORY')) {
-        const targets = findOrderedEffectTargets(triggerPlayerId, 'ALL_OTHER', match).filter(id => reactionContext[id] !== 'immunity');
+
+      if (card.type.includes("VICTORY")) {
+        const targets = findOrderedEffectTargets(
+          triggerPlayerId,
+          "ALL_OTHER",
+          match,
+        ).filter((id) => reactionContext[id] !== "immunity");
         for (const targetId of targets) {
           for (let i = match.supply.length - 1; i >= 0; i--) {
             const potentialCard = cardLibrary.getCard(match.supply[i]);
-            if (potentialCard.cardKey !== 'curse') continue;
+            if (potentialCard.cardKey !== "curse") continue;
             yield new GainCardEffect({
               playerId: targetId,
               sourcePlayerId: triggerPlayerId,
               sourceCardId: triggerCardId!,
               cardId: potentialCard.id,
-              to: { location: 'playerDiscards' },
+              to: { location: "playerDiscards" },
             });
             break;
           }
         }
       }
     },
-    "secret-passage": function* ({
+    /*"secret-passage": function* ({
       match,
       cardLibrary,
       triggerPlayerId,
       triggerCardId,
       reactionContext,
     }) {
-    },
+    },*/
     "shanty-town": function* ({
       match,
       cardLibrary,
@@ -962,9 +990,9 @@ const expansionModule: CardExpansionModule = {
       triggerCardId,
     }) {
       yield new GainActionEffect({ count: 2, sourcePlayerId: triggerPlayerId });
-      
+
       const hand = match.playerHands[triggerPlayerId];
-      
+
       for (const cardId of hand) {
         yield new RevealCardEffect({
           sourceCardId: triggerCardId,
@@ -973,13 +1001,17 @@ const expansionModule: CardExpansionModule = {
           playerId: triggerPlayerId,
         });
       }
-      
-      if (!hand.some(cardId => cardLibrary.getCard(cardId).type.includes('ACTION'))) {
+
+      if (
+        !hand.some((cardId) =>
+          cardLibrary.getCard(cardId).type.includes("ACTION")
+        )
+      ) {
         for (let i = 0; i < 2; i++) {
           yield new DrawCardEffect({
             playerId: triggerPlayerId,
             sourcePlayerId: triggerPlayerId,
-            sourceCardId: triggerCardId
+            sourceCardId: triggerCardId,
           });
         }
       }
@@ -994,42 +1026,45 @@ const expansionModule: CardExpansionModule = {
         sourcePlayerId: triggerPlayerId,
         sourceCardId: triggerCardId,
         actionButtons: [
-          {action: 1, label: '+2 Card'},
-          {action: 2, label: '+2 Treasure'},
-          {action: 3, label: 'Trash 2 cards'}
+          { action: 1, label: "+2 Card" },
+          { action: 2, label: "+2 Treasure" },
+          { action: 3, label: "Trash 2 cards" },
         ],
-        prompt: 'Choose on',
-      })) as { action: number, cardIds: number[] };
-      
+        prompt: "Choose on",
+      })) as { action: number; cardIds: number[] };
+
       switch (result.action) {
         case 1:
           for (let i = 0; i < 2; i++) {
             yield new DrawCardEffect({
               playerId: triggerPlayerId,
               sourcePlayerId: triggerPlayerId,
-              sourceCardId: triggerCardId
+              sourceCardId: triggerCardId,
             });
           }
           break;
         case 2:
-          yield new GainTreasureEffect({ count: 2, sourcePlayerId: triggerPlayerId });
+          yield new GainTreasureEffect({
+            count: 2,
+            sourcePlayerId: triggerPlayerId,
+          });
           break;
         case 3: {
           const cardIds = (yield new SelectCardEffect({
-            prompt: 'Confirm trash',
+            prompt: "Confirm trash",
             playerId: triggerPlayerId,
             sourcePlayerId: triggerPlayerId,
-            restrict: { from: { location: 'playerHands' } },
+            restrict: { from: { location: "playerHands" } },
             count: Math.min(2, match.playerHands[triggerPlayerId].length),
-            sourceCardId: triggerCardId
+            sourceCardId: triggerCardId,
           })) as number[];
-          
+
           for (const cardId of cardIds) {
             yield new TrashCardEffect({
               sourcePlayerId: triggerPlayerId,
               playerId: triggerPlayerId,
               cardId,
-              sourceCardId: triggerCardId!
+              sourceCardId: triggerCardId!,
             });
           }
           break;
@@ -1043,9 +1078,16 @@ const expansionModule: CardExpansionModule = {
       triggerCardId,
       reactionContext,
     }) {
-      yield new GainTreasureEffect({ count: 2, sourcePlayerId: triggerPlayerId });
-      
-      const targets = findOrderedEffectTargets(triggerPlayerId, 'ALL_OTHER', match).filter(id => reactionContext[id] !== 'immunity')
+      yield new GainTreasureEffect({
+        count: 2,
+        sourcePlayerId: triggerPlayerId,
+      });
+
+      const targets = findOrderedEffectTargets(
+        triggerPlayerId,
+        "ALL_OTHER",
+        match,
+      ).filter((id) => reactionContext[id] !== "immunity");
       for (const target of targets) {
         let cardId = match.playerDecks[target].slice(-1)?.[0];
         if (!cardId) continue;
@@ -1053,17 +1095,20 @@ const expansionModule: CardExpansionModule = {
           sourcePlayerId: triggerPlayerId,
           playerId: target,
           cardId: cardId,
-          sourceCardId: triggerCardId!
+          sourceCardId: triggerCardId!,
         });
         const card = cardLibrary.getCard(cardId);
         const cardIds = (yield new SelectCardEffect({
-          prompt: 'Choose card',
-          validPrompt: '',
+          prompt: "Choose card",
+          validPrompt: "",
           playerId: triggerPlayerId,
           sourcePlayerId: triggerPlayerId,
-          restrict: { from: { location: ['supply', 'kingdom'] }, cost: card.cost.treasure },
+          restrict: {
+            from: { location: ["supply", "kingdom"] },
+            cost: card.cost.treasure,
+          },
           count: 1,
-          sourceCardId: triggerCardId
+          sourceCardId: triggerCardId,
         })) as number[];
         cardId = cardIds[0];
         if (!cardId) {
@@ -1074,63 +1119,158 @@ const expansionModule: CardExpansionModule = {
           sourcePlayerId: triggerPlayerId,
           sourceCardId: triggerCardId!,
           cardId,
-          to: { location: 'playerDiscards' },
+          to: { location: "playerDiscards" },
         });
       }
     },
-    "torturer": function* ({
+    /*"torturer": function* ({
       match,
       cardLibrary,
       triggerPlayerId,
       triggerCardId,
       reactionContext,
     }) {
-    },
+      // +3 Cards\nEach other player either discards 2 cards or gains a Curse to their hand, their choice. (They may pick an option they can't do.)"
+      
+      for (let i = 0; i < 3; i++) {
+        yield new DrawCardEffect({
+          playerId: triggerPlayerId,
+          sourcePlayerId: triggerPlayerId,
+          sourceCardId: triggerCardId
+        });
+      }
+      
+      const targets = findOrderedEffectTargets(triggerPlayerId, 'ALL_OTHER', match).filter(id => reactionContext[id] !== "immunity");
+      for (const target of targets) {
+        const result = (yield new UserPromptEffect({
+          playerId: target,
+          sourcePlayerId: triggerPlayerId,
+          sourceCardId: triggerCardId,
+          actionButtons: [
+            {action: 1, label: 'DISCARD'},
+            {action: 2, label: 'GAIN CURSE'}
+          ],
+          prompt: 'Choose one',
+        })) as { action: number, cardIds: number[] };
+        
+        if (result.action === 1) {
+          const cardIds = (yield new SelectCardEffect({
+            prompt: 'Confirm discard',
+            playerId: target,
+            sourcePlayerId: triggerPlayerId,
+            restrict: { from: { location: 'playerHands' } },
+            count: Math.min(2, match.playerHands[target].length),
+            sourceCardId: triggerCardId
+          })) as number[];
+          
+          for (const cardId of cardIds) {
+            yield new DiscardCardEffect({
+              cardId,
+              playerId: target,
+              sourcePlayerId: triggerPlayerId,
+            });
+          }
+        }
+        else {
+          match.supply
+        }
+      }
+      
+    },*/
     "trading-post": function* ({
       match,
       triggerPlayerId,
-      triggerCardId
+      triggerCardId,
+      cardLibrary
     }) {
       const cardIds = (yield new SelectCardEffect({
-        prompt: 'Confirm trash',
+        prompt: "Confirm trash",
         playerId: triggerPlayerId,
         sourcePlayerId: triggerPlayerId,
-        restrict: { from: { location: 'playerHands' } },
+        restrict: { from: { location: "playerHands" } },
         count: Math.min(2, match.playerDecks[triggerPlayerId].length),
-        sourceCardId: triggerCardId
+        sourceCardId: triggerCardId,
       })) as number[];
-      
+
       for (const cardId of cardIds) {
         yield new TrashCardEffect({
           sourcePlayerId: triggerPlayerId,
           playerId: triggerPlayerId,
           cardId,
-          sourceCardId: triggerCardId!
+          sourceCardId: triggerCardId!,
         });
       }
-      
+
       if (cardIds.length === 2) {
-        yield new GainTreasureEffect({ count: 2, sourcePlayerId: triggerPlayerId });
+        for (let i = match.supply.length - 1; i >= 0; i--) {
+          const card = cardLibrary.getCard(match.supply[i]);
+          if (card.cardKey === 'silver') {
+            yield new GainCardEffect({
+              playerId: triggerPlayerId,
+              sourcePlayerId: triggerPlayerId,
+              sourceCardId: triggerCardId!,
+              cardId: card.id,
+              to: { location: 'playerHands' },
+            });
+            break;
+          }
+        }
       } else {
-        console.debug(`[TRADING POST EFFECT] player trashed ${cardIds.length}, so no treasure gained`);
+        console.debug(
+          `[TRADING POST EFFECT] player trashed ${cardIds.length}, so no treasure gained`,
+        );
       }
     },
     "upgrade": function* ({
+      cardLibrary,
+      triggerPlayerId,
+      triggerCardId,
+    }) {
+      yield new DrawCardEffect({
+        playerId: triggerPlayerId,
+        sourcePlayerId: triggerPlayerId,
+        sourceCardId: triggerCardId,
+      })
+
+      yield new GainActionEffect({ count: 1, sourcePlayerId: triggerPlayerId });
+
+      const cardIds = (yield new SelectCardEffect({
+        prompt: "Confirm trash",
+        playerId: triggerPlayerId,
+        sourcePlayerId: triggerPlayerId,
+        restrict: { from: { location: "playerHands" } },
+        count: 1,
+        sourceCardId: triggerCardId,
+      })) as number[];
+
+      if (cardIds.length === 0) {
+        console.debug(`[UPGRADE EFFECT] player trashed no cards`);
+        return;
+      }
+
+      const card = cardLibrary.getCard(cardIds[0]);
+      
+      yield new SelectCardEffect({
+        prompt: "Gain card",
+        playerId: triggerPlayerId,
+        sourcePlayerId: triggerPlayerId,
+        restrict: {
+          from: { location: ["supply", "kingdom"] },
+          cost: card.cost.treasure + 1,
+        },
+        count: 1,
+        sourceCardId: triggerCardId,
+      });
+    },
+    /*"wishing-well": function* ({
       match,
       cardLibrary,
       triggerPlayerId,
       triggerCardId,
       reactionContext,
     }) {
-    },
-    "wishing-well": function* ({
-      match,
-      cardLibrary,
-      triggerPlayerId,
-      triggerCardId,
-      reactionContext,
-    }) {
-    },
+
+    },*/
   }),
 };
 

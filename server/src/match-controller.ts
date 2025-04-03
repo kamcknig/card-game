@@ -150,14 +150,14 @@ export class MatchController {
     const kingdomCards: Card[] = [];
 
     // todo: remove testing code
-    const keepers: string[] = ['shanty-town', 'steward', 'swindler', 'trading-post'];
+    const keepers: string[] = [];
 
     console.debug(
       `[MATCH] choosing ${MatchBaseConfiguration.numberOfKingdomPiles} kingdom cards`,
     );
 
     const availableKingdom = Object.keys(cardLibrary["kingdom"]);
-    console.debug(`[MATCH] available kingdom cards ${availableKingdom}`);
+    console.debug(`[MATCH] available kingdom cards\n${availableKingdom}`);
 
     const chosenKingdom = availableKingdom
       .sort(() => Math.random() > .5 ? 1 : -1)
@@ -214,15 +214,15 @@ export class MatchController {
 
     return Object.values(config.players).reduce((prev, player, _idx) => {
       console.log("initializing player", player.id, "cards...");
-      let blah = {};
+      /*let blah = {};
       // todo remove testing code
       if (_idx === 0) {
         blah = {
-          swindler: 3,
-          copper: 3,
-          duchy: 3,
+          baron: 3,
+          sentry: 3,
+          'mining-village': 3,
           'trading-post': 3,
-          'shanty-town': 1,
+          duke: 2,
         };
       } else {
         blah = {
@@ -232,9 +232,9 @@ export class MatchController {
           moat: 5
         };
       }
-      Object.entries(blah).forEach(([key, count]) => {
-        /*Object.entries(playerStartHand).forEach(
-        ([key, count]) => {*/
+      Object.entries(blah).forEach(([key, count]) => {*/
+        Object.entries(playerStartHand).forEach(
+        ([key, count]) => {
         prev["playerDecks"][player.id] ??= [];
         let deck = prev["playerDecks"][player.id];
         deck = deck.concat(
@@ -386,7 +386,7 @@ export class MatchController {
         const customScoringFn = scoringFunctionMap[card?.cardKey ?? ""];
         if (customScoringFn) {
           console.log(`[MATCH] processing scoring function for ${card}`);
-          score += customScoringFn(match as Match, this._cardLibrary, playerId);
+          score += customScoringFn({ match: this.$matchState.get(), cardLibrary: this._cardLibrary, ownerId: playerId });
         }
       }
       scores[playerId] = score;
@@ -604,7 +604,7 @@ export class MatchController {
             currentMatch.playerHands[player.id],
           );
 
-          await this._effectsController?.suspendedCallbackRunner(
+          /*await this._effectsController?.suspendedCallbackRunner(
             async () => {
               for (const cardId of cardsToDiscard) {
                 await this._effectsController!.runGameActionEffects(
@@ -628,8 +628,29 @@ export class MatchController {
               this.endTurn(newMatch);
               await this.onNextPhase(match);
             },
-          );
-
+          );*/
+          
+          for (const cardId of cardsToDiscard) {
+            await this._effectsController!.runGameActionEffects(
+              "discardCard",
+              this.$matchState.get(),
+              player.id,
+              cardId,
+            );
+          }
+          
+          for (let i = 0; i < 5; i++) {
+            await this._effectsController!.runGameActionEffects(
+              "drawCard",
+              this.$matchState.get(),
+              player.id,
+            );
+          }
+          
+          const newMatch = { ...this.$matchState.get(), ...match };
+          this.endTurn(newMatch);
+          await this.onNextPhase(match);
+          
           return;
         }
       }

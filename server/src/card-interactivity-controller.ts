@@ -66,10 +66,8 @@ export class CardInteractivityController {
     const treasureCards = hand.filter((e) =>
       this._cardLibrary.getCard(e).type.includes('TREASURE')
     );
+    console.debug(`[CARD INTERACTIVITY] ${currentPlayer} has ${treasureCards.length} treasure cards in hand`);
     if (hand.length === 0 || treasureCards.length === 0) {
-      console.debug(
-        `[CARD INTERACTIVITY] ${currentPlayer} has no cards or no treasures in hand`,
-      );
       return;
     }
     for (const cardId of treasureCards) {

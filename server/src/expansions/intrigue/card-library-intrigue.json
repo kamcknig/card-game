@@ -7,14 +7,6 @@
     },
     "cardName": "Baron"
   },
-  "bridge": {
-    "abilityText": "+1 Buy\n+$1\nThis turn, cards (everywhere) cost $1 less.",
-    "type": ["ACTION"],
-    "cardName": "Bridge",
-    "cost": {
-      "treasure": 4
-    }
-  },
   "conspirator": {
     "abilityText": "+$2\nIf you've played 3 or more Actions this turn (counting this), +1 Card and +1 Action.",
     "cost": {

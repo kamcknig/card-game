@@ -1000,47 +1000,27 @@ const expansionModule: CardExpansionModule = {
         count: 1,
       });
 
-      let playerDeck = match.playerDecks[triggerPlayerId];
-      const playerDiscard = match.playerDiscards[triggerPlayerId];
-
-      let numToLookAt = 2;
-      const cardCount = playerDeck.length + playerDiscard.length;
-
-      if (cardCount < 2) {
-        numToLookAt = Math.min(numToLookAt, cardCount);
-        console.debug(
-          `[SENTRY EFFECT] not enough cards in deck + discard, setting num to look at to ${numToLookAt}`,
-        );
-      }
-
+      const playerDeck = match.playerDecks[triggerPlayerId];
+      const numToLookAt = Math.min(2, playerDeck.length);
+      
       if (numToLookAt === 0) {
         console.debug(`[SENTRY EFFECT] player does not have enough cards`);
         return;
       }
 
-      if (numToLookAt < playerDeck.length) {
-        console.log(`[SENTRY EFFECT] player does not have enough in deck, reshuffling`);
-
-        yield new ShuffleDeckEffect({
-          playerId: triggerPlayerId,
-        });
-
-        playerDeck = match.playerDecks[triggerPlayerId];
-      }
-
-      let cardsToLookAtIds = playerDeck.slice(-numToLookAt);
+      const cardsToLookAtIds = playerDeck.slice(-numToLookAt);
 
       console.debug(
         `[SENTRY EFFECT] looking at cards ${
           cardsToLookAtIds.map((id) => cardLibrary.getCard(id))
         }`,
       );
-
+      
       let result = (yield new UserPromptEffect({
         sourcePlayerId: triggerPlayerId,
         sourceCardId: triggerCardId,
         playerId: triggerPlayerId,
-        prompt: 'Choose a card/s to trash?',
+        prompt: 'Choose card/s to trash?',
         actionButtons: [{label: 'TRASH', action: 1}],
         content: {
           cards: {
@@ -1054,33 +1034,32 @@ const expansionModule: CardExpansionModule = {
       })) as { action: number; cardIds: number[] };
       
       let selectedCardIds = result.cardIds;
-
+      
       console.debug(
         `[SENTRY EFFECT] player selected ${
           selectedCardIds.map((id) => cardLibrary.getCard(id))
         } to trash`,
       );
-
-      if (selectedCardIds.length > 0) {
-        for (const selectedCardId of selectedCardIds) {
-          yield new TrashCardEffect({
-            sourcePlayerId: triggerPlayerId,
-            sourceCardId: triggerCardId,
-            playerId: triggerPlayerId,
-            cardId: selectedCardId,
-          });
-        }
+      
+      for (const cardId of selectedCardIds) {
+        yield new TrashCardEffect({
+          sourcePlayerId: triggerPlayerId,
+          sourceCardId: triggerCardId,
+          playerId: triggerPlayerId,
+          cardId: cardId,
+        });
       }
-
-      cardsToLookAtIds = cardsToLookAtIds.filter((id) =>
+      
+      const cardsToDiscard = cardsToLookAtIds.filter((id) =>
         !selectedCardIds.includes(id)
       );
 
-      if (cardsToLookAtIds.length === 0) {
+      if (cardsToDiscard.length === 0) {
         console.debug(`[SENTRY EFFECT] all cards trashed, not selecting for discard`);
         return;
       }
-
+      
+      //Look at the top 2 cards of your deck. Trash and/or discard any number of them. Put the rest back on top in any order."
       result = (yield new UserPromptEffect({
         sourcePlayerId: triggerPlayerId,
         sourceCardId: triggerCardId,
@@ -1089,16 +1068,21 @@ const expansionModule: CardExpansionModule = {
         actionButtons: [{label: 'DISCARD', action: 1}],
         content: {
           cards: {
-            cardIds: cardsToLookAtIds,
+            cardIds: cardsToDiscard,
             selectCount: {
               kind: 'upTo',
-              count: cardsToLookAtIds.length,
+              count: cardsToDiscard.length,
             },
           },
         },
       })) as { action: number; cardIds: number[] };
 
       selectedCardIds = result.cardIds;
+      
+      if (selectedCardIds.length === 0) {
+        console.debug(`[SENTRY EFFECT] player chose not to discard cards`);
+        return;
+      }
       
       console.debug(
         `[SENTRY EFFECT] player chose ${

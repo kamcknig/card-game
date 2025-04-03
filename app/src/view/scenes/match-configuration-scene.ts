@@ -1,14 +1,13 @@
-import { Assets, Color, Container, DestroyOptions, Graphics, Sprite, Text } from "pixi.js";
-import { Scene } from "../../core/scene/scene";
-import { $players, $selfPlayerId } from "../../state/player-state";
-import { socket } from "../../client-socket";
-import { $gameOwner } from "../../state/game-state";
+import { Assets, Color, Container, Graphics, Sprite, Text } from 'pixi.js';
+import { Scene } from '../../core/scene/scene';
+import { $player, $playerIds, $players, $selfPlayerId } from '../../state/player-state';
+import { socket } from '../../client-socket';
+import { $gameOwner } from '../../state/game-state';
 import { $expansionList } from '../../state/expansion-list-state';
 import { STANDARD_GAP } from '../../app-contants';
-import { isUndefined } from 'es-toolkit';
 import { $matchConfiguration } from '../../state/match-state';
 import { MatchConfiguration, Player } from 'shared/shared-types';
-import { CheckBox, Input, List } from "@pixi/ui";
+import { CheckBox, Input, List } from '@pixi/ui';
 import { AppList } from '../../app-list';
 
 export class MatchConfigurationScene extends Scene {
@@ -18,7 +17,7 @@ export class MatchConfigurationScene extends Scene {
     elementsMargin: STANDARD_GAP,
   });
   private readonly _cleanup: (() => void)[] = [];
-  private _expansionList: List = new List({type: 'vertical', padding: STANDARD_GAP, elementsMargin: STANDARD_GAP});
+  private _expansionList: List = new List({ type: 'vertical', padding: STANDARD_GAP, elementsMargin: STANDARD_GAP });
   private _expansionHighlight: Graphics = new Graphics();
   private _updateNameTimeout: any;
   
@@ -35,7 +34,8 @@ export class MatchConfigurationScene extends Scene {
   initialize() {
     super.initialize();
     
-    this._cleanup.push($players.subscribe(this.updatePlayerList.bind(this)));
+    this._cleanup.push($playerIds.subscribe(this.onPlayerListUpdated.bind(this)));
+    
     this._playerList.x = 300;
     this._playerList.y = STANDARD_GAP;
     this.addChild(this._playerList);
@@ -60,7 +60,7 @@ export class MatchConfigurationScene extends Scene {
     }
     
     for (const expansion of val) {
-      const expansionList = new AppList({ type:'horizontal', elementsMargin: STANDARD_GAP});
+      const expansionList = new AppList({ type: 'horizontal', elementsMargin: STANDARD_GAP });
       expansionList.eventMode = 'static';
       expansionList.label = expansion.expansionName;
       
@@ -69,7 +69,7 @@ export class MatchConfigurationScene extends Scene {
       s.label = 'expansionIcon';
       const maxSide = 25;
       s.scale = Math.min(maxSide / s.width, maxSide / s.height);
-      const spriteContainer = new Container({label: 'expansionIconContainer'});
+      const spriteContainer = new Container({ label: 'expansionIconContainer' });
       spriteContainer.addChild(s);
       expansionList.addChild(spriteContainer);
       
@@ -140,31 +140,61 @@ export class MatchConfigurationScene extends Scene {
     }
     
     for (const c of this._expansionList.children) {
-      const highlight = c.getChildByLabel('expansionIconContainer')?.getChildByLabel('highlight');
+      const highlight = c.getChildByLabel('expansionIconContainer')
+        ?.getChildByLabel('highlight');
       if (highlight) {
         highlight.visible = val.expansions.includes(c.label);
       }
     }
   }
   
-  private async updatePlayerList() {
-    const players = $players.get();
+  private onPlayerUpdated = (player: Player) => {
+    const playerName = this._playerList
+      .getChildByLabel(`playerName-${player.id}`)
+      ?.getChildByLabel('nameItem')
+      ?.getChildByLabel('playerNameText') as Text;
     
-    this._playerList.removeChildren();
-    const selfId = $selfPlayerId.get();
-    
-    if (isUndefined(players)) {
+    if (!playerName) {
+      console.warn(`received update for player ${player.id} - ${player.name} but found no player name list item`);
       return;
     }
     
-    for (const player of Object.values(players)) {
+    playerName.text = `${player.name}${player.connected ? '' : ' - disconnected'}`;
+    const readyCheck = this._playerList
+      .getChildByLabel(`playerName-${player.id}`)
+      ?.getChildByLabel('playerReadyCheck') as CheckBox;
+    if (readyCheck) {
+      readyCheck.forceCheck(player.ready);
+    }
+  }
+  
+  private async onPlayerListUpdated(newVal: readonly number[], oldVal: readonly number[]) {
+    if (!newVal?.length) {
+      return;
+    }
+    
+    const added = [...newVal].filter(x => !oldVal?.includes(x));
+    const selfId = $selfPlayerId.get();
+    
+    for (const playerId of added) {
+      const playerName = this._playerList.getChildByLabel(`playerName-${playerId}`);
+      if (playerName) continue; // player is already in the list
+      
+      const player = $player(playerId).get();
+      
+      if (!player) throw new Error(
+        `player ${playerId} added, but no player object exist, did you insert the Player first?`);
+      
+      // holds the checkbox, and the players name/input
       let item: List = new List({
         type: 'horizontal',
         elementsMargin: STANDARD_GAP
       });
+      item.label = `playerName-${player.id}`;
       
       let nameItem: Container;
       
+      // if it's your own player ID, then add an input so the name can be changed
       if (player.id === selfId) {
         nameItem = new Input({
           textStyle: {
@@ -178,8 +208,9 @@ export class MatchConfigurationScene extends Scene {
           padding: STANDARD_GAP
         });
         const s = (nameItem as Input).onChange.connect(this.updateName.bind(this));
-        nameItem.on('destroyed', () => s.disconnect());
+        nameItem.on('removed', () => nameItem.removeAllListeners());
       } else {
+        // otherwise add a text field
         nameItem = new Container();
         const g = new Graphics().roundRect(0, 0, 200, 40, 5)
           .fill(new Color('0x00000000'));
@@ -192,15 +223,24 @@ export class MatchConfigurationScene extends Scene {
             fill: 'black'
           }
         });
+        t.label = 'playerNameText';
         t.y = nameItem.height * .5 - t.height * .5;
         nameItem.addChild(t);
       }
       
+      nameItem.label = 'nameItem';
       item.addChild(nameItem);
       
       await this.drawReadySelect(player, item);
       
       this._playerList.addChild(item);
+      
+      // while self sends updates out, when we get an update on our self we should be able to ignore it.
+      // right now the only updates would be ready or name change, and we already have that visually
+      if (selfId !== playerId) {
+        this._cleanup.push($player(playerId)
+          .subscribe(this.onPlayerUpdated));
+      }
     }
   }
   
@@ -216,17 +256,11 @@ export class MatchConfigurationScene extends Scene {
         unchecked
       }
     });
+    readyCheck.label = 'playerReadyCheck';
     
     let readyCheckSignal;
     if (selfId === player.id) {
       readyCheckSignal = readyCheck.onChange.connect((checked) => {
-        $players.set({
-          ...$players.get(),
-          [selfId]: {
-            ...$players.get()[selfId],
-            ready: checked as boolean
-          }
-        });
         socket.emit('playerReady', selfId, checked as boolean);
       });
     } else {
@@ -239,7 +273,7 @@ export class MatchConfigurationScene extends Scene {
     
     this._cleanup.push(() => readyCheckSignal.disconnect());
     
-    readyCheck.visible = selfId === player.id;
+    readyCheck.alpha = selfId === player.id ? 1 : .5;
     item.addChildAt(readyCheck, 0);
     checked.y = unchecked.y = Math.floor(item.height * .5 - checked.height * .5);
   }

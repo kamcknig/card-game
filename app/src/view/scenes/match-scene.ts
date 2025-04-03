@@ -31,6 +31,7 @@ import { $currentPlayerTurnId, $turnPhase } from '../../state/turn-state';
 import { socket } from '../../client-socket';
 import { isNumber, isUndefined } from 'es-toolkit/compat';
 import { AppList } from '../../app-list';
+import { $gamePaused } from '../../state/game-state';
 
 export class MatchScene extends Scene {
   private _doneSelectingBtn: Container;
@@ -85,8 +86,6 @@ export class MatchScene extends Scene {
     gameEvents.on('displayCardDetail', this.onDisplayCardDetail);
     gameEvents.on('waitingForPlayer', this.onWaitingOnPlayer);
     gameEvents.on('doneWaitingForPlayer', this.onDoneWaitingForPlayer);
-    gameEvents.on('pauseGame', this.onPauseGame);
-    gameEvents.on('unpauseGame', this.onUnpauseGame);
     
     this._cleanup.push(() => {
       app.renderer.off('resize');
@@ -96,13 +95,11 @@ export class MatchScene extends Scene {
       gameEvents.off('displayCardDetail');
       gameEvents.off('waitingForPlayer');
       gameEvents.off('doneWaitingForPlayer');
-      gameEvents.off('pauseGame');
-      gameEvents.off('unpauseGame');
       this._playAllTreasuresButton.button.off('pointerdown');
     });
     
     this._cleanup.push($currentPlayerTurnId.subscribe(this.onCurrentPlayerTurnUpdated));
-    
+    this._cleanup.push($gamePaused.subscribe(this.onPauseGameUpdated));
     this._cleanup.push($turnPhase.subscribe(this.onTurnPhaseUpdated));
     this._cleanup.push($playerHandStore($selfPlayerId.get()).subscribe(this.onTurnPhaseUpdated));
     
@@ -112,29 +109,35 @@ export class MatchScene extends Scene {
     });
   }
   
-  private onPauseGame = () => {
-    const c = new Container({ label: 'pause' });
-    const g = new Graphics({ label: 'pause' });
-    g.rect(0, 0, app.renderer.width, app.renderer.height)
-      .fill({ color: 'black', alpha: .5 });
-    c.addChild(g);
+  private onPauseGameUpdated = (paused: boolean) => {
+    if (paused) {
+      const c = new Container({ label: 'pause' });
+      const g = new Graphics({ label: 'pause' });
+      g.rect(0, 0, app.renderer.width, app.renderer.height)
+        .fill({ color: 'black', alpha: .5 });
+      c.addChild(g);
+      
+      const t = new Text({
+        text: 'PLAYER DISCONNECTED',
+        style: { fill: 'white', fontSize: 36 },
+        anchor: .5
+      });
+      
+      t.x = Math.floor(app.renderer.width * .5);
+      t.y = Math.floor(app.renderer.height * .5);
+      c.addChild(t);
+      this.addChild(c);
+      return;
+    }
     
-    const t = new Text({
-      text: 'PLAYER DISCONNECTED',
-      style: { fill: 'white', fontSize: 36 },
-      anchor: .5
-    });
-    
-    t.x = Math.floor(app.renderer.width * .5);
-    t.y = Math.floor(app.renderer.height * .5);
-    c.addChild(t);
-    this.addChild(c);
+    const c = this.getChildByLabel('pause');
+    c?.removeFromParent();
   }
   
   private onCurrentPlayerTurnUpdated = (playerId: number) => {
-    if (playerId !== $selfPlayerId.get()) return;
+    document.title = `Dominion - ${$players.get()[playerId]?.name}`;
     
-    document.title = `Dominion - ${$players.get()[playerId].name}`;
+    if (playerId !== $selfPlayerId.get()) return;
     
     try {
       const s = new Audio(`./assets/sounds/your-turn.mp3`);
@@ -157,11 +160,6 @@ export class MatchScene extends Scene {
       $currentPlayerTurnId.get() === $selfPlayerId.get() &&
       playerHand.some(cardId => $cardsById.get()[cardId].type.includes('TREASURE'))
     );
-  }
-  
-  private onUnpauseGame = () => {
-    const c = this.getChildByLabel('pause');
-    c?.removeFromParent();
   }
   
   private async loadAssets() {
@@ -266,6 +264,16 @@ export class MatchScene extends Scene {
   }
   
   private onWaitingOnPlayer = (playerId: number) => {
+    if (playerId === $selfPlayerId.get()) {
+      try {
+        const s = new Audio(`./assets/sounds/your-turn.mp3`);
+        s.volume = .2;
+        void s?.play();
+      } catch {
+        console.error('Could not play start turn sound');
+      }
+    }
+    
     const c = new Container({ label: 'waitingOnPlayer' });
     
     const t = new Text({
@@ -443,7 +451,8 @@ export class MatchScene extends Scene {
       return;
     }
     
-    if (event.button === 2) {
+    const cardView = event.target as CardView
+    if (event.button === 2 && cardView.facing === 'front') {
       gameEvents.emit('displayCardDetail', (event.target as CardView).card.id);
       return;
     }

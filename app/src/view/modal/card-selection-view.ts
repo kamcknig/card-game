@@ -41,8 +41,9 @@ export const cardSelectionView = (cards: UserPromptEffectArgs['content']['cards'
   };
   
   const cardPointerDownListener = (event: FederatedPointerEvent) => {
-    if (event.button === 2) {
-      gameEvents.emit('displayCardDetail', newCardToOldCardMap.get((event.target as CardView).card.id));
+    const cardView = event.target as CardView;
+    if (event.button === 2 && cardView.facing === 'front') {
+      gameEvents.emit('displayCardDetail', newCardToOldCardMap.get(cardView.card.id));
       return;
     }
     const target = event.target as CardView;

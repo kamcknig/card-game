@@ -41,18 +41,18 @@ export const createEffectHandlerMap = (
     } = findSourceByCardId(effect.cardId, match, cardLibrary);
 
     if (!oldStoreKey || isUndefined(index)) {
-      console.debug('could not find card in a store to move it');
+      console.debug('[MOVE CARD EFFECT HANDLER] could not find card in a store to move it');
       return;
     }
 
-    console.log(`moving card ${card} from ${oldStoreKey} to ${effect.to.location}`);
+    console.log(`[MOVE CARD EFFECT HANDLER] moving card ${card} from ${oldStoreKey} to ${effect.to.location}`);
 
       effect.to.location = castArray(effect.to.location);
 
     const newStore = findSourceByLocationSpec({ spec: effect.to, playerId: effect.toPlayerId }, match);
 
     if (!newStore) {
-      console.debug('could not find new store to move card to');
+      console.debug('[MOVE CARD EFFECT HANDLER] could not find new store to move card to');
       return;
     }
 
@@ -187,7 +187,7 @@ export const createEffectHandlerMap = (
   }
   
   function userPrompt(effect: UserPromptEffect, match: Match) {
-    console.log('effectHandler userPrompt', effect);
+    console.log('[USER PROMPT EFFECT HANDLER] effectHandler userPrompt', effect);
     
     return new Promise((resolve, reject) => {
       try {
@@ -195,7 +195,7 @@ export const createEffectHandlerMap = (
         const currentPlayer = match.players[match.currentPlayerTurnIndex];
         
         const socketListener = (result: unknown) => {
-          console.debug(`player responded with ${result}`);
+          console.debug(`[USER PROMPT EFFECT HANDLER]player responded with ${result}`);
           socket?.off('userPromptResponse', socketListener);
           resolve(result);
           if (currentPlayer.id !== effect.playerId) {
@@ -218,7 +218,7 @@ export const createEffectHandlerMap = (
   }
 
   function shuffleDeck(playerId: number, match: Match, acc: MatchUpdate) {
-    console.log(`shuffling deck for ${match.players.find(player => player.id === playerId)}`);
+    console.log(`[SHUFFLE DECK EFFECT HANDLER] shuffling deck for ${match.players.find(player => player.id === playerId)}`);
 
     let interimUpdate: MatchUpdate = {};
 
@@ -278,7 +278,7 @@ export const createEffectHandlerMap = (
       const discard = match.playerDiscards[effect.playerId];
 
       if (discard.length + deck.length === 0) {
-        console.log('not enough cards to draw in deck + hand');
+        console.log('[DRAW CARD EFFECT HANDLER] not enough cards to draw in deck + hand');
         return;
       }
 
@@ -288,18 +288,18 @@ export const createEffectHandlerMap = (
       // later sets that can be played from the deck for example and if those are handled
       // via reactions and triggers then their reactions wont' get registered properly
       if (deck.length === 0) {
-        console.debug(`not enough cards in deck, shuffling`);
+        console.debug(`[DRAW CARD EFFECT HANDLER] not enough cards in deck, shuffling`);
         shuffleDeck(effect.playerId, match, acc);
         deck = match.playerDecks[effect.playerId];
       }
 
       const drawnCardId = deck.slice(-1)?.[0];
       if (!drawnCardId) {
-        console.debug(`no card drawn`);
+        console.debug(`[DRAW CARD EFFECT HANDLER] no card drawn`);
         return;
       }
 
-      console.debug(`card drawn ${cardLibrary.getCard(drawnCardId)}`);
+      console.debug(`[DRAW CARD EFFECT HANDLER] card drawn ${cardLibrary.getCard(drawnCardId)}`);
 
       socketMap.forEach(s => s.emit('addLogEntry', {
         type: 'draw',
@@ -415,7 +415,7 @@ export const createEffectHandlerMap = (
       for (const targetPlayer of targetOrder) {
         let reactions = reactionManager.getReactionsForPlayer(match, trigger, targetPlayer.id);
         
-        console.debug(`[PLAY CARD EFFECT HANDLER] found ${reactions.length} for ${targetPlayer}`);
+        console.debug(`[PLAY CARD EFFECT HANDLER] found ${reactions.length} reactions for ${targetPlayer}`);
         
         if (reactions.length === 0) continue;
         
@@ -517,7 +517,7 @@ export const createEffectHandlerMap = (
           );
           
           if (selectedReaction.once) {
-            console.debug(`reaction registered as a 'once', removing reaction`);
+            console.debug(`[PLAY CARD EFFECT HANDLER] reaction registered as a 'once', removing reaction`);
             reactionManager.unregisterTrigger(selectedReaction.id);
           }
           
@@ -538,7 +538,7 @@ export const createEffectHandlerMap = (
       );
     },
     revealCard(effect, _match) {
-      console.debug(`revealing card ${cardLibrary.getCard(effect.cardId)}`);
+      console.debug(`[REVEAL CARD EFFECT HANDLER] revealing card ${cardLibrary.getCard(effect.cardId)}`);
       socketMap.forEach(s => s.emit('addLogEntry', {
         type: 'revealCard',
         cardId: effect.cardId,
@@ -556,19 +556,19 @@ export const createEffectHandlerMap = (
       if (effect.restrict === 'SELF') { // the card that triggered the effect action
         if (effect.sourceCardId) {
           console.debug(
-            `setting selection to effect's source card ${
+            `[SELECT CARD EFFECT HANDLER] setting selection to effect's source card ${
               cardLibrary.getCard(effect.sourceCardId)
             }`,
           );
           selectableCardIds = [effect.sourceCardId];
         } else {
           throw new Error(
-            `effect restriction set to 'SELF' but no sourceCardId was found.`,
+            `[SELECT CARD EFFECT HANDLER] effect restriction set to 'SELF' but no sourceCardId was found.`,
           );
         }
       } else if (Array.isArray(effect.restrict)) { // should be a list of card IDs
         console.debug(
-          `setting selection to list of cards ${
+          `[SELECT CARD EFFECT HANDLER] setting selection to list of cards ${
             effect.restrict.map((id) => cardLibrary.getCard(id))
           }`,
         );
@@ -576,7 +576,7 @@ export const createEffectHandlerMap = (
       } else if (effect.restrict.from) {
         if (effect.restrict.from.location === 'playerDecks') {
           console.warn(
-            'will not be able to select from deck, not sending it to client, nor able to show them to them right now',
+            '[SELECT CARD EFFECT HANDLER] will not be able to select from deck, not sending it to client, nor able to show them to them right now',
           );
           return [];
         }
@@ -587,7 +587,7 @@ export const createEffectHandlerMap = (
           playerId,
         );
         console.debug(
-          `found selectable cards ${
+          `[SELECT CARD EFFECT HANDLER] found selectable cards ${
             selectableCardIds.map((id) => cardLibrary.getCard(id))
           }`,
         );
@@ -595,7 +595,7 @@ export const createEffectHandlerMap = (
 
       if (selectableCardIds?.length === 0) {
         console.debug(
-          `found no cards within restricted set ${effect.restrict}`,
+          `[SELECT CARD EFFECT HANDLER] found no cards within restricted set ${effect.restrict}`,
         );
         return [];
       }
@@ -611,15 +611,11 @@ export const createEffectHandlerMap = (
         } else if (effect.count.kind === 'exact') {
           count = effect.count.count;
         }
-        console.debug(
-          'selection count is an exact count',
-          count,
-          'checking if user has that many cards',
-        );
+        console.debug(`[SELECT CARD EFFECT HANDLER] selection count is an exact count ${count} checking if user has that many cards`);
 
         if (selectableCardIds.length <= count) {
           console.debug(
-            'user does not have enough, or has exactly the amount of cards to select from, selecting all automatically',
+            '[SELECT CARD EFFECT HANDLER] user does not have enough, or has exactly the amount of cards to select from, selecting all automatically',
           );
           return selectableCardIds;
         }
@@ -632,7 +628,7 @@ export const createEffectHandlerMap = (
           
           const socketListener = (selectedCards: number[]) => {
             console.debug(
-              `player selected ${
+              `[SELECT CARD EFFECT HANDLER] player selected ${
                 selectedCards.map((id) => cardLibrary.getCard(id))
               }`,
             );
@@ -666,7 +662,7 @@ export const createEffectHandlerMap = (
       const { sourceStore } = findSourceByCardId(cardId, match, cardLibrary);
 
       if (sourceStore === match.trash) {
-        console.debug(`Card is already in trash`);
+        console.debug(`[TRASH CARD EFFECT HANDLER] Card is already in trash`);
         return;
       }
 

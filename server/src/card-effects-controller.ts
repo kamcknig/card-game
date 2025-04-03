@@ -25,12 +25,12 @@ export class CardEffectController implements IEffectRunner {
     const generatorFn = effectGeneratorMap[effectName];
     if (!generatorFn) {
       console.log(
-        `[EFFECT CONTROLLER] No effect generator found for game event ${effectName}`,
+        `[EFFECT CONTROLLER] No game action effects generator found for game event ${effectName}`,
       );
       return;
     }
     console.log(
-      `[EFFECT CONTROLLER] running game action effect generator for ${effectName}`,
+      `[EFFECT CONTROLLER] running game action effects generator for ${effectName}`,
     );
     const gen = await generatorFn({
       match,
@@ -51,10 +51,10 @@ export class CardEffectController implements IEffectRunner {
     const card = this._cardLibrary.getCard(cardId);
     const generatorFn = effectGeneratorMap[card?.cardKey ?? ""];
     if (!generatorFn) {
-      console.log(`[EFFECT CONTROLLER] No effect generator found for ${card}`);
+      console.log(`[EFFECT CONTROLLER] No card effects generator found for ${card}`);
       return;
     }
-    console.log(`[EFFECT CONTROLLER] running effect generator for ${card}`);
+    console.log(`[EFFECT CONTROLLER] running card effects generator for ${card}`);
     const gen = await generatorFn({
       match,
       cardLibrary: this._cardLibrary,
@@ -72,7 +72,7 @@ export class CardEffectController implements IEffectRunner {
     acc?: MatchUpdate,
   ) {
     if (!generator) {
-      console.log(`[EFFECT CONTROLLER] No effect generator found`);
+      console.log(`[EFFECT CONTROLLER] No anonymous effects generator supplied`);
       return;
     }
 
@@ -93,7 +93,7 @@ export class CardEffectController implements IEffectRunner {
 
   public async suspendedCallbackRunner(fn: () => Promise<void>): Promise<void> {
     console.log(
-      `[EFFECT CONTROLLER] running complete callback suspended effects`,
+      `[EFFECT CONTROLLER] running suspended callback runner complete callback suspended effects`,
     );
     if (this._effectsPipeline) {
       await this._effectsPipeline.suspendCallback(fn);

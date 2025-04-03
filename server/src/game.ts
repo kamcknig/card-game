@@ -32,7 +32,7 @@ export class Game {
         (await import(`./expansions/expansion-list.json`, {
           with: { type: 'json' },
         })).default;
-      console.debug(`[GAME] retrieved expansion list ${this._expansionList}`);
+      console.debug(`[GAME] retrieved expansion list ${this._expansionList.map(e => e.expansionName).join(',')}`);
     } catch (error) {
       console.log(`[GAME] could not retrieve expansion list`);
       console.error(error);
@@ -57,10 +57,10 @@ export class Game {
     }
 
     if (player) {
-      console.debug(`[GAME] player already exists ${player}`);
+      console.debug(`[GAME] ${player} already in game assigning socket ID`);
       player.socketId = socket.id;
+      player.sessionId = sessionId;
     } else {
-      console.debug(`[GAME] creating new player`);
       player = createNewPlayer(sessionId, socket);
       this.players.push(player);
     }
@@ -69,7 +69,9 @@ export class Game {
     player.connected = true;
     this._socketMap.set(player.id, socket);
 
-    io.in('game').emit('playerConnected', player, this.players);
+    socket.emit('setPlayerList', this.players);
+    io.in('game').emit('playerConnected', player);
+    
     socket.emit('setPlayer', player);
 
     if (!this.owner) {
@@ -137,7 +139,7 @@ export class Game {
     
     this._match?.playerDisconnected(player.id, this._socketMap.get(playerId));
     
-    io.in('game').emit('playerDisconnected', player, this.players);
+    io.in('game').emit('playerDisconnected', player);
     
     if (player.id === this.owner?.id) {
       for (
