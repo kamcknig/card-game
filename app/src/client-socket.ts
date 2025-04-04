@@ -44,6 +44,7 @@ import {
 } from 'shared/shared-types';
 import { toNumber } from 'es-toolkit/compat';
 import { logManager } from './log-manager';
+import { difference } from 'es-toolkit';
 
 export let socket: Socket<ClientListenEvents, ClientEmitEvents>;
 
@@ -119,6 +120,20 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
     const keys = Object.keys(match);
     for (const key of keys) {
       switch (key) {
+        case 'selectableCards':
+          const currentlySelectable = $selectableCards.get();
+          const newSelectable = match.selectableCards[$selfPlayerId.get()] ?? [];
+          
+          if (currentlySelectable.length !== newSelectable.length) {
+            $selectableCards.set(newSelectable);
+          }
+          const sorted1 = [...currentlySelectable].sort((a, b) => a - b);
+          const sorted2 = [...newSelectable].sort((a, b) => a - b);
+          
+          if (!sorted1.every((val, idx) => val === sorted2[idx])) {
+            $selectableCards.set(newSelectable);
+          }
+          break;
         case 'scores':
           socketToGameEventMap.scoresUpdated(match.scores);
           break;

@@ -3,7 +3,8 @@ import { isUndefined } from 'es-toolkit';
 import { EffectRestrictionSpec, Match } from "shared/shared-types.ts";
 
 import { validateCostSpec } from "../shared/validate-cost-spec.ts";
-import { CardLibrary } from '../match-controller.ts';
+
+import { CardLibrary } from '../card-library.ts';
 
 export const findCards = (
     match: Match,

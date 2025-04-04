@@ -1,9 +1,9 @@
 import { AppSocket } from './types.ts';
 import { CardEffectController } from './card-effects-controller.ts';
-import { Match, PlayerID, TurnPhaseOrderValues } from 'shared/shared-types.ts';
+import { Card, CardId, Match, Player, PlayerID, TurnPhaseOrderValues } from 'shared/shared-types.ts';
 import { isUndefined } from 'es-toolkit/compat';
-import { CardLibrary } from './match-controller.ts';
 import { getEffectiveCardCost } from './utils/get-effective-card-cost.ts';
+import { CardLibrary } from './card-library.ts';
 
 export class CardInteractivityController {
   private _gameOver: boolean = false;
@@ -13,6 +13,7 @@ export class CardInteractivityController {
     private readonly match: Match,
     private readonly _socketMap: Map<PlayerID, AppSocket>,
     private readonly _cardLibrary: CardLibrary,
+    private readonly _cardTapCompleteCallback: (card: Card, player?: Player) => void,
   ) {
     // todo
     //match.subscribe(this.checkCardInteractivity.bind(this));
@@ -127,6 +128,8 @@ export class CardInteractivityController {
     console.log(
       `[CARD INTERACTIVITY] card tapped handler complete ${card} for ${player}`,
     );
+    
+    this._cardTapCompleteCallback(card, player);
   }
 
   public checkCardInteractivity(match: Match, _oldMatch?: Match): void {
@@ -188,11 +191,9 @@ export class CardInteractivityController {
       }
     }
 
-    this._socketMap.forEach((s, playerId) =>
-      s.emit(
-        'selectableCardsUpdated',
-        playerId === currentPlayer.id ? selectableCards : [],
-      )
-    );
+    match.selectableCards = match.players.reduce((prev, { id}) => {
+      prev[id] = id === currentPlayer.id ? selectableCards : [];
+      return prev;
+    }, {} as Record<PlayerID, CardId[]>)
   }
 }

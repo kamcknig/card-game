@@ -30,19 +30,14 @@ export class EffectsPipeline {
 
       const handler = this._effectHandlerMap[effect.type];
       if (!handler) {
-        console.error(`[EFFECT PIPELINE] No handler for effect type: ${effect.type}`);
+        console.error(`[EFFECT PIPELINE] '${effect.type}' effect handler not found`);
         nextEffect = generator.next();
         continue;
       }
 
-      console.log(`[EFFECT PIPELINE] running effect handler for ${effect.type}`);
+      console.log(`[EFFECT PIPELINE] running '${effect.type}' effect handler`);
       
       effectResults = await handler(effect as unknown as any, match, acc);
-
-      if (effect.triggerImmediateUpdate) {
-        console.debug(`[EFFECT PIPELINE] effect requires immediate client update`);
-        this._socketMap.forEach((s) => s.emit("matchUpdated", acc));
-      }
 
       nextEffect = generator.next(effectResults);
     }
@@ -67,10 +62,5 @@ export class EffectsPipeline {
     console.log(`[EFFECT PIPELINE] un-suspending call back`);
     this._suspendEffectCallback = false;
     this._effectCompletedCallback();
-  }
-
-  private effectCompleted() {
-    console.log(`[EFFECT PIPELINE] effects runner has completed`);
-    this._socketMap.forEach(s => s.emit('matchUpdated', this.match));
   }
 }

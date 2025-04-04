@@ -2,7 +2,8 @@ import { Socket } from 'socket.io';
 import { Card, Match, MatchUpdate, ServerEmitEvents, ServerListenEvents, } from 'shared/shared-types.ts';
 import { GameEffects } from './effects/game-effects.ts';
 import { toNumber } from 'es-toolkit/compat';
-import { CardLibrary } from './match-controller.ts';
+
+import { CardLibrary } from './card-library.ts';
 
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
 

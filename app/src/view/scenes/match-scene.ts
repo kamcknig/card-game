@@ -521,13 +521,13 @@ export class MatchScene extends Scene {
       }, [[], []] as [Card[][], Card[][]]);
     
     for (const [idx, pile] of victoryPiles.entries()) {
-      const pileView = new PileView(pile[0], pile.length, 'half');
+      const pileView = new PileView(pile, pile.length, 'half');
       pileView.y = idx * SMALL_CARD_HEIGHT + idx * STANDARD_GAP;
       this._baseSupply.addChild(pileView);
     }
     
     for (const [idx, pile] of treasurePiles.entries()) {
-      const pileView = new PileView(pile[0], pile.length, 'half');
+      const pileView = new PileView(pile, pile.length, 'half');
       pileView.x = SMALL_CARD_WIDTH + STANDARD_GAP;
       pileView.y = idx * SMALL_CARD_HEIGHT + idx * STANDARD_GAP;
       this._baseSupply.addChild(pileView);

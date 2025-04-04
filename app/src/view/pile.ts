@@ -4,9 +4,16 @@ import {CountBadgeView} from "./count-badge-view";
 import { Card, CardFacing, CardSize } from 'shared/shared-types';
 
 export class PileView extends Container {
-    constructor(card: Card, count: number, size: CardSize = 'full', facing: CardFacing = 'front') {
+    constructor(cards: Card[], count: number, size: CardSize = 'full', facing: CardFacing = 'front') {
         super();
 
+        const card = cards.reduce((prev, next) => {
+            if (!prev) {
+                return next;
+            }
+            
+            return prev.id > next.id ? prev : next
+        }, undefined);
         const view = this.addChild(createCardView(card));
         view.size = size;
         view.facing = facing;

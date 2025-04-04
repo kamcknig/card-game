@@ -3,7 +3,8 @@ import { GameEffects } from "./effects/game-effects.ts";
 import { Match, MatchUpdate } from "shared/shared-types.ts";
 import { effectGeneratorMap } from "./effect-generator-map.ts";
 import { EffectsPipeline } from "./effects-pipeline.ts";
-import { CardLibrary } from "./match-controller.ts";
+
+import { CardLibrary } from './card-library.ts';
 
 export class CardEffectController implements IEffectRunner {
   private _effectsPipeline: EffectsPipeline | undefined;
@@ -23,15 +24,13 @@ export class CardEffectController implements IEffectRunner {
     cardId?: number,
   ): Promise<unknown> {
     const generatorFn = effectGeneratorMap[effectName];
+    
     if (!generatorFn) {
-      console.log(
-        `[EFFECT CONTROLLER] No game action effects generator found for game event ${effectName}`,
-      );
+      console.log(`[EFFECT CONTROLLER] '${effectName}' game action effects generator not found`,);
       return;
     }
-    console.log(
-      `[EFFECT CONTROLLER] running game action effects generator for ${effectName}`,
-    );
+    console.log(`[EFFECT CONTROLLER] running '${effectName}' game action effect generator`,);
+    
     const gen = await generatorFn({
       match,
       cardLibrary: this._cardLibrary,
@@ -50,11 +49,14 @@ export class CardEffectController implements IEffectRunner {
   ): Promise<unknown> {
     const card = this._cardLibrary.getCard(cardId);
     const generatorFn = effectGeneratorMap[card?.cardKey ?? ""];
+    
     if (!generatorFn) {
       console.log(`[EFFECT CONTROLLER] No card effects generator found for ${card}`);
       return;
     }
+    
     console.log(`[EFFECT CONTROLLER] running card effects generator for ${card}`);
+    
     const gen = await generatorFn({
       match,
       cardLibrary: this._cardLibrary,
@@ -62,6 +64,7 @@ export class CardEffectController implements IEffectRunner {
       triggerPlayerId: playerId,
       reactionContext,
     });
+    
     return this.runGenerator(gen, match, playerId, acc);
   }
 
@@ -77,9 +80,7 @@ export class CardEffectController implements IEffectRunner {
     }
 
     if (!this._effectsPipeline) {
-      console.warn(
-        "[EFFECT CONTROLLER] EffectPipeline not assigned to CardEffectController; skipping generator",
-      );
+      console.warn("[EFFECT CONTROLLER] EffectPipeline not assigned to CardEffectController; skipping generator",);
       return;
     }
 

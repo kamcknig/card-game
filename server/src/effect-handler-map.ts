@@ -9,12 +9,12 @@ import { findSourceByCardId } from './utils/find-source-by-card-id.ts';
 import { findSpecLocationBySource } from './utils/find-spec-location-by-source.ts';
 import { findSourceByLocationSpec } from './utils/find-source-by-location-spec.ts';
 import { castArray, isUndefined } from 'es-toolkit/compat';
-import { CardLibrary } from './match-controller.ts';
 import { MoveCardEffect } from './effects/move-card.ts';
 import { cardDataOverrides, getCardOverrides } from './card-data-overrides.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';
 import { getOrderStartingFrom } from './utils/get-order-starting-from.ts';
 import { UserPromptEffect } from './effects/user-prompt.ts';
+import { CardLibrary } from './card-library.ts';
 
 /**
  * Returns an object whose properties are functions. The names are a union of Effect types

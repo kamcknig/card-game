@@ -1,6 +1,6 @@
 import { Match } from "shared/shared-types.ts";
-import { CardLibrary } from "../match-controller.ts";
 import { getCardOverrides } from "../card-data-overrides.ts";
+import { CardLibrary } from '../card-library.ts';
 
 export const getEffectiveCardCost = (
   playerId: number,

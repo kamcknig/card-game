@@ -1,9 +1,9 @@
 import {
   Card,
-  CardId,
   Match,
   MatchConfiguration,
   MatchSummary,
+  Player,
   PlayerID,
   TurnPhaseOrderValues,
 } from 'shared/shared-types.ts';
@@ -19,25 +19,7 @@ import { ReactionManager } from './reaction-manager.ts';
 import { scoringFunctionMap } from './scoring-function-map.ts';
 import { getCardOverrides, removeOverrideEffects, } from './card-data-overrides.ts';
 import { getPlayerById } from './utils/get-player-by-id.ts';
-
-export class CardLibrary {
-  private readonly _library: Map<CardId, Card> = new Map();
-
-  public addCard = (card: Card) => {
-    console.log(`[CARD LIBRARY] adding ${card} to library`);
-    this._library.set(card.id, card);
-  }
-
-  public getCard = (cardId: CardId): Card => {
-    const c = this._library.get(cardId);
-    if (!c) throw new Error(`[CARD LIBRARY] unable to locate card ${cardId}`);
-    return c;
-  }
-
-  public getAllCards = (): Record<number, Card> => {
-    return Object.fromEntries(this._library) as Record<number, Card>;
-  }
-}
+import { CardLibrary } from './card-library.ts';
 
 export class MatchController {
   private match: Match = {} as Match;
@@ -90,7 +72,7 @@ export class MatchController {
       playerTreasure: 0,
       playerActions: 0,
       turnPhaseIndex: 0,
-      selectableCards: [],
+      selectableCards: {},
       playArea: [],
       cardsPlayed: {},
     };
@@ -305,6 +287,7 @@ export class MatchController {
       this.match,
       this._socketMap,
       this._cardLibrary,
+      this.onCardTapHandlerComplete
     );
 
     this.effectHandlerMap = createEffectHandlerMap(
@@ -345,14 +328,22 @@ export class MatchController {
         }
       }
     });
+    
+    void this.onCheckForPlayerActions();
   }
 
-  private onEffectCompleted = () => {
-    console.log(`[MATCH] effect has completed, updating clients`);
-    this.calculateScores();
-    this.sendMatchUpdate();
-    this.checkGameEnd();
+  private onCardTapHandlerComplete = (card: Card, player?: Player) => {
+    console.log(`[MATCH] card tap complete handler invoked`);
     void this.onCheckForPlayerActions();
+  }
+  
+  private onEffectCompleted = async () => {
+    console.log(`[MATCH] effect has completed, updating clients`);
+    
+    this.calculateScores();
+    if (this.checkGameEnd()) return;
+    this._interactivityController?.checkCardInteractivity(this.match);
+    this.sendMatchUpdate();
   }
   
   private sendMatchUpdate = () => {
@@ -388,8 +379,6 @@ export class MatchController {
     }
 
     match.scores = scores;
-
-    this._socketMap.forEach((s) => s.emit("matchUpdated", match));
   }
 
   private checkGameEnd() {
@@ -397,46 +386,43 @@ export class MatchController {
 
     const match = this.match;
 
-    if (
-      match.supply.map((c) => this._cardLibrary.getCard(c)).filter((c) =>
-        c.cardKey === "province"
-      ).length === 0
+    if (match.supply.map((c) =>
+      this._cardLibrary.getCard(c)).filter((c) => c.cardKey === "province").length === 0
     ) {
       console.log(`[MATCH] supply has no more provinces, game over`);
       this.endGame();
-      return;
+      return true;
     }
+    
     const allSupplyCardKeys = match.config.supplyCardKeys.concat(
       match.config.kingdomCardKeys,
     );
 
     console.debug(`[MATCH] original supply card piles ${allSupplyCardKeys}`);
 
-    const remainingSupplyCardKeys = match.supply.concat(
-      match.kingdom,
-    ).map((id) => this._cardLibrary.getCard(id).cardKey).reduce(
-      (prev, cardKey) => {
-        if (prev.includes(cardKey)) {
-          return prev;
-        }
-        return prev.concat(cardKey);
-      },
-      [] as string[],
-    );
+    const remainingSupplyCardKeys =
+      match.supply.concat(match.kingdom).map((id) =>
+        this._cardLibrary.getCard(id).cardKey).reduce((prev, cardKey) => {
+          if (prev.includes(cardKey)) {
+            return prev;
+          }
+          return prev.concat(cardKey);
+        },
+        [] as string[]);
 
-    console.debug(
-      `[MATCH] remaining supply card piles ${remainingSupplyCardKeys}`,
-    );
+    console.debug(`[MATCH] remaining supply card piles ${remainingSupplyCardKeys}`);
 
-    const emptyPileCount = allSupplyCardKeys.length -
-      remainingSupplyCardKeys.length;
+    const emptyPileCount = allSupplyCardKeys.length - remainingSupplyCardKeys.length;
 
     console.debug(`[MATCH] empty pile count ${emptyPileCount}`);
 
     if (emptyPileCount === 3) {
       console.log(`[MATCH] three supply piles are empty, game over`);
       this.endGame();
+      return true;
     }
+    
+    return false;
   }
 
   private endGame() {
@@ -505,6 +491,8 @@ export class MatchController {
     const turnPhase = TurnPhaseOrderValues[match.turnPhaseIndex];
     const player = match.players[match.currentPlayerTurnIndex];
 
+    console.debug(`[MATCH] turn phase ${turnPhase}`);
+    
     switch (turnPhase) {
       case "action": {
         const numActionCards =
@@ -513,7 +501,7 @@ export class MatchController {
           ).length;
 
         console.debug(
-          `[MATCH] player ${player.id} has ${match.playerActions} actions and ${numActionCards} action cards`,
+          `[MATCH] ${player} has ${match.playerActions} actions and ${numActionCards} action cards`,
         );
 
         if (numActionCards <= 0 || match.playerActions <= 0) {
@@ -560,8 +548,6 @@ export class MatchController {
         );
         match.turnPhaseIndex = 0;
       }
-
-      console.debug(`[MATCH] new turn phase index ${match.turnPhaseIndex}`);
 
       const newPhase = TurnPhaseOrderValues[match.turnPhaseIndex];
 
@@ -612,9 +598,9 @@ export class MatchController {
           return;
         }
       }
-
+      this._interactivityController?.checkCardInteractivity(match);
       this.sendMatchUpdate();
-      this._interactivityController?.checkCardInteractivity(this.match);
+      void this.onCheckForPlayerActions();
     } catch (e) {
       console.error("[MATCH] Could not move to next phase", e);
       console.error(e);

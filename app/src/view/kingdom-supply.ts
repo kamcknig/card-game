@@ -50,7 +50,7 @@ export class KingdomSupplyView extends Container {
                 return cardsA[0].cardName.localeCompare(cardsB[0].cardName);
             })
             .forEach(([_cardName, pile], idx) => {
-                const p = new PileView(pile[pile.length - 1], pile.length, 'half');
+                const p = new PileView(pile, pile.length, 'half');
                 p.x = Math.floor(idx % 5 * SMALL_CARD_WIDTH + idx % 5 * STANDARD_GAP);
                 p.y = Math.floor(((numRows - 1 - Math.floor((idx) / 5)) * SMALL_CARD_HEIGHT) + ((numRows - 1 - Math.floor((idx) / 5)) * STANDARD_GAP));
                 this._cardContainer.addChild(p);

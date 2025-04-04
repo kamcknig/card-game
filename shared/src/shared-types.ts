@@ -51,19 +51,19 @@ export type MatchUpdate = Partial<Match>;
 export type Match = {
     config: MatchConfiguration,
     currentPlayerTurnIndex: number;
-    kingdom: number[];
-    playArea: number[];
+    kingdom: CardId[];
+    playArea: CardId[];
     playerActions: number;
     playerBuys: number;
-    playerDecks: Record<number, number[]>;
-    playerDiscards: Record<number, number[]>;
-    playerHands: Record<number, number[]>;
+    playerDecks: Record<PlayerID, CardId[]>;
+    playerDiscards: Record<PlayerID, CardId[]>;
+    playerHands: Record<PlayerID, CardId[]>;
     playerTreasure: number;
     players: Player[];
-    scores: Record<number, number>,
-    selectableCards: { playerId: number; cardId: number }[];
-    supply: number[];
-    trash: number[];
+    scores: Record<PlayerID, number>,
+    selectableCards: Record<PlayerID, CardId[]>;
+    supply: CardId[];
+    trash: CardId[];
     turnNumber: number;
     turnPhaseIndex: number;
     cardsPlayed: Record<PlayerID, CardId[]>;
