@@ -498,8 +498,8 @@ const expansionModule: CardExpansionModule = {
               cardIds: match.trash,
             },
           },
-        })) as { cardIds: number[] };
-        const cardId = result.cardIds[0];
+        })) as { result: number[] };
+        const cardId = result.result[0];
         yield new GainCardEffect({
           cardId,
           playerId: triggerPlayerId,
@@ -645,7 +645,7 @@ const expansionModule: CardExpansionModule = {
           { action: 2, label: "YES" },
         ],
         prompt: "Trash Mining Village?",
-      })) as { action: number; cardIds: number[] };
+      })) as { action: number };
       if (results.action === 2) {
         yield new TrashCardEffect({
           sourcePlayerId: triggerPlayerId,
@@ -675,7 +675,7 @@ const expansionModule: CardExpansionModule = {
           { action: 1, label: "+2 Treasure" },
           { action: 2, label: "Discard hand" },
         ],
-      })) as { action: number; cardIds: number[] };
+      })) as { action: number };
 
       if (results.action === 1) {
         yield new GainTreasureEffect({
@@ -726,7 +726,7 @@ const expansionModule: CardExpansionModule = {
           { action: 2, label: "+2 Actions" },
         ],
         prompt: "Choose one",
-      })) as { action: number; cardIds: number[] };
+      })) as { action: number };
 
       console.debug(`[NOBLES EFFECT] player chose ${result.action}`);
 
@@ -823,10 +823,10 @@ const expansionModule: CardExpansionModule = {
         actionButtons: [
           { action: 1, label: "DONE" },
         ],
-      })) as { action: number; cardIds: number[] };
+      })) as { action: number; result: number[] };
 
       for (
-        const cardId of result.cardIds ?? nonVictoryCards.map((card) => card.id)
+        const cardId of result.result ?? nonVictoryCards.map((card) => card.id)
       ) {
         yield new MoveCardEffect({
           cardId,
@@ -857,7 +857,7 @@ const expansionModule: CardExpansionModule = {
           sourceCardId: triggerCardId,
           actionButtons: actions,
           prompt: "Choose one",
-        })) as { action: number; cardIds: number[] };
+        })) as { action: number; };
 
         switch (result.action) {
           case 1:
@@ -978,14 +978,86 @@ const expansionModule: CardExpansionModule = {
         }
       }
     },
-    /*"secret-passage": function* ({
+    "secret-passage": function* ({
       match,
-      cardLibrary,
       triggerPlayerId,
       triggerCardId,
-      reactionContext,
     }) {
-    },*/
+      for (let i = 0; i < 2; i++) {
+        yield new DrawCardEffect({
+          playerId: triggerPlayerId,
+          sourcePlayerId: triggerPlayerId,
+          sourceCardId: triggerCardId
+        });
+      }
+      
+      yield new GainActionEffect({ count: 1, sourcePlayerId: triggerPlayerId });
+      
+      if (match.playerHands[triggerPlayerId].length === 0) {
+        console.debug(`[SECRET PASSAGE EFFECT] player has no cards in hand`);
+        return;
+      }
+      
+      const cardIds = (yield new SelectCardEffect({
+        prompt: 'Choose card',
+        playerId: triggerPlayerId,
+        sourcePlayerId: triggerPlayerId,
+        restrict: { from: { location: 'playerHands' } },
+        count: 1,
+        sourceCardId: triggerCardId
+      })) as number[];
+      
+      const cardId = cardIds?.[0];
+      
+      if (!cardId) {
+        console.warn(`[SECRET PASSAGE EFFECT] player selected card, but result doesn't have it`);
+        return;
+      }
+      
+      if (match.playerDecks[triggerPlayerId].length === 0) {
+        console.debug(`[SECRET PASSAGE EFFECT] player has no cards in deck, so just putting card on deck`);
+        yield new MoveCardEffect({
+          cardId,
+          toPlayerId: triggerPlayerId,
+          sourcePlayerId: triggerPlayerId,
+          sourceCardId: triggerCardId,
+          to: {
+            location: 'playerDecks',
+          }
+        });
+        return;
+      }
+      
+      const result = (yield new UserPromptEffect({
+        playerId: triggerPlayerId,
+        sourcePlayerId: triggerPlayerId,
+        sourceCardId: triggerCardId,
+        actionButtons: [
+          {action: 1, label: 'DONE'}
+        ],
+        prompt: 'Position card',
+        content: {
+          cards: {
+            action: 'blind-rearrange',
+            cardIds: match.playerDecks[triggerPlayerId]
+          }
+        }
+      })) as { action: number, result: number };
+      
+      const idx = result.result;
+      yield new MoveCardEffect({
+        cardId,
+        toPlayerId: triggerPlayerId,
+        sourcePlayerId: triggerPlayerId,
+        sourceCardId: triggerCardId,
+        to: {
+          location: 'playerDecks',
+          index: idx
+        }
+      })
+      
+      
+    },
     "shanty-town": function* ({
       match,
       cardLibrary,
@@ -1034,7 +1106,7 @@ const expansionModule: CardExpansionModule = {
           { action: 3, label: "Trash 2 cards" },
         ],
         prompt: "Choose on",
-      })) as { action: number; cardIds: number[] };
+      })) as { action: number; };
 
       switch (result.action) {
         case 1:

@@ -19,8 +19,8 @@ export const cardRearrangeView = (cards: UserPromptEffectArgs['content']['cards'
     text: 'TOP',
     style: {
       fill: 'white',
-      fontSize: 24
-    }
+      fontSize: 24,
+    },
   });
   
   $selectableCards.set([]);
@@ -46,7 +46,7 @@ export const cardRearrangeView = (cards: UserPromptEffectArgs['content']['cards'
       card.x = idx * (CARD_WIDTH + margin);
       card.zIndex = idx;
     });
-    cardList.x = Math.floor(-cardList.width * 0.5);
+    //cardList.x = Math.floor(-cardList.width * 0.5);
   };
   
   // --- Create all cards and store them in cardViews array ---

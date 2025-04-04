@@ -137,7 +137,8 @@ export class MatchController {
       'duke',
       'upgrade',
       'wishing-well',
-      'bridge'
+      'bridge',
+      'secret-passage',
     ];
 
     console.debug(

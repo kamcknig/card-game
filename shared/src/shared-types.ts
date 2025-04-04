@@ -22,7 +22,7 @@ export type UserPromptEffectArgs = {
     prompt?: string;
     content?: {
         cards?: {
-            action?: 'rearrange' | undefined;
+            action?: 'blind-rearrange' | 'rearrange' | undefined;
             cardIds: number[],
             selectCount?: CountSpec
         }

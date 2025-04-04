@@ -8,7 +8,7 @@ import { findOrderedEffectTargets } from './utils/find-ordered-effect-targets.ts
 import { findSourceByCardId } from './utils/find-source-by-card-id.ts';
 import { findSpecLocationBySource } from './utils/find-spec-location-by-source.ts';
 import { findSourceByLocationSpec } from './utils/find-source-by-location-spec.ts';
-import { castArray, isNumber, isUndefined } from 'es-toolkit/compat';
+import { castArray, isNumber, isUndefined, toNumber } from 'es-toolkit/compat';
 import { MoveCardEffect } from './effects/move-card.ts';
 import { cardDataOverrides, getCardOverrides } from './card-data-overrides.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';
@@ -47,7 +47,7 @@ export const createEffectHandlerMap = (
 
     console.log(`[MOVE CARD EFFECT HANDLER] moving card ${card} from ${oldStoreKey} to ${effect.to.location}`);
 
-      effect.to.location = castArray(effect.to.location);
+    effect.to.location = castArray(effect.to.location);
 
     const newStore = findSourceByLocationSpec({ spec: effect.to, playerId: effect.toPlayerId }, match);
 
@@ -80,8 +80,9 @@ export const createEffectHandlerMap = (
     }
 
     unregisterIds?.forEach((id) => reactionManager.unregisterTrigger(id));
-
-    newStore.push(effect.cardId);
+    
+    newStore.splice(isNaN(toNumber(effect.to.index)) ? newStore.length : effect.to.index!, 0, effect.cardId);
+    // newStore.push(effect.cardId);
 
     // when a card moves to a new location, check if we need to register any triggers for the card
     // todo: account for moves to non-player locations i.e., deck, trash, discard, etc.

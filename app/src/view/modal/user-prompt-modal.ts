@@ -7,6 +7,7 @@ import { UserPromptEffectArgs } from 'shared/shared-types';
 import { List } from '@pixi/ui';
 import { cardSelectionView } from './card-selection-view';
 import { cardRearrangeView } from './card-rearrange-view';
+import { cardBlindRearrangeView } from './card-blind-rearrange-view';
 
 export const userPromptModal = (args: UserPromptEffectArgs): Promise<unknown> => {
   return new Promise((resolve) => {
@@ -40,28 +41,34 @@ export const userPromptModal = (args: UserPromptEffectArgs): Promise<unknown> =>
     const actionButtonListener = (args?: { action?: number; result?: unknown}) => {
       resolve({
         action: args?.action,
-        cardIds: args?.result ?? contentResults
+        result: args?.result ?? contentResults
       });
       
       cleanup();
     }
     
     if (args.content?.cards) {
-      if (args.content.cards.action !== 'rearrange') {
-        contentView = cardSelectionView(args.content.cards);
-        
-        contentView.on('finished', () => {
-          actionButtonListener()
-        });
-        
-        contentView.on('validationUpdated', valid => {
-          if (validationBtn) {
-            validationBtn.button.alpha = valid ? 1 : .6;
-            validationBtn.button.eventMode = valid ? 'static' : 'none';
-          }
-        });
-      } else {
-        contentView = cardRearrangeView(args.content.cards);
+      switch (args.content.cards.action) {
+        case 'rearrange':
+          contentView = cardSelectionView(args.content.cards);
+          
+          contentView.on('finished', () => {
+            actionButtonListener()
+          });
+          
+          contentView.on('validationUpdated', valid => {
+            if (validationBtn) {
+              validationBtn.button.alpha = valid ? 1 : .6;
+              validationBtn.button.eventMode = valid ? 'static' : 'none';
+            }
+          });
+          break;
+        case 'blind-rearrange':
+          contentView = cardBlindRearrangeView(args.content.cards);
+          break;
+        default:
+          contentView = cardRearrangeView(args.content.cards);
+          break;
       }
       
       if (contentView) {
@@ -73,6 +80,7 @@ export const userPromptModal = (args: UserPromptEffectArgs): Promise<unknown> =>
           contentResults = result;
         });
         
+        contentView.x = Math.floor(-contentView.width * .5);
         contentView.y = modalContainer.height + STANDARD_GAP;
         modalContainer.addChild(contentView);
       }

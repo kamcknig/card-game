@@ -260,9 +260,9 @@ const expansionModule: CardExpansionModule = {
                 selectCount: 1
               },
             },
-          })) as { action: number, cardIds: number[] };
+          })) as { action: number, result: number[] };
 
-          const selectedId = results?.cardIds?.[0];
+          const selectedId = results?.result?.[0];
 
           console.debug(`[BANDIT EFFECT] chose card ${cardLibrary.getCard(selectedId)}`);
 
@@ -535,9 +535,9 @@ const expansionModule: CardExpansionModule = {
             selectCount: 1
           },
         },
-      })) as { action: number, cardIds: number[] };
+      })) as { action: number, result: number[] };
 
-      const selectedId = results?.cardIds?.[0];
+      const selectedId = results?.result?.[0];
       if (selectedId) {
         yield new MoveCardEffect({
           sourcePlayerId: triggerPlayerId,
@@ -1031,9 +1031,9 @@ const expansionModule: CardExpansionModule = {
             },
           },
         },
-      })) as { action: number; cardIds: number[] };
+      })) as { action: number; result: number[] };
       
-      let selectedCardIds = result?.cardIds ?? [];
+      let selectedCardIds = result?.result ?? [];
       
       console.debug(
         `[SENTRY EFFECT] player selected ${
@@ -1075,9 +1075,9 @@ const expansionModule: CardExpansionModule = {
             },
           },
         },
-      })) as { action: number; cardIds: number[] };
+      })) as { action: number; result: number[] };
 
-      selectedCardIds = result?.cardIds ?? [];
+      selectedCardIds = result?.result ?? [];
       
       if (selectedCardIds.length === 0) {
         console.debug(`[SENTRY EFFECT] player chose not to discard cards`);

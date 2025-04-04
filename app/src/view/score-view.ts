@@ -1,5 +1,5 @@
 import { Container, Graphics, Text } from 'pixi.js';
-import { $player, $playerIds, $players, $playerScoreStore, PlayerState } from '../state/player-state';
+import { $playerIds, $playerScoreStore } from '../state/player-state';
 import { $currentPlayerTurnIndex, $playerTurnOrder, $turnNumber } from '../state/turn-state';
 import { STANDARD_GAP } from '../app-contants';
 import { Player } from 'shared/shared-types';

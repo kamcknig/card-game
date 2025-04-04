@@ -1,17 +1,12 @@
 import {atom, computed, map, PreinitializedWritableAtom} from "nanostores";
 import { Player, PlayerID } from 'shared/shared-types';
 
-export type PlayerState = Record<number, Player>;
-
 export const $selfPlayerId = atom<number>();
 
 export const $playerIds = atom<number[]>([]);
 
 const playerStoreCache: Record<PlayerID, PreinitializedWritableAtom<Player>> = {};
 export const $player = (id: PlayerID) => (playerStoreCache[id] ??= atom<Player>());
-
-
-export const $players = map<PlayerState>({});
 
 const playerHandStores: Record<number,  PreinitializedWritableAtom<number[]>> = {};
 export const $playerHandStore = (playerId: number) => {
