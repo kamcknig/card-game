@@ -394,7 +394,10 @@ const expansionModule: CardExpansionModule = {
         prompt: "Choose card",
         count: 1,
         restrict: {
-          cost: 4,
+          cost: {
+            amount: 4,
+            kind: 'upTo'
+          },
           from: {
             location: ["supply", "kingdom"],
           },

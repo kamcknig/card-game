@@ -131,16 +131,12 @@ export class MatchController {
 
     // todo: remove testing code
     const keepers: string[] = [
-      'council-room',
-      'merchant',
-      'moneylender',
-      'poacher',
-      'remodel',
-      'sentry',
-      'smithy',
-      'throne-room',
-      'vassal',
-      'village',
+      'moat',
+      'diplomat',
+      'minion',
+      'trading-post',
+      'upgrade',
+      'wishing-well'
     ];
 
     console.debug(
@@ -307,7 +303,7 @@ export class MatchController {
     
     const match = this.match;
     match.playerBuys = 1;
-    match.playerActions = 1;
+    match.playerActions = 3;
     match.turnNumber = 1;
 
     this._socketMap.forEach((s) => s.emit("matchStarted", match));
@@ -552,7 +548,7 @@ export class MatchController {
 
       switch (newPhase) {
         case "action":
-          match.playerActions = 1;
+          match.playerActions = 3;
           match.playerBuys = 1;
           match.playerTreasure = 0;
           match.currentPlayerTurnIndex = match.currentPlayerTurnIndex + 1;
@@ -604,8 +600,9 @@ export class MatchController {
 
   private endTurn = () => {
     removeOverrideEffects("TURN_END");
-
+    
     const match = this.match;
+    match.cardsPlayed = {};
     const overrides = getCardOverrides(match, this._cardLibrary);
     for (const { id } of match.players) {
       const playerOverrides = overrides?.[id];
