@@ -139,6 +139,7 @@ export class MatchController {
       'wishing-well',
       'bridge',
       'secret-passage',
+      'torturer'
     ];
 
     console.debug(
