@@ -679,7 +679,7 @@ export const createEffectHandlerMap = (
       return await userPrompt(effect, match);
     },
     modifyCost(effect, match, _acc) {
-      const targets = findOrderedEffectTargets(match.currentPlayerTurnIndex, effect.appliesTo, match);
+      const targets = findOrderedEffectTargets(effect.sourcePlayerId, effect.appliesTo, match);
       
       cardDataOverrides.push({targets, overrideEffect: effect});
       

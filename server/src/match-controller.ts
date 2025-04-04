@@ -134,9 +134,10 @@ export class MatchController {
       'moat',
       'diplomat',
       'minion',
-      'trading-post',
+      'duke',
       'upgrade',
-      'wishing-well'
+      'wishing-well',
+      'bridge'
     ];
 
     console.debug(
