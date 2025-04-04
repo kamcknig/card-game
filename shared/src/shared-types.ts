@@ -92,7 +92,6 @@ export type ServerEmitEvents = {
     playerReady: (playerId: number, ready: boolean) => void;
     reconnectedToGame: (player: Player, state?: Match) => void;
     scoresUpdated: (scores: Record<number, number>) => void;
-    selectableCardsUpdated: (cards: number[]) => void;
     selectCard: (selectCardArgs: SelectCardEffectArgs & { selectableCardIds: number[] }) => void;
     setCardDataOverrides: (overrides: Record<CardId, Partial<Card>> | undefined) => void;
     setCardLibrary: (cardLibrary: Record<number, Card>) => void;
@@ -127,10 +126,7 @@ export type CardLocation = typeof CardLocationValues[number];
 export type LocationSpec = { location: CardLocation | CardLocation[], index?: number };
 
 export type CountSpec =
-    | { kind: 'exact'; count: number }
     | { kind: 'upTo'; count: number }
-    | { kind: 'all' }
-    | { kind: 'variable' }
     | number;
 
 export type CostSpec =

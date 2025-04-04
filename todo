@@ -16,8 +16,6 @@ TODO higher priority
 
 when a game ends, the server side needs to clean up the cardLibrary object (right now it cleans it when all players disconnect)
 
-need larger image sizes fo details view
-
 card expansion module's scoring functions currently only look in the hand, discard, deck. what about the play area? what about other random areas later? probably need to add an ownerId to Card class and then just look at all cards and their owners
 
 update user prompt modal when there are multiple actions to toggle thos eactions (example pawn card in intrigue or courtier)

@@ -7,10 +7,6 @@ export const validateCountSpec = (spec: CountSpec, count: number): boolean => {
     }
 
     switch (spec.kind) {
-        case 'variable':
-            return true;
-        case 'exact':
-            return count === spec.count;
         case 'upTo':
             return count <= spec.count;
         default:

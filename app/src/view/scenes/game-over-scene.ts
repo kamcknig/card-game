@@ -4,7 +4,7 @@ import { app } from '../../core/create-app';
 import { LARGE_GAP, STANDARD_GAP } from '../../app-contants';
 import { MatchSummary } from 'shared/shared-types';
 import { List } from '@pixi/ui';
-import { $players } from '../../state/player-state';
+import { $player } from '../../state/player-state';
 import { AppList } from '../../app-list';
 import { AdjustmentFilter } from 'pixi-filters';
 import { $cardsById } from '../../state/card-state';
@@ -67,7 +67,7 @@ export class GameOverScene extends Scene {
         padding: STANDARD_GAP,
         elementsMargin: STANDARD_GAP
       });
-      const player = $players.get()[playerSummary.playerId];
+      const player = $player(playerSummary.playerId).get();
       
       const ordinalContainer = new Container();
       const ordinalText = new Text({
@@ -153,7 +153,7 @@ export class GameOverScene extends Scene {
       const deckContainer = new Container();
       
       const playerNameText = new Text({
-        text: $players.get()[playerId].name,
+        text: $player(playerId).get().name,
         style: {
           fill: 'black',
           fontSize: 24

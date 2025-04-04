@@ -33,7 +33,7 @@ export const cardSelectionView = (cards: UserPromptEffectArgs['content']['cards'
       
       cardList.emit('resultsUpdated', $selectedCards.get().map(id => newCardToOldCardMap.get(id)));
       
-      if ((isNumber(count) && count === 1) || (!isNumber(count) && count.kind === 'exact' && count.count === 1)) {
+      if (isNumber(count) && count === 1) {
         cardList.emit('finished');
       }
     }

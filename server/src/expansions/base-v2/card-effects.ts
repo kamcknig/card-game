@@ -262,7 +262,7 @@ const expansionModule: CardExpansionModule = {
             },
           })) as { action: number, cardIds: number[] };
 
-          const selectedId = results.cardIds?.[0];
+          const selectedId = results?.cardIds?.[0];
 
           console.debug(`[BANDIT EFFECT] chose card ${cardLibrary.getCard(selectedId)}`);
 
@@ -407,7 +407,7 @@ const expansionModule: CardExpansionModule = {
         playerId: triggerPlayerId,
         sourceCardId: triggerCardId,
         sourcePlayerId: triggerPlayerId,
-        count: { kind: 'variable' },
+        count: { kind: 'upTo', count: match.playerHands[triggerPlayerId].length },
         restrict: { from: { location: 'playerHands' } },
       })) as number[];
 
@@ -1033,7 +1033,7 @@ const expansionModule: CardExpansionModule = {
         },
       })) as { action: number; cardIds: number[] };
       
-      let selectedCardIds = result.cardIds;
+      let selectedCardIds = result?.cardIds ?? [];
       
       console.debug(
         `[SENTRY EFFECT] player selected ${
@@ -1077,7 +1077,7 @@ const expansionModule: CardExpansionModule = {
         },
       })) as { action: number; cardIds: number[] };
 
-      selectedCardIds = result.cardIds;
+      selectedCardIds = result?.cardIds ?? [];
       
       if (selectedCardIds.length === 0) {
         console.debug(`[SENTRY EFFECT] player chose not to discard cards`);
@@ -1114,7 +1114,8 @@ const expansionModule: CardExpansionModule = {
       triggerPlayerId, triggerCardId,
     }) {
       const cardIds = (yield new SelectCardEffect({
-        prompt: 'Confirm action',
+        prompt: 'Cancel cancel',
+        validPrompt: 'Confirm play',
         sourcePlayerId: triggerPlayerId,
         sourceCardId: triggerCardId,
         playerId: triggerPlayerId,

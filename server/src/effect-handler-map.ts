@@ -8,7 +8,7 @@ import { findOrderedEffectTargets } from './utils/find-ordered-effect-targets.ts
 import { findSourceByCardId } from './utils/find-source-by-card-id.ts';
 import { findSpecLocationBySource } from './utils/find-spec-location-by-source.ts';
 import { findSourceByLocationSpec } from './utils/find-source-by-location-spec.ts';
-import { castArray, isUndefined } from 'es-toolkit/compat';
+import { castArray, isNumber, isUndefined } from 'es-toolkit/compat';
 import { MoveCardEffect } from './effects/move-card.ts';
 import { cardDataOverrides, getCardOverrides } from './card-data-overrides.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';
@@ -384,16 +384,34 @@ export const createEffectHandlerMap = (
         playerId,
         cardId,
       };
-
-      const targetOrder = getOrderStartingFrom(match.players, match.currentPlayerTurnIndex).filter(player => player.id !== sourcePlayerId);
       
+      // get reactions the current player could react with. these are things like Merchant
+      let reactions = reactionManager.getReactionsForPlayer(trigger, sourcePlayerId);
+      for (const reaction of reactions) {
+        const generator = await reaction.generatorFn({match, cardLibrary, trigger, reaction});
+        
+        await cardEffectRunner.runGenerator(
+          generator,
+          match,
+          reaction.playerId,
+          acc,
+        );
+        
+        if (reaction.once) {
+          console.debug(`[PLAY CARD EFFECT HANDLER] reaction registered as a 'once', removing reaction`);
+          reactionManager.unregisterTrigger(reaction.id);
+        }
+      }
+      
+      // now we get the order of players that could be affected by the play (including the current player),
+      // then get reactions for them and run them
+      const targetOrder = getOrderStartingFrom(match.players, match.currentPlayerTurnIndex).filter(player => player.id !== sourcePlayerId);
       console.debug(`[PLAY CARD EFFECT HANDLER] player order for reaction targets ${targetOrder}`);
       
       const reactionContext: any = {};
       
       for (const targetPlayer of targetOrder) {
-        let reactions = reactionManager.getReactionsForPlayer(trigger, targetPlayer.id);
-        
+        reactions = reactionManager.getReactionsForPlayer(trigger, targetPlayer.id);
         console.debug(`[PLAY CARD EFFECT HANDLER] found ${reactions.length} reactions for ${targetPlayer}`);
         
         if (reactions.length === 0) continue;
@@ -581,15 +599,9 @@ export const createEffectHandlerMap = (
 
       // if there aren't enough cards, depending on the selection type, we might simply implicitly select cards
       // because the player would be forced to select hem all anyway
-      if (
-        (typeof effect.count === 'number') || (effect.count.kind === 'exact')
-      ) {
-        let count: number = 0;
-        if ((typeof effect.count === 'number')) {
-          count = effect.count;
-        } else if (effect.count.kind === 'exact') {
-          count = effect.count.count;
-        }
+      if (isNumber(effect.count)) {
+        const count= effect.count;
+        
         console.debug(`[SELECT CARD EFFECT HANDLER] selection count is an exact count ${count} checking if user has that many cards`);
 
         if (selectableCardIds.length <= count) {

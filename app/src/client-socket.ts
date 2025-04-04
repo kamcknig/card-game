@@ -3,7 +3,6 @@ import {
   $playerDeckStore,
   $playerDiscardStore,
   $playerHandStore, $playerIds,
-  $players,
   $playerScoreStore,
   $selfPlayerId,
 } from './state/player-state';
@@ -44,7 +43,6 @@ import {
 } from 'shared/shared-types';
 import { toNumber } from 'es-toolkit/compat';
 import { logManager } from './log-manager';
-import { difference } from 'es-toolkit';
 
 export let socket: Socket<ClientListenEvents, ClientEmitEvents>;
 
@@ -228,7 +226,7 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
     void displayScene('matchConfiguration');
   },
   reconnectedToGame: (player, state?: Match) => {
-    $players.setKey(player.id, player);
+    $player(player.id).set(player);
     
     if (state) {
       socketToGameEventMap.matchUpdated(state);
@@ -239,12 +237,6 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
       const pId = toNumber(playerId);
       $playerScoreStore(pId).set(scores[pId]);
     })
-  },
-  selectableCardsUpdated: cards => {
-    // todo: maybe server really should send only the cards for this player. but right now it's a limitation
-    // on how the back-end is storing some data for itself. the sending of data needs an overhaul anyway
-    // rather than sending this update as a whole
-    $selectableCards.set(cards);
   },
   selectCard: selectCardArgs => {
     const eventListener = (cardIds: number[]) => {

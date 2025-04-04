@@ -1,6 +1,6 @@
 import { Assets, Color, Container, Graphics, Sprite, Text } from 'pixi.js';
 import { Scene } from '../../core/scene/scene';
-import { $player, $playerIds, $players, $selfPlayerId } from '../../state/player-state';
+import { $player, $playerIds, $selfPlayerId } from '../../state/player-state';
 import { socket } from '../../client-socket';
 import { $gameOwner } from '../../state/game-state';
 import { $expansionList } from '../../state/expansion-list-state';

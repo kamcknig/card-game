@@ -5,10 +5,10 @@ import { AppButton, createAppButton } from '../../core/create-app-button';
 import { $supplyStore, $trashStore } from '../../state/match-state';
 import { app } from '../../core/create-app';
 import {
+  $player,
   $playerDeckStore,
   $playerDiscardStore,
   $playerHandStore,
-  $players,
   $selfPlayerId
 } from '../../state/player-state';
 import { gameEvents } from '../../core/event/events';
@@ -135,7 +135,7 @@ export class MatchScene extends Scene {
   }
   
   private onCurrentPlayerTurnUpdated = (playerId: number) => {
-    document.title = `Dominion - ${$players.get()[playerId]?.name}`;
+    document.title = `Dominion - ${$player(playerId).get()?.name}`;
     
     if (playerId !== $selfPlayerId.get()) return;
     
@@ -277,7 +277,7 @@ export class MatchScene extends Scene {
     const c = new Container({ label: 'waitingOnPlayer' });
     
     const t = new Text({
-      text: `Waiting for ${$players.get()[playerId].name}`,
+      text: `Waiting for ${$player(playerId).get().name}`,
       style: {
         fontSize: 36,
         fill: 'white',
@@ -344,9 +344,9 @@ export class MatchScene extends Scene {
     this._doneSelectingBtn.y = this._playArea.y + this._playArea.height + STANDARD_GAP;
     this._doneSelectingBtn.addChild(button.button);
     
-    const count = isNumber(arg.count) ? arg.count : arg.count.kind === 'exact' || arg.count.kind === 'upTo' ? arg.count.count : -1;
-    if (count === -1) {
-      throw new Error('Haven\'t dealt with "all" or "variable" yet');
+    const count = isNumber(arg.count) ? arg.count : (!isNumber(arg.count) ? arg.count.count : NaN);
+    if (isNaN(count)) {
+      throw new Error(`Selection count couldn't be determined`);
     }
     
     if (count > 1) {
@@ -359,6 +359,7 @@ export class MatchScene extends Scene {
       } else if (arg.prompt.includes('discard')) {
         s = Sprite.from(await Assets.load(`./assets/ui-icons/discard-card-count.png`));
       }
+      
       if (s) {
         s.x = 5;
         s.y = 5;
@@ -372,7 +373,7 @@ export class MatchScene extends Scene {
       
       const countText = new Text({
         label: 'count',
-        text: count,
+        text: isNumber(arg.count) ? count : 0,
         style: {
           fontSize: 26,
           fill: 'white'
@@ -414,9 +415,8 @@ export class MatchScene extends Scene {
         this._doneSelectingBtn.getChildByLabel('doneSelectingButton').alpha = 1;
         this._doneSelectingBtn.on('pointerdown', doneListener);
         
-        if (isNumber(arg.count) || arg.count.kind === 'exact') {
-          const count = isNumber(arg.count) ? arg.count : arg.count.count;
-          if (count === 1) doneListener();
+        if (isNumber(arg.count)) {
+          if (arg.count === $selectedCards.get().length) doneListener();
         }
         
       } else {
@@ -432,10 +432,12 @@ export class MatchScene extends Scene {
       
       const countText = this._doneSelectingBtn.getChildByLabel('cardCountContainer')
         ?.getChildByLabel('count') as Text;
+      
       if (countText) {
-        if (isNumber(arg.count) || arg.count.kind === 'exact') {
-          const count = isNumber(arg.count) ? arg.count : arg.count.count;
+        if (isNumber(arg.count)) {
           updateCountText(countText, Math.max(count - cardIds.length, 0));
+        } else {
+          updateCountText(countText, cardIds.length);
         }
       }
       

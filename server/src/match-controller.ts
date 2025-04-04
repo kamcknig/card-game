@@ -130,7 +130,18 @@ export class MatchController {
     const kingdomCards: Card[] = [];
 
     // todo: remove testing code
-    const keepers: string[] = [];
+    const keepers: string[] = [
+      'council-room',
+      'merchant',
+      'moneylender',
+      'poacher',
+      'remodel',
+      'sentry',
+      'smithy',
+      'throne-room',
+      'vassal',
+      'village',
+    ];
 
     console.debug(
       `[MATCH] choosing ${MatchBaseConfiguration.numberOfKingdomPiles} kingdom cards`,
@@ -139,7 +150,7 @@ export class MatchController {
     const availableKingdom = Object.keys(cardLibrary["kingdom"]);
     console.debug(`[MATCH] available kingdom cards\n${availableKingdom}`);
 
-    const chosenKingdom = availableKingdom
+    let chosenKingdom = availableKingdom
       .sort(() => Math.random() > .5 ? 1 : -1)
       .slice(-MatchBaseConfiguration.numberOfKingdomPiles);
     
@@ -148,17 +159,8 @@ export class MatchController {
     if (keepers.length) {
       console.debug(`[MATCH] adding keeper cards ${keepers}`);
       
-      const finalKeepers = keepers.filter(k => availableKingdom.includes(k));
-      
-      if (finalKeepers.length !== keepers.length) {
-        console.debug(`[MATCH] final keepers ${finalKeepers}`);
-      }
-      
-      for (const keeper of finalKeepers) {
-        if (chosenKingdom.includes(keeper)) continue;
-        chosenKingdom.unshift(keeper);
-        chosenKingdom.pop();
-      }
+      const filteredKingdom = chosenKingdom.filter((k => !keepers.includes(k)))
+      chosenKingdom = keepers.concat(filteredKingdom).slice(0, MatchBaseConfiguration.numberOfKingdomPiles);
     }
     
     console.debug(`[MATCH] final chosen kingdom cards ${chosenKingdom}`);
@@ -194,27 +196,20 @@ export class MatchController {
 
     return Object.values(config.players).reduce((prev, player, _idx) => {
       console.log("initializing player", player.id, "cards...");
-      /*let blah = {};
+      let blah = {};
       // todo remove testing code
       if (_idx === 0) {
         blah = {
-          baron: 3,
-          sentry: 3,
-          'mining-village': 3,
-          'trading-post': 3,
-          duke: 2,
+         silver: 10
         };
       } else {
         blah = {
-          militia: 3,
-          copper: 3,
-          silver: 3,
-          moat: 5
+          silver: 10
         };
       }
-      Object.entries(blah).forEach(([key, count]) => {*/
-        Object.entries(playerStartHand).forEach(
-        ([key, count]) => {
+      Object.entries(blah).forEach(([key, count]) => {
+        /*Object.entries(playerStartHand).forEach(
+        ([key, count]) => {*/
         prev["playerDecks"][player.id] ??= [];
         let deck = prev["playerDecks"][player.id];
         deck = deck.concat(
