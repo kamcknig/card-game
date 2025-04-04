@@ -319,26 +319,22 @@ export class MatchController {
       this.effectHandlerMap,
       this.match,
       this._socketMap,
+      this.onEffectCompleted
     );
     this._effectsController.setEffectPipeline(this._effectsPipeline);
 
     for (const socket of this._socketMap.values()) {
       socket.on("nextPhase", this.onNextPhase);
     }
-
-    const match = {
-      ...this.match ?? {},
-      turnNumber: 1,
-      currentPlayerTurnIndex: 0,
-      playerActions: 1,
-      playerBuys: 1,
-      turnPhaseIndex: 0,
-      playerTreasure: 0,
-    };
+    
+    const match = this.match;
+    match.playerBuys = 1;
+    match.playerActions = 1;
+    match.turnNumber = 1;
 
     this._socketMap.forEach((s) => s.emit("matchStarted", match));
 
-    await this._effectsController?.suspendedCallbackRunner(async () => {
+    await this._effectsController.suspendedCallbackRunner(async () => {
       for (const player of match.players!) {
         for (let i = 0; i < 5; i++) {
           await this._effectsController?.runGameActionEffects(
@@ -349,15 +345,19 @@ export class MatchController {
         }
       }
     });
-
-    void this.onCheckForPlayerActions();
   }
 
-  private onMatchUpdated = () => {
-    console.log(`[MATCH] match updated handler`);
+  private onEffectCompleted = () => {
+    console.log(`[MATCH] effect has completed, updating clients`);
     this.calculateScores();
+    this.sendMatchUpdate();
     this.checkGameEnd();
     void this.onCheckForPlayerActions();
+  }
+  
+  private sendMatchUpdate = () => {
+    console.log(`[MATCH] sending match update to clients`);
+    this._socketMap.forEach(s => s.emit('matchUpdated', this.match));
   };
 
   private calculateScores() {
@@ -590,32 +590,6 @@ export class MatchController {
         case "cleanup": {
           const cardsToDiscard = match.playArea.concat(match.playerHands[player.id]);
 
-          /*await this._effectsController?.suspendedCallbackRunner(
-            async () => {
-              for (const cardId of cardsToDiscard) {
-                await this._effectsController!.runGameActionEffects(
-                  "discardCard",
-                  this.$matchState.get(),
-                  player.id,
-                  cardId,
-                );
-              }
-
-              for (let i = 0; i < 5; i++) {
-                await this._effectsController!.runGameActionEffects(
-                  "drawCard",
-                  this.$matchState.get(),
-                  player.id,
-                );
-              }
-
-              const newMatch = { ...this.$matchState.get(), ...match };
-              this.$matchState.set(newMatch);
-              this.endTurn(newMatch);
-              await this.onNextPhase(match);
-            },
-          );*/
-          
           for (const cardId of cardsToDiscard) {
             await this._effectsController!.runGameActionEffects(
               "discardCard",
@@ -633,16 +607,14 @@ export class MatchController {
             );
           }
           
-          this.match = { ...match };
           this.endTurn();
           await this.onNextPhase();
           return;
         }
       }
 
-      this._socketMap.forEach((s) => s.emit("matchUpdated", this.match));
+      this.sendMatchUpdate();
       this._interactivityController?.checkCardInteractivity(this.match);
-      this.onMatchUpdated();
     } catch (e) {
       console.error("[MATCH] Could not move to next phase", e);
       console.error(e);

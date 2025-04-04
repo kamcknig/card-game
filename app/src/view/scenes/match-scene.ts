@@ -16,7 +16,7 @@ import { PlayAreaView } from '../play-area';
 import { KingdomSupplyView } from '../kingdom-supply';
 import { PileView } from '../pile';
 import { $cardsById } from '../../state/card-state';
-import { Card, SelectCardEffectArgs, UserPromptEffectArgs } from 'shared/shared-types';
+import { Card, CardId, CardKey, SelectCardEffectArgs, UserPromptEffectArgs } from 'shared/shared-types';
 import { $runningCardActions, $selectableCards, $selectedCards } from '../../state/interactive-state';
 import { CardView } from '../card-view';
 import { userPromptModal } from '../modal/user-prompt-modal';
@@ -502,22 +502,36 @@ export class MatchScene extends Scene {
     
     const cards = newVal.map(id => $cardsById.get()[id]);
     
-    // reduce to Record of card name to a Card array of those named cards
-    const piles = cards.reduce((prev, card) => {
+    // first reduces and then gets teh values to make an array of Card arrays, then reduces again
+    // into a tuple whose first element is an array of piles of victory cards and the curse, and the 2nd
+    // element is an array of treasure card piles
+    const [victoryPiles, treasurePiles] = Object.values(cards.reduce((prev, card) => {
       prev[card.cardKey] ||= [];
       prev[card.cardKey].push(card);
       return prev;
-    }, {} as Record<string, Card[]>);
+    }, {} as Record<CardKey, Card[]>))
+      .reduce((prev, next) => {
+        const firstCard = next[0];
+        if (firstCard.type.includes('VICTORY') || firstCard.cardKey === 'curse') {
+          prev[0].push(next);
+        } else {
+          prev[1].push(next);
+        }
+        return prev;
+      }, [[], []] as [Card[][], Card[][]]);
     
-    const columns = 2;
-    Object.entries(piles)
-      .forEach(([_cardKey, pile], oIdx) => {
-        const card = pile[pile.length - 1];
-        const c = new PileView(card, pile.length, 'half');
-        c.x = oIdx % columns * SMALL_CARD_WIDTH + oIdx % columns * STANDARD_GAP;
-        c.y = Math.floor(oIdx / columns) * SMALL_CARD_HEIGHT + Math.floor(oIdx / columns) * STANDARD_GAP;
-        this._baseSupply.addChild(c);
-      });
+    for (const [idx, pile] of victoryPiles.entries()) {
+      const pileView = new PileView(pile[0], pile.length, 'half');
+      pileView.y = idx * SMALL_CARD_HEIGHT + idx * STANDARD_GAP;
+      this._baseSupply.addChild(pileView);
+    }
+    
+    for (const [idx, pile] of treasurePiles.entries()) {
+      const pileView = new PileView(pile[0], pile.length, 'half');
+      pileView.x = SMALL_CARD_WIDTH + STANDARD_GAP;
+      pileView.y = idx * SMALL_CARD_HEIGHT + idx * STANDARD_GAP;
+      this._baseSupply.addChild(pileView);
+    }
   }
   
   private onRendererResize = (): void => {

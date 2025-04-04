@@ -10,6 +10,7 @@ export class EffectsPipeline {
     private readonly _effectHandlerMap: EffectHandlerMap,
     private readonly match: Match,
     private readonly _socketMap: Map<PlayerID, AppSocket>,
+    private readonly _effectCompletedCallback: () => void,
   ) {}
 
   public async runGenerator(
@@ -29,22 +30,17 @@ export class EffectsPipeline {
 
       const handler = this._effectHandlerMap[effect.type];
       if (!handler) {
-        console.error(
-          `[EFFECT PIPELINE] No handler for effect type: ${effect.type}`,
-        );
+        console.error(`[EFFECT PIPELINE] No handler for effect type: ${effect.type}`);
         nextEffect = generator.next();
         continue;
       }
 
-      console.log(
-        `[EFFECT PIPELINE] running effect handler for ${effect.type}`,
-      );
+      console.log(`[EFFECT PIPELINE] running effect handler for ${effect.type}`);
+      
       effectResults = await handler(effect as unknown as any, match, acc);
 
       if (effect.triggerImmediateUpdate) {
-        console.debug(
-          `[EFFECT PIPELINE] effect requires immediate client update`,
-        );
+        console.debug(`[EFFECT PIPELINE] effect requires immediate client update`);
         this._socketMap.forEach((s) => s.emit("matchUpdated", acc));
       }
 
@@ -52,15 +48,11 @@ export class EffectsPipeline {
     }
 
     if (topLevel) {
+      console.debug(`[EFFECT PIPELINE] topLevel effect pipeline completed`);
       if (!this._suspendEffectCallback) {
-        this.effectCompleted();
-        console.debug(
-          `[EFFECT PIPELINE] topLevel effect pipeline complete, send client update`,
-        );
+        this._effectCompletedCallback()
       } else {
-        console.debug(
-          `[EFFECT PIPELINE] topLevel effect pipeline complete but running in suspended, no update to client`,
-        );
+        console.debug(`[EFFECT PIPELINE] effect completion is suspended, not invoking completed callback`,);
       }
     }
 
@@ -69,12 +61,12 @@ export class EffectsPipeline {
   }
 
   public async suspendCallback(fn: () => Promise<void>) {
-    console.log(`[EFFECT PIPELINE] suspending call back`);
+    console.log(`[EFFECT PIPELINE] suspending call back to run function`);
     this._suspendEffectCallback = true;
     await fn();
     console.log(`[EFFECT PIPELINE] un-suspending call back`);
     this._suspendEffectCallback = false;
-    this.effectCompleted();
+    this._effectCompletedCallback();
   }
 
   private effectCompleted() {
