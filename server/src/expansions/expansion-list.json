@@ -1,14 +1,14 @@
 [
   {
     "title": "Base V1",
-    "expansionName": "base-v1"
+    "name": "base-v1"
   },
   {
     "title": "Base V2",
-    "expansionName": "base-v2"
+    "name": "base-v2"
   },
   {
     "title": "Intrigue",
-    "expansionName": "intrigue"
+    "name": "intrigue"
   }
 ]

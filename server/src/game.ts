@@ -1,12 +1,13 @@
-import { AppSocket } from './types.ts';
-import { MatchConfiguration, Player, PlayerID } from 'shared/shared-types.ts';
-import { createNewPlayer } from './utils/create-new-player.ts';
-import { io } from './server.ts';
-import { MatchController } from './match-controller.ts';
-import { cardData } from './utils/load-expansion.ts';
+import { AppSocket } from "./types.ts";
+import { MatchConfiguration, Player, PlayerID } from "shared/shared-types.ts";
+import { createNewPlayer } from "./utils/create-new-player.ts";
+import { io } from "./server.ts";
+import { MatchController } from "./match-controller.ts";
+import { cardData } from "./utils/load-expansion.ts";
+import { expansionData } from "./state/expansion-data.ts";
 
 const defaultMatchConfiguration = {
-  expansions: ['base-v2'],
+  expansions: ["base-v2"],
   players: [],
   supplyCardKeys: [],
   kingdomCardKeys: [],
@@ -15,29 +16,25 @@ const defaultMatchConfiguration = {
 export class Game {
   public players: Player[] = [];
   public owner: Player | undefined;
-  public started: boolean = false;
+  public matchStarted: boolean = false;
 
   private _socketMap: Map<PlayerID, AppSocket> = new Map();
-  private _expansionList: { title: string; expansionName: string }[] = [];
   private _match: MatchController | undefined;
   private _matchConfiguration: MatchConfiguration = defaultMatchConfiguration;
 
-  constructor() {}
+  constructor(private _availableExpansion: { name: string; title: string }[]) {
+    console.log(`[GAME] created`);
+    console.debug(
+      `[GAME] currently loaded expansions ${
+        _availableExpansion.map((e) => e.name).join(", ")
+      }`,
+    );
+  }
 
-  public async getExpansionList() {
-    console.log(`[GAME] retrieving expansion list`);
-
-    try {
-      this._expansionList =
-        (await import(`./expansions/expansion-list.json`, {
-          with: { type: 'json' },
-        })).default;
-      console.debug(`[GAME] retrieved expansion list ${this._expansionList.map(e => e.expansionName).join(',')}`);
-    } catch (error) {
-      console.log(`[GAME] could not retrieve expansion list`);
-      console.error(error);
-      this._expansionList = [];
-    }
+  public expansionLoaded(expansion: { name: string; title: string }) {
+    console.log(`[GAME] expansion '${expansion.name}' loaded`);
+    this._availableExpansion.push(expansion);
+    io.in("game").emit("expansionList", this._availableExpansion);
   }
 
   public addPlayer(sessionId: string, socket: AppSocket) {
@@ -49,7 +46,7 @@ export class Game {
 
     let player = this.players.find((p) => p.sessionId === sessionId);
 
-    if (this.started && !player) {
+    if (this.matchStarted && !player) {
       console.log(
         `[GAME] game has already started, and player not found in game, rejecting`,
       );
@@ -65,39 +62,39 @@ export class Game {
       this.players.push(player);
     }
 
-    socket.join('game');
+    socket.join("game");
     player.connected = true;
     this._socketMap.set(player.id, socket);
 
-    socket.emit('setPlayerList', this.players);
-    io.in('game').emit('playerConnected', player);
-    
-    socket.emit('setPlayer', player);
+    socket.emit("setPlayerList", this.players);
+    io.in("game").emit("playerConnected", player);
+
+    socket.emit("setPlayer", player);
 
     if (!this.owner) {
       console.log(`[GAME] game owner does not exist, setting to ${player}`);
       this.owner = player;
-      socket.on('matchConfigurationUpdated', this.onMatchConfigurationUpdated);
-      io.in('game').emit('gameOwnerUpdated', player.id);
+      socket.on("matchConfigurationUpdated", this.onMatchConfigurationUpdated);
+      io.in("game").emit("gameOwnerUpdated", player.id);
     }
 
     console.log(`[GAME] ${player} added to game`);
 
-    if (this.started) {
-      console.log('[GAME] game already started');
+    if (this.matchStarted) {
+      console.log("[GAME] game already started");
       this._match?.playerReconnected(player.id, socket);
     } else {
       console.log(
         `[GAME] not yet started, sending player to match configuration`,
       );
-      socket.emit('expansionList', this._expansionList);
-      socket.emit('displayMatchConfiguration', this._matchConfiguration);
-      socket.on('updatePlayerName', this.onUpdatePlayerName);
-      socket.on('playerReady', this.onPlayerReady);
+      socket.emit("expansionList", this._availableExpansion);
+      socket.emit("displayMatchConfiguration", this._matchConfiguration);
+      socket.on("updatePlayerName", this.onUpdatePlayerName);
+      socket.on("playerReady", this.onPlayerReady);
     }
 
     socket.on(
-      'disconnect',
+      "disconnect",
       (arg) => this.onPlayerDisconnected(player.id, arg.toString()),
     );
   }
@@ -105,48 +102,48 @@ export class Game {
   private onPlayerDisconnected = (playerId: number, reason: string) => {
     console.log(`[GAME] ${playerId} disconnected - ${reason}`);
 
-    const player = this.players.find(player => player.id === playerId);
+    const player = this.players.find((player) => player.id === playerId);
     if (!player) {
       this._socketMap.delete(playerId);
       console.warn(`[GAME] player disconnected, but cannot find player object`);
       return;
     }
-    
+
     player.connected = false;
     player.ready = false;
 
     if (!this.players.some((p) => p.connected)) {
       console.log(
-        '[GAME] no players left in game, clearing game state completely',
+        "[GAME] no players left in game, clearing game state completely",
       );
       this._socketMap.forEach((socket) => {
-        socket.off('updatePlayerName');
-        socket.off('playerReady');
-        socket.off('disconnect');
-        socket.leave('game');
+        socket.off("updatePlayerName");
+        socket.off("playerReady");
+        socket.off("disconnect");
+        socket.leave("game");
       });
       cardData.supply = {};
-      cardData.kingdom = {}
+      cardData.kingdom = {};
       this._socketMap.clear();
       this.players = [];
       this.owner = undefined;
-      this.started = false;
+      this.matchStarted = false;
       this._match = undefined;
       this._matchConfiguration = defaultMatchConfiguration;
       return;
     }
-    
+
     this._match?.playerDisconnected(player.id);
-    
-    io.in('game').emit('playerDisconnected', player);
-    
+
+    io.in("game").emit("playerDisconnected", player);
+
     if (player.id === this.owner?.id) {
       for (
         const checkPlayer of this.players.filter((p) => p.id !== player.id)
       ) {
         if (checkPlayer.connected) {
           this.owner = checkPlayer;
-          io.in('game').emit('gameOwnerUpdated', checkPlayer.id);
+          io.in("game").emit("gameOwnerUpdated", checkPlayer.id);
           break;
         }
       }
@@ -165,7 +162,7 @@ export class Game {
     for (const expansion of newExpansions) {
       const configModule =
         (await import(`./expansions/${expansion}/configuration.json`, {
-          with: { type: 'json' },
+          with: { type: "json" },
         }))?.default;
 
       if (!configModule) {
@@ -208,10 +205,10 @@ export class Game {
       ),
     };
 
-    console.log('[GAME] match configuration has been updated');
+    console.log("[GAME] match configuration has been updated");
     console.debug(this._matchConfiguration);
 
-    io.in('game').emit('matchConfigurationUpdated', this._matchConfiguration);
+    io.in("game").emit("matchConfigurationUpdated", this._matchConfiguration);
   };
 
   private onUpdatePlayerName = (playerId: number, name: string) => {
@@ -228,7 +225,7 @@ export class Game {
       console.debug(`[GAME] player ${playerId} not found`);
     }
 
-    io.in('game').emit('playerNameUpdated', playerId, name);
+    io.in("game").emit("playerNameUpdated", playerId, name);
   };
 
   private onPlayerReady = (playerId: number) => {
@@ -248,7 +245,7 @@ export class Game {
 
     console.debug(`[GAME] marking ${player} as ${ready}`);
 
-    io.in('game').except(player.socketId).emit('playerReady', playerId, ready);
+    io.in("game").except(player.socketId).emit("playerReady", playerId, ready);
 
     if (this.players.some((p) => !p.ready)) {
       console.log(`[GAME] not all players ready yet`);
@@ -257,21 +254,30 @@ export class Game {
 
     console.log(`[GAME] all players ready, proceeding to start match`);
 
-    this.started = true;
+    this.matchStarted = true;
 
     this._match = new MatchController(this._socketMap);
 
     this._socketMap.forEach((socket) => {
-      socket.off('updatePlayerName');
-      socket.off('playerReady');
+      socket.off("updatePlayerName");
+      socket.off("playerReady");
     });
 
-    void this._match.initialize({
-      ...this._matchConfiguration,
-      players: this.players.map((player) => {
-        player.ready = false;
-        return player;
-      }),
-    });
+    void this._match.initialize(
+      {
+        ...this._matchConfiguration,
+        players: this.players.map((player) => {
+          player.ready = false;
+          return player;
+        }),
+      },
+      this._matchConfiguration.expansions.reduce((prev, next) => {
+        prev = {
+          ...prev,
+          ...expansionData[next].cardData,
+        };
+        return prev;
+      }, {}),
+    );
   };
 }

@@ -15,9 +15,9 @@ export const cardData: { supply: Record<CardKey, CardData>; kingdom: Record<Card
     kingdom: {},
 };
 
-export const loadExpansion = async (expansionName: string) => {
-    const expansionPath = `../expansions/${expansionName}`;
-    
+export const loadExpansion = async (expansion: { title: string, name: string }) => {
+    const expansionPath = `../expansions/${expansion.name}`;
+    const expansionName = expansion.name;
     if (expansionData[expansionName]) {
         console.debug(`[EXPANSION LOADER] expansion ${expansionName} already loaded`);
         return;
@@ -25,9 +25,13 @@ export const loadExpansion = async (expansionName: string) => {
     
     console.log(`[EXPANSION LOADER] loading expansion ${expansionName}`);
     
-    expansionData[expansionName] = {};
+    expansionData[expansionName] = {
+        title: expansion.title,
+        name: expansion.name,
+        cardData: {}
+    };
     
-    const newExpansionData = expansionData[expansionName];
+    const cardData = expansionData[expansionName].cardData;
     
     try {
         console.log(`[EXPANSION LOADER] loading expansion configuration for ${expansionName}`);
@@ -41,7 +45,7 @@ export const loadExpansion = async (expansionName: string) => {
         let module = await import(`${expansionPath}/${expansionConfiguration.supply}`, { with: { type: 'json' }});
         let cards = module.default as Record<string, CardData>;
         Object.keys(cards).forEach((key) => {
-            newExpansionData[key] = {
+            cardData[key] = {
                 ...cards[key],
                 expansionName,
                 detailImagePath: `./assets/card-images/base-supply/detail/${key}.jpg`,
@@ -57,7 +61,7 @@ export const loadExpansion = async (expansionName: string) => {
         module = await import(`${expansionPath}/${expansionConfiguration.kingdom}`, { with: { type: 'json' }});
         cards = module.default as Record<string, CardData>;
         Object.keys(cards).forEach((key) => {
-            newExpansionData[key] = {
+            cardData[key] = {
                 ...cards[key],
                 expansionName,
                 fullImagePath: `./assets/card-images/${expansionName}/full-size/${key}.jpg`,

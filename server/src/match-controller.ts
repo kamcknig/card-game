@@ -1,5 +1,6 @@
 import {
   Card,
+  CardKey,
   Match,
   MatchConfiguration,
   MatchSummary,
@@ -7,11 +8,10 @@ import {
   PlayerID,
   TurnPhaseOrderValues,
 } from 'shared/shared-types.ts';
-import { AppSocket, EffectHandlerMap, MatchBaseConfiguration, } from './types.ts';
+import { AppSocket, CardData, EffectHandlerMap, MatchBaseConfiguration, } from './types.ts';
 import { CardEffectController } from './card-effects-controller.ts';
-import { cardData, loadExpansion } from './utils/load-expansion.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';
-import { createCard } from './utils/create-card.ts';
+import { createCardFactory } from './utils/create-card.ts';
 import { createEffectHandlerMap } from './effect-handler-map.ts';
 import { EffectsPipeline } from './effects-pipeline.ts';
 import { fisherYatesShuffle } from './utils/fisher-yates-shuffler.ts';
@@ -29,15 +29,15 @@ export class MatchController {
   private _reactionManager: ReactionManager | undefined;
   private _interactivityController: CardInteractivityController | undefined;
   private _cardLibrary: CardLibrary = new CardLibrary();
+  private _cardData: Record<CardKey, CardData> | undefined;
   private _config: MatchConfiguration | undefined;
+  private _createCardFn: ((key: CardKey) => Card) | undefined;
 
   constructor(private readonly _socketMap: Map<PlayerID, AppSocket>) {}
 
-  public async initialize(config: MatchConfiguration) {
-    for (const expansionName of config.expansions) {
-      await loadExpansion(expansionName);
-    }
-
+  public initialize(config: MatchConfiguration, cardData: Record<CardKey, CardData>) {
+    this._createCardFn = createCardFactory(cardData);
+    this._cardData = cardData;
     const supplyCards = this.createBaseSupply(config);
     const kingdomCards = this.createKingdom(config);
     const playerCards = this.createPlayerDecks(config);
@@ -114,7 +114,7 @@ export class MatchController {
         }
 
         for (let i = 0; i < count; i++) {
-          const c = createCard(key);
+          const c = this._createCardFn!(key);
           this._cardLibrary.addCard(c);
           supplyCards.push(c);
         }
@@ -125,6 +125,9 @@ export class MatchController {
   }
 
   private createKingdom({ players }: MatchConfiguration) {
+    if (!this._cardData) {
+      throw new Error('no card data available to match');
+    }
     console.log(`[MATCH] creating kingdom cards`);
 
     const kingdomCards: Card[] = [];
@@ -146,7 +149,7 @@ export class MatchController {
       `[MATCH] choosing ${MatchBaseConfiguration.numberOfKingdomPiles} kingdom cards`,
     );
 
-    const availableKingdom = Object.keys(cardData["kingdom"]);
+    const availableKingdom = Object.keys(this._cardData);
     console.debug(`[MATCH] available kingdom cards\n${availableKingdom}`);
 
     let chosenKingdom = availableKingdom
@@ -165,7 +168,7 @@ export class MatchController {
     console.debug(`[MATCH] final chosen kingdom cards ${chosenKingdom}`);
     
      const finalKingdom = chosenKingdom.reduce((prev, key) => {
-        prev[key] = cardData["kingdom"][key].type.includes("VICTORY")
+        prev[key] = this._cardData![key].type.includes("VICTORY")
           ? (players.length < 3 ? 8 : 12)
           : 10;
 
@@ -178,7 +181,7 @@ export class MatchController {
     Object.entries(finalKingdom)
       .forEach(([key, count]) => {
         for (let i = 0; i < count; i++) {
-          const c = createCard(key);
+          const c = this._createCardFn!(key);
           this._cardLibrary.addCard(c);
           kingdomCards.push(c);
         }
@@ -213,7 +216,7 @@ export class MatchController {
         let deck = prev["playerDecks"][player.id];
         deck = deck.concat(
           new Array(count).fill(0).map((_) => {
-            const c = createCard(key);
+            const c = this._createCardFn!(key);
             this._cardLibrary.addCard(c);
             return c.id;
           }),

@@ -1,16 +1,17 @@
-import {cardData} from "./load-expansion.ts";
-import {Card} from "shared/shared-types.ts";
+import { Card, CardKey } from 'shared/shared-types.ts';
+import { CardData } from '../types.ts';
 
 let CARD_COUNT: number = 0;
 
-export const createCard = (cardName: string, card?: Omit<Card, 'id'>): Card => {
+export const createCardFactory = (cardData: Record<CardKey, CardData>) => {
+  return (cardName: string, card?: Omit<Card, "id">): Card => {
     const c = new Card({
-        ...(cardData['supply'][cardName] ?? cardData['kingdom'][cardName]),
-        order: 0,
-        ...card ?? {},
-        id: ++CARD_COUNT,
-        cardKey: cardName
+      ...(cardData[cardName]),
+      ...card ?? {},
+      id: ++CARD_COUNT,
+      cardKey: cardName,
     });
     console.debug(`[createCard] created ${c}`);
     return c;
-}
+  };
+};

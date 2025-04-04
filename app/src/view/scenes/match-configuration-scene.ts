@@ -62,9 +62,9 @@ export class MatchConfigurationScene extends Scene {
     for (const expansion of val) {
       const expansionList = new AppList({ type: 'horizontal', elementsMargin: STANDARD_GAP });
       expansionList.eventMode = 'static';
-      expansionList.label = expansion.expansionName;
+      expansionList.label = expansion.name;
       
-      const texture = await Assets.load(`./assets/expansion-icons/${expansion.expansionName}.png`)
+      const texture = await Assets.load(`./assets/expansion-icons/${expansion.name}.png`)
       const s = Sprite.from(texture);
       s.label = 'expansionIcon';
       const maxSide = 25;
@@ -76,7 +76,7 @@ export class MatchConfigurationScene extends Scene {
       const t = new Text({
         style: { fontSize: 24, fill: 'black' },
         text: expansion.title,
-        label: expansion.expansionName
+        label: expansion.name
       });
       expansionList.addChild(t);
       
