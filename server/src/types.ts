@@ -1,15 +1,21 @@
-import { Socket } from 'socket.io';
-import { Card, Match, MatchUpdate, ServerEmitEvents, ServerListenEvents, } from 'shared/shared-types.ts';
-import { GameEffects } from './effects/game-effects.ts';
-import { toNumber } from 'es-toolkit/compat';
+import { Socket } from "socket.io";
+import {
+  Card,
+  Match,
+  MatchUpdate,
+  ServerEmitEvents,
+  ServerListenEvents,
+} from "shared/shared-types.ts";
+import { GameEffects } from "./effects/game-effects.ts";
+import { toNumber } from "es-toolkit/compat";
 
-import { CardLibrary } from './card-library.ts';
+import { CardLibrary } from "./card-library.ts";
 
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
 
 export type CardData = Omit<
   Card,
-  "id" | "location" | "owner" | "order" | "cardKey"
+  "id" | "cardKey"
 >;
 
 /**
@@ -92,20 +98,20 @@ export type ReactionTrigger = {
   cardId: number;
   // who triggered this?
   playerId: number;
-}
+};
 
 export type ReactionEffectGeneratorFn = (args: {
-  match: Match,
-  cardLibrary: CardLibrary,
-  trigger: ReactionTrigger,
-  reaction: Reaction,
+  match: Match;
+  cardLibrary: CardLibrary;
+  trigger: ReactionTrigger;
+  reaction: Reaction;
 }) => EffectGenerator<GameEffects>;
 
 export type AsyncReactionEffectGeneratorFn = (args: {
-  match: Match,
-  cardLibrary: CardLibrary,
-  trigger: ReactionTrigger,
-  reaction: Reaction,
+  match: Match;
+  cardLibrary: CardLibrary;
+  trigger: ReactionTrigger;
+  reaction: Reaction;
 }) => Promise<EffectGenerator<GameEffects>>;
 
 export type EffectGenerator<T> = Generator<
@@ -115,21 +121,21 @@ export type EffectGenerator<T> = Generator<
 >;
 
 export type EffectGeneratorFn = (args: {
-  match: Match,
-  cardLibrary: CardLibrary,
-  triggerPlayerId: number,
-  triggerCardId?: number,
+  match: Match;
+  cardLibrary: CardLibrary;
+  triggerPlayerId: number;
+  triggerCardId?: number;
   // deno-lint-ignore no-explicit-any
-  reactionContext?: any,
+  reactionContext?: any;
 }) => EffectGenerator<GameEffects>;
 
 export type AsyncEffectGeneratorFn = (args: {
-  match: Match,
-  cardLibrary: CardLibrary,
-  triggerPlayerId: number,
-  triggerCardId?: number,
+  match: Match;
+  cardLibrary: CardLibrary;
+  triggerPlayerId: number;
+  triggerCardId?: number;
   // deno-lint-ignore no-explicit-any
-  reactionContext?: any,
+  reactionContext?: any;
 }) => Promise<EffectGenerator<GameEffects>>;
 
 export type EffectTypes = GameEffects["type"];
@@ -137,7 +143,7 @@ export type EffectTypes = GameEffects["type"];
 export type EffectHandler<T> = (
   effect: Extract<GameEffects, { type: T }>,
   match: Match,
-  acc: MatchUpdate
+  acc: MatchUpdate,
 ) => EffectHandlerResult;
 
 export type EffectHandlerMap = {
@@ -146,8 +152,7 @@ export type EffectHandlerMap = {
 
 export type EffectHandlerResult = Promise<unknown> | unknown;
 
-export type TriggerEventType =
-  | "cardPlayed";
+export type TriggerEventType = "cardPlayed";
 
 export class Reaction {
   public id: string;
@@ -158,13 +163,15 @@ export class Reaction {
   public listeningFor: TriggerEventType;
 
   public once?: boolean = false;
-  
+
   public multipleUse?: boolean = true;
 
   // todo working on moat right now which has no condition other than it be an attack.
   // in the future we might need to define this condition method elsewhere such as
   // in the expansion's module? need to wait to see what kind of conditions there are i think
-  public condition?: (args: { match: Match, cardLibrary: CardLibrary, trigger: ReactionTrigger }) => boolean;
+  public condition?: (
+    args: { match: Match; cardLibrary: CardLibrary; trigger: ReactionTrigger },
+  ) => boolean;
 
   // todo defined in a map somewhere just like registered card effects. so maybe another export
   // from teh expansion module that defines what happens when you ccn react?
@@ -198,7 +205,7 @@ export class Reaction {
       out = this.id.split("-")?.[0];
       return out;
     } catch (e) {
-      throw e
+      throw e;
     }
   }
 
@@ -221,31 +228,33 @@ export interface IEffectRunner {
     acc: MatchUpdate,
     reactionContext?: unknown,
   ): Promise<unknown>;
-  
+
   runGameActionEffects(
     effectName: string,
     match: Match,
     playerId: number,
     cardId?: number,
   ): Promise<unknown>;
-  
+
   runGenerator(
     generator: EffectGenerator<GameEffects>,
     match: Match,
     playerId: number,
     acc?: MatchUpdate,
   ): Promise<unknown>;
-  
+
   suspendedCallbackRunner(fn: () => Promise<void>): Promise<unknown>;
 }
 
-export type ReactionTemplate = Omit<Reaction, 'getSourceId' | 'getSourceKey'>;
+export type ReactionTemplate = Omit<Reaction, "getSourceId" | "getSourceKey">;
 
 export type LifecycleResult = {
   registerTriggers?: ReactionTemplate[];
   unregisterTriggers?: string[];
-}
-export type LifecycleCallback = (args: { playerId: number, cardId: number }) => LifecycleResult | void;
+};
+export type LifecycleCallback = (
+  args: { playerId: number; cardId: number },
+) => LifecycleResult | void;
 
 export type LifecycleCallbackMap = {
   onEnterHand?: LifecycleCallback;

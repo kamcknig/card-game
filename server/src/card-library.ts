@@ -1,5 +1,11 @@
 import { Card, CardId } from "shared/shared-types.ts";
 
+/**
+ * The CardLibrary class provides a way to add cards into a library that is used within a Match.
+ *
+ * The library should include every physical card created to be used within a match. This is NOT a library
+ * of every card possible; ONLY the ones created and used in a Match.
+ */
 export class CardLibrary {
   private readonly _library: Map<CardId, Card> = new Map();
 

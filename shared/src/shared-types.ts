@@ -241,7 +241,6 @@ export type CardArgs = {
         treasure: number;
     };
     abilityText: string;
-    order: number;
     cardKey: string;
     victoryPoints?: number;
     targetScheme?: EffectTarget;
@@ -260,7 +259,6 @@ export class Card {
     };
     victoryPoints: number;
     abilityText: string;
-    order: number;
     cardKey: string;
     targetScheme?: EffectTarget;
     expansionName: string;
@@ -273,7 +271,6 @@ export class Card {
         this.type = args.type;
         this.cost = args.cost;
         this.abilityText = args.abilityText;
-        this.order = args.order;
         this.cardKey = args.cardKey;
         this.cardName = args.cardName;
         this.victoryPoints = args.victoryPoints ?? 0;

@@ -9,7 +9,7 @@ import {
 } from 'shared/shared-types.ts';
 import { AppSocket, EffectHandlerMap, MatchBaseConfiguration, } from './types.ts';
 import { CardEffectController } from './card-effects-controller.ts';
-import { cardLibrary, loadExpansion } from './utils/load-expansion.ts';
+import { cardData, loadExpansion } from './utils/load-expansion.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';
 import { createCard } from './utils/create-card.ts';
 import { createEffectHandlerMap } from './effect-handler-map.ts';
@@ -146,7 +146,7 @@ export class MatchController {
       `[MATCH] choosing ${MatchBaseConfiguration.numberOfKingdomPiles} kingdom cards`,
     );
 
-    const availableKingdom = Object.keys(cardLibrary["kingdom"]);
+    const availableKingdom = Object.keys(cardData["kingdom"]);
     console.debug(`[MATCH] available kingdom cards\n${availableKingdom}`);
 
     let chosenKingdom = availableKingdom
@@ -165,7 +165,7 @@ export class MatchController {
     console.debug(`[MATCH] final chosen kingdom cards ${chosenKingdom}`);
     
      const finalKingdom = chosenKingdom.reduce((prev, key) => {
-        prev[key] = cardLibrary["kingdom"][key].type.includes("VICTORY")
+        prev[key] = cardData["kingdom"][key].type.includes("VICTORY")
           ? (players.length < 3 ? 8 : 12)
           : 10;
 

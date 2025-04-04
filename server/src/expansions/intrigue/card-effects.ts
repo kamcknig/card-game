@@ -1361,15 +1361,31 @@ const expansionModule: CardExpansionModule = {
         sourceCardId: triggerCardId,
       });
     },
-    /*"wishing-well": function* ({
+    "wishing-well": function* ({
       match,
       cardLibrary,
       triggerPlayerId,
       triggerCardId,
       reactionContext,
     }) {
-
-    },*/
+      yield new DrawCardEffect({
+        playerId: triggerPlayerId,
+        sourcePlayerId: triggerPlayerId,
+        sourceCardId: triggerCardId
+      });
+      
+      yield new GainActionEffect({ count: 1, sourcePlayerId: triggerPlayerId });
+      
+      const result = (yield new UserPromptEffect({
+        playerId: triggerPlayerId,
+        sourcePlayerId: triggerPlayerId,
+        sourceCardId: triggerCardId,
+        actionButtons: [
+          { action: 1, label: 'DONE' }
+        ],
+        prompt: 'Name a card',
+      })) as { action: number, cardIds: number[] };
+    },
   }),
 };
 
