@@ -14,25 +14,25 @@ export const findSourceByCardId = (
   if (match.supply.includes(cardId)) {
     sourceStore = match.supply;
     storeKey = 'supply';
-    console.debug(`found card ${cardLibrary.getCard(cardId)} in the supply`);
+    console.log(`[FIND CARD SOURCE] found card ${cardLibrary.getCard(cardId)} in the supply`);
   } else if (match.kingdom.includes(cardId)) {
     sourceStore = match.kingdom;
     storeKey = "kingdom";
-    console.debug(`found card ${cardLibrary.getCard(cardId)} in the kingdom`);
+    console.log(`[FIND CARD SOURCE] found card ${cardLibrary.getCard(cardId)} in the kingdom`);
   } else if (match.playArea.includes(cardId)) {
     sourceStore = match.playArea;
     storeKey = "playArea";
-    console.debug(`found card ${cardLibrary.getCard(cardId)} in the play area`);
+    console.log(`[FIND CARD SOURCE] found card ${cardLibrary.getCard(cardId)} in the play area`);
   } else if (match.trash.includes(cardId)) {
     sourceStore = match.trash;
     storeKey = "trash";
-    console.debug(`found card ${cardLibrary.getCard(cardId)} in the trash`);
+    console.log(`[FIND CARD SOURCE] found card ${cardLibrary.getCard(cardId)} in the trash`);
   } else {
     for (const [playerId, hand] of Object.entries(match.playerHands)) {
       if (hand.includes(cardId)) {
         sourceStore = hand;
         storeKey = "playerHands";
-        console.debug(`found card ${cardLibrary.getCard(cardId)} in ${match.players.find(player => player.id === +playerId)} hand`);
+        console.log(`[FIND CARD SOURCE] found card ${cardLibrary.getCard(cardId)} in ${match.players.find(player => player.id === +playerId)} hand`);
         break;
       }
     }
@@ -42,7 +42,7 @@ export const findSourceByCardId = (
         if (deck.includes(cardId)) {
           storeKey = "playerDecks";
           sourceStore = deck;
-          console.debug(`found card ${cardLibrary.getCard(cardId)} in ${match.players.find(player => player.id === +playerId)} deck`);
+          console.debug(`[FIND CARD SOURCE] found card ${cardLibrary.getCard(cardId)} in ${match.players.find(player => player.id === +playerId)} deck`);
           break;
         }
       }
@@ -53,7 +53,7 @@ export const findSourceByCardId = (
         if (discard.includes(cardId)) {
           storeKey = "playerDiscards";
           sourceStore = discard;
-          console.debug(`found card ${cardLibrary.getCard(cardId)} in ${match.players.find(player => player.id === +playerId)} discard`);
+          console.debug(`[FIND CARD SOURCE] found card ${cardLibrary.getCard(cardId)} in ${match.players.find(player => player.id === +playerId)} discard`);
           break;
         }
       }
@@ -64,7 +64,7 @@ export const findSourceByCardId = (
   if (!isUndefined(sourceStore)) {
     idx = sourceStore?.findIndex((e) => e === cardId);
   } else {
-    console.error(`could not find card store for ${cardLibrary.getCard(cardId)}`);
+    console.error(`[FIND CARD SOURCE] could not find card store for ${cardLibrary.getCard(cardId)}`);
   }
 
   return { sourceStore, index: idx, storeKey };

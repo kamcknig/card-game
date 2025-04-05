@@ -66,7 +66,7 @@ export class CardInteractivityController {
     const treasureCards = hand.filter((e) =>
       this._cardLibrary.getCard(e).type.includes('TREASURE')
     );
-    console.debug(`[CARD INTERACTIVITY] ${currentPlayer} has ${treasureCards.length} treasure cards in hand`);
+    console.log(`[CARD INTERACTIVITY] ${currentPlayer} has ${treasureCards.length} treasure cards in hand`);
     if (hand.length === 0 || treasureCards.length === 0) {
       return;
     }
@@ -84,7 +84,7 @@ export class CardInteractivityController {
     console.log(`[CARD INTERACTIVITY] player ${player} tapped card ${card}`);
 
     if (this._gameOver) {
-      console.debug(
+      console.log(
         `[CARD INTERACTIVITY] game is over, not processing card tap`,
       );
       return;
@@ -101,7 +101,7 @@ export class CardInteractivityController {
       );
     } else if (turnPhase === 'buy') {
       if (!match.playerHands?.[triggerPlayerId]) {
-        console.debug(
+        console.log(
           `[CARD INTERACTIVITY] could not find player hand for ${
           match.players.find(player => player.id === triggerPlayerId)
           }`,
@@ -138,7 +138,7 @@ export class CardInteractivityController {
     }
 
     if (this._gameOver) {
-      console.debug(
+      console.log(
         `[CARD INTERACTIVITY] game is over, not processing match update`,
       );
       return;

@@ -33,10 +33,10 @@ export class ReactionManager {
       if (t.listeningFor !== trigger.eventType) return false;
 
       console.log(`[REACTION MANAGER] checking trigger ${trigger} condition for ${t.id} reaction`);
-      console.debug(
+      console.log(
         `[REACTION MANAGER] trigger card ${this._cardLibrary.getCard(trigger.cardId)}`,
       );
-      console.debug(
+      console.log(
         `t[REACTION MANAGER] rigger player ${
           this.match.players.find((player) => player.id === trigger.playerId)
         }`,

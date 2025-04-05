@@ -84,7 +84,7 @@ const expansionModule: CardExpansionModule = {
         });
         const card = cardLibrary.getCard(cardId);
         if (card.type.includes('TREASURE')) {
-          console.debug(`[ADVENTURER EFFECT] card revealed is a treasure, drawing`);
+          console.log(`[ADVENTURER EFFECT] card revealed is a treasure, drawing`);
           yield new DrawCardEffect({
             playerId: triggerPlayerId,
             sourcePlayerId: triggerPlayerId,
@@ -92,7 +92,7 @@ const expansionModule: CardExpansionModule = {
           });
           ++treasuresRevealed;
         } else {
-          console.debug('[ADVENTURER EFFECT] card revealed is not a treasure, discarding');
+          console.log('[ADVENTURER EFFECT] card revealed is not a treasure, discarding');
           yield new DiscardCardEffect({
             playerId: triggerPlayerId,
             cardId,
@@ -132,7 +132,7 @@ const expansionModule: CardExpansionModule = {
           break;
         }
         
-        console.debug('[BUREAUCRAT EFFECT] no silver in supply');
+        console.log('[BUREAUCRAT EFFECT] no silver in supply');
       }
       
       const playerIds = findOrderedEffectTargets(
@@ -141,7 +141,7 @@ const expansionModule: CardExpansionModule = {
         match,
       ).filter((id) => reactionContext[id] !== 'immunity');
       
-      console.debug(`[BUREAUCRAT EFFECT] targeting ${playerIds.map((id) => getPlayerById(match, id))}`);
+      console.log(`[BUREAUCRAT EFFECT] targeting ${playerIds.map((id) => getPlayerById(match, id))}`);
       
       for (const playerId of playerIds) {
         let cardsToReveal = match.playerHands[playerId].filter((c) =>
@@ -149,7 +149,7 @@ const expansionModule: CardExpansionModule = {
         );
         
         if (cardsToReveal.length === 0) {
-          console.debug(`[BUREAUCRAT EFFECT]  ${getPlayerById(match, playerId)} has no victory cards, revealing all`);
+          console.log(`[BUREAUCRAT EFFECT]  ${getPlayerById(match, playerId)} has no victory cards, revealing all`);
           cardsToReveal = match.playerHands[playerId];
           for (const cardId of cardsToReveal) {
             yield new RevealCardEffect({
@@ -204,7 +204,7 @@ const expansionModule: CardExpansionModule = {
       
       const hasCards = match.playerHands[triggerPlayerId].length > 0;
       if (!hasCards) {
-        console.debug(`[CELLAR EFFECT] player has no cards to choose from`);
+        console.log(`[CELLAR EFFECT] player has no cards to choose from`);
         return;
       }
       
@@ -228,7 +228,7 @@ const expansionModule: CardExpansionModule = {
       }
       
       if (!cardIds.length) {
-        console.debug(`[CELLAR EFFECT] no cards discarded, so no cards drawn`);
+        console.log(`[CELLAR EFFECT] no cards discarded, so no cards drawn`);
         return;
       }
       
@@ -249,7 +249,7 @@ const expansionModule: CardExpansionModule = {
 
       const deck = match.playerDecks[triggerPlayerId];
       if (deck.length === 0) {
-        console.debug(`[CHANCELLOR EFFECT] ${getPlayerById(match, triggerPlayerId)} has no cards in deck to discard`);
+        console.log(`[CHANCELLOR EFFECT] ${getPlayerById(match, triggerPlayerId)} has no cards in deck to discard`);
         return;
       }
 
@@ -262,7 +262,7 @@ const expansionModule: CardExpansionModule = {
       })) as { action: number };
 
       if (result.action !== 2) {
-        console.debug(`[CHANCELLOR EFFECT] ${getPlayerById(match, triggerPlayerId)} selected no`);
+        console.log(`[CHANCELLOR EFFECT] ${getPlayerById(match, triggerPlayerId)} selected no`);
         return;
       }
 
@@ -285,7 +285,7 @@ const expansionModule: CardExpansionModule = {
       const hand = match.playerHands[triggerPlayerId];
       
       if (!hand.length) {
-        console.debug(`[CHAPEL EFFECT] player has no cards in hand`);
+        console.log(`[CHAPEL EFFECT] player has no cards in hand`);
         return;
       }
       
@@ -309,7 +309,7 @@ const expansionModule: CardExpansionModule = {
           });
         }
       } else {
-        console.debug('[CHAPEL EFFECT] no cards selected');
+        console.log('[CHAPEL EFFECT] no cards selected');
       }
     },
     'copper': function* ({
@@ -339,7 +339,7 @@ const expansionModule: CardExpansionModule = {
         match,
       );
       
-      console.debug(
+      console.log(
         `[COUNCIL ROOM EFFECT] targets ${playerIds.map((id) => getPlayerById(match, id))}`,
       );
       
@@ -370,7 +370,7 @@ const expansionModule: CardExpansionModule = {
       const cardId = cardIds?.[0];
       
       if (!isUndefined(cardId)) {
-        console.debug(`[FEAST EFFECT] ${getPlayerById(match, triggerPlayerId)} chose ${cardLibrary.getCard(cardId)}`);
+        console.log(`[FEAST EFFECT] ${getPlayerById(match, triggerPlayerId)} chose ${cardLibrary.getCard(cardId)}`);
         yield new GainCardEffect({
           sourcePlayerId: triggerPlayerId,
           sourceCardId: triggerCardId,
@@ -425,14 +425,14 @@ const expansionModule: CardExpansionModule = {
       let newHandSize = 7;
       
       if (hand.length + deck.length < newHandSize) {
-        console.debug(`[LIBRARY EFFECT] total size of hand + deck is less than ${newHandSize}`);
+        console.log(`[LIBRARY EFFECT] total size of hand + deck is less than ${newHandSize}`);
         newHandSize = Math.min(7, hand.length + deck.length);
-        console.debug(`[LIBRARY EFFECT] new hand size to draw to ${newHandSize}`);
+        console.log(`[LIBRARY EFFECT] new hand size to draw to ${newHandSize}`);
       }
       
-      console.debug(`[LIBRARY EFFECT] current hand size ${hand.length}`);
-      console.debug(`[LIBRARY EFFECT] number of set aside cards ${setAside.length}`);
-      console.debug(`[LIBRARY EFFECT] deck size ${deck.length}`);
+      console.log(`[LIBRARY EFFECT] current hand size ${hand.length}`);
+      console.log(`[LIBRARY EFFECT] number of set aside cards ${setAside.length}`);
+      console.log(`[LIBRARY EFFECT] deck size ${deck.length}`);
       
       while (hand.length < newHandSize + setAside.length && deck.length > 0) {
         const drawnCardId = (yield new DrawCardEffect({
@@ -441,7 +441,7 @@ const expansionModule: CardExpansionModule = {
           sourceCardId: triggerCardId,
         })) as number;
         
-        console.debug(`[LIBRARY EFFECT] drew card, new hand size ${hand.length}`);
+        console.log(`[LIBRARY EFFECT] drew card, new hand size ${hand.length}`);
         
         const drawnCard = cardLibrary.getCard(drawnCardId);
         

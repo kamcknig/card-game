@@ -95,7 +95,7 @@ const expansionModule: CardExpansionModule = {
   }),
   registerEffects: () => ({
     'artisan': function* ({cardLibrary, triggerPlayerId, triggerCardId}) {
-      console.debug(`[ARTISAN EFFECT] choosing card to gain...`);
+      console.log(`[ARTISAN EFFECT] choosing card to gain...`);
       let results = (yield new SelectCardEffect({
         prompt: 'Choose card to gain',
         playerId: triggerPlayerId,
@@ -112,7 +112,7 @@ const expansionModule: CardExpansionModule = {
         },
       })) as number[];
       let selectedCardId = results[0];
-      console.debug(`[ARTISAN EFFECT] card chosen ${cardLibrary.getCard(selectedCardId)}`);
+      console.log(`[ARTISAN EFFECT] card chosen ${cardLibrary.getCard(selectedCardId)}`);
       yield new GainCardEffect({
         playerId: triggerPlayerId,
         sourceCardId: triggerCardId,
@@ -123,7 +123,7 @@ const expansionModule: CardExpansionModule = {
         },
       });
 
-      console.debug(`[ARTISAN EFFECT] choosing card to put on deck...`);
+      console.log(`[ARTISAN EFFECT] choosing card to put on deck...`);
       results = (yield new SelectCardEffect({
         prompt: 'Confirm top-deck card',
         playerId: triggerPlayerId,
@@ -136,7 +136,7 @@ const expansionModule: CardExpansionModule = {
         },
       })) as number[];
       selectedCardId = results[0];
-      console.debug(`[ARTISAN EFFECT] card chosen ${cardLibrary.getCard(selectedCardId)}`);
+      console.log(`[ARTISAN EFFECT] card chosen ${cardLibrary.getCard(selectedCardId)}`);
       yield new MoveCardEffect({
         sourcePlayerId: triggerPlayerId,
         sourceCardId: triggerCardId,
@@ -158,7 +158,7 @@ const expansionModule: CardExpansionModule = {
         cardLibrary.getCard(c).cardKey === 'gold'
       );
       if (goldCardId) {
-        console.debug(`[BANDIT EFFECT] gaining a gold...`);
+        console.log(`[BANDIT EFFECT] gaining a gold...`);
         const goldCard = cardLibrary.getCard(goldCardId);
         yield new GainCardEffect({
           sourceCardId: triggerCardId,
@@ -170,7 +170,7 @@ const expansionModule: CardExpansionModule = {
           },
         });
       } else {
-        console.debug(`[BANDIT EFFECT] no gold available`);
+        console.log(`[BANDIT EFFECT] no gold available`);
       }
 
       const targetPlayerIds = findOrderedEffectTargets(
@@ -179,7 +179,7 @@ const expansionModule: CardExpansionModule = {
         match,
       ).filter((id) => reactionContext[id] !== 'immunity');
 
-      console.debug(`[BANDIT EFFECT] ordered targets ${targetPlayerIds}`);
+      console.log(`[BANDIT EFFECT] ordered targets ${targetPlayerIds}`);
 
       for (const targetPlayerId of targetPlayerIds) {
         let playerDeck = match.playerDecks[targetPlayerId];
@@ -190,12 +190,12 @@ const expansionModule: CardExpansionModule = {
         numToReveal = Math.min(numToReveal, totalCards);
 
         if (numToReveal === 0) {
-          console.debug(`[BANDIT EFFECT] player has no cards to reveal`);
+          console.log(`[BANDIT EFFECT] player has no cards to reveal`);
           continue;
         }
 
         if (playerDeck.length < numToReveal) {
-          console.debug(`[BANDIT EFFECT] not enough cards in deck, shuffling...`);
+          console.log(`[BANDIT EFFECT] not enough cards in deck, shuffling...`);
 
           yield new ShuffleDeckEffect({
             playerId: targetPlayerId,
@@ -217,7 +217,7 @@ const expansionModule: CardExpansionModule = {
         }
 
         const possibleCardsToTrash = cardIdsToReveal.filter((id) => {
-          console.debug(
+          console.log(
             `[BANDIT EFFECT] checking if ${cardLibrary.getCard(id)} can be trashed`,
           );
           return cardLibrary.getCard(id).cardKey !== 'copper' &&
@@ -225,7 +225,7 @@ const expansionModule: CardExpansionModule = {
         });
 
         if (possibleCardsToTrash.length > 0) {
-          console.debug(
+          console.log(
             `[BANDIT EFFECT] cards that can be trashed ${
               possibleCardsToTrash.map((cardId) => cardLibrary.getCard(cardId))
             }`,
@@ -237,7 +237,7 @@ const expansionModule: CardExpansionModule = {
         );
 
         if (cardsToDiscard.length > 0) {
-          console.debug(
+          console.log(
             `[BANDIT EFFECT] cards that will be discarded ${
               cardsToDiscard.map((cardId) => cardLibrary.getCard(cardId))
             }`,
@@ -248,7 +248,7 @@ const expansionModule: CardExpansionModule = {
 
         let results;
         if (possibleCardsToTrash.length > 1) {
-          console.debug(`[BANDIT EFFECT] prompt user to select card to trash...`);
+          console.log(`[BANDIT EFFECT] prompt user to select card to trash...`);
           results = (yield new UserPromptEffect({
             sourcePlayerId: triggerPlayerId,
             sourceCardId: triggerCardId,
@@ -264,7 +264,7 @@ const expansionModule: CardExpansionModule = {
 
           const selectedId = results?.result?.[0];
 
-          console.debug(`[BANDIT EFFECT] chose card ${cardLibrary.getCard(selectedId)}`);
+          console.log(`[BANDIT EFFECT] chose card ${cardLibrary.getCard(selectedId)}`);
 
           const otherCardId = possibleCardsToTrash.find((id) =>
             id !== selectedId
@@ -320,7 +320,7 @@ const expansionModule: CardExpansionModule = {
           break;
         }
 
-        console.debug('[BUREAUCRAT EFFECT] no silver in supply');
+        console.log('[BUREAUCRAT EFFECT] no silver in supply');
       }
 
       const playerIds = findOrderedEffectTargets(
@@ -329,7 +329,7 @@ const expansionModule: CardExpansionModule = {
         match,
       ).filter((id) => reactionContext[id] !== 'immunity');
 
-      console.debug(
+      console.log(
         `[BUREAUCRAT EFFECT] targeting ${playerIds.map((id) => getPlayerById(match, id))}`,
       );
 
@@ -339,7 +339,7 @@ const expansionModule: CardExpansionModule = {
         );
 
         if (cardsToReveal.length === 0) {
-          console.debug(
+          console.log(
             `[BUREAUCRAT EFFECT] ${
               getPlayerById(match, playerId)
             } has no victory cards, revealing all`,
@@ -397,7 +397,7 @@ const expansionModule: CardExpansionModule = {
 
       const hasCards = match.playerHands[triggerPlayerId].length > 0;
       if (!hasCards) {
-        console.debug('[CELLAR EFFECT] player has no cards to choose from');
+        console.log('[CELLAR EFFECT] player has no cards to choose from');
         return;
       }
 

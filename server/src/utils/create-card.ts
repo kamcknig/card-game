@@ -11,7 +11,7 @@ export const createCardFactory = (cardData: Record<CardKey, CardData>) => {
       id: ++CARD_COUNT,
       cardKey: cardName,
     });
-    console.debug(`[createCard] created ${c}`);
+    console.log(`[createCard] created ${c}`);
     return c;
   };
 };

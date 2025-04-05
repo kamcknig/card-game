@@ -97,8 +97,8 @@ export class MatchController {
     const baseCardsDict =
       MatchBaseConfiguration.cards.supply.baseCards[config.players.length - 1];
 
-    console.debug(`[MATCH] base card dictionary counts`);
-    console.debug(baseCardsDict);
+    console.log(`[MATCH] base card dictionary counts`);
+    console.log(baseCardsDict);
 
     Object.entries(baseCardsDict)
       .forEach(([key, count]) => {
@@ -108,7 +108,7 @@ export class MatchController {
         if (key === "copper") {
           count -= config.players.length *
             MatchBaseConfiguration.playerStartingHand.copper;
-          console.debug(
+          console.log(
             `[MATCH] setting copper count to ${count} due to number of players ${config.players.length}`,
           );
         }
@@ -119,7 +119,7 @@ export class MatchController {
           supplyCards.push(c);
         }
 
-        console.debug(`[MATCH] created ${count} of card ${key}`);
+        console.log(`[MATCH] created ${count} of card ${key}`);
       });
     return supplyCards;
   }
@@ -145,21 +145,21 @@ export class MatchController {
       'torturer'
     ];
 
-    console.debug(
+    console.log(
       `[MATCH] choosing ${MatchBaseConfiguration.numberOfKingdomPiles} kingdom cards`,
     );
 
     const availableKingdom = Object.keys(this._cardData);
-    console.debug(`[MATCH] available kingdom cards\n${availableKingdom}`);
+    console.log(`[MATCH] available kingdom cards\n${availableKingdom}`);
 
     let chosenKingdom = availableKingdom
       .sort(() => Math.random() > .5 ? 1 : -1)
       .slice(-MatchBaseConfiguration.numberOfKingdomPiles);
     
-    console.debug(`[MATCH] sorted and selected kingdom cards ${chosenKingdom}`);
+    console.log(`[MATCH] sorted and selected kingdom cards ${chosenKingdom}`);
     
     if (keepers.length) {
-      console.debug(`[MATCH] adding keeper cards ${keepers}`);
+      console.log(`[MATCH] adding keeper cards ${keepers}`);
       
       const filteredKingdom = chosenKingdom.filter((k => !keepers.includes(k)))
       chosenKingdom = keepers.concat(filteredKingdom).slice(0, MatchBaseConfiguration.numberOfKingdomPiles);

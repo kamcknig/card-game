@@ -27,7 +27,7 @@ io.on("connection", (socket) => {
 
   const sessionId = socket.handshake.query.get("sessionId");
 
-  console.debug(
+  console.log(
     `[SERVER] connection from ${socket.handshake.address} - session ID ${sessionId}`,
   );
 

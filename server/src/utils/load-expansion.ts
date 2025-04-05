@@ -7,7 +7,7 @@ export const loadExpansion = async (expansion: { title: string, name: string, or
     const expansionPath = `../expansions/${expansion.name}`;
     const expansionName = expansion.name;
     if (expansionData[expansionName]) {
-        console.debug(`[EXPANSION LOADER] expansion ${expansionName} already loaded`);
+        console.log(`[EXPANSION LOADER] expansion ${expansionName} already loaded`);
         return;
     }
     
@@ -66,7 +66,7 @@ export const loadExpansion = async (expansion: { title: string, name: string, or
         module = await import(`../expansions/base-supply-card-effects.ts`);
         let effects = module.default.registerEffects();
         Object.keys(effects).forEach(key => {
-            console.debug('registering effects for', key);
+            console.log('registering effects for', key);
             effectGeneratorMap[key] = effects[key];
         });
         console.log('[EXPANSION LOADER] base supply card effects loaded');
@@ -77,7 +77,7 @@ export const loadExpansion = async (expansion: { title: string, name: string, or
         module = await import(`${expansionPath}/card-effects.ts`);
         effects = module.default.registerEffects();
         Object.keys(effects).forEach(key => {
-            console.debug('registering effects for', key);
+            console.log('registering effects for', key);
             effectGeneratorMap[key] = effects[key];
         });
         console.log(`[EXPANSION LOADER] card effects loaded for ${expansionName}`, effectGeneratorMap);

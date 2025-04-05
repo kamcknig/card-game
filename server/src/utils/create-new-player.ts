@@ -13,6 +13,6 @@ export const createNewPlayer = (sessionId: string, socket: AppSocket) => {
     ready: false,
     socketId: socket.id
   });
-  console.debug(`[createNewPlayer] new player created ${p}`);
+  console.log(`[createNewPlayer] new player created ${p}`);
   return p;
 }

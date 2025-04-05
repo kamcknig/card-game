@@ -82,7 +82,7 @@ const expansionModule: CardExpansionModule = {
       ).map(cardLibrary.getCard)
         .filter((card) => card.cardKey === "duchy");
 
-      console.debug(
+      console.log(
         `[DUKE SCORING] player ${
           getPlayerById(match, ownerId)
         } has ${duchies.length} Duchies`,
@@ -115,12 +115,12 @@ const expansionModule: CardExpansionModule = {
       );
 
       if (!handEstateIdx) {
-        console.debug(
+        console.log(
           `[BARON EFFECT] player has no estates in hand, they gain one`,
         );
 
         if (!supplyEstateIdx) {
-          console.debug(`[BARON EFFECT] no estates in supply`);
+          console.log(`[BARON EFFECT] no estates in supply`);
           return;
         }
 
@@ -134,7 +134,7 @@ const expansionModule: CardExpansionModule = {
         return;
       }
 
-      console.debug(`[BARON EFFECT] player has an estate in hand`);
+      console.log(`[BARON EFFECT] player has an estate in hand`);
 
       const confirm = (yield new UserPromptEffect({
         playerId: triggerPlayerId,
@@ -148,7 +148,7 @@ const expansionModule: CardExpansionModule = {
       })) as { action: number };
 
       if (confirm.action === 2) {
-        console.debug(
+        console.log(
           `[BARON EFFECT] player chooses to discard estate, gain 4 treasure`,
         );
 
@@ -164,7 +164,7 @@ const expansionModule: CardExpansionModule = {
           sourcePlayerId: triggerPlayerId,
         });
       } else if (supplyEstateIdx) {
-        console.debug(
+        console.log(
           `[BARON EFFECT] player not discarding estate, gaining one`,
         );
 
@@ -178,7 +178,7 @@ const expansionModule: CardExpansionModule = {
           },
         });
       } else {
-        console.debug(`[BARON EFFECT] no estate in supply`);
+        console.log(`[BARON EFFECT] no estate in supply`);
       }
     },
     "bridge": function* ({
@@ -215,7 +215,7 @@ const expansionModule: CardExpansionModule = {
         cardId,
       ) => cardLibrary.getCard(cardId).type.includes("ACTION"));
 
-      console.debug(
+      console.log(
         `[CONSPIRATOR EFFECT] action cards played so far ${actionCardCount}`,
       );
       if (actionCardCount?.length >= 3) {
@@ -277,7 +277,7 @@ const expansionModule: CardExpansionModule = {
 
         const resultAction = result.action;
 
-        console.debug(`[COURTIER EFFECT] player chose ${resultAction}`);
+        console.log(`[COURTIER EFFECT] player chose ${resultAction}`);
 
         const idx = choices.findIndex((c) => c.action === resultAction);
         choices.splice(idx, 1);
@@ -379,7 +379,7 @@ const expansionModule: CardExpansionModule = {
           sourcePlayerId: triggerPlayerId,
         });
       } else {
-        console.debug(
+        console.log(
           `[DIPLOMAT EFFECT] player has more than 5 cards in hand, can't perform diplomat`,
         );
       }
@@ -467,10 +467,10 @@ const expansionModule: CardExpansionModule = {
           sourcePlayerId: triggerPlayerId,
         })) as { action: number };
       } else {
-        console.debug(`[LURKER EFFECT] no cards in trash to select`);
+        console.log(`[LURKER EFFECT] no cards in trash to select`);
       }
 
-      console.debug(
+      console.log(
         `[LURKER EFFECT] user choose action ${
           actionButtons.find((a) => a.action === result.action)?.label
         }`,
@@ -548,7 +548,7 @@ const expansionModule: CardExpansionModule = {
           },
         })) as number[];
         playerCardMap.set(playerId, cardIds[0]);
-        console.debug(
+        console.log(
           `[MASQUERADE EFFECT] ${getPlayerById(match, playerId)} chose ${
             cardLibrary.getCard(cardIds[0])
           }`,
@@ -581,7 +581,7 @@ const expansionModule: CardExpansionModule = {
           },
         },
       })) as number[];
-      console.debug(
+      console.log(
         `[MASQUERADE EFFECT] player chose ${
           cardIds.length ? cardLibrary.getCard(cardIds[0]) : "not to trash"
         }`,

@@ -58,7 +58,7 @@ export class Game {
     }
 
     if (player) {
-      console.debug(`[GAME] ${player} already in game assigning socket ID`);
+      console.log(`[GAME] ${player} already in game assigning socket ID`);
       player.socketId = socket.id;
       player.sessionId = sessionId;
     } else {
@@ -157,7 +157,7 @@ export class Game {
 
   private onMatchConfigurationUpdated = async (config: MatchConfiguration) => {
     console.log(`[GAME] received match configuration update`);
-    console.debug(config);
+    console.log(config);
 
     const newExpansions = config.expansions.filter(
       (e) => !this._matchConfiguration.expansions.includes(e),

@@ -4,14 +4,14 @@ import {Match} from "shared/shared-types.ts";
 
 export const findOrderedEffectTargets =
     (currentPlayerTurnId: number, target: EffectTarget, match: Match, exception?: EffectExceptionSpec): number[] => {
-        console.debug('findEffectTargetIds current player', currentPlayerTurnId, 'target', target, 'exception', exception);
+        console.log('findEffectTargetIds current player', currentPlayerTurnId, 'target', target, 'exception', exception);
 
         const otherCountRegExResult = /(\d+)_OTHER/.exec(target);
         let otherCount;
         if (!isNull(otherCountRegExResult)) {
             target = 'X_OTHER';
             otherCount = otherCountRegExResult[1];
-            console.debug('X_OTHER count', otherCount);
+            console.log('X_OTHER count', otherCount);
         }
 
         let result = [];

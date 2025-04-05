@@ -41,7 +41,7 @@ export const createEffectHandlerMap = (
     } = findSourceByCardId(effect.cardId, match, cardLibrary);
 
     if (!oldStoreKey || isUndefined(index)) {
-      console.debug('[MOVE CARD EFFECT HANDLER] could not find card in a store to move it');
+      console.log('[MOVE CARD EFFECT HANDLER] could not find card in a store to move it');
       return;
     }
 
@@ -52,7 +52,7 @@ export const createEffectHandlerMap = (
     const newStore = findSourceByLocationSpec({ spec: effect.to, playerId: effect.toPlayerId }, match);
 
     if (!newStore) {
-      console.debug('[MOVE CARD EFFECT HANDLER] could not find new store to move card to');
+      console.log('[MOVE CARD EFFECT HANDLER] could not find new store to move card to');
       return;
     }
 
@@ -186,7 +186,7 @@ export const createEffectHandlerMap = (
         const currentPlayer = match.players[match.currentPlayerTurnIndex];
         
         const socketListener = (result: unknown) => {
-          console.debug(`[USER PROMPT EFFECT HANDLER]player responded with ${result}`);
+          console.log(`[USER PROMPT EFFECT HANDLER]player responded with ${result}`);
           socket?.off('userPromptResponse', socketListener);
           resolve(result);
           if (currentPlayer.id !== effect.playerId) {
@@ -268,18 +268,18 @@ export const createEffectHandlerMap = (
       // later sets that can be played from the deck for example and if those are handled
       // via reactions and triggers then their reactions wont' get registered properly
       if (deck.length === 0) {
-        console.debug(`[DRAW CARD EFFECT HANDLER] not enough cards in deck, shuffling`);
+        console.log(`[DRAW CARD EFFECT HANDLER] not enough cards in deck, shuffling`);
         shuffleDeck(effect.playerId, match, acc);
         deck = match.playerDecks[effect.playerId];
       }
 
       const drawnCardId = deck.slice(-1)?.[0];
       if (!drawnCardId) {
-        console.debug(`[DRAW CARD EFFECT HANDLER] no card drawn`);
+        console.log(`[DRAW CARD EFFECT HANDLER] no card drawn`);
         return;
       }
 
-      console.debug(`[DRAW CARD EFFECT HANDLER] card drawn ${cardLibrary.getCard(drawnCardId)}`);
+      console.log(`[DRAW CARD EFFECT HANDLER] card drawn ${cardLibrary.getCard(drawnCardId)}`);
 
       socketMap.forEach(s => s.emit('addLogEntry', {
         type: 'draw',
@@ -399,7 +399,7 @@ export const createEffectHandlerMap = (
         );
         
         if (reaction.once) {
-          console.debug(`[PLAY CARD EFFECT HANDLER] reaction registered as a 'once', removing reaction`);
+          console.log(`[PLAY CARD EFFECT HANDLER] reaction registered as a 'once', removing reaction`);
           reactionManager.unregisterTrigger(reaction.id);
         }
       }
@@ -407,13 +407,13 @@ export const createEffectHandlerMap = (
       // now we get the order of players that could be affected by the play (including the current player),
       // then get reactions for them and run them
       const targetOrder = getOrderStartingFrom(match.players, match.currentPlayerTurnIndex).filter(player => player.id !== sourcePlayerId);
-      console.debug(`[PLAY CARD EFFECT HANDLER] player order for reaction targets ${targetOrder}`);
+      console.log(`[PLAY CARD EFFECT HANDLER] player order for reaction targets ${targetOrder}`);
       
       const reactionContext: any = {};
       
       for (const targetPlayer of targetOrder) {
         reactions = reactionManager.getReactionsForPlayer(trigger, targetPlayer.id);
-        console.debug(`[PLAY CARD EFFECT HANDLER] found ${reactions.length} reactions for ${targetPlayer}`);
+        console.log(`[PLAY CARD EFFECT HANDLER] found ${reactions.length} reactions for ${targetPlayer}`);
         
         if (reactions.length === 0) continue;
         
@@ -424,7 +424,7 @@ export const createEffectHandlerMap = (
           const actionMap = new Map<number, Reaction>();
           const grouped = new Map<string, { count: number; reaction: Reaction }>();
           
-          console.debug(`[PLAY CARD EFFECT HANDLER] grouping reactions by card key`);
+          console.log(`[PLAY CARD EFFECT HANDLER] grouping reactions by card key`);
           
           // Group available reactions by cardKey
           for (const reaction of reactions) {
@@ -436,29 +436,29 @@ export const createEffectHandlerMap = (
             }
           }
           
-          console.debug(`[PLAY CARD EFFECT HANDLER] reactions grouped by card key ${grouped}`);
+          console.log(`[PLAY CARD EFFECT HANDLER] reactions grouped by card key ${grouped}`);
           
           let actionId = 1;
           
           for (const [cardKey, { count, reaction }] of grouped.entries()) {
-            console.debug(`[PLAY CARD EFFECT HANDLER] build action buttons and mapping for ${cardKey}`);
+            console.log(`[PLAY CARD EFFECT HANDLER] build action buttons and mapping for ${cardKey}`);
             
             const usedCount = usedReactionMap.get(cardKey) ?? 0;
-            console.debug(`[PLAY CARD EFFECT HANDLER] ${usedCount} already used for ${cardKey}`);
+            console.log(`[PLAY CARD EFFECT HANDLER] ${usedCount} already used for ${cardKey}`);
             
             const multipleUse = reaction.multipleUse ?? true;
-            console.debug(`[PLAY CARD EFFECT HANDLER] ${cardKey} can be used multiple? ${multipleUse}`);
+            console.log(`[PLAY CARD EFFECT HANDLER] ${cardKey} can be used multiple? ${multipleUse}`);
             
             const canUse = multipleUse
               ? usedCount < count
               : usedCount === 0;
             
-            console.debug(`[PLAY CARD EFFECT HANDLER] ${cardKey} can be used? ${canUse}`);
+            console.log(`[PLAY CARD EFFECT HANDLER] ${cardKey} can be used? ${canUse}`);
             
             if (!canUse) continue;
             
             const remainingCount = count - usedCount;
-            console.debug(`[PLAY CARD EFFECT HANDLER] ${usedCount} remaining for ${cardKey}`);
+            console.log(`[PLAY CARD EFFECT HANDLER] ${usedCount} remaining for ${cardKey}`);
             
             if (remainingCount <= 0) continue; // All copies used, skip
             
@@ -466,7 +466,7 @@ export const createEffectHandlerMap = (
             const label = `${card.cardName} (${remainingCount})`;
             
             const action = { action: actionId, label }
-            console.debug(`[PLAY CARD EFFECT HANDLER] adding action ${action.action} with label '${action.label}'`);
+            console.log(`[PLAY CARD EFFECT HANDLER] adding action ${action.action} with label '${action.label}'`);
             actionButtons.push(action);
             actionMap.set(actionId, reaction); // Any one reaction from that group
             actionId++;
@@ -478,7 +478,7 @@ export const createEffectHandlerMap = (
           
           actionButtons.unshift({action: cancelAction, label: 'Cancel'});
           
-          console.debug(`[PLAY CARD EFFECT HANDLER] adding cancel action ${cancelAction} with label 'Cancel'`);
+          console.log(`[PLAY CARD EFFECT HANDLER] adding cancel action ${cancelAction} with label 'Cancel'`);
           
           const result = (await userPrompt(
             new UserPromptEffect({

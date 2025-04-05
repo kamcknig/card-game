@@ -43,11 +43,11 @@ export class EffectsPipeline {
     }
 
     if (topLevel) {
-      console.debug(`[EFFECT PIPELINE] topLevel effect pipeline completed`);
+      console.log(`[EFFECT PIPELINE] topLevel effect pipeline completed`);
       if (!this._suspendEffectCallback) {
         this._effectCompletedCallback()
       } else {
-        console.debug(`[EFFECT PIPELINE] effect completion is suspended, not invoking completed callback`,);
+        console.log(`[EFFECT PIPELINE] effect completion is suspended, not invoking completed callback`,);
       }
     }
 
