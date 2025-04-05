@@ -1,0 +1,13 @@
+import {$cardsById} from "../../state/card-state";
+import {CardView} from "../../view/card-view";
+import {Card} from "shared/shared-types";
+import { isNumber } from 'es-toolkit/compat';
+
+export const createCardView = (cardOrCardId: Card | number) => {
+    const actualCard = isNumber(cardOrCardId) ? $cardsById.get()[cardOrCardId] : cardOrCardId;
+    const c = new CardView(actualCard);
+    c.on('removed', () => {
+        c.removeAllListeners();
+    });
+    return c;
+}

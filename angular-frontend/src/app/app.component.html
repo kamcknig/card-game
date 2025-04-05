@@ -1,0 +1,12 @@
+<main class="main">
+  <div class="content">
+    <ng-container [ngSwitch]="view">
+      <app-match-configuration *ngSwitchCase="'match-configuration'"></app-match-configuration>
+      <app-match *ngSwitchCase="'match'"></app-match>
+    </ng-container>
+  </div>
+</main>
+
+
+
+<router-outlet />

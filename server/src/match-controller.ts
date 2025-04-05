@@ -134,22 +134,13 @@ export class MatchController {
 
     // todo: remove testing code
     const keepers: string[] = [
-      'moat',
-      'diplomat',
-      'minion',
-      'duke',
-      'upgrade',
-      'wishing-well',
-      'bridge',
-      'secret-passage',
-      'torturer'
     ];
 
     console.log(
       `[MATCH] choosing ${MatchBaseConfiguration.numberOfKingdomPiles} kingdom cards`,
     );
 
-    const availableKingdom = Object.keys(this._cardData);
+    const availableKingdom = Object.keys(this._cardData).filter(key => !['province', 'duchy', 'estate', 'copper', 'silver', 'gold', 'curse'].includes(key));
     console.log(`[MATCH] available kingdom cards\n${availableKingdom}`);
 
     let chosenKingdom = availableKingdom
@@ -198,7 +189,7 @@ export class MatchController {
 
     return Object.values(config.players).reduce((prev, player, _idx) => {
       console.log("initializing player", player.id, "cards...");
-      let blah = {};
+      /*let blah = {};
       // todo remove testing code
       if (_idx === 0) {
         blah = {
@@ -209,9 +200,9 @@ export class MatchController {
           silver: 10
         };
       }
-      Object.entries(blah).forEach(([key, count]) => {
-        /*Object.entries(playerStartHand).forEach(
-        ([key, count]) => {*/
+      Object.entries(blah).forEach(([key, count]) => {*/
+        Object.entries(playerStartHand).forEach(
+        ([key, count]) => {
         prev["playerDecks"][player.id] ??= [];
         let deck = prev["playerDecks"][player.id];
         deck = deck.concat(
@@ -309,7 +300,7 @@ export class MatchController {
     
     const match = this.match;
     match.playerBuys = 1;
-    match.playerActions = 3;
+    match.playerActions = 1;
     match.turnNumber = 1;
 
     this._socketMap.forEach((s) => s.emit("matchStarted", match));
@@ -554,7 +545,7 @@ export class MatchController {
 
       switch (newPhase) {
         case "action":
-          match.playerActions = 3;
+          match.playerActions = 1;
           match.playerBuys = 1;
           match.playerTreasure = 0;
           match.currentPlayerTurnIndex = match.currentPlayerTurnIndex + 1;

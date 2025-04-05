@@ -1,0 +1,6 @@
+:host {
+  display: flex;          /* ← flexbox turns children into rows */
+  flex-direction: column; /* stack them vertically            */
+  height: 100vh;          /* fill the whole viewport          */
+  width: 100vw;
+}

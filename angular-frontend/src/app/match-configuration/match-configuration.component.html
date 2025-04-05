@@ -1,0 +1,35 @@
+<main class="match-config">
+  <!-- ░░░  Player List  ░░░ -->
+  <section class="players">
+    <h2 class="section-title">Players</h2>
+
+    <ul class="player-list">
+      @for (player of playerList(); track player.id) {
+        <!-- item -->
+        <li class="player-item">
+          <label class="ready">
+            <input type="checkbox" />
+            <span class="checkbox-ui"></span>
+          </label>
+
+          <input class="player-name editable" type="text" placeholder="{{player.name}}" />
+        </li>
+      }
+    </ul>
+  </section>
+
+  <!-- ░░░  Expansion List  ░░░ -->
+  <section class="expansions">
+    <h2 class="section-title">Expansions</h2>
+
+    <ul class="expansion-list">
+    @for (expansion of expansionList(); track expansion.name) {
+        <!-- item (selected) -->
+        <li class="expansion-item selected">
+          <div class="expansion-icon"></div>
+          <span class="expansion-title">{{expansion.title}}</span>
+        </li>
+    }
+    </ul>
+  </section>
+</main>
