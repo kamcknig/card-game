@@ -1,14 +1,12 @@
 [
   {
-    "title": "Base V1",
-    "name": "base-v1"
-  },
-  {
-    "title": "Base V2",
-    "name": "base-v2"
+    "title": "Base",
+    "name": "base-v2",
+    "order": 1
   },
   {
     "title": "Intrigue",
-    "name": "intrigue"
+    "name": "intrigue",
+    "order": 2
   }
 ]

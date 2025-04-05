@@ -5,6 +5,7 @@ type ExpansionData = Record<string, {
   title: string;
   name: string;
   cardData: Record<CardKey, CardData>;
+  order: number;
 }>;
 
 /**

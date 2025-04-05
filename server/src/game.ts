@@ -1,10 +1,9 @@
-import { AppSocket } from "./types.ts";
-import { MatchConfiguration, Player, PlayerID } from "shared/shared-types.ts";
-import { createNewPlayer } from "./utils/create-new-player.ts";
-import { io } from "./server.ts";
-import { MatchController } from "./match-controller.ts";
-import { cardData } from "./utils/load-expansion.ts";
-import { expansionData } from "./state/expansion-data.ts";
+import { AppSocket } from './types.ts';
+import { MatchConfiguration, Player, PlayerID } from 'shared/shared-types.ts';
+import { createNewPlayer } from './utils/create-new-player.ts';
+import { io } from './server.ts';
+import { MatchController } from './match-controller.ts';
+import { expansionData } from './state/expansion-data.ts';
 
 const defaultMatchConfiguration = {
   expansions: ["base-v2"],
@@ -22,7 +21,7 @@ export class Game {
   private _match: MatchController | undefined;
   private _matchConfiguration: MatchConfiguration = defaultMatchConfiguration;
 
-  constructor(private _availableExpansion: { name: string; title: string }[]) {
+  constructor(private _availableExpansion: { name: string; title: string, order: number }[]) {
     console.log(`[GAME] created`);
     console.debug(
       `[GAME] currently loaded expansions ${
@@ -31,10 +30,10 @@ export class Game {
     );
   }
 
-  public expansionLoaded(expansion: { name: string; title: string }) {
+  public expansionLoaded(expansion: { name: string; title: string, order: number }) {
     console.log(`[GAME] expansion '${expansion.name}' loaded`);
     this._availableExpansion.push(expansion);
-    io.in("game").emit("expansionList", this._availableExpansion);
+    io.in("game").emit("expansionList", this._availableExpansion.sort((a, b) => b.order - a.order));
   }
 
   public addPlayer(sessionId: string, socket: AppSocket) {
@@ -87,7 +86,7 @@ export class Game {
       console.log(
         `[GAME] not yet started, sending player to match configuration`,
       );
-      socket.emit("expansionList", this._availableExpansion);
+      socket.emit("expansionList", this._availableExpansion.sort((a, b) => b.order - a.order));
       socket.emit("displayMatchConfiguration", this._matchConfiguration);
       socket.on("updatePlayerName", this.onUpdatePlayerName);
       socket.on("playerReady", this.onPlayerReady);
@@ -122,8 +121,6 @@ export class Game {
         socket.off("disconnect");
         socket.leave("game");
       });
-      cardData.supply = {};
-      cardData.kingdom = {};
       this._socketMap.clear();
       this.players = [];
       this.owner = undefined;

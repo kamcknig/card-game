@@ -22,9 +22,10 @@ const game = new Game(
     prev.push({
       title: expansionData[next].title,
       name: expansionData[next].name,
+      order: expansionData[next].order
     });
     return prev;
-  }, [] as { title: string; name: string }[]),
+  }, [] as { title: string; name: string; order: number; }[]),
 );
 
 export const io = new Server<ServerListenEvents, ServerEmitEvents>({

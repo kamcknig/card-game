@@ -1,21 +1,9 @@
 import { CardData } from '../types.ts';
 import { cardLifecycleMap, effectGeneratorMap } from '../effect-generator-map.ts';
 import { scoringFunctionMap } from '../scoring-function-map.ts';
-import { CardKey } from "shared/shared-types.ts";
 import { expansionData } from '../state/expansion-data.ts';
 
-/**
- * The cardData object contains a list of card keys and the associated data for that card. These datas
- * are the templates for create Card objects. When an expansion is loaded for use in a game, the data
- * from the expansion is put into the cardData and then that is the source to be used for kingdom and supply
- * selection
- */
-export const cardData: { supply: Record<CardKey, CardData>; kingdom: Record<CardKey, CardData> } = {
-    supply: {},
-    kingdom: {},
-};
-
-export const loadExpansion = async (expansion: { title: string, name: string }) => {
+export const loadExpansion = async (expansion: { title: string, name: string, order: number }) => {
     const expansionPath = `../expansions/${expansion.name}`;
     const expansionName = expansion.name;
     if (expansionData[expansionName]) {
@@ -28,7 +16,8 @@ export const loadExpansion = async (expansion: { title: string, name: string }) 
     expansionData[expansionName] = {
         title: expansion.title,
         name: expansion.name,
-        cardData: {}
+        cardData: {},
+        order: expansion.order
     };
     
     const cardData = expansionData[expansionName].cardData;
