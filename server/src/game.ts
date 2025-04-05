@@ -1,9 +1,9 @@
-import { AppSocket } from './types.ts';
-import { MatchConfiguration, Player, PlayerID } from 'shared/shared-types.ts';
-import { createNewPlayer } from './utils/create-new-player.ts';
-import { io } from './server.ts';
-import { MatchController } from './match-controller.ts';
-import { expansionData } from './state/expansion-data.ts';
+import { AppSocket } from "./types.ts";
+import { MatchConfiguration, Player, PlayerID } from "shared/shared-types.ts";
+import { createNewPlayer } from "./utils/create-new-player.ts";
+import { io } from "./server.ts";
+import { MatchController } from "./match-controller.ts";
+import { expansionData } from "./state/expansion-data.ts";
 
 const defaultMatchConfiguration = {
   expansions: ["base-v2"],
@@ -20,20 +20,25 @@ export class Game {
   private _socketMap: Map<PlayerID, AppSocket> = new Map();
   private _match: MatchController | undefined;
   private _matchConfiguration: MatchConfiguration = defaultMatchConfiguration;
+  private _availableExpansion: {
+    title: string;
+    name: string;
+    order: number;
+  }[] = [];
 
-  constructor(private _availableExpansion: { name: string; title: string, order: number }[]) {
+  constructor() {
     console.log(`[GAME] created`);
-    console.debug(
-      `[GAME] currently loaded expansions ${
-        _availableExpansion.map((e) => e.name).join(", ")
-      }`,
-    );
   }
 
-  public expansionLoaded(expansion: { name: string; title: string, order: number }) {
+  public expansionLoaded(
+    expansion: { name: string; title: string; order: number },
+  ) {
     console.log(`[GAME] expansion '${expansion.name}' loaded`);
     this._availableExpansion.push(expansion);
-    io.in("game").emit("expansionList", this._availableExpansion.sort((a, b) => b.order - a.order));
+    io.in("game").emit(
+      "expansionList",
+      this._availableExpansion.sort((a, b) => b.order - a.order),
+    );
   }
 
   public addPlayer(sessionId: string, socket: AppSocket) {
@@ -86,7 +91,10 @@ export class Game {
       console.log(
         `[GAME] not yet started, sending player to match configuration`,
       );
-      socket.emit("expansionList", this._availableExpansion.sort((a, b) => b.order - a.order));
+      socket.emit(
+        "expansionList",
+        this._availableExpansion.sort((a, b) => a.order - b.order),
+      );
       socket.emit("displayMatchConfiguration", this._matchConfiguration);
       socket.on("updatePlayerName", this.onUpdatePlayerName);
       socket.on("playerReady", this.onPlayerReady);

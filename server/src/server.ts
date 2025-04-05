@@ -1,15 +1,14 @@
-import { Server } from "socket.io";
-import { ServerEmitEvents, ServerListenEvents } from "shared/shared-types.ts";
-import process from "node:process";
-import { toNumber } from "es-toolkit/compat";
-import * as log from "@timepp/enhanced-deno-log/auto-init";
-import { Game } from "./game.ts";
-import { loadExpansion } from "./utils/load-expansion.ts";
-import { expansionData } from "./state/expansion-data.ts";
+import { Server } from 'socket.io';
+import { ServerEmitEvents, ServerListenEvents } from 'shared/shared-types.ts';
+import process from 'node:process';
+import { toNumber } from 'es-toolkit/compat';
+import * as log from '@timepp/enhanced-deno-log/auto-init';
+import { Game } from './game.ts';
+import { loadExpansion } from './utils/load-expansion.ts';
 
 if (Deno.env.get("LOG_TO_FILE")?.toLowerCase() === "false") {
   log.setConfig({
-    enabledLevels: [],
+    enabledLevels: []
   }, "file");
 }
 
@@ -17,16 +16,7 @@ log.init();
 
 const PORT = toNumber(process.env.PORT) || 3000;
 
-const game = new Game(
-  Object.keys(expansionData).reduce((prev, next) => {
-    prev.push({
-      title: expansionData[next].title,
-      name: expansionData[next].name,
-      order: expansionData[next].order
-    });
-    return prev;
-  }, [] as { title: string; name: string; order: number; }[]),
-);
+const game = new Game();
 
 export const io = new Server<ServerListenEvents, ServerEmitEvents>({
   pingTimeout: 1000 * 60 * 10,
