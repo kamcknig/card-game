@@ -21,7 +21,7 @@ export type SelectCardEffectArgs = {
 export type UserPromptEffectArgs = {
     prompt?: string;
     content?: {
-        cards?: {
+        cards: {
             action?: 'blind-rearrange' | 'rearrange' | undefined;
             cardIds: number[],
             selectCount?: CountSpec
@@ -77,7 +77,6 @@ export type CardOverrides = Record<PlayerID, Record<CardId, Card>>;
 export type ServerEmitEvents = {
     addLogEntry: (logEntry: LogEntry) => void;
     cardEffectsComplete: () => void;
-    displayMatchConfiguration: (config: MatchConfiguration) => void;
     doneWaitingForPlayer: (playerId?: number) => void;
     expansionList: (val: any[]) => void;
     matchConfigurationUpdated: (val: MatchConfiguration) => void;
@@ -90,7 +89,6 @@ export type ServerEmitEvents = {
     playerDisconnected: (player: Player) => void;
     playerNameUpdated: (playerId: number, name: string) => void;
     playerReady: (playerId: number, ready: boolean) => void;
-    reconnectedToGame: (player: Player, state?: Match) => void;
     scoresUpdated: (scores: Record<number, number>) => void;
     selectCard: (selectCardArgs: SelectCardEffectArgs & { selectableCardIds: number[] }) => void;
     setCardDataOverrides: (overrides: Record<CardId, Partial<Card>> | undefined) => void;

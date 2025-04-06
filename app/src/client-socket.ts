@@ -225,13 +225,6 @@ export const socketToGameEventMap: { [p in ClientListenEventNames]: ClientListen
     $matchConfiguration.set(config);
     void displayScene('matchConfiguration');
   },
-  reconnectedToGame: (player, state?: Match) => {
-    $player(player.id).set(player);
-    
-    if (state) {
-      socketToGameEventMap.matchUpdated(state);
-    }
-  },
   scoresUpdated: scores => {
     Object.keys(scores).forEach(playerId => {
       const pId = toNumber(playerId);

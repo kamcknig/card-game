@@ -53,8 +53,8 @@ export class MatchScene extends Scene {
     return !this._selecting && !$runningCardActions.get();
   }
   
-  constructor(stage: Container) {
-    super(stage);
+  constructor() {
+    super();
     
     this.on('removed', this.onRemoved);
   }

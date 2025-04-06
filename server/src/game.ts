@@ -95,7 +95,7 @@ export class Game {
         "expansionList",
         this._availableExpansion.sort((a, b) => a.order - b.order),
       );
-      socket.emit("displayMatchConfiguration", this._matchConfiguration);
+      socket.emit("matchConfigurationUpdated", this._matchConfiguration);
       socket.on("updatePlayerName", this.onUpdatePlayerName);
       socket.on("playerReady", this.onPlayerReady);
     }
@@ -149,6 +149,7 @@ export class Game {
         if (checkPlayer.connected) {
           this.owner = checkPlayer;
           io.in("game").emit("gameOwnerUpdated", checkPlayer.id);
+          this._socketMap.get(checkPlayer.id)?.on('matchConfigurationUpdated', this.onMatchConfigurationUpdated);
           break;
         }
       }
@@ -266,6 +267,7 @@ export class Game {
     this._socketMap.forEach((socket) => {
       socket.off("updatePlayerName");
       socket.off("playerReady");
+      socket.off("matchConfigurationUpdated");
     });
 
     void this._match.initialize(
