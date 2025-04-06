@@ -206,6 +206,7 @@ export class MatchScene extends Scene {
     this._discard = new CardStackView({
       $cardIds: playerDiscardStore(this._selfId),
       label: 'DISCARD',
+      showCountBadge: false,
       cardFacing: 'front'
     });
     this.addChild(this._discard);

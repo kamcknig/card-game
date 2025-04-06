@@ -55,6 +55,7 @@ export class EffectsPipeline {
     console.log(`[EFFECT PIPELINE] suspending call back to run function`);
     this._suspendEffectCallback = true;
     await fn();
+    this._suspendEffectCallback = false;
     console.log(`[EFFECT PIPELINE] un-suspending call back`);
     this.flushChanges();
     this._effectCompletedCallback();

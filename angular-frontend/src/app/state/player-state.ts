@@ -13,7 +13,7 @@ export const playerHandStore = (playerId: number) =>
   computed(matchStore, m => m?.playerHands[playerId] ?? []);
 
 export const playerDeckStore = (playerId: number) =>
-  computed(matchStore, m => m?.playerHands[playerId] ?? []);
+  computed(matchStore, m => m?.playerDecks[playerId] ?? []);
 
 export const playerDiscardStore = (playerId: number) =>
   computed(matchStore, m => m?.playerDiscards[playerId] ?? []);

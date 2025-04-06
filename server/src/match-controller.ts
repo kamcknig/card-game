@@ -327,7 +327,7 @@ export class MatchController {
     return structuredClone(this._match);
   }
   
-  private onCardTapHandlerComplete = (card: Card, player?: Player) => {
+  private onCardTapHandlerComplete = async (card: Card, player?: Player) => {
     console.log(`[MATCH] card tap complete handler invoked`);
     void this.onCheckForPlayerActions();
   }
@@ -589,7 +589,7 @@ export class MatchController {
           this.endTurn();
           
           // broadcast changes for this entire cleanup step
-          this.broadcastPatch(prev);
+          // this.broadcastPatch(prev);
           
           // recursively call nextPhase
           await this.onNextPhase();
