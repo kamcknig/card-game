@@ -33,8 +33,7 @@ export class MatchConfigurationComponent {
   ) {
     this.$playerIds = this._nanoStoreService.useStore(playerIdStore);
     this.$expansionList = this._nanoStoreService.useStore(expansionListStore);
-    this.$selectedExpansions = this._nanoStoreService.useStore(matchConfigurationStore).pipe(
-      map(config => config?.expansions ?? []));
+    this.$selectedExpansions = this._nanoStoreService.useStore(matchConfigurationStore);
     combineLatest([
       this._nanoStoreService.useStore(gameOwnerIdStore),
       this._nanoStoreService.useStore(selfPlayerIdStore)
@@ -42,7 +41,7 @@ export class MatchConfigurationComponent {
   }
 
   onToggleExpansion(expansion: string) {
-    const currentExpansions = matchConfigurationStore.get()?.expansions ?? [];
+    const currentExpansions = matchConfigurationStore.get() ?? [];
     const currentIdx = currentExpansions?.indexOf(expansion);
 
     if (currentIdx === undefined || currentIdx === -1) {

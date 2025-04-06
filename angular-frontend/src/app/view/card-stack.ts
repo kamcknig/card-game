@@ -3,21 +3,21 @@ import { CountBadgeView } from './count-badge-view';
 import { createCardView } from '../core/card/create-card-view';
 import { cardStore } from '../state/card-state';
 import { CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP } from '../core/app-contants';
-import { WritableAtom } from 'nanostores';
+import { ReadableAtom, WritableAtom } from 'nanostores';
 import { isUndefined } from 'es-toolkit';
 import { CardView } from './card-view';
 import { selectedCardStore } from '../state/interactive-state';
 
 export type CardStackArgs = {
   label?: string;
-  $cardIds: WritableAtom<number[]>;
+  $cardIds: ReadableAtom<number[]>;
   showCountBadge?: boolean;
   cardFacing: CardView['facing'];
   showBackground?: boolean;
 }
 
 export class CardStackView extends Container {
-  private readonly _$cardIds: WritableAtom<number[]>;
+  private readonly _$cardIds: ReadableAtom<number[]>;
   private readonly _background: Container = new Container();
   private readonly _cardContainer: Container<CardView> = new Container({ x: STANDARD_GAP * .8, y: STANDARD_GAP * .8 });
   private readonly _cleanup: (() => void)[] = [];

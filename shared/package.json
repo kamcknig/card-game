@@ -1,0 +1,7 @@
+{
+  "name": "shared",
+  "version": "1.0.0",
+  "devDependencies": {
+    "fast-json-patch": "^3.1.1"
+  }
+}

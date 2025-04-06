@@ -1,38 +1,16 @@
-import { ClientListenEventNames, ClientListenEvents, LogEntry, TurnPhaseOrderValues } from 'shared/shared-types';
+import { ClientListenEventNames, ClientListenEvents, LogEntry } from 'shared/shared-types';
 import { InjectionToken } from '@angular/core';
-import {
-  playerDeckStore,
-  playerDiscardStore,
-  playerHandStore,
-  playerIdStore,
-  playerScoreStore,
-  playerStore,
-  selfPlayerIdStore
-} from '../../state/player-state';
-import {
-  matchStartedStore,
-  playAreaStore,
-  kingdomStore,
-  matchConfigurationStore,
-  supplyStore,
-  trashStore
-} from '../../state/match-state';
-import { gamePausedStore, gameOwnerIdStore, sceneStore } from '../../state/game-state';
+import { playerIdStore, playerStore, selfPlayerIdStore } from '../../state/player-state';
+import { matchStartedStore } from '../../state/match-state';
+import { gameOwnerIdStore, gamePausedStore, sceneStore } from '../../state/game-state';
 import { expansionListStore } from '../../state/expansion-list-state';
 import { cardOverrideStore, cardStore } from '../../state/card-state';
-import {
-  playerTreasureStore,
-  turnNumberStore,
-  playerTurnOrder,
-  turnPhaseStore,
-  currentPlayerTurnIndexStore,
-  playerBuysStore,
-  playerActionsStore
-} from '../../state/turn-state';
 import { Assets } from 'pixi.js';
-import { selectedCardStore, selectableCardStore } from '../../state/interactive-state';
+import { selectableCardStore, selectedCardStore } from '../../state/interactive-state';
 import { gameEvents } from '../event/events';
 import { type SocketService } from './socket.service';
+import { matchStore } from '../../state/match';
+import { applyPatch, Operation } from 'fast-json-patch';
 
 export const SOCKET_EVENT_MAP = new InjectionToken('socketEventMap');
 
@@ -66,9 +44,6 @@ export const socketToGameEventMap = (socketService: SocketService): SocketEventM
     gameOwnerUpdated: playerId => {
       gameOwnerIdStore.set(playerId);
     },
-    matchConfigurationUpdated: val => {
-      matchConfigurationStore.set(val);
-    },
     setCardLibrary: cards => {
       cardStore.set(cards);
     },
@@ -76,16 +51,7 @@ export const socketToGameEventMap = (socketService: SocketService): SocketEventM
       cardOverrideStore.set(overrides ?? {});
     },
     matchReady: async match => {
-      supplyStore.set(match.supply);
-      kingdomStore.set(match.kingdom);
-      playerTurnOrder.set(match.players);
-
-      Object.values(match.players).forEach(p => {
-        const pId = +p;
-        playerHandStore(pId).set(match?.playerHands[pId] ?? []);
-        playerDiscardStore(pId).set(match?.playerDiscards[pId] ?? []);
-        playerDeckStore(pId).set(match?.playerDecks[pId] ?? []);
-      });
+      matchStore.set(match);
 
       if (!cardStore.get()) throw new Error('missing card library');
       const cardsById = cardStore.get();
@@ -103,11 +69,16 @@ export const socketToGameEventMap = (socketService: SocketService): SocketEventM
 
       sceneStore.set('match');
     },
-    matchStarted: match => {
-      map.matchUpdated(match);
+    matchStarted: () => {
       matchStartedStore.set(true);
     },
-    matchUpdated: match => {
+    matchPatch: (patch: Operation[]) => {
+      const current = structuredClone(matchStore.get());
+      if (!current) return;
+      applyPatch(current, patch);
+      matchStore.set(current);
+    },
+    /*matchUpdated: match => {
       const keys = Object.keys(match);
       for (const key of keys) {
         switch (key) {
@@ -176,7 +147,7 @@ export const socketToGameEventMap = (socketService: SocketService): SocketEventM
             break;
         }
       }
-    },
+    },*/
     playerConnected: (player) => {
       playerStore(player.id).set(player);
 
@@ -221,12 +192,12 @@ export const socketToGameEventMap = (socketService: SocketService): SocketEventM
     setPlayer: player => {
       selfPlayerIdStore.set(player.id);
     },
-    scoresUpdated: scores => {
+    /*scoresUpdated: scores => {
       Object.keys(scores).forEach(playerId => {
         const pId = +playerId;
         playerScoreStore(pId).set(scores[pId]);
       })
-    },
+    },*/
     selectCard: selectCardArgs => {
       const eventListener = (cardIds: number[]) => {
         gameEvents.off('cardsSelected', eventListener);

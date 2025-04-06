@@ -1,19 +1,27 @@
-import { atom, computed } from "nanostores";
-import { Player, TurnPhase } from "shared/shared-types";
+import { atom, computed } from 'nanostores';
+import { Player, TurnPhase, TurnPhaseOrderValues } from 'shared/shared-types';
+import { matchStore } from './match';
 
-export const playerTreasureStore = atom<number>(0);
+export const playerTreasureStore =
+  computed(matchStore, m => m?.playerTreasure ?? 0);
 
-export const playerBuysStore = atom<number>(0);
+export const playerBuysStore =
+  computed(matchStore, m => m?.playerBuys ?? 0);
 
-export const playerActionsStore = atom<number>(0);
+export const playerActionsStore =
+  computed(matchStore, m => m?.playerActions ?? 0);
 
-export const playerTurnOrder = atom<Player[]>([]);
+export const playerTurnOrder =
+  computed(matchStore, m => m?.players ?? []);
 
-export const currentPlayerTurnIndexStore = atom<number>(0);
+export const currentPlayerTurnIndexStore =
+  computed(matchStore, m => m?.currentPlayerTurnIndex ?? 0);
 
-export const $currentPlayerTurnId =
+export const currentPlayerTurnIdStore =
   computed([currentPlayerTurnIndexStore, playerTurnOrder], (turnIndex, turnOrder) => turnOrder[turnIndex]?.id);
 
-export const turnNumberStore = atom<number>(0);
+export const turnNumberStore =
+  computed(matchStore, m => m?.turnNumber ?? 0);
 
-export const turnPhaseStore = atom<TurnPhase | undefined>();
+export const turnPhaseStore =
+  computed(matchStore, m => TurnPhaseOrderValues[m?.turnPhaseIndex ?? 0]);

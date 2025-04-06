@@ -16,7 +16,7 @@ import { KingdomSupplyView } from '../kingdom-supply';
 import { PileView } from '../pile';
 import { cardStore } from '../../state/card-state';
 import { Card, CardKey, PlayerId, SelectCardEffectArgs, UserPromptEffectArgs } from 'shared/shared-types';
-import { $runningCardActions, selectableCardStore, selectedCardStore } from '../../state/interactive-state';
+import { cardActionsInProgressStore, selectableCardStore, selectedCardStore } from '../../state/interactive-state';
 import { CardView } from '../card-view';
 import { userPromptModal } from '../modal/user-prompt-modal';
 import { CARD_HEIGHT, SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP } from '../../core/app-contants';
@@ -25,7 +25,7 @@ import { displayCardDetail } from '../modal/display-card-detail';
 import { validateCountSpec } from '../../shared/validate-count-spec';
 import { CardStackView } from '../card-stack';
 import { displayTrash } from '../modal/display-trash';
-import { $currentPlayerTurnId, turnPhaseStore } from '../../state/turn-state';
+import { currentPlayerTurnIdStore, turnPhaseStore } from '../../state/turn-state';
 import { isNumber, isUndefined } from 'es-toolkit/compat';
 import { AppList } from '../app-list';
 import { gamePausedStore } from '../../state/game-state';
@@ -50,7 +50,7 @@ export class MatchScene extends Scene {
   private _selfId: PlayerId = selfPlayerIdStore.get()!;
 
   private get uiInteractive(): boolean {
-    return !this._selecting && !$runningCardActions.get();
+    return !this._selecting && !cardActionsInProgressStore.get();
   }
 
   constructor(stage: Container, private _socketService: SocketService, private app: Application) {
@@ -95,7 +95,7 @@ export class MatchScene extends Scene {
       this._playAllTreasuresButton?.button.off('pointerdown');
     });
 
-    this._cleanup.push($currentPlayerTurnId.subscribe(this.onCurrentPlayerTurnUpdated));
+    this._cleanup.push(currentPlayerTurnIdStore.subscribe(this.onCurrentPlayerTurnUpdated));
     this._cleanup.push(gamePausedStore.subscribe(this.onPauseGameUpdated));
     this._cleanup.push(turnPhaseStore.subscribe(this.onTurnPhaseUpdated));
     this._cleanup.push(playerHandStore(this._selfId).subscribe(this.onTurnPhaseUpdated));
@@ -153,7 +153,7 @@ export class MatchScene extends Scene {
 
     this._playAllTreasuresButton.button.visible = (
       phase === 'buy' &&
-      $currentPlayerTurnId.get() === this._selfId &&
+      currentPlayerTurnIdStore.get() === this._selfId &&
       playerHand.some(cardId => cardStore.get()[cardId].type.includes('TREASURE'))
     );
   }
@@ -493,10 +493,10 @@ export class MatchScene extends Scene {
 
       if (selectableCardStore.get()
         .includes(cardId)) {
-        $runningCardActions.set(true);
+        cardActionsInProgressStore.set(true);
         const updated = () => {
           gameEvents.off('cardEffectsComplete', updated)
-          $runningCardActions.set(false);
+          cardActionsInProgressStore.set(false);
         }
         gameEvents.on('cardEffectsComplete', updated);
         this._socketService.emit('cardTapped', this._selfId, cardId);

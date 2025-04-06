@@ -1,3 +1,5 @@
+import type { Operation } from 'fast-json-patch';
+
 export type LogEntry =
     | { type: 'draw'; playerSourceId: number; cardId: number; }
     | { type: 'discard'; playerSourceId: number; cardId: number; }
@@ -83,13 +85,13 @@ export type ServerEmitEvents = {
     gameOver: (summary: MatchSummary) => void;
     gameOwnerUpdated: (playerId: PlayerId) => void;
     matchReady: (match: Match) => void;
-    matchStarted: (match: Match) => void;
-    matchUpdated: (match: MatchUpdate) => void;
+    matchStarted: () => void;
+    matchPatch: (patch: Operation[]) => void;
     playerConnected: (player: Player) => void;
     playerDisconnected: (player: Player) => void;
     playerNameUpdated: (playerId: PlayerId, name: string) => void;
     playerReady: (playerId: PlayerId, ready: boolean) => void;
-    scoresUpdated: (scores: Record<PlayerId, number>) => void;
+    /*scoresUpdated: (scores: Record<PlayerId, number>) => void;*/
     selectCard: (selectCardArgs: SelectCardEffectArgs & { selectableCardIds: CardId[] }) => void;
     setCardDataOverrides: (overrides: Record<CardId, Partial<Card>> | undefined) => void;
     setCardLibrary: (cardLibrary: Record<CardId, Card>) => void;

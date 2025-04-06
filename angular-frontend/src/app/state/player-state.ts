@@ -1,5 +1,6 @@
-import { atom, WritableAtom } from 'nanostores';
+import { atom, computed, WritableAtom } from 'nanostores';
 import { Player, PlayerId } from 'shared/shared-types';
+import { matchStore } from './match';
 
 export const selfPlayerIdStore = atom<PlayerId | undefined>();
 
@@ -8,26 +9,14 @@ export const playerIdStore = atom<number[]>([]);
 const playerStoreCache: Record<PlayerId, WritableAtom<Player | undefined>> = {};
 export const playerStore = (id: PlayerId) => (playerStoreCache[id] ??= atom<Player | undefined>());
 
-const playerHandStoreCache: Record<number,  WritableAtom<number[]>> = {};
-export const playerHandStore = (playerId: number) => {
-    playerHandStoreCache[playerId] ??= atom<number[]>([]);
-    return playerHandStoreCache[playerId];
-}
+export const playerHandStore = (playerId: number) =>
+  computed(matchStore, m => m?.playerHands[playerId] ?? []);
 
-const playerDeckStoreCache: Record<number, WritableAtom<number[]>> = {};
-export const playerDeckStore = (playerId: number) => {
-    playerDeckStoreCache[playerId] ??= atom<number[]>([]);
-    return playerDeckStoreCache[playerId];
-}
+export const playerDeckStore = (playerId: number) =>
+  computed(matchStore, m => m?.playerHands[playerId] ?? []);
 
-const playerDiscardStoreCache: Record<number, WritableAtom<number[]>> = {};
-export const playerDiscardStore = (playerId: number) => {
-    playerDiscardStoreCache[playerId] ??= atom<number[]>([]);
-    return playerDiscardStoreCache[playerId];
-}
+export const playerDiscardStore = (playerId: number) =>
+  computed(matchStore, m => m?.playerDiscards[playerId] ?? []);
 
-const playerScoreStoreCache: Record<number, WritableAtom<number>> = {};
-export const playerScoreStore = (playerId: number) => {
-    playerScoreStoreCache[playerId] ??= atom<number>(0);
-    return playerScoreStoreCache[playerId];
-}
+export const playerScoreStore = (playerId: number) =>
+  computed(matchStore, m => m?.scores[playerId] ?? 0);
