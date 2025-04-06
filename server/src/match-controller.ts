@@ -18,8 +18,8 @@ import { fisherYatesShuffle } from './utils/fisher-yates-shuffler.ts';
 import { ReactionManager } from './reaction-manager.ts';
 import { scoringFunctionMap } from './scoring-function-map.ts';
 import { getCardOverrides, removeOverrideEffects, } from './card-data-overrides.ts';
-import { getPlayerById } from './utils/get-player-by-id.ts';
 import { CardLibrary } from './card-library.ts';
+import { compare, Operation } from "fast-json-patch";
 
 export class MatchController {
   private _effectHandlerMap: EffectHandlerMap | undefined;
@@ -158,14 +158,14 @@ export class MatchController {
       chosenKingdom = keepers.concat(filteredKingdom).slice(0, MatchBaseConfiguration.numberOfKingdomPiles);
     }
     
-    console.debug(`[MATCH] final chosen kingdom cards ${chosenKingdom}`);
+    console.log(`[MATCH] final chosen kingdom cards ${chosenKingdom}`);
     
      const finalKingdom = chosenKingdom.reduce((prev, key) => {
         prev[key] = this._cardData![key].type.includes("VICTORY")
           ? (players.length < 3 ? 8 : 12)
           : 10;
 
-        console.debug(
+        console.log(
           `[MATCH] setting card count to ${prev[key]} for chosen card ${key}`,
         );
         return prev;
@@ -187,7 +187,7 @@ export class MatchController {
     console.log(`[MATCH] creating player decks`);
 
     const playerStartHand = MatchBaseConfiguration.playerStartingHand;
-    console.debug(`[MATCH] using player starting hand ${playerStartHand}`);
+    console.log(`[MATCH] using player starting hand ${playerStartHand}`);
 
     return Object.values(config.players).reduce((prev, player, _idx) => {
       console.log("initializing player", player.id, "cards...");
@@ -247,13 +247,13 @@ export class MatchController {
     player.ready = true;
 
     if (this._config.players.some((p) => !p.ready)) {
-      console.debug(
+      console.log(
         `[MATCH] not all players marked ready, waiting for everyone`,
       );
       return;
     }
 
-    console.debug("[MATCH] all players ready");
+    console.log("[MATCH] all players ready");
 
     for (const socket of this._socketMap.values()) {
       socket.off("clientReady", this.onClientReady);
@@ -270,14 +270,15 @@ export class MatchController {
       this._cardLibrary,
     );
 
-    this._effectsController = new CardEffectController(this._cardLibrary);
+    this._effectsController = new CardEffectController(this._cardLibrary, this._match);
 
     this._interactivityController = new CardInteractivityController(
       this._effectsController,
       this._match,
       this._socketMap,
       this._cardLibrary,
-      this.onCardTapHandlerComplete
+      this.onCardTapHandlerComplete,
+      this
     );
 
     this._effectHandlerMap = createEffectHandlerMap(
@@ -291,7 +292,9 @@ export class MatchController {
     this._effectsPipeline = new EffectsPipeline(
       this._effectHandlerMap,
       this._socketMap,
-      this.onEffectCompleted
+      this.onEffectCompleted,
+      this,
+      this._match
     );
     this._effectsController.setEffectPipeline(this._effectsPipeline);
 
@@ -311,7 +314,6 @@ export class MatchController {
         for (let i = 0; i < 5; i++) {
           await this._effectsController?.runGameActionEffects(
             "drawCard",
-            match as Match,
             player.id,
           );
         }
@@ -336,13 +338,13 @@ export class MatchController {
     this.calculateScores();
     if (this.checkGameEnd()) return;
     this._interactivityController?.checkCardInteractivity(this._match);
-    this.sendMatchUpdate();
   }
   
-  private sendMatchUpdate = () => {
+  public broadcastPatch(prev: Match) {
     console.log(`[MATCH] sending match update to clients`);
-    // this._socketMap.forEach(s => s.emit('matchUpdated', this.match));
-  };
+    const patch: Operation[] = compare(prev, this._match);
+    if (patch.length) this._socketMap.forEach(s => s.emit("matchPatch", patch));
+  }
 
   private calculateScores() {
     console.log(`[MATCH] calculating scores`);
@@ -391,7 +393,7 @@ export class MatchController {
       match.config.kingdomCardKeys,
     );
 
-    console.debug(`[MATCH] original supply card piles ${allSupplyCardKeys}`);
+    console.log(`[MATCH] original supply card piles ${allSupplyCardKeys}`);
 
     const remainingSupplyCardKeys =
       match.supply.concat(match.kingdom).map((id) =>
@@ -403,11 +405,11 @@ export class MatchController {
         },
         [] as string[]);
 
-    console.debug(`[MATCH] remaining supply card piles ${remainingSupplyCardKeys}`);
+    console.log(`[MATCH] remaining supply card piles ${remainingSupplyCardKeys}`);
 
     const emptyPileCount = allSupplyCardKeys.length - remainingSupplyCardKeys.length;
 
-    console.debug(`[MATCH] empty pile count ${emptyPileCount}`);
+    console.log(`[MATCH] empty pile count ${emptyPileCount}`);
 
     if (emptyPileCount === 3) {
       console.log(`[MATCH] three supply piles are empty, game over`);
@@ -425,10 +427,10 @@ export class MatchController {
     this._reactionManager?.endGame();
     this._interactivityController?.endGame();
 
-    console.debug(`[MATCH] removing socket listeners for 'nextPhase'`);
+    console.log(`[MATCH] removing socket listeners for 'nextPhase'`);
     this._socketMap.forEach((s) => s.off("nextPhase"));
 
-    console.debug(`[MATCH] removing listener for match state updates`);
+    console.log(`[MATCH] removing listener for match state updates`);
 
     const match = this._match;
     const currentTurn = match.turnNumber;
@@ -471,8 +473,8 @@ export class MatchController {
         }),
     };
 
-    console.debug(`[MATCH] match summary created`);
-    console.debug(summary);
+    console.log(`[MATCH] match summary created`);
+    console.log(summary);
 
     this._socketMap.forEach((s) => s.emit("gameOver", summary));
   }
@@ -484,7 +486,7 @@ export class MatchController {
     const turnPhase = TurnPhaseOrderValues[match.turnPhaseIndex];
     const player = match.players[match.currentPlayerTurnIndex];
 
-    console.debug(`[MATCH] turn phase ${turnPhase}`);
+    console.log(`[MATCH] turn phase ${turnPhase}`);
     
     switch (turnPhase) {
       case "action": {
@@ -493,7 +495,7 @@ export class MatchController {
             this._cardLibrary.getCard(c).type.includes("ACTION")
           ).length;
 
-        console.debug(
+        console.log(
           `[MATCH] ${player} has ${match.playerActions} actions and ${numActionCards} action cards`,
         );
 
@@ -510,7 +512,7 @@ export class MatchController {
             this._cardLibrary.getCard(c).type.includes("TREASURE")
           ).length;
 
-        console.debug(
+        console.log(
           `[MATCH] player ${player.id} has ${treasureCardCount} treasure cards in hand, ${match.playerTreasure} treasure, and ${match.playerBuys} buys`,
         );
 
@@ -526,77 +528,83 @@ export class MatchController {
       }
     }
   }
-
+  
   private onNextPhase = async () => {
     console.log(`[MATCH] next phase handler invoked`);
-
+    
+    // capture the pre‑change snapshot
+    const prev = this.getMatchSnapshot();
     const match = this._match;
-
+    
     try {
       match.turnPhaseIndex = match.turnPhaseIndex + 1;
-
-      if (match.turnPhaseIndex === TurnPhaseOrderValues.length) {
-        console.debug(
-          "[MATCH] no more phases in turn, resetting turn phase to 0",
-        );
+      if (match.turnPhaseIndex >= TurnPhaseOrderValues.length) {
+        console.log('[MATCH] resetting turn phase to 0');
         match.turnPhaseIndex = 0;
       }
-
+      
       const newPhase = TurnPhaseOrderValues[match.turnPhaseIndex];
-
       console.log(`[MATCH] new turn phase ${newPhase}`);
-
       const player = match.players[match.currentPlayerTurnIndex];
-
+      
       switch (newPhase) {
-        case "action":
+        case 'action': {
           match.playerActions = 1;
           match.playerBuys = 1;
           match.playerTreasure = 0;
-          match.currentPlayerTurnIndex = match.currentPlayerTurnIndex + 1;
-
-          if (match.currentPlayerTurnIndex === match.players.length) {
+          match.currentPlayerTurnIndex++;
+          if (match.currentPlayerTurnIndex >= match.players.length) {
             match.currentPlayerTurnIndex = 0;
           }
-
           if (match.currentPlayerTurnIndex === 0) {
-            match.turnNumber = match.turnNumber + 1;
+            match.turnNumber++;
             console.log(`[MATCH] starting new round ${match.turnNumber}`);
           }
           break;
-        case "buy":
+        }
+        case 'buy':
+          // no direct logic
           break;
-        case "cleanup": {
-          const cardsToDiscard = match.playArea.concat(match.playerHands[player.id]);
-
+        case 'cleanup': {
+          // discard everything from playArea + player's hand
+          const cardsToDiscard = match.playArea.concat(
+            match.playerHands[player.id]
+          );
+          
           for (const cardId of cardsToDiscard) {
             await this._effectsController!.runGameActionEffects(
-              "discardCard",
-              match,
+              'discardCard',
               player.id,
-              cardId,
+              cardId
             );
           }
-          
+          // then draw 5 new cards
           for (let i = 0; i < 5; i++) {
             await this._effectsController!.runGameActionEffects(
-              "drawCard",
-              match,
-              player.id,
+              'drawCard',
+              player.id
             );
           }
           
           this.endTurn();
+          
+          // broadcast changes for this entire cleanup step
+          this.broadcastPatch(prev);
+          
+          // recursively call nextPhase
           await this.onNextPhase();
           return;
         }
       }
+      
+      this.broadcastPatch(prev);
+      
       this._interactivityController?.checkCardInteractivity(match);
-      this.sendMatchUpdate();
+      
+      // see if we can skip to next phase
       void this.onCheckForPlayerActions();
     } catch (e) {
-      console.error("[MATCH] Could not move to next phase", e);
-      console.error(e);
+      console.error('[MATCH] Could not move to next phase', e);
     }
   };
 
@@ -635,9 +643,16 @@ export class MatchController {
       }
     });
   }
-
+  
   public playerDisconnected(playerId: number) {
-    console.log(`[MATCH] ${getPlayerById(this._match, playerId)} has disconnected`);
+    // Use whichever array is populated depending on phase
+    const roster = this._match.players?.length ? this._match.players : this._match.config.players;
+    
+    // There should always be at least one entry after a single disconnect
+    const leaving = roster.find(p => p.id === playerId);
+    console.log(`[MATCH] ${leaving ?? `{id:${playerId}}`} has disconnected`);
+    
+    this._socketMap.get(playerId)?.offAnyIncoming();
     this._interactivityController?.playerRemoved(this._socketMap.get(playerId));
     this._socketMap.delete(playerId);
   }

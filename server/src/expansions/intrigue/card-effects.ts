@@ -664,7 +664,7 @@ const expansionModule: CardExpansionModule = {
           sourcePlayerId: triggerPlayerId,
         });
       } else {
-        console.debug(
+        console.log(
           `[MINING VILLAGE EFFECT] player chose not to trash mining village`,
         );
       }
@@ -693,7 +693,7 @@ const expansionModule: CardExpansionModule = {
         const targets = findOrderedEffectTargets(triggerPlayerId, "ALL", match)
           .filter((playerId) => {
             const handCount = match.playerHands[playerId].length;
-            console.debug(
+            console.log(
               `[MINION EFFECT HANDLER] ${
                 getPlayerById(match, playerId)
               } has ${handCount} cards in hand`,
@@ -735,7 +735,7 @@ const expansionModule: CardExpansionModule = {
         prompt: "Choose one",
       })) as { action: number };
 
-      console.debug(`[NOBLES EFFECT] player chose ${result.action}`);
+      console.log(`[NOBLES EFFECT] player chose ${result.action}`);
 
       if (result.action === 1) {
         for (let i = 0; i < 3; i++) {
@@ -771,7 +771,7 @@ const expansionModule: CardExpansionModule = {
         const cardId = deck[deck.length - 1 - i];
 
         if (!cardId) {
-          console.debug(`[PATROL EFFECT] no card to reveal`);
+          console.log(`[PATROL EFFECT] no card to reveal`);
           break;
         }
 
@@ -811,7 +811,7 @@ const expansionModule: CardExpansionModule = {
       }
 
       if (nonVictoryCards.length < 2) {
-        console.debug(
+        console.log(
           `[PATROL EFFECT] non-victory card count is ${nonVictoryCards.length}, no need to rearrange`,
         );
         return;
@@ -1001,7 +1001,7 @@ const expansionModule: CardExpansionModule = {
       yield new GainActionEffect({ count: 1, sourcePlayerId: triggerPlayerId });
 
       if (match.playerHands[triggerPlayerId].length === 0) {
-        console.debug(`[SECRET PASSAGE EFFECT] player has no cards in hand`);
+        console.log(`[SECRET PASSAGE EFFECT] player has no cards in hand`);
         return;
       }
 
@@ -1024,7 +1024,7 @@ const expansionModule: CardExpansionModule = {
       }
 
       if (match.playerDecks[triggerPlayerId].length === 0) {
-        console.debug(
+        console.log(
           `[SECRET PASSAGE EFFECT] player has no cards in deck, so just putting card on deck`,
         );
         yield new MoveCardEffect({
@@ -1315,7 +1315,7 @@ const expansionModule: CardExpansionModule = {
           }
         }
       } else {
-        console.debug(
+        console.log(
           `[TRADING POST EFFECT] player trashed ${cardIds.length}, so no treasure gained`,
         );
       }
@@ -1343,7 +1343,7 @@ const expansionModule: CardExpansionModule = {
       })) as number[];
 
       if (cardIds.length === 0) {
-        console.debug(`[UPGRADE EFFECT] player trashed no cards`);
+        console.log(`[UPGRADE EFFECT] player trashed no cards`);
         return;
       }
 

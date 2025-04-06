@@ -88,7 +88,7 @@ export const loadExpansion = async (expansion: { title: string, name: string, or
         console.log('[EXPANSION LOADER] loading card lifecycles');
         const cardLifeCycles = module.default.registerCardLifeCycles();
         Object.keys(cardLifeCycles).forEach(key => {
-            console.debug('registering card lifecycle', key);
+            console.log('registering card lifecycle', key);
             cardLifecycleMap[key] = cardLifeCycles[key];
         });
         console.log('[EXPANSION LOADER] card lifecycles loaded', cardLifecycleMap);
@@ -99,7 +99,7 @@ export const loadExpansion = async (expansion: { title: string, name: string, or
         console.log('[EXPANSION LOADER] registering scoring functions');
         const scoringFunctions = module.default.registerScoringFunctions();
         Object.keys(scoringFunctions).forEach(key => {
-            console.debug('registering scoring function for', key);
+            console.log('registering scoring function for', key);
             scoringFunctionMap[key] = scoringFunctions[key];
         });
         console.log('[EXPANSION LOADER] scoring functions registered');

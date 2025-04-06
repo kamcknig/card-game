@@ -1,16 +1,16 @@
 import { ClientListenEventNames, ClientListenEvents, LogEntry } from 'shared/shared-types';
 import { InjectionToken } from '@angular/core';
 import { playerIdStore, playerStore, selfPlayerIdStore } from '../../state/player-state';
-import { matchStartedStore } from '../../state/match-state';
+import { lobbyMatchConfigurationStore, matchStartedStore } from '../../state/match-state';
 import { gameOwnerIdStore, gamePausedStore, sceneStore } from '../../state/game-state';
 import { expansionListStore } from '../../state/expansion-list-state';
 import { cardOverrideStore, cardStore } from '../../state/card-state';
 import { Assets } from 'pixi.js';
-import { selectableCardStore, selectedCardStore } from '../../state/interactive-state';
 import { gameEvents } from '../event/events';
 import { type SocketService } from './socket.service';
 import { matchStore } from '../../state/match';
-import { applyPatch, Operation } from 'fast-json-patch';
+import { applyPatch, compare, Operation } from 'fast-json-patch';
+import { clientSelectableCardsOverrideStore } from '../../state/interactive-state';
 
 export const SOCKET_EVENT_MAP = new InjectionToken('socketEventMap');
 
@@ -20,6 +20,9 @@ export const socketToGameEventMap = (socketService: SocketService): SocketEventM
   const map: SocketEventMap = {
     addLogEntry: (logEntry: LogEntry) => {
       /*logManager.addLogEntry(logEntry);*/
+    },
+    matchConfigurationUpdated: config => {
+      lobbyMatchConfigurationStore.set(config.expansions);
     },
     cardEffectsComplete: () => {
       gameEvents.emit('cardEffectsComplete');
@@ -79,75 +82,75 @@ export const socketToGameEventMap = (socketService: SocketService): SocketEventM
       matchStore.set(current);
     },
     /*matchUpdated: match => {
-      const keys = Object.keys(match);
-      for (const key of keys) {
-        switch (key) {
-          case 'selectableCards':
-            const currentlySelectable = selectableCardStore.get();
-            const newSelectable = match.selectableCards?.[selfPlayerIdStore.get()!] ?? [];
+     const keys = Object.keys(match);
+     for (const key of keys) {
+     switch (key) {
+     case 'selectableCards':
+     const currentlySelectable = selectableCardStore.get();
+     const newSelectable = match.selectableCards?.[selfPlayerIdStore.get()!] ?? [];
 
-            if (currentlySelectable.length !== newSelectable.length) {
-              selectableCardStore.set(newSelectable);
-            }
+     if (currentlySelectable.length !== newSelectable.length) {
+     selectableCardStore.set(newSelectable);
+     }
 
-            const sorted1 = [...currentlySelectable].sort((a, b) => a - b);
-            const sorted2 = [...newSelectable].sort((a, b) => a - b);
+     const sorted1 = [...currentlySelectable].sort((a, b) => a - b);
+     const sorted2 = [...newSelectable].sort((a, b) => a - b);
 
-            if (!sorted1.every((val, idx) => val === sorted2[idx])) {
-              selectableCardStore.set(newSelectable);
-            }
-            break;
-          case 'scores':
-            map.scoresUpdated(match.scores ?? {});
-            break;
-          case 'turnNumber':
-            turnNumberStore.set(match.turnNumber ?? 0);
-            break;
-          case 'turnPhaseIndex':
-            turnPhaseStore.set(TurnPhaseOrderValues[match.turnPhaseIndex ?? 0]);
-            break;
-          case 'currentPlayerTurnIndex':
-            currentPlayerTurnIndexStore.set(match.currentPlayerTurnIndex ?? 0);
-            break;
-          case 'playerBuys':
-            playerBuysStore.set(match.playerBuys ?? 0);
-            break;
-          case 'playerActions':
-            playerActionsStore.set(match.playerActions ?? 0);
-            break;
-          case 'playerTreasure':
-            playerTreasureStore.set(match.playerTreasure ?? 0);
-            break;
-          case 'playArea':
-            playAreaStore.set(match.playArea ?? []);
-            break;
-          case 'supply':
-            supplyStore.set(match.supply ?? []);
-            break;
-          case 'kingdom':
-            kingdomStore.set(match.kingdom ?? []);
-            break;
-          case 'playerHands':
-            for (const playerId of Object.keys(match.playerHands ?? {})) {
-              playerHandStore(+playerId).set(match.playerHands?.[+playerId] ?? []);
-            }
-            break;
-          case 'playerDecks':
-            for (const playerId of Object.keys(match.playerDecks ?? {})) {
-              playerDeckStore(+playerId).set(match.playerDecks?.[+playerId] ?? []);
-            }
-            break;
-          case 'playerDiscards':
-            for (const playerId of Object.keys(match.playerDiscards ?? {})) {
-              playerDiscardStore(+playerId).set(match.playerDiscards?.[+playerId] ?? []);
-            }
-            break;
-          case 'trash':
-            trashStore.set(match.trash ?? []);
-            break;
-        }
-      }
-    },*/
+     if (!sorted1.every((val, idx) => val === sorted2[idx])) {
+     selectableCardStore.set(newSelectable);
+     }
+     break;
+     case 'scores':
+     map.scoresUpdated(match.scores ?? {});
+     break;
+     case 'turnNumber':
+     turnNumberStore.set(match.turnNumber ?? 0);
+     break;
+     case 'turnPhaseIndex':
+     turnPhaseStore.set(TurnPhaseOrderValues[match.turnPhaseIndex ?? 0]);
+     break;
+     case 'currentPlayerTurnIndex':
+     currentPlayerTurnIndexStore.set(match.currentPlayerTurnIndex ?? 0);
+     break;
+     case 'playerBuys':
+     playerBuysStore.set(match.playerBuys ?? 0);
+     break;
+     case 'playerActions':
+     playerActionsStore.set(match.playerActions ?? 0);
+     break;
+     case 'playerTreasure':
+     playerTreasureStore.set(match.playerTreasure ?? 0);
+     break;
+     case 'playArea':
+     playAreaStore.set(match.playArea ?? []);
+     break;
+     case 'supply':
+     supplyStore.set(match.supply ?? []);
+     break;
+     case 'kingdom':
+     kingdomStore.set(match.kingdom ?? []);
+     break;
+     case 'playerHands':
+     for (const playerId of Object.keys(match.playerHands ?? {})) {
+     playerHandStore(+playerId).set(match.playerHands?.[+playerId] ?? []);
+     }
+     break;
+     case 'playerDecks':
+     for (const playerId of Object.keys(match.playerDecks ?? {})) {
+     playerDeckStore(+playerId).set(match.playerDecks?.[+playerId] ?? []);
+     }
+     break;
+     case 'playerDiscards':
+     for (const playerId of Object.keys(match.playerDiscards ?? {})) {
+     playerDiscardStore(+playerId).set(match.playerDiscards?.[+playerId] ?? []);
+     }
+     break;
+     case 'trash':
+     trashStore.set(match.trash ?? []);
+     break;
+     }
+     }
+     },*/
     playerConnected: (player) => {
       playerStore(player.id).set(player);
 
@@ -193,19 +196,23 @@ export const socketToGameEventMap = (socketService: SocketService): SocketEventM
       selfPlayerIdStore.set(player.id);
     },
     /*scoresUpdated: scores => {
-      Object.keys(scores).forEach(playerId => {
-        const pId = +playerId;
-        playerScoreStore(pId).set(scores[pId]);
-      })
-    },*/
+     Object.keys(scores).forEach(playerId => {
+     const pId = +playerId;
+     playerScoreStore(pId).set(scores[pId]);
+     })
+     },*/
     selectCard: selectCardArgs => {
       const eventListener = (cardIds: number[]) => {
         gameEvents.off('cardsSelected', eventListener);
-        selectedCardStore.set([]);
+        clientSelectableCardsOverrideStore.set(null);
         socketService.emit('selectCardResponse', cardIds);
       };
 
-      selectableCardStore.set(selectCardArgs.selectableCardIds);
+      const current = structuredClone(matchStore.get());
+      if (!current) return;
+      current.selectableCards[selfPlayerIdStore.get()!] = selectCardArgs.selectableCardIds;
+      const diff = compare(matchStore.get()!, current);
+      map.matchPatch(diff);
       gameEvents.emit('selectCard', selectCardArgs);
       gameEvents.on('cardsSelected', eventListener);
     },

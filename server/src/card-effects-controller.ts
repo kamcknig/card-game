@@ -11,6 +11,7 @@ export class CardEffectController implements IEffectRunner {
 
   constructor(
     private readonly _cardLibrary: CardLibrary,
+    private _match: Match,
   ) {
   }
 
@@ -19,7 +20,6 @@ export class CardEffectController implements IEffectRunner {
 
   public async runGameActionEffects(
     effectName: string,
-    match: Match,
     playerId: number,
     cardId?: number,
   ): Promise<unknown> {
@@ -32,16 +32,15 @@ export class CardEffectController implements IEffectRunner {
     console.log(`[EFFECT CONTROLLER] running '${effectName}' game action effect generator`,);
     
     const gen = await generatorFn({
-      match,
+      match: this._match,
       cardLibrary: this._cardLibrary,
       triggerPlayerId: playerId,
       triggerCardId: cardId,
     });
-    return this.runGenerator(gen, match, playerId);
+    return this.runGenerator(gen, playerId);
   }
 
   public async runCardEffects(
-    match: Match,
     playerId: number,
     cardId: number,
     reactionContext?: unknown,
@@ -57,19 +56,18 @@ export class CardEffectController implements IEffectRunner {
     console.log(`[EFFECT CONTROLLER] running card effects generator for ${card}`);
     
     const gen = await generatorFn({
-      match,
+      match: this._match,
       cardLibrary: this._cardLibrary,
       triggerCardId: cardId,
       triggerPlayerId: playerId,
       reactionContext,
     });
     
-    return this.runGenerator(gen, match, playerId);
+    return this.runGenerator(gen, playerId);
   }
 
   public async runGenerator(
     generator: EffectGenerator<GameEffects>,
-    match: Match,
     playerId: number
   ) {
     if (!generator) {
@@ -84,7 +82,6 @@ export class CardEffectController implements IEffectRunner {
 
     return await this._effectsPipeline.runGenerator(
       generator,
-      match,
       playerId
     );
   }

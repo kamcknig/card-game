@@ -7,7 +7,11 @@ import { cardStore } from '../../state/card-state';
 import { isNumber, toNumber } from "es-toolkit/compat";
 import { gameEvents } from '../../core/event/events';
 import { CardView } from '../card-view';
-import { selectableCardStore, selectedCardStore } from '../../state/interactive-state';
+import {
+  clientSelectableCardsOverrideStore,
+  selectableCardStore,
+  selectedCardStore
+} from '../../state/interactive-state';
 import { validateCountSpec } from '../../shared/validate-count-spec';
 
 export const cardSelectionView = (args: UserPromptEffectArgs) => {
@@ -84,7 +88,7 @@ export const cardSelectionView = (args: UserPromptEffectArgs) => {
 
   validate();
 
-  selectableCardStore.set(Array.from(newCardToOldCardMap.keys()));
+  clientSelectableCardsOverrideStore.set(Array.from(newCardToOldCardMap.keys()));
 
   return cardList
 }

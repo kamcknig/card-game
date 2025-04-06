@@ -421,7 +421,7 @@ const expansionModule: CardExpansionModule = {
       }
 
       if (!cardIds.length) {
-        console.debug('[CELLAR EFFECT] no cards discarded, so no cards drawn');
+        console.log('[CELLAR EFFECT] no cards discarded, so no cards drawn');
         return;
       }
 
@@ -440,7 +440,7 @@ const expansionModule: CardExpansionModule = {
       const hand = match.playerHands[triggerPlayerId];
 
       if (!hand.length) {
-        console.debug(`[CHAPEL EFFECT] player has no cards in hand`);
+        console.log(`[CHAPEL EFFECT] player has no cards in hand`);
         return;
       }
 
@@ -464,7 +464,7 @@ const expansionModule: CardExpansionModule = {
           });
         }
       } else {
-        console.debug('[CHAPEL EFFECT] no cards selected');
+        console.log('[CHAPEL EFFECT] no cards selected');
       }
     },
     'council-room': function* ({
@@ -487,7 +487,7 @@ const expansionModule: CardExpansionModule = {
         match,
       );
 
-      console.debug(
+      console.log(
         `[COUNCIL ROOM EFFECT] targets ${playerIds.map((id) => getPlayerById(match, id))}`,
       );
 
@@ -518,7 +518,7 @@ const expansionModule: CardExpansionModule = {
       yield new GainActionEffect({ count: 1, sourcePlayerId: triggerPlayerId, sourceCardId: triggerCardId });
 
       if (match.playerDiscards[triggerPlayerId].length === 0) {
-        console.debug('[HARBINGER EFFECT] player has no cards in discard, done processing');
+        console.log('[HARBINGER EFFECT] player has no cards in discard, done processing');
         return;
       }
 
@@ -549,7 +549,7 @@ const expansionModule: CardExpansionModule = {
           },
         });
       } else {
-        console.debug('[HARBINGER EFFECT] no card selected');
+        console.log('[HARBINGER EFFECT] no card selected');
       }
     },
     'laboratory': function* ({
@@ -579,14 +579,14 @@ const expansionModule: CardExpansionModule = {
       let newHandSize = 7;
 
       if (hand.length + deck.length < newHandSize) {
-        console.debug(`[LIBRARY EFFECT] total size of hand + deck is less than ${newHandSize}`);
+        console.log(`[LIBRARY EFFECT] total size of hand + deck is less than ${newHandSize}`);
         newHandSize = Math.min(7, hand.length + deck.length);
-        console.debug(`[LIBRARY EFFECT] new hand size to draw to ${newHandSize}`);
+        console.log(`[LIBRARY EFFECT] new hand size to draw to ${newHandSize}`);
       }
 
-      console.debug(`[LIBRARY EFFECT] current hand size ${hand.length}`);
-      console.debug(`[LIBRARY EFFECT] number of set aside cards ${setAside.length}`);
-      console.debug(`[LIBRARY EFFECT] deck size ${deck.length}`);
+      console.log(`[LIBRARY EFFECT] current hand size ${hand.length}`);
+      console.log(`[LIBRARY EFFECT] number of set aside cards ${setAside.length}`);
+      console.log(`[LIBRARY EFFECT] deck size ${deck.length}`);
 
       while (hand.length < newHandSize + setAside.length && deck.length > 0) {
         const drawnCardId = (yield new DrawCardEffect({
@@ -595,13 +595,13 @@ const expansionModule: CardExpansionModule = {
           sourcePlayerId: triggerPlayerId,
         })) as number;
 
-        console.debug(`[LIBRARY EFFECT] drew card, new hand size ${hand.length}`);
+        console.log(`[LIBRARY EFFECT] drew card, new hand size ${hand.length}`);
 
         const drawnCard = cardLibrary.getCard(drawnCardId);
 
         // If it's an Action card, allow the user to decide whether to set it aside.
         if (drawnCard.type.includes('ACTION')) {
-          console.debug(`[LIBRARY EFFECT] card is an action card ${drawnCard}`);
+          console.log(`[LIBRARY EFFECT] card is an action card ${drawnCard}`);
 
           const shouldSetAside = (yield new UserPromptEffect({
             sourcePlayerId: triggerPlayerId,
@@ -612,9 +612,9 @@ const expansionModule: CardExpansionModule = {
           })) as { action: number };
 
           if (shouldSetAside.action === 2) {
-            console.debug(`[LIBRARY EFFECT] setting card aside`);
+            console.log(`[LIBRARY EFFECT] setting card aside`);
           } else {
-            console.debug('[LIBRARY EFFECT] keeping card in hand');
+            console.log('[LIBRARY EFFECT] keeping card in hand');
           }
 
           // If user picked yes, move the card to a temporary 'aside' location, then continue.
@@ -627,7 +627,7 @@ const expansionModule: CardExpansionModule = {
 
       // Finally, discard all set-aside cards.
       if (setAside.length > 0) {
-        console.debug(
+        console.log(
           `[LIBRARY EFFECT] discarding set aside cards ${
             setAside.map((id) => cardLibrary.getCard(id))
           }`,
@@ -682,7 +682,7 @@ const expansionModule: CardExpansionModule = {
         match,
       ).filter((id) => reactionContext[id] !== 'immunity');
 
-      console.debug(
+      console.log(
         `[MILITIA EFFECT] targets ${playerIds.map((id) => getPlayerById(match, id))}`,
       );
 
@@ -717,7 +717,7 @@ const expansionModule: CardExpansionModule = {
             });
           }
         } else {
-          console.debug(`[MILITIA EFFECT] already at 3 or fewer cards`);
+          console.log(`[MILITIA EFFECT] already at 3 or fewer cards`);
         }
       }
     },
@@ -729,7 +729,7 @@ const expansionModule: CardExpansionModule = {
       );
 
       if (!hasTreasureCards) {
-        console.debug(`[MINE EFFECT] player has no treasure cards in hand`);
+        console.log(`[MINE EFFECT] player has no treasure cards in hand`);
         return;
       }
 
@@ -752,11 +752,11 @@ const expansionModule: CardExpansionModule = {
       let cardId = cardIds[0];
 
       if (!cardId) {
-        console.debug(`[MINE EFFECT] player selected no card`);
+        console.log(`[MINE EFFECT] player selected no card`);
         return;
       }
 
-      console.debug(`[MINE EFFECT] player selected ${cardLibrary.getCard(cardId)}`);
+      console.log(`[MINE EFFECT] player selected ${cardLibrary.getCard(cardId)}`);
 
       yield new TrashCardEffect({
         sourcePlayerId: triggerPlayerId,
@@ -782,7 +782,7 @@ const expansionModule: CardExpansionModule = {
 
       cardId = cardIds[0];
 
-      console.debug(`[MINE EFFECT] player selected ${card}`);
+      console.log(`[MINE EFFECT] player selected ${card}`);
 
       yield new GainCardEffect({
         sourceCardId: triggerCardId,
@@ -815,7 +815,7 @@ const expansionModule: CardExpansionModule = {
       );
 
       if (!hasCopper) {
-        console.debug(`[MONEYLENDER EFFECT] player has no copper in hand`);
+        console.log(`[MONEYLENDER EFFECT] player has no copper in hand`);
         return;
       }
 
@@ -833,7 +833,7 @@ const expansionModule: CardExpansionModule = {
       })) as number[];
 
       if (cardIds?.length === 0) {
-        console.debug(`[MONEYLENDER EFFECT] player didn't choose copper`);
+        console.log(`[MONEYLENDER EFFECT] player didn't choose copper`);
         return;
       }
 
@@ -882,7 +882,7 @@ const expansionModule: CardExpansionModule = {
         match.config.kingdomCardKeys,
       );
 
-      console.debug(`[POACHER EFFECT] original supply card piles ${allSupplyCardKeys}`);
+      console.log(`[POACHER EFFECT] original supply card piles ${allSupplyCardKeys}`);
 
       const remainingSupplyCardKeys = match.supply.concat(
         match.kingdom,
@@ -893,12 +893,12 @@ const expansionModule: CardExpansionModule = {
         return prev.concat(cardKey);
       }, [] as string[]);
 
-      console.debug(`[POACHER EFFECT] remaining supply card piles ${remainingSupplyCardKeys}`);
+      console.log(`[POACHER EFFECT] remaining supply card piles ${remainingSupplyCardKeys}`);
 
       const emptyPileCount = allSupplyCardKeys.length -
         remainingSupplyCardKeys.length;
 
-      console.debug(`[POACHER EFFECT] number of empty supply piles ${emptyPileCount}`);
+      console.log(`[POACHER EFFECT] number of empty supply piles ${emptyPileCount}`);
 
       if (emptyPileCount === 0) {
         return;
@@ -932,7 +932,7 @@ const expansionModule: CardExpansionModule = {
       triggerPlayerId, triggerCardId,
     }) {
       if (match.playerHands[triggerPlayerId].length === 0) {
-        console.debug(`[REMODEL EFFECT] player has no cards in hand`);
+        console.log(`[REMODEL EFFECT] player has no cards in hand`);
         return;
       }
 
@@ -948,7 +948,7 @@ const expansionModule: CardExpansionModule = {
       let cardId = cardIds[0];
       const card = cardLibrary.getCard(cardId);
 
-      console.debug(`[REMODEL EFFECT] player chose card ${card} to trash`);
+      console.log(`[REMODEL EFFECT] player chose card ${card} to trash`);
 
       yield new TrashCardEffect({
         sourceCardId: triggerCardId,
@@ -971,7 +971,7 @@ const expansionModule: CardExpansionModule = {
 
       cardId = cardIds[0];
 
-      console.debug(
+      console.log(
         `[REMODEL EFFECT] player chose card ${cardLibrary.getCard(cardId)} to gain`,
       );
 
@@ -1004,7 +1004,7 @@ const expansionModule: CardExpansionModule = {
       const numToLookAt = Math.min(2, playerDeck.length);
       
       if (numToLookAt === 0) {
-        console.debug(`[SENTRY EFFECT] player does not have enough cards`);
+        console.log(`[SENTRY EFFECT] player does not have enough cards`);
         return;
       }
 

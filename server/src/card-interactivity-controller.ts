@@ -4,6 +4,7 @@ import { Card, CardId, Match, Player, PlayerId, TurnPhaseOrderValues } from 'sha
 import { isUndefined } from 'es-toolkit/compat';
 import { getEffectiveCardCost } from './utils/get-effective-card-cost.ts';
 import { CardLibrary } from './card-library.ts';
+import { MatchController } from './match-controller.ts';
 
 export class CardInteractivityController {
   private _gameOver: boolean = false;
@@ -14,6 +15,7 @@ export class CardInteractivityController {
     private readonly _socketMap: Map<PlayerId, AppSocket>,
     private readonly _cardLibrary: CardLibrary,
     private readonly _cardTapCompleteCallback: (card: Card, player?: Player) => void,
+    private readonly _matchController: MatchController,
   ) {
     // todo
     //match.subscribe(this.checkCardInteractivity.bind(this));
@@ -89,13 +91,12 @@ export class CardInteractivityController {
       );
       return;
     }
-
+    
     const turnPhase = TurnPhaseOrderValues[match.turnPhaseIndex];
 
     if (turnPhase === 'action') {
       await this._cardEffectController.runGameActionEffects(
         'playCard',
-        match,
         triggerPlayerId,
         tappedCardId,
       );
@@ -108,17 +109,16 @@ export class CardInteractivityController {
         );
         return;
       }
+      
       if (match.playerHands[triggerPlayerId].includes(tappedCardId)) {
         await this._cardEffectController.runGameActionEffects(
           'playCard',
-          match,
           triggerPlayerId,
           tappedCardId,
         );
       } else {
         await this._cardEffectController.runGameActionEffects(
           'buyCard',
-          match,
           triggerPlayerId,
           tappedCardId,
         );
@@ -144,6 +144,7 @@ export class CardInteractivityController {
       return;
     }
 
+    const prev = this._matchController.getMatchSnapshot();
     const currentPlayer = match.players[match.currentPlayerTurnIndex];
     const turnPhase = TurnPhaseOrderValues[match.turnPhaseIndex];
 
@@ -194,6 +195,8 @@ export class CardInteractivityController {
     match.selectableCards = match.players.reduce((prev, { id}) => {
       prev[id] = id === currentPlayer.id ? selectableCards : [];
       return prev;
-    }, {} as Record<PlayerId, CardId[]>)
+    }, {} as Record<PlayerId, CardId[]>);
+    
+    this._matchController.broadcastPatch(prev);
   }
 }

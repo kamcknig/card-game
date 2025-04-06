@@ -1,6 +1,10 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { AppButton, createAppButton } from '../../core/create-app-button';
-import { selectableCardStore, selectedCardStore } from '../../state/interactive-state';
+import {
+  clientSelectableCardsOverrideStore,
+  selectableCardStore,
+  selectedCardStore
+} from '../../state/interactive-state';
 import { STANDARD_GAP } from '../../core/app-contants';
 import { UserPromptEffectArgs } from 'shared/shared-types';
 import { List } from '@pixi/ui';
@@ -38,7 +42,7 @@ export const userPromptModal = (args: UserPromptEffectArgs): Promise<unknown> =>
     const cleanup = () => {
       app.stage.removeChild(modalContainer);
       selectedCardStore.set([]);
-      selectableCardStore.set([]);
+      clientSelectableCardsOverrideStore.set([]);
     };
 
     const actionButtonListener = (args?: { action?: number; result?: unknown}) => {

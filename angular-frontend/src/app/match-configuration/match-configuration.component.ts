@@ -6,7 +6,7 @@ import { combineLatest, map, Observable } from 'rxjs';
 import { AsyncPipe, NgClass, NgOptimizedImage } from '@angular/common';
 import { PlayerComponent } from './player-name-input/player-name-input.component';
 import { expansionListStore } from '../state/expansion-list-state';
-import { matchConfigurationStore } from '../state/match-state';
+import { lobbyMatchConfigurationStore, matchConfigurationStore } from '../state/match-state';
 import { SocketService } from '../core/socket-service/socket.service';
 import { gameOwnerIdStore } from '../state/game-state';
 
@@ -24,7 +24,7 @@ import { gameOwnerIdStore } from '../state/game-state';
 export class MatchConfigurationComponent {
   public $playerIds!: Observable<readonly PlayerId[]>;
   public $expansionList!: Observable<readonly any[]>;
-  public $selectedExpansions!: Observable<string[]>;
+  public $selectedExpansions!: Observable<readonly string[]>;
   public isGameOwner: boolean = false;
 
   constructor(
@@ -33,7 +33,7 @@ export class MatchConfigurationComponent {
   ) {
     this.$playerIds = this._nanoStoreService.useStore(playerIdStore);
     this.$expansionList = this._nanoStoreService.useStore(expansionListStore);
-    this.$selectedExpansions = this._nanoStoreService.useStore(matchConfigurationStore);
+    this.$selectedExpansions = this._nanoStoreService.useStore(lobbyMatchConfigurationStore);
     combineLatest([
       this._nanoStoreService.useStore(gameOwnerIdStore),
       this._nanoStoreService.useStore(selfPlayerIdStore)
@@ -41,7 +41,7 @@ export class MatchConfigurationComponent {
   }
 
   onToggleExpansion(expansion: string) {
-    const currentExpansions = matchConfigurationStore.get() ?? [];
+    const currentExpansions = lobbyMatchConfigurationStore.get() ?? [];
     const currentIdx = currentExpansions?.indexOf(expansion);
 
     if (currentIdx === undefined || currentIdx === -1) {

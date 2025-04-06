@@ -221,7 +221,6 @@ export class Reaction {
 
 export interface IEffectRunner {
   runCardEffects(
-    match: Match,
     playerId: number,
     cardId: number,
     reactionContext?: unknown,
@@ -229,14 +228,12 @@ export interface IEffectRunner {
 
   runGameActionEffects(
     effectName: string,
-    match: Match,
     playerId: number,
     cardId?: number,
   ): Promise<unknown>;
 
   runGenerator(
     generator: EffectGenerator<GameEffects>,
-    match: Match,
     playerId: number,
     acc?: MatchUpdate,
   ): Promise<unknown>;

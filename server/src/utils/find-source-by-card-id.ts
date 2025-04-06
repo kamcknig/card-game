@@ -42,7 +42,7 @@ export const findSourceByCardId = (
         if (deck.includes(cardId)) {
           storeKey = "playerDecks";
           sourceStore = deck;
-          console.debug(`[FIND CARD SOURCE] found card ${cardLibrary.getCard(cardId)} in ${match.players.find(player => player.id === +playerId)} deck`);
+          console.log(`[FIND CARD SOURCE] found card ${cardLibrary.getCard(cardId)} in ${match.players.find(player => player.id === +playerId)} deck`);
           break;
         }
       }
@@ -53,7 +53,7 @@ export const findSourceByCardId = (
         if (discard.includes(cardId)) {
           storeKey = "playerDiscards";
           sourceStore = discard;
-          console.debug(`[FIND CARD SOURCE] found card ${cardLibrary.getCard(cardId)} in ${match.players.find(player => player.id === +playerId)} discard`);
+          console.log(`[FIND CARD SOURCE] found card ${cardLibrary.getCard(cardId)} in ${match.players.find(player => player.id === +playerId)} discard`);
           break;
         }
       }

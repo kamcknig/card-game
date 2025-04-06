@@ -91,7 +91,6 @@ export type ServerEmitEvents = {
     playerDisconnected: (player: Player) => void;
     playerNameUpdated: (playerId: PlayerId, name: string) => void;
     playerReady: (playerId: PlayerId, ready: boolean) => void;
-    /*scoresUpdated: (scores: Record<PlayerId, number>) => void;*/
     selectCard: (selectCardArgs: SelectCardEffectArgs & { selectableCardIds: CardId[] }) => void;
     setCardDataOverrides: (overrides: Record<CardId, Partial<Card>> | undefined) => void;
     setCardLibrary: (cardLibrary: Record<CardId, Card>) => void;

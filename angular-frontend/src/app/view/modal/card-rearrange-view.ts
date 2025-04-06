@@ -2,7 +2,7 @@ import { UserPromptEffectArgs } from 'shared/shared-types';
 import { CARD_WIDTH, STANDARD_GAP } from '../../core/app-contants';
 import { createCardView } from '../../core/card/create-card-view';
 import { Text, Container } from 'pixi.js';
-import { selectableCardStore } from '../../state/interactive-state';
+import { clientSelectableCardsOverrideStore, selectableCardStore } from '../../state/interactive-state';
 import { CardView } from '../card-view';
 import { inject } from '@angular/core';
 import { PIXI_APP } from '../../core/pixi-application.token';
@@ -28,7 +28,7 @@ export const cardRearrangeView = (args: UserPromptEffectArgs) => {
     },
   });
 
-  selectableCardStore.set([]);
+  clientSelectableCardsOverrideStore.set([]);
   const originalStageEventMode = app.stage.eventMode;
 
   const cardList = new Container();

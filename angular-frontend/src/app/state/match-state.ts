@@ -15,6 +15,8 @@ export const playAreaStore =
   computed(matchStore, m => m?.playArea ?? []);
 
 export const matchConfigurationStore =
-  computed<MatchConfiguration['expansions'], typeof matchStore>(matchStore, m => m?.config?.expansions ?? []);
+  computed<MatchConfiguration | null, typeof matchStore>(matchStore, m => m?.config ?? null);
+
+export const lobbyMatchConfigurationStore = atom<string[]>([])
 
 export const matchStartedStore = atom<boolean>(false);

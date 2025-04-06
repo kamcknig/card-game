@@ -181,18 +181,18 @@ export class Game {
       }
 
       if (!configModule.mutuallyExclusiveExpansions) {
-        console.debug(`[GAME] module for expansion ${expansion} contains no mutually exclusive expansions`,);
+        console.log(`[GAME] module for expansion ${expansion} contains no mutually exclusive expansions`,);
         continue;
       }
 
-      console.debug(`[GAME] ${expansion} is mutually exclusive with ${configModule.mutuallyExclusiveExpansions}`,);
+      console.log(`[GAME] ${expansion} is mutually exclusive with ${configModule.mutuallyExclusiveExpansions}`,);
 
       for (const exclusiveExpansion of configModule.mutuallyExclusiveExpansions) {
         if (
           config.expansions.includes(exclusiveExpansion) &&
           !expansionsToRemove.includes(exclusiveExpansion)
         ) {
-          console.debug(`[GAME] removing expansion ${exclusiveExpansion} as it is not allowed with ${expansion}`,);
+          console.log(`[GAME] removing expansion ${exclusiveExpansion} as it is not allowed with ${expansion}`,);
           expansionsToRemove.push(exclusiveExpansion);
         }
       }
@@ -204,7 +204,7 @@ export class Game {
       expansions: config.expansions,
     };
     
-    if (this.matchStarted) {
+    if (this.matchStarted) { // i don't think we need the matchStarted check as match configuration is only updated during the lobby phase right now
       this._match.config = this._matchConfiguration;
       const patch = compare(previousSnapshot, this._matchController?.getMatchSnapshot() ?? {});
       if (patch.length) this._socketMap.forEach(s => s.emit("matchPatch", patch));
@@ -223,9 +223,9 @@ export class Game {
 
     if (player) {
       player.name = name;
-      console.debug(`[GAME] ${player} name updated to '${name}'`);
+      console.log(`[GAME] ${player} name updated to '${name}'`);
     } else {
-      console.debug(`[GAME] player ${playerId} not found`);
+      console.log(`[GAME] player ${playerId} not found`);
     }
 
     io.in("game").emit("playerNameUpdated", playerId, name);
@@ -235,22 +235,22 @@ export class Game {
     const player = this.players.find((player) => player.id === playerId);
 
     if (!player) {
-      console.debug(`[GAME] received player ready event from ${playerId} but could not find Player object`,);
+      console.log(`[GAME] received player ready event from ${playerId} but could not find Player object`,);
       return;
     }
 
     console.log(`[GAME] received ready event from ${player}`);
     
     player.ready = !player.ready;
-    console.debug(`[GAME] marking ${player} as ${player.ready}`);
+    console.log(`[GAME] marking ${player} as ${player.ready}`);
     io.in("game").except(player.socketId).emit("playerReady", playerId, player.ready);
 
-    if (this.players.some((p) => !p.ready)) {
+    if (this.players.some((p) => !p.ready && p.connected)) {
       console.log(`[GAME] not all players ready yet`);
       return;
     }
 
-    console.log(`[GAME] all players ready, proceeding to start match`);
+    console.log(`[GAME] all connected players ready, proceeding to start match`);
 
     this.matchStarted = true;
 
@@ -263,7 +263,7 @@ export class Game {
     void this._matchController?.initialize(
       {
         ...this._matchConfiguration,
-        players: this.players.map(p => ({ ...p, ready: false })),
+        players: this.players.filter(p => p.connected).map(p => { p.ready = false; return p; }),
       },
       this._matchConfiguration.expansions.reduce((prev, key) => ({ ...prev, ...expansionData[key].cardData }), {}),
     );
