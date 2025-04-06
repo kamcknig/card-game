@@ -6,11 +6,12 @@
   },
   "imports": {
     "@timepp/enhanced-deno-log": "jsr:@timepp/enhanced-deno-log@^0.4.1",
-    "es-toolkit": "jsr:@es-toolkit/es-toolkit@^1.33.0",
     "@std/path": "https://deno.land/std/path/mod.ts",
-    "socket.io": "https://deno.land/x/socket_io@0.2.1/mod.ts",
-    "shared/": "../shared/src/",
+    "es-toolkit": "jsr:@es-toolkit/es-toolkit@^1.33.0",
+    "fast-json-patch": "https://esm.sh/fast-json-patch@3.1.1?target=deno&pin=v123",
     "lodash-es": "npm:lodash-es@4.17.21",
-    "nanostores": "npm:nanostores@0.11.4"
+    "nanostores": "npm:nanostores@0.11.4",
+    "shared/": "../shared/src/",
+    "socket.io": "https://deno.land/x/socket_io@0.2.1/mod.ts"
   }
 }

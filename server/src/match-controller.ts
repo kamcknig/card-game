@@ -22,8 +22,7 @@ import { getPlayerById } from './utils/get-player-by-id.ts';
 import { CardLibrary } from './card-library.ts';
 
 export class MatchController {
-  private match: Match = {} as Match;
-  private effectHandlerMap: EffectHandlerMap | undefined;
+  private _effectHandlerMap: EffectHandlerMap | undefined;
   private _effectsController: CardEffectController | undefined;
   private _effectsPipeline: EffectsPipeline | undefined;
   private _reactionManager: ReactionManager | undefined;
@@ -33,7 +32,10 @@ export class MatchController {
   private _config: MatchConfiguration | undefined;
   private _createCardFn: ((key: CardKey) => Card) | undefined;
 
-  constructor(private readonly _socketMap: Map<PlayerId, AppSocket>) {}
+  constructor(
+    private _match: Match,
+    private readonly _socketMap: Map<PlayerId, AppSocket>
+  ) {}
 
   public initialize(config: MatchConfiguration, cardData: Record<CardKey, CardData>) {
     this._createCardFn = createCardFactory(cardData);
@@ -58,7 +60,7 @@ export class MatchController {
       }, [] as string[]),
     };
     
-    this.match = {
+    this._match = {
       scores: [],
       trash: [],
       players: fisherYatesShuffle(config.players),
@@ -85,7 +87,7 @@ export class MatchController {
 
     this._socketMap.forEach((s) => {
       s.emit("setCardLibrary", this._cardLibrary.getAllCards());
-      s.emit("matchReady", this.match);
+      s.emit("matchReady", this._match);
       s.on("clientReady", this.onClientReady);
     });
   }
@@ -264,7 +266,7 @@ export class MatchController {
     console.log(`[MATCH] starting match`);
 
     this._reactionManager = new ReactionManager(
-      this.match,
+      this._match,
       this._cardLibrary,
     );
 
@@ -272,13 +274,13 @@ export class MatchController {
 
     this._interactivityController = new CardInteractivityController(
       this._effectsController,
-      this.match,
+      this._match,
       this._socketMap,
       this._cardLibrary,
       this.onCardTapHandlerComplete
     );
 
-    this.effectHandlerMap = createEffectHandlerMap(
+    this._effectHandlerMap = createEffectHandlerMap(
       this._socketMap,
       this._reactionManager,
       this._effectsController,
@@ -287,8 +289,7 @@ export class MatchController {
     );
 
     this._effectsPipeline = new EffectsPipeline(
-      this.effectHandlerMap,
-      this.match,
+      this._effectHandlerMap,
       this._socketMap,
       this.onEffectCompleted
     );
@@ -298,12 +299,12 @@ export class MatchController {
       socket.on("nextPhase", this.onNextPhase);
     }
     
-    const match = this.match;
+    const match = this._match;
     match.playerBuys = 1;
     match.playerActions = 1;
     match.turnNumber = 1;
 
-    this._socketMap.forEach((s) => s.emit("matchStarted", match));
+    this._socketMap.forEach((s) => s.emit("matchStarted"));
 
     await this._effectsController.suspendedCallbackRunner(async () => {
       for (const player of match.players!) {
@@ -320,6 +321,10 @@ export class MatchController {
     void this.onCheckForPlayerActions();
   }
 
+  public getMatchSnapshot(): Match {
+    return structuredClone(this._match);
+  }
+  
   private onCardTapHandlerComplete = (card: Card, player?: Player) => {
     console.log(`[MATCH] card tap complete handler invoked`);
     void this.onCheckForPlayerActions();
@@ -330,19 +335,19 @@ export class MatchController {
     
     this.calculateScores();
     if (this.checkGameEnd()) return;
-    this._interactivityController?.checkCardInteractivity(this.match);
+    this._interactivityController?.checkCardInteractivity(this._match);
     this.sendMatchUpdate();
   }
   
   private sendMatchUpdate = () => {
     console.log(`[MATCH] sending match update to clients`);
-    this._socketMap.forEach(s => s.emit('matchUpdated', this.match));
+    // this._socketMap.forEach(s => s.emit('matchUpdated', this.match));
   };
 
   private calculateScores() {
     console.log(`[MATCH] calculating scores`);
 
-    const match = this.match;
+    const match = this._match;
     const scores: Record<number, number> = {};
 
     for (const player of match.players ?? []) {
@@ -360,7 +365,7 @@ export class MatchController {
         const customScoringFn = scoringFunctionMap[card?.cardKey ?? ""];
         if (customScoringFn) {
           console.log(`[MATCH] processing scoring function for ${card}`);
-          score += customScoringFn({ match: this.match, cardLibrary: this._cardLibrary, ownerId: playerId });
+          score += customScoringFn({ match: this._match, cardLibrary: this._cardLibrary, ownerId: playerId });
         }
       }
       scores[playerId] = score;
@@ -372,7 +377,7 @@ export class MatchController {
   private checkGameEnd() {
     console.log(`[MATCH] checking if the game has ended`);
 
-    const match = this.match;
+    const match = this._match;
 
     if (match.supply.map((c) =>
       this._cardLibrary.getCard(c)).filter((c) => c.cardKey === "province").length === 0
@@ -425,7 +430,7 @@ export class MatchController {
 
     console.debug(`[MATCH] removing listener for match state updates`);
 
-    const match = this.match;
+    const match = this._match;
     const currentTurn = match.turnNumber;
     const currentPlayerTurnIndex = match.currentPlayerTurnIndex;
 
@@ -475,7 +480,7 @@ export class MatchController {
   private async onCheckForPlayerActions() {
     console.log("[MATCH] checking for remaining player actions");
 
-    const match = this.match;
+    const match = this._match;
     const turnPhase = TurnPhaseOrderValues[match.turnPhaseIndex];
     const player = match.players[match.currentPlayerTurnIndex];
 
@@ -525,7 +530,7 @@ export class MatchController {
   private onNextPhase = async () => {
     console.log(`[MATCH] next phase handler invoked`);
 
-    const match = this.match;
+    const match = this._match;
 
     try {
       match.turnPhaseIndex = match.turnPhaseIndex + 1;
@@ -598,7 +603,7 @@ export class MatchController {
   private endTurn = () => {
     removeOverrideEffects("TURN_END");
     
-    const match = this.match;
+    const match = this._match;
     match.cardsPlayed = {};
     const overrides = getCardOverrides(match, this._cardLibrary);
     for (const { id } of match.players) {
@@ -613,26 +618,26 @@ export class MatchController {
     this._socketMap.set(playerId, socket);
 
     socket.emit("setCardLibrary", this._cardLibrary.getAllCards());
-    socket.emit("matchReady", this.match);
+    socket.emit("matchReady", this._match);
     socket.on("clientReady", async (_playerId: number, _ready: boolean) => {
-      console.log(`[MATCH] ${this.match.players.find((player) => player.id === playerId)} marked ready`,
+      console.log(`[MATCH] ${this._match.players.find((player) => player.id === playerId)} marked ready`,
       );
-      socket.emit("matchStarted", this.match);
+      socket.emit("matchStarted");
       socket.off("clientReady");
 
       socket.on("nextPhase", this.onNextPhase);
 
       this._interactivityController?.playerAdded(socket);
 
-      if (this.match.players[this.match.currentPlayerTurnIndex].id === playerId) {
+      if (this._match.players[this._match.currentPlayerTurnIndex].id === playerId) {
         await this.onCheckForPlayerActions();
-        this._interactivityController?.checkCardInteractivity(this.match);
+        this._interactivityController?.checkCardInteractivity(this._match);
       }
     });
   }
 
   public playerDisconnected(playerId: number) {
-    console.log(`[MATCH] ${getPlayerById(this.match, playerId)} has disconnected`);
+    console.log(`[MATCH] ${getPlayerById(this._match, playerId)} has disconnected`);
     this._interactivityController?.playerRemoved(this._socketMap.get(playerId));
     this._socketMap.delete(playerId);
   }

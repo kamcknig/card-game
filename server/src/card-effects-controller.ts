@@ -1,8 +1,8 @@
-import { EffectGenerator, IEffectRunner } from "./types.ts";
-import { GameEffects } from "./effects/game-effects.ts";
-import { Match, MatchUpdate } from "shared/shared-types.ts";
-import { effectGeneratorMap } from "./effect-generator-map.ts";
-import { EffectsPipeline } from "./effects-pipeline.ts";
+import { EffectGenerator, IEffectRunner } from './types.ts';
+import { GameEffects } from './effects/game-effects.ts';
+import { Match } from 'shared/shared-types.ts';
+import { effectGeneratorMap } from './effect-generator-map.ts';
+import { EffectsPipeline } from './effects-pipeline.ts';
 
 import { CardLibrary } from './card-library.ts';
 
@@ -44,7 +44,6 @@ export class CardEffectController implements IEffectRunner {
     match: Match,
     playerId: number,
     cardId: number,
-    acc: MatchUpdate,
     reactionContext?: unknown,
   ): Promise<unknown> {
     const card = this._cardLibrary.getCard(cardId);
@@ -65,14 +64,13 @@ export class CardEffectController implements IEffectRunner {
       reactionContext,
     });
     
-    return this.runGenerator(gen, match, playerId, acc);
+    return this.runGenerator(gen, match, playerId);
   }
 
   public async runGenerator(
     generator: EffectGenerator<GameEffects>,
     match: Match,
-    playerId: number,
-    acc?: MatchUpdate,
+    playerId: number
   ) {
     if (!generator) {
       console.log(`[EFFECT CONTROLLER] No anonymous effects generator supplied`);
@@ -87,8 +85,7 @@ export class CardEffectController implements IEffectRunner {
     return await this._effectsPipeline.runGenerator(
       generator,
       match,
-      playerId,
-      acc,
+      playerId
     );
   }
 

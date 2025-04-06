@@ -1,28 +1,21 @@
-import {
-  AppSocket,
-  EffectHandlerMap,
-  IEffectRunner,
-  Reaction,
-  ReactionTemplate,
-  ReactionTrigger,
-} from "./types.ts";
-import { fisherYatesShuffle } from "./utils/fisher-yates-shuffler.ts";
-import { findCards } from "./utils/find-cards.ts";
-import { ReactionManager } from "./reaction-manager.ts";
-import { Match, MatchUpdate, PlayerId } from "shared/shared-types.ts";
-import { cardLifecycleMap } from "./effect-generator-map.ts";
-import { findOrderedEffectTargets } from "./utils/find-ordered-effect-targets.ts";
-import { findSourceByCardId } from "./utils/find-source-by-card-id.ts";
-import { findSpecLocationBySource } from "./utils/find-spec-location-by-source.ts";
-import { findSourceByLocationSpec } from "./utils/find-source-by-location-spec.ts";
-import { castArray, isNumber, isUndefined, toNumber } from "es-toolkit/compat";
-import { MoveCardEffect } from "./effects/move-card.ts";
-import { cardDataOverrides, getCardOverrides } from "./card-data-overrides.ts";
-import { CardInteractivityController } from "./card-interactivity-controller.ts";
-import { getOrderStartingFrom } from "./utils/get-order-starting-from.ts";
-import { UserPromptEffect } from "./effects/user-prompt.ts";
-import { CardLibrary } from "./card-library.ts";
-import { ShuffleDeckEffect } from "./effects/shuffle-card.ts";
+import { AppSocket, EffectHandlerMap, IEffectRunner, Reaction, ReactionTemplate, ReactionTrigger, } from './types.ts';
+import { fisherYatesShuffle } from './utils/fisher-yates-shuffler.ts';
+import { findCards } from './utils/find-cards.ts';
+import { ReactionManager } from './reaction-manager.ts';
+import { Match, PlayerId } from 'shared/shared-types.ts';
+import { cardLifecycleMap } from './effect-generator-map.ts';
+import { findOrderedEffectTargets } from './utils/find-ordered-effect-targets.ts';
+import { findSourceByCardId } from './utils/find-source-by-card-id.ts';
+import { findSpecLocationBySource } from './utils/find-spec-location-by-source.ts';
+import { findSourceByLocationSpec } from './utils/find-source-by-location-spec.ts';
+import { castArray, isNumber, isUndefined, toNumber } from 'es-toolkit/compat';
+import { MoveCardEffect } from './effects/move-card.ts';
+import { cardDataOverrides, getCardOverrides } from './card-data-overrides.ts';
+import { CardInteractivityController } from './card-interactivity-controller.ts';
+import { getOrderStartingFrom } from './utils/get-order-starting-from.ts';
+import { UserPromptEffect } from './effects/user-prompt.ts';
+import { CardLibrary } from './card-library.ts';
+import { ShuffleDeckEffect } from './effects/shuffle-card.ts';
 
 /**
  * Returns an object whose properties are functions. The names are a union of Effect types
@@ -36,7 +29,7 @@ export const createEffectHandlerMap = (
   cardLibrary: CardLibrary,
 ): EffectHandlerMap => {
   const effectHandlerMap: EffectHandlerMap = {
-    discardCard(effect, match, acc) {
+    discardCard(effect, match) {
       socketMap.forEach((s) =>
         s.emit("addLogEntry", {
           type: "discard",
@@ -53,11 +46,10 @@ export const createEffectHandlerMap = (
           toPlayerId: effect.playerId,
           to: { location: "playerDiscards" },
         }),
-        match,
-        acc,
+        match
       );
     },
-    drawCard(effect, match, acc) {
+    drawCard(effect, match) {
       let deck = match.playerDecks[effect.playerId];
       const discard = match.playerDiscards[effect.playerId];
 
@@ -81,8 +73,7 @@ export const createEffectHandlerMap = (
           new ShuffleDeckEffect({
             playerId: effect.playerId,
           }),
-          match,
-          acc,
+          match
         );
         deck = match.playerDecks[effect.playerId];
       }
@@ -115,15 +106,13 @@ export const createEffectHandlerMap = (
           toPlayerId: effect.playerId,
           to: { location: "playerHands" },
         }),
-        match,
-        acc,
+        match
       );
 
       return drawnCardId;
     },
-    gainAction(effect, match, acc) {
-      acc.playerActions = match.playerActions + effect.count;
-      match.playerActions = acc.playerActions;
+    gainAction(effect, match) {
+      match.playerActions = match.playerActions + effect.count;
 
       socketMap.forEach((s) =>
         s.emit("addLogEntry", {
@@ -134,9 +123,8 @@ export const createEffectHandlerMap = (
       );
       return;
     },
-    gainBuy(effect, match, acc) {
-      acc.playerBuys = match.playerBuys + effect.count;
-      match.playerBuys = acc.playerBuys;
+    gainBuy(effect, match) {
+      match.playerBuys = match.playerBuys + effect.count;
       socketMap.forEach((s) =>
         s.emit("addLogEntry", {
           type: "gainBuy",
@@ -146,7 +134,7 @@ export const createEffectHandlerMap = (
       );
       return;
     },
-    gainCard(effect, match, acc) {
+    gainCard(effect, match) {
       effect.to.location ??= "playerDiscards";
 
       socketMap.forEach((s) =>
@@ -165,13 +153,11 @@ export const createEffectHandlerMap = (
           toPlayerId: effect.playerId,
           cardId: effect.cardId,
         }),
-        match,
-        acc,
+        match
       );
     },
-    gainTreasure(effect, match, acc) {
-      acc.playerTreasure = match.playerTreasure + effect.count;
-      match.playerTreasure = acc.playerTreasure;
+    gainTreasure(effect, match) {
+      match.playerTreasure = match.playerTreasure + effect.count;
       socketMap.forEach((s) =>
         s.emit("addLogEntry", {
           type: "gainTreasure",
@@ -183,8 +169,7 @@ export const createEffectHandlerMap = (
     },
     moveCard(
       effect: MoveCardEffect,
-      match: Match,
-      acc: MatchUpdate,
+      match: Match
     ) {
       const card = cardLibrary.getCard(effect.cardId);
       
@@ -282,27 +267,27 @@ export const createEffectHandlerMap = (
         if (effect.toPlayerId) {
           switch (oldStoreKey) {
             case "playerHands":
-              acc.playerHands = {
-                ...acc.playerHands,
+              match.playerHands = {
+                ...match.playerHands,
                 [effect.toPlayerId]: oldStore,
               };
               break;
             case "playerDiscards":
-              acc.playerDiscards = {
-                ...acc.playerDiscards,
+              match.playerDiscards = {
+                ...match.playerDiscards,
                 [effect.toPlayerId]: oldStore,
               };
               break;
             case "playerDecks":
-              acc.playerDecks = {
-                ...acc.playerDecks,
+              match.playerDecks = {
+                ...match.playerDecks,
                 [effect.toPlayerId]: oldStore,
               };
               break;
           }
         }
       } else {
-        acc[oldStoreKey] = oldStore;
+        match[oldStoreKey] = oldStore;
       }
       
       // update the accumulator with the cards new location
@@ -314,36 +299,30 @@ export const createEffectHandlerMap = (
         if (effect.toPlayerId) {
           switch (effect.to.location[0]) {
             case "playerHands":
-              acc.playerHands = {
-                ...acc.playerHands,
+              match.playerHands = {
+                ...match.playerHands,
                 [effect.toPlayerId]: newStore,
               };
               break;
             case "playerDiscards":
-              acc.playerDiscards = {
-                ...acc.playerDiscards,
+              match.playerDiscards = {
+                ...match.playerDiscards,
                 [effect.toPlayerId]: newStore,
               };
               break;
             case "playerDecks":
-              acc.playerDecks = {
-                ...acc.playerDecks,
+              match.playerDecks = {
+                ...match.playerDecks,
                 [effect.toPlayerId]: newStore,
               };
               break;
           }
         }
       } else {
-        acc[effect.to.location[0]] = newStore as unknown as any;
+        match[effect.to.location[0]] = newStore as unknown as any;
       }
-      
-      // because where a card is on the board, we immediately send an update with the new cards location to
-      // clients to visually update them. normally we'd wait.
-      // TODO: can this go in the effects pipeline? Maybe checking if the effect was a move effect and if
-      // so send the interim update there? Having it here special-cases it and that's rarely good
-      socketMap.forEach((s) => s.emit("matchUpdated", acc));
     },
-    async playCard(effect, match, acc) {
+    async playCard(effect, match) {
       const { playerId, sourceCardId, sourcePlayerId, cardId } = effect;
 
       socketMap.forEach((s) =>
@@ -362,8 +341,7 @@ export const createEffectHandlerMap = (
           sourceCardId,
           to: { location: "playArea" },
         }),
-        match,
-        acc,
+        match
       );
 
       match.cardsPlayed[sourcePlayerId] ??= [];
@@ -391,8 +369,7 @@ export const createEffectHandlerMap = (
         await cardEffectRunner.runGenerator(
           generator,
           match,
-          reaction.playerId,
-          acc,
+          reaction.playerId
         );
 
         if (reaction.once) {
@@ -515,8 +492,7 @@ export const createEffectHandlerMap = (
               actionButtons,
               prompt: "Choose reaction?",
             }),
-            match,
-            acc,
+            match
           )) as { action: number };
 
           if (result.action === cancelAction) {
@@ -543,8 +519,7 @@ export const createEffectHandlerMap = (
           const reactionResults = await cardEffectRunner.runGenerator(
             reactionGenerator,
             match,
-            selectedReaction.playerId,
-            acc,
+            selectedReaction.playerId
           );
 
           if (selectedReaction.once) {
@@ -566,7 +541,6 @@ export const createEffectHandlerMap = (
         match,
         sourcePlayerId,
         cardId,
-        acc,
         reactionContext,
       );
     },
@@ -693,7 +667,7 @@ export const createEffectHandlerMap = (
         }
       });
     },
-    shuffleDeck(effect: ShuffleDeckEffect, match: Match, acc: MatchUpdate) {
+    shuffleDeck(effect: ShuffleDeckEffect, match: Match) {
       const playerId = effect.playerId;
       console.log(
         `[SHUFFLE DECK EFFECT HANDLER] shuffling deck for ${
@@ -706,23 +680,17 @@ export const createEffectHandlerMap = (
 
       match.playerDecks[playerId] = fisherYatesShuffle(discard).concat(deck);
       match.playerDiscards[playerId] = [];
-
-      acc.playerDecks = {
-        ...acc.playerDecks ?? {},
+    
+      match.playerDecks = {
+        ...match.playerDecks ?? {},
         [playerId]: match.playerDecks[playerId],
       };
-      acc.playerDiscards = {
-        ...acc.playerDiscards ?? {},
+      match.playerDiscards = {
+        ...match.playerDiscards ?? {},
         [playerId]: [],
       };
-
-      // because where a card is on the board, we immediately send an update with the new cards location to
-      // clients to visually update them. normally we'd wait.
-      // TODO: can this go in the effects pipeline? Maybe checking if the effect was a move effect and if
-      // so send the interim update there? Having it here special-cases it and that's rarely good
-      socketMap.forEach((s) => s.emit("matchUpdated", acc));
     },
-    trashCard(effect, match, acc) {
+    trashCard(effect, match) {
       const cardId = effect.cardId;
       const { sourceStore } = findSourceByCardId(cardId, match, cardLibrary);
 
@@ -747,8 +715,7 @@ export const createEffectHandlerMap = (
           toPlayerId: effect.playerId,
           cardId: effect.cardId,
         }),
-        match,
-        acc,
+        match
       );
     },
     userPrompt(effect: UserPromptEffect, match: Match) {
@@ -790,7 +757,7 @@ export const createEffectHandlerMap = (
         }
       });
     },
-    modifyCost(effect, match, _acc) {
+    modifyCost(effect, match) {
       const targets = findOrderedEffectTargets(
         effect.sourcePlayerId,
         effect.appliesTo,

@@ -142,8 +142,7 @@ export type EffectTypes = GameEffects["type"];
 
 export type EffectHandler<T> = (
   effect: Extract<GameEffects, { type: T }>,
-  match: Match,
-  acc: MatchUpdate,
+  match: Match
 ) => EffectHandlerResult;
 
 export type EffectHandlerMap = {
@@ -225,7 +224,6 @@ export interface IEffectRunner {
     match: Match,
     playerId: number,
     cardId: number,
-    acc: MatchUpdate,
     reactionContext?: unknown,
   ): Promise<unknown>;
 
