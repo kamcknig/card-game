@@ -1,12 +1,12 @@
 import { atom, WritableAtom } from 'nanostores';
-import { Player, PlayerID } from 'shared/shared-types';
+import { Player, PlayerId } from 'shared/shared-types';
 
-export const selfPlayerIdStore = atom<PlayerID | undefined>();
+export const selfPlayerIdStore = atom<PlayerId | undefined>();
 
 export const playerIdStore = atom<number[]>([]);
 
-const playerStoreCache: Record<PlayerID, WritableAtom<Player | undefined>> = {};
-export const playerStore = (id: PlayerID) => (playerStoreCache[id] ??= atom<Player | undefined>());
+const playerStoreCache: Record<PlayerId, WritableAtom<Player | undefined>> = {};
+export const playerStore = (id: PlayerId) => (playerStoreCache[id] ??= atom<Player | undefined>());
 
 const playerHandStoreCache: Record<number,  WritableAtom<number[]>> = {};
 export const playerHandStore = (playerId: number) => {

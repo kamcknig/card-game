@@ -1,9 +1,7 @@
 import {Container, Graphics} from 'pixi.js';
 import {cardStore} from '../../state/card-state';
 import {createCardView} from '../../core/card/create-card-view';
-import {app} from '../../core/create-app';
-
-export const displayCardDetail = (cardId: number): void => {
+export const displayCardDetail = (cardId: number, stage: Container): void => {
     const container = new Container();
     container.eventMode = 'static';
     const card = cardStore.get()[cardId];
@@ -14,20 +12,20 @@ export const displayCardDetail = (cardId: number): void => {
     view.eventMode = 'none';
 
     const background = new Graphics()
-        .rect(0, 0, app.renderer.width, app.renderer.height)
+        .rect(0, 0, stage.width, stage.height)
         .fill({
             color: 'black',
             alpha: .6,
         });
 
     container.addChild(background);
-    view.x = Math.floor(app.renderer.width * .5 - view.width * .5);
-    view.y = Math.floor(app.renderer.height * .5 - view.height * .5);
+    view.x = Math.floor(stage.width * .5 - view.width * .5);
+    view.y = Math.floor(stage.height * .5 - view.height * .5);
     container.addChild(view);
-    app.stage.addChild(container);
+    stage.addChild(container);
 
     const onPointerDown = () => {
-        app.stage.removeChild(container);
+        stage.removeChild(container);
     };
     const onRemoved = () => {
         container.off('pointerdown', onPointerDown);

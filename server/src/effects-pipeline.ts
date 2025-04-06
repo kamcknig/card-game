@@ -1,6 +1,6 @@
 import { GameEffects } from './effects/game-effects.ts';
 import { AppSocket, EffectGenerator, EffectHandlerMap, } from './types.ts';
-import { Match, MatchUpdate, PlayerID } from 'shared/shared-types.ts';
+import { Match, MatchUpdate, PlayerId } from 'shared/shared-types.ts';
 import { isUndefined } from 'es-toolkit';
 
 export class EffectsPipeline {
@@ -9,7 +9,7 @@ export class EffectsPipeline {
   constructor(
     private readonly _effectHandlerMap: EffectHandlerMap,
     private readonly match: Match,
-    private readonly _socketMap: Map<PlayerID, AppSocket>,
+    private readonly _socketMap: Map<PlayerId, AppSocket>,
     private readonly _effectCompletedCallback: () => void,
   ) {}
 

@@ -1,6 +1,6 @@
 import { Container, Graphics } from "pixi.js";
 import { createCardView } from "../core/card/create-card-view";
-import { $playAreaStore } from "../state/match-state";
+import { playAreaStore } from "../state/match-state";
 import { cardStore } from "../state/card-state";
 import { List } from "@pixi/ui";
 import { STANDARD_GAP } from '../core/app-contants';
@@ -24,7 +24,7 @@ export class PlayAreaView extends Container {
         this._cardView.y = STANDARD_GAP * 3;
         this.addChild(this._cardView);
 
-        this._cleanup.push($playAreaStore.subscribe(this.drawCards.bind(this)));
+        this._cleanup.push(playAreaStore.subscribe(this.drawCards.bind(this)));
         this.on('removed', this.onRemoved);
     }
 

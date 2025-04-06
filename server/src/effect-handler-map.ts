@@ -2,7 +2,7 @@ import { AppSocket, EffectHandlerMap, IEffectRunner, Reaction, ReactionTemplate,
 import { fisherYatesShuffle } from './utils/fisher-yates-shuffler.ts';
 import { findCards } from './utils/find-cards.ts';
 import { ReactionManager } from './reaction-manager.ts';
-import { Match, MatchUpdate, PlayerID } from 'shared/shared-types.ts';
+import { Match, MatchUpdate, PlayerId } from 'shared/shared-types.ts';
 import { cardLifecycleMap } from './effect-generator-map.ts';
 import { findOrderedEffectTargets } from './utils/find-ordered-effect-targets.ts';
 import { findSourceByCardId } from './utils/find-source-by-card-id.ts';
@@ -21,7 +21,7 @@ import { CardLibrary } from './card-library.ts';
  * and whose values are functions to implement that Effect within the system
  */
 export const createEffectHandlerMap = (
-  socketMap: Map<PlayerID, AppSocket>,
+  socketMap: Map<PlayerId, AppSocket>,
   reactionManager: ReactionManager,
   cardEffectRunner: IEffectRunner,
   interactivityController: CardInteractivityController,

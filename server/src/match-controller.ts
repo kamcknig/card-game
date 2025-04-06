@@ -5,7 +5,7 @@ import {
   MatchConfiguration,
   MatchSummary,
   Player,
-  PlayerID,
+  PlayerId,
   TurnPhaseOrderValues,
 } from 'shared/shared-types.ts';
 import { AppSocket, CardData, EffectHandlerMap, MatchBaseConfiguration, } from './types.ts';
@@ -33,7 +33,7 @@ export class MatchController {
   private _config: MatchConfiguration | undefined;
   private _createCardFn: ((key: CardKey) => Card) | undefined;
 
-  constructor(private readonly _socketMap: Map<PlayerID, AppSocket>) {}
+  constructor(private readonly _socketMap: Map<PlayerId, AppSocket>) {}
 
   public initialize(config: MatchConfiguration, cardData: Record<CardKey, CardData>) {
     this._createCardFn = createCardFactory(cardData);

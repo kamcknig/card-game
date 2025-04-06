@@ -6,7 +6,7 @@ import { atom } from 'nanostores';
 import { CARD_HEIGHT, CARD_WIDTH, SMALL_CARD_WIDTH, STANDARD_GAP } from '../core/app-contants';
 import { PhaseStatus } from './phase-status';
 import { AppButton, createAppButton } from '../core/create-app-button';
-import { $currentPlayerTurnId, $turnPhase } from '../state/turn-state';
+import { $currentPlayerTurnId, turnPhaseStore } from '../state/turn-state';
 import { CardStackView } from './card-stack';
 import { List } from "@pixi/ui";
 
@@ -43,7 +43,7 @@ export class PlayerHandView extends Container {
         this._cleanup.push($currentPlayerTurnId.subscribe(playerId => {
             this._nextPhaseButton.button.visible = playerId === selfPlayerIdStore.get();
         }));
-        this._cleanup.push($turnPhase.subscribe((phase) => {
+        this._cleanup.push(turnPhaseStore.subscribe((phase) => {
             this.removeChild(this._nextPhaseButton.button);
             switch (phase) {
                 case 'action':

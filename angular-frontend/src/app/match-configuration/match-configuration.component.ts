@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { PlayerID } from 'shared/shared-types';
+import { PlayerId } from 'shared/shared-types';
 import { NanostoresService } from '@nanostores/angular';
 import { playerIdStore, selfPlayerIdStore } from '../state/player-state';
 import { combineLatest, map, Observable } from 'rxjs';
@@ -22,7 +22,7 @@ import { gameOwnerIdStore } from '../state/game-state';
   styleUrl: './match-configuration.component.scss'
 })
 export class MatchConfigurationComponent {
-  public $playerIds!: Observable<readonly PlayerID[]>;
+  public $playerIds!: Observable<readonly PlayerId[]>;
   public $expansionList!: Observable<readonly any[]>;
   public $selectedExpansions!: Observable<string[]>;
   public isGameOwner: boolean = false;

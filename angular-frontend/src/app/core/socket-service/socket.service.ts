@@ -1,17 +1,18 @@
-import { Inject, Injectable } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { io, Socket } from 'socket.io-client';
 import { environment } from '../../../environments/environment';
 import { v4 as uuidV4 } from 'uuid';
-import { SocketEventMap, SOCKET_EVENT_MAP } from './socket-event-map';
-import { ClientEmitEvents, ServerEmitEventNames, ServerListenEvents } from 'shared/shared-types';
+import { SocketEventMap } from './socket-event-map';
+import { ClientEmitEvents, ServerEmitEventNames } from 'shared/shared-types';
 
 @Injectable({
   providedIn: 'root',
 })
 export class SocketService {
   private _socket: Socket | undefined;
+  private _socketEventMap: SocketEventMap | undefined
 
-  constructor(@Inject(SOCKET_EVENT_MAP) private _socketEventMap: SocketEventMap) {
+  constructor() {
     console.log('Socket service created');
     let sessionId = localStorage.getItem('sessionId') || uuidV4();
 
@@ -26,10 +27,13 @@ export class SocketService {
 
     this._socket.on('connect_error', this.onConnectError);
     this._socket.on('disconnect', this.onDisconnect);
+  }
 
+  public setEventMap(map: SocketEventMap) {
+    this._socketEventMap = map;
     (Object.keys(this._socketEventMap) as ServerEmitEventNames[]).forEach(eventName => {
       console.log('creating socket handler for event', eventName);
-      const handler = this._socketEventMap[eventName];
+      const handler = this._socketEventMap![eventName];
       this._socket?.on(eventName, this.wrapHandler(eventName, handler));
     });
   }

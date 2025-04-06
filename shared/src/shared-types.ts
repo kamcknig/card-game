@@ -55,61 +55,62 @@ export type Match = {
     playArea: CardId[];
     playerActions: number;
     playerBuys: number;
-    playerDecks: Record<PlayerID, CardId[]>;
-    playerDiscards: Record<PlayerID, CardId[]>;
-    playerHands: Record<PlayerID, CardId[]>;
+    playerDecks: Record<PlayerId, CardId[]>;
+    playerDiscards: Record<PlayerId, CardId[]>;
+    playerHands: Record<PlayerId, CardId[]>;
     playerTreasure: number;
     players: Player[];
-    scores: Record<PlayerID, number>,
-    selectableCards: Record<PlayerID, CardId[]>;
+    scores: Record<PlayerId, number>,
+    selectableCards: Record<PlayerId, CardId[]>;
     supply: CardId[];
     trash: CardId[];
     turnNumber: number;
     turnPhaseIndex: number;
-    cardsPlayed: Record<PlayerID, CardId[]>;
+    cardsPlayed: Record<PlayerId, CardId[]>;
 }
 
 export const TurnPhaseOrderValues = ["action", "buy", "cleanup"] as const;
 export type TurnPhase = typeof TurnPhaseOrderValues[number] | undefined; // Define Effect as a union of all effect classes.
 
-export type CardOverrides = Record<PlayerID, Record<CardId, Card>>;
+export type CardOverrides = Record<PlayerId, Record<CardId, Card>>;
 
 export type ServerEmitEvents = {
     addLogEntry: (logEntry: LogEntry) => void;
     cardEffectsComplete: () => void;
-    doneWaitingForPlayer: (playerId?: number) => void;
+    doneWaitingForPlayer: (playerId?: PlayerId) => void;
     expansionList: (val: any[]) => void;
     matchConfigurationUpdated: (val: MatchConfiguration) => void;
     gameOver: (summary: MatchSummary) => void;
-    gameOwnerUpdated: (playerId: number) => void;
+    gameOwnerUpdated: (playerId: PlayerId) => void;
     matchReady: (match: Match) => void;
     matchStarted: (match: Match) => void;
     matchUpdated: (match: MatchUpdate) => void;
     playerConnected: (player: Player) => void;
     playerDisconnected: (player: Player) => void;
-    playerNameUpdated: (playerId: number, name: string) => void;
-    playerReady: (playerId: number, ready: boolean) => void;
-    scoresUpdated: (scores: Record<number, number>) => void;
-    selectCard: (selectCardArgs: SelectCardEffectArgs & { selectableCardIds: number[] }) => void;
+    playerNameUpdated: (playerId: PlayerId, name: string) => void;
+    playerReady: (playerId: PlayerId, ready: boolean) => void;
+    scoresUpdated: (scores: Record<PlayerId, number>) => void;
+    selectCard: (selectCardArgs: SelectCardEffectArgs & { selectableCardIds: CardId[] }) => void;
     setCardDataOverrides: (overrides: Record<CardId, Partial<Card>> | undefined) => void;
-    setCardLibrary: (cardLibrary: Record<number, Card>) => void;
+    setCardLibrary: (cardLibrary: Record<CardId, Card>) => void;
     setPlayerList: (players: Player[]) => void;
     setPlayer: (player: Player) => void;
     userPrompt: (userPromptArgs: UserPromptEffectArgs) => void;
-    waitingForPlayer: (playerId: number) => void;
+    waitingForPlayer: (playerId: PlayerId) => void;
 }
 export type ServerEmitEventNames = keyof ServerEmitEvents;
 
 export type ServerListenEvents = {
-    cardTapped: (playerId: number, cardId: number) => void;
-    clientReady: (playerId: number, ready: boolean) => void;
+    cardsSelected: (selected: CardId[]) =>void
+    cardTapped: (playerId: PlayerId, cardId: CardId) => void;
+    clientReady: (playerId: PlayerId, ready: boolean) => void;
     expansionSelected: (val: string[]) => void;
     matchConfigurationUpdated: (val: MatchConfiguration) => void;
     nextPhase: () => void;
-    playerReady: (playerId: number, ready: boolean) => void;
-    playAllTreasure: (playerId: number) => void;
-    selectCardResponse: (selectedCards: number[]) => void;
-    updatePlayerName: (playerId: number, name: string) => void;
+    playerReady: (playerId: PlayerId, ready: boolean) => void;
+    playAllTreasure: (playerId: PlayerId) => void;
+    selectCardResponse: (selectedCards: CardId[]) => void;
+    updatePlayerName: (playerId: PlayerId, name: string) => void;
     userPromptResponse: (result: unknown) => void;
 }
 
@@ -133,10 +134,10 @@ export type CostSpec =
     | number;
 
 export type EffectExceptionSpec =
-    | { kind: 'player'; playerIds: number[] };
+    | { kind: 'player'; playerIds: PlayerId[] };
 
 export type PlayerArgs = {
-    id: number;
+    id: PlayerId;
     name: string;
     sessionId: string;
     socketId: string;
@@ -145,7 +146,7 @@ export type PlayerArgs = {
 }
 
 export class Player {
-    id: number;
+    id: PlayerId;
     name: string;
     sessionId: string;
     socketId: string;
@@ -173,7 +174,7 @@ export class Player {
 
 export type MatchSummary = {
     scores: {
-        playerId: number;
+        playerId: PlayerId;
         turnsTaken: number;
         score: number;
         deck: number[];
@@ -232,14 +233,14 @@ const CardTypeValues = [
 export type CardType = typeof CardTypeValues[number] | string;
 
 export type CardArgs = {
-    id: number;
+    id: CardId;
     type: CardType[];
     cardName: string;
     cost: {
         treasure: number;
     };
     abilityText: string;
-    cardKey: string;
+    cardKey: CardKey;
     victoryPoints?: number;
     targetScheme?: EffectTarget;
     expansionName: string;
@@ -249,7 +250,7 @@ export type CardArgs = {
 }
 
 export class Card {
-    id: number;
+    id: CardId;
     cardName: string;
     type: CardType[];
     cost: {
@@ -257,7 +258,7 @@ export class Card {
     };
     victoryPoints: number;
     abilityText: string;
-    cardKey: string;
+    cardKey: CardKey;
     targetScheme?: EffectTarget;
     expansionName: string;
     fullImagePath: string;
@@ -295,17 +296,16 @@ export type ClientListenEventNames = ServerEmitEventNames;
 export interface GameEvents {
     addLogEntry: (logEntry: string) => void;
     cardEffectsComplete: () => void;
-    cardsSelected: (cardIds: number[]) => void;
-    cardTapped: (playerId: number, cardId: number) => void;
-    displayCardDetail: (cardId: number) => void;
-    doneWaitingForPlayer: (playerId?: number) => void;
-    matchStarted: () => void;
+    cardsSelected: (cardIds: CardId[]) => void;
+    cardTapped: (playerId: PlayerId, cardId: CardId) => void;
+    displayCardDetail: (cardId: CardId) => void;
+    doneWaitingForPlayer: (playerId?: PlayerId) => void;
     nextPhase: () => void;
-    playCard: (playerId: number, cardId: number) => void;
+    playCard: (playerId: PlayerId, cardId: CardId) => void;
     selectCard: (selectCardArgs: SelectCardEffectArgs) => void;
     userPrompt: (userPromptArgs: UserPromptEffectArgs) => void;
     userPromptResponse: (confirm: unknown) => void;
-    waitingForPlayer: (playerId: number) => void;
+    waitingForPlayer: (playerId: PlayerId) => void;
 }
 
 export type CardKey = string;
@@ -320,7 +320,7 @@ export type EffectRestrictionSpec = "SELF" | {
     };
     cost?: CostSpec;
 };
-export type PlayerID = number;
+export type PlayerId = number;
 export type CardId = number;
 export type ActionButtons = {
     label: string;

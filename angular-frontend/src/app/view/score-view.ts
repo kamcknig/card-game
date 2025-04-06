@@ -1,6 +1,6 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { playerIdStore, playerScoreStore } from '../state/player-state';
-import { $currentPlayerTurnIndex, playerTurnOrder, $turnNumber } from '../state/turn-state';
+import { currentPlayerTurnIndexStore, playerTurnOrder, turnNumberStore } from '../state/turn-state';
 import { STANDARD_GAP } from '../core/app-contants';
 import { Player } from 'shared/shared-types';
 
@@ -20,8 +20,8 @@ export class ScoreView extends Container {
     this._playerNameContainer.y = this._turnLabel.y + this._turnLabel.height + STANDARD_GAP;
 
     this._cleanup.push(playerTurnOrder.subscribe(this.onPlayersUpdated.bind(this)));
-    this._cleanup.push($currentPlayerTurnIndex.subscribe(this.onPlayerTurnUpdated.bind(this)));
-    this._cleanup.push($turnNumber.subscribe(this.onTurnNumberUpdated.bind(this)));
+    this._cleanup.push(currentPlayerTurnIndexStore.subscribe(this.onPlayerTurnUpdated.bind(this)));
+    this._cleanup.push(turnNumberStore.subscribe(this.onTurnNumberUpdated.bind(this)));
 
     this._cleanup.push(playerIdStore.subscribe(this.onTrackScores));
 

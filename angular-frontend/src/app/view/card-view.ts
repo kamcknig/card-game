@@ -1,5 +1,5 @@
 import { Assets, Container, ContainerChild, Graphics, Sprite, Text, Texture } from 'pixi.js';
-import { $selectableCards, $selectedCards } from '../state/interactive-state';
+import { selectableCardStore, selectedCardStore } from '../state/interactive-state';
 import { Card, CardFacing, CardSize } from 'shared/shared-types';
 import { gameEvents } from '../core/event/events';
 import { batched } from 'nanostores';
@@ -84,7 +84,7 @@ export class CardView extends Container<ContainerChild> {
         this.size  = 'full'
         this.facing = 'front';
 
-        this._cleanup.push(batched([$selectableCards, $selectedCards], (...args) => args).subscribe(this.onDraw));
+        this._cleanup.push(batched([selectableCardStore, selectedCardStore], (...args) => args).subscribe(this.onDraw));
         this._cleanup.push(cardOverrideStore.subscribe(this.onDraw));
 
         this.on('removed', this.onRemoved);
@@ -96,8 +96,8 @@ export class CardView extends Container<ContainerChild> {
     }
 
     private onDraw = () => {
-        const selected = $selectedCards.get();
-        const selectable = $selectableCards.get().filter(s => !selected.includes(s));
+        const selected = selectedCardStore.get();
+        const selectable = selectableCardStore.get().filter(s => !selected.includes(s));
         const overrides = cardOverrideStore.get();
 
         this._highlight.clear();

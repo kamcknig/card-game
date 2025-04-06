@@ -1,6 +1,6 @@
 import { Container, DestroyOptions, Graphics, Text } from 'pixi.js';
 import { batched } from 'nanostores';
-import { $playerActions, $playerBuys, $playerTreasure } from '../state/turn-state';
+import { playerActionsStore, playerBuysStore, playerTreasureStore } from '../state/turn-state';
 import { STANDARD_GAP } from '../core/app-contants';
 
 export class PhaseStatus extends Container {
@@ -22,7 +22,7 @@ export class PhaseStatus extends Container {
       .roundRect(0, 0, 900, 50, 5)
       .fill({color: 0, alpha: .7});
 
-    this._cleanup.push(batched([$playerTreasure, $playerBuys, $playerActions], (treasure, buys, actions) => ({
+    this._cleanup.push(batched([playerTreasureStore, playerBuysStore, playerActionsStore], (treasure, buys, actions) => ({
       treasure,
       buys,
       actions,

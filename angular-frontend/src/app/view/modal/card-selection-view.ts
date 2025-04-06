@@ -7,7 +7,7 @@ import { cardStore } from '../../state/card-state';
 import { isNumber, toNumber } from "es-toolkit/compat";
 import { gameEvents } from '../../core/event/events';
 import { CardView } from '../card-view';
-import { $selectableCards, $selectedCards } from '../../state/interactive-state';
+import { selectableCardStore, selectedCardStore } from '../../state/interactive-state';
 import { validateCountSpec } from '../../shared/validate-count-spec';
 
 export const cardSelectionView = (args: UserPromptEffectArgs) => {
@@ -28,14 +28,14 @@ export const cardSelectionView = (args: UserPromptEffectArgs) => {
 
   const validate = () => {
     if (!cards.selectCount) throw new Error('selectCount cannot be empty');
-    let validated = validateCountSpec(cards.selectCount, $selectedCards.get().length)
+    let validated = validateCountSpec(cards.selectCount, selectedCardStore.get().length)
 
     cardList.emit('validationUpdated', validated);
 
     if (validated) {
       const count = cards.selectCount;
 
-      cardList.emit('resultsUpdated', $selectedCards.get().map(id => newCardToOldCardMap.get(id)));
+      cardList.emit('resultsUpdated', selectedCardStore.get().map(id => newCardToOldCardMap.get(id)));
 
       if (isNumber(count) && count === 1) {
         cardList.emit('finished');
@@ -54,11 +54,11 @@ export const cardSelectionView = (args: UserPromptEffectArgs) => {
     }
     const target = event.target as CardView;
     const cardId = target.card.id;
-    if ($selectedCards.get().includes(cardId)) {
-      $selectedCards.set($selectedCards.get().filter(c => c !== cardId));
+    if (selectedCardStore.get().includes(cardId)) {
+      selectedCardStore.set(selectedCardStore.get().filter(c => c !== cardId));
       target.y = 0;
     } else {
-      $selectedCards.set($selectedCards.get().concat(cardId));
+      selectedCardStore.set(selectedCardStore.get().concat(cardId));
       target.y = -10;
     }
 
@@ -84,7 +84,7 @@ export const cardSelectionView = (args: UserPromptEffectArgs) => {
 
   validate();
 
-  $selectableCards.set(Array.from(newCardToOldCardMap.keys()));
+  selectableCardStore.set(Array.from(newCardToOldCardMap.keys()));
 
   return cardList
 }

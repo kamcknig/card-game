@@ -6,7 +6,7 @@ import { CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP } from '../core/app-contants';
 import { WritableAtom } from 'nanostores';
 import { isUndefined } from 'es-toolkit';
 import { CardView } from './card-view';
-import { $selectedCards } from '../state/interactive-state';
+import { selectedCardStore } from '../state/interactive-state';
 
 export type CardStackArgs = {
   label?: string;
@@ -79,10 +79,10 @@ export class CardStackView extends Container {
     this.addChild(this._cardContainer);
 
     this._cleanup.push(this._$cardIds.subscribe(this.drawDeck));
-    this._cleanup.push($selectedCards.subscribe(this.onSelectedCardsUpdated));
+    this._cleanup.push(selectedCardStore.subscribe(this.onSelectedCardsUpdated));
 
     this._cleanup.push(this._$cardIds.subscribe(this.updateBadgeCount));
-    this._cleanup.push($selectedCards.subscribe(this.updateBadgeCount));
+    this._cleanup.push(selectedCardStore.subscribe(this.updateBadgeCount));
     this.on('removed', this.onRemoved);
   }
 
@@ -119,7 +119,7 @@ export class CardStackView extends Container {
 
   private updateBadgeCount = () => {
     const cardIds = this._$cardIds.get();
-    const selectedCardsIds = $selectedCards.get();
+    const selectedCardsIds = selectedCardStore.get();
     const selectedCardCountInStack = cardIds.filter(e => selectedCardsIds.includes(e)).length;
 
     if (this._showCountBadge && cardIds.length - selectedCardCountInStack > 1) {

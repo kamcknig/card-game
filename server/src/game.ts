@@ -1,5 +1,5 @@
 import { AppSocket } from "./types.ts";
-import { MatchConfiguration, Player, PlayerID } from "shared/shared-types.ts";
+import { MatchConfiguration, Player, PlayerId } from "shared/shared-types.ts";
 import { createNewPlayer } from "./utils/create-new-player.ts";
 import { io } from "./server.ts";
 import { MatchController } from "./match-controller.ts";
@@ -17,7 +17,7 @@ export class Game {
   public owner: Player | undefined;
   public matchStarted: boolean = false;
 
-  private _socketMap: Map<PlayerID, AppSocket> = new Map();
+  private _socketMap: Map<PlayerId, AppSocket> = new Map();
   private _match: MatchController | undefined;
   private _matchConfiguration: MatchConfiguration = defaultMatchConfiguration;
   private _availableExpansion: {

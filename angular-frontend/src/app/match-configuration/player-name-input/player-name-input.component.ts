@@ -1,6 +1,6 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { NanostoresService } from '@nanostores/angular';
-import { Player, PlayerID } from 'shared/shared-types';
+import { Player, PlayerId } from 'shared/shared-types';
 import { debounceTime, Observable, Subject } from 'rxjs';
 import { AsyncPipe, NgIf } from '@angular/common';
 import { playerStore, selfPlayerIdStore } from 'src/app/state/player-state';
@@ -41,10 +41,10 @@ import { SocketService } from '../../core/socket-service/socket.service';
   `
 })
 export class PlayerComponent implements OnInit {
-  @Input() playerId!: PlayerID;
+  @Input() playerId!: PlayerId;
   $player!: Observable<Player | undefined>;
 
-  $selfId!: Observable<PlayerID | undefined>;
+  $selfId!: Observable<PlayerId | undefined>;
 
   private nameInput$ = new Subject<string>();
 

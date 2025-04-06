@@ -1,6 +1,6 @@
 import { AppSocket } from './types.ts';
 import { CardEffectController } from './card-effects-controller.ts';
-import { Card, CardId, Match, Player, PlayerID, TurnPhaseOrderValues } from 'shared/shared-types.ts';
+import { Card, CardId, Match, Player, PlayerId, TurnPhaseOrderValues } from 'shared/shared-types.ts';
 import { isUndefined } from 'es-toolkit/compat';
 import { getEffectiveCardCost } from './utils/get-effective-card-cost.ts';
 import { CardLibrary } from './card-library.ts';
@@ -11,7 +11,7 @@ export class CardInteractivityController {
   constructor(
     private readonly _cardEffectController: CardEffectController,
     private readonly match: Match,
-    private readonly _socketMap: Map<PlayerID, AppSocket>,
+    private readonly _socketMap: Map<PlayerId, AppSocket>,
     private readonly _cardLibrary: CardLibrary,
     private readonly _cardTapCompleteCallback: (card: Card, player?: Player) => void,
   ) {
@@ -194,6 +194,6 @@ export class CardInteractivityController {
     match.selectableCards = match.players.reduce((prev, { id}) => {
       prev[id] = id === currentPlayer.id ? selectableCards : [];
       return prev;
-    }, {} as Record<PlayerID, CardId[]>)
+    }, {} as Record<PlayerId, CardId[]>)
   }
 }

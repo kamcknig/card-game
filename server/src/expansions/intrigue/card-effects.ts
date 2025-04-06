@@ -12,7 +12,7 @@ import { MoveCardEffect } from "../../effects/move-card.ts";
 import { CardExpansionModule } from "../card-expansion-module.ts";
 import { getPlayerById } from "../../utils/get-player-by-id.ts";
 import { TrashCardEffect } from "../../effects/trash-card.ts";
-import { ActionButtons, Card, CardId, PlayerID } from "shared/shared-types.ts";
+import { ActionButtons, Card, CardId, PlayerId } from "shared/shared-types.ts";
 import { findOrderedEffectTargets } from "../../utils/find-ordered-effect-targets.ts";
 import { handlers } from "https://deno.land/x/socket_io@0.2.1/test_deps.ts";
 
@@ -534,7 +534,7 @@ const expansionModule: CardExpansionModule = {
       const targets = findOrderedEffectTargets(triggerPlayerId, "ALL", match)
         .filter((playerId) => match.playerHands[playerId].length > 0);
 
-      const playerCardMap = new Map<PlayerID, CardId>();
+      const playerCardMap = new Map<PlayerId, CardId>();
       for (const playerId of targets) {
         const cardIds = (yield new SelectCardEffect({
           prompt: "Confirm pass",
