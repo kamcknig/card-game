@@ -3,7 +3,10 @@ import { Slider } from '@pixi/ui';
 import { UserPromptEffectArgs } from 'shared/shared-types';
 import { STANDARD_GAP } from '../../core/app-contants';
 
-export const cardBlindRearrangeView = (cards: UserPromptEffectArgs['content']['cards']) => {
+export const cardBlindRearrangeView = (args: UserPromptEffectArgs) => {
+  if (!args.content?.cards) throw new Error('Cards cannot be empty');
+  const cards = args.content.cards;
+
   if (cards.action !== 'blind-rearrange') {
     throw new Error('Card action type is not blind-rearrange');
   }

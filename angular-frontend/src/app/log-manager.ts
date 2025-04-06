@@ -1,18 +1,18 @@
 import { LogEntry } from 'shared/shared-types';
-import { $cardsById } from './state/card-state';
-import { $player, $selfPlayerId } from './state/player-state';
+import { cardStore } from './state/card-state';
+import { playerStore, selfPlayerIdStore } from './state/player-state';
 import { gameEvents } from './core/event/events';
 
 export const logManager = {
   addLogEntry: (logEntry: LogEntry) => {
     let msg: string;
     const playerSourceId = logEntry.playerSourceId;
-    const cardsById = $cardsById.get();
-    const selfId = $selfPlayerId.get();
-    
+    const cardsById = cardStore.get();
+    const selfId = selfPlayerIdStore.get();
+
     switch (logEntry.type) {
       case 'draw': {
-        const playerName = $player(playerSourceId).get()?.name;
+        const playerName = playerStore(playerSourceId).get()?.name;
         const cardName = cardsById[logEntry.cardId]?.cardName;
         if (selfId === playerSourceId) {
           msg = `You drew a ${cardName}`;
@@ -22,7 +22,7 @@ export const logManager = {
         break;
       }
       case 'discard': {
-        const playerName = $player(playerSourceId).get()?.name;
+        const playerName = playerStore(playerSourceId).get()?.name;
         const cardName = cardsById[logEntry.cardId]?.cardName;
         if (selfId === playerSourceId) {
           msg = `You discarded a ${cardName}`;
@@ -32,7 +32,7 @@ export const logManager = {
         break;
       }
       case 'gainBuy': {
-        const playerName = $player(playerSourceId).get()?.name;
+        const playerName = playerStore(playerSourceId).get()?.name;
         if (selfId === playerSourceId) {
           msg = `You gained ${logEntry.count} buy/s`;
         } else {
@@ -41,7 +41,7 @@ export const logManager = {
         break;
       }
       case 'gainTreasure': {
-        const playerName = $player(playerSourceId).get()?.name;
+        const playerName = playerStore(playerSourceId).get()?.name;
         if (selfId === playerSourceId) {
           msg = `You gained ${logEntry.count} treasure`;
         } else {
@@ -50,7 +50,7 @@ export const logManager = {
         break;
       }
       case 'gainAction': {
-        const playerName = $player(playerSourceId).get()?.name;
+        const playerName = playerStore(playerSourceId).get()?.name;
         if (selfId === playerSourceId) {
           msg = `You gained ${logEntry.count} action/s`;
         } else {
@@ -59,7 +59,7 @@ export const logManager = {
         break;
       }
       case 'gainCard': {
-        const playerName = $player(playerSourceId).get()?.name;
+        const playerName = playerStore(playerSourceId).get()?.name;
         const cardName = cardsById[logEntry.cardId]?.cardName;
         if (selfId === playerSourceId) {
           msg = `You gained a ${cardName}`;
@@ -69,7 +69,7 @@ export const logManager = {
         break;
       }
       case 'playCard': {
-        const playerName = $player(playerSourceId).get()?.name;
+        const playerName = playerStore(playerSourceId).get()?.name;
         const cardName = cardsById[logEntry.cardId].cardName;
         if (selfId === playerSourceId) {
           msg = `You played a ${cardName}`;
@@ -79,7 +79,7 @@ export const logManager = {
         break;
       }
       case 'revealCard': {
-        const playerName = $player(playerSourceId).get()?.name;
+        const playerName = playerStore(playerSourceId).get()?.name;
         const cardName = cardsById[logEntry.cardId]?.cardName;
         if (selfId === playerSourceId) {
           msg = `You revealed a ${cardName}`;
@@ -89,7 +89,7 @@ export const logManager = {
         break;
       }
       case 'trashCard': {
-        const playerName = $player(playerSourceId).get()?.name;
+        const playerName = playerStore(playerSourceId).get()?.name;
         const cardName = cardsById[logEntry.cardId]?.cardName;
         if (selfId === playerSourceId) {
           msg = `You trashed a ${cardName}`;
@@ -99,7 +99,7 @@ export const logManager = {
         break;
       }
     }
-    
+
     if (!msg) return;
     gameEvents.emit('addLogEntry', msg);
   }

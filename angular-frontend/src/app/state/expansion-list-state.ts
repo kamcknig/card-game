@@ -1,3 +1,3 @@
 import { atom } from 'nanostores';
 
-export const $expansionList = atom([]);
+export const expansionListStore = atom<any[]>([]);

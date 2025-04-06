@@ -3,7 +3,7 @@ import { $selectableCards, $selectedCards } from '../state/interactive-state';
 import { Card, CardFacing, CardSize } from 'shared/shared-types';
 import { gameEvents } from '../core/event/events';
 import { batched } from 'nanostores';
-import { $cardOverrides } from '../state/card-state';
+import { cardOverrideStore } from '../state/card-state';
 
 type CardArgs = Card;
 
@@ -17,14 +17,14 @@ export class CardView extends Container<ContainerChild> {
     private readonly _cardView: Sprite = new Sprite({label: 'caredView'});
     private readonly _costView: Container = new Container({label: 'costView'});
     private readonly _cleanup: (() => void)[] = [];
-    
+
     private _frontImage: Texture;
     private _backImage: Texture;
     private _facing: CardFacing = 'back';
     private _size: CardSize = 'full';
-    
+
     public card: Card;
-    
+
     public set facing(value: CardFacing) {
         if ((value === 'front' && !this._frontImage) || (value === 'back' && !this._backImage)) return;
         this._cardView.texture = value === 'front' ? this._frontImage : this._backImage;
@@ -49,16 +49,17 @@ export class CardView extends Container<ContainerChild> {
 
     constructor({ size, facing, ...card }: CardArgs & CardViewArgs) {
         super();
-        
+
         this.card = card;
-        
+
         this.label = `${card.cardKey}-${card.id}`;
-        
+
         this.eventMode = 'static';
 
         this.addChild(this._highlight);
         this.addChild(this._cardView);
 
+        this._frontImage = Assets.get(`${this.card.cardKey}-full`);
         this._backImage = Assets.get('card-back-full');
         this._backImage.label = 'backImageSprite';
 
@@ -66,7 +67,7 @@ export class CardView extends Container<ContainerChild> {
         const maxSide = 32;
         costBgSprite.scale = Math.min(maxSide / costBgSprite.width, maxSide / costBgSprite.height);
         this._costView.addChild(costBgSprite);
-        
+
         const costText = new Text({
             label: 'costText',
             text: card.cost.treasure,
@@ -79,13 +80,13 @@ export class CardView extends Container<ContainerChild> {
         costText.y = Math.floor(costBgSprite.height * .5);
         this._costView.addChild(costText);
         this.addChild(this._costView)
-        
+
         this.size  = 'full'
         this.facing = 'front';
 
         this._cleanup.push(batched([$selectableCards, $selectedCards], (...args) => args).subscribe(this.onDraw));
-        this._cleanup.push($cardOverrides.subscribe(this.onDraw));
-        
+        this._cleanup.push(cardOverrideStore.subscribe(this.onDraw));
+
         this.on('removed', this.onRemoved);
     }
 
@@ -93,12 +94,12 @@ export class CardView extends Container<ContainerChild> {
         this._cleanup.forEach(cb => cb());
         this.off('removed');
     }
-    
+
     private onDraw = () => {
         const selected = $selectedCards.get();
         const selectable = $selectableCards.get().filter(s => !selected.includes(s));
-        const overrides = $cardOverrides.get();
-        
+        const overrides = cardOverrideStore.get();
+
         this._highlight.clear();
         for (const cardId of selectable) {
             if (cardId === this.card.id) {
@@ -114,12 +115,12 @@ export class CardView extends Container<ContainerChild> {
                   .fill(0x6DFF8C);
             }
         }
-        
+
         const costText = this._costView.getChildByLabel('costText') as Text;
         if (costText) {
             costText.text = overrides?.[this.card.id]?.cost?.treasure ?? this.card.cost.treasure;
         }
-        
+
         this._costView.x = 2;
         this._costView.y = this._cardView.y + this._cardView.height - this._costView.height - 5 ;
         this._costView.visible = this.facing === 'front';

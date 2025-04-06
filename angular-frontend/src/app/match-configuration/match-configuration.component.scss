@@ -22,50 +22,14 @@
   gap: 16px;                   /* STANDARD_GAP analogue */
 }
 
-/* ——— Player items ———————————————————— */
-.player-item {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.player-name {
-  font-size: 24px;
-  min-width: 200px;
-  padding: 4px 8px;
-}
-
-.player-name.editable {
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-/* checkbox look‑alike (pure CSS) */
-.ready {
-  position: relative;
-}
-.ready input {
-  opacity: 0;                  /* hide real checkbox */
-  width: 20px;
-  height: 20px;
-  margin: 0;
-  cursor: pointer;
-}
-.checkbox-ui {
-  position: absolute;
-  inset: 0;
-  border: 2px solid #555;
-  border-radius: 4px;
-}
-.ready input:checked + .checkbox-ui::after {
-  content: '';
-  position: absolute;
-  inset: 4px;
-  background: #555;
-}
-
 /* ——— Expansion items ———————————————— */
+.expansion-icon {
+  width: 32px;
+  height: auto;
+  display: inline-block;
+  object-fit: contain;
+}
+
 .expansion-item {
   display: flex;
   align-items: center;
@@ -73,19 +37,7 @@
   cursor: default;             /* will become pointer when you add logic */
 }
 
-.expansion-icon {
-  width: 25px;
-  height: 25px;
-  background: #d0d0d0;         /* placeholder colour */
-  border-radius: 4px;
-}
-
-.expansion-item.selected .expansion-icon {
-  outline: 2px solid #fff;     /* highlight border */
-  outline-offset: -3px;
-}
-
-.expansion-title {
-  font-size: 24px;
-  color: #000;
+.expansion-item.selected {
+  outline: 2px solid #000000;     /* highlight border */
+  outline-offset: 5px;
 }

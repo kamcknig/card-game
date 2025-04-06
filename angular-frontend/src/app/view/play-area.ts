@@ -1,7 +1,7 @@
 import { Container, Graphics } from "pixi.js";
 import { createCardView } from "../core/card/create-card-view";
 import { $playAreaStore } from "../state/match-state";
-import { $cardsById } from "../state/card-state";
+import { cardStore } from "../state/card-state";
 import { List } from "@pixi/ui";
 import { STANDARD_GAP } from '../core/app-contants';
 
@@ -35,7 +35,7 @@ export class PlayAreaView extends Container {
 
     private drawCards(val: ReadonlyArray<number>) {
         this._cardView.removeChildren();
-        const cards = val.concat().map(id => $cardsById.get()[id]);
+        const cards = val.concat().map(id => cardStore.get()[id]);
         for (const card of cards) {
             const view = this._cardView.addChild(createCardView(card));
             view.size = 'full';

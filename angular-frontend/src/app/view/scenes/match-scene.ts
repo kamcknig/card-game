@@ -1,22 +1,21 @@
-import { Assets, Container, Graphics, Sprite, Text } from 'pixi.js';
+import { Application, Assets, Container, Graphics, Sprite, Text } from 'pixi.js';
 import { Scene } from '../../core/scene/scene';
 import { PlayerHandView } from '../player-hand';
 import { AppButton, createAppButton } from '../../core/create-app-button';
-import { $supplyStore, $trashStore } from '../../state/match-state';
-import { app } from '../../core/create-app';
+import { $trashStore, supplyStore } from '../../state/match-state';
 import {
-  $player,
-  $playerDeckStore,
-  $playerDiscardStore,
-  $playerHandStore,
-  $selfPlayerId
+  playerDeckStore,
+  playerDiscardStore,
+  playerHandStore,
+  playerStore,
+  selfPlayerIdStore
 } from '../../state/player-state';
 import { gameEvents } from '../../core/event/events';
 import { PlayAreaView } from '../play-area';
 import { KingdomSupplyView } from '../kingdom-supply';
 import { PileView } from '../pile';
-import { $cardsById } from '../../state/card-state';
-import { Card, CardId, CardKey, SelectCardEffectArgs, UserPromptEffectArgs } from 'shared/shared-types';
+import { cardStore } from '../../state/card-state';
+import { Card, CardKey, PlayerID, SelectCardEffectArgs, UserPromptEffectArgs } from 'shared/shared-types';
 import { $runningCardActions, $selectableCards, $selectedCards } from '../../state/interactive-state';
 import { CardView } from '../card-view';
 import { userPromptModal } from '../modal/user-prompt-modal';
@@ -28,13 +27,13 @@ import { validateCountSpec } from '../../shared/validate-count-spec';
 import { CardStackView } from '../card-stack';
 import { displayTrash } from '../modal/display-trash';
 import { $currentPlayerTurnId, $turnPhase } from '../../state/turn-state';
-import { socket } from '../../core/client-socket';
 import { isNumber, isUndefined } from 'es-toolkit/compat';
 import { AppList } from '../app-list';
 import { $gamePaused } from '../../state/game-state';
+import { SocketService } from '../../core/socket-service/socket.service';
 
 export class MatchScene extends Scene {
-  private _doneSelectingBtn: Container;
+  private _doneSelectingBtn: Container | undefined;
   private _board: Container = new Container();
   private _baseSupply: Container = new Container();
   private _playerHand: PlayerHandView | undefined;
@@ -47,19 +46,23 @@ export class MatchScene extends Scene {
   private _scoreView: ScoreView = new ScoreView();
   private _gameLog: GameLogView = new GameLogView();
   private _selecting: boolean = false;
-  private _playAllTreasuresButton: AppButton;
+  private _playAllTreasuresButton: AppButton = createAppButton(
+    { text: 'PLAY ALL TREASURES', style: { fill: 'white', fontSize: 24 } }
+  );
+  private _selfId: PlayerID = selfPlayerIdStore.get()!;
 
   private get uiInteractive(): boolean {
     return !this._selecting && !$runningCardActions.get();
   }
 
-  constructor(stage: Container) {
+  constructor(stage: Container, private _socketService: SocketService, private app: Application) {
     super(stage);
 
+    if (!this._selfId) throw new Error('self id not set in match scene');
     this.on('removed', this.onRemoved);
   }
 
-  async initialize() {
+  override async initialize() {
     super.initialize();
 
     await this.loadAssets();
@@ -68,18 +71,15 @@ export class MatchScene extends Scene {
     this.createGameLog();
     this.createScoreView();
 
-    this._playAllTreasuresButton = createAppButton(
-      { text: 'PLAY ALL TREASURES', style: { fill: 'white', fontSize: 24 } }
-    );
     this._playAllTreasuresButton.button.label = 'playAllTreasureButton';
     this._playAllTreasuresButton.button.visible = false;
     this._playAllTreasuresButton.button.on('pointerdown', () => {
-      socket.emit('playAllTreasure', $selfPlayerId.get());
+      this._socketService.emit('playAllTreasure', this._selfId);
     });
     this.addChild(this._playAllTreasuresButton.button);
 
-    this._cleanup.push($supplyStore.subscribe(this.drawBaseSupply));
-    app.renderer.on('resize', this.onRendererResize);
+    this._cleanup.push(supplyStore.subscribe(this.drawBaseSupply));
+    this.app.renderer.on('resize', this.onRendererResize);
     gameEvents.on('matchStarted', this.onMatchStarted);
     gameEvents.on('selectCard', this.doSelectCards);
     gameEvents.on('userPrompt', this.onUserPrompt);
@@ -88,24 +88,25 @@ export class MatchScene extends Scene {
     gameEvents.on('doneWaitingForPlayer', this.onDoneWaitingForPlayer);
 
     this._cleanup.push(() => {
-      app.renderer.off('resize');
+      this.app.renderer.off('resize');
       gameEvents.off('matchStarted');
       gameEvents.off('selectCard');
       gameEvents.off('userPrompt');
       gameEvents.off('displayCardDetail');
       gameEvents.off('waitingForPlayer');
       gameEvents.off('doneWaitingForPlayer');
-      this._playAllTreasuresButton.button.off('pointerdown');
+      this._playAllTreasuresButton?.button.off('pointerdown');
     });
 
     this._cleanup.push($currentPlayerTurnId.subscribe(this.onCurrentPlayerTurnUpdated));
     this._cleanup.push($gamePaused.subscribe(this.onPauseGameUpdated));
     this._cleanup.push($turnPhase.subscribe(this.onTurnPhaseUpdated));
-    this._cleanup.push($playerHandStore($selfPlayerId.get()).subscribe(this.onTurnPhaseUpdated));
+
+    this._cleanup.push(playerHandStore(this._selfId).subscribe(this.onTurnPhaseUpdated));
 
     setTimeout(() => {
       this.onRendererResize();
-      socket.emit('clientReady', $selfPlayerId.get(), true);
+      this._socketService.emit('clientReady', selfPlayerIdStore.get()!, true);
     });
   }
 
@@ -113,7 +114,7 @@ export class MatchScene extends Scene {
     if (paused) {
       const c = new Container({ label: 'pause' });
       const g = new Graphics({ label: 'pause' });
-      g.rect(0, 0, app.renderer.width, app.renderer.height)
+      g.rect(0, 0, this.app.renderer.width, this.app.renderer.height)
         .fill({ color: 'black', alpha: .5 });
       c.addChild(g);
 
@@ -123,8 +124,8 @@ export class MatchScene extends Scene {
         anchor: .5
       });
 
-      t.x = Math.floor(app.renderer.width * .5);
-      t.y = Math.floor(app.renderer.height * .5);
+      t.x = Math.floor(this.app.renderer.width * .5);
+      t.y = Math.floor(this.app.renderer.height * .5);
       c.addChild(t);
       this.addChild(c);
       return;
@@ -135,9 +136,9 @@ export class MatchScene extends Scene {
   }
 
   private onCurrentPlayerTurnUpdated = (playerId: number) => {
-    document.title = `Dominion - ${$player(playerId).get()?.name}`;
+    document.title = `Dominion - ${playerStore(playerId).get()?.name}`;
 
-    if (playerId !== $selfPlayerId.get()) return;
+    if (playerId !== selfPlayerIdStore.get()) return;
 
     try {
       const s = new Audio(`./assets/sounds/your-turn.mp3`);
@@ -152,20 +153,19 @@ export class MatchScene extends Scene {
     const phase = $turnPhase.get();
     if (isUndefined(phase)) return;
 
-    const playerHand = $playerHandStore($selfPlayerId.get())
-      .get();
+    const playerHand = playerHandStore(this._selfId).get();
 
-    this._playAllTreasuresButton.button.visible = !!(
+    this._playAllTreasuresButton.button.visible = (
       phase === 'buy' &&
-      $currentPlayerTurnId.get() === $selfPlayerId.get() &&
-      playerHand.some(cardId => $cardsById.get()[cardId].type.includes('TREASURE'))
+      $currentPlayerTurnId.get() === this._selfId &&
+      playerHand.some(cardId => cardStore.get()[cardId].type.includes('TREASURE'))
     );
   }
 
   private async loadAssets() {
     const c = new Container();
     const g = c.addChild(new Graphics());
-    g.rect(0, 0, app.renderer.width, app.renderer.height)
+    g.rect(0, 0, this.app.renderer.width, this.app.renderer.height)
       .fill({ color: 'black', alpha: .6 });
     let ellipsisCount = 0;
     const t = new Text({
@@ -174,8 +174,8 @@ export class MatchScene extends Scene {
         fontSize: 24,
         fill: 'white',
       },
-      x: app.renderer.width * .5,
-      y: app.renderer.height * .5,
+      x: this.app.renderer.width * .5,
+      y: this.app.renderer.height * .5,
       anchor: .5
     });
     c.addChild(t);
@@ -201,14 +201,14 @@ export class MatchScene extends Scene {
     this._playArea = this.addChild(new PlayAreaView());
 
     this._deck = new CardStackView({
-      $cardIds: $playerDeckStore($selfPlayerId.get()),
+      $cardIds: playerDeckStore(this._selfId),
       label: 'DECK',
       cardFacing: 'back'
     });
     this.addChild(this._deck);
 
     this._discard = new CardStackView({
-      $cardIds: $playerDiscardStore($selfPlayerId.get()),
+      $cardIds: playerDiscardStore(this._selfId),
       label: 'DISCARD',
       cardFacing: 'front'
     });
@@ -222,11 +222,11 @@ export class MatchScene extends Scene {
     this.addChild(this._trash);
     this._trash.eventMode = 'static';
     this._trash.on('pointerdown', this.onTrashPressed);
-    this._cleanup.push(() => this._trash.off('pointerdown', this.onTrashPressed));
+    this._cleanup.push(() => this._trash?.off('pointerdown', this.onTrashPressed));
 
-    this._playerHand = new PlayerHandView($selfPlayerId.get());
+    this._playerHand = new PlayerHandView(this._selfId);
     this._playerHand.on('nextPhase', this.onNextPhasePressed);
-    this._cleanup.push(() => this._playerHand.off('nextPhase', this.onNextPhasePressed));
+    this._cleanup.push(() => this._playerHand?.off('nextPhase', this.onNextPhasePressed));
     this.addChild(this._playerHand);
   }
 
@@ -264,7 +264,7 @@ export class MatchScene extends Scene {
   }
 
   private onWaitingOnPlayer = (playerId: number) => {
-    if (playerId === $selfPlayerId.get()) {
+    if (playerId === this._selfId) {
       try {
         const s = new Audio(`./assets/sounds/your-turn.mp3`);
         s.volume = .2;
@@ -277,7 +277,7 @@ export class MatchScene extends Scene {
     const c = new Container({ label: 'waitingOnPlayer' });
 
     const t = new Text({
-      text: `Waiting for ${$player(playerId).get().name}`,
+      text: `Waiting for ${playerStore(playerId).get()?.name}`,
       style: {
         fontSize: 36,
         fill: 'white',
@@ -295,8 +295,8 @@ export class MatchScene extends Scene {
     c.addChild(t);
 
     this.addChild(c);
-    c.x = app.renderer.width * .5 - c.width * .5;
-    c.y = app.renderer.height * .5 - c.height * .5;
+    c.x = this.app.renderer.width * .5 - c.width * .5;
+    c.y = this.app.renderer.height * .5 - c.height * .5;
   }
 
   private onDoneWaitingForPlayer = () => {
@@ -341,18 +341,18 @@ export class MatchScene extends Scene {
     button.button.label = 'doneSelectingButton';
     this._doneSelectingBtn = new AppList({ type: 'horizontal', elementsMargin: STANDARD_GAP, padding: STANDARD_GAP });
     this._doneSelectingBtn.eventMode = 'static';
-    this._doneSelectingBtn.y = this._playArea.y + this._playArea.height + STANDARD_GAP;
+    this._doneSelectingBtn.y = (this._playArea?.y ?? 0) + (this._playArea?.height ?? 0) + STANDARD_GAP;
     this._doneSelectingBtn.addChild(button.button);
 
-    const count = isNumber(arg.count) ? arg.count : (!isNumber(arg.count) ? arg.count.count : NaN);
-    if (isNaN(count)) {
+    const count = isNumber(arg.count) ? arg.count : (!isNumber(arg.count) ? arg.count?.count : NaN);
+    if (count === undefined || isNaN(count)) {
       throw new Error(`Selection count couldn't be determined`);
     }
 
     if (count > 1) {
       const c = new Container({ label: 'cardCountContainer' });
 
-      let s: Sprite;
+      let s: Sprite | undefined = undefined;
       console.warn('very hacky way of getting this icon');
       if (arg.prompt.includes('trash')) {
         s = Sprite.from(await Assets.load(`./assets/ui-icons/trash-card-count.png`));
@@ -387,13 +387,13 @@ export class MatchScene extends Scene {
     }
 
     this._doneSelectingBtn.x = Math.floor(
-      this._playerHand.x + this._playerHand.width * .5 - this._doneSelectingBtn.width * .5
+      (this._playerHand?.x ?? 0) + (this._playerHand?.width ?? 0) * .5 - this._doneSelectingBtn.width * .5
     );
-    this._doneSelectingBtn.y = Math.floor(this._playerHand.y - this._doneSelectingBtn.height - STANDARD_GAP);
+    this._doneSelectingBtn.y = Math.floor((this._playerHand?.y ?? 0) - this._doneSelectingBtn.height - STANDARD_GAP);
 
     const doneListener = () => {
-      this._doneSelectingBtn.off('pointerdown', doneListener);
-      this.removeChild(this._doneSelectingBtn);
+      this._doneSelectingBtn?.off('pointerdown', doneListener);
+      this._doneSelectingBtn?.removeFromParent();
       selectedCardsListenerCleanup();
       gameEvents.emit('cardsSelected', $selectedCards.get());
       this._selecting = false;
@@ -405,6 +405,11 @@ export class MatchScene extends Scene {
 
     const validate = (selectedCards: readonly number[]) => {
       // if they are valid, allow button press
+      if (arg.count === undefined) {
+        console.warn('arg.count is undefined, not validating');
+        return;
+      }
+
       if (validateCountSpec(arg.count, selectedCards?.length ?? 0)) {
         if (!isUndefined(arg.validPrompt) && selectedCards?.length > 0) {
           button.text(arg.validPrompt);
@@ -412,8 +417,13 @@ export class MatchScene extends Scene {
           button.text(arg.prompt);
         }
 
-        this._doneSelectingBtn.getChildByLabel('doneSelectingButton').alpha = 1;
-        this._doneSelectingBtn.on('pointerdown', doneListener);
+        if (this._doneSelectingBtn) {
+          const b = this._doneSelectingBtn.getChildByLabel('doneSelectingButton');
+          if (b) {
+            b.alpha = 1;
+          }
+          this._doneSelectingBtn.on('pointerdown', doneListener);
+        }
 
         if (isNumber(arg.count)) {
           if (arg.count === $selectedCards.get().length) doneListener();
@@ -421,16 +431,21 @@ export class MatchScene extends Scene {
 
       } else {
         button.text(arg.prompt);
-        this._doneSelectingBtn.getChildByLabel('doneSelectingButton').alpha = .6;
-        this._doneSelectingBtn.off('pointerdown', doneListener);
+        if (this._doneSelectingBtn) {
+          const b = this._doneSelectingBtn.getChildByLabel('doneSelectingButton');
+          if (b) {
+            b.alpha = .6;
+          }
+          this._doneSelectingBtn.off('pointerdown', doneListener);
+        }
       }
     };
 
     // listen for cards being selected
     const selectedCardsListenerCleanup = $selectedCards.subscribe(cardIds => {
-      this._doneSelectingBtn.off('pointerdown', doneListener);
+      this._doneSelectingBtn?.off('pointerdown', doneListener);
 
-      const countText = this._doneSelectingBtn.getChildByLabel('cardCountContainer')
+      const countText = this._doneSelectingBtn?.getChildByLabel('cardCountContainer')
         ?.getChildByLabel('count') as Text;
 
       if (countText) {
@@ -490,7 +505,7 @@ export class MatchScene extends Scene {
           $runningCardActions.set(false);
         }
         gameEvents.on('cardEffectsComplete', updated);
-        gameEvents.emit('cardTapped', $selfPlayerId.get(), cardId);
+        gameEvents.emit('cardTapped', this._selfId, cardId);
       }
     }
   }
@@ -502,7 +517,7 @@ export class MatchScene extends Scene {
 
     this._baseSupply.removeChildren();
 
-    const cards = newVal.map(id => $cardsById.get()[id]);
+    const cards = newVal.map(id => cardStore.get()[id]);
 
     // first reduces and then gets teh values to make an array of Card arrays, then reduces again
     // into a tuple whose first element is an array of piles of victory cards and the curse, and the 2nd
@@ -537,7 +552,7 @@ export class MatchScene extends Scene {
   }
 
   private onRendererResize = (): void => {
-    this._gameLog.x = app.renderer.width - this._gameLog.width - STANDARD_GAP;
+    this._gameLog.x = this.app.renderer.width - this._gameLog.width - STANDARD_GAP;
     this._gameLog.y = STANDARD_GAP;
 
     this._scoreView.x = STANDARD_GAP;
@@ -546,25 +561,37 @@ export class MatchScene extends Scene {
     this._baseSupply.y = STANDARD_GAP;
     this._baseSupply.x = this._scoreView.x + this._scoreView.width + STANDARD_GAP;
 
-    this._kingdomView.y = STANDARD_GAP;
-    this._kingdomView.x = this._baseSupply.x + this._baseSupply.width + STANDARD_GAP;
+    if (this._kingdomView) {
+      this._kingdomView.y = STANDARD_GAP;
+      this._kingdomView.x = this._baseSupply.x + this._baseSupply.width + STANDARD_GAP;
+    }
 
-    this._playerHand.x = app.renderer.width * .5 - this._playerHand.getLocalBounds().width * .5;
-    this._playerHand.y = app.renderer.height - this._playerHand.getLocalBounds().height;
+    if (this._playerHand) {
+      this._playerHand.x = this.app.renderer.width * .5 - this._playerHand.getLocalBounds().width * .5;
+      this._playerHand.y = this.app.renderer.height - this._playerHand.getLocalBounds().height;
 
-    this._playAllTreasuresButton.button.x = this._playerHand.x + this._playerHand.width * .5 - this._playAllTreasuresButton.button.width * .5;
-    this._playAllTreasuresButton.button.y = this._playerHand.y - this._playAllTreasuresButton.button.height - STANDARD_GAP;
+      this._playAllTreasuresButton.button.x = this._playerHand.x + this._playerHand.width * .5 - this._playAllTreasuresButton.button.width * .5;
+      this._playAllTreasuresButton.button.y = this._playerHand.y - this._playAllTreasuresButton.button.height - STANDARD_GAP;
 
-    this._playArea.x = this._playerHand.x + this._playerHand.width * .5 - this._playArea.width * .5;
-    this._playArea.y = this._playerHand.y - this._playArea.height - 75;
+      if (this._playArea) {
+        this._playArea.x = this._playerHand.x + this._playerHand.width * .5 - this._playArea.width * .5;
+        this._playArea.y = this._playerHand.y - this._playArea.height - 75;
+      }
 
-    this._discard.y = app.renderer.height - CARD_HEIGHT * .75;
-    this._discard.x = this._playerHand.x - this._discard.width - STANDARD_GAP;
+      if (this._discard) {
+        this._discard.y = this.app.renderer.height - CARD_HEIGHT * .75;
+        this._discard.x = this._playerHand.x - this._discard.width - STANDARD_GAP;
+      }
 
-    this._deck.y = app.renderer.height - CARD_HEIGHT * .75;
-    this._deck.x = this._discard.x - this._deck.width - STANDARD_GAP;
+      if (this._deck && this._discard) {
+        this._deck.y = this.app.renderer.height - CARD_HEIGHT * .75;
+        this._deck.x = this._discard.x - this._deck.width - STANDARD_GAP;
 
-    this._trash.y = this._deck.y;
-    this._trash.x = this._playerHand.x + this._playerHand.width + STANDARD_GAP;
+        if (this._trash) {
+          this._trash.y = this._deck.y;
+          this._trash.x = this._playerHand.x + this._playerHand.width + STANDARD_GAP;
+        }
+      }
+    }
   }
 }

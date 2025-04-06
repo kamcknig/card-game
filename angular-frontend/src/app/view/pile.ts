@@ -7,13 +7,18 @@ export class PileView extends Container {
     constructor(cards: Card[], count: number, size: CardSize = 'full', facing: CardFacing = 'front') {
         super();
 
-        const card = cards.reduce((prev, next) => {
+        const card = cards.reduce<Card | undefined>((prev, next) => {
             if (!prev) {
                 return next;
             }
-            
+
             return prev.id > next.id ? prev : next
         }, undefined);
+
+        if (!card) {
+          throw new Error('No card found for this pile');
+        }
+
         const view = this.addChild(createCardView(card));
         view.size = size;
         view.facing = facing;

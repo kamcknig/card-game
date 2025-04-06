@@ -1,16 +1,16 @@
 import {Container, Graphics} from 'pixi.js';
-import {$cardsById} from '../../state/card-state';
+import {cardStore} from '../../state/card-state';
 import {createCardView} from '../../core/card/create-card-view';
 import {app} from '../../core/create-app';
 
 export const displayCardDetail = (cardId: number): void => {
     const container = new Container();
     container.eventMode = 'static';
-    const card = $cardsById.get()[cardId];
+    const card = cardStore.get()[cardId];
     const view = createCardView(card);
     view.size = 'detail';
     view.facing = 'front'
-    
+
     view.eventMode = 'none';
 
     const background = new Graphics()
@@ -33,7 +33,7 @@ export const displayCardDetail = (cardId: number): void => {
         container.off('pointerdown', onPointerDown);
         container.off('removed', onRemoved);
     }
-    
+
     container.on('pointerdown', onPointerDown);
     container.on('removed', onRemoved)
 }

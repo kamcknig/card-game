@@ -6,7 +6,9 @@ import { app } from '../../core/create-app';
 import { $selectableCards } from '../../state/interactive-state';
 import { CardView } from '../card-view';
 
-export const cardRearrangeView = (cards: UserPromptEffectArgs['content']['cards']) => {
+export const cardRearrangeView = (args: UserPromptEffectArgs) => {
+  if (!args.content?.cards) throw new Error('Cards must be provided');
+  const cards = args.content.cards;
   const bottomText = new Text({
     text: 'BOTTOM',
     style: {

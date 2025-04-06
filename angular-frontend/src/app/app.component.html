@@ -1,12 +1,11 @@
 <main class="main">
+  <div #pixiContainer class="pixi-container"></div>
+
   <div class="content">
-    <ng-container [ngSwitch]="view">
-      <app-match-configuration *ngSwitchCase="'match-configuration'"></app-match-configuration>
-      <app-match *ngSwitchCase="'match'"></app-match>
+    <ng-container [ngSwitch]="scene$ | async">
+      <app-match-configuration *ngSwitchCase="'configuration'"></app-match-configuration>
     </ng-container>
   </div>
 </main>
-
-
 
 <router-outlet />

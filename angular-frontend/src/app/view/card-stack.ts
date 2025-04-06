@@ -1,29 +1,29 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { CountBadgeView } from './count-badge-view';
 import { createCardView } from '../core/card/create-card-view';
-import { $cardsById } from '../state/card-state';
+import { cardStore } from '../state/card-state';
 import { CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP } from '../core/app-contants';
-import { batched, PreinitializedWritableAtom } from 'nanostores';
+import { WritableAtom } from 'nanostores';
 import { isUndefined } from 'es-toolkit';
 import { CardView } from './card-view';
 import { $selectedCards } from '../state/interactive-state';
 
 export type CardStackArgs = {
   label?: string;
-  $cardIds: PreinitializedWritableAtom<number[]>;
+  $cardIds: WritableAtom<number[]>;
   showCountBadge?: boolean;
   cardFacing: CardView['facing'];
   showBackground?: boolean;
 }
 
 export class CardStackView extends Container {
-  private readonly _$cardIds: PreinitializedWritableAtom<number[]>;
+  private readonly _$cardIds: WritableAtom<number[]>;
   private readonly _background: Container = new Container();
   private readonly _cardContainer: Container<CardView> = new Container({ x: STANDARD_GAP * .8, y: STANDARD_GAP * .8 });
   private readonly _cleanup: (() => void)[] = [];
   private readonly _showCountBadge: boolean = true;
-  private readonly _label: string;
-  private readonly _labelText: Text;
+  private readonly _label: string | undefined;
+  private readonly _labelText: Text | undefined;
   private readonly _cardFacing: CardView['facing'];
   private readonly _selectedBadgeCount: CountBadgeView = new CountBadgeView({ label: 'selectedBadgeCount' });
   private readonly _badgeCount: CountBadgeView = new CountBadgeView({ label: 'badgeCount' });
@@ -111,7 +111,7 @@ export class CardStackView extends Container {
     this._cardContainer.removeChildren();
 
     for (const cardId of cardIds) {
-      const c = this._cardContainer.addChild(createCardView($cardsById.get()[cardId]));
+      const c = this._cardContainer.addChild(createCardView(cardStore.get()[cardId]));
       c.size = 'full';
       c.facing = this._cardFacing
     }

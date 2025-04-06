@@ -1,7 +1,7 @@
 import {Container, DestroyOptions, Graphics} from "pixi.js";
 import {PileView} from "./pile";
-import {$kingdomStore} from "../state/match-state";
-import {$cardsById} from "../state/card-state";
+import {kingdomStore} from "../state/match-state";
+import {cardStore} from "../state/card-state";
 import {Card, CardKey} from "shared/shared-types";
 import {SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP} from '../core/app-contants';
 
@@ -18,7 +18,7 @@ export class KingdomSupplyView extends Container {
 
         this._cardContainer = this.addChild(new Container({x: STANDARD_GAP, y: STANDARD_GAP}));
 
-        this._cleanup.push($kingdomStore.subscribe(this.draw.bind(this)));
+        this._cleanup.push(kingdomStore.subscribe(this.draw.bind(this)));
         this.off('removed', this.onRemoved);
     }
 
@@ -32,7 +32,7 @@ export class KingdomSupplyView extends Container {
 
         this._cardContainer.removeChildren();
 
-        const cards = val.map(id => $cardsById.get()[id]);
+        const cards = val.map(id => cardStore.get()[id]);
         const piles = cards.reduce((prev, card) => {
             prev[card.cardKey] ||= [];
             prev[card.cardKey].push(card);

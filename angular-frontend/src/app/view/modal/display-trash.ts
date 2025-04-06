@@ -3,7 +3,7 @@ import {Color, Container, Graphics} from 'pixi.js';
 import {app} from '../../core/create-app';
 import {ScrollBox} from '@pixi/ui';
 import {CARD_HEIGHT, STANDARD_GAP} from '../../core/app-contants';
-import {$cardsById} from '../../state/card-state';
+import {cardStore} from '../../state/card-state';
 import {createCardView} from '../../core/card/create-card-view';
 
 export const displayTrash = () => {
@@ -24,7 +24,7 @@ export const displayTrash = () => {
     scrollBox.y = Math.floor(app.renderer.height * .5 - scrollBox.height * .5);
     c.addChild(scrollBox);
 
-    const cardsById = $cardsById.get();
+    const cardsById = cardStore.get();
     for(const cardId of cards) {
         const card = cardsById[cardId];
         const view = createCardView(card);

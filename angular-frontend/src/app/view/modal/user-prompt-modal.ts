@@ -50,7 +50,7 @@ export const userPromptModal = (args: UserPromptEffectArgs): Promise<unknown> =>
     if (args.content?.cards) {
       switch (args.content.cards.action) {
         case 'rearrange':
-          contentView = cardSelectionView(args.content.cards);
+          contentView = cardSelectionView(args);
 
           contentView.on('finished', () => {
             actionButtonListener()
@@ -64,10 +64,10 @@ export const userPromptModal = (args: UserPromptEffectArgs): Promise<unknown> =>
           });
           break;
         case 'blind-rearrange':
-          contentView = cardBlindRearrangeView(args.content.cards);
+          contentView = cardBlindRearrangeView(args);
           break;
         default:
-          contentView = cardRearrangeView(args.content.cards);
+          contentView = cardRearrangeView(args);
           break;
       }
 

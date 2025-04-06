@@ -3,14 +3,17 @@ import { CardId, UserPromptEffectArgs } from 'shared/shared-types';
 import { CARD_WIDTH, STANDARD_GAP } from '../../core/app-contants';
 import { createCardView } from '../../core/card/create-card-view';
 import { List } from "@pixi/ui";
-import { $cardsById } from '../../state/card-state';
+import { cardStore } from '../../state/card-state';
 import { isNumber, toNumber } from "es-toolkit/compat";
 import { gameEvents } from '../../core/event/events';
 import { CardView } from '../card-view';
 import { $selectableCards, $selectedCards } from '../../state/interactive-state';
 import { validateCountSpec } from '../../shared/validate-count-spec';
 
-export const cardSelectionView = (cards: UserPromptEffectArgs['content']['cards']) => {
+export const cardSelectionView = (args: UserPromptEffectArgs) => {
+  if (!args.content?.cards) throw new Error('Cards cannot be empty');
+  const cards = args.content.cards;
+
   // super hacky. $selectable cards is "global". and in cases where we are showing cards
   // from places like a user's discard for the harbinger card then the IDs of the cards used to create
   // the views in the modal are the same as those in the discard. So the cards in both places will highlight and
@@ -18,13 +21,14 @@ export const cardSelectionView = (cards: UserPromptEffectArgs['content']['cards'
   // map them to the old IDs. However, CardView has the listener that also shows the detail view when right
   // l, which will fail
   let newCardToOldCardMap = new Map<CardId, CardId>();
-  let maxId = toNumber(Object.keys($cardsById.get()).sort().slice(-1)[0]);
+  let maxId = toNumber(Object.keys(cardStore.get()).sort().slice(-1)[0]);
 
   const cardCount = cards.cardIds.length;
   cards.selectCount ??= 1;
 
   const validate = () => {
-    let validated = validateCountSpec(cards?.selectCount, $selectedCards.get().length)
+    if (!cards.selectCount) throw new Error('selectCount cannot be empty');
+    let validated = validateCountSpec(cards.selectCount, $selectedCards.get().length)
 
     cardList.emit('validationUpdated', validated);
 
@@ -43,7 +47,9 @@ export const cardSelectionView = (cards: UserPromptEffectArgs['content']['cards'
   const cardPointerDownListener = (event: FederatedPointerEvent) => {
     const cardView = event.target as CardView;
     if (event.button === 2 && cardView.facing === 'front') {
-      gameEvents.emit('displayCardDetail', newCardToOldCardMap.get(cardView.card.id));
+      const cardId = newCardToOldCardMap.get(cardView.card.id);
+      if (!cardId) return;
+      gameEvents.emit('displayCardDetail', cardId);
       return;
     }
     const target = event.target as CardView;

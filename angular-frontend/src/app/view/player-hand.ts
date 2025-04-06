@@ -1,6 +1,6 @@
 import { Container, Graphics } from "pixi.js";
-import { $playerHandStore, $selfPlayerId } from "../state/player-state";
-import { $cardsById } from "../state/card-state";
+import { playerHandStore, selfPlayerIdStore } from "../state/player-state";
+import { cardStore } from "../state/card-state";
 import { Card } from "shared/shared-types";
 import { atom } from 'nanostores';
 import { CARD_HEIGHT, CARD_WIDTH, SMALL_CARD_WIDTH, STANDARD_GAP } from '../core/app-contants';
@@ -41,7 +41,7 @@ export class PlayerHandView extends Container {
         this._phaseStatus.x = this._background.width * .5 - this._phaseStatus.width * .5;
 
         this._cleanup.push($currentPlayerTurnId.subscribe(playerId => {
-            this._nextPhaseButton.button.visible = playerId === $selfPlayerId.get();
+            this._nextPhaseButton.button.visible = playerId === selfPlayerIdStore.get();
         }));
         this._cleanup.push($turnPhase.subscribe((phase) => {
             this.removeChild(this._nextPhaseButton.button);
@@ -57,7 +57,7 @@ export class PlayerHandView extends Container {
             this._nextPhaseButton.button.x = this._phaseStatus.x + this._phaseStatus.width - this._nextPhaseButton.button.width;
             this.addChild(this._nextPhaseButton.button);
         }));
-        this._cleanup.push($playerHandStore(playerId).subscribe(this.drawHand));
+        this._cleanup.push(playerHandStore(playerId).subscribe(this.drawHand));
         this._nextPhaseButton.button.on('pointerdown', this.onNextPhasePressed);
         this.on('removed', this.onRemoved);
     }
@@ -75,7 +75,7 @@ export class PlayerHandView extends Container {
     private drawHand = (hand: ReadonlyArray<number>) => {
         this._cardList.removeChildren();
 
-        const cardsById = $cardsById.get();
+        const cardsById = cardStore.get();
 
         // first reduce the cards by card type, actions, then treasures, then victory cards
         const categoryMap: Record<string, number> = {ACTION: 0, TREASURE: 1, VICTORY: 2};

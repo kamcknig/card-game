@@ -1,6 +1,6 @@
 import { Container, Graphics, Text } from 'pixi.js';
-import { $playerIds, $playerScoreStore } from '../state/player-state';
-import { $currentPlayerTurnIndex, $playerTurnOrder, $turnNumber } from '../state/turn-state';
+import { playerIdStore, playerScoreStore } from '../state/player-state';
+import { $currentPlayerTurnIndex, playerTurnOrder, $turnNumber } from '../state/turn-state';
 import { STANDARD_GAP } from '../core/app-contants';
 import { Player } from 'shared/shared-types';
 
@@ -19,11 +19,11 @@ export class ScoreView extends Container {
     this.addChild(this._playerNameContainer);
     this._playerNameContainer.y = this._turnLabel.y + this._turnLabel.height + STANDARD_GAP;
 
-    this._cleanup.push($playerTurnOrder.subscribe(this.onPlayersUpdated.bind(this)));
+    this._cleanup.push(playerTurnOrder.subscribe(this.onPlayersUpdated.bind(this)));
     this._cleanup.push($currentPlayerTurnIndex.subscribe(this.onPlayerTurnUpdated.bind(this)));
     this._cleanup.push($turnNumber.subscribe(this.onTurnNumberUpdated.bind(this)));
 
-    this._cleanup.push($playerIds.subscribe(this.onTrackScores));
+    this._cleanup.push(playerIdStore.subscribe(this.onTrackScores));
 
     this.on('removed', this.onRemoved);
   }
@@ -46,7 +46,7 @@ export class ScoreView extends Container {
     this.cleanupScoreListeners();
 
     for (const playerId of playerIds) {
-      this._scoreListeners.push($playerScoreStore(playerId).subscribe(playerScore =>
+      this._scoreListeners.push(playerScoreStore(playerId).subscribe(playerScore =>
         this.onUpdateScore(playerId, playerScore)))
     }
   }

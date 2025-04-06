@@ -4,22 +4,22 @@ import { app } from '../../core/create-app';
 import { LARGE_GAP, STANDARD_GAP } from '../../core/app-contants';
 import { MatchSummary } from 'shared/shared-types';
 import { List } from '@pixi/ui';
-import { $player } from '../../state/player-state';
+import { playerStore } from '../../state/player-state';
 import { AppList } from '../app-list';
 import { AdjustmentFilter } from 'pixi-filters';
-import { $cardsById } from '../../state/card-state';
+import { cardStore } from '../../state/card-state';
 
 export class GameOverScene extends Scene {
-  private _summary: MatchSummary;
-  private _scoresContainer: List;
-  private _divider: Graphics;
-  private _playerDeckList: List
+  private _summary: MatchSummary | undefined;
+  private _scoresContainer: List | undefined;
+  private _divider: Graphics | undefined;
+  private _playerDeckList: List | undefined;
 
   constructor(stage: Container) {
     super(stage);
   }
 
-  initialize(data: MatchSummary) {
+  override initialize(data: MatchSummary) {
     super.initialize(data);
 
     this._summary = data;
@@ -61,13 +61,13 @@ export class GameOverScene extends Scene {
   }
 
   private async drawScores() {
-    for (const [idx, playerSummary] of this._summary.scores.entries()) {
+    for (const [idx, playerSummary] of this._summary?.scores.entries() ?? [].entries()) {
       const playerInfoContainer: AppList = new AppList({
         type: 'horizontal',
         padding: STANDARD_GAP,
         elementsMargin: STANDARD_GAP
       });
-      const player = $player(playerSummary.playerId).get();
+      const player = playerStore(playerSummary.playerId).get();
 
       const ordinalContainer = new Container();
       const ordinalText = new Text({
@@ -88,7 +88,7 @@ export class GameOverScene extends Scene {
       ordinalContainer.addChild(ordinalText);
 
       const nameText = new Text({
-        text: player.name,
+        text: player?.name,
         style: {
           fontSize: 20,
           fill: 'black'
@@ -130,30 +130,30 @@ export class GameOverScene extends Scene {
       playerInfoContainer.addChild(scoreContainer);
       playerInfoContainer.addChild(turnText);
 
-      this._scoresContainer.addChild(playerInfoContainer);
+      this._scoresContainer?.addChild(playerInfoContainer);
     }
   }
 
   private drawDivider() {
-    this._divider.clear();
-    const x = this._scoresContainer.getBounds().right + LARGE_GAP
-    this._divider.moveTo(x, LARGE_GAP);
-    this._divider.lineTo(x, app.renderer.height - LARGE_GAP);
-    this._divider.stroke({color: 'black', width: 2});
+    this._divider?.clear();
+    const x = (this._scoresContainer?.getBounds().right ?? 0) + LARGE_GAP
+    this._divider?.moveTo(x, LARGE_GAP);
+    this._divider?.lineTo(x, app.renderer.height - LARGE_GAP);
+    this._divider?.stroke({color: 'black', width: 2});
   }
 
   private async drawPlayerDecks() {
-    const cardsById = $cardsById.get();
+    const cardsById = cardStore.get();
 
     const playerNameDeckContainerList = new List({type: 'vertical', elementsMargin: STANDARD_GAP});
 
-    for (const playerSummary of this._summary.scores) {
+    for (const playerSummary of this._summary?.scores ?? []) {
       const playerId = playerSummary.playerId;
       const deckList = new List({type: 'vertical'});
       const deckContainer = new Container();
 
       const playerNameText = new Text({
-        text: $player(playerId).get().name,
+        text: playerStore(playerId).get()?.name,
         style: {
           fill: 'black',
           fontSize: 24
@@ -205,8 +205,10 @@ export class GameOverScene extends Scene {
       playerNameDeckContainerList.addChild(deckContainer);
     }
 
-    this._playerDeckList.addChild(playerNameDeckContainerList);
-    this._playerDeckList.x = this._divider.getBounds().right + LARGE_GAP;
-    this._playerDeckList.y = LARGE_GAP;
+    this._playerDeckList?.addChild(playerNameDeckContainerList);
+    if (this._playerDeckList) {
+      this._playerDeckList.x = (this._divider?.getBounds().right ?? 0) + LARGE_GAP;
+      this._playerDeckList.y = LARGE_GAP;
+    }
   }
 }
