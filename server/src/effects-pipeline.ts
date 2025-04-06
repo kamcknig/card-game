@@ -4,7 +4,6 @@ import { Match, PlayerId } from 'shared/shared-types.ts';
 import { MatchController } from './match-controller.ts';
 
 export class EffectsPipeline {
-  private _suspendEffectCallback: boolean = false;
   private _prevSnapshot!: Match;
 
   constructor(
@@ -42,25 +41,12 @@ export class EffectsPipeline {
       nextEffect = generator.next(result);
     }
     
-    // Top‑level generator finished
-    if (!this._suspendEffectCallback) {
-      this._effectCompletedCallback();
-    }
+    this._effectCompletedCallback();
     
     this._socketMap.get(playerId)?.emit("cardEffectsComplete");
     return nextEffect.value;
   }
 
-  public async suspendCallback(fn: () => Promise<void>) {
-    console.log(`[EFFECT PIPELINE] suspending call back to run function`);
-    this._suspendEffectCallback = true;
-    await fn();
-    this._suspendEffectCallback = false;
-    console.log(`[EFFECT PIPELINE] un-suspending call back`);
-    this.flushChanges();
-    this._effectCompletedCallback();
-  }
-  
   public flushChanges() {
     this._matchController.broadcastPatch(this._prevSnapshot);
     this._prevSnapshot = this._matchController.getMatchSnapshot();

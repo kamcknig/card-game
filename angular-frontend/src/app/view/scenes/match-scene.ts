@@ -559,8 +559,8 @@ export class MatchScene extends Scene {
     }
 
     if (this._playerHand) {
-      this._playerHand.x = this.app.renderer.width * .5 - this._playerHand.getLocalBounds().width * .5;
-      this._playerHand.y = this.app.renderer.height - this._playerHand.getLocalBounds().height;
+      this._playerHand.x = this.app.renderer.width * .5 - this._playerHand.width * .5;
+      this._playerHand.y = this.app.renderer.height - this._playerHand.height;
 
       this._playAllTreasuresButton.button.x = this._playerHand.x + this._playerHand.width * .5 - this._playAllTreasuresButton.button.width * .5;
       this._playAllTreasuresButton.button.y = this._playerHand.y - this._playAllTreasuresButton.button.height - STANDARD_GAP;
