@@ -89,7 +89,7 @@ export class Game {
     if (!this.owner) {
       console.log(`[GAME] game owner does not exist, setting to ${player}`);
       this.owner = player;
-      socket.on("matchConfigurationUpdated", this.onMatchConfigurationUpdated);
+      socket.on("expansionSelected", this.onMatchConfigurationUpdated);
       io.in("game").emit("gameOwnerUpdated", player.id);
     }
 
@@ -157,16 +157,16 @@ export class Game {
       if (replacement) {
         this.owner = replacement;
         io.in("game").emit("gameOwnerUpdated", replacement.id);
-        this._socketMap.get(replacement.id)?.on("matchConfigurationUpdated", this.onMatchConfigurationUpdated);
+        this._socketMap.get(replacement.id)?.on("expansionSelected", this.onMatchConfigurationUpdated);
       }
     }
   };
 
-  private onMatchConfigurationUpdated = async (config: MatchConfiguration) => {
+  private onMatchConfigurationUpdated = async (expansions: string[]) => {
     console.log(`[GAME] received match configuration update`);
-    console.log(config);
+    console.log(expansions);
 
-    const newExpansions = config.expansions.filter(
+    const newExpansions = expansions.filter(
       (e) => !this._matchConfiguration.expansions.includes(e),
     );
 
@@ -191,7 +191,7 @@ export class Game {
 
       for (const exclusiveExpansion of configModule.mutuallyExclusiveExpansions) {
         if (
-          config.expansions.includes(exclusiveExpansion) &&
+          expansions.includes(exclusiveExpansion) &&
           !expansionsToRemove.includes(exclusiveExpansion)
         ) {
           console.log(`[GAME] removing expansion ${exclusiveExpansion} as it is not allowed with ${expansion}`,);
@@ -203,7 +203,7 @@ export class Game {
     const previousSnapshot = this._matchController?.getMatchSnapshot() ?? {};
     this._matchConfiguration = {
       ...this._matchConfiguration,
-      expansions: config.expansions,
+      expansions,
     };
     
     if (this.matchStarted) { // i don't think we need the matchStarted check as match configuration is only updated during the lobby phase right now

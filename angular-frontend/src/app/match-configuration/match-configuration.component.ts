@@ -50,6 +50,6 @@ export class MatchConfigurationComponent {
       currentExpansions.splice(currentIdx, 1);
     }
 
-    this._socketService.emit('matchConfigurationUpdated', { expansions: currentExpansions ?? []});
+    this._socketService.emit('expansionSelected', currentExpansions ?? []);
   }
 }

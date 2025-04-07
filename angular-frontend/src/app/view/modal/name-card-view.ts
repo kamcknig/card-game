@@ -39,6 +39,10 @@ export const nameCardView = (
     }, 300);
   });
 
+  socketService.on('searchCardResponse', (data) => {
+    console.log(data);
+  });
+
   c.on('removed', () => {
     c.removeAllListeners();
     inputChangeSignal.disconnect();

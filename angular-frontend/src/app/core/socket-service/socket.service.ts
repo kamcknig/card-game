@@ -3,13 +3,13 @@ import { io, Socket } from 'socket.io-client';
 import { environment } from '../../../environments/environment';
 import { v4 as uuidV4 } from 'uuid';
 import { SocketEventMap } from './socket-event-map';
-import { ClientEmitEvents, ServerEmitEventNames } from 'shared/shared-types';
+import { ClientEmitEvents, ServerEmitEventNames, ServerEmitEvents, ServerListenEvents } from 'shared/shared-types';
 
 @Injectable({
   providedIn: 'root',
 })
 export class SocketService {
-  private _socket: Socket | undefined;
+  private _socket: Socket<ServerListenEvents, ServerEmitEvents>;
   private _socketEventMap: SocketEventMap | undefined
 
   constructor() {
@@ -23,7 +23,7 @@ export class SocketService {
       timeout: environment.wsTimeout,
       requestTimeout: environment.wsRequestTimeout,
       query: { sessionId }
-    });
+    }) as unknown as Socket<ServerListenEvents, ServerEmitEvents>;
 
     this._socket.on('connect_error', this.onConnectError);
     this._socket.on('disconnect', this.onDisconnect);
@@ -34,7 +34,7 @@ export class SocketService {
     (Object.keys(this._socketEventMap) as ServerEmitEventNames[]).forEach(eventName => {
       console.log('creating socket handler for event', eventName);
       const handler = this._socketEventMap![eventName];
-      this._socket?.on(eventName, this.wrapHandler(eventName, handler));
+      (this._socket as unknown as Socket).on(eventName as string, this.wrapHandler(eventName, handler));
     });
   }
 
@@ -63,10 +63,19 @@ export class SocketService {
     return wrapped as unknown as F;
   };
 
-  public emit<K extends keyof ClientEmitEvents>(
+  public on<K extends keyof ServerEmitEvents>(
     eventName: K,
-    ...args: Parameters<ClientEmitEvents[K]>
+    handler: (...args: Parameters<ServerEmitEvents[K]>) => void,
+  ) {
+    // Cast to avoid conflict with reserved events
+    (this._socket as unknown as Socket).on(eventName as string, handler);
+  }
+
+  public emit<K extends keyof ServerListenEvents>(
+    eventName: K,
+    ...args: Parameters<ServerListenEvents[K]>
   ): void {
-    this._socket?.emit(eventName, ...args);
+    // Bypass the incorrect type inference by SocketIO’s type declaration
+    (this._socket as unknown as Socket).emit(eventName as string, ...args);
   }
 }

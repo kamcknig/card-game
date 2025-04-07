@@ -49,7 +49,11 @@ export class MatchController {
       const expansion = expansionData[expansionName];
       const expansionCardData = Object.values(expansion.cardData.supply).concat(Object.values(expansion.cardData.kingdom));
       
-      prev.concat(expansionCardData.filter(cd => prev.findIndex(e => e.cardName === cd.cardName) === -1));
+      prev = prev.concat(expansionCardData.filter(cd => {
+        return prev.findIndex(e => {
+          return e.cardName === cd.cardName
+        }) === -1
+      }));
       return prev;
     }, [] as CardData[]);
     
@@ -158,7 +162,7 @@ export class MatchController {
     const kingdomCards: Card[] = [];
 
     // todo: remove testing code
-    const keepers: string[] = ['bandit', 'harbinger', 'sentry'].filter(k => this._cardData!.kingdom[k]);
+    const keepers: string[] = ['wishing-well'].filter(k => this._cardData!.kingdom[k]);
 
     console.log(
       `[MATCH] choosing ${MatchBaseConfiguration.numberOfKingdomPiles} kingdom cards`,
