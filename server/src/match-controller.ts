@@ -146,7 +146,7 @@ export class MatchController {
     const kingdomCards: Card[] = [];
 
     // todo: remove testing code
-    const keepers: string[] = [];
+    const keepers: string[] = ['chapel'];
 
     console.log(
       `[MATCH] choosing ${MatchBaseConfiguration.numberOfKingdomPiles} kingdom cards`,
@@ -355,7 +355,7 @@ export class MatchController {
 
     this.calculateScores();
     if (this.checkGameEnd()) return;
-    this._interactivityController?.checkCardInteractivity(this._match);
+    this._interactivityController?.checkCardInteractivity();
   };
 
   public broadcastPatch(prev: Match) {
@@ -627,7 +627,7 @@ export class MatchController {
 
       this.broadcastPatch(prev);
 
-      this._interactivityController?.checkCardInteractivity(match);
+      this._interactivityController?.checkCardInteractivity();
 
       // see if we can skip to next phase
       void this.onCheckForPlayerActions();
@@ -672,7 +672,7 @@ export class MatchController {
         this._match.players[this._match.currentPlayerTurnIndex].id === playerId
       ) {
         await this.onCheckForPlayerActions();
-        this._interactivityController?.checkCardInteractivity(this._match);
+        this._interactivityController?.checkCardInteractivity();
       }
     });
   }

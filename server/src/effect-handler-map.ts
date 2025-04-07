@@ -333,17 +333,6 @@ export const createEffectHandlerMap = (
         })
       );
 
-      effectHandlerMap.moveCard(
-        new MoveCardEffect({
-          cardId,
-          toPlayerId: playerId,
-          sourcePlayerId,
-          sourceCardId,
-          to: { location: "playArea" },
-        }),
-        match
-      );
-
       match.cardsPlayed[sourcePlayerId] ??= [];
       match.cardsPlayed[sourcePlayerId].push(sourceCardId);
 
@@ -688,14 +677,6 @@ export const createEffectHandlerMap = (
       };
     },
     trashCard(effect, match) {
-      const cardId = effect.cardId;
-      const { sourceStore } = findSourceByCardId(cardId, match, cardLibrary);
-
-      if (sourceStore === match.trash) {
-        console.log(`[TRASH CARD EFFECT HANDLER] Card is already in trash`);
-        return;
-      }
-
       socketMap.forEach((s) =>
         s.emit("addLogEntry", {
           type: "trashCard",
@@ -771,7 +752,7 @@ export const createEffectHandlerMap = (
         socket?.emit("setCardDataOverrides", playerOverrides);
       }
 
-      interactivityController.checkCardInteractivity(match);
+      interactivityController.checkCardInteractivity();
     },
   };
   return effectHandlerMap;

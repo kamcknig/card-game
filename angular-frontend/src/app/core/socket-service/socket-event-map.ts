@@ -10,7 +10,7 @@ import { gameEvents } from '../event/events';
 import { type SocketService } from './socket.service';
 import { matchStore } from '../../state/match';
 import { applyPatch, compare, Operation } from 'fast-json-patch';
-import { clientSelectableCardsOverrideStore } from '../../state/interactive-state';
+import { clientSelectableCardsOverrideStore, selectedCardStore } from '../../state/interactive-state';
 
 export const SOCKET_EVENT_MAP = new InjectionToken('socketEventMap');
 
@@ -160,15 +160,12 @@ export const socketToGameEventMap = (socketService: SocketService): SocketEventM
     selectCard: selectCardArgs => {
       const eventListener = (cardIds: number[]) => {
         gameEvents.off('cardsSelected', eventListener);
+        selectedCardStore.set([]);
         clientSelectableCardsOverrideStore.set(null);
         socketService.emit('selectCardResponse', cardIds);
       };
 
-      const current = structuredClone(matchStore.get());
-      if (!current) return;
-      current.selectableCards[selfPlayerIdStore.get()!] = selectCardArgs.selectableCardIds;
-      const diff = compare(matchStore.get()!, current);
-      map.matchPatch(diff);
+      clientSelectableCardsOverrideStore.set(selectCardArgs.selectableCardIds);
       gameEvents.emit('selectCard', selectCardArgs);
       gameEvents.on('cardsSelected', eventListener);
     },

@@ -132,17 +132,15 @@ export class CardInteractivityController {
     this._cardTapCompleteCallback(card, player);
   }
 
-  public checkCardInteractivity(match: Match, _oldMatch?: Match): void {
-    if (!match) {
-      return;
-    }
-
+  public checkCardInteractivity(): void {
     if (this._gameOver) {
       console.log(
         `[CARD INTERACTIVITY] game is over, not processing match update`,
       );
       return;
     }
+    
+    const match = this.match;
 
     const prev = this._matchController.getMatchSnapshot();
     const currentPlayer = match.players[match.currentPlayerTurnIndex];

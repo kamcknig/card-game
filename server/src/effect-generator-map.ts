@@ -8,6 +8,7 @@ import { GainTreasureEffect } from "./effects/gain-treasure.ts";
 import { PlayCardEffect } from "./effects/play-card.ts";
 
 import { getEffectiveCardCost } from "./utils/get-effective-card-cost.ts";
+import { MoveCardEffect } from './effects/move-card.ts';
 
 export const cardLifecycleMap: Record<string, Partial<LifecycleCallbackMap>> =
   {};
@@ -27,6 +28,15 @@ export const effectGeneratorMap: Record<string, EffectGeneratorFn | AsyncEffectG
       });
     }
 
+    yield new MoveCardEffect({
+      cardId: triggerCardId,
+      sourcePlayerId: triggerPlayerId,
+      sourceCardId: triggerCardId,
+      to: {
+        location: 'playArea',
+      }
+    });
+    
     yield new PlayCardEffect({
       cardId: triggerCardId,
       sourcePlayerId: triggerPlayerId,
