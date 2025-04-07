@@ -1,15 +1,14 @@
 import { UserPromptEffectArgs } from 'shared/shared-types';
 import { CARD_WIDTH, STANDARD_GAP } from '../../core/app-contants';
 import { createCardView } from '../../core/card/create-card-view';
-import { Text, Container } from 'pixi.js';
+import { Text, Container, Application } from 'pixi.js';
 import { clientSelectableCardsOverrideStore, selectableCardStore } from '../../state/interactive-state';
 import { CardView } from '../card-view';
 import { inject } from '@angular/core';
 import { PIXI_APP } from '../../core/pixi-application.token';
 
-export const cardRearrangeView = (args: UserPromptEffectArgs) => {
+export const cardRearrangeView = (app: Application, args: UserPromptEffectArgs) => {
   if (!args.content?.cards) throw new Error('Cards must be provided');
-  const app = inject(PIXI_APP);
 
   const cards = args.content.cards;
   const bottomText = new Text({

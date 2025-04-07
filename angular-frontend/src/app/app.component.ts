@@ -43,7 +43,7 @@ export class AppComponent implements AfterViewInit, OnInit {
       tap(async scene => {
         if (scene === 'match') {
           if (!this._app) throw new Error('App not found');
-          this._matchScene = new MatchScene(this._app.stage, this._socketService, this._app);
+          this._matchScene = new MatchScene(this._socketService, this._app);
           await this._matchScene.initialize();
           this._app.stage.addChild(this._matchScene);
         }
@@ -58,6 +58,8 @@ export class AppComponent implements AfterViewInit, OnInit {
   async ngAfterViewInit() {
     if (!this._app) throw new Error('No app is initialized');
     this._app.resizeTo = this.pixiContainer.nativeElement;
+    console.log('pixi container width, height', this.pixiContainer.nativeElement.clientWidth, this.pixiContainer.nativeElement.clientHeight);
+    console.log('pixi container width, height', this._app.renderer.width, this._app.renderer.height);
     this.pixiContainer.nativeElement.appendChild(this._app.canvas);
   }
 }

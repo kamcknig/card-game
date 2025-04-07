@@ -1,6 +1,6 @@
 import { Card, CardOverrides, Match } from 'shared/shared-types.ts';
-import { ModifyCostEffect, ModifyCostEffectArgs } from './effects/modify-cost.ts';
-import { CardLibrary } from './card-library.ts';
+import { ModifyCostEffect, ModifyCostEffectArgs } from './core/effects/modify-cost.ts';
+import { CardLibrary } from './core/card-library.ts';
 
 // todo should this be a class or at least an encapsulated object? if push an effect onto the stack
 // it can auto send the socket updates. right now anywhere the code adds one or uses

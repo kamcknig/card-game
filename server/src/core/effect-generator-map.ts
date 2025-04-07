@@ -1,4 +1,4 @@
-import { AsyncEffectGeneratorFn, EffectGeneratorFn, LifecycleCallbackMap } from './types.ts';
+import { AsyncEffectGeneratorFn, EffectGeneratorFn, LifecycleCallbackMap } from '../types.ts';
 import { DiscardCardEffect } from "./effects/discard-card.ts";
 import { DrawCardEffect } from "./effects/draw-card.ts";
 import { GainActionEffect } from "./effects/gain-action.ts";
@@ -7,7 +7,7 @@ import { GainCardEffect } from "./effects/gain-card.ts";
 import { GainTreasureEffect } from "./effects/gain-treasure.ts";
 import { PlayCardEffect } from "./effects/play-card.ts";
 
-import { getEffectiveCardCost } from "./utils/get-effective-card-cost.ts";
+import { getEffectiveCardCost } from "../utils/get-effective-card-cost.ts";
 import { MoveCardEffect } from './effects/move-card.ts';
 
 export const cardLifecycleMap: Record<string, Partial<LifecycleCallbackMap>> =

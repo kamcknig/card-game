@@ -1,7 +1,7 @@
 import { Container } from 'pixi.js';
 
 export class Scene<D = unknown> extends Container {
-    constructor(protected stage: Container) {
+    constructor() {
         super();
     }
 

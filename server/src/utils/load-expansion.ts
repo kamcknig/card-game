@@ -1,6 +1,6 @@
 import { CardData } from '../types.ts';
-import { cardLifecycleMap, effectGeneratorMap } from '../effect-generator-map.ts';
-import { scoringFunctionMap } from '../scoring-function-map.ts';
+import { cardLifecycleMap, effectGeneratorMap } from '../core/effect-generator-map.ts';
+import { scoringFunctionMap } from '../expansions/scoring-function-map.ts';
 import { expansionData } from '../state/expansion-data.ts';
 
 export const loadExpansion = async (expansion: { title: string, name: string, order: number }) => {
@@ -16,7 +16,10 @@ export const loadExpansion = async (expansion: { title: string, name: string, or
     expansionData[expansionName] = {
         title: expansion.title,
         name: expansion.name,
-        cardData: {},
+        cardData: {
+            supply: {},
+            kingdom: {},
+        },
         order: expansion.order
     };
     
@@ -34,7 +37,7 @@ export const loadExpansion = async (expansion: { title: string, name: string, or
         let module = await import(`${expansionPath}/${expansionConfiguration.supply}`, { with: { type: 'json' }});
         let cards = module.default as Record<string, CardData>;
         Object.keys(cards).forEach((key) => {
-            cardData[key] = {
+            cardData.supply[key] = {
                 ...cards[key],
                 expansionName,
                 detailImagePath: `./assets/card-images/base-supply/detail/${key}.jpg`,
@@ -50,7 +53,7 @@ export const loadExpansion = async (expansion: { title: string, name: string, or
         module = await import(`${expansionPath}/${expansionConfiguration.kingdom}`, { with: { type: 'json' }});
         cards = module.default as Record<string, CardData>;
         Object.keys(cards).forEach((key) => {
-            cardData[key] = {
+            cardData.kingdom[key] = {
                 ...cards[key],
                 expansionName,
                 fullImagePath: `./assets/card-images/${expansionName}/full-size/${key}.jpg`,
@@ -66,7 +69,7 @@ export const loadExpansion = async (expansion: { title: string, name: string, or
         module = await import(`../expansions/base-supply-card-effects.ts`);
         let effects = module.default.registerEffects();
         Object.keys(effects).forEach(key => {
-            console.log('registering effects for', key);
+            console.log('[EXPANSION LOADER]registering effects for', key);
             effectGeneratorMap[key] = effects[key];
         });
         console.log('[EXPANSION LOADER] base supply card effects loaded');
@@ -74,10 +77,10 @@ export const loadExpansion = async (expansion: { title: string, name: string, or
         
         
         console.log(`[EXPANSION LOADER] loading ${expansionName} card effects`);
-        module = await import(`${expansionPath}/card-effects.ts`);
+        module = await import(`${expansionPath}/card-effects-${expansionName}.ts`);
         effects = module.default.registerEffects();
         Object.keys(effects).forEach(key => {
-            console.log('registering effects for', key);
+            console.log('[EXPANSION LOADER]registering effects for', key);
             effectGeneratorMap[key] = effects[key];
         });
         console.log(`[EXPANSION LOADER] card effects loaded for ${expansionName}`, effectGeneratorMap);
@@ -88,7 +91,7 @@ export const loadExpansion = async (expansion: { title: string, name: string, or
         console.log('[EXPANSION LOADER] loading card lifecycles');
         const cardLifeCycles = module.default.registerCardLifeCycles();
         Object.keys(cardLifeCycles).forEach(key => {
-            console.log('registering card lifecycle', key);
+            console.log('[EXPANSION LOADER]registering card lifecycle', key);
             cardLifecycleMap[key] = cardLifeCycles[key];
         });
         console.log('[EXPANSION LOADER] card lifecycles loaded', cardLifecycleMap);
@@ -99,7 +102,7 @@ export const loadExpansion = async (expansion: { title: string, name: string, or
         console.log('[EXPANSION LOADER] registering scoring functions');
         const scoringFunctions = module.default.registerScoringFunctions();
         Object.keys(scoringFunctions).forEach(key => {
-            console.log('registering scoring function for', key);
+            console.log('[EXPANSION LOADER]registering scoring function for', key);
             scoringFunctionMap[key] = scoringFunctions[key];
         });
         console.log('[EXPANSION LOADER] scoring functions registered');

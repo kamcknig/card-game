@@ -13,21 +13,22 @@ import {
   CardData,
   EffectHandlerMap,
   MatchBaseConfiguration,
-} from "./types.ts";
+} from "../types.ts";
 import { CardEffectController } from "./card-effects-controller.ts";
 import { CardInteractivityController } from "./card-interactivity-controller.ts";
-import { createCardFactory } from "./utils/create-card.ts";
+import { createCardFactory } from "../utils/create-card.ts";
 import { createEffectHandlerMap } from "./effect-handler-map.ts";
 import { EffectsPipeline } from "./effects-pipeline.ts";
-import { fisherYatesShuffle } from "./utils/fisher-yates-shuffler.ts";
+import { fisherYatesShuffle } from "../utils/fisher-yates-shuffler.ts";
 import { ReactionManager } from "./reaction-manager.ts";
-import { scoringFunctionMap } from "./scoring-function-map.ts";
+import { scoringFunctionMap } from "../expansions/scoring-function-map.ts";
 import {
   getCardOverrides,
   removeOverrideEffects,
-} from "./card-data-overrides.ts";
+} from "../card-data-overrides.ts";
 import { CardLibrary } from "./card-library.ts";
 import { compare, Operation } from "fast-json-patch";
+import { ExpansionCardData } from '../state/expansion-data.ts';
 
 export class MatchController {
   private _effectHandlerMap: EffectHandlerMap | undefined;
@@ -36,7 +37,7 @@ export class MatchController {
   private _reactionManager: ReactionManager | undefined;
   private _interactivityController: CardInteractivityController | undefined;
   private _cardLibrary: CardLibrary = new CardLibrary();
-  private _cardData: Record<CardKey, CardData> | undefined;
+  private _cardData: ExpansionCardData | undefined;
   private _config: MatchConfiguration | undefined;
   private _createCardFn: ((key: CardKey) => Card) | undefined;
 
@@ -47,7 +48,7 @@ export class MatchController {
 
   public initialize(
     config: MatchConfiguration,
-    cardData: Record<CardKey, CardData>,
+    cardData: ExpansionCardData,
   ) {
     this._createCardFn = createCardFactory(cardData);
     this._cardData = cardData;
@@ -146,16 +147,14 @@ export class MatchController {
     const kingdomCards: Card[] = [];
 
     // todo: remove testing code
-    const keepers: string[] = ['chapel'];
+    const keepers: string[] = ['chapel', 'sentry'].filter(k => this._cardData!.kingdom[k]);
 
     console.log(
       `[MATCH] choosing ${MatchBaseConfiguration.numberOfKingdomPiles} kingdom cards`,
     );
 
-    const availableKingdom = Object.keys(this._cardData).filter((key) =>
-      !["province", "duchy", "estate", "copper", "silver", "gold", "curse"]
-        .includes(key)
-    );
+    const availableKingdom = Object.keys(this._cardData.kingdom);
+    
     console.log(`[MATCH] available kingdom cards\n${availableKingdom}`);
 
     let chosenKingdom = availableKingdom
@@ -168,16 +167,13 @@ export class MatchController {
       console.log(`[MATCH] adding keeper cards ${keepers}`);
 
       const filteredKingdom = chosenKingdom.filter((k) => !keepers.includes(k));
-      chosenKingdom = keepers.concat(filteredKingdom).slice(
-        0,
-        MatchBaseConfiguration.numberOfKingdomPiles,
-      );
+      chosenKingdom = filteredKingdom.concat(keepers).slice(-MatchBaseConfiguration.numberOfKingdomPiles);
     }
 
     console.log(`[MATCH] final chosen kingdom cards ${chosenKingdom}`);
 
     const finalKingdom = chosenKingdom.reduce((prev, key) => {
-      prev[key] = this._cardData![key].type.includes("VICTORY")
+      prev[key] = this._cardData!.kingdom[key].type.includes("VICTORY")
         ? (players.length < 3 ? 8 : 12)
         : 10;
 
@@ -345,12 +341,12 @@ export class MatchController {
     return structuredClone(this._match);
   }
 
-  private onCardTapHandlerComplete = async (card: Card, player?: Player) => {
+  private onCardTapHandlerComplete = (card: Card, player?: Player) => {
     console.log(`[MATCH] card tap complete handler invoked`);
     void this.onCheckForPlayerActions();
   };
 
-  private onEffectCompleted = async () => {
+  private onEffectCompleted = () => {
     console.log(`[MATCH] effect has completed, updating clients`);
 
     this.calculateScores();
@@ -369,6 +365,7 @@ export class MatchController {
   private calculateScores() {
     console.log(`[MATCH] calculating scores`);
 
+    const prev = this.getMatchSnapshot();
     const match = this._match;
     const scores: Record<number, number> = {};
 
@@ -398,6 +395,8 @@ export class MatchController {
     }
 
     match.scores = scores;
+    
+    this.broadcastPatch(prev);
   }
 
   private checkGameEnd() {

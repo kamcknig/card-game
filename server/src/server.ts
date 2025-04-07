@@ -3,7 +3,7 @@ import { ServerEmitEvents, ServerListenEvents } from 'shared/shared-types.ts';
 import process from 'node:process';
 import { toNumber } from 'es-toolkit/compat';
 import * as log from '@timepp/enhanced-deno-log/auto-init';
-import { Game } from './game.ts';
+import { Game } from './core/game.ts';
 import { loadExpansion } from './utils/load-expansion.ts';
 
 if (Deno.env.get("LOG_TO_FILE")?.toLowerCase() === "false") {

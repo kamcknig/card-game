@@ -53,8 +53,11 @@ export class MatchScene extends Scene {
     return !this._selecting && !cardActionsInProgressStore.get();
   }
 
-  constructor(stage: Container, private _socketService: SocketService, private app: Application) {
-    super(stage);
+  constructor(
+    private _socketService: SocketService,
+    private _app: Application
+  ) {
+    super();
 
     if (!this._selfId) throw new Error('self id not set in match scene');
     this.on('removed', this.onRemoved);
@@ -77,7 +80,7 @@ export class MatchScene extends Scene {
 
     this._cleanup.push(supplyStore.subscribe(this.drawBaseSupply));
     this._cleanup.push(matchStartedStore.subscribe(this.onMatchStarted));
-    this.app.renderer.on('resize', this.onRendererResize);
+    this._app.renderer.on('resize', this.onRendererResize);
     gameEvents.on('selectCard', this.doSelectCards);
     gameEvents.on('userPrompt', this.onUserPrompt);
     gameEvents.on('displayCardDetail', this.onDisplayCardDetail);
@@ -85,7 +88,7 @@ export class MatchScene extends Scene {
     gameEvents.on('doneWaitingForPlayer', this.onDoneWaitingForPlayer);
 
     this._cleanup.push(() => {
-      this.app.renderer.off('resize');
+      this._app.renderer.off('resize');
       gameEvents.off('selectCard');
       gameEvents.off('userPrompt');
       gameEvents.off('displayCardDetail');
@@ -110,7 +113,7 @@ export class MatchScene extends Scene {
     if (paused) {
       const c = new Container({ label: 'pause' });
       const g = new Graphics({ label: 'pause' });
-      g.rect(0, 0, this.app.renderer.width, this.app.renderer.height)
+      g.rect(0, 0, this._app.renderer.width, this._app.renderer.height)
         .fill({ color: 'black', alpha: .5 });
       c.addChild(g);
 
@@ -120,8 +123,8 @@ export class MatchScene extends Scene {
         anchor: .5
       });
 
-      t.x = Math.floor(this.app.renderer.width * .5);
-      t.y = Math.floor(this.app.renderer.height * .5);
+      t.x = Math.floor(this._app.renderer.width * .5);
+      t.y = Math.floor(this._app.renderer.height * .5);
       c.addChild(t);
       this.addChild(c);
       return;
@@ -161,7 +164,7 @@ export class MatchScene extends Scene {
   private async loadAssets() {
     const c = new Container();
     const g = c.addChild(new Graphics());
-    g.rect(0, 0, this.app.renderer.width, this.app.renderer.height)
+    g.rect(0, 0, this._app.renderer.width, this._app.renderer.height)
       .fill({ color: 'black', alpha: .6 });
     let ellipsisCount = 0;
     const t = new Text({
@@ -170,8 +173,8 @@ export class MatchScene extends Scene {
         fontSize: 24,
         fill: 'white',
       },
-      x: this.app.renderer.width * .5,
-      y: this.app.renderer.height * .5,
+      x: this._app.renderer.width * .5,
+      y: this._app.renderer.height * .5,
       anchor: .5
     });
     c.addChild(t);
@@ -232,7 +235,7 @@ export class MatchScene extends Scene {
       return;
     }
 
-    displayTrash(this.stage)
+    displayTrash(this._app)
   }
 
   private createScoreView() {
@@ -254,7 +257,7 @@ export class MatchScene extends Scene {
   }
 
   private onDisplayCardDetail = (cardId: number) => {
-    displayCardDetail(cardId, this.stage);
+    displayCardDetail(this._app, cardId);
   }
 
   private onWaitingOnPlayer = (playerId: number) => {
@@ -289,8 +292,8 @@ export class MatchScene extends Scene {
     c.addChild(t);
 
     this.addChild(c);
-    c.x = this.app.renderer.width * .5 - c.width * .5;
-    c.y = this.app.renderer.height * .5 - c.height * .5;
+    c.x = this._app.renderer.width * .5 - c.width * .5;
+    c.y = this._app.renderer.height * .5 - c.height * .5;
   }
 
   private onDoneWaitingForPlayer = () => {
@@ -311,7 +314,7 @@ export class MatchScene extends Scene {
 
   private onUserPrompt = async (args: UserPromptEffectArgs) => {
     this._selecting = true;
-    const result = await userPromptModal(args);
+    const result = await userPromptModal(this._app, args);
     this._selecting = false;
     gameEvents.emit('userPromptResponse', result);
   }
@@ -567,8 +570,8 @@ export class MatchScene extends Scene {
     }
 
     if (this._playerHand) {
-      this._playerHand.x = this.app.renderer.width * .5 - this._playerHand.width * .5;
-      this._playerHand.y = this.app.renderer.height - this._playerHand.height;
+      this._playerHand.x = this._app.renderer.width * .5 - this._playerHand.width * .5;
+      this._playerHand.y = this._app.renderer.height - this._playerHand.height;
 
       this._playAllTreasuresButton.button.x = this._playerHand.x + this._playerHand.width * .5 - this._playAllTreasuresButton.button.width * .5;
       this._playAllTreasuresButton.button.y = this._playerHand.y - this._playAllTreasuresButton.button.height - STANDARD_GAP;
@@ -579,12 +582,12 @@ export class MatchScene extends Scene {
       }
 
       if (this._discard) {
-        this._discard.y = this.app.renderer.height - CARD_HEIGHT * .75;
+        this._discard.y = this._app.renderer.height - CARD_HEIGHT * .75;
         this._discard.x = this._playerHand.x - this._discard.width - STANDARD_GAP;
       }
 
       if (this._deck && this._discard) {
-        this._deck.y = this.app.renderer.height - CARD_HEIGHT * .75;
+        this._deck.y = this._app.renderer.height - CARD_HEIGHT * .75;
         this._deck.x = this._discard.x - this._deck.width - STANDARD_GAP;
 
         if (this._trash) {

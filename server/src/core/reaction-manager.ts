@@ -1,5 +1,5 @@
 import { Match } from 'shared/shared-types.ts';
-import { Reaction, ReactionTemplate, ReactionTrigger } from './types.ts';
+import { Reaction, ReactionTemplate, ReactionTrigger } from '../types.ts';
 
 import { CardLibrary } from './card-library.ts';
 

@@ -1,4 +1,4 @@
-import { GainTreasureEffect } from "../effects/gain-treasure.ts";
+import { GainTreasureEffect } from "../core/effects/gain-treasure.ts";
 import { CardExpansionModule } from "./card-expansion-module.ts";
 
 const expansionModule: CardExpansionModule = {

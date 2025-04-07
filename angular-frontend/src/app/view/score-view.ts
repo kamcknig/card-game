@@ -54,7 +54,7 @@ export class ScoreView extends Container {
   private onUpdateScore(playerId: number, score: number) {
     let scoreText;
     try {
-      scoreText = this._playerNameContainer.getChildByName(`player-${playerId}`)?.getChildByName('score-text') as Text;
+      scoreText = this._playerNameContainer.getChildByName(`player-${playerId}`)?.getChildByName('scoreText') as Text;
     } catch {
       // meh
     }
@@ -66,36 +66,41 @@ export class ScoreView extends Container {
     scoreText.x -= 50;
     scoreText.text = score;
     scoreText.x = 200 - scoreText.width - STANDARD_GAP;
+    console.log(scoreText.text);
   }
 
   private onPlayersUpdated(turnOrder: readonly Player[]) {
-    this._playerNameContainer.removeChildren();
-
     for (const [idx, player] of turnOrder.entries()) {
-      const playerContainer = new Container({ label: `player-${player.id}` });
+      const label = `player-${player.id}`;
 
-      if (!player) {
-        continue;
-      }
+      const playerContainer = this._playerNameContainer.getChildByLabel(label) ??
+        new Container({ label });
 
-      const t = new Text({
-        text: player.name,
-        style: { fontSize: 18, fill: { color: 'white' } }
-      });
+      const playerNameText = playerContainer.getChildByLabel('playerNameText') ??
+        new Text({
+          label: 'playerNameText',
+          text: player.name,
+          style: { fontSize: 18, fill: { color: 'white' } }
+        });
 
-      const g = new Graphics();
-      g.roundRect(0, 0, 200, t.height + STANDARD_GAP * 2, 5).fill({ color: 'black', alpha: .6 });
+      const scoreText = playerContainer.getChildByLabel('scoreText') ??
+        new Text({
+          text: 0,
+          label: 'scoreText',
+          style: { fontSize: 18, fill: { color: 'white' } }
+        });
+
+      const g = playerContainer.getChildByName('background') as Graphics ??
+        new Graphics({label: 'background'});
+      g.clear();
+      g.roundRect(0, 0, 200, playerNameText.height + STANDARD_GAP * 2, 5).fill({ color: 'black', alpha: .6 });
+
       playerContainer.addChild(g);
 
-      t.x = STANDARD_GAP;
-      t.y = playerContainer.height * .5 - t.height * .5;
-      playerContainer.addChild(t);
+      playerNameText.x = STANDARD_GAP;
+      playerNameText.y = playerContainer.height * .5 - playerNameText.height * .5;
+      playerContainer.addChild(playerNameText);
 
-      const scoreText = new Text({
-        text: 0,
-        label: 'score-text',
-        style: { fontSize: 18, fill: { color: 'white' } }
-      });
       scoreText.x = 200 - scoreText.width - STANDARD_GAP;
       scoreText.y = playerContainer.height * .5 - scoreText.height * .5;
       playerContainer.addChild(scoreText);

@@ -1,14 +1,14 @@
-import { AppSocket } from "./types.ts";
+import { AppSocket } from "../types.ts";
 import {
   Match,
   MatchConfiguration,
   Player,
   PlayerId,
 } from "shared/shared-types.ts";
-import { createNewPlayer } from "./utils/create-new-player.ts";
-import { io } from "./server.ts";
+import { createNewPlayer } from "../utils/create-new-player.ts";
+import { io } from "../server.ts";
 import { MatchController } from "./match-controller.ts";
-import { expansionData } from "./state/expansion-data.ts";
+import { ExpansionCardData, expansionData } from '../state/expansion-data.ts';
 import { compare } from "fast-json-patch";
 
 const defaultMatchConfiguration = {
@@ -171,7 +171,7 @@ export class Game {
     const expansionsToRemove: string[] = [];
     for (const expansion of newExpansions) {
       const configModule =
-        (await import(`./expansions/${expansion}/configuration.json`, {
+        (await import(`../expansions/${expansion}/configuration.json`, {
           with: { type: "json" },
         }))?.default;
 
@@ -265,7 +265,7 @@ export class Game {
         ...this._matchConfiguration,
         players: this.players.filter(p => p.connected).map(p => { p.ready = false; return p; }),
       },
-      this._matchConfiguration.expansions.reduce((prev, key) => ({ ...prev, ...expansionData[key].cardData }), {}),
+      this._matchConfiguration.expansions.reduce((prev, key) => ({ ...prev, ...expansionData[key].cardData }), {} as ExpansionCardData),
     );
   };
 }

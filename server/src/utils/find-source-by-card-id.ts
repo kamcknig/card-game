@@ -1,7 +1,7 @@
 import { CardLocation, Match } from 'shared/shared-types.ts';
 import { isUndefined } from 'es-toolkit';
 
-import { CardLibrary } from '../card-library.ts';
+import { CardLibrary } from '../core/card-library.ts';
 
 export const findSourceByCardId = (
   cardId: number,

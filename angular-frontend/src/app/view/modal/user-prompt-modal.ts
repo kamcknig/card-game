@@ -1,22 +1,14 @@
-import { Container, Graphics, Text } from 'pixi.js';
+import { Application, Container, Graphics, Text } from 'pixi.js';
 import { AppButton, createAppButton } from '../../core/create-app-button';
-import {
-  clientSelectableCardsOverrideStore,
-  selectableCardStore,
-  selectedCardStore
-} from '../../state/interactive-state';
+import { clientSelectableCardsOverrideStore, selectedCardStore } from '../../state/interactive-state';
 import { STANDARD_GAP } from '../../core/app-contants';
 import { UserPromptEffectArgs } from 'shared/shared-types';
 import { List } from '@pixi/ui';
 import { cardSelectionView } from './card-selection-view';
 import { cardRearrangeView } from './card-rearrange-view';
 import { cardBlindRearrangeView } from './card-blind-rearrange-view';
-import { inject } from '@angular/core';
-import { PIXI_APP } from '../../core/pixi-application.token';
 
-export const userPromptModal = (args: UserPromptEffectArgs): Promise<unknown> => {
-  const app = inject(PIXI_APP);
-
+export const userPromptModal = (app: Application, args: UserPromptEffectArgs): Promise<unknown> => {
   return new Promise((resolve) => {
     let validationBtn: AppButton;
     let contentView: Container;
@@ -42,7 +34,7 @@ export const userPromptModal = (args: UserPromptEffectArgs): Promise<unknown> =>
     const cleanup = () => {
       app.stage.removeChild(modalContainer);
       selectedCardStore.set([]);
-      clientSelectableCardsOverrideStore.set([]);
+      clientSelectableCardsOverrideStore.set(null);
     };
 
     const actionButtonListener = (args?: { action?: number; result?: unknown}) => {
@@ -57,6 +49,12 @@ export const userPromptModal = (args: UserPromptEffectArgs): Promise<unknown> =>
     if (args.content?.cards) {
       switch (args.content.cards.action) {
         case 'rearrange':
+          contentView = cardRearrangeView(app, args);
+          break;
+        case 'blind-rearrange':
+          contentView = cardBlindRearrangeView(args);
+          break;
+        default:
           contentView = cardSelectionView(args);
 
           contentView.on('finished', () => {
@@ -69,12 +67,6 @@ export const userPromptModal = (args: UserPromptEffectArgs): Promise<unknown> =>
               validationBtn.button.eventMode = valid ? 'static' : 'none';
             }
           });
-          break;
-        case 'blind-rearrange':
-          contentView = cardBlindRearrangeView(args);
-          break;
-        default:
-          contentView = cardRearrangeView(args);
           break;
       }
 

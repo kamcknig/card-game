@@ -1,19 +1,19 @@
 import { findOrderedEffectTargets } from '../../utils/find-ordered-effect-targets.ts';
 import { isUndefined } from 'es-toolkit';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
-import { DiscardCardEffect } from '../../effects/discard-card.ts';
-import { DrawCardEffect } from '../../effects/draw-card.ts';
-import { GainActionEffect } from '../../effects/gain-action.ts';
-import { GainBuyEffect } from '../../effects/gain-buy.ts';
-import { GainCardEffect } from '../../effects/gain-card.ts';
-import { GainTreasureEffect } from '../../effects/gain-treasure.ts';
-import { MoveCardEffect } from '../../effects/move-card.ts';
-import { PlayCardEffect } from '../../effects/play-card.ts';
-import { RevealCardEffect } from '../../effects/reveal-card.ts';
-import { SelectCardEffect } from '../../effects/select-card.ts';
-import { ShuffleDeckEffect } from '../../effects/shuffle-card.ts';
-import { TrashCardEffect } from '../../effects/trash-card.ts';
-import { UserPromptEffect } from '../../effects/user-prompt.ts';
+import { DiscardCardEffect } from '../../core/effects/discard-card.ts';
+import { DrawCardEffect } from '../../core/effects/draw-card.ts';
+import { GainActionEffect } from '../../core/effects/gain-action.ts';
+import { GainBuyEffect } from '../../core/effects/gain-buy.ts';
+import { GainCardEffect } from '../../core/effects/gain-card.ts';
+import { GainTreasureEffect } from '../../core/effects/gain-treasure.ts';
+import { MoveCardEffect } from '../../core/effects/move-card.ts';
+import { PlayCardEffect } from '../../core/effects/play-card.ts';
+import { RevealCardEffect } from '../../core/effects/reveal-card.ts';
+import { SelectCardEffect } from '../../core/effects/select-card.ts';
+import { ShuffleDeckEffect } from '../../core/effects/shuffle-card.ts';
+import { TrashCardEffect } from '../../core/effects/trash-card.ts';
+import { UserPromptEffect } from '../../core/effects/user-prompt.ts';
 import { CardExpansionModule } from '../card-expansion-module.ts';
 
 const expansionModule: CardExpansionModule = {
@@ -214,7 +214,7 @@ const expansionModule: CardExpansionModule = {
         playerId: triggerPlayerId,
         sourceCardId: triggerCardId,
         sourcePlayerId: triggerPlayerId,
-        count: { kind: 'variable' },
+        count: { kind: 'upTo', count: match.playerHands[triggerPlayerId].length },
         restrict: { from: { location: 'playerHands' } },
       })) as number[];
       

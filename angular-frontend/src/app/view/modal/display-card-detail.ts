@@ -1,11 +1,10 @@
-import { Container, Graphics } from 'pixi.js';
+import { Application, Container, Graphics } from 'pixi.js';
 import { cardStore } from '../../state/card-state';
 import { createCardView } from '../../core/card/create-card-view';
 import { inject } from '@angular/core';
 import { PIXI_APP } from '../../core/pixi-application.token';
 
-export const displayCardDetail = (cardId: number): void => {
-  const app = inject(PIXI_APP);
+export const displayCardDetail = (app: Application, cardId: number): void => {
   const container = new Container();
   container.eventMode = 'static';
   const card = cardStore.get()[cardId];

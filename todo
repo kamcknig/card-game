@@ -6,9 +6,9 @@ TODO lower priority
 - when can't load assets (expansion modules) it still just goes on rather than stopping
 - create a "card display" component. this component can be used within things like the userPromptModal or reactModal.
 - need to allow user to select another username inorder to see their discard?
+- when discarding, the last card discarded should be displayed in log
 
 TODO higher priority
-- make some selections non-toggleable like when playing throne room and picking a card
 - ask to resign feature
   - remove player that resigns - or just make them skip their turn each time
 - when disconnecting/reconnecting, need to handle scenarios when waiting on input from the user that disconnected (from card effects - like the user prompt, or select card effects)
@@ -18,24 +18,8 @@ card expansion module's scoring functions currently only look in the hand, disca
 
 update user prompt modal when there are multiple actions to toggle those actions (example pawn card in intrigue or courtier)
 
-need to go through all effects. anything that is related to cost like choosing a card that costs x amount - need to update those to compare aginst the effective cost
+need to go through all effects. anything that is related to cost like choosing a card that costs x amount - need to update those to compare against the effective cost
 
 viewing the trash sucks
 
-supply is lumped in with all kingdom cards in the carddata so it can be cchosen in the kingdom
-
-in normal dominion when someone else discards, does it tell you what the card is?
-
-sentry prompt says to trash, but then asks to rearrange
-
-deck and discard show counts - should they?
-
-sentry - might be broken
-
 wishing well not implemented
-
-
-choosing intrige, but not base v2 breaks
-
-
-display card details modal doesn't fill screen

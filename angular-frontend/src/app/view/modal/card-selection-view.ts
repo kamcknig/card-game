@@ -18,12 +18,6 @@ export const cardSelectionView = (args: UserPromptEffectArgs) => {
   if (!args.content?.cards) throw new Error('Cards cannot be empty');
   const cards = args.content.cards;
 
-  // super hacky. $selectable cards is "global". and in cases where we are showing cards
-  // from places like a user's discard for the harbinger card then the IDs of the cards used to create
-  // the views in the modal are the same as those in the discard. So the cards in both places will highlight and
-  // be selectable. So I create new IDs for them here so that only the ones on the modal are selectable and
-  // map them to the old IDs. However, CardView has the listener that also shows the detail view when right
-  // l, which will fail
   let newCardToOldCardMap = new Map<CardId, CardId>();
   let maxId = toNumber(Object.keys(cardStore.get()).sort().slice(-1)[0]);
 
