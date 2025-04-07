@@ -228,9 +228,10 @@ export class MatchScene extends Scene {
   }
 
   private onTrashPressed = (e: PointerEvent) => {
-    if (trashStore.get().length === 0) {
+    if (trashStore.get().length === 0 || e.button === 2) {
       return;
     }
+
     displayTrash(this.stage)
   }
 
@@ -319,6 +320,7 @@ export class MatchScene extends Scene {
   private doSelectCards = async (arg: SelectCardEffectArgs) => {
     const cardIds = selectableCardStore.get();
 
+    // no more selectable cards, remove the done selecting button if it exists
     if (cardIds.length === 0 && !isUndefined(this._doneSelectingBtn)) {
       this.removeChild(this._doneSelectingBtn);
       return;
@@ -348,7 +350,6 @@ export class MatchScene extends Scene {
       const c = new Container({ label: 'cardCountContainer' });
 
       let s: Sprite | undefined = undefined;
-      console.warn('very hacky way of getting this icon');
       if (arg.prompt.includes('trash')) {
         s = Sprite.from(await Assets.load(`./assets/ui-icons/trash-card-count.png`));
       } else if (arg.prompt.includes('discard')) {
@@ -387,11 +388,12 @@ export class MatchScene extends Scene {
     this._doneSelectingBtn.y = Math.floor((this._playerHand?.y ?? 0) - this._doneSelectingBtn.height - STANDARD_GAP);
 
     const doneListener = () => {
-      this._doneSelectingBtn?.off('pointerdown', doneListener);
+      this._doneSelectingBtn?.off('pointerdown');
       this._doneSelectingBtn?.removeFromParent();
+      this._doneSelectingBtn = undefined;
       selectedCardsListenerCleanup();
-      gameEvents.emit('cardsSelected', selectedCardStore.get());
       this._selecting = false;
+      gameEvents.emit('cardsSelected', selectedCardStore.get());
     }
 
     const updateCountText = (countText: Text, count: number) => {
@@ -438,7 +440,7 @@ export class MatchScene extends Scene {
 
     // listen for cards being selected
     const selectedCardsListenerCleanup = selectedCardStore.subscribe(cardIds => {
-      this._doneSelectingBtn?.off('pointerdown', doneListener);
+      this._doneSelectingBtn?.off('pointerdown');
 
       const countText = this._doneSelectingBtn?.getChildByLabel('cardCountContainer')
         ?.getChildByLabel('count') as Text;
@@ -463,7 +465,13 @@ export class MatchScene extends Scene {
       return;
     }
 
-    const cardView = event.target as CardView
+    const cardView = event.target as CardView;
+
+    if (event.ctrlKey) {
+      console.log(cardView.card);
+      return;
+    }
+
     if (event.button === 2 && cardView.facing === 'front') {
       gameEvents.emit('displayCardDetail', (event.target as CardView).card.id);
       return;

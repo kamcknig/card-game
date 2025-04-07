@@ -1,37 +1,41 @@
-import {Container, Graphics} from 'pixi.js';
-import {cardStore} from '../../state/card-state';
-import {createCardView} from '../../core/card/create-card-view';
-export const displayCardDetail = (cardId: number, stage: Container): void => {
-    const container = new Container();
-    container.eventMode = 'static';
-    const card = cardStore.get()[cardId];
-    const view = createCardView(card);
-    view.size = 'detail';
-    view.facing = 'front'
+import { Container, Graphics } from 'pixi.js';
+import { cardStore } from '../../state/card-state';
+import { createCardView } from '../../core/card/create-card-view';
+import { inject } from '@angular/core';
+import { PIXI_APP } from '../../core/pixi-application.token';
 
-    view.eventMode = 'none';
+export const displayCardDetail = (cardId: number): void => {
+  const app = inject(PIXI_APP);
+  const container = new Container();
+  container.eventMode = 'static';
+  const card = cardStore.get()[cardId];
+  const view = createCardView(card);
+  view.size = 'detail';
+  view.facing = 'front'
 
-    const background = new Graphics()
-        .rect(0, 0, stage.width, stage.height)
-        .fill({
-            color: 'black',
-            alpha: .6,
-        });
+  view.eventMode = 'none';
 
-    container.addChild(background);
-    view.x = Math.floor(stage.width * .5 - view.width * .5);
-    view.y = Math.floor(stage.height * .5 - view.height * .5);
-    container.addChild(view);
-    stage.addChild(container);
+  const background = new Graphics()
+    .rect(0, 0, app.renderer.width, app.renderer.height)
+    .fill({
+      color: 'black',
+      alpha: .6,
+    });
 
-    const onPointerDown = () => {
-        stage.removeChild(container);
-    };
-    const onRemoved = () => {
-        container.off('pointerdown', onPointerDown);
-        container.off('removed', onRemoved);
-    }
+  container.addChild(background);
+  view.x = Math.floor(app.renderer.width * .5 - view.width * .5);
+  view.y = Math.floor(app.renderer.height * .5 - view.height * .5);
+  container.addChild(view);
+  app.stage.addChild(container);
 
-    container.on('pointerdown', onPointerDown);
-    container.on('removed', onRemoved)
+  const onPointerDown = () => {
+    app.stage.removeChild(container);
+  };
+  const onRemoved = () => {
+    container.off('pointerdown', onPointerDown);
+    container.off('removed', onRemoved);
+  }
+
+  container.on('pointerdown', onPointerDown);
+  container.on('removed', onRemoved)
 }

@@ -237,8 +237,6 @@ export interface IEffectRunner {
     playerId: number,
     acc?: MatchUpdate,
   ): Promise<unknown>;
-
-  suspendedCallbackRunner(fn: () => Promise<void>): Promise<unknown>;
 }
 
 export type ReactionTemplate = Omit<Reaction, "getSourceId" | "getSourceKey">;

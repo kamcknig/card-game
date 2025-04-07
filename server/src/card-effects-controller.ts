@@ -86,20 +86,6 @@ export class CardEffectController implements IEffectRunner {
     );
   }
 
-  public async suspendedCallbackRunner(fn: () => Promise<void>): Promise<void> {
-    console.log(
-      `[EFFECT CONTROLLER] running suspended callback runner complete callback suspended effects`,
-    );
-    if (this._effectsPipeline) {
-      await this._effectsPipeline.suspendCallback(fn);
-    } else {
-      console.warn(
-        "[EFFECT CONTROLLER] EffectPipeline not assigned to CardEffectController",
-      );
-      await fn();
-    }
-  }
-
   public setEffectPipeline(pipeline: EffectsPipeline) {
     this._effectsPipeline = pipeline;
   }
