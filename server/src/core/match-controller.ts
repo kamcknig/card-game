@@ -7,22 +7,29 @@ import {
   MatchSummary,
   PlayerId,
   TurnPhaseOrderValues,
-} from 'shared/shared-types.ts';
-import { AppSocket, EffectHandlerMap, MatchBaseConfiguration, } from '../types.ts';
-import { CardEffectController } from './card-effects-controller.ts';
-import { CardInteractivityController } from './card-interactivity-controller.ts';
-import { createCardFactory } from '../utils/create-card.ts';
-import { createEffectHandlerMap } from './effect-handler-map.ts';
-import { EffectsPipeline } from './effects-pipeline.ts';
-import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
-import { ReactionManager } from './reaction-manager.ts';
-import { scoringFunctionMap } from '../expansions/scoring-function-map.ts';
-import { getCardOverrides, removeOverrideEffects, } from '../card-data-overrides.ts';
-import { CardLibrary } from './card-library.ts';
-import { compare, Operation } from 'fast-json-patch';
-import { ExpansionCardData, expansionData } from '../state/expansion-data.ts';
-import { getPlayerById } from '../utils/get-player-by-id.ts';
-import Fuse, { IFuseOptions } from 'fuse.js';
+} from "shared/shared-types.ts";
+import {
+  AppSocket,
+  EffectHandlerMap,
+  MatchBaseConfiguration,
+} from "../types.ts";
+import { CardEffectController } from "./card-effects-controller.ts";
+import { CardInteractivityController } from "./card-interactivity-controller.ts";
+import { createCardFactory } from "../utils/create-card.ts";
+import { createEffectHandlerMap } from "./effect-handler-map.ts";
+import { EffectsPipeline } from "./effects-pipeline.ts";
+import { fisherYatesShuffle } from "../utils/fisher-yates-shuffler.ts";
+import { ReactionManager } from "./reaction-manager.ts";
+import { scoringFunctionMap } from "../expansions/scoring-function-map.ts";
+import {
+  getCardOverrides,
+  removeOverrideEffects,
+} from "../card-data-overrides.ts";
+import { CardLibrary } from "./card-library.ts";
+import { compare, Operation } from "fast-json-patch";
+import { ExpansionCardData, expansionData } from "../state/expansion-data.ts";
+import { getPlayerById } from "../utils/get-player-by-id.ts";
+import Fuse, { IFuseOptions } from "fuse.js";
 
 export class MatchController {
   private _effectHandlerMap: EffectHandlerMap | undefined;
@@ -34,7 +41,7 @@ export class MatchController {
   private _cardData: ExpansionCardData | undefined;
   private _config: MatchConfiguration | undefined;
   private _createCardFn: ((key: CardKey) => Card) | undefined;
-  private _fuse: Fuse<CardData> | undefined;
+  private _fuse: Fuse<CardData & { cardKey: CardKey }> | undefined;
 
   constructor(
     private _match: Match,
@@ -45,26 +52,33 @@ export class MatchController {
     config: MatchConfiguration,
     cardData: ExpansionCardData,
   ) {
-    const allExpansionCards = Object.keys(expansionData).reduce((prev, expansionName) => {
-      const expansion = expansionData[expansionName];
-      const expansionCardData = Object.values(expansion.cardData.supply).concat(Object.values(expansion.cardData.kingdom));
-      
-      prev = prev.concat(expansionCardData.filter(cd => {
-        return prev.findIndex(e => {
-          return e.cardName === cd.cardName
-        }) === -1
-      }));
-      return prev;
-    }, [] as CardData[]);
+    const find = (key: CardKey, arr: (CardData & { cardKey: CardKey })[]) =>
+      arr.findIndex(e => e.cardKey === key) > -1;
     
+    const allExpansionCards = Object.keys(expansionData).reduce(
+      (prev, expansionName) => {
+        const expansion = expansionData[expansionName];
+        const supply = expansion.cardData.supply;
+        const kingdom = expansion.cardData.kingdom;
+        
+        prev = prev
+          .concat(Object.keys(supply).filter(k => !find(k, prev)).map((k) => ({ ...supply[k], cardKey: k })))
+          .concat(Object.keys(kingdom).filter(k => !find(k, prev)).map((k) => ({ ...kingdom[k], cardKey: k })));
+        
+        return prev;
+      },
+      [] as (CardData & { cardKey: CardKey })[],
+    );
+
     const fuseOptions: IFuseOptions<CardData> = {
       ignoreDiacritics: true,
       minMatchCharLength: 2,
-      keys: ['cardName'],
-      ignoreLocation: true
-    }
+      keys: ["cardName"],
+      ignoreLocation: true,
+    };
+
     this._fuse = new Fuse(allExpansionCards, fuseOptions);
-    
+
     this._createCardFn = createCardFactory(cardData);
     this._cardData = cardData;
     const supplyCards = this.createBaseSupply(config);
@@ -162,14 +176,16 @@ export class MatchController {
     const kingdomCards: Card[] = [];
 
     // todo: remove testing code
-    const keepers: string[] = ['wishing-well'].filter(k => this._cardData!.kingdom[k]);
+    const keepers: string[] = ["wishing-well"].filter((k) =>
+      this._cardData!.kingdom[k]
+    );
 
     console.log(
       `[MATCH] choosing ${MatchBaseConfiguration.numberOfKingdomPiles} kingdom cards`,
     );
 
     const availableKingdom = Object.keys(this._cardData.kingdom);
-    
+
     console.log(`[MATCH] available kingdom cards\n${availableKingdom}`);
 
     let chosenKingdom = availableKingdom
@@ -182,7 +198,9 @@ export class MatchController {
       console.log(`[MATCH] adding keeper cards ${keepers}`);
 
       const filteredKingdom = chosenKingdom.filter((k) => !keepers.includes(k));
-      chosenKingdom = filteredKingdom.concat(keepers).slice(-MatchBaseConfiguration.numberOfKingdomPiles);
+      chosenKingdom = filteredKingdom.concat(keepers).slice(
+        -MatchBaseConfiguration.numberOfKingdomPiles,
+      );
     }
 
     console.log(`[MATCH] final chosen kingdom cards ${chosenKingdom}`);
@@ -331,7 +349,7 @@ export class MatchController {
 
     for (const socket of this._socketMap.values()) {
       socket.on("nextPhase", this.onNextPhase);
-      socket.on('searchCards', this.onSearchCards);
+      socket.on("searchCards", this.onSearchCards);
     }
 
     const match = this._match;
@@ -349,17 +367,24 @@ export class MatchController {
         );
       }
     }
-    
+
     void this.onCheckForPlayerActions();
   }
 
   private onSearchCards = (playerId: PlayerId, searchStr: string) => {
-    console.log(`[MATCH] searching cards for string '${searchStr}' for ${getPlayerById(this._match, playerId)}`);
-    
+    console.log(
+      `[MATCH] searching cards for string '${searchStr}' for ${
+        getPlayerById(this._match, playerId)
+      }`,
+    );
+
     const results = this._fuse?.search(searchStr);
-    this._socketMap.get(playerId)?.emit('searchCardResponse', results?.map(r => r.item) ?? []);
-  }
-  
+    this._socketMap.get(playerId)?.emit(
+      "searchCardResponse",
+      results?.map((r) => r.item) ?? [],
+    );
+  };
+
   public getMatchSnapshot(): Match {
     return structuredClone(this._match);
   }
@@ -418,7 +443,7 @@ export class MatchController {
     }
 
     match.scores = scores;
-    
+
     this.broadcastPatch(prev);
   }
 
@@ -708,7 +733,7 @@ export class MatchController {
     // There should always be at least one entry after a single disconnect
     const leaving = roster.find((p) => p.id === playerId);
     console.log(`[MATCH] ${leaving ?? `{id:${playerId}}`} has disconnected`);
-    
+
     this._socketMap.get(playerId)?.offAnyIncoming();
     this._interactivityController?.playerRemoved(this._socketMap.get(playerId));
     this._socketMap.delete(playerId);

@@ -1,8 +1,10 @@
 import { PlayerId, UserPromptKinds } from 'shared/shared-types';
-import { Container, Graphics } from 'pixi.js';
+import { Assets, Container, Graphics, Sprite } from 'pixi.js';
 import { Input, List } from '@pixi/ui'
-import { CARD_HEIGHT, STANDARD_GAP } from '../../core/app-contants';
+import { CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP } from '../../core/app-contants';
 import { SocketService } from '../../core/socket-service/socket.service';
+import { createCardView } from '../../core/card/create-card-view';
+import { compare } from 'fast-json-patch/';
 
 export const nameCardView = (
   args: UserPromptKinds,
@@ -39,8 +41,27 @@ export const nameCardView = (
     }, 300);
   });
 
-  socketService.on('searchCardResponse', (data) => {
-    console.log(data);
+  let prev: any;
+  socketService.on('searchCardResponse', async (data) => {
+    if (!prev) {
+      prev = data;
+    } else {
+      const changes = compare(prev,  data);
+      if (!changes) return;
+    }
+
+    cardList.removeChildren();
+    cardList.elementsMargin = data.length > 10 ? -CARD_WIDTH * .75 : STANDARD_GAP;
+
+    for (const d of data) {
+      try {
+        const img = Sprite.from(await Assets.load(`${d.fullImagePath}`));
+        cardList.addChild(img);
+      }
+      catch (err) {
+        console.error(err);
+      }
+    }
   });
 
   c.on('removed', () => {
