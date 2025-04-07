@@ -255,10 +255,9 @@ const expansionModule: CardExpansionModule = {
             playerId: targetPlayerId,
             prompt: 'Choose a treasure to trash',
             content: {
-              cards: {
-                cardIds: possibleCardsToTrash,
-                selectCount: 1
-              },
+              type: 'select',
+              cardIds: possibleCardsToTrash,
+              selectCount: 1,
             },
           })) as { action: number, result: number[] };
 
@@ -530,10 +529,9 @@ const expansionModule: CardExpansionModule = {
         actionButtons: [{label: 'CANCEL', action: 2}],
         validationAction: 1,
         content: {
-          cards: {
-            cardIds: match.playerDiscards[triggerPlayerId],
-            selectCount: 1
-          },
+          type: 'select',
+          cardIds: match.playerDiscards[triggerPlayerId],
+          selectCount: 1
         },
       })) as { action: number, result: number[] };
 
@@ -1031,33 +1029,36 @@ const expansionModule: CardExpansionModule = {
         sourceCardId: triggerCardId,
         playerId: triggerPlayerId,
         prompt: 'Choose card/s to trash?',
-        actionButtons: [{label: 'TRASH', action: 1}],
+        actionButtons: [{label: `DON'T TRASH`, action: 2}, {label: 'TRASH', action: 1}],
         content: {
-          cards: {
-            cardIds: cardsToLookAtIds,
-            selectCount: {
-              kind: 'upTo',
-              count: cardsToLookAtIds.length,
-            },
+          type: 'select',
+          cardIds: cardsToLookAtIds,
+          selectCount: {
+            kind: 'upTo',
+            count: cardsToLookAtIds.length,
           },
         },
       })) as { action: number; result: number[] };
       
       let selectedCardIds = result?.result ?? [];
       
-      console.debug(
-        `[SENTRY EFFECT] player selected ${
-          selectedCardIds.map((id) => cardLibrary.getCard(id))
-        } to trash`,
-      );
-      
-      for (const cardId of selectedCardIds) {
-        yield new TrashCardEffect({
-          sourcePlayerId: triggerPlayerId,
-          sourceCardId: triggerCardId,
-          playerId: triggerPlayerId,
-          cardId: cardId,
-        });
+      if (result.action === 1) {
+        console.debug(
+          `[SENTRY EFFECT] player selected ${
+            selectedCardIds.map((id) => cardLibrary.getCard(id))
+          } to trash`,
+        );
+        
+        for (const cardId of selectedCardIds) {
+          yield new TrashCardEffect({
+            sourcePlayerId: triggerPlayerId,
+            sourceCardId: triggerCardId,
+            playerId: triggerPlayerId,
+            cardId: cardId,
+          });
+        }
+      } else {
+        console.debug(`[SENTRY EFFECT] player chose not to trash anything`);
       }
       
       const cardsToDiscard = cardsToLookAtIds.filter((id) =>
@@ -1075,18 +1076,22 @@ const expansionModule: CardExpansionModule = {
         sourceCardId: triggerCardId,
         playerId: triggerPlayerId,
         prompt: 'Choose card/s to discard?',
-        actionButtons: [{label: 'DISCARD', action: 1}],
+        actionButtons: [{label: `DON'T DISCARD`, action: 2}, {label: 'DISCARD', action: 1}],
         content: {
-          cards: {
-            cardIds: cardsToDiscard,
-            selectCount: {
-              kind: 'upTo',
-              count: cardsToDiscard.length,
-            },
+          type: 'select',
+          cardIds: cardsToDiscard,
+          selectCount: {
+            kind: 'upTo',
+            count: cardsToDiscard.length,
           },
         },
       })) as { action: number; result: number[] };
 
+      if (result.action === 2) {
+        console.debug(`[SENTRY EFFECT] player chose not to discard`);
+        return;
+      }
+      
       selectedCardIds = result?.result ?? [];
       
       if (selectedCardIds.length === 0) {

@@ -1,20 +1,19 @@
-import { DiscardCardEffect } from "../../core/effects/discard-card.ts";
-import { GainBuyEffect } from "../../core/effects/gain-buy.ts";
-import { GainCardEffect } from "../../core/effects/gain-card.ts";
-import { GainTreasureEffect } from "../../core/effects/gain-treasure.ts";
-import { UserPromptEffect } from "../../core/effects/user-prompt.ts";
-import { ModifyCostEffect } from "../../core/effects/modify-cost.ts";
-import { DrawCardEffect } from "../../core/effects/draw-card.ts";
-import { GainActionEffect } from "../../core/effects/gain-action.ts";
-import { RevealCardEffect } from "../../core/effects/reveal-card.ts";
-import { SelectCardEffect } from "../../core/effects/select-card.ts";
-import { MoveCardEffect } from "../../core/effects/move-card.ts";
-import { CardExpansionModule } from "../card-expansion-module.ts";
-import { getPlayerById } from "../../utils/get-player-by-id.ts";
-import { TrashCardEffect } from "../../core/effects/trash-card.ts";
-import { ActionButtons, Card, CardId, PlayerId } from "shared/shared-types.ts";
-import { findOrderedEffectTargets } from "../../utils/find-ordered-effect-targets.ts";
-import { handlers } from "https://deno.land/x/socket_io@0.2.1/test_deps.ts";
+import { DiscardCardEffect } from '../../core/effects/discard-card.ts';
+import { GainBuyEffect } from '../../core/effects/gain-buy.ts';
+import { GainCardEffect } from '../../core/effects/gain-card.ts';
+import { GainTreasureEffect } from '../../core/effects/gain-treasure.ts';
+import { UserPromptEffect } from '../../core/effects/user-prompt.ts';
+import { ModifyCostEffect } from '../../core/effects/modify-cost.ts';
+import { DrawCardEffect } from '../../core/effects/draw-card.ts';
+import { GainActionEffect } from '../../core/effects/gain-action.ts';
+import { RevealCardEffect } from '../../core/effects/reveal-card.ts';
+import { SelectCardEffect } from '../../core/effects/select-card.ts';
+import { MoveCardEffect } from '../../core/effects/move-card.ts';
+import { CardExpansionModule } from '../card-expansion-module.ts';
+import { getPlayerById } from '../../utils/get-player-by-id.ts';
+import { TrashCardEffect } from '../../core/effects/trash-card.ts';
+import { ActionButtons, Card, CardId, PlayerId } from 'shared/shared-types.ts';
+import { findOrderedEffectTargets } from '../../utils/find-ordered-effect-targets.ts';
 
 const expansionModule: CardExpansionModule = {
   registerCardLifeCycles: () => ({
@@ -495,17 +494,23 @@ const expansionModule: CardExpansionModule = {
           sourcePlayerId: triggerPlayerId,
         });
       } else {
-        const result = (yield new UserPromptEffect({
-          prompt: "Choose card to gain",
-          playerId: triggerPlayerId,
-          sourcePlayerId: triggerPlayerId,
-          content: {
-            cards: {
+        let result;
+        if (match.trash.length > 1) {
+          result = (yield new UserPromptEffect({
+            prompt: "Choose card to gain",
+            playerId: triggerPlayerId,
+            sourcePlayerId: triggerPlayerId,
+            content: {
+              type: 'select',
               selectCount: 1,
               cardIds: match.trash,
             },
-          },
-        })) as { result: number[] };
+          })) as { result: number[] };
+        } else {
+          console.debug(`[LURKER EFFECT] trash only has one card, gaining it automatically`);
+          result = { result: match.trash };
+        }
+        
         const cardId = result.result[0];
         yield new GainCardEffect({
           cardId,
@@ -822,10 +827,8 @@ const expansionModule: CardExpansionModule = {
         sourcePlayerId: triggerPlayerId,
         prompt: "Choose order to put back on deck",
         content: {
-          cards: {
-            action: "rearrange",
-            cardIds: nonVictoryCards.map((card) => card.id),
-          },
+          type: 'rearrange',
+          cardIds: nonVictoryCards.map((card) => card.id),
         },
         actionButtons: [
           { action: 1, label: "DONE" },
@@ -1048,10 +1051,8 @@ const expansionModule: CardExpansionModule = {
         ],
         prompt: "Position card",
         content: {
-          cards: {
-            action: "blind-rearrange",
-            cardIds: match.playerDecks[triggerPlayerId],
-          },
+          type: 'blind-rearrange',
+          cardIds: match.playerDecks[triggerPlayerId],
         },
       })) as { action: number; result: number };
 
@@ -1376,6 +1377,7 @@ const expansionModule: CardExpansionModule = {
       
       yield new GainActionEffect({ count: 1, sourcePlayerId: triggerPlayerId });
       
+      // Name a card, then reveal the top card of your deck. If you named it, put it into your hand."
       const result = (yield new UserPromptEffect({
         playerId: triggerPlayerId,
         sourcePlayerId: triggerPlayerId,

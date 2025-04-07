@@ -1,10 +1,11 @@
-import { AppSocket } from "../types.ts";
+import { AppSocket, CardData } from '../types.ts';
 import {
+  CardId,
   Match,
   MatchConfiguration,
   Player,
   PlayerId,
-} from "shared/shared-types.ts";
+} from 'shared/shared-types.ts';
 import { createNewPlayer } from "../utils/create-new-player.ts";
 import { io } from "../server.ts";
 import { MatchController } from "./match-controller.ts";
@@ -260,12 +261,26 @@ export class Game {
       socket.off("matchConfigurationUpdated");
     });
     
+    const cardData = this._matchConfiguration.expansions.reduce((prev, key) => {
+      prev = {
+        supply: {
+          ...prev.supply,
+          ...expansionData[key].cardData.supply
+        },
+        kingdom: {
+          ...prev.kingdom,
+          ...expansionData[key].cardData.kingdom
+        }
+      }
+      return prev;
+    }, {} as ExpansionCardData);
+    
     void this._matchController?.initialize(
       {
         ...this._matchConfiguration,
         players: this.players.filter(p => p.connected).map(p => { p.ready = false; return p; }),
       },
-      this._matchConfiguration.expansions.reduce((prev, key) => ({ ...prev, ...expansionData[key].cardData }), {} as ExpansionCardData),
+      cardData
     );
   };
 }

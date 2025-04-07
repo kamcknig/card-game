@@ -1,4 +1,4 @@
-import { UserPromptEffectArgs } from 'shared/shared-types';
+import { UserPromptEffectArgs, UserPromptKinds } from 'shared/shared-types';
 import { CARD_WIDTH, STANDARD_GAP } from '../../core/app-contants';
 import { createCardView } from '../../core/card/create-card-view';
 import { Text, Container, Application } from 'pixi.js';
@@ -7,10 +7,10 @@ import { CardView } from '../card-view';
 import { inject } from '@angular/core';
 import { PIXI_APP } from '../../core/pixi-application.token';
 
-export const cardRearrangeView = (app: Application, args: UserPromptEffectArgs) => {
-  if (!args.content?.cards) throw new Error('Cards must be provided');
+export const cardRearrangeView = (app: Application, args: UserPromptKinds) => {
+  if (!args.cardIds) throw new Error('Cards must be provided');
 
-  const cards = args.content.cards;
+  const cardIds = args.cardIds;
   const bottomText = new Text({
     text: 'BOTTOM',
     style: {
@@ -41,7 +41,7 @@ export const cardRearrangeView = (app: Application, args: UserPromptEffectArgs) 
   // For easy re-ordering, keep references to each card
   const cardViews: CardView[] = [];
 
-  const cardCount = cards.cardIds.length;
+  const cardCount = cardIds.length;
   const margin = cardCount > 6 ? -CARD_WIDTH * 0.5 : STANDARD_GAP;
 
   // --- Layout Helper ---
@@ -54,7 +54,7 @@ export const cardRearrangeView = (app: Application, args: UserPromptEffectArgs) 
   };
 
   // --- Create all cards and store them in cardViews array ---
-  for (const cardId of cards.cardIds) {
+  for (const cardId of cardIds) {
     const view = createCardView(cardId);
     view.eventMode = 'static';
     cardViews.push(view);

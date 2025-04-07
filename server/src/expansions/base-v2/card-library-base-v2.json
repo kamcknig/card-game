@@ -74,6 +74,7 @@
     "cardName": "Festival"
   },
   "gardens": {
+    "victoryPoints": 0,
     "cost": {
       "treasure": 4
     },

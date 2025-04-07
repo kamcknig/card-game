@@ -1,4 +1,4 @@
-import { ActionButtons, UserPromptEffectArgs } from 'shared/shared-types.ts';
+import { ActionButtons, UserPromptEffectArgs, UserPromptKinds } from 'shared/shared-types.ts';
 import { EffectBase, EffectBaseArgs } from './effect-base.ts';
 
 export class UserPromptEffect extends EffectBase {
@@ -6,7 +6,7 @@ export class UserPromptEffect extends EffectBase {
   playerId: number;
   prompt?: string;
   actionButtons?: ActionButtons;
-  content?: UserPromptEffectArgs["content"];
+  content?: UserPromptKinds;
   validationAction?: number;
 
   constructor(

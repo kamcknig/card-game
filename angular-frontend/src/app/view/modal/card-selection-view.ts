@@ -1,5 +1,5 @@
 import { Container, FederatedPointerEvent } from "pixi.js"
-import { CardId, UserPromptEffectArgs } from 'shared/shared-types';
+import { CardId, UserPromptEffectArgs, UserPromptKinds } from 'shared/shared-types';
 import { CARD_WIDTH, STANDARD_GAP } from '../../core/app-contants';
 import { createCardView } from '../../core/card/create-card-view';
 import { List } from "@pixi/ui";
@@ -14,24 +14,26 @@ import {
 } from '../../state/interactive-state';
 import { validateCountSpec } from '../../shared/validate-count-spec';
 
-export const cardSelectionView = (args: UserPromptEffectArgs) => {
-  if (!args.content?.cards) throw new Error('Cards cannot be empty');
-  const cards = args.content.cards;
+export const cardSelectionView = (args: UserPromptKinds) => {
+  if (!args.cardIds) throw new Error('Cards cannot be empty');
+  if (args.type !== 'select') throw new Error('card selection modal requires type "select"');
+
+  const cardIds = args.cardIds;
 
   let newCardToOldCardMap = new Map<CardId, CardId>();
   let maxId = toNumber(Object.keys(cardStore.get()).sort().slice(-1)[0]);
 
-  const cardCount = cards.cardIds.length;
-  cards.selectCount ??= 1;
+  const cardCount = cardIds.length;
+  args.selectCount ??= 1;
 
   const validate = () => {
-    if (!cards.selectCount) throw new Error('selectCount cannot be empty');
-    let validated = validateCountSpec(cards.selectCount, selectedCardStore.get().length)
+    if (!args.selectCount) throw new Error('selectCount cannot be empty');
+    let validated = validateCountSpec(args.selectCount, selectedCardStore.get().length)
 
     cardList.emit('validationUpdated', validated);
 
     if (validated) {
-      const count = cards.selectCount;
+      const count = args.selectCount;
 
       cardList.emit('resultsUpdated', selectedCardStore.get().map(id => newCardToOldCardMap.get(id)));
 
@@ -69,7 +71,7 @@ export const cardSelectionView = (args: UserPromptEffectArgs) => {
   const cardList = new List({ type: 'horizontal'});
   cardList.elementsMargin = cardCount > 6 ? -CARD_WIDTH * .5 : STANDARD_GAP;
 
-  for (const cardId of cards.cardIds) {
+  for (const cardId of cardIds) {
     const view = createCardView(cardId);
     view.card.id = ++maxId;
     newCardToOldCardMap.set(view.card.id, cardId);

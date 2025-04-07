@@ -206,5 +206,13 @@
       "treasure": 5
     },
     "cardName": "Upgrade"
+  },
+  "wishing-well": {
+    "abilityText": "+1 Card\n+1 Action\nName a card, then reveal the top card of your deck. If you named it, put it into your hand.",
+    "type": ["ACTION"],
+    "cost": {
+      "treasure": 3
+    },
+    "cardName": "wishing-well"
   }
 }

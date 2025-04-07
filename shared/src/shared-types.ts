@@ -20,15 +20,14 @@ export type SelectCardEffectArgs = {
     validPrompt?: string,
 }
 
+export type UserPromptKinds =
+    | { type: 'blind-rearrange'; cardIds: CardId[]; }
+    | { type: 'rearrange'; cardIds: CardId[]; }
+    | { type: 'select'; cardIds: CardId[]; selectCount: CountSpec };
+
 export type UserPromptEffectArgs = {
     prompt?: string;
-    content?: {
-        cards: {
-            action?: 'blind-rearrange' | 'rearrange' | undefined;
-            cardIds: number[],
-            selectCount?: CountSpec
-        }
-    };
+    content?: UserPromptKinds;
     actionButtons?: ActionButtons;
     validationAction?: number;
 }

@@ -147,7 +147,7 @@ export class MatchController {
     const kingdomCards: Card[] = [];
 
     // todo: remove testing code
-    const keepers: string[] = ['chapel', 'sentry'].filter(k => this._cardData!.kingdom[k]);
+    const keepers: string[] = ['bandit', 'harbinger', 'sentry'].filter(k => this._cardData!.kingdom[k]);
 
     console.log(
       `[MATCH] choosing ${MatchBaseConfiguration.numberOfKingdomPiles} kingdom cards`,
