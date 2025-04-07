@@ -9,10 +9,8 @@ import { Assets } from 'pixi.js';
 import { gameEvents } from '../event/events';
 import { type SocketService } from './socket.service';
 import { matchStore } from '../../state/match';
-import { applyPatch, compare, Operation } from 'fast-json-patch';
+import { applyPatch, Operation } from 'fast-json-patch';
 import { clientSelectableCardsOverrideStore, selectedCardStore } from '../../state/interactive-state';
-
-export const SOCKET_EVENT_MAP = new InjectionToken('socketEventMap');
 
 export type SocketEventMap = { [p in ClientListenEventNames]: ClientListenEvents[p] };
 
@@ -78,39 +76,7 @@ export const socketToGameEventMap = (socketService: SocketService): SocketEventM
     matchPatch: (patch: Operation[]) => {
       const current = structuredClone(matchStore.get());
       if (!current) return;
-
-      const blah = matchStore.get()!;
-      if (patch.some(p => p.path.includes('selectableCards'))) {
-        console.log('current selectable cards: ', blah.selectableCards);
-      }
-      if (patch.some(p => p.path.includes('playerHands'))) {
-        console.log('current player hand: ', blah.playerHands[selfPlayerIdStore.get()!]);
-      }
-      if (patch.some(p => p.path.includes('playerDecks'))) {
-        console.log('current player deck: ', blah.playerDecks[selfPlayerIdStore.get()!]);
-      }
-      if (patch.some(p => p.path.includes('playerDiscards'))) {
-        console.log('current player discard: ', blah.playerDiscards[selfPlayerIdStore.get()!]);
-      }
-      if (patch.some(p => p.path.includes('playArea'))) {
-        console.log('current playerArea: ', blah.playArea);
-      }
       applyPatch(current, patch);
-      if (patch.some(p => p.path.includes('selectableCards'))) {
-        console.log('new selectable cards: ', current.selectableCards);
-      }
-      if (patch.some(p => p.path.includes('playerHands'))) {
-        console.log('new player hand: ', current.playerHands[selfPlayerIdStore.get()!]);
-      }
-      if (patch.some(p => p.path.includes('playerDecks'))) {
-        console.log('new player deck: ', current.playerDecks[selfPlayerIdStore.get()!]);
-      }
-      if (patch.some(p => p.path.includes('playerDiscards'))) {
-        console.log('new player discard: ', current.playerDiscards[selfPlayerIdStore.get()!]);
-      }
-      if (patch.some(p => p.path.includes('playArea'))) {
-        console.log('new playerArea: ', current.playArea);
-      }
       matchStore.set(current);
     },
     playerConnected: (player) => {
@@ -181,6 +147,9 @@ export const socketToGameEventMap = (socketService: SocketService): SocketEventM
     waitingForPlayer: playerId => {
       gameEvents.emit('waitingForPlayer', playerId);
     },
+    searchCardResponse: results => {
+      console.log(results);
+    }
   }
 
   return map;

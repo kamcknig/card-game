@@ -12,6 +12,7 @@
     "npm:concurrently@9.1.2": "9.1.2",
     "npm:concurrently@^9.1.2": "9.1.2",
     "npm:esbuild@*": "0.25.1",
+    "npm:fuse.js@7.1.0": "7.1.0",
     "npm:lodash-es@4.17.21": "4.17.21",
     "npm:nanostores@0.11.4": "0.11.4",
     "npm:playwright@*": "1.51.1",
@@ -215,6 +216,9 @@
     },
     "fsevents@2.3.2": {
       "integrity": "sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA=="
+    },
+    "fuse.js@7.1.0": {
+      "integrity": "sha512-trLf4SzuuUxfusZADLINj+dE8clK1frKdmqiJNb1Es75fmI5oY6X2mxLVUciLLjxqw/xr72Dhy+lER6dGd02FQ=="
     },
     "get-caller-file@2.0.5": {
       "integrity": "sha512-DyFP3BM/3YHTQOCUL/w0OZHR0lpKeGrxotcHWcqNEdnltqFwXVfhEBQ94eIo34AfQpo0rGki4cyIiftY06h2Fg=="
@@ -492,6 +496,7 @@
     "dependencies": [
       "jsr:@es-toolkit/es-toolkit@^1.33.0",
       "jsr:@timepp/enhanced-deno-log@~0.4.1",
+      "npm:fuse.js@7.1.0",
       "npm:lodash-es@4.17.21",
       "npm:nanostores@0.11.4"
     ],

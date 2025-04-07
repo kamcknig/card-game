@@ -1,5 +1,6 @@
-import { AppSocket, CardData } from '../types.ts';
+import { AppSocket } from '../types.ts';
 import {
+  CardData,
   CardId,
   Match,
   MatchConfiguration,

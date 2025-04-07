@@ -4,12 +4,10 @@ import { UserPromptEffectArgs, UserPromptKinds } from 'shared/shared-types';
 import { STANDARD_GAP } from '../../core/app-contants';
 
 export const cardBlindRearrangeView = (args: UserPromptKinds) => {
-  if (!args.cardIds) throw new Error('Cards cannot be empty');
-
   if (args.type !== 'blind-rearrange') {
     throw new Error('Card action type is not blind-rearrange');
   }
-
+  if (!args.cardIds) throw new Error('Cards cannot be empty');
   const cardIds = args.cardIds;
   const count = cardIds.length;
   const sliderWidth = Math.min(700, Math.max(300, Math.ceil(count / 10) * 100));

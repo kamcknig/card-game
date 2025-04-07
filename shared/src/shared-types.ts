@@ -23,6 +23,7 @@ export type SelectCardEffectArgs = {
 export type UserPromptKinds =
     | { type: 'blind-rearrange'; cardIds: CardId[]; }
     | { type: 'rearrange'; cardIds: CardId[]; }
+    | { type: 'name-card' }
     | { type: 'select'; cardIds: CardId[]; selectCount: CountSpec };
 
 export type UserPromptEffectArgs = {
@@ -90,6 +91,7 @@ export type ServerEmitEvents = {
     playerDisconnected: (player: Player) => void;
     playerNameUpdated: (playerId: PlayerId, name: string) => void;
     playerReady: (playerId: PlayerId, ready: boolean) => void;
+    searchCardResponse: (cardData: CardData[]) => void;
     selectCard: (selectCardArgs: SelectCardEffectArgs & { selectableCardIds: CardId[] }) => void;
     setCardDataOverrides: (overrides: Record<CardId, Partial<Card>> | undefined) => void;
     setCardLibrary: (cardLibrary: Record<CardId, Card>) => void;
@@ -109,6 +111,7 @@ export type ServerListenEvents = {
     nextPhase: () => void;
     playerReady: (playerId: PlayerId, ready: boolean) => void;
     playAllTreasure: (playerId: PlayerId) => void;
+    searchCards: (playerId: PlayerId, searchStr: string) => void;
     selectCardResponse: (selectedCards: CardId[]) => void;
     updatePlayerName: (playerId: PlayerId, name: string) => void;
     userPromptResponse: (result: unknown) => void;
@@ -328,3 +331,7 @@ export type ActionButtons = {
 }[];
 export type CardFacing = 'front' | 'back';
 export type CardSize = 'full' | 'half' | 'detail';
+export type CardData = Omit<
+  Card,
+  'id' | 'cardKey'
+>;

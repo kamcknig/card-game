@@ -12,6 +12,7 @@
     "lodash-es": "npm:lodash-es@4.17.21",
     "nanostores": "npm:nanostores@0.11.4",
     "shared/": "../shared/src/",
-    "socket.io": "https://deno.land/x/socket_io@0.2.1/mod.ts"
+    "socket.io": "https://deno.land/x/socket_io@0.2.1/mod.ts",
+    "fuse.js": "npm:fuse.js@7.1.0"
   }
 }

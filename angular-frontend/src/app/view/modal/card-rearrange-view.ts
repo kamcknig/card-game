@@ -8,6 +8,7 @@ import { inject } from '@angular/core';
 import { PIXI_APP } from '../../core/pixi-application.token';
 
 export const cardRearrangeView = (app: Application, args: UserPromptKinds) => {
+  if (args.type !== 'rearrange') throw new Error('card rearrange view requires type "rearrange"');
   if (!args.cardIds) throw new Error('Cards must be provided');
 
   const cardIds = args.cardIds;

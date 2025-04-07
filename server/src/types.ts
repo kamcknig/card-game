@@ -1,22 +1,11 @@
-import { Socket } from "socket.io";
-import {
-  Card,
-  Match,
-  MatchUpdate,
-  ServerEmitEvents,
-  ServerListenEvents,
-} from "shared/shared-types.ts";
-import { GameEffects } from "./core/effects/game-effects.ts";
-import { toNumber } from "es-toolkit/compat";
+import { Socket } from 'socket.io';
+import { Match, MatchUpdate, ServerEmitEvents, ServerListenEvents, } from 'shared/shared-types.ts';
+import { GameEffects } from './core/effects/game-effects.ts';
+import { toNumber } from 'es-toolkit/compat';
 
-import { CardLibrary } from "./core/card-library.ts";
+import { CardLibrary } from './core/card-library.ts';
 
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
-
-export type CardData = Omit<
-  Card,
-  "id" | "cardKey"
->;
 
 /**
  * A base match configuration that can be used to spread default values.

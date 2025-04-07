@@ -1382,6 +1382,9 @@ const expansionModule: CardExpansionModule = {
         playerId: triggerPlayerId,
         sourcePlayerId: triggerPlayerId,
         sourceCardId: triggerCardId,
+        content: {
+          type: 'name-card'
+        },
         actionButtons: [
           { action: 1, label: 'DONE' }
         ],

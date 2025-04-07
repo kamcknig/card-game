@@ -314,7 +314,12 @@ export class MatchScene extends Scene {
 
   private onUserPrompt = async (args: UserPromptEffectArgs) => {
     this._selecting = true;
-    const result = await userPromptModal(this._app, args);
+    const result = await userPromptModal(
+      this._app,
+      this._socketService,
+      args,
+      this._selfId
+    );
     this._selecting = false;
     gameEvents.emit('userPromptResponse', result);
   }

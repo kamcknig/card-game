@@ -15,8 +15,8 @@ import {
 import { validateCountSpec } from '../../shared/validate-count-spec';
 
 export const cardSelectionView = (args: UserPromptKinds) => {
-  if (!args.cardIds) throw new Error('Cards cannot be empty');
   if (args.type !== 'select') throw new Error('card selection modal requires type "select"');
+  if (!args.cardIds) throw new Error('Cards cannot be empty');
 
   const cardIds = args.cardIds;
 
