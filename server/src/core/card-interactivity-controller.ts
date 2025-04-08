@@ -111,13 +111,13 @@ export class CardInteractivityController {
       }
       
       if (match.playerHands[triggerPlayerId].includes(tappedCardId)) {
-        await this._cardEffectController.runGameActionEffects(
+        this._cardEffectController.runGameActionEffects(
           'playCard',
           triggerPlayerId,
           tappedCardId,
         );
       } else {
-        await this._cardEffectController.runGameActionEffects(
+        this._cardEffectController.runGameActionEffects(
           'buyCard',
           triggerPlayerId,
           tappedCardId,

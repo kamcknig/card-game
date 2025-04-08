@@ -1,9 +1,17 @@
-import { Socket } from 'socket.io';
-import { Card, CardId, Match, PlayerId, ServerEmitEvents, ServerListenEvents, } from 'shared/shared-types.ts';
-import { GameEffects } from './core/effects/game-effects.ts';
-import { toNumber } from 'es-toolkit/compat';
+import { Socket } from "socket.io";
+import {
+  Card,
+  CardId,
+  Match,
+  PlayerId,
+  ServerEmitEvents,
+  ServerListenEvents,
+} from "shared/shared-types.ts";
+import { GameEffects } from "./core/effects/game-effects.ts";
+import { toNumber } from "es-toolkit/compat";
 
-import { CardLibrary } from './core/card-library.ts';
+import { CardLibrary } from "./core/card-library.ts";
+import { ReactionManager } from "./core/reaction-manager.ts";
 
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
 
@@ -89,56 +97,64 @@ export type ReactionTrigger = {
   playerId: number;
 };
 
-export type ReactionEffectGeneratorFn = (args: {
-  match: Match;
-  cardLibrary: CardLibrary;
-  trigger: ReactionTrigger;
-  reaction: Reaction;
-}) => EffectGenerator<GameEffects>;
-
-export type AsyncReactionEffectGeneratorFn = (args: {
-  match: Match;
-  cardLibrary: CardLibrary;
-  trigger: ReactionTrigger;
-  reaction: Reaction;
-}) => Promise<EffectGenerator<GameEffects>>;
-
 export type EffectGenerator<T> = Generator<
   T,
   unknown,
   unknown
 >;
 
-export type EffectGeneratorFn = (args: {
+export type SharedEffectGeneratorContext = {
   match: Match;
   cardLibrary: CardLibrary;
-  triggerPlayerId: number;
-  triggerCardId?: number;
-  // deno-lint-ignore no-explicit-any
-  reactionContext?: any;
-}) => EffectGenerator<GameEffects>;
+};
 
-export type AsyncEffectGeneratorFn = (args: {
-  match: Match;
-  cardLibrary: CardLibrary;
+export type EffectContext = SharedEffectGeneratorContext & {
   triggerPlayerId: number;
   triggerCardId?: number;
-  // deno-lint-ignore no-explicit-any
   reactionContext?: any;
-}) => Promise<EffectGenerator<GameEffects>>;
+};
+
+export type ReactionEffectContext = SharedEffectGeneratorContext & {
+  trigger: ReactionTrigger;
+  reaction: Reaction;
+};
+
+export type GameEffectGenerator = EffectGenerator<GameEffects>;
+
+export type EffectGeneratorBlueprint = (
+  ctx: { reactionManager: ReactionManager },
+) => EffectGeneratorFn;
+
+export type EffectGeneratorFactory = (context: {
+  reactionManager: ReactionManager;
+}) => Record<string, EffectGeneratorFn>;
+
+export type EffectGeneratorFn = (
+  args: EffectContext,
+) => GameEffectGenerator;
+
+export type ReactionEffectGeneratorFn = (
+  args: ReactionEffectContext,
+) => GameEffectGenerator;
 
 export type EffectTypes = GameEffects["type"];
 
 export type EffectHandler<T> = (
   effect: Extract<GameEffects, { type: T }>,
-  match: Match
+  match: Match,
 ) => EffectHandlerResult;
 
 export type EffectHandlerMap = {
   [T in EffectTypes]: EffectHandler<T>;
 };
 
-export type EffectHandlerResult = Promise<unknown> | unknown;
+export type EffectPauseResult = { pause: true; signalId: string };
+export type EffectResult = { result: unknown; };
+
+export type EffectHandlerResult =
+  | EffectPauseResult
+  | EffectResult
+  | undefined;
 
 export type TriggerEventType = "cardPlayed";
 
@@ -163,9 +179,7 @@ export class Reaction {
 
   // todo defined in a map somewhere just like registered card effects. so maybe another export
   // from teh expansion module that defines what happens when you ccn react?
-  public generatorFn:
-    | ReactionEffectGeneratorFn
-    | AsyncReactionEffectGeneratorFn;
+  public generatorFn: ReactionEffectGeneratorFn;
 
   constructor(
     arg: {
@@ -173,7 +187,7 @@ export class Reaction {
       playerId: number;
       listeningFor: TriggerEventType;
       condition?: Reaction["condition"];
-      generatorFn: ReactionEffectGeneratorFn | AsyncReactionEffectGeneratorFn;
+      generatorFn: ReactionEffectGeneratorFn;
       once?: boolean;
       multipleUse?: boolean;
     },
@@ -215,19 +229,19 @@ export interface IEffectRunner {
     playerId: number,
     cardId: number,
     reactionContext?: unknown,
-  ): Promise<unknown>;
+  ): unknown;
 
   runGameActionEffects(
     effectName: string,
     playerId: number,
     cardId?: number,
-  ): Promise<unknown>;
+  ): unknown;
 
   runGenerator(
-    generator: EffectGenerator<GameEffects>,
+    generator: GameEffectGenerator,
     playerId: number,
     acc?: MatchUpdate,
-  ): Promise<unknown>;
+  ): unknown;
 }
 
 export type ReactionTemplate = Omit<Reaction, "getSourceId" | "getSourceKey">;
@@ -247,6 +261,6 @@ export type LifecycleCallbackMap = {
   onLeavePlay?: LifecycleCallback;
 };
 
-export type EffectExceptionSpec =
-  | { kind: 'player'; playerIds: PlayerId[] };
+export type EffectExceptionSpec = { kind: "player"; playerIds: PlayerId[] };
+
 export type CardOverrides = Record<PlayerId, Record<CardId, Card>>;

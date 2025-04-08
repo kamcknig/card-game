@@ -1,4 +1,4 @@
-import { EffectGeneratorFn, LifecycleCallbackMap } from '../types.ts';
+import { EffectGeneratorBlueprint, LifecycleCallbackMap } from '../types.ts';
 import { Match } from 'shared/shared-types.ts';
 
 import { CardLibrary } from '../core/card-library.ts';
@@ -6,5 +6,5 @@ import { CardLibrary } from '../core/card-library.ts';
 export interface CardExpansionModule {
   registerCardLifeCycles?: () => Record<string, LifecycleCallbackMap>;
   registerScoringFunctions?: () => Record<string, (args: { match: Match, cardLibrary: CardLibrary, ownerId: number }) => number>;
-  registerEffects: () => Record<string, EffectGeneratorFn>;
+  registerEffects: () => Record<string, EffectGeneratorBlueprint>;
 }

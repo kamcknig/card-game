@@ -1,7 +1,8 @@
 import { CardData } from "shared/shared-types.ts";
-import { cardLifecycleMap, effectGeneratorMap } from '../core/effect-generator-map.ts';
+import { effectGeneratorBlueprintMap } from '../core/effect-generator-map.ts';
 import { scoringFunctionMap } from '../expansions/scoring-function-map.ts';
 import { expansionData } from '../state/expansion-data.ts';
+import { cardLifecycleMap } from '../core/card-lifecycle-map.ts';
 
 export const loadExpansion = async (expansion: { title: string, name: string, order: number }) => {
     const expansionPath = `../expansions/${expansion.name}`;
@@ -70,7 +71,7 @@ export const loadExpansion = async (expansion: { title: string, name: string, or
         let effects = module.default.registerEffects();
         Object.keys(effects).forEach(key => {
             console.log('[EXPANSION LOADER]registering effects for', key);
-            effectGeneratorMap[key] = effects[key];
+            effectGeneratorBlueprintMap[key] = effects[key];
         });
         console.log('[EXPANSION LOADER] base supply card effects loaded');
         
@@ -81,9 +82,9 @@ export const loadExpansion = async (expansion: { title: string, name: string, or
         effects = module.default.registerEffects();
         Object.keys(effects).forEach(key => {
             console.log('[EXPANSION LOADER]registering effects for', key);
-            effectGeneratorMap[key] = effects[key];
+            effectGeneratorBlueprintMap[key] = effects[key];
         });
-        console.log(`[EXPANSION LOADER] card effects loaded for ${expansionName}`, effectGeneratorMap);
+        console.log(`[EXPANSION LOADER] card effects loaded for ${expansionName}`, effectGeneratorBlueprintMap);
 
         
         

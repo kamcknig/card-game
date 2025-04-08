@@ -7,29 +7,23 @@ import {
   MatchSummary,
   PlayerId,
   TurnPhaseOrderValues,
-} from "shared/shared-types.ts";
-import {
-  AppSocket,
-  EffectHandlerMap,
-  MatchBaseConfiguration,
-} from "../types.ts";
-import { CardEffectController } from "./card-effects-controller.ts";
-import { CardInteractivityController } from "./card-interactivity-controller.ts";
-import { createCardFactory } from "../utils/create-card.ts";
-import { createEffectHandlerMap } from "./effect-handler-map.ts";
-import { EffectsPipeline } from "./effects-pipeline.ts";
-import { fisherYatesShuffle } from "../utils/fisher-yates-shuffler.ts";
-import { ReactionManager } from "./reaction-manager.ts";
-import { scoringFunctionMap } from "../expansions/scoring-function-map.ts";
-import {
-  getCardOverrides,
-  removeOverrideEffects,
-} from "../card-data-overrides.ts";
-import { CardLibrary } from "./card-library.ts";
-import { compare, Operation } from "fast-json-patch";
-import { ExpansionCardData, expansionData } from "../state/expansion-data.ts";
-import { getPlayerById } from "../utils/get-player-by-id.ts";
-import Fuse, { IFuseOptions } from "fuse.js";
+} from 'shared/shared-types.ts';
+import { AppSocket, EffectHandlerMap, MatchBaseConfiguration, } from '../types.ts';
+import { CardEffectController } from './card-effects-controller.ts';
+import { CardInteractivityController } from './card-interactivity-controller.ts';
+import { createCardFactory } from '../utils/create-card.ts';
+import { createEffectHandlerMap } from './effect-handler-map.ts';
+import { EffectsPipeline } from './effects-pipeline.ts';
+import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
+import { ReactionManager } from './reaction-manager.ts';
+import { scoringFunctionMap } from '../expansions/scoring-function-map.ts';
+import { getCardOverrides, removeOverrideEffects, } from '../card-data-overrides.ts';
+import { CardLibrary } from './card-library.ts';
+import { compare, Operation } from 'fast-json-patch';
+import { ExpansionCardData, expansionData } from '../state/expansion-data.ts';
+import { getPlayerById } from '../utils/get-player-by-id.ts';
+import Fuse, { IFuseOptions } from 'fuse.js';
+import { createEffectGeneratorMap, effectGeneratorBlueprintMap } from './effect-generator-map.ts';
 
 export class MatchController {
   private _effectHandlerMap: EffectHandlerMap | undefined;
@@ -42,7 +36,7 @@ export class MatchController {
   private _config: MatchConfiguration | undefined;
   private _createCardFn: ((key: CardKey) => Card) | undefined;
   private _fuse: Fuse<CardData & { cardKey: CardKey }> | undefined;
-
+  
   constructor(
     private _match: Match,
     private readonly _socketMap: Map<PlayerId, AppSocket>,
@@ -69,7 +63,7 @@ export class MatchController {
       },
       [] as (CardData & { cardKey: CardKey })[],
     );
-
+    
     const fuseOptions: IFuseOptions<CardData> = {
       ignoreDiacritics: true,
       minMatchCharLength: 1,
@@ -176,7 +170,7 @@ export class MatchController {
     const kingdomCards: Card[] = [];
 
     // todo: remove testing code
-    const keepers: string[] = ["wishing-well"].filter((k) =>
+    const keepers: string[] = ["moat"].filter((k) =>
       this._cardData!.kingdom[k]
     );
 
@@ -315,8 +309,18 @@ export class MatchController {
       this._match,
       this._cardLibrary,
     );
-
+    
+    const effectGeneratorMap = createEffectGeneratorMap({
+      reactionManager: this._reactionManager,
+    });
+    for (const [key, blueprint] of Object.entries(effectGeneratorBlueprintMap)) {
+      effectGeneratorMap[key] = blueprint({
+        reactionManager: this._reactionManager
+      });
+    }
+    
     this._effectsController = new CardEffectController(
+      effectGeneratorMap,
       this._cardLibrary,
       this._match,
     );
@@ -350,6 +354,7 @@ export class MatchController {
     for (const socket of this._socketMap.values()) {
       socket.on("nextPhase", this.onNextPhase);
       socket.on("searchCards", this.onSearchCards);
+      socket.on('userInputReceived', this.onUserInputReceived);
     }
 
     const match = this._match;
@@ -371,6 +376,12 @@ export class MatchController {
     void this.onCheckForPlayerActions();
   }
 
+  private onUserInputReceived = (signalId: string, input: unknown) => {
+    console.log(`[MATCH] user input received for signal ${signalId}`);
+    console.log(`[MATCH] input ${input}`);
+    this._effectsPipeline?.resumeGenerator(signalId, input);
+  }
+  
   private onSearchCards = (playerId: PlayerId, searchStr: string) => {
     console.log(
       `[MATCH] searching cards for string '${searchStr}' for ${

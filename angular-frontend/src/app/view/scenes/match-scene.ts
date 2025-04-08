@@ -78,6 +78,7 @@ export class MatchScene extends Scene {
     this._playAllTreasuresButton.button.label = 'playAllTreasureButton';
     this._playAllTreasuresButton.button.visible = false;
     this._playAllTreasuresButton.button.on('pointerdown', () => {
+      cardActionsInProgressStore.set(true);
       this._socketService.emit('playAllTreasure', this._selfId);
     });
     this.addChild(this._playAllTreasuresButton.button);
@@ -252,6 +253,7 @@ export class MatchScene extends Scene {
       return
     }
 
+    cardActionsInProgressStore.set(true);
     this._socketService.emit('nextPhase');
   }
 
@@ -307,7 +309,7 @@ export class MatchScene extends Scene {
     this._cleanup.forEach(c => c());
   }
 
-  private onUserPrompt = async (args: UserPromptEffectArgs) => {
+  private onUserPrompt = async (signalId: string, args: UserPromptEffectArgs) => {
     this._selecting = true;
     const result = await userPromptModal(
       this._app,
@@ -316,7 +318,7 @@ export class MatchScene extends Scene {
       this._selfId
     );
     this._selecting = false;
-    this._socketService.emit('userPromptResponse', result);
+    this._socketService.emit('userInputReceived', signalId, result);
   }
 
   // todo move the selection stuff to another class, SelectionManager?
@@ -371,7 +373,7 @@ export class MatchScene extends Scene {
     }
   }
 
-  private doSelectCards = async (arg: SelectCardArgs) => {
+  private doSelectCards = async (signalId: string, arg: SelectCardArgs) => {
     const cardIds = selectableCardStore.get();
 
     // no more selectable cards, remove the done selecting button if it exists
@@ -386,7 +388,7 @@ export class MatchScene extends Scene {
 
       // reset overrides so server can tell us now what cards are selectable
       clientSelectableCardsOverrideStore.set(null);
-      this._socketService.emit('selectCardResponse', cardIds);
+      this._socketService.emit('userInputReceived', signalId, cardIds);
     };
 
     const doneListener = () => {

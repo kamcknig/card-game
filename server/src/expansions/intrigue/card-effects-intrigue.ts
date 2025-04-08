@@ -92,7 +92,7 @@ const expansionModule: CardExpansionModule = {
     },
   }),
   registerEffects: () => ({
-    "baron": function* ({
+    "baron": () => function* ({
       match,
       cardLibrary,
       triggerPlayerId,
@@ -181,7 +181,7 @@ const expansionModule: CardExpansionModule = {
         console.log(`[BARON EFFECT] no estate in supply`);
       }
     },
-    "bridge": function* ({
+    "bridge": () => function* ({
       triggerPlayerId,
       triggerCardId,
     }) {
@@ -201,7 +201,7 @@ const expansionModule: CardExpansionModule = {
         expiresAt: "TURN_END",
       });
     },
-    "conspirator": function* ({
+    "conspirator": () => function* ({
       match,
       cardLibrary,
       triggerPlayerId,
@@ -230,7 +230,7 @@ const expansionModule: CardExpansionModule = {
         });
       }
     },
-    "courtier": function* ({
+    "courtier": () => function* ({
       match,
       cardLibrary,
       triggerPlayerId,
@@ -323,7 +323,7 @@ const expansionModule: CardExpansionModule = {
         }
       }
     },
-    "courtyard": function* ({
+    "courtyard": () => function* ({
       triggerPlayerId,
       triggerCardId,
     }) {
@@ -364,7 +364,7 @@ const expansionModule: CardExpansionModule = {
         },
       });
     },
-    "diplomat": function* ({
+    "diplomat": () => function* ({
       match,
       triggerPlayerId,
     }) {
@@ -384,8 +384,8 @@ const expansionModule: CardExpansionModule = {
         );
       }
     },
-    /*"duke": function* () {},*/
-    "farm": function* ({
+    /*"duke": () => function* () {},*/
+    "farm": () => function* ({
       triggerPlayerId,
     }) {
       yield new GainTreasureEffect({
@@ -393,7 +393,7 @@ const expansionModule: CardExpansionModule = {
         sourcePlayerId: triggerPlayerId,
       });
     },
-    "ironworks": function* ({
+    "ironworks": () => function* ({
       cardLibrary,
       triggerPlayerId,
     }) {
@@ -445,7 +445,7 @@ const expansionModule: CardExpansionModule = {
         });
       }
     },
-    "lurker": function* ({
+    "lurker": () => function* ({
       match,
       triggerPlayerId,
     }) {
@@ -523,7 +523,7 @@ const expansionModule: CardExpansionModule = {
         });
       }
     },
-    "masquerade": function* ({
+    "masquerade": () => function* ({
       match,
       cardLibrary,
       triggerPlayerId,
@@ -601,7 +601,7 @@ const expansionModule: CardExpansionModule = {
         });
       }
     },
-    "mill": function* ({
+    "mill": () => function* ({
       triggerPlayerId,
     }) {
       yield new DrawCardEffect({
@@ -641,7 +641,7 @@ const expansionModule: CardExpansionModule = {
         });
       }
     },
-    "mining-village": function* ({
+    "mining-village": () => function* ({
       triggerPlayerId,
       triggerCardId,
     }) {
@@ -675,7 +675,7 @@ const expansionModule: CardExpansionModule = {
         );
       }
     },
-    "minion": function* ({
+    "minion": () => function* ({
       match,
       triggerPlayerId,
       reactionContext,
@@ -728,7 +728,7 @@ const expansionModule: CardExpansionModule = {
         }
       }
     },
-    "nobles": function* ({
+    "nobles": () => function* ({
       triggerPlayerId,
     }) {
       const result = (yield new UserPromptEffect({
@@ -757,7 +757,7 @@ const expansionModule: CardExpansionModule = {
         });
       }
     },
-    "patrol": function* ({
+    "patrol": () => function* ({
       match,
       cardLibrary,
       triggerPlayerId,
@@ -850,7 +850,7 @@ const expansionModule: CardExpansionModule = {
         });
       }
     },
-    "pawn": function* ({
+    "pawn": () => function* ({
       triggerPlayerId,
       triggerCardId,
     }) {
@@ -904,7 +904,7 @@ const expansionModule: CardExpansionModule = {
         actions.splice(actions.findIndex((a) => a.action === result.action), 1);
       }
     },
-    "replace": function* ({
+    "replace": () => function* ({
       match,
       cardLibrary,
       triggerPlayerId,
@@ -989,7 +989,7 @@ const expansionModule: CardExpansionModule = {
         }
       }
     },
-    "secret-passage": function* ({
+    "secret-passage": () => function* ({
       match,
       triggerPlayerId,
       triggerCardId,
@@ -1069,7 +1069,7 @@ const expansionModule: CardExpansionModule = {
         },
       });
     },
-    "shanty-town": function* ({
+    "shanty-town": () => function* ({
       match,
       cardLibrary,
       triggerPlayerId,
@@ -1102,7 +1102,7 @@ const expansionModule: CardExpansionModule = {
         }
       }
     },
-    "steward": function* ({
+    "steward": () => function* ({
       match,
       triggerPlayerId,
       triggerCardId,
@@ -1157,7 +1157,7 @@ const expansionModule: CardExpansionModule = {
         }
       }
     },
-    "swindler": function* ({
+    "swindler": () => function* ({
       match,
       cardLibrary,
       triggerPlayerId,
@@ -1209,7 +1209,7 @@ const expansionModule: CardExpansionModule = {
         });
       }
     },
-    "torturer": function* ({
+    "torturer": () => function* ({
       match,
       cardLibrary,
       triggerPlayerId,
@@ -1278,7 +1278,7 @@ const expansionModule: CardExpansionModule = {
         }
       }
     },
-    "trading-post": function* ({
+    "trading-post": () => function* ({
       match,
       triggerPlayerId,
       triggerCardId,
@@ -1322,7 +1322,7 @@ const expansionModule: CardExpansionModule = {
         );
       }
     },
-    "upgrade": function* ({
+    "upgrade": () => function* ({
       cardLibrary,
       triggerPlayerId,
       triggerCardId,
@@ -1363,7 +1363,7 @@ const expansionModule: CardExpansionModule = {
         sourceCardId: triggerCardId,
       });
     },
-    "wishing-well": function* ({
+    "wishing-well": () => function* ({
       match,
       cardLibrary,
       triggerPlayerId,

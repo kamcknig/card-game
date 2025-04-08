@@ -87,12 +87,12 @@ export type ServerEmitEvents = {
     playerNameUpdated: (playerId: PlayerId, name: string) => void;
     playerReady: (playerId: PlayerId, ready: boolean) => void;
     searchCardResponse: (cardData: (CardData & { cardKey: CardKey})[]) => void;
-    selectCard: (selectCardArgs: SelectCardEffectArgs & { selectableCardIds: CardId[] }) => void;
+    selectCard: (signalId: string, selectCardArgs: SelectCardEffectArgs & { selectableCardIds: CardId[] }) => void;
     setCardDataOverrides: (overrides: Record<CardId, Partial<Card>> | undefined) => void;
     setCardLibrary: (cardLibrary: Record<CardId, Card>) => void;
     setPlayerList: (players: Player[]) => void;
     setPlayer: (player: Player) => void;
-    userPrompt: (userPromptArgs: UserPromptEffectArgs) => void;
+    userPrompt: (signalId: string, userPromptArgs: UserPromptEffectArgs) => void;
     waitingForPlayer: (playerId: PlayerId) => void;
 }
 
@@ -106,9 +106,8 @@ export type ServerListenEvents = {
     playerReady: (playerId: PlayerId, ready: boolean) => void;
     playAllTreasure: (playerId: PlayerId) => void;
     searchCards: (playerId: PlayerId, searchStr: string) => void;
-    selectCardResponse: (selectedCards: CardId[]) => void;
     updatePlayerName: (playerId: PlayerId, name: string) => void;
-    userPromptResponse: (result: unknown) => void;
+    userInputReceived: (signalId: string, input: unknown) => void;
 }
 
 export type ClientEmitEvents = Omit<ServerListenEvents, 'startMatch' | 'matchConfigurationUpdated'> & {

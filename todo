@@ -21,5 +21,3 @@ update user prompt modal when there are multiple actions to toggle those actions
 need to go through all effects. anything that is related to cost like choosing a card that costs x amount - need to update those to compare against the effective cost
 
 viewing the trash sucks
-
-wishing well not implemented

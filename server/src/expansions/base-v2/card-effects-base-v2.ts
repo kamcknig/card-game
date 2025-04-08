@@ -94,7 +94,7 @@ const expansionModule: CardExpansionModule = {
     },
   }),
   registerEffects: () => ({
-    'artisan': function* ({cardLibrary, triggerPlayerId, triggerCardId}) {
+    'artisan': () => function* ({cardLibrary, triggerPlayerId, triggerCardId}) {
       console.log(`[ARTISAN EFFECT] choosing card to gain...`);
       let results = (yield new SelectCardEffect({
         prompt: 'Choose card to gain',
@@ -147,7 +147,7 @@ const expansionModule: CardExpansionModule = {
         },
       });
     },
-    'bandit': function* ({
+    'bandit': () => function* ({
       match,
       cardLibrary,
       triggerPlayerId,
@@ -297,7 +297,7 @@ const expansionModule: CardExpansionModule = {
         }
       }
     },
-    'bureaucrat': function* ({
+    'bureaucrat': () => function* ({
       match,
       cardLibrary,
       triggerPlayerId, triggerCardId,
@@ -388,7 +388,7 @@ const expansionModule: CardExpansionModule = {
         }
       }
     },
-    'cellar': function* ({
+    'cellar': () => function* ({
       match,
       triggerPlayerId, triggerCardId,
     }) {
@@ -432,7 +432,7 @@ const expansionModule: CardExpansionModule = {
         });
       }
     },
-    'chapel': function* ({
+    'chapel': () => function* ({
       match,
       triggerPlayerId, triggerCardId,
     }) {
@@ -466,7 +466,7 @@ const expansionModule: CardExpansionModule = {
         console.log('[CHAPEL EFFECT] no cards selected');
       }
     },
-    'council-room': function* ({
+    'council-room': () => function* ({
       match,
       triggerPlayerId, triggerCardId,
     }) {
@@ -494,17 +494,17 @@ const expansionModule: CardExpansionModule = {
         yield new DrawCardEffect({ playerId, sourcePlayerId: triggerPlayerId, sourceCardId: triggerCardId });
       }
     },
-    'festival': function* ({
+    'festival': () => function* ({
       triggerPlayerId, triggerCardId,
     }) {
       yield new GainActionEffect({ count: 2, sourcePlayerId: triggerPlayerId, sourceCardId: triggerCardId });
       yield new GainBuyEffect({ sourcePlayerId: triggerPlayerId, sourceCardId: triggerCardId, count: 1 });
       yield new GainTreasureEffect({ count: 2, sourcePlayerId: triggerPlayerId, sourceCardId: triggerCardId });
     },
-    'gardens': function* () {
+    'gardens': () => function* () {
       // has no effects, calculates score as game plays
     },
-    'harbinger': function* ({
+    'harbinger': () => function* ({
       match,
       triggerPlayerId, triggerCardId,
     }) {
@@ -550,7 +550,7 @@ const expansionModule: CardExpansionModule = {
         console.log('[HARBINGER EFFECT] no card selected');
       }
     },
-    'laboratory': function* ({
+    'laboratory': () => function* ({
       triggerPlayerId, triggerCardId,
     }) {
       for (let i = 0; i < 2; i++) {
@@ -562,7 +562,7 @@ const expansionModule: CardExpansionModule = {
       }
       yield new GainActionEffect({ sourcePlayerId: triggerPlayerId, sourceCardId: triggerCardId, count: 1 });
     },
-    'library': function* ({
+    'library': () => function* ({
       match,
       cardLibrary,
       triggerPlayerId, triggerCardId,
@@ -640,7 +640,7 @@ const expansionModule: CardExpansionModule = {
         }
       }
     },
-    'market': function* ({
+    'market': () => function* ({
       triggerPlayerId, triggerCardId,
     }) {
       yield new GainActionEffect({ sourcePlayerId: triggerPlayerId, sourceCardId: triggerCardId, count: 1 });
@@ -652,7 +652,7 @@ const expansionModule: CardExpansionModule = {
       yield new GainBuyEffect({ sourcePlayerId: triggerPlayerId, sourceCardId: triggerCardId, count: 1 });
       yield new GainTreasureEffect({ sourcePlayerId: triggerPlayerId, sourceCardId: triggerCardId, count: 1 });
     },
-    'merchant': function* ({
+    'merchant': () => function* ({
       triggerPlayerId, triggerCardId,
     }) {
       yield new DrawCardEffect({
@@ -666,7 +666,7 @@ const expansionModule: CardExpansionModule = {
         count: 1,
       });
     },
-    'militia': function* ({
+    'militia': () => function* ({
       match,
       cardLibrary,
       triggerPlayerId, triggerCardId,
@@ -719,7 +719,7 @@ const expansionModule: CardExpansionModule = {
         }
       }
     },
-    'mine': function* ({match, cardLibrary, triggerPlayerId, triggerCardId}) {
+    'mine': () => function* ({match, cardLibrary, triggerPlayerId, triggerCardId}) {
       const hand = match.playerHands[triggerPlayerId];
 
       const hasTreasureCards = hand.some((c) =>
@@ -790,7 +790,7 @@ const expansionModule: CardExpansionModule = {
         to: { location: 'playerHands' },
       });
     },
-    'moat': function* ({triggerPlayerId, triggerCardId}) {
+    'moat': () => function* ({triggerPlayerId, triggerCardId}) {
       yield new DrawCardEffect({
         playerId: triggerPlayerId,
         sourcePlayerId: triggerPlayerId,
@@ -802,7 +802,7 @@ const expansionModule: CardExpansionModule = {
         sourceCardId: triggerCardId,
       });
     },
-    'moneylender': function* ({
+    'moneylender': () => function* ({
       match,
       cardLibrary,
       triggerPlayerId, triggerCardId,
@@ -848,7 +848,7 @@ const expansionModule: CardExpansionModule = {
         count: 3,
       });
     },
-    'poacher': function* ({
+    'poacher': () => function* ({
       match,
       cardLibrary,
       triggerPlayerId, triggerCardId,
@@ -924,7 +924,7 @@ const expansionModule: CardExpansionModule = {
         });
       }
     },
-    'remodel': function* ({
+    'remodel': () => function* ({
       match,
       cardLibrary,
       triggerPlayerId, triggerCardId,
@@ -981,7 +981,7 @@ const expansionModule: CardExpansionModule = {
         to: { location: 'playerDiscards' },
       });
     },
-    'sentry': function* ({
+    'sentry': () => function* ({
       match,
       cardLibrary,
       triggerPlayerId, triggerCardId,
@@ -1114,7 +1114,7 @@ const expansionModule: CardExpansionModule = {
         });
       }
     },
-    'smithy': function* ({
+    'smithy': () => function* ({
       triggerPlayerId, triggerCardId,
     }) {
       for (let i = 0; i < 3; i++) {
@@ -1125,7 +1125,7 @@ const expansionModule: CardExpansionModule = {
         });
       }
     },
-    'throne-room': function* ({
+    'throne-room': () => function* ({
       triggerPlayerId, triggerCardId,
     }) {
       const cardIds = (yield new SelectCardEffect({
@@ -1162,7 +1162,7 @@ const expansionModule: CardExpansionModule = {
         playerId: triggerPlayerId,
       });
     },
-    'vassal': function* ({
+    'vassal': () => function* ({
       match,
       cardLibrary,
       triggerPlayerId, triggerCardId,
@@ -1226,7 +1226,7 @@ const expansionModule: CardExpansionModule = {
         cardId: cardToDiscardId,
       });
     },
-    'village': function* ({
+    'village': () => function* ({
       triggerPlayerId, triggerCardId,
     }) {
       yield new GainActionEffect({ count: 2, sourcePlayerId: triggerPlayerId, sourceCardId: triggerCardId });
@@ -1236,7 +1236,7 @@ const expansionModule: CardExpansionModule = {
         sourceCardId: triggerCardId,
       });
     },
-    'witch': function* ({
+    'witch': () => function* ({
       match,
       cardLibrary,
       triggerPlayerId, triggerCardId,
@@ -1280,7 +1280,7 @@ const expansionModule: CardExpansionModule = {
         }
       }
     },
-    'workshop': function* ({
+    'workshop': () => function* ({
       triggerPlayerId, triggerCardId,
     }) {
       const cardIds = (yield new SelectCardEffect({

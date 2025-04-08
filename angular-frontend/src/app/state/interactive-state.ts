@@ -18,6 +18,6 @@ export const selectableCardStore = computed(
   (clientOverride, serverCards) => clientOverride ?? serverCards
 );
 
-export const selectedCardStore = atom<number[]>([]);
+export const selectedCardStore = atom<CardId[]>([]);
 
-export const cardActionsInProgressStore = atom(false);
+export const cardActionsInProgressStore = atom<boolean>(false);
