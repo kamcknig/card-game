@@ -62,7 +62,7 @@ export const userPromptModal = (
           contentView = cardBlindRearrangeView(args.content);
           break;
         case 'name-card':
-          contentView = nameCardView(args.content, socketService, selfPlayerId);
+          contentView = nameCardView(app, args.content, socketService, selfPlayerId);
           contentView.on('finished', () => {
             actionButtonListener()
           });

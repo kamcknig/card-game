@@ -14,6 +14,7 @@ import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { TrashCardEffect } from '../../core/effects/trash-card.ts';
 import { ActionButtons, Card, CardId, CardKey, PlayerId } from 'shared/shared-types.ts';
 import { findOrderedEffectTargets } from '../../utils/find-ordered-effect-targets.ts';
+import { ShuffleDeckEffect } from '../../core/effects/shuffle-card.ts';
 
 const expansionModule: CardExpansionModule = {
   registerCardLifeCycles: () => ({
@@ -1366,8 +1367,7 @@ const expansionModule: CardExpansionModule = {
       match,
       cardLibrary,
       triggerPlayerId,
-      triggerCardId,
-      reactionContext,
+      triggerCardId
     }) {
       yield new DrawCardEffect({
         playerId: triggerPlayerId,
@@ -1389,7 +1389,34 @@ const expansionModule: CardExpansionModule = {
       })) as { action: number, result: CardKey };
       
       const cardKey: CardKey = result.result;
-      console.log(cardKey);
+      
+      if (match.playerDecks[triggerPlayerId].length === 0) {
+        console.log(`[WISHING WELL EFFECT] shuffling player's deck`)
+        yield new ShuffleDeckEffect({
+          playerId: triggerPlayerId
+        });
+      }
+      
+      const cardId = match.playerDecks[triggerPlayerId].slice(-1)[0];
+      
+      yield new RevealCardEffect({
+        sourceCardId: triggerCardId,
+        sourcePlayerId: triggerPlayerId,
+        cardId,
+        playerId: triggerPlayerId,
+      });
+      
+      if (cardLibrary.getCard(cardId).cardKey === cardKey) {
+        yield new MoveCardEffect({
+          cardId,
+          toPlayerId: triggerPlayerId,
+          sourcePlayerId: triggerPlayerId,
+          sourceCardId: triggerCardId,
+          to: {
+            location: 'playerHands',
+          }
+        })
+      }
     },
   }),
 };

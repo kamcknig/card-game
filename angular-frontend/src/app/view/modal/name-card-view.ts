@@ -1,11 +1,13 @@
-import { CardData, CardKey, PlayerId, UserPromptKinds } from 'shared/shared-types';
-import { Assets, Color, Container, Graphics, Point, Sprite } from 'pixi.js';
+import { Card, CardData, CardKey, PlayerId, UserPromptKinds } from 'shared/shared-types';
+import { Application, Assets, Color, Container, Graphics, Point, Sprite } from 'pixi.js';
 import { Input, List } from '@pixi/ui'
 import { CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP } from '../../core/app-contants';
 import { SocketService } from '../../core/socket-service/socket.service';
 import { compare } from 'fast-json-patch/';
+import { displayCardDetail } from './display-card-detail';
 
 export const nameCardView = (
+  app: Application,
   args: UserPromptKinds,
   socketService: SocketService,
   selfPlayerId: PlayerId,
@@ -28,8 +30,7 @@ export const nameCardView = (
 
   const cardListMask = new Graphics();
   cardListMask.x = STANDARD_GAP;
-  cardListMask.y = STANDARD_GAP;
-  cardListMask.rect(0, 0, cardListWidth, CARD_HEIGHT);
+  cardListMask.rect(0, -60, cardListWidth, CARD_HEIGHT + 60);
   cardListMask.fill('black');
 
   const cardListContainer = new Container();
@@ -43,7 +44,7 @@ export const nameCardView = (
     elementsMargin: STANDARD_GAP
   });
   cardList.x = STANDARD_GAP;
-  cardList.y = STANDARD_GAP;
+  cardList.y = STANDARD_GAP * 3;
   cardList.mask = cardListMask;
 
   cardListContainer.addChild(cardListContainerBg);
@@ -67,11 +68,26 @@ export const nameCardView = (
 
   let cardMap = new Map();
   const onCardPointerDown = (event: PointerEvent) => {
-    if (event.button === 2) return;
     const cardData = cardMap.get(event.target);
+
+    if (event.button === 2) {
+      void displayCardDetail(app, cardData);
+      return
+    }
+
     c.emit('resultsUpdated', cardData.cardKey);
     c.emit('finished');
   }
+
+  const onCardHover = (event: PointerEvent) => {
+    const s = event.target as Sprite;
+    s.y = -60;
+  };
+
+  const onCardHoverOut = (event: PointerEvent) => {
+    const s = event.target as Sprite;
+    s.y = 0;
+  };
 
   let prev: any;
   const searchResponse = async (data: (CardData & { cardKey: CardKey })[]) => {
@@ -94,7 +110,9 @@ export const nameCardView = (
         cardMap.set(s, d);
         s.eventMode = 'static';
         s.on('pointerdown', onCardPointerDown);
-        s.on('removed', () => s.off('pointerdown'));
+        s.on('pointerover', onCardHover);
+        s.on('pointerout', onCardHoverOut)
+        s.on('removed', () => s.removeAllListeners());
         img.anchor = new Point(0, 0);
         cardList.addChild(s);
       } catch (err) {

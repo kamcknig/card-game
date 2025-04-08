@@ -73,8 +73,8 @@ export class MatchController {
     const fuseOptions: IFuseOptions<CardData> = {
       ignoreDiacritics: true,
       minMatchCharLength: 1,
-      keys: ["cardName"],
-      ignoreLocation: true,
+      distance: 5,
+      keys: ["cardName"]
     };
 
     this._fuse = new Fuse(allExpansionCards, fuseOptions);

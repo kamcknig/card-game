@@ -1,18 +1,22 @@
-import { Application, Container, Graphics } from 'pixi.js';
+import { Application, Assets, Container, Graphics, Sprite, Texture } from 'pixi.js';
 import { cardStore } from '../../state/card-state';
 import { createCardView } from '../../core/card/create-card-view';
 import { inject } from '@angular/core';
 import { PIXI_APP } from '../../core/pixi-application.token';
+import { Card, CardData } from 'shared/shared-types';
 
-export const displayCardDetail = (app: Application, cardId: number): void => {
+export async function displayCardDetail(app: Application, arg: number | Card | CardData) {
+  let cardImg: Texture;
+  if (typeof arg === 'number') {
+    cardImg = await Assets.load(cardStore.get()[arg].detailImagePath);
+  }
+  else {
+    cardImg = await Assets.load(arg.detailImagePath);
+  }
+
+  const s = Sprite.from(cardImg);
   const container = new Container();
   container.eventMode = 'static';
-  const card = cardStore.get()[cardId];
-  const view = createCardView(card);
-  view.size = 'detail';
-  view.facing = 'front'
-
-  view.eventMode = 'none';
 
   const background = new Graphics()
     .rect(0, 0, app.renderer.width, app.renderer.height)
@@ -22,9 +26,9 @@ export const displayCardDetail = (app: Application, cardId: number): void => {
     });
 
   container.addChild(background);
-  view.x = Math.floor(app.renderer.width * .5 - view.width * .5);
-  view.y = Math.floor(app.renderer.height * .5 - view.height * .5);
-  container.addChild(view);
+  s.x = Math.floor(app.renderer.width * .5 - s.width * .5);
+  s.y = Math.floor(app.renderer.height * .5 - s.height * .5);
+  container.addChild(s);
   app.stage.addChild(container);
 
   const onPointerDown = () => {

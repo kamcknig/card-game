@@ -1,4 +1,3 @@
-
 import { CardData } from "shared/shared-types.ts";
 import { cardLifecycleMap, effectGeneratorMap } from '../core/effect-generator-map.ts';
 import { scoringFunctionMap } from '../expansions/scoring-function-map.ts';

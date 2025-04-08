@@ -15,7 +15,7 @@ import { PlayAreaView } from '../play-area';
 import { KingdomSupplyView } from '../kingdom-supply';
 import { PileView } from '../pile';
 import { cardStore } from '../../state/card-state';
-import { Card, CardKey, PlayerId, SelectCardEffectArgs, UserPromptEffectArgs } from 'shared/shared-types';
+import { Card, CardData, CardKey, PlayerId, SelectCardEffectArgs, UserPromptEffectArgs } from 'shared/shared-types';
 import { cardActionsInProgressStore, selectableCardStore, selectedCardStore } from '../../state/interactive-state';
 import { CardView } from '../card-view';
 import { userPromptModal } from '../modal/user-prompt-modal';
@@ -256,8 +256,8 @@ export class MatchScene extends Scene {
     this._socketService.emit('nextPhase');
   }
 
-  private onDisplayCardDetail = (cardId: number) => {
-    displayCardDetail(this._app, cardId);
+  private onDisplayCardDetail = (cardId: number | Card | CardData) => {
+    void displayCardDetail(this._app, cardId);
   }
 
   private onWaitingOnPlayer = (playerId: number) => {
