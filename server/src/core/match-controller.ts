@@ -72,7 +72,7 @@ export class MatchController {
 
     const fuseOptions: IFuseOptions<CardData> = {
       ignoreDiacritics: true,
-      minMatchCharLength: 2,
+      minMatchCharLength: 1,
       keys: ["cardName"],
       ignoreLocation: true,
     };

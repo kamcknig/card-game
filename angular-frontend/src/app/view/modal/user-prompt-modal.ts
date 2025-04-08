@@ -63,6 +63,9 @@ export const userPromptModal = (
           break;
         case 'name-card':
           contentView = nameCardView(args.content, socketService, selfPlayerId);
+          contentView.on('finished', () => {
+            actionButtonListener()
+          });
           break;
         default:
           contentView = cardSelectionView(args.content);
@@ -132,7 +135,7 @@ export const userPromptModal = (
       modalContainer.height + STANDARD_GAP * 2,
       5
     )
-      .fill({ color: 'black', alpha: .6 });
+      .fill({ color: 'black', alpha: .8 });
 
     modalContainer.addChildAt(background, 0);
     modalContainer.x = app.renderer.width * .5;

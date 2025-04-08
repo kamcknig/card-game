@@ -1,9 +1,8 @@
-import { PlayerId, UserPromptKinds } from 'shared/shared-types';
-import { Assets, Container, Graphics, Sprite } from 'pixi.js';
+import { CardData, CardKey, PlayerId, UserPromptKinds } from 'shared/shared-types';
+import { Assets, Color, Container, Graphics, Point, Sprite } from 'pixi.js';
 import { Input, List } from '@pixi/ui'
 import { CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP } from '../../core/app-contants';
 import { SocketService } from '../../core/socket-service/socket.service';
-import { createCardView } from '../../core/card/create-card-view';
 import { compare } from 'fast-json-patch/';
 
 export const nameCardView = (
@@ -15,6 +14,8 @@ export const nameCardView = (
   inputBg.roundRect(0, 0, 200, 50, 5);
   inputBg.fill('white');
 
+  const cardListWidth = 1100;
+
   const input = new Input({
     bg: inputBg,
     addMask: true,
@@ -25,12 +26,35 @@ export const nameCardView = (
     }
   });
 
-  const cardList = new List({ type: 'horizontal', elementsMargin: STANDARD_GAP, padding: STANDARD_GAP });
+  const cardListMask = new Graphics();
+  cardListMask.x = STANDARD_GAP;
+  cardListMask.y = STANDARD_GAP;
+  cardListMask.rect(0, 0, cardListWidth, CARD_HEIGHT);
+  cardListMask.fill('black');
+
+  const cardListContainer = new Container();
+
+  const cardListContainerBg = new Graphics();
+  cardListContainerBg.rect(0, 0, cardListWidth + STANDARD_GAP * 2, CARD_HEIGHT + STANDARD_GAP * 2);
+  cardListContainerBg.fill(new Color('0x00000000'));
+
+  const cardList = new List({
+    type: 'horizontal',
+    elementsMargin: STANDARD_GAP
+  });
+  cardList.x = STANDARD_GAP;
+  cardList.y = STANDARD_GAP;
+  cardList.mask = cardListMask;
+
+  cardListContainer.addChild(cardListContainerBg);
+  cardListContainer.addChild(cardList);
+  cardListContainer.addChild(cardListMask);
+
+  input.y = cardList.y + CARD_HEIGHT + STANDARD_GAP * 2;
+  input.x = Math.floor(cardListWidth * .5 - input.width * .5);
 
   const c = new Container();
-  c.addChild(cardList);
-
-  input.y = cardList.y + CARD_HEIGHT + STANDARD_GAP;
+  c.addChild(cardListContainer);
   c.addChild(input);
 
   let inputChangeTimeout: any;
@@ -41,32 +65,66 @@ export const nameCardView = (
     }, 300);
   });
 
+  let cardMap = new Map();
+  const onCardPointerDown = (event: PointerEvent) => {
+    if (event.button === 2) return;
+    const cardData = cardMap.get(event.target);
+    c.emit('resultsUpdated', cardData.cardKey);
+    c.emit('finished');
+  }
+
   let prev: any;
-  socketService.on('searchCardResponse', async (data) => {
+  const searchResponse = async (data: (CardData & { cardKey: CardKey })[]) => {
     if (!prev) {
       prev = data;
     } else {
-      const changes = compare(prev,  data);
+      const changes = compare(prev, data);
       if (!changes) return;
     }
 
+    cardMap.clear();
     cardList.removeChildren();
-    cardList.elementsMargin = data.length > 10 ? -CARD_WIDTH * .75 : STANDARD_GAP;
+    cardList.elementsMargin = data.length > 10 ? -CARD_WIDTH * .65 : STANDARD_GAP;
+    cardList.x = 0;
 
     for (const d of data) {
       try {
-        const img = Sprite.from(await Assets.load(`${d.fullImagePath}`));
-        cardList.addChild(img);
-      }
-      catch (err) {
+        const img = await Assets.load(`${d.fullImagePath}`);
+        const s = Sprite.from(img);
+        cardMap.set(s, d);
+        s.eventMode = 'static';
+        s.on('pointerdown', onCardPointerDown);
+        s.on('removed', () => s.off('pointerdown'));
+        img.anchor = new Point(0, 0);
+        cardList.addChild(s);
+      } catch (err) {
         console.error(err);
       }
     }
+  };
+
+  socketService.on('searchCardResponse', searchResponse);
+
+  cardListContainer.eventMode = 'static';
+  cardListContainer.on('wheel', wheelEvent => {
+    cardList.mask = null;
+    let newX = cardList.x + (wheelEvent.deltaY * -.25);
+
+    if (wheelEvent.deltaY < 0) {
+      newX = Math.min(newX, 0);
+    } else {
+      newX = Math.max(newX, (cardList.width - cardListWidth) * -1);
+    }
+    cardList.x = newX;
+    cardList.mask = cardListMask;
   });
 
   c.on('removed', () => {
+    cardListContainer.off('wheel');
+    socketService.off('searchCardResponse', searchResponse);
     c.removeAllListeners();
     inputChangeSignal.disconnect();
   });
+
   return c;
 }

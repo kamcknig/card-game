@@ -12,7 +12,7 @@ import { MoveCardEffect } from '../../core/effects/move-card.ts';
 import { CardExpansionModule } from '../card-expansion-module.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { TrashCardEffect } from '../../core/effects/trash-card.ts';
-import { ActionButtons, Card, CardId, PlayerId } from 'shared/shared-types.ts';
+import { ActionButtons, Card, CardId, CardKey, PlayerId } from 'shared/shared-types.ts';
 import { findOrderedEffectTargets } from '../../utils/find-ordered-effect-targets.ts';
 
 const expansionModule: CardExpansionModule = {
@@ -1385,11 +1385,11 @@ const expansionModule: CardExpansionModule = {
         content: {
           type: 'name-card'
         },
-        actionButtons: [
-          { action: 1, label: 'DONE' }
-        ],
         prompt: 'Name a card',
-      })) as { action: number, cardIds: number[] };
+      })) as { action: number, result: CardKey };
+      
+      const cardKey: CardKey = result.result;
+      console.log(cardKey);
     },
   }),
 };

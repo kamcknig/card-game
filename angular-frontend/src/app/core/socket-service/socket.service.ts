@@ -63,6 +63,18 @@ export class SocketService {
     return wrapped as unknown as F;
   };
 
+  public off<K extends keyof ServerEmitEvents>(
+    eventName: K,
+    handler?: (...args: Parameters<ServerEmitEvents[K]>) => void,
+  ) {
+    // Cast to avoid conflict with reserved events
+    if (handler) {
+      (this._socket as unknown as Socket).off(eventName as string, handler);
+    } else {
+      (this._socket as unknown as Socket).off(eventName as string);
+    }
+  }
+
   public on<K extends keyof ServerEmitEvents>(
     eventName: K,
     handler: (...args: Parameters<ServerEmitEvents[K]>) => void,
