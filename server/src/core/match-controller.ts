@@ -1,10 +1,10 @@
 import {
   Card,
-  CardData,
+  CardData, CardId,
   CardKey,
   Match,
   MatchConfiguration,
-  MatchSummary,
+  MatchSummary, Player,
   PlayerId,
   TurnPhaseOrderValues,
 } from 'shared/shared-types.ts';
@@ -302,7 +302,7 @@ export class MatchController {
     void this.startMatch();
   };
 
-  private async startMatch() {
+  private startMatch() {
     console.log(`[MATCH] starting match`);
 
     this._reactionManager = new ReactionManager(
@@ -351,10 +351,8 @@ export class MatchController {
     );
     this._effectsController.setEffectPipeline(this._effectsPipeline);
 
-    for (const socket of this._socketMap.values()) {
-      socket.on("nextPhase", this.onNextPhase);
-      socket.on("searchCards", this.onSearchCards);
-      socket.on('userInputReceived', this.onUserInputReceived);
+    for (const [playerId, socket] of this._socketMap.entries()) {
+      this.initializeSocketListeners(playerId, socket);
     }
 
     const match = this._match;
@@ -373,7 +371,7 @@ export class MatchController {
       }
     }
 
-    void this.onCheckForPlayerActions();
+    void this.onCheckForPlayerActions(match.players[match.currentPlayerTurnIndex].id);
   }
 
   private onUserInputReceived = (signalId: string, input: unknown) => {
@@ -400,9 +398,9 @@ export class MatchController {
     return structuredClone(this._match);
   }
 
-  private onCardTapHandlerComplete = () => {
+  private onCardTapHandlerComplete = (_card: Card, player: Player) => {
     console.log(`[MATCH] card tap complete handler invoked`);
-    void this.onCheckForPlayerActions();
+    void this.onCheckForPlayerActions(player.id);
   };
 
   private onEffectCompleted = () => {
@@ -565,13 +563,17 @@ export class MatchController {
     this._socketMap.forEach((s) => s.emit("gameOver", summary));
   }
 
-  private async onCheckForPlayerActions() {
+  private async onCheckForPlayerActions(playerId: PlayerId) {
     console.log("[MATCH] checking for remaining player actions");
 
     const match = this._match;
     const turnPhase = TurnPhaseOrderValues[match.turnPhaseIndex];
-    const player = match.players[match.currentPlayerTurnIndex];
+    const player = getPlayerById(match, playerId);
 
+    if (!player) {
+      throw new Error('could not find player');
+    }
+    
     console.log(`[MATCH] turn phase ${turnPhase}`);
 
     switch (turnPhase) {
@@ -587,7 +589,7 @@ export class MatchController {
 
         if (numActionCards <= 0 || match.playerActions <= 0) {
           console.log(`[MATCH] skipping to next phase`);
-          await this.onNextPhase();
+          await this.onNextPhase(playerId);
           return;
         }
         break;
@@ -607,7 +609,7 @@ export class MatchController {
           match.playerBuys <= 0
         ) {
           console.log("[MATCH] skipping to next phase");
-          await this.onNextPhase();
+          await this.onNextPhase(playerId);
           return;
         }
         break;
@@ -615,7 +617,7 @@ export class MatchController {
     }
   }
 
-  private onNextPhase = async () => {
+  private onNextPhase = async (playerId: PlayerId) => {
     console.log(`[MATCH] next phase handler invoked`);
 
     // capture the pre‑change snapshot
@@ -674,11 +676,7 @@ export class MatchController {
 
           this.endTurn();
 
-          // broadcast changes for this entire cleanup step
-          // this.broadcastPatch(prev);
-
-          // recursively call nextPhase
-          await this.onNextPhase();
+          await this.onNextPhase(playerId);
           return;
         }
       }
@@ -688,7 +686,8 @@ export class MatchController {
       this._interactivityController?.checkCardInteractivity();
 
       // see if we can skip to next phase
-      void this.onCheckForPlayerActions();
+      await this.onCheckForPlayerActions(playerId);
+      this._socketMap.get(playerId)?.emit('nextPhaseComplete', playerId);
     } catch (e) {
       console.error("[MATCH] Could not move to next phase", e);
     }
@@ -707,7 +706,7 @@ export class MatchController {
     }
   };
 
-  public playerReconnected(playerId: number, socket: AppSocket) {
+  public playerReconnected(playerId: PlayerId, socket: AppSocket) {
     console.log(`[MATCH] player ${playerId} reconnecting`);
     this._socketMap.set(playerId, socket);
 
@@ -721,20 +720,26 @@ export class MatchController {
       );
       socket.emit("matchStarted");
       socket.off("clientReady");
-
-      socket.on("nextPhase", this.onNextPhase);
+      
+      this.initializeSocketListeners(playerId, socket);
 
       this._interactivityController?.playerAdded(socket);
 
       if (
         this._match.players[this._match.currentPlayerTurnIndex].id === playerId
       ) {
-        await this.onCheckForPlayerActions();
+        await this.onCheckForPlayerActions(playerId);
         this._interactivityController?.checkCardInteractivity();
       }
     });
   }
 
+  private initializeSocketListeners(playerId: PlayerId, socket: AppSocket) {
+    socket.on("nextPhase", () => this.onNextPhase(playerId));
+    socket.on("searchCards", this.onSearchCards);
+    socket.on('userInputReceived', this.onUserInputReceived);
+  }
+  
   public playerDisconnected(playerId: number) {
     // Use whichever array is populated depending on phase
     const roster = this._match.players?.length

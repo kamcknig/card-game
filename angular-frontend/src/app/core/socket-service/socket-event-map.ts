@@ -9,6 +9,7 @@ import { type SocketService } from './socket.service';
 import { matchStore } from '../../state/match';
 import { applyPatch, Operation } from 'fast-json-patch';
 import { ClientListenEventNames, ClientListenEvents } from '../../../types';
+import { selectableCardStore, selectedCardStore } from '../../state/interactive-state';
 
 export type SocketEventMap = Partial<{ [p in ClientListenEventNames]: ClientListenEvents[p] }>;
 
@@ -70,6 +71,7 @@ export const socketToGameEventMap = (socketService: SocketService): SocketEventM
       if (!current) return;
       applyPatch(current, patch);
       matchStore.set(current);
+      console.log(selectableCardStore.get())
     },
     playerConnected: (player) => {
       playerStore(player.id).set(player);

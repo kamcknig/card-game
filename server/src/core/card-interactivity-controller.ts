@@ -5,6 +5,7 @@ import { isUndefined } from 'es-toolkit/compat';
 import { getEffectiveCardCost } from '../utils/get-effective-card-cost.ts';
 import { CardLibrary } from './card-library.ts';
 import { MatchController } from './match-controller.ts';
+import { getPlayerById } from '../utils/get-player-by-id.ts';
 
 export class CardInteractivityController {
   private _gameOver: boolean = false;
@@ -14,7 +15,7 @@ export class CardInteractivityController {
     private readonly match: Match,
     private readonly _socketMap: Map<PlayerId, AppSocket>,
     private readonly _cardLibrary: CardLibrary,
-    private readonly _cardTapCompleteCallback: (card: Card, player?: Player) => void,
+    private readonly _cardTapCompleteCallback: (card: Card, player: Player) => void,
     private readonly _matchController: MatchController,
   ) {
     // todo
@@ -46,7 +47,7 @@ export class CardInteractivityController {
     this._gameOver = true;
   }
 
-  private onPlayAllTreasure = () => {
+  private onPlayAllTreasure = (playerId: number) => {
     console.log(
       '[CARD INTERACTIVITY] playing all treasures for current player',
     );
@@ -57,30 +58,35 @@ export class CardInteractivityController {
     }
 
     const match = this.match;
-    const currentPlayer = match.players[match.currentPlayerTurnIndex];
+    const player = getPlayerById(match, playerId);
 
-    if (isUndefined(currentPlayer)) {
+    if (isUndefined(player)) {
       console.warn(`[CARD INTERACTIVITY] could not find current player`);
       return;
     }
 
-    const hand = match.playerHands[currentPlayer.id];
+    const hand = match.playerHands[player.id];
     const treasureCards = hand.filter((e) =>
       this._cardLibrary.getCard(e).type.includes('TREASURE')
     );
-    console.log(`[CARD INTERACTIVITY] ${currentPlayer} has ${treasureCards.length} treasure cards in hand`);
+    console.log(`[CARD INTERACTIVITY] ${player} has ${treasureCards.length} treasure cards in hand`);
     if (hand.length === 0 || treasureCards.length === 0) {
       return;
     }
     for (const cardId of treasureCards) {
-      this.onCardTapped(currentPlayer.id, cardId);
+      this.onCardTapped(player.id, cardId);
     }
+    this._socketMap.get(playerId)?.emit('playAllTreasureComplete');
   }
 
   private onCardTapped = (triggerPlayerId: number, tappedCardId: number) => {
     const match = this.match;
     const player = match.players.find(player => player.id === triggerPlayerId);
 
+    if (!player) {
+      throw new Error('could not find player');
+    }
+    
     const card = this._cardLibrary.getCard(tappedCardId);
 
     console.log(`[CARD INTERACTIVITY] player ${player} tapped card ${card}`);
@@ -195,6 +201,13 @@ export class CardInteractivityController {
       return prev;
     }, {} as Record<PlayerId, CardId[]>);
     
+    console.log(`[CARD INTERACTIVITY] selectable cards`);
+    for (const key of Object.keys(match.selectableCards)) {
+      const tmp = match.selectableCards[+key]?.concat() ?? [];
+      const p = getPlayerById(match, +key);
+      console.log(`${p} can select ${tmp.length} cards`);
+      if (tmp.length > 0) console.log(`${p} can select ${tmp.map(c => this._cardLibrary.getCard(c)).join(', ')}`);
+    }
     this._matchController.broadcastPatch(prev);
   }
 }

@@ -240,7 +240,7 @@ export interface IEffectRunner {
   runGenerator(
     generator: GameEffectGenerator,
     playerId: number,
-    acc?: MatchUpdate,
+    cardId: number,
   ): unknown;
 }
 

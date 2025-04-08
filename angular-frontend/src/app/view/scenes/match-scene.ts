@@ -14,9 +14,9 @@ import { PlayAreaView } from '../play-area';
 import { KingdomSupplyView } from '../kingdom-supply';
 import { PileView } from '../pile';
 import { cardStore } from '../../state/card-state';
-import { Card, CardKey, PlayerId, SelectCardArgs, UserPromptEffectArgs } from 'shared/shared-types';
+import { Card, CardId, CardKey, Player, PlayerId, SelectCardArgs, UserPromptEffectArgs } from 'shared/shared-types';
 import {
-  cardActionsInProgressStore,
+  awaitingServerLockReleaseStore,
   clientSelectableCardsOverrideStore,
   selectableCardStore,
   selectedCardStore
@@ -54,7 +54,7 @@ export class MatchScene extends Scene {
   private _selfId: PlayerId = selfPlayerIdStore.get()!;
 
   private get uiInteractive(): boolean {
-    return !this._selecting && !cardActionsInProgressStore.get();
+    return !this._selecting && !awaitingServerLockReleaseStore.get();
   }
 
   constructor(
@@ -78,7 +78,11 @@ export class MatchScene extends Scene {
     this._playAllTreasuresButton.button.label = 'playAllTreasureButton';
     this._playAllTreasuresButton.button.visible = false;
     this._playAllTreasuresButton.button.on('pointerdown', () => {
-      cardActionsInProgressStore.set(true);
+      awaitingServerLockReleaseStore.set(true);
+      this._socketService.on('playAllTreasureComplete', () => {
+        this._socketService.off('playAllTreasureComplete');
+        awaitingServerLockReleaseStore.set(false);
+      });
       this._socketService.emit('playAllTreasure', this._selfId);
     });
     this.addChild(this._playAllTreasuresButton.button);
@@ -253,7 +257,12 @@ export class MatchScene extends Scene {
       return
     }
 
-    cardActionsInProgressStore.set(true);
+    awaitingServerLockReleaseStore.set(true);
+    this._socketService.on('nextPhaseComplete', (playerId: PlayerId) => {
+      if (playerId !== this._selfId) return;
+      this._socketService.off('nextPhaseComplete');
+      awaitingServerLockReleaseStore.set(false);
+    });
     this._socketService.emit('nextPhase');
   }
 
@@ -362,10 +371,11 @@ export class MatchScene extends Scene {
 
       if (selectableCardStore.get()
         .includes(cardId)) {
-        cardActionsInProgressStore.set(true);
-        const updated = () => {
+        awaitingServerLockReleaseStore.set(true);
+        const updated = (finishedPlayerId: PlayerId, finishedCardId?: CardId) => {
+          if (finishedPlayerId !== this._selfId || finishedCardId !== cardId) return;
           this._socketService.off('cardEffectsComplete', updated)
-          cardActionsInProgressStore.set(false);
+          awaitingServerLockReleaseStore.set(false);
         }
         this._socketService.on('cardEffectsComplete', updated);
         this._socketService.emit('cardTapped', this._selfId, cardId);

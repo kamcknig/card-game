@@ -23,13 +23,12 @@ export class EffectsPipeline {
   public runGenerator(
     generator: EffectGenerator<GameEffects>,
     playerId: number,
+    cardId?: number,
     resumeInput?: unknown,
     resumeSignalId?: string,
   ): unknown {
-    if (!this._prevSnapshot) {
-      this._prevSnapshot = this._matchController.getMatchSnapshot();
-    }
-
+    this._prevSnapshot = this._matchController.getMatchSnapshot();
+    
     let nextEffect = resumeInput !== undefined && resumeSignalId
       ? generator.next(resumeInput)
       : generator.next();
@@ -58,7 +57,7 @@ export class EffectsPipeline {
           generator,
           playerId,
           resolve: (input: unknown) => {
-            void this.runGenerator(generator, playerId, input, signalId);
+            void this.runGenerator(generator, playerId, cardId, input, signalId);
           },
         });
         
@@ -71,7 +70,7 @@ export class EffectsPipeline {
 
     this._effectCompletedCallback();
 
-    this._socketMap.get(playerId)?.emit("cardEffectsComplete");
+    this._socketMap.get(playerId)?.emit("cardEffectsComplete", playerId, cardId);
     return nextEffect.value;
   }
   
