@@ -1,9 +1,9 @@
 import { Assets, Container, ContainerChild, Graphics, Sprite, Text, Texture } from 'pixi.js';
 import { selectableCardStore, selectedCardStore } from '../state/interactive-state';
-import { Card, CardFacing, CardSize } from 'shared/shared-types';
-import { gameEvents } from '../core/event/events';
+import { Card } from 'shared/shared-types';
 import { batched } from 'nanostores';
 import { cardOverrideStore } from '../state/card-state';
+import { CardFacing, CardSize } from '../../types';
 
 type CardArgs = Card;
 

@@ -1,5 +1,5 @@
 import { Socket } from 'socket.io';
-import { Match, MatchUpdate, ServerEmitEvents, ServerListenEvents, } from 'shared/shared-types.ts';
+import { Card, CardId, Match, PlayerId, ServerEmitEvents, ServerListenEvents, } from 'shared/shared-types.ts';
 import { GameEffects } from './core/effects/game-effects.ts';
 import { toNumber } from 'es-toolkit/compat';
 
@@ -208,6 +208,8 @@ export class Reaction {
   }
 }
 
+export type MatchUpdate = Partial<Match>;
+
 export interface IEffectRunner {
   runCardEffects(
     playerId: number,
@@ -244,3 +246,7 @@ export type LifecycleCallbackMap = {
   onEnterPlay?: LifecycleCallback;
   onLeavePlay?: LifecycleCallback;
 };
+
+export type EffectExceptionSpec =
+  | { kind: 'player'; playerIds: PlayerId[] };
+export type CardOverrides = Record<PlayerId, Record<CardId, Card>>;

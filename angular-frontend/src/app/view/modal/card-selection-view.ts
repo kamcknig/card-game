@@ -1,20 +1,16 @@
-import { Container, FederatedPointerEvent } from "pixi.js"
-import { CardId, UserPromptEffectArgs, UserPromptKinds } from 'shared/shared-types';
+import { Application, Container, FederatedPointerEvent } from 'pixi.js'
+import { CardId, UserPromptKinds } from 'shared/shared-types';
 import { CARD_WIDTH, STANDARD_GAP } from '../../core/app-contants';
 import { createCardView } from '../../core/card/create-card-view';
-import { List } from "@pixi/ui";
+import { List } from '@pixi/ui';
 import { cardStore } from '../../state/card-state';
-import { isNumber, toNumber } from "es-toolkit/compat";
-import { gameEvents } from '../../core/event/events';
+import { isNumber, toNumber } from 'es-toolkit/compat';
 import { CardView } from '../card-view';
-import {
-  clientSelectableCardsOverrideStore,
-  selectableCardStore,
-  selectedCardStore
-} from '../../state/interactive-state';
+import { clientSelectableCardsOverrideStore, selectedCardStore } from '../../state/interactive-state';
 import { validateCountSpec } from '../../shared/validate-count-spec';
+import { displayCardDetail } from './display-card-detail';
 
-export const cardSelectionView = (args: UserPromptKinds) => {
+export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
   if (args.type !== 'select') throw new Error('card selection modal requires type "select"');
   if (!args.cardIds) throw new Error('Cards cannot be empty');
 
@@ -49,7 +45,7 @@ export const cardSelectionView = (args: UserPromptKinds) => {
     if (event.button === 2 && cardView.facing === 'front') {
       const cardId = newCardToOldCardMap.get(cardView.card.id);
       if (!cardId) return;
-      gameEvents.emit('displayCardDetail', cardId);
+      void displayCardDetail(app, cardId);
       return;
     }
     const target = event.target as CardView;

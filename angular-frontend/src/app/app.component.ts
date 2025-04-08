@@ -5,7 +5,7 @@ import { AsyncPipe, NgSwitch, NgSwitchCase } from '@angular/common';
 import { SocketService } from './core/socket-service/socket.service';
 import { NanostoresService } from '@nanostores/angular';
 import { catchError, Observable, of, tap } from 'rxjs';
-import { Application, TexturePool } from 'pixi.js';
+import { Application } from 'pixi.js';
 import { sceneStore } from './state/game-state';
 import { MatchScene } from './view/scenes/match-scene';
 import { PIXI_APP } from './core/pixi-application.token';
@@ -58,8 +58,6 @@ export class AppComponent implements AfterViewInit, OnInit {
   async ngAfterViewInit() {
     if (!this._app) throw new Error('No app is initialized');
     this._app.resizeTo = this.pixiContainer.nativeElement;
-    console.log('pixi container width, height', this.pixiContainer.nativeElement.clientWidth, this.pixiContainer.nativeElement.clientHeight);
-    console.log('pixi container width, height', this._app.renderer.width, this._app.renderer.height);
     this.pixiContainer.nativeElement.appendChild(this._app.canvas);
   }
 }

@@ -1,7 +1,6 @@
 import { LogEntry } from 'shared/shared-types';
-import { cardStore } from './state/card-state';
-import { playerStore, selfPlayerIdStore } from './state/player-state';
-import { gameEvents } from './core/event/events';
+import { cardStore } from '../state/card-state';
+import { playerStore, selfPlayerIdStore } from '../state/player-state';
 
 export const logManager = {
   addLogEntry: (logEntry: LogEntry) => {
@@ -101,6 +100,6 @@ export const logManager = {
     }
 
     if (!msg) return;
-    gameEvents.emit('addLogEntry', msg);
+    // gameEvents.emit('addLogEntry', msg);
   }
 }

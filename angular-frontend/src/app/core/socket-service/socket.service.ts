@@ -3,7 +3,9 @@ import { io, Socket } from 'socket.io-client';
 import { environment } from '../../../environments/environment';
 import { v4 as uuidV4 } from 'uuid';
 import { SocketEventMap } from './socket-event-map';
-import { ClientEmitEvents, ServerEmitEventNames, ServerEmitEvents, ServerListenEvents } from 'shared/shared-types';
+import { ClientEmitEvents, ServerEmitEvents, ServerListenEvents } from 'shared/shared-types';
+import { Container } from 'pixi.js';
+import { ServerEmitEventNames } from '../../../types';
 
 @Injectable({
   providedIn: 'root',
@@ -13,7 +15,6 @@ export class SocketService {
   private _socketEventMap: SocketEventMap | undefined
 
   constructor() {
-    console.log('Socket service created');
     let sessionId = localStorage.getItem('sessionId') || uuidV4();
 
     localStorage.setItem('sessionId', sessionId);
@@ -32,9 +33,9 @@ export class SocketService {
   public setEventMap(map: SocketEventMap) {
     this._socketEventMap = map;
     (Object.keys(this._socketEventMap) as ServerEmitEventNames[]).forEach(eventName => {
-      console.log('creating socket handler for event', eventName);
       const handler = this._socketEventMap![eventName];
-      (this._socket as unknown as Socket).on(eventName as string, this.wrapHandler(eventName, handler));
+      if (!handler) return;
+      (this._socket as unknown as Socket).on(eventName as string, handler);
     });
   }
 
@@ -47,21 +48,6 @@ export class SocketService {
   private onDisconnect = () => {
     console.log('socket disconnected');
   }
-
-  private wrapHandler = <F extends (this: null, ...args: any[]) => any>(
-    eventName: string,
-    handler: F
-  ): F => {
-    const wrapped = function (this: null, ...args: Parameters<F>): ReturnType<F> {
-      console.log(`Socket event '${eventName}' invoked with arguments:`);
-      for (const arg of args) {
-        console.log(JSON.parse(JSON.stringify(arg)));
-      }
-      return handler.apply(null, args);
-    };
-    // First cast to unknown, then to F.
-    return wrapped as unknown as F;
-  };
 
   public off<K extends keyof ServerEmitEvents>(
     eventName: K,

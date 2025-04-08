@@ -2,7 +2,7 @@ import { Application, Assets, Container, Graphics, Sprite, Text } from 'pixi.js'
 import { Scene } from '../../core/scene/scene';
 import { PlayerHandView } from '../player-hand';
 import { AppButton, createAppButton } from '../../core/create-app-button';
-import { trashStore, supplyStore, matchStartedStore } from '../../state/match-state';
+import { matchStartedStore, supplyStore, trashStore } from '../../state/match-state';
 import {
   playerDeckStore,
   playerDiscardStore,
@@ -10,13 +10,17 @@ import {
   playerStore,
   selfPlayerIdStore
 } from '../../state/player-state';
-import { gameEvents } from '../../core/event/events';
 import { PlayAreaView } from '../play-area';
 import { KingdomSupplyView } from '../kingdom-supply';
 import { PileView } from '../pile';
 import { cardStore } from '../../state/card-state';
-import { Card, CardData, CardKey, PlayerId, SelectCardEffectArgs, UserPromptEffectArgs } from 'shared/shared-types';
-import { cardActionsInProgressStore, selectableCardStore, selectedCardStore } from '../../state/interactive-state';
+import { Card, CardKey, PlayerId, SelectCardArgs, UserPromptEffectArgs } from 'shared/shared-types';
+import {
+  cardActionsInProgressStore,
+  clientSelectableCardsOverrideStore,
+  selectableCardStore,
+  selectedCardStore
+} from '../../state/interactive-state';
 import { CardView } from '../card-view';
 import { userPromptModal } from '../modal/user-prompt-modal';
 import { CARD_HEIGHT, SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP } from '../../core/app-contants';
@@ -81,19 +85,17 @@ export class MatchScene extends Scene {
     this._cleanup.push(supplyStore.subscribe(this.drawBaseSupply));
     this._cleanup.push(matchStartedStore.subscribe(this.onMatchStarted));
     this._app.renderer.on('resize', this.onRendererResize);
-    gameEvents.on('selectCard', this.doSelectCards);
-    gameEvents.on('userPrompt', this.onUserPrompt);
-    gameEvents.on('displayCardDetail', this.onDisplayCardDetail);
-    gameEvents.on('waitingForPlayer', this.onWaitingOnPlayer);
-    gameEvents.on('doneWaitingForPlayer', this.onDoneWaitingForPlayer);
+    this._socketService.on('selectCard', this.doSelectCards);
+    this._socketService.on('userPrompt', this.onUserPrompt);
+    this._socketService.on('waitingForPlayer', this.onWaitingOnPlayer);
+    this._socketService.on('doneWaitingForPlayer', this.onDoneWaitingForPlayer);
 
     this._cleanup.push(() => {
       this._app.renderer.off('resize');
-      gameEvents.off('selectCard');
-      gameEvents.off('userPrompt');
-      gameEvents.off('displayCardDetail');
-      gameEvents.off('waitingForPlayer');
-      gameEvents.off('doneWaitingForPlayer');
+      this._socketService.off('selectCard');
+      this._socketService.off('userPrompt');
+      this._socketService.off('waitingForPlayer');
+      this._socketService.off('doneWaitingForPlayer');
       this.off('pointerdown');
       this._playAllTreasuresButton?.button.off('pointerdown');
     });
@@ -246,18 +248,11 @@ export class MatchScene extends Scene {
   }
 
   private onNextPhasePressed = (e: PointerEvent) => {
-    console.log('call to action pressed');
-
     if (!this.uiInteractive) {
-      console.log('GUI non-interactive, ignoring');
       return
     }
 
     this._socketService.emit('nextPhase');
-  }
-
-  private onDisplayCardDetail = (cardId: number | Card | CardData) => {
-    void displayCardDetail(this._app, cardId);
   }
 
   private onWaitingOnPlayer = (playerId: number) => {
@@ -321,11 +316,62 @@ export class MatchScene extends Scene {
       this._selfId
     );
     this._selecting = false;
-    gameEvents.emit('userPromptResponse', result);
+    this._socketService.emit('userPromptResponse', result);
   }
 
   // todo move the selection stuff to another class, SelectionManager?
-  private doSelectCards = async (arg: SelectCardEffectArgs) => {
+  private onPointerDown(event: PointerEvent) {
+    if (!(event.target instanceof CardView)) {
+      return;
+    }
+
+    const cardView = event.target as CardView;
+
+    if (event.ctrlKey) {
+      console.log(cardView.card);
+      return;
+    }
+
+    if (event.button === 2 && cardView.facing === 'front') {
+      void displayCardDetail(this._app, event.target.card);
+      return;
+    }
+
+    const view: CardView = event.target as CardView;
+    const cardId = view.card.id;
+
+    if (this._selecting) {
+      if (!selectableCardStore.get()
+        .includes(cardId)) {
+        return;
+      }
+      let current = selectedCardStore.get();
+      const idx = current.findIndex(c => c === cardId);
+      if (idx > -1) {
+        current.splice(idx, 1);
+      } else {
+        current.push(cardId);
+      }
+      selectedCardStore.set([...current]);
+    } else {
+      if (!this.uiInteractive) {
+        return;
+      }
+
+      if (selectableCardStore.get()
+        .includes(cardId)) {
+        cardActionsInProgressStore.set(true);
+        const updated = () => {
+          this._socketService.off('cardEffectsComplete', updated)
+          cardActionsInProgressStore.set(false);
+        }
+        this._socketService.on('cardEffectsComplete', updated);
+        this._socketService.emit('cardTapped', this._selfId, cardId);
+      }
+    }
+  }
+
+  private doSelectCards = async (arg: SelectCardArgs) => {
     const cardIds = selectableCardStore.get();
 
     // no more selectable cards, remove the done selecting button if it exists
@@ -333,6 +379,68 @@ export class MatchScene extends Scene {
       this.removeChild(this._doneSelectingBtn);
       return;
     }
+
+    const cardsSelectedComplete = (cardIds: number[]) => {
+      // reset selected card state
+      selectedCardStore.set([]);
+
+      // reset overrides so server can tell us now what cards are selectable
+      clientSelectableCardsOverrideStore.set(null);
+      this._socketService.emit('selectCardResponse', cardIds);
+    };
+
+    const doneListener = () => {
+      this._doneSelectingBtn?.off('pointerdown');
+      this._doneSelectingBtn?.removeFromParent();
+      this._doneSelectingBtn = undefined;
+      this._selecting = false;
+      selectedCardsListenerCleanup();
+      cardsSelectedComplete(selectedCardStore.get());
+    }
+
+    const updateCountText = (countText: Text, count: number) => {
+      countText.text = count;
+    }
+
+    const validateSelection = (selectedCards: readonly number[]) => {
+      if (arg.count === undefined) {
+        console.error('validate requires a count');
+        return;
+      }
+
+      if (validateCountSpec(arg.count, selectedCards?.length ?? 0)) {
+        if (!isUndefined(arg.validPrompt) && selectedCards?.length > 0) {
+          button.text(arg.validPrompt);
+        } else {
+          button.text(arg.prompt);
+        }
+
+        if (this._doneSelectingBtn) {
+          const b = this._doneSelectingBtn.getChildByLabel('doneSelectingButton');
+          if (b) {
+            b.alpha = 1;
+          }
+          this._doneSelectingBtn.on('pointerdown', doneListener);
+        }
+
+        if (isNumber(arg.count)) {
+          if (arg.count === selectedCardStore.get().length) doneListener();
+        }
+
+      } else {
+        button.text(arg.prompt);
+        if (this._doneSelectingBtn) {
+          const b = this._doneSelectingBtn.getChildByLabel('doneSelectingButton');
+          if (b) {
+            b.alpha = .6;
+          }
+          this._doneSelectingBtn.off('pointerdown', doneListener);
+        }
+      }
+    };
+
+    // set the currently selectable cards
+    clientSelectableCardsOverrideStore.set(arg.selectableCardIds);
 
     this._selecting = true;
 
@@ -395,57 +503,6 @@ export class MatchScene extends Scene {
     );
     this._doneSelectingBtn.y = Math.floor((this._playerHand?.y ?? 0) - this._doneSelectingBtn.height - STANDARD_GAP);
 
-    const doneListener = () => {
-      this._doneSelectingBtn?.off('pointerdown');
-      this._doneSelectingBtn?.removeFromParent();
-      this._doneSelectingBtn = undefined;
-      selectedCardsListenerCleanup();
-      this._selecting = false;
-      gameEvents.emit('cardsSelected', selectedCardStore.get());
-    }
-
-    const updateCountText = (countText: Text, count: number) => {
-      countText.text = count;
-    }
-
-    const validate = (selectedCards: readonly number[]) => {
-      // if they are valid, allow button press
-      if (arg.count === undefined) {
-        console.warn('arg.count is undefined, not validating');
-        return;
-      }
-
-      if (validateCountSpec(arg.count, selectedCards?.length ?? 0)) {
-        if (!isUndefined(arg.validPrompt) && selectedCards?.length > 0) {
-          button.text(arg.validPrompt);
-        } else {
-          button.text(arg.prompt);
-        }
-
-        if (this._doneSelectingBtn) {
-          const b = this._doneSelectingBtn.getChildByLabel('doneSelectingButton');
-          if (b) {
-            b.alpha = 1;
-          }
-          this._doneSelectingBtn.on('pointerdown', doneListener);
-        }
-
-        if (isNumber(arg.count)) {
-          if (arg.count === selectedCardStore.get().length) doneListener();
-        }
-
-      } else {
-        button.text(arg.prompt);
-        if (this._doneSelectingBtn) {
-          const b = this._doneSelectingBtn.getChildByLabel('doneSelectingButton');
-          if (b) {
-            b.alpha = .6;
-          }
-          this._doneSelectingBtn.off('pointerdown', doneListener);
-        }
-      }
-    };
-
     // listen for cards being selected
     const selectedCardsListenerCleanup = selectedCardStore.subscribe(cardIds => {
       this._doneSelectingBtn?.off('pointerdown');
@@ -461,64 +518,11 @@ export class MatchScene extends Scene {
         }
       }
 
-      validate(cardIds);
+      validateSelection(cardIds);
     });
 
-    validate(selectedCardStore.get());
+    validateSelection(selectedCardStore.get());
     this.addChild(this._doneSelectingBtn);
-  }
-
-  private onPointerDown(event: PointerEvent) {
-    if (!(event.target instanceof CardView)) {
-      return;
-    }
-
-    const cardView = event.target as CardView;
-
-    if (event.ctrlKey) {
-      console.log(cardView.card);
-      return;
-    }
-
-    if (event.button === 2 && cardView.facing === 'front') {
-      gameEvents.emit('displayCardDetail', (event.target as CardView).card.id);
-      return;
-    }
-
-    const view: CardView = event.target as CardView;
-    const cardId = view.card.id;
-
-    if (this._selecting) {
-      if (!selectableCardStore.get()
-        .includes(cardId)) {
-        console.log(`Card selected is not in the list of selectable cards`);
-        return;
-      }
-      let current = selectedCardStore.get();
-      const idx = current.findIndex(c => c === cardId);
-      if (idx > -1) {
-        current.splice(idx, 1);
-      } else {
-        current.push(cardId);
-      }
-      selectedCardStore.set([...current]);
-    } else {
-      if (!this.uiInteractive) {
-        console.log('awaiting server response');
-        return;
-      }
-
-      if (selectableCardStore.get()
-        .includes(cardId)) {
-        cardActionsInProgressStore.set(true);
-        const updated = () => {
-          gameEvents.off('cardEffectsComplete', updated)
-          cardActionsInProgressStore.set(false);
-        }
-        gameEvents.on('cardEffectsComplete', updated);
-        this._socketService.emit('cardTapped', this._selfId, cardId);
-      }
-    }
   }
 
   private drawBaseSupply = (newVal: ReadonlyArray<number>) => {

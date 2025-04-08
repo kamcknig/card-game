@@ -68,7 +68,7 @@ export const userPromptModal = (
           });
           break;
         default:
-          contentView = cardSelectionView(args.content);
+          contentView = cardSelectionView(app, args.content);
 
           contentView.on('finished', () => {
             actionButtonListener()

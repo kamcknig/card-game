@@ -1,18 +1,16 @@
-import { ClientListenEventNames, ClientListenEvents, LogEntry } from 'shared/shared-types';
-import { InjectionToken } from '@angular/core';
+import { LogEntry } from 'shared/shared-types';
 import { playerIdStore, playerStore, selfPlayerIdStore } from '../../state/player-state';
 import { lobbyMatchConfigurationStore, matchStartedStore } from '../../state/match-state';
 import { gameOwnerIdStore, gamePausedStore, sceneStore } from '../../state/game-state';
 import { expansionListStore } from '../../state/expansion-list-state';
 import { cardOverrideStore, cardStore } from '../../state/card-state';
 import { Assets } from 'pixi.js';
-import { gameEvents } from '../event/events';
 import { type SocketService } from './socket.service';
 import { matchStore } from '../../state/match';
 import { applyPatch, Operation } from 'fast-json-patch';
-import { clientSelectableCardsOverrideStore, selectedCardStore } from '../../state/interactive-state';
+import { ClientListenEventNames, ClientListenEvents } from '../../../types';
 
-export type SocketEventMap = { [p in ClientListenEventNames]: ClientListenEvents[p] };
+export type SocketEventMap = Partial<{ [p in ClientListenEventNames]: ClientListenEvents[p] }>;
 
 export const socketToGameEventMap = (socketService: SocketService): SocketEventMap => {
   const map: SocketEventMap = {
@@ -21,12 +19,6 @@ export const socketToGameEventMap = (socketService: SocketService): SocketEventM
     },
     matchConfigurationUpdated: config => {
       lobbyMatchConfigurationStore.set(config.expansions);
-    },
-    cardEffectsComplete: () => {
-      gameEvents.emit('cardEffectsComplete');
-    },
-    doneWaitingForPlayer: playerId => {
-      gameEvents.emit('doneWaitingForPlayer', playerId);
     },
     expansionList: val => {
       expansionListStore.set(val);
@@ -122,30 +114,6 @@ export const socketToGameEventMap = (socketService: SocketService): SocketEventM
     },
     setPlayer: player => {
       selfPlayerIdStore.set(player.id);
-    },
-    selectCard: selectCardArgs => {
-      const eventListener = (cardIds: number[]) => {
-        gameEvents.off('cardsSelected', eventListener);
-        selectedCardStore.set([]);
-        clientSelectableCardsOverrideStore.set(null);
-        socketService.emit('selectCardResponse', cardIds);
-      };
-
-      clientSelectableCardsOverrideStore.set(selectCardArgs.selectableCardIds);
-      gameEvents.emit('selectCard', selectCardArgs);
-      gameEvents.on('cardsSelected', eventListener);
-    },
-    userPrompt: userPromptArgs => {
-      const userPromptResponseListener = (result: unknown) => {
-        gameEvents.off('userPromptResponse', userPromptResponseListener);
-        socketService.emit('userPromptResponse', result);
-      };
-
-      gameEvents.on('userPromptResponse', userPromptResponseListener);
-      gameEvents.emit('userPrompt', userPromptArgs);
-    },
-    waitingForPlayer: playerId => {
-      gameEvents.emit('waitingForPlayer', playerId);
     },
     searchCardResponse: results => {
       console.log(results);

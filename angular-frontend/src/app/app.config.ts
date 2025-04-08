@@ -4,7 +4,7 @@ import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { NANOSTORES, NanostoresService } from '@nanostores/angular';
 import { PIXI_APP } from './core/pixi-application.token';
-import { pixiFactory, pixiInstance } from './pixi-application.factory';
+import { pixiFactory, pixiInstance } from './core/pixi-application.factory';
 
 export const appConfig: ApplicationConfig = {
   providers: [

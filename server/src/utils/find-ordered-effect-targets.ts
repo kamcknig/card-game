@@ -1,6 +1,7 @@
-import {EffectExceptionSpec, EffectTarget} from "shared/shared-types.ts";
+import {EffectTarget} from "shared/shared-types.ts";
 import { isNull } from 'es-toolkit';
 import {Match} from "shared/shared-types.ts";
+import { EffectExceptionSpec } from '../types.ts';
 
 export const findOrderedEffectTargets =
     (currentPlayerTurnId: number, target: EffectTarget, match: Match, exception?: EffectExceptionSpec): number[] => {

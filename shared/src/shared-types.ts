@@ -1,23 +1,31 @@
 import type { Operation } from 'fast-json-patch';
 
+export type CardKey = string;
+export type PlayerId = number;
+export type CardId = number;
+
 export type LogEntry =
-    | { type: 'draw'; playerSourceId: number; cardId: number; }
-    | { type: 'discard'; playerSourceId: number; cardId: number; }
-    | { type: 'gainAction'; count: number; playerSourceId: number; }
-    | { type: 'gainBuy'; count: number; playerSourceId: number;}
-    | { type: 'gainTreasure'; count: number; playerSourceId: number;}
-    | { type: 'gainCard'; cardId: number; playerSourceId: number;}
-    | { type: 'playCard'; cardId: number; playerSourceId: number;}
-    | { type: 'revealCard'; cardId: number; playerSourceId: number;}
-    | { type: 'trashCard'; cardId: number; playerSourceId: number;}
+    | { type: 'draw'; playerSourceId: PlayerId; cardId: CardId; }
+    | { type: 'discard'; playerSourceId: PlayerId; cardId: CardId; }
+    | { type: 'gainAction'; count: number; playerSourceId: PlayerId; }
+    | { type: 'gainBuy'; count: number; playerSourceId: PlayerId;}
+    | { type: 'gainTreasure'; count: number; playerSourceId: PlayerId;}
+    | { type: 'gainCard'; cardId: CardId; playerSourceId: PlayerId;}
+    | { type: 'playCard'; cardId: CardId; playerSourceId: PlayerId;}
+    | { type: 'revealCard'; cardId: CardId; playerSourceId: PlayerId;}
+    | { type: 'trashCard'; cardId: CardId; playerSourceId: PlayerId;}
+
+export type SelectCardArgs = SelectCardEffectArgs & {
+    selectableCardIds: CardId[];
+}
 
 export type SelectCardEffectArgs = {
-    restrict: EffectRestrictionSpec | number[],
-    count?: CountSpec | number,
-    autoSelect?: boolean,
-    playerId: number,
-    prompt: string,
-    validPrompt?: string,
+    restrict: EffectRestrictionSpec | number[];
+    count?: CountSpec | number;
+    autoSelect?: boolean;
+    playerId: PlayerId;
+    prompt: string;
+    validPrompt?: string;
 }
 
 export type UserPromptKinds =
@@ -39,16 +47,6 @@ export type MatchConfiguration = {
     supplyCardKeys: string[];
     kingdomCardKeys: string[];
 }
-
-export type GameState = {
-    match: Match;
-    matchConfig: MatchConfiguration;
-    owner: number;
-    players: Player[];
-    started: boolean;
-}
-
-export type MatchUpdate = Partial<Match>;
 
 export type Match = {
     config: MatchConfiguration,
@@ -72,9 +70,6 @@ export type Match = {
 }
 
 export const TurnPhaseOrderValues = ["action", "buy", "cleanup"] as const;
-export type TurnPhase = typeof TurnPhaseOrderValues[number] | undefined; // Define Effect as a union of all effect classes.
-
-export type CardOverrides = Record<PlayerId, Record<CardId, Card>>;
 
 export type ServerEmitEvents = {
     addLogEntry: (logEntry: LogEntry) => void;
@@ -100,7 +95,6 @@ export type ServerEmitEvents = {
     userPrompt: (userPromptArgs: UserPromptEffectArgs) => void;
     waitingForPlayer: (playerId: PlayerId) => void;
 }
-export type ServerEmitEventNames = keyof ServerEmitEvents;
 
 export type ServerListenEvents = {
     cardsSelected: (selected: CardId[]) =>void
@@ -135,9 +129,6 @@ export type CostSpec =
     | { kind: 'exact'; amount: number }
     | { kind: 'upTo'; amount: number }
     | number;
-
-export type EffectExceptionSpec =
-    | { kind: 'player'; playerIds: PlayerId[] };
 
 export type PlayerArgs = {
     id: PlayerId;
@@ -293,26 +284,6 @@ export class Card {
     }
 }
 
-export type ClientListenEvents = ServerEmitEvents;
-export type ClientListenEventNames = ServerEmitEventNames;
-
-export interface GameEvents {
-    addLogEntry: (logEntry: string) => void;
-    cardEffectsComplete: () => void;
-    cardsSelected: (cardIds: CardId[]) => void;
-    cardTapped: (playerId: PlayerId, cardId: CardId) => void;
-    displayCardDetail: (cardId: CardId) => void;
-    doneWaitingForPlayer: (playerId?: PlayerId) => void;
-    nextPhase: () => void;
-    playCard: (playerId: PlayerId, cardId: CardId) => void;
-    selectCard: (selectCardArgs: SelectCardEffectArgs) => void;
-    userPrompt: (userPromptArgs: UserPromptEffectArgs) => void;
-    userPromptResponse: (confirm: unknown) => void;
-    waitingForPlayer: (playerId: PlayerId) => void;
-}
-
-export type CardKey = string;
-
 const EffectTargetValues = ["ANY", "ALL_OTHER", "ALL"] as const;
 export type EffectTarget = typeof EffectTargetValues[number] | string;
 export type EffectRestrictionSpec = "SELF" | {
@@ -323,14 +294,11 @@ export type EffectRestrictionSpec = "SELF" | {
     };
     cost?: CostSpec;
 };
-export type PlayerId = number;
-export type CardId = number;
+
 export type ActionButtons = {
     label: string;
     action: number;
 }[];
-export type CardFacing = 'front' | 'back';
-export type CardSize = 'full' | 'half' | 'detail';
 export type CardData = Omit<
   Card,
   'id' | 'cardKey'

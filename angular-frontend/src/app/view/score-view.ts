@@ -66,7 +66,6 @@ export class ScoreView extends Container {
     scoreText.x -= 50;
     scoreText.text = score;
     scoreText.x = 200 - scoreText.width - STANDARD_GAP;
-    console.log(scoreText.text);
   }
 
   private onPlayersUpdated(turnOrder: readonly Player[]) {
