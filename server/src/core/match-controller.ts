@@ -366,7 +366,7 @@ export class MatchController {
 
     for (const player of match.players!) {
       for (let i = 0; i < 5; i++) {
-        await this._effectsController?.runGameActionEffects(
+        this._effectsController?.runGameActionEffects(
           "drawCard",
           player.id,
         );
@@ -658,7 +658,7 @@ export class MatchController {
           );
 
           for (const cardId of cardsToDiscard) {
-            await this._effectsController!.runGameActionEffects(
+            this._effectsController!.runGameActionEffects(
               "discardCard",
               player.id,
               cardId,
@@ -666,7 +666,7 @@ export class MatchController {
           }
           // then draw 5 new cards
           for (let i = 0; i < 5; i++) {
-            await this._effectsController!.runGameActionEffects(
+            this._effectsController!.runGameActionEffects(
               "drawCard",
               player.id,
             );

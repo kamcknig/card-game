@@ -46,7 +46,7 @@ export class CardInteractivityController {
     this._gameOver = true;
   }
 
-  private onPlayAllTreasure = async () => {
+  private onPlayAllTreasure = () => {
     console.log(
       '[CARD INTERACTIVITY] playing all treasures for current player',
     );
@@ -73,11 +73,11 @@ export class CardInteractivityController {
       return;
     }
     for (const cardId of treasureCards) {
-      await this.onCardTapped(currentPlayer.id, cardId);
+      this.onCardTapped(currentPlayer.id, cardId);
     }
   }
 
-  private onCardTapped = async (triggerPlayerId: number, tappedCardId: number) => {
+  private onCardTapped = (triggerPlayerId: number, tappedCardId: number) => {
     const match = this.match;
     const player = match.players.find(player => player.id === triggerPlayerId);
 
@@ -95,7 +95,7 @@ export class CardInteractivityController {
     const turnPhase = TurnPhaseOrderValues[match.turnPhaseIndex];
 
     if (turnPhase === 'action') {
-      await this._cardEffectController.runGameActionEffects(
+      this._cardEffectController.runGameActionEffects(
         'playCard',
         triggerPlayerId,
         tappedCardId,
