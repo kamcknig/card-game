@@ -37,7 +37,7 @@ export class ReactionManager {
         `[REACTION MANAGER] trigger card ${this._cardLibrary.getCard(trigger.cardId)}`,
       );
       console.log(
-        `t[REACTION MANAGER] rigger player ${
+        `[REACTION MANAGER] rigger player ${
           this.match.players.find((player) => player.id === trigger.playerId)
         }`,
       );

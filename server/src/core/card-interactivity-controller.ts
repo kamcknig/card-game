@@ -202,12 +202,14 @@ export class CardInteractivityController {
     }, {} as Record<PlayerId, CardId[]>);
     
     console.log(`[CARD INTERACTIVITY] selectable cards`);
+    
     for (const key of Object.keys(match.selectableCards)) {
       const tmp = match.selectableCards[+key]?.concat() ?? [];
       const p = getPlayerById(match, +key);
       console.log(`${p} can select ${tmp.length} cards`);
       if (tmp.length > 0) console.log(`${p} can select ${tmp.map(c => this._cardLibrary.getCard(c)).join(', ')}`);
     }
+    
     this._matchController.broadcastPatch(prev);
   }
 }
