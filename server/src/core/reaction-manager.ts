@@ -5,16 +5,16 @@ import { CardLibrary } from './card-library.ts';
 
 export class ReactionManager {
   private readonly _triggers: Reaction[] = [];
-
+  
   constructor(
     private readonly match: Match,
     private readonly _cardLibrary: CardLibrary,
   ) {
   }
-
+  
   public endGame() {
   }
-
+  
   unregisterTrigger(triggerId: string) {
     const idx = this._triggers.findIndex((trigger) => trigger.id === triggerId);
     if (idx > -1) {
@@ -27,11 +27,11 @@ export class ReactionManager {
       this._triggers.splice(idx, 1);
     }
   }
-
+  
   getReactions(trigger: ReactionTrigger) {
     return this._triggers.filter((t) => {
       if (t.listeningFor !== trigger.eventType) return false;
-
+      
       console.log(`[REACTION MANAGER] checking trigger ${trigger} condition for ${t.id} reaction`);
       console.log(
         `[REACTION MANAGER] trigger card ${this._cardLibrary.getCard(trigger.cardId)}`,
@@ -41,12 +41,12 @@ export class ReactionManager {
           this.match.players.find((player) => player.id === trigger.playerId)
         }`,
       );
-
+      
       return !(t.condition !== undefined &&
         !t.condition({ match: this.match, cardLibrary: this._cardLibrary, trigger }));
     });
   }
-
+  
   getReactionsForPlayer(
     trigger: ReactionTrigger,
     playerId: number,
@@ -55,7 +55,7 @@ export class ReactionManager {
       item.playerId === playerId
     );
   }
-
+  
   registerReactionTemplate(reactionTemplate: ReactionTemplate) {
     console.log(
       `[REACTION MANAGER] registering trigger template ID ${reactionTemplate.id}, for player ${reactionTemplate.playerId}`,

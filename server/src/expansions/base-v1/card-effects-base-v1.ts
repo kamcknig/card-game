@@ -54,13 +54,13 @@ const expansionModule: CardExpansionModule = {
     };
   },
   registerScoringFunctions: () => ({
-    'gardens': function ({ match , ownerId}) {
+    'gardens': function ({ match, ownerId }) {
       const cards = match
         .playerHands[ownerId]
         .concat(match.playerDecks[ownerId])
         .concat(match.playerDiscards[ownerId])
         .concat(match.playArea);
-
+      
       return Math.floor(cards.length / 10);
     },
   }),
@@ -71,9 +71,9 @@ const expansionModule: CardExpansionModule = {
       triggerPlayerId,
     }) {
       let treasuresRevealed = 0;
-
+      
       let deck = match.playerDecks[triggerPlayerId];
-
+      
       while (treasuresRevealed < 2 && deck.length > 0) {
         const cardId = deck.slice(-1)![0];
         yield new RevealCardEffect({
@@ -246,26 +246,26 @@ const expansionModule: CardExpansionModule = {
       triggerCardId
     }) {
       yield new GainTreasureEffect({ count: 2, sourceCardId: triggerCardId, sourcePlayerId: triggerPlayerId });
-
+      
       const deck = match.playerDecks[triggerPlayerId];
       if (deck.length === 0) {
         console.log(`[CHANCELLOR EFFECT] ${getPlayerById(match, triggerPlayerId)} has no cards in deck to discard`);
         return;
       }
-
+      
       const result = (yield new UserPromptEffect({
         prompt: 'Discard deck?',
-        actionButtons: [{label: 'NO', action: 1}, {label: 'YES', action: 2}],
+        actionButtons: [{ label: 'NO', action: 1 }, { label: 'YES', action: 2 }],
         sourcePlayerId: triggerPlayerId,
         sourceCardId: triggerCardId,
         playerId: triggerPlayerId,
       })) as { action: number };
-
+      
       if (result.action !== 2) {
         console.log(`[CHANCELLOR EFFECT] ${getPlayerById(match, triggerPlayerId)} selected no`);
         return;
       }
-
+      
       while (deck.length > 0) {
         const cardId = deck.slice(-1)![0];
         yield new MoveCardEffect({
@@ -347,14 +347,14 @@ const expansionModule: CardExpansionModule = {
         yield new DrawCardEffect({ playerId, sourcePlayerId: triggerPlayerId, sourceCardId: triggerCardId });
       }
     },
-    'feast': function* ({match, cardLibrary, triggerPlayerId, triggerCardId}) {
+    'feast': function* ({ match, cardLibrary, triggerPlayerId, triggerCardId }) {
       yield new TrashCardEffect({
         playerId: triggerPlayerId,
         cardId: triggerCardId!,
         sourcePlayerId: triggerPlayerId,
         sourceCardId: triggerCardId,
       });
-
+      
       const cardIds = (yield new SelectCardEffect({
         prompt: '',
         sourcePlayerId: triggerPlayerId,
@@ -366,7 +366,7 @@ const expansionModule: CardExpansionModule = {
         },
         count: 1,
       })) as number[];
-
+      
       const cardId = cardIds?.[0];
       
       if (!isUndefined(cardId)) {
@@ -393,7 +393,7 @@ const expansionModule: CardExpansionModule = {
     'gardens': function* () {
       // has no effects, calculates score as game plays
     },
-    'gold': function* ({triggerPlayerId, triggerCardId}) {
+    'gold': function* ({ triggerPlayerId, triggerCardId }) {
       yield new GainTreasureEffect({ count: 3, sourcePlayerId: triggerPlayerId, sourceCardId: triggerCardId });
     },
     'laboratory': function* ({
@@ -416,7 +416,8 @@ const expansionModule: CardExpansionModule = {
       triggerCardId,
     }) {
       // TODO: do the set aside stuff
-      // 'Draw until you have 7 cards in hand, skipping any Action cards you choose to; set those aside, discarding them afterward.'
+      // 'Draw until you have 7 cards in hand, skipping any Action cards you choose to; set those aside, discarding
+      // them afterward.'
       const setAside: number[] = [];
       
       const hand = match.playerHands[triggerPlayerId];
@@ -454,7 +455,7 @@ const expansionModule: CardExpansionModule = {
             sourceCardId: triggerCardId,
             playerId: triggerPlayerId,
             prompt: `You drew ${drawnCard.cardName}. Set it aside (skip putting it in your hand)?`,
-            actionButtons: [{label: 'KEEP', action: 1}, {label: 'SET ASIDE', action: 2}],
+            actionButtons: [{ label: 'KEEP', action: 1 }, { label: 'SET ASIDE', action: 2 }],
           })) as { action: number };
           
           if (shouldSetAside.action === 2) {
@@ -555,7 +556,7 @@ const expansionModule: CardExpansionModule = {
         }
       }
     },
-    'mine': function* ({match, cardLibrary, triggerPlayerId, triggerCardId}) {
+    'mine': function* ({ match, cardLibrary, triggerPlayerId, triggerCardId }) {
       const hand = match.playerHands[triggerPlayerId];
       
       const hasTreasureCards = hand.some((c) =>
@@ -626,7 +627,7 @@ const expansionModule: CardExpansionModule = {
         to: { location: 'playerHands' },
       });
     },
-    'moat': function* ({triggerPlayerId, triggerCardId}) {
+    'moat': function* ({ triggerPlayerId, triggerCardId }) {
       yield new DrawCardEffect({
         playerId: triggerPlayerId,
         sourcePlayerId: triggerPlayerId,
@@ -761,14 +762,14 @@ const expansionModule: CardExpansionModule = {
         });
       }
     },
-    'spy': function* ({match, triggerPlayerId, triggerCardId, reactionContext}) {
+    'spy': function* ({ match, triggerPlayerId, triggerCardId, reactionContext }) {
       yield new GainActionEffect({ sourcePlayerId: triggerPlayerId, sourceCardId: triggerCardId, count: 1 });
       yield new DrawCardEffect({
         sourcePlayerId: triggerPlayerId,
         sourceCardId: triggerCardId,
         playerId: triggerPlayerId,
       });
-
+      
       const playerIds = findOrderedEffectTargets(
         triggerPlayerId,
         'ALL',
@@ -783,31 +784,31 @@ const expansionModule: CardExpansionModule = {
         const player = getPlayerById(match, playerId);
         let deck = match.playerDecks[playerId];
         if (deck.length === 0) {
-          yield new ShuffleDeckEffect({playerId});
+          yield new ShuffleDeckEffect({ playerId });
           deck = match.playerDecks[playerId];
         }
         const cardId = deck.slice(-1)[0];
-
+        
         yield new RevealCardEffect({
           sourcePlayerId: triggerPlayerId,
           sourceCardId: triggerCardId,
           cardId,
           playerId,
         });
-
+        
         const discard = (yield new UserPromptEffect({
           sourcePlayerId: triggerPlayerId,
           sourceCardId: triggerCardId,
           playerId: triggerPlayerId,
           prompt: `Discard or put on ${player?.name}'s deck?`,
-          actionButtons: [{label: 'DECK', action: 1}, {label: 'DISCARD', action: 2}],
+          actionButtons: [{ label: 'DECK', action: 1 }, { label: 'DISCARD', action: 2 }],
           content: {
             cards: {
               cardIds: [cardId],
             },
           },
         })) as { action: number; cardIds: number[] };
-
+        
         if (discard.action === 2) {
           console.log(`[SPY EFFECT] ${getPlayerById(match, triggerPlayerId)} chose to discard`);
           yield new DiscardCardEffect({
@@ -819,12 +820,12 @@ const expansionModule: CardExpansionModule = {
         }
       }
     },
-    'thief': function* ({match, cardLibrary, triggerPlayerId, triggerCardId, reactionContext}) {
+    'thief': function* ({ match, cardLibrary, triggerPlayerId, triggerCardId, reactionContext }) {
       // 'Each other player reveals the top 2 cards of his deck.
       // If they revealed any Treasure cards, they trash one of them that you choose.
       // You may gain any or all of these trashed cards.
       // They discard the other revealed cards.'
-
+      
       const targetPlayerIds = findOrderedEffectTargets(
         triggerPlayerId,
         'ALL_OTHER',
@@ -832,36 +833,36 @@ const expansionModule: CardExpansionModule = {
       ).filter((id) => reactionContext[id] !== 'immunity');
       
       const cardsToGain: number[] = [];
-
+      
       for (const playerId of targetPlayerIds) {
         let deck = match.playerDecks[playerId];
         let discard = match.playerDiscards[playerId];
-
+        
         // num to reveal is 2 or the number of cards we have to choose from (including a reshuffle if need be)
         const numToReveal = Math.min(2, deck.length + discard.length);
-
+        
         if (numToReveal === 0) {
           console.log(`[THIEF EFFECT] ${getPlayerById(match, playerId)} has not cards to reveal`);
           continue;
         }
-
+        
         // shuffle discard back into deck (make sure deck is on top)
         if (deck.length < numToReveal) {
-          yield new ShuffleDeckEffect({playerId})
+          yield new ShuffleDeckEffect({ playerId })
           deck = match.playerDecks[playerId];
           discard = match.playerDiscards[playerId];
         }
-
+        
         const cardsToReveal = deck.slice(-numToReveal);
-
+        
         const treasureCardIds = cardsToReveal.filter((id) =>
           cardLibrary.getCard(id).type.includes('TREASURE')
         );
         
         const cardsToDiscard = cardsToReveal.filter((id) =>
-            !cardLibrary.getCard(id).type.includes('TREASURE')
+          !cardLibrary.getCard(id).type.includes('TREASURE')
         );
-
+        
         for (const e of cardsToReveal) {
           yield new RevealCardEffect({
             sourcePlayerId: triggerPlayerId,
@@ -870,7 +871,7 @@ const expansionModule: CardExpansionModule = {
             playerId,
           });
         }
-
+        
         if (treasureCardIds.length > 0) {
           console.log(`[THIEF EFFECT] Revealed ${treasureCardIds.length} treasure cards`);
           // if more than one, choose, otherwise auto-choose the only one
@@ -899,25 +900,25 @@ const expansionModule: CardExpansionModule = {
           }
           
           const cardId = Array.isArray(result) ? result[0] : result.cardIds[0];
-
+          
           console.log(
             `[THIEF EFFECT] ${getPlayerById(match, triggerPlayerId)} chose card ${cardLibrary.getCard(cardId)} to trash`,
           );
-
+          
           yield new TrashCardEffect({
             playerId,
             sourcePlayerId: triggerPlayerId,
             sourceCardId: triggerCardId,
             cardId,
           });
-
+          
           cardsToGain.push(cardId);
           
           console.log(`[THIEF EFFECT] adding card ${cardLibrary.getCard(cardId)} to list to possibly gain`);
         } else {
           console.log(`[THIEF EFFECT] ${name} no treasure cards in player's hand`);
         }
-
+        
         for (const cardId of cardsToDiscard) {
           yield new DiscardCardEffect({
             sourcePlayerId: triggerPlayerId,
@@ -927,14 +928,14 @@ const expansionModule: CardExpansionModule = {
           });
         }
       }
-
+      
       if (cardsToGain.length > 0) {
         const result = (yield new UserPromptEffect({
           sourcePlayerId: triggerPlayerId,
           sourceCardId: triggerCardId,
           playerId: triggerPlayerId,
           prompt: 'Select which cards to keep.',
-          actionButtons: [{label: 'DONE', action: 1}],
+          actionButtons: [{ label: 'DONE', action: 1 }],
           content: {
             cards: {
               cardIds: cardsToGain,
@@ -947,7 +948,7 @@ const expansionModule: CardExpansionModule = {
         })) as { action: number; cardIds: number[] };
         
         const cardIds = result.cardIds;
-
+        
         for (const cardId of cardIds) {
           yield new GainCardEffect({
             sourcePlayerId: triggerPlayerId,

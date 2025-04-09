@@ -7,17 +7,17 @@ import { CardLibrary } from './card-library.ts';
 
 export class CardEffectController implements IEffectRunner {
   private _effectsPipeline: EffectsPipeline | undefined;
-
+  
   constructor(
     private readonly _effectGeneratorMap: Record<string, EffectGeneratorFn>,
     private readonly _cardLibrary: CardLibrary,
     private _match: Match,
   ) {
   }
-
+  
   public endGame() {
   }
-
+  
   public runGameActionEffects(
     effectName: string,
     playerId: number,
@@ -39,14 +39,14 @@ export class CardEffectController implements IEffectRunner {
     });
     return this.runGenerator(gen, playerId, cardId);
   }
-
+  
   public runCardEffects(
     playerId: number,
     cardId: number,
     reactionContext?: unknown,
   ): unknown {
     const card = this._cardLibrary.getCard(cardId);
-    const generatorFn = this._effectGeneratorMap[card?.cardKey ?? ""];
+    const generatorFn = this._effectGeneratorMap[card?.cardKey ?? ''];
     
     if (!generatorFn) {
       console.log(`[EFFECT CONTROLLER] No card effects generator found for ${card}`);
@@ -65,7 +65,7 @@ export class CardEffectController implements IEffectRunner {
     
     return this.runGenerator(gen, playerId, cardId);
   }
-
+  
   public runGenerator(
     generator: EffectGenerator<GameEffects>,
     playerId: number,
@@ -75,19 +75,19 @@ export class CardEffectController implements IEffectRunner {
       console.log(`[EFFECT CONTROLLER] No anonymous effects generator supplied`);
       return;
     }
-
+    
     if (!this._effectsPipeline) {
-      console.warn("[EFFECT CONTROLLER] EffectPipeline not assigned to CardEffectController; skipping generator",);
+      console.warn('[EFFECT CONTROLLER] EffectPipeline not assigned to CardEffectController; skipping generator',);
       return;
     }
-
+    
     return this._effectsPipeline.runGenerator(
       generator,
       playerId,
       cardId,
     );
   }
-
+  
   public setEffectPipeline(pipeline: EffectsPipeline) {
     this._effectsPipeline = pipeline;
   }

@@ -1,60 +1,60 @@
 import { castArray } from 'es-toolkit/compat';
 import { isUndefined } from 'es-toolkit';
-import { EffectRestrictionSpec, Match } from "shared/shared-types.ts";
+import { EffectRestrictionSpec, Match } from 'shared/shared-types.ts';
 
-import { validateCostSpec } from "../shared/validate-cost-spec.ts";
+import { validateCostSpec } from '../shared/validate-cost-spec.ts';
 
 import { CardLibrary } from '../core/card-library.ts';
 
 export const findCards = (
-    match: Match,
-    effectRestriction: EffectRestrictionSpec,
-    cardLibrary: CardLibrary,
-    playerId?: number,
+  match: Match,
+  effectRestriction: EffectRestrictionSpec,
+  cardLibrary: CardLibrary,
+  playerId?: number,
 ) => {
-    if (effectRestriction === 'SELF') {
-        throw new Error(`findCards cannot accept a restriction of type 'SELF'`);
+  if (effectRestriction === 'SELF') {
+    throw new Error(`findCards cannot accept a restriction of type 'SELF'`);
+  }
+  
+  let cardIds: number[] = [];
+  
+  if (!isUndefined(effectRestriction.from?.location)) {
+    if (!isUndefined(playerId)) {
+      if (effectRestriction.from?.location.includes('playerHands')) {
+        cardIds = cardIds.concat(match.playerHands[playerId]);
+      }
+      
+      if (effectRestriction.from?.location.includes('playerDecks')) {
+        cardIds = cardIds.concat(match.playerDecks[playerId]);
+      }
+      
+      if (effectRestriction.from?.location.includes('playerDiscards')) {
+        cardIds = cardIds.concat(match.playerDiscards[playerId]);
+      }
     }
-
-    let cardIds: number[] = [];
-
-    if (!isUndefined(effectRestriction.from?.location)) {
-        if (!isUndefined(playerId)) {
-            if (effectRestriction.from?.location.includes('playerHands')) {
-                cardIds = cardIds.concat(match.playerHands[playerId]);
-            }
-
-            if (effectRestriction.from?.location.includes('playerDecks')) {
-                cardIds = cardIds.concat(match.playerDecks[playerId]);
-            }
-
-            if (effectRestriction.from?.location.includes('playerDiscards')) {
-                cardIds = cardIds.concat(match.playerDiscards[playerId]);
-            }
-        }
-
-        if (effectRestriction.from?.location.includes('supply')) {
-            cardIds = cardIds.concat(match.supply);
-        }
-
-        if (effectRestriction.from?.location.includes('kingdom')) {
-            cardIds = cardIds.concat(match.kingdom);
-        }
+    
+    if (effectRestriction.from?.location.includes('supply')) {
+      cardIds = cardIds.concat(match.supply);
     }
-
-    if (!isUndefined(effectRestriction?.cost)) {
-        cardIds = cardIds.filter(id => validateCostSpec(effectRestriction.cost!, cardLibrary.getCard(id).cost.treasure));
+    
+    if (effectRestriction.from?.location.includes('kingdom')) {
+      cardIds = cardIds.concat(match.kingdom);
     }
-    if (!isUndefined(effectRestriction.card)) {
-        if (!isUndefined(effectRestriction.card?.cardKeys)) {
-            const keys = castArray(effectRestriction.card.cardKeys);
-            cardIds = cardIds.filter(id => keys.includes(cardLibrary.getCard(id).cardKey))
-        }
-        if (!isUndefined(effectRestriction.card?.type)) {
-            const types = castArray(effectRestriction.card.type);
-            cardIds = cardIds.filter(id => cardLibrary.getCard(id).type.some(t => types.includes(t)));
-        }
+  }
+  
+  if (!isUndefined(effectRestriction?.cost)) {
+    cardIds = cardIds.filter(id => validateCostSpec(effectRestriction.cost!, cardLibrary.getCard(id).cost.treasure));
+  }
+  if (!isUndefined(effectRestriction.card)) {
+    if (!isUndefined(effectRestriction.card?.cardKeys)) {
+      const keys = castArray(effectRestriction.card.cardKeys);
+      cardIds = cardIds.filter(id => keys.includes(cardLibrary.getCard(id).cardKey))
     }
-
-    return cardIds;
+    if (!isUndefined(effectRestriction.card?.type)) {
+      const types = castArray(effectRestriction.card.type);
+      cardIds = cardIds.filter(id => cardLibrary.getCard(id).type.some(t => types.includes(t)));
+    }
+  }
+  
+  return cardIds;
 }

@@ -16,7 +16,7 @@ export class ModifyCostEffect extends EffectBase {
   public appliesTo: EffectTarget;
   public appliesToCard: ModifyCostEffectArgs['appliesToCard'];
   
-  constructor({expiresAt, amount, appliesToPlayer, appliesToCard, ...arg}: EffectBaseArgs & ModifyCostEffectArgs) {
+  constructor({ expiresAt, amount, appliesToPlayer, appliesToCard, ...arg }: EffectBaseArgs & ModifyCostEffectArgs) {
     super(arg);
     this.expiresAt = expiresAt;
     this.amount = amount;

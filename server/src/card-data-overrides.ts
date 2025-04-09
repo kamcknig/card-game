@@ -31,12 +31,12 @@ export const getCardOverrides = (_match: Match, cardLibrary: CardLibrary): CardO
       let effectedCards: Card[] = [];
       if (typeof effect.appliesToCard === 'function') {
         effectedCards = allCards.filter(effect.appliesToCard);
-      } else if (effect.appliesToCard === 'ALL'){
+      } else if (effect.appliesToCard === 'ALL') {
         effectedCards = allCards;
       }
       
       for (const effectedCard of effectedCards) {
-        let existingOverrideCard = overrides[playerTargetId][effectedCard.id] ?? { cost: { treasure: Math.max(0, effectedCard.cost.treasure)}};
+        let existingOverrideCard = overrides[playerTargetId][effectedCard.id] ?? { cost: { treasure: Math.max(0, effectedCard.cost.treasure) } };
         
         existingOverrideCard = {
           ...existingOverrideCard,

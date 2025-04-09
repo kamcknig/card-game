@@ -5,7 +5,7 @@ let PLAYER_ID: number = 0;
 
 export const createNewPlayer = (sessionId: string, socket: AppSocket) => {
   const newId = ++PLAYER_ID;
-  const p =  new Player({
+  const p = new Player({
     name: `Player ${newId}`,
     id: newId,
     sessionId,

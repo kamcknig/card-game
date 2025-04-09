@@ -2,13 +2,13 @@ import { ActionButtons, UserPromptEffectArgs, UserPromptKinds } from 'shared/sha
 import { EffectBase, EffectBaseArgs } from './effect-base.ts';
 
 export class UserPromptEffect extends EffectBase {
-  type = "userPrompt" as const;
+  type = 'userPrompt' as const;
   playerId: number;
   prompt?: string;
   actionButtons?: ActionButtons;
   content?: UserPromptKinds;
   validationAction?: number;
-
+  
   constructor(
     {
       content,

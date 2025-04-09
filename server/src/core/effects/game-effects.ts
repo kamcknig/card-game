@@ -14,17 +14,17 @@ import { UserPromptEffect } from './user-prompt.ts';
 import { ModifyCostEffect } from './modify-cost.ts';
 
 export type GameEffects =
-    | DrawCardEffect
-    | DiscardCardEffect
-    | GainActionEffect
-    | GainBuyEffect
-    | GainCardEffect
-    | GainTreasureEffect
-    | MoveCardEffect
-    | TrashCardEffect
-    | PlayCardEffect
-    | RevealCardEffect
-    | SelectCardEffect
-    | ShuffleDeckEffect
-    | UserPromptEffect
-    | ModifyCostEffect;
+  | DrawCardEffect
+  | DiscardCardEffect
+  | GainActionEffect
+  | GainBuyEffect
+  | GainCardEffect
+  | GainTreasureEffect
+  | MoveCardEffect
+  | TrashCardEffect
+  | PlayCardEffect
+  | RevealCardEffect
+  | SelectCardEffect
+  | ShuffleDeckEffect
+  | UserPromptEffect
+  | ModifyCostEffect;

@@ -1,25 +1,25 @@
-import { GameEffects } from "./effects/game-effects.ts";
-import { AppSocket, EffectGenerator, EffectHandlerMap } from "../types.ts";
-import { Match, PlayerId } from "shared/shared-types.ts";
-import { MatchController } from "./match-controller.ts";
+import { GameEffects } from './effects/game-effects.ts';
+import { AppSocket, EffectGenerator, EffectHandlerMap } from '../types.ts';
+import { Match, PlayerId } from 'shared/shared-types.ts';
+import { MatchController } from './match-controller.ts';
 
 export class EffectsPipeline {
   private _prevSnapshot!: Match;
-
+  private _pausedGenerators = new Map<string, {
+    generator: EffectGenerator<GameEffects>;
+    playerId: PlayerId;
+    resolve: (input: unknown) => void;
+  }>();
+  
   constructor(
     private readonly _effectHandlerMap: EffectHandlerMap,
     private readonly _socketMap: Map<PlayerId, AppSocket>,
     private readonly _effectCompletedCallback: () => void,
     private readonly _matchController: MatchController,
     private readonly _match: Match,
-  ) {}
-
-  private _pausedGenerators = new Map<string, {
-    generator: EffectGenerator<GameEffects>;
-    playerId: PlayerId;
-    resolve: (input: unknown) => void;
-  }>();
-
+  ) {
+  }
+  
   public runGenerator(
     generator: EffectGenerator<GameEffects>,
     playerId: number,
@@ -32,7 +32,7 @@ export class EffectsPipeline {
     let nextEffect = resumeInput !== undefined && resumeSignalId
       ? generator.next(resumeInput)
       : generator.next();
-
+    
     while (!nextEffect.done) {
       const effect = nextEffect.value as GameEffects;
       const handler = this._effectHandlerMap[effect.type];
@@ -44,7 +44,7 @@ export class EffectsPipeline {
         nextEffect = generator.next();
         continue;
       }
-
+      
       console.log(`[EFFECT PIPELINE] running '${effect.type}' effect`);
       
       const result = handler(effect as unknown as any, this._match);
@@ -67,10 +67,10 @@ export class EffectsPipeline {
       this.flushChanges();
       nextEffect = generator.next(result);
     }
-
+    
     this._effectCompletedCallback();
-
-    this._socketMap.get(playerId)?.emit("cardEffectsComplete", playerId, cardId);
+    
+    this._socketMap.get(playerId)?.emit('cardEffectsComplete', playerId, cardId);
     return nextEffect.value;
   }
   

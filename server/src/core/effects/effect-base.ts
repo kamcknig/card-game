@@ -13,7 +13,7 @@ export abstract class EffectBase {
   public sourceCardId: number;
   public sourcePlayerId: number;
   public triggerImmediateUpdate?: boolean;
-
+  
   protected constructor(
     { sourcePlayerId, sourceCardId, triggerImmediateUpdate }: EffectBaseArgs,
   ) {
@@ -21,12 +21,12 @@ export abstract class EffectBase {
     this.sourceCardId = sourceCardId!;
     this.triggerImmediateUpdate = triggerImmediateUpdate!;
   }
-
+  
   toString() {
     return `[EFFECT '${this.type}', source player ${this.sourcePlayerId}, source card ${this.sourceCardId}']`;
   }
-
-  [Symbol.for("nodejs.util.inspect.custom")]() {
+  
+  [Symbol.for('nodejs.util.inspect.custom')]() {
     return this.toString();
   }
 }

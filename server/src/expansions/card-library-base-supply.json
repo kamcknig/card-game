@@ -1,41 +1,69 @@
 {
-    "copper": {
-        "cost": {"treasure": 0},
-        "type": ["TREASURE"],
-        "cardName": "Copper"
+  "copper": {
+    "cost": {
+      "treasure": 0
     },
-    "curse": {
-        "cost": {"treasure": 0},
-        "type": ["VICTORY"],
-        "victoryPoints": -1,
-        "cardName": "Curse"
+    "type": [
+      "TREASURE"
+    ],
+    "cardName": "Copper"
+  },
+  "curse": {
+    "cost": {
+      "treasure": 0
     },
-    "duchy": {
-        "cost": {"treasure": 5},
-        "type": ["VICTORY"],
-        "victoryPoints": 3,
-        "cardName": "Duchy"
+    "type": [
+      "VICTORY"
+    ],
+    "victoryPoints": -1,
+    "cardName": "Curse"
+  },
+  "duchy": {
+    "cost": {
+      "treasure": 5
     },
-    "estate": {
-        "cost": {"treasure": 2},
-        "type": ["VICTORY"],
-        "victoryPoints": 1,
-        "cardName": "Estate"
+    "type": [
+      "VICTORY"
+    ],
+    "victoryPoints": 3,
+    "cardName": "Duchy"
+  },
+  "estate": {
+    "cost": {
+      "treasure": 2
     },
-    "gold": {
-        "cost": {"treasure": 6},
-        "type": ["TREASURE"],
-        "cardName": "Gold"
+    "type": [
+      "VICTORY"
+    ],
+    "victoryPoints": 1,
+    "cardName": "Estate"
+  },
+  "gold": {
+    "cost": {
+      "treasure": 6
     },
-    "province": {
-        "cost": {"treasure": 8},
-        "type": ["VICTORY"],
-        "victoryPoints": 6,
-        "cardName": "Province"
+    "type": [
+      "TREASURE"
+    ],
+    "cardName": "Gold"
+  },
+  "province": {
+    "cost": {
+      "treasure": 8
     },
-    "silver": {
-        "cost": {"treasure": 3},
-        "type": ["TREASURE"],
-        "cardName": "Silver"
-    }
+    "type": [
+      "VICTORY"
+    ],
+    "victoryPoints": 6,
+    "cardName": "Province"
+  },
+  "silver": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": [
+      "TREASURE"
+    ],
+    "cardName": "Silver"
+  }
 }

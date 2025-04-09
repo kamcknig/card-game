@@ -1,9 +1,9 @@
-import { GainTreasureEffect } from "../core/effects/gain-treasure.ts";
-import { CardExpansionModule } from "./card-expansion-module.ts";
+import { GainTreasureEffect } from '../core/effects/gain-treasure.ts';
+import { CardExpansionModule } from './card-expansion-module.ts';
 
 const expansionModule: CardExpansionModule = {
   registerEffects: () => ({
-    "copper": () => function* ({
+    'copper': () => function* ({
       triggerPlayerId,
       triggerCardId,
     }) {
@@ -13,14 +13,14 @@ const expansionModule: CardExpansionModule = {
         count: 1,
       });
     },
-    "gold": () => function* ({ triggerCardId, triggerPlayerId }) {
+    'gold': () => function* ({ triggerCardId, triggerPlayerId }) {
       yield new GainTreasureEffect({
         count: 3,
         sourcePlayerId: triggerPlayerId,
         sourceCardId: triggerCardId,
       });
     },
-    "silver": () => function* ({
+    'silver': () => function* ({
       triggerPlayerId,
       triggerCardId,
     }) {

@@ -5,6 +5,10 @@ import { CardLibrary } from '../core/card-library.ts';
 
 export interface CardExpansionModule {
   registerCardLifeCycles?: () => Record<string, LifecycleCallbackMap>;
-  registerScoringFunctions?: () => Record<string, (args: { match: Match, cardLibrary: CardLibrary, ownerId: number }) => number>;
+  registerScoringFunctions?: () => Record<string, (args: {
+    match: Match,
+    cardLibrary: CardLibrary,
+    ownerId: number
+  }) => number>;
   registerEffects: () => Record<string, EffectGeneratorBlueprint>;
 }

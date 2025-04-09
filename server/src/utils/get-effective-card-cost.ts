@@ -1,5 +1,5 @@
-import { Match } from "shared/shared-types.ts";
-import { getCardOverrides } from "../card-data-overrides.ts";
+import { Match } from 'shared/shared-types.ts';
+import { getCardOverrides } from '../card-data-overrides.ts';
 import { CardLibrary } from '../core/card-library.ts';
 
 export const getEffectiveCardCost = (

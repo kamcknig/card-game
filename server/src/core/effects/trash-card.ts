@@ -1,13 +1,13 @@
-import { EffectBase, EffectBaseArgs } from "./effect-base.ts";
+import { EffectBase, EffectBaseArgs } from './effect-base.ts';
 
 export class TrashCardEffect extends EffectBase {
-  type = "trashCard" as const;
+  type = 'trashCard' as const;
   cardId: number;
   playerId?: number;
-
+  
   constructor(
     { cardId, playerId, ...arg }:
-      & { cardId: number; playerId?: number }
+    & { cardId: number; playerId?: number }
       & EffectBaseArgs,
   ) {
     super(arg);

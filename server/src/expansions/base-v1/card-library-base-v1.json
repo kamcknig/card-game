@@ -1,157 +1,262 @@
-  {
-    "adventurer": {
-        "cost": {"treasure": 6},
-        "type": ["ACTION"],
-        "abilityText": "Reveal cards from your deck until you reveal 2 Treasure cards. Put those Treasure cards into your hand and discard the other revealed cards.",
-        "cardName": "Adventurer"
+{
+  "adventurer": {
+    "cost": {
+      "treasure": 6
     },
-    "bureaucrat": {
-        "cost": {"treasure": 4},
-        "type": ["ACTION", "ATTACK"],
-        "targetScheme": "ALL_OTHER",
-        "abilityText": "Gain a Silver onto your deck. Each other player reveals a Victory card from their hand and puts it onto their deck (or reveals a hand with no Victory cards).",
-        "cardName": "Bureaucrat"
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "Reveal cards from your deck until you reveal 2 Treasure cards. Put those Treasure cards into your hand and discard the other revealed cards.",
+    "cardName": "Adventurer"
+  },
+  "bureaucrat": {
+    "cost": {
+      "treasure": 4
     },
-    "cellar": {
-        "cost": {"treasure": 2},
-        "type": ["ACTION"],
-        "abilityText": "+1 Action\nDiscard any number of cards. +1 Card per card discarded.",
-        "cardName": "Cellar"
+    "type": [
+      "ACTION",
+      "ATTACK"
+    ],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "Gain a Silver onto your deck. Each other player reveals a Victory card from their hand and puts it onto their deck (or reveals a hand with no Victory cards).",
+    "cardName": "Bureaucrat"
+  },
+  "cellar": {
+    "cost": {
+      "treasure": 2
     },
-    "chancellor": {
-        "cost": {"treasure": 3},
-        "type": ["ACTION"],
-        "abilityText": "+2 Treasure\nYou may immediately put your deck into your discard pile.",
-        "cardName": "Chancellor"
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+1 Action\nDiscard any number of cards. +1 Card per card discarded.",
+    "cardName": "Cellar"
+  },
+  "chancellor": {
+    "cost": {
+      "treasure": 3
     },
-    "chapel": {
-        "cost": {"treasure": 2},
-        "type": ["ACTION"],
-        "abilityText": "Trash up to 4 cards from your hand.",
-        "cardName": "Chapel"
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+2 Treasure\nYou may immediately put your deck into your discard pile.",
+    "cardName": "Chancellor"
+  },
+  "chapel": {
+    "cost": {
+      "treasure": 2
     },
-    "council-room": {
-        "cost": {"treasure": 5},
-        "type": ["ACTION"],
-        "abilityText": "+4 Cards\n+1 Buy\nEach other player draws a card.",
-        "cardName": "Council Room"
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "Trash up to 4 cards from your hand.",
+    "cardName": "Chapel"
+  },
+  "council-room": {
+    "cost": {
+      "treasure": 5
     },
-    "feast": {
-        "cost": {"treasure": 4},
-        "type": ["ACTION"],
-        "abilityText": "Trash this card. Gain a card costing up to 5 Treasure.",
-        "cardName": "Feast"
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+4 Cards\n+1 Buy\nEach other player draws a card.",
+    "cardName": "Council Room"
+  },
+  "feast": {
+    "cost": {
+      "treasure": 4
     },
-    "festival": {
-        "cost": {"treasure": 5},
-        "type": ["ACTION"],
-        "abilityText": "+2 Actions\n+1 Buy\n+2 Treasure",
-        "cardName": "Festival"
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "Trash this card. Gain a card costing up to 5 Treasure.",
+    "cardName": "Feast"
+  },
+  "festival": {
+    "cost": {
+      "treasure": 5
     },
-    "gardens": {
-        "cost": {"treasure": 4},
-        "type": ["VICTORY"],
-        "abilityText": "Worth 1 Victory for every 10 cards in your deck rounded down.",
-        "cardName": "Gardens",
-        "victoryPoints": 0
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+2 Actions\n+1 Buy\n+2 Treasure",
+    "cardName": "Festival"
+  },
+  "gardens": {
+    "cost": {
+      "treasure": 4
     },
-    "laboratory": {
-        "cost": {"treasure": 5},
-        "type": ["ACTION"],
-        "abilityText": "+2 Cards\n+1 Action",
-        "cardName": "Laboratory"
+    "type": [
+      "VICTORY"
+    ],
+    "abilityText": "Worth 1 Victory for every 10 cards in your deck rounded down.",
+    "cardName": "Gardens",
+    "victoryPoints": 0
+  },
+  "laboratory": {
+    "cost": {
+      "treasure": 5
     },
-    "library": {
-        "cost": {"treasure": 5},
-        "type": ["ACTION"],
-        "abilityText": "Draw until you have 7 cards in hand, skipping any Action cards you choose to; set those aside, discarding them afterwards.\t",
-        "cardName": "Library"
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+2 Cards\n+1 Action",
+    "cardName": "Laboratory"
+  },
+  "library": {
+    "cost": {
+      "treasure": 5
     },
-    "market": {
-        "cost": {"treasure": 5},
-        "type": ["ACTION"],
-        "abilityText": "+1 Card\n+1 Action\n+1 Buy\n+1 Treasure",
-        "cardName": "Market"
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "Draw until you have 7 cards in hand, skipping any Action cards you choose to; set those aside, discarding them afterwards.\t",
+    "cardName": "Library"
+  },
+  "market": {
+    "cost": {
+      "treasure": 5
     },
-    "militia": {
-        "cost": {"treasure": 4},
-        "type": ["ACTION", "ATTACK"],
-        "targetScheme": "ALL_OTHER",
-        "abilityText": "+2 Treasure\nEach other player discards down to 3 cards in hand.",
-        "cardName": "Militia"
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+1 Card\n+1 Action\n+1 Buy\n+1 Treasure",
+    "cardName": "Market"
+  },
+  "militia": {
+    "cost": {
+      "treasure": 4
     },
-    "mine": {
-        "cost": {"treasure": 5},
-        "type": ["ACTION"],
-        "abilityText": "You may trash a Treasure from your hand. Gain a Treasure to your hand costing up to 3 Treasure more than it.",
-        "cardName": "Mine"
+    "type": [
+      "ACTION",
+      "ATTACK"
+    ],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+2 Treasure\nEach other player discards down to 3 cards in hand.",
+    "cardName": "Militia"
+  },
+  "mine": {
+    "cost": {
+      "treasure": 5
     },
-    "moat": {
-        "cost": {"treasure": 2},
-        "type": ["ACTION", "REACTION"],
-        "abilityText": "+2 Cards\n--------------\nWhen another player plays an Attack card, you may first reveal this from your hand, to be unaffected by it.",
-        "cardName": "Moat"
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "You may trash a Treasure from your hand. Gain a Treasure to your hand costing up to 3 Treasure more than it.",
+    "cardName": "Mine"
+  },
+  "moat": {
+    "cost": {
+      "treasure": 2
     },
-    "moneylender": {
-        "cost": {"treasure": 4},
-        "type": ["ACTION"],
-        "abilityText": "You may trash a Copper from your hand for +3 Treasure.",
-        "cardName": "Moneylender"
+    "type": [
+      "ACTION",
+      "REACTION"
+    ],
+    "abilityText": "+2 Cards\n--------------\nWhen another player plays an Attack card, you may first reveal this from your hand, to be unaffected by it.",
+    "cardName": "Moat"
+  },
+  "moneylender": {
+    "cost": {
+      "treasure": 4
     },
-    "remodel": {
-        "cost": {"treasure": 4},
-        "type": ["ACTION"],
-        "abilityText": "Trash a card from your hand. Gain a card costing up to 2 Treasure more than it.",
-        "cardName": "Remodel"
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "You may trash a Copper from your hand for +3 Treasure.",
+    "cardName": "Moneylender"
+  },
+  "remodel": {
+    "cost": {
+      "treasure": 4
     },
-    "smithy": {
-        "cost": {"treasure": 4},
-        "type": ["ACTION"],
-        "abilityText": "+3 Cards",
-        "cardName": "Smithy"
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "Trash a card from your hand. Gain a card costing up to 2 Treasure more than it.",
+    "cardName": "Remodel"
+  },
+  "smithy": {
+    "cost": {
+      "treasure": 4
     },
-    "spy": {
-        "cost": {"treasure": 4},
-        "type": ["ACTION", "ATTACK"],
-        "targetScheme": "ALL_OTHER",
-        "abilityText": "+1 Card\n+1 Action\nEach player (including you) reveals the top card of their deck and either discards it or puts it back, your choice.",
-        "cardName": "Spy"
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+3 Cards",
+    "cardName": "Smithy"
+  },
+  "spy": {
+    "cost": {
+      "treasure": 4
     },
-    "thief": {
-        "cost": {"treasure": 4},
-        "type": ["ACTION", "ATTACK"],
-        "targetScheme": "ALL_OTHER",
-        "abilityText": "Each other player reveals the top 2 cards of their deck.\nIf they revealed any Treasure cards, they trash one of them that you choose. You may gain any or all of these trashed cards. They discard the other revealed cards.",
-        "cardName": "Thief"
+    "type": [
+      "ACTION",
+      "ATTACK"
+    ],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+1 Card\n+1 Action\nEach player (including you) reveals the top card of their deck and either discards it or puts it back, your choice.",
+    "cardName": "Spy"
+  },
+  "thief": {
+    "cost": {
+      "treasure": 4
     },
-    "throne-room": {
-        "cost": {"treasure": 4},
-        "type": ["ACTION"],
-        "abilityText": "You may play an Action card from your hand twice.",
-        "cardName": "Throne Room"
+    "type": [
+      "ACTION",
+      "ATTACK"
+    ],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "Each other player reveals the top 2 cards of their deck.\nIf they revealed any Treasure cards, they trash one of them that you choose. You may gain any or all of these trashed cards. They discard the other revealed cards.",
+    "cardName": "Thief"
+  },
+  "throne-room": {
+    "cost": {
+      "treasure": 4
     },
-    "village": {
-        "cost": {"treasure": 3},
-        "type": ["ACTION"],
-        "abilityText": "+1 Card\n+2 Actions",
-        "cardName": "Village"
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "You may play an Action card from your hand twice.",
+    "cardName": "Throne Room"
+  },
+  "village": {
+    "cost": {
+      "treasure": 3
     },
-    "witch": {
-        "cost": {"treasure": 5},
-        "type": ["ACTION"],
-        "abilityText": "+2 Cards\nEach other player gains a Curse.",
-        "cardName": "Witch"
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+1 Card\n+2 Actions",
+    "cardName": "Village"
+  },
+  "witch": {
+    "cost": {
+      "treasure": 5
     },
-    "woodcutter": {
-        "cost": {"treasure": 3},
-        "type": ["ACTION"],
-        "abilityText": "+1 Buy\n+2 Treasure",
-        "cardName": "Woodcutter"
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+2 Cards\nEach other player gains a Curse.",
+    "cardName": "Witch"
+  },
+  "woodcutter": {
+    "cost": {
+      "treasure": 3
     },
-    "workshop": {
-        "cost": {"treasure": 3},
-        "type": ["ACTION"],
-        "abilityText": "Gain a card costing up to 4 Treasure.",
-        "cardName": "Workshop"
-    }
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+1 Buy\n+2 Treasure",
+    "cardName": "Woodcutter"
+  },
+  "workshop": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "Gain a card costing up to 4 Treasure.",
+    "cardName": "Workshop"
+  }
 }

@@ -105,14 +105,22 @@
     "cardName": "Laboratory"
   },
   "library": {
-    "cost": {"treasure": 5},
-    "type": ["ACTION"],
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION"
+    ],
     "abilityText": "Draw until you have 7 cards in hand, skipping any Action cards you choose to; set those aside, discarding them afterwards.\t",
     "cardName": "Library"
   },
   "market": {
-    "cost": {"treasure": 5},
-    "type": ["ACTION"],
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION"
+    ],
     "abilityText": "+1 Card\n+1 Action\n+1 Buy\n+1 Treasure",
     "cardName": "Market"
   },
@@ -127,27 +135,45 @@
     "cardName": "Merchant"
   },
   "militia": {
-    "cost": {"treasure": 4},
-    "type": ["ACTION", "ATTACK"],
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION",
+      "ATTACK"
+    ],
     "targetScheme": "ALL_OTHER",
     "abilityText": "+2 Treasure\nEach other player discards down to 3 cards in hand.",
     "cardName": "Militia"
   },
   "mine": {
-    "cost": {"treasure": 5},
-    "type": ["ACTION"],
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION"
+    ],
     "abilityText": "You may trash a Treasure from your hand. Gain a Treasure to your hand costing up to 3 Treasure more than it.",
     "cardName": "Mine"
   },
   "moat": {
-    "cost": {"treasure": 2},
-    "type": ["ACTION", "REACTION"],
+    "cost": {
+      "treasure": 2
+    },
+    "type": [
+      "ACTION",
+      "REACTION"
+    ],
     "abilityText": "+2 Cards\n--------------\nWhen another player plays an Attack card, you may first reveal this from your hand, to be unaffected by it.",
     "cardName": "Moat"
   },
   "moneylender": {
-    "cost": {"treasure": 4},
-    "type": ["ACTION"],
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION"
+    ],
     "abilityText": "You may trash a Copper from your hand for +3 Treasure.",
     "cardName": "Moneylender"
   },
@@ -162,8 +188,12 @@
     "cardName": "Poacher"
   },
   "remodel": {
-    "cost": {"treasure": 4},
-    "type": ["ACTION"],
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION"
+    ],
     "abilityText": "Trash a card from your hand. Gain a card costing up to 2 Treasure more than it.",
     "cardName": "Remodel"
   },
@@ -178,14 +208,22 @@
     "cardName": "Sentry"
   },
   "smithy": {
-    "cost": {"treasure": 4},
-    "type": ["ACTION"],
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION"
+    ],
     "abilityText": "+3 Cards",
     "cardName": "Smithy"
   },
   "throne-room": {
-    "cost": {"treasure": 4},
-    "type": ["ACTION"],
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION"
+    ],
     "abilityText": "You may play an Action card from your hand twice.",
     "cardName": "Throne Room"
   },
@@ -200,20 +238,32 @@
     "cardName": "Vassal"
   },
   "village": {
-    "cost": {"treasure": 3},
-    "type": ["ACTION"],
+    "cost": {
+      "treasure": 3
+    },
+    "type": [
+      "ACTION"
+    ],
     "abilityText": "+1 Card\n+2 Actions",
     "cardName": "Village"
   },
   "witch": {
-    "cost": {"treasure": 5},
-    "type": ["ACTION"],
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION"
+    ],
     "abilityText": "+2 Cards\nEach other player gains a Curse.",
     "cardName": "Witch"
   },
   "workshop": {
-    "cost": {"treasure": 3},
-    "type": ["ACTION"],
+    "cost": {
+      "treasure": 3
+    },
+    "type": [
+      "ACTION"
+    ],
     "abilityText": "Gain a card costing up to 4 Treasure.",
     "cardName": "Workshop"
   }
