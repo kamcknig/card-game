@@ -21,3 +21,7 @@ update user prompt modal when there are multiple actions to toggle those actions
 need to go through all effects. anything that is related to cost like choosing a card that costs x amount - need to update those to compare against the effective cost
 
 viewing the trash sucks
+
+when select card effect happens, the UI needs to remove the play all treasure cards button
+
+it skips phases sometimes and doesn't auto skipo action phase sometimes
