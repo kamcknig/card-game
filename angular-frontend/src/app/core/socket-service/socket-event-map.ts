@@ -71,7 +71,6 @@ export const socketToGameEventMap = (socketService: SocketService): SocketEventM
       if (!current) return;
       applyPatch(current, patch);
       matchStore.set(current);
-      console.log(selectableCardStore.get())
     },
     playerConnected: (player) => {
       playerStore(player.id).set(player);

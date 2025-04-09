@@ -238,8 +238,8 @@ export const createEffectHandlerMap = (
       // when a card moves to a new location, check if we need to register any triggers for the card
       // todo: account for moves to non-player locations i.e., deck, trash, discard, etc.
       // todo: this can also remove triggers, not just add
+      let triggerTemplates: ReactionTemplate[] | void = undefined;
       if (effect.toPlayerId) {
-        let triggerTemplates: ReactionTemplate[] | void = undefined;
         switch (effect.to.location[0]) {
           case "playerHands":
             triggerTemplates = cardLifecycleMap[card.cardKey]
@@ -248,20 +248,22 @@ export const createEffectHandlerMap = (
                 cardId: effect.cardId,
               })?.registerTriggers;
             break;
+        }
+      } else {
+        switch(effect.to.location[0]) {
           case "playArea":
             triggerTemplates = cardLifecycleMap[card.cardKey]
               ?.["onEnterPlay"]?.({
-                playerId: effect.toPlayerId,
-                cardId: effect.cardId,
-              })?.registerTriggers;
+              playerId: effect.sourcePlayerId,
+              cardId: effect.cardId,
+            })?.registerTriggers;
         }
-
-        triggerTemplates?.forEach((triggerTemplate) =>
-          reactionManager.registerReactionTemplate(triggerTemplate)
-        );
       }
+      triggerTemplates?.forEach((triggerTemplate) =>
+        reactionManager.registerReactionTemplate(triggerTemplate)
+      );
 
-      // update the accumulator with the card's old location
+      // update the match stores old location
       if (
         ["playerHands", "playerDecks", "playerDiscards"].includes(oldStoreKey)
       ) {
@@ -290,8 +292,8 @@ export const createEffectHandlerMap = (
       } else {
         match[oldStoreKey] = oldStore;
       }
-
-      // update the accumulator with the cards new location
+      
+      // update the match stores new location
       if (
         effect.to.location.some((l) =>
           ["playerHands", "playerDecks", "playerDiscards"].includes(l)

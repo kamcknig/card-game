@@ -1,6 +1,6 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { playerIdStore, playerScoreStore } from '../state/player-state';
-import { currentPlayerTurnIndexStore, playerTurnOrder, turnNumberStore } from '../state/turn-state';
+import { currentPlayerTurnIndexStore, playerTurnOrderStore, turnNumberStore } from '../state/turn-state';
 import { STANDARD_GAP } from '../core/app-contants';
 import { Player } from 'shared/shared-types';
 
@@ -19,7 +19,7 @@ export class ScoreView extends Container {
     this.addChild(this._playerNameContainer);
     this._playerNameContainer.y = this._turnLabel.y + this._turnLabel.height + STANDARD_GAP;
 
-    this._cleanup.push(playerTurnOrder.subscribe(this.onPlayersUpdated.bind(this)));
+    this._cleanup.push(playerTurnOrderStore.subscribe(this.onPlayersUpdated.bind(this)));
     this._cleanup.push(currentPlayerTurnIndexStore.subscribe(this.onPlayerTurnUpdated.bind(this)));
     this._cleanup.push(turnNumberStore.subscribe(this.onTurnNumberUpdated.bind(this)));
 
@@ -114,16 +114,26 @@ export class ScoreView extends Container {
 
     if (!this._playerNameContainer.children.length) return;
 
-    const c: Container = this._playerNameContainer?.getChildAt(turnIndex);
-
-    if (!c || !g) {
+    if (!g) {
       return;
     }
 
-    this._currentPlayerHighlight.x = c.x;
-    this._currentPlayerHighlight.y = c.y;
+    g.clear();
 
-    const { width, height } = c;
+    const playerTurns = playerTurnOrderStore.get();
+    const p = playerTurns[turnIndex];
+    const label = `player-${p.id}`;
+    const playerContainer = this._playerNameContainer.getChildByLabel(label)
+
+    if (!playerContainer) {
+      console.warn('could not find player name container');
+      return;
+    }
+
+    this._currentPlayerHighlight.x = playerContainer?.x ?? 0;
+    this._currentPlayerHighlight.y = playerContainer?.y ?? 0;
+
+    const { width, height } = playerContainer;
     g.roundRect(0, 0, width, height, 5);
     g.stroke({
       color: 0xffffff,

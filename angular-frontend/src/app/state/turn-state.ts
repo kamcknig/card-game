@@ -12,14 +12,14 @@ export const playerBuysStore =
 export const playerActionsStore =
   computed(matchStore, m => m?.playerActions ?? 0);
 
-export const playerTurnOrder =
+export const playerTurnOrderStore =
   computed(matchStore, m => m?.players ?? []);
 
 export const currentPlayerTurnIndexStore =
   computed(matchStore, m => m?.currentPlayerTurnIndex ?? 0);
 
 export const currentPlayerTurnIdStore =
-  computed([currentPlayerTurnIndexStore, playerTurnOrder], (turnIndex, turnOrder) => turnOrder[turnIndex]?.id);
+  computed([currentPlayerTurnIndexStore, playerTurnOrderStore], (turnIndex, turnOrder) => turnOrder[turnIndex]?.id);
 
 export const turnNumberStore =
   computed(matchStore, m => m?.turnNumber ?? 0);

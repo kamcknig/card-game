@@ -108,7 +108,7 @@ export class CardStackView extends Container {
   }
 
   private drawDeck = (cardIds: readonly number[]) => {
-    this._cardContainer.removeChildren();
+    this._cardContainer.removeChildren().forEach((c) => c.destroy({children: true}));
 
     for (const cardId of cardIds) {
       const c = this._cardContainer.addChild(createCardView(cardStore.get()[cardId]));

@@ -29,5 +29,8 @@ export class PileView extends Container {
         b.y = 0;
 
         this.addChild(b);
+        this.on('removed', () => {
+          this.destroy({children: true});
+        })
     }
 }
