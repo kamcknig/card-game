@@ -1,10 +1,11 @@
 import {
   Card,
-  CardData, CardId,
+  CardData,
   CardKey,
   Match,
   MatchConfiguration,
-  MatchSummary, Player,
+  MatchSummary,
+  Player,
   PlayerId,
   TurnPhaseOrderValues,
 } from 'shared/shared-types.ts';
@@ -170,7 +171,7 @@ export class MatchController {
     const kingdomCards: Card[] = [];
 
     // todo: remove testing code
-    const keepers: string[] = ['moat', 'militia'].filter((k) =>
+    const keepers: string[] = [].filter((k) =>
       this._cardData!.kingdom[k]
     );
 
@@ -230,7 +231,7 @@ export class MatchController {
 
     return Object.values(config.players).reduce((prev, player, _idx) => {
       console.log("initializing player", player.id, "cards...");
-      let blah = {};
+      /*let blah = {};
       // todo remove testing code
       if (_idx === 0) {
         blah = {
@@ -243,9 +244,9 @@ export class MatchController {
           militia: 5
         };
       }
-      Object.entries(blah).forEach(([key, count]) => {
-      /*Object.entries(playerStartHand).forEach(
-        ([key, count]) => {*/
+      Object.entries(blah).forEach(([key, count]) => {*/
+      Object.entries(playerStartHand).forEach(
+        ([key, count]) => {
           prev["playerDecks"][player.id] ??= [];
           let deck = prev["playerDecks"][player.id];
           deck = deck.concat(
@@ -376,7 +377,7 @@ export class MatchController {
       }
     }
 
-    void this.onCheckForPlayerActions(match.players[match.currentPlayerTurnIndex].id);
+    void this.onCheckForPlayerActions();
   }
 
   private onUserInputReceived = (signalId: string, input: unknown) => {
@@ -405,7 +406,7 @@ export class MatchController {
 
   private onCardTapHandlerComplete = (_card: Card, player: Player) => {
     console.log(`[MATCH] card tap complete handler invoked`);
-    void this.onCheckForPlayerActions(player.id);
+    void this.onCheckForPlayerActions();
   };
 
   private onEffectCompleted = () => {
@@ -568,12 +569,12 @@ export class MatchController {
     this._socketMap.forEach((s) => s.emit("gameOver", summary));
   }
 
-  private async onCheckForPlayerActions(playerId: PlayerId) {
+  private async onCheckForPlayerActions() {
     console.log("[MATCH] checking for remaining player actions");
-
+    
     const match = this._match;
     const turnPhase = TurnPhaseOrderValues[match.turnPhaseIndex];
-    const player = getPlayerById(match, playerId);
+    const player = getPlayerById(match, match.players[match.currentPlayerTurnIndex].id);
 
     if (!player) {
       throw new Error('could not find player');
@@ -594,7 +595,7 @@ export class MatchController {
 
         if (numActionCards <= 0 || match.playerActions <= 0) {
           console.log(`[MATCH] skipping to next phase`);
-          await this.onNextPhase(playerId);
+          await this.onNextPhase();
           return;
         }
         break;
@@ -614,7 +615,7 @@ export class MatchController {
           match.playerBuys <= 0
         ) {
           console.log("[MATCH] skipping to next phase");
-          await this.onNextPhase(playerId);
+          await this.onNextPhase();
           return;
         }
         break;
@@ -622,7 +623,7 @@ export class MatchController {
     }
   }
 
-  private onNextPhase = async (playerId: PlayerId) => {
+  private onNextPhase = async () => {
     console.log(`[MATCH] next phase handler invoked`);
 
     // capture the pre‑change snapshot
@@ -638,7 +639,8 @@ export class MatchController {
 
       const newPhase = TurnPhaseOrderValues[match.turnPhaseIndex];
       console.log(`[MATCH] new turn phase ${newPhase}`);
-      const player = match.players[match.currentPlayerTurnIndex];
+      let player = match.players[match.currentPlayerTurnIndex];
+      let playerId = player.id;
 
       switch (newPhase) {
         case "action": {
@@ -649,6 +651,8 @@ export class MatchController {
           if (match.currentPlayerTurnIndex >= match.players.length) {
             match.currentPlayerTurnIndex = 0;
           }
+          player = match.players[match.currentPlayerTurnIndex];
+          playerId = player.id;
           if (match.currentPlayerTurnIndex === 0) {
             match.turnNumber++;
             console.log(`[MATCH] starting new round ${match.turnNumber}`);
@@ -681,7 +685,7 @@ export class MatchController {
 
           this.endTurn();
 
-          await this.onNextPhase(playerId);
+          await this.onNextPhase();
           return;
         }
       }
@@ -691,7 +695,7 @@ export class MatchController {
       this._interactivityController?.checkCardInteractivity();
 
       // see if we can skip to next phase
-      await this.onCheckForPlayerActions(playerId);
+      await this.onCheckForPlayerActions();
       this._socketMap.get(playerId)?.emit('nextPhaseComplete', playerId);
     } catch (e) {
       console.error("[MATCH] Could not move to next phase", e);
@@ -733,14 +737,14 @@ export class MatchController {
       if (
         this._match.players[this._match.currentPlayerTurnIndex].id === playerId
       ) {
-        await this.onCheckForPlayerActions(playerId);
+        await this.onCheckForPlayerActions();
         this._interactivityController?.checkCardInteractivity();
       }
     });
   }
 
   private initializeSocketListeners(playerId: PlayerId, socket: AppSocket) {
-    socket.on("nextPhase", () => this.onNextPhase(playerId));
+    socket.on("nextPhase", () => this.onNextPhase());
     socket.on("searchCards", this.onSearchCards);
     socket.on('userInputReceived', this.onUserInputReceived);
   }
