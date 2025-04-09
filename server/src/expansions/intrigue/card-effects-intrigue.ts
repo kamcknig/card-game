@@ -24,7 +24,7 @@ const expansionModule: CardExpansionModule = {
           id: `diplomat-${cardId}`,
           playerId,
           listeningFor: "cardPlayed",
-          condition: ({ match }) => match.playerHands[playerId].length >= 5,
+          condition: ({ match, trigger }) => match.playerHands[playerId].length >= 5 && trigger.playerId !== playerId,
           generatorFn: function* ({ trigger, reaction }) {
             const sourceId = reaction.getSourceId();
 
@@ -368,10 +368,12 @@ const expansionModule: CardExpansionModule = {
       match,
       triggerPlayerId,
     }) {
-      yield new DrawCardEffect({
-        playerId: triggerPlayerId,
-        sourcePlayerId: triggerPlayerId,
-      });
+      for (let i = 0; i < 2; i++) {
+        yield new DrawCardEffect({
+          playerId: triggerPlayerId,
+          sourcePlayerId: triggerPlayerId,
+        });
+      }
 
       if (match.playerHands[triggerPlayerId].length <= 5) {
         yield new GainActionEffect({

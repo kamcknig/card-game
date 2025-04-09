@@ -334,6 +334,7 @@ export class MatchController {
       this._cardLibrary,
       this.onCardTapHandlerComplete,
       this,
+      effectGeneratorMap
     );
 
     this._effectHandlerMap = createEffectHandlerMap(
@@ -357,11 +358,13 @@ export class MatchController {
       this.initializeSocketListeners(playerId, socket);
     }
 
+    const prev = this.getMatchSnapshot();
     const match = this._match;
     match.playerBuys = 1;
     match.playerActions = 1;
     match.turnNumber = 1;
-
+    this.broadcastPatch(prev);
+    
     this._socketMap.forEach((s) => s.emit("matchStarted"));
 
     for (const player of match.players!) {
