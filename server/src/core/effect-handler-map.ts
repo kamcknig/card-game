@@ -431,6 +431,13 @@ export const createEffectHandlerMap = (
       // if the player being prompted is not the current player,
       // let the other players know that we are waiting.
       if (currentPlayer.id !== effect.playerId) {
+        socket?.on('userInputReceived', (signal) => {
+          if (signal !== signalId) return;
+          socketMap.forEach((s) =>
+            s !== socket && s.emit("doneWaitingForPlayer", effect.playerId)
+          );
+        });
+        
         socketMap.forEach((s) =>
           s !== socket && s.emit("waitingForPlayer", effect.playerId)
         );
@@ -502,6 +509,13 @@ export const createEffectHandlerMap = (
       // if the player being prompted is not the current player,
       // let the other players know that we are waiting.
       if (currentPlayer.id !== effect.playerId) {
+        socket?.on('userInputReceived', (signal) => {
+          if (signal !== signalId) return;
+          socketMap.forEach((s) =>
+            s !== socket && s.emit("doneWaitingForPlayer", effect.playerId)
+          );
+        });
+        
         socketMap.forEach((s) =>
           s !== socket && s.emit("waitingForPlayer", effect.playerId)
         );

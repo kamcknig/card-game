@@ -159,6 +159,7 @@ export type EffectHandlerResult =
 export type TriggerEventType = "cardPlayed";
 
 export class Reaction {
+  // a concatenation of the card key and card id with a '-'
   public id: string;
 
   // the player's ID who owns this reaction - the one that can decide to do it.

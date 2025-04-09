@@ -705,7 +705,7 @@ const expansionModule: CardExpansionModule = {
               } has ${handCount} cards in hand`,
             );
             return playerId === triggerPlayerId ||
-              (handCount >= 5 && reactionContext[playerId] !== "immunity");
+              (handCount >= 5 && reactionContext?.[playerId]?.result !== "immunity");
           });
 
         for (const playerId of targets) {
@@ -972,7 +972,7 @@ const expansionModule: CardExpansionModule = {
           triggerPlayerId,
           "ALL_OTHER",
           match,
-        ).filter((id) => reactionContext[id] !== "immunity");
+        ).filter((id) => reactionContext?.[id]?.result !== "immunity");
         for (const targetId of targets) {
           for (let i = match.supply.length - 1; i >= 0; i--) {
             const potentialCard = cardLibrary.getCard(match.supply[i]);
@@ -1173,7 +1173,7 @@ const expansionModule: CardExpansionModule = {
         triggerPlayerId,
         "ALL_OTHER",
         match,
-      ).filter((id) => reactionContext[id] !== "immunity");
+      ).filter((id) => reactionContext?.[id]?.result !== "immunity");
       for (const target of targets) {
         let cardId = match.playerDecks[target].slice(-1)?.[0];
         if (!cardId) continue;
@@ -1228,7 +1228,7 @@ const expansionModule: CardExpansionModule = {
         triggerPlayerId,
         "ALL_OTHER",
         match,
-      ).filter((id) => reactionContext[id] !== "immunity");
+      ).filter((id) => reactionContext?.[id]?.result !== "immunity");
       
       // Each other player either discards 2 cards or gains a Curse to their hand,
       // their choice. (They may pick an option they can't do.)",

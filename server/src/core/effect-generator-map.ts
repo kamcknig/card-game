@@ -16,6 +16,7 @@ import { getEffectiveCardCost } from '../utils/get-effective-card-cost.ts';
 import { MoveCardEffect } from './effects/move-card.ts';
 import { getOrderStartingFrom } from '../utils/get-order-starting-from.ts';
 import { UserPromptEffect } from './effects/user-prompt.ts';
+import { CardLibrary } from './card-library.ts';
 
 function groupReactionsByCard(reactions: Reaction[]) {
   const grouped = new Map<string, { count: number; reaction: Reaction }>();
@@ -27,11 +28,13 @@ function groupReactionsByCard(reactions: Reaction[]) {
   return grouped;
 }
 
-function buildActionButtons(grouped: Map<string, { count: number; reaction: Reaction }>) {
+function buildActionButtons(grouped: Map<string, { count: number; reaction: Reaction }>, cardLibrary: CardLibrary) {
   let actionId = 1;
-  const buttons = [];
-  for (const [cardKey, { count }] of grouped) {
-    buttons.push({ action: actionId++, label: `${cardKey} (${count})` });
+  const buttons = [{action: 0, label: 'Cancel'}];
+  for (const [cardKey, { count, reaction: { id} }] of grouped) {
+    const [, cardId] = id.split('-');
+    const cardName = cardLibrary.getCard(+cardId).cardName
+    buttons.push({ action: actionId++, label: `${cardName} (${count})` });
   }
   return buttons;
 }
@@ -80,16 +83,6 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = ({reactionManage
       playerId: triggerPlayerId,
     });
     
-    const generatorFn = map[card.cardKey];
-    if (generatorFn) {
-      yield* generatorFn({
-        match,
-        cardLibrary,
-        triggerPlayerId,
-        triggerCardId,
-      });
-    }
-    
     const trigger: ReactionTrigger = {
       eventType: "cardPlayed",
       playerId: triggerPlayerId,
@@ -103,12 +96,14 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = ({reactionManage
       match.currentPlayerTurnIndex,
     );
     
+    let reactionContext: any = {};
+    
     for (const targetPlayer of targetOrder) {
       const reactions = reactionManager.getReactionsForPlayer(trigger, targetPlayer.id);
       if (!reactions.length) continue;
       
       const grouped = groupReactionsByCard(reactions);
-      const actionButtons = buildActionButtons(grouped);
+      const actionButtons = buildActionButtons(grouped, cardLibrary);
       const actionMap = buildActionMap(grouped);
       
       const result = (yield new UserPromptEffect({
@@ -131,11 +126,28 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = ({reactionManage
         reaction: selectedReaction,
       });
       
-      yield* reactionGenerator;
+      const reactionResult = yield* reactionGenerator;
+      
+      reactionContext[targetPlayer.id] = {
+        reaction: selectedReaction,
+        trigger,
+        result: reactionResult
+      };
       
       if (selectedReaction.once) {
         reactionManager.unregisterTrigger(selectedReaction.id);
       }
+    }
+    
+    const generatorFn = map[card.cardKey];
+    if (generatorFn) {
+      yield* generatorFn({
+        match,
+        cardLibrary,
+        triggerPlayerId,
+        triggerCardId,
+        reactionContext
+      });
     }
   }
   map.discardCard = function* ({ triggerPlayerId, triggerCardId }) {

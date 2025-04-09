@@ -177,7 +177,7 @@ const expansionModule: CardExpansionModule = {
         triggerPlayerId,
         'ALL_OTHER',
         match,
-      ).filter((id) => reactionContext[id] !== 'immunity');
+      ).filter((id) => reactionContext?.[id]?.result !== 'immunity');
 
       console.log(`[BANDIT EFFECT] ordered targets ${targetPlayerIds}`);
 
@@ -326,7 +326,7 @@ const expansionModule: CardExpansionModule = {
         triggerPlayerId,
         'ALL_OTHER',
         match,
-      ).filter((id) => reactionContext[id] !== 'immunity');
+      ).filter((id) => reactionContext?.[id]?.result !== 'immunity');
 
       console.log(
         `[BUREAUCRAT EFFECT] targeting ${playerIds.map((id) => getPlayerById(match, id))}`,
@@ -678,7 +678,7 @@ const expansionModule: CardExpansionModule = {
         triggerPlayerId,
         'ALL_OTHER',
         match,
-      ).filter((id) => reactionContext[id] !== 'immunity');
+      ).filter((id) => reactionContext?.[id]?.result !== 'immunity');
 
       console.log(
         `[MILITIA EFFECT] targets ${playerIds.map((id) => getPlayerById(match, id))}`,
@@ -1255,7 +1255,7 @@ const expansionModule: CardExpansionModule = {
         triggerPlayerId,
         'ALL_OTHER',
         match,
-      ).filter((id) => reactionContext[id] !== 'immunity');
+      ).filter((id) => reactionContext?.[id]?.result !== 'immunity');
 
       console.debug(
         `[WITCH EFFECT] targets ${playerIds.map((id) => getPlayerById(match, id))}`,
