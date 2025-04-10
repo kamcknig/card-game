@@ -98,6 +98,8 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
     }
   };
   
+  
+  
   map.nextPhase = function* (
     { match, cardLibrary, triggerPlayerId, triggerCardId }
   ) {
@@ -158,12 +160,14 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
       }
     }
     
-    yield* map.checkForPlayerActions({match, cardLibrary, triggerPlayerId, triggerCardId});
+    yield* map.checkForPlayerActions({ match, cardLibrary, triggerPlayerId, triggerCardId });
     
     // have to emit a noop so that the effects pipeline doesn't mark the generator as done
     // and doesn't flush the changes to the client.
     yield { type: 'noop' };
   };
+  
+  
   
   map.playCard = function* (
     { match, cardLibrary, triggerPlayerId, triggerCardId },
@@ -227,60 +231,57 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
     const reactionContext: any = {};
     
     for (const targetPlayer of targetOrder) {
-      console.log(
-        `[PLAY CARD EFFECT] checking '${trigger.eventType}' reactions for ${targetPlayer}`,
-      );
-      const reactions = reactionManager.getReactionsForPlayer(
-        trigger,
-        targetPlayer.id,
-      );
-      console.log(
-        `[PLAY CARD EFFECT] ${targetPlayer} has ${reactions.length} reactions to start`,
-      );
-      if (!reactions.length) continue;
+      console.log(`[PLAY CARD EFFECT] checking '${trigger.eventType}' reactions for ${targetPlayer}`);
       
       const usedReactionIds = new Set<string>();
       const blockedCardKeys = new Set<string>();
       
       while (true) {
-        const remainingReactions = reactions.filter((r) => {
+        const reactions = reactionManager.getReactionsForPlayer(
+          trigger,
+          targetPlayer.id,
+        ).filter((r) => {
           const key = r.getSourceKey();
           return !usedReactionIds.has(r.id) && !blockedCardKeys.has(key);
         });
         
-        console.log(
-          `[PLAY CARD EFFECT] ${targetPlayer} has ${remainingReactions.length} remaining reactions`,
-        );
+        console.log(`[PLAY CARD EFFECT] ${targetPlayer} has ${reactions.length} remaining actions`);
         
-        if (!remainingReactions.length) break;
+        if (!reactions.length) break;
         
-        const grouped = groupReactionsByCard(remainingReactions);
-        const actionButtons = buildActionButtons(grouped, cardLibrary);
-        const actionMap = buildActionMap(grouped);
+        const compulsoryReactions = reactions.filter(r => r.compulsory);
         
-        const result = (yield new UserPromptEffect({
-          playerId: targetPlayer.id,
-          sourcePlayerId: triggerPlayerId,
-          sourceCardId: triggerCardId,
-          actionButtons,
-          prompt: 'Choose reaction?',
-        })) as { action: number };
-        
-        if (result.action === 0) {
-          console.log(`[PLAY CARD EFFECT] ${targetPlayer} chose not to react`);
-          break;
+        let selectedReaction: Reaction | undefined = undefined;
+        // when you have more than one reaction, the player chooses.
+        // if there is only one reaction though, and it's compulsory (such as the merchant's
+        // reaction-like card effect to gain a treasure) then we just do it with no choice.
+        if (reactions.length > 1 || compulsoryReactions.length === 0) {
+          const grouped = groupReactionsByCard(reactions);
+          const actionButtons = buildActionButtons(grouped, cardLibrary);
+          const actionMap = buildActionMap(grouped);
+          
+          const result = (yield new UserPromptEffect({
+            playerId: targetPlayer.id,
+            sourcePlayerId: triggerPlayerId,
+            sourceCardId: triggerCardId,
+            actionButtons,
+            prompt: 'Choose reaction?',
+          })) as { action: number };
+          
+          if (result.action === 0) {
+            console.log(`[PLAY CARD EFFECT] ${targetPlayer} chose not to react`);
+            break;
+          } else {
+            console.log(`[PLAY CARD EFFECT] ${targetPlayer} reacts with ${actionMap.get(result.action)}`);
+          }
+          
+          selectedReaction = actionMap.get(result.action);
         } else {
-          console.log(
-            `[PLAY CARD EFFECT] ${targetPlayer} reacts with ${
-              actionMap.get(result.action)
-            }`,
-          );
+          selectedReaction = compulsoryReactions[0];
         }
         
-        const selectedReaction = actionMap.get(result.action);
-        
         if (!selectedReaction) {
-          console.log(`[PLAY CARD EFFECT] reaction not found in action map`);
+          console.warn(`[PLAY CARD EFFECT] reaction not found in action map`);
           continue;
         }
         
@@ -307,9 +308,7 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
         usedReactionIds.add(selectedReaction.id);
         
         if (selectedReaction.once) {
-          console.log(
-            `[PLAY CARD EFFECT] selected reaction is single-use, unregistering it`,
-          );
+          console.log(`[PLAY CARD EFFECT] selected reaction is single-use, unregistering it`);
           reactionManager.unregisterTrigger(selectedReaction.id);
         }
         
@@ -330,6 +329,9 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
       });
     }
   };
+  
+  
+  
   map.discardCard = function* ({ triggerPlayerId, triggerCardId }) {
     if (!triggerCardId) {
       throw new Error('discardCard requires a card ID');
@@ -342,6 +344,9 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
       sourceCardId: triggerCardId,
     });
   };
+  
+  
+  
   map.buyCard = function* (
     { match, cardLibrary, triggerPlayerId, triggerCardId },
   ) {
@@ -376,6 +381,9 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
       sourceCardId: triggerCardId,
     });
   };
+  
+  
+  
   map.drawCard = function* ({ triggerPlayerId, triggerCardId }) {
     yield new DrawCardEffect({
       playerId: triggerPlayerId,
@@ -383,6 +391,9 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
       sourcePlayerId: triggerPlayerId,
     });
   };
+  
+  
+  
   map.gainCard = function* ({ triggerPlayerId, triggerCardId }) {
     if (!triggerCardId) {
       throw new Error('gainCard requires a card ID');

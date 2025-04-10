@@ -42,8 +42,11 @@ export class ReactionManager {
         }`,
       );
       
-      return !(t.condition !== undefined &&
-        !t.condition({ match: this.match, cardLibrary: this._cardLibrary, trigger }));
+      if (t.condition !== undefined) {
+        return t.condition({ match: this.match, cardLibrary: this._cardLibrary, trigger });
+      } else {
+        return true;
+      }
     });
   }
   
@@ -51,9 +54,10 @@ export class ReactionManager {
     trigger: ReactionTrigger,
     playerId: number,
   ) {
-    return this.getReactions(trigger).filter((item) =>
-      item.playerId === playerId
-    );
+    const reactions = this.getReactions(trigger).filter((item) => {
+      return item.playerId === playerId;
+    });
+    return reactions;
   }
   
   registerReactionTemplate(reactionTemplate: ReactionTemplate) {

@@ -25,6 +25,7 @@ const expansionModule: CardExpansionModule = {
             id,
             playerId,
             once: true,
+            compulsory: true,
             condition: ({ cardLibrary, trigger }) => {
               const card = cardLibrary.getCard(trigger.cardId);
               return card.cardKey === 'silver' && trigger.playerId === playerId;

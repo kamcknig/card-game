@@ -173,6 +173,8 @@ export class Reaction {
   
   public once?: boolean = false;
   
+  public compulsory?: boolean = false;
+  
   public multipleUse?: boolean = true;
   
   // todo working on moat right now which has no condition other than it be an attack.
