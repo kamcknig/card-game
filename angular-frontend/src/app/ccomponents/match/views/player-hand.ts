@@ -1,12 +1,12 @@
 import { Container, Graphics } from "pixi.js";
-import { playerHandStore, selfPlayerIdStore } from "../state/player-state";
-import { cardStore } from "../state/card-state";
+import { playerHandStore, selfPlayerIdStore } from "../../../state/player-state";
+import { cardStore } from "../../../state/card-state";
 import { Card } from "shared/shared-types";
 import { atom } from 'nanostores';
-import { CARD_HEIGHT, CARD_WIDTH, SMALL_CARD_WIDTH, STANDARD_GAP } from '../core/app-contants';
+import { CARD_HEIGHT, CARD_WIDTH, SMALL_CARD_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
 import { PhaseStatus } from './phase-status';
-import { AppButton, createAppButton } from '../core/create-app-button';
-import { currentPlayerTurnIdStore, turnPhaseStore } from '../state/turn-state';
+import { AppButton, createAppButton } from '../../../core/create-app-button';
+import { currentPlayerTurnIdStore, turnPhaseStore } from '../../../state/turn-state';
 import { CardStackView } from './card-stack';
 import { List } from "@pixi/ui";
 

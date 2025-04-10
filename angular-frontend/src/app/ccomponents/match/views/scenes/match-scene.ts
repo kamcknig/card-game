@@ -1,39 +1,39 @@
 import { Application, Assets, Container, Graphics, Sprite, Text } from 'pixi.js';
-import { Scene } from '../../core/scene/scene';
+import { Scene } from '../../../../core/scene/scene';
 import { PlayerHandView } from '../player-hand';
-import { AppButton, createAppButton } from '../../core/create-app-button';
-import { matchStartedStore, supplyStore, trashStore } from '../../state/match-state';
+import { AppButton, createAppButton } from '../../../../core/create-app-button';
+import { matchStartedStore, supplyStore, trashStore } from '../../../../state/match-state';
 import {
   playerDeckStore,
   playerDiscardStore,
   playerHandStore,
   playerStore,
   selfPlayerIdStore
-} from '../../state/player-state';
+} from '../../../../state/player-state';
 import { PlayAreaView } from '../play-area';
 import { KingdomSupplyView } from '../kingdom-supply';
 import { PileView } from '../pile';
-import { cardStore } from '../../state/card-state';
+import { cardStore } from '../../../../state/card-state';
 import { Card, CardId, CardKey, Player, PlayerId, SelectCardArgs, UserPromptEffectArgs } from 'shared/shared-types';
 import {
   awaitingServerLockReleaseStore,
   clientSelectableCardsOverrideStore,
   selectableCardStore,
   selectedCardStore
-} from '../../state/interactive-state';
+} from '../../../../state/interactive-state';
 import { CardView } from '../card-view';
 import { userPromptModal } from '../modal/user-prompt-modal';
-import { CARD_HEIGHT, SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP } from '../../core/app-contants';
+import { CARD_HEIGHT, SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP } from '../../../../core/app-contants';
 import { ScoreView } from '../score-view';
 import { displayCardDetail } from '../modal/display-card-detail';
-import { validateCountSpec } from '../../shared/validate-count-spec';
+import { validateCountSpec } from '../../../../shared/validate-count-spec';
 import { CardStackView } from '../card-stack';
 import { displayTrash } from '../modal/display-trash';
-import { currentPlayerTurnIdStore, turnPhaseStore } from '../../state/turn-state';
+import { currentPlayerTurnIdStore, turnPhaseStore } from '../../../../state/turn-state';
 import { isNumber, isUndefined } from 'es-toolkit/compat';
 import { AppList } from '../app-list';
-import { gamePausedStore } from '../../state/game-state';
-import { SocketService } from '../../core/socket-service/socket.service';
+import { gamePausedStore } from '../../../../state/game-state';
+import { SocketService } from '../../../../core/socket-service/socket.service';
 
 export class MatchScene extends Scene {
   private _doneSelectingBtn: Container | undefined;
@@ -258,8 +258,7 @@ export class MatchScene extends Scene {
     }
 
     awaitingServerLockReleaseStore.set(true);
-    this._socketService.on('nextPhaseComplete', (playerId: PlayerId) => {
-      if (playerId !== this._selfId) return;
+    this._socketService.on('nextPhaseComplete', () => {
       this._socketService.off('nextPhaseComplete');
       awaitingServerLockReleaseStore.set(false);
     });

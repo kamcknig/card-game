@@ -8,7 +8,7 @@ import { GainBuyEffect } from '../../core/effects/gain-buy.ts';
 import { GainCardEffect } from '../../core/effects/gain-card.ts';
 import { GainTreasureEffect } from '../../core/effects/gain-treasure.ts';
 import { MoveCardEffect } from '../../core/effects/move-card.ts';
-import { PlayCardEffect } from '../../core/effects/play-card.ts';
+import { CardPlayedEffect } from '../../core/effects/card-played.ts';
 import { RevealCardEffect } from '../../core/effects/reveal-card.ts';
 import { SelectCardEffect } from '../../core/effects/select-card.ts';
 import { ShuffleDeckEffect } from '../../core/effects/shuffle-card.ts';
@@ -983,14 +983,14 @@ const expansionModule: CardExpansionModule = {
         return;
       }
       
-      yield new PlayCardEffect({
+      yield new CardPlayedEffect({
         sourcePlayerId: triggerPlayerId,
         sourceCardId: triggerCardId,
         cardId: cardIds[0],
         playerId: triggerPlayerId,
       });
       
-      yield new PlayCardEffect({
+      yield new CardPlayedEffect({
         sourcePlayerId: triggerPlayerId,
         sourceCardId: triggerCardId,
         cardId: cardIds[0],

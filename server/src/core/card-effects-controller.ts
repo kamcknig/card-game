@@ -20,7 +20,7 @@ export class CardEffectController implements IEffectRunner {
   
   public runGameActionEffects(
     effectName: string,
-    playerId: number,
+    playerId?: number,
     cardId?: number,
   ): unknown {
     const generatorFn = this._effectGeneratorMap[effectName];
@@ -34,7 +34,7 @@ export class CardEffectController implements IEffectRunner {
     const gen = generatorFn({
       match: this._match,
       cardLibrary: this._cardLibrary,
-      triggerPlayerId: playerId,
+      triggerPlayerId: playerId!,
       triggerCardId: cardId,
     });
     return this.runGenerator(gen, playerId, cardId);
@@ -68,7 +68,7 @@ export class CardEffectController implements IEffectRunner {
   
   public runGenerator(
     generator: EffectGenerator<GameEffects>,
-    playerId: number,
+    playerId?: number,
     cardId?: number,
   ) {
     if (!generator) {

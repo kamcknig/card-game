@@ -1,7 +1,8 @@
 import { atom, computed } from 'nanostores';
 import { Match, MatchConfiguration } from 'shared/shared-types';
-import { matchStore } from './match';
-import { clientSelectableCardsOverrideStore } from './interactive-state';
+
+export const matchStore = atom<Match | null>(null);
+(globalThis as any).matchStore = matchStore;
 
 export const supplyStore =
   computed(matchStore, m => m?.supply ?? []);

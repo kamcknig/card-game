@@ -1,12 +1,12 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { CountBadgeView } from './count-badge-view';
-import { createCardView } from '../core/card/create-card-view';
-import { cardStore } from '../state/card-state';
-import { CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP } from '../core/app-contants';
+import { createCardView } from '../../../core/card/create-card-view';
+import { cardStore } from '../../../state/card-state';
+import { CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
 import { ReadableAtom } from 'nanostores';
 import { isUndefined } from 'es-toolkit';
 import { CardView } from './card-view';
-import { selectedCardStore } from '../state/interactive-state';
+import { selectedCardStore } from '../../../state/interactive-state';
 
 export type CardStackArgs = {
   label?: string;

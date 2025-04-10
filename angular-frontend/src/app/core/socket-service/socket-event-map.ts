@@ -1,12 +1,11 @@
 import { LogEntry } from 'shared/shared-types';
 import { playerIdStore, playerStore, selfPlayerIdStore } from '../../state/player-state';
-import { lobbyMatchConfigurationStore, matchStartedStore } from '../../state/match-state';
+import { lobbyMatchConfigurationStore, matchStartedStore, matchStore } from '../../state/match-state';
 import { gameOwnerIdStore, gamePausedStore, sceneStore } from '../../state/game-state';
 import { expansionListStore } from '../../state/expansion-list-state';
 import { cardOverrideStore, cardStore } from '../../state/card-state';
 import { Assets } from 'pixi.js';
 import { type SocketService } from './socket.service';
-import { matchStore } from '../../state/match';
 import { applyPatch, Operation } from 'fast-json-patch';
 import { ClientListenEventNames, ClientListenEvents } from '../../../types';
 import { selectableCardStore, selectedCardStore } from '../../state/interactive-state';

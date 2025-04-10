@@ -1,9 +1,9 @@
-import {trashStore} from '../../state/match-state';
+import {trashStore} from '../../../../state/match-state';
 import { Application, Color, Container, Graphics } from 'pixi.js';
 import {ScrollBox} from '@pixi/ui';
-import {CARD_HEIGHT, STANDARD_GAP} from '../../core/app-contants';
-import {cardStore} from '../../state/card-state';
-import {createCardView} from '../../core/card/create-card-view';
+import {CARD_HEIGHT, STANDARD_GAP} from '../../../../core/app-contants';
+import {cardStore} from '../../../../state/card-state';
+import {createCardView} from '../../../../core/card/create-card-view';
 
 export const displayTrash = (app: Application) => {
     const cards = trashStore.get();

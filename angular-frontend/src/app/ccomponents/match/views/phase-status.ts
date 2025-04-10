@@ -1,7 +1,7 @@
 import { Container, DestroyOptions, Graphics, Text } from 'pixi.js';
 import { batched } from 'nanostores';
-import { playerActionsStore, playerBuysStore, playerTreasureStore } from '../state/turn-state';
-import { STANDARD_GAP } from '../core/app-contants';
+import { playerActionsStore, playerBuysStore, playerTreasureStore } from '../../../state/turn-state';
+import { STANDARD_GAP } from '../../../core/app-contants';
 
 export class PhaseStatus extends Container {
   private _background: Graphics = new Graphics();

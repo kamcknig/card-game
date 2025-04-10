@@ -1336,7 +1336,6 @@ const expansionModule: CardExpansionModule = {
           overrides: {
             actionCost: 0,
             moveCard: false,
-            playCard: false,
           }
         });
       }

@@ -1,13 +1,13 @@
 import { Assets, Container, Graphics, Sprite, Text } from 'pixi.js';
-import { Scene } from '../../core/scene/scene';
+import { Scene } from '../../../../core/scene/scene';
 import { app } from '../../core/create-app';
-import { LARGE_GAP, STANDARD_GAP } from '../../core/app-contants';
+import { LARGE_GAP, STANDARD_GAP } from '../../../../core/app-contants';
 import { MatchSummary } from 'shared/shared-types';
 import { List } from '@pixi/ui';
-import { playerStore } from '../../state/player-state';
+import { playerStore } from '../../../../state/player-state';
 import { AppList } from '../app-list';
 import { AdjustmentFilter } from 'pixi-filters';
-import { cardStore } from '../../state/card-state';
+import { cardStore } from '../../../../state/card-state';
 
 export class GameOverScene extends Scene {
   private _summary: MatchSummary | undefined;

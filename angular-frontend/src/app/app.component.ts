@@ -1,13 +1,13 @@
 import { AfterViewInit, Component, ElementRef, Inject, OnInit, ViewChild } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { MatchConfigurationComponent } from './match-configuration/match-configuration.component';
+import { MatchConfigurationComponent } from './ccomponents/match-configuration/match-configuration.component';
 import { AsyncPipe, NgSwitch, NgSwitchCase } from '@angular/common';
 import { SocketService } from './core/socket-service/socket.service';
 import { NanostoresService } from '@nanostores/angular';
 import { catchError, Observable, of, tap } from 'rxjs';
 import { Application } from 'pixi.js';
 import { sceneStore } from './state/game-state';
-import { MatchScene } from './view/scenes/match-scene';
+import { MatchScene } from './ccomponents/match/views/scenes/match-scene';
 import { PIXI_APP } from './core/pixi-application.token';
 
 @Component({

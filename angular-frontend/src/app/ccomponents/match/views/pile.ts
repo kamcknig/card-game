@@ -1,8 +1,8 @@
 import {Container} from "pixi.js";
-import {createCardView} from "../core/card/create-card-view";
+import {createCardView} from "../../../core/card/create-card-view";
 import {CountBadgeView} from "./count-badge-view";
 import { Card } from 'shared/shared-types';
-import { CardFacing, CardSize } from '../../types';
+import { CardFacing, CardSize } from '../../../../types';
 
 export class PileView extends Container {
     constructor(cards: Card[], count: number, size: CardSize = 'full', facing: CardFacing = 'front') {

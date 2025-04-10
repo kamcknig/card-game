@@ -1,5 +1,5 @@
 import {cardStore} from "../../state/card-state";
-import {CardView} from "../../view/card-view";
+import {CardView} from "../../ccomponents/match/views/card-view";
 import {Card} from "shared/shared-types";
 import { isNumber } from 'es-toolkit/compat';
 

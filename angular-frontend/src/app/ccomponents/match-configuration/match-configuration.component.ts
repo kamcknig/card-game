@@ -1,14 +1,14 @@
 import { Component } from '@angular/core';
 import { PlayerId } from 'shared/shared-types';
 import { NanostoresService } from '@nanostores/angular';
-import { playerIdStore, selfPlayerIdStore } from '../state/player-state';
+import { playerIdStore, selfPlayerIdStore } from '../../state/player-state';
 import { combineLatest, map, Observable } from 'rxjs';
 import { AsyncPipe, NgClass, NgOptimizedImage } from '@angular/common';
 import { PlayerComponent } from './player-name-input/player-name-input.component';
-import { expansionListStore } from '../state/expansion-list-state';
-import { lobbyMatchConfigurationStore, matchConfigurationStore } from '../state/match-state';
-import { SocketService } from '../core/socket-service/socket.service';
-import { gameOwnerIdStore } from '../state/game-state';
+import { expansionListStore } from '../../state/expansion-list-state';
+import { lobbyMatchConfigurationStore, matchConfigurationStore } from '../../state/match-state';
+import { SocketService } from '../../core/socket-service/socket.service';
+import { gameOwnerIdStore } from '../../state/game-state';
 
 @Component({
   selector: 'app-match-configuration',

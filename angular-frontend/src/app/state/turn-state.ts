@@ -1,6 +1,7 @@
 import { computed } from 'nanostores';
 import { TurnPhaseOrderValues } from 'shared/shared-types';
-import { matchStore } from './match';
+
+import { matchStore } from './match-state';
 
 export const playerTreasureStore =
   computed(matchStore, m => m?.playerTreasure ?? 0);

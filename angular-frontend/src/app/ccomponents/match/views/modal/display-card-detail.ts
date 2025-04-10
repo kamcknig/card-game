@@ -1,5 +1,5 @@
 import { Application, Assets, Container, Graphics, Sprite, Texture } from 'pixi.js';
-import { cardStore } from '../../state/card-state';
+import { cardStore } from '../../../../state/card-state';
 import { Card, CardData } from 'shared/shared-types';
 
 export async function displayCardDetail(app: Application, arg: number | Card | CardData) {

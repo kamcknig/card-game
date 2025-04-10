@@ -5,7 +5,7 @@ import { GainBuyEffect } from './gain-buy.ts';
 import { GainCardEffect } from './gain-card.ts';
 import { GainTreasureEffect } from './gain-treasure.ts';
 import { MoveCardEffect } from './move-card.ts';
-import { PlayCardEffect } from './play-card.ts';
+import { CardPlayedEffect } from './card-played.ts';
 import { RevealCardEffect } from './reveal-card.ts';
 import { SelectCardEffect } from './select-card.ts';
 import { ShuffleDeckEffect } from './shuffle-card.ts';
@@ -14,6 +14,9 @@ import { UserPromptEffect } from './user-prompt.ts';
 import { ModifyCostEffect } from './modify-cost.ts';
 import { InvokeCardGeneratorEffect } from './invoke-card-generator-effect.ts';
 import { InvokeGameActionGeneratorEffect } from './invoke-game-action-generator-effect.ts';
+import { EndTurnEffect } from './end-turn.ts';
+import { NoopEffect } from './noop.ts';
+import { NextPhaseCompleteEffect } from './next-phase-complete.ts';
 
 export type GameEffects =
   | DrawCardEffect
@@ -24,11 +27,14 @@ export type GameEffects =
   | GainTreasureEffect
   | MoveCardEffect
   | TrashCardEffect
-  | PlayCardEffect
+  | CardPlayedEffect
+  | EndTurnEffect
   | RevealCardEffect
   | SelectCardEffect
   | ShuffleDeckEffect
   | UserPromptEffect
   | InvokeCardGeneratorEffect
   | InvokeGameActionGeneratorEffect
+  | NoopEffect
+  | NextPhaseCompleteEffect
   | ModifyCostEffect;

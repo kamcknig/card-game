@@ -1,13 +1,13 @@
 import { Application, Container, FederatedPointerEvent } from 'pixi.js'
 import { CardId, UserPromptKinds } from 'shared/shared-types';
-import { CARD_WIDTH, STANDARD_GAP } from '../../core/app-contants';
-import { createCardView } from '../../core/card/create-card-view';
+import { CARD_WIDTH, STANDARD_GAP } from '../../../../core/app-contants';
+import { createCardView } from '../../../../core/card/create-card-view';
 import { List } from '@pixi/ui';
-import { cardStore } from '../../state/card-state';
+import { cardStore } from '../../../../state/card-state';
 import { isNumber, toNumber } from 'es-toolkit/compat';
 import { CardView } from '../card-view';
-import { clientSelectableCardsOverrideStore, selectedCardStore } from '../../state/interactive-state';
-import { validateCountSpec } from '../../shared/validate-count-spec';
+import { clientSelectableCardsOverrideStore, selectedCardStore } from '../../../../state/interactive-state';
+import { validateCountSpec } from '../../../../shared/validate-count-spec';
 import { displayCardDetail } from './display-card-detail';
 
 export const cardSelectionView = (app: Application, args: UserPromptKinds) => {

@@ -1,8 +1,8 @@
 import { CardData, CardKey, PlayerId, UserPromptKinds } from 'shared/shared-types';
 import { Application, Assets, Color, Container, Graphics, Point, Sprite } from 'pixi.js';
 import { Input, List } from '@pixi/ui'
-import { CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP } from '../../core/app-contants';
-import { SocketService } from '../../core/socket-service/socket.service';
+import { CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP } from '../../../../core/app-contants';
+import { SocketService } from '../../../../core/socket-service/socket.service';
 import { compare } from 'fast-json-patch/';
 import { displayCardDetail } from './display-card-detail';
 

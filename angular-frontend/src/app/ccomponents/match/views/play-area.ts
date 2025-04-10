@@ -1,9 +1,9 @@
 import { Container, Graphics } from "pixi.js";
-import { createCardView } from "../core/card/create-card-view";
-import { playAreaStore } from "../state/match-state";
-import { cardStore } from "../state/card-state";
+import { createCardView } from "../../../core/card/create-card-view";
+import { playAreaStore } from "../../../state/match-state";
+import { cardStore } from "../../../state/card-state";
 import { List } from "@pixi/ui";
-import { STANDARD_GAP } from '../core/app-contants';
+import { STANDARD_GAP } from '../../../core/app-contants';
 
 export class PlayAreaView extends Container {
     private _background: Graphics = new Graphics();

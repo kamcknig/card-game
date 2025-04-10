@@ -3,8 +3,8 @@ import { NanostoresService } from '@nanostores/angular';
 import { Player, PlayerId } from 'shared/shared-types';
 import { debounceTime, Observable, Subject } from 'rxjs';
 import { AsyncPipe, NgIf } from '@angular/common';
-import { playerStore, selfPlayerIdStore } from 'src/app/state/player-state';
-import { SocketService } from '../../core/socket-service/socket.service';
+import { playerStore, selfPlayerIdStore } from '../../../state/player-state';
+import { SocketService } from '../../../core/socket-service/socket.service';
 
 @Component({
   selector: 'app-player-name-input',

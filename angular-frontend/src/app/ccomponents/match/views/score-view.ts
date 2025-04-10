@@ -1,7 +1,7 @@
 import { Container, Graphics, Text } from 'pixi.js';
-import { playerIdStore, playerScoreStore } from '../state/player-state';
-import { currentPlayerTurnIndexStore, playerTurnOrderStore, turnNumberStore } from '../state/turn-state';
-import { STANDARD_GAP } from '../core/app-contants';
+import { playerIdStore, playerScoreStore } from '../../../state/player-state';
+import { currentPlayerTurnIndexStore, playerTurnOrderStore, turnNumberStore } from '../../../state/turn-state';
+import { STANDARD_GAP } from '../../../core/app-contants';
 import { Player } from 'shared/shared-types';
 
 export class ScoreView extends Container {

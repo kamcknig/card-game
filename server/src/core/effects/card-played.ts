@@ -1,7 +1,7 @@
 import { EffectBase, EffectBaseArgs } from './effect-base.ts';
 
-export class PlayCardEffect extends EffectBase {
-  type = 'playCard' as const;
+export class CardPlayedEffect extends EffectBase {
+  type = 'cardPlayed' as const;
   cardId: number;
   playerId: number;
   

@@ -1,14 +1,14 @@
 import { Application, Container, Graphics, Text } from 'pixi.js';
-import { AppButton, createAppButton } from '../../core/create-app-button';
-import { clientSelectableCardsOverrideStore, selectedCardStore } from '../../state/interactive-state';
-import { STANDARD_GAP } from '../../core/app-contants';
+import { AppButton, createAppButton } from '../../../../core/create-app-button';
+import { clientSelectableCardsOverrideStore, selectedCardStore } from '../../../../state/interactive-state';
+import { STANDARD_GAP } from '../../../../core/app-contants';
 import { PlayerId, UserPromptEffectArgs } from 'shared/shared-types';
 import { List } from '@pixi/ui';
 import { cardSelectionView } from './card-selection-view';
 import { cardRearrangeView } from './card-rearrange-view';
 import { cardBlindRearrangeView } from './card-blind-rearrange-view';
 import { nameCardView } from './name-card-view';
-import { SocketService } from '../../core/socket-service/socket.service';
+import { SocketService } from '../../../../core/socket-service/socket.service';
 
 export const userPromptModal = (
   app: Application,
