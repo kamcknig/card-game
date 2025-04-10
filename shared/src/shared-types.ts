@@ -168,7 +168,7 @@ export class Player {
 }
 
 export type MatchSummary = {
-    scores: {
+    playerSummary: {
         playerId: PlayerId;
         turnsTaken: number;
         score: number;

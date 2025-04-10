@@ -569,7 +569,7 @@ export class MatchController {
     const currentPlayerTurnIndex = match.currentPlayerTurnIndex;
     
     const summary: MatchSummary = {
-      scores: match.players.reduce((prev, player) => {
+      playerSummary: match.players.reduce((prev, player) => {
         const playerId = player.id;
         const turnsTaken = match.players.findIndex((p) =>
           p.id === playerId
@@ -587,7 +587,7 @@ export class MatchController {
           ),
         });
         return prev;
-      }, [] as MatchSummary['scores'])
+      }, [] as MatchSummary['playerSummary'])
         .sort((a, b) => {
           if (a.score < b.score) return 1;
           if (b.score < a.score) return -1;

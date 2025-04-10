@@ -25,8 +25,10 @@ import { SocketService } from '../../../core/socket-service/socket.service';
 
       @if (playerId === ($selfId | async)) {
         <input
+          #nameInput
           class="player-name editable"
           type="text"
+          autofocus
           [value]="player.name"
           (input)="onNameChange($any($event.target).value)"
         />

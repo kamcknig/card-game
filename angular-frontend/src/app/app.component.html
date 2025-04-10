@@ -4,6 +4,7 @@
   <div class="content">
     <ng-container [ngSwitch]="scene$ | async">
       <app-match-configuration *ngSwitchCase="'configuration'"></app-match-configuration>
+      <app-game-summary [matchSummary]="matchSummary!" *ngSwitchCase="'gameSummary'"></app-game-summary>
     </ng-container>
   </div>
 </main>

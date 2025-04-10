@@ -8,5 +8,7 @@ export const gamePausedStore = atom<boolean>(false);
 export const gameOwnerIdStore = atom<PlayerId | undefined>();
 (globalThis as any).gameOwnerIdStore = gameOwnerIdStore;
 
-export const sceneStore = atom<'configuration' | 'match'>('configuration');
+export type SceneNames = 'configuration' | 'match' | 'gameSummary';
+
+export const sceneStore = atom<SceneNames>('configuration');
 (globalThis as any).sceneStore = sceneStore;
