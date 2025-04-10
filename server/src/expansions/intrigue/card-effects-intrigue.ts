@@ -287,21 +287,18 @@ const expansionModule: CardExpansionModule = {
             yield new GainActionEffect({
               count: 1,
               sourcePlayerId: triggerPlayerId,
-              triggerImmediateUpdate: true,
             });
             break;
           case 2:
             yield new GainBuyEffect({
               count: 1,
               sourcePlayerId: triggerPlayerId,
-              triggerImmediateUpdate: true,
             });
             break;
           case 3:
             yield new GainTreasureEffect({
               count: 3,
               sourcePlayerId: triggerPlayerId,
-              triggerImmediateUpdate: true,
             });
             break;
           case 4:
@@ -884,21 +881,18 @@ const expansionModule: CardExpansionModule = {
             yield new GainActionEffect({
               count: 1,
               sourcePlayerId: triggerPlayerId,
-              triggerImmediateUpdate: true,
             });
             break;
           case 3:
             yield new GainBuyEffect({
               count: 1,
               sourcePlayerId: triggerPlayerId,
-              triggerImmediateUpdate: true,
             });
             break;
           case 4:
             yield new GainTreasureEffect({
               count: 1,
               sourcePlayerId: triggerPlayerId,
-              triggerImmediateUpdate: true,
             });
             break;
         }
@@ -1291,7 +1285,7 @@ const expansionModule: CardExpansionModule = {
         playerId: triggerPlayerId,
         sourcePlayerId: triggerPlayerId,
         restrict: { from: { location: 'playerHands' } },
-        count: Math.min(2, match.playerDecks[triggerPlayerId].length),
+        count: Math.min(2, match.playerHands[triggerPlayerId].length),
         sourceCardId: triggerCardId,
       })) as number[];
       

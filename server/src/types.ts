@@ -122,8 +122,15 @@ export type EffectGeneratorFactory = (context: {
   reactionManager: ReactionManager;
 }) => Record<string, EffectGeneratorFn>;
 
+export type GameActionOverrides = {
+  actionCost?: number,
+  moveCard?: boolean,
+  playCard?: boolean,
+};
+
 export type EffectGeneratorFn = (
   args: EffectContext,
+  overrides?: GameActionOverrides,
 ) => GameEffectGenerator;
 
 export type ReactionEffectGeneratorFn = (
@@ -143,11 +150,15 @@ export type EffectHandlerMap = {
 
 export type EffectPauseResult = { pause: true; signalId: string };
 export type EffectResult = { result: unknown; };
+export type EffectRunGeneratorResult = {
+  run: EffectGenerator<GameEffects>;
+};
 
 export type EffectHandlerResult =
   | EffectPauseResult
   | EffectResult
-  | undefined;
+  | EffectRunGeneratorResult
+  | void;
 
 export type TriggerEventType = 'cardPlayed';
 

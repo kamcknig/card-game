@@ -12,6 +12,8 @@ import { ShuffleDeckEffect } from './shuffle-card.ts';
 import { TrashCardEffect } from './trash-card.ts';
 import { UserPromptEffect } from './user-prompt.ts';
 import { ModifyCostEffect } from './modify-cost.ts';
+import { InvokeCardGeneratorEffect } from './invoke-card-generator-effect.ts';
+import { InvokeGameActionGeneratorEffect } from './invoke-game-action-generator-effect.ts';
 
 export type GameEffects =
   | DrawCardEffect
@@ -27,4 +29,6 @@ export type GameEffects =
   | SelectCardEffect
   | ShuffleDeckEffect
   | UserPromptEffect
+  | InvokeCardGeneratorEffect
+  | InvokeGameActionGeneratorEffect
   | ModifyCostEffect;

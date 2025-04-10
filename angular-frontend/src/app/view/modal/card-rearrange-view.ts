@@ -143,5 +143,6 @@ export const cardRearrangeView = (app: Application, args: UserPromptKinds) => {
     app.stage.off('pointerup', onEndDrag);
   })
 
+  cardList.emit('resultsUpdated', args.cardIds);
   return cardList;
 };

@@ -60,6 +60,7 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
   
   map.playCard = function* (
     { match, cardLibrary, triggerPlayerId, triggerCardId },
+    { actionCost, moveCard, playCard } = { actionCost: -1, playCard: true, moveCard: true }
   ) {
     if (!triggerCardId) {
       throw new Error('playCard requires a card ID');
@@ -67,30 +68,33 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
     
     const card = cardLibrary.getCard(triggerCardId);
     
-    if (cardLibrary.getCard(triggerCardId).type.includes('ACTION')) {
-      yield new GainActionEffect({
-        count: -1,
+    if (actionCost !== 0) {
+      if (cardLibrary.getCard(triggerCardId).type.includes('ACTION')) {
+        yield new GainActionEffect({
+          count: actionCost ?? -1,
+          sourcePlayerId: triggerPlayerId,
+          sourceCardId: triggerCardId,
+        });
+      }
+    }
+    
+    if (moveCard) {
+      yield new MoveCardEffect({
+        cardId: triggerCardId,
         sourcePlayerId: triggerPlayerId,
         sourceCardId: triggerCardId,
-        triggerImmediateUpdate: true,
+        to: { location: 'playArea' }
       });
     }
     
-    yield new MoveCardEffect({
-      cardId: triggerCardId,
-      sourcePlayerId: triggerPlayerId,
-      sourceCardId: triggerCardId,
-      to: {
-        location: 'playArea',
-      },
-    });
-    
-    yield new PlayCardEffect({
-      cardId: triggerCardId,
-      sourcePlayerId: triggerPlayerId,
-      sourceCardId: triggerCardId,
-      playerId: triggerPlayerId,
-    });
+    if (playCard) {
+      yield new PlayCardEffect({
+        cardId: triggerCardId,
+        sourcePlayerId: triggerPlayerId,
+        sourceCardId: triggerCardId,
+        playerId: triggerPlayerId,
+      });
+    }
     
     const trigger: ReactionTrigger = {
       eventType: 'cardPlayed',
@@ -248,7 +252,6 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
       count: -1,
       sourcePlayerId: triggerPlayerId,
       sourceCardId: triggerCardId,
-      triggerImmediateUpdate: true,
     });
     yield new GainCardEffect({
       playerId: triggerPlayerId,

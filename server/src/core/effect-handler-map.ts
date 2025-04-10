@@ -1,4 +1,4 @@
-import { AppSocket, EffectHandlerMap, IEffectRunner, ReactionTemplate, } from '../types.ts';
+import { AppSocket, EffectGeneratorFn, EffectHandlerMap, ReactionTemplate, } from '../types.ts';
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
 import { findCards } from '../utils/find-cards.ts';
 import { ReactionManager } from './reaction-manager.ts';
@@ -23,7 +23,7 @@ import { cardLifecycleMap } from './card-lifecycle-map.ts';
 export const createEffectHandlerMap = (
   socketMap: Map<PlayerId, AppSocket>,
   reactionManager: ReactionManager,
-  cardEffectRunner: IEffectRunner,
+  effectGeneratorMap: Record<string, EffectGeneratorFn>,
   interactivityController: CardInteractivityController,
   cardLibrary: CardLibrary,
 ): EffectHandlerMap => {
@@ -120,7 +120,6 @@ export const createEffectHandlerMap = (
           playerSourceId: effect.sourcePlayerId,
         })
       );
-      return undefined;
     },
     gainBuy(effect, match) {
       match.playerBuys = match.playerBuys + effect.count;
@@ -131,7 +130,6 @@ export const createEffectHandlerMap = (
           playerSourceId: effect.sourcePlayerId,
         })
       );
-      return undefined;
     },
     gainCard(effect, match) {
       effect.to.location ??= 'playerDiscards';
@@ -164,7 +162,6 @@ export const createEffectHandlerMap = (
           playerSourceId: effect.sourcePlayerId,
         })
       );
-      return undefined;
     },
     moveCard(
       effect: MoveCardEffect,
@@ -182,7 +179,7 @@ export const createEffectHandlerMap = (
         console.log(
           '[MOVE CARD EFFECT HANDLER] could not find card in a store to move it',
         );
-        return undefined;
+        return;
       }
       
       console.log(
@@ -200,7 +197,7 @@ export const createEffectHandlerMap = (
         console.log(
           '[MOVE CARD EFFECT HANDLER] could not find new store to move card to',
         );
-        return undefined;
+        return;
       }
       
       oldStore.splice(index, 1);
@@ -326,7 +323,7 @@ export const createEffectHandlerMap = (
       }
     },
     playCard(effect, match) {
-      const { playerId, sourceCardId, sourcePlayerId, cardId } = effect;
+      const { sourceCardId, sourcePlayerId } = effect;
       
       socketMap.forEach((s) =>
         s.emit('addLogEntry', {
@@ -338,7 +335,6 @@ export const createEffectHandlerMap = (
       
       match.cardsPlayed[sourcePlayerId] ??= [];
       match.cardsPlayed[sourcePlayerId].push(sourceCardId);
-      return { result: undefined };
     },
     revealCard(effect, _match) {
       console.log(
@@ -353,8 +349,6 @@ export const createEffectHandlerMap = (
           playerSourceId: effect.playerId,
         })
       );
-      
-      return undefined;
     },
     selectCard(effect, match) {
       effect.count ??= 1;
@@ -474,8 +468,6 @@ export const createEffectHandlerMap = (
         ...match.playerDiscards ?? {},
         [playerId]: [],
       };
-      
-      return undefined;
     },
     trashCard(effect, match) {
       socketMap.forEach((s) =>
@@ -544,11 +536,30 @@ export const createEffectHandlerMap = (
         const socket = socketMap.get(targetId);
         socket?.emit('setCardDataOverrides', playerOverrides);
       }
+    },
+    invokeCardEffects(effect) {
+      const { context, cardKey } = effect;
+      const generatorFn = effectGeneratorMap[cardKey];
       
-      // todo is this needed?
-      interactivityController.checkCardInteractivity();
+      if (!generatorFn) {
+        throw new Error(`no generator found for '${cardKey}'`);
+      }
       
-      return undefined
+      const generator = generatorFn(context);
+      
+      return { run: generator };
+    },
+    invokeGameActionGenerator(effect) {
+      const { context, gameAction, overrides } = effect;
+      const generatorFn = effectGeneratorMap[gameAction];
+      
+      if (!generatorFn) {
+        throw new Error(`no generator found for '${gameAction}'`);
+      }
+      
+      const generator = generatorFn(context, overrides);
+      
+      return { run: generator };
     }
   };
   return effectHandlerMap;

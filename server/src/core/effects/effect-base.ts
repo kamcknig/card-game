@@ -1,7 +1,6 @@
 export type EffectBaseArgs = {
   sourcePlayerId: number;
   sourceCardId?: number;
-  triggerImmediateUpdate?: boolean;
 };
 
 /**
@@ -12,14 +11,12 @@ export abstract class EffectBase {
   abstract type: string;
   public sourceCardId: number;
   public sourcePlayerId: number;
-  public triggerImmediateUpdate?: boolean;
   
   protected constructor(
-    { sourcePlayerId, sourceCardId, triggerImmediateUpdate }: EffectBaseArgs,
+    { sourcePlayerId, sourceCardId }: EffectBaseArgs,
   ) {
     this.sourcePlayerId = sourcePlayerId;
     this.sourceCardId = sourceCardId!;
-    this.triggerImmediateUpdate = triggerImmediateUpdate!;
   }
   
   toString() {

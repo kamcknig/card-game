@@ -288,21 +288,23 @@ export class MatchController {
     return Object.values(config.players).reduce((prev, player, _idx) => {
       console.log('initializing player', player.id, 'cards...');
       /*let blah = {};
-       // todo remove testing code
-       if (_idx === 0) {
-       blah = {
-       diplomat: 5,
-       moat: 5
-       };
-       } else {
-       blah = {
-       moat: 5,
-       militia: 5
-       };
-       }
-       Object.entries(blah).forEach(([key, count]) => {*/
-      Object.entries(playerStartHand).forEach(
-        ([key, count]) => {
+      // todo remove testing code
+      if (_idx === 0) {
+        blah = {
+          'vassal': 4,
+          'market': 4,
+          village: 3,
+          gold: 3
+        };
+      } else {
+        blah = {
+          estate: 7,
+          gold: 20,
+        };
+      }*/
+      /*Object.entries(blah).forEach(([key, count]) => {*/
+          Object.entries(playerStartHand).forEach(
+           ([key, count]) => {
           prev['playerDecks'][player.id] ??= [];
           let deck = prev['playerDecks'][player.id];
           deck = deck.concat(
@@ -397,7 +399,7 @@ export class MatchController {
     this._effectHandlerMap = createEffectHandlerMap(
       this._socketMap,
       this._reactionManager,
-      this._effectsController,
+      effectGeneratorMap,
       this._interactivityController,
       this._cardLibrary,
     );
@@ -456,7 +458,7 @@ export class MatchController {
     );
   };
   
-  private onCardTapHandlerComplete = (_card: Card, player: Player) => {
+  private onCardTapHandlerComplete = (_card: Card, _player: Player) => {
     console.log(`[MATCH] card tap complete handler invoked`);
     void this.onCheckForPlayerActions();
   };

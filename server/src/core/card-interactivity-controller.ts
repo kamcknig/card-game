@@ -22,9 +22,6 @@ export class CardInteractivityController {
     private readonly _matchController: MatchController,
     private readonly _effectGeneratorMap: Record<string, EffectGeneratorFn>,
   ) {
-    // todo
-    //match.subscribe(this.checkCardInteractivity.bind(this));
-    
     this._socketMap.forEach((s) => {
       s.on('cardTapped', this.onCardTapped);
       s.on('playAllTreasure', this.onPlayAllTreasure);
