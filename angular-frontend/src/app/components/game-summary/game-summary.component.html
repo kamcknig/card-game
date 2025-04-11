@@ -3,10 +3,19 @@
   <div class="pane">
     @for (playerSummary of matchSummary.playerSummary; track playerSummary.playerId) {
       <div class="player-score-wrapper">
-
+        <span class="turns-taken">{{playerSummary.turnsTaken}}</span>
+        <span>{{getPlayerName(playerSummary.playerId)}}</span>
+        <hr class="turn-score-separator" />
+        <div class="score-container">
+          <img class="victory-icon" ngSrc="/assets/ui-icons/victory-shield.png" width="1" height="1"/>
+          <span class="score-value">{{playerSummary.score}}</span>
+        </div>
+        <hr />
       </div>
     }
   </div>
+
+  <div class="vertical-rule"></div>
 
   <!-- right half, decks -->
   <div class="pane"></div>

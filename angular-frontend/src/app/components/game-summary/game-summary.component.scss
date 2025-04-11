@@ -1,6 +1,23 @@
+:host, .content, .vertical-rule {
+  height: 100%;
+  overflow: hidden;
+}
+
+:host {
+  display: block;
+}
+
+.vertical-rule {
+  width: 2px;
+  background-color: black; /* or any color you like */
+  align-self: stretch;
+}
+
 .content {
   display: flex;
   flex-direction: row;
+  flex: 1;
+  padding: 20px;
 }
 
 .pane {
@@ -11,5 +28,55 @@
 
 .player-score-wrapper {
   display: flex;
+  align-items: center;
+  justify-content: center;
   flex-direction: row;
+  gap: 20px;
+
+  hr {
+    border: none;
+    border-top: 2px solid black;
+    align-self: center;
+    flex: .3;
+
+    &.turn-score-separator {
+      flex: .1;
+    }
+  }
+
+  .score-container {
+    position: relative;
+    width: 45px;
+    height: 45px;
+  }
+}
+
+.victory-icon {
+  width: 45px;
+  height: auto;
+  display: inline-block;
+  object-fit: contain;
+  filter: brightness(.5);
+}
+
+.score-value {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: bold;
+  pointer-events: none;
+  color: white;
+  font-size: 24px;
+}
+
+.turns-taken {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid black;
+  font-weight: bold;
 }
