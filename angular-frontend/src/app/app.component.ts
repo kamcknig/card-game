@@ -10,7 +10,7 @@ import { MatchScene } from './components/match/views/scenes/match-scene';
 import { PIXI_APP } from './core/pixi-application.token';
 import { MatchConfigurationComponent } from './components/match-configuration/match-configuration.component';
 import { GameSummaryComponent } from './components/game-summary/game-summary.component';
-import { MatchSummary } from 'shared/shared-types';
+import { MatchSummary, Player } from 'shared/shared-types';
 import { matchStore } from './state/match-state';
 import { cardStore } from './state/card-state';
 
@@ -58,14 +58,13 @@ export class AppComponent implements AfterViewInit, OnInit {
 
           setTimeout(() => {
             this.matchSummary = {
-              playerSummary: match!.players.map(p => ({
+              playerSummary: match!.players.concat({id: 2, name: 'Kyle'} as Player).map(p => ({
                 playerId: p.id,
                 score: Math.floor(Math.random() * 50) + 1,
                 turnsTaken: Math.floor(Math.random() * 20) + 1,
                 deck: new Array(20).fill(0).map(_ => cardsById[cardIds[Math.floor(Math.random() * cardIds.length) + 1]].id)
               }))
             }
-            console.log(this.matchSummary);
             sceneStore.set('gameSummary');
           }, 3000);
         } else if (scene === 'gameSummary') {

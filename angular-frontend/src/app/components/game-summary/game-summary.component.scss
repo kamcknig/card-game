@@ -1,6 +1,9 @@
+* {
+  font-size: 36px;
+}
+
 :host, .content, .vertical-rule {
   height: 100%;
-  overflow: hidden;
 }
 
 :host {
@@ -9,7 +12,7 @@
 
 .vertical-rule {
   width: 2px;
-  background-color: black; /* or any color you like */
+  background-color: black;
   align-self: stretch;
 }
 
@@ -24,30 +27,41 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  padding: 20px;
+
+  &.left {
+    max-width: 40%;
+  }
 }
 
-.player-score-wrapper {
-  display: flex;
+.player-score-content {
+  display: grid;
+  row-gap: 20px;
+  grid-template-columns:
+    60px 1fr max-content 1fr 60px 1fr max-content;
   align-items: center;
-  justify-content: center;
-  flex-direction: row;
-  gap: 20px;
 
-  hr {
-    border: none;
-    border-top: 2px solid black;
-    align-self: center;
-    flex: .3;
+  .player-score-wrapper {
+    display: contents;
 
-    &.turn-score-separator {
-      flex: .1;
+    div.hr-rule {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      .line {
+        width: 100%;
+        height: 2px;
+        background: black;
+        margin: 0 10px; /* This finally works! */
+      }
     }
-  }
 
-  .score-container {
-    position: relative;
-    width: 45px;
-    height: 45px;
+    .score-container {
+      position: relative;
+      width: 45px;
+      height: 45px;
+    }
   }
 }
 
@@ -70,13 +84,47 @@
   font-size: 24px;
 }
 
-.turns-taken {
+.place {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 45px;
+  height: 45px;
   border-radius: 50%;
   border: 2px solid black;
   font-weight: bold;
+}
+
+.player-deck-summary {
+  border: 2px solid black;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  .deck-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+
+  .card-summary {
+    .card-image {
+      position: relative;
+      height: 35px;
+      overflow: hidden;
+    }
+
+    .count {
+      text-align: center;
+      width: 30px;
+      height: 30px;
+      font-size: 24px;
+      position: absolute;
+      top: 0;
+      left: 0;
+      background: red;
+      border: 2px solid black;
+    }
+  }
 }
