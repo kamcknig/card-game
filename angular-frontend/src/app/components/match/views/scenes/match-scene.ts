@@ -132,6 +132,7 @@ export class MatchScene extends Scene {
 
       t.x = Math.floor(this._app.renderer.width * .5);
       t.y = Math.floor(this._app.renderer.height * .5);
+
       c.addChild(t);
       this.addChild(c);
       return;

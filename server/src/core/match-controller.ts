@@ -23,8 +23,9 @@ import { ExpansionCardData, expansionData } from '../state/expansion-data.ts';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
 import Fuse, { IFuseOptions } from 'fuse.js';
 import { createEffectGeneratorMap, effectGeneratorBlueprintMap } from './effect-generator-map.ts';
+import { EventEmitter } from '@denosaurs/event';
 
-export class MatchController {
+export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _effectsController: CardEffectController | undefined;
   private _effectsPipeline: EffectsPipeline | undefined;
   private _reactionManager: ReactionManager | undefined;
@@ -39,6 +40,7 @@ export class MatchController {
     private _match: Match,
     private readonly _socketMap: Map<PlayerId, AppSocket>,
   ) {
+    super();
   }
   
   public initialize(
@@ -224,7 +226,7 @@ export class MatchController {
     const kingdomCards: Card[] = [];
     
     // todo: remove testing code
-    const keepers: string[] = ['minion'].filter((k) =>
+    const keepers: string[] = [].filter((k) =>
       this._cardData!.kingdom[k]
     );
     
@@ -286,12 +288,10 @@ export class MatchController {
       // todo remove testing code
       if (_idx === 0) {
         blah = {
-          'minion': 3,
-          gold: 3,
+          gold: 10,
         };
       } else {
         blah = {
-          estate: 7,
           gold: 20,
         };
       }
@@ -389,7 +389,7 @@ export class MatchController {
       effectGeneratorMap
     );
     
-    const effectHandlerMap =createEffectHandlerMap(
+    const effectHandlerMap = createEffectHandlerMap(
       this._socketMap,
       this._reactionManager,
       effectGeneratorMap,
@@ -419,7 +419,7 @@ export class MatchController {
     this._socketMap.forEach((s) => s.emit('matchStarted'));
     
     for (const player of match.players!) {
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < 5; i++) {
         this._effectsController?.runGameActionEffects(
           'drawCard',
           player.id,
@@ -605,11 +605,12 @@ export class MatchController {
     console.log(summary);
     
     this._socketMap.forEach((s) => s.emit('gameOver', summary));
+    this.emit('gameOver');
   }
   
   private onNextPhase = () => {
-      this._effectsController?.runGameActionEffects('nextPhase');
-      this._socketMap.forEach(s => s.emit('nextPhaseComplete'));
+    this._effectsController?.runGameActionEffects('nextPhase');
+    this._socketMap.forEach(s => s.emit('nextPhaseComplete'));
   }
   
   private initializeSocketListeners(_playerId: PlayerId, socket: AppSocket) {

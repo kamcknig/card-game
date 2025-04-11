@@ -18,10 +18,10 @@ export class Game {
   public owner: Player | undefined;
   public matchStarted: boolean = false;
   
-  private _match: Match;
+  private _match: Match | undefined;
   private _socketMap: Map<PlayerId, AppSocket> = new Map();
   private _matchController: MatchController | undefined;
-  private _matchConfiguration: MatchConfiguration;
+  private _matchConfiguration: MatchConfiguration | undefined;
   private _availableExpansion: {
     title: string;
     name: string;
@@ -30,9 +30,15 @@ export class Game {
   
   constructor() {
     console.log(`[GAME] created`);
+    
+    this.initializeMatch();
+  }
+  
+  private initializeMatch = () => {
     this._matchConfiguration = defaultMatchConfiguration;
     this._match = { config: this._matchConfiguration } as Match;
     this._matchController = new MatchController(this._match, this._socketMap);
+    this._matchController.on('gameOver', this.clearMatch);
   }
   
   public expansionLoaded(
@@ -100,7 +106,7 @@ export class Game {
         'expansionList',
         this._availableExpansion.sort((a, b) => a.order - b.order),
       );
-      socket.emit('matchConfigurationUpdated', this._matchConfiguration);
+      socket.emit('matchConfigurationUpdated', this._matchConfiguration!);
       socket.on('updatePlayerName', this.onUpdatePlayerName);
       socket.on('playerReady', this.onPlayerReady);
     }
@@ -126,19 +132,7 @@ export class Game {
     
     if (!this.players.some((p) => p.connected)) {
       console.log('[GAME] no players left in game, clearing game state completely',);
-      this._socketMap.forEach((socket) => {
-        socket.off('updatePlayerName');
-        socket.off('playerReady');
-        socket.off('disconnect');
-        socket.leave('game');
-      });
-      this._socketMap.clear();
-      this.players = [];
-      this.owner = undefined;
-      this.matchStarted = false;
-      this._matchController = new MatchController(this._match, this._socketMap);
-      this._matchConfiguration = defaultMatchConfiguration;
-      this._match = { config: this._matchConfiguration } as Match;
+      this.clearMatch()
       return;
     }
     
@@ -155,12 +149,29 @@ export class Game {
     }
   };
   
+  private clearMatch = () => {
+    console.log(`[GAME] clearing match`);
+    
+    this._socketMap.forEach((socket) => {
+      socket.off('updatePlayerName');
+      socket.off('playerReady');
+      socket.off('disconnect');
+      socket.leave('game');
+    });
+    
+    this._socketMap.clear();
+    this.players = [];
+    this.owner = undefined;
+    this.matchStarted = false;
+    this.initializeMatch();
+  }
+  
   private onMatchConfigurationUpdated = async (expansions: string[]) => {
     console.log(`[GAME] received match configuration update`);
     console.log(expansions);
     
     const newExpansions = expansions.filter(
-      (e) => !this._matchConfiguration.expansions.includes(e),
+      (e) => !this._matchConfiguration?.expansions.includes(e),
     );
     
     const expansionsToRemove: string[] = [];
@@ -197,10 +208,9 @@ export class Game {
     this._matchConfiguration = {
       ...this._matchConfiguration,
       expansions,
-    };
+    } as MatchConfiguration;
     
-    if (this.matchStarted) { // i don't think we need the matchStarted check as match configuration is only updated during the lobby phase right
-  // now
+    if (this.matchStarted && this._match) {
       this._match.config = this._matchConfiguration;
       const patch = compare(previousSnapshot, this._matchController?.getMatchSnapshot() ?? {});
       if (patch.length) this._socketMap.forEach(s => s.emit('matchPatch', patch));
@@ -256,7 +266,7 @@ export class Game {
       socket.off('matchConfigurationUpdated');
     });
     
-    const cardData = this._matchConfiguration.expansions.reduce((prev, key) => {
+    const cardData = this._matchConfiguration?.expansions.reduce((prev, key) => {
       prev = {
         supply: {
           ...prev.supply,
@@ -277,8 +287,8 @@ export class Game {
           p.ready = false;
           return p;
         }),
-      },
-      cardData
+      } as MatchConfiguration,
+      cardData as ExpansionCardData
     );
   };
 }

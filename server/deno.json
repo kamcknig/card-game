@@ -5,6 +5,7 @@
     "dev:watch": "deno run --inspect --check --env-file --allow-read --allow-write --allow-net --allow-env --watch src/server.ts"
   },
   "imports": {
+    "@denosaurs/event": "jsr:@denosaurs/event@^2.0.2",
     "@timepp/enhanced-deno-log": "jsr:@timepp/enhanced-deno-log@^0.4.1",
     "@std/path": "https://deno.land/std/path/mod.ts",
     "es-toolkit": "jsr:@es-toolkit/es-toolkit@^1.33.0",
