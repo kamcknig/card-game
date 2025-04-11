@@ -1,6 +1,11 @@
 import { LogEntry } from 'shared/shared-types';
 import { playerIdStore, playerStore, selfPlayerIdStore } from '../../state/player-state';
-import { lobbyMatchConfigurationStore, matchStartedStore, matchStore } from '../../state/match-state';
+import {
+  lobbyMatchConfigurationStore,
+  matchStartedStore,
+  matchStore,
+  matchSummaryStore
+} from '../../state/match-state';
 import { gameOwnerIdStore, gamePausedStore, sceneStore } from '../../state/game-state';
 import { expansionListStore } from '../../state/expansion-list-state';
 import { cardOverrideStore, cardStore } from '../../state/card-state';
@@ -32,7 +37,8 @@ export const socketToGameEventMap = (socketService: SocketService): SocketEventM
         console.error(error);
       }
 
-      /*void displayScene('gameOver', summary);*/
+      matchSummaryStore.set(summary);
+      sceneStore.set('gameSummary');
     },
     gameOwnerUpdated: playerId => {
       gameOwnerIdStore.set(playerId);

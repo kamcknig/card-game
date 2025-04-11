@@ -252,6 +252,7 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
         const compulsoryReactions = reactions.filter(r => r.compulsory);
         
         let selectedReaction: Reaction | undefined = undefined;
+        
         // when you have more than one reaction, the player chooses.
         // if there is only one reaction though, and it's compulsory (such as the merchant's
         // reaction-like card effect to gain a treasure) then we just do it with no choice.

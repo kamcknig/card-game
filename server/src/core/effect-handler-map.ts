@@ -391,13 +391,13 @@ export const createEffectHandlerMap = (
           effect.restrict.map((id) => cardLibrary.getCard(id))
         }`,
       );
-      return { result: effect.restrict };
+      return effect.restrict;
     } else if (effect.restrict.from) {
       if (effect.restrict.from.location === 'playerDecks') {
         console.warn(
           '[SELECT CARD EFFECT HANDLER] will not be able to select from deck, not sending it to client, nor able to show them to them right now',
         );
-        return { result: [] };
+        return [];
       }
       selectableCardIds = findCards(
         match,
@@ -416,7 +416,7 @@ export const createEffectHandlerMap = (
       console.log(
         `[SELECT CARD EFFECT HANDLER] found no cards within restricted set ${effect.restrict}`,
       );
-      return { result: [] };
+      return [];
     }
     
     // if there aren't enough cards, depending on the selection type, we might simply implicitly select cards
@@ -432,7 +432,7 @@ export const createEffectHandlerMap = (
         console.log(
           '[SELECT CARD EFFECT HANDLER] user does not have enough, or has exactly the amount of cards to select from, selecting all automatically',
         );
-        return { result: selectableCardIds };
+        return selectableCardIds;
       }
     }
     

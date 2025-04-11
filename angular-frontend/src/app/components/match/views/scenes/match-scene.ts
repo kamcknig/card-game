@@ -139,6 +139,7 @@ export class MatchScene extends Scene {
 
     const c = this.getChildByLabel('pause');
     c?.removeFromParent();
+    c?.destroy();
   }
 
   private onCurrentPlayerTurnUpdated = (playerId: number) => {

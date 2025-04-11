@@ -1,5 +1,5 @@
 import { atom, computed } from 'nanostores';
-import { Match, MatchConfiguration } from 'shared/shared-types';
+import { Match, MatchConfiguration, MatchSummary } from 'shared/shared-types';
 
 export const matchStore = atom<Match | null>(null);
 (globalThis as any).matchStore = matchStore;
@@ -29,3 +29,6 @@ export const lobbyMatchConfigurationStore = atom<string[]>([]);
 
 export const matchStartedStore = atom<boolean>(false);
 (globalThis as any).matchStartedStore = matchStartedStore;
+
+export const matchSummaryStore = atom<MatchSummary | undefined>(undefined);
+(globalThis as any).matchSummaryStore = matchSummaryStore;

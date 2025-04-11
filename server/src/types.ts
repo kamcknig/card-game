@@ -158,6 +158,7 @@ export type EffectHandlerResult =
   | EffectPauseResult
   | EffectResult
   | EffectRunGeneratorResult
+  | number[]
   | void;
 
 export type TriggerEventType = 'cardPlayed';
@@ -197,6 +198,7 @@ export class Reaction {
       generatorFn: ReactionEffectGeneratorFn;
       once?: boolean;
       multipleUse?: boolean;
+      compulsory?: boolean;
     },
   ) {
     this.id = arg.id;
@@ -206,6 +208,7 @@ export class Reaction {
     this.generatorFn = arg.generatorFn;
     this.once = arg.once;
     this.multipleUse = arg.multipleUse;
+    this.compulsory = arg.compulsory ?? true;
   }
   
   public getSourceKey() {

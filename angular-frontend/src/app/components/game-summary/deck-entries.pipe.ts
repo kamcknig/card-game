@@ -7,6 +7,6 @@ export class DeckEntriesPipe implements PipeTransform {
     return Object.entries(cards).map(([cardKey, { cardId, count }]) => ({
       cardId: +cardId,
       count,
-    }));
+    })).sort((a, b) => b.count - a.count);
   }
 }

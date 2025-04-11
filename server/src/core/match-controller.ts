@@ -224,13 +224,11 @@ export class MatchController {
     const kingdomCards: Card[] = [];
     
     // todo: remove testing code
-    const keepers: string[] = [].filter((k) =>
+    const keepers: string[] = ['minion'].filter((k) =>
       this._cardData!.kingdom[k]
     );
     
-    console.log(
-      `[MATCH] choosing ${MatchBaseConfiguration.numberOfKingdomPiles} kingdom cards`,
-    );
+    console.log(`[MATCH] choosing ${MatchBaseConfiguration.numberOfKingdomPiles} kingdom cards`);
     
     const availableKingdom = Object.keys(this._cardData.kingdom);
     
@@ -284,24 +282,22 @@ export class MatchController {
     
     return Object.values(config.players).reduce((prev, player, _idx) => {
       console.log('initializing player', player.id, 'cards...');
-      /*let blah = {};
+      let blah = {};
       // todo remove testing code
       if (_idx === 0) {
         blah = {
-          'vassal': 4,
-          'market': 4,
-          village: 3,
-          gold: 3
+          'minion': 3,
+          gold: 3,
         };
       } else {
         blah = {
           estate: 7,
           gold: 20,
         };
-      }*/
-      /*Object.entries(blah).forEach(([key, count]) => {*/
-          Object.entries(playerStartHand).forEach(
-           ([key, count]) => {
+      }
+      Object.entries(blah).forEach(([key, count]) => {
+          /*Object.entries(playerStartHand).forEach(
+           ([key, count]) => {*/
           prev['playerDecks'][player.id] ??= [];
           let deck = prev['playerDecks'][player.id];
           deck = deck.concat(
@@ -423,7 +419,7 @@ export class MatchController {
     this._socketMap.forEach((s) => s.emit('matchStarted'));
     
     for (const player of match.players!) {
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 3; i++) {
         this._effectsController?.runGameActionEffects(
           'drawCard',
           player.id,

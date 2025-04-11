@@ -2,7 +2,7 @@
   font-size: 36px;
 }
 
-:host, .content, .vertical-rule {
+:host, .content {
   height: 100%;
 }
 
@@ -11,7 +11,7 @@
 }
 
 .vertical-rule {
-  width: 2px;
+  width: 1px;
   background-color: black;
   align-self: stretch;
 }
