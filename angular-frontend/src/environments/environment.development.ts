@@ -1,5 +1,5 @@
 export const environment = {
-  wsHost: 'http://localhost:3000/',
+  wsHost: 'http://97.87.64.162:3000/',
   wsTimeout: 5000,
   wsRequestTimeout: 5000
 };
