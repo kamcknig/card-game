@@ -2,7 +2,8 @@
   "nodeModulesDir": "auto",
   "tasks": {
     "copy:shared": "deno run --check --allow-read --allow-write scripts/copy-shared-sources.ts",
-    "dev:watch": "deno run --inspect --check --env-file --allow-read --allow-write --allow-net --allow-env --watch src/server.ts"
+    "dev:watch": "deno run --inspect --check --env-file --allow-read --allow-write --allow-net --allow-env --watch src/server.ts",
+    "dev:runbrowsers": "deno run scripts/run-browsers.js"
   },
   "imports": {
     "@denosaurs/event": "jsr:@denosaurs/event@^2.0.2",

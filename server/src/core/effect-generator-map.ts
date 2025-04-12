@@ -161,10 +161,6 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
     }
     
     yield* map.checkForPlayerActions({ match, cardLibrary, triggerPlayerId, triggerCardId });
-    
-    // have to emit a noop so that the effects pipeline doesn't mark the generator as done
-    // and doesn't flush the changes to the client.
-    yield { type: 'noop' };
   };
   
   

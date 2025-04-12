@@ -70,6 +70,7 @@ export class CardEffectController implements IEffectRunner {
     generator: EffectGenerator<GameEffects>,
     playerId?: number,
     cardId?: number,
+    onComplete?: () => void
   ) {
     if (!generator) {
       console.log(`[EFFECT CONTROLLER] No anonymous effects generator supplied`);
@@ -81,11 +82,12 @@ export class CardEffectController implements IEffectRunner {
       return;
     }
     
-    return this._effectsPipeline.runGenerator(
+    return this._effectsPipeline.runGenerator({
       generator,
       playerId,
       cardId,
-    );
+      onComplete
+    });
   }
   
   public setEffectPipeline(pipeline: EffectsPipeline) {

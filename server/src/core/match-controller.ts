@@ -133,10 +133,12 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
   
   public broadcastPatch(prev: Match) {
-    console.log(`[MATCH] sending match update to clients`);
     const patch: Operation[] = compare(prev, this._match);
     if (patch.length) {
+      console.log(`[MATCH] sending match update to clients`);
       this._socketMap.forEach((s) => s.emit('matchPatch', patch));
+    } else {
+      console.debug(`[MATCH] no changes, not sending update to client`);
     }
   }
   

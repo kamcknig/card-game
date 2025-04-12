@@ -15,7 +15,6 @@ import { ModifyCostEffect } from './modify-cost.ts';
 import { InvokeCardGeneratorEffect } from './invoke-card-generator-effect.ts';
 import { InvokeGameActionGeneratorEffect } from './invoke-game-action-generator-effect.ts';
 import { EndTurnEffect } from './end-turn.ts';
-import { NoopEffect } from './noop.ts';
 import { NextPhaseCompleteEffect } from './next-phase-complete.ts';
 
 export type GameEffects =
@@ -35,6 +34,5 @@ export type GameEffects =
   | UserPromptEffect
   | InvokeCardGeneratorEffect
   | InvokeGameActionGeneratorEffect
-  | NoopEffect
   | NextPhaseCompleteEffect
   | ModifyCostEffect;

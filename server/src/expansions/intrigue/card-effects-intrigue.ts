@@ -417,9 +417,9 @@ const expansionModule: CardExpansionModule = {
         console.log(`[DIPLOMAT EFFECT] player has more than ${cardCount} cards in hand, can't perform diplomat`,);
       }
     },
+    // deno-lint-ignore require-yield
     'duke': () => function* () {
       console.log(`[DUKE EFFECT] duke has no effects`);
-      yield { type: 'noop' };
     },
     'farm': () => function* ({
       triggerPlayerId,
@@ -1252,7 +1252,7 @@ const expansionModule: CardExpansionModule = {
           { action: 2, label: '+2 Treasure' },
           { action: 3, label: 'Trash 2 cards' },
         ],
-        prompt: 'Choose on',
+        prompt: 'Choose one',
       })) as { action: number };
       
       switch (result.action) {
@@ -1566,6 +1566,16 @@ const expansionModule: CardExpansionModule = {
       })) as number[];
       
       const card = cardLibrary.getCard(cardIds[0]);
+      
+      console.log(`[UPGRADE EFFECT] trashing ${card}...`);
+      
+      yield new TrashCardEffect({
+        sourcePlayerId: triggerPlayerId,
+        playerId: triggerPlayerId,
+        cardId: card.id,
+        sourceCardId: triggerCardId!
+      });
+      
       const cost = card.cost.treasure + 1;
       
       if (!match.supply.concat(match.kingdom).map(cardLibrary.getCard).some(card => card.cost.treasure === cost)) {

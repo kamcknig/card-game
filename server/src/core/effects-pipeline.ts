@@ -20,14 +20,16 @@ export class EffectsPipeline {
   ) {
   }
   
-  public runGenerator(
+  public runGenerator(args: {
     generator: EffectGenerator<GameEffects>,
     playerId?: number,
     cardId?: number,
     resumeInput?: unknown,
     resumeSignalId?: string,
-  ): unknown {
+    onComplete?: () => void,
+  }): unknown {
     this._prevSnapshot = this._matchController.getMatchSnapshot();
+    const { onComplete, resumeInput, resumeSignalId, generator, playerId, cardId } = args;
     
     let nextEffect = resumeInput !== undefined && resumeSignalId
       ? generator.next(resumeInput)
@@ -53,14 +55,14 @@ export class EffectsPipeline {
             this._pausedGenerators.set(signalId, {
               generator,
               playerId,
-              resolve: (input: unknown) => this.runGenerator(generator, playerId, cardId, input, signalId)
+              resolve: (input: unknown) => this.runGenerator({ generator, playerId, cardId, resumeInput: input, resumeSignalId: signalId, onComplete })
             });
             
             // return because we are 'pausing' the generator
             return;
           } else if ('run' in result) {
             // runs a generator returned from the handler
-            this.runGenerator(result.run, playerId, cardId);
+            this.runGenerator({ generator: result.run, playerId, cardId });
             
             // continue with the outer generator
             nextEffect = generator.next();
@@ -73,6 +75,8 @@ export class EffectsPipeline {
       nextEffect = generator.next(result);
     }
     
+    this.flushChanges();
+    onComplete?.();
     this._effectCompletedCallback();
     
     if (playerId) {

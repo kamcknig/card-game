@@ -405,17 +405,11 @@ export const createEffectHandlerMap = (
         cardLibrary,
         playerId,
       );
-      console.log(
-        `[SELECT CARD EFFECT HANDLER] found selectable cards ${
-          selectableCardIds.map((id) => cardLibrary.getCard(id))
-        }`,
-      );
+      console.log(`[SELECT CARD EFFECT HANDLER] found selectable cards ${selectableCardIds.map((id) => cardLibrary.getCard(id))}`);
     }
     
     if (selectableCardIds?.length === 0) {
-      console.log(
-        `[SELECT CARD EFFECT HANDLER] found no cards within restricted set ${effect.restrict}`,
-      );
+      console.log(`[SELECT CARD EFFECT HANDLER] found no cards within restricted set ${effect.restrict}`);
       return [];
     }
     
@@ -509,10 +503,7 @@ export const createEffectHandlerMap = (
   }
   
   map.userPrompt = function (effect: UserPromptEffect, match) {
-    console.log(
-      '[USER PROMPT EFFECT HANDLER] effectHandler userPrompt',
-      effect,
-    );
+    console.log('[USER PROMPT EFFECT HANDLER] effectHandler userPrompt', effect);
     
     const socket = socketMap.get(effect.playerId);
     const currentPlayer = match.players[match.currentPlayerTurnIndex];

@@ -549,9 +549,9 @@ const expansionModule: CardExpansionModule = {
       console.log(`[FESTIVAL EFFECT] gaining 2 treasure...`);
       yield new GainTreasureEffect({ count: 2, sourcePlayerId: triggerPlayerId, sourceCardId: triggerCardId });
     },
+    // deno-lint-ignore require-yield
     'gardens': () => function* () {
       console.log(`[GARDENS EFFECT] garden has no effects`);
-      yield { type: 'noop' };
     },
     'harbinger': () => function* ({
       match,

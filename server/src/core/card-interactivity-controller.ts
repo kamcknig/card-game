@@ -39,9 +39,7 @@ export class CardInteractivityController {
   }
   
   public endGame() {
-    console.log(
-      `[CARD INTERACTIVITY] removing socket listeners and marking ended`,
-    );
+    console.log(`[CARD INTERACTIVITY] removing socket listeners and marking ended`,);
     this._socketMap.forEach((s) => {
       s.off('cardTapped');
       s.off('playAllTreasure');
@@ -51,9 +49,7 @@ export class CardInteractivityController {
   
   public checkCardInteractivity(): void {
     if (this._gameOver) {
-      console.log(
-        `[CARD INTERACTIVITY] game is over, not processing match update`,
-      );
+      console.log(`[CARD INTERACTIVITY] game is over, not processing match update`,);
       return;
     }
     
@@ -63,20 +59,17 @@ export class CardInteractivityController {
     const currentPlayer = match.players[match.currentPlayerTurnIndex];
     const turnPhase = TurnPhaseOrderValues[match.turnPhaseIndex];
     
-    console.log(
-      `[CARD INTERACTIVITY] determining selectable cards - phase '${turnPhase}, player ${currentPlayer}', player Index '${match.currentPlayerTurnIndex}'`,
-    );
+    console.log(`[CARD INTERACTIVITY] determining selectable cards - phase '${turnPhase}, player ${currentPlayer}', player Index '${match.currentPlayerTurnIndex}'`);
+    
     const selectableCards: number[] = [];
     
-    const hand = match.playerHands[currentPlayer.id].map((id) =>
-      this._cardLibrary.getCard(id)
-    );
+    const hand = match.playerHands[currentPlayer.id]
+      .map((id) => this._cardLibrary.getCard(id));
     
     if (turnPhase === 'buy') {
       const cardsAdded: string[] = [];
-      const supply = match.supply.concat(match.kingdom).map((id) =>
-        this._cardLibrary.getCard(id)
-      );
+      const supply = match.supply.concat(match.kingdom)
+        .map((id) => this._cardLibrary.getCard(id));
       
       for (let i = supply.length - 1; i >= 0; i--) {
         const card = supply[i];
@@ -91,9 +84,7 @@ export class CardInteractivityController {
           this._cardLibrary,
         );
         
-        if (
-          cardCost <= match.playerTreasure && match.playerBuys > 0
-        ) {
+        if (cardCost <= match.playerTreasure && match.playerBuys > 0) {
           selectableCards.push(card.id);
           cardsAdded.push(card.cardKey);
         }
@@ -134,9 +125,7 @@ export class CardInteractivityController {
   }
   
   private onPlayAllTreasure = (playerId: number) => {
-    console.log(
-      '[CARD INTERACTIVITY] playing all treasures for current player',
-    );
+    console.log('[CARD INTERACTIVITY] playing all treasures for current player');
     
     if (this._gameOver) {
       console.log(`[CARD INTERACTIVITY] game is over, not playing treasures`);
@@ -155,20 +144,21 @@ export class CardInteractivityController {
     const treasureCards = hand.filter((e) =>
       this._cardLibrary.getCard(e).type.includes('TREASURE')
     );
-    console.log(
-      `[CARD INTERACTIVITY] ${player} has ${treasureCards.length} treasure cards in hand`,
-    );
+    console.log(`[CARD INTERACTIVITY] ${player} has ${treasureCards.length} treasure cards in hand`);
     if (hand.length === 0 || treasureCards.length === 0) {
       return;
     }
+    
     for (const cardId of treasureCards) {
       this.onCardTapped(player.id, cardId);
     }
+    
     this._socketMap.get(playerId)?.emit('playAllTreasureComplete');
   };
   
   private onCardTapped = (triggerPlayerId: number, tappedCardId: number) => {
     const match = this.match;
+    
     const player = match.players.find((player) =>
       player.id === triggerPlayerId
     );
@@ -214,17 +204,11 @@ export class CardInteractivityController {
           triggerCardId: tappedCardId,
         });
       }
-      
-      console.log(
-        `[CARD INTERACTIVITY] card tapped handler complete ${card} for ${player}`,
-      );
-      self._cardTapCompleteCallback(card, player);
     };
     
-    console.log(
-      `[CARD INTERACTIVITY] card tapped handler complete ${card} for ${player}`,
-    );
-    
-    this._cardEffectController.runGenerator(generator(), triggerPlayerId, tappedCardId);
+    this._cardEffectController.runGenerator(generator(), triggerPlayerId, tappedCardId, () => {
+      console.log(`[CARD INTERACTIVITY] card tapped handler complete ${card} for ${player}`);
+      this._cardTapCompleteCallback(card, player);
+    });
   };
 }
