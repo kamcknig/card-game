@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { MatchComponent } from './match.component';
+import { MatchHudComponent } from './match-hud.component';
 
-describe('MatchComponent', () => {
-  let component: MatchComponent;
-  let fixture: ComponentFixture<MatchComponent>;
+describe('MatchHudComponent', () => {
+  let component: MatchHudComponent;
+  let fixture: ComponentFixture<MatchHudComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [MatchComponent]
+      imports: [MatchHudComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(MatchComponent);
+    fixture = TestBed.createComponent(MatchHudComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

@@ -1,15 +1,9 @@
 :host {
-  display: block;          /* ← flexbox turns children into rows */
-  height: 100vh;          /* fill the whole viewport          */
+  display: block;
+  height: 100vh;
   width: 100vw;
   position: relative;
   overflow: hidden;
-}
-
-.main {
-  position: relative;
-  height: 100%;
-  width: 100%;
 }
 
 .pixi-container {
@@ -20,7 +14,7 @@
   height: 100%;
 }
 
-.content {
+app-match-configuration, app-match-hud, app-game-summary {
   position: relative;
   z-index: 1;
   max-height: 100%;

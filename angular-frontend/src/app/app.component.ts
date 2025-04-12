@@ -1,4 +1,12 @@
-import { AfterViewInit, Component, ElementRef, Inject, OnInit, ViewChild } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  Inject,
+  OnInit,
+  ViewChild
+} from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { AsyncPipe, NgSwitch, NgSwitchCase } from '@angular/common';
 import { SocketService } from './core/socket-service/socket.service';
@@ -12,6 +20,7 @@ import { MatchConfigurationComponent } from './components/match-configuration/ma
 import { GameSummaryComponent } from './components/game-summary/game-summary.component';
 import { MatchSummary } from 'shared/shared-types';
 import { matchSummaryStore } from './state/match-state';
+import { MatchHudComponent } from './match/components/match-hud/match-hud.component';
 
 @Component({
   selector: 'app-root',
@@ -21,10 +30,12 @@ import { matchSummaryStore } from './state/match-state';
     NgSwitchCase,
     AsyncPipe,
     MatchConfigurationComponent,
-    GameSummaryComponent
+    GameSummaryComponent,
+    MatchHudComponent,
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AppComponent implements AfterViewInit, OnInit {
   @ViewChild('pixiContainer', { static: true }) pixiContainer!: ElementRef;
