@@ -1,8 +1,8 @@
-export const fisherYatesShuffle = <T>(array: T[]) => {
-  const newArray = array.concat();
-  for (let i = newArray.length - 1; i > 0; i--) {
+export const fisherYatesShuffle = <T>(array: T[], inPlace = false): T[] => {
+  const a = inPlace ? array : array.slice(); // avoid using concat() for perf
+  for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    [a[i], a[j]] = [a[j], a[i]];
   }
-  return newArray;
-}
+  return a;
+};

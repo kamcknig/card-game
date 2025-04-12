@@ -15,6 +15,7 @@ import { TrashCardEffect } from '../../core/effects/trash-card.ts';
 import { ActionButtons, Card, CardId, CardKey, PlayerId } from 'shared/shared-types.ts';
 import { findOrderedEffectTargets } from '../../utils/find-ordered-effect-targets.ts';
 import { ShuffleDeckEffect } from '../../core/effects/shuffle-card.ts';
+import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 
 const expansionModule: CardExpansionModule = {
   registerCardLifeCycles: () => ({
@@ -1048,7 +1049,12 @@ const expansionModule: CardExpansionModule = {
       });
       
       let card = cardLibrary.getCard(cardId);
-      const cost = card.cost.treasure + 2;
+      const cost = getEffectiveCardCost(
+        triggerPlayerId,
+        cardId,
+        match,
+        cardLibrary
+      ) + 2;
       
       console.log(`[REPLACE EFFECT] prompting user to gain a card costing up to ${cost}...`);
       
@@ -1355,10 +1361,20 @@ const expansionModule: CardExpansionModule = {
           sourceCardId: triggerCardId!,
         });
         
-        const card = cardLibrary.getCard(cardId);
-        const cost = card.cost.treasure;
+        const cost = getEffectiveCardCost(target, cardId, match, cardLibrary);
         
-        if (match.supply.concat(match.kingdom).map(cardLibrary.getCard).filter(card => card.cost.treasure === cost).length === 0) {
+        if (match.supply.concat(match.kingdom)
+          .map(cardLibrary.getCard)
+          .filter(card => {
+              const effectiveCost = getEffectiveCardCost(
+                target,
+                card.id,
+                match,
+                cardLibrary
+              );
+              return effectiveCost === cost;
+            }
+          ).length === 0) {
           console.log(`[SWINDLER EFFECT] no cards in supply that cost ${cost}`);
           continue;
         }
@@ -1576,9 +1592,25 @@ const expansionModule: CardExpansionModule = {
         sourceCardId: triggerCardId!
       });
       
-      const cost = card.cost.treasure + 1;
+      const cost = getEffectiveCardCost(
+        triggerPlayerId,
+        card.id,
+        match,
+        cardLibrary
+      ) + 1;
       
-      if (!match.supply.concat(match.kingdom).map(cardLibrary.getCard).some(card => card.cost.treasure === cost)) {
+      if (!match.supply
+        .concat(match.kingdom)
+        .map(cardLibrary.getCard)
+        .some(card => {
+          const effectiveCost = getEffectiveCardCost(
+            triggerPlayerId,
+            card.id,
+            match,
+            cardLibrary
+          );
+          return effectiveCost === cost;
+        })) {
         console.log(`[UPGRADE EFFECT] no cards in supply costing ${cost}`);
         return;
       }

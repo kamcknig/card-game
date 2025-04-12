@@ -14,6 +14,7 @@ import { TrashCardEffect } from '../../core/effects/trash-card.ts';
 import { UserPromptEffect } from '../../core/effects/user-prompt.ts';
 import { CardExpansionModule } from '../card-expansion-module.ts';
 import { InvokeGameActionGeneratorEffect } from '../../core/effects/invoke-game-action-generator-effect.ts';
+import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 
 const expansionModule: CardExpansionModule = {
   registerCardLifeCycles: () => ({
@@ -842,9 +843,15 @@ const expansionModule: CardExpansionModule = {
       
       let card = cardLibrary.getCard(cardId);
       
-      const costRestriction = card.cost.treasure + 3;
+      const costRestriction = getEffectiveCardCost(
+        triggerPlayerId,
+        cardId,
+        match,
+        cardLibrary
+      ) + 3;
       
       console.log(`[MINE EFFECT] prompting user to select treasure costing up to ${costRestriction}`);
+      
       cardIds = (yield new SelectCardEffect({
         prompt: 'Confirm gain card',
         playerId: triggerPlayerId,
@@ -1073,7 +1080,12 @@ const expansionModule: CardExpansionModule = {
         cardId,
       });
       
-      const costRestriction = card.cost.treasure + 2;
+      const costRestriction = getEffectiveCardCost(
+        triggerPlayerId,
+        cardId,
+        match,
+        cardLibrary
+      ) + 2;
       
       console.log(`[REMODEL EFFECT] prompting user to select card costing up to ${costRestriction}...`);
       

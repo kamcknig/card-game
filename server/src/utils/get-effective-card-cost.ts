@@ -8,6 +8,10 @@ export const getEffectiveCardCost = (
   match: Match,
   cardLibrary: CardLibrary,
 ) => {
+  if (!playerId) {
+    return cardLibrary.getCard(cardId).cost.treasure;
+  }
+  
   const overrides = getCardOverrides(match, cardLibrary);
   return overrides?.[playerId]?.[cardId]?.cost?.treasure ??
     cardLibrary.getCard(cardId).cost.treasure;

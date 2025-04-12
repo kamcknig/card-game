@@ -5,6 +5,7 @@ import { EffectRestrictionSpec, Match } from 'shared/shared-types.ts';
 import { validateCostSpec } from '../shared/validate-cost-spec.ts';
 
 import { CardLibrary } from '../core/card-library.ts';
+import { getEffectiveCardCost } from './get-effective-card-cost.ts';
 
 export const findCards = (
   match: Match,
@@ -43,7 +44,10 @@ export const findCards = (
   }
   
   if (!isUndefined(effectRestriction?.cost)) {
-    cardIds = cardIds.filter(id => validateCostSpec(effectRestriction.cost!, cardLibrary.getCard(id).cost.treasure));
+    cardIds = cardIds.filter(id => {
+      const effectiveCost = getEffectiveCardCost(playerId!, id, match, cardLibrary);
+      return validateCostSpec(effectRestriction.cost!, effectiveCost);
+    });
   }
   if (!isUndefined(effectRestriction.card)) {
     if (!isUndefined(effectRestriction.card?.cardKeys)) {

@@ -4,8 +4,7 @@ TODO lower priority
     maybe "arbitrary zones"
         if so then current zones can be converted to use the feature too.
 - when can't load assets (expansion modules) it still just goes on rather than stopping
-- create a "card display" component. this component can be used within things like the userPromptModal or reactModal.
-- need to allow user to select another username inorder to see their discard?
+- need to allow user to select another username in order to see their discard?
 - when discarding, the last card discarded should be displayed in log
 
 TODO higher priority
@@ -18,10 +17,11 @@ card expansion module's scoring functions currently only look in the hand, disca
 
 update user prompt modal when there are multiple actions to toggle those actions (example pawn card in intrigue or courtier)
 
-need to go through all effects. anything that is related to cost like choosing a card that costs x amount - need to update those to compare against the effective cost
-
 viewing the trash sucks
 
 when select card effect happens, the UI needs to remove the play all treasure cards button
 
 when player disconnects in game, give option to kick, or continue playing
+
+you rewrote shuffle deck effect handler to edit in place (and move card effect handler as well) - test card effects that invoke a shuffle and see if you don't need to reassign deck/discard each time now
+	- also because of this maybe look into not yielding a shuffle during effects, and just let the effect handler's shuffle as needed instead 
