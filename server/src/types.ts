@@ -236,6 +236,15 @@ export class Reaction {
       throw e;
     }
   }
+  
+  toString() {
+    return `[REACTION ${this.id} - owner {${this.playerId}}]`;
+  }
+  
+  // @ts-ignore
+  [Symbol.for('Deno.customInspect')]() {
+    return this.toString();
+  }
 }
 
 export type MatchUpdate = Partial<Match>;
