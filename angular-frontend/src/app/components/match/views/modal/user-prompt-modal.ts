@@ -100,7 +100,7 @@ export const userPromptModal = (
 
     if (args.actionButtons) {
       const actionList = new List({
-        maxWidth: 250,
+        maxWidth: 300,
         type: 'bidirectional',
         elementsMargin: STANDARD_GAP
       });
@@ -123,16 +123,16 @@ export const userPromptModal = (
         actionList.addChild(btn.button);
       });
 
-      actionList.y = modalContainer.height + STANDARD_GAP;
+      actionList.y = modalContainer.height + STANDARD_GAP * 2;
       actionList.x = Math.floor(-actionList.width * .5);
       modalContainer.addChild(actionList);
     }
 
     background.roundRect(
-      -modalContainer.width * .5 - STANDARD_GAP,
-      -STANDARD_GAP,
-      modalContainer.width + STANDARD_GAP * 2,
-      modalContainer.height + STANDARD_GAP * 2,
+      -modalContainer.width * .5 - STANDARD_GAP * 2,
+      -STANDARD_GAP * 2,
+      modalContainer.width + STANDARD_GAP * 4,
+      modalContainer.height + STANDARD_GAP * 4,
       5
     )
       .fill({ color: 'black', alpha: .8 });

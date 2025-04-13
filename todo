@@ -12,9 +12,6 @@ TODO higher priority
   - remove player that resigns - or just make them skip their turn each time
 - when disconnecting/reconnecting, need to handle scenarios when waiting on input from the user that disconnected (from card effects - like the user prompt, or select card effects)
 
-
-card expansion module's scoring functions currently only look in the hand, discard, deck. what about the play area? what about other random areas later? probably need to add an ownerId to Card class and then just look at all cards and their owners
-
 update user prompt modal when there are multiple actions to toggle those actions (example pawn card in intrigue or courtier)
 
 viewing the trash sucks
@@ -22,6 +19,3 @@ viewing the trash sucks
 when select card effect happens, the UI needs to remove the play all treasure cards button
 
 when player disconnects in game, give option to kick, or continue playing
-
-you rewrote shuffle deck effect handler to edit in place (and move card effect handler as well) - test card effects that invoke a shuffle and see if you don't need to reassign deck/discard each time now
-	- also because of this maybe look into not yielding a shuffle during effects, and just let the effect handler's shuffle as needed instead 

@@ -31,10 +31,8 @@ export class ScoreComponent implements OnInit {
   getOrderedPlayerScores() {
     return this._nanoService.useStore(playerIdStore)
       .pipe(
-        map(ids => {
-          console.log(ids);
-          return ids.map(id => this.playerScores?.find(pScore => pScore.id === id))
-        })
+        map(ids => ids.map(id =>
+          this.playerScores?.find(pScore => pScore.id === id)))
       );
   }
 

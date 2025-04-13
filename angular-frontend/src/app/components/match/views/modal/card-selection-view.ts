@@ -78,7 +78,9 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
 
   cardList.x = Math.floor(-cardList.width * .5);
 
-  validate();
+  setTimeout(() => {
+    validate();
+  }, 0);
 
   clientSelectableCardsOverrideStore.set(Array.from(newCardToOldCardMap.keys()));
 

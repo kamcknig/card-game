@@ -128,7 +128,7 @@ export type CardLocation = typeof CardLocationValues[number];
 export type LocationSpec = { location: CardLocation | CardLocation[], index?: number };
 
 export type CountSpec =
-  | { kind: 'upTo'; count: number }
+  | { kind: 'upTo'; count: number; zeroValid?: boolean; }
   | number;
 
 export type CostSpec =

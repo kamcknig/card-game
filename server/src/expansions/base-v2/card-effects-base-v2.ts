@@ -202,8 +202,8 @@ const expansionModule: CardExpansionModule = {
       console.log(`[BANDIT EFFECT] targets ${targetPlayerIds}`);
       
       for (const targetPlayerId of targetPlayerIds) {
-        let playerDeck = match.playerDecks[targetPlayerId];
-        let playerDiscard = match.playerDiscards[targetPlayerId];
+        const playerDeck = match.playerDecks[targetPlayerId];
+        const playerDiscard = match.playerDiscards[targetPlayerId];
         
         let numToReveal = 2;
         const totalCards = playerDiscard.length + playerDeck.length;
@@ -221,9 +221,6 @@ const expansionModule: CardExpansionModule = {
           yield new ShuffleDeckEffect({
             playerId: targetPlayerId,
           });
-          
-          playerDeck = match.playerDecks[targetPlayerId];
-          playerDiscard = match.playerDiscards[targetPlayerId];
         }
         
         const cardIdsToReveal = playerDeck.slice(-numToReveal);
@@ -1138,7 +1135,7 @@ const expansionModule: CardExpansionModule = {
         count: 1,
       });
       
-      let deck = match.playerDecks[triggerPlayerId];
+      const deck = match.playerDecks[triggerPlayerId];
       const discard = match.playerDiscards[triggerPlayerId];
       
       let numToLookAt = 2;
@@ -1160,8 +1157,6 @@ const expansionModule: CardExpansionModule = {
         yield new ShuffleDeckEffect({
           playerId: triggerPlayerId
         });
-        
-        deck = match.playerDecks[triggerPlayerId];
       }
       
       const cardsToLookAtIds = deck.slice(-numToLookAt);
@@ -1176,12 +1171,14 @@ const expansionModule: CardExpansionModule = {
         sourceCardId: triggerCardId,
         playerId: triggerPlayerId,
         prompt: 'Choose card/s to trash?',
+        validationAction: 1,
         actionButtons: [{ label: `DON'T TRASH`, action: 2 }, { label: 'TRASH', action: 1 }],
         content: {
           type: 'select',
           cardIds: cardsToLookAtIds,
           selectCount: {
             kind: 'upTo',
+            zeroValid: false,
             count: cardsToLookAtIds.length,
           },
         },
@@ -1221,12 +1218,14 @@ const expansionModule: CardExpansionModule = {
         sourceCardId: triggerCardId,
         playerId: triggerPlayerId,
         prompt: 'Choose card/s to discard?',
+        validationAction: 1,
         actionButtons: [{ label: `DON'T DISCARD`, action: 2 }, { label: 'DISCARD', action: 1 }],
         content: {
           type: 'select',
           cardIds: possibleCardsToDiscard,
           selectCount: {
             kind: 'upTo',
+            zeroValid: false,
             count: possibleCardsToDiscard.length,
           },
         },
@@ -1366,14 +1365,13 @@ const expansionModule: CardExpansionModule = {
         count: 2,
       });
       
-      let playerDeck = match.playerDecks[triggerPlayerId];
+      const playerDeck = match.playerDecks[triggerPlayerId];
       
       if (playerDeck.length === 0) {
         console.debug(`[VASSAL EFFECT] not enough cards in deck, shuffling`);
         yield new ShuffleDeckEffect({
           playerId: triggerPlayerId,
         });
-        playerDeck = match.playerDecks[triggerPlayerId];
       }
       
       const cardToDiscardId = playerDeck.slice(-1)?.[0];
@@ -1406,7 +1404,7 @@ const expansionModule: CardExpansionModule = {
         sourceCardId: triggerCardId,
         playerId: triggerPlayerId,
         prompt: `Play card ${card.cardName}?`,
-        actionButtons: [{ label: 'NO', action: 1 }, { label: 'PLAY', action: 2 }],
+        actionButtons: [{ label: `DON'T PLAY`, action: 1 }, { label: 'PLAY', action: 2 }],
       })) as { action: number };
       
       if (confirm.action !== 2) {

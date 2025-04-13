@@ -83,11 +83,17 @@ export class CardStackView extends Container {
     this._cleanup.push(this._$cardIds.subscribe(this.updateBadgeCount));
     this._cleanup.push(selectedCardStore.subscribe(this.updateBadgeCount));
     this.on('removed', this.onRemoved);
+    this.eventMode = 'static';
+    this.on('pointerdown', (event) => {
+      if (event.ctrlKey) {
+        console.log(this._$cardIds.get().map(cId => cardStore.get()[cId]));
+      }
+    });
   }
 
   private onRemoved = () => {
     this._cleanup.forEach(cb => cb());
-    this.off('removed');
+    this.removeAllListeners();
   }
 
   private onSelectedCardsUpdated = (selectedCardIds: readonly number[] = []) => {

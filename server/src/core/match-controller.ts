@@ -227,7 +227,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const kingdomCards: Card[] = [];
     
     // todo: remove testing code
-    const keepers: string[] = [].filter((k) =>
+    const keepers: string[] = ['sentry', 'moat', 'militia'].filter((k) =>
       this._cardData!.kingdom[k]
     );
     
@@ -285,13 +285,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     return Object.values(config.players).reduce((prev, player, _idx) => {
       console.log('initializing player', player.id, 'cards...');
-      /*let blah = {};
+      let blah = {};
       // todo remove testing code
       if (_idx === 0) {
         blah = {
-          moat: 3,
+          sentry: 3,
+          gold: 5,
           militia: 3,
-          gold: 5
+          moat: 3,
         };
       } else {
         blah = {
@@ -300,9 +301,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           gold: 5
         };
       }
-      Object.entries(blah).forEach(([key, count]) => {*/
-          Object.entries(playerStartHand).forEach(
-           ([key, count]) => {
+      Object.entries(blah).forEach(([key, count]) => {
+          /*Object.entries(playerStartHand).forEach(
+           ([key, count]) => {*/
           prev['playerDecks'][player.id] ??= [];
           let deck = prev['playerDecks'][player.id];
           deck = deck.concat(
@@ -495,10 +496,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     for (const player of match.players ?? []) {
       const playerId = player.id;
       const cards = this._cardLibrary.getCardsByOwner(playerId);
-      /*const cards = (match.playerHands?.[playerId] ?? [])
-        .concat(match.playerDecks?.[playerId] ?? [])
-        .concat(match.playerDiscards?.[playerId] ?? [])
-        .concat(match.playArea ?? []);*/
       
       let score = 0;
       for (const { id: cardId } of cards) {

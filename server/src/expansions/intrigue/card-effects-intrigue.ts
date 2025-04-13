@@ -136,7 +136,7 @@ const expansionModule: CardExpansionModule = {
           sourceCardId: triggerCardId,
           prompt: 'Discard estate?',
           actionButtons: [
-            { label: 'NO', action: 1 },
+            { label: `DON'T DISCARD`, action: 1 },
             { label: 'DISCARD', action: 2 },
           ],
         })) as { action: number };
@@ -723,8 +723,8 @@ const expansionModule: CardExpansionModule = {
         playerId: triggerPlayerId,
         sourcePlayerId: triggerPlayerId,
         actionButtons: [
-          { action: 1, label: 'NO' },
-          { action: 2, label: 'YES' },
+          { action: 1, label: `DON'T TRASH` },
+          { action: 2, label: 'TRASH' },
         ],
         prompt: 'Trash Mining Village?',
       })) as { action: number };
@@ -1335,14 +1335,13 @@ const expansionModule: CardExpansionModule = {
       console.log(`[SWINDLER EFFECT] targets in order ${targets.map(id => getPlayerById(match, id)).join(',')}`);
       
       for (const target of targets) {
-        let deck = match.playerDecks[target];
+        const deck = match.playerDecks[target];
         
         if (deck.length === 0) {
           console.log(`[SWINDLER EFFECT] ${getPlayerById(match, target)} as no cards, shuffling`);
           yield new ShuffleDeckEffect({
             playerId: target
           });
-          deck = match.playerDecks[target];
           
           if (deck.length === 0) {
             console.log(`[SWINDLER EFFECT] ${getPlayerById(match, target)} still has no cards`);
