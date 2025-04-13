@@ -54,9 +54,9 @@ export const logManager = {
       }
       case 'gainTreasure': {
         if (selfId === playerId) {
-          msg = `%Y% gained ${logEntry.count > 0 ? '+' : ''}${logEntry.count}$`;
+          msg = `%Y% gained ${logEntry.count > 0 ? '+' : ''}$${logEntry.count}`;
         } else {
-          msg = `%P${player?.id}% gained ${logEntry.count > 0 ? '+' : ''}${logEntry.count}$`;
+          msg = `%P${player?.id}% gained ${logEntry.count > 0 ? '+' : ''}$${logEntry.count}`;
         }
         break;
       }
