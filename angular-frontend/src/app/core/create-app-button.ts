@@ -19,7 +19,7 @@ export const createAppButton = (
 
   const background = new Graphics();
   background
-    .roundRect(0, 0, text.width + 20, text.height + 20, 10)
+    .roundRect(0, 0, text.width + 20, text.height + 20, 5)
     .fill(backgroundFill)
     .stroke('white');
 
@@ -35,8 +35,9 @@ export const createAppButton = (
       text.text = val;
       background
         .clear()
-        .roundRect(0, 0, text.width + 20, text.height + 20, 10)
-        .fill({ color: 'black', alpha: .9 });
+        .roundRect(0, 0, text.width + 20, text.height + 20, 5)
+        .fill({ color: 'black', alpha: .9 })
+        .stroke('white');
       text.x = button.width * .5;
       text.y = button.height * .5;
       button.addChild(text);

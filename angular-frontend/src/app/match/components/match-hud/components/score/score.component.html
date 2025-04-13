@@ -9,7 +9,7 @@
           class="player-score-container"
           [ngClass]="{'current-player': isCurrentPlayer}"
           [style.borderColor]="isCurrentPlayer ? (getPlayerColor(playerScore.id) | async) : null"
-          [style.boxShadow]="isCurrentPlayer ? 'inset 8px 0 0 ' + (getPlayerColor(playerScore.id) | async) : null"
+          [style.boxShadow]="isCurrentPlayer ? 'inset 10px 0 0 ' + (getPlayerColor(playerScore.id) | async) : null"
           [style.backgroundColor]="getBackgroundColor(playerScore.id) | async"
         >
           <span>{{playerScore.name}}</span>
