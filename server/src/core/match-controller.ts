@@ -1,7 +1,7 @@
 import {
   Card,
   CardData,
-  CardKey,
+  CardKey, LogEntry,
   Match,
   MatchConfiguration,
   MatchSummary,
@@ -396,6 +396,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._reactionManager,
       effectGeneratorMap,
       this._cardLibrary,
+      this
     );
     
     this._effectsPipeline = new EffectsPipeline(
@@ -430,6 +431,10 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }
     
     this._effectsController?.runGameActionEffects('checkForPlayerActions');
+  }
+  
+  public addLogEntry(log: LogEntry) {
+    this._socketMap.forEach((s) => s.emit('addLogEntry', log));
   }
   
   private onUserInputReceived = (signalId: string, input: unknown) => {

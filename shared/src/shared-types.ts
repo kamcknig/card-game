@@ -14,6 +14,7 @@ export type LogEntry =
     | { type: 'playCard'; cardId: CardId; playerSourceId: PlayerId;}
     | { type: 'revealCard'; cardId: CardId; playerSourceId: PlayerId;}
     | { type: 'trashCard'; cardId: CardId; playerSourceId: PlayerId;}
+    | { type: 'shuffleDeck'; playerSourceId: PlayerId; };
 
 export type LogEntryMessage = LogEntry & { message: string; id: number; };
 
