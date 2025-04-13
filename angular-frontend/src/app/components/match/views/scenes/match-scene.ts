@@ -14,7 +14,7 @@ import { PlayAreaView } from '../play-area';
 import { KingdomSupplyView } from '../kingdom-supply';
 import { PileView } from '../pile';
 import { cardStore } from '../../../../state/card-state';
-import { Card, CardId, CardKey, Player, PlayerId, SelectCardArgs, UserPromptEffectArgs } from 'shared/shared-types';
+import { Card, CardId, CardKey, PlayerId, SelectCardArgs, UserPromptEffectArgs } from 'shared/shared-types';
 import {
   awaitingServerLockReleaseStore,
   clientSelectableCardsOverrideStore,
@@ -24,7 +24,6 @@ import {
 import { CardView } from '../card-view';
 import { userPromptModal } from '../modal/user-prompt-modal';
 import { CARD_HEIGHT, SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP } from '../../../../core/app-contants';
-import { ScoreView } from '../score-view';
 import { displayCardDetail } from '../modal/display-card-detail';
 import { validateCountSpec } from '../../../../shared/validate-count-spec';
 import { CardStackView } from '../card-stack';
@@ -38,7 +37,7 @@ import { SocketService } from '../../../../core/socket-service/socket.service';
 export class MatchScene extends Scene {
   private _doneSelectingBtn: Container | undefined;
   private _board: Container = new Container();
-  private _baseSupply: Container = new Container();
+  private _baseSupply: Container = new Container({scale: .8});
   private _playerHand: PlayerHandView | undefined;
   private _trash: CardStackView | undefined;
   private _deck: CardStackView | undefined;
@@ -46,8 +45,9 @@ export class MatchScene extends Scene {
   private _cleanup: (() => void)[] = [];
   private _playArea: PlayAreaView | undefined;
   private _kingdomView: KingdomSupplyView | undefined;
-  private _scoreView: ScoreView = new ScoreView();
   private _selecting: boolean = false;
+  private _supply: Container = new Container();
+  private _scoreViewRight: number = 0;
   private _playAllTreasuresButton: AppButton = createAppButton(
     { text: 'PLAY ALL TREASURES', style: { fill: 'white', fontSize: 24 } }
   );
@@ -55,6 +55,11 @@ export class MatchScene extends Scene {
 
   private get uiInteractive(): boolean {
     return !this._selecting && !awaitingServerLockReleaseStore.get();
+  }
+
+  public scoreViewWidth(right: number): void {
+    this._scoreViewRight = right;
+    this.onRendererResize();
   }
 
   constructor(
@@ -73,7 +78,6 @@ export class MatchScene extends Scene {
     await this.loadAssets();
 
     this.createBoard();
-    this.createScoreView();
 
     this._playAllTreasuresButton.button.label = 'playAllTreasureButton';
     this._playAllTreasuresButton.button.visible = false;
@@ -204,8 +208,21 @@ export class MatchScene extends Scene {
   private createBoard() {
     this.addChild(this._board);
 
-    this._board.addChild(this._baseSupply);
-    this._kingdomView = this._board.addChild(new KingdomSupplyView());
+    this._supply.addChild(this._baseSupply);
+    this._kingdomView = this._supply.addChild(new KingdomSupplyView());
+
+    this._trash = new CardStackView({
+      label: 'TRASH',
+      $cardIds: trashStore,
+      cardFacing: 'front',
+    });
+    this._trash.eventMode = 'static';
+    this._trash.on('pointerdown', this.onTrashPressed);
+    this._cleanup.push(() => this._trash?.off('pointerdown', this.onTrashPressed));
+
+    this._supply.addChild(this._trash);
+
+    this._board.addChild(this._supply);
     this._playArea = this.addChild(new PlayAreaView());
 
     this._deck = new CardStackView({
@@ -223,16 +240,6 @@ export class MatchScene extends Scene {
     });
     this.addChild(this._discard);
 
-    this._trash = new CardStackView({
-      label: 'TRASH',
-      $cardIds: trashStore,
-      cardFacing: 'front'
-    });
-    this.addChild(this._trash);
-    this._trash.eventMode = 'static';
-    this._trash.on('pointerdown', this.onTrashPressed);
-    this._cleanup.push(() => this._trash?.off('pointerdown', this.onTrashPressed));
-
     this._playerHand = new PlayerHandView(this._selfId);
     this._playerHand.on('nextPhase', this.onNextPhasePressed);
     this._cleanup.push(() => this._playerHand?.off('nextPhase', this.onNextPhasePressed));
@@ -245,13 +252,6 @@ export class MatchScene extends Scene {
     }
 
     displayTrash(this._app)
-  }
-
-  private createScoreView() {
-    this._scoreView = new ScoreView();
-    this.addChild(this._scoreView);
-    this._scoreView.x = STANDARD_GAP;
-    this._scoreView.y = STANDARD_GAP;
   }
 
   private onNextPhasePressed = (e: PointerEvent) => {
@@ -580,15 +580,16 @@ export class MatchScene extends Scene {
   }
 
   private onRendererResize = (): void => {
-    this._scoreView.x = STANDARD_GAP;
-    this._scoreView.y = STANDARD_GAP;
+    if (this._supply && this._kingdomView && this._baseSupply) {
+      this._supply.y = STANDARD_GAP;
 
-    this._baseSupply.y = STANDARD_GAP;
-    this._baseSupply.x = this._scoreView.x + this._scoreView.width + STANDARD_GAP;
+      this._kingdomView.x = Math.floor(this._baseSupply.width + STANDARD_GAP);
 
-    if (this._kingdomView) {
-      this._kingdomView.y = STANDARD_GAP;
-      this._kingdomView.x = this._baseSupply.x + this._baseSupply.width + STANDARD_GAP;
+      if (this._trash) {
+        this._trash.x = this._kingdomView.x + this._kingdomView.width + STANDARD_GAP;
+      }
+
+      this._supply.x = Math.max(this._scoreViewRight + STANDARD_GAP);
     }
 
     if (this._playerHand) {
@@ -605,17 +606,12 @@ export class MatchScene extends Scene {
 
       if (this._discard) {
         this._discard.y = this._app.renderer.height - CARD_HEIGHT * .75;
-        this._discard.x = this._playerHand.x - this._discard.width - STANDARD_GAP;
+        this._discard.x = this._playerHand.x + this._playerHand.width + STANDARD_GAP;
       }
 
-      if (this._deck && this._discard) {
+      if (this._deck) {
         this._deck.y = this._app.renderer.height - CARD_HEIGHT * .75;
-        this._deck.x = this._discard.x - this._deck.width - STANDARD_GAP;
-
-        if (this._trash) {
-          this._trash.y = this._deck.y;
-          this._trash.x = this._playerHand.x + this._playerHand.width + STANDARD_GAP;
-        }
+        this._deck.x = this._playerHand.x - this._deck.width - STANDARD_GAP;
       }
     }
   }

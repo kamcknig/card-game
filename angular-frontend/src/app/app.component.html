@@ -2,7 +2,7 @@
 
 <ng-container [ngSwitch]="scene$ | async">
   <app-match-configuration *ngSwitchCase="'configuration'"></app-match-configuration>
-  <app-match-hud *ngSwitchCase="'match'"></app-match-hud>
+  <app-match-hud (scoreViewResize)="matchScene?.scoreViewWidth($event)" *ngSwitchCase="'match'"></app-match-hud>
   <app-game-summary [matchSummary]="matchSummary!" *ngSwitchCase="'gameSummary'"></app-game-summary>
 </ng-container>
 

@@ -43,8 +43,7 @@ export class AppComponent implements AfterViewInit, OnInit {
   title = 'Dominion Clone';
   matchSummary: MatchSummary | undefined;
   scene$: Observable<SceneNames> | undefined;
-
-  private _matchScene: MatchScene | undefined;
+  matchScene: MatchScene | undefined;
 
   constructor(
     private _socketService: SocketService,
@@ -58,12 +57,12 @@ export class AppComponent implements AfterViewInit, OnInit {
       tap(async scene => {
         if (scene === 'match') {
           if (!this._app) throw new Error('App not found');
-          this._matchScene = new MatchScene(this._socketService, this._app);
-          await this._matchScene.initialize();
-          this._app.stage.addChild(this._matchScene);
+          this.matchScene = new MatchScene(this._socketService, this._app);
+          await this.matchScene.initialize();
+          this._app.stage.addChild(this.matchScene);
         } else if (scene === 'gameSummary') {
           this.matchSummary = matchSummaryStore.get();
-          !!this._matchScene && this._app.stage.removeChild(this._matchScene);
+          !!this.matchScene && this._app.stage.removeChild(this.matchScene);
         }
       }),
       catchError(err => {
