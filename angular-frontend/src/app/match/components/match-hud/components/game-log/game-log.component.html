@@ -1,4 +1,4 @@
-<div class="content">
+<div class="content" #content>
   @for (entry of entries; track entry.id) {
     <div class="log-entry" [innerHTML]="sanitize(entry.message)"></div>
   }

@@ -284,7 +284,7 @@ export class Game {
       return prev;
     }, {} as ExpansionCardData);
     
-    const colors = ['#10FF19', '#053EFF', '#FF0BF2', '#FFF114', '#FF1F11', '#FF9900'];
+    const colors = ['#10FF19', '#3c69ff', '#FF0BF2', '#FFF114', '#FF1F11', '#FF9900'];
     const players = this.players
       .filter(p => p.connected)
       .map((p, idx) => {
