@@ -4,20 +4,18 @@ export type CardKey = string;
 export type PlayerId = number;
 export type CardId = number;
 
-export type LogEntryDepth = { depth?: number };
-
 export type LogEntry =
-  | { type: 'draw'; playerId: PlayerId; cardId: CardId; } & LogEntryDepth
-  | { type: 'discard'; playerId: PlayerId; cardId: CardId; } & LogEntryDepth
-  | { type: 'gainAction'; count: number; playerId: PlayerId; } & LogEntryDepth
-  | { type: 'gainBuy'; count: number; playerId: PlayerId; } & LogEntryDepth
-  | { type: 'gainTreasure'; count: number; playerId: PlayerId; } & LogEntryDepth
-  | { type: 'gainCard'; cardId: CardId; playerId: PlayerId; } & LogEntryDepth
-  | { type: 'playCard'; cardId: CardId; playerId: PlayerId; } & LogEntryDepth
-  | { type: 'revealCard'; cardId: CardId; playerId: PlayerId; } & LogEntryDepth
-  | { type: 'trashCard'; cardId: CardId; playerId: PlayerId; } & LogEntryDepth
-  | { type: 'shuffleDeck'; playerId: PlayerId; } & LogEntryDepth
-  | { type: 'newTurn', turn: number; } & LogEntryDepth;
+  | { type: 'draw'; playerId: PlayerId; cardId: CardId; depth?: number; }
+  | { type: 'discard'; playerId: PlayerId; cardId: CardId; depth?: number; }
+  | { type: 'gainAction'; count: number; playerId: PlayerId; depth?: number; }
+  | { type: 'gainBuy'; count: number; playerId: PlayerId; depth?: number; }
+  | { type: 'gainTreasure'; count: number; playerId: PlayerId; depth?: number; }
+  | { type: 'gainCard'; cardId: CardId; playerId: PlayerId; depth?: number; }
+  | { type: 'cardPlayed'; cardId: CardId; playerId: PlayerId; depth?: number; }
+  | { type: 'revealCard'; cardId: CardId; playerId: PlayerId; depth?: number; }
+  | { type: 'trashCard'; cardId: CardId; playerId: PlayerId; depth?: number; }
+  | { type: 'shuffleDeck'; playerId: PlayerId; depth?: number; }
+  | { type: 'newTurn'; turn: number; depth?: number; };
 
 export type LogEntryMessage = LogEntry & { message: string; id: number; };
 

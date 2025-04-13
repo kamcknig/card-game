@@ -1,4 +1,4 @@
-import { AppSocket, EffectGeneratorFn, EffectHandlerMap, LogManager, ReactionTemplate, } from '../types.ts';
+import { AppSocket, EffectGeneratorFn, EffectHandlerMap, ReactionTemplate, } from '../types.ts';
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
 import { findCards } from '../utils/find-cards.ts';
 import { ReactionManager } from './reaction-manager.ts';
@@ -14,6 +14,7 @@ import { UserPromptEffect } from './effects/user-prompt.ts';
 import { CardLibrary } from './card-library.ts';
 import { ShuffleDeckEffect } from './effects/shuffle-card.ts';
 import { cardLifecycleMap } from './card-lifecycle-map.ts';
+import { LogManager } from './log-manager.ts';
 
 /**
  * Returns an object whose properties are functions. The names are a union of Effect types
@@ -24,14 +25,17 @@ export const createEffectHandlerMap = (
   reactionManager: ReactionManager,
   effectGeneratorMap: Record<string, EffectGeneratorFn>,
   cardLibrary: CardLibrary,
-  logController: LogManager,
+  logManager: LogManager,
 ): EffectHandlerMap => {
   const map: EffectHandlerMap = {} as EffectHandlerMap;
   
   map.endTurn = function (_effect, match) {
     removeOverrideEffects('TURN_END');
+    
     Object.keys(match.cardsPlayed).forEach(e => match.cardsPlayed[+e].length = 0);
+    
     const overrides = getCardOverrides(match, cardLibrary);
+    
     for (const { id } of match.players) {
       const playerOverrides = overrides?.[id];
       const socket = socketMap.get(id);
@@ -40,11 +44,13 @@ export const createEffectHandlerMap = (
   }
   
   map.discardCard = function (effect, match) {
-    logController.addLogEntry({
-      type: 'discard',
-      playerId: effect.playerId,
-      cardId: effect.cardId,
-    });
+    if (effect.logEffect) {
+      logManager[effect.isRootLog ? 'rootLog' : 'addLogEntry']({
+        type: 'discard',
+        playerId: effect.playerId,
+        cardId: effect.cardId,
+      });
+    }
     
     return map.moveCard(
       new MoveCardEffect({
@@ -93,11 +99,13 @@ export const createEffectHandlerMap = (
     
     console.log(`[DRAW CARD EFFECT HANDLER] card drawn ${cardLibrary.getCard(drawnCardId)}`);
     
-    logController.addLogEntry({
-      type: 'draw',
-      playerId: effect.playerId,
-      cardId: drawnCardId,
-    });
+    if (effect.logEffect) {
+      logManager[effect.isRootLog ? 'rootLog' : 'addLogEntry']({
+        type: 'draw',
+        playerId: effect.playerId,
+        cardId: drawnCardId,
+      });
+    }
     
     map.moveCard(
       new MoveCardEffect({
@@ -116,29 +124,37 @@ export const createEffectHandlerMap = (
   map.gainAction = function (effect, match) {
     match.playerActions = match.playerActions + effect.count;
     
-    logController.addLogEntry({
-      type: 'gainAction',
-      count: effect.count,
-      playerId: effect.sourcePlayerId,
-    });
+    if (effect.logEffect) {
+      logManager[effect.isRootLog ? 'rootLog' : 'addLogEntry']({
+        type: 'gainAction',
+        count: effect.count,
+        playerId: effect.sourcePlayerId,
+      });
+    }
   }
   
   map.gainBuy = function (effect, match) {
     match.playerBuys = match.playerBuys + effect.count;
-    logController.addLogEntry({
-      type: 'gainBuy',
-      count: effect.count,
-      playerId: effect.sourcePlayerId,
-    });
+    
+    if (effect.logEffect) {
+      logManager[effect.isRootLog ? 'rootLog' : 'addLogEntry']({
+        type: 'gainBuy',
+        count: effect.count,
+        playerId: effect.sourcePlayerId,
+      });
+    }
   }
   
   map.gainCard = function (effect, match) {
     effect.to.location ??= 'playerDiscards';
-    logController.addLogEntry({
-      type: 'gainCard',
-      cardId: effect.cardId,
-      playerId: effect.playerId,
-    });
+    
+    if (effect.logEffect) {
+      logManager[effect.isRootLog ? 'rootLog' : 'addLogEntry']({
+        type: 'gainCard',
+        cardId: effect.cardId,
+        playerId: effect.playerId,
+      });
+    }
     
     return map.moveCard(
       new MoveCardEffect({
@@ -154,11 +170,14 @@ export const createEffectHandlerMap = (
   
   map.gainTreasure = function (effect, match) {
     match.playerTreasure = match.playerTreasure + effect.count;
-    logController.addLogEntry({
-      type: 'gainTreasure',
-      count: effect.count,
-      playerId: effect.sourcePlayerId,
-    });
+    
+    if (effect.logEffect) {
+      logManager[effect.isRootLog ? 'rootLog' : 'addLogEntry']({
+        type: 'gainTreasure',
+        count: effect.count,
+        playerId: effect.sourcePlayerId,
+      });
+    }
   }
   
   map.moveCard = function (effect: MoveCardEffect, match) {
@@ -254,13 +273,15 @@ export const createEffectHandlerMap = (
   
   
   map.cardPlayed = function (effect, match) {
-    const { sourceCardId, sourcePlayerId } = effect;
+    const { sourceCardId, sourcePlayerId, isRootLog } = effect;
     
-    logController.addLogEntry({
-      type: 'playCard',
-      cardId: effect.cardId,
-      playerId: effect.sourcePlayerId,
-    });
+    if (effect.logEffect) {
+      logManager[isRootLog ? 'rootLog' : 'addLogEntry']({
+        type: 'cardPlayed',
+        cardId: effect.cardId,
+        playerId: effect.sourcePlayerId,
+      });
+    }
     
     match.cardsPlayed[sourcePlayerId] ??= [];
     match.cardsPlayed[sourcePlayerId].push(sourceCardId);
@@ -268,11 +289,14 @@ export const createEffectHandlerMap = (
   
   map.revealCard = function (effect, _match) {
     console.log(`[REVEAL CARD EFFECT HANDLER] revealing card ${cardLibrary.getCard(effect.cardId)}`);
-    logController.addLogEntry({
-      type: 'revealCard',
-      cardId: effect.cardId,
-      playerId: effect.playerId,
-    });
+    
+    if (effect.logEffect) {
+      logManager[effect.isRootLog ? 'rootLog' : 'addLogEntry']({
+        type: 'revealCard',
+        cardId: effect.cardId,
+        playerId: effect.playerId,
+      });
+    }
   }
   
   map.selectCard = function (effect, match) {
@@ -360,18 +384,23 @@ export const createEffectHandlerMap = (
     deck.unshift(...discard);
     discard.length = 0;
     
-    logController.addLogEntry({
-      type: 'shuffleDeck',
-      playerId: effect.playerId
-    })
+    if (effect.logEffect) {
+      logManager.addLogEntry({
+        type: 'shuffleDeck',
+        playerId: effect.playerId
+      });
+    }
   }
   
   map.trashCard = function (effect, match) {
-    logController.addLogEntry({
-      type: 'trashCard',
-      cardId: effect.cardId,
-      playerId: effect.playerId!,
-    });
+    
+    if (effect.logEffect) {
+      logManager[effect.isRootLog ? 'rootLog' : 'addLogEntry']({
+        type: 'trashCard',
+        cardId: effect.cardId,
+        playerId: effect.playerId!,
+      });
+    }
     
     return map.moveCard(
       new MoveCardEffect({

@@ -1,12 +1,16 @@
 import { Socket } from 'socket.io';
-import { Card, CardId, LogEntry, Match, PlayerId, ServerEmitEvents, ServerListenEvents, } from 'shared/shared-types.ts';
+import { Card, CardId, Match, PlayerId, ServerEmitEvents, ServerListenEvents, } from 'shared/shared-types.ts';
 import { GameEffects } from './core/effects/game-effects.ts';
 import { toNumber } from 'es-toolkit/compat';
 
 import { CardLibrary } from './core/card-library.ts';
 import { ReactionManager } from './core/reaction-manager.ts';
+import { LogManager } from './core/log-manager.ts';
 
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
+
+export type DistributiveOmit<T, K extends PropertyKey> =
+  T extends any ? Omit<T, K> : never;
 
 /**
  * A base match configuration that can be used to spread default values.
@@ -90,10 +94,6 @@ export type ReactionTrigger = {
   playerId: number;
 };
 
-export type LogManager = {
-  addLogEntry: (entry: LogEntry) => void;
-}
-
 export type EffectGenerator<T> = Generator<
   T,
   unknown,
@@ -103,6 +103,7 @@ export type EffectGenerator<T> = Generator<
 export type SharedEffectGeneratorContext = {
   match: Match;
   cardLibrary: CardLibrary;
+  isRootLog?: boolean;
 };
 
 export type EffectContext = SharedEffectGeneratorContext & {

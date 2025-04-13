@@ -1,6 +1,8 @@
 export type EffectBaseArgs = {
   sourcePlayerId: number;
   sourceCardId?: number;
+  isRootLog?: boolean;
+  logEffect?: boolean;
 };
 
 /**
@@ -11,12 +13,16 @@ export abstract class EffectBase {
   abstract type: string;
   public sourceCardId: number;
   public sourcePlayerId: number;
+  public isRootLog?: boolean;
+  public logEffect?: boolean;
   
   protected constructor(
-    { sourcePlayerId, sourceCardId }: EffectBaseArgs,
+    { isRootLog, sourcePlayerId, sourceCardId, logEffect }: EffectBaseArgs,
   ) {
     this.sourcePlayerId = sourcePlayerId;
     this.sourceCardId = sourceCardId!;
+    this.isRootLog = isRootLog ?? false;
+    this.logEffect = logEffect ?? true;
   }
   
   toString() {

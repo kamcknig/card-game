@@ -187,6 +187,7 @@ export class CardInteractivityController {
           cardLibrary: self._cardLibrary,
           triggerPlayerId,
           triggerCardId: tappedCardId,
+          isRootLog: true
         });
       } else if (turnPhase === 'buy') {
         const hand = match.playerHands?.[triggerPlayerId];
@@ -202,6 +203,7 @@ export class CardInteractivityController {
           cardLibrary: self._cardLibrary,
           triggerPlayerId,
           triggerCardId: tappedCardId,
+          isRootLog: true
         });
       }
     };

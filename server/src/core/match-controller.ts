@@ -24,6 +24,7 @@ import { getPlayerById } from '../utils/get-player-by-id.ts';
 import Fuse, { IFuseOptions } from 'fuse.js';
 import { createEffectGeneratorMap, effectGeneratorBlueprintMap } from './effect-generator-map.ts';
 import { EventEmitter } from '@denosaurs/event';
+import { LogManager } from './log-manager.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _effectsController: CardEffectController | undefined;
@@ -35,6 +36,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _config: MatchConfiguration | undefined;
   private _createCardFn: ((key: CardKey) => Card) | undefined;
   private _fuse: Fuse<CardData & { cardKey: CardKey }> | undefined;
+  private _logManager: LogManager | undefined;
   
   constructor(
     private _match: Match,
@@ -366,9 +368,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._cardLibrary,
     );
     
+    this._logManager = new LogManager({
+      socketMap: this._socketMap,
+    });
+    
     const effectGeneratorMap = createEffectGeneratorMap({
       reactionManager: this._reactionManager,
-      logManager: this
+      logManager: this._logManager
     });
     for (const [key, blueprint] of Object.entries(effectGeneratorBlueprintMap)) {
       effectGeneratorMap[key] = blueprint({
@@ -397,7 +403,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._reactionManager,
       effectGeneratorMap,
       this._cardLibrary,
-      this
+      this._logManager
     );
     
     this._effectsPipeline = new EffectsPipeline(
