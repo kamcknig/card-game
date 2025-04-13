@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { LogEntryMessage } from 'shared/shared-types';
 
 @Component({
   selector: 'app-game-log',
@@ -8,5 +9,5 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class GameLogComponent {
-
+  @Input() entries!: readonly LogEntryMessage[] | null;
 }

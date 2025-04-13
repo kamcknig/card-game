@@ -15,6 +15,8 @@ export type LogEntry =
     | { type: 'revealCard'; cardId: CardId; playerSourceId: PlayerId;}
     | { type: 'trashCard'; cardId: CardId; playerSourceId: PlayerId;}
 
+export type LogEntryMessage = LogEntry & { message: string; id: number; };
+
 export type SelectCardArgs = SelectCardEffectArgs & {
     selectableCardIds: CardId[];
 }
@@ -138,6 +140,7 @@ export type PlayerArgs = {
     socketId: string;
     connected: boolean;
     ready: boolean;
+    color: string;
 }
 
 export class Player {
@@ -147,14 +150,16 @@ export class Player {
     socketId: string;
     connected: boolean;
     ready: boolean;
+    color: string;
 
-    constructor({id, name, sessionId, socketId, connected, ready}: PlayerArgs) {
+    constructor({color, id, name, sessionId, socketId, connected, ready}: PlayerArgs) {
         this.id = id;
         this.name = name;
         this.sessionId = sessionId;
         this.socketId = socketId;
         this.connected = connected;
         this.ready = ready;
+        this.color = color;
     }
 
     toString() {

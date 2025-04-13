@@ -12,8 +12,10 @@ import { ScoreComponent } from './components/score/score.component';
 import { GameLogComponent } from './components/game-log/game-log.component';
 import { NanostoresService } from '@nanostores/angular';
 import { playerIdStore, playerScoreStore, playerStore } from '../../../state/player-state';
-import { combineLatest, map, Observable, switchMap } from 'rxjs';
+import { combineLatest, combineLatestWith, map, Observable, switchMap } from 'rxjs';
 import { AsyncPipe } from '@angular/common';
+import { LogEntryMessage } from 'shared/shared-types';
+import { logEntryIdsStore, logStore } from '../../../state/log-state';
 
 @Component({
   selector: 'app-match-hud',
@@ -30,16 +32,20 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('scoreView', { read: ElementRef}) scoreView!: ElementRef;
 
   scoreViewResize = output<number>();
-
   scoreViewResizer: ResizeObserver | undefined;
-
   playerIds$: Observable<readonly number[]> | undefined;
-  playerScore$: Observable<{ id: number; score: number; name: string }[]> | undefined;
+  playerScore$!: Observable<{ id: number; score: number; name: string }[]> | null;
+  logEntries$!: Observable<readonly LogEntryMessage[]> | null;
 
   constructor(private _nanoService: NanostoresService) {
   }
 
   ngOnInit() {
+    this.logEntries$ = this._nanoService.useStore(logEntryIdsStore).pipe(
+      combineLatestWith(this._nanoService.useStore(logStore)),
+      map(([logIds, logs]) => logIds.map(id => logs[id]))
+    );
+
     this.playerIds$ = this._nanoService.useStore(playerIdStore);
 
     this.playerScore$ = this.playerIds$.pipe(

@@ -1,1 +1,5 @@
-<p>game-log works!</p>
+<div class="content">
+  @for (entry of entries; track entry.id) {
+    <div class="log-entry">{{entry.message}}</div>
+  }
+</div>
