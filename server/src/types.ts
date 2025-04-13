@@ -213,8 +213,8 @@ export class Reaction {
     this.condition = arg.condition ?? (() => true);
     this.generatorFn = arg.generatorFn;
     this.once = arg.once;
-    this.multipleUse = arg.multipleUse;
-    this.compulsory = arg.compulsory ?? true;
+    this.multipleUse = arg.multipleUse ?? false;
+    this.compulsory = arg.compulsory ?? false;
   }
   
   public getSourceKey() {

@@ -27,6 +27,7 @@ const expansionModule: CardExpansionModule = {
             playerId,
             once: true,
             compulsory: true,
+            multipleUse: true,
             condition: ({ cardLibrary, trigger }) => {
               const card = cardLibrary.getCard(trigger.cardId);
               return card.cardKey === 'silver' && trigger.playerId === playerId;
@@ -54,7 +55,6 @@ const expansionModule: CardExpansionModule = {
           registerTriggers: [{
             id: `moat-${cardId}`,
             playerId,
-            multipleUse: false,
             listeningFor: 'cardPlayed',
             condition: ({ cardLibrary, trigger }) => {
               return cardLibrary.getCard(trigger.cardId).type.includes(

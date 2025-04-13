@@ -15,16 +15,15 @@ import { SocketService } from '../../../core/socket-service/socket.service';
   ],
   styleUrls: ['./player-name-input.component.scss'],
   template: `
-    @let isSelf = playerId !== ($selfId | async);
     <li *ngIf="$player | async as player">
       <input
         type="checkbox"
-        [disabled]="!isSelf"
+        [disabled]="playerId !== ($selfId | async)"
         [checked]="player.ready"
         (input)="onReadyChange($any($event.target).checked)"
       />
 
-      @if (isSelf) {
+      @if (playerId === ($selfId | async)) {
         <input
           #nameInput
           class="player-name editable"
@@ -32,7 +31,6 @@ import { SocketService } from '../../../core/socket-service/socket.service';
           autofocus
           [value]="player.name"
           (input)="onNameChange($any($event.target).value)"
-          (focus)="onInputFocus($event.target)"
         />
       } @else {
         <span class="player-name readonly">{{ player.name }}</span>
@@ -75,10 +73,6 @@ export class PlayerComponent implements OnInit {
 
   onNameChange(newName: string) {
     this.nameInput$.next(newName);
-  }
-
-  onInputFocus(element: HTMLInputElement) {
-    element.select()
   }
 
   onReadyChange(ready: any) {
