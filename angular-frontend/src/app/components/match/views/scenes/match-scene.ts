@@ -154,7 +154,7 @@ export class MatchScene extends Scene {
 
     try {
       const s = new Audio(`./assets/sounds/your-turn.mp3`);
-      s.volume = .2;
+      s.volume = .4;
       void s?.play();
     } catch {
       console.error('Could not play start turn sound');

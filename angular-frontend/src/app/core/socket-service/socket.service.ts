@@ -15,7 +15,11 @@ export class SocketService {
   private _socketEventMap: SocketEventMap | undefined
 
   constructor() {
-    let sessionId = localStorage.getItem('sessionId') || uuidV4();
+    let sessionId = localStorage.getItem('sessionId');
+
+    if (!sessionId) {
+      sessionId = uuidV4();
+    }
 
     localStorage.setItem('sessionId', sessionId);
 
