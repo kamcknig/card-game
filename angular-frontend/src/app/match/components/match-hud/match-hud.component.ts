@@ -2,7 +2,8 @@ import {
   AfterViewInit,
   ChangeDetectionStrategy,
   Component,
-  ElementRef, EventEmitter, OnDestroy,
+  ElementRef,
+  OnDestroy,
   OnInit,
   output,
   ViewChild

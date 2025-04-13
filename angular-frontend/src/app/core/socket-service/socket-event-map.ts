@@ -13,14 +13,14 @@ import { Assets } from 'pixi.js';
 import { type SocketService } from './socket.service';
 import { applyPatch, Operation } from 'fast-json-patch';
 import { ClientListenEventNames, ClientListenEvents } from '../../../types';
-import { selectableCardStore, selectedCardStore } from '../../state/interactive-state';
+import { logManager } from '../log-manager';
 
 export type SocketEventMap = Partial<{ [p in ClientListenEventNames]: ClientListenEvents[p] }>;
 
 export const socketToGameEventMap = (socketService: SocketService): SocketEventMap => {
   const map: SocketEventMap = {
     addLogEntry: (logEntry: LogEntry) => {
-      /*logManager.addLogEntry(logEntry);*/
+      logManager.addLogEntry(logEntry);
     },
     matchConfigurationUpdated: config => {
       lobbyMatchConfigurationStore.set(config.expansions);
