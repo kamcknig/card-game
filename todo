@@ -4,8 +4,6 @@ TODO lower priority
     maybe "arbitrary zones"
         if so then current zones can be converted to use the feature too.
 - when can't load assets (expansion modules) it still just goes on rather than stopping
-- need to allow user to select another username in order to see their discard?
-- when discarding, the last card discarded should be displayed in log
 
 TODO higher priority
 - ask to resign feature
@@ -13,8 +11,6 @@ TODO higher priority
 - when disconnecting/reconnecting, need to handle scenarios when waiting on input from the user that disconnected (from card effects - like the user prompt, or select card effects)
 
 update user prompt modal when there are multiple actions to toggle those actions (example pawn card in intrigue or courtier)
-
-viewing the trash sucks
 
 when select card effect happens, the UI needs to remove the play all treasure cards button
 
