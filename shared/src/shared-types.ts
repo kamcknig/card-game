@@ -15,7 +15,8 @@ export type LogEntry =
   | { type: 'revealCard'; cardId: CardId; playerId: PlayerId; depth?: number; }
   | { type: 'trashCard'; cardId: CardId; playerId: PlayerId; depth?: number; }
   | { type: 'shuffleDeck'; playerId: PlayerId; depth?: number; }
-  | { type: 'newTurn'; turn: number; depth?: number; };
+  | { type: 'newTurn'; turn: number; depth?: number; }
+  | { type: 'newPlayerTurn'; turn: number; playerId: PlayerId; depth?: number; };
 
 export type LogEntryMessage = LogEntry & { message: string; id: number; };
 
@@ -249,6 +250,7 @@ export type CardArgs = {
   fullImagePath: string;
   halfImagePath: string;
   detailImagePath: string;
+  owner?: PlayerId | null;
 }
 
 export class Card {
@@ -266,6 +268,7 @@ export class Card {
   fullImagePath: string;
   detailImagePath: string;
   halfImagePath: string;
+  owner: PlayerId | null;
   
   constructor(args: CardArgs) {
     this.id = args.id;
@@ -280,6 +283,7 @@ export class Card {
     this.fullImagePath = args.fullImagePath;
     this.halfImagePath = args.halfImagePath;
     this.detailImagePath = args.detailImagePath;
+    this.owner = args.owner ?? null;
   }
   
   toString() {

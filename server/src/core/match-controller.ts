@@ -34,7 +34,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardLibrary: CardLibrary = new CardLibrary();
   private _cardData: ExpansionCardData | undefined;
   private _config: MatchConfiguration | undefined;
-  private _createCardFn: ((key: CardKey) => Card) | undefined;
+  private _createCardFn: ((key: CardKey, card?: Omit<Partial<Card>, 'id'>) => Card) | undefined;
   private _fuse: Fuse<CardData & { cardKey: CardKey }> | undefined;
   private _logManager: LogManager | undefined;
   
@@ -203,11 +203,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         // initially creating the supplies, and they get manually created later, estates
         // do not come from the supply, so they don't get subtracted here
         if (key === 'copper') {
-          count -= config.players.length *
-            MatchBaseConfiguration.playerStartingHand.copper;
-          console.log(
-            `[MATCH] setting copper count to ${count} due to number of players ${config.players.length}`,
-          );
+          count -= config.players.length * MatchBaseConfiguration.playerStartingHand.copper;
+          console.log(`[MATCH] setting copper count to ${count} due to number of players ${config.players.length}`,);
         }
         
         for (let i = 0; i < count; i++) {
@@ -230,7 +227,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const kingdomCards: Card[] = [];
     
     // todo: remove testing code
-    const keepers: string[] = ['moat', 'militia'].filter((k) =>
+    const keepers: string[] = [].filter((k) =>
       this._cardData!.kingdom[k]
     );
     
@@ -288,7 +285,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     return Object.values(config.players).reduce((prev, player, _idx) => {
       console.log('initializing player', player.id, 'cards...');
-      let blah = {};
+      /*let blah = {};
       // todo remove testing code
       if (_idx === 0) {
         blah = {
@@ -303,14 +300,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           gold: 5
         };
       }
-      Object.entries(blah).forEach(([key, count]) => {
-          /*Object.entries(playerStartHand).forEach(
-           ([key, count]) => {*/
+      Object.entries(blah).forEach(([key, count]) => {*/
+          Object.entries(playerStartHand).forEach(
+           ([key, count]) => {
           prev['playerDecks'][player.id] ??= [];
           let deck = prev['playerDecks'][player.id];
           deck = deck.concat(
             new Array(count).fill(0).map((_) => {
-              const c = this._createCardFn!(key);
+              const c = this._createCardFn!(key, { owner: player.id });
               this._cardLibrary.addCard(c);
               return c.id;
             }),
@@ -441,16 +438,18 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       }
     }
     
-    this.addLogEntry({
+    this._logManager.rootLog({
       type: 'newTurn',
       turn: match.turnNumber,
     });
     
+    this._logManager.rootLog({
+      type: 'newPlayerTurn',
+      turn: match.turnNumber,
+      playerId: match.players[match.currentPlayerTurnIndex].id
+    });
+    
     this._effectsController?.runGameActionEffects('checkForPlayerActions');
-  }
-  
-  public addLogEntry(log: LogEntry) {
-    this._socketMap.forEach((s) => s.emit('addLogEntry', log));
   }
   
   private onUserInputReceived = (signalId: string, input: unknown) => {
@@ -495,13 +494,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     for (const player of match.players ?? []) {
       const playerId = player.id;
-      const cards = (match.playerHands?.[playerId] ?? [])
+      const cards = this._cardLibrary.getCardsByOwner(playerId);
+      /*const cards = (match.playerHands?.[playerId] ?? [])
         .concat(match.playerDecks?.[playerId] ?? [])
         .concat(match.playerDiscards?.[playerId] ?? [])
-        .concat(match.playArea ?? []);
+        .concat(match.playArea ?? []);*/
       
       let score = 0;
-      for (const cardId of cards) {
+      for (const { id: cardId } of cards) {
         const card = this._cardLibrary.getCard(cardId);
         score += card.victoryPoints ?? 0;
         

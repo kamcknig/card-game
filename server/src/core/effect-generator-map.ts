@@ -20,6 +20,7 @@ import { CardLibrary } from './card-library.ts';
 import { TurnPhaseOrderValues } from 'shared/shared-types.ts';
 import { getTurnPhase } from '../utils/get-turn-phase.ts';
 import { EndTurnEffect } from './effects/end-turn.ts';
+import { LogManager } from './log-manager.ts';
 
 function groupReactionsByCard(reactions: Reaction[]) {
   const grouped = new Map<string, { count: number; reaction: Reaction }>();
@@ -132,6 +133,11 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
             turn: match.turnNumber,
           });
         }
+        logManager.rootLog({
+          type: 'newPlayerTurn',
+          turn: match.turnNumber,
+          playerId: match.players[match.currentPlayerTurnIndex].id
+        });
         
         break;
       case 'buy':

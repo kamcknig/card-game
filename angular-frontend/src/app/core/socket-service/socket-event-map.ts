@@ -120,9 +120,6 @@ export const socketToGameEventMap = (socketService: SocketService): SocketEventM
     },
     setPlayer: player => {
       selfPlayerIdStore.set(player.id);
-    },
-    searchCardResponse: results => {
-      console.log(results);
     }
   }
 

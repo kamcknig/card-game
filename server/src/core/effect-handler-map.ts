@@ -156,6 +156,8 @@ export const createEffectHandlerMap = (
       });
     }
     
+    cardLibrary.getCard(effect.cardId).owner = effect.playerId;
+    
     return map.moveCard(
       new MoveCardEffect({
         to: effect.to,
@@ -270,7 +272,6 @@ export const createEffectHandlerMap = (
       reactionManager.registerReactionTemplate(triggerTemplate)
     );
   };
-  
   
   map.cardPlayed = function (effect, match) {
     const { sourceCardId, sourcePlayerId, isRootLog } = effect;
@@ -400,6 +401,11 @@ export const createEffectHandlerMap = (
         cardId: effect.cardId,
         playerId: effect.playerId!,
       });
+    }
+    
+    const card = cardLibrary.getCard(effect.cardId);
+    if (card.owner) {
+      card.owner = null;
     }
     
     return map.moveCard(

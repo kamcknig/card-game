@@ -23,9 +23,7 @@ export class GameLogComponent implements AfterViewInit {
   }
 
   ngAfterViewInit() {
-    this._nanoService.useStore(logStore).subscribe(logEntry => {
-      console.log(this.content.nativeElement.scrollTop);
-      console.log(this.content.nativeElement.scrollHeight);
+    this._nanoService.useStore(logStore).subscribe(_ => {
       setTimeout(() => this.content.nativeElement.scrollTop = this.content.nativeElement.scrollHeight, 0);
     });
   }

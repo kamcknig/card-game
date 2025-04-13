@@ -7,9 +7,17 @@
   min-width: 300px;
   overflow: auto;
 
-  ::ng-deep .log-entry hr {
-    width: 100%;
-    border-top: 2px solid white;
-    display: inline-block;
+  ::ng-deep .log-entry {
+    hr {
+      width: 100%;
+      border-top: 2px solid white;
+      display: inline-block;
+      height: 8px;
+    }
+
+    hr.new-player-turn {
+      border-top: 2px dashed rgba(255, 255, 255, 0.5);
+      width: 75%;
+    }
   }
 }

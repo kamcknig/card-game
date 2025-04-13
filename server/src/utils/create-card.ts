@@ -4,7 +4,7 @@ import { ExpansionCardData } from '../state/expansion-data.ts';
 let CARD_COUNT: number = 0;
 
 export const createCardFactory = (cardData: ExpansionCardData) => {
-  return (cardKey: CardKey, card?: Omit<Card, 'id'>): Card => {
+  return (cardKey: CardKey, card?: Omit<Partial<Card>, 'id'>): Card => {
     const c = new Card({
       ...(cardData.supply[cardKey] ?? cardData.kingdom[cardKey]),
       ...card ?? {},
