@@ -6,4 +6,10 @@
   max-height: 1000px;
   min-width: 300px;
   overflow: auto;
+
+  ::ng-deep .log-entry hr {
+    width: 100%;
+    border-top: 2px solid white;
+    display: inline-block;
+  }
 }

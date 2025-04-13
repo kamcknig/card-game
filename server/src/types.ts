@@ -1,5 +1,5 @@
 import { Socket } from 'socket.io';
-import { Card, CardId, Match, PlayerId, ServerEmitEvents, ServerListenEvents, } from 'shared/shared-types.ts';
+import { Card, CardId, LogEntry, Match, PlayerId, ServerEmitEvents, ServerListenEvents, } from 'shared/shared-types.ts';
 import { GameEffects } from './core/effects/game-effects.ts';
 import { toNumber } from 'es-toolkit/compat';
 
@@ -90,6 +90,10 @@ export type ReactionTrigger = {
   playerId: number;
 };
 
+export type LogManager = {
+  addLogEntry: (entry: LogEntry) => void;
+}
+
 export type EffectGenerator<T> = Generator<
   T,
   unknown,
@@ -120,6 +124,7 @@ export type EffectGeneratorBlueprint = (
 
 export type EffectGeneratorFactory = (context: {
   reactionManager: ReactionManager;
+  logManager: LogManager
 }) => Record<string, EffectGeneratorFn>;
 
 export type GameActionOverrides = {

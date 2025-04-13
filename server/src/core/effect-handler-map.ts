@@ -1,8 +1,8 @@
-import { AppSocket, EffectGeneratorFn, EffectHandlerMap, ReactionTemplate, } from '../types.ts';
+import { AppSocket, EffectGeneratorFn, EffectHandlerMap, LogManager, ReactionTemplate, } from '../types.ts';
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
 import { findCards } from '../utils/find-cards.ts';
 import { ReactionManager } from './reaction-manager.ts';
-import { LogEntry, PlayerId } from 'shared/shared-types.ts';
+import { PlayerId } from 'shared/shared-types.ts';
 import { findOrderedEffectTargets } from '../utils/find-ordered-effect-targets.ts';
 import { findSourceByCardId } from '../utils/find-source-by-card-id.ts';
 import { findSpecLocationBySource } from '../utils/find-spec-location-by-source.ts';
@@ -24,7 +24,7 @@ export const createEffectHandlerMap = (
   reactionManager: ReactionManager,
   effectGeneratorMap: Record<string, EffectGeneratorFn>,
   cardLibrary: CardLibrary,
-  logController: { addLogEntry: (log: LogEntry) => void; },
+  logController: LogManager,
 ): EffectHandlerMap => {
   const map: EffectHandlerMap = {} as EffectHandlerMap;
   

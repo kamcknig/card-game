@@ -2,6 +2,7 @@ import { LogEntry } from 'shared/shared-types';
 import { cardStore } from '../state/card-state';
 import { playerStore, selfPlayerIdStore } from '../state/player-state';
 import { logEntryIdsStore, logStore } from '../state/log-state';
+import { log } from '@angular-devkit/build-angular/src/builders/ssr-dev-server';
 
 export const logManager = {
   addLogEntry: (logEntry: LogEntry) => {
@@ -93,6 +94,9 @@ export const logManager = {
         }
         break;
       }
+      case 'newTurn':
+        msg = `<hr><br>TURN ${logEntry.turn}<br>`
+        break;
     }
 
     if (!msg) return;

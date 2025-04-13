@@ -57,7 +57,7 @@ function buildActionMap(
 }
 
 export const createEffectGeneratorMap: EffectGeneratorFactory = (
-  { reactionManager },
+  { reactionManager, logManager },
 ) => {
   const map: Record<string, EffectGeneratorFn> = {};
   
@@ -125,6 +125,10 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
           match.currentPlayerTurnIndex = 0;
           match.turnNumber++;
           console.log(`[NEXT PHASE EFFECT] new round: ${match.turnNumber}`);
+          logManager.addLogEntry({
+            type: 'newTurn',
+            turn: match.turnNumber,
+          })
         }
         
         break;

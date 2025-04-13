@@ -368,6 +368,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     const effectGeneratorMap = createEffectGeneratorMap({
       reactionManager: this._reactionManager,
+      logManager: this
     });
     for (const [key, blueprint] of Object.entries(effectGeneratorBlueprintMap)) {
       effectGeneratorMap[key] = blueprint({
@@ -429,6 +430,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         );
       }
     }
+    
+    this.addLogEntry({
+      type: 'newTurn',
+      turn: match.turnNumber,
+    });
     
     this._effectsController?.runGameActionEffects('checkForPlayerActions');
   }
