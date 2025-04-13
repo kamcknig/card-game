@@ -5,16 +5,16 @@ export type PlayerId = number;
 export type CardId = number;
 
 export type LogEntry =
-    | { type: 'draw'; playerSourceId: PlayerId; cardId: CardId; }
-    | { type: 'discard'; playerSourceId: PlayerId; cardId: CardId; }
-    | { type: 'gainAction'; count: number; playerSourceId: PlayerId; }
-    | { type: 'gainBuy'; count: number; playerSourceId: PlayerId;}
-    | { type: 'gainTreasure'; count: number; playerSourceId: PlayerId;}
-    | { type: 'gainCard'; cardId: CardId; playerSourceId: PlayerId;}
-    | { type: 'playCard'; cardId: CardId; playerSourceId: PlayerId;}
-    | { type: 'revealCard'; cardId: CardId; playerSourceId: PlayerId;}
-    | { type: 'trashCard'; cardId: CardId; playerSourceId: PlayerId;}
-    | { type: 'shuffleDeck'; playerSourceId: PlayerId; };
+    | { type: 'draw'; playerId: PlayerId; cardId: CardId; }
+    | { type: 'discard'; playerId: PlayerId; cardId: CardId; }
+    | { type: 'gainAction'; count: number; playerId: PlayerId; }
+    | { type: 'gainBuy'; count: number; playerId: PlayerId;}
+    | { type: 'gainTreasure'; count: number; playerId: PlayerId;}
+    | { type: 'gainCard'; cardId: CardId; playerId: PlayerId;}
+    | { type: 'playCard'; cardId: CardId; playerId: PlayerId;}
+    | { type: 'revealCard'; cardId: CardId; playerId: PlayerId;}
+    | { type: 'trashCard'; cardId: CardId; playerId: PlayerId;}
+    | { type: 'shuffleDeck'; playerId: PlayerId; };
 
 export type LogEntryMessage = LogEntry & { message: string; id: number; };
 

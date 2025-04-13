@@ -42,7 +42,7 @@ export const createEffectHandlerMap = (
   map.discardCard = function (effect, match) {
     logController.addLogEntry({
       type: 'discard',
-      playerSourceId: effect.playerId,
+      playerId: effect.playerId,
       cardId: effect.cardId,
     });
     
@@ -95,7 +95,7 @@ export const createEffectHandlerMap = (
     
     logController.addLogEntry({
       type: 'draw',
-      playerSourceId: effect.playerId,
+      playerId: effect.playerId,
       cardId: drawnCardId,
     });
     
@@ -119,7 +119,7 @@ export const createEffectHandlerMap = (
     logController.addLogEntry({
       type: 'gainAction',
       count: effect.count,
-      playerSourceId: effect.sourcePlayerId,
+      playerId: effect.sourcePlayerId,
     });
   }
   
@@ -128,7 +128,7 @@ export const createEffectHandlerMap = (
     logController.addLogEntry({
       type: 'gainBuy',
       count: effect.count,
-      playerSourceId: effect.sourcePlayerId,
+      playerId: effect.sourcePlayerId,
     });
   }
   
@@ -137,7 +137,7 @@ export const createEffectHandlerMap = (
     logController.addLogEntry({
       type: 'gainCard',
       cardId: effect.cardId,
-      playerSourceId: effect.playerId,
+      playerId: effect.playerId,
     });
     
     return map.moveCard(
@@ -157,7 +157,7 @@ export const createEffectHandlerMap = (
     logController.addLogEntry({
       type: 'gainTreasure',
       count: effect.count,
-      playerSourceId: effect.sourcePlayerId,
+      playerId: effect.sourcePlayerId,
     });
   }
   
@@ -259,7 +259,7 @@ export const createEffectHandlerMap = (
     logController.addLogEntry({
       type: 'playCard',
       cardId: effect.cardId,
-      playerSourceId: effect.sourcePlayerId,
+      playerId: effect.sourcePlayerId,
     });
     
     match.cardsPlayed[sourcePlayerId] ??= [];
@@ -271,7 +271,7 @@ export const createEffectHandlerMap = (
     logController.addLogEntry({
       type: 'revealCard',
       cardId: effect.cardId,
-      playerSourceId: effect.playerId,
+      playerId: effect.playerId,
     });
   }
   
@@ -362,7 +362,7 @@ export const createEffectHandlerMap = (
     
     logController.addLogEntry({
       type: 'shuffleDeck',
-      playerSourceId: effect.playerId
+      playerId: effect.playerId
     })
   }
   
@@ -370,7 +370,7 @@ export const createEffectHandlerMap = (
     logController.addLogEntry({
       type: 'trashCard',
       cardId: effect.cardId,
-      playerSourceId: effect.playerId!,
+      playerId: effect.playerId!,
     });
     
     return map.moveCard(
