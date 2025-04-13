@@ -4,7 +4,7 @@ import { currentPlayerTurnIdStore, turnNumberStore } from '../../../../../state/
 import { map, Observable } from 'rxjs';
 import { AsyncPipe, NgClass, UpperCasePipe } from '@angular/common';
 import { PlayerId } from 'shared/shared-types';
-import { playerStore } from '../../../../../state/player-state';
+import { playerIdStore, playerStore } from '../../../../../state/player-state';
 import tinycolor from 'tinycolor2'
 
 @Component({
@@ -26,6 +26,16 @@ export class ScoreComponent implements OnInit {
 
   constructor(private _nanoService: NanostoresService) {
 
+  }
+
+  getOrderedPlayerScores() {
+    return this._nanoService.useStore(playerIdStore)
+      .pipe(
+        map(ids => {
+          console.log(ids);
+          return ids.map(id => this.playerScores?.find(pScore => pScore.id === id))
+        })
+      );
   }
 
   getPlayerColor(id: PlayerId) {

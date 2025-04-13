@@ -5,6 +5,7 @@ import { io } from '../server.ts';
 import { MatchController } from './match-controller.ts';
 import { ExpansionCardData, expansionData } from '../state/expansion-data.ts';
 import { compare } from 'fast-json-patch';
+import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
 
 const defaultMatchConfiguration = {
   expansions: ['base-v2', 'intrigue'],
@@ -285,13 +286,13 @@ export class Game {
     }, {} as ExpansionCardData);
     
     const colors = ['#10FF19', '#3c69ff', '#FF0BF2', '#FFF114', '#FF1F11', '#FF9900'];
-    const players = this.players
+    const players = fisherYatesShuffle(this.players
       .filter(p => p.connected)
       .map((p, idx) => {
         p.ready = false;
         p.color = colors[idx]
         return p;
-      });
+      }));
     io.in('game').emit('setPlayerList', players);
     void this._matchController?.initialize(
       {

@@ -101,7 +101,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this._match = {
       scores: [],
       trash: [],
-      players: fisherYatesShuffle(config.players),
+      players: config.players,
       supply: supplyCards.map((c) => c.id),
       kingdom: kingdomCards.map((c) => c.id),
       ...playerCards,
