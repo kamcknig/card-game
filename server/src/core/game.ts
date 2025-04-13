@@ -256,6 +256,10 @@ export class Game {
       return;
     }
     
+    this.startMatch();
+  };
+  
+  private startMatch() {
     console.log(`[GAME] all connected players ready, proceeding to start match`);
     
     this.matchStarted = true;
@@ -280,15 +284,21 @@ export class Game {
       return prev;
     }, {} as ExpansionCardData);
     
+    const colors = ['#10FF19', '#053EFF', '#FF0BF2', '#FFF114', '#FF1F11', '#FF9900'];
+    const players = this.players
+      .filter(p => p.connected)
+      .map((p, idx) => {
+        p.ready = false;
+        p.color = colors[idx]
+        return p;
+      });
+    io.in('game').emit('setPlayerList', players);
     void this._matchController?.initialize(
       {
         ...this._matchConfiguration,
-        players: this.players.filter(p => p.connected).map(p => {
-          p.ready = false;
-          return p;
-        }),
+        players,
       } as MatchConfiguration,
       cardData as ExpansionCardData
     );
-  };
+  }
 }

@@ -489,7 +489,7 @@ const expansionModule: CardExpansionModule = {
         restrict: { from: { location: 'playerHands' } },
       })) as number[];
       
-      if (cardIds?.length > 0) {
+      if (cardIds?.length === 0) {
         console.log('[CHAPEL EFFECT] no cards selected');
         return;
       }

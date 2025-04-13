@@ -37,7 +37,7 @@ import { SocketService } from '../../../../core/socket-service/socket.service';
 export class MatchScene extends Scene {
   private _doneSelectingBtn: Container | undefined;
   private _board: Container = new Container();
-  private _baseSupply: Container = new Container({scale: .8});
+  private _baseSupply: Container = new Container({scale: .7});
   private _playerHand: PlayerHandView | undefined;
   private _trash: CardStackView | undefined;
   private _deck: CardStackView | undefined;
@@ -210,11 +210,13 @@ export class MatchScene extends Scene {
 
     this._supply.addChild(this._baseSupply);
     this._kingdomView = this._supply.addChild(new KingdomSupplyView());
+    this._kingdomView.scale = .8;
 
     this._trash = new CardStackView({
       label: 'TRASH',
       $cardIds: trashStore,
       cardFacing: 'front',
+      scale: .6,
     });
     this._trash.eventMode = 'static';
     this._trash.on('pointerdown', this.onTrashPressed);

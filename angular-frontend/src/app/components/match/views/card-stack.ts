@@ -14,6 +14,7 @@ export type CardStackArgs = {
   showCountBadge?: boolean;
   cardFacing: CardView['facing'];
   showBackground?: boolean;
+  scale?: number;
 }
 
 export class CardStackView extends Container {
@@ -27,6 +28,7 @@ export class CardStackView extends Container {
   private readonly _cardFacing: CardView['facing'];
   private readonly _selectedBadgeCount: CountBadgeView = new CountBadgeView({ label: 'selectedBadgeCount' });
   private readonly _badgeCount: CountBadgeView = new CountBadgeView({ label: 'badgeCount' });
+  private readonly _sscale: number;
 
   private readonly _showBackground: boolean;
 
@@ -38,21 +40,18 @@ export class CardStackView extends Container {
       label,
       cardFacing,
       showBackground,
-      $cardIds
+      $cardIds,
+      scale = 1
     } = args;
     this._cardFacing = cardFacing;
     this._showCountBadge = showCountBadge ?? true;
     this._label = label;
     this._showBackground = showBackground ?? true;
     this._$cardIds = $cardIds;
+    this._sscale = scale;
 
     if (this._showBackground) {
-      this._background.addChild(
-        new Graphics()
-          .roundRect(0, 0, CARD_WIDTH + STANDARD_GAP * 2, CARD_HEIGHT + STANDARD_GAP * 2)
-          .fill({ color: 0x000000, alpha: .6 })
-      );
-
+      this._background.addChild(new Graphics({ label: 'graphics' }));
       this.addChild(this._background);
     }
 
@@ -69,11 +68,11 @@ export class CardStackView extends Container {
       this.addChild(this._labelText);
     }
 
-    this._cardContainer.x = STANDARD_GAP;
+    this._cardContainer.x = STANDARD_GAP * this._sscale;
     this._cardContainer.y = STANDARD_GAP;
 
     if (this._labelText) {
-      this._cardContainer.y = this._labelText.y + this._labelText.height + STANDARD_GAP;
+      this._cardContainer.y = this._labelText.y + this._labelText.height + STANDARD_GAP * this._sscale;
     }
 
     this.addChild(this._cardContainer);
@@ -104,16 +103,18 @@ export class CardStackView extends Container {
       } else {
         cardView.y = 0;
       }
+      cardView.y *= this._sscale;
     }
   }
 
   private drawDeck = (cardIds: readonly number[]) => {
-    this._cardContainer.removeChildren().forEach((c) => c.destroy({children: true}));
+    this._cardContainer.removeChildren().forEach((c) => c.destroy({ children: true }));
 
     for (const cardId of cardIds) {
       const c = this._cardContainer.addChild(createCardView(cardStore.get()[cardId]));
       c.size = 'full';
-      c.facing = this._cardFacing
+      c.facing = this._cardFacing;
+      c.scale = this._sscale;
     }
   }
 
@@ -127,16 +128,36 @@ export class CardStackView extends Container {
       this._badgeCount.x = this._cardContainer.x + 5;
       this._badgeCount.y = this._cardContainer.y + 5;
       this.addChild(this._badgeCount);
+      this._badgeCount.scale = this._sscale;
     } else {
       this.removeChild(this._badgeCount);
     }
 
     if (selectedCardCountInStack > 1) {
       this._selectedBadgeCount.count = selectedCardCountInStack;
-      this._selectedBadgeCount.y = -60;
+      this._selectedBadgeCount.y = -60 * this._sscale;
+      this._selectedBadgeCount.scale = this._sscale;
       this.addChild(this._selectedBadgeCount);
     } else {
       this.removeChild(this._selectedBadgeCount);
     }
+
+    if (this._showBackground) {
+      const g = this._background.getChildByLabel('graphics') as Graphics;
+      let h = CARD_HEIGHT * this._sscale + (STANDARD_GAP) * 2
+      if (this._label) {
+        h += this._labelText?.height ?? 0;
+      }
+      g.clear();
+      g.roundRect(
+        0,
+        0,
+        CARD_WIDTH * this._sscale + (STANDARD_GAP * this._sscale) * 2,
+        h,
+        5
+      )
+        .fill({ color: 0x000000, alpha: .6 });
+    }
+
   }
 }

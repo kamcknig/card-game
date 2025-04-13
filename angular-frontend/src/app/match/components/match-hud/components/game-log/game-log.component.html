@@ -1,5 +1,5 @@
 <div class="content">
   @for (entry of entries; track entry.id) {
-    <div class="log-entry">{{entry.message}}</div>
+    <div class="log-entry" [innerHTML]="sanitize(entry.message)"></div>
   }
 </div>

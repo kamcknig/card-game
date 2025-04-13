@@ -5,102 +5,104 @@ import { logEntryIdsStore, logStore } from '../state/log-state';
 
 export const logManager = {
   addLogEntry: (logEntry: LogEntry) => {
-    let msg: string;
-    const playerId = logEntry.playerId;
+    let msg: string = '';
     const cardsById = cardStore.get();
+    const playerId = logEntry.playerId;
     const selfId = selfPlayerIdStore.get();
+    const player = playerStore(playerId).get();
+    const playerName = player?.name;
+    const playerColor = player?.color;
+    const youColor = playerStore(selfId!).get()?.color;
 
     switch (logEntry.type) {
       case 'draw': {
-        const playerName = playerStore(playerId).get()?.name;
         const cardName = cardsById[logEntry.cardId]?.cardName;
         if (selfId === playerId) {
-          msg = `You drew a ${cardName}`;
+          msg = `%Y% drew a ${cardName}`;
         } else {
-          msg = `${playerName} drew a card`;
+          msg = `%P${player?.id}% drew a card`;
         }
         break;
       }
       case 'discard': {
-        const playerName = playerStore(playerId).get()?.name;
         const cardName = cardsById[logEntry.cardId]?.cardName;
         if (selfId === playerId) {
-          msg = `You discarded a ${cardName}`;
+          msg = `%Y% discarded a ${cardName}`;
         } else {
-          msg = `${playerName} discarded a card`;
+          msg = `%P${player?.id}% discarded a card`;
         }
         break;
       }
       case 'gainBuy': {
-        const playerName = playerStore(playerId).get()?.name;
         if (selfId === playerId) {
-          msg = `You gained ${logEntry.count} buy/s`;
+          msg = `%Y% gained ${logEntry.count} buy/s`;
         } else {
-          msg = `${playerName} gained ${logEntry.count} buy/s`;
+          msg = `%P${player?.id}% gained ${logEntry.count} buy/s`;
         }
         break;
       }
       case 'gainTreasure': {
-        const playerName = playerStore(playerId).get()?.name;
         if (selfId === playerId) {
-          msg = `You gained ${logEntry.count} treasure`;
+          msg = `%Y% gained ${logEntry.count} treasure`;
         } else {
-          msg = `${playerName} gained ${logEntry.count} treasure`;
+          msg = `%P${player?.id}% gained ${logEntry.count} treasure`;
         }
         break;
       }
       case 'gainAction': {
-        const playerName = playerStore(playerId).get()?.name;
         if (selfId === playerId) {
-          msg = `You gained ${logEntry.count} action/s`;
+          msg = `%Y% gained ${logEntry.count} action/s`;
         } else {
-          msg = `${playerName} gained ${logEntry.count} action/s`;
+          msg = `%P${player?.id}% gained ${logEntry.count} action/s`;
         }
         break;
       }
       case 'gainCard': {
-        const playerName = playerStore(playerId).get()?.name;
         const cardName = cardsById[logEntry.cardId]?.cardName;
         if (selfId === playerId) {
-          msg = `You gained a ${cardName}`;
+          msg = `%Y% gained a ${cardName}`;
         } else {
-          msg = `${playerName} gained a ${cardName}`;
+          msg = `%P${player?.id}% gained a ${cardName}`;
         }
         break;
       }
       case 'playCard': {
-        const playerName = playerStore(playerId).get()?.name;
         const cardName = cardsById[logEntry.cardId].cardName;
         if (selfId === playerId) {
-          msg = `You played a ${cardName}`;
+          msg = `%Y% played a ${cardName}`;
         } else {
-          msg = `${playerName} played a ${cardName}`;
+          msg = `%P${player?.id}% played a ${cardName}`;
         }
         break;
       }
       case 'revealCard': {
-        const playerName = playerStore(playerId).get()?.name;
         const cardName = cardsById[logEntry.cardId]?.cardName;
         if (selfId === playerId) {
-          msg = `You revealed a ${cardName}`;
+          msg = `%Y% revealed a ${cardName}`;
         } else {
-          msg = `${playerName} revealed a ${cardName}`;
+          msg = `%P${player?.id}% revealed a ${cardName}`;
         }
         break;
       }
       case 'trashCard': {
-        const playerName = playerStore(playerId).get()?.name;
         const cardName = cardsById[logEntry.cardId]?.cardName;
         if (selfId === playerId) {
-          msg = `You trashed a ${cardName}`;
+          msg = `%Y% trashed a ${cardName}`;
         } else {
-          msg = `${playerName} trashed a ${cardName}`;
+          msg = `%P${player?.id}% trashed a ${cardName}`;
         }
         break;
       }
     }
 
     if (!msg) return;
+
+    const youRegex = /%Y%/g;
+    const playerRegex = /%P(\d+)%/g;
+
+    msg = msg.replaceAll(youRegex, `<span style="color: ${youColor}">You</span>`);
+    msg = msg.replaceAll(playerRegex, `<span style="color: ${playerColor}">${playerName}</span>`);
+
     const ids = logEntryIdsStore.get();
     const newId = ids.length + 1;
     logEntryIdsStore.set([...ids, newId])
