@@ -3,6 +3,7 @@ import { LogEntryMessage } from 'shared/shared-types';
 import { DomSanitizer } from '@angular/platform-browser';
 import { NanostoresService } from '@nanostores/angular';
 import { logStore } from '../../../../../state/log-state';
+import { debounceTime, fromEvent, switchMap, takeUntil, tap, throttleTime } from 'rxjs';
 
 @Component({
   selector: 'app-game-log',
@@ -12,7 +13,8 @@ import { logStore } from '../../../../../state/log-state';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class GameLogComponent implements AfterViewInit {
-  @ViewChild('content', { read: ElementRef }) content!: ElementRef;
+  @ViewChild('logContent', { read: ElementRef }) logContent!: ElementRef;
+  @ViewChild('resizeHandle') resizeHandle!: ElementRef;
 
   @Input() entries!: readonly LogEntryMessage[] | null;
 
@@ -24,8 +26,27 @@ export class GameLogComponent implements AfterViewInit {
 
   ngAfterViewInit() {
     this._nanoService.useStore(logStore).subscribe(_ => {
-      setTimeout(() => this.content.nativeElement.scrollTop = this.content.nativeElement.scrollHeight, 0);
+      setTimeout(() => this.logContent.nativeElement.scrollTop = this.logContent.nativeElement.scrollHeight, 10);
     });
+
+    let startDragX: number;
+    let startWidth: number;
+    fromEvent<DragEvent>(this.resizeHandle.nativeElement, 'dragstart')
+      .pipe(
+        switchMap((event) => {
+          startDragX = event.clientX;
+          startWidth = this.logContent.nativeElement.clientWidth;
+
+          console.log('startDragX', startDragX, 'startWidth', startWidth);
+
+          return fromEvent<DragEvent>(this.resizeHandle.nativeElement, 'drag').pipe(throttleTime(50));
+        }),
+      )
+      .subscribe((event) => {
+        const diff = startDragX - event.clientX;
+
+        (this.logContent.nativeElement as HTMLElement).style.width = `${startWidth + diff}px`;
+      });
   }
 
   public sanitize(msg: string) {

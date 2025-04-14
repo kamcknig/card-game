@@ -1,5 +1,9 @@
-<div class="content" #content>
-  @for (entry of entries; track entry.id) {
-    <div class="log-entry" [innerHTML]="sanitize(entry.message)"></div>
-  }
+<div class="content">
+  <div #resizeHandle draggable="true" class="resize-handle"></div>
+
+  <div #logContent class="log-content">
+    @for (entry of entries; track entry.id) {
+      <div class="log-entry" [innerHTML]="sanitize(entry.message)"></div>
+    }
+  </div>
 </div>

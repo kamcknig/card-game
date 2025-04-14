@@ -1,13 +1,31 @@
 .content {
   color: white;
   background-color: rgba(0, 0, 0, .6);
-  padding: 20px;
   height: 75vh;
   max-height: 1000px;
-  min-width: 300px;
-  overflow: auto;
+  position: relative;
+
+  .resize-handle {
+    height: 100%;
+    width: 10px;
+    position: absolute;
+    cursor: col-resize;
+    box-shadow: inset 4px 0 4px -2px rgba(255, 255, 255, 1);
+  }
+
+  .log-content {
+    pointer-events: none;
+    min-width: 300px;
+    height: 100%;
+    overflow: auto;
+    padding: 20px;
+    top: 0;
+    left: 0;
+  }
 
   ::ng-deep .log-entry {
+    pointer-events: none;
+    user-select: none;
     hr {
       width: 100%;
       border-top: 2px solid white;

@@ -83,10 +83,6 @@ export const socketToGameEventMap = (socketService: SocketService): SocketEventM
       if (!playerIdStore.get().includes(player.id)) {
         playerIdStore.set([...playerIdStore.get(), player.id]);
       }
-
-      if (matchStartedStore.get()) {
-        gamePausedStore.set(false);
-      }
     },
     setPlayerList: players => {
       for (const player of players) {
@@ -96,10 +92,6 @@ export const socketToGameEventMap = (socketService: SocketService): SocketEventM
     },
     playerDisconnected: (player) => {
       playerStore(player.id).set(player);
-
-      if (matchStartedStore.get()) {
-        gamePausedStore.set(true);
-      }
     },
     playerNameUpdated: (playerId: number, name: string) => {
       const current = playerStore(playerId).get();
