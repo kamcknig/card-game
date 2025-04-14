@@ -95,7 +95,7 @@
         "description": "The text to display on the card"
       }
     },
-    "required": ["cost", "type", "cardName"],
+    "required": ["cost", "type"],
     "additionalProperties": false,
     "allOf": [
       {

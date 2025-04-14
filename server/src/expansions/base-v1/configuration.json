@@ -1,7 +1,0 @@
-{
-  "supply": "../card-library-base-supply.json",
-  "kingdom": "card-library-base-v1.json",
-  "mutuallyExclusiveExpansions": [
-    "base-v2"
-  ]
-}
