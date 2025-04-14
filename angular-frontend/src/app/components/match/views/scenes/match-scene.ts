@@ -199,7 +199,15 @@ export class MatchScene extends Scene {
 
     this._app.stage.addChild(c);
 
+    const startTime = Date.now();
+
     await Assets.loadBundle('cardLibrary');
+
+    const endTime = Date.now();
+
+    if (endTime - startTime < 3000) {
+      await new Promise(resolve => setTimeout(resolve, 3000 - (endTime - startTime)));
+    }
 
     c.removeFromParent();
     c.destroy();
