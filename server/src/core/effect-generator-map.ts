@@ -16,45 +16,12 @@ import { getEffectiveCardCost } from '../utils/get-effective-card-cost.ts';
 import { MoveCardEffect } from './effects/move-card.ts';
 import { getOrderStartingFrom } from '../utils/get-order-starting-from.ts';
 import { UserPromptEffect } from './effects/user-prompt.ts';
-import { CardLibrary } from './card-library.ts';
 import { TurnPhaseOrderValues } from 'shared/shared-types.ts';
 import { getTurnPhase } from '../utils/get-turn-phase.ts';
 import { EndTurnEffect } from './effects/end-turn.ts';
-
-function groupReactionsByCard(reactions: Reaction[]) {
-  const grouped = new Map<string, { count: number; reaction: Reaction }>();
-  for (const reaction of reactions) {
-    const key = reaction.getSourceKey();
-    if (!grouped.has(key)) grouped.set(key, { count: 1, reaction });
-    else grouped.get(key)!.count++;
-  }
-  return grouped;
-}
-
-function buildActionButtons(
-  grouped: Map<string, { count: number; reaction: Reaction }>,
-  cardLibrary: CardLibrary,
-) {
-  let actionId = 1;
-  const buttons = [{ action: 0, label: 'Cancel' }];
-  for (const [_cardKey, { count, reaction: { id } }] of grouped) {
-    const [, cardId] = id.split('-');
-    const cardName = cardLibrary.getCard(+cardId).cardName;
-    buttons.push({ action: actionId++, label: `${cardName} (${count})` });
-  }
-  return buttons;
-}
-
-function buildActionMap(
-  grouped: Map<string, { count: number; reaction: Reaction }>,
-) {
-  let actionId = 1;
-  const map = new Map<number, Reaction>();
-  for (const [, { reaction }] of grouped) {
-    map.set(actionId++, reaction);
-  }
-  return map;
-}
+import { groupReactionsByCardKey } from './reactions/group-reactions-by-card-key.ts';
+import { buildActionButtons } from './reactions/build-action-buttons.ts';
+import { buildActionMap } from './reactions/build-action-map.ts';
 
 export const createEffectGeneratorMap: EffectGeneratorFactory = (
   { reactionManager, logManager },
@@ -268,7 +235,7 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
         // if there is only one reaction though, and it's compulsory (such as the merchant's
         // reaction-like card effect to gain a treasure) then we just do it with no choice.
         if (reactions.length > 1 || compulsoryReactions.length === 0) {
-          const grouped = groupReactionsByCard(reactions);
+          const grouped = groupReactionsByCardKey(reactions);
           const actionButtons = buildActionButtons(grouped, cardLibrary);
           const actionMap = buildActionMap(grouped);
           

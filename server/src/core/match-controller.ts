@@ -15,7 +15,7 @@ import { createCardFactory } from '../utils/create-card.ts';
 import { createEffectHandlerMap } from './effect-handler-map.ts';
 import { EffectsPipeline } from './effects-pipeline.ts';
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
-import { ReactionManager } from './reaction-manager.ts';
+import { ReactionManager } from './reactions/reaction-manager.ts';
 import { scoringFunctionMap } from '../expansions/scoring-function-map.ts';
 import { CardLibrary } from './card-library.ts';
 import { compare, Operation } from 'fast-json-patch';

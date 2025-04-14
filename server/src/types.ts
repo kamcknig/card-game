@@ -4,7 +4,7 @@ import { GameEffects } from './core/effects/game-effects.ts';
 import { toNumber } from 'es-toolkit/compat';
 
 import { CardLibrary } from './core/card-library.ts';
-import { ReactionManager } from './core/reaction-manager.ts';
+import { ReactionManager } from './core/reactions/reaction-manager.ts';
 import { LogManager } from './core/log-manager.ts';
 
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;

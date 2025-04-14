@@ -1,7 +1,7 @@
 import { AppSocket, EffectGeneratorFn, EffectHandlerMap, ReactionTemplate, } from '../types.ts';
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
 import { findCards } from '../utils/find-cards.ts';
-import { ReactionManager } from './reaction-manager.ts';
+import { ReactionManager } from './reactions/reaction-manager.ts';
 import { PlayerId } from 'shared/shared-types.ts';
 import { findOrderedEffectTargets } from '../utils/find-ordered-effect-targets.ts';
 import { findSourceByCardId } from '../utils/find-source-by-card-id.ts';
