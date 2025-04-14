@@ -286,7 +286,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     return Object.values(config.players).reduce((prev, player, _idx) => {
       console.log('initializing player', player.id, 'cards...');
-      let blah = {};
+      /*let blah = {};
       // todo remove testing code
       if (_idx === 0) {
         blah = {
@@ -302,9 +302,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           gold: 5
         };
       }
-      Object.entries(blah).forEach(([key, count]) => {
-          /*Object.entries(playerStartHand).forEach(
-           ([key, count]) => {*/
+      Object.entries(blah).forEach(([key, count]) => {*/
+          Object.entries(playerStartHand).forEach(
+           ([key, count]) => {
           prev['playerDecks'][player.id] ??= [];
           let deck = prev['playerDecks'][player.id];
           deck = deck.concat(
@@ -439,25 +439,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         );
       }
     }
-    
-    let count = 0;
-    const blah = function* () {
-      const playerId = Object.keys(match.playerDecks)[0];
-      for (const cardId of match.playerDecks[+playerId]) {
-        yield new TrashCardEffect({
-          sourcePlayerId: +playerId,
-          playerId: +playerId,
-          cardId: +cardId,
-          sourceCardId: +cardId!
-        });
-        count++;
-        if (count > 10) {
-          break;
-        }
-      }
-    }
-    
-    this._effectsController?.runGenerator(blah());
     
     this._logManager.rootLog({
       type: 'newTurn',
