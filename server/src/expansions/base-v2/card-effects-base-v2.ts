@@ -648,7 +648,7 @@ const expansionModule: CardExpansionModule = {
       // total hand size should be 7 when done. because i'm drawing to hand and not really
       // placing them in an 'aside' area, the total hand size should be 7 plus the set aside cards.
       // we also make sure the deck+discard length is great enough to be able to draw a card.
-      while (hand.length < 7 + setAside.length && (deck.length + discard.length > 0)) {
+      while (hand.length < 7 && (deck.length + discard.length > 0)) {
         console.log(`[LIBRARY EFFECT] drawing card...`);
         
         const results = (yield new DrawCardEffect({
@@ -663,7 +663,7 @@ const expansionModule: CardExpansionModule = {
         if (card.type.includes('ACTION')) {
           console.log(`[LIBRARY EFFECT] ${card} is an action prompting user to set aside...`);
           
-          const shouldSetAside = (yield new UserPromptEffect({
+          const setAsideResult = (yield new UserPromptEffect({
             sourcePlayerId: triggerPlayerId,
             sourceCardId: triggerCardId,
             playerId: triggerPlayerId,
@@ -671,16 +671,20 @@ const expansionModule: CardExpansionModule = {
             actionButtons: [{ label: 'KEEP', action: 1 }, { label: 'SET ASIDE', action: 2 }],
           })) as { action: number };
           
-          if (shouldSetAside.action === 2) {
+          if (setAsideResult.action === 2) {
             console.log(`[LIBRARY EFFECT] setting card aside`);
+            yield new MoveCardEffect({
+              cardId,
+              sourcePlayerId: triggerPlayerId,
+              sourceCardId: triggerCardId,
+              to: {
+                location: 'set-aside',
+              }
+            });
             setAside.push(cardId);
           } else {
             console.log('[LIBRARY EFFECT] keeping card in hand');
           }
-          
-          hand = match.playerHands[triggerPlayerId];
-          deck = match.playerDecks[triggerPlayerId];
-          discard = match.playerDiscards[triggerPlayerId];
         } else {
           console.log(`[LIBRARY EFFECT] card was not an action, keeping in hand`);
         }

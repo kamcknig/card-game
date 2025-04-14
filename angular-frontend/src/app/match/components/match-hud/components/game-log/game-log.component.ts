@@ -3,7 +3,7 @@ import { LogEntryMessage } from 'shared/shared-types';
 import { DomSanitizer } from '@angular/platform-browser';
 import { NanostoresService } from '@nanostores/angular';
 import { logStore } from '../../../../../state/log-state';
-import { debounceTime, fromEvent, switchMap, takeUntil, tap, throttleTime } from 'rxjs';
+import { fromEvent, switchMap, throttleTime } from 'rxjs';
 
 @Component({
   selector: 'app-game-log',

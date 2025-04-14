@@ -8,7 +8,7 @@ import {
   ViewChild
 } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { AsyncPipe, NgSwitch, NgSwitchCase } from '@angular/common';
+import { AsyncPipe, NgClass, NgSwitch, NgSwitchCase } from '@angular/common';
 import { SocketService } from './core/socket-service/socket.service';
 import { NanostoresService } from '@nanostores/angular';
 import { catchError, Observable, of, tap } from 'rxjs';
@@ -19,7 +19,7 @@ import { PIXI_APP } from './core/pixi-application.token';
 import { MatchConfigurationComponent } from './components/match-configuration/match-configuration.component';
 import { GameSummaryComponent } from './components/game-summary/game-summary.component';
 import { MatchSummary } from 'shared/shared-types';
-import { matchSummaryStore } from './state/match-state';
+import { matchStartedStore, matchSummaryStore } from './state/match-state';
 import { MatchHudComponent } from './match/components/match-hud/match-hud.component';
 
 @Component({
@@ -32,6 +32,7 @@ import { MatchHudComponent } from './match/components/match-hud/match-hud.compon
     MatchConfigurationComponent,
     GameSummaryComponent,
     MatchHudComponent,
+    NgClass,
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
@@ -44,6 +45,7 @@ export class AppComponent implements AfterViewInit, OnInit {
   matchSummary: MatchSummary | undefined;
   scene$: Observable<SceneNames> | undefined;
   matchScene: MatchScene | undefined;
+  matchStarted$: Observable<boolean> | undefined;
 
   constructor(
     private _socketService: SocketService,
@@ -53,6 +55,8 @@ export class AppComponent implements AfterViewInit, OnInit {
   }
 
   ngOnInit() {
+    this.matchStarted$ = this._nanoStores.useStore(matchStartedStore);
+
     this.scene$ = this._nanoStores.useStore(sceneStore).pipe(
       tap(async scene => {
         if (scene === 'match') {

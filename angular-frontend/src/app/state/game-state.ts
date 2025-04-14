@@ -37,7 +37,6 @@ function updatePausedState() {
 }
 
 (globalThis as any).gamePausedStore = gamePausedStore;
-console.log(gamePausedStore.subscribe((val => console.log(val))));
 
 export const gameOwnerIdStore = atom<PlayerId | undefined>();
 (globalThis as any).gameOwnerIdStore = gameOwnerIdStore;

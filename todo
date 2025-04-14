@@ -1,8 +1,5 @@
 TODO lower priority
-- undo
-- "set aside" area and update the one ability that uses it right now.
-    maybe "arbitrary zones"
-        if so then current zones can be converted to use the feature too.
+- undo turn/steps
 - when can't load assets (expansion modules) it still just goes on rather than stopping
 
 TODO higher priority
@@ -15,6 +12,5 @@ update user prompt modal when there are multiple actions to toggle those actions
 when select card effect happens, the UI needs to remove the play all treasure cards button
 
 when player disconnects in game, give option to kick, or continue playing
-
 
 vassal'd a moneylender i think, but didn't show it in the game log - see how dominion does this - see screenshot in server code

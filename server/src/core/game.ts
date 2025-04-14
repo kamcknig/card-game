@@ -63,9 +63,7 @@ export class Game {
     let player = this.players.find((p) => p.sessionId === sessionId);
     
     if (this.matchStarted && !player) {
-      console.log(
-        `[GAME] game has already started, and player not found in game, rejecting`,
-      );
+      console.log(`[GAME] game has already started, and player not found in game, rejecting`,);
       socket.disconnect();
     }
     

@@ -1,4 +1,4 @@
-import { CardLocation, Match } from 'shared/shared-types.ts';
+import { CardId, CardLocation, Match, Zones } from 'shared/shared-types.ts';
 import { isUndefined } from 'es-toolkit';
 
 import { CardLibrary } from '../core/card-library.ts';
@@ -8,26 +8,34 @@ export const findSourceByCardId = (
   match: Match,
   cardLibrary: CardLibrary,
 ): { sourceStore: any; index?: number; storeKey?: CardLocation } => {
-  let sourceStore;
+  let sourceStore: CardId[] | undefined  = undefined;
   let storeKey: CardLocation | undefined;
   
   if (match.supply.includes(cardId)) {
     sourceStore = match.supply;
     storeKey = 'supply';
-    console.log(`[FIND CARD SOURCE] found card ${cardLibrary.getCard(cardId)} in the supply`);
+    console.log(`[FIND CARD SOURCE] found card ${cardLibrary.getCard(cardId)} in the 'supply'`);
   } else if (match.kingdom.includes(cardId)) {
     sourceStore = match.kingdom;
     storeKey = 'kingdom';
-    console.log(`[FIND CARD SOURCE] found card ${cardLibrary.getCard(cardId)} in the kingdom`);
+    console.log(`[FIND CARD SOURCE] found card ${cardLibrary.getCard(cardId)} in the 'kingdom'`);
   } else if (match.playArea.includes(cardId)) {
     sourceStore = match.playArea;
     storeKey = 'playArea';
-    console.log(`[FIND CARD SOURCE] found card ${cardLibrary.getCard(cardId)} in the play area`);
+    console.log(`[FIND CARD SOURCE] found card ${cardLibrary.getCard(cardId)} in the 'play area'`);
   } else if (match.trash.includes(cardId)) {
     sourceStore = match.trash;
     storeKey = 'trash';
-    console.log(`[FIND CARD SOURCE] found card ${cardLibrary.getCard(cardId)} in the trash`);
+    console.log(`[FIND CARD SOURCE] found card ${cardLibrary.getCard(cardId)} in the 'trash'`);
   } else {
+    for (const [zone, cardIds] of Object.entries(match.zones)) {
+      if (cardIds.includes(cardId)) {
+        sourceStore = match.zones[zone as Zones];
+        storeKey = zone as Zones;
+        console.log(`[FIND CARD SOURCE] found card ${cardLibrary.getCard(cardId)} in zone '${zone}' hand`);
+      }
+    }
+    
     for (const [playerId, hand] of Object.entries(match.playerHands)) {
       if (hand.includes(cardId)) {
         sourceStore = hand;

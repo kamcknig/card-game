@@ -72,6 +72,7 @@ export type Match = {
   turnNumber: number;
   turnPhaseIndex: number;
   cardsPlayed: Record<PlayerId, CardId[]>;
+  zones: Record<Zones, CardId[]>;
 }
 
 export const TurnPhaseOrderValues = ['action', 'buy', 'cleanup'] as const;
@@ -122,8 +123,18 @@ export type ClientEmitEvents = Omit<ServerListenEvents, 'startMatch' | 'matchCon
   matchConfigurationUpdated: (config: Pick<MatchConfiguration, 'expansions'>) => void;
 };
 
+let ZoneValues = ['set-aside'] as const;
+export type Zones = typeof ZoneValues[number];
+export const isLocationZone = (location: any): location is Zones => {
+  return !!location && (ZoneValues as unknown as string[]).indexOf(location) !== -1;
+}
+
 const CardLocationValues = ['playerDiscards', 'playerHands', 'trash', 'playArea', 'playerDecks', 'supply', 'kingdom'] as const;
-export type CardLocation = typeof CardLocationValues[number];
+export type CardLocations = typeof CardLocationValues[number];
+
+export type CardLocation =
+  | CardLocations
+  | Zones
 
 export type LocationSpec = { location: CardLocation | CardLocation[], index?: number };
 

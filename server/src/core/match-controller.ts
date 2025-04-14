@@ -1,7 +1,7 @@
 import {
   Card,
   CardData,
-  CardKey, LogEntry,
+  CardKey,
   Match,
   MatchConfiguration,
   MatchSummary,
@@ -25,7 +25,6 @@ import Fuse, { IFuseOptions } from 'fuse.js';
 import { createEffectGeneratorMap, effectGeneratorBlueprintMap } from './effects/effect-generator-map.ts';
 import { EventEmitter } from '@denosaurs/event';
 import { LogManager } from './log-manager.ts';
-import { TrashCardEffect } from './effects/effect-types/trash-card.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _effectsController: CardEffectController | undefined;
@@ -116,6 +115,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       selectableCards: {},
       playArea: [],
       cardsPlayed: {},
+      zones: {
+        'set-aside': [],
+      }
     };
     
     this._config = config;
@@ -228,7 +230,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const kingdomCards: Card[] = [];
     
     // todo: remove testing code
-    const keepers: string[] = [].filter((k) =>
+    const keepers: string[] = ['library', 'militia', 'moat'].filter((k) =>
       this._cardData!.kingdom[k]
     );
     
@@ -286,14 +288,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     return Object.values(config.players).reduce((prev, player, _idx) => {
       console.log('initializing player', player.id, 'cards...');
-      /*let blah = {};
+      let blah = {};
       // todo remove testing code
       if (_idx === 0) {
         blah = {
-          sentry: 3,
+          library: 3,
           gold: 5,
           militia: 3,
-          moat: 30,
+          moat: 8,
         };
       } else {
         blah = {
@@ -302,9 +304,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           gold: 5
         };
       }
-      Object.entries(blah).forEach(([key, count]) => {*/
-          Object.entries(playerStartHand).forEach(
-           ([key, count]) => {
+      Object.entries(blah).forEach(([key, count]) => {
+          /*Object.entries(playerStartHand).forEach(
+           ([key, count]) => {*/
           prev['playerDecks'][player.id] ??= [];
           let deck = prev['playerDecks'][player.id];
           deck = deck.concat(
@@ -348,9 +350,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     player.ready = true;
     
     if (this._config.players.some((p) => !p.ready)) {
-      console.log(
-        `[MATCH] not all players marked ready, waiting for everyone`,
-      );
+      console.log(`[MATCH] not all players marked ready, waiting for everyone`,);
       return;
     }
     

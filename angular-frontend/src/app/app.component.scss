@@ -20,3 +20,11 @@ app-match-configuration, app-match-hud, app-game-summary {
   max-height: 100%;
   overflow: hidden;
 }
+
+app-match-hud {
+  display: none;
+}
+
+app-match-hud.match-started {
+  display: unset;
+}

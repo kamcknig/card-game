@@ -197,11 +197,12 @@ export class MatchScene extends Scene {
       t.text = `LOADING${dots}`;
     }, 300);
 
-    this.addChild(c);
+    this._app.stage.addChild(c);
 
     await Assets.loadBundle('cardLibrary');
 
-    this.removeChild(c);
+    c.removeFromParent();
+    c.destroy();
     clearInterval(i);
   }
 

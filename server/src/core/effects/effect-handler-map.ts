@@ -185,6 +185,7 @@ export const createEffectHandlerMap = (
   map.moveCard = function (effect: MoveCardEffect, match) {
     const card = cardLibrary.getCard(effect.cardId);
     
+    // find the current location of the card
     const {
       sourceStore: oldStore,
       index,
@@ -200,6 +201,7 @@ export const createEffectHandlerMap = (
     
     effect.to.location = castArray(effect.to.location);
     
+    // find the new location of the card
     const newStore = findSourceByLocationSpec({
       spec: effect.to,
       playerId: effect.toPlayerId,
