@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { PlayerId } from 'shared/shared-types';
 import { NanostoresService } from '@nanostores/angular';
 import { playerIdStore, selfPlayerIdStore } from '../../state/player-state';
@@ -19,7 +19,8 @@ import { PlayerComponent } from './player-name-input/player-name-input.component
     PlayerComponent
   ],
   templateUrl: './match-configuration.component.html',
-  styleUrl: './match-configuration.component.scss'
+  styleUrl: './match-configuration.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MatchConfigurationComponent {
   public $playerIds!: Observable<readonly PlayerId[]>;

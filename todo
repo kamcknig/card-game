@@ -15,3 +15,6 @@ update user prompt modal when there are multiple actions to toggle those actions
 when select card effect happens, the UI needs to remove the play all treasure cards button
 
 when player disconnects in game, give option to kick, or continue playing
+
+
+vassal'd a moneylender i think, but didn't show it in the game log - see how dominion does this - see screenshot in server code
