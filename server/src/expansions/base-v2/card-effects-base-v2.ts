@@ -1,19 +1,19 @@
 import { findOrderedEffectTargets } from '../../utils/find-ordered-effect-targets.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
-import { DiscardCardEffect } from '../../core/effects/discard-card.ts';
-import { DrawCardEffect } from '../../core/effects/draw-card.ts';
-import { GainActionEffect } from '../../core/effects/gain-action.ts';
-import { GainBuyEffect } from '../../core/effects/gain-buy.ts';
-import { GainCardEffect } from '../../core/effects/gain-card.ts';
-import { GainTreasureEffect } from '../../core/effects/gain-treasure.ts';
-import { MoveCardEffect } from '../../core/effects/move-card.ts';
-import { RevealCardEffect } from '../../core/effects/reveal-card.ts';
-import { SelectCardEffect } from '../../core/effects/select-card.ts';
-import { ShuffleDeckEffect } from '../../core/effects/shuffle-card.ts';
-import { TrashCardEffect } from '../../core/effects/trash-card.ts';
-import { UserPromptEffect } from '../../core/effects/user-prompt.ts';
+import { DiscardCardEffect } from '../../core/effects/effect-types/discard-card.ts';
+import { DrawCardEffect } from '../../core/effects/effect-types/draw-card.ts';
+import { GainActionEffect } from '../../core/effects/effect-types/gain-action.ts';
+import { GainBuyEffect } from '../../core/effects/effect-types/gain-buy.ts';
+import { GainCardEffect } from '../../core/effects/effect-types/gain-card.ts';
+import { GainTreasureEffect } from '../../core/effects/effect-types/gain-treasure.ts';
+import { MoveCardEffect } from '../../core/effects/effect-types/move-card.ts';
+import { RevealCardEffect } from '../../core/effects/effect-types/reveal-card.ts';
+import { SelectCardEffect } from '../../core/effects/effect-types/select-card.ts';
+import { ShuffleDeckEffect } from '../../core/effects/effect-types/shuffle-card.ts';
+import { TrashCardEffect } from '../../core/effects/effect-types/trash-card.ts';
+import { UserPromptEffect } from '../../core/effects/effect-types/user-prompt.ts';
 import { CardExpansionModule } from '../card-expansion-module.ts';
-import { InvokeGameActionGeneratorEffect } from '../../core/effects/invoke-game-action-generator-effect.ts';
+import { InvokeGameActionGeneratorEffect } from '../../core/effects/effect-types/invoke-game-action-generator-effect.ts';
 import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 
 const expansionModule: CardExpansionModule = {

@@ -1,5 +1,5 @@
 import { AppSocket, EffectGeneratorFn, GameEffectGenerator } from '../types.ts';
-import { CardEffectController } from './card-effects-controller.ts';
+import { CardEffectController } from './effects/card-effects-controller.ts';
 import { Card, CardId, Match, Player, PlayerId, TurnPhaseOrderValues, } from 'shared/shared-types.ts';
 import { isUndefined } from 'es-toolkit/compat';
 import { getEffectiveCardCost } from '../utils/get-effective-card-cost.ts';

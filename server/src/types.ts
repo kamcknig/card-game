@@ -1,6 +1,6 @@
 import { Socket } from 'socket.io';
 import { Card, CardId, Match, PlayerId, ServerEmitEvents, ServerListenEvents, } from 'shared/shared-types.ts';
-import { GameEffects } from './core/effects/game-effects.ts';
+import { GameEffects } from './core/effects/effect-types/game-effects.ts';
 import { toNumber } from 'es-toolkit/compat';
 
 import { CardLibrary } from './core/card-library.ts';

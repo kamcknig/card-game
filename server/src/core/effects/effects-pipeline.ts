@@ -1,7 +1,7 @@
-import { GameEffects } from './effects/game-effects.ts';
-import { AppSocket, EffectGenerator, EffectHandlerMap } from '../types.ts';
+import { GameEffects } from './effect-types/game-effects.ts';
+import { AppSocket, EffectGenerator, EffectHandlerMap } from '../../types.ts';
 import { Match, PlayerId } from 'shared/shared-types.ts';
-import { MatchController } from './match-controller.ts';
+import { MatchController } from '../match-controller.ts';
 
 export class EffectsPipeline {
   private _prevSnapshot!: Match;

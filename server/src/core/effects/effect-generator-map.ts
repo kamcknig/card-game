@@ -4,24 +4,24 @@ import {
   EffectGeneratorFn,
   Reaction,
   ReactionTrigger,
-} from '../types.ts';
-import { DiscardCardEffect } from './effects/discard-card.ts';
-import { DrawCardEffect } from './effects/draw-card.ts';
-import { GainActionEffect } from './effects/gain-action.ts';
-import { GainBuyEffect } from './effects/gain-buy.ts';
-import { GainCardEffect } from './effects/gain-card.ts';
-import { GainTreasureEffect } from './effects/gain-treasure.ts';
-import { CardPlayedEffect } from './effects/card-played.ts';
-import { getEffectiveCardCost } from '../utils/get-effective-card-cost.ts';
-import { MoveCardEffect } from './effects/move-card.ts';
-import { getOrderStartingFrom } from '../utils/get-order-starting-from.ts';
-import { UserPromptEffect } from './effects/user-prompt.ts';
+} from '../../types.ts';
+import { DiscardCardEffect } from './effect-types/discard-card.ts';
+import { DrawCardEffect } from './effect-types/draw-card.ts';
+import { GainActionEffect } from './effect-types/gain-action.ts';
+import { GainBuyEffect } from './effect-types/gain-buy.ts';
+import { GainCardEffect } from './effect-types/gain-card.ts';
+import { GainTreasureEffect } from './effect-types/gain-treasure.ts';
+import { CardPlayedEffect } from './effect-types/card-played.ts';
+import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
+import { MoveCardEffect } from './effect-types/move-card.ts';
+import { getOrderStartingFrom } from '../../utils/get-order-starting-from.ts';
+import { UserPromptEffect } from './effect-types/user-prompt.ts';
 import { TurnPhaseOrderValues } from 'shared/shared-types.ts';
-import { getTurnPhase } from '../utils/get-turn-phase.ts';
-import { EndTurnEffect } from './effects/end-turn.ts';
-import { groupReactionsByCardKey } from './reactions/group-reactions-by-card-key.ts';
-import { buildActionButtons } from './reactions/build-action-buttons.ts';
-import { buildActionMap } from './reactions/build-action-map.ts';
+import { getTurnPhase } from '../../utils/get-turn-phase.ts';
+import { EndTurnEffect } from './effect-types/end-turn.ts';
+import { groupReactionsByCardKey } from '../reactions/group-reactions-by-card-key.ts';
+import { buildActionButtons } from '../reactions/build-action-buttons.ts';
+import { buildActionMap } from '../reactions/build-action-map.ts';
 
 export const createEffectGeneratorMap: EffectGeneratorFactory = (
   { reactionManager, logManager },

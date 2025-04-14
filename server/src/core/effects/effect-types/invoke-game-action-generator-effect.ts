@@ -1,5 +1,5 @@
 import { EffectBase, EffectBaseArgs } from './effect-base.ts';
-import { EffectContext, GameActionOverrides } from '../../types.ts';
+import { EffectContext, GameActionOverrides } from '../../../types.ts';
 
 export type InvokeGameActionGeneratorArgs = {
   gameAction: string;

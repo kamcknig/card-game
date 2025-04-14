@@ -1,5 +1,5 @@
 import { Card, Match } from 'shared/shared-types.ts';
-import { ModifyCostEffect, ModifyCostEffectArgs } from './core/effects/modify-cost.ts';
+import { ModifyCostEffect, ModifyCostEffectArgs } from './core/effects/effect-types/modify-cost.ts';
 import { CardLibrary } from './core/card-library.ts';
 import { CardOverrides } from './types.ts';
 

@@ -1,9 +1,9 @@
-import { EffectGenerator, EffectGeneratorFn, IEffectRunner } from '../types.ts';
-import { GameEffects } from './effects/game-effects.ts';
+import { EffectGenerator, EffectGeneratorFn, IEffectRunner } from '../../types.ts';
+import { GameEffects } from './effect-types/game-effects.ts';
 import { Match } from 'shared/shared-types.ts';
 import { EffectsPipeline } from './effects-pipeline.ts';
 
-import { CardLibrary } from './card-library.ts';
+import { CardLibrary } from '../card-library.ts';
 
 export class CardEffectController implements IEffectRunner {
   private _effectsPipeline: EffectsPipeline | undefined;

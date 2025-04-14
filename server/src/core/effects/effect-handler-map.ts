@@ -1,20 +1,20 @@
-import { AppSocket, EffectGeneratorFn, EffectHandlerMap, ReactionTemplate, } from '../types.ts';
-import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
-import { findCards } from '../utils/find-cards.ts';
-import { ReactionManager } from './reactions/reaction-manager.ts';
+import { AppSocket, EffectGeneratorFn, EffectHandlerMap, ReactionTemplate, } from '../../types.ts';
+import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
+import { findCards } from '../../utils/find-cards.ts';
+import { ReactionManager } from '../reactions/reaction-manager.ts';
 import { PlayerId } from 'shared/shared-types.ts';
-import { findOrderedEffectTargets } from '../utils/find-ordered-effect-targets.ts';
-import { findSourceByCardId } from '../utils/find-source-by-card-id.ts';
-import { findSpecLocationBySource } from '../utils/find-spec-location-by-source.ts';
-import { findSourceByLocationSpec } from '../utils/find-source-by-location-spec.ts';
+import { findOrderedEffectTargets } from '../../utils/find-ordered-effect-targets.ts';
+import { findSourceByCardId } from '../../utils/find-source-by-card-id.ts';
+import { findSpecLocationBySource } from '../../utils/find-spec-location-by-source.ts';
+import { findSourceByLocationSpec } from '../../utils/find-source-by-location-spec.ts';
 import { castArray, isNumber, isUndefined, toNumber } from 'es-toolkit/compat';
-import { MoveCardEffect } from './effects/move-card.ts';
-import { cardDataOverrides, getCardOverrides, removeOverrideEffects } from '../card-data-overrides.ts';
-import { UserPromptEffect } from './effects/user-prompt.ts';
-import { CardLibrary } from './card-library.ts';
-import { ShuffleDeckEffect } from './effects/shuffle-card.ts';
-import { cardLifecycleMap } from './card-lifecycle-map.ts';
-import { LogManager } from './log-manager.ts';
+import { MoveCardEffect } from './effect-types/move-card.ts';
+import { cardDataOverrides, getCardOverrides, removeOverrideEffects } from '../../card-data-overrides.ts';
+import { UserPromptEffect } from './effect-types/user-prompt.ts';
+import { CardLibrary } from '../card-library.ts';
+import { ShuffleDeckEffect } from './effect-types/shuffle-card.ts';
+import { cardLifecycleMap } from '../card-lifecycle-map.ts';
+import { LogManager } from '../log-manager.ts';
 
 /**
  * Returns an object whose properties are functions. The names are a union of Effect types

@@ -1,5 +1,5 @@
 import { EffectBase, EffectBaseArgs } from './effect-base.ts';
-import { EffectContext } from '../../types.ts';
+import { EffectContext } from '../../../types.ts';
 import { CardKey } from "shared/shared-types.ts";
 
 export type InvokeGeneratorEffectArgs = {

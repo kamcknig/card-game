@@ -9,11 +9,11 @@ import {
   PlayerId,
 } from 'shared/shared-types.ts';
 import { AppSocket, MatchBaseConfiguration, } from '../types.ts';
-import { CardEffectController } from './card-effects-controller.ts';
+import { CardEffectController } from './effects/card-effects-controller.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';
 import { createCardFactory } from '../utils/create-card.ts';
-import { createEffectHandlerMap } from './effect-handler-map.ts';
-import { EffectsPipeline } from './effects-pipeline.ts';
+import { createEffectHandlerMap } from './effects/effect-handler-map.ts';
+import { EffectsPipeline } from './effects/effects-pipeline.ts';
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
 import { ReactionManager } from './reactions/reaction-manager.ts';
 import { scoringFunctionMap } from '../expansions/scoring-function-map.ts';
@@ -22,10 +22,10 @@ import { compare, Operation } from 'fast-json-patch';
 import { ExpansionCardData, expansionData } from '../state/expansion-data.ts';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
 import Fuse, { IFuseOptions } from 'fuse.js';
-import { createEffectGeneratorMap, effectGeneratorBlueprintMap } from './effect-generator-map.ts';
+import { createEffectGeneratorMap, effectGeneratorBlueprintMap } from './effects/effect-generator-map.ts';
 import { EventEmitter } from '@denosaurs/event';
 import { LogManager } from './log-manager.ts';
-import { TrashCardEffect } from './effects/trash-card.ts';
+import { TrashCardEffect } from './effects/effect-types/trash-card.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _effectsController: CardEffectController | undefined;

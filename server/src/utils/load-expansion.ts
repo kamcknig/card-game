@@ -1,5 +1,5 @@
 import { CardData } from 'shared/shared-types.ts';
-import { effectGeneratorBlueprintMap } from '../core/effect-generator-map.ts';
+import { effectGeneratorBlueprintMap } from '../core/effects/effect-generator-map.ts';
 import { scoringFunctionMap } from '../expansions/scoring-function-map.ts';
 import { expansionData } from '../state/expansion-data.ts';
 import { cardLifecycleMap } from '../core/card-lifecycle-map.ts';
