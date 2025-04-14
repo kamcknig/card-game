@@ -41,7 +41,7 @@ export class PlayerHandView extends Container {
         this._phaseStatus.x = this._background.width * .5 - this._phaseStatus.width * .5;
 
         this._cleanup.push(currentPlayerTurnIdStore.subscribe(playerId => {
-            this._nextPhaseButton.button.visible = playerId === selfPlayerIdStore.get();
+              this._nextPhaseButton.button.visible = playerId === selfPlayerIdStore.get();
         }));
         this._cleanup.push(turnPhaseStore.subscribe((phase) => {
             this.removeChild(this._nextPhaseButton.button);

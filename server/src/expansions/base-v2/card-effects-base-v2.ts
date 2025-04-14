@@ -29,7 +29,7 @@ const expansionModule: CardExpansionModule = {
             compulsory: true,
             multipleUse: true,
             condition: ({ cardLibrary, trigger }) => {
-              const card = cardLibrary.getCard(trigger.cardId);
+              const card = cardLibrary.getCard(trigger.cardId!);
               return card.cardKey === 'silver' && trigger.playerId === playerId;
             },
             listeningFor: 'cardPlayed',
@@ -57,7 +57,7 @@ const expansionModule: CardExpansionModule = {
             playerId,
             listeningFor: 'cardPlayed',
             condition: ({ cardLibrary, trigger }) => {
-              return cardLibrary.getCard(trigger.cardId).type.includes(
+              return cardLibrary.getCard(trigger.cardId!).type.includes(
                 'ATTACK',
               ) && trigger.playerId !== playerId;
             },

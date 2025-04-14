@@ -66,15 +66,15 @@ export class ReactionManager {
     this._triggers.push(new Reaction(reactionTemplate));
   }
   
-  *runTrigger({ trigger }: { trigger: ReactionTrigger }) {
+  *runTrigger({ trigger, reactionContext }: { trigger: ReactionTrigger, reactionContext?: any }) {
+    reactionContext ??= {};
+    
     // now we get the order of players that could be affected by the play (including the current player),
     // then get reactions for them and run them
     const targetOrder = getOrderStartingFrom(
       this.match.players,
       this.match.currentPlayerTurnIndex,
     );
-    
-    const reactionContext: any = {};
     
     for (const targetPlayer of targetOrder) {
       console.log(`[REACTION MANAGER] checking '${trigger.eventType}' reactions for ${targetPlayer}`);
@@ -165,8 +165,6 @@ export class ReactionManager {
           blockedCardKeys.add(selectedReaction.getSourceKey());
         }
       }
-      
-      yield reactionContext;
     }
   }
 }

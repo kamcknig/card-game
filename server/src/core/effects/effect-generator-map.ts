@@ -1,10 +1,4 @@
-import {
-  EffectGeneratorBlueprint,
-  EffectGeneratorFactory,
-  EffectGeneratorFn,
-  Reaction,
-  ReactionTrigger,
-} from '../../types.ts';
+import { EffectGeneratorBlueprint, EffectGeneratorFactory, EffectGeneratorFn, ReactionTrigger, } from '../../types.ts';
 import { DiscardCardEffect } from './effect-types/discard-card.ts';
 import { DrawCardEffect } from './effect-types/draw-card.ts';
 import { GainActionEffect } from './effect-types/gain-action.ts';
@@ -14,14 +8,9 @@ import { GainTreasureEffect } from './effect-types/gain-treasure.ts';
 import { CardPlayedEffect } from './effect-types/card-played.ts';
 import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 import { MoveCardEffect } from './effect-types/move-card.ts';
-import { getOrderStartingFrom } from '../../utils/get-order-starting-from.ts';
-import { UserPromptEffect } from './effect-types/user-prompt.ts';
 import { TurnPhaseOrderValues } from 'shared/shared-types.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { EndTurnEffect } from './effect-types/end-turn.ts';
-import { groupReactionsByCardKey } from '../reactions/group-reactions-by-card-key.ts';
-import { buildActionButtons } from '../reactions/build-action-buttons.ts';
-import { buildActionMap } from '../reactions/build-action-map.ts';
 import { NewTurnEffect } from './effect-types/new-turn.ts';
 
 export const createEffectGeneratorMap: EffectGeneratorFactory = (
@@ -81,7 +70,7 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
     console.log(`[NEXT PHASE EFFECT] entering phase: ${newPhase}`);
     
     switch (newPhase) {
-      case 'action':
+      case 'action': {
         match.playerActions = 1;
         match.playerBuys = 1;
         match.playerTreasure = 0;
@@ -99,17 +88,22 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
           });
         }
         
-        yield new NewTurnEffect({
-          playerId: match.players[match.currentPlayerTurnIndex].id
-        });
-        
         logManager.rootLog({
           type: 'newPlayerTurn',
           turn: match.turnNumber,
           playerId: match.players[match.currentPlayerTurnIndex].id
         });
         
+        const trigger: ReactionTrigger = {
+          eventType: 'startTurn',
+          playerId: match.players[match.currentPlayerTurnIndex].id
+        };
+        
+        const reactionContext = {};
+        yield* reactionManager.runTrigger({ trigger, reactionContext });
+        
         break;
+      }
       case 'buy':
         // no explicit behavior
         break;
@@ -204,7 +198,8 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
       cardId: triggerCardId,
     };
     
-    const reactionContext = yield* reactionManager.runTrigger({ trigger });
+    const reactionContext = {};
+    yield* reactionManager.runTrigger({ trigger, reactionContext });
     
     const generatorFn = map[card.cardKey];
     if (generatorFn) {

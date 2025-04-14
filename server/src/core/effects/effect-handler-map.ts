@@ -297,22 +297,6 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
   };
   
   
-  map.newTurn = function (effect, match) {
-    const trigger: ReactionTrigger = {
-      playerId: effect.playerId,
-      eventType: 'startTurn',
-    };
-    
-    const reactions = reactionManager.getReactions(trigger);
-    
-    for (const reaction of reactions) {
-      const generator = reaction.generatorFn({ match, cardLibrary, reaction, trigger });
-      getEffectsPipeline?.().runGenerator({
-        generator,
-        playerId: effect.playerId,
-      });
-    }
-  }
   
   
   map.cardPlayed = function (effect, match) {

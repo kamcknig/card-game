@@ -230,7 +230,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const kingdomCards: Card[] = [];
     
     // todo: remove testing code
-    const keepers: string[] = ['astrolabe'].filter((k) =>
+    const keepers: string[] = ['astrolabe', 'militia', 'moat'].filter((k) =>
       this._cardData!.kingdom[k]
     );
     
@@ -288,25 +288,26 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     return Object.values(config.players).reduce((prev, player, _idx) => {
       console.log('initializing player', player.id, 'cards...');
-      /*let blah = {};
+      let blah = {};
       // todo remove testing code
       if (_idx === 0) {
         blah = {
           library: 3,
           gold: 5,
           militia: 3,
-          moat: 8,
+          moat: 3,
         };
       } else {
         blah = {
           moat: 3,
           militia: 3,
-          gold: 5
+          gold: 5,
+          estate: 4
         };
       }
-      Object.entries(blah).forEach(([key, count]) => {*/
-          Object.entries(playerStartHand).forEach(
-           ([key, count]) => {
+      Object.entries(blah).forEach(([key, count]) => {
+          /*Object.entries(playerStartHand).forEach(
+           ([key, count]) => {*/
           prev['playerDecks'][player.id] ??= [];
           let deck = prev['playerDecks'][player.id];
           deck = deck.concat(
