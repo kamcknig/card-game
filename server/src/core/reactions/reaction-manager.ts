@@ -1,6 +1,5 @@
 import { Match } from 'shared/shared-types.ts';
 import { Reaction, ReactionTemplate, ReactionTrigger } from '../../types.ts';
-
 import { CardLibrary } from '../card-library.ts';
 
 export class ReactionManager {
@@ -19,11 +18,9 @@ export class ReactionManager {
     const idx = this._triggers.findIndex((trigger) => trigger.id === triggerId);
     if (idx > -1) {
       const trigger = this._triggers[idx];
-      console.log(
-        `[REACTION MANAGER] removing trigger reaction ${triggerId} for player ${
-          this.match.players?.find((player) => player.id === trigger.playerId)
-        }`,
-      );
+      console.log(`[REACTION MANAGER] removing trigger reaction ${triggerId} for player
+        ${this.match.players?.find((player) => player.id === trigger.playerId)}`);
+      
       this._triggers.splice(idx, 1);
     }
   }
@@ -33,18 +30,17 @@ export class ReactionManager {
       if (t.listeningFor !== trigger.eventType) return false;
       
       console.log(`[REACTION MANAGER] checking trigger ${trigger} condition for ${t.id} reaction`);
-      console.log(
-        `[REACTION MANAGER] trigger card ${this._cardLibrary.getCard(trigger.cardId)}`,
-      );
-      console.log(
-        `[REACTION MANAGER] rigger player ${
-          this.match.players.find((player) => player.id === trigger.playerId)
-        }`,
-      );
+      
+      if (trigger.cardId) {
+        console.log(`[REACTION MANAGER] trigger card ${this._cardLibrary.getCard(trigger.cardId)}`,);
+      }
+      
+      console.log(`[REACTION MANAGER] trigger player ${this.match.players.find((player) => player.id === trigger.playerId)}`);
       
       if (t.condition !== undefined) {
         return t.condition({ match: this.match, cardLibrary: this._cardLibrary, trigger });
-      } else {
+      }
+      else {
         return true;
       }
     });
@@ -61,9 +57,7 @@ export class ReactionManager {
   }
   
   registerReactionTemplate(reactionTemplate: ReactionTemplate) {
-    console.log(
-      `[REACTION MANAGER] registering trigger template ID ${reactionTemplate.id}, for player ${reactionTemplate.playerId}`,
-    );
+    console.log(`[REACTION MANAGER] registering trigger template ID ${reactionTemplate.id}, for player ${reactionTemplate.playerId}`,);
     this._triggers.push(new Reaction(reactionTemplate));
   }
 }

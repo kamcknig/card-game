@@ -21,7 +21,7 @@ const expansionModule: CardExpansionModule = {
   registerCardLifeCycles: () => ({
     'diplomat': {
       onEnterHand: ({ playerId, cardId }) => ({
-        registerTriggers: [{
+        registerTriggeredEvents: [{
           id: `diplomat-${cardId}`,
           playerId,
           listeningFor: 'cardPlayed',
@@ -70,7 +70,7 @@ const expansionModule: CardExpansionModule = {
         }],
       }),
       onLeaveHand: ({ cardId }) => ({
-        unregisterTriggers: [`diplomat-${cardId}`],
+        unregisterTriggeredEvents: [`diplomat-${cardId}`],
       }),
     },
   }),

@@ -9,7 +9,7 @@ import {
   PlayerId,
 } from 'shared/shared-types.ts';
 import { AppSocket, MatchBaseConfiguration, } from '../types.ts';
-import { CardEffectController } from './effects/card-effects-controller.ts';
+import { EffectsController } from './effects/effects-controller.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';
 import { createCardFactory } from '../utils/create-card.ts';
 import { createEffectHandlerMap } from './effects/effect-handler-map.ts';
@@ -27,7 +27,7 @@ import { EventEmitter } from '@denosaurs/event';
 import { LogManager } from './log-manager.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
-  private _effectsController: CardEffectController | undefined;
+  private _effectsController: EffectsController | undefined;
   private _effectsPipeline: EffectsPipeline | undefined;
   private _reactionManager: ReactionManager | undefined;
   private _interactivityController: CardInteractivityController | undefined;
@@ -230,7 +230,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const kingdomCards: Card[] = [];
     
     // todo: remove testing code
-    const keepers: string[] = ['library', 'militia', 'moat'].filter((k) =>
+    const keepers: string[] = ['astrolabe'].filter((k) =>
       this._cardData!.kingdom[k]
     );
     
@@ -288,7 +288,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     return Object.values(config.players).reduce((prev, player, _idx) => {
       console.log('initializing player', player.id, 'cards...');
-      let blah = {};
+      /*let blah = {};
       // todo remove testing code
       if (_idx === 0) {
         blah = {
@@ -304,9 +304,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           gold: 5
         };
       }
-      Object.entries(blah).forEach(([key, count]) => {
-          /*Object.entries(playerStartHand).forEach(
-           ([key, count]) => {*/
+      Object.entries(blah).forEach(([key, count]) => {*/
+          Object.entries(playerStartHand).forEach(
+           ([key, count]) => {
           prev['playerDecks'][player.id] ??= [];
           let deck = prev['playerDecks'][player.id];
           deck = deck.concat(
@@ -385,7 +385,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       });
     }
     
-    this._effectsController = new CardEffectController(
+    this._effectsController = new EffectsController(
       effectGeneratorMap,
       this._cardLibrary,
       this._match,
@@ -401,13 +401,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       effectGeneratorMap
     );
     
-    const effectHandlerMap = createEffectHandlerMap(
-      this._socketMap,
-      this._reactionManager,
+    const effectHandlerMap = createEffectHandlerMap({
+      socketMap: this._socketMap,
+      reactionManager: this._reactionManager,
       effectGeneratorMap,
-      this._cardLibrary,
-      this._logManager
-    );
+      cardLibrary: this._cardLibrary,
+      logManager: this._logManager,
+      getEffectsPipeline: () => this._effectsPipeline!
+    });
     
     this._effectsPipeline = new EffectsPipeline(
       effectHandlerMap,

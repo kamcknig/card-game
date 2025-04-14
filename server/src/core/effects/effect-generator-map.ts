@@ -22,6 +22,7 @@ import { EndTurnEffect } from './effect-types/end-turn.ts';
 import { groupReactionsByCardKey } from '../reactions/group-reactions-by-card-key.ts';
 import { buildActionButtons } from '../reactions/build-action-buttons.ts';
 import { buildActionMap } from '../reactions/build-action-map.ts';
+import { NewTurnEffect } from './effect-types/new-turn.ts';
 
 export const createEffectGeneratorMap: EffectGeneratorFactory = (
   { reactionManager, logManager },
@@ -66,10 +67,8 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
   };
   
   
-  
-  map.nextPhase = function* (
-    { match, cardLibrary, triggerPlayerId, triggerCardId }
-  ) {
+  map.nextPhase = function* (args) {
+    const { match, cardLibrary, triggerPlayerId, triggerCardId } = args;
     match.turnPhaseIndex = match.turnPhaseIndex + 1;
     
     if (match.turnPhaseIndex >= TurnPhaseOrderValues.length) {
@@ -86,8 +85,8 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
         match.playerActions = 1;
         match.playerBuys = 1;
         match.playerTreasure = 0;
-        
         match.currentPlayerTurnIndex++;
+        
         if (match.currentPlayerTurnIndex >= match.players.length) {
           match.currentPlayerTurnIndex = 0;
           match.turnNumber++;
@@ -99,6 +98,11 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
             turn: match.turnNumber,
           });
         }
+        
+        yield new NewTurnEffect({
+          playerId: match.players[match.currentPlayerTurnIndex].id
+        });
+        
         logManager.rootLog({
           type: 'newPlayerTurn',
           turn: match.turnNumber,
@@ -144,7 +148,6 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
   };
   
   
-  
   map.playCard = function* (
     { match, cardLibrary, triggerPlayerId, triggerCardId, isRootLog },
     { actionCost, moveCard, playCard } = { actionCost: -1, playCard: true, moveCard: true }
@@ -164,8 +167,20 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
         sourceCardId: triggerCardId,
         to: { location: 'playArea' }
       });
-    } else {
+    }
+    else {
       console.log(`[PLAY CARD EFFECT] not physically moving card`);
+    }
+    
+    if (actionCost !== 0) {
+      if (cardLibrary.getCard(triggerCardId).type.includes('ACTION')) {
+        yield new GainActionEffect({
+          count: actionCost ?? -1,
+          sourcePlayerId: triggerPlayerId,
+          sourceCardId: triggerCardId,
+          logEffect: false,
+        });
+      }
     }
     
     if (playCard) {
@@ -178,19 +193,9 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
         playerId: triggerPlayerId,
         isRootLog
       });
-    } else {
-      console.log(`[PLAY CARD EFFECT] card played doesn't count towards stats`);
     }
-    
-    if (actionCost !== 0) {
-      if (cardLibrary.getCard(triggerCardId).type.includes('ACTION')) {
-        yield new GainActionEffect({
-          count: actionCost ?? -1,
-          sourcePlayerId: triggerPlayerId,
-          sourceCardId: triggerCardId,
-          logEffect: false,
-        });
-      }
+    else {
+      console.log(`[PLAY CARD EFFECT] card played doesn't count towards stats`);
     }
     
     const trigger: ReactionTrigger = {
@@ -250,12 +255,14 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
           if (result.action === 0) {
             console.log(`[PLAY CARD EFFECT] ${targetPlayer} chose not to react`);
             break;
-          } else {
+          }
+          else {
             console.log(`[PLAY CARD EFFECT] ${targetPlayer} reacts with ${actionMap.get(result.action)}`);
           }
           
           selectedReaction = actionMap.get(result.action);
-        } else {
+        }
+        else {
           selectedReaction = compulsoryReactions[0];
         }
         
@@ -310,7 +317,6 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
   };
   
   
-  
   map.discardCard = function* ({ triggerPlayerId, triggerCardId }) {
     if (!triggerCardId) {
       throw new Error('discardCard requires a card ID');
@@ -323,7 +329,6 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
       sourceCardId: triggerCardId,
     });
   };
-  
   
   
   map.buyCard = function* (
@@ -367,7 +372,6 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
   };
   
   
-  
   map.drawCard = function* ({ triggerPlayerId, triggerCardId }) {
     yield new DrawCardEffect({
       playerId: triggerPlayerId,
@@ -375,7 +379,6 @@ export const createEffectGeneratorMap: EffectGeneratorFactory = (
       sourcePlayerId: triggerPlayerId,
     });
   };
-  
   
   
   map.gainCard = function* ({ triggerPlayerId, triggerCardId }) {

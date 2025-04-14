@@ -205,8 +205,8 @@ export class MatchScene extends Scene {
 
     const endTime = Date.now();
 
-    if (endTime - startTime < 3000) {
-      await new Promise(resolve => setTimeout(resolve, 3000 - (endTime - startTime)));
+    if (endTime - startTime < 2000) {
+      await new Promise(resolve => setTimeout(resolve, 2000 - (endTime - startTime)));
     }
 
     c.removeFromParent();

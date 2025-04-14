@@ -1,5 +1,5 @@
 import { AppSocket, EffectGeneratorFn, GameEffectGenerator } from '../types.ts';
-import { CardEffectController } from './effects/card-effects-controller.ts';
+import { EffectsController } from './effects/effects-controller.ts';
 import { Card, CardId, Match, Player, PlayerId, TurnPhaseOrderValues, } from 'shared/shared-types.ts';
 import { isUndefined } from 'es-toolkit/compat';
 import { getEffectiveCardCost } from '../utils/get-effective-card-cost.ts';
@@ -11,7 +11,7 @@ export class CardInteractivityController {
   private _gameOver: boolean = false;
   
   constructor(
-    private readonly _cardEffectController: CardEffectController,
+    private readonly _cardEffectController: EffectsController,
     private readonly match: Match,
     private readonly _socketMap: Map<PlayerId, AppSocket>,
     private readonly _cardLibrary: CardLibrary,

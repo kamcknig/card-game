@@ -5,7 +5,7 @@ import { EffectsPipeline } from './effects-pipeline.ts';
 
 import { CardLibrary } from '../card-library.ts';
 
-export class CardEffectController implements IEffectRunner {
+export class EffectsController implements IEffectRunner {
   private _effectsPipeline: EffectsPipeline | undefined;
   
   constructor(

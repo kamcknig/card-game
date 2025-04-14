@@ -89,7 +89,7 @@ export const MatchBaseConfiguration = {
 export type ReactionTrigger = {
   eventType: TriggerEventType;
   // the card that triggered this
-  cardId: number;
+  cardId?: number;
   // who triggered this?
   playerId: number;
 };
@@ -157,7 +157,7 @@ export type EffectHandlerMap = {
 export type EffectPauseResult = { pause: true; signalId: string };
 export type EffectResult = { result: unknown; };
 export type EffectRunGeneratorResult = {
-  run: EffectGenerator<GameEffects>;
+  runGenerator: EffectGenerator<GameEffects>;
 };
 
 export type EffectHandlerResult =
@@ -167,7 +167,7 @@ export type EffectHandlerResult =
   | number[]
   | void;
 
-export type TriggerEventType = 'cardPlayed';
+export type TriggerEventType = 'cardPlayed' | 'startTurn';
 
 export class Reaction {
   // a concatenation of the card key and card id with a '-'
@@ -247,8 +247,6 @@ export class Reaction {
   }
 }
 
-export type MatchUpdate = Partial<Match>;
-
 export interface IEffectRunner {
   runCardEffects(
     playerId: number,
@@ -272,8 +270,8 @@ export interface IEffectRunner {
 export type ReactionTemplate = Omit<Reaction, 'getSourceId' | 'getSourceKey'>;
 
 export type LifecycleResult = {
-  registerTriggers?: ReactionTemplate[];
-  unregisterTriggers?: string[];
+  registerTriggeredEvents?: ReactionTemplate[];
+  unregisterTriggeredEvents?: string[];
 };
 export type LifecycleCallback = (
   args: { playerId: number; cardId: number },
@@ -284,6 +282,7 @@ export type LifecycleCallbackMap = {
   onLeaveHand?: LifecycleCallback;
   onEnterPlay?: LifecycleCallback;
   onLeavePlay?: LifecycleCallback;
+  onCardPlayed?: LifecycleCallback;
 };
 
 export type EffectExceptionSpec = { kind: 'player'; playerIds: PlayerId[] };

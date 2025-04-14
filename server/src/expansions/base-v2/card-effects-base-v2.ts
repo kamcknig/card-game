@@ -22,7 +22,7 @@ const expansionModule: CardExpansionModule = {
       onEnterPlay: ({ playerId, cardId }) => {
         const id = `merchant-${cardId}`;
         return {
-          registerTriggers: [{
+          registerTriggeredEvents: [{
             id,
             playerId,
             once: true,
@@ -45,14 +45,14 @@ const expansionModule: CardExpansionModule = {
       },
       onLeavePlay: ({ cardId }) => {
         return {
-          unregisterTriggers: [`merchant-${cardId}`],
+          unregisterTriggeredEvents: [`merchant-${cardId}`],
         };
       },
     },
     'moat': {
       onEnterHand: ({ playerId, cardId }) => {
         return {
-          registerTriggers: [{
+          registerTriggeredEvents: [{
             id: `moat-${cardId}`,
             playerId,
             listeningFor: 'cardPlayed',
@@ -78,7 +78,7 @@ const expansionModule: CardExpansionModule = {
       },
       onLeaveHand: ({ cardId }) => {
         return {
-          unregisterTriggers: [`moat-${cardId}`],
+          unregisterTriggeredEvents: [`moat-${cardId}`],
         };
       },
     },
