@@ -30,39 +30,28 @@ const expansionModule: CardExpansionModule = {
             const sourceId = reaction.getSourceId();
             
             yield new RevealCardEffect({
-              sourceCardId: trigger.cardId,
-              sourcePlayerId: trigger.playerId,
               cardId: sourceId,
               playerId: reaction.playerId,
             });
             
             yield new DrawCardEffect({
               playerId,
-              sourceCardId: trigger.cardId,
-              sourcePlayerId: trigger.playerId,
             });
             yield new DrawCardEffect({
               playerId,
-              sourceCardId: trigger.cardId,
-              sourcePlayerId: trigger.playerId,
             });
             const cardIds = (yield new SelectCardEffect({
               prompt: 'Confirm discard',
               playerId,
-              sourceCardId: trigger.playerId,
               restrict: {
-                from: {
-                  location: 'playerHands',
-                },
+                from: { location: 'playerHands' },
               },
               count: 3,
-              sourcePlayerId: trigger.playerId,
             })) as number[];
             
             for (const cardId of cardIds) {
               yield new DiscardCardEffect({
                 playerId,
-                sourcePlayerId: trigger.playerId,
                 cardId,
               });
             }
@@ -92,13 +81,8 @@ const expansionModule: CardExpansionModule = {
       return duchies.length;
     },
   }),
-  registerEffects: () => ({
-    'baron': () => function* ({
-      match,
-      cardLibrary,
-      triggerPlayerId,
-      triggerCardId,
-    }) {
+  registerEffects: {
+    'baron': ({match, cardLibrary, reactionManager, logManager}) => function* (arg) {
       // +1 Buy
       // You may discard an Estate for +$4. If you don't, gain an Estate.
       
@@ -106,8 +90,6 @@ const expansionModule: CardExpansionModule = {
       
       yield new GainBuyEffect({
         count: 1,
-        sourcePlayerId: triggerPlayerId,
-        sourceCardId: triggerCardId,
       });
       
       const hand = match.playerHands[triggerPlayerId];
@@ -132,8 +114,6 @@ const expansionModule: CardExpansionModule = {
         
         const confirm = (yield new UserPromptEffect({
           playerId: triggerPlayerId,
-          sourcePlayerId: triggerPlayerId,
-          sourceCardId: triggerCardId,
           prompt: 'Discard estate?',
           actionButtons: [
             { label: `DON'T DISCARD`, action: 1 },
@@ -146,8 +126,6 @@ const expansionModule: CardExpansionModule = {
           
           yield new DiscardCardEffect({
             cardId: handEstateIdx,
-            sourceCardId: triggerCardId,
-            sourcePlayerId: triggerPlayerId,
             playerId: triggerPlayerId,
           });
           
@@ -169,8 +147,6 @@ const expansionModule: CardExpansionModule = {
       
       yield new GainCardEffect({
         playerId: triggerPlayerId,
-        sourcePlayerId: triggerPlayerId,
-        sourceCardId: triggerCardId,
         cardId: supplyEstateIdx,
         to: { location: 'playerDiscards' },
       });
@@ -196,12 +172,10 @@ const expansionModule: CardExpansionModule = {
         appliesToCard: 'ALL',
         appliesToPlayer: 'ALL',
         amount: -1,
-        sourceCardId: triggerCardId!,
-        sourcePlayerId: triggerPlayerId,
         expiresAt: 'TURN_END',
       });
     },
-    'conspirator': () => function* ({
+    'conspirator': (arg) => function* ({
       match,
       cardLibrary,
       triggerPlayerId,
@@ -252,8 +226,6 @@ const expansionModule: CardExpansionModule = {
       
       const cardIds = (yield new SelectCardEffect({
         prompt: 'Reveal card',
-        sourcePlayerId: triggerPlayerId,
-        sourceCardId: triggerCardId,
         count: 1,
         playerId: triggerPlayerId,
         restrict: {
@@ -373,8 +345,6 @@ const expansionModule: CardExpansionModule = {
       
       const result = (yield new SelectCardEffect({
         prompt: 'Top deck',
-        sourcePlayerId: triggerPlayerId,
-        sourceCardId: triggerCardId,
         count: 1,
         playerId: triggerPlayerId,
         restrict: {
@@ -856,8 +826,6 @@ const expansionModule: CardExpansionModule = {
         
         yield new DrawCardEffect({
           playerId: triggerPlayerId,
-          sourcePlayerId: triggerPlayerId,
-          sourceCardId: triggerCardId,
         });
       }
       
@@ -893,8 +861,6 @@ const expansionModule: CardExpansionModule = {
         console.log(`[PATROL EFFECT] revealing ${cardLibrary.getCard(cardId)}...`);
         
         yield new RevealCardEffect({
-          sourceCardId: triggerCardId,
-          sourcePlayerId: triggerPlayerId,
           cardId,
           playerId: triggerPlayerId,
         });
@@ -917,8 +883,6 @@ const expansionModule: CardExpansionModule = {
         yield new MoveCardEffect({
           cardId: card.id,
           toPlayerId: triggerPlayerId,
-          sourcePlayerId: triggerPlayerId,
-          sourceCardId: triggerCardId,
           to: { location: 'playerHands' },
         });
       }
@@ -949,8 +913,6 @@ const expansionModule: CardExpansionModule = {
         yield new MoveCardEffect({
           cardId,
           toPlayerId: triggerPlayerId,
-          sourcePlayerId: triggerPlayerId,
-          sourceCardId: triggerCardId,
           to: { location: 'playerDecks' },
         });
       }
@@ -971,8 +933,6 @@ const expansionModule: CardExpansionModule = {
         
         const result = (yield new UserPromptEffect({
           playerId: triggerPlayerId,
-          sourcePlayerId: triggerPlayerId,
-          sourceCardId: triggerCardId,
           actionButtons: actions,
           prompt: 'Choose one',
         })) as { action: number };
@@ -982,8 +942,6 @@ const expansionModule: CardExpansionModule = {
             console.log(`[PAWN EFFECT] drawing card...`);
             yield new DrawCardEffect({
               playerId: triggerPlayerId,
-              sourcePlayerId: triggerPlayerId,
-              sourceCardId: triggerCardId,
             });
             break;
           case 2:
@@ -1029,12 +987,10 @@ const expansionModule: CardExpansionModule = {
       let result = (yield new SelectCardEffect({
         prompt: 'Trash card',
         playerId: triggerPlayerId,
-        sourcePlayerId: triggerPlayerId,
         restrict: {
           from: { location: 'playerHands' },
         },
         count: 1,
-        sourceCardId: triggerCardId,
       })) as number[];
       
       let cardId = result[0];
@@ -1042,10 +998,8 @@ const expansionModule: CardExpansionModule = {
       console.log(`[REPLACE EFFECT] trashing ${cardLibrary.getCard(cardId)}...`);
       
       yield new TrashCardEffect({
-        sourcePlayerId: triggerPlayerId,
         playerId: triggerPlayerId,
         cardId,
-        sourceCardId: triggerCardId,
       });
       
       let card = cardLibrary.getCard(cardId);
@@ -1061,7 +1015,6 @@ const expansionModule: CardExpansionModule = {
       result = (yield new SelectCardEffect({
         prompt: 'Gain card',
         playerId: triggerPlayerId,
-        sourcePlayerId: triggerPlayerId,
         restrict: {
           from: { location: ['kingdom', 'supply']},
           cost: {
@@ -1070,7 +1023,6 @@ const expansionModule: CardExpansionModule = {
           },
         },
         count: 1,
-        sourceCardId: triggerCardId,
       })) as number[];
       
       cardId = result[0];
@@ -1084,8 +1036,6 @@ const expansionModule: CardExpansionModule = {
       
       yield new GainCardEffect({
         playerId: triggerPlayerId,
-        sourcePlayerId: triggerPlayerId,
-        sourceCardId: triggerCardId!,
         cardId,
         to: { location },
       });
@@ -1109,8 +1059,6 @@ const expansionModule: CardExpansionModule = {
           
           yield new GainCardEffect({
             playerId: targetId,
-            sourcePlayerId: triggerPlayerId,
-            sourceCardId: triggerCardId!,
             cardId: curseCardId,
             to: { location: 'playerDiscards' },
           });
@@ -1128,8 +1076,6 @@ const expansionModule: CardExpansionModule = {
         
         yield new DrawCardEffect({
           playerId: triggerPlayerId,
-          sourcePlayerId: triggerPlayerId,
-          sourceCardId: triggerCardId,
         });
       }
       
@@ -1146,10 +1092,8 @@ const expansionModule: CardExpansionModule = {
       const cardIds = (yield new SelectCardEffect({
         prompt: 'Choose card',
         playerId: triggerPlayerId,
-        sourcePlayerId: triggerPlayerId,
         restrict: { from: { location: 'playerHands' } },
         count: 1,
-        sourceCardId: triggerCardId,
       })) as number[];
       
       const cardId = cardIds?.[0];
@@ -1166,8 +1110,6 @@ const expansionModule: CardExpansionModule = {
         yield new MoveCardEffect({
           cardId,
           toPlayerId: triggerPlayerId,
-          sourcePlayerId: triggerPlayerId,
-          sourceCardId: triggerCardId,
           to: { location: 'playerDecks' },
         });
         return;
@@ -1177,8 +1119,6 @@ const expansionModule: CardExpansionModule = {
       
       const result = (yield new UserPromptEffect({
         playerId: triggerPlayerId,
-        sourcePlayerId: triggerPlayerId,
-        sourceCardId: triggerCardId,
         actionButtons: [
           { action: 1, label: 'DONE' },
         ],
@@ -1196,8 +1136,6 @@ const expansionModule: CardExpansionModule = {
       yield new MoveCardEffect({
         cardId,
         toPlayerId: triggerPlayerId,
-        sourcePlayerId: triggerPlayerId,
-        sourceCardId: triggerCardId,
         to: {
           location: 'playerDecks',
           index: idx,
@@ -1220,7 +1158,6 @@ const expansionModule: CardExpansionModule = {
         console.log(`[SHANTY TOWN EFFECT] revealing ${cardLibrary.getCard(cardId)}...`);
         
         yield new RevealCardEffect({
-          sourceCardId: triggerCardId,
           sourcePlayerId: triggerPlayerId,
           cardId,
           playerId: triggerPlayerId,
@@ -1233,8 +1170,6 @@ const expansionModule: CardExpansionModule = {
           
           yield new DrawCardEffect({
             playerId: triggerPlayerId,
-            sourcePlayerId: triggerPlayerId,
-            sourceCardId: triggerCardId,
           });
         }
       } else {
@@ -1251,8 +1186,6 @@ const expansionModule: CardExpansionModule = {
       
       const result = (yield new UserPromptEffect({
         playerId: triggerPlayerId,
-        sourcePlayerId: triggerPlayerId,
-        sourceCardId: triggerCardId,
         actionButtons: [
           { action: 1, label: '+2 Card' },
           { action: 2, label: '+2 Treasure' },
@@ -1267,8 +1200,6 @@ const expansionModule: CardExpansionModule = {
             console.log(`[STEWARD EFFECT] drawing card...`);
             yield new DrawCardEffect({
               playerId: triggerPlayerId,
-              sourcePlayerId: triggerPlayerId,
-              sourceCardId: triggerCardId,
             });
           }
           break;
@@ -1292,20 +1223,16 @@ const expansionModule: CardExpansionModule = {
           const cardIds = (yield new SelectCardEffect({
             prompt: 'Confirm trash',
             playerId: triggerPlayerId,
-            sourcePlayerId: triggerPlayerId,
             restrict: { from: { location: 'playerHands' } },
             count,
-            sourceCardId: triggerCardId,
           })) as number[];
           
           for (const cardId of cardIds) {
             console.log(`[STEWARD EFFECT] trashing ${cardLibrary.getCard(cardId)}...`);
             
             yield new TrashCardEffect({
-              sourcePlayerId: triggerPlayerId,
               playerId: triggerPlayerId,
               cardId,
-              sourceCardId: triggerCardId!,
             });
           }
           break;
@@ -1354,10 +1281,8 @@ const expansionModule: CardExpansionModule = {
         console.log(`[SWINDLER EFFECT] trashing ${cardLibrary.getCard(cardId)}...`);
         
         yield new TrashCardEffect({
-          sourcePlayerId: triggerPlayerId,
           playerId: target,
           cardId: cardId,
-          sourceCardId: triggerCardId!,
         });
         
         const cost = getEffectiveCardCost(target, cardId, match, cardLibrary);
@@ -1383,13 +1308,11 @@ const expansionModule: CardExpansionModule = {
         const cardIds = (yield new SelectCardEffect({
           prompt: 'Choose card',
           playerId: triggerPlayerId,
-          sourcePlayerId: triggerPlayerId,
           restrict: {
             from: { location: ['supply', 'kingdom'] },
             cost,
           },
           count: 1,
-          sourceCardId: triggerCardId,
         })) as number[];
         cardId = cardIds[0];
         
@@ -1397,8 +1320,6 @@ const expansionModule: CardExpansionModule = {
         
         yield new GainCardEffect({
           playerId: target,
-          sourcePlayerId: triggerPlayerId,
-          sourceCardId: triggerCardId!,
           cardId,
           to: { location: 'playerDiscards' },
         });
@@ -1416,8 +1337,6 @@ const expansionModule: CardExpansionModule = {
         
         yield new DrawCardEffect({
           playerId: triggerPlayerId,
-          sourcePlayerId: triggerPlayerId,
-          sourceCardId: triggerCardId,
         });
       }
       
@@ -1437,8 +1356,6 @@ const expansionModule: CardExpansionModule = {
         
         const result = (yield new UserPromptEffect({
           playerId: target,
-          sourcePlayerId: triggerPlayerId,
-          sourceCardId: triggerCardId,
           actionButtons: [
             { action: 1, label: 'DISCARD' },
             { action: 2, label: 'GAIN CURSE' },
@@ -1452,10 +1369,8 @@ const expansionModule: CardExpansionModule = {
           const cardIds = (yield new SelectCardEffect({
             prompt: 'Confirm discard',
             playerId: target,
-            sourcePlayerId: triggerPlayerId,
             restrict: { from: { location: 'playerHands' } },
             count: Math.min(2, match.playerHands[target].length),
-            sourceCardId: triggerCardId,
             autoSelect: match.playerHands[target].length <= 2
           })) as number[];
           
@@ -1481,8 +1396,6 @@ const expansionModule: CardExpansionModule = {
           
           yield new GainCardEffect({
             playerId: target,
-            sourcePlayerId: triggerPlayerId,
-            sourceCardId: triggerCardId!,
             cardId: card.id,
             to: { location: 'playerHands' },
           });
@@ -1507,20 +1420,16 @@ const expansionModule: CardExpansionModule = {
       const cardIds = (yield new SelectCardEffect({
         prompt: 'Confirm trash',
         playerId: triggerPlayerId,
-        sourcePlayerId: triggerPlayerId,
         restrict: { from: { location: 'playerHands' } },
         count,
-        sourceCardId: triggerCardId,
       })) as number[];
       
       for (const cardId of cardIds) {
         console.log(`[TRADING POST EFFECT] trashing card ${cardLibrary.getCard(cardId)}`);
         
         yield new TrashCardEffect({
-          sourcePlayerId: triggerPlayerId,
           playerId: triggerPlayerId,
           cardId,
-          sourceCardId: triggerCardId!,
         });
       }
       
@@ -1537,8 +1446,6 @@ const expansionModule: CardExpansionModule = {
         
         yield new GainCardEffect({
           playerId: triggerPlayerId,
-          sourcePlayerId: triggerPlayerId,
-          sourceCardId: triggerCardId!,
           cardId: silverCardId,
           to: { location: 'playerHands' },
         });
@@ -1556,8 +1463,6 @@ const expansionModule: CardExpansionModule = {
       
       yield new DrawCardEffect({
         playerId: triggerPlayerId,
-        sourcePlayerId: triggerPlayerId,
-        sourceCardId: triggerCardId,
       });
       
       console.log(`[UPGRADE EFFECT] gaining 1 action...`);
@@ -1574,10 +1479,8 @@ const expansionModule: CardExpansionModule = {
       let cardIds = (yield new SelectCardEffect({
         prompt: 'Confirm trash',
         playerId: triggerPlayerId,
-        sourcePlayerId: triggerPlayerId,
         restrict: { from: { location: 'playerHands' } },
         count: 1,
-        sourceCardId: triggerCardId,
       })) as number[];
       
       const card = cardLibrary.getCard(cardIds[0]);
@@ -1585,10 +1488,8 @@ const expansionModule: CardExpansionModule = {
       console.log(`[UPGRADE EFFECT] trashing ${card}...`);
       
       yield new TrashCardEffect({
-        sourcePlayerId: triggerPlayerId,
         playerId: triggerPlayerId,
         cardId: card.id,
-        sourceCardId: triggerCardId!
       });
       
       const cost = getEffectiveCardCost(
@@ -1619,13 +1520,11 @@ const expansionModule: CardExpansionModule = {
       cardIds = (yield new SelectCardEffect({
         prompt: 'Gain card',
         playerId: triggerPlayerId,
-        sourcePlayerId: triggerPlayerId,
         restrict: {
           from: { location: ['supply', 'kingdom'] },
           cost,
         },
         count: 1,
-        sourceCardId: triggerCardId,
       })) as number[];
       
       const cardId = cardIds[0];
@@ -1634,8 +1533,6 @@ const expansionModule: CardExpansionModule = {
       
       yield new GainCardEffect({
         playerId: triggerPlayerId,
-        sourcePlayerId: triggerPlayerId,
-        sourceCardId: triggerCardId!,
         cardId,
         to: { location: 'playerDiscards' },
       });
@@ -1650,8 +1547,6 @@ const expansionModule: CardExpansionModule = {
       
       yield new DrawCardEffect({
         playerId: triggerPlayerId,
-        sourcePlayerId: triggerPlayerId,
-        sourceCardId: triggerCardId
       });
       
       console.log(`[WISHING WELL EFFECT] gaining 1 action...`)
@@ -1663,8 +1558,6 @@ const expansionModule: CardExpansionModule = {
       
       const result = (yield new UserPromptEffect({
         playerId: triggerPlayerId,
-        sourcePlayerId: triggerPlayerId,
-        sourceCardId: triggerCardId,
         content: { type: 'name-card' },
         prompt: 'Name a card',
       })) as { action: number, result: CardKey };
@@ -1686,8 +1579,6 @@ const expansionModule: CardExpansionModule = {
       console.log(`[WISHING WELL EFFECT] revealing card ${cardLibrary.getCard(cardId)}...`);
       
       yield new RevealCardEffect({
-        sourceCardId: triggerCardId,
-        sourcePlayerId: triggerPlayerId,
         cardId,
         playerId: triggerPlayerId,
       });
@@ -1699,13 +1590,11 @@ const expansionModule: CardExpansionModule = {
         yield new MoveCardEffect({
           cardId,
           toPlayerId: triggerPlayerId,
-          sourcePlayerId: triggerPlayerId,
-          sourceCardId: triggerCardId,
           to: { location: 'playerHands' }
         })
       }
     },
-  }),
+  }
 };
 
 export default expansionModule;
