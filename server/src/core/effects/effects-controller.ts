@@ -4,12 +4,14 @@ import { Match } from 'shared/shared-types.ts';
 import { EffectsPipeline } from './effects-pipeline.ts';
 
 import { CardLibrary } from '../card-library.ts';
+import { ReactionManager } from '../reactions/reaction-manager.ts';
 
 export class EffectsController implements IEffectRunner {
   private _effectsPipeline: EffectsPipeline | undefined;
   
   constructor(
     private readonly _effectGeneratorMap: Record<string, EffectGeneratorFn>,
+    private readonly _reactionManager: ReactionManager,
     private readonly _cardLibrary: CardLibrary,
     private _match: Match,
   ) {
@@ -36,6 +38,7 @@ export class EffectsController implements IEffectRunner {
       cardLibrary: this._cardLibrary,
       triggerPlayerId: playerId!,
       triggerCardId: cardId,
+      reactionManager: this._reactionManager
     });
     return this.runGenerator(gen, playerId, cardId);
   }
@@ -60,6 +63,7 @@ export class EffectsController implements IEffectRunner {
       cardLibrary: this._cardLibrary,
       triggerCardId: cardId,
       triggerPlayerId: playerId,
+      reactionManager: this._reactionManager,
       reactionContext,
     });
     

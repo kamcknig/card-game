@@ -103,6 +103,7 @@ export type EffectGenerator<T> = Generator<
 export type SharedEffectGeneratorContext = {
   match: Match;
   cardLibrary: CardLibrary;
+  reactionManager: ReactionManager,
   isRootLog?: boolean;
 };
 

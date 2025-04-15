@@ -32,7 +32,7 @@ const expansion: CardExpansionModule = {
           }]
         }
       }
-    }
+    },
   }),
   registerScoringFunctions: () => ({}),
   registerEffects: () => ({
@@ -57,7 +57,12 @@ const expansion: CardExpansionModule = {
       console.log(`[SEASON EFFECT] gaining 1 treasure...`);
       yield new GainTreasureEffect({ count: 1, sourcePlayerId: triggerPlayerId });
     },
-    'blockade': () => function* ({cardLibrary, triggerPlayerId, triggerCardId}) {
+    'blockade': () => function* ({
+      cardLibrary,
+      triggerPlayerId,
+      triggerCardId,
+      reactionManager
+    }) {
       const cardIds = (yield new SelectCardEffect({
         prompt: 'Gain card',
         validPrompt: '',

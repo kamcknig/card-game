@@ -388,6 +388,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     this._effectsController = new EffectsController(
       effectGeneratorMap,
+      this._reactionManager,
       this._cardLibrary,
       this._match,
     );
