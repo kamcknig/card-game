@@ -1,23 +1,24 @@
-import { EffectBase, EffectBaseArgs } from './effect-base.ts';
-import { Card, LocationSpec } from 'shared/shared-types.ts';
+import { Card, CardId, LocationSpec, PlayerId } from 'shared/shared-types.ts';
 
-export class GainCardEffect extends EffectBase {
+type GainCardArgs = {
+  playerId: PlayerId;
+  cardId: CardId;
+  cost?: Card['cost'];
+  to: LocationSpec;
+}
+
+export class GainCardEffect {
   type = 'gainCard' as const;
+  
   cardId: number;
   cost?: Card['cost'];
   to: LocationSpec;
   playerId: number;
   
-  constructor({ cardId, cost, to, playerId, ...arg }: {
-    cardId: number;
-    cost?: Card['cost'];
-    to: LocationSpec;
-    playerId: number;
-  } & EffectBaseArgs) {
-    super(arg);
-    this.cardId = cardId;
-    this.cost = cost;
-    this.to = to;
-    this.playerId = playerId;
+  constructor(args: GainCardArgs) {
+    this.cardId = args.cardId;
+    this.cost = args.cost;
+    this.to = args.to;
+    this.playerId = args.playerId;
   }
 }

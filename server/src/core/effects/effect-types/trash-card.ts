@@ -1,17 +1,19 @@
-import { EffectBase, EffectBaseArgs } from './effect-base.ts';
+import { EffectBase } from './effect-base.ts';
+import { PlayerId, CardId } from "shared/shared-types.ts";
+
+type TrashCardArgs = {
+  playerId: PlayerId;
+  cardId: CardId;
+}
 
 export class TrashCardEffect extends EffectBase {
   type = 'trashCard' as const;
   cardId: number;
   playerId?: number;
   
-  constructor(
-    { cardId, playerId, ...arg }:
-    & { cardId: number; playerId?: number }
-      & EffectBaseArgs,
-  ) {
-    super(arg);
-    this.cardId = cardId;
-    this.playerId = playerId;
+  constructor(args: TrashCardArgs) {
+    super();
+    this.cardId = args.cardId;
+    this.playerId = args.playerId;
   }
 }

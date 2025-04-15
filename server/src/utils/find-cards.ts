@@ -13,10 +13,6 @@ export const findCards = (
   cardLibrary: CardLibrary,
   playerId?: number,
 ) => {
-  if (effectRestriction === 'SELF') {
-    throw new Error(`findCards cannot accept a restriction of type 'SELF'`);
-  }
-  
   let cardIds: number[] = [];
   
   if (!isUndefined(effectRestriction.from?.location)) {

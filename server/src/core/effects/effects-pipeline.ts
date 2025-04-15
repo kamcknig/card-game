@@ -1,13 +1,13 @@
 import { GameEffects } from './effect-types/game-effects.ts';
-import { AppSocket, EffectGenerator, EffectHandlerMap } from '../../types.ts';
+import { AppSocket, EffectHandlerMap, GameEffectGenerator, SourceContext } from '../../types.ts';
 import { Match, PlayerId } from 'shared/shared-types.ts';
 import { MatchController } from '../match-controller.ts';
 
 export class EffectsPipeline {
   private _prevSnapshot!: Match;
   private _pausedGenerators = new Map<string, {
-    generator: EffectGenerator<GameEffects>;
-    playerId?: PlayerId;
+    generator: GameEffectGenerator;
+    source?: SourceContext;
     resolve: (input: unknown) => void;
   }>();
   
@@ -21,15 +21,20 @@ export class EffectsPipeline {
   }
   
   public runGenerator(args: {
-    generator: EffectGenerator<GameEffects>,
-    playerId?: number,
-    cardId?: number,
+    generator: GameEffectGenerator,
+    source?: SourceContext,
     resumeInput?: unknown,
     resumeSignalId?: string,
     onComplete?: () => void,
   }): unknown {
     this._prevSnapshot = this._matchController.getMatchSnapshot();
-    const { onComplete, resumeInput, resumeSignalId, generator, playerId, cardId } = args;
+    const {
+      onComplete,
+      resumeInput,
+      resumeSignalId,
+      generator,
+      source
+    } = args;
     
     let nextEffect = resumeInput !== undefined && resumeSignalId
       ? generator.next(resumeInput)
@@ -55,16 +60,16 @@ export class EffectsPipeline {
             
             this._pausedGenerators.set(signalId, {
               generator,
-              playerId,
+              source,
               resolve: (input: unknown) =>
-                this.runGenerator({ generator, playerId, cardId, resumeInput: input, resumeSignalId: signalId, onComplete })
+                this.runGenerator({ generator, source, resumeInput: input, resumeSignalId: signalId, onComplete })
             });
             
             // return because we are 'pausing' the generator
             return;
           } else if ('runGenerator' in result) {
             // runs a generator returned from the handler
-            this.runGenerator({ generator: result.runGenerator, playerId, cardId });
+            this.runGenerator({ generator: result.runGenerator, source });
             
             // continue with the outer generator
             nextEffect = generator.next();
@@ -81,8 +86,8 @@ export class EffectsPipeline {
     onComplete?.();
     this._effectCompletedCallback();
     
-    if (playerId) {
-      this._socketMap.get(playerId!)?.emit('cardEffectsComplete', playerId, cardId);
+    if (!!source && source.type === 'card') {
+      this._socketMap.get(source.playerId!)?.emit('cardEffectsComplete', source.playerId, source.cardId);
     }
     
     return nextEffect.value;

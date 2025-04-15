@@ -22,7 +22,11 @@ import { compare, Operation } from 'fast-json-patch';
 import { ExpansionCardData, expansionData } from '../state/expansion-data.ts';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
 import Fuse, { IFuseOptions } from 'fuse.js';
-import { createEffectGeneratorMap, effectGeneratorBlueprintMap } from './effects/effect-generator-map.ts';
+import {
+  gameActionEffectGeneratorFactory,
+  cardEffectGeneratorMapFactory,
+  cardEffectGeneratorMap
+} from './effects/effect-generator-map.ts';
 import { EventEmitter } from '@denosaurs/event';
 import { LogManager } from './log-manager.ts';
 
@@ -169,7 +173,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       if (
         this._match.players[this._match.currentPlayerTurnIndex].id === playerId
       ) {
-        this._effectsController?.runGameActionEffects('checkForPlayerActions');
+        this._effectsController?.runGameActionEffects({ effectName: 'checkForPlayerActions' });
         this._interactivityController?.checkCardInteractivity();
       }
     });
@@ -230,7 +234,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const kingdomCards: Card[] = [];
     
     // todo: remove testing code
-    const keepers: string[] = ['astrolabe', 'militia', 'moat'].filter((k) =>
+    const keepers: string[] = ['merchant', 'throne-room'].filter((k) =>
       this._cardData!.kingdom[k]
     );
     
@@ -292,10 +296,10 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       // todo remove testing code
       if (_idx === 0) {
         blah = {
-          library: 3,
-          gold: 5,
-          militia: 3,
-          moat: 3,
+          gold: 6,
+          silver: 4,
+          merchant: 3,
+          'throne-room': 3
         };
       } else {
         blah = {
@@ -376,21 +380,25 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       socketMap: this._socketMap,
     });
     
-    const effectGeneratorMap = createEffectGeneratorMap({
+    const effectGeneratorMap = gameActionEffectGeneratorFactory({
       reactionManager: this._reactionManager,
-      logManager: this._logManager
+      logManager: this._logManager,
+      match: this._match,
+      cardLibrary: this._cardLibrary
     });
-    for (const [key, blueprint] of Object.entries(effectGeneratorBlueprintMap)) {
-      effectGeneratorMap[key] = blueprint({
-        reactionManager: this._reactionManager
+    
+    for (const [key, effectGeneratorFactory] of Object.entries(cardEffectGeneratorMapFactory)) {
+      cardEffectGeneratorMap[key] = effectGeneratorFactory({
+        reactionManager: this._reactionManager,
+        match: this._match,
+        logManager: this._logManager,
+        cardLibrary: this._cardLibrary,
       });
     }
     
     this._effectsController = new EffectsController(
       effectGeneratorMap,
-      this._reactionManager,
-      this._cardLibrary,
-      this._match,
+      this._cardLibrary
     );
     
     this._interactivityController = new CardInteractivityController(
@@ -437,8 +445,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     for (const player of match.players!) {
       for (let i = 0; i < 5; i++) {
         this._effectsController?.runGameActionEffects(
-          'drawCard',
-          player.id,
+          { effectName: 'drawCard', context: { playerId: player.id } },
         );
       }
     }
@@ -454,7 +461,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       playerId: match.players[match.currentPlayerTurnIndex].id
     });
     
-    this._effectsController?.runGameActionEffects('checkForPlayerActions');
+    this._effectsController?.runGameActionEffects({ effectName: 'checkForPlayerActions' });
   }
   
   private onUserInputReceived = (signalId: string, input: unknown) => {
@@ -479,7 +486,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   
   private onCardTapHandlerComplete = (_card: Card, _player: Player) => {
     console.log(`[MATCH] card tap complete handler invoked`);
-    this._effectsController?.runGameActionEffects('checkForPlayerActions');
+    this._effectsController?.runGameActionEffects({ effectName: 'checkForPlayerActions' });
   };
   
   private onEffectCompleted = () => {
@@ -633,7 +640,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
   
   private onNextPhase = () => {
-    this._effectsController?.runGameActionEffects('nextPhase');
+    this._effectsController?.runGameActionEffects({ effectName: 'nextPhase' });
     this._socketMap.forEach(s => s.emit('nextPhaseComplete'));
   }
   

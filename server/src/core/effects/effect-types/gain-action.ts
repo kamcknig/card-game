@@ -1,11 +1,16 @@
-import { EffectBase, EffectBaseArgs } from './effect-base.ts';
+import { EffectBase } from './effect-base.ts';
+
+type GainActionArgs = {
+  count?: number;
+}
 
 export class GainActionEffect extends EffectBase {
   type = 'gainAction' as const;
-  count: number;
   
-  constructor({ count, ...arg }: { count: number } & EffectBaseArgs) {
-    super(arg);
-    this.count = count;
+  count: number = 1;
+  
+  constructor(args: GainActionArgs) {
+    super()
+    this.count = args.count ?? 1;
   }
 }

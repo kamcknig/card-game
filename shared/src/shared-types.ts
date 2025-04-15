@@ -309,7 +309,7 @@ export class Card {
 
 const EffectTargetValues = ['ANY', 'ALL_OTHER', 'ALL'] as const;
 export type EffectTarget = typeof EffectTargetValues[number] | string;
-export type EffectRestrictionSpec = 'SELF' | {
+export type EffectRestrictionSpec = {
   from?: LocationSpec;
   card?: {
     cardKeys?: CardKey | CardKey[];

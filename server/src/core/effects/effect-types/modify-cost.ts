@@ -1,4 +1,4 @@
-import { EffectBase, EffectBaseArgs } from './effect-base.ts';
+import { EffectBase } from './effect-base.ts';
 import { Card, EffectTarget } from 'shared/shared-types.ts';
 
 export type ModifyCostEffectArgs = {
@@ -16,11 +16,11 @@ export class ModifyCostEffect extends EffectBase {
   public appliesTo: EffectTarget;
   public appliesToCard: ModifyCostEffectArgs['appliesToCard'];
   
-  constructor({ expiresAt, amount, appliesToPlayer, appliesToCard, ...arg }: EffectBaseArgs & ModifyCostEffectArgs) {
-    super(arg);
-    this.expiresAt = expiresAt;
-    this.amount = amount;
-    this.appliesTo = appliesToPlayer;
-    this.appliesToCard = appliesToCard;
+  constructor(args: ModifyCostEffectArgs) {
+    super();
+    this.expiresAt = args.expiresAt;
+    this.amount = args.amount;
+    this.appliesTo = args.appliesToPlayer;
+    this.appliesToCard = args.appliesToCard;
   }
 }

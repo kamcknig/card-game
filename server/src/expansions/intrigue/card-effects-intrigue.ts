@@ -9,13 +9,13 @@ import { GainActionEffect } from '../../core/effects/effect-types/gain-action.ts
 import { RevealCardEffect } from '../../core/effects/effect-types/reveal-card.ts';
 import { SelectCardEffect } from '../../core/effects/effect-types/select-card.ts';
 import { MoveCardEffect } from '../../core/effects/effect-types/move-card.ts';
-import { CardExpansionModule } from '../card-expansion-module.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { TrashCardEffect } from '../../core/effects/effect-types/trash-card.ts';
 import { ActionButtons, Card, CardId, CardKey, PlayerId } from 'shared/shared-types.ts';
 import { findOrderedEffectTargets } from '../../utils/find-ordered-effect-targets.ts';
 import { ShuffleDeckEffect } from '../../core/effects/effect-types/shuffle-card.ts';
 import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
+import { CardExpansionModule } from '../../types.ts';
 
 const expansionModule: CardExpansionModule = {
   registerCardLifeCycles: () => ({

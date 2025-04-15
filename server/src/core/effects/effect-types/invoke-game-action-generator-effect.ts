@@ -1,23 +1,31 @@
-import { EffectBase, EffectBaseArgs } from './effect-base.ts';
-import { EffectContext, GameActionOverrides } from '../../../types.ts';
+import { EffectBase } from './effect-base.ts';
+import { GameActionOverrides, GameActions, GameActionTypes } from '../../../types.ts';
 
-export type InvokeGameActionGeneratorArgs = {
-  gameAction: string;
-  context: EffectContext;
+export type InvokeGameActionGeneratorArgs<T extends GameActionTypes> = {
+  gameAction: T;
+  context: GameActions[T];
   overrides?: GameActionOverrides;
 }
 
-export class InvokeGameActionGeneratorEffect extends EffectBase {
+export class InvokeGameActionGeneratorEffect<T extends GameActionTypes = GameActionTypes> extends EffectBase {
   type = 'invokeGameActionGenerator' as const;
-  gameAction: string;
-  context: EffectContext;
-  overrides?: GameActionOverrides;
   
-  constructor({ gameAction, overrides, context, ...arg }: InvokeGameActionGeneratorArgs & EffectBaseArgs) {
-    super(arg);
+  gameAction: T;
+  context: GameActions[T];
+  overrides?: GameActionOverrides = {
+    moveCard: true,
+    playCard: true,
+  };
+  
+  constructor(args:  InvokeGameActionGeneratorArgs<T>) {
+    super();
     
-    this.gameAction = gameAction;
-    this.context = context;
-    this.overrides = overrides;
+    this.gameAction = args.gameAction;
+    this.context = args.context;
+    this.overrides = {
+      moveCard: args.overrides?.moveCard ?? true,
+      playCard: args.overrides?.playCard ?? true,
+      actionCost: args.overrides?.actionCost
+    };
   }
 }

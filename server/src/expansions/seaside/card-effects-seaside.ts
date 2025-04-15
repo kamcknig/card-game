@@ -1,10 +1,10 @@
-import { CardExpansionModule } from '../card-expansion-module.ts';
 import { GainTreasureEffect } from '../../core/effects/effect-types/gain-treasure.ts';
 import { GainBuyEffect } from '../../core/effects/effect-types/gain-buy.ts';
 import { DrawCardEffect } from '../../core/effects/effect-types/draw-card.ts';
 import { GainActionEffect } from '../../core/effects/effect-types/gain-action.ts';
 import { SelectCardEffect } from '../../core/effects/effect-types/select-card.ts';
 import { GainCardEffect } from '../../core/effects/effect-types/gain-card.ts';
+import { CardExpansionModule } from '../../types.ts';
 
 const expansion: CardExpansionModule = {
   registerCardLifeCycles: () => ({

@@ -23,6 +23,7 @@ export class SocketService {
 
     localStorage.setItem('sessionId', sessionId);
 
+    console.log('kyle');
     this._socket = io(environment.wsHost, {
       transports: ['websocket', 'polling'],
       timeout: environment.wsTimeout,

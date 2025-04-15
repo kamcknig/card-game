@@ -1,4 +1,4 @@
-import { AppSocket, EffectGeneratorFn, GameEffectGenerator } from '../types.ts';
+import { AppSocket, GameActionEffectGeneratorFn, GameActions, GameActionTypes, GameEffectGenerator } from '../types.ts';
 import { EffectsController } from './effects/effects-controller.ts';
 import { Card, CardId, Match, Player, PlayerId, TurnPhaseOrderValues, } from 'shared/shared-types.ts';
 import { isUndefined } from 'es-toolkit/compat';
@@ -20,22 +20,24 @@ export class CardInteractivityController {
       player: Player,
     ) => void,
     private readonly _matchController: MatchController,
-    private readonly _effectGeneratorMap: Record<string, EffectGeneratorFn>,
+    private readonly _effectGeneratorMap: {
+      [K in GameActionTypes]: GameActionEffectGeneratorFn<GameActions[K]>;
+    },
   ) {
     this._socketMap.forEach((s) => {
-      s.on('cardTapped', this.onCardTapped);
-      s.on('playAllTreasure', this.onPlayAllTreasure);
+      s.on('cardTapped', (pId, cId) => this.onCardTapped(pId, cId));
+      s.on('playAllTreasure', (pId) => this.onPlayAllTreasure(pId));
     });
   }
   
-  public playerAdded(socket: AppSocket | undefined) {
-    socket?.on('cardTapped', this.onCardTapped);
-    socket?.on('playAllTreasure', this.onPlayAllTreasure);
+  public playerAdded(s: AppSocket | undefined) {
+    s?.on('cardTapped', (pId, cId) => this.onCardTapped(pId, cId));
+    s?.on('playAllTreasure', (pId) => this.onPlayAllTreasure(pId));
   }
   
   public playerRemoved(socket: AppSocket | undefined) {
-    socket?.off('cardTapped', this.onCardTapped);
-    socket?.off('playAllTreasure', this.onPlayAllTreasure);
+    socket?.off('cardTapped');
+    socket?.off('playAllTreasure');
   }
   
   public endGame() {
@@ -95,7 +97,8 @@ export class CardInteractivityController {
           selectableCards.push(card.id);
         }
       }
-    } else if (turnPhase === 'action') {
+    }
+    else if (turnPhase === 'action') {
       for (const card of hand) {
         if (card.type.includes('ACTION') && match.playerActions > 0) {
           selectableCards.push(card.id);
@@ -124,7 +127,7 @@ export class CardInteractivityController {
     this._matchController.broadcastPatch(prev);
   }
   
-  private onPlayAllTreasure = (playerId: number) => {
+  private onPlayAllTreasure(playerId: number) {
     console.log('[CARD INTERACTIVITY] playing all treasures for current player');
     
     if (this._gameOver) {
@@ -156,7 +159,7 @@ export class CardInteractivityController {
     this._socketMap.get(playerId)?.emit('playAllTreasureComplete');
   };
   
-  private onCardTapped = (triggerPlayerId: number, tappedCardId: number) => {
+  private onCardTapped(triggerPlayerId: number, tappedCardId: number) {
     const match = this.match;
     
     const player = match.players.find((player) =>
@@ -182,14 +185,12 @@ export class CardInteractivityController {
     const self = this; // ✅ for use inside generator
     const generator = function* (): GameEffectGenerator {
       if (turnPhase === 'action') {
-        yield* self._effectGeneratorMap['playCard']({
-          match,
-          cardLibrary: self._cardLibrary,
-          triggerPlayerId,
-          triggerCardId: tappedCardId,
-          isRootLog: true
+        yield* self._effectGeneratorMap.playCard({
+          playerId: triggerPlayerId,
+          cardId: card.id
         });
-      } else if (turnPhase === 'buy') {
+      }
+      else if (turnPhase === 'buy') {
         const hand = match.playerHands?.[triggerPlayerId];
         
         if (!hand) {
@@ -197,20 +198,31 @@ export class CardInteractivityController {
           return;
         }
         
-        const effect = hand.includes(tappedCardId) ? 'playCard' : 'buyCard';
-        yield* self._effectGeneratorMap[effect]({
-          match,
-          cardLibrary: self._cardLibrary,
-          triggerPlayerId,
-          triggerCardId: tappedCardId,
-          isRootLog: true
-        });
+        if (hand.includes(tappedCardId)) {
+          yield* self._effectGeneratorMap.playCard({
+            playerId: triggerPlayerId,
+            cardId: card.id,
+          });
+        } else {
+          yield* self._effectGeneratorMap.buyCard({
+            playerId: triggerPlayerId,
+            cardId: card.id,
+          });
+        }
       }
     };
     
-    this._cardEffectController.runGenerator(generator(), triggerPlayerId, tappedCardId, () => {
-      console.log(`[CARD INTERACTIVITY] card tapped handler complete ${card} for ${player}`);
-      this._cardTapCompleteCallback(card, player);
+    this._cardEffectController.runGenerator({
+      generator: generator(),
+      source: {
+        type: 'card',
+        playerId: triggerPlayerId,
+        cardId: tappedCardId,
+      },
+      onComplete: () => {
+        console.log(`[CARD INTERACTIVITY] card tapped handler complete ${card} for ${player}`);
+        this._cardTapCompleteCallback(card, player);
+      }
     });
   };
 }

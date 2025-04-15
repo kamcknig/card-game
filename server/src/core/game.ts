@@ -8,7 +8,7 @@ import { compare } from 'fast-json-patch';
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
 
 const defaultMatchConfiguration = {
-  expansions: ['base-v2', 'seaside'],
+  expansions: ['base-v2'],
   players: [],
   supplyCardKeys: [],
   kingdomCardKeys: [],

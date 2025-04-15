@@ -1,4 +1,4 @@
-import { CardId, Match, PlayerId } from 'shared/shared-types.ts';
+import { Match } from 'shared/shared-types.ts';
 import { Reaction, ReactionTemplate, ReactionTrigger } from '../../types.ts';
 import { CardLibrary } from '../card-library.ts';
 import { getOrderStartingFrom } from '../../utils/get-order-starting-from.ts';
@@ -51,10 +51,7 @@ export class ReactionManager {
     });
   }
   
-  getReactionsForPlayer(
-    trigger: ReactionTrigger,
-    playerId: number,
-  ) {
+  getReactionsForPlayer(trigger: ReactionTrigger, playerId: number) {
     const reactions = this.getReactions(trigger).filter((item) => {
       return item.playerId === playerId;
     });
@@ -66,7 +63,7 @@ export class ReactionManager {
     this._triggers.push(new Reaction(reactionTemplate));
   }
   
-  *runTrigger({ trigger, reactionContext }: { trigger: ReactionTrigger, reactionContext?: any }) {
+  * runTrigger({ trigger, reactionContext }: { trigger: ReactionTrigger, reactionContext?: any }) {
     reactionContext ??= {};
     
     // now we get the order of players that could be affected by the play (including the current player),
@@ -99,18 +96,22 @@ export class ReactionManager {
         
         let selectedReaction: Reaction | undefined = undefined;
         
-        // when you have more than one reaction, the player chooses.
-        // if there is only one reaction though, and it's compulsory (such as the merchant's
-        // reaction-like card effect to gain a treasure) then we just do it with no choice.
-        if (reactions.length > 1 || compulsoryReactions.length === 0) {
+        // when multiple reactions can occur, the user chooses unless they are all compulsory
+        // and the same card
+        if (
+          // do we have multiple reactions and none are compulsory
+          (reactions.length > 1 && compulsoryReactions.length === 0)
+          // do we have multiple reactions and some are compulsory
+          || (reactions.length > 1 && compulsoryReactions.length > 0 && reactions.length !== compulsoryReactions.length)
+          // do we have multiple reactions, and all are compulsory, but not all are the same compulsory
+          || (reactions.length > 1 && !compulsoryReactions.every(r => r.getSourceKey() === compulsoryReactions[0].getSourceKey()))
+        ) {
           const grouped = groupReactionsByCardKey(reactions);
           const actionButtons = buildActionButtons(grouped, this._cardLibrary);
           const actionMap = buildActionMap(grouped);
           
           const result = (yield new UserPromptEffect({
             playerId: targetPlayer.id,
-            sourcePlayerId: trigger.playerId,
-            sourceCardId: trigger.cardId,
             actionButtons,
             prompt: 'Choose reaction?',
           })) as { action: number };
@@ -135,8 +136,6 @@ export class ReactionManager {
         }
         
         const reactionResult = yield* selectedReaction.generatorFn({
-          match: this.match,
-          cardLibrary: this._cardLibrary,
           trigger,
           reaction: selectedReaction,
         });
