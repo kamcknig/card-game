@@ -24,10 +24,10 @@ const expansion: CardExpansionModule = {
             },
             generatorFn: function*() {
               console.log(`[SEASIDE TRIGGERED EFFECT] gaining 1 treasure...`);
-              yield new GainTreasureEffect({ count: 1, sourcePlayerId: playerId });
+              yield new GainTreasureEffect({ count: 1});
               
               console.log(`[SEASIDE TRIGGERED EFFECT] gaining 1 buy...`);
-              yield new GainBuyEffect({count: 1, sourcePlayerId: playerId});
+              yield new GainBuyEffect({count: 1});
             }
           }]
         }
@@ -35,45 +35,36 @@ const expansion: CardExpansionModule = {
     },
   }),
   registerScoringFunctions: () => ({}),
-  registerEffects: () => ({
-    'astrolabe': () => function* ({ triggerPlayerId }) {
+  registerEffects: {
+    'astrolabe': () => function* () {
       console.log(`[SEASON EFFECT] gaining 1 treasure...`);
-      yield new GainTreasureEffect({ count: 1, sourcePlayerId: triggerPlayerId });
+      yield new GainTreasureEffect({ count: 1});
       
       console.log(`[SEASON EFFECT] gaining 1 buy...`);
-      yield new GainBuyEffect({ count: 1, sourcePlayerId: triggerPlayerId });
+      yield new GainBuyEffect({ count: 1});
     },
-    'bazaar': () => function* ({triggerPlayerId, triggerCardId}) {
+    'bazaar': () => function* (arg) {
       console.log(`[SEASON EFFECT] drawing 1 card...`);
       yield new DrawCardEffect({
-        playerId: triggerPlayerId,
-        sourcePlayerId: triggerPlayerId,
-        sourceCardId: triggerCardId
+        playerId: arg.playerId,
       });
       
       console.log(`[SEASON EFFECT] gaining 2 actions...`);
-      yield new GainActionEffect({ count: 2, sourcePlayerId: triggerPlayerId });
+      yield new GainActionEffect({ count: 2});
       
       console.log(`[SEASON EFFECT] gaining 1 treasure...`);
-      yield new GainTreasureEffect({ count: 1, sourcePlayerId: triggerPlayerId });
+      yield new GainTreasureEffect({ count: 1});
     },
-    'blockade': () => function* ({
-      cardLibrary,
-      triggerPlayerId,
-      triggerCardId,
-      reactionManager
-    }) {
+    'blockade': ({ cardLibrary}) => function* (arg) {
       const cardIds = (yield new SelectCardEffect({
         prompt: 'Gain card',
         validPrompt: '',
-        playerId: triggerPlayerId,
-        sourcePlayerId: triggerPlayerId,
+        playerId: arg.playerId,
         restrict: {
           from: { location: ['supply', 'kingdom'] },
           cost: { kind: 'upTo', amount: 4 },
         },
         count: 1,
-        sourceCardId: triggerCardId
       })) as number[];
       
       const cardId = cardIds[0];
@@ -81,14 +72,12 @@ const expansion: CardExpansionModule = {
       console.log(`[BLOCKADE EFFECT] selected card ${cardLibrary.getCard(cardId)}`);
       
       yield new GainCardEffect({
-        playerId: triggerPlayerId,
-        sourcePlayerId: triggerPlayerId,
-        sourceCardId: triggerCardId!,
+        playerId: arg.playerId,
         cardId,
         to: { location: 'set-aside' },
       });
     }
-  }),
+  }
 }
 
 export default expansion;

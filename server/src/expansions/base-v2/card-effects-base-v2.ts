@@ -453,7 +453,7 @@ const expansionModule: CardExpansionModule = {
         });
       }
     },
-    'council-room': ({match, cardLibrary}) => function* (arg) {
+    'council-room': ({match}) => function* (arg) {
       for (let i = 0; i < 4; i++) {
         console.log(`[COUNCIL ROOM EFFECT] drawing card...`);
         
@@ -483,7 +483,7 @@ const expansionModule: CardExpansionModule = {
         });
       }
     },
-    'festival': () => function* (arg) {
+    'festival': () => function* () {
       console.log(`[FESTIVAL EFFECT] gaining 2 actions...`);
       yield new GainActionEffect({
         count: 2,
@@ -1154,7 +1154,7 @@ const expansionModule: CardExpansionModule = {
         });
       }
     },
-    'throne-room': ({match, cardLibrary}) => function* (arg) {
+    'throne-room': ({ cardLibrary}) => function* (arg) {
       console.log(`[THRONE ROOM EFFECT] prompting user to select action card from hand...`);
       
       const cardIds = (yield new SelectCardEffect({
@@ -1303,7 +1303,7 @@ const expansionModule: CardExpansionModule = {
         }
       }
     },
-    'workshop': ({match, cardLibrary}) => function* (arg) {
+    'workshop': ({ cardLibrary}) => function* (arg) {
       console.log(`[WORKSHOP EFFECT] prompting player to select card to gain...`);
       
       const cardIds = (yield new SelectCardEffect({

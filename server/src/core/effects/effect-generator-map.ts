@@ -200,6 +200,7 @@ export const gameActionEffectGeneratorFactory: GameActionEffectGeneratorMapFacto
     if (generatorFn) {
       yield* generatorFn({
         playerId,
+        cardId: card.id,
         reactionContext
       });
     }

@@ -147,7 +147,8 @@ export type ReactionContext = any;
 
 export type CardEffectGeneratorFnContext = {
   reactionContext: ReactionContext;
-  playerId: PlayerId
+  playerId: PlayerId;
+  cardId: CardId;
 }
 export type CardEffectGeneratorFn =
   (args: CardEffectGeneratorFnContext) => GameEffectGenerator;
