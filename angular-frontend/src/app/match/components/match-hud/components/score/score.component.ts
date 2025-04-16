@@ -38,13 +38,13 @@ export class ScoreComponent implements OnInit {
 
   getPlayerColor(id: PlayerId) {
     return this._nanoService.useStore(playerStore(id)).pipe(
-      map(player => tinycolor(player?.color).brighten(3) ?? 'black')
+      map(player => tinycolor(player?.color).lighten(15) ?? 'black')
     );
   }
 
   getBackgroundColor(id: PlayerId) {
     return this._nanoService.useStore(playerStore(id)).pipe(
-      map(player => tinycolor(player?.color).setAlpha(.2) ?? 'black')
+      map(player => tinycolor(player?.color).setAlpha(.4).darken(15) ?? 'black')
     );
   }
 
