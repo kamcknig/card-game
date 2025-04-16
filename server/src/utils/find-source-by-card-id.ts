@@ -1,4 +1,4 @@
-import { CardId, CardLocation, Match, Zones } from 'shared/shared-types.ts';
+import { CardId, CardLocation, Match, Mats, Zones } from 'shared/shared-types.ts';
 import { isUndefined } from 'es-toolkit';
 
 import { CardLibrary } from '../core/card-library.ts';
@@ -8,26 +8,39 @@ export const findSourceByCardId = (
   match: Match,
   cardLibrary: CardLibrary,
 ): { sourceStore: any; index?: number; storeKey?: CardLocation } => {
-  let sourceStore: CardId[] | undefined  = undefined;
+  let sourceStore: CardId[] | undefined = undefined;
   let storeKey: CardLocation | undefined;
   
   if (match.supply.includes(cardId)) {
     sourceStore = match.supply;
     storeKey = 'supply';
     console.log(`[FIND CARD SOURCE] found card ${cardLibrary.getCard(cardId)} in the 'supply'`);
-  } else if (match.kingdom.includes(cardId)) {
+  }
+  else if (match.kingdom.includes(cardId)) {
     sourceStore = match.kingdom;
     storeKey = 'kingdom';
     console.log(`[FIND CARD SOURCE] found card ${cardLibrary.getCard(cardId)} in the 'kingdom'`);
-  } else if (match.playArea.includes(cardId)) {
+  }
+  else if (match.playArea.includes(cardId)) {
     sourceStore = match.playArea;
     storeKey = 'playArea';
     console.log(`[FIND CARD SOURCE] found card ${cardLibrary.getCard(cardId)} in the 'play area'`);
-  } else if (match.trash.includes(cardId)) {
+  }
+  else if (match.trash.includes(cardId)) {
     sourceStore = match.trash;
     storeKey = 'trash';
     console.log(`[FIND CARD SOURCE] found card ${cardLibrary.getCard(cardId)} in the 'trash'`);
-  } else {
+  }
+  else {
+    for (const [mat, playerMats] of Object.entries(match.mats)) {
+      for (const [playerId, cardIds] of Object.entries(playerMats)) {
+        if (cardIds.includes(cardId)) {
+          sourceStore = match.mats[mat as Mats][+playerId];
+          storeKey = mat as Mats;
+        }
+      }
+    }
+    
     for (const [zone, cardIds] of Object.entries(match.zones)) {
       if (cardIds.includes(cardId)) {
         sourceStore = match.zones[zone as Zones];
@@ -71,7 +84,8 @@ export const findSourceByCardId = (
   let idx: number | undefined;
   if (!isUndefined(sourceStore)) {
     idx = sourceStore?.findIndex((e) => e === cardId);
-  } else {
+  }
+  else {
     console.error(`[FIND CARD SOURCE] could not find card store for ${cardLibrary.getCard(cardId)}`);
   }
   

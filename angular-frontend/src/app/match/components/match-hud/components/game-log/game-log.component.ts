@@ -43,9 +43,17 @@ export class GameLogComponent implements AfterViewInit {
         }),
       )
       .subscribe((event) => {
-        const diff = startDragX - event.clientX;
+        let diff = startDragX - event.clientX;
 
-        (this.logContent.nativeElement as HTMLElement).style.width = `${startWidth + diff}px`;
+        let newWidth = 0;
+        console.log(diff);
+        if (diff > 0) {
+          newWidth = Math.min(800, startWidth + diff);
+        } else {
+          newWidth = Math.max(300, startWidth + diff);
+        }
+
+        (this.logContent.nativeElement as HTMLElement).style.width = `${newWidth}px`;
       });
   }
 

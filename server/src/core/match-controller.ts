@@ -1,6 +1,6 @@
 import {
   Card,
-  CardData,
+  CardData, CardId,
   CardKey,
   Match,
   MatchConfiguration,
@@ -49,13 +49,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     super();
   }
   
-  private _keepers: CardKey[] = ['cellar', 'bridge', 'masquerade', 'mill'];
-  private _playerHands: Record<CardKey, number>[] = [{
+  private _keepers: CardKey[] = [];
+  private _playerHands: Record<CardKey, number>[] = [/*{
     gold: 3,
-    silver: 3,
+    silver: 2,
     estate: 3,
-    mill: 2,
-  }];
+    island: 2,
+  }*/];
   
   public initialize(
     config: MatchConfiguration,
@@ -127,9 +127,16 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       selectableCards: {},
       playArea: [],
       cardsPlayed: {},
+      mats: {
+        'island-mat': config.players.reduce((prev, next) => {
+          prev[next.id] = [];
+          return prev;
+        }, {} as Record<PlayerId, CardId[]>)
+      },
       zones: {
         'set-aside': [],
         'revealed': [],
+        'look-at': [],
       }
     };
     

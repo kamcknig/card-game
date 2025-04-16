@@ -15,8 +15,10 @@ when player disconnects in game, give option to kick, or continue playing
 
 vassal'd a moneylender i think, but didn't show it in the game log - see how dominion does this - see screenshot in server code
 
-resize of game log - limit how far left and right
+select card effect handler tries to find cards before prompting user and if none, then returns empty array. 
+ - look into making user prompt effect handler do the same
 
-mill requires discard instead of allowing
+ don't allow empty player name
 
-play with the colors for the score view
+
+if player name too long - truncate in score view

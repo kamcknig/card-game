@@ -818,7 +818,7 @@ const expansionModule: CardExpansionModule = {
           { action: 1, label: `DON'T TRASH` }, { action: 2, label: 'TRASH' }
         ],
         prompt: 'Trash a copper?'
-      })) as { action: number, cardIds: number[] };
+      })) as { action: number, result: number[] };
       
       if (result.action === 1) {
         console.log(`[MONEYLENDER EFFECT] player chose not to trash`);

@@ -5,6 +5,16 @@ import { GainActionEffect } from '../../core/effects/effect-types/gain-action.ts
 import { SelectCardEffect } from '../../core/effects/effect-types/select-card.ts';
 import { GainCardEffect } from '../../core/effects/effect-types/gain-card.ts';
 import { CardExpansionModule } from '../../types.ts';
+import { getOrderStartingFrom } from '../../utils/get-order-starting-from.ts';
+import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
+import { DiscardCardEffect } from '../../core/effects/effect-types/discard-card.ts';
+import { RevealCardEffect } from '../../core/effects/effect-types/reveal-card.ts';
+import { MoveCardEffect } from '../../core/effects/effect-types/move-card.ts';
+import { UserPromptEffect } from '../../core/effects/effect-types/user-prompt.ts';
+import { ShuffleDeckEffect } from '../../core/effects/effect-types/shuffle-card.ts';
+import { TrashCardEffect } from '../../core/effects/effect-types/trash-card.ts';
+import { count } from 'npm:rxjs@7.8.2';
+import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 
 const expansion: CardExpansionModule = {
   registerCardLifeCycles: () => ({
@@ -76,6 +86,187 @@ const expansion: CardExpansionModule = {
         cardId,
         to: { location: 'set-aside' },
       });
+    },
+    'cutpurse': ({match, cardLibrary}) => function* (arg) {
+      console.log(`[CUTPURSE EFFECT] gaining 2 treasure...`);
+      yield new GainTreasureEffect({ count: 2, });
+      
+      const targetIds = findOrderedTargets({
+        startingPlayerId: arg.playerId,
+        appliesTo: 'ALL_OTHER',
+        match
+      }).filter((id) => arg.reactionContext?.[id]?.result !== 'immunity');
+      
+      for (const targetId of targetIds) {
+        const hand = match.playerHands[targetId];
+        const copperId = hand.find(cardId => cardLibrary.getCard(cardId).cardKey === 'copper');
+        if (copperId) {
+          console.log(`[CUTPURSE EFFECT] discarding copper...`);
+          yield new DiscardCardEffect({
+            cardId: copperId,
+            playerId: targetId
+          });
+          continue;
+        }
+        
+        console.log(`[CUTPURSE EFFECT] revealing hand...`);
+        for (const cardId of hand) {
+          yield new RevealCardEffect({
+            cardId,
+            playerId: targetId,
+          });
+        }
+      }
+    },
+    'island': () => function* (arg) {
+      console.log(`[ISLAND EFFECT] prompting user to select card...`);
+      
+      const cardIds = (yield new SelectCardEffect({
+        prompt: 'Choose card',
+        validPrompt: '',
+        playerId: arg.playerId,
+        restrict: { from: { location: 'playerHands' } },
+        count: 1,
+      })) as number[];
+      
+      console.log(`[ISLAND EFFECT] moving island to island mat...`);
+      
+      yield new MoveCardEffect({
+        cardId: arg.cardId,
+        to: {
+          location: 'island-mat',
+        },
+        toPlayerId: arg.playerId
+      });
+      
+      const cardId = cardIds[0];
+      
+      console.log(`[ISLAND EFFECT] moving selected card to island mat...`);
+      
+      if (cardId) {
+        yield new MoveCardEffect({
+          cardId: cardId,
+          to: {
+            location: 'island-mat',
+          },
+          toPlayerId: arg.playerId
+        })
+      }
+    },
+    'lookout': ({match}) => function* (arg) {
+      console.log(`[LOOKOUT EFFECT] gaining 1 action...`);
+      yield new GainActionEffect({ count: 1 });
+      
+      const deck = match.playerDecks[arg.playerId];
+      
+      if (deck.length < 3) {
+        console.log(`[LOOKOUT EFFECT] deck has less than 3 cards, shuffling...`);
+        yield new ShuffleDeckEffect({
+          playerId: arg.playerId
+        });
+        
+        if (deck.length === 0) {
+          console.log(`[LOOKOUT EFFECT] no cards in deck...`);
+          return;
+        }
+      }
+      
+      const cardIdsToLookAt = deck.slice(Math.max(-3, -deck.length));
+      
+      console.log(`[LOOKOUT EFFECT] moving cards to look at zone...`);
+      for (const cardId of cardIdsToLookAt) {
+        yield new MoveCardEffect({
+          cardId: cardId,
+          to: {
+            location: 'look-at',
+          }
+        })
+      }
+      
+      console.log(`[LOOKOUT EFFECT] prompting user to select one to trash..`);
+      let result = (yield new UserPromptEffect({
+        playerId: arg.playerId,
+        prompt: 'Choose one to trash',
+        content: {
+          type: 'select',
+          cardIds: cardIdsToLookAt,
+          selectCount: 1
+        }
+      })) as { action: number, result: number[] };
+      
+      let cardId = result.result[0];
+      
+      console.log(`[LOOKOUT EFFECT] trashing selected card..`);
+      yield new TrashCardEffect({
+        playerId: arg.playerId,
+        cardId,
+      });
+      
+      cardIdsToLookAt.splice(cardIdsToLookAt.indexOf(cardId), 1);
+      
+      if (cardIdsToLookAt.length === 0) {
+        console.log(`[LOOKOUT EFFECT] not enough cards to continue..`);
+        return;
+      }
+      
+      console.log(`[LOOKOUT EFFECT] prompting user to select one to discard..`);
+      result = (yield new UserPromptEffect({
+        playerId: arg.playerId,
+        prompt: 'Choose one to discard',
+        content: {
+          type: 'select',
+          cardIds: cardIdsToLookAt,
+          selectCount: 1
+        }
+      })) as { action: number, result: number[] };
+      
+      cardId = result.result[0];
+      
+      console.log(`[LOOKOUT EFFECT] discarding selected card...`);
+      yield new DiscardCardEffect({
+        cardId,
+        playerId: arg.playerId
+      });
+      
+      cardIdsToLookAt.splice(cardIdsToLookAt.indexOf(cardId), 1);
+      
+      if (cardIdsToLookAt.length === 0) {
+        console.log(`[LOOKOUT EFFECT] not enough cards to continue...`);
+        return;
+      }
+      
+      console.log(`[LOOKOUT EFFECT] putting last card back on deck...`);
+      yield new MoveCardEffect({
+        cardId: cardId,
+        to: {
+          location: 'playerDecks',
+        },
+        toPlayerId: arg.playerId
+      })
+    },
+    'salvager': ({match, cardLibrary}) => function* (arg) {
+      console.log(`[SALVAGER EFFECT] gaining 1 buy...`);
+      yield new GainBuyEffect({count: 1});
+      
+      console.log(`[SALVAGER EFFECT] prompting user to select a card from hand...`);
+      const cardIds = (yield new SelectCardEffect({
+        prompt: 'Trash card',
+        playerId: arg.playerId,
+        restrict: { from: { location: 'playerHands' } },
+        count: 1,
+      })) as number[];
+      
+      const cardId = cardIds[0];
+      
+      if (!cardId) {
+        console.log(`[SALVAGER EFFECT] no card selected...`);
+        return;
+      }
+      
+      const effectiveCost = getEffectiveCardCost(arg.playerId, cardId,  match, cardLibrary);
+      
+      console.log(`[SALVAGER EFFECT] gaining ${effectiveCost} buy...`);
+      yield new GainTreasureEffect({ count: effectiveCost });
     }
   }
 }

@@ -1,187 +1,34 @@
 {
-  "astrolabe": {
-    "cardName": "Astrolabe",
-    "cost": {
-      "treasure": 3
-    },
-    "type": ["TREASURE", "DURATION"]
-  },
   "bazaar": {
-    "cardName": "Bazaar",
     "cost": {
       "treasure": 5
     },
     "type": ["ACTION"]
   },
-  "blockade": {
-    "cardName": "Blockade",
-    "cost": {
-      "treasure": 4
-    },
-    "type": ["ACTION", "DURATION", "ATTACK"],
-    "targetScheme": "ALL_OTHER"
-  },
-  "caravan": {
-    "cardName": "Caravan",
-    "cost": {
-      "treasure": 4
-    },
-    "type": ["ACTION", "DURATION"]
-  },
-  "corsair": {
-    "cardName": "Corsair",
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION", "DURATION", "ATTACK"],
-    "targetScheme": "ALL_OTHER"
-  },
   "cutpurse": {
-    "cardName": "Cutpurse",
     "cost": {
       "treasure": 4
     },
     "type": ["ACTION", "ATTACK"],
     "targetScheme": "ALL_OTHER"
   },
-  "fishing-village": {
-    "cardName": "Fishing Village",
-    "cost": {
-      "treasure": 3
-    },
-    "type": ["ACTION", "DURATION"]
-  },
-  "haven": {
-    "cardName": "Haven",
-    "cost": {
-      "treasure": 2
-    },
-    "type": ["ACTION", "DURATION"]
-  },
   "island": {
-    "cardName": "Island",
     "cost": {
       "treasure": 4
     },
     "type": ["ACTION", "VICTORY"],
     "victoryPoints": 2
   },
-  "lighthouse": {
-    "cardName": "Lighthouse",
-    "cost": {
-      "treasure": 2
-    },
-    "type": ["ACTION", "DURATION"]
-  },
   "lookout": {
-    "cardName": "Lookout",
     "cost": {
       "treasure": 3
     },
     "type": ["ACTION"]
-  },
-  "merchant-ship": {
-    "cardName": "Merchant Ship",
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION", "DURATION"]
-  },
-  "monkey": {
-    "cardName": "Monkey",
-    "cost": {
-      "treasure": 3
-    },
-    "type": ["ACTION", "DURATION"]
-  },
-  "native-village": {
-    "cardName": "Native Village",
-    "cost": {
-      "treasure": 2
-    },
-    "type": ["ACTION"]
-  },
-  "outpost": {
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION", "DURATION"]
-  },
-  "pirate": {
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION", "DURATION", "REACTION"]
-  },
-  "sailor": {
-    "cost": {
-      "treasure": 4
-    },
-    "type": ["ACTION", "DURATION"]
   },
   "salvager": {
     "cost": {
       "treasure": 4
     },
     "type": ["ACTION"]
-  },
-  "sea-chart": {
-    "cardName": "Sea Chart",
-    "cost": {
-      "treasure": 3
-    },
-    "type": ["ACTION"]
-  },
-  "sea-witch": {
-    "cardName": "Sea Witch",
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION", "DURATION", "ATTACK"],
-    "targetScheme": "ALL_OTHER"
-  },
-  "smugglers": {
-    "cost": {
-      "treasure": 3
-    },
-    "type": ["ACTION"]
-  },
-  "tactician": {
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION", "DURATION"]
-  },
-  "tide-pools": {
-    "cardName": "Tide Pools",
-    "cost": {
-      "treasure": 4
-    },
-    "type": ["ACTION", "DURATION"]
-  },
-  "treasure-map": {
-    "cardName": "Treasure Map",
-    "cost": {
-      "treasure": 4
-    },
-    "type": ["ACTION"]
-  },
-  "treasury": {
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION"]
-  },
-  "warehouse": {
-    "cost": {
-      "treasure": 3
-    },
-    "type": ["ACTION"]
-  },
-  "wharf": {
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION", "DURATION"]
   }
 }
