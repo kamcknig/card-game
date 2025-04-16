@@ -1,17 +1,23 @@
-import { EffectBase, EffectBaseArgs } from './effect-base.ts';
+import { CardId, PlayerId } from 'shared/shared-types.ts';
+import { EffectBase } from './effect-base.ts';
+
+type RevealCardArgs = {
+  playerId: PlayerId;
+  cardId: CardId;
+  moveToRevealed?: boolean;
+}
 
 export class RevealCardEffect extends EffectBase {
   type = 'revealCard' as const;
-  cardId: number;
-  playerId: number;
   
-  constructor(
-    { cardId, playerId, ...arg }:
-    & { playerId: number; cardId: number }
-      & EffectBaseArgs,
-  ) {
-    super(arg);
-    this.cardId = cardId;
-    this.playerId = playerId;
+  cardId: CardId;
+  playerId: PlayerId;
+  moveToRevealed?: boolean;
+  
+  constructor(args: RevealCardArgs) {
+    super();
+    this.cardId = args.cardId;
+    this.playerId = args.playerId;
+    this.moveToRevealed = args.moveToRevealed;
   }
 }

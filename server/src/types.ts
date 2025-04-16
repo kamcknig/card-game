@@ -1,5 +1,14 @@
 import { Socket } from 'socket.io';
-import { Card, CardId, Match, PlayerId, ServerEmitEvents, ServerListenEvents, } from 'shared/shared-types.ts';
+import {
+  Card,
+  CardId,
+  CardKey,
+  Match,
+  Player,
+  PlayerId,
+  ServerEmitEvents,
+  ServerListenEvents,
+} from 'shared/shared-types.ts';
 import { GameEffects } from './core/effects/effect-types/game-effects.ts';
 import { toNumber } from 'es-toolkit/compat';
 
@@ -89,55 +98,80 @@ export const MatchBaseConfiguration = {
 export type ReactionTrigger = {
   eventType: TriggerEventType;
   // the card that triggered this
-  cardId: number;
+  cardId?: number;
   // who triggered this?
   playerId: number;
 };
 
-export type EffectGenerator<T> = Generator<
-  T,
-  unknown,
-  unknown
->;
+export type TargetContext =
+  | { type: 'player', playerId: PlayerId }
+  | { type: 'card', playerId: PlayerId, cardId: CardId };
 
-export type SharedEffectGeneratorContext = {
-  match: Match;
-  cardLibrary: CardLibrary;
+export type SourceContext =
+  | { type: 'player', playerId: PlayerId }
+  | { type: 'card', playerId: PlayerId, cardId: CardId };
+
+export type ReactionEffectContext = {
+  trigger: ReactionTrigger;
+  reaction: Reaction;
   isRootLog?: boolean;
 };
 
-export type EffectContext = SharedEffectGeneratorContext & {
-  triggerPlayerId: number;
-  triggerCardId?: number;
-  reactionContext?: any;
-};
+export type GameActions = {
+  buyCard: { playerId: PlayerId; cardId: CardId; };
+  playCard: { playerId: PlayerId; cardId: CardId; };
+  drawCard: { playerId: PlayerId };
+  checkForPlayerActions: undefined;
+  nextPhase: undefined;
+} & Record<string, any>;
 
-export type ReactionEffectContext = SharedEffectGeneratorContext & {
-  trigger: ReactionTrigger;
-  reaction: Reaction;
-};
+export type GameEffectGenerator = Generator<GameEffects>;
 
-export type GameEffectGenerator = EffectGenerator<GameEffects>;
-
-export type EffectGeneratorBlueprint = (
-  ctx: { reactionManager: ReactionManager },
-) => EffectGeneratorFn;
-
-export type EffectGeneratorFactory = (context: {
+export type EffectGeneratorFactoryContext = {
   reactionManager: ReactionManager;
-  logManager: LogManager
-}) => Record<string, EffectGeneratorFn>;
+  logManager: LogManager,
+  match: Match,
+  cardLibrary: CardLibrary,
+}
+
+export type GameActionTypes = keyof GameActions;
+export type GameActionEffectGeneratorFn<Args = any> = (
+  args: Args,
+  overrides?: GameActionOverrides,
+) => GameEffectGenerator;
+export type GameActionEffectGeneratorMapFactory = (context: EffectGeneratorFactoryContext) => {
+  [K in GameActionTypes]: GameActionEffectGeneratorFn<GameActions[K]>;
+};
+
+export type ReactionContext = any;
+
+export type CardEffectGeneratorFnContext = {
+  reactionContext: ReactionContext;
+  playerId: PlayerId;
+  cardId: CardId;
+}
+export type CardEffectGeneratorFn =
+  (args: CardEffectGeneratorFnContext) => GameEffectGenerator;
+
+export type CardEffectGeneratorMapFactory =
+  Record<CardKey, (context: EffectGeneratorFactoryContext) => CardEffectGeneratorFn>;
+
+export interface CardExpansionModule {
+  registerCardLifeCycles?: () => Record<string, LifecycleCallbackMap>;
+  registerScoringFunctions?: () => Record<string, (args: {
+    match: Match,
+    cardLibrary: CardLibrary,
+    ownerId: number
+  }) => number>;
+  registerEffects: CardEffectGeneratorMapFactory;
+}
+
 
 export type GameActionOverrides = {
   actionCost?: number,
   moveCard?: boolean,
   playCard?: boolean,
 };
-
-export type EffectGeneratorFn = (
-  args: EffectContext,
-  overrides?: GameActionOverrides,
-) => GameEffectGenerator;
 
 export type ReactionEffectGeneratorFn = (
   args: ReactionEffectContext,
@@ -157,7 +191,7 @@ export type EffectHandlerMap = {
 export type EffectPauseResult = { pause: true; signalId: string };
 export type EffectResult = { result: unknown; };
 export type EffectRunGeneratorResult = {
-  run: EffectGenerator<GameEffects>;
+  runGenerator: GameEffectGenerator;
 };
 
 export type EffectHandlerResult =
@@ -167,7 +201,7 @@ export type EffectHandlerResult =
   | number[]
   | void;
 
-export type TriggerEventType = 'cardPlayed';
+export type TriggerEventType = 'cardPlayed' | 'startTurn';
 
 export class Reaction {
   // a concatenation of the card key and card id with a '-'
@@ -207,7 +241,7 @@ export class Reaction {
       compulsory?: boolean;
     },
   ) {
-    this.id = arg.id;
+    this.id = `${arg.id}-${Date.now()}`;
     this.playerId = arg.playerId;
     this.listeningFor = arg.listeningFor;
     this.condition = arg.condition ?? (() => true);
@@ -215,6 +249,10 @@ export class Reaction {
     this.once = arg.once;
     this.multipleUse = arg.multipleUse ?? false;
     this.compulsory = arg.compulsory ?? false;
+  }
+  
+  public getBaseId() {
+    return `${this.getSourceKey()}-${this.getSourceId()}`;
   }
   
   public getSourceKey() {
@@ -247,33 +285,29 @@ export class Reaction {
   }
 }
 
-export type MatchUpdate = Partial<Match>;
-
 export interface IEffectRunner {
-  runCardEffects(
-    playerId: number,
-    cardId: number,
+  runCardEffects(arg: {
+    source: SourceContext;
     reactionContext?: unknown,
-  ): unknown;
+  }): unknown;
   
-  runGameActionEffects(
-    effectName: string,
-    playerId: number,
-    cardId?: number,
-  ): unknown;
+  runGameActionEffects<T extends GameActionTypes>(arg: {
+    effectName: T,
+    context: GameActions[T],
+    source: SourceContext
+  }): unknown;
   
-  runGenerator(
+  runGenerator(arg: {
     generator: GameEffectGenerator,
-    playerId: number,
-    cardId: number,
-  ): unknown;
+    source: SourceContext
+  }): unknown;
 }
 
-export type ReactionTemplate = Omit<Reaction, 'getSourceId' | 'getSourceKey'>;
+export type ReactionTemplate = Omit<Reaction, 'getSourceId' | 'getSourceKey' | 'getBaseId'>;
 
 export type LifecycleResult = {
-  registerTriggers?: ReactionTemplate[];
-  unregisterTriggers?: string[];
+  registerTriggeredEvents?: ReactionTemplate[];
+  unregisterTriggeredEvents?: string[];
 };
 export type LifecycleCallback = (
   args: { playerId: number; cardId: number },
@@ -284,8 +318,7 @@ export type LifecycleCallbackMap = {
   onLeaveHand?: LifecycleCallback;
   onEnterPlay?: LifecycleCallback;
   onLeavePlay?: LifecycleCallback;
+  onCardPlayed?: LifecycleCallback;
 };
-
-export type EffectExceptionSpec = { kind: 'player'; playerIds: PlayerId[] };
 
 export type CardOverrides = Record<PlayerId, Record<CardId, Card>>;

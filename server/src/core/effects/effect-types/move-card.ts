@@ -1,22 +1,19 @@
-import { EffectBase, EffectBaseArgs } from './effect-base.ts';
-import { LocationSpec } from 'shared/shared-types.ts';
+import { CardId, LocationSpec, PlayerId } from 'shared/shared-types.ts';
 
-export class MoveCardEffect extends EffectBase {
-  type = 'moveCard' as const;
-  cardId: number;
+type MoveCardArgs = {
+  cardId: CardId;
   to: LocationSpec;
-  toPlayerId: number | undefined;
+  toPlayerId?: PlayerId;
+}
+export class MoveCardEffect {
+  type = 'moveCard' as const;
+  cardId: CardId;
+  to: LocationSpec;
+  toPlayerId?: PlayerId;
   
-  constructor(
-    { toPlayerId, cardId, to, ...arg }: {
-      cardId: number;
-      to: LocationSpec;
-      toPlayerId?: number;
-    } & EffectBaseArgs,
-  ) {
-    super(arg);
-    this.cardId = cardId;
-    this.to = to;
-    this.toPlayerId = toPlayerId;
+  constructor(args: MoveCardArgs) {
+    this.cardId = args.cardId;
+    this.to = args.to;
+    this.toPlayerId = args.toPlayerId;
   }
 }

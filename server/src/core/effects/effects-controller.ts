@@ -1,28 +1,40 @@
-import { EffectGenerator, EffectGeneratorFn, IEffectRunner } from '../../types.ts';
-import { GameEffects } from './effect-types/game-effects.ts';
-import { Match } from 'shared/shared-types.ts';
+import {
+  GameActionEffectGeneratorFn,
+  GameActions,
+  GameActionTypes,
+  GameEffectGenerator,
+  IEffectRunner,
+  SourceContext
+} from '../../types.ts';
 import { EffectsPipeline } from './effects-pipeline.ts';
 
 import { CardLibrary } from '../card-library.ts';
 
-export class CardEffectController implements IEffectRunner {
+export class EffectsController implements IEffectRunner {
   private _effectsPipeline: EffectsPipeline | undefined;
   
   constructor(
-    private readonly _effectGeneratorMap: Record<string, EffectGeneratorFn>,
+    private readonly _effectGeneratorMap: Record<GameActionTypes, GameActionEffectGeneratorFn>,
     private readonly _cardLibrary: CardLibrary,
-    private _match: Match,
   ) {
   }
   
   public endGame() {
   }
   
-  public runGameActionEffects(
-    effectName: string,
-    playerId?: number,
-    cardId?: number,
+  public runGameActionEffects<T extends GameActionTypes>(
+    args: GameActions[T] extends undefined
+      ? { effectName: T }
+      : { effectName: T; context: GameActions[T] }
   ): unknown {
+    const { effectName } = args;
+    
+    let c = {};
+    if ('context' in args) {
+      c = args.context
+    }
+    
+    // const source = context?.source;
     const generatorFn = this._effectGeneratorMap[effectName];
     
     if (!generatorFn) {
@@ -31,21 +43,16 @@ export class CardEffectController implements IEffectRunner {
     }
     console.log(`[EFFECT CONTROLLER] running '${effectName}' game action effect generator`,);
     
-    const gen = generatorFn({
-      match: this._match,
-      cardLibrary: this._cardLibrary,
-      triggerPlayerId: playerId!,
-      triggerCardId: cardId,
-    });
-    return this.runGenerator(gen, playerId, cardId);
+    const generator = generatorFn({ ...c });
+    return this.runGenerator({ generator, ...c });
   }
   
-  public runCardEffects(
-    playerId: number,
-    cardId: number,
+  public runCardEffects(arg: {
     reactionContext?: unknown,
-  ): unknown {
-    const card = this._cardLibrary.getCard(cardId);
+    source: Extract<SourceContext, { type: 'card' }>;
+  }): unknown {
+    const { source, reactionContext } = arg;
+    const card = this._cardLibrary.getCard(source.cardId);
     const generatorFn = this._effectGeneratorMap[card?.cardKey ?? ''];
     
     if (!generatorFn) {
@@ -55,23 +62,21 @@ export class CardEffectController implements IEffectRunner {
     
     console.log(`[EFFECT CONTROLLER] running card effects generator for ${card}`);
     
-    const gen = generatorFn({
-      match: this._match,
-      cardLibrary: this._cardLibrary,
-      triggerCardId: cardId,
-      triggerPlayerId: playerId,
+    const generator = generatorFn({
+      source,
       reactionContext,
     });
     
-    return this.runGenerator(gen, playerId, cardId);
+    return this.runGenerator({ generator, source });
   }
   
-  public runGenerator(
-    generator: EffectGenerator<GameEffects>,
-    playerId?: number,
-    cardId?: number,
+  public runGenerator(arg: {
+    generator: GameEffectGenerator,
+    source?: SourceContext,
     onComplete?: () => void
-  ) {
+  }): unknown {
+    const { generator, source, onComplete } = arg;
+    
     if (!generator) {
       console.log(`[EFFECT CONTROLLER] No anonymous effects generator supplied`);
       return;
@@ -84,8 +89,7 @@ export class CardEffectController implements IEffectRunner {
     
     return this._effectsPipeline.runGenerator({
       generator,
-      playerId,
-      cardId,
+      source,
       onComplete
     });
   }

@@ -29,8 +29,10 @@ export type SelectCardEffectArgs = {
   count?: CountSpec | number;
   autoSelect?: boolean;
   playerId: PlayerId;
+  optional?: boolean;
   prompt: string;
   validPrompt?: string;
+  cancelPrompt?: string;
 }
 
 export type UserPromptKinds =
@@ -123,7 +125,7 @@ export type ClientEmitEvents = Omit<ServerListenEvents, 'startMatch' | 'matchCon
   matchConfigurationUpdated: (config: Pick<MatchConfiguration, 'expansions'>) => void;
 };
 
-let ZoneValues = ['set-aside'] as const;
+let ZoneValues = ['set-aside', 'revealed'] as const;
 export type Zones = typeof ZoneValues[number];
 export const isLocationZone = (location: any): location is Zones => {
   return !!location && (ZoneValues as unknown as string[]).indexOf(location) !== -1;
@@ -139,7 +141,7 @@ export type CardLocation =
 export type LocationSpec = { location: CardLocation | CardLocation[], index?: number };
 
 export type CountSpec =
-  | { kind: 'upTo'; count: number; zeroValid?: boolean; }
+  | { kind: 'upTo'; count: number; }
   | number;
 
 export type CostSpec =
@@ -309,7 +311,7 @@ export class Card {
 
 const EffectTargetValues = ['ANY', 'ALL_OTHER', 'ALL'] as const;
 export type EffectTarget = typeof EffectTargetValues[number] | string;
-export type EffectRestrictionSpec = 'SELF' | {
+export type EffectRestrictionSpec = {
   from?: LocationSpec;
   card?: {
     cardKeys?: CardKey | CardKey[];

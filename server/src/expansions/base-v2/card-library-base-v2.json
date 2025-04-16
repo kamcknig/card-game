@@ -252,8 +252,9 @@
       "treasure": 5
     },
     "type": [
-      "ACTION"
+      "ACTION", "ATTACK"
     ],
+    "targetScheme": "ALL_OTHER",
     "abilityText": "+2 Cards\nEach other player gains a Curse.",
     "cardName": "Witch"
   },

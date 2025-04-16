@@ -1,11 +1,12 @@
-import { EffectBase, EffectBaseArgs } from './effect-base.ts';
+import { PlayerId } from 'shared/shared-types.ts';
 
-export class DrawCardEffect extends EffectBase {
+type DrawCardArgs = { playerId: PlayerId };
+
+export class DrawCardEffect {
   type = 'drawCard' as const;
-  playerId: number;
+  playerId: PlayerId;
   
-  constructor({ playerId, ...arg }: { playerId: number } & EffectBaseArgs) {
-    super(arg);
-    this.playerId = playerId;
+  constructor(args: DrawCardArgs) {
+    this.playerId = args.playerId;
   }
 }

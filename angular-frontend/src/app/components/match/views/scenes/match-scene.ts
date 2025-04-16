@@ -35,9 +35,8 @@ import { gamePausedStore } from '../../../../state/game-state';
 import { SocketService } from '../../../../core/socket-service/socket.service';
 
 export class MatchScene extends Scene {
-  private _doneSelectingBtn: Container | undefined;
   private _board: Container = new Container();
-  private _baseSupply: Container = new Container({scale: .7});
+  private _baseSupply: Container = new Container({ scale: .8 });
   private _playerHand: PlayerHandView | undefined;
   private _trash: CardStackView | undefined;
   private _deck: CardStackView | undefined;
@@ -205,8 +204,8 @@ export class MatchScene extends Scene {
 
     const endTime = Date.now();
 
-    if (endTime - startTime < 3000) {
-      await new Promise(resolve => setTimeout(resolve, 3000 - (endTime - startTime)));
+    if (endTime - startTime < 1500) {
+      await new Promise(resolve => setTimeout(resolve, 1500 - (endTime - startTime)));
     }
 
     c.removeFromParent();
@@ -219,13 +218,13 @@ export class MatchScene extends Scene {
 
     this._supply.addChild(this._baseSupply);
     this._kingdomView = this._supply.addChild(new KingdomSupplyView());
-    this._kingdomView.scale = .8;
+    this._kingdomView.scale = .9;
 
     this._trash = new CardStackView({
       label: 'TRASH',
       $cardIds: trashStore,
       cardFacing: 'front',
-      scale: .6,
+      scale: .7,
     });
     this._trash.eventMode = 'static';
     this._trash.on('pointerdown', this.onTrashPressed);
@@ -372,11 +371,13 @@ export class MatchScene extends Scene {
       const idx = current.findIndex(c => c === cardId);
       if (idx > -1) {
         current.splice(idx, 1);
-      } else {
+      }
+      else {
         current.push(cardId);
       }
       selectedCardStore.set([...current]);
-    } else {
+    }
+    else {
       if (!this.uiInteractive) {
         return;
       }
@@ -398,76 +399,27 @@ export class MatchScene extends Scene {
   private doSelectCards = async (signalId: string, arg: SelectCardArgs) => {
     const cardIds = selectableCardStore.get();
 
+    let doSelectButtonContainer: Container | null;
+
     // no more selectable cards, remove the done selecting button if it exists
-    if (cardIds.length === 0 && !isUndefined(this._doneSelectingBtn)) {
-      this.removeChild(this._doneSelectingBtn);
+    if (cardIds.length === 0 && this.getChildByLabel('doSelectButtonContainer')) {
+      doSelectButtonContainer = this.getChildByLabel('doSelectButtonContainer');
+      doSelectButtonContainer?.removeChildren().forEach(c => c.destroy());
       return;
     }
 
-    const cardsSelectedComplete = (cardIds: number[]) => {
-      // reset selected card state
-      selectedCardStore.set([]);
-
-      // reset overrides so server can tell us now what cards are selectable
-      clientSelectableCardsOverrideStore.set(null);
-      this._socketService.emit('userInputReceived', signalId, cardIds);
-    };
-
-    const doneListener = () => {
-      this._doneSelectingBtn?.off('pointerdown');
-      this._doneSelectingBtn?.removeFromParent();
-      this._doneSelectingBtn = undefined;
-      this._selecting = false;
-      selectedCardsListenerCleanup();
-      cardsSelectedComplete(selectedCardStore.get());
+    const count = isNumber(arg.count) ? arg.count : (!isNumber(arg.count) ? arg.count?.count : NaN);
+    if (count === undefined || isNaN(count)) {
+      throw new Error(`Selection count couldn't be determined`);
     }
 
-    const updateCountText = (countText: Text, count: number) => {
-      countText.text = count;
-    }
+    doSelectButtonContainer = new AppList({
+      type: 'horizontal',
+      elementsMargin: STANDARD_GAP,
+      padding: STANDARD_GAP
+    });
 
-    const validateSelection = (selectedCards: readonly number[]) => {
-      if (arg.count === undefined) {
-        console.error('validate requires a count');
-        return;
-      }
-
-      if (validateCountSpec(arg.count, selectedCards?.length ?? 0)) {
-        if (!isUndefined(arg.validPrompt) && selectedCards?.length > 0) {
-          button.text(arg.validPrompt);
-        } else {
-          button.text(arg.prompt);
-        }
-
-        if (this._doneSelectingBtn) {
-          const b = this._doneSelectingBtn.getChildByLabel('doneSelectingButton');
-          if (b) {
-            b.alpha = 1;
-          }
-          this._doneSelectingBtn.on('pointerdown', doneListener);
-        }
-
-        if (isNumber(arg.count)) {
-          if (arg.count === selectedCardStore.get().length) doneListener();
-        }
-
-      } else {
-        button.text(arg.prompt);
-        if (this._doneSelectingBtn) {
-          const b = this._doneSelectingBtn.getChildByLabel('doneSelectingButton');
-          if (b) {
-            b.alpha = .6;
-          }
-          this._doneSelectingBtn.off('pointerdown', doneListener);
-        }
-      }
-    };
-
-    // set the currently selectable cards
-    clientSelectableCardsOverrideStore.set(arg.selectableCardIds);
-
-    this._selecting = true;
-
+    const doneSelectingBtn = new Container();
     const button = createAppButton({
       text: arg.prompt,
       style: {
@@ -476,23 +428,40 @@ export class MatchScene extends Scene {
       },
     });
     button.button.label = 'doneSelectingButton';
-    this._doneSelectingBtn = new AppList({ type: 'horizontal', elementsMargin: STANDARD_GAP, padding: STANDARD_GAP });
-    this._doneSelectingBtn.eventMode = 'static';
-    this._doneSelectingBtn.y = (this._playArea?.y ?? 0) + (this._playArea?.height ?? 0) + STANDARD_GAP;
-    this._doneSelectingBtn.addChild(button.button);
+    doneSelectingBtn.eventMode = 'static';
+    doneSelectingBtn.on('removed', () => doneSelectingBtn.removeAllListeners());
+    doneSelectingBtn.addChild(button.button);
 
-    const count = isNumber(arg.count) ? arg.count : (!isNumber(arg.count) ? arg.count?.count : NaN);
-    if (count === undefined || isNaN(count)) {
-      throw new Error(`Selection count couldn't be determined`);
+    doSelectButtonContainer.addChild(doneSelectingBtn);
+
+    if (arg.optional) {
+      const cancelButton = createAppButton({
+        text: arg.cancelPrompt ?? 'Cancel',
+        style: {
+          fill: 'white',
+          fontSize: 36,
+        },
+      });
+      doSelectButtonContainer.addChildAt(cancelButton.button, 0);
+      cancelButton.button.on('removed', () => cancelButton.button.removeAllListeners());
+      cancelButton.button.on('pointerdown', () => doneListener());
     }
 
-    if (count > 1) {
-      const c = new Container({ label: 'cardCountContainer' });
+    doSelectButtonContainer.x = Math.floor(
+      (this._playerHand?.x ?? 0) + (this._playerHand?.width ?? 0) * .5 - doSelectButtonContainer.width * .5
+    );
 
+    doSelectButtonContainer.y = Math.floor((this._playerHand?.y ?? 0) - doSelectButtonContainer.height - STANDARD_GAP);
+    this.addChild(doSelectButtonContainer);
+
+    const c = new Container({ label: 'cardCountContainer' });
+
+    if (arg.prompt.includes('trash') || arg.prompt.includes('discard')) {
       let s: Sprite | undefined = undefined;
       if (arg.prompt.includes('trash')) {
         s = Sprite.from(await Assets.load(`./assets/ui-icons/trash-card-count.png`));
-      } else if (arg.prompt.includes('discard')) {
+      }
+      else if (arg.prompt.includes('discard')) {
         s = Sprite.from(await Assets.load(`./assets/ui-icons/discard-card-count.png`));
       }
 
@@ -515,29 +484,90 @@ export class MatchScene extends Scene {
           fill: 'white'
         }
       });
-
       countText.x = Math.floor(c.width - countText.width * .5);
       countText.y = -Math.floor(countText.height * .5);
       c.addChild(countText);
-      this._doneSelectingBtn.addChild(c);
+      c.scale = .6;
+      c.x = Math.floor(doSelectButtonContainer.x + doSelectButtonContainer.width - 5);
+      c.y = Math.floor(doSelectButtonContainer.y - c.height * .25);
+      this.addChild(c);
     }
 
-    this._doneSelectingBtn.x = Math.floor(
-      (this._playerHand?.x ?? 0) + (this._playerHand?.width ?? 0) * .5 - this._doneSelectingBtn.width * .5
-    );
-    this._doneSelectingBtn.y = Math.floor((this._playerHand?.y ?? 0) - this._doneSelectingBtn.height - STANDARD_GAP);
+    const cardsSelectedComplete = (cardIds: number[]) => {
+      // reset selected card state
+      selectedCardStore.set([]);
+      c.removeFromParent();
+      doSelectButtonContainer?.removeChildren().forEach(c => c.destroy());
+      selectedCardsListenerCleanup();
+
+      // reset overrides so server can tell us now what cards are selectable
+      clientSelectableCardsOverrideStore.set(null);
+      this._socketService.emit('userInputReceived', signalId, cardIds);
+    };
+
+    const doneListener = () => {
+      this._selecting = false;
+      cardsSelectedComplete(selectedCardStore.get());
+    }
+
+    const updateCountText = (countText: Text, count: number) => {
+      countText.text = count;
+    }
+
+    const validateSelection = (selectedCards: readonly number[]) => {
+      if (arg.count === undefined) {
+        console.error('validate requires a count');
+        doneListener();
+        return;
+      }
+
+      if (validateCountSpec(arg.count, selectedCards?.length ?? 0)) {
+        if (!isUndefined(arg.validPrompt)) {
+          button.text(arg.validPrompt);
+        }
+        else {
+          button.text(arg.prompt);
+        }
+
+        if (doneSelectingBtn) {
+          const b = doneSelectingBtn.getChildByLabel('doneSelectingButton');
+          if (b) {
+            b.alpha = 1;
+          }
+          doneSelectingBtn.on('pointerdown', doneListener);
+        }
+
+        if (isNumber(arg.count) && !arg.optional) {
+          if (arg.count === selectedCardStore.get().length) doneListener();
+        }
+
+      }
+      else {
+        button.text(arg.prompt);
+        if (doneSelectingBtn) {
+          const b = doneSelectingBtn.getChildByLabel('doneSelectingButton');
+          if (b) {
+            b.alpha = .6;
+          }
+          doneSelectingBtn.off('pointerdown', doneListener);
+        }
+      }
+    };
+
+    // set the currently selectable cards
+    clientSelectableCardsOverrideStore.set(arg.selectableCardIds);
+
+    this._selecting = true;
 
     // listen for cards being selected
     const selectedCardsListenerCleanup = selectedCardStore.subscribe(cardIds => {
-      this._doneSelectingBtn?.off('pointerdown');
-
-      const countText = this._doneSelectingBtn?.getChildByLabel('cardCountContainer')
-        ?.getChildByLabel('count') as Text;
+      const countText = this.getChildByLabel('cardCountContainer')?.getChildByLabel('count') as Text;
 
       if (countText) {
         if (isNumber(arg.count)) {
           updateCountText(countText, Math.max(count - cardIds.length, 0));
-        } else {
+        }
+        else {
           updateCountText(countText, cardIds.length);
         }
       }
@@ -546,7 +576,6 @@ export class MatchScene extends Scene {
     });
 
     validateSelection(selectedCardStore.get());
-    this.addChild(this._doneSelectingBtn);
   }
 
   private drawBaseSupply = (newVal: ReadonlyArray<number>) => {
@@ -570,7 +599,8 @@ export class MatchScene extends Scene {
         const firstCard = next[0];
         if (firstCard.type.includes('VICTORY') || firstCard.cardKey === 'curse') {
           prev[0].push(next);
-        } else {
+        }
+        else {
           prev[1].push(next);
         }
         return prev;

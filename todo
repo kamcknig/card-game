@@ -14,3 +14,11 @@ when select card effect happens, the UI needs to remove the play all treasure ca
 when player disconnects in game, give option to kick, or continue playing
 
 vassal'd a moneylender i think, but didn't show it in the game log - see how dominion does this - see screenshot in server code
+
+resize of game log - limit how far left and right
+
+mill requires discard instead of allowing
+
+play with the colors for the score view
+
+when revealing cards -they should move to a new "location"

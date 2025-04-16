@@ -1,21 +1,21 @@
-import { EffectBase, EffectBaseArgs } from './effect-base.ts';
-import { EffectContext } from '../../../types.ts';
+import { EffectBase } from './effect-base.ts';
 import { CardKey } from "shared/shared-types.ts";
+import { CardEffectGeneratorFnContext } from '../../../types.ts';
 
 export type InvokeGeneratorEffectArgs = {
   cardKey: CardKey;
-  context: EffectContext;
+  context: CardEffectGeneratorFnContext;
 }
 
 export class InvokeCardGeneratorEffect extends EffectBase {
   type = 'invokeCardEffects' as const;
   cardKey: CardKey;
-  context: EffectContext;
+  context: CardEffectGeneratorFnContext;
   
-  constructor({ cardKey, context, ...arg }: InvokeGeneratorEffectArgs & EffectBaseArgs) {
-    super(arg);
+  constructor(args: InvokeGeneratorEffectArgs) {
+    super();
     
-    this.cardKey = cardKey;
-    this.context = context;
+    this.cardKey = args.cardKey;
+    this.context = args.context;
   }
 }
