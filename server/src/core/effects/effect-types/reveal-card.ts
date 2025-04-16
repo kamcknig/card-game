@@ -4,6 +4,7 @@ import { EffectBase } from './effect-base.ts';
 type RevealCardArgs = {
   playerId: PlayerId;
   cardId: CardId;
+  moveToRevealed?: boolean;
 }
 
 export class RevealCardEffect extends EffectBase {
@@ -11,10 +12,12 @@ export class RevealCardEffect extends EffectBase {
   
   cardId: CardId;
   playerId: PlayerId;
+  moveToRevealed?: boolean;
   
   constructor(args: RevealCardArgs) {
     super();
     this.cardId = args.cardId;
     this.playerId = args.playerId;
+    this.moveToRevealed = args.moveToRevealed;
   }
 }

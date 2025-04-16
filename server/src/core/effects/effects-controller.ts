@@ -1,11 +1,11 @@
 import {
   GameActionEffectGeneratorFn,
   GameActions,
-  GameActionTypes, GameEffectGenerator,
+  GameActionTypes,
+  GameEffectGenerator,
   IEffectRunner,
   SourceContext
 } from '../../types.ts';
-import { GameEffects } from './effect-types/game-effects.ts';
 import { EffectsPipeline } from './effects-pipeline.ts';
 
 import { CardLibrary } from '../card-library.ts';

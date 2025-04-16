@@ -8,7 +8,7 @@ import { findSpecLocationBySource } from '../../utils/find-spec-location-by-sour
 import { findSourceByLocationSpec } from '../../utils/find-source-by-location-spec.ts';
 import { castArray, isNumber, isUndefined, toNumber } from 'es-toolkit/compat';
 import { MoveCardEffect } from './effect-types/move-card.ts';
-import { getCardOverrides, removeOverrideEffects } from '../../card-data-overrides.ts';
+import { cardDataOverrides, getCardOverrides, removeOverrideEffects } from '../../card-data-overrides.ts';
 import { UserPromptEffect } from './effect-types/user-prompt.ts';
 import { CardLibrary } from '../card-library.ts';
 import { ShuffleDeckEffect } from './effect-types/shuffle-card.ts';
@@ -317,8 +317,15 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
   }
   
   
-  map.revealCard = function (effect, _match) {
+  map.revealCard = function (effect, match) {
     console.log(`[REVEAL CARD EFFECT HANDLER] revealing card ${cardLibrary.getCard(effect.cardId)}`);
+   
+    if (effect.moveToRevealed) {
+      map.moveCard(new MoveCardEffect({
+        cardId: effect.cardId,
+        to: { location: 'revealed' }
+      }), match);
+    }
     
     /*if (effect.logEffect) {
       logManager[effect.isRootLog ? 'rootLog' : 'addLogEntry']({
@@ -338,19 +345,21 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
     
     if (Array.isArray(effect.restrict)) {
       console.log(`[SELECT CARD EFFECT HANDLER] setting selection to list of cards${effect.restrict.map((id: number) => cardLibrary.getCard(id))}`);
-      return effect.restrict;
+      selectableCardIds = effect.restrict;
     }
     else if (effect.restrict.from) {
       if (effect.restrict.from.location === 'playerDecks') {
         console.warn('[SELECT CARD EFFECT HANDLER] will not be able to select from deck, not sending it to client, nor able to show them to them right now');
         return [];
       }
+      
       selectableCardIds = findCards(
         match,
         effect.restrict,
         cardLibrary,
         playerId,
       );
+      
       console.log(`[SELECT CARD EFFECT HANDLER] found selectable cards ${selectableCardIds.map((id) => cardLibrary.getCard(id))}`);
     }
     
@@ -361,7 +370,7 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
     
     // if there aren't enough cards, depending on the selection type, we might simply implicitly select cards
     // because the player would be forced to select hem all anyway
-    if (isNumber(effect.count)) {
+    if (isNumber(effect.count) && !effect.optional) {
       const count = effect.count;
       
       console.log(`[SELECT CARD EFFECT HANDLER] selection count is an exact count ${count} checking if user has that many cards`);
@@ -474,12 +483,11 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
   }
   
   
-  /*map.modifyCost = function (effect, match) {
-    const targets = findOrderedEffectTargets(
-      effect.sourcePlayerId!,
-      effect.appliesTo,
-      match,
-    );
+  map.modifyCost = function (effect, match) {
+    let targets: PlayerId[] = [];
+    if (effect.appliesTo === 'ALL') {
+      targets = match.players.map(p => p.id);
+    }
     
     cardDataOverrides.push({ targets, overrideEffect: effect });
     
@@ -490,7 +498,7 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
       const socket = socketMap.get(targetId);
       socket?.emit('setCardDataOverrides', playerOverrides);
     }
-  }*/
+  }
   
   
   map.invokeCardEffects = function (effect) {

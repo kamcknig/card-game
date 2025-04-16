@@ -1,31 +1,26 @@
 import { EffectBase } from './effect-base.ts';
-import { CountSpec, EffectRestrictionSpec, } from 'shared/shared-types.ts';
+import { CountSpec, EffectRestrictionSpec, SelectCardEffectArgs, } from 'shared/shared-types.ts';
 
-type SelectCardArgs = {
-  count?: CountSpec | number;
-  autoSelect?: boolean;
-  restrict: EffectRestrictionSpec | number[];
-  playerId: number;
-  prompt: string;
-  validPrompt?: string;
-};
+
 
 export class SelectCardEffect extends EffectBase {
   type = 'selectCard' as const;
   count?: CountSpec | number;
-  autoSelect?: boolean;
+  optional?: boolean;
   restrict: EffectRestrictionSpec | number[];
   playerId: number;
   prompt: string;
   validPrompt?: string;
+  cancelPrompt?: string;
   
-  constructor(args: SelectCardArgs) {
+  constructor(args: SelectCardEffectArgs) {
     super();
     this.restrict = args.restrict;
     this.count = args.count;
-    this.autoSelect = args.autoSelect;
+    this.optional = args.optional;
     this.playerId =args. playerId;
     this.prompt = args.prompt;
     this.validPrompt = args.validPrompt;
+    this.cancelPrompt = args.cancelPrompt;
   }
 }

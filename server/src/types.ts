@@ -251,6 +251,10 @@ export class Reaction {
     this.compulsory = arg.compulsory ?? false;
   }
   
+  public getBaseId() {
+    return `${this.getSourceKey()}-${this.getSourceId()}`;
+  }
+  
   public getSourceKey() {
     let out;
     try {
@@ -299,7 +303,7 @@ export interface IEffectRunner {
   }): unknown;
 }
 
-export type ReactionTemplate = Omit<Reaction, 'getSourceId' | 'getSourceKey'>;
+export type ReactionTemplate = Omit<Reaction, 'getSourceId' | 'getSourceKey' | 'getBaseId'>;
 
 export type LifecycleResult = {
   registerTriggeredEvents?: ReactionTemplate[];
@@ -316,7 +320,5 @@ export type LifecycleCallbackMap = {
   onLeavePlay?: LifecycleCallback;
   onCardPlayed?: LifecycleCallback;
 };
-
-export type EffectExceptionSpec = { kind: 'player'; playerIds: PlayerId[] };
 
 export type CardOverrides = Record<PlayerId, Record<CardId, Card>>;

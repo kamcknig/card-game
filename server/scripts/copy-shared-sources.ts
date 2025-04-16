@@ -12,7 +12,7 @@ console.log("PROJECT_ROOT:", PROJECT_ROOT);
 console.log("Current working directory:", Deno.cwd());
 
 const SRC_DIR = join(PROJECT_ROOT, "server", "src", "shared");
-const DEST_DIR = join(PROJECT_ROOT, "app", "src", "shared");
+const DEST_DIR = join(PROJECT_ROOT, "angular-frontend", "src", "app", "shared");
 
 async function transformAndCopy(srcDir: string, destDir: string): Promise<void> {
     try {

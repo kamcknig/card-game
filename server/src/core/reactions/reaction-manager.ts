@@ -19,17 +19,6 @@ export class ReactionManager {
   public endGame() {
   }
   
-  unregisterTrigger(triggerId: string) {
-    const idx = this._triggers.findIndex((trigger) => trigger.id === triggerId);
-    if (idx > -1) {
-      const trigger = this._triggers[idx];
-      console.log(`[REACTION MANAGER] removing trigger reaction ${triggerId} for player
-        ${this.match.players?.find((player) => player.id === trigger.playerId)}`);
-      
-      this._triggers.splice(idx, 1);
-    }
-  }
-  
   getReactions(trigger: ReactionTrigger) {
     return this._triggers.filter((t) => {
       if (t.listeningFor !== trigger.eventType) return false;
@@ -56,6 +45,17 @@ export class ReactionManager {
       return item.playerId === playerId;
     });
     return reactions;
+  }
+  
+  unregisterTrigger(triggerId: string) {
+    for (let i = this._triggers.length - 1; i >= 0; i--) {
+      const trigger = this._triggers[i];
+      if (trigger.getBaseId() === triggerId) {
+        this._triggers.splice(i, 1);
+        console.log(`[REACTION MANAGER] removing trigger reaction ${triggerId} for player
+        ${this.match.players?.find((player) => player.id === trigger.playerId)}`);
+      }
+    }
   }
   
   registerReactionTemplate(reactionTemplate: ReactionTemplate) {
@@ -88,7 +88,7 @@ export class ReactionManager {
           return !usedReactionIds.has(r.id) && !blockedCardKeys.has(key);
         });
         
-        console.log(`[REACTION MANAGER] ${targetPlayer} has ${reactions.length} remaining actions`);
+        console.log(`[REACTION MANAGER] ${targetPlayer} has ${reactions.length} remaining reactions`);
         
         if (!reactions.length) break;
         

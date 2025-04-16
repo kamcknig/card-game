@@ -23,9 +23,9 @@ import { ExpansionCardData, expansionData } from '../state/expansion-data.ts';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
 import Fuse, { IFuseOptions } from 'fuse.js';
 import {
-  gameActionEffectGeneratorFactory,
+  cardEffectGeneratorMap,
   cardEffectGeneratorMapFactory,
-  cardEffectGeneratorMap
+  gameActionEffectGeneratorFactory
 } from './effects/effect-generator-map.ts';
 import { EventEmitter } from '@denosaurs/event';
 import { LogManager } from './log-manager.ts';
@@ -48,6 +48,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   ) {
     super();
   }
+  
+  private _keepers: CardKey[] = ['cellar', 'bridge', 'masquerade', 'mill'];
+  private _playerHands: Record<CardKey, number>[] = [{
+    gold: 3,
+    silver: 3,
+    estate: 3,
+    mill: 2,
+  }];
   
   public initialize(
     config: MatchConfiguration,
@@ -121,6 +129,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       cardsPlayed: {},
       zones: {
         'set-aside': [],
+        'revealed': [],
       }
     };
     
@@ -146,7 +155,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     if (patch.length) {
       console.log(`[MATCH] sending match update to clients`);
       this._socketMap.forEach((s) => s.emit('matchPatch', patch));
-    } else {
+    }
+    else {
       console.debug(`[MATCH] no changes, not sending update to client`);
     }
   }
@@ -234,7 +244,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const kingdomCards: Card[] = [];
     
     // todo: remove testing code
-    const keepers: string[] = ['merchant', 'throne-room'].filter((k) =>
+    const keepers: string[] = this._keepers.filter((k) =>
       this._cardData!.kingdom[k]
     );
     
@@ -287,31 +297,15 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private createPlayerDecks(config: MatchConfiguration) {
     console.log(`[MATCH] creating player decks`);
     
-    const playerStartHand = MatchBaseConfiguration.playerStartingHand;
-    console.log(`[MATCH] using player starting hand ${playerStartHand}`);
-    
     return Object.values(config.players).reduce((prev, player, _idx) => {
       console.log('initializing player', player.id, 'cards...');
-      let blah = {};
-      // todo remove testing code
-      if (_idx === 0) {
-        blah = {
-          gold: 6,
-          silver: 4,
-          merchant: 3,
-          'throne-room': 3
-        };
-      } else {
-        blah = {
-          moat: 3,
-          militia: 3,
-          gold: 5,
-          estate: 4
-        };
-      }
-      Object.entries(blah).forEach(([key, count]) => {
-          /*Object.entries(playerStartHand).forEach(
-           ([key, count]) => {*/
+      
+      let playerStartHand = this._playerHands.length > 0 ? this._playerHands[_idx] : MatchBaseConfiguration.playerStartingHand;
+      playerStartHand ??= MatchBaseConfiguration.playerStartingHand;
+      console.log(`[MATCH] using player starting hand ${playerStartHand}`);
+      
+      Object.entries(playerStartHand).forEach(
+        ([key, count]) => {
           prev['playerDecks'][player.id] ??= [];
           let deck = prev['playerDecks'][player.id];
           deck = deck.concat(
