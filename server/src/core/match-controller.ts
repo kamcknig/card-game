@@ -1,6 +1,6 @@
 import {
   Card,
-  CardData,
+  CardData, CardId,
   CardKey,
   Match,
   MatchConfiguration,
@@ -49,12 +49,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     super();
   }
   
-  private _keepers: CardKey[] = ['cellar', 'bridge', 'masquerade', 'mill'];
+  private _keepers: CardKey[] = ['cutpurse', 'smugglers', 'treasure-map'];
   private _playerHands: Record<CardKey, number>[] = [{
     gold: 3,
-    silver: 3,
+    silver: 2,
     estate: 3,
-    mill: 2,
+    smugglers: 2,
+    'treasure-map': 2,
   }];
   
   public initialize(
@@ -126,10 +127,38 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       turnPhaseIndex: 0,
       selectableCards: {},
       playArea: [],
-      cardsPlayed: {},
+      cardsGained: [
+        config.players.reduce((prev, next) => {
+          prev[next.id] = [];
+          return prev;
+        }, {} as Record<PlayerId, CardId[]>)
+      ],
+      cardsPlayed: [
+        config.players.reduce((prev, next) => {
+          prev[next.id] = [];
+          return prev;
+        }, {} as Record<PlayerId, CardId[]>)
+      ],
+      trashedCards: [
+        config.players.reduce((prev, next) => {
+          prev[next.id] = [];
+          return prev;
+        }, {} as Record<PlayerId, CardId[]>)
+      ],
+      mats: {
+        'native-village-mat': config.players.reduce((prev, next) => {
+          prev[next.id] = [];
+          return prev;
+        }, {} as Record<PlayerId, CardId[]>),
+        'island-mat': config.players.reduce((prev, next) => {
+          prev[next.id] = [];
+          return prev;
+        }, {} as Record<PlayerId, CardId[]>)
+      },
       zones: {
         'set-aside': [],
         'revealed': [],
+        'look-at': [],
       }
     };
     
@@ -431,7 +460,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const match = this._match;
     match.playerBuys = 1;
     match.playerActions = 1;
-    match.turnNumber = 1;
     this.broadcastPatch(prev);
     
     this._socketMap.forEach((s) => s.emit('matchStarted'));

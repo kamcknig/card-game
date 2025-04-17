@@ -1,20 +1,17 @@
 {
   "astrolabe": {
-    "cardName": "Astrolabe",
     "cost": {
       "treasure": 3
     },
     "type": ["TREASURE", "DURATION"]
   },
   "bazaar": {
-    "cardName": "Bazaar",
     "cost": {
       "treasure": 5
     },
     "type": ["ACTION"]
   },
   "blockade": {
-    "cardName": "Blockade",
     "cost": {
       "treasure": 4
     },
@@ -22,14 +19,12 @@
     "targetScheme": "ALL_OTHER"
   },
   "caravan": {
-    "cardName": "Caravan",
     "cost": {
       "treasure": 4
     },
     "type": ["ACTION", "DURATION"]
   },
   "corsair": {
-    "cardName": "Corsair",
     "cost": {
       "treasure": 5
     },
@@ -37,7 +32,6 @@
     "targetScheme": "ALL_OTHER"
   },
   "cutpurse": {
-    "cardName": "Cutpurse",
     "cost": {
       "treasure": 4
     },
@@ -52,14 +46,12 @@
     "type": ["ACTION", "DURATION"]
   },
   "haven": {
-    "cardName": "Haven",
     "cost": {
       "treasure": 2
     },
     "type": ["ACTION", "DURATION"]
   },
   "island": {
-    "cardName": "Island",
     "cost": {
       "treasure": 4
     },
@@ -67,14 +59,12 @@
     "victoryPoints": 2
   },
   "lighthouse": {
-    "cardName": "Lighthouse",
     "cost": {
       "treasure": 2
     },
     "type": ["ACTION", "DURATION"]
   },
   "lookout": {
-    "cardName": "Lookout",
     "cost": {
       "treasure": 3
     },
@@ -88,7 +78,6 @@
     "type": ["ACTION", "DURATION"]
   },
   "monkey": {
-    "cardName": "Monkey",
     "cost": {
       "treasure": 3
     },

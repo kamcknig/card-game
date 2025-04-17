@@ -15,10 +15,30 @@ when player disconnects in game, give option to kick, or continue playing
 
 vassal'd a moneylender i think, but didn't show it in the game log - see how dominion does this - see screenshot in server code
 
-resize of game log - limit how far left and right
+select card effect handler tries to find cards before prompting user and if none, then returns empty array. 
+ - look into making user prompt effect handler do the same
 
-mill requires discard instead of allowing
+ don't allow empty player name
 
-play with the colors for the score view
 
-when revealing cards -they should move to a new "location"
+if player name too long - truncate in score view
+
+deck should always show number even if it's one
+
+lookout might not be putting on top of deck
+
+torturer didn't target everyone
+
+make mats dynamiclly registered
+
+
+
+
+
+advanced reaction use-case
+   trader and castles.
+   when i gained the castle, i could use the reaction of hte castle OR the trader
+   i chose the castle
+   then i was also about to choose trader but declined,
+   then everyone else had to do the castle thing,
+   then it asked me again about the trader

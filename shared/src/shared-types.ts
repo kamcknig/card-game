@@ -73,7 +73,10 @@ export type Match = {
   trash: CardId[];
   turnNumber: number;
   turnPhaseIndex: number;
-  cardsPlayed: Record<PlayerId, CardId[]>;
+  cardsGained: Record<PlayerId, CardId[]>[];
+  cardsPlayed: Record<PlayerId, CardId[]>[];
+  trashedCards: Record<PlayerId, CardId[]>[];
+  mats: Record<Mats, Record<PlayerId, CardId[]>>;
   zones: Record<Zones, CardId[]>;
 }
 
@@ -125,7 +128,20 @@ export type ClientEmitEvents = Omit<ServerListenEvents, 'startMatch' | 'matchCon
   matchConfigurationUpdated: (config: Pick<MatchConfiguration, 'expansions'>) => void;
 };
 
-let ZoneValues = ['set-aside', 'revealed'] as const;
+const MatValues = [
+  'island-mat',
+  'native-village-mat'
+] as const;
+export type Mats = typeof MatValues[number];
+export const isLocationMat = (location: any): location is Mats => {
+  return !!location && (MatValues as unknown as string[]).indexOf(location) !== -1;
+}
+
+let ZoneValues = [
+  'set-aside',
+  'look-at',
+  'revealed'
+] as const;
 export type Zones = typeof ZoneValues[number];
 export const isLocationZone = (location: any): location is Zones => {
   return !!location && (ZoneValues as unknown as string[]).indexOf(location) !== -1;
@@ -137,8 +153,12 @@ export type CardLocations = typeof CardLocationValues[number];
 export type CardLocation =
   | CardLocations
   | Zones
+  | Mats
 
-export type LocationSpec = { location: CardLocation | CardLocation[], index?: number };
+export type LocationSpec = {
+  location: CardLocation | CardLocation[],
+  index?: number
+};
 
 export type CountSpec =
   | { kind: 'upTo'; count: number; }

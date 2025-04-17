@@ -182,7 +182,7 @@ const expansionModule: CardExpansionModule = {
         count: 2,
       });
       
-      const actionCardCount = match.cardsPlayed[arg.playerId]?.filter((
+      const actionCardCount = match.cardsPlayed[match.turnNumber][arg.playerId]?.filter((
         cardId,
       ) => cardLibrary.getCard(cardId).type.includes('ACTION'));
       

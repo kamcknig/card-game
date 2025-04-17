@@ -1,7 +1,12 @@
 const { chromium } = require("playwright");
 const { v4: uuidv4 } = require("uuid");
+const minimist = require('minimist');
 
-const NUM_SESSIONS = 3;
+const args = minimist(process.argv.slice(2), {
+  alias: { s: 'num-sessions' },
+  default: { 'num-sessions': 3 },
+});
+
 const COLUMNS = 3;
 const PAGE_WIDTH = 1280;
 const PAGE_HEIGHT = 720;
@@ -9,7 +14,9 @@ const PAGE_HEIGHT = 720;
 (async () => {
   let closedCount = 0;
 
-  for (let i = 0; i < NUM_SESSIONS; i++) {
+  const numSessions = parseInt(args['num-sessions'], 10);
+
+  for (let i = 0; i < numSessions; i++) {
     const browser = await chromium.launch({
       headless: false,
       args: [
@@ -31,8 +38,8 @@ const PAGE_HEIGHT = 720;
     // Track page close
     page.on("close", () => {
       closedCount++;
-      console.log(`❌ Page ${i + 1} closed (${closedCount}/${NUM_SESSIONS})`);
-      if (closedCount === NUM_SESSIONS) {
+      console.log(`❌ Page ${i + 1} closed (${closedCount}/${numSessions})`);
+      if (closedCount === numSessions) {
         console.log("✅ All pages closed. Exiting.");
         process.exit(0);
       }
@@ -41,5 +48,5 @@ const PAGE_HEIGHT = 720;
     await page.goto("http://localhost:5143");
   }
 
-  console.log(`🕵️‍♂️ All ${NUM_SESSIONS} pages launched. Close them to end the script.`);
+  console.log(`🕵️‍♂️ All ${numSessions} pages launched. Close them to end the script.`);
 })();
