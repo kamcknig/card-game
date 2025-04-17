@@ -430,6 +430,30 @@ const expansion: CardExpansionModule = {
           });
         }
       }
+    },
+    'warehouse': ({match}) => function* (arg) {
+      for (let i = 0; i < 3; i++) {
+        const cardId = (yield new DrawCardEffect({
+          playerId: arg.playerId
+        })) as { result: number };
+      }
+      
+      yield new GainActionEffect({ count: 1 });
+      
+      const cardIds = (yield new SelectCardEffect({
+        prompt: 'Discard cards',
+        validPrompt: '',
+        playerId: arg.playerId,
+        restrict: { from: { location: 'playerHands' } },
+        count: Math.min(3, match.playerHands[arg.playerId].length),
+      })) as number[];
+      
+      for (const cardId of cardIds) {
+        yield new DiscardCardEffect({
+          cardId,
+          playerId: arg.playerId
+        });
+      }
     }
   }
 }

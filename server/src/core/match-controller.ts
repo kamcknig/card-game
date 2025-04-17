@@ -49,13 +49,17 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     super();
   }
   
-  private _keepers: CardKey[] = [];
-  private _playerHands: Record<CardKey, number>[] = [/*{
+  private _keepers: CardKey[] = ['native-village', 'sea-chart', 'smugglers', 'treasure-map', 'warehouse'];
+  private _playerHands: Record<CardKey, number>[] = [{
     gold: 3,
     silver: 2,
     estate: 3,
-    island: 2,
-  }*/];
+    'native-village': 2,
+    'sea-chart': 2,
+    'smugglers': 2,
+    'treasure-map': 2,
+    'warehouse': 2,
+  }];
   
   public initialize(
     config: MatchConfiguration,
