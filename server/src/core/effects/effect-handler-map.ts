@@ -168,7 +168,7 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
     
     cardLibrary.getCard(effect.cardId).owner = effect.playerId;
     
-    return map.moveCard(
+    map.moveCard(
       new MoveCardEffect({
         to: effect.to,
         toPlayerId: effect.playerId,
@@ -176,6 +176,9 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
       }),
       match,
     );
+    
+    match.cardsGained[match.turnNumber][effect.playerId] ??= [];
+    match.cardsGained[match.turnNumber][effect.playerId].push(effect.cardId);
   }
   
   
@@ -318,6 +321,13 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
       type: 'newTurn',
       turn: match.turnNumber,
     });
+    
+    match.cardsGained.push(
+      match.players.reduce((prev, next) => {
+        prev[next.id] = [];
+        return prev;
+      }, {} as Record<PlayerId, CardId[]>)
+    );
     
     match.cardsPlayed.push(
       match.players.reduce((prev, next) => {

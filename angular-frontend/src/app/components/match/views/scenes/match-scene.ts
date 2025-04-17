@@ -456,12 +456,12 @@ export class MatchScene extends Scene {
 
     const c = new Container({ label: 'cardCountContainer' });
 
-    if (arg.prompt.includes('trash') || arg.prompt.includes('discard')) {
+    if (arg.prompt.toLowerCase().includes('trash') || arg.prompt.toLowerCase().includes('discard')) {
       let s: Sprite | undefined = undefined;
-      if (arg.prompt.includes('trash')) {
+      if (arg.prompt.toLowerCase().includes('trash')) {
         s = Sprite.from(await Assets.load(`./assets/ui-icons/trash-card-count.png`));
       }
-      else if (arg.prompt.includes('discard')) {
+      else if (arg.prompt.toLowerCase().includes('discard')) {
         s = Sprite.from(await Assets.load(`./assets/ui-icons/discard-card-count.png`));
       }
 

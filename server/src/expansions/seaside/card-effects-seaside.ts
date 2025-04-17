@@ -14,7 +14,7 @@ import { ShuffleDeckEffect } from '../../core/effects/effect-types/shuffle-card.
 import { TrashCardEffect } from '../../core/effects/effect-types/trash-card.ts';
 import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 import { getPlayerStartingFrom } from '../../utils/get-player-starting-from.ts';
-import { CardId } from "shared/shared-types.ts";
+import { Card, CardId } from 'shared/shared-types.ts';
 
 const expansion: CardExpansionModule = {
   registerCardLifeCycles: () => ({
@@ -235,6 +235,8 @@ const expansion: CardExpansionModule = {
         return;
       }
       
+      cardId = cardIdsToLookAt[0];
+      
       console.log(`[LOOKOUT EFFECT] putting last card back on deck...`);
       yield new MoveCardEffect({
         cardId: cardId,
@@ -245,21 +247,24 @@ const expansion: CardExpansionModule = {
       })
     },
     'native-village': ({ match }) => function* (arg) {
+      console.log(`[NATIVE VILLAGE EFFECT] gaining 2 actions...`);
       yield new GainActionEffect({ count: 2 });
+      
+      console.log(`[NATIVE VILLAGE EFFECT] prompting user to choose...`);
       
       const result = (yield new UserPromptEffect({
         playerId: arg.playerId,
         actionButtons: [
-          { label: 'Top card', action: 1 },
-          { label: 'Hand', action: 2 }
-        ],
-        prompt: 'Put top card, or entire hand on your native mat'
-      })) as { action: number, result: any };
+          { label: 'Put top card on mat', action: 1 },
+          { label: 'Take cards from mat', action: 2 }
+        ]
+      })) as { action: number };
       
       if (result.action === 1) {
         const deck = match.playerDecks[arg.playerId];
         
         if (deck.length === 0) {
+          console.log(`[NATIVE VILLAGE EFFECT] shuffling deck...`);
           yield new ShuffleDeckEffect({
             playerId: arg.playerId
           });
@@ -268,9 +273,11 @@ const expansion: CardExpansionModule = {
         const cardId = deck.slice(-1)[0];
         
         if (!cardId) {
+          console.log(`[NATIVE VILLAGE EFFECT] no cards in deck...`);
           return;
         }
         
+        console.log(`[NATIVE VILLAGE EFFECT] moving card to native village mat...`);
         yield new MoveCardEffect({
           cardId,
           toPlayerId: arg.playerId,
@@ -282,13 +289,14 @@ const expansion: CardExpansionModule = {
         return;
       }
       
-      for (const cardId of match.playerHands[arg.playerId]) {
+      const matCardIds = match.mats['native-village-mat'][arg.playerId].concat();
+      
+      console.log(`[NATIVE VILLAGE EFFECT] moving ${matCardIds.length} cards from native village mat to hand...`);
+      for (const cardId of matCardIds) {
         yield new MoveCardEffect({
           cardId: cardId,
           toPlayerId: arg.playerId,
-          to: {
-            location: 'native-village-mat',
-          }
+          to: { location: 'playerHands' }
         });
       }
     },
@@ -317,20 +325,24 @@ const expansion: CardExpansionModule = {
       yield new GainTreasureEffect({ count: effectiveCost });
     },
     'sea-chart': ({ match, cardLibrary }) => function* (arg) {
+      console.log(`[SEA CHART EFFECT] drawing 1 card...`);
       yield new DrawCardEffect({
         playerId: arg.playerId
       });
       
+      console.log(`[SEA CHART EFFECT] gaining 1 action...`);
       yield new GainActionEffect({ count: 1 });
       
       const deck = match.playerDecks[arg.playerId];
       
       if (deck.length === 0) {
+        console.log(`[SEA CHART EFFECT] shuffling deck...`);
         yield new ShuffleDeckEffect({
           playerId: arg.playerId
         });
         
         if (deck.length === 0) {
+          console.log(`[SEA CHART EFFECT] no cards in deck...`);
           return;
         }
       }
@@ -338,6 +350,7 @@ const expansion: CardExpansionModule = {
       const cardId = deck.slice(-1)[0];
       const card = cardLibrary.getCard(cardId);
       
+      console.log(`[SEA CHART EFFECT] revealing card...`);
       yield new RevealCardEffect({
         cardId,
         playerId: arg.playerId,
@@ -346,6 +359,10 @@ const expansion: CardExpansionModule = {
       
       const copyInPlay = match.cardsPlayed[match.turnNumber][arg.playerId]
         .find(cardId => cardLibrary.getCard(cardId).cardKey === card.cardKey);
+      
+      console.log(`[SEA CHART EFFECT] ${copyInPlay ? 'copy is in play' : 'no copy in play'}...`);
+      
+      console.log(`[SEA CHART EFFECT] moving card to ${copyInPlay ? 'playerHands' : 'playerDecks'}...`);
       
       yield new MoveCardEffect({
         cardId,
@@ -356,13 +373,15 @@ const expansion: CardExpansionModule = {
       });
     },
     'smugglers': ({match, cardLibrary}) => function* (arg) {
-      const player = getPlayerStartingFrom({
+      const previousPlayer = getPlayerStartingFrom({
         startFromIdx: match.currentPlayerTurnIndex,
         match,
         distance: -1
       });
       
-      const cardIds = match.cardsPlayed[match.turnNumber - 2][player.id].filter(cardId => {
+      console.log(`[SMUGGLERS EFFECT] looking at ${previousPlayer} cards played`);
+      
+      let cardIds = match.cardsGained[match.turnNumber - 1][previousPlayer.id].filter(cardId => {
         const cost = getEffectiveCardCost(
           arg.playerId,
           cardId,
@@ -372,9 +391,20 @@ const expansion: CardExpansionModule = {
         return cost <= 6;
       });
       
+      console.log(`[SMUGGLERS EFFECT] found ${cardIds.length} costing up to 6 that were played`);
+      
+      const inSupply = (card: Card) =>
+        match.supply.concat(match.kingdom).find(id => cardLibrary.getCard(id).cardKey === card.cardKey);
+      
+      cardIds = cardIds.map(cardLibrary.getCard).map(inSupply).filter(id => id !== undefined);
+      
+      console.log(`[SMUGGLERS EFFECT] found ${cardIds.length} available cards in supply to choose from`);
+      
       if (!cardIds.length) {
         return;
       }
+      
+      console.log(`[SMUGGLERS EFFECT] prompting user to select a card...`);
       
       const result = (yield new UserPromptEffect({
         playerId: arg.playerId,
@@ -389,19 +419,20 @@ const expansion: CardExpansionModule = {
       const cardId = result.result[0];
       
       if (!cardId) {
+        console.warn(`[SMUGGLERS EFFECT] no card selected`);
         return;
       }
+      
+      console.log(`[SMUGGLERS EFFECT] gaining card...`);
       
       yield new GainCardEffect({
         playerId: arg.playerId,
         cardId: cardId,
-        to: { location: 'playerDecks' },
+        to: { location: 'playerDiscards' },
       });
     },
     'treasure-map': ({match, cardLibrary}) => function* (arg) {
-      // trash this and a treasure map from hand,
-      // if you trashed two treasure maps, gain 4 golds onto deck
-      
+      console.log(`[TREASURE MAP EFFECT] trashing played treasure map...`);
       yield new TrashCardEffect({
         playerId: arg.playerId,
         cardId: arg.cardId,
@@ -410,16 +441,20 @@ const expansion: CardExpansionModule = {
       const hand = match.playerHands[arg.playerId];
       const inHand = hand.find(cardId => cardLibrary.getCard(cardId).cardKey === 'treasure-map');
       
+      console.log(`[TREASURE MAP EFFECT] ${inHand ? 'another treasure map is in hand' : 'no other treasure map in hand'}...`);
+      
       if (!inHand) {
         return;
       }
+      
+      console.log(`[TREASURE MAP EFFECT] trashing treasure map from hand...`);
       
       yield new TrashCardEffect({
         playerId: arg.playerId,
         cardId: inHand,
       });
       
-      if (match.trashedCards[match.turnNumber - 1][arg.playerId]
+      if (match.trashedCards[match.turnNumber][arg.playerId]
         .filter(cardId => cardLibrary.getCard(cardId).cardKey === 'treasure-map').length >= 2) {
         const goldCardIds = match.supply.filter(cardId => cardLibrary.getCard(cardId).cardKey === 'gold');
         for (let i = 0; i < Math.min(goldCardIds.length, 4); i++) {
@@ -432,21 +467,28 @@ const expansion: CardExpansionModule = {
       }
     },
     'warehouse': ({match}) => function* (arg) {
+      console.log(`[WAREHOUSE EFFECT] drawing 3 cards...`);
       for (let i = 0; i < 3; i++) {
-        const cardId = (yield new DrawCardEffect({
+        yield new DrawCardEffect({
           playerId: arg.playerId
-        })) as { result: number };
+        });
       }
       
+      console.log(`[WAREHOUSE EFFECT] gaining 1 actions...`);
       yield new GainActionEffect({ count: 1 });
+      
+      const count = Math.min(3, match.playerHands[arg.playerId].length);
+      
+      console.log(`[WAREHOUSE EFFECT] prompting user to select ${count} cards...`);
       
       const cardIds = (yield new SelectCardEffect({
         prompt: 'Discard cards',
-        validPrompt: '',
         playerId: arg.playerId,
         restrict: { from: { location: 'playerHands' } },
-        count: Math.min(3, match.playerHands[arg.playerId].length),
+        count,
       })) as number[];
+      
+      console.log(`[WAREHOUSE EFFECT] discarding cards...`);
       
       for (const cardId of cardIds) {
         yield new DiscardCardEffect({

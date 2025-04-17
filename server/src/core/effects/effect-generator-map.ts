@@ -91,7 +91,7 @@ export const gameActionEffectGeneratorFactory: GameActionEffectGeneratorMapFacto
           match.currentPlayerTurnIndex = 0;
           match.turnNumber++;
           
-          console.log(`[NEXT PHASE EFFECT] new round: ${match.turnNumber}`);
+          console.log(`[NEXT PHASE EFFECT] new round: ${match.turnNumber} (${match.turnNumber + 1})`);
         
           yield new NewTurnEffect();
         }
@@ -176,8 +176,8 @@ export const gameActionEffectGeneratorFactory: GameActionEffectGeneratorMapFacto
       console.log(`[PLAY CARD EFFECT] updating card played stats...`);
       
       yield new CardPlayedEffect({
-        cardId: cardId,
-        playerId: playerId,
+        cardId,
+        playerId,
         /*isRootLog*/
       });
     }
@@ -187,8 +187,8 @@ export const gameActionEffectGeneratorFactory: GameActionEffectGeneratorMapFacto
     
     const trigger: ReactionTrigger = {
       eventType: 'cardPlayed',
-      playerId: playerId,
-      cardId: cardId,
+      playerId,
+      cardId,
     };
     
     const reactionContext = {};
