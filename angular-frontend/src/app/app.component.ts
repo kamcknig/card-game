@@ -20,7 +20,7 @@ import { MatchConfigurationComponent } from './components/match-configuration/ma
 import { GameSummaryComponent } from './components/game-summary/game-summary.component';
 import { MatchSummary } from 'shared/shared-types';
 import { matchStartedStore, matchSummaryStore } from './state/match-state';
-import { MatchHudComponent } from './match/components/match-hud/match-hud.component';
+import { MatchHudComponent } from './components/match/match-hud/match-hud.component';
 
 @Component({
   selector: 'app-root',

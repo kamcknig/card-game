@@ -12,6 +12,7 @@ export type CardStackArgs = {
   label?: string;
   $cardIds: ReadableAtom<number[]>;
   showCountBadge?: boolean;
+  alwaysShowCountBadge?: boolean;
   cardFacing: CardView['facing'];
   showBackground?: boolean;
   scale?: number;
@@ -29,6 +30,7 @@ export class CardStackView extends Container {
   private readonly _selectedBadgeCount: CountBadgeView = new CountBadgeView({ label: 'selectedBadgeCount' });
   private readonly _badgeCount: CountBadgeView = new CountBadgeView({ label: 'badgeCount' });
   private readonly _sscale: number;
+  private readonly _alwaysShowCountBadge?: boolean;
 
   private readonly _showBackground: boolean;
 
@@ -41,7 +43,8 @@ export class CardStackView extends Container {
       cardFacing,
       showBackground,
       $cardIds,
-      scale = 1
+      scale = 1,
+      alwaysShowCountBadge
     } = args;
     this._cardFacing = cardFacing;
     this._showCountBadge = showCountBadge ?? true;
@@ -49,6 +52,7 @@ export class CardStackView extends Container {
     this._showBackground = showBackground ?? true;
     this._$cardIds = $cardIds;
     this._sscale = scale;
+    this._alwaysShowCountBadge = alwaysShowCountBadge;
 
     if (this._showBackground) {
       this._background.addChild(new Graphics({ label: 'graphics' }));
@@ -79,11 +83,12 @@ export class CardStackView extends Container {
 
     this._cleanup.push(this._$cardIds.subscribe(this.drawDeck));
     this._cleanup.push(selectedCardStore.subscribe(this.onSelectedCardsUpdated));
-
     this._cleanup.push(this._$cardIds.subscribe(this.updateBadgeCount));
     this._cleanup.push(selectedCardStore.subscribe(this.updateBadgeCount));
     this.on('removed', this.onRemoved);
+
     this.eventMode = 'static';
+
     this.on('pointerdown', (event) => {
       if (event.ctrlKey) {
         console.log(this._$cardIds.get().map(cId => cardStore.get()[cId]));
@@ -94,6 +99,7 @@ export class CardStackView extends Container {
   private onRemoved = () => {
     this._cleanup.forEach(cb => cb());
     this.removeAllListeners();
+    this.destroy({children: true});
   }
 
   private onSelectedCardsUpdated = (selectedCardIds: readonly number[] = []) => {
@@ -114,7 +120,7 @@ export class CardStackView extends Container {
   }
 
   private drawDeck = (cardIds: readonly number[]) => {
-    this._cardContainer.removeChildren().forEach((c) => c.destroy({ children: true }));
+    this._cardContainer.removeChildren();
 
     for (const cardId of cardIds) {
       const c = this._cardContainer.addChild(createCardView(cardStore.get()[cardId]));
@@ -139,7 +145,7 @@ export class CardStackView extends Container {
       this.removeChild(this._badgeCount);
     }
 
-    if (selectedCardCountInStack > 1) {
+    if (selectedCardCountInStack > 1 || this._alwaysShowCountBadge) {
       this._selectedBadgeCount.count = selectedCardCountInStack;
       this._selectedBadgeCount.y = -60 * this._sscale;
       this._selectedBadgeCount.scale = this._sscale;

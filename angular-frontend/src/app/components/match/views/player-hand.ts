@@ -44,7 +44,6 @@ export class PlayerHandView extends Container {
               this._nextPhaseButton.button.visible = playerId === selfPlayerIdStore.get();
         }));
         this._cleanup.push(turnPhaseStore.subscribe((phase) => {
-            this.removeChild(this._nextPhaseButton.button);
             switch (phase) {
                 case 'action':
                     this._nextPhaseButton.text('END ACTIONS');
@@ -55,8 +54,8 @@ export class PlayerHandView extends Container {
             }
 
             this._nextPhaseButton.button.x = this._phaseStatus.x + this._phaseStatus.width - this._nextPhaseButton.button.width;
-            this.addChild(this._nextPhaseButton.button);
         }));
+        this.addChild(this._nextPhaseButton.button);
         this._cleanup.push(playerHandStore(playerId).subscribe(this.drawHand));
         this._nextPhaseButton.button.on('pointerdown', this.onNextPhasePressed);
         this.on('removed', this.onRemoved);

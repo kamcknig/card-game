@@ -88,6 +88,11 @@ export class MatchScene extends Scene {
       });
       this._socketService.emit('playAllTreasure', this._selfId);
     });
+    this._playAllTreasuresButton.button.on('removed', () => {
+      this._playAllTreasuresButton.button.removeAllListeners();
+      this._playAllTreasuresButton.button.destroy({children: true});
+    })
+
     this.addChild(this._playAllTreasuresButton.button);
 
     this._cleanup.push(supplyStore.subscribe(this.drawBaseSupply));
@@ -105,7 +110,6 @@ export class MatchScene extends Scene {
       this._socketService.off('waitingForPlayer');
       this._socketService.off('doneWaitingForPlayer');
       this.off('pointerdown');
-      this._playAllTreasuresButton?.button.off('pointerdown');
     });
 
     this._cleanup.push(currentPlayerTurnIdStore.subscribe(this.onCurrentPlayerTurnUpdated));
@@ -224,6 +228,7 @@ export class MatchScene extends Scene {
       label: 'TRASH',
       $cardIds: trashStore,
       cardFacing: 'front',
+      alwaysShowCountBadge: true,
       scale: .7,
     });
     this._trash.eventMode = 'static';
@@ -237,6 +242,7 @@ export class MatchScene extends Scene {
 
     this._deck = new CardStackView({
       $cardIds: playerDeckStore(this._selfId),
+
       label: 'DECK',
       cardFacing: 'back'
     });
@@ -245,7 +251,7 @@ export class MatchScene extends Scene {
     this._discard = new CardStackView({
       $cardIds: playerDiscardStore(this._selfId),
       label: 'DISCARD',
-      showCountBadge: false,
+      alwaysShowCountBadge: false,
       cardFacing: 'front'
     });
     this.addChild(this._discard);
