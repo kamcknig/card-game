@@ -3,7 +3,7 @@ import {
   Card,
   CardId,
   CardKey,
-  Match,
+  Match, MatchStats,
   Player,
   PlayerId,
   ServerEmitEvents,
@@ -128,6 +128,7 @@ export type GameActions = {
 export type GameEffectGenerator = Generator<GameEffects>;
 
 export type EffectGeneratorFactoryContext = {
+  matchStats: MatchStats;
   reactionManager: ReactionManager;
   logManager: LogManager,
   match: Match,

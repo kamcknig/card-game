@@ -55,6 +55,12 @@ export type MatchConfiguration = {
   kingdomCardKeys: string[];
 }
 
+export type MatchStats = {
+  cardsGained: Record<PlayerId, CardId[]>[];
+  cardsPlayed: Record<PlayerId, CardId[]>[];
+  trashedCards: Record<PlayerId, CardId[]>[];
+};
+
 export type Match = {
   config: MatchConfiguration,
   currentPlayerTurnIndex: number;
@@ -73,9 +79,6 @@ export type Match = {
   trash: CardId[];
   turnNumber: number;
   turnPhaseIndex: number;
-  cardsGained: Record<PlayerId, CardId[]>[];
-  cardsPlayed: Record<PlayerId, CardId[]>[];
-  trashedCards: Record<PlayerId, CardId[]>[];
   mats: Record<Mats, Record<PlayerId, CardId[]>>;
   zones: Record<Zones, CardId[]>;
 }

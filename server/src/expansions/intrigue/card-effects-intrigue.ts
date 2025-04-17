@@ -175,14 +175,14 @@ const expansionModule: CardExpansionModule = {
         expiresAt: 'TURN_END',
       });
     },
-    'conspirator': ({ match, cardLibrary }) => function* (arg) {
+    'conspirator': ({ matchStats, match, cardLibrary }) => function* (arg) {
       console.log(`[CONSPIRATOR EFFECT] gaining 2 treasure...`);
       
       yield new GainTreasureEffect({
         count: 2,
       });
       
-      const actionCardCount = match.cardsPlayed[match.turnNumber][arg.playerId]?.filter((
+      const actionCardCount = matchStats.cardsPlayed[match.turnNumber][arg.playerId]?.filter((
         cardId,
       ) => cardLibrary.getCard(cardId).type.includes('ACTION'));
       

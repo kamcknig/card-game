@@ -324,7 +324,7 @@ const expansion: CardExpansionModule = {
       console.log(`[SALVAGER EFFECT] gaining ${effectiveCost} buy...`);
       yield new GainTreasureEffect({ count: effectiveCost });
     },
-    'sea-chart': ({ match, cardLibrary }) => function* (arg) {
+    'sea-chart': ({ matchStats, match, cardLibrary }) => function* (arg) {
       console.log(`[SEA CHART EFFECT] drawing 1 card...`);
       yield new DrawCardEffect({
         playerId: arg.playerId
@@ -357,7 +357,7 @@ const expansion: CardExpansionModule = {
         moveToRevealed: true
       });
       
-      const copyInPlay = match.cardsPlayed[match.turnNumber][arg.playerId]
+      const copyInPlay = matchStats.cardsPlayed[match.turnNumber][arg.playerId]
         .find(cardId => cardLibrary.getCard(cardId).cardKey === card.cardKey);
       
       console.log(`[SEA CHART EFFECT] ${copyInPlay ? 'copy is in play' : 'no copy in play'}...`);
@@ -372,7 +372,7 @@ const expansion: CardExpansionModule = {
         }
       });
     },
-    'smugglers': ({match, cardLibrary}) => function* (arg) {
+    'smugglers': ({matchStats, match, cardLibrary}) => function* (arg) {
       const previousPlayer = getPlayerStartingFrom({
         startFromIdx: match.currentPlayerTurnIndex,
         match,
@@ -381,7 +381,7 @@ const expansion: CardExpansionModule = {
       
       console.log(`[SMUGGLERS EFFECT] looking at ${previousPlayer} cards played`);
       
-      let cardIds = match.cardsGained[match.turnNumber - 1][previousPlayer.id].filter(cardId => {
+      let cardIds = matchStats.cardsGained[match.turnNumber - 1][previousPlayer.id].filter(cardId => {
         const cost = getEffectiveCardCost(
           arg.playerId,
           cardId,
@@ -431,7 +431,7 @@ const expansion: CardExpansionModule = {
         to: { location: 'playerDiscards' },
       });
     },
-    'treasure-map': ({match, cardLibrary}) => function* (arg) {
+    'treasure-map': ({match, matchStats, cardLibrary}) => function* (arg) {
       console.log(`[TREASURE MAP EFFECT] trashing played treasure map...`);
       yield new TrashCardEffect({
         playerId: arg.playerId,
@@ -454,7 +454,7 @@ const expansion: CardExpansionModule = {
         cardId: inHand,
       });
       
-      if (match.trashedCards[match.turnNumber][arg.playerId]
+      if (matchStats.trashedCards[match.turnNumber][arg.playerId]
         .filter(cardId => cardLibrary.getCard(cardId).cardKey === 'treasure-map').length >= 2) {
         const goldCardIds = match.supply.filter(cardId => cardLibrary.getCard(cardId).cardKey === 'gold');
         for (let i = 0; i < Math.min(goldCardIds.length, 4); i++) {

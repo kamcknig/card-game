@@ -2,7 +2,7 @@ import { AppSocket, EffectHandlerMap, GameActionEffectGeneratorFn, ReactionTempl
 import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
 import { findCards } from '../../utils/find-cards.ts';
 import { ReactionManager } from '../reactions/reaction-manager.ts';
-import { CardId, PlayerId } from 'shared/shared-types.ts';
+import { CardId, MatchStats, PlayerId } from 'shared/shared-types.ts';
 import { findSourceByCardId } from '../../utils/find-source-by-card-id.ts';
 import { findSpecLocationBySource } from '../../utils/find-spec-location-by-source.ts';
 import { findSourceByLocationSpec } from '../../utils/find-source-by-location-spec.ts';
@@ -23,6 +23,7 @@ type CreateEffectHandlerMapArgs = {
   cardLibrary: CardLibrary,
   logManager: LogManager,
   getEffectsPipeline: () => EffectsPipeline,
+  matchStats: MatchStats
 }
 
 /**
@@ -36,6 +37,7 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
     cardLibrary,
     logManager,
     reactionManager,
+    matchStats,
   } = args;
   
   const map: EffectHandlerMap = {} as EffectHandlerMap;
@@ -177,8 +179,8 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
       match,
     );
     
-    match.cardsGained[match.turnNumber][effect.playerId] ??= [];
-    match.cardsGained[match.turnNumber][effect.playerId].push(effect.cardId);
+    matchStats.cardsGained[match.turnNumber][effect.playerId] ??= [];
+    matchStats.cardsGained[match.turnNumber][effect.playerId].push(effect.cardId);
   }
   
   
@@ -311,8 +313,8 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
       reactionManager.registerReactionTemplate(trigger);
     }
     
-    match.cardsPlayed[match.turnNumber][effect.playerId] ??= [];
-    match.cardsPlayed[match.turnNumber][effect.playerId].push(effect.cardId);
+    matchStats.cardsPlayed[match.turnNumber][effect.playerId] ??= [];
+    matchStats.cardsPlayed[match.turnNumber][effect.playerId].push(effect.cardId);
   }
   
   
@@ -322,21 +324,21 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
       turn: match.turnNumber,
     });
     
-    match.cardsGained.push(
+    matchStats.cardsGained.push(
       match.players.reduce((prev, next) => {
         prev[next.id] = [];
         return prev;
       }, {} as Record<PlayerId, CardId[]>)
     );
     
-    match.cardsPlayed.push(
+    matchStats.cardsPlayed.push(
       match.players.reduce((prev, next) => {
         prev[next.id] = [];
         return prev;
       }, {} as Record<PlayerId, CardId[]>)
     );
     
-    match.trashedCards.push(
+    matchStats.trashedCards.push(
       match.players.reduce((prev, next) => {
         prev[next.id] = [];
         return prev;
@@ -480,8 +482,8 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
     );
     
     if (effect.playerId) {
-      match.trashedCards[match.turnNumber][effect.playerId] ??= [];
-      match.trashedCards[match.turnNumber][effect.playerId].push(effect.cardId);
+      matchStats.trashedCards[match.turnNumber][effect.playerId] ??= [];
+      matchStats.trashedCards[match.turnNumber][effect.playerId].push(effect.cardId);
     }
   }
   

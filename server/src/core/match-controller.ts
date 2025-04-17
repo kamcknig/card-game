@@ -3,7 +3,7 @@ import {
   CardData, CardId,
   CardKey,
   Match,
-  MatchConfiguration,
+  MatchConfiguration, MatchStats,
   MatchSummary,
   Player,
   PlayerId,
@@ -41,6 +41,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _createCardFn: ((key: CardKey, card?: Omit<Partial<Card>, 'id'>) => Card) | undefined;
   private _fuse: Fuse<CardData & { cardKey: CardKey }> | undefined;
   private _logManager: LogManager | undefined;
+  private _matchStats: MatchStats | undefined
   
   constructor(
     private _match: Match,
@@ -111,22 +112,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       }, [] as string[]),
     };
     
-    this._match = {
-      scores: [],
-      trash: [],
-      players: config.players,
-      supply: supplyCards.map((c) => c.id),
-      kingdom: kingdomCards.map((c) => c.id),
-      ...playerCards,
-      config: config,
-      turnNumber: 0,
-      currentPlayerTurnIndex: 0,
-      playerBuys: 0,
-      playerTreasure: 0,
-      playerActions: 0,
-      turnPhaseIndex: 0,
-      selectableCards: {},
-      playArea: [],
+    this._matchStats = {
       cardsGained: [
         config.players.reduce((prev, next) => {
           prev[next.id] = [];
@@ -145,6 +131,24 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           return prev;
         }, {} as Record<PlayerId, CardId[]>)
       ],
+    };
+    
+    this._match = {
+      scores: [],
+      trash: [],
+      players: config.players,
+      supply: supplyCards.map((c) => c.id),
+      kingdom: kingdomCards.map((c) => c.id),
+      ...playerCards,
+      config: config,
+      turnNumber: 0,
+      currentPlayerTurnIndex: 0,
+      playerBuys: 0,
+      playerTreasure: 0,
+      playerActions: 0,
+      turnPhaseIndex: 0,
+      selectableCards: {},
+      playArea: [],
       mats: {
         'native-village-mat': config.players.reduce((prev, next) => {
           prev[next.id] = [];
@@ -404,6 +408,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     });
     
     const effectGeneratorMap = gameActionEffectGeneratorFactory({
+      matchStats: this._matchStats!,
       reactionManager: this._reactionManager,
       logManager: this._logManager,
       match: this._match,
@@ -412,6 +417,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     for (const [key, effectGeneratorFactory] of Object.entries(cardEffectGeneratorMapFactory)) {
       cardEffectGeneratorMap[key] = effectGeneratorFactory({
+        matchStats: this._matchStats!,
         reactionManager: this._reactionManager,
         match: this._match,
         logManager: this._logManager,
@@ -440,7 +446,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       effectGeneratorMap,
       cardLibrary: this._cardLibrary,
       logManager: this._logManager,
-      getEffectsPipeline: () => this._effectsPipeline!
+      getEffectsPipeline: () => this._effectsPipeline!,
+      matchStats: this._matchStats!
     });
     
     this._effectsPipeline = new EffectsPipeline(
