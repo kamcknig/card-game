@@ -5,7 +5,6 @@ import { GainActionEffect } from '../../core/effects/effect-types/gain-action.ts
 import { SelectCardEffect } from '../../core/effects/effect-types/select-card.ts';
 import { GainCardEffect } from '../../core/effects/effect-types/gain-card.ts';
 import { CardExpansionModule } from '../../types.ts';
-import { getOrderStartingFrom } from '../../utils/get-order-starting-from.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { DiscardCardEffect } from '../../core/effects/effect-types/discard-card.ts';
 import { RevealCardEffect } from '../../core/effects/effect-types/reveal-card.ts';
@@ -13,8 +12,9 @@ import { MoveCardEffect } from '../../core/effects/effect-types/move-card.ts';
 import { UserPromptEffect } from '../../core/effects/effect-types/user-prompt.ts';
 import { ShuffleDeckEffect } from '../../core/effects/effect-types/shuffle-card.ts';
 import { TrashCardEffect } from '../../core/effects/effect-types/trash-card.ts';
-import { count } from 'npm:rxjs@7.8.2';
 import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
+import { getPlayerStartingFrom } from '../../utils/get-player-starting-from.ts';
+import { CardId } from "shared/shared-types.ts";
 
 const expansion: CardExpansionModule = {
   registerCardLifeCycles: () => ({
@@ -32,12 +32,12 @@ const expansion: CardExpansionModule = {
               const { trigger } = args;
               return trigger.playerId === playerId;
             },
-            generatorFn: function*() {
+            generatorFn: function* () {
               console.log(`[SEASIDE TRIGGERED EFFECT] gaining 1 treasure...`);
-              yield new GainTreasureEffect({ count: 1});
+              yield new GainTreasureEffect({ count: 1 });
               
               console.log(`[SEASIDE TRIGGERED EFFECT] gaining 1 buy...`);
-              yield new GainBuyEffect({count: 1});
+              yield new GainBuyEffect({ count: 1 });
             }
           }]
         }
@@ -48,10 +48,10 @@ const expansion: CardExpansionModule = {
   registerEffects: {
     'astrolabe': () => function* () {
       console.log(`[SEASON EFFECT] gaining 1 treasure...`);
-      yield new GainTreasureEffect({ count: 1});
+      yield new GainTreasureEffect({ count: 1 });
       
       console.log(`[SEASON EFFECT] gaining 1 buy...`);
-      yield new GainBuyEffect({ count: 1});
+      yield new GainBuyEffect({ count: 1 });
     },
     'bazaar': () => function* (arg) {
       console.log(`[SEASON EFFECT] drawing 1 card...`);
@@ -60,12 +60,12 @@ const expansion: CardExpansionModule = {
       });
       
       console.log(`[SEASON EFFECT] gaining 2 actions...`);
-      yield new GainActionEffect({ count: 2});
+      yield new GainActionEffect({ count: 2 });
       
       console.log(`[SEASON EFFECT] gaining 1 treasure...`);
-      yield new GainTreasureEffect({ count: 1});
+      yield new GainTreasureEffect({ count: 1 });
     },
-    'blockade': ({ cardLibrary}) => function* (arg) {
+    'blockade': ({ cardLibrary }) => function* (arg) {
       const cardIds = (yield new SelectCardEffect({
         prompt: 'Gain card',
         validPrompt: '',
@@ -87,7 +87,7 @@ const expansion: CardExpansionModule = {
         to: { location: 'set-aside' },
       });
     },
-    'cutpurse': ({match, cardLibrary}) => function* (arg) {
+    'cutpurse': ({ match, cardLibrary }) => function* (arg) {
       console.log(`[CUTPURSE EFFECT] gaining 2 treasure...`);
       yield new GainTreasureEffect({ count: 2, });
       
@@ -153,7 +153,7 @@ const expansion: CardExpansionModule = {
         })
       }
     },
-    'lookout': ({match}) => function* (arg) {
+    'lookout': ({ match }) => function* (arg) {
       console.log(`[LOOKOUT EFFECT] gaining 1 action...`);
       yield new GainActionEffect({ count: 1 });
       
@@ -244,9 +244,57 @@ const expansion: CardExpansionModule = {
         toPlayerId: arg.playerId
       })
     },
-    'salvager': ({match, cardLibrary}) => function* (arg) {
+    'native-village': ({ match }) => function* (arg) {
+      yield new GainActionEffect({ count: 2 });
+      
+      const result = (yield new UserPromptEffect({
+        playerId: arg.playerId,
+        actionButtons: [
+          { label: 'Top card', action: 1 },
+          { label: 'Hand', action: 2 }
+        ],
+        prompt: 'Put top card, or entire hand on your native mat'
+      })) as { action: number, result: any };
+      
+      if (result.action === 1) {
+        const deck = match.playerDecks[arg.playerId];
+        
+        if (deck.length === 0) {
+          yield new ShuffleDeckEffect({
+            playerId: arg.playerId
+          });
+        }
+        
+        const cardId = deck.slice(-1)[0];
+        
+        if (!cardId) {
+          return;
+        }
+        
+        yield new MoveCardEffect({
+          cardId,
+          toPlayerId: arg.playerId,
+          to: {
+            location: 'native-village-mat',
+          }
+        });
+        
+        return;
+      }
+      
+      for (const cardId of match.playerHands[arg.playerId]) {
+        yield new MoveCardEffect({
+          cardId: cardId,
+          toPlayerId: arg.playerId,
+          to: {
+            location: 'native-village-mat',
+          }
+        });
+      }
+    },
+    'salvager': ({ match, cardLibrary }) => function* (arg) {
       console.log(`[SALVAGER EFFECT] gaining 1 buy...`);
-      yield new GainBuyEffect({count: 1});
+      yield new GainBuyEffect({ count: 1 });
       
       console.log(`[SALVAGER EFFECT] prompting user to select a card from hand...`);
       const cardIds = (yield new SelectCardEffect({
@@ -263,10 +311,125 @@ const expansion: CardExpansionModule = {
         return;
       }
       
-      const effectiveCost = getEffectiveCardCost(arg.playerId, cardId,  match, cardLibrary);
+      const effectiveCost = getEffectiveCardCost(arg.playerId, cardId, match, cardLibrary);
       
       console.log(`[SALVAGER EFFECT] gaining ${effectiveCost} buy...`);
       yield new GainTreasureEffect({ count: effectiveCost });
+    },
+    'sea-chart': ({ match, cardLibrary }) => function* (arg) {
+      yield new DrawCardEffect({
+        playerId: arg.playerId
+      });
+      
+      yield new GainActionEffect({ count: 1 });
+      
+      const deck = match.playerDecks[arg.playerId];
+      
+      if (deck.length === 0) {
+        yield new ShuffleDeckEffect({
+          playerId: arg.playerId
+        });
+        
+        if (deck.length === 0) {
+          return;
+        }
+      }
+      
+      const cardId = deck.slice(-1)[0];
+      const card = cardLibrary.getCard(cardId);
+      
+      yield new RevealCardEffect({
+        cardId,
+        playerId: arg.playerId,
+        moveToRevealed: true
+      });
+      
+      const copyInPlay = match.cardsPlayed[match.turnNumber][arg.playerId]
+        .find(cardId => cardLibrary.getCard(cardId).cardKey === card.cardKey);
+      
+      yield new MoveCardEffect({
+        cardId,
+        toPlayerId: arg.playerId,
+        to: {
+          location: copyInPlay ? 'playerHands' : 'playerDecks'
+        }
+      });
+    },
+    'smugglers': ({match, cardLibrary}) => function* (arg) {
+      const player = getPlayerStartingFrom({
+        startFromIdx: match.currentPlayerTurnIndex,
+        match,
+        distance: -1
+      });
+      
+      const cardIds = match.cardsPlayed[match.turnNumber - 2][player.id].filter(cardId => {
+        const cost = getEffectiveCardCost(
+          arg.playerId,
+          cardId,
+          match,
+          cardLibrary
+        );
+        return cost <= 6;
+      });
+      
+      if (!cardIds.length) {
+        return;
+      }
+      
+      const result = (yield new UserPromptEffect({
+        playerId: arg.playerId,
+        prompt: 'Choose a card to gain',
+        content: {
+          type: 'select',
+          selectCount: 1,
+          cardIds
+        },
+      })) as { action: number, result: CardId[] };
+      
+      const cardId = result.result[0];
+      
+      if (!cardId) {
+        return;
+      }
+      
+      yield new GainCardEffect({
+        playerId: arg.playerId,
+        cardId: cardId,
+        to: { location: 'playerDecks' },
+      });
+    },
+    'treasure-map': ({match, cardLibrary}) => function* (arg) {
+      // trash this and a treasure map from hand,
+      // if you trashed two treasure maps, gain 4 golds onto deck
+      
+      yield new TrashCardEffect({
+        playerId: arg.playerId,
+        cardId: arg.cardId,
+      });
+      
+      const hand = match.playerHands[arg.playerId];
+      const inHand = hand.find(cardId => cardLibrary.getCard(cardId).cardKey === 'treasure-map');
+      
+      if (!inHand) {
+        return;
+      }
+      
+      yield new TrashCardEffect({
+        playerId: arg.playerId,
+        cardId: inHand,
+      });
+      
+      if (match.trashedCards[match.turnNumber - 1][arg.playerId]
+        .filter(cardId => cardLibrary.getCard(cardId).cardKey === 'treasure-map').length >= 2) {
+        const goldCardIds = match.supply.filter(cardId => cardLibrary.getCard(cardId).cardKey === 'gold');
+        for (let i = 0; i < Math.min(goldCardIds.length, 4); i++) {
+          yield new GainCardEffect({
+            playerId: arg.playerId,
+            cardId: goldCardIds[i],
+            to: { location: 'playerDecks' },
+          });
+        }
+      }
     }
   }
 }

@@ -1,4 +1,4 @@
-import { ActionButtons, UserPromptEffectArgs, UserPromptKinds } from 'shared/shared-types.ts';
+import { ActionButtons, UserPromptKinds } from 'shared/shared-types.ts';
 import { EffectBase } from './effect-base.ts';
 
 type UserPromptArgs = {
