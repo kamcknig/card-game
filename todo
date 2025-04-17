@@ -22,3 +22,23 @@ select card effect handler tries to find cards before prompting user and if none
 
 
 if player name too long - truncate in score view
+
+deck should always show number even if it's one
+
+lookout might not be putting on top of deck
+
+torturer didn't target everyone
+
+make mats dynamiclly registered
+
+
+
+
+
+advanced reaction use-case
+   trader and castles.
+   when i gained the castle, i could use the reaction of hte castle OR the trader
+   i chose the castle
+   then i was also about to choose trader but declined,
+   then everyone else had to do the castle thing,
+   then it asked me again about the trader
