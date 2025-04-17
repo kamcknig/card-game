@@ -126,8 +126,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       turnPhaseIndex: 0,
       selectableCards: {},
       playArea: [],
-      cardsPlayed: {},
+      cardsPlayed: [],
+      trashedCards: [],
       mats: {
+        'native-village-mat': config.players.reduce((prev, next) => {
+          prev[next.id] = [];
+          return prev;
+        }, {} as Record<PlayerId, CardId[]>),
         'island-mat': config.players.reduce((prev, next) => {
           prev[next.id] = [];
           return prev;

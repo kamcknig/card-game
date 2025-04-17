@@ -73,7 +73,8 @@ export type Match = {
   trash: CardId[];
   turnNumber: number;
   turnPhaseIndex: number;
-  cardsPlayed: Record<PlayerId, CardId[]>;
+  cardsPlayed: Record<PlayerId, CardId[]>[];
+  trashedCards: Record<PlayerId, CardId[]>[];
   mats: Record<Mats, Record<PlayerId, CardId[]>>;
   zones: Record<Zones, CardId[]>;
 }
@@ -127,7 +128,8 @@ export type ClientEmitEvents = Omit<ServerListenEvents, 'startMatch' | 'matchCon
 };
 
 const MatValues = [
-  'island-mat'
+  'island-mat',
+  'native-village-mat'
 ] as const;
 export type Mats = typeof MatValues[number];
 export const isLocationMat = (location: any): location is Mats => {
