@@ -1,21 +1,25 @@
 import { Container, ContainerOptions, Graphics, Text } from 'pixi.js';
 
+type Args = {
+  count?: number
+};
+
 export class CountBadgeView extends Container {
   public set count(val: number) {
     (this.getChildByLabel('count') as Text).text = val;
   }
-  
-  constructor({ count, ...arg }: ContainerOptions & { count?: number } = { count: 0 }) {
+
+  constructor({ count, ...arg }: ContainerOptions & Args = { count: 0 }) {
     super(arg);
-    
+
     const c = new Graphics()
       .roundRect(0, 0, 30, 26, 4)
       .fill(0x000000)
       .roundRect(2, 2, 26, 22, 4)
       .fill(0xff0000);
-    
+
     this.addChild(c);
-    
+
     const l = new Text({
       label: 'count',
       text: count,
