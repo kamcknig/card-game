@@ -1,3 +1,9 @@
 <app-score #scoreView [playerScores]="playerScore$ | async"></app-score>
 
+<div class="zone-content">
+  @for (mat of mats$ | async; track mat.mat) {
+    <app-mat-zone [mat]="mat"></app-mat-zone>
+  }
+</div>
+
 <app-game-log [entries]="logEntries$ | async"></app-game-log>

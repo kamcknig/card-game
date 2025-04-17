@@ -1,4 +1,4 @@
-import { CardData, CardKey } from 'shared/shared-types.ts';
+import { CardData, CardKey, Mats } from 'shared/shared-types.ts';
 
 export type ExpansionCardData = {
   supply: Record<CardKey, CardData>,
@@ -10,6 +10,7 @@ type ExpansionData = Record<string, {
   name: string;
   cardData: ExpansionCardData;
   order: number;
+  mats?: Mats[];
 }>;
 
 /**

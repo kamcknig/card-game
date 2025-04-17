@@ -4,7 +4,7 @@ import {
   CardKey,
   Match,
   MatchConfiguration, MatchStats,
-  MatchSummary,
+  MatchSummary, Mats,
   Player,
   PlayerId,
 } from 'shared/shared-types.ts';
@@ -57,39 +57,12 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     estate: 4,
   }];
   
-  public initialize(
-    config: MatchConfiguration,
-    cardData: ExpansionCardData,
-  ) {
-    const find = (key: CardKey, arr: (CardData & { cardKey: CardKey })[]) =>
-      arr.findIndex(e => e.cardKey === key) > -1;
-    
-    const allExpansionCards = Object.keys(expansionData).reduce(
-      (prev, expansionName) => {
-        const expansion = expansionData[expansionName];
-        const supply = expansion.cardData.supply;
-        const kingdom = expansion.cardData.kingdom;
-        
-        prev = prev
-          .concat(Object.keys(supply).filter(k => !find(k, prev)).map((k) => ({ ...supply[k], cardKey: k })))
-          .concat(Object.keys(kingdom).filter(k => !find(k, prev)).map((k) => ({ ...kingdom[k], cardKey: k })));
-        
-        return prev;
-      },
-      [] as (CardData & { cardKey: CardKey })[],
-    );
-    
-    const fuseOptions: IFuseOptions<CardData> = {
-      ignoreDiacritics: true,
-      minMatchCharLength: 1,
-      distance: 5,
-      keys: ['cardName']
-    };
-    
-    this._fuse = new Fuse(allExpansionCards, fuseOptions);
+  public initialize(config: MatchConfiguration, cardData: ExpansionCardData) {
+    this.initializeFuseSearch();
     
     this._createCardFn = createCardFactory(cardData);
     this._cardData = cardData;
+    
     const supplyCards = this.createBaseSupply(config);
     const kingdomCards = this.createKingdom(config);
     const playerCards = this.createPlayerDecks(config);
@@ -131,6 +104,17 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       ],
     };
     
+    const mats =
+      Object.values(expansionData)
+        .reduce((prev, nextExpansion) => {
+          if (!nextExpansion.mats?.length) {
+            return prev;
+          }
+          
+          prev = prev.concat(nextExpansion.mats);
+          return prev;
+        }, [] as Mats[]);
+    
     this._match = {
       scores: [],
       trash: [],
@@ -147,16 +131,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       turnPhaseIndex: 0,
       selectableCards: {},
       playArea: [],
-      mats: {
-        'native-village-mat': config.players.reduce((prev, next) => {
-          prev[next.id] = [];
-          return prev;
-        }, {} as Record<PlayerId, CardId[]>),
-        'island-mat': config.players.reduce((prev, next) => {
-          prev[next.id] = [];
-          return prev;
-        }, {} as Record<PlayerId, CardId[]>)
-      },
+      mats: config.players.reduce((acc, nextPlayer) => {
+        acc[nextPlayer.id] = {} as Record<Mats, CardId[]>;
+        for (const mat of mats) {
+          acc[nextPlayer.id][mat] = [];
+        }
+        return acc;
+      }, {} as Match['mats']),
       zones: {
         'set-aside': [],
         'revealed': [],
@@ -175,6 +156,35 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       s.emit('matchReady', this._match);
       s.on('clientReady', this.onClientReady);
     });
+  }
+  
+  private initializeFuseSearch() {
+    const find = (key: CardKey, arr: (CardData & { cardKey: CardKey })[]) =>
+      arr.findIndex(e => e.cardKey === key) > -1;
+    
+    const allExpansionCards = Object.keys(expansionData).reduce(
+      (prev, expansionName) => {
+        const expansion = expansionData[expansionName];
+        const supply = expansion.cardData.supply;
+        const kingdom = expansion.cardData.kingdom;
+        
+        prev = prev
+          .concat(Object.keys(supply).filter(k => !find(k, prev)).map((k) => ({ ...supply[k], cardKey: k })))
+          .concat(Object.keys(kingdom).filter(k => !find(k, prev)).map((k) => ({ ...kingdom[k], cardKey: k })));
+        
+        return prev;
+      },
+      [] as (CardData & { cardKey: CardKey })[],
+    );
+    
+    const fuseOptions: IFuseOptions<CardData> = {
+      ignoreDiacritics: true,
+      minMatchCharLength: 1,
+      distance: 5,
+      keys: ['cardName']
+    };
+    
+    this._fuse = new Fuse(allExpansionCards, fuseOptions);
   }
   
   public getMatchSnapshot(): Match {

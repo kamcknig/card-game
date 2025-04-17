@@ -33,7 +33,6 @@ import { isNumber, isUndefined } from 'es-toolkit/compat';
 import { AppList } from '../app-list';
 import { gamePausedStore } from '../../../../state/game-state';
 import { SocketService } from '../../../../core/socket-service/socket.service';
-import { PullOut } from '../pull-out';
 
 export class MatchScene extends Scene {
   private _board: Container = new Container();
@@ -77,7 +76,6 @@ export class MatchScene extends Scene {
 
     await this.loadAssets();
 
-    this.createPullOuts();
     this.createBoard();
 
     this._playAllTreasuresButton.button.label = 'playAllTreasureButton';
@@ -663,13 +661,5 @@ export class MatchScene extends Scene {
         this._deck.x = this._playerHand.x - this._deck.width - STANDARD_GAP;
       }
     }
-  }
-
-  private createPullOuts() {
-    const pullOut = new PullOut({
-      tabLabel: 'Play area'
-    });
-    pullOut.y = this._app.renderer.height * .5;
-    this.addChild(pullOut);
   }
 }

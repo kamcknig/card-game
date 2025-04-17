@@ -8,39 +8,48 @@ import {
   output,
   ViewChild
 } from '@angular/core';
-import { ScoreComponent } from './components/score/score.component';
-import { GameLogComponent } from './components/game-log/game-log.component';
+import { ScoreComponent } from './score/score.component';
+import { GameLogComponent } from './game-log/game-log.component';
 import { NanostoresService } from '@nanostores/angular';
-import { playerIdStore, playerScoreStore, playerStore } from '../../../state/player-state';
+import { playerIdStore, playerScoreStore, playerStore, selfPlayerIdStore } from '../../../state/player-state';
 import { combineLatest, combineLatestWith, map, Observable, switchMap } from 'rxjs';
 import { AsyncPipe } from '@angular/common';
-import { LogEntryMessage } from 'shared/shared-types';
+import { CardId, LogEntryMessage, Mats } from 'shared/shared-types';
 import { logEntryIdsStore, logStore } from '../../../state/log-state';
+import { matStore } from '../../../state/match-state';
+import { MatZoneComponent } from './mat-zone/mat-zone.component';
 
 @Component({
   selector: 'app-match-hud',
   imports: [
     ScoreComponent,
     GameLogComponent,
-    AsyncPipe
+    AsyncPipe,
+    MatZoneComponent
   ],
   templateUrl: './match-hud.component.html',
   styleUrl: './match-hud.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
-  @ViewChild('scoreView', { read: ElementRef}) scoreView!: ElementRef;
+  @ViewChild('scoreView', { read: ElementRef }) scoreView!: ElementRef;
 
   scoreViewResize = output<number>();
   scoreViewResizer: ResizeObserver | undefined;
   playerIds$: Observable<readonly number[]> | undefined;
   playerScore$!: Observable<{ id: number; score: number; name: string }[]> | null;
   logEntries$!: Observable<readonly LogEntryMessage[]> | null;
+  mats$: Observable<{ mat: Mats; cardIds: CardId[] }[]> | undefined;
 
   constructor(private _nanoService: NanostoresService) {
   }
 
   ngOnInit() {
+    this.mats$ = this._nanoService.useStore(matStore)
+      .pipe(map(mats =>
+        Object.entries(mats).map(entry => ({ mat: entry[0] as Mats, cardIds: entry[1] }))/*.filter(e => e.cardIds.length > 0)*/
+      ));
+
     this.logEntries$ = this._nanoService.useStore(logEntryIdsStore).pipe(
       combineLatestWith(this._nanoService.useStore(logStore)),
       map(([logIds, logs]) => logIds.map(id => logs[id]))

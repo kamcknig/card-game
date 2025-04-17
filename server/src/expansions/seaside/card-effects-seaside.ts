@@ -134,7 +134,7 @@ const expansion: CardExpansionModule = {
       yield new MoveCardEffect({
         cardId: arg.cardId,
         to: {
-          location: 'island-mat',
+          location: 'island',
         },
         toPlayerId: arg.playerId
       });
@@ -147,7 +147,7 @@ const expansion: CardExpansionModule = {
         yield new MoveCardEffect({
           cardId: cardId,
           to: {
-            location: 'island-mat',
+            location: 'island',
           },
           toPlayerId: arg.playerId
         })
@@ -282,14 +282,14 @@ const expansion: CardExpansionModule = {
           cardId,
           toPlayerId: arg.playerId,
           to: {
-            location: 'native-village-mat',
+            location: 'native-village',
           }
         });
         
         return;
       }
       
-      const matCardIds = match.mats['native-village-mat'][arg.playerId].concat();
+      const matCardIds = match.mats['native-village'][arg.playerId].concat();
       
       console.log(`[NATIVE VILLAGE EFFECT] moving ${matCardIds.length} cards from native village mat to hand...`);
       for (const cardId of matCardIds) {

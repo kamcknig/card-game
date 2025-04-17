@@ -4,6 +4,15 @@ app-score {
   left: 20px;
 }
 
+.zone-content {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 app-game-log {
   position: fixed;
   top: 20px;

@@ -4,7 +4,7 @@ import {
   lobbyMatchConfigurationStore,
   matchStartedStore,
   matchStore,
-  matchSummaryStore
+  matchSummaryStore, matStore
 } from '../../state/match-state';
 import { gameOwnerIdStore, gamePausedStore, sceneStore } from '../../state/game-state';
 import { expansionListStore } from '../../state/expansion-list-state';
@@ -50,10 +50,17 @@ export const socketToGameEventMap = (socketService: SocketService): SocketEventM
       cardOverrideStore.set(overrides ?? {});
     },
     matchReady: async match => {
+      if (!cardStore.get()) throw new Error('missing card library');
+
       matchStore.set(match);
 
-      if (!cardStore.get()) throw new Error('missing card library');
+      const playerId = selfPlayerIdStore.get();
+      if (!playerId) throw new Error('missing self playerId');
+
+      matStore.set(match.mats[playerId]);
+
       const cardsById = cardStore.get();
+
       Assets.addBundle('cardLibrary', Object.values(cardsById).reduce((prev, c) => {
         prev[`${c.cardKey}-detail`] ??= c.detailImagePath;
         prev[`${c.cardKey}-full`] ??= c.fullImagePath;

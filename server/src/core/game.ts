@@ -176,7 +176,7 @@ export class Game {
     const expansionsToRemove: string[] = [];
     for (const expansion of newExpansions) {
       const configModule =
-        (await import(`../expansions/${expansion}/configuration.json`, {
+        (await import(`../expansions/${expansion}/configuration-${expansion}.json`, {
           with: { type: 'json' },
         }))?.default;
       
