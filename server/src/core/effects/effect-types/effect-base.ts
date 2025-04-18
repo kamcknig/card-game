@@ -1,11 +1,18 @@
-/**
- * Base class for all effects.
- * Provides a default toJSON() method and a common interface.
- */
+type Args = {
+  log?: boolean;
+  isRootLog?: boolean;
+};
+
+export type EffectArgs<T> = T & Args;
+
 export abstract class EffectBase {
   abstract type: string;
   
-  protected constructor() {
+  log: boolean;
+  isRootLog: boolean;
   
+  protected constructor(args: Args = {}) {
+    this.log = args.log ?? true;
+    this.isRootLog = args.isRootLog ?? true;
   }
 }

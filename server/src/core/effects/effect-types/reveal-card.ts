@@ -1,5 +1,5 @@
 import { CardId, PlayerId } from 'shared/shared-types.ts';
-import { EffectBase } from './effect-base.ts';
+import { EffectArgs, EffectBase } from './effect-base.ts';
 
 type RevealCardArgs = {
   playerId: PlayerId;
@@ -14,7 +14,7 @@ export class RevealCardEffect extends EffectBase {
   playerId: PlayerId;
   moveToRevealed?: boolean;
   
-  constructor(args: RevealCardArgs) {
+  constructor(args: EffectArgs<RevealCardArgs>) {
     super();
     this.cardId = args.cardId;
     this.playerId = args.playerId;

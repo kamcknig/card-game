@@ -15,6 +15,7 @@ import { ShuffleDeckEffect } from './effect-types/shuffle-card.ts';
 import { cardLifecycleMap } from '../card-lifecycle-map.ts';
 import { LogManager } from '../log-manager.ts';
 import { EffectsPipeline } from './effects-pipeline.ts';
+import { DiscardCardEffect } from './effect-types/discard-card.ts';
 
 type CreateEffectHandlerMapArgs = {
   socketMap: Map<PlayerId, AppSocket>,
@@ -55,14 +56,14 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
   }
   
   
-  map.discardCard = function (effect, match) {
-    /*if (effect.logEffect) {
+  map.discardCard = function (effect: DiscardCardEffect, match) {
+    if (effect.log) {
      logManager[effect.isRootLog ? 'rootLog' : 'addLogEntry']({
      type: 'discard',
      playerId: effect.playerId,
      cardId: effect.cardId,
      });
-     }*/
+     }
     
     return map.moveCard(
       new MoveCardEffect({

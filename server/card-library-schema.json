@@ -104,8 +104,7 @@
             "type": {
               "contains": {"const": "ATTACK"}
             }
-          },
-          "required": ["type"]
+          }
         },
         "then": {
           "required": ["targetScheme"]
@@ -117,8 +116,7 @@
             "type": {
               "contains": {"const": "VICTORY"}
             }
-          },
-          "required": ["type"]
+          }
         },
         "then": {
           "required": ["victoryPoints"]

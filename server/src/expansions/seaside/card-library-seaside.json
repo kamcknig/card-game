@@ -3,7 +3,7 @@
     "cost": {
       "treasure": 3
     },
-    "type": ["TREASURE", "DURATION"]
+    "type": ["TREASURE", "DURATION"],
   },
   "bazaar": {
     "cost": {
