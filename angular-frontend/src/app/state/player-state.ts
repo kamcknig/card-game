@@ -3,9 +3,6 @@ import { Player, PlayerId } from 'shared/shared-types';
 
 import { matchStore } from './match-state';
 
-export const selfPlayerIdStore = atom<PlayerId | undefined>();
-(globalThis as any).selfPlayerIdStore = selfPlayerIdStore;
-
 export const playerIdStore = atom<number[]>([]);
 (globalThis as any).playerIdStore = playerIdStore;
 

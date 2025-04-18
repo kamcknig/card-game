@@ -1,10 +1,10 @@
 import { LogEntry } from 'shared/shared-types';
-import { playerIdStore, playerStore, selfPlayerIdStore } from '../../state/player-state';
+import { playerIdStore, playerStore } from '../../state/player-state';
 import {
   lobbyMatchConfigurationStore,
   matchStartedStore,
   matchStore,
-  matchSummaryStore, matStore
+  matchSummaryStore, matStore, selfPlayerIdStore
 } from '../../state/match-state';
 import { gameOwnerIdStore, gamePausedStore, sceneStore } from '../../state/game-state';
 import { expansionListStore } from '../../state/expansion-list-state';
@@ -56,8 +56,6 @@ export const socketToGameEventMap = (socketService: SocketService): SocketEventM
 
       const playerId = selfPlayerIdStore.get();
       if (!playerId) throw new Error('missing self playerId');
-
-      matStore.set(match.mats[playerId]);
 
       const cardsById = cardStore.get();
 

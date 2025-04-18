@@ -2,13 +2,12 @@ import { Application, Assets, Container, Graphics, Sprite, Text } from 'pixi.js'
 import { Scene } from '../../../../core/scene/scene';
 import { PlayerHandView } from '../player-hand';
 import { AppButton, createAppButton } from '../../../../core/create-app-button';
-import { matchStartedStore, supplyStore, trashStore } from '../../../../state/match-state';
+import { matchStartedStore, selfPlayerIdStore, supplyStore, trashStore } from '../../../../state/match-state';
 import {
   playerDeckStore,
   playerDiscardStore,
   playerHandStore,
   playerStore,
-  selfPlayerIdStore
 } from '../../../../state/player-state';
 import { PlayAreaView } from '../play-area';
 import { KingdomSupplyView } from '../kingdom-supply';

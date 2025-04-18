@@ -1,8 +1,6 @@
-import { atom, computed } from 'nanostores';
-import { selfPlayerIdStore } from './player-state';
+import { atom, computed } from 'nanostores'
 import { CardId } from 'shared/shared-types';
-import { pixiInstance } from '../core/pixi-application.factory';
-import { matchStore } from './match-state';
+import { matchStore, selfPlayerIdStore } from './match-state';
 
 // Tracks client override if one exists
 export const clientSelectableCardsOverrideStore = atom<CardId[] | null>(null);

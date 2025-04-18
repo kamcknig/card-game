@@ -2,8 +2,25 @@
 
 <div class="zone-content">
   @for (mat of mats$ | async; track mat.mat) {
-    <app-mat-zone [mat]="mat"></app-mat-zone>
+    <app-mat-zone
+      [mat]="mat"
+      (openMat)="openMat($event)">
+    </app-mat-zone>
   }
 </div>
 
 <app-game-log [entries]="logEntries$ | async"></app-game-log>
+
+@if (visibleMat) {
+  <div class="mat-content">
+    <div class="card-content">
+      @for (card of visibleMat.cardIds; track card) {
+        <app-card [cardId]="card"></app-card>
+      }
+      <div
+        class="close"
+        (mousedown)="visibleMat = undefined"
+      >X</div>
+    </div>
+  </div>
+}

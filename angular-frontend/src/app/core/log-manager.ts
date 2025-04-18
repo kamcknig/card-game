@@ -1,9 +1,8 @@
 import { LogEntry, Player, PlayerId } from 'shared/shared-types';
 import { cardStore } from '../state/card-state';
-import { playerStore, selfPlayerIdStore } from '../state/player-state';
+import { playerStore } from '../state/player-state';
 import { logEntryIdsStore, logStore } from '../state/log-state';
-import { log } from '@angular-devkit/build-angular/src/builders/ssr-dev-server';
-import { has } from 'es-toolkit/compat';
+import { selfPlayerIdStore } from '../state/match-state';
 
 export const logManager = {
   addLogEntry: (logEntry: LogEntry) => {

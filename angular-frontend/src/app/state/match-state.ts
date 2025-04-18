@@ -1,5 +1,5 @@
-import { atom, computed, map } from 'nanostores';
-import { CardId, Match, MatchConfiguration, MatchSummary, Mats } from 'shared/shared-types';
+import { atom, computed } from 'nanostores';
+import { CardId, Match, MatchSummary, Mats, PlayerId } from 'shared/shared-types';
 
 export const matchStore = atom<Match | null>(null);
 (globalThis as any).matchStore = matchStore;
@@ -29,5 +29,14 @@ export const matchStartedStore = atom<boolean>(false);
 export const matchSummaryStore = atom<MatchSummary | undefined>(undefined);
 (globalThis as any).matchSummaryStore = matchSummaryStore;
 
-export const matStore = map<Record<Mats, CardId[]>>({} as Record<Mats, CardId[]>);
+export const selfPlayerIdStore = atom<PlayerId | undefined>();
+(globalThis as any).selfPlayerIdStore = selfPlayerIdStore;
+
+type MatStoreType = Record<Mats, CardId[]>;
+export const matStore = computed(
+  [selfPlayerIdStore, matchStore],
+  (id, match): MatStoreType => {
+    return match?.mats?.[id!] ?? {} as MatStoreType
+  }
+);
 (globalThis as any).matStore = matStore;

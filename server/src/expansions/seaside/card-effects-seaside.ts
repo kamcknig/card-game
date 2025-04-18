@@ -289,7 +289,7 @@ const expansion: CardExpansionModule = {
         return;
       }
       
-      const matCardIds = match.mats['native-village'][arg.playerId].concat();
+      const matCardIds = match.mats[arg.playerId]['native-village'].concat();
       
       console.log(`[NATIVE VILLAGE EFFECT] moving ${matCardIds.length} cards from native village mat to hand...`);
       for (const cardId of matCardIds) {

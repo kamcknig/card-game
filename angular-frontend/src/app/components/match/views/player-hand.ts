@@ -1,5 +1,5 @@
 import { Container, Graphics } from "pixi.js";
-import { playerHandStore, selfPlayerIdStore } from "../../../state/player-state";
+import { playerHandStore } from "../../../state/player-state";
 import { cardStore } from "../../../state/card-state";
 import { Card } from "shared/shared-types";
 import { atom } from 'nanostores';
@@ -9,6 +9,7 @@ import { AppButton, createAppButton } from '../../../core/create-app-button';
 import { currentPlayerTurnIdStore, turnPhaseStore } from '../../../state/turn-state';
 import { CardStackView } from './card-stack';
 import { List } from "@pixi/ui";
+import { selfPlayerIdStore } from '../../../state/match-state';
 
 export class PlayerHandView extends Container {
     private _phaseStatus: PhaseStatus = new PhaseStatus();
