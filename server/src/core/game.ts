@@ -166,7 +166,7 @@ export class Game {
   }
   
   private onMatchConfigurationUpdated = async (expansions: string[]) => {
-    console.log(`[GAME] received match configuration update`);
+    console.log(`[GAME] received expansionSelected socket event`);
     console.log(expansions);
     
     const newExpansions = expansions.filter(

@@ -3,8 +3,7 @@ import { io, Socket } from 'socket.io-client';
 import { environment } from '../../../environments/environment';
 import { v4 as uuidV4 } from 'uuid';
 import { SocketEventMap } from './socket-event-map';
-import { ClientEmitEvents, ServerEmitEvents, ServerListenEvents } from 'shared/shared-types';
-import { Container } from 'pixi.js';
+import { ServerEmitEvents, ServerListenEvents } from 'shared/shared-types';
 import { ServerEmitEventNames } from '../../../types';
 
 @Injectable({

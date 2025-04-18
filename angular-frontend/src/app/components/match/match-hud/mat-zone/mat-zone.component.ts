@@ -9,7 +9,6 @@ import {
   ViewChild
 } from '@angular/core';
 import { CardId, Mats } from 'shared/shared-types';
-import { fromEvent, tap } from 'rxjs';
 
 @Component({
   selector: 'app-mat-zone',
@@ -25,8 +24,6 @@ export class MatZoneComponent implements AfterViewInit {
   @Output() openMat = new EventEmitter<{ mat: Mats; cardIds: CardId[] }>();
 
   ngAfterViewInit(): void {
-    fromEvent<MouseEvent>(this.matTab.nativeElement, 'mousedown').pipe(
-      tap(() => this.openMat.emit(this.mat))
-    ).subscribe()
+
   }
 }

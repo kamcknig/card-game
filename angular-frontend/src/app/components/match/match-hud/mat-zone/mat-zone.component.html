@@ -1,4 +1,8 @@
-<div #matTab class="mat-tab">
+<div
+  #matTab
+  class="mat-tab"
+  (click)="mat.cardIds.length > 0 ? openMat.emit(mat) : null"
+>
   <span>{{mat.mat}}</span>
   <div class="badge-count">{{mat.cardIds.length}}</div>
 </div>
