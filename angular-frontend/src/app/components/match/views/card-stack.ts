@@ -83,8 +83,12 @@ export class CardStackView extends Container {
 
     this._cleanup.push(this._$cardIds.subscribe(this.drawDeck));
     this._cleanup.push(selectedCardStore.subscribe(this.onSelectedCardsUpdated));
-    this._cleanup.push(this._$cardIds.subscribe(this.updateBadgeCount));
-    this._cleanup.push(selectedCardStore.subscribe(this.updateBadgeCount));
+
+    if (this._showCountBadge) {
+      this._cleanup.push(this._$cardIds.subscribe(this.updateBadgeCount));
+      this._cleanup.push(selectedCardStore.subscribe(this.updateBadgeCount));
+    }
+
     this.on('removed', this.onRemoved);
 
     this.eventMode = 'static';
@@ -99,7 +103,7 @@ export class CardStackView extends Container {
   private onRemoved = () => {
     this._cleanup.forEach(cb => cb());
     this.removeAllListeners();
-    this.destroy({children: true});
+    this.destroy();
   }
 
   private onSelectedCardsUpdated = (selectedCardIds: readonly number[] = []) => {
@@ -127,6 +131,23 @@ export class CardStackView extends Container {
       c.size = 'full';
       c.facing = this._cardFacing;
       c.scale = this._sscale;
+    }
+
+    if (this._showBackground) {
+      const g = this._background.getChildByLabel('graphics') as Graphics;
+      let h = CARD_HEIGHT * this._sscale + (STANDARD_GAP) * 2
+      if (this._label) {
+        h += this._labelText?.height ?? 0;
+      }
+      g.clear();
+      g.roundRect(
+        0,
+        0,
+        CARD_WIDTH * this._sscale + (STANDARD_GAP * this._sscale) * 2,
+        h,
+        5
+      )
+        .fill({ color: 0x000000, alpha: .6 });
     }
   }
 
@@ -170,6 +191,5 @@ export class CardStackView extends Container {
       )
         .fill({ color: 0x000000, alpha: .6 });
     }
-
   }
 }

@@ -1,13 +1,4 @@
-import {
-  AfterViewInit,
-  ChangeDetectionStrategy,
-  Component,
-  ElementRef,
-  EventEmitter,
-  Input,
-  Output,
-  ViewChild
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
 import { CardId, Mats } from 'shared/shared-types';
 
 @Component({
@@ -17,13 +8,9 @@ import { CardId, Mats } from 'shared/shared-types';
   styleUrl: './mat-zone.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class MatZoneComponent implements AfterViewInit {
-  @Input() mat!: { mat: Mats; cardIds: CardId[] };
+export class MatZoneComponent {
+  @Input() mat!: { mat: Mats | 'playArea'; cardIds: CardId[] };
 
   @ViewChild('matTab') matTab!: ElementRef;
-  @Output() openMat = new EventEmitter<{ mat: Mats; cardIds: CardId[] }>();
-
-  ngAfterViewInit(): void {
-
-  }
+  @Output() openMat = new EventEmitter<{ mat: Mats | 'playArea'; cardIds: CardId[] }>();
 }

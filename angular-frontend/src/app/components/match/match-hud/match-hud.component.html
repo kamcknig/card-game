@@ -1,6 +1,11 @@
 <app-score #scoreView [playerScores]="playerScore$ | async"></app-score>
 
 <div class="zone-content">
+  <app-mat-zone
+    [mat]="{mat: 'playArea', cardIds: (playAreaMat$ | async)?.cardIds ?? []}"
+    (openMat)="openMat($event)">
+  </app-mat-zone>
+
   @for (mat of mats$ | async; track mat.mat) {
     <app-mat-zone
       [mat]="mat"

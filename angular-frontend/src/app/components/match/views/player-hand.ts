@@ -1,7 +1,7 @@
 import { Container, Graphics } from "pixi.js";
 import { playerHandStore } from "../../../state/player-state";
 import { cardStore } from "../../../state/card-state";
-import { Card } from "shared/shared-types";
+import { Card, CardType } from 'shared/shared-types';
 import { atom } from 'nanostores';
 import { CARD_HEIGHT, CARD_WIDTH, SMALL_CARD_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
 import { PhaseStatus } from './phase-status';
@@ -73,7 +73,7 @@ export class PlayerHandView extends Container {
     }
 
     private drawHand = (hand: ReadonlyArray<number>) => {
-        this._cardList.removeChildren().forEach(c => c.destroy({children: true}));
+        this._cardList.removeChildren().forEach(c => c.destroy());
 
         const cardsById = cardStore.get();
 
@@ -81,7 +81,7 @@ export class PlayerHandView extends Container {
         const categoryMap: Record<string, number> = {ACTION: 0, TREASURE: 1, VICTORY: 2};
         const categorized = hand.reduce(
             (acc, cardId) => {
-                const category = Object.keys(categoryMap).find(type => cardsById[cardId].type.includes(type));
+                const category = Object.keys(categoryMap).find(type => cardsById[cardId].type.includes(type as CardType));
                 if (category) {
                     acc[categoryMap[category]].push(cardsById[cardId]);
                 }

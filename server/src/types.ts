@@ -121,6 +121,7 @@ export type GameActions = {
   buyCard: { playerId: PlayerId; cardId: CardId; };
   playCard: { playerId: PlayerId; cardId: CardId; };
   drawCard: { playerId: PlayerId };
+  gainCard: { playerId: PlayerId; cardId: CardId };
   checkForPlayerActions: undefined;
   nextPhase: undefined;
 } & Record<string, any>;
@@ -132,7 +133,7 @@ export type EffectGeneratorFactoryContext = {
   reactionManager: ReactionManager;
   logManager: LogManager,
   match: Match,
-  cardLibrary: CardLibrary,
+  cardLibrary: CardLibrary
 }
 
 export type GameActionTypes = keyof GameActions;
@@ -202,7 +203,7 @@ export type EffectHandlerResult =
   | number[]
   | void;
 
-export type TriggerEventType = 'cardPlayed' | 'startTurn';
+export type TriggerEventType = 'cardPlayed' | 'startTurn' | 'gainCard';
 
 export class Reaction {
   // a concatenation of the card key and card id with a '-'
@@ -213,11 +214,22 @@ export class Reaction {
   
   public listeningFor: TriggerEventType;
   
+  /**
+   * @default false
+   */
   public once?: boolean = false;
   
+  /**
+   * @default false
+   */
   public compulsory?: boolean = false;
   
+  /**
+   * @default true
+   */
   public multipleUse?: boolean = true;
+  
+  public extraData?: any;
   
   // todo working on moat right now which has no condition other than it be an attack.
   // in the future we might need to define this condition method elsewhere such as
@@ -242,12 +254,12 @@ export class Reaction {
       compulsory?: boolean;
     },
   ) {
-    this.id = `${arg.id}-${Date.now()}`;
+    this.id = arg.id;
     this.playerId = arg.playerId;
     this.listeningFor = arg.listeningFor;
     this.condition = arg.condition ?? (() => true);
     this.generatorFn = arg.generatorFn;
-    this.once = arg.once;
+    this.once = arg.once ?? false;
     this.multipleUse = arg.multipleUse ?? false;
     this.compulsory = arg.compulsory ?? false;
   }

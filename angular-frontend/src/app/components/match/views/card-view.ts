@@ -95,9 +95,7 @@ export class CardView extends Container<ContainerChild> {
   private onRemoved = () => {
     this._cleanup.forEach(cb => cb());
     this.off('removed');
-    this._frontImage.destroy();
-    this._backImage.destroy();
-    this.destroy({children: true});
+    this.destroy();
   }
 
   private onDraw = () => {

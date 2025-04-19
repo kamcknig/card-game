@@ -93,10 +93,11 @@ export type ServerEmitEvents = {
   gameOver: (summary: MatchSummary) => void;
   gameOwnerUpdated: (playerId: PlayerId) => void;
   matchConfigurationUpdated: (val: MatchConfiguration) => void;
-  matchPatch: (patch: Operation[]) => void;
   matchReady: (match: Match) => void;
   matchStarted: () => void;
   nextPhaseComplete: () => void;
+  patchCardLibrary: (patch: Operation[]) => void;
+  patchMatch: (patch: Operation[]) => void;
   playAllTreasureComplete: () => void;
   playerConnected: (player: Player) => void;
   playerDisconnected: (player: Player) => void;
@@ -125,11 +126,6 @@ export type ServerListenEvents = {
   updatePlayerName: (playerId: PlayerId, name: string) => void;
   userInputReceived: (signalId: string, input: unknown) => void;
 }
-
-export type ClientEmitEvents = Omit<ServerListenEvents, 'startMatch' | 'matchConfigurationUpdated'> & {
-  startMatch: (configuration: Pick<MatchConfiguration, 'expansions'>) => void;
-  matchConfigurationUpdated: (config: Pick<MatchConfiguration, 'expansions'>) => void;
-};
 
 const MatValues = [
   'island',
@@ -269,7 +265,7 @@ const CardTypeValues = [
   'WIZARD',
   'ZOMBIE',
 ] as const;
-export type CardType = typeof CardTypeValues[number] | string;
+export type CardType = typeof CardTypeValues[number];
 
 export type CardArgs = {
   id: CardId;
