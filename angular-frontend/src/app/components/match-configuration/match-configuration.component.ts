@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { PlayerId } from 'shared/shared-types';
 import { NanostoresService } from '@nanostores/angular';
 import { playerIdStore } from '../../state/player-state';
-import { combineLatest, Observable } from 'rxjs';
+import { combineLatest, map, Observable } from 'rxjs';
 import { AsyncPipe, NgClass, NgOptimizedImage } from '@angular/common';
 import { expansionListStore } from '../../state/expansion-list-state';
 import { lobbyMatchConfigurationStore, selfPlayerIdStore } from '../../state/match-state';
@@ -34,7 +34,7 @@ export class MatchConfigurationComponent {
   ) {
     this.$playerIds = this._nanoStoreService.useStore(playerIdStore);
     this.$expansionList = this._nanoStoreService.useStore(expansionListStore);
-    this.$selectedExpansions = this._nanoStoreService.useStore(lobbyMatchConfigurationStore);
+    this.$selectedExpansions = this._nanoStoreService.useStore(lobbyMatchConfigurationStore).pipe(map(result => result ?? []));
     combineLatest([
       this._nanoStoreService.useStore(gameOwnerIdStore),
       this._nanoStoreService.useStore(selfPlayerIdStore)

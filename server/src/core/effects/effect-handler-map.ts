@@ -320,7 +320,8 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
   
   
   map.newTurn = function (_effect, match) {
-    logManager.rootLog({
+    logManager.addLogEntry({
+      root: true,
       type: 'newTurn',
       turn: match.turnNumber,
     });
