@@ -126,11 +126,6 @@ export type ServerListenEvents = {
   userInputReceived: (signalId: string, input: unknown) => void;
 }
 
-export type ClientEmitEvents = Omit<ServerListenEvents, 'startMatch' | 'matchConfigurationUpdated'> & {
-  startMatch: (configuration: Pick<MatchConfiguration, 'expansions'>) => void;
-  matchConfigurationUpdated: (config: Pick<MatchConfiguration, 'expansions'>) => void;
-};
-
 const MatValues = [
   'island',
   'native-village'
@@ -269,7 +264,7 @@ const CardTypeValues = [
   'WIZARD',
   'ZOMBIE',
 ] as const;
-export type CardType = typeof CardTypeValues[number] | string;
+export type CardType = typeof CardTypeValues[number];
 
 export type CardArgs = {
   id: CardId;

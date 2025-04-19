@@ -89,7 +89,7 @@ export class MatchScene extends Scene {
     });
     this._playAllTreasuresButton.button.on('removed', () => {
       this._playAllTreasuresButton.button.removeAllListeners();
-      this._playAllTreasuresButton.button.destroy({children: true});
+      this._playAllTreasuresButton.button.destroy();
     })
 
     this.addChild(this._playAllTreasuresButton.button);

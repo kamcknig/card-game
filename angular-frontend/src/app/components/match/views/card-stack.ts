@@ -99,7 +99,7 @@ export class CardStackView extends Container {
   private onRemoved = () => {
     this._cleanup.forEach(cb => cb());
     this.removeAllListeners();
-    this.destroy({children: true});
+    this.destroy();
   }
 
   private onSelectedCardsUpdated = (selectedCardIds: readonly number[] = []) => {

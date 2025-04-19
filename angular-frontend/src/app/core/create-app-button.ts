@@ -25,7 +25,7 @@ export const createAppButton = (
 
   button.addChildAt(background, 0);
   button.on('removed', () => {
-    button.destroy({children: true});
+    button.destroy();
   })
 
   text.x = button.width * .5;

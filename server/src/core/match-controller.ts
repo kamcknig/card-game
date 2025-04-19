@@ -50,7 +50,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     super();
   }
   
-  private _keepers: CardKey[] = ['island'];
+  private _keepers: CardKey[] = ['astrolabe', 'blockade'];
   private _playerHands: Record<CardKey, number>[] = [{
     gold: 4,
     silver: 4,
@@ -488,12 +488,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       }
     }
     
-    this._logManager.rootLog({
+    this._logManager.addLogEntry({
+      root: true,
       type: 'newTurn',
       turn: match.turnNumber,
     });
     
-    this._logManager.rootLog({
+    this._logManager.addLogEntry({
+      root: true,
       type: 'newPlayerTurn',
       turn: match.turnNumber,
       playerId: match.players[match.currentPlayerTurnIndex].id

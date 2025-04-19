@@ -15,6 +15,7 @@ import { TrashCardEffect } from '../../core/effects/effect-types/trash-card.ts';
 import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 import { getPlayerStartingFrom } from '../../utils/get-player-starting-from.ts';
 import { Card, CardId } from 'shared/shared-types.ts';
+import { getPlayerById } from '../../utils/get-player-by-id.ts';
 
 const expansion: CardExpansionModule = {
   registerCardLifeCycles: () => ({
@@ -65,10 +66,9 @@ const expansion: CardExpansionModule = {
       console.log(`[SEASON EFFECT] gaining 1 treasure...`);
       yield new GainTreasureEffect({ count: 1 });
     },
-    'blockade': ({ cardLibrary }) => function* (arg) {
+    'blockade': ({ reactionManager, cardLibrary }) => function* (arg) {
       const cardIds = (yield new SelectCardEffect({
         prompt: 'Gain card',
-        validPrompt: '',
         playerId: arg.playerId,
         restrict: {
           from: { location: ['supply', 'kingdom'] },
@@ -86,6 +86,22 @@ const expansion: CardExpansionModule = {
         cardId,
         to: { location: 'set-aside' },
       });
+      
+      reactionManager.registerReactionTemplate({
+        playerId: arg.playerId,
+        id: `blockade-${cardId}`,
+        once: true,
+        condition: ({ trigger}) => trigger.playerId === arg.playerId,
+        listeningFor: 'startTurn',
+        compulsory: true,
+        generatorFn: function* () {
+          yield new MoveCardEffect({
+            cardId: cardId,
+            toPlayerId: arg.playerId,
+            to: { location: 'playerHands' }
+          })
+        }
+      })
     },
     'cutpurse': ({ match, cardLibrary }) => function* (arg) {
       console.log(`[CUTPURSE EFFECT] gaining 2 treasure...`);

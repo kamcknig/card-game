@@ -17,6 +17,7 @@
     "npm:lodash-es@4.17.21": "4.17.21",
     "npm:minimist@^1.2.8": "1.2.8",
     "npm:nanostores@0.11.4": "0.11.4",
+    "npm:playwright-core@1.51.1": "1.51.1",
     "npm:playwright@*": "1.51.1",
     "npm:playwright@1.51.1": "1.51.1",
     "npm:rxjs@7.8.2": "7.8.2",
