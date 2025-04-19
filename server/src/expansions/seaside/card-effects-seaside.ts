@@ -45,7 +45,7 @@ const expansion: CardExpansionModule = {
       }
     },
     'blockade': {
-      onLeavePlay: ({cardId}) => {
+      onLeavePlay: ({ cardId }) => {
         return {
           unregisterTriggeredEvents: [`blockade-${cardId}-gainCard`]
         }
@@ -74,6 +74,7 @@ const expansion: CardExpansionModule = {
       yield new GainTreasureEffect({ count: 1 });
     },
     'blockade': ({ match, reactionManager, cardLibrary }) => function* (arg) {
+      console.log(`[BLOCKADE EFFECT] prompting user to select card...`);
       const cardIds = (yield new SelectCardEffect({
         prompt: 'Gain card',
         playerId: arg.playerId,
@@ -98,10 +99,11 @@ const expansion: CardExpansionModule = {
         playerId: arg.playerId,
         id: `blockade-${cardId}-startTurn`,
         once: true,
-        condition: ({ trigger}) => trigger.playerId === arg.playerId,
+        condition: ({ trigger }) => trigger.playerId === arg.playerId,
         listeningFor: 'startTurn',
         compulsory: true,
         generatorFn: function* () {
+          console.log(`[BLOCKADE TRIGGERED EFFECT] moving previously selected card to hand...`);
           yield new MoveCardEffect({
             cardId: cardId,
             toPlayerId: arg.playerId,
@@ -115,24 +117,31 @@ const expansion: CardExpansionModule = {
       reactionManager.registerReactionTemplate({
         playerId: arg.playerId,
         id: `blockade-${arg.cardId}-gainCard`,
-        condition: (args) =>
-          args.trigger.cardId !== undefined && cardLibrary.getCard(args.trigger.cardId).cardKey == cardGained.cardKey,
+        condition: (args) => {
+          if (match.players[match.currentPlayerTurnIndex].id !== args.trigger.playerId) {
+            return false;
+          }
+          
+          return args.trigger.cardId !== undefined && cardLibrary.getCard(args.trigger.cardId).cardKey == cardGained.cardKey;
+        },
         compulsory: true,
         listeningFor: 'gainCard',
         generatorFn: function* (args) {
           const curseCardIds = findCards(
             match,
             {
-              from: { location: ['supply', 'kingdom'] },
+              from: { location: 'supply' },
               card: { cardKeys: 'curse' }
             },
             cardLibrary
           );
           
           if (!curseCardIds.length) {
+            console.log(`[BLOCKADE TRIGGERED EFFECT] no curse cards in supply...`);
             return
           }
           
+          console.log(`[BLOCKADE TRIGGERED EFFECT] gaining curse card to player's discard...`);
           yield new GainCardEffect({
             playerId: args.trigger.playerId,
             cardId: curseCardIds[0],
@@ -142,10 +151,12 @@ const expansion: CardExpansionModule = {
       })
     },
     'caravan': ({ reactionManager }) => function* (arg) {
+      console.log(`[CARAVAN EFFECT] drawing a card...`);
       yield new DrawCardEffect({
         playerId: arg.playerId
       });
       
+      console.log(`[CARAVAN EFFECT] gaining 1 action...`);
       yield new GainActionEffect({ count: 1 });
       
       reactionManager.registerReactionTemplate({
@@ -154,10 +165,54 @@ const expansion: CardExpansionModule = {
         compulsory: true,
         once: true,
         listeningFor: 'startTurn',
-        condition: ({trigger}) => trigger.playerId === arg.playerId,
+        condition: ({ trigger }) => trigger.playerId === arg.playerId,
         generatorFn: function* () {
+          console.log(`[CARAVAN TRIGGERED EFFECT] drawing a card...`);
           yield new DrawCardEffect({
             playerId: arg.playerId
+          });
+        }
+      })
+    },
+    'corsair': ({ reactionManager, matchStats }) => function* (args) {
+      console.log(`[CORSAIR EFFECT] gaining 2 treasure...`);
+      yield new GainTreasureEffect({ count: 2 });
+      
+      reactionManager.registerReactionTemplate({
+        id: `corsair-${args.cardId}-startTurn`,
+        playerId: args.playerId,
+        compulsory: true,
+        once: true,
+        listeningFor: 'startTurn',
+        condition: ({ trigger }) => trigger.playerId === args.playerId,
+        generatorFn: function* () {
+          console.log(`[CORSAIR TRIGGERED EFFECT] drawing card...`);
+          yield new DrawCardEffect({
+            playerId: args.playerId,
+          });
+        }
+      });
+      
+      reactionManager.registerReactionTemplate({
+        id: `corsair-${args.cardId}-cardPlayed`,
+        playerId: args.playerId,
+        listeningFor: 'cardPlayed',
+        condition: ({match, trigger, cardLibrary}) => {
+          if (!trigger.cardId) return false;
+          
+          const card = cardLibrary.getCard(trigger.cardId);
+          
+          if (!['silver', 'gold'].includes(card.cardKey)) return false;
+          
+          const cardIdsPlayed = matchStats.cardsPlayed[match.turnNumber][trigger.playerId];
+          const numPlayed = cardIdsPlayed.filter(cardId => ['silver', 'gold'].includes(cardLibrary.getCard(cardId).cardKey)).length;
+          return numPlayed === 1;
+        },
+        generatorFn: function* ({trigger}) {
+          console.log(`[CORSAIR TRIGGERED EFFECT] trashing card...`);
+          yield new TrashCardEffect({
+            playerId: trigger.playerId,
+            cardId: trigger.cardId!,
           });
         }
       })
@@ -447,7 +502,7 @@ const expansion: CardExpansionModule = {
         }
       });
     },
-    'smugglers': ({matchStats, match, cardLibrary}) => function* (arg) {
+    'smugglers': ({ matchStats, match, cardLibrary }) => function* (arg) {
       const previousPlayer = getPlayerStartingFrom({
         startFromIdx: match.currentPlayerTurnIndex,
         match,
@@ -506,7 +561,7 @@ const expansion: CardExpansionModule = {
         to: { location: 'playerDiscards' },
       });
     },
-    'treasure-map': ({match, matchStats, cardLibrary}) => function* (arg) {
+    'treasure-map': ({ match, matchStats, cardLibrary }) => function* (arg) {
       console.log(`[TREASURE MAP EFFECT] trashing played treasure map...`);
       yield new TrashCardEffect({
         playerId: arg.playerId,
@@ -541,7 +596,7 @@ const expansion: CardExpansionModule = {
         }
       }
     },
-    'warehouse': ({match}) => function* (arg) {
+    'warehouse': ({ match }) => function* (arg) {
       console.log(`[WAREHOUSE EFFECT] drawing 3 cards...`);
       for (let i = 0; i < 3; i++) {
         yield new DrawCardEffect({
