@@ -141,6 +141,27 @@ const expansion: CardExpansionModule = {
         }
       })
     },
+    'caravan': ({ reactionManager }) => function* (arg) {
+      yield new DrawCardEffect({
+        playerId: arg.playerId
+      });
+      
+      yield new GainActionEffect({ count: 1 });
+      
+      reactionManager.registerReactionTemplate({
+        id: `caravan-${arg.cardId}-startTurn`,
+        playerId: arg.playerId,
+        compulsory: true,
+        once: true,
+        listeningFor: 'startTurn',
+        condition: ({trigger}) => trigger.playerId === arg.playerId,
+        generatorFn: function* () {
+          yield new DrawCardEffect({
+            playerId: arg.playerId
+          });
+        }
+      })
+    },
     'cutpurse': ({ match, cardLibrary }) => function* (arg) {
       console.log(`[CUTPURSE EFFECT] gaining 2 treasure...`);
       yield new GainTreasureEffect({ count: 2, });

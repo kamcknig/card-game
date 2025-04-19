@@ -12,14 +12,13 @@ import { gameOwnerIdStore, sceneStore } from '../../state/game-state';
 import { expansionListStore } from '../../state/expansion-list-state';
 import { cardOverrideStore, cardStore } from '../../state/card-state';
 import { Assets } from 'pixi.js';
-import { type SocketService } from './socket.service';
 import { applyPatch, Operation } from 'fast-json-patch';
 import { ClientListenEventNames, ClientListenEvents } from '../../../types';
 import { logManager } from '../log-manager';
 
 export type SocketEventMap = Partial<{ [p in ClientListenEventNames]: ClientListenEvents[p] }>;
 
-export const socketToGameEventMap = (socketService: SocketService): SocketEventMap => {
+export const socketToGameEventMap = (): SocketEventMap => {
   const map: SocketEventMap = {};
 
   map.addLogEntry = (logEntry: LogEntry) => {
