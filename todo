@@ -18,8 +18,7 @@ vassal'd a moneylender i think, but didn't show it in the game log - see how dom
 select card effect handler tries to find cards before prompting user and if none, then returns empty array. 
  - look into making user prompt effect handler do the same
 
- don't allow empty player name
-
+don't allow empty player name
 
 if player name too long - truncate in score view
 
@@ -29,6 +28,7 @@ lookout might not be putting on top of deck
 
 torturer didn't target everyone
 
+add tailwindcss maybe
 
 for blockade - check on dominion.games what the log looks like for both players
 

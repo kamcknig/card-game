@@ -329,7 +329,7 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
     
     const card = cardLibrary.getCard(effect.cardId);
     const triggerTemplates = cardLifecycleMap[card.cardKey]
-      ?.onEnterPlay?.({ playerId: effect.playerId, cardId: effect.cardId })?.registerTriggeredEvents;
+      ?.onCardPlayed?.({ playerId: effect.playerId, cardId: effect.cardId })?.registerTriggeredEvents;
     
     for (const trigger of triggerTemplates ?? []) {
       reactionManager.registerReactionTemplate(trigger);
