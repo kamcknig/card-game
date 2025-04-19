@@ -1,16 +1,14 @@
 /* You can add global styles to this file, and also import other style files */
-
-html {
-  box-sizing: border-box;
-  font-size: 24px;
-}
+@import 'node_modules/modern-normalize/modern-normalize.css';
 
 hr {
   all: unset;
 }
 
+/*
 html, body, input {
   margin: 0;
   padding: 0;
   height: 100%;
 }
+*/
