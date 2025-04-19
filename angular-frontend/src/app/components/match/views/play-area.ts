@@ -25,6 +25,7 @@ export class PlayAreaView extends Container {
         this.addChild(this._cardView);
 
         this._cleanup.push(playAreaStore.subscribe(this.drawCards.bind(this)));
+
         this.on('removed', this.onRemoved);
     }
 
@@ -35,7 +36,9 @@ export class PlayAreaView extends Container {
 
     private drawCards(val: ReadonlyArray<number>) {
         this._cardView.removeChildren();
+
         const cards = val.concat().map(id => cardStore.get()[id]);
+
         for (const card of cards) {
             const view = this._cardView.addChild(createCardView(card));
             view.size = 'full';

@@ -15,13 +15,13 @@ import { TrashCardEffect } from '../../core/effects/effect-types/trash-card.ts';
 import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 import { getPlayerStartingFrom } from '../../utils/get-player-starting-from.ts';
 import { Card, CardId } from 'shared/shared-types.ts';
-import { getPlayerById } from '../../utils/get-player-by-id.ts';
+import { findCards } from '../../utils/find-cards.ts';
 
 const expansion: CardExpansionModule = {
   registerCardLifeCycles: () => ({
     'astrolabe': {
       onCardPlayed: ({ playerId, cardId }) => {
-        const id = `astrolabe-${cardId}`;
+        const id = `astrolabe-${cardId}-onCardPlayed`;
         return {
           registerTriggeredEvents: [{
             id,
@@ -44,6 +44,13 @@ const expansion: CardExpansionModule = {
         }
       }
     },
+    'blockade': {
+      onLeavePlay: ({cardId}) => {
+        return {
+          unregisterTriggeredEvents: [`blockade-${cardId}-gainCard`]
+        }
+      }
+    }
   }),
   registerScoringFunctions: () => ({}),
   registerEffects: {
@@ -66,7 +73,7 @@ const expansion: CardExpansionModule = {
       console.log(`[SEASON EFFECT] gaining 1 treasure...`);
       yield new GainTreasureEffect({ count: 1 });
     },
-    'blockade': ({ reactionManager, cardLibrary }) => function* (arg) {
+    'blockade': ({ match, reactionManager, cardLibrary }) => function* (arg) {
       const cardIds = (yield new SelectCardEffect({
         prompt: 'Gain card',
         playerId: arg.playerId,
@@ -89,7 +96,7 @@ const expansion: CardExpansionModule = {
       
       reactionManager.registerReactionTemplate({
         playerId: arg.playerId,
-        id: `blockade-${cardId}`,
+        id: `blockade-${cardId}-startTurn`,
         once: true,
         condition: ({ trigger}) => trigger.playerId === arg.playerId,
         listeningFor: 'startTurn',
@@ -100,6 +107,37 @@ const expansion: CardExpansionModule = {
             toPlayerId: arg.playerId,
             to: { location: 'playerHands' }
           })
+        }
+      });
+      
+      const cardGained = cardLibrary.getCard(cardId);
+      
+      reactionManager.registerReactionTemplate({
+        playerId: arg.playerId,
+        id: `blockade-${arg.cardId}-gainCard`,
+        condition: (args) =>
+          args.trigger.cardId !== undefined && cardLibrary.getCard(args.trigger.cardId).cardKey == cardGained.cardKey,
+        compulsory: true,
+        listeningFor: 'gainCard',
+        generatorFn: function* (args) {
+          const curseCardIds = findCards(
+            match,
+            {
+              from: { location: ['supply', 'kingdom'] },
+              card: { cardKeys: 'curse' }
+            },
+            cardLibrary
+          );
+          
+          if (!curseCardIds.length) {
+            return
+          }
+          
+          yield new GainCardEffect({
+            playerId: args.trigger.playerId,
+            cardId: curseCardIds[0],
+            to: { location: 'playerDiscards' },
+          });
         }
       })
     },

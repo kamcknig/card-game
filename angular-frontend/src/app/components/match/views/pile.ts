@@ -1,36 +1,46 @@
-import {Container} from "pixi.js";
-import {createCardView} from "../../../core/card/create-card-view";
-import {CountBadgeView} from "./count-badge-view";
+import { Container } from 'pixi.js';
+import { createCardView } from '../../../core/card/create-card-view';
+import { CountBadgeView } from './count-badge-view';
 import { Card } from 'shared/shared-types';
 import { CardFacing, CardSize } from '../../../../types';
 
 export class PileView extends Container {
-    constructor(cards: Card[], count: number, size: CardSize = 'full', facing: CardFacing = 'front') {
-        super();
+  constructor(cards: Card[], count: number, size: CardSize = 'full', facing: CardFacing = 'front') {
+    super();
 
-        const card = cards.reduce<Card | undefined>((prev, next) => {
-            if (!prev) {
-                return next;
-            }
+    const card = cards.reduce<Card | undefined>((prev, next) => {
+      if (!prev) {
+        return next;
+      }
 
-            return prev.id > next.id ? prev : next
-        }, undefined);
+      return prev.id > next.id ? prev : next
+    }, undefined);
 
-        if (!card) {
-          throw new Error('No card found for this pile');
-        }
-
-        const view = this.addChild(createCardView(card));
-        view.size = size;
-        view.facing = facing;
-
-        const b = new CountBadgeView({ count });
-        b.x = 0;
-        b.y = 0;
-
-        this.addChild(b);
-        this.on('removed', () => {
-          this.destroy();
-        })
+    if (!card) {
+      throw new Error('No card found for this pile');
     }
+
+    const view = this.addChild(createCardView(card));
+    view.size = size;
+    view.facing = facing;
+
+    const b = new CountBadgeView({ count });
+    b.x = 0;
+    b.y = 0;
+
+    this.addChild(b);
+
+    this.eventMode = 'static';
+
+    this.on('pointerdown', (event) => {
+      if (event.ctrlKey) {
+        console.log(cards);
+      }
+    });
+
+    this.on('removed', () => {
+      this.destroy();
+      this.removeAllListeners();
+    });
+  }
 }

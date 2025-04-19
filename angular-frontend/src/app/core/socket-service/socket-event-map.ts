@@ -46,6 +46,12 @@ export const socketToGameEventMap = (socketService: SocketService): SocketEventM
     setCardLibrary: cards => {
       cardStore.set(cards);
     },
+    patchCardLibrary: patch => {
+      const current = structuredClone(cardStore.get());
+      if (!current) return;
+      applyPatch(current, patch);
+      cardStore.set(current);
+    },
     setCardDataOverrides: overrides => {
       cardOverrideStore.set(overrides ?? {});
     },
@@ -76,7 +82,7 @@ export const socketToGameEventMap = (socketService: SocketService): SocketEventM
     matchStarted: () => {
       matchStartedStore.set(true);
     },
-    matchPatch: (patch: Operation[]) => {
+    patchMatch: (patch: Operation[]) => {
       const current = structuredClone(matchStore.get());
       if (!current) return;
       applyPatch(current, patch);

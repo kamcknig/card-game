@@ -1,4 +1,10 @@
-import { AppSocket, EffectHandlerMap, GameActionEffectGeneratorFn, ReactionTemplate, } from '../../types.ts';
+import {
+  AppSocket,
+  EffectHandlerMap,
+  GameActionEffectGeneratorFn, GameActions, GameActionTypes,
+  ReactionTemplate,
+  ReactionTrigger,
+} from '../../types.ts';
 import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
 import { findCards } from '../../utils/find-cards.ts';
 import { ReactionManager } from '../reactions/reaction-manager.ts';
@@ -16,11 +22,12 @@ import { cardLifecycleMap } from '../card-lifecycle-map.ts';
 import { LogManager } from '../log-manager.ts';
 import { EffectsPipeline } from './effects-pipeline.ts';
 import { DiscardCardEffect } from './effect-types/discard-card.ts';
+import { cardEffectGeneratorMap } from './effect-generator-map.ts';
 
 type CreateEffectHandlerMapArgs = {
   socketMap: Map<PlayerId, AppSocket>,
   reactionManager: ReactionManager,
-  effectGeneratorMap: Record<string, GameActionEffectGeneratorFn>,
+  effectGeneratorMap: Record<GameActionTypes, GameActionEffectGeneratorFn>,
   cardLibrary: CardLibrary,
   logManager: LogManager,
   getEffectsPipeline: () => EffectsPipeline,
@@ -187,6 +194,13 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
     
     matchStats.cardsGained[match.turnNumber][effect.playerId] ??= [];
     matchStats.cardsGained[match.turnNumber][effect.playerId].push(effect.cardId);
+    
+    const generator = effectGeneratorMap.gainCard({
+      playerId: effect.playerId,
+      cardId: effect.cardId
+    });
+    
+    return { runGenerator: generator };
   }
   
   
@@ -550,7 +564,7 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
   
   map.invokeCardEffects = function (effect) {
     const { context, cardKey } = effect;
-    const generatorFn = effectGeneratorMap[cardKey];
+    const generatorFn = cardEffectGeneratorMap[cardKey];
     
     if (!generatorFn) {
       throw new Error(`no generator found for '${cardKey}'`);

@@ -212,7 +212,7 @@ export class Game {
     if (this.matchStarted && this._match) {
       this._match.config = this._matchConfiguration;
       const patch = compare(previousSnapshot, this._matchController?.getMatchSnapshot() ?? {});
-      if (patch.length) this._socketMap.forEach(s => s.emit('matchPatch', patch));
+      if (patch.length) this._socketMap.forEach(s => s.emit('patchMatch', patch));
     } else {
       // lobby phase – raw object still useful for the config screen
       io.in('game').emit('matchConfigurationUpdated', this._matchConfiguration);

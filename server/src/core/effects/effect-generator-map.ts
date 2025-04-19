@@ -121,14 +121,15 @@ export const gameActionEffectGeneratorFactory: GameActionEffectGeneratorMapFacto
         const cardsToDiscard = match.playArea.concat(match.playerHands[player.id]);
         
         for (const cardId of cardsToDiscard) {
-          console.log(`[NEXT PHASE EFFECT] discarding ${cardLibrary.getCard(cardId)}...`);
-          
           const card = cardLibrary.getCard(cardId);
           
           // if the card is a duration card, and it was played this turn
           if (card.type.includes('DURATION') && matchStats.cardsPlayed[match.turnNumber][card.owner!].includes(card.id)) {
+            console.log(`[NEXT PHASE EFFECT] ${card} is duration, leaving in play`);
             continue;
           }
+          
+          console.log(`[NEXT PHASE EFFECT] discarding ${cardLibrary.getCard(cardId)}...`);
           
           yield new DiscardCardEffect({
             cardId,
@@ -250,6 +251,19 @@ export const gameActionEffectGeneratorFactory: GameActionEffectGeneratorMapFacto
       playerId,
     });
   };
+  
+  
+  
+  
+  map.gainCard = function* (args) {
+    const trigger: ReactionTrigger = {
+      cardId: args.cardId,
+      playerId: args.playerId,
+      eventType: 'gainCard'
+    };
+    
+    yield* reactionManager.runTrigger({trigger});
+  }
   
   return map;
 };

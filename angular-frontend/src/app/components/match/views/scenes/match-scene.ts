@@ -35,7 +35,7 @@ import { SocketService } from '../../../../core/socket-service/socket.service';
 
 export class MatchScene extends Scene {
   private _board: Container = new Container();
-  private _baseSupply: Container = new Container({ scale: .8 });
+  private _baseSupply: Container = new Container({ scale: .9 });
   private _playerHand: PlayerHandView | undefined;
   private _trash: CardStackView | undefined;
   private _deck: CardStackView | undefined;
@@ -241,7 +241,6 @@ export class MatchScene extends Scene {
 
     this._deck = new CardStackView({
       $cardIds: playerDeckStore(this._selfId),
-
       label: 'DECK',
       cardFacing: 'back'
     });
@@ -250,7 +249,7 @@ export class MatchScene extends Scene {
     this._discard = new CardStackView({
       $cardIds: playerDiscardStore(this._selfId),
       label: 'DISCARD',
-      alwaysShowCountBadge: false,
+      showCountBadge: false,
       cardFacing: 'front'
     });
     this.addChild(this._discard);

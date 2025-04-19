@@ -121,6 +121,7 @@ export type GameActions = {
   buyCard: { playerId: PlayerId; cardId: CardId; };
   playCard: { playerId: PlayerId; cardId: CardId; };
   drawCard: { playerId: PlayerId };
+  gainCard: { playerId: PlayerId; cardId: CardId };
   checkForPlayerActions: undefined;
   nextPhase: undefined;
 } & Record<string, any>;
@@ -202,7 +203,7 @@ export type EffectHandlerResult =
   | number[]
   | void;
 
-export type TriggerEventType = 'cardPlayed' | 'startTurn';
+export type TriggerEventType = 'cardPlayed' | 'startTurn' | 'gainCard';
 
 export class Reaction {
   // a concatenation of the card key and card id with a '-'
@@ -253,7 +254,7 @@ export class Reaction {
       compulsory?: boolean;
     },
   ) {
-    this.id = `${arg.id}-${Date.now()}`;
+    this.id = arg.id;
     this.playerId = arg.playerId;
     this.listeningFor = arg.listeningFor;
     this.condition = arg.condition ?? (() => true);

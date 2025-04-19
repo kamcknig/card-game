@@ -54,8 +54,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _playerHands: Record<CardKey, number>[] = [{
     gold: 4,
     silver: 4,
-    estate: 4,
-    island: 4,
+    estate: 4
   }];
   
   public initialize(config: MatchConfiguration, cardData: ExpansionCardData) {
@@ -148,9 +147,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     this._config = config;
     
-    console.log(
-      `[MATCH] ready, sending to clients and listening for when clients are ready`,
-    );
+    console.log(`[MATCH] ready, sending to clients and listening for when clients are ready`);
     
     this._socketMap.forEach((s) => {
       s.emit('setCardLibrary', this._cardLibrary.getAllCards());
@@ -188,18 +185,22 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this._fuse = new Fuse(allExpansionCards, fuseOptions);
   }
   
+  private _cardLibSnapshot = {};
   public getMatchSnapshot(): Match {
+    this._cardLibSnapshot = structuredClone(this._cardLibrary.getAllCards());
     return structuredClone(this._match);
   }
   
   public broadcastPatch(prev: Match) {
     const patch: Operation[] = compare(prev, this._match);
+    const cardLibraryPatch = compare(this._cardLibSnapshot, this._cardLibrary.getAllCards());
     if (patch.length) {
       console.log(`[MATCH] sending match update to clients`);
-      this._socketMap.forEach((s) => s.emit('matchPatch', patch));
+      this._socketMap.forEach((s) => s.emit('patchMatch', patch));
     }
-    else {
-      console.debug(`[MATCH] no changes, not sending update to client`);
+    
+    if (cardLibraryPatch.length) {
+      this._socketMap.forEach(s => s.emit('patchCardLibrary', cardLibraryPatch))
     }
   }
   
@@ -476,6 +477,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const match = this._match;
     match.playerBuys = 1;
     match.playerActions = 1;
+    this.getMatchSnapshot();
     this.broadcastPatch(prev);
     
     this._socketMap.forEach((s) => s.emit('matchStarted'));
