@@ -265,13 +265,13 @@ export class Reaction {
   }
   
   public getBaseId() {
-    return `${this.getSourceKey()}-${this.getSourceId()}`;
+    return `${this.getSourceKey()}:${this.getSourceId()}`;
   }
   
   public getSourceKey() {
     let out;
     try {
-      out = this.id.split('-')?.[0];
+      out = this.id.split(':')?.[0];
       return out;
     } catch (e) {
       throw e;
@@ -281,7 +281,7 @@ export class Reaction {
   public getSourceId() {
     let out;
     try {
-      out = toNumber(this.id.split('-')?.[1]);
+      out = toNumber(this.id.split(':')?.[1]);
       return out;
     } catch (e) {
       throw e;

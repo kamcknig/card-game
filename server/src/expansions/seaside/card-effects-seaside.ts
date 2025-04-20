@@ -21,7 +21,7 @@ const expansion: CardExpansionModule = {
   registerCardLifeCycles: () => ({
     'astrolabe': {
       onCardPlayed: ({ playerId, cardId }) => {
-        const id = `astrolabe-${cardId}-onCardPlayed`;
+        const id = `astrolabe:${cardId}:onCardPlayed`;
         return {
           registerTriggeredEvents: [{
             id,
@@ -47,7 +47,14 @@ const expansion: CardExpansionModule = {
     'blockade': {
       onLeavePlay: ({ cardId }) => {
         return {
-          unregisterTriggeredEvents: [`blockade-${cardId}-gainCard`]
+          unregisterTriggeredEvents: [`blockade:${cardId}:gainCard`]
+        }
+      }
+    },
+    'corsair': {
+      onLeavePlay: ({ cardId}) => {
+        return {
+          unregisterTriggeredEvents: [`corsair:${cardId}:cardPlayed`]
         }
       }
     }
@@ -97,7 +104,7 @@ const expansion: CardExpansionModule = {
       
       reactionManager.registerReactionTemplate({
         playerId: arg.playerId,
-        id: `blockade-${cardId}-startTurn`,
+        id: `blockade:${cardId}:startTurn`,
         once: true,
         condition: ({ trigger }) => trigger.playerId === arg.playerId,
         listeningFor: 'startTurn',
@@ -116,7 +123,7 @@ const expansion: CardExpansionModule = {
       
       reactionManager.registerReactionTemplate({
         playerId: arg.playerId,
-        id: `blockade-${arg.cardId}-gainCard`,
+        id: `blockade:${arg.cardId}:gainCard`,
         condition: (args) => {
           if (match.players[match.currentPlayerTurnIndex].id !== args.trigger.playerId) {
             return false;
@@ -160,7 +167,7 @@ const expansion: CardExpansionModule = {
       yield new GainActionEffect({ count: 1 });
       
       reactionManager.registerReactionTemplate({
-        id: `caravan-${arg.cardId}-startTurn`,
+        id: `caravan:${arg.cardId}:startTurn`,
         playerId: arg.playerId,
         compulsory: true,
         once: true,
@@ -179,7 +186,7 @@ const expansion: CardExpansionModule = {
       yield new GainTreasureEffect({ count: 2 });
       
       reactionManager.registerReactionTemplate({
-        id: `corsair-${args.cardId}-startTurn`,
+        id: `corsair:${args.cardId}:startTurn`,
         playerId: args.playerId,
         compulsory: true,
         once: true,
@@ -194,7 +201,7 @@ const expansion: CardExpansionModule = {
       });
       
       reactionManager.registerReactionTemplate({
-        id: `corsair-${args.cardId}-cardPlayed`,
+        id: `corsair:${args.cardId}:cardPlayed`,
         playerId: args.playerId,
         listeningFor: 'cardPlayed',
         condition: ({match, trigger, cardLibrary}) => {
@@ -247,6 +254,29 @@ const expansion: CardExpansionModule = {
           });
         }
       }
+    },
+    'fishing-village': ({reactionManager}) => function* (args) {
+      console.log(`[FISHING VILLAGE EFFECT] gaining 2 action...`);
+      yield new GainActionEffect({ count: 2 });
+      
+      console.log(`[FISHING VILLAGE EFFECT] gaining 1 treasure...`);
+      yield new GainTreasureEffect({ count: 1 });
+      
+      reactionManager.registerReactionTemplate({
+        id: `fishing-village:${args.cardId}:startTurn`,
+        once: true,
+        compulsory: true,
+        playerId: args.playerId,
+        listeningFor: 'startTurn',
+        condition: () => true,
+        generatorFn: function* () {
+          console.log(`[FISHING VILLAGE TRIGGERED EFFECT] gaining 1 action...`);
+          yield new GainActionEffect({ count: 1 });
+          
+          console.log(`[FISHING VILLAGE TRIGGERED EFFECT] gaining 1 treasure...`);
+          yield new GainTreasureEffect({ count: 1 });
+        }
+      })
     },
     'island': () => function* (arg) {
       console.log(`[ISLAND EFFECT] prompting user to select card...`);

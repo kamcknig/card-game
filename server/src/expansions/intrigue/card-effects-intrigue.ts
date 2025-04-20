@@ -22,7 +22,7 @@ const expansionModule: CardExpansionModule = {
     'diplomat': {
       onEnterHand: ({ playerId, cardId }) => ({
         registerTriggeredEvents: [{
-          id: `diplomat-${cardId}-onEnterHand`,
+          id: `diplomat:${cardId}:onEnterHand`,
           playerId,
           listeningFor: 'cardPlayed',
           condition: ({ match, trigger, cardLibrary }) => {
@@ -63,7 +63,7 @@ const expansionModule: CardExpansionModule = {
         }],
       }),
       onLeaveHand: ({ cardId }) => ({
-        unregisterTriggeredEvents: [`diplomat-${cardId}-onEnterHand`],
+        unregisterTriggeredEvents: [`diplomat:${cardId}:onEnterHand`],
       }),
     },
   }),
