@@ -1,4 +1,5 @@
 import { Application, TexturePool } from 'pixi.js';
+import { appStore } from '../state/app-state';
 
 export let pixiInstance: Application = new Application();
 (globalThis as any).__PIXI_APP__ = pixiInstance;
@@ -13,4 +14,5 @@ export const pixiFactory = async () => {
   pixiInstance.canvas.addEventListener('contextmenu', (e) => {
     e.preventDefault();
   });
+  appStore.set(pixiInstance);
 }

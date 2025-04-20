@@ -2,11 +2,8 @@ import { Application, Assets, Container, Graphics, Sprite, Text } from 'pixi.js'
 import { Scene } from '../../../../core/scene/scene';
 import { PlayerHandView } from '../player-hand';
 import { AppButton, createAppButton } from '../../../../core/create-app-button';
-import { matchStartedStore, selfPlayerIdStore, supplyStore, trashStore } from '../../../../state/match-state';
+import { matchStartedStore, selfPlayerIdStore} from '../../../../state/match-state';
 import {
-  playerDeckStore,
-  playerDiscardStore,
-  playerHandStore,
   playerStore,
 } from '../../../../state/player-state';
 import { PlayAreaView } from '../play-area';
@@ -17,7 +14,6 @@ import { Card, CardId, CardKey, PlayerId, SelectCardArgs, UserPromptEffectArgs }
 import {
   awaitingServerLockReleaseStore,
   clientSelectableCardsOverrideStore,
-  selectableCardStore,
   selectedCardStore
 } from '../../../../state/interactive-state';
 import { CardView } from '../card-view';
@@ -30,8 +26,11 @@ import { displayTrash } from '../modal/display-trash';
 import { currentPlayerTurnIdStore, turnPhaseStore } from '../../../../state/turn-state';
 import { isNumber, isUndefined } from 'es-toolkit/compat';
 import { AppList } from '../app-list';
-import { gamePausedStore } from '../../../../state/game-state';
 import { SocketService } from '../../../../core/socket-service/socket.service';
+import { supplyStore, trashStore } from '../../../../state/match-logic';
+import { gamePausedStore } from '../../../../state/game-logic';
+import { playerDeckStore, playerDiscardStore, playerHandStore } from '../../../../state/player-logic';
+import { selectableCardStore } from '../../../../state/interactive-logic';
 
 export class MatchScene extends Scene {
   private _board: Container = new Container();

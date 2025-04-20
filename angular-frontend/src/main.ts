@@ -8,6 +8,6 @@ bootstrapApplication(AppComponent, appConfig)
   .then(appRef => {
     const injector = appRef.injector;
     const socketService = injector.get(SocketService);
-    socketService.setEventMap(socketToGameEventMap(socketService));
+    socketService.setEventMap(socketToGameEventMap());
   })
   .catch((err) => console.error(err));

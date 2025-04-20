@@ -11,15 +11,15 @@ import {
 import { ScoreComponent } from './score/score.component';
 import { GameLogComponent } from './game-log/game-log.component';
 import { NanostoresService } from '@nanostores/angular';
-import { playerIdStore, playerScoreStore, playerStore } from '../../../state/player-state';
+import { playerIdStore, playerStore } from '../../../state/player-state';
 import { combineLatest, combineLatestWith, map, Observable, switchMap } from 'rxjs';
 import { AsyncPipe } from '@angular/common';
 import { CardId, LogEntryMessage, Mats, PlayerId } from 'shared/shared-types';
 import { logEntryIdsStore, logStore } from '../../../state/log-state';
-import { matStore, playAreaStore, selfPlayerIdStore } from '../../../state/match-state';
-import { MatZoneComponent } from './mat-zone/mat-zone.component';
+import { MatComponent } from './mat-zone/mat.component';
 import { CardComponent } from '../../card/card.component';
-import { currentPlayerTurnIdStore } from '../../../state/turn-state';
+import { playerScoreStore } from '../../../state/player-logic';
+import { matStore } from '../../../state/match-logic';
 
 @Component({
   selector: 'app-match-hud',
@@ -27,7 +27,7 @@ import { currentPlayerTurnIdStore } from '../../../state/turn-state';
     ScoreComponent,
     GameLogComponent,
     AsyncPipe,
-    MatZoneComponent,
+    MatComponent,
     CardComponent
   ],
   templateUrl: './match-hud.component.html',
@@ -40,26 +40,16 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
   scoreViewResize = output<number>();
   scoreViewResizer: ResizeObserver | undefined;
   playerIds$: Observable<readonly PlayerId[]> | undefined;
-  playerScore$!: Observable<{ id: PlayerId; score: number; name: string }[]> | null;
-  logEntries$!: Observable<readonly LogEntryMessage[]> | null;
+  playerScore$!: Observable<{ id: PlayerId; score: number; name: string }[]> | undefined;
+  logEntries$!: Observable<readonly LogEntryMessage[]> | undefined;
   mats$: Observable<{mat: Mats, cardIds: CardId[]}[]> | undefined;
-  playAreaMat$: Observable<{ mat: 'playArea', cardIds: CardId[] }> | undefined;
-  visibleMat: {mat: Mats | 'playArea'; cardIds: CardId[] } | undefined;
+  visibleMat: {mat: Mats; cardIds: CardId[] } | null = null;
+  stickyMat: boolean = false;
 
   constructor(private _nanoService: NanostoresService) {
   }
 
   ngOnInit() {
-    this.playAreaMat$ = this._nanoService.useStore(playAreaStore).pipe(
-      combineLatestWith(
-        this._nanoService.useStore(selfPlayerIdStore),
-        this._nanoService.useStore(currentPlayerTurnIdStore),
-      ),
-      map(([cardIds, selfId, currentId]) => {
-        return { mat: 'playArea', cardIds: selfId === currentId ? [] : cardIds };
-      })
-    )
-
     this.mats$ = this._nanoService.useStore(matStore)
       .pipe(map(mats =>
         Object.entries(mats)
@@ -88,7 +78,7 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
     );
   }
 
-  openMat(event: {mat: Mats | 'playArea', cardIds: CardId[]}) {
+  openMat(event: {mat: Mats, cardIds: CardId[]} | null) {
     this.visibleMat = event;
   }
 

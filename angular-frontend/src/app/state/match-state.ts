@@ -1,24 +1,8 @@
-import { atom, computed } from 'nanostores';
-import { CardId, Match, MatchStats, MatchSummary, Mats, PlayerId } from 'shared/shared-types';
+import { atom } from 'nanostores';
+import { Match, MatchStats, MatchSummary, PlayerId } from 'shared/shared-types';
 
 export const matchStore = atom<Match | null>(null);
 (globalThis as any).matchStore = matchStore;
-
-export const supplyStore =
-  computed(matchStore, m => m?.supply ?? []);
-(globalThis as any).supplyStore = supplyStore;
-
-export const kingdomStore =
-  computed(matchStore, m => m?.kingdom ?? []);
-(globalThis as any).kingdomStore = kingdomStore;
-
-export const trashStore =
-  computed(matchStore, m => m?.trash ?? []);
-(globalThis as any).trashStore = trashStore;
-
-export const playAreaStore =
-  computed(matchStore, m => m?.playArea ?? []);
-(globalThis as any).playAreaStore = playAreaStore;
 
 export const lobbyMatchConfigurationStore = atom<string[]>([]);
 (globalThis as any).matchStartedStore = lobbyMatchConfigurationStore;
@@ -34,14 +18,4 @@ export const selfPlayerIdStore = atom<PlayerId | undefined>();
 
 export const matchStatsStore = atom<MatchStats | undefined>();
 (globalThis as any).matchStatsStore = matchStatsStore;
-
-type MatStoreType = Record<Mats, CardId[]>;
-export const matStore = computed(
-  [selfPlayerIdStore, matchStore],
-  (id, match): MatStoreType => {
-    return match?.mats?.[id!] ?? {} as MatStoreType
-  }
-);
-(globalThis as any).matStore = matStore;
-
 

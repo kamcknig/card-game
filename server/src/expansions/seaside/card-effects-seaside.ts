@@ -28,6 +28,7 @@ const expansion: CardExpansionModule = {
             playerId,
             listeningFor: 'startTurn',
             compulsory: true,
+            multipleUse: true,
             once: true,
             condition: (args) => {
               const { trigger } = args;

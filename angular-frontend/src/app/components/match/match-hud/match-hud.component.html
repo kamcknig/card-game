@@ -1,16 +1,13 @@
 <app-score #scoreView [playerScores]="playerScore$ | async"></app-score>
 
 <div class="zone-content">
-  <app-mat-zone
-    [mat]="{mat: 'playArea', cardIds: (playAreaMat$ | async)?.cardIds ?? []}"
-    (openMat)="openMat($event)">
-  </app-mat-zone>
-
   @for (mat of mats$ | async; track mat.mat) {
-    <app-mat-zone
+    <app-mat
       [mat]="mat"
-      (openMat)="openMat($event)">
-    </app-mat-zone>
+      (click)="stickyMat = true"
+      (mouseenter)="!stickyMat ? openMat(mat) : null"
+      (mouseleave)="!stickyMat ? openMat(null) : null">
+    </app-mat>
   }
 </div>
 
@@ -24,7 +21,7 @@
       }
       <div
         class="close"
-        (mousedown)="visibleMat = undefined"
+        (mousedown)="visibleMat = null; stickyMat = false"
       >X</div>
     </div>
   </div>

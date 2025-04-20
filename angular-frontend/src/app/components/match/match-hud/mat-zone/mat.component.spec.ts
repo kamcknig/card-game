@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { MatZoneComponent } from './mat-zone.component';
+import { MatComponent } from './mat.component';
 
 describe('MatZoneComponent', () => {
-  let component: MatZoneComponent;
-  let fixture: ComponentFixture<MatZoneComponent>;
+  let component: MatComponent;
+  let fixture: ComponentFixture<MatComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [MatZoneComponent]
+      imports: [MatComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(MatZoneComponent);
+    fixture = TestBed.createComponent(MatComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

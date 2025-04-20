@@ -54,7 +54,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _playerHands: Record<CardKey, number>[] = [{
     gold: 4,
     silver: 4,
-    estate: 4
+    astrolabe: 4
   }];
   
   public initialize(config: MatchConfiguration, cardData: ExpansionCardData) {
