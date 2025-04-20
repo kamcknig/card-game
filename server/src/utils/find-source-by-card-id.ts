@@ -32,8 +32,8 @@ export const findSourceByCardId = (
     console.log(`[FIND CARD SOURCE] found card ${cardLibrary.getCard(cardId)} in the 'trash'`);
   }
   else {
-    for (const [mat, playerMats] of Object.entries(match.mats)) {
-      for (const [playerId, cardIds] of Object.entries(playerMats)) {
+    for (const [playerId, playerMats] of Object.entries(match.mats)) {
+      for (const [mat, cardIds] of Object.entries(playerMats)) {
         if (cardIds.includes(cardId)) {
           sourceStore = match.mats[+playerId][mat as Mats];
           storeKey = mat as Mats;
