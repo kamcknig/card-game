@@ -457,6 +457,24 @@ const expansion: CardExpansionModule = {
         toPlayerId: arg.playerId
       })
     },
+    'merchant-ship': ({reactionManager}) => function* (args) {
+      console.log(`[merchant ship effect] gaining 2 treasures...`);
+      yield new GainTreasureEffect({ count: 2 });
+      
+      reactionManager.registerReactionTemplate({
+        id: `merchant-ship:${args.cardId}:startTurn`,
+        playerId: args.playerId,
+        compulsory: true,
+        multipleUse: true,
+        once: true,
+        listeningFor: 'startTurn',
+        condition: ({trigger}) => trigger.playerId === args.playerId,
+        generatorFn: function* () {
+          console.log(`[merchant ship triggered effect] gaining 2 treasure...`);
+          yield new GainTreasureEffect({ count: 2 });
+        }
+      })
+    },
     'native-village': ({ match }) => function* (arg) {
       console.log(`[NATIVE VILLAGE EFFECT] gaining 2 actions...`);
       yield new GainActionEffect({ count: 2 });
