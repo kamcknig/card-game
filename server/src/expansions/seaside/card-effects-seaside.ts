@@ -205,6 +205,7 @@ const expansion: CardExpansionModule = {
         id: `corsair:${args.cardId}:cardPlayed`,
         playerId: args.playerId,
         listeningFor: 'cardPlayed',
+        compulsory: true,
         condition: ({match, trigger, cardLibrary}) => {
           if (!trigger.cardId) return false;
           
@@ -268,6 +269,7 @@ const expansion: CardExpansionModule = {
         once: true,
         compulsory: true,
         playerId: args.playerId,
+        multipleUse: true,
         listeningFor: 'startTurn',
         condition: () => true,
         generatorFn: function* () {

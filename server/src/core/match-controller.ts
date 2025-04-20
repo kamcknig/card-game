@@ -50,12 +50,17 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     super();
   }
   
-  private _keepers: CardKey[] = ['astrolabe', 'blockade', 'caravan'];
+  private _keepers: CardKey[] = ['astrolabe', 'blockade', 'caravan', 'corsair'];
   private _playerHands: Record<CardKey, number>[] = [{
     gold: 4,
     silver: 4,
-    astrolabe: 4
-  }];
+    'corsair': 4
+  },
+    {
+      gold: 4,
+      silver: 4,
+      'astrolabe': 4
+    }];
   
   public initialize(config: MatchConfiguration, cardData: ExpansionCardData) {
     this.initializeFuseSearch();
@@ -187,6 +192,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   
   private _matchStatSnapshot = {};
   private _cardLibSnapshot = {};
+  
   public getMatchSnapshot(): Match {
     this._cardLibSnapshot = structuredClone(this._matchStatSnapshot);
     this._cardLibSnapshot = structuredClone(this._cardLibrary.getAllCards());
@@ -196,7 +202,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   public broadcastPatch(prev: Match) {
     const patch: Operation[] = compare(prev, this._match);
     const cardLibraryPatch = compare(this._cardLibSnapshot, this._cardLibrary.getAllCards());
-    const matchStatPatch  = compare(this._matchStatSnapshot, this._matchStats ?? {});
+    const matchStatPatch = compare(this._matchStatSnapshot, this._matchStats ?? {});
     if (patch.length || cardLibraryPatch.length || matchStatPatch.length) {
       console.log(`[MATCH] sending match update to clients`);
       this._socketMap.forEach((s) => s.emit('patchUpdate', patch, cardLibraryPatch, matchStatPatch));

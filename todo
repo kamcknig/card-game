@@ -55,7 +55,7 @@ outpost
 pirate
 sailor
 salvager
-sea-witchc
+sea-witch
 tactician
 tide pools
 treasury
@@ -66,5 +66,4 @@ wharf
 
 BUILT BUT NOT TESTED
 blockade - (I've added a condition that the card needs to be gained on the triggering players turn - test that), need to add moat immunity
-corsair - need to add moat immunity, when testing, the silver or gold played should still give the player treasure
-fishing-village
+corsair - need to add moat immunity
