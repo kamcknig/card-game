@@ -24,7 +24,8 @@ export const gameActionEffectGeneratorFactory: GameActionEffectGeneratorMapFacto
   reactionManager,
   logManager,
   match,
-  cardLibrary
+  cardLibrary,
+  matchStats
 }) => {
   const map: {
     [K in GameActionTypes]: GameActionEffectGeneratorFn<GameActions[K]>;
@@ -92,11 +93,12 @@ export const gameActionEffectGeneratorFactory: GameActionEffectGeneratorMapFacto
           match.turnNumber++;
           
           console.log(`[NEXT PHASE EFFECT] new round: ${match.turnNumber} (${match.turnNumber + 1})`);
-        
+          
           yield new NewTurnEffect();
         }
         
-        logManager.rootLog({
+        logManager.addLogEntry({
+          root: true,
           type: 'newPlayerTurn',
           turn: match.turnNumber,
           playerId: match.players[match.currentPlayerTurnIndex].id
@@ -119,6 +121,14 @@ export const gameActionEffectGeneratorFactory: GameActionEffectGeneratorMapFacto
         const cardsToDiscard = match.playArea.concat(match.playerHands[player.id]);
         
         for (const cardId of cardsToDiscard) {
+          const card = cardLibrary.getCard(cardId);
+          
+          // if the card is a duration card, and it was played this turn
+          if (card.type.includes('DURATION') && matchStats.cardsPlayed[match.turnNumber][card.owner!].includes(card.id)) {
+            console.log(`[NEXT PHASE EFFECT] ${card} is duration, leaving in play`);
+            continue;
+          }
+          
           console.log(`[NEXT PHASE EFFECT] discarding ${cardLibrary.getCard(cardId)}...`);
           
           yield new DiscardCardEffect({
@@ -167,7 +177,7 @@ export const gameActionEffectGeneratorFactory: GameActionEffectGeneratorMapFacto
       if (cardLibrary.getCard(cardId).type.includes('ACTION')) {
         yield new GainActionEffect({
           count: actionCost ?? -1,
-          /*logEffect: false,*/
+          log: false,
         });
       }
     }
@@ -178,7 +188,7 @@ export const gameActionEffectGeneratorFactory: GameActionEffectGeneratorMapFacto
       yield new CardPlayedEffect({
         cardId,
         playerId,
-        /*isRootLog*/
+        log: false,
       });
     }
     else {
@@ -218,20 +228,20 @@ export const gameActionEffectGeneratorFactory: GameActionEffectGeneratorMapFacto
     if (cardCost !== 0) {
       yield new GainTreasureEffect({
         count: -cardCost,
-        /*logEffect: false*/
+        log: false
       });
     }
     
     yield new GainBuyEffect({
       count: -1,
-      /*logEffect: false,*/
+      log: false
     });
     
     yield new GainCardEffect({
       playerId: playerId,
       cardId: cardId,
-      to: { location: 'playerDiscards' }
-      /*isRootLog*/
+      to: { location: 'playerDiscards' },
+      isRootLog: true
     });
   };
   
@@ -241,6 +251,19 @@ export const gameActionEffectGeneratorFactory: GameActionEffectGeneratorMapFacto
       playerId,
     });
   };
+  
+  
+  
+  
+  map.gainCard = function* (args) {
+    const trigger: ReactionTrigger = {
+      cardId: args.cardId,
+      playerId: args.playerId,
+      eventType: 'gainCard'
+    };
+    
+    yield* reactionManager.runTrigger({trigger});
+  }
   
   return map;
 };

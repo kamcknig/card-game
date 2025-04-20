@@ -1,11 +1,9 @@
-import { UserPromptEffectArgs, UserPromptKinds } from 'shared/shared-types';
+import { UserPromptKinds } from 'shared/shared-types';
 import { CARD_WIDTH, STANDARD_GAP } from '../../../../core/app-contants';
 import { createCardView } from '../../../../core/card/create-card-view';
-import { Text, Container, Application } from 'pixi.js';
-import { clientSelectableCardsOverrideStore, selectableCardStore } from '../../../../state/interactive-state';
+import { Application, Container, Text } from 'pixi.js';
+import { clientSelectableCardsOverrideStore, } from '../../../../state/interactive-state';
 import { CardView } from '../card-view';
-import { inject } from '@angular/core';
-import { PIXI_APP } from '../../../../core/pixi-application.token';
 
 export const cardRearrangeView = (app: Application, args: UserPromptKinds) => {
   if (args.type !== 'rearrange') throw new Error('card rearrange view requires type "rearrange"');

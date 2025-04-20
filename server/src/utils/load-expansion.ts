@@ -14,24 +14,24 @@ export const loadExpansion = async (expansion: { title: string, name: string, or
   
   console.log(`[EXPANSION LOADER] loading expansion ${expansionName}`);
   
-  expansionData[expansionName] = {
-    title: expansion.title,
-    name: expansion.name,
-    cardData: {
-      supply: {},
-      kingdom: {},
-    },
-    order: expansion.order
-  };
-  
-  const cardData = expansionData[expansionName].cardData;
-  
   try {
     console.log(`[EXPANSION LOADER] loading expansion configuration for ${expansionName}`);
-    const configModule = await import(`${expansionPath}/configuration.json`, { with: { type: 'json' } });
+    const configModule = await import(`${expansionPath}/configuration-${expansionName}.json`, { with: { type: 'json' } });
     const expansionConfiguration = configModule.default;
     console.log(`[EXPANSION LOADER] expansion configuration loaded`);
     
+    expansionData[expansionName] = {
+      title: expansion.title,
+      name: expansion.name,
+      cardData: {
+        supply: {},
+        kingdom: {},
+      },
+      order: expansion.order,
+      mats: expansionConfiguration.mats ?? []
+    };
+    
+    const cardData = expansionData[expansionName].cardData;
     
     console.log(`[EXPANSION LOADER] loading supply card library for ${expansionName}`);
     let module = await import(`${expansionPath}/${expansionConfiguration.supply}`, { with: { type: 'json' } });

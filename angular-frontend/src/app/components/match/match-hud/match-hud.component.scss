@@ -1,0 +1,60 @@
+app-score {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+}
+
+.zone-content {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  display: flex;
+  flex-direction: column;
+}
+
+.mat-content {
+  position: fixed; /* or absolute */
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none; /* optional: allows click-through outside mat */
+
+  .close {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    z-index: 1;
+    font-size: 24px;
+    color: white;
+    background: red;
+    padding: 2px 4px;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+}
+
+.card-content {
+  pointer-events: auto; /* re-enable interactivity inside */
+  padding: 20px 20px 120px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  background: rgba(0, 0, 0, 0.8);
+  width: 600px;
+  gap: 10px;
+  position: relative;
+
+  app-card {
+    margin-bottom: -100px;
+  }
+}
+
+app-game-log {
+  position: fixed;
+  top: 20px;
+  right: 20px
+}

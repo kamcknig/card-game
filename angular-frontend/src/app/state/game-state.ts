@@ -1,14 +1,9 @@
-import { atom, computed } from 'nanostores';
-import { Player, PlayerId } from 'shared/shared-types';
-import { playerActionsStore } from './turn-state';
+import { atom } from 'nanostores';
+import { PlayerId } from 'shared/shared-types';
 import { playerIdStore, playerStore } from './player-state';
 
 
-const playerDisconnected = atom<boolean>(false);
-
-// Holds the final boolean value
-export const gamePausedStore = computed(playerDisconnected, (isDisconnected) => isDisconnected);
-(globalThis as any).gamePausedStore = gamePausedStore;
+export const playerDisconnectedStore = atom<boolean>(false);
 
 // Internal: Track all subscriptions so we can clean them up
 let unsubscribers: (() => void)[] = [];
@@ -33,10 +28,8 @@ function updatePausedState() {
   const ids = playerIdStore.get();
   const players = ids.map(id => playerStore(id).get());
   const anyDisconnected = players.some(p => !p?.connected);
-  playerDisconnected.set(anyDisconnected);
+  playerDisconnectedStore.set(anyDisconnected);
 }
-
-(globalThis as any).gamePausedStore = gamePausedStore;
 
 export const gameOwnerIdStore = atom<PlayerId | undefined>();
 (globalThis as any).gameOwnerIdStore = gameOwnerIdStore;

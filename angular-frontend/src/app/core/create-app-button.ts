@@ -1,8 +1,7 @@
-import { FillInput, Graphics, Text, TextOptions } from "pixi.js";
-import { ButtonContainer } from "@pixi/ui";
+import { Container, FillInput, Graphics, Text, TextOptions } from 'pixi.js';
 
 export interface AppButton {
-  button: ButtonContainer;
+  button: Container;
   text: (val: string) => void;
 }
 
@@ -10,7 +9,8 @@ export const createAppButton = (
   textOpts?: TextOptions,
   backgroundFill: FillInput = { color: 'black', alpha: .9 }
 ) => {
-  const button = new ButtonContainer();
+  const button = new Container();
+  button.eventMode = 'static';
   const text = new Text({
     ...textOpts,
     style: { fill: 'white', ...textOpts?.style ?? {} },
@@ -24,6 +24,9 @@ export const createAppButton = (
     .stroke('white');
 
   button.addChildAt(background, 0);
+  button.on('removed', () => {
+    button.destroy();
+  })
 
   text.x = button.width * .5;
   text.y = button.height * .5;

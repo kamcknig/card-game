@@ -1,29 +1,39 @@
 .content {
   color: white;
-  background-color: rgba(0, 0, 0, .6);
+  background-color: rgba(0, 0, 0, 0.6);
   height: 75vh;
   max-height: 1000px;
   position: relative;
+  padding-right: 20px;
+
+  .resize-container {
+    display: flex;
+    height: 100%;
+    position: relative;
+  }
 
   .resize-handle {
-    height: 100%;
     width: 10px;
-    position: absolute;
+    height: 100%;
     cursor: col-resize;
     box-shadow: inset 3px 0 4px -2px rgba(255, 255, 255, 1);
+    z-index: 2;
+    position: relative;
+    flex-shrink: 0;
   }
 
   .log-content {
+    position: relative;
     min-width: 300px;
+    padding-left: 20px;
     height: 100%;
     overflow: auto;
-    padding: 20px;
-    top: 0;
-    left: 0;
+    flex-grow: 1;
   }
 
   ::ng-deep .log-entry {
     user-select: none;
+
     hr {
       width: 100%;
       border-top: 2px solid white;

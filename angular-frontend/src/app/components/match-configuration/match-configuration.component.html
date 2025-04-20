@@ -15,12 +15,14 @@
     <h2 class="section-title">Expansions</h2>
 
     <ul class="expansion-list">
-      @for (expansion of $expansionList | async; track expansion.name) {
+      @let expansionList = ($expansionList | async) ?? [];
+      @let selectedExpansions = ($selectedExpansions | async) ?? [];
+      @for (expansion of expansionList; track expansion.name) {
         <!-- item (selected) -->
         <li
         (click)="isGameOwner ? onToggleExpansion(expansion.name) : null"
         class="expansion-item"
-          [ngClass]="{'selected': ($selectedExpansions | async)?.includes(expansion.name)}"
+          [ngClass]="{'selected': selectedExpansions.includes(expansion.name)}"
           >
           <img
             ngSrc="/assets/expansion-icons/{{expansion.name}}.png"

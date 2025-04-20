@@ -1,10 +1,10 @@
 import { ChangeDetectionStrategy, Component, Input, OnInit } from '@angular/core';
 import { NanostoresService } from '@nanostores/angular';
-import { currentPlayerTurnIdStore, turnNumberStore } from '../../../../../state/turn-state';
+import { currentPlayerTurnIdStore, turnNumberStore } from '../../../../state/turn-state';
 import { map, Observable } from 'rxjs';
 import { AsyncPipe, NgClass, UpperCasePipe } from '@angular/common';
 import { PlayerId } from 'shared/shared-types';
-import { playerIdStore, playerStore } from '../../../../../state/player-state';
+import { playerIdStore, playerStore } from '../../../../state/player-state';
 import tinycolor from 'tinycolor2'
 
 @Component({

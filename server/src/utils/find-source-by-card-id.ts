@@ -35,7 +35,7 @@ export const findSourceByCardId = (
     for (const [mat, playerMats] of Object.entries(match.mats)) {
       for (const [playerId, cardIds] of Object.entries(playerMats)) {
         if (cardIds.includes(cardId)) {
-          sourceStore = match.mats[mat as Mats][+playerId];
+          sourceStore = match.mats[+playerId][mat as Mats];
           storeKey = mat as Mats;
         }
       }

@@ -9,7 +9,22 @@ export class LogManager {
     this._socketMap = args.socketMap;
   }
   
-  public addLogEntry(entry: DistributiveOmit<LogEntry, 'depth'>) {
+  public addLogEntry(entry: DistributiveOmit<LogEntry, 'depth'> & { root?: boolean; }) {
+    if (entry.root) {
+      this.rootLog(entry);
+    }
+    else {
+      this.sendLogs(entry);
+    }
+  }
+  
+  private rootLog(entry: LogEntry) {
+    this.startChain();
+    this.sendLogs(entry);
+    this.enter();
+  }
+  
+  private sendLogs(entry: LogEntry) {
     this._socketMap.forEach((s) => s.emit('addLogEntry', { ...entry, depth: this._depth } as LogEntry));
   }
   
@@ -23,11 +38,5 @@ export class LogManager {
   
   public exit() {
     this._depth = Math.max(0, this._depth - 1);
-  }
-  
-  public rootLog(entry: DistributiveOmit<LogEntry, 'depth'>) {
-    this.startChain();
-    this.addLogEntry(entry);
-    this.enter();
   }
 }

@@ -55,6 +55,12 @@ export type MatchConfiguration = {
   kingdomCardKeys: string[];
 }
 
+export type MatchStats = {
+  cardsGained: Record<PlayerId, CardId[]>[];
+  cardsPlayed: Record<PlayerId, CardId[]>[];
+  trashedCards: Record<PlayerId, CardId[]>[];
+};
+
 export type Match = {
   config: MatchConfiguration,
   currentPlayerTurnIndex: number;
@@ -73,10 +79,7 @@ export type Match = {
   trash: CardId[];
   turnNumber: number;
   turnPhaseIndex: number;
-  cardsGained: Record<PlayerId, CardId[]>[];
-  cardsPlayed: Record<PlayerId, CardId[]>[];
-  trashedCards: Record<PlayerId, CardId[]>[];
-  mats: Record<Mats, Record<PlayerId, CardId[]>>;
+  mats: Record<PlayerId, Record<Mats, CardId[]>>;
   zones: Record<Zones, CardId[]>;
 }
 
@@ -90,10 +93,13 @@ export type ServerEmitEvents = {
   gameOver: (summary: MatchSummary) => void;
   gameOwnerUpdated: (playerId: PlayerId) => void;
   matchConfigurationUpdated: (val: MatchConfiguration) => void;
-  matchPatch: (patch: Operation[]) => void;
   matchReady: (match: Match) => void;
   matchStarted: () => void;
   nextPhaseComplete: () => void;
+  patchUpdate: (patchMatch: Operation[], patchCardLibrary: Operation[], patchMatchStats: Operation[]) => void;
+  patchCardLibrary: (patch: Operation[]) => void;
+  patchMatch: (patch: Operation[]) => void;
+  patchMatchStats: (patch: Operation[]) => void;
   playAllTreasureComplete: () => void;
   playerConnected: (player: Player) => void;
   playerDisconnected: (player: Player) => void;
@@ -123,14 +129,9 @@ export type ServerListenEvents = {
   userInputReceived: (signalId: string, input: unknown) => void;
 }
 
-export type ClientEmitEvents = Omit<ServerListenEvents, 'startMatch' | 'matchConfigurationUpdated'> & {
-  startMatch: (configuration: Pick<MatchConfiguration, 'expansions'>) => void;
-  matchConfigurationUpdated: (config: Pick<MatchConfiguration, 'expansions'>) => void;
-};
-
 const MatValues = [
-  'island-mat',
-  'native-village-mat'
+  'island',
+  'native-village'
 ] as const;
 export type Mats = typeof MatValues[number];
 export const isLocationMat = (location: any): location is Mats => {
@@ -266,7 +267,7 @@ const CardTypeValues = [
   'WIZARD',
   'ZOMBIE',
 ] as const;
-export type CardType = typeof CardTypeValues[number] | string;
+export type CardType = typeof CardTypeValues[number];
 
 export type CardArgs = {
   id: CardId;

@@ -2,13 +2,9 @@ import { Application, Assets, Container, Graphics, Sprite, Text } from 'pixi.js'
 import { Scene } from '../../../../core/scene/scene';
 import { PlayerHandView } from '../player-hand';
 import { AppButton, createAppButton } from '../../../../core/create-app-button';
-import { matchStartedStore, supplyStore, trashStore } from '../../../../state/match-state';
+import { matchStartedStore, selfPlayerIdStore} from '../../../../state/match-state';
 import {
-  playerDeckStore,
-  playerDiscardStore,
-  playerHandStore,
   playerStore,
-  selfPlayerIdStore
 } from '../../../../state/player-state';
 import { PlayAreaView } from '../play-area';
 import { KingdomSupplyView } from '../kingdom-supply';
@@ -18,7 +14,6 @@ import { Card, CardId, CardKey, PlayerId, SelectCardArgs, UserPromptEffectArgs }
 import {
   awaitingServerLockReleaseStore,
   clientSelectableCardsOverrideStore,
-  selectableCardStore,
   selectedCardStore
 } from '../../../../state/interactive-state';
 import { CardView } from '../card-view';
@@ -31,12 +26,15 @@ import { displayTrash } from '../modal/display-trash';
 import { currentPlayerTurnIdStore, turnPhaseStore } from '../../../../state/turn-state';
 import { isNumber, isUndefined } from 'es-toolkit/compat';
 import { AppList } from '../app-list';
-import { gamePausedStore } from '../../../../state/game-state';
 import { SocketService } from '../../../../core/socket-service/socket.service';
+import { supplyStore, trashStore } from '../../../../state/match-logic';
+import { gamePausedStore } from '../../../../state/game-logic';
+import { playerDeckStore, playerDiscardStore, playerHandStore } from '../../../../state/player-logic';
+import { selectableCardStore } from '../../../../state/interactive-logic';
 
 export class MatchScene extends Scene {
   private _board: Container = new Container();
-  private _baseSupply: Container = new Container({ scale: .8 });
+  private _baseSupply: Container = new Container({ scale: .9 });
   private _playerHand: PlayerHandView | undefined;
   private _trash: CardStackView | undefined;
   private _deck: CardStackView | undefined;
@@ -88,6 +86,11 @@ export class MatchScene extends Scene {
       });
       this._socketService.emit('playAllTreasure', this._selfId);
     });
+    this._playAllTreasuresButton.button.on('removed', () => {
+      this._playAllTreasuresButton.button.removeAllListeners();
+      this._playAllTreasuresButton.button.destroy();
+    })
+
     this.addChild(this._playAllTreasuresButton.button);
 
     this._cleanup.push(supplyStore.subscribe(this.drawBaseSupply));
@@ -105,7 +108,6 @@ export class MatchScene extends Scene {
       this._socketService.off('waitingForPlayer');
       this._socketService.off('doneWaitingForPlayer');
       this.off('pointerdown');
-      this._playAllTreasuresButton?.button.off('pointerdown');
     });
 
     this._cleanup.push(currentPlayerTurnIdStore.subscribe(this.onCurrentPlayerTurnUpdated));
@@ -224,6 +226,7 @@ export class MatchScene extends Scene {
       label: 'TRASH',
       $cardIds: trashStore,
       cardFacing: 'front',
+      alwaysShowCountBadge: true,
       scale: .7,
     });
     this._trash.eventMode = 'static';

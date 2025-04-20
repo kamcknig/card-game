@@ -68,6 +68,8 @@ export class EffectsPipeline {
             // return because we are 'pausing' the generator
             return;
           } else if ('runGenerator' in result) {
+            this.flushChanges();
+            
             // runs a generator returned from the handler
             this.runGenerator({ generator: result.runGenerator, source });
             

@@ -1,5 +1,5 @@
 import { PlayerId } from "shared/shared-types.ts";
-import { EffectBase } from './effect-base.ts';
+import { EffectArgs, EffectBase } from './effect-base.ts';
 
 type ShuffleDeckArgs = {
   playerId: PlayerId
@@ -10,7 +10,7 @@ export class ShuffleDeckEffect extends EffectBase {
   
   playerId: number;
   
-  constructor(args: ShuffleDeckArgs) {
+  constructor(args: EffectArgs<ShuffleDeckArgs>) {
     super();
     this.playerId = args.playerId;
   }

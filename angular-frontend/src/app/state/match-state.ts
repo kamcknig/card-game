@@ -1,28 +1,8 @@
-import { atom, computed } from 'nanostores';
-import { Match, MatchConfiguration, MatchSummary } from 'shared/shared-types';
+import { atom } from 'nanostores';
+import { Match, MatchStats, MatchSummary, PlayerId } from 'shared/shared-types';
 
 export const matchStore = atom<Match | null>(null);
 (globalThis as any).matchStore = matchStore;
-
-export const supplyStore =
-  computed(matchStore, m => m?.supply ?? []);
-(globalThis as any).supplyStore = supplyStore;
-
-export const kingdomStore =
-  computed(matchStore, m => m?.kingdom ?? []);
-(globalThis as any).kingdomStore = kingdomStore;
-
-export const trashStore =
-  computed(matchStore, m => m?.trash ?? []);
-(globalThis as any).trashStore = trashStore;
-
-export const playAreaStore =
-  computed(matchStore, m => m?.playArea ?? []);
-(globalThis as any).playAreaStore = playAreaStore;
-
-export const matchConfigurationStore =
-  computed<MatchConfiguration | null, typeof matchStore>(matchStore, m => m?.config ?? null);
-(globalThis as any).matchConfigurationStore = matchConfigurationStore;
 
 export const lobbyMatchConfigurationStore = atom<string[]>([]);
 (globalThis as any).matchStartedStore = lobbyMatchConfigurationStore;
@@ -32,3 +12,10 @@ export const matchStartedStore = atom<boolean>(false);
 
 export const matchSummaryStore = atom<MatchSummary | undefined>(undefined);
 (globalThis as any).matchSummaryStore = matchSummaryStore;
+
+export const selfPlayerIdStore = atom<PlayerId | undefined>();
+(globalThis as any).selfPlayerIdStore = selfPlayerIdStore;
+
+export const matchStatsStore = atom<MatchStats | undefined>();
+(globalThis as any).matchStatsStore = matchStatsStore;
+

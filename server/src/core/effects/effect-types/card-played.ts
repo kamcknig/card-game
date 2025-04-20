@@ -1,5 +1,5 @@
 import { CardId, PlayerId } from 'shared/shared-types.ts';
-import { EffectBase } from './effect-base.ts';
+import { EffectArgs, EffectBase } from './effect-base.ts';
 
 type CardPlayedArgs = {
   playerId: PlayerId;
@@ -11,8 +11,8 @@ export class CardPlayedEffect extends EffectBase {
   cardId: number;
   playerId: number;
   
-  constructor(args: CardPlayedArgs) {
-    super();
+  constructor(args: EffectArgs<CardPlayedArgs>) {
+    super(args);
     this.cardId = args.cardId;
     this.playerId = args.playerId;
   }

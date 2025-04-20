@@ -166,7 +166,7 @@ export class Game {
   }
   
   private onMatchConfigurationUpdated = async (expansions: string[]) => {
-    console.log(`[GAME] received match configuration update`);
+    console.log(`[GAME] received expansionSelected socket event`);
     console.log(expansions);
     
     const newExpansions = expansions.filter(
@@ -176,7 +176,7 @@ export class Game {
     const expansionsToRemove: string[] = [];
     for (const expansion of newExpansions) {
       const configModule =
-        (await import(`../expansions/${expansion}/configuration.json`, {
+        (await import(`../expansions/${expansion}/configuration-${expansion}.json`, {
           with: { type: 'json' },
         }))?.default;
       
@@ -212,7 +212,7 @@ export class Game {
     if (this.matchStarted && this._match) {
       this._match.config = this._matchConfiguration;
       const patch = compare(previousSnapshot, this._matchController?.getMatchSnapshot() ?? {});
-      if (patch.length) this._socketMap.forEach(s => s.emit('matchPatch', patch));
+      if (patch.length) this._socketMap.forEach(s => s.emit('patchMatch', patch));
     } else {
       // lobby phase – raw object still useful for the config screen
       io.in('game').emit('matchConfigurationUpdated', this._matchConfiguration);

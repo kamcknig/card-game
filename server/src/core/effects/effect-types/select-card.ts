@@ -1,4 +1,4 @@
-import { EffectBase } from './effect-base.ts';
+import { EffectArgs, EffectBase } from './effect-base.ts';
 import { CountSpec, EffectRestrictionSpec, SelectCardEffectArgs, } from 'shared/shared-types.ts';
 
 
@@ -13,7 +13,7 @@ export class SelectCardEffect extends EffectBase {
   validPrompt?: string;
   cancelPrompt?: string;
   
-  constructor(args: SelectCardEffectArgs) {
+  constructor(args: EffectArgs<SelectCardEffectArgs>) {
     super();
     this.restrict = args.restrict;
     this.count = args.count;

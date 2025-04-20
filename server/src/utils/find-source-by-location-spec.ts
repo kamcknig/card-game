@@ -24,7 +24,7 @@ export function findSourceByLocationSpec(
   }
   else if (isLocationMat(spec.spec.location[0])) {
     if (isNaN(spec.playerId ?? NaN)) throw new Error('findSourceByLocationSpec requires a player ID with a mat');
-    return match.mats[spec.spec.location[0]][spec.playerId!];
+    return match.mats[spec.playerId!][spec.spec.location[0]];
   }
   else if (isLocationZone(spec.spec.location[0])) {
     return match.zones[spec.spec.location[0]];

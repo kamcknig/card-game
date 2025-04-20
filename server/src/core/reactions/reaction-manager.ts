@@ -50,10 +50,9 @@ export class ReactionManager {
   unregisterTrigger(triggerId: string) {
     for (let i = this._triggers.length - 1; i >= 0; i--) {
       const trigger = this._triggers[i];
-      if (trigger.getBaseId() === triggerId) {
+      if (trigger.id === triggerId) {
         this._triggers.splice(i, 1);
-        console.log(`[REACTION MANAGER] removing trigger reaction ${triggerId} for player
-        ${this.match.players?.find((player) => player.id === trigger.playerId)}`);
+        console.log(`[REACTION MANAGER] removing trigger reaction ${triggerId} for player ${this.match.players?.find((player) => player.id === trigger.playerId)}`);
       }
     }
   }

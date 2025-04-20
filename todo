@@ -18,8 +18,7 @@ vassal'd a moneylender i think, but didn't show it in the game log - see how dom
 select card effect handler tries to find cards before prompting user and if none, then returns empty array. 
  - look into making user prompt effect handler do the same
 
- don't allow empty player name
-
+don't allow empty player name
 
 if player name too long - truncate in score view
 
@@ -29,10 +28,9 @@ lookout might not be putting on top of deck
 
 torturer didn't target everyone
 
-make mats dynamiclly registered
+add tailwindcss maybe
 
-
-
+for blockade - check on dominion.games what the log looks like for both players
 
 
 advanced reaction use-case
@@ -42,3 +40,31 @@ advanced reaction use-case
    then i was also about to choose trader but declined,
    then everyone else had to do the castle thing,
    then it asked me again about the trader
+
+i'm directly adding trigger effect reactions in some card effect generators. maybe they should yield a RegisterReactionEffect instaed
+
+
+SEASIDE still to test
+
+haven
+lighthouse
+merchant ship
+monkey
+
+outpost
+pirate
+sailor
+salvager
+sea-witchc
+tactician
+tide pools
+treasury
+
+wharf
+
+
+
+BUILT BUT NOT TESTED
+blockade - (I've added a condition that the card needs to be gained on the triggering players turn - test that), need to add moat immunity
+corsair - need to add moat immunity, when testing, the silver or gold played should still give the player treasure
+fishing-village

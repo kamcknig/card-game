@@ -3,8 +3,8 @@ import {
   CardData, CardId,
   CardKey,
   Match,
-  MatchConfiguration,
-  MatchSummary,
+  MatchConfiguration, MatchStats,
+  MatchSummary, Mats,
   Player,
   PlayerId,
 } from 'shared/shared-types.ts';
@@ -41,6 +41,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _createCardFn: ((key: CardKey, card?: Omit<Partial<Card>, 'id'>) => Card) | undefined;
   private _fuse: Fuse<CardData & { cardKey: CardKey }> | undefined;
   private _logManager: LogManager | undefined;
+  private _matchStats: MatchStats | undefined
   
   constructor(
     private _match: Match,
@@ -49,19 +50,113 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     super();
   }
   
-  private _keepers: CardKey[] = ['cutpurse', 'smugglers', 'treasure-map'];
+  private _keepers: CardKey[] = ['astrolabe', 'blockade', 'caravan'];
   private _playerHands: Record<CardKey, number>[] = [{
-    gold: 3,
-    silver: 2,
-    estate: 3,
-    smugglers: 2,
-    'treasure-map': 2,
+    gold: 4,
+    silver: 4,
+    astrolabe: 4
   }];
   
-  public initialize(
-    config: MatchConfiguration,
-    cardData: ExpansionCardData,
-  ) {
+  public initialize(config: MatchConfiguration, cardData: ExpansionCardData) {
+    this.initializeFuseSearch();
+    
+    this._createCardFn = createCardFactory(cardData);
+    this._cardData = cardData;
+    
+    const supplyCards = this.createBaseSupply(config);
+    const kingdomCards = this.createKingdom(config);
+    const playerCards = this.createPlayerDecks(config);
+    
+    config = {
+      ...config,
+      supplyCardKeys: supplyCards.reduce((prev, card) => {
+        if (prev.includes(card.cardKey)) {
+          return prev;
+        }
+        return prev.concat(card.cardKey);
+      }, [] as string[]),
+      kingdomCardKeys: kingdomCards.reduce((prev, card) => {
+        if (prev.includes(card.cardKey)) {
+          return prev;
+        }
+        return prev.concat(card.cardKey);
+      }, [] as string[]),
+    };
+    
+    this._matchStats = {
+      cardsGained: [
+        config.players.reduce((prev, next) => {
+          prev[next.id] = [];
+          return prev;
+        }, {} as Record<PlayerId, CardId[]>)
+      ],
+      cardsPlayed: [
+        config.players.reduce((prev, next) => {
+          prev[next.id] = [];
+          return prev;
+        }, {} as Record<PlayerId, CardId[]>)
+      ],
+      trashedCards: [
+        config.players.reduce((prev, next) => {
+          prev[next.id] = [];
+          return prev;
+        }, {} as Record<PlayerId, CardId[]>)
+      ],
+    };
+    
+    const mats =
+      Object.values(expansionData)
+        .reduce((prev, nextExpansion) => {
+          if (!nextExpansion.mats?.length) {
+            return prev;
+          }
+          
+          prev = prev.concat(nextExpansion.mats);
+          return prev;
+        }, [] as Mats[]);
+    
+    this._match = {
+      scores: [],
+      trash: [],
+      players: config.players,
+      supply: supplyCards.map((c) => c.id),
+      kingdom: kingdomCards.map((c) => c.id),
+      ...playerCards,
+      config: config,
+      turnNumber: 0,
+      currentPlayerTurnIndex: 0,
+      playerBuys: 0,
+      playerTreasure: 0,
+      playerActions: 0,
+      turnPhaseIndex: 0,
+      selectableCards: {},
+      playArea: [],
+      mats: config.players.reduce((acc, nextPlayer) => {
+        acc[nextPlayer.id] = {} as Record<Mats, CardId[]>;
+        for (const mat of mats) {
+          acc[nextPlayer.id][mat] = [];
+        }
+        return acc;
+      }, {} as Match['mats']),
+      zones: {
+        'set-aside': [],
+        'revealed': [],
+        'look-at': [],
+      }
+    };
+    
+    this._config = config;
+    
+    console.log(`[MATCH] ready, sending to clients and listening for when clients are ready`);
+    
+    this._socketMap.forEach((s) => {
+      s.emit('setCardLibrary', this._cardLibrary.getAllCards());
+      s.emit('matchReady', this._match);
+      s.on('clientReady', this.onClientReady);
+    });
+  }
+  
+  private initializeFuseSearch() {
     const find = (key: CardKey, arr: (CardData & { cardKey: CardKey })[]) =>
       arr.findIndex(e => e.cardKey === key) > -1;
     
@@ -88,105 +183,23 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     };
     
     this._fuse = new Fuse(allExpansionCards, fuseOptions);
-    
-    this._createCardFn = createCardFactory(cardData);
-    this._cardData = cardData;
-    const supplyCards = this.createBaseSupply(config);
-    const kingdomCards = this.createKingdom(config);
-    const playerCards = this.createPlayerDecks(config);
-    
-    config = {
-      ...config,
-      supplyCardKeys: supplyCards.reduce((prev, card) => {
-        if (prev.includes(card.cardKey)) {
-          return prev;
-        }
-        return prev.concat(card.cardKey);
-      }, [] as string[]),
-      kingdomCardKeys: kingdomCards.reduce((prev, card) => {
-        if (prev.includes(card.cardKey)) {
-          return prev;
-        }
-        return prev.concat(card.cardKey);
-      }, [] as string[]),
-    };
-    
-    this._match = {
-      scores: [],
-      trash: [],
-      players: config.players,
-      supply: supplyCards.map((c) => c.id),
-      kingdom: kingdomCards.map((c) => c.id),
-      ...playerCards,
-      config: config,
-      turnNumber: 0,
-      currentPlayerTurnIndex: 0,
-      playerBuys: 0,
-      playerTreasure: 0,
-      playerActions: 0,
-      turnPhaseIndex: 0,
-      selectableCards: {},
-      playArea: [],
-      cardsGained: [
-        config.players.reduce((prev, next) => {
-          prev[next.id] = [];
-          return prev;
-        }, {} as Record<PlayerId, CardId[]>)
-      ],
-      cardsPlayed: [
-        config.players.reduce((prev, next) => {
-          prev[next.id] = [];
-          return prev;
-        }, {} as Record<PlayerId, CardId[]>)
-      ],
-      trashedCards: [
-        config.players.reduce((prev, next) => {
-          prev[next.id] = [];
-          return prev;
-        }, {} as Record<PlayerId, CardId[]>)
-      ],
-      mats: {
-        'native-village-mat': config.players.reduce((prev, next) => {
-          prev[next.id] = [];
-          return prev;
-        }, {} as Record<PlayerId, CardId[]>),
-        'island-mat': config.players.reduce((prev, next) => {
-          prev[next.id] = [];
-          return prev;
-        }, {} as Record<PlayerId, CardId[]>)
-      },
-      zones: {
-        'set-aside': [],
-        'revealed': [],
-        'look-at': [],
-      }
-    };
-    
-    this._config = config;
-    
-    console.log(
-      `[MATCH] ready, sending to clients and listening for when clients are ready`,
-    );
-    
-    this._socketMap.forEach((s) => {
-      s.emit('setCardLibrary', this._cardLibrary.getAllCards());
-      s.emit('matchReady', this._match);
-      s.on('clientReady', this.onClientReady);
-    });
   }
   
+  private _matchStatSnapshot = {};
+  private _cardLibSnapshot = {};
   public getMatchSnapshot(): Match {
+    this._cardLibSnapshot = structuredClone(this._matchStatSnapshot);
+    this._cardLibSnapshot = structuredClone(this._cardLibrary.getAllCards());
     return structuredClone(this._match);
   }
   
   public broadcastPatch(prev: Match) {
     const patch: Operation[] = compare(prev, this._match);
-    if (patch.length) {
+    const cardLibraryPatch = compare(this._cardLibSnapshot, this._cardLibrary.getAllCards());
+    const matchStatPatch  = compare(this._matchStatSnapshot, this._matchStats ?? {});
+    if (patch.length || cardLibraryPatch.length || matchStatPatch.length) {
       console.log(`[MATCH] sending match update to clients`);
-      this._socketMap.forEach((s) => s.emit('matchPatch', patch));
-    }
-    else {
-      console.debug(`[MATCH] no changes, not sending update to client`);
+      this._socketMap.forEach((s) => s.emit('patchUpdate', patch, cardLibraryPatch, matchStatPatch));
     }
   }
   
@@ -404,6 +417,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     });
     
     const effectGeneratorMap = gameActionEffectGeneratorFactory({
+      matchStats: this._matchStats!,
       reactionManager: this._reactionManager,
       logManager: this._logManager,
       match: this._match,
@@ -412,6 +426,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     for (const [key, effectGeneratorFactory] of Object.entries(cardEffectGeneratorMapFactory)) {
       cardEffectGeneratorMap[key] = effectGeneratorFactory({
+        matchStats: this._matchStats!,
         reactionManager: this._reactionManager,
         match: this._match,
         logManager: this._logManager,
@@ -440,7 +455,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       effectGeneratorMap,
       cardLibrary: this._cardLibrary,
       logManager: this._logManager,
-      getEffectsPipeline: () => this._effectsPipeline!
+      getEffectsPipeline: () => this._effectsPipeline!,
+      matchStats: this._matchStats!
     });
     
     this._effectsPipeline = new EffectsPipeline(
@@ -460,6 +476,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const match = this._match;
     match.playerBuys = 1;
     match.playerActions = 1;
+    this.getMatchSnapshot();
     this.broadcastPatch(prev);
     
     this._socketMap.forEach((s) => s.emit('matchStarted'));
@@ -472,12 +489,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       }
     }
     
-    this._logManager.rootLog({
+    this._logManager.addLogEntry({
+      root: true,
       type: 'newTurn',
       turn: match.turnNumber,
     });
     
-    this._logManager.rootLog({
+    this._logManager.addLogEntry({
+      root: true,
       type: 'newPlayerTurn',
       turn: match.turnNumber,
       playerId: match.players[match.currentPlayerTurnIndex].id

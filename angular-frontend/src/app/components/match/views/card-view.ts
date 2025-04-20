@@ -1,9 +1,10 @@
 import { Assets, Container, ContainerChild, Graphics, Sprite, Text, Texture } from 'pixi.js';
-import { selectableCardStore, selectedCardStore } from '../../../state/interactive-state';
 import { Card } from 'shared/shared-types';
 import { batched } from 'nanostores';
 import { cardOverrideStore } from '../../../state/card-state';
 import { CardFacing, CardSize } from '../../../../types';
+import { selectableCardStore } from '../../../state/interactive-logic';
+import { selectedCardStore } from '../../../state/interactive-state';
 
 type CardArgs = Card;
 
@@ -95,7 +96,7 @@ export class CardView extends Container<ContainerChild> {
   private onRemoved = () => {
     this._cleanup.forEach(cb => cb());
     this.off('removed');
-    this.destroy({children: true});
+    this.destroy();
   }
 
   private onDraw = () => {

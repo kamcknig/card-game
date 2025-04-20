@@ -2,7 +2,7 @@ import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, V
 import { LogEntryMessage } from 'shared/shared-types';
 import { DomSanitizer } from '@angular/platform-browser';
 import { NanostoresService } from '@nanostores/angular';
-import { logStore } from '../../../../../state/log-state';
+import { logStore } from '../../../../state/log-state';
 import { fromEvent, switchMap, throttleTime } from 'rxjs';
 
 @Component({

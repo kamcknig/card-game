@@ -1,4 +1,4 @@
-import { EffectBase } from './effect-base.ts';
+import { EffectArgs, EffectBase } from './effect-base.ts';
 
 type GainActionArgs = {
   count?: number;
@@ -9,8 +9,8 @@ export class GainActionEffect extends EffectBase {
   
   count: number = 1;
   
-  constructor(args: GainActionArgs) {
-    super()
+  constructor(args: EffectArgs<GainActionArgs>) {
+    super(args)
     this.count = args.count ?? 1;
   }
 }

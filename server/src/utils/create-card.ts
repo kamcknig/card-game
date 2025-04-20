@@ -14,7 +14,6 @@ export const createCardFactory = (cardData: ExpansionCardData) => {
       cardKey: cardKey,
       cardName: baseCardData.cardName ?? capitalize(cardKey),
     });
-    console.log(`[createCard] created ${c}`);
     return c;
   };
 };
