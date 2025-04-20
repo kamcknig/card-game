@@ -131,7 +131,8 @@ export type ServerListenEvents = {
 
 const MatValues = [
   'island',
-  'native-village'
+  'native-village',
+  'set-aside',
 ] as const;
 export type Mats = typeof MatValues[number];
 export const isLocationMat = (location: any): location is Mats => {
@@ -139,7 +140,6 @@ export const isLocationMat = (location: any): location is Mats => {
 }
 
 let ZoneValues = [
-  'set-aside',
   'look-at',
   'revealed'
 ] as const;

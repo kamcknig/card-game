@@ -600,9 +600,8 @@ const expansionModule: CardExpansionModule = {
             console.log(`[LIBRARY EFFECT] setting card aside`);
             yield new MoveCardEffect({
               cardId,
-              to: {
-                location: 'set-aside',
-              }
+              toPlayerId: arg.playerId,
+              to: { location: 'set-aside' }
             });
             setAside.push(cardId);
           }

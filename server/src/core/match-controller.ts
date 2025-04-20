@@ -118,7 +118,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           
           prev = prev.concat(nextExpansion.mats);
           return prev;
-        }, [] as Mats[]);
+        }, ['set-aside'] as Mats[]);
     
     this._match = {
       scores: [],
@@ -144,7 +144,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         return acc;
       }, {} as Match['mats']),
       zones: {
-        'set-aside': [],
         'revealed': [],
         'look-at': [],
       }

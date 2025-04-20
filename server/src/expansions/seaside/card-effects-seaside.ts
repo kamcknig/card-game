@@ -281,6 +281,54 @@ const expansion: CardExpansionModule = {
         }
       })
     },
+    'haven': ({ reactionManager }) => function* (args) {
+      console.log(`[haven effect] drawing card...`);
+      yield new DrawCardEffect({
+        playerId: args.playerId,
+      });
+      
+      
+      console.log(`[haven effect] gaining 1 action...`);
+      yield new GainActionEffect({ count: 1 });
+      
+      const cardIds = (yield new SelectCardEffect({
+        prompt: 'Choose card to set aside',
+        validPrompt: '',
+        playerId: args.playerId,
+        restrict: { from: { location: 'playerHands' } },
+        count: 1,
+      })) as number[];
+      
+      const cardId = cardIds[0];
+      
+      if (!cardId) {
+        console.warn('[haven effect] no card selected');
+        return;
+      }
+      
+      yield new MoveCardEffect({
+        cardId: cardId,
+        toPlayerId: args.playerId,
+        to: { location: 'set-aside' }
+      });
+      
+      reactionManager.registerReactionTemplate({
+        id: `haven:${args.cardId}:startTurn`,
+        listeningFor: 'startTurn',
+        compulsory: true,
+        once: true,
+        playerId: args.playerId,
+        condition: ({trigger}) => trigger.playerId === args.playerId,
+        generatorFn: function* () {
+          console.log(`[haven triggered effect] moving selected card to hand...`);
+          yield new MoveCardEffect({
+            cardId: cardId,
+            toPlayerId: args.playerId,
+            to: { location: 'playerHands' }
+          });
+        }
+      });
+    },
     'island': () => function* (arg) {
       console.log(`[ISLAND EFFECT] prompting user to select card...`);
       
