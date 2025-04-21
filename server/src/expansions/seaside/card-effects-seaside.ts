@@ -45,13 +45,6 @@ const expansion: CardExpansionModule = {
         }
       }
     },
-    'blockade': {
-      onLeavePlay: ({ cardId }) => {
-        return {
-          unregisterTriggeredEvents: [`blockade:${cardId}:gainCard`]
-        }
-      }
-    },
     'corsair': {
       onLeavePlay: ({ cardId}) => {
         return {
@@ -116,7 +109,9 @@ const expansion: CardExpansionModule = {
             cardId: cardId,
             toPlayerId: arg.playerId,
             to: { location: 'playerHands' }
-          })
+          });
+          
+          reactionManager.unregisterTrigger(`blockade:${arg.cardId}:gainCard`);
         }
       });
       
@@ -474,6 +469,49 @@ const expansion: CardExpansionModule = {
           yield new GainTreasureEffect({ count: 2 });
         }
       })
+    },
+    // deno-lint-ignore require-yield
+    'monkey': ({match, reactionManager}) => function* (args) {
+      reactionManager.registerReactionTemplate({
+        id: `monkey:${args.cardId}:startTurn`,
+        playerId: args.playerId,
+        compulsory: true,
+        once: true,
+        multipleUse: true,
+        listeningFor: 'startTurn',
+        condition: ({trigger}) => trigger.playerId === args.playerId,
+        generatorFn: function* () {
+          console.log(`[monkey triggered effect] drawing card at start of turn...`);
+          yield new DrawCardEffect({
+            playerId: args.playerId,
+          });
+          
+          reactionManager.unregisterTrigger(`monkey:${args.cardId}:gainCard`);
+        }
+      });
+      
+      const thisPlayerTurnIdx = match.players.findIndex(p => p.id === args.playerId);
+      const playerToRightId = getPlayerStartingFrom({
+        startFromIdx: thisPlayerTurnIdx,
+        match,
+        distance: -1
+      }).id;
+      
+      reactionManager.registerReactionTemplate({
+        id: `monkey:${args.cardId}:gainCard`,
+        playerId: args.playerId,
+        compulsory: true,
+        multipleUse: true,
+        listeningFor: 'gainCard',
+        once: false,
+        generatorFn: function* () {
+          console.log(`[monkey triggered effect] drawing card, because player to the right gained a card...`);
+          yield new DrawCardEffect({
+            playerId: args.playerId,
+          });
+        },
+        condition: ({trigger}) => trigger.playerId === playerToRightId
+      });
     },
     'native-village': ({ match }) => function* (arg) {
       console.log(`[NATIVE VILLAGE EFFECT] gaining 2 actions...`);

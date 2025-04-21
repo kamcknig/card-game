@@ -44,11 +44,9 @@ advanced reaction use-case
 i'm directly adding trigger effect reactions in some card effect generators. maybe they should yield a RegisterReactionEffect instaed
 
 
-SEASIDE still to test
+SEASIDE still to build
 
 lighthouse
-monkey
-
 outpost
 pirate
 sailor

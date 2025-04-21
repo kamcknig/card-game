@@ -50,17 +50,19 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     super();
   }
   
-  private _keepers: CardKey[] = ['merchant-ship', 'blockade', 'caravan', 'corsair'];
-  private _playerHands: Record<CardKey, number>[] = [{
-    gold: 4,
-    silver: 4,
-    'merchant-ship': 4
-  },
+  private _keepers: CardKey[] = ['monkey', 'blockade', 'caravan', 'corsair'];
+  private _playerHands: Record<CardKey, number>[] = [
+    {
+      gold: 4,
+      silver: 4,
+      'monkey': 4
+    },
     {
       gold: 4,
       silver: 4,
       'astrolabe': 4
-    }];
+    }
+  ];
   
   public initialize(config: MatchConfiguration, cardData: ExpansionCardData) {
     this.initializeFuseSearch();
