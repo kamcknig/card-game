@@ -16,6 +16,9 @@ import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 import { getPlayerStartingFrom } from '../../utils/get-player-starting-from.ts';
 import { Card, CardId } from 'shared/shared-types.ts';
 import { findCards } from '../../utils/find-cards.ts';
+import {
+  InvokeGameActionGeneratorEffect
+} from '../../core/effects/effect-types/invoke-game-action-generator-effect.ts';
 
 const expansion: CardExpansionModule = {
   registerCardLifeCycles: () => ({
@@ -28,7 +31,7 @@ const expansion: CardExpansionModule = {
             playerId,
             listeningFor: 'startTurn',
             compulsory: true,
-            multipleUse: true,
+            allowMultipleInstances: true,
             once: true,
             condition: (args) => {
               const { trigger } = args;
@@ -46,9 +49,41 @@ const expansion: CardExpansionModule = {
       }
     },
     'corsair': {
-      onLeavePlay: ({ cardId}) => {
+      onLeavePlay: ({ cardId }) => {
         return {
           unregisterTriggeredEvents: [`corsair:${cardId}:cardPlayed`]
+        }
+      }
+    },
+    'pirate': {
+      onEnterHand: ({ playerId, cardId }) => {
+        return {
+          registerTriggeredEvents: [{
+            id: `pirate:${cardId}:onEnterHand`,
+            playerId,
+            compulsory: false,
+            allowMultipleInstances: true,
+            once: true,
+            listeningFor: 'gainCard',
+            condition: ({ cardLibrary, trigger }) => cardLibrary.getCard(trigger.cardId!).type.includes('TREASURE'),
+            generatorFn: function* () {
+              yield new InvokeGameActionGeneratorEffect({
+                gameAction: 'playCard',
+                context: {
+                  playerId,
+                  cardId
+                },
+                overrides: {
+                  actionCost: 0,
+                }
+              });
+            }
+          }]
+        }
+      },
+      onLeaveHand: ({ cardId }) => {
+        return {
+          unregisterTriggeredEvents: [`pirate:${cardId}:onEnterHand`]
         }
       }
     }
@@ -201,18 +236,18 @@ const expansion: CardExpansionModule = {
         playerId: args.playerId,
         listeningFor: 'cardPlayed',
         compulsory: true,
-        condition: ({match, trigger, cardLibrary}) => {
+        condition: ({ match, trigger, cardLibrary }) => {
           if (!trigger.cardId) return false;
           
           const card = cardLibrary.getCard(trigger.cardId);
           
           if (!['silver', 'gold'].includes(card.cardKey)) return false;
           
-          const cardIdsPlayed = matchStats.cardsPlayed[match.turnNumber][trigger.playerId];
+          const cardIdsPlayed = matchStats.cardsPlayedByTurn[match.turnNumber][trigger.playerId];
           const numPlayed = cardIdsPlayed.filter(cardId => ['silver', 'gold'].includes(cardLibrary.getCard(cardId).cardKey)).length;
           return numPlayed === 1;
         },
-        generatorFn: function* ({trigger}) {
+        generatorFn: function* ({ trigger }) {
           console.log(`[CORSAIR TRIGGERED EFFECT] trashing card...`);
           yield new TrashCardEffect({
             playerId: trigger.playerId,
@@ -252,7 +287,7 @@ const expansion: CardExpansionModule = {
         }
       }
     },
-    'fishing-village': ({reactionManager}) => function* (args) {
+    'fishing-village': ({ reactionManager }) => function* (args) {
       console.log(`[FISHING VILLAGE EFFECT] gaining 2 action...`);
       yield new GainActionEffect({ count: 2 });
       
@@ -264,7 +299,7 @@ const expansion: CardExpansionModule = {
         once: true,
         compulsory: true,
         playerId: args.playerId,
-        multipleUse: true,
+        allowMultipleInstances: true,
         listeningFor: 'startTurn',
         condition: () => true,
         generatorFn: function* () {
@@ -313,7 +348,7 @@ const expansion: CardExpansionModule = {
         compulsory: true,
         once: true,
         playerId: args.playerId,
-        condition: ({trigger}) => trigger.playerId === args.playerId,
+        condition: ({ trigger }) => trigger.playerId === args.playerId,
         generatorFn: function* () {
           console.log(`[haven triggered effect] moving selected card to hand...`);
           yield new MoveCardEffect({
@@ -452,7 +487,7 @@ const expansion: CardExpansionModule = {
         toPlayerId: arg.playerId
       })
     },
-    'merchant-ship': ({reactionManager}) => function* (args) {
+    'merchant-ship': ({ reactionManager }) => function* (args) {
       console.log(`[merchant ship effect] gaining 2 treasures...`);
       yield new GainTreasureEffect({ count: 2 });
       
@@ -460,10 +495,10 @@ const expansion: CardExpansionModule = {
         id: `merchant-ship:${args.cardId}:startTurn`,
         playerId: args.playerId,
         compulsory: true,
-        multipleUse: true,
+        allowMultipleInstances: true,
         once: true,
         listeningFor: 'startTurn',
-        condition: ({trigger}) => trigger.playerId === args.playerId,
+        condition: ({ trigger }) => trigger.playerId === args.playerId,
         generatorFn: function* () {
           console.log(`[merchant ship triggered effect] gaining 2 treasure...`);
           yield new GainTreasureEffect({ count: 2 });
@@ -471,15 +506,15 @@ const expansion: CardExpansionModule = {
       })
     },
     // deno-lint-ignore require-yield
-    'monkey': ({match, reactionManager}) => function* (args) {
+    'monkey': ({ match, reactionManager }) => function* (args) {
       reactionManager.registerReactionTemplate({
         id: `monkey:${args.cardId}:startTurn`,
         playerId: args.playerId,
         compulsory: true,
         once: true,
-        multipleUse: true,
+        allowMultipleInstances: true,
         listeningFor: 'startTurn',
-        condition: ({trigger}) => trigger.playerId === args.playerId,
+        condition: ({ trigger }) => trigger.playerId === args.playerId,
         generatorFn: function* () {
           console.log(`[monkey triggered effect] drawing card at start of turn...`);
           yield new DrawCardEffect({
@@ -501,7 +536,7 @@ const expansion: CardExpansionModule = {
         id: `monkey:${args.cardId}:gainCard`,
         playerId: args.playerId,
         compulsory: true,
-        multipleUse: true,
+        allowMultipleInstances: true,
         listeningFor: 'gainCard',
         once: false,
         generatorFn: function* () {
@@ -510,7 +545,46 @@ const expansion: CardExpansionModule = {
             playerId: args.playerId,
           });
         },
-        condition: ({trigger}) => trigger.playerId === playerToRightId
+        condition: ({ trigger }) => trigger.playerId === playerToRightId
+      });
+    },
+    // deno-lint-ignore require-yield
+    'pirate': ({ reactionManager }) => function* (args) {
+      reactionManager.registerReactionTemplate({
+        id: `pirate:${args.cardId}:startTurn`,
+        playerId: args.playerId,
+        listeningFor: 'startTurn',
+        once: true,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: ({ trigger }) => trigger.playerId === args.playerId,
+        generatorFn: function* () {
+          console.log(`[pirate triggered effect] prompting user to select treasure costing up to 6...`);
+          const cardIds = (yield new SelectCardEffect({
+            prompt: 'Gain card',
+            validPrompt: '',
+            playerId: args.playerId,
+            restrict: {
+              from: { location: ['supply', 'kingdom'] },
+              card: { type: 'TREASURE' },
+              cost: { kind: 'upTo', amount: 6 }
+            },
+            count: 1,
+          })) as number[];
+          
+          const cardId = cardIds[0];
+          if (!cardId) {
+            console.warn(`[pirate triggered effect] no card selected...`);
+            return;
+          }
+          
+          console.log(`[pirate triggered effect] gaining selected card to hand...`);
+          yield new GainCardEffect({
+            playerId: args.playerId,
+            cardId: cardId,
+            to: { location: 'playerHands' },
+          });
+        }
       });
     },
     'native-village': ({ match }) => function* (arg) {
@@ -591,7 +665,7 @@ const expansion: CardExpansionModule = {
       console.log(`[SALVAGER EFFECT] gaining ${effectiveCost} buy...`);
       yield new GainTreasureEffect({ count: effectiveCost });
     },
-    'sea-chart': ({ matchStats, match, cardLibrary }) => function* (arg) {
+    'sea-chart': ({ match, cardLibrary }) => function* (arg) {
       console.log(`[SEA CHART EFFECT] drawing 1 card...`);
       yield new DrawCardEffect({
         playerId: arg.playerId
@@ -624,8 +698,8 @@ const expansion: CardExpansionModule = {
         moveToRevealed: true
       });
       
-      const copyInPlay = matchStats.cardsPlayed[match.turnNumber][arg.playerId]
-        .find(cardId => cardLibrary.getCard(cardId).cardKey === card.cardKey);
+      const copyInPlay = match.playArea.map(cardLibrary.getCard)
+        .find(playAreaCard => playAreaCard.cardKey === card.cardName && playAreaCard.owner === arg.playerId);
       
       console.log(`[SEA CHART EFFECT] ${copyInPlay ? 'copy is in play' : 'no copy in play'}...`);
       

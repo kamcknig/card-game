@@ -284,18 +284,23 @@ export class Game {
     }, {} as ExpansionCardData);
     
     const colors = ['#10FF19', '#3c69ff', '#FF0BF2', '#FFF114', '#FF1F11', '#FF9900'];
-    const players = fisherYatesShuffle(this.players
+    /*const players = fisherYatesShuffle(this.players
       .filter(p => p.connected)
       .map((p, idx) => {
         p.ready = false;
         p.color = colors[idx]
         return p;
-      }));
+      }));*/
+    const players = this.players.map((p, idx) => {
+      p.ready = false;
+      p.color = colors[idx]
+      return p;
+    });
     io.in('game').emit('setPlayerList', players);
     void this._matchController?.initialize(
       {
         ...this._matchConfiguration,
-        players,
+        players: this.players,
       } as MatchConfiguration,
       cardData as ExpansionCardData
     );

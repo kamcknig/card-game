@@ -1,9 +1,9 @@
 import {
   AppSocket,
   EffectHandlerMap,
-  GameActionEffectGeneratorFn, GameActions, GameActionTypes,
+  GameActionEffectGeneratorFn,
+  GameActionTypes,
   ReactionTemplate,
-  ReactionTrigger,
 } from '../../types.ts';
 import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
 import { findCards } from '../../utils/find-cards.ts';
@@ -194,13 +194,6 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
     
     matchStats.cardsGained[match.turnNumber][effect.playerId] ??= [];
     matchStats.cardsGained[match.turnNumber][effect.playerId].push(effect.cardId);
-    
-    const generator = effectGeneratorMap.gainCard({
-      playerId: effect.playerId,
-      cardId: effect.cardId
-    });
-    
-    return { runGenerator: generator };
   }
   
   
@@ -335,8 +328,13 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
       reactionManager.registerReactionTemplate(trigger);
     }
     
-    matchStats.cardsPlayed[match.turnNumber][effect.playerId] ??= [];
-    matchStats.cardsPlayed[match.turnNumber][effect.playerId].push(effect.cardId);
+    const currentPlayerTurnId = match.players[match.currentPlayerTurnIndex].id;
+    matchStats.cardsPlayedByTurn[match.turnNumber][currentPlayerTurnId] ??= [];
+    matchStats.cardsPlayedByTurn[match.turnNumber][currentPlayerTurnId].push(effect.cardId);
+    matchStats.playedCardsInfo[effect.cardId] = {
+      turnNumber: match.turnNumber,
+      playerId: effect.playerId,
+    };
   }
   
   
@@ -354,7 +352,7 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
       }, {} as Record<PlayerId, CardId[]>)
     );
     
-    matchStats.cardsPlayed.push(
+    matchStats.cardsPlayedByTurn.push(
       match.players.reduce((prev, next) => {
         prev[next.id] = [];
         return prev;
@@ -391,6 +389,14 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
   }
   
   
+  map.synchronizeState = function () {
+    // This effect doesn't need to do anything except force a state update cycle
+    console.log('[SYNCHRONIZE STATE EFFECT] Forcing client state synchronization');
+  }
+  
+  
+  
+  
   map.selectCard = function (effect, match) {
     effect.count ??= 1;
     
@@ -414,7 +420,7 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
         playerId,
       );
       
-      console.log(`[SELECT CARD EFFECT HANDLER] found selectable cards ${selectableCardIds.map((id) => cardLibrary.getCard(id))}`);
+      console.log(`[SELECT CARD EFFECT HANDLER] found ${selectableCardIds.length} selectable cards`);
     }
     
     if (selectableCardIds?.length === 0) {

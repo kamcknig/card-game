@@ -17,6 +17,7 @@ import { InvokeGameActionGeneratorEffect } from './invoke-game-action-generator-
 import { EndTurnEffect } from './end-turn.ts';
 import { NextPhaseCompleteEffect } from './next-phase-complete.ts';
 import { NewTurnEffect } from './new-turn.ts';
+import { SynchronizeStateEffect } from './synchronize-state.ts';
 
 export type GameEffects =
   | DrawCardEffect
@@ -37,4 +38,5 @@ export type GameEffects =
   | InvokeGameActionGeneratorEffect
   | NextPhaseCompleteEffect
   | ModifyCostEffect
+  | SynchronizeStateEffect
   | NewTurnEffect;

@@ -25,12 +25,6 @@ export class ReactionManager {
       
       console.log(`[REACTION MANAGER] checking trigger ${trigger} condition for ${t.id} reaction`);
       
-      if (trigger.cardId) {
-        console.log(`[REACTION MANAGER] trigger card ${this._cardLibrary.getCard(trigger.cardId)}`,);
-      }
-      
-      console.log(`[REACTION MANAGER] trigger player ${this.match.players.find((player) => player.id === trigger.playerId)}`);
-      
       if (t.condition !== undefined) {
         return t.condition({ match: this.match, cardLibrary: this._cardLibrary, trigger });
       }
@@ -95,19 +89,22 @@ export class ReactionManager {
         
         let selectedReaction: Reaction | undefined = undefined;
         
+        const shouldPrompt = (
+          reactions.length > 1 &&
+          (
+            compulsoryReactions.length !== reactions.length || // mix of compulsory + optional
+            !compulsoryReactions.every(r => r.getSourceKey() === compulsoryReactions[0].getSourceKey()) // different cards
+          )
+        );
+        
         // when multiple reactions can occur, the user chooses unless they are all compulsory
         // and the same card
-        if (
-          // do we have multiple reactions and none are compulsory
-          (reactions.length > 1 && compulsoryReactions.length === 0)
-          // do we have multiple reactions and some are compulsory
-          || (reactions.length > 1 && compulsoryReactions.length > 0 && reactions.length !== compulsoryReactions.length)
-          // do we have multiple reactions, and all are compulsory, but not all are the same compulsory
-          || (reactions.length > 1 && !compulsoryReactions.every(r => r.getSourceKey() === compulsoryReactions[0].getSourceKey()))
-        ) {
+        if (shouldPrompt || (reactions.length === 1 && compulsoryReactions.length === 0)) {
           const grouped = groupReactionsByCardKey(reactions);
           const actionButtons = buildActionButtons(grouped, this._cardLibrary);
           const actionMap = buildActionMap(grouped);
+          
+          console.log(`[REACTION MANAGER] prompting ${targetPlayer} to choose reaction`);
           
           const result = (yield new UserPromptEffect({
             playerId: targetPlayer.id,
@@ -159,7 +156,7 @@ export class ReactionManager {
           this.unregisterTrigger(selectedReaction.id);
         }
         
-        if (!selectedReaction.multipleUse) {
+        if (!selectedReaction.allowMultipleInstances) {
           blockedCardKeys.add(selectedReaction.getSourceKey());
         }
       }

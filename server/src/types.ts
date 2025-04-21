@@ -95,12 +95,36 @@ export const MatchBaseConfiguration = {
   },
 } as const;
 
-export type ReactionTrigger = {
+type ReactionTriggerArgs = {
   eventType: TriggerEventType;
+  playerId: number;
+  cardId?: number;
+};
+
+export class ReactionTrigger {
+  eventType: TriggerEventType;
+  
   // the card that triggered this
   cardId?: number;
+  
   // who triggered this?
   playerId: number;
+
+  constructor(args: ReactionTriggerArgs) {
+    this.eventType = args.eventType;
+    this.cardId = args.cardId;
+    this.playerId = args.playerId;
+  }
+  
+  toString() {
+    return `[TRIGGER ${this.eventType} - player ${this.playerId} - card ${this.cardId} ]`;
+  }
+  
+  // @ts-ignore
+  [Symbol.for('Deno.customInspect')]() {
+    return this.toString();
+  }
+  
 };
 
 export type TargetContext =
@@ -205,6 +229,18 @@ export type EffectHandlerResult =
 
 export type TriggerEventType = 'cardPlayed' | 'startTurn' | 'gainCard';
 
+type ReactionArgs = {
+  id: string;
+  playerId: number;
+  listeningFor: TriggerEventType;
+  condition?: Reaction['condition'];
+  generatorFn: ReactionEffectGeneratorFn;
+  once?: boolean;
+  allow?: boolean;
+  compulsory?: boolean;
+  allowMultipleUse?: boolean;
+};
+
 export class Reaction {
   // a concatenation of the card key and card id with a '-'
   public id: string;
@@ -215,19 +251,25 @@ export class Reaction {
   public listeningFor: TriggerEventType;
   
   /**
+   * Indicates the triggered effect only happens once for this particular instance of the reaction.
+   *
    * @default false
    */
   public once?: boolean = false;
   
   /**
+   * Indicates that the triggered effect happens regardless of user choice.
+   *
    * @default false
    */
   public compulsory?: boolean = false;
   
   /**
+   * Indicates that the reaction can be used by multiple different instances of the same card.
+   *
    * @default true
    */
-  public multipleUse?: boolean = true;
+  public allowMultipleInstances?: boolean = true;
   
   public extraData?: any;
   
@@ -242,25 +284,14 @@ export class Reaction {
   // from teh expansion module that defines what happens when you ccn react?
   public generatorFn: ReactionEffectGeneratorFn;
   
-  constructor(
-    arg: {
-      id: string;
-      playerId: number;
-      listeningFor: TriggerEventType;
-      condition?: Reaction['condition'];
-      generatorFn: ReactionEffectGeneratorFn;
-      once?: boolean;
-      multipleUse?: boolean;
-      compulsory?: boolean;
-    },
-  ) {
+  constructor(arg: ReactionArgs) {
     this.id = arg.id;
     this.playerId = arg.playerId;
     this.listeningFor = arg.listeningFor;
     this.condition = arg.condition ?? (() => true);
     this.generatorFn = arg.generatorFn;
     this.once = arg.once ?? false;
-    this.multipleUse = arg.multipleUse ?? false;
+    this.allowMultipleInstances = arg.allowMultipleUse ?? true;
     this.compulsory = arg.compulsory ?? false;
   }
   

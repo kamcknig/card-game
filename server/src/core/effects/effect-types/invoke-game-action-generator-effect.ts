@@ -15,6 +15,7 @@ export class InvokeGameActionGeneratorEffect<T extends GameActionTypes = GameAct
   overrides?: GameActionOverrides = {
     moveCard: true,
     playCard: true,
+    actionCost: 1,
   };
   
   constructor(args:  InvokeGameActionGeneratorArgs<T>) {

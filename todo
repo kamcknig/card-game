@@ -62,4 +62,6 @@ wharf
 
 BUILT BUT NOT TESTED
 blockade - (I've added a condition that the card needs to be gained on the triggering players turn - test that), need to add moat immunity
-corsair - need to add moat immunity
+corsair - need to add moat immunity, also changed how cards match so test that
+
+restest sea chart, and conspirator - changed how cards are matched
