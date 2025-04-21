@@ -1,4 +1,4 @@
-import { Match } from 'shared/shared-types.ts';
+import { Match, MatchStats } from 'shared/shared-types.ts';
 import { Reaction, ReactionTemplate, ReactionTrigger } from '../../types.ts';
 import { CardLibrary } from '../card-library.ts';
 import { getOrderStartingFrom } from '../../utils/get-order-starting-from.ts';
@@ -11,8 +11,9 @@ export class ReactionManager {
   private readonly _triggers: Reaction[] = [];
   
   constructor(
-    private readonly match: Match,
+    private readonly _match: Match,
     private readonly _cardLibrary: CardLibrary,
+    private readonly _matchStats: MatchStats,
   ) {
   }
   
@@ -26,7 +27,12 @@ export class ReactionManager {
       console.log(`[REACTION MANAGER] checking trigger ${trigger} condition for ${t.id} reaction`);
       
       if (t.condition !== undefined) {
-        return t.condition({ match: this.match, cardLibrary: this._cardLibrary, trigger });
+        return t.condition({
+          matchStats: this._matchStats,
+          match: this._match,
+          cardLibrary:
+          this._cardLibrary, trigger
+        });
       }
       else {
         return true;
@@ -46,7 +52,7 @@ export class ReactionManager {
       const trigger = this._triggers[i];
       if (trigger.id === triggerId) {
         this._triggers.splice(i, 1);
-        console.log(`[REACTION MANAGER] removing trigger reaction ${triggerId} for player ${this.match.players?.find((player) => player.id === trigger.playerId)}`);
+        console.log(`[REACTION MANAGER] removing trigger reaction ${triggerId} for player ${this._match.players?.find((player) => player.id === trigger.playerId)}`);
       }
     }
   }
@@ -62,8 +68,8 @@ export class ReactionManager {
     // now we get the order of players that could be affected by the play (including the current player),
     // then get reactions for them and run them
     const targetOrder = getOrderStartingFrom(
-      this.match.players,
-      this.match.currentPlayerTurnIndex,
+      this._match.players,
+      this._match.currentPlayerTurnIndex,
     );
     
     for (const targetPlayer of targetOrder) {

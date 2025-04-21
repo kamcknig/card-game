@@ -641,6 +641,77 @@ const expansion: CardExpansionModule = {
         });
       }
     },
+    'sailor': ({reactionManager}) => function* (args) {
+      console.log(`[sailor effect] gaining 1 action...`);
+      yield new GainActionEffect({ count: 1 });
+      
+      reactionManager.registerReactionTemplate({
+        id: `sailor:${args.cardId}:startTurn`,
+        listeningFor: 'startTurn',
+        playerId: args.playerId,
+        compulsory: true,
+        once: true,
+        allowMultipleInstances: true,
+        condition: ({trigger}) => trigger.playerId === args.playerId,
+        generatorFn: function* () {
+          console.log(`[sailor triggered effect] gaining 2 treasure...`);
+          yield new GainTreasureEffect({ count: 2 });
+          
+          const cardIds = (yield new SelectCardEffect({
+            prompt: 'Trash card',
+            playerId: args.playerId,
+            restrict: { from: { location: 'playerHands' } },
+            count: 1,
+            optional: true,
+            cancelPrompt: `Don't trash`
+          })) as number[];
+          
+          const cardId = cardIds[0];
+          
+          if (!cardId) {
+            console.log(`[sailor triggered effect] no card chosen`);
+            return;
+          }
+          
+          console.log(`[sailor triggered effect] trashing selected card...`);
+          yield new TrashCardEffect({
+            playerId: args.playerId,
+            cardId,
+          });
+        }
+      });
+      
+      reactionManager.registerReactionTemplate({
+        id: `sailor:${args.cardId}:gainCard`,
+        playerId: args.playerId,
+        compulsory: false,
+        allowMultipleInstances: true,
+        once: true,
+        condition: ({matchStats, cardLibrary, trigger}) => {
+          if (!trigger.cardId) {
+            console.warn(`[sailor triggered effect] no trigger.cardId`);
+            return false;
+          }
+          
+          return !matchStats.playedCardsInfo[trigger.cardId]
+            && trigger.playerId === args.playerId
+            && cardLibrary.getCard(trigger.cardId).type.includes('DURATION');
+        },
+        generatorFn: function* ({trigger}) {
+          yield new InvokeGameActionGeneratorEffect({
+            gameAction: 'playCard',
+            context: {
+              cardId: trigger.cardId,
+              playerId: trigger.playerId,
+            },
+            overrides: {
+              actionCost: 0,
+            }
+          });
+        },
+        listeningFor: 'gainCard'
+      })
+    },
     'salvager': ({ match, cardLibrary }) => function* (arg) {
       console.log(`[SALVAGER EFFECT] gaining 1 buy...`);
       yield new GainBuyEffect({ count: 1 });

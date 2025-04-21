@@ -41,7 +41,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _createCardFn: ((key: CardKey, card?: Omit<Partial<Card>, 'id'>) => Card) | undefined;
   private _fuse: Fuse<CardData & { cardKey: CardKey }> | undefined;
   private _logManager: LogManager | undefined;
-  private _matchStats: MatchStats | undefined
+  private _matchStats: MatchStats = {} as MatchStats;
   
   constructor(
     private _match: Match,
@@ -50,12 +50,12 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     super();
   }
   
-  private _keepers: CardKey[] = ['sea-chart', 'pirate', 'corsair', 'corsair'];
+  private _keepers: CardKey[] = ['sailor', 'pirate', 'corsair', 'corsair'];
   private _playerHands: Record<CardKey, number>[] = [
     {
       gold: 4,
       silver: 4,
-      'corsair': 4
+      'sailor': 4
     },
     {
       gold: 4,
@@ -434,6 +434,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this._reactionManager = new ReactionManager(
       this._match,
       this._cardLibrary,
+      this._matchStats
     );
     
     this._logManager = new LogManager({

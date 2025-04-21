@@ -277,7 +277,12 @@ export class Reaction {
   // in the future we might need to define this condition method elsewhere such as
   // in the expansion's module? need to wait to see what kind of conditions there are i think
   public condition?: (
-    args: { match: Match; cardLibrary: CardLibrary; trigger: ReactionTrigger },
+    args: {
+      matchStats: MatchStats;
+      match: Match;
+      cardLibrary: CardLibrary;
+      trigger: ReactionTrigger
+    },
   ) => boolean;
   
   // todo defined in a map somewhere just like registered card effects. so maybe another export
