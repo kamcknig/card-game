@@ -53,20 +53,28 @@ export class EffectsPipeline {
         result = handler(effect as unknown as any, this._match);
         
         if (result !== undefined) {
+          console.log(`[EFFECT PIPELINE] '${effect.type}' effect handler returned:`, result);
           // pauses the current generator, usually to await input from the user
           if ('pause' in result) {
             const { signalId } = result;
-            console.log(`[EFFECT PIPELINE] pausing effect generator with signal ${signalId}`);
+            console.log(`[EFFECT PIPELINE] pausing effect '${effect.type}' generator with signal ${signalId}`);
             
             this._pausedGenerators.set(signalId, {
               generator,
               source,
               resolve: (input: unknown) =>
-                this.runGenerator({ generator, source, resumeInput: input, resumeSignalId: signalId, onComplete })
+                this.runGenerator({
+                  generator,
+                  source,
+                  resumeInput: input,
+                  resumeSignalId: signalId,
+                  onComplete
+                })
             });
             
+            this.flushChanges();
             // return because we are 'pausing' the generator
-            return;
+            return result;
           } else if ('runGenerator' in result) {
             this.flushChanges();
             
@@ -97,7 +105,6 @@ export class EffectsPipeline {
   
   public resumeGenerator(signalId: string, userInput: unknown): void {
     console.log(`[EFFECT PIPELINE] resuming generator for signal ${signalId}`);
-    console.log(`[EFFECT PIPELINE] resumed input ${userInput}`);
     const paused = this._pausedGenerators.get(signalId);
     if (!paused) {
       console.log(`[EFFECT PIPELINE] could not find paused generator for signal ${signalId}`);

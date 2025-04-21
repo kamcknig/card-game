@@ -1,5 +1,6 @@
 import {
-  CardEffectGeneratorMapFactory, CardEffectGeneratorFn,
+  CardEffectGeneratorFn,
+  CardEffectGeneratorMapFactory,
   GameActionEffectGeneratorFn,
   GameActionEffectGeneratorMapFactory,
   GameActions,
@@ -104,10 +105,10 @@ export const gameActionEffectGeneratorFactory: GameActionEffectGeneratorMapFacto
           playerId: match.players[match.currentPlayerTurnIndex].id
         });
         
-        const trigger: ReactionTrigger = {
+        const trigger = new ReactionTrigger({
           eventType: 'startTurn',
           playerId: match.players[match.currentPlayerTurnIndex].id
-        };
+        });
         
         const reactionContext = {};
         yield* reactionManager.runTrigger({ trigger, reactionContext });
@@ -124,7 +125,36 @@ export const gameActionEffectGeneratorFactory: GameActionEffectGeneratorMapFacto
           const card = cardLibrary.getCard(cardId);
           
           // if the card is a duration card, and it was played this turn
-          if (card.type.includes('DURATION') && matchStats.cardsPlayed[match.turnNumber][card.owner!].includes(card.id)) {
+          if (card.type.includes('DURATION')) {
+            const playedCardsInfo = matchStats.playedCardsInfo?.[card.id];
+            
+            if (!playedCardsInfo) continue;
+            const turnPlayed = playedCardsInfo.turnNumber;
+            
+            // if cleaning up for the player that played the duration card
+            if (playedCardsInfo.playerId === player.id) {
+              // and the turn is different, it's time to discard
+              if (turnPlayed !== match.turnNumber) {
+                yield new DiscardCardEffect({
+                  cardId,
+                  playerId: player.id,
+                });
+              }
+              else {
+                // if it's the same turn number,
+                const turnMap = matchStats.cardsPlayedByTurn[turnPlayed];
+                const playedTurnIds = Object.keys(turnMap).map(Number);
+                const playedTurnPlayerIndex = playedTurnIds.findIndex(id => turnMap[id].includes(card.id));
+                
+                if (playedTurnPlayerIndex !== match.currentPlayerTurnIndex) {
+                  yield new DiscardCardEffect({
+                    cardId,
+                    playerId: player.id,
+                  });
+                }
+              }
+            }
+            
             console.log(`[NEXT PHASE EFFECT] ${card} is duration, leaving in play`);
             continue;
           }
@@ -148,6 +178,7 @@ export const gameActionEffectGeneratorFactory: GameActionEffectGeneratorMapFacto
         yield new EndTurnEffect();
         
         yield* map.nextPhase(undefined);
+        break;
       }
     }
     
@@ -195,11 +226,11 @@ export const gameActionEffectGeneratorFactory: GameActionEffectGeneratorMapFacto
       console.log(`[PLAY CARD EFFECT] card played doesn't count towards stats`);
     }
     
-    const trigger: ReactionTrigger = {
+    const trigger = new ReactionTrigger({
       eventType: 'cardPlayed',
       playerId,
       cardId,
-    };
+    });
     
     const reactionContext = {};
     yield* reactionManager.runTrigger({ trigger, reactionContext });
@@ -243,6 +274,8 @@ export const gameActionEffectGeneratorFactory: GameActionEffectGeneratorMapFacto
       to: { location: 'playerDiscards' },
       isRootLog: true
     });
+    
+    yield* map.gainCard({ playerId, cardId });
   };
   
   
@@ -253,16 +286,14 @@ export const gameActionEffectGeneratorFactory: GameActionEffectGeneratorMapFacto
   };
   
   
-  
-  
   map.gainCard = function* (args) {
-    const trigger: ReactionTrigger = {
+    const trigger = new ReactionTrigger({
       cardId: args.cardId,
       playerId: args.playerId,
       eventType: 'gainCard'
-    };
+    });
     
-    yield* reactionManager.runTrigger({trigger});
+    yield* reactionManager.runTrigger({ trigger });
   }
   
   return map;

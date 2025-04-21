@@ -29,7 +29,7 @@ const expansionModule: CardExpansionModule = {
             playerId,
             once: true,
             compulsory: true,
-            multipleUse: true,
+            allowMultipleInstances: true,
             condition: ({ cardLibrary, trigger }) => {
               const card = cardLibrary.getCard(trigger.cardId!);
               return card.cardKey === 'silver' && trigger.playerId === playerId;
@@ -56,6 +56,7 @@ const expansionModule: CardExpansionModule = {
             id: `moat:${cardId}:onEnterHand`,
             playerId,
             listeningFor: 'cardPlayed',
+            allowMultipleInstances: false,
             condition: ({ cardLibrary, trigger }) => {
               return cardLibrary.getCard(trigger.cardId!).type.includes(
                 'ATTACK',
@@ -600,9 +601,8 @@ const expansionModule: CardExpansionModule = {
             console.log(`[LIBRARY EFFECT] setting card aside`);
             yield new MoveCardEffect({
               cardId,
-              to: {
-                location: 'set-aside',
-              }
+              toPlayerId: arg.playerId,
+              to: { location: 'set-aside' }
             });
             setAside.push(cardId);
           }

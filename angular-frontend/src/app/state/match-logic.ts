@@ -1,6 +1,6 @@
 import { computed } from 'nanostores';
-import { CardId, Mats } from 'shared/shared-types';
-import { currentPlayerTurnIdStore, turnNumberStore } from './turn-state';
+import { Card, CardId, Mats } from 'shared/shared-types';
+import { currentPlayerTurnIndexStore, turnNumberStore } from './turn-state';
 import { cardStore } from './card-state';
 import { matchStatsStore, matchStore, selfPlayerIdStore } from './match-state';
 
@@ -30,29 +30,64 @@ export const matStore = computed(
 (globalThis as any).matStore = matStore;
 
 export const activeDurationCardStore = computed(
-  [playAreaStore, matchStatsStore, turnNumberStore, currentPlayerTurnIdStore, cardStore],
-  (cardIds, matchStats, turnNumber, currentPlayerTurnId, allCards) => {
-    const currentTurnPlays = matchStats?.cardsPlayed?.[turnNumber];
+  [playAreaStore, matchStore, matchStatsStore, currentPlayerTurnIndexStore, turnNumberStore, cardStore],
+  (playArea, match, matchStats, currentTurnPlayerIndex, turnNumber, allCards) => {
+    const result: Card[] = [];
 
-    return cardIds.map(id => allCards[id])
-      .filter(nextCard => {
-        if (!matchStats || !nextCard.type.includes('DURATION')) return false;
-        else if (currentTurnPlays?.[currentPlayerTurnId]?.includes(nextCard.id)) return false;
-        return true;
-      });
+    if (!match || !matchStats?.playedCardsInfo || !matchStats.cardsPlayedByTurn) return result;
+
+    for (const card of playArea.map(id => allCards[id])) {
+      if (!card.type.includes('DURATION')) continue;
+
+      const info = matchStats.playedCardsInfo[card.id];
+      if (!info) continue;
+
+      const playedTurn = info.turnNumber;
+
+      // Only show if it's after the turn it was played
+      if (turnNumber > playedTurn) {
+        result.push(card);
+      }
+      else if (turnNumber === playedTurn) {
+        const turnMap = matchStats.cardsPlayedByTurn[playedTurn];
+        const playedTurnIds = Object.keys(turnMap).map(Number);
+        const playedTurnPlayerIndex = playedTurnIds.findIndex(id => turnMap[id].includes(card.id));
+
+        // If we're in the same turn number but it's no longer that player's turn
+        if (playedTurnPlayerIndex !== currentTurnPlayerIndex) {
+          result.push(card);
+        }
+      }
+    }
+
+    return result;
   }
 );
 
 export const playedCardStore = computed(
-  [playAreaStore, matchStatsStore, turnNumberStore, currentPlayerTurnIdStore, cardStore],
-  (cardIds, matchStats, turnNumber, currentPlayerTurnId, allCards) => {
-    const currentTurnPlays = matchStats?.cardsPlayed?.[turnNumber];
+  [playAreaStore, matchStatsStore, turnNumberStore, cardStore, matchStore, currentPlayerTurnIndexStore],
+  (cardIds, matchStats, turnNumber, allCards, match, currentTurnPlayerIndex) => {
+    if (!matchStats?.playedCardsInfo || !matchStats.cardsPlayedByTurn || !match) return cardIds.map(id => allCards[id]);
+
     return cardIds
       .map(id => allCards[id])
       .filter(card => {
-        if (!matchStats) return true;
         if (!card.type.includes('DURATION')) return true;
-        return currentTurnPlays?.[currentPlayerTurnId]?.includes(card.id) ?? false;
+
+        const info = matchStats.playedCardsInfo[card.id];
+        if (!info) return true;
+
+        const playedTurn = info.turnNumber;
+        const playedPlayerId = info.playerId;
+
+        if (playedTurn !== turnNumber) return false;
+
+        const turnMap = matchStats.cardsPlayedByTurn[playedTurn];
+        const playedTurnIds = Object.keys(turnMap);
+        const playedTurnPlayerIndex = playedTurnIds.findIndex(id => parseInt(id) === playedPlayerId);
+
+        return playedTurnPlayerIndex === currentTurnPlayerIndex && turnMap[playedPlayerId]?.includes(card.id);
       });
   }
 );
+

@@ -8,7 +8,7 @@ export function buildActionButtons(
   let actionId = 1;
   const buttons = [{ action: 0, label: 'Cancel' }];
   for (const [_cardKey, { count, reaction: { id } }] of grouped) {
-    const [, cardId] = id.split('-');
+    const [, cardId] = id.split(':');
     const cardName = cardLibrary.getCard(+cardId).cardName;
     buttons.push({ action: actionId++, label: `${cardName} (${count})` });
   }

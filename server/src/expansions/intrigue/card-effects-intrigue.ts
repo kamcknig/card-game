@@ -182,9 +182,12 @@ const expansionModule: CardExpansionModule = {
         count: 2,
       });
       
-      const actionCardCount = matchStats.cardsPlayed[match.turnNumber][arg.playerId]?.filter((
-        cardId,
-      ) => cardLibrary.getCard(cardId).type.includes('ACTION'));
+      // we want those cards played on the player's turn that are actions and played by THAT player
+      const actionCardCount =
+        matchStats.cardsPlayedByTurn[match.turnNumber][arg.playerId]
+          ?.filter(cardId =>
+            cardLibrary.getCard(cardId).type.includes('ACTION')
+            && matchStats.playedCardsInfo[cardId].playerId === arg.playerId);
       
       console.log(`[CONSPIRATOR EFFECT] action cards played so far ${actionCardCount}`);
       

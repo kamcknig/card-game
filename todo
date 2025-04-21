@@ -44,18 +44,14 @@ advanced reaction use-case
 i'm directly adding trigger effect reactions in some card effect generators. maybe they should yield a RegisterReactionEffect instaed
 
 
-SEASIDE still to test
+SEASIDE still to build
 
-haven
 lighthouse
-merchant ship
-monkey
-
 outpost
 pirate
 sailor
 salvager
-sea-witchc
+sea-witch
 tactician
 tide pools
 treasury
@@ -66,5 +62,6 @@ wharf
 
 BUILT BUT NOT TESTED
 blockade - (I've added a condition that the card needs to be gained on the triggering players turn - test that), need to add moat immunity
-corsair - need to add moat immunity, when testing, the silver or gold played should still give the player treasure
-fishing-village
+corsair - need to add moat immunity, also changed how cards match so test that
+
+restest sea chart, and conspirator - changed how cards are matched

@@ -50,12 +50,20 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     super();
   }
   
-  private _keepers: CardKey[] = ['astrolabe', 'blockade', 'caravan'];
-  private _playerHands: Record<CardKey, number>[] = [{
-    gold: 4,
-    silver: 4,
-    astrolabe: 4
-  }];
+  private _keepers: CardKey[] = ['militia', 'pirate', 'caravan', 'corsair'];
+  private _playerHands: Record<CardKey, number>[] = [
+    {
+      gold: 4,
+      silver: 4,
+      'militia': 4
+    },
+    {
+      gold: 4,
+      estate: 3,
+      silver: 4,
+      'pirate': 3
+    }
+  ];
   
   public initialize(config: MatchConfiguration, cardData: ExpansionCardData) {
     this.initializeFuseSearch();
@@ -84,13 +92,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     };
     
     this._matchStats = {
+      playedCardsInfo: {},
       cardsGained: [
         config.players.reduce((prev, next) => {
           prev[next.id] = [];
           return prev;
         }, {} as Record<PlayerId, CardId[]>)
       ],
-      cardsPlayed: [
+      cardsPlayedByTurn: [
         config.players.reduce((prev, next) => {
           prev[next.id] = [];
           return prev;
@@ -113,7 +122,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           
           prev = prev.concat(nextExpansion.mats);
           return prev;
-        }, [] as Mats[]);
+        }, ['set-aside'] as Mats[]);
     
     this._match = {
       scores: [],
@@ -139,7 +148,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         return acc;
       }, {} as Match['mats']),
       zones: {
-        'set-aside': [],
         'revealed': [],
         'look-at': [],
       }
@@ -187,8 +195,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   
   private _matchStatSnapshot = {};
   private _cardLibSnapshot = {};
+  
   public getMatchSnapshot(): Match {
-    this._cardLibSnapshot = structuredClone(this._matchStatSnapshot);
+    this._matchStatSnapshot = structuredClone(this._matchStatSnapshot);
     this._cardLibSnapshot = structuredClone(this._cardLibrary.getAllCards());
     return structuredClone(this._match);
   }
@@ -196,9 +205,24 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   public broadcastPatch(prev: Match) {
     const patch: Operation[] = compare(prev, this._match);
     const cardLibraryPatch = compare(this._cardLibSnapshot, this._cardLibrary.getAllCards());
-    const matchStatPatch  = compare(this._matchStatSnapshot, this._matchStats ?? {});
+    const matchStatPatch = compare(this._matchStatSnapshot, this._matchStats ?? {});
     if (patch.length || cardLibraryPatch.length || matchStatPatch.length) {
       console.log(`[MATCH] sending match update to clients`);
+      
+      if (patch.length) {
+        console.log(`[ match ] match patch`);
+        console.log(patch);
+      }
+      
+      if (cardLibraryPatch.length) {
+        console.log(`[ match ] card library patch`);
+        console.log(cardLibraryPatch);
+      }
+      
+      if (matchStatPatch.length) {
+        console.log(`[ match ] match stats patch`);
+        console.log(matchStatPatch);
+      }
       this._socketMap.forEach((s) => s.emit('patchUpdate', patch, cardLibraryPatch, matchStatPatch));
     }
   }
@@ -591,7 +615,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       match.config.kingdomCardKeys,
     );
     
-    console.log(`[MATCH] original supply card piles ${allSupplyCardKeys}`);
+    console.log(`[MATCH] original supply card pile count ${allSupplyCardKeys.length}`);
     
     const remainingSupplyCardKeys = match.supply.concat(match.kingdom).map((
       id,
@@ -603,7 +627,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }, [] as string[]);
     
     console.log(
-      `[MATCH] remaining supply card piles ${remainingSupplyCardKeys}`,
+      `[MATCH] remaining supply card pile count ${remainingSupplyCardKeys.length}`,
     );
     
     const emptyPileCount = allSupplyCardKeys.length -

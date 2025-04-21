@@ -57,7 +57,24 @@ export type MatchConfiguration = {
 
 export type MatchStats = {
   cardsGained: Record<PlayerId, CardId[]>[];
-  cardsPlayed: Record<PlayerId, CardId[]>[];
+  
+  /**
+   * Tracks cards that are played on each turn. This is an array where each element
+   * represents a turn in which cards are played. The elements then track the
+   * player whose turn it is and the cards played during that player's turn.
+   *
+   * This means that the card played might not be played by that player. An
+   * example would be the Pirate from seaside. It is a reaction card that can be played
+   * on someone else's turn.
+   */
+  cardsPlayedByTurn: Record<PlayerId, CardId[]>[];
+  
+  /**
+   * This tracks info about a card that was played. The key is the card's ID,
+   * and the values track the turn number in which it was played and the player
+   * that played it.
+   */
+  playedCardsInfo: Record<CardId, { turnNumber: number; playerId: PlayerId }>;
   trashedCards: Record<PlayerId, CardId[]>[];
 };
 
@@ -131,7 +148,8 @@ export type ServerListenEvents = {
 
 const MatValues = [
   'island',
-  'native-village'
+  'native-village',
+  'set-aside',
 ] as const;
 export type Mats = typeof MatValues[number];
 export const isLocationMat = (location: any): location is Mats => {
@@ -139,7 +157,6 @@ export const isLocationMat = (location: any): location is Mats => {
 }
 
 let ZoneValues = [
-  'set-aside',
   'look-at',
   'revealed'
 ] as const;
