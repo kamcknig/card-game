@@ -189,7 +189,7 @@ const expansionModule: CardExpansionModule = {
             cardLibrary.getCard(cardId).type.includes('ACTION')
             && matchStats.playedCardsInfo[cardId].playerId === arg.playerId);
       
-      console.log(`[CONSPIRATOR EFFECT] action cards played so far ${actionCardCount}`);
+      console.log(`[CONSPIRATOR EFFECT] action cards played so far ${actionCardCount.length}`);
       
       if (actionCardCount?.length >= 3) {
         console.log(`[CONSPIRATOR EFFECT] drawing card...`);

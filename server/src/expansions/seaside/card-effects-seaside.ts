@@ -699,7 +699,7 @@ const expansion: CardExpansionModule = {
       });
       
       const copyInPlay = match.playArea.map(cardLibrary.getCard)
-        .find(playAreaCard => playAreaCard.cardKey === card.cardName && playAreaCard.owner === arg.playerId);
+        .find(playAreaCard => playAreaCard.cardKey === card.cardKey && playAreaCard.owner === arg.playerId);
       
       console.log(`[SEA CHART EFFECT] ${copyInPlay ? 'copy is in play' : 'no copy in play'}...`);
       
