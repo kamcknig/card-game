@@ -3,8 +3,8 @@ import {
   Card,
   CardId,
   CardKey,
-  Match, MatchStats,
-  Player,
+  Match,
+  MatchStats,
   PlayerId,
   ServerEmitEvents,
   ServerListenEvents,
@@ -15,8 +15,8 @@ import { toNumber } from 'es-toolkit/compat';
 import { CardLibrary } from './core/card-library.ts';
 import { ReactionManager } from './core/reactions/reaction-manager.ts';
 import { LogManager } from './core/log-manager.ts';
-import { EventSystem } from './core/events/event-system.ts';
 import { EffectsController } from './core/effects/effects-controller.ts';
+import { GameActionController } from './core/effects/game-action-controller.ts';
 
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
 
@@ -184,6 +184,19 @@ export type CardEffectGeneratorFn =
 export type CardEffectGeneratorMapFactory =
   Record<CardKey, (context: EffectGeneratorFactoryContext) => CardEffectGeneratorFn>;
 
+export type CardEffectFunctionMapFactory = Record<CardKey, () => (context: CardEffectFunctionContext) => Promise<void>>;
+
+export type CardEffectFunctionContext = {
+  match: Match,
+  gameActionController: GameActionController;
+  reactionContext?: ReactionContext;
+  playerId: PlayerId;
+  cardId: CardId;
+}
+
+export type CardEffectFunctionMap =
+  Record<CardKey, (args: CardEffectFunctionContext) => Promise<void>>;
+
 export interface CardExpansionModule {
   registerCardLifeCycles?: () => Record<string, LifecycleCallbackMap>;
   registerScoringFunctions?: () => Record<string, (args: {
@@ -192,6 +205,16 @@ export interface CardExpansionModule {
     ownerId: number
   }) => number>;
   registerEffects: CardEffectGeneratorMapFactory;
+}
+
+export interface NewCardExpansionModule {
+  registerCardLifeCycles?: () => Record<string, LifecycleCallbackMap>;
+  registerScoringFunctions?: () => Record<string, (args: {
+    match: Match,
+    cardLibrary: CardLibrary,
+    ownerId: number
+  }) => number>;
+  registerEffects: CardEffectFunctionMapFactory;
 }
 
 
@@ -362,10 +385,9 @@ export type LifecycleResult = {
 };
 export type LifecycleCallback = (
   args: {
-    effectsController?: EffectsController,
-    eventSystem?: EventSystem,
+    effectsController?: EffectsController;
     playerId: number;
-    cardId: number
+    cardId: number;
   },
 ) => LifecycleResult | void;
 

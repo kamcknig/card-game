@@ -13,12 +13,12 @@ import { UserPromptEffect } from '../../core/effects/effect-types/user-prompt.ts
 import { ShuffleDeckEffect } from '../../core/effects/effect-types/shuffle-card.ts';
 import { TrashCardEffect } from '../../core/effects/effect-types/trash-card.ts';
 import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
-import { getPlayerStartingFrom } from '../../utils/get-player-starting-from.ts';
 import { Card, CardId } from 'shared/shared-types.ts';
 import { findCards } from '../../utils/find-cards.ts';
 import {
   InvokeGameActionGeneratorEffect
 } from '../../core/effects/effect-types/invoke-game-action-generator-effect.ts';
+import { getPlayerStartingFrom } from '../../shared/get-player-position-utils.ts';
 
 const expansion: CardExpansionModule = {
   registerCardLifeCycles: () => ({

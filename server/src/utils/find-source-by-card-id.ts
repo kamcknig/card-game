@@ -7,7 +7,7 @@ export const findSourceByCardId = (
   cardId: number,
   match: Match,
   cardLibrary: CardLibrary,
-): { sourceStore: any; index?: number; storeKey?: CardLocation } => {
+) => {
   let sourceStore: CardId[] | undefined = undefined;
   let storeKey: CardLocation | undefined;
   
@@ -79,6 +79,7 @@ export const findSourceByCardId = (
   }
   else {
     console.error(`[FIND CARD SOURCE] could not find card store for ${cardLibrary.getCard(cardId)}`);
+    throw new Error('Could not find card store');
   }
   
   return { sourceStore, index: idx, storeKey };

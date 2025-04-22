@@ -57,24 +57,16 @@ export type MatchConfiguration = {
 
 export type MatchStats = {
   cardsGained: Record<PlayerId, CardId[]>[];
-  
-  /**
-   * Tracks cards that are played on each turn. This is an array where each element
-   * represents a turn in which cards are played. The elements then track the
-   * player whose turn it is and the cards played during that player's turn.
-   *
-   * This means that the card played might not be played by that player. An
-   * example would be the Pirate from seaside. It is a reaction card that can be played
-   * on someone else's turn.
-   */
-  cardsPlayedByTurn: Record<PlayerId, CardId[]>[];
-  
-  /**
-   * This tracks info about a card that was played. The key is the card's ID,
-   * and the values track the turn number in which it was played and the player
-   * that played it.
-   */
-  playedCardsInfo: Record<CardId, { turnNumber: number; playerId: PlayerId }>;
+  playedCardsInfo: Record<CardId, {
+    // the turn number on which the card was played.
+    turnNumber: number;
+    
+    // the player that played the card
+    playedPlayerId: PlayerId;
+    
+    // the player who's turn it was when the card was played.
+    turnPlayerId: PlayerId
+  }>;
   trashedCards: Record<PlayerId, CardId[]>[];
 };
 
@@ -98,6 +90,7 @@ export type Match = {
   turnPhaseIndex: number;
   mats: Record<PlayerId, Record<Mats, CardId[]>>;
   zones: Record<Zones, CardId[]>;
+  stats: MatchStats;
 }
 
 export const TurnPhaseOrderValues = ['action', 'buy', 'cleanup'] as const;
@@ -105,6 +98,7 @@ export const TurnPhaseOrderValues = ['action', 'buy', 'cleanup'] as const;
 export type ServerEmitEvents = {
   addLogEntry: (logEntry: LogEntry) => void;
   cardEffectsComplete: (playerId: PlayerId, cardId?: CardId) => void;
+  cardTappedComplete: (playerId: PlayerId, cardId: CardId) => void;
   doneWaitingForPlayer: (playerId?: PlayerId) => void;
   expansionList: (val: any[]) => void;
   gameOver: (summary: MatchSummary) => void;
@@ -113,7 +107,7 @@ export type ServerEmitEvents = {
   matchReady: (match: Match) => void;
   matchStarted: () => void;
   nextPhaseComplete: () => void;
-  patchUpdate: (patchMatch: Operation[], patchCardLibrary: Operation[], patchMatchStats: Operation[]) => void;
+  patchUpdate: (patchMatch: Operation[], patchCardLibrary: Operation[]) => void;
   patchCardLibrary: (patch: Operation[]) => void;
   patchMatch: (patch: Operation[]) => void;
   patchMatchStats: (patch: Operation[]) => void;
@@ -130,7 +124,7 @@ export type ServerEmitEvents = {
   setPlayer: (player: Player) => void;
   userPrompt: (signalId: string, userPromptArgs: UserPromptEffectArgs) => void;
   waitingForPlayer: (playerId: PlayerId) => void;
-}
+} & Record<string, (...args: any[]) => void>;
 
 export type ServerListenEvents = {
   cardsSelected: (selected: CardId[]) => void

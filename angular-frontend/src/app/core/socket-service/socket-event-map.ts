@@ -3,7 +3,6 @@ import { playerIdStore, playerStore } from '../../state/player-state';
 import {
   lobbyMatchConfigurationStore,
   matchStartedStore,
-  matchStatsStore,
   matchStore,
   matchSummaryStore,
   selfPlayerIdStore
@@ -93,22 +92,15 @@ export const socketToGameEventMap = (): SocketEventMap => {
     cardStore.set(current);
   };
 
-  map.patchUpdate = (patchMatch, patchCardLibrary, patchMatchStats) => {
+  map.patchUpdate = (patchMatch, patchCardLibrary) => {
     if (patchMatch?.length) map.patchMatch?.(patchMatch);
     if (patchCardLibrary?.length) map.patchCardLibrary?.(patchCardLibrary);
-    if (patchMatchStats?.length) map.patchMatchStats?.(patchMatchStats);
   };
 
   map.patchMatch = (patch: Operation[]) => {
     const current = structuredClone(matchStore.get()) ?? {} as Match;
     applyPatch(current, patch);
     matchStore.set(current);
-  };
-
-  map.patchMatchStats = patch => {
-    const current = structuredClone(matchStatsStore.get()) ?? {} as MatchStats;
-    applyPatch(current, patch);
-    matchStatsStore.set(current);
   };
 
   map.playerConnected = (player) => {

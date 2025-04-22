@@ -390,10 +390,10 @@ export class MatchScene extends Scene {
         awaitingServerLockReleaseStore.set(true);
         const updated = (finishedPlayerId: PlayerId, finishedCardId?: CardId) => {
           if (finishedPlayerId !== this._selfId || finishedCardId !== cardId) return;
-          this._socketService.off('cardEffectsComplete', updated)
+          this._socketService.off('cardTappedComplete', updated)
           awaitingServerLockReleaseStore.set(false);
         }
-        this._socketService.on('cardEffectsComplete', updated);
+        this._socketService.on('cardTappedComplete', updated);
         this._socketService.emit('cardTapped', this._selfId, cardId);
       }
     }

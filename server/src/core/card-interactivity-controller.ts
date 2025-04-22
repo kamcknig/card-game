@@ -1,17 +1,17 @@
-import { AppSocket, GameActionEffectGeneratorFn, GameActions, GameActionTypes, GameEffectGenerator } from '../types.ts';
-import { EffectsController } from './effects/effects-controller.ts';
+import { AppSocket, GameActionEffectGeneratorFn, GameActions, GameActionTypes } from '../types.ts';
 import { Card, CardId, Match, Player, PlayerId, TurnPhaseOrderValues, } from 'shared/shared-types.ts';
 import { isUndefined } from 'es-toolkit/compat';
 import { getEffectiveCardCost } from '../utils/get-effective-card-cost.ts';
 import { CardLibrary } from './card-library.ts';
 import { MatchController } from './match-controller.ts';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
+import { GameActionController } from './effects/game-action-controller.ts';
 
 export class CardInteractivityController {
   private _gameOver: boolean = false;
   
   constructor(
-    private readonly _cardEffectController: EffectsController,
+    private readonly gameActionsController: GameActionController,
     private readonly match: Match,
     private readonly _socketMap: Map<PlayerId, AppSocket>,
     private readonly _cardLibrary: CardLibrary,
@@ -26,13 +26,13 @@ export class CardInteractivityController {
   ) {
     this._socketMap.forEach((s) => {
       s.on('cardTapped', (pId, cId) => this.onCardTapped(pId, cId));
-      s.on('playAllTreasure', (pId) => this.onPlayAllTreasure(pId));
+      s.on('playAllTreasure', async (pId) => await this.onPlayAllTreasure(pId));
     });
   }
   
   public playerAdded(s: AppSocket | undefined) {
     s?.on('cardTapped', (pId, cId) => this.onCardTapped(pId, cId));
-    s?.on('playAllTreasure', (pId) => this.onPlayAllTreasure(pId));
+    s?.on('playAllTreasure', async (pId) => await this.onPlayAllTreasure(pId));
   }
   
   public playerRemoved(socket: AppSocket | undefined) {
@@ -57,7 +57,6 @@ export class CardInteractivityController {
     
     const match = this.match;
     
-    const prev = this._matchController.getMatchSnapshot();
     const currentPlayer = match.players[match.currentPlayerTurnIndex];
     const turnPhase = TurnPhaseOrderValues[match.turnPhaseIndex];
     
@@ -117,17 +116,10 @@ export class CardInteractivityController {
       const tmp = match.selectableCards[+key]?.concat() ?? [];
       const p = getPlayerById(match, +key);
       console.log(`${p} can select ${tmp.length} cards`);
-      if (tmp.length > 0) {
-        console.log(`${p} can select ${
-          tmp.map((c) => this._cardLibrary.getCard(c)).join(', ')
-        }`);
-      }
     }
-    
-    this._matchController.broadcastPatch(prev);
   }
   
-  private onPlayAllTreasure(playerId: number) {
+  private async onPlayAllTreasure(playerId: PlayerId) {
     console.log('[CARD INTERACTIVITY] playing all treasures for current player');
     
     if (this._gameOver) {
@@ -153,76 +145,28 @@ export class CardInteractivityController {
     }
     
     for (const cardId of treasureCards) {
-      this.onCardTapped(player.id, cardId);
+      await this._matchController.runGameAction('playCard', { playerId, cardId });
     }
     
     this._socketMap.get(playerId)?.emit('playAllTreasureComplete');
   };
   
-  private onCardTapped(triggerPlayerId: number, tappedCardId: number) {
-    const match = this.match;
-    
-    const player = match.players.find((player) =>
-      player.id === triggerPlayerId
-    );
+  private async onCardTapped(playerId: PlayerId, cardId: CardId) {
+    const player = getPlayerById(this.match, playerId)
     
     if (!player) {
       throw new Error('could not find player');
     }
     
-    const card = this._cardLibrary.getCard(tappedCardId);
-    
-    console.log(`[CARD INTERACTIVITY] player ${player} tapped card ${card}`);
+    console.log(`[CARD INTERACTIVITY] player ${player} tapped card ${this._cardLibrary.getCard(cardId)}`);
     
     if (this._gameOver) {
       console.log(`[CARD INTERACTIVITY] game is over, not processing card tap`);
       return;
     }
     
-    const turnPhase = TurnPhaseOrderValues[match.turnPhaseIndex];
+    await this._matchController.runGameAction('playCard', { playerId, cardId });
     
-    // deno-lint-ignore no-this-alias
-    const self = this; // ✅ for use inside generator
-    const generator = function* (): GameEffectGenerator {
-      if (turnPhase === 'action') {
-        yield* self._effectGeneratorMap.playCard({
-          playerId: triggerPlayerId,
-          cardId: card.id
-        });
-      }
-      else if (turnPhase === 'buy') {
-        const hand = match.playerHands?.[triggerPlayerId];
-        
-        if (!hand) {
-          console.warn(`[CARD INTERACTIVITY] no hand for player ${player}`);
-          return;
-        }
-        
-        if (hand.includes(tappedCardId)) {
-          yield* self._effectGeneratorMap.playCard({
-            playerId: triggerPlayerId,
-            cardId: card.id,
-          });
-        } else {
-          yield* self._effectGeneratorMap.buyCard({
-            playerId: triggerPlayerId,
-            cardId: card.id,
-          });
-        }
-      }
-    };
-    
-    this._cardEffectController.runGenerator({
-      generator: generator(),
-      source: {
-        type: 'card',
-        playerId: triggerPlayerId,
-        cardId: tappedCardId,
-      },
-      onComplete: () => {
-        console.log(`[CARD INTERACTIVITY] card tapped handler complete ${card} for ${player}`);
-        this._cardTapCompleteCallback(card, player);
-      }
-    });
+    this._socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
   };
 }

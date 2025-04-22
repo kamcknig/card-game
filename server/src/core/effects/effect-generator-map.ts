@@ -1,5 +1,5 @@
 import {
-  CardEffectGeneratorFn,
+  CardEffectFunctionMap, CardEffectFunctionMapFactory,
   CardEffectGeneratorMapFactory,
   GameActionEffectGeneratorFn,
   GameActionEffectGeneratorMapFactory,
@@ -16,7 +16,7 @@ import { GainTreasureEffect } from './effect-types/gain-treasure.ts';
 import { CardPlayedEffect } from './effect-types/card-played.ts';
 import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 import { MoveCardEffect } from './effect-types/move-card.ts';
-import { CardKey, TurnPhaseOrderValues } from 'shared/shared-types.ts';
+import { TurnPhaseOrderValues } from 'shared/shared-types.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { EndTurnEffect } from './effect-types/end-turn.ts';
 import { NewTurnEffect } from './effect-types/new-turn.ts';
@@ -25,8 +25,7 @@ export const gameActionEffectGeneratorFactory: GameActionEffectGeneratorMapFacto
   reactionManager,
   logManager,
   match,
-  cardLibrary,
-  matchStats
+  cardLibrary
 }) => {
   const map: {
     [K in GameActionTypes]: GameActionEffectGeneratorFn<GameActions[K]>;
@@ -126,13 +125,13 @@ export const gameActionEffectGeneratorFactory: GameActionEffectGeneratorMapFacto
           
           // if the card is a duration card, and it was played this turn
           if (card.type.includes('DURATION')) {
-            const playedCardsInfo = matchStats.playedCardsInfo?.[card.id];
+            const playedCardsInfo = match.stats.playedCardsInfo?.[card.id];
             
             if (!playedCardsInfo) continue;
             const turnPlayed = playedCardsInfo.turnNumber;
             
             // if cleaning up for the player that played the duration card
-            if (playedCardsInfo.playerId === player.id) {
+            if (playedCardsInfo.playedPlayerId === player.id) {
               // and the turn is different, it's time to discard
               if (turnPlayed !== match.turnNumber) {
                 yield new DiscardCardEffect({
@@ -142,9 +141,8 @@ export const gameActionEffectGeneratorFactory: GameActionEffectGeneratorMapFacto
               }
               else {
                 // if it's the same turn number,
-                const turnMap = matchStats.cardsPlayedByTurn[turnPlayed];
-                const playedTurnIds = Object.keys(turnMap).map(Number);
-                const playedTurnPlayerIndex = playedTurnIds.findIndex(id => turnMap[id].includes(card.id));
+                const playerTurnPlayedId = match.stats.playedCardsInfo[card.id].turnPlayerId;
+                const playedTurnPlayerIndex = match.players.findIndex(p => p.id === playerTurnPlayedId);
                 
                 if (playedTurnPlayerIndex !== match.currentPlayerTurnIndex) {
                   yield new DiscardCardEffect({
@@ -234,15 +232,7 @@ export const gameActionEffectGeneratorFactory: GameActionEffectGeneratorMapFacto
     
     const reactionContext = {};
     yield* reactionManager.runTrigger({ trigger, reactionContext });
-    
-    const generatorFn = cardEffectGeneratorMap[card.cardKey];
-    if (generatorFn) {
-      yield* generatorFn({
-        playerId,
-        cardId: card.id,
-        reactionContext
-      });
-    }
+
   };
   
   
@@ -279,13 +269,6 @@ export const gameActionEffectGeneratorFactory: GameActionEffectGeneratorMapFacto
   };
   
   
-  map.drawCard = function* ({ playerId }) {
-    yield new DrawCardEffect({
-      playerId,
-    });
-  };
-  
-  
   map.gainCard = function* (args) {
     const trigger = new ReactionTrigger({
       cardId: args.cardId,
@@ -299,6 +282,6 @@ export const gameActionEffectGeneratorFactory: GameActionEffectGeneratorMapFacto
   return map;
 };
 
-export const cardEffectGeneratorMap: Record<CardKey, CardEffectGeneratorFn> = {};
+export const cardEffectFunctionMapFactory: CardEffectFunctionMapFactory = {};
 
 export const cardEffectGeneratorMapFactory: CardEffectGeneratorMapFactory = {};

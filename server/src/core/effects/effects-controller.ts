@@ -9,15 +9,14 @@ import {
 import { EffectsPipeline } from './effects-pipeline.ts';
 
 import { CardLibrary } from '../card-library.ts';
-import { CardId, Match, PlayerId } from 'shared/shared-types.ts';
-import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
-import { EventSystem, GameEvent } from '../events/event-system.ts';
+import { Match } from 'shared/shared-types.ts';
+import { GameActionController, GameActions as GameActionsNew } from './game-action-controller.ts';
 
 export class EffectsController implements IEffectRunner {
   private _effectsPipeline: EffectsPipeline | undefined;
   
   constructor(
-    private readonly eventSystem: EventSystem,
+    private readonly gameActionController: GameActionController,
     private readonly match: Match,
     private readonly _effectGeneratorMap: Record<GameActionTypes, GameActionEffectGeneratorFn>,
     private readonly _cardLibrary: CardLibrary,
@@ -39,6 +38,10 @@ export class EffectsController implements IEffectRunner {
       c = args.context
     }
     
+    if (effectName === 'playCard' || effectName === 'drawCard') {
+      await this.gameActionController[effectName as GameActionsNew](c as any);
+    }
+    
     // const source = context?.source;
     const generatorFn = this._effectGeneratorMap[effectName];
     
@@ -50,32 +53,6 @@ export class EffectsController implements IEffectRunner {
     console.log(`[EFFECT CONTROLLER] running '${effectName}' game action effect generator`,);
     
     // For specific effects that can trigger reactions, handle them here
-    if (effectName === 'playCard' && 'cardId' in c) {
-      const card = this._cardLibrary.getCard(c.cardId as CardId);
-      if (card.type.includes('ATTACK')) {
-        // Create an event for the attack
-        const attackEvent: GameEvent = {
-          type: 'attackPlayed',
-          playerId: (c as any).playerId as PlayerId,
-          cardId: c.cardId as CardId,
-          targetIds: findOrderedTargets({
-            startingPlayerId: (c as any).playerId as PlayerId,
-            appliesTo: 'ALL_OTHER',
-            match: this.match
-          })
-        };
-        
-        // Process reactions before continuing with the effect
-        const reactionResults = await this.eventSystem.processEvent(attackEvent);
-        
-        // Add reaction results to context so the generator can use them
-        c = {
-          ...c,
-          reactionResults
-        };
-      }
-    }
-    
     const generator = generatorFn({ ...c });
     return this.runGenerator({ generator, ...c });
   }

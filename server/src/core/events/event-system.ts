@@ -1,22 +1,17 @@
 // Define event types
 import { CardId, Match, PlayerId } from 'shared/shared-types.ts';
 import { CardLibrary } from '../card-library.ts';
-import { EffectsController } from '../effects/effects-controller.ts';
 
-export type GameEventType =
-  | 'cardPlayed'
-  | 'attackPlayed'
-  | 'gainCard'
-  | 'startTurn';
+
 
 // Basic event interface
-export interface GameEvent {
+/*export interface GameEvent {
   type: GameEventType;
   playerId: PlayerId;
   cardId?: CardId;
   targetIds?: PlayerId[];
   data?: any;
-}
+}*/
 
 // Reaction result
 export interface ReactionResult {
@@ -26,21 +21,21 @@ export interface ReactionResult {
   additionalData?: any;
 }
 
-interface ReactionConditionContext {
+/*interface ReactionConditionContext {
   event: GameEvent;
   match: Match;
   cardLibrary: CardLibrary;
-}
+}*/
 
-interface ReactionExecuteContext {
+/*interface ReactionExecuteContext {
   effectsController: { runGameActionEffects: any };
   event: GameEvent;
   match: Match;
   cardLibrary: CardLibrary;
-}
+}*/
 
 // Reaction interface
-export interface Reaction {
+/*export interface Reaction {
   id: string;
   playerId: PlayerId;
   sourceCardId: CardId;
@@ -48,8 +43,9 @@ export interface Reaction {
   once: boolean;
   condition: (args: ReactionConditionContext) => boolean;
   execute: (args: ReactionExecuteContext) => Promise<ReactionResult>;
-}
+}*/
 
+/*
 export interface PromptPlayerArgs {
   playerId: PlayerId;
   options: any;
@@ -67,7 +63,7 @@ export class EventSystem {
   
   private _effectsController: { runGameActionEffects: any } | undefined;
   
-  setEffectsController (effectsController: { runGameActionEffects: any }) {
+  setEffectsController(effectsController: { runGameActionEffects: any }) {
     this._effectsController = effectsController;
   }
   
@@ -181,4 +177,4 @@ export class EventSystem {
     
     return results;
   }
-}
+}*/

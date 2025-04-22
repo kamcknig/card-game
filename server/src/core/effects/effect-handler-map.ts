@@ -22,13 +22,11 @@ import { cardLifecycleMap } from '../card-lifecycle-map.ts';
 import { LogManager } from '../log-manager.ts';
 import { EffectsPipeline } from './effects-pipeline.ts';
 import { DiscardCardEffect } from './effect-types/discard-card.ts';
-import { cardEffectGeneratorMap } from './effect-generator-map.ts';
-import { EventSystem } from '../events/event-system.ts';
 import { EffectsController } from './effects-controller.ts';
+import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 
 type CreateEffectHandlerMapArgs = {
   effectsController: EffectsController,
-  eventSystem: EventSystem,
   socketMap: Map<PlayerId, AppSocket>,
   reactionManager: ReactionManager,
   effectGeneratorMap: Record<GameActionTypes, GameActionEffectGeneratorFn>,
@@ -45,7 +43,6 @@ type CreateEffectHandlerMapArgs = {
 export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): EffectHandlerMap => {
   const {
     effectsController,
-    eventSystem,
     socketMap,
     effectGeneratorMap,
     cardLibrary,
@@ -292,7 +289,6 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
         case 'playerHands':
           triggerTemplates = cardLifecycleMap[card.cardKey]
             ?.['onEnterHand']?.({
-            eventSystem,
             effectsController,
             playerId: effect.toPlayerId,
             cardId: effect.cardId,
@@ -336,13 +332,11 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
       reactionManager.registerReactionTemplate(trigger);
     }
     
-    const currentPlayerTurnId = match.players[match.currentPlayerTurnIndex].id;
-    matchStats.cardsPlayedByTurn[match.turnNumber][currentPlayerTurnId] ??= [];
-    matchStats.cardsPlayedByTurn[match.turnNumber][currentPlayerTurnId].push(effect.cardId);
-    matchStats.playedCardsInfo[effect.cardId] = {
+    match.stats.playedCardsInfo[effect.cardId] = {
       turnNumber: match.turnNumber,
-      playerId: effect.playerId,
-    };
+      playedPlayerId: effect.playerId,
+      turnPlayerId: getCurrentPlayer(match).id
+    }
   }
   
   
@@ -354,13 +348,6 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
     });
     
     matchStats.cardsGained.push(
-      match.players.reduce((prev, next) => {
-        prev[next.id] = [];
-        return prev;
-      }, {} as Record<PlayerId, CardId[]>)
-    );
-    
-    matchStats.cardsPlayedByTurn.push(
       match.players.reduce((prev, next) => {
         prev[next.id] = [];
         return prev;
@@ -578,7 +565,7 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
   
   map.invokeCardEffects = function (effect) {
     const { context, cardKey } = effect;
-    const generatorFn = cardEffectGeneratorMap[cardKey];
+/*    const generatorFn = cardEffectFunctionMap[cardKey];
     
     if (!generatorFn) {
       throw new Error(`no generator found for '${cardKey}'`);
@@ -586,7 +573,7 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
     
     const generator = generatorFn(context);
     
-    return { runGenerator: generator };
+    return { runGenerator: generator };*/
   }
   
   

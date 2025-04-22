@@ -1,8 +1,9 @@
 import { computed } from 'nanostores';
 import { Card, CardId, Mats } from 'shared/shared-types';
-import { currentPlayerTurnIndexStore, turnNumberStore } from './turn-state';
+import { currentPlayerTurnIdStore } from './turn-state';
 import { cardStore } from './card-state';
-import { matchStatsStore, matchStore, selfPlayerIdStore } from './match-state';
+import { matchStore, selfPlayerIdStore } from './match-state';
+import { getDistanceToPlayer } from '../shared/get-player-position-utils';
 
 export const supplyStore =
   computed(matchStore, m => m?.supply ?? []);
@@ -30,11 +31,13 @@ export const matStore = computed(
 (globalThis as any).matStore = matStore;
 
 export const activeDurationCardStore = computed(
-  [playAreaStore, matchStore, matchStatsStore, currentPlayerTurnIndexStore, turnNumberStore, cardStore],
-  (playArea, match, matchStats, currentTurnPlayerIndex, turnNumber, allCards) => {
+  [playAreaStore, matchStore, cardStore, currentPlayerTurnIdStore],
+  (playArea, match, allCards, currentPlayerTurnId) => {
     const result: Card[] = [];
 
-    if (!match || !matchStats?.playedCardsInfo || !matchStats.cardsPlayedByTurn) return result;
+    const matchStats = match?.stats;
+
+    if (!match || !matchStats?.playedCardsInfo) return result;
 
     for (const card of playArea.map(id => allCards[id])) {
       if (!card.type.includes('DURATION')) continue;
@@ -42,21 +45,15 @@ export const activeDurationCardStore = computed(
       const info = matchStats.playedCardsInfo[card.id];
       if (!info) continue;
 
-      const playedTurn = info.turnNumber;
+      const turnsSincePlayed = getDistanceToPlayer({
+        match,
+        startPlayerId: info.turnPlayerId,
+        targetPlayerId: currentPlayerTurnId,
+        direction: 'forward'
+      });
 
-      // Only show if it's after the turn it was played
-      if (turnNumber > playedTurn) {
+      if (turnsSincePlayed > 0 && turnsSincePlayed < match.players.length) {
         result.push(card);
-      }
-      else if (turnNumber === playedTurn) {
-        const turnMap = matchStats.cardsPlayedByTurn[playedTurn];
-        const playedTurnIds = Object.keys(turnMap).map(Number);
-        const playedTurnPlayerIndex = playedTurnIds.findIndex(id => turnMap[id].includes(card.id));
-
-        // If we're in the same turn number but it's no longer that player's turn
-        if (playedTurnPlayerIndex !== currentTurnPlayerIndex) {
-          result.push(card);
-        }
       }
     }
 
@@ -65,9 +62,10 @@ export const activeDurationCardStore = computed(
 );
 
 export const playedCardStore = computed(
-  [playAreaStore, matchStatsStore, turnNumberStore, cardStore, matchStore, currentPlayerTurnIndexStore],
-  (cardIds, matchStats, turnNumber, allCards, match, currentTurnPlayerIndex) => {
-    if (!matchStats?.playedCardsInfo || !matchStats.cardsPlayedByTurn || !match) return cardIds.map(id => allCards[id]);
+  [playAreaStore, cardStore, matchStore, currentPlayerTurnIdStore],
+  (cardIds, allCards, match, currentPlayerTurnId) => {
+    const matchStats = match?.stats;
+    if (!matchStats?.playedCardsInfo || !match) return cardIds.map(id => allCards[id]);
 
     return cardIds
       .map(id => allCards[id])
@@ -77,16 +75,14 @@ export const playedCardStore = computed(
         const info = matchStats.playedCardsInfo[card.id];
         if (!info) return true;
 
-        const playedTurn = info.turnNumber;
-        const playedPlayerId = info.playerId;
+        const turnsSincePlayed = getDistanceToPlayer({
+          match,
+          startPlayerId: info.turnPlayerId,
+          targetPlayerId: currentPlayerTurnId,
+          direction: 'forward'
+        });
 
-        if (playedTurn !== turnNumber) return false;
-
-        const turnMap = matchStats.cardsPlayedByTurn[playedTurn];
-        const playedTurnIds = Object.keys(turnMap);
-        const playedTurnPlayerIndex = playedTurnIds.findIndex(id => parseInt(id) === playedPlayerId);
-
-        return playedTurnPlayerIndex === currentTurnPlayerIndex && turnMap[playedPlayerId]?.includes(card.id);
+        return turnsSincePlayed === 0;
       });
   }
 );

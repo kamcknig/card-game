@@ -1,14 +1,17 @@
 import {
   Card,
-  CardData, CardId,
+  CardData,
+  CardId,
   CardKey,
   Match,
-  MatchConfiguration, MatchStats,
-  MatchSummary, Mats,
+  MatchConfiguration,
+  MatchStats,
+  MatchSummary,
+  Mats,
   Player,
   PlayerId,
 } from 'shared/shared-types.ts';
-import { AppSocket, MatchBaseConfiguration, } from '../types.ts';
+import { AppSocket, CardEffectFunctionMap, MatchBaseConfiguration, } from '../types.ts';
 import { EffectsController } from './effects/effects-controller.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';
 import { createCardFactory } from '../utils/create-card.ts';
@@ -22,14 +25,11 @@ import { compare, Operation } from 'fast-json-patch';
 import { ExpansionCardData, expansionData } from '../state/expansion-data.ts';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
 import Fuse, { IFuseOptions } from 'fuse.js';
-import {
-  cardEffectGeneratorMap,
-  cardEffectGeneratorMapFactory,
-  gameActionEffectGeneratorFactory
-} from './effects/effect-generator-map.ts';
+import { cardEffectFunctionMapFactory, gameActionEffectGeneratorFactory } from './effects/effect-generator-map.ts';
 import { EventEmitter } from '@denosaurs/event';
 import { LogManager } from './log-manager.ts';
-import { EventSystem } from './events/event-system.ts';
+import { GameActionController, GameActions } from './effects/game-action-controller.ts';
+import { getCurrentPlayer } from '../utils/get-current-player.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _effectsController: EffectsController | undefined;
@@ -43,6 +43,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _fuse: Fuse<CardData & { cardKey: CardKey }> | undefined;
   private _logManager: LogManager | undefined;
   private _matchStats: MatchStats = {} as MatchStats;
+  private gameActionsController: GameActionController | undefined;
   
   constructor(
     private _match: Match,
@@ -99,12 +100,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           return prev;
         }, {} as Record<PlayerId, CardId[]>)
       ],
-      cardsPlayedByTurn: [
-        config.players.reduce((prev, next) => {
-          prev[next.id] = [];
-          return prev;
-        }, {} as Record<PlayerId, CardId[]>)
-      ],
       trashedCards: [
         config.players.reduce((prev, next) => {
           prev[next.id] = [];
@@ -150,6 +145,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       zones: {
         'revealed': [],
         'look-at': [],
+      },
+      stats: {
+        playedCardsInfo: {},
+        cardsGained: [],
+        trashedCards: []
       }
     };
     
@@ -193,37 +193,45 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this._fuse = new Fuse(allExpansionCards, fuseOptions);
   }
   
-  private _matchStatSnapshot = {};
   private _cardLibSnapshot = {};
   
   public getMatchSnapshot(): Match {
-    this._matchStatSnapshot = structuredClone(this._matchStatSnapshot);
     this._cardLibSnapshot = structuredClone(this._cardLibrary.getAllCards());
     return structuredClone(this._match);
+  }
+  
+  async runGameAction<K extends GameActions>(
+    action: K,
+    args: Parameters<GameActionController[K]>[0]
+  ): Promise<ReturnType<GameActionController[K]>> {
+    const prev = this.getMatchSnapshot();
+    
+    const result = await this.gameActionsController![action](args as any);
+    
+    this._interactivityController?.checkCardInteractivity();
+    
+    this.broadcastPatch(prev);
+    
+    return result as ReturnType<GameActionController[K]>;
   }
   
   public broadcastPatch(prev: Match) {
     const patch: Operation[] = compare(prev, this._match);
     const cardLibraryPatch = compare(this._cardLibSnapshot, this._cardLibrary.getAllCards());
-    const matchStatPatch = compare(this._matchStatSnapshot, this._matchStats ?? {});
-    if (patch.length || cardLibraryPatch.length || matchStatPatch.length) {
+    if (patch.length || cardLibraryPatch.length) {
       console.log(`[MATCH] sending match update to clients`);
-      
-      if (patch.length) {
-        console.log(`[ match ] match patch`);
-        console.log(patch);
-      }
       
       if (cardLibraryPatch.length) {
         console.log(`[ match ] card library patch`);
         console.log(cardLibraryPatch);
       }
       
-      if (matchStatPatch.length) {
-        console.log(`[ match ] match stats patch`);
-        console.log(matchStatPatch);
+      if (patch.length) {
+        console.log(`[ match ] match patch`);
+        console.log(patch);
       }
-      this._socketMap.forEach((s) => s.emit('patchUpdate', patch, cardLibraryPatch, matchStatPatch));
+      
+      this._socketMap.forEach((s) => s.emit('patchUpdate', patch, cardLibraryPatch));
     }
   }
   
@@ -233,7 +241,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     socket.emit('setCardLibrary', this._cardLibrary.getAllCards());
     socket.emit('matchReady', this._match);
-    socket.on('clientReady', (_playerId: number, _ready: boolean) => {
+    socket.on('clientReady', async (_playerId: number, _ready: boolean) => {
       console.log(
         `[MATCH] ${
           this._match.players.find((player) => player.id === playerId)
@@ -249,7 +257,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       if (
         this._match.players[this._match.currentPlayerTurnIndex].id === playerId
       ) {
-        this._effectsController?.runGameActionEffects({ effectName: 'checkForPlayerActions' });
+        await this._effectsController?.runGameActionEffects({ effectName: 'checkForPlayerActions' });
         this._interactivityController?.checkCardInteractivity();
       }
     });
@@ -428,7 +436,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     void this.startMatch();
   };
   
-  private startMatch() {
+  private async startMatch() {
     console.log(`[MATCH] starting match`);
     
     this._reactionManager = new ReactionManager(
@@ -441,6 +449,19 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       socketMap: this._socketMap,
     });
     
+    const cardEffectFunctionMap = Object.keys(cardEffectFunctionMapFactory).reduce((acc, nextKey) => {
+      acc[nextKey] = cardEffectFunctionMapFactory[nextKey]();
+      return acc;
+    }, {} as CardEffectFunctionMap);
+    
+    this.gameActionsController = new GameActionController(
+      cardEffectFunctionMap,
+      this._match,
+      this._cardLibrary,
+      this._logManager,
+      this._socketMap,
+    );
+    
     const effectGeneratorMap = gameActionEffectGeneratorFactory({
       matchStats: this._matchStats!,
       reactionManager: this._reactionManager,
@@ -449,63 +470,15 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       cardLibrary: this._cardLibrary
     });
     
-    for (const [key, effectGeneratorFactory] of Object.entries(cardEffectGeneratorMapFactory)) {
-      cardEffectGeneratorMap[key] = effectGeneratorFactory({
-        matchStats: this._matchStats!,
-        reactionManager: this._reactionManager,
-        match: this._match,
-        logManager: this._logManager,
-        cardLibrary: this._cardLibrary,
-      });
-    }
-    
-    // Create the event system
-    const promptPlayer = async (args :{ playerId: PlayerId, options: any}) => {
-      // Use your existing user prompt mechanism
-      return new Promise(resolve => {
-        const socket = this._socketMap.get(args.playerId);
-        const signalId = `prompt:${Date.now()}`;
-        
-        socket?.emit('userPrompt', signalId, args.options);
-        
-        if (match.players[match.currentPlayerTurnIndex].id !== args.playerId) {
-          socket?.on('userInputReceived', (signal, result) => {
-            if (signal !== signalId) return;
-            this._socketMap.forEach((s) =>
-              s !== socket && s.emit('doneWaitingForPlayer', args.playerId)
-            );
-            resolve(result);
-          });
-          
-          this._socketMap.forEach((s) =>
-            s !== socket && s.emit('waitingForPlayer', args.playerId)
-          );
-        }
-        
-        // TODO: listen for the signal instead!!
-        /*socket?.once(signalId, result => {
-          resolve(result);
-        });*/
-      });
-    };
-    
-    const eventSystem = new EventSystem(
-      this._match,
-      this._cardLibrary,
-      promptPlayer
-    );
-    
     this._effectsController = new EffectsController(
-      eventSystem,
+      this.gameActionsController,
       this._match,
       effectGeneratorMap,
       this._cardLibrary
     );
     
-    eventSystem.setEffectsController(this._effectsController);
-    
     this._interactivityController = new CardInteractivityController(
-      this._effectsController,
+      this.gameActionsController,
       this._match,
       this._socketMap,
       this._cardLibrary,
@@ -516,7 +489,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     const effectHandlerMap = createEffectHandlerMap({
       effectsController: this._effectsController,
-      eventSystem,
       socketMap: this._socketMap,
       reactionManager: this._reactionManager,
       effectGeneratorMap,
@@ -539,42 +511,35 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this.initializeSocketListeners(playerId, socket);
     }
     
-    const prev = this.getMatchSnapshot();
-    const match = this._match;
-    match.playerBuys = 1;
-    match.playerActions = 1;
-    this.getMatchSnapshot();
-    this.broadcastPatch(prev);
+    this._match.playerBuys = 1;
+    this._match.playerActions = 1;
     
     this._socketMap.forEach((s) => s.emit('matchStarted'));
     
-    for (const player of match.players!) {
+    for (const player of this._match.players!) {
       for (let i = 0; i < 5; i++) {
-        this._effectsController?.runGameActionEffects(
-          { effectName: 'drawCard', context: { playerId: player.id } },
-        );
+        await this.runGameAction('drawCard', { playerId: player.id });
       }
     }
     
     this._logManager.addLogEntry({
       root: true,
       type: 'newTurn',
-      turn: match.turnNumber,
+      turn: this._match.turnNumber,
     });
     
     this._logManager.addLogEntry({
       root: true,
       type: 'newPlayerTurn',
-      turn: match.turnNumber,
-      playerId: match.players[match.currentPlayerTurnIndex].id
+      turn: this._match.turnNumber,
+      playerId: getCurrentPlayer(this._match).id
     });
     
-    this._effectsController?.runGameActionEffects({ effectName: 'checkForPlayerActions' });
+    await this._effectsController?.runGameActionEffects({ effectName: 'checkForPlayerActions' });
   }
   
   private onUserInputReceived = (signalId: string, input: unknown) => {
     console.log(`[MATCH] user input received for signal ${signalId}`);
-    console.log(`[MATCH] input ${input}`);
     this._effectsPipeline?.resumeGenerator(signalId, input);
   }
   
@@ -592,9 +557,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     );
   };
   
-  private onCardTapHandlerComplete = (_card: Card, _player: Player) => {
+  private onCardTapHandlerComplete = async (_card: Card, _player: Player) => {
     console.log(`[MATCH] card tap complete handler invoked`);
-    this._effectsController?.runGameActionEffects({ effectName: 'checkForPlayerActions' });
+    await this._effectsController?.runGameActionEffects({ effectName: 'checkForPlayerActions' });
   };
   
   private onEffectCompleted = () => {
@@ -747,8 +712,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this.emit('gameOver');
   }
   
-  private onNextPhase = () => {
-    this._effectsController?.runGameActionEffects({ effectName: 'nextPhase' });
+  private async onNextPhase() {
+    await this.runGameAction('nextPhase', {});
     this._socketMap.forEach(s => s.emit('nextPhaseComplete'));
   }
   
