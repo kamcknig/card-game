@@ -15,6 +15,8 @@ import { toNumber } from 'es-toolkit/compat';
 import { CardLibrary } from './core/card-library.ts';
 import { ReactionManager } from './core/reactions/reaction-manager.ts';
 import { LogManager } from './core/log-manager.ts';
+import { EventSystem } from './core/events/event-system.ts';
+import { EffectsController } from './core/effects/effects-controller.ts';
 
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
 
@@ -359,7 +361,12 @@ export type LifecycleResult = {
   unregisterTriggeredEvents?: string[];
 };
 export type LifecycleCallback = (
-  args: { playerId: number; cardId: number },
+  args: {
+    effectsController?: EffectsController,
+    eventSystem?: EventSystem,
+    playerId: number;
+    cardId: number
+  },
 ) => LifecycleResult | void;
 
 export type LifecycleCallbackMap = {

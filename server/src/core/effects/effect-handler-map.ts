@@ -23,8 +23,12 @@ import { LogManager } from '../log-manager.ts';
 import { EffectsPipeline } from './effects-pipeline.ts';
 import { DiscardCardEffect } from './effect-types/discard-card.ts';
 import { cardEffectGeneratorMap } from './effect-generator-map.ts';
+import { EventSystem } from '../events/event-system.ts';
+import { EffectsController } from './effects-controller.ts';
 
 type CreateEffectHandlerMapArgs = {
+  effectsController: EffectsController,
+  eventSystem: EventSystem,
   socketMap: Map<PlayerId, AppSocket>,
   reactionManager: ReactionManager,
   effectGeneratorMap: Record<GameActionTypes, GameActionEffectGeneratorFn>,
@@ -40,6 +44,8 @@ type CreateEffectHandlerMapArgs = {
  */
 export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): EffectHandlerMap => {
   const {
+    effectsController,
+    eventSystem,
     socketMap,
     effectGeneratorMap,
     cardLibrary,
@@ -286,6 +292,8 @@ export const createEffectHandlerMap = (args: CreateEffectHandlerMapArgs): Effect
         case 'playerHands':
           triggerTemplates = cardLifecycleMap[card.cardKey]
             ?.['onEnterHand']?.({
+            eventSystem,
+            effectsController,
             playerId: effect.toPlayerId,
             cardId: effect.cardId,
           })?.registerTriggeredEvents;

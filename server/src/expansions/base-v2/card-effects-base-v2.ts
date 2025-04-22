@@ -50,7 +50,38 @@ const expansionModule: CardExpansionModule = {
       },
     },
     'moat': {
-      onEnterHand: ({ playerId, cardId }) => {
+      onEnterHand: ({ eventSystem, playerId, cardId }) => {
+        const reactionId = `moat:${cardId}:onEnterHand`;
+        
+        // Register with the event system instead of using triggers
+        eventSystem?.registerReaction('attackPlayed', {
+          id: reactionId,
+          playerId,
+          sourceCardId: cardId,
+          compulsory: false,
+          once: false,
+          condition: ({ event, match, cardLibrary }) => {
+            // Only apply to attacks from other players
+            return event.playerId !== playerId;
+          },
+          execute: async ({ effectsController, event, match, cardLibrary }) => {
+            // Reveal the moat card
+            await effectsController.runGameActionEffects({
+              effectName: 'revealCard',
+              context: {
+                cardId,
+                playerId
+              }
+            });
+            
+            // Return immunity result
+            return {
+              applied: true,
+              immunity: true
+            };
+          }
+        });
+        
         return {
           registerTriggeredEvents: [{
             id: `moat:${cardId}:onEnterHand`,

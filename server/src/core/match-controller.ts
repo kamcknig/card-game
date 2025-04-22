@@ -29,6 +29,7 @@ import {
 } from './effects/effect-generator-map.ts';
 import { EventEmitter } from '@denosaurs/event';
 import { LogManager } from './log-manager.ts';
+import { EventSystem } from './events/event-system.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _effectsController: EffectsController | undefined;
@@ -50,18 +51,17 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     super();
   }
   
-  private _keepers: CardKey[] = ['sailor', 'pirate', 'corsair', 'haven'];
+  private _keepers: CardKey[] = ['militia', 'moat', 'corsair', 'haven'];
   private _playerHands: Record<CardKey, number>[] = [
     {
       gold: 4,
       silver: 4,
-      'sailor': 4
+      'militia': 4
     },
     {
       gold: 4,
       estate: 3,
-      silver: 4,
-      'pirate': 3
+      'moat': 3
     }
   ];
   
@@ -459,10 +459,50 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       });
     }
     
+    // Create the event system
+    const promptPlayer = async (args :{ playerId: PlayerId, options: any}) => {
+      // Use your existing user prompt mechanism
+      return new Promise(resolve => {
+        const socket = this._socketMap.get(args.playerId);
+        const signalId = `prompt:${Date.now()}`;
+        
+        socket?.emit('userPrompt', signalId, args.options);
+        
+        if (match.players[match.currentPlayerTurnIndex].id !== args.playerId) {
+          socket?.on('userInputReceived', (signal, result) => {
+            if (signal !== signalId) return;
+            this._socketMap.forEach((s) =>
+              s !== socket && s.emit('doneWaitingForPlayer', args.playerId)
+            );
+            resolve(result);
+          });
+          
+          this._socketMap.forEach((s) =>
+            s !== socket && s.emit('waitingForPlayer', args.playerId)
+          );
+        }
+        
+        // TODO: listen for the signal instead!!
+        /*socket?.once(signalId, result => {
+          resolve(result);
+        });*/
+      });
+    };
+    
+    const eventSystem = new EventSystem(
+      this._match,
+      this._cardLibrary,
+      promptPlayer
+    );
+    
     this._effectsController = new EffectsController(
+      eventSystem,
+      this._match,
       effectGeneratorMap,
       this._cardLibrary
     );
+    
+    eventSystem.setEffectsController(this._effectsController);
     
     this._interactivityController = new CardInteractivityController(
       this._effectsController,
@@ -475,6 +515,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     );
     
     const effectHandlerMap = createEffectHandlerMap({
+      effectsController: this._effectsController,
+      eventSystem,
       socketMap: this._socketMap,
       reactionManager: this._reactionManager,
       effectGeneratorMap,
