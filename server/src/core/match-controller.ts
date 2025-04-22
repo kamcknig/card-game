@@ -55,9 +55,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _keepers: CardKey[] = ['militia', 'moat', 'corsair', 'haven'];
   private _playerHands: Record<CardKey, number>[] = [
     {
-      gold: 4,
-      silver: 4,
-      'militia': 4
+      gold: 7,
+      silver: 7,
+      'militia': 3
     },
     {
       gold: 4,
@@ -202,7 +202,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   
   async runGameAction<K extends GameActions>(
     action: K,
-    args: Parameters<GameActionController[K]>[0]
+    args: Parameters<GameActionController[K]>[0] = {}
   ): Promise<ReturnType<GameActionController[K]>> {
     const prev = this.getMatchSnapshot();
     
@@ -254,11 +254,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       
       this._interactivityController?.playerAdded(socket);
       
-      if (
-        this._match.players[this._match.currentPlayerTurnIndex].id === playerId
-      ) {
-        await this._effectsController?.runGameActionEffects({ effectName: 'checkForPlayerActions' });
-        this._interactivityController?.checkCardInteractivity();
+      if (getCurrentPlayer(this._match).id === playerId) {
+        await this.runGameAction('checkForRemainingPlayerActions');
       }
     });
   }
@@ -535,7 +532,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       playerId: getCurrentPlayer(this._match).id
     });
     
-    await this._effectsController?.runGameActionEffects({ effectName: 'checkForPlayerActions' });
+    await this.runGameAction('checkForRemainingPlayerActions');
   }
   
   private onUserInputReceived = (signalId: string, input: unknown) => {
@@ -559,7 +556,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   
   private onCardTapHandlerComplete = async (_card: Card, _player: Player) => {
     console.log(`[MATCH] card tap complete handler invoked`);
-    await this._effectsController?.runGameActionEffects({ effectName: 'checkForPlayerActions' });
+    await this.runGameAction('checkForRemainingPlayerActions');
   };
   
   private onEffectCompleted = () => {
@@ -713,13 +710,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
   
   private async onNextPhase() {
-    await this.runGameAction('nextPhase', {});
+    await this.runGameAction('nextPhase');
+    await this.runGameAction('checkForRemainingPlayerActions');
     this._socketMap.forEach(s => s.emit('nextPhaseComplete'));
   }
   
   private initializeSocketListeners(_playerId: PlayerId, socket: AppSocket) {
-    socket.on('nextPhase', this.onNextPhase);
-    socket.on('searchCards', this.onSearchCards);
-    socket.on('userInputReceived', this.onUserInputReceived);
+    socket.on('nextPhase', () => this.onNextPhase());
+    socket.on('searchCards', (playerId, searchStr) => this.onSearchCards(playerId, searchStr));
+    socket.on('userInputReceived', (signalId, input) => this.onUserInputReceived(signalId, input));
   }
 }

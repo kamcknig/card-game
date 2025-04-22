@@ -15,7 +15,8 @@ export type GameActions =
   | 'nextPhase'
   | 'discardCard'
   | 'endTurn'
-  | 'drawCard';
+  | 'drawCard'
+  | 'checkForRemainingPlayerActions';
 
 type GameActionMethodMap = {
   [K in GameActions]: GameActionController[K];
@@ -38,21 +39,54 @@ export class GameActionController {
     });
   }
   
-  async discardCard(args: { cardId: CardId, playerId: PlayerId }) {
-    /*if (effect.log) {
-      logManager.addLogEntry({
-        root: effect.isRootLog,
-        type: 'discard',
-        playerId: effect.playerId,
-        cardId: effect.cardId,
-      });
-    }*/
+  async checkForRemainingPlayerActions(): Promise<void> {
+    const match = this.match;
+    const currentPlayer = getCurrentPlayer(match);
+    const turnPhase = getTurnPhase(match.turnPhaseIndex);
     
-    const oldSource = findSourceByCardId(args.cardId, this.match, this.cardLibrary);
-    oldSource.sourceStore.splice(oldSource.index, 1);
+    console.log(`[checkForRemainingPlayerActions action] phase: ${turnPhase}, player: ${currentPlayer.name}`);
+    
+    if (turnPhase === 'action') {
+      const hasActions = match.playerActions > 0;
+      const hasActionCards = match.playerHands[currentPlayer.id]
+        .some(cardId => this.cardLibrary.getCard(cardId).type.includes('ACTION'));
+      
+      if (!hasActions || !hasActionCards) {
+        console.log('[checkForRemainingPlayerActions action] skipping to next phase');
+        await this.nextPhase();
+      }
+    }
+    
+    if (turnPhase === 'buy') {
+      const hasBuys = match.playerBuys > 0;
+      const hasTreasure = match.playerHands[currentPlayer.id]
+        .some(cardId => this.cardLibrary.getCard(cardId).type.includes('TREASURE'));
+      const hasMoney = match.playerTreasure > 0;
+      
+      if ((!hasTreasure && !hasMoney) || !hasBuys) {
+        console.log('[checkForRemainingPlayerActions action] skipping to next phase');
+        await this.nextPhase();
+      }
+    }
   }
   
-  async nextPhase(args: {}) {
+  
+  async discardCard(args: { cardId: CardId, playerId: PlayerId }) {
+    console.log(`[discardCard action] discarding ${this.cardLibrary.getCard(args.cardId)} from ${getPlayerById(this.match, args.playerId)}`);
+    const oldSource = findSourceByCardId(args.cardId, this.match, this.cardLibrary);
+    oldSource.sourceStore.splice(oldSource.index, 1);
+    
+    this.match.playerDiscards[args.playerId].push(args.cardId);
+    
+    this.logManager.addLogEntry({
+      root: false,
+      type: 'discard',
+      playerId: args.playerId,
+      cardId: args.cardId,
+    });
+  }
+  
+  async nextPhase(args: {} = {}) {
     const match = this.match;
     
     match.turnPhaseIndex = match.turnPhaseIndex + 1;
@@ -64,7 +98,7 @@ export class GameActionController {
     const newPhase = getTurnPhase(match.turnPhaseIndex);
     const player = match.players[match.currentPlayerTurnIndex];
     
-    console.log(`[NEXT PHASE EFFECT] entering phase: ${newPhase}`);
+    console.log(`[nextPhase action] entering phase: ${newPhase}`);
     
     switch (newPhase) {
       case 'action': {
@@ -77,7 +111,7 @@ export class GameActionController {
           match.currentPlayerTurnIndex = 0;
           match.turnNumber++;
           
-          console.log(`[NEXT PHASE EFFECT] new round: ${match.turnNumber} (${match.turnNumber + 1})`);
+          console.log(`[nextPhase action] new round: ${match.turnNumber} (${match.turnNumber + 1})`);
           
           await this.endTurn();
         }
@@ -91,12 +125,12 @@ export class GameActionController {
         
         // TODO
         /*const trigger = new ReactionTrigger({
-          eventType: 'startTurn',
-          playerId: match.players[match.currentPlayerTurnIndex].id
-        });
-        
-        const reactionContext = {};
-        yield* reactionManager.runTrigger({ trigger, reactionContext });*/
+         eventType: 'startTurn',
+         playerId: match.players[match.currentPlayerTurnIndex].id
+         });
+         
+         const reactionContext = {};
+         yield* reactionManager.runTrigger({ trigger, reactionContext });*/
         
         break;
       }
@@ -139,11 +173,11 @@ export class GameActionController {
               }
             }
             
-            console.log(`[NEXT PHASE EFFECT] ${card} is duration, leaving in play`);
+            console.log(`[nextPhase action] ${card} is duration, leaving in play`);
             continue;
           }
           
-          console.log(`[NEXT PHASE EFFECT] discarding ${this.cardLibrary.getCard(cardId)}...`);
+          console.log(`[nextPhase action] discarding ${this.cardLibrary.getCard(cardId)}...`);
           
           await this.discardCard({
             cardId,
@@ -152,7 +186,7 @@ export class GameActionController {
         }
         
         for (let i = 0; i < 5; i++) {
-          console.log(`[NEXT PHASE EFFECT] drawing card...`);
+          console.log(`[nextPhase action] drawing card...`);
           
           await this.drawCard({
             playerId: player.id
@@ -171,6 +205,7 @@ export class GameActionController {
   }
   
   async endTurn() {
+    console.log('[endTurn action] removing overrides');
     removeOverrideEffects('TURN_END');
     
     const overrides = getCardOverrides(this.match, this.cardLibrary);
@@ -183,6 +218,7 @@ export class GameActionController {
   }
   
   async gainTreasure(args: { count: number }) {
+    console.log(`[gainTreasure action] gaining ${args.count} treasure`);
     this.match.playerTreasure += args.count;
   }
   
@@ -194,20 +230,20 @@ export class GameActionController {
     const discard = this.match.playerDiscards[playerId];
     
     if (discard.length + deck.length === 0) {
-      console.log('[drawCard action] Not enough cards to draw');
+      console.log('[gainTreasure action] Not enough cards to draw');
       return null;
     }
     
     // If deck is empty, shuffle discard into deck
     if (deck.length === 0) {
-      console.log(`[drawCard action] Shuffling discard pile`);
+      console.log(`[gainTreasure action] Shuffling discard pile`);
       await this.shuffleDeck({ playerId });
     }
     
     const drawnCardId = deck.pop();
     if (!drawnCardId) return null;
     
-    console.log(`[drawCard action] Drew card ${this.cardLibrary.getCard(drawnCardId)}`);
+    console.log(`[gainTreasure action] Drew card ${this.cardLibrary.getCard(drawnCardId)}`);
     
     this.logManager.addLogEntry({
       root: false,
@@ -262,7 +298,7 @@ export class GameActionController {
     
     const effectFn = this.cardEffectFunctionMap[card.cardKey];
     if (effectFn) {
-      await effectFn({cardId, gameActionController: this, playerId, match: this.match});
+      await effectFn({ cardId, gameActionController: this, playerId, match: this.match });
     }
     
     return true;
@@ -281,12 +317,10 @@ export class GameActionController {
     deck.unshift(...discard);
     discard.length = 0;
     
-    /*if (effect.log) {
-     logManager.addLogEntry({
-     root: effect.isRootLog,
-     type: 'shuffleDeck',
-     playerId: effect.playerId
-     });
-     }*/
+    this.logManager.addLogEntry({
+      root: false,
+      type: 'shuffleDeck',
+      playerId: args.playerId
+    });
   }
 }

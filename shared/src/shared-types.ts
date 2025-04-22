@@ -124,7 +124,7 @@ export type ServerEmitEvents = {
   setPlayer: (player: Player) => void;
   userPrompt: (signalId: string, userPromptArgs: UserPromptEffectArgs) => void;
   waitingForPlayer: (playerId: PlayerId) => void;
-} & Record<string, (...args: any[]) => void>;
+};
 
 export type ServerListenEvents = {
   cardsSelected: (selected: CardId[]) => void
