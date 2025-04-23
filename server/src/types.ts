@@ -169,7 +169,6 @@ export type GameActionArgsMap = {
 
 export type ModifyActionCardArgs = {
   appliesTo: EffectTarget;
-  cost: number;
   expiresAt: 'TURN_END';
   appliesToCard: EffectTarget;
   amount: number;
