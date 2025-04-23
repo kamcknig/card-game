@@ -612,7 +612,6 @@ export class GameActionController implements GameActionControllerInterface {
         match: this.match,
         cardLibrary: this.cardLibrary,
         reactionContext,
-        logManager: this.logManager,
       });
     }
     

@@ -63,6 +63,9 @@ type CardStats = {
 
 export type MatchStats = {
   cardsGained: Record<CardId, CardStats>;
+  /**
+   * Keys are the card's ID that was played, and values are CardStats objects.
+   */
   playedCards: Record<CardId, CardStats>;
   trashedCards: Record<PlayerId, CardStats>;
 };
