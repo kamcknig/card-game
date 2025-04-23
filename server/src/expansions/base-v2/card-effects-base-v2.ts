@@ -6,27 +6,37 @@ import { CardExpansionModule } from '../../types.ts';
 const expansionModule: CardExpansionModule = {
   registerCardLifeCycles: () => ({
     'merchant': {
-      onEnterPlay: ({ reactionManager, runGameActionDelegate, playerId, cardId }) => {
+      onCardPlayed: ({ reactionManager, cardId, playerId }) => {
         reactionManager.registerReactionTemplate({
-          id: `merchant:${cardId}:onEnterPlay`,
+          id: `merchant:${cardId}:cardPlayed`,
           playerId,
           once: true,
           compulsory: true,
           allowMultipleInstances: true,
-          condition: ({ cardLibrary, trigger }) => {
-            const card = cardLibrary.getCard(trigger.cardId!);
-            return card.cardKey === 'silver' && trigger.playerId === playerId;
-          },
           listeningFor: 'cardPlayed',
-          triggeredEffectFn: async function () {
+          condition: ({ cardLibrary, trigger: silverTrigger, match }) => {
+            const silverCard = cardLibrary.getCard(silverTrigger.cardId!);
+            if (silverCard.cardKey !== 'silver') return false;
+            
+            const playedCardInfo = match.stats.playedCards;
+            const playedSilvers = Object.keys(playedCardInfo)
+              .filter((cardId) =>
+                cardLibrary.getCard(+cardId).cardKey === 'silver'
+                && playedCardInfo[+cardId].turnNumber === match.turnNumber
+                && playedCardInfo[+cardId].playedPlayerId === silverTrigger.playerId)
+            
+            return playedSilvers.length === 1;
+          },
+          triggeredEffectFn: async ({ runGameActionDelegate }) => {
             await runGameActionDelegate('gainTreasure', {
               count: 1,
             });
-          },
+          }
         });
       },
       onLeavePlay: ({ reactionManager, cardId }) => {
-        reactionManager.unregisterTrigger(`merchant:${cardId}:onEnterPlay`)
+        reactionManager.unregisterTrigger(`merchant:${cardId}:cardPlayed-self`);
+        reactionManager.unregisterTrigger(`merchant:${cardId}:cardPlayed-silver`);
       },
     },
     'moat': {

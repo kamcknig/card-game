@@ -52,13 +52,7 @@ export class ActiveDurationCardList extends Container {
 
     this._tabContainer.on('pointerdown', () => this.toggleCardList());
 
-    let timeout: any;
-    const activeCardSubscription = activeDurationCardStore.subscribe(cards => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        this.drawCards(cards);
-      }, 100);
-    });
+    const activeCardSubscription = activeDurationCardStore.subscribe(cards => this.drawCards(cards));
 
     this.on('removed', () => {
       activeCardSubscription();

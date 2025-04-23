@@ -45,36 +45,161 @@ sailor + haven doesn't seem to work, it moves to the next player's turn too soon
 
 SEASIDE still to build
 
-lighthouse
-outpost
-sailor
-salvager
-sea-witch
-tactician
-tide pools
-treasury
+{
+  "caravan": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION", "DURATION"]
+  },
+  "corsair": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "DURATION", "ATTACK"],
+    "targetScheme": "ALL_OTHER"
+  },
+  "cutpurse": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION", "ATTACK"],
+    "targetScheme": "ALL_OTHER"
+  },
+  "fishing-village": {
+    "cardName": "Fishing Village",
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION", "DURATION"]
+  },
+  "haven": {
+    "cost": {
+      "treasure": 2
+    },
+    "type": ["ACTION", "DURATION"]
+  },
+  "island": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION", "VICTORY"],
+    "victoryPoints": 2
+  },
+  "lighthouse": {
+    "cost": {
+      "treasure": 2
+    },
+    "type": ["ACTION", "DURATION"]
+  },
+  "lookout": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION"]
+  },
+  "merchant-ship": {
+    "cardName": "Merchant Ship",
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "DURATION"]
+  },
+  "monkey": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION", "DURATION"]
+  },
+  "native-village": {
+    "cardName": "Native Village",
+    "cost": {
+      "treasure": 2
+    },
+    "type": ["ACTION"]
+  },
+  "outpost": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "DURATION"]
+  },
+  "pirate": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "DURATION", "REACTION"]
+  },
+  "sailor": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION", "DURATION"]
+  },
+  "salvager": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"]
+  },
+  "sea-chart": {
+    "cardName": "Sea Chart",
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION"]
+  },
+  "sea-witch": {
+    "cardName": "Sea Witch",
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "DURATION", "ATTACK"],
+    "targetScheme": "ALL_OTHER"
+  },
+  "smugglers": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION"]
+  },
+  "tactician": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "DURATION"]
+  },
+  "tide-pools": {
+    "cardName": "Tide Pools",
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION", "DURATION"]
+  },
+  "treasure-map": {
+    "cardName": "Treasure Map",
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"]
+  },
+  "treasury": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"]
+  },
+  "warehouse": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION"]
+  },
+  "wharf": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "DURATION"]
+  }
+}
 
-wharf
-
-
-
-BUILT BUT NOT TESTED
-blockade - (I've added a condition that the card needs to be gained on the triggering players turn - test that), need to add moat immunity
-corsair - need to add moat immunity
-
-
-
-RETRESTING base v2
-
-MOSTLY WORKING
-moat - need to do reactions
-poacher - didn't test discarding
-merchant - need to test gaining of silver with reactions
-gardens - scoring
-
-RETRESTING intrigue
-conspirator - need to test 3 actions
-duke - scoring
-farm - scoring
-nobles - scoring
-mill - scoring

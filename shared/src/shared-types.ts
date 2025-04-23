@@ -63,11 +63,15 @@ type CardStats = {
 
 export type MatchStats = {
   cardsGained: Record<CardId, CardStats>;
+  /**
+   * Keys are the card's ID that was played, and values are CardStats objects.
+   */
   playedCards: Record<CardId, CardStats>;
   trashedCards: Record<PlayerId, CardStats>;
 };
 
 export type Match = {
+  activeDurationCards: CardId[];
   config: MatchConfiguration,
   currentPlayerTurnIndex: number;
   kingdom: CardId[];
@@ -156,7 +160,7 @@ export const isLocationZone = (location: any): location is Zones => {
   return !!location && (ZoneValues as unknown as string[]).indexOf(location) !== -1;
 }
 
-const CardLocationValues = ['playerDiscards', 'playerHands', 'trash', 'playArea', 'playerDecks', 'supply', 'kingdom'] as const;
+const CardLocationValues = ['activeDuration', 'playerDiscards', 'playerHands', 'trash', 'playArea', 'playerDecks', 'supply', 'kingdom'] as const;
 export type CardLocations = typeof CardLocationValues[number];
 
 export type CardLocation =

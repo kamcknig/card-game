@@ -9,7 +9,7 @@ const expansionModule: CardExpansionModule = {
     'diplomat': {
       onEnterHand: ({ reactionManager, runGameActionDelegate, playerId, cardId }) => {
         reactionManager.registerReactionTemplate({
-          id: `diplomat:${cardId}:onEnterHand`,
+          id: `diplomat:${cardId}:cardPlayed`,
           playerId,
           listeningFor: 'cardPlayed',
           condition: ({ match, trigger, cardLibrary }) => {
@@ -46,7 +46,7 @@ const expansionModule: CardExpansionModule = {
         });
       },
       onLeaveHand: ({ reactionManager, cardId }) => {
-        reactionManager.unregisterTrigger(`diplomat:${cardId}:onEnterHand`);
+        reactionManager.unregisterTrigger(`diplomat:${cardId}:cardPlayed`);
       },
     },
   }),
@@ -154,12 +154,10 @@ const expansionModule: CardExpansionModule = {
         expiresAt: 'TURN_END',
       });
     },
-    'conspirator': () => async ({ cardId, match, cardLibrary, playerId, runGameActionDelegate }) => {
+    'conspirator': () => async ({ match, cardLibrary, playerId, runGameActionDelegate }) => {
       console.log(`[CONSPIRATOR EFFECT] gaining 2 treasure...`);
       
-      await runGameActionDelegate('gainTreasure', {
-        count: 2,
-      });
+      await runGameActionDelegate('gainTreasure', { count: 2 });
       
       // we want those cards played on the player's turn that are actions and played by THAT player
       const actionCardCount =

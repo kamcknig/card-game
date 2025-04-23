@@ -6,19 +6,17 @@ import {
   EffectTarget,
   LocationSpec,
   Match,
-  MatchStats,
   PlayerId,
   SelectActionCardArgs,
   ServerEmitEvents,
-  ServerListenEvents, UserPromptActionArgs,
+  ServerListenEvents,
+  UserPromptActionArgs,
 } from 'shared/shared-types.ts';
 import { toNumber } from 'es-toolkit/compat';
 
 import { CardLibrary } from './core/card-library.ts';
 import { ReactionManager } from './core/reactions/reaction-manager.ts';
-import { LogManager } from './core/log-manager.ts';
 import { GameActionController } from './core/effects/game-action-controller.ts';
-import { MatchController } from './core/match-controller.ts';
 
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
 
@@ -113,7 +111,7 @@ export class ReactionTrigger {
   
   // who triggered this?
   playerId: number;
-
+  
   constructor(args: ReactionTriggerArgs) {
     this.eventType = args.eventType;
     this.cardId = args.cardId;
@@ -200,14 +198,14 @@ export type ReactionContext = any;
 export type CardEffectFunctionMapFactory = Record<CardKey, () => (context: CardEffectFunctionContext) => Promise<void>>;
 
 export type CardEffectFunctionContext = {
-  match: Match,
-  runGameActionDelegate: RunGameActionDelegate,
-  logManager: LogManager,
+  match: Match;
+  reactionManager: ReactionManager;
+  runGameActionDelegate: RunGameActionDelegate;
   gameActionController: GameActionController;
   reactionContext?: ReactionContext;
   playerId: PlayerId;
   cardId: CardId;
-  cardLibrary: CardLibrary
+  cardLibrary: CardLibrary;
 }
 
 export type CardTriggeredEffectFn = (context: TriggeredEffectContext) => Promise<any>;
