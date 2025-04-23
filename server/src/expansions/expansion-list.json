@@ -3,15 +3,5 @@
     "title": "Base",
     "name": "base-v2",
     "order": 1
-  },
-  {
-    "title": "Intrigue",
-    "name": "intrigue",
-    "order": 2
-  },
-  {
-    "title": "Seaside",
-    "name": "seaside",
-    "order": 3
   }
 ]

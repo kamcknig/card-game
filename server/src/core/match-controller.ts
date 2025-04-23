@@ -4,18 +4,15 @@ import {
   CardId,
   CardKey,
   Match,
-  MatchConfiguration,
-  MatchStats,
+  MatchConfiguration, MatchStats,
   MatchSummary,
   Mats,
   Player,
   PlayerId,
 } from 'shared/shared-types.ts';
-import { AppSocket, CardEffectFunctionMap, MatchBaseConfiguration, } from '../types.ts';
+import { AppSocket, CardEffectFunctionMap, GameActionArgsMap, GameActions, MatchBaseConfiguration, } from '../types.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';
 import { createCardFactory } from '../utils/create-card.ts';
-import { createEffectHandlerMap } from './effects/effect-handler-map.ts';
-import { EffectsPipeline } from './effects/effects-pipeline.ts';
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
 import { ReactionManager } from './reactions/reaction-manager.ts';
 import { scoringFunctionMap } from '../expansions/scoring-function-map.ts';
@@ -27,11 +24,10 @@ import Fuse, { IFuseOptions } from 'fuse.js';
 import { cardEffectFunctionMapFactory } from './effects/card-effect-function-map-factory.ts';
 import { EventEmitter } from '@denosaurs/event';
 import { LogManager } from './log-manager.ts';
-import { GameActionController, GameActions } from './effects/game-action-controller.ts';
+import { GameActionController } from './effects/game-action-controller.ts';
 import { getCurrentPlayer } from '../utils/get-current-player.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
-  private _effectsPipeline: EffectsPipeline | undefined;
   private _reactionManager: ReactionManager | undefined;
   private _interactivityController: CardInteractivityController | undefined;
   private _cardLibrary: CardLibrary = new CardLibrary();
@@ -40,7 +36,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _createCardFn: ((key: CardKey, card?: Omit<Partial<Card>, 'id'>) => Card) | undefined;
   private _fuse: Fuse<CardData & { cardKey: CardKey }> | undefined;
   private _logManager: LogManager | undefined;
-  private _matchStats: MatchStats = {} as MatchStats;
   private gameActionsController: GameActionController | undefined;
   
   constructor(
@@ -50,18 +45,17 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     super();
   }
   
-  private _keepers: CardKey[] = ['militia', 'moat'];
+  private _keepers: CardKey[] = ['throne-room', 'vassal', 'village', 'witch'];
   private _playerHands: Record<CardKey, number>[] = [
     {
       gold: 3,
       silver: 3,
       estate: 2,
-      'militia': 4
     },
     {
       gold: 4,
+      silver: 3,
       estate: 3,
-      'moat': 3
     }
   ];
   
@@ -91,20 +85,10 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       }, [] as string[]),
     };
     
-    this._matchStats = {
-      playedCardsInfo: {},
-      cardsGained: [
-        config.players.reduce((prev, next) => {
-          prev[next.id] = [];
-          return prev;
-        }, {} as Record<PlayerId, CardId[]>)
-      ],
-      trashedCards: [
-        config.players.reduce((prev, next) => {
-          prev[next.id] = [];
-          return prev;
-        }, {} as Record<PlayerId, CardId[]>)
-      ],
+    const matchStats: MatchStats = {
+      playedCards: {},
+      cardsGained: {},
+      trashedCards: {}
     };
     
     const mats =
@@ -145,11 +129,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         'revealed': [],
         'look-at': [],
       },
-      stats: {
-        playedCardsInfo: {},
-        cardsGained: [],
-        trashedCards: []
-      }
+      stats: matchStats
     };
     
     this._config = config;
@@ -193,6 +173,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
   
   private _cardLibSnapshot = {};
+  private _matchSnapshot: Match | null | undefined;
   
   public getMatchSnapshot(): Match {
     this._cardLibSnapshot = structuredClone(this._cardLibrary.getAllCards());
@@ -201,15 +182,23 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   
   async runGameAction<K extends GameActions>(
     action: K,
-    args: Parameters<GameActionController[K]>[0] = {}
+    ...args: GameActionArgsMap[K] extends void
+      ? []
+      : [GameActionArgsMap[K]]
   ): Promise<ReturnType<GameActionController[K]>> {
-    const prev = this.getMatchSnapshot();
+    this._matchSnapshot ??= this.getMatchSnapshot();
     
-    const result = await this.gameActionsController![action](args as any);
+    if (action === 'selectCard' || action === 'userPrompt') {
+      this.broadcastPatch(this._matchSnapshot);
+      this._matchSnapshot = this.getMatchSnapshot();
+    }
+    const result = await this.gameActionsController![action](args[0] as any);
     
     this._interactivityController?.checkCardInteractivity();
     
-    this.broadcastPatch(prev);
+    this.broadcastPatch({...this._matchSnapshot});
+    
+    this._matchSnapshot = null;
     
     return result as ReturnType<GameActionController[K]>;
   }
@@ -435,11 +424,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private async startMatch() {
     console.log(`[MATCH] starting match`);
     
-    this._reactionManager = new ReactionManager(
-      this._match,
-      this._cardLibrary,
-      this._matchStats
-    );
+    /*this._reactionManager = new ReactionManager(
+     this._match,
+     this._cardLibrary,
+     this._matchStats
+     );*/
     
     this._logManager = new LogManager({
       socketMap: this._socketMap,
@@ -456,6 +445,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._cardLibrary,
       this._logManager,
       this._socketMap,
+      (action, ...args) => this.runGameAction(action, ...args)
     );
     
     this._interactivityController = new CardInteractivityController(
@@ -465,23 +455,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._cardLibrary,
       this.onCardTapHandlerComplete,
       this,
-    );
-    
-    const effectHandlerMap = createEffectHandlerMap({
-      socketMap: this._socketMap,
-      reactionManager: this._reactionManager,
-      cardLibrary: this._cardLibrary,
-      logManager: this._logManager,
-      getEffectsPipeline: () => this._effectsPipeline!,
-      matchStats: this._matchStats!
-    });
-    
-    this._effectsPipeline = new EffectsPipeline(
-      effectHandlerMap,
-      this._socketMap,
-      this.onEffectCompleted,
-      this,
-      this._match,
     );
     
     for (const [playerId, socket] of this._socketMap.entries()) {
@@ -513,11 +486,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     });
     
     await this.runGameAction('checkForRemainingPlayerActions');
-  }
-  
-  private onUserInputReceived = (signalId: string, input: unknown) => {
-    console.log(`[MATCH] user input received for signal ${signalId}`);
-    this._effectsPipeline?.resumeGenerator(signalId, input);
   }
   
   private onSearchCards = (playerId: PlayerId, searchStr: string) => {
@@ -697,6 +665,5 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private initializeSocketListeners(_playerId: PlayerId, socket: AppSocket) {
     socket.on('nextPhase', () => this.onNextPhase());
     socket.on('searchCards', (playerId, searchStr) => this.onSearchCards(playerId, searchStr));
-    socket.on('userInputReceived', (signalId, input) => this.onUserInputReceived(signalId, input));
   }
 }

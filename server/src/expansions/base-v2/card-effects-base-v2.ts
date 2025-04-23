@@ -1,18 +1,12 @@
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
-import { RevealCardEffect } from '../../core/effects/effect-types/reveal-card.ts';
-import { SelectCardEffect } from '../../core/effects/effect-types/select-card.ts';
-import { UserPromptEffect } from '../../core/effects/effect-types/user-prompt.ts';
-import {
-  InvokeGameActionGeneratorEffect
-} from '../../core/effects/effect-types/invoke-game-action-generator-effect.ts';
 import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
-import { NewCardExpansionModule } from '../../types.ts';
+import { CardExpansionModule } from '../../types.ts';
 
-const expansionModule: NewCardExpansionModule = {
+const expansionModule: CardExpansionModule = {
   registerCardLifeCycles: () => ({
     'merchant': {
-      onEnterPlay: ({ gameActionController, playerId, cardId }) => {
+      onEnterPlay: ({ runGameActionDelegate, playerId, cardId }) => {
         const id = `merchant:${cardId}:onEnterPlay`;
         return {
           registerTriggeredEvents: [{
@@ -27,7 +21,7 @@ const expansionModule: NewCardExpansionModule = {
             },
             listeningFor: 'cardPlayed',
             triggeredEffectFn: async function () {
-              await gameActionController.gainTreasure({
+              await runGameActionDelegate('gainTreasure', {
                 count: 1,
               });
             },
@@ -53,10 +47,10 @@ const expansionModule: NewCardExpansionModule = {
                 'ATTACK',
               ) && trigger.playerId !== playerId;
             },
-            triggeredEffectFn: async function ({ reaction }) {
+            triggeredEffectFn: async function ({ runGameActionDelegate, reaction }) {
               const sourceId = reaction.getSourceId();
               
-              yield new RevealCardEffect({
+              await runGameActionDelegate('revealCard', {
                 cardId: sourceId,
                 playerId: reaction.playerId,
               });
@@ -85,27 +79,27 @@ const expansionModule: NewCardExpansionModule = {
     },
   }),
   registerEffects: {
-    'artisan': () => async ({ cardLibrary, gameActionController, playerId }) => {
+    'artisan': () => async ({ cardLibrary, runGameActionDelegate, playerId }) => {
       
       console.log(`[ARTISAN EFFECT] choosing card to gain...`);
       //Gain a card to your hand costing up to 5 Treasure.
       //Put a card from your hand onto your deck.
       
-      let results = (yield new SelectCardEffect({
+      let results = await runGameActionDelegate('selectCard', {
         prompt: 'Choose card to gain',
-        playerId: arg.playerId,
+        playerId: playerId,
         restrict: {
           from: { location: ['supply', 'kingdom'] },
           cost: { kind: 'upTo', amount: 5 },
         },
-      })) as number[];
+      });
       
       let selectedCardId = results[0];
       
       console.log(`[ARTISAN EFFECT] card chosen ${cardLibrary.getCard(selectedCardId)}`);
       
       console.log(`[ARTISAN EFFECT] gaining card to hand...`);
-      await gameActionController.gainCard({
+      await runGameActionDelegate('gainCard', {
         playerId,
         cardId: selectedCardId,
         to: {
@@ -115,13 +109,13 @@ const expansionModule: NewCardExpansionModule = {
       
       console.log(`[ARTISAN EFFECT] choosing card to put on deck...`);
       
-      results = (yield new SelectCardEffect({
+      results = await runGameActionDelegate('selectCard', {
         prompt: 'Choose card to top-deck',
-        playerId: arg.playerId,
+        playerId: playerId,
         restrict: {
           from: { location: 'playerHands' },
         },
-      })) as number[];
+      });
       
       selectedCardId = results[0];
       
@@ -129,7 +123,7 @@ const expansionModule: NewCardExpansionModule = {
       
       console.log(`[ARTISAN EFFECT] moving card to deck...`);
       
-      await gameActionController.moveCard({
+      await runGameActionDelegate('moveCard', {
         toPlayerId: playerId,
         cardId: selectedCardId,
         to: {
@@ -137,7 +131,7 @@ const expansionModule: NewCardExpansionModule = {
         },
       });
     },
-    'bandit': () => async ({ match, cardLibrary, playerId, gameActionController, reactionContext }) => {
+    'bandit': () => async ({ match, cardLibrary, playerId, runGameActionDelegate, reactionContext }) => {
       //Gain a Gold. Each other player reveals the top 2 cards of their deck,
       // trashes a revealed Treasure other than Copper, and discards the rest.
       
@@ -150,7 +144,7 @@ const expansionModule: NewCardExpansionModule = {
         
         const goldCard = cardLibrary.getCard(goldCardId);
         
-        await gameActionController.gainCard({
+        await runGameActionDelegate('gainCard', {
           playerId,
           cardId: goldCard.id,
           to: {
@@ -187,7 +181,7 @@ const expansionModule: NewCardExpansionModule = {
         if (playerDeck.length < numToReveal) {
           console.log(`[BANDIT EFFECT] not enough cards in deck, shuffling...`);
           
-          await gameActionController.shuffleDeck({
+          await runGameActionDelegate('shuffleDeck', {
             playerId: targetPlayerId,
           });
         }
@@ -197,7 +191,7 @@ const expansionModule: NewCardExpansionModule = {
         for (const cardId of cardIdsToReveal) {
           console.log(`[BANDIT EFFECT] revealing ${cardLibrary.getCard(cardId)}...`);
           
-          yield new RevealCardEffect({
+          await runGameActionDelegate('revealCard', {
             playerId: targetPlayerId,
             cardId,
             moveToRevealed: true,
@@ -215,14 +209,14 @@ const expansionModule: NewCardExpansionModule = {
             (cardId) => cardLibrary.getCard(cardId))}`
           );
           
-          // they get a choice if there is more than one to trash, and they aren't the same
+          // they get a choice if there is more than one to trash, and they are different
           const giveChoice = possibleCardIdsToTrash.length > 1 &&
             (cardLibrary.getCard(possibleCardIdsToTrash[0]).cardKey !== (cardLibrary.getCard(possibleCardIdsToTrash[1]).cardKey));
           
           if (giveChoice) {
             console.log(`[BANDIT EFFECT] prompt user to select card to trash...`);
             
-            const results = (yield new UserPromptEffect({
+            const results = await runGameActionDelegate('userPrompt', {
               playerId: targetPlayerId,
               prompt: 'Choose a treasure to trash',
               content: {
@@ -230,9 +224,9 @@ const expansionModule: NewCardExpansionModule = {
                 cardIds: possibleCardIdsToTrash,
                 selectCount: 1,
               },
-            })) as { result: number[] };
+            }) as number[];
             
-            cardIdTrashed = results?.result?.[0];
+            cardIdTrashed = results?.[0];
           }
           else {
             cardIdTrashed = possibleCardIdsToTrash[0];
@@ -243,7 +237,7 @@ const expansionModule: NewCardExpansionModule = {
           
           console.log(`[BANDIT EFFECT] trashing card...`);
           
-          await gameActionController.trashCard({
+          await runGameActionDelegate('trashCard', {
             playerId: targetPlayerId,
             cardId: cardIdTrashed,
           });
@@ -264,7 +258,7 @@ const expansionModule: NewCardExpansionModule = {
           for (const cardId of cardIdsToDiscard) {
             console.log(`[BANDIT EFFECT] discarding ${cardLibrary.getCard(cardId)}...`);
             
-            await gameActionController.discardCard({
+            await runGameActionDelegate('discardCard', {
               playerId: targetPlayerId,
               cardId,
             });
@@ -275,7 +269,7 @@ const expansionModule: NewCardExpansionModule = {
         }
       }
     },
-    'bureaucrat': () => async ({ reactionContext, match, cardLibrary, gameActionController, playerId }) => {
+    'bureaucrat': () => async ({ reactionContext, match, cardLibrary, runGameActionDelegate, playerId }) => {
       
       // Gain a Silver onto your deck. Each other player reveals a Victory card
       // from their hand and puts it onto their deck (or reveals a hand with no Victory cards).
@@ -288,7 +282,7 @@ const expansionModule: NewCardExpansionModule = {
       else {
         console.log(`[BUREAUCRAT EFFECT] gaining silver to deck...`);
         
-        await gameActionController.gainCard({
+        await runGameActionDelegate('gainCard', {
           playerId,
           cardId: silverCardId,
           to: { location: 'playerDecks' },
@@ -316,7 +310,7 @@ const expansionModule: NewCardExpansionModule = {
           for (const cardId of cardIdsToReveal) {
             console.log(`[BUREAUCRAT EFFECT] revealing ${cardLibrary.getCard(cardId)}...`);
             
-            yield new RevealCardEffect({
+            await runGameActionDelegate('revealCard', {
               playerId: targetPlayerId,
               cardId,
             });
@@ -333,7 +327,7 @@ const expansionModule: NewCardExpansionModule = {
           else {
             console.log(`[BUREAUCRAT EFFECT] prompting user to select card to reveal...`);
             
-            const cardIds = (yield new SelectCardEffect({
+            const cardIds = await runGameActionDelegate('selectCard', {
               prompt: 'Reveal victory card',
               playerId: targetPlayerId,
               count: 1,
@@ -341,20 +335,20 @@ const expansionModule: NewCardExpansionModule = {
                 from: { location: 'playerHands' },
                 card: { type: 'VICTORY' },
               },
-            })) as number[];
+            });
             cardIdToReveal = cardIds[0];
           }
           
           console.log(`[BUREAUCRAT EFFECT] revealing ${cardLibrary.getCard(cardIdToReveal)}...`);
           
-          yield new RevealCardEffect({
+          await runGameActionDelegate('revealCard', {
             playerId: targetPlayerId,
             cardId: cardIdToReveal,
           });
           
           console.log(`[BUREAUCRAT EFFECT] moving card to deck`);
           
-          await gameActionController.moveCard({
+          await runGameActionDelegate('moveCard', {
             toPlayerId: targetPlayerId,
             cardId: cardIdToReveal,
             to: { location: 'playerDecks' },
@@ -362,10 +356,10 @@ const expansionModule: NewCardExpansionModule = {
         }
       }
     },
-    'cellar': () => async ({ match, gameActionController, playerId, cardLibrary }) => {
+    'cellar': () => async ({ match, runGameActionDelegate, playerId, cardLibrary }) => {
       
       console.log(`[CELLAR EFFECT] gaining action...`);
-      await gameActionController.gainAction({
+      await runGameActionDelegate('gainAction', {
         count: 1
       });
       
@@ -378,13 +372,13 @@ const expansionModule: NewCardExpansionModule = {
       
       console.log(`[CELLAR EFFECT] prompting user to select cards to discard...`);
       
-      const cardIds = (yield new SelectCardEffect({
+      const cardIds = await runGameActionDelegate('selectCard', {
         optional: true,
         prompt: 'Confirm discard',
-        playerId: arg.playerId,
-        count: { kind: 'upTo', count: match.playerHands[arg.playerId].length },
+        playerId: playerId,
+        count: { kind: 'upTo', count: match.playerHands[playerId].length },
         restrict: { from: { location: 'playerHands' } },
-      })) as number[];
+      });
       
       console.log(`[CELLAR EFFECT] user selected ${cardIds.length} cards`);
       
@@ -395,7 +389,7 @@ const expansionModule: NewCardExpansionModule = {
       for (const cardId of cardIds) {
         console.log(`[CELLAR EFFECT] discarding ${cardLibrary.getCard(cardId)}...`);
         
-        await gameActionController.discardCard({
+        await runGameActionDelegate('discardCard', {
           cardId,
           playerId,
         });
@@ -404,12 +398,12 @@ const expansionModule: NewCardExpansionModule = {
       for (let i = 0; i < (cardIds as number[]).length; i++) {
         console.log(`[CELLAR EFFECT] drawing card...`);
         
-        await gameActionController.drawCard({
+        await runGameActionDelegate('drawCard', {
           playerId,
         });
       }
     },
-    'chapel': () => async ({ match, gameActionController, cardLibrary, playerId }) => {
+    'chapel': () => async ({ match, runGameActionDelegate, cardLibrary, playerId }) => {
       const hand = match.playerHands[playerId];
       
       if (!hand.length) {
@@ -417,13 +411,13 @@ const expansionModule: NewCardExpansionModule = {
         return;
       }
       
-      const cardIds = (yield new SelectCardEffect({
+      const cardIds = await runGameActionDelegate('selectCard', {
         optional: true,
         prompt: 'Confirm trash',
         playerId,
         count: { kind: 'upTo', count: 4 },
         restrict: { from: { location: 'playerHands' } },
-      })) as number[];
+      });
       
       if (cardIds?.length === 0) {
         console.log('[CHAPEL EFFECT] no cards selected');
@@ -433,23 +427,23 @@ const expansionModule: NewCardExpansionModule = {
       for (const cardId of cardIds) {
         console.log(`[CELLAR EFFECT] trashing ${cardLibrary.getCard(cardId)}...`);
         
-        await gameActionController.trashCard({
+        await runGameActionDelegate('trashCard', {
           playerId,
           cardId,
         });
       }
     },
-    'council-room': () => async ({ gameActionController, match, playerId }) => {
+    'council-room': () => async ({ runGameActionDelegate, match, playerId }) => {
       for (let i = 0; i < 4; i++) {
         console.log(`[COUNCIL ROOM EFFECT] drawing card...`);
         
-        await gameActionController.drawCard({
+        await runGameActionDelegate('drawCard', {
           playerId,
         });
       }
       
       console.log(`[COUNCIL ROOM EFFECT] gaining buy...`);
-      await gameActionController.gainBuy({
+      await runGameActionDelegate('gainBuy', {
         count: 1
       });
       
@@ -464,24 +458,24 @@ const expansionModule: NewCardExpansionModule = {
       for (const playerId of playerIds) {
         console.log(`[COUNCIL EFFECT] ${getPlayerById(match, playerId)} drawing card...`);
         
-        await gameActionController.drawCard({
+        await runGameActionDelegate('drawCard', {
           playerId,
         });
       }
     },
-    'festival': () => async ({ gameActionController }) => {
+    'festival': () => async ({ runGameActionDelegate }) => {
       console.log(`[FESTIVAL EFFECT] gaining 2 actions...`);
-      await gameActionController.gainAction({
+      await runGameActionDelegate('gainAction', {
         count: 2,
       });
       
       console.log(`[FESTIVAL EFFECT] gaining 1 buy...`);
-      await gameActionController.gainBuy({
+      await runGameActionDelegate('gainBuy', {
         count: 1
       });
       
       console.log(`[FESTIVAL EFFECT] gaining 2 treasure...`);
-      await gameActionController.gainTreasure({
+      await runGameActionDelegate('gainTreasure', {
         count: 2,
       });
     },
@@ -489,15 +483,15 @@ const expansionModule: NewCardExpansionModule = {
     'gardens': () => async () => {
       console.log(`[GARDENS EFFECT] garden has no effects`);
     },
-    'harbinger': () => async ({ cardLibrary, match, gameActionController, playerId }) => {
+    'harbinger': () => async ({ cardLibrary, match, runGameActionDelegate, playerId }) => {
       console.log(`[HARBINGER EFFECT] drawing card...`);
       
-      await gameActionController.drawCard({
+      await runGameActionDelegate('drawCard', {
         playerId,
       });
       
       console.log(`[HARBINGER EFFECT] drawing 1 action...`);
-      await gameActionController.gainAction({
+      await runGameActionDelegate('gainAction', {
         count: 1,
       });
       
@@ -508,16 +502,16 @@ const expansionModule: NewCardExpansionModule = {
       
       console.log(`[HARBINGER EFFECT] prompting user to select card from discard...`);
       
-      const results = (yield new UserPromptEffect({
-        playerId: arg.playerId,
+      const results = await runGameActionDelegate('userPrompt', {
+        playerId,
         prompt: 'Choose card to put on deck?',
         actionButtons: [{ label: 'CANCEL', action: 2 }],
         content: {
           type: 'select',
-          cardIds: match.playerDiscards[arg.playerId],
+          cardIds: match.playerDiscards[playerId],
           selectCount: 1
         },
-      })) as { action: number, result: number[] };
+      }) as { action: number, result: number[] };
       
       if (results.action === 2) {
         console.log('[HARBINGER EFFECT] no card selected');
@@ -531,7 +525,7 @@ const expansionModule: NewCardExpansionModule = {
         
         console.log(`[HARBINGER EFFECT] moving card to deck...`);
         
-        await gameActionController.moveCard({
+        await runGameActionDelegate('moveCard', {
           cardId: selectedId,
           toPlayerId: playerId,
           to: { location: 'playerDecks' }
@@ -541,21 +535,21 @@ const expansionModule: NewCardExpansionModule = {
         console.log('[HARBINGER EFFECT] no card selected');
       }
     },
-    'laboratory': () => async ({ gameActionController, playerId }) => {
+    'laboratory': () => async ({ runGameActionDelegate, playerId }) => {
       for (let i = 0; i < 2; i++) {
         console.log(`[LABORATORY EFFECT] drawing card...`);
         
-        await gameActionController.drawCard({
+        await runGameActionDelegate('drawCard', {
           playerId
         });
       }
       
       console.log(`[LABORATORY EFFECT] gaining 1 action...`);
-      await gameActionController.gainAction({
+      await runGameActionDelegate('gainAction', {
         count: 1
       });
     },
-    'library': () => async ({ match, gameActionController, cardLibrary, playerId }) => {
+    'library': () => async ({ match, runGameActionDelegate, cardLibrary, playerId }) => {
       // Draw until you have 7 cards in hand, skipping any Action cards
       // you choose to; set those aside, discarding them afterward.
       const setAside: number[] = [];
@@ -572,7 +566,7 @@ const expansionModule: NewCardExpansionModule = {
       while (hand.length < 7 && (deck.length + discard.length > 0)) {
         console.log(`[LIBRARY EFFECT] drawing card...`);
         
-        const cardId = await gameActionController.drawCard({
+        const cardId = await runGameActionDelegate('drawCard', {
           playerId
         });
         
@@ -586,15 +580,15 @@ const expansionModule: NewCardExpansionModule = {
         if (card.type.includes('ACTION')) {
           console.log(`[LIBRARY EFFECT] ${card} is an action prompting user to set aside...`);
           
-          const setAsideResult = (yield new UserPromptEffect({
-            playerId: arg.playerId,
+          const setAsideResult = await runGameActionDelegate('userPrompt', {
+            playerId,
             prompt: `You drew ${card.cardName}. Set it aside (skip putting it in your hand)?`,
             actionButtons: [{ label: 'KEEP', action: 1 }, { label: 'SET ASIDE', action: 2 }],
-          })) as { action: number };
+          }) as { action: number };
           
           if (setAsideResult.action === 2) {
             console.log(`[LIBRARY EFFECT] setting card aside`);
-            await gameActionController.moveCard({
+            await runGameActionDelegate('moveCard', {
               cardId,
               toPlayerId: playerId,
               to: { location: 'set-aside' }
@@ -618,47 +612,47 @@ const expansionModule: NewCardExpansionModule = {
       for (const cardId of setAside) {
         console.log(`[LIBRARY EFFECT] discarding ${cardLibrary.getCard(cardId)}...`);
         
-        await gameActionController.discardCard({
+        await runGameActionDelegate('discardCard', {
           cardId,
           playerId,
         });
       }
     },
-    'market': () => async ({ gameActionController, playerId }) => {
+    'market': () => async ({ runGameActionDelegate, playerId }) => {
       console.log(`[MARKET EFFECT] drawing card...`);
-      await gameActionController.drawCard({
+      await runGameActionDelegate('drawCard', {
         playerId,
       });
       
       console.log(`[MARKET EFFECT] gaining 1 action...`);
-      await gameActionController.gainAction({
+      await runGameActionDelegate('gainAction', {
         count: 1
       });
       
       console.log(`[MARKET EFFECT] gaining 1 buy...`);
-      await gameActionController.gainBuy({
+      await runGameActionDelegate('gainBuy', {
         count: 1
       });
       
       console.log(`[MARKET EFFECT] gaining 1 treasure...`);
-      await gameActionController.gainTreasure({
+      await runGameActionDelegate('gainTreasure', {
         count: 1
       });
     },
-    'merchant': () => async ({ gameActionController, playerId }) => {
+    'merchant': () => async ({ runGameActionDelegate, playerId }) => {
       console.log(`[MERCHANT EFFECT] drawing card...`);
-      await gameActionController.drawCard({
+      await runGameActionDelegate('drawCard', {
         playerId,
       });
       
       console.log(`[MERCHANT EFFECT] gaining 1 action...`);
-      await gameActionController.gainAction({
+      await runGameActionDelegate('gainAction', {
         count: 1,
       });
     },
-    'militia': () => async ({ gameActionController, cardLibrary, match, reactionContext, playerId }) => {
+    'militia': () => async ({ runGameActionDelegate, cardLibrary, match, reactionContext, playerId }) => {
       console.log(`[MILITIA EFFECT] gaining 1 treasure...`);
-      await gameActionController.gainTreasure({
+      await runGameActionDelegate('gainTreasure', {
         count: 2
       });
       
@@ -681,14 +675,14 @@ const expansionModule: NewCardExpansionModule = {
         const selectCount = handCount - 3;
         console.log(`[MILITIA EFFECT] prompting user to select ${selectCount} hands`);
         
-        const cardIds = (yield new SelectCardEffect({
+        const cardIds = await runGameActionDelegate('selectCard', {
           prompt: 'Confirm discard',
           playerId,
           count: selectCount,
           restrict: {
             from: { location: 'playerHands' }
           },
-        })) as number[];
+        });
         
         console.log(`[MILITIA EFFECT] ${getPlayerById(match, playerId)} chose ${cardIds.map(
           (id) => cardLibrary.getCard(id))} to discard`);
@@ -696,14 +690,14 @@ const expansionModule: NewCardExpansionModule = {
         for (const cardId of cardIds) {
           console.log(`[MILITIA EFFECT] discarding ${cardLibrary.getCard(cardId)}...`);
           
-          await gameActionController.discardCard({
+          await runGameActionDelegate('discardCard', {
             cardId,
             playerId,
           });
         }
       }
     },
-    'mine': () => async ({ gameActionController, match, cardLibrary, playerId }) => {
+    'mine': () => async ({ runGameActionDelegate, match, cardLibrary, playerId }) => {
       // You may trash a Treasure from your hand. Gain a Treasure to
       // your hand costing up to 3 Treasure more than it.
       const hand = match.playerHands[playerId];
@@ -718,16 +712,16 @@ const expansionModule: NewCardExpansionModule = {
       
       console.log(`[MINE EFFECT] prompting player to trash a treasure`);
       
-      let cardIds = (yield new SelectCardEffect({
+      let cardIds = await runGameActionDelegate('selectCard', {
         optional: true,
         prompt: 'Confirm trash',
-        playerId: arg.playerId,
+        playerId: playerId,
         count: { kind: 'upTo', count: 1 },
         restrict: {
           from: { location: 'playerHands' },
           card: { type: ['TREASURE'] },
         },
-      })) as number[];
+      });
       
       let cardId = cardIds?.[0];
       
@@ -740,7 +734,7 @@ const expansionModule: NewCardExpansionModule = {
       
       console.log(`[MINE EFFECT] trashing ${cardLibrary.getCard(cardId)}...`);
       
-      await gameActionController.trashCard({
+      await runGameActionDelegate('trashCard', {
         playerId,
         cardId,
       });
@@ -756,16 +750,16 @@ const expansionModule: NewCardExpansionModule = {
       
       console.log(`[MINE EFFECT] prompting user to select treasure costing up to ${costRestriction}`);
       
-      cardIds = (yield new SelectCardEffect({
+      cardIds = await runGameActionDelegate('selectCard', {
         prompt: 'Confirm gain card',
-        playerId: arg.playerId,
+        playerId: playerId,
         count: 1,
         restrict: {
           from: { location: ['supply', 'kingdom'] },
           card: { type: ['TREASURE'] },
           cost: { kind: 'upTo', amount: costRestriction },
         },
-      })) as number[];
+      });
       
       cardId = cardIds?.[0];
       
@@ -780,21 +774,21 @@ const expansionModule: NewCardExpansionModule = {
       
       console.log(`[MINE EFFECT] gaining card to hand`);
       
-      await gameActionController.gainCard({
+      await runGameActionDelegate('gainCard', {
         playerId,
         cardId,
         to: { location: 'playerHands' },
       });
     },
-    'moat': () => async ({ gameActionController, playerId }) => {
-      await gameActionController.drawCard({
+    'moat': () => async ({ runGameActionDelegate, playerId }) => {
+      await runGameActionDelegate('drawCard', {
         playerId,
       });
-      await gameActionController.drawCard({
+      await runGameActionDelegate('drawCard', {
         playerId,
       });
     },
-    'moneylender': () => async ({ gameActionController, match, cardLibrary, playerId }) => {
+    'moneylender': () => async ({ runGameActionDelegate, match, cardLibrary, playerId }) => {
       const hand = match.playerHands[playerId];
       
       const hasCopper = hand.some((c) =>
@@ -807,13 +801,13 @@ const expansionModule: NewCardExpansionModule = {
       
       console.log(`[MONEYLENDER EFFECT] prompting user to trash a copper`);
       
-      const result = (yield new UserPromptEffect({
-        playerId: arg.playerId,
+      const result = await runGameActionDelegate('userPrompt', {
+        playerId,
         actionButtons: [
           { action: 1, label: `DON'T TRASH` }, { action: 2, label: 'TRASH' }
         ],
         prompt: 'Trash a copper?'
-      })) as { action: number, result: number[] };
+      }) as { action: number, result: number[] };
       
       if (result.action === 1) {
         console.log(`[MONEYLENDER EFFECT] player chose not to trash`);
@@ -829,32 +823,32 @@ const expansionModule: NewCardExpansionModule = {
       
       console.log(`[MONEYLENDER EFFECT] trashing ${card}...`);
       
-      await gameActionController.trashCard({
+      await runGameActionDelegate('trashCard', {
         playerId,
         cardId: card.id
       });
       
       console.log(`[MONEYLENDER EFFECT] gaining 3 treasure...`);
       
-      await gameActionController.gainTreasure({
+      await runGameActionDelegate('gainTreasure', {
         count: 3,
       });
     },
-    'poacher': () => async ({ cardLibrary, match, playerId, gameActionController }) => {
+    'poacher': () => async ({ cardLibrary, match, playerId, runGameActionDelegate }) => {
       console.log(`[POACHER EFFECT] drawing card...`);
       
-      await gameActionController.drawCard({
+      await runGameActionDelegate('drawCard', {
         playerId,
       });
       
       console.log(`[POACHER EFFECT] gaining 1 action...`);
       
-      await gameActionController.gainAction({
+      await runGameActionDelegate('gainAction', {
         count: 1,
       });
       
       console.log(`[POACHER EFFECT] gaining 1 treasure...`);
-      await gameActionController.gainTreasure({
+      await runGameActionDelegate('gainTreasure', {
         count: 1,
       });
       
@@ -908,43 +902,43 @@ const expansionModule: NewCardExpansionModule = {
       
       console.log(`[POACHER EFFECT] prompting user to discard cards...`);
       
-      const cardIds = (yield new SelectCardEffect({
+      const cardIds = await runGameActionDelegate('selectCard', {
         prompt: 'Confirm discard',
-        playerId: arg.playerId,
+        playerId: playerId,
         count: numToDiscard,
         restrict: {
           from: { location: 'playerHands' }
         },
-      })) as number[];
+      });
       
       for (const cardId of cardIds) {
         console.log(`[POACHER EFFECT] discarding card ${cardLibrary.getCard(cardId)}...`);
         
-        await gameActionController.discardCard({
+        await runGameActionDelegate('discardCard', {
           playerId,
           cardId,
         });
       }
     },
-    'remodel': () => async ({ match, cardLibrary, playerId, gameActionController }) => {
+    'remodel': () => async ({ match, cardLibrary, playerId, runGameActionDelegate }) => {
       if (match.playerHands[playerId].length === 0) {
         console.log(`[REMODEL EFFECT] player has no cards in hand`);
         return;
       }
       
-      let cardIds = (yield new SelectCardEffect({
+      let cardIds = await runGameActionDelegate('selectCard', {
         prompt: 'Trash card',
-        playerId: arg.playerId,
+        playerId: playerId,
         count: 1,
         restrict: { from: { location: 'playerHands' } },
-      })) as number[];
+      });
       
       let cardId = cardIds[0];
       const card = cardLibrary.getCard(cardId);
       
       console.log(`[REMODEL EFFECT] trashing card ${card}...`);
       
-      await gameActionController.trashCard({
+      await runGameActionDelegate('trashCard', {
         playerId,
         cardId,
       });
@@ -958,7 +952,7 @@ const expansionModule: NewCardExpansionModule = {
       
       console.log(`[REMODEL EFFECT] prompting user to select card costing up to ${costRestriction}...`);
       
-      cardIds = (yield new SelectCardEffect({
+      cardIds = await runGameActionDelegate('selectCard', {
         prompt: 'Gain card',
         playerId,
         count: 1,
@@ -966,32 +960,32 @@ const expansionModule: NewCardExpansionModule = {
           from: { location: ['supply', 'kingdom'] },
           cost: { kind: 'upTo', amount: costRestriction },
         },
-      })) as number[];
+      });
       
       cardId = cardIds[0];
       
       console.log(`[REMODEL EFFECT] gaining ${cardLibrary.getCard(cardId)} to discard...`);
       
-      await gameActionController.gainCard({
+      await runGameActionDelegate('gainCard', {
         playerId,
         cardId,
         to: { location: 'playerDiscards' },
       });
     },
-    'sentry': () => async ({ gameActionController, cardLibrary, match, playerId }) => {
+    'sentry': () => async ({ runGameActionDelegate, cardLibrary, match, playerId }) => {
       // +1 Card
       // +1 Action
       // Look at the top 2 cards of your deck. Trash and/or discard any number of
       // them. Put the rest back on top in any order.
       console.log(`[SENTRY EFFECT] drawing card...`);
       
-      await gameActionController.drawCard({
+      await runGameActionDelegate('drawCard', {
         playerId
       });
       
       console.log(`[SENTRY EFFECT] gaining 1 action...`);
       
-      await gameActionController.gainAction({
+      await runGameActionDelegate('gainAction', {
         count: 1,
       });
       
@@ -1014,7 +1008,7 @@ const expansionModule: NewCardExpansionModule = {
       
       if (deck.length < 2) {
         console.debug(`[SENTRY EFFECT] player has ${deck.length} cards in deck, shuffling deck`);
-        await gameActionController.shuffleDeck({
+        await runGameActionDelegate('shuffleDeck', {
           playerId
         });
       }
@@ -1026,8 +1020,8 @@ const expansionModule: NewCardExpansionModule = {
       
       console.log(`[SENTRY EFFECT] prompting user to trash cards...`);
       
-      let result = (yield new UserPromptEffect({
-        playerId: arg.playerId,
+      let result = await runGameActionDelegate('userPrompt', {
+        playerId,
         prompt: 'Choose card/s to trash?',
         validationAction: 1,
         actionButtons: [{ label: `DON'T TRASH`, action: 2 }, { label: 'TRASH', action: 1 }],
@@ -1039,7 +1033,7 @@ const expansionModule: NewCardExpansionModule = {
             count: cardsToLookAtIds.length,
           },
         },
-      })) as { action: number; result: number[] };
+      }) as { action: number; result: number[] };
       
       const cardIdsToTrash = result?.result ?? [];
       
@@ -1050,7 +1044,7 @@ const expansionModule: NewCardExpansionModule = {
         for (const cardId of cardIdsToTrash) {
           console.log(`[SENTRY EFFECT] trashing ${cardLibrary.getCard(cardId)}...`);
           
-          await gameActionController.trashCard({
+          await runGameActionDelegate('trashCard', {
             playerId,
             cardId: cardId,
           });
@@ -1069,8 +1063,8 @@ const expansionModule: NewCardExpansionModule = {
         return;
       }
       
-      result = (yield new UserPromptEffect({
-        playerId: arg.playerId,
+      result = await runGameActionDelegate('userPrompt', {
+        playerId,
         prompt: 'Choose card/s to discard?',
         validationAction: 1,
         actionButtons: [{ label: `DON'T DISCARD`, action: 2 }, { label: 'DISCARD', action: 1 }],
@@ -1082,7 +1076,7 @@ const expansionModule: NewCardExpansionModule = {
             count: possibleCardsToDiscard.length,
           },
         },
-      })) as { action: number; result: number[] };
+      }) as { action: number; result: number[] };
       
       let cardsToDiscard: number[] = [];
       if (result.action === 2) {
@@ -1097,7 +1091,7 @@ const expansionModule: NewCardExpansionModule = {
         for (const selectedCardId of cardsToDiscard) {
           console.log(`[SENTRY EFFECT] discarding ${cardLibrary.getCard(selectedCardId)}`);
           
-          await gameActionController.discardCard({
+          await runGameActionDelegate('discardCard', {
             playerId,
             cardId: selectedCardId,
           });
@@ -1114,8 +1108,8 @@ const expansionModule: NewCardExpansionModule = {
       
       console.debug(`[SENTRY EFFECT] prompting user to rearrange cards...`);
       
-      result = (yield new UserPromptEffect({
-        playerId: arg.playerId,
+      result = await runGameActionDelegate('userPrompt', {
+        playerId,
         prompt: 'rearrange cards',
         actionButtons: [
           { action: 1, label: 'DONE' },
@@ -1124,41 +1118,41 @@ const expansionModule: NewCardExpansionModule = {
           type: 'rearrange',
           cardIds: remainingCardIds
         }
-      })) as { action: number, result: number[] };
+      }) as { action: number, result: number[] };
       
       const cardIds = result.result;
       
       for (const cardId of cardIds) {
         console.log(`[SENTRY EFFECT] putting ${cardLibrary.getCard(cardId)} on top of deck...`);
         
-        await gameActionController.moveCard({
+        await runGameActionDelegate('moveCard', {
           cardId,
           toPlayerId: playerId,
           to: { location: 'playerDecks' }
         });
       }
     },
-    'smithy': () => async ({ gameActionController, playerId }) => {
+    'smithy': () => async ({ runGameActionDelegate, playerId }) => {
       for (let i = 0; i < 3; i++) {
         console.log(`[SMITHY EFFECT] drawing card...`);
-        await gameActionController.drawCard({
+        await runGameActionDelegate('drawCard', {
           playerId,
         });
       }
     },
-    'throne-room': () => async ({ cardLibrary }) => {
+    'throne-room': () => async ({ playerId, runGameActionDelegate, cardLibrary }) => {
       console.log(`[THRONE ROOM EFFECT] prompting user to select action card from hand...`);
       
-      const cardIds = (yield new SelectCardEffect({
+      const cardIds = await runGameActionDelegate('selectCard', {
         optional: true,
         prompt: 'Choose action',
-        playerId: arg.playerId,
+        playerId,
         count: { kind: 'upTo', count: 1 },
         restrict: {
           from: { location: 'playerHands' },
           card: { type: ['ACTION'] },
         },
-      })) as number[];
+      });
       
       const cardId = cardIds?.[0];
       
@@ -1172,22 +1166,19 @@ const expansionModule: NewCardExpansionModule = {
       for (let i = 0; i < 2; i++) {
         console.log(`[THRONE ROOM EFFECT] running generator...`);
         
-        yield new InvokeGameActionGeneratorEffect({
-          gameAction: 'playCard',
-          context: {
-            playerId: arg.playerId,
-            cardId
-          },
+        await runGameActionDelegate('playCard', {
+          playerId,
+          cardId,
           overrides: {
             actionCost: 0,
           }
         });
       }
     },
-    'vassal': () => async ({ cardLibrary, match, playerId, gameActionController }) => {
+    'vassal': () => async ({ cardLibrary, match, playerId, runGameActionDelegate }) => {
       console.log(`[VASSAL EFFECT] gain 2 treasure...`);
       
-      await gameActionController.gainTreasure({
+      await runGameActionDelegate('gainTreasure', {
         count: 2,
       });
       
@@ -1195,7 +1186,7 @@ const expansionModule: NewCardExpansionModule = {
       
       if (playerDeck.length === 0) {
         console.debug(`[VASSAL EFFECT] not enough cards in deck, shuffling`);
-        await gameActionController.shuffleDeck({
+        await runGameActionDelegate('shuffleDeck', {
           playerId,
         });
       }
@@ -1209,7 +1200,7 @@ const expansionModule: NewCardExpansionModule = {
       
       console.log(`[VASSAL EFFECT] discarding ${cardLibrary.getCard(cardToDiscardId)}...`);
       
-      await gameActionController.discardCard({
+      await runGameActionDelegate('discardCard', {
         playerId,
         cardId: cardToDiscardId,
       });
@@ -1223,11 +1214,11 @@ const expansionModule: NewCardExpansionModule = {
       
       console.log(`[VASSAL EFFECT] prompting user to play card or not...`);
       
-      const confirm = (yield new UserPromptEffect({
-        playerId: arg.playerId,
+      const confirm = await runGameActionDelegate('userPrompt', {
+        playerId,
         prompt: `Play card ${card.cardName}?`,
         actionButtons: [{ label: `DON'T PLAY`, action: 1 }, { label: 'PLAY', action: 2 }],
-      })) as { action: number };
+      }) as { action: number };
       
       if (confirm.action !== 2) {
         console.debug(`[VASSAL EFFECT] player chose not to play card`);
@@ -1236,34 +1227,31 @@ const expansionModule: NewCardExpansionModule = {
       
       console.log(`[VASSAL EFFECT] invoking game action generator...`);
       
-      yield new InvokeGameActionGeneratorEffect({
-        gameAction: 'playCard',
-        context: {
-          playerId: arg.playerId,
-          cardId: card.id
-        },
+      runGameActionDelegate('playCard', {
+        playerId,
+        cardId: card.id,
         overrides: {
           actionCost: 0,
         }
       });
     },
-    'village': () => async ({playerId, gameActionController}) => {
+    'village': () => async ({ playerId, runGameActionDelegate }) => {
       console.log(`[VILLAGE EFFECT] gaining 2 actions...`);
-      await gameActionController.gainAction({
+      await runGameActionDelegate('gainAction', {
         count: 2,
       });
       
       console.log(`[VILLAGE EFFECT] drawing card...`);
       
-      await gameActionController.drawCard({
+      await runGameActionDelegate('drawCard', {
         playerId,
       });
     },
-    'witch': () => async ({ gameActionController, match, playerId, cardLibrary, reactionContext }) => {
+    'witch': () => async ({ runGameActionDelegate, match, playerId, cardLibrary, reactionContext }) => {
       for (let i = 0; i < 2; i++) {
         console.log(`[WITCH EFFECT] drawing card...`);
         
-        await gameActionController.drawCard({
+        await runGameActionDelegate('drawCard', {
           playerId,
         });
       }
@@ -1283,7 +1271,7 @@ const expansionModule: NewCardExpansionModule = {
           if (cardLibrary.getCard(supply[i]).cardKey === 'curse') {
             console.log(`[WITCH EFFECT] gaining card...`);
             
-            await gameActionController.gainCard({
+            await runGameActionDelegate('gainCard', {
               playerId,
               cardId: supply[i],
               to: { location: 'playerDiscards' },
@@ -1295,24 +1283,24 @@ const expansionModule: NewCardExpansionModule = {
         }
       }
     },
-    'workshop': () => async ({ gameActionController, cardLibrary, playerId }) => {
+    'workshop': () => async ({ runGameActionDelegate, cardLibrary, playerId }) => {
       console.log(`[WORKSHOP EFFECT] prompting player to select card to gain...`);
       
-      const cardIds = (yield new SelectCardEffect({
+      const cardIds = await runGameActionDelegate('selectCard', {
         prompt: 'Gain card',
-        playerId: arg.playerId,
+        playerId: playerId,
         count: 1,
         restrict: {
           cost: { kind: 'upTo', amount: 4 },
           from: { location: ['supply', 'kingdom'] },
         },
-      })) as number[];
+      });
       
       const cardId = cardIds[0];
       
       console.log(`[WORKSHOP EFFECT] gaining card ${cardLibrary.getCard(cardId)}`)
       
-      await gameActionController.gainCard({
+      await runGameActionDelegate('gainCard', {
         playerId: playerId,
         cardId,
         to: { location: 'playerDiscards' },

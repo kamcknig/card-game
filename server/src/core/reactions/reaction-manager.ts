@@ -5,7 +5,6 @@ import { getOrderStartingFrom } from '../../utils/get-order-starting-from.ts';
 import { groupReactionsByCardKey } from './group-reactions-by-card-key.ts';
 import { buildActionButtons } from './build-action-buttons.ts';
 import { buildActionMap } from './build-action-map.ts';
-import { UserPromptEffect } from '../effects/effect-types/user-prompt.ts';
 
 export class ReactionManager {
   private readonly _triggers: Reaction[] = [];
@@ -62,6 +61,7 @@ export class ReactionManager {
     this._triggers.push(new Reaction(reactionTemplate));
   }
   
+  // deno-lint-ignore require-yield
   * runTrigger({ trigger, reactionContext }: { trigger: ReactionTrigger, reactionContext?: any }) {
     reactionContext ??= {};
     
@@ -112,13 +112,13 @@ export class ReactionManager {
           
           console.log(`[REACTION MANAGER] prompting ${targetPlayer} to choose reaction`);
           
-          const result = (yield new UserPromptEffect({
+          /*const result = (yield new UserPromptEffect({
             playerId: targetPlayer.id,
             actionButtons,
             prompt: 'Choose reaction?',
-          })) as { action: number };
+          })) as { action: number };*/
           
-          if (result.action === 0) {
+          /*if (result.action === 0) {
             console.log(`[REACTION MANAGER] ${targetPlayer} chose not to react`);
             break;
           }
@@ -126,7 +126,7 @@ export class ReactionManager {
             console.log(`[REACTION MANAGER] ${targetPlayer} reacts with ${actionMap.get(result.action)}`);
           }
           
-          selectedReaction = actionMap.get(result.action);
+          selectedReaction = actionMap.get(result.action);*/
         }
         else {
           selectedReaction = compulsoryReactions[0];
@@ -137,23 +137,23 @@ export class ReactionManager {
           continue;
         }
         
-        const reactionResult = yield* selectedReaction.triggeredEffectFn({
+        /*const reactionResult = yield* selectedReaction.triggeredEffectFn({
           trigger,
           reaction: selectedReaction,
-        });
+        });*/
         
         // right now the only card that created that has a reaction that the
         // card triggering it needs to know about is moat giving immunity.
         // every other reaction just returns undefined. so if the reaction
         // doesn't give a result, don't set it on the context. this might
         // have to expand later.
-        if (reactionResult !== undefined) {
+        /*if (reactionResult !== undefined) {
           reactionContext[targetPlayer.id] = {
             reaction: selectedReaction,
             trigger,
             result: reactionResult,
           };
-        }
+        }*/
         
         usedReactionIds.add(selectedReaction.id);
         

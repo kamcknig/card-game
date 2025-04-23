@@ -693,7 +693,7 @@ const expansion: CardExpansionModule = {
             return false;
           }
           
-          return !matchStats.playedCardsInfo[trigger.cardId]
+          return !matchStats.playedCards[trigger.cardId]
             && trigger.playerId === args.playerId
             && cardLibrary.getCard(trigger.cardId).type.includes('DURATION');
         },

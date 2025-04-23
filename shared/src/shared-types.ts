@@ -18,13 +18,7 @@ export type LogEntry =
   | { type: 'newTurn'; turn: number; depth?: number; }
   | { type: 'newPlayerTurn'; turn: number; playerId: PlayerId; depth?: number; };
 
-export type LogEntryMessage = LogEntry & { message: string; id: number; };
-
-export type SelectCardArgs = SelectCardEffectArgs & {
-  selectableCardIds: CardId[];
-}
-
-export type SelectCardEffectArgs = {
+export type SelectActionCardArgs = {
   restrict: EffectRestrictionSpec | number[];
   count?: CountSpec | number;
   autoSelect?: boolean;
@@ -41,7 +35,8 @@ export type UserPromptKinds =
   | { type: 'name-card' }
   | { type: 'select'; cardIds: CardId[]; selectCount: CountSpec };
 
-export type UserPromptEffectArgs = {
+export type UserPromptActionArgs = {
+  playerId: PlayerId;
   prompt?: string;
   content?: UserPromptKinds;
   actionButtons?: ActionButtons;
@@ -55,19 +50,21 @@ export type MatchConfiguration = {
   kingdomCardKeys: string[];
 }
 
+type CardStats = {
+  // the turn number on which the card was played.
+  turnNumber: number;
+  
+  // the player that played the card
+  playedPlayerId: PlayerId;
+  
+  // the player whose turn it was when the card was played.
+  turnPlayerId: PlayerId
+};
+
 export type MatchStats = {
-  cardsGained: Record<PlayerId, CardId[]>[];
-  playedCardsInfo: Record<CardId, {
-    // the turn number on which the card was played.
-    turnNumber: number;
-    
-    // the player that played the card
-    playedPlayerId: PlayerId;
-    
-    // the player who's turn it was when the card was played.
-    turnPlayerId: PlayerId
-  }>;
-  trashedCards: Record<PlayerId, CardId[]>[];
+  cardsGained: Record<CardId, CardStats>;
+  playedCards: Record<CardId, CardStats>;
+  trashedCards: Record<PlayerId, CardStats>;
 };
 
 export type Match = {
@@ -117,12 +114,12 @@ export type ServerEmitEvents = {
   playerNameUpdated: (playerId: PlayerId, name: string) => void;
   playerReady: (playerId: PlayerId, ready: boolean) => void;
   searchCardResponse: (cardData: (CardData & { cardKey: CardKey })[]) => void;
-  selectCard: (signalId: string, selectCardArgs: SelectCardEffectArgs & { selectableCardIds: CardId[] }) => void;
+  selectCard: (signalId: string, selectCardArgs: SelectActionCardArgs & { selectableCardIds: CardId[] }) => void;
   setCardDataOverrides: (overrides: Record<CardId, Partial<Card>> | undefined) => void;
   setCardLibrary: (cardLibrary: Record<CardId, Card>) => void;
   setPlayerList: (players: Player[]) => void;
   setPlayer: (player: Player) => void;
-  userPrompt: (signalId: string, userPromptArgs: UserPromptEffectArgs) => void;
+  userPrompt: (signalId: string, userPromptArgs: UserPromptActionArgs) => void;
   waitingForPlayer: (playerId: PlayerId) => void;
 };
 

@@ -1,15 +1,31 @@
-import { CardId, EffectTarget, LocationSpec, Match, PlayerId, TurnPhaseOrderValues } from 'shared/shared-types.ts';
+import {
+  CardId,
+  LocationSpec,
+  Match,
+  PlayerId,
+  SelectActionCardArgs,
+  TurnPhaseOrderValues,
+  UserPromptActionArgs
+} from 'shared/shared-types.ts';
 import { CardLibrary } from '../card-library.ts';
 import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
 import { LogManager } from '../log-manager.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
-import { AppSocket, CardEffectFunctionMap } from '../../types.ts';
+import {
+  AppSocket,
+  CardEffectFunctionMap,
+  GameActionOverrides,
+  ModifyActionCardArgs,
+  RunGameActionDelegate
+} from '../../types.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { cardDataOverrides, getCardOverrides, removeOverrideEffects } from '../../card-data-overrides.ts';
 import { findSourceByCardId } from '../../utils/find-source-by-card-id.ts';
 import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 import { findSourceByLocationSpec } from '../../utils/find-source-by-location-spec.ts';
+import { findCards } from '../../utils/find-cards.ts';
+import { castArray, isNumber } from 'es-toolkit/compat';
 
 export class GameActionController {
   constructor(
@@ -18,17 +34,12 @@ export class GameActionController {
     private cardLibrary: CardLibrary,
     private logManager: LogManager,
     private socketMap: Map<PlayerId, AppSocket>,
+    private runGameActionDelegate: RunGameActionDelegate
   ) {
   }
   
-  // todo change this probably to setOverrides when there are more overrridess later?
-  async modifyCost(args: {
-    appliesTo: EffectTarget,
-    cost: number,
-    expiresAt: 'TURN_END',
-    appliesToCard: EffectTarget,
-    amount: number,
-  }) {
+  // todo change this probably to setOverrides when there are more overrides later?
+  async modifyCost(args: ModifyActionCardArgs) {
     let targets: PlayerId[] = [];
     if (args.appliesTo === 'ALL') {
       targets = this.match.players.map(p => p.id);
@@ -51,9 +62,11 @@ export class GameActionController {
     console.log(`[gainBuy action] setting player guys to ${this.match.playerBuys}`);
   }
   
-  async moveCard(args: { toPlayerId: PlayerId, cardId: CardId, to: LocationSpec }) {
+  async moveCard(args: { toPlayerId?: PlayerId, cardId: CardId, to: LocationSpec }) {
     const oldSource = findSourceByCardId(args.cardId, this.match, this.cardLibrary);
     oldSource.sourceStore.splice(oldSource.index, 1);
+    
+    args.to.location = castArray(args.to.location);
     
     const newSource = findSourceByLocationSpec({ spec: args.to, playerId: args.toPlayerId }, this.match);
     newSource.push(args.cardId);
@@ -70,58 +83,183 @@ export class GameActionController {
   }
   
   async gainCard(args: { playerId: PlayerId, cardId: CardId, to: LocationSpec }) {
-    const oldSource = findSourceByCardId(args.cardId, this.match, this.cardLibrary);
-    oldSource.sourceStore.splice(oldSource.index, 1);
+    await this.moveCard({
+      cardId: args.cardId,
+      to: args.to,
+      toPlayerId: args.playerId
+    });
     
-    const newSource = findSourceByLocationSpec({ spec: args.to, playerId: args.playerId }, this.match);
-    newSource.push(args.cardId);
+    this.match.stats.cardsGained[args.cardId] = {
+      turnNumber: this.match.turnNumber,
+      turnPlayerId: getCurrentPlayer(this.match).id,
+      playedPlayerId: args.playerId
+    };
     
-    this.match.stats.cardsGained[this.match.turnNumber][args.playerId] ??= [];
-    this.match.stats.cardsGained[this.match.turnNumber][args.playerId].push(args.cardId);
+    console.log(`[gainCard action] ${getPlayerById(this.match, args.playerId)} gained ${this.cardLibrary.getCard(args.cardId)}`);
     
     this.logManager.addLogEntry({
-      root: false,
+      root: true,
       playerId: args.playerId,
       cardId: args.cardId,
       type: 'gainCard'
     });
   }
   
-  async newTurn(args: {} = {}) {
+  async newTurn() {
     this.logManager.addLogEntry({
       root: true,
       type: 'newTurn',
       turn: this.match.turnNumber,
     });
+  }
+  
+  async userPrompt(args: UserPromptActionArgs) {
+    const { playerId } = args;
     
-    this.match.stats.cardsGained.push(
-      this.match.players.reduce((prev, next) => {
-        prev[next.id] = [];
-        return prev;
-      }, {} as Record<PlayerId, CardId[]>)
-    );
+    const signalId = `userPrompt:${playerId}:${Date.now()}`;
     
-    this.match.stats.trashedCards.push(
-      this.match.players.reduce((prev, next) => {
-        prev[next.id] = [];
-        return prev;
-      }, {} as Record<PlayerId, CardId[]>)
-    );
+    const socket = this.socketMap.get(playerId);
+    if (!socket) {
+      console.log(`[userPrompt] No socket for player ${playerId}`);
+      return null
+    }
+    
+    const currentPlayerId = getCurrentPlayer(this.match).id;
+    
+    if (playerId !== currentPlayerId) {
+      this.socketMap.forEach((socket, id) => {
+        if (id !== playerId) {
+          socket.emit('waitingForPlayer', playerId);
+        }
+      });
+    }
+    
+    return new Promise((resolve) => {
+      const onInput = (incomingSignalId: string, response: unknown) => {
+        if (incomingSignalId !== signalId) return;
+        
+        socket.off('userInputReceived', onInput);
+        
+        if (playerId !== currentPlayerId) {
+          this.socketMap.forEach((socket, id) => {
+            if (id !== playerId) {
+              socket.emit('doneWaitingForPlayer', playerId);
+            }
+          });
+        }
+        
+        resolve(response);
+      };
+      
+      socket.on('userInputReceived', onInput);
+      socket.emit('userPrompt', signalId, args);
+    });
+  }
+  
+  async selectCard(args: SelectActionCardArgs) {
+    args.count ??= 1;
+    
+    let selectableCardIds: number[] = [];
+    
+    const { count, playerId, restrict } = args;
+    
+    if (Array.isArray(restrict)) {
+      console.log(`[selectCard action] restricted to set of cards ${restrict}`);
+      selectableCardIds = restrict;
+    }
+    else if (restrict.from) {
+      if (restrict.from.location === 'playerDecks') {
+        console.warn('[selectCard action] will not be able to select from deck, not sending it to client, nor able to show them to them right now');
+        return [];
+      }
+      
+      selectableCardIds = findCards(
+        this.match,
+        restrict,
+        this.cardLibrary,
+        playerId,
+      );
+      
+      console.log(`[selectCard action] found ${selectableCardIds.length} selectable cards`);
+    }
+    
+    if (selectableCardIds?.length === 0) {
+      console.log(`[selectCard action] found no cards within restricted set ${restrict}`);
+      return [];
+    }
+    
+    // if there aren't enough cards, depending on the selection type, we might simply implicitly select cards
+    // because the player would be forced to select hem all anyway
+    if (isNumber(count) && !args.optional) {
+      console.log(`[selectCard action] selection count is an exact count ${count} checking if user has that many cards`);
+      
+      if (selectableCardIds.length <= count) {
+        console.log('[selectCard action] user does not have enough, or has exactly the amount of cards to select from, selecting all automatically');
+        return selectableCardIds;
+      }
+    }
+    
+    const socket = this.socketMap.get(playerId);
+    
+    if (!socket) {
+      console.log(`[selectCard action] no socket found for ${getPlayerById(this.match, playerId)}, skipping`);
+      return [];
+    }
+    
+    const signalId = `selectCard:${playerId}:${Date.now()}`;
+    const currentPlayerId = getCurrentPlayer(this.match).id;
+    
+    if (playerId !== currentPlayerId) {
+      this.socketMap.forEach((socket, id) => {
+        if (id !== playerId) {
+          socket.emit('waitingForPlayer', playerId);
+        }
+      });
+    }
+    
+    return new Promise<CardId[]>((resolve) => {
+      const onInput = (incomingSignalId: string, cardIds: unknown) => {
+        if (incomingSignalId !== signalId) return;
+        
+        socket.off('userInputReceived', onInput);
+        
+        // ✅ Clear "waiting" if needed
+        if (playerId !== currentPlayerId) {
+          this.socketMap.forEach((socket, id) => {
+            if (id !== playerId) {
+              socket.emit('doneWaitingForPlayer', playerId);
+            }
+          });
+        }
+        
+        if (!Array.isArray(cardIds)) {
+          console.warn(`[selectCard action] received invalid cardIds ${cardIds}`);
+        }
+        
+        resolve(Array.isArray(cardIds) ? cardIds : []);
+      };
+      
+      socket.on('userInputReceived', onInput);
+      socket.emit('selectCard', signalId, { ...args, selectableCardIds });
+    });
   }
   
   async trashCard(args: { cardId: CardId, playerId: PlayerId }) {
-    this.match.trash.push(args.cardId);
+    await this.moveCard({
+      cardId: args.cardId,
+      to: { location: 'trash' }
+    });
     
-    const oldSource = findSourceByCardId(args.cardId, this.match, this.cardLibrary);
-    oldSource.sourceStore.splice(oldSource.index, 1);
-    
-    this.match.stats.trashedCards[this.match.turnNumber][args.playerId] ??= [];
-    this.match.stats.trashedCards[this.match.turnNumber][args.playerId].push(args.cardId);
+    this.match.stats.trashedCards[args.cardId] = {
+      turnNumber: this.match.turnNumber,
+      playedPlayerId: args.playerId,
+      turnPlayerId: getCurrentPlayer(this.match).id
+    };
     
     console.log(`[trashCard action] trashed ${this.cardLibrary.getCard(args.cardId)}`);
     
     this.logManager.addLogEntry({
-      root: false,
+      root: true,
       playerId: args.playerId,
       cardId: args.cardId,
       type: 'trashCard'
@@ -153,6 +291,26 @@ export class GameActionController {
      });
      
      yield* reactionManager.runTrigger({ trigger });*/
+  }
+  
+  async revealCard(args: { cardId: CardId, playerId: PlayerId, moveToRevealed?: boolean }) {
+    console.log(`[revealCard action] ${getPlayerById(this.match, args.playerId)} revealing ${this.cardLibrary.getCard(args.cardId)}`);
+    
+    if (args.moveToRevealed) {
+      console.log(`[revealCard action] moving card to 'revealed' zone`);
+      
+      await this.moveCard({
+        cardId: args.cardId,
+        to: { location: 'revealed' }
+      });
+    }
+    
+    this.logManager.addLogEntry({
+      root: true,
+      type: 'revealCard',
+      cardId: args.cardId,
+      playerId: args.playerId,
+    });
   }
   
   async checkForRemainingPlayerActions(): Promise<void> {
@@ -189,20 +347,22 @@ export class GameActionController {
   
   async discardCard(args: { cardId: CardId, playerId: PlayerId }) {
     console.log(`[discardCard action] discarding ${this.cardLibrary.getCard(args.cardId)} from ${getPlayerById(this.match, args.playerId)}`);
-    const oldSource = findSourceByCardId(args.cardId, this.match, this.cardLibrary);
-    oldSource.sourceStore.splice(oldSource.index, 1);
     
-    this.match.playerDiscards[args.playerId].push(args.cardId);
+    await this.moveCard({
+      cardId: args.cardId,
+      to: { location: 'playerDiscards' },
+      toPlayerId: args.playerId
+    });
     
     this.logManager.addLogEntry({
-      root: false,
+      root: true,
       type: 'discard',
       playerId: args.playerId,
       cardId: args.cardId,
     });
   }
   
-  async nextPhase(args: {} = {}) {
+  async nextPhase() {
     const match = this.match;
     
     match.turnPhaseIndex = match.turnPhaseIndex + 1;
@@ -261,7 +421,7 @@ export class GameActionController {
           
           // if the card is a duration card, and it was played this turn
           if (card.type.includes('DURATION')) {
-            const playedCardsInfo = match.stats.playedCardsInfo?.[card.id];
+            const playedCardsInfo = match.stats.playedCards?.[card.id];
             
             if (!playedCardsInfo) continue;
             const turnPlayed = playedCardsInfo.turnNumber;
@@ -277,7 +437,7 @@ export class GameActionController {
               }
               else {
                 // if it's the same turn number,
-                const playerTurnPlayedId = match.stats.playedCardsInfo[card.id].turnPlayerId;
+                const playerTurnPlayedId = match.stats.playedCards[card.id].turnPlayerId;
                 const playedTurnPlayerIndex = match.players.findIndex(p => p.id === playerTurnPlayedId);
                 
                 if (playedTurnPlayerIndex !== match.currentPlayerTurnIndex) {
@@ -311,13 +471,12 @@ export class GameActionController {
         
         await this.endTurn();
         
-        await this.nextPhase({});
+        await this.nextPhase();
         break;
       }
     }
     
-    // todo
-    // yield* map.checkForPlayerActions(undefined);
+    await this.runGameActionDelegate('checkForRemainingPlayerActions');
   }
   
   async endTurn() {
@@ -346,23 +505,23 @@ export class GameActionController {
     const discard = this.match.playerDiscards[playerId];
     
     if (discard.length + deck.length === 0) {
-      console.log('[gainTreasure action] Not enough cards to draw');
+      console.log('[drawCard action] Not enough cards to draw');
       return null;
     }
     
     // If deck is empty, shuffle discard into deck
     if (deck.length === 0) {
-      console.log(`[gainTreasure action] Shuffling discard pile`);
+      console.log(`[drawCard action] Shuffling discard pile`);
       await this.shuffleDeck({ playerId });
     }
     
     const drawnCardId = deck.pop();
     if (!drawnCardId) return null;
     
-    console.log(`[gainTreasure action] Drew card ${this.cardLibrary.getCard(drawnCardId)}`);
+    console.log(`[drawCard action] Drew card ${this.cardLibrary.getCard(drawnCardId)}`);
     
     this.logManager.addLogEntry({
-      root: false,
+      root: true,
       type: 'draw',
       playerId,
       cardId: drawnCardId
@@ -374,43 +533,36 @@ export class GameActionController {
     return drawnCardId;
   }
   
-  async playCard(args: { playerId: PlayerId, cardId: CardId }): Promise<boolean> {
+  async playCard(args: { playerId: PlayerId, cardId: CardId, overrides?: GameActionOverrides }): Promise<boolean> {
     const { playerId, cardId } = args;
     
-    console.log(`[playCard action] ${getPlayerById(this.match, playerId)} playing card ${this.cardLibrary.getCard(cardId)}`);
+    await this.moveCard({
+      cardId: args.cardId,
+      to: { location: 'playArea' },
+    });
     
-    // 1. Find the card in the player's hand
-    const hand = this.match.playerHands[playerId];
-    const cardIndex = hand.indexOf(cardId);
-    
-    if (cardIndex === -1) {
-      console.log(`[playCard action] Card not found in player's hand`);
-      return false;
-    }
-    
-    // 2. Remove the card from hand
-    hand.splice(cardIndex, 1);
-    
-    // 3. Put the card in the play area
-    this.match.playArea.push(cardId);
-    
-    // 4. If it's an action card, reduce the player's action count
     const card = this.cardLibrary.getCard(cardId);
     
-    if (card.type.includes('ACTION')) {
-      this.match.playerActions--;
+    if (card.type.includes('ACTION') && args.overrides?.actionCost !== 0) {
+      this.match.playerActions -= args.overrides?.actionCost ?? 1;
       
       console.log(`[playCard action] Reducing player's action count to ${this.match.playerActions}`);
     }
     
-    // 5. Record the card play in match stats
-    const turnNumber = this.match.turnNumber;
-    
-    this.match.stats.playedCardsInfo[cardId] = {
-      turnNumber,
+    this.match.stats.playedCards[cardId] = {
+      turnNumber: this.match.turnNumber,
       playedPlayerId: playerId,
       turnPlayerId: getCurrentPlayer(this.match).id
     };
+    
+    console.log(`[playCard action] ${getPlayerById(this.match, playerId)} played card ${this.cardLibrary.getCard(cardId)}`);
+    
+    this.logManager.addLogEntry({
+      type: 'cardPlayed',
+      cardId,
+      playerId,
+      root: true,
+    });
     
     // todo reaction triggers
     // 6. run reactions for the card being played
@@ -423,7 +575,7 @@ export class GameActionController {
      const reactionContext = {};
      yield* reactionManager.runTrigger({ trigger, reactionContext });*/
     
-    // todo check for triggered effecsts to register
+    // todo check for triggered effects to register
     /*const card = cardLibrary.getCard(effect.cardId);
      const triggerTemplates = cardLifecycleMap[card.cardKey]
      ?.onCardPlayed?.({ playerId: effect.playerId, cardId: effect.cardId })?.registerTriggeredEvents;
@@ -435,11 +587,14 @@ export class GameActionController {
     const effectFn = this.cardEffectFunctionMap[card.cardKey];
     if (effectFn) {
       await effectFn({
+        runGameActionDelegate: this.runGameActionDelegate,
         cardId,
         gameActionController: this,
         playerId,
         match: this.match,
-        cardLibrary: this.cardLibrary
+        cardLibrary: this.cardLibrary,
+        reactionContext: {},
+        logManager: this.logManager,
       });
     }
     
@@ -460,7 +615,7 @@ export class GameActionController {
     discard.length = 0;
     
     this.logManager.addLogEntry({
-      root: false,
+      root: true,
       type: 'shuffleDeck',
       playerId: args.playerId
     });

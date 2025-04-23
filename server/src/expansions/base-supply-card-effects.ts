@@ -1,6 +1,6 @@
-import { NewCardExpansionModule } from '../types.ts';
+import { CardExpansionModule } from '../types.ts';
 
-const expansionModule: NewCardExpansionModule = {
+const expansionModule: CardExpansionModule = {
   registerEffects: {
     'copper': () => async ({gameActionController}) => {
       await gameActionController.gainTreasure({ count: 1 });

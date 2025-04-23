@@ -6,6 +6,7 @@ import { CardLibrary } from './card-library.ts';
 import { MatchController } from './match-controller.ts';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
 import { GameActionController } from './effects/game-action-controller.ts';
+import { getTurnPhase } from '../utils/get-turn-phase.ts';
 
 export class CardInteractivityController {
   private _gameOver: boolean = false;
@@ -162,7 +163,21 @@ export class CardInteractivityController {
       return;
     }
     
-    await this._matchController.runGameAction('playCard', { playerId, cardId });
+    const phase = getTurnPhase(this.match.turnPhaseIndex);
+    
+    if (phase === 'buy') {
+      const hand = this.match.playerHands[playerId];
+      if (hand.includes(cardId)) {
+        await this._matchController.runGameAction('playCard', { playerId, cardId });
+      }
+      else {
+        await this._matchController.runGameAction('buyCard', { playerId, cardId });
+      }
+    }
+    else if (phase === 'action') {
+      await this._matchController.runGameAction('playCard', { playerId, cardId });
+    }
+    
     await this._matchController.runGameAction('checkForRemainingPlayerActions');
     
     this._socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);

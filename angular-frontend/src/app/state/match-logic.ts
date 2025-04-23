@@ -37,12 +37,12 @@ export const activeDurationCardStore = computed(
 
     const matchStats = match?.stats;
 
-    if (!match || !matchStats?.playedCardsInfo) return result;
+    if (!match || !matchStats?.playedCards) return result;
 
     for (const card of playArea.map(id => allCards[id])) {
       if (!card.type.includes('DURATION')) continue;
 
-      const info = matchStats.playedCardsInfo[card.id];
+      const info = matchStats.playedCards[card.id];
       if (!info) continue;
 
       const turnsSincePlayed = getDistanceToPlayer({
@@ -65,14 +65,14 @@ export const playedCardStore = computed(
   [playAreaStore, cardStore, matchStore, currentPlayerTurnIdStore],
   (cardIds, allCards, match, currentPlayerTurnId) => {
     const matchStats = match?.stats;
-    if (!matchStats?.playedCardsInfo || !match) return cardIds.map(id => allCards[id]);
+    if (!matchStats?.playedCards || !match) return cardIds.map(id => allCards[id]);
 
     return cardIds
       .map(id => allCards[id])
       .filter(card => {
         if (!card.type.includes('DURATION')) return true;
 
-        const info = matchStats.playedCardsInfo[card.id];
+        const info = matchStats.playedCards[card.id];
         if (!info) return true;
 
         const turnsSincePlayed = getDistanceToPlayer({

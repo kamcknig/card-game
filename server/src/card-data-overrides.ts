@@ -1,7 +1,6 @@
 import { Card, Match } from 'shared/shared-types.ts';
-import { ModifyCostEffect, ModifyCostEffectArgs } from './core/effects/effect-types/modify-cost.ts';
 import { CardLibrary } from './core/card-library.ts';
-import { CardOverrides, GameActionMethodMap } from './types.ts';
+import { CardOverrides, GameActionMethodMap, ModifyActionCardArgs } from './types.ts';
 
 // todo should this be a class or at least an encapsulated object? if push an effect onto the stack
 // it can auto send the socket updates. right now anywhere the code adds one or uses
@@ -9,7 +8,7 @@ import { CardOverrides, GameActionMethodMap } from './types.ts';
 
 export const cardDataOverrides: { targets: number[], overrideEffect: Parameters<GameActionMethodMap['modifyCost']>[0] }[] = [];
 
-export const removeOverrideEffects = (expiresAt: ModifyCostEffectArgs['expiresAt']) => {
+export const removeOverrideEffects = (expiresAt: ModifyActionCardArgs['expiresAt']) => {
   for (let i = cardDataOverrides.length - 1; i >= 0; i--) {
     if (cardDataOverrides[i].overrideEffect.expiresAt === expiresAt) {
       cardDataOverrides.splice(i, 1);

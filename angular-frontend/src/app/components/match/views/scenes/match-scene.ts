@@ -10,7 +10,7 @@ import { PlayAreaView } from '../play-area';
 import { KingdomSupplyView } from '../kingdom-supply';
 import { PileView } from '../pile';
 import { cardStore } from '../../../../state/card-state';
-import { Card, CardId, CardKey, PlayerId, SelectCardArgs, UserPromptEffectArgs } from 'shared/shared-types';
+import { Card, CardId, CardKey, PlayerId, UserPromptActionArgs } from 'shared/shared-types';
 import {
   awaitingServerLockReleaseStore,
   clientSelectableCardsOverrideStore,
@@ -31,6 +31,7 @@ import { supplyStore, trashStore } from '../../../../state/match-logic';
 import { gamePausedStore } from '../../../../state/game-logic';
 import { playerDeckStore, playerDiscardStore, playerHandStore } from '../../../../state/player-logic';
 import { selectableCardStore } from '../../../../state/interactive-logic';
+import { SelectCardArgs } from '../../../../../types';
 
 export class MatchScene extends Scene {
   private _board: Container = new Container();
@@ -332,7 +333,7 @@ export class MatchScene extends Scene {
     this._cleanup.forEach(c => c());
   }
 
-  private onUserPrompt = async (signalId: string, args: UserPromptEffectArgs) => {
+  private onUserPrompt = async (signalId: string, args: UserPromptActionArgs) => {
     this._selecting = true;
     const result = await userPromptModal(
       this._app,
