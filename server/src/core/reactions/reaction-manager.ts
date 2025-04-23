@@ -1,10 +1,11 @@
-import { Match, MatchStats } from 'shared/shared-types.ts';
-import { Reaction, ReactionTemplate, ReactionTrigger } from '../../types.ts';
+import { CardId, Match, PlayerId } from 'shared/shared-types.ts';
+import { LifecycleTriggers, Reaction, ReactionTemplate, ReactionTrigger, RunGameActionDelegate } from '../../types.ts';
 import { CardLibrary } from '../card-library.ts';
 import { getOrderStartingFrom } from '../../utils/get-order-starting-from.ts';
 import { groupReactionsByCardKey } from './group-reactions-by-card-key.ts';
 import { buildActionButtons } from './build-action-buttons.ts';
 import { buildActionMap } from './build-action-map.ts';
+import { cardLifecycleMap } from '../card-lifecycle-map.ts';
 
 export class ReactionManager {
   private readonly _triggers: Reaction[] = [];
@@ -12,7 +13,7 @@ export class ReactionManager {
   constructor(
     private readonly _match: Match,
     private readonly _cardLibrary: CardLibrary,
-    private readonly _matchStats: MatchStats,
+    private readonly runGameActionDelegate: RunGameActionDelegate
   ) {
   }
   
@@ -27,7 +28,6 @@ export class ReactionManager {
       
       if (t.condition !== undefined) {
         return t.condition({
-          matchStats: this._matchStats,
           match: this._match,
           cardLibrary:
           this._cardLibrary, trigger
@@ -61,8 +61,24 @@ export class ReactionManager {
     this._triggers.push(new Reaction(reactionTemplate));
   }
   
-  // deno-lint-ignore require-yield
-  * runTrigger({ trigger, reactionContext }: { trigger: ReactionTrigger, reactionContext?: any }) {
+  handleLifecycleTrigger(trigger: LifecycleTriggers, context: { playerId?: PlayerId, cardId: CardId }) {
+    const card = this._cardLibrary.getCard(context.cardId);
+    
+    const fn = cardLifecycleMap[card.cardKey]?.[trigger];
+    if (!fn) {
+      return;
+    }
+    
+    console.log(`[REACTION MANAGER] running lifecycle trigger '${trigger}' for card ${card}`);
+    fn({
+      cardId: context.cardId,
+      playerId: context.playerId!,
+      reactionManager: this,
+      runGameActionDelegate: this.runGameActionDelegate,
+    });
+  }
+  
+  async runTrigger({ trigger, reactionContext }: { trigger: ReactionTrigger, reactionContext?: any }) {
     reactionContext ??= {};
     
     // now we get the order of players that could be affected by the play (including the current player),

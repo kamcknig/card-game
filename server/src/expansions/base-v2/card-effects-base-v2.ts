@@ -6,64 +6,55 @@ import { CardExpansionModule } from '../../types.ts';
 const expansionModule: CardExpansionModule = {
   registerCardLifeCycles: () => ({
     'merchant': {
-      onEnterPlay: ({ runGameActionDelegate, playerId, cardId }) => {
-        const id = `merchant:${cardId}:onEnterPlay`;
-        return {
-          registerTriggeredEvents: [{
-            id,
-            playerId,
-            once: true,
-            compulsory: true,
-            allowMultipleInstances: true,
-            condition: ({ cardLibrary, trigger }) => {
-              const card = cardLibrary.getCard(trigger.cardId!);
-              return card.cardKey === 'silver' && trigger.playerId === playerId;
-            },
-            listeningFor: 'cardPlayed',
-            triggeredEffectFn: async function () {
-              await runGameActionDelegate('gainTreasure', {
-                count: 1,
-              });
-            },
-          }],
-        };
+      onEnterPlay: ({ reactionManager, runGameActionDelegate, playerId, cardId }) => {
+        reactionManager.registerReactionTemplate({
+          id: `merchant:${cardId}:onEnterPlay`,
+          playerId,
+          once: true,
+          compulsory: true,
+          allowMultipleInstances: true,
+          condition: ({ cardLibrary, trigger }) => {
+            const card = cardLibrary.getCard(trigger.cardId!);
+            return card.cardKey === 'silver' && trigger.playerId === playerId;
+          },
+          listeningFor: 'cardPlayed',
+          triggeredEffectFn: async function () {
+            await runGameActionDelegate('gainTreasure', {
+              count: 1,
+            });
+          },
+        });
       },
-      onLeavePlay: ({ cardId }) => {
-        return {
-          unregisterTriggeredEvents: [`merchant:${cardId}:onEnterPlay`],
-        };
+      onLeavePlay: ({ reactionManager, cardId }) => {
+        reactionManager.unregisterTrigger(`merchant:${cardId}:onEnterPlay`)
       },
     },
     'moat': {
-      onEnterHand: ({ playerId, cardId }) => {
-        return {
-          registerTriggeredEvents: [{
-            id: `moat:${cardId}:onEnterHand`,
-            playerId,
-            listeningFor: 'cardPlayed',
-            allowMultipleInstances: false,
-            condition: ({ cardLibrary, trigger }) => {
-              return cardLibrary.getCard(trigger.cardId!).type.includes(
-                'ATTACK',
-              ) && trigger.playerId !== playerId;
-            },
-            triggeredEffectFn: async function ({ runGameActionDelegate, reaction }) {
-              const sourceId = reaction.getSourceId();
-              
-              await runGameActionDelegate('revealCard', {
-                cardId: sourceId,
-                playerId: reaction.playerId,
-              });
-              
-              return 'immunity';
-            },
-          }],
-        };
+      onEnterHand: ({ reactionManager, playerId, cardId }) => {
+        reactionManager.registerReactionTemplate({
+          id: `moat:${cardId}:onEnterHand`,
+          playerId,
+          listeningFor: 'cardPlayed',
+          allowMultipleInstances: false,
+          condition: ({ cardLibrary, trigger }) => {
+            return cardLibrary.getCard(trigger.cardId!).type.includes(
+              'ATTACK',
+            ) && trigger.playerId !== playerId;
+          },
+          triggeredEffectFn: async function ({ runGameActionDelegate, reaction }) {
+            const sourceId = reaction.getSourceId();
+            
+            await runGameActionDelegate('revealCard', {
+              cardId: sourceId,
+              playerId: reaction.playerId,
+            });
+            
+            return 'immunity';
+          },
+        });
       },
-      onLeaveHand: ({ cardId }) => {
-        return {
-          unregisterTriggeredEvents: [`moat:${cardId}:onEnterHand`],
-        };
+      onLeaveHand: ({ reactionManager, cardId }) => {
+        reactionManager.unregisterTrigger(`moat:${cardId}:onEnterHand`);
       },
     },
   }),

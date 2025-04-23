@@ -145,6 +145,12 @@ export type TriggeredEffectContext = {
   isRootLog?: boolean;
 };
 
+export type TriggeredEffectConditionContext = {
+  match: Match;
+  cardLibrary: CardLibrary;
+  trigger: ReactionTrigger
+};
+
 export type GameActionArgsMap = {
   checkForRemainingPlayerActions: void;
   buyCard: { playerId: PlayerId; cardId: CardId };
@@ -166,6 +172,11 @@ export type GameActionArgsMap = {
   trashCard: { playerId: PlayerId; cardId: CardId };
   userPrompt: UserPromptActionArgs;
 };
+
+export type GameActionControllerInterface = {
+  [K in keyof GameActionArgsMap]: (args: GameActionArgsMap[K]) => any;
+};
+
 
 export type ModifyActionCardArgs = {
   appliesTo: EffectTarget;
@@ -203,9 +214,11 @@ export type CardEffectFunctionContext = {
   cardLibrary: CardLibrary
 }
 
-export type CardTriggeredEffectFn = (args: TriggeredEffectContext) => Promise<any>;
+export type CardTriggeredEffectFn = (context: TriggeredEffectContext) => Promise<any>;
 
-export type CardEffectFunction = (args: CardEffectFunctionContext) => Promise<void>;
+type CardTriggerEffectConditionFn = (context: TriggeredEffectConditionContext) => boolean;
+
+export type CardEffectFunction = (context: CardEffectFunctionContext) => Promise<void>;
 
 export type CardEffectFunctionMap =
   Record<CardKey, CardEffectFunction>;
@@ -275,14 +288,7 @@ export class Reaction {
   // todo working on moat right now which has no condition other than it be an attack.
   // in the future we might need to define this condition method elsewhere such as
   // in the expansion's module? need to wait to see what kind of conditions there are i think
-  public condition?: (
-    args: {
-      matchStats: MatchStats;
-      match: Match;
-      cardLibrary: CardLibrary;
-      trigger: ReactionTrigger
-    },
-  ) => boolean;
+  public condition?: CardTriggerEffectConditionFn
   
   // todo defined in a map somewhere just like registered card effects. so maybe another export
   // from teh expansion module that defines what happens when you ccn react?
@@ -335,19 +341,12 @@ export class Reaction {
 
 export type ReactionTemplate = Omit<Reaction, 'getSourceId' | 'getSourceKey' | 'getBaseId'>;
 
-export type LifecycleResult = {
-  registerTriggeredEvents?: ReactionTemplate[];
-  unregisterTriggeredEvents?: string[];
-};
-export type LifecycleCallback = (
-  args: {
-    runGameActionDelegate: RunGameActionDelegate;
-    gameActionController: GameActionController;
-    playerId: number;
-    cardId: number;
-  },
-) => LifecycleResult | void;
-
+type LifecycleCallbackContext = {
+  reactionManager: ReactionManager;
+  runGameActionDelegate: RunGameActionDelegate;
+  playerId: number;
+  cardId: number;
+}
 export type LifecycleCallbackMap = {
   onEnterHand?: LifecycleCallback;
   onLeaveHand?: LifecycleCallback;
@@ -355,5 +354,12 @@ export type LifecycleCallbackMap = {
   onLeavePlay?: LifecycleCallback;
   onCardPlayed?: LifecycleCallback;
 };
+export type LifecycleResult = {
+  registerTriggeredEvents?: ReactionTemplate[];
+  unregisterTriggeredEvents?: string[];
+};
+export type LifecycleCallback = (args: LifecycleCallbackContext) => LifecycleResult | void;
+
+export type LifecycleTriggers = keyof LifecycleCallbackMap;
 
 export type CardOverrides = Record<PlayerId, Record<CardId, Card>>;

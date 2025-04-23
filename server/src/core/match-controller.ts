@@ -4,7 +4,8 @@ import {
   CardId,
   CardKey,
   Match,
-  MatchConfiguration, MatchStats,
+  MatchConfiguration,
+  MatchStats,
   MatchSummary,
   Mats,
   Player,
@@ -45,21 +46,22 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     super();
   }
   
-  private _keepers: CardKey[] = ['steward', 'swindler', 'torturer', 'trading-post', 'upgrade', 'wishing-well'];
+  private _keepers: CardKey[] = ['moat', 'militia'];
   private _playerHands: Record<CardKey, number>[] = [
     {
-      gold: 3,
-      silver: 3
+      gold: 4,
+      silver: 4,
+      militia: 3
     },
     {
       gold: 4,
       silver: 3,
-      torturer: 3,
+      moat: 3,
     },
     {
       gold: 4,
       silver: 3,
-      torturer: 3,
+      estate: 3,
     }
   ];
   
@@ -200,7 +202,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     this._interactivityController?.checkCardInteractivity();
     
-    this.broadcastPatch({...this._matchSnapshot});
+    this.broadcastPatch({ ...this._matchSnapshot });
     
     this._matchSnapshot = null;
     
@@ -428,11 +430,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private async startMatch() {
     console.log(`[MATCH] starting match`);
     
-    /*this._reactionManager = new ReactionManager(
-     this._match,
-     this._cardLibrary,
-     this._matchStats
-     );*/
+    this._reactionManager = new ReactionManager(
+      this._match,
+      this._cardLibrary,
+      (action, ...args) => this.runGameAction(action, ...args)
+    );
     
     this._logManager = new LogManager({
       socketMap: this._socketMap,
@@ -449,6 +451,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._cardLibrary,
       this._logManager,
       this._socketMap,
+      this._reactionManager,
       (action, ...args) => this.runGameAction(action, ...args)
     );
     

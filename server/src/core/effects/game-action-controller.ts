@@ -14,6 +14,7 @@ import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import {
   AppSocket,
   CardEffectFunctionMap,
+  GameActionControllerInterface,
   GameActionOverrides,
   ModifyActionCardArgs,
   RunGameActionDelegate
@@ -26,14 +27,16 @@ import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 import { findSourceByLocationSpec } from '../../utils/find-source-by-location-spec.ts';
 import { findCards } from '../../utils/find-cards.ts';
 import { castArray, isNumber } from 'es-toolkit/compat';
+import { ReactionManager } from '../reactions/reaction-manager.ts';
 
-export class GameActionController {
+export class GameActionController implements GameActionControllerInterface {
   constructor(
     private cardEffectFunctionMap: CardEffectFunctionMap,
     private match: Match,
     private cardLibrary: CardLibrary,
     private logManager: LogManager,
     private socketMap: Map<PlayerId, AppSocket>,
+    private reactionManager: ReactionManager,
     private runGameActionDelegate: RunGameActionDelegate
   ) {
   }
@@ -66,12 +69,26 @@ export class GameActionController {
     const oldSource = findSourceByCardId(args.cardId, this.match, this.cardLibrary);
     oldSource.sourceStore.splice(oldSource.index, 1);
     
+    switch (oldSource.storeKey) {
+      case 'playerHands':
+        this.reactionManager.handleLifecycleTrigger('onLeaveHand', { playerId: args.toPlayerId!, cardId: args.cardId });
+        break;
+      case 'playArea':
+        this.reactionManager.handleLifecycleTrigger('onLeavePlay', { cardId: args.cardId });
+    }
+    
     args.to.location = castArray(args.to.location);
     
     const newSource = findSourceByLocationSpec({ spec: args.to, playerId: args.toPlayerId }, this.match);
     newSource.push(args.cardId);
     
-    console.log(`[moveCard action] moving ${this.cardLibrary.getCard(args.cardId)} from ${oldSource.storeKey} to ${args.to.location}`);
+    switch (args.to.location[0]) {
+      case 'playerHands':
+        this.reactionManager.handleLifecycleTrigger('onEnterHand', { playerId: args.toPlayerId!, cardId: args.cardId });
+        break;
+    }
+    
+    console.log(`[moveCard action] moved ${this.cardLibrary.getCard(args.cardId)} from ${oldSource.storeKey} to ${args.to.location}`);
   }
   
   async gainAction(args: { count: number }) {
@@ -515,8 +532,14 @@ export class GameActionController {
       await this.shuffleDeck({ playerId });
     }
     
-    const drawnCardId = deck.pop();
+    const drawnCardId = deck.slice(-1)[0];
     if (!drawnCardId) return null;
+
+    await this.moveCard({
+      cardId: drawnCardId,
+      toPlayerId: playerId,
+      to: { location: 'playerHands' }
+    });
     
     console.log(`[drawCard action] Drew card ${this.cardLibrary.getCard(drawnCardId)}`);
     
@@ -526,9 +549,6 @@ export class GameActionController {
       playerId,
       cardId: drawnCardId
     });
-    
-    // Add to hand
-    this.match.playerHands[playerId].push(drawnCardId);
     
     return drawnCardId;
   }
@@ -575,14 +595,9 @@ export class GameActionController {
      const reactionContext = {};
      yield* reactionManager.runTrigger({ trigger, reactionContext });*/
     
-    // todo check for triggered effects to register
-    /*const card = cardLibrary.getCard(effect.cardId);
-     const triggerTemplates = cardLifecycleMap[card.cardKey]
-     ?.onCardPlayed?.({ playerId: effect.playerId, cardId: effect.cardId })?.registerTriggeredEvents;
-     
-     for (const trigger of triggerTemplates ?? []) {
-     reactionManager.registerReactionTemplate(trigger);
-     }*/
+    
+    this.reactionManager.handleLifecycleTrigger('onCardPlayed', { playerId: args.playerId, cardId: args.cardId });
+    
     // 7. run the cards effects
     const effectFn = this.cardEffectFunctionMap[card.cardKey];
     if (effectFn) {

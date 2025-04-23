@@ -1,4 +1,4 @@
 import { LifecycleCallbackMap } from '../types.ts';
 
-export const cardLifecycleMap: Record<string, Partial<LifecycleCallbackMap>> =
+export const cardLifecycleMap: Record<string, LifecycleCallbackMap> =
   {};
