@@ -1,4 +1,4 @@
-import { AppSocket, GameActionEffectGeneratorFn, GameActions, GameActionTypes } from '../types.ts';
+import { AppSocket } from '../types.ts';
 import { Card, CardId, Match, Player, PlayerId, TurnPhaseOrderValues, } from 'shared/shared-types.ts';
 import { isUndefined } from 'es-toolkit/compat';
 import { getEffectiveCardCost } from '../utils/get-effective-card-cost.ts';
@@ -20,9 +20,6 @@ export class CardInteractivityController {
       player: Player,
     ) => void,
     private readonly _matchController: MatchController,
-    private readonly _effectGeneratorMap: {
-      [K in GameActionTypes]: GameActionEffectGeneratorFn<GameActions[K]>;
-    },
   ) {
     this._socketMap.forEach((s) => {
       s.on('cardTapped', (pId, cId) => this.onCardTapped(pId, cId));

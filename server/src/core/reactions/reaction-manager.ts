@@ -137,7 +137,7 @@ export class ReactionManager {
           continue;
         }
         
-        const reactionResult = yield* selectedReaction.generatorFn({
+        const reactionResult = yield* selectedReaction.triggeredEffectFn({
           trigger,
           reaction: selectedReaction,
         });

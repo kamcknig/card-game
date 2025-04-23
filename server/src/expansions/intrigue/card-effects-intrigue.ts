@@ -30,7 +30,7 @@ const expansionModule: CardExpansionModule = {
               match.playerHands[playerId].length >= 5 &&
               trigger.playerId !== playerId
           },
-          generatorFn: function* ({ reaction }) {
+          triggeredEffectFn: function* ({ reaction }) {
             const sourceId = reaction.getSourceId();
             
             yield new RevealCardEffect({

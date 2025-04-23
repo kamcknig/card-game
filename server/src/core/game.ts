@@ -5,10 +5,9 @@ import { io } from '../server.ts';
 import { MatchController } from './match-controller.ts';
 import { ExpansionCardData, expansionData } from '../state/expansion-data.ts';
 import { compare } from 'fast-json-patch';
-import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
 
 const defaultMatchConfiguration = {
-  expansions: ['base-v2', 'intrigue', 'seaside'],
+  expansions: ['base-v2',],
   players: [],
   supplyCardKeys: [],
   kingdomCardKeys: [],

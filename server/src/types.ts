@@ -15,7 +15,6 @@ import { toNumber } from 'es-toolkit/compat';
 import { CardLibrary } from './core/card-library.ts';
 import { ReactionManager } from './core/reactions/reaction-manager.ts';
 import { LogManager } from './core/log-manager.ts';
-import { EffectsController } from './core/effects/effects-controller.ts';
 import { GameActionController } from './core/effects/game-action-controller.ts';
 
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
@@ -129,28 +128,15 @@ export class ReactionTrigger {
   
 };
 
-export type TargetContext =
-  | { type: 'player', playerId: PlayerId }
-  | { type: 'card', playerId: PlayerId, cardId: CardId };
-
 export type SourceContext =
   | { type: 'player', playerId: PlayerId }
   | { type: 'card', playerId: PlayerId, cardId: CardId };
 
-export type ReactionEffectContext = {
+export type TriggeredEffectContext = {
   trigger: ReactionTrigger;
   reaction: Reaction;
   isRootLog?: boolean;
 };
-
-export type GameActions = {
-  buyCard: { playerId: PlayerId; cardId: CardId; };
-  playCard: { playerId: PlayerId; cardId: CardId; };
-  drawCard: { playerId: PlayerId };
-  gainCard: { playerId: PlayerId; cardId: CardId };
-  checkForPlayerActions: undefined;
-  nextPhase: undefined;
-} & Record<string, any>;
 
 export type GameEffectGenerator = Generator<GameEffects>;
 
@@ -162,14 +148,27 @@ export type EffectGeneratorFactoryContext = {
   cardLibrary: CardLibrary
 }
 
-export type GameActionTypes = keyof GameActions;
-export type GameActionEffectGeneratorFn<Args = any> = (
-  args: Args,
-  overrides?: GameActionOverrides,
-) => GameEffectGenerator;
-export type GameActionEffectGeneratorMapFactory = (context: EffectGeneratorFactoryContext) => {
-  [K in GameActionTypes]: GameActionEffectGeneratorFn<GameActions[K]>;
+export type GameActions =
+  | 'playCard'
+  | 'gainTreasure'
+  | 'nextPhase'
+  | 'discardCard'
+  | 'endTurn'
+  | 'drawCard'
+  | 'gainCard'
+  | 'buyCard'
+  | 'newTurn'
+  | 'trashCard'
+  | 'gainAction'
+  | 'modifyCost'
+  | 'moveCard'
+  | 'checkForRemainingPlayerActions';
+
+export type GameActionMethodMap = {
+  [K in GameActions]: GameActionController[K];
 };
+
+export type GameActionTypes = keyof GameActions;
 
 export type ReactionContext = any;
 
@@ -192,10 +191,15 @@ export type CardEffectFunctionContext = {
   reactionContext?: ReactionContext;
   playerId: PlayerId;
   cardId: CardId;
+  cardLibrary: CardLibrary
 }
 
+export type CardTriggeredEffectFn = (args: TriggeredEffectContext) => Promise<any>;
+
+export type CardEffectFunction = (args: CardEffectFunctionContext) => Promise<void>;
+
 export type CardEffectFunctionMap =
-  Record<CardKey, (args: CardEffectFunctionContext) => Promise<void>>;
+  Record<CardKey, CardEffectFunction>;
 
 export interface CardExpansionModule {
   registerCardLifeCycles?: () => Record<string, LifecycleCallbackMap>;
@@ -223,10 +227,6 @@ export type GameActionOverrides = {
   moveCard?: boolean,
   playCard?: boolean,
 };
-
-export type ReactionEffectGeneratorFn = (
-  args: ReactionEffectContext,
-) => GameEffectGenerator;
 
 export type EffectTypes = GameEffects['type'];
 
@@ -259,7 +259,7 @@ type ReactionArgs = {
   playerId: number;
   listeningFor: TriggerEventType;
   condition?: Reaction['condition'];
-  generatorFn: ReactionEffectGeneratorFn;
+  triggeredEffectFn: CardTriggeredEffectFn;
   once?: boolean;
   allow?: boolean;
   compulsory?: boolean;
@@ -312,14 +312,14 @@ export class Reaction {
   
   // todo defined in a map somewhere just like registered card effects. so maybe another export
   // from teh expansion module that defines what happens when you ccn react?
-  public generatorFn: ReactionEffectGeneratorFn;
+  public triggeredEffectFn: CardTriggeredEffectFn;
   
   constructor(arg: ReactionArgs) {
     this.id = arg.id;
     this.playerId = arg.playerId;
     this.listeningFor = arg.listeningFor;
     this.condition = arg.condition ?? (() => true);
-    this.generatorFn = arg.generatorFn;
+    this.triggeredEffectFn = arg.triggeredEffectFn;
     this.once = arg.once ?? false;
     this.allowMultipleInstances = arg.allowMultipleUse ?? true;
     this.compulsory = arg.compulsory ?? false;
@@ -359,24 +359,6 @@ export class Reaction {
   }
 }
 
-export interface IEffectRunner {
-  runCardEffects(arg: {
-    source: SourceContext;
-    reactionContext?: unknown,
-  }): unknown;
-  
-  runGameActionEffects<T extends GameActionTypes>(arg: {
-    effectName: T,
-    context: GameActions[T],
-    source: SourceContext
-  }): unknown;
-  
-  runGenerator(arg: {
-    generator: GameEffectGenerator,
-    source: SourceContext
-  }): unknown;
-}
-
 export type ReactionTemplate = Omit<Reaction, 'getSourceId' | 'getSourceKey' | 'getBaseId'>;
 
 export type LifecycleResult = {
@@ -385,7 +367,7 @@ export type LifecycleResult = {
 };
 export type LifecycleCallback = (
   args: {
-    effectsController?: EffectsController;
+    gameActionController: GameActionController;
     playerId: number;
     cardId: number;
   },

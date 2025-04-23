@@ -12,7 +12,6 @@ import {
   PlayerId,
 } from 'shared/shared-types.ts';
 import { AppSocket, CardEffectFunctionMap, MatchBaseConfiguration, } from '../types.ts';
-import { EffectsController } from './effects/effects-controller.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';
 import { createCardFactory } from '../utils/create-card.ts';
 import { createEffectHandlerMap } from './effects/effect-handler-map.ts';
@@ -25,14 +24,13 @@ import { compare, Operation } from 'fast-json-patch';
 import { ExpansionCardData, expansionData } from '../state/expansion-data.ts';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
 import Fuse, { IFuseOptions } from 'fuse.js';
-import { cardEffectFunctionMapFactory, gameActionEffectGeneratorFactory } from './effects/effect-generator-map.ts';
+import { cardEffectFunctionMapFactory } from './effects/card-effect-function-map-factory.ts';
 import { EventEmitter } from '@denosaurs/event';
 import { LogManager } from './log-manager.ts';
 import { GameActionController, GameActions } from './effects/game-action-controller.ts';
 import { getCurrentPlayer } from '../utils/get-current-player.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
-  private _effectsController: EffectsController | undefined;
   private _effectsPipeline: EffectsPipeline | undefined;
   private _reactionManager: ReactionManager | undefined;
   private _interactivityController: CardInteractivityController | undefined;
@@ -52,12 +50,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     super();
   }
   
-  private _keepers: CardKey[] = ['militia', 'moat', 'corsair', 'haven'];
+  private _keepers: CardKey[] = ['militia', 'moat'];
   private _playerHands: Record<CardKey, number>[] = [
     {
-      gold: 7,
-      silver: 7,
-      'militia': 3
+      gold: 3,
+      silver: 3,
+      estate: 2,
+      'militia': 4
     },
     {
       gold: 4,
@@ -459,21 +458,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._socketMap,
     );
     
-    const effectGeneratorMap = gameActionEffectGeneratorFactory({
-      matchStats: this._matchStats!,
-      reactionManager: this._reactionManager,
-      logManager: this._logManager,
-      match: this._match,
-      cardLibrary: this._cardLibrary
-    });
-    
-    this._effectsController = new EffectsController(
-      this.gameActionsController,
-      this._match,
-      effectGeneratorMap,
-      this._cardLibrary
-    );
-    
     this._interactivityController = new CardInteractivityController(
       this.gameActionsController,
       this._match,
@@ -481,14 +465,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._cardLibrary,
       this.onCardTapHandlerComplete,
       this,
-      effectGeneratorMap
     );
     
     const effectHandlerMap = createEffectHandlerMap({
-      effectsController: this._effectsController,
       socketMap: this._socketMap,
       reactionManager: this._reactionManager,
-      effectGeneratorMap,
       cardLibrary: this._cardLibrary,
       logManager: this._logManager,
       getEffectsPipeline: () => this._effectsPipeline!,
@@ -502,7 +483,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this,
       this._match,
     );
-    this._effectsController.setEffectPipeline(this._effectsPipeline);
     
     for (const [playerId, socket] of this._socketMap.entries()) {
       this.initializeSocketListeners(playerId, socket);
@@ -652,7 +632,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private endGame() {
     console.log(`[MATCH] ending the game`);
     
-    this._effectsController?.endGame();
     this._reactionManager?.endGame();
     this._interactivityController?.endGame();
     

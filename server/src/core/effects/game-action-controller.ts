@@ -1,4 +1,4 @@
-import { CardId, Match, PlayerId, TurnPhaseOrderValues } from 'shared/shared-types.ts';
+import { CardId, EffectTarget, LocationSpec, Match, PlayerId, TurnPhaseOrderValues } from 'shared/shared-types.ts';
 import { CardLibrary } from '../card-library.ts';
 import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
 import { LogManager } from '../log-manager.ts';
@@ -6,21 +6,10 @@ import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { AppSocket, CardEffectFunctionMap } from '../../types.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
-import { getCardOverrides, removeOverrideEffects } from '../../card-data-overrides.ts';
+import { cardDataOverrides, getCardOverrides, removeOverrideEffects } from '../../card-data-overrides.ts';
 import { findSourceByCardId } from '../../utils/find-source-by-card-id.ts';
-
-export type GameActions =
-  | 'playCard'
-  | 'gainTreasure'
-  | 'nextPhase'
-  | 'discardCard'
-  | 'endTurn'
-  | 'drawCard'
-  | 'checkForRemainingPlayerActions';
-
-type GameActionMethodMap = {
-  [K in GameActions]: GameActionController[K];
-};
+import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
+import { findSourceByLocationSpec } from '../../utils/find-source-by-location-spec.ts';
 
 export class GameActionController {
   constructor(
@@ -32,11 +21,138 @@ export class GameActionController {
   ) {
   }
   
-  private emitActionComplete(playerId: PlayerId, cardId?: CardId) {
-    if (!this.socketMap) return;
-    this.socketMap.forEach(s => {
-      s.emit('cardEffectsComplete', playerId, cardId);
+  // todo change this probably to setOverrides when there are more overrridess later?
+  async modifyCost(args: {
+    appliesTo: EffectTarget,
+    cost: number,
+    expiresAt: 'TURN_END',
+    appliesToCard: EffectTarget,
+    amount: number,
+  }) {
+    let targets: PlayerId[] = [];
+    if (args.appliesTo === 'ALL') {
+      targets = this.match.players.map(p => p.id);
+    }
+    
+    cardDataOverrides.push({ targets, overrideEffect: args });
+    
+    const overrides = getCardOverrides(this.match, this.cardLibrary);
+    
+    for (const targetId of targets) {
+      const playerOverrides = overrides?.[targetId];
+      const socket = this.socketMap.get(targetId);
+      socket?.emit('setCardDataOverrides', playerOverrides);
+    }
+  }
+  
+  async gainBuy(args: { count: number }) {
+    console.log(`[gainBuy action] gaining ${args.count} buys`);
+    this.match.playerBuys += args.count;
+    console.log(`[gainBuy action] setting player guys to ${this.match.playerBuys}`);
+  }
+  
+  async moveCard(args: { toPlayerId: PlayerId, cardId: CardId, to: LocationSpec }) {
+    const oldSource = findSourceByCardId(args.cardId, this.match, this.cardLibrary);
+    oldSource.sourceStore.splice(oldSource.index, 1);
+    
+    const newSource = findSourceByLocationSpec({ spec: args.to, playerId: args.toPlayerId }, this.match);
+    newSource.push(args.cardId);
+    
+    console.log(`[moveCard action] moving ${this.cardLibrary.getCard(args.cardId)} from ${oldSource.storeKey} to ${args.to.location}`);
+  }
+  
+  async gainAction(args: { count: number }) {
+    console.log(`[gainAction action] gaining ${args.count} actions`);
+    
+    this.match.playerActions += args.count;
+    
+    console.log(`[gainAction action] setting player actions to ${args.count}`);
+  }
+  
+  async gainCard(args: { playerId: PlayerId, cardId: CardId, to: LocationSpec }) {
+    const oldSource = findSourceByCardId(args.cardId, this.match, this.cardLibrary);
+    oldSource.sourceStore.splice(oldSource.index, 1);
+    
+    const newSource = findSourceByLocationSpec({ spec: args.to, playerId: args.playerId }, this.match);
+    newSource.push(args.cardId);
+    
+    this.match.stats.cardsGained[this.match.turnNumber][args.playerId] ??= [];
+    this.match.stats.cardsGained[this.match.turnNumber][args.playerId].push(args.cardId);
+    
+    this.logManager.addLogEntry({
+      root: false,
+      playerId: args.playerId,
+      cardId: args.cardId,
+      type: 'gainCard'
     });
+  }
+  
+  async newTurn(args: {} = {}) {
+    this.logManager.addLogEntry({
+      root: true,
+      type: 'newTurn',
+      turn: this.match.turnNumber,
+    });
+    
+    this.match.stats.cardsGained.push(
+      this.match.players.reduce((prev, next) => {
+        prev[next.id] = [];
+        return prev;
+      }, {} as Record<PlayerId, CardId[]>)
+    );
+    
+    this.match.stats.trashedCards.push(
+      this.match.players.reduce((prev, next) => {
+        prev[next.id] = [];
+        return prev;
+      }, {} as Record<PlayerId, CardId[]>)
+    );
+  }
+  
+  async trashCard(args: { cardId: CardId, playerId: PlayerId }) {
+    this.match.trash.push(args.cardId);
+    
+    const oldSource = findSourceByCardId(args.cardId, this.match, this.cardLibrary);
+    oldSource.sourceStore.splice(oldSource.index, 1);
+    
+    this.match.stats.trashedCards[this.match.turnNumber][args.playerId] ??= [];
+    this.match.stats.trashedCards[this.match.turnNumber][args.playerId].push(args.cardId);
+    
+    console.log(`[trashCard action] trashed ${this.cardLibrary.getCard(args.cardId)}`);
+    
+    this.logManager.addLogEntry({
+      root: false,
+      playerId: args.playerId,
+      cardId: args.cardId,
+      type: 'trashCard'
+    });
+  }
+  
+  async buyCard(args: { cardId: CardId; playerId: PlayerId }) {
+    const cardCost = getEffectiveCardCost(
+      args.playerId,
+      args.cardId,
+      this.match,
+      this.cardLibrary
+    );
+    
+    this.match.playerTreasure -= cardCost;
+    this.match.playerBuys--;
+    
+    await this.gainCard({
+      playerId: args.playerId,
+      cardId: args.cardId,
+      to: { location: 'playerDiscards' }
+    });
+    
+    // todo
+    /*const trigger = new ReactionTrigger({
+     cardId: args.cardId,
+     playerId: args.playerId,
+     eventType: 'gainCard'
+     });
+     
+     yield* reactionManager.runTrigger({ trigger });*/
   }
   
   async checkForRemainingPlayerActions(): Promise<void> {
@@ -282,9 +398,9 @@ export class GameActionController {
     const card = this.cardLibrary.getCard(cardId);
     
     if (card.type.includes('ACTION')) {
-      console.log(`[playCard action] Reducing player's action count`);
-      
       this.match.playerActions--;
+      
+      console.log(`[playCard action] Reducing player's action count to ${this.match.playerActions}`);
     }
     
     // 5. Record the card play in match stats
@@ -296,9 +412,35 @@ export class GameActionController {
       turnPlayerId: getCurrentPlayer(this.match).id
     };
     
+    // todo reaction triggers
+    // 6. run reactions for the card being played
+    /*const trigger = new ReactionTrigger({
+     eventType: 'cardPlayed',
+     playerId,
+     cardId,
+     });
+     
+     const reactionContext = {};
+     yield* reactionManager.runTrigger({ trigger, reactionContext });*/
+    
+    // todo check for triggered effecsts to register
+    /*const card = cardLibrary.getCard(effect.cardId);
+     const triggerTemplates = cardLifecycleMap[card.cardKey]
+     ?.onCardPlayed?.({ playerId: effect.playerId, cardId: effect.cardId })?.registerTriggeredEvents;
+     
+     for (const trigger of triggerTemplates ?? []) {
+     reactionManager.registerReactionTemplate(trigger);
+     }*/
+    // 7. run the cards effects
     const effectFn = this.cardEffectFunctionMap[card.cardKey];
     if (effectFn) {
-      await effectFn({ cardId, gameActionController: this, playerId, match: this.match });
+      await effectFn({
+        cardId,
+        gameActionController: this,
+        playerId,
+        match: this.match,
+        cardLibrary: this.cardLibrary
+      });
     }
     
     return true;

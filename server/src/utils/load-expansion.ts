@@ -1,5 +1,5 @@
 import { CardData } from 'shared/shared-types.ts';
-import { cardEffectFunctionMapFactory, cardEffectGeneratorMapFactory } from '../core/effects/effect-generator-map.ts';
+import { cardEffectFunctionMapFactory } from '../core/effects/card-effect-function-map-factory.ts';
 import { scoringFunctionMap } from '../expansions/scoring-function-map.ts';
 import { expansionData } from '../state/expansion-data.ts';
 import { cardLifecycleMap } from '../core/card-lifecycle-map.ts';
@@ -78,9 +78,9 @@ export const loadExpansion = async (expansion: { title: string, name: string, or
     effects = module.default.registerEffects;
     Object.keys(effects).forEach(key => {
       console.log('[EXPANSION LOADER]registering effects for', key);
-      cardEffectGeneratorMapFactory[key] = effects[key];
+      cardEffectFunctionMapFactory[key] = effects[key];
     });
-    console.log(`[EXPANSION LOADER] card effects loaded for ${expansionName}`, cardEffectGeneratorMapFactory);
+    console.log(`[EXPANSION LOADER] card effects loaded for ${expansionName}`, cardEffectFunctionMapFactory);
     
     
     console.log('[EXPANSION LOADER] loading card lifecycles');
