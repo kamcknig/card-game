@@ -1,7 +1,7 @@
 import { Container, Graphics } from 'pixi.js';
 import { cardStore } from '../../../state/card-state';
 import { Card, CardType } from 'shared/shared-types';
-import { atom } from 'nanostores';
+import { atom, computed } from 'nanostores';
 import { CARD_HEIGHT, CARD_WIDTH, SMALL_CARD_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
 import { PhaseStatus } from './phase-status';
 import { AppButton, createAppButton } from '../../../core/create-app-button';
@@ -10,6 +10,7 @@ import { CardStackView } from './card-stack';
 import { List } from '@pixi/ui';
 import { selfPlayerIdStore } from '../../../state/match-state';
 import { playerHandStore } from '../../../state/player-logic';
+import { awaitingServerLockReleaseStore } from '../../../state/interactive-state';
 
 export class PlayerHandView extends Container {
   private _phaseStatus: PhaseStatus = new PhaseStatus();
@@ -41,9 +42,13 @@ export class PlayerHandView extends Container {
 
     this._phaseStatus.x = this._background.width * .5 - this._phaseStatus.width * .5;
 
-    this._cleanup.push(currentPlayerTurnIdStore.subscribe(playerId => {
-      this._nextPhaseButton.button.visible = playerId === selfPlayerIdStore.get();
+    this._cleanup.push(computed(
+      [currentPlayerTurnIdStore, selfPlayerIdStore, awaitingServerLockReleaseStore],
+      (currentPlayerTurnId, selfPlayerId, waitingServerLockRelease) => currentPlayerTurnId === selfPlayerId && !waitingServerLockRelease
+    ).subscribe(visible => {
+      this._nextPhaseButton.button.visible = visible
     }));
+
     this._cleanup.push(turnPhaseStore.subscribe((phase) => {
       switch (phase) {
         case 'action':

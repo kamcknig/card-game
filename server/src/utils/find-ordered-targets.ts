@@ -1,4 +1,4 @@
-import { EffectTarget, Match, PlayerId } from 'shared/shared-types.ts';
+import { EffectTarget, Match, Player, PlayerId } from 'shared/shared-types.ts';
 import { isNull } from 'es-toolkit';
 
 type FindTargetsArgs = {
@@ -20,7 +20,7 @@ export const findOrderedTargets = (args: FindTargetsArgs): number[] => {
     console.log('X_OTHER count', otherCount);
   }
   
-  let result = [];
+  let result: Player[] = [];
   const currentTurnOrder = match.players;
   
   switch (target) {
@@ -40,15 +40,18 @@ export const findOrderedTargets = (args: FindTargetsArgs): number[] => {
       return [1];
     case 'ALL_OTHER': {
       console.log('find targets for ALL_OTHER');
-      const startIndex = currentTurnOrder.findIndex(player => player.id === currentPlayerTurnId);
-      const turnOrder = currentTurnOrder.filter(player => player.id !== currentPlayerTurnId);
+      const fullOrder = match.players;
+      const currentIndex = fullOrder.findIndex(player => player.id === currentPlayerTurnId);
       
-      const l = turnOrder.length;
-      for (let i = 0; i < l; i++) {
-        const idx = (startIndex + i) % turnOrder.length;
-        result.push(turnOrder[idx]);
+      const reordered = [];
+      const l = fullOrder.length;
+      for (let i = 1; i < l; i++) {
+        const idx = (currentIndex + i) % l;
+        reordered.push(fullOrder[idx]);
       }
-      console.log('target players in order starting from current player', result);
+      
+      result = reordered;
+      console.log('target players in order (ALL_OTHER)', result);
       break;
     }
     case 'X_OTHER':

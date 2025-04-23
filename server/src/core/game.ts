@@ -7,7 +7,7 @@ import { ExpansionCardData, expansionData } from '../state/expansion-data.ts';
 import { compare } from 'fast-json-patch';
 
 const defaultMatchConfiguration = {
-  expansions: ['base-v2',],
+  expansions: ['base-v2', 'intrigue'],
   players: [],
   supplyCardKeys: [],
   kingdomCardKeys: [],

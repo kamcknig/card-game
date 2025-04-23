@@ -2,10 +2,8 @@ import { Application, Assets, Container, Graphics, Sprite, Text } from 'pixi.js'
 import { Scene } from '../../../../core/scene/scene';
 import { PlayerHandView } from '../player-hand';
 import { AppButton, createAppButton } from '../../../../core/create-app-button';
-import { matchStartedStore, selfPlayerIdStore} from '../../../../state/match-state';
-import {
-  playerStore,
-} from '../../../../state/player-state';
+import { matchStartedStore, selfPlayerIdStore } from '../../../../state/match-state';
+import { playerStore, } from '../../../../state/player-state';
 import { PlayAreaView } from '../play-area';
 import { KingdomSupplyView } from '../kingdom-supply';
 import { PileView } from '../pile';
@@ -32,6 +30,7 @@ import { gamePausedStore } from '../../../../state/game-logic';
 import { playerDeckStore, playerDiscardStore, playerHandStore } from '../../../../state/player-logic';
 import { selectableCardStore } from '../../../../state/interactive-logic';
 import { SelectCardArgs } from '../../../../../types';
+import { computed } from 'nanostores';
 
 export class MatchScene extends Scene {
   private _board: Container = new Container();
@@ -113,8 +112,20 @@ export class MatchScene extends Scene {
 
     this._cleanup.push(currentPlayerTurnIdStore.subscribe(this.onCurrentPlayerTurnUpdated));
     this._cleanup.push(gamePausedStore.subscribe(this.onPauseGameUpdated));
-    this._cleanup.push(turnPhaseStore.subscribe(this.onTurnPhaseUpdated));
-    this._cleanup.push(playerHandStore(this._selfId).subscribe(this.onTurnPhaseUpdated));
+
+    this._cleanup.push(
+      computed(
+        [playerHandStore(this._selfId), awaitingServerLockReleaseStore, turnPhaseStore, currentPlayerTurnIdStore],
+        (hand, waiting, turnPhase, currentPlayerTurnId) => {
+          return (
+            !waiting &&
+            turnPhase === 'buy' &&
+            currentPlayerTurnId === this._selfId &&
+            hand.some(cardId => cardStore.get()[cardId].type.includes('TREASURE'))
+          );
+        }
+      ).subscribe(visible => this._playAllTreasuresButton.button.visible = visible)
+    );
 
     setTimeout(() => {
       this.onRendererResize();
@@ -161,19 +172,6 @@ export class MatchScene extends Scene {
     } catch {
       console.error('Could not play start turn sound');
     }
-  }
-
-  private onTurnPhaseUpdated = () => {
-    const phase = turnPhaseStore.get();
-    if (isUndefined(phase)) return;
-
-    const playerHand = playerHandStore(this._selfId).get();
-
-    this._playAllTreasuresButton.button.visible = (
-      phase === 'buy' &&
-      currentPlayerTurnIdStore.get() === this._selfId &&
-      playerHand.some(cardId => cardStore.get()[cardId].type.includes('TREASURE'))
-    );
   }
 
   private async loadAssets() {
@@ -242,7 +240,8 @@ export class MatchScene extends Scene {
     this._deck = new CardStackView({
       $cardIds: playerDeckStore(this._selfId),
       label: 'DECK',
-      cardFacing: 'back'
+      cardFacing: 'back',
+      alwaysShowCountBadge: true
     });
     this.addChild(this._deck);
 
