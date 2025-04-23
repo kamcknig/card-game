@@ -46,19 +46,6 @@ sailor + haven doesn't seem to work, it moves to the next player's turn too soon
 SEASIDE still to build
 
 {
-  "caravan": {
-    "cost": {
-      "treasure": 4
-    },
-    "type": ["ACTION", "DURATION"]
-  },
-  "corsair": {
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION", "DURATION", "ATTACK"],
-    "targetScheme": "ALL_OTHER"
-  },
   "cutpurse": {
     "cost": {
       "treasure": 4

@@ -5,6 +5,7 @@ import { Card, CardId } from 'shared/shared-types.ts';
 import { findCards } from '../../utils/find-cards.ts';
 import { getPlayerStartingFrom } from '../../shared/get-player-position-utils.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
+import { getPlayerById } from '../../utils/get-player-by-id.ts';
 
 const expansion: CardExpansionModule = {
   registerCardLifeCycles: () => ({
@@ -184,7 +185,7 @@ const expansion: CardExpansionModule = {
         }
       })
     },
-    'corsair': () => async ({ runGameActionDelegate, reactionManager, cardId, playerId }) => {
+    'corsair': () => async ({ runGameActionDelegate, reactionManager, cardId, playerId, reactionContext }) => {
       console.log(`[CORSAIR EFFECT] gaining 2 treasure...`);
       await runGameActionDelegate('gainTreasure', { count: 2 });
       
@@ -208,6 +209,11 @@ const expansion: CardExpansionModule = {
         compulsory: true,
         condition: ({ match, trigger, cardLibrary }) => {
           if (!trigger.cardId) return false;
+          
+          if (reactionContext[trigger.playerId]?.result === 'immunity') {
+            console.log(`[corsair triggered effect] ${getPlayerById(match, trigger.playerId)} is immune`);
+            return false;
+          }
           
           const card = cardLibrary.getCard(trigger.cardId);
           
