@@ -1,9 +1,7 @@
 import { computed } from 'nanostores';
-import { Card, CardId, Mats } from 'shared/shared-types';
-import { currentPlayerTurnIdStore } from './turn-state';
-import { cardStore } from './card-state';
+import { CardId, Mats } from 'shared/shared-types';
 import { matchStore, selfPlayerIdStore } from './match-state';
-import { getDistanceToPlayer } from '../shared/get-player-position-utils';
+import { cardStore } from './card-state';
 
 export const supplyStore =
   computed(matchStore, m => m?.supply ?? []);
@@ -18,7 +16,7 @@ export const trashStore =
 (globalThis as any).trashStore = trashStore;
 
 export const playAreaStore =
-  computed(matchStore, m => m?.playArea ?? []);
+  computed([matchStore, cardStore], (match, cards) => match?.playArea?.map(cardId => cards[cardId]) ?? []);
 (globalThis as any).playAreaStore = playAreaStore;
 
 type MatStoreType = Record<Mats, CardId[]>;
@@ -30,60 +28,5 @@ export const matStore = computed(
 );
 (globalThis as any).matStore = matStore;
 
-export const activeDurationCardStore = computed(
-  [playAreaStore, matchStore, cardStore, currentPlayerTurnIdStore],
-  (playArea, match, allCards, currentPlayerTurnId) => {
-    const result: Card[] = [];
-
-    const matchStats = match?.stats;
-
-    if (!match || !matchStats?.playedCards) return result;
-
-    for (const card of playArea.map(id => allCards[id])) {
-      if (!card.type.includes('DURATION')) continue;
-
-      const info = matchStats.playedCards[card.id];
-      if (!info) continue;
-
-      const turnsSincePlayed = getDistanceToPlayer({
-        match,
-        startPlayerId: info.turnPlayerId,
-        targetPlayerId: currentPlayerTurnId,
-        direction: 'forward'
-      });
-
-      if (turnsSincePlayed > 0 && turnsSincePlayed < match.players.length) {
-        result.push(card);
-      }
-    }
-
-    return result;
-  }
-);
-
-export const playedCardStore = computed(
-  [playAreaStore, cardStore, matchStore, currentPlayerTurnIdStore],
-  (cardIds, allCards, match, currentPlayerTurnId) => {
-    const matchStats = match?.stats;
-    if (!matchStats?.playedCards || !match) return cardIds.map(id => allCards[id]);
-
-    return cardIds
-      .map(id => allCards[id])
-      .filter(card => {
-        if (!card.type.includes('DURATION')) return true;
-
-        const info = matchStats.playedCards[card.id];
-        if (!info) return true;
-
-        const turnsSincePlayed = getDistanceToPlayer({
-          match,
-          startPlayerId: info.turnPlayerId,
-          targetPlayerId: currentPlayerTurnId,
-          direction: 'forward'
-        });
-
-        return turnsSincePlayed === 0;
-      });
-  }
-);
-
+export const activeDurationCardStore =
+  computed([matchStore, cardStore], (match, cards) => match?.activeDurationCards?.map(cardId => cards[cardId]) ?? []);

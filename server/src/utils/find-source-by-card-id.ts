@@ -27,6 +27,10 @@ export const findSourceByCardId = (
     sourceStore = match.trash;
     storeKey = 'trash';
   }
+  else if (match.activeDurationCards.includes(cardId)) {
+    sourceStore = match.activeDurationCards;
+    storeKey = 'activeDuration';
+  }
   else {
     for (const [playerId, playerMats] of Object.entries(match.mats)) {
       for (const [mat, cardIds] of Object.entries(playerMats)) {
@@ -44,7 +48,7 @@ export const findSourceByCardId = (
       }
     }
     
-    for (const [playerId, hand] of Object.entries(match.playerHands)) {
+    for (const hand of Object.values(match.playerHands)) {
       if (hand.includes(cardId)) {
         sourceStore = hand;
         storeKey = 'playerHands';
@@ -53,7 +57,7 @@ export const findSourceByCardId = (
     }
     
     if (!sourceStore) {
-      for (const [playerId, deck] of Object.entries(match.playerDecks)) {
+      for (const deck of Object.values(match.playerDecks)) {
         if (deck.includes(cardId)) {
           storeKey = 'playerDecks';
           sourceStore = deck;
@@ -63,7 +67,7 @@ export const findSourceByCardId = (
     }
     
     if (!sourceStore) {
-      for (const [playerId, discard] of Object.entries(match.playerDiscards)) {
+      for (const discard of Object.values(match.playerDiscards)) {
         if (discard.includes(cardId)) {
           storeKey = 'playerDiscards';
           sourceStore = discard;

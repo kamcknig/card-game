@@ -4,7 +4,7 @@ import { List } from '@pixi/ui';
 import { STANDARD_GAP } from '../../../core/app-contants';
 import { Card } from 'shared/shared-types';
 import { ActiveDurationCardList } from './active-duration-card-list';
-import { playedCardStore } from '../../../state/match-logic';
+import { playAreaStore } from '../../../state/match-logic';
 
 export class PlayAreaView extends Container {
   private _background: Graphics = new Graphics();
@@ -29,7 +29,7 @@ export class PlayAreaView extends Container {
     this._cardView.y = STANDARD_GAP * 4;
     this.addChild(this._cardView);
 
-    this._cleanup.push(playedCardStore.subscribe(val => this.drawCards(val)));
+    this._cleanup.push(playAreaStore.subscribe(val => this.drawCards(val)));
 
     this.on('removed', this.onRemoved);
   }

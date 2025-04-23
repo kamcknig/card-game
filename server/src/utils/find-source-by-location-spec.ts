@@ -39,6 +39,8 @@ export function findSourceByLocationSpec(
         return match.trash;
       case 'playArea':
         return match.playArea;
+      case 'activeDuration':
+        return match.activeDurationCards;
     }
   }
   

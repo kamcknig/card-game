@@ -49,14 +49,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _keepers: CardKey[] = ['moat', 'militia', 'astrolabe', 'blockade'];
   private _playerHands: Record<CardKey, number>[] = [
     {
-      gold: 4,
-      silver: 4,
-      copper: 3
+      gold: 3,
+      silver: 2,
+      copper: 2
     },
     {
-      gold: 4,
-      silver: 3,
-      copper: 3,
+      gold: 3,
+      silver: 2,
+      copper: 2,
     },
     {
       gold: 4,
@@ -109,6 +109,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         }, ['set-aside'] as Mats[]);
     
     this._match = {
+      activeDurationCards: [],
       scores: [],
       trash: [],
       players: config.players,

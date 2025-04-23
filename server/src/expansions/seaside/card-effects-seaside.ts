@@ -4,6 +4,7 @@ import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 import { Card, CardId } from 'shared/shared-types.ts';
 import { findCards } from '../../utils/find-cards.ts';
 import { getPlayerStartingFrom } from '../../shared/get-player-position-utils.ts';
+import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 
 const expansion: CardExpansionModule = {
   registerCardLifeCycles: () => ({
@@ -131,7 +132,7 @@ const expansion: CardExpansionModule = {
         playerId,
         id: `blockade:${cardId}:gainCard`,
         condition: (args) => {
-          if (match.players[match.currentPlayerTurnIndex].id !== args.trigger.playerId) {
+          if (getCurrentPlayer(match).id !== args.trigger.playerId) {
             return false;
           }
           

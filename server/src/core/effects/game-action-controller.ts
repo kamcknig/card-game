@@ -398,7 +398,7 @@ export class GameActionController implements GameActionControllerInterface {
     
     switch (newPhase) {
       case 'action': {
-        match.playerActions = 3;
+        match.playerActions = 1;
         match.playerBuys = 1;
         match.playerTreasure = 0;
         match.currentPlayerTurnIndex++;
@@ -425,7 +425,7 @@ export class GameActionController implements GameActionControllerInterface {
         });
         
         const reactionContext = {};
-        await this.reactionManager.runTrigger({trigger, reactionContext});
+        await this.reactionManager.runTrigger({ trigger, reactionContext });
         
         break;
       }
@@ -433,43 +433,48 @@ export class GameActionController implements GameActionControllerInterface {
         // no explicit behavior
         break;
       case 'cleanup': {
-        const cardsToDiscard = match.playArea.concat(match.playerHands[currentPlayer.id]);
+        const cardsToDiscard = match.playArea.concat(match.activeDurationCards, match.playerHands[currentPlayer.id]);
         
         for (const cardId of cardsToDiscard) {
           const card = this.cardLibrary.getCard(cardId);
           
-          // if the card is a duration card, and it was played this turn
-          if (card.type.includes('DURATION')) {
-            const stats = match.stats.playedCards?.[cardId];
-            if (!stats) continue;
-            
-            const turnsPassed = getDistanceToPlayer({
-              startPlayerId: stats.turnPlayerId,
-              targetPlayerId: stats.playedPlayerId,
-              match
-            }) + (match.turnNumber - stats.turnNumber);
-            
-            const shouldDiscard = (
-              stats.playedPlayerId === currentPlayer.id &&
-              turnsPassed > 0
-            );
-            
-            if (shouldDiscard) {
-              await this.discardCard({ cardId, playerId: currentPlayer.id });
-            } else {
-              console.log(`[nextPhase action] ${card.cardKey} is duration, leaving in play`);
-            }
-            
+          if (!card.type.includes('DURATION')) {
+            await this.discardCard({ cardId, playerId: currentPlayer.id });
             continue;
           }
           
+          // if the card is a duration card, and it was played this turn
+          const stats = match.stats.playedCards?.[cardId];
+          if (!stats) continue;
           
-          console.log(`[nextPhase action] discarding ${this.cardLibrary.getCard(cardId)}...`);
+          const turnsPassed = getDistanceToPlayer({
+            startPlayerId: stats.turnPlayerId,
+            targetPlayerId: stats.playedPlayerId,
+            match
+          }) + (match.turnNumber - stats.turnNumber);
           
-          await this.discardCard({
-            cardId,
-            playerId: currentPlayer.id
-          });
+          const turnPlayer = getPlayerById(match, stats.turnPlayerId);
+          const playedPlayer = getPlayerById(match, stats.playedPlayerId);
+          
+          console.log(`[nextPhase action] ${turnsPassed} turns passed since ${playedPlayer} played ${card} on ${turnPlayer}'s turn`);
+          
+          const shouldDiscard = (
+            stats.playedPlayerId === currentPlayer.id &&
+            turnsPassed > 0
+          );
+          
+          if (shouldDiscard) {
+            console.log(`[nextPhase action] discarding ${card}...`);
+            await this.discardCard({ cardId, playerId: currentPlayer.id });
+          }
+          else {
+            await this.moveCard({
+              cardId,
+              to: { location: 'activeDuration' }
+            });
+            
+            console.log(`[nextPhase action] ${card} is duration, leaving in play, moving to 'activeDuration' area`);
+          }
         }
         
         for (let i = 0; i < 5; i++) {
