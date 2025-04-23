@@ -430,15 +430,16 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private async startMatch() {
     console.log(`[MATCH] starting match`);
     
+    this._logManager = new LogManager({
+      socketMap: this._socketMap,
+    });
+    
     this._reactionManager = new ReactionManager(
+      this._logManager,
       this._match,
       this._cardLibrary,
       (action, ...args) => this.runGameAction(action, ...args)
     );
-    
-    this._logManager = new LogManager({
-      socketMap: this._socketMap,
-    });
     
     const cardEffectFunctionMap = Object.keys(cardEffectFunctionMapFactory).reduce((acc, nextKey) => {
       acc[nextKey] = cardEffectFunctionMapFactory[nextKey]();

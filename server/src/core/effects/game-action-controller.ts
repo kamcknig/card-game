@@ -17,6 +17,7 @@ import {
   GameActionControllerInterface,
   GameActionOverrides,
   ModifyActionCardArgs,
+  ReactionTrigger,
   RunGameActionDelegate
 } from '../../types.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
@@ -71,10 +72,10 @@ export class GameActionController implements GameActionControllerInterface {
     
     switch (oldSource.storeKey) {
       case 'playerHands':
-        this.reactionManager.handleLifecycleTrigger('onLeaveHand', { playerId: args.toPlayerId!, cardId: args.cardId });
+        this.reactionManager.registerLifecycleEvent('onLeaveHand', { playerId: args.toPlayerId!, cardId: args.cardId });
         break;
       case 'playArea':
-        this.reactionManager.handleLifecycleTrigger('onLeavePlay', { cardId: args.cardId });
+        this.reactionManager.registerLifecycleEvent('onLeavePlay', { cardId: args.cardId });
     }
     
     args.to.location = castArray(args.to.location);
@@ -84,7 +85,7 @@ export class GameActionController implements GameActionControllerInterface {
     
     switch (args.to.location[0]) {
       case 'playerHands':
-        this.reactionManager.handleLifecycleTrigger('onEnterHand', { playerId: args.toPlayerId!, cardId: args.cardId });
+        this.reactionManager.registerLifecycleEvent('onEnterHand', { playerId: args.toPlayerId!, cardId: args.cardId });
         break;
     }
     
@@ -534,7 +535,7 @@ export class GameActionController implements GameActionControllerInterface {
     
     const drawnCardId = deck.slice(-1)[0];
     if (!drawnCardId) return null;
-
+    
     await this.moveCard({
       cardId: drawnCardId,
       toPlayerId: playerId,
@@ -586,19 +587,21 @@ export class GameActionController implements GameActionControllerInterface {
     
     // todo reaction triggers
     // 6. run reactions for the card being played
-    /*const trigger = new ReactionTrigger({
-     eventType: 'cardPlayed',
-     playerId,
-     cardId,
-     });
-     
-     const reactionContext = {};
-     yield* reactionManager.runTrigger({ trigger, reactionContext });*/
+    const trigger = new ReactionTrigger({
+      eventType: 'cardPlayed',
+      playerId,
+      cardId,
+    });
     
+    // handle reactions for the card played
+    const reactionContext = {};
+    await this.reactionManager.runTrigger({ trigger, reactionContext });
     
-    this.reactionManager.handleLifecycleTrigger('onCardPlayed', { playerId: args.playerId, cardId: args.cardId });
+    // now add any triggered effects from the card played
+    this.reactionManager.registerLifecycleEvent('onCardPlayed', { playerId: args.playerId, cardId: args.cardId });
     
-    // 7. run the cards effects
+    // run the effects of the card played, note passing in the reaction context collected from running the trigger
+    // above - e.g., could provide immunity to an attack card played
     const effectFn = this.cardEffectFunctionMap[card.cardKey];
     if (effectFn) {
       await effectFn({
@@ -608,7 +611,7 @@ export class GameActionController implements GameActionControllerInterface {
         playerId,
         match: this.match,
         cardLibrary: this.cardLibrary,
-        reactionContext: {},
+        reactionContext,
         logManager: this.logManager,
       });
     }

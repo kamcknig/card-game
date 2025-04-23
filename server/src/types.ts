@@ -136,10 +136,6 @@ export type SourceContext =
 
 export type TriggeredEffectContext = {
   runGameActionDelegate: RunGameActionDelegate;
-  logManager: LogManager;
-  sourceContext: SourceContext;
-  matchController: MatchController,
-  gameActionController: GameActionController;
   trigger: ReactionTrigger;
   reaction: Reaction;
   isRootLog?: boolean;
@@ -241,18 +237,6 @@ export type GameActionOverrides = {
 
 export type TriggerEventType = 'cardPlayed' | 'startTurn' | 'gainCard';
 
-type ReactionArgs = {
-  id: string;
-  playerId: number;
-  listeningFor: TriggerEventType;
-  condition?: Reaction['condition'];
-  triggeredEffectFn: CardTriggeredEffectFn;
-  once?: boolean;
-  allow?: boolean;
-  compulsory?: boolean;
-  allowMultipleUse?: boolean;
-};
-
 export class Reaction {
   // a concatenation of the card key and card id with a '-'
   public id: string;
@@ -294,14 +278,14 @@ export class Reaction {
   // from teh expansion module that defines what happens when you ccn react?
   public triggeredEffectFn: CardTriggeredEffectFn;
   
-  constructor(arg: ReactionArgs) {
+  constructor(arg: ReactionTemplate) {
     this.id = arg.id;
     this.playerId = arg.playerId;
     this.listeningFor = arg.listeningFor;
     this.condition = arg.condition ?? (() => true);
     this.triggeredEffectFn = arg.triggeredEffectFn;
     this.once = arg.once ?? false;
-    this.allowMultipleInstances = arg.allowMultipleUse ?? true;
+    this.allowMultipleInstances = arg.allowMultipleInstances ?? true;
     this.compulsory = arg.compulsory ?? false;
   }
   
@@ -360,6 +344,6 @@ export type LifecycleResult = {
 };
 export type LifecycleCallback = (args: LifecycleCallbackContext) => LifecycleResult | void;
 
-export type LifecycleTriggers = keyof LifecycleCallbackMap;
+export type LifecycleEvent = keyof LifecycleCallbackMap;
 
 export type CardOverrides = Record<PlayerId, Record<CardId, Card>>;

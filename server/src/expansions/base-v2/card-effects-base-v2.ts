@@ -32,7 +32,7 @@ const expansionModule: CardExpansionModule = {
     'moat': {
       onEnterHand: ({ reactionManager, playerId, cardId }) => {
         reactionManager.registerReactionTemplate({
-          id: `moat:${cardId}:onEnterHand`,
+          id: `moat:${cardId}:cardPlayed`,
           playerId,
           listeningFor: 'cardPlayed',
           allowMultipleInstances: false,
@@ -54,7 +54,7 @@ const expansionModule: CardExpansionModule = {
         });
       },
       onLeaveHand: ({ reactionManager, cardId }) => {
-        reactionManager.unregisterTrigger(`moat:${cardId}:onEnterHand`);
+        reactionManager.unregisterTrigger(`moat:${cardId}:cardPlayed`);
       },
     },
   }),
