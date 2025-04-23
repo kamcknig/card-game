@@ -25,6 +25,9 @@ type DistanceArgs = {
   match: Match;
   startPlayerId: PlayerId;
   targetPlayerId: PlayerId;
+  /**
+   * @default 'forward'
+   */
   direction?: 'forward' | 'backward';
   repetition?: number;
 };

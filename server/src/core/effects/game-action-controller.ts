@@ -29,6 +29,7 @@ import { findSourceByLocationSpec } from '../../utils/find-source-by-location-sp
 import { findCards } from '../../utils/find-cards.ts';
 import { castArray, isNumber } from 'es-toolkit/compat';
 import { ReactionManager } from '../reactions/reaction-manager.ts';
+import { getDistanceToPlayer } from '../../shared/get-player-position-utils.ts';
 
 export class GameActionController implements GameActionControllerInterface {
   constructor(
@@ -123,6 +124,14 @@ export class GameActionController implements GameActionControllerInterface {
       cardId: args.cardId,
       type: 'gainCard'
     });
+    
+    const trigger = new ReactionTrigger({
+      eventType: 'gainCard',
+      cardId: args.cardId,
+      playerId: args.playerId
+    });
+    
+    await this.reactionManager.runTrigger({ trigger });
   }
   
   async newTurn() {
@@ -302,15 +311,6 @@ export class GameActionController implements GameActionControllerInterface {
       cardId: args.cardId,
       to: { location: 'playerDiscards' }
     });
-    
-    // todo
-    /*const trigger = new ReactionTrigger({
-     cardId: args.cardId,
-     playerId: args.playerId,
-     eventType: 'gainCard'
-     });
-     
-     yield* reactionManager.runTrigger({ trigger });*/
   }
   
   async revealCard(args: { cardId: CardId, playerId: PlayerId, moveToRevealed?: boolean }) {
@@ -392,9 +392,9 @@ export class GameActionController implements GameActionControllerInterface {
     }
     
     const newPhase = getTurnPhase(match.turnPhaseIndex);
-    const player = match.players[match.currentPlayerTurnIndex];
+    const currentPlayer = getCurrentPlayer(match);
     
-    console.log(`[nextPhase action] entering phase: ${newPhase}`);
+    console.log(`[nextPhase action] entering phase: ${newPhase} for turn ${match.turnNumber}`);
     
     switch (newPhase) {
       case 'action': {
@@ -419,14 +419,13 @@ export class GameActionController implements GameActionControllerInterface {
           playerId: match.players[match.currentPlayerTurnIndex].id
         });
         
-        // TODO
-        /*const trigger = new ReactionTrigger({
-         eventType: 'startTurn',
-         playerId: match.players[match.currentPlayerTurnIndex].id
-         });
-         
-         const reactionContext = {};
-         yield* reactionManager.runTrigger({ trigger, reactionContext });*/
+        const trigger = new ReactionTrigger({
+          eventType: 'startTurn',
+          playerId: match.players[match.currentPlayerTurnIndex].id
+        });
+        
+        const reactionContext = {};
+        await this.reactionManager.runTrigger({trigger, reactionContext});
         
         break;
       }
@@ -434,50 +433,42 @@ export class GameActionController implements GameActionControllerInterface {
         // no explicit behavior
         break;
       case 'cleanup': {
-        const cardsToDiscard = match.playArea.concat(match.playerHands[player.id]);
+        const cardsToDiscard = match.playArea.concat(match.playerHands[currentPlayer.id]);
         
         for (const cardId of cardsToDiscard) {
           const card = this.cardLibrary.getCard(cardId);
           
           // if the card is a duration card, and it was played this turn
           if (card.type.includes('DURATION')) {
-            const playedCardsInfo = match.stats.playedCards?.[card.id];
+            const stats = match.stats.playedCards?.[cardId];
+            if (!stats) continue;
             
-            if (!playedCardsInfo) continue;
-            const turnPlayed = playedCardsInfo.turnNumber;
+            const turnsPassed = getDistanceToPlayer({
+              startPlayerId: stats.turnPlayerId,
+              targetPlayerId: stats.playedPlayerId,
+              match
+            }) + (match.turnNumber - stats.turnNumber);
             
-            // if cleaning up for the player that played the duration card
-            if (playedCardsInfo.playedPlayerId === player.id) {
-              // and the turn is different, it's time to discard
-              if (turnPlayed !== match.turnNumber) {
-                await this.discardCard({
-                  cardId,
-                  playerId: player.id
-                });
-              }
-              else {
-                // if it's the same turn number,
-                const playerTurnPlayedId = match.stats.playedCards[card.id].turnPlayerId;
-                const playedTurnPlayerIndex = match.players.findIndex(p => p.id === playerTurnPlayedId);
-                
-                if (playedTurnPlayerIndex !== match.currentPlayerTurnIndex) {
-                  await this.discardCard({
-                    cardId,
-                    playerId: player.id,
-                  });
-                }
-              }
+            const shouldDiscard = (
+              stats.playedPlayerId === currentPlayer.id &&
+              turnsPassed > 0
+            );
+            
+            if (shouldDiscard) {
+              await this.discardCard({ cardId, playerId: currentPlayer.id });
+            } else {
+              console.log(`[nextPhase action] ${card.cardKey} is duration, leaving in play`);
             }
             
-            console.log(`[nextPhase action] ${card} is duration, leaving in play`);
             continue;
           }
+          
           
           console.log(`[nextPhase action] discarding ${this.cardLibrary.getCard(cardId)}...`);
           
           await this.discardCard({
             cardId,
-            playerId: player.id
+            playerId: currentPlayer.id
           });
         }
         
@@ -485,7 +476,7 @@ export class GameActionController implements GameActionControllerInterface {
           console.log(`[nextPhase action] drawing card...`);
           
           await this.drawCard({
-            playerId: player.id
+            playerId: currentPlayer.id
           });
         }
         
@@ -587,8 +578,7 @@ export class GameActionController implements GameActionControllerInterface {
       root: true,
     });
     
-    // todo reaction triggers
-    // 6. run reactions for the card being played
+    // find any reactions for the cardPlayed event type
     const trigger = new ReactionTrigger({
       eventType: 'cardPlayed',
       playerId,
@@ -607,6 +597,7 @@ export class GameActionController implements GameActionControllerInterface {
     const effectFn = this.cardEffectFunctionMap[card.cardKey];
     if (effectFn) {
       await effectFn({
+        reactionManager: this.reactionManager,
         runGameActionDelegate: this.runGameActionDelegate,
         cardId,
         gameActionController: this,

@@ -199,6 +199,7 @@ export type CardEffectFunctionMapFactory = Record<CardKey, () => (context: CardE
 
 export type CardEffectFunctionContext = {
   match: Match;
+  reactionManager: ReactionManager;
   runGameActionDelegate: RunGameActionDelegate;
   gameActionController: GameActionController;
   reactionContext?: ReactionContext;
