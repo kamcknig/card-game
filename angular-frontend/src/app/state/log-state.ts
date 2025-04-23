@@ -1,5 +1,5 @@
 import { atom, map } from 'nanostores';
-import { LogEntryMessage } from 'shared/shared-types';
+import { LogEntryMessage } from '../../types';
 
 export const logEntryIdsStore = atom<number[]>([]);
 

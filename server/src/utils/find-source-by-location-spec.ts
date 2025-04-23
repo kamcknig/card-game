@@ -3,7 +3,7 @@ import { isLocationMat, isLocationZone, LocationSpec, Match } from 'shared/share
 export function findSourceByLocationSpec(
   spec: { spec: LocationSpec; playerId?: number },
   match: Match,
-): number[] | undefined {
+) {
   if (spec.spec.location.length > 1) {
     throw new Error('findSourceByLocationSpec can only accept one location');
   }
@@ -41,4 +41,6 @@ export function findSourceByLocationSpec(
         return match.playArea;
     }
   }
+  
+  throw new Error('findSourceByLocationSpec could not find source');
 }

@@ -1,9 +1,9 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, ViewChild } from '@angular/core';
-import { LogEntryMessage } from 'shared/shared-types';
 import { DomSanitizer } from '@angular/platform-browser';
 import { NanostoresService } from '@nanostores/angular';
 import { logStore } from '../../../../state/log-state';
 import { fromEvent, switchMap, throttleTime } from 'rxjs';
+import { LogEntryMessage } from '../../../../../types';
 
 @Component({
   selector: 'app-game-log',

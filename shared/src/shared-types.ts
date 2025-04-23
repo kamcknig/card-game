@@ -18,13 +18,7 @@ export type LogEntry =
   | { type: 'newTurn'; turn: number; depth?: number; }
   | { type: 'newPlayerTurn'; turn: number; playerId: PlayerId; depth?: number; };
 
-export type LogEntryMessage = LogEntry & { message: string; id: number; };
-
-export type SelectCardArgs = SelectCardEffectArgs & {
-  selectableCardIds: CardId[];
-}
-
-export type SelectCardEffectArgs = {
+export type SelectActionCardArgs = {
   restrict: EffectRestrictionSpec | number[];
   count?: CountSpec | number;
   autoSelect?: boolean;
@@ -41,7 +35,8 @@ export type UserPromptKinds =
   | { type: 'name-card' }
   | { type: 'select'; cardIds: CardId[]; selectCount: CountSpec };
 
-export type UserPromptEffectArgs = {
+export type UserPromptActionArgs = {
+  playerId: PlayerId;
   prompt?: string;
   content?: UserPromptKinds;
   actionButtons?: ActionButtons;
@@ -55,27 +50,21 @@ export type MatchConfiguration = {
   kingdomCardKeys: string[];
 }
 
+type CardStats = {
+  // the turn number on which the card was played.
+  turnNumber: number;
+  
+  // the player that played the card
+  playedPlayerId: PlayerId;
+  
+  // the player whose turn it was when the card was played.
+  turnPlayerId: PlayerId
+};
+
 export type MatchStats = {
-  cardsGained: Record<PlayerId, CardId[]>[];
-  
-  /**
-   * Tracks cards that are played on each turn. This is an array where each element
-   * represents a turn in which cards are played. The elements then track the
-   * player whose turn it is and the cards played during that player's turn.
-   *
-   * This means that the card played might not be played by that player. An
-   * example would be the Pirate from seaside. It is a reaction card that can be played
-   * on someone else's turn.
-   */
-  cardsPlayedByTurn: Record<PlayerId, CardId[]>[];
-  
-  /**
-   * This tracks info about a card that was played. The key is the card's ID,
-   * and the values track the turn number in which it was played and the player
-   * that played it.
-   */
-  playedCardsInfo: Record<CardId, { turnNumber: number; playerId: PlayerId }>;
-  trashedCards: Record<PlayerId, CardId[]>[];
+  cardsGained: Record<CardId, CardStats>;
+  playedCards: Record<CardId, CardStats>;
+  trashedCards: Record<PlayerId, CardStats>;
 };
 
 export type Match = {
@@ -98,6 +87,7 @@ export type Match = {
   turnPhaseIndex: number;
   mats: Record<PlayerId, Record<Mats, CardId[]>>;
   zones: Record<Zones, CardId[]>;
+  stats: MatchStats;
 }
 
 export const TurnPhaseOrderValues = ['action', 'buy', 'cleanup'] as const;
@@ -105,6 +95,7 @@ export const TurnPhaseOrderValues = ['action', 'buy', 'cleanup'] as const;
 export type ServerEmitEvents = {
   addLogEntry: (logEntry: LogEntry) => void;
   cardEffectsComplete: (playerId: PlayerId, cardId?: CardId) => void;
+  cardTappedComplete: (playerId: PlayerId, cardId: CardId) => void;
   doneWaitingForPlayer: (playerId?: PlayerId) => void;
   expansionList: (val: any[]) => void;
   gameOver: (summary: MatchSummary) => void;
@@ -113,7 +104,7 @@ export type ServerEmitEvents = {
   matchReady: (match: Match) => void;
   matchStarted: () => void;
   nextPhaseComplete: () => void;
-  patchUpdate: (patchMatch: Operation[], patchCardLibrary: Operation[], patchMatchStats: Operation[]) => void;
+  patchUpdate: (patchMatch: Operation[], patchCardLibrary: Operation[]) => void;
   patchCardLibrary: (patch: Operation[]) => void;
   patchMatch: (patch: Operation[]) => void;
   patchMatchStats: (patch: Operation[]) => void;
@@ -123,14 +114,14 @@ export type ServerEmitEvents = {
   playerNameUpdated: (playerId: PlayerId, name: string) => void;
   playerReady: (playerId: PlayerId, ready: boolean) => void;
   searchCardResponse: (cardData: (CardData & { cardKey: CardKey })[]) => void;
-  selectCard: (signalId: string, selectCardArgs: SelectCardEffectArgs & { selectableCardIds: CardId[] }) => void;
+  selectCard: (signalId: string, selectCardArgs: SelectActionCardArgs & { selectableCardIds: CardId[] }) => void;
   setCardDataOverrides: (overrides: Record<CardId, Partial<Card>> | undefined) => void;
   setCardLibrary: (cardLibrary: Record<CardId, Card>) => void;
   setPlayerList: (players: Player[]) => void;
   setPlayer: (player: Player) => void;
-  userPrompt: (signalId: string, userPromptArgs: UserPromptEffectArgs) => void;
+  userPrompt: (signalId: string, userPromptArgs: UserPromptActionArgs) => void;
   waitingForPlayer: (playerId: PlayerId) => void;
-}
+};
 
 export type ServerListenEvents = {
   cardsSelected: (selected: CardId[]) => void

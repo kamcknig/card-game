@@ -22,11 +22,7 @@ don't allow empty player name
 
 if player name too long - truncate in score view
 
-deck should always show number even if it's one
-
 lookout might not be putting on top of deck
-
-torturer didn't target everyone
 
 add tailwindcss maybe
 
@@ -43,12 +39,14 @@ advanced reaction use-case
 
 i'm directly adding trigger effect reactions in some card effect generators. maybe they should yield a RegisterReactionEffect instaed
 
+during buy phase, once a player has made one buy, they can no longer play anymore treasure
+
+sailor + haven doesn't seem to work, it moves to the next player's turn too soon
 
 SEASIDE still to build
 
 lighthouse
 outpost
-pirate
 sailor
 salvager
 sea-witch
@@ -62,6 +60,21 @@ wharf
 
 BUILT BUT NOT TESTED
 blockade - (I've added a condition that the card needs to be gained on the triggering players turn - test that), need to add moat immunity
-corsair - need to add moat immunity, also changed how cards match so test that
+corsair - need to add moat immunity
 
-restest sea chart, and conspirator - changed how cards are matched
+
+
+RETRESTING base v2
+
+MOSTLY WORKING
+moat - need to do reactions
+poacher - didn't test discarding
+merchant - need to test gaining of silver with reactions
+gardens - scoring
+
+RETRESTING intrigue
+conspirator - need to test 3 actions
+duke - scoring
+farm - scoring
+nobles - scoring
+mill - scoring

@@ -14,12 +14,13 @@ import { NanostoresService } from '@nanostores/angular';
 import { playerIdStore, playerStore } from '../../../state/player-state';
 import { combineLatest, combineLatestWith, map, Observable, switchMap } from 'rxjs';
 import { AsyncPipe } from '@angular/common';
-import { CardId, LogEntryMessage, Mats, PlayerId } from 'shared/shared-types';
+import { CardId, Mats, PlayerId } from 'shared/shared-types';
 import { logEntryIdsStore, logStore } from '../../../state/log-state';
 import { MatComponent } from './mat-zone/mat.component';
 import { CardComponent } from '../../card/card.component';
 import { playerScoreStore } from '../../../state/player-logic';
 import { matStore } from '../../../state/match-logic';
+import { LogEntryMessage } from '../../../../types';
 
 @Component({
   selector: 'app-match-hud',

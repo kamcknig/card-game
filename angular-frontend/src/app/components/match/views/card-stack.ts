@@ -52,7 +52,7 @@ export class CardStackView extends Container {
     this._showBackground = showBackground ?? true;
     this._$cardIds = $cardIds;
     this._sscale = scale;
-    this._alwaysShowCountBadge = alwaysShowCountBadge;
+    this._alwaysShowCountBadge = alwaysShowCountBadge ?? false;
 
     if (this._showBackground) {
       this._background.addChild(new Graphics({ label: 'graphics' }));
@@ -156,7 +156,7 @@ export class CardStackView extends Container {
     const selectedCardsIds = selectedCardStore.get();
     const selectedCardCountInStack = cardIds.filter(e => selectedCardsIds.includes(e)).length;
 
-    if (this._showCountBadge && cardIds.length - selectedCardCountInStack > 1) {
+    if (this._alwaysShowCountBadge || (this._showCountBadge && cardIds.length - selectedCardCountInStack > 1)) {
       this._badgeCount.count = cardIds.length - selectedCardCountInStack;
       this._badgeCount.x = this._cardContainer.x + 5;
       this._badgeCount.y = this._cardContainer.y + 5;
@@ -166,7 +166,7 @@ export class CardStackView extends Container {
       this.removeChild(this._badgeCount);
     }
 
-    if (selectedCardCountInStack > 1 || this._alwaysShowCountBadge) {
+    if (selectedCardCountInStack > 1) {
       this._selectedBadgeCount.count = selectedCardCountInStack;
       this._selectedBadgeCount.y = -60 * this._sscale;
       this._selectedBadgeCount.scale = this._sscale;

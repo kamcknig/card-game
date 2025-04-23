@@ -1,5 +1,5 @@
 <div class="content">
-  <span>{{ ('Turn ' + (turnNumber$ | async)) | uppercase }}</span>
+  <span>{{ ('Turn ' + ((turnNumber$ | async) ?? 1)) | uppercase }}</span>
 
   <div class="player-scores-container">
     @for (playerScore of (getOrderedPlayerScores() | async); track playerScore?.id) {

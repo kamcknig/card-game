@@ -1,5 +1,5 @@
 import { atom } from 'nanostores';
-import { Match, MatchStats, MatchSummary, PlayerId } from 'shared/shared-types';
+import { Match, MatchSummary, PlayerId } from 'shared/shared-types';
 
 export const matchStore = atom<Match | null>(null);
 (globalThis as any).matchStore = matchStore;
@@ -15,7 +15,3 @@ export const matchSummaryStore = atom<MatchSummary | undefined>(undefined);
 
 export const selfPlayerIdStore = atom<PlayerId | undefined>();
 (globalThis as any).selfPlayerIdStore = selfPlayerIdStore;
-
-export const matchStatsStore = atom<MatchStats | undefined>();
-(globalThis as any).matchStatsStore = matchStatsStore;
-

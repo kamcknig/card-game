@@ -1,18 +1,21 @@
-import { Match } from 'shared/shared-types.ts';
-import { Reaction, ReactionTemplate, ReactionTrigger } from '../../types.ts';
+import { CardId, Match, PlayerId } from 'shared/shared-types.ts';
+import { LifecycleEvent, Reaction, ReactionTemplate, ReactionTrigger, RunGameActionDelegate } from '../../types.ts';
 import { CardLibrary } from '../card-library.ts';
 import { getOrderStartingFrom } from '../../utils/get-order-starting-from.ts';
 import { groupReactionsByCardKey } from './group-reactions-by-card-key.ts';
 import { buildActionButtons } from './build-action-buttons.ts';
 import { buildActionMap } from './build-action-map.ts';
-import { UserPromptEffect } from '../effects/effect-types/user-prompt.ts';
+import { cardLifecycleMap } from '../card-lifecycle-map.ts';
+import { LogManager } from '../log-manager.ts';
 
 export class ReactionManager {
   private readonly _triggers: Reaction[] = [];
   
   constructor(
-    private readonly match: Match,
+    private readonly logManager: LogManager,
+    private readonly _match: Match,
     private readonly _cardLibrary: CardLibrary,
+    private readonly runGameActionDelegate: RunGameActionDelegate
   ) {
   }
   
@@ -26,7 +29,11 @@ export class ReactionManager {
       console.log(`[REACTION MANAGER] checking trigger ${trigger} condition for ${t.id} reaction`);
       
       if (t.condition !== undefined) {
-        return t.condition({ match: this.match, cardLibrary: this._cardLibrary, trigger });
+        return t.condition({
+          match: this._match,
+          cardLibrary:
+          this._cardLibrary, trigger
+        });
       }
       else {
         return true;
@@ -46,7 +53,7 @@ export class ReactionManager {
       const trigger = this._triggers[i];
       if (trigger.id === triggerId) {
         this._triggers.splice(i, 1);
-        console.log(`[REACTION MANAGER] removing trigger reaction ${triggerId} for player ${this.match.players?.find((player) => player.id === trigger.playerId)}`);
+        console.log(`[REACTION MANAGER] removing trigger reaction ${triggerId} for player ${this._match.players?.find((player) => player.id === trigger.playerId)}`);
       }
     }
   }
@@ -56,14 +63,32 @@ export class ReactionManager {
     this._triggers.push(new Reaction(reactionTemplate));
   }
   
-  * runTrigger({ trigger, reactionContext }: { trigger: ReactionTrigger, reactionContext?: any }) {
+  registerLifecycleEvent(trigger: LifecycleEvent, context: { playerId?: PlayerId, cardId: CardId }) {
+    const card = this._cardLibrary.getCard(context.cardId);
+    
+    const fn = cardLifecycleMap[card.cardKey]?.[trigger];
+    if (!fn) {
+      return;
+    }
+    
+    console.log(`[REACTION MANAGER] running lifecycle trigger '${trigger}' for card ${card}`);
+    
+    fn({
+      cardId: context.cardId,
+      playerId: context.playerId!,
+      reactionManager: this,
+      runGameActionDelegate: this.runGameActionDelegate,
+    });
+  }
+  
+  async runTrigger({ trigger, reactionContext }: { trigger: ReactionTrigger, reactionContext?: any }) {
     reactionContext ??= {};
     
     // now we get the order of players that could be affected by the play (including the current player),
     // then get reactions for them and run them
     const targetOrder = getOrderStartingFrom(
-      this.match.players,
-      this.match.currentPlayerTurnIndex,
+      this._match.players,
+      this._match.currentPlayerTurnIndex,
     );
     
     for (const targetPlayer of targetOrder) {
@@ -93,7 +118,8 @@ export class ReactionManager {
           reactions.length > 1 &&
           (
             compulsoryReactions.length !== reactions.length || // mix of compulsory + optional
-            !compulsoryReactions.every(r => r.getSourceKey() === compulsoryReactions[0].getSourceKey()) // different cards
+            !compulsoryReactions.every(r => r.getSourceKey() === compulsoryReactions[0].getSourceKey()) // different
+                                                                                                        // cards
           )
         );
         
@@ -106,11 +132,11 @@ export class ReactionManager {
           
           console.log(`[REACTION MANAGER] prompting ${targetPlayer} to choose reaction`);
           
-          const result = (yield new UserPromptEffect({
+          const result = await this.runGameActionDelegate('userPrompt', {
             playerId: targetPlayer.id,
             actionButtons,
             prompt: 'Choose reaction?',
-          })) as { action: number };
+          }) as { action: number };
           
           if (result.action === 0) {
             console.log(`[REACTION MANAGER] ${targetPlayer} chose not to react`);
@@ -131,7 +157,9 @@ export class ReactionManager {
           continue;
         }
         
-        const reactionResult = yield* selectedReaction.generatorFn({
+        const reactionResult = await selectedReaction.triggeredEffectFn({
+          isRootLog: false,
+          runGameActionDelegate: this.runGameActionDelegate,
           trigger,
           reaction: selectedReaction,
         });

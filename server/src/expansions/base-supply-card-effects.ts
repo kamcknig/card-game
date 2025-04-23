@@ -1,23 +1,15 @@
-import { GainTreasureEffect } from '../core/effects/effect-types/gain-treasure.ts';
-
 import { CardExpansionModule } from '../types.ts';
 
 const expansionModule: CardExpansionModule = {
   registerEffects: {
-    'copper': () => function* () {
-      yield new GainTreasureEffect({
-        count: 1,
-      });
+    'copper': () => async ({gameActionController}) => {
+      await gameActionController.gainTreasure({ count: 1 });
     },
-    'gold': () => function* () {
-      yield new GainTreasureEffect({
-        count: 3,
-      });
+    'gold': () => async ({gameActionController}) => {
+      await gameActionController.gainTreasure({ count: 3 });
     },
-    'silver': () => function* () {
-      yield new GainTreasureEffect({
-        count: 2,
-      });
+    'silver': () => async ({gameActionController}) => {
+      await gameActionController.gainTreasure({ count: 2 });
     },
   }
 };

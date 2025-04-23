@@ -3,18 +3,22 @@ import {
   Card,
   CardId,
   CardKey,
-  Match, MatchStats,
-  Player,
+  EffectTarget,
+  LocationSpec,
+  Match,
+  MatchStats,
   PlayerId,
+  SelectActionCardArgs,
   ServerEmitEvents,
-  ServerListenEvents,
+  ServerListenEvents, UserPromptActionArgs,
 } from 'shared/shared-types.ts';
-import { GameEffects } from './core/effects/effect-types/game-effects.ts';
 import { toNumber } from 'es-toolkit/compat';
 
 import { CardLibrary } from './core/card-library.ts';
 import { ReactionManager } from './core/reactions/reaction-manager.ts';
 import { LogManager } from './core/log-manager.ts';
+import { GameActionController } from './core/effects/game-action-controller.ts';
+import { MatchController } from './core/match-controller.ts';
 
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
 
@@ -124,63 +128,96 @@ export class ReactionTrigger {
   [Symbol.for('Deno.customInspect')]() {
     return this.toString();
   }
-  
-};
-
-export type TargetContext =
-  | { type: 'player', playerId: PlayerId }
-  | { type: 'card', playerId: PlayerId, cardId: CardId };
+}
 
 export type SourceContext =
   | { type: 'player', playerId: PlayerId }
   | { type: 'card', playerId: PlayerId, cardId: CardId };
 
-export type ReactionEffectContext = {
+export type TriggeredEffectContext = {
+  runGameActionDelegate: RunGameActionDelegate;
   trigger: ReactionTrigger;
   reaction: Reaction;
   isRootLog?: boolean;
 };
 
-export type GameActions = {
-  buyCard: { playerId: PlayerId; cardId: CardId; };
-  playCard: { playerId: PlayerId; cardId: CardId; };
-  drawCard: { playerId: PlayerId };
-  gainCard: { playerId: PlayerId; cardId: CardId };
-  checkForPlayerActions: undefined;
-  nextPhase: undefined;
-} & Record<string, any>;
-
-export type GameEffectGenerator = Generator<GameEffects>;
-
-export type EffectGeneratorFactoryContext = {
-  matchStats: MatchStats;
-  reactionManager: ReactionManager;
-  logManager: LogManager,
-  match: Match,
-  cardLibrary: CardLibrary
-}
-
-export type GameActionTypes = keyof GameActions;
-export type GameActionEffectGeneratorFn<Args = any> = (
-  args: Args,
-  overrides?: GameActionOverrides,
-) => GameEffectGenerator;
-export type GameActionEffectGeneratorMapFactory = (context: EffectGeneratorFactoryContext) => {
-  [K in GameActionTypes]: GameActionEffectGeneratorFn<GameActions[K]>;
+export type TriggeredEffectConditionContext = {
+  match: Match;
+  cardLibrary: CardLibrary;
+  trigger: ReactionTrigger
 };
+
+export type GameActionArgsMap = {
+  checkForRemainingPlayerActions: void;
+  buyCard: { playerId: PlayerId; cardId: CardId };
+  discardCard: { cardId: CardId; playerId: PlayerId };
+  drawCard: { playerId: PlayerId };
+  endTurn: void;
+  gainAction: { count: number };
+  gainBuy: { count: number; };
+  gainCard: { playerId: PlayerId; cardId: CardId; to: LocationSpec };
+  gainTreasure: { count: number };
+  modifyCost: ModifyActionCardArgs;
+  moveCard: { toPlayerId?: PlayerId; cardId: CardId; to: LocationSpec };
+  newTurn: void;
+  nextPhase: void;
+  playCard: { playerId: PlayerId; cardId: CardId, overrides?: GameActionOverrides };
+  revealCard: { cardId: CardId, playerId: PlayerId, moveToRevealed?: boolean },
+  selectCard: SelectActionCardArgs;
+  shuffleDeck: { playerId: PlayerId };
+  trashCard: { playerId: PlayerId; cardId: CardId };
+  userPrompt: UserPromptActionArgs;
+};
+
+export type GameActionControllerInterface = {
+  [K in keyof GameActionArgsMap]: (args: GameActionArgsMap[K]) => any;
+};
+
+
+export type ModifyActionCardArgs = {
+  appliesTo: EffectTarget;
+  expiresAt: 'TURN_END';
+  appliesToCard: EffectTarget;
+  amount: number;
+};
+
+export type GameActions = keyof GameActionArgsMap
+
+export type GameActionMethodMap = {
+  [K in GameActions]: (args: GameActionArgsMap[K]) => Promise<any>
+};
+
+export type RunGameActionDelegate = <K extends GameActions>(
+  action: K,
+  ...args: GameActionArgsMap[K] extends void
+    ? []
+    : [GameActionArgsMap[K]]
+) => Promise<ReturnType<GameActionController[K]>>;
+
 
 export type ReactionContext = any;
 
-export type CardEffectGeneratorFnContext = {
-  reactionContext: ReactionContext;
+export type CardEffectFunctionMapFactory = Record<CardKey, () => (context: CardEffectFunctionContext) => Promise<void>>;
+
+export type CardEffectFunctionContext = {
+  match: Match,
+  runGameActionDelegate: RunGameActionDelegate,
+  logManager: LogManager,
+  gameActionController: GameActionController;
+  reactionContext?: ReactionContext;
   playerId: PlayerId;
   cardId: CardId;
+  cardLibrary: CardLibrary
 }
-export type CardEffectGeneratorFn =
-  (args: CardEffectGeneratorFnContext) => GameEffectGenerator;
 
-export type CardEffectGeneratorMapFactory =
-  Record<CardKey, (context: EffectGeneratorFactoryContext) => CardEffectGeneratorFn>;
+export type CardTriggeredEffectFn = (context: TriggeredEffectContext) => Promise<any>;
+
+type CardTriggerEffectConditionFn = (context: TriggeredEffectConditionContext) => boolean;
+
+export type CardEffectFunction = (context: CardEffectFunctionContext) => Promise<void>;
+
+export type CardEffectFunctionMap =
+  Record<CardKey, CardEffectFunction>;
 
 export interface CardExpansionModule {
   registerCardLifeCycles?: () => Record<string, LifecycleCallbackMap>;
@@ -189,9 +226,8 @@ export interface CardExpansionModule {
     cardLibrary: CardLibrary,
     ownerId: number
   }) => number>;
-  registerEffects: CardEffectGeneratorMapFactory;
+  registerEffects: CardEffectFunctionMapFactory;
 }
-
 
 export type GameActionOverrides = {
   actionCost?: number,
@@ -199,47 +235,7 @@ export type GameActionOverrides = {
   playCard?: boolean,
 };
 
-export type ReactionEffectGeneratorFn = (
-  args: ReactionEffectContext,
-) => GameEffectGenerator;
-
-export type EffectTypes = GameEffects['type'];
-
-export type EffectHandler<T> = (
-  effect: Extract<GameEffects, { type: T }>,
-  match: Match,
-) => EffectHandlerResult;
-
-export type EffectHandlerMap = {
-  [T in EffectTypes]: EffectHandler<T>;
-};
-
-export type EffectPauseResult = { pause: true; signalId: string };
-export type EffectResult = { result: unknown; };
-export type EffectRunGeneratorResult = {
-  runGenerator: GameEffectGenerator;
-};
-
-export type EffectHandlerResult =
-  | EffectPauseResult
-  | EffectResult
-  | EffectRunGeneratorResult
-  | number[]
-  | void;
-
 export type TriggerEventType = 'cardPlayed' | 'startTurn' | 'gainCard';
-
-type ReactionArgs = {
-  id: string;
-  playerId: number;
-  listeningFor: TriggerEventType;
-  condition?: Reaction['condition'];
-  generatorFn: ReactionEffectGeneratorFn;
-  once?: boolean;
-  allow?: boolean;
-  compulsory?: boolean;
-  allowMultipleUse?: boolean;
-};
 
 export class Reaction {
   // a concatenation of the card key and card id with a '-'
@@ -276,22 +272,20 @@ export class Reaction {
   // todo working on moat right now which has no condition other than it be an attack.
   // in the future we might need to define this condition method elsewhere such as
   // in the expansion's module? need to wait to see what kind of conditions there are i think
-  public condition?: (
-    args: { match: Match; cardLibrary: CardLibrary; trigger: ReactionTrigger },
-  ) => boolean;
+  public condition?: CardTriggerEffectConditionFn
   
   // todo defined in a map somewhere just like registered card effects. so maybe another export
   // from teh expansion module that defines what happens when you ccn react?
-  public generatorFn: ReactionEffectGeneratorFn;
+  public triggeredEffectFn: CardTriggeredEffectFn;
   
-  constructor(arg: ReactionArgs) {
+  constructor(arg: ReactionTemplate) {
     this.id = arg.id;
     this.playerId = arg.playerId;
     this.listeningFor = arg.listeningFor;
     this.condition = arg.condition ?? (() => true);
-    this.generatorFn = arg.generatorFn;
+    this.triggeredEffectFn = arg.triggeredEffectFn;
     this.once = arg.once ?? false;
-    this.allowMultipleInstances = arg.allowMultipleUse ?? true;
+    this.allowMultipleInstances = arg.allowMultipleInstances ?? true;
     this.compulsory = arg.compulsory ?? false;
   }
   
@@ -329,34 +323,14 @@ export class Reaction {
   }
 }
 
-export interface IEffectRunner {
-  runCardEffects(arg: {
-    source: SourceContext;
-    reactionContext?: unknown,
-  }): unknown;
-  
-  runGameActionEffects<T extends GameActionTypes>(arg: {
-    effectName: T,
-    context: GameActions[T],
-    source: SourceContext
-  }): unknown;
-  
-  runGenerator(arg: {
-    generator: GameEffectGenerator,
-    source: SourceContext
-  }): unknown;
-}
-
 export type ReactionTemplate = Omit<Reaction, 'getSourceId' | 'getSourceKey' | 'getBaseId'>;
 
-export type LifecycleResult = {
-  registerTriggeredEvents?: ReactionTemplate[];
-  unregisterTriggeredEvents?: string[];
-};
-export type LifecycleCallback = (
-  args: { playerId: number; cardId: number },
-) => LifecycleResult | void;
-
+type LifecycleCallbackContext = {
+  reactionManager: ReactionManager;
+  runGameActionDelegate: RunGameActionDelegate;
+  playerId: number;
+  cardId: number;
+}
 export type LifecycleCallbackMap = {
   onEnterHand?: LifecycleCallback;
   onLeaveHand?: LifecycleCallback;
@@ -364,5 +338,12 @@ export type LifecycleCallbackMap = {
   onLeavePlay?: LifecycleCallback;
   onCardPlayed?: LifecycleCallback;
 };
+export type LifecycleResult = {
+  registerTriggeredEvents?: ReactionTemplate[];
+  unregisterTriggeredEvents?: string[];
+};
+export type LifecycleCallback = (args: LifecycleCallbackContext) => LifecycleResult | void;
+
+export type LifecycleEvent = keyof LifecycleCallbackMap;
 
 export type CardOverrides = Record<PlayerId, Record<CardId, Card>>;

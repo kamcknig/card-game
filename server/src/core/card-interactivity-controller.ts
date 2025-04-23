@@ -1,17 +1,18 @@
-import { AppSocket, GameActionEffectGeneratorFn, GameActions, GameActionTypes, GameEffectGenerator } from '../types.ts';
-import { EffectsController } from './effects/effects-controller.ts';
+import { AppSocket } from '../types.ts';
 import { Card, CardId, Match, Player, PlayerId, TurnPhaseOrderValues, } from 'shared/shared-types.ts';
 import { isUndefined } from 'es-toolkit/compat';
 import { getEffectiveCardCost } from '../utils/get-effective-card-cost.ts';
 import { CardLibrary } from './card-library.ts';
 import { MatchController } from './match-controller.ts';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
+import { GameActionController } from './effects/game-action-controller.ts';
+import { getTurnPhase } from '../utils/get-turn-phase.ts';
 
 export class CardInteractivityController {
   private _gameOver: boolean = false;
   
   constructor(
-    private readonly _cardEffectController: EffectsController,
+    private readonly gameActionsController: GameActionController,
     private readonly match: Match,
     private readonly _socketMap: Map<PlayerId, AppSocket>,
     private readonly _cardLibrary: CardLibrary,
@@ -20,19 +21,16 @@ export class CardInteractivityController {
       player: Player,
     ) => void,
     private readonly _matchController: MatchController,
-    private readonly _effectGeneratorMap: {
-      [K in GameActionTypes]: GameActionEffectGeneratorFn<GameActions[K]>;
-    },
   ) {
     this._socketMap.forEach((s) => {
       s.on('cardTapped', (pId, cId) => this.onCardTapped(pId, cId));
-      s.on('playAllTreasure', (pId) => this.onPlayAllTreasure(pId));
+      s.on('playAllTreasure', async (pId) => await this.onPlayAllTreasure(pId));
     });
   }
   
   public playerAdded(s: AppSocket | undefined) {
     s?.on('cardTapped', (pId, cId) => this.onCardTapped(pId, cId));
-    s?.on('playAllTreasure', (pId) => this.onPlayAllTreasure(pId));
+    s?.on('playAllTreasure', async (pId) => await this.onPlayAllTreasure(pId));
   }
   
   public playerRemoved(socket: AppSocket | undefined) {
@@ -41,7 +39,7 @@ export class CardInteractivityController {
   }
   
   public endGame() {
-    console.log(`[CARD INTERACTIVITY] removing socket listeners and marking ended`,);
+    console.log(`[card interactivity] removing socket listeners and marking ended`,);
     this._socketMap.forEach((s) => {
       s.off('cardTapped');
       s.off('playAllTreasure');
@@ -51,17 +49,16 @@ export class CardInteractivityController {
   
   public checkCardInteractivity(): void {
     if (this._gameOver) {
-      console.log(`[CARD INTERACTIVITY] game is over, not processing match update`,);
+      console.log(`[card interactivity] game is over, not processing match update`,);
       return;
     }
     
     const match = this.match;
     
-    const prev = this._matchController.getMatchSnapshot();
     const currentPlayer = match.players[match.currentPlayerTurnIndex];
     const turnPhase = TurnPhaseOrderValues[match.turnPhaseIndex];
     
-    console.log(`[CARD INTERACTIVITY] determining selectable cards - phase '${turnPhase}, player ${currentPlayer}', player Index '${match.currentPlayerTurnIndex}'`);
+    console.log(`[card interactivity] determining selectable cards - phase '${turnPhase}, player ${currentPlayer}', player Index '${match.currentPlayerTurnIndex}'`);
     
     const selectableCards: number[] = [];
     
@@ -111,27 +108,20 @@ export class CardInteractivityController {
       return prev;
     }, {} as Record<PlayerId, CardId[]>);
     
-    console.log(`[CARD INTERACTIVITY] selectable cards`);
+    console.log(`[card interactivity] selectable cards`);
     
     for (const key of Object.keys(match.selectableCards)) {
       const tmp = match.selectableCards[+key]?.concat() ?? [];
       const p = getPlayerById(match, +key);
       console.log(`${p} can select ${tmp.length} cards`);
-      if (tmp.length > 0) {
-        console.log(`${p} can select ${
-          tmp.map((c) => this._cardLibrary.getCard(c)).join(', ')
-        }`);
-      }
     }
-    
-    this._matchController.broadcastPatch(prev);
   }
   
-  private onPlayAllTreasure(playerId: number) {
-    console.log('[CARD INTERACTIVITY] playing all treasures for current player');
+  private async onPlayAllTreasure(playerId: PlayerId) {
+    console.log('[card interactivity] playing all treasures for current player');
     
     if (this._gameOver) {
-      console.log(`[CARD INTERACTIVITY] game is over, not playing treasures`);
+      console.log(`[card interactivity] game is over, not playing treasures`);
       return;
     }
     
@@ -139,7 +129,7 @@ export class CardInteractivityController {
     const player = getPlayerById(match, playerId);
     
     if (isUndefined(player)) {
-      console.warn(`[CARD INTERACTIVITY] could not find current player`);
+      console.warn(`[card interactivity] could not find current player`);
       return;
     }
     
@@ -147,82 +137,49 @@ export class CardInteractivityController {
     const treasureCards = hand.filter((e) =>
       this._cardLibrary.getCard(e).type.includes('TREASURE')
     );
-    console.log(`[CARD INTERACTIVITY] ${player} has ${treasureCards.length} treasure cards in hand`);
+    console.log(`[card interactivity] ${player} has ${treasureCards.length} treasure cards in hand`);
     if (hand.length === 0 || treasureCards.length === 0) {
       return;
     }
     
     for (const cardId of treasureCards) {
-      this.onCardTapped(player.id, cardId);
+      await this._matchController.runGameAction('playCard', { playerId, cardId });
     }
     
     this._socketMap.get(playerId)?.emit('playAllTreasureComplete');
   };
   
-  private onCardTapped(triggerPlayerId: number, tappedCardId: number) {
-    const match = this.match;
-    
-    const player = match.players.find((player) =>
-      player.id === triggerPlayerId
-    );
+  private async onCardTapped(playerId: PlayerId, cardId: CardId) {
+    const player = getPlayerById(this.match, playerId)
     
     if (!player) {
       throw new Error('could not find player');
     }
     
-    const card = this._cardLibrary.getCard(tappedCardId);
-    
-    console.log(`[CARD INTERACTIVITY] player ${player} tapped card ${card}`);
+    console.log(`[card interactivity] player ${player} tapped card ${this._cardLibrary.getCard(cardId)}`);
     
     if (this._gameOver) {
-      console.log(`[CARD INTERACTIVITY] game is over, not processing card tap`);
+      console.log(`[card interactivity] game is over, not processing card tap`);
       return;
     }
     
-    const turnPhase = TurnPhaseOrderValues[match.turnPhaseIndex];
+    const phase = getTurnPhase(this.match.turnPhaseIndex);
     
-    // deno-lint-ignore no-this-alias
-    const self = this; // ✅ for use inside generator
-    const generator = function* (): GameEffectGenerator {
-      if (turnPhase === 'action') {
-        yield* self._effectGeneratorMap.playCard({
-          playerId: triggerPlayerId,
-          cardId: card.id
-        });
+    if (phase === 'buy') {
+      const hand = this.match.playerHands[playerId];
+      if (hand.includes(cardId)) {
+        await this._matchController.runGameAction('playCard', { playerId, cardId });
       }
-      else if (turnPhase === 'buy') {
-        const hand = match.playerHands?.[triggerPlayerId];
-        
-        if (!hand) {
-          console.warn(`[CARD INTERACTIVITY] no hand for player ${player}`);
-          return;
-        }
-        
-        if (hand.includes(tappedCardId)) {
-          yield* self._effectGeneratorMap.playCard({
-            playerId: triggerPlayerId,
-            cardId: card.id,
-          });
-        } else {
-          yield* self._effectGeneratorMap.buyCard({
-            playerId: triggerPlayerId,
-            cardId: card.id,
-          });
-        }
+      else {
+        await this._matchController.runGameAction('buyCard', { playerId, cardId });
       }
-    };
+    }
+    else if (phase === 'action') {
+      await this._matchController.runGameAction('playCard', { playerId, cardId });
+    }
     
-    this._cardEffectController.runGenerator({
-      generator: generator(),
-      source: {
-        type: 'card',
-        playerId: triggerPlayerId,
-        cardId: tappedCardId,
-      },
-      onComplete: () => {
-        console.log(`[CARD INTERACTIVITY] card tapped handler complete ${card} for ${player}`);
-        this._cardTapCompleteCallback(card, player);
-      }
-    });
+    await this._matchController.runGameAction('checkForRemainingPlayerActions');
+    
+    this._socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
   };
 }

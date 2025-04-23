@@ -1,9 +1,8 @@
-import { LogEntry, Match, MatchStats } from 'shared/shared-types';
+import { LogEntry, Match } from 'shared/shared-types';
 import { playerIdStore, playerStore } from '../../state/player-state';
 import {
   lobbyMatchConfigurationStore,
   matchStartedStore,
-  matchStatsStore,
   matchStore,
   matchSummaryStore,
   selfPlayerIdStore
@@ -19,21 +18,21 @@ import { logManager } from '../log-manager';
 export type SocketEventMap = Partial<{ [p in ClientListenEventNames]: ClientListenEvents[p] }>;
 
 export const socketToGameEventMap = (): SocketEventMap => {
-  const map: SocketEventMap = {};
+  const map = {} as SocketEventMap;
 
-  map.addLogEntry = (logEntry: LogEntry) => {
+  map['addLogEntry'] = (logEntry: LogEntry) => {
     logManager.addLogEntry(logEntry);
   };
 
-  map.matchConfigurationUpdated = config => {
+  map['matchConfigurationUpdated'] = config => {
     lobbyMatchConfigurationStore.set(config.expansions);
   };
 
-  map.expansionList = val => {
+  map['expansionList'] = val => {
     expansionListStore.set(val);
   };
 
-  map.gameOver = async summary => {
+  map['gameOver'] = async summary => {
     try {
       const s = new Audio('./assets/sounds/game-over.mp3');
       await s?.play();
@@ -46,19 +45,19 @@ export const socketToGameEventMap = (): SocketEventMap => {
     sceneStore.set('gameSummary');
   };
 
-  map.gameOwnerUpdated = playerId => {
+  map['gameOwnerUpdated'] = playerId => {
     gameOwnerIdStore.set(playerId);
   };
 
-  map.setCardLibrary = cards => {
+  map['setCardLibrary'] = cards => {
     cardStore.set(cards);
   };
 
-  map.setCardDataOverrides = overrides => {
+  map['setCardDataOverrides'] = overrides => {
     cardOverrideStore.set(overrides ?? {});
   };
 
-  map.matchReady = async match => {
+  map['matchReady'] = async match => {
     if (!cardStore.get()) throw new Error('missing card library');
 
     matchStore.set(match);
@@ -83,35 +82,28 @@ export const socketToGameEventMap = (): SocketEventMap => {
     sceneStore.set('match');
   };
 
-  map.matchStarted = () => {
+  map['matchStarted'] = () => {
     matchStartedStore.set(true);
   };
 
-  map.patchCardLibrary = patch => {
+  map['patchCardLibrary'] = patch => {
     const current = structuredClone(cardStore.get()) ?? {};
     applyPatch(current, patch);
     cardStore.set(current);
   };
 
-  map.patchUpdate = (patchMatch, patchCardLibrary, patchMatchStats) => {
-    if (patchMatch?.length) map.patchMatch?.(patchMatch);
-    if (patchCardLibrary?.length) map.patchCardLibrary?.(patchCardLibrary);
-    if (patchMatchStats?.length) map.patchMatchStats?.(patchMatchStats);
+  map['patchUpdate'] = (patchMatch, patchCardLibrary) => {
+    if (patchMatch?.length) map['patchMatch']?.(patchMatch);
+    if (patchCardLibrary?.length) map['patchCardLibrary']?.(patchCardLibrary);
   };
 
-  map.patchMatch = (patch: Operation[]) => {
+  map['patchMatch'] = (patch: Operation[]) => {
     const current = structuredClone(matchStore.get()) ?? {} as Match;
     applyPatch(current, patch);
     matchStore.set(current);
   };
 
-  map.patchMatchStats = patch => {
-    const current = structuredClone(matchStatsStore.get()) ?? {} as MatchStats;
-    applyPatch(current, patch);
-    matchStatsStore.set(current);
-  };
-
-  map.playerConnected = (player) => {
+  map['playerConnected'] = (player) => {
     playerStore(player.id).set(player);
 
     if (!playerIdStore.get().includes(player.id)) {
@@ -119,18 +111,18 @@ export const socketToGameEventMap = (): SocketEventMap => {
     }
   };
 
-  map.setPlayerList = players => {
+  map['setPlayerList'] = players => {
     for (const player of players) {
       playerStore(player.id).set(player);
     }
     playerIdStore.set(players.map(player => player.id));
   };
 
-  map.playerDisconnected = (player) => {
+  map['playerDisconnected'] = (player) => {
     playerStore(player.id).set(player);
   };
 
-  map.playerNameUpdated = (playerId: number, name: string) => {
+  map['playerNameUpdated'] = (playerId: number, name: string) => {
     const current = playerStore(playerId).get();
     if (!current) return;
     playerStore(playerId).set({
@@ -139,7 +131,7 @@ export const socketToGameEventMap = (): SocketEventMap => {
     });
   };
 
-  map.playerReady = (playerId, ready) => {
+  map['playerReady'] = (playerId, ready) => {
     const current = playerStore(playerId).get();
     if (!current) return;
 
@@ -149,7 +141,7 @@ export const socketToGameEventMap = (): SocketEventMap => {
     });
   };
 
-  map.setPlayer = player => {
+  map['setPlayer'] = player => {
     selfPlayerIdStore.set(player.id);
   }
   return map;

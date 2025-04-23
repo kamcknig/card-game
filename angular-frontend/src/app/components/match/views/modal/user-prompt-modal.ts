@@ -2,7 +2,7 @@ import { Application, Container, Graphics, Text } from 'pixi.js';
 import { AppButton, createAppButton } from '../../../../core/create-app-button';
 import { clientSelectableCardsOverrideStore, selectedCardStore } from '../../../../state/interactive-state';
 import { STANDARD_GAP } from '../../../../core/app-contants';
-import { PlayerId, UserPromptEffectArgs } from 'shared/shared-types';
+import { PlayerId, UserPromptActionArgs } from 'shared/shared-types';
 import { List } from '@pixi/ui';
 import { cardSelectionView } from './card-selection-view';
 import { cardRearrangeView } from './card-rearrange-view';
@@ -13,7 +13,7 @@ import { SocketService } from '../../../../core/socket-service/socket.service';
 export const userPromptModal = (
   app: Application,
   socketService: SocketService,
-  args: UserPromptEffectArgs,
+  args: UserPromptActionArgs,
   selfPlayerId: PlayerId,
 ): Promise<unknown> => {
   return new Promise((resolve) => {
