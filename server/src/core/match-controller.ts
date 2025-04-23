@@ -46,17 +46,17 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     super();
   }
   
-  private _keepers: CardKey[] = ['moat', 'militia', 'merchant'];
+  private _keepers: CardKey[] = ['moat', 'militia', 'diplomat'];
   private _playerHands: Record<CardKey, number>[] = [
     {
       gold: 4,
       silver: 4,
-      merchant: 3
+      diplomat: 3
     },
     {
       gold: 4,
       silver: 3,
-      moat: 3,
+      militia: 3,
     },
     {
       gold: 4,
@@ -198,13 +198,20 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this.broadcastPatch(this._matchSnapshot);
       this._matchSnapshot = this.getMatchSnapshot();
     }
+    
     const result = await this.gameActionsController![action](args[0] as any);
+    
+    this.calculateScores();
     
     this._interactivityController?.checkCardInteractivity();
     
     this.broadcastPatch({ ...this._matchSnapshot });
     
     this._matchSnapshot = null;
+    
+    if (this.checkGameEnd()) {
+      console.log(`[match] game ended`)
+    }
     
     return result as ReturnType<GameActionController[K]>;
   }
@@ -515,18 +522,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     await this.runGameAction('checkForRemainingPlayerActions');
   };
   
-  private onEffectCompleted = () => {
-    console.log(`[MATCH] effect has completed, updating clients`);
-    
-    this.calculateScores();
-    if (this.checkGameEnd()) return;
-    this._interactivityController?.checkCardInteractivity();
-  };
-  
   private calculateScores() {
     console.log(`[MATCH] calculating scores`);
     
-    const prev = this.getMatchSnapshot();
     const match = this._match;
     const scores: Record<number, number> = {};
     
@@ -553,8 +551,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }
     
     match.scores = scores;
-    
-    this.broadcastPatch(prev);
   }
   
   private checkGameEnd() {
@@ -587,9 +583,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       return prev.concat(cardKey);
     }, [] as string[]);
     
-    console.log(
-      `[MATCH] remaining supply card pile count ${remainingSupplyCardKeys.length}`,
-    );
+    console.log(`[MATCH] remaining supply card pile count ${remainingSupplyCardKeys.length}`);
     
     const emptyPileCount = allSupplyCardKeys.length -
       remainingSupplyCardKeys.length;

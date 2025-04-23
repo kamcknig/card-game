@@ -113,6 +113,8 @@ export class GameActionController implements GameActionControllerInterface {
       playedPlayerId: args.playerId
     };
     
+    this.cardLibrary.getCard(args.cardId).owner = args.playerId;
+    
     console.log(`[gainCard action] ${getPlayerById(this.match, args.playerId)} gained ${this.cardLibrary.getCard(args.cardId)}`);
     
     this.logManager.addLogEntry({
@@ -396,7 +398,7 @@ export class GameActionController implements GameActionControllerInterface {
     
     switch (newPhase) {
       case 'action': {
-        match.playerActions = 1;
+        match.playerActions = 3;
         match.playerBuys = 1;
         match.playerTreasure = 0;
         match.currentPlayerTurnIndex++;

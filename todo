@@ -61,20 +61,3 @@ wharf
 BUILT BUT NOT TESTED
 blockade - (I've added a condition that the card needs to be gained on the triggering players turn - test that), need to add moat immunity
 corsair - need to add moat immunity
-
-
-
-RETRESTING base v2
-
-MOSTLY WORKING
-moat - need to do reactions
-poacher - didn't test discarding
-merchant - need to test gaining of silver with reactions
-gardens - scoring
-
-RETRESTING intrigue
-conspirator - need to test 3 actions
-duke - scoring
-farm - scoring
-nobles - scoring
-mill - scoring

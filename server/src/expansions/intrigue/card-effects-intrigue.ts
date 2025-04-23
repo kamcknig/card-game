@@ -9,7 +9,7 @@ const expansionModule: CardExpansionModule = {
     'diplomat': {
       onEnterHand: ({ reactionManager, runGameActionDelegate, playerId, cardId }) => {
         reactionManager.registerReactionTemplate({
-          id: `diplomat:${cardId}:onEnterHand`,
+          id: `diplomat:${cardId}:cardPlayed`,
           playerId,
           listeningFor: 'cardPlayed',
           condition: ({ match, trigger, cardLibrary }) => {
@@ -46,7 +46,7 @@ const expansionModule: CardExpansionModule = {
         });
       },
       onLeaveHand: ({ reactionManager, cardId }) => {
-        reactionManager.unregisterTrigger(`diplomat:${cardId}:onEnterHand`);
+        reactionManager.unregisterTrigger(`diplomat:${cardId}:cardPlayed`);
       },
     },
   }),
