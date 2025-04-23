@@ -154,12 +154,10 @@ const expansionModule: CardExpansionModule = {
         expiresAt: 'TURN_END',
       });
     },
-    'conspirator': () => async ({ cardId, match, cardLibrary, playerId, runGameActionDelegate }) => {
+    'conspirator': () => async ({ match, cardLibrary, playerId, runGameActionDelegate }) => {
       console.log(`[CONSPIRATOR EFFECT] gaining 2 treasure...`);
       
-      await runGameActionDelegate('gainTreasure', {
-        count: 2,
-      });
+      await runGameActionDelegate('gainTreasure', { count: 2 });
       
       // we want those cards played on the player's turn that are actions and played by THAT player
       const actionCardCount =

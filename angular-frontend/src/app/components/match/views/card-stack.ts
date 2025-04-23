@@ -156,7 +156,7 @@ export class CardStackView extends Container {
     const selectedCardsIds = selectedCardStore.get();
     const selectedCardCountInStack = cardIds.filter(e => selectedCardsIds.includes(e)).length;
 
-    if (this._alwaysShowCountBadge || (this._showCountBadge && cardIds.length - selectedCardCountInStack > 1)) {
+    if ((cardIds.length !== 0 && this._alwaysShowCountBadge) || (this._showCountBadge && cardIds.length - selectedCardCountInStack > 1)) {
       this._badgeCount.count = cardIds.length - selectedCardCountInStack;
       this._badgeCount.x = this._cardContainer.x + 5;
       this._badgeCount.y = this._cardContainer.y + 5;
