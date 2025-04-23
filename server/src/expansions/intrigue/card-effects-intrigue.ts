@@ -164,7 +164,7 @@ const expansionModule: CardExpansionModule = {
         Object.keys(match.stats.playedCards)
           .filter(cardId =>
             cardLibrary.getCard(+cardId).type.includes('ACTION')
-            && match.stats.playedCards[+cardId].playedPlayerId === playerId);
+            && match.stats.playedCards[+cardId].playerId === playerId);
       
       console.log(`[CONSPIRATOR EFFECT] action cards played so far ${actionCardCount.length}`);
       

@@ -55,10 +55,7 @@ type CardStats = {
   turnNumber: number;
   
   // the player that played the card
-  playedPlayerId: PlayerId;
-  
-  // the player whose turn it was when the card was played.
-  turnPlayerId: PlayerId
+  playerId: PlayerId;
 };
 
 export type MatchStats = {
@@ -83,6 +80,7 @@ export type Match = {
   playerHands: Record<PlayerId, CardId[]>;
   playerTreasure: number;
   players: Player[];
+  roundNumber: number;
   scores: Record<PlayerId, number>,
   selectableCards: Record<PlayerId, CardId[]>;
   supply: CardId[];

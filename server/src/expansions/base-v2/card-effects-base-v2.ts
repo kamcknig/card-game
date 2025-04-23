@@ -23,7 +23,7 @@ const expansionModule: CardExpansionModule = {
               .filter((cardId) =>
                 cardLibrary.getCard(+cardId).cardKey === 'silver'
                 && playedCardInfo[+cardId].turnNumber === match.turnNumber
-                && playedCardInfo[+cardId].playedPlayerId === silverTrigger.playerId)
+                && playedCardInfo[+cardId].playerId === silverTrigger.playerId)
             
             return playedSilvers.length === 1;
           },

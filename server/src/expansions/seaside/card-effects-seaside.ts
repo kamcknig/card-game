@@ -217,7 +217,7 @@ const expansion: CardExpansionModule = {
             .filter(cardId => {
               return ['silver', 'gold'].includes(cardLibrary.getCard(+cardId).cardKey) &&
                 match.stats.playedCards[+cardId].turnNumber === match.turnNumber &&
-                match.stats.playedCards[+cardId].playedPlayerId === trigger.playerId
+                match.stats.playedCards[+cardId].playerId === trigger.playerId
             });
           
           return playedSilverCards.length === 1;
@@ -752,7 +752,7 @@ const expansion: CardExpansionModule = {
           );
           
           return cost <= 6 &&
-            cardsGained[cardId].playedPlayerId === previousPlayer.id &&
+            cardsGained[cardId].playerId === previousPlayer.id &&
             cardsGained[cardId].turnNumber <= match.turnNumber;
         });
       
@@ -822,7 +822,7 @@ const expansion: CardExpansionModule = {
       const trashedCards = match.stats.trashedCards;
       const trashedThisTurn = Object.keys(trashedCards)
         .map(Number)
-        .filter(cardId => trashedCards[cardId].playedPlayerId === playerId && trashedCards[cardId].turnNumber === match.turnNumber);
+        .filter(cardId => trashedCards[cardId].playerId === playerId && trashedCards[cardId].turnNumber === match.turnNumber);
       
       if (trashedThisTurn.length > 2) {
         const goldCardIds = match.supply.filter(cardId => cardLibrary.getCard(cardId).cardKey === 'gold');

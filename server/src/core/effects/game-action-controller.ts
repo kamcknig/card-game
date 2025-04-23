@@ -110,8 +110,7 @@ export class GameActionController implements GameActionControllerInterface {
     
     this.match.stats.cardsGained[args.cardId] = {
       turnNumber: this.match.turnNumber,
-      turnPlayerId: getCurrentPlayer(this.match).id,
-      playedPlayerId: args.playerId
+      playerId: args.playerId
     };
     
     this.cardLibrary.getCard(args.cardId).owner = args.playerId;
@@ -281,8 +280,7 @@ export class GameActionController implements GameActionControllerInterface {
     
     this.match.stats.trashedCards[args.cardId] = {
       turnNumber: this.match.turnNumber,
-      playedPlayerId: args.playerId,
-      turnPlayerId: getCurrentPlayer(this.match).id
+      playerId: getCurrentPlayer(this.match).id
     };
     
     console.log(`[trashCard action] trashed ${this.cardLibrary.getCard(args.cardId)}`);
@@ -362,6 +360,10 @@ export class GameActionController implements GameActionControllerInterface {
         await this.nextPhase();
       }
     }
+    
+    if (turnPhase === 'cleanup') {
+      await this.nextPhase();
+    }
   }
   
   
@@ -392,7 +394,7 @@ export class GameActionController implements GameActionControllerInterface {
     }
     
     const newPhase = getTurnPhase(match.turnPhaseIndex);
-    const currentPlayer = getCurrentPlayer(match);
+    let currentPlayer = getCurrentPlayer(match);
     
     console.log(`[nextPhase action] entering phase: ${newPhase} for turn ${match.turnNumber}`);
     
@@ -402,10 +404,11 @@ export class GameActionController implements GameActionControllerInterface {
         match.playerBuys = 1;
         match.playerTreasure = 0;
         match.currentPlayerTurnIndex++;
+        match.turnNumber++;
         
         if (match.currentPlayerTurnIndex >= match.players.length) {
           match.currentPlayerTurnIndex = 0;
-          match.turnNumber++;
+          match.roundNumber++;
           
           console.log(`[nextPhase action] new round: ${match.turnNumber} (${match.turnNumber + 1})`);
           
@@ -418,6 +421,25 @@ export class GameActionController implements GameActionControllerInterface {
           turn: match.turnNumber,
           playerId: match.players[match.currentPlayerTurnIndex].id
         });
+        
+        currentPlayer = getCurrentPlayer(match);
+        
+        for (const cardId of match.activeDurationCards) {
+          const turnsSincePlayed = match.turnNumber - match.stats.playedCards[cardId].turnNumber;
+          
+          const shouldMoveToPlayArea = (
+            currentPlayer.id === match.stats.playedCards[cardId].playerId &&
+            turnsSincePlayed > 0
+          );
+          
+          
+          if (shouldMoveToPlayArea) {
+            await this.moveCard({
+              cardId,
+              to: { location: 'playArea' }
+            })
+          }
+        }
         
         const trigger = new ReactionTrigger({
           eventType: 'startTurn',
@@ -438,29 +460,16 @@ export class GameActionController implements GameActionControllerInterface {
         for (const cardId of cardsToDiscard) {
           const card = this.cardLibrary.getCard(cardId);
           
-          if (!card.type.includes('DURATION')) {
+          if (!card.type.includes('DURATION') || !match.stats.playedCards[cardId]) {
             await this.discardCard({ cardId, playerId: currentPlayer.id });
             continue;
           }
           
-          // if the card is a duration card, and it was played this turn
-          const stats = match.stats.playedCards?.[cardId];
-          if (!stats) continue;
-          
-          const turnsPassed = getDistanceToPlayer({
-            startPlayerId: stats.turnPlayerId,
-            targetPlayerId: stats.playedPlayerId,
-            match
-          }) + (match.turnNumber - stats.turnNumber);
-          
-          const turnPlayer = getPlayerById(match, stats.turnPlayerId);
-          const playedPlayer = getPlayerById(match, stats.playedPlayerId);
-          
-          console.log(`[nextPhase action] ${turnsPassed} turns passed since ${playedPlayer} played ${card} on ${turnPlayer}'s turn`);
+          const turnsSincePlayed = match.turnNumber - match.stats.playedCards[cardId].turnNumber;
           
           const shouldDiscard = (
-            stats.playedPlayerId === currentPlayer.id &&
-            turnsPassed > 0
+            currentPlayer.id === match.stats.playedCards[cardId].playerId &&
+            turnsSincePlayed > 1
           );
           
           if (shouldDiscard) {
@@ -487,7 +496,6 @@ export class GameActionController implements GameActionControllerInterface {
         
         await this.endTurn();
         
-        await this.nextPhase();
         break;
       }
     }
@@ -570,8 +578,7 @@ export class GameActionController implements GameActionControllerInterface {
     
     this.match.stats.playedCards[cardId] = {
       turnNumber: this.match.turnNumber,
-      playedPlayerId: playerId,
-      turnPlayerId: getCurrentPlayer(this.match).id
+      playerId: playerId,
     };
     
     console.log(`[playCard action] ${getPlayerById(this.match, playerId)} played card ${this.cardLibrary.getCard(cardId)}`);
