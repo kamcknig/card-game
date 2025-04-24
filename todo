@@ -84,13 +84,6 @@ SEASIDE still to build
     },
     "type": ["ACTION", "DURATION"]
   },
-  "native-village": {
-    "cardName": "Native Village",
-    "cost": {
-      "treasure": 2
-    },
-    "type": ["ACTION"]
-  },
   "outpost": {
     "cost": {
       "treasure": 5
