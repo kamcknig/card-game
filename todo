@@ -22,8 +22,6 @@ don't allow empty player name
 
 if player name too long - truncate in score view
 
-lookout might not be putting on top of deck
-
 add tailwindcss maybe
 
 for blockade - check on dominion.games what the log looks like for both players
@@ -46,12 +44,6 @@ sailor + haven doesn't seem to work, it moves to the next player's turn too soon
 SEASIDE still to build
 
 {
-  "lookout": {
-    "cost": {
-      "treasure": 3
-    },
-    "type": ["ACTION"]
-  },
   "merchant-ship": {
     "cardName": "Merchant Ship",
     "cost": {
