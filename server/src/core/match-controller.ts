@@ -46,12 +46,12 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     super();
   }
   
-  private _keepers: CardKey[] = ['moat', 'militia', 'corsair', 'lookout', 'island'];
+  private _keepers: CardKey[] = ['moat', 'militia', 'corsair', 'lookout', 'pirate'];
   private _playerHands: Record<CardKey, number>[] = [
     {
       gold: 4,
       silver: 3,
-      haven: 3
+      'pirate': 3
     },
     {
       gold: 3,
@@ -456,6 +456,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       return acc;
     }, {} as CardEffectFunctionMap);
     
+    this._interactivityController = new CardInteractivityController(
+      this._match,
+      this._socketMap,
+      this._cardLibrary,
+      this,
+    );
+    
     this.gameActionsController = new GameActionController(
       cardEffectFunctionMap,
       this._match,
@@ -463,16 +470,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._logManager,
       this._socketMap,
       this._reactionManager,
-      (action, ...args) => this.runGameAction(action, ...args)
-    );
-    
-    this._interactivityController = new CardInteractivityController(
-      this.gameActionsController,
-      this._match,
-      this._socketMap,
-      this._cardLibrary,
-      this.onCardTapHandlerComplete,
-      this,
+      (action, ...args) => this.runGameAction(action, ...args),
+      this._interactivityController,
     );
     
     for (const [playerId, socket] of this._socketMap.entries()) {
@@ -663,7 +662,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   
   private async onNextPhase() {
     await this.runGameAction('nextPhase');
-    await this.runGameAction('checkForRemainingPlayerActions');
+    // await this.runGameAction('checkForRemainingPlayerActions');
     this._socketMap.forEach(s => s.emit('nextPhaseComplete'));
   }
   

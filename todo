@@ -44,19 +44,6 @@ sailor + haven doesn't seem to work, it moves to the next player's turn too soon
 SEASIDE still to build
 
 {
-  "merchant-ship": {
-    "cardName": "Merchant Ship",
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION", "DURATION"]
-  },
-  "monkey": {
-    "cost": {
-      "treasure": 3
-    },
-    "type": ["ACTION", "DURATION"]
-  },
   "outpost": {
     "cost": {
       "treasure": 5

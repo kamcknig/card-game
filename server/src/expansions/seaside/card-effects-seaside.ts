@@ -74,18 +74,17 @@ const expansion: CardExpansionModule = {
     'pirate': {
       onEnterHand: ({ reactionManager, playerId, cardId }) => {
         reactionManager.registerReactionTemplate({
-          id: `pirate:${cardId}:onEnterHand`,
+          id: `pirate:${cardId}:gainCard`,
           playerId,
           compulsory: false,
           allowMultipleInstances: true,
           once: true,
           listeningFor: 'gainCard',
-          condition: ({ cardLibrary, trigger }) =>
-            cardLibrary.getCard(trigger.cardId!).type.includes('TREASURE'),
+          condition: ({ cardLibrary, trigger }) => cardLibrary.getCard(trigger.cardId!).type.includes('TREASURE'),
           triggeredEffectFn: async ({ runGameActionDelegate, trigger }) => {
             await runGameActionDelegate('playCard', {
-              playerId: trigger.playerId!,
-              cardId: trigger.cardId!,
+              playerId,
+              cardId,
               overrides: {
                 actionCost: 0,
               }
@@ -94,7 +93,7 @@ const expansion: CardExpansionModule = {
         });
       },
       onLeaveHand: ({ reactionManager, cardId }) => {
-        reactionManager.unregisterTrigger(`pirate:${cardId}:onEnterHand`);
+        reactionManager.unregisterTrigger(`pirate:${cardId}:gainCard`);
       }
     }
   }),
@@ -562,15 +561,18 @@ const expansion: CardExpansionModule = {
         });
       },
     'pirate':
-      () => async ({ reactionManager, playerId, cardId, runGameActionDelegate }) => {
+      () => async ({ reactionManager, playerId, match, cardId, runGameActionDelegate }) => {
+        const id = `pirate:${cardId}:startTurn`;
+        const turnPlayed = match.stats.playedCards[cardId].turnNumber;
+        
         reactionManager.registerReactionTemplate({
-          id: `pirate:${cardId}:startTurn`,
+          id,
           playerId,
           listeningFor: 'startTurn',
           once: true,
           allowMultipleInstances: true,
           compulsory: true,
-          condition: ({ trigger }) => trigger.playerId === playerId,
+          condition: ({ trigger, reaction }) => trigger.playerId === playerId && reaction.id === id && match.turnNumber !== turnPlayed,
           triggeredEffectFn: async () => {
             console.log(`[pirate triggered effect] prompting user to select treasure costing up to 6...`);
             const cardIds = (await runGameActionDelegate('selectCard', {

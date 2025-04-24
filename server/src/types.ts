@@ -142,7 +142,8 @@ export type TriggeredEffectContext = {
 export type TriggeredEffectConditionContext = {
   match: Match;
   cardLibrary: CardLibrary;
-  trigger: ReactionTrigger
+  trigger: ReactionTrigger;
+  reaction: Reaction;
 };
 
 export type GameActionArgsMap = {

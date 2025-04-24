@@ -29,6 +29,7 @@ import { findSourceByLocationSpec } from '../../utils/find-source-by-location-sp
 import { findCards } from '../../utils/find-cards.ts';
 import { castArray, isNumber } from 'es-toolkit/compat';
 import { ReactionManager } from '../reactions/reaction-manager.ts';
+import { CardInteractivityController } from '../card-interactivity-controller.ts';
 
 export class GameActionController implements GameActionControllerInterface {
   constructor(
@@ -38,7 +39,8 @@ export class GameActionController implements GameActionControllerInterface {
     private logManager: LogManager,
     private socketMap: Map<PlayerId, AppSocket>,
     private reactionManager: ReactionManager,
-    private runGameActionDelegate: RunGameActionDelegate
+    private runGameActionDelegate: RunGameActionDelegate,
+    private readonly interactivityController: CardInteractivityController,
   ) {
   }
   
@@ -339,7 +341,9 @@ export class GameActionController implements GameActionControllerInterface {
     const currentPlayer = getCurrentPlayer(match);
     const turnPhase = getTurnPhase(match.turnPhaseIndex);
     
-    console.log(`[checkForRemainingPlayerActions action] phase: ${turnPhase}, player: ${currentPlayer.name}`);
+    console.log(`[checkForRemainingPlayerActions action] phase: ${turnPhase} for ${currentPlayer} turn ${match.turnNumber}`);
+    
+    this.interactivityController.checkCardInteractivity();
     
     if (turnPhase === 'action') {
       const hasActions = match.playerActions > 0;
@@ -394,6 +398,7 @@ export class GameActionController implements GameActionControllerInterface {
     
     if (match.turnPhaseIndex >= TurnPhaseOrderValues.length) {
       match.turnPhaseIndex = 0;
+      match.turnNumber++;
     }
     
     const newPhase = getTurnPhase(match.turnPhaseIndex);
@@ -407,15 +412,10 @@ export class GameActionController implements GameActionControllerInterface {
         match.playerBuys = 1;
         match.playerTreasure = 0;
         match.currentPlayerTurnIndex++;
-        match.turnNumber++;
         
         if (match.currentPlayerTurnIndex >= match.players.length) {
           match.currentPlayerTurnIndex = 0;
           match.roundNumber++;
-          
-          console.log(`[nextPhase action] new round: ${match.turnNumber} (${match.turnNumber + 1})`);
-          
-          await this.endTurn();
         }
         
         this.logManager.addLogEntry({
@@ -427,7 +427,9 @@ export class GameActionController implements GameActionControllerInterface {
         
         currentPlayer = getCurrentPlayer(match);
         
-        for (const cardId of match.activeDurationCards) {
+        console.log(`[nextPhase action] new round: ${match.roundNumber}, turn ${match.turnNumber} for ${currentPlayer}`);
+        
+        for (const cardId of [...match.activeDurationCards]) {
           const turnsSincePlayed = match.turnNumber - match.stats.playedCards[cardId].turnNumber;
           
           const shouldMoveToPlayArea = (
@@ -463,16 +465,18 @@ export class GameActionController implements GameActionControllerInterface {
         for (const cardId of cardsToDiscard) {
           const card = this.cardLibrary.getCard(cardId);
           
-          if (!card.type.includes('DURATION') || !match.stats.playedCards[cardId]) {
+          const stats = match?.stats?.playedCards?.[cardId];
+          
+          if (!card.type.includes('DURATION') || !stats) {
             await this.discardCard({ cardId, playerId: currentPlayer.id });
             continue;
           }
           
-          const turnsSincePlayed = match.turnNumber - match.stats.playedCards[cardId].turnNumber;
+          const turnsSincePlayed = match.turnNumber - stats.turnNumber;
           
           const shouldDiscard = (
-            currentPlayer.id === match.stats.playedCards[cardId].playerId &&
-            turnsSincePlayed > 1
+            currentPlayer.id === stats.playerId &&
+            turnsSincePlayed > 0
           );
           
           if (shouldDiscard) {
@@ -492,9 +496,7 @@ export class GameActionController implements GameActionControllerInterface {
         for (let i = 0; i < 5; i++) {
           console.log(`[nextPhase action] drawing card...`);
           
-          await this.drawCard({
-            playerId: currentPlayer.id
-          });
+          await this.drawCard({ playerId: currentPlayer.id });
         }
         
         await this.endTurn();

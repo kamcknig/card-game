@@ -9,7 +9,7 @@ import { cardLifecycleMap } from '../card-lifecycle-map.ts';
 import { LogManager } from '../log-manager.ts';
 
 export class ReactionManager {
-  private readonly _triggers: Reaction[] = [];
+  private readonly _reactions: Reaction[] = [];
   
   constructor(
     private readonly logManager: LogManager,
@@ -22,17 +22,19 @@ export class ReactionManager {
   public endGame() {
   }
   
-  getReactions(trigger: ReactionTrigger) {
-    return this._triggers.filter((t) => {
-      if (t.listeningFor !== trigger.eventType) return false;
+  getReactions(trigger: ReactionTrigger, reactionSet?: Reaction[]) {
+    const reactions = reactionSet ?? this._reactions;
+    return reactions.filter(reaction => {
+      if (reaction.listeningFor !== trigger.eventType) return false;
       
-      console.log(`[REACTION MANAGER] checking trigger ${trigger} condition for ${t.id} reaction`);
+      console.log(`[REACTION MANAGER] checking trigger ${trigger} condition for ${reaction.id} reaction`);
       
-      if (t.condition !== undefined) {
-        return t.condition({
+      if (reaction.condition !== undefined) {
+        return reaction.condition({
           match: this._match,
           cardLibrary:
-          this._cardLibrary, trigger
+          this._cardLibrary, trigger,
+          reaction
         });
       }
       else {
@@ -42,17 +44,15 @@ export class ReactionManager {
   }
   
   getReactionsForPlayer(trigger: ReactionTrigger, playerId: number) {
-    const reactions = this.getReactions(trigger).filter((item) => {
-      return item.playerId === playerId;
-    });
-    return reactions;
+    const playerReactions = this._reactions.filter(reaction => reaction.playerId === playerId);
+    return this.getReactions(trigger, playerReactions);
   }
   
   unregisterTrigger(triggerId: string) {
-    for (let i = this._triggers.length - 1; i >= 0; i--) {
-      const trigger = this._triggers[i];
+    for (let i = this._reactions.length - 1; i >= 0; i--) {
+      const trigger = this._reactions[i];
       if (trigger.id === triggerId) {
-        this._triggers.splice(i, 1);
+        this._reactions.splice(i, 1);
         console.log(`[REACTION MANAGER] removing trigger reaction ${triggerId} for player ${this._match.players?.find((player) => player.id === trigger.playerId)}`);
       }
     }
@@ -60,7 +60,7 @@ export class ReactionManager {
   
   registerReactionTemplate(reactionTemplate: ReactionTemplate) {
     console.log(`[REACTION MANAGER] registering trigger template ID ${reactionTemplate.id}, for player ${reactionTemplate.playerId}`,);
-    this._triggers.push(new Reaction(reactionTemplate));
+    this._reactions.push(new Reaction(reactionTemplate));
   }
   
   registerLifecycleEvent(trigger: LifecycleEvent, context: { playerId?: PlayerId, cardId: CardId }) {
