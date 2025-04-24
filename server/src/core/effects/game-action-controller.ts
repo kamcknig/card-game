@@ -3,7 +3,7 @@ import {
   LocationSpec,
   Match,
   PlayerId,
-  SelectActionCardArgs,
+  SelectActionCardArgs, SetAsideCard,
   TurnPhaseOrderValues,
   UserPromptActionArgs
 } from 'shared/shared-types.ts';
@@ -29,7 +29,6 @@ import { findSourceByLocationSpec } from '../../utils/find-source-by-location-sp
 import { findCards } from '../../utils/find-cards.ts';
 import { castArray, isNumber } from 'es-toolkit/compat';
 import { ReactionManager } from '../reactions/reaction-manager.ts';
-import { getDistanceToPlayer } from '../../shared/get-player-position-utils.ts';
 
 export class GameActionController implements GameActionControllerInterface {
   constructor(
@@ -514,6 +513,12 @@ export class GameActionController implements GameActionControllerInterface {
       const socket = this.socketMap.get(id);
       socket?.emit('setCardDataOverrides', playerOverrides);
     }
+    
+    const trigger = new ReactionTrigger({
+      eventType: 'endTurn'
+    });
+    
+    await this.reactionManager.runTrigger({ trigger });
   }
   
   async gainTreasure(args: { count: number }) {
@@ -641,5 +646,14 @@ export class GameActionController implements GameActionControllerInterface {
       type: 'shuffleDeck',
       playerId: args.playerId
     });
+  }
+  
+  async setAside(arg: SetAsideCard) {
+    this.match.setAside.push(arg);
+    
+    return () => {
+      const setAsideIdx = this.match.setAside.findIndex(id => id === arg);
+      this.match.setAside.splice(setAsideIdx, 1);
+    }
   }
 }

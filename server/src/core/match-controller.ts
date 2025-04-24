@@ -46,12 +46,12 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     super();
   }
   
-  private _keepers: CardKey[] = ['moat', 'militia', 'corsair', 'fishing-village'];
+  private _keepers: CardKey[] = ['moat', 'militia', 'corsair', 'lighthouse', 'island'];
   private _playerHands: Record<CardKey, number>[] = [
     {
       gold: 3,
       silver: 2,
-      cutpurse: 2
+      haven: 2
     },
     {
       gold: 3,
@@ -125,6 +125,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       playerActions: 0,
       turnPhaseIndex: 0,
       selectableCards: {},
+      setAside: [],
       playArea: [],
       mats: config.players.reduce((acc, nextPlayer) => {
         acc[nextPlayer.id] = {} as Record<Mats, CardId[]>;

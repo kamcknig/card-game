@@ -46,12 +46,6 @@ sailor + haven doesn't seem to work, it moves to the next player's turn too soon
 SEASIDE still to build
 
 {
-  "haven": {
-    "cost": {
-      "treasure": 2
-    },
-    "type": ["ACTION", "DURATION"]
-  },
   "island": {
     "cost": {
       "treasure": 4

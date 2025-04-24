@@ -51,7 +51,7 @@ const expansion: CardExpansionModule = {
             cardLibrary.getCard(trigger.cardId!).type.includes('TREASURE'),
           triggeredEffectFn: async ({ runGameActionDelegate, trigger }) => {
             await runGameActionDelegate('playCard', {
-              playerId: trigger.playerId,
+              playerId: trigger.playerId!,
               cardId: trigger.cardId!,
               overrides: {
                 actionCost: 0,
@@ -158,7 +158,7 @@ const expansion: CardExpansionModule = {
           
           console.log(`[BLOCKADE TRIGGERED EFFECT] gaining curse card to player's discard...`);
           await runGameActionDelegate('gainCard', {
-            playerId: args.trigger.playerId,
+            playerId: args.trigger.playerId!,
             cardId: curseCardIds[0],
             to: { location: 'playerDiscards' },
           });
@@ -210,8 +210,8 @@ const expansion: CardExpansionModule = {
         condition: ({ match, trigger, cardLibrary }) => {
           if (!trigger.cardId) return false;
           
-          if (reactionContext[trigger.playerId]?.result === 'immunity') {
-            console.log(`[corsair triggered effect] ${getPlayerById(match, trigger.playerId)} is immune`);
+          if (reactionContext[trigger.playerId!]?.result === 'immunity') {
+            console.log(`[corsair triggered effect] ${getPlayerById(match, trigger.playerId!)} is immune`);
             return false;
           }
           
@@ -231,7 +231,7 @@ const expansion: CardExpansionModule = {
         triggeredEffectFn: async ({ trigger }) => {
           console.log(`[CORSAIR TRIGGERED EFFECT] trashing card...`);
           await runGameActionDelegate('trashCard', {
-            playerId: trigger.playerId,
+            playerId: trigger.playerId!,
             cardId: trigger.cardId!,
           });
         }
@@ -302,7 +302,6 @@ const expansion: CardExpansionModule = {
       
       const cardIds = await runGameActionDelegate('selectCard', {
         prompt: 'Choose card to set aside',
-        validPrompt: '',
         playerId,
         restrict: { from: { location: 'playerHands' } },
         count: 1,
@@ -312,13 +311,32 @@ const expansion: CardExpansionModule = {
       
       if (!cardId) {
         console.warn('[haven effect] no card selected');
+        
+        reactionManager.registerReactionTemplate({
+          id: `haven:${playedCardId}:endTurn`,
+          playerId,
+          once: true,
+          allowMultipleInstances: true,
+          compulsory: true,
+          listeningFor: 'endTurn',
+          condition: () => true,
+          triggeredEffectFn: async () => {
+            await runGameActionDelegate('discardCard', { cardId: playedCardId, playerId })
+          }
+        })
         return;
       }
       
       await runGameActionDelegate('moveCard', {
-        cardId: cardId,
+        cardId,
         toPlayerId: playerId,
         to: { location: 'set-aside' }
+      });
+      
+      const setAsideCleanup = await runGameActionDelegate('setAside', {
+        cardId,
+        playerId,
+        sourceCardId: playedCardId
       });
       
       reactionManager.registerReactionTemplate({
@@ -330,6 +348,7 @@ const expansion: CardExpansionModule = {
         condition: ({ trigger }) => trigger.playerId === playerId,
         triggeredEffectFn: async () => {
           console.log(`[haven triggered effect] moving selected card to hand...`);
+          setAsideCleanup();
           await runGameActionDelegate('moveCard', {
             cardId: cardId,
             toPlayerId: playerId,
@@ -661,7 +680,7 @@ const expansion: CardExpansionModule = {
         triggeredEffectFn: async ({ runGameActionDelegate, trigger }) => {
           await runGameActionDelegate('playCard', {
             cardId: trigger.cardId!,
-            playerId: trigger.playerId,
+            playerId: trigger.playerId!,
             overrides: {
               actionCost: 0,
             }
