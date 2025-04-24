@@ -176,6 +176,42 @@ const expansion: CardExpansionModule = {
           }
         });
       }
+    },
+    'sea-witch': {
+      onCardPlayed: (args) => {
+        args.reactionManager.registerReactionTemplate({
+          id: `sea-witch:${args.cardId}:startTurn`,
+          playerId: args.playerId,
+          once: true,
+          compulsory: true,
+          allowMultipleInstances: true,
+          listeningFor: 'startTurn',
+          condition: (conditionArgs) => {
+            return conditionArgs.trigger.playerId === args.playerId
+          },
+          triggeredEffectFn: async (triggerArgs) => {
+            console.log(`[sea-witch triggered effect] drawing cards...`)
+            await triggerArgs.runGameActionDelegate('drawCard', { playerId: args.playerId });
+            await triggerArgs.runGameActionDelegate('drawCard', { playerId: args.playerId });
+            
+            console.log(`[sea-witch triggered effect] selecting discarding cards...`);
+            
+            const selectedCards = await triggerArgs.runGameActionDelegate('selectCard', {
+              prompt: 'Discard cards',
+              restrict: { from: { location: 'playerHands' } },
+              count: 2,
+              playerId: args.playerId
+            }) as number[];
+            
+            for (const selectedCardId of selectedCards) {
+              await triggerArgs.runGameActionDelegate('discardCard', {
+                cardId: selectedCardId,
+                playerId: args.playerId
+              });
+            }
+          }
+        })
+      }
     }
   }),
   registerScoringFunctions: () => ({}),
@@ -746,10 +782,10 @@ const expansion: CardExpansionModule = {
       },
     'salvager':
       () => async ({ runGameActionDelegate, playerId, match, cardLibrary }) => {
-        console.log(`[SALVAGER EFFECT] gaining 1 buy...`);
+        console.log(`[salvager effect] gaining 1 buy...`);
         await runGameActionDelegate('gainBuy', { count: 1 });
         
-        console.log(`[SALVAGER EFFECT] prompting user to select a card from hand...`);
+        console.log(`[salvager effect] prompting user to select a card from hand...`);
         const cardIds = (await runGameActionDelegate('selectCard', {
           prompt: 'Trash card',
           playerId,
@@ -760,58 +796,90 @@ const expansion: CardExpansionModule = {
         const cardId = cardIds[0];
         
         if (!cardId) {
-          console.log(`[SALVAGER EFFECT] no card selected...`);
+          console.log(`[salvager effect] no card selected...`);
           return;
         }
         
+        console.log(`[salvager effect] trashing card...`);
+        await runGameActionDelegate('trashCard', { cardId, playerId });
+        
         const effectiveCost = getEffectiveCardCost(playerId, cardId, match, cardLibrary);
         
-        console.log(`[SALVAGER EFFECT] gaining ${effectiveCost} buy...`);
+        console.log(`[salvager effect] gaining ${effectiveCost} buy...`);
         await runGameActionDelegate('gainTreasure', { count: effectiveCost });
       },
-    'sea-chart':
-      () => async ({ runGameActionDelegate, playerId, match, cardLibrary }) => {
-        console.log(`[SEA CHART EFFECT] drawing 1 card...`);
-        await runGameActionDelegate('drawCard', { playerId });
-        
-        console.log(`[SEA CHART EFFECT] gaining 1 action...`);
-        await runGameActionDelegate('gainAction', { count: 1 });
-        
-        const deck = match.playerDecks[playerId];
+    'sea-chart': () => async ({ runGameActionDelegate, playerId, match, cardLibrary }) => {
+      console.log(`[SEA CHART EFFECT] drawing 1 card...`);
+      await runGameActionDelegate('drawCard', { playerId });
+      
+      console.log(`[SEA CHART EFFECT] gaining 1 action...`);
+      await runGameActionDelegate('gainAction', { count: 1 });
+      
+      const deck = match.playerDecks[playerId];
+      
+      if (deck.length === 0) {
+        console.log(`[SEA CHART EFFECT] shuffling deck...`);
+        await runGameActionDelegate('shuffleDeck', { playerId });
         
         if (deck.length === 0) {
-          console.log(`[SEA CHART EFFECT] shuffling deck...`);
-          await runGameActionDelegate('shuffleDeck', { playerId });
-          
-          if (deck.length === 0) {
-            console.log(`[SEA CHART EFFECT] no cards in deck...`);
-            return;
-          }
+          console.log(`[SEA CHART EFFECT] no cards in deck...`);
+          return;
+        }
+      }
+      
+      const cardId = deck.slice(-1)[0];
+      const card = cardLibrary.getCard(cardId);
+      
+      console.log(`[SEA CHART EFFECT] revealing card...`);
+      await runGameActionDelegate('revealCard', {
+        cardId,
+        playerId,
+        moveToRevealed: true
+      });
+      
+      const copyInPlay = match.playArea.map(cardLibrary.getCard)
+        .find(playAreaCard => playAreaCard.cardKey === card.cardKey && playAreaCard.owner === playerId);
+      
+      console.log(`[SEA CHART EFFECT] ${copyInPlay ? 'copy is in play' : 'no copy in play'}...`);
+      
+      console.log(`[SEA CHART EFFECT] moving card to ${copyInPlay ? 'playerHands' : 'playerDecks'}...`);
+      
+      await runGameActionDelegate('moveCard', {
+        cardId,
+        toPlayerId: playerId,
+        to: { location: copyInPlay ? 'playerHands' : 'playerDecks' }
+      });
+    },
+    'sea-witch': () => async (args) => {
+      console.log(`[sea witch effect] drawing cards...`);
+      await args.runGameActionDelegate('drawCard', { playerId: args.playerId });
+      await args.runGameActionDelegate('drawCard', { playerId: args.playerId });
+      
+      const targetPlayerIds = findOrderedTargets({
+        startingPlayerId: args.playerId,
+        appliesTo: 'ALL_OTHER',
+        match: args.match
+      }).filter(playerId => args.reactionContext[playerId]?.result !== 'immunity');
+      
+      for (const targetPlayerId of targetPlayerIds) {
+        const curseCardIds = findCards(args.match, {
+          from: { location: 'supply' },
+          card: { cardKeys: 'curse' }
+        }, args.cardLibrary);
+        if (curseCardIds.length === 0) {
+          console.log(`[sea witch effect] no curses in supply...`);
+          break;
         }
         
-        const cardId = deck.slice(-1)[0];
-        const card = cardLibrary.getCard(cardId);
-        
-        console.log(`[SEA CHART EFFECT] revealing card...`);
-        await runGameActionDelegate('revealCard', {
-          cardId,
-          playerId,
-          moveToRevealed: true
+        console.log(`[sea witch effect] giving curse to ${getPlayerById(args.match, targetPlayerId)}`);
+        await args.runGameActionDelegate('gainCard', {
+          cardId: curseCardIds[0],
+          playerId: targetPlayerId,
+          to: { location: 'playerDiscards' }
         });
-        
-        const copyInPlay = match.playArea.map(cardLibrary.getCard)
-          .find(playAreaCard => playAreaCard.cardKey === card.cardKey && playAreaCard.owner === playerId);
-        
-        console.log(`[SEA CHART EFFECT] ${copyInPlay ? 'copy is in play' : 'no copy in play'}...`);
-        
-        console.log(`[SEA CHART EFFECT] moving card to ${copyInPlay ? 'playerHands' : 'playerDecks'}...`);
-        
-        await runGameActionDelegate('moveCard', {
-          cardId,
-          toPlayerId: playerId,
-          to: { location: copyInPlay ? 'playerHands' : 'playerDecks' }
-        });
-      },
+      }
+      
+    },
     'smugglers':
       () => async ({ match, cardLibrary, playerId, runGameActionDelegate }) => {
         const previousPlayer = getPlayerStartingFrom({

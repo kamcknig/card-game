@@ -50,39 +50,6 @@ SEASIDE still to build
     },
     "type": ["ACTION", "DURATION"]
   },
-  "pirate": {
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION", "DURATION", "REACTION"]
-  },
-  "sailor": {
-    "cost": {
-      "treasure": 4
-    },
-    "type": ["ACTION", "DURATION"]
-  },
-  "salvager": {
-    "cost": {
-      "treasure": 4
-    },
-    "type": ["ACTION"]
-  },
-  "sea-chart": {
-    "cardName": "Sea Chart",
-    "cost": {
-      "treasure": 3
-    },
-    "type": ["ACTION"]
-  },
-  "sea-witch": {
-    "cardName": "Sea Witch",
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION", "DURATION", "ATTACK"],
-    "targetScheme": "ALL_OTHER"
-  },
   "smugglers": {
     "cost": {
       "treasure": 3
