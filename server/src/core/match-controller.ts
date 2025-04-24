@@ -46,12 +46,12 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     super();
   }
   
-  private _keepers: CardKey[] = ['moat', 'militia', 'sea-witch', 'smugglers'];
+  private _keepers: CardKey[] = ['moat', 'militia', 'sea-witch', 'tactician'];
   private _playerHands: Record<CardKey, number>[] = [
     {
       gold: 4,
       silver: 3,
-      'sailor': 3
+      'tactician': 3
     },
     {
       gold: 3,

@@ -3,11 +3,7 @@ import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 import { Card, CardId } from 'shared/shared-types.ts';
 import { findCards } from '../../utils/find-cards.ts';
-import {
-  getDistanceToPlayer,
-  getPlayerStartingFrom,
-  getPlayerTurnIndex
-} from '../../shared/get-player-position-utils.ts';
+import { getPlayerStartingFrom, getPlayerTurnIndex } from '../../shared/get-player-position-utils.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 
@@ -946,6 +942,46 @@ const expansion: CardExpansionModule = {
         cardId: cardId,
         to: { location: 'playerDiscards' },
       });
+    },
+    'tactician': () => async (args) => {
+      const hand = args.match.playerHands[args.playerId];
+      if (hand.length === 0) {
+        console.log(`[tactician effect] no cards in hand...`);
+        return;
+      }
+      
+      console.log(`[tactician effect] discarding hand...`);
+      for (const cardId of [...hand]) {
+        await args.runGameActionDelegate('discardCard', { cardId, playerId: args.playerId });
+      }
+      
+      args.reactionManager.registerReactionTemplate({
+        id: `tactician:${args.cardId}:startTurn`,
+        playerId: args.playerId,
+        listeningFor: 'startTurn',
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: (conditionArgs) => {
+          return conditionArgs.trigger.playerId === args.playerId && args.match.stats.playedCards[args.cardId].turnNumber < args.match.turnNumber
+        },
+        triggeredEffectFn: async (triggerArgs) => {
+          console.warn(`[tactician triggered effect] drawing 5 cards`);
+          for (let i = 0; i < 4; i++) {
+            const card = await triggerArgs.runGameActionDelegate('drawCard', { playerId: args.playerId }) as CardId;
+            if (!card) {
+              console.warn(`[tactician triggered effect] no card drawn`);
+              break;
+            }
+          }
+          
+          console.warn(`[tactician triggered effect] gaining 1 action`);
+          await triggerArgs.runGameActionDelegate('gainAction', { count: 1 });
+          
+          console.warn(`[tactician triggered effect] gaining 1 buy`);
+          await triggerArgs.runGameActionDelegate('gainBuy', { count: 1 });
+        }
+      })
     },
     'treasure-map':
       () => async ({ runGameActionDelegate, playerId, cardId, match, cardLibrary }) => {
