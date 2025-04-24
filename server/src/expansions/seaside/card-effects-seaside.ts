@@ -1007,7 +1007,7 @@ const expansion: CardExpansionModule = {
             playerId: args.playerId,
             prompt: `Discard cards`,
             restrict: { from: { location: 'playerHands' } },
-            count : 2
+            count: 2
           }) as CardId[];
           
           if (!selectedCardIds.length) {
@@ -1022,7 +1022,7 @@ const expansion: CardExpansionModule = {
     },
     'treasure-map':
       () => async ({ runGameActionDelegate, playerId, cardId, match, cardLibrary }) => {
-        console.log(`[TREASURE MAP EFFECT] trashing played treasure map...`);
+        console.log(`[treasure map effect] trashing played treasure map...`);
         await runGameActionDelegate('trashCard', {
           playerId,
           cardId,
@@ -1031,33 +1031,26 @@ const expansion: CardExpansionModule = {
         const hand = match.playerHands[playerId];
         const inHand = hand.find(cardId => cardLibrary.getCard(cardId).cardKey === 'treasure-map');
         
-        console.log(`[TREASURE MAP EFFECT] ${inHand ? 'another treasure map is in hand' : 'no other treasure map in hand'}...`);
+        console.log(`[treasure map effect] ${inHand ? 'another treasure map is in hand' : 'no other treasure map in hand'}...`);
         
         if (!inHand) {
           return;
         }
         
-        console.log(`[TREASURE MAP EFFECT] trashing treasure map from hand...`);
+        console.log(`[treasure map effect] trashing treasure map from hand...`);
         
         await runGameActionDelegate('trashCard', {
           playerId,
           cardId: inHand,
         });
         
-        const trashedCards = match.stats.trashedCards;
-        const trashedThisTurn = Object.keys(trashedCards)
-          .map(Number)
-          .filter(cardId => trashedCards[cardId].playerId === playerId && trashedCards[cardId].turnNumber === match.turnNumber);
-        
-        if (trashedThisTurn.length > 2) {
-          const goldCardIds = match.supply.filter(cardId => cardLibrary.getCard(cardId).cardKey === 'gold');
-          for (let i = 0; i < Math.min(goldCardIds.length, 4); i++) {
-            await runGameActionDelegate('gainCard', {
-              playerId,
-              cardId: goldCardIds[i],
-              to: { location: 'playerDecks' },
-            });
-          }
+        const goldCardIds = match.supply.filter(cardId => cardLibrary.getCard(cardId).cardKey === 'gold');
+        for (let i = 0; i < Math.min(goldCardIds.length, 4); i++) {
+          await runGameActionDelegate('gainCard', {
+            playerId,
+            cardId: goldCardIds[i],
+            to: { location: 'playerDecks' },
+          });
         }
       },
     'warehouse':

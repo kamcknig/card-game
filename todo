@@ -50,13 +50,6 @@ SEASIDE still to build
     },
     "type": ["ACTION", "DURATION"]
   },
-  "treasure-map": {
-    "cardName": "Treasure Map",
-    "cost": {
-      "treasure": 4
-    },
-    "type": ["ACTION"]
-  },
   "treasury": {
     "cost": {
       "treasure": 5
