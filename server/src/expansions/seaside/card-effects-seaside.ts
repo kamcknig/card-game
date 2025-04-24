@@ -10,6 +10,9 @@ import { getPlayerById } from '../../utils/get-player-by-id.ts';
 const expansion: CardExpansionModule = {
   registerCardLifeCycles: () => ({
     'astrolabe': {
+      onLeavePlay: (args) => {
+        args.reactionManager.unregisterTrigger(`astrolabe:${args.cardId}:starTurn`);
+      },
       onCardPlayed: ({ reactionManager, playerId, cardId }) => {
         const id = `astrolabe:${cardId}:starTurn`;
         reactionManager.registerReactionTemplate({
@@ -39,6 +42,10 @@ const expansion: CardExpansionModule = {
       }
     },
     'lighthouse': {
+      onLeavePlay: (args) => {
+        args.reactionManager.unregisterTrigger(`lighthouse:${args.cardId}:startTurn`);
+        args.reactionManager.unregisterTrigger(`lighthouse:${args.cardId}:cardPlayed`);
+      },
       onCardPlayed: args => {
         args.reactionManager.registerReactionTemplate({
           id: `lighthouse:${args.cardId}:cardPlayed`,
@@ -81,7 +88,7 @@ const expansion: CardExpansionModule = {
           once: true,
           listeningFor: 'gainCard',
           condition: ({ cardLibrary, trigger }) => cardLibrary.getCard(trigger.cardId!).type.includes('TREASURE'),
-          triggeredEffectFn: async ({ runGameActionDelegate, trigger }) => {
+          triggeredEffectFn: async ({ runGameActionDelegate }) => {
             await runGameActionDelegate('playCard', {
               playerId,
               cardId,
@@ -94,6 +101,80 @@ const expansion: CardExpansionModule = {
       },
       onLeaveHand: ({ reactionManager, cardId }) => {
         reactionManager.unregisterTrigger(`pirate:${cardId}:gainCard`);
+      }
+    },
+    'sailor': {
+      onLeavePlay: ({ reactionManager, cardId }) => {
+        reactionManager.unregisterTrigger(`sailor:${cardId}:gainCard`);
+        reactionManager.unregisterTrigger(`sailor:${cardId}:startTurn`);
+      },
+      onCardPlayed: (args) => {
+        args.reactionManager.registerReactionTemplate({
+          id: `sailor:${args.cardId}:gainCard`,
+          playerId: args.playerId,
+          listeningFor: 'gainCard',
+          once: true,
+          compulsory: false,
+          allowMultipleInstances: true,
+          condition: (conditionArgs) => {
+            const cardGained = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.cardId!);
+            
+            if (!cardGained.type.includes('DURATION')) {
+              return false;
+            }
+            
+            if (conditionArgs.trigger.playerId !== args.playerId) {
+              return false;
+            }
+            
+            return conditionArgs.match.stats.playedCards[conditionArgs.trigger.cardId!] === undefined;
+          },
+          triggeredEffectFn: async (triggeredArgs) => {
+            console.log(`[sailor triggered effect] playing ${triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.cardId!)}`);
+            await triggeredArgs.runGameActionDelegate('playCard', {
+              playerId: args.playerId,
+              cardId: triggeredArgs.trigger.cardId!,
+              overrides: { actionCost: 0 }
+            });
+          }
+        });
+        
+        args.reactionManager.registerReactionTemplate({
+          id: `sailor:${args.cardId}:startTurn`,
+          listeningFor: 'startTurn',
+          playerId: args.playerId,
+          compulsory: true,
+          once: true,
+          allowMultipleInstances: true,
+          condition: ({ trigger, match }) =>
+            trigger.playerId === args.playerId && match.stats.playedCards[args.cardId].turnNumber !== match.turnNumber,
+          triggeredEffectFn: async () => {
+            console.log(`[sailor triggered effect] gaining 2 treasure...`);
+            await args.runGameActionDelegate('gainTreasure', { count: 2 });
+            
+            const cardIds = await args.runGameActionDelegate('selectCard', {
+              prompt: 'Trash card',
+              playerId: args.playerId,
+              restrict: { from: { location: 'playerHands' } },
+              count: 1,
+              optional: true,
+              cancelPrompt: `Don't trash`
+            }) as number[];
+            
+            const cardId = cardIds[0];
+            
+            if (!cardId) {
+              console.log(`[sailor triggered effect] no card chosen`);
+              return;
+            }
+            
+            console.log(`[sailor triggered effect] trashing selected card...`);
+            await args.runGameActionDelegate('trashCard', {
+              playerId: args.playerId,
+              cardId,
+            });
+          }
+        });
       }
     }
   }),
@@ -572,7 +653,10 @@ const expansion: CardExpansionModule = {
           once: true,
           allowMultipleInstances: true,
           compulsory: true,
-          condition: ({ trigger, reaction }) => trigger.playerId === playerId && reaction.id === id && match.turnNumber !== turnPlayed,
+          condition: ({
+            trigger,
+            reaction
+          }) => trigger.playerId === playerId && reaction.id === id && match.turnNumber !== turnPlayed,
           triggeredEffectFn: async () => {
             console.log(`[pirate triggered effect] prompting user to select treasure costing up to 6...`);
             const cardIds = (await runGameActionDelegate('selectCard', {
@@ -656,73 +740,9 @@ const expansion: CardExpansionModule = {
         }
       },
     'sailor':
-      () => async ({ runGameActionDelegate, playerId, reactionManager, cardId }) => {
+      () => async ({ runGameActionDelegate }) => {
         console.log(`[sailor effect] gaining 1 action...`);
         await runGameActionDelegate('gainAction', { count: 1 });
-        
-        reactionManager.registerReactionTemplate({
-          id: `sailor:${cardId}:startTurn`,
-          listeningFor: 'startTurn',
-          playerId,
-          compulsory: true,
-          once: true,
-          allowMultipleInstances: true,
-          condition: ({ trigger }) => trigger.playerId === playerId,
-          triggeredEffectFn: async () => {
-            console.log(`[sailor triggered effect] gaining 2 treasure...`);
-            await runGameActionDelegate('gainTreasure', { count: 2 });
-            
-            const cardIds = (await runGameActionDelegate('selectCard', {
-              prompt: 'Trash card',
-              playerId,
-              restrict: { from: { location: 'playerHands' } },
-              count: 1,
-              optional: true,
-              cancelPrompt: `Don't trash`
-            })) as number[];
-            
-            const cardId = cardIds[0];
-            
-            if (!cardId) {
-              console.log(`[sailor triggered effect] no card chosen`);
-              return;
-            }
-            
-            console.log(`[sailor triggered effect] trashing selected card...`);
-            await runGameActionDelegate('trashCard', {
-              playerId,
-              cardId,
-            });
-          }
-        });
-        
-        reactionManager.registerReactionTemplate({
-          id: `sailor:${cardId}:gainCard`,
-          playerId,
-          compulsory: false,
-          allowMultipleInstances: true,
-          once: true,
-          condition: ({ match, cardLibrary, trigger }) => {
-            if (!trigger.cardId) {
-              console.warn(`[sailor triggered effect] no trigger.cardId`);
-              return false;
-            }
-            
-            return !match.stats.playedCards[trigger.cardId]
-              && trigger.playerId === playerId
-              && cardLibrary.getCard(trigger.cardId).type.includes('DURATION');
-          },
-          triggeredEffectFn: async ({ runGameActionDelegate, trigger }) => {
-            await runGameActionDelegate('playCard', {
-              cardId: trigger.cardId!,
-              playerId: trigger.playerId!,
-              overrides: {
-                actionCost: 0,
-              }
-            });
-          },
-          listeningFor: 'gainCard'
-        })
       },
     'salvager':
       () => async ({ runGameActionDelegate, playerId, match, cardLibrary }) => {

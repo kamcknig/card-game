@@ -35,8 +35,7 @@ const expansionModule: CardExpansionModule = {
         });
       },
       onLeavePlay: ({ reactionManager, cardId }) => {
-        reactionManager.unregisterTrigger(`merchant:${cardId}:cardPlayed-self`);
-        reactionManager.unregisterTrigger(`merchant:${cardId}:cardPlayed-silver`);
+        reactionManager.unregisterTrigger(`merchant:${cardId}:cardPlayed`);
       },
     },
     'moat': {

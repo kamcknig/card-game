@@ -46,12 +46,12 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     super();
   }
   
-  private _keepers: CardKey[] = ['moat', 'militia', 'corsair', 'lookout', 'pirate'];
+  private _keepers: CardKey[] = ['moat', 'militia', 'corsair', 'lookout', 'sailor'];
   private _playerHands: Record<CardKey, number>[] = [
     {
       gold: 4,
       silver: 3,
-      'pirate': 3
+      'sailor': 3
     },
     {
       gold: 3,
@@ -478,6 +478,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this.initializeSocketListeners(playerId, socket);
     }
     
+    
+    this._matchSnapshot = this.getMatchSnapshot();
     this._match.playerBuys = 1;
     this._match.playerActions = 1;
     

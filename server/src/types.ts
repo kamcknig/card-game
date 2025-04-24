@@ -136,6 +136,8 @@ export type TriggeredEffectContext = {
   runGameActionDelegate: RunGameActionDelegate;
   trigger: ReactionTrigger;
   reaction: Reaction;
+  match: Match;
+  cardLibrary: CardLibrary;
   isRootLog?: boolean;
 };
 

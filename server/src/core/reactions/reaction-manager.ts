@@ -161,6 +161,8 @@ export class ReactionManager {
           isRootLog: false,
           runGameActionDelegate: this.runGameActionDelegate,
           trigger,
+          cardLibrary: this._cardLibrary,
+          match: this._match,
           reaction: selectedReaction,
         });
         
