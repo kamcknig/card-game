@@ -1,25 +1,19 @@
 import { AppSocket } from '../types.ts';
-import { Card, CardId, Match, Player, PlayerId, TurnPhaseOrderValues, } from 'shared/shared-types.ts';
+import { CardId, Match, PlayerId, TurnPhaseOrderValues, } from 'shared/shared-types.ts';
 import { isUndefined } from 'es-toolkit/compat';
 import { getEffectiveCardCost } from '../utils/get-effective-card-cost.ts';
 import { CardLibrary } from './card-library.ts';
 import { MatchController } from './match-controller.ts';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
-import { GameActionController } from './effects/game-action-controller.ts';
 import { getTurnPhase } from '../utils/get-turn-phase.ts';
 
 export class CardInteractivityController {
   private _gameOver: boolean = false;
   
   constructor(
-    private readonly gameActionsController: GameActionController,
     private readonly match: Match,
     private readonly _socketMap: Map<PlayerId, AppSocket>,
     private readonly _cardLibrary: CardLibrary,
-    private readonly _cardTapCompleteCallback: (
-      card: Card,
-      player: Player,
-    ) => void,
     private readonly _matchController: MatchController,
   ) {
     this._socketMap.forEach((s) => {

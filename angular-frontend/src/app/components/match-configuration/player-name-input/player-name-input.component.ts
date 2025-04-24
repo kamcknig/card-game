@@ -30,6 +30,7 @@ import { selfPlayerIdStore } from '../../../state/match-state';
           class="player-name editable"
           type="text"
           autofocus
+          (focus)="$any($event.target)?.select?.()"
           [value]="player.name"
           (input)="onNameChange($any($event.target).value)"
         />

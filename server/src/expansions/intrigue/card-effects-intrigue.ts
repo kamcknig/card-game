@@ -17,8 +17,10 @@ const expansionModule: CardExpansionModule = {
               match.playerHands[playerId].length >= 5 &&
               trigger.playerId !== playerId
           },
-          triggeredEffectFn: async function ({ reaction }) {
+          triggeredEffectFn: async function ({ reaction, cardLibrary }) {
             const sourceId = reaction.getSourceId();
+            
+            console.log(`[diplomat triggered effect] running for ${cardLibrary.getCard(cardId)}`);
             
             await runGameActionDelegate('revealCard', {
               cardId: sourceId,
@@ -164,7 +166,7 @@ const expansionModule: CardExpansionModule = {
         Object.keys(match.stats.playedCards)
           .filter(cardId =>
             cardLibrary.getCard(+cardId).type.includes('ACTION')
-            && match.stats.playedCards[+cardId].playedPlayerId === playerId);
+            && match.stats.playedCards[+cardId].playerId === playerId);
       
       console.log(`[CONSPIRATOR EFFECT] action cards played so far ${actionCardCount.length}`);
       

@@ -9,7 +9,7 @@ import {
   PlayerId,
   SelectActionCardArgs,
   ServerEmitEvents,
-  ServerListenEvents,
+  ServerListenEvents, SetAsideCard, TurnPhase,
   UserPromptActionArgs,
 } from 'shared/shared-types.ts';
 import { toNumber } from 'es-toolkit/compat';
@@ -97,11 +97,12 @@ export const MatchBaseConfiguration = {
   },
 } as const;
 
-type ReactionTriggerArgs = {
-  eventType: TriggerEventType;
-  playerId: number;
-  cardId?: number;
-};
+type ReactionTriggerArgs =
+  | { eventType: 'endTurn' } // no playerId or cardId needed
+  | { eventType: 'startTurn'; playerId: number }
+  | { eventType: 'gainCard' | 'cardPlayed'; playerId: number; cardId: number }
+  | { eventType: 'endTurnPhase'; phase: TurnPhase; };
+
 
 export class ReactionTrigger {
   eventType: TriggerEventType;
@@ -110,12 +111,12 @@ export class ReactionTrigger {
   cardId?: number;
   
   // who triggered this?
-  playerId: number;
+  playerId?: number;
   
   constructor(args: ReactionTriggerArgs) {
     this.eventType = args.eventType;
-    this.cardId = args.cardId;
-    this.playerId = args.playerId;
+    if ('playerId' in args) this.playerId = args.playerId;
+    if ('cardId' in args) this.cardId = args.cardId;
   }
   
   toString() {
@@ -136,13 +137,16 @@ export type TriggeredEffectContext = {
   runGameActionDelegate: RunGameActionDelegate;
   trigger: ReactionTrigger;
   reaction: Reaction;
+  match: Match;
+  cardLibrary: CardLibrary;
   isRootLog?: boolean;
 };
 
 export type TriggeredEffectConditionContext = {
   match: Match;
   cardLibrary: CardLibrary;
-  trigger: ReactionTrigger
+  trigger: ReactionTrigger;
+  reaction: Reaction;
 };
 
 export type GameActionArgsMap = {
@@ -162,6 +166,7 @@ export type GameActionArgsMap = {
   playCard: { playerId: PlayerId; cardId: CardId, overrides?: GameActionOverrides };
   revealCard: { cardId: CardId, playerId: PlayerId, moveToRevealed?: boolean },
   selectCard: SelectActionCardArgs;
+  setAside: SetAsideCard;
   shuffleDeck: { playerId: PlayerId };
   trashCard: { playerId: PlayerId; cardId: CardId };
   userPrompt: UserPromptActionArgs;
@@ -233,7 +238,14 @@ export type GameActionOverrides = {
   playCard?: boolean,
 };
 
-export type TriggerEventType = 'cardPlayed' | 'startTurn' | 'gainCard';
+export type TriggerEventType =
+  | 'cardPlayed'
+  | 'startTurn'
+  | 'gainCard'
+  | 'endTurnPhase'
+  | 'endTurn';
+
+export type ReactionRemoveAt = 'TURN_END' | 'PHASE_END';
 
 export class Reaction {
   // a concatenation of the card key and card id with a '-'

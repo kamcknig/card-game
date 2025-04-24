@@ -55,10 +55,7 @@ type CardStats = {
   turnNumber: number;
   
   // the player that played the card
-  playedPlayerId: PlayerId;
-  
-  // the player whose turn it was when the card was played.
-  turnPlayerId: PlayerId
+  playerId: PlayerId;
 };
 
 export type MatchStats = {
@@ -69,6 +66,12 @@ export type MatchStats = {
   playedCards: Record<CardId, CardStats>;
   trashedCards: Record<PlayerId, CardStats>;
 };
+
+export type SetAsideCard = {
+  cardId: CardId;
+  playerId: PlayerId;
+  sourceCardId: CardId;
+}
 
 export type Match = {
   activeDurationCards: CardId[];
@@ -83,8 +86,10 @@ export type Match = {
   playerHands: Record<PlayerId, CardId[]>;
   playerTreasure: number;
   players: Player[];
+  roundNumber: number;
   scores: Record<PlayerId, number>,
   selectableCards: Record<PlayerId, CardId[]>;
+  setAside: SetAsideCard[];
   supply: CardId[];
   trash: CardId[];
   turnNumber: number;
@@ -95,6 +100,7 @@ export type Match = {
 }
 
 export const TurnPhaseOrderValues = ['action', 'buy', 'cleanup'] as const;
+export type TurnPhase = typeof TurnPhaseOrderValues[number];
 
 export type ServerEmitEvents = {
   addLogEntry: (logEntry: LogEntry) => void;

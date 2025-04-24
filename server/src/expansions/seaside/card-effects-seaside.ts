@@ -3,12 +3,17 @@ import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 import { Card, CardId } from 'shared/shared-types.ts';
 import { findCards } from '../../utils/find-cards.ts';
-import { getPlayerStartingFrom } from '../../shared/get-player-position-utils.ts';
+import { getPlayerStartingFrom, getPlayerTurnIndex } from '../../shared/get-player-position-utils.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
+import { getPlayerById } from '../../utils/get-player-by-id.ts';
+import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 
 const expansion: CardExpansionModule = {
   registerCardLifeCycles: () => ({
     'astrolabe': {
+      onLeavePlay: (args) => {
+        args.reactionManager.unregisterTrigger(`astrolabe:${args.cardId}:starTurn`);
+      },
       onCardPlayed: ({ reactionManager, playerId, cardId }) => {
         const id = `astrolabe:${cardId}:starTurn`;
         reactionManager.registerReactionTemplate({
@@ -37,21 +42,57 @@ const expansion: CardExpansionModule = {
         reactionManager.unregisterTrigger(`corsair:${cardId}:starTurn`);
       }
     },
+    'lighthouse': {
+      onLeavePlay: (args) => {
+        args.reactionManager.unregisterTrigger(`lighthouse:${args.cardId}:startTurn`);
+        args.reactionManager.unregisterTrigger(`lighthouse:${args.cardId}:cardPlayed`);
+      },
+      onCardPlayed: args => {
+        args.reactionManager.registerReactionTemplate({
+          id: `lighthouse:${args.cardId}:cardPlayed`,
+          playerId: args.playerId,
+          listeningFor: 'cardPlayed',
+          condition: ({ trigger, cardLibrary }) => {
+            const playedCard = cardLibrary.getCard(trigger.cardId!);
+            return trigger.cardId !== args.cardId && trigger.playerId !== args.playerId && playedCard.type.includes('ATTACK');
+          },
+          once: false,
+          allowMultipleInstances: false,
+          compulsory: true,
+          triggeredEffectFn: async () => {
+            return 'immunity';
+          }
+        });
+        
+        args.reactionManager.registerReactionTemplate({
+          id: `lighthouse:${args.cardId}:startTurn`,
+          playerId: args.playerId,
+          listeningFor: 'startTurn',
+          condition: ({ trigger }) => trigger.playerId === args.playerId,
+          once: true,
+          allowMultipleInstances: true,
+          compulsory: true,
+          triggeredEffectFn: async () => {
+            args.reactionManager.unregisterTrigger(`lighthouse:${args.cardId}:cardPlayed`);
+            await args.runGameActionDelegate('gainTreasure', { count: 1 });
+          }
+        })
+      }
+    },
     'pirate': {
       onEnterHand: ({ reactionManager, playerId, cardId }) => {
         reactionManager.registerReactionTemplate({
-          id: `pirate:${cardId}:onEnterHand`,
+          id: `pirate:${cardId}:gainCard`,
           playerId,
           compulsory: false,
           allowMultipleInstances: true,
           once: true,
           listeningFor: 'gainCard',
-          condition: ({ cardLibrary, trigger }) =>
-            cardLibrary.getCard(trigger.cardId!).type.includes('TREASURE'),
-          triggeredEffectFn: async ({ runGameActionDelegate, trigger }) => {
+          condition: ({ cardLibrary, trigger }) => cardLibrary.getCard(trigger.cardId!).type.includes('TREASURE'),
+          triggeredEffectFn: async ({ runGameActionDelegate }) => {
             await runGameActionDelegate('playCard', {
-              playerId: trigger.playerId,
-              cardId: trigger.cardId!,
+              playerId,
+              cardId,
               overrides: {
                 actionCost: 0,
               }
@@ -60,7 +101,142 @@ const expansion: CardExpansionModule = {
         });
       },
       onLeaveHand: ({ reactionManager, cardId }) => {
-        reactionManager.unregisterTrigger(`pirate:${cardId}:onEnterHand`);
+        reactionManager.unregisterTrigger(`pirate:${cardId}:gainCard`);
+      }
+    },
+    'sailor': {
+      onLeavePlay: ({ reactionManager, cardId }) => {
+        reactionManager.unregisterTrigger(`sailor:${cardId}:gainCard`);
+        reactionManager.unregisterTrigger(`sailor:${cardId}:startTurn`);
+      },
+      onCardPlayed: (args) => {
+        args.reactionManager.registerReactionTemplate({
+          id: `sailor:${args.cardId}:gainCard`,
+          playerId: args.playerId,
+          listeningFor: 'gainCard',
+          once: true,
+          compulsory: false,
+          allowMultipleInstances: true,
+          condition: (conditionArgs) => {
+            const cardGained = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.cardId!);
+            
+            if (!cardGained.type.includes('DURATION')) {
+              return false;
+            }
+            
+            if (conditionArgs.trigger.playerId !== args.playerId) {
+              return false;
+            }
+            
+            return conditionArgs.match.stats.playedCards[conditionArgs.trigger.cardId!] === undefined;
+          },
+          triggeredEffectFn: async (triggeredArgs) => {
+            console.log(`[sailor triggered effect] playing ${triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.cardId!)}`);
+            await triggeredArgs.runGameActionDelegate('playCard', {
+              playerId: args.playerId,
+              cardId: triggeredArgs.trigger.cardId!,
+              overrides: { actionCost: 0 }
+            });
+          }
+        });
+        
+        args.reactionManager.registerReactionTemplate({
+          id: `sailor:${args.cardId}:startTurn`,
+          listeningFor: 'startTurn',
+          playerId: args.playerId,
+          compulsory: true,
+          once: true,
+          allowMultipleInstances: true,
+          condition: ({ trigger, match }) =>
+            trigger.playerId === args.playerId && match.stats.playedCards[args.cardId].turnNumber !== match.turnNumber,
+          triggeredEffectFn: async () => {
+            console.log(`[sailor triggered effect] gaining 2 treasure...`);
+            await args.runGameActionDelegate('gainTreasure', { count: 2 });
+            
+            const cardIds = await args.runGameActionDelegate('selectCard', {
+              prompt: 'Trash card',
+              playerId: args.playerId,
+              restrict: { from: { location: 'playerHands' } },
+              count: 1,
+              optional: true,
+              cancelPrompt: `Don't trash`
+            }) as number[];
+            
+            const cardId = cardIds[0];
+            
+            if (!cardId) {
+              console.log(`[sailor triggered effect] no card chosen`);
+              return;
+            }
+            
+            console.log(`[sailor triggered effect] trashing selected card...`);
+            await args.runGameActionDelegate('trashCard', {
+              playerId: args.playerId,
+              cardId,
+            });
+          }
+        });
+      }
+    },
+    'sea-witch': {
+      onCardPlayed: (args) => {
+        args.reactionManager.registerReactionTemplate({
+          id: `sea-witch:${args.cardId}:startTurn`,
+          playerId: args.playerId,
+          once: true,
+          compulsory: true,
+          allowMultipleInstances: true,
+          listeningFor: 'startTurn',
+          condition: (conditionArgs) => {
+            return conditionArgs.trigger.playerId === args.playerId
+          },
+          triggeredEffectFn: async (triggerArgs) => {
+            console.log(`[sea-witch triggered effect] drawing cards...`)
+            await triggerArgs.runGameActionDelegate('drawCard', { playerId: args.playerId });
+            await triggerArgs.runGameActionDelegate('drawCard', { playerId: args.playerId });
+            
+            console.log(`[sea-witch triggered effect] selecting discarding cards...`);
+            
+            const selectedCards = await triggerArgs.runGameActionDelegate('selectCard', {
+              prompt: 'Discard cards',
+              restrict: { from: { location: 'playerHands' } },
+              count: 2,
+              playerId: args.playerId
+            }) as number[];
+            
+            for (const selectedCardId of selectedCards) {
+              await triggerArgs.runGameActionDelegate('discardCard', {
+                cardId: selectedCardId,
+                playerId: args.playerId
+              });
+            }
+          }
+        })
+      }
+    },
+    'wharf': {
+      onCardPlayed: (args) => {
+        args.reactionManager.registerReactionTemplate({
+          id: `wharf:${args.cardId}:startTurn`,
+          playerId: args.playerId,
+          listeningFor: 'startTurn',
+          once: true,
+          compulsory: true,
+          allowMultipleInstances: true,
+          condition: (conditionArgs) => {
+            return conditionArgs.trigger.playerId === args.playerId &&
+              conditionArgs.match.stats.playedCards[args.cardId].turnNumber < conditionArgs.match.turnNumber
+          },
+          triggeredEffectFn: async (triggerArgs) => {
+            console.log(`[wharf triggered effect] drawing 2 cards`);
+            for (let i = 0; i < 2; i++) {
+              await triggerArgs.runGameActionDelegate('drawCard', { playerId: args.playerId });
+            }
+            
+            console.log(`[wharf triggered effect] gaining 1 buy`);
+            await triggerArgs.runGameActionDelegate('gainBuy', { count: 1 });
+          }
+        })
       }
     }
   }),
@@ -157,7 +333,7 @@ const expansion: CardExpansionModule = {
           
           console.log(`[BLOCKADE TRIGGERED EFFECT] gaining curse card to player's discard...`);
           await runGameActionDelegate('gainCard', {
-            playerId: args.trigger.playerId,
+            playerId: args.trigger.playerId!,
             cardId: curseCardIds[0],
             to: { location: 'playerDiscards' },
           });
@@ -184,7 +360,7 @@ const expansion: CardExpansionModule = {
         }
       })
     },
-    'corsair': () => async ({ runGameActionDelegate, reactionManager, cardId, playerId }) => {
+    'corsair': () => async ({ runGameActionDelegate, reactionManager, cardId, playerId, reactionContext }) => {
       console.log(`[CORSAIR EFFECT] gaining 2 treasure...`);
       await runGameActionDelegate('gainTreasure', { count: 2 });
       
@@ -209,6 +385,11 @@ const expansion: CardExpansionModule = {
         condition: ({ match, trigger, cardLibrary }) => {
           if (!trigger.cardId) return false;
           
+          if (reactionContext[trigger.playerId!]?.result === 'immunity') {
+            console.log(`[corsair triggered effect] ${getPlayerById(match, trigger.playerId!)} is immune`);
+            return false;
+          }
+          
           const card = cardLibrary.getCard(trigger.cardId);
           
           if (!['silver', 'gold'].includes(card.cardKey)) return false;
@@ -217,7 +398,7 @@ const expansion: CardExpansionModule = {
             .filter(cardId => {
               return ['silver', 'gold'].includes(cardLibrary.getCard(+cardId).cardKey) &&
                 match.stats.playedCards[+cardId].turnNumber === match.turnNumber &&
-                match.stats.playedCards[+cardId].playedPlayerId === trigger.playerId
+                match.stats.playedCards[+cardId].playerId === trigger.playerId
             });
           
           return playedSilverCards.length === 1;
@@ -225,14 +406,14 @@ const expansion: CardExpansionModule = {
         triggeredEffectFn: async ({ trigger }) => {
           console.log(`[CORSAIR TRIGGERED EFFECT] trashing card...`);
           await runGameActionDelegate('trashCard', {
-            playerId: trigger.playerId,
+            playerId: trigger.playerId!,
             cardId: trigger.cardId!,
           });
         }
       })
     },
     'cutpurse': () => async ({ runGameActionDelegate, playerId, match, reactionContext, cardLibrary }) => {
-      console.log(`[CUTPURSE EFFECT] gaining 2 treasure...`);
+      console.log(`[cutpurse effect] gaining 2 treasure...`);
       await runGameActionDelegate('gainTreasure', { count: 2, });
       
       const targetIds = findOrderedTargets({
@@ -245,7 +426,7 @@ const expansion: CardExpansionModule = {
         const hand = match.playerHands[targetId];
         const copperId = hand.find(cardId => cardLibrary.getCard(cardId).cardKey === 'copper');
         if (copperId) {
-          console.log(`[CUTPURSE EFFECT] discarding copper...`);
+          console.log(`[cutpurse effect] discarding copper...`);
           await runGameActionDelegate('discardCard', {
             cardId: copperId,
             playerId: targetId
@@ -253,7 +434,7 @@ const expansion: CardExpansionModule = {
           continue;
         }
         
-        console.log(`[CUTPURSE EFFECT] revealing hand...`);
+        console.log(`[cutpurse effect] revealing hand...`);
         for (const cardId of hand) {
           await runGameActionDelegate('revealCard', {
             cardId,
@@ -263,10 +444,10 @@ const expansion: CardExpansionModule = {
       }
     },
     'fishing-village': () => async ({ runGameActionDelegate, playerId, reactionManager, cardId }) => {
-      console.log(`[FISHING VILLAGE EFFECT] gaining 2 action...`);
+      console.log(`[fishing village effect] gaining 2 action...`);
       await runGameActionDelegate('gainAction', { count: 2 });
       
-      console.log(`[FISHING VILLAGE EFFECT] gaining 1 treasure...`);
+      console.log(`[fishing village effect] gaining 1 treasure...`);
       await runGameActionDelegate('gainTreasure', { count: 1 });
       
       reactionManager.registerReactionTemplate({
@@ -276,12 +457,12 @@ const expansion: CardExpansionModule = {
         playerId,
         allowMultipleInstances: true,
         listeningFor: 'startTurn',
-        condition: () => true,
+        condition: ({ trigger }) => trigger.playerId === playerId,
         triggeredEffectFn: async () => {
-          console.log(`[FISHING VILLAGE TRIGGERED EFFECT] gaining 1 action...`);
+          console.log(`[fishing village triggered effect] gaining 1 action...`);
           await runGameActionDelegate('gainAction', { count: 1 });
           
-          console.log(`[FISHING VILLAGE TRIGGERED EFFECT] gaining 1 treasure...`);
+          console.log(`[fishing village triggered effect] gaining 1 treasure...`);
           await runGameActionDelegate('gainTreasure', { count: 1 });
         }
       })
@@ -296,7 +477,6 @@ const expansion: CardExpansionModule = {
       
       const cardIds = await runGameActionDelegate('selectCard', {
         prompt: 'Choose card to set aside',
-        validPrompt: '',
         playerId,
         restrict: { from: { location: 'playerHands' } },
         count: 1,
@@ -306,13 +486,32 @@ const expansion: CardExpansionModule = {
       
       if (!cardId) {
         console.warn('[haven effect] no card selected');
+        
+        reactionManager.registerReactionTemplate({
+          id: `haven:${playedCardId}:endTurn`,
+          playerId,
+          once: true,
+          allowMultipleInstances: true,
+          compulsory: true,
+          listeningFor: 'endTurn',
+          condition: () => true,
+          triggeredEffectFn: async () => {
+            await runGameActionDelegate('discardCard', { cardId: playedCardId, playerId })
+          }
+        })
         return;
       }
       
       await runGameActionDelegate('moveCard', {
-        cardId: cardId,
+        cardId,
         toPlayerId: playerId,
         to: { location: 'set-aside' }
+      });
+      
+      const setAsideCleanup = await runGameActionDelegate('setAside', {
+        cardId,
+        playerId,
+        sourceCardId: playedCardId
       });
       
       reactionManager.registerReactionTemplate({
@@ -324,6 +523,7 @@ const expansion: CardExpansionModule = {
         condition: ({ trigger }) => trigger.playerId === playerId,
         triggeredEffectFn: async () => {
           console.log(`[haven triggered effect] moving selected card to hand...`);
+          setAsideCleanup();
           await runGameActionDelegate('moveCard', {
             cardId: cardId,
             toPlayerId: playerId,
@@ -363,331 +563,277 @@ const expansion: CardExpansionModule = {
         })
       }
     },
+    'lighthouse': () => async ({ runGameActionDelegate }) => {
+      console.log(`[lighthouse effect] gaining 1 action...`);
+      await runGameActionDelegate('gainAction', { count: 1 });
+      
+      console.log(`[lighthouse effect] gaining 1 treasure...`);
+      await runGameActionDelegate('gainTreasure', { count: 1 });
+    },
     'lookout': () => async ({ runGameActionDelegate, playerId, match }) => {
       console.log(`[LOOKOUT EFFECT] gaining 1 action...`);
       await runGameActionDelegate('gainAction', { count: 1 });
       
       const deck = match.playerDecks[playerId];
       
-      if (deck.length < 3) {
-        console.log(`[LOOKOUT EFFECT] deck has less than 3 cards, shuffling...`);
-        await runGameActionDelegate('shuffleDeck', { playerId });
+      const cardIds = [] as CardId[];
+      while (cardIds.length < 3) {
+        let cardId = deck.slice(-1)[0];
         
-        if (deck.length === 0) {
-          console.log(`[LOOKOUT EFFECT] no cards in deck...`);
-          return;
+        if (cardId === undefined) {
+          await runGameActionDelegate('shuffleDeck', { playerId });
         }
-      }
-      
-      const cardIdsToLookAt = deck.slice(Math.max(-3, -deck.length));
-      
-      console.log(`[LOOKOUT EFFECT] moving cards to look at zone...`);
-      for (const cardId of cardIdsToLookAt) {
+        
+        cardId = deck.slice(-1)[0];
+        
+        if (cardId === undefined) {
+          console.log(`[lookout effect] no card in deck`)
+          break;
+        }
+        
         await runGameActionDelegate('moveCard', {
-          cardId: cardId,
+          cardId,
           to: { location: 'look-at' }
-        })
+        });
+        
+        cardIds.push(cardId);
       }
       
-      console.log(`[LOOKOUT EFFECT] prompting user to select one to trash..`);
-      let result = (await runGameActionDelegate('userPrompt', {
-        playerId,
-        prompt: 'Choose one to trash',
-        content: {
-          type: 'select',
-          cardIds: cardIdsToLookAt,
-          selectCount: 1
+      const prompts = ['Trash one', 'Discard one'];
+      const l = cardIds.length;
+      
+      for (let i = 0; i < l; i++) {
+        let selectedId: number | undefined = undefined;
+        
+        if (cardIds.length === 1) {
+          selectedId = cardIds[0];
         }
-      })) as { action: number, result: number[] };
-      
-      let cardId = result.result[0];
-      
-      console.log(`[LOOKOUT EFFECT] trashing selected card..`);
-      await runGameActionDelegate('trashCard', {
-        playerId,
-        cardId,
-      });
-      
-      cardIdsToLookAt.splice(cardIdsToLookAt.indexOf(cardId), 1);
-      
-      if (cardIdsToLookAt.length === 0) {
-        console.log(`[LOOKOUT EFFECT] not enough cards to continue..`);
-        return;
-      }
-      
-      console.log(`[LOOKOUT EFFECT] prompting user to select one to discard..`);
-      result = (await runGameActionDelegate('userPrompt', {
-        playerId,
-        prompt: 'Choose one to discard',
-        content: {
-          type: 'select',
-          cardIds: cardIdsToLookAt,
-          selectCount: 1
-        }
-      })) as { action: number, result: number[] };
-      
-      cardId = result.result[0];
-      
-      console.log(`[LOOKOUT EFFECT] discarding selected card...`);
-      await runGameActionDelegate('discardCard', {
-        cardId,
-        playerId
-      });
-      
-      cardIdsToLookAt.splice(cardIdsToLookAt.indexOf(cardId), 1);
-      
-      if (cardIdsToLookAt.length === 0) {
-        console.log(`[LOOKOUT EFFECT] not enough cards to continue...`);
-        return;
-      }
-      
-      cardId = cardIdsToLookAt[0];
-      
-      console.log(`[LOOKOUT EFFECT] putting last card back on deck...`);
-      await runGameActionDelegate('moveCard', {
-        cardId: cardId,
-        to: { location: 'playerDecks' },
-        toPlayerId: playerId
-      })
-    },
-    'merchant-ship': () => async ({ runGameActionDelegate, playerId, reactionManager, cardId }) => {
-      console.log(`[merchant ship effect] gaining 2 treasures...`);
-      await runGameActionDelegate('gainTreasure', { count: 2 });
-      
-      reactionManager.registerReactionTemplate({
-        id: `merchant-ship:${cardId}:startTurn`,
-        playerId,
-        compulsory: true,
-        allowMultipleInstances: true,
-        once: true,
-        listeningFor: 'startTurn',
-        condition: ({ trigger }) => trigger.playerId === playerId,
-        triggeredEffectFn: async () => {
-          console.log(`[merchant ship triggered effect] gaining 2 treasure...`);
-          await runGameActionDelegate('gainTreasure', { count: 2 });
-        }
-      })
-    },
-    'monkey': () => async ({ reactionManager, match, playerId, cardId, runGameActionDelegate }) => {
-      reactionManager.registerReactionTemplate({
-        id: `monkey:${cardId}:startTurn`,
-        playerId,
-        compulsory: true,
-        once: true,
-        allowMultipleInstances: true,
-        listeningFor: 'startTurn',
-        condition: ({ trigger }) => trigger.playerId === playerId,
-        triggeredEffectFn: async () => {
-          console.log(`[monkey triggered effect] drawing card at start of turn...`);
-          await runGameActionDelegate('drawCard', { playerId });
-          
-          reactionManager.unregisterTrigger(`monkey:${cardId}:gainCard`);
-        }
-      });
-      
-      const thisPlayerTurnIdx = match.players.findIndex(p => p.id === playerId);
-      const playerToRightId = getPlayerStartingFrom({
-        startFromIdx: thisPlayerTurnIdx,
-        match,
-        distance: -1
-      }).id;
-      
-      reactionManager.registerReactionTemplate({
-        id: `monkey:${cardId}:gainCard`,
-        playerId,
-        compulsory: true,
-        allowMultipleInstances: true,
-        listeningFor: 'gainCard',
-        once: false,
-        triggeredEffectFn: async () => {
-          console.log(`[monkey triggered effect] drawing card, because player to the right gained a card...`);
-          await runGameActionDelegate('drawCard', { playerId });
-        },
-        condition: ({ trigger }) => trigger.playerId === playerToRightId
-      });
-    },
-    'pirate': () => async ({ reactionManager, playerId, cardId, runGameActionDelegate }) => {
-      reactionManager.registerReactionTemplate({
-        id: `pirate:${cardId}:startTurn`,
-        playerId,
-        listeningFor: 'startTurn',
-        once: true,
-        allowMultipleInstances: true,
-        compulsory: true,
-        condition: ({ trigger }) => trigger.playerId === playerId,
-        triggeredEffectFn: async () => {
-          console.log(`[pirate triggered effect] prompting user to select treasure costing up to 6...`);
-          const cardIds = (await runGameActionDelegate('selectCard', {
-            prompt: 'Gain card',
-            validPrompt: '',
+        else {
+          const selectedIds = await runGameActionDelegate('userPrompt', {
             playerId,
-            restrict: {
-              from: { location: ['supply', 'kingdom'] },
-              card: { type: 'TREASURE' },
-              cost: { kind: 'upTo', amount: 6 }
-            },
-            count: 1,
-          })) as number[];
+            prompt: prompts[i],
+            content: {
+              type: 'select',
+              cardIds,
+              selectCount: 1
+            }
+          }) as { result: number[] }
           
-          const cardId = cardIds[0];
-          if (!cardId) {
-            console.warn(`[pirate triggered effect] no card selected...`);
-            return;
-          }
-          
-          console.log(`[pirate triggered effect] gaining selected card to hand...`);
-          await runGameActionDelegate('gainCard', {
+          selectedId = selectedIds.result[0];
+        }
+        
+        cardIds.splice(cardIds.findIndex(id => id === selectedId), 1);
+        
+        if (i === 0) {
+          await runGameActionDelegate('trashCard', {
             playerId,
-            cardId: cardId,
-            to: { location: 'playerHands' },
+            cardId: selectedId,
           });
         }
-      });
-    },
-    'native-village': () => async ({ runGameActionDelegate, playerId, match }) => {
-      console.log(`[NATIVE VILLAGE EFFECT] gaining 2 actions...`);
-      await runGameActionDelegate('gainAction', { count: 2 });
-      
-      console.log(`[NATIVE VILLAGE EFFECT] prompting user to choose...`);
-      
-      const result = (await runGameActionDelegate('userPrompt', {
-        playerId,
-        actionButtons: [
-          { label: 'Put top card on mat', action: 1 },
-          { label: 'Take cards from mat', action: 2 }
-        ]
-      })) as { action: number };
-      
-      if (result.action === 1) {
-        const deck = match.playerDecks[playerId];
-        
-        if (deck.length === 0) {
-          console.log(`[NATIVE VILLAGE EFFECT] shuffling deck...`);
-          await runGameActionDelegate('shuffleDeck', {
+        else if (i === 1) {
+          await runGameActionDelegate('discardCard', {
+            cardId: selectedId,
             playerId
           });
         }
-        
-        const cardId = deck.slice(-1)[0];
-        
-        if (!cardId) {
-          console.log(`[NATIVE VILLAGE EFFECT] no cards in deck...`);
-          return;
+        else {
+          await runGameActionDelegate('moveCard', {
+            cardId: selectedId,
+            toPlayerId: playerId,
+            to: { location: 'playerDecks' }
+          });
         }
-        
-        console.log(`[NATIVE VILLAGE EFFECT] moving card to native village mat...`);
-        await runGameActionDelegate('moveCard', {
-          cardId,
-          toPlayerId: playerId,
-          to: { location: 'native-village' }
-        });
-        
-        return;
-      }
-      
-      const matCardIds = match.mats[playerId]['native-village'].concat();
-      
-      console.log(`[NATIVE VILLAGE EFFECT] moving ${matCardIds.length} cards from native village mat to hand...`);
-      for (const cardId of matCardIds) {
-        await runGameActionDelegate('moveCard', {
-          cardId: cardId,
-          toPlayerId: playerId,
-          to: { location: 'playerHands' }
-        });
       }
     },
-    'sailor': () => async ({ runGameActionDelegate, playerId, reactionManager, cardId }) => {
-      console.log(`[sailor effect] gaining 1 action...`);
-      await runGameActionDelegate('gainAction', { count: 1 });
-      
-      reactionManager.registerReactionTemplate({
-        id: `sailor:${cardId}:startTurn`,
-        listeningFor: 'startTurn',
-        playerId,
-        compulsory: true,
-        once: true,
-        allowMultipleInstances: true,
-        condition: ({ trigger }) => trigger.playerId === playerId,
-        triggeredEffectFn: async () => {
-          console.log(`[sailor triggered effect] gaining 2 treasure...`);
-          await runGameActionDelegate('gainTreasure', { count: 2 });
+    'merchant-ship':
+      () => async ({ runGameActionDelegate, playerId, reactionManager, cardId }) => {
+        console.log(`[merchant ship effect] gaining 2 treasures...`);
+        await runGameActionDelegate('gainTreasure', { count: 2 });
+        
+        reactionManager.registerReactionTemplate({
+          id: `merchant-ship:${cardId}:startTurn`,
+          playerId,
+          compulsory: true,
+          allowMultipleInstances: true,
+          once: true,
+          listeningFor: 'startTurn',
+          condition: ({ trigger }) => trigger.playerId === playerId,
+          triggeredEffectFn: async () => {
+            console.log(`[merchant ship triggered effect] gaining 2 treasure...`);
+            await runGameActionDelegate('gainTreasure', { count: 2 });
+          }
+        })
+      },
+    'monkey':
+      () => async ({ reactionManager, match, playerId, cardId, runGameActionDelegate }) => {
+        reactionManager.registerReactionTemplate({
+          id: `monkey:${cardId}:startTurn`,
+          playerId,
+          compulsory: true,
+          once: true,
+          allowMultipleInstances: true,
+          listeningFor: 'startTurn',
+          condition: ({ trigger }) => trigger.playerId === playerId,
+          triggeredEffectFn: async () => {
+            console.log(`[monkey triggered effect] drawing card at start of turn...`);
+            await runGameActionDelegate('drawCard', { playerId });
+            
+            reactionManager.unregisterTrigger(`monkey:${cardId}:gainCard`);
+          }
+        });
+        
+        const thisPlayerTurnIdx = match.players.findIndex(p => p.id === playerId);
+        const playerToRightId = getPlayerStartingFrom({
+          startFromIdx: thisPlayerTurnIdx,
+          match,
+          distance: -1
+        }).id;
+        
+        reactionManager.registerReactionTemplate({
+          id: `monkey:${cardId}:gainCard`,
+          playerId,
+          compulsory: true,
+          allowMultipleInstances: true,
+          listeningFor: 'gainCard',
+          once: false,
+          triggeredEffectFn: async () => {
+            console.log(`[monkey triggered effect] drawing card, because player to the right gained a card...`);
+            await runGameActionDelegate('drawCard', { playerId });
+          },
+          condition: ({ trigger }) => trigger.playerId === playerToRightId
+        });
+      },
+    'pirate':
+      () => async ({ reactionManager, playerId, match, cardId, runGameActionDelegate }) => {
+        const id = `pirate:${cardId}:startTurn`;
+        const turnPlayed = match.stats.playedCards[cardId].turnNumber;
+        
+        reactionManager.registerReactionTemplate({
+          id,
+          playerId,
+          listeningFor: 'startTurn',
+          once: true,
+          allowMultipleInstances: true,
+          compulsory: true,
+          condition: ({
+            trigger,
+            reaction
+          }) => trigger.playerId === playerId && reaction.id === id && match.turnNumber !== turnPlayed,
+          triggeredEffectFn: async () => {
+            console.log(`[pirate triggered effect] prompting user to select treasure costing up to 6...`);
+            const cardIds = (await runGameActionDelegate('selectCard', {
+              prompt: 'Gain card',
+              validPrompt: '',
+              playerId,
+              restrict: {
+                from: { location: ['supply', 'kingdom'] },
+                card: { type: 'TREASURE' },
+                cost: { kind: 'upTo', amount: 6 }
+              },
+              count: 1,
+            })) as number[];
+            
+            const cardId = cardIds[0];
+            if (!cardId) {
+              console.warn(`[pirate triggered effect] no card selected...`);
+              return;
+            }
+            
+            console.log(`[pirate triggered effect] gaining selected card to hand...`);
+            await runGameActionDelegate('gainCard', {
+              playerId,
+              cardId: cardId,
+              to: { location: 'playerHands' },
+            });
+          }
+        });
+      },
+    'native-village':
+      () => async ({ runGameActionDelegate, playerId, match }) => {
+        console.log(`[NATIVE VILLAGE EFFECT] gaining 2 actions...`);
+        await runGameActionDelegate('gainAction', { count: 2 });
+        
+        console.log(`[NATIVE VILLAGE EFFECT] prompting user to choose...`);
+        
+        const result = (await runGameActionDelegate('userPrompt', {
+          playerId,
+          actionButtons: [
+            { label: 'Put top card on mat', action: 1 },
+            { label: 'Take cards from mat', action: 2 }
+          ]
+        })) as { action: number };
+        
+        if (result.action === 1) {
+          const deck = match.playerDecks[playerId];
           
-          const cardIds = (await runGameActionDelegate('selectCard', {
-            prompt: 'Trash card',
-            playerId,
-            restrict: { from: { location: 'playerHands' } },
-            count: 1,
-            optional: true,
-            cancelPrompt: `Don't trash`
-          })) as number[];
+          if (deck.length === 0) {
+            console.log(`[NATIVE VILLAGE EFFECT] shuffling deck...`);
+            await runGameActionDelegate('shuffleDeck', {
+              playerId
+            });
+          }
           
-          const cardId = cardIds[0];
+          const cardId = deck.slice(-1)[0];
           
           if (!cardId) {
-            console.log(`[sailor triggered effect] no card chosen`);
+            console.log(`[NATIVE VILLAGE EFFECT] no cards in deck...`);
             return;
           }
           
-          console.log(`[sailor triggered effect] trashing selected card...`);
-          await runGameActionDelegate('trashCard', {
-            playerId,
+          console.log(`[NATIVE VILLAGE EFFECT] moving card to native village mat...`);
+          await runGameActionDelegate('moveCard', {
             cardId,
+            toPlayerId: playerId,
+            to: { location: 'native-village' }
+          });
+          
+          return;
+        }
+        
+        const matCardIds = match.mats[playerId]['native-village'].concat();
+        
+        console.log(`[NATIVE VILLAGE EFFECT] moving ${matCardIds.length} cards from native village mat to hand...`);
+        for (const cardId of matCardIds) {
+          await runGameActionDelegate('moveCard', {
+            cardId: cardId,
+            toPlayerId: playerId,
+            to: { location: 'playerHands' }
           });
         }
-      });
-      
-      reactionManager.registerReactionTemplate({
-        id: `sailor:${cardId}:gainCard`,
-        playerId,
-        compulsory: false,
-        allowMultipleInstances: true,
-        once: true,
-        condition: ({ match, cardLibrary, trigger }) => {
-          if (!trigger.cardId) {
-            console.warn(`[sailor triggered effect] no trigger.cardId`);
-            return false;
-          }
-          
-          return !match.stats.playedCards[trigger.cardId]
-            && trigger.playerId === playerId
-            && cardLibrary.getCard(trigger.cardId).type.includes('DURATION');
-        },
-        triggeredEffectFn: async ({ runGameActionDelegate, trigger }) => {
-          await runGameActionDelegate('playCard', {
-            cardId: trigger.cardId!,
-            playerId: trigger.playerId,
-            overrides: {
-              actionCost: 0,
-            }
-          });
-        },
-        listeningFor: 'gainCard'
-      })
-    },
-    'salvager': () => async ({ runGameActionDelegate, playerId, match, cardLibrary }) => {
-      console.log(`[SALVAGER EFFECT] gaining 1 buy...`);
-      await runGameActionDelegate('gainBuy', { count: 1 });
-      
-      console.log(`[SALVAGER EFFECT] prompting user to select a card from hand...`);
-      const cardIds = (await runGameActionDelegate('selectCard', {
-        prompt: 'Trash card',
-        playerId,
-        restrict: { from: { location: 'playerHands' } },
-        count: 1,
-      })) as number[];
-      
-      const cardId = cardIds[0];
-      
-      if (!cardId) {
-        console.log(`[SALVAGER EFFECT] no card selected...`);
-        return;
-      }
-      
-      const effectiveCost = getEffectiveCardCost(playerId, cardId, match, cardLibrary);
-      
-      console.log(`[SALVAGER EFFECT] gaining ${effectiveCost} buy...`);
-      await runGameActionDelegate('gainTreasure', { count: effectiveCost });
-    },
+      },
+    'sailor':
+      () => async ({ runGameActionDelegate }) => {
+        console.log(`[sailor effect] gaining 1 action...`);
+        await runGameActionDelegate('gainAction', { count: 1 });
+      },
+    'salvager':
+      () => async ({ runGameActionDelegate, playerId, match, cardLibrary }) => {
+        console.log(`[salvager effect] gaining 1 buy...`);
+        await runGameActionDelegate('gainBuy', { count: 1 });
+        
+        console.log(`[salvager effect] prompting user to select a card from hand...`);
+        const cardIds = (await runGameActionDelegate('selectCard', {
+          prompt: 'Trash card',
+          playerId,
+          restrict: { from: { location: 'playerHands' } },
+          count: 1,
+        })) as number[];
+        
+        const cardId = cardIds[0];
+        
+        if (!cardId) {
+          console.log(`[salvager effect] no card selected...`);
+          return;
+        }
+        
+        console.log(`[salvager effect] trashing card...`);
+        await runGameActionDelegate('trashCard', { cardId, playerId });
+        
+        const effectiveCost = getEffectiveCardCost(playerId, cardId, match, cardLibrary);
+        
+        console.log(`[salvager effect] gaining ${effectiveCost} buy...`);
+        await runGameActionDelegate('gainTreasure', { count: effectiveCost });
+      },
     'sea-chart': () => async ({ runGameActionDelegate, playerId, match, cardLibrary }) => {
       console.log(`[SEA CHART EFFECT] drawing 1 card...`);
       await runGameActionDelegate('drawCard', { playerId });
@@ -730,19 +876,52 @@ const expansion: CardExpansionModule = {
         to: { location: copyInPlay ? 'playerHands' : 'playerDecks' }
       });
     },
+    'sea-witch': () => async (args) => {
+      console.log(`[sea witch effect] drawing cards...`);
+      await args.runGameActionDelegate('drawCard', { playerId: args.playerId });
+      await args.runGameActionDelegate('drawCard', { playerId: args.playerId });
+      
+      const targetPlayerIds = findOrderedTargets({
+        startingPlayerId: args.playerId,
+        appliesTo: 'ALL_OTHER',
+        match: args.match
+      }).filter(playerId => args.reactionContext[playerId]?.result !== 'immunity');
+      
+      for (const targetPlayerId of targetPlayerIds) {
+        const curseCardIds = findCards(args.match, {
+          from: { location: 'supply' },
+          card: { cardKeys: 'curse' }
+        }, args.cardLibrary);
+        if (curseCardIds.length === 0) {
+          console.log(`[sea witch effect] no curses in supply...`);
+          break;
+        }
+        
+        console.log(`[sea witch effect] giving curse to ${getPlayerById(args.match, targetPlayerId)}`);
+        await args.runGameActionDelegate('gainCard', {
+          cardId: curseCardIds[0],
+          playerId: targetPlayerId,
+          to: { location: 'playerDiscards' }
+        });
+      }
+    },
     'smugglers': () => async ({ match, cardLibrary, playerId, runGameActionDelegate }) => {
       const previousPlayer = getPlayerStartingFrom({
-        startFromIdx: match.currentPlayerTurnIndex,
+        startFromIdx: getPlayerTurnIndex({ match, playerId }),
         match,
         distance: -1
       });
       
-      console.log(`[SMUGGLERS EFFECT] looking at ${previousPlayer} cards played`);
+      console.log(`[smugglers effect] looking at ${previousPlayer} cards gained`);
       
       const cardsGained = match.stats.cardsGained;
       
       let cardIds = Object.keys(cardsGained)
         .map(Number)
+        .filter(cardId => {
+          return cardsGained[cardId].playerId === previousPlayer.id &&
+            cardsGained[cardId].turnNumber === match.turnNumber - 1;
+        })
         .filter(cardId => {
           const cost = getEffectiveCardCost(
             playerId,
@@ -751,44 +930,38 @@ const expansion: CardExpansionModule = {
             cardLibrary
           );
           
-          return cost <= 6 &&
-            cardsGained[cardId].playedPlayerId === previousPlayer.id &&
-            cardsGained[cardId].turnNumber <= match.turnNumber;
+          return cost <= 6;
         });
       
-      console.log(`[SMUGGLERS EFFECT] found ${cardIds.length} costing up to 6 that were played`);
+      console.log(`[smugglers effect] found ${cardIds.length} costing up to 6 that were played`);
       
       const inSupply = (card: Card) =>
         match.supply.concat(match.kingdom).find(id => cardLibrary.getCard(id).cardKey === card.cardKey);
       
       cardIds = cardIds.map(cardLibrary.getCard).map(inSupply).filter(id => id !== undefined);
       
-      console.log(`[SMUGGLERS EFFECT] found ${cardIds.length} available cards in supply to choose from`);
+      console.log(`[smugglers effect] found ${cardIds.length} available cards in supply to choose from`);
       
       if (!cardIds.length) {
         return;
       }
       
-      console.log(`[SMUGGLERS EFFECT] prompting user to select a card...`);
+      console.log(`[smugglers effect] prompting user to select a card...`);
       
-      const result = (await runGameActionDelegate('userPrompt', {
-        playerId,
-        prompt: 'Choose a card to gain',
-        content: {
-          type: 'select',
-          selectCount: 1,
-          cardIds
-        },
-      })) as { action: number, result: CardId[] };
+      const results = await runGameActionDelegate('selectCard', {
+        playerId: playerId,
+        restrict: cardIds,
+        prompt: `Gain a card`,
+      }) as number[];
       
-      const cardId = result.result[0];
+      const cardId = results[0];
       
       if (!cardId) {
-        console.warn(`[SMUGGLERS EFFECT] no card selected`);
+        console.warn(`[smugglers effect] no card selected`);
         return;
       }
       
-      console.log(`[SMUGGLERS EFFECT] gaining card...`);
+      console.log(`[smugglers effect] gaining card...`);
       
       await runGameActionDelegate('gainCard', {
         playerId,
@@ -796,8 +969,85 @@ const expansion: CardExpansionModule = {
         to: { location: 'playerDiscards' },
       });
     },
+    'tactician': () => async (args) => {
+      const hand = args.match.playerHands[args.playerId];
+      if (hand.length === 0) {
+        console.log(`[tactician effect] no cards in hand...`);
+        return;
+      }
+      
+      console.log(`[tactician effect] discarding hand...`);
+      for (const cardId of [...hand]) {
+        await args.runGameActionDelegate('discardCard', { cardId, playerId: args.playerId });
+      }
+      
+      args.reactionManager.registerReactionTemplate({
+        id: `tactician:${args.cardId}:startTurn`,
+        playerId: args.playerId,
+        listeningFor: 'startTurn',
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: (conditionArgs) => {
+          return conditionArgs.trigger.playerId === args.playerId && args.match.stats.playedCards[args.cardId].turnNumber < args.match.turnNumber
+        },
+        triggeredEffectFn: async (triggerArgs) => {
+          console.warn(`[tactician triggered effect] drawing 5 cards`);
+          for (let i = 0; i < 4; i++) {
+            const card = await triggerArgs.runGameActionDelegate('drawCard', { playerId: args.playerId }) as CardId;
+            if (!card) {
+              console.warn(`[tactician triggered effect] no card drawn`);
+              break;
+            }
+          }
+          
+          console.warn(`[tactician triggered effect] gaining 1 action`);
+          await triggerArgs.runGameActionDelegate('gainAction', { count: 1 });
+          
+          console.warn(`[tactician triggered effect] gaining 1 buy`);
+          await triggerArgs.runGameActionDelegate('gainBuy', { count: 1 });
+        }
+      })
+    },
+    'tide-pools': () => async (args) => {
+      console.log(`[tide pools effect] drawing 3 cards...`);
+      for (let i = 0; i < 3; i++) {
+        await args.runGameActionDelegate('drawCard', { playerId: args.playerId });
+      }
+      
+      console.log(`[tide pools effect] gaining 1 action...`);
+      await args.runGameActionDelegate('gainAction', { count: 1 });
+      
+      args.reactionManager.registerReactionTemplate({
+        id: `tide-pools:${args.cardId}:startTurn`,
+        playerId: args.playerId,
+        listeningFor: 'startTurn',
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: (conditionArgs) =>
+          conditionArgs.trigger.playerId === args.playerId && args.match.stats.playedCards[args.cardId].turnNumber < args.match.turnNumber,
+        triggeredEffectFn: async (triggerArgs) => {
+          console.log(`[tide pools triggered effect] selecting two cards to discard`);
+          const selectedCardIds = await triggerArgs.runGameActionDelegate('selectCard', {
+            playerId: args.playerId,
+            prompt: `Discard cards`,
+            restrict: { from: { location: 'playerHands' } },
+            count: 2
+          }) as CardId[];
+          
+          if (!selectedCardIds.length) {
+            return;
+          }
+          
+          for (const cardId of selectedCardIds) {
+            await triggerArgs.runGameActionDelegate('discardCard', { cardId, playerId: args.playerId });
+          }
+        }
+      })
+    },
     'treasure-map': () => async ({ runGameActionDelegate, playerId, cardId, match, cardLibrary }) => {
-      console.log(`[TREASURE MAP EFFECT] trashing played treasure map...`);
+      console.log(`[treasure map effect] trashing played treasure map...`);
       await runGameActionDelegate('trashCard', {
         playerId,
         cardId,
@@ -806,56 +1056,86 @@ const expansion: CardExpansionModule = {
       const hand = match.playerHands[playerId];
       const inHand = hand.find(cardId => cardLibrary.getCard(cardId).cardKey === 'treasure-map');
       
-      console.log(`[TREASURE MAP EFFECT] ${inHand ? 'another treasure map is in hand' : 'no other treasure map in hand'}...`);
+      console.log(`[treasure map effect] ${inHand ? 'another treasure map is in hand' : 'no other treasure map in hand'}...`);
       
       if (!inHand) {
         return;
       }
       
-      console.log(`[TREASURE MAP EFFECT] trashing treasure map from hand...`);
+      console.log(`[treasure map effect] trashing treasure map from hand...`);
       
       await runGameActionDelegate('trashCard', {
         playerId,
         cardId: inHand,
       });
       
-      const trashedCards = match.stats.trashedCards;
-      const trashedThisTurn = Object.keys(trashedCards)
-        .map(Number)
-        .filter(cardId => trashedCards[cardId].playedPlayerId === playerId && trashedCards[cardId].turnNumber === match.turnNumber);
-      
-      if (trashedThisTurn.length > 2) {
-        const goldCardIds = match.supply.filter(cardId => cardLibrary.getCard(cardId).cardKey === 'gold');
-        for (let i = 0; i < Math.min(goldCardIds.length, 4); i++) {
-          await runGameActionDelegate('gainCard', {
-            playerId,
-            cardId: goldCardIds[i],
-            to: { location: 'playerDecks' },
-          });
-        }
+      const goldCardIds = match.supply.filter(cardId => cardLibrary.getCard(cardId).cardKey === 'gold');
+      for (let i = 0; i < Math.min(goldCardIds.length, 4); i++) {
+        await runGameActionDelegate('gainCard', {
+          playerId,
+          cardId: goldCardIds[i],
+          to: { location: 'playerDecks' },
+        });
       }
     },
-    'warehouse': () => async ({ runGameActionDelegate, playerId, match }) => {
-      console.log(`[WAREHOUSE EFFECT] drawing 3 cards...`);
+    'treasury': () => async (args) => {
+      console.log(`[treasury effect] drawing 1 card...`);
+      await args.runGameActionDelegate('drawCard', { playerId: args.playerId });
+      
+      console.log(`[treasury effect] gaining 1 action...`);
+      await args.runGameActionDelegate('gainAction', { count: 1 });
+      
+      console.log(`[treasury effect] gaining 1 treasure...`);
+      await args.runGameActionDelegate('gainTreasure', { count: 1 });
+      
+      args.reactionManager.registerReactionTemplate({
+        id: `treasury:${args.cardId}:endTurnPhase`,
+        playerId: args.playerId,
+        listeningFor: 'endTurnPhase',
+        once: true,
+        compulsory: false,
+        allowMultipleInstances: true,
+        condition: (conditionArgs) => {
+          if (getTurnPhase(args.match.turnPhaseIndex) !== 'buy') return false;
+          
+          const victoryCardsGained = Object.entries(conditionArgs.match.stats.cardsGained)
+            .filter(([id, stats]) => {
+              return stats.turnNumber === conditionArgs.match.turnNumber &&
+                conditionArgs.cardLibrary.getCard(+id).type.includes('VICTORY');
+            }).map(results => Number(results[0]));
+          
+          if (victoryCardsGained.length > 0) {
+            return false;
+          }
+          
+          return getCurrentPlayer(args.match).id === args.playerId
+        },
+        triggeredEffectFn: async (triggerArgs) => {
+          await triggerArgs.runGameActionDelegate('moveCard', {
+            cardId: args.cardId,
+            toPlayerId: args.playerId,
+            to: { location: 'playerDecks' }
+          });
+        }
+      })
+    },
+    'warehouse': () => async ({ runGameActionDelegate, playerId }) => {
+      console.log(`[warehouse effect] drawing 3 cards...`);
       for (let i = 0; i < 3; i++) {
         await runGameActionDelegate('drawCard', { playerId });
       }
       
-      console.log(`[WAREHOUSE EFFECT] gaining 1 actions...`);
+      console.log(`[warehouse effect] gaining 1 actions...`);
       await runGameActionDelegate('gainAction', { count: 1 });
-      
-      const count = Math.min(3, match.playerHands[playerId].length);
-      
-      console.log(`[WAREHOUSE EFFECT] prompting user to select ${count} cards...`);
       
       const cardIds = (await runGameActionDelegate('selectCard', {
         prompt: 'Discard cards',
         playerId,
         restrict: { from: { location: 'playerHands' } },
-        count,
+        count: 3,
       })) as number[];
       
-      console.log(`[WAREHOUSE EFFECT] discarding cards...`);
+      console.log(`[warehouse effect] discarding cards...`);
       
       for (const cardId of cardIds) {
         await runGameActionDelegate('discardCard', {
@@ -863,6 +1143,15 @@ const expansion: CardExpansionModule = {
           playerId
         });
       }
+    },
+    'wharf': () => async (args) => {
+      console.log(`[wharf effect] drawing 2 cards...`);
+      for (let i = 0; i < 2; i++) {
+        await args.runGameActionDelegate('drawCard', { playerId: args.playerId });
+      }
+      
+      console.log(`[wharf effect] gaining 1 buy...`);
+      await args.runGameActionDelegate('gainBuy', { count: 1 });
     }
   }
 }

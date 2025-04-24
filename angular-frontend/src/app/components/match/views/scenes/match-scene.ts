@@ -447,7 +447,7 @@ export class MatchScene extends Scene {
       });
       doSelectButtonContainer.addChildAt(cancelButton.button, 0);
       cancelButton.button.on('removed', () => cancelButton.button.removeAllListeners());
-      cancelButton.button.on('pointerdown', () => doneListener());
+      cancelButton.button.on('pointerdown', () => doneListener(true));
     }
 
     doSelectButtonContainer.x = Math.floor(
@@ -508,9 +508,9 @@ export class MatchScene extends Scene {
       this._socketService.emit('userInputReceived', signalId, cardIds);
     };
 
-    const doneListener = () => {
+    const doneListener = (cancelled?: boolean) => {
       this._selecting = false;
-      cardsSelectedComplete(selectedCardStore.get());
+      cardsSelectedComplete(!!cancelled ? [] : selectedCardStore.get());
     }
 
     const updateCountText = (countText: Text, count: number) => {
@@ -520,7 +520,7 @@ export class MatchScene extends Scene {
     const validateSelection = (selectedCards: readonly number[]) => {
       if (arg.count === undefined) {
         console.error('validate requires a count');
-        doneListener();
+        doneListener(true);
         return;
       }
 
@@ -537,7 +537,7 @@ export class MatchScene extends Scene {
           if (b) {
             b.alpha = 1;
           }
-          doneSelectingBtn.on('pointerdown', doneListener);
+          doneSelectingBtn.on('pointerdown', () => doneListener());
         }
 
         if (isNumber(arg.count) && !arg.optional) {
@@ -552,7 +552,7 @@ export class MatchScene extends Scene {
           if (b) {
             b.alpha = .6;
           }
-          doneSelectingBtn.off('pointerdown', doneListener);
+          doneSelectingBtn.off('pointerdown', () => doneListener());
         }
       }
     };

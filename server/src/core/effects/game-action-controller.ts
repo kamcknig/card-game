@@ -3,7 +3,7 @@ import {
   LocationSpec,
   Match,
   PlayerId,
-  SelectActionCardArgs,
+  SelectActionCardArgs, SetAsideCard,
   TurnPhaseOrderValues,
   UserPromptActionArgs
 } from 'shared/shared-types.ts';
@@ -29,7 +29,7 @@ import { findSourceByLocationSpec } from '../../utils/find-source-by-location-sp
 import { findCards } from '../../utils/find-cards.ts';
 import { castArray, isNumber } from 'es-toolkit/compat';
 import { ReactionManager } from '../reactions/reaction-manager.ts';
-import { getDistanceToPlayer } from '../../shared/get-player-position-utils.ts';
+import { CardInteractivityController } from '../card-interactivity-controller.ts';
 
 export class GameActionController implements GameActionControllerInterface {
   constructor(
@@ -39,7 +39,8 @@ export class GameActionController implements GameActionControllerInterface {
     private logManager: LogManager,
     private socketMap: Map<PlayerId, AppSocket>,
     private reactionManager: ReactionManager,
-    private runGameActionDelegate: RunGameActionDelegate
+    private runGameActionDelegate: RunGameActionDelegate,
+    private readonly interactivityController: CardInteractivityController,
   ) {
   }
   
@@ -69,6 +70,9 @@ export class GameActionController implements GameActionControllerInterface {
   
   async moveCard(args: { toPlayerId?: PlayerId, cardId: CardId, to: LocationSpec }) {
     const oldSource = findSourceByCardId(args.cardId, this.match, this.cardLibrary);
+    args.to.location = castArray(args.to.location);
+    const newSource = findSourceByLocationSpec({ spec: args.to, playerId: args.toPlayerId }, this.match);
+    
     oldSource.sourceStore.splice(oldSource.index, 1);
     
     switch (oldSource.storeKey) {
@@ -76,12 +80,13 @@ export class GameActionController implements GameActionControllerInterface {
         this.reactionManager.registerLifecycleEvent('onLeaveHand', { playerId: args.toPlayerId!, cardId: args.cardId });
         break;
       case 'playArea':
+      case 'activeDuration':
+        if (newSource === this.match.playArea || newSource === this.match.activeDurationCards) break;
         this.reactionManager.registerLifecycleEvent('onLeavePlay', { cardId: args.cardId });
     }
     
     args.to.location = castArray(args.to.location);
     
-    const newSource = findSourceByLocationSpec({ spec: args.to, playerId: args.toPlayerId }, this.match);
     newSource.push(args.cardId);
     
     switch (args.to.location[0]) {
@@ -110,8 +115,7 @@ export class GameActionController implements GameActionControllerInterface {
     
     this.match.stats.cardsGained[args.cardId] = {
       turnNumber: this.match.turnNumber,
-      turnPlayerId: getCurrentPlayer(this.match).id,
-      playedPlayerId: args.playerId
+      playerId: args.playerId
     };
     
     this.cardLibrary.getCard(args.cardId).owner = args.playerId;
@@ -281,8 +285,7 @@ export class GameActionController implements GameActionControllerInterface {
     
     this.match.stats.trashedCards[args.cardId] = {
       turnNumber: this.match.turnNumber,
-      playedPlayerId: args.playerId,
-      turnPlayerId: getCurrentPlayer(this.match).id
+      playerId: getCurrentPlayer(this.match).id
     };
     
     console.log(`[trashCard action] trashed ${this.cardLibrary.getCard(args.cardId)}`);
@@ -338,7 +341,9 @@ export class GameActionController implements GameActionControllerInterface {
     const currentPlayer = getCurrentPlayer(match);
     const turnPhase = getTurnPhase(match.turnPhaseIndex);
     
-    console.log(`[checkForRemainingPlayerActions action] phase: ${turnPhase}, player: ${currentPlayer.name}`);
+    console.log(`[checkForRemainingPlayerActions action] phase: ${turnPhase} for ${currentPlayer} turn ${match.turnNumber}`);
+    
+    this.interactivityController.checkCardInteractivity();
     
     if (turnPhase === 'action') {
       const hasActions = match.playerActions > 0;
@@ -361,6 +366,10 @@ export class GameActionController implements GameActionControllerInterface {
         console.log('[checkForRemainingPlayerActions action] skipping to next phase');
         await this.nextPhase();
       }
+    }
+    
+    if (turnPhase === 'cleanup') {
+      await this.nextPhase();
     }
   }
   
@@ -385,14 +394,22 @@ export class GameActionController implements GameActionControllerInterface {
   async nextPhase() {
     const match = this.match;
     
+    const trigger = new ReactionTrigger({
+      eventType: 'endTurnPhase',
+      phase: getTurnPhase(this.match.turnPhaseIndex)
+    });
+    
+    await this.reactionManager.runTrigger({ trigger });
+    
     match.turnPhaseIndex = match.turnPhaseIndex + 1;
     
     if (match.turnPhaseIndex >= TurnPhaseOrderValues.length) {
       match.turnPhaseIndex = 0;
+      match.turnNumber++;
     }
     
     const newPhase = getTurnPhase(match.turnPhaseIndex);
-    const currentPlayer = getCurrentPlayer(match);
+    let currentPlayer = getCurrentPlayer(match);
     
     console.log(`[nextPhase action] entering phase: ${newPhase} for turn ${match.turnNumber}`);
     
@@ -405,11 +422,7 @@ export class GameActionController implements GameActionControllerInterface {
         
         if (match.currentPlayerTurnIndex >= match.players.length) {
           match.currentPlayerTurnIndex = 0;
-          match.turnNumber++;
-          
-          console.log(`[nextPhase action] new round: ${match.turnNumber} (${match.turnNumber + 1})`);
-          
-          await this.endTurn();
+          match.roundNumber++;
         }
         
         this.logManager.addLogEntry({
@@ -418,6 +431,27 @@ export class GameActionController implements GameActionControllerInterface {
           turn: match.turnNumber,
           playerId: match.players[match.currentPlayerTurnIndex].id
         });
+        
+        currentPlayer = getCurrentPlayer(match);
+        
+        console.log(`[nextPhase action] new round: ${match.roundNumber}, turn ${match.turnNumber} for ${currentPlayer}`);
+        
+        for (const cardId of [...match.activeDurationCards]) {
+          const turnsSincePlayed = match.turnNumber - match.stats.playedCards[cardId].turnNumber;
+          
+          const shouldMoveToPlayArea = (
+            currentPlayer.id === match.stats.playedCards[cardId].playerId &&
+            turnsSincePlayed > 0
+          );
+          
+          
+          if (shouldMoveToPlayArea) {
+            await this.moveCard({
+              cardId,
+              to: { location: 'playArea' }
+            })
+          }
+        }
         
         const trigger = new ReactionTrigger({
           eventType: 'startTurn',
@@ -438,29 +472,18 @@ export class GameActionController implements GameActionControllerInterface {
         for (const cardId of cardsToDiscard) {
           const card = this.cardLibrary.getCard(cardId);
           
-          if (!card.type.includes('DURATION')) {
+          const stats = match?.stats?.playedCards?.[cardId];
+          
+          if (!card.type.includes('DURATION') || !stats) {
             await this.discardCard({ cardId, playerId: currentPlayer.id });
             continue;
           }
           
-          // if the card is a duration card, and it was played this turn
-          const stats = match.stats.playedCards?.[cardId];
-          if (!stats) continue;
-          
-          const turnsPassed = getDistanceToPlayer({
-            startPlayerId: stats.turnPlayerId,
-            targetPlayerId: stats.playedPlayerId,
-            match
-          }) + (match.turnNumber - stats.turnNumber);
-          
-          const turnPlayer = getPlayerById(match, stats.turnPlayerId);
-          const playedPlayer = getPlayerById(match, stats.playedPlayerId);
-          
-          console.log(`[nextPhase action] ${turnsPassed} turns passed since ${playedPlayer} played ${card} on ${turnPlayer}'s turn`);
+          const turnsSincePlayed = match.turnNumber - stats.turnNumber;
           
           const shouldDiscard = (
-            stats.playedPlayerId === currentPlayer.id &&
-            turnsPassed > 0
+            currentPlayer.id === stats.playerId &&
+            turnsSincePlayed > 0
           );
           
           if (shouldDiscard) {
@@ -480,14 +503,11 @@ export class GameActionController implements GameActionControllerInterface {
         for (let i = 0; i < 5; i++) {
           console.log(`[nextPhase action] drawing card...`);
           
-          await this.drawCard({
-            playerId: currentPlayer.id
-          });
+          await this.drawCard({ playerId: currentPlayer.id });
         }
         
         await this.endTurn();
         
-        await this.nextPhase();
         break;
       }
     }
@@ -506,6 +526,14 @@ export class GameActionController implements GameActionControllerInterface {
       const socket = this.socketMap.get(id);
       socket?.emit('setCardDataOverrides', playerOverrides);
     }
+    
+    const trigger = new ReactionTrigger({
+      eventType: 'endTurn'
+    });
+    
+    await this.reactionManager.runTrigger({ trigger });
+    
+    this.reactionManager.cleanUpTriggers()
   }
   
   async gainTreasure(args: { count: number }) {
@@ -570,8 +598,7 @@ export class GameActionController implements GameActionControllerInterface {
     
     this.match.stats.playedCards[cardId] = {
       turnNumber: this.match.turnNumber,
-      playedPlayerId: playerId,
-      turnPlayerId: getCurrentPlayer(this.match).id
+      playerId: playerId,
     };
     
     console.log(`[playCard action] ${getPlayerById(this.match, playerId)} played card ${this.cardLibrary.getCard(cardId)}`);
@@ -583,6 +610,9 @@ export class GameActionController implements GameActionControllerInterface {
       root: true,
     });
     
+    // now add any triggered effects from the card played
+    this.reactionManager.registerLifecycleEvent('onCardPlayed', { playerId: args.playerId, cardId: args.cardId });
+    
     // find any reactions for the cardPlayed event type
     const trigger = new ReactionTrigger({
       eventType: 'cardPlayed',
@@ -593,9 +623,6 @@ export class GameActionController implements GameActionControllerInterface {
     // handle reactions for the card played
     const reactionContext = {};
     await this.reactionManager.runTrigger({ trigger, reactionContext });
-    
-    // now add any triggered effects from the card played
-    this.reactionManager.registerLifecycleEvent('onCardPlayed', { playerId: args.playerId, cardId: args.cardId });
     
     // run the effects of the card played, note passing in the reaction context collected from running the trigger
     // above - e.g., could provide immunity to an attack card played
@@ -634,5 +661,14 @@ export class GameActionController implements GameActionControllerInterface {
       type: 'shuffleDeck',
       playerId: args.playerId
     });
+  }
+  
+  async setAside(arg: SetAsideCard) {
+    this.match.setAside.push(arg);
+    
+    return () => {
+      const setAsideIdx = this.match.setAside.findIndex(id => id === arg);
+      this.match.setAside.splice(setAsideIdx, 1);
+    }
   }
 }

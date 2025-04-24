@@ -46,17 +46,17 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     super();
   }
   
-  private _keepers: CardKey[] = ['moat', 'militia', 'astrolabe', 'blockade'];
+  private _keepers: CardKey[] = ['moat', 'militia', 'sea-witch', 'wharf'];
   private _playerHands: Record<CardKey, number>[] = [
     {
-      gold: 3,
-      silver: 2,
-      copper: 2
+      gold: 4,
+      silver: 3,
+      'treasury': 3
     },
     {
       gold: 3,
       silver: 2,
-      copper: 2,
+      moat: 2,
     },
     {
       gold: 4,
@@ -118,12 +118,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       ...playerCards,
       config: config,
       turnNumber: 0,
+      roundNumber: 0,
       currentPlayerTurnIndex: 0,
       playerBuys: 0,
       playerTreasure: 0,
       playerActions: 0,
       turnPhaseIndex: 0,
       selectableCards: {},
+      setAside: [],
       playArea: [],
       mats: config.players.reduce((acc, nextPlayer) => {
         acc[nextPlayer.id] = {} as Record<Mats, CardId[]>;
@@ -454,6 +456,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       return acc;
     }, {} as CardEffectFunctionMap);
     
+    this._interactivityController = new CardInteractivityController(
+      this._match,
+      this._socketMap,
+      this._cardLibrary,
+      this,
+    );
+    
     this.gameActionsController = new GameActionController(
       cardEffectFunctionMap,
       this._match,
@@ -461,22 +470,16 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._logManager,
       this._socketMap,
       this._reactionManager,
-      (action, ...args) => this.runGameAction(action, ...args)
-    );
-    
-    this._interactivityController = new CardInteractivityController(
-      this.gameActionsController,
-      this._match,
-      this._socketMap,
-      this._cardLibrary,
-      this.onCardTapHandlerComplete,
-      this,
+      (action, ...args) => this.runGameAction(action, ...args),
+      this._interactivityController,
     );
     
     for (const [playerId, socket] of this._socketMap.entries()) {
       this.initializeSocketListeners(playerId, socket);
     }
     
+    
+    this._matchSnapshot = this.getMatchSnapshot();
     this._match.playerBuys = 1;
     this._match.playerActions = 1;
     
@@ -661,7 +664,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   
   private async onNextPhase() {
     await this.runGameAction('nextPhase');
-    await this.runGameAction('checkForRemainingPlayerActions');
+    // await this.runGameAction('checkForRemainingPlayerActions');
     this._socketMap.forEach(s => s.emit('nextPhaseComplete'));
   }
   

@@ -23,7 +23,7 @@ const expansionModule: CardExpansionModule = {
               .filter((cardId) =>
                 cardLibrary.getCard(+cardId).cardKey === 'silver'
                 && playedCardInfo[+cardId].turnNumber === match.turnNumber
-                && playedCardInfo[+cardId].playedPlayerId === silverTrigger.playerId)
+                && playedCardInfo[+cardId].playerId === silverTrigger.playerId)
             
             return playedSilvers.length === 1;
           },
@@ -35,8 +35,7 @@ const expansionModule: CardExpansionModule = {
         });
       },
       onLeavePlay: ({ reactionManager, cardId }) => {
-        reactionManager.unregisterTrigger(`merchant:${cardId}:cardPlayed-self`);
-        reactionManager.unregisterTrigger(`merchant:${cardId}:cardPlayed-silver`);
+        reactionManager.unregisterTrigger(`merchant:${cardId}:cardPlayed`);
       },
     },
     'moat': {

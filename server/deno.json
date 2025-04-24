@@ -1,12 +1,22 @@
 {
   "nodeModulesDir": "auto",
   "compilerOptions": {
-    "lib": ["es2023", "dom", "deno.ns"]
+    "lib": [
+      "es2023",
+      "dom",
+      "deno.ns"
+    ]
   },
   "tasks": {
     "copy:shared": "deno run --check --allow-read --allow-write scripts/copy-shared-sources.ts",
     "dev:watch": "deno run --inspect --check --env-file --allow-read --allow-write --allow-net --allow-env --watch src/server.ts",
     "dev:runbrowsers": "deno run scripts/run-browsers.js"
+  },
+  "lint": {
+    "include": ["src/"],
+    "rules": {
+      "exclude": ["require-await"]
+    }
   },
   "imports": {
     "@denosaurs/event": "jsr:@denosaurs/event@^2.0.2",
