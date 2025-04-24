@@ -38,6 +38,39 @@ const expansion: CardExpansionModule = {
         reactionManager.unregisterTrigger(`corsair:${cardId}:starTurn`);
       }
     },
+    'lighthouse': {
+      onCardPlayed: args => {
+        args.reactionManager.registerReactionTemplate({
+          id: `lighthouse:${args.cardId}:cardPlayed`,
+          playerId: args.playerId,
+          listeningFor: 'cardPlayed',
+          condition: ({trigger, cardLibrary}) => {
+            const playedCard = cardLibrary.getCard(trigger.cardId!);
+            return trigger.cardId !== args.cardId && trigger.playerId !== args.playerId && playedCard.type.includes('ATTACK');
+          },
+          once: false,
+          allowMultipleInstances: false,
+          compulsory: true,
+          triggeredEffectFn: async () => {
+            return 'immunity';
+          }
+        });
+        
+        args.reactionManager.registerReactionTemplate({
+          id: `lighthouse:${args.cardId}:startTurn`,
+          playerId: args.playerId,
+          listeningFor: 'startTurn',
+          condition: ({trigger}) => trigger.playerId === args.playerId,
+          once: true,
+          allowMultipleInstances: true,
+          compulsory: true,
+          triggeredEffectFn: async () => {
+            args.reactionManager.unregisterTrigger(`lighthouse:${args.cardId}:cardPlayed`);
+            await args.runGameActionDelegate('gainTreasure', { count: 1 });
+          }
+        })
+      }
+    },
     'pirate': {
       onEnterHand: ({ reactionManager, playerId, cardId }) => {
         reactionManager.registerReactionTemplate({
@@ -387,6 +420,13 @@ const expansion: CardExpansionModule = {
           toPlayerId: playerId
         })
       }
+    },
+    'lighthouse': () => async ({runGameActionDelegate, reactionContext}) => {
+      console.log(`[lighthouse effect] gaining 1 action...`);
+      await runGameActionDelegate('gainAction', { count: 1 });
+      
+      console.log(`[lighthouse effect] gaining 1 treasure...`);
+      await runGameActionDelegate('gainTreasure', { count: 1 });
     },
     'lookout': () => async ({ runGameActionDelegate, playerId, match }) => {
       console.log(`[LOOKOUT EFFECT] gaining 1 action...`);

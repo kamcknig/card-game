@@ -68,6 +68,9 @@ export class GameActionController implements GameActionControllerInterface {
   
   async moveCard(args: { toPlayerId?: PlayerId, cardId: CardId, to: LocationSpec }) {
     const oldSource = findSourceByCardId(args.cardId, this.match, this.cardLibrary);
+    args.to.location = castArray(args.to.location);
+    const newSource = findSourceByLocationSpec({ spec: args.to, playerId: args.toPlayerId }, this.match);
+    
     oldSource.sourceStore.splice(oldSource.index, 1);
     
     switch (oldSource.storeKey) {
@@ -75,12 +78,13 @@ export class GameActionController implements GameActionControllerInterface {
         this.reactionManager.registerLifecycleEvent('onLeaveHand', { playerId: args.toPlayerId!, cardId: args.cardId });
         break;
       case 'playArea':
+      case 'activeDuration':
+        if (newSource === this.match.playArea || newSource === this.match.activeDurationCards) break;
         this.reactionManager.registerLifecycleEvent('onLeavePlay', { cardId: args.cardId });
     }
     
     args.to.location = castArray(args.to.location);
     
-    const newSource = findSourceByLocationSpec({ spec: args.to, playerId: args.toPlayerId }, this.match);
     newSource.push(args.cardId);
     
     switch (args.to.location[0]) {
@@ -595,6 +599,9 @@ export class GameActionController implements GameActionControllerInterface {
       root: true,
     });
     
+    // now add any triggered effects from the card played
+    this.reactionManager.registerLifecycleEvent('onCardPlayed', { playerId: args.playerId, cardId: args.cardId });
+    
     // find any reactions for the cardPlayed event type
     const trigger = new ReactionTrigger({
       eventType: 'cardPlayed',
@@ -605,9 +612,6 @@ export class GameActionController implements GameActionControllerInterface {
     // handle reactions for the card played
     const reactionContext = {};
     await this.reactionManager.runTrigger({ trigger, reactionContext });
-    
-    // now add any triggered effects from the card played
-    this.reactionManager.registerLifecycleEvent('onCardPlayed', { playerId: args.playerId, cardId: args.cardId });
     
     // run the effects of the card played, note passing in the reaction context collected from running the trigger
     // above - e.g., could provide immunity to an attack card played

@@ -46,19 +46,6 @@ sailor + haven doesn't seem to work, it moves to the next player's turn too soon
 SEASIDE still to build
 
 {
-  "island": {
-    "cost": {
-      "treasure": 4
-    },
-    "type": ["ACTION", "VICTORY"],
-    "victoryPoints": 2
-  },
-  "lighthouse": {
-    "cost": {
-      "treasure": 2
-    },
-    "type": ["ACTION", "DURATION"]
-  },
   "lookout": {
     "cost": {
       "treasure": 3
