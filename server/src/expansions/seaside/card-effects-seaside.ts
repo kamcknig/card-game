@@ -269,10 +269,10 @@ const expansion: CardExpansionModule = {
       }
     },
     'fishing-village': () => async ({ runGameActionDelegate, playerId, reactionManager, cardId }) => {
-      console.log(`[FISHING VILLAGE EFFECT] gaining 2 action...`);
+      console.log(`[fishing village effect] gaining 2 action...`);
       await runGameActionDelegate('gainAction', { count: 2 });
       
-      console.log(`[FISHING VILLAGE EFFECT] gaining 1 treasure...`);
+      console.log(`[fishing village effect] gaining 1 treasure...`);
       await runGameActionDelegate('gainTreasure', { count: 1 });
       
       reactionManager.registerReactionTemplate({
@@ -282,12 +282,12 @@ const expansion: CardExpansionModule = {
         playerId,
         allowMultipleInstances: true,
         listeningFor: 'startTurn',
-        condition: () => true,
+        condition: ({trigger}) => trigger.playerId === playerId,
         triggeredEffectFn: async () => {
-          console.log(`[FISHING VILLAGE TRIGGERED EFFECT] gaining 1 action...`);
+          console.log(`[fishing village triggered effect] gaining 1 action...`);
           await runGameActionDelegate('gainAction', { count: 1 });
           
-          console.log(`[FISHING VILLAGE TRIGGERED EFFECT] gaining 1 treasure...`);
+          console.log(`[fishing village triggered effect] gaining 1 treasure...`);
           await runGameActionDelegate('gainTreasure', { count: 1 });
         }
       })

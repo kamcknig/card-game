@@ -46,20 +46,6 @@ sailor + haven doesn't seem to work, it moves to the next player's turn too soon
 SEASIDE still to build
 
 {
-  "cutpurse": {
-    "cost": {
-      "treasure": 4
-    },
-    "type": ["ACTION", "ATTACK"],
-    "targetScheme": "ALL_OTHER"
-  },
-  "fishing-village": {
-    "cardName": "Fishing Village",
-    "cost": {
-      "treasure": 3
-    },
-    "type": ["ACTION", "DURATION"]
-  },
   "haven": {
     "cost": {
       "treasure": 2
