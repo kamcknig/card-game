@@ -213,6 +213,31 @@ const expansion: CardExpansionModule = {
           }
         })
       }
+    },
+    'wharf': {
+      onCardPlayed: (args) => {
+        args.reactionManager.registerReactionTemplate({
+          id: `wharf:${args.cardId}:startTurn`,
+          playerId: args.playerId,
+          listeningFor: 'startTurn',
+          once: true,
+          compulsory: true,
+          allowMultipleInstances: true,
+          condition: (conditionArgs) => {
+            return conditionArgs.trigger.playerId === args.playerId &&
+              conditionArgs.match.stats.playedCards[args.cardId].turnNumber < conditionArgs.match.turnNumber
+          },
+          triggeredEffectFn: async (triggerArgs) => {
+            console.log(`[wharf triggered effect] drawing 2 cards`);
+            for (let i = 0; i < 2; i++) {
+              await triggerArgs.runGameActionDelegate('drawCard', { playerId: args.playerId });
+            }
+            
+            console.log(`[wharf triggered effect] gaining 1 buy`);
+            await triggerArgs.runGameActionDelegate('gainBuy', { count: 1 });
+          }
+        })
+      }
     }
   }),
   registerScoringFunctions: () => ({}),
@@ -1094,36 +1119,40 @@ const expansion: CardExpansionModule = {
         }
       })
     },
-    'warehouse':
-      () => async ({ runGameActionDelegate, playerId, match }) => {
-        console.log(`[WAREHOUSE EFFECT] drawing 3 cards...`);
-        for (let i = 0; i < 3; i++) {
-          await runGameActionDelegate('drawCard', { playerId });
-        }
-        
-        console.log(`[WAREHOUSE EFFECT] gaining 1 actions...`);
-        await runGameActionDelegate('gainAction', { count: 1 });
-        
-        const count = Math.min(3, match.playerHands[playerId].length);
-        
-        console.log(`[WAREHOUSE EFFECT] prompting user to select ${count} cards...`);
-        
-        const cardIds = (await runGameActionDelegate('selectCard', {
-          prompt: 'Discard cards',
-          playerId,
-          restrict: { from: { location: 'playerHands' } },
-          count,
-        })) as number[];
-        
-        console.log(`[WAREHOUSE EFFECT] discarding cards...`);
-        
-        for (const cardId of cardIds) {
-          await runGameActionDelegate('discardCard', {
-            cardId,
-            playerId
-          });
-        }
+    'warehouse': () => async ({ runGameActionDelegate, playerId }) => {
+      console.log(`[warehouse effect] drawing 3 cards...`);
+      for (let i = 0; i < 3; i++) {
+        await runGameActionDelegate('drawCard', { playerId });
       }
+      
+      console.log(`[warehouse effect] gaining 1 actions...`);
+      await runGameActionDelegate('gainAction', { count: 1 });
+      
+      const cardIds = (await runGameActionDelegate('selectCard', {
+        prompt: 'Discard cards',
+        playerId,
+        restrict: { from: { location: 'playerHands' } },
+        count: 3,
+      })) as number[];
+      
+      console.log(`[warehouse effect] discarding cards...`);
+      
+      for (const cardId of cardIds) {
+        await runGameActionDelegate('discardCard', {
+          cardId,
+          playerId
+        });
+      }
+    },
+    'wharf': () => async (args) => {
+      console.log(`[wharf effect] drawing 2 cards...`);
+      for (let i = 0; i < 2; i++) {
+        await args.runGameActionDelegate('drawCard', { playerId: args.playerId });
+      }
+      
+      console.log(`[wharf effect] gaining 1 buy...`);
+      await args.runGameActionDelegate('gainBuy', { count: 1 });
+    }
   }
 }
 

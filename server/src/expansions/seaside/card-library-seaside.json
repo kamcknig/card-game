@@ -90,12 +90,6 @@
     },
     "type": ["ACTION"]
   },
-  "outpost": {
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION", "DURATION"]
-  },
   "pirate": {
     "cost": {
       "treasure": 5
