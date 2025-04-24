@@ -3,7 +3,11 @@ import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 import { Card, CardId } from 'shared/shared-types.ts';
 import { findCards } from '../../utils/find-cards.ts';
-import { getPlayerStartingFrom } from '../../shared/get-player-position-utils.ts';
+import {
+  getDistanceToPlayer,
+  getPlayerStartingFrom,
+  getPlayerTurnIndex
+} from '../../shared/get-player-position-utils.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 
@@ -878,75 +882,71 @@ const expansion: CardExpansionModule = {
           to: { location: 'playerDiscards' }
         });
       }
-      
     },
-    'smugglers':
-      () => async ({ match, cardLibrary, playerId, runGameActionDelegate }) => {
-        const previousPlayer = getPlayerStartingFrom({
-          startFromIdx: match.currentPlayerTurnIndex,
-          match,
-          distance: -1
+    'smugglers': () => async ({ match, cardLibrary, playerId, runGameActionDelegate }) => {
+      const previousPlayer = getPlayerStartingFrom({
+        startFromIdx: getPlayerTurnIndex({ match, playerId }),
+        match,
+        distance: -1
+      });
+      
+      console.log(`[smugglers effect] looking at ${previousPlayer} cards gained`);
+      
+      const cardsGained = match.stats.cardsGained;
+      
+      let cardIds = Object.keys(cardsGained)
+        .map(Number)
+        .filter(cardId => {
+          return cardsGained[cardId].playerId === previousPlayer.id &&
+            cardsGained[cardId].turnNumber === match.turnNumber - 1;
+        })
+        .filter(cardId => {
+          const cost = getEffectiveCardCost(
+            playerId,
+            +cardId,
+            match,
+            cardLibrary
+          );
+          
+          return cost <= 6;
         });
-        
-        console.log(`[SMUGGLERS EFFECT] looking at ${previousPlayer} cards played`);
-        
-        const cardsGained = match.stats.cardsGained;
-        
-        let cardIds = Object.keys(cardsGained)
-          .map(Number)
-          .filter(cardId => {
-            const cost = getEffectiveCardCost(
-              playerId,
-              +cardId,
-              match,
-              cardLibrary
-            );
-            
-            return cost <= 6 &&
-              cardsGained[cardId].playerId === previousPlayer.id &&
-              cardsGained[cardId].turnNumber <= match.turnNumber;
-          });
-        
-        console.log(`[SMUGGLERS EFFECT] found ${cardIds.length} costing up to 6 that were played`);
-        
-        const inSupply = (card: Card) =>
-          match.supply.concat(match.kingdom).find(id => cardLibrary.getCard(id).cardKey === card.cardKey);
-        
-        cardIds = cardIds.map(cardLibrary.getCard).map(inSupply).filter(id => id !== undefined);
-        
-        console.log(`[SMUGGLERS EFFECT] found ${cardIds.length} available cards in supply to choose from`);
-        
-        if (!cardIds.length) {
-          return;
-        }
-        
-        console.log(`[SMUGGLERS EFFECT] prompting user to select a card...`);
-        
-        const result = (await runGameActionDelegate('userPrompt', {
-          playerId,
-          prompt: 'Choose a card to gain',
-          content: {
-            type: 'select',
-            selectCount: 1,
-            cardIds
-          },
-        })) as { action: number, result: CardId[] };
-        
-        const cardId = result.result[0];
-        
-        if (!cardId) {
-          console.warn(`[SMUGGLERS EFFECT] no card selected`);
-          return;
-        }
-        
-        console.log(`[SMUGGLERS EFFECT] gaining card...`);
-        
-        await runGameActionDelegate('gainCard', {
-          playerId,
-          cardId: cardId,
-          to: { location: 'playerDiscards' },
-        });
-      },
+      
+      console.log(`[smugglers effect] found ${cardIds.length} costing up to 6 that were played`);
+      
+      const inSupply = (card: Card) =>
+        match.supply.concat(match.kingdom).find(id => cardLibrary.getCard(id).cardKey === card.cardKey);
+      
+      cardIds = cardIds.map(cardLibrary.getCard).map(inSupply).filter(id => id !== undefined);
+      
+      console.log(`[smugglers effect] found ${cardIds.length} available cards in supply to choose from`);
+      
+      if (!cardIds.length) {
+        return;
+      }
+      
+      console.log(`[smugglers effect] prompting user to select a card...`);
+      
+      const results = await runGameActionDelegate('selectCard', {
+        playerId: playerId,
+        restrict: cardIds,
+        prompt: `Gain a card`,
+      }) as number[];
+      
+      const cardId = results[0];
+      
+      if (!cardId) {
+        console.warn(`[smugglers effect] no card selected`);
+        return;
+      }
+      
+      console.log(`[smugglers effect] gaining card...`);
+      
+      await runGameActionDelegate('gainCard', {
+        playerId,
+        cardId: cardId,
+        to: { location: 'playerDiscards' },
+      });
+    },
     'treasure-map':
       () => async ({ runGameActionDelegate, playerId, cardId, match, cardLibrary }) => {
         console.log(`[TREASURE MAP EFFECT] trashing played treasure map...`);

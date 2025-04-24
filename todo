@@ -50,12 +50,6 @@ SEASIDE still to build
     },
     "type": ["ACTION", "DURATION"]
   },
-  "smugglers": {
-    "cost": {
-      "treasure": 3
-    },
-    "type": ["ACTION"]
-  },
   "tactician": {
     "cost": {
       "treasure": 5

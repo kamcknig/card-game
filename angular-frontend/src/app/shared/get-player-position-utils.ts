@@ -53,14 +53,19 @@ export const getDistanceToPlayer = ({
     throw new Error('Player ID not found in match');
   }
   
-  let distance = 0;
+  let base = (targetIdx - startIdx + numPlayers) % numPlayers;
   
-  if (direction === 'forward') {
-    distance = (targetIdx - startIdx + numPlayers) % numPlayers + repetition * numPlayers;
+  // Special case: same player, but no base distance — they still count as a full loop
+  if (startPlayerId === targetPlayerId && repetition === 0) {
+    base = 0;
+    repetition = 1;
   }
-  else {
-    distance = -((startIdx - targetIdx + numPlayers) % numPlayers + repetition * numPlayers);
-  }
+  
+  const loopOffset = repetition * numPlayers;
+  
+  const distance = direction === 'forward'
+    ? base + loopOffset
+    : -(base + loopOffset);
   
   return distance;
 };
