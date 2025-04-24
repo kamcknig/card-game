@@ -46,7 +46,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     super();
   }
   
-  private _keepers: CardKey[] = ['moat', 'militia', 'sea-witch', 'wharf'];
+  private _keepers: CardKey[] = ['moat', 'militia', 'island', 'native-village'];
   private _playerHands: Record<CardKey, number>[] = [
     {
       gold: 4,
@@ -94,7 +94,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const matchStats: MatchStats = {
       playedCards: {},
       cardsGained: {},
-      trashedCards: {}
+      trashedCards: {},
+      cardsBought: {}
     };
     
     const mats =

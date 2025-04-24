@@ -1,4 +1,3 @@
-// Derived directly from server match state
 import { clientSelectableCardsOverrideStore } from './interactive-state';
 import { computed } from 'nanostores';
 import { matchStore, selfPlayerIdStore } from './match-state';

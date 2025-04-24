@@ -1,12 +1,12 @@
 <app-score #scoreView [playerScores]="playerScore$ | async"></app-score>
 
-<div class="zone-content">
+<div class="mat-tab-content">
   @for (mat of mats$ | async; track mat.mat) {
     <app-mat
       [mat]="mat"
-      (click)="stickyMat = true"
-      (mouseenter)="!stickyMat ? openMat(mat) : null"
-      (mouseleave)="!stickyMat ? openMat(null) : null">
+      (click)="visibleMat === mat ? stickyMat = !stickyMat : visibleMat = mat"
+      (mouseenter)="!stickyMat ? visibleMat = mat : null"
+      (mouseleave)="!stickyMat ? visibleMat = null : null">
     </app-mat>
   }
 </div>
@@ -14,15 +14,19 @@
 <app-game-log [entries]="logEntries$ | async"></app-game-log>
 
 @if (visibleMat) {
-  <div class="mat-content">
-    <div class="card-content">
-      @for (card of visibleMat.cardIds; track card) {
-        <app-card [cardId]="card"></app-card>
-      }
+  <div class="mat-modal-backdrop">
+    <div class="mat-modal-content">
+      <div class="mat-modal-title">{{ visibleMat.mat }}</div>
+      <div class="card-content">
+        @for (card of visibleMat.cardIds; track card) {
+          <app-card [cardId]="card"></app-card>
+        }
+      </div>
       <div
         class="close"
         (mousedown)="visibleMat = null; stickyMat = false"
-      >X</div>
+      >X
+      </div>
     </div>
   </div>
 }

@@ -64,12 +64,16 @@ export class CardInteractivityController {
       const supply = match.supply.concat(match.kingdom)
         .map((id) => this._cardLibrary.getCard(id));
       
+      // a loop going backwards through the supply and kingdom. we only mark the last one as selectable (this should
+      // be the top of any pile). a bit hacky to assume that.
       for (let i = supply.length - 1; i >= 0; i--) {
         const card = supply[i];
+        // we already marked this type of card as selectable based on cost
         if (cardsAdded.includes(card.cardKey)) {
           continue;
         }
         
+        // get the true cost - with any overrides
         const cardCost = getEffectiveCardCost(
           currentPlayer.id,
           card.id,
@@ -77,15 +81,21 @@ export class CardInteractivityController {
           this._cardLibrary,
         );
         
+        // if the player has enough treasure and buys
         if (cardCost <= match.playerTreasure && match.playerBuys > 0) {
           selectableCards.push(card.id);
           cardsAdded.push(card.cardKey);
         }
       }
       
-      for (const card of hand) {
-        if (card.type.includes('TREASURE')) {
-          selectableCards.push(card.id);
+      // loop over the player's hand; in the buy phase, one can play treasure as long as you haven't already
+      // bought a card
+      if (!Object.values(match.stats.cardsBought)
+        .some(stats => stats.playerId === currentPlayer.id && stats.turnNumber === match.turnNumber)) {
+        for (const card of hand) {
+          if (card.type.includes('TREASURE')) {
+            selectableCards.push(card.id);
+          }
         }
       }
     }

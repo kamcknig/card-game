@@ -87,8 +87,11 @@ export class CardView extends Container<ContainerChild> {
     this.size = 'full'
     this.facing = 'front';
 
-    this._cleanup.push(batched([selectableCardStore, selectedCardStore], (...args) => args).subscribe(this.onDraw));
-    this._cleanup.push(cardOverrideStore.subscribe(this.onDraw));
+    this._cleanup.push(
+      batched(
+        [selectableCardStore, selectedCardStore, cardOverrideStore],
+        (...args) => args
+      ).subscribe(this.onDraw));
 
     this.on('removed', this.onRemoved);
   }

@@ -65,6 +65,7 @@ export type MatchStats = {
    */
   playedCards: Record<CardId, CardStats>;
   trashedCards: Record<PlayerId, CardStats>;
+  cardsBought: Record<PlayerId, CardStats>;
 };
 
 export type SetAsideCard = {

@@ -43,8 +43,8 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
   playerIds$: Observable<readonly PlayerId[]> | undefined;
   playerScore$!: Observable<{ id: PlayerId; score: number; name: string }[]> | undefined;
   logEntries$!: Observable<readonly LogEntryMessage[]> | undefined;
-  mats$: Observable<{mat: Mats, cardIds: CardId[]}[]> | undefined;
-  visibleMat: {mat: Mats; cardIds: CardId[] } | null = null;
+  mats$: Observable<{ mat: Mats, cardIds: CardId[] }[]> | undefined;
+  visibleMat: { mat: Mats; cardIds: CardId[] } | null = null;
   stickyMat: boolean = false;
 
   constructor(private _nanoService: NanostoresService) {
@@ -52,9 +52,10 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnInit() {
     this.mats$ = this._nanoService.useStore(matStore)
-      .pipe(map(mats =>
-        Object.entries(mats)
-          .map(entry => ({ mat: entry[0] as Mats, cardIds: entry[1] }))/*.filter(e => e.cardIds.length > 0)*/));
+      .pipe(
+        map(mats => Object.entries(mats).map(entry => ({ mat: entry[0] as Mats, cardIds: entry[1] }))),
+        map(mats => mats.filter(mat => mat.cardIds.length > 0)),
+      );
 
     this.logEntries$ = this._nanoService.useStore(logEntryIdsStore).pipe(
       combineLatestWith(this._nanoService.useStore(logStore)),
@@ -79,7 +80,7 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
     );
   }
 
-  openMat(event: {mat: Mats, cardIds: CardId[]} | null) {
+  openMat(event: { mat: Mats, cardIds: CardId[] } | null) {
     this.visibleMat = event;
   }
 

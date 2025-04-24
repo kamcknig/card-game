@@ -37,7 +37,8 @@ export const userPromptModal = (
       prompt.x = Math.floor(-prompt.width * .5);
       modalContainer.addChild(prompt);
     }
-
+    clientSelectableCardsOverrideStore.set([]);
+    
     const cleanup = () => {
       app.stage.removeChild(modalContainer);
       selectedCardStore.set([]);

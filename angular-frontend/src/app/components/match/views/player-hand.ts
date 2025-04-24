@@ -95,8 +95,6 @@ export class PlayerHandView extends Container {
       [[], [], []] as Card[][]
     );
 
-    type VictoryName = 'estate' | 'duchy' | 'gold';
-
     // now sort within each type. actions by name, treasure and victory by predefined rankings,
     // then flatten to a single dimensional array. probably better to type this array or something
     // elsewhere later on

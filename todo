@@ -27,18 +27,4 @@ add tailwindcss maybe
 for blockade - check on dominion.games what the log looks like for both players
 
 
-advanced reaction use-case
-   trader and castles.
-   when i gained the castle, i could use the reaction of hte castle OR the trader
-   i chose the castle
-   then i was also about to choose trader but declined,
-   then everyone else had to do the castle thing,
-   then it asked me again about the trader
-
-i'm directly adding trigger effect reactions in some card effect generators. maybe they should yield a RegisterReactionEffect instaed
-
-during buy phase, once a player has made one buy, they can no longer play anymore treasure
-
-sailor + haven doesn't seem to work, it moves to the next player's turn too soon
-
 SEASIDE expansion - i haven't built outpost - taking an extra turn. the rules are so incredibly complicated it's jus tnot worth it right now.

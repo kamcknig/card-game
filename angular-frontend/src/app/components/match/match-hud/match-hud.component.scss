@@ -4,7 +4,7 @@ app-score {
   left: 20px;
 }
 
-.zone-content {
+.mat-tab-content {
   position: fixed;
   left: 0;
   top: 50%;
@@ -12,7 +12,7 @@ app-score {
   flex-direction: column;
 }
 
-.mat-content {
+.mat-modal-backdrop {
   position: fixed; /* or absolute */
   top: 0;
   left: 0;
@@ -36,20 +36,28 @@ app-score {
     cursor: pointer;
     pointer-events: auto;
   }
-}
 
-.card-content {
-  pointer-events: auto; /* re-enable interactivity inside */
-  padding: 20px 20px 120px 20px;
-  display: flex;
-  flex-wrap: wrap;
-  background: rgba(0, 0, 0, 0.8);
-  width: 600px;
-  gap: 10px;
-  position: relative;
+  .mat-modal-content {
+    position: relative;
+    background: rgba(0, 0, 0, 0.8);
+    pointer-events: auto; /* re-enable interactivity inside */
+    padding: 10px 10px 120px 10px;
+  }
 
-  app-card {
-    margin-bottom: -100px;
+  .mat-modal-title {
+    color: white;
+  }
+
+  .card-content {
+    display: flex;
+    flex-wrap: wrap;
+    width: 600px;
+    gap: 10px;
+    position: relative;
+
+    app-card {
+      margin-bottom: -100px;
+    }
   }
 }
 

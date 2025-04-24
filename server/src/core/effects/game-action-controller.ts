@@ -314,6 +314,11 @@ export class GameActionController implements GameActionControllerInterface {
       cardId: args.cardId,
       to: { location: 'playerDiscards' }
     });
+    
+    this.match.stats.cardsBought[args.cardId] = {
+      turnNumber: this.match.turnNumber,
+      playerId: args.playerId,
+    }
   }
   
   async revealCard(args: { cardId: CardId, playerId: PlayerId, moveToRevealed?: boolean }) {
@@ -416,7 +421,7 @@ export class GameActionController implements GameActionControllerInterface {
     switch (newPhase) {
       case 'action': {
         match.playerActions = 1;
-        match.playerBuys = 1;
+        match.playerBuys = 2;
         match.playerTreasure = 0;
         match.currentPlayerTurnIndex++;
         
