@@ -100,6 +100,7 @@ export type Match = {
 }
 
 export const TurnPhaseOrderValues = ['action', 'buy', 'cleanup'] as const;
+export type TurnPhase = typeof TurnPhaseOrderValues[number];
 
 export type ServerEmitEvents = {
   addLogEntry: (logEntry: LogEntry) => void;

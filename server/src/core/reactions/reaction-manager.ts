@@ -9,7 +9,7 @@ import { cardLifecycleMap } from '../card-lifecycle-map.ts';
 import { LogManager } from '../log-manager.ts';
 
 export class ReactionManager {
-  private readonly _reactions: Reaction[] = [];
+  private _reactions: Reaction[] = [];
   
   constructor(
     private readonly logManager: LogManager,
@@ -191,5 +191,10 @@ export class ReactionManager {
         }
       }
     }
+  }
+  
+  cleanUpTriggers() {
+    this._reactions = this._reactions
+      .filter(reaction => this._cardLibrary.getCard(reaction.getSourceId()).type.includes('DURATION'));
   }
 }

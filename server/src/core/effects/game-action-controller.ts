@@ -394,6 +394,13 @@ export class GameActionController implements GameActionControllerInterface {
   async nextPhase() {
     const match = this.match;
     
+    const trigger = new ReactionTrigger({
+      eventType: 'endTurnPhase',
+      phase: getTurnPhase(this.match.turnPhaseIndex)
+    });
+    
+    await this.reactionManager.runTrigger({ trigger });
+    
     match.turnPhaseIndex = match.turnPhaseIndex + 1;
     
     if (match.turnPhaseIndex >= TurnPhaseOrderValues.length) {
@@ -525,6 +532,8 @@ export class GameActionController implements GameActionControllerInterface {
     });
     
     await this.reactionManager.runTrigger({ trigger });
+    
+    this.reactionManager.cleanUpTriggers()
   }
   
   async gainTreasure(args: { count: number }) {

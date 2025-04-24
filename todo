@@ -50,12 +50,6 @@ SEASIDE still to build
     },
     "type": ["ACTION", "DURATION"]
   },
-  "treasury": {
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION"]
-  },
   "warehouse": {
     "cost": {
       "treasure": 3

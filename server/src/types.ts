@@ -9,7 +9,7 @@ import {
   PlayerId,
   SelectActionCardArgs,
   ServerEmitEvents,
-  ServerListenEvents, SetAsideCard,
+  ServerListenEvents, SetAsideCard, TurnPhase,
   UserPromptActionArgs,
 } from 'shared/shared-types.ts';
 import { toNumber } from 'es-toolkit/compat';
@@ -100,7 +100,8 @@ export const MatchBaseConfiguration = {
 type ReactionTriggerArgs =
   | { eventType: 'endTurn' } // no playerId or cardId needed
   | { eventType: 'startTurn'; playerId: number }
-  | { eventType: 'gainCard' | 'cardPlayed'; playerId: number; cardId: number };
+  | { eventType: 'gainCard' | 'cardPlayed'; playerId: number; cardId: number }
+  | { eventType: 'endTurnPhase'; phase: TurnPhase; };
 
 
 export class ReactionTrigger {
@@ -241,7 +242,10 @@ export type TriggerEventType =
   | 'cardPlayed'
   | 'startTurn'
   | 'gainCard'
+  | 'endTurnPhase'
   | 'endTurn';
+
+export type ReactionRemoveAt = 'TURN_END' | 'PHASE_END';
 
 export class Reaction {
   // a concatenation of the card key and card id with a '-'
