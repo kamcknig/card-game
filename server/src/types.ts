@@ -161,7 +161,6 @@ export type GameActionArgsMap = {
   gainTreasure: { count: number };
   modifyCost: ModifyActionCardArgs;
   moveCard: { toPlayerId?: PlayerId; cardId: CardId; to: LocationSpec };
-  newTurn: void;
   nextPhase: void;
   playCard: { playerId: PlayerId; cardId: CardId, overrides?: GameActionOverrides };
   revealCard: { cardId: CardId, playerId: PlayerId, moveToRevealed?: boolean },

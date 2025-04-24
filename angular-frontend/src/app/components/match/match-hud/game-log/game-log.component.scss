@@ -31,6 +31,10 @@
     flex-grow: 1;
   }
 
+  :not(:last-child) {
+    margin-bottom: 4px;
+  }
+
   ::ng-deep .log-entry {
     user-select: none;
 

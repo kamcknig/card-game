@@ -198,12 +198,15 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   ): Promise<ReturnType<GameActionController[K]>> {
     this._matchSnapshot ??= this.getMatchSnapshot();
     
+    this._logManager?.enter();
     if (action === 'selectCard' || action === 'userPrompt') {
       this.broadcastPatch(this._matchSnapshot);
       this._matchSnapshot = this.getMatchSnapshot();
     }
     
     const result = await this.gameActionsController![action](args[0] as any);
+    
+    this._logManager?.exit();
     
     this.calculateScores();
     

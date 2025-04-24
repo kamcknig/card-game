@@ -65,6 +65,13 @@ export class GameActionController implements GameActionControllerInterface {
   async gainBuy(args: { count: number }) {
     console.log(`[gainBuy action] gaining ${args.count} buys`);
     this.match.playerBuys += args.count;
+    
+    this.logManager.addLogEntry({
+      type: 'gainBuy',
+      count: args.count,
+      playerId: getCurrentPlayer(this.match).id
+    });
+    
     console.log(`[gainBuy action] setting player guys to ${this.match.playerBuys}`);
   }
   
@@ -103,6 +110,12 @@ export class GameActionController implements GameActionControllerInterface {
     
     this.match.playerActions += args.count;
     
+    this.logManager.addLogEntry({
+      type: 'gainAction',
+      playerId: getCurrentPlayer(this.match).id,
+      count: 1
+    })
+    
     console.log(`[gainAction action] setting player actions to ${args.count}`);
   }
   
@@ -123,7 +136,6 @@ export class GameActionController implements GameActionControllerInterface {
     console.log(`[gainCard action] ${getPlayerById(this.match, args.playerId)} gained ${this.cardLibrary.getCard(args.cardId)}`);
     
     this.logManager.addLogEntry({
-      root: true,
       playerId: args.playerId,
       cardId: args.cardId,
       type: 'gainCard'
@@ -135,15 +147,9 @@ export class GameActionController implements GameActionControllerInterface {
       playerId: args.playerId
     });
     
+    this.logManager.enter();
     await this.reactionManager.runTrigger({ trigger });
-  }
-  
-  async newTurn() {
-    this.logManager.addLogEntry({
-      root: true,
-      type: 'newTurn',
-      turn: this.match.turnNumber,
-    });
+    this.logManager.exit();
   }
   
   async userPrompt(args: UserPromptActionArgs) {
@@ -291,7 +297,6 @@ export class GameActionController implements GameActionControllerInterface {
     console.log(`[trashCard action] trashed ${this.cardLibrary.getCard(args.cardId)}`);
     
     this.logManager.addLogEntry({
-      root: true,
       playerId: args.playerId,
       cardId: args.cardId,
       type: 'trashCard'
@@ -334,7 +339,6 @@ export class GameActionController implements GameActionControllerInterface {
     }
     
     this.logManager.addLogEntry({
-      root: true,
       type: 'revealCard',
       cardId: args.cardId,
       playerId: args.playerId,
@@ -389,7 +393,6 @@ export class GameActionController implements GameActionControllerInterface {
     });
     
     this.logManager.addLogEntry({
-      root: true,
       type: 'discard',
       playerId: args.playerId,
       cardId: args.cardId,
@@ -404,7 +407,9 @@ export class GameActionController implements GameActionControllerInterface {
       phase: getTurnPhase(this.match.turnPhaseIndex)
     });
     
+    this.logManager.enter();
     await this.reactionManager.runTrigger({ trigger });
+    this.logManager.exit();
     
     match.turnPhaseIndex = match.turnPhaseIndex + 1;
     
@@ -431,7 +436,6 @@ export class GameActionController implements GameActionControllerInterface {
         }
         
         this.logManager.addLogEntry({
-          root: true,
           type: 'newPlayerTurn',
           turn: match.turnNumber,
           playerId: match.players[match.currentPlayerTurnIndex].id
@@ -464,7 +468,9 @@ export class GameActionController implements GameActionControllerInterface {
         });
         
         const reactionContext = {};
+        this.logManager.enter();
         await this.reactionManager.runTrigger({ trigger, reactionContext });
+        this.logManager.exit();
         
         break;
       }
@@ -536,7 +542,9 @@ export class GameActionController implements GameActionControllerInterface {
       eventType: 'endTurn'
     });
     
+    this.logManager.enter();
     await this.reactionManager.runTrigger({ trigger });
+    this.logManager.exit();
     
     this.reactionManager.cleanUpTriggers()
   }
@@ -544,6 +552,12 @@ export class GameActionController implements GameActionControllerInterface {
   async gainTreasure(args: { count: number }) {
     console.log(`[gainTreasure action] gaining ${args.count} treasure`);
     this.match.playerTreasure += args.count;
+    
+    this.logManager.addLogEntry({
+      type: 'gainTreasure',
+      playerId: getCurrentPlayer(this.match).id,
+      count: args.count
+    })
   }
   
   // Single, focused implementation of drawCard
@@ -576,7 +590,6 @@ export class GameActionController implements GameActionControllerInterface {
     console.log(`[drawCard action] Drew card ${this.cardLibrary.getCard(drawnCardId)}`);
     
     this.logManager.addLogEntry({
-      root: true,
       type: 'draw',
       playerId,
       cardId: drawnCardId
@@ -612,7 +625,6 @@ export class GameActionController implements GameActionControllerInterface {
       type: 'cardPlayed',
       cardId,
       playerId,
-      root: true,
     });
     
     // now add any triggered effects from the card played
@@ -627,12 +639,15 @@ export class GameActionController implements GameActionControllerInterface {
     
     // handle reactions for the card played
     const reactionContext = {};
+    this.logManager.enter();
     await this.reactionManager.runTrigger({ trigger, reactionContext });
+    this.logManager.exit();
     
     // run the effects of the card played, note passing in the reaction context collected from running the trigger
     // above - e.g., could provide immunity to an attack card played
     const effectFn = this.cardEffectFunctionMap[card.cardKey];
     if (effectFn) {
+      this.logManager.enter();
       await effectFn({
         reactionManager: this.reactionManager,
         runGameActionDelegate: this.runGameActionDelegate,
@@ -643,6 +658,7 @@ export class GameActionController implements GameActionControllerInterface {
         cardLibrary: this.cardLibrary,
         reactionContext,
       });
+      this.logManager.exit();
     }
     
     return true;
@@ -662,7 +678,6 @@ export class GameActionController implements GameActionControllerInterface {
     discard.length = 0;
     
     this.logManager.addLogEntry({
-      root: true,
       type: 'shuffleDeck',
       playerId: args.playerId
     });
