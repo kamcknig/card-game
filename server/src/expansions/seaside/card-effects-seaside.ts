@@ -983,6 +983,43 @@ const expansion: CardExpansionModule = {
         }
       })
     },
+    'tide-pools': () => async (args) => {
+      console.log(`[tide pools effect] drawing 3 cards...`);
+      for (let i = 0; i < 3; i++) {
+        await args.runGameActionDelegate('drawCard', { playerId: args.playerId });
+      }
+      
+      console.log(`[tide pools effect] gaining 1 action...`);
+      await args.runGameActionDelegate('gainAction', { count: 1 });
+      
+      args.reactionManager.registerReactionTemplate({
+        id: `tide-pools:${args.cardId}:startTurn`,
+        playerId: args.playerId,
+        listeningFor: 'startTurn',
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: (conditionArgs) =>
+          conditionArgs.trigger.playerId === args.playerId && args.match.stats.playedCards[args.cardId].turnNumber < args.match.turnNumber,
+        triggeredEffectFn: async (triggerArgs) => {
+          console.log(`[tide pools triggered effect] selecting two cards to discard`);
+          const selectedCardIds = await triggerArgs.runGameActionDelegate('selectCard', {
+            playerId: args.playerId,
+            prompt: `Discard cards`,
+            restrict: { from: { location: 'playerHands' } },
+            count : 2
+          }) as CardId[];
+          
+          if (!selectedCardIds.length) {
+            return;
+          }
+          
+          for (const cardId of selectedCardIds) {
+            await triggerArgs.runGameActionDelegate('discardCard', { cardId, playerId: args.playerId });
+          }
+        }
+      })
+    },
     'treasure-map':
       () => async ({ runGameActionDelegate, playerId, cardId, match, cardLibrary }) => {
         console.log(`[TREASURE MAP EFFECT] trashing played treasure map...`);

@@ -50,19 +50,6 @@ SEASIDE still to build
     },
     "type": ["ACTION", "DURATION"]
   },
-  "tactician": {
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION", "DURATION"]
-  },
-  "tide-pools": {
-    "cardName": "Tide Pools",
-    "cost": {
-      "treasure": 4
-    },
-    "type": ["ACTION", "DURATION"]
-  },
   "treasure-map": {
     "cardName": "Treasure Map",
     "cost": {
