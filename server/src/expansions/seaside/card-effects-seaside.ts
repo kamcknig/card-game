@@ -238,7 +238,7 @@ const expansion: CardExpansionModule = {
       })
     },
     'cutpurse': () => async ({ runGameActionDelegate, playerId, match, reactionContext, cardLibrary }) => {
-      console.log(`[CUTPURSE EFFECT] gaining 2 treasure...`);
+      console.log(`[cutpurse effect] gaining 2 treasure...`);
       await runGameActionDelegate('gainTreasure', { count: 2, });
       
       const targetIds = findOrderedTargets({
@@ -251,7 +251,7 @@ const expansion: CardExpansionModule = {
         const hand = match.playerHands[targetId];
         const copperId = hand.find(cardId => cardLibrary.getCard(cardId).cardKey === 'copper');
         if (copperId) {
-          console.log(`[CUTPURSE EFFECT] discarding copper...`);
+          console.log(`[cutpurse effect] discarding copper...`);
           await runGameActionDelegate('discardCard', {
             cardId: copperId,
             playerId: targetId
@@ -259,7 +259,7 @@ const expansion: CardExpansionModule = {
           continue;
         }
         
-        console.log(`[CUTPURSE EFFECT] revealing hand...`);
+        console.log(`[cutpurse effect] revealing hand...`);
         for (const cardId of hand) {
           await runGameActionDelegate('revealCard', {
             cardId,
