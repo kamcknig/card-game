@@ -3,6 +3,7 @@ import { cardEffectFunctionMapFactory } from '../core/effects/card-effect-functi
 import { scoringFunctionMap } from '../expansions/scoring-function-map.ts';
 import { expansionData } from '../state/expansion-data.ts';
 import { cardLifecycleMap } from '../core/card-lifecycle-map.ts';
+import { capitalize } from "es-toolkit/compat";
 
 export const loadExpansion = async (expansion: ExpansionListElement) => {
   const expansionPath = `../expansions/${expansion.name}`;
@@ -40,6 +41,7 @@ export const loadExpansion = async (expansion: ExpansionListElement) => {
       cardData.supply[key] = {
         ...cards[key],
         expansionName,
+        isSupply: true,
         detailImagePath: `./assets/card-images/base-supply/detail/${key}.jpg`,
         fullImagePath: `./assets/card-images/base-supply/full-size/${key}.jpg`,
         halfImagePath: `./assets/card-images/base-supply/half-size/${key}.jpg`
@@ -48,12 +50,14 @@ export const loadExpansion = async (expansion: ExpansionListElement) => {
     console.log('[EXPANSION LOADER] supply loaded');
     
     
-    console.log(`[EXPANSION LOADER] loading kingdom car library for ${expansionName}`);
+    console.log(`[EXPANSION LOADER] loading kingdom card library for ${expansionName}`);
     module = await import(`${expansionPath}/${expansionConfiguration.kingdom}`, { with: { type: 'json' } });
     cards = module.default as Record<string, CardData>;
     Object.keys(cards).forEach((key) => {
       cardData.kingdom[key] = {
         ...cards[key],
+        isKingdom: true,
+        cardName: cards[key].cardName ?? capitalize(key),
         expansionName,
         fullImagePath: `./assets/card-images/${expansionName}/full-size/${key}.jpg`,
         detailImagePath: `./assets/card-images/${expansionName}/detail/${key}.jpg`,

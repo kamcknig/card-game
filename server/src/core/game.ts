@@ -1,10 +1,11 @@
 import { AppSocket } from '../types.ts';
-import { ExpansionListElement, MatchConfiguration, Player, PlayerId, } from 'shared/shared-types.ts';
+import { CardData, CardKey, ExpansionListElement, MatchConfiguration, Player, PlayerId, } from 'shared/shared-types.ts';
 import { createNewPlayer } from '../utils/create-new-player.ts';
 import { io } from '../server.ts';
 import { MatchController } from './match-controller.ts';
 import { ExpansionCardData, expansionData } from '../state/expansion-data.ts';
 import { applyPatch, compare } from 'https://esm.sh/v123/fast-json-patch@3.1.1/index.js';
+import Fuse, { IFuseOptions } from 'fuse.js';
 
 const defaultMatchConfiguration = {
   expansions: [
@@ -25,8 +26,8 @@ const defaultMatchConfiguration = {
     }
   ],
   players: [],
-  supplyCardKeys: [],
-  kingdomCardKeys: [],
+  supplyCards: [],
+  kingdomCards: [],
 };
 
 export class Game {
@@ -35,14 +36,64 @@ export class Game {
   public matchStarted: boolean = false;
   
   private _socketMap: Map<PlayerId, AppSocket> = new Map();
-  private _matchController: MatchController | undefined;
+  private _matchController: MatchController;
   private _matchConfiguration: MatchConfiguration = defaultMatchConfiguration;
   private _availableExpansion: ExpansionListElement[] = [];
+  private _fuse: Fuse<CardData & { cardKey: CardKey }> | undefined;
   
   constructor() {
     console.log(`[GAME] created`);
-    this._matchController = new MatchController(this._socketMap);
+    this._matchController = new MatchController(
+      this._socketMap,
+      (searchTerm: string) => this.onSearchCards(searchTerm)
+    );
+    this.initializeFuseSearch();
   }
+  
+  private initializeFuseSearch() {
+    console.log(`[game] initializing fuse search`);
+    const find = (key: CardKey, arr: (CardData & { cardKey: CardKey })[]) =>
+      arr.findIndex(e => e.cardKey === key) > -1;
+    
+    const allExpansionCards = Object.keys(expansionData).reduce(
+      (prev, expansionName) => {
+        const expansion = expansionData[expansionName];
+        const supply = expansion.cardData.supply;
+        const kingdom = expansion.cardData.kingdom;
+        
+        prev = prev
+          .concat(Object.keys(supply).filter(k => !find(k, prev)).map((k) => ({ ...supply[k], cardKey: k })))
+          .concat(Object.keys(kingdom).filter(k => !find(k, prev)).map((k) => ({ ...kingdom[k], cardKey: k })));
+        
+        return prev;
+      },
+      [] as (CardData & { cardKey: CardKey })[],
+    );
+    
+    console.log(`[game] list of expansion cards: ${allExpansionCards.length}`);
+    console.log(allExpansionCards.map(e => `${e.expansionName} - ${e.cardKey}`).join('\n'));
+    
+    if (this._fuse) {
+      this._fuse.setCollection(allExpansionCards);
+    }
+    else {
+      const index = Fuse.createIndex(['cardName'], allExpansionCards);
+      
+      const fuseOptions: IFuseOptions<CardData> = {
+        ignoreDiacritics: true,
+        minMatchCharLength: 1,
+        distance: 2,
+        keys: ['cardName']
+      };
+      this._fuse = new Fuse(allExpansionCards, fuseOptions, index);
+      console.log(this._fuse.getIndex());
+    }
+  }
+  
+  private onSearchCards = (searchStr: string) => {
+    const results = this._fuse?.search(searchStr);
+    return results?.map(r => r.item) ?? [];
+  };
   
   public expansionLoaded(expansion: ExpansionListElement) {
     console.log(`[GAME] expansion '${expansion.name}' loaded`);
@@ -51,6 +102,8 @@ export class Game {
       'expansionList',
       this._availableExpansion.sort((a, b) => b.order - a.order),
     );
+    
+    this.initializeFuseSearch();
   }
   
   public addPlayer(sessionId: string, socket: AppSocket) {
@@ -89,6 +142,9 @@ export class Game {
       console.log(`[GAME] game owner does not exist, setting to ${player}`);
       this.owner = player;
       socket.on('matchConfigurationUpdated', this.onMatchConfigurationUpdated);
+      socket.on('searchCards', (playerId, searchTerm) => {
+        this._socketMap.get(playerId)?.emit('searchCardResponse', this.onSearchCards(searchTerm));
+      });
       io.in('game').emit('gameOwnerUpdated', player.id);
     }
     
@@ -138,17 +194,25 @@ export class Game {
       return;
     }
     
-    this._matchController?.playerDisconnected(player.id);
-    io.in('game').emit('playerDisconnected', player);
-    
     if (player.id === this.owner?.id) {
+      this._socketMap.get(player.id)?.off('matchConfigurationUpdated');
+      this._socketMap.get(player.id)?.off('searchCards');
+      
       const replacement = this.players.find(p => p.connected);
       if (replacement) {
         this.owner = replacement;
         io.in('game').emit('gameOwnerUpdated', replacement.id);
+        this._socketMap.get(replacement.id)?.on('searchCards', (playerId, searchTerm) => {
+          this._socketMap.get(playerId)?.emit('searchCardResponse', this.onSearchCards(searchTerm));
+        });
         this._socketMap.get(replacement.id)?.on('matchConfigurationUpdated', this.onMatchConfigurationUpdated);
       }
     }
+    
+    if (this.matchStarted) {
+      this._matchController?.playerDisconnected(player.id);
+    }
+    io.in('game').emit('playerDisconnected', player);
   };
   
   private clearMatch = () => {
@@ -269,6 +333,7 @@ export class Game {
       socket.off('updatePlayerName');
       socket.off('playerReady');
       socket.off('matchConfigurationUpdated');
+      socket.off('searchCards');
     });
     
     const cardData = this._matchConfiguration?.expansions.reduce((prev, key) => {
@@ -305,6 +370,7 @@ export class Game {
     void this._matchController?.initialize(
       {
         ...defaultMatchConfiguration,
+        ...this._matchConfiguration,
         players: this.players,
       } as MatchConfiguration,
       cardData as ExpansionCardData

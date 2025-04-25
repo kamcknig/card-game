@@ -26,7 +26,6 @@ import { selfPlayerIdStore } from '../../../state/match-state';
 
       @if (playerId === ($selfId | async)) {
         <input
-          #nameInput
           class="player-name editable"
           type="text"
           autofocus

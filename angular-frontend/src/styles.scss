@@ -12,3 +12,17 @@ html, body, input {
   height: 100%;
 }
 */
+
+
+.close-button {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 1;
+  font-size: 24px;
+  color: white;
+  background: red;
+  padding: 2px 4px;
+  cursor: pointer;
+  pointer-events: auto;
+}

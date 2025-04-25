@@ -20,11 +20,11 @@
       @for (expansion of expansionList; track expansion.name) {
         <!-- item (selected) -->
         <li
-        [title]="expansion.title"
-        (click)="isGameOwner ? onToggleExpansion(expansion) : null"
-        class="expansion-item"
+          [title]="expansion.title"
+          (click)="isGameOwner ? onToggleExpansion(expansion) : null"
+          class="expansion-item"
           [ngClass]="{'selected': selectedExpansions.includes(expansion.name)}"
-          >
+        >
           <img
             ngSrc="/assets/expansion-icons/{{expansion.name}}.png"
             height="24"
@@ -41,24 +41,36 @@
     <h2 class="section-title">Kingdom</h2>
 
     <div class="kingdom-list">
-      @for (kingdom of preSelectedKingdoms; track kingdom?.name) {
+      @for (kingdom of preSelectedKingdoms; track kingdom?.cardKey) {
         <div
           class="kingdom"
-          (click)="selectKingdom($index, kingdom)"
+          [ngStyle]="{'cursor': isGameOwner && kingdom === null ? 'pointer' : 'default'}"
+          (click)="kingdom === null && isGameOwner ? selectingKingdom = true : null"
         >
-          @if (kingdom !== null) {
-            <img
-              alt="{{kingdom.name}} image"
-              ngSrc="/assets/card-images/{{kingdom.expansion}}/half-size/{{kingdom.cardKey}}.jpg"
-              height="122"
-              width="122"
-            />
+          @if (kingdom !== null && isGameOwner) {
+            <div (click)="deleteKingdom(kingdom)" class="close-button">X</div>
           }
-          @else {
-            <span class="no-kingdom">?</span>
-          }
+          <div>
+            @if (kingdom !== null) {
+              <img
+                alt="{{kingdom.cardName}} image"
+                ngSrc="{{kingdom.halfImagePath}}"
+                height="122"
+                width="122"
+              />
+            } @else {
+              <span class="no-kingdom">?</span>
+            }
+          </div>
         </div>
       }
     </div>
   </section>
 </main>
+
+<app-select-kingdom-modal
+  [selectedKingdoms]="preSelectedKingdoms"
+  [ngStyle]="{'visibility': selectingKingdom ? 'visible' : 'hidden'}"
+  (close)="selectingKingdom = false"
+  autofocus
+  (kingdomSelected)="onKingdomSelected($event)"></app-select-kingdom-modal>

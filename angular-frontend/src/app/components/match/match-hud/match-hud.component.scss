@@ -24,19 +24,6 @@ app-score {
   align-items: center;
   pointer-events: none; /* optional: allows click-through outside mat */
 
-  .close {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    z-index: 1;
-    font-size: 24px;
-    color: white;
-    background: red;
-    padding: 2px 4px;
-    cursor: pointer;
-    pointer-events: auto;
-  }
-
   .mat-modal-content {
     position: relative;
     background: rgba(0, 0, 0, 0.8);

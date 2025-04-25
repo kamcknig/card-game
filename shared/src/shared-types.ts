@@ -46,8 +46,8 @@ export type UserPromptActionArgs = {
 export type MatchConfiguration = {
   players: Player[];
   expansions: ExpansionListElement[];
-  supplyCardKeys: string[];
-  kingdomCardKeys: string[];
+  supplyCards: MatchPreselectedKingdom[];
+  kingdomCards: MatchPreselectedKingdom[];
 }
 
 type CardStats = {
@@ -297,6 +297,8 @@ export type CardType = typeof CardTypeValues[number];
 export type CardArgs = {
   id: CardId;
   type: CardType[];
+  isSupply: boolean;
+  isKingdom: boolean;
   cardName: string;
   cost: {
     treasure: number;
@@ -314,6 +316,8 @@ export type CardArgs = {
 
 export class Card {
   id: CardId;
+  isSupply: boolean = false;
+  isKingdom: boolean = false;
   cardName: string;
   type: CardType[];
   cost: {
@@ -330,6 +334,8 @@ export class Card {
   owner: PlayerId | null;
   
   constructor(args: CardArgs) {
+    this.isSupply = args.isSupply;
+    this.isKingdom = args.isKingdom;
     this.id = args.id;
     this.type = args.type;
     this.cost = args.cost;
@@ -374,3 +380,4 @@ export type CardData = Omit<
   Card,
   'id' | 'cardKey'
 >;
+export type MatchPreselectedKingdom = CardData & { cardKey: CardKey };

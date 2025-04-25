@@ -37,6 +37,7 @@
 
 .player-list {
   display: flex;
+  flex-direction: column;
 }
 
 .expansion-list {
@@ -65,12 +66,16 @@
 }
 
 .kingdom {
+  position: relative;
   border: 2px solid black;
-  cursor: pointer;
   width: 122px;
   height: 122px;
 
   .no-kingdom {
     font-size: 32px;
+  }
+
+  .close-button {
+    font-size: 10px;
   }
 }

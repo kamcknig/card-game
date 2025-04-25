@@ -21,7 +21,6 @@ import { CardLibrary } from './card-library.ts';
 import { compare, Operation } from 'fast-json-patch';
 import { ExpansionCardData, expansionData } from '../state/expansion-data.ts';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
-import Fuse, { IFuseOptions } from 'fuse.js';
 import { cardEffectFunctionMapFactory } from './effects/card-effect-function-map-factory.ts';
 import { EventEmitter } from '@denosaurs/event';
 import { LogManager } from './log-manager.ts';
@@ -35,12 +34,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardData: ExpansionCardData | undefined;
   private _config: MatchConfiguration | undefined;
   private _createCardFn: ((key: CardKey, card?: Omit<Partial<Card>, 'id'>) => Card) | undefined;
-  private _fuse: Fuse<CardData & { cardKey: CardKey }> | undefined;
   private _logManager: LogManager | undefined;
   private gameActionsController: GameActionController | undefined;
   private _match: Match = {} as Match;
   
-  constructor(private readonly _socketMap: Map<PlayerId, AppSocket>) {
+  constructor(
+    private readonly _socketMap: Map<PlayerId, AppSocket>,
+    private readonly cardSearchFn: (searchTerm: string) => (CardData & { cardKey: CardKey })[],
+  ) {
     super();
   }
   
@@ -65,30 +66,24 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   ];
   
   public initialize(config: MatchConfiguration, cardData: ExpansionCardData) {
-    this.initializeFuseSearch();
-    
     this._createCardFn = createCardFactory(cardData);
     this._cardData = cardData;
     
-    const supplyCards = this.createBaseSupply(config);
-    const kingdomCards = this.createKingdom(config);
-    const playerCards = this.createPlayerDecks(config);
+    for (const card of config.supplyCards) {
+      this._keepers.unshift(card.cardKey);
+    }
+    for (const card of config.kingdomCards) {
+      this._keepers.unshift(card.cardKey);
+    }
+    this._keepers.length = 10;
     
     config = {
       ...config,
-      supplyCardKeys: supplyCards.reduce((prev, card) => {
-        if (prev.includes(card.cardKey)) {
-          return prev;
-        }
-        return prev.concat(card.cardKey);
-      }, [] as string[]),
-      kingdomCardKeys: kingdomCards.reduce((prev, card) => {
-        if (prev.includes(card.cardKey)) {
-          return prev;
-        }
-        return prev.concat(card.cardKey);
-      }, [] as string[]),
+      supplyCards: this.createBaseSupply(config),
+      kingdomCards: this.createKingdom(config),
     };
+    
+    const playerCards = this.createPlayerDecks(config);
     
     const matchStats: MatchStats = {
       playedCards: {},
@@ -113,8 +108,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       scores: [],
       trash: [],
       players: config.players,
-      supply: supplyCards.map((c) => c.id),
-      kingdom: kingdomCards.map((c) => c.id),
+      supply: config.supplyCards.map((c) => (c as any).id),
+      kingdom: config.kingdomCards.map((c) => (c as any).id),
       ...playerCards,
       config: config,
       turnNumber: 0,
@@ -150,35 +145,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       s.emit('matchReady', this._match);
       s.on('clientReady', this.onClientReady);
     });
-  }
-  
-  private initializeFuseSearch() {
-    const find = (key: CardKey, arr: (CardData & { cardKey: CardKey })[]) =>
-      arr.findIndex(e => e.cardKey === key) > -1;
-    
-    const allExpansionCards = Object.keys(expansionData).reduce(
-      (prev, expansionName) => {
-        const expansion = expansionData[expansionName];
-        const supply = expansion.cardData.supply;
-        const kingdom = expansion.cardData.kingdom;
-        
-        prev = prev
-          .concat(Object.keys(supply).filter(k => !find(k, prev)).map((k) => ({ ...supply[k], cardKey: k })))
-          .concat(Object.keys(kingdom).filter(k => !find(k, prev)).map((k) => ({ ...kingdom[k], cardKey: k })));
-        
-        return prev;
-      },
-      [] as (CardData & { cardKey: CardKey })[],
-    );
-    
-    const fuseOptions: IFuseOptions<CardData> = {
-      ignoreDiacritics: true,
-      minMatchCharLength: 1,
-      distance: 5,
-      keys: ['cardName']
-    };
-    
-    this._fuse = new Fuse(allExpansionCards, fuseOptions);
   }
   
   private _cardLibSnapshot = {};
@@ -254,7 +220,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       socket.emit('matchStarted');
       socket.off('clientReady');
       
-      this.initializeSocketListeners(playerId, socket);
+      this.
+      initializeSocketListeners(socket);
       
       this._interactivityController?.playerAdded(socket);
       
@@ -474,8 +441,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._interactivityController,
     );
     
-    for (const [playerId, socket] of this._socketMap.entries()) {
-      this.initializeSocketListeners(playerId, socket);
+    for (const socket of this._socketMap.values()) {
+      this.initializeSocketListeners(socket);
     }
     
     
@@ -506,20 +473,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     await this.runGameAction('checkForRemainingPlayerActions');
   }
-  
-  private onSearchCards = (playerId: PlayerId, searchStr: string) => {
-    console.log(
-      `[MATCH] searching cards for string '${searchStr}' for ${
-        getPlayerById(this._match, playerId)
-      }`,
-    );
-    
-    const results = this._fuse?.search(searchStr);
-    this._socketMap.get(playerId)?.emit(
-      'searchCardResponse',
-      results?.map((r) => r.item) ?? [],
-    );
-  };
   
   private onCardTapHandlerComplete = async (_card: Card, _player: Player) => {
     console.log(`[MATCH] card tap complete handler invoked`);
@@ -572,8 +525,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       return true;
     }
     
-    const allSupplyCardKeys = match.config.supplyCardKeys.concat(
-      match.config.kingdomCardKeys,
+    const allSupplyCardKeys = match.config.supplyCards.concat(
+      match.config.kingdomCards,
     );
     
     console.log(`[MATCH] original supply card pile count ${allSupplyCardKeys.length}`);
@@ -664,12 +617,20 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   
   private async onNextPhase() {
     await this.runGameAction('nextPhase');
-    // await this.runGameAction('checkForRemainingPlayerActions');
     this._socketMap.forEach(s => s.emit('nextPhaseComplete'));
   }
   
-  private initializeSocketListeners(_playerId: PlayerId, socket: AppSocket) {
+  private initializeSocketListeners(socket: AppSocket) {
     socket.on('nextPhase', () => this.onNextPhase());
     socket.on('searchCards', (playerId, searchStr) => this.onSearchCards(playerId, searchStr));
+  }
+  
+  private onSearchCards(playerId: PlayerId, searchStr: string) {
+    console.log(`[match] ${getPlayerById(this._match, playerId)} searching for cards using term '${searchStr}'`);
+    
+    this._socketMap.get(playerId)?.emit(
+      'searchCardResponse',
+      this.cardSearchFn(searchStr),
+    );
   }
 }

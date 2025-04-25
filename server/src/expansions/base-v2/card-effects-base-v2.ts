@@ -852,8 +852,8 @@ const expansionModule: CardExpansionModule = {
         count: 1,
       });
       
-      const allSupplyCardKeys = match.config.supplyCardKeys.concat(
-        match.config.kingdomCardKeys,
+      const allSupplyCardKeys = match.config.supplyCards.concat(
+        match.config.kingdomCards,
       );
       
       console.log(`[POACHER EFFECT] original supply card piles ${allSupplyCardKeys}`);
