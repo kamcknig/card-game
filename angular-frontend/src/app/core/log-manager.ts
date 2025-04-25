@@ -100,7 +100,8 @@ export const logManager = {
         return `<span style="color: ${p?.color || 'white'}">${p?.name || 'Player'}</span>`;
       });
 
-    msg = `${'&nbsp;'.repeat((logEntry.depth ?? 0) * 2)}${msg}`;
+    console.log(JSON.parse(JSON.stringify(logEntry)));
+    msg = `${'&nbsp;'.repeat((logEntry.depth ?? 0) * 3)}${msg}`;
 
     const ids = logEntryIdsStore.get();
     const newId = ids.length + 1;

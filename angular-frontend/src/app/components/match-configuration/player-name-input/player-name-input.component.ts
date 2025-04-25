@@ -15,33 +15,7 @@ import { selfPlayerIdStore } from '../../../state/match-state';
     NgIf
   ],
   styleUrls: ['./player-name-input.component.scss'],
-  template: `
-    <li *ngIf="$player | async as player">
-      <input
-        type="checkbox"
-        [disabled]="playerId !== ($selfId | async)"
-        [checked]="player.ready"
-        (input)="onReadyChange($any($event.target).checked)"
-      />
-
-      @if (playerId === ($selfId | async)) {
-        <input
-          class="player-name editable"
-          type="text"
-          autofocus
-          (focus)="$any($event.target)?.select?.()"
-          [value]="player.name"
-          (input)="onNameChange($any($event.target).value)"
-        />
-      } @else {
-        <span class="player-name readonly">{{ player.name }}</span>
-      }
-
-      @if (!player.connected) {
-        <span>⚠️</span>
-      }
-    </li>
-  `
+  templateUrl: './player-name-input.component.html',
 })
 export class PlayerComponent implements OnInit {
   @Input() playerId!: PlayerId;

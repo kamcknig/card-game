@@ -12,7 +12,7 @@
           [style.boxShadow]="isCurrentPlayer ? 'inset 10px 0 0 ' + (getPlayerColor(playerScore.id) | async) : null"
           [style.backgroundColor]="getBackgroundColor(playerScore.id) | async"
         >
-          <span>{{ playerScore.name }}</span>
+          <span class="player-name">{{ playerScore.name }}</span>
           <span>{{ playerScore.score }}</span>
         </div>
       }

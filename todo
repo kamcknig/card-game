@@ -16,13 +16,4 @@ when player disconnects in game, give option to kick, or continue playing
 select card effect handler tries to find cards before prompting user and if none, then returns empty array. 
  - look into making user prompt effect handler do the same
 
-don't allow empty player name
-
-if player name too long - truncate in score view
-
-add tailwindcss maybe
-
-for blockade - check on dominion.games what the log looks like for both players
-
-
 SEASIDE expansion - i haven't built outpost - taking an extra turn. the rules are so incredibly complicated it's jus tnot worth it right now.

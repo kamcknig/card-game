@@ -1227,7 +1227,7 @@ const expansionModule: CardExpansionModule = {
       
       console.log(`[VASSAL EFFECT] invoking game action generator...`);
       
-      runGameActionDelegate('playCard', {
+      await runGameActionDelegate('playCard', {
         playerId,
         cardId: card.id,
         overrides: {
