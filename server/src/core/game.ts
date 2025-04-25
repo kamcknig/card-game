@@ -350,6 +350,27 @@ export class Game {
       return prev;
     }, {} as ExpansionCardData);
     
+    // if any cards were requested specifically to be included, add them
+    const keeperExpansions = this._matchConfiguration.supplyCards.concat(this._matchConfiguration.kingdomCards);
+    for (const keeper of keeperExpansions) {
+      if (keeper.isSupply) {
+        cardData.supply = {
+          ...cardData.supply,
+          [keeper.cardKey]: {
+            ...expansionData[keeper.expansionName].cardData.supply[keeper.cardKey]
+          }
+        }
+      }
+      else {
+        cardData.kingdom = {
+          ...cardData.kingdom,
+          [keeper.cardKey]: {
+            ...expansionData[keeper.expansionName].cardData.kingdom[keeper.cardKey]
+          }
+        }
+      }
+    }
+    
     const colors = ['#10FF19', '#3c69ff', '#FF0BF2', '#FFF114', '#FF1F11', '#FF9900'];
     /*const players = fisherYatesShuffle(this.players
      .filter(p => p.connected)

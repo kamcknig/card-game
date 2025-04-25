@@ -1,9 +1,10 @@
 /* ——— Layout ——————————————————————————————— */
 .match-config {
-  display: flex;               /* two vertical columns */
-  gap: 100px;                  /* ~300 px → 700 px offset you had in Pixi */
+  display: flex;
+  gap: 50px;
   padding: 24px;
   font-family: system-ui, sans-serif;
+  justify-content: start;
 }
 
 .section-title {
