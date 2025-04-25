@@ -2,14 +2,17 @@ import { Container, Graphics } from 'pixi.js';
 import { createCardView } from '../../../core/card/create-card-view';
 import { List } from '@pixi/ui';
 import { STANDARD_GAP } from '../../../core/app-contants';
-import { Card } from 'shared/shared-types';
+import { Card, Match } from 'shared/shared-types';
 import { ActiveDurationCardList } from './active-duration-card-list';
 import { playAreaStore } from '../../../state/match-logic';
+import { computed } from 'nanostores';
+import { matchStore } from '../../../state/match-state';
+import { AdjustmentFilter } from 'pixi-filters';
 
 export class PlayAreaView extends Container {
   private _background: Graphics = new Graphics();
   private _cardView: List = new List({ elementsMargin: STANDARD_GAP });
-  private _activeDurationCardList: ActiveDurationCardList = new ActiveDurationCardList({label: 'activeDurationCardList'});
+  private _activeDurationCardList: ActiveDurationCardList = new ActiveDurationCardList({ label: 'activeDurationCardList' });
   private readonly _cleanup: (() => void)[] = [];
 
   constructor() {
@@ -29,7 +32,11 @@ export class PlayAreaView extends Container {
     this._cardView.y = STANDARD_GAP * 4;
     this.addChild(this._cardView);
 
-    this._cleanup.push(playAreaStore.subscribe(val => this.drawCards(val)));
+    this._cleanup.push(
+      computed(
+        [playAreaStore, matchStore],
+        (playArea, match) => ({ playArea, match })
+      ).subscribe(({ playArea, match }) => this.drawCards(playArea, match)));
 
     this.on('removed', this.onRemoved);
   }
@@ -39,12 +46,21 @@ export class PlayAreaView extends Container {
     this.off('removed', this.onRemoved);
   }
 
-  private drawCards(cards: ReadonlyArray<Card>) {
+  private drawCards(cards: ReadonlyArray<Card>, match: Match | null) {
     this._cardView.removeChildren();
 
     for (const card of cards) {
       const view = this._cardView.addChild(createCardView(card));
       view.size = 'full';
+      if (!match?.stats?.playedCards?.[card.id]) continue;
+      if (card.type.includes('DURATION') && match.stats.playedCards[card.id].turnNumber < match.turnNumber) {
+        view.filters = [new AdjustmentFilter({
+          saturation: .4
+        })]
+      }
+      else {
+        view.filters = [];
+      }
     }
   }
 }
