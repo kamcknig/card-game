@@ -11,6 +11,22 @@
   font-size: 1.25rem;
 }
 
+.kingdom-section {
+  flex: 1;
+
+  .kingdom-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+
+    .kingdom {
+      border: 2px solid black;
+      width: 122px;
+      height: 122px;
+    }
+  }
+}
+
 /* ——— Shared list styles ———————————————— */
 .player-list,
 .expansion-list {

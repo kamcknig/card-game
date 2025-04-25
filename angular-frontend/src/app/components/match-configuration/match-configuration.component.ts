@@ -27,6 +27,7 @@ export class MatchConfigurationComponent {
   public $expansionList!: Observable<readonly any[]>;
   public $selectedExpansions!: Observable<readonly string[]>;
   public isGameOwner: boolean = false;
+  public preSelectedKingdoms: { name: string }[];
 
   constructor(
     private _nanoStoreService: NanostoresService,
@@ -39,6 +40,8 @@ export class MatchConfigurationComponent {
       this._nanoStoreService.useStore(gameOwnerIdStore),
       this._nanoStoreService.useStore(selfPlayerIdStore)
     ]).subscribe(([ownerId, playerId]) => this.isGameOwner = playerId === ownerId);
+
+    this.preSelectedKingdoms = new Array(10).fill(null);
   }
 
   onToggleExpansion(expansion: string) {
