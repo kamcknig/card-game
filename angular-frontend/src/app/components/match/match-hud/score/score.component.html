@@ -1,5 +1,5 @@
 <div class="content">
-  <span>{{ ('Turn ' + ((turnNumber$ | async) ?? 1)) | uppercase }}</span>
+  <span>{{ ('Turn ' + ((roundNumber$ | async) ?? 1)) | uppercase }} ({{turnNumber$ | async}})</span>
 
   <div class="player-scores-container">
     @for (playerScore of (getOrderedPlayerScores() | async); track playerScore?.id) {
@@ -12,8 +12,8 @@
           [style.boxShadow]="isCurrentPlayer ? 'inset 10px 0 0 ' + (getPlayerColor(playerScore.id) | async) : null"
           [style.backgroundColor]="getBackgroundColor(playerScore.id) | async"
         >
-          <span>{{playerScore.name}}</span>
-          <span>{{playerScore.score}}</span>
+          <span>{{ playerScore.name }}</span>
+          <span>{{ playerScore.score }}</span>
         </div>
       }
     }

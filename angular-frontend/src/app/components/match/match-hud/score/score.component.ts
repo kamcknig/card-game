@@ -6,6 +6,7 @@ import { AsyncPipe, NgClass, UpperCasePipe } from '@angular/common';
 import { PlayerId } from 'shared/shared-types';
 import { playerIdStore, playerStore } from '../../../../state/player-state';
 import tinycolor from 'tinycolor2'
+import { roundNumberStore } from '../../../../state/turn-logic';
 
 @Component({
   selector: 'app-score',
@@ -22,6 +23,7 @@ export class ScoreComponent implements OnInit {
   @Input() playerScores!: { id: number; score: number; name: string }[] | null;
 
   turnNumber$: Observable<number> | undefined;
+  roundNumber$: Observable<number> | undefined;
   currentPlayerTurnId$: Observable<PlayerId> | undefined;
 
   constructor(private _nanoService: NanostoresService) {
@@ -50,6 +52,7 @@ export class ScoreComponent implements OnInit {
 
   ngOnInit() {
     this.turnNumber$ = this._nanoService.useStore(turnNumberStore);
+    this.roundNumber$ = this._nanoService.useStore(roundNumberStore);
     this.currentPlayerTurnId$ = this._nanoService.useStore(currentPlayerTurnIdStore)
   }
 }
