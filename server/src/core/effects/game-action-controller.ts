@@ -426,7 +426,7 @@ export class GameActionController implements GameActionControllerInterface {
     switch (newPhase) {
       case 'action': {
         match.playerActions = 1;
-        match.playerBuys = 2;
+        match.playerBuys = 1;
         match.playerTreasure = 0;
         match.currentPlayerTurnIndex++;
         

@@ -46,12 +46,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     super();
   }
   
-  private _keepers: CardKey[] = ['moat', 'militia', 'island', 'native-village'];
+  private _keepers: CardKey[] = ['moat', 'militia', 'vassal', 'moneylender'];
   private _playerHands: Record<CardKey, number>[] = [
     {
       gold: 4,
       silver: 3,
-      'treasury': 3
+      'vassal': 3,
+      'moneylender': 3,
     },
     {
       gold: 3,
@@ -198,15 +199,12 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   ): Promise<ReturnType<GameActionController[K]>> {
     this._matchSnapshot ??= this.getMatchSnapshot();
     
-    this._logManager?.enter();
     if (action === 'selectCard' || action === 'userPrompt') {
       this.broadcastPatch(this._matchSnapshot);
       this._matchSnapshot = this.getMatchSnapshot();
     }
     
     const result = await this.gameActionsController![action](args[0] as any);
-    
-    this._logManager?.exit();
     
     this.calculateScores();
     
