@@ -38,7 +38,7 @@ export class Game {
   
   private _socketMap: Map<PlayerId, AppSocket> = new Map();
   private _matchController: MatchController;
-  private _matchConfiguration: MatchConfiguration = defaultMatchConfiguration;
+  private _matchConfiguration: MatchConfiguration = { ...structuredClone(defaultMatchConfiguration) };
   private _availableExpansion: ExpansionListElement[] = [];
   private _fuse: Fuse<CardData & { cardKey: CardKey }> | undefined;
   
@@ -146,11 +146,9 @@ export class Game {
       socket.on('searchCards', (playerId, searchTerm) => {
         this._socketMap.get(playerId)?.emit('searchCardResponse', this.onSearchCards(searchTerm));
       });
-      io.in('game').emit('gameOwnerUpdated', player.id);
     }
-    else {
-      socket.emit('gameOwnerUpdated', this.owner.id);
-    }
+    
+    io.in('game').emit('gameOwnerUpdated', player.id);
     
     console.log(`[GAME] ${player} added to game`);
     
@@ -160,9 +158,7 @@ export class Game {
       socket.emit('matchReady', this._matchController?.getMatchSnapshot()!);
     }
     else {
-      console.log(
-        `[GAME] not yet started, sending player to match configuration`,
-      );
+      console.log(`[GAME] not yet started, sending player to match configuration`,);
       socket.emit(
         'expansionList',
         this._availableExpansion.sort((a, b) => a.order - b.order),
@@ -233,6 +229,7 @@ export class Game {
     this.players = [];
     this.owner = undefined;
     this.matchStarted = false;
+    this._matchConfiguration = structuredClone(defaultMatchConfiguration);
   }
   
   private onMatchConfigurationUpdated = async (newConfig: MatchConfiguration) => {
@@ -394,7 +391,7 @@ export class Game {
     
     void this._matchController?.initialize(
       {
-        ...defaultMatchConfiguration,
+        ...structuredClone(defaultMatchConfiguration),
         ...this._matchConfiguration,
         players: this.players,
       } as MatchConfiguration,
