@@ -6,6 +6,7 @@ import { MatchController } from './match-controller.ts';
 import { ExpansionCardData, expansionData } from '../state/expansion-data.ts';
 import { applyPatch, compare } from 'https://esm.sh/v123/fast-json-patch@3.1.1/index.js';
 import Fuse, { IFuseOptions } from 'fuse.js';
+import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
 
 const defaultMatchConfiguration = {
   expansions: [
@@ -116,12 +117,12 @@ export class Game {
     let player = this.players.find((p) => p.sessionId === sessionId);
     
     if (this.matchStarted && !player) {
-      console.log(`[GAME] game has already started, and player not found in game, rejecting`,);
+      console.log(`[GAME] match has already started, and player not found in game, rejecting`,);
       socket.disconnect();
     }
     
     if (player) {
-      console.log(`[GAME] ${player} already in game assigning socket ID`);
+      console.log(`[GAME] ${player} already in match - assigning socket ID`);
       player.socketId = socket.id;
       player.sessionId = sessionId;
     }
@@ -146,6 +147,9 @@ export class Game {
         this._socketMap.get(playerId)?.emit('searchCardResponse', this.onSearchCards(searchTerm));
       });
       io.in('game').emit('gameOwnerUpdated', player.id);
+    }
+    else {
+      socket.emit('gameOwnerUpdated', this.owner.id);
     }
     
     console.log(`[GAME] ${player} added to game`);
@@ -372,18 +376,18 @@ export class Game {
     }
     
     const colors = ['#10FF19', '#3c69ff', '#FF0BF2', '#FFF114', '#FF1F11', '#FF9900'];
-    /*const players = fisherYatesShuffle(this.players
+    const players = fisherYatesShuffle(this.players
      .filter(p => p.connected)
      .map((p, idx) => {
      p.ready = false;
      p.color = colors[idx]
      return p;
-     }));*/
-    const players = this.players.map((p, idx) => {
-      p.ready = false;
-      p.color = colors[idx]
-      return p;
-    });
+     }));
+    /*const players = this.players.map((p, idx) => {
+     p.ready = false;
+     p.color = colors[idx]
+     return p;
+     });*/
     io.in('game').emit('setPlayerList', players);
     
     this._matchController?.on('gameOver', this.clearMatch);

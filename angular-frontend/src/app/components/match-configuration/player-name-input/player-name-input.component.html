@@ -1,4 +1,6 @@
-<li *ngIf="$player | async as player">
+<div class="content" *ngIf="$player | async as player">
+  <span [ngStyle]="{'visibility': ($isOwner | async) ? 'visible' : 'hidden'}">👑</span>
+
   <input
     type="checkbox"
     [disabled]="playerId !== ($selfId | async) || player.name === ''"
@@ -22,4 +24,4 @@
   @if (!player.connected) {
     <span>⚠️</span>
   }
-</li>
+</div>
