@@ -18,6 +18,12 @@
     grid-template-rows: 1fr 1fr;
     gap: 10px;
   }
+
+  .kingdom {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
 }
 
 /* ——— Shared list styles ———————————————— */
@@ -26,16 +32,23 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
   gap: 16px;                   /* STANDARD_GAP analogue */
+}
+
+.player-list {
+  display: flex;
+}
+
+.expansion-list {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
 }
 
 /* ——— Expansion items ———————————————— */
 .expansion-icon {
   width: 32px;
   height: auto;
-  display: inline-block;
   object-fit: contain;
 }
 
@@ -52,10 +65,8 @@
 }
 
 .kingdom {
-  display: flex;
-  justify-content: center;
-  align-items: center;
   border: 2px solid black;
+  cursor: pointer;
   width: 122px;
   height: 122px;
 

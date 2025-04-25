@@ -1,10 +1,10 @@
-import { CardData } from 'shared/shared-types.ts';
+import { CardData, ExpansionListElement } from 'shared/shared-types.ts';
 import { cardEffectFunctionMapFactory } from '../core/effects/card-effect-function-map-factory.ts';
 import { scoringFunctionMap } from '../expansions/scoring-function-map.ts';
 import { expansionData } from '../state/expansion-data.ts';
 import { cardLifecycleMap } from '../core/card-lifecycle-map.ts';
 
-export const loadExpansion = async (expansion: { title: string, name: string, order: number }) => {
+export const loadExpansion = async (expansion: ExpansionListElement) => {
   const expansionPath = `../expansions/${expansion.name}`;
   const expansionName = expansion.name;
   if (expansionData[expansionName]) {

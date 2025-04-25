@@ -1,4 +1,9 @@
-import { ApplicationConfig, provideAppInitializer, provideZoneChangeDetection } from '@angular/core';
+import {
+  ApplicationConfig,
+  provideAppInitializer,
+  provideExperimentalZonelessChangeDetection,
+  provideZoneChangeDetection
+} from '@angular/core';
 import { provideRouter } from '@angular/router';
 
 import { routes } from './app.routes';
@@ -8,7 +13,7 @@ import { pixiFactory, pixiInstance } from './core/pixi-application.factory';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideZoneChangeDetection({ eventCoalescing: true }),
+    provideExperimentalZonelessChangeDetection(),
     provideRouter(routes),
     { provide: NANOSTORES, useClass: NanostoresService },
     provideAppInitializer(pixiFactory),

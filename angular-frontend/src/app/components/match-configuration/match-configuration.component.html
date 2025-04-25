@@ -4,7 +4,7 @@
     <h2 class="section-title">Players</h2>
 
     <ul class="player-list">
-      @for (id of $playerIds | async; track id) {
+      @for (id of playerIds$ | async; track id) {
         <app-player-name-input [playerId]="id"></app-player-name-input>
       }
     </ul>
@@ -15,12 +15,13 @@
     <h2 class="section-title">Expansions</h2>
 
     <ul class="expansion-list">
-      @let expansionList = ($expansionList | async) ?? [];
-      @let selectedExpansions = ($selectedExpansions | async) ?? [];
+      @let expansionList = (expansionList$ | async) ?? [];
+      @let selectedExpansions = (matchExpansions$ | async) ?? [];
       @for (expansion of expansionList; track expansion.name) {
         <!-- item (selected) -->
         <li
-        (click)="isGameOwner ? onToggleExpansion(expansion.name) : null"
+        [title]="expansion.title"
+        (click)="isGameOwner ? onToggleExpansion(expansion) : null"
         class="expansion-item"
           [ngClass]="{'selected': selectedExpansions.includes(expansion.name)}"
           >
@@ -31,7 +32,6 @@
             alt="{{expansion.title}} icon"
             class="expansion-icon"
           />
-          <div class="expansion-title">{{ expansion.title }}</div>
         </li>
       }
     </ul>

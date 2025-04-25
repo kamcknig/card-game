@@ -499,7 +499,9 @@
     "https://deno.land/x/socket_io@0.2.1/vendor/deno.land/x/redis@v0.27.1/vendor/https/deno.land/std/async/delay.ts": "c7e2604f7cb5ef00d595de8dd600604902d5be03a183b515b3d6d4bbb48e1700",
     "https://deno.land/x/socket_io@0.2.1/vendor/deno.land/x/redis@v0.27.1/vendor/https/deno.land/std/io/buffer.ts": "8c5f84b7ecf71bc3e12aa299a9fae9e72e495db05281fcdd62006ecd3c5ed3f3",
     "https://esm.sh/fast-json-patch@3.1.1?target=deno&pin=v123": "547719cfb97dedc1c5d8017bd361d9196fbe9a5b484c3989eb9a8def066cfc2f",
-    "https://esm.sh/v123/fast-json-patch@3.1.1/deno/fast-json-patch.mjs": "d9f3f4dee499e848ccd05af3438d224ef621161ed29d46c4ce3856f77ec4765a"
+    "https://esm.sh/v123/fast-json-patch@3.1.1/deno/fast-json-patch.mjs": "d9f3f4dee499e848ccd05af3438d224ef621161ed29d46c4ce3856f77ec4765a",
+    "https://esm.sh/v123/fast-json-patch@3.1.1/denonext/index.js": "611ba66c07322160f184cd4fb8bb716f46c3e9265ca20d5bcf69499524d9f77a",
+    "https://esm.sh/v123/fast-json-patch@3.1.1/index.js": "1146b1996cdd600ab306d8c9ea8bc73d1e4e16632db8e7cb1e5cb5fcef5d0ff7"
   },
   "workspace": {
     "dependencies": [

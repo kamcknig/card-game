@@ -1,7 +1,7 @@
-import { LogEntry, Match } from 'shared/shared-types';
+import { LogEntry, Match, MatchConfiguration } from 'shared/shared-types';
 import { playerIdStore, playerStore } from '../../state/player-state';
 import {
-  lobbyMatchConfigurationStore,
+  matchConfigurationStore,
   matchStartedStore,
   matchStore,
   matchSummaryStore,
@@ -25,7 +25,7 @@ export const socketToGameEventMap = (): SocketEventMap => {
   };
 
   map['matchConfigurationUpdated'] = config => {
-    lobbyMatchConfigurationStore.set(config.expansions);
+    matchConfigurationStore.set(config);
   };
 
   map['expansionList'] = val => {

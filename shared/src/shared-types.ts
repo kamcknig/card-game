@@ -45,7 +45,7 @@ export type UserPromptActionArgs = {
 
 export type MatchConfiguration = {
   players: Player[];
-  expansions: string[];
+  expansions: ExpansionListElement[];
   supplyCardKeys: string[];
   kingdomCardKeys: string[];
 }
@@ -103,16 +103,18 @@ export type Match = {
 export const TurnPhaseOrderValues = ['action', 'buy', 'cleanup'] as const;
 export type TurnPhase = typeof TurnPhaseOrderValues[number];
 
+export type ExpansionListElement = {
+  title: string;
+  name: string;
+  order: number;
+};
+
 export type ServerEmitEvents = {
   addLogEntry: (logEntry: LogEntry) => void;
   cardEffectsComplete: (playerId: PlayerId, cardId?: CardId) => void;
   cardTappedComplete: (playerId: PlayerId, cardId: CardId) => void;
   doneWaitingForPlayer: (playerId?: PlayerId) => void;
-  expansionList: (val: {
-    title: string;
-    name: string;
-    order: number;
-  }[]) => void;
+  expansionList: (val: ExpansionListElement[]) => void;
   gameOver: (summary: MatchSummary) => void;
   gameOwnerUpdated: (playerId: PlayerId) => void;
   matchConfigurationUpdated: (val: MatchConfiguration) => void;

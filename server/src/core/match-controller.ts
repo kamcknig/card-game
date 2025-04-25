@@ -38,11 +38,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _fuse: Fuse<CardData & { cardKey: CardKey }> | undefined;
   private _logManager: LogManager | undefined;
   private gameActionsController: GameActionController | undefined;
+  private _match: Match = {} as Match;
   
-  constructor(
-    private _match: Match,
-    private readonly _socketMap: Map<PlayerId, AppSocket>,
-  ) {
+  constructor(private readonly _socketMap: Map<PlayerId, AppSocket>) {
     super();
   }
   

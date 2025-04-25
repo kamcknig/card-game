@@ -1,13 +1,29 @@
 import { AppSocket } from '../types.ts';
-import { Match, MatchConfiguration, Player, PlayerId, } from 'shared/shared-types.ts';
+import { ExpansionListElement, MatchConfiguration, Player, PlayerId, } from 'shared/shared-types.ts';
 import { createNewPlayer } from '../utils/create-new-player.ts';
 import { io } from '../server.ts';
 import { MatchController } from './match-controller.ts';
 import { ExpansionCardData, expansionData } from '../state/expansion-data.ts';
-import { compare } from 'fast-json-patch';
+import { applyPatch, compare } from 'https://esm.sh/v123/fast-json-patch@3.1.1/index.js';
 
 const defaultMatchConfiguration = {
-  expansions: ['base-v2', 'intrigue', 'seaside'],
+  expansions: [
+    {
+      'title': 'Base',
+      'name': 'base-v2',
+      'order': 1
+    },
+    {
+      'title': 'Intrigue',
+      'name': 'intrigue',
+      'order': 2
+    },
+    {
+      'title': 'Seaside',
+      'name': 'seaside',
+      'order': 3
+    }
+  ],
   players: [],
   supplyCardKeys: [],
   kingdomCardKeys: [],
@@ -18,32 +34,17 @@ export class Game {
   public owner: Player | undefined;
   public matchStarted: boolean = false;
   
-  private _match: Match | undefined;
   private _socketMap: Map<PlayerId, AppSocket> = new Map();
   private _matchController: MatchController | undefined;
-  private _matchConfiguration: MatchConfiguration | undefined;
-  private _availableExpansion: {
-    title: string;
-    name: string;
-    order: number;
-  }[] = [];
+  private _matchConfiguration: MatchConfiguration = defaultMatchConfiguration;
+  private _availableExpansion: ExpansionListElement[] = [];
   
   constructor() {
     console.log(`[GAME] created`);
-    
-    this.initializeMatch();
+    this._matchController = new MatchController(this._socketMap);
   }
   
-  private initializeMatch = () => {
-    this._matchConfiguration = defaultMatchConfiguration;
-    this._match = { config: this._matchConfiguration } as Match;
-    this._matchController = new MatchController(this._match, this._socketMap);
-    this._matchController.on('gameOver', this.clearMatch);
-  }
-  
-  public expansionLoaded(
-    expansion: { name: string; title: string; order: number },
-  ) {
+  public expansionLoaded(expansion: ExpansionListElement) {
     console.log(`[GAME] expansion '${expansion.name}' loaded`);
     this._availableExpansion.push(expansion);
     io.in('game').emit(
@@ -70,7 +71,8 @@ export class Game {
       console.log(`[GAME] ${player} already in game assigning socket ID`);
       player.socketId = socket.id;
       player.sessionId = sessionId;
-    } else {
+    }
+    else {
       player = createNewPlayer(sessionId, socket);
       this.players.push(player);
     }
@@ -86,7 +88,7 @@ export class Game {
     if (!this.owner) {
       console.log(`[GAME] game owner does not exist, setting to ${player}`);
       this.owner = player;
-      socket.on('expansionSelected', this.onMatchConfigurationUpdated);
+      socket.on('matchConfigurationUpdated', this.onMatchConfigurationUpdated);
       io.in('game').emit('gameOwnerUpdated', player.id);
     }
     
@@ -96,7 +98,8 @@ export class Game {
       console.log('[GAME] game already started');
       this._matchController?.playerReconnected(player.id, socket);
       socket.emit('matchReady', this._matchController?.getMatchSnapshot()!);
-    } else {
+    }
+    else {
       console.log(
         `[GAME] not yet started, sending player to match configuration`,
       );
@@ -104,7 +107,8 @@ export class Game {
         'expansionList',
         this._availableExpansion.sort((a, b) => a.order - b.order),
       );
-      socket.emit('matchConfigurationUpdated', this._matchConfiguration!);
+      
+      socket.emit('matchConfigurationUpdated', this._matchConfiguration ?? {});
       socket.on('updatePlayerName', this.onUpdatePlayerName);
       socket.on('playerReady', this.onPlayerReady);
     }
@@ -142,7 +146,7 @@ export class Game {
       if (replacement) {
         this.owner = replacement;
         io.in('game').emit('gameOwnerUpdated', replacement.id);
-        this._socketMap.get(replacement.id)?.on('expansionSelected', this.onMatchConfigurationUpdated);
+        this._socketMap.get(replacement.id)?.on('matchConfigurationUpdated', this.onMatchConfigurationUpdated);
       }
     }
   };
@@ -161,39 +165,43 @@ export class Game {
     this.players = [];
     this.owner = undefined;
     this.matchStarted = false;
-    this.initializeMatch();
   }
   
-  private onMatchConfigurationUpdated = async (expansions: string[]) => {
+  private onMatchConfigurationUpdated = async (newConfig: MatchConfiguration) => {
     console.log(`[GAME] received expansionSelected socket event`);
-    console.log(expansions);
+    console.log(newConfig);
     
-    const newExpansions = expansions.filter(
-      (e) => !this._matchConfiguration?.expansions.includes(e),
+    const currentConfig = structuredClone(this._matchConfiguration ?? {}) as MatchConfiguration;
+    
+    const newExpansions = newConfig.expansions.filter(
+      (e) => !currentConfig?.expansions.includes(e),
     );
     
-    const expansionsToRemove: string[] = [];
+    const expansionsToRemove: ExpansionListElement[] = [];
+    
+    // go through the new expansions to add, if any are mutually exclusive with some we still have
+    // selected, then remove those selected ones as well
     for (const expansion of newExpansions) {
       const configModule =
-        (await import(`../expansions/${expansion}/configuration-${expansion}.json`, {
+        (await import(`../expansions/${expansion.name}/configuration-${expansion.name}.json`, {
           with: { type: 'json' },
         }))?.default;
       
       if (!configModule) {
-        console.warn(`[GAME] could not find config module for expansion ${expansion}`,);
+        console.warn(`[GAME] could not find config module for expansion '${expansion.name}'`,);
         continue;
       }
       
       if (!configModule.mutuallyExclusiveExpansions) {
-        console.log(`[GAME] module for expansion ${expansion} contains no mutually exclusive expansions`,);
+        console.log(`[GAME] module for expansion '${expansion.name}' contains no mutually exclusive expansions`,);
         continue;
       }
       
-      console.log(`[GAME] ${expansion} is mutually exclusive with ${configModule.mutuallyExclusiveExpansions}`,);
+      console.log(`[GAME] '${expansion.name}' is mutually exclusive with ${configModule.mutuallyExclusiveExpansions}`,);
       
       for (const exclusiveExpansion of configModule.mutuallyExclusiveExpansions) {
         if (
-          expansions.includes(exclusiveExpansion) &&
+          currentConfig.expansions.includes(exclusiveExpansion) &&
           !expansionsToRemove.includes(exclusiveExpansion)
         ) {
           console.log(`[GAME] removing expansion ${exclusiveExpansion} as it is not allowed with ${expansion}`,);
@@ -202,17 +210,11 @@ export class Game {
       }
     }
     
-    const previousSnapshot = this._matchController?.getMatchSnapshot() ?? {};
-    this._matchConfiguration = {
-      ...this._matchConfiguration,
-      expansions,
-    } as MatchConfiguration;
+    const patch = compare(currentConfig, newConfig);
     
-    if (this.matchStarted && this._match) {
-      this._match.config = this._matchConfiguration;
-      const patch = compare(previousSnapshot, this._matchController?.getMatchSnapshot() ?? {});
-      if (patch.length) this._socketMap.forEach(s => s.emit('patchMatch', patch));
-    } else {
+    
+    if (patch.length) {
+      applyPatch(this._matchConfiguration, patch)
       // lobby phase – raw object still useful for the config screen
       io.in('game').emit('matchConfigurationUpdated', this._matchConfiguration);
     }
@@ -228,7 +230,8 @@ export class Game {
     if (player) {
       player.name = name;
       console.log(`[GAME] ${player} name updated to '${name}'`);
-    } else {
+    }
+    else {
       console.log(`[GAME] player ${playerId} not found`);
     }
     
@@ -272,11 +275,11 @@ export class Game {
       prev = {
         supply: {
           ...prev.supply,
-          ...expansionData[key].cardData.supply
+          ...expansionData[key.name].cardData.supply
         },
         kingdom: {
           ...prev.kingdom,
-          ...expansionData[key].cardData.kingdom
+          ...expansionData[key.name].cardData.kingdom
         }
       }
       return prev;
@@ -284,21 +287,24 @@ export class Game {
     
     const colors = ['#10FF19', '#3c69ff', '#FF0BF2', '#FFF114', '#FF1F11', '#FF9900'];
     /*const players = fisherYatesShuffle(this.players
-      .filter(p => p.connected)
-      .map((p, idx) => {
-        p.ready = false;
-        p.color = colors[idx]
-        return p;
-      }));*/
+     .filter(p => p.connected)
+     .map((p, idx) => {
+     p.ready = false;
+     p.color = colors[idx]
+     return p;
+     }));*/
     const players = this.players.map((p, idx) => {
       p.ready = false;
       p.color = colors[idx]
       return p;
     });
     io.in('game').emit('setPlayerList', players);
+    
+    this._matchController?.on('gameOver', this.clearMatch);
+    
     void this._matchController?.initialize(
       {
-        ...this._matchConfiguration,
+        ...defaultMatchConfiguration,
         players: this.players,
       } as MatchConfiguration,
       cardData as ExpansionCardData
