@@ -148,7 +148,7 @@ export class Game {
       });
     }
     
-    io.in('game').emit('gameOwnerUpdated', player.id);
+    io.in('game').emit('gameOwnerUpdated', this.owner.id);
     
     console.log(`[GAME] ${player} added to game`);
     
@@ -373,13 +373,15 @@ export class Game {
     }
     
     const colors = ['#10FF19', '#3c69ff', '#FF0BF2', '#FFF114', '#FF1F11', '#FF9900'];
-    const players = fisherYatesShuffle(this.players
-     .filter(p => p.connected)
-     .map((p, idx) => {
-     p.ready = false;
-     p.color = colors[idx]
-     return p;
-     }));
+    const players = fisherYatesShuffle(
+      this.players
+        .filter(p => p.connected)
+        .map((p, idx) => {
+          p.ready = false;
+          p.color = colors[idx]
+          return p;
+        })
+    );
     /*const players = this.players.map((p, idx) => {
      p.ready = false;
      p.color = colors[idx]
@@ -393,7 +395,7 @@ export class Game {
       {
         ...structuredClone(defaultMatchConfiguration),
         ...this._matchConfiguration,
-        players: this.players,
+        players,
       } as MatchConfiguration,
       cardData as ExpansionCardData
     );

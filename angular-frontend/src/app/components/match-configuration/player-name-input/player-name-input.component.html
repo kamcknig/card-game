@@ -2,6 +2,7 @@
   <span [ngStyle]="{'visibility': ($isOwner | async) ? 'visible' : 'hidden'}">👑</span>
 
   <input
+    #readyCheckbox
     type="checkbox"
     [disabled]="playerId !== ($selfId | async) || player.name === ''"
     [checked]="player.ready"
@@ -13,6 +14,7 @@
       class="player-name editable"
       type="text"
       autofocus
+      [disabled]="readyCheckbox.checked"
       (focus)="$any($event.target)?.select?.()"
       [value]="player.name"
       (input)="onNameChange($any($event.target).value)"
