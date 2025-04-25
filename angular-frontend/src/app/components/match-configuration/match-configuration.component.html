@@ -28,7 +28,7 @@
             ngSrc="/assets/expansion-icons/{{expansion.name}}.png"
             height="24"
             width="1"
-            alt="Expansion icon"
+            alt="{{expansion.title}} icon"
             class="expansion-icon"
           />
           <div class="expansion-title">{{ expansion.title }}</div>
@@ -42,9 +42,20 @@
 
     <div class="kingdom-list">
       @for (kingdom of preSelectedKingdoms; track kingdom?.name) {
-        <div class="kingdom">
-          @if (kingdom !== undefined) {
-
+        <div
+          class="kingdom"
+          (click)="selectKingdom($index, kingdom)"
+        >
+          @if (kingdom !== null) {
+            <img
+              alt="{{kingdom.name}} image"
+              ngSrc="/assets/card-images/{{kingdom.expansion}}/half-size/{{kingdom.cardKey}}.jpg"
+              height="122"
+              width="122"
+            />
+          }
+          @else {
+            <span class="no-kingdom">?</span>
           }
         </div>
       }

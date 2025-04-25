@@ -108,7 +108,11 @@ export type ServerEmitEvents = {
   cardEffectsComplete: (playerId: PlayerId, cardId?: CardId) => void;
   cardTappedComplete: (playerId: PlayerId, cardId: CardId) => void;
   doneWaitingForPlayer: (playerId?: PlayerId) => void;
-  expansionList: (val: any[]) => void;
+  expansionList: (val: {
+    title: string;
+    name: string;
+    order: number;
+  }[]) => void;
   gameOver: (summary: MatchSummary) => void;
   gameOwnerUpdated: (playerId: PlayerId) => void;
   matchConfigurationUpdated: (val: MatchConfiguration) => void;

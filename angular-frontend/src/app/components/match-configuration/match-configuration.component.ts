@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { PlayerId } from 'shared/shared-types';
+import { CardKey, PlayerId } from 'shared/shared-types';
 import { NanostoresService } from '@nanostores/angular';
 import { playerIdStore } from '../../state/player-state';
 import { combineLatest, map, Observable } from 'rxjs';
@@ -24,10 +24,14 @@ import { PlayerComponent } from './player-name-input/player-name-input.component
 })
 export class MatchConfigurationComponent {
   public $playerIds!: Observable<readonly PlayerId[]>;
-  public $expansionList!: Observable<readonly any[]>;
+  public $expansionList!: Observable<readonly {
+    title: string;
+    name: string;
+    order: number;
+  }[]>;
   public $selectedExpansions!: Observable<readonly string[]>;
   public isGameOwner: boolean = false;
-  public preSelectedKingdoms: { name: string }[];
+  public preSelectedKingdoms: { name: string; expansion: string; cardKey: CardKey; }[];
 
   constructor(
     private _nanoStoreService: NanostoresService,
@@ -35,7 +39,8 @@ export class MatchConfigurationComponent {
   ) {
     this.$playerIds = this._nanoStoreService.useStore(playerIdStore);
     this.$expansionList = this._nanoStoreService.useStore(expansionListStore);
-    this.$selectedExpansions = this._nanoStoreService.useStore(lobbyMatchConfigurationStore).pipe(map(result => result ?? []));
+    this.$selectedExpansions = this._nanoStoreService.useStore(lobbyMatchConfigurationStore)
+      .pipe(map(result => result ?? []));
     combineLatest([
       this._nanoStoreService.useStore(gameOwnerIdStore),
       this._nanoStoreService.useStore(selfPlayerIdStore)
@@ -50,10 +55,17 @@ export class MatchConfigurationComponent {
 
     if (currentIdx === undefined || currentIdx === -1) {
       currentExpansions.push(expansion);
-    } else {
+    }
+    else {
       currentExpansions.splice(currentIdx, 1);
     }
 
     this._socketService.emit('expansionSelected', currentExpansions ?? []);
+  }
+
+  selectKingdom(index: number, kingdom: { name: string; expansion: string; cardKey: CardKey }) {
+    console.log('selectKingdom', index, kingdom);
+
+
   }
 }

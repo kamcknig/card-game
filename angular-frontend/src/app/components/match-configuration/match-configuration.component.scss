@@ -12,18 +12,11 @@
 }
 
 .kingdom-section {
-  flex: 1;
-
   .kingdom-list {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
     gap: 10px;
-
-    .kingdom {
-      border: 2px solid black;
-      width: 122px;
-      height: 122px;
-    }
   }
 }
 
@@ -56,4 +49,17 @@
 .expansion-item.selected {
   outline: 2px solid #000000;     /* highlight border */
   outline-offset: 5px;
+}
+
+.kingdom {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 2px solid black;
+  width: 122px;
+  height: 122px;
+
+  .no-kingdom {
+    font-size: 32px;
+  }
 }
