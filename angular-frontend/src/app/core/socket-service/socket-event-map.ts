@@ -1,4 +1,4 @@
-import { LogEntry, Match, MatchConfiguration } from 'shared/shared-types';
+import { Card, CardKey, LogEntry, Match, MatchConfiguration } from 'shared/shared-types';
 import { playerIdStore, playerStore } from '../../state/player-state';
 import {
   matchConfigurationStore,
@@ -14,6 +14,7 @@ import { Assets } from 'pixi.js';
 import { applyPatch, Operation } from 'fast-json-patch';
 import { ClientListenEventNames, ClientListenEvents } from '../../../types';
 import { logManager } from '../log-manager';
+import { kingdomCardKeyStore, supplyCardKeyStore } from '../../state/match-logic';
 
 export type SocketEventMap = Partial<{ [p in ClientListenEventNames]: ClientListenEvents[p] }>;
 
@@ -83,6 +84,34 @@ export const socketToGameEventMap = (): SocketEventMap => {
   };
 
   map['matchStarted'] = () => {
+    const allCards = cardStore.get();
+    const match = matchStore.get();
+    const kingdomSupplyCardKeys = match?.supply.reduce((prev, nextCard) => {
+      const card = allCards[nextCard];
+
+      if (card.type.includes(('VICTORY'))) {
+        if (prev[0].includes(card.cardKey)) return prev;
+        prev[0].push(card.cardKey);
+        return prev;
+      }
+      else if (card.type.includes(('TREASURE'))) {
+        if (prev[1].includes(card.cardKey)) return prev;
+        prev[1].push(card.cardKey);
+        return prev;
+      }
+
+      return prev;
+    }, [[], []] as [CardKey[], CardKey[]]);
+    supplyCardKeyStore.set(kingdomSupplyCardKeys ?? [[], []]);
+
+    const kingdomCardKeys = match?.kingdom.reduce((prev, nextCard) => {
+      const card = allCards[nextCard];
+      if (prev.includes(card.cardKey)) return prev;
+      prev.push(card.cardKey);
+      return prev;
+    }, [] as CardKey[]);
+    kingdomCardKeyStore.set(kingdomCardKeys ?? []);
+
     matchStartedStore.set(true);
   };
 

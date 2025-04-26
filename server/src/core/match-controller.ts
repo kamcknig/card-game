@@ -86,8 +86,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       kingdomCards: this.createKingdom(config),
     };
     
-    this._socketMap.forEach(s => s.emit('matchConfigurationUpdated', config));
-    
     const playerCards = this.createPlayerDecks(config);
     
     const matchStats: MatchStats = {
