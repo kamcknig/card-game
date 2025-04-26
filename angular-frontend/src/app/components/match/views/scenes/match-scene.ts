@@ -602,6 +602,8 @@ export class MatchScene extends Scene {
       pileView.y = idx * SMALL_CARD_HEIGHT + idx * STANDARD_GAP;
       this._baseSupply.addChild(pileView);
     }
+
+    this.drawBaseSupply(supplyStore.get())
   }
 
   private drawBaseSupply = (newVal: ReadonlyArray<number>) => {
@@ -620,7 +622,7 @@ export class MatchScene extends Scene {
       return prev;
     }, {} as Record<CardKey, Card[]>);
 
-    for (const [cardKey, pile] of pileMap.entries()) {
+    for (const [cardKey, pile] of Object.entries(pileMap)) {
       const pileView = this._baseSupply.getChildByLabel(`pile:${cardKey}`) as PileView;
       if (!pileView) {
         continue;
