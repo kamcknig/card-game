@@ -60,7 +60,8 @@ export class MatchConfigurationComponent implements OnDestroy {
         (config?.kingdomCards?.concat(config?.supplyCards) ?? [])
           .sort((a, b) => a.cardKey.localeCompare(b.cardKey))))
       .subscribe(selectedKingdoms => {
-        const remainingNulls = new Array(10 - selectedKingdoms.length).fill(null);
+        selectedKingdoms ??= []
+        const remainingNulls = new Array(10 - (selectedKingdoms?.length ?? 0)).fill(null);
 
         for (const _ of remainingNulls) {
           selectedKingdoms.push(null as any);

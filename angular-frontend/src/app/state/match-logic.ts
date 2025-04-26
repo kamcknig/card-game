@@ -1,11 +1,14 @@
 import { computed } from 'nanostores';
 import { CardId, Mats } from 'shared/shared-types';
-import { matchStore, selfPlayerIdStore } from './match-state';
+import { matchConfigurationStore, matchStore, selfPlayerIdStore } from './match-state';
 import { cardStore } from './card-state';
 
 export const supplyStore =
   computed(matchStore, m => m?.supply ?? []);
 (globalThis as any).supplyStore = supplyStore;
+
+export const supplyCardKeyStore =
+  computed(matchConfigurationStore, matchConfig => matchConfig?.supplyCards?.map(card => card.cardKey) ?? []);
 
 export const kingdomStore =
   computed(matchStore, m => m?.kingdom ?? []);

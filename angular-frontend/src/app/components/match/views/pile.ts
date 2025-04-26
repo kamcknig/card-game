@@ -4,11 +4,53 @@ import { CountBadgeView } from './count-badge-view';
 import { Card } from 'shared/shared-types';
 import { CardFacing, CardSize } from '../../../../types';
 
+type PileArgs = {
+  cards?: Card[];
+  count?: number;
+  size?: CardSize;
+  facing?: CardFacing;
+}
+
 export class PileView extends Container {
-  constructor(cards: Card[], count: number, size: CardSize = 'full', facing: CardFacing = 'front') {
+  private _cards: Card[] = [];
+  private _count: number = 0;
+  private _size: CardSize = 'full';
+  private _facing: CardFacing = 'front';
+
+  set pile(val: Card[]) {
+    this._cards = [...val];
+    this._count = this._cards.length;
+    this.draw();
+  }
+
+  constructor(args: PileArgs) {
     super();
 
-    const card = cards.reduce<Card | undefined>((prev, next) => {
+    this._cards = args.cards ?? [];
+    this._count = args.count ?? 0;
+    this._size = args.size ?? 'full';
+    this._facing = args.facing ?? 'front';
+
+    if (this._cards.length > 0) {
+      this.draw();
+    }
+
+    this.eventMode = 'static';
+
+    this.on('pointerdown', (event) => {
+      if (event.ctrlKey) {
+        console.log(this._cards);
+      }
+    });
+
+    this.on('removed', () => {
+      this.destroy();
+      this.removeAllListeners();
+    });
+  }
+
+  draw() {
+    const card = this._cards.reduce<Card | undefined>((prev, next) => {
       if (!prev) {
         return next;
       }
@@ -21,26 +63,13 @@ export class PileView extends Container {
     }
 
     const view = this.addChild(createCardView(card));
-    view.size = size;
-    view.facing = facing;
+    view.size = this._size;
+    view.facing = this._facing;
 
-    const b = new CountBadgeView({ count });
+    const b = new CountBadgeView({ count: this._count });
     b.x = 0;
     b.y = 0;
 
     this.addChild(b);
-
-    this.eventMode = 'static';
-
-    this.on('pointerdown', (event) => {
-      if (event.ctrlKey) {
-        console.log(cards);
-      }
-    });
-
-    this.on('removed', () => {
-      this.destroy();
-      this.removeAllListeners();
-    });
   }
 }

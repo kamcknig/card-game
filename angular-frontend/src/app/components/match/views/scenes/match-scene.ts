@@ -2,13 +2,13 @@ import { Application, Assets, Container, Graphics, Sprite, Text } from 'pixi.js'
 import { Scene } from '../../../../core/scene/scene';
 import { PlayerHandView } from '../player-hand';
 import { AppButton, createAppButton } from '../../../../core/create-app-button';
-import { matchStartedStore, selfPlayerIdStore } from '../../../../state/match-state';
+import { matchConfigurationStore, matchStartedStore, selfPlayerIdStore } from '../../../../state/match-state';
 import { playerStore, } from '../../../../state/player-state';
 import { PlayAreaView } from '../play-area';
 import { KingdomSupplyView } from '../kingdom-supply';
 import { PileView } from '../pile';
 import { cardStore } from '../../../../state/card-state';
-import { Card, CardId, CardKey, PlayerId, UserPromptActionArgs } from 'shared/shared-types';
+import { Card, CardId, CardKey, CardNoId, PlayerId, UserPromptActionArgs } from 'shared/shared-types';
 import {
   awaitingServerLockReleaseStore,
   clientSelectableCardsOverrideStore,
@@ -93,7 +93,6 @@ export class MatchScene extends Scene {
 
     this.addChild(this._playAllTreasuresButton.button);
 
-    this._cleanup.push(supplyStore.subscribe(this.drawBaseSupply));
     this._cleanup.push(matchStartedStore.subscribe(this.onMatchStarted));
     this._app.renderer.on('resize', this.onRendererResize);
     this._socketService.on('selectCard', this.doSelectCards);
@@ -322,10 +321,15 @@ export class MatchScene extends Scene {
   }
 
   private onMatchStarted = (started: boolean) => {
-    if (started) {
-      this.eventMode = 'static';
-      this.on('pointerdown', this.onPointerDown);
-    }
+    if (!started) return
+
+    this.eventMode = 'static';
+    this.on('pointerdown', this.onPointerDown);
+
+    const config = matchConfigurationStore.get();
+    this.createBaseSupply(config?.supplyCards);
+
+    this._cleanup.push(supplyStore.subscribe(val => this.drawBaseSupply(val)));
   }
 
   private onRemoved = () => {
@@ -581,12 +585,40 @@ export class MatchScene extends Scene {
     validateSelection(selectedCardStore.get());
   }
 
+  private createBaseSupply(supplyCards: CardNoId[] | undefined) {
+    if (!supplyCards) return;
+
+    const [victoryPiles, treasurePiles] = Object.values(supplyCards.reduce((prev, card) => {
+      if (card.type.includes('VICTORY')) {
+        prev[0].push(card.cardKey);
+        prev[0] = Array.from((new Set(prev[0])));
+      }
+      else if (card.type.includes('TREASURE')) {
+        prev[1] = Array.from((new Set(prev[1])));
+      }
+      return prev;
+    }, [[], []] as [CardKey[], CardKey[]]));
+
+    for (const [idx, cardKey] of victoryPiles.entries()) {
+      const pileView = new PileView({ size: 'half' });
+      pileView.label = `pile:${cardKey}`;
+      pileView.y = idx * SMALL_CARD_HEIGHT + idx * STANDARD_GAP;
+      this._baseSupply.addChild(pileView);
+    }
+
+    for (const [idx, cardKey] of treasurePiles.entries()) {
+      const pileView = new PileView({ size: 'half' });
+      pileView.label = `pile:${cardKey}`;
+      pileView.x = SMALL_CARD_WIDTH + STANDARD_GAP;
+      pileView.y = idx * SMALL_CARD_HEIGHT + idx * STANDARD_GAP;
+      this._baseSupply.addChild(pileView);
+    }
+  }
+
   private drawBaseSupply = (newVal: ReadonlyArray<number>) => {
     if (!newVal || newVal.length === 0) {
       return;
     }
-
-    this._baseSupply.removeChildren();
 
     const cards = newVal.map(id => cardStore.get()[id]);
 
@@ -609,17 +641,20 @@ export class MatchScene extends Scene {
         return prev;
       }, [[], []] as [Card[][], Card[][]]);
 
-    for (const [idx, pile] of victoryPiles.entries()) {
-      const pileView = new PileView(pile, pile.length, 'half');
-      pileView.y = idx * SMALL_CARD_HEIGHT + idx * STANDARD_GAP;
-      this._baseSupply.addChild(pileView);
+    for (const pile of victoryPiles.values()) {
+      const pileView = this._baseSupply.getChildByLabel(`pile:${pile[0].cardKey}`) as PileView;
+      if (!pileView) {
+        continue;
+      }
+      pileView.pile = pile;
     }
 
-    for (const [idx, pile] of treasurePiles.entries()) {
-      const pileView = new PileView(pile, pile.length, 'half');
-      pileView.x = SMALL_CARD_WIDTH + STANDARD_GAP;
-      pileView.y = idx * SMALL_CARD_HEIGHT + idx * STANDARD_GAP;
-      this._baseSupply.addChild(pileView);
+    for (const pile of treasurePiles.values()) {
+      const pileView = this._baseSupply.getChildByLabel(`pile:${pile[0].cardKey}`) as PileView;
+      if (!pileView) {
+        continue;
+      }
+      pileView.pile = pile;
     }
   }
 
