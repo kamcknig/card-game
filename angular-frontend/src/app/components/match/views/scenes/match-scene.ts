@@ -614,32 +614,14 @@ export class MatchScene extends Scene {
     // first reduces and then gets teh values to make an array of Card arrays, then reduces again
     // into a tuple whose first element is an array of piles of victory cards and the curse, and the 2nd
     // element is an array of treasure card piles
-    const [victoryPiles, treasurePiles] = Object.values(cards.reduce((prev, card) => {
-      prev[card.cardKey] ||= [];
+    const pileMap = Object.values(cards.reduce((prev, card) => {
+      prev[card.cardKey] ??= [];
       prev[card.cardKey].push(card);
       return prev;
-    }, {} as Record<CardKey, Card[]>))
-      .reduce((prev, next) => {
-        const firstCard = next[0];
-        if (firstCard.type.includes('VICTORY') || firstCard.cardKey === 'curse') {
-          prev[0].push(next);
-        }
-        else {
-          prev[1].push(next);
-        }
-        return prev;
-      }, [[], []] as [Card[][], Card[][]]);
+    }, {} as Record<CardKey, Card[]>));
 
-    for (const pile of victoryPiles.values()) {
-      const pileView = this._baseSupply.getChildByLabel(`pile:${pile[0].cardKey}`) as PileView;
-      if (!pileView) {
-        continue;
-      }
-      pileView.pile = pile;
-    }
-
-    for (const pile of treasurePiles.values()) {
-      const pileView = this._baseSupply.getChildByLabel(`pile:${pile[0].cardKey}`) as PileView;
+    for (const [cardKey, pile] of pileMap.entries()) {
+      const pileView = this._baseSupply.getChildByLabel(`pile:${cardKey}`) as PileView;
       if (!pileView) {
         continue;
       }
