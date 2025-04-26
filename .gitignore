@@ -4,3 +4,4 @@ dist/
 *.tsbuildinfo
 logs/
 .env
+banned-kingdoms.json
