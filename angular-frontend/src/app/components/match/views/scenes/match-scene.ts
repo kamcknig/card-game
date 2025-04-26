@@ -614,11 +614,11 @@ export class MatchScene extends Scene {
     // first reduces and then gets teh values to make an array of Card arrays, then reduces again
     // into a tuple whose first element is an array of piles of victory cards and the curse, and the 2nd
     // element is an array of treasure card piles
-    const pileMap = Object.values(cards.reduce((prev, card) => {
+    const pileMap = cards.reduce((prev, card) => {
       prev[card.cardKey] ??= [];
       prev[card.cardKey].push(card);
       return prev;
-    }, {} as Record<CardKey, Card[]>));
+    }, {} as Record<CardKey, Card[]>);
 
     for (const [cardKey, pile] of pileMap.entries()) {
       const pileView = this._baseSupply.getChildByLabel(`pile:${cardKey}`) as PileView;
