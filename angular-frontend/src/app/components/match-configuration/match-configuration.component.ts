@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnDestroy } from '@angular/core';
-import { ExpansionListElement, MatchConfiguration, MatchPreselectedKingdom, PlayerId } from 'shared/shared-types';
+import { ExpansionListElement, MatchConfiguration, CardNoId, PlayerId } from 'shared/shared-types';
 import { NanostoresService } from '@nanostores/angular';
 import { playerIdStore } from '../../state/player-state';
 import { combineLatest, map, Observable, Subscription } from 'rxjs';
@@ -26,13 +26,17 @@ import { SelectKingdomModalComponent } from './select-kingdom-modal/select-kingd
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MatchConfigurationComponent implements OnDestroy {
-  public playerIds$!: Observable<readonly PlayerId[]>;
-  public expansionList$!: Observable<readonly ExpansionListElement[]>;
-  public matchExpansions$!: Observable<readonly string[]>;
-  public isGameOwner: boolean = false;
-  public preSelectedKingdoms: (MatchPreselectedKingdom | null)[] = [];
-  public selectingKingdom: boolean = false;
+  playerIds$!: Observable<readonly PlayerId[]>;
+  expansionList$!: Observable<readonly ExpansionListElement[]>;
+  matchExpansions$!: Observable<readonly string[]>;
+  isGameOwner: boolean = false;
+  preSelectedKingdoms: (CardNoId | null)[] = [];
+  selectingKingdom: boolean = false;
+  selectingBannedCards: boolean = false
+  bannedKingdoms$: Observable<readonly CardNoId[]>;
+
   private gameOwnerSub: Subscription;
+  private bannedKingdoms: CardNoId[] = [];
   private selectedKingdomsSub: Subscription;
 
   constructor(
@@ -46,6 +50,10 @@ export class MatchConfigurationComponent implements OnDestroy {
         map(config => config?.expansions?.map(e => e.name)),
         map(expansions => expansions ?? [])
       );
+
+    this.bannedKingdoms$ = this._nanoStoreService.useStore(matchConfigurationStore).pipe(
+      map(config => config?.bannedKingdoms ?? [])
+    );
 
     this.selectedKingdomsSub = this._nanoStoreService.useStore(matchConfigurationStore)
       .pipe(map(config =>
@@ -92,7 +100,7 @@ export class MatchConfigurationComponent implements OnDestroy {
     });
   }
 
-  deleteKingdom(kingdom: MatchPreselectedKingdom) {
+  deleteKingdom(kingdom: CardNoId) {
     const idx = this.preSelectedKingdoms.findIndex(k => k !== null && k?.cardKey === kingdom.cardKey);
     this.preSelectedKingdoms = this.preSelectedKingdoms
       .toSpliced(idx, 1, null)
@@ -110,7 +118,7 @@ export class MatchConfigurationComponent implements OnDestroy {
    *
    * @param $event
    */
-  onKingdomSelected($event: MatchPreselectedKingdom) {
+  onKingdomSelected($event: CardNoId) {
     const idx = this.preSelectedKingdoms.findIndex(k => k === null);
     this.preSelectedKingdoms = this.preSelectedKingdoms.toSpliced(idx, 1, $event);
     this.selectingKingdom = false;
@@ -120,8 +128,25 @@ export class MatchConfigurationComponent implements OnDestroy {
   private sendMatchConfigUpdate() {
     this._socketService.emit('matchConfigurationUpdated', {
       ...matchConfigurationStore.get() as MatchConfiguration,
+      bannedKingdoms: this.bannedKingdoms,
       kingdomCards: this.preSelectedKingdoms.filter(card => card?.isKingdom).filter(card => card !== null),
       supplyCards: this.preSelectedKingdoms.filter(card => card?.isSupply).filter(card => card !== null),
     });
+  }
+
+  onBannedKingdomSelected($event: CardNoId) {
+    const idx = this.bannedKingdoms.findIndex(k => k.cardKey === $event.cardKey);
+    if (idx === -1) {
+      this.bannedKingdoms.push($event);
+    }
+    else {
+      this.bannedKingdoms.splice(idx, 1)
+    }
+    this.bannedKingdoms = [...this.bannedKingdoms.sort((a, b) => a.cardKey.localeCompare(b.cardKey))];
+    this.sendMatchConfigUpdate();
+  }
+
+  deleteBannedKingdom(bannedCard: CardNoId) {
+    this.onBannedKingdomSelected(bannedCard);
   }
 }

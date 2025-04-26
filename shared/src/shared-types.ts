@@ -46,8 +46,9 @@ export type UserPromptActionArgs = {
 export type MatchConfiguration = {
   players: Player[];
   expansions: ExpansionListElement[];
-  supplyCards: MatchPreselectedKingdom[];
-  kingdomCards: MatchPreselectedKingdom[];
+  bannedKingdoms: CardNoId[];
+  supplyCards: CardNoId[];
+  kingdomCards: CardNoId[];
 }
 
 type CardStats = {
@@ -380,4 +381,4 @@ export type CardData = Omit<
   Card,
   'id' | 'cardKey'
 >;
-export type MatchPreselectedKingdom = CardData & { cardKey: CardKey };
+export type CardNoId = Omit<Card, 'id'>;

@@ -3,7 +3,7 @@ import { combineLatestWith, debounceTime, filter, Subject, Subscription } from '
 import { SocketService } from '../../../core/socket-service/socket.service';
 import { NanostoresService } from '@nanostores/angular';
 import { selfPlayerIdStore } from '../../../state/match-state';
-import { CardData, CardKey, MatchPreselectedKingdom } from 'shared/shared-types';
+import { CardData, CardKey, CardNoId } from 'shared/shared-types';
 import { AsyncPipe, NgOptimizedImage } from '@angular/common';
 import { SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH } from '../../../core/app-contants';
 
@@ -22,7 +22,8 @@ export class SelectKingdomModalComponent implements OnDestroy {
   protected readonly SMALL_CARD_WIDTH = SMALL_CARD_WIDTH;
   private searchSub: Subscription;
 
-  @Input() selectedKingdoms: (MatchPreselectedKingdom | null)[] = [];
+  @Input() excludedKingdoms: (CardNoId | null)[] = [];
+
   @Output() close: EventEmitter<void> = new EventEmitter();
   @Output() kingdomSelected: EventEmitter<CardData & { cardKey: CardKey }> = new EventEmitter();
   searchTerm$: Subject<string> = new Subject();
@@ -35,7 +36,9 @@ export class SelectKingdomModalComponent implements OnDestroy {
     this._socketService
       .on('searchCardResponse', results =>
         this.searchResults$.next(results.filter(r => {
-          const currentSelectedKingdomCardKeys = this.selectedKingdoms.map(k => k?.cardKey).filter(k => k !== null);
+          if (r.isSupply) return false;
+
+          const currentSelectedKingdomCardKeys = this.excludedKingdoms.map(k => k?.cardKey).filter(k => k !== null);
           return !currentSelectedKingdomCardKeys.some(k => k === r.cardKey);
         })));
 
@@ -57,8 +60,13 @@ export class SelectKingdomModalComponent implements OnDestroy {
     this.searchSub.unsubscribe();
   }
 
-  onKingdomSelected(card: MatchPreselectedKingdom) {
+  onKingdomSelected(card: CardNoId) {
     this.kingdomSelected.emit(card);
+    this.searchResults$.next([]);
+    this.close.emit();
+  }
+
+  onClose() {
     this.searchResults$.next([]);
     this.close.emit();
   }

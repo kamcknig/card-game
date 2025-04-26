@@ -3,23 +3,23 @@
   <section class="players">
     <h2 class="section-title">Players</h2>
 
-    <ul class="player-list">
+    <div class="player-list">
       @for (id of playerIds$ | async; track id) {
         <app-player-name-input [playerId]="id"></app-player-name-input>
       }
-    </ul>
+    </div>
   </section>
 
   <!-- ░░░  Expansion List  ░░░ -->
   <section class="expansions">
     <h2 class="section-title">Expansions</h2>
 
-    <ul class="expansion-list">
+    <div class="expansion-list">
       @let expansionList = (expansionList$ | async) ?? [];
       @let selectedExpansions = (matchExpansions$ | async) ?? [];
       @for (expansion of expansionList; track expansion.name) {
         <!-- item (selected) -->
-        <li
+        <div
           [title]="expansion.title"
           (click)="isGameOwner ? onToggleExpansion(expansion) : null"
           class="expansion-item"
@@ -27,14 +27,14 @@
         >
           <img
             ngSrc="/assets/expansion-icons/{{expansion.name}}.png"
-            height="24"
+            height="1"
             width="1"
             alt="{{expansion.title}} icon"
             class="expansion-icon"
           />
-        </li>
+        </div>
       }
-    </ul>
+    </div>
   </section>
 
   <section class="kingdom-section">
@@ -66,11 +66,46 @@
       }
     </div>
   </section>
+
+  <section class="banned-cards-section">
+    @let bannedKingdoms = (bannedKingdoms$ | async) ?? [];
+    <h2 class="section-title">Banned cards ({{ bannedKingdoms.length }})</h2>
+
+    @if (isGameOwner) {
+      <button (click)="selectingBannedCards = true">Select</button>
+    }
+
+    <div class="banned-card-list">
+      @for (bannedCard of bannedKingdoms; track bannedCard.cardKey) {
+        <span class="banned-card-item">
+          <span>{{ bannedCard.cardName }}</span>
+          @if (isGameOwner) {
+            <span (click)="deleteBannedKingdom(bannedCard)" class="close-button">X</span>
+          }
+        </span>
+      }
+    </div>
+  </section>
 </main>
 
-<app-select-kingdom-modal
-  [selectedKingdoms]="preSelectedKingdoms"
-  [ngStyle]="{'visibility': selectingKingdom ? 'visible' : 'hidden'}"
-  (close)="selectingKingdom = false"
-  autofocus
-  (kingdomSelected)="onKingdomSelected($event)"></app-select-kingdom-modal>
+<!-- select banned kingdoms -->
+@if (selectingBannedCards) {
+  <app-select-kingdom-modal
+    [excludedKingdoms]="preSelectedKingdoms"
+    [ngStyle]="{'visibility': selectingBannedCards ? 'visible' : 'hidden'}"
+    (close)="selectingBannedCards = false"
+    autofocus
+    (kingdomSelected)="onBannedKingdomSelected($event)">
+  </app-select-kingdom-modal>
+}
+
+<!-- select kingdoms to include in match -->
+@if (selectingKingdom) {
+  <app-select-kingdom-modal
+    [excludedKingdoms]="preSelectedKingdoms.concat(bannedKingdoms)"
+    [ngStyle]="{'visibility': selectingKingdom ? 'visible' : 'hidden'}"
+    (close)="selectingKingdom = false"
+    autofocus
+    (kingdomSelected)="onKingdomSelected($event)">
+  </app-select-kingdom-modal>
+}

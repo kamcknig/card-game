@@ -26,6 +26,7 @@ const defaultMatchConfiguration = {
       'order': 3
     }
   ],
+  bannedKingdoms: [],
   players: [],
   supplyCards: [],
   kingdomCards: [],
@@ -43,7 +44,7 @@ export class Game {
   private _fuse: Fuse<CardData & { cardKey: CardKey }> | undefined;
   
   constructor() {
-    console.log(`[GAME] created`);
+    console.log(`[game] created`);
     this._matchController = new MatchController(
       this._socketMap,
       (searchTerm: string) => this.onSearchCards(searchTerm)
@@ -97,7 +98,7 @@ export class Game {
   };
   
   public expansionLoaded(expansion: ExpansionListElement) {
-    console.log(`[GAME] expansion '${expansion.name}' loaded`);
+    console.log(`[game] expansion '${expansion.name}' loaded`);
     this._availableExpansion.push(expansion);
     io.in('game').emit(
       'expansionList',
@@ -109,7 +110,7 @@ export class Game {
   
   public addPlayer(sessionId: string, socket: AppSocket) {
     if (this.players.length >= 6) {
-      console.log(`[GAME] game has 6 players, rejecting`);
+      console.log(`[game] game has 6 players, rejecting`);
       socket.disconnect(true);
       return;
     }
@@ -117,12 +118,12 @@ export class Game {
     let player = this.players.find((p) => p.sessionId === sessionId);
     
     if (this.matchStarted && !player) {
-      console.log(`[GAME] match has already started, and player not found in game, rejecting`,);
+      console.log(`[game] match has already started, and player not found in game, rejecting`,);
       socket.disconnect();
     }
     
     if (player) {
-      console.log(`[GAME] ${player} already in match - assigning socket ID`);
+      console.log(`[game] ${player} already in match - assigning socket ID`);
       player.socketId = socket.id;
       player.sessionId = sessionId;
     }
@@ -140,7 +141,7 @@ export class Game {
     socket.emit('setPlayer', player);
     
     if (!this.owner) {
-      console.log(`[GAME] game owner does not exist, setting to ${player}`);
+      console.log(`[game] game owner does not exist, setting to ${player}`);
       this.owner = player;
       socket.on('matchConfigurationUpdated', this.onMatchConfigurationUpdated);
       socket.on('searchCards', (playerId, searchTerm) => {
@@ -150,15 +151,15 @@ export class Game {
     
     io.in('game').emit('gameOwnerUpdated', this.owner.id);
     
-    console.log(`[GAME] ${player} added to game`);
+    console.log(`[game] ${player} added to game`);
     
     if (this.matchStarted) {
-      console.log('[GAME] game already started');
+      console.log('[game] game already started');
       this._matchController?.playerReconnected(player.id, socket);
       socket.emit('matchReady', this._matchController?.getMatchSnapshot()!);
     }
     else {
-      console.log(`[GAME] not yet started, sending player to match configuration`,);
+      console.log(`[game] not yet started, sending player to match configuration`,);
       socket.emit(
         'expansionList',
         this._availableExpansion.sort((a, b) => a.order - b.order),
@@ -176,12 +177,12 @@ export class Game {
   }
   
   private onPlayerDisconnected = (playerId: number, reason: string) => {
-    console.log(`[GAME] ${playerId} disconnected - ${reason}`);
+    console.log(`[game] ${playerId} disconnected - ${reason}`);
     
     const player = this.players.find((player) => player.id === playerId);
     if (!player) {
       this._socketMap.delete(playerId);
-      console.warn(`[GAME] player disconnected, but cannot find player object`);
+      console.warn(`[game] player disconnected, but cannot find player object`);
       return;
     }
     
@@ -189,7 +190,7 @@ export class Game {
     player.ready = false;
     
     if (!this.players.some((p) => p.connected)) {
-      console.log('[GAME] no players left in game, clearing game state completely',);
+      console.log('[game] no players left in game, clearing game state completely',);
       this.clearMatch()
       return;
     }
@@ -216,7 +217,7 @@ export class Game {
   };
   
   private clearMatch = () => {
-    console.log(`[GAME] clearing match`);
+    console.log(`[game] clearing match`);
     
     this._socketMap.forEach((socket) => {
       socket.off('updatePlayerName');
@@ -233,7 +234,7 @@ export class Game {
   }
   
   private onMatchConfigurationUpdated = async (newConfig: MatchConfiguration) => {
-    console.log(`[GAME] received expansionSelected socket event`);
+    console.log(`[game] received expansionSelected socket event`);
     console.log(newConfig);
     
     const currentConfig = structuredClone(this._matchConfiguration ?? {}) as MatchConfiguration;
@@ -253,23 +254,23 @@ export class Game {
         }))?.default;
       
       if (!configModule) {
-        console.warn(`[GAME] could not find config module for expansion '${expansion.name}'`,);
+        console.warn(`[game] could not find config module for expansion '${expansion.name}'`,);
         continue;
       }
       
       if (!configModule.mutuallyExclusiveExpansions) {
-        console.log(`[GAME] module for expansion '${expansion.name}' contains no mutually exclusive expansions`,);
+        console.log(`[game] module for expansion '${expansion.name}' contains no mutually exclusive expansions`,);
         continue;
       }
       
-      console.log(`[GAME] '${expansion.name}' is mutually exclusive with ${configModule.mutuallyExclusiveExpansions}`,);
+      console.log(`[game] '${expansion.name}' is mutually exclusive with ${configModule.mutuallyExclusiveExpansions}`,);
       
       for (const exclusiveExpansion of configModule.mutuallyExclusiveExpansions) {
         if (
           currentConfig.expansions.includes(exclusiveExpansion) &&
           !expansionsToRemove.includes(exclusiveExpansion)
         ) {
-          console.log(`[GAME] removing expansion ${exclusiveExpansion} as it is not allowed with ${expansion}`,);
+          console.log(`[game] removing expansion ${exclusiveExpansion} as it is not allowed with ${expansion}`,);
           expansionsToRemove.push(exclusiveExpansion);
         }
       }
@@ -287,17 +288,17 @@ export class Game {
   
   private onUpdatePlayerName = (playerId: number, name: string) => {
     console.log(
-      `[GAME] player ${playerId} request to update name to '${name}'`,
+      `[game] player ${playerId} request to update name to '${name}'`,
     );
     
     const player = this.players.find((player) => player.id === playerId);
     
     if (player) {
       player.name = name;
-      console.log(`[GAME] ${player} name updated to '${name}'`);
+      console.log(`[game] ${player} name updated to '${name}'`);
     }
     else {
-      console.log(`[GAME] player ${playerId} not found`);
+      console.log(`[game] player ${playerId} not found`);
     }
     
     io.in('game').emit('playerNameUpdated', playerId, name);
@@ -307,18 +308,18 @@ export class Game {
     const player = this.players.find((player) => player.id === playerId);
     
     if (!player) {
-      console.log(`[GAME] received player ready event from ${playerId} but could not find Player object`,);
+      console.log(`[game] received player ready event from ${playerId} but could not find Player object`,);
       return;
     }
     
-    console.log(`[GAME] received ready event from ${player}`);
+    console.log(`[game] received ready event from ${player}`);
     
     player.ready = !player.ready;
-    console.log(`[GAME] marking ${player} as ${player.ready}`);
+    console.log(`[game] marking ${player} as ${player.ready}`);
     io.in('game').except(player.socketId).emit('playerReady', playerId, player.ready);
     
     if (this.players.some((p) => !p.ready && p.connected)) {
-      console.log(`[GAME] not all players ready yet`);
+      console.log(`[game] not all players ready yet`);
       return;
     }
     
@@ -326,7 +327,7 @@ export class Game {
   };
   
   private startMatch() {
-    console.log(`[GAME] all connected players ready, proceeding to start match`);
+    console.log(`[game] all connected players ready, proceeding to start match`);
     
     this.matchStarted = true;
     
