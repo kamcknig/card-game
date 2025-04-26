@@ -76,6 +76,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     for (const card of config.kingdomCards) {
       this._keepers.unshift(card.cardKey);
     }
+    
+    this._keepers =  Array.from(new Set(this._keepers));
     this._keepers.length = 10;
     
     config = {
