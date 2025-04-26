@@ -385,7 +385,7 @@ const expansion: CardExpansionModule = {
         listeningFor: 'cardPlayed',
         compulsory: true,
         condition: ({ match, trigger, cardLibrary }) => {
-          if (!trigger.cardId) return false;
+          if (!trigger.cardId || trigger.playerId === playerId) return false;
           
           if (reactionContext[trigger.playerId!]?.result === 'immunity') {
             console.log(`[corsair triggered effect] ${getPlayerById(match, trigger.playerId!)} is immune`);

@@ -22,6 +22,7 @@
         <div
           [title]="expansion.title"
           (click)="isGameOwner ? onToggleExpansion(expansion) : null"
+          [ngStyle]="{'cursor': isGameOwner ? 'pointer' : 'default'}"
           class="expansion-item"
           [ngClass]="{'selected': selectedExpansions.includes(expansion.name)}"
         >

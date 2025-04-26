@@ -289,12 +289,15 @@ export class GameActionController implements GameActionControllerInterface {
       to: { location: 'trash' }
     });
     
+    const card = this.cardLibrary.getCard(args.cardId);
+    card.owner = null;
+    
     this.match.stats.trashedCards[args.cardId] = {
       turnNumber: this.match.turnNumber,
       playerId: getCurrentPlayer(this.match).id
     };
     
-    console.log(`[trashCard action] trashed ${this.cardLibrary.getCard(args.cardId)}`);
+    console.log(`[trashCard action] trashed ${card}`);
     
     this.logManager.addLogEntry({
       playerId: args.playerId,
@@ -367,11 +370,10 @@ export class GameActionController implements GameActionControllerInterface {
     
     if (turnPhase === 'buy') {
       const hasBuys = match.playerBuys > 0;
-      const hasTreasure = match.playerHands[currentPlayer.id]
-        .some(cardId => this.cardLibrary.getCard(cardId).type.includes('TREASURE'));
-      const hasMoney = match.playerTreasure > 0;
       
-      if ((!hasTreasure && !hasMoney) || !hasBuys) {
+      console.log(`[checkForRemainingPlayerActions action] ${currentPlayer} as ${hasBuys} buys remaining`);
+      
+      if (!hasBuys) {
         console.log('[checkForRemainingPlayerActions action] skipping to next phase');
         await this.nextPhase();
       }
