@@ -374,6 +374,8 @@ const expansion: CardExpansionModule = {
         triggeredEffectFn: async () => {
           console.log(`[CORSAIR TRIGGERED EFFECT] drawing card...`);
           await runGameActionDelegate('drawCard', { playerId });
+          reactionManager.unregisterTrigger(`corsair:${cardId}:startTurn`);
+          reactionManager.unregisterTrigger(`corsair:${cardId}:cardPlayed`);
         }
       });
       

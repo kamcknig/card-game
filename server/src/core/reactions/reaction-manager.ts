@@ -195,6 +195,7 @@ export class ReactionManager {
   
   cleanUpTriggers() {
     this._reactions = this._reactions
-      .filter(reaction => this._cardLibrary.getCard(reaction.getSourceId()).type.includes('DURATION'));
+      .filter(reaction => this._cardLibrary.getCard(reaction.getSourceId()).type.includes('DURATION') ||
+        this._cardLibrary.getCard(reaction.getSourceId()).type.includes('REACTION'));
   }
 }

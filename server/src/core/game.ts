@@ -1,5 +1,13 @@
 import { AppSocket } from '../types.ts';
-import { CardData, CardKey, ExpansionListElement, MatchConfiguration, Player, PlayerId, } from 'shared/shared-types.ts';
+import {
+  CardData,
+  CardKey,
+  CardNoId,
+  ExpansionListElement,
+  MatchConfiguration,
+  Player,
+  PlayerId,
+} from 'shared/shared-types.ts';
 import { createNewPlayer } from '../utils/create-new-player.ts';
 import { io } from '../server.ts';
 import { MatchController } from './match-controller.ts';
@@ -8,7 +16,7 @@ import { applyPatch, compare } from 'https://esm.sh/v123/fast-json-patch@3.1.1/i
 import Fuse, { IFuseOptions } from 'fuse.js';
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
 
-const defaultMatchConfiguration = {
+const defaultMatchConfiguration: MatchConfiguration = {
   expansions: [
     {
       'title': 'Base',
@@ -39,7 +47,7 @@ export class Game {
   
   private _socketMap: Map<PlayerId, AppSocket> = new Map();
   private _matchController: MatchController;
-  private _matchConfiguration: MatchConfiguration = { ...structuredClone(defaultMatchConfiguration) };
+  private _matchConfiguration: MatchConfiguration;
   private _availableExpansion: ExpansionListElement[] = [];
   private _fuse: Fuse<CardData & { cardKey: CardKey }> | undefined;
   
@@ -49,6 +57,15 @@ export class Game {
       this._socketMap,
       (searchTerm: string) => this.onSearchCards(searchTerm)
     );
+    
+    try {
+      const bannedKingdoms = JSON.parse(Deno.readTextFileSync('./banned-kingdoms.json')) as CardNoId[];
+      defaultMatchConfiguration.bannedKingdoms = bannedKingdoms
+    } catch (e) {
+      console.warn(`Couldn't read banned-kingdoms.json`);
+      console.error(e);
+    }
+    this._matchConfiguration = { ...structuredClone(defaultMatchConfiguration) }
     this.initializeFuseSearch();
   }
   
@@ -276,8 +293,12 @@ export class Game {
       }
     }
     
-    const patch = compare(currentConfig, newConfig);
+    const bannedKingdomsPatch = compare(currentConfig.bannedKingdoms, newConfig.bannedKingdoms);
+    if (bannedKingdomsPatch) {
+      Deno.writeTextFileSync('./banned-kingdoms.json', JSON.stringify(newConfig.bannedKingdoms));
+    }
     
+    const patch = compare(currentConfig, newConfig);
     
     if (patch.length) {
       applyPatch(this._matchConfiguration, patch)
