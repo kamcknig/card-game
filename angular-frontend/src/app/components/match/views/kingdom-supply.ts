@@ -19,8 +19,7 @@ export class KingdomSupplyView extends Container {
 
     this._cardContainer = this.addChild(new Container({ x: STANDARD_GAP, y: STANDARD_GAP }));
 
-    this._cleanup.push(
-      computed(
+      const pileCreationSub = computed(
         [kingdomCardKeyStore, cardStore], (kingdom, cards) => {
           const allCards = Object.values(cards);
           return kingdom
@@ -34,8 +33,16 @@ export class KingdomSupplyView extends Container {
             .filter(key => !!key)
             .map(card => card?.cardKey)
         }
-      ).subscribe(val => this.createKingdomPiles(val))
-    );
+      ).subscribe(val => {
+        if (val.length < 1) {
+          return;
+        }
+
+        pileCreationSub();
+        this.createKingdomPiles(val);
+      });
+
+      this._cleanup.push(pileCreationSub);
 
     this._cleanup.push(
       computed(
@@ -62,8 +69,6 @@ export class KingdomSupplyView extends Container {
 
     Object.entries(piles).forEach(([cardKey, pile], idx) => {
       const p = this._cardContainer.getChildByLabel(`pile:${cardKey}`) as PileView;
-      console.log(`looking for pile:${cardKey} within kingdom`);
-      console.log(this._cardContainer.children.length);
       if (!p) {
         return;
       }
@@ -92,7 +97,6 @@ export class KingdomSupplyView extends Container {
     for (const [idx, cardKey] of cardKeys.entries()) {
       const p = new PileView({ size: 'half' });
       p.label = `pile:${cardKey}`;
-      console.log(`created kingdom pile ${p.label}`);
       p.x = Math.floor(idx % 5 * SMALL_CARD_WIDTH + idx % 5 * STANDARD_GAP);
       p.y = Math.floor(((numRows - 1 - Math.floor((idx) / 5)) * SMALL_CARD_HEIGHT) + ((numRows - 1 - Math.floor((idx) / 5)) * STANDARD_GAP));
       this._cardContainer.addChild(p);

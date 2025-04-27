@@ -1,4 +1,4 @@
-import { Assets, Container, ContainerChild, Graphics, Sprite, Text, Texture } from 'pixi.js';
+import { Assets, Container, Graphics, Sprite, Text, Texture } from 'pixi.js';
 import { Card } from 'shared/shared-types';
 import { batched } from 'nanostores';
 import { cardOverrideStore } from '../../../state/card-state';
@@ -13,7 +13,7 @@ type CardViewArgs = {
   facing?: CardFacing;
 }
 
-export class CardView extends Container<ContainerChild> {
+export class CardView extends Container {
   private readonly _highlight: Graphics = new Graphics({ label: 'highlight' });
   private readonly _cardView: Sprite = new Sprite({ label: 'caredView' });
   private readonly _costView: Container = new Container({ label: 'costView' });
@@ -24,7 +24,20 @@ export class CardView extends Container<ContainerChild> {
   private _facing: CardFacing = 'back';
   private _size: CardSize = 'full';
 
-  public card: Card;
+  private _card: Card;
+
+  public get card(): Card {
+    return this._card;
+  }
+
+  public set card(value: Card) {
+    if (value.id !== this._card.id) {
+      this._card = value;
+      this._frontImage = Assets.get(`${this._card.cardKey}-full`);
+    }
+
+    this.onDraw();
+  }
 
   public set facing(value: CardFacing) {
     if ((value === 'front' && !this._frontImage) || (value === 'back' && !this._backImage)) return;
@@ -39,7 +52,7 @@ export class CardView extends Container<ContainerChild> {
 
   public set size(value: CardSize) {
     this._size = value;
-    this._frontImage = Assets.get(`${this.card.cardKey}-${value}`);
+    this._frontImage = Assets.get(`${this._card.cardKey}-${value}`);
     this._backImage = Assets.get(`card-back-${value}`);
     this._cardView.texture = this._facing === 'front' ? this._frontImage : this._backImage;
     this._size = value;
@@ -53,16 +66,16 @@ export class CardView extends Container<ContainerChild> {
   constructor({ size, facing, ...card }: CardArgs & CardViewArgs) {
     super();
 
-    this.card = card;
+    this._card = card;
 
-    this.label = `${card.cardKey}:${card.id}`;
+    this.label = `${this._card.cardKey}:${this._card.id}`;
 
     this.eventMode = 'static';
 
     this.addChild(this._highlight);
     this.addChild(this._cardView);
 
-    this._frontImage = Assets.get(`${this.card.cardKey}-full`);
+    this._frontImage = Assets.get(`${this._card.cardKey}-full`);
     this._backImage = Assets.get('card-back-full');
     this._backImage.label = 'backImageSprite';
 
@@ -73,7 +86,7 @@ export class CardView extends Container<ContainerChild> {
 
     const costText = new Text({
       label: 'costText',
-      text: card.cost.treasure,
+      text: this._card.cost.treasure,
       style: {
         fill: 'black'
       },
@@ -99,6 +112,7 @@ export class CardView extends Container<ContainerChild> {
   private onRemoved = () => {
     this._cleanup.forEach(cb => cb());
     this.removeAllListeners();
+    this.destroy();
   }
 
   private onDraw = () => {
@@ -109,14 +123,14 @@ export class CardView extends Container<ContainerChild> {
     this._highlight.clear();
 
     for (const cardId of selectable) {
-      if (cardId === this.card.id) {
+      if (cardId === this._card.id) {
         this._highlight
           .roundRect(-3, -3, this._cardView.width + 6, this._cardView.height + 6, 5)
           .fill(0xffaaaa);
       }
     }
     for (const cardId of selected) {
-      if (cardId === this.card.id) {
+      if (cardId === this._card.id) {
         this._highlight
           .roundRect(-3, -3, this._cardView.width + 6, this._cardView.height + 6, 5)
           .fill(0x6DFF8C);
@@ -125,7 +139,7 @@ export class CardView extends Container<ContainerChild> {
 
     const costText = this._costView.getChildByLabel('costText') as Text;
     if (costText) {
-      costText.text = overrides?.[this.card.id]?.cost?.treasure ?? this.card.cost.treasure;
+      costText.text = overrides?.[this._card.id]?.cost?.treasure ?? this._card.cost.treasure;
     }
 
     this._costView.x = 2;

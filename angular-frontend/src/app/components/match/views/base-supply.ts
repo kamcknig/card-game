@@ -19,42 +19,58 @@ export class BaseSupplyView extends Container {
 
     this._cardContainer = this.addChild(new Container({ x: STANDARD_GAP, y: STANDARD_GAP }));
 
-    this._cleanup.push(
-      computed(
-        [supplyCardKeyStore, cardStore], ([victorySupply, treasureSupply], cards) => {
-          const allCards = Object.values(cards);
-          return [
-            victorySupply.map(key =>
-              allCards.find(c => c.cardKey === key)?.cardKey),
-            treasureSupply.map(key =>
-              allCards.find(c => c.cardKey === key)?.cardKey)
-          ]
-        }
-      ).subscribe(val => this.createSupplyPiles(val[0] as CardKey[], val[1] as CardKey[]))
-    );
+
+    const pileCreationSub = computed(
+      [supplyCardKeyStore, cardStore], ([victorySupply, treasureSupply], cards) => {
+        const allCards = Object.values(cards);
+        return [
+          victorySupply.map(key =>
+            allCards.find(c => c.cardKey === key)?.cardKey),
+          treasureSupply.map(key =>
+            allCards.find(c => c.cardKey === key)?.cardKey)
+        ]
+      }
+    ).subscribe(val => {
+      if (val[0].length < 1) {
+        return;
+      }
+      pileCreationSub();
+      this.createSupplyPiles(val[0] as CardKey[], val[1] as CardKey[]);
+    });
+
+    this._cleanup.push(pileCreationSub);
 
     this._cleanup.push(
       computed(
-        [supplyStore, cardStore],
-        (supply, cards) => supply.map(id => cards[id])
+        [supplyStore, supplyCardKeyStore, cardStore],
+        (supply, supplyCardKeys, cards) => {
+          const supplyCards = supply.map(id => cards[id]);
+
+          const ob = {} as Record<CardKey, Card[]>;
+          for (const cardKey of supplyCardKeys.flat()) {
+            ob[cardKey] = supplyCards.filter(card => card.cardKey === cardKey);
+          }
+          return ob;
+        }
       ).subscribe((val => this.draw(val)))
     );
-    this.off('removed', this.onRemoved);
+
+    this.on('removed', this.onRemoved);
   }
 
   private onRemoved = () => {
     this._cleanup.forEach(cb => cb());
-    this.on('removed', this.onRemoved);
+    this.off('removed', this.onRemoved);
   }
 
   private createSupplyPiles(victoryCardKeys: readonly CardKey[], treasureCardKeys: readonly CardKey[]) {
+    console.log('createSupplyPiles');
     this._cardContainer.removeChildren();
 
     for (const [idx, cardKey] of victoryCardKeys.entries()) {
       const pileView = new PileView({ size: 'half' });
       pileView.y = idx * SMALL_CARD_HEIGHT + idx * STANDARD_GAP;
       pileView.label = `pile:${cardKey}`;
-      console.log(`created supply pile ${pileView.label}`);
       this._cardContainer.addChild(pileView);
     }
 
@@ -63,29 +79,20 @@ export class BaseSupplyView extends Container {
       pileView.x = SMALL_CARD_WIDTH + STANDARD_GAP;
       pileView.y = idx * SMALL_CARD_HEIGHT + idx * STANDARD_GAP;
       pileView.label = `pile:${cardKey}`;
-      console.log(`created supply pile ${pileView.label}`);
       this._cardContainer.addChild(pileView);
     }
   }
 
-  private draw(cards: ReadonlyArray<Card>) {
-    if (!cards || cards.length === 0) return;
+  private draw(piles: Record<CardKey, Card[]>) {
+    if (!piles) return;
 
-    const piles = cards.reduce((prev, card) => {
-      prev[card.cardKey] ||= [];
-      prev[card.cardKey].push(card);
-      return prev;
-    }, {} as Record<CardKey, Card[]>)
-
-    Object.entries(piles).forEach(([cardKey, pile], idx) => {
+    for (const [cardKey, pile] of Object.entries(piles)) {
       const p = this._cardContainer.getChildByLabel(`pile:${cardKey}`) as PileView;
-      console.log(`looking for pile:${cardKey} within supply`)
-      console.log(this._cardContainer.children.length);
       if (!p) {
         return;
       }
       p.pile = pile;
-    })
+    }
 
     const g = this._background.getChildAt(0) as Graphics;
     g.clear();
@@ -94,7 +101,8 @@ export class BaseSupplyView extends Container {
       0,
       this._cardContainer.x + this._cardContainer.width + STANDARD_GAP,
       this._cardContainer.y + this._cardContainer.height + STANDARD_GAP,
-      5)
+      5
+    )
       .fill({
         color: 0,
         alpha: .6

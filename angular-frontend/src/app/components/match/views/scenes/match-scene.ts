@@ -88,7 +88,6 @@ export class MatchScene extends Scene {
     });
     this._playAllTreasuresButton.button.on('removed', () => {
       this._playAllTreasuresButton.button.removeAllListeners();
-      this._playAllTreasuresButton.button.destroy();
     })
 
     this.addChild(this._playAllTreasuresButton.button);
@@ -210,7 +209,6 @@ export class MatchScene extends Scene {
     }
 
     c.removeFromParent();
-    c.destroy();
     clearInterval(i);
   }
 
@@ -501,7 +499,7 @@ export class MatchScene extends Scene {
       // reset selected card state
       selectedCardStore.set([]);
       c.removeFromParent();
-      doSelectButtonContainer?.removeChildren().forEach(c => c.destroy());
+      doSelectButtonContainer?.removeChildren();
       selectedCardsListenerCleanup();
 
       // reset overrides so server can tell us now what cards are selectable
