@@ -3,7 +3,8 @@ import {
   LocationSpec,
   Match,
   PlayerId,
-  SelectActionCardArgs, SetAsideCard,
+  SelectActionCardArgs,
+  SetAsideCard,
   TurnPhaseOrderValues,
   UserPromptActionArgs
 } from 'shared/shared-types.ts';
@@ -15,6 +16,7 @@ import {
   AppSocket,
   CardEffectFunctionMap,
   GameActionControllerInterface,
+  GameActionOptions,
   GameActionOverrides,
   ModifyActionCardArgs,
   ReactionTrigger,
@@ -62,14 +64,15 @@ export class GameActionController implements GameActionControllerInterface {
     }
   }
   
-  async gainBuy(args: { count: number }) {
+  async gainBuy(args: { count: number }, context?: GameActionOptions) {
     console.log(`[gainBuy action] gaining ${args.count} buys`);
     this.match.playerBuys += args.count;
     
     this.logManager.addLogEntry({
       type: 'gainBuy',
       count: args.count,
-      playerId: getCurrentPlayer(this.match).id
+      playerId: getCurrentPlayer(this.match).id,
+      source: context?.loggingContext?.source,
     });
     
     console.log(`[gainBuy action] setting player guys to ${this.match.playerBuys}`);
@@ -105,7 +108,7 @@ export class GameActionController implements GameActionControllerInterface {
     console.log(`[moveCard action] moved ${this.cardLibrary.getCard(args.cardId)} from ${oldSource.storeKey} to ${args.to.location}`);
   }
   
-  async gainAction(args: { count: number }) {
+  async gainAction(args: { count: number }, context?: GameActionOptions) {
     console.log(`[gainAction action] gaining ${args.count} actions`);
     
     this.match.playerActions += args.count;
@@ -113,13 +116,14 @@ export class GameActionController implements GameActionControllerInterface {
     this.logManager.addLogEntry({
       type: 'gainAction',
       playerId: getCurrentPlayer(this.match).id,
-      count: 1
+      count: 1,
+      source: context?.loggingContext?.source,
     })
     
     console.log(`[gainAction action] setting player actions to ${args.count}`);
   }
   
-  async gainCard(args: { playerId: PlayerId, cardId: CardId, to: LocationSpec }) {
+  async gainCard(args: { playerId: PlayerId, cardId: CardId, to: LocationSpec }, context?: GameActionOptions) {
     await this.moveCard({
       cardId: args.cardId,
       to: args.to,
@@ -138,7 +142,8 @@ export class GameActionController implements GameActionControllerInterface {
     this.logManager.addLogEntry({
       playerId: args.playerId,
       cardId: args.cardId,
-      type: 'gainCard'
+      type: 'gainCard',
+      source: context?.loggingContext?.source,
     });
     
     const trigger = new ReactionTrigger({
@@ -283,7 +288,7 @@ export class GameActionController implements GameActionControllerInterface {
     });
   }
   
-  async trashCard(args: { cardId: CardId, playerId: PlayerId }) {
+  async trashCard(args: { cardId: CardId, playerId: PlayerId }, context?: GameActionOptions) {
     await this.moveCard({
       cardId: args.cardId,
       to: { location: 'trash' }
@@ -302,7 +307,8 @@ export class GameActionController implements GameActionControllerInterface {
     this.logManager.addLogEntry({
       playerId: args.playerId,
       cardId: args.cardId,
-      type: 'trashCard'
+      type: 'trashCard',
+      source: context?.loggingContext?.source,
     });
   }
   
@@ -329,7 +335,7 @@ export class GameActionController implements GameActionControllerInterface {
     }
   }
   
-  async revealCard(args: { cardId: CardId, playerId: PlayerId, moveToRevealed?: boolean }) {
+  async revealCard(args: { cardId: CardId, playerId: PlayerId, moveToRevealed?: boolean }, context?: GameActionOptions) {
     console.log(`[revealCard action] ${getPlayerById(this.match, args.playerId)} revealing ${this.cardLibrary.getCard(args.cardId)}`);
     
     if (args.moveToRevealed) {
@@ -345,6 +351,7 @@ export class GameActionController implements GameActionControllerInterface {
       type: 'revealCard',
       cardId: args.cardId,
       playerId: args.playerId,
+      source: context?.loggingContext?.source,
     });
   }
   
@@ -385,7 +392,7 @@ export class GameActionController implements GameActionControllerInterface {
   }
   
   
-  async discardCard(args: { cardId: CardId, playerId: PlayerId }) {
+  async discardCard(args: { cardId: CardId, playerId: PlayerId }, context?: GameActionOptions) {
     console.log(`[discardCard action] discarding ${this.cardLibrary.getCard(args.cardId)} from ${getPlayerById(this.match, args.playerId)}`);
     
     await this.moveCard({
@@ -398,6 +405,7 @@ export class GameActionController implements GameActionControllerInterface {
       type: 'discard',
       playerId: args.playerId,
       cardId: args.cardId,
+      source: context?.loggingContext?.source,
     });
   }
   
@@ -551,19 +559,20 @@ export class GameActionController implements GameActionControllerInterface {
     this.reactionManager.cleanUpTriggers()
   }
   
-  async gainTreasure(args: { count: number }) {
+  async gainTreasure(args: { count: number }, context?: GameActionOptions) {
     console.log(`[gainTreasure action] gaining ${args.count} treasure`);
     this.match.playerTreasure += args.count;
     
     this.logManager.addLogEntry({
       type: 'gainTreasure',
       playerId: getCurrentPlayer(this.match).id,
-      count: args.count
+      count: args.count,
+      source: context?.loggingContext?.source,
     })
   }
   
   // Single, focused implementation of drawCard
-  async drawCard(args: { playerId: PlayerId }): Promise<CardId | null> {
+  async drawCard(args: { playerId: PlayerId }, context?: GameActionOptions): Promise<CardId | null> {
     const { playerId } = args;
     
     const deck = this.match.playerDecks[playerId];
@@ -594,13 +603,14 @@ export class GameActionController implements GameActionControllerInterface {
     this.logManager.addLogEntry({
       type: 'draw',
       playerId,
-      cardId: drawnCardId
+      cardId: drawnCardId,
+      source: context?.loggingContext?.source,
     });
     
     return drawnCardId;
   }
   
-  async playCard(args: { playerId: PlayerId, cardId: CardId, overrides?: GameActionOverrides }): Promise<boolean> {
+  async playCard(args: { playerId: PlayerId, cardId: CardId, overrides?: GameActionOverrides }, context?: GameActionOptions): Promise<boolean> {
     const { playerId, cardId } = args;
     
     await this.moveCard({
@@ -627,6 +637,7 @@ export class GameActionController implements GameActionControllerInterface {
       type: 'cardPlayed',
       cardId,
       playerId,
+      source: context?.loggingContext?.source,
     });
     
     // now add any triggered effects from the card played
@@ -667,7 +678,7 @@ export class GameActionController implements GameActionControllerInterface {
   }
   
   // Helper method to shuffle a player's deck
-  async shuffleDeck(args: { playerId: PlayerId }): Promise<void> {
+  async shuffleDeck(args: { playerId: PlayerId }, context?: GameActionOptions): Promise<void> {
     const { playerId } = args;
     
     console.log(`[shuffleDeck action] shuffling deck`);
@@ -681,7 +692,8 @@ export class GameActionController implements GameActionControllerInterface {
     
     this.logManager.addLogEntry({
       type: 'shuffleDeck',
-      playerId: args.playerId
+      playerId: args.playerId,
+      source: context?.loggingContext?.source,
     });
   }
   

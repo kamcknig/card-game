@@ -4,19 +4,21 @@ export type CardKey = string;
 export type PlayerId = number;
 export type CardId = number;
 
+export type LogEntrySource = CardId;
+
 export type LogEntry =
-  | { type: 'draw'; playerId: PlayerId; cardId: CardId; depth?: number; }
-  | { type: 'discard'; playerId: PlayerId; cardId: CardId; depth?: number; }
-  | { type: 'gainAction'; count: number; playerId: PlayerId; depth?: number; }
-  | { type: 'gainBuy'; count: number; playerId: PlayerId; depth?: number; }
-  | { type: 'gainTreasure'; count: number; playerId: PlayerId; depth?: number; }
-  | { type: 'gainCard'; cardId: CardId; playerId: PlayerId; depth?: number; }
-  | { type: 'cardPlayed'; cardId: CardId; playerId: PlayerId; depth?: number; }
-  | { type: 'revealCard'; cardId: CardId; playerId: PlayerId; depth?: number; }
-  | { type: 'trashCard'; cardId: CardId; playerId: PlayerId; depth?: number; }
-  | { type: 'shuffleDeck'; playerId: PlayerId; depth?: number; }
-  | { type: 'newTurn'; turn: number; depth?: number; }
-  | { type: 'newPlayerTurn'; turn: number; playerId: PlayerId; depth?: number; };
+  | { type: 'draw'; playerId: PlayerId; cardId: CardId; depth?: number; source?: LogEntrySource}
+  | { type: 'discard'; playerId: PlayerId; cardId: CardId; depth?: number; source?: LogEntrySource}
+  | { type: 'gainAction'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource}
+  | { type: 'gainBuy'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
+  | { type: 'gainTreasure'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource}
+  | { type: 'gainCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource}
+  | { type: 'cardPlayed'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource}
+  | { type: 'revealCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource}
+  | { type: 'trashCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource}
+  | { type: 'shuffleDeck'; playerId: PlayerId; depth?: number; source?: LogEntrySource }
+  | { type: 'newTurn'; turn: number; depth?: number; source?: LogEntrySource}
+  | { type: 'newPlayerTurn'; turn: number; playerId: PlayerId; depth?: number; source?: LogEntrySource};
 
 export type SelectActionCardArgs = {
   restrict: EffectRestrictionSpec | number[];

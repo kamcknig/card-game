@@ -11,7 +11,14 @@ import {
   Player,
   PlayerId,
 } from 'shared/shared-types.ts';
-import { AppSocket, CardEffectFunctionMap, GameActionArgsMap, GameActions, MatchBaseConfiguration, } from '../types.ts';
+import {
+  AppSocket,
+  CardEffectFunctionMap,
+  GameActionArgsMap,
+  GameActionOptions,
+  GameActions,
+  MatchBaseConfiguration,
+} from '../types.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';
 import { createCardFactory } from '../utils/create-card.ts';
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
@@ -162,7 +169,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     action: K,
     ...args: GameActionArgsMap[K] extends void
       ? []
-      : [GameActionArgsMap[K], { loggingContext: { source: CardId } }] | [GameActionArgsMap[K]]
+      : [GameActionArgsMap[K], GameActionOptions] | [GameActionArgsMap[K]]
   ): Promise<ReturnType<GameActionController[K]>> {
     this._matchSnapshot ??= this.getMatchSnapshot();
     
@@ -171,7 +178,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._matchSnapshot = this.getMatchSnapshot();
     }
     
-    const result = await this.gameActionsController![action](args[0] as any);
+    const result = await (this.gameActionsController![action] as any)(args[0], args?.[1]);
     
     this.calculateScores();
     

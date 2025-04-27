@@ -91,7 +91,8 @@ export const loadExpansion = async (expansion: ExpansionListElement) => {
     
     
     console.log(`[expansion loader] loading ${expansionName} card effects`);
-    expansionModule = await import(`${expansionPath}/card-effects-${expansionName}.ts`);
+    module = await import(`${expansionPath}/card-effects-${expansionName}.ts`);
+    expansionModule = module.default as CardExpansionModuleNew;
     
     Object.keys(expansionModule).forEach(key => {
       if (expansionModule[key].registerScoringFunction) {

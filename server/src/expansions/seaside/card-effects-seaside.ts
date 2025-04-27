@@ -60,7 +60,7 @@ const expansion: CardExpansionModuleNew = {
     }
   },
   'blockade': {
-    registerEffects: () => async ({ match, reactionManager, runGameActionDelegate, cardLibrary, playerId }) => {
+    registerEffects: () => async ({ match, reactionManager, runGameActionDelegate, cardLibrary, playerId, cardId }) => {
       console.log(`[BLOCKADE EFFECT] prompting user to select card...`);
       const cardIds = await runGameActionDelegate('selectCard', {
         prompt: 'Gain card',
@@ -72,13 +72,13 @@ const expansion: CardExpansionModuleNew = {
         count: 1,
       }) as number[];
       
-      const cardId = cardIds[0];
+      const gainedCardId = cardIds[0];
       
-      console.log(`[BLOCKADE EFFECT] selected card ${cardLibrary.getCard(cardId)}`);
+      console.log(`[BLOCKADE EFFECT] selected card ${cardLibrary.getCard(gainedCardId)}`);
       
       await runGameActionDelegate('gainCard', {
         playerId,
-        cardId,
+        cardId: gainedCardId,
         to: { location: 'set-aside' },
       });
       
@@ -92,7 +92,7 @@ const expansion: CardExpansionModuleNew = {
         triggeredEffectFn: async () => {
           console.log(`[BLOCKADE TRIGGERED EFFECT] moving previously selected card to hand...`);
           await runGameActionDelegate('moveCard', {
-            cardId: cardId,
+            cardId: gainedCardId,
             toPlayerId: playerId,
             to: { location: 'playerHands' }
           });
@@ -101,7 +101,7 @@ const expansion: CardExpansionModuleNew = {
         }
       });
       
-      const cardGained = cardLibrary.getCard(cardId);
+      const cardGained = cardLibrary.getCard(gainedCardId);
       
       reactionManager.registerReactionTemplate({
         playerId,

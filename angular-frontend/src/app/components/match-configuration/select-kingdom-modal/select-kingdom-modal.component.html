@@ -13,5 +13,9 @@
     </div>
   </div>
 
-  <input #searchTerm (input)="updateSearchTerm(searchTerm.value)" type="text">
+  <input
+    #searchTerm
+    autofocus
+    (input)="updateSearchTerm(searchTerm.value)"
+    type="text">
 </div>

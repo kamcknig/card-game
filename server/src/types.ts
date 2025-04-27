@@ -9,7 +9,9 @@ import {
   PlayerId,
   SelectActionCardArgs,
   ServerEmitEvents,
-  ServerListenEvents, SetAsideCard, TurnPhase,
+  ServerListenEvents,
+  SetAsideCard,
+  TurnPhase,
   UserPromptActionArgs,
 } from 'shared/shared-types.ts';
 import { toNumber } from 'es-toolkit/compat';
@@ -172,9 +174,10 @@ export type GameActionArgsMap = {
 };
 
 export type GameActionControllerInterface = {
-  [K in keyof GameActionArgsMap]: (args: GameActionArgsMap[K]) => any;
+  [K in keyof GameActionArgsMap]: (gameActionArgs: GameActionArgsMap[K], options?: GameActionOptions) => any;
 };
 
+export type GameActionOptions = { loggingContext: { source: CardId } };
 
 export type ModifyActionCardArgs = {
   appliesTo: EffectTarget;
