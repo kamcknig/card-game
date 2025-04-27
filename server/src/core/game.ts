@@ -404,11 +404,7 @@ export class Game {
           return p;
         })
     );
-    /*const players = this.players.map((p, idx) => {
-     p.ready = false;
-     p.color = colors[idx]
-     return p;
-     });*/
+    
     io.in('game').emit('setPlayerList', players);
     
     this._matchController?.on('gameOver', this.clearMatch);

@@ -1,86 +1,11 @@
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
-import { CardExpansionModule } from '../../types.ts';
+import { CardExpansionModuleNew } from '../../types.ts';
 
-const expansionModule: CardExpansionModule = {
-  registerCardLifeCycles: () => ({
-    'merchant': {
-      onCardPlayed: ({ reactionManager, cardId, playerId }) => {
-        reactionManager.registerReactionTemplate({
-          id: `merchant:${cardId}:cardPlayed`,
-          playerId,
-          once: true,
-          compulsory: true,
-          allowMultipleInstances: true,
-          listeningFor: 'cardPlayed',
-          condition: ({ cardLibrary, trigger: silverTrigger, match }) => {
-            const silverCard = cardLibrary.getCard(silverTrigger.cardId!);
-            if (silverCard.cardKey !== 'silver') return false;
-            
-            const playedCardInfo = match.stats.playedCards;
-            const playedSilvers = Object.keys(playedCardInfo)
-              .filter((cardId) =>
-                cardLibrary.getCard(+cardId).cardKey === 'silver'
-                && playedCardInfo[+cardId].turnNumber === match.turnNumber
-                && playedCardInfo[+cardId].playerId === silverTrigger.playerId)
-            
-            return playedSilvers.length === 1;
-          },
-          triggeredEffectFn: async ({ runGameActionDelegate }) => {
-            await runGameActionDelegate('gainTreasure', {
-              count: 1,
-            });
-          }
-        });
-      },
-      onLeavePlay: ({ reactionManager, cardId }) => {
-        reactionManager.unregisterTrigger(`merchant:${cardId}:cardPlayed`);
-      },
-    },
-    'moat': {
-      onEnterHand: ({ reactionManager, playerId, cardId }) => {
-        reactionManager.registerReactionTemplate({
-          id: `moat:${cardId}:cardPlayed`,
-          playerId,
-          listeningFor: 'cardPlayed',
-          allowMultipleInstances: false,
-          condition: ({ cardLibrary, trigger }) => {
-            return cardLibrary.getCard(trigger.cardId!).type.includes(
-              'ATTACK',
-            ) && trigger.playerId !== playerId;
-          },
-          triggeredEffectFn: async function ({ runGameActionDelegate, reaction }) {
-            const sourceId = reaction.getSourceId();
-            
-            await runGameActionDelegate('revealCard', {
-              cardId: sourceId,
-              playerId: reaction.playerId,
-            });
-            
-            return 'immunity';
-          },
-        });
-      },
-      onLeaveHand: ({ reactionManager, cardId }) => {
-        reactionManager.unregisterTrigger(`moat:${cardId}:cardPlayed`);
-      },
-    },
-  }),
-  registerScoringFunctions: () => ({
-    'gardens': function ({ match, ownerId }) {
-      const cards = match
-        .playerHands[ownerId]
-        .concat(match.playerDecks[ownerId])
-        .concat(match.playerDiscards[ownerId])
-        .concat(match.playArea);
-      
-      return Math.floor(cards.length / 10);
-    },
-  }),
-  registerEffects: {
-    'artisan': () => async ({ cardLibrary, runGameActionDelegate, playerId }) => {
-      
+const expansionModule: CardExpansionModuleNew = {
+  'artisan': {
+    registerEffects: () => async ({ cardLibrary, runGameActionDelegate, playerId }) => {
       console.log(`[ARTISAN EFFECT] choosing card to gain...`);
       //Gain a card to your hand costing up to 5 Treasure.
       //Put a card from your hand onto your deck.
@@ -130,8 +55,10 @@ const expansionModule: CardExpansionModule = {
           location: 'playerDecks',
         },
       });
-    },
-    'bandit': () => async ({ match, cardLibrary, playerId, runGameActionDelegate, reactionContext }) => {
+    }
+  },
+  'bandit': {
+    registerEffects: () => async ({ match, cardLibrary, playerId, runGameActionDelegate, reactionContext }) => {
       //Gain a Gold. Each other player reveals the top 2 cards of their deck,
       // trashes a revealed Treasure other than Copper, and discards the rest.
       
@@ -268,8 +195,10 @@ const expansionModule: CardExpansionModule = {
           console.log(`[BANDIT EFFECT] no cards to discard`);
         }
       }
-    },
-    'bureaucrat': () => async ({ reactionContext, match, cardLibrary, runGameActionDelegate, playerId }) => {
+    }
+  },
+  'bureaucrat': {
+    registerEffects: () => async ({ reactionContext, match, cardLibrary, runGameActionDelegate, playerId }) => {
       
       // Gain a Silver onto your deck. Each other player reveals a Victory card
       // from their hand and puts it onto their deck (or reveals a hand with no Victory cards).
@@ -355,8 +284,10 @@ const expansionModule: CardExpansionModule = {
           });
         }
       }
-    },
-    'cellar': () => async ({ match, runGameActionDelegate, playerId, cardLibrary }) => {
+    }
+  },
+  'cellar': {
+    registerEffects: () => async ({ match, runGameActionDelegate, playerId, cardLibrary }) => {
       
       console.log(`[CELLAR EFFECT] gaining action...`);
       await runGameActionDelegate('gainAction', {
@@ -402,8 +333,10 @@ const expansionModule: CardExpansionModule = {
           playerId,
         });
       }
-    },
-    'chapel': () => async ({ match, runGameActionDelegate, cardLibrary, playerId }) => {
+    }
+  },
+  'chapel': {
+    registerEffects: () => async ({ match, runGameActionDelegate, cardLibrary, playerId }) => {
       const hand = match.playerHands[playerId];
       
       if (!hand.length) {
@@ -432,8 +365,10 @@ const expansionModule: CardExpansionModule = {
           cardId,
         });
       }
-    },
-    'council-room': () => async ({ runGameActionDelegate, match, playerId }) => {
+    }
+  },
+  'council-room': {
+    registerEffects: () => async ({ runGameActionDelegate, match, playerId }) => {
       for (let i = 0; i < 4; i++) {
         console.log(`[COUNCIL ROOM EFFECT] drawing card...`);
         
@@ -462,8 +397,10 @@ const expansionModule: CardExpansionModule = {
           playerId,
         });
       }
-    },
-    'festival': () => async ({ runGameActionDelegate }) => {
+    }
+  },
+  'festival': {
+    registerEffects: () => async ({ runGameActionDelegate }) => {
       console.log(`[FESTIVAL EFFECT] gaining 2 actions...`);
       await runGameActionDelegate('gainAction', {
         count: 2,
@@ -478,12 +415,24 @@ const expansionModule: CardExpansionModule = {
       await runGameActionDelegate('gainTreasure', {
         count: 2,
       });
+    }
+  },
+  'gardens': {
+    registerScoringFunction: () => ({ match, ownerId }) => {
+      const cards = match
+        .playerHands[ownerId]
+        .concat(match.playerDecks[ownerId])
+        .concat(match.playerDiscards[ownerId])
+        .concat(match.playArea);
+      
+      return Math.floor(cards.length / 10);
     },
-    // deno-lint-ignore require-yield
-    'gardens': () => async () => {
+    registerEffects: () => async () => {
       console.log(`[GARDENS EFFECT] garden has no effects`);
-    },
-    'harbinger': () => async ({ cardLibrary, match, runGameActionDelegate, playerId }) => {
+    }
+  },
+  'harbinger': {
+    registerEffects: () => async ({ cardLibrary, match, runGameActionDelegate, playerId }) => {
       console.log(`[HARBINGER EFFECT] drawing card...`);
       
       await runGameActionDelegate('drawCard', {
@@ -534,8 +483,10 @@ const expansionModule: CardExpansionModule = {
       else {
         console.log('[HARBINGER EFFECT] no card selected');
       }
-    },
-    'laboratory': () => async ({ runGameActionDelegate, playerId }) => {
+    }
+  },
+  'laboratory': {
+    registerEffects: () => async ({ runGameActionDelegate, playerId }) => {
       for (let i = 0; i < 2; i++) {
         console.log(`[LABORATORY EFFECT] drawing card...`);
         
@@ -548,8 +499,10 @@ const expansionModule: CardExpansionModule = {
       await runGameActionDelegate('gainAction', {
         count: 1
       });
-    },
-    'library': () => async ({ match, runGameActionDelegate, cardLibrary, playerId }) => {
+    }
+  },
+  'library': {
+    registerEffects: () => async ({ match, runGameActionDelegate, cardLibrary, playerId }) => {
       // Draw until you have 7 cards in hand, skipping any Action cards
       // you choose to; set those aside, discarding them afterward.
       const setAside: number[] = [];
@@ -617,8 +570,10 @@ const expansionModule: CardExpansionModule = {
           playerId,
         });
       }
-    },
-    'market': () => async ({ runGameActionDelegate, playerId }) => {
+    }
+  },
+  'market': {
+    registerEffects: () => async ({ runGameActionDelegate, playerId }) => {
       console.log(`[MARKET EFFECT] drawing card...`);
       await runGameActionDelegate('drawCard', {
         playerId,
@@ -638,8 +593,43 @@ const expansionModule: CardExpansionModule = {
       await runGameActionDelegate('gainTreasure', {
         count: 1
       });
-    },
-    'merchant': () => async ({ runGameActionDelegate, playerId }) => {
+    }
+  },
+  'merchant': {
+    registerLifeCycleMethods: () => ({
+      onCardPlayed: ({ reactionManager, cardId, playerId }) => {
+        reactionManager.registerReactionTemplate({
+          id: `merchant:${cardId}:cardPlayed`,
+          playerId,
+          once: true,
+          compulsory: true,
+          allowMultipleInstances: true,
+          listeningFor: 'cardPlayed',
+          condition: ({ cardLibrary, trigger: silverTrigger, match }) => {
+            const silverCard = cardLibrary.getCard(silverTrigger.cardId!);
+            if (silverCard.cardKey !== 'silver') return false;
+            
+            const playedCardInfo = match.stats.playedCards;
+            const playedSilvers = Object.keys(playedCardInfo)
+              .filter((cardId) =>
+                cardLibrary.getCard(+cardId).cardKey === 'silver'
+                && playedCardInfo[+cardId].turnNumber === match.turnNumber
+                && playedCardInfo[+cardId].playerId === silverTrigger.playerId)
+            
+            return playedSilvers.length === 1;
+          },
+          triggeredEffectFn: async ({ runGameActionDelegate }) => {
+            await runGameActionDelegate('gainTreasure', {
+              count: 1,
+            });
+          }
+        });
+      },
+      onLeavePlay: ({ reactionManager, cardId }) => {
+        reactionManager.unregisterTrigger(`merchant:${cardId}:cardPlayed`);
+      },
+    }),
+    registerEffects: () => async ({ runGameActionDelegate, playerId }) => {
       console.log(`[MERCHANT EFFECT] drawing card...`);
       await runGameActionDelegate('drawCard', {
         playerId,
@@ -649,8 +639,10 @@ const expansionModule: CardExpansionModule = {
       await runGameActionDelegate('gainAction', {
         count: 1,
       });
-    },
-    'militia': () => async ({ runGameActionDelegate, cardLibrary, match, reactionContext, playerId }) => {
+    }
+  },
+  'militia': {
+    registerEffects: () => async ({ runGameActionDelegate, cardLibrary, match, reactionContext, playerId }) => {
       console.log(`[MILITIA EFFECT] gaining 1 treasure...`);
       await runGameActionDelegate('gainTreasure', {
         count: 2
@@ -696,8 +688,10 @@ const expansionModule: CardExpansionModule = {
           });
         }
       }
-    },
-    'mine': () => async ({ runGameActionDelegate, match, cardLibrary, playerId }) => {
+    }
+  },
+  'mine': {
+    registerEffects: () => async ({ runGameActionDelegate, match, cardLibrary, playerId }) => {
       // You may trash a Treasure from your hand. Gain a Treasure to
       // your hand costing up to 3 Treasure more than it.
       const hand = match.playerHands[playerId];
@@ -779,16 +773,48 @@ const expansionModule: CardExpansionModule = {
         cardId,
         to: { location: 'playerHands' },
       });
-    },
-    'moat': () => async ({ runGameActionDelegate, playerId }) => {
+    }
+  },
+  'moat': {
+    registerLifeCycleMethods: () => ({
+      onEnterHand: ({ reactionManager, playerId, cardId }) => {
+        reactionManager.registerReactionTemplate({
+          id: `moat:${cardId}:cardPlayed`,
+          playerId,
+          listeningFor: 'cardPlayed',
+          allowMultipleInstances: false,
+          condition: ({ cardLibrary, trigger }) => {
+            return cardLibrary.getCard(trigger.cardId!).type.includes(
+              'ATTACK',
+            ) && trigger.playerId !== playerId;
+          },
+          triggeredEffectFn: async function ({ runGameActionDelegate, reaction }) {
+            const sourceId = reaction.getSourceId();
+            
+            await runGameActionDelegate('revealCard', {
+              cardId: sourceId,
+              playerId: reaction.playerId,
+            });
+            
+            return 'immunity';
+          },
+        });
+      },
+      onLeaveHand: ({ reactionManager, cardId }) => {
+        reactionManager.unregisterTrigger(`moat:${cardId}:cardPlayed`);
+      },
+    }),
+    registerEffects: () => async ({ runGameActionDelegate, playerId }) => {
       await runGameActionDelegate('drawCard', {
         playerId,
       });
       await runGameActionDelegate('drawCard', {
         playerId,
       });
-    },
-    'moneylender': () => async ({ runGameActionDelegate, match, cardLibrary, playerId }) => {
+    }
+  },
+  'moneylender': {
+    registerEffects: () => async ({ runGameActionDelegate, match, cardLibrary, playerId }) => {
       const hand = match.playerHands[playerId];
       
       const hasCopper = hand.some((c) =>
@@ -833,8 +859,10 @@ const expansionModule: CardExpansionModule = {
       await runGameActionDelegate('gainTreasure', {
         count: 3,
       });
-    },
-    'poacher': () => async ({ cardLibrary, match, playerId, runGameActionDelegate }) => {
+    }
+  },
+  'poacher': {
+    registerEffects: () => async ({ cardLibrary, match, playerId, runGameActionDelegate }) => {
       console.log(`[POACHER EFFECT] drawing card...`);
       
       await runGameActionDelegate('drawCard', {
@@ -919,8 +947,10 @@ const expansionModule: CardExpansionModule = {
           cardId,
         });
       }
-    },
-    'remodel': () => async ({ match, cardLibrary, playerId, runGameActionDelegate }) => {
+    }
+  },
+  'remodel': {
+    registerEffects: () => async ({ match, cardLibrary, playerId, runGameActionDelegate }) => {
       if (match.playerHands[playerId].length === 0) {
         console.log(`[REMODEL EFFECT] player has no cards in hand`);
         return;
@@ -971,8 +1001,10 @@ const expansionModule: CardExpansionModule = {
         cardId,
         to: { location: 'playerDiscards' },
       });
-    },
-    'sentry': () => async ({ runGameActionDelegate, cardLibrary, match, playerId }) => {
+    }
+  },
+  'sentry': {
+    registerEffects: () => async ({ runGameActionDelegate, cardLibrary, match, playerId }) => {
       // +1 Card
       // +1 Action
       // Look at the top 2 cards of your deck. Trash and/or discard any number of
@@ -1131,16 +1163,20 @@ const expansionModule: CardExpansionModule = {
           to: { location: 'playerDecks' }
         });
       }
-    },
-    'smithy': () => async ({ runGameActionDelegate, playerId }) => {
+    }
+  },
+  'smithy': {
+    registerEffects: () => async ({ runGameActionDelegate, playerId }) => {
       for (let i = 0; i < 3; i++) {
         console.log(`[SMITHY EFFECT] drawing card...`);
         await runGameActionDelegate('drawCard', {
           playerId,
         });
       }
-    },
-    'throne-room': () => async ({ playerId, runGameActionDelegate, cardLibrary }) => {
+    }
+  },
+  'throne-room': {
+    registerEffects: () => async ({ playerId, runGameActionDelegate, cardLibrary }) => {
       console.log(`[THRONE ROOM EFFECT] prompting user to select action card from hand...`);
       
       const cardIds = await runGameActionDelegate('selectCard', {
@@ -1174,8 +1210,10 @@ const expansionModule: CardExpansionModule = {
           }
         });
       }
-    },
-    'vassal': () => async ({ cardLibrary, match, playerId, runGameActionDelegate }) => {
+    }
+  },
+  'vassal': {
+    registerEffects: () => async ({ cardLibrary, match, playerId, runGameActionDelegate }) => {
       console.log(`[VASSAL EFFECT] gain 2 treasure...`);
       
       await runGameActionDelegate('gainTreasure', {
@@ -1234,8 +1272,10 @@ const expansionModule: CardExpansionModule = {
           actionCost: 0,
         }
       });
-    },
-    'village': () => async ({ playerId, runGameActionDelegate }) => {
+    }
+  },
+  'village': {
+    registerEffects: () => async ({ playerId, runGameActionDelegate }) => {
       console.log(`[VILLAGE EFFECT] gaining 2 actions...`);
       await runGameActionDelegate('gainAction', {
         count: 2,
@@ -1246,8 +1286,10 @@ const expansionModule: CardExpansionModule = {
       await runGameActionDelegate('drawCard', {
         playerId,
       });
-    },
-    'witch': () => async ({ runGameActionDelegate, match, playerId, cardLibrary, reactionContext }) => {
+    }
+  },
+  'witch': {
+    registerEffects: () => async ({ runGameActionDelegate, match, playerId, cardLibrary, reactionContext }) => {
       for (let i = 0; i < 2; i++) {
         console.log(`[WITCH EFFECT] drawing card...`);
         
@@ -1282,8 +1324,10 @@ const expansionModule: CardExpansionModule = {
           console.debug('[WITCH EFFECT] no curses found in supply');
         }
       }
-    },
-    'workshop': () => async ({ runGameActionDelegate, cardLibrary, playerId }) => {
+    }
+  },
+  'workshop': {
+    registerEffects: () => async ({ runGameActionDelegate, cardLibrary, playerId }) => {
       console.log(`[WORKSHOP EFFECT] prompting player to select card to gain...`);
       
       const cardIds = await runGameActionDelegate('selectCard', {
@@ -1305,8 +1349,8 @@ const expansionModule: CardExpansionModule = {
         cardId,
         to: { location: 'playerDiscards' },
       });
-    },
-  }
+    }
+  },
 };
 
 export default expansionModule;

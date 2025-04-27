@@ -1,73 +1,12 @@
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
-import { CardExpansionModule } from '../../types.ts';
+import { CardExpansionModuleNew } from '../../types.ts';
 import { ActionButtons, Card, CardId, CardKey, PlayerId } from 'shared/shared-types.ts';
 
-const expansionModule: CardExpansionModule = {
-  registerCardLifeCycles: () => ({
-    'diplomat': {
-      onEnterHand: ({ reactionManager, runGameActionDelegate, playerId, cardId }) => {
-        reactionManager.registerReactionTemplate({
-          id: `diplomat:${cardId}:cardPlayed`,
-          playerId,
-          listeningFor: 'cardPlayed',
-          condition: ({ match, trigger, cardLibrary }) => {
-            return cardLibrary.getCard(trigger.cardId!).type.includes('ATTACK') &&
-              match.playerHands[playerId].length >= 5 &&
-              trigger.playerId !== playerId
-          },
-          triggeredEffectFn: async function ({ reaction, cardLibrary }) {
-            const sourceId = reaction.getSourceId();
-            
-            console.log(`[diplomat triggered effect] running for ${cardLibrary.getCard(cardId)}`);
-            
-            await runGameActionDelegate('revealCard', {
-              cardId: sourceId,
-              playerId: reaction.playerId,
-            });
-            
-            await runGameActionDelegate('drawCard', { playerId });
-            await runGameActionDelegate('drawCard', { playerId });
-            const cardIds = await runGameActionDelegate('selectCard', {
-              prompt: 'Confirm discard',
-              playerId,
-              restrict: {
-                from: { location: 'playerHands' },
-              },
-              count: 3,
-            }) as number[];
-            
-            for (const cardId of cardIds) {
-              await runGameActionDelegate('discardCard', {
-                playerId,
-                cardId,
-              });
-            }
-          },
-        });
-      },
-      onLeaveHand: ({ reactionManager, cardId }) => {
-        reactionManager.unregisterTrigger(`diplomat:${cardId}:cardPlayed`);
-      },
-    },
-  }),
-  registerScoringFunctions: () => ({
-    'duke': function ({ match, cardLibrary, ownerId }) {
-      const duchies = match.playerHands[ownerId]?.concat(
-        match.playerDecks[ownerId],
-        match.playerDiscards[ownerId],
-        match.playArea,
-      ).map(cardLibrary.getCard)
-        .filter((card) => card.cardKey === 'duchy');
-      
-      console.log(`[DUKE SCORING] player ${getPlayerById(match, ownerId)} has ${duchies.length} Duchies`);
-      
-      return duchies.length;
-    },
-  }),
-  registerEffects: {
-    'baron': () => async ({ runGameActionDelegate, cardLibrary, match, playerId }) => {
+const expansionModule: CardExpansionModuleNew = {
+  'baron': {
+    registerEffects: () => async ({ runGameActionDelegate, cardLibrary, match, playerId }) => {
       // +1 Buy
       // You may discard an Estate for +$4. If you don't, gain an Estate.
       
@@ -135,8 +74,10 @@ const expansionModule: CardExpansionModule = {
         cardId: supplyEstateIdx,
         to: { location: 'playerDiscards' },
       });
-    },
-    'bridge': () => async ({ runGameActionDelegate }) => {
+    }
+  },
+  'bridge': {
+    registerEffects: () => async ({ runGameActionDelegate }) => {
       console.log(`[BRIDGE EFFECT] gaining 1 buy...`);
       
       await runGameActionDelegate('gainBuy', { count: 1 });
@@ -155,8 +96,10 @@ const expansionModule: CardExpansionModule = {
         amount: -1,
         expiresAt: 'TURN_END',
       });
-    },
-    'conspirator': () => async ({ match, cardLibrary, playerId, runGameActionDelegate }) => {
+    }
+  },
+  'conspirator': {
+    registerEffects: () => async ({ match, cardLibrary, playerId, runGameActionDelegate }) => {
       console.log(`[CONSPIRATOR EFFECT] gaining 2 treasure...`);
       
       await runGameActionDelegate('gainTreasure', { count: 2 });
@@ -183,8 +126,10 @@ const expansionModule: CardExpansionModule = {
           count: 1,
         });
       }
-    },
-    'courtier': () => async ({ match, playerId, cardLibrary, runGameActionDelegate }) => {
+    }
+  },
+  'courtier': {
+    registerEffects: () => async ({ match, playerId, cardLibrary, runGameActionDelegate }) => {
       const hand = match.playerHands[playerId];
       
       if (!hand.length) {
@@ -282,8 +227,10 @@ const expansionModule: CardExpansionModule = {
           }
         }
       }
-    },
-    'courtyard': () => async ({ match, runGameActionDelegate, playerId, cardLibrary }) => {
+    }
+  },
+  'courtyard': {
+    registerEffects: () => async ({ match, runGameActionDelegate, playerId, cardLibrary }) => {
       for (let i = 0; i < 3; i++) {
         console.log(`[COURTYARD EFFECT] drawing card...`);
         
@@ -319,8 +266,55 @@ const expansionModule: CardExpansionModule = {
         toPlayerId: playerId,
         to: { location: 'playerDecks' },
       });
-    },
-    'diplomat': () => async ({ match, runGameActionDelegate, playerId }) => {
+    }
+  },
+  'diplomat': {
+    registerLifeCycleMethods: () => ({
+      onEnterHand: ({ reactionManager, runGameActionDelegate, playerId, cardId }) => {
+        reactionManager.registerReactionTemplate({
+          id: `diplomat:${cardId}:cardPlayed`,
+          playerId,
+          listeningFor: 'cardPlayed',
+          condition: ({ match, trigger, cardLibrary }) => {
+            return cardLibrary.getCard(trigger.cardId!).type.includes('ATTACK') &&
+              match.playerHands[playerId].length >= 5 &&
+              trigger.playerId !== playerId
+          },
+          triggeredEffectFn: async function ({ reaction, cardLibrary }) {
+            const sourceId = reaction.getSourceId();
+            
+            console.log(`[diplomat triggered effect] running for ${cardLibrary.getCard(cardId)}`);
+            
+            await runGameActionDelegate('revealCard', {
+              cardId: sourceId,
+              playerId: reaction.playerId,
+            });
+            
+            await runGameActionDelegate('drawCard', { playerId });
+            await runGameActionDelegate('drawCard', { playerId });
+            const cardIds = await runGameActionDelegate('selectCard', {
+              prompt: 'Confirm discard',
+              playerId,
+              restrict: {
+                from: { location: 'playerHands' },
+              },
+              count: 3,
+            }) as number[];
+            
+            for (const cardId of cardIds) {
+              await runGameActionDelegate('discardCard', {
+                playerId,
+                cardId,
+              });
+            }
+          },
+        });
+      },
+      onLeaveHand: ({ reactionManager, cardId }) => {
+        reactionManager.unregisterTrigger(`diplomat:${cardId}:cardPlayed`);
+      },
+    }),
+    registerEffects: () => async ({ match, runGameActionDelegate, playerId }) => {
       for (let i = 0; i < 2; i++) {
         console.log(`[DIPLOMAT EFFECT] drawing card...`);
         
@@ -340,19 +334,36 @@ const expansionModule: CardExpansionModule = {
       else {
         console.log(`[DIPLOMAT EFFECT] player has more than ${cardCount} cards in hand, can't perform diplomat`,);
       }
-    },
-    // deno-lint-ignore require-yield
-    'duke': () => async () => {
+    }
+  },
+  'duke': {
+    registerScoringFunction: () => ({ match, cardLibrary, ownerId }) => {
+  const duchies = match.playerHands[ownerId]?.concat(
+    match.playerDecks[ownerId],
+    match.playerDiscards[ownerId],
+    match.playArea,
+  ).map(cardLibrary.getCard)
+    .filter((card) => card.cardKey === 'duchy');
+  
+  console.log(`[DUKE SCORING] player ${getPlayerById(match, ownerId)} has ${duchies.length} Duchies`);
+  
+  return duchies.length;
+},
+    registerEffects: () => async () => {
       console.log(`[DUKE EFFECT] duke has no effects`);
-    },
-    'farm': () => async ({ runGameActionDelegate }) => {
+    }
+  },
+  'farm': {
+    registerEffects: () => async ({ runGameActionDelegate }) => {
       console.log(`[FARM EFFECT] gaining 2 treasure...`);
       
       await runGameActionDelegate('gainTreasure', {
         count: 2,
       });
-    },
-    'ironworks': () => async ({ cardLibrary, runGameActionDelegate, playerId }) => {
+    }
+  },
+  'ironworks': {
+    registerEffects: () => async ({ cardLibrary, runGameActionDelegate, playerId }) => {
       console.log(`[IRONWORKS EFFECT] prompting user to choose card costing up to 4...`);
       
       const cardIds = await runGameActionDelegate('selectCard', {
@@ -398,8 +409,10 @@ const expansionModule: CardExpansionModule = {
           playerId,
         });
       }
-    },
-    'lurker': () => async ({ cardLibrary, match, playerId, runGameActionDelegate }) => {
+    }
+  },
+  'lurker': {
+    registerEffects: () => async ({ cardLibrary, match, playerId, runGameActionDelegate }) => {
       console.log(`[LURKER EFFECT] gaining 1 action...`);
       
       await runGameActionDelegate('gainAction', { count: 1 });
@@ -484,8 +497,10 @@ const expansionModule: CardExpansionModule = {
         playerId,
         to: { location: 'playerDiscards' },
       });
-    },
-    'masquerade': () => async ({ runGameActionDelegate, playerId, match, cardLibrary }) => {
+    }
+  },
+  'masquerade': {
+    registerEffects: () => async ({ runGameActionDelegate, playerId, match, cardLibrary }) => {
       for (let i = 0; i < 2; i++) {
         console.log(`[MASQUERADE EFFECT] drawing card...`);
         
@@ -556,8 +571,10 @@ const expansionModule: CardExpansionModule = {
           playerId,
         });
       }
-    },
-    'mill': () => async ({ runGameActionDelegate, playerId, match, cardLibrary }) => {
+    }
+  },
+  'mill': {
+    registerEffects: () => async ({ runGameActionDelegate, playerId, match, cardLibrary }) => {
       console.log(`[MILL EFFECT] drawing card...`);
       
       await runGameActionDelegate('drawCard', {
@@ -601,8 +618,10 @@ const expansionModule: CardExpansionModule = {
           count: 2,
         });
       }
-    },
-    'mining-village': () => async ({ runGameActionDelegate, playerId, cardId, cardLibrary }) => {
+    }
+  },
+  'mining-village': {
+    registerEffects: () => async ({ runGameActionDelegate, playerId, cardId, cardLibrary }) => {
       console.log(`[MINING VILLAGE EFFECT] drawing card...`);
       
       await runGameActionDelegate('drawCard', {
@@ -640,8 +659,10 @@ const expansionModule: CardExpansionModule = {
       else {
         console.log(`[MINING VILLAGE EFFECT] player chose not to trash mining village`);
       }
-    },
-    'minion': () => async ({ match, reactionContext, cardLibrary, runGameActionDelegate, playerId }) => {
+    }
+  },
+  'minion': {
+    registerEffects: () => async ({ match, reactionContext, cardLibrary, runGameActionDelegate, playerId }) => {
       console.log(`[MINION EFFECT] gaining 1 action...`);
       
       await runGameActionDelegate('gainAction', { count: 1 });
@@ -698,8 +719,10 @@ const expansionModule: CardExpansionModule = {
           }
         }
       }
-    },
-    'nobles': () => async ({ runGameActionDelegate, playerId }) => {
+    }
+  },
+  'nobles': {
+    registerEffects: () => async ({ runGameActionDelegate, playerId }) => {
       console.log(`[NOBLES EFFECT] prompting user to select actions or treasure`);
       
       const result = await runGameActionDelegate('userPrompt', {
@@ -728,8 +751,10 @@ const expansionModule: CardExpansionModule = {
           count: 2,
         });
       }
-    },
-    'patrol': () => async ({ runGameActionDelegate, match, playerId, cardLibrary }) => {
+    }
+  },
+  'patrol': {
+    registerEffects: () => async ({ runGameActionDelegate, match, playerId, cardLibrary }) => {
       for (let i = 0; i < 3; i++) {
         console.log(`[PATROL EFFECT] drawing card`);
         
@@ -828,8 +853,10 @@ const expansionModule: CardExpansionModule = {
           to: { location: 'playerDecks' },
         });
       }
-    },
-    'pawn': () => async ({ runGameActionDelegate, playerId }) => {
+    }
+  },
+  'pawn': {
+    registerEffects: () => async ({ runGameActionDelegate, playerId }) => {
       const actions = [
         { action: 1, label: '+1 Card' },
         { action: 2, label: '+1 Action' },
@@ -875,8 +902,10 @@ const expansionModule: CardExpansionModule = {
         
         actions.splice(actions.findIndex((a) => a.action === result.action), 1);
       }
-    },
-    'replace': () => async ({ runGameActionDelegate, match, cardLibrary, playerId, reactionContext }) => {
+    }
+  },
+  'replace': {
+    registerEffects: () => async ({ runGameActionDelegate, match, cardLibrary, playerId, reactionContext }) => {
       if (match.playerHands[playerId].length === 0) {
         console.log(`[REPLACE EFFECT] no cards in hand to trash...`);
         return;
@@ -964,8 +993,10 @@ const expansionModule: CardExpansionModule = {
           });
         }
       }
-    },
-    'secret-passage': () => async ({ match, cardLibrary, runGameActionDelegate, playerId }) => {
+    }
+  },
+  'secret-passage': {
+    registerEffects: () => async ({ match, cardLibrary, runGameActionDelegate, playerId }) => {
       for (let i = 0; i < 2; i++) {
         console.log(`[SECRET PASSAGE EFFECT] drawing card...`);
         
@@ -1036,8 +1067,10 @@ const expansionModule: CardExpansionModule = {
           index: idx,
         },
       });
-    },
-    'shanty-town': () => async ({ runGameActionDelegate, playerId, cardLibrary, match }) => {
+    }
+  },
+  'shanty-town': {
+    registerEffects: () => async ({ runGameActionDelegate, playerId, cardLibrary, match }) => {
       console.log(`[SHANTY TOWN EFFECT] gaining 2 actions...`);
       
       await runGameActionDelegate('gainAction', { count: 2 });
@@ -1065,8 +1098,10 @@ const expansionModule: CardExpansionModule = {
       else {
         console.log(`[SHANTY TOWN EFFECT] player has actions, not drawing cards`);
       }
-    },
-    'steward': () => async ({ match, cardLibrary, runGameActionDelegate, playerId }) => {
+    }
+  },
+  'steward': {
+    registerEffects: () => async ({ match, cardLibrary, runGameActionDelegate, playerId }) => {
       console.log(`[STEWARD EFFECT] prompting user to choose cards, treasure, or trashing cards`);
       
       const result = await runGameActionDelegate('userPrompt', {
@@ -1122,8 +1157,10 @@ const expansionModule: CardExpansionModule = {
           break;
         }
       }
-    },
-    'swindler': () => async ({ reactionContext, runGameActionDelegate, playerId, match, cardLibrary }) => {
+    }
+  },
+  'swindler': {
+    registerEffects: () => async ({ reactionContext, runGameActionDelegate, playerId, match, cardLibrary }) => {
       console.log(`[SWINDLER EFFECT] gaining 2 treasure...`);
       
       await runGameActionDelegate('gainTreasure', {
@@ -1185,8 +1222,10 @@ const expansionModule: CardExpansionModule = {
           to: { location: 'playerDiscards' },
         });
       }
-    },
-    'torturer': () => async ({ reactionContext, runGameActionDelegate, playerId, match, cardLibrary }) => {
+    }
+  },
+  'torturer': {
+    registerEffects: () => async ({ reactionContext, runGameActionDelegate, playerId, match, cardLibrary }) => {
       for (let i = 0; i < 3; i++) {
         console.log(`[TORTURER EFFECT] drawing card...`);
         
@@ -1258,8 +1297,10 @@ const expansionModule: CardExpansionModule = {
           to: { location: 'playerHands' },
         });
       }
-    },
-    'trading-post': () => async ({ runGameActionDelegate, match, cardLibrary, playerId }) => {
+    }
+  },
+  'trading-post': {
+    registerEffects: () => async ({ runGameActionDelegate, match, cardLibrary, playerId }) => {
       const count = Math.min(2, match.playerHands[playerId].length);
       
       if (count === 0) {
@@ -1307,8 +1348,10 @@ const expansionModule: CardExpansionModule = {
       else {
         console.log(`[TRADING POST EFFECT] player trashed ${cardIds.length}, so no treasure gained`);
       }
-    },
-    'upgrade': () => async ({ cardLibrary, runGameActionDelegate, match, playerId }) => {
+    }
+  },
+  'upgrade': {
+    registerEffects: () => async ({ cardLibrary, runGameActionDelegate, match, playerId }) => {
       console.log(`[UPGRADE EFFECT] drawing card...`);
       
       await runGameActionDelegate('drawCard', {
@@ -1375,8 +1418,10 @@ const expansionModule: CardExpansionModule = {
         cardId,
         to: { location: 'playerDiscards' },
       });
-    },
-    'wishing-well': () => async ({ match, cardLibrary, runGameActionDelegate, playerId }) => {
+    }
+  },
+  'wishing-well': {
+    registerEffects: () => async ({ match, cardLibrary, runGameActionDelegate, playerId }) => {
       console.log(`[WISHING WELL EFFECT] drawing card...`);
       
       await runGameActionDelegate('drawCard', {
@@ -1429,6 +1474,6 @@ const expansionModule: CardExpansionModule = {
       }
     }
   }
-};
+}
 
 export default expansionModule;

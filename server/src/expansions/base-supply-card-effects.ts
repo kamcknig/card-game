@@ -1,17 +1,21 @@
-import { CardExpansionModule } from '../types.ts';
+import { CardExpansionModuleNew } from '../types.ts';
 
-const expansionModule: CardExpansionModule = {
-  registerEffects: {
-    'copper': () => async ({gameActionController}) => {
+const expansionModule: CardExpansionModuleNew = {
+  'copper': {
+    registerEffects: () => async ({ gameActionController }) => {
       await gameActionController.gainTreasure({ count: 1 });
-    },
-    'gold': () => async ({gameActionController}) => {
+    }
+  },
+  'gold': {
+    registerEffects: () => async ({ gameActionController }) => {
       await gameActionController.gainTreasure({ count: 3 });
-    },
-    'silver': () => async ({gameActionController}) => {
+    }
+  },
+  'silver': {
+    registerEffects: () => async ({ gameActionController }) => {
       await gameActionController.gainTreasure({ count: 2 });
-    },
-  }
+    }
+  },
 };
 
 export default expansionModule;

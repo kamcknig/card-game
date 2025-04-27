@@ -199,7 +199,9 @@ export type RunGameActionDelegate = <K extends GameActions>(
 
 export type ReactionContext = any;
 
-export type CardEffectFunctionMapFactory = Record<CardKey, () => (context: CardEffectFunctionContext) => Promise<void>>;
+export type CardEffectFactory = () => (context: CardEffectFunctionContext) => Promise<void>;
+
+export type CardEffectFactoryMap = Record<CardKey, CardEffectFactory>;
 
 export type CardEffectFunctionContext = {
   match: Match;
@@ -221,14 +223,20 @@ export type CardEffectFunction = (context: CardEffectFunctionContext) => Promise
 export type CardEffectFunctionMap =
   Record<CardKey, CardEffectFunction>;
 
-export interface CardExpansionModule {
-  registerCardLifeCycles?: () => Record<string, LifecycleCallbackMap>;
-  registerScoringFunctions?: () => Record<string, (args: {
-    match: Match,
-    cardLibrary: CardLibrary,
-    ownerId: number
-  }) => number>;
-  registerEffects: CardEffectFunctionMapFactory;
+export type CardScoringFnContext = {
+  match: Match;
+  cardLibrary: CardLibrary;
+  ownerId: number;
+}
+
+export type CardScoringFunction = (args: CardScoringFnContext) => number;
+
+export interface CardExpansionModuleNew {
+  [p: CardKey]: {
+    registerLifeCycleMethods?: () => LifecycleCallbackMap;
+    registerScoringFunction?: () => CardScoringFunction;
+    registerEffects?: CardEffectFactory;
+  }
 }
 
 export type GameActionOverrides = {

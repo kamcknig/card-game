@@ -3,23 +3,24 @@ import { cardEffectFunctionMapFactory } from '../core/effects/card-effect-functi
 import { scoringFunctionMap } from '../expansions/scoring-function-map.ts';
 import { expansionData } from '../state/expansion-data.ts';
 import { cardLifecycleMap } from '../core/card-lifecycle-map.ts';
-import { capitalize } from "es-toolkit/compat";
+import { capitalize } from 'es-toolkit/compat';
+import { CardExpansionModuleNew } from '../types.ts';
 
 export const loadExpansion = async (expansion: ExpansionListElement) => {
   const expansionPath = `../expansions/${expansion.name}`;
   const expansionName = expansion.name;
   if (expansionData[expansionName]) {
-    console.log(`[EXPANSION LOADER] expansion ${expansionName} already loaded`);
+    console.log(`[expansion loader] expansion ${expansionName} already loaded`);
     return;
   }
   
-  console.log(`[EXPANSION LOADER] loading expansion ${expansionName}`);
+  console.log(`[expansion loader] loading expansion ${expansionName}`);
   
   try {
-    console.log(`[EXPANSION LOADER] loading expansion configuration for ${expansionName}`);
+    console.log(`[expansion loader] loading expansion configuration for ${expansionName}`);
     const configModule = await import(`${expansionPath}/configuration-${expansionName}.json`, { with: { type: 'json' } });
     const expansionConfiguration = configModule.default;
-    console.log(`[EXPANSION LOADER] expansion configuration loaded`);
+    console.log(`[expansion loader] expansion configuration loaded`);
     
     expansionData[expansionName] = {
       title: expansion.title,
@@ -34,7 +35,7 @@ export const loadExpansion = async (expansion: ExpansionListElement) => {
     
     const cardData = expansionData[expansionName].cardData;
     
-    console.log(`[EXPANSION LOADER] loading supply card library for ${expansionName}`);
+    console.log(`[expansion loader] loading supply card library for ${expansionName}`);
     let module = await import(`${expansionPath}/${expansionConfiguration.supply}`, { with: { type: 'json' } });
     let cards = module.default as Record<string, CardData>;
     Object.keys(cards).forEach((key) => {
@@ -47,10 +48,10 @@ export const loadExpansion = async (expansion: ExpansionListElement) => {
         halfImagePath: `./assets/card-images/base-supply/half-size/${key}.jpg`
       };
     });
-    console.log('[EXPANSION LOADER] supply loaded');
+    console.log('[expansion loader] supply loaded');
     
     
-    console.log(`[EXPANSION LOADER] loading kingdom card library for ${expansionName}`);
+    console.log(`[expansion loader] loading kingdom card library for ${expansionName}`);
     module = await import(`${expansionPath}/${expansionConfiguration.kingdom}`, { with: { type: 'json' } });
     cards = module.default as Record<string, CardData>;
     Object.keys(cards).forEach((key) => {
@@ -64,48 +65,53 @@ export const loadExpansion = async (expansion: ExpansionListElement) => {
         halfImagePath: `./assets/card-images/${expansionName}/half-size/${key}.jpg`,
       };
     });
-    console.log('[EXPANSION LOADER] kingdom loaded');
+    console.log('[expansion loader] kingdom loaded');
     
     
-    console.log('[EXPANSION LOADER] loading base supply card effects');
+    console.log('[expansion loader] loading base supply card effects');
     module = await import(`../expansions/base-supply-card-effects.ts`);
-    let effects = module.default.registerEffects;
-    Object.keys(effects).forEach(key => {
-      console.log('[EXPANSION LOADER]registering effects for', key);
-      cardEffectFunctionMapFactory[key] = effects[key];
+    let expansionModule = module.default as CardExpansionModuleNew;
+    Object.keys(expansionModule).forEach(key => {
+      if (expansionModule[key].registerScoringFunction) {
+        console.log(`[expansion loader] registering scoring function for ${key}`);
+        scoringFunctionMap[key] = expansionModule[key].registerScoringFunction();
+      }
+
+      if (expansionModule[key].registerLifeCycleMethods) {
+        console.log(`[expansion loader] registering lifecycle methods for ${key}`);
+        cardLifecycleMap[key] = expansionModule[key].registerLifeCycleMethods()
+      }
+      
+      if (expansionModule[key].registerEffects) {
+        console.log(`[expansion loader] registering effects for ${key}`);
+        cardEffectFunctionMapFactory[key] = expansionModule[key].registerEffects;
+      }
     });
-    console.log('[EXPANSION LOADER] base supply card effects loaded');
+    console.log('[expansion loader] base supply card effects loaded');
     
     
-    console.log(`[EXPANSION LOADER] loading ${expansionName} card effects`);
-    module = await import(`${expansionPath}/card-effects-${expansionName}.ts`);
-    effects = module.default.registerEffects;
-    Object.keys(effects).forEach(key => {
-      console.log('[EXPANSION LOADER]registering effects for', key);
-      cardEffectFunctionMapFactory[key] = effects[key];
+    console.log(`[expansion loader] loading ${expansionName} card effects`);
+    expansionModule = await import(`${expansionPath}/card-effects-${expansionName}.ts`);
+    
+    Object.keys(expansionModule).forEach(key => {
+      if (expansionModule[key].registerScoringFunction) {
+        console.log(`[expansion loader] registering scoring function for ${key}`);
+        scoringFunctionMap[key] = expansionModule[key].registerScoringFunction();
+      }
+      
+      if (expansionModule[key].registerLifeCycleMethods) {
+        console.log(`[expansion loader] registering lifecycle methods for ${key}`);
+        cardLifecycleMap[key] = expansionModule[key].registerLifeCycleMethods()
+      }
+      
+      if (expansionModule[key].registerEffects) {
+        console.log(`[expansion loader] registering effects for ${key}`);
+        cardEffectFunctionMapFactory[key] = expansionModule[key].registerEffects;
+      }
     });
-    console.log(`[EXPANSION LOADER] card effects loaded for ${expansionName}`, cardEffectFunctionMapFactory);
-    
-    
-    console.log('[EXPANSION LOADER] loading card lifecycles');
-    const cardLifeCycles = module.default.registerCardLifeCycles();
-    Object.keys(cardLifeCycles).forEach(key => {
-      console.log('[EXPANSION LOADER]registering card lifecycle', key);
-      cardLifecycleMap[key] = cardLifeCycles[key];
-    });
-    console.log('[EXPANSION LOADER] card lifecycles loaded', cardLifecycleMap);
-    
-    
-    console.log('[EXPANSION LOADER] registering scoring functions');
-    const scoringFunctions = module.default.registerScoringFunctions();
-    Object.keys(scoringFunctions).forEach(key => {
-      console.log('[EXPANSION LOADER]registering scoring function for', key);
-      scoringFunctionMap[key] = scoringFunctions[key];
-    });
-    console.log('[EXPANSION LOADER] scoring functions registered');
-    
+    console.log('[expansion loader] base supply card effects loaded');
   } catch (error) {
-    console.error(`[EXPANSION LOADER] Failed to load expansion: ${expansionName}`, error);
+    console.error(`[expansion loader] Failed to load expansion: ${expansionName}`, error);
     return {};
   }
 };

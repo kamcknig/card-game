@@ -1,3 +1,3 @@
-import { CardEffectFunctionMapFactory } from '../../types.ts';
+import { CardEffectFactoryMap } from '../../types.ts';
 
-export const cardEffectFunctionMapFactory: CardEffectFunctionMapFactory = {};
+export const cardEffectFunctionMapFactory: CardEffectFactoryMap = {};
