@@ -36,7 +36,7 @@ export class SelectKingdomModalComponent implements OnDestroy {
     this._socketService
       .on('searchCardResponse', results =>
         this.searchResults$.next(results.filter(r => {
-          if (r.isSupply) return false;
+          if (r.isBasic) return false;
 
           const currentSelectedKingdomCardKeys = this.excludedKingdoms.map(k => k?.cardKey).filter(k => k !== null);
           return !currentSelectedKingdomCardKeys.some(k => k === r.cardKey);

@@ -35,7 +35,7 @@ export const MatchBaseConfiguration = {
   numberOfKingdomPiles: 10,
   cards: {
     supply: {
-      baseCards: [
+      basic: [
         {
           'province': 8,
           'duchy': 8,
@@ -130,10 +130,6 @@ export class ReactionTrigger {
     return this.toString();
   }
 }
-
-export type SourceContext =
-  | { type: 'player', playerId: PlayerId }
-  | { type: 'card', playerId: PlayerId, cardId: CardId };
 
 export type TriggeredEffectContext = {
   runGameActionDelegate: RunGameActionDelegate;

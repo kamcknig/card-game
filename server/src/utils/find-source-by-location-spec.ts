@@ -32,9 +32,9 @@ export function findSourceByLocationSpec(
   else {
     switch (spec.spec.location[0]) {
       case 'kingdom':
-        return match.kingdom;
+        return match.kingdomSupply;
       case 'supply':
-        return match.supply;
+        return match.basicSupply;
       case 'trash':
         return match.trash;
       case 'playArea':

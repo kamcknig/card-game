@@ -61,7 +61,7 @@ export class CardInteractivityController {
     
     if (turnPhase === 'buy') {
       const cardsAdded: string[] = [];
-      const supply = match.supply.concat(match.kingdom)
+      const supply = match.basicSupply.concat(match.kingdomSupply)
         .map((id) => this._cardLibrary.getCard(id));
       
       // a loop going backwards through the supply and kingdom. we only mark the last one as selectable (this should

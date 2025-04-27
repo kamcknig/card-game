@@ -6,7 +6,7 @@ let CARD_COUNT: number = 0;
 
 export const createCardFactory = (cardData: ExpansionCardData) => {
   return (cardKey: CardKey, card?: Omit<Partial<Card>, 'id'>): Card => {
-    const baseCardData = cardData.supply[cardKey] ?? cardData.kingdom[cardKey] ?? {};
+    const baseCardData = cardData.basicSupply[cardKey] ?? cardData.kingdomSupply[cardKey] ?? {};
     const c = new Card({
       ...baseCardData,
       ...card ?? {},

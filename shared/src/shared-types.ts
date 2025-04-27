@@ -49,7 +49,7 @@ export type MatchConfiguration = {
   players: Player[];
   expansions: ExpansionListElement[];
   bannedKingdoms: CardNoId[];
-  supplyCards: CardNoId[];
+  basicCards: CardNoId[];
   kingdomCards: CardNoId[];
 }
 
@@ -81,7 +81,7 @@ export type Match = {
   activeDurationCards: CardId[];
   config: MatchConfiguration,
   currentPlayerTurnIndex: number;
-  kingdom: CardId[];
+  kingdomSupply: CardId[];
   playArea: CardId[];
   playerActions: number;
   playerBuys: number;
@@ -94,7 +94,7 @@ export type Match = {
   scores: Record<PlayerId, number>,
   selectableCards: Record<PlayerId, CardId[]>;
   setAside: SetAsideCard[];
-  supply: CardId[];
+  basicSupply: CardId[];
   trash: CardId[];
   turnNumber: number;
   turnPhaseIndex: number;
@@ -300,7 +300,7 @@ export type CardType = typeof CardTypeValues[number];
 export type CardArgs = {
   id: CardId;
   type: CardType[];
-  isSupply: boolean;
+  isBasic: boolean;
   isKingdom: boolean;
   cardName: string;
   cost: {
@@ -319,7 +319,7 @@ export type CardArgs = {
 
 export class Card {
   id: CardId;
-  isSupply: boolean = false;
+  isBasic: boolean = false;
   isKingdom: boolean = false;
   cardName: string;
   type: CardType[];
@@ -337,7 +337,7 @@ export class Card {
   owner: PlayerId | null;
   
   constructor(args: CardArgs) {
-    this.isSupply = args.isSupply;
+    this.isBasic = args.isBasic;
     this.isKingdom = args.isKingdom;
     this.id = args.id;
     this.type = args.type;

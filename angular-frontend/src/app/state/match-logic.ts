@@ -3,17 +3,17 @@ import { CardId, CardKey, Mats } from 'shared/shared-types';
 import { matchConfigurationStore, matchStore, selfPlayerIdStore } from './match-state';
 import { cardStore } from './card-state';
 
-export const supplyStore =
-  computed(matchStore, m => m?.supply ?? []);
-(globalThis as any).supplyStore = supplyStore;
+export const basicSupplyStore =
+  computed(matchStore, m => m?.basicSupply ?? []);
+(globalThis as any).supplyStore = basicSupplyStore;
 
 export const supplyCardKeyStore = atom<[CardKey[], CardKey[]]>([[], []]);
 
 export const kingdomCardKeyStore = atom<CardKey[]>([]);
 
-export const kingdomStore =
-  computed(matchStore, m => m?.kingdom ?? []);
-(globalThis as any).kingdomStore = kingdomStore;
+export const kingdomSupplyStore =
+  computed(matchStore, m => m?.kingdomSupply ?? []);
+(globalThis as any).kingdomStore = kingdomSupplyStore;
 
 export const trashStore =
   computed(matchStore, m => m?.trash ?? []);

@@ -36,7 +36,7 @@ const defaultMatchConfiguration: MatchConfiguration = {
   ],
   bannedKingdoms: [],
   players: [],
-  supplyCards: [],
+  basicCards: [],
   kingdomCards: [],
 };
 
@@ -77,8 +77,8 @@ export class Game {
     const allExpansionCards = Object.keys(expansionData).reduce(
       (prev, expansionName) => {
         const expansion = expansionData[expansionName];
-        const supply = expansion.cardData.supply;
-        const kingdom = expansion.cardData.kingdom;
+        const supply = expansion.cardData.basicSupply;
+        const kingdom = expansion.cardData.kingdomSupply;
         
         prev = prev
           .concat(Object.keys(supply).filter(k => !find(k, prev)).map((k) => ({ ...supply[k], cardKey: k })))
@@ -361,34 +361,34 @@ export class Game {
     
     const cardData = this._matchConfiguration?.expansions.reduce((prev, key) => {
       prev = {
-        supply: {
-          ...prev.supply,
-          ...expansionData[key.name].cardData.supply
+        basicSupply: {
+          ...prev.basicSupply,
+          ...expansionData[key.name].cardData.basicSupply
         },
-        kingdom: {
-          ...prev.kingdom,
-          ...expansionData[key.name].cardData.kingdom
+        kingdomSupply: {
+          ...prev.kingdomSupply,
+          ...expansionData[key.name].cardData.kingdomSupply
         }
       }
       return prev;
     }, {} as ExpansionCardData);
     
     // if any cards were requested specifically to be included, add them
-    const keeperExpansions = this._matchConfiguration.supplyCards.concat(this._matchConfiguration.kingdomCards);
+    const keeperExpansions = this._matchConfiguration.basicCards.concat(this._matchConfiguration.kingdomCards);
     for (const keeper of keeperExpansions) {
-      if (keeper.isSupply) {
-        cardData.supply = {
-          ...cardData.supply,
+      if (keeper.isBasic) {
+        cardData.basicSupply = {
+          ...cardData.basicSupply,
           [keeper.cardKey]: {
-            ...expansionData[keeper.expansionName].cardData.supply[keeper.cardKey]
+            ...expansionData[keeper.expansionName].cardData.basicSupply[keeper.cardKey]
           }
         }
       }
       else {
-        cardData.kingdom = {
-          ...cardData.kingdom,
+        cardData.kingdomSupply = {
+          ...cardData.kingdomSupply,
           [keeper.cardKey]: {
-            ...expansionData[keeper.expansionName].cardData.kingdom[keeper.cardKey]
+            ...expansionData[keeper.expansionName].cardData.kingdomSupply[keeper.cardKey]
           }
         }
       }

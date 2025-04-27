@@ -26,8 +26,8 @@ export const loadExpansion = async (expansion: ExpansionListElement) => {
       title: expansion.title,
       name: expansion.name,
       cardData: {
-        supply: {},
-        kingdom: {},
+        basicSupply: {},
+        kingdomSupply: {},
       },
       order: expansion.order,
       mats: expansionConfiguration.mats ?? []
@@ -39,10 +39,10 @@ export const loadExpansion = async (expansion: ExpansionListElement) => {
     let module = await import(`${expansionPath}/${expansionConfiguration.supply}`, { with: { type: 'json' } });
     let cards = module.default as Record<string, CardData>;
     Object.keys(cards).forEach((key) => {
-      cardData.supply[key] = {
+      cardData.basicSupply[key] = {
         ...cards[key],
         expansionName,
-        isSupply: true,
+        isBasic: true,
         detailImagePath: `./assets/card-images/base-supply/detail/${key}.jpg`,
         fullImagePath: `./assets/card-images/base-supply/full-size/${key}.jpg`,
         halfImagePath: `./assets/card-images/base-supply/half-size/${key}.jpg`
@@ -55,7 +55,7 @@ export const loadExpansion = async (expansion: ExpansionListElement) => {
     module = await import(`${expansionPath}/${expansionConfiguration.kingdom}`, { with: { type: 'json' } });
     cards = module.default as Record<string, CardData>;
     Object.keys(cards).forEach((key) => {
-      cardData.kingdom[key] = {
+      cardData.kingdomSupply[key] = {
         ...cards[key],
         isKingdom: true,
         cardName: cards[key].cardName ?? capitalize(key),

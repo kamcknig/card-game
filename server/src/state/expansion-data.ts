@@ -1,8 +1,8 @@
 import { CardData, CardKey, Mats } from 'shared/shared-types.ts';
 
 export type ExpansionCardData = {
-  supply: Record<CardKey, CardData>,
-  kingdom: Record<CardKey, CardData>
+  basicSupply: Record<CardKey, CardData>,
+  kingdomSupply: Record<CardKey, CardData>
 }
 
 type ExpansionData = Record<string, {

@@ -57,7 +57,7 @@ export class MatchConfigurationComponent implements OnDestroy {
 
     this.selectedKingdomsSub = this._nanoStoreService.useStore(matchConfigurationStore)
       .pipe(map(config =>
-        (config?.kingdomCards?.concat(config?.supplyCards) ?? [])
+        (config?.kingdomCards?.concat(config?.basicCards) ?? [])
           .sort((a, b) => a.cardKey.localeCompare(b.cardKey))))
       .subscribe(selectedKingdoms => {
         selectedKingdoms ??= []
@@ -131,7 +131,7 @@ export class MatchConfigurationComponent implements OnDestroy {
       ...matchConfigurationStore.get() as MatchConfiguration,
       bannedKingdoms: this.bannedKingdoms,
       kingdomCards: this.preSelectedKingdoms.filter(card => card?.isKingdom).filter(card => card !== null),
-      supplyCards: this.preSelectedKingdoms.filter(card => card?.isSupply).filter(card => card !== null),
+      basicCards: this.preSelectedKingdoms.filter(card => card?.isBasic).filter(card => card !== null),
     });
   }
 

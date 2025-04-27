@@ -22,7 +22,7 @@ const expansionModule: CardExpansionModuleNew = {
         cardLibrary.getCard(cId).cardKey === 'estate'
       );
       
-      const supplyEstateIdx = match.supply.findLast((cId) =>
+      const supplyEstateIdx = match.basicSupply.findLast((cId) =>
         cardLibrary.getCard(cId).cardKey === 'estate'
       );
       
@@ -208,7 +208,7 @@ const expansionModule: CardExpansionModuleNew = {
             });
             break;
           case 4: {
-            const goldCardId = match.supply.find(cardId => cardLibrary.getCard(cardId).cardKey === 'gold');
+            const goldCardId = match.basicSupply.find(cardId => cardLibrary.getCard(cardId).cardKey === 'gold');
             
             if (!goldCardId) {
               console.log(`[COURTIER EFFECT] no gold in supply...`);
@@ -977,7 +977,7 @@ const expansionModule: CardExpansionModuleNew = {
         }).filter((id) => reactionContext?.[id]?.result !== 'immunity');
         
         for (const targetId of targets) {
-          const curseCardId = match.supply.find(cardId => cardLibrary.getCard(cardId).cardKey === 'curse');
+          const curseCardId = match.basicSupply.find(cardId => cardLibrary.getCard(cardId).cardKey === 'curse');
           
           if (!curseCardId) {
             console.log(`[REPLACE EFFECT] no curse cards in supply`);
@@ -1281,7 +1281,7 @@ const expansionModule: CardExpansionModuleNew = {
           return
         }
         
-        const curseCardId = match.supply.find(cardId => cardLibrary.getCard(cardId).cardKey === 'curse');
+        const curseCardId = match.basicSupply.find(cardId => cardLibrary.getCard(cardId).cardKey === 'curse');
         if (!curseCardId) {
           console.log(`[TORTURER EFFECT] no curse card in supply`);
           continue;
@@ -1329,7 +1329,7 @@ const expansionModule: CardExpansionModuleNew = {
       }
       
       if (cardIds.length === 2) {
-        const silverCardId = match.supply.find(cardId => cardLibrary.getCard(cardId).cardKey === 'silver');
+        const silverCardId = match.basicSupply.find(cardId => cardLibrary.getCard(cardId).cardKey === 'silver');
         if (!silverCardId) {
           console.log(`[TRADING POST EFFECT] no silver in supply`);
           return;

@@ -8,10 +8,10 @@ export const findSpecLocationBySource = (
     return undefined;
   }
   
-  if (sourceStore == match.supply) {
+  if (sourceStore == match.basicSupply) {
     return 'supply';
   }
-  if (sourceStore == match.kingdom) {
+  if (sourceStore == match.kingdomSupply) {
     return 'kingdom';
   }
   if (sourceStore == match.trash) {

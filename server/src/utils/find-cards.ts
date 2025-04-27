@@ -31,11 +31,11 @@ export const findCards = (
     }
     
     if (effectRestriction.from?.location.includes('supply')) {
-      cardIds = cardIds.concat(match.supply);
+      cardIds = cardIds.concat(match.basicSupply);
     }
     
     if (effectRestriction.from?.location.includes('kingdom')) {
-      cardIds = cardIds.concat(match.kingdom);
+      cardIds = cardIds.concat(match.kingdomSupply);
     }
   }
   

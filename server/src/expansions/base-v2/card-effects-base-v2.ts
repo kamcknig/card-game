@@ -62,7 +62,7 @@ const expansionModule: CardExpansionModuleNew = {
       //Gain a Gold. Each other player reveals the top 2 cards of their deck,
       // trashes a revealed Treasure other than Copper, and discards the rest.
       
-      const goldCardId = match.supply.find((c) =>
+      const goldCardId = match.basicSupply.find((c) =>
         cardLibrary.getCard(c).cardKey === 'gold'
       );
       
@@ -202,7 +202,7 @@ const expansionModule: CardExpansionModuleNew = {
       
       // Gain a Silver onto your deck. Each other player reveals a Victory card
       // from their hand and puts it onto their deck (or reveals a hand with no Victory cards).
-      const silverCardId = match.supply.find((c) =>
+      const silverCardId = match.basicSupply.find((c) =>
         cardLibrary.getCard(c).cardKey === 'silver');
       
       if (!silverCardId) {
@@ -880,15 +880,15 @@ const expansionModule: CardExpansionModuleNew = {
         count: 1,
       });
       
-      const allSupplyCardKeys = match.config.supplyCards.concat(
+      const allSupplyCardKeys = match.config.basicCards.concat(
         match.config.kingdomCards,
       );
       
       console.log(`[POACHER EFFECT] original supply card piles ${allSupplyCardKeys}`);
       
       const remainingSupplyCardKeys =
-        match.supply
-          .concat(match.kingdom)
+        match.basicSupply
+          .concat(match.kingdomSupply)
           .map((id) => cardLibrary.getCard(id).cardKey)
           .reduce((prev, cardKey) => {
             if (prev.includes(cardKey)) {
@@ -1307,7 +1307,7 @@ const expansionModule: CardExpansionModuleNew = {
       console.debug(`[WITCH EFFECT] targets ${playerIds.map((id) => getPlayerById(match, id))}`);
       
       for (const playerId of playerIds) {
-        const supply = match.supply;
+        const supply = match.basicSupply;
         const l = supply.length;
         for (let i = l - 1; i >= 0; i--) {
           if (cardLibrary.getCard(supply[i]).cardKey === 'curse') {

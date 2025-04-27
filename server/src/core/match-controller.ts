@@ -77,7 +77,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this._createCardFn = createCardFactory(cardData);
     this._cardData = cardData;
     
-    for (const card of config.supplyCards) {
+    for (const card of config.basicCards) {
       this._keepers.unshift(card.cardKey);
     }
     for (const card of config.kingdomCards) {
@@ -89,7 +89,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     config = {
       ...config,
-      supplyCards: this.createBaseSupply(config),
+      basicCards: this.createBaseSupply(config),
       kingdomCards: this.createKingdom(config),
     };
     
@@ -118,8 +118,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       scores: [],
       trash: [],
       players: config.players,
-      supply: config.supplyCards.map((c) => (c as any).id),
-      kingdom: config.kingdomCards.map((c) => (c as any).id),
+      basicSupply: config.basicCards.map((c) => (c as any).id),
+      kingdomSupply: config.kingdomCards.map((c) => (c as any).id),
       ...playerCards,
       config: config,
       turnNumber: 0,
@@ -261,7 +261,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const supplyCards: Card[] = [];
     
     const baseCardsDict =
-      MatchBaseConfiguration.cards.supply.baseCards[config.players.length - 1];
+      MatchBaseConfiguration.cards.supply.basic[config.players.length - 1];
     
     console.log(`[match] base card dictionary counts`);
     console.log(baseCardsDict);
@@ -297,12 +297,12 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     // todo: remove testing code
     const keepers: string[] = this._keepers.filter((k) =>
-      this._cardData!.kingdom[k]
+      this._cardData!.kingdomSupply[k]
     );
     
     console.log(`[match] choosing ${MatchBaseConfiguration.numberOfKingdomPiles} kingdom cards`);
     
-    let availableKingdom = Object.keys(this._cardData.kingdom);
+    let availableKingdom = Object.keys(this._cardData.kingdomSupply);
     
     console.log(`[match] available kingdom cards\n${availableKingdom}`);
     
@@ -334,7 +334,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     console.log(`[match] final chosen kingdom cards ${chosenKingdom}`);
     
     const finalKingdom = chosenKingdom.reduce((prev, key) => {
-      prev[key] = this._cardData!.kingdom[key].type.includes('VICTORY')
+      prev[key] = this._cardData!.kingdomSupply[key].type.includes('VICTORY')
         ? (players.length < 3 ? 8 : 12)
         : 10;
       
@@ -536,7 +536,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const match = this._match;
     
     if (
-      match.supply.map((c) => this._cardLibrary.getCard(c)).filter((c) =>
+      match.basicSupply.map((c) => this._cardLibrary.getCard(c)).filter((c) =>
         c.cardKey === 'province'
       ).length === 0
     ) {
@@ -545,13 +545,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       return true;
     }
     
-    const allSupplyCardKeys = match.config.supplyCards.concat(
+    const allSupplyCardKeys = match.config.basicCards.concat(
       match.config.kingdomCards,
     );
     
     console.log(`[match] original supply card pile count ${allSupplyCardKeys.length}`);
     
-    const remainingSupplyCardKeys = match.supply.concat(match.kingdom).map((
+    const remainingSupplyCardKeys = match.basicSupply.concat(match.kingdomSupply).map((
       id,
     ) => this._cardLibrary.getCard(id).cardKey).reduce((prev, cardKey) => {
       if (prev.includes(cardKey)) {

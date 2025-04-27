@@ -11,12 +11,12 @@ export const findSourceByCardId = (
   let sourceStore: CardId[] | undefined = undefined;
   let storeKey: CardLocation | undefined;
   
-  if (match.supply.includes(cardId)) {
-    sourceStore = match.supply;
+  if (match.basicSupply.includes(cardId)) {
+    sourceStore = match.basicSupply;
     storeKey = 'supply';
   }
-  else if (match.kingdom.includes(cardId)) {
-    sourceStore = match.kingdom;
+  else if (match.kingdomSupply.includes(cardId)) {
+    sourceStore = match.kingdomSupply;
     storeKey = 'kingdom';
   }
   else if (match.playArea.includes(cardId)) {

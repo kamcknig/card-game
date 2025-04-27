@@ -955,7 +955,7 @@ const expansion: CardExpansionModuleNew = {
       console.log(`[smugglers effect] found ${cardIds.length} costing up to 6 that were played`);
       
       const inSupply = (card: Card) =>
-        match.supply.concat(match.kingdom).find(id => cardLibrary.getCard(id).cardKey === card.cardKey);
+        match.basicSupply.concat(match.kingdomSupply).find(id => cardLibrary.getCard(id).cardKey === card.cardKey);
       
       cardIds = cardIds.map(cardLibrary.getCard).map(inSupply).filter(id => id !== undefined);
       
@@ -1097,7 +1097,7 @@ const expansion: CardExpansionModuleNew = {
         cardId: inHand,
       });
       
-      const goldCardIds = match.supply.filter(cardId => cardLibrary.getCard(cardId).cardKey === 'gold');
+      const goldCardIds = match.basicSupply.filter(cardId => cardLibrary.getCard(cardId).cardKey === 'gold');
       for (let i = 0; i < Math.min(goldCardIds.length, 4); i++) {
         await runGameActionDelegate('gainCard', {
           playerId,

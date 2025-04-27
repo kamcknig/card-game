@@ -86,7 +86,7 @@ export const socketToGameEventMap = (): SocketEventMap => {
   map['matchStarted'] = () => {
     const allCards = cardStore.get();
     const match = matchStore.get();
-    const kingdomSupplyCardKeys = match?.supply.reduce((prev, nextCard) => {
+    const kingdomSupplyCardKeys = match?.basicSupply.reduce((prev, nextCard) => {
       const card = allCards[nextCard];
 
       if (card.type.includes(('VICTORY'))) {
@@ -104,7 +104,7 @@ export const socketToGameEventMap = (): SocketEventMap => {
     }, [[], []] as [CardKey[], CardKey[]]);
     supplyCardKeyStore.set(kingdomSupplyCardKeys ?? [[], []]);
 
-    const kingdomCardKeys = match?.kingdom.reduce((prev, nextCard) => {
+    const kingdomCardKeys = match?.kingdomSupply.reduce((prev, nextCard) => {
       const card = allCards[nextCard];
       if (prev.includes(card.cardKey)) return prev;
       prev.push(card.cardKey);
