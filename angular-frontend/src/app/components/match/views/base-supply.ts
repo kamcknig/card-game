@@ -1,12 +1,12 @@
 import { Container, Graphics } from 'pixi.js';
-import { PileView } from './pile';
+import { SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
+import { computed } from 'nanostores';
+import { supplyCardKeyStore, supplyStore } from '../../../state/match-logic';
 import { cardStore } from '../../../state/card-state';
 import { Card, CardKey } from 'shared/shared-types';
-import { SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
-import { kingdomCardKeyStore, kingdomStore } from '../../../state/match-logic';
-import { computed } from 'nanostores';
+import { PileView } from './pile';
 
-export class KingdomSupplyView extends Container {
+export class BaseSupplyView extends Container {
   private _background: Container;
   private _cardContainer: Container;
   private _cleanup: (() => void)[] = [];
@@ -21,26 +21,22 @@ export class KingdomSupplyView extends Container {
 
     this._cleanup.push(
       computed(
-        [kingdomCardKeyStore, cardStore], (kingdom, cards) => {
+        [supplyCardKeyStore, cardStore], ([victorySupply, treasureSupply], cards) => {
           const allCards = Object.values(cards);
-          return kingdom
-            .map(key => allCards.find(c => c.cardKey === key))
-            .sort((a, b) => {
-              if (!a || !b) throw new Error(`failed to build kingdom, card not found in card store`);
-              const result = a.cost.treasure - b.cost.treasure;
-              if (result !== 0) return result;
-              return a.cardName.localeCompare(b.cardName);
-            })
-            .filter(key => !!key)
-            .map(card => card?.cardKey)
+          return [
+            victorySupply.map(key =>
+              allCards.find(c => c.cardKey === key)?.cardKey),
+            treasureSupply.map(key =>
+              allCards.find(c => c.cardKey === key)?.cardKey)
+          ]
         }
-      ).subscribe(val => this.createKingdomPiles(val))
+      ).subscribe(val => this.createSupplyPiles(val[0] as CardKey[], val[1] as CardKey[]))
     );
 
     this._cleanup.push(
       computed(
-        [kingdomStore, cardStore],
-        (kingdom, cards) => kingdom.map(id => cards[id])
+        [supplyStore, cardStore],
+        (supply, cards) => supply.map(id => cards[id])
       ).subscribe((val => this.draw(val)))
     );
     this.off('removed', this.onRemoved);
@@ -49,6 +45,27 @@ export class KingdomSupplyView extends Container {
   private onRemoved = () => {
     this._cleanup.forEach(cb => cb());
     this.on('removed', this.onRemoved);
+  }
+
+  private createSupplyPiles(victoryCardKeys: readonly CardKey[], treasureCardKeys: readonly CardKey[]) {
+    this._cardContainer.removeChildren();
+
+    for (const [idx, cardKey] of victoryCardKeys.entries()) {
+      const pileView = new PileView({ size: 'half' });
+      pileView.y = idx * SMALL_CARD_HEIGHT + idx * STANDARD_GAP;
+      pileView.label = `pile:${cardKey}`;
+      console.log(`created supply pile ${pileView.label}`);
+      this._cardContainer.addChild(pileView);
+    }
+
+    for (const [idx, cardKey] of treasureCardKeys.entries()) {
+      const pileView = new PileView({ size: 'half' });
+      pileView.x = SMALL_CARD_WIDTH + STANDARD_GAP;
+      pileView.y = idx * SMALL_CARD_HEIGHT + idx * STANDARD_GAP;
+      pileView.label = `pile:${cardKey}`;
+      console.log(`created supply pile ${pileView.label}`);
+      this._cardContainer.addChild(pileView);
+    }
   }
 
   private draw(cards: ReadonlyArray<Card>) {
@@ -62,7 +79,7 @@ export class KingdomSupplyView extends Container {
 
     Object.entries(piles).forEach(([cardKey, pile], idx) => {
       const p = this._cardContainer.getChildByLabel(`pile:${cardKey}`) as PileView;
-      console.log(`looking for pile:${cardKey} within kingdom`);
+      console.log(`looking for pile:${cardKey} within supply`)
       console.log(this._cardContainer.children.length);
       if (!p) {
         return;
@@ -82,20 +99,5 @@ export class KingdomSupplyView extends Container {
         color: 0,
         alpha: .6
       });
-  }
-
-  private createKingdomPiles(cardKeys: readonly CardKey[]) {
-    this._cardContainer.removeChildren();
-
-    const numRows = 2;
-
-    for (const [idx, cardKey] of cardKeys.entries()) {
-      const p = new PileView({ size: 'half' });
-      p.label = `pile:${cardKey}`;
-      console.log(`created kingdom pile ${p.label}`);
-      p.x = Math.floor(idx % 5 * SMALL_CARD_WIDTH + idx % 5 * STANDARD_GAP);
-      p.y = Math.floor(((numRows - 1 - Math.floor((idx) / 5)) * SMALL_CARD_HEIGHT) + ((numRows - 1 - Math.floor((idx) / 5)) * STANDARD_GAP));
-      this._cardContainer.addChild(p);
-    }
   }
 }

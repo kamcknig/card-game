@@ -2,13 +2,12 @@ import { Application, Assets, Container, Graphics, Sprite, Text } from 'pixi.js'
 import { Scene } from '../../../../core/scene/scene';
 import { PlayerHandView } from '../player-hand';
 import { AppButton, createAppButton } from '../../../../core/create-app-button';
-import { matchConfigurationStore, matchStartedStore, selfPlayerIdStore } from '../../../../state/match-state';
+import { matchStartedStore, selfPlayerIdStore } from '../../../../state/match-state';
 import { playerStore, } from '../../../../state/player-state';
 import { PlayAreaView } from '../play-area';
 import { KingdomSupplyView } from '../kingdom-supply';
-import { PileView } from '../pile';
 import { cardStore } from '../../../../state/card-state';
-import { Card, CardId, CardKey, PlayerId, UserPromptActionArgs } from 'shared/shared-types';
+import { CardId, PlayerId, UserPromptActionArgs } from 'shared/shared-types';
 import {
   awaitingServerLockReleaseStore,
   clientSelectableCardsOverrideStore,
@@ -16,7 +15,7 @@ import {
 } from '../../../../state/interactive-state';
 import { CardView } from '../card-view';
 import { userPromptModal } from '../modal/user-prompt-modal';
-import { CARD_HEIGHT, SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP } from '../../../../core/app-contants';
+import { CARD_HEIGHT, STANDARD_GAP } from '../../../../core/app-contants';
 import { displayCardDetail } from '../modal/display-card-detail';
 import { validateCountSpec } from '../../../../shared/validate-count-spec';
 import { CardStackView } from '../card-stack';
@@ -25,12 +24,13 @@ import { currentPlayerTurnIdStore, turnPhaseStore } from '../../../../state/turn
 import { isNumber, isUndefined } from 'es-toolkit/compat';
 import { AppList } from '../app-list';
 import { SocketService } from '../../../../core/socket-service/socket.service';
-import { supplyCardKeyStore, supplyStore, trashStore } from '../../../../state/match-logic';
+import { trashStore } from '../../../../state/match-logic';
 import { gamePausedStore } from '../../../../state/game-logic';
 import { playerDeckStore, playerDiscardStore, playerHandStore } from '../../../../state/player-logic';
 import { selectableCardStore } from '../../../../state/interactive-logic';
 import { SelectCardArgs } from '../../../../../types';
 import { computed } from 'nanostores';
+import { BaseSupplyView } from '../base-supply';
 
 export class MatchScene extends Scene {
   private _board: Container = new Container();
@@ -94,10 +94,6 @@ export class MatchScene extends Scene {
     this.addChild(this._playAllTreasuresButton.button);
 
     this._cleanup.push(matchStartedStore.subscribe(val => this.onMatchStarted(val)));
-
-    this._cleanup.push(supplyCardKeyStore.subscribe((val) => this.createBaseSupply(val)));
-    this._cleanup.push(supplyStore.subscribe((val) => this.drawBaseSupply(val)));
-
 
     this._app.renderer.on('resize', this.onRendererResize);
     this._socketService.on('selectCard', this.doSelectCards);
@@ -221,7 +217,8 @@ export class MatchScene extends Scene {
   private createBoard() {
     this.addChild(this._board);
 
-    this._supply.addChild(this._baseSupply);
+    this._baseSupply = this._supply.addChild(new BaseSupplyView());
+    this._baseSupply.scale = .9;
     this._kingdomView = this._supply.addChild(new KingdomSupplyView());
     this._kingdomView.scale = .9;
 
@@ -583,52 +580,6 @@ export class MatchScene extends Scene {
     });
 
     validateSelection(selectedCardStore.get());
-  }
-
-  private createBaseSupply(supplyCards: readonly [CardKey[], CardKey[]]) {
-    if (!supplyCards) return;
-
-    for (const [idx, cardKey] of supplyCards[0].entries()) {
-      const pileView = new PileView({ size: 'half' });
-      pileView.label = `pile:${cardKey}`;
-      pileView.y = idx * SMALL_CARD_HEIGHT + idx * STANDARD_GAP;
-      this._baseSupply.addChild(pileView);
-    }
-
-    for (const [idx, cardKey] of supplyCards[1].entries()) {
-      const pileView = new PileView({ size: 'half' });
-      pileView.label = `pile:${cardKey}`;
-      pileView.x = SMALL_CARD_WIDTH + STANDARD_GAP;
-      pileView.y = idx * SMALL_CARD_HEIGHT + idx * STANDARD_GAP;
-      this._baseSupply.addChild(pileView);
-    }
-
-    this.drawBaseSupply(supplyStore.get())
-  }
-
-  private drawBaseSupply = (newVal: ReadonlyArray<number>) => {
-    if (!newVal || newVal.length === 0) {
-      return;
-    }
-
-    const cards = newVal.map(id => cardStore.get()[id]);
-
-    // first reduces and then gets teh values to make an array of Card arrays, then reduces again
-    // into a tuple whose first element is an array of piles of victory cards and the curse, and the 2nd
-    // element is an array of treasure card piles
-    const pileMap = cards.reduce((prev, card) => {
-      prev[card.cardKey] ??= [];
-      prev[card.cardKey].push(card);
-      return prev;
-    }, {} as Record<CardKey, Card[]>);
-
-    for (const [cardKey, pile] of Object.entries(pileMap)) {
-      const pileView = this._baseSupply.getChildByLabel(`pile:${cardKey}`) as PileView;
-      if (!pileView) {
-        continue;
-      }
-      pileView.pile = pile;
-    }
   }
 
   private onRendererResize = (): void => {
