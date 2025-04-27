@@ -3,6 +3,7 @@ import { createCardView } from '../../../core/card/create-card-view';
 import { CountBadgeView } from './count-badge-view';
 import { Card } from 'shared/shared-types';
 import { CardFacing, CardSize } from '../../../../types';
+import { CardView } from './card-view';
 
 type PileArgs = {
   cards?: Card[];
@@ -62,7 +63,11 @@ export class PileView extends Container {
       throw new Error('No card found for this pile');
     }
 
-    const view = this.addChild(createCardView(card));
+    let view = this.getChildByLabel(`${card.cardKey}:${card.id}`) as CardView;
+    if (!view) {
+      view = this.addChild(createCardView(card));
+    }
+
     view.size = this._size;
     view.facing = this._facing;
 

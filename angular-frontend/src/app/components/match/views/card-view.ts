@@ -55,7 +55,7 @@ export class CardView extends Container<ContainerChild> {
 
     this.card = card;
 
-    this.label = `${card.cardKey}-${card.id}`;
+    this.label = `${card.cardKey}:${card.id}`;
 
     this.eventMode = 'static';
 
