@@ -621,7 +621,7 @@ const expansionModule: CardExpansionModuleNew = {
           triggeredEffectFn: async ({ runGameActionDelegate }) => {
             await runGameActionDelegate('gainTreasure', {
               count: 1,
-            });
+            }, { loggingContext: { source: cardId }});
           }
         });
       },

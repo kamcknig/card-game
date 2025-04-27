@@ -162,7 +162,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     action: K,
     ...args: GameActionArgsMap[K] extends void
       ? []
-      : [GameActionArgsMap[K]]
+      : [GameActionArgsMap[K], { loggingContext: { source: CardId } }] | [GameActionArgsMap[K]]
   ): Promise<ReturnType<GameActionController[K]>> {
     this._matchSnapshot ??= this.getMatchSnapshot();
     

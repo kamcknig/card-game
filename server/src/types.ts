@@ -193,7 +193,7 @@ export type RunGameActionDelegate = <K extends GameActions>(
   action: K,
   ...args: GameActionArgsMap[K] extends void
     ? []
-    : [GameActionArgsMap[K]]
+    : [GameActionArgsMap[K], { loggingContext: { source: CardId } }] | [GameActionArgsMap[K]]
 ) => Promise<ReturnType<GameActionController[K]>>;
 
 
