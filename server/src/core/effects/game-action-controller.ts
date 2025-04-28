@@ -32,6 +32,7 @@ import { findCards } from '../../utils/find-cards.ts';
 import { castArray, isNumber } from 'es-toolkit/compat';
 import { ReactionManager } from '../reactions/reaction-manager.ts';
 import { CardInteractivityController } from '../card-interactivity-controller.ts';
+import { findSpecLocationBySource } from '../../utils/find-spec-location-by-source.ts';
 
 export class GameActionController implements GameActionControllerInterface {
   constructor(
@@ -707,9 +708,10 @@ export class GameActionController implements GameActionControllerInterface {
   async setAside(arg: SetAsideCard) {
     this.match.setAside.push(arg);
     
-    return () => {
-      const setAsideIdx = this.match.setAside.findIndex(id => id === arg);
-      this.match.setAside.splice(setAsideIdx, 1);
-    }
+    await this.moveCard({
+      cardId: arg.cardId,
+      toPlayerId: arg.playerId,
+      to: { location: 'set-aside' },
+    });
   }
 }

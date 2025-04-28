@@ -1,4 +1,18 @@
 {
+  "alchemist": {
+    "cost": {
+      "treasure": 3,
+      "potion": 1
+    },
+    "type": ["TREASURE"]
+  },
+  "apothecary": {
+    "cost": {
+      "treasure": 2,
+      "potion": 1
+    },
+    "type": ["ACTION"]
+  },
   "potion": {
     "cost": {
       "treasure": 4
@@ -7,12 +21,5 @@
     "type": [
       "TREASURE"
     ]
-  },
-  "alchemist": {
-    "cost": {
-      "treasure": 3,
-      "potion": 1
-    },
-    "type": ["TREASURE"]
   }
 }

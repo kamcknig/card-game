@@ -331,13 +331,7 @@ const expansion: CardExpansionModuleNew = {
         return;
       }
       
-      await runGameActionDelegate('moveCard', {
-        cardId,
-        toPlayerId: playerId,
-        to: { location: 'set-aside' }
-      });
-      
-      const setAsideCleanup = await runGameActionDelegate('setAside', {
+      await runGameActionDelegate('setAside', {
         cardId,
         playerId,
         sourceCardId: playedCardId
@@ -352,7 +346,13 @@ const expansion: CardExpansionModuleNew = {
         condition: ({ trigger }) => trigger.playerId === playerId,
         triggeredEffectFn: async () => {
           console.log(`[haven triggered effect] moving selected card to hand...`);
-          setAsideCleanup();
+          
+          await runGameActionDelegate('moveCard', {
+            cardId,
+            toPlayerId: playerId,
+            to: { location: 'playerHands' }
+          });
+          
           await runGameActionDelegate('moveCard', {
             cardId: cardId,
             toPlayerId: playerId,

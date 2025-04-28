@@ -89,6 +89,7 @@ export type SetAsideCard = {
   cardId: CardId;
   playerId: PlayerId;
   sourceCardId: CardId;
+  moveToSetAside?: boolean;
 }
 
 export type Match = {

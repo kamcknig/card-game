@@ -52,6 +52,6 @@ Deno.serve({
   
   for (const expansion of expansionList) {
     console.log(`[SERVER] loading expansion card data for ${expansion.title}`);
-    loadExpansion(expansion).then(() => game.expansionLoaded(expansion));
+    await loadExpansion(expansion).then(() => game.expansionLoaded(expansion));
   }
 })();
