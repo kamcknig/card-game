@@ -15,10 +15,11 @@
   "lint": {
     "include": ["src/"],
     "rules": {
-      "exclude": ["require-await"]
+      "exclude": ["require-await", "no-unused-vars"]
     }
   },
   "imports": {
+    "@expansions/": "./src/expansions/",
     "@denosaurs/event": "jsr:@denosaurs/event@^2.0.2",
     "@timepp/enhanced-deno-log": "jsr:@timepp/enhanced-deno-log@^0.4.1",
     "@std/path": "https://deno.land/std/path/mod.ts",

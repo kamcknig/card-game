@@ -48,17 +48,23 @@ export type UserPromptActionArgs = {
 export type MatchConfiguration = {
   players: Player[];
   
-  // info about the expansions selected for the match.
+  // info about the expansions selected for the match. determines what cards can randomly be selected for the kingdom
   expansions: ExpansionListElement[];
   
-  // cards banned from the game
+  // cards banned from the match
   bannedKingdoms: CardNoId[];
   
-  // basic cards selected for the game
+  // basic cards selected for the game, these are what are available at the beginning of a match
   basicCards: CardNoId[];
   
-  // kingdom cards selected for the game
+  // kingdom cards selected for the game, these are what are available at the beginning of a match
   kingdomCards: CardNoId[];
+}
+
+export type ComputedMatchConfiguration = MatchConfiguration & {
+  basicCardCount: Record<CardKey, number>;
+  kingdomCardCount: Record<CardKey, number>;
+  startingHand: Record<CardKey, number>;
 }
 
 type CardStats = {
@@ -309,8 +315,8 @@ export type CardArgs = {
   id: CardId;
   type: CardType[];
   isBasic: boolean;
-  isKingdom: boolean;
   cardName: string;
+  mat: Mats | undefined;
   cost: {
     treasure: number;
   };
@@ -328,11 +334,12 @@ export type CardArgs = {
 export class Card {
   id: CardId;
   isBasic: boolean = false;
-  isKingdom: boolean = false;
   cardName: string;
   type: CardType[];
+  mat: Mats | undefined;
   cost: {
     treasure: number;
+    potion?: number | undefined;
   };
   victoryPoints: number;
   abilityText: string;
@@ -346,7 +353,6 @@ export class Card {
   
   constructor(args: CardArgs) {
     this.isBasic = args.isBasic;
-    this.isKingdom = args.isKingdom;
     this.id = args.id;
     this.type = args.type;
     this.cost = args.cost;
@@ -360,6 +366,7 @@ export class Card {
     this.halfImagePath = args.halfImagePath;
     this.detailImagePath = args.detailImagePath;
     this.owner = args.owner ?? null;
+    this.mat = args.mat;
   }
   
   toString() {

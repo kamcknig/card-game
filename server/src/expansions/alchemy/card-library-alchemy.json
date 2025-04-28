@@ -1,0 +1,18 @@
+{
+  "potion": {
+    "cost": {
+      "treasure": 4
+    },
+    "isBasic": true,
+    "type": [
+      "TREASURE"
+    ]
+  },
+  "alchemist": {
+    "cost": {
+      "treasure": 3,
+      "potion": 1
+    },
+    "type": ["TREASURE"]
+  }
+}

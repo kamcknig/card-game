@@ -66,11 +66,19 @@
           "treasure": {
             "type": "integer",
             "minimum": 0
+          },
+          "potion": {
+            "type": "integer",
+            "minimum": 1
           }
         },
         "required": [
           "treasure"
         ]
+      },
+      "mat": {
+        "type": "string",
+        "description": "Indicates the card requires a mat to be used."
       },
       "isBasic": {
         "type": "boolean",
@@ -99,31 +107,42 @@
         "description": "The text to display on the card"
       }
     },
-    "required": ["cost", "type"],
+    "required": [
+      "cost",
+      "type"
+    ],
     "additionalProperties": false,
     "allOf": [
       {
         "if": {
           "properties": {
             "type": {
-              "contains": {"const": "ATTACK"}
+              "contains": {
+                "const": "ATTACK"
+              }
             }
           }
         },
         "then": {
-          "required": ["targetScheme"]
+          "required": [
+            "targetScheme"
+          ]
         }
       },
       {
         "if": {
           "properties": {
             "type": {
-              "contains": {"const": "VICTORY"}
+              "contains": {
+                "const": "VICTORY"
+              }
             }
           }
         },
         "then": {
-          "required": ["victoryPoints"]
+          "required": [
+            "victoryPoints"
+          ]
         }
       }
     ]

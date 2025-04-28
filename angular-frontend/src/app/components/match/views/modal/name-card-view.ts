@@ -1,4 +1,4 @@
-import { CardData, CardKey, PlayerId, UserPromptKinds } from 'shared/shared-types';
+import { CardKey, CardNoId, PlayerId, UserPromptKinds } from 'shared/shared-types';
 import { Application, Assets, Color, Container, Graphics, Point, Sprite } from 'pixi.js';
 import { Input, List } from '@pixi/ui'
 import { CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP } from '../../../../core/app-contants';
@@ -90,7 +90,7 @@ export const nameCardView = (
   };
 
   let prev: any;
-  const searchResponse = async (data: (CardData & { cardKey: CardKey })[]) => {
+  const searchResponse = async (data: CardNoId[]) => {
     if (!prev) {
       prev = data;
     } else {

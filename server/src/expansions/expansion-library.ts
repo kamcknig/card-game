@@ -5,17 +5,20 @@ export type ExpansionCardData = {
   kingdomSupply: Record<CardKey, CardNoId>
 }
 
-export type ExpansionData = Record<string, {
+export type ExpansionData = {
   title: string;
   name: string;
   cardData: ExpansionCardData;
   mats?: Mats[];
-}>;
+  mutuallyExclusive?: string[];
+}
+
+export type ExpansionDataLibrary = Record<string, ExpansionData>;
 
 /**
  * Global expansion data. Holds data about an expansion and the cards it loads.
  */
-export const expansionLibrary: ExpansionData = {};
+export const expansionLibrary: ExpansionDataLibrary = {};
 
 /**
  * Holds the "raw" JSON data of all cards loaded.

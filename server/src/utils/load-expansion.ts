@@ -1,12 +1,13 @@
 import { cardEffectFunctionMapFactory } from '../core/effects/card-effect-function-map-factory.ts';
-import { scoringFunctionMap } from '../expansions/scoring-function-map.ts';
-import { allCardLibrary, expansionLibrary } from '../state/expansion-library.ts';
+import { scoringFunctionMap } from "@expansions/scoring-function-map.ts";
+import { allCardLibrary, expansionLibrary } from "@expansions/expansion-library.ts";
 import { cardLifecycleMap } from '../core/card-lifecycle-map.ts';
 import { CardExpansionModuleNew } from '../types.ts';
 import { CardNoId } from "shared/shared-types.ts";
+import { capitalize } from "es-toolkit";
 
 export const loadExpansion = async (expansion: { name: string; }) => {
-  const expansionPath = `../expansions/${expansion.name}`;
+  const expansionPath = `@expansions/${expansion.name}`;
   const expansionName = expansion.name;
   if (expansionLibrary[expansionName]) {
     console.log(`[expansion loader] expansion ${expansionName} already loaded`);
@@ -37,7 +38,8 @@ export const loadExpansion = async (expansion: { name: string; }) => {
     
     const currValue = expansionLibrary[expansionName].title;
     expansionLibrary[expansionName].title = expansionConfiguration.title ? expansionConfiguration.title : currValue;
-    expansionLibrary.mats = expansionConfiguration.mats ?? [];
+    expansionLibrary[expansionName].mats = expansionConfiguration.mats ?? [];
+    expansionLibrary[expansionName].mutuallyExclusive = expansionConfiguration.mutuallyExclusive ?? [];
   } catch (error) {
     console.warn(`[expansion loader] failed to load configuration for expansion ${expansionName}`);
     console.log(error);
@@ -54,9 +56,10 @@ export const loadExpansion = async (expansion: { name: string; }) => {
         ...cards[key],
         cardKey: key,
         expansionName,
-        detailImagePath: `./assets/card-images/${cards[key].isBasic ? 'base-supply' : expansionName}/detail/${key}.jpg`,
-        fullImagePath: `./assets/card-images/${cards[key].isBasic ? 'base-supply' : expansionName}/full-size/${key}.jpg`,
-        halfImagePath: `./assets/card-images/${cards[key].isBasic ? 'base-supply' : expansionName}/half-size/${key}.jpg`
+        cardName: cards[key].cardName ?? capitalize(key),
+        detailImagePath: `./assets/card-images/${expansionName}/detail/${key}.jpg`,
+        fullImagePath: `./assets/card-images/${expansionName}/full-size/${key}.jpg`,
+        halfImagePath: `./assets/card-images/${expansionName}/half-size/${key}.jpg`
       };
       
       const isBasic = newCardData.isBasic;

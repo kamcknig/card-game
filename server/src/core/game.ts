@@ -3,7 +3,7 @@ import { CardNoId, ExpansionListElement, MatchConfiguration, Player, PlayerId, }
 import { createNewPlayer } from '../utils/create-new-player.ts';
 import { io } from '../server.ts';
 import { MatchController } from './match-controller.ts';
-import { allCardLibrary } from '../state/expansion-library.ts';
+import { allCardLibrary } from '../expansions/expansion-library.ts';
 import { applyPatch, compare } from 'https://esm.sh/v123/fast-json-patch@3.1.1/index.js';
 import Fuse, { IFuseOptions } from 'fuse.js';
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
@@ -229,7 +229,7 @@ export class Game {
     const currentConfig = structuredClone(this._matchConfiguration ?? {}) as MatchConfiguration;
     
     const newExpansions = newConfig.expansions.filter(
-      (e) => !currentConfig?.expansions.includes(e),
+      (e) => currentConfig?.expansions?.findIndex(curr => curr.name === e.name) === -1,
     );
     
     const expansionsToRemove: ExpansionListElement[] = [];

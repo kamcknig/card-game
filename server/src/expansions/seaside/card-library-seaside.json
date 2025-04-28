@@ -55,6 +55,7 @@
     "cost": {
       "treasure": 4
     },
+    "mat": "island-village",
     "type": ["ACTION", "VICTORY"],
     "victoryPoints": 2
   },
@@ -88,6 +89,7 @@
     "cost": {
       "treasure": 2
     },
+    "mat": "native-village",
     "type": ["ACTION"]
   },
   "pirate": {

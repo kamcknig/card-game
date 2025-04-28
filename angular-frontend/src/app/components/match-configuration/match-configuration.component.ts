@@ -130,7 +130,7 @@ export class MatchConfigurationComponent implements OnDestroy {
     this._socketService.emit('matchConfigurationUpdated', {
       ...matchConfigurationStore.get() as MatchConfiguration,
       bannedKingdoms: this.bannedKingdoms,
-      kingdomCards: this.preSelectedKingdoms.filter(card => card?.isKingdom).filter(card => card !== null),
+      kingdomCards: this.preSelectedKingdoms.filter(card => !card?.isBasic).filter(card => card !== null),
       basicCards: this.preSelectedKingdoms.filter(card => card?.isBasic).filter(card => card !== null),
     });
   }

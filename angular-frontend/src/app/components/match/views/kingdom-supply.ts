@@ -38,7 +38,6 @@ export class KingdomSupplyView extends Container {
           return;
         }
 
-        pileCreationSub();
         this.createKingdomPiles(val);
       });
 

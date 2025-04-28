@@ -3,7 +3,7 @@ import { combineLatestWith, debounceTime, filter, Subject, Subscription } from '
 import { SocketService } from '../../../core/socket-service/socket.service';
 import { NanostoresService } from '@nanostores/angular';
 import { selfPlayerIdStore } from '../../../state/match-state';
-import { CardData, CardKey, CardNoId } from 'shared/shared-types';
+import { CardNoId } from 'shared/shared-types';
 import { AsyncPipe, NgOptimizedImage } from '@angular/common';
 import { SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH } from '../../../core/app-contants';
 
@@ -25,9 +25,9 @@ export class SelectKingdomModalComponent implements OnDestroy {
   @Input() excludedKingdoms: (CardNoId | null)[] = [];
 
   @Output() close: EventEmitter<void> = new EventEmitter();
-  @Output() kingdomSelected: EventEmitter<CardData & { cardKey: CardKey }> = new EventEmitter();
+  @Output() kingdomSelected: EventEmitter<CardNoId> = new EventEmitter();
   searchTerm$: Subject<string> = new Subject();
-  searchResults$: Subject<(CardData & { cardKey: CardKey })[]> = new Subject();
+  searchResults$: Subject<CardNoId[]> = new Subject();
 
   constructor(
     private _socketService: SocketService,

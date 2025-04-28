@@ -63,29 +63,7 @@ export const socketToGameEventMap = (): SocketEventMap => {
 
     matchStore.set(match);
 
-    const playerId = selfPlayerIdStore.get();
-    if (!playerId) throw new Error('missing self playerId');
-
-    const cardsById = cardStore.get();
-
-    Assets.addBundle('cardLibrary', Object.values(cardsById).reduce((prev, c) => {
-      prev[`${c.cardKey}-detail`] ??= c.detailImagePath;
-      prev[`${c.cardKey}-full`] ??= c.fullImagePath;
-      prev[`${c.cardKey}-half`] ??= c.halfImagePath;
-      return prev;
-    }, {
-      'card-back-full': `/assets/card-images/base-supply/full-size/card-back.jpg`,
-      'card-back-detail': `/assets/card-images/base-supply/detail/card-back.jpg`,
-      'card-back-half': `/assets/card-images/base-supply/half-size/card-back.jpg`,
-      'treasure-bg': '/assets/ui-icons/treasure-bg.png',
-    } as Record<string, string>));
-
-    sceneStore.set('match');
-  };
-
-  map['matchStarted'] = () => {
     const allCards = cardStore.get();
-    const match = matchStore.get();
     const kingdomSupplyCardKeys = match?.basicSupply.reduce((prev, nextCard) => {
       const card = allCards[nextCard];
 
@@ -112,6 +90,27 @@ export const socketToGameEventMap = (): SocketEventMap => {
     }, [] as CardKey[]);
     kingdomCardKeyStore.set(kingdomCardKeys ?? []);
 
+    const playerId = selfPlayerIdStore.get();
+    if (!playerId) throw new Error('missing self playerId');
+
+    const cardsById = cardStore.get();
+
+    Assets.addBundle('cardLibrary', Object.values(cardsById).reduce((prev, c) => {
+      prev[`${c.cardKey}-detail`] ??= c.detailImagePath;
+      prev[`${c.cardKey}-full`] ??= c.fullImagePath;
+      prev[`${c.cardKey}-half`] ??= c.halfImagePath;
+      return prev;
+    }, {
+      'card-back-full': `/assets/card-images/base-supply/full-size/card-back.jpg`,
+      'card-back-detail': `/assets/card-images/base-supply/detail/card-back.jpg`,
+      'card-back-half': `/assets/card-images/base-supply/half-size/card-back.jpg`,
+      'treasure-bg': '/assets/ui-icons/treasure-bg.png',
+    } as Record<string, string>));
+
+    sceneStore.set('match');
+  };
+
+  map['matchStarted'] = () => {
     matchStartedStore.set(true);
   };
 

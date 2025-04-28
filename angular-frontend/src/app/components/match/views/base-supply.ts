@@ -1,7 +1,7 @@
 import { Container, Graphics } from 'pixi.js';
 import { SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
 import { computed } from 'nanostores';
-import { supplyCardKeyStore, basicSupplyStore } from '../../../state/match-logic';
+import { basicSupplyStore, supplyCardKeyStore } from '../../../state/match-logic';
 import { cardStore } from '../../../state/card-state';
 import { Card, CardKey } from 'shared/shared-types';
 import { PileView } from './pile';
@@ -25,17 +25,16 @@ export class BaseSupplyView extends Container {
         const allCards = Object.values(cards);
         return [
           victorySupply.map(key =>
-            allCards.find(c => c.cardKey === key)?.cardKey),
+            allCards.find(c => c.cardKey === key)),
           treasureSupply.map(key =>
-            allCards.find(c => c.cardKey === key)?.cardKey)
+            allCards.find(c => c.cardKey === key))
         ]
       }
     ).subscribe(val => {
       if (val[0].length < 1) {
         return;
       }
-      pileCreationSub();
-      this.createSupplyPiles(val[0] as CardKey[], val[1] as CardKey[]);
+      this.createSupplyPiles(val[0] as Card[], val[1] as Card[]);
     });
 
     this._cleanup.push(pileCreationSub);
@@ -63,22 +62,32 @@ export class BaseSupplyView extends Container {
     this.off('removed', this.onRemoved);
   }
 
-  private createSupplyPiles(victoryCardKeys: readonly CardKey[], treasureCardKeys: readonly CardKey[]) {
+  private createSupplyPiles(victoryCards: readonly Card[], treasureCards: readonly Card[]) {
     console.log('createSupplyPiles');
     this._cardContainer.removeChildren();
 
-    for (const [idx, cardKey] of victoryCardKeys.entries()) {
+    // Sort victory cards by descending cost
+    const sortedVictoryCards = [...victoryCards].sort((cardA, cardB) => {
+      return (cardB?.cost.treasure ?? 0) - (cardA?.cost.treasure ?? 0);
+    });
+
+    for (const [idx, card] of sortedVictoryCards.entries()) {
       const pileView = new PileView({ size: 'half' });
       pileView.y = idx * SMALL_CARD_HEIGHT + idx * STANDARD_GAP;
-      pileView.label = `pile:${cardKey}`;
+      pileView.label = `pile:${card.cardKey}`;
       this._cardContainer.addChild(pileView);
     }
 
-    for (const [idx, cardKey] of treasureCardKeys.entries()) {
+    // Sort treasure cards by descending cost
+    const sortedTreasureKeys = [...treasureCards].sort((cardA, cardB) => {
+      return (cardB?.cost.treasure ?? 0) - (cardA?.cost.treasure ?? 0);
+    });
+
+    for (const [idx, card] of sortedTreasureKeys.entries()) {
       const pileView = new PileView({ size: 'half' });
       pileView.x = SMALL_CARD_WIDTH + STANDARD_GAP;
       pileView.y = idx * SMALL_CARD_HEIGHT + idx * STANDARD_GAP;
-      pileView.label = `pile:${cardKey}`;
+      pileView.label = `pile:${card.cardKey}`;
       this._cardContainer.addChild(pileView);
     }
   }

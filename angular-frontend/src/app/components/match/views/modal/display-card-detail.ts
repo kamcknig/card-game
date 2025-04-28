@@ -1,8 +1,8 @@
 import { Application, Assets, Container, Graphics, Sprite, Texture } from 'pixi.js';
 import { cardStore } from '../../../../state/card-state';
-import { Card, CardData } from 'shared/shared-types';
+import { CardNoId } from 'shared/shared-types';
 
-export async function displayCardDetail(app: Application, arg: number | Card | CardData) {
+export async function displayCardDetail(app: Application, arg: number | CardNoId) {
   let cardImg: Texture;
   if (typeof arg === 'number') {
     cardImg = await Assets.load(cardStore.get()[arg].detailImagePath);
