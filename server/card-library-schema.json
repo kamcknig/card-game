@@ -72,6 +72,10 @@
           "treasure"
         ]
       },
+      "isBasic": {
+        "type": "boolean",
+        "description": "Indicates the card is a basic supply card (not a kingdom card)"
+      },
       "cardName": {
         "type": "string",
         "description": "The human-readable card name."

@@ -1,0 +1,4 @@
+{
+  "supply": "../card-library-basic-supply.json",
+  "kingdom": "./card-library-alchemy.json"
+}

@@ -4,6 +4,21 @@ import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 import { CardExpansionModuleNew } from '../../types.ts';
 
 const expansionModule: CardExpansionModuleNew = {
+  'copper': {
+    registerEffects: () => async ({ gameActionController }) => {
+      await gameActionController.gainTreasure({ count: 1 });
+    }
+  },
+  'gold': {
+    registerEffects: () => async ({ gameActionController }) => {
+      await gameActionController.gainTreasure({ count: 3 });
+    }
+  },
+  'silver': {
+    registerEffects: () => async ({ gameActionController }) => {
+      await gameActionController.gainTreasure({ count: 2 });
+    }
+  },
   'artisan': {
     registerEffects: () => async ({ cardLibrary, runGameActionDelegate, playerId }) => {
       console.log(`[ARTISAN EFFECT] choosing card to gain...`);
@@ -621,7 +636,7 @@ const expansionModule: CardExpansionModuleNew = {
           triggeredEffectFn: async ({ runGameActionDelegate }) => {
             await runGameActionDelegate('gainTreasure', {
               count: 1,
-            }, { loggingContext: { source: cardId }});
+            }, { loggingContext: { source: cardId } });
           }
         });
       },

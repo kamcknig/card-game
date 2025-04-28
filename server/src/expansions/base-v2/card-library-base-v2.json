@@ -1,4 +1,78 @@
 {
+  "copper": {
+    "cost": {
+      "treasure": 0
+    },
+    "isBasic": true,
+    "type": [
+      "TREASURE"
+    ],
+    "cardName": "Copper"
+  },
+  "curse": {
+    "cost": {
+      "treasure": 0
+    },
+    "isBasic": true,
+    "type": [
+      "VICTORY"
+    ],
+    "victoryPoints": -1,
+    "cardName": "Curse"
+  },
+  "duchy": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "VICTORY"
+    ],
+    "isBasic": true,
+    "victoryPoints": 3,
+    "cardName": "Duchy"
+  },
+  "estate": {
+    "cost": {
+      "treasure": 2
+    },
+    "type": [
+      "VICTORY"
+    ],
+    "isBasic": true,
+    "victoryPoints": 1,
+    "cardName": "Estate"
+  },
+  "gold": {
+    "cost": {
+      "treasure": 6
+    },
+    "type": [
+      "TREASURE"
+    ],
+    "isBasic": true,
+    "cardName": "Gold"
+  },
+  "province": {
+    "cost": {
+      "treasure": 8
+    },
+    "type": [
+      "VICTORY"
+    ],
+    "isBasic": true,
+    "victoryPoints": 6,
+    "cardName": "Province"
+  },
+  "silver": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": [
+      "TREASURE"
+    ],
+    "isBasic": true,
+    "cardName": "Silver"
+  },
   "artisan": {
     "cost": {
       "treasure": 6
@@ -252,7 +326,8 @@
       "treasure": 5
     },
     "type": [
-      "ACTION", "ATTACK"
+      "ACTION",
+      "ATTACK"
     ],
     "targetScheme": "ALL_OTHER",
     "abilityText": "+2 Cards\nEach other player gains a Curse.",

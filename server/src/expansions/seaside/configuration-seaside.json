@@ -1,6 +1,5 @@
 {
-  "supply": "../card-library-base-supply.json",
-  "kingdom": "card-library-seaside.json",
+  "title": "Seaside",
   "mats": [
     "native-village",
     "island"

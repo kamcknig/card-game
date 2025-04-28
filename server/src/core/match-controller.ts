@@ -1,11 +1,10 @@
 import {
   Card,
-  CardData,
   CardId,
   CardKey,
+  CardNoId,
   Match,
   MatchConfiguration,
-  MatchStats,
   MatchSummary,
   Mats,
   Player,
@@ -20,34 +19,32 @@ import {
   MatchBaseConfiguration,
 } from '../types.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';
-import { createCardFactory } from '../utils/create-card.ts';
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
 import { ReactionManager } from './reactions/reaction-manager.ts';
 import { scoringFunctionMap } from '../expansions/scoring-function-map.ts';
 import { CardLibrary } from './card-library.ts';
 import { compare, Operation } from 'fast-json-patch';
-import { ExpansionCardData, expansionData } from '../state/expansion-data.ts';
+import { allCardLibrary, expansionLibrary } from '../state/expansion-library.ts';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
 import { cardEffectFunctionMapFactory } from './effects/card-effect-function-map-factory.ts';
 import { EventEmitter } from '@denosaurs/event';
 import { LogManager } from './log-manager.ts';
 import { GameActionController } from './effects/game-action-controller.ts';
 import { getCurrentPlayer } from '../utils/get-current-player.ts';
+import { createCard } from '../utils/create-card.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _reactionManager: ReactionManager | undefined;
   private _interactivityController: CardInteractivityController | undefined;
   private _cardLibrary: CardLibrary = new CardLibrary();
-  private _cardData: ExpansionCardData | undefined;
   private _config: MatchConfiguration | undefined;
-  private _createCardFn: ((key: CardKey, card?: Omit<Partial<Card>, 'id'>) => Card) | undefined;
   private _logManager: LogManager | undefined;
   private gameActionsController: GameActionController | undefined;
   private _match: Match = {} as Match;
   
   constructor(
     private readonly _socketMap: Map<PlayerId, AppSocket>,
-    private readonly cardSearchFn: (searchTerm: string) => (CardData & { cardKey: CardKey })[],
+    private readonly cardSearchFn: (searchTerm: string) => CardNoId[],
   ) {
     super();
   }
@@ -55,28 +52,25 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _keepers: CardKey[] = [];
   private _playerHands: Record<CardKey, number>[] = [
     /*{
-      gold: 3,
-      silver: 2,
-      copper: 2,
-      'corsair': 3,
-    },
-    {
-      gold: 3,
-      silver: 2,
-      copper: 2,
-      'moat': 3,
-    },
-    {
-      gold: 4,
-      silver: 3,
-      copper: 3,
-    }*/
+     gold: 3,
+     silver: 2,
+     copper: 2,
+     'corsair': 3,
+     },
+     {
+     gold: 3,
+     silver: 2,
+     copper: 2,
+     'moat': 3,
+     },
+     {
+     gold: 4,
+     silver: 3,
+     copper: 3,
+     }*/
   ];
   
-  public initialize(config: MatchConfiguration, cardData: ExpansionCardData) {
-    this._createCardFn = createCardFactory(cardData);
-    this._cardData = cardData;
-    
+  public initialize(config: MatchConfiguration) {
     for (const card of config.basicCards) {
       this._keepers.unshift(card.cardKey);
     }
@@ -84,26 +78,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._keepers.unshift(card.cardKey);
     }
     
-    this._keepers =  Array.from(new Set(this._keepers));
+    this._keepers = Array.from(new Set(this._keepers));
     this._keepers.length = 10;
     
-    config = {
-      ...config,
-      basicCards: this.createBaseSupply(config),
-      kingdomCards: this.createKingdom(config),
-    };
-    
-    const playerCards = this.createPlayerDecks(config);
-    
-    const matchStats: MatchStats = {
-      playedCards: {},
-      cardsGained: {},
-      trashedCards: {},
-      cardsBought: {}
-    };
-    
     const mats =
-      Object.values(expansionData)
+      Object.values(expansionLibrary)
         .reduce((prev, nextExpansion) => {
           if (!nextExpansion.mats?.length) {
             return prev;
@@ -118,9 +97,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       scores: [],
       trash: [],
       players: config.players,
-      basicSupply: config.basicCards.map((c) => (c as any).id),
-      kingdomSupply: config.kingdomCards.map((c) => (c as any).id),
-      ...playerCards,
+      basicSupply: this.createBaseSupply(config).map(c => c.id),
+      kingdomSupply: this.createKingdom(config).map(c => c.id),
+      ...this.createPlayerDecks(config),
       config: config,
       turnNumber: 0,
       roundNumber: 0,
@@ -143,7 +122,12 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         'revealed': [],
         'look-at': [],
       },
-      stats: matchStats
+      stats: {
+        playedCards: {},
+        cardsGained: {},
+        trashedCards: {},
+        cardsBought: {}
+      }
     };
     
     this._config = config;
@@ -230,8 +214,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       socket.emit('matchStarted');
       socket.off('clientReady');
       
-      this.
-      initializeSocketListeners(socket);
+      this.initializeSocketListeners(socket);
       
       this._interactivityController?.playerAdded(socket);
       
@@ -277,7 +260,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         }
         
         for (let i = 0; i < count; i++) {
-          const c = this._createCardFn!(key);
+          const c = createCard(key);
           this._cardLibrary.addCard(c);
           supplyCards.push(c);
         }
@@ -287,36 +270,38 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     return supplyCards;
   }
   
-  private createKingdom({ players, bannedKingdoms }: MatchConfiguration) {
-    if (!this._cardData) {
-      throw new Error('no card data available to match');
-    }
+  private createKingdom(config: MatchConfiguration) {
     console.log(`[match] creating kingdom cards`);
     
     const kingdomCards: Card[] = [];
     
     // todo: remove testing code
-    const keepers: string[] = this._keepers.filter((k) =>
-      this._cardData!.kingdomSupply[k]
-    );
+    // remove any hard-coded keepers that aren't in the card library
+    const keepers: string[] = this._keepers.filter((k) => allCardLibrary[k]);
     
     console.log(`[match] choosing ${MatchBaseConfiguration.numberOfKingdomPiles} kingdom cards`);
     
-    let availableKingdom = Object.keys(this._cardData.kingdomSupply);
+    // go through the match configuration expansions and get all the cards from those expansions to choose from.
+    let kingdomPool = config.expansions
+      .map(data => data.name)
+      .reduce((acc, nextExpansionName) => {
+        acc.concat(Object.values(expansionLibrary[nextExpansionName].cardData.kingdomSupply).map(card => card.cardKey));
+        return acc;
+      }, [] as CardKey[]);
     
-    console.log(`[match] available kingdom cards\n${availableKingdom}`);
+    console.log(`[match] available kingdom cards\n${kingdomPool}`);
     
-    const bannedKeys = bannedKingdoms.map(data => data.cardKey);
+    const bannedKeys = config.bannedKingdoms.map(data => data.cardKey);
     
     if (bannedKeys.length) {
       console.log(`[match] banned cards ${bannedKeys}`);
       
-      availableKingdom = availableKingdom.filter(cardKey => !bannedKeys.includes(cardKey));
+      kingdomPool = kingdomPool.filter(cardKey => !bannedKeys.includes(cardKey));
       
-      console.log(`[match] available kingdom cards after filtering banned cards\n${availableKingdom}`);
+      console.log(`[match] available kingdom cards after filtering banned cards\n${kingdomPool}`);
     }
     
-    let chosenKingdom = availableKingdom
+    let chosenKingdom = kingdomPool
       .sort(() => Math.random() > .5 ? 1 : -1)
       .slice(-MatchBaseConfiguration.numberOfKingdomPiles);
     
@@ -347,7 +332,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     Object.entries(finalKingdom)
       .forEach(([key, count]) => {
         for (let i = 0; i < count; i++) {
-          const c = this._createCardFn!(key);
+          const c = createCard(key);
           this._cardLibrary.addCard(c);
           kingdomCards.push(c);
         }
@@ -372,7 +357,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           let deck = prev['playerDecks'][player.id];
           deck = deck.concat(
             new Array(count).fill(0).map((_) => {
-              const c = this._createCardFn!(key, { owner: player.id });
+              const c = createCard(key, { owner: player.id });
               this._cardLibrary.addCard(c);
               return c.id;
             }),

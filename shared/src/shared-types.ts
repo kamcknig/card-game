@@ -47,9 +47,17 @@ export type UserPromptActionArgs = {
 
 export type MatchConfiguration = {
   players: Player[];
+  
+  // info about the expansions selected for the match.
   expansions: ExpansionListElement[];
+  
+  // cards banned from the game
   bannedKingdoms: CardNoId[];
+  
+  // basic cards selected for the game
   basicCards: CardNoId[];
+  
+  // kingdom cards selected for the game
   kingdomCards: CardNoId[];
 }
 
@@ -133,7 +141,7 @@ export type ServerEmitEvents = {
   playerDisconnected: (player: Player) => void;
   playerNameUpdated: (playerId: PlayerId, name: string) => void;
   playerReady: (playerId: PlayerId, ready: boolean) => void;
-  searchCardResponse: (cardData: (CardData & { cardKey: CardKey })[]) => void;
+  searchCardResponse: (cardData: CardNoId[]) => void;
   selectCard: (signalId: string, selectCardArgs: SelectActionCardArgs & { selectableCardIds: CardId[] }) => void;
   setCardDataOverrides: (overrides: Record<CardId, Partial<Card>> | undefined) => void;
   setCardLibrary: (cardLibrary: Record<CardId, Card>) => void;
@@ -379,8 +387,4 @@ export type ActionButtons = {
   label: string;
   action: number;
 }[];
-export type CardData = Omit<
-  Card,
-  'id' | 'cardKey'
->;
 export type CardNoId = Omit<Card, 'id'>;

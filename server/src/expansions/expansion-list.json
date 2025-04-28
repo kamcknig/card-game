@@ -13,5 +13,10 @@
     "title": "Seaside",
     "name": "seaside",
     "order": 3
+  },
+  {
+    "title": "Alchemy",
+    "name": "alchemy",
+    "order": 4
   }
 ]

@@ -1,17 +1,9 @@
 import { AppSocket } from '../types.ts';
-import {
-  CardData,
-  CardKey,
-  CardNoId,
-  ExpansionListElement,
-  MatchConfiguration,
-  Player,
-  PlayerId,
-} from 'shared/shared-types.ts';
+import { CardNoId, ExpansionListElement, MatchConfiguration, Player, PlayerId, } from 'shared/shared-types.ts';
 import { createNewPlayer } from '../utils/create-new-player.ts';
 import { io } from '../server.ts';
 import { MatchController } from './match-controller.ts';
-import { ExpansionCardData, expansionData } from '../state/expansion-data.ts';
+import { allCardLibrary } from '../state/expansion-library.ts';
 import { applyPatch, compare } from 'https://esm.sh/v123/fast-json-patch@3.1.1/index.js';
 import Fuse, { IFuseOptions } from 'fuse.js';
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
@@ -49,7 +41,7 @@ export class Game {
   private _matchController: MatchController;
   private _matchConfiguration: MatchConfiguration;
   private _availableExpansion: ExpansionListElement[] = [];
-  private _fuse: Fuse<CardData & { cardKey: CardKey }> | undefined;
+  private _fuse: Fuse<CardNoId> | undefined;
   
   constructor() {
     console.log(`[game] created`);
@@ -71,42 +63,22 @@ export class Game {
   
   private initializeFuseSearch() {
     console.log(`[game] initializing fuse search`);
-    const find = (key: CardKey, arr: (CardData & { cardKey: CardKey })[]) =>
-      arr.findIndex(e => e.cardKey === key) > -1;
-    
-    const allExpansionCards = Object.keys(expansionData).reduce(
-      (prev, expansionName) => {
-        const expansion = expansionData[expansionName];
-        const supply = expansion.cardData.basicSupply;
-        const kingdom = expansion.cardData.kingdomSupply;
-        
-        prev = prev
-          .concat(Object.keys(supply).filter(k => !find(k, prev)).map((k) => ({ ...supply[k], cardKey: k })))
-          .concat(Object.keys(kingdom).filter(k => !find(k, prev)).map((k) => ({ ...kingdom[k], cardKey: k })));
-        
-        return prev;
-      },
-      [] as (CardData & { cardKey: CardKey })[],
-    );
-    
-    console.log(`[game] list of expansion cards: ${allExpansionCards.length}`);
-    console.log(allExpansionCards.map(e => `${e.expansionName} - ${e.cardKey}`).join('\n'));
     
     if (this._fuse) {
-      this._fuse.setCollection(allExpansionCards);
+      this._fuse.remove(() => true);
+      this._fuse = undefined;
     }
-    else {
-      const index = Fuse.createIndex(['cardName'], allExpansionCards);
-      
-      const fuseOptions: IFuseOptions<CardData> = {
-        ignoreDiacritics: true,
-        minMatchCharLength: 1,
-        distance: 2,
-        keys: ['cardName']
-      };
-      this._fuse = new Fuse(allExpansionCards, fuseOptions, index);
-      console.log(this._fuse.getIndex());
-    }
+    
+    const libraryArr = Object.values(allCardLibrary);
+    const index = Fuse.createIndex(['cardName'], libraryArr);
+    
+    const fuseOptions: IFuseOptions<CardNoId> = {
+      ignoreDiacritics: true,
+      minMatchCharLength: 1,
+      distance: 2,
+      keys: ['cardName']
+    };
+    this._fuse = new Fuse(libraryArr, fuseOptions, index);
   }
   
   private onSearchCards = (searchStr: string) => {
@@ -359,41 +331,6 @@ export class Game {
       socket.off('searchCards');
     });
     
-    const cardData = this._matchConfiguration?.expansions.reduce((prev, key) => {
-      prev = {
-        basicSupply: {
-          ...prev.basicSupply,
-          ...expansionData[key.name].cardData.basicSupply
-        },
-        kingdomSupply: {
-          ...prev.kingdomSupply,
-          ...expansionData[key.name].cardData.kingdomSupply
-        }
-      }
-      return prev;
-    }, {} as ExpansionCardData);
-    
-    // if any cards were requested specifically to be included, add them
-    const keeperExpansions = this._matchConfiguration.basicCards.concat(this._matchConfiguration.kingdomCards);
-    for (const keeper of keeperExpansions) {
-      if (keeper.isBasic) {
-        cardData.basicSupply = {
-          ...cardData.basicSupply,
-          [keeper.cardKey]: {
-            ...expansionData[keeper.expansionName].cardData.basicSupply[keeper.cardKey]
-          }
-        }
-      }
-      else {
-        cardData.kingdomSupply = {
-          ...cardData.kingdomSupply,
-          [keeper.cardKey]: {
-            ...expansionData[keeper.expansionName].cardData.kingdomSupply[keeper.cardKey]
-          }
-        }
-      }
-    }
-    
     const colors = ['#10FF19', '#3c69ff', '#FF0BF2', '#FFF114', '#FF1F11', '#FF9900'];
     const players = fisherYatesShuffle(
       this.players
@@ -414,8 +351,7 @@ export class Game {
         ...structuredClone(defaultMatchConfiguration),
         ...this._matchConfiguration,
         players,
-      } as MatchConfiguration,
-      cardData as ExpansionCardData
+      } as MatchConfiguration
     );
   }
 }
