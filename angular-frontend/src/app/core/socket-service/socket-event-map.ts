@@ -101,10 +101,11 @@ export const socketToGameEventMap = (): SocketEventMap => {
       prev[`${c.cardKey}-half`] ??= c.halfImagePath;
       return prev;
     }, {
-      'card-back-full': `/assets/card-images/base-supply/full-size/card-back.jpg`,
-      'card-back-detail': `/assets/card-images/base-supply/detail/card-back.jpg`,
-      'card-back-half': `/assets/card-images/base-supply/half-size/card-back.jpg`,
+      'card-back-full': `/assets/card-images/base-v2/full-size/card-back.jpg`,
+      'card-back-detail': `/assets/card-images/base-v2/detail/card-back.jpg`,
+      'card-back-half': `/assets/card-images/base-v2/half-size/card-back.jpg`,
       'treasure-bg': '/assets/ui-icons/treasure-bg.png',
+      'potion-icon': '/assets/ui-icons/potion.png',
     } as Record<string, string>));
 
     sceneStore.set('match');

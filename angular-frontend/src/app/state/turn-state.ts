@@ -11,6 +11,10 @@ export const playerBuysStore =
   computed(matchStore, m => m?.playerBuys ?? 0);
 (globalThis as any).playerBuysStore = playerBuysStore;
 
+export const playerPotionStore =
+  computed(matchStore, m => m?.playerPotions ?? 0);
+(globalThis as any).playerPotionStore = playerPotionStore;
+
 export const playerActionsStore =
   computed(matchStore, m => m?.playerActions ?? 0);
 (globalThis as any).playerActionsStore = playerActionsStore;

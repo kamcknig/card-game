@@ -64,6 +64,13 @@ export class GameActionController implements GameActionControllerInterface {
     }
   }
   
+  async gainPotion(args: { count: number }, context?: GameActionOptions) {
+    console.log(`[gainPotion action] gaining ${args.count} potions`);
+    this.match.playerPotions += args.count;
+    
+    console.log(`[gainPotion action] setting player potions to ${this.match.playerPotions}`);
+  }
+  
   async gainBuy(args: { count: number }, context?: GameActionOptions) {
     console.log(`[gainBuy action] gaining ${args.count} buys`);
     this.match.playerBuys += args.count;
@@ -438,6 +445,7 @@ export class GameActionController implements GameActionControllerInterface {
         match.playerActions = 1;
         match.playerBuys = 1;
         match.playerTreasure = 0;
+        match.playerPotions = 0;
         match.currentPlayerTurnIndex++;
         
         if (match.currentPlayerTurnIndex >= match.players.length) {

@@ -103,6 +103,7 @@ export type Match = {
   playerDiscards: Record<PlayerId, CardId[]>;
   playerHands: Record<PlayerId, CardId[]>;
   playerTreasure: number;
+  playerPotions: number;
   players: Player[];
   roundNumber: number;
   scores: Record<PlayerId, number>,

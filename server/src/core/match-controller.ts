@@ -103,6 +103,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       turnNumber: 0,
       roundNumber: 0,
       currentPlayerTurnIndex: 0,
+      playerPotions: 0,
       playerBuys: 0,
       playerTreasure: 0,
       playerActions: 0,

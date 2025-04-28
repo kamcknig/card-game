@@ -95,7 +95,17 @@ export class CardView extends Container {
     costText.x = Math.floor(costBgSprite.width * .5);
     costText.y = Math.floor(costBgSprite.height * .5);
     this._costView.addChild(costText);
-    this.addChild(this._costView)
+
+    if ((card.cost?.potion ?? 0) > 0) {
+      const potion = Sprite.from(Assets.get('potion-icon'));
+      const maxSide = 32;
+      potion.scale = Math.min(maxSide / potion.width, maxSide / potion.height);
+      potion.x = costBgSprite.x + costBgSprite.width + 3;
+      potion.y = Math.floor(costBgSprite.y + costBgSprite.height - potion.height);
+      this._costView.addChild(potion);
+    }
+
+    this.addChild(this._costView);
 
     this.size = 'full'
     this.facing = 'front';

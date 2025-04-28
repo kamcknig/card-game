@@ -150,6 +150,7 @@ export type GameActionArgsMap = {
   drawCard: { playerId: PlayerId };
   endTurn: void;
   gainAction: { count: number };
+  gainPotion: { count: number };
   gainBuy: { count: number; };
   gainCard: { playerId: PlayerId; cardId: CardId; to: LocationSpec };
   gainTreasure: { count: number };

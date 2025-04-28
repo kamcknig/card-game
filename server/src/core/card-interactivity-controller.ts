@@ -59,7 +59,7 @@ export class CardInteractivityController {
     const hand = match.playerHands[currentPlayer.id]
       .map((id) => this._cardLibrary.getCard(id));
     
-    if (turnPhase === 'buy') {
+    if (turnPhase === 'buy' && match.playerBuys > 0) {
       const cardsAdded: string[] = [];
       const supply = match.basicSupply.concat(match.kingdomSupply)
         .map((id) => this._cardLibrary.getCard(id));
@@ -82,7 +82,7 @@ export class CardInteractivityController {
         );
         
         // if the player has enough treasure and buys
-        if (cardCost <= match.playerTreasure && match.playerBuys > 0) {
+        if (cardCost <= match.playerTreasure && (card.cost.potion === undefined || card.cost.potion <= match.playerPotions)) {
           selectableCards.push(card.id);
           cardsAdded.push(card.cardKey);
         }
