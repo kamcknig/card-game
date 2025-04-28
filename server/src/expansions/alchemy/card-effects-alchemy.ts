@@ -3,6 +3,9 @@ import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { Card, CardId } from 'shared/shared-types.ts';
 import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
+import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
+import { findCards } from '../../utils/find-cards.ts';
+import { getPlayerById } from '../../utils/get-player-by-id.ts';
 
 const expansion: CardExpansionModuleNew = {
   'alchemist': {
@@ -158,6 +161,41 @@ const expansion: CardExpansionModuleNew = {
         if (!(await args.runGameActionDelegate('drawCard', { playerId: args.playerId }))) {
           break;
         }
+      }
+    }
+  },
+  'familiar': {
+    registerEffects: () => async (args) => {
+      console.log(`[familiar effect] gaining 1 card and 1 action`);
+      await args.runGameActionDelegate('drawCard', { playerId: args.playerId });
+      await args.runGameActionDelegate('gainAction', { count: 1 });
+      
+      const targets = findOrderedTargets({
+        match: args.match,
+        appliesTo: 'ALL_OTHER',
+        startingPlayerId: args.playerId
+      }).filter((id) => args.reactionContext?.[id]?.result !== 'immunity');
+      
+      for (const targetId of targets) {
+        const curseCardId =
+          args.match.basicSupply.find(cardId => args.cardLibrary.getCard(cardId).cardKey === 'curse');
+        
+        if (curseCardId === undefined) {
+          console.log(`[familiar effect] no curse card in basic supply`);
+          break;
+        }
+        
+        console.log(`[familiar effect] gaining curse card to ${getPlayerById(args.match, targetId)}`);
+        
+        await args.runGameActionDelegate('gainCard', {
+          cardId: curseCardId,
+          playerId: targetId,
+          to: { location: 'playerDiscards' }
+        }, {
+          loggingContext: {
+            source: args.cardId
+          }
+        });
       }
     }
   },

@@ -19,6 +19,13 @@
     },
     "type": ["ACTION"]
   },
+  "familiar": {
+    "cost": {
+      "treasure": 3,
+      "potion": 1
+    },
+    "type": ["ACTION", "ATTACK"]
+  },
   "potion": {
     "cost": {
       "treasure": 4

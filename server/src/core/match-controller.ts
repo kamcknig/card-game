@@ -32,11 +32,8 @@ import {
   GameActionArgsMap,
   GameActionOptions,
   GameActions,
-
-MatchBaseConfiguration,
-}
-from
-'../types.ts';
+  MatchBaseConfiguration,
+} from '../types.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _reactionManager: ReactionManager | undefined;
