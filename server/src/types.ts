@@ -99,7 +99,8 @@ type ReactionTriggerArgs =
   | { eventType: 'endTurn' } // no playerId or cardId needed
   | { eventType: 'startTurn'; playerId: number }
   | { eventType: 'gainCard' | 'cardPlayed'; playerId: number; cardId: number }
-  | { eventType: 'endTurnPhase'; phase: TurnPhase; };
+  | { eventType: 'endTurnPhase'; }
+  | { eventType: 'startTurnPhase' };
 
 
 export class ReactionTrigger {
@@ -246,6 +247,7 @@ export type TriggerEventType =
   | 'startTurn'
   | 'gainCard'
   | 'endTurnPhase'
+  | 'startTurnPhase'
   | 'endTurn';
 
 export type ReactionRemoveAt = 'TURN_END' | 'PHASE_END';

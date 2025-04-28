@@ -159,9 +159,7 @@ export class GameActionController implements GameActionControllerInterface {
       playerId: args.playerId
     });
     
-    this.logManager.enter();
     await this.reactionManager.runTrigger({ trigger });
-    this.logManager.exit();
   }
   
   async userPrompt(args: UserPromptActionArgs) {
@@ -342,7 +340,11 @@ export class GameActionController implements GameActionControllerInterface {
     }
   }
   
-  async revealCard(args: { cardId: CardId, playerId: PlayerId, moveToRevealed?: boolean }, context?: GameActionOptions) {
+  async revealCard(args: {
+    cardId: CardId,
+    playerId: PlayerId,
+    moveToRevealed?: boolean
+  }, context?: GameActionOptions) {
     console.log(`[revealCard action] ${getPlayerById(this.match, args.playerId)} revealing ${this.cardLibrary.getCard(args.cardId)}`);
     
     if (args.moveToRevealed) {
@@ -419,14 +421,8 @@ export class GameActionController implements GameActionControllerInterface {
   async nextPhase() {
     const match = this.match;
     
-    const trigger = new ReactionTrigger({
-      eventType: 'endTurnPhase',
-      phase: getTurnPhase(this.match.turnPhaseIndex)
-    });
-    
-    this.logManager.enter();
+    const trigger = new ReactionTrigger({ eventType: 'endTurnPhase' });
     await this.reactionManager.runTrigger({ trigger });
-    this.logManager.exit();
     
     match.turnPhaseIndex = match.turnPhaseIndex + 1;
     
@@ -471,7 +467,6 @@ export class GameActionController implements GameActionControllerInterface {
             turnsSincePlayed > 0
           );
           
-          
           if (shouldMoveToPlayArea) {
             await this.moveCard({
               cardId,
@@ -480,22 +475,26 @@ export class GameActionController implements GameActionControllerInterface {
           }
         }
         
-        const trigger = new ReactionTrigger({
+        const startTurnTrigger = new ReactionTrigger({
           eventType: 'startTurn',
           playerId: match.players[match.currentPlayerTurnIndex].id
         });
+        await this.reactionManager.runTrigger({ trigger: startTurnTrigger });
         
-        const reactionContext = {};
-        this.logManager.enter();
-        await this.reactionManager.runTrigger({ trigger, reactionContext });
-        this.logManager.exit();
+        const startPhaseTrigger = new ReactionTrigger({ eventType: 'startTurnPhase' });
+        await this.reactionManager.runTrigger({ trigger: startPhaseTrigger });
         
         break;
       }
-      case 'buy':
-        // no explicit behavior
+      case 'buy': {
+        const startPhaseTrigger = new ReactionTrigger({ eventType: 'startTurnPhase' });
+        await this.reactionManager.runTrigger({ trigger: startPhaseTrigger });
         break;
+      }
       case 'cleanup': {
+        const startPhaseTrigger = new ReactionTrigger({ eventType: 'startTurnPhase' });
+        await this.reactionManager.runTrigger({ trigger: startPhaseTrigger });
+        
         const cardsToDiscard = match.playArea.concat(match.activeDurationCards, match.playerHands[currentPlayer.id]);
         
         for (const cardId of cardsToDiscard) {
@@ -560,9 +559,7 @@ export class GameActionController implements GameActionControllerInterface {
       eventType: 'endTurn'
     });
     
-    this.logManager.enter();
     await this.reactionManager.runTrigger({ trigger });
-    this.logManager.exit();
     
     this.reactionManager.cleanUpTriggers()
   }
@@ -618,7 +615,11 @@ export class GameActionController implements GameActionControllerInterface {
     return drawnCardId;
   }
   
-  async playCard(args: { playerId: PlayerId, cardId: CardId, overrides?: GameActionOverrides }, context?: GameActionOptions): Promise<boolean> {
+  async playCard(args: {
+    playerId: PlayerId,
+    cardId: CardId,
+    overrides?: GameActionOverrides
+  }, context?: GameActionOptions): Promise<boolean> {
     const { playerId, cardId } = args;
     
     await this.moveCard({
@@ -660,9 +661,7 @@ export class GameActionController implements GameActionControllerInterface {
     
     // handle reactions for the card played
     const reactionContext = {};
-    this.logManager.enter();
     await this.reactionManager.runTrigger({ trigger, reactionContext });
-    this.logManager.exit();
     
     // run the effects of the card played, note passing in the reaction context collected from running the trigger
     // above - e.g., could provide immunity to an attack card played

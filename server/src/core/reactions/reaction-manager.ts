@@ -82,6 +82,7 @@ export class ReactionManager {
   }
   
   async runTrigger({ trigger, reactionContext }: { trigger: ReactionTrigger, reactionContext?: any }) {
+    this.logManager.enter();
     reactionContext ??= {};
     
     // now we get the order of players that could be affected by the play (including the current player),
@@ -191,6 +192,8 @@ export class ReactionManager {
         }
       }
     }
+    
+    this.logManager.exit();
   }
   
   cleanUpTriggers() {
