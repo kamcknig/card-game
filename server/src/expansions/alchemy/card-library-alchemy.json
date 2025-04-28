@@ -26,6 +26,13 @@
     },
     "type": ["ACTION", "ATTACK"]
   },
+  "golem": {
+    "cost": {
+      "treasure": 4,
+      "potion": 1
+    },
+    "type": ["ACTION"]
+  },
   "potion": {
     "cost": {
       "treasure": 4

@@ -14,7 +14,6 @@ import {
 import { MatchConfigurator } from './match-configurator.ts';
 import { expansionLibrary } from '@expansions/expansion-library.ts';
 import { getCurrentPlayer } from '../utils/get-current-player.ts';
-import { createCard } from '../utils/create-card.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
 import { ReactionManager } from './reactions/reaction-manager.ts';
@@ -34,6 +33,7 @@ import {
   GameActions,
   MatchBaseConfiguration,
 } from '../types.ts';
+import { createCard } from '../utils/create-card.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _reactionManager: ReactionManager | undefined;
@@ -52,11 +52,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
   
   private _playerHands: Record<CardKey, number>[] = [
-    /*{
+    {
      gold: 3,
      silver: 2,
-     copper: 2,
-     'corsair': 3,
+     potion: 2,
+     'golem': 3,
      },
      {
      gold: 3,
@@ -68,7 +68,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
      gold: 4,
      silver: 3,
      copper: 3,
-     }*/
+     }
   ];
   
   public async initialize(config: MatchConfiguration) {

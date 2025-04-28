@@ -199,6 +199,61 @@ const expansion: CardExpansionModuleNew = {
       }
     }
   },
+  'golem': {
+    registerEffects: () => async (args) => {
+      const deck = args.match.playerDecks[args.playerId];
+      const discard = args.match.playerDiscards[args.playerId];
+      
+      const actionCardsSetAside: Card[] = [];
+      const cardsToDiscard: Card[] = [];
+      
+      while (deck.length + discard.length > 0 && actionCardsSetAside.length !== 2) {
+        if (deck.length === 0) {
+          await args.runGameActionDelegate('shuffleDeck', { playerId: args.playerId });
+        }
+        
+        const cardId = deck.slice(-1)[0];
+        const card = args.cardLibrary.getCard(cardId);
+        
+        console.log(`[golem effect] revealing card ${card}`);
+        await args.runGameActionDelegate('revealCard', {
+          cardId: card.id,
+          playerId: args.playerId,
+        });
+        
+        console.log(`[golem effect] card is non-golem action, setting aside`);
+        await args.runGameActionDelegate('setAside', {
+          cardId: card.id,
+          playerId: args.playerId,
+          sourceCardId: args.cardId
+        });
+        
+        if (card.type.includes('ACTION') && card.cardKey !== 'golem') {
+          actionCardsSetAside.push(card);
+        }
+        else {
+          console.log(`[golem effect] card is golem, or action, setting aside to discard`);
+          cardsToDiscard.push(card);
+        }
+      }
+      
+      console.log(`[golem effect] discarding ${cardsToDiscard.length} cards`);
+      for (const card of cardsToDiscard) {
+        await args.runGameActionDelegate('discardCard', { cardId: card.id, playerId: args.playerId });
+      }
+      
+      console.log(`[golem effect] playing ${actionCardsSetAside.length} cards`);
+      for (const card of actionCardsSetAside) {
+        await args.runGameActionDelegate('playCard', {
+          cardId: card.id,
+          playerId: args.playerId,
+          overrides: {
+            actionCost: 0
+          }
+        })
+      }
+    }
+  },
   'potion': {
     registerEffects: () => async (args) => {
       await args.runGameActionDelegate('gainPotion', { count: 1 });
