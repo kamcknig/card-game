@@ -1,7 +1,8 @@
 import { CardExpansionModuleNew } from '../../types.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
-import { Card } from 'shared/shared-types.ts';
+import { Card, CardId } from 'shared/shared-types.ts';
+import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 
 const expansion: CardExpansionModuleNew = {
   'alchemist': {
@@ -120,6 +121,42 @@ const expansion: CardExpansionModuleNew = {
             toPlayerId: args.playerId,
             to: { location: 'playerDecks' }
           });
+        }
+      }
+    }
+  },
+  'apprentice': {
+    registerEffects: () => async (args) => {
+      console.log(`[apprentice effect] drawing 1 card`);
+      await args.runGameActionDelegate('drawCard', { playerId: args.playerId });
+      
+      if (args.match.playerHands[args.playerId].length === 0) {
+        return;
+      }
+      
+      const selectedCardIds = await args.runGameActionDelegate('selectCard', {
+        playerId: args.playerId,
+        prompt: `Trash card`,
+        restrict: { from: { location: 'playerHands' } },
+        count: 1,
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.warn(`[apprentice effect] no card selected`);
+        return;
+      }
+      
+      const card = args.cardLibrary.getCard(selectedCardIds[0]);
+      const numCardsToDraw = getEffectiveCardCost(
+        args.playerId,
+        card.id,
+        args.match,
+        args.cardLibrary
+      ) + (card.cost.potion !== undefined ? 2 : 0);
+      
+      for (let i = 0; i < numCardsToDraw; i++) {
+        if (!(await args.runGameActionDelegate('drawCard', { playerId: args.playerId }))) {
+          break;
         }
       }
     }
