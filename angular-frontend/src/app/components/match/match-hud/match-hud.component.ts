@@ -19,7 +19,7 @@ import { logEntryIdsStore, logStore } from '../../../state/log-state';
 import { MatComponent } from './mat-zone/mat.component';
 import { CardComponent } from '../../card/card.component';
 import { playerScoreStore } from '../../../state/player-logic';
-import { matStore } from '../../../state/match-logic';
+import { selfPlayerMatStore, setAsideStore } from '../../../state/match-logic';
 import { LogEntryMessage } from '../../../../types';
 
 @Component({
@@ -43,7 +43,8 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
   playerIds$: Observable<readonly PlayerId[]> | undefined;
   playerScore$!: Observable<{ id: PlayerId; score: number; name: string }[]> | undefined;
   logEntries$!: Observable<readonly LogEntryMessage[]> | undefined;
-  mats$: Observable<{ mat: Mats, cardIds: CardId[] }[]> | undefined;
+  selfMats$: Observable<{ mat: Mats, cardIds: CardId[] }[]> | undefined;
+  setAsideMat$: Observable<{ mat: Mats; cardIds: CardId[] }> | undefined;
   visibleMat: { mat: Mats; cardIds: CardId[] } | null = null;
   stickyMat: boolean = false;
 
@@ -51,7 +52,10 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.mats$ = this._nanoService.useStore(matStore)
+    this.setAsideMat$ = this._nanoService.useStore(setAsideStore)
+      .pipe(map(store => ({ mat: 'set-aside', cardIds: store })));
+
+    this.selfMats$ = this._nanoService.useStore(selfPlayerMatStore)
       .pipe(
         map(mats => Object.entries(mats).map(entry => ({ mat: entry[0] as Mats, cardIds: entry[1] }))),
         map(mats => mats.filter(mat => mat.cardIds.length > 0)),

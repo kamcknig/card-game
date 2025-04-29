@@ -74,7 +74,7 @@ export class CardInteractivityController {
         }
         
         // get the true cost - with any overrides
-        const cardCost = getEffectiveCardCost(
+        const { treasure: cardCost, potion } = getEffectiveCardCost(
           currentPlayer.id,
           card.id,
           match,
@@ -82,7 +82,7 @@ export class CardInteractivityController {
         );
         
         // if the player has enough treasure and buys
-        if (cardCost <= match.playerTreasure && (card.cost.potion === undefined || card.cost.potion <= match.playerPotions)) {
+        if (cardCost <= match.playerTreasure && (potion === undefined || potion <= match.playerPotions)) {
           selectableCards.push(card.id);
           cardsAdded.push(card.cardKey);
         }

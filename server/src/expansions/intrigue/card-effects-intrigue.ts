@@ -931,23 +931,23 @@ const expansionModule: CardExpansionModuleNew = {
         cardId,
       });
       
-      const cost = getEffectiveCardCost(
+      const cardCost = getEffectiveCardCost(
         playerId,
         cardId,
         match,
         cardLibrary
-      ) + 2;
+      );
       
       let card = cardLibrary.getCard(cardId);
       
-      console.log(`[REPLACE EFFECT] prompting user to gain a card costing up to ${cost}...`);
+      console.log(`[REPLACE EFFECT] prompting user to gain a card costing up to ${cardCost.treasure + 2}...`);
       
       result = await runGameActionDelegate('selectCard', {
         prompt: 'Gain card',
         playerId,
         restrict: {
           from: { location: ['kingdom', 'supply'] },
-          cost: { kind: 'upTo', amount: { treasure: cost, potion: card.cost.potion } },
+          cost: { kind: 'upTo', amount: { treasure: cardCost.treasure + 2, potion: cardCost.potion } },
         },
         count: 1,
       }) as number[];
@@ -1198,17 +1198,16 @@ const expansionModule: CardExpansionModuleNew = {
           cardId: cardId,
         });
         
-        const card = cardLibrary.getCard(cardId);
         const cost = getEffectiveCardCost(target, cardId, match, cardLibrary);
         
-        console.log(`[SWINDLER EFFECT] prompting user to select card costing ${cost}...`);
+        console.log(`[SWINDLER EFFECT] prompting user to select card costing ${cost.treasure}...`);
         
         const cardIds = await runGameActionDelegate('selectCard', {
           prompt: 'Choose card',
           playerId,
           restrict: {
             from: { location: ['supply', 'kingdom'] },
-            cost: { kind: 'exact', amount: { treasure: cost, potion: card.cost.potion } },
+            cost: { kind: 'exact', amount: cost },
           },
           count: 1,
         }) as number[];
@@ -1390,21 +1389,21 @@ const expansionModule: CardExpansionModuleNew = {
         cardId: card.id,
       });
       
-      const cost = getEffectiveCardCost(
+      const cardCost = getEffectiveCardCost(
         playerId,
         card.id,
         match,
         cardLibrary
-      ) + 1;
+      );
       
-      console.log(`[UPGRADE EFFECT] prompting user to select card costing ${cost}...`);
+      console.log(`[UPGRADE EFFECT] prompting user to select card costing ${cardCost.treasure + 2}...`);
       
       cardIds = await runGameActionDelegate('selectCard', {
         prompt: 'Gain card',
         playerId,
         restrict: {
           from: { location: ['supply', 'kingdom'] },
-          cost: { kind: 'exact', amount: { treasure: cost, potion: card.cost.potion } },
+          cost: { kind: 'exact', amount: { treasure: cardCost.treasure + 1, potion: cardCost.potion } },
         },
         count: 1,
       }) as number[];

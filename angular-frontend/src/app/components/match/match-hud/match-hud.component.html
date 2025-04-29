@@ -1,7 +1,16 @@
 <app-score #scoreView [playerScores]="playerScore$ | async"></app-score>
 
 <div class="mat-tab-content">
-  @for (mat of mats$ | async; track mat.mat) {
+  @let setAsideMat = setAsideMat$ | async;
+  @if (setAsideMat) {
+    <app-mat
+      [mat]="setAsideMat"
+      (click)="visibleMat = setAsideMat; stickyMat = true"
+      (mouseenter)="visibleMat = setAsideMat; stickyMat = true"
+      (mouseleave)="visibleMat = null; stickyMat = false">
+    </app-mat>
+  }
+  @for (mat of selfMats$ | async; track mat.mat) {
     <app-mat
       [mat]="mat"
       (click)="visibleMat === mat ? stickyMat = !stickyMat : visibleMat = mat"

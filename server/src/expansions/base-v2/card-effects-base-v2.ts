@@ -750,14 +750,14 @@ const expansionModule: CardExpansionModuleNew = {
       
       let card = cardLibrary.getCard(cardId);
       
-      const costRestriction = getEffectiveCardCost(
+      const cardCost = getEffectiveCardCost(
         playerId,
         cardId,
         match,
         cardLibrary
-      ) + 3;
+      );
       
-      console.log(`[MINE EFFECT] prompting user to select treasure costing up to ${costRestriction}`);
+      console.log(`[MINE EFFECT] prompting user to select treasure costing up to ${cardCost.treasure + 3}`);
       
       cardIds = await runGameActionDelegate('selectCard', {
         prompt: 'Confirm gain card',
@@ -766,7 +766,7 @@ const expansionModule: CardExpansionModuleNew = {
         restrict: {
           from: { location: ['supply', 'kingdom'] },
           card: { type: ['TREASURE'] },
-          cost: { kind: 'upTo', amount: { treasure: costRestriction, potion: card.cost.potion } },
+          cost: { kind: 'upTo', amount: { treasure: cardCost.treasure + 3, potion: cardCost.potion } },
         },
       });
       
@@ -988,14 +988,14 @@ const expansionModule: CardExpansionModuleNew = {
         cardId,
       });
       
-      const costRestriction = getEffectiveCardCost(
+      const cardCost = getEffectiveCardCost(
         playerId,
         cardId,
         match,
         cardLibrary
-      ) + 2;
+      );
       
-      console.log(`[REMODEL EFFECT] prompting user to select card costing up to ${costRestriction}...`);
+      console.log(`[REMODEL EFFECT] prompting user to select card costing up to ${cardCost.treasure}...`);
       
       cardIds = await runGameActionDelegate('selectCard', {
         prompt: 'Gain card',
@@ -1003,7 +1003,7 @@ const expansionModule: CardExpansionModuleNew = {
         count: 1,
         restrict: {
           from: { location: ['supply', 'kingdom'] },
-          cost: { kind: 'upTo', amount: { treasure: costRestriction, potion: card.cost.potion } },
+          cost: { kind: 'upTo', amount: { treasure: cardCost.treasure + 2, potion: card.cost.potion } },
         },
       });
       

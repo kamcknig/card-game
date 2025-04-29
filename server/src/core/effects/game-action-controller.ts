@@ -317,7 +317,7 @@ export class GameActionController {
   }
   
   async buyCard(args: { cardId: CardId; playerId: PlayerId }) {
-    const cardCost = getEffectiveCardCost(
+    const { treasure: cardCost, potion = 0 } = getEffectiveCardCost(
       args.playerId,
       args.cardId,
       this.match,
@@ -325,6 +325,11 @@ export class GameActionController {
     );
     
     this.match.playerTreasure -= cardCost;
+    
+    if (potion != 0) {
+      this.match.playerPotions -= potion;
+    }
+    
     this.match.playerBuys--;
     
     await this.gainCard({

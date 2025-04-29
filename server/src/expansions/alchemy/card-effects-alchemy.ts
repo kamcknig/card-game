@@ -151,12 +151,14 @@ const expansion: CardExpansionModuleNew = {
       }
       
       const card = args.cardLibrary.getCard(selectedCardIds[0]);
-      const numCardsToDraw = getEffectiveCardCost(
+      const { treasure, potion } = getEffectiveCardCost(
         args.playerId,
         card.id,
         args.match,
         args.cardLibrary
-      ) + (card.cost.potion !== undefined ? 2 : 0);
+      );
+      
+      const numCardsToDraw = treasure + (potion !== undefined ? 2 : 0);
       
       for (let i = 0; i < numCardsToDraw; i++) {
         if (!(await args.runGameActionDelegate('drawCard', { playerId: args.playerId }))) {

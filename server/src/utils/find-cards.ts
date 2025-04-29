@@ -1,6 +1,6 @@
 import { castArray } from 'es-toolkit/compat';
 import { isUndefined } from 'es-toolkit';
-import { EffectRestrictionSpec, Match } from 'shared/shared-types.ts';
+import { Card, CardId, EffectRestrictionSpec, Match } from 'shared/shared-types.ts';
 
 import { validateCostSpec } from '../shared/validate-cost-spec.ts';
 
@@ -10,24 +10,22 @@ import { getEffectiveCardCost } from './get-effective-card-cost.ts';
 export const findCards = (
   match: Match,
   effectRestriction: EffectRestrictionSpec,
-  cardLibrary: CardLibrary,
-  playerId?: number,
-) => {
-  let cardIds: number[] = [];
+  cardLibrary: CardLibrary
+): CardId[] => {
+  let cardIds: Card[] = cardLibrary.getAllCardsAsArray();
   
   if (!isUndefined(effectRestriction.from?.location)) {
-    if (!isUndefined(playerId)) {
-      if (effectRestriction.from?.location.includes('playerHands')) {
-        cardIds = cardIds.concat(match.playerHands[playerId]);
-      }
-      
-      if (effectRestriction.from?.location.includes('playerDecks')) {
-        cardIds = cardIds.concat(match.playerDecks[playerId]);
-      }
-      
-      if (effectRestriction.from?.location.includes('playerDiscards')) {
-        cardIds = cardIds.concat(match.playerDiscards[playerId]);
-      }
+    for (const playerId of )
+    if (effectRestriction.from?.location.includes('playerHands')) {
+      cardIds = cardIds.concat(match.playerHands[playerId]);
+    }
+    
+    if (effectRestriction.from?.location.includes('playerDecks')) {
+      cardIds = cardIds.concat(match.playerDecks[playerId]);
+    }
+    
+    if (effectRestriction.from?.location.includes('playerDiscards')) {
+      cardIds = cardIds.concat(match.playerDiscards[playerId]);
     }
     
     if (effectRestriction.from?.location.includes('supply')) {
@@ -41,11 +39,11 @@ export const findCards = (
   
   if (!isUndefined(effectRestriction.cost)) {
     cardIds = cardIds.filter(id => {
-      const card = cardLibrary.getCard(id);
       const effectiveCost = getEffectiveCardCost(playerId!, id, match, cardLibrary);
-      return validateCostSpec(effectRestriction.cost!, { treasure: effectiveCost, potion: card.cost.potion });
+      return validateCostSpec(effectRestriction.cost!, effectiveCost);
     });
   }
+  
   if (!isUndefined(effectRestriction.card)) {
     if (!isUndefined(effectRestriction.card?.cardKeys)) {
       const keys = castArray(effectRestriction.card.cardKeys);

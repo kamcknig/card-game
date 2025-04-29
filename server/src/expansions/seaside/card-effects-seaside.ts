@@ -806,10 +806,10 @@ const expansion: CardExpansionModuleNew = {
       console.log(`[salvager effect] trashing card...`);
       await runGameActionDelegate('trashCard', { cardId, playerId });
       
-      const effectiveCost = getEffectiveCardCost(playerId, cardId, match, cardLibrary);
+      const cardCost = getEffectiveCardCost(playerId, cardId, match, cardLibrary);
       
-      console.log(`[salvager effect] gaining ${effectiveCost} buy...`);
-      await runGameActionDelegate('gainTreasure', { count: effectiveCost });
+      console.log(`[salvager effect] gaining ${cardCost.treasure} buy...`);
+      await runGameActionDelegate('gainTreasure', { count: cardCost.treasure });
     }
   },
   'sea-chart': {
@@ -935,12 +935,12 @@ const expansion: CardExpansionModuleNew = {
       
       const cardsGained = match.stats.cardsGained;
       
-      let cardIds = Object.keys(cardsGained)
+      let cardIdsGained = Object.keys(cardsGained)
         .map(Number)
         .filter(cardId => {
           return cardsGained[cardId].playerId === previousPlayer.id &&
             cardsGained[cardId].turnNumber === match.turnNumber - 1;
-        })
+        });/*
         .filter(cardId => {
           const cost = getEffectiveCardCost(
             playerId,
@@ -949,8 +949,18 @@ const expansion: CardExpansionModuleNew = {
             cardLibrary
           );
           
-          return cost <= 6;
-        });
+          return cost.treasure <= 6;
+        });*/
+      
+      const cardIds = findCards(
+        match,
+        {
+          cost: { kind: 'upTo', amount: { treasure: 6 } },
+          card: cardsGained
+        },
+        cardLibrary,
+        playerId
+      )
       
       console.log(`[smugglers effect] found ${cardIds.length} costing up to 6 that were played`);
       

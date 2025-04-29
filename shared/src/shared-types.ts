@@ -388,7 +388,7 @@ export type EffectRestrictionSpec = {
   card?: {
     cardKeys?: CardKey | CardKey[];
     type?: CardType | CardType[];
-  };
+  } | CardId[];
   cost?: CostSpec;
 };
 
