@@ -48,5 +48,13 @@
     "type": [
       "TREASURE"
     ]
+  },
+  "philosophers-stone": {
+    "cardName": "Philosopher's Stone",
+    "cost": {
+      "treasure": 3,
+      "potion": 1
+    },
+    "type": ["TREASURE"]
   }
 }

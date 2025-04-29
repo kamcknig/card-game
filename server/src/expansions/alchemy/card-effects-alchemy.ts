@@ -307,6 +307,14 @@ const expansion: CardExpansionModuleNew = {
       })
     }
   },
+  'philosophers-stone': {
+    registerEffects: () => async (args) => {
+      const cardCount = args.match.playerDecks[args.playerId].length + args.match.playerDiscards[args.playerId].length;
+      const amountToGain = Math.floor(cardCount / 5);
+      console.log(`[philosophers-stone effect] card count ${cardCount}, gaining ${amountToGain} treasure`);
+      await args.runGameActionDelegate('gainTreasure', { count: amountToGain });
+    }
+  },
   'potion': {
     registerEffects: () => async (args) => {
       await args.runGameActionDelegate('gainPotion', { count: 1 });
