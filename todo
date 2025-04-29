@@ -13,6 +13,8 @@ when select card effect happens, the UI needs to remove the play all treasure ca
 
 when player disconnects in game, give option to kick, or continue playing
 
+validating the cost of something against andother is hardcoded to use potions even though potions might not be involved. probably need to add some dynamic way per module
+
 select card effect handler tries to find cards before prompting user and if none, then returns empty array. 
  - look into making user prompt effect handler do the same
 
