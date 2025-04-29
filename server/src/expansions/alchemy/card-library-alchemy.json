@@ -79,5 +79,12 @@
       "potion": 1
     },
     "type": ["ACTION"]
+  },
+  "vineyard": {
+    "cost": {
+      "treasure": 0,
+      "potion": 1
+    },
+    "type": ["VICTORY"]
   }
 }

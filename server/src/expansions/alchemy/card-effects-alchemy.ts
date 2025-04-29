@@ -507,6 +507,16 @@ const expansion: CardExpansionModuleNew = {
       });
     }
   },
+  'vineyard': {
+    registerScoringFunction: () => (args) => {
+      const ownedActionCards = args.cardLibrary
+        .getCardsByOwner(args.ownerId)
+        .filter(card => card.type.includes('ACTION'));
+      
+      const victoryPoints = Math.floor(ownedActionCards.length / 3);
+      return victoryPoints;
+    }
+  },
   'potion': {
     registerEffects: () => async (args) => {
       await args.runGameActionDelegate('gainPotion', { count: 1 });
