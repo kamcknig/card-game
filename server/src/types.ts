@@ -2,7 +2,9 @@ import { Socket } from 'socket.io';
 import {
   Card,
   CardId,
-  CardKey, CardNoId, ComputedMatchConfiguration,
+  CardKey,
+  CardNoId,
+  ComputedMatchConfiguration,
   EffectTarget,
   LocationSpec,
   Match,
@@ -165,10 +167,14 @@ export type GameActionArgsMap = {
 };
 
 export type GameActionControllerInterface = {
-  [K in keyof GameActionArgsMap]: (gameActionArgs: GameActionArgsMap[K], options?: GameActionOptions) => any;
+  [K in keyof GameActionController]: (gameActionArgs: GameActionController[K], context?: GameActionContext) => any;
 };
 
-export type GameActionOptions = { loggingContext: { source: CardId } };
+export type GameActionContext = {
+  loggingContext: {
+    source: CardId
+  };
+};
 
 export type ModifyActionCardArgs = {
   appliesTo: EffectTarget;
@@ -177,17 +183,11 @@ export type ModifyActionCardArgs = {
   amount: number;
 };
 
-export type GameActions = keyof GameActionArgsMap
-
-export type GameActionMethodMap = {
-  [K in GameActions]: (args: GameActionArgsMap[K]) => Promise<any>
-};
+export type GameActions = keyof GameActionController
 
 export type RunGameActionDelegate = <K extends GameActions>(
   action: K,
-  ...args: GameActionArgsMap[K] extends void
-    ? []
-    : [GameActionArgsMap[K], { loggingContext: { source: CardId } }] | [GameActionArgsMap[K]]
+  ...args: Parameters<GameActionController[K]> extends [] ? [] : Parameters<GameActionController[K]>
 ) => Promise<ReturnType<GameActionController[K]>>;
 
 

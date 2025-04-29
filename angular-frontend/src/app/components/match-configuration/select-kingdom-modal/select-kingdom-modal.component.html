@@ -1,10 +1,10 @@
 <div class="modal-container">
   <div class="card-content">
-    <div (click)="searchTerm.value = ''; onClose()" class="close-button">X</div>
+    <div (click)="searchTermInput.value = ''; onClose()" class="close-button">X</div>
     <div class="card-container">
       @for (card of searchResults$ | async; track card.cardKey) {
         <img
-          (click)="onKingdomSelected(card); searchTerm.value = ''"
+          (click)="onKingdomSelected(card); searchTermInput.value = ''"
           [ngSrc]="card.halfImagePath"
           height="{{SMALL_CARD_HEIGHT}}"
           width="{{SMALL_CARD_WIDTH}}"
@@ -14,8 +14,8 @@
   </div>
 
   <input
-    #searchTerm
+    #searchTermInput
     autofocus
-    (input)="updateSearchTerm(searchTerm.value)"
+    (input)="updateSearchTerm(searchTermInput.value)"
     type="text">
 </div>

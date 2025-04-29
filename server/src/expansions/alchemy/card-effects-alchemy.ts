@@ -96,10 +96,10 @@ const expansion: CardExpansionModuleNew = {
         }
         else {
           setAside.push(card);
-          await args.runGameActionDelegate('setAside', {
+          await args.runGameActionDelegate('moveCard', {
             cardId: card.id,
-            playerId: args.playerId,
-            sourceCardId: args.cardId,
+            toPlayerId: args.playerId,
+            to: { location: 'set-aside' }
           });
         }
       }
@@ -222,10 +222,10 @@ const expansion: CardExpansionModuleNew = {
         });
         
         console.log(`[golem effect] card is non-golem action, setting aside`);
-        await args.runGameActionDelegate('setAside', {
+        await args.runGameActionDelegate('moveCard', {
           cardId: card.id,
-          playerId: args.playerId,
-          sourceCardId: args.cardId
+          toPlayerId: args.playerId,
+          to: { location: 'set-aside' }
         });
         
         if (card.type.includes('ACTION') && card.cardKey !== 'golem') {
@@ -242,15 +242,37 @@ const expansion: CardExpansionModuleNew = {
         await args.runGameActionDelegate('discardCard', { cardId: card.id, playerId: args.playerId });
       }
       
+      const actions = actionCardsSetAside.map((card, idx) => ({
+        label: `Play ${card.cardName}`,
+        action: idx + 1,
+      }));
       console.log(`[golem effect] playing ${actionCardsSetAside.length} cards`);
-      for (const card of actionCardsSetAside) {
+      
+      const getAction = async () => {
+        if (actions.length === 1) {
+          return actions.shift()?.action;
+        }
+        
+        const result = await args.runGameActionDelegate('userPrompt', {
+          prompt: 'Choose to play',
+          playerId: args.playerId,
+          actionButtons: actions
+        }) as { action: number, cardIds: number[] };
+        const idx = actions.findIndex(action => action.action === result.action);
+        actions.splice(idx, 1);
+        return result.action;
+      }
+      
+      while (actions.length > 0) {
+        const action = await getAction();
+        const card = actionCardsSetAside[action! - 1];
         await args.runGameActionDelegate('playCard', {
           cardId: card.id,
           playerId: args.playerId,
           overrides: {
             actionCost: 0
           }
-        })
+        });
       }
     }
   },

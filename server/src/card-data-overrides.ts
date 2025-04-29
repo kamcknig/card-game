@@ -1,12 +1,16 @@
 import { Card, Match } from 'shared/shared-types.ts';
 import { CardLibrary } from './core/card-library.ts';
-import { CardOverrides, GameActionMethodMap, ModifyActionCardArgs } from './types.ts';
+import { CardOverrides, ModifyActionCardArgs } from './types.ts';
+import { GameActionController } from './core/effects/game-action-controller.ts';
 
 // todo should this be a class or at least an encapsulated object? if push an effect onto the stack
 // it can auto send the socket updates. right now anywhere the code adds one or uses
 // 'removeOverrideEffects' the consumer has to send them
 
-export const cardDataOverrides: { targets: number[], overrideEffect: Parameters<GameActionMethodMap['modifyCost']>[0] }[] = [];
+export const cardDataOverrides: {
+  targets: number[],
+  overrideEffect: Parameters<GameActionController['modifyCost']>[0]
+}[] = [];
 
 export const removeOverrideEffects = (expiresAt: ModifyActionCardArgs['expiresAt']) => {
   for (let i = cardDataOverrides.length - 1; i >= 0; i--) {
@@ -30,7 +34,8 @@ export const getCardOverrides = (_match: Match, cardLibrary: CardLibrary): CardO
       let effectedCards: Card[] = [];
       if (typeof effect.appliesToCard === 'function') {
         effectedCards = allCards.filter(effect.appliesToCard);
-      } else if (effect.appliesToCard === 'ALL') {
+      }
+      else if (effect.appliesToCard === 'ALL') {
         effectedCards = allCards;
       }
       

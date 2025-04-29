@@ -1,6 +1,7 @@
 import { CardKey, CardNoId, ComputedMatchConfiguration, MatchConfiguration } from 'shared/shared-types.ts';
 import { allCardLibrary, ExpansionData, expansionLibrary } from '@expansions/expansion-library.ts';
 import { MatchBaseConfiguration } from '../types.ts';
+import { addMatToMatchConfig } from '../utils/add-mat-to-match-config.ts';
 
 type MatchConfiguratorOptions = {
   keeperCards: CardKey[];
@@ -44,6 +45,7 @@ export class MatchConfigurator {
     
     this.selectKingdomSupply();
     this.selectBasicSupply();
+    addMatToMatchConfig('set-aside', this._config);
     await this.runExpansionConfigurations();
     return this._config;
   }

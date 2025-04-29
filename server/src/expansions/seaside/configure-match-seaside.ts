@@ -1,13 +1,6 @@
-import { CardKey, CardNoId, ComputedMatchConfiguration, Mats } from 'shared/shared-types.ts';
+import { CardKey, CardNoId, ComputedMatchConfiguration } from 'shared/shared-types.ts';
 import { CardExpansionConfigurator } from '../../types.ts';
-
-export const addMatToMatchConfig = (mat: string, config: ComputedMatchConfiguration) => {
-  for (const player of config.players) {
-    config.mats ??= {} as any;
-    config.mats[player.id] ??= {} as any;
-    config.mats[player.id][mat as Mats] = [];
-  }
-}
+import { addMatToMatchConfig } from '../../utils/add-mat-to-match-config.ts';
 
 const configurator: CardExpansionConfigurator = (args: { config: ComputedMatchConfiguration, cardLibrary: Record<CardKey, CardNoId> }) => {
   for (const kingdomCard of args.config.kingdomCards) {

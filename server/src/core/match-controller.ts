@@ -1,18 +1,15 @@
 import {
   Card,
-  CardId,
   CardKey,
   CardNoId,
   ComputedMatchConfiguration,
   Match,
   MatchConfiguration,
   MatchSummary,
-  Mats,
   Player,
   PlayerId,
 } from 'shared/shared-types.ts';
 import { MatchConfigurator } from './match-configurator.ts';
-import { expansionLibrary } from '@expansions/expansion-library.ts';
 import { getCurrentPlayer } from '../utils/get-current-player.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
@@ -25,14 +22,7 @@ import { cardEffectFunctionMapFactory } from './effects/card-effect-function-map
 import { EventEmitter } from '@denosaurs/event';
 import { LogManager } from './log-manager.ts';
 import { GameActionController } from './effects/game-action-controller.ts';
-import {
-  AppSocket,
-  CardEffectFunctionMap,
-  GameActionArgsMap,
-  GameActionOptions,
-  GameActions,
-  MatchBaseConfiguration,
-} from '../types.ts';
+import { AppSocket, CardEffectFunctionMap, GameActions, MatchBaseConfiguration, } from '../types.ts';
 import { createCard } from '../utils/create-card.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
@@ -53,22 +43,22 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   
   private _playerHands: Record<CardKey, number>[] = [
     {
-     gold: 3,
-     silver: 2,
-     potion: 2,
-     'golem': 3,
-     },
-     {
-     gold: 3,
-     silver: 2,
-     copper: 2,
-     'moat': 3,
-     },
-     {
-     gold: 4,
-     silver: 3,
-     copper: 3,
-     }
+      gold: 3,
+      silver: 2,
+      potion: 2,
+      'golem': 3,
+    },
+    {
+      gold: 3,
+      silver: 2,
+      copper: 2,
+      'moat': 3,
+    },
+    {
+      gold: 4,
+      silver: 3,
+      copper: 3,
+    }
   ];
   
   public async initialize(config: MatchConfiguration) {
@@ -128,9 +118,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   
   async runGameAction<K extends GameActions>(
     action: K,
-    ...args: GameActionArgsMap[K] extends void
-      ? []
-      : [GameActionArgsMap[K], GameActionOptions] | [GameActionArgsMap[K]]
+    ...args: Parameters<GameActionController[K]> extends [] ? [] : Parameters<GameActionController[K]>
   ): Promise<ReturnType<GameActionController[K]>> {
     this._matchSnapshot ??= this.getMatchSnapshot();
     

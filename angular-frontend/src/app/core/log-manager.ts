@@ -40,17 +40,17 @@ export const logManager = {
         break;
       }
       case 'gainBuy': {
-        const amount = `${logEntry.count > 0 ? '+' : ''}${logEntry.count} buy${logEntry.count > 1 ? 's' : ''}`;
+        const amount = `${logEntry.count} buy${logEntry.count > 1 ? 's' : ''}`;
         msg = selfId === playerId ? `%Y% gained ${amount}` : `%P${player?.id}% gained ${amount}`;
         break;
       }
       case 'gainTreasure': {
-        const amount = `${logEntry.count > 0 ? '+' : ''}$${logEntry.count}`;
+        const amount = `$${logEntry.count}`;
         msg = selfId === playerId ? `%Y% gained ${amount}` : `%P${player?.id}% gained ${amount}`;
         break;
       }
       case 'gainAction': {
-        const amount = `${logEntry.count > 0 ? '+' : ''}${logEntry.count} action${logEntry.count > 1 ? 's' : ''}`;
+        const amount = `${logEntry.count} action${logEntry.count > 1 ? 's' : ''}`;
         msg = selfId === playerId ? `%Y% gained ${amount}` : `%P${player?.id}% gained ${amount}`;
         break;
       }

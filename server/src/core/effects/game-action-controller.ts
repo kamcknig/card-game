@@ -15,7 +15,7 @@ import {
   AppSocket,
   CardEffectFunctionMap,
   GameActionControllerInterface,
-  GameActionOptions,
+  GameActionContext,
   GameActionOverrides,
   ModifyActionCardArgs,
   ReactionTrigger,
@@ -32,7 +32,7 @@ import { castArray, isNumber } from 'es-toolkit/compat';
 import { ReactionManager } from '../reactions/reaction-manager.ts';
 import { CardInteractivityController } from '../card-interactivity-controller.ts';
 
-export class GameActionController implements GameActionControllerInterface {
+export class GameActionController {
   constructor(
     private cardEffectFunctionMap: CardEffectFunctionMap,
     private match: Match,
@@ -63,14 +63,14 @@ export class GameActionController implements GameActionControllerInterface {
     }
   }
   
-  async gainPotion(args: { count: number }, context?: GameActionOptions) {
+  async gainPotion(args: { count: number }) {
     console.log(`[gainPotion action] gaining ${args.count} potions`);
     this.match.playerPotions += args.count;
     
     console.log(`[gainPotion action] setting player potions to ${this.match.playerPotions}`);
   }
   
-  async gainBuy(args: { count: number }, context?: GameActionOptions) {
+  async gainBuy(args: { count: number }, context?: GameActionContext) {
     console.log(`[gainBuy action] gaining ${args.count} buys`);
     this.match.playerBuys += args.count;
     
@@ -114,7 +114,7 @@ export class GameActionController implements GameActionControllerInterface {
     console.log(`[moveCard action] moved ${this.cardLibrary.getCard(args.cardId)} from ${oldSource.storeKey} to ${args.to.location}`);
   }
   
-  async gainAction(args: { count: number }, context?: GameActionOptions) {
+  async gainAction(args: { count: number }, context?: GameActionContext) {
     console.log(`[gainAction action] gaining ${args.count} actions`);
     
     this.match.playerActions += args.count;
@@ -122,14 +122,14 @@ export class GameActionController implements GameActionControllerInterface {
     this.logManager.addLogEntry({
       type: 'gainAction',
       playerId: getCurrentPlayer(this.match).id,
-      count: 1,
+      count: args.count,
       source: context?.loggingContext?.source,
     })
     
     console.log(`[gainAction action] setting player actions to ${args.count}`);
   }
   
-  async gainCard(args: { playerId: PlayerId, cardId: CardId, to: LocationSpec }, context?: GameActionOptions) {
+  async gainCard(args: { playerId: PlayerId, cardId: CardId, to: LocationSpec }, context?: GameActionContext) {
     await this.moveCard({
       cardId: args.cardId,
       to: args.to,
@@ -292,7 +292,7 @@ export class GameActionController implements GameActionControllerInterface {
     });
   }
   
-  async trashCard(args: { cardId: CardId, playerId: PlayerId }, context?: GameActionOptions) {
+  async trashCard(args: { cardId: CardId, playerId: PlayerId }, context?: GameActionContext) {
     await this.moveCard({
       cardId: args.cardId,
       to: { location: 'trash' }
@@ -343,7 +343,7 @@ export class GameActionController implements GameActionControllerInterface {
     cardId: CardId,
     playerId: PlayerId,
     moveToRevealed?: boolean
-  }, context?: GameActionOptions) {
+  }, context?: GameActionContext) {
     console.log(`[revealCard action] ${getPlayerById(this.match, args.playerId)} revealing ${this.cardLibrary.getCard(args.cardId)}`);
     
     if (args.moveToRevealed) {
@@ -400,7 +400,7 @@ export class GameActionController implements GameActionControllerInterface {
   }
   
   
-  async discardCard(args: { cardId: CardId, playerId: PlayerId }, context?: GameActionOptions) {
+  async discardCard(args: { cardId: CardId, playerId: PlayerId }, context?: GameActionContext) {
     console.log(`[discardCard action] discarding ${this.cardLibrary.getCard(args.cardId)} from ${getPlayerById(this.match, args.playerId)}`);
     
     await this.moveCard({
@@ -563,7 +563,7 @@ export class GameActionController implements GameActionControllerInterface {
     this.reactionManager.cleanUpTriggers()
   }
   
-  async gainTreasure(args: { count: number }, context?: GameActionOptions) {
+  async gainTreasure(args: { count: number }, context?: GameActionContext) {
     console.log(`[gainTreasure action] gaining ${args.count} treasure`);
     this.match.playerTreasure += args.count;
     
@@ -576,7 +576,7 @@ export class GameActionController implements GameActionControllerInterface {
   }
   
   // Single, focused implementation of drawCard
-  async drawCard(args: { playerId: PlayerId }, context?: GameActionOptions): Promise<CardId | null> {
+  async drawCard(args: { playerId: PlayerId }, context?: GameActionContext): Promise<CardId | null> {
     const { playerId } = args;
     
     const deck = this.match.playerDecks[playerId];
@@ -618,7 +618,7 @@ export class GameActionController implements GameActionControllerInterface {
     playerId: PlayerId,
     cardId: CardId,
     overrides?: GameActionOverrides
-  }, context?: GameActionOptions): Promise<boolean> {
+  }, context?: GameActionContext): Promise<boolean> {
     const { playerId, cardId } = args;
     
     await this.moveCard({
@@ -684,7 +684,7 @@ export class GameActionController implements GameActionControllerInterface {
   }
   
   // Helper method to shuffle a player's deck
-  async shuffleDeck(args: { playerId: PlayerId }, context?: GameActionOptions): Promise<void> {
+  async shuffleDeck(args: { playerId: PlayerId }, context?: GameActionContext): Promise<void> {
     const { playerId } = args;
     
     console.log(`[shuffleDeck action] shuffling deck`);

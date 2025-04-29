@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnDestroy, Output } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  Component, ElementRef,
+  EventEmitter,
+  Input,
+  OnDestroy,
+  Output,
+  ViewChild
+} from '@angular/core';
 import { combineLatestWith, debounceTime, filter, Subject, Subscription } from 'rxjs';
 import { SocketService } from '../../../core/socket-service/socket.service';
 import { NanostoresService } from '@nanostores/angular';
@@ -17,7 +26,7 @@ import { SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH } from '../../../core/app-contants'
   styleUrl: './select-kingdom-modal.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class SelectKingdomModalComponent implements OnDestroy {
+export class SelectKingdomModalComponent implements OnDestroy, AfterViewInit {
   protected readonly SMALL_CARD_HEIGHT = SMALL_CARD_HEIGHT;
   protected readonly SMALL_CARD_WIDTH = SMALL_CARD_WIDTH;
   private searchSub: Subscription;
@@ -26,6 +35,9 @@ export class SelectKingdomModalComponent implements OnDestroy {
 
   @Output() close: EventEmitter<void> = new EventEmitter();
   @Output() kingdomSelected: EventEmitter<CardNoId> = new EventEmitter();
+
+  @ViewChild('searchTermInput', { static: true }) searchTerm!: ElementRef<HTMLInputElement>;
+
   searchTerm$: Subject<string> = new Subject();
   searchResults$: Subject<CardNoId[]> = new Subject();
 
@@ -49,6 +61,10 @@ export class SelectKingdomModalComponent implements OnDestroy {
     ).subscribe(([searchTerm, selfId]) => {
       this._socketService.emit('searchCards', selfId!, searchTerm);
     });
+  }
+
+  ngAfterViewInit(): void {
+    setTimeout(() => this.searchTerm?.nativeElement.focus(), 0);
   }
 
   updateSearchTerm(term: string) {
