@@ -1,6 +1,6 @@
 import {
   CardId,
-  LocationSpec,
+  CardLocationSpec,
   Match,
   PlayerId,
   SelectActionCardArgs,
@@ -14,7 +14,6 @@ import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import {
   AppSocket,
   CardEffectFunctionMap,
-  GameActionControllerInterface,
   GameActionContext,
   GameActionOverrides,
   ModifyActionCardArgs,
@@ -84,7 +83,7 @@ export class GameActionController {
     console.log(`[gainBuy action] setting player guys to ${this.match.playerBuys}`);
   }
   
-  async moveCard(args: { toPlayerId?: PlayerId, cardId: CardId, to: LocationSpec }) {
+  async moveCard(args: { toPlayerId?: PlayerId, cardId: CardId, to: CardLocationSpec }) {
     const oldSource = findSourceByCardId(args.cardId, this.match, this.cardLibrary);
     args.to.location = castArray(args.to.location);
     const newSource = findSourceByLocationSpec({ spec: args.to, playerId: args.toPlayerId }, this.match);
@@ -112,6 +111,8 @@ export class GameActionController {
     }
     
     console.log(`[moveCard action] moved ${this.cardLibrary.getCard(args.cardId)} from ${oldSource.storeKey} to ${args.to.location}`);
+    
+    return oldSource.storeKey;
   }
   
   async gainAction(args: { count: number }, context?: GameActionContext) {
@@ -129,7 +130,7 @@ export class GameActionController {
     console.log(`[gainAction action] setting player actions to ${args.count}`);
   }
   
-  async gainCard(args: { playerId: PlayerId, cardId: CardId, to: LocationSpec }, context?: GameActionContext) {
+  async gainCard(args: { playerId: PlayerId, cardId: CardId, to: CardLocationSpec }, context?: GameActionContext) {
     await this.moveCard({
       cardId: args.cardId,
       to: args.to,
@@ -152,8 +153,7 @@ export class GameActionController {
       source: context?.loggingContext?.source,
     });
     
-    const trigger = new ReactionTrigger({
-      eventType: 'gainCard',
+    const trigger = new ReactionTrigger('gainCard', {
       cardId: args.cardId,
       playerId: args.playerId
     });
@@ -403,7 +403,7 @@ export class GameActionController {
   async discardCard(args: { cardId: CardId, playerId: PlayerId }, context?: GameActionContext) {
     console.log(`[discardCard action] discarding ${this.cardLibrary.getCard(args.cardId)} from ${getPlayerById(this.match, args.playerId)}`);
     
-    await this.moveCard({
+    const oldLocation = await this.moveCard({
       cardId: args.cardId,
       to: { location: 'playerDiscards' },
       toPlayerId: args.playerId
@@ -415,12 +415,20 @@ export class GameActionController {
       cardId: args.cardId,
       source: context?.loggingContext?.source,
     });
+    
+    const r = new ReactionTrigger('discardCard', {
+      previousLocation: oldLocation,
+      playerId: args.playerId,
+      cardId: args.cardId
+    });
+    
+    await this.reactionManager.runTrigger({ trigger: r });
   }
   
   async nextPhase() {
     const match = this.match;
     
-    const trigger = new ReactionTrigger({ eventType: 'endTurnPhase' });
+    const trigger = new ReactionTrigger('endTurnPhase');
     await this.reactionManager.runTrigger({ trigger });
     
     match.turnPhaseIndex = match.turnPhaseIndex + 1;
@@ -474,24 +482,23 @@ export class GameActionController {
           }
         }
         
-        const startTurnTrigger = new ReactionTrigger({
-          eventType: 'startTurn',
+        const startTurnTrigger = new ReactionTrigger('startTurn', {
           playerId: match.players[match.currentPlayerTurnIndex].id
         });
         await this.reactionManager.runTrigger({ trigger: startTurnTrigger });
         
-        const startPhaseTrigger = new ReactionTrigger({ eventType: 'startTurnPhase' });
+        const startPhaseTrigger = new ReactionTrigger('startTurnPhase');
         await this.reactionManager.runTrigger({ trigger: startPhaseTrigger });
         
         break;
       }
       case 'buy': {
-        const startPhaseTrigger = new ReactionTrigger({ eventType: 'startTurnPhase' });
+        const startPhaseTrigger = new ReactionTrigger('startTurnPhase');
         await this.reactionManager.runTrigger({ trigger: startPhaseTrigger });
         break;
       }
       case 'cleanup': {
-        const startPhaseTrigger = new ReactionTrigger({ eventType: 'startTurnPhase' });
+        const startPhaseTrigger = new ReactionTrigger('startTurnPhase');
         await this.reactionManager.runTrigger({ trigger: startPhaseTrigger });
         
         const cardsToDiscard = match.playArea.concat(match.activeDurationCards, match.playerHands[currentPlayer.id]);
@@ -554,9 +561,7 @@ export class GameActionController {
       socket?.emit('setCardDataOverrides', playerOverrides);
     }
     
-    const trigger = new ReactionTrigger({
-      eventType: 'endTurn'
-    });
+    const trigger = new ReactionTrigger('endTurn',);
     
     await this.reactionManager.runTrigger({ trigger });
     
@@ -652,8 +657,7 @@ export class GameActionController {
     this.reactionManager.registerLifecycleEvent('onCardPlayed', { playerId: args.playerId, cardId: args.cardId });
     
     // find any reactions for the cardPlayed event type
-    const trigger = new ReactionTrigger({
-      eventType: 'cardPlayed',
+    const trigger = new ReactionTrigger('cardPlayed', {
       playerId,
       cardId,
     });

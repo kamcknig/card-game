@@ -3,16 +3,14 @@ import {
   Card,
   CardId,
   CardKey,
+  CardLocation,
   CardNoId,
   ComputedMatchConfiguration,
   EffectTarget,
-  LocationSpec,
   Match,
   PlayerId,
-  SelectActionCardArgs,
   ServerEmitEvents,
   ServerListenEvents,
-  UserPromptActionArgs,
 } from 'shared/shared-types.ts';
 import { toNumber } from 'es-toolkit/compat';
 
@@ -95,81 +93,6 @@ export const MatchBaseConfiguration = {
   },
 } as const;
 
-type ReactionTriggerArgs =
-  | { eventType: 'endTurn' } // no playerId or cardId needed
-  | { eventType: 'startTurn'; playerId: number }
-  | { eventType: 'gainCard' | 'cardPlayed'; playerId: number; cardId: number }
-  | { eventType: 'endTurnPhase'; }
-  | { eventType: 'startTurnPhase' };
-
-
-export class ReactionTrigger {
-  eventType: TriggerEventType;
-  
-  // the card that triggered this
-  cardId?: number;
-  
-  // who triggered this?
-  playerId?: number;
-  
-  constructor(args: ReactionTriggerArgs) {
-    this.eventType = args.eventType;
-    if ('playerId' in args) this.playerId = args.playerId;
-    if ('cardId' in args) this.cardId = args.cardId;
-  }
-  
-  toString() {
-    return `[TRIGGER ${this.eventType} - player ${this.playerId} - card ${this.cardId} ]`;
-  }
-  
-  // @ts-ignore
-  [Symbol.for('Deno.customInspect')]() {
-    return this.toString();
-  }
-}
-
-export type TriggeredEffectContext = {
-  runGameActionDelegate: RunGameActionDelegate;
-  trigger: ReactionTrigger;
-  reaction: Reaction;
-  match: Match;
-  cardLibrary: CardLibrary;
-  isRootLog?: boolean;
-};
-
-export type TriggeredEffectConditionContext = {
-  match: Match;
-  cardLibrary: CardLibrary;
-  trigger: ReactionTrigger;
-  reaction: Reaction;
-};
-
-export type GameActionArgsMap = {
-  checkForRemainingPlayerActions: void;
-  buyCard: { playerId: PlayerId; cardId: CardId };
-  discardCard: { cardId: CardId; playerId: PlayerId };
-  drawCard: { playerId: PlayerId };
-  endTurn: void;
-  gainAction: { count: number };
-  gainPotion: { count: number };
-  gainBuy: { count: number; };
-  gainCard: { playerId: PlayerId; cardId: CardId; to: LocationSpec };
-  gainTreasure: { count: number };
-  modifyCost: ModifyActionCardArgs;
-  moveCard: { toPlayerId?: PlayerId; cardId: CardId; to: LocationSpec };
-  nextPhase: void;
-  playCard: { playerId: PlayerId; cardId: CardId, overrides?: GameActionOverrides };
-  revealCard: { cardId: CardId, playerId: PlayerId, moveToRevealed?: boolean },
-  selectCard: SelectActionCardArgs;
-  shuffleDeck: { playerId: PlayerId };
-  trashCard: { playerId: PlayerId; cardId: CardId };
-  userPrompt: UserPromptActionArgs;
-};
-
-export type GameActionControllerInterface = {
-  [K in keyof GameActionController]: (gameActionArgs: GameActionController[K], context?: GameActionContext) => any;
-};
-
 export type GameActionContext = {
   loggingContext: {
     source: CardId
@@ -208,9 +131,9 @@ export type CardEffectFunctionContext = {
   cardLibrary: CardLibrary;
 }
 
-export type CardTriggeredEffectFn = (context: TriggeredEffectContext) => Promise<any>;
+export type CardTriggeredEffectFn<T extends TriggerEventType> = (context: TriggeredEffectContext<T>) => Promise<any>;
 
-type CardTriggerEffectConditionFn = (context: TriggeredEffectConditionContext) => boolean;
+type CardTriggerEffectConditionFn<T extends TriggerEventType> = (context: TriggeredEffectConditionContext<T>) => boolean;
 
 export type CardEffectFunction = (context: CardEffectFunctionContext) => Promise<void>;
 
@@ -246,24 +169,62 @@ export type GameActionOverrides = {
   playCard?: boolean,
 };
 
-export type TriggerEventType =
-  | 'cardPlayed'
-  | 'startTurn'
-  | 'gainCard'
-  | 'endTurnPhase'
-  | 'startTurnPhase'
-  | 'endTurn';
+export class ReactionTrigger<T extends TriggerEventType = TriggerEventType> {
+  eventType: T;
+  
+  args: TriggerEventTypeContext[T];
+  
+  constructor(eventType: T, ...rest: TriggerEventTypeContext[T] extends void ? [] : [TriggerEventTypeContext[T]]) {
+    this.eventType = eventType;
+    this.args = (rest[0] ?? undefined) as TriggerEventTypeContext[T];
+  }
+  
+  toString() {
+    return `[TRIGGER ${this.eventType}]`;
+  }
+  
+  // @ts-ignore
+  [Symbol.for('Deno.customInspect')]() {
+    return this.toString();
+  }
+}
 
-export type ReactionRemoveAt = 'TURN_END' | 'PHASE_END';
+export type TriggeredEffectContext<T extends TriggerEventType> = {
+  runGameActionDelegate: RunGameActionDelegate;
+  trigger: ReactionTrigger<T>;
+  reaction: Reaction;
+  match: Match;
+  cardLibrary: CardLibrary;
+  isRootLog?: boolean;
+};
 
-export class Reaction {
+export type TriggeredEffectConditionContext<T extends TriggerEventType> = {
+  match: Match;
+  cardLibrary: CardLibrary;
+  trigger: ReactionTrigger<T>;
+  reaction: Reaction;
+};
+
+export type TriggerEventTypeContext = {
+  cardPlayed: { playerId: PlayerId; cardId: CardId };
+  startTurn: { playerId: PlayerId };
+  gainCard: { playerId: PlayerId; cardId: CardId };
+  endTurnPhase: void;
+  startTurnPhase: void;
+  endTurn: void;
+  discardCard: { previousLocation: CardLocation, playerId: PlayerId, cardId: CardId };
+}
+
+export type TriggerEventType = keyof TriggerEventTypeContext;
+
+export class Reaction<T extends TriggerEventType = TriggerEventType> {
   // a concatenation of the card key and card id with a '-'
   public id: string;
   
   // the player's ID who owns this reaction - the one that can decide to do it.
   public playerId: number;
   
-  public listeningFor: TriggerEventType;
+  public listeningFor: T;
   
   /**
    * Indicates the triggered effect only happens once for this particular instance of the reaction.
@@ -291,13 +252,13 @@ export class Reaction {
   // todo working on moat right now which has no condition other than it be an attack.
   // in the future we might need to define this condition method elsewhere such as
   // in the expansion's module? need to wait to see what kind of conditions there are i think
-  public condition?: CardTriggerEffectConditionFn
+  public condition?: CardTriggerEffectConditionFn<T>
   
   // todo defined in a map somewhere just like registered card effects. so maybe another export
   // from teh expansion module that defines what happens when you ccn react?
-  public triggeredEffectFn: CardTriggeredEffectFn;
+  public triggeredEffectFn: CardTriggeredEffectFn<T>;
   
-  constructor(arg: ReactionTemplate) {
+  constructor(arg: ReactionTemplate<T>) {
     this.id = arg.id;
     this.playerId = arg.playerId;
     this.listeningFor = arg.listeningFor;
@@ -342,7 +303,7 @@ export class Reaction {
   }
 }
 
-export type ReactionTemplate = Omit<Reaction, 'getSourceId' | 'getSourceKey' | 'getBaseId'>;
+export type ReactionTemplate<T extends TriggerEventType = TriggerEventType> = Omit<Reaction<T>, 'getSourceId' | 'getSourceKey' | 'getBaseId'>;
 
 type LifecycleCallbackContext = {
   reactionManager: ReactionManager;

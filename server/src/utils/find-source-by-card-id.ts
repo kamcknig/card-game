@@ -9,7 +9,7 @@ export const findSourceByCardId = (
   cardLibrary: CardLibrary,
 ) => {
   let sourceStore: CardId[] | undefined = undefined;
-  let storeKey: CardLocation | undefined;
+  let storeKey: CardLocation = 'supply';
   
   if (match.basicSupply.includes(cardId)) {
     sourceStore = match.basicSupply;

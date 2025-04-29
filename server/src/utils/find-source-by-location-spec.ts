@@ -1,7 +1,7 @@
-import { isLocationMat, isLocationZone, LocationSpec, Match } from 'shared/shared-types.ts';
+import { isLocationMat, isLocationZone, CardLocationSpec, Match } from 'shared/shared-types.ts';
 
 export function findSourceByLocationSpec(
-  spec: { spec: LocationSpec; playerId?: number },
+  spec: { spec: CardLocationSpec; playerId?: number },
   match: Match,
 ) {
   if (spec.spec.location.length > 1) {

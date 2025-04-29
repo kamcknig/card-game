@@ -1,5 +1,12 @@
 import { CardId, Match, PlayerId } from 'shared/shared-types.ts';
-import { LifecycleEvent, Reaction, ReactionTemplate, ReactionTrigger, RunGameActionDelegate } from '../../types.ts';
+import {
+  LifecycleEvent,
+  Reaction,
+  ReactionTemplate,
+  ReactionTrigger,
+  RunGameActionDelegate,
+  TriggerEventType
+} from '../../types.ts';
 import { CardLibrary } from '../card-library.ts';
 import { getOrderStartingFrom } from '../../utils/get-order-starting-from.ts';
 import { groupReactionsByCardKey } from './group-reactions-by-card-key.ts';
@@ -33,7 +40,8 @@ export class ReactionManager {
         return reaction.condition({
           match: this._match,
           cardLibrary:
-          this._cardLibrary, trigger,
+          this._cardLibrary,
+          trigger,
           reaction
         });
       }
@@ -58,9 +66,9 @@ export class ReactionManager {
     }
   }
   
-  registerReactionTemplate(reactionTemplate: ReactionTemplate) {
-    console.log(`[REACTION MANAGER] registering trigger template ID ${reactionTemplate.id}, for player ${reactionTemplate.playerId}`,);
-    this._reactions.push(new Reaction(reactionTemplate));
+  registerReactionTemplate<T extends TriggerEventType>(reactionTemplate: ReactionTemplate<T>) {
+  console.log(`[REACTION MANAGER] registering trigger template ID ${reactionTemplate.id}, for player ${reactionTemplate.playerId}`,);
+    this._reactions.push(new Reaction(reactionTemplate) as any);
   }
   
   registerLifecycleEvent(trigger: LifecycleEvent, context: { playerId?: PlayerId, cardId: CardId }) {

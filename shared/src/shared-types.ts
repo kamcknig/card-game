@@ -195,7 +195,7 @@ export type CardLocation =
   | Zones
   | Mats
 
-export type LocationSpec = {
+export type CardLocationSpec = {
   location: CardLocation | CardLocation[],
   index?: number
 };
@@ -379,7 +379,7 @@ export class Card {
 const EffectTargetValues = ['ANY', 'ALL_OTHER', 'ALL'] as const;
 export type EffectTarget = typeof EffectTargetValues[number] | string;
 export type EffectRestrictionSpec = {
-  from?: LocationSpec;
+  from?: CardLocationSpec;
   card?: {
     cardKeys?: CardKey | CardKey[];
     type?: CardType | CardType[];

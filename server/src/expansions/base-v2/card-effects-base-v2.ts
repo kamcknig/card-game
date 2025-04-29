@@ -621,7 +621,7 @@ const expansionModule: CardExpansionModuleNew = {
           allowMultipleInstances: true,
           listeningFor: 'cardPlayed',
           condition: ({ cardLibrary, trigger: silverTrigger, match }) => {
-            const silverCard = cardLibrary.getCard(silverTrigger.cardId!);
+            const silverCard = cardLibrary.getCard(silverTrigger.args.cardId!);
             if (silverCard.cardKey !== 'silver') return false;
             
             const playedCardInfo = match.stats.playedCards;
@@ -629,7 +629,7 @@ const expansionModule: CardExpansionModuleNew = {
               .filter((cardId) =>
                 cardLibrary.getCard(+cardId).cardKey === 'silver'
                 && playedCardInfo[+cardId].turnNumber === match.turnNumber
-                && playedCardInfo[+cardId].playerId === silverTrigger.playerId)
+                && playedCardInfo[+cardId].playerId === silverTrigger.args.playerId)
             
             return playedSilvers.length === 1;
           },
@@ -799,9 +799,9 @@ const expansionModule: CardExpansionModuleNew = {
           listeningFor: 'cardPlayed',
           allowMultipleInstances: false,
           condition: ({ cardLibrary, trigger }) => {
-            return cardLibrary.getCard(trigger.cardId!).type.includes(
+            return cardLibrary.getCard(trigger.args.cardId!).type.includes(
               'ATTACK',
-            ) && trigger.playerId !== playerId;
+            ) && trigger.args.playerId !== playerId;
           },
           triggeredEffectFn: async function ({ runGameActionDelegate, reaction }) {
             const sourceId = reaction.getSourceId();

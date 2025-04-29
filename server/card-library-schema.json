@@ -2,6 +2,9 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "description": "Schema for validating Dominion-style cards",
   "type": "object",
+  "additionalProperties": {
+    "$ref": "#/$defs/Card"
+  },
   "$defs": {
     "CardType": {
       "type": "string",
@@ -51,100 +54,91 @@
         "WIZARD",
         "ZOMBIE"
       ]
-    }
-  },
-  "additionalProperties": {
-    "type": "object",
-    "properties": {
-      "victoryPoints": {
-        "type": "integer",
-        "description": "Number of 'static' victory points the card is worth."
-      },
-      "cost": {
-        "type": "object",
-        "properties": {
-          "treasure": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "potion": {
-            "type": "integer",
-            "minimum": 1
-          }
-        },
-        "required": [
-          "treasure"
-        ]
-      },
-      "mat": {
-        "type": "string",
-        "description": "Indicates the card requires a mat to be used."
-      },
-      "isBasic": {
-        "type": "boolean",
-        "description": "Indicates the card is a basic supply card (not a kingdom card)"
-      },
-      "cardName": {
-        "type": "string",
-        "description": "The human-readable card name."
-      },
-      "type": {
-        "type": "array",
-        "items": {
-          "$ref": "#/$defs/CardType"
-        },
-        "uniqueItems": true,
-        "description": "Defines the type of the card (TREASURE, VICTORY, ACTION, etc.)."
-      },
-      "targetScheme": {
-        "type": "string",
-        "enum": [
-          "ALL_OTHER"
-        ]
-      },
-      "abilityText": {
-        "type": "string",
-        "description": "The text to display on the card"
-      }
     },
-    "required": [
-      "cost",
-      "type"
-    ],
-    "additionalProperties": false,
-    "allOf": [
-      {
-        "if": {
-          "properties": {
-            "type": {
-              "contains": {
-                "const": "ATTACK"
-              }
-            }
-          }
+    "Card": {
+      "type": "object",
+      "properties": {
+        "victoryPoints": {
+          "type": "integer",
+          "description": "Number of 'static' victory points the card is worth."
         },
-        "then": {
-          "required": [
-            "targetScheme"
-          ]
+        "cost": {
+          "type": "object",
+          "properties": {
+            "treasure": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "potion": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": ["treasure"],
+          "additionalProperties": false
+        },
+        "mat": {
+          "type": "string",
+          "description": "Indicates the card requires a mat to be used."
+        },
+        "isBasic": {
+          "type": "boolean",
+          "description": "Indicates the card is a basic supply card (not a kingdom card)."
+        },
+        "cardName": {
+          "type": "string",
+          "description": "The human-readable card name."
+        },
+        "type": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CardType"
+          },
+          "uniqueItems": true,
+          "description": "Defines the type(s) of the card (e.g., TREASURE, VICTORY, ACTION)."
+        },
+        "targetScheme": {
+          "type": "string",
+          "enum": ["ALL_OTHER"],
+          "description": "Required for ATTACK cards to specify the target pattern."
+        },
+        "abilityText": {
+          "type": "string",
+          "description": "The text to display on the card."
         }
       },
-      {
-        "if": {
-          "properties": {
-            "type": {
-              "contains": {
-                "const": "VICTORY"
+      "required": ["cost", "type"],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "contains": {
+                  "const": "ATTACK"
+                }
               }
             }
+          },
+          "then": {
+            "required": ["targetScheme"]
           }
         },
-        "then": {
-          "required": [
-            "victoryPoints"
-          ]
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "contains": {
+                  "const": "VICTORY"
+                }
+              }
+            }
+          },
+          "then": {
+            "required": ["victoryPoints"]
+          }
         }
-      }
-    ]
+      ]
+    }
   }
 }

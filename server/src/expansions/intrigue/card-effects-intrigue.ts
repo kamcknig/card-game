@@ -276,9 +276,9 @@ const expansionModule: CardExpansionModuleNew = {
           playerId,
           listeningFor: 'cardPlayed',
           condition: ({ match, trigger, cardLibrary }) => {
-            return cardLibrary.getCard(trigger.cardId!).type.includes('ATTACK') &&
+            return cardLibrary.getCard(trigger.args.cardId!).type.includes('ATTACK') &&
               match.playerHands[playerId].length >= 5 &&
-              trigger.playerId !== playerId
+              trigger.args.playerId !== playerId
           },
           triggeredEffectFn: async function ({ reaction, cardLibrary }) {
             const sourceId = reaction.getSourceId();

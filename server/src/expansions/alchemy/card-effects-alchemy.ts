@@ -6,6 +6,7 @@ import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { findCards } from '../../utils/find-cards.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
+import { isCardInPlay, isLocationInPlay } from '../../utils/is-in-play.ts';
 
 const expansion: CardExpansionModuleNew = {
   'alchemist': {
@@ -274,6 +275,36 @@ const expansion: CardExpansionModuleNew = {
           }
         });
       }
+    }
+  },
+  'herbalist': {
+    registerEffects: () => async (args) => {
+      console.log(`[herbalist effect] gaining 1 buy and 1 treasure`);
+      await args.runGameActionDelegate('gainBuy', { count: 1 });
+      await args.runGameActionDelegate('gainTreasure', { count: 1 });
+      
+      args.reactionManager.registerReactionTemplate({
+        id: `herbalist:${args.cardId}:discardCard`,
+        listeningFor: 'discardCard',
+        once: true,
+        allowMultipleInstances: true,
+        compulsory: false,
+        playerId: args.playerId,
+        condition: (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId !== args.playerId) return false;
+          if (!isLocationInPlay(conditionArgs.trigger.args.previousLocation)) return false;
+          return conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId).type.includes('TREASURE');
+        },
+        triggeredEffectFn: async (triggeredArgs) => {
+          const card = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
+          console.log(`[herbalist triggered effect] moving ${card} to top of deck`);
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            cardId: triggeredArgs.trigger.args.cardId,
+            toPlayerId: args.playerId,
+            to: { location: 'playerDecks' }
+          });
+        }
+      })
     }
   },
   'potion': {

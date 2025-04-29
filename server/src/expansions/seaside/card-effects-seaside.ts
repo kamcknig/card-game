@@ -25,7 +25,7 @@ const expansion: CardExpansionModuleNew = {
           once: true,
           condition: (args) => {
             const { trigger } = args;
-            return trigger.playerId === playerId;
+            return trigger.args.playerId === playerId;
           },
           triggeredEffectFn: async ({ runGameActionDelegate }) => {
             console.log(`[SEASIDE TRIGGERED EFFECT] gaining 1 treasure...`);
@@ -86,7 +86,7 @@ const expansion: CardExpansionModuleNew = {
         playerId,
         id: `blockade:${cardId}:startTurn`,
         once: true,
-        condition: ({ trigger }) => trigger.playerId === playerId,
+        condition: ({ trigger }) => trigger.args.playerId === playerId,
         listeningFor: 'startTurn',
         compulsory: true,
         triggeredEffectFn: async () => {
@@ -107,11 +107,11 @@ const expansion: CardExpansionModuleNew = {
         playerId,
         id: `blockade:${cardId}:gainCard`,
         condition: (args) => {
-          if (getCurrentPlayer(match).id !== args.trigger.playerId) {
+          if (getCurrentPlayer(match).id !== args.trigger.args.playerId) {
             return false;
           }
           
-          return args.trigger.cardId !== undefined && cardLibrary.getCard(args.trigger.cardId).cardKey == cardGained.cardKey;
+          return args.trigger.args.cardId !== undefined && cardLibrary.getCard(args.trigger.args.cardId).cardKey == cardGained.cardKey;
         },
         compulsory: true,
         listeningFor: 'gainCard',
@@ -132,7 +132,7 @@ const expansion: CardExpansionModuleNew = {
           
           console.log(`[BLOCKADE TRIGGERED EFFECT] gaining curse card to player's discard...`);
           await runGameActionDelegate('gainCard', {
-            playerId: args.trigger.playerId!,
+            playerId: args.trigger.args.playerId!,
             cardId: curseCardIds[0],
             to: { location: 'playerDiscards' },
           }, { loggingContext: { source: cardId } });
@@ -154,7 +154,7 @@ const expansion: CardExpansionModuleNew = {
         compulsory: true,
         once: true,
         listeningFor: 'startTurn',
-        condition: ({ trigger }) => trigger.playerId === playerId,
+        condition: ({ trigger }) => trigger.args.playerId === playerId,
         triggeredEffectFn: async () => {
           console.log(`[CARAVAN TRIGGERED EFFECT] drawing a card...`);
           await runGameActionDelegate('drawCard', { playerId }, { loggingContext: { source: cardId } });
@@ -180,7 +180,7 @@ const expansion: CardExpansionModuleNew = {
         compulsory: true,
         once: true,
         listeningFor: 'startTurn',
-        condition: ({ trigger }) => trigger.playerId === playerId,
+        condition: ({ trigger }) => trigger.args.playerId === playerId,
         triggeredEffectFn: async () => {
           console.log(`[CORSAIR TRIGGERED EFFECT] drawing card...`);
           await runGameActionDelegate('drawCard', { playerId }, { loggingContext: { source: cardId } });
@@ -195,14 +195,14 @@ const expansion: CardExpansionModuleNew = {
         listeningFor: 'cardPlayed',
         compulsory: true,
         condition: ({ match, trigger, cardLibrary }) => {
-          if (!trigger.cardId || trigger.playerId === playerId) return false;
+          if (!trigger.args.cardId || trigger.args.playerId === playerId) return false;
           
-          if (reactionContext[trigger.playerId!]?.result === 'immunity') {
-            console.log(`[corsair triggered effect] ${getPlayerById(match, trigger.playerId!)} is immune`);
+          if (reactionContext[trigger.args.playerId!]?.result === 'immunity') {
+            console.log(`[corsair triggered effect] ${getPlayerById(match, trigger.args.playerId!)} is immune`);
             return false;
           }
           
-          const card = cardLibrary.getCard(trigger.cardId);
+          const card = cardLibrary.getCard(trigger.args.cardId);
           
           if (!['silver', 'gold'].includes(card.cardKey)) return false;
           
@@ -210,7 +210,7 @@ const expansion: CardExpansionModuleNew = {
             .filter(cardId => {
               return ['silver', 'gold'].includes(cardLibrary.getCard(+cardId).cardKey) &&
                 match.stats.playedCards[+cardId].turnNumber === match.turnNumber &&
-                match.stats.playedCards[+cardId].playerId === trigger.playerId
+                match.stats.playedCards[+cardId].playerId === trigger.args.playerId
             });
           
           return playedSilverCards.length === 1;
@@ -220,8 +220,8 @@ const expansion: CardExpansionModuleNew = {
           await runGameActionDelegate(
             'trashCard',
             {
-              playerId: trigger.playerId!,
-              cardId: trigger.cardId!,
+              playerId: trigger.args.playerId!,
+              cardId: trigger.args.cardId!,
             },
             {
               loggingContext: {
@@ -281,7 +281,7 @@ const expansion: CardExpansionModuleNew = {
         playerId,
         allowMultipleInstances: true,
         listeningFor: 'startTurn',
-        condition: ({ trigger }) => trigger.playerId === playerId,
+        condition: ({ trigger }) => trigger.args.playerId === playerId,
         triggeredEffectFn: async () => {
           console.log(`[fishing village triggered effect] gaining 1 action...`);
           await runGameActionDelegate('gainAction', { count: 1 }, { loggingContext: { source: cardId } });
@@ -343,7 +343,7 @@ const expansion: CardExpansionModuleNew = {
         compulsory: true,
         once: true,
         playerId,
-        condition: ({ trigger }) => trigger.playerId === playerId,
+        condition: ({ trigger }) => trigger.args.playerId === playerId,
         triggeredEffectFn: async () => {
           console.log(`[haven triggered effect] moving selected card to hand...`);
           
@@ -407,8 +407,8 @@ const expansion: CardExpansionModuleNew = {
           playerId: args.playerId,
           listeningFor: 'cardPlayed',
           condition: ({ trigger, cardLibrary }) => {
-            const playedCard = cardLibrary.getCard(trigger.cardId!);
-            return trigger.cardId !== args.cardId && trigger.playerId !== args.playerId && playedCard.type.includes('ATTACK');
+            const playedCard = cardLibrary.getCard(trigger.args.cardId!);
+            return trigger.args.cardId !== args.cardId && trigger.args.playerId !== args.playerId && playedCard.type.includes('ATTACK');
           },
           once: false,
           allowMultipleInstances: false,
@@ -422,7 +422,7 @@ const expansion: CardExpansionModuleNew = {
           id: `lighthouse:${args.cardId}:startTurn`,
           playerId: args.playerId,
           listeningFor: 'startTurn',
-          condition: ({ trigger }) => trigger.playerId === args.playerId,
+          condition: ({ trigger }) => trigger.args.playerId === args.playerId,
           once: true,
           allowMultipleInstances: true,
           compulsory: true,
@@ -530,7 +530,7 @@ const expansion: CardExpansionModuleNew = {
         allowMultipleInstances: true,
         once: true,
         listeningFor: 'startTurn',
-        condition: ({ trigger }) => trigger.playerId === playerId,
+        condition: ({ trigger }) => trigger.args.playerId === playerId,
         triggeredEffectFn: async () => {
           console.log(`[merchant ship triggered effect] gaining 2 treasure...`);
           await runGameActionDelegate('gainTreasure', { count: 2 }, { loggingContext: { source: cardId } });
@@ -547,7 +547,7 @@ const expansion: CardExpansionModuleNew = {
         once: true,
         allowMultipleInstances: true,
         listeningFor: 'startTurn',
-        condition: ({ trigger }) => trigger.playerId === playerId,
+        condition: ({ trigger }) => trigger.args.playerId === playerId,
         triggeredEffectFn: async () => {
           console.log(`[monkey triggered effect] drawing card at start of turn...`);
           await runGameActionDelegate('drawCard', { playerId }, { loggingContext: { source: cardId } });
@@ -574,7 +574,7 @@ const expansion: CardExpansionModuleNew = {
           console.log(`[monkey triggered effect] drawing card, because player to the right gained a card...`);
           await runGameActionDelegate('drawCard', { playerId }, { loggingContext: { source: cardId } });
         },
-        condition: ({ trigger }) => trigger.playerId === playerToRightId
+        condition: ({ trigger }) => trigger.args.playerId === playerToRightId
       });
     }
   },
@@ -588,7 +588,7 @@ const expansion: CardExpansionModuleNew = {
           allowMultipleInstances: true,
           once: true,
           listeningFor: 'gainCard',
-          condition: ({ cardLibrary, trigger }) => cardLibrary.getCard(trigger.cardId!).type.includes('TREASURE'),
+          condition: ({ cardLibrary, trigger }) => cardLibrary.getCard(trigger.args.cardId!).type.includes('TREASURE'),
           triggeredEffectFn: async ({ runGameActionDelegate }) => {
             await runGameActionDelegate('playCard', {
               playerId,
@@ -618,7 +618,7 @@ const expansion: CardExpansionModuleNew = {
         condition: ({
           trigger,
           reaction
-        }) => trigger.playerId === playerId && reaction.id === id && match.turnNumber !== turnPlayed,
+        }) => trigger.args.playerId === playerId && reaction.id === id && match.turnNumber !== turnPlayed,
         triggeredEffectFn: async () => {
           console.log(`[pirate triggered effect] prompting user to select treasure costing up to 6...`);
           const cardIds = (await runGameActionDelegate('selectCard', {
@@ -718,23 +718,23 @@ const expansion: CardExpansionModuleNew = {
           compulsory: false,
           allowMultipleInstances: true,
           condition: (conditionArgs) => {
-            const cardGained = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.cardId!);
+            const cardGained = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId!);
             
             if (!cardGained.type.includes('DURATION')) {
               return false;
             }
             
-            if (conditionArgs.trigger.playerId !== args.playerId) {
+            if (conditionArgs.trigger.args.playerId !== args.playerId) {
               return false;
             }
             
-            return conditionArgs.match.stats.playedCards[conditionArgs.trigger.cardId!] === undefined;
+            return conditionArgs.match.stats.playedCards[conditionArgs.trigger.args.cardId!] === undefined;
           },
           triggeredEffectFn: async (triggeredArgs) => {
-            console.log(`[sailor triggered effect] playing ${triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.cardId!)}`);
+            console.log(`[sailor triggered effect] playing ${triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId!)}`);
             await triggeredArgs.runGameActionDelegate('playCard', {
               playerId: args.playerId,
-              cardId: triggeredArgs.trigger.cardId!,
+              cardId: triggeredArgs.trigger.args.cardId!,
               overrides: { actionCost: 0 }
             }, { loggingContext: { source: args.cardId } });
           }
@@ -748,7 +748,7 @@ const expansion: CardExpansionModuleNew = {
           once: true,
           allowMultipleInstances: true,
           condition: ({ trigger, match }) =>
-            trigger.playerId === args.playerId && match.stats.playedCards[args.cardId].turnNumber !== match.turnNumber,
+            trigger.args.playerId === args.playerId && match.stats.playedCards[args.cardId].turnNumber !== match.turnNumber,
           triggeredEffectFn: async () => {
             console.log(`[sailor triggered effect] gaining 2 treasure...`);
             await args.runGameActionDelegate('gainTreasure', { count: 2 }, { loggingContext: { source: args.cardId } });
@@ -867,7 +867,7 @@ const expansion: CardExpansionModuleNew = {
           allowMultipleInstances: true,
           listeningFor: 'startTurn',
           condition: (conditionArgs) => {
-            return conditionArgs.trigger.playerId === args.playerId
+            return conditionArgs.trigger.args.playerId === args.playerId
           },
           triggeredEffectFn: async (triggerArgs) => {
             console.log(`[sea-witch triggered effect] drawing cards...`)
@@ -1010,7 +1010,7 @@ const expansion: CardExpansionModuleNew = {
         compulsory: true,
         allowMultipleInstances: true,
         condition: (conditionArgs) => {
-          return conditionArgs.trigger.playerId === args.playerId && args.match.stats.playedCards[args.cardId].turnNumber < args.match.turnNumber
+          return conditionArgs.trigger.args.playerId === args.playerId && args.match.stats.playedCards[args.cardId].turnNumber < args.match.turnNumber
         },
         triggeredEffectFn: async (triggerArgs) => {
           console.warn(`[tactician triggered effect] drawing 5 cards`);
@@ -1049,7 +1049,7 @@ const expansion: CardExpansionModuleNew = {
         compulsory: true,
         allowMultipleInstances: true,
         condition: (conditionArgs) =>
-          conditionArgs.trigger.playerId === args.playerId && args.match.stats.playedCards[args.cardId].turnNumber < args.match.turnNumber,
+          conditionArgs.trigger.args.playerId === args.playerId && args.match.stats.playedCards[args.cardId].turnNumber < args.match.turnNumber,
         triggeredEffectFn: async (triggerArgs) => {
           console.log(`[tide pools triggered effect] selecting two cards to discard`);
           const selectedCardIds = await triggerArgs.runGameActionDelegate('selectCard', {
@@ -1188,7 +1188,7 @@ const expansion: CardExpansionModuleNew = {
           compulsory: true,
           allowMultipleInstances: true,
           condition: (conditionArgs) => {
-            return conditionArgs.trigger.playerId === args.playerId &&
+            return conditionArgs.trigger.args.playerId === args.playerId &&
               conditionArgs.match.stats.playedCards[args.cardId].turnNumber < conditionArgs.match.turnNumber
           },
           triggeredEffectFn: async (triggerArgs) => {

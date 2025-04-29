@@ -24,12 +24,19 @@
       "treasure": 3,
       "potion": 1
     },
-    "type": ["ACTION", "ATTACK"]
+    "type": ["ACTION", "ATTACK"],
+    "targetScheme": "ALL_OTHER"
   },
   "golem": {
     "cost": {
       "treasure": 4,
       "potion": 1
+    },
+    "type": ["ACTION"]
+  },
+  "herbalist": {
+    "cost": {
+      "treasure": 2
     },
     "type": ["ACTION"]
   },
