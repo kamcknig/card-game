@@ -122,7 +122,7 @@ export type ExpansionListElement = {
 };
 
 export type ServerEmitEvents = {
-  addLogEntry: (logEntry: LogEntry) => void;
+  addLogEntry: (logEntry: LogEntry[]) => void;
   cardEffectsComplete: (playerId: PlayerId, cardId?: CardId) => void;
   cardTappedComplete: (playerId: PlayerId, cardId: CardId) => void;
   doneWaitingForPlayer: (playerId?: PlayerId) => void;

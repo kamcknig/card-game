@@ -24,8 +24,16 @@ export class LogManager {
     this.enter();
   }
   
+  private _queue: LogEntry[] = [];
+  
   private sendLogs(entry: LogEntry) {
-    this._socketMap.forEach((s) => s.emit('addLogEntry', { ...entry, depth: this._depth } as LogEntry));
+    this._queue.push(entry);
+  }
+  
+  public flushQueue() {
+    if (!this._queue.length) return;
+    this._socketMap.forEach((s) => s.emit('addLogEntry', [...this._queue]));
+    this._queue = [];
   }
   
   public startChain() {

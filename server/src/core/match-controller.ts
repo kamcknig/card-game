@@ -124,6 +124,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     if (action === 'selectCard' || action === 'userPrompt') {
       this.broadcastPatch(this._matchSnapshot);
+      this._logManager?.flushQueue();
       this._matchSnapshot = this.getMatchSnapshot();
     }
     
@@ -134,6 +135,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this._interactivityController?.checkCardInteractivity();
     
     this.broadcastPatch({ ...this._matchSnapshot });
+    this._logManager?.flushQueue();
     
     this._matchSnapshot = null;
     

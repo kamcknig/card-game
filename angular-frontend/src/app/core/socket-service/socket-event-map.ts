@@ -21,8 +21,10 @@ export type SocketEventMap = Partial<{ [p in ClientListenEventNames]: ClientList
 export const socketToGameEventMap = (): SocketEventMap => {
   const map = {} as SocketEventMap;
 
-  map['addLogEntry'] = (logEntry: LogEntry) => {
-    logManager.addLogEntry(logEntry);
+  map['addLogEntry'] = (logEntries: LogEntry[]) => {
+    for (const logEntry of logEntries) {
+      logManager.addLogEntry(logEntry);
+    }
   };
 
   map['matchConfigurationUpdated'] = config => {
