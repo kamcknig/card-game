@@ -18,3 +18,4 @@ select card effect handler tries to find cards before prompting user and if none
 
 SEASIDE expansion - i haven't built outpost - taking an extra turn. the rules are so incredibly complicated it's jus tnot worth it right now.
 
+you changed setAside game action to move cards to that zone. cards from alchemy use set aside when the is the revealed zone as wwell

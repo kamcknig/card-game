@@ -77,25 +77,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       { keeperCards: [] }
     ).createConfiguration();
     
-    const mats =
-      Object.values(expansionLibrary)
-        .reduce((prev, nextExpansion) => {
-          if (!nextExpansion.mats?.length) {
-            return prev;
-          }
-          
-          prev = prev.concat(nextExpansion.mats);
-          return prev;
-        }, ['set-aside'] as Mats[]);
-    
     this._match = {
       activeDurationCards: [],
       scores: [],
       trash: [],
-      players: config.players,
+      players: this._matchConfiguration.players,
       basicSupply: this.createBaseSupply(this._matchConfiguration),
       kingdomSupply: this.createKingdom(this._matchConfiguration),
-      ...this.createPlayerDecks(config),
+      ...this.createPlayerDecks(this._matchConfiguration),
       config: this._matchConfiguration,
       turnNumber: 0,
       roundNumber: 0,
@@ -108,13 +97,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       selectableCards: {},
       setAside: [],
       playArea: [],
-      mats: config.players.reduce((acc, nextPlayer) => {
-        acc[nextPlayer.id] = {} as Record<Mats, CardId[]>;
-        for (const mat of mats) {
-          acc[nextPlayer.id][mat] = [];
-        }
-        return acc;
-      }, {} as Match['mats']),
+      mats: { ...this._matchConfiguration.mats },
       zones: {
         'revealed': [],
         'look-at': [],

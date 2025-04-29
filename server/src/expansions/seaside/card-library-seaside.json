@@ -55,7 +55,7 @@
     "cost": {
       "treasure": 4
     },
-    "mat": "island-village",
+    "mat": "island",
     "type": ["ACTION", "VICTORY"],
     "victoryPoints": 2
   },

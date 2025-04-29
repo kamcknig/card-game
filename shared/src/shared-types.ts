@@ -65,6 +65,7 @@ export type ComputedMatchConfiguration = MatchConfiguration & {
   basicCardCount: Record<CardKey, number>;
   kingdomCardCount: Record<CardKey, number>;
   startingHand: Record<CardKey, number>;
+  mats: PlayerMatMap;
 }
 
 type CardStats = {
@@ -114,7 +115,7 @@ export type Match = {
   trash: CardId[];
   turnNumber: number;
   turnPhaseIndex: number;
-  mats: Record<PlayerId, Record<Mats, CardId[]>>;
+  mats: PlayerMatMap;
   zones: Record<Zones, CardId[]>;
   stats: MatchStats;
 }
@@ -172,6 +173,8 @@ export type ServerListenEvents = {
   updatePlayerName: (playerId: PlayerId, name: string) => void;
   userInputReceived: (signalId: string, input: unknown) => void;
 }
+
+export type PlayerMatMap = Record<PlayerId, Record<Mats, CardId[]>>;
 
 const MatValues = [
   'island',
