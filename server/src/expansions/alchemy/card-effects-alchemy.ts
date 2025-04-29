@@ -4,9 +4,8 @@ import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { Card, CardId } from 'shared/shared-types.ts';
 import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
-import { findCards } from '../../utils/find-cards.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
-import { isCardInPlay, isLocationInPlay } from '../../utils/is-in-play.ts';
+import { isLocationInPlay } from '../../utils/is-in-play.ts';
 
 const expansion: CardExpansionModuleNew = {
   'alchemist': {
@@ -313,6 +312,74 @@ const expansion: CardExpansionModuleNew = {
       const amountToGain = Math.floor(cardCount / 5);
       console.log(`[philosophers-stone effect] card count ${cardCount}, gaining ${amountToGain} treasure`);
       await args.runGameActionDelegate('gainTreasure', { count: amountToGain });
+    }
+  },
+  'scrying-pool': {
+    registerEffects: () => async (args) => {
+      console.log(`[scrying-pool effect] gaining 1 action`);
+      await args.runGameActionDelegate('gainAction', { count: 1 });
+      const playedCard = args.cardLibrary.getCard(args.cardId);
+      
+      const targetIds = findOrderedTargets({
+        match: args.match,
+        appliesTo: playedCard.targetScheme!,
+        startingPlayerId: args.playerId
+      }).filter(t => args.reactionContext[t]?.result !== 'immunity');
+      
+      for (const targetPlayerId of targetIds) {
+        const deck = args.match.playerDecks[targetPlayerId];
+        
+        if (deck.length === 0) {
+          console.log(`[scrying-pool effect] no cards in deck, shuffling`);
+          await args.runGameActionDelegate('shuffleDeck', { playerId: targetPlayerId });
+          
+          if (deck.length === 0) {
+            console.log(`[scrying-pool effect] still no cards in deck, skipping`);
+            continue;
+          }
+        }
+        
+        const cardId = deck.slice(-1)[0];
+        const card = args.cardLibrary.getCard(cardId);
+        
+        console.log(`[scrying-pool effect] revealing card ${card}`);
+        
+        await args.runGameActionDelegate('revealCard', {
+          cardId: cardId,
+          playerId: targetPlayerId,
+        });
+        
+        await args.runGameActionDelegate('moveCard', {
+          cardId: cardId,
+          toPlayerId: targetPlayerId,
+          to: { location: 'set-aside' }
+        });
+        
+        const result = await args.runGameActionDelegate('userPrompt', {
+          prompt: `Discard or top-deck ${card.cardName}?`,
+          playerId: args.playerId,
+          actionButtons: [
+            { label: `Discard`, action: 1 },
+            { label: `Top-deck`, action: 2 }
+          ],
+        }) as { action: number, cardIds: number[] };
+        
+        if (result.action === 1) {
+          console.log(`[scrying-pool effect] ${getPlayerById(args.match, args.playerId)} chose discard`);
+          await args.runGameActionDelegate('discardCard', {
+            cardId: cardId,
+            playerId: targetPlayerId
+          });
+        }
+        else {
+          console.log(`[scrying-pool effect] ${getPlayerById(args.match, args.playerId)} chose top-deck`);
+          await args.runGameActionDelegate('moveCard', {
+            cardId: cardId,
+            toPlayerId: targetPlayerId,
+            to: { location: 'playerDecks' }
+          });
+        }
+      }
     }
   },
   'potion': {

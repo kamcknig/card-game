@@ -99,7 +99,7 @@
         },
         "targetScheme": {
           "type": "string",
-          "enum": ["ALL_OTHER"],
+          "enum": ["ALL_OTHER", "ALL"],
           "description": "Required for ATTACK cards to specify the target pattern."
         },
         "abilityText": {

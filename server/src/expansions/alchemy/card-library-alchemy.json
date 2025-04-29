@@ -56,5 +56,14 @@
       "potion": 1
     },
     "type": ["TREASURE"]
+  },
+  "scrying-pool": {
+    "cardName": "Scrying Pool",
+    "cost": {
+      "treasure": 2,
+      "potion": 1
+    },
+    "type": ["ACTION", "ATTACK"],
+    "targetScheme": "ALL"
   }
 }
