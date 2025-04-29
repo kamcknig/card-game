@@ -27,7 +27,7 @@ export class LogManager {
   private _queue: LogEntry[] = [];
   
   private sendLogs(entry: LogEntry) {
-    this._queue.push(entry);
+    this._queue.push({ ...entry, depth: this._depth });
   }
   
   public flushQueue() {

@@ -65,5 +65,12 @@
     },
     "type": ["ACTION", "ATTACK"],
     "targetScheme": "ALL"
+  },
+  "transmute": {
+    "cost": {
+      "treasure": 0,
+      "potion": 1
+    },
+    "type": ["ACTION"]
   }
 }
