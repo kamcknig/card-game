@@ -39,10 +39,11 @@ export const findCards = (
     }
   }
   
-  if (!isUndefined(effectRestriction?.cost)) {
+  if (!isUndefined(effectRestriction.cost)) {
     cardIds = cardIds.filter(id => {
+      const card = cardLibrary.getCard(id);
       const effectiveCost = getEffectiveCardCost(playerId!, id, match, cardLibrary);
-      return validateCostSpec(effectRestriction.cost!, effectiveCost);
+      return validateCostSpec(effectRestriction.cost!, { treasure: effectiveCost, potion: card.cost.potion });
     });
   }
   if (!isUndefined(effectRestriction.card)) {

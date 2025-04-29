@@ -72,5 +72,12 @@
       "potion": 1
     },
     "type": ["ACTION"]
+  },
+  "university": {
+    "cost": {
+      "treasure": 2,
+      "potion": 1
+    },
+    "type": ["ACTION"]
   }
 }

@@ -67,7 +67,7 @@ const expansion: CardExpansionModuleNew = {
         playerId,
         restrict: {
           from: { location: ['supply', 'kingdom'] },
-          cost: { kind: 'upTo', amount: 4 },
+          cost: { kind: 'upTo', amount: { treasure: 4 } },
         },
         count: 1,
       }) as number[];
@@ -628,7 +628,7 @@ const expansion: CardExpansionModuleNew = {
             restrict: {
               from: { location: ['supply', 'kingdom'] },
               card: { type: 'TREASURE' },
-              cost: { kind: 'upTo', amount: 6 }
+              cost: { kind: 'upTo', amount: { treasure: 6 } }
             },
             count: 1,
           })) as number[];

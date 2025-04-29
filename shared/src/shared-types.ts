@@ -200,14 +200,17 @@ export type CardLocationSpec = {
   index?: number
 };
 
+export type ComparisonType =
+  | 'exact'
+  | 'upTo';
+
 export type CountSpec =
   | { kind: 'upTo'; count: number; }
   | number;
 
 export type CostSpec =
-  | { kind: 'exact'; amount: number }
-  | { kind: 'upTo'; amount: number }
-  | number;
+  | { kind: 'exact'; amount: CardCost }
+  | { kind: 'upTo'; amount: CardCost };
 
 export type PlayerArgs = {
   id: PlayerId;
@@ -328,16 +331,18 @@ export type CardArgs = {
   owner?: PlayerId | null;
 }
 
+export type CardCost = {
+  treasure: number;
+  potion?: number | undefined;
+}
+
 export class Card {
   id: CardId;
   isBasic: boolean = false;
   cardName: string;
   type: CardType[];
   mat: Mats | undefined;
-  cost: {
-    treasure: number;
-    potion?: number | undefined;
-  };
+  cost: CardCost;
   victoryPoints: number;
   abilityText: string;
   cardKey: CardKey;

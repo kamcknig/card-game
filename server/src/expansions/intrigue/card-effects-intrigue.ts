@@ -338,17 +338,17 @@ const expansionModule: CardExpansionModuleNew = {
   },
   'duke': {
     registerScoringFunction: () => ({ match, cardLibrary, ownerId }) => {
-  const duchies = match.playerHands[ownerId]?.concat(
-    match.playerDecks[ownerId],
-    match.playerDiscards[ownerId],
-    match.playArea,
-  ).map(cardLibrary.getCard)
-    .filter((card) => card.cardKey === 'duchy');
-  
-  console.log(`[DUKE SCORING] player ${getPlayerById(match, ownerId)} has ${duchies.length} Duchies`);
-  
-  return duchies.length;
-},
+      const duchies = match.playerHands[ownerId]?.concat(
+        match.playerDecks[ownerId],
+        match.playerDiscards[ownerId],
+        match.playArea,
+      ).map(cardLibrary.getCard)
+        .filter((card) => card.cardKey === 'duchy');
+      
+      console.log(`[DUKE SCORING] player ${getPlayerById(match, ownerId)} has ${duchies.length} Duchies`);
+      
+      return duchies.length;
+    },
     registerEffects: () => async () => {
       console.log(`[DUKE EFFECT] duke has no effects`);
     }
@@ -370,7 +370,7 @@ const expansionModule: CardExpansionModuleNew = {
         prompt: 'Choose card',
         count: 1,
         restrict: {
-          cost: { amount: 4, kind: 'upTo' },
+          cost: { amount: { treasure: 4 }, kind: 'upTo' },
           from: { location: ['supply', 'kingdom'] },
         },
         playerId,
@@ -938,6 +938,8 @@ const expansionModule: CardExpansionModuleNew = {
         cardLibrary
       ) + 2;
       
+      let card = cardLibrary.getCard(cardId);
+      
       console.log(`[REPLACE EFFECT] prompting user to gain a card costing up to ${cost}...`);
       
       result = await runGameActionDelegate('selectCard', {
@@ -945,16 +947,13 @@ const expansionModule: CardExpansionModuleNew = {
         playerId,
         restrict: {
           from: { location: ['kingdom', 'supply'] },
-          cost: {
-            kind: 'upTo',
-            amount: cost,
-          },
+          cost: { kind: 'upTo', amount: { treasure: cost, potion: card.cost.potion } },
         },
         count: 1,
       }) as number[];
       
       cardId = result[0];
-      const card = cardLibrary.getCard(cardId);
+      card = cardLibrary.getCard(cardId);
       
       const location = card.type.some((t) => ['ACTION', 'TREASURE'].includes(t))
         ? 'playerDecks'
@@ -1199,6 +1198,7 @@ const expansionModule: CardExpansionModuleNew = {
           cardId: cardId,
         });
         
+        const card = cardLibrary.getCard(cardId);
         const cost = getEffectiveCardCost(target, cardId, match, cardLibrary);
         
         console.log(`[SWINDLER EFFECT] prompting user to select card costing ${cost}...`);
@@ -1208,7 +1208,7 @@ const expansionModule: CardExpansionModuleNew = {
           playerId,
           restrict: {
             from: { location: ['supply', 'kingdom'] },
-            cost,
+            cost: { kind: 'exact', amount: { treasure: cost, potion: card.cost.potion } },
           },
           count: 1,
         }) as number[];
@@ -1404,7 +1404,7 @@ const expansionModule: CardExpansionModuleNew = {
         playerId,
         restrict: {
           from: { location: ['supply', 'kingdom'] },
-          cost,
+          cost: { kind: 'exact', amount: { treasure: cost, potion: card.cost.potion } },
         },
         count: 1,
       }) as number[];

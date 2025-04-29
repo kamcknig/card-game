@@ -468,9 +468,43 @@ const expansion: CardExpansionModuleNew = {
             playerId: args.playerId,
             cardId,
             to: { location: 'playerDiscards' }
-          })
+          });
         }
       }
+    }
+  },
+  'university': {
+    registerEffects: () => async (args) => {
+      await args.runGameActionDelegate('gainAction', { count: 2 });
+      
+      const selectedCardIds = await args.runGameActionDelegate('selectCard', {
+        playerId: args.playerId,
+        prompt: `Gain card`,
+        restrict: {
+          from: { location: ['kingdom'] },
+          card: { type: 'ACTION' },
+          cost: { kind: 'upTo', amount: { treasure: 5 } }
+        },
+        count: 1,
+        optional: true
+      }) as CardId[];
+      
+      const selectedCardId = selectedCardIds[0];
+      
+      if (!selectedCardId) {
+        console.log(`[university effect] no card selected`);
+        return;
+      }
+      
+      const selectedCard = args.cardLibrary.getCard(selectedCardId);
+      
+      console.log(`[university effect] gaining ${selectedCard}`);
+      
+      await args.runGameActionDelegate('gainCard', {
+        playerId: args.playerId,
+        cardId: selectedCardId,
+        to: { location: 'playerDiscards' }
+      });
     }
   },
   'potion': {
