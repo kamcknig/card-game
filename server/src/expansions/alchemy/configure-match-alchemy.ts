@@ -1,6 +1,6 @@
-import { CardKey, CardNoId, ComputedMatchConfiguration, MatchConfiguration } from 'shared/shared-types.ts';
+import { CardExpansionConfigurator } from '../../types.ts';
 
-const configurator = (args: { config: ComputedMatchConfiguration, cardLibrary: Record<CardKey, CardNoId> }) => {
+const configurator: CardExpansionConfigurator = (args) => {
   console.log(`configuring match for alchemy`);
   
   const expansionCards = args.config.kingdomCards.filter(card => card.expansionName === 'alchemy');
@@ -24,6 +24,8 @@ const configurator = (args: { config: ComputedMatchConfiguration, cardLibrary: R
     args.config.basicCardCount[potionCard.cardKey] = 16;
     break;
   }
+  
+  return args.config;
 }
 
 export default configurator;

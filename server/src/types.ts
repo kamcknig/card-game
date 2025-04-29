@@ -2,7 +2,7 @@ import { Socket } from 'socket.io';
 import {
   Card,
   CardId,
-  CardKey,
+  CardKey, CardNoId, ComputedMatchConfiguration,
   EffectTarget,
   LocationSpec,
   Match,
@@ -10,8 +10,6 @@ import {
   SelectActionCardArgs,
   ServerEmitEvents,
   ServerListenEvents,
-  SetAsideCard,
-  TurnPhase,
   UserPromptActionArgs,
 } from 'shared/shared-types.ts';
 import { toNumber } from 'es-toolkit/compat';
@@ -161,7 +159,6 @@ export type GameActionArgsMap = {
   playCard: { playerId: PlayerId; cardId: CardId, overrides?: GameActionOverrides };
   revealCard: { cardId: CardId, playerId: PlayerId, moveToRevealed?: boolean },
   selectCard: SelectActionCardArgs;
-  setAside: SetAsideCard;
   shuffleDeck: { playerId: PlayerId };
   trashCard: { playerId: PlayerId; cardId: CardId };
   userPrompt: UserPromptActionArgs;
@@ -225,6 +222,13 @@ export type CardScoringFnContext = {
   cardLibrary: CardLibrary;
   ownerId: number;
 }
+
+export type CardExpansionConfiguratorContext = {
+  config: ComputedMatchConfiguration,
+  cardLibrary: Record<CardKey, CardNoId>
+};
+
+export type CardExpansionConfigurator = (args: CardExpansionConfiguratorContext) => ComputedMatchConfiguration;
 
 export type CardScoringFunction = (args: CardScoringFnContext) => number;
 

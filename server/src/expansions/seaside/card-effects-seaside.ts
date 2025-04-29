@@ -331,10 +331,10 @@ const expansion: CardExpansionModuleNew = {
         return;
       }
       
-      await runGameActionDelegate('setAside', {
+      await runGameActionDelegate('moveCard', {
         cardId,
-        playerId,
-        sourceCardId: playedCardId
+        toPlayerId: playerId,
+        to: { location: 'set-aside' },
       });
       
       reactionManager.registerReactionTemplate({

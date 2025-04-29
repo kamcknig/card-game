@@ -95,7 +95,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       playerActions: 0,
       turnPhaseIndex: 0,
       selectableCards: {},
-      setAside: [],
       playArea: [],
       mats: { ...this._matchConfiguration.mats },
       zones: {

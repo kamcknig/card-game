@@ -4,7 +4,6 @@ import {
   Match,
   PlayerId,
   SelectActionCardArgs,
-  SetAsideCard,
   TurnPhaseOrderValues,
   UserPromptActionArgs
 } from 'shared/shared-types.ts';
@@ -32,7 +31,6 @@ import { findCards } from '../../utils/find-cards.ts';
 import { castArray, isNumber } from 'es-toolkit/compat';
 import { ReactionManager } from '../reactions/reaction-manager.ts';
 import { CardInteractivityController } from '../card-interactivity-controller.ts';
-import { findSpecLocationBySource } from '../../utils/find-spec-location-by-source.ts';
 
 export class GameActionController implements GameActionControllerInterface {
   constructor(
@@ -702,16 +700,6 @@ export class GameActionController implements GameActionControllerInterface {
       type: 'shuffleDeck',
       playerId: args.playerId,
       source: context?.loggingContext?.source,
-    });
-  }
-  
-  async setAside(arg: SetAsideCard) {
-    this.match.setAside.push(arg);
-    
-    await this.moveCard({
-      cardId: arg.cardId,
-      toPlayerId: arg.playerId,
-      to: { location: 'set-aside' },
     });
   }
 }

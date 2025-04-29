@@ -86,13 +86,6 @@ export type MatchStats = {
   cardsBought: Record<PlayerId, CardStats>;
 };
 
-export type SetAsideCard = {
-  cardId: CardId;
-  playerId: PlayerId;
-  sourceCardId: CardId;
-  moveToSetAside?: boolean;
-}
-
 export type Match = {
   activeDurationCards: CardId[];
   config: MatchConfiguration,
@@ -110,7 +103,6 @@ export type Match = {
   roundNumber: number;
   scores: Record<PlayerId, number>,
   selectableCards: Record<PlayerId, CardId[]>;
-  setAside: SetAsideCard[];
   basicSupply: CardId[];
   trash: CardId[];
   turnNumber: number;
