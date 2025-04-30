@@ -108,7 +108,6 @@ export type Match = {
   turnNumber: number;
   turnPhaseIndex: number;
   mats: PlayerMatMap;
-  zones: Record<Zones, CardId[]>;
   stats: MatchStats;
 }
 
@@ -178,21 +177,11 @@ export const isLocationMat = (location: any): location is Mats => {
   return !!location && (MatValues as unknown as string[]).indexOf(location) !== -1;
 }
 
-let ZoneValues = [
-  'look-at',
-  'revealed'
-] as const;
-export type Zones = typeof ZoneValues[number];
-export const isLocationZone = (location: any): location is Zones => {
-  return !!location && (ZoneValues as unknown as string[]).indexOf(location) !== -1;
-}
-
 const CardLocationValues = ['activeDuration', 'playerDiscards', 'playerHands', 'trash', 'playArea', 'playerDecks', 'supply', 'kingdom'] as const;
 export type CardLocations = typeof CardLocationValues[number];
 
 export type CardLocation =
   | CardLocations
-  | Zones
   | Mats
 
 export type CardLocationSpec = {
@@ -209,8 +198,8 @@ export type CountSpec =
   | number;
 
 export type CostSpec =
-  | { kind: 'exact'; amount: CardCost }
-  | { kind: 'upTo'; amount: CardCost };
+  | { kind: 'exact'; amount: CardCost, playerId: PlayerId }
+  | { kind: 'upTo'; amount: CardCost, playerId: PlayerId };
 
 export type PlayerArgs = {
   id: PlayerId;

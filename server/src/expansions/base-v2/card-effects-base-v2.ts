@@ -30,7 +30,7 @@ const expansionModule: CardExpansionModuleNew = {
         playerId: playerId,
         restrict: {
           from: { location: ['supply', 'kingdom'] },
-          cost: { kind: 'upTo', amount: { treasure: 5 } },
+          cost: { playerId, kind: 'upTo', amount: { treasure: 5 } },
         },
       });
       
@@ -766,7 +766,7 @@ const expansionModule: CardExpansionModuleNew = {
         restrict: {
           from: { location: ['supply', 'kingdom'] },
           card: { type: ['TREASURE'] },
-          cost: { kind: 'upTo', amount: { treasure: cardCost.treasure + 3, potion: cardCost.potion } },
+          cost: { playerId, kind: 'upTo', amount: { treasure: cardCost.treasure + 3, potion: cardCost.potion } },
         },
       });
       
@@ -1003,7 +1003,7 @@ const expansionModule: CardExpansionModuleNew = {
         count: 1,
         restrict: {
           from: { location: ['supply', 'kingdom'] },
-          cost: { kind: 'upTo', amount: { treasure: cardCost.treasure + 2, potion: card.cost.potion } },
+          cost: { playerId, kind: 'upTo', amount: { treasure: cardCost.treasure + 2, potion: card.cost.potion } },
         },
       });
       
@@ -1350,7 +1350,7 @@ const expansionModule: CardExpansionModuleNew = {
         playerId: playerId,
         count: 1,
         restrict: {
-          cost: { kind: 'upTo', amount: { treasure: 4 } },
+          cost: { playerId, kind: 'upTo', amount: { treasure: 4 } },
           from: { location: ['supply', 'kingdom'] },
         },
       });

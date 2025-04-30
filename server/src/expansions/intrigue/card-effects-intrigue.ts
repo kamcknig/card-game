@@ -370,7 +370,7 @@ const expansionModule: CardExpansionModuleNew = {
         prompt: 'Choose card',
         count: 1,
         restrict: {
-          cost: { amount: { treasure: 4 }, kind: 'upTo' },
+          cost: { playerId, amount: { treasure: 4 }, kind: 'upTo' },
           from: { location: ['supply', 'kingdom'] },
         },
         playerId,
@@ -947,7 +947,7 @@ const expansionModule: CardExpansionModuleNew = {
         playerId,
         restrict: {
           from: { location: ['kingdom', 'supply'] },
-          cost: { kind: 'upTo', amount: { treasure: cardCost.treasure + 2, potion: cardCost.potion } },
+          cost: { playerId, kind: 'upTo', amount: { treasure: cardCost.treasure + 2, potion: cardCost.potion } },
         },
         count: 1,
       }) as number[];
@@ -1207,7 +1207,7 @@ const expansionModule: CardExpansionModuleNew = {
           playerId,
           restrict: {
             from: { location: ['supply', 'kingdom'] },
-            cost: { kind: 'exact', amount: cost },
+            cost: { playerId, kind: 'exact', amount: cost },
           },
           count: 1,
         }) as number[];
@@ -1403,7 +1403,7 @@ const expansionModule: CardExpansionModuleNew = {
         playerId,
         restrict: {
           from: { location: ['supply', 'kingdom'] },
-          cost: { kind: 'exact', amount: { treasure: cardCost.treasure + 1, potion: cardCost.potion } },
+          cost: { playerId, kind: 'exact', amount: { treasure: cardCost.treasure + 1, potion: cardCost.potion } },
         },
         count: 1,
       }) as number[];

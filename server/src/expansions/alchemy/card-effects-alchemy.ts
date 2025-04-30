@@ -412,8 +412,8 @@ const expansion: CardExpansionModuleNew = {
         cardIds = findCards(
           args.match,
           {
-            from: { location: ['supply'] },
-            card: { cardKeys: 'duchy' }
+            location: ['supply'],
+            cards: { cardKeys: 'duchy' }
           },
           args.cardLibrary,
         );
@@ -434,8 +434,8 @@ const expansion: CardExpansionModuleNew = {
         cardIds = findCards(
           args.match,
           {
-            from: { location: ['kingdom'] },
-            card: { cardKeys: 'transmute' }
+            location: 'kingdom',
+            cards: { cardKeys: 'transmute' }
           },
           args.cardLibrary,
         );
@@ -456,8 +456,8 @@ const expansion: CardExpansionModuleNew = {
         cardIds = findCards(
           args.match,
           {
-            from: { location: ['supply'] },
-            card: { cardKeys: 'gold' }
+            location: 'supply',
+            cards: { cardKeys: 'gold' }
           },
           args.cardLibrary,
         );
@@ -485,7 +485,7 @@ const expansion: CardExpansionModuleNew = {
         restrict: {
           from: { location: ['kingdom'] },
           card: { type: 'ACTION' },
-          cost: { kind: 'upTo', amount: { treasure: 5 } }
+          cost: { kind: 'upTo', amount: { treasure: 5 }, playerId: args.playerId }
         },
         count: 1,
         optional: true

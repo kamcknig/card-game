@@ -67,7 +67,7 @@ const expansion: CardExpansionModuleNew = {
         playerId,
         restrict: {
           from: { location: ['supply', 'kingdom'] },
-          cost: { kind: 'upTo', amount: { treasure: 4 } },
+          cost: { kind: 'upTo', amount: { treasure: 4 }, playerId },
         },
         count: 1,
       }) as number[];
@@ -119,8 +119,8 @@ const expansion: CardExpansionModuleNew = {
           const curseCardIds = findCards(
             match,
             {
-              from: { location: 'supply' },
-              card: { cardKeys: 'curse' }
+              location: 'supply',
+              cards: { cardKeys: 'curse' }
             },
             cardLibrary
           );
@@ -465,7 +465,7 @@ const expansion: CardExpansionModuleNew = {
         
         await runGameActionDelegate('moveCard', {
           cardId,
-          to: { location: 'look-at' }
+          to: { location: 'set-aside' }
         });
         
         cardIds.push(cardId);
@@ -628,7 +628,7 @@ const expansion: CardExpansionModuleNew = {
             restrict: {
               from: { location: ['supply', 'kingdom'] },
               card: { type: 'TREASURE' },
-              cost: { kind: 'upTo', amount: { treasure: 6 } }
+              cost: { kind: 'upTo', amount: { treasure: 6 }, playerId }
             },
             count: 1,
           })) as number[];
@@ -906,8 +906,8 @@ const expansion: CardExpansionModuleNew = {
       
       for (const targetPlayerId of targetPlayerIds) {
         const curseCardIds = findCards(args.match, {
-          from: { location: 'supply' },
-          card: { cardKeys: 'curse' }
+          location: 'supply',
+          cards: { cardKeys: 'curse' }
         }, args.cardLibrary);
         if (curseCardIds.length === 0) {
           console.log(`[sea witch effect] no curses in supply...`);
@@ -935,32 +935,20 @@ const expansion: CardExpansionModuleNew = {
       
       const cardsGained = match.stats.cardsGained;
       
-      let cardIdsGained = Object.keys(cardsGained)
+      const cardIdsGained = Object.keys(cardsGained)
         .map(Number)
         .filter(cardId => {
           return cardsGained[cardId].playerId === previousPlayer.id &&
             cardsGained[cardId].turnNumber === match.turnNumber - 1;
-        });/*
-        .filter(cardId => {
-          const cost = getEffectiveCardCost(
-            playerId,
-            +cardId,
-            match,
-            cardLibrary
-          );
-          
-          return cost.treasure <= 6;
-        });*/
+        });
       
-      const cardIds = findCards(
+      let cardIds = findCards(
         match,
         {
-          cost: { kind: 'upTo', amount: { treasure: 6 } },
-          card: cardsGained
+          cost: { kind: 'upTo', amount: { treasure: 6 }, playerId },
         },
         cardLibrary,
-        playerId
-      )
+      ).filter(id => cardIdsGained.includes(id));
       
       console.log(`[smugglers effect] found ${cardIds.length} costing up to 6 that were played`);
       

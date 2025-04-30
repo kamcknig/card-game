@@ -225,7 +225,6 @@ export class GameActionController {
         this.match,
         restrict,
         this.cardLibrary,
-        playerId,
       );
       
       console.log(`[selectCard action] found ${selectableCardIds.length} selectable cards`);
@@ -356,7 +355,7 @@ export class GameActionController {
       
       await this.moveCard({
         cardId: args.cardId,
-        to: { location: 'revealed' }
+        to: { location: 'set-aside' }
       });
     }
     

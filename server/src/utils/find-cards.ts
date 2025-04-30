@@ -1,56 +1,93 @@
 import { castArray } from 'es-toolkit/compat';
 import { isUndefined } from 'es-toolkit';
-import { Card, CardId, EffectRestrictionSpec, Match } from 'shared/shared-types.ts';
+import { CardId, CardKey, CardLocation, CardType, CostSpec, isLocationMat, Match } from 'shared/shared-types.ts';
 
 import { validateCostSpec } from '../shared/validate-cost-spec.ts';
 
 import { CardLibrary } from '../core/card-library.ts';
 import { getEffectiveCardCost } from './get-effective-card-cost.ts';
 
-export const findCards = (
-  match: Match,
-  effectRestriction: EffectRestrictionSpec,
-  cardLibrary: CardLibrary
-): CardId[] => {
-  let cardIds: Card[] = cardLibrary.getAllCardsAsArray();
+export type FindCardsFilter = {
+  location?: CardLocation | CardLocation[];
+  cost?: CostSpec;
+  cards?: {
+    cardKeys?: CardKey | CardKey[];
+    type?: CardType | CardType[];
+  }
+}
+
+export const findCardsByLocation = (match: Match, locations: CardLocation[]) => {
+  let cardIds: CardId[] = [];
   
-  if (!isUndefined(effectRestriction.from?.location)) {
-    for (const playerId of )
-    if (effectRestriction.from?.location.includes('playerHands')) {
-      cardIds = cardIds.concat(match.playerHands[playerId]);
+  for (const location of locations) {
+    if (location.includes('playerHands')) {
+      for (const player of match.config.players) {
+        const playerHand = match.playerHands[player.id];
+        cardIds = cardIds.concat(playerHand);
+      }
     }
     
-    if (effectRestriction.from?.location.includes('playerDecks')) {
-      cardIds = cardIds.concat(match.playerDecks[playerId]);
+    if (location.includes('playerDecks')) {
+      for (const player of match.config.players) {
+        const playerDeck = match.playerDecks[player.id];
+        cardIds = cardIds.concat(playerDeck);
+      }
     }
     
-    if (effectRestriction.from?.location.includes('playerDiscards')) {
-      cardIds = cardIds.concat(match.playerDiscards[playerId]);
+    if (location.includes('playerDiscards')) {
+      for (const player of match.config.players) {
+        const playerDiscard = match.playerDiscards[player.id];
+        cardIds = cardIds.concat(playerDiscard);
+      }
     }
     
-    if (effectRestriction.from?.location.includes('supply')) {
+    if (location.includes('supply')) {
       cardIds = cardIds.concat(match.basicSupply);
     }
     
-    if (effectRestriction.from?.location.includes('kingdom')) {
+    if (location.includes('kingdom')) {
       cardIds = cardIds.concat(match.kingdomSupply);
+    }
+    
+    if (isLocationMat(location)) {
+      for (const player of match.config.players) {
+        cardIds = cardIds.concat(match.mats[player.id][location]);
+      }
     }
   }
   
-  if (!isUndefined(effectRestriction.cost)) {
+  return cardIds;
+}
+
+export const findCards = (
+  match: Match,
+  filter: FindCardsFilter,
+  cardLibrary: CardLibrary
+): CardId[] => {
+  let cardIds: CardId[] = [];
+  
+  if (filter.location) {
+    filter.location = castArray(filter.location);
+    cardIds = findCardsByLocation(match, filter.location);
+  }
+  else {
+    cardIds = cardLibrary.getAllCardsAsArray().map(card => card.id);
+  }
+  
+  if (!isUndefined(filter.cost)) {
     cardIds = cardIds.filter(id => {
-      const effectiveCost = getEffectiveCardCost(playerId!, id, match, cardLibrary);
-      return validateCostSpec(effectRestriction.cost!, effectiveCost);
+      const effectiveCost = getEffectiveCardCost(filter.cost!.playerId, id, match, cardLibrary);
+      return validateCostSpec(filter.cost!, effectiveCost);
     });
   }
   
-  if (!isUndefined(effectRestriction.card)) {
-    if (!isUndefined(effectRestriction.card?.cardKeys)) {
-      const keys = castArray(effectRestriction.card.cardKeys);
+  if (!isUndefined(filter.cards)) {
+    if (!isUndefined(filter.cards?.cardKeys)) {
+      const keys = castArray(filter.cards.cardKeys);
       cardIds = cardIds.filter(id => keys.includes(cardLibrary.getCard(id).cardKey))
     }
-    if (!isUndefined(effectRestriction.card?.type)) {
-      const types = castArray(effectRestriction.card.type);
+    if (!isUndefined(filter.cards?.type)) {
+      const types = castArray(filter.cards.type);
       cardIds = cardIds.filter(id => cardLibrary.getCard(id).type.some(t => types.includes(t)));
     }
   }
