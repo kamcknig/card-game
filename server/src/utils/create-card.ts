@@ -8,10 +8,10 @@ export const createCard = (cardKey: CardKey, card?: Partial<CardNoId>) => {
   const baseCardData = allCardLibrary[cardKey] ?? {};
   const c = new Card({
     ...baseCardData,
-    ...card ?? {},
-    id: ++CARD_COUNT,
     cardKey: cardKey,
     cardName: baseCardData.cardName ?? capitalize(cardKey),
+    ...card ?? {},
+    id: ++CARD_COUNT,
   });
   return c;
 };

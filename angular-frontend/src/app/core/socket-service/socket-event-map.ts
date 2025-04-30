@@ -1,4 +1,4 @@
-import { Card, CardKey, LogEntry, Match, MatchConfiguration } from 'shared/shared-types';
+import { CardKey, LogEntry, Match } from 'shared/shared-types';
 import { playerIdStore, playerStore } from '../../state/player-state';
 import {
   matchConfigurationStore,
@@ -97,18 +97,22 @@ export const socketToGameEventMap = (): SocketEventMap => {
 
     const cardsById = cardStore.get();
 
-    Assets.addBundle('cardLibrary', Object.values(cardsById).reduce((prev, c) => {
-      prev[`${c.cardKey}-detail`] ??= c.detailImagePath;
-      prev[`${c.cardKey}-full`] ??= c.fullImagePath;
-      prev[`${c.cardKey}-half`] ??= c.halfImagePath;
-      return prev;
-    }, {
+    const baseBundle: Record<string, string> = {
       'card-back-full': `/assets/card-images/base-v2/full-size/card-back.jpg`,
       'card-back-detail': `/assets/card-images/base-v2/detail/card-back.jpg`,
       'card-back-half': `/assets/card-images/base-v2/half-size/card-back.jpg`,
       'treasure-bg': '/assets/ui-icons/treasure-bg.png',
       'potion-icon': '/assets/ui-icons/potion.png',
-    } as Record<string, string>));
+    };
+
+    const finalBundle = Object.values(cardsById).reduce((prev, c) => {
+      prev[`${c.cardKey}-detail`] ??= c.detailImagePath;
+      prev[`${c.cardKey}-full`] ??= c.fullImagePath;
+      prev[`${c.cardKey}-half`] ??= c.halfImagePath;
+      return prev;
+    }, baseBundle);
+
+    Assets.addBundle('cardLibrary', finalBundle);
 
     sceneStore.set('match');
   };

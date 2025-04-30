@@ -3,6 +3,7 @@ import { CardId } from 'shared/shared-types.ts';
 import { CardExpansionModuleNew } from '../../types.ts';
 import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
+import { findCards } from '../../utils/find-cards.ts';
 
 const expansion: CardExpansionModuleNew = {
   'anvil': {
@@ -147,6 +148,41 @@ const expansion: CardExpansionModuleNew = {
         await effectArgs.runGameActionDelegate('trashCard', {
           playerId: targetPlayerId,
           cardId: selectedCardId,
+        });
+      }
+    }
+  },
+  'charlatan': {
+    registerEffects: () => async (effectArgs) => {
+      console.log(`[charlatan effect] gaining 3 treasure and 1 action`);
+      await effectArgs.runGameActionDelegate('gainTreasure', { count: 3 });
+      
+      const targetPlayerIds = findOrderedTargets({
+        match: effectArgs.match,
+        appliesTo: 'ALL_OTHER',
+        startingPlayerId: effectArgs.playerId
+      }).filter(playerId => effectArgs.reactionContext?.[playerId].result !== 'immunity');
+      
+      console.log(`[charlatan effect] targets ${targetPlayerIds} gaining a curse`);
+      
+      for (const targetPlayerId of targetPlayerIds) {
+        const curseCards = findCards(
+          effectArgs.match,
+          {
+            location: 'supply',
+            cards: { cardKeys: 'curse' }
+          },
+          effectArgs.cardLibrary
+        );
+        if (!curseCards.length) {
+          console.log(`[charlatan effect] no curse cards in supply`);
+          break;
+        }
+        
+        await effectArgs.runGameActionDelegate('gainCard', {
+          playerId: targetPlayerId,
+          cardId: curseCards.slice(-1)[0],
+          to: { location: 'playerDiscards' }
         });
       }
     }

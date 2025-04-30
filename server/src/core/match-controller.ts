@@ -215,8 +215,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const supplyCards: Card[] = [];
     
     for (const [key, count] of Object.entries(config.basicCardCount)) {
+      const cardData = config.basicCards.find((card) => card.cardKey === key);
       for (let i = 0; i < count; i++) {
-        const c = createCard(key);
+        const c = createCard(key, cardData);
         this._cardLibrary.addCard(c);
         supplyCards.push(c);
       }
@@ -231,8 +232,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const kingdomCards: Card[] = [];
     
     for (const [key, count] of Object.entries(config.kingdomCardCount)) {
+      const cardData = config.kingdomCards.find((card) => card.cardKey === key);
       for (let i = 0; i < count; i++) {
-        const c = createCard(key);
+        const c = createCard(key, cardData);
         this._cardLibrary.addCard(c);
         kingdomCards.push(c);
       }
@@ -387,6 +389,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     console.log(`[match] registering expansion actions`);
     await this.gameActionsController?.registerExpansionActions();
+    
+    console.log(`[match] registering expansion effects`);
+    await this.gameActionsController?.registerExpansionEffects();
     
     await this.registerExpansionScoringFunctions();
   }

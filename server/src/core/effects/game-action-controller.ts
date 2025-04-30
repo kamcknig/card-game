@@ -1,5 +1,6 @@
 import {
   CardId,
+  CardKey,
   CardLocationSpec,
   Match,
   PlayerId,
@@ -14,6 +15,8 @@ import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import {
   AppSocket,
   BaseGameActionDefinitionMap,
+  CardEffectFactoryMap,
+  CardEffectFn,
   CardEffectFunctionMap,
   GameActionContext,
   GameActionDefinitionMap,
@@ -37,6 +40,7 @@ import { CardInteractivityController } from '../card-interactivity-controller.ts
 
 export class GameActionController implements BaseGameActionDefinitionMap {
   private customActionHandlers: Partial<GameActionDefinitionMap> = {};
+  private customCardEffectHandlers: Record<string, Record<CardKey, CardEffectFn>> = {};
   
   constructor(
     private cardEffectFunctionMap: CardEffectFunctionMap,
@@ -59,7 +63,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         if (!actionRegistry) continue;
         actionRegistry(this.registerAction.bind(this), { match: this.match });
       } catch (error) {
-        console.warn(`[registerExpansionActions] failed to register expansion actions for ${expansion}`, error);
+        console.warn(`[action controller] failed to register expansion actions for ${expansion}`, error);
         console.log(error);
       }
     }
@@ -67,14 +71,33 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   
   private registerAction<K extends GameActions>(key: K, handler: GameActionDefinitionMap[K]) {
     if ((this as any)[key]) {
-      throw new Error(`[registerAction] action ${key} is reserved`);
+      throw new Error(`[action controller] action ${key} is reserved`);
     }
     
     if (this.customActionHandlers[key]) {
-      console.warn(`[registerAction] overwriting existing action handler for ${key}`);
+      console.warn(`[action controller] overwriting existing action handler for ${key}`);
     }
     
     this.customActionHandlers[key] = handler;
+  }
+  
+  public async registerExpansionEffects() {
+    const uniqueExpansions = Array.from(new Set(this.match.config.kingdomCards.map(card => card.expansionName)));
+    for (const expansion of uniqueExpansions) {
+      try {
+        const module = await import((`@expansions/${expansion}/configurator-${expansion}.ts`));
+        const cardEffectsFactory = module.cardEffectsFactory;
+        if (!cardEffectsFactory) continue;
+        const effectFactory: Record<CardKey, CardEffectFn> = cardEffectsFactory();
+        this.customCardEffectHandlers[expansion] ??= {};
+        this.customCardEffectHandlers[expansion] = {
+          ...effectFactory
+        };
+      } catch (error) {
+        console.warn(`[action controller] failed to register expansion actions for ${expansion}`, error);
+        console.log(error);
+      }
+    }
   }
   
   public async invokeAction<K extends GameActions>(
@@ -721,7 +744,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     // run the effects of the card played, note passing in the reaction context collected from running the trigger
     // above - e.g., could provide immunity to an attack card played
-    const effectFn = this.cardEffectFunctionMap[card.cardKey];
+    let effectFn = this.cardEffectFunctionMap[card.cardKey];
     if (effectFn) {
       this.logManager.enter();
       await effectFn({
@@ -735,6 +758,25 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         reactionContext,
       });
       this.logManager.exit();
+    }
+    
+    for (const expansion of Object.keys(this.customCardEffectHandlers)) {
+      const effects = this.customCardEffectHandlers[expansion];
+      effectFn = effects[card.cardKey];
+      if (effectFn) {
+        this.logManager.enter();
+        await effectFn({
+          reactionManager: this.reactionManager,
+          runGameActionDelegate: this.runGameActionDelegate,
+          cardId,
+          gameActionController: this,
+          playerId,
+          match: this.match,
+          cardLibrary: this.cardLibrary,
+          reactionContext,
+        });
+        this.logManager.exit();
+      }
     }
   }
   

@@ -3,7 +3,7 @@ import { CardNoId, ExpansionListElement, MatchConfiguration, Player, PlayerId, }
 import { createNewPlayer } from '../utils/create-new-player.ts';
 import { io } from '../server.ts';
 import { MatchController } from './match-controller.ts';
-import { allCardLibrary } from '../expansions/expansion-library.ts';
+import { allCardLibrary } from "@expansions/expansion-library.ts";
 import { applyPatch, compare } from 'https://esm.sh/v123/fast-json-patch@3.1.1/index.js';
 import Fuse, { IFuseOptions } from 'fuse.js';
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
@@ -38,18 +38,13 @@ export class Game {
   public matchStarted: boolean = false;
   
   private _socketMap: Map<PlayerId, AppSocket> = new Map();
-  private _matchController: MatchController;
-  private _matchConfiguration: MatchConfiguration;
+  private _matchController: MatchController | undefined;
+  private _matchConfiguration: MatchConfiguration | undefined;
   private _availableExpansion: ExpansionListElement[] = [];
   private _fuse: Fuse<CardNoId> | undefined;
   
   constructor() {
     console.log(`[game] created`);
-    this._matchController = new MatchController(
-      this._socketMap,
-      (searchTerm: string) => this.onSearchCards(searchTerm)
-    );
-    
     try {
       const bannedKingdoms = JSON.parse(Deno.readTextFileSync('./banned-kingdoms.json')) as CardNoId[];
       defaultMatchConfiguration.bannedKingdoms = bannedKingdoms
@@ -57,8 +52,17 @@ export class Game {
       console.warn(`Couldn't read banned-kingdoms.json`);
       console.error(e);
     }
-    this._matchConfiguration = { ...structuredClone(defaultMatchConfiguration) }
     this.initializeFuseSearch();
+    
+    this.createNewMatch();
+  }
+  
+  private createNewMatch() {
+    this._matchController = new MatchController(
+      this._socketMap,
+      (searchTerm: string) => this.onSearchCards(searchTerm)
+    );
+    this._matchConfiguration = { ...structuredClone(defaultMatchConfiguration) }
   }
   
   private initializeFuseSearch() {
@@ -154,7 +158,7 @@ export class Game {
         this._availableExpansion.sort((a, b) => a.order - b.order),
       );
       
-      socket.emit('matchConfigurationUpdated', this._matchConfiguration ?? {});
+      socket.emit('matchConfigurationUpdated', this._matchConfiguration!);
       socket.on('updatePlayerName', this.onUpdatePlayerName);
       socket.on('playerReady', this.onPlayerReady);
     }
@@ -209,9 +213,7 @@ export class Game {
     console.log(`[game] clearing match`);
     
     this._socketMap.forEach((socket) => {
-      socket.off('updatePlayerName');
-      socket.off('playerReady');
-      socket.off('disconnect');
+      socket.offAnyIncoming();
       socket.leave('game');
     });
     
@@ -219,7 +221,7 @@ export class Game {
     this.players = [];
     this.owner = undefined;
     this.matchStarted = false;
-    this._matchConfiguration = structuredClone(defaultMatchConfiguration);
+    this.createNewMatch();
   }
   
   private onMatchConfigurationUpdated = async (newConfig: MatchConfiguration) => {
@@ -275,7 +277,7 @@ export class Game {
     if (patch.length) {
       applyPatch(this._matchConfiguration, patch)
       // lobby phase – raw object still useful for the config screen
-      io.in('game').emit('matchConfigurationUpdated', this._matchConfiguration);
+      io.in('game').emit('matchConfigurationUpdated', this._matchConfiguration!);
     }
   };
   

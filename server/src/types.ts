@@ -169,7 +169,9 @@ export type RunGameActionDelegate = <K extends GameActions>(
 
 export type ReactionContext = any;
 
-export type CardEffectFactory = () => (context: CardEffectFunctionContext) => Promise<void>;
+export type CardEffectFn = (context: CardEffectFunctionContext) => Promise<void>;
+
+export type CardEffectFactory = () => CardEffectFn;
 
 export type CardEffectFactoryMap = Record<CardKey, CardEffectFactory>;
 

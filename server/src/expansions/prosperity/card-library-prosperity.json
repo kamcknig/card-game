@@ -25,6 +25,12 @@
     "type": ["VICTORY"],
     "victoryPoints": 10
   },
+  "charlatan": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "ATTACK"]
+  },
   "prosperity": {
     "cost": {
       "treasure": 9

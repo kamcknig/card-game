@@ -17,9 +17,7 @@ export class MatchConfigurator {
     private _options?: MatchConfiguratorOptions
   ) {
     
-    this._config = {
-      ...config
-    } as ComputedMatchConfiguration;
+    this._config = structuredClone(config) as ComputedMatchConfiguration;
     
     console.log(`[match configurator] created`);
   }
@@ -51,7 +49,7 @@ export class MatchConfigurator {
     this.selectBasicSupply();
     addMatToMatchConfig('set-aside', this._config);
     await this.runExpansionConfigurations();
-    return this._config;
+    return this._config
   }
   
   private selectKingdomSupply() {
@@ -92,7 +90,7 @@ export class MatchConfigurator {
       
       console.log(`[match configurator] finalized kingdoms ${selectedKingdoms.map(card => card.cardKey).join(', ')}`);
       
-      this._config.kingdomCards = [...this._requestedKingdoms, ...selectedKingdoms];
+      this._config.kingdomCards = structuredClone([...this._requestedKingdoms, ...selectedKingdoms]);
       
       this._config.kingdomCardCount = this._config.kingdomCards.reduce((acc, nextKingdom) => {
         const cardKey = nextKingdom.cardKey;
@@ -118,10 +116,10 @@ export class MatchConfigurator {
     }, {} as Record<CardKey, number>);
     
     // create the basic cards map
-    this._config.basicCards = Object.keys(basicCardCounts).reduce((acc, nextKey) => {
+    this._config.basicCards = structuredClone(Object.keys(basicCardCounts).reduce((acc, nextKey) => {
       acc.push({ ...allCardLibrary[nextKey] });
       return acc;
-    }, [] as CardNoId[]);
+    }, [] as CardNoId[]));
     
     console.log(`[match configurator] setting default basic cards ${this._config.basicCards.map(card => card.cardKey)
       .join(', ')}`);

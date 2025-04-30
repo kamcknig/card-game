@@ -1,6 +1,6 @@
 import './types.ts';
-import { ExpansionActionRegistery, CardExpansionConfigurator } from '../../types.ts';
-import { Match } from "shared/shared-types.ts";
+import { CardEffectFn, CardExpansionConfigurator, ExpansionActionRegistery, } from '../../types.ts';
+import { CardKey, Match } from 'shared/shared-types.ts';
 
 const configurator: CardExpansionConfigurator = (args) => {
   const kingdomCards = args.config.kingdomCards;
@@ -21,10 +21,21 @@ const configurator: CardExpansionConfigurator = (args) => {
     console.log(`[prosperity configurator] NOT adding prosperity and colony to config`);
   }
   
-  return { ...args.config };
+  const charlatanPresent = kingdomCards.find(card => card.cardKey === 'charlatan');
+  
+  if (charlatanPresent) {
+    console.log(`[prosperity configurator] charlatan is part of kingdom - curses gain the treasure type and +1 treasure effect`);
+    const curseCard = args.config.basicCards.find(card => card.cardKey === 'curse');
+    if (!curseCard) {
+      console.warn(`[prosperity configurator] curse card not found in config`);
+    }
+    curseCard?.type.push('TREASURE');
+  }
+  
+  return args.config;
 }
 
-export const actionRegistry: ExpansionActionRegistery = (registerFn, { match}) => {
+export const actionRegistry: ExpansionActionRegistery = (registerFn, { match }) => {
   console.log(`[prosperity action registry] registering gainVictoryToken action`);
   registerFn('gainVictoryToken', async ({ playerId, count }) => {
     console.log(`[gainVictoryToken action] player ${playerId} gained ${count} victory tokens`);
@@ -36,10 +47,17 @@ export const actionRegistry: ExpansionActionRegistery = (registerFn, { match}) =
   });
 }
 
-export const scoringFunctionFactory = () => (args: {match: Match}) => {
+export const scoringFunctionFactory = () => (args: { match: Match }) => {
   for (const playerId of Object.keys(args.match.scores)) {
     args.match.scores[+playerId] += args.match.playerVictoryTokens?.[+playerId] ?? 0;
   }
 };
+
+export const cardEffectsFactory: () => Record<CardKey, CardEffectFn> = () => ({
+  'curse': async (args) => {
+    console.log(`[curse effect - prosperity] curse effect called`);
+    await args.runGameActionDelegate('gainTreasure', { count: 1 });
+  }
+});
 
 export default configurator;
