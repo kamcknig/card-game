@@ -405,6 +405,66 @@ const expansion: CardExpansionModuleNew = {
       });
     }
   },
+  'forge': {
+    registerEffects: () => async (effectArgs) => {
+      const selectedCardIdsToTrash = await effectArgs.runGameActionDelegate('selectCard', {
+        playerId: effectArgs.playerId,
+        prompt: `Trash cards`,
+        restrict: { from: { location: 'playerHands' } },
+        count: {
+          kind: 'upTo',
+          count: effectArgs.match.playerHands[effectArgs.playerId].length
+        },
+        optional: true,
+      }) as CardId[];
+      
+      let cost = { treasure: 0, potion: 0 };
+      if (!selectedCardIdsToTrash.length) {
+        cost = { treasure: 0, potion: 0 };
+      }
+      else {
+        for (const cardId of selectedCardIdsToTrash) {
+          const cardCost = getEffectiveCardCost(
+            effectArgs.playerId,
+            cardId,
+            effectArgs.match,
+            effectArgs.cardLibrary
+          );
+          cost = {
+            treasure: cost.treasure + cardCost.treasure,
+            potion: cost.potion + (cardCost.potion ?? 0)
+          };
+          
+          await effectArgs.runGameActionDelegate('trashCard', { playerId: effectArgs.playerId, cardId });
+        }
+      }
+      
+      const selectedCardIds = await effectArgs.runGameActionDelegate('selectCard', {
+        playerId: effectArgs.playerId,
+        prompt: `Gain card`,
+        restrict: {
+          from: { location: 'playerHands' },
+          cost: {
+            kind: 'exact',
+            amount: { treasure: cost.treasure, potion: 0 },
+            playerId: effectArgs.playerId
+          }
+        },
+        count: 1,
+      }) as CardId[];
+      
+      if (selectedCardIds.length === 0) {
+        console.log(`[forge effect] no card selected`);
+        return;
+      }
+      
+      await effectArgs.runGameActionDelegate('gainCard', {
+        playerId: effectArgs.playerId,
+        cardId: selectedCardIds[0],
+        to: { location: 'playerDiscards' }
+      });
+    }
+  },
   'platinum': {
     registerEffects: () => async (effectArgs) => {
       await effectArgs.runGameActionDelegate('gainTreasure', { count: 5 });
