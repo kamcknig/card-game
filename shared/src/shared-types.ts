@@ -4,48 +4,11 @@ export type CardKey = string;
 export type PlayerId = number;
 export type CardId = number;
 
-export type LogEntrySource = CardId;
+/****************
+ 
+    MATCH types
 
-export type LogEntry =
-  | { type: 'draw'; playerId: PlayerId; cardId: CardId; depth?: number; source?: LogEntrySource}
-  | { type: 'discard'; playerId: PlayerId; cardId: CardId; depth?: number; source?: LogEntrySource}
-  | { type: 'gainAction'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource}
-  | { type: 'gainBuy'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
-  | { type: 'gainTreasure'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource}
-  | { type: 'gainVictoryToken'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource}
-  | { type: 'gainCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource}
-  | { type: 'cardPlayed'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource}
-  | { type: 'revealCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource}
-  | { type: 'trashCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource}
-  | { type: 'shuffleDeck'; playerId: PlayerId; depth?: number; source?: LogEntrySource }
-  | { type: 'newTurn'; turn: number; depth?: number; source?: LogEntrySource}
-  | { type: 'newPlayerTurn'; turn: number; playerId: PlayerId; depth?: number; source?: LogEntrySource};
-
-export type SelectActionCardArgs = {
-  restrict: EffectRestrictionSpec | number[];
-  count?: CountSpec | number;
-  autoSelect?: boolean;
-  playerId: PlayerId;
-  optional?: boolean;
-  prompt: string;
-  validPrompt?: string;
-  cancelPrompt?: string;
-}
-
-export type UserPromptKinds =
-  | { type: 'blind-rearrange'; cardIds: CardId[]; }
-  | { type: 'rearrange'; cardIds: CardId[]; }
-  | { type: 'name-card' }
-  | { type: 'select'; cardIds: CardId[]; selectCount: CountSpec };
-
-export type UserPromptActionArgs = {
-  playerId: PlayerId;
-  prompt?: string;
-  content?: UserPromptKinds;
-  actionButtons?: ActionButtons;
-  validationAction?: number;
-}
-
+***************/
 export type MatchConfiguration = {
   players: Player[];
   
@@ -112,6 +75,64 @@ export type Match = {
   turnPhaseIndex: number;
   mats: PlayerMatMap;
   stats: MatchStats;
+}
+
+
+/**************
+ 
+ LOG types
+ 
+******************/
+
+export type LogEntrySource = CardId;
+
+export type LogEntry =
+  | { type: 'draw'; playerId: PlayerId; cardId: CardId; depth?: number; source?: LogEntrySource}
+  | { type: 'discard'; playerId: PlayerId; cardId: CardId; depth?: number; source?: LogEntrySource}
+  | { type: 'gainAction'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource}
+  | { type: 'gainBuy'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
+  | { type: 'gainTreasure'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource}
+  | { type: 'gainVictoryToken'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource}
+  | { type: 'gainCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource}
+  | { type: 'cardPlayed'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource}
+  | { type: 'revealCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource}
+  | { type: 'trashCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource}
+  | { type: 'shuffleDeck'; playerId: PlayerId; depth?: number; source?: LogEntrySource }
+  | { type: 'newTurn'; turn: number; depth?: number; source?: LogEntrySource}
+  | { type: 'newPlayerTurn'; turn: number; playerId: PlayerId; depth?: number; source?: LogEntrySource};
+
+
+
+
+/***************
+ 
+ GAME ACTION types
+ 
+*********************/
+
+export type SelectActionCardArgs = {
+  restrict: EffectRestrictionSpec | number[];
+  count?: CountSpec | number;
+  autoSelect?: boolean;
+  playerId: PlayerId;
+  optional?: boolean;
+  prompt: string;
+  validPrompt?: string;
+  cancelPrompt?: string;
+}
+
+export type UserPromptKinds =
+  | { type: 'blind-rearrange'; cardIds: CardId[]; }
+  | { type: 'rearrange'; cardIds: CardId[]; }
+  | { type: 'name-card' }
+  | { type: 'select'; cardIds: CardId[]; selectCount: CountSpec };
+
+export type UserPromptActionArgs = {
+  playerId: PlayerId;
+  prompt?: string;
+  content?: UserPromptKinds;
+  actionButtons?: ActionButtons;
+  validationAction?: number;
 }
 
 export const TurnPhaseOrderValues = ['action', 'buy', 'cleanup'] as const;

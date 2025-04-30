@@ -630,7 +630,7 @@ export class GameActionController {
     playerId: PlayerId,
     cardId: CardId,
     overrides?: GameActionOverrides
-  }, context?: GameActionContext): Promise<boolean> {
+  }, context?: GameActionContext) {
     const { playerId, cardId } = args;
     
     await this.moveCard({
@@ -692,8 +692,6 @@ export class GameActionController {
       });
       this.logManager.exit();
     }
-    
-    return true;
   }
   
   // Helper method to shuffle a player's deck

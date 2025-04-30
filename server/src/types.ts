@@ -3,21 +3,21 @@ import {
   Card,
   CardId,
   CardKey,
-  CardLocation,
+  CardLocation, CardLocationSpec,
   CardNoId,
   ComputedMatchConfiguration,
   EffectTarget,
   Match,
-  PlayerId,
+  PlayerId, SelectActionCardArgs,
   ServerEmitEvents,
-  ServerListenEvents,
+  ServerListenEvents, UserPromptActionArgs,
 } from 'shared/shared-types.ts';
 import { toNumber } from 'es-toolkit/compat';
 
 import { CardLibrary } from './core/card-library.ts';
 import { ReactionManager } from './core/reactions/reaction-manager.ts';
 import { GameActionController } from './core/effects/game-action-controller.ts';
-import { ExpansionData } from './expansions/expansion-library.ts';
+import { ExpansionData } from "@expansions/expansion-library.ts";
 
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
 
@@ -107,13 +107,28 @@ export type ModifyActionCardArgs = {
   amount: number;
 };
 
-export type GameActions = keyof GameActionController
+export type GameActionDefinitionMap = {
+  [K in keyof GameActionController]: GameActionController[K];
+};
+
+export type GameActions = keyof GameActionDefinitionMap;
+
+export type GameActionArgsMap = {
+  [K in GameActions]: Parameters<GameActionDefinitionMap[K]>[0];
+};
+
+export type GameActionContextMap = {
+  [K in GameActions]: Parameters<GameActionDefinitionMap[K]>[1];
+};
+
+export type GameActionReturnTypeMap = {
+  [K in GameActions]: Awaited<ReturnType<GameActionDefinitionMap[K]>>;
+};
 
 export type RunGameActionDelegate = <K extends GameActions>(
   action: K,
-  ...args: Parameters<GameActionController[K]> extends [] ? [] : Parameters<GameActionController[K]>
-) => Promise<ReturnType<GameActionController[K]>>;
-
+  ...args: Parameters<GameActionDefinitionMap[K]>
+) => Promise<GameActionReturnTypeMap[K]>;
 
 export type ReactionContext = any;
 

@@ -22,7 +22,13 @@ import { cardEffectFunctionMapFactory } from './effects/card-effect-function-map
 import { EventEmitter } from '@denosaurs/event';
 import { LogManager } from './log-manager.ts';
 import { GameActionController } from './effects/game-action-controller.ts';
-import { AppSocket, CardEffectFunctionMap, GameActions, MatchBaseConfiguration, } from '../types.ts';
+import {
+  AppSocket,
+  CardEffectFunctionMap, GameActionDefinitionMap,
+  GameActionReturnTypeMap,
+  GameActions,
+  MatchBaseConfiguration,
+} from '../types.ts';
 import { createCard } from '../utils/create-card.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
@@ -116,8 +122,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   
   async runGameAction<K extends GameActions>(
     action: K,
-    ...args: Parameters<GameActionController[K]> extends [] ? [] : Parameters<GameActionController[K]>
-  ): Promise<ReturnType<GameActionController[K]>> {
+    ...args: Parameters<GameActionDefinitionMap[K]>
+  ): Promise<GameActionReturnTypeMap[K]> {
     this._matchSnapshot ??= this.getMatchSnapshot();
     
     if (action === 'selectCard' || action === 'userPrompt') {
@@ -141,7 +147,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       console.log(`[match] game ended`)
     }
     
-    return result as ReturnType<GameActionController[K]>;
+    return result as Promise<GameActionReturnTypeMap[K]>;
   }
   
   public broadcastPatch(prev: Match) {
@@ -372,11 +378,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     await this.runGameAction('checkForRemainingPlayerActions');
   }
-  
-  private onCardTapHandlerComplete = async (_card: Card, _player: Player) => {
-    console.log(`[match] card tap complete handler invoked`);
-    await this.runGameAction('checkForRemainingPlayerActions');
-  };
   
   private calculateScores() {
     console.log(`[match] calculating scores`);

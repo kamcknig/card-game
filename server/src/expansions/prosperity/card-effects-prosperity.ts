@@ -64,7 +64,6 @@ const expansion: CardExpansionModuleNew = {
   'bishop': {
     registerEffects: () => async (effectArgs) => {
       await effectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
-      await effectArgs.runGameActionDelegate('gainVictoryToken', { count: 1 });
     }
   },
   'platinum': {
