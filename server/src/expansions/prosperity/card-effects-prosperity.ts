@@ -306,7 +306,7 @@ const expansion: CardExpansionModuleNew = {
       const deck = effectArgs.match.playerDecks[effectArgs.playerId];
       const discard = effectArgs.match.playerDiscards[effectArgs.playerId];
       
-      if (deck.length + discard.length) {
+      if (deck.length + discard.length === 0) {
         console.log(`[crystal-ball effect] no cards to look at`);
         return;
       }
@@ -443,7 +443,7 @@ const expansion: CardExpansionModuleNew = {
         playerId: effectArgs.playerId,
         prompt: `Gain card`,
         restrict: {
-          from: { location: 'playerHands' },
+          from: { location: ['supply', 'kingdom'] },
           cost: {
             kind: 'exact',
             amount: { treasure: cost.treasure, potion: 0 },
