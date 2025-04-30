@@ -1,0 +1,35 @@
+{
+  "anvil": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["TREASURE"]
+  },
+  "bank": {
+    "cost": {
+      "treasure": 7
+    },
+    "type": ["TREASURE"]
+  },
+  "bishop": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"]
+  },
+  "colony": {
+    "cost": {
+      "treasure": 11
+    },
+    "isBasic": true,
+    "type": ["VICTORY"],
+    "victoryPoints": 10
+  },
+  "prosperity": {
+    "cost": {
+      "treasure": 9
+    },
+    "isBasic": true,
+    "type": ["TREASURE"]
+  }
+}

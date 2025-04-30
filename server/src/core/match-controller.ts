@@ -88,6 +88,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       playArea: [],
       mats: { ...this._matchConfiguration.mats },
       stats: {
+        playedCardsByTurn: {},
+        cardsGainedByTurn: {},
         playedCards: {},
         cardsGained: {},
         trashedCards: {},

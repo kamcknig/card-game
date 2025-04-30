@@ -12,6 +12,7 @@ export type LogEntry =
   | { type: 'gainAction'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource}
   | { type: 'gainBuy'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'gainTreasure'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource}
+  | { type: 'gainVictoryToken'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource}
   | { type: 'gainCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource}
   | { type: 'cardPlayed'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource}
   | { type: 'revealCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource}
@@ -77,11 +78,13 @@ type CardStats = {
 };
 
 export type MatchStats = {
+  cardsGainedByTurn: Record<number, CardId[]>;
   cardsGained: Record<CardId, CardStats>;
   /**
    * Keys are the card's ID that was played, and values are CardStats objects.
    */
   playedCards: Record<CardId, CardStats>;
+  playedCardsByTurn: Record<number, CardId[]>;
   trashedCards: Record<PlayerId, CardStats>;
   cardsBought: Record<PlayerId, CardStats>;
 };

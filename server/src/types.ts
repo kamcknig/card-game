@@ -17,6 +17,7 @@ import { toNumber } from 'es-toolkit/compat';
 import { CardLibrary } from './core/card-library.ts';
 import { ReactionManager } from './core/reactions/reaction-manager.ts';
 import { GameActionController } from './core/effects/game-action-controller.ts';
+import { ExpansionData } from './expansions/expansion-library.ts';
 
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
 
@@ -148,7 +149,8 @@ export type CardScoringFnContext = {
 
 export type CardExpansionConfiguratorContext = {
   config: ComputedMatchConfiguration,
-  cardLibrary: Record<CardKey, CardNoId>
+  cardLibrary: Record<CardKey, CardNoId>;
+  expansionData: ExpansionData;
 };
 
 export type CardExpansionConfigurator = (args: CardExpansionConfiguratorContext) => ComputedMatchConfiguration;

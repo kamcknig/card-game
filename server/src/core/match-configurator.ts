@@ -126,8 +126,8 @@ export class MatchConfigurator {
     const uniqueExpansions = Array.from(new Set(this._config.kingdomCards.map(card => card.expansionName)));
     for (const expansionName of uniqueExpansions) {
       try {
-        const expansionConfigurator = (await import(`@expansions/${expansionName}/configure-match-${expansionName}.ts`)).default;
-        expansionConfigurator({ config: this._config, cardLibrary: allCardLibrary });
+        const expansionConfigurator = (await import(`@expansions/${expansionName}/configurator-${expansionName}.ts`)).default;
+        expansionConfigurator({ config: this._config, cardLibrary: allCardLibrary, expansionData: expansionLibrary[expansionName] });
       } catch (error) {
         console.warn(`[match configurator] failed to load expansion configurator for ${expansionName}`);
         console.log(error);

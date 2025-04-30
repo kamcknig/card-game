@@ -137,6 +137,9 @@ export class GameActionController {
       toPlayerId: args.playerId
     });
     
+    this.match.stats.cardsGainedByTurn[this.match.turnNumber] ??= [];
+    this.match.stats.cardsGainedByTurn[this.match.turnNumber].push(args.cardId);
+    
     this.match.stats.cardsGained[args.cardId] = {
       turnNumber: this.match.turnNumber,
       playerId: args.playerId
@@ -550,7 +553,7 @@ export class GameActionController {
       }
     }
     
-    await this.runGameActionDelegate('checkForRemainingPlayerActions');
+    await this.checkForRemainingPlayerActions();
   }
   
   async endTurn() {
@@ -581,7 +584,7 @@ export class GameActionController {
       playerId: getCurrentPlayer(this.match).id,
       count: args.count,
       source: context?.loggingContext?.source,
-    })
+    });
   }
   
   // Single, focused implementation of drawCard
@@ -643,6 +646,8 @@ export class GameActionController {
       console.log(`[playCard action] Reducing player's action count to ${this.match.playerActions}`);
     }
     
+    this.match.stats.playedCardsByTurn[this.match.turnNumber] ??= [];
+    this.match.stats.playedCardsByTurn[this.match.turnNumber].push(cardId);
     this.match.stats.playedCards[cardId] = {
       turnNumber: this.match.turnNumber,
       playerId: playerId,
