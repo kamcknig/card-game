@@ -37,6 +37,12 @@
     },
     "type": ["ACTION"]
   },
+  "clerk": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION", "REACTION", "ATTACK"]
+  },
   "platinum": {
     "cost": {
       "treasure": 9

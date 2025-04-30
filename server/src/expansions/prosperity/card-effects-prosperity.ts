@@ -201,10 +201,66 @@ const expansion: CardExpansionModuleNew = {
         await effectArgs.runGameActionDelegate('drawCard', { playerId: effectArgs.playerId });
       }
       
-      if(emptySupplyCount > 1) {
+      if (emptySupplyCount > 1) {
         console.log(`[city effect] empty supply count is greater than 1; gaining 1 buy and 1 treasure`);
         await effectArgs.runGameActionDelegate('gainBuy', { count: 1 });
         await effectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+      }
+    }
+  },
+  'clerk': {
+    registerLifeCycleMethods: () => ({
+      onEnterHand: args => {
+        args.reactionManager.registerReactionTemplate({
+          id: `clerk:${args.cardId}:startTurn`,
+          listeningFor: 'startTurn',
+          playerId: args.playerId,
+          once: true,
+          allowMultipleInstances: true,
+          compulsory: false,
+          condition: (conditionArgs) => conditionArgs.trigger.args.playerId !== args.playerId,
+          triggeredEffectFn: async (triggerEffectArgs) => {
+            await triggerEffectArgs.runGameActionDelegate('playCard', {
+              playerId: args.playerId,
+              cardId: args.cardId
+            });
+          }
+        })
+      },
+      onLeaveHand: args => {
+        args.reactionManager.unregisterTrigger(`clerk:${args.cardId}:startTurn`)
+      }
+    }),
+    registerEffects: () => async (effectArgs) => {
+      await effectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+      
+      const targetPlayerIds = findOrderedTargets({
+        match: effectArgs.match,
+        appliesTo: 'ALL_OTHER',
+        startingPlayerId: effectArgs.playerId
+      }).filter(playerId => {
+        return effectArgs.reactionContext?.[playerId].result !== 'immunity' &&
+          effectArgs.match.playerHands[playerId].length >= 5;
+      });
+      
+      for (const targetPlayerId of targetPlayerIds) {
+        const selectedCardIds = await effectArgs.runGameActionDelegate('selectCard', {
+          playerId: targetPlayerId,
+          prompt: `Top-deck card`,
+          restrict: { from: { location: 'playerHands' } },
+          count: 1
+        }) as CardId[];
+        
+        if (!selectedCardIds) {
+          console.log(`[clerk effect] target player ${targetPlayerId} selected no card`);
+          continue;
+        }
+        
+        await effectArgs.runGameActionDelegate('moveCard', {
+          cardId: selectedCardIds[0],
+          toPlayerId: targetPlayerId,
+          to: { location: 'playerDecks' }
+        });
       }
     }
   },
