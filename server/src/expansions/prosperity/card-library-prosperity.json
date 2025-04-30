@@ -43,6 +43,18 @@
     },
     "type": ["ACTION", "REACTION", "ATTACK"]
   },
+  "collection": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["TREASURE"]
+  },
+  "crystal-ball": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["TREASURE"]
+  },
   "platinum": {
     "cost": {
       "treasure": 9

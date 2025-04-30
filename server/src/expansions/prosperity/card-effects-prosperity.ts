@@ -264,6 +264,91 @@ const expansion: CardExpansionModuleNew = {
       }
     }
   },
+  'collection': {
+    registerLifeCycleMethods: () => ({
+      onLeavePlay: args => {
+        args.reactionManager.unregisterTrigger(`collection:${args.cardId}:gainCard`);
+      }
+    }),
+    registerEffects: () => async (effectArgs) => {
+      console.log(`[collection effect] gaining 2 treasure and 1 buy`);
+      await effectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+      await effectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+      
+      effectArgs.reactionManager.registerReactionTemplate({
+        id: `collection:${effectArgs.cardId}:gainCard`,
+        playerId: effectArgs.playerId,
+        listeningFor: 'gainCard',
+        compulsory: true,
+        once: true,
+        allowMultipleInstances: true,
+        condition: (conditionArgs) => {
+          const currentTurnNumber = conditionArgs.match.turnNumber;
+          if (currentTurnNumber !== conditionArgs.match.stats.cardsGained[conditionArgs.trigger.args.cardId].turnNumber) return false;
+          const card = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
+          if (!card.type.includes('ACTION')) return false;
+          return true;
+        },
+        triggeredEffectFn: async (triggeredEffectArgs) => {
+          console.log(`[collection triggered effect] gaining 1 victory token`);
+          await triggeredEffectArgs.runGameActionDelegate('gainVictoryToken', {
+            playerId: effectArgs.playerId,
+            count: 1
+          });
+        }
+      })
+    }
+  },
+  'crystal-ball': {
+    registerEffects: () => async (effectArgs) => {
+      await effectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+      
+      const deck = effectArgs.match.playerDecks[effectArgs.playerId];
+      const discard = effectArgs.match.playerDiscards[effectArgs.playerId];
+      
+      if (deck.length + discard.length) {
+        console.log(`[crystal-ball effect] no cards to look at`);
+        return;
+      }
+      
+      if (deck.length === 0) {
+        await effectArgs.runGameActionDelegate('shuffleDeck', { playerId: effectArgs.playerId });
+      }
+      
+      const cardId = deck.slice(-1)[0];
+      const card = effectArgs.cardLibrary.getCard(cardId);
+      
+      const actions = [
+        { label: 'Trash', action: 1 },
+        { label: 'Discard', action: 2 }
+      ];
+      
+      const isAction = card.type.includes('ACTION')
+      const isTreasure = card.type.includes('TREASURE')
+      
+      if (isAction || isTreasure) {
+        actions.push({ label: 'Play', action: 3 });
+      }
+      
+      const result = await effectArgs.runGameActionDelegate('userPrompt', {
+        prompt: `You drew ${card.cardName}`,
+        playerId: effectArgs.playerId,
+        actionButtons: actions,
+      }) as { action: number, cardIds: number[] };
+      
+      switch (result.action) {
+        case 1:
+          await effectArgs.runGameActionDelegate('trashCard', { playerId: effectArgs.playerId, cardId });
+          break;
+        case 2:
+          await effectArgs.runGameActionDelegate('discardCard', { cardId, playerId: effectArgs.playerId });
+          break;
+        case 3:
+          await effectArgs.runGameActionDelegate('playCard', { playerId: effectArgs.playerId, cardId });
+          break;
+      }
+    }
+  },
   'platinum': {
     registerEffects: () => async (effectArgs) => {
       await effectArgs.runGameActionDelegate('gainTreasure', { count: 5 });
