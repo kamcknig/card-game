@@ -1,4 +1,4 @@
-import { CardId, LogEntry, SelectActionCardArgs, ServerEmitEvents, TurnPhaseOrderValues } from 'shared/shared-types';
+import { CardId, LogEntry, PlayerId, SelectActionCardArgs, ServerEmitEvents } from 'shared/shared-types';
 
 export type ClientListenEvents = ServerEmitEvents;
 export type ServerEmitEventNames = keyof ServerEmitEvents;
@@ -10,4 +10,10 @@ export type LogEntryMessage = LogEntry & { message: string; id: number; };
 
 export type CardFacing = 'front' | 'back';
 export type CardSize = 'full' | 'half' | 'detail';
-export type TurnPhase = typeof TurnPhaseOrderValues[number] | undefined;
+
+declare module 'shared/shared-types' {
+  interface Match {
+    playerVictoryTokens?: Record<PlayerId, number>;
+  }
+}
+

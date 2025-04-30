@@ -1,12 +1,13 @@
 import { ChangeDetectionStrategy, Component, Input, OnInit } from '@angular/core';
 import { NanostoresService } from '@nanostores/angular';
 import { currentPlayerTurnIdStore, turnNumberStore } from '../../../../state/turn-state';
-import { map, Observable } from 'rxjs';
-import { AsyncPipe, NgClass, UpperCasePipe } from '@angular/common';
+import { map, Observable, tap } from 'rxjs';
+import { AsyncPipe, NgClass, NgOptimizedImage, UpperCasePipe } from '@angular/common';
 import { PlayerId } from 'shared/shared-types';
 import { playerIdStore, playerStore } from '../../../../state/player-state';
 import tinycolor from 'tinycolor2'
 import { roundNumberStore } from '../../../../state/turn-logic';
+import { matchStore } from '../../../../state/match-state';
 
 @Component({
   selector: 'app-score',
@@ -14,6 +15,7 @@ import { roundNumberStore } from '../../../../state/turn-logic';
     AsyncPipe,
     UpperCasePipe,
     NgClass,
+    NgOptimizedImage,
   ],
   templateUrl: './score.component.html',
   styleUrl: './score.component.scss',
@@ -25,9 +27,12 @@ export class ScoreComponent implements OnInit {
   turnNumber$: Observable<number> | undefined;
   roundNumber$: Observable<number> | undefined;
   currentPlayerTurnId$: Observable<PlayerId> | undefined;
+  victoryTokens$: Observable<Record<PlayerId, number>> | undefined;
 
   constructor(private _nanoService: NanostoresService) {
-
+    this.victoryTokens$ = this._nanoService.useStore(matchStore).pipe(
+      map(match => match?.playerVictoryTokens ?? {})
+    )
   }
 
   getOrderedPlayerScores() {

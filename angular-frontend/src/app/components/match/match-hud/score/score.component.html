@@ -1,5 +1,7 @@
 <div class="content">
-  <span>{{ ('Turn ' + ((roundNumber$ | async) ?? 1)) | uppercase }} ({{turnNumber$ | async}})</span>
+  <span>{{ ('Turn ' + ((roundNumber$ | async) ?? 1)) | uppercase }} ({{ turnNumber$ | async }})</span>
+
+  @let victoryTokens = victoryTokens$ | async;
 
   <div class="player-scores-container">
     @for (playerScore of (getOrderedPlayerScores() | async); track playerScore?.id) {
@@ -13,7 +15,22 @@
           [style.backgroundColor]="getBackgroundColor(playerScore.id) | async"
         >
           <span class="player-name">{{ playerScore.name }}</span>
-          <span>{{ playerScore.score }}</span>
+
+          <div style="display: flex; align-items: center; gap: 10px;">
+            @if ((victoryTokens?.[playerScore.id] ?? 0) > 0) {
+              <div style="position:relative; display: flex; align-items: center;">
+                <img
+                  class="victory-token-icon"
+                  ngSrc="/assets/ui-icons/victory-shield.png"
+                  width="24"
+                  height="24"
+                  alt="victory point token"
+                >
+                <span class="victory-token-count">{{ (victoryTokens$ | async)?.[playerScore.id] ?? 0 }}</span>
+              </div>
+            }
+            <span style="font-size: 18px;">{{ playerScore.score }}</span>
+          </div>
         </div>
       }
     }

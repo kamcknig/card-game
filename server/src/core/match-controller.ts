@@ -6,7 +6,6 @@ import {
   Match,
   MatchConfiguration,
   MatchSummary,
-  Player,
   PlayerId,
 } from 'shared/shared-types.ts';
 import { MatchConfigurator } from './match-configurator.ts';
@@ -24,7 +23,8 @@ import { LogManager } from './log-manager.ts';
 import { GameActionController } from './effects/game-action-controller.ts';
 import {
   AppSocket,
-  CardEffectFunctionMap, GameActionDefinitionMap,
+  CardEffectFunctionMap,
+  GameActionDefinitionMap,
   GameActionReturnTypeMap,
   GameActions,
   MatchBaseConfiguration,
@@ -132,7 +132,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._matchSnapshot = this.getMatchSnapshot();
     }
     
-    const result = await (this.gameActionsController![action] as any)(args[0], args?.[1]);
+    const result = await this.gameActionsController!.invokeAction(action, ...args);
     
     this.calculateScores();
     
@@ -346,10 +346,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._interactivityController,
     );
     
+    await this.initializeExpansions();
+    
     for (const socket of this._socketMap.values()) {
       this.initializeSocketListeners(socket);
     }
-    
     
     this._matchSnapshot = this.getMatchSnapshot();
     this._match.playerBuys = 1;
@@ -377,6 +378,33 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     });
     
     await this.runGameAction('checkForRemainingPlayerActions');
+  }
+  
+  private _expansionScoringFns: ((args: { match: Match }) => void)[] = [];
+  
+  private async initializeExpansions() {
+    console.log(`[match] initializing expansions`);
+    
+    console.log(`[match] registering expansion actions`);
+    await this.gameActionsController?.registerExpansionActions();
+    
+    await this.registerExpansionScoringFunctions();
+  }
+  
+  private async registerExpansionScoringFunctions() {
+    const uniqueExpansions = Array.from(new Set(this._match.config.kingdomCards.map(card => card.expansionName)));
+    for (const expansion of uniqueExpansions) {
+      try {
+        const module = await import((`@expansions/${expansion}/configurator-${expansion}.ts`));
+        const scoringFunctionFactory = module.scoringFunctionFactory;
+        if (!scoringFunctionFactory) continue;
+        console.log(`[match] registering scoring function for ${expansion}`);
+        this._expansionScoringFns.push(scoringFunctionFactory());
+      } catch (error) {
+        console.warn(`[registerExpansionActions] failed to register expansion actions for ${expansion}`, error);
+        console.log(error);
+      }
+    }
   }
   
   private calculateScores() {
@@ -408,6 +436,10 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }
     
     match.scores = scores;
+    
+    for (const expansionScoringFn of this._expansionScoringFns) {
+      expansionScoringFn({ match });
+    }
   }
   
   private checkGameEnd() {

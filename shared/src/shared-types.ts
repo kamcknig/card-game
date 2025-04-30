@@ -52,7 +52,7 @@ export type MatchStats = {
   cardsBought: Record<PlayerId, CardStats>;
 };
 
-export type Match = {
+export interface Match {
   activeDurationCards: CardId[];
   config: MatchConfiguration,
   currentPlayerTurnIndex: number;

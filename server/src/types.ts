@@ -3,21 +3,24 @@ import {
   Card,
   CardId,
   CardKey,
-  CardLocation, CardLocationSpec,
+  CardLocation,
+  CardLocationSpec,
   CardNoId,
   ComputedMatchConfiguration,
   EffectTarget,
   Match,
-  PlayerId, SelectActionCardArgs,
+  PlayerId,
+  SelectActionCardArgs,
   ServerEmitEvents,
-  ServerListenEvents, UserPromptActionArgs,
+  ServerListenEvents,
+  UserPromptActionArgs,
 } from 'shared/shared-types.ts';
 import { toNumber } from 'es-toolkit/compat';
 
 import { CardLibrary } from './core/card-library.ts';
 import { ReactionManager } from './core/reactions/reaction-manager.ts';
 import { GameActionController } from './core/effects/game-action-controller.ts';
-import { ExpansionData } from "@expansions/expansion-library.ts";
+import { ExpansionData } from '@expansions/expansion-library.ts';
 
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
 
@@ -107,9 +110,43 @@ export type ModifyActionCardArgs = {
   amount: number;
 };
 
-export type GameActionDefinitionMap = {
-  [K in keyof GameActionController]: GameActionController[K];
-};
+export interface BaseGameActionDefinitionMap {
+  modifyCost: (args: ModifyActionCardArgs) => Promise<void>;
+  gainPotion: (args: { count: number }) => Promise<void>;
+  gainBuy: (args: { count: number }, context?: GameActionContext) => Promise<void>;
+  moveCard: (args: { toPlayerId?: PlayerId, cardId: CardId, to: CardLocationSpec }) => Promise<CardLocation>;
+  gainAction: (args: { count: number }, context?: GameActionContext) => Promise<void>;
+  gainCard: (args: {
+    playerId: PlayerId,
+    cardId: CardId,
+    to: CardLocationSpec
+  }, context?: GameActionContext) => Promise<void>;
+  userPrompt: (args: UserPromptActionArgs) => Promise<unknown>;
+  selectCard: (args: SelectActionCardArgs) => Promise<CardId[]>;
+  trashCard: (args: { cardId: CardId, playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
+  buyCard: (args: { cardId: CardId; playerId: PlayerId }) => Promise<void>;
+  revealCard: (args: {
+    cardId: CardId,
+    playerId: PlayerId,
+    moveToSetAside?: boolean
+  }, context?: GameActionContext) => Promise<void>;
+  checkForRemainingPlayerActions: () => Promise<void>;
+  discardCard: (args: { cardId: CardId, playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
+  nextPhase: () => Promise<void>;
+  endTurn: () => Promise<void>;
+  gainTreasure: (args: { count: number }, context?: GameActionContext) => Promise<void>;
+  drawCard: (args: { playerId: PlayerId }, context?: GameActionContext) => Promise<CardId | null>
+  playCard: (args: {
+    playerId: PlayerId,
+    cardId: CardId,
+    overrides?: GameActionOverrides
+  }, context?: GameActionContext) => Promise<void>;
+  shuffleDeck: (args: { playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
+}
+
+export interface GameActionDefinitionMap extends BaseGameActionDefinitionMap {
+  [key: string]: (...args: any[]) => Promise<any>;
+}
 
 export type GameActions = keyof GameActionDefinitionMap;
 
@@ -166,6 +203,7 @@ export type CardExpansionConfiguratorContext = {
   config: ComputedMatchConfiguration,
   cardLibrary: Record<CardKey, CardNoId>;
   expansionData: ExpansionData;
+  actionRegister: GameActionController['registerAction'];
 };
 
 export type CardExpansionConfigurator = (args: CardExpansionConfiguratorContext) => ComputedMatchConfiguration;
@@ -344,3 +382,14 @@ export type LifecycleCallback = (args: LifecycleCallbackContext) => LifecycleRes
 export type LifecycleEvent = keyof LifecycleCallbackMap;
 
 export type CardOverrides = Record<PlayerId, Record<CardId, Card>>;
+
+export type ActionFunctionFactoryContext = {
+  match: Match;
+}
+
+export type ExpansionActionRegistery = (registerAction: RegisterActionFn, args: ActionFunctionFactoryContext) => void;
+
+export type RegisterActionFn = <K extends keyof GameActionDefinitionMap>(
+  key: K,
+  handler: GameActionDefinitionMap[K]
+) => void;

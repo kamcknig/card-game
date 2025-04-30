@@ -13,9 +13,13 @@ import { LogManager } from '../log-manager.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import {
   AppSocket,
+  BaseGameActionDefinitionMap,
   CardEffectFunctionMap,
   GameActionContext,
+  GameActionDefinitionMap,
   GameActionOverrides,
+  GameActionReturnTypeMap,
+  GameActions,
   ModifyActionCardArgs,
   ReactionTrigger,
   RunGameActionDelegate
@@ -31,7 +35,9 @@ import { castArray, isNumber } from 'es-toolkit/compat';
 import { ReactionManager } from '../reactions/reaction-manager.ts';
 import { CardInteractivityController } from '../card-interactivity-controller.ts';
 
-export class GameActionController {
+export class GameActionController implements BaseGameActionDefinitionMap {
+  private customActionHandlers: Partial<GameActionDefinitionMap> = {};
+  
   constructor(
     private cardEffectFunctionMap: CardEffectFunctionMap,
     private match: Match,
@@ -42,6 +48,44 @@ export class GameActionController {
     private runGameActionDelegate: RunGameActionDelegate,
     private readonly interactivityController: CardInteractivityController,
   ) {
+  }
+  
+  public async registerExpansionActions() {
+    const uniqueExpansions = Array.from(new Set(this.match.config.kingdomCards.map(card => card.expansionName)));
+    for (const expansion of uniqueExpansions) {
+      try {
+        const module = await import((`@expansions/${expansion}/configurator-${expansion}.ts`));
+        const actionRegistry = module.actionRegistry;
+        if (!actionRegistry) continue;
+        actionRegistry(this.registerAction.bind(this), { match: this.match });
+      } catch (error) {
+        console.warn(`[registerExpansionActions] failed to register expansion actions for ${expansion}`, error);
+        console.log(error);
+      }
+    }
+  }
+  
+  private registerAction<K extends GameActions>(key: K, handler: GameActionDefinitionMap[K]) {
+    if ((this as any)[key]) {
+      throw new Error(`[registerAction] action ${key} is reserved`);
+    }
+    
+    if (this.customActionHandlers[key]) {
+      console.warn(`[registerAction] overwriting existing action handler for ${key}`);
+    }
+    
+    this.customActionHandlers[key] = handler;
+  }
+  
+  public async invokeAction<K extends GameActions>(
+    action: K,
+    ...args: Parameters<GameActionDefinitionMap[K]>
+  ): Promise<GameActionReturnTypeMap[K]> {
+    const handler = (this as any)[action] ?? this.customActionHandlers[action];
+    if (!handler) {
+      throw new Error(`No handler registered for action: ${action}`);
+    }
+    return await handler.bind(this)(...args);
   }
   
   // todo change this probably to setOverrides when there are more overrides later?

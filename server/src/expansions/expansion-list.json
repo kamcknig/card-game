@@ -18,5 +18,10 @@
     "title": "Alchemy",
     "name": "alchemy",
     "order": 4
+  },
+  {
+    "title": "Prosperity",
+    "name": "prosperity",
+    "order": 5
   }
 ]

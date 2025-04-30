@@ -46,7 +46,7 @@ Deno.serve({
 });
 
 (async () => {
-  const expansionList = (await import(`./expansions/expansion-list.json`, {
+  const expansionList = (await import("@expansions/expansion-list.json", {
     with: { type: 'json' },
   })).default;
   

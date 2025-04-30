@@ -12,7 +12,10 @@ export class MatchConfigurator {
   private _bannedKingdoms: CardNoId[] = [];
   private _config: ComputedMatchConfiguration;
   
-  constructor(config: MatchConfiguration, private _options?: MatchConfiguratorOptions) {
+  constructor(
+    config: MatchConfiguration,
+    private _options?: MatchConfiguratorOptions
+  ) {
     
     this._config = {
       ...config
@@ -27,7 +30,8 @@ export class MatchConfigurator {
     }
     
     if (this._config.kingdomCards?.length > 0) {
-      console.log(`[match configurator] requested kingdom cards ${this._config.kingdomCards?.map(card => card.cardKey)?.join(', ') ?? '- no requested kingdom cards'}`);
+      console.log(`[match configurator] requested kingdom cards ${this._config.kingdomCards?.map(card => card.cardKey)
+        ?.join(', ') ?? '- no requested kingdom cards'}`);
     }
     
     this._requestedKingdoms = Array.from(new Set([
@@ -106,8 +110,8 @@ export class MatchConfigurator {
     // based on the number of players, get the basic supply card counts
     const basicCardCounts = { ...MatchBaseConfiguration.basicSupplyByPlayerCount[this._config.players.length - 1] } as Record<CardKey, number>;
     
-    // coppers come from the supply, so they are removed here, because these represent the cards IN the supply at the start
-    // of game. The coppers in a player's hand come from the supply, whereas the estates do not.
+    // coppers come from the supply, so they are removed here, because these represent the cards IN the supply at the
+    // start of game. The coppers in a player's hand come from the supply, whereas the estates do not.
     this._config.basicCardCount = Object.keys(basicCardCounts).reduce((acc, nextKey) => {
       acc[nextKey] = nextKey === 'copper' ? this._config.players.length * MatchBaseConfiguration.playerStartingHand.copper : basicCardCounts[nextKey];
       return acc;
@@ -119,7 +123,8 @@ export class MatchConfigurator {
       return acc;
     }, [] as CardNoId[]);
     
-    console.log(`[match configurator] setting default basic cards ${this._config.basicCards.map(card => card.cardKey).join(', ')}`);
+    console.log(`[match configurator] setting default basic cards ${this._config.basicCards.map(card => card.cardKey)
+      .join(', ')}`);
   }
   
   private async runExpansionConfigurations() {
@@ -127,7 +132,11 @@ export class MatchConfigurator {
     for (const expansionName of uniqueExpansions) {
       try {
         const expansionConfigurator = (await import(`@expansions/${expansionName}/configurator-${expansionName}.ts`)).default;
-        expansionConfigurator({ config: this._config, cardLibrary: allCardLibrary, expansionData: expansionLibrary[expansionName] });
+        expansionConfigurator({
+          config: this._config,
+          cardLibrary: allCardLibrary,
+          expansionData: expansionLibrary[expansionName]
+        });
       } catch (error) {
         console.warn(`[match configurator] failed to load expansion configurator for ${expansionName}`);
         console.log(error);
