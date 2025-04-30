@@ -349,6 +349,62 @@ const expansion: CardExpansionModuleNew = {
       }
     }
   },
+  'expand': {
+    registerEffects: () => async (effectArgs) => {
+      console.log('[expand effect] prompting to select card to trash')
+      const selectedToTrashIds = await effectArgs.runGameActionDelegate('selectCard', {
+        playerId: effectArgs.playerId,
+        prompt: `Trash card`,
+        restrict: { from: { location: 'playerHands' } },
+        count: 1
+      }) as CardId[];
+      
+      if (!selectedToTrashIds.length) {
+        console.log(`[expand effect] no card selected`);
+        return;
+      }
+      
+      const selectedToTrashId = selectedToTrashIds[0];
+      let card = effectArgs.cardLibrary.getCard(selectedToTrashId);
+      console.log(`[expand effect] selected ${card} to trash`)
+      
+      const effectCost = getEffectiveCardCost(
+        effectArgs.playerId,
+        selectedToTrashId,
+        effectArgs.match,
+        effectArgs.cardLibrary
+      );
+      
+      const selectedToGainIds = await effectArgs.runGameActionDelegate('selectCard', {
+        playerId: effectArgs.playerId,
+        prompt: `Gain card`,
+        restrict: {
+          from: { location: ['kingdom', 'supply'] },
+          cost: {
+            kind: 'upTo',
+            playerId: effectArgs.playerId,
+            amount: { treasure: effectCost.treasure + 3, potion: effectCost.potion }
+          }
+        },
+        count: 1,
+      }) as CardId[];
+      
+      if (!selectedToGainIds.length) {
+        console.log(`[expand effect] no card selected`);
+        return;
+      }
+      
+      card = effectArgs.cardLibrary.getCard(selectedToGainIds[0]);
+      
+      console.log(`[expand effect] selected ${card} to gain`)
+      
+      await effectArgs.runGameActionDelegate('gainCard', {
+        playerId: effectArgs.playerId,
+        cardId: selectedToGainIds[0],
+        to: { location: 'playerDiscards' }
+      });
+    }
+  },
   'platinum': {
     registerEffects: () => async (effectArgs) => {
       await effectArgs.runGameActionDelegate('gainTreasure', { count: 5 });
