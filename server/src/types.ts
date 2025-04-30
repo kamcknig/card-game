@@ -208,7 +208,10 @@ export type CardExpansionConfiguratorContext = {
   actionRegister: GameActionController['registerAction'];
 };
 
-export type CardExpansionConfigurator = (args: CardExpansionConfiguratorContext) => ComputedMatchConfiguration;
+export type CardExpansionConfigurator = (args: CardExpansionConfiguratorContext) => {
+  config: ComputedMatchConfiguration;
+  endGameConditions?: (args: { match: Match, cardLibrary: CardLibrary }) => boolean
+};
 
 export type CardScoringFunction = (args: CardScoringFnContext) => number;
 

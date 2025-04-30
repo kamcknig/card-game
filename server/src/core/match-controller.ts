@@ -40,6 +40,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private gameActionsController: GameActionController | undefined;
   private _match: Match = {} as Match;
   private _matchConfiguration: ComputedMatchConfiguration | undefined;
+  private _expansionEndGameConditionFns: ((...args: any[]) => boolean)[] = [];
   
   constructor(
     private readonly _socketMap: Map<PlayerId, AppSocket>,
@@ -69,10 +70,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   ];
   
   public async initialize(config: MatchConfiguration) {
-    this._matchConfiguration = await new MatchConfigurator(
-      config,
-      { keeperCards: [] }
-    ).createConfiguration();
+    const { config: newConfig, endGameConditionFns } =
+      await new MatchConfigurator(config, { keeperCards: [] }).createConfiguration();
+    
+    this._matchConfiguration = newConfig;
+    
+    if (endGameConditionFns.length) {
+      this._expansionEndGameConditionFns = [...this._expansionEndGameConditionFns, ...endGameConditionFns];
+    }
     
     this._match = {
       activeDurationCards: [],
@@ -475,6 +480,10 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       console.log(`[match] three supply piles are empty, game over`);
       this.endGame();
       return true;
+    }
+    
+    for (const conditionFn of this._expansionEndGameConditionFns) {
+      conditionFn({ match: this._match, cardLibrary: this._cardLibrary });
     }
     
     return false;

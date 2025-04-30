@@ -1,12 +1,17 @@
 import './types.ts';
 import { CardEffectFn, CardExpansionConfigurator, ExpansionActionRegistery, } from '../../types.ts';
 import { CardKey, Match } from 'shared/shared-types.ts';
+import { findCards } from '../../utils/find-cards.ts';
+import { CardLibrary } from '../../core/card-library.ts';
 
 const configurator: CardExpansionConfigurator = (args) => {
   const kingdomCards = args.config.kingdomCards;
   const randomKingdomCard = kingdomCards[Math.floor(kingdomCards.length * Math.random())];
   console.log(`[prosperity configurator] random kingdom chosen to determine if colony and prosperity should be added to config '${randomKingdomCard.cardKey}'`);
+  let colonyPresent = false;
+  colonyPresent = true;
   if (randomKingdomCard.expansionName === 'prosperity') {
+    colonyPresent = true;
     console.log(`[prosperity configurator] adding prosperity and colony to config`);
     
     args.config.basicCards = [
@@ -18,6 +23,13 @@ const configurator: CardExpansionConfigurator = (args) => {
     args.config.basicCardCount['colony'] = args.config.players.length >= 3 ? 12 : 8;
   }
   else {
+    args.config.basicCards = [
+      ...args.config.basicCards,
+      { ...args.expansionData.cardData.basicSupply['platinum'] },
+      { ...args.expansionData.cardData.basicSupply['colony'] }
+    ];
+    args.config.basicCardCount['platinum'] = 12;
+    args.config.basicCardCount['colony'] = args.config.players.length >= 3 ? 12 : 8;
     console.log(`[prosperity configurator] NOT adding prosperity and colony to config`);
   }
   
@@ -32,7 +44,23 @@ const configurator: CardExpansionConfigurator = (args) => {
     curseCard?.type.push('TREASURE');
   }
   
-  return args.config;
+  const endGameConditions = (endGameArgs: { match: Match, cardLibrary: CardLibrary }) => {
+    if (!colonyPresent) {
+      return false;
+    }
+    
+    const colonyCards = findCards(
+      endGameArgs.match,
+      {
+        location: 'supply',
+        cards: { cardKeys: 'colony' }
+      },
+      endGameArgs.cardLibrary
+    );
+    return colonyCards.length === 0;
+  }
+  
+  return { config: args.config, endGameConditions: colonyPresent ? endGameConditions : undefined };
 }
 
 export const actionRegistry: ExpansionActionRegistery = (registerFn, { match }) => {

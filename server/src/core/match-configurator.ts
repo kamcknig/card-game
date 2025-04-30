@@ -11,6 +11,7 @@ export class MatchConfigurator {
   private _requestedKingdoms: CardNoId[] = [];
   private _bannedKingdoms: CardNoId[] = [];
   private _config: ComputedMatchConfiguration;
+  private readonly _expansionEndGameConditionFuncs: ((...args: any[]) => boolean)[] = [];
   
   constructor(
     config: MatchConfiguration,
@@ -49,7 +50,7 @@ export class MatchConfigurator {
     this.selectBasicSupply();
     addMatToMatchConfig('set-aside', this._config);
     await this.runExpansionConfigurations();
-    return this._config
+    return { config: this._config, endGameConditionFns: this._expansionEndGameConditionFuncs };
   }
   
   private selectKingdomSupply() {
@@ -130,11 +131,14 @@ export class MatchConfigurator {
     for (const expansionName of uniqueExpansions) {
       try {
         const expansionConfigurator = (await import(`@expansions/${expansionName}/configurator-${expansionName}.ts`)).default;
-        expansionConfigurator({
+        const { endGameConditions } = expansionConfigurator({
           config: this._config,
           cardLibrary: allCardLibrary,
           expansionData: expansionLibrary[expansionName]
         });
+        if (endGameConditions) {
+          this._expansionEndGameConditionFuncs.push(endGameConditions);
+        }
       } catch (error) {
         console.warn(`[match configurator] failed to load expansion configurator for ${expansionName}`);
         console.log(error);
