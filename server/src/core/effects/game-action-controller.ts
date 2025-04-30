@@ -293,7 +293,11 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       
       selectableCardIds = findCards(
         this.match,
-        restrict,
+        {
+          location: restrict.from.location,
+          cards: !Array.isArray(restrict.card) ? restrict.card : undefined,
+          cost: restrict.cost
+        },
         this.cardLibrary,
       );
       

@@ -218,7 +218,7 @@ const expansion: CardExpansionModuleNew = {
           once: true,
           allowMultipleInstances: true,
           compulsory: false,
-          condition: (conditionArgs) => conditionArgs.trigger.args.playerId !== args.playerId,
+          condition: (conditionArgs) => conditionArgs.trigger.args.playerId === args.playerId,
           triggeredEffectFn: async (triggerEffectArgs) => {
             await triggerEffectArgs.runGameActionDelegate('playCard', {
               playerId: args.playerId,
@@ -239,7 +239,7 @@ const expansion: CardExpansionModuleNew = {
         appliesTo: 'ALL_OTHER',
         startingPlayerId: effectArgs.playerId
       }).filter(playerId => {
-        return effectArgs.reactionContext?.[playerId].result !== 'immunity' &&
+        return effectArgs.reactionContext?.[playerId]?.result !== 'immunity' &&
           effectArgs.match.playerHands[playerId].length >= 5;
       });
       
