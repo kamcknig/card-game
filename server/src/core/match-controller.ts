@@ -87,10 +87,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       selectableCards: {},
       playArea: [],
       mats: { ...this._matchConfiguration.mats },
-      zones: {
-        'revealed': [],
-        'look-at': [],
-      },
       stats: {
         playedCards: {},
         cardsGained: {},

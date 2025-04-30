@@ -1,4 +1,4 @@
-import { CardId, CardLocation, Match, Mats, Zones } from 'shared/shared-types.ts';
+import { CardId, CardLocation, Match, Mats } from 'shared/shared-types.ts';
 import { isUndefined } from 'es-toolkit';
 
 import { CardLibrary } from '../core/card-library.ts';
@@ -38,13 +38,6 @@ export const findSourceByCardId = (
           sourceStore = match.mats[+playerId][mat as Mats];
           storeKey = mat as Mats;
         }
-      }
-    }
-    
-    for (const [zone, cardIds] of Object.entries(match.zones)) {
-      if (cardIds.includes(cardId)) {
-        sourceStore = match.zones[zone as Zones];
-        storeKey = zone as Zones;
       }
     }
     

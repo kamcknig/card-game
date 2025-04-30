@@ -839,7 +839,7 @@ const expansion: CardExpansionModuleNew = {
       await runGameActionDelegate('revealCard', {
         cardId,
         playerId,
-        moveToRevealed: true
+        moveToSetAside: true
       });
       
       const copyInPlay = match.playArea.map(cardLibrary.getCard)

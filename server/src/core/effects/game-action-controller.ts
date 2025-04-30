@@ -346,11 +346,11 @@ export class GameActionController {
   async revealCard(args: {
     cardId: CardId,
     playerId: PlayerId,
-    moveToRevealed?: boolean
+    moveToSetAside?: boolean
   }, context?: GameActionContext) {
     console.log(`[revealCard action] ${getPlayerById(this.match, args.playerId)} revealing ${this.cardLibrary.getCard(args.cardId)}`);
     
-    if (args.moveToRevealed) {
+    if (args.moveToSetAside) {
       console.log(`[revealCard action] moving card to 'revealed' zone`);
       
       await this.moveCard({

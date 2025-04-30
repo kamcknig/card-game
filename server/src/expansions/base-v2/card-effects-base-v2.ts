@@ -136,7 +136,7 @@ const expansionModule: CardExpansionModuleNew = {
           await runGameActionDelegate('revealCard', {
             playerId: targetPlayerId,
             cardId,
-            moveToRevealed: true,
+            moveToSetAside: true,
           });
         }
         

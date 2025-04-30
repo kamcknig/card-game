@@ -792,7 +792,7 @@ const expansionModule: CardExpansionModuleNew = {
         await runGameActionDelegate('revealCard', {
           cardId,
           playerId,
-          moveToRevealed: true,
+          moveToSetAside: true,
         });
       }
       
