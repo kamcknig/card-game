@@ -4,6 +4,7 @@ import { CardExpansionModuleNew } from '../../types.ts';
 import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { findCards } from '../../utils/find-cards.ts';
+import { getRemainingSupplyCount, getStartingSupplyCount } from '../../utils/get-starting-supply-count.ts';
 
 const expansion: CardExpansionModuleNew = {
   'anvil': {
@@ -184,6 +185,26 @@ const expansion: CardExpansionModuleNew = {
           cardId: curseCards.slice(-1)[0],
           to: { location: 'playerDiscards' }
         });
+      }
+    }
+  },
+  'city': {
+    registerEffects: () => async (effectArgs) => {
+      console.log(`[city effect] drawing 1 card and gaining 1 action`);
+      await effectArgs.runGameActionDelegate('drawCard', { playerId: effectArgs.playerId });
+      await effectArgs.runGameActionDelegate('gainAction', { count: 2 });
+      
+      const emptySupplyCount = getStartingSupplyCount(effectArgs.match) - getRemainingSupplyCount(effectArgs.match, effectArgs.cardLibrary);
+      
+      if (emptySupplyCount > 0) {
+        console.log(`[city effect] empty supply count is greater than 0; drawing 1 card`);
+        await effectArgs.runGameActionDelegate('drawCard', { playerId: effectArgs.playerId });
+      }
+      
+      if(emptySupplyCount > 1) {
+        console.log(`[city effect] empty supply count is greater than 1; gaining 1 buy and 1 treasure`);
+        await effectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+        await effectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
       }
     }
   },

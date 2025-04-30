@@ -30,6 +30,7 @@ import {
   MatchBaseConfiguration,
 } from '../types.ts';
 import { createCard } from '../utils/create-card.ts';
+import { getRemainingSupplyCount, getStartingSupplyCount } from '../utils/get-starting-supply-count.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _reactionManager: ReactionManager | undefined;
@@ -462,25 +463,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       return true;
     }
     
-    const allSupplyCardKeys = match.config.basicCards.concat(
-      match.config.kingdomCards,
-    );
+    const startingSupplyCount = getStartingSupplyCount(match);
     
-    console.log(`[match] original supply card pile count ${allSupplyCardKeys.length}`);
+    const remainingSupplyCount = getRemainingSupplyCount(match, this._cardLibrary);
     
-    const remainingSupplyCardKeys = match.basicSupply.concat(match.kingdomSupply).map((
-      id,
-    ) => this._cardLibrary.getCard(id).cardKey).reduce((prev, cardKey) => {
-      if (prev.includes(cardKey)) {
-        return prev;
-      }
-      return prev.concat(cardKey);
-    }, [] as string[]);
-    
-    console.log(`[match] remaining supply card pile count ${remainingSupplyCardKeys.length}`);
-    
-    const emptyPileCount = allSupplyCardKeys.length -
-      remainingSupplyCardKeys.length;
+    const emptyPileCount = startingSupplyCount - remainingSupplyCount;
     
     console.log(`[match] empty pile count ${emptyPileCount}`);
     
