@@ -571,7 +571,7 @@ const expansion: CardExpansionModuleNew = {
       else {
         const hand = effectArgs.match.playerHands[effectArgs.playerId];
         let uniqueTreasureCount: CardKey[] = [];
-        let l = hand.length - 1;
+        const l = hand.length - 1;
         for (let i = l; i >= 0; i--) {
           await effectArgs.runGameActionDelegate('revealCard', {
             cardId: hand[i],
@@ -581,7 +581,10 @@ const expansion: CardExpansionModuleNew = {
           uniqueTreasureCount.push(card.cardKey);
         }
         uniqueTreasureCount = Array.from(new Set(uniqueTreasureCount));
-        await effectArgs.runGameActionDelegate('gainVictoryToken', { playerId: effectArgs.playerId, count: uniqueTreasureCount.length });
+        await effectArgs.runGameActionDelegate('gainVictoryToken', {
+          playerId: effectArgs.playerId,
+          count: uniqueTreasureCount.length
+        });
       }
     }
   },
@@ -619,6 +622,27 @@ const expansion: CardExpansionModuleNew = {
             actionCost: 0
           }
         })
+      }
+    }
+  },
+  'magnate': {
+    registerEffects: () => async (effectArgs) => {
+      console.log(`[magnate effect] revealing hand`);
+      const hand = effectArgs.match.playerHands[effectArgs.playerId];
+      let treasureCardCount = 0;
+      for (let i = hand.length - 1; i >= 0; i--) {
+        const card = effectArgs.cardLibrary.getCard(hand[i]);
+        treasureCardCount += card.type.includes('TREASURE') ? 1 : 0;
+        await effectArgs.runGameActionDelegate('revealCard', {
+          cardId: hand[i],
+          playerId: effectArgs.playerId,
+        });
+      }
+      
+      console.log(`[magnate effect] ${treasureCardCount} treasure revealed`);
+      
+      for (let i = 0; i < treasureCardCount; i++) {
+        await effectArgs.runGameActionDelegate('drawCard', { playerId: effectArgs.playerId });
       }
     }
   },

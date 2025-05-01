@@ -94,6 +94,12 @@
     },
     "type": ["ACTION"]
   },
+  "magnate": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"]
+  },
   "platinum": {
     "cost": {
       "treasure": 9
