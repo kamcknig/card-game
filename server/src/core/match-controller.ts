@@ -88,7 +88,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     this._match = {
       activeDurationCards: [],
-      scores: [],
+      scores: {},
       trash: [],
       players: this._matchConfiguration.players,
       basicSupply: this.createBaseSupply(this._matchConfiguration),
@@ -433,8 +433,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         expansionScoringFn(playerId, match);
       }
     }
-    
-    match.scores = scores;
   }
   
   private checkGameEnd() {
