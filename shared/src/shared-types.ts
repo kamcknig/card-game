@@ -75,8 +75,10 @@ export interface Match {
   turnPhaseIndex: number;
   mats: PlayerMatMap;
   stats: MatchStats;
+  cardOverrides: CardOverrides;
 }
 
+export type CardOverrides = Record<PlayerId, Record<CardId, Partial<Card>>>;
 
 /**************
  
@@ -167,7 +169,6 @@ export type ServerEmitEvents = {
   playerReady: (playerId: PlayerId, ready: boolean) => void;
   searchCardResponse: (cardData: CardNoId[]) => void;
   selectCard: (signalId: string, selectCardArgs: SelectActionCardArgs & { selectableCardIds: CardId[] }) => void;
-  setCardDataOverrides: (overrides: Record<CardId, Partial<Card>> | undefined) => void;
   setCardLibrary: (cardLibrary: Record<CardId, Card>) => void;
   setPlayerList: (players: Player[]) => void;
   setPlayer: (player: Player) => void;

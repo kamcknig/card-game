@@ -112,7 +112,6 @@ export type ModifyActionCardArgs = {
 };
 
 export interface BaseGameActionDefinitionMap {
-  modifyCost: (args: ModifyActionCardArgs) => Promise<void>;
   gainPotion: (args: { count: number }) => Promise<void>;
   gainBuy: (args: { count: number }, context?: GameActionContext) => Promise<void>;
   moveCard: (args: { toPlayerId?: PlayerId, cardId: CardId, to: CardLocationSpec }) => Promise<CardLocation>;

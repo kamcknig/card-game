@@ -103,7 +103,7 @@ const expansionModule: CardExpansionModuleNew = {
           cardPriceController.registerRule(
             card,
             (card, context) => {
-              return { restricted: false, cost: { treasure: card.cost.treasure - 1, potion: card.cost.potion } }
+              return { restricted: false, cost: { treasure: -1 } }
             }
           )
         );

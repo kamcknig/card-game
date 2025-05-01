@@ -22,13 +22,11 @@ import {
   GameActionOverrides,
   GameActionReturnTypeMap,
   GameActions,
-  ModifyActionCardArgs,
   ReactionTrigger,
   RunGameActionDelegate
 } from '../../types.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
-import { cardDataOverrides, getCardOverrides, removeOverrideEffects } from '../../card-data-overrides.ts';
 import { findSourceByCardId } from '../../utils/find-source-by-card-id.ts';
 import { findSourceByLocationSpec } from '../../utils/find-source-by-location-spec.ts';
 import { findCards } from '../../utils/find-cards.ts';
@@ -85,24 +83,6 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       throw new Error(`No handler registered for action: ${action}`);
     }
     return await handler.bind(this)(...args);
-  }
-  
-  // todo change this probably to setOverrides when there are more overrides later?
-  async modifyCost(args: ModifyActionCardArgs) {
-    let targets: PlayerId[] = [];
-    if (args.appliesTo === 'ALL') {
-      targets = this.match.players.map(p => p.id);
-    }
-    
-    cardDataOverrides.push({ targets, overrideEffect: args });
-    
-    const overrides = getCardOverrides(this.match, this.cardLibrary);
-    
-    for (const targetId of targets) {
-      const playerOverrides = overrides?.[targetId];
-      const socket = this.socketMap.get(targetId);
-      socket?.emit('setCardDataOverrides', playerOverrides);
-    }
   }
   
   async gainPotion(args: { count: number }) {
@@ -612,18 +592,8 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   
   async endTurn() {
     console.log('[endTurn action] removing overrides');
-    removeOverrideEffects('TURN_END');
-    
-    const overrides = getCardOverrides(this.match, this.cardLibrary);
-    
-    for (const { id } of this.match.players) {
-      const playerOverrides = overrides?.[id];
-      const socket = this.socketMap.get(id);
-      socket?.emit('setCardDataOverrides', playerOverrides);
-    }
     
     const trigger = new ReactionTrigger('endTurn',);
-    
     await this.reactionManager.runTrigger({ trigger });
     
     this.reactionManager.cleanUpTriggers()

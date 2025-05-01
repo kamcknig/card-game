@@ -1,4 +1,5 @@
 import { Card, CardCost, CardId, Match, PlayerId } from 'shared/shared-types.ts';
+import { CardLibrary } from './card-library.ts';
 
 export type CardPriceRule = (
   card: Card,
@@ -7,6 +8,12 @@ export type CardPriceRule = (
 
 export class CardPriceRulesController {
   private _rules: Record<CardId, CardPriceRule[]> = {};
+  
+  constructor(
+    private readonly cardLibrary: CardLibrary,
+    private readonly match: Match,
+  ) {
+  }
   
   registerRule(card: Card, rule: CardPriceRule) {
     this._rules[card.id] ??= [];
@@ -42,5 +49,23 @@ export class CardPriceRulesController {
     }
     
     return { restricted, cost: modifiedCost };
+  }
+  
+  calculateOverrides() {
+    const costOverrides: Record<PlayerId, Record<CardId, Partial<Card>>> = {};
+    
+    const cards = this.cardLibrary.getAllCardsAsArray();
+    for (const player of this.match.players) {
+      for (const card of cards) {
+        const { cost } =
+          this.applyRules(card, { match: this.match, playerId: player.id })
+        costOverrides[player.id] ??= {};
+        costOverrides[player.id][card.id] = {
+          cost
+        }
+      }
+    }
+    
+    return costOverrides;
   }
 }

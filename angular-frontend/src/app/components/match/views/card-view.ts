@@ -1,10 +1,10 @@
 import { Assets, Container, Graphics, Sprite, Text, Texture } from 'pixi.js';
 import { Card } from 'shared/shared-types';
 import { batched } from 'nanostores';
-import { cardOverrideStore } from '../../../state/card-state';
 import { CardFacing, CardSize } from '../../../../types';
 import { selectableCardStore } from '../../../state/interactive-logic';
 import { selectedCardStore } from '../../../state/interactive-state';
+import { cardOverrideStore } from '../../../state/card-logic';
 
 type CardArgs = Card;
 

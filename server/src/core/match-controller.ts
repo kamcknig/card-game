@@ -1,5 +1,5 @@
 import {
-  Card,
+  Card, CardId,
   CardKey,
   CardNoId,
   ComputedMatchConfiguration,
@@ -87,6 +87,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }
     
     this._match = {
+      cardOverrides: {},
       activeDurationCards: [],
       scores: {},
       trash: [],
@@ -253,8 +254,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const result = await this.gameActionsController!.invokeAction(action, ...args);
     
     this.calculateScores();
-    
     this._interactivityController?.checkCardInteractivity();
+    this._match.cardOverrides = this._cardPriceController?.calculateOverrides() ?? {};
     
     this.broadcastPatch({ ...this._matchSnapshot });
     this._logManager?.flushQueue();
@@ -271,6 +272,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   public broadcastPatch(prev: Match) {
     const patch: Operation[] = compare(prev, this._match);
     const cardLibraryPatch = compare(this._cardLibSnapshot, this._cardLibrary.getAllCards());
+    
     if (patch.length || cardLibraryPatch.length) {
       console.log(`[match] sending match update to clients`);
       
@@ -328,7 +330,10 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       socketMap: this._socketMap,
     });
     
-    this._cardPriceController = new CardPriceRulesController();
+    this._cardPriceController = new CardPriceRulesController(
+      this._cardLibrary,
+      this._match
+    );
     
     this._reactionManager = new ReactionManager(
       this._logManager,
@@ -422,10 +427,10 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           score += customScoringFn({
             match: this._match,
             cardLibrary: this._cardLibrary,
-      ownerId: playerId,
-    });
-  }
-}
+            ownerId: playerId,
+          });
+        }
+      }
       match.scores[playerId] = score;
       
       for (const expansionScoringFn of this._expansionScoringFns) {
