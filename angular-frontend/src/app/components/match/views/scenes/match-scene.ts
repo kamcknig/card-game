@@ -280,16 +280,6 @@ export class MatchScene extends Scene {
   }
 
   private onWaitingOnPlayer = (playerId: number) => {
-    if (playerId === this._selfId) {
-      try {
-        const s = new Audio(`./assets/sounds/your-turn.mp3`);
-        s.volume = .2;
-        void s?.play();
-      } catch {
-        console.error('Could not play start turn sound');
-      }
-    }
-
     const c = new Container({ label: 'waitingOnPlayer' });
 
     const t = new Text({
@@ -332,6 +322,15 @@ export class MatchScene extends Scene {
   }
 
   private onUserPrompt = async (signalId: string, args: UserPromptActionArgs) => {
+    if (currentPlayerTurnIdStore.get() !== this._selfId) {
+      try {
+        const s = new Audio(`./assets/sounds/your-turn.mp3`);
+        s.volume = .4;
+        void s?.play();
+      } catch {
+        console.error('Could not play start turn sound');
+      }
+    }
     this._selecting = true;
     const result = await userPromptModal(
       this._app,
@@ -413,6 +412,16 @@ export class MatchScene extends Scene {
     const count = isNumber(arg.count) ? arg.count : (!isNumber(arg.count) ? arg.count?.count : NaN);
     if (count === undefined || isNaN(count)) {
       throw new Error(`Selection count couldn't be determined`);
+    }
+
+    if (currentPlayerTurnIdStore.get() !== this._selfId) {
+      try {
+        const s = new Audio(`./assets/sounds/your-turn.mp3`);
+        s.volume = .4;
+        void s?.play();
+      } catch {
+        console.error('Could not play start turn sound');
+      }
     }
 
     doSelectButtonContainer = new AppList({

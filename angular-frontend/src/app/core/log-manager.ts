@@ -83,11 +83,11 @@ export const logManager = {
         break;
       }
       case 'newTurn': {
-        msg = `<hr class="new-turn"><br>TURN ${logEntry.turn + 1}<br>`;
+        msg = `<hr class="new-turn"><br>TURN ${logEntry.turn}<br>`;
         break;
       }
       case 'newPlayerTurn': {
-        msg = `<br><span style="color: ${playerColor}">${playerName}</span> - turn ${logEntry.turn + 1}<hr class="new-player-turn">`;
+        msg = `<br><span style="color: ${playerColor}">${playerName}</span> - turn ${logEntry.turn}<hr class="new-player-turn">`;
         break;
       }
     }

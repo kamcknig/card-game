@@ -222,7 +222,10 @@ const expansion: CardExpansionModuleNew = {
           triggeredEffectFn: async (triggerEffectArgs) => {
             await triggerEffectArgs.runGameActionDelegate('playCard', {
               playerId: args.playerId,
-              cardId: args.cardId
+              cardId: args.cardId,
+              overrides: {
+                actionCost: 0
+              }
             });
           }
         })
@@ -344,7 +347,7 @@ const expansion: CardExpansionModuleNew = {
           await effectArgs.runGameActionDelegate('discardCard', { cardId, playerId: effectArgs.playerId });
           break;
         case 3:
-          await effectArgs.runGameActionDelegate('playCard', { playerId: effectArgs.playerId, cardId });
+          await effectArgs.runGameActionDelegate('playCard', { playerId: effectArgs.playerId, cardId, overrides: { actionCost: 0 } });
           break;
       }
     }

@@ -54,7 +54,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       gold: 3,
       silver: 2,
       potion: 2,
-      'golem': 3,
+      'militia': 3,
     },
     {
       gold: 3,
@@ -71,7 +71,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   
   public async initialize(config: MatchConfiguration) {
     const { config: newConfig, endGameConditionFns } =
-      await new MatchConfigurator(config, { keeperCards: [] }).createConfiguration();
+      await new MatchConfigurator(config, { keeperCards: ['moat', 'militia'] }).createConfiguration();
     
     this._matchConfiguration = newConfig;
     
@@ -375,13 +375,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this._logManager.addLogEntry({
       root: true,
       type: 'newTurn',
-      turn: this._match.turnNumber,
+      turn: Math.floor(this._match.turnNumber / this._match.players.length) + 1,
     });
     
     this._logManager.addLogEntry({
       root: true,
       type: 'newPlayerTurn',
-      turn: this._match.turnNumber,
+      turn: Math.floor(this._match.turnNumber / this._match.players.length) + 1,
       playerId: getCurrentPlayer(this._match).id
     });
     
@@ -510,8 +510,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         const turnsTaken = match.players.findIndex((p) =>
           p.id === playerId
         ) <= currentPlayerTurnIndex
-          ? currentTurn
-          : currentTurn - 1;
+          ? (Math.floor(currentTurn / match.players.length) + 1)
+          : Math.floor(currentTurn / match.players.length);
         
         prev.push({
           playerId,

@@ -532,11 +532,17 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         if (match.currentPlayerTurnIndex >= match.players.length) {
           match.currentPlayerTurnIndex = 0;
           match.roundNumber++;
+          
+          this.logManager.addLogEntry({
+            root: true,
+            type: 'newTurn',
+            turn: Math.floor(match.turnNumber / match.players.length) + 1,
+          });
         }
         
         this.logManager.addLogEntry({
           type: 'newPlayerTurn',
-          turn: match.turnNumber,
+          turn: Math.floor(match.turnNumber / match.players.length) + 1,
           playerId: match.players[match.currentPlayerTurnIndex].id
         });
         

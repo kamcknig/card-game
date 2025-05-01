@@ -25,18 +25,22 @@ export class MatchConfigurator {
   
   public async createConfiguration() {
     if (this._options?.keeperCards && this._options.keeperCards.length > 0) {
-      console.warn(`[match configurator] hard-coded keeper cards ${this._options?.keeperCards?.join(', ') ?? '- no hard-coded kingdom cards'}`);
+      console.warn(`[match configurator] hard-coded keeper cards ${this._options?.keeperCards?.length}`);
+      console.log(this._options?.keeperCards?.join('\n'));
     }
     
     if (this._config.kingdomCards?.length > 0) {
-      console.log(`[match configurator] requested kingdom cards ${this._config.kingdomCards?.map(card => card.cardKey)
-        ?.join(', ') ?? '- no requested kingdom cards'}`);
+      console.log(`[match configurator] requested kingdom cards ${this._config.kingdomCards.length}`);
+      console.log(this._config.kingdomCards?.map(card => card.cardKey)?.join('\n'));
     }
     
-    this._requestedKingdoms = Array.from(new Set([
-      ...(this._options?.keeperCards?.map(key => allCardLibrary[key])?.filter(card => !!card)?.slice() ?? []),
-      ...(this._config.kingdomCards?.slice() ?? [])
-    ]));
+    this._requestedKingdoms =
+      Array.from(new Set([
+        ...(this._options?.keeperCards ?? []),
+        ...(this._config.kingdomCards?.map(card => card.cardKey) ?? [])
+      ]))
+        .map(key => structuredClone(allCardLibrary[key]))
+        .filter(card => !!card)
     
     if (this._requestedKingdoms.length > MatchBaseConfiguration.numberOfKingdomPiles) {
       const requestedKingdomCardKeys = this._requestedKingdoms.map(card => card.cardKey);
@@ -57,6 +61,7 @@ export class MatchConfigurator {
     let selectedKingdoms: CardNoId[] = [];
     
     if (this._requestedKingdoms.length === MatchBaseConfiguration.numberOfKingdomPiles) {
+      console.log(`[match configurator] number of requested kingdoms ${this._requestedKingdoms.length} is enough`);
       selectedKingdoms = this._requestedKingdoms.slice();
     }
     else {
@@ -78,18 +83,29 @@ export class MatchConfigurator {
           .filter(card => !bannedKingdomKeys.includes(card.cardKey));
       });
       
-      console.log(`[match configurator] available kingdoms ${availableKingdoms.map(card => card.cardKey).join(', ')}`);
+      console.log(`[match configurator] available kingdoms ${availableKingdoms.length}`);
+      console.log(availableKingdoms.map(card => card.cardKey).join('\n'));
       
       const numKingdomsToSelect = MatchBaseConfiguration.numberOfKingdomPiles - this._requestedKingdoms.length;
+      
+      console.log(`[match configurator] need to select ${numKingdomsToSelect} kingdoms`);
+      
+      const additionalKingdoms: CardNoId[] = [];
       
       for (let i = 0; i < numKingdomsToSelect; i++) {
         const randomIndex = Math.floor(Math.random() * availableKingdoms.length);
         const randomKingdom = availableKingdoms[randomIndex];
-        selectedKingdoms.push({ ...randomKingdom });
+        additionalKingdoms.push({...randomKingdom});
         availableKingdoms.splice(randomIndex, 1);
       }
       
-      console.log(`[match configurator] finalized kingdoms ${selectedKingdoms.map(card => card.cardKey).join(', ')}`);
+      console.log(`[match configurator] additional kingdoms to add`);
+      console.log(additionalKingdoms.map(card => card.cardKey).join('\n'));
+      
+      selectedKingdoms = [...selectedKingdoms, ...additionalKingdoms];
+      
+      console.log(`[match configurator] finalized kingdoms ${selectedKingdoms.length}`);
+      console.log(selectedKingdoms.map(card => card.cardKey).join('\n'));
       
       this._config.kingdomCards = structuredClone([...this._requestedKingdoms, ...selectedKingdoms]);
       
