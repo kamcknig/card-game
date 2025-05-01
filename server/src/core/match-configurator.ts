@@ -8,11 +8,6 @@ import {
   PlayerScoreDecoratorRegistrar
 } from '../types.ts';
 import { addMatToMatchConfig } from '../utils/add-mat-to-match-config.ts';
-import { registerEndGameConditions } from '../expansions/prosperity/configurator-prosperity.ts';
-
-type MatchConfiguratorOptions = {
-  keeperCards: CardKey[];
-}
 
 type InitializeExpansionContext = {
   match: Match;
@@ -29,8 +24,7 @@ export class MatchConfigurator {
   private readonly _expansionEndGameConditionFuncs: ((...args: any[]) => boolean)[] = [];
   
   constructor(
-    config: MatchConfiguration,
-    private _options?: MatchConfiguratorOptions
+    config: MatchConfiguration
   ) {
     
     this._config = structuredClone(config) as ComputedMatchConfiguration;
@@ -39,9 +33,14 @@ export class MatchConfigurator {
   }
   
   public async createConfiguration() {
-    if (this._options?.keeperCards && this._options.keeperCards.length > 0) {
-      console.warn(`[match configurator] hard-coded keeper cards ${this._options?.keeperCards?.length}`);
-      console.log(this._options?.keeperCards?.join('\n'));
+    const requisiteKingdomCardKeys = Deno.env.get('REQUISITE_KINGDOM_CARD_KEYS')
+      ?.toLowerCase()
+      ?.split(',')
+      ?.map(e => e.trim()) ?? [];
+    
+    if (requisiteKingdomCardKeys && requisiteKingdomCardKeys.length > 0) {
+      console.warn(`[match configurator] hard-coded keeper cards ${requisiteKingdomCardKeys}`);
+      console.log(requisiteKingdomCardKeys?.join('\n'));
     }
     
     if (this._config.kingdomCards?.length > 0) {
@@ -56,7 +55,7 @@ export class MatchConfigurator {
     
     this._requestedKingdoms =
       Array.from(new Set([
-        ...(this._options?.keeperCards ?? []),
+        ...requisiteKingdomCardKeys,
         ...(this._config.kingdomCards?.map(card => card.cardKey) ?? [])
       ]))
         .map(key => structuredClone(allCardLibrary[key]))

@@ -11,11 +11,10 @@ import { findCards } from '../../utils/find-cards.ts';
 const configurator: CardExpansionConfigurator = (args) => {
   const kingdomCards = args.config.kingdomCards;
   const randomKingdomCard = kingdomCards[Math.floor(kingdomCards.length * Math.random())];
+  
   console.log(`[prosperity configurator] random kingdom chosen to determine if colony and prosperity should be added to config '${randomKingdomCard.cardKey}'`);
-  let colonyPresent = false;
-  colonyPresent = true;
+  
   if (randomKingdomCard.expansionName === 'prosperity') {
-    colonyPresent = true;
     console.log(`[prosperity configurator] adding prosperity and colony to config`);
     
     args.config.basicCards = [
@@ -34,10 +33,13 @@ const configurator: CardExpansionConfigurator = (args) => {
   
   if (charlatanPresent) {
     console.log(`[prosperity configurator] charlatan is part of kingdom - curses gain the treasure type and +1 treasure effect`);
+    
     const curseCard = args.config.basicCards.find(card => card.cardKey === 'curse');
+    
     if (!curseCard) {
       console.warn(`[prosperity configurator] curse card not found in config`);
     }
+    
     curseCard?.type.push('TREASURE');
   }
   

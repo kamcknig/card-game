@@ -75,25 +75,6 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     this.customActionHandlers[key] = handler;
   }
   
-  public async registerExpansionEffects() {
-    const uniqueExpansions = Array.from(new Set(this.match.config.kingdomCards.map(card => card.expansionName)));
-    for (const expansion of uniqueExpansions) {
-      try {
-        const module = await import((`@expansions/${expansion}/configurator-${expansion}.ts`));
-        const cardEffectsFactory = module.cardEffectsFactory;
-        if (!cardEffectsFactory) continue;
-        const effectFactory: Record<CardKey, CardEffectFn> = cardEffectsFactory();
-        this.customCardEffectHandlers[expansion] ??= {};
-        this.customCardEffectHandlers[expansion] = {
-          ...effectFactory
-        };
-      } catch (error) {
-        console.warn(`[action controller] failed to register expansion actions for ${expansion}`, error);
-        console.log(error);
-      }
-    }
-  }
-  
   public async invokeAction<K extends GameActions>(
     action: K,
     ...args: Parameters<GameActionDefinitionMap[K]>

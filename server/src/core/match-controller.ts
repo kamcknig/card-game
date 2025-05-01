@@ -77,7 +77,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   ];
   
   public async initialize(config: MatchConfiguration) {
-    this._matchConfigurator = new MatchConfigurator(config, { keeperCards: ['moat', 'militia'] });
+    this._matchConfigurator = new MatchConfigurator(config);
     const { config: newConfig, endGameConditionFns } = await this._matchConfigurator.createConfiguration();
     
     this._matchConfiguration = newConfig;
