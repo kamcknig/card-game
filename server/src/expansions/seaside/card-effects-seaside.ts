@@ -1,6 +1,5 @@
 import { CardExpansionModuleNew } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
-import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 import { Card, CardId } from 'shared/shared-types.ts';
 import { findCards } from '../../utils/find-cards.ts';
 import { getPlayerStartingFrom, getPlayerTurnIndex } from '../../shared/get-player-position-utils.ts';
@@ -784,7 +783,7 @@ const expansion: CardExpansionModuleNew = {
     }
   },
   'salvager': {
-    registerEffects: () => async ({ runGameActionDelegate, playerId, match, cardLibrary }) => {
+    registerEffects: () => async ({ cardPriceController, runGameActionDelegate, playerId, match, cardLibrary }) => {
       console.log(`[salvager effect] gaining 1 buy...`);
       await runGameActionDelegate('gainBuy', { count: 1 });
       
@@ -806,7 +805,8 @@ const expansion: CardExpansionModuleNew = {
       console.log(`[salvager effect] trashing card...`);
       await runGameActionDelegate('trashCard', { cardId, playerId });
       
-      const cardCost = getEffectiveCardCost(playerId, cardId, match, cardLibrary);
+      const card = cardLibrary.getCard(cardId);
+      const { cost: cardCost } = cardPriceController.applyRules(card, { match, playerId });
       
       console.log(`[salvager effect] gaining ${cardCost.treasure} buy...`);
       await runGameActionDelegate('gainTreasure', { count: cardCost.treasure });
@@ -924,7 +924,7 @@ const expansion: CardExpansionModuleNew = {
     }
   },
   'smugglers': {
-    registerEffects: () => async ({ match, cardLibrary, playerId, runGameActionDelegate }) => {
+    registerEffects: () => async ({ cardPriceController, match, cardLibrary, playerId, runGameActionDelegate }) => {
       const previousPlayer = getPlayerStartingFrom({
         startFromIdx: getPlayerTurnIndex({ match, playerId }),
         match,
@@ -945,7 +945,10 @@ const expansion: CardExpansionModuleNew = {
       let cardIds = findCards(
         match,
         {
-          cost: { kind: 'upTo', amount: { treasure: 6 }, playerId },
+          cost: {
+            spec: { kind: 'upTo', amount: { treasure: 6 }, playerId },
+            cardCostController: cardPriceController
+          },
         },
         cardLibrary,
       ).filter(id => cardIdsGained.includes(id));

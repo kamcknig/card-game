@@ -1,7 +1,6 @@
 import './types.ts';
 import { CardId } from 'shared/shared-types.ts';
 import { CardExpansionModuleNew } from '../../types.ts';
-import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { findCards } from '../../utils/find-cards.ts';
 import { getRemainingSupplyCount, getStartingSupplyCount } from '../../utils/get-starting-supply-count.ts';
@@ -106,12 +105,10 @@ const expansion: CardExpansionModuleNew = {
             cardId: selectedCardId,
           });
           
-          const selectedCardCost = getEffectiveCardCost(
-            effectArgs.playerId,
-            selectedCardId,
-            effectArgs.match,
-            effectArgs.cardLibrary
-          );
+          const { cost: selectedCardCost } = effectArgs.cardPriceController.applyRules(selectedCard, {
+            match: effectArgs.match,
+            playerId: effectArgs.playerId
+          })
           
           const tokensToGain = Math.floor(selectedCardCost.treasure / 2);
           
@@ -347,7 +344,11 @@ const expansion: CardExpansionModuleNew = {
           await effectArgs.runGameActionDelegate('discardCard', { cardId, playerId: effectArgs.playerId });
           break;
         case 3:
-          await effectArgs.runGameActionDelegate('playCard', { playerId: effectArgs.playerId, cardId, overrides: { actionCost: 0 } });
+          await effectArgs.runGameActionDelegate('playCard', {
+            playerId: effectArgs.playerId,
+            cardId,
+            overrides: { actionCost: 0 }
+          });
           break;
       }
     }
@@ -371,12 +372,10 @@ const expansion: CardExpansionModuleNew = {
       let card = effectArgs.cardLibrary.getCard(selectedToTrashId);
       console.log(`[expand effect] selected ${card} to trash`)
       
-      const effectCost = getEffectiveCardCost(
-        effectArgs.playerId,
-        selectedToTrashId,
-        effectArgs.match,
-        effectArgs.cardLibrary
-      );
+      const { cost: effectCost } = effectArgs.cardPriceController.applyRules(card, {
+        match: effectArgs.match,
+        playerId: effectArgs.playerId
+      });
       
       const selectedToGainIds = await effectArgs.runGameActionDelegate('selectCard', {
         playerId: effectArgs.playerId,
@@ -427,12 +426,11 @@ const expansion: CardExpansionModuleNew = {
       }
       else {
         for (const cardId of selectedCardIdsToTrash) {
-          const cardCost = getEffectiveCardCost(
-            effectArgs.playerId,
-            cardId,
-            effectArgs.match,
-            effectArgs.cardLibrary
-          );
+          const card = effectArgs.cardLibrary.getCard(cardId);
+          const { cost: cardCost } = effectArgs.cardPriceController.applyRules(card, {
+            match: effectArgs.match,
+            playerId: effectArgs.playerId
+          });
           cost = {
             treasure: cost.treasure + cardCost.treasure,
             potion: cost.potion + (cardCost.potion ?? 0)

@@ -1,4 +1,4 @@
-import { Card, CardCost, CardKey, Match, PlayerId } from 'shared/shared-types.ts';
+import { Card, CardCost, CardId, Match, PlayerId } from 'shared/shared-types.ts';
 
 export type CardPriceRule = (
   card: Card,
@@ -6,11 +6,18 @@ export type CardPriceRule = (
 ) => ({ restricted: boolean; cost: CardCost });
 
 export class CardPriceRulesController {
-  private _rules: Record<CardKey, CardPriceRule[]> = {};
+  private _rules: Record<CardId, CardPriceRule[]> = {};
   
-  registerRule(cardKey: CardKey, rule: CardPriceRule) {
-    this._rules[cardKey] ??= [];
-    this._rules[cardKey].push(rule);
+  registerRule(card: Card, rule: CardPriceRule) {
+    this._rules[card.id] ??= [];
+    this._rules[card.id].push(rule);
+    
+    return () => {
+      const idx = this._rules[card.id].findIndex(r => r === rule);
+      if (idx !== -1) {
+        this._rules[card.id].splice(idx, 1);
+      }
+    }
   }
   
   applyRules(card: Card, { match, playerId }: { match: Match, playerId: PlayerId }) {
@@ -18,13 +25,13 @@ export class CardPriceRulesController {
     let restricted = false;
     let modifiedCost = { ...card.cost };
     
-    const rules = this._rules[card.cardKey];
+    const rules = this._rules[card.id];
     if (!rules) {
       return { restricted, cost: modifiedCost };
     }
     
     for (const rule of rules) {
-      const result = rule(card, {match, playerId });
+      const result = rule(card, { match, playerId });
       
       restricted ||= result.restricted;
       

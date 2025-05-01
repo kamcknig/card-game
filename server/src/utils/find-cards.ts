@@ -5,11 +5,14 @@ import { CardId, CardKey, CardLocation, CardType, CostSpec, isLocationMat, Match
 import { validateCostSpec } from '../shared/validate-cost-spec.ts';
 
 import { CardLibrary } from '../core/card-library.ts';
-import { getEffectiveCardCost } from './get-effective-card-cost.ts';
+import { CardPriceRulesController } from '../core/card-price-rules-controller.ts';
 
 export type FindCardsFilter = {
   location?: CardLocation | CardLocation[];
-  cost?: CostSpec;
+  cost?: {
+    spec: CostSpec
+    cardCostController: CardPriceRulesController,
+  };
   cards?: {
     cardKeys?: CardKey | CardKey[];
     type?: CardType | CardType[];
@@ -62,7 +65,7 @@ export const findCardsByLocation = (match: Match, locations: CardLocation[]) => 
 export const findCards = (
   match: Match,
   filter: FindCardsFilter,
-  cardLibrary: CardLibrary
+  cardLibrary: CardLibrary,
 ): CardId[] => {
   let cardIds: CardId[] = [];
   
@@ -74,10 +77,14 @@ export const findCards = (
     cardIds = cardLibrary.getAllCardsAsArray().map(card => card.id);
   }
   
-  if (!isUndefined(filter.cost)) {
+  if (filter.cost) {
     cardIds = cardIds.filter(id => {
-      const effectiveCost = getEffectiveCardCost(filter.cost!.playerId, id, match, cardLibrary);
-      return validateCostSpec(filter.cost!, effectiveCost);
+      const card = cardLibrary.getCard(id);
+      const { cost: effectiveCost } = filter.cost!.cardCostController.applyRules(card, {
+        match,
+        playerId: filter.cost!.spec.playerId
+      });
+      return validateCostSpec(filter.cost!.spec, effectiveCost);
     });
   }
   

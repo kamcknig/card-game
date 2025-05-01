@@ -1,6 +1,5 @@
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
-import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 import { CardExpansionModuleNew } from '../../types.ts';
 
 const expansionModule: CardExpansionModuleNew = {
@@ -691,9 +690,6 @@ const expansionModule: CardExpansionModuleNew = {
           },
         });
         
-        console.log(`[MILITIA EFFECT] ${getPlayerById(match, playerId)} chose ${cardIds.map(
-          (id) => cardLibrary.getCard(id))} to discard`);
-        
         for (const cardId of cardIds) {
           console.log(`[MILITIA EFFECT] discarding ${cardLibrary.getCard(cardId)}...`);
           
@@ -706,7 +702,13 @@ const expansionModule: CardExpansionModuleNew = {
     }
   },
   'mine': {
-    registerEffects: () => async ({ runGameActionDelegate, match, cardLibrary, playerId }) => {
+    registerEffects: () => async ({
+      runGameActionDelegate,
+      match,
+      cardLibrary,
+      playerId,
+      cardPriceController
+    }) => {
       // You may trash a Treasure from your hand. Gain a Treasure to
       // your hand costing up to 3 Treasure more than it.
       const hand = match.playerHands[playerId];
@@ -750,12 +752,7 @@ const expansionModule: CardExpansionModuleNew = {
       
       let card = cardLibrary.getCard(cardId);
       
-      const cardCost = getEffectiveCardCost(
-        playerId,
-        cardId,
-        match,
-        cardLibrary
-      );
+      const { cost: cardCost } = cardPriceController.applyRules(card, { match, playerId });
       
       console.log(`[MINE EFFECT] prompting user to select treasure costing up to ${cardCost.treasure + 3}`);
       
@@ -965,7 +962,13 @@ const expansionModule: CardExpansionModuleNew = {
     }
   },
   'remodel': {
-    registerEffects: () => async ({ match, cardLibrary, playerId, runGameActionDelegate }) => {
+    registerEffects: () => async ({
+      match,
+      cardLibrary,
+      playerId,
+      runGameActionDelegate,
+      cardPriceController,
+    }) => {
       if (match.playerHands[playerId].length === 0) {
         console.log(`[REMODEL EFFECT] player has no cards in hand`);
         return;
@@ -988,12 +991,7 @@ const expansionModule: CardExpansionModuleNew = {
         cardId,
       });
       
-      const cardCost = getEffectiveCardCost(
-        playerId,
-        cardId,
-        match,
-        cardLibrary
-      );
+      const { cost: cardCost } = cardPriceController.applyRules(card, { match, playerId });
       
       console.log(`[REMODEL EFFECT] prompting user to select card costing up to ${cardCost.treasure}...`);
       

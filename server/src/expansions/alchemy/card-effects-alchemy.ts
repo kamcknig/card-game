@@ -2,7 +2,6 @@ import { CardExpansionModuleNew } from '../../types.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { Card, CardId } from 'shared/shared-types.ts';
-import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
@@ -151,14 +150,10 @@ const expansion: CardExpansionModuleNew = {
       }
       
       const card = args.cardLibrary.getCard(selectedCardIds[0]);
-      const { treasure, potion } = getEffectiveCardCost(
-        args.playerId,
-        card.id,
-        args.match,
-        args.cardLibrary
-      );
+      const { cost } =
+        args.cardPriceController.applyRules(card, { match: args.match, playerId: args.playerId });
       
-      const numCardsToDraw = treasure + (potion !== undefined ? 2 : 0);
+      const numCardsToDraw = cost.treasure + (cost.potion !== undefined ? 2 : 0);
       
       for (let i = 0; i < numCardsToDraw; i++) {
         if (!(await args.runGameActionDelegate('drawCard', { playerId: args.playerId }))) {

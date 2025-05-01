@@ -1,6 +1,5 @@
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
-import { getEffectiveCardCost } from '../../utils/get-effective-card-cost.ts';
 import { CardExpansionModuleNew } from '../../types.ts';
 import { ActionButtons, Card, CardId, CardKey, PlayerId } from 'shared/shared-types.ts';
 
@@ -77,7 +76,14 @@ const expansionModule: CardExpansionModuleNew = {
     }
   },
   'bridge': {
-    registerEffects: () => async ({ runGameActionDelegate }) => {
+    registerEffects: () => async ({
+      reactionManager,
+      cardLibrary,
+      runGameActionDelegate,
+      cardPriceController,
+      cardId,
+      playerId
+    }) => {
       console.log(`[BRIDGE EFFECT] gaining 1 buy...`);
       
       await runGameActionDelegate('gainBuy', { count: 1 });
@@ -90,11 +96,31 @@ const expansionModule: CardExpansionModuleNew = {
       
       console.log(`[BRIDGE EFFECT] modify cost by -1 of all cards...`);
       
-      await runGameActionDelegate('modifyCost', {
-        appliesToCard: 'ALL',
-        appliesTo: 'ALL',
-        amount: -1,
-        expiresAt: 'TURN_END',
+      const allCards = cardLibrary.getAllCardsAsArray();
+      const ruleCleanups: (() => void)[] = [];
+      for (const card of allCards) {
+        ruleCleanups.push(
+          cardPriceController.registerRule(
+            card,
+            (card, context) => {
+              return { restricted: false, cost: { treasure: card.cost.treasure - 1, potion: card.cost.potion } }
+            }
+          )
+        );
+      }
+      
+      reactionManager.registerReactionTemplate({
+        id: `bridge:${cardId}:endTurn`,
+        listeningFor: 'endTurn',
+        condition: () => true,
+        triggeredEffectFn: async () => {
+          for (const rule of ruleCleanups) {
+            rule();
+          }
+          reactionManager.unregisterTrigger(`bridge:${cardId}:endTurn`);
+        },
+        playerId,
+        compulsory: true
       });
     }
   },
@@ -905,7 +931,14 @@ const expansionModule: CardExpansionModuleNew = {
     }
   },
   'replace': {
-    registerEffects: () => async ({ runGameActionDelegate, match, cardLibrary, playerId, reactionContext }) => {
+    registerEffects: () => async ({
+      runGameActionDelegate,
+      match,
+      cardLibrary,
+      playerId,
+      reactionContext,
+      cardPriceController
+    }) => {
       if (match.playerHands[playerId].length === 0) {
         console.log(`[REPLACE EFFECT] no cards in hand to trash...`);
         return;
@@ -923,6 +956,7 @@ const expansionModule: CardExpansionModuleNew = {
       }) as number[];
       
       let cardId = result[0];
+      let card = cardLibrary.getCard(cardId);
       
       console.log(`[REPLACE EFFECT] trashing ${cardLibrary.getCard(cardId)}...`);
       
@@ -931,14 +965,7 @@ const expansionModule: CardExpansionModuleNew = {
         cardId,
       });
       
-      const cardCost = getEffectiveCardCost(
-        playerId,
-        cardId,
-        match,
-        cardLibrary
-      );
-      
-      let card = cardLibrary.getCard(cardId);
+      const { cost: cardCost } = cardPriceController.applyRules(card, { match, playerId });
       
       console.log(`[REPLACE EFFECT] prompting user to gain a card costing up to ${cardCost.treasure + 2}...`);
       
@@ -1159,7 +1186,14 @@ const expansionModule: CardExpansionModuleNew = {
     }
   },
   'swindler': {
-    registerEffects: () => async ({ reactionContext, runGameActionDelegate, playerId, match, cardLibrary }) => {
+    registerEffects: () => async ({
+      reactionContext,
+      runGameActionDelegate,
+      playerId,
+      match,
+      cardLibrary,
+      cardPriceController
+    }) => {
       console.log(`[SWINDLER EFFECT] gaining 2 treasure...`);
       
       await runGameActionDelegate('gainTreasure', {
@@ -1190,6 +1224,7 @@ const expansionModule: CardExpansionModuleNew = {
         }
         
         let cardId = deck.slice(-1)?.[0];
+        const card = cardLibrary.getCard(cardId);
         
         console.log(`[SWINDLER EFFECT] trashing ${cardLibrary.getCard(cardId)}...`);
         
@@ -1198,7 +1233,7 @@ const expansionModule: CardExpansionModuleNew = {
           cardId: cardId,
         });
         
-        const cost = getEffectiveCardCost(target, cardId, match, cardLibrary);
+        const { cost } = cardPriceController.applyRules(card, { match, playerId});
         
         console.log(`[SWINDLER EFFECT] prompting user to select card costing ${cost.treasure}...`);
         
@@ -1350,7 +1385,13 @@ const expansionModule: CardExpansionModuleNew = {
     }
   },
   'upgrade': {
-    registerEffects: () => async ({ cardLibrary, runGameActionDelegate, match, playerId }) => {
+    registerEffects: () => async ({
+      cardLibrary,
+      runGameActionDelegate,
+      match,
+      playerId,
+      cardPriceController
+    }) => {
       console.log(`[UPGRADE EFFECT] drawing card...`);
       
       await runGameActionDelegate('drawCard', {
@@ -1389,12 +1430,7 @@ const expansionModule: CardExpansionModuleNew = {
         cardId: card.id,
       });
       
-      const cardCost = getEffectiveCardCost(
-        playerId,
-        card.id,
-        match,
-        cardLibrary
-      );
+      const { cost: cardCost } = cardPriceController.applyRules(card, { match, playerId });
       
       console.log(`[UPGRADE EFFECT] prompting user to select card costing ${cardCost.treasure + 2}...`);
       

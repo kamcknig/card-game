@@ -49,13 +49,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _matchConfigurator: MatchConfigurator | undefined;
   private _expansionScoringFns: PlayerScoreDecorator[] = [];
   
-  constructor(
-    private readonly _socketMap: Map<PlayerId, AppSocket>,
-    private readonly cardSearchFn: (searchTerm: string) => CardNoId[],
-  ) {
-    super();
-  }
-  
   private _playerHands: Record<CardKey, number>[] = [
     {
       gold: 3,
@@ -75,6 +68,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       copper: 3,
     }
   ];
+  
+  constructor(
+    private readonly _socketMap: Map<PlayerId, AppSocket>,
+    private readonly cardSearchFn: (searchTerm: string) => CardNoId[],
+  ) {
+    super();
+  }
   
   public async initialize(config: MatchConfiguration) {
     this._matchConfigurator = new MatchConfigurator(config);
@@ -351,6 +351,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     );
     
     this.gameActionsController = new GameActionController(
+      this._cardPriceController,
       cardEffectFunctionMap,
       this._match,
       this._cardLibrary,

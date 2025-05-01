@@ -1,6 +1,6 @@
 import { Socket } from 'socket.io';
 import {
-  Card,
+  Card, CardCost,
   CardId,
   CardKey,
   CardLocation,
@@ -21,6 +21,7 @@ import { CardLibrary } from './core/card-library.ts';
 import { ReactionManager } from './core/reactions/reaction-manager.ts';
 import { GameActionController } from './core/effects/game-action-controller.ts';
 import { ExpansionData } from '@expansions/expansion-library.ts';
+import { CardPriceRule, CardPriceRulesController } from './core/card-price-rules-controller.ts';
 
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
 
@@ -175,7 +176,10 @@ export type CardEffectFactory = () => CardEffectFn;
 
 export type CardEffectFactoryMap = Record<CardKey, CardEffectFactory>;
 
+export type CardPriceRuleRegistrar = (card: Card, rule: CardPriceRule) => () => void;
+
 export type CardEffectFunctionContext = {
+  cardPriceController: CardPriceRulesController;
   match: Match;
   reactionManager: ReactionManager;
   runGameActionDelegate: RunGameActionDelegate;
