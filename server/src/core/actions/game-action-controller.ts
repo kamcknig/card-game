@@ -18,6 +18,7 @@ import {
   CardEffectFn,
   CardEffectFunctionMap,
   GameActionContext,
+  GameActionContextMap,
   GameActionDefinitionMap,
   GameActionOverrides,
   GameActionReturnTypeMap,
@@ -153,7 +154,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     console.log(`[gainAction action] setting player actions to ${args.count}`);
   }
   
-  async gainCard(args: { playerId: PlayerId, cardId: CardId, to: CardLocationSpec }, context?: GameActionContext) {
+  async gainCard(args: { playerId: PlayerId, cardId: CardId, to: CardLocationSpec }, context?: GameActionContextMap['gainCard']) {
     await this.moveCard({
       cardId: args.cardId,
       to: args.to,
@@ -181,7 +182,8 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     const trigger = new ReactionTrigger('gainCard', {
       cardId: args.cardId,
-      playerId: args.playerId
+      playerId: args.playerId,
+      bought: context?.bought,
     });
     
     await this.reactionManager.runTrigger({ trigger });
@@ -366,7 +368,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       playerId: args.playerId,
       cardId: args.cardId,
       to: { location: 'playerDiscards' }
-    });
+    }, { bought: true });
     
     this.match.stats.cardsBought[args.cardId] = {
       turnNumber: this.match.turnNumber,

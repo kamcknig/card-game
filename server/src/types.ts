@@ -120,7 +120,7 @@ export interface BaseGameActionDefinitionMap {
     playerId: PlayerId,
     cardId: CardId,
     to: CardLocationSpec
-  }, context?: GameActionContext) => Promise<void>;
+  }, context?: GameActionContext & { bought?: boolean }) => Promise<void>;
   userPrompt: (args: UserPromptActionArgs) => Promise<unknown>;
   selectCard: (args: SelectActionCardArgs) => Promise<CardId[]>;
   trashCard: (args: { cardId: CardId, playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
@@ -273,7 +273,7 @@ export type TriggeredEffectConditionContext<T extends TriggerEventType> = {
 export type TriggerEventTypeContext = {
   cardPlayed: { playerId: PlayerId; cardId: CardId };
   startTurn: { playerId: PlayerId };
-  gainCard: { playerId: PlayerId; cardId: CardId };
+  gainCard: { playerId: PlayerId; cardId: CardId, bought: boolean };
   endTurnPhase: void;
   startTurnPhase: void;
   endTurn: void;

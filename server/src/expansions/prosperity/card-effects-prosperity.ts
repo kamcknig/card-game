@@ -480,8 +480,56 @@ const expansion: CardExpansionModuleNew = {
       await effectArgs.runGameActionDelegate('gainAction', { count: 1 });
       await effectArgs.runGameActionDelegate('gainBuy', { count: 1 });
       await effectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+    }
+  },
+  'hoard': {
+    registerLifeCycleMethods: () => ({
+      onLeavePlay: args => {
+        args.reactionManager.unregisterTrigger(`hoard:${args.cardId}:gainCard`);
+      }
+    }),
+    registerEffects: () => async (effectArgs) => {
+      await effectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
       
-      
+      effectArgs.reactionManager.registerReactionTemplate({
+        id: `hoard:${effectArgs.cardId}:gainCard`,
+        listeningFor: 'gainCard',
+        compulsory: true,
+        allowMultipleInstances: true,
+        once: false,
+        condition: (conditionArgs) => {
+          if (conditionArgs.match.turnNumber !==
+            conditionArgs.match.stats.cardsGained[conditionArgs.trigger.args.cardId]?.turnNumber) return false;
+          
+          if (!conditionArgs.trigger.args.bought) return false;
+          
+          if (conditionArgs.trigger.args.playerId !== effectArgs.playerId) return false;
+          
+          return true;
+        },
+        triggeredEffectFn: async (triggeredEffectArgs) => {
+          const goldCardIds = findCards(
+            triggeredEffectArgs.match,
+            {
+              location: 'supply',
+              cards: { cardKeys: 'gold' }
+            },
+            triggeredEffectArgs.cardLibrary,
+          );
+          
+          if (!goldCardIds.length) {
+            console.log(`[hoard triggered effect] no gold in supply`);
+            return;
+          }
+          
+          await triggeredEffectArgs.runGameActionDelegate('gainCard', {
+            playerId: effectArgs.playerId,
+            cardId: goldCardIds.slice(-1)[0],
+            to: { location: 'playerDiscards' }
+          });
+        },
+        playerId: effectArgs.playerId
+      })
     }
   },
   'platinum': {

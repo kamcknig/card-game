@@ -73,6 +73,12 @@
     },
     "type": ["ACTION"]
   },
+  "hoard": {
+    "cost": {
+      "treasure": 6
+    },
+    "type": ["TREASURE"]
+  },
   "platinum": {
     "cost": {
       "treasure": 9
