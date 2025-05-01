@@ -67,6 +67,12 @@
     },
     "type": ["ACTION"]
   },
+  "grand-market": {
+    "cost": {
+      "treasure": 6
+    },
+    "type": ["ACTION"]
+  },
   "platinum": {
     "cost": {
       "treasure": 9

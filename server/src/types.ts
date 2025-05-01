@@ -208,10 +208,7 @@ export type CardExpansionConfiguratorContext = {
   actionRegister: GameActionController['registerAction'];
 };
 
-export type CardExpansionConfigurator = (args: CardExpansionConfiguratorContext) => {
-  config: ComputedMatchConfiguration;
-  endGameConditions?: (args: { match: Match, cardLibrary: CardLibrary }) => boolean
-};
+export type CardExpansionConfigurator = (args: CardExpansionConfiguratorContext) => ComputedMatchConfiguration;
 
 export type CardScoringFunction = (args: CardScoringFnContext) => number;
 
@@ -392,9 +389,13 @@ export type ActionFunctionFactoryContext = {
   match: Match;
 }
 
-export type ExpansionActionRegistery = (registerAction: RegisterActionFn, args: ActionFunctionFactoryContext) => void;
+export type ExpansionActionRegistry = (registerAction: ActionRegistrar, args: ActionFunctionFactoryContext) => void;
 
-export type RegisterActionFn = <K extends keyof GameActionDefinitionMap>(
-  key: K,
-  handler: GameActionDefinitionMap[K]
-) => void;
+export type ActionRegistrar = <K extends GameActions>(key: K, handler: GameActionDefinitionMap[K]) => void;
+export type CardEffectRegistrar = (cardKey: CardKey, tag: string, fn: CardEffectFn) => void;
+export type PlayerScoreDecoratorRegistrar = (decorator: PlayerScoreDecorator) => void;
+export type PlayerScoreDecorator = (playerId: PlayerId, match: Match) => void;
+export type EndGameConditionRegistrar = (endGameConditionFn: (args: {
+  match: Match,
+  cardLibrary: CardLibrary
+}) => boolean) => void;

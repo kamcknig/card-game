@@ -1,10 +1,25 @@
-import { CardKey, CardNoId, ComputedMatchConfiguration, MatchConfiguration } from 'shared/shared-types.ts';
+import { CardKey, CardNoId, ComputedMatchConfiguration, Match, MatchConfiguration } from 'shared/shared-types.ts';
 import { allCardLibrary, ExpansionData, expansionLibrary } from '@expansions/expansion-library.ts';
-import { MatchBaseConfiguration } from '../types.ts';
+import {
+  ActionRegistrar,
+  CardEffectRegistrar,
+  EndGameConditionRegistrar,
+  MatchBaseConfiguration,
+  PlayerScoreDecoratorRegistrar
+} from '../types.ts';
 import { addMatToMatchConfig } from '../utils/add-mat-to-match-config.ts';
+import { registerEndGameConditions } from '../expansions/prosperity/configurator-prosperity.ts';
 
 type MatchConfiguratorOptions = {
   keeperCards: CardKey[];
+}
+
+type InitializeExpansionContext = {
+  match: Match;
+  actionRegistrar: ActionRegistrar;
+  endGameConditionRegistrar: EndGameConditionRegistrar;
+  playerScoreDecoratorRegistrar: PlayerScoreDecoratorRegistrar;
+  cardEffectRegistrar: CardEffectRegistrar;
 }
 
 export class MatchConfigurator {
@@ -33,6 +48,11 @@ export class MatchConfigurator {
       console.log(`[match configurator] requested kingdom cards ${this._config.kingdomCards.length}`);
       console.log(this._config.kingdomCards?.map(card => card.cardKey)?.join('\n'));
     }
+    else {
+      console.log(`[match configurator] no cards requested in during match configuration`);
+    }
+    
+    console.log(`[match configurator] removing possible duplicates from requested and hard-coded kingdoms`);
     
     this._requestedKingdoms =
       Array.from(new Set([
@@ -40,7 +60,7 @@ export class MatchConfigurator {
         ...(this._config.kingdomCards?.map(card => card.cardKey) ?? [])
       ]))
         .map(key => structuredClone(allCardLibrary[key]))
-        .filter(card => !!card)
+        .filter(card => !!card);
     
     if (this._requestedKingdoms.length > MatchBaseConfiguration.numberOfKingdomPiles) {
       const requestedKingdomCardKeys = this._requestedKingdoms.map(card => card.cardKey);
@@ -58,11 +78,10 @@ export class MatchConfigurator {
   }
   
   private selectKingdomSupply() {
-    let selectedKingdoms: CardNoId[] = [];
+    let selectedKingdoms: CardNoId[] = this._requestedKingdoms.slice();
     
-    if (this._requestedKingdoms.length === MatchBaseConfiguration.numberOfKingdomPiles) {
+    if (selectedKingdoms.length === MatchBaseConfiguration.numberOfKingdomPiles) {
       console.log(`[match configurator] number of requested kingdoms ${this._requestedKingdoms.length} is enough`);
-      selectedKingdoms = this._requestedKingdoms.slice();
     }
     else {
       const selectedExpansions = this._config.expansions.reduce((acc, allowedExpansion) => {
@@ -76,11 +95,13 @@ export class MatchConfigurator {
       }, [] as ExpansionData[]);
       
       const bannedKingdomKeys = this._bannedKingdoms.map(card => card.cardKey);
+      const alreadyIncludedKeys = selectedKingdoms.map(card => card.cardKey);
+      
       console.log(`[match configurator] banned kingdoms ${bannedKingdomKeys.join(', ') ?? '- no banned kingdoms'}`);
       
       const availableKingdoms = selectedExpansions.flatMap((nextExpansion) => {
         return Object.values(nextExpansion.cardData.kingdomSupply)
-          .filter(card => !bannedKingdomKeys.includes(card.cardKey));
+          .filter(card => !bannedKingdomKeys.includes(card.cardKey) && !alreadyIncludedKeys.includes(card.cardKey));
       });
       
       console.log(`[match configurator] available kingdoms ${availableKingdoms.length}`);
@@ -95,7 +116,7 @@ export class MatchConfigurator {
       for (let i = 0; i < numKingdomsToSelect; i++) {
         const randomIndex = Math.floor(Math.random() * availableKingdoms.length);
         const randomKingdom = availableKingdoms[randomIndex];
-        additionalKingdoms.push({...randomKingdom});
+        additionalKingdoms.push({ ...randomKingdom });
         availableKingdoms.splice(randomIndex, 1);
       }
       
@@ -103,22 +124,22 @@ export class MatchConfigurator {
       console.log(additionalKingdoms.map(card => card.cardKey).join('\n'));
       
       selectedKingdoms = [...selectedKingdoms, ...additionalKingdoms];
-      
-      console.log(`[match configurator] finalized kingdoms ${selectedKingdoms.length}`);
-      console.log(selectedKingdoms.map(card => card.cardKey).join('\n'));
-      
-      this._config.kingdomCards = structuredClone([...this._requestedKingdoms, ...selectedKingdoms]);
-      
-      this._config.kingdomCardCount = this._config.kingdomCards.reduce((acc, nextKingdom) => {
-        const cardKey = nextKingdom.cardKey;
-        acc[cardKey] = nextKingdom.type.includes('VICTORY')
-          ? (this._config.players.length < 3 ? 8 : 12)
-          : 10;
-        
-        console.log(`[match configurator] setting card count to ${acc[cardKey]} for ${cardKey}`);
-        return acc;
-      }, {} as Record<CardKey, number>)
     }
+    
+    this._config.kingdomCards = structuredClone(selectedKingdoms);
+    
+    console.log(`[match configurator] finalized selected kingdoms count ${this._config.kingdomCards.length}`);
+    console.log(this._config.kingdomCards.map(card => card.cardKey).join('\n'));
+    
+    this._config.kingdomCardCount = this._config.kingdomCards.reduce((acc, nextKingdom) => {
+      const cardKey = nextKingdom.cardKey;
+      acc[cardKey] = nextKingdom.type.includes('VICTORY')
+        ? (this._config.players.length < 3 ? 8 : 12)
+        : 10;
+      
+      console.log(`[match configurator] setting card count to ${acc[cardKey]} for ${cardKey}`);
+      return acc;
+    }, {} as Record<CardKey, number>)
   }
   
   private selectBasicSupply() {
@@ -157,6 +178,85 @@ export class MatchConfigurator {
         }
       } catch (error) {
         console.warn(`[match configurator] failed to load expansion configurator for ${expansionName}`);
+        console.log(error);
+      }
+    }
+  }
+  
+  
+  public async initializeExpansions({
+    match,
+    endGameConditionRegistrar,
+    actionRegistrar,
+    playerScoreDecoratorRegistrar,
+    cardEffectRegistrar
+  }: InitializeExpansionContext) {
+    console.log(`[match configurator] initializing expansions`);
+    
+    console.log(`[match configurator] registering expansion actions`);
+    await this.registerExpansionActions(actionRegistrar, match);
+    
+    console.log(`[match configurator] registering expansion card effects`);
+    await this.registerExpansionCardEffects(cardEffectRegistrar);
+    
+    console.log(`[match configurator] registering expansion end game conditions`);
+    await this.registerExpansionEndGameConditions(endGameConditionRegistrar);
+    
+    console.log(`[match configurator] registering expansion scoring effects`);
+    await this.registerExpansionPlayerScoreDecorators(playerScoreDecoratorRegistrar);
+  }
+  
+  private async registerExpansionActions(actionRegistrar: ActionRegistrar, match: Match) {
+    const uniqueExpansions = Array.from(new Set(this._config.kingdomCards.map(card => card.expansionName)));
+    for (const expansion of uniqueExpansions) {
+      try {
+        const module = await import((`@expansions/${expansion}/configurator-${expansion}.ts`));
+        if (!module.registerActions) continue;
+        module.registerActions(actionRegistrar, { match });
+      } catch (error) {
+        console.warn(`[match configurator] failed to register expansion actions for ${expansion}`);
+        console.log(error);
+      }
+    }
+  }
+  
+  private async registerExpansionCardEffects(registrar: CardEffectRegistrar) {
+    const uniqueExpansions = Array.from(new Set(this._config.kingdomCards.map(card => card.expansionName)));
+    for (const expansion of uniqueExpansions) {
+      try {
+        const module = await import((`@expansions/${expansion}/configurator-${expansion}.ts`));
+        if (!module.registerCardEffects) continue;
+        module.registerCardEffects(registrar);
+      } catch (error) {
+        console.warn(`[match configurator] failed to register expansion actions for ${expansion}`);
+        console.log(error);
+      }
+    }
+  }
+  
+  private async registerExpansionEndGameConditions(registrar: EndGameConditionRegistrar) {
+    const uniqueExpansions = Array.from(new Set(this._config.kingdomCards.map(card => card.expansionName)));
+    for (const expansion of uniqueExpansions) {
+      try {
+        const module = await import((`@expansions/${expansion}/configurator-${expansion}.ts`));
+        if (!module.registerEndGameConditions) continue;
+        module.registerEndGameConditions(registrar);
+      } catch (error) {
+        console.warn(`[match configurator] failed to register expansion end game conditions for ${expansion}`);
+        console.log(error);
+      }
+    }
+  }
+  
+  private async registerExpansionPlayerScoreDecorators(registrar: PlayerScoreDecoratorRegistrar) {
+    const uniqueExpansions = Array.from(new Set(this._config.kingdomCards.map(card => card.expansionName)));
+    for (const expansion of uniqueExpansions) {
+      try {
+        const module = await import((`@expansions/${expansion}/configurator-${expansion}.ts`));
+        if (!module.registerScoringFunctions) continue;
+        module.registerScoringFunctions(registrar);
+      } catch (error) {
+        console.warn(`[match configurator] failed to register expansion coring functions for ${expansion}`);
         console.log(error);
       }
     }

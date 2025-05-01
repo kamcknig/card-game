@@ -468,6 +468,14 @@ const expansion: CardExpansionModuleNew = {
       });
     }
   },
+  'grand-market': {
+    registerEffects: () => async (effectArgs) => {
+      await effectArgs.runGameActionDelegate('drawCard', { playerId: effectArgs.playerId });
+      await effectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      await effectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+      await effectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+    }
+  },
   'platinum': {
     registerEffects: () => async (effectArgs) => {
       await effectArgs.runGameActionDelegate('gainTreasure', { count: 5 });

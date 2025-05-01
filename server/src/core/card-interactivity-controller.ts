@@ -1,16 +1,17 @@
 import { AppSocket } from '../types.ts';
 import { CardId, Match, PlayerId, TurnPhaseOrderValues, } from 'shared/shared-types.ts';
 import { isUndefined } from 'es-toolkit/compat';
-import { getEffectiveCardCost } from '../utils/get-effective-card-cost.ts';
 import { CardLibrary } from './card-library.ts';
 import { MatchController } from './match-controller.ts';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
 import { getTurnPhase } from '../utils/get-turn-phase.ts';
+import { CardPriceRulesController } from './card-price-rules-controller.ts';
 
 export class CardInteractivityController {
   private _gameOver: boolean = false;
   
   constructor(
+    private readonly _cardPriceController: CardPriceRulesController,
     private readonly match: Match,
     private readonly _socketMap: Map<PlayerId, AppSocket>,
     private readonly _cardLibrary: CardLibrary,
@@ -60,7 +61,7 @@ export class CardInteractivityController {
       .map((id) => this._cardLibrary.getCard(id));
     
     if (turnPhase === 'buy' && match.playerBuys > 0) {
-      const cardsAdded: string[] = [];
+      const cardKeysAdded: string[] = [];
       const supply = match.basicSupply.concat(match.kingdomSupply)
         .map((id) => this._cardLibrary.getCard(id));
       
@@ -69,22 +70,23 @@ export class CardInteractivityController {
       for (let i = supply.length - 1; i >= 0; i--) {
         const card = supply[i];
         // we already marked this type of card as selectable based on cost
-        if (cardsAdded.includes(card.cardKey)) {
+        if (cardKeysAdded.includes(card.cardKey)) {
           continue;
         }
         
-        // get the true cost - with any overrides
-        const { treasure: cardCost, potion } = getEffectiveCardCost(
-          currentPlayer.id,
-          card.id,
-          match,
-          this._cardLibrary,
-        );
+        const { restricted, cost } = this._cardPriceController.applyRules(card, {
+          match: this.match,
+          playerId: currentPlayer.id
+        });
         
         // if the player has enough treasure and buys
-        if (cardCost <= match.playerTreasure && (potion === undefined || potion <= match.playerPotions)) {
+        if (
+          !restricted &&
+          cost.treasure <= match.playerTreasure &&
+          (cost.potion === undefined || cost.potion <= match.playerPotions)
+        ) {
           selectableCards.push(card.id);
-          cardsAdded.push(card.cardKey);
+          cardKeysAdded.push(card.cardKey);
         }
       }
       

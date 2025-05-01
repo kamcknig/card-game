@@ -15,7 +15,6 @@ import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import {
   AppSocket,
   BaseGameActionDefinitionMap,
-  CardEffectFactoryMap,
   CardEffectFn,
   CardEffectFunctionMap,
   GameActionContext,
@@ -54,22 +53,17 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   ) {
   }
   
-  public async registerExpansionActions() {
-    const uniqueExpansions = Array.from(new Set(this.match.config.kingdomCards.map(card => card.expansionName)));
-    for (const expansion of uniqueExpansions) {
-      try {
-        const module = await import((`@expansions/${expansion}/configurator-${expansion}.ts`));
-        const actionRegistry = module.actionRegistry;
-        if (!actionRegistry) continue;
-        actionRegistry(this.registerAction.bind(this), { match: this.match });
-      } catch (error) {
-        console.warn(`[action controller] failed to register expansion actions for ${expansion}`, error);
-        console.log(error);
-      }
+  public registerCardEffect(cardKey: CardKey, tag: string, fn: CardEffectFn) {
+    this.customCardEffectHandlers[tag] ??= {};
+    
+    if (this.customCardEffectHandlers[tag][cardKey]) {
+      console.warn(`[action controller] effect for ${cardKey} in ${tag} already exists, overwriting it`);
     }
+    
+    this.customCardEffectHandlers[tag][cardKey] = fn;
   }
   
-  private registerAction<K extends GameActions>(key: K, handler: GameActionDefinitionMap[K]) {
+  public registerAction<K extends GameActions>(key: K, handler: GameActionDefinitionMap[K]) {
     if ((this as any)[key]) {
       throw new Error(`[action controller] action ${key} is reserved`);
     }

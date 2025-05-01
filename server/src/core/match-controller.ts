@@ -28,11 +28,15 @@ import {
   GameActionReturnTypeMap,
   GameActions,
   MatchBaseConfiguration,
+  PlayerScoreDecorator,
 } from '../types.ts';
 import { createCard } from '../utils/create-card.ts';
 import { getRemainingSupplyCount, getStartingSupplyCount } from '../utils/get-starting-supply-count.ts';
+import { CardPriceRulesController } from './card-price-rules-controller.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
+  private _cardLibSnapshot = {};
+  private _matchSnapshot: Match | null | undefined;
   private _reactionManager: ReactionManager | undefined;
   private _interactivityController: CardInteractivityController | undefined;
   private _cardLibrary: CardLibrary = new CardLibrary();
@@ -41,6 +45,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _match: Match = {} as Match;
   private _matchConfiguration: ComputedMatchConfiguration | undefined;
   private _expansionEndGameConditionFns: ((...args: any[]) => boolean)[] = [];
+  private _cardPriceController: CardPriceRulesController | undefined;
+  private _matchConfigurator: MatchConfigurator | undefined;
+  private _expansionScoringFns: PlayerScoreDecorator[] = [];
   
   constructor(
     private readonly _socketMap: Map<PlayerId, AppSocket>,
@@ -70,8 +77,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   ];
   
   public async initialize(config: MatchConfiguration) {
-    const { config: newConfig, endGameConditionFns } =
-      await new MatchConfigurator(config, { keeperCards: ['moat', 'militia'] }).createConfiguration();
+    this._matchConfigurator = new MatchConfigurator(config, { keeperCards: ['moat', 'militia'] });
+    const { config: newConfig, endGameConditionFns } = await this._matchConfigurator.createConfiguration();
     
     this._matchConfiguration = newConfig;
     
@@ -116,64 +123,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       s.emit('matchReady', this._match);
       s.on('clientReady', this.onClientReady);
     });
-  }
-  
-  private _cardLibSnapshot = {};
-  private _matchSnapshot: Match | null | undefined;
-  
-  public getMatchSnapshot(): Match {
-    this._cardLibSnapshot = structuredClone(this._cardLibrary.getAllCards());
-    return structuredClone(this._match);
-  }
-  
-  async runGameAction<K extends GameActions>(
-    action: K,
-    ...args: Parameters<GameActionDefinitionMap[K]>
-  ): Promise<GameActionReturnTypeMap[K]> {
-    this._matchSnapshot ??= this.getMatchSnapshot();
-    
-    if (action === 'selectCard' || action === 'userPrompt') {
-      this.broadcastPatch(this._matchSnapshot);
-      this._logManager?.flushQueue();
-      this._matchSnapshot = this.getMatchSnapshot();
-    }
-    
-    const result = await this.gameActionsController!.invokeAction(action, ...args);
-    
-    this.calculateScores();
-    
-    this._interactivityController?.checkCardInteractivity();
-    
-    this.broadcastPatch({ ...this._matchSnapshot });
-    this._logManager?.flushQueue();
-    
-    this._matchSnapshot = null;
-    
-    if (this.checkGameEnd()) {
-      console.log(`[match] game ended`)
-    }
-    
-    return result as Promise<GameActionReturnTypeMap[K]>;
-  }
-  
-  public broadcastPatch(prev: Match) {
-    const patch: Operation[] = compare(prev, this._match);
-    const cardLibraryPatch = compare(this._cardLibSnapshot, this._cardLibrary.getAllCards());
-    if (patch.length || cardLibraryPatch.length) {
-      console.log(`[match] sending match update to clients`);
-      
-      if (cardLibraryPatch.length) {
-        console.log(`[ match ] card library patch`);
-        console.log(cardLibraryPatch);
-      }
-      
-      if (patch.length) {
-        console.log(`[ match ] match patch`);
-        console.log(patch);
-      }
-      
-      this._socketMap.forEach((s) => s.emit('patchUpdate', patch, cardLibraryPatch));
-    }
   }
   
   public playerReconnected(playerId: PlayerId, socket: AppSocket) {
@@ -284,6 +233,61 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     } as Pick<Match, 'playerHands' | 'playerDiscards' | 'playerDecks'>);
   }
   
+  public getMatchSnapshot(): Match {
+    this._cardLibSnapshot = structuredClone(this._cardLibrary.getAllCards());
+    return structuredClone(this._match);
+  }
+  
+  async runGameAction<K extends GameActions>(
+    action: K,
+    ...args: Parameters<GameActionDefinitionMap[K]>
+  ): Promise<GameActionReturnTypeMap[K]> {
+    this._matchSnapshot ??= this.getMatchSnapshot();
+    
+    if (action === 'selectCard' || action === 'userPrompt') {
+      this.broadcastPatch(this._matchSnapshot);
+      this._logManager?.flushQueue();
+      this._matchSnapshot = this.getMatchSnapshot();
+    }
+    
+    const result = await this.gameActionsController!.invokeAction(action, ...args);
+    
+    this.calculateScores();
+    
+    this._interactivityController?.checkCardInteractivity();
+    
+    this.broadcastPatch({ ...this._matchSnapshot });
+    this._logManager?.flushQueue();
+    
+    this._matchSnapshot = null;
+    
+    if (this.checkGameEnd()) {
+      console.log(`[match] game ended`)
+    }
+    
+    return result as Promise<GameActionReturnTypeMap[K]>;
+  }
+  
+  public broadcastPatch(prev: Match) {
+    const patch: Operation[] = compare(prev, this._match);
+    const cardLibraryPatch = compare(this._cardLibSnapshot, this._cardLibrary.getAllCards());
+    if (patch.length || cardLibraryPatch.length) {
+      console.log(`[match] sending match update to clients`);
+      
+      if (cardLibraryPatch.length) {
+        console.log(`[ match ] card library patch`);
+        console.log(cardLibraryPatch);
+      }
+      
+      if (patch.length) {
+        console.log(`[ match ] match patch`);
+        console.log(patch);
+      }
+      
+      this._socketMap.forEach((s) => s.emit('patchUpdate', patch, cardLibraryPatch));
+    }
+  }
+  
   private onClientReady = (playerId: number) => {
     const player = this._match.config?.players.find((player) =>
       player.id === playerId
@@ -324,6 +328,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       socketMap: this._socketMap,
     });
     
+    this._cardPriceController = new CardPriceRulesController();
+    
     this._reactionManager = new ReactionManager(
       this._logManager,
       this._match,
@@ -337,6 +343,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }, {} as CardEffectFunctionMap);
     
     this._interactivityController = new CardInteractivityController(
+      this._cardPriceController,
       this._match,
       this._socketMap,
       this._cardLibrary,
@@ -354,7 +361,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._interactivityController,
     );
     
-    await this.initializeExpansions();
+    await this._matchConfigurator?.initializeExpansions({
+      match: this._match,
+      endGameConditionRegistrar: (val) => this._expansionEndGameConditionFns.push(val),
+      actionRegistrar: (...args) => this.gameActionsController?.registerAction(...args),
+      cardEffectRegistrar: (...args) => this.gameActionsController?.registerCardEffect(...args),
+      playerScoreDecoratorRegistrar: (val: PlayerScoreDecorator) => this._expansionScoringFns.push(val),
+    });
     
     for (const socket of this._socketMap.values()) {
       this.initializeSocketListeners(socket);
@@ -388,36 +401,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     await this.runGameAction('checkForRemainingPlayerActions');
   }
   
-  private _expansionScoringFns: ((args: { match: Match }) => void)[] = [];
-  
-  private async initializeExpansions() {
-    console.log(`[match] initializing expansions`);
-    
-    console.log(`[match] registering expansion actions`);
-    await this.gameActionsController?.registerExpansionActions();
-    
-    console.log(`[match] registering expansion effects`);
-    await this.gameActionsController?.registerExpansionEffects();
-    
-    await this.registerExpansionScoringFunctions();
-  }
-  
-  private async registerExpansionScoringFunctions() {
-    const uniqueExpansions = Array.from(new Set(this._match.config.kingdomCards.map(card => card.expansionName)));
-    for (const expansion of uniqueExpansions) {
-      try {
-        const module = await import((`@expansions/${expansion}/configurator-${expansion}.ts`));
-        const scoringFunctionFactory = module.scoringFunctionFactory;
-        if (!scoringFunctionFactory) continue;
-        console.log(`[match] registering scoring function for ${expansion}`);
-        this._expansionScoringFns.push(scoringFunctionFactory());
-      } catch (error) {
-        console.warn(`[registerExpansionActions] failed to register expansion actions for ${expansion}`, error);
-        console.log(error);
-      }
-    }
-  }
-  
   private calculateScores() {
     console.log(`[match] calculating scores`);
     
@@ -443,14 +426,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           });
         }
       }
-      scores[playerId] = score;
+      match.scores[playerId] = score;
+      
+      for (const expansionScoringFn of this._expansionScoringFns) {
+        expansionScoringFn(playerId, match);
+      }
     }
     
     match.scores = scores;
-    
-    for (const expansionScoringFn of this._expansionScoringFns) {
-      expansionScoringFn({ match });
-    }
   }
   
   private checkGameEnd() {

@@ -1,8 +1,12 @@
 import './types.ts';
-import { CardEffectFn, CardExpansionConfigurator, ExpansionActionRegistery, } from '../../types.ts';
-import { CardKey, Match } from 'shared/shared-types.ts';
+import {
+  CardEffectRegistrar,
+  CardExpansionConfigurator,
+  EndGameConditionRegistrar,
+  ExpansionActionRegistry,
+  PlayerScoreDecoratorRegistrar,
+} from '../../types.ts';
 import { findCards } from '../../utils/find-cards.ts';
-import { CardLibrary } from '../../core/card-library.ts';
 
 const configurator: CardExpansionConfigurator = (args) => {
   const kingdomCards = args.config.kingdomCards;
@@ -23,13 +27,6 @@ const configurator: CardExpansionConfigurator = (args) => {
     args.config.basicCardCount['colony'] = args.config.players.length >= 3 ? 12 : 8;
   }
   else {
-    args.config.basicCards = [
-      ...args.config.basicCards,
-      { ...args.expansionData.cardData.basicSupply['platinum'] },
-      { ...args.expansionData.cardData.basicSupply['colony'] }
-    ];
-    args.config.basicCardCount['platinum'] = 12;
-    args.config.basicCardCount['colony'] = args.config.players.length >= 3 ? 12 : 8;
     console.log(`[prosperity configurator] NOT adding prosperity and colony to config`);
   }
   
@@ -44,27 +41,33 @@ const configurator: CardExpansionConfigurator = (args) => {
     curseCard?.type.push('TREASURE');
   }
   
-  const endGameConditions = (endGameArgs: { match: Match, cardLibrary: CardLibrary }) => {
+  return args.config;
+}
+
+export const registerEndGameConditions = (registrar: EndGameConditionRegistrar) => {
+  registrar(({ match, cardLibrary }) => {
+    const kingdomCards = match.config.kingdomCards;
+    const colonyPresent = kingdomCards.find(card => card.cardKey === 'colony');
+    
     if (!colonyPresent) {
       return false;
     }
     
     const colonyCards = findCards(
-      endGameArgs.match,
+      match,
       {
         location: 'supply',
         cards: { cardKeys: 'colony' }
       },
-      endGameArgs.cardLibrary
+      cardLibrary
     );
     return colonyCards.length === 0;
-  }
-  
-  return { config: args.config, endGameConditions: colonyPresent ? endGameConditions : undefined };
+  })
 }
 
-export const actionRegistry: ExpansionActionRegistery = (registerFn, { match }) => {
+export const registerActions: ExpansionActionRegistry = (registerFn, { match }) => {
   console.log(`[prosperity action registry] registering gainVictoryToken action`);
+  
   registerFn('gainVictoryToken', async ({ playerId, count }) => {
     console.log(`[gainVictoryToken action] player ${playerId} gained ${count} victory tokens`);
     match.playerVictoryTokens ??= {};
@@ -75,17 +78,17 @@ export const actionRegistry: ExpansionActionRegistery = (registerFn, { match }) 
   });
 }
 
-export const scoringFunctionFactory = () => (args: { match: Match }) => {
-  for (const playerId of Object.keys(args.match.scores)) {
-    args.match.scores[+playerId] += args.match.playerVictoryTokens?.[+playerId] ?? 0;
-  }
+export const registerScoringFunctions = (registrar: PlayerScoreDecoratorRegistrar) => {
+  registrar((playerId, match) => {
+    match.scores[playerId] += match.playerVictoryTokens?.[playerId] ?? 0;
+  });
 };
 
-export const cardEffectsFactory: () => Record<CardKey, CardEffectFn> = () => ({
-  'curse': async (args) => {
+export const registerCardEffects: (registrar: CardEffectRegistrar) => void = (registrar) => {
+  registrar('curse', 'prosperity', async (args) => {
     console.log(`[curse effect - prosperity] curse effect called`);
     await args.runGameActionDelegate('gainTreasure', { count: 1 });
-  }
-});
+  });
+};
 
 export default configurator;
