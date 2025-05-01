@@ -467,11 +467,21 @@ const expansion: CardExpansionModuleNew = {
     }
   },
   'grand-market': {
+    registerActionConditions: () => ({
+      canBuy: ({ match, cardLibrary, playerId }) =>
+        !match.stats.playedCardsByTurn[match.turnNumber]?.find((cardId) => {
+          return cardLibrary.getCard(cardId).cardKey === 'copper' &&
+            match.stats.playedCards[cardId].playerId === playerId
+        })
+    }),
     registerEffects: () => async (effectArgs) => {
+      console.log(`[grand market effect] drawing 1 card, gaining 1 action, gaining 1 buy, and gaining 2 treasure`);
       await effectArgs.runGameActionDelegate('drawCard', { playerId: effectArgs.playerId });
       await effectArgs.runGameActionDelegate('gainAction', { count: 1 });
       await effectArgs.runGameActionDelegate('gainBuy', { count: 1 });
       await effectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+      
+      
     }
   },
   'platinum': {

@@ -20,7 +20,7 @@ import { getPlayerById } from '../utils/get-player-by-id.ts';
 import { cardEffectFunctionMapFactory } from './effects/card-effect-function-map-factory.ts';
 import { EventEmitter } from '@denosaurs/event';
 import { LogManager } from './log-manager.ts';
-import { GameActionController } from './effects/game-action-controller.ts';
+import { GameActionController } from './actions/game-action-controller.ts';
 import {
   AppSocket,
   CardEffectFunctionMap,

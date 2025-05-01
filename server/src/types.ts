@@ -1,6 +1,6 @@
 import { Socket } from 'socket.io';
 import {
-  Card, CardCost,
+  Card,
   CardId,
   CardKey,
   CardLocation,
@@ -19,7 +19,7 @@ import { toNumber } from 'es-toolkit/compat';
 
 import { CardLibrary } from './core/card-library.ts';
 import { ReactionManager } from './core/reactions/reaction-manager.ts';
-import { GameActionController } from './core/effects/game-action-controller.ts';
+import { GameActionController } from './core/actions/game-action-controller.ts';
 import { ExpansionData } from '@expansions/expansion-library.ts';
 import { CardPriceRule, CardPriceRulesController } from './core/card-price-rules-controller.ts';
 
@@ -215,8 +215,13 @@ export type CardExpansionConfigurator = (args: CardExpansionConfiguratorContext)
 
 export type CardScoringFunction = (args: CardScoringFnContext) => number;
 
+export type CardExpansionActionConditionMap = {
+  canBuy?: (args: { match: Match, cardLibrary: CardLibrary, playerId: PlayerId }) => boolean
+};
+
 export interface CardExpansionModuleNew {
   [p: CardKey]: {
+    registerActionConditions?: () => CardExpansionActionConditionMap;
     registerLifeCycleMethods?: () => LifecycleCallbackMap;
     registerScoringFunction?: () => CardScoringFunction;
     registerEffects?: CardEffectFactory;

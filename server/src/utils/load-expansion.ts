@@ -5,6 +5,7 @@ import { cardLifecycleMap } from '../core/card-lifecycle-map.ts';
 import { CardExpansionModuleNew } from '../types.ts';
 import { CardNoId } from "shared/shared-types.ts";
 import { capitalize } from "es-toolkit";
+import { cardActionConditionMapFactory } from '../core/actions/card-action-condition-map-factory.ts';
 
 export const loadExpansion = async (expansion: { name: string; }) => {
   const expansionPath = `@expansions/${expansion.name}`;
@@ -86,6 +87,10 @@ export const loadExpansion = async (expansion: { name: string; }) => {
       if (cardEffects[key].registerEffects) {
         console.log(`[expansion loader] registering effects for ${key}`);
         cardEffectFunctionMapFactory[key] = cardEffects[key].registerEffects;
+      }
+      
+      if (cardEffects[key].registerActionConditions) {
+        cardActionConditionMapFactory[key] = cardEffects[key].registerActionConditions()
       }
     });
     console.log('[expansion loader] base supply card effects loaded');

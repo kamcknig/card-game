@@ -6,6 +6,7 @@ import { MatchController } from './match-controller.ts';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
 import { getTurnPhase } from '../utils/get-turn-phase.ts';
 import { CardPriceRulesController } from './card-price-rules-controller.ts';
+import { cardActionConditionMapFactory } from './actions/card-action-condition-map-factory.ts';
 
 export class CardInteractivityController {
   private _gameOver: boolean = false;
@@ -72,6 +73,16 @@ export class CardInteractivityController {
         // we already marked this type of card as selectable based on cost
         if (cardKeysAdded.includes(card.cardKey)) {
           continue;
+        }
+        
+        if (cardActionConditionMapFactory[card.cardKey]?.canBuy) {
+          if (!cardActionConditionMapFactory[card.cardKey].canBuy?.({
+            match: this.match,
+            cardLibrary: this._cardLibrary,
+            playerId: currentPlayer.id
+          })) {
+            continue;
+          }
         }
         
         const { restricted, cost } = this._cardPriceController.applyRules(card, {
