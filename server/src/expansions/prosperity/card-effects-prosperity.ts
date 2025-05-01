@@ -585,6 +585,43 @@ const expansion: CardExpansionModuleNew = {
       }
     }
   },
+  'kings-court': {
+    registerEffects: () => async (effectArgs) => {
+      console.log(`[kings court effect] prompting user to select card`);
+      
+      const selectedCardIds = await effectArgs.runGameActionDelegate('selectCard', {
+        playerId: effectArgs.playerId,
+        prompt: `Choose action`,
+        restrict: {
+          from: { location: 'playerHands' },
+          card: { type: 'ACTION' }
+        },
+        count: 1,
+        optional: true
+      }) as CardId[];
+      
+      const selectedCardId = selectedCardIds[0];
+      
+      if (!selectedCardId) {
+        console.log(`[kings court effect] no selected card`);
+        return;
+      }
+      
+      const selectedCard = effectArgs.cardLibrary.getCard(selectedCardId);
+      
+      console.log(`[kings court effect] selected ${selectedCard}`);
+      
+      for (let i = 0; i < 3; i++) {
+        await effectArgs.runGameActionDelegate('playCard', {
+          playerId: effectArgs.playerId,
+          cardId: selectedCardId,
+          overrides: {
+            actionCost: 0
+          }
+        })
+      }
+    }
+  },
   'platinum': {
     registerEffects: () => async (effectArgs) => {
       await effectArgs.runGameActionDelegate('gainTreasure', { count: 5 });

@@ -50,6 +50,7 @@
     "type": ["TREASURE"]
   },
   "crystal-ball": {
+    "cardName": "Crystal Ball",
     "cost": {
       "treasure": 5
     },
@@ -68,6 +69,7 @@
     "type": ["ACTION"]
   },
   "grand-market": {
+    "cardName": "Grand Market",
     "cost": {
       "treasure": 6
     },
@@ -84,6 +86,13 @@
       "treasure": 4
     },
     "type": ["TREASURE"]
+  },
+  "kings-court": {
+    "cardName": "King's Court",
+    "cost": {
+      "treasure": 7
+    },
+    "type": ["ACTION"]
   },
   "platinum": {
     "cost": {
