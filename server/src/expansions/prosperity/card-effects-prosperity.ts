@@ -1,5 +1,5 @@
 import './types.ts';
-import { CardId } from 'shared/shared-types.ts';
+import { CardId, CardKey } from 'shared/shared-types.ts';
 import { CardExpansionModuleNew } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { findCards } from '../../utils/find-cards.ts';
@@ -530,6 +530,59 @@ const expansion: CardExpansionModuleNew = {
         },
         playerId: effectArgs.playerId
       })
+    }
+  },
+  'investment': {
+    registerEffects: () => async (effectArgs) => {
+      if (effectArgs.match.playerHands[effectArgs.playerId].length === 0) {
+        console.log(`[investment effect] no cards in hand`);
+      }
+      else {
+        const selectedCardIds = await effectArgs.runGameActionDelegate('selectCard', {
+          playerId: effectArgs.playerId,
+          prompt: `Trash card`,
+          restrict: { from: { location: 'playerHands' } },
+          count: 1
+        }) as CardId[];
+        
+        if (!selectedCardIds[0]) {
+          console.warn(`[investment effect] no card selected to trash`);
+        }
+        else {
+          await effectArgs.runGameActionDelegate('trashCard', {
+            playerId: effectArgs.playerId,
+            cardId: selectedCardIds[0],
+          });
+        }
+      }
+      
+      const result = await effectArgs.runGameActionDelegate('userPrompt', {
+        prompt: 'Choose one',
+        playerId: effectArgs.playerId,
+        actionButtons: [
+          { label: '+1 Treasure', action: 1 },
+          { label: 'Trash and reveal', action: 2 }
+        ],
+      }) as { action: number, cardIds: number[] };
+      
+      if (result.action === 1) {
+        await effectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+      }
+      else {
+        const hand = effectArgs.match.playerHands[effectArgs.playerId];
+        let uniqueTreasureCount: CardKey[] = [];
+        let l = hand.length - 1;
+        for (let i = l; i >= 0; i--) {
+          await effectArgs.runGameActionDelegate('revealCard', {
+            cardId: hand[i],
+            playerId: effectArgs.playerId,
+          });
+          const card = effectArgs.cardLibrary.getCard(hand[i]);
+          uniqueTreasureCount.push(card.cardKey);
+        }
+        uniqueTreasureCount = Array.from(new Set(uniqueTreasureCount));
+        await effectArgs.runGameActionDelegate('gainVictoryToken', { playerId: effectArgs.playerId, count: uniqueTreasureCount.length });
+      }
     }
   },
   'platinum': {

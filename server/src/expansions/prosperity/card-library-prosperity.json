@@ -79,6 +79,12 @@
     },
     "type": ["TREASURE"]
   },
+  "investment": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["TREASURE"]
+  },
   "platinum": {
     "cost": {
       "treasure": 9
