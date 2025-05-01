@@ -406,7 +406,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     console.log(`[match] calculating scores`);
     
     const match = this._match;
-    const scores: Record<number, number> = {};
     
     for (const player of match.players ?? []) {
       const playerId = player.id;
@@ -423,10 +422,10 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           score += customScoringFn({
             match: this._match,
             cardLibrary: this._cardLibrary,
-            ownerId: playerId,
-          });
-        }
-      }
+      ownerId: playerId,
+    });
+  }
+}
       match.scores[playerId] = score;
       
       for (const expansionScoringFn of this._expansionScoringFns) {
