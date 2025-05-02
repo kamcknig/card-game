@@ -10,10 +10,10 @@ import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 const expansion: CardExpansionModuleNew = {
   'astrolabe': {
     registerLifeCycleMethods: () => ({
-      onLeavePlay: (args) => {
+      onLeavePlay: async (args) => {
         args.reactionManager.unregisterTrigger(`astrolabe:${args.cardId}:starTurn`);
       },
-      onCardPlayed: ({ reactionManager, playerId, cardId }) => {
+      onCardPlayed: async ({ reactionManager, playerId, cardId }) => {
         const id = `astrolabe:${cardId}:starTurn`;
         reactionManager.registerReactionTemplate({
           id,
@@ -163,7 +163,7 @@ const expansion: CardExpansionModuleNew = {
   },
   'corsair': {
     registerLifeCycleMethods: () => ({
-      onLeavePlay: ({ reactionManager, cardId }) => {
+      onLeavePlay: async ({ reactionManager, cardId }) => {
         reactionManager.unregisterTrigger(`corsair:${cardId}:starTurn`);
       }
     }),
@@ -396,11 +396,11 @@ const expansion: CardExpansionModuleNew = {
   },
   'lighthouse': {
     registerLifeCycleMethods: () => ({
-      onLeavePlay: (args) => {
+      onLeavePlay: async (args) => {
         args.reactionManager.unregisterTrigger(`lighthouse:${args.cardId}:startTurn`);
         args.reactionManager.unregisterTrigger(`lighthouse:${args.cardId}:cardPlayed`);
       },
-      onCardPlayed: args => {
+      onCardPlayed: async args => {
         args.reactionManager.registerReactionTemplate({
           id: `lighthouse:${args.cardId}:cardPlayed`,
           playerId: args.playerId,
@@ -579,7 +579,7 @@ const expansion: CardExpansionModuleNew = {
   },
   'pirate': {
     registerLifeCycleMethods: () => ({
-      onEnterHand: ({ reactionManager, playerId, cardId }) => {
+      onEnterHand: async ({ reactionManager, playerId, cardId }) => {
         reactionManager.registerReactionTemplate({
           id: `pirate:${cardId}:gainCard`,
           playerId,
@@ -599,7 +599,7 @@ const expansion: CardExpansionModuleNew = {
           }
         });
       },
-      onLeaveHand: ({ reactionManager, cardId }) => {
+      onLeaveHand: async ({ reactionManager, cardId }) => {
         reactionManager.unregisterTrigger(`pirate:${cardId}:gainCard`);
       }
     }),
@@ -704,11 +704,11 @@ const expansion: CardExpansionModuleNew = {
   },
   'sailor': {
     registerLifeCycleMethods: () => ({
-      onLeavePlay: ({ reactionManager, cardId }) => {
+      onLeavePlay: async ({ reactionManager, cardId }) => {
         reactionManager.unregisterTrigger(`sailor:${cardId}:gainCard`);
         reactionManager.unregisterTrigger(`sailor:${cardId}:startTurn`);
       },
-      onCardPlayed: (args) => {
+      onCardPlayed: async (args) => {
         args.reactionManager.registerReactionTemplate({
           id: `sailor:${args.cardId}:gainCard`,
           playerId: args.playerId,
@@ -858,7 +858,7 @@ const expansion: CardExpansionModuleNew = {
   },
   'sea-witch': {
     registerLifeCycleMethods: () => ({
-      onCardPlayed: (args) => {
+      onCardPlayed: async (args) => {
         args.reactionManager.registerReactionTemplate({
           id: `sea-witch:${args.cardId}:startTurn`,
           playerId: args.playerId,
@@ -1180,7 +1180,7 @@ const expansion: CardExpansionModuleNew = {
   },
   'wharf': {
     registerLifeCycleMethods: () => ({
-      onCardPlayed: (args) => {
+      onCardPlayed: async (args) => {
         args.reactionManager.registerReactionTemplate({
           id: `wharf:${args.cardId}:startTurn`,
           playerId: args.playerId,

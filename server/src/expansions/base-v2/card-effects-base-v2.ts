@@ -611,7 +611,7 @@ const expansionModule: CardExpansionModuleNew = {
   },
   'merchant': {
     registerLifeCycleMethods: () => ({
-      onCardPlayed: ({ reactionManager, cardId, playerId }) => {
+      onCardPlayed: async ({ reactionManager, cardId, playerId }) => {
         reactionManager.registerReactionTemplate({
           id: `merchant:${cardId}:cardPlayed`,
           playerId,
@@ -639,7 +639,7 @@ const expansionModule: CardExpansionModuleNew = {
           }
         });
       },
-      onLeavePlay: ({ reactionManager, cardId }) => {
+      onLeavePlay: async ({ reactionManager, cardId }) => {
         reactionManager.unregisterTrigger(`merchant:${cardId}:cardPlayed`);
       },
     }),
@@ -789,7 +789,7 @@ const expansionModule: CardExpansionModuleNew = {
   },
   'moat': {
     registerLifeCycleMethods: () => ({
-      onEnterHand: ({ reactionManager, playerId, cardId }) => {
+      onEnterHand: async ({ reactionManager, playerId, cardId }) => {
         reactionManager.registerReactionTemplate({
           id: `moat:${cardId}:cardPlayed`,
           playerId,
@@ -812,7 +812,7 @@ const expansionModule: CardExpansionModuleNew = {
           },
         });
       },
-      onLeaveHand: ({ reactionManager, cardId }) => {
+      onLeaveHand: async ({ reactionManager, cardId }) => {
         reactionManager.unregisterTrigger(`moat:${cardId}:cardPlayed`);
       },
     }),

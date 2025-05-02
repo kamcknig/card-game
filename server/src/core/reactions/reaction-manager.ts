@@ -71,7 +71,7 @@ export class ReactionManager {
     this._reactions.push(new Reaction(reactionTemplate) as any);
   }
   
-  registerLifecycleEvent(trigger: LifecycleEvent, context: { playerId?: PlayerId, cardId: CardId }) {
+  async triggerLifecycleEvent(trigger: LifecycleEvent, context: { playerId?: PlayerId, cardId: CardId }) {
     const card = this._cardLibrary.getCard(context.cardId);
     
     const fn = cardLifecycleMap[card.cardKey]?.[trigger];
@@ -81,7 +81,9 @@ export class ReactionManager {
     
     console.log(`[REACTION MANAGER] running lifecycle trigger '${trigger}' for card ${card}`);
     
-    fn({
+    await fn({
+      cardLibrary: this._cardLibrary,
+      match: this._match,
       cardId: context.cardId,
       playerId: context.playerId!,
       reactionManager: this,

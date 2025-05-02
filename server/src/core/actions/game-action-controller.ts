@@ -116,12 +116,12 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     switch (oldSource.storeKey) {
       case 'playerHands':
-        this.reactionManager.registerLifecycleEvent('onLeaveHand', { playerId: args.toPlayerId!, cardId: args.cardId });
+        await this.reactionManager.triggerLifecycleEvent('onLeaveHand', { playerId: args.toPlayerId!, cardId: args.cardId });
         break;
       case 'playArea':
       case 'activeDuration':
         if (newSource === this.match.playArea || newSource === this.match.activeDurationCards) break;
-        this.reactionManager.registerLifecycleEvent('onLeavePlay', { cardId: args.cardId });
+        await this.reactionManager.triggerLifecycleEvent('onLeavePlay', { cardId: args.cardId });
     }
     
     args.to.location = castArray(args.to.location);
@@ -130,7 +130,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     switch (args.to.location[0]) {
       case 'playerHands':
-        this.reactionManager.registerLifecycleEvent('onEnterHand', { playerId: args.toPlayerId!, cardId: args.cardId });
+        await this.reactionManager.triggerLifecycleEvent('onEnterHand', { playerId: args.toPlayerId!, cardId: args.cardId });
         break;
     }
     
@@ -187,6 +187,8 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     });
     
     await this.reactionManager.runTrigger({ trigger });
+    
+    await this.reactionManager.triggerLifecycleEvent('onGained', { playerId: args.playerId, cardId: args.cardId });
   }
   
   async userPrompt(args: UserPromptActionArgs) {
@@ -689,7 +691,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     });
     
     // now add any triggered effects from the card played
-    this.reactionManager.registerLifecycleEvent('onCardPlayed', { playerId: args.playerId, cardId: args.cardId });
+    await this.reactionManager.triggerLifecycleEvent('onCardPlayed', { playerId: args.playerId, cardId: args.cardId });
     
     // find any reactions for the cardPlayed event type
     const trigger = new ReactionTrigger('cardPlayed', {

@@ -371,6 +371,8 @@ export class Reaction<T extends TriggerEventType = TriggerEventType> {
 export type ReactionTemplate<T extends TriggerEventType = TriggerEventType> = Omit<Reaction<T>, 'getSourceId' | 'getSourceKey' | 'getBaseId'>;
 
 type LifecycleCallbackContext = {
+  cardLibrary: CardLibrary;
+  match: Match;
   reactionManager: ReactionManager;
   runGameActionDelegate: RunGameActionDelegate;
   playerId: number;
@@ -382,12 +384,13 @@ export type LifecycleCallbackMap = {
   onEnterPlay?: LifecycleCallback;
   onLeavePlay?: LifecycleCallback;
   onCardPlayed?: LifecycleCallback;
+  onGained?: LifecycleCallback;
 };
 export type LifecycleResult = {
   registerTriggeredEvents?: ReactionTemplate[];
   unregisterTriggeredEvents?: string[];
 };
-export type LifecycleCallback = (args: LifecycleCallbackContext) => LifecycleResult | void;
+export type LifecycleCallback = (args: LifecycleCallbackContext) => Promise<LifecycleResult | void>;
 
 export type LifecycleEvent = keyof LifecycleCallbackMap;
 

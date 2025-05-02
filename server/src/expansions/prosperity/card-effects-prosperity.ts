@@ -1,9 +1,10 @@
 import './types.ts';
-import { CardId, CardKey } from 'shared/shared-types.ts';
+import { Card, CardId, CardKey } from 'shared/shared-types.ts';
 import { CardExpansionModuleNew } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { findCards } from '../../utils/find-cards.ts';
 import { getRemainingSupplyCount, getStartingSupplyCount } from '../../utils/get-starting-supply-count.ts';
+import { async } from 'npm:rxjs@7.8.2';
 
 const expansion: CardExpansionModuleNew = {
   'anvil': {
@@ -207,7 +208,7 @@ const expansion: CardExpansionModuleNew = {
   },
   'clerk': {
     registerLifeCycleMethods: () => ({
-      onEnterHand: args => {
+      onEnterHand: async args => {
         args.reactionManager.registerReactionTemplate({
           id: `clerk:${args.cardId}:startTurn`,
           listeningFor: 'startTurn',
@@ -227,7 +228,7 @@ const expansion: CardExpansionModuleNew = {
           }
         })
       },
-      onLeaveHand: args => {
+      onLeaveHand: async args => {
         args.reactionManager.unregisterTrigger(`clerk:${args.cardId}:startTurn`)
       }
     }),
@@ -266,7 +267,7 @@ const expansion: CardExpansionModuleNew = {
   },
   'collection': {
     registerLifeCycleMethods: () => ({
-      onLeavePlay: args => {
+      onLeavePlay: async args => {
         args.reactionManager.unregisterTrigger(`collection:${args.cardId}:gainCard`);
       }
     }),
@@ -484,7 +485,7 @@ const expansion: CardExpansionModuleNew = {
   },
   'hoard': {
     registerLifeCycleMethods: () => ({
-      onLeavePlay: args => {
+      onLeavePlay: async args => {
         args.reactionManager.unregisterTrigger(`hoard:${args.cardId}:gainCard`);
       }
     }),
@@ -644,6 +645,88 @@ const expansion: CardExpansionModuleNew = {
       for (let i = 0; i < treasureCardCount; i++) {
         await effectArgs.runGameActionDelegate('drawCard', { playerId: effectArgs.playerId });
       }
+    }
+  },
+  'mint': {
+    registerLifeCycleMethods: () => ({
+      onGained: async ({ runGameActionDelegate, cardLibrary, match, playerId }) => {
+        const cardsIdsPlayedThisTurn = match.stats.playedCardsByTurn[match.turnNumber];
+        const cardsPlayedThisTurn = cardsIdsPlayedThisTurn.map(cardLibrary.getCard);
+        const nonDurationTreasures = cardsPlayedThisTurn
+          .filter(card => card.type.includes('TREASURE') &&
+            !card.type.includes('DURATION') &&
+            match.stats.playedCards[card.id].playerId === playerId
+          );
+        
+        if (nonDurationTreasures.length === 0) {
+          console.log(`[mint onGained] no non-duration treasure cards in play`);
+          return;
+        }
+        
+        console.log(`[mint onGained] trashing ${nonDurationTreasures.length} non-duration treasure cards`);
+        for (let i = nonDurationTreasures.length - 1; i >= 0; i--) {
+          await runGameActionDelegate('trashCard', {
+            playerId,
+            cardId: nonDurationTreasures[i].id,
+          });
+        }
+      }
+    }),
+    registerEffects: () => async (effectArgs) => {
+      const hand = effectArgs.match.playerHands[effectArgs.playerId];
+      const handCards = hand.map(effectArgs.cardLibrary.getCard);
+      const treasuresInHand = handCards.filter(card => card.type.includes('TREASURE'));
+      
+      if (treasuresInHand.length === 0) {
+        console.log(`[mint effect] no treasures in hand`);
+        return;
+      }
+      
+      const uniqueTreasureCount = new Set(treasuresInHand.map(card => card.cardKey)).size;
+      
+      let selectedCard: Card | undefined = undefined;
+      
+      if (uniqueTreasureCount === 1) {
+        selectedCard = treasuresInHand[0];
+      }
+      else {
+        const selectedCardIds = await effectArgs.runGameActionDelegate('selectCard', {
+          playerId: effectArgs.playerId,
+          prompt: `Reveal card`,
+          restrict: { from: { location: 'playerHands' } },
+          count: 1
+        }) as CardId[];
+        
+        if (!selectedCardIds[0]) {
+          console.warn(`[mint effect] no card selected to reveal`);
+          return;
+        }
+        
+        selectedCard = effectArgs.cardLibrary.getCard(selectedCardIds[0]);
+      }
+      
+      console.log(`[mint effect] card to reveal ${selectedCard}`);
+      
+      await effectArgs.runGameActionDelegate('revealCard', {
+        cardId: selectedCard.id,
+        playerId: effectArgs.playerId,
+      });
+      
+      const cardsInSupply = findCards(effectArgs.match, {
+        location: selectedCard.isBasic ? 'supply' : 'kingdom',
+        cards: { cardKeys: selectedCard.cardKey }
+      }, effectArgs.cardLibrary);
+      
+      if (cardsInSupply.length === 0) {
+        console.log(`[mint effect] no copies of ${selectedCard} in supply`);
+        return;
+      }
+      
+      await effectArgs.runGameActionDelegate('gainCard', {
+        playerId: effectArgs.playerId,
+        cardId: selectedCard.id,
+        to: { location: 'playerDiscards' }
+      });
     }
   },
   'platinum': {
