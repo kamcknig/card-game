@@ -118,11 +118,23 @@
     },
     "type": ["ACTION"]
   },
+  "prosperity": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["TREASURE"]
+  },
   "platinum": {
     "cost": {
       "treasure": 9
     },
     "isBasic": true,
+    "type": ["TREASURE"]
+  },
+  "quarry": {
+    "cost": {
+      "treasure": 4
+    },
     "type": ["TREASURE"]
   }
 }

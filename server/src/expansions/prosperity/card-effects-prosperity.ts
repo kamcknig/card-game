@@ -8,6 +8,7 @@ import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
+import { async } from 'npm:rxjs@7.8.2';
 
 const expansion: CardExpansionModuleNew = {
   'anvil': {
@@ -775,6 +776,8 @@ const expansion: CardExpansionModuleNew = {
             triggeredEffectFn: async (triggerEffectArgs) => {
               const peddlerCard = triggerEffectArgs.cardLibrary.getCard(args.cardId);
               
+              console.log(`[peddler triggered effect] adding pricing rule for ${peddlerCard}`);
+              
               const rule: CardPriceRule = (ruleCard, ruleContext) => {
                 const cardIdsInPlay = getCardsInPlay(ruleContext.match);
                 const cardsInPlay = cardIdsInPlay.map(triggerEffectArgs.cardLibrary.getCard);
@@ -797,6 +800,40 @@ const expansion: CardExpansionModuleNew = {
       await runGameActionDelegate('drawCard', { playerId });
       await runGameActionDelegate('gainAction', { count: 1 });
       await runGameActionDelegate('gainTreasure', { count: 1 });
+    }
+  },
+  'quarry': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[quarry effect] gaining 1 treasure`);
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+      
+      const actionCards = findCards(
+        cardEffectArgs.match,
+        {
+          cards: { type: 'ACTION' },
+        },
+        cardEffectArgs.cardLibrary,
+      ).map(cardEffectArgs.cardLibrary.getCard);
+      
+      const unsubs: (() => void)[] = [];
+      for (const actionCard of actionCards) {
+        const rule: CardPriceRule = () => ({ restricted: false, cost: { treasure: -2 } });
+        const unsub = cardEffectArgs.cardPriceController.registerRule(actionCard, rule);
+        unsubs.push(unsub);
+      }
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate({
+        id: `peddler:${cardEffectArgs.cardId}:endTurn`,
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        allowMultipleInstances: true,
+        compulsory: true,
+        listeningFor: 'endTurn',
+        condition: () => true,
+        triggeredEffectFn: async () => {
+          unsubs.forEach(e => e());
+        }
+      })
     }
   },
   'platinum': {
