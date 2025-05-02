@@ -161,5 +161,12 @@
       "treasure": 3
     },
     "type": ["ACTION", "REACTION"]
+  },
+  "workers-village": {
+    "cardName": "Worker's Village",
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"]
   }
 }

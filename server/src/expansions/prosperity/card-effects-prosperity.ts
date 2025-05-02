@@ -1211,6 +1211,14 @@ const expansion: CardExpansionModuleNew = {
         await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
       }
     }
+  },
+  'workers-village': {
+    registerEffects: () => async ({runGameActionDelegate, playerId}) => {
+      console.log(`[workers-village effect] drawing 1 card, gaining 2 actions, and gaining 1 buy`);
+      await runGameActionDelegate('drawCard', { playerId });
+      await runGameActionDelegate('gainAction', { count: 2 });
+      await runGameActionDelegate('gainBuy', { count: 1 });
+    }
   }
 }
 
