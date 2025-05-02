@@ -116,7 +116,10 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     switch (oldSource.storeKey) {
       case 'playerHands':
-        await this.reactionManager.triggerLifecycleEvent('onLeaveHand', { playerId: args.toPlayerId!, cardId: args.cardId });
+        await this.reactionManager.triggerLifecycleEvent('onLeaveHand', {
+          playerId: args.toPlayerId!,
+          cardId: args.cardId
+        });
         break;
       case 'playArea':
       case 'activeDuration':
@@ -130,7 +133,10 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     switch (args.to.location[0]) {
       case 'playerHands':
-        await this.reactionManager.triggerLifecycleEvent('onEnterHand', { playerId: args.toPlayerId!, cardId: args.cardId });
+        await this.reactionManager.triggerLifecycleEvent('onEnterHand', {
+          playerId: args.toPlayerId!,
+          cardId: args.cardId
+        });
         break;
     }
     
@@ -154,7 +160,11 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     console.log(`[gainAction action] setting player actions to ${args.count}`);
   }
   
-  async gainCard(args: { playerId: PlayerId, cardId: CardId, to: CardLocationSpec }, context?: GameActionContextMap['gainCard']) {
+  async gainCard(args: {
+    playerId: PlayerId,
+    cardId: CardId,
+    to: CardLocationSpec
+  }, context?: GameActionContextMap['gainCard']) {
     await this.moveCard({
       cardId: args.cardId,
       to: args.to,
@@ -467,7 +477,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   async nextPhase() {
     const match = this.match;
     
-    const trigger = new ReactionTrigger('endTurnPhase');
+    const trigger = new ReactionTrigger('endTurnPhase', { phaseIndex: match.turnPhaseIndex });
     await this.reactionManager.runTrigger({ trigger });
     
     match.turnPhaseIndex = match.turnPhaseIndex + 1;
@@ -532,18 +542,18 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         });
         await this.reactionManager.runTrigger({ trigger: startTurnTrigger });
         
-        const startPhaseTrigger = new ReactionTrigger('startTurnPhase');
+        const startPhaseTrigger = new ReactionTrigger('startTurnPhase', { phaseIndex: match.turnPhaseIndex });
         await this.reactionManager.runTrigger({ trigger: startPhaseTrigger });
         
         break;
       }
       case 'buy': {
-        const startPhaseTrigger = new ReactionTrigger('startTurnPhase');
+        const startPhaseTrigger = new ReactionTrigger('startTurnPhase', { phaseIndex: match.turnPhaseIndex });
         await this.reactionManager.runTrigger({ trigger: startPhaseTrigger });
         break;
       }
       case 'cleanup': {
-        const startPhaseTrigger = new ReactionTrigger('startTurnPhase');
+        const startPhaseTrigger = new ReactionTrigger('startTurnPhase', { phaseIndex: match.turnPhaseIndex });
         await this.reactionManager.runTrigger({ trigger: startPhaseTrigger });
         
         const cardsToDiscard = match.playArea.concat(match.activeDurationCards, match.playerHands[currentPlayer.id]);
@@ -599,8 +609,6 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     const trigger = new ReactionTrigger('endTurn',);
     await this.reactionManager.runTrigger({ trigger });
-    
-    this.reactionManager.cleanUpTriggers()
   }
   
   async gainTreasure(args: { count: number }, context?: GameActionContext) {

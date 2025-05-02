@@ -4,7 +4,10 @@ import { CardExpansionModuleNew } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { findCards } from '../../utils/find-cards.ts';
 import { getRemainingSupplyCount, getStartingSupplyCount } from '../../utils/get-starting-supply-count.ts';
-import { async } from 'npm:rxjs@7.8.2';
+import { getTurnPhase } from '../../utils/get-turn-phase.ts';
+import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
+import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
+import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 
 const expansion: CardExpansionModuleNew = {
   'anvil': {
@@ -650,9 +653,9 @@ const expansion: CardExpansionModuleNew = {
   'mint': {
     registerLifeCycleMethods: () => ({
       onGained: async ({ runGameActionDelegate, cardLibrary, match, playerId }) => {
-        const cardsIdsPlayedThisTurn = match.stats.playedCardsByTurn[match.turnNumber];
-        const cardsPlayedThisTurn = cardsIdsPlayedThisTurn.map(cardLibrary.getCard);
-        const nonDurationTreasures = cardsPlayedThisTurn
+        const cardIdsInPlay = getCardsInPlay(match);
+        const cardsInPlay = cardIdsInPlay.map(cardLibrary.getCard);
+        const nonDurationTreasures = cardsInPlay
           .filter(card => card.type.includes('TREASURE') &&
             !card.type.includes('DURATION') &&
             match.stats.playedCards[card.id].playerId === playerId
@@ -727,6 +730,73 @@ const expansion: CardExpansionModuleNew = {
         cardId: cardsInSupply.slice(-1)[0],
         to: { location: 'playerDiscards' }
       });
+    }
+  },
+  'monument': {
+    registerEffects: () => async ({ runGameActionDelegate }) => {
+      console.log(`[monument effect] gaining 2 treasure, and 1 victory token`);
+      await runGameActionDelegate('gainTreasure', { count: 2 });
+      await runGameActionDelegate('gainVictoryToken', { count: 1 });
+    }
+  },
+  'peddler': {
+    registerGameLifecycleMethods: () => ({
+      onGameStart: async args => {
+        let ruleUnsub = () => void 0;
+        
+        for (const player of args.match.players) {
+          args.reactionManager.registerReactionTemplate({
+            id: `peddler:${args.cardId}:endTurnPhase`,
+            listeningFor: 'endTurnPhase',
+            playerId: player.id,
+            once: false,
+            compulsory: true,
+            allowMultipleInstances: true,
+            condition: (conditionArgs) => {
+              if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') return false;
+              return getCurrentPlayer(conditionArgs.match).id === player.id;
+            },
+            triggeredEffectFn: async () => {
+              ruleUnsub();
+              ruleUnsub = () => void 0;
+            }
+          });
+          
+          args.reactionManager.registerReactionTemplate({
+            id: `peddler:${args.cardId}:startTurnPhase`,
+            listeningFor: 'startTurnPhase',
+            playerId: player.id,
+            compulsory: true,
+            allowMultipleInstances: true,
+            condition: (conditionArgs) => {
+              if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') return false;
+              return getCurrentPlayer(conditionArgs.match).id === player.id;
+            },
+            triggeredEffectFn: async (triggerEffectArgs) => {
+              const peddlerCard = triggerEffectArgs.cardLibrary.getCard(args.cardId);
+              
+              const rule: CardPriceRule = (ruleCard, ruleContext) => {
+                const cardIdsInPlay = getCardsInPlay(ruleContext.match);
+                const cardsInPlay = cardIdsInPlay.map(triggerEffectArgs.cardLibrary.getCard);
+                const actionsInPlay = cardsInPlay.filter(card => card.type.includes('ACTION'));
+                if (actionsInPlay.length === 0) {
+                  return { restricted: false, cost: { treasure: 0 } };
+                }
+                
+                return { restricted: false, cost: { treasure: -actionsInPlay.length * 2 } }
+              }
+              
+              ruleUnsub = args.cardPriceController.registerRule(peddlerCard, rule);
+            }
+          })
+        }
+      }
+    }),
+    registerEffects: () => async ({ runGameActionDelegate, playerId }) => {
+      console.log(`[peddler effect] drawing 1 card, gaining 1 action, and gaining 1 treasure`);
+      await runGameActionDelegate('drawCard', { playerId });
+      await runGameActionDelegate('gainAction', { count: 1 });
+      await runGameActionDelegate('gainTreasure', { count: 1 });
     }
   },
   'platinum': {

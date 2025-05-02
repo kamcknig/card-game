@@ -336,6 +336,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     );
     
     this._reactionManager = new ReactionManager(
+      this._cardPriceController,
       this._logManager,
       this._match,
       this._cardLibrary,
@@ -403,6 +404,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       turn: Math.floor(this._match.turnNumber / this._match.players.length) + 1,
       playerId: getCurrentPlayer(this._match).id
     });
+    
+    await this._reactionManager.triggerGameLifecycleEvent('onGameStart')
     
     await this.runGameAction('checkForRemainingPlayerActions');
   }

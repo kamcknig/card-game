@@ -221,6 +221,7 @@ export type CardExpansionActionConditionMap = {
 
 export interface CardExpansionModuleNew {
   [p: CardKey]: {
+    registerGameLifecycleMethods?: () => GameLifecycleCallbackMap;
     registerActionConditions?: () => CardExpansionActionConditionMap;
     registerLifeCycleMethods?: () => LifecycleCallbackMap;
     registerScoringFunction?: () => CardScoringFunction;
@@ -274,8 +275,8 @@ export type TriggerEventTypeContext = {
   cardPlayed: { playerId: PlayerId; cardId: CardId };
   startTurn: { playerId: PlayerId };
   gainCard: { playerId: PlayerId; cardId: CardId, bought: boolean };
-  endTurnPhase: void;
-  startTurnPhase: void;
+  endTurnPhase: { phaseIndex: number; };
+  startTurnPhase: { phaseIndex: number; };
   endTurn: void;
   discardCard: { previousLocation: CardLocation, playerId: PlayerId, cardId: CardId };
 }
@@ -370,7 +371,23 @@ export class Reaction<T extends TriggerEventType = TriggerEventType> {
 
 export type ReactionTemplate<T extends TriggerEventType = TriggerEventType> = Omit<Reaction<T>, 'getSourceId' | 'getSourceKey' | 'getBaseId'>;
 
+export type GameLifecycleCallbackContext = {
+  cardId: CardId,
+  cardPriceController: CardPriceRulesController,
+  cardLibrary: CardLibrary;
+  match: Match;
+  reactionManager: ReactionManager;
+  runGameActionDelegate: RunGameActionDelegate;
+}
+
+export type GameLifecycleCallback = (args: GameLifecycleCallbackContext) => Promise<LifecycleResult | void>;
+
+export type GameLifecycleCallbackMap = {
+  onGameStart?: GameLifecycleCallback;
+};
+
 type LifecycleCallbackContext = {
+  cardPriceController: CardPriceRulesController,
   cardLibrary: CardLibrary;
   match: Match;
   reactionManager: ReactionManager;
@@ -379,6 +396,7 @@ type LifecycleCallbackContext = {
   cardId: number;
 }
 export type LifecycleCallbackMap = {
+  onGameStart?: LifecycleCallback;
   onEnterHand?: LifecycleCallback;
   onLeaveHand?: LifecycleCallback;
   onEnterPlay?: LifecycleCallback;
@@ -386,10 +404,12 @@ export type LifecycleCallbackMap = {
   onCardPlayed?: LifecycleCallback;
   onGained?: LifecycleCallback;
 };
+
 export type LifecycleResult = {
   registerTriggeredEvents?: ReactionTemplate[];
   unregisterTriggeredEvents?: string[];
 };
+
 export type LifecycleCallback = (args: LifecycleCallbackContext) => Promise<LifecycleResult | void>;
 
 export type LifecycleEvent = keyof LifecycleCallbackMap;

@@ -6,6 +6,7 @@ import { getPlayerStartingFrom, getPlayerTurnIndex } from '../../shared/get-play
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
+import { async } from 'npm:rxjs@7.8.2';
 
 const expansion: CardExpansionModuleNew = {
   'astrolabe': {
@@ -59,6 +60,12 @@ const expansion: CardExpansionModuleNew = {
     }
   },
   'blockade': {
+    registerLifeCycleMethods: () => ({
+      onLeavePlay: async args => {
+        args.reactionManager.unregisterTrigger(`blockade:${args.cardId}:startTurn`);
+        args.reactionManager.unregisterTrigger(`blockade:${args.cardId}:gainCard`);
+      }
+    }),
     registerEffects: () => async ({ match, reactionManager, runGameActionDelegate, cardLibrary, playerId, cardId }) => {
       console.log(`[BLOCKADE EFFECT] prompting user to select card...`);
       const cardIds = await runGameActionDelegate('selectCard', {
@@ -140,6 +147,11 @@ const expansion: CardExpansionModuleNew = {
     }
   },
   'caravan': {
+    registerLifeCycleMethods: () => ({
+      onLeavePlay: async args => {
+        args.reactionManager.unregisterTrigger(`caravan:${args.cardId}:startTurn`);
+      }
+    }),
     registerEffects: () => async ({ runGameActionDelegate, playerId, reactionManager, cardId }) => {
       console.log(`[CARAVAN EFFECT] drawing a card...`);
       await runGameActionDelegate('drawCard', { playerId });
@@ -165,6 +177,7 @@ const expansion: CardExpansionModuleNew = {
     registerLifeCycleMethods: () => ({
       onLeavePlay: async ({ reactionManager, cardId }) => {
         reactionManager.unregisterTrigger(`corsair:${cardId}:starTurn`);
+        reactionManager.unregisterTrigger(`corsair:${cardId}:cardPlayed`);
       }
     }),
     registerEffects: () => async ({ runGameActionDelegate, reactionManager, cardId, playerId, reactionContext }) => {
@@ -266,6 +279,11 @@ const expansion: CardExpansionModuleNew = {
     }
   },
   'fishing-village': {
+    registerLifeCycleMethods: () => ({
+      onLeavePlay: async args => {
+        args.reactionManager.unregisterTrigger(`fishing-village:${args.cardId}:startTurn`);
+      }
+    }),
     registerEffects: () => async ({ runGameActionDelegate, playerId, reactionManager, cardId }) => {
       console.log(`[fishing village effect] gaining 2 action...`);
       await runGameActionDelegate('gainAction', { count: 2 });
@@ -311,22 +329,6 @@ const expansion: CardExpansionModuleNew = {
       
       if (!cardId) {
         console.warn('[haven effect] no card selected');
-        
-        reactionManager.registerReactionTemplate({
-          id: `haven:${playedCardId}:endTurn`,
-          playerId,
-          once: true,
-          allowMultipleInstances: true,
-          compulsory: true,
-          listeningFor: 'endTurn',
-          condition: () => true,
-          triggeredEffectFn: async () => {
-            await runGameActionDelegate('discardCard', {
-              cardId: playedCardId,
-              playerId
-            }, { loggingContext: { source: cardId } })
-          }
-        })
         return;
       }
       
@@ -335,6 +337,8 @@ const expansion: CardExpansionModuleNew = {
         toPlayerId: playerId,
         to: { location: 'set-aside' },
       });
+      // todo needs to be face down - for other players - maybe just add a set-aside-face-down zone that the
+      // front-end can then differentiate. cheap. but eh.
       
       reactionManager.registerReactionTemplate({
         id: `haven:${playedCardId}:startTurn`,
@@ -348,12 +352,6 @@ const expansion: CardExpansionModuleNew = {
           
           await runGameActionDelegate('moveCard', {
             cardId,
-            toPlayerId: playerId,
-            to: { location: 'playerHands' }
-          });
-          
-          await runGameActionDelegate('moveCard', {
-            cardId: cardId,
             toPlayerId: playerId,
             to: { location: 'playerHands' }
           });
@@ -518,6 +516,11 @@ const expansion: CardExpansionModuleNew = {
     }
   },
   'merchant-ship': {
+    registerLifeCycleMethods: () => ({
+      onLeavePlay: async args => {
+        args.reactionManager.unregisterTrigger(`merchant-ship:${args.cardId}:startTurn`);
+      }
+    }),
     registerEffects: () => async ({ runGameActionDelegate, playerId, reactionManager, cardId }) => {
       console.log(`[merchant ship effect] gaining 2 treasures...`);
       await runGameActionDelegate('gainTreasure', { count: 2 });
@@ -538,6 +541,12 @@ const expansion: CardExpansionModuleNew = {
     }
   },
   'monkey': {
+    registerLifeCycleMethods: () => ({
+      onLeavePlay: async args => {
+        args.reactionManager.unregisterTrigger(`monkey:${args.cardId}:startTurn`);
+        args.reactionManager.unregisterTrigger(`monkey:${args.cardId}:gainCard`)
+      }
+    }),
     registerEffects: () => async ({ reactionManager, match, playerId, cardId, runGameActionDelegate }) => {
       reactionManager.registerReactionTemplate({
         id: `monkey:${cardId}:startTurn`,
@@ -601,6 +610,9 @@ const expansion: CardExpansionModuleNew = {
       },
       onLeaveHand: async ({ reactionManager, cardId }) => {
         reactionManager.unregisterTrigger(`pirate:${cardId}:gainCard`);
+      },
+      onLeavePlay: async args => {
+        args.reactionManager.unregisterTrigger(`pirate:${args.cardId}:startTurn`);
       }
     }),
     registerEffects: () => async ({ reactionManager, playerId, match, cardId, runGameActionDelegate }) => {
@@ -707,8 +719,23 @@ const expansion: CardExpansionModuleNew = {
       onLeavePlay: async ({ reactionManager, cardId }) => {
         reactionManager.unregisterTrigger(`sailor:${cardId}:gainCard`);
         reactionManager.unregisterTrigger(`sailor:${cardId}:startTurn`);
+        reactionManager.unregisterTrigger(`sailor:${cardId}:endTurn`);
       },
       onCardPlayed: async (args) => {
+        args.reactionManager.registerReactionTemplate({
+          id: `sailor:${args.cardId}:endTurn`,
+          playerId: args.playerId,
+          listeningFor: 'endTurn',
+          compulsory: true,
+          allowMultipleInstances: true,
+          once: true,
+          condition: () => true,
+          triggeredEffectFn: async (triggerArgs) => {
+            args.reactionManager.unregisterTrigger(`sailor:${args.cardId}:gainCard`);
+            args.reactionManager.unregisterTrigger(`sailor:${args.cardId}:endTurn`);
+          }
+        });
+        
         args.reactionManager.registerReactionTemplate({
           id: `sailor:${args.cardId}:gainCard`,
           playerId: args.playerId,
@@ -858,6 +885,9 @@ const expansion: CardExpansionModuleNew = {
   },
   'sea-witch': {
     registerLifeCycleMethods: () => ({
+      onLeavePlay: async (args) => {
+        args.reactionManager.unregisterTrigger(`sea-witch:${args.cardId}:startTurn`);
+      },
       onCardPlayed: async (args) => {
         args.reactionManager.registerReactionTemplate({
           id: `sea-witch:${args.cardId}:startTurn`,
@@ -991,6 +1021,11 @@ const expansion: CardExpansionModuleNew = {
     }
   },
   'tactician': {
+    registerLifeCycleMethods: () => ({
+      onLeavePlay: async ({ reactionManager, cardId }) => {
+        reactionManager.unregisterTrigger(`tactician:${cardId}:startTurn`);
+      }
+    }),
     registerEffects: () => async (args) => {
       const hand = args.match.playerHands[args.playerId];
       if (hand.length === 0) {
@@ -1033,6 +1068,11 @@ const expansion: CardExpansionModuleNew = {
     }
   },
   'tide-pools': {
+    registerLifeCycleMethods: () => ({
+      onLeavePlay: async ({ reactionManager, cardId }) => {
+        reactionManager.unregisterTrigger(`tide-pools:${cardId}:startTurn`);
+      }
+    }),
     registerEffects: () => async (args) => {
       console.log(`[tide pools effect] drawing 3 cards...`);
       for (let i = 0; i < 3; i++) {
@@ -1109,6 +1149,11 @@ const expansion: CardExpansionModuleNew = {
     }
   },
   'treasury': {
+    registerLifeCycleMethods: () => ({
+      onLeavePlay: async ({ reactionManager, cardId }) => {
+        reactionManager.unregisterTrigger(`treasury:${cardId}:endTurnPhase`);
+      }
+    }),
     registerEffects: () => async (args) => {
       console.log(`[treasury effect] drawing 1 card...`);
       await args.runGameActionDelegate('drawCard', { playerId: args.playerId });
@@ -1127,7 +1172,7 @@ const expansion: CardExpansionModuleNew = {
         compulsory: false,
         allowMultipleInstances: true,
         condition: (conditionArgs) => {
-          if (getTurnPhase(args.match.turnPhaseIndex) !== 'buy') return false;
+          if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') return false;
           
           const victoryCardsGained = Object.entries(conditionArgs.match.stats.cardsGained)
             .filter(([id, stats]) => {
@@ -1180,6 +1225,9 @@ const expansion: CardExpansionModuleNew = {
   },
   'wharf': {
     registerLifeCycleMethods: () => ({
+      onLeavePlay: async ({ reactionManager, cardId }) => {
+        reactionManager.unregisterTrigger(`wharf:${cardId}:startTurn`);
+      },
       onCardPlayed: async (args) => {
         args.reactionManager.registerReactionTemplate({
           id: `wharf:${args.cardId}:startTurn`,

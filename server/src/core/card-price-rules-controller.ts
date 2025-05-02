@@ -24,11 +24,11 @@ export class CardPriceRulesController {
       if (idx !== -1) {
         this._rules[card.id].splice(idx, 1);
       }
+      return void 0;
     }
   }
   
   applyRules(card: Card, { match, playerId }: { match: Match, playerId: PlayerId }) {
-    console.log(`[card price controller] running price rules for ${card}`);
     let restricted = false;
     let modifiedCost = { ...card.cost };
     

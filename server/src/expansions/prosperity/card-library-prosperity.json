@@ -106,6 +106,18 @@
     },
     "type": ["ACTION"]
   },
+  "monument": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"]
+  },
+  "peddler": {
+    "cost": {
+      "treasure": 8
+    },
+    "type": ["ACTION"]
+  },
   "platinum": {
     "cost": {
       "treasure": 9

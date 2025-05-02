@@ -6,6 +6,7 @@ import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
 import { findCards } from '../../utils/find-cards.ts';
+import { async } from 'npm:rxjs@7.8.2';
 
 const expansion: CardExpansionModuleNew = {
   'alchemist': {
@@ -17,6 +18,20 @@ const expansion: CardExpansionModuleNew = {
       await args.runGameActionDelegate('gainAction', { count: 1 });
       
       args.reactionManager.registerReactionTemplate({
+        id: `alchemist:${args.cardId}:endTurn`,
+        playerId: args.playerId,
+        listeningFor: 'endTurn',
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: () => true,
+        triggeredEffectFn: async () => {
+          args.reactionManager.unregisterTrigger(`alchemist:${args.cardId}:endTurn`);
+          args.reactionManager.unregisterTrigger(`alchemist:${args.cardId}:startCleanUpPhase`);
+        }
+      });
+      
+      args.reactionManager.registerReactionTemplate({
         id: `alchemist:${args.cardId}:startCleanUpPhase`,
         playerId: args.playerId,
         listeningFor: 'startTurnPhase',
@@ -24,7 +39,7 @@ const expansion: CardExpansionModuleNew = {
         compulsory: true,
         allowMultipleInstances: true,
         condition: (conditionArgs) => {
-          if (getTurnPhase(conditionArgs.match.turnPhaseIndex) !== 'cleanup') {
+          if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'cleanup') {
             return false;
           }
           
@@ -279,6 +294,20 @@ const expansion: CardExpansionModuleNew = {
       console.log(`[herbalist effect] gaining 1 buy and 1 treasure`);
       await args.runGameActionDelegate('gainBuy', { count: 1 });
       await args.runGameActionDelegate('gainTreasure', { count: 1 });
+      
+      args.reactionManager.registerReactionTemplate({
+        id: `herbalist:${args.cardId}:endTurn`,
+        playerId: args.playerId,
+        once: true,
+        allowMultipleInstances: true,
+        compulsory: true,
+        listeningFor: 'endTurn',
+        condition: () => true,
+        triggeredEffectFn: async () => {
+          args.reactionManager.unregisterTrigger(`herbalist:${args.cardId}:endTurn`);
+          args.reactionManager.unregisterTrigger(`herbalist:${args.cardId}:discardCard`);
+        }
+      });
       
       args.reactionManager.registerReactionTemplate({
         id: `herbalist:${args.cardId}:discardCard`,

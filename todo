@@ -24,8 +24,21 @@ set aside needs to be visible to all players
 
 set aside - face down cards like with haven
 
-need to work on expansions being able to add restrictcions on being able to buy cards
-
 for cards like charaltan in prosoperity that change cards need a way to display that change in the UI
 
 for masquerade - is ownership of the card changed over??
+
+need to go through eveyr reaction and make sure they are being cleaned up on their own
+ - then need to remove the `cleanupTriggers` method in reaciton manager-
+   - this method is messing up global reactions like peddlers
+     - maybe need to look into system of automatic unregistering as well as manual.
+     - system should accoutnt for duration rules 
+
+
+
+at end of game, set-aside cards should be moved back to deck for scoring
+  - look up the rules for mats, i only know set aside does
+
+retest haven
+
+need to test peddler with multiple players, does it lower cost for everyone's screen

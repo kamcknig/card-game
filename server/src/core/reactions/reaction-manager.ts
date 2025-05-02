@@ -12,13 +12,15 @@ import { getOrderStartingFrom } from '../../utils/get-order-starting-from.ts';
 import { groupReactionsByCardKey } from './group-reactions-by-card-key.ts';
 import { buildActionButtons } from './build-action-buttons.ts';
 import { buildActionMap } from './build-action-map.ts';
-import { cardLifecycleMap } from '../card-lifecycle-map.ts';
+import { cardLifecycleMap, gameLifeCycleMap } from '../card-lifecycle-map.ts';
 import { LogManager } from '../log-manager.ts';
+import { CardPriceRulesController } from '../card-price-rules-controller.ts';
 
 export class ReactionManager {
   private _reactions: Reaction[] = [];
   
   constructor(
+    private readonly cardPriceController: CardPriceRulesController,
     private readonly logManager: LogManager,
     private readonly _match: Match,
     private readonly _cardLibrary: CardLibrary,
@@ -71,6 +73,23 @@ export class ReactionManager {
     this._reactions.push(new Reaction(reactionTemplate) as any);
   }
   
+  async triggerGameLifecycleEvent(trigger: 'onGameStart') {
+    const cards = this._cardLibrary.getAllCardsAsArray();
+    for (const card of cards) {
+      const fn = gameLifeCycleMap[card.cardKey]?.[trigger];
+      if (fn) {
+        await fn({
+          cardId: card.id,
+          cardPriceController: this.cardPriceController,
+          cardLibrary: this._cardLibrary,
+          match: this._match,
+          reactionManager: this,
+          runGameActionDelegate: this.runGameActionDelegate,
+        });
+      }
+    }
+  }
+  
   async triggerLifecycleEvent(trigger: LifecycleEvent, context: { playerId?: PlayerId, cardId: CardId }) {
     const card = this._cardLibrary.getCard(context.cardId);
     
@@ -82,6 +101,7 @@ export class ReactionManager {
     console.log(`[REACTION MANAGER] running lifecycle trigger '${trigger}' for card ${card}`);
     
     await fn({
+      cardPriceController: this.cardPriceController,
       cardLibrary: this._cardLibrary,
       match: this._match,
       cardId: context.cardId,
@@ -204,11 +224,5 @@ export class ReactionManager {
     }
     
     this.logManager.exit();
-  }
-  
-  cleanUpTriggers() {
-    this._reactions = this._reactions
-      .filter(reaction => this._cardLibrary.getCard(reaction.getSourceId()).type.includes('DURATION') ||
-        this._cardLibrary.getCard(reaction.getSourceId()).type.includes('REACTION'));
   }
 }
