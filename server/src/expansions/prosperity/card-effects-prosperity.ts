@@ -724,7 +724,7 @@ const expansion: CardExpansionModuleNew = {
       
       await effectArgs.runGameActionDelegate('gainCard', {
         playerId: effectArgs.playerId,
-        cardId: selectedCard.id,
+        cardId: cardsInSupply.slice(-1)[0],
         to: { location: 'playerDiscards' }
       });
     }
