@@ -148,5 +148,12 @@
       "treasure": 5
     },
     "type": ["ACTION"]
+  },
+  "war-chest": {
+    "cardName": "War Chest",
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["TREASURE"]
   }
 }

@@ -8,6 +8,7 @@ import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
+import { getPlayerStartingFrom } from '../../shared/get-player-position-utils.ts';
 
 const expansion: CardExpansionModuleNew = {
   'anvil': {
@@ -1008,14 +1009,14 @@ const expansion: CardExpansionModuleNew = {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[vault effect] drawing 2 cards`);
       for (let i = 0; i < 2; i++) {
-        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId});
+        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
       }
       
       const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Discard cards`,
         restrict: { from: { location: 'playerHands' } },
-        count: { kind: 'upTo', count: cardEffectArgs.match.playerHands[cardEffectArgs.playerId].length}
+        count: { kind: 'upTo', count: cardEffectArgs.match.playerHands[cardEffectArgs.playerId].length }
       }) as CardId[];
       
       if (!selectedCardIds.length) {
@@ -1055,7 +1056,10 @@ const expansion: CardExpansionModuleNew = {
         
         console.log(`[vault effect] discarding ${selectedCardIds.length} cards`);
         for (const selectedCardId of selectedCardIds) {
-          await cardEffectArgs.runGameActionDelegate('discardCard', { cardId: selectedCardId, playerId: targetPlayerId });
+          await cardEffectArgs.runGameActionDelegate('discardCard', {
+            cardId: selectedCardId,
+            playerId: targetPlayerId
+          });
         }
         
         if (selectedCardIds.length !== 2) {
@@ -1064,6 +1068,77 @@ const expansion: CardExpansionModuleNew = {
         }
         
         await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: targetPlayerId });
+      }
+    }
+  },
+  'war-chest': {
+    registerEffects: () => {
+      const cardsNamedByTurn: Record<number, CardKey[]> = {};
+      
+      return async (cardEffectArgs) => {
+        const leftPlayer = getPlayerStartingFrom({
+          startFromIdx: cardEffectArgs.match.currentPlayerTurnIndex,
+          match: cardEffectArgs.match,
+          distance: 1,
+        });
+        
+        console.log(`[war-chest effect] prompting ${leftPlayer} to name a card`);
+        
+        const namedCardResult = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+          prompt: 'Name a card',
+          playerId: leftPlayer.id,
+          content: {
+            type: 'name-card'
+          }
+        }) as { action: number, result: CardKey };
+        
+        const cardKey = namedCardResult.result;
+        
+        cardsNamedByTurn[cardEffectArgs.match.turnNumber] ??= [];
+        cardsNamedByTurn[cardEffectArgs.match.turnNumber].push(cardKey);
+        
+        const cardIds = findCards(
+          cardEffectArgs.match,
+          {
+            location: ['supply', 'kingdom'],
+            cost: {
+              cardCostController: cardEffectArgs.cardPriceController,
+              spec: { kind: 'upTo', amount: { treasure: 5 }, playerId: cardEffectArgs.playerId }
+            }
+          },
+          cardEffectArgs.cardLibrary,
+        )
+          .map(cardEffectArgs.cardLibrary.getCard)
+          .filter(card => !cardsNamedByTurn[cardEffectArgs.match.turnNumber].includes(card.cardKey))
+          .map(card => card.id);
+        
+        if (!cardIds.length) {
+          console.log(`[war-chest effect] no cards found`);
+          return;
+        }
+        
+        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Gain a card`,
+          restrict: cardIds,
+          count: 1,
+        }) as CardId[];
+        
+        if (!selectedCardIds.length) {
+          console.warn(`[war-chest effect] no card selected`);
+          return;
+        }
+        
+        const selectedCardId = selectedCardIds[0];
+        const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+        
+        console.log(`[war-chest effect] gaining ${selectedCard}`);
+        
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: selectedCardId,
+          to: { location: 'playerDiscards' }
+        });
       }
     }
   }
