@@ -2,7 +2,7 @@ import {
   CardId,
   CardKey,
   CardLocationSpec,
-  Match,
+  Match, Player,
   PlayerId,
   SelectActionCardArgs,
   TurnPhaseOrderValues,
@@ -400,6 +400,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       
       await this.moveCard({
         cardId: args.cardId,
+        toPlayerId: args.playerId,
         to: { location: 'set-aside' }
       });
     }

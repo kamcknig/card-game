@@ -118,12 +118,6 @@
     },
     "type": ["ACTION"]
   },
-  "prosperity": {
-    "cost": {
-      "treasure": 4
-    },
-    "type": ["TREASURE"]
-  },
   "platinum": {
     "cost": {
       "treasure": 9
@@ -136,5 +130,11 @@
       "treasure": 4
     },
     "type": ["TREASURE"]
+  },
+  "rabble": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "ATTACK"]
   }
 }

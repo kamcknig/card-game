@@ -42,3 +42,6 @@ at end of game, set-aside cards should be moved back to deck for scoring
 retest haven
 
 need to test peddler with multiple players, does it lower cost for everyone's screen
+
+reveal game action should always move card
+  - so also need to make sure all card effects using it are moving cards back

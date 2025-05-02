@@ -8,7 +8,6 @@ import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
-import { async } from 'npm:rxjs@7.8.2';
 
 const expansion: CardExpansionModuleNew = {
   'anvil': {
@@ -802,6 +801,11 @@ const expansion: CardExpansionModuleNew = {
       await runGameActionDelegate('gainTreasure', { count: 1 });
     }
   },
+  'platinum': {
+    registerEffects: () => async (effectArgs) => {
+      await effectArgs.runGameActionDelegate('gainTreasure', { count: 5 });
+    }
+  },
   'quarry': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[quarry effect] gaining 1 treasure`);
@@ -836,9 +840,91 @@ const expansion: CardExpansionModuleNew = {
       })
     }
   },
-  'platinum': {
-    registerEffects: () => async (effectArgs) => {
-      await effectArgs.runGameActionDelegate('gainTreasure', { count: 5 });
+  'rabble': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[rabble effect] drawing 3 cards`);
+      
+      for (let i = 0; i < 3; i++) {
+        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      }
+      
+      const targetPlayerIds = findOrderedTargets({
+        match: cardEffectArgs.match,
+        appliesTo: 'ALL_OTHER',
+        startingPlayerId: cardEffectArgs.playerId,
+      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      
+      for (const targetPlayerId of targetPlayerIds) {
+        const match = cardEffectArgs.match;
+        const deck = match.playerDecks[targetPlayerId];
+        
+        if (deck.length < 3) {
+          console.log(`[rabble effect] ${targetPlayerId} has less than 3 cards in deck, shuffling`);
+          await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: targetPlayerId });
+        }
+        
+        if (deck.length === 0) {
+          console.log(`[rabble effect] ${targetPlayerId} has no cards in deck`);
+          continue;
+        }
+        
+        const numToReveal = Math.min(3, deck.length);
+        
+        const cardsToRearrange: Card[] = [];
+        
+        for (let i = 0; i < numToReveal; i++) {
+          const cardId = deck.slice(-1)[0];
+          const card = cardEffectArgs.cardLibrary.getCard(cardId);
+          await cardEffectArgs.runGameActionDelegate('revealCard', {
+            cardId,
+            playerId: targetPlayerId,
+            moveToSetAside: true
+          });
+          
+          if (card.type.includes('ACTION') || card.type.includes('TREASURE')) {
+            console.log(`[rabble effect] action or treasure revealed, discarding`);
+            await cardEffectArgs.runGameActionDelegate('discardCard', { cardId, playerId: targetPlayerId });
+          }
+          else {
+            cardsToRearrange.push(card);
+          }
+        }
+        
+        if (cardsToRearrange.length === 0) {
+          console.log(`[rabble effect] no cards to rearrange`);
+          return;
+        }
+        
+        if (cardsToRearrange.length === 1) {
+          console.log(`[rabble effect] only 1 card to rearrange, moving to deck`);
+          await cardEffectArgs.runGameActionDelegate('moveCard', {
+            cardId: cardsToRearrange[0].id,
+            toPlayerId: targetPlayerId,
+            to: { location: 'playerDecks' }
+          });
+        }
+        else {
+          const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+            prompt: 'Rearrange',
+            playerId: targetPlayerId,
+            actionButtons: [
+              { label: 'DONE', action: 1 }
+            ],
+            content: {
+              type: 'rearrange',
+              cardIds: cardsToRearrange.map(card => card.id)
+            }
+          }) as { action: number, result: number[] };
+          
+          for (const cardId of result.result) {
+            await cardEffectArgs.runGameActionDelegate('moveCard', {
+              cardId,
+              toPlayerId: targetPlayerId,
+              to: { location: 'playerDecks' }
+            });
+          }
+        }
+      }
     }
   }
 }
