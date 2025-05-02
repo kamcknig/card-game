@@ -1053,7 +1053,17 @@ const expansion: CardExpansionModuleNew = {
           optional: true,
         }) as CardId[];
         
-        if (!selectedCardIds.length)
+        console.log(`[vault effect] discarding ${selectedCardIds.length} cards`);
+        for (const selectedCardId of selectedCardIds) {
+          await cardEffectArgs.runGameActionDelegate('discardCard', { cardId: selectedCardId, playerId: targetPlayerId });
+        }
+        
+        if (selectedCardIds.length !== 2) {
+          console.log(`[vault effect] ${targetPlayerId} did not discard 2 cards, only ${selectedCardIds.length}`);
+          return;
+        }
+        
+        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: targetPlayerId });
       }
     }
   }
