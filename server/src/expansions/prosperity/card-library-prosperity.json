@@ -155,5 +155,11 @@
       "treasure": 5
     },
     "type": ["TREASURE"]
+  },
+  "watchtower": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION", "REACTION"]
   }
 }

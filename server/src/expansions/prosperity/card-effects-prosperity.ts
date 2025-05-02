@@ -1141,6 +1141,76 @@ const expansion: CardExpansionModuleNew = {
         });
       }
     }
+  },
+  'watchtower': {
+    registerLifeCycleMethods: () => ({
+      onLeaveHand: async (args) => {
+        args.reactionManager.unregisterTrigger(`watchtower:${args.cardId}:gainCard`);
+      },
+      onEnterHand: async (args) => {
+        args.reactionManager.registerReactionTemplate({
+          id: `watchtower:${args.cardId}:gainCard`,
+          playerId: args.playerId,
+          once: false,
+          compulsory: false,
+          allowMultipleInstances: false,
+          listeningFor: 'gainCard',
+          condition: (conditionArgs) => {
+            if (conditionArgs.trigger.args.playerId !== args.playerId) return false;
+            return true;
+          },
+          triggeredEffectFn: async (triggerEffectArgs) => {
+            const card = triggerEffectArgs.cardLibrary.getCard(triggerEffectArgs.trigger.args.cardId);
+            await triggerEffectArgs.runGameActionDelegate('revealCard', {
+              cardId: args.cardId,
+              playerId: args.playerId,
+            });
+            
+            const result = await triggerEffectArgs.runGameActionDelegate('userPrompt', {
+              prompt: `Trash or top deck ${card.cardName}?`,
+              playerId: args.playerId,
+              actionButtons: [
+                { label: 'TRASH', action: 1 },
+                { label: 'TOP-DECK', action: 2 }
+              ],
+            }) as { action: number, result: number[] };
+            
+            if (result.action === 1) {
+              console.log(`[watchtower triggered effect] player chose to trash ${card}`);
+              await triggerEffectArgs.runGameActionDelegate('trashCard', {
+                playerId: args. playerId,
+                cardId: card.id,
+              });
+            }
+            else {
+              console.log(`[watchtower triggered effect] player chose to top-deck ${card}`);
+              await triggerEffectArgs.runGameActionDelegate('moveCard', {
+                cardId: card.id,
+                toPlayerId: args.playerId,
+                to: { location: 'playerDecks' }
+              });
+            }
+          }
+        })
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      const hand = cardEffectArgs.match.playerHands[cardEffectArgs.playerId];
+      const numToDraw = 6 - hand.length;
+      
+      if (numToDraw < 1) {
+        console.log(`[watchtower effect] already has 6 cards in hand`);
+        return;
+      }
+      
+      console.log(`[watchtower effect] drawing ${numToDraw} cards`);
+      const deck = cardEffectArgs.match.playerDecks[cardEffectArgs.playerId];
+      const discard = cardEffectArgs.match.playerDiscards[cardEffectArgs.playerId];
+      
+      while (hand.length < 6 && deck.length + discard.length > 0) {
+        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      }
+    }
   }
 }
 

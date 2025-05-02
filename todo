@@ -45,3 +45,6 @@ need to test peddler with multiple players, does it lower cost for everyone's sc
 
 reveal game action should always move card
   - so also need to make sure all card effects using it are moving cards back
+
+draw card game action can take count
+ - then loop inside the game action, it can then shortcircuit when deck and discard aren't enough. that removes the need in card effects to do so
