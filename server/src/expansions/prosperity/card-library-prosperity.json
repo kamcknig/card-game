@@ -142,5 +142,11 @@
       "treasure": 4
     },
     "type": ["TREASURE"]
+  },
+  "vault": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"]
   }
 }

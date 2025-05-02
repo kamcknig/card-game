@@ -1003,6 +1003,59 @@ const expansion: CardExpansionModuleNew = {
         })
       }
     }
+  },
+  'vault': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[vault effect] drawing 2 cards`);
+      for (let i = 0; i < 2; i++) {
+        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId});
+      }
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Discard cards`,
+        restrict: { from: { location: 'playerHands' } },
+        count: { kind: 'upTo', count: cardEffectArgs.match.playerHands[cardEffectArgs.playerId].length}
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.log(`[vault effect] no cards selected`);
+        return;
+      }
+      
+      console.log(`[vault effect] discarding ${selectedCardIds.length} cards`);
+      
+      for (const cardId of selectedCardIds) {
+        await cardEffectArgs.runGameActionDelegate('discardCard', { cardId, playerId: cardEffectArgs.playerId });
+      }
+      
+      console.log(`[vault effect] gaining ${selectedCardIds.length} treasure`);
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: selectedCardIds.length });
+      
+      const targetPlayerIds = findOrderedTargets({
+        match: cardEffectArgs.match,
+        appliesTo: 'ALL_OTHER',
+        startingPlayerId: cardEffectArgs.playerId,
+      });
+      
+      for (const targetPlayerId of targetPlayerIds) {
+        const hand = cardEffectArgs.match.playerHands[targetPlayerId];
+        if (!hand.length) {
+          console.log(`[vault effect] ${targetPlayerId} has no cards in hand`);
+          continue;
+        }
+        
+        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: targetPlayerId,
+          prompt: `Discard${hand.length > 1 ? ' to draw' : ''}?`,
+          restrict: { from: { location: 'playerHands' } },
+          count: Math.min(2, hand.length),
+          optional: true,
+        }) as CardId[];
+        
+        if (!selectedCardIds.length)
+      }
+    }
   }
 }
 
