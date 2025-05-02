@@ -926,6 +926,83 @@ const expansion: CardExpansionModuleNew = {
         }
       }
     }
+  },
+  'tiara': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[tiara effect] gaining 1 buy`);
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate({
+        id: `tiara:${cardEffectArgs.cardId}:gainCard`,
+        playerId: cardEffectArgs.playerId,
+        listeningFor: 'gainCard',
+        once: false,
+        allowMultipleInstances: false,
+        compulsory: false,
+        condition: (conditionArgs) => conditionArgs.trigger.args.playerId === cardEffectArgs.playerId,
+        triggeredEffectFn: async (triggerEffectArgs) => {
+          const card = triggerEffectArgs.cardLibrary.getCard(triggerEffectArgs.trigger.args.cardId);
+          
+          console.log(`[tiara triggered effect] putting ${card} on deck`);
+          
+          await triggerEffectArgs.runGameActionDelegate('moveCard', {
+            cardId: card.id,
+            toPlayerId: cardEffectArgs.playerId,
+            to: { location: 'playerDecks' }
+          })
+        }
+      });
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate({
+        id: `tiara:${cardEffectArgs.cardId}:endTurn`,
+        playerId: cardEffectArgs.playerId,
+        listeningFor: 'endTurn',
+        once: true,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: () => true,
+        triggeredEffectFn: async (triggerEffectArgs) => {
+          cardEffectArgs.reactionManager.unregisterTrigger(`tiara:${cardEffectArgs.cardId}:gainCard`);
+          cardEffectArgs.reactionManager.unregisterTrigger(`tiara:${cardEffectArgs.cardId}:endTurn`);
+        }
+      });
+      
+      const handIds = cardEffectArgs.match.playerHands[cardEffectArgs.playerId];
+      const handCards = handIds.map(cardEffectArgs.cardLibrary.getCard);
+      const treasureCards = handCards.filter(card => card.type.includes('TREASURE'));
+      if (treasureCards.length === 0) {
+        console.log(`[tiara effect] no treasure cards in hand`);
+        return;
+      }
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Play treasure`,
+        restrict: { from: { location: 'playerHands' }, card: { type: 'TREASURE' } },
+        count: 1,
+        optional: true,
+      }) as CardId[];
+      
+      if (!selectedCardIds[0]) {
+        console.log(`[tiara effect] no treasure card selected`);
+        return;
+      }
+      
+      const selectedCardId = selectedCardIds[0];
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+      
+      console.log(`[tiara effect] playing ${selectedCard} twice`);
+      
+      for (let i = 0; i < 2; i++) {
+        await cardEffectArgs.runGameActionDelegate('playCard', {
+          cardId: selectedCardId,
+          playerId: cardEffectArgs.playerId,
+          overrides: {
+            actionCost: 0
+          }
+        })
+      }
+    }
   }
 }
 
