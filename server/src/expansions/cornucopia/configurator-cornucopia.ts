@@ -8,11 +8,11 @@ export const configurator: ExpansionConfiguratorFactory = () => {
   return (args) => {
     const youngWitchPresent = args.config.kingdomCards.some(card => card.cardKey === 'young-witch');
     
-    if (!true) {
+    if (!youngWitchPresent) {
       return args.config;
     }
     
-    console.log(`[cornucopia configurator] young witch present in supply` );
+    console.log(`[cornucopia configurator] young witch present in supply`);
     
     const availableKingdoms = args.config.expansions.reduce((acc, nextExpansion) => {
       const exp = expansionLibrary[nextExpansion.name];
