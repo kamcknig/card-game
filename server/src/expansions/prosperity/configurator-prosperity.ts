@@ -1,14 +1,14 @@
 import './types.ts';
 import {
   CardEffectRegistrar,
-  CardExpansionConfigurator,
+  ExpansionConfiguratorFactory,
   EndGameConditionRegistrar,
   ExpansionActionRegistry,
   PlayerScoreDecoratorRegistrar,
 } from '../../types.ts';
 import { findCards } from '../../utils/find-cards.ts';
 
-const configurator: CardExpansionConfigurator = (args) => {
+const configurator: ExpansionConfiguratorFactory = () => (args) => {
   const kingdomCards = args.config.kingdomCards;
   const randomKingdomCard = kingdomCards[Math.floor(kingdomCards.length * Math.random())];
   

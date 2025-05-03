@@ -1,6 +1,6 @@
-import { CardExpansionConfigurator } from '../../types.ts';
+import { ExpansionConfiguratorFactory } from '../../types.ts';
 
-const configurator: CardExpansionConfigurator = (args) => {
+const configurator: ExpansionConfiguratorFactory = () => (args) => {
   console.log(`configuring match for alchemy`);
   
   const expansionCards = args.config.kingdomCards.filter(card => card.expansionName === 'alchemy');

@@ -1,5 +1,5 @@
 import {
-  Card, CardId,
+  Card,
   CardKey,
   CardNoId,
   ComputedMatchConfiguration,
@@ -24,6 +24,7 @@ import { GameActionController } from './actions/game-action-controller.ts';
 import {
   AppSocket,
   CardEffectFunctionMap,
+  EndGameConditionFn,
   GameActionDefinitionMap,
   GameActionReturnTypeMap,
   GameActions,
@@ -45,7 +46,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private gameActionsController: GameActionController | undefined;
   private _match: Match = {} as Match;
   private _matchConfiguration: ComputedMatchConfiguration | undefined;
-  private _expansionEndGameConditionFns: ((...args: any[]) => boolean)[] = [];
+  private _expansionEndGameConditionFns: EndGameConditionFn[] = [];
   private _cardPriceController: CardPriceRulesController | undefined;
   private _matchConfigurator: MatchConfigurator | undefined;
   private _expansionScoringFns: PlayerScoreDecorator[] = [];
@@ -75,39 +76,30 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     private readonly cardSearchFn: (searchTerm: string) => CardNoId[],
   ) {
     super();
-  }
-  
-  public async initialize(config: MatchConfiguration) {
-    this._matchConfigurator = new MatchConfigurator(config);
-    const { config: newConfig, endGameConditionFns } = await this._matchConfigurator.createConfiguration();
-    
-    this._matchConfiguration = newConfig;
-    
-    if (endGameConditionFns.length) {
-      this._expansionEndGameConditionFns = [...this._expansionEndGameConditionFns, ...endGameConditionFns];
-    }
     
     this._match = {
       cardOverrides: {},
       activeDurationCards: [],
       scores: {},
       trash: [],
-      players: this._matchConfiguration.players,
-      basicSupply: this.createBaseSupply(this._matchConfiguration),
-      kingdomSupply: this.createKingdom(this._matchConfiguration),
-      ...this.createPlayerDecks(this._matchConfiguration),
-      config: this._matchConfiguration,
+      players: [],
+      basicSupply: [],
+      kingdomSupply: [],
+      playerDecks: {},
+      config: {} as MatchConfiguration,
       turnNumber: 0,
       roundNumber: 0,
       currentPlayerTurnIndex: 0,
       playerPotions: 0,
       playerBuys: 0,
       playerTreasure: 0,
+      playerDiscards: {},
+      playerHands: {},
       playerActions: 0,
       turnPhaseIndex: 0,
       selectableCards: {},
       playArea: [],
-      mats: { ...this._matchConfiguration.mats },
+      mats: {},
       stats: {
         playedCardsByTurn: {},
         cardsGainedByTurn: {},
@@ -116,7 +108,74 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         trashedCards: {},
         cardsBought: {}
       }
-    };
+    }
+  }
+  
+  public async initialize(config: MatchConfiguration) {
+    this._matchConfigurator = new MatchConfigurator(config);
+    const { config: newConfig } = await this._matchConfigurator.createConfiguration();
+    
+    this._matchConfiguration = newConfig;
+    
+    this._logManager = new LogManager({
+      socketMap: this._socketMap,
+    });
+    
+    this._cardPriceController = new CardPriceRulesController(
+      this._cardLibrary,
+      this._match
+    );
+    
+    this._reactionManager = new ReactionManager(
+      this._cardPriceController,
+      this._logManager,
+      this._match,
+      this._cardLibrary,
+      (action, ...args) => this.runGameAction(action, ...args)
+    );
+    
+    const cardEffectFunctionMap = Object.keys(cardEffectFunctionMapFactory).reduce((acc, nextKey) => {
+      acc[nextKey] = cardEffectFunctionMapFactory[nextKey]();
+      return acc;
+    }, {} as CardEffectFunctionMap);
+    
+    this._interactivityController = new CardInteractivityController(
+      this._cardPriceController,
+      this._match,
+      this._socketMap,
+      this._cardLibrary,
+      this,
+    );
+    
+    this.gameActionsController = new GameActionController(
+      this._cardPriceController,
+      cardEffectFunctionMap,
+      this._match,
+      this._cardLibrary,
+      this._logManager,
+      this._socketMap,
+      this._reactionManager,
+      (action, ...args) => this.runGameAction(action, ...args),
+      this._interactivityController,
+    );
+    
+    await this._matchConfigurator?.initializeExpansions({
+      match: this._match,
+      endGameConditionRegistrar: (val) => this._expansionEndGameConditionFns.push(val),
+      actionRegistrar: (...args) => this.gameActionsController?.registerAction(...args),
+      cardEffectRegistrar: (...args) => this.gameActionsController?.registerCardEffect(...args),
+      playerScoreDecoratorRegistrar: (val: PlayerScoreDecorator) => this._expansionScoringFns.push(val),
+    });
+    
+    this._match.players = this._matchConfiguration.players;
+    this._match.basicSupply = this.createBaseSupply(this._matchConfiguration);
+    this._match.kingdomSupply = this.createKingdom(this._matchConfiguration);
+    const { playerDecks, playerHands, playerDiscards } = this.createPlayerDecks(this._matchConfiguration);
+    this._match.playerDecks = playerDecks;
+    this._match.playerHands = playerHands;
+    this._match.playerDiscards = playerDiscards;
+    this._match.config = this._matchConfiguration;
+    this._match.mats = this._matchConfiguration.mats;
     
     console.log(`[match] ready, sending to clients and listening for when clients are ready`);
     
@@ -327,56 +386,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private async startMatch() {
     console.log(`[match] starting match`);
     
-    this._logManager = new LogManager({
-      socketMap: this._socketMap,
-    });
-    
-    this._cardPriceController = new CardPriceRulesController(
-      this._cardLibrary,
-      this._match
-    );
-    
-    this._reactionManager = new ReactionManager(
-      this._cardPriceController,
-      this._logManager,
-      this._match,
-      this._cardLibrary,
-      (action, ...args) => this.runGameAction(action, ...args)
-    );
-    
-    const cardEffectFunctionMap = Object.keys(cardEffectFunctionMapFactory).reduce((acc, nextKey) => {
-      acc[nextKey] = cardEffectFunctionMapFactory[nextKey]();
-      return acc;
-    }, {} as CardEffectFunctionMap);
-    
-    this._interactivityController = new CardInteractivityController(
-      this._cardPriceController,
-      this._match,
-      this._socketMap,
-      this._cardLibrary,
-      this,
-    );
-    
-    this.gameActionsController = new GameActionController(
-      this._cardPriceController,
-      cardEffectFunctionMap,
-      this._match,
-      this._cardLibrary,
-      this._logManager,
-      this._socketMap,
-      this._reactionManager,
-      (action, ...args) => this.runGameAction(action, ...args),
-      this._interactivityController,
-    );
-    
-    await this._matchConfigurator?.initializeExpansions({
-      match: this._match,
-      endGameConditionRegistrar: (val) => this._expansionEndGameConditionFns.push(val),
-      actionRegistrar: (...args) => this.gameActionsController?.registerAction(...args),
-      cardEffectRegistrar: (...args) => this.gameActionsController?.registerCardEffect(...args),
-      playerScoreDecoratorRegistrar: (val: PlayerScoreDecorator) => this._expansionScoringFns.push(val),
-    });
-    
     for (const socket of this._socketMap.values()) {
       this.initializeSocketListeners(socket);
     }
@@ -391,20 +400,20 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       await this.runGameAction('drawCard', { playerId: player.id, count: 5 });
     }
     
-    this._logManager.addLogEntry({
+    this._logManager?.addLogEntry({
       root: true,
       type: 'newTurn',
       turn: Math.floor(this._match.turnNumber / this._match.players.length) + 1,
     });
     
-    this._logManager.addLogEntry({
+    this._logManager?.addLogEntry({
       root: true,
       type: 'newPlayerTurn',
       turn: Math.floor(this._match.turnNumber / this._match.players.length) + 1,
       playerId: getCurrentPlayer(this._match).id
     });
     
-    await this._reactionManager.triggerGameLifecycleEvent('onGameStart')
+    await this._reactionManager?.triggerGameLifecycleEvent('onGameStart')
     
     await this.runGameAction('checkForRemainingPlayerActions');
   }

@@ -204,14 +204,15 @@ export type CardScoringFnContext = {
   ownerId: number;
 }
 
-export type CardExpansionConfiguratorContext = {
+export type ExpansionConfiguratorContext = {
   config: ComputedMatchConfiguration,
   cardLibrary: Record<CardKey, CardNoId>;
   expansionData: ExpansionData;
-  actionRegister: GameActionController['registerAction'];
+  actionRegistrar: GameActionController['registerAction'];
 };
 
-export type CardExpansionConfigurator = (args: CardExpansionConfiguratorContext) => ComputedMatchConfiguration;
+export type ExpansionConfigurator = (args: ExpansionConfiguratorContext) => ComputedMatchConfiguration;
+export type ExpansionConfiguratorFactory = () => (args: ExpansionConfiguratorContext) => ComputedMatchConfiguration;
 
 export type CardScoringFunction = (args: CardScoringFnContext) => number;
 
@@ -414,8 +415,6 @@ export type LifecycleCallback = (args: LifecycleCallbackContext) => Promise<Life
 
 export type LifecycleEvent = keyof LifecycleCallbackMap;
 
-export type CardOverrides = Record<PlayerId, Record<CardId, Card>>;
-
 export type ActionFunctionFactoryContext = {
   match: Match;
 }
@@ -426,7 +425,7 @@ export type ActionRegistrar = <K extends GameActions>(key: K, handler: GameActio
 export type CardEffectRegistrar = (cardKey: CardKey, tag: string, fn: CardEffectFn) => void;
 export type PlayerScoreDecoratorRegistrar = (decorator: PlayerScoreDecorator) => void;
 export type PlayerScoreDecorator = (playerId: PlayerId, match: Match) => void;
-export type EndGameConditionRegistrar = (endGameConditionFn: (args: {
-  match: Match,
-  cardLibrary: CardLibrary
-}) => boolean) => void;
+
+export type EndGameConditionFnContext = { match: Match, cardLibrary: CardLibrary };
+export type EndGameConditionFn = (args: EndGameConditionFnContext) => boolean;
+export type EndGameConditionRegistrar = (endGameConditionFn: EndGameConditionFn) => void;

@@ -4,6 +4,8 @@ import {
   ActionRegistrar,
   CardEffectRegistrar,
   EndGameConditionRegistrar,
+  ExpansionConfigurator,
+  ExpansionConfiguratorFactory,
   MatchBaseConfiguration,
   PlayerScoreDecoratorRegistrar
 } from '../types.ts';
@@ -20,8 +22,7 @@ type InitializeExpansionContext = {
 export class MatchConfigurator {
   private _requestedKingdoms: CardNoId[] = [];
   private _bannedKingdoms: CardNoId[] = [];
-  private _config: ComputedMatchConfiguration;
-  private readonly _expansionEndGameConditionFuncs: ((...args: any[]) => boolean)[] = [];
+  private readonly _config: ComputedMatchConfiguration;
   
   constructor(
     config: MatchConfiguration
@@ -72,8 +73,9 @@ export class MatchConfigurator {
     this.selectKingdomSupply();
     this.selectBasicSupply();
     addMatToMatchConfig('set-aside', this._config);
-    await this.runExpansionConfigurations();
-    return { config: this._config, endGameConditionFns: this._expansionEndGameConditionFuncs };
+    await this.registerExpansionConfigurators();
+    
+    return { config: this._config };
   }
   
   private selectKingdomSupply() {
@@ -162,26 +164,32 @@ export class MatchConfigurator {
       .join(', ')}`);
   }
   
-  private async runExpansionConfigurations() {
+  private _expansionConfigurators = new Map<string, ExpansionConfigurator>();
+  
+  private async registerExpansionConfigurators() {
     const uniqueExpansions = Array.from(new Set(this._config.kingdomCards.map(card => card.expansionName)));
     for (const expansionName of uniqueExpansions) {
       try {
-        const expansionConfigurator = (await import(`@expansions/${expansionName}/configurator-${expansionName}.ts`)).default;
-        const { endGameConditions } = expansionConfigurator({
-          config: this._config,
-          cardLibrary: allCardLibrary,
-          expansionData: expansionLibrary[expansionName]
-        });
-        if (endGameConditions) {
-          this._expansionEndGameConditionFuncs.push(endGameConditions);
-        }
+        console.log(`[match configurator] loading configurator for expansion '${expansionName}'`);
+        const configuratorFactory = (await import(`@expansions/${expansionName}/configurator-${expansionName}.ts`)).default as ExpansionConfiguratorFactory;
+        this._expansionConfigurators.set(expansionName, configuratorFactory());
       } catch (error) {
-        console.warn(`[match configurator] failed to load expansion configurator for ${expansionName}`);
-        console.log(error);
+        console.log(`[match configurator] no configurator factory found for expansion '${expansionName}'`);
       }
     }
   }
   
+  private async runExpansionConfigurators(actionRegistrar: ActionRegistrar) {
+    const iter = this._expansionConfigurators.entries();
+    for (const [expansionName, expansionConfigurator] of iter) {
+      expansionConfigurator({
+        actionRegistrar,
+        config: this._config,
+        cardLibrary: allCardLibrary,
+        expansionData: expansionLibrary[expansionName]
+      });
+    }
+  }
   
   public async initializeExpansions({
     match,
@@ -191,6 +199,8 @@ export class MatchConfigurator {
     cardEffectRegistrar
   }: InitializeExpansionContext) {
     console.log(`[match configurator] initializing expansions`);
+    
+    await this.runExpansionConfigurators(actionRegistrar);
     
     console.log(`[match configurator] registering expansion actions`);
     await this.registerExpansionActions(actionRegistrar, match);
