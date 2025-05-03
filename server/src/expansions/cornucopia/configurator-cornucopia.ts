@@ -6,7 +6,7 @@ export const configurator: ExpansionConfiguratorFactory = () => {
   return (args) => {
     const youngWitchPresent = args.config.kingdomCards.some(card => card.cardKey === 'young-witch');
     
-    if (!youngWitchPresent || !args.config.kingdomCards.find(card => card.tags.includes('bane'))) {
+    if (!youngWitchPresent || args.config.kingdomCards.some(card => card.tags?.includes('bane'))) {
       return args.config;
     }
     
