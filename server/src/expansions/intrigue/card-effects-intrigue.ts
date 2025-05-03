@@ -1,9 +1,9 @@
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
-import { CardExpansionModuleNew } from '../../types.ts';
+import { CardExpansionModule } from '../../types.ts';
 import { ActionButtons, Card, CardId, CardKey, PlayerId } from 'shared/shared-types.ts';
 
-const expansionModule: CardExpansionModuleNew = {
+const expansionModule: CardExpansionModule = {
   'baron': {
     registerEffects: () => async ({ runGameActionDelegate, cardLibrary, match, playerId }) => {
       // +1 Buy

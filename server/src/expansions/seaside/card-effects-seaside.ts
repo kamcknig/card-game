@@ -1,4 +1,4 @@
-import { CardExpansionModuleNew } from '../../types.ts';
+import { CardExpansionModule } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { Card, CardId } from 'shared/shared-types.ts';
 import { findCards } from '../../utils/find-cards.ts';
@@ -6,9 +6,8 @@ import { getPlayerStartingFrom, getPlayerTurnIndex } from '../../shared/get-play
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
-import { async } from 'npm:rxjs@7.8.2';
 
-const expansion: CardExpansionModuleNew = {
+const expansion: CardExpansionModule = {
   'astrolabe': {
     registerLifeCycleMethods: () => ({
       onLeavePlay: async (args) => {

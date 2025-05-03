@@ -2,7 +2,7 @@ import { cardEffectFunctionMapFactory } from '../core/effects/card-effect-functi
 import { scoringFunctionMap } from "@expansions/scoring-function-map.ts";
 import { allCardLibrary, expansionLibrary } from "@expansions/expansion-library.ts";
 import { cardLifecycleMap, gameLifeCycleMap } from '../core/card-lifecycle-map.ts';
-import { CardExpansionModuleNew } from '../types.ts';
+import { CardExpansionModule } from '../types.ts';
 import { CardNoId } from "shared/shared-types.ts";
 import { capitalize } from "es-toolkit";
 import { cardActionConditionMapFactory } from '../core/actions/card-action-condition-map-factory.ts';
@@ -23,8 +23,7 @@ export const loadExpansion = async (expansion: { name: string; }) => {
     cardData: {
       basicSupply: {},
       kingdomSupply: {},
-    },
-    mats: []
+    }
   };
   
   let expansionConfiguration;
@@ -39,7 +38,6 @@ export const loadExpansion = async (expansion: { name: string; }) => {
     
     const currValue = expansionLibrary[expansionName].title;
     expansionLibrary[expansionName].title = expansionConfiguration.title ? expansionConfiguration.title : currValue;
-    expansionLibrary[expansionName].mats = expansionConfiguration.mats ?? [];
     expansionLibrary[expansionName].mutuallyExclusive = expansionConfiguration.mutuallyExclusive ?? [];
   } catch (error) {
     console.warn(`[expansion loader] failed to load configuration for expansion ${expansionName}`);
@@ -71,7 +69,7 @@ export const loadExpansion = async (expansion: { name: string; }) => {
     
     console.log(`[expansion loader] loading ${expansionName} card effects`);
     const cardEffectsModule = await import(`${expansionPath}/card-effects-${expansionName}.ts`);
-    const cardEffects = cardEffectsModule.default as CardExpansionModuleNew;
+    const cardEffects = cardEffectsModule.default as CardExpansionModule;
     
     Object.keys(cardEffects).forEach(key => {
       if (cardEffects[key].registerScoringFunction) {

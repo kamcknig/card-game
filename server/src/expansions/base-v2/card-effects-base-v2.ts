@@ -1,8 +1,8 @@
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
-import { CardExpansionModuleNew } from '../../types.ts';
+import { CardExpansionModule } from '../../types.ts';
 
-const expansionModule: CardExpansionModuleNew = {
+const expansionModule: CardExpansionModule = {
   'copper': {
     registerEffects: () => async ({ gameActionController }) => {
       await gameActionController.gainTreasure({ count: 1 });

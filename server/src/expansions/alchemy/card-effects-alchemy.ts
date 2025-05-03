@@ -1,4 +1,4 @@
-import { CardExpansionModuleNew } from '../../types.ts';
+import { CardExpansionModule } from '../../types.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { Card, CardId } from 'shared/shared-types.ts';
@@ -8,7 +8,7 @@ import { isLocationInPlay } from '../../utils/is-in-play.ts';
 import { findCards } from '../../utils/find-cards.ts';
 import { async } from 'npm:rxjs@7.8.2';
 
-const expansion: CardExpansionModuleNew = {
+const expansion: CardExpansionModule = {
   'alchemist': {
     registerEffects: () => async (args) => {
       console.log(`[alchemist effect] gaining 2 cards and 1 action`);

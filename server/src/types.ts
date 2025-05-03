@@ -221,7 +221,7 @@ export type CardExpansionActionConditionMap = {
   canBuy?: (args: { match: Match, cardLibrary: CardLibrary, playerId: PlayerId }) => boolean
 };
 
-export interface CardExpansionModuleNew {
+export interface CardExpansionModule {
   [p: CardKey]: {
     registerGameLifecycleMethods?: () => GameLifecycleCallbackMap;
     registerActionConditions?: () => CardExpansionActionConditionMap;

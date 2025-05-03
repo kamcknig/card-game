@@ -23,5 +23,10 @@
     "title": "Prosperity",
     "name": "prosperity",
     "order": 5
+  },
+  {
+    "title": "Cornucopia",
+    "name": "cornucopia",
+    "order": 6
   }
 ]

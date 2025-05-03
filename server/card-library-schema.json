@@ -87,7 +87,7 @@
         },
         "cardName": {
           "type": "string",
-          "description": "The human-readable card name."
+          "description": "The human-readable card name. If not defined, the card's key is capitalized and used as the card name."
         },
         "type": {
           "type": "array",

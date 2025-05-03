@@ -1,6 +1,6 @@
 import './types.ts';
 import { Card, CardId, CardKey } from 'shared/shared-types.ts';
-import { CardExpansionModuleNew } from '../../types.ts';
+import { CardExpansionModule } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { findCards } from '../../utils/find-cards.ts';
 import { getRemainingSupplyCount, getStartingSupplyCount } from '../../utils/get-starting-supply-count.ts';
@@ -10,7 +10,7 @@ import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getPlayerStartingFrom } from '../../shared/get-player-position-utils.ts';
 
-const expansion: CardExpansionModuleNew = {
+const expansion: CardExpansionModule = {
   'anvil': {
     registerEffects: () => async (effectArgs) => {
       await effectArgs.runGameActionDelegate('gainTreasure', { count: 1 });

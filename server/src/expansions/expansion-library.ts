@@ -9,7 +9,6 @@ export type ExpansionData = {
   title: string;
   name: string;
   cardData: ExpansionCardData;
-  mats?: Mats[];
   mutuallyExclusive?: string[];
 }
 
