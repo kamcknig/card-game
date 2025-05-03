@@ -32,7 +32,5 @@ need to go through eveyr reaction and make sure they are being cleaned up on the
      - maybe need to look into system of automatic unregistering as well as manual.
      - system should accoutnt for duration rules 
 
-need to test peddler with multiple players, does it lower cost for everyone's screen
-
 reveal game action should always move card
   - so also need to make sure all card effects using it are moving cards back
