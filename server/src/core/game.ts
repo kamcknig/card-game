@@ -113,6 +113,7 @@ export class Game {
     if (this.matchStarted && !player) {
       console.log(`[game] match has already started, and player not found in game, rejecting`,);
       socket.disconnect();
+      return;
     }
     
     if (player) {
