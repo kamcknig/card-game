@@ -240,10 +240,17 @@ export class Game {
     // go through the new expansions to add, if any are mutually exclusive with some we still have
     // selected, then remove those selected ones as well
     for (const expansion of newExpansions) {
-      const configModule =
-        (await import(`../expansions/${expansion.name}/configuration-${expansion.name}.json`, {
-          with: { type: 'json' },
-        }))?.default;
+      let configModule = undefined;
+      
+      try {
+        configModule =
+          (await import(`../expansions/${expansion.name}/configuration-${expansion.name}.json`, {
+            with: { type: 'json' },
+          }))?.default;
+      }
+      catch (e) {
+        // nothing
+      }
       
       if (!configModule) {
         console.warn(`[game] could not find config module for expansion '${expansion.name}'`,);

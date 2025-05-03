@@ -326,6 +326,7 @@ const CardTypeValues = [
 export type CardType = typeof CardTypeValues[number];
 
 export type CardArgs = {
+  tags: string[];
   facing?: CardFacing;
   id: CardId;
   type: CardType[];
@@ -352,6 +353,7 @@ export type CardCost = {
 }
 
 export class Card {
+  tags: string[] = [];
   facing: CardFacing;
   id: CardId;
   isBasic: boolean = false;
@@ -370,6 +372,7 @@ export class Card {
   owner: PlayerId | null;
   
   constructor(args: CardArgs) {
+    this.tags = args.tags ?? [];
     this.facing = args.facing ?? 'front';
     this.isBasic = args.isBasic;
     this.id = args.id;
