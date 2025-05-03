@@ -8,7 +8,6 @@ export type SelectCardArgs = SelectActionCardArgs & {
 }
 export type LogEntryMessage = LogEntry & { message: string; id: number; };
 
-export type CardFacing = 'front' | 'back';
 export type CardSize = 'full' | 'half' | 'detail';
 
 declare module 'shared/shared-types' {

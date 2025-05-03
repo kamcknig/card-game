@@ -1,7 +1,7 @@
 import { Assets, Container, Graphics, Sprite, Text, Texture } from 'pixi.js';
-import { Card } from 'shared/shared-types';
+import { Card, CardFacing } from 'shared/shared-types';
 import { batched } from 'nanostores';
-import { CardFacing, CardSize } from '../../../../types';
+import { CardSize } from '../../../../types';
 import { selectableCardStore } from '../../../state/interactive-logic';
 import { selectedCardStore } from '../../../state/interactive-state';
 import { cardOverrideStore } from '../../../state/card-logic';
@@ -10,7 +10,6 @@ type CardArgs = Card;
 
 type CardViewArgs = {
   size?: CardSize;
-  facing?: CardFacing;
 }
 
 export class CardView extends Container {
@@ -63,7 +62,7 @@ export class CardView extends Container {
     return this._size;
   }
 
-  constructor({ size, facing, ...card }: CardArgs & CardViewArgs) {
+  constructor({ size, ...card }: CardArgs & CardViewArgs) {
     super();
 
     this._card = card;

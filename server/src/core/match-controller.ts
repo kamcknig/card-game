@@ -55,13 +55,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     {
       gold: 3,
       silver: 2,
-      potion: 2,
+      haven: 8,
       'militia': 3,
     },
     {
       gold: 3,
       silver: 2,
-      copper: 2,
+      haven: 8,
       'moat': 3,
     },
     {

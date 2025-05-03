@@ -1,8 +1,8 @@
 import { Container } from 'pixi.js';
 import { createCardView } from '../../../core/card/create-card-view';
 import { CountBadgeView } from './count-badge-view';
-import { Card } from 'shared/shared-types';
-import { CardFacing, CardSize } from '../../../../types';
+import { Card, CardFacing } from 'shared/shared-types';
+import { CardSize } from '../../../../types';
 import { CardView } from './card-view';
 import { AdjustmentFilter } from 'pixi-filters';
 

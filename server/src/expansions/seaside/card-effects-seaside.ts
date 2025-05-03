@@ -308,7 +308,13 @@ const expansion: CardExpansionModuleNew = {
     }
   },
   'haven': {
-    registerEffects: () => async ({ runGameActionDelegate, playerId, cardId: playedCardId, reactionManager }) => {
+    registerEffects: () => async ({
+      runGameActionDelegate,
+      playerId,
+      cardId: playedCardId,
+      reactionManager,
+      cardLibrary
+    }) => {
       console.log(`[haven effect] drawing card...`);
       await runGameActionDelegate('drawCard', { playerId });
       
@@ -335,8 +341,8 @@ const expansion: CardExpansionModuleNew = {
         toPlayerId: playerId,
         to: { location: 'set-aside' },
       });
-      // todo needs to be face down - for other players - maybe just add a set-aside-face-down zone that the
-      // front-end can then differentiate. cheap. but eh.
+      
+      cardLibrary.getCard(cardId).facing = 'back';
       
       reactionManager.registerReactionTemplate({
         id: `haven:${playedCardId}:startTurn`,
@@ -345,7 +351,7 @@ const expansion: CardExpansionModuleNew = {
         once: true,
         playerId,
         condition: ({ trigger }) => trigger.args.playerId === playerId,
-        triggeredEffectFn: async () => {
+        triggeredEffectFn: async (triggerEffectArgs) => {
           console.log(`[haven triggered effect] moving selected card to hand...`);
           
           await runGameActionDelegate('moveCard', {
@@ -353,6 +359,9 @@ const expansion: CardExpansionModuleNew = {
             toPlayerId: playerId,
             to: { location: 'playerHands' }
           });
+          
+          const card = triggerEffectArgs.cardLibrary.getCard(cardId);
+          card.facing = 'front';
         }
       });
     }

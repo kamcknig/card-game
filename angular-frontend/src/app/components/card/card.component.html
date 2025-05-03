@@ -1,7 +1,6 @@
 <img
   class="card-image"
-  *ngIf="(card$ | async)?.halfImagePath as path"
-  [ngSrc]="path"
+  [ngSrc]="path ?? ''"
   width="{{CARD_WIDTH}}"
   height="20"
 />

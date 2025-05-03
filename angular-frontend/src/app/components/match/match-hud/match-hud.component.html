@@ -3,20 +3,20 @@
 <div class="mat-tab-content">
   @let setAsideMat = setAsideMat$ | async;
   @if (setAsideMat) {
-    <app-mat
+    <app-mat-tab
       [mat]="setAsideMat"
       (click)="visibleMat = setAsideMat; stickyMat = true"
       (mouseenter)="visibleMat = setAsideMat; stickyMat = true"
       (mouseleave)="visibleMat = null; stickyMat = false">
-    </app-mat>
+    </app-mat-tab>
   }
   @for (mat of selfMats$ | async; track mat.mat) {
-    <app-mat
+    <app-mat-tab
       [mat]="mat"
       (click)="visibleMat === mat ? stickyMat = !stickyMat : visibleMat = mat"
       (mouseenter)="!stickyMat ? visibleMat = mat : null"
       (mouseleave)="!stickyMat ? visibleMat = null : null">
-    </app-mat>
+    </app-mat-tab>
   }
 </div>
 
@@ -26,9 +26,21 @@
   <div class="mat-modal-backdrop">
     <div class="mat-modal-content">
       <div class="mat-modal-title">{{ visibleMat.mat }}</div>
-      <div class="card-content">
-        @for (card of visibleMat.cardIds; track card) {
-          <app-card [cardId]="card"></app-card>
+      <div class="player-flex-container">
+        @for (playerMatContent of visibleMatContent; track playerMatContent.id) {
+          <div class="player-item">
+            <div class="player-name">{{ playerMatContent.playerName }}</div>
+            <div class="card-flex-container">
+              @for (cardId of playerMatContent.cardIds; track cardId) {
+                <div class="card-item">
+                  <app-card
+                    [size]="'half'"
+                    [cardId]="cardId"
+                  ></app-card>
+                </div>
+              }
+            </div>
+          </div>
         }
       </div>
       <div

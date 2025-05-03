@@ -12,15 +12,18 @@ import { ScoreComponent } from './score/score.component';
 import { GameLogComponent } from './game-log/game-log.component';
 import { NanostoresService } from '@nanostores/angular';
 import { playerIdStore, playerStore } from '../../../state/player-state';
-import { combineLatest, combineLatestWith, map, Observable, switchMap } from 'rxjs';
+import { combineLatest, combineLatestWith, filter, map, Observable, switchMap } from 'rxjs';
 import { AsyncPipe } from '@angular/common';
 import { CardId, Mats, PlayerId } from 'shared/shared-types';
 import { logEntryIdsStore, logStore } from '../../../state/log-state';
-import { MatComponent } from './mat-zone/mat.component';
+import { MatTabComponent } from './mat-zone/mat-tab.component';
 import { CardComponent } from '../../card/card.component';
 import { playerScoreStore } from '../../../state/player-logic';
 import { selfPlayerMatStore, setAsideStore } from '../../../state/match-logic';
 import { LogEntryMessage } from '../../../../types';
+import { cardStore } from '../../../state/card-state';
+import { MatPlayerContent } from './types';
+import { selfPlayerIdStore } from '../../../state/match-state';
 
 @Component({
   selector: 'app-match-hud',
@@ -28,7 +31,7 @@ import { LogEntryMessage } from '../../../../types';
     ScoreComponent,
     GameLogComponent,
     AsyncPipe,
-    MatComponent,
+    MatTabComponent,
     CardComponent
   ],
   templateUrl: './match-hud.component.html',
@@ -38,27 +41,94 @@ import { LogEntryMessage } from '../../../../types';
 export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('scoreView', { read: ElementRef }) scoreView!: ElementRef;
 
+  _visibleMat: { mat: Mats; playerContent: MatPlayerContent } | null = null;
+
+  public get visibleMat() {
+    return this._visibleMat;
+  }
+
+  public set visibleMat(value: { mat: Mats; playerContent: MatPlayerContent } | null) {
+    this._visibleMat = value;
+
+    this.visibleMatContent = Object.keys(value?.playerContent ?? {})?.map(playerId => {
+      return {
+        id: +playerId,
+        playerName: value?.playerContent[+playerId].playerName ?? 'unknown',
+        cardIds: value?.playerContent[+playerId].cardIds ?? [],
+      }
+    }) ?? [];
+  }
+
+  visibleMatContent: { id: PlayerId; playerName: string; cardIds: CardId[] }[] = [];
+
   scoreViewResize = output<number>();
   scoreViewResizer: ResizeObserver | undefined;
   playerIds$: Observable<readonly PlayerId[]> | undefined;
   playerScore$!: Observable<{ id: PlayerId; score: number; name: string }[]> | undefined;
   logEntries$!: Observable<readonly LogEntryMessage[]> | undefined;
-  selfMats$: Observable<{ mat: Mats, cardIds: CardId[] }[]> | undefined;
-  setAsideMat$: Observable<{ mat: Mats; cardIds: CardId[] }> | undefined;
-  visibleMat: { mat: Mats; cardIds: CardId[] } | null = null;
+  selfMats$: Observable<{ mat: Mats, playerContent: MatPlayerContent }[]> | undefined;
+  setAsideMat$: Observable<{ mat: Mats; playerContent: MatPlayerContent }> | undefined;
   stickyMat: boolean = false;
 
   constructor(private _nanoService: NanostoresService) {
   }
 
   ngOnInit() {
-    this.setAsideMat$ = this._nanoService.useStore(setAsideStore)
-      .pipe(map(store => ({ mat: 'set-aside', cardIds: store })));
+    this.setAsideMat$ = this._nanoService.useStore(setAsideStore).pipe(
+      combineLatestWith(
+        this._nanoService.useStore(cardStore),
+        this._nanoService.useStore(playerIdStore)
+          .pipe(switchMap(ids => combineLatest(ids.map(id => this._nanoService.useStore(playerStore(id)))))),
+      ),
+      map(([setAsideCardIds, cardsById, players]) => {
+        let matContent = setAsideCardIds.reduce((acc, nextCardId) => {
+          const card = cardsById[nextCardId];
+          const owner = card.owner;
+
+          if (!owner) return acc;
+
+          const playerName = players.find(p => p?.id === owner)?.name;
+
+          if (!playerName) return acc;
+
+          acc[owner] ??= {
+            playerName: playerName,
+            cardIds: []
+          };
+          acc[owner].cardIds.push(nextCardId);
+          return acc;
+        }, {} as MatPlayerContent);
+
+        return {
+          mat: 'set-aside',
+          playerContent: matContent
+        }
+      })
+    );
 
     this.selfMats$ = this._nanoService.useStore(selfPlayerMatStore)
       .pipe(
         map(mats => Object.entries(mats).map(entry => ({ mat: entry[0] as Mats, cardIds: entry[1] }))),
         map(mats => mats.filter(mat => mat.cardIds.length > 0)),
+        map(mats => mats.filter(mat => mat.mat !== 'set-aside')),
+        combineLatestWith(
+          this._nanoService.useStore(selfPlayerIdStore).pipe(filter(vale => vale !== undefined)),
+          this._nanoService.useStore(playerIdStore)
+            .pipe(switchMap(ids => combineLatest(ids.map(id => this._nanoService.useStore(playerStore(id)))))),
+        ),
+        map(([mats, selfId, players]) => mats.map(mat => {
+            const playerName = players.find(p => p?.id === selfId)?.name;
+            return {
+              mat: mat.mat,
+              playerContent: {
+                [selfId]: {
+                  playerName: playerName ?? 'Unknown',
+                  cardIds: mat.cardIds
+                }
+              }
+            }
+          })
+        )
       );
 
     this.logEntries$ = this._nanoService.useStore(logEntryIdsStore).pipe(
@@ -84,7 +154,7 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
     );
   }
 
-  openMat(event: { mat: Mats, cardIds: CardId[] } | null) {
+  openMat(event: { mat: Mats, playerContent: MatPlayerContent } | null) {
     this.visibleMat = event;
   }
 

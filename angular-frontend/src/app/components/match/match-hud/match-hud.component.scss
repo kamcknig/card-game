@@ -25,6 +25,7 @@ app-score {
   pointer-events: none; /* optional: allows click-through outside mat */
 
   .mat-modal-content {
+    color: white;
     position: relative;
     background: rgba(0, 0, 0, 0.8);
     pointer-events: auto; /* re-enable interactivity inside */
@@ -33,17 +34,32 @@ app-score {
 
   .mat-modal-title {
     color: white;
+    margin-bottom: 20px;
+    font-size: 24px;
   }
 
-  .card-content {
+  .player-flex-container {
     display: flex;
-    flex-wrap: wrap;
-    width: 600px;
-    gap: 10px;
-    position: relative;
+    justify-content: start;
+    min-width: 600px;
+    gap: 20px;
 
-    app-card {
-      margin-bottom: -100px;
+    .player-item {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .card-flex-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      position: relative;
+      padding-bottom: 50px;
+
+      .card-item {
+        margin-bottom: -150px;
+      }
     }
   }
 }

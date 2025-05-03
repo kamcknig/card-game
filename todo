@@ -20,10 +20,6 @@ SEASIDE expansion - i haven't built outpost - taking an extra turn. the rules ar
 
 ALCHEMY expansion - haven't built posession
 
-set aside needs to be visible to all players
-
-set aside - face down cards like with haven
-
 for cards like charaltan in prosoperity that change cards need a way to display that change in the UI
 
 need to go through eveyr reaction and make sure they are being cleaned up on their own DONE
@@ -32,10 +28,7 @@ need to go through eveyr reaction and make sure they are being cleaned up on the
      - maybe need to look into system of automatic unregistering as well as manual.
      - system should accoutnt for duration rules 
 
-reveal game action should always move card
-  - so also need to make sure all card effects using it are moving cards back
-
-curse cards - are they subtracting points?
+should reveal game action should always move card?
 
 cornucopia new features
  - young witch card - she adds a kingdom card. this card could trigger further setup. but most setup is configured
