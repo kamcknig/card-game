@@ -3,12 +3,10 @@ import { ExpansionConfiguratorFactory } from '../../types.ts';
 import { expansionLibrary } from '../expansion-library.ts';
 
 export const configurator: ExpansionConfiguratorFactory = () => {
-  let youngWitchConfigured: boolean = false;
-  
   return (args) => {
     const youngWitchPresent = args.config.kingdomCards.some(card => card.cardKey === 'young-witch');
     
-    if (!youngWitchPresent) {
+    if (!youngWitchPresent || !args.config.kingdomCards.find(card => card.tags.includes('bane'))) {
       return args.config;
     }
     
@@ -41,7 +39,6 @@ export const configurator: ExpansionConfiguratorFactory = () => {
     chosenCard.tags = ['bane'];
     args.config.kingdomCards.push(chosenCard);
     
-    youngWitchConfigured = true;
     return args.config;
   }
 }
