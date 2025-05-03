@@ -34,3 +34,10 @@ need to go through eveyr reaction and make sure they are being cleaned up on the
 
 reveal game action should always move card
   - so also need to make sure all card effects using it are moving cards back
+
+curse cards - are they subtracting points?
+
+cornucopia new features
+ - young witch card - she adds a kingdom card. this card could trigger further setup. but most setup is configured
+currently in order at the start of the match. so if it were to add a card from an expansion that had already
+run its configurator, then that new card wouldn't be set up properly
