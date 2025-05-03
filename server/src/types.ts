@@ -205,7 +205,8 @@ export type CardScoringFnContext = {
 }
 
 export type ExpansionConfiguratorContext = {
-  config: ComputedMatchConfiguration,
+  cardEffectRegistrar: CardEffectRegistrar;
+  config: ComputedMatchConfiguration;
   cardLibrary: Record<CardKey, CardNoId>;
   expansionData: ExpansionData;
   actionRegistrar: GameActionController['registerAction'];

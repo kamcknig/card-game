@@ -10,6 +10,7 @@ import {
   PlayerScoreDecoratorRegistrar
 } from '../types.ts';
 import { addMatToMatchConfig } from '../utils/add-mat-to-match-config.ts';
+import { compare, Operation } from 'https://esm.sh/v123/fast-json-patch@3.1.1/index.js';
 
 type InitializeExpansionContext = {
   match: Match;
@@ -179,18 +180,6 @@ export class MatchConfigurator {
     }
   }
   
-  private async runExpansionConfigurators(actionRegistrar: ActionRegistrar) {
-    const iter = this._expansionConfigurators.entries();
-    for (const [expansionName, expansionConfigurator] of iter) {
-      expansionConfigurator({
-        actionRegistrar,
-        config: this._config,
-        cardLibrary: allCardLibrary,
-        expansionData: expansionLibrary[expansionName]
-      });
-    }
-  }
-  
   public async initializeExpansions({
     match,
     endGameConditionRegistrar,
@@ -200,7 +189,7 @@ export class MatchConfigurator {
   }: InitializeExpansionContext) {
     console.log(`[match configurator] initializing expansions`);
     
-    await this.runExpansionConfigurators(actionRegistrar);
+    await this.runExpansionConfigurators({ actionRegistrar, cardEffectRegistrar });
     
     console.log(`[match configurator] registering expansion actions`);
     await this.registerExpansionActions(actionRegistrar, match);
@@ -213,6 +202,37 @@ export class MatchConfigurator {
     
     console.log(`[match configurator] registering expansion scoring effects`);
     await this.registerExpansionPlayerScoreDecorators(playerScoreDecoratorRegistrar);
+  }
+  
+  private async runExpansionConfigurators({ actionRegistrar, cardEffectRegistrar }: {
+    cardEffectRegistrar: CardEffectRegistrar;
+    actionRegistrar: ActionRegistrar;
+  }) {
+    const iter = this._expansionConfigurators.entries();
+    
+    let iteration = 0;
+    let changes: Operation[] = [];
+    let configSnapshot = structuredClone(this._config);
+    
+    do {
+      iteration++;
+      for (const [expansionName, expansionConfigurator] of iter) {
+        expansionConfigurator({
+          cardEffectRegistrar,
+          actionRegistrar,
+          config: this._config,
+          cardLibrary: allCardLibrary,
+          expansionData: expansionLibrary[expansionName]
+        });
+      }
+      
+      changes = compare(configSnapshot, this._config);
+      configSnapshot = structuredClone(this._config);
+    } while (changes.length > 0 && iteration < 10);
+    
+    if (iteration >= 10) {
+      throw new Error(`[match configurator] expansion configurator failed to converge after 10 iterations`);
+    }
   }
   
   private async registerExpansionActions(actionRegistrar: ActionRegistrar, match: Match) {

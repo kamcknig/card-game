@@ -1,49 +1,58 @@
 import './types.ts';
 import {
-  CardEffectRegistrar,
-  ExpansionConfiguratorFactory,
   EndGameConditionRegistrar,
   ExpansionActionRegistry,
+  ExpansionConfiguratorFactory,
   PlayerScoreDecoratorRegistrar,
 } from '../../types.ts';
 import { findCards } from '../../utils/find-cards.ts';
 
-const configurator: ExpansionConfiguratorFactory = () => (args) => {
-  const kingdomCards = args.config.kingdomCards;
-  const randomKingdomCard = kingdomCards[Math.floor(kingdomCards.length * Math.random())];
+const configurator: ExpansionConfiguratorFactory = () => {
+  let charlatanConfigured: boolean = false;
+  let prosperityCheckConfigured: boolean = false;
   
-  console.log(`[prosperity configurator] random kingdom chosen to determine if colony and prosperity should be added to config '${randomKingdomCard.cardKey}'`);
-  
-  if (randomKingdomCard.expansionName === 'prosperity') {
-    console.log(`[prosperity configurator] adding prosperity and colony to config`);
+  return (args) => {
+    const kingdomCards = args.config.kingdomCards;
+    const randomKingdomCard = kingdomCards[Math.floor(kingdomCards.length * Math.random())];
     
-    args.config.basicCards = [
-      ...args.config.basicCards,
-      { ...args.expansionData.cardData.basicSupply['platinum'] },
-      { ...args.expansionData.cardData.basicSupply['colony'] }
-    ];
-    args.config.basicCardCount['platinum'] = 12;
-    args.config.basicCardCount['colony'] = args.config.players.length >= 3 ? 12 : 8;
-  }
-  else {
-    console.log(`[prosperity configurator] NOT adding prosperity and colony to config`);
-  }
-  
-  const charlatanPresent = kingdomCards.find(card => card.cardKey === 'charlatan');
-  
-  if (charlatanPresent) {
-    console.log(`[prosperity configurator] charlatan is part of kingdom - curses gain the treasure type and +1 treasure effect`);
+    console.log(`[prosperity configurator] random kingdom chosen to determine if colony and prosperity should be added to config '${randomKingdomCard.cardKey}'`);
     
-    const curseCard = args.config.basicCards.find(card => card.cardKey === 'curse');
+    const basicCards = args.config.basicCards;
     
-    if (!curseCard) {
-      console.warn(`[prosperity configurator] curse card not found in config`);
+    if (randomKingdomCard.expansionName === 'prosperity' && !prosperityCheckConfigured) {
+      console.log(`[prosperity configurator] adding prosperity and colony to config`);
+      
+      basicCards.push(args.expansionData.cardData.basicSupply['colony']);
+      args.config.basicCardCount['colony'] = args.config.players.length >= 3 ? 12 : 8;
+      
+      basicCards.push(args.expansionData.cardData.basicSupply['platinum']);
+      args.config.basicCardCount['platinum'] = 12;
+      
+      prosperityCheckConfigured = true;
     }
     
-    curseCard?.type.push('TREASURE');
+    const charlatanPresent = kingdomCards.find(card => card.cardKey === 'charlatan');
+    const curseCard = basicCards.find(card => card.cardKey === 'curse');
+    
+    if (charlatanPresent && !charlatanConfigured) {
+      console.log(`[prosperity configurator] charlatan is part of kingdom - curses gain the treasure type and +1 treasure effect`);
+      
+      if (!curseCard) {
+        console.warn(`[prosperity configurator] curse card not found in config`);
+      }
+      
+      curseCard?.type.push('TREASURE');
+      
+      args.cardEffectRegistrar('curse', 'prosperity', async (args) => {
+        console.log(`[curse effect - prosperity] curse effect called`);
+        await args.runGameActionDelegate('gainTreasure', { count: 1 });
+      });
+      
+      charlatanConfigured = true;
+    }
+    
+    return args.config;
   }
-  
-  return args.config;
 }
 
 export const registerEndGameConditions = (registrar: EndGameConditionRegistrar) => {
@@ -83,13 +92,6 @@ export const registerActions: ExpansionActionRegistry = (registerFn, { match }) 
 export const registerScoringFunctions = (registrar: PlayerScoreDecoratorRegistrar) => {
   registrar((playerId, match) => {
     match.scores[playerId] += match.playerVictoryTokens?.[playerId] ?? 0;
-  });
-};
-
-export const registerCardEffects: (registrar: CardEffectRegistrar) => void = (registrar) => {
-  registrar('curse', 'prosperity', async (args) => {
-    console.log(`[curse effect - prosperity] curse effect called`);
-    await args.runGameActionDelegate('gainTreasure', { count: 1 });
   });
 };
 
