@@ -528,7 +528,7 @@ const expansionModule: CardExpansionModuleNew = {
   'masquerade': {
     registerEffects: () => async ({ runGameActionDelegate, playerId, match, cardLibrary }) => {
       for (let i = 0; i < 2; i++) {
-        console.log(`[MASQUERADE EFFECT] drawing card...`);
+        console.log(`[masquerade effect] drawing card...`);
         
         await runGameActionDelegate('drawCard', {
           playerId,
@@ -541,12 +541,12 @@ const expansionModule: CardExpansionModuleNew = {
         match
       }).filter((playerId) => match.playerHands[playerId].length > 0);
       
-      console.log(`[MASQUERADE EFFECT] targets in order ${targets.map(t => getPlayerById(match, t)).join(',')}`);
+      console.log(`[masquerade effect] targets in order ${targets.map(t => getPlayerById(match, t)).join(',')}`);
       
       const playerCardMap = new Map<PlayerId, CardId>();
       
       for (const playerId of targets) {
-        console.log(`[LURKER EFFECT] prompting ${getPlayerById(match, playerId)} to choose a card...`);
+        console.log(`[masquerade effect] prompting ${getPlayerById(match, playerId)} to choose a card...`);
         
         const cardIds = await runGameActionDelegate('selectCard', {
           prompt: 'Confirm pass',
@@ -559,14 +559,23 @@ const expansionModule: CardExpansionModuleNew = {
         
         playerCardMap.set(playerId, cardIds[0]);
         
-        console.log(`[MASQUERADE EFFECT] ${getPlayerById(match, playerId)} chose ${cardLibrary.getCard(cardIds[0])}`);
+        console.log(`[masquerade effect] ${getPlayerById(match, playerId)} chose ${cardLibrary.getCard(cardIds[0])}`);
       }
       
       for (let i = 0; i < targets.length; i++) {
         const cardId = playerCardMap.get(targets[i]);
+        
+        if (!cardId) {
+          console.warn(`[masquerade effect] no card for ${getPlayerById(match, targets[i])}`);
+          continue;
+        }
+        
         const playerId = targets[(i + 1) % targets.length];
         
-        console.log(`[MASQUERADE EFFECT] moving ${cardLibrary.getCard(cardId!)} to ${getPlayerById(match, playerId!)}`);
+        const card = cardLibrary.getCard(cardId);
+        card.owner = playerId;
+        
+        console.log(`[masquerade effect] moving ${cardLibrary.getCard(cardId!)} to ${getPlayerById(match, playerId!)}`);
         
         await runGameActionDelegate('moveCard', {
           cardId: cardId!,
@@ -575,7 +584,7 @@ const expansionModule: CardExpansionModuleNew = {
         });
       }
       
-      console.log(`[MASQUERADE EFFECT] prompting user to trash card from hand...`);
+      console.log(`[masquerade effect] prompting user to trash card from hand...`);
       
       const cardIds = await runGameActionDelegate('selectCard', {
         optional: true,
@@ -587,10 +596,10 @@ const expansionModule: CardExpansionModuleNew = {
         },
       }) as number[];
       
-      console.log(`[MASQUERADE EFFECT] player chose ${cardIds.length ? cardLibrary.getCard(cardIds[0]) : 'not to trash'}`);
+      console.log(`[masquerade effect] player chose ${cardIds.length ? cardLibrary.getCard(cardIds[0]) : 'not to trash'}`);
       
       if (cardIds[0]) {
-        console.log(`[MASQUERADE EFFECT] trashing ${cardLibrary.getCard(cardIds[0])}...`);
+        console.log(`[masquerade effect] trashing ${cardLibrary.getCard(cardIds[0])}...`);
         
         await runGameActionDelegate('trashCard', {
           cardId: cardIds[0],
