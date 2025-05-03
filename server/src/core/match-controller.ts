@@ -33,6 +33,7 @@ import {
 import { createCard } from '../utils/create-card.ts';
 import { getRemainingSupplyCount, getStartingSupplyCount } from '../utils/get-starting-supply-count.ts';
 import { CardPriceRulesController } from './card-price-rules-controller.ts';
+import { findCards } from '../utils/find-cards.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardLibSnapshot = {};
@@ -262,7 +263,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     this._matchSnapshot = null;
     
-    if (this.checkGameEnd()) {
+    if (await this.checkGameEnd()) {
       console.log(`[match] game ended`)
     }
     
@@ -442,7 +443,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }
   }
   
-  private checkGameEnd() {
+  private async checkGameEnd() {
     console.log(`[match] checking if the game has ended`);
     
     const match = this._match;
@@ -453,7 +454,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       ).length === 0
     ) {
       console.log(`[match] supply has no more provinces, game over`);
-      this.endGame();
+      await this.endGame();
       return true;
     }
     
@@ -467,7 +468,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     if (emptyPileCount === 3) {
       console.log(`[match] three supply piles are empty, game over`);
-      this.endGame();
+      await this.endGame();
       return true;
     }
     
@@ -478,7 +479,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     return false;
   }
   
-  private endGame() {
+  private async endGame() {
     console.log(`[match] ending the game`);
     
     this._reactionManager?.endGame();
@@ -490,6 +491,23 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     console.log(`[match] removing listener for match state updates`);
     
     const match = this._match;
+    
+    const setAsideCardIds = findCards(
+      match,
+      { location: 'set-aside' },
+      this._cardLibrary
+    );
+    
+    for (const cardId of setAsideCardIds) {
+      const owner = this._cardLibrary.getCard(cardId).owner;
+      if (owner === null) continue;
+      await this.runGameAction('moveCard', {
+        toPlayerId: owner,
+        cardId,
+        to: { location: 'playerDecks' },
+      })
+    }
+    
     const currentTurn = match.turnNumber;
     const currentPlayerTurnIndex = match.currentPlayerTurnIndex;
     
