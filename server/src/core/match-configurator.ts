@@ -132,16 +132,6 @@ export class MatchConfigurator {
     
     console.log(`[match configurator] finalized selected kingdoms count ${this._config.kingdomCards.length}`);
     console.log(this._config.kingdomCards.map(card => card.cardKey).join('\n'));
-    
-    this._config.kingdomCardCount = this._config.kingdomCards.reduce((acc, nextKingdom) => {
-      const cardKey = nextKingdom.cardKey;
-      acc[cardKey] = nextKingdom.type.includes('VICTORY')
-        ? (this._config.players.length < 3 ? 8 : 12)
-        : 10;
-      
-      console.log(`[match configurator] setting card count to ${acc[cardKey]} for ${cardKey}`);
-      return acc;
-    }, {} as Record<CardKey, number>)
   }
   
   private selectBasicSupply() {
@@ -191,6 +181,16 @@ export class MatchConfigurator {
     
     await this.runExpansionConfigurators({ actionRegistrar, cardEffectRegistrar });
     
+    this._config.kingdomCardCount = this._config.kingdomCards.reduce((acc, nextKingdom) => {
+      const cardKey = nextKingdom.cardKey;
+      acc[cardKey] = nextKingdom.type.includes('VICTORY')
+        ? (this._config.players.length < 3 ? 8 : 12)
+        : 10;
+      
+      console.log(`[match configurator] setting card count to ${acc[cardKey]} for ${cardKey}`);
+      return acc;
+    }, {} as Record<CardKey, number>)
+    
     console.log(`[match configurator] registering expansion actions`);
     await this.registerExpansionActions(actionRegistrar, match);
     
@@ -217,6 +217,7 @@ export class MatchConfigurator {
     do {
       iteration++;
       for (const [expansionName, expansionConfigurator] of iter) {
+        console.log(`[match configurator] running expansion configurator for expansion '${expansionName}'`);
         expansionConfigurator({
           cardEffectRegistrar,
           actionRegistrar,
@@ -227,6 +228,9 @@ export class MatchConfigurator {
       }
       
       changes = compare(configSnapshot, this._config);
+      
+      console.log(`[match configurator] expansion configurator iteration ${iteration} changes ${changes.length}`);
+      
       configSnapshot = structuredClone(this._config);
     } while (changes.length > 0 && iteration < 10);
     

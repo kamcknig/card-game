@@ -45,3 +45,6 @@ An expansion's configurator module will define how that expansion modifies a mat
 add new behaviors, or based on kingdom cards chosen for the kingdom might add other kingdom cards or trigger other
 game behaviors e.g., the Charlatan from Prosperity
 
+Create a file named "configurator-<expansion-name>.ts" in the expansion's directory.
+
+See more about [expansion configurators](README-expansion-configurator.md)
