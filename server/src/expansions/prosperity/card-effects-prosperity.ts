@@ -646,9 +646,7 @@ const expansion: CardExpansionModuleNew = {
       
       console.log(`[magnate effect] ${treasureCardCount} treasure revealed`);
       
-      for (let i = 0; i < treasureCardCount; i++) {
-        await effectArgs.runGameActionDelegate('drawCard', { playerId: effectArgs.playerId });
-      }
+      await effectArgs.runGameActionDelegate('drawCard', { playerId: effectArgs.playerId, count: treasureCardCount });
     }
   },
   'mint': {
@@ -845,9 +843,7 @@ const expansion: CardExpansionModuleNew = {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[rabble effect] drawing 3 cards`);
       
-      for (let i = 0; i < 3; i++) {
-        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
-      }
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 3 });
       
       const targetPlayerIds = findOrderedTargets({
         match: cardEffectArgs.match,
@@ -1008,9 +1004,7 @@ const expansion: CardExpansionModuleNew = {
   'vault': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[vault effect] drawing 2 cards`);
-      for (let i = 0; i < 2; i++) {
-        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
-      }
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
       
       const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
         playerId: cardEffectArgs.playerId,
@@ -1178,7 +1172,7 @@ const expansion: CardExpansionModuleNew = {
             if (result.action === 1) {
               console.log(`[watchtower triggered effect] player chose to trash ${card}`);
               await triggerEffectArgs.runGameActionDelegate('trashCard', {
-                playerId: args. playerId,
+                playerId: args.playerId,
                 cardId: card.id,
               });
             }
@@ -1204,16 +1198,15 @@ const expansion: CardExpansionModuleNew = {
       }
       
       console.log(`[watchtower effect] drawing ${numToDraw} cards`);
-      const deck = cardEffectArgs.match.playerDecks[cardEffectArgs.playerId];
-      const discard = cardEffectArgs.match.playerDiscards[cardEffectArgs.playerId];
       
-      while (hand.length < 6 && deck.length + discard.length > 0) {
-        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
-      }
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: hand.length - 6
+      });
     }
   },
   'workers-village': {
-    registerEffects: () => async ({runGameActionDelegate, playerId}) => {
+    registerEffects: () => async ({ runGameActionDelegate, playerId }) => {
       console.log(`[workers-village effect] drawing 1 card, gaining 2 actions, and gaining 1 buy`);
       await runGameActionDelegate('drawCard', { playerId });
       await runGameActionDelegate('gainAction', { count: 2 });

@@ -48,9 +48,7 @@ const expansion: CardExpansionModuleNew = {
   'bazaar': {
     registerEffects: () => async ({ runGameActionDelegate, playerId }) => {
       console.log(`[SEASON EFFECT] drawing 1 card...`);
-      await runGameActionDelegate('drawCard', {
-        playerId: playerId,
-      });
+      await runGameActionDelegate('drawCard', { playerId: playerId });
       
       console.log(`[SEASON EFFECT] gaining 2 actions...`);
       await runGameActionDelegate('gainAction', { count: 2 });
@@ -900,9 +898,11 @@ const expansion: CardExpansionModuleNew = {
             return conditionArgs.trigger.args.playerId === args.playerId
           },
           triggeredEffectFn: async (triggerArgs) => {
-            console.log(`[sea-witch triggered effect] drawing cards...`)
-            await triggerArgs.runGameActionDelegate('drawCard', { playerId: args.playerId }, { loggingContext: { source: args.cardId } });
-            await triggerArgs.runGameActionDelegate('drawCard', { playerId: args.playerId }, { loggingContext: { source: args.cardId } });
+            console.log(`[sea-witch triggered effect] drawing 2 cards...`)
+            await triggerArgs.runGameActionDelegate('drawCard', {
+              playerId: args.playerId,
+              count: 2
+            }, { loggingContext: { source: args.cardId } });
             
             console.log(`[sea-witch triggered effect] selecting discarding cards...`);
             
@@ -924,9 +924,8 @@ const expansion: CardExpansionModuleNew = {
       }
     }),
     registerEffects: () => async (args) => {
-      console.log(`[sea witch effect] drawing cards...`);
-      await args.runGameActionDelegate('drawCard', { playerId: args.playerId });
-      await args.runGameActionDelegate('drawCard', { playerId: args.playerId });
+      console.log(`[sea witch effect] drawing 2 cards...`);
+      await args.runGameActionDelegate('drawCard', { playerId: args.playerId, count: 2 });
       
       const targetPlayerIds = findOrderedTargets({
         startingPlayerId: args.playerId,
@@ -1050,13 +1049,10 @@ const expansion: CardExpansionModuleNew = {
         },
         triggeredEffectFn: async (triggerArgs) => {
           console.warn(`[tactician triggered effect] drawing 5 cards`);
-          for (let i = 0; i < 4; i++) {
-            const card = await triggerArgs.runGameActionDelegate('drawCard', { playerId: args.playerId }, { loggingContext: { source: args.cardId } }) as CardId;
-            if (!card) {
-              console.warn(`[tactician triggered effect] no card drawn`);
-              break;
-            }
-          }
+          await triggerArgs.runGameActionDelegate('drawCard', {
+            count: 5,
+            playerId: args.playerId
+          }, { loggingContext: { source: args.cardId } });
           
           console.warn(`[tactician triggered effect] gaining 1 action`);
           await triggerArgs.runGameActionDelegate('gainAction', { count: 1 });
@@ -1075,9 +1071,7 @@ const expansion: CardExpansionModuleNew = {
     }),
     registerEffects: () => async (args) => {
       console.log(`[tide pools effect] drawing 3 cards...`);
-      for (let i = 0; i < 3; i++) {
-        await args.runGameActionDelegate('drawCard', { playerId: args.playerId });
-      }
+      await args.runGameActionDelegate('drawCard', { playerId: args.playerId, count: 3 });
       
       console.log(`[tide pools effect] gaining 1 action...`);
       await args.runGameActionDelegate('gainAction', { count: 1 });
@@ -1199,9 +1193,7 @@ const expansion: CardExpansionModuleNew = {
   'warehouse': {
     registerEffects: () => async ({ runGameActionDelegate, playerId }) => {
       console.log(`[warehouse effect] drawing 3 cards...`);
-      for (let i = 0; i < 3; i++) {
-        await runGameActionDelegate('drawCard', { playerId });
-      }
+      await runGameActionDelegate('drawCard', { playerId, count: 3 });
       
       console.log(`[warehouse effect] gaining 1 actions...`);
       await runGameActionDelegate('gainAction', { count: 1 });
@@ -1242,9 +1234,10 @@ const expansion: CardExpansionModuleNew = {
           },
           triggeredEffectFn: async (triggerArgs) => {
             console.log(`[wharf triggered effect] drawing 2 cards`);
-            for (let i = 0; i < 2; i++) {
-              await triggerArgs.runGameActionDelegate('drawCard', { playerId: args.playerId }, { loggingContext: { source: args.cardId } });
-            }
+            await triggerArgs.runGameActionDelegate('drawCard', {
+              playerId: args.playerId,
+              count: 2
+            }, { loggingContext: { source: args.cardId } });
             
             console.log(`[wharf triggered effect] gaining 1 buy`);
             await triggerArgs.runGameActionDelegate('gainBuy', { count: 1 }, { loggingContext: { source: args.cardId } });
@@ -1254,9 +1247,7 @@ const expansion: CardExpansionModuleNew = {
     }),
     registerEffects: () => async (args) => {
       console.log(`[wharf effect] drawing 2 cards...`);
-      for (let i = 0; i < 2; i++) {
-        await args.runGameActionDelegate('drawCard', { playerId: args.playerId });
-      }
+      await args.runGameActionDelegate('drawCard', { playerId: args.playerId, count: 2 });
       
       console.log(`[wharf effect] gaining 1 buy...`);
       await args.runGameActionDelegate('gainBuy', { count: 1 });

@@ -12,8 +12,7 @@ const expansion: CardExpansionModuleNew = {
   'alchemist': {
     registerEffects: () => async (args) => {
       console.log(`[alchemist effect] gaining 2 cards and 1 action`);
-      await args.runGameActionDelegate('drawCard', { playerId: args.playerId });
-      await args.runGameActionDelegate('drawCard', { playerId: args.playerId });
+      await args.runGameActionDelegate('drawCard', { playerId: args.playerId, count: 2 });
       
       await args.runGameActionDelegate('gainAction', { count: 1 });
       
@@ -170,11 +169,7 @@ const expansion: CardExpansionModuleNew = {
       
       const numCardsToDraw = cost.treasure + (cost.potion !== undefined ? 2 : 0);
       
-      for (let i = 0; i < numCardsToDraw; i++) {
-        if (!(await args.runGameActionDelegate('drawCard', { playerId: args.playerId }))) {
-          break;
-        }
-      }
+      await args.runGameActionDelegate('drawCard', { playerId: args.playerId, count: numCardsToDraw });
     }
   },
   'familiar': {

@@ -142,9 +142,7 @@ const expansionModule: CardExpansionModuleNew = {
       if (actionCardCount?.length >= 3) {
         console.log(`[CONSPIRATOR EFFECT] drawing card...`);
         
-        await runGameActionDelegate('drawCard', {
-          playerId,
-        });
+        await runGameActionDelegate('drawCard', { playerId });
         
         console.log(`[CONSPIRATOR EFFECT] gaining 1 action...`);
         
@@ -257,13 +255,9 @@ const expansionModule: CardExpansionModuleNew = {
   },
   'courtyard': {
     registerEffects: () => async ({ match, runGameActionDelegate, playerId, cardLibrary }) => {
-      for (let i = 0; i < 3; i++) {
-        console.log(`[COURTYARD EFFECT] drawing card...`);
-        
-        await runGameActionDelegate('drawCard', {
-          playerId,
-        });
-      }
+      console.log(`[COURTYARD EFFECT] drawing 3 cards...`);
+      
+      await runGameActionDelegate('drawCard', { playerId, count: 3 });
       
       const hand = match.playerHands[playerId];
       
@@ -341,13 +335,9 @@ const expansionModule: CardExpansionModuleNew = {
       },
     }),
     registerEffects: () => async ({ match, runGameActionDelegate, playerId }) => {
-      for (let i = 0; i < 2; i++) {
-        console.log(`[DIPLOMAT EFFECT] drawing card...`);
-        
-        await runGameActionDelegate('drawCard', {
-          playerId,
-        });
-      }
+      console.log(`[DIPLOMAT EFFECT] drawing 2 cards...`);
+      
+      await runGameActionDelegate('drawCard', { playerId, count: 2 });
       
       const cardCount = match.playerHands[playerId].length;
       if (cardCount <= 5) {
@@ -431,9 +421,7 @@ const expansionModule: CardExpansionModuleNew = {
       if (card.type.includes('VICTORY')) {
         console.log(`[IRONWORKS EFFECT] card is a victory, drawing card...`);
         
-        await runGameActionDelegate('drawCard', {
-          playerId,
-        });
+        await runGameActionDelegate('drawCard', { playerId });
       }
     }
   },
@@ -527,13 +515,9 @@ const expansionModule: CardExpansionModuleNew = {
   },
   'masquerade': {
     registerEffects: () => async ({ runGameActionDelegate, playerId, match, cardLibrary }) => {
-      for (let i = 0; i < 2; i++) {
-        console.log(`[masquerade effect] drawing card...`);
-        
-        await runGameActionDelegate('drawCard', {
-          playerId,
-        });
-      }
+      console.log(`[masquerade effect] drawing 2 cards...`);
+      
+      await runGameActionDelegate('drawCard', { playerId, count: 2 });
       
       const targets = findOrderedTargets({
         startingPlayerId: playerId,
@@ -612,9 +596,7 @@ const expansionModule: CardExpansionModuleNew = {
     registerEffects: () => async ({ runGameActionDelegate, playerId, match, cardLibrary }) => {
       console.log(`[MILL EFFECT] drawing card...`);
       
-      await runGameActionDelegate('drawCard', {
-        playerId,
-      });
+      await runGameActionDelegate('drawCard', { playerId });
       
       console.log(`[MILL EFFECT] gaining 1 action...`);
       
@@ -659,9 +641,7 @@ const expansionModule: CardExpansionModuleNew = {
     registerEffects: () => async ({ runGameActionDelegate, playerId, cardId, cardLibrary }) => {
       console.log(`[MINING VILLAGE EFFECT] drawing card...`);
       
-      await runGameActionDelegate('drawCard', {
-        playerId,
-      });
+      await runGameActionDelegate('drawCard', { playerId });
       
       console.log(`[MINING VILLAGE EFFECT] gaining 2 actions`);
       
@@ -745,13 +725,9 @@ const expansionModule: CardExpansionModuleNew = {
             });
           }
           
-          for (let i = 0; i < 4; i++) {
-            console.log(`[MINION EFFECT] ${player} drawing card...`);
-            
-            await runGameActionDelegate('drawCard', {
-              playerId,
-            });
-          }
+          console.log(`[MINION EFFECT] ${player} drawing 4 cards...`);
+          
+          await runGameActionDelegate('drawCard', { playerId, count: 4 });
         }
       }
     }
@@ -772,13 +748,9 @@ const expansionModule: CardExpansionModuleNew = {
       console.log(`[NOBLES EFFECT] player chose ${result.action}`);
       
       if (result.action === 1) {
-        for (let i = 0; i < 3; i++) {
-          console.log(`[NOBLES EFFECT] drawing card...`);
-          
-          await runGameActionDelegate('drawCard', {
-            playerId,
-          });
-        }
+        console.log(`[NOBLES EFFECT] drawing 3 cards...`);
+        
+        await runGameActionDelegate('drawCard', { playerId, count: 3 });
       }
       else {
         console.log(`[NOBLES EFFECT] gaining 2 actions`);
@@ -790,13 +762,9 @@ const expansionModule: CardExpansionModuleNew = {
   },
   'patrol': {
     registerEffects: () => async ({ runGameActionDelegate, match, playerId, cardLibrary }) => {
-      for (let i = 0; i < 3; i++) {
-        console.log(`[PATROL EFFECT] drawing card`);
-        
-        await runGameActionDelegate('drawCard', {
-          playerId,
-        });
-      }
+      console.log(`[PATROL EFFECT] drawing 3 cards`);
+      
+      await runGameActionDelegate('drawCard', { playerId, count: 3 });
       
       const deck = match.playerDecks[playerId];
       const discard = match.playerDiscards[playerId];
@@ -911,9 +879,7 @@ const expansionModule: CardExpansionModuleNew = {
         switch (result.action) {
           case 1:
             console.log(`[PAWN EFFECT] drawing card...`);
-            await runGameActionDelegate('drawCard', {
-              playerId,
-            });
+            await runGameActionDelegate('drawCard', { playerId });
             break;
           case 2:
             console.log(`[PAWN EFFECT] gaining 1 action...`);
@@ -1032,13 +998,9 @@ const expansionModule: CardExpansionModuleNew = {
   },
   'secret-passage': {
     registerEffects: () => async ({ match, cardLibrary, runGameActionDelegate, playerId }) => {
-      for (let i = 0; i < 2; i++) {
-        console.log(`[SECRET PASSAGE EFFECT] drawing card...`);
-        
-        await runGameActionDelegate('drawCard', {
-          playerId,
-        });
-      }
+      console.log(`[SECRET PASSAGE EFFECT] drawing 2 cards...`);
+      
+      await runGameActionDelegate('drawCard', { playerId, count: 2 });
       
       console.log(`[SECRET PASSAGE EFFECT] gaining 1 action`);
       
@@ -1122,13 +1084,9 @@ const expansionModule: CardExpansionModuleNew = {
       }
       
       if (!hand.some((cardId) => cardLibrary.getCard(cardId).type.includes('ACTION'))) {
-        for (let i = 0; i < 2; i++) {
-          console.log(`[SHANTY TOWN EFFECT] drawing card...`);
-          
-          await runGameActionDelegate('drawCard', {
-            playerId,
-          });
-        }
+        console.log(`[SHANTY TOWN EFFECT] drawing 2 cards...`);
+        
+        await runGameActionDelegate('drawCard', { playerId, count: 2 });
       }
       else {
         console.log(`[SHANTY TOWN EFFECT] player has actions, not drawing cards`);
@@ -1151,12 +1109,8 @@ const expansionModule: CardExpansionModuleNew = {
       
       switch (result.action) {
         case 1:
-          for (let i = 0; i < 2; i++) {
-            console.log(`[STEWARD EFFECT] drawing card...`);
-            await runGameActionDelegate('drawCard', {
-              playerId,
-            });
-          }
+          console.log(`[STEWARD EFFECT] drawing 2 carda...`);
+          await runGameActionDelegate('drawCard', { playerId, count: 2 });
           break;
         case 2:
           console.log(`[STEWARD EFFECT] gaining 2 treasure...`);
@@ -1242,7 +1196,7 @@ const expansionModule: CardExpansionModuleNew = {
           cardId: cardId,
         });
         
-        const { cost } = cardPriceController.applyRules(card, { match, playerId});
+        const { cost } = cardPriceController.applyRules(card, { match, playerId });
         
         console.log(`[SWINDLER EFFECT] prompting user to select card costing ${cost.treasure}...`);
         
@@ -1269,13 +1223,9 @@ const expansionModule: CardExpansionModuleNew = {
   },
   'torturer': {
     registerEffects: () => async ({ reactionContext, runGameActionDelegate, playerId, match, cardLibrary }) => {
-      for (let i = 0; i < 3; i++) {
-        console.log(`[TORTURER EFFECT] drawing card...`);
-        
-        await runGameActionDelegate('drawCard', {
-          playerId,
-        });
-      }
+      console.log(`[TORTURER EFFECT] drawing 3 cards...`);
+      
+      await runGameActionDelegate('drawCard', { playerId, count: 3 });
       
       const targets = findOrderedTargets({
         startingPlayerId: playerId,
@@ -1403,9 +1353,7 @@ const expansionModule: CardExpansionModuleNew = {
     }) => {
       console.log(`[UPGRADE EFFECT] drawing card...`);
       
-      await runGameActionDelegate('drawCard', {
-        playerId,
-      });
+      await runGameActionDelegate('drawCard', { playerId });
       
       console.log(`[UPGRADE EFFECT] gaining 1 action...`);
       
@@ -1468,9 +1416,7 @@ const expansionModule: CardExpansionModuleNew = {
     registerEffects: () => async ({ match, cardLibrary, runGameActionDelegate, playerId }) => {
       console.log(`[WISHING WELL EFFECT] drawing card...`);
       
-      await runGameActionDelegate('drawCard', {
-        playerId,
-      });
+      await runGameActionDelegate('drawCard', { playerId });
       
       console.log(`[WISHING WELL EFFECT] gaining 1 action...`)
       

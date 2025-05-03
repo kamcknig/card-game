@@ -625,42 +625,42 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   }
   
   // Single, focused implementation of drawCard
-  async drawCard(args: { playerId: PlayerId }, context?: GameActionContext): Promise<CardId | null> {
+  async drawCard(args: { playerId: PlayerId, count?: number }, context?: GameActionContext) {
     const { playerId } = args;
     
     const deck = this.match.playerDecks[playerId];
-    const discard = this.match.playerDiscards[playerId];
+    const drawnCardIds: CardId[] = [];
     
-    if (discard.length + deck.length === 0) {
-      console.log('[drawCard action] Not enough cards to draw');
-      return null;
+    for (let i = 0; i < (args.count ?? 1); i++) {
+      if (deck.length < 1) {
+        console.log(`[drawCard action] Shuffling discard pile`);
+        await this.shuffleDeck({ playerId});
+        
+        if (deck.length < 1) {
+          console.log(`[drawCard action] No cards left in deck, returning null`);
+          return drawnCardIds.length > 0 ? drawnCardIds : null;
+        }
+      }
+      
+      const drawnCardId = deck.slice(-1)[0];
+      
+      await this.moveCard({
+        cardId: drawnCardId,
+        toPlayerId: playerId,
+        to: { location: 'playerHands' }
+      });
+      
+      console.log(`[drawCard action] Drew card ${this.cardLibrary.getCard(drawnCardId)}`);
+      
+      this.logManager.addLogEntry({
+        type: 'draw',
+        playerId,
+        cardId: drawnCardId,
+        source: context?.loggingContext?.source,
+      });
     }
     
-    // If deck is empty, shuffle discard into deck
-    if (deck.length === 0) {
-      console.log(`[drawCard action] Shuffling discard pile`);
-      await this.shuffleDeck({ playerId });
-    }
-    
-    const drawnCardId = deck.slice(-1)[0];
-    if (!drawnCardId) return null;
-    
-    await this.moveCard({
-      cardId: drawnCardId,
-      toPlayerId: playerId,
-      to: { location: 'playerHands' }
-    });
-    
-    console.log(`[drawCard action] Drew card ${this.cardLibrary.getCard(drawnCardId)}`);
-    
-    this.logManager.addLogEntry({
-      type: 'draw',
-      playerId,
-      cardId: drawnCardId,
-      source: context?.loggingContext?.source,
-    });
-    
-    return drawnCardId;
+    return drawnCardIds;
   }
   
   async playCard(args: {

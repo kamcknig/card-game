@@ -112,36 +112,36 @@ export type ModifyActionCardArgs = {
 };
 
 export interface BaseGameActionDefinitionMap {
-  gainPotion: (args: { count: number }) => Promise<void>;
-  gainBuy: (args: { count: number }, context?: GameActionContext) => Promise<void>;
-  moveCard: (args: { toPlayerId?: PlayerId, cardId: CardId, to: CardLocationSpec }) => Promise<CardLocation>;
+  buyCard: (args: { cardId: CardId; playerId: PlayerId }) => Promise<void>;
+  checkForRemainingPlayerActions: () => Promise<void>;
+  discardCard: (args: { cardId: CardId, playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
+  drawCard: (args: { playerId: PlayerId, count?: number }, context?: GameActionContext) => Promise<CardId[] | null>
+  endTurn: () => Promise<void>;
   gainAction: (args: { count: number }, context?: GameActionContext) => Promise<void>;
+  gainBuy: (args: { count: number }, context?: GameActionContext) => Promise<void>;
   gainCard: (args: {
     playerId: PlayerId,
     cardId: CardId,
     to: CardLocationSpec
   }, context?: GameActionContext & { bought?: boolean }) => Promise<void>;
-  userPrompt: (args: UserPromptActionArgs) => Promise<unknown>;
-  selectCard: (args: SelectActionCardArgs) => Promise<CardId[]>;
-  trashCard: (args: { cardId: CardId, playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
-  buyCard: (args: { cardId: CardId; playerId: PlayerId }) => Promise<void>;
-  revealCard: (args: {
-    cardId: CardId,
-    playerId: PlayerId,
-    moveToSetAside?: boolean
-  }, context?: GameActionContext) => Promise<void>;
-  checkForRemainingPlayerActions: () => Promise<void>;
-  discardCard: (args: { cardId: CardId, playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
-  nextPhase: () => Promise<void>;
-  endTurn: () => Promise<void>;
+  gainPotion: (args: { count: number }) => Promise<void>;
   gainTreasure: (args: { count: number }, context?: GameActionContext) => Promise<void>;
-  drawCard: (args: { playerId: PlayerId }, context?: GameActionContext) => Promise<CardId | null>
+  moveCard: (args: { toPlayerId?: PlayerId, cardId: CardId, to: CardLocationSpec }) => Promise<CardLocation>;
+  nextPhase: () => Promise<void>;
   playCard: (args: {
     playerId: PlayerId,
     cardId: CardId,
     overrides?: GameActionOverrides
   }, context?: GameActionContext) => Promise<void>;
+  revealCard: (args: {
+    cardId: CardId,
+    playerId: PlayerId,
+    moveToSetAside?: boolean
+  }, context?: GameActionContext) => Promise<void>;
+  selectCard: (args: SelectActionCardArgs) => Promise<CardId[]>;
   shuffleDeck: (args: { playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
+  trashCard: (args: { cardId: CardId, playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
+  userPrompt: (args: UserPromptActionArgs) => Promise<unknown>;
 }
 
 export interface GameActionDefinitionMap extends BaseGameActionDefinitionMap {

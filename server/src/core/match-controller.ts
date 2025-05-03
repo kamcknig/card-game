@@ -388,9 +388,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this._socketMap.forEach((s) => s.emit('matchStarted'));
     
     for (const player of this._match.players!) {
-      for (let i = 0; i < 5; i++) {
-        await this.runGameAction('drawCard', { playerId: player.id });
-      }
+      await this.runGameAction('drawCard', { playerId: player.id, count: 5 });
     }
     
     this._logManager.addLogEntry({
