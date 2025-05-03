@@ -19,29 +19,29 @@ export class KingdomSupplyView extends Container {
 
     this._cardContainer = this.addChild(new Container({ x: STANDARD_GAP, y: STANDARD_GAP }));
 
-      const pileCreationSub = computed(
-        [kingdomCardKeyStore, cardStore], (kingdom, cards) => {
-          const allCards = Object.values(cards);
-          return kingdom
-            .map(key => allCards.find(c => c.cardKey === key))
-            .sort((a, b) => {
-              if (!a || !b) throw new Error(`failed to build kingdom, card not found in card store`);
-              const result = a.cost.treasure - b.cost.treasure;
-              if (result !== 0) return result;
-              return a.cardName.localeCompare(b.cardName);
-            })
-            .filter(key => !!key)
-            .map(card => card?.cardKey)
-        }
-      ).subscribe(val => {
-        if (val.length < 1) {
-          return;
-        }
+    const pileCreationSub = computed(
+      [kingdomCardKeyStore, cardStore], (kingdom, cards) => {
+        const allCards = Object.values(cards);
+        return kingdom
+          .map(key => allCards.find(c => c.cardKey === key))
+          .sort((a, b) => {
+            if (!a || !b) throw new Error(`failed to build kingdom, card not found in card store`);
+            const result = a.cost.treasure - b.cost.treasure;
+            if (result !== 0) return result;
+            return a.cardName.localeCompare(b.cardName);
+          })
+          .filter(key => !!key)
+          .map(card => card?.cardKey)
+      }
+    ).subscribe(val => {
+      if (val.length < 1) {
+        return;
+      }
 
-        this.createKingdomPiles(val);
-      });
+      this.createKingdomPiles(val);
+    });
 
-      this._cleanup.push(pileCreationSub);
+    this._cleanup.push(pileCreationSub);
 
     this._cleanup.push(
       computed(
@@ -81,7 +81,8 @@ export class KingdomSupplyView extends Container {
       0,
       this._cardContainer.x + this._cardContainer.width + STANDARD_GAP,
       this._cardContainer.y + this._cardContainer.height + STANDARD_GAP,
-      5)
+      5
+    )
       .fill({
         color: 0,
         alpha: .6
@@ -91,13 +92,17 @@ export class KingdomSupplyView extends Container {
   private createKingdomPiles(cardKeys: readonly CardKey[]) {
     this._cardContainer.removeChildren();
 
-    const numRows = 2;
+    const numColumns = 5;
 
     for (const [idx, cardKey] of cardKeys.entries()) {
       const p = new PileView({ size: 'half' });
       p.label = `pile:${cardKey}`;
-      p.x = Math.floor(idx % 5 * SMALL_CARD_WIDTH + idx % 5 * STANDARD_GAP);
-      p.y = Math.floor(((numRows - 1 - Math.floor((idx) / 5)) * SMALL_CARD_HEIGHT) + ((numRows - 1 - Math.floor((idx) / 5)) * STANDARD_GAP));
+
+      const col = idx % numColumns;
+      const row = Math.floor(idx / numColumns);
+
+      p.x = col * (SMALL_CARD_WIDTH + STANDARD_GAP);
+      p.y = row * (SMALL_CARD_HEIGHT + STANDARD_GAP);
       this._cardContainer.addChild(p);
     }
   }

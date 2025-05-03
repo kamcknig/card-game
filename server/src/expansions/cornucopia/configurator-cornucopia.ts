@@ -12,7 +12,7 @@ export const configurator: ExpansionConfiguratorFactory = () => {
       return args.config;
     }
     
-    console.log(`[cornucopia configurator] young witch present in supply`);
+    console.log(`[cornucopia configurator] young witch present in supply` );
     
     const availableKingdoms = args.config.expansions.reduce((acc, nextExpansion) => {
       const exp = expansionLibrary[nextExpansion.name];
