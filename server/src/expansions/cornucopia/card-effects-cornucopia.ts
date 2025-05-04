@@ -332,6 +332,67 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'hunting-party': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[hunting party effect] drawing 1 card and gaining 1 action`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      
+      const hand = cardEffectArgs.match.playerHands[cardEffectArgs.playerId];
+      if (hand.length === 0) {
+        console.warn(`[hunting party effect] no cards in hand`);
+        return;
+      }
+      for (const cardId of hand) {
+        await cardEffectArgs.runGameActionDelegate('revealCard', {
+          cardId: cardId,
+          playerId: cardEffectArgs.playerId,
+        });
+      }
+      const uniqueHandCardNames = new Set(hand
+        .map(cardEffectArgs.cardLibrary.getCard)
+        .map(card => card.cardName)
+      );
+      
+      const deck = cardEffectArgs.match.playerDecks[cardEffectArgs.playerId];
+      const discard = cardEffectArgs.match.playerDiscards[cardEffectArgs.playerId];
+      let cardFound = false;
+      const cardsToDiscard: CardId[] = [];
+      while (deck.length + discard.length > 0 && !cardFound) {
+        let cardId = deck.slice(-1)[0];
+        
+        if (!cardId) {
+          await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+          
+          if (deck.length < 0) {
+            console.warn(`[hunting party effect] no cards in deck after shuffling`);
+            return;
+          }
+        }
+        
+        cardId = deck.slice(-1)[0];
+        const card = cardEffectArgs.cardLibrary.getCard(cardId);
+        if (uniqueHandCardNames.has(card.cardName)) {
+          console.log(`[hunting party effect] adding ${card.cardName} to discards`);
+          cardsToDiscard.push(cardId);
+        }
+        else {
+          console.log(`[hunting party effect] moving ${card.cardName} to hand`);
+          await cardEffectArgs.runGameActionDelegate('moveCard', {
+            cardId: cardId,
+            toPlayerId: cardEffectArgs.playerId,
+            to: { location: 'playerHands' }
+          });
+          cardFound = true;
+        }
+      }
+      
+      console.log(`[hunting party effect] discarding ${cardsToDiscard.length} cards`);
+      for (const cardId of cardsToDiscard) {
+        await cardEffectArgs.runGameActionDelegate('discardCard', { cardId: cardId, playerId: cardEffectArgs.playerId });
+      }
+    }
+  },
   'young-witch': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[young witch effect] drawing 2 cards`);

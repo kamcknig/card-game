@@ -44,6 +44,12 @@
     },
     "type": ["ACTION", "REACTION"]
   },
+  "hunting-party": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"]
+  },
   "young-witch": {
     "cardName": "Young Witch",
     "cost": {
