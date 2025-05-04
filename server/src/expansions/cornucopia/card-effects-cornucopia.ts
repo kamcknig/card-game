@@ -579,6 +579,68 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'tournament': {
+    registerEffects: () => async (cardEffectArgs) => {
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      
+      const targetPlayerIds = findOrderedTargets({
+        match: cardEffectArgs.match,
+        appliesTo: 'ALL',
+        startingPlayerId: cardEffectArgs.playerId
+      });
+      
+      let someoneOtherThanSelfRevealed = false;
+      
+      for (const targetPlayerId of targetPlayerIds) {
+        const hand = cardEffectArgs.match.playerHands[targetPlayerId];
+        const handCards = hand.map(cardId => cardEffectArgs.cardLibrary.getCard(cardId));
+        const provincesInHand = handCards.filter(card => card.cardKey === 'province');
+        
+        if (!provincesInHand.length) {
+          console.log(`[tournament effect] player ${targetPlayerId} has no provinces in hand, skipping`);
+          continue;
+        }
+        
+        const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+          prompt: 'Reveal province?',
+          playerId: targetPlayerId,
+          actionButtons: [
+            { label: 'NO', action: 1 }, { label: 'YES', action: 2 }
+          ],
+        }) as { action: number, result: number[] };
+        
+        if (result.action === 1) {
+          console.log(`[tournament effect] player ${targetPlayerId} not revealing`);
+        }
+        else {
+          console.log(`[tournament effect] player ${targetPlayerId} is revealing`);
+          
+          const selectedProvinceId = provincesInHand[0].id;
+          await cardEffectArgs.runGameActionDelegate('revealCard', {
+            cardId: selectedProvinceId,
+            playerId: targetPlayerId,
+          });
+          
+          if (targetPlayerId !== cardEffectArgs.playerId) {
+            someoneOtherThanSelfRevealed = true;
+          }
+          else {
+            console.log(`[tournament effect] player ${targetPlayerId} is self, discarding province to gain prize`);
+            await cardEffectArgs.runGameActionDelegate('discardCard', {
+              cardId: selectedProvinceId,
+              playerId: cardEffectArgs.playerId
+            });
+          }
+        }
+      }
+      
+      if (!someoneOtherThanSelfRevealed) {
+        console.log(`[tournament effect] no one else revealed, drawing 1 card, and gaining 1 treasure`);
+        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+        await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+      }
+    }
+  },
   'young-witch': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[young witch effect] drawing 2 cards`);

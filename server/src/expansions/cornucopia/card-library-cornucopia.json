@@ -68,6 +68,12 @@
     },
     "type": ["ACTION"]
   },
+  "tournament": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"]
+  },
   "young-witch": {
     "cardName": "Young Witch",
     "cost": {
