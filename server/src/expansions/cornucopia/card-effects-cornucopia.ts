@@ -69,6 +69,69 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'fortune-teller': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[fortune teller effect] gaining 2 treasure`);
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+      
+      const targetPlayerIds = findOrderedTargets({
+        match: cardEffectArgs.match,
+        appliesTo: 'ALL_OTHER',
+        startingPlayerId: cardEffectArgs.playerId
+      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      
+      for (const targetPlayerId of targetPlayerIds) {
+        const deck = cardEffectArgs.match.playerDecks[targetPlayerId];
+        const discard = cardEffectArgs.match.playerDiscards[targetPlayerId];
+        let cardFound = false;
+        const cardsRevealed: Card[] = [];
+        
+        console.log(`[fortune teller effect] revealing cards for player ${targetPlayerId}`);
+        
+        while (deck.length + discard.length > 0 && !cardFound) {
+          let cardId = deck.slice(-1)[0];
+          
+          if (!cardId) {
+            console.log(`[fortune teller effect] no cards in deck, shuffling`);
+            await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: targetPlayerId });
+            cardId = deck.slice(-1)[0];
+            
+            if (!cardId) {
+              console.log(`[fortune teller effect] no cards in deck after shuffling`);
+              continue;
+            }
+          }
+          
+          const card = cardEffectArgs.cardLibrary.getCard(cardId);
+          
+          await cardEffectArgs.runGameActionDelegate('revealCard', {
+            cardId: cardId,
+            playerId: targetPlayerId,
+            moveToSetAside: true
+          });
+          
+          if (card.type.includes('VICTORY') || card.type.includes('TREASURE')) {
+            console.log(`[fortune teller effect] card is victory or treasure, moving to deck`);
+            cardFound = true;
+            await cardEffectArgs.runGameActionDelegate('moveCard', {
+              cardId: cardId,
+              toPlayerId: targetPlayerId,
+              to: { location: 'playerDecks' }
+            });
+          }
+          else {
+            cardsRevealed.push(card);
+          }
+        }
+        
+        console.log(`[fortune teller effect] discarding ${cardsRevealed.length} cards for player ${targetPlayerId}`);
+        
+        for (const card of cardsRevealed) {
+          await cardEffectArgs.runGameActionDelegate('discardCard', { cardId: card.id, playerId: targetPlayerId });
+        }
+      }
+    }
+  },
   'young-witch': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[young witch effect] drawing 2 cards`);
@@ -149,7 +212,7 @@ const expansion: CardExpansionModule = {
         }
       }
     }
-  }
+  },
 }
 
 export default expansion;

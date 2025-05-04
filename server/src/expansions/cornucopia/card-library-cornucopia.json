@@ -6,10 +6,18 @@
     "type": ["VICTORY"]
   },
   "farming-village": {
+    "cardName": "Farming Village",
     "cost": {
       "treasure": 4
     },
     "type": ["ACTION"]
+  },
+  "fortune-tell": {
+    "cardName": "Fortune Teller",
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION", "ATTACK"]
   },
   "young-witch": {
     "cardName": "Young Witch",
