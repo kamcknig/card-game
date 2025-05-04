@@ -1,7 +1,9 @@
 import { CardId, Match, PlayerId } from 'shared/shared-types.ts';
 import {
+  CardLifecycleEventArgMap,
   GameLifecycleCallback,
   GameLifecycleEvent,
+  GameLifeCycleEventArgsMap,
   LifecycleEvent,
   Reaction,
   ReactionTemplate,
@@ -14,7 +16,7 @@ import { getOrderStartingFrom } from '../../utils/get-order-starting-from.ts';
 import { groupReactionsByCardKey } from './group-reactions-by-card-key.ts';
 import { buildActionButtons } from './build-action-buttons.ts';
 import { buildActionMap } from './build-action-map.ts';
-import { cardLifecycleMap, cardGameLifeCycleMap } from '../card-lifecycle-map.ts';
+import { cardGameLifeCycleMap, cardLifecycleMap } from '../card-lifecycle-map.ts';
 import { LogManager } from '../log-manager.ts';
 import { CardPriceRulesController } from '../card-price-rules-controller.ts';
 
@@ -81,7 +83,7 @@ export class ReactionManager {
     this._reactions.push(new Reaction(reactionTemplate) as any);
   }
   
-  async triggerGameLifecycleEvent(trigger: GameLifecycleEvent) {
+  async triggerGameLifecycleEvent<T extends GameLifecycleEvent>(trigger: T, ...args: GameLifeCycleEventArgsMap[T] extends void ? [] : [GameLifeCycleEventArgsMap[T]]) {
     for (const handler of this._expansionGameEventHandlers[trigger] ?? []) {
       await handler({
         cardPriceController: this.cardPriceController,
@@ -91,7 +93,7 @@ export class ReactionManager {
         runGameActionDelegate: this.runGameActionDelegate,
       })
     }
-
+    
     const cards = this._cardLibrary.getAllCardsAsArray();
     for (const card of cards) {
       const fn = cardGameLifeCycleMap[card.cardKey]?.[trigger];
@@ -103,13 +105,13 @@ export class ReactionManager {
           match: this._match,
           reactionManager: this,
           runGameActionDelegate: this.runGameActionDelegate,
-        });
+        }, ...args);
       }
     }
   }
   
-  async triggerLifecycleEvent(trigger: LifecycleEvent, context: { playerId?: PlayerId, cardId: CardId }) {
-    const card = this._cardLibrary.getCard(context.cardId);
+  async triggerLifecycleEvent<T extends LifecycleEvent>(trigger: T, args: CardLifecycleEventArgMap[T]) {
+    const card = this._cardLibrary.getCard(args.cardId);
     
     const fn = cardLifecycleMap[card.cardKey]?.[trigger];
     if (!fn) {
@@ -122,8 +124,8 @@ export class ReactionManager {
       cardPriceController: this.cardPriceController,
       cardLibrary: this._cardLibrary,
       match: this._match,
-      cardId: context.cardId,
-      playerId: context.playerId!,
+      cardId: args.cardId,
+      playerId: args.playerId!,
       reactionManager: this,
       runGameActionDelegate: this.runGameActionDelegate,
     });
