@@ -5,6 +5,12 @@
     },
     "type": ["ACTION"]
   },
+  "baker": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"]
+  },
   "fairgrounds": {
     "cost": {
       "treasure": 6

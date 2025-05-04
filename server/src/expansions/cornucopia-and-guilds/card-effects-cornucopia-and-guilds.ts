@@ -1,3 +1,4 @@
+import './types.ts';
 import { Card, CardId } from 'shared/shared-types.ts';
 import { CardExpansionModule } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
@@ -77,6 +78,13 @@ const expansion: CardExpansionModule = {
           to: { location: 'playerHands' }
         });
       }
+    }
+  },
+  'baker': {
+    registerEffects: () => async (cardEffectArgs) => {
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      await cardEffectArgs.runGameActionDelegate('gainCoffer', { playerId: cardEffectArgs.playerId });
     }
   },
   'fairgrounds': {

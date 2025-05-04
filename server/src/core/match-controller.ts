@@ -7,6 +7,7 @@ import {
   MatchConfiguration,
   MatchSummary,
   PlayerId,
+  ServerListenEvents,
 } from 'shared/shared-types.ts';
 import { MatchConfigurator } from './match-configurator.ts';
 import { getCurrentPlayer } from '../utils/get-current-player.ts';
@@ -28,6 +29,8 @@ import {
   GameActionDefinitionMap,
   GameActionReturnTypeMap,
   GameActions,
+  GameLifecycleCallback,
+  GameLifecycleEvent,
   MatchBaseConfiguration,
   PlayerScoreDecorator,
 } from '../types.ts';
@@ -50,6 +53,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardPriceController: CardPriceRulesController | undefined;
   private _matchConfigurator: MatchConfigurator | undefined;
   private _expansionScoringFns: PlayerScoreDecorator[] = [];
+  private _registeredEvents: (keyof ServerListenEvents)[] = [];
   
   private _playerHands: Record<CardKey, number>[] = [
     {
@@ -116,6 +120,10 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const { config: newConfig } = await this._matchConfigurator.createConfiguration();
     
     this._matchConfiguration = newConfig;
+    this._match = {
+      ...this._match,
+      ...newConfig.matchPresets ?? {}
+    }
     
     this._logManager = new LogManager({
       socketMap: this._socketMap,
@@ -161,6 +169,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     await this._matchConfigurator?.initializeExpansions({
       match: this._match,
+      gameEventRegistrar: (event: GameLifecycleEvent, handler: GameLifecycleCallback) => this._reactionManager?.registerGameEvent(event, handler),
+      clientEventRegistrar: (event, handler) => this.clientEventRegistrar(event, handler),
       endGameConditionRegistrar: (val) => this._expansionEndGameConditionFns.push(val),
       actionRegistrar: (...args) => this.gameActionsController?.registerAction(...args),
       cardEffectRegistrar: (...args) => this.gameActionsController?.registerCardEffect(...args),
@@ -184,6 +194,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       s.emit('matchReady', this._match);
       s.on('clientReady', this.onClientReady);
     });
+  }
+  
+  private clientEventRegistrar<T extends keyof ServerListenEvents>(event: T, handler: ServerListenEvents[T]) {
+    this._registeredEvents.push(event);
+    this._socketMap.forEach(s => {
+      s.on(event, handler as any);
+    })
   }
   
   public playerReconnected(playerId: PlayerId, socket: AppSocket) {
@@ -413,7 +430,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       playerId: getCurrentPlayer(this._match).id
     });
     
+    this._matchSnapshot = this.getMatchSnapshot();
+    
     await this._reactionManager?.triggerGameLifecycleEvent('onGameStart')
+    
+    this.broadcastPatch(this._matchSnapshot);
     
     await this.runGameAction('checkForRemainingPlayerActions');
   }
@@ -513,6 +534,10 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         cardId,
         to: { location: 'playerDecks' },
       })
+    }
+    
+    for (const event of this._registeredEvents) {
+      this._socketMap.forEach(s => s.off(event));
     }
     
     const currentTurn = match.turnNumber;

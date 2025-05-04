@@ -1,7 +1,7 @@
 import './types.ts';
 import {
   EndGameConditionRegistrar,
-  ExpansionActionRegistry,
+  ActionRegistry,
   ExpansionConfiguratorFactory,
   PlayerScoreDecoratorRegistrar,
 } from '../../types.ts';
@@ -76,7 +76,7 @@ export const registerEndGameConditions = (registrar: EndGameConditionRegistrar) 
   })
 }
 
-export const registerActions: ExpansionActionRegistry = (registerFn, { match }) => {
+export const registerActions: ActionRegistry = (registerFn, { match }) => {
   console.log(`[prosperity action registry] registering gainVictoryToken action`);
   
   registerFn('gainVictoryToken', async ({ playerId, count }) => {

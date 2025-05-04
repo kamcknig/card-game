@@ -13,6 +13,7 @@ export type CardSize = 'full' | 'half' | 'detail';
 declare module 'shared/shared-types' {
   interface Match {
     playerVictoryTokens?: Record<PlayerId, number>;
+    coffers?: Record<PlayerId, number>;
   }
 }
 

@@ -3,22 +3,17 @@ import { allCardLibrary, ExpansionData, expansionLibrary } from '@expansions/exp
 import {
   ActionRegistrar,
   CardEffectRegistrar,
+  ClientEventRegistrar,
   EndGameConditionRegistrar,
   ExpansionConfigurator,
-  ExpansionConfiguratorFactory,
+  ExpansionConfiguratorFactory, GameEventRegistrar,
+  InitializeExpansionContext,
   MatchBaseConfiguration,
   PlayerScoreDecoratorRegistrar
 } from '../types.ts';
 import { addMatToMatchConfig } from '../utils/add-mat-to-match-config.ts';
 import { compare, Operation } from 'https://esm.sh/v123/fast-json-patch@3.1.1/index.js';
-
-type InitializeExpansionContext = {
-  match: Match;
-  actionRegistrar: ActionRegistrar;
-  endGameConditionRegistrar: EndGameConditionRegistrar;
-  playerScoreDecoratorRegistrar: PlayerScoreDecoratorRegistrar;
-  cardEffectRegistrar: CardEffectRegistrar;
-}
+import { registerGameEvents } from '../expansions/cornucopia-and-guilds/configurator-cornucopia-and-guilds.ts';
 
 export class MatchConfigurator {
   private _requestedKingdoms: CardNoId[] = [];
@@ -172,10 +167,12 @@ export class MatchConfigurator {
   
   public async initializeExpansions({
     match,
+    gameEventRegistrar,
     endGameConditionRegistrar,
     actionRegistrar,
     playerScoreDecoratorRegistrar,
-    cardEffectRegistrar
+    cardEffectRegistrar,
+    clientEventRegistrar,
   }: InitializeExpansionContext) {
     console.log(`[match configurator] initializing expansions`);
     
@@ -202,6 +199,29 @@ export class MatchConfigurator {
     
     console.log(`[match configurator] registering expansion scoring effects`);
     await this.registerExpansionPlayerScoreDecorators(playerScoreDecoratorRegistrar);
+    
+    console.log(`[match configurator] registering client event listeners`);
+    await this.registerClientEventListeners(clientEventRegistrar, { match });
+    
+    console.log(`[match configurator] registering game event listeners`);
+    await this.registerGameEventListeners(gameEventRegistrar);
+  }
+  
+  private async registerGameEventListeners(gameEventRegistrar: GameEventRegistrar) {
+    const uniqueExpansions = Array.from(new Set(this._config.kingdomCards.map(card => card.expansionName)));
+    for (const expansion of uniqueExpansions) {
+      try {
+        const module = await import((`@expansions/${expansion}/configurator-${expansion}.ts`));
+        if (!module.registerGameEvents) continue;
+        module.registerGameEvents(gameEventRegistrar);
+      } catch (error) {
+        if ((error as any )?.code === 'ERR_MODULE_NOT_FOUND') {
+          continue;
+        }
+        console.warn(`[match configurator] failed to register expansion actions for ${expansion}`);
+        console.log(error);
+      }
+    }
   }
   
   private async runExpansionConfigurators({ actionRegistrar, cardEffectRegistrar }: {
@@ -247,6 +267,9 @@ export class MatchConfigurator {
         if (!module.registerActions) continue;
         module.registerActions(actionRegistrar, { match });
       } catch (error) {
+        if ((error as any )?.code === 'ERR_MODULE_NOT_FOUND') {
+          continue;
+        }
         console.warn(`[match configurator] failed to register expansion actions for ${expansion}`);
         console.log(error);
       }
@@ -261,6 +284,9 @@ export class MatchConfigurator {
         if (!module.registerCardEffects) continue;
         module.registerCardEffects(registrar);
       } catch (error) {
+        if ((error as any )?.code === 'ERR_MODULE_NOT_FOUND') {
+          continue;
+        }
         console.warn(`[match configurator] failed to register expansion actions for ${expansion}`);
         console.log(error);
       }
@@ -275,6 +301,9 @@ export class MatchConfigurator {
         if (!module.registerEndGameConditions) continue;
         module.registerEndGameConditions(registrar);
       } catch (error) {
+        if ((error as any )?.code === 'ERR_MODULE_NOT_FOUND') {
+          continue;
+        }
         console.warn(`[match configurator] failed to register expansion end game conditions for ${expansion}`);
         console.log(error);
       }
@@ -289,7 +318,27 @@ export class MatchConfigurator {
         if (!module.registerScoringFunctions) continue;
         module.registerScoringFunctions(registrar);
       } catch (error) {
-        console.warn(`[match configurator] failed to register expansion coring functions for ${expansion}`);
+        if ((error as any )?.code === 'ERR_MODULE_NOT_FOUND') {
+          continue;
+        }
+        console.warn(`[match configurator] failed to register expansion scoring functions for ${expansion}`);
+        console.log(error);
+      }
+    }
+  }
+  
+  private async registerClientEventListeners(registrar: ClientEventRegistrar, { match }: { match: Match }) {
+    const uniqueExpansions = Array.from(new Set(this._config.kingdomCards.map(card => card.expansionName)));
+    for (const expansion of uniqueExpansions) {
+      try {
+        const module = await import((`@expansions/${expansion}/configurator-${expansion}.ts`));
+        if (!module.registerClientEvents) continue;
+        module.registerClientEvents(registrar, { match });
+      } catch (error) {
+        if ((error as any )?.code === 'ERR_MODULE_NOT_FOUND') {
+          continue;
+        }
+        console.warn(`[match configurator] failed to register expansion client events for ${expansion}`);
         console.log(error);
       }
     }

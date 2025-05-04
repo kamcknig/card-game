@@ -1,4 +1,4 @@
-import { PlayerId } from "shared/shared-types.ts";
+import { PlayerId } from 'shared/shared-types.ts';
 
 declare module '../../types' {
   interface GameActionDefinitionMap {

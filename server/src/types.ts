@@ -223,7 +223,7 @@ export type CardExpansionActionConditionMap = {
 
 export interface CardExpansionModule {
   [p: CardKey]: {
-    registerGameLifecycleMethods?: () => GameLifecycleCallbackMap;
+    registerGameLifecycleMethods?: () => CardGameLifecycleCallbackMap;
     registerActionConditions?: () => CardExpansionActionConditionMap;
     registerLifeCycleMethods?: () => LifecycleCallbackMap;
     registerScoringFunction?: () => CardScoringFunction;
@@ -382,11 +382,14 @@ export type GameLifecycleCallbackContext = {
   runGameActionDelegate: RunGameActionDelegate;
 }
 
-export type GameLifecycleCallback = (args: GameLifecycleCallbackContext) => Promise<LifecycleResult | void>;
+export type GameLifecycleCallback = (args: Omit<GameLifecycleCallbackContext, 'cardId'>) => Promise<LifecycleResult | void>;
+export type CardGameLifeCycleCallback = (args: GameLifecycleCallbackContext) => Promise<void>;
 
-export type GameLifecycleCallbackMap = {
-  onGameStart?: GameLifecycleCallback;
+export type CardGameLifecycleCallbackMap = {
+  onGameStart?: CardGameLifeCycleCallback;
 };
+
+export type GameLifecycleEvent = 'onGameStart';
 
 type LifecycleCallbackContext = {
   cardPriceController: CardPriceRulesController,
@@ -419,14 +422,31 @@ export type LifecycleEvent = keyof LifecycleCallbackMap;
 export type ActionFunctionFactoryContext = {
   match: Match;
 }
-
-export type ExpansionActionRegistry = (registerAction: ActionRegistrar, args: ActionFunctionFactoryContext) => void;
-
+export type ActionRegistry = (registerAction: ActionRegistrar, args: ActionFunctionFactoryContext) => void;
 export type ActionRegistrar = <K extends GameActions>(key: K, handler: GameActionDefinitionMap[K]) => void;
+
 export type CardEffectRegistrar = (cardKey: CardKey, tag: string, fn: CardEffectFn) => void;
+
 export type PlayerScoreDecoratorRegistrar = (decorator: PlayerScoreDecorator) => void;
 export type PlayerScoreDecorator = (playerId: PlayerId, match: Match) => void;
 
 export type EndGameConditionFnContext = { match: Match, cardLibrary: CardLibrary };
 export type EndGameConditionFn = (args: EndGameConditionFnContext) => boolean;
 export type EndGameConditionRegistrar = (endGameConditionFn: EndGameConditionFn) => void;
+
+export type ClientEventRegistrar = <T extends keyof ServerListenEvents>(event: T, eventHandler: ServerListenEvents[T]) => void;
+export type ClientEventRegistry = (registrar: ClientEventRegistrar, context: {
+  match: Match
+}) => void;
+
+export type GameEventRegistrar = (event: GameLifecycleEvent, handler: GameLifecycleCallback) => void;
+
+export type InitializeExpansionContext = {
+  gameEventRegistrar: GameEventRegistrar,
+  match: Match;
+  clientEventRegistrar: ClientEventRegistrar;
+  actionRegistrar: ActionRegistrar;
+  endGameConditionRegistrar: EndGameConditionRegistrar;
+  playerScoreDecoratorRegistrar: PlayerScoreDecoratorRegistrar;
+  cardEffectRegistrar: CardEffectRegistrar;
+}
