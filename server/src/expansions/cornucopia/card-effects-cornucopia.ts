@@ -518,6 +518,67 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'remake': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const count = Math.min(2, cardEffectArgs.match.playerHands[cardEffectArgs.playerId].length);
+      console.log(`[remake effect] selecting ${count} cards`);
+      
+      for (let i = 0; i < count; i++) {
+        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Trash card`,
+          restrict: { from: { location: 'playerHands' } },
+          count,
+        }) as CardId[];
+        
+        const selectedId = selectedCardIds[0];
+        const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedId);
+        
+        console.log(`[remake effect] player ${cardEffectArgs.playerId} trashing ${selectedCard}`);
+        
+        await cardEffectArgs.runGameActionDelegate('trashCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: selectedId,
+        });
+        
+        const { cost } = cardEffectArgs.cardPriceController.applyRules(selectedCard, {
+          match: cardEffectArgs.match,
+          playerId: cardEffectArgs.playerId
+        });
+        
+        const availableCardIds = findCards(
+          cardEffectArgs.match,
+          {
+            location: ['supply', 'kingdom'],
+            cost: {
+              cardCostController: cardEffectArgs.cardPriceController,
+              spec: {
+                kind: 'exact',
+                playerId: cardEffectArgs.playerId,
+                amount: { ...cost, treasure: cost.treasure + 1 }
+              }
+            }
+          },
+          cardEffectArgs.cardLibrary
+        );
+        
+        if (!availableCardIds.length) {
+          console.log(`[remake effect] no cards in supply with cost ${cost}`);
+          continue;
+        }
+        
+        const card = cardEffectArgs.cardLibrary.getCard(availableCardIds.slice(-1)[0]);
+        
+        console.log(`[remake effect] player ${cardEffectArgs.playerId} gaining ${card}`);
+        
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: availableCardIds.slice(-1)[0],
+          to: { location: 'playerDiscards' }
+        });
+      }
+    }
+  },
   'young-witch': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[young witch effect] drawing 2 cards`);
