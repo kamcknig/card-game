@@ -1,0 +1,52 @@
+{
+  "advisor": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"]
+  },
+  "fairgrounds": {
+    "cost": {
+      "treasure": 6
+    },
+    "type": ["VICTORY"]
+  },
+  "hamlet": {
+    "cost": {
+      "treasure": 2
+    },
+    "type": ["ACTION"]
+  },
+  "horn-of-plenty": {
+    "cardName": "Horn of Plenty",
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["TREASURE"]
+  },
+  "hunting-party": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"]
+  },
+  "jester": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "ATTACK"]
+  },
+  "remake": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"]
+  },
+  "young-witch": {
+    "cardName": "Young Witch",
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION", "ATTACK"]
+  }
+}
