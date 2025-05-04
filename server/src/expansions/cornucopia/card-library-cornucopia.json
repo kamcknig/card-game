@@ -56,6 +56,12 @@
     },
     "type": ["ACTION""ATTACK"]
   },
+  "menagerie": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION"]
+  },
   "young-witch": {
     "cardName": "Young Witch",
     "cost": {

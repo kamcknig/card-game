@@ -487,6 +487,37 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'menagerie': {
+    registerEffects: () => async (cardEffectArgs) => {
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      const hand = cardEffectArgs.match.playerHands[cardEffectArgs.playerId];
+      if (hand.length === 0) {
+        console.warn(`[menagerie effect] no cards in hand`);
+        return;
+      }
+      
+      for (const cardId of hand) {
+        await cardEffectArgs.runGameActionDelegate('revealCard', {
+          cardId: cardId,
+          playerId: cardEffectArgs.playerId,
+        });
+      }
+      
+      const uniqueHandCardNames = new Set(hand
+        .map(cardEffectArgs.cardLibrary.getCard)
+        .map(card => card.cardName)
+      );
+      
+      if (uniqueHandCardNames.size === hand.length) {
+        console.log(`[menagerie effect] all cards in hand are unique, drawing 3 cards`);
+        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 3 });
+      }
+      else {
+        console.log(`[menagerie effect] not all cards in hand are unique, drawing 1 cards`);
+        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      }
+    }
+  },
   'young-witch': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[young witch effect] drawing 2 cards`);
