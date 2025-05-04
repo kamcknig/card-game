@@ -2,8 +2,17 @@ import { CardId } from 'shared/shared-types.ts';
 import { CardExpansionModule } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { findCards } from '../../utils/find-cards.ts';
+import { find } from 'npm:rxjs@7.8.2';
 
 const expansion: CardExpansionModule = {
+  'fairgrounds': {
+    registerScoringFunction: () => (args) => {
+      const cards = args.cardLibrary.getAllCardsAsArray().filter(card => card.owner === args.ownerId);
+      const uniqueNameCardCount = new Set(cards.map(card => card.cardName)).size;
+      const score = Math.floor(uniqueNameCardCount / 5);
+      return score;
+    }
+  },
   'young-witch': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[young witch effect] drawing 2 cards`);

@@ -1,4 +1,10 @@
 {
+  "fairgrounds": {
+    "cost": {
+      "treasure": 6
+    },
+    "type": ["VICTORY"]
+  },
   "young-witch": {
     "cardName": "Young Witch",
     "cost": {
