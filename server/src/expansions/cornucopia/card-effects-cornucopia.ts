@@ -2,7 +2,8 @@ import { Card, CardId } from 'shared/shared-types.ts';
 import { CardExpansionModule } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { findCards } from '../../utils/find-cards.ts';
-import { find } from 'npm:rxjs@7.8.2';
+import { filter, find } from 'npm:rxjs@7.8.2';
+import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 
 const expansion: CardExpansionModule = {
   'fairgrounds': {
@@ -215,12 +216,28 @@ const expansion: CardExpansionModule = {
       }
       
       console.log(`[harvest effect] discarding ${revealedCardIds.length} cards`);
-      for(const cardId of revealedCardIds) {
-        await cardEffectArgs.runGameActionDelegate('discardCard', { cardId: cardId, playerId: cardEffectArgs.playerId });
+      for (const cardId of revealedCardIds) {
+        await cardEffectArgs.runGameActionDelegate('discardCard', {
+          cardId: cardId,
+          playerId: cardEffectArgs.playerId
+        });
       }
-      const numUniqueNames = new Set(revealedCardIds.map(cardEffectArgs.cardLibrary.getCard).map(card => card.cardName)).size;
+      const numUniqueNames = new Set(revealedCardIds.map(cardEffectArgs.cardLibrary.getCard)
+        .map(card => card.cardName)).size;
       console.log(`[harvest effect] gaining ${numUniqueNames} treasure`);
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: numUniqueNames });
+    }
+  },
+  'horn-of-plenty': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const uniquelyNamesCardsInPlay = new Set(getCardsInPlay(cardEffectArgs.match)
+        .map(cardEffectArgs.cardLibrary.getCard)
+        .filter(card => card.owner === cardEffectArgs.playerId)
+        .map(card => card.cardName)
+      ).size;
+      
+      console.log(`[horn of plenty effect] gaining ${uniquelyNamesCardsInPlay} treasure`);
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: uniquelyNamesCardsInPlay });
     }
   },
   'young-witch': {

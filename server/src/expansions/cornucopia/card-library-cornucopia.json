@@ -31,6 +31,13 @@
     },
     "type": ["ACTION"]
   },
+  "horn-of-plenty": {
+    "cardName": "Horn of Plenty",
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["TREASURE"]
+  },
   "young-witch": {
     "cardName": "Young Witch",
     "cost": {
