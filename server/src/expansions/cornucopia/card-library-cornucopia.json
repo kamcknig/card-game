@@ -19,6 +19,12 @@
     },
     "type": ["ACTION", "ATTACK"]
   },
+  "hamlet": {
+    "cost": {
+      "treasure": 2
+    },
+    "type": ["ACTION"]
+  },
   "young-witch": {
     "cardName": "Young Witch",
     "cost": {

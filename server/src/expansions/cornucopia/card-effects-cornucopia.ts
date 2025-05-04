@@ -132,6 +132,60 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'hamlet': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[hamlet effect] drawing 1 card, and gaining 1 action`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      
+      const hand = cardEffectArgs.match.playerHands[cardEffectArgs.playerId];
+      
+      if (hand.length > 0) {
+        const result = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          prompt: 'Discard to gain action?',
+          playerId: cardEffectArgs.playerId,
+          optional: true,
+          count: 1,
+          restrict: { from: { location: 'playerHands' } },
+        }) as CardId[];
+        
+        if (result.length) {
+          console.log(`[hamlet effect] player chose to discard to gain +1 action`);
+          const cardId = result[0];
+          await cardEffectArgs.runGameActionDelegate('discardCard', { cardId, playerId: cardEffectArgs.playerId });
+          await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+        }
+        else {
+          console.log(`[hamlet effect] player chose not to discard to gain +1 action`);
+        }
+      }
+      else {
+        console.log(`[hamlet effect] no cards in hand, not prompting to discard for action`);
+      }
+      
+      if (hand.length > 0) {
+        const result = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          prompt: 'Discard to gain buy?',
+          playerId: cardEffectArgs.playerId,
+          optional: true,
+          count: 1,
+          restrict: { from: { location: 'playerHands' } },
+        }) as CardId[];
+        
+        if (result.length) {
+          const cardId = result[0];
+          await cardEffectArgs.runGameActionDelegate('discardCard', { cardId, playerId: cardEffectArgs.playerId });
+          await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+        }
+        else {
+          console.log(`[hamlet effect] player chose not to discard to gain +1 buy`);
+        }
+      }
+      else {
+        console.log(`[hamlet effect] no cards in hand, not prompting to discard for buy`);
+      }
+    }
+  },
   'young-witch': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[young witch effect] drawing 2 cards`);
