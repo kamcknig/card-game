@@ -240,6 +240,98 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: uniquelyNamesCardsInPlay });
     }
   },
+  'horse-traders': {
+    registerLifeCycleMethods: () => ({
+      onEnterHand: async (args) => {
+        args.reactionManager.registerReactionTemplate({
+          id: `horse-traders:${args.cardId}:cardPlayed`,
+          listeningFor: 'cardPlayed',
+          playerId: args.playerId,
+          compulsory: false,
+          once: false,
+          allowMultipleInstances: true,
+          condition: (conditionArgs) => {
+            if (conditionArgs.trigger.args.playerId === args.playerId) return false;
+            const card = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
+            if (!card.type.includes('ATTACK')) return false;
+            return true;
+          },
+          triggeredEffectFn: async (triggerEffectArgs) => {
+            console.log(`[horse traders triggered effect] setting horse traders aside`);
+            await triggerEffectArgs.runGameActionDelegate('moveCard', {
+              cardId: args.cardId,
+              toPlayerId: args.playerId,
+              to: { location: 'set-aside' }
+            });
+            
+            args.reactionManager.registerReactionTemplate({
+              id: `horse-traders:${args.cardId}startTurn`,
+              playerId: args.playerId,
+              listeningFor: 'startTurn',
+              once: true,
+              compulsory: true,
+              allowMultipleInstances: true,
+              condition: (startTurnConditionArgs) => {
+                if (startTurnConditionArgs.trigger.args.playerId !== args.playerId) return false;
+                return true;
+              },
+              triggeredEffectFn: async (startTurnTriggeredEffectArgs) => {
+                console.log(`[horse traders triggered effect] moving horse traders back to hand and drawing 1 card`)
+                await startTurnTriggeredEffectArgs.runGameActionDelegate('drawCard', { playerId: args.playerId });
+                await startTurnTriggeredEffectArgs.runGameActionDelegate('moveCard', {
+                  cardId: args.cardId,
+                  toPlayerId: args.playerId,
+                  to: { location: 'playerHands' }
+                });
+              }
+            })
+          }
+        })
+      },
+      onLeaveHand: async args => {
+        args.reactionManager.unregisterTrigger(`horse-traders:${args.cardId}:cardPlayed`);
+      },
+      onLeavePlay: async args => {
+        args.reactionManager.unregisterTrigger(`horse-traders:${args.cardId}startTurn`);
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[horse traders effect] gaining 1 buy, and 3 treasure`);
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 3 });
+      
+      const hand = cardEffectArgs.match.playerHands[cardEffectArgs.playerId];
+      const numToDiscard = Math.min(hand.length, 2);
+      
+      if (numToDiscard === 0) {
+        console.warn(`[horse traders effect] no cards in hand`);
+        return;
+      }
+      
+      console.log(`[horse traders effect] selecting ${numToDiscard} cards to discard (max ${hand.length})`);
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Discard cards`,
+        restrict: { from: { location: 'playerHands' } },
+        count: numToDiscard
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.warn(`[horse traders effect] no cards selected`);
+        return;
+      }
+      
+      console.log(`[horse traders effect] discarding ${selectedCardIds.length} cards`);
+      
+      for (let i = 0; i < selectedCardIds.length; i++) {
+        await cardEffectArgs.runGameActionDelegate('discardCard', {
+          cardId: selectedCardIds[i],
+          playerId: cardEffectArgs.playerId
+        });
+      }
+    }
+  },
   'young-witch': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[young witch effect] drawing 2 cards`);

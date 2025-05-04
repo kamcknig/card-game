@@ -38,6 +38,12 @@
     },
     "type": ["TREASURE"]
   },
+  "horse-traders": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION", "REACTION"]
+  },
   "young-witch": {
     "cardName": "Young Witch",
     "cost": {
