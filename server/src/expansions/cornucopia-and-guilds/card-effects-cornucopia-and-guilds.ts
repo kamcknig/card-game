@@ -161,6 +161,68 @@ const expansion: CardExpansionModule = {
       return score;
     }
   },
+  'farmhands': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (cardEffectArgs) => {
+        const hand = cardEffectArgs.match.playerHands[cardEffectArgs.playerId];
+        const actionTreasureCards = hand
+          .map(cardEffectArgs.cardLibrary.getCard)
+          .filter(card => card.type.includes('ACTION') || card.type.includes('TREASURE'));
+        
+        if (actionTreasureCards.length === 0) {
+          console.log(`[farmhands effect] no action or treasure cards in hand, not prompting to select`);
+          return;
+        }
+        
+        const result = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          prompt: 'Set aside?',
+          playerId: cardEffectArgs.playerId,
+          optional: true,
+          count: 1,
+          restrict: { from: { location: 'playerHands' }, card: { type: ['ACTION', 'TREASURE'] } },
+        }) as CardId[];
+        
+        if (result.length) {
+          const cardId = result[0];
+          await cardEffectArgs.runGameActionDelegate('moveCard', {
+            cardId,
+            toPlayerId: cardEffectArgs.playerId,
+            to: { location: 'set-aside' }
+          });
+          
+          cardEffectArgs.reactionManager.registerReactionTemplate({
+            id: `farmhands:${cardEffectArgs.cardLibrary}:startTurn`,
+            listeningFor: 'startTurn',
+            condition: (conditionArgs) => {
+              if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
+              return true;
+            },
+            once: true,
+            compulsory: true,
+            allowMultipleInstances: false,
+            playerId: cardEffectArgs.playerId,
+            triggeredEffectFn: async (triggerEffectArgs) => {
+              await triggerEffectArgs.runGameActionDelegate('playCard', {
+                playerId: cardEffectArgs.playerId,
+                cardId,
+                overrides: {
+                  actionCost: 0
+                }
+              })
+            }
+          })
+        }
+        else {
+          console.log(`[farmhands effect] player chose not to set aside`);
+        }
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[farmhands effect] drawing 1 card, and 2 actions`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
+    }
+  },
   'hamlet': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[hamlet effect] drawing 1 card, and gaining 1 action`);

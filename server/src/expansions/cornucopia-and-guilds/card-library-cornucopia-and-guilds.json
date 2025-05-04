@@ -30,6 +30,12 @@
     },
     "type": ["VICTORY"]
   },
+  "farmhands": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"]
+  },
   "hamlet": {
     "cost": {
       "treasure": 2
