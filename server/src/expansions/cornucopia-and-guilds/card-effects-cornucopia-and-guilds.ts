@@ -87,6 +87,14 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('gainCoffer', { playerId: cardEffectArgs.playerId });
     }
   },
+  'candlestick-maker': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[candlestick maker effect] gaining 1 action, 1 buy, and 1 coffer`);
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+      await cardEffectArgs.runGameActionDelegate('gainCoffer', { playerId: cardEffectArgs.playerId, count: 1 });
+    }
+  },
   'fairgrounds': {
     registerScoringFunction: () => (args) => {
       const cards = args.cardLibrary.getAllCardsAsArray().filter(card => card.owner === args.ownerId);

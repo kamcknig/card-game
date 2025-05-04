@@ -11,6 +11,13 @@
     },
     "type": ["ACTION"]
   },
+  "candlestick-maaker": {
+    "cardName": "Candlestick Maker",
+    "cost": {
+      "treasure": 2
+    },
+    "type": ["ACTION"]
+  },
   "fairgrounds": {
     "cost": {
       "treasure": 6
