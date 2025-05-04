@@ -1,4 +1,4 @@
-import { CardId } from 'shared/shared-types.ts';
+import { Card, CardId } from 'shared/shared-types.ts';
 import { CardExpansionModule } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { findCards } from '../../utils/find-cards.ts';
@@ -11,6 +11,62 @@ const expansion: CardExpansionModule = {
       const uniqueNameCardCount = new Set(cards.map(card => card.cardName)).size;
       const score = Math.floor(uniqueNameCardCount / 5);
       return score;
+    }
+  },
+  'farming-village': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[farming village effect] gaining 2 actions`);
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
+      
+      let cardFound = false;
+      const deck = cardEffectArgs.match.playerDecks[cardEffectArgs.playerId];
+      const discard = cardEffectArgs.match.playerDiscards[cardEffectArgs.playerId];
+      const revealedCards: Card[] = [];
+      
+      while (!cardFound && deck.length + discard.length > 1) {
+        let cardId = deck.slice(-1)[0];
+        
+        if (!cardId) {
+          await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+          cardId = deck.slice(-1)[0];
+          
+          if (!cardId) {
+            console.log(`[farming village effect] no cards in deck`);
+            return;
+          }
+        }
+        
+        const card = cardEffectArgs.cardLibrary.getCard(cardId);
+        
+        console.log(`[farming village effect] revealing card ${card}`);
+        
+        await cardEffectArgs.runGameActionDelegate('revealCard', {
+          cardId,
+          playerId: cardEffectArgs.playerId,
+          moveToSetAside: true,
+        });
+        
+        if (card.type.includes('ACTION') || card.type.includes('TREASURE')) {
+          console.log(`[farming village effect] card is action or treasure, moving to hand`);
+          cardFound = true;
+          await cardEffectArgs.runGameActionDelegate('moveCard', {
+            cardId,
+            toPlayerId: cardEffectArgs.playerId,
+            to: { location: 'playerHands' }
+          })
+        }
+        else {
+          console.log(`[farming village effect] card is not action or treasure, discarding`);
+          revealedCards.push(card);
+        }
+      }
+      
+      for (const card of revealedCards) {
+        await cardEffectArgs.runGameActionDelegate('discardCard', {
+          cardId: card.id,
+          playerId: cardEffectArgs.playerId
+        });
+      }
     }
   },
   'young-witch': {
