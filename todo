@@ -20,19 +20,7 @@ SEASIDE expansion - i haven't built outpost - taking an extra turn. the rules ar
 
 ALCHEMY expansion - haven't built posession
 
-for cards like charaltan in prosoperity that change cards need a way to display that change in the UI
-
-need to go through eveyr reaction and make sure they are being cleaned up on their own DONE
- - then need to remove the `cleanupTriggers` method in reaciton manager- DONE
-   - this method is messing up global reactions like peddlers
-     - maybe need to look into system of automatic unregistering as well as manual.
-     - system should accoutnt for duration rules 
-
-should reveal game action should always move card?
-
-cornucopia new features
- - young witch card - she adds a kingdom card. this card could trigger further setup. but most setup is configured
-currently in order at the start of the match. so if it were to add a card from an expansion that had already
-run its configurator, then that new card wouldn't be set up properly
+CORNUCOPIA expansion 
+  - tournament card effects have been built but prizes haven't been implemented. so once prizes are in, then need to add the final effect for tournament for cards like charaltan in prosoperity that change cards need a way to display that change in the UI
 
 for overrides like cost overrides, look into rules that are applied based on filters rather than rules placed on every single card
