@@ -2,7 +2,6 @@ import { Card, CardId } from 'shared/shared-types.ts';
 import { CardExpansionModule } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { findCards } from '../../utils/find-cards.ts';
-import { filter, find } from 'npm:rxjs@7.8.2';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 
 const expansion: CardExpansionModule = {
@@ -389,7 +388,102 @@ const expansion: CardExpansionModule = {
       
       console.log(`[hunting party effect] discarding ${cardsToDiscard.length} cards`);
       for (const cardId of cardsToDiscard) {
-        await cardEffectArgs.runGameActionDelegate('discardCard', { cardId: cardId, playerId: cardEffectArgs.playerId });
+        await cardEffectArgs.runGameActionDelegate('discardCard', {
+          cardId: cardId,
+          playerId: cardEffectArgs.playerId
+        });
+      }
+    }
+  },
+  'jester': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[jester effect] gaining 2 treasure`);
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+      
+      const targetPlayerIds = findOrderedTargets({
+        match: cardEffectArgs.match,
+        appliesTo: 'ALL_OTHER',
+        startingPlayerId: cardEffectArgs.playerId
+      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId].result !== 'immunity');
+      
+      for (const targetPlayerId of targetPlayerIds) {
+        const deck = cardEffectArgs.match.playerDecks[targetPlayerId];
+        
+        if (deck.length === 0) {
+          console.log(`[jester effect] no cards in deck, shuffling`);
+          await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: targetPlayerId });
+          
+          if (deck.length === 0) {
+            console.log(`[jester effect] no cards in deck after shuffling`);
+            continue
+          }
+        }
+        
+        const cardId = deck.slice(-1)[0];
+        const card = cardEffectArgs.cardLibrary.getCard(cardId);
+        
+        console.log(`[jester effect] player ${targetPlayerId} discarding ${card}`);
+        await cardEffectArgs.runGameActionDelegate('discardCard', { cardId: cardId, playerId: targetPlayerId });
+        
+        if (card.type.includes('VICTORY')) {
+          console.log(`[jester effect] card is a victory card, gaining curse`);
+          const curseCardIds = findCards(
+            cardEffectArgs.match,
+            { location: 'supply', cards: { cardKeys: 'curse' } },
+            cardEffectArgs.cardLibrary
+          );
+          
+          if (!curseCardIds.length) {
+            console.log(`[jester effect] no curse cards in supply`);
+            continue;
+          }
+          
+          await cardEffectArgs.runGameActionDelegate('gainCard', {
+            playerId: targetPlayerId,
+            cardId: curseCardIds.slice(-1)[0],
+            to: { location: 'supply' }
+          });
+        }
+        else {
+          const copyIds = findCards(
+            cardEffectArgs.match,
+            { location: ['supply', 'kingdom'], cards: { cardKeys: card.cardKey } },
+            cardEffectArgs.cardLibrary
+          );
+          
+          if (!copyIds.length) {
+            console.log(`[jester effect] no copies of ${card.cardName} in supply`);
+            continue;
+          }
+          
+          const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+            prompt: `You or they gain a ${card.cardName}`,
+            playerId: cardEffectArgs.playerId,
+            actionButtons: [
+              { label: 'THEY GAIN', action: 1 },
+              { label: 'YOU GAIN', action: 2 },
+            ],
+          }) as { action: number, result: number[] };
+          
+          const copyId = copyIds.slice(-1)[0];
+          
+          if (result.action === 1) {
+            console.log(`[jester effect] player ${targetPlayerId} gaining ${card.cardName}`);
+            await cardEffectArgs.runGameActionDelegate('gainCard', {
+              playerId: targetPlayerId,
+              cardId: copyId,
+              to: { location: 'playerDiscards' }
+            });
+          }
+          else {
+            console.log(`[jester effect] player ${cardEffectArgs.playerId} gaining ${card.cardName}`);
+            await cardEffectArgs.runGameActionDelegate('gainCard', {
+              playerId: cardEffectArgs.playerId,
+              cardId: copyId,
+              to: { location: 'playerDiscards' }
+            });
+          }
+        }
       }
     }
   },

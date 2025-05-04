@@ -50,6 +50,12 @@
     },
     "type": ["ACTION"]
   },
+  "jester": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION""ATTACK"]
+  },
   "young-witch": {
     "cardName": "Young Witch",
     "cost": {
