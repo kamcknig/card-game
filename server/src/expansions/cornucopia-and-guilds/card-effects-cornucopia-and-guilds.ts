@@ -95,6 +95,64 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('gainCoffer', { playerId: cardEffectArgs.playerId, count: 1 });
     }
   },
+  'carnival': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const deck = cardEffectArgs.match.playerDecks[cardEffectArgs.playerId];
+      const cardsToKeep: Card[] = [];
+      const cardsToDiscard: Card[] = [];
+      
+      for (let i = 0; i < 4; i++) {
+        if (deck.length === 0) {
+          console.log(`[carnival effect] no cards in deck, shuffling`);
+          await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+          
+          if (deck.length === 0) {
+            console.log(`[carnival effect] no cards in deck after shuffling`);
+            break;
+          }
+        }
+        
+        const revealedCardId = deck.slice(-1)[0];
+        const revealedCard = cardEffectArgs.cardLibrary.getCard(revealedCardId);
+        
+        console.log(`[carnival effect] revealing ${revealedCard}`);
+        
+        await cardEffectArgs.runGameActionDelegate('revealCard', {
+          cardId: revealedCardId,
+          playerId: cardEffectArgs.playerId,
+          moveToSetAside: true
+        });
+        
+        if (!cardsToKeep.find(card => card.cardKey === revealedCard.cardKey)) {
+          console.log(`[carnival effect] adding ${revealedCard} to keep`);
+          cardsToKeep.push(revealedCard);
+        }
+        else {
+          console.log(`[carnival effect] adding ${revealedCard} to discard`);
+          cardsToDiscard.push(revealedCard);
+        }
+      }
+      
+      console.log(`[carnival effect] discarding ${cardsToDiscard.length} cards`);
+      
+      for (const card of cardsToDiscard) {
+        await cardEffectArgs.runGameActionDelegate('discardCard', {
+          cardId: card.id,
+          playerId: cardEffectArgs.playerId
+        });
+      }
+      
+      console.log(`[carnival effect] moving ${cardsToKeep.length} cards to hand`);
+      
+      for (const card of cardsToKeep) {
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
+          cardId: card.id,
+          toPlayerId: cardEffectArgs.playerId,
+          to: { location: 'playerHands' }
+        });
+      }
+    }
+  },
   'fairgrounds': {
     registerScoringFunction: () => (args) => {
       const cards = args.cardLibrary.getAllCardsAsArray().filter(card => card.owner === args.ownerId);
