@@ -186,6 +186,43 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'harvest': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const deck = cardEffectArgs.match.playerDecks[cardEffectArgs.playerId];
+      const discard = cardEffectArgs.match.playerDiscards[cardEffectArgs.playerId];
+      let count = 0;
+      const revealedCardIds: CardId[] = [];
+      
+      console.log(`[harvest effect] revealing cards`);
+      while (deck.length && discard.length > 0 && count < 4) {
+        if (deck.length < 0) {
+          await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+          
+          if (deck.length < 0) {
+            console.log(`[harvest effect] no cards in deck after shuffling`);
+            return;
+          }
+        }
+        
+        const cardId = deck.slice(-1)[0];
+        await cardEffectArgs.runGameActionDelegate('revealCard', {
+          cardId: cardId,
+          playerId: cardEffectArgs.playerId,
+          moveToSetAside: true
+        });
+        revealedCardIds.push(cardId);
+        count++;
+      }
+      
+      console.log(`[harvest effect] discarding ${revealedCardIds.length} cards`);
+      for(const cardId of revealedCardIds) {
+        await cardEffectArgs.runGameActionDelegate('discardCard', { cardId: cardId, playerId: cardEffectArgs.playerId });
+      }
+      const numUniqueNames = new Set(revealedCardIds.map(cardEffectArgs.cardLibrary.getCard).map(card => card.cardName)).size;
+      console.log(`[harvest effect] gaining ${numUniqueNames} treasure`);
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: numUniqueNames });
+    }
+  },
   'young-witch': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[young witch effect] drawing 2 cards`);

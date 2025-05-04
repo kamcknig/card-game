@@ -25,6 +25,12 @@
     },
     "type": ["ACTION"]
   },
+  "harvest": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"]
+  },
   "young-witch": {
     "cardName": "Young Witch",
     "cost": {
