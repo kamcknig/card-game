@@ -4,7 +4,7 @@ import {
   GameLifecycleCallback,
   GameLifecycleEvent,
   GameLifeCycleEventArgsMap,
-  LifecycleEvent,
+  CardLifecycleEvent,
   Reaction,
   ReactionTemplate,
   ReactionTrigger,
@@ -95,7 +95,7 @@ export class ReactionManager {
     }
   }
   
-  async triggerLifecycleEvent<T extends LifecycleEvent>(trigger: T, args: CardLifecycleEventArgMap[T]) {
+  async triggerLifecycleEvent<T extends CardLifecycleEvent>(trigger: T, args: CardLifecycleEventArgMap[T]) {
     const card = this._cardLibrary.getCard(args.cardId);
     
     const fn = cardLifecycleMap[card.cardKey]?.[trigger];

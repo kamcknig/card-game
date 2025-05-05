@@ -380,7 +380,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       playerId: args.playerId,
       cardId: args.cardId,
       to: { location: 'playerDiscards' }
-    }, { bought: true });
+    }, { bought: true, overpaid: 0 });
     
     this.match.stats.cardsBought[args.cardId] = {
       turnNumber: this.match.turnNumber,
@@ -634,7 +634,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     for (let i = 0; i < (args.count ?? 1); i++) {
       if (deck.length < 1) {
         console.log(`[drawCard action] Shuffling discard pile`);
-        await this.shuffleDeck({ playerId});
+        await this.shuffleDeck({ playerId });
         
         if (deck.length < 1) {
           console.log(`[drawCard action] No cards left in deck, returning null`);
