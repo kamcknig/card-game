@@ -81,6 +81,13 @@
     },
     "type": ["ACTION"]
   },
+  "infirmary": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION"],
+    "tags": ["overpay"]
+  },
   "jester": {
     "cost": {
       "treasure": 5

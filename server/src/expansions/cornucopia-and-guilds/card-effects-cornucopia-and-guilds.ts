@@ -565,6 +565,51 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'infirmary': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (cardEffectArgs, eventArgs) => {
+        if (!eventArgs.overpaid) {
+          console.log(`[infirmary onGained] no overpay cost spent for ${eventArgs.cardId}`);
+          return;
+        }
+        
+        console.log(`[infirmary onGained] ${eventArgs.playerId} overpaid for ${eventArgs.cardId}`);
+        
+        for (let i = 0; i < eventArgs.overpaid; i++) {
+          await cardEffectArgs.runGameActionDelegate('playCard', {
+            playerId: eventArgs.playerId,
+            cardId: eventArgs.cardId
+          });
+        }
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[infirmary effect] drawing 1 card`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Trash card`,
+        restrict: { from: { location: 'playerHands' } },
+        count: 1,
+        optional: true
+      }) as CardId[];
+      
+      if (!selectedCardIds[0]) {
+        console.log(`[infirmary effect] no cards selected`);
+        return;
+      }
+      
+      const card = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+      
+      console.log(`[infirmary effect] player ${cardEffectArgs.playerId} trashing ${card}`);
+      
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCardIds[0],
+      });
+    }
+  },
   'jester': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[jester effect] gaining 2 treasure`);
