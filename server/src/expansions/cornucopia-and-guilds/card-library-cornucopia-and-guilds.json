@@ -49,6 +49,12 @@
     },
     "type": ["ACTION"]
   },
+  "footpad": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "ATTACK"]
+  },
   "hamlet": {
     "cost": {
       "treasure": 2

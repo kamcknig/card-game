@@ -83,7 +83,7 @@ export class ReactionManager {
     this._reactions.push(new Reaction(reactionTemplate) as any);
   }
   
-  async triggerGameLifecycleEvent<T extends GameLifecycleEvent>(trigger: T, ...args: GameLifeCycleEventArgsMap[T] extends void ? [] : [GameLifeCycleEventArgsMap[T]]) {
+  async runGameLifecycleEvent<T extends GameLifecycleEvent>(trigger: T, ...args: GameLifeCycleEventArgsMap[T] extends void ? [] : [GameLifeCycleEventArgsMap[T]]) {
     for (const handler of this._expansionGameEventHandlers[trigger] ?? []) {
       await handler({
         cardPriceController: this.cardPriceController,

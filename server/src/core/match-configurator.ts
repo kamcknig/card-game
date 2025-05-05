@@ -13,7 +13,6 @@ import {
 } from '../types.ts';
 import { addMatToMatchConfig } from '../utils/add-mat-to-match-config.ts';
 import { compare, Operation } from 'https://esm.sh/v123/fast-json-patch@3.1.1/index.js';
-import { registerGameEvents } from '../expansions/cornucopia-and-guilds/configurator-cornucopia-and-guilds.ts';
 
 export class MatchConfigurator {
   private _requestedKingdoms: CardNoId[] = [];
@@ -213,7 +212,7 @@ export class MatchConfigurator {
       try {
         const module = await import((`@expansions/${expansion}/configurator-${expansion}.ts`));
         if (!module.registerGameEvents) continue;
-        module.registerGameEvents(gameEventRegistrar);
+        module.registerGameEvents(gameEventRegistrar, this._config);
       } catch (error) {
         if ((error as any )?.code === 'ERR_MODULE_NOT_FOUND') {
           continue;

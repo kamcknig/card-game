@@ -432,7 +432,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     this._matchSnapshot = this.getMatchSnapshot();
     
-    await this._reactionManager?.triggerGameLifecycleEvent('onGameStart', { match: this._match });
+    await this._reactionManager?.runGameLifecycleEvent('onGameStart', { match: this._match });
     
     this.broadcastPatch(this._matchSnapshot);
     

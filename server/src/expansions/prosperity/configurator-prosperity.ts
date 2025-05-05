@@ -10,6 +10,7 @@ import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
+import { ComputedMatchConfiguration } from "shared/shared-types.ts";
 
 const configurator: ExpansionConfiguratorFactory = () => {
   let charlatanConfigured: boolean = false;
@@ -80,7 +81,7 @@ export const registerEndGameConditions = (registrar: EndGameConditionRegistrar) 
   })
 }
 
-export const registerGameEvents: (registrar: GameEventRegistrar) => void = (registrar) => {
+export const registerGameEvents: (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => void = (registrar) => {
   registrar('onGameStart', async (args) => {
     
     const peddlerCardIds = findCards(args.match, {

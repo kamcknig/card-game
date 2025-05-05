@@ -2,6 +2,9 @@ import './types.ts'
 import { ActionRegistry, ClientEventRegistry, ExpansionConfiguratorFactory, GameEventRegistrar } from '../../types.ts';
 import { configureYoungWitch } from './check-young-witch.ts';
 import { configureFerryman } from './configure-ferryman.ts';
+import { ComputedMatchConfiguration } from 'shared/shared-types.ts';
+import { getTurnPhase } from '../../utils/get-turn-phase.ts';
+import { findCards } from '../../utils/find-cards.ts';
 
 export const configurator: ExpansionConfiguratorFactory = () => {
   return (args) => {
@@ -11,17 +14,40 @@ export const configurator: ExpansionConfiguratorFactory = () => {
   }
 }
 
-export const registerGameEvents: (registrar: GameEventRegistrar) => void = (registrar) => {
-  registrar('onGameStart', async (args) => {
-    if (args.match.config.kingdomCards.some(card => card.cardKey === 'baker')) {
-      console.log(`[cornucopia onGameStart event] setting up baker - +1 coffer to each player`);
+export const registerGameEvents: (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => void = (registrar, config) => {
+  if (config.kingdomCards.some(card => card.cardKey === 'footpad')) {
+    console.log(`[cornucopia configurator] setting up footpad onCardGained handler`);
+    
+    registrar('onCardGained', async (args, eventArgs) => {
+      if (getTurnPhase(args.match.turnPhaseIndex) !== 'action') return;
+      
+      const card = args.cardLibrary.getCard(eventArgs.cardId);
+      
+      console.log(`[cornucopia onCardGained event] player ${eventArgs.playerId} gained ${card} during action phase, drawing card`);
+      
+      // todo hacky to use just any card by id for the source. eventually source needs to be more dynamic
+      const footpadCardIds = findCards(
+        args.match,
+        { cards: { cardKeys: 'footpad' } },
+        args.cardLibrary
+      );
+      
+      await args.runGameActionDelegate('drawCard', { playerId: eventArgs.playerId }, { loggingContext: { source: footpadCardIds[0] } });
+    });
+  }
+  
+  if (config.kingdomCards.some(card => card.cardKey === 'baker')) {
+    console.log(`[cornucopia configurator] setting up baker onGameStart handler`);
+    
+    registrar('onGameStart', async (args) => {
+      console.log(`[cornucopia onGameStart event] setting up baker - +1 coffer to each player on game start`);
       args.match.coffers ??= {};
       for (const player of args.match.players) {
         args.match.coffers[player.id] ??= 0;
         args.match.coffers[player.id] += 1;
       }
-    }
-  });
+    });
+  }
 }
 
 export const registerClientEvents: ClientEventRegistry = (registrar, { match }) => {

@@ -206,6 +206,12 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       bought: context?.bought ?? false,
       overpaid: context?.overpay ?? 0
     });
+    
+    await this.reactionManager.runGameLifecycleEvent('onCardGained', {
+      cardId: args.cardId,
+      playerId: args.playerId,
+      match: this.match
+    });
   }
   
   async userPrompt(args: UserPromptActionArgs) {

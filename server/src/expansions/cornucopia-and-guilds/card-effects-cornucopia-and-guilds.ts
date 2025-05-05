@@ -316,6 +316,37 @@ const expansion: CardExpansionModule = {
       });
     }
   },
+  'footpad': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[footpad effect] gaining 2 coffers`);
+      await cardEffectArgs.runGameActionDelegate('gainCoffer', { playerId: cardEffectArgs.playerId, count: 2 });
+      
+      const targetPlayerIds = findOrderedTargets({
+        match: cardEffectArgs.match,
+        appliesTo: 'ALL_OTHER',
+        startingPlayerId: cardEffectArgs.playerId
+      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      
+      for (const targetPlayerId of targetPlayerIds) {
+        const hand = cardEffectArgs.match.playerDiscards[targetPlayerId];
+        const numToDiscard = hand.length - 3;
+        if (numToDiscard <= 0) {
+          console.log(`[footpad effect] player ${targetPlayerId} already at 3 or less`);
+          continue;
+        }
+        
+        console.log(`[footpad effect] player ${targetPlayerId} discarding ${numToDiscard} cards`);
+        
+        for (let i = 0; i < numToDiscard; i++) {
+          const cardId = hand.slice(-1)[0];
+          await cardEffectArgs.runGameActionDelegate('discardCard', {
+            cardId: cardId,
+            playerId: targetPlayerId
+          });
+        }
+      }
+    }
+  },
   'hamlet': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[hamlet effect] drawing 1 card, and gaining 1 action`);
@@ -544,11 +575,11 @@ const expansion: CardExpansionModule = {
       console.log(`[remake effect] selecting ${count} cards`);
       
       for (let i = 0; i < count; i++) {
-        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        let selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
           playerId: cardEffectArgs.playerId,
           prompt: `Trash card`,
           restrict: { from: { location: 'playerHands' } },
-          count,
+          count: 1,
         }) as CardId[];
         
         const selectedId = selectedCardIds[0];
@@ -584,6 +615,20 @@ const expansion: CardExpansionModule = {
         
         if (!availableCardIds.length) {
           console.log(`[remake effect] no cards in supply with cost ${cost}`);
+          continue;
+        }
+        
+        selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Gain card`,
+          restrict: availableCardIds,
+          count: 1
+        }) as CardId[];
+        
+        const selectedCardId = selectedCardIds[0];
+        
+        if (!selectedCardId) {
+          console.warn(`[remake effect] no card selected`);
           continue;
         }
         

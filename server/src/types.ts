@@ -382,10 +382,13 @@ export type GameLifecycleCallbackContext = {
 export type GameLifecycleCallback = (args: Omit<GameLifecycleCallbackContext, 'cardId'>, ...rest: any[]) => Promise<CardLifecycleCallbackResult | void>;
 export type CardGameLifeCycleCallback = (args: GameLifecycleCallbackContext, ...rest: any[]) => Promise<void>;
 
-export type GameLifecycleEvent = 'onGameStart';
+export type GameLifecycleEvent =
+  | 'onGameStart'
+  | 'onCardGained';
 
 export type GameLifeCycleEventArgsMap = {
-  onGameStart: { match: Match};
+  onGameStart: { match: Match };
+  onCardGained: { cardId: CardId, playerId: PlayerId, match: Match}
 }
 
 type CardLifecycleCallbackContext = {

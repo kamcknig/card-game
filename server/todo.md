@@ -15,12 +15,13 @@ they need to be asked for their input again
 - need to finish implementation of coffers
   - state, actions, game setup with cards like baker has been completed. using overpay should account for coffers as
 well. need to work on displaying them and being able spend them during a player's turn to get treasure
+- overpay from cornucopia and guilds - overpay cards typically show a "+" on the cost icon of the card
 
 
 CORNUCOPIA expansion
 - tournament card effects have been built but prizes haven't been implemented. so once prizes are in, then need to add the final effect for tournament for cards like charaltan in prosoperity that change cards need a way to display that change in the UI
 
-need to show the context of the kingdom card for something like young witch
+need to show the context of the kingdom card for something like young witch, and ferryman
 - dominion.games puts the word "bane" in the type area of the card (but only while it's in the supply)
   - it also puts it in the detail view of both the witch and the bane card, when viewing the details of one or the
 other, it will show the opposite card smaller next to it
