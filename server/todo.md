@@ -12,6 +12,9 @@
   - when player disconnects - ask others to vote to continue. leave the player in game, they just skip their turn 
   - work on the use-case when a player disconnects while waiting on input for that player - when they reconnected
 they need to be asked for their input again
+- need to finish implementation of coffers
+  - state, actions, game setup with cards like baker has been completed. using overpay should account for coffers as
+well. need to work on displaying them and being able spend them during a player's turn to get treasure
 
 
 CORNUCOPIA expansion
