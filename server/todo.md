@@ -32,3 +32,8 @@ need to show the context of the kingdom card for something like young witch, and
 - dominion.games puts the word "bane" in the type area of the card (but only while it's in the supply)
 - it also puts it in the detail view of both the witch and the bane card, when viewing the details of one or the
 other, it will show the opposite card smaller next to it
+
+currently working on
+ - joust
+   - need to create non supply cards at start of game
+   - need to display non-supply cards in UI
