@@ -136,6 +136,14 @@
     },
     "type": ["ACTION", "ATTACK"]
   },
+  "stone-mason": {
+    "cardName": "Stone Mason",
+    "cost": {
+      "treasure": 2
+    },
+    "type": ["ACTION"],
+    "tags": ["overpay"]
+  },
   "young-witch": {
     "cardName": "Young Witch",
     "cost": {

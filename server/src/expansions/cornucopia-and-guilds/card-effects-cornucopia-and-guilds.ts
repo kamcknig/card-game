@@ -1014,6 +1014,93 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'stone-mason': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const hand = cardEffectArgs.match.playerHands[cardEffectArgs.playerId];
+      if (hand.length === 0) {
+        console.log(`[stone mason effect] no cards in hand`);
+        return;
+      }
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Trash card`,
+        restrict: { from: { location: 'playerHands' } },
+        count: 1
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.warn(`[stone mason effect] no card selected`);
+        return;
+      }
+      
+      const card = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+      
+      console.log(`[stone mason effect] player ${cardEffectArgs.playerId} trashing ${card}`);
+      
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCardIds[0],
+      });
+      
+      const { cost } = cardEffectArgs.cardPriceController.applyRules(card, {
+        match: cardEffectArgs.match,
+        playerId: cardEffectArgs.playerId
+      });
+      
+      const cardIds = findCards(
+        cardEffectArgs.match,
+        {
+          location: ['supply', 'kingdom'],
+          cost: {
+            cardCostController: cardEffectArgs.cardPriceController,
+            spec: {
+              kind: 'upTo',
+              playerId: cardEffectArgs.playerId,
+              amount: {
+                treasure: cost.treasure - 1,
+                potion: 1
+              }
+            }
+          }
+        },
+        cardEffectArgs.cardLibrary
+      );
+      
+      if (!cardIds.length) {
+        console.log(`[stone mason effect] no cards in supply with cost ${cost} or less to gain`);
+        return;
+      }
+      
+      const numToGain = Math.min(2, cardIds.length);
+      
+      console.log(`[stone mason effect] player ${cardEffectArgs.playerId} gaining ${numToGain} cards`);
+      
+      for (let i = 0; i < numToGain; i++) {
+        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Gain card`,
+          restrict: cardIds,
+          count: 1,
+        }) as CardId[];
+        
+        if (!selectedCardIds.length) {
+          console.warn(`[stone mason effect] no card selected`);
+          continue;
+        }
+      
+        const card = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+        
+        console.log(`[stone mason effect] player ${cardEffectArgs.playerId} gaining ${card}`);
+        
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: selectedCardIds[0],
+          to: { location: 'playerDiscards' }
+        });
+      }
+    }
+  },
   'young-witch': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[young witch effect] drawing 2 cards`);
