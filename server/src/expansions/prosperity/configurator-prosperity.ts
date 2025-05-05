@@ -16,7 +16,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
   let charlatanConfigured: boolean = false;
   let prosperityCheckConfigured: boolean = false;
   
-  return (args) => {
+  return async (args) => {
     const kingdomCards = args.config.kingdomCards;
     const randomKingdomCard = kingdomCards[Math.floor(kingdomCards.length * Math.random())];
     

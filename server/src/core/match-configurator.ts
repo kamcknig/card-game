@@ -237,7 +237,7 @@ export class MatchConfigurator {
       iteration++;
       for (const [expansionName, expansionConfigurator] of iter) {
         console.log(`[match configurator] running expansion configurator for expansion '${expansionName}'`);
-        expansionConfigurator({
+        await expansionConfigurator({
           cardEffectRegistrar,
           actionRegistrar,
           config: this._config,

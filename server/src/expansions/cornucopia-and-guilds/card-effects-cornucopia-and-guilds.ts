@@ -748,6 +748,15 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'joust': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[joust effect] drawing 1 card, and gaining 1 action, and 1 treasure`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+      
+    }
+  },
   'menagerie': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[menagerie effect] gaining 1 action`);

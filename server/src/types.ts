@@ -210,8 +210,8 @@ export type ExpansionConfiguratorContext = {
   actionRegistrar: GameActionController['registerAction'];
 };
 
-export type ExpansionConfigurator = (args: ExpansionConfiguratorContext) => ComputedMatchConfiguration;
-export type ExpansionConfiguratorFactory = () => (args: ExpansionConfiguratorContext) => ComputedMatchConfiguration;
+export type ExpansionConfigurator = (args: ExpansionConfiguratorContext) => Promise<ComputedMatchConfiguration>;
+export type ExpansionConfiguratorFactory = () => ExpansionConfigurator;
 
 export type CardScoringFunction = (args: CardScoringFnContext) => number;
 

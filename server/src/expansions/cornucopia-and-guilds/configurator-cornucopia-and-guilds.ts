@@ -1,15 +1,17 @@
 import './types.ts'
 import { ActionRegistry, ClientEventRegistry, ExpansionConfiguratorFactory, GameEventRegistrar } from '../../types.ts';
-import { configureYoungWitch } from './check-young-witch.ts';
+import { configureYoungWitch } from './configure-young-witch.ts';
 import { configureFerryman } from './configure-ferryman.ts';
 import { ComputedMatchConfiguration } from 'shared/shared-types.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { findCards } from '../../utils/find-cards.ts';
+import { configureJoust } from './configure-joust.ts';
 
 export const configurator: ExpansionConfiguratorFactory = () => {
-  return (args) => {
+  return async (args) => {
     configureYoungWitch(args);
     configureFerryman(args);
+    await configureJoust(args);
     return args.config;
   }
 }

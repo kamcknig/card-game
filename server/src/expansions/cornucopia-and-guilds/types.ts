@@ -10,6 +10,7 @@ declare module '../../types' {
 declare module 'shared/shared-types.ts' {
   interface Match {
     coffers?: Record<PlayerId, number>;
+    nonSupplyCards?: CardId[];
   }
   
   interface ServerListenEvents {

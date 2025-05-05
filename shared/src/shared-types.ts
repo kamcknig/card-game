@@ -28,6 +28,8 @@ export type MatchConfiguration = {
 }
 
 export type ComputedMatchConfiguration = MatchConfiguration & {
+  nonSupplyCards?: CardNoId[];
+  nonSupplyCardCount?: Record<CardKey, number>;
   basicCardCount: Record<CardKey, number>;
   kingdomCardCount: Record<CardKey, number>;
   startingHand: Record<CardKey, number>;

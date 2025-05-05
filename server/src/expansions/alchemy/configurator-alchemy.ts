@@ -3,7 +3,7 @@ import { ExpansionConfiguratorFactory } from '../../types.ts';
 const configurator: ExpansionConfiguratorFactory = () => {
   let potionConfigured = false;
   
-  return (args) => {
+  return async (args) => {
     console.log(`configuring match for alchemy`);
     
     if (potionConfigured) {
