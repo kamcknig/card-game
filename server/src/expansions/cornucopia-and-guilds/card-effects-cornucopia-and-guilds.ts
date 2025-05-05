@@ -6,6 +6,7 @@ import { findCards } from '../../utils/find-cards.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { getPlayerStartingFrom } from '../../shared/get-player-position-utils.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
+import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 
 const expansion: CardExpansionModule = {
   'advisor': {
@@ -776,6 +777,39 @@ const expansion: CardExpansionModule = {
         console.log(`[menagerie effect] not all cards in hand are unique, gaining 1 card`);
         await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
       }
+    }
+  },
+  'merchant-guild': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[merchant guild effect] gaining 1 buy, and 1 treasure`);
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate({
+        id: `merchant-guild:${cardEffectArgs.cardId}:endTurnPhase`,
+        playerId: cardEffectArgs.playerId,
+        listeningFor: 'endTurnPhase',
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: (conditionArgs) => {
+          if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) === 'buy') return false;
+          return true;
+        },
+        triggeredEffectFn: async (triggerEffectArgs) => {
+          const turnBought = triggerEffectArgs.match.stats.cardsGained[cardEffectArgs.cardId].turnNumber;
+          const cardIdsGained = triggerEffectArgs.match.stats.cardsGainedByTurn[turnBought];
+          const cardsGained = cardIdsGained.map(triggerEffectArgs.cardLibrary.getCard);
+          const ownGained = cardsGained.filter(card => card.owner === cardEffectArgs.playerId);
+          
+          console.log(`[merchant guild triggered effect] gaining ${ownGained.length} coffers`);
+          
+          await cardEffectArgs.runGameActionDelegate('gainCoffer', {
+            playerId: cardEffectArgs.playerId,
+            count: ownGained.length
+          }, { loggingContext: { sourceId: cardEffectArgs.cardId } });
+        }
+      })
     }
   },
   'remake': {

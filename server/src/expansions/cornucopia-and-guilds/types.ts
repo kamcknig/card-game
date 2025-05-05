@@ -1,8 +1,9 @@
 import { PlayerId } from 'shared/shared-types.ts';
+import { GameActionContext } from '../../types.ts';
 
 declare module '../../types' {
   interface GameActionDefinitionMap {
-    gainCoffer: (args: { playerId: PlayerId, count: number; }) => Promise<void>;
+    gainCoffer: (args: { playerId: PlayerId, count: number; }, context?: GameActionContext) => Promise<void>;
   }
 }
 

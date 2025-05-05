@@ -106,6 +106,12 @@
     },
     "type": ["ACTION"]
   },
+  "merchant-guild": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"]
+  },
   "remake": {
     "cost": {
       "treasure": 4
