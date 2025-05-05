@@ -112,7 +112,7 @@ export type ModifyActionCardArgs = {
 };
 
 export interface BaseGameActionDefinitionMap {
-  buyCard: (args: { cardId: CardId; playerId: PlayerId }) => Promise<void>;
+  buyCard: (args: { cardId: CardId; playerId: PlayerId, overpay?: number }) => Promise<void>;
   checkForRemainingPlayerActions: () => Promise<void>;
   discardCard: (args: { cardId: CardId, playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
   drawCard: (args: { playerId: PlayerId, count?: number }, context?: GameActionContext) => Promise<CardId[] | null>

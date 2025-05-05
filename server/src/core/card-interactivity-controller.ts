@@ -188,7 +188,30 @@ export class CardInteractivityController {
         await this._matchController.runGameAction('playCard', { playerId, cardId });
       }
       else {
-        await this._matchController.runGameAction('buyCard', { playerId, cardId });
+        const card = this._cardLibrary.getCard(cardId);
+        if (card.tags.includes('overpay')) {
+          
+          const { cost } = this._cardPriceController.applyRules(card, {
+            match: this.match,
+            playerId
+          });
+          
+          if (this.match.playerTreasure > cost.treasure) {
+            const result = await this._matchController.runGameAction('userPrompt', {
+              prompt: 'Overpay?',
+              playerId: playerId,
+              content: {
+                type: 'overpay',
+                amount: this.match.playerTreasure - cost.treasure
+              }
+            }) as { action: number, result: number[] };
+          }
+          
+          // todo front-end modal to display overpaying, getting response and sending it as amount below,
+          // testing farrier's end turn to get the effect
+        }
+        
+        await this._matchController.runGameAction('buyCard', { playerId, cardId, overpay: 0 });
       }
     }
     else if (phase === 'action') {

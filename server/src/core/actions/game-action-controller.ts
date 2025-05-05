@@ -35,6 +35,8 @@ import { castArray, isNumber } from 'es-toolkit/compat';
 import { ReactionManager } from '../reactions/reaction-manager.ts';
 import { CardInteractivityController } from '../card-interactivity-controller.ts';
 import { CardPriceRulesController } from '../card-price-rules-controller.ts';
+import { Protocol } from 'npm:playwright-core@1.51.1/types/protocol.d.ts';
+import Overlay = Protocol.Overlay;
 
 export class GameActionController implements BaseGameActionDefinitionMap {
   private customActionHandlers: Partial<GameActionDefinitionMap> = {};
@@ -359,9 +361,11 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     });
   }
   
-  async buyCard(args: { cardId: CardId; playerId: PlayerId }) {
+  async buyCard(args: { cardId: CardId; playerId: PlayerId, overpay?: number }) {
+    const card = this.cardLibrary.getCard(args.cardId);
+    
     const { cost } = this.cardPriceRuleController.applyRules(
-      this.cardLibrary.getCard(args.cardId),
+      card,
       {
         match: this.match,
         playerId: args.playerId
@@ -376,16 +380,18 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     this.match.playerBuys--;
     
+    this.match.stats.cardsBought[args.cardId] = {
+      turnNumber: this.match.turnNumber,
+      playerId: args.playerId,
+      cost: cost.treasure,
+      paid: cost.treasure + (args.overpay ?? 0)
+    }
+    
     await this.gainCard({
       playerId: args.playerId,
       cardId: args.cardId,
       to: { location: 'playerDiscards' }
     }, { bought: true, overpaid: 0 });
-    
-    this.match.stats.cardsBought[args.cardId] = {
-      turnNumber: this.match.turnNumber,
-      playerId: args.playerId,
-    }
   }
   
   async revealCard(args: {

@@ -62,6 +62,13 @@
           "type": "integer",
           "description": "Number of 'static' victory points the card is worth."
         },
+        "tags": {
+          "description": "A list of tags applied to the object, can be used for filter operations.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "cost": {
           "type": "object",
           "properties": {

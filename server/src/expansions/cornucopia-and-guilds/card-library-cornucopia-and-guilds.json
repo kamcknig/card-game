@@ -36,6 +36,13 @@
     },
     "type": ["ACTION"]
   },
+  "farrier": {
+    "cost": {
+      "treasure": 2
+    },
+    "type": ["ACTION"],
+    "tags": ["overpay"]
+  },
   "hamlet": {
     "cost": {
       "treasure": 2

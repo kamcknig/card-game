@@ -6,9 +6,9 @@ export type CardId = number;
 
 /****************
  
-    MATCH types
-
-***************/
+ MATCH types
+ 
+ ***************/
 export type MatchConfiguration = {
   players: Player[];
   
@@ -51,7 +51,14 @@ export type MatchStats = {
   playedCards: Record<CardId, CardStats>;
   playedCardsByTurn: Record<number, CardId[]>;
   trashedCards: Record<PlayerId, CardStats>;
-  cardsBought: Record<PlayerId, CardStats>;
+  cardsBought: Record<PlayerId, CardStats & {
+    
+    // the cost when it was bought
+    cost: number;
+    
+    // the amount used to buy it
+    paid: number;
+  }>;
 };
 
 export interface Match {
@@ -86,33 +93,31 @@ export type CardOverrides = Record<PlayerId, Record<CardId, Partial<Card>>>;
  
  LOG types
  
-******************/
+ ******************/
 
 export type LogEntrySource = CardId;
 
 export type LogEntry =
-  | { type: 'draw'; playerId: PlayerId; cardId: CardId; depth?: number; source?: LogEntrySource}
-  | { type: 'discard'; playerId: PlayerId; cardId: CardId; depth?: number; source?: LogEntrySource}
-  | { type: 'gainAction'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource}
+  | { type: 'draw'; playerId: PlayerId; cardId: CardId; depth?: number; source?: LogEntrySource }
+  | { type: 'discard'; playerId: PlayerId; cardId: CardId; depth?: number; source?: LogEntrySource }
+  | { type: 'gainAction'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'gainBuy'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
-  | { type: 'gainTreasure'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource}
-  | { type: 'gainVictoryToken'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource}
-  | { type: 'gainCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource}
-  | { type: 'cardPlayed'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource}
-  | { type: 'revealCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource}
-  | { type: 'trashCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource}
+  | { type: 'gainTreasure'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
+  | { type: 'gainVictoryToken'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
+  | { type: 'gainCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource }
+  | { type: 'cardPlayed'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource }
+  | { type: 'revealCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource }
+  | { type: 'trashCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'shuffleDeck'; playerId: PlayerId; depth?: number; source?: LogEntrySource }
-  | { type: 'newTurn'; turn: number; depth?: number; source?: LogEntrySource}
-  | { type: 'newPlayerTurn'; turn: number; playerId: PlayerId; depth?: number; source?: LogEntrySource};
-
-
+  | { type: 'newTurn'; turn: number; depth?: number; source?: LogEntrySource }
+  | { type: 'newPlayerTurn'; turn: number; playerId: PlayerId; depth?: number; source?: LogEntrySource };
 
 
 /***************
  
  GAME ACTION types
  
-*********************/
+ *********************/
 
 export type SelectActionCardArgs = {
   restrict: EffectRestrictionSpec | number[];
@@ -128,8 +133,9 @@ export type SelectActionCardArgs = {
 export type UserPromptKinds =
   | { type: 'blind-rearrange'; cardIds: CardId[]; }
   | { type: 'rearrange'; cardIds: CardId[]; }
-  | { type: 'name-card' }
-  | { type: 'select'; cardIds: CardId[]; selectCount: CountSpec };
+  | { type: 'name-card'; }
+  | { type: 'overpay'; amount: number; }
+  | { type: 'select'; cardIds: CardId[]; selectCount: CountSpec; };
 
 export type UserPromptActionArgs = {
   playerId: PlayerId;
