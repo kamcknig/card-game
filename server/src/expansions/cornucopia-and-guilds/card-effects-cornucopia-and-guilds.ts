@@ -1,5 +1,5 @@
 import './types.ts';
-import { Card, CardId } from 'shared/shared-types.ts';
+import { Card, CardId, CardKey } from 'shared/shared-types.ts';
 import { CardExpansionModule } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { findCards } from '../../utils/find-cards.ts';
@@ -698,6 +698,51 @@ const expansion: CardExpansionModule = {
               to: { location: 'playerDiscards' }
             });
           }
+        }
+      }
+    }
+  },
+  'journeyman': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        prompt: 'Name a card',
+        playerId: cardEffectArgs.playerId,
+        content: { type: 'name-card' }
+      }) as { action: number, result: CardKey };
+      
+      const key = result.result;
+      
+      const deck = cardEffectArgs.match.playerDecks[cardEffectArgs.playerId];
+      const discard = cardEffectArgs.match.playerDiscards[cardEffectArgs.playerId];
+      let count = 0;
+      while (deck.length + discard.length > 0 && count < 3) {
+        if (deck.length === 0) {
+          console.warn(`[journeyman effect] no cards in deck, shuffling`);
+          await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+          
+          if (deck.length === 0) {
+            console.warn(`[journeyman effect] no cards in deck after shuffling`);
+            break;
+          }
+        }
+        
+        const cardId = deck.slice(-1)[0];
+        await cardEffectArgs.runGameActionDelegate('revealCard', {
+          cardId,
+          playerId: cardEffectArgs.playerId,
+          moveToSetAside: true
+        });
+        const card = cardEffectArgs.cardLibrary.getCard(cardId);
+        if (card.cardKey === key) {
+          await cardEffectArgs.runGameActionDelegate('discardCard', { cardId, playerId: cardEffectArgs.playerId });
+        }
+        else {
+          await cardEffectArgs.runGameActionDelegate('moveCard', {
+            cardId,
+            toPlayerId: cardEffectArgs.playerId,
+            to: { location: 'playerHands' }
+          });
+          count++;
         }
       }
     }
