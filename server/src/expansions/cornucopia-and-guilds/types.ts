@@ -3,7 +3,7 @@ import { GameActionContext } from '../../types.ts';
 
 declare module '../../types' {
   interface GameActionDefinitionMap {
-    gainCoffer: (args: { playerId: PlayerId, count: number; }, context?: GameActionContext) => Promise<void>;
+    gainCoffer: (args: { playerId: PlayerId, count?: number; }, context?: GameActionContext) => Promise<void>;
   }
 }
 

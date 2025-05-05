@@ -93,7 +93,7 @@ const expansion: CardExpansionModule = {
       console.log(`[candlestick maker effect] gaining 1 action, 1 buy, and 1 coffer`);
       await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
       await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
-      await cardEffectArgs.runGameActionDelegate('gainCoffer', { playerId: cardEffectArgs.playerId, count: 1 });
+      await cardEffectArgs.runGameActionDelegate('gainCoffer', { playerId: cardEffectArgs.playerId });
     }
   },
   'carnival': {
@@ -810,6 +810,36 @@ const expansion: CardExpansionModule = {
           }, { loggingContext: { sourceId: cardEffectArgs.cardId } });
         }
       })
+    }
+  },
+  'plaza': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[plaza effect] drawing 1 card, and gaining 2 actions`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Discard treasure`,
+        restrict: { from: { location: 'playerHands' }, card: { type: 'TREASURE' } },
+        count: 1,
+        optional: true,
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.log(`[plaza effect] no cards selected`);
+        return;
+      }
+      
+      const card = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+      console.log(`[plaza effect] player ${cardEffectArgs.playerId} discarding ${card}`);
+      
+      await cardEffectArgs.runGameActionDelegate('discardCard', {
+        cardId: selectedCardIds[0],
+        playerId: cardEffectArgs.playerId
+      });
+      
+      await cardEffectArgs.runGameActionDelegate('gainCoffer', { playerId: cardEffectArgs.playerId });
     }
   },
   'remake': {

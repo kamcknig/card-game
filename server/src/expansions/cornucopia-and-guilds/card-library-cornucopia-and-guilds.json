@@ -112,6 +112,12 @@
     },
     "type": ["ACTION"]
   },
+  "plaza": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"]
+  },
   "remake": {
     "cost": {
       "treasure": 4
