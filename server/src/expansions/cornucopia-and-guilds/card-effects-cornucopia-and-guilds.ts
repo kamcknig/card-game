@@ -1015,6 +1015,61 @@ const expansion: CardExpansionModule = {
     }
   },
   'stone-mason': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (cardEffectArgs, eventArgs) => {
+        if (!eventArgs.overpaid) {
+          console.log(`[stone mason triggered effect] ${eventArgs.cardId} was not overpaid, skipping`);
+          return;
+        }
+        
+        const cardIds = findCards(
+          cardEffectArgs.match,
+          {
+            location: ['supply', 'kingdom'],
+            cards: { type: 'ACTION' },
+            cost: {
+              cardCostController: cardEffectArgs.cardPriceController,
+              spec: { playerId: eventArgs.playerId, kind: 'exact', amount: { treasure: eventArgs.overpaid } }
+            }
+          },
+          cardEffectArgs.cardLibrary
+        );
+        
+        if (!cardIds.length) {
+          console.log(`[stone mason triggered effect] no cards in supply with cost ${eventArgs.overpaid}`);
+          return;
+        }
+        
+        const numToGain = Math.min(2, cardIds.length);
+        
+        console.log(`[stone mason triggered effect] gaining ${numToGain} cards`);
+        
+        for (let i = 0; i < numToGain; i++) {
+          const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+            playerId: eventArgs.playerId,
+            prompt: `Gain card`,
+            restrict: cardIds,
+            count: 1,
+          });
+          
+          if (!selectedCardIds.length) {
+            console.warn(`[stone mason triggered effect] no card selected`);
+            continue;
+          }
+          
+          const selectedCardId = selectedCardIds[0];
+          const card = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+          
+          console.log(`[stone mason triggered effect] player ${eventArgs.playerId} gaining ${card}`);
+          
+          await cardEffectArgs.runGameActionDelegate('gainCard', {
+            playerId: eventArgs.playerId,
+            cardId: selectedCardId,
+            to: { location: 'playerDiscards' }
+          });
+        }
+      }
+    }),
     registerEffects: () => async (cardEffectArgs) => {
       const hand = cardEffectArgs.match.playerHands[cardEffectArgs.playerId];
       if (hand.length === 0) {
@@ -1088,7 +1143,7 @@ const expansion: CardExpansionModule = {
           console.warn(`[stone mason effect] no card selected`);
           continue;
         }
-      
+        
         const card = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
         
         console.log(`[stone mason effect] player ${cardEffectArgs.playerId} gaining ${card}`);
