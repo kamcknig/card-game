@@ -61,6 +61,13 @@
     },
     "type": ["ACTION"]
   },
+  "herald": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"],
+    "tags": ["overpay"]
+  },
   "horn-of-plenty": {
     "cardName": "Horn of Plenty",
     "cost": {

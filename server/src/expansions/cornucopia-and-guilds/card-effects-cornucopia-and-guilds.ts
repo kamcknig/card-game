@@ -401,6 +401,94 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'herald': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (cardEffectArgs, eventArgs) => {
+        cardEffectArgs.reactionManager.registerReactionTemplate({
+          id: `herald:${eventArgs.cardId}:endTurn`,
+          playerId: eventArgs.playerId,
+          once: true,
+          compulsory: true,
+          allowMultipleInstances: true,
+          listeningFor: 'endTurn',
+          condition: () => true,
+          triggeredEffectFn: async (triggerEffectArgs) => {
+            if (!eventArgs.overpaid) {
+              console.log(`[herald triggered effect] no overpay cost spent for ${eventArgs.cardId}`);
+              return;
+            }
+            
+            console.log(`[herald triggered effect] ${eventArgs.playerId} overpaid for ${eventArgs.cardId}`);
+            
+            const discardIds = triggerEffectArgs.match.playerDiscards[eventArgs.playerId];
+            const numToChoose = Math.min(eventArgs.overpaid, discardIds.length);
+            
+            const result = await triggerEffectArgs.runGameActionDelegate('userPrompt', {
+              prompt: 'Top-deck from discard',
+              playerId: eventArgs.playerId,
+              actionButtons: [
+                { label: 'DONE', action: 1 }
+              ],
+              content: {
+                type: 'select',
+                cardIds: discardIds,
+                selectCount: {
+                  kind: 'upTo',
+                  count: numToChoose
+                }
+              },
+              validationAction: 1,
+            }) as { action: number, result: CardId[] };
+            
+            console.log(`[herald triggered effect] putting ${result.result.length} cards on top of deck`);
+            
+            for (const cardId of result.result) {
+              await cardEffectArgs.runGameActionDelegate('moveCard', {
+                cardId: cardId,
+                toPlayerId: eventArgs.playerId,
+                to: { location: 'playerDecks' }
+              });
+            }
+          }
+        })
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[herald effect] drawing 1 card, and gaining 1 action`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      
+      const deck = cardEffectArgs.match.playerDecks[cardEffectArgs.playerId];
+      
+      if (deck.length === 0) {
+        console.log(`[herald effect] no cards in deck, shuffling`);
+        await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+        
+        if (deck.length === 0) {
+          console.log(`[herald effect] no cards in deck after shuffling`);
+          return;
+        }
+      }
+      
+      const cardId = deck.slice(-1)[0];
+      const card = cardEffectArgs.cardLibrary.getCard(cardId);
+      
+      console.log(`[herald effect] player ${cardEffectArgs.playerId} revealing ${card}`);
+      
+      await cardEffectArgs.runGameActionDelegate('revealCard', {
+        cardId,
+        playerId: cardEffectArgs.playerId,
+      });
+      
+      if (card.type.includes('ACTION')) {
+        console.log(`[herald effect] card is an action card, playing it`);
+        await cardEffectArgs.runGameActionDelegate('playCard', {
+          cardId,
+          playerId: cardEffectArgs.playerId,
+        });
+      }
+    }
+  },
   'horn-of-plenty': {
     registerEffects: () => async (cardEffectArgs) => {
       const uniquelyNamesCardsInPlay = new Set(getCardsInPlay(cardEffectArgs.match)
