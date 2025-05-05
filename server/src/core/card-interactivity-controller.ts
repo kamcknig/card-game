@@ -191,7 +191,7 @@ export class CardInteractivityController {
       }
       else {
         const card = this._cardLibrary.getCard(cardId);
-        if (card.tags.includes('overpay')) {
+        if (card.tags?.includes('overpay')) {
           
           const { cost } = this._cardPriceController.applyRules(card, {
             match: this.match,

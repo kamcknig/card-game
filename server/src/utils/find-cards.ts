@@ -92,7 +92,7 @@ export const findCards = (
     
     if (!isUndefined(filter.cards?.tags)) {
       const tags = castArray(filter.cards.tags);
-      sourceCards = sourceCards.filter(card => card.tags.some(t => tags.includes(t)));
+      sourceCards = sourceCards.filter(card => card.tags?.some(t => tags.includes(t)));
     }
   }
   

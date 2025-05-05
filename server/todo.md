@@ -23,6 +23,7 @@ they need to be asked for their input again
   - using overpay should account for coffers as
   - need UI to exchange coffers for treasure
 - overpay from cornucopia and guilds
+- organize modules again.
 
 
 CORNUCOPIA expansion

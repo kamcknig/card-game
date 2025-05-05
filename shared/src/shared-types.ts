@@ -65,7 +65,7 @@ export type MatchStats = {
 
 export interface Match {
   activeDurationCards: CardId[];
-  config: MatchConfiguration,
+  config: ComputedMatchConfiguration,
   currentPlayerTurnIndex: number;
   kingdomSupply: CardId[];
   playArea: CardId[];
@@ -336,11 +336,11 @@ const CardTypeValues = [
 export type CardType = typeof CardTypeValues[number];
 
 export type CardArgs = {
-  tags: string[];
+  tags?: string[];
   facing?: CardFacing;
   id: CardId;
   type: CardType[];
-  isBasic: boolean;
+  isBasic?: boolean;
   cardName: string;
   mat: Mats | undefined;
   cost: {
@@ -363,10 +363,10 @@ export type CardCost = {
 }
 
 export class Card {
-  tags: string[] = [];
-  facing: CardFacing;
+  tags?: string[] = [];
+  facing?: CardFacing;
   id: CardId;
-  isBasic: boolean = false;
+  isBasic?: boolean = false;
   cardName: string;
   type: CardType[];
   mat: Mats | undefined;
@@ -384,7 +384,7 @@ export class Card {
   constructor(args: CardArgs) {
     this.tags = args.tags ?? [];
     this.facing = args.facing ?? 'front';
-    this.isBasic = args.isBasic;
+    this.isBasic = args.isBasic ?? false;
     this.id = args.id;
     this.type = args.type;
     this.cost = args.cost;

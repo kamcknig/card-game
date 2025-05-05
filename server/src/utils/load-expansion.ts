@@ -7,6 +7,20 @@ import { CardNoId } from 'shared/shared-types.ts';
 import { capitalize } from 'es-toolkit';
 import { cardActionConditionMapFactory } from '../core/actions/card-action-condition-map-factory.ts';
 
+export const createCardData = (cardKey: string, expansionName: string, templateData: Partial<CardNoId>) => {
+  const data = {
+    cardKey,
+    cardName: templateData.cardName ?? capitalize(cardKey),
+    expansionName,
+    detailImagePath: `./assets/card-images/${expansionName}/detail/${cardKey}.jpg`,
+    fullImagePath: `./assets/card-images/${expansionName}/full-size/${cardKey}.jpg`,
+    halfImagePath: `./assets/card-images/${expansionName}/half-size/${cardKey}.jpg`,
+    ...templateData ?? {},
+  }
+  
+  return data as CardNoId;
+};
+
 export const loadExpansion = async (expansion: { name: string; }) => {
   const expansionPath = `@expansions/${expansion.name}`;
   const expansionName = expansion.name;
@@ -51,21 +65,13 @@ export const loadExpansion = async (expansion: { name: string; }) => {
     
     console.log(`[expansion loader] loading card library for ${expansionName}`);
     const cardLibraryModule = await import(`${expansionPath}/card-library-${expansionName}.json`, { with: { type: 'json' } });
-    const cards = cardLibraryModule.default as Record<string, CardNoId>;
+    const cards = cardLibraryModule.default as Record<string, Partial<CardNoId>>;
     for (const key of Object.keys(cards)) {
-      const newCardData = {
-        ...cards[key],
-        cardKey: key,
-        expansionName,
-        cardName: cards[key].cardName ?? capitalize(key),
-        detailImagePath: `./assets/card-images/${expansionName}/detail/${key}.jpg`,
-        fullImagePath: `./assets/card-images/${expansionName}/full-size/${key}.jpg`,
-        halfImagePath: `./assets/card-images/${expansionName}/half-size/${key}.jpg`
-      };
+      const newCardData = createCardData(key, expansionName, cards[key]);
       
       const isBasic = newCardData.isBasic;
-      cardData[isBasic ? 'basicSupply' : 'kingdomSupply'][key] = newCardData
-      allCardLibrary[key] = newCardData;
+      cardData[isBasic ? 'basicSupply' : 'kingdomSupply'][key] = newCardData as any;
+      allCardLibrary[key] = newCardData as any;
     }
     console.log('[expansion loader] card library loaded');
     

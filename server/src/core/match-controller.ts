@@ -90,7 +90,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       basicSupply: [],
       kingdomSupply: [],
       playerDecks: {},
-      config: {} as MatchConfiguration,
+      config: {} as ComputedMatchConfiguration,
       turnNumber: 0,
       roundNumber: 0,
       currentPlayerTurnIndex: 0,
@@ -167,7 +167,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._interactivityController,
     );
     
-    await this._matchConfigurator?.initializeExpansions({
+    await this._matchConfigurator?.onPreKingdomCreation({
       match: this._match,
       gameEventRegistrar: (event: GameLifecycleEvent, handler: GameLifecycleCallback) => this._reactionManager?.registerGameEvent(event, handler),
       clientEventRegistrar: (event, handler) => this.clientEventRegistrar(event, handler),
@@ -186,6 +186,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this._match.playerDiscards = playerDiscards;
     this._match.config = this._matchConfiguration;
     this._match.mats = this._matchConfiguration.mats;
+    
+    await this._matchConfigurator?.onPostKingdomCreation({
+      match: this._match,
+      cardLibrary: this._cardLibrary
+    });
     
     console.log(`[match] ready, sending to clients and listening for when clients are ready`);
     
