@@ -267,6 +267,55 @@ const expansion: CardExpansionModule = {
       })
     }
   },
+  'ferryman': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (cardEffectArgs, eventArgs) => {
+        const cardIds = findCards(
+          cardEffectArgs.match,
+          { location: 'kingdom', cards: { tags: 'ferryman' } },
+          cardEffectArgs.cardLibrary
+        );
+        
+        if (!cardIds.length) {
+          console.log(`[ferryman effect] no ferryman cards in kingdom, can't gain`);
+          return;
+        }
+        
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: eventArgs.playerId,
+          cardId: cardIds.slice(-1)[0],
+          to: { location: 'playerDiscards' }
+        });
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[ferryman effect] drawing 2 cards, and 1 action`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Discard card`,
+        restrict: { from: { location: 'playerHands' } },
+        count: 1
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.warn(`[ferryman effect] no cards selected`);
+        return;
+      }
+      
+      const selectedCardId = selectedCardIds.slice(-1)[0];
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+      
+      console.log(`[ferryman effect] discarding ${selectedCard}`);
+      
+      await cardEffectArgs.runGameActionDelegate('discardCard', {
+        cardId: selectedCardId,
+        playerId: cardEffectArgs.playerId
+      });
+    }
+  },
   'hamlet': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[hamlet effect] drawing 1 card, and gaining 1 action`);

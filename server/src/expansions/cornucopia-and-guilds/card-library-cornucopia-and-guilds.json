@@ -43,6 +43,12 @@
     "type": ["ACTION"],
     "tags": ["overpay"]
   },
+  "ferryman": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"]
+  },
   "hamlet": {
     "cost": {
       "treasure": 2

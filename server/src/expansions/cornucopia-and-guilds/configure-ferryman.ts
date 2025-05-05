@@ -1,22 +1,27 @@
-import { expansionLibrary } from '../expansion-library.ts';
+import { CardKey } from "shared/shared-types.ts";
 import { ExpansionConfiguratorContext } from '../../types.ts';
-import { CardKey } from 'shared/shared-types.ts';
+import { expansionLibrary } from '../expansion-library.ts';
 
-export const configureYoungWitch = (args: ExpansionConfiguratorContext) => {
-  const youngWitchPresent = args.config.kingdomCards.some(card => card.cardKey === 'young-witch');
+export const configureFerryman = (args: ExpansionConfiguratorContext) => {
+  const ferrymanPresent = args.config.kingdomCards.some(card => card.cardKey === 'ferryman');
   
   // if no witch is present, or if the bane is already configured, no need to configure
-  if (!youngWitchPresent || args.config.kingdomCards.some(card => card.tags?.includes('bane'))) {
+  if (!ferrymanPresent || args.config.kingdomCards.some(card => card.tags?.includes('ferryman'))) {
     return;
   }
   
-  console.log(`[cornucopia configurator - configuring young-witch] young witch present in supply`);
+  console.log(`[cornucopia configurator - configuring ferryman] ferryman present in supply`);
   
   const availableKingdoms = args.config.expansions.reduce((acc, nextExpansion) => {
     const exp = expansionLibrary[nextExpansion.name];
     if (!exp) return acc;
     
     for (const key of Object.keys(exp.cardData.kingdomSupply)) {
+      const cost = exp.cardData.kingdomSupply[key].cost.treasure;
+      if (cost !== 3 && cost !== 4) {
+        return acc;
+      }
+      
       acc[key] = { cardKey: key, expansionName: nextExpansion.name };
     }
     return acc;
@@ -28,15 +33,15 @@ export const configureYoungWitch = (args: ExpansionConfiguratorContext) => {
     .filter(key => !bannedKeys.includes(key) && !kingdomCardKeys.includes(key));
   
   if (!availableKeys.length) {
-    console.log(`[cornucopia configurator - configuring young-witch] no available kingdoms, not adding new kingdom`);
+    console.log(`[cornucopia configurator - configuring ferryman] no available kingdoms, not adding new kingdom`);
     return;
   }
   
   const chosenKey = availableKeys[Math.floor(Math.random() * availableKeys.length)];
   
-  console.log(`[cornucopia configurator - configuring young-witch] adding ${chosenKey} to kingdom as the "bane" card`);
+  console.log(`[cornucopia configurator - configuring ferryman] adding ${chosenKey} to kingdom as the "ferryman" card`);
   
   const chosenCard = structuredClone(expansionLibrary[availableKingdoms[chosenKey].expansionName].cardData.kingdomSupply[chosenKey]);
-  chosenCard.tags = ['bane'];
+  chosenCard.tags = ['ferryman'];
   args.config.kingdomCards.push(chosenCard);
 }

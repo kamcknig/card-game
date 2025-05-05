@@ -14,6 +14,7 @@ export type FindCardsFilter = {
     cardCostController: CardPriceRulesController,
   };
   cards?: {
+    tags?: string | string[];
     cardKeys?: CardKey | CardKey[];
     type?: CardType | CardType[];
   }
@@ -77,9 +78,26 @@ export const findCards = (
     cardIds = cardLibrary.getAllCardsAsArray().map(card => card.id);
   }
   
+  let sourceCards = cardIds.map(cardLibrary.getCard);
+  
+  if (!isUndefined(filter.cards)) {
+    if (!isUndefined(filter.cards?.cardKeys)) {
+      const keys = castArray(filter.cards.cardKeys);
+      sourceCards = sourceCards.filter(card => keys.includes(card.cardKey));
+    }
+    if (!isUndefined(filter.cards?.type)) {
+      const types = castArray(filter.cards.type);
+      sourceCards = sourceCards.filter(card => card.type.some(t => types.includes(t)));
+    }
+    
+    if (!isUndefined(filter.cards?.tags)) {
+      const tags = castArray(filter.cards.tags);
+      sourceCards = sourceCards.filter(card => card.tags.some(t => tags.includes(t)));
+    }
+  }
+  
   if (filter.cost) {
-    cardIds = cardIds.filter(id => {
-      const card = cardLibrary.getCard(id);
+    sourceCards = sourceCards.filter(card => {
       const { cost: effectiveCost } = filter.cost!.cardCostController.applyRules(card, {
         match,
         playerId: filter.cost!.spec.playerId
@@ -88,16 +106,5 @@ export const findCards = (
     });
   }
   
-  if (!isUndefined(filter.cards)) {
-    if (!isUndefined(filter.cards?.cardKeys)) {
-      const keys = castArray(filter.cards.cardKeys);
-      cardIds = cardIds.filter(id => keys.includes(cardLibrary.getCard(id).cardKey))
-    }
-    if (!isUndefined(filter.cards?.type)) {
-      const types = castArray(filter.cards.type);
-      cardIds = cardIds.filter(id => cardLibrary.getCard(id).type.some(t => types.includes(t)));
-    }
-  }
-  
-  return cardIds;
+  return sourceCards.map(card => card.id);
 }

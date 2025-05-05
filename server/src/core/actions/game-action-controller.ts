@@ -203,8 +203,8 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     await this.reactionManager.runCardLifecycleEvent('onGained', {
       playerId: args.playerId,
       cardId: args.cardId,
-      bought: context.bought,
-      overpaid: context.overpay
+      bought: context?.bought ?? false,
+      overpaid: context?.overpay ?? 0
     });
   }
   

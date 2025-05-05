@@ -1,24 +1,25 @@
 import './types.ts'
 import { ActionRegistry, ClientEventRegistry, ExpansionConfiguratorFactory, GameEventRegistrar } from '../../types.ts';
 import { configureYoungWitch } from './check-young-witch.ts';
+import { configureFerryman } from './configure-ferryman.ts';
 
 export const configurator: ExpansionConfiguratorFactory = () => {
   return (args) => {
     configureYoungWitch(args);
+    configureFerryman(args);
     return args.config;
   }
 }
 
 export const registerGameEvents: (registrar: GameEventRegistrar) => void = (registrar) => {
   registrar('onGameStart', async (args) => {
-    if (!args.match.config.kingdomCards.some(card => card.cardKey === 'baker')) {
-      return;
-    }
-    console.log(`[cornucopia onGameStart event] adding initial 1 coffer to players because baker is present`);
-    args.match.coffers ??= {};
-    for (const player of args.match.players) {
-      args.match.coffers[player.id] ??= 0;
-      args.match.coffers[player.id] += 1;
+    if (args.match.config.kingdomCards.some(card => card.cardKey === 'baker')) {
+      console.log(`[cornucopia onGameStart event] setting up baker - +1 coffer to each player`);
+      args.match.coffers ??= {};
+      for (const player of args.match.players) {
+        args.match.coffers[player.id] ??= 0;
+        args.match.coffers[player.id] += 1;
+      }
     }
   });
 }
