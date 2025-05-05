@@ -183,6 +183,8 @@ export class CardInteractivityController {
     const phase = getTurnPhase(this.match.turnPhaseIndex);
     
     if (phase === 'buy') {
+      let overpay = 0;
+      
       const hand = this.match.playerHands[playerId];
       if (hand.includes(cardId)) {
         await this._matchController.runGameAction('playCard', { playerId, cardId });
@@ -199,19 +201,15 @@ export class CardInteractivityController {
           if (this.match.playerTreasure > cost.treasure) {
             const result = await this._matchController.runGameAction('userPrompt', {
               prompt: 'Overpay?',
+              actionButtons: [{ label: 'DONE', action: 1 }],
               playerId: playerId,
-              content: {
-                type: 'overpay',
-                amount: this.match.playerTreasure - cost.treasure
-              }
-            }) as { action: number, result: number[] };
+              content: { type: 'overpay', cost: cost.treasure }
+            }) as { action: number, result: number };
+            overpay = result.result ?? 0;
           }
-          
-          // todo front-end modal to display overpaying, getting response and sending it as amount below,
-          // testing farrier's end turn to get the effect
         }
         
-        await this._matchController.runGameAction('buyCard', { playerId, cardId, overpay: 0 });
+        await this._matchController.runGameAction('buyCard', { playerId, cardId, overpay });
       }
     }
     else if (phase === 'action') {

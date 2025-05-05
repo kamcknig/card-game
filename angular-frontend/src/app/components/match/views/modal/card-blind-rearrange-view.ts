@@ -57,6 +57,6 @@ export const cardBlindRearrangeView = (args: UserPromptKinds) => {
   container.on('removed', () => {
     container.removeAllListeners();
     sliderOnUpdate.disconnect();
-  })
+  });
   return container;
 }

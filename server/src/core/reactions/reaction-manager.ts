@@ -95,7 +95,7 @@ export class ReactionManager {
     }
   }
   
-  async triggerLifecycleEvent<T extends CardLifecycleEvent>(trigger: T, args: CardLifecycleEventArgMap[T]) {
+  async runCardLifecycleEvent<T extends CardLifecycleEvent>(trigger: T, args: CardLifecycleEventArgMap[T]) {
     const card = this._cardLibrary.getCard(args.cardId);
     
     const fn = cardLifecycleMap[card.cardKey]?.[trigger];
@@ -111,11 +111,10 @@ export class ReactionManager {
       match: this._match,
       reactionManager: this,
       runGameActionDelegate: this.runGameActionDelegate,
-    }, args);
+    }, args as any);
   }
   
   async runTrigger({ trigger, reactionContext }: { trigger: ReactionTrigger, reactionContext?: any }) {
-    this.logManager.enter();
     reactionContext ??= {};
     
     // now we get the order of players that could be affected by the play (including the current player),
@@ -225,7 +224,5 @@ export class ReactionManager {
         }
       }
     }
-    
-    this.logManager.exit();
   }
 }

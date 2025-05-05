@@ -123,7 +123,7 @@ export interface BaseGameActionDefinitionMap {
     playerId: PlayerId,
     cardId: CardId,
     to: CardLocationSpec
-  }, context?: GameActionContext & { bought?: boolean, overpaid?: number }) => Promise<void>;
+  }, context?: GameActionContext & { bought?: boolean, overpay?: number }) => Promise<void>;
   gainPotion: (args: { count: number }) => Promise<void>;
   gainTreasure: (args: { count: number }, context?: GameActionContext) => Promise<void>;
   moveCard: (args: { toPlayerId?: PlayerId, cardId: CardId, to: CardLocationSpec }) => Promise<CardLocation>;
@@ -396,17 +396,25 @@ type CardLifecycleCallbackContext = {
   runGameActionDelegate: RunGameActionDelegate;
 }
 
-export type CardLifecycleCallbackMap = {
-  onGained?: CardLifecycleCallback;
-  onEnterHand?: CardLifecycleCallback;
-  onLeaveHand?: CardLifecycleCallback;
-  onEnterPlay?: CardLifecycleCallback;
-  onLeavePlay?: CardLifecycleCallback;
-  onCardPlayed?: CardLifecycleCallback;
+export type CardLifecycleEvent =
+  | 'onGained'
+  | 'onEnterHand'
+  | 'onLeaveHand'
+  | 'onEnterPlay'
+  | 'onLeavePlay'
+  | 'onCardPlayed';
+
+export interface CardLifecycleCallbackMap {
+  onGained?: CardLifecycleCallback<'onGained'>;
+  onEnterHand?: CardLifecycleCallback<'onEnterHand'>;
+  onLeaveHand?: CardLifecycleCallback<'onLeaveHand'>;
+  onEnterPlay?: CardLifecycleCallback<'onEnterPlay'>;
+  onLeavePlay?: CardLifecycleCallback<'onLeavePlay'>;
+  onCardPlayed?: CardLifecycleCallback<'onCardPlayed'>;
 };
 
-export type CardLifecycleEventArgMap = {
-  onGained: { playerId: PlayerId, cardId: CardId, overpaid?: number; };
+export interface CardLifecycleEventArgMap {
+  onGained: { playerId: PlayerId, cardId: CardId, bought: boolean; overpaid: number; };
   onEnterHand: { playerId: PlayerId, cardId: CardId };
   onLeaveHand: { playerId: PlayerId, cardId: CardId };
   onEnterPlay: { playerId: PlayerId, cardId: CardId };
@@ -419,9 +427,7 @@ export type CardLifecycleCallbackResult = {
   unregisterTriggeredEvents?: string[];
 };
 
-export type CardLifecycleCallback = (args: CardLifecycleCallbackContext, rest: any) => Promise<CardLifecycleCallbackResult | void>;
-
-export type CardLifecycleEvent = keyof CardLifecycleCallbackMap;
+export type CardLifecycleCallback<T extends CardLifecycleEvent> = (args: CardLifecycleCallbackContext, rest: CardLifecycleEventArgMap[T]) => Promise<CardLifecycleCallbackResult | void>;
 
 export type ActionFunctionFactoryContext = {
   match: Match;

@@ -199,7 +199,7 @@ const expansion: CardExpansionModule = {
             },
             once: true,
             compulsory: true,
-            allowMultipleInstances: false,
+            allowMultipleInstances: true,
             playerId: eventArgs.playerId,
             triggeredEffectFn: async (triggerEffectArgs) => {
               await triggerEffectArgs.runGameActionDelegate('playCard', {
@@ -221,6 +221,50 @@ const expansion: CardExpansionModule = {
       console.log(`[farmhands effect] drawing 1 card, and 2 actions`);
       await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
       await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
+    }
+  },
+  'farrier': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (cardEffectArgs, eventArgs) => {
+        if (!eventArgs.bought || (eventArgs.overpaid ?? 0) === 0) {
+          return;
+        }
+        
+        cardEffectArgs.reactionManager.registerReactionTemplate({
+          id: `farrier:${eventArgs.cardId}:endTurn`,
+          listeningFor: 'endTurn',
+          playerId: eventArgs.playerId,
+          once: true,
+          allowMultipleInstances: true,
+          compulsory: true,
+          condition: () => true,
+          triggeredEffectFn: async (triggerEffectArgs) => {
+            await triggerEffectArgs.runGameActionDelegate('drawCard', {
+              playerId: eventArgs.playerId,
+              count: eventArgs.overpaid
+            }, { loggingContext: { source: eventArgs.cardId } });
+          }
+        });
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[farrier effect] drawing 1 card, gaining 1 action, and 1 buy`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate({
+        id: `farrier:${cardEffectArgs.cardId}:endTurn`,
+        listeningFor: 'endTurn',
+        playerId: cardEffectArgs.playerId,
+        allowMultipleInstances: true,
+        once: true,
+        compulsory: true,
+        condition: (conditionArgs) => true,
+        triggeredEffectFn: async (triggerEffectArgs) => {
+        
+        }
+      })
     }
   },
   'hamlet': {

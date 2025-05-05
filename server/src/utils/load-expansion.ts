@@ -40,8 +40,10 @@ export const loadExpansion = async (expansion: { name: string; }) => {
     expansionLibrary[expansionName].title = expansionConfiguration.title ? expansionConfiguration.title : currValue;
     expansionLibrary[expansionName].mutuallyExclusive = expansionConfiguration.mutuallyExclusive ?? [];
   } catch (error) {
-    console.warn(`[expansion loader] failed to load configuration for expansion ${expansionName}`);
-    console.log(error);
+    if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
+      console.warn(`[expansion loader] failed to load configuration for expansion ${expansionName}`);
+      console.log(error);
+    }
   }
   
   try {

@@ -11,6 +11,10 @@ export const configurator: ExpansionConfiguratorFactory = () => {
 
 export const registerGameEvents: (registrar: GameEventRegistrar) => void = (registrar) => {
   registrar('onGameStart', async (args) => {
+    if (!args.match.config.kingdomCards.some(card => card.cardKey === 'baker')) {
+      return;
+    }
+    console.log(`[cornucopia onGameStart event] adding initial 1 coffer to players because baker is present`);
     args.match.coffers ??= {};
     for (const player of args.match.players) {
       args.match.coffers[player.id] ??= 0;

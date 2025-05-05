@@ -27,6 +27,10 @@ export const currentPlayerTurnIndexStore =
   computed(matchStore, m => m?.currentPlayerTurnIndex ?? 0);
 (globalThis as any).currentPlayerTurnIndexStore = currentPlayerTurnIndexStore;
 
+export const currentPlayerStore =
+  computed([currentPlayerTurnIndexStore, playerTurnOrderStore], (turnIndex, turnOrder) => turnOrder[turnIndex]);
+(globalThis as any).currentPlayerStore = currentPlayerStore;
+
 export const currentPlayerTurnIdStore =
   computed([currentPlayerTurnIndexStore, playerTurnOrderStore], (turnIndex, turnOrder) => turnOrder[turnIndex]?.id);
 (globalThis as any).currentPlayerTurnIdStore = currentPlayerTurnIdStore;

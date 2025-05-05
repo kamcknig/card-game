@@ -2,7 +2,7 @@ import {
   CardId,
   CardKey,
   CardLocationSpec,
-  Match, Player,
+  Match,
   PlayerId,
   SelectActionCardArgs,
   TurnPhaseOrderValues,
@@ -35,8 +35,6 @@ import { castArray, isNumber } from 'es-toolkit/compat';
 import { ReactionManager } from '../reactions/reaction-manager.ts';
 import { CardInteractivityController } from '../card-interactivity-controller.ts';
 import { CardPriceRulesController } from '../card-price-rules-controller.ts';
-import { Protocol } from 'npm:playwright-core@1.51.1/types/protocol.d.ts';
-import Overlay = Protocol.Overlay;
 
 export class GameActionController implements BaseGameActionDefinitionMap {
   private customActionHandlers: Partial<GameActionDefinitionMap> = {};
@@ -118,7 +116,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     switch (oldSource.storeKey) {
       case 'playerHands':
-        await this.reactionManager.triggerLifecycleEvent('onLeaveHand', {
+        await this.reactionManager.runCardLifecycleEvent('onLeaveHand', {
           playerId: args.toPlayerId!,
           cardId: args.cardId
         });
@@ -126,7 +124,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       case 'playArea':
       case 'activeDuration':
         if (newSource === this.match.playArea || newSource === this.match.activeDurationCards) break;
-        await this.reactionManager.triggerLifecycleEvent('onLeavePlay', { cardId: args.cardId });
+        await this.reactionManager.runCardLifecycleEvent('onLeavePlay', { cardId: args.cardId });
     }
     
     args.to.location = castArray(args.to.location);
@@ -135,7 +133,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     switch (args.to.location[0]) {
       case 'playerHands':
-        await this.reactionManager.triggerLifecycleEvent('onEnterHand', {
+        await this.reactionManager.runCardLifecycleEvent('onEnterHand', {
           playerId: args.toPlayerId!,
           cardId: args.cardId
         });
@@ -198,9 +196,16 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       bought: context?.bought,
     });
     
+    this.logManager.enter();
     await this.reactionManager.runTrigger({ trigger });
+    this.logManager.exit();
     
-    await this.reactionManager.triggerLifecycleEvent('onGained', { playerId: args.playerId, cardId: args.cardId });
+    await this.reactionManager.runCardLifecycleEvent('onGained', {
+      playerId: args.playerId,
+      cardId: args.cardId,
+      bought: context.bought,
+      overpaid: context.overpay
+    });
   }
   
   async userPrompt(args: UserPromptActionArgs) {
@@ -391,7 +396,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       playerId: args.playerId,
       cardId: args.cardId,
       to: { location: 'playerDiscards' }
-    }, { bought: true, overpaid: 0 });
+    }, { bought: true, overpay: args.overpay ?? 0 });
   }
   
   async revealCard(args: {
@@ -478,7 +483,9 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       cardId: args.cardId
     });
     
+    this.logManager.enter();
     await this.reactionManager.runTrigger({ trigger: r });
+    this.logManager.exit();
   }
   
   async nextPhase() {
@@ -706,7 +713,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     });
     
     // now add any triggered effects from the card played
-    await this.reactionManager.triggerLifecycleEvent('onCardPlayed', { playerId: args.playerId, cardId: args.cardId });
+    await this.reactionManager.runCardLifecycleEvent('onCardPlayed', { playerId: args.playerId, cardId: args.cardId });
     
     // find any reactions for the cardPlayed event type
     const trigger = new ReactionTrigger('cardPlayed', {
@@ -716,7 +723,9 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     // handle reactions for the card played
     const reactionContext = {};
+    this.logManager.enter();
     await this.reactionManager.runTrigger({ trigger, reactionContext });
+    this.logManager.exit();
     
     // run the effects of the card played, note passing in the reaction context collected from running the trigger
     // above - e.g., could provide immunity to an attack card played

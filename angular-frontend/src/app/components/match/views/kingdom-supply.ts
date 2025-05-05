@@ -26,9 +26,9 @@ export class KingdomSupplyView extends Container {
           .map(key => allCards.find(c => c.cardKey === key))
           .sort((a, b) => {
             if (!a || !b) throw new Error(`failed to build kingdom, card not found in card store`);
-            const result = a.cost.treasure - b.cost.treasure;
+            const result = b.cost.treasure - a.cost.treasure;
             if (result !== 0) return result;
-            return a.cardName.localeCompare(b.cardName);
+            return b.cardName.localeCompare(a.cardName);
           })
           .filter(key => !!key)
           .map(card => card?.cardKey)
@@ -98,7 +98,7 @@ export class KingdomSupplyView extends Container {
       const p = new PileView({ size: 'half' });
       p.label = `pile:${cardKey}`;
 
-      const col = idx % numColumns;
+      const col = numColumns - 1 - (idx % numColumns);
       const row = Math.floor(idx / numColumns);
 
       p.x = col * (SMALL_CARD_WIDTH + STANDARD_GAP);

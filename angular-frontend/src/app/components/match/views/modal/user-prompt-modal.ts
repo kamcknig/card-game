@@ -9,6 +9,7 @@ import { cardRearrangeView } from './card-rearrange-view';
 import { cardBlindRearrangeView } from './card-blind-rearrange-view';
 import { nameCardView } from './name-card-view';
 import { SocketService } from '../../../../core/socket-service/socket.service';
+import { overpayView } from './overpay-view';
 
 export const userPromptModal = (
   app: Application,
@@ -45,7 +46,7 @@ export const userPromptModal = (
       clientSelectableCardsOverrideStore.set(null);
     };
 
-    const actionButtonListener = (args?: { action?: number; result?: unknown}) => {
+    const actionButtonListener = (args?: { action?: number; result?: unknown }) => {
       resolve({
         action: args?.action,
         result: args?.result ?? contentResults
@@ -68,6 +69,10 @@ export const userPromptModal = (
             actionButtonListener()
           });
           break;
+        case 'overpay': {
+          contentView = overpayView(app, args.content);
+          break;
+        }
         default:
           contentView = cardSelectionView(app, args.content);
 
@@ -98,49 +103,52 @@ export const userPromptModal = (
         modalContainer.addChild(contentView);
       }
     }
-
-    if (args.actionButtons) {
-      const actionList = new List({
-        maxWidth: 300,
-        type: 'bidirectional',
-        elementsMargin: STANDARD_GAP
-      });
-
-      args.actionButtons?.forEach(actionButton => {
-        const btn = createAppButton({
-          text: actionButton.label,
-          style: {
-            wordWrap: true,
-            wordWrapWidth: 100,
-            fill: 'white',
-            fontSize: 24,
-          }
+    setTimeout(() => {
+      if (args.actionButtons) {
+        const actionList = new List({
+          maxWidth: 300,
+          type: 'bidirectional',
+          elementsMargin: STANDARD_GAP
         });
-        if (args.validationAction === actionButton.action) {
-          validationBtn = btn;
-        }
-        btn.button.on('pointerdown', () => actionButtonListener({action: actionButton.action}));
-        btn.button.on('removed', () => btn.button.removeAllListeners());
-        actionList.addChild(btn.button);
-      });
 
-      actionList.y = modalContainer.height + STANDARD_GAP * 2;
-      actionList.x = Math.floor(-actionList.width * .5);
-      modalContainer.addChild(actionList);
-    }
+        args.actionButtons?.forEach(actionButton => {
+          const btn = createAppButton({
+            text: actionButton.label,
+            style: {
+              wordWrap: true,
+              wordWrapWidth: 100,
+              fill: 'white',
+              fontSize: 24,
+            }
+          });
+          if (args.validationAction === actionButton.action) {
+            validationBtn = btn;
+          }
+          btn.button.on('pointerdown', () => actionButtonListener({ action: actionButton.action }));
+          btn.button.on('removed', () => btn.button.removeAllListeners());
+          actionList.addChild(btn.button);
+        });
 
-    background.roundRect(
-      -modalContainer.width * .5 - STANDARD_GAP * 2,
-      -STANDARD_GAP * 2,
-      modalContainer.width + STANDARD_GAP * 4,
-      modalContainer.height + STANDARD_GAP * 4,
-      5
-    )
-      .fill({ color: 'black', alpha: .8 });
+        actionList.y = modalContainer.height + STANDARD_GAP * 2;
+        actionList.x = Math.floor(-actionList.width * .5);
+        modalContainer.addChild(actionList);
+      }
 
-    modalContainer.addChildAt(background, 0);
-    modalContainer.x = app.renderer.width * .5;
-    modalContainer.y = app.renderer.height * .5 - modalContainer.height * .5;
-    app.stage.addChild(modalContainer);
+
+      background.roundRect(
+        -modalContainer.width * .5 - STANDARD_GAP * 2,
+        -STANDARD_GAP * 2,
+        modalContainer.width + STANDARD_GAP * 4,
+        modalContainer.height + STANDARD_GAP * 4,
+        5
+      )
+        .fill({ color: 'black', alpha: .8 });
+
+      modalContainer.addChildAt(background, 0);
+
+      modalContainer.x = app.renderer.width * .5;
+      modalContainer.y = app.renderer.height * .5 - modalContainer.height * .5;
+      app.stage.addChild(modalContainer);
+    }, 50);
   });
 }

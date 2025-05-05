@@ -134,7 +134,7 @@ export type UserPromptKinds =
   | { type: 'blind-rearrange'; cardIds: CardId[]; }
   | { type: 'rearrange'; cardIds: CardId[]; }
   | { type: 'name-card'; }
-  | { type: 'overpay'; amount: number; }
+  | { type: 'overpay'; cost: number; }
   | { type: 'select'; cardIds: CardId[]; selectCount: CountSpec; };
 
 export type UserPromptActionArgs = {
