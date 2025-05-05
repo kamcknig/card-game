@@ -961,6 +961,59 @@ const expansion: CardExpansionModule = {
       });
     }
   },
+  'soothsayer': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const goldCardIds = findCards(
+        cardEffectArgs.match,
+        { location: 'supply', cards: { cardKeys: 'gold' } },
+        cardEffectArgs.cardLibrary
+      );
+      
+      if (!goldCardIds.length) {
+        console.log(`[soothsayer effect] no gold cards in supply`);
+      }
+      else {
+        console.log(`[soothsayer effect] player ${cardEffectArgs.playerId} gaining gold`);
+        
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: goldCardIds.slice(-1)[0],
+          to: { location: 'playerDiscards' }
+        });
+      }
+      
+      const targetPlayerIds = findOrderedTargets({
+        match: cardEffectArgs.match,
+        appliesTo: 'ALL_OTHER',
+        startingPlayerId: cardEffectArgs.playerId
+      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      
+      for (const targetPlayerId of targetPlayerIds) {
+        const curseCardIds = findCards(
+          cardEffectArgs.match,
+          { location: 'supply', cards: { cardKeys: 'curse' } },
+          cardEffectArgs.cardLibrary
+        );
+        
+        if (!curseCardIds.length) {
+          console.log(`[soothsayer effect] no curse cards in supply`);
+          continue;
+        }
+        
+        console.log(`[soothsayer effect] player ${targetPlayerId} gaining a curse`);
+        
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: targetPlayerId,
+          cardId: curseCardIds.slice(-1)[0],
+          to: { location: 'playerDiscards' }
+        });
+        
+        console.log(`[soothsayer effect] player ${targetPlayerId} drawing 1 card`);
+        
+        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: targetPlayerId });
+      }
+    }
+  },
   'young-witch': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[young witch effect] drawing 2 cards`);
