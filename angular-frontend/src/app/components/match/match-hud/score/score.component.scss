@@ -1,8 +1,16 @@
 .content {
+  color: white;
   display: flex;
   flex-direction: column;
   gap: 20px;
   font-size: 24px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 5px;
+}
+
+.turn-header {
+  color: white;
 }
 
 .player-scores-container {

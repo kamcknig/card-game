@@ -1,5 +1,5 @@
 <div class="content">
-  <span>{{ ('Turn ' + ((roundNumber$ | async) ?? 1)) | uppercase }}</span>
+  <span class="turn-header">{{ ('Turn ' + ((roundNumber$ | async) ?? 1)) | uppercase }}</span>
 
   @let victoryTokens = victoryTokens$ | async;
 
