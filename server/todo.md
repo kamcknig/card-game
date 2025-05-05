@@ -19,7 +19,7 @@ well. need to work on displaying them and being able spend them during a player'
 
 
 CORNUCOPIA expansion
-- tournament card effects have been built but prizes haven't been implemented. so once prizes are in, then need to add the final effect for tournament for cards like charaltan in prosoperity that change cards need a way to display that change in the UI
+- joust isn't implemented - it uses prizes - need to figure them out. 
 
 need to show the context of the kingdom card for something like young witch, and ferryman
 - dominion.games puts the word "bane" in the type area of the card (but only while it's in the supply)

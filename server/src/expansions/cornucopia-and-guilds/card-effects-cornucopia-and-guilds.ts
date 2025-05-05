@@ -747,6 +747,37 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'menagerie': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[menagerie effect] gaining 1 action`);
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      
+      const hand = cardEffectArgs.match.playerHands[cardEffectArgs.playerId];
+      
+      console.log(`[menagerie effect] revealing ${hand.length} cards`);
+      
+      for (const cardId of hand) {
+        await cardEffectArgs.runGameActionDelegate('revealCard', {
+          cardId: cardId,
+          playerId: cardEffectArgs.playerId,
+        });
+      }
+      
+      const uniqueHandCardNames = new Set(hand
+        .map(cardEffectArgs.cardLibrary.getCard)
+        .map(card => card.cardName)
+      );
+      
+      if (uniqueHandCardNames.size === hand.length) {
+        console.log(`[menagerie effect] all cards in hand are unique, gaining 3 cards`);
+        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 3 });
+      }
+      else {
+        console.log(`[menagerie effect] not all cards in hand are unique, gaining 1 card`);
+        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      }
+    }
+  },
   'remake': {
     registerEffects: () => async (cardEffectArgs) => {
       const count = Math.min(2, cardEffectArgs.match.playerHands[cardEffectArgs.playerId].length);

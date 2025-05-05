@@ -100,6 +100,12 @@
     },
     "type": ["ACTION"]
   },
+  "menagerie": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION"]
+  },
   "remake": {
     "cost": {
       "treasure": 4
