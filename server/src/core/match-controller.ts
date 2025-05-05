@@ -59,14 +59,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     {
       gold: 3,
       silver: 2,
-      haven: 8,
-      'young-witch': 3,
+      estate: 2,
+      copper: 2,
+      haven: 3,
     },
     {
       gold: 3,
       silver: 3,
       copper: 2,
-      'moat': 3,
     },
     {
       gold: 4,
@@ -432,7 +432,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     this._matchSnapshot = this.getMatchSnapshot();
     
-    await this._reactionManager?.triggerGameLifecycleEvent('onGameStart')
+    await this._reactionManager?.triggerGameLifecycleEvent('onGameStart', { match: this._match });
     
     this.broadcastPatch(this._matchSnapshot);
     

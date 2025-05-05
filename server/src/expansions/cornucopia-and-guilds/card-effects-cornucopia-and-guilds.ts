@@ -163,8 +163,8 @@ const expansion: CardExpansionModule = {
   },
   'farmhands': {
     registerLifeCycleMethods: () => ({
-      onGained: async (cardEffectArgs) => {
-        const hand = cardEffectArgs.match.playerHands[cardEffectArgs.playerId];
+      onGained: async (cardEffectArgs, eventArgs) => {
+        const hand = cardEffectArgs.match.playerHands[eventArgs.playerId];
         const actionTreasureCards = hand
           .map(cardEffectArgs.cardLibrary.getCard)
           .filter(card => card.type.includes('ACTION') || card.type.includes('TREASURE'));
@@ -176,7 +176,7 @@ const expansion: CardExpansionModule = {
         
         const result = await cardEffectArgs.runGameActionDelegate('selectCard', {
           prompt: 'Set aside?',
-          playerId: cardEffectArgs.playerId,
+          playerId: eventArgs.playerId,
           optional: true,
           count: 1,
           restrict: { from: { location: 'playerHands' }, card: { type: ['ACTION', 'TREASURE'] } },
@@ -186,7 +186,7 @@ const expansion: CardExpansionModule = {
           const cardId = result[0];
           await cardEffectArgs.runGameActionDelegate('moveCard', {
             cardId,
-            toPlayerId: cardEffectArgs.playerId,
+            toPlayerId: eventArgs.playerId,
             to: { location: 'set-aside' }
           });
           
@@ -194,16 +194,16 @@ const expansion: CardExpansionModule = {
             id: `farmhands:${cardEffectArgs.cardLibrary}:startTurn`,
             listeningFor: 'startTurn',
             condition: (conditionArgs) => {
-              if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
+              if (conditionArgs.trigger.args.playerId !== eventArgs.playerId) return false;
               return true;
             },
             once: true,
             compulsory: true,
             allowMultipleInstances: false,
-            playerId: cardEffectArgs.playerId,
+            playerId: eventArgs.playerId,
             triggeredEffectFn: async (triggerEffectArgs) => {
               await triggerEffectArgs.runGameActionDelegate('playCard', {
-                playerId: cardEffectArgs.playerId,
+                playerId: eventArgs.playerId,
                 cardId,
                 overrides: {
                   actionCost: 0

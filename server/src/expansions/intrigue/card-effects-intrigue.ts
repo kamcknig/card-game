@@ -290,7 +290,7 @@ const expansionModule: CardExpansionModule = {
   },
   'diplomat': {
     registerLifeCycleMethods: () => ({
-      onEnterHand: async ({ reactionManager, runGameActionDelegate, playerId, cardId }) => {
+      onEnterHand: async ({ reactionManager, runGameActionDelegate }, { playerId, cardId }) => {
         reactionManager.registerReactionTemplate({
           id: `diplomat:${cardId}:cardPlayed`,
           playerId,
@@ -330,7 +330,7 @@ const expansionModule: CardExpansionModule = {
           },
         });
       },
-      onLeaveHand: async ({ reactionManager, cardId }) => {
+      onLeaveHand: async ({ reactionManager }, { cardId }) => {
         reactionManager.unregisterTrigger(`diplomat:${cardId}:cardPlayed`);
       },
     }),

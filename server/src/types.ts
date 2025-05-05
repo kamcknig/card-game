@@ -175,8 +175,6 @@ export type CardEffectFactory = () => CardEffectFn;
 
 export type CardEffectFactoryMap = Record<CardKey, CardEffectFactory>;
 
-export type CardPriceRuleRegistrar = (card: Card, rule: CardPriceRule) => () => void;
-
 export type CardEffectFunctionContext = {
   cardPriceController: CardPriceRulesController;
   match: Match;
@@ -223,7 +221,6 @@ export type CardExpansionActionConditionMap = {
 
 export interface CardExpansionModule {
   [p: CardKey]: {
-    registerGameLifecycleMethods?: () => CardGameLifecycleCallbackMap;
     registerActionConditions?: () => CardExpansionActionConditionMap;
     registerLifeCycleMethods?: () => LifecycleCallbackMap;
     registerScoringFunction?: () => CardScoringFunction;
@@ -382,17 +379,13 @@ export type GameLifecycleCallbackContext = {
   runGameActionDelegate: RunGameActionDelegate;
 }
 
-export type GameLifecycleCallback = (args: Omit<GameLifecycleCallbackContext, 'cardId'>) => Promise<LifecycleResult | void>;
+export type GameLifecycleCallback = (args: Omit<GameLifecycleCallbackContext, 'cardId'>, ...rest: any[]) => Promise<LifecycleResult | void>;
 export type CardGameLifeCycleCallback = (args: GameLifecycleCallbackContext, ...rest: any[]) => Promise<void>;
-
-export type CardGameLifecycleCallbackMap = {
-  onGameStart?: CardGameLifeCycleCallback;
-};
 
 export type GameLifecycleEvent = 'onGameStart';
 
 export type GameLifeCycleEventArgsMap = {
-  onGameStart: void;
+  onGameStart: { match: Match};
 }
 
 type LifecycleCallbackContext = {
@@ -401,12 +394,9 @@ type LifecycleCallbackContext = {
   match: Match;
   reactionManager: ReactionManager;
   runGameActionDelegate: RunGameActionDelegate;
-  playerId: number;
-  cardId: number;
 }
 
 export type LifecycleCallbackMap = {
-  onGameStart?: LifecycleCallback;
   onEnterHand?: LifecycleCallback;
   onLeaveHand?: LifecycleCallback;
   onEnterPlay?: LifecycleCallback;
@@ -417,11 +407,10 @@ export type LifecycleCallbackMap = {
 
 export type CardLifecycleEventArgMap = {
   onGained: { playerId: PlayerId, cardId: CardId };
-  onGameStart: { playerId: PlayerId, cardId: CardId }; //todo get rid of this
   onEnterHand: { playerId: PlayerId, cardId: CardId };
   onLeaveHand: { playerId: PlayerId, cardId: CardId };
   onEnterPlay: { playerId: PlayerId, cardId: CardId };
-  onLeavePlay: { playerId: PlayerId, cardId: CardId };
+  onLeavePlay: { cardId: CardId };
   onCardPlayed: { playerId: PlayerId, cardId: CardId };
 }
 
@@ -430,7 +419,7 @@ export type LifecycleResult = {
   unregisterTriggeredEvents?: string[];
 };
 
-export type LifecycleCallback = (args: LifecycleCallbackContext) => Promise<LifecycleResult | void>;
+export type LifecycleCallback = (args: LifecycleCallbackContext, rest: any) => Promise<LifecycleResult | void>;
 
 export type LifecycleEvent = keyof LifecycleCallbackMap;
 

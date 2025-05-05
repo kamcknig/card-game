@@ -3,9 +3,13 @@ import {
   EndGameConditionRegistrar,
   ActionRegistry,
   ExpansionConfiguratorFactory,
-  PlayerScoreDecoratorRegistrar,
+  PlayerScoreDecoratorRegistrar, GameEventRegistrar,
 } from '../../types.ts';
 import { findCards } from '../../utils/find-cards.ts';
+import { getTurnPhase } from '../../utils/get-turn-phase.ts';
+import { getCurrentPlayer } from '../../utils/get-current-player.ts';
+import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
+import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 
 const configurator: ExpansionConfiguratorFactory = () => {
   let charlatanConfigured: boolean = false;
@@ -74,6 +78,75 @@ export const registerEndGameConditions = (registrar: EndGameConditionRegistrar) 
     );
     return colonyCards.length === 0;
   })
+}
+
+export const registerGameEvents: (registrar: GameEventRegistrar) => void = (registrar) => {
+  registrar('onGameStart', async (args) => {
+    
+    const peddlerCardIds = findCards(args.match, {
+      location: 'kingdom',
+      cards: { cardKeys: 'peddler' }
+    }, args.cardLibrary);
+    
+    if (peddlerCardIds.length === 0) {
+      return;
+    }
+    
+    console.log(`[prosperity onGameStart event] registering peddler game events`);
+    
+    for (const cardId of peddlerCardIds) {
+      for (const player of args.match.players) {
+        let ruleUnsub = () => void 0;
+        args.reactionManager.registerReactionTemplate({
+          id: `peddler:${cardId}:endTurnPhase`,
+          listeningFor: 'endTurnPhase',
+          playerId: player.id,
+          once: false,
+          compulsory: true,
+          allowMultipleInstances: true,
+          condition: (conditionArgs) => {
+            if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') return false;
+            return getCurrentPlayer(conditionArgs.match).id === player.id;
+          },
+          triggeredEffectFn: async () => {
+            ruleUnsub();
+            ruleUnsub = () => void 0;
+          }
+        });
+        
+        args.reactionManager.registerReactionTemplate({
+          id: `peddler:${cardId}:startTurnPhase`,
+          listeningFor: 'startTurnPhase',
+          playerId: player.id,
+          compulsory: true,
+          once: false,
+          allowMultipleInstances: true,
+          condition: (conditionArgs) => {
+            if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') return false;
+            return getCurrentPlayer(conditionArgs.match).id === player.id;
+          },
+          triggeredEffectFn: async (triggerEffectArgs) => {
+            const peddlerCard = triggerEffectArgs.cardLibrary.getCard(cardId);
+            
+            console.log(`[peddler triggered effect] adding pricing rule for ${peddlerCard}`);
+            
+            const rule: CardPriceRule = (ruleCard, ruleContext) => {
+              const cardIdsInPlay = getCardsInPlay(ruleContext.match);
+              const cardsInPlay = cardIdsInPlay.map(triggerEffectArgs.cardLibrary.getCard);
+              const actionsInPlay = cardsInPlay.filter(card => card.type.includes('ACTION'));
+              if (actionsInPlay.length === 0) {
+                return { restricted: false, cost: { treasure: 0 } };
+              }
+              
+              return { restricted: false, cost: { treasure: -actionsInPlay.length * 2 } }
+            }
+            
+            ruleUnsub = args.cardPriceController.registerRule(peddlerCard, rule);
+          }
+        })
+      }
+    }
+  });
 }
 
 export const registerActions: ActionRegistry = (registerFn, { match }) => {

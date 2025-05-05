@@ -10,10 +10,10 @@ import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 const expansion: CardExpansionModule = {
   'astrolabe': {
     registerLifeCycleMethods: () => ({
-      onLeavePlay: async (args) => {
-        args.reactionManager.unregisterTrigger(`astrolabe:${args.cardId}:starTurn`);
+      onLeavePlay: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`astrolabe:${eventArgs.cardId}:starTurn`);
       },
-      onCardPlayed: async ({ reactionManager, playerId, cardId }) => {
+      onCardPlayed: async ({ reactionManager }, { playerId, cardId }) => {
         const id = `astrolabe:${cardId}:starTurn`;
         reactionManager.registerReactionTemplate({
           id,
@@ -58,9 +58,9 @@ const expansion: CardExpansionModule = {
   },
   'blockade': {
     registerLifeCycleMethods: () => ({
-      onLeavePlay: async args => {
-        args.reactionManager.unregisterTrigger(`blockade:${args.cardId}:startTurn`);
-        args.reactionManager.unregisterTrigger(`blockade:${args.cardId}:gainCard`);
+      onLeavePlay: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`blockade:${eventArgs.cardId}:startTurn`);
+        args.reactionManager.unregisterTrigger(`blockade:${eventArgs.cardId}:gainCard`);
       }
     }),
     registerEffects: () => async ({ match, reactionManager, runGameActionDelegate, cardLibrary, playerId, cardId }) => {
@@ -145,8 +145,8 @@ const expansion: CardExpansionModule = {
   },
   'caravan': {
     registerLifeCycleMethods: () => ({
-      onLeavePlay: async args => {
-        args.reactionManager.unregisterTrigger(`caravan:${args.cardId}:startTurn`);
+      onLeavePlay: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`caravan:${eventArgs.cardId}:startTurn`);
       }
     }),
     registerEffects: () => async ({ runGameActionDelegate, playerId, reactionManager, cardId }) => {
@@ -172,7 +172,7 @@ const expansion: CardExpansionModule = {
   },
   'corsair': {
     registerLifeCycleMethods: () => ({
-      onLeavePlay: async ({ reactionManager, cardId }) => {
+      onLeavePlay: async ({ reactionManager }, { cardId }) => {
         reactionManager.unregisterTrigger(`corsair:${cardId}:starTurn`);
         reactionManager.unregisterTrigger(`corsair:${cardId}:cardPlayed`);
       }
@@ -277,8 +277,8 @@ const expansion: CardExpansionModule = {
   },
   'fishing-village': {
     registerLifeCycleMethods: () => ({
-      onLeavePlay: async args => {
-        args.reactionManager.unregisterTrigger(`fishing-village:${args.cardId}:startTurn`);
+      onLeavePlay: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`fishing-village:${eventArgs.cardId}:startTurn`);
       }
     }),
     registerEffects: () => async ({ runGameActionDelegate, playerId, reactionManager, cardId }) => {
@@ -400,18 +400,18 @@ const expansion: CardExpansionModule = {
   },
   'lighthouse': {
     registerLifeCycleMethods: () => ({
-      onLeavePlay: async (args) => {
-        args.reactionManager.unregisterTrigger(`lighthouse:${args.cardId}:startTurn`);
-        args.reactionManager.unregisterTrigger(`lighthouse:${args.cardId}:cardPlayed`);
+      onLeavePlay: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`lighthouse:${eventArgs.cardId}:startTurn`);
+        args.reactionManager.unregisterTrigger(`lighthouse:${eventArgs.cardId}:cardPlayed`);
       },
-      onCardPlayed: async args => {
+      onCardPlayed: async (args, eventArgs) => {
         args.reactionManager.registerReactionTemplate({
-          id: `lighthouse:${args.cardId}:cardPlayed`,
-          playerId: args.playerId,
+          id: `lighthouse:${eventArgs.cardId}:cardPlayed`,
+          playerId: eventArgs.playerId,
           listeningFor: 'cardPlayed',
           condition: ({ trigger, cardLibrary }) => {
             const playedCard = cardLibrary.getCard(trigger.args.cardId!);
-            return trigger.args.cardId !== args.cardId && trigger.args.playerId !== args.playerId && playedCard.type.includes('ATTACK');
+            return trigger.args.cardId !== eventArgs.cardId && trigger.args.playerId !== eventArgs.playerId && playedCard.type.includes('ATTACK');
           },
           once: false,
           allowMultipleInstances: false,
@@ -422,16 +422,16 @@ const expansion: CardExpansionModule = {
         });
         
         args.reactionManager.registerReactionTemplate({
-          id: `lighthouse:${args.cardId}:startTurn`,
-          playerId: args.playerId,
+          id: `lighthouse:${eventArgs.cardId}:startTurn`,
+          playerId: eventArgs.playerId,
           listeningFor: 'startTurn',
-          condition: ({ trigger }) => trigger.args.playerId === args.playerId,
+          condition: ({ trigger }) => trigger.args.playerId === eventArgs.playerId,
           once: true,
           allowMultipleInstances: true,
           compulsory: true,
           triggeredEffectFn: async () => {
-            args.reactionManager.unregisterTrigger(`lighthouse:${args.cardId}:cardPlayed`);
-            await args.runGameActionDelegate('gainTreasure', { count: 1 }, { loggingContext: { source: args.cardId } });
+            args.reactionManager.unregisterTrigger(`lighthouse:${eventArgs.cardId}:cardPlayed`);
+            await args.runGameActionDelegate('gainTreasure', { count: 1 }, { loggingContext: { source: eventArgs.cardId } });
           }
         })
       }
@@ -523,8 +523,8 @@ const expansion: CardExpansionModule = {
   },
   'merchant-ship': {
     registerLifeCycleMethods: () => ({
-      onLeavePlay: async args => {
-        args.reactionManager.unregisterTrigger(`merchant-ship:${args.cardId}:startTurn`);
+      onLeavePlay: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`merchant-ship:${eventArgs.cardId}:startTurn`);
       }
     }),
     registerEffects: () => async ({ runGameActionDelegate, playerId, reactionManager, cardId }) => {
@@ -548,9 +548,9 @@ const expansion: CardExpansionModule = {
   },
   'monkey': {
     registerLifeCycleMethods: () => ({
-      onLeavePlay: async args => {
-        args.reactionManager.unregisterTrigger(`monkey:${args.cardId}:startTurn`);
-        args.reactionManager.unregisterTrigger(`monkey:${args.cardId}:gainCard`)
+      onLeavePlay: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`monkey:${eventArgs.cardId}:startTurn`);
+        args.reactionManager.unregisterTrigger(`monkey:${eventArgs.cardId}:gainCard`)
       }
     }),
     registerEffects: () => async ({ reactionManager, match, playerId, cardId, runGameActionDelegate }) => {
@@ -594,7 +594,7 @@ const expansion: CardExpansionModule = {
   },
   'pirate': {
     registerLifeCycleMethods: () => ({
-      onEnterHand: async ({ reactionManager, playerId, cardId }) => {
+      onEnterHand: async ({ reactionManager }, { playerId, cardId }) => {
         reactionManager.registerReactionTemplate({
           id: `pirate:${cardId}:gainCard`,
           playerId,
@@ -614,11 +614,11 @@ const expansion: CardExpansionModule = {
           }
         });
       },
-      onLeaveHand: async ({ reactionManager, cardId }) => {
+      onLeaveHand: async ({ reactionManager }, { cardId }) => {
         reactionManager.unregisterTrigger(`pirate:${cardId}:gainCard`);
       },
-      onLeavePlay: async args => {
-        args.reactionManager.unregisterTrigger(`pirate:${args.cardId}:startTurn`);
+      onLeavePlay: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`pirate:${eventArgs.cardId}:startTurn`);
       }
     }),
     registerEffects: () => async ({ reactionManager, playerId, match, cardId, runGameActionDelegate }) => {
@@ -722,29 +722,29 @@ const expansion: CardExpansionModule = {
   },
   'sailor': {
     registerLifeCycleMethods: () => ({
-      onLeavePlay: async ({ reactionManager, cardId }) => {
+      onLeavePlay: async ({ reactionManager }, { cardId }) => {
         reactionManager.unregisterTrigger(`sailor:${cardId}:gainCard`);
         reactionManager.unregisterTrigger(`sailor:${cardId}:startTurn`);
         reactionManager.unregisterTrigger(`sailor:${cardId}:endTurn`);
       },
-      onCardPlayed: async (args) => {
+      onCardPlayed: async (args, eventArgs) => {
         args.reactionManager.registerReactionTemplate({
-          id: `sailor:${args.cardId}:endTurn`,
-          playerId: args.playerId,
+          id: `sailor:${eventArgs.cardId}:endTurn`,
+          playerId: eventArgs.playerId,
           listeningFor: 'endTurn',
           compulsory: true,
           allowMultipleInstances: true,
           once: true,
           condition: () => true,
           triggeredEffectFn: async (triggerArgs) => {
-            args.reactionManager.unregisterTrigger(`sailor:${args.cardId}:gainCard`);
-            args.reactionManager.unregisterTrigger(`sailor:${args.cardId}:endTurn`);
+            args.reactionManager.unregisterTrigger(`sailor:${eventArgs.cardId}:gainCard`);
+            args.reactionManager.unregisterTrigger(`sailor:${eventArgs.cardId}:endTurn`);
           }
         });
         
         args.reactionManager.registerReactionTemplate({
-          id: `sailor:${args.cardId}:gainCard`,
-          playerId: args.playerId,
+          id: `sailor:${eventArgs.cardId}:gainCard`,
+          playerId: eventArgs.playerId,
           listeningFor: 'gainCard',
           once: true,
           compulsory: false,
@@ -756,7 +756,7 @@ const expansion: CardExpansionModule = {
               return false;
             }
             
-            if (conditionArgs.trigger.args.playerId !== args.playerId) {
+            if (conditionArgs.trigger.args.playerId !== eventArgs.playerId) {
               return false;
             }
             
@@ -765,29 +765,29 @@ const expansion: CardExpansionModule = {
           triggeredEffectFn: async (triggeredArgs) => {
             console.log(`[sailor triggered effect] playing ${triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId!)}`);
             await triggeredArgs.runGameActionDelegate('playCard', {
-              playerId: args.playerId,
+              playerId: eventArgs.playerId,
               cardId: triggeredArgs.trigger.args.cardId!,
               overrides: { actionCost: 0 }
-            }, { loggingContext: { source: args.cardId } });
+            }, { loggingContext: { source: eventArgs.cardId } });
           }
         });
         
         args.reactionManager.registerReactionTemplate({
-          id: `sailor:${args.cardId}:startTurn`,
+          id: `sailor:${eventArgs.cardId}:startTurn`,
           listeningFor: 'startTurn',
-          playerId: args.playerId,
+          playerId: eventArgs.playerId,
           compulsory: true,
           once: true,
           allowMultipleInstances: true,
           condition: ({ trigger, match }) =>
-            trigger.args.playerId === args.playerId && match.stats.playedCards[args.cardId].turnNumber !== match.turnNumber,
+            trigger.args.playerId === eventArgs.playerId && match.stats.playedCards[eventArgs.cardId].turnNumber !== match.turnNumber,
           triggeredEffectFn: async () => {
             console.log(`[sailor triggered effect] gaining 2 treasure...`);
-            await args.runGameActionDelegate('gainTreasure', { count: 2 }, { loggingContext: { source: args.cardId } });
+            await args.runGameActionDelegate('gainTreasure', { count: 2 }, { loggingContext: { source: eventArgs.cardId } });
             
             const cardIds = await args.runGameActionDelegate('selectCard', {
               prompt: 'Trash card',
-              playerId: args.playerId,
+              playerId: eventArgs.playerId,
               restrict: { from: { location: 'playerHands' } },
               count: 1,
               optional: true,
@@ -803,7 +803,7 @@ const expansion: CardExpansionModule = {
             
             console.log(`[sailor triggered effect] trashing selected card...`);
             await args.runGameActionDelegate('trashCard', {
-              playerId: args.playerId,
+              playerId: eventArgs.playerId,
               cardId,
             }, { loggingContext: { source: cardId } });
           }
@@ -891,26 +891,26 @@ const expansion: CardExpansionModule = {
   },
   'sea-witch': {
     registerLifeCycleMethods: () => ({
-      onLeavePlay: async (args) => {
-        args.reactionManager.unregisterTrigger(`sea-witch:${args.cardId}:startTurn`);
+      onLeavePlay: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`sea-witch:${eventArgs.cardId}:startTurn`);
       },
-      onCardPlayed: async (args) => {
+      onCardPlayed: async (args, eventArgs) => {
         args.reactionManager.registerReactionTemplate({
-          id: `sea-witch:${args.cardId}:startTurn`,
-          playerId: args.playerId,
+          id: `sea-witch:${eventArgs.cardId}:startTurn`,
+          playerId: eventArgs.playerId,
           once: true,
           compulsory: true,
           allowMultipleInstances: true,
           listeningFor: 'startTurn',
           condition: (conditionArgs) => {
-            return conditionArgs.trigger.args.playerId === args.playerId
+            return conditionArgs.trigger.args.playerId === eventArgs.playerId
           },
           triggeredEffectFn: async (triggerArgs) => {
             console.log(`[sea-witch triggered effect] drawing 2 cards...`)
             await triggerArgs.runGameActionDelegate('drawCard', {
-              playerId: args.playerId,
+              playerId: eventArgs.playerId,
               count: 2
-            }, { loggingContext: { source: args.cardId } });
+            }, { loggingContext: { source: eventArgs.cardId } });
             
             console.log(`[sea-witch triggered effect] selecting discarding cards...`);
             
@@ -918,14 +918,14 @@ const expansion: CardExpansionModule = {
               prompt: 'Discard cards',
               restrict: { from: { location: 'playerHands' } },
               count: 2,
-              playerId: args.playerId
+              playerId: eventArgs.playerId
             }) as number[];
             
             for (const selectedCardId of selectedCards) {
               await triggerArgs.runGameActionDelegate('discardCard', {
                 cardId: selectedCardId,
-                playerId: args.playerId
-              }, { loggingContext: { source: args.cardId } });
+                playerId: eventArgs.playerId
+              }, { loggingContext: { source: eventArgs.cardId } });
             }
           }
         })
@@ -1029,7 +1029,7 @@ const expansion: CardExpansionModule = {
   },
   'tactician': {
     registerLifeCycleMethods: () => ({
-      onLeavePlay: async ({ reactionManager, cardId }) => {
+      onLeavePlay: async ({ reactionManager }, { cardId }) => {
         reactionManager.unregisterTrigger(`tactician:${cardId}:startTurn`);
       }
     }),
@@ -1073,7 +1073,7 @@ const expansion: CardExpansionModule = {
   },
   'tide-pools': {
     registerLifeCycleMethods: () => ({
-      onLeavePlay: async ({ reactionManager, cardId }) => {
+      onLeavePlay: async ({ reactionManager }, { cardId }) => {
         reactionManager.unregisterTrigger(`tide-pools:${cardId}:startTurn`);
       }
     }),
@@ -1152,7 +1152,7 @@ const expansion: CardExpansionModule = {
   },
   'treasury': {
     registerLifeCycleMethods: () => ({
-      onLeavePlay: async ({ reactionManager, cardId }) => {
+      onLeavePlay: async ({ reactionManager }, { cardId }) => {
         reactionManager.unregisterTrigger(`treasury:${cardId}:endTurnPhase`);
       }
     }),
@@ -1225,30 +1225,30 @@ const expansion: CardExpansionModule = {
   },
   'wharf': {
     registerLifeCycleMethods: () => ({
-      onLeavePlay: async ({ reactionManager, cardId }) => {
+      onLeavePlay: async ({ reactionManager }, { cardId }) => {
         reactionManager.unregisterTrigger(`wharf:${cardId}:startTurn`);
       },
-      onCardPlayed: async (args) => {
+      onCardPlayed: async (args, eventArgs) => {
         args.reactionManager.registerReactionTemplate({
-          id: `wharf:${args.cardId}:startTurn`,
-          playerId: args.playerId,
+          id: `wharf:${eventArgs.cardId}:startTurn`,
+          playerId: eventArgs.playerId,
           listeningFor: 'startTurn',
           once: true,
           compulsory: true,
           allowMultipleInstances: true,
           condition: (conditionArgs) => {
-            return conditionArgs.trigger.args.playerId === args.playerId &&
-              conditionArgs.match.stats.playedCards[args.cardId].turnNumber < conditionArgs.match.turnNumber
+            return conditionArgs.trigger.args.playerId === eventArgs.playerId &&
+              conditionArgs.match.stats.playedCards[eventArgs.cardId].turnNumber < conditionArgs.match.turnNumber
           },
           triggeredEffectFn: async (triggerArgs) => {
             console.log(`[wharf triggered effect] drawing 2 cards`);
             await triggerArgs.runGameActionDelegate('drawCard', {
-              playerId: args.playerId,
+              playerId: eventArgs.playerId,
               count: 2
-            }, { loggingContext: { source: args.cardId } });
+            }, { loggingContext: { source: eventArgs.cardId } });
             
             console.log(`[wharf triggered effect] gaining 1 buy`);
-            await triggerArgs.runGameActionDelegate('gainBuy', { count: 1 }, { loggingContext: { source: args.cardId } });
+            await triggerArgs.runGameActionDelegate('gainBuy', { count: 1 }, { loggingContext: { source: eventArgs.cardId } });
           }
         })
       }

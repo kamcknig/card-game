@@ -1,4 +1,4 @@
-import { CardId, Match, PlayerId } from 'shared/shared-types.ts';
+import { Match } from 'shared/shared-types.ts';
 import {
   CardLifecycleEventArgMap,
   GameLifecycleCallback,
@@ -16,7 +16,7 @@ import { getOrderStartingFrom } from '../../utils/get-order-starting-from.ts';
 import { groupReactionsByCardKey } from './group-reactions-by-card-key.ts';
 import { buildActionButtons } from './build-action-buttons.ts';
 import { buildActionMap } from './build-action-map.ts';
-import { cardGameLifeCycleMap, cardLifecycleMap } from '../card-lifecycle-map.ts';
+import { cardLifecycleMap } from '../card-lifecycle-map.ts';
 import { LogManager } from '../log-manager.ts';
 import { CardPriceRulesController } from '../card-price-rules-controller.ts';
 
@@ -91,22 +91,7 @@ export class ReactionManager {
         match: this._match,
         reactionManager: this,
         runGameActionDelegate: this.runGameActionDelegate,
-      })
-    }
-    
-    const cards = this._cardLibrary.getAllCardsAsArray();
-    for (const card of cards) {
-      const fn = cardGameLifeCycleMap[card.cardKey]?.[trigger];
-      if (fn) {
-        await fn({
-          cardId: card.id,
-          cardPriceController: this.cardPriceController,
-          cardLibrary: this._cardLibrary,
-          match: this._match,
-          reactionManager: this,
-          runGameActionDelegate: this.runGameActionDelegate,
-        }, ...args);
-      }
+      }, ...args)
     }
   }
   
@@ -124,11 +109,9 @@ export class ReactionManager {
       cardPriceController: this.cardPriceController,
       cardLibrary: this._cardLibrary,
       match: this._match,
-      cardId: args.cardId,
-      playerId: args.playerId!,
       reactionManager: this,
       runGameActionDelegate: this.runGameActionDelegate,
-    });
+    }, args);
   }
   
   async runTrigger({ trigger, reactionContext }: { trigger: ReactionTrigger, reactionContext?: any }) {

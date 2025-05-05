@@ -1,10 +1,10 @@
 import { cardEffectFunctionMapFactory } from '../core/effects/card-effect-function-map-factory.ts';
-import { scoringFunctionMap } from "@expansions/scoring-function-map.ts";
-import { allCardLibrary, expansionLibrary } from "@expansions/expansion-library.ts";
-import { cardLifecycleMap, cardGameLifeCycleMap } from '../core/card-lifecycle-map.ts';
+import { scoringFunctionMap } from '@expansions/scoring-function-map.ts';
+import { allCardLibrary, expansionLibrary } from '@expansions/expansion-library.ts';
+import { cardLifecycleMap } from '../core/card-lifecycle-map.ts';
 import { CardExpansionModule } from '../types.ts';
-import { CardNoId } from "shared/shared-types.ts";
-import { capitalize } from "es-toolkit";
+import { CardNoId } from 'shared/shared-types.ts';
+import { capitalize } from 'es-toolkit';
 import { cardActionConditionMapFactory } from '../core/actions/card-action-condition-map-factory.ts';
 
 export const loadExpansion = async (expansion: { name: string; }) => {
@@ -75,11 +75,6 @@ export const loadExpansion = async (expansion: { name: string; }) => {
       if (cardEffects[key].registerScoringFunction) {
         console.log(`[expansion loader] registering scoring function for ${key}`);
         scoringFunctionMap[key] = cardEffects[key].registerScoringFunction();
-      }
-      
-      if (cardEffects[key].registerGameLifecycleMethods) {
-        console.log(`[expansion loader] registering game lifecycle methods for ${key}`);
-        cardGameLifeCycleMap[key] = cardEffects[key].registerGameLifecycleMethods()
       }
       
       if (cardEffects[key].registerLifeCycleMethods) {
