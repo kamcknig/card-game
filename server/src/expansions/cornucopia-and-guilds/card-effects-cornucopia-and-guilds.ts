@@ -917,6 +917,50 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'shop': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[shop effect] drawing 1 card, and gaining 1 treasure`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+      
+      const cardsInPlay = getCardsInPlay(cardEffectArgs.match)
+        .map(cardEffectArgs.cardLibrary.getCard);
+      
+      const uniqueInPlayCardNames = new Set(cardsInPlay
+        .map(card => card.cardName)
+      );
+      
+      const cardsInHand = cardEffectArgs.match.playerHands[cardEffectArgs.playerId]
+        .map(cardEffectArgs.cardLibrary.getCard)
+        .filter(card => !uniqueInPlayCardNames.has(card.cardKey) && card.type.includes('ACTION'));
+      
+      if (cardsInHand.length === 0) {
+        console.log(`[shop effect] no action cards in hand that are not in play`);
+        return;
+      }
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Play card?`,
+        restrict: cardsInHand.map(card => card.id),
+        count: 1,
+        optional: true,
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.log(`[shop effect] no card selected`);
+        return;
+      }
+      
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0])
+      console.log(`[shop effect] player ${cardEffectArgs.playerId} playing ${selectedCard}`);
+      
+      await cardEffectArgs.runGameActionDelegate('playCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCardIds[0]
+      });
+    }
+  },
   'young-witch': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[young witch effect] drawing 2 cards`);

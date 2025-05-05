@@ -124,6 +124,12 @@
     },
     "type": ["ACTION"]
   },
+  "shop": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION"]
+  },
   "young-witch": {
     "cardName": "Young Witch",
     "cost": {
