@@ -1023,11 +1023,11 @@ const expansion: CardExpansionModule = {
       }
     }
   },
-  'stone-mason': {
+  'stonemason': {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
         if (!eventArgs.overpaid) {
-          console.log(`[stone mason triggered effect] ${eventArgs.cardId} was not overpaid, skipping`);
+          console.log(`[stonemason triggered effect] ${eventArgs.cardId} was not overpaid, skipping`);
           return;
         }
         
@@ -1045,13 +1045,13 @@ const expansion: CardExpansionModule = {
         );
         
         if (!cardIds.length) {
-          console.log(`[stone mason triggered effect] no cards in supply with cost ${eventArgs.overpaid}`);
+          console.log(`[stonemason triggered effect] no cards in supply with cost ${eventArgs.overpaid}`);
           return;
         }
         
         const numToGain = Math.min(2, cardIds.length);
         
-        console.log(`[stone mason triggered effect] gaining ${numToGain} cards`);
+        console.log(`[stonemason triggered effect] gaining ${numToGain} cards`);
         
         for (let i = 0; i < numToGain; i++) {
           const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
@@ -1062,14 +1062,14 @@ const expansion: CardExpansionModule = {
           });
           
           if (!selectedCardIds.length) {
-            console.warn(`[stone mason triggered effect] no card selected`);
+            console.warn(`[stonemason triggered effect] no card selected`);
             continue;
           }
           
           const selectedCardId = selectedCardIds[0];
           const card = cardEffectArgs.cardLibrary.getCard(selectedCardId);
           
-          console.log(`[stone mason triggered effect] player ${eventArgs.playerId} gaining ${card}`);
+          console.log(`[stonemason triggered effect] player ${eventArgs.playerId} gaining ${card}`);
           
           await cardEffectArgs.runGameActionDelegate('gainCard', {
             playerId: eventArgs.playerId,
@@ -1082,7 +1082,7 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const hand = cardEffectArgs.match.playerHands[cardEffectArgs.playerId];
       if (hand.length === 0) {
-        console.log(`[stone mason effect] no cards in hand`);
+        console.log(`[stonemason effect] no cards in hand`);
         return;
       }
       
@@ -1094,13 +1094,13 @@ const expansion: CardExpansionModule = {
       }) as CardId[];
       
       if (!selectedCardIds.length) {
-        console.warn(`[stone mason effect] no card selected`);
+        console.warn(`[stonemason effect] no card selected`);
         return;
       }
       
       const card = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
       
-      console.log(`[stone mason effect] player ${cardEffectArgs.playerId} trashing ${card}`);
+      console.log(`[stonemason effect] player ${cardEffectArgs.playerId} trashing ${card}`);
       
       await cardEffectArgs.runGameActionDelegate('trashCard', {
         playerId: cardEffectArgs.playerId,
@@ -1132,13 +1132,13 @@ const expansion: CardExpansionModule = {
       );
       
       if (!cardIds.length) {
-        console.log(`[stone mason effect] no cards in supply with cost ${cost} or less to gain`);
+        console.log(`[stonemason effect] no cards in supply with cost ${cost} or less to gain`);
         return;
       }
       
       const numToGain = Math.min(2, cardIds.length);
       
-      console.log(`[stone mason effect] player ${cardEffectArgs.playerId} gaining ${numToGain} cards`);
+      console.log(`[stonemason effect] player ${cardEffectArgs.playerId} gaining ${numToGain} cards`);
       
       for (let i = 0; i < numToGain; i++) {
         const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
@@ -1149,13 +1149,13 @@ const expansion: CardExpansionModule = {
         }) as CardId[];
         
         if (!selectedCardIds.length) {
-          console.warn(`[stone mason effect] no card selected`);
+          console.warn(`[stonemason effect] no card selected`);
           continue;
         }
         
         const card = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
         
-        console.log(`[stone mason effect] player ${cardEffectArgs.playerId} gaining ${card}`);
+        console.log(`[stonemason effect] player ${cardEffectArgs.playerId} gaining ${card}`);
         
         await cardEffectArgs.runGameActionDelegate('gainCard', {
           playerId: cardEffectArgs.playerId,
@@ -1194,7 +1194,7 @@ const expansion: CardExpansionModule = {
       for (const targetPlayerId of targetPlayerIds) {
         const handIds = cardEffectArgs.match.playerHands[targetPlayerId];
         const handCards = handIds.map(cardId => cardEffectArgs.cardLibrary.getCard(cardId));
-        const baneCards = handCards.filter(card => card.tags.includes('bane'));
+        const baneCards = handCards.filter(card => card.tags?.includes('bane'));
         
         const curseCardIds = findCards(
           cardEffectArgs.match,

@@ -142,8 +142,7 @@
     },
     "type": ["ACTION", "ATTACK"]
   },
-  "stone-mason": {
-    "cardName": "Stone Mason",
+  "stonemason": {
     "cost": {
       "treasure": 2
     },

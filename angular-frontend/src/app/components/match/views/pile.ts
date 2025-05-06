@@ -8,18 +8,26 @@ import { AdjustmentFilter } from 'pixi-filters';
 
 type PileArgs = {
   cards?: Card[];
-  count?: number;
   size?: CardSize;
   facing?: CardFacing;
+  showBadgeCount?: boolean;
 }
 
 export class PileView extends Container {
   private _cards: Card[] = [];
   private _count: number = 0;
-  private _size: CardSize = 'full';
-  private _facing: CardFacing = 'front';
-  private _cardViewContainer: Container;
+  private readonly _size: CardSize = 'full';
+  private readonly _facing: CardFacing = 'front';
+  private readonly _cardViewContainer: Container;
   private _cardView: CardView | undefined | null;
+  private _showCountBadge: boolean = true;
+
+  set showCountBadge(val: boolean) {
+    if (this._showCountBadge === val) return;
+
+    this._showCountBadge = val;
+    this.draw();
+  }
 
   set pile(val: Card[]) {
     this._cards = [...val];
@@ -30,8 +38,9 @@ export class PileView extends Container {
   constructor(args: PileArgs) {
     super();
 
+    this._showCountBadge = args.showBadgeCount ?? true;
     this._cards = args.cards ?? [];
-    this._count = args.count ?? 0;
+    this._count = this._cards.length
     this._size = args.size ?? 'full';
     this._facing = args.facing ?? 'front';
 
@@ -85,11 +94,14 @@ export class PileView extends Container {
     this._cardView.card = card;
 
     badge = this._cardViewContainer.getChildByLabel('countBadge') as CountBadgeView;
+
     if (!badge) {
       badge = new CountBadgeView({ count: this._count });
       badge.label = 'countBadge';
       this._cardViewContainer.addChild(badge);
     }
+
     badge.count = this._count;
+    badge.visible = this._showCountBadge;
   }
 }

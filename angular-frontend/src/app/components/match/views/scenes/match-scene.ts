@@ -29,6 +29,7 @@ import { selectableCardStore } from '../../../../state/interactive-logic';
 import { SelectCardArgs } from '../../../../../types';
 import { computed } from 'nanostores';
 import { BaseSupplyView } from '../base-supply';
+import { NonSupplyKingdomView } from '../non-supply-kingdom-view';
 
 export class MatchScene extends Scene {
   private _board: Container = new Container();
@@ -42,6 +43,7 @@ export class MatchScene extends Scene {
   private _selecting: boolean = false;
   private _scoreViewRight: number = 0;
   private _scoreViewBottom: number = 0;
+  private _nonSupplyView: NonSupplyKingdomView | undefined;
 
   private _playAllTreasuresButton: AppButton = createAppButton(
     { text: 'PLAY ALL TREASURES', style: { fill: 'white', fontSize: 24 } }
@@ -218,6 +220,8 @@ export class MatchScene extends Scene {
     this._baseSupply.scale = .9;
     this._kingdomView = this.addChild(new KingdomSupplyView());
     this._kingdomView.scale = .9;
+    this._nonSupplyView = this.addChild(new NonSupplyKingdomView());
+    this._nonSupplyView.scale = .9;
 
     this._playArea = this.addChild(new PlayAreaView());
 
@@ -573,6 +577,11 @@ export class MatchScene extends Scene {
 
       this._kingdomView.y = STANDARD_GAP;
       this._kingdomView.x = Math.max(this._scoreViewRight, this._baseSupply.x + this._baseSupply.width) + STANDARD_GAP;
+    }
+
+    if (this._kingdomView && this._nonSupplyView) {
+      this._nonSupplyView.x = this._kingdomView.x + this._kingdomView.width + STANDARD_GAP;
+      this._nonSupplyView.y = STANDARD_GAP;
     }
 
     if (this._playerHand) {

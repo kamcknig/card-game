@@ -1,5 +1,5 @@
 import { atom, computed, ReadableAtom } from 'nanostores';
-import { CardId, CardKey, Mats } from 'shared/shared-types';
+import { Card, CardId, CardKey, CardNoId, Mats } from 'shared/shared-types';
 import { matchStore } from './match-state';
 import { cardStore } from './card-state';
 import { selfPlayerIdStore } from './player-state';
@@ -12,13 +12,25 @@ export const nonSupplyStore = computed(
   match => match?.nonSupplyCards ?? []
 );
 
-export const rewardsStore: ReadableAtom<number[] | undefined> = computed(
-  [nonSupplyStore, cardStore],
-  (nonSupply, cards) =>
-    nonSupply
+export const rewardsStore: ReadableAtom<{
+  startingCards: CardNoId[]; cards: Card[]
+} | undefined> = computed(
+  [nonSupplyStore, cardStore, matchStore],
+  (nonSupply, cards, match) => {
+    const cardsInSupply = nonSupply
       .map(id => cards[id])
       .filter(card => card.type.includes('REWARD'))
-      .map(card => card.id) ?? undefined
+
+    const startingCards = match?.config.nonSupplyCards?.filter(card => card.type.includes('REWARD')) ?? [];
+    if (!cardsInSupply.length || !startingCards.length) {
+      return undefined;
+    }
+
+    return {
+      startingCards: startingCards,
+      cards: cardsInSupply
+    }
+  }
 );
 
 export const supplyCardKeyStore = atom<[CardKey[], CardKey[]]>([[], []]);

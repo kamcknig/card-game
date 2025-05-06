@@ -16,7 +16,7 @@ export class CountBadgeView extends Container {
       .roundRect(0, 0, 30, 26, 4)
       .fill(0x000000)
       .roundRect(2, 2, 26, 22, 4)
-      .fill(0xff0000);
+      .fill(0xFD5849);
 
     this.addChild(c);
 
