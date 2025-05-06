@@ -7,6 +7,8 @@ import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { getPlayerStartingFrom } from '../../shared/get-player-position-utils.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
+import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
+import { async } from 'npm:rxjs@7.8.2';
 
 const expansion: CardExpansionModule = {
   'advisor': {
@@ -1221,6 +1223,43 @@ const expansion: CardExpansionModule = {
           to: { location: 'playerDiscards' }
         });
       }
+    }
+  },
+  'renown': {
+    registerEffects: () => async (cardEffectArgs) => {
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+      
+      const rule: CardPriceRule = (card, context) => {
+        return {
+          restricted: false,
+          cost: {
+            treasure: -2,
+            potion: card.cost.potion,
+          }
+        }
+      }
+      
+      const ruleSubs: (() => void)[] = [];
+      const allCards = cardEffectArgs.cardLibrary.getAllCardsAsArray();
+      for (const card of allCards) {
+        ruleSubs.push(cardEffectArgs.cardPriceController.registerRule(card, rule));
+      }
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate({
+        id: `renown:${cardEffectArgs.cardId}:endTurn`,
+        listeningFor: 'endTurn',
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: () => true,
+        triggeredEffectFn: async () => {
+          console.log(`[renown triggered effect] removing price rule`);
+          for (const unsub of ruleSubs) {
+            unsub();
+          }
+        }
+      })
     }
   },
   'shop': {
