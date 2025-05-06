@@ -25,9 +25,7 @@ they need to be asked for their input again
 - overpay from cornucopia and guilds
 - organize modules again.
 - ui updates
-  - sticky mats aren't working - when you mouse over a mat tab it shows the mat, but pressing it doesn't
-make it stick open
-  - trash to be moved to mat tab style button - maybe they can have icons
+  - need to update app-mat-tab and the visible mat. i've clunked it together for now 
   - add non-supply cards to right side of kingdom
     - maybe as tabs similar to the mat tabs that expand or you press to open and show what's in them
 
