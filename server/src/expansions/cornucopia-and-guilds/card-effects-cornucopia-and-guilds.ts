@@ -755,6 +755,95 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
       
+      const provinceCardsInHand = cardEffectArgs.match.playerHands[cardEffectArgs.playerId]
+        .map(cardEffectArgs.cardLibrary.getCard)
+        .filter(card => card.cardKey === 'province');
+      
+      if (provinceCardsInHand.length === 0) {
+        console.log(`[joust effect] no province cards in hand`);
+        return;
+      }
+      
+      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        prompt: 'Set aside province?',
+        playerId: cardEffectArgs.playerId,
+        actionButtons: [
+          { label: 'CANCEL', action: 1 }, { label: 'SET ASIDE', action: 2 }
+        ],
+      }) as { action: number, result: number[] };
+      
+      if (result.action === 1) {
+        console.log(`[joust effect] player ${cardEffectArgs.playerId} cancelling joust`);
+        return;
+      }
+      
+      const provinceCard = provinceCardsInHand.slice(-1)[0];
+      
+      console.log(`[joust effect] player ${cardEffectArgs.playerId} setting aside ${provinceCard}`);
+      
+      await cardEffectArgs.runGameActionDelegate('moveCard', {
+        cardId: provinceCard.id,
+        toPlayerId: cardEffectArgs.playerId,
+        to: { location: 'set-aside' }
+      });
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate({
+        id: `joust:${cardEffectArgs.cardId}:startPhase`,
+        listeningFor: 'startTurnPhase',
+        condition: (conditionArgs) => {
+          if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'cleanup') return false;
+          return true;
+        },
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        triggeredEffectFn: async () => {
+          console.log(`[joust triggered effect] player ${cardEffectArgs.playerId} discarding set aside ${provinceCard}`);
+          await cardEffectArgs.runGameActionDelegate('discardCard', {
+            cardId: provinceCard.id,
+            playerId: cardEffectArgs.playerId
+          });
+        }
+      });
+      
+      const rewardCardIds = findCards(cardEffectArgs.match, { cards: { type: 'REWARD' } }, cardEffectArgs.cardLibrary);
+      
+      if (!rewardCardIds.length) {
+        console.log(`[joust effect] no reward cards in supply`);
+        return;
+      }
+      
+      let selectedRewardId: CardId | undefined = undefined;
+      
+      if (rewardCardIds.length === 1) {
+        selectedRewardId = rewardCardIds[0];
+      }
+      else {
+        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Select reward`,
+          restrict: rewardCardIds,
+          count: 1
+        }) as CardId[];
+        
+        selectedRewardId = selectedCardIds[0];
+      }
+      
+      if (!selectedRewardId) {
+        console.warn(`[joust effect] no reward card selected`);
+        return;
+      }
+      
+      const selectedRewardCard = cardEffectArgs.cardLibrary.getCard(selectedRewardId);
+      
+      console.log(`[joust effect] player ${cardEffectArgs.playerId} gaining ${selectedRewardCard}`);
+      
+      await cardEffectArgs.runGameActionDelegate('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedRewardId,
+        to: { location: 'playerHands' }
+      });
     }
   },
   'menagerie': {

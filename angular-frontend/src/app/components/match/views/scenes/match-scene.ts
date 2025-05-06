@@ -1,12 +1,11 @@
 import { Application, Assets, Container, Graphics, Rectangle, Sprite, Text } from 'pixi.js';
 import { Scene } from '../../../../core/scene/scene';
 import { PlayerHandView } from '../player-hand';
-import { AppButton, createAppButton } from '../../../../core/create-app-button';
+import { createAppButton } from '../../../../core/create-app-button';
 import { matchStartedStore } from '../../../../state/match-state';
 import { playerStore, selfPlayerIdStore, } from '../../../../state/player-state';
 import { PlayAreaView } from '../play-area';
 import { KingdomSupplyView } from '../kingdom-supply';
-import { cardStore } from '../../../../state/card-state';
 import { CardId, PlayerId, UserPromptActionArgs } from 'shared/shared-types';
 import {
   awaitingServerLockReleaseStore,
@@ -19,15 +18,14 @@ import { CARD_HEIGHT, STANDARD_GAP } from '../../../../core/app-contants';
 import { displayCardDetail } from '../modal/display-card-detail';
 import { validateCountSpec } from '../../../../shared/validate-count-spec';
 import { CardStackView } from '../card-stack';
-import { currentPlayerTurnIdStore, turnPhaseStore } from '../../../../state/turn-state';
+import { currentPlayerTurnIdStore } from '../../../../state/turn-state';
 import { isNumber, isUndefined } from 'es-toolkit/compat';
 import { AppList } from '../app-list';
 import { SocketService } from '../../../../core/socket-service/socket.service';
 import { gamePausedStore } from '../../../../state/game-logic';
-import { playerDeckStore, playerDiscardStore, playerHandStore } from '../../../../state/player-logic';
+import { playerDeckStore, playerDiscardStore } from '../../../../state/player-logic';
 import { selectableCardStore } from '../../../../state/interactive-logic';
 import { SelectCardArgs } from '../../../../../types';
-import { computed } from 'nanostores';
 import { BaseSupplyView } from '../base-supply';
 import { NonSupplyKingdomView } from '../non-supply-kingdom-view';
 
@@ -44,10 +42,6 @@ export class MatchScene extends Scene {
   private _scoreViewRight: number = 0;
   private _scoreViewBottom: number = 0;
   private _nonSupplyView: NonSupplyKingdomView | undefined;
-
-  private _playAllTreasuresButton: AppButton = createAppButton(
-    { text: 'PLAY ALL TREASURES', style: { fill: 'white', fontSize: 24 } }
-  );
   private _selfId: PlayerId = selfPlayerIdStore.get()!;
 
   private get uiInteractive(): boolean {
@@ -77,22 +71,6 @@ export class MatchScene extends Scene {
 
     this.createBoard();
 
-    this._playAllTreasuresButton.button.label = 'playAllTreasureButton';
-    this._playAllTreasuresButton.button.visible = false;
-    this._playAllTreasuresButton.button.on('pointerdown', () => {
-      awaitingServerLockReleaseStore.set(true);
-      this._socketService.on('playAllTreasureComplete', () => {
-        this._socketService.off('playAllTreasureComplete');
-        awaitingServerLockReleaseStore.set(false);
-      });
-      this._socketService.emit('playAllTreasure', this._selfId);
-    });
-    this._playAllTreasuresButton.button.on('removed', () => {
-      this._playAllTreasuresButton.button.removeAllListeners();
-    })
-
-    this.addChild(this._playAllTreasuresButton.button);
-
     this._cleanup.push(matchStartedStore.subscribe(val => this.onMatchStarted(val)));
 
     this._app.renderer.on('resize', this.onRendererResize);
@@ -112,20 +90,6 @@ export class MatchScene extends Scene {
 
     this._cleanup.push(currentPlayerTurnIdStore.subscribe(this.onCurrentPlayerTurnUpdated));
     this._cleanup.push(gamePausedStore.subscribe(this.onPauseGameUpdated));
-
-    this._cleanup.push(
-      computed(
-        [playerHandStore(this._selfId), awaitingServerLockReleaseStore, turnPhaseStore, currentPlayerTurnIdStore],
-        (hand, waiting, turnPhase, currentPlayerTurnId) => {
-          return (
-            !waiting &&
-            turnPhase === 'buy' &&
-            currentPlayerTurnId === this._selfId &&
-            hand.some(cardId => cardStore.get()[cardId].type.includes('TREASURE'))
-          );
-        }
-      ).subscribe(visible => this._playAllTreasuresButton.button.visible = visible)
-    );
 
     setTimeout(() => {
       this.onRendererResize();
@@ -243,7 +207,20 @@ export class MatchScene extends Scene {
 
     this._playerHand = new PlayerHandView(this._selfId);
     this._playerHand.on('nextPhase', this.onNextPhasePressed);
-    this._cleanup.push(() => this._playerHand?.off('nextPhase', this.onNextPhasePressed));
+
+    this._cleanup.push(() => this._playerHand?.off('nextPhase'));
+
+    this._playerHand.on('playAllTreasure', () => {
+      awaitingServerLockReleaseStore.set(true);
+      this._socketService.on('playAllTreasureComplete', () => {
+        this._socketService.off('playAllTreasureComplete');
+        awaitingServerLockReleaseStore.set(false);
+      });
+      this._socketService.emit('playAllTreasure', this._selfId);
+    });
+
+    this._cleanup.push(() => this._playerHand?.off('playAllTreasure'));
+
     this.addChild(this._playerHand);
   }
 
@@ -579,6 +556,14 @@ export class MatchScene extends Scene {
       this._kingdomView.x = Math.max(this._scoreViewRight, this._baseSupply.x + this._baseSupply.width) + STANDARD_GAP;
     }
 
+    if (this._playArea && this._kingdomView && this._nonSupplyView && this._playerHand) {
+      this._playArea.x = this._kingdomView.x;
+      this._playArea.y = Math.max(this._kingdomView.y + this._kingdomView.height, this._nonSupplyView.y + this._nonSupplyView.height) + STANDARD_GAP;
+
+      const height = this._playerHand.y - this._playArea.y;
+      this._playArea.verticalSpace = Math.max(400, height - STANDARD_GAP);
+    }
+
     if (this._kingdomView && this._nonSupplyView) {
       this._nonSupplyView.x = this._kingdomView.x + this._kingdomView.width + STANDARD_GAP;
       this._nonSupplyView.y = STANDARD_GAP;
@@ -587,14 +572,6 @@ export class MatchScene extends Scene {
     if (this._playerHand) {
       this._playerHand.x = this._app.renderer.width * .5 - this._playerHand.width * .5;
       this._playerHand.y = this._app.renderer.height - this._playerHand.height;
-
-      this._playAllTreasuresButton.button.x = this._playerHand.x + this._playerHand.width * .5 - this._playAllTreasuresButton.button.width * .5;
-      this._playAllTreasuresButton.button.y = this._playerHand.y - this._playAllTreasuresButton.button.height - STANDARD_GAP;
-
-      if (this._playArea) {
-        this._playArea.x = this._playerHand.x + this._playerHand.width * .5 - this._playArea.width * .5;
-        this._playArea.y = this._playerHand.y - this._playArea.height - 75;
-      }
 
       if (this._discard) {
         this._discard.y = this._app.renderer.height - CARD_HEIGHT * .5;

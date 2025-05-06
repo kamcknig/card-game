@@ -13,8 +13,11 @@ import { awaitingServerLockReleaseStore } from '../../../state/interactive-state
 import { selfPlayerIdStore } from '../../../state/player-state';
 
 export class PlayerHandView extends Container {
-  private _phaseStatus: PhaseStatus = new PhaseStatus();
-  private _nextPhaseButton: AppButton = createAppButton({ text: 'NEXT' });
+  private readonly _phaseStatus: PhaseStatus = new PhaseStatus();
+  private readonly _nextPhaseButton: AppButton = createAppButton({ text: 'NEXT' });
+  private readonly _playAllTreasuresButton: AppButton = createAppButton(
+    { text: 'PLAY ALL\nTREASURE', style: { align: 'center', fill: 'white', fontSize: 24 } }
+  );
 
   private readonly _cleanup: (() => void)[] = [];
   private readonly _background: Graphics = new Graphics({ label: 'background' });
@@ -25,6 +28,7 @@ export class PlayerHandView extends Container {
 
     this._cardList.label = `cardList`;
     this._cardList.elementsMargin = STANDARD_GAP;
+    this._cardList.x = STANDARD_GAP;
 
     this.label = `player-hand-${this.playerId}`;
 
@@ -37,10 +41,8 @@ export class PlayerHandView extends Container {
     this._cardList.y = this._background.y + STANDARD_GAP;
 
     this._background.clear();
-    this._background.roundRect(0, 0, CARD_WIDTH * 6 + STANDARD_GAP * 6, CARD_HEIGHT + STANDARD_GAP * 4, 5);
+    this._background.roundRect(0, 0, (CARD_WIDTH + STANDARD_GAP) * 6, CARD_HEIGHT + STANDARD_GAP * 4, 5);
     this._background.fill({ color: 0, alpha: .6 });
-
-    this._phaseStatus.x = this._background.width * .5 - this._phaseStatus.width * .5;
 
     this._cleanup.push(computed(
       [currentPlayerTurnIdStore, selfPlayerIdStore, awaitingServerLockReleaseStore],
@@ -48,6 +50,23 @@ export class PlayerHandView extends Container {
     ).subscribe(visible => {
       this._nextPhaseButton.button.visible = visible
     }));
+
+    this._cleanup.push(
+      computed(
+        [selfPlayerIdStore, awaitingServerLockReleaseStore, turnPhaseStore, currentPlayerTurnIdStore],
+        (selfId, waiting, turnPhase, currentPlayerTurnId) => {
+          if (!selfId) return false;
+
+          const hand = playerHandStore(selfId).get();
+
+          return (
+            !waiting &&
+            turnPhase === 'buy' &&
+            currentPlayerTurnId === selfId && hand.some(cardId => cardStore.get()[cardId].type.includes('TREASURE'))
+          );
+        }
+      ).subscribe(visible => this._playAllTreasuresButton.button.visible = visible)
+    );
 
     this._cleanup.push(turnPhaseStore.subscribe((phase) => {
       switch (phase) {
@@ -59,21 +78,31 @@ export class PlayerHandView extends Container {
           break;
       }
 
-      this._nextPhaseButton.button.x = this._phaseStatus.x + this._phaseStatus.width - this._nextPhaseButton.button.width;
+      this._nextPhaseButton.button.x = this.width - this._nextPhaseButton.button.width;
+      this._nextPhaseButton.button.y = Math.floor(this.height * .5 + this._nextPhaseButton.button.height * .5 + STANDARD_GAP);
     }));
     this.addChild(this._nextPhaseButton.button);
-    this._cleanup.push(playerHandStore(playerId).subscribe(this.drawHand));
-    this._nextPhaseButton.button.on('pointerdown', this.onNextPhasePressed);
-    this.on('removed', this.onRemoved);
-  }
 
-  private onNextPhasePressed = () => {
-    this.emit('nextPhase');
+    this._playAllTreasuresButton.button.label = 'playAllTreasureButton';
+    this._playAllTreasuresButton.button.visible = false;
+    this._playAllTreasuresButton.button.on('pointerdown', () => {
+      this.emit('playAllTreasure');
+    });
+    this._playAllTreasuresButton.button.x = this.width - this._playAllTreasuresButton.button.width;
+    this._playAllTreasuresButton.button.y = Math.floor(this.height * .5 - this._playAllTreasuresButton.button.height * .5 - STANDARD_GAP);
+    this.addChild(this._playAllTreasuresButton.button);
+
+    this._cleanup.push(playerHandStore(playerId).subscribe(this.drawHand));
+    this._nextPhaseButton.button.on('pointerdown', () => {
+      this.emit('nextPhase');
+    });
+    this.on('removed', this.onRemoved);
   }
 
   private onRemoved = () => {
     this._cleanup.forEach(c => c());
     this._nextPhaseButton.button.off('pointerdown');
+    this._playAllTreasuresButton.button.off('pointerdown');
     this.off('removed');
   }
 
@@ -152,6 +181,5 @@ export class PlayerHandView extends Container {
     }
 
     this._cardList.elementsMargin = cardStackCards.length > 5 ? -SMALL_CARD_WIDTH * .50 : STANDARD_GAP
-    this._cardList.x = Math.floor(this.width * .5 - this._cardList.width * .5);
   }
 }

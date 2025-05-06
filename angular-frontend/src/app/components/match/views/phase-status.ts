@@ -21,7 +21,7 @@ export class PhaseStatus extends Container {
 
     this._background
       .roundRect(0, 0, 900, 50, 5)
-      .fill({ color: 0, alpha: .7 });
+      .fill({ color: 0, alpha: .6 });
 
     this._cleanup.push(
       batched(

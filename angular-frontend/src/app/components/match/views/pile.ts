@@ -20,14 +20,6 @@ export class PileView extends Container {
   private readonly _facing: CardFacing = 'front';
   private readonly _cardViewContainer: Container;
   private _cardView: CardView | undefined | null;
-  private _showCountBadge: boolean = true;
-
-  set showCountBadge(val: boolean) {
-    if (this._showCountBadge === val) return;
-
-    this._showCountBadge = val;
-    this.draw();
-  }
 
   set pile(val: Card[]) {
     this._cards = [...val];
@@ -38,7 +30,6 @@ export class PileView extends Container {
   constructor(args: PileArgs) {
     super();
 
-    this._showCountBadge = args.showBadgeCount ?? true;
     this._cards = args.cards ?? [];
     this._count = this._cards.length
     this._size = args.size ?? 'full';
@@ -75,6 +66,11 @@ export class PileView extends Container {
         saturation: .4,
         brightness: .4
       })];
+
+      if (this._cardView) {
+        this._cardView.useHighlight = false;
+      }
+
       badge = this._cardViewContainer.getChildByLabel('countBadge') as CountBadgeView;
       badge?.removeFromParent();
       return;
@@ -102,6 +98,5 @@ export class PileView extends Container {
     }
 
     badge.count = this._count;
-    badge.visible = this._showCountBadge;
   }
 }

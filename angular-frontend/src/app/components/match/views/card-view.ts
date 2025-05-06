@@ -22,6 +22,14 @@ export class CardView extends Container {
   private _backImage: Texture;
   private _facing: CardFacing = 'back';
   private _size: CardSize = 'full';
+  private _useHighlight: boolean = true;
+
+  set useHighlight(val: boolean) {
+    if (this._useHighlight === val) return;
+
+    this._useHighlight = val;
+    this.onDraw();
+  }
 
   private _card: Card;
 
@@ -131,18 +139,21 @@ export class CardView extends Container {
 
     this._highlight.clear();
 
-    for (const cardId of selectable) {
-      if (cardId === this._card.id) {
-        this._highlight
-          .roundRect(-3, -3, this._cardView.width + 6, this._cardView.height + 6, 5)
-          .fill(0xffaaaa);
+    if (this._useHighlight) {
+      for (const cardId of selectable) {
+        if (cardId === this._card.id) {
+          this._highlight
+            .roundRect(-3, -3, this._cardView.width + 6, this._cardView.height + 6, 5)
+            .fill(0xffaaaa);
+        }
       }
-    }
-    for (const cardId of selected) {
-      if (cardId === this._card.id) {
-        this._highlight
-          .roundRect(-3, -3, this._cardView.width + 6, this._cardView.height + 6, 5)
-          .fill(0x6DFF8C);
+
+      for (const cardId of selected) {
+        if (cardId === this._card.id) {
+          this._highlight
+            .roundRect(-3, -3, this._cardView.width + 6, this._cardView.height + 6, 5)
+            .fill(0x6DFF8C);
+        }
       }
     }
 

@@ -14,6 +14,12 @@ export class PlayAreaView extends Container {
   private _cardView: List = new List({ elementsMargin: STANDARD_GAP });
   private _activeDurationCardList: ActiveDurationCardList = new ActiveDurationCardList({ label: 'activeDurationCardList' });
   private readonly _cleanup: (() => void)[] = [];
+  private _verticalSpace: number | undefined = undefined;
+
+  set verticalSpace(val: number) {
+    this._verticalSpace = val;
+    this.drawCards(playAreaStore.get(), matchStore.get());
+  }
 
   constructor() {
     super();
@@ -21,7 +27,7 @@ export class PlayAreaView extends Container {
     this._cardView.label = 'cardView';
 
     this._background.roundRect(0, 0, 1000, 340, 5);
-    this._background.fill({ color: 0, alpha: .6 });
+    this._background.fill({ color: 0, alpha: .4 });
     this.addChild(this._background);
 
     this._activeDurationCardList.x = STANDARD_GAP;
@@ -48,6 +54,10 @@ export class PlayAreaView extends Container {
 
   private drawCards(cards: ReadonlyArray<Card>, match: Match | null) {
     this._cardView.removeChildren();
+
+    this._background.clear();
+    this._background.roundRect(0, 0, 1000, this._verticalSpace ?? 400, 5);
+    this._background.fill({ color: 0, alpha: .4 });
 
     for (const card of cards) {
       const view = this._cardView.addChild(createCardView(card));

@@ -108,13 +108,21 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   }
   
   async moveCard(args: { toPlayerId?: PlayerId, cardId: CardId, to: CardLocationSpec }) {
-    const oldSource = findSourceByCardId(args.cardId, this.match, this.cardLibrary);
+    let oldSource;
+    
+    try {
+      oldSource = findSourceByCardId(args.cardId, this.match, this.cardLibrary);
+    }
+    catch (e) {
+      console.warn(`[moveCard action] could not find source for card ${args.cardId}`);
+    }
+    
     args.to.location = castArray(args.to.location);
     const newSource = findSourceByLocationSpec({ spec: args.to, playerId: args.toPlayerId }, this.match);
     
-    oldSource.sourceStore.splice(oldSource.index, 1);
+    oldSource?.sourceStore.splice(oldSource.index, 1);
     
-    switch (oldSource.storeKey) {
+    switch (oldSource?.storeKey) {
       case 'playerHands':
         await this.reactionManager.runCardLifecycleEvent('onLeaveHand', {
           playerId: args.toPlayerId!,
@@ -140,9 +148,9 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         break;
     }
     
-    console.log(`[moveCard action] moved ${this.cardLibrary.getCard(args.cardId)} from ${oldSource.storeKey} to ${args.to.location}`);
+    console.log(`[moveCard action] moved ${this.cardLibrary.getCard(args.cardId)} from ${oldSource?.storeKey} to ${args.to.location}`);
     
-    return oldSource.storeKey;
+    return oldSource?.storeKey;
   }
   
   async gainAction(args: { count: number }, context?: GameActionContext) {

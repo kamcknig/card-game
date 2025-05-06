@@ -3,6 +3,7 @@ import { rewardsStore } from '../../../state/match-logic';
 import { Card, CardNoId } from 'shared/shared-types';
 import { PileView } from './pile';
 import { STANDARD_GAP } from '../../../core/app-contants';
+import { cardStore } from '../../../state/card-state';
 
 export class NonSupplyKingdomView extends Container {
   private _container: Container;
@@ -12,8 +13,20 @@ export class NonSupplyKingdomView extends Container {
 
     this._container = this.addChild(new Container());
 
-    const rewardStoreUnsub = rewardsStore.subscribe(rewards =>
-      this.drawRewards(rewards));
+    const rewardStoreUnsub = rewardsStore.subscribe(rewards => {
+      if (!rewards) {
+        return;
+      }
+
+      // todo: remove this owner check when game actions on the server side properly handles moving cards to/from
+      // locations
+      const cardsById = cardStore.get();
+
+      this.drawRewards({
+        ...rewards,
+        cards: rewards?.cards.filter(card => !card.owner) ?? []
+      });
+    });
 
     this.on('removed', () => {
       rewardStoreUnsub();
@@ -68,6 +81,7 @@ export class NonSupplyKingdomView extends Container {
           size: 'half',
           facing: 'front',
         });
+        pile.label = cardKey;
         pile.y = idx * 30;
         cardContainer.addChild(pile);
       }

@@ -126,7 +126,7 @@ export interface BaseGameActionDefinitionMap {
   }, context?: GameActionContext & { bought?: boolean, overpay?: number }) => Promise<void>;
   gainPotion: (args: { count: number }) => Promise<void>;
   gainTreasure: (args: { count: number }, context?: GameActionContext) => Promise<void>;
-  moveCard: (args: { toPlayerId?: PlayerId, cardId: CardId, to: CardLocationSpec }) => Promise<CardLocation>;
+  moveCard: (args: { toPlayerId?: PlayerId, cardId: CardId, to: CardLocationSpec }) => Promise<CardLocation | undefined>;
   nextPhase: () => Promise<void>;
   playCard: (args: {
     playerId: PlayerId,
@@ -277,7 +277,7 @@ export type TriggerEventTypeContext = {
   endTurnPhase: { phaseIndex: number; };
   startTurnPhase: { phaseIndex: number; };
   endTurn: void;
-  discardCard: { previousLocation: CardLocation, playerId: PlayerId, cardId: CardId };
+  discardCard: { previousLocation?: CardLocation, playerId: PlayerId, cardId: CardId };
 }
 
 export type TriggerEventType = keyof TriggerEventTypeContext;
