@@ -32,7 +32,6 @@ export const configureJoust = async (args: ExpansionConfiguratorContext) => {
     // adds the REWARD card type
     const cardData = createCardData(key, 'cornucopia-and-guilds', {
       ...rewardCardLibrary[key] ?? {},
-      type: [...rewardCardLibrary[key].type, 'REWARD']
     });
     args.config.nonSupplyCards.push(cardData)
     args.config.nonSupplyCardCount[key] = args.config.players.length > 2 ? 2 : 1;

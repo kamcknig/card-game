@@ -230,6 +230,59 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'courser': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const actions = [
+        { label: '+2 Cards', action: 1 },
+        { label: '+2 Actions', action: 2 },
+        { label: '+2 Treasure', action: 3 },
+        { label: 'Gain 4 Silvers', action: 4 },
+      ];
+      
+      for (let i = 0; i < 2; i++) {
+        const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+          prompt: 'Choose one',
+          playerId: cardEffectArgs.playerId,
+          actionButtons: actions,
+        }) as { action: number, result: number[] };
+        
+        const idx = actions.findIndex(action => action.action === result.action);
+        if (idx !== -1) {
+          actions.splice(idx, 1);
+        }
+        
+        switch (result.action) {
+          case 1:
+            await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
+            break;
+          case 2:
+            await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
+            break;
+          case 3:
+            await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+            break;
+          case 4: {
+            const silverCardIds = findCards(
+              cardEffectArgs.match,
+              { location: 'supply', cards: { cardKeys: 'silver' } },
+              cardEffectArgs.cardLibrary
+            );
+            
+            const numToGain = Math.min(4, silverCardIds.length);
+            for (let i = 0; i < numToGain; i++) {
+              await cardEffectArgs.runGameActionDelegate('gainCard', {
+                playerId: cardEffectArgs.playerId,
+                cardId: silverCardIds.slice(-(i + 1))[0],
+                to: { location: 'playerDiscards'}
+              });
+            }
+            
+            break;
+          }
+        }
+      }
+    }
+  },
   'fairgrounds': {
     registerScoringFunction: () => (args) => {
       const cards = args.cardLibrary.getAllCardsAsArray().filter(card => card.owner === args.ownerId);
