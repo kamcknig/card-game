@@ -19,12 +19,10 @@ import { CARD_HEIGHT, STANDARD_GAP } from '../../../../core/app-contants';
 import { displayCardDetail } from '../modal/display-card-detail';
 import { validateCountSpec } from '../../../../shared/validate-count-spec';
 import { CardStackView } from '../card-stack';
-import { displayTrash } from '../modal/display-trash';
 import { currentPlayerTurnIdStore, turnPhaseStore } from '../../../../state/turn-state';
 import { isNumber, isUndefined } from 'es-toolkit/compat';
 import { AppList } from '../app-list';
 import { SocketService } from '../../../../core/socket-service/socket.service';
-import { trashStore } from '../../../../state/match-logic';
 import { gamePausedStore } from '../../../../state/game-logic';
 import { playerDeckStore, playerDiscardStore, playerHandStore } from '../../../../state/player-logic';
 import { selectableCardStore } from '../../../../state/interactive-logic';
@@ -36,7 +34,6 @@ export class MatchScene extends Scene {
   private _board: Container = new Container();
   private _baseSupply: Container = new Container({ scale: .9 });
   private _playerHand: PlayerHandView | undefined;
-  private _trash: CardStackView | undefined;
   private _deck: CardStackView | undefined;
   private _discard: CardStackView | undefined;
   private _cleanup: (() => void)[] = [];
@@ -222,19 +219,6 @@ export class MatchScene extends Scene {
     this._kingdomView = this.addChild(new KingdomSupplyView());
     this._kingdomView.scale = .9;
 
-    this._trash = new CardStackView({
-      label: 'TRASH',
-      $cardIds: trashStore,
-      cardFacing: 'front',
-      alwaysShowCountBadge: true,
-      scale: .7,
-    });
-    this._trash.eventMode = 'static';
-    this._trash.on('pointerdown', this.onTrashPressed);
-    this._cleanup.push(() => this._trash?.off('pointerdown', this.onTrashPressed));
-
-    this.addChild(this._trash);
-
     this._playArea = this.addChild(new PlayAreaView());
 
     this._deck = new CardStackView({
@@ -257,14 +241,6 @@ export class MatchScene extends Scene {
     this._playerHand.on('nextPhase', this.onNextPhasePressed);
     this._cleanup.push(() => this._playerHand?.off('nextPhase', this.onNextPhasePressed));
     this.addChild(this._playerHand);
-  }
-
-  private onTrashPressed = (e: PointerEvent) => {
-    if (trashStore.get().length === 0 || e.button === 2) {
-      return;
-    }
-
-    displayTrash(this._app)
   }
 
   private onNextPhasePressed = (e: PointerEvent) => {
@@ -597,11 +573,6 @@ export class MatchScene extends Scene {
 
       this._kingdomView.y = STANDARD_GAP;
       this._kingdomView.x = Math.max(this._scoreViewRight, this._baseSupply.x + this._baseSupply.width) + STANDARD_GAP;
-
-      if (this._trash) {
-        this._trash.x = this._kingdomView.x + this._kingdomView.width + STANDARD_GAP;
-        this._trash.y = this._kingdomView.y;
-      }
     }
 
     if (this._playerHand) {

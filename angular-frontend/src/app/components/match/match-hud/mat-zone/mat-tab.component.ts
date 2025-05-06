@@ -10,11 +10,17 @@ import { MatPlayerContent } from '../types';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MatTabComponent {
-  @Input() mat!: { mat: Mats; playerContent: MatPlayerContent };
+  @Input() mat!: { mat: Mats | string; content: MatPlayerContent | CardId[]  };
 
   getCount() {
-    return Object.keys(this.mat.playerContent).reduce((acc, playerId) => {
-      return acc + this.mat.playerContent[+playerId].cardIds.length;
-    }, 0);
+    if (!Array.isArray(this.mat.content)) {
+      const matContent = this.mat.content as MatPlayerContent
+      return Object.keys(this.mat.content).reduce((acc, playerId) => {
+        return acc + matContent[+playerId].cardIds.length;
+      }, 0);
+    }
+    else {
+      return this.mat.content.length ?? 0;
+    }
   }
 }

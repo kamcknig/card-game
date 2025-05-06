@@ -1,13 +1,22 @@
 <app-score #scoreView [playerScores]="playerScore$ | async"></app-score>
 
 <div class="mat-tab-content">
+  @let trashMat = trashMat$ | async;
+  @if (trashMat) {
+    <app-mat-tab
+      [mat]="trashMat"
+      (click)="visibleMat === trashMat ? stickyMat = !stickyMat : visibleMat = trashMat"
+      (mouseenter)="!stickyMat ? visibleMat = trashMat : null"
+      (mouseleave)="!stickyMat ? visibleMat = null : null">
+    </app-mat-tab>
+  }
   @let setAsideMat = setAsideMat$ | async;
   @if (setAsideMat) {
     <app-mat-tab
       [mat]="setAsideMat"
-      (click)="visibleMat = setAsideMat; stickyMat = true"
-      (mouseenter)="visibleMat = setAsideMat; stickyMat = true"
-      (mouseleave)="visibleMat = null; stickyMat = false">
+      (click)="visibleMat === setAsideMat ? stickyMat = !stickyMat : visibleMat = setAsideMat"
+      (mouseenter)="!stickyMat ? visibleMat = setAsideMat : null"
+      (mouseleave)="!stickyMat ? visibleMat = null : null">
     </app-mat-tab>
   }
   @for (mat of selfMats$ | async; track mat.mat) {
@@ -29,7 +38,9 @@
       <div class="player-flex-container">
         @for (playerMatContent of visibleMatContent; track playerMatContent.id) {
           <div class="player-item">
-            <div class="player-name">{{ playerMatContent.playerName }}</div>
+            @if(playerMatContent.playerName) {
+              <div class="player-name">{{ playerMatContent.playerName }}</div>
+            }
             <div class="card-flex-container">
               @for (cardId of playerMatContent.cardIds; track cardId) {
                 <div class="card-item">

@@ -19,12 +19,17 @@ import { logEntryIdsStore, logStore } from '../../../state/log-state';
 import { MatTabComponent } from './mat-zone/mat-tab.component';
 import { CardComponent } from '../../card/card.component';
 import { playerScoreStore } from '../../../state/player-logic';
-import { selfPlayerMatStore, setAsideStore } from '../../../state/match-logic';
+import { selfPlayerMatStore, setAsideStore, trashStore } from '../../../state/match-logic';
 import { LogEntryMessage } from '../../../../types';
 import { cardStore } from '../../../state/card-state';
 import { MatPlayerContent } from './types';
 import { selfPlayerIdStore } from '../../../state/match-state';
 import { Rectangle } from 'pixi.js';
+
+export interface Mat {
+  mat: Mats | string;
+  content: MatPlayerContent | CardId[];
+}
 
 @Component({
   selector: 'app-match-hud',
@@ -42,39 +47,60 @@ import { Rectangle } from 'pixi.js';
 export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('scoreView', { read: ElementRef }) scoreView!: ElementRef;
 
-  _visibleMat: { mat: Mats; playerContent: MatPlayerContent } | null = null;
+  _visibleMat: Mat | null = null;
 
   public get visibleMat() {
     return this._visibleMat;
   }
 
-  public set visibleMat(value: { mat: Mats; playerContent: MatPlayerContent } | null) {
+  public set visibleMat(value: Mat | null) {
     this._visibleMat = value;
 
-    this.visibleMatContent = Object.keys(value?.playerContent ?? {})?.map(playerId => {
-      return {
-        id: +playerId,
-        playerName: value?.playerContent[+playerId].playerName ?? 'unknown',
-        cardIds: value?.playerContent[+playerId].cardIds ?? [],
-      }
-    }) ?? [];
+    if (!Array.isArray(value?.content)) {
+      const content = value?.content as MatPlayerContent;
+      this.visibleMatContent = Object.keys(value?.content ?? {})?.map(playerId => {
+        return {
+          id: +playerId,
+          playerName: content[+playerId].playerName ?? 'unknown',
+          cardIds: content[+playerId].cardIds ?? [],
+        }
+      }) ?? [];
+    }
+    else {
+      this.visibleMatContent = [{
+        id: null,
+        playerName: null,
+        cardIds: value?.content ?? []
+      }];
+    }
   }
 
-  visibleMatContent: { id: PlayerId; playerName: string; cardIds: CardId[] }[] = [];
+  visibleMatContent: { id: PlayerId | null; playerName: string | null; cardIds: CardId[] }[] = [];
 
   scoreViewResize = output<Rectangle>();
   scoreViewResizer: ResizeObserver | undefined;
   playerIds$: Observable<readonly PlayerId[]> | undefined;
   playerScore$!: Observable<{ id: PlayerId; score: number; name: string }[]> | undefined;
   logEntries$!: Observable<readonly LogEntryMessage[]> | undefined;
-  selfMats$: Observable<{ mat: Mats, playerContent: MatPlayerContent }[]> | undefined;
-  setAsideMat$: Observable<{ mat: Mats; playerContent: MatPlayerContent }> | undefined;
+  selfMats$: Observable<{ mat: Mats, content: MatPlayerContent }[]> | undefined;
+  setAsideMat$: Observable<{ mat: Mats; content: MatPlayerContent }> | undefined;
+  trashMat$: Observable<{ mat: string; content: CardId[]; }> | undefined;
+
   stickyMat: boolean = false;
 
   constructor(private _nanoService: NanostoresService) {
   }
 
   ngOnInit() {
+    this.trashMat$ = this._nanoService.useStore(trashStore).pipe(
+      map(trash => {
+        return {
+          mat: 'trash',
+          content: trash
+        }
+      })
+    );
+
     this.setAsideMat$ = this._nanoService.useStore(setAsideStore).pipe(
       combineLatestWith(
         this._nanoService.useStore(cardStore),
@@ -102,7 +128,7 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
 
         return {
           mat: 'set-aside',
-          playerContent: matContent
+          content: matContent
         }
       })
     );
@@ -121,7 +147,7 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
             const playerName = players.find(p => p?.id === selfId)?.name;
             return {
               mat: mat.mat,
-              playerContent: {
+              content: {
                 [selfId]: {
                   playerName: playerName ?? 'Unknown',
                   cardIds: mat.cardIds
@@ -155,7 +181,7 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
     );
   }
 
-  openMat(event: { mat: Mats, playerContent: MatPlayerContent } | null) {
+  openMat(event: { mat: Mats, content: MatPlayerContent } | null) {
     this.visibleMat = event;
   }
 

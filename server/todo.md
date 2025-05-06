@@ -9,8 +9,6 @@
 so is something like that needed?
 - when using overpay feature, you can overpay with potions. this matters for stone mason. don't know how to do
 the UI for this yet, and doesn't seem super important to get done right away
-- sticky mats aren't working - when you mouse over a mat tab it shows the mat, but pressing it doesn't
-make it stick open
 
 # Higher priority
 
@@ -26,6 +24,12 @@ they need to be asked for their input again
   - need UI to exchange coffers for treasure
 - overpay from cornucopia and guilds
 - organize modules again.
+- ui updates
+  - sticky mats aren't working - when you mouse over a mat tab it shows the mat, but pressing it doesn't
+make it stick open
+  - trash to be moved to mat tab style button - maybe they can have icons
+  - add non-supply cards to right side of kingdom
+    - maybe as tabs similar to the mat tabs that expand or you press to open and show what's in them
 
 
 CORNUCOPIA expansion
