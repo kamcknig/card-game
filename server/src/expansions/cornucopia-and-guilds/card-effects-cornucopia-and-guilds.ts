@@ -273,7 +273,7 @@ const expansion: CardExpansionModule = {
               await cardEffectArgs.runGameActionDelegate('gainCard', {
                 playerId: cardEffectArgs.playerId,
                 cardId: silverCardIds.slice(-(i + 1))[0],
-                to: { location: 'playerDiscards'}
+                to: { location: 'playerDiscards' }
               });
             }
             
@@ -281,6 +281,43 @@ const expansion: CardExpansionModule = {
           }
         }
       }
+    }
+  },
+  'demesne': {
+    registerScoringFunction: () => (args) => {
+      const ownedGoldCards = findCards(
+        args.match,
+        { owner: args.ownerId },
+        args.cardLibrary
+      ).map(args.cardLibrary.getCard)
+        .filter(card => card.cardKey === 'gold');
+      return ownedGoldCards.length;
+    },
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[demesne effect] gaining 2 actions, and 2 buys`);
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 2 });
+      
+      const goldCardIds = findCards(
+        cardEffectArgs.match,
+        { location: 'supply', cards: { cardKeys: 'gold' } },
+        cardEffectArgs.cardLibrary
+      );
+      
+      if (!goldCardIds.length) {
+        console.log(`[demesne effect] no gold cards in supply`);
+        return;
+      }
+      
+      const goldCard = cardEffectArgs.cardLibrary.getCard(goldCardIds.slice(-1)[0]);
+      
+      console.log(`[demesne effect] gaining ${goldCard}`);
+      
+      await cardEffectArgs.runGameActionDelegate('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: goldCard.id,
+        to: { location: 'playerDiscards' }
+      });
     }
   },
   'fairgrounds': {

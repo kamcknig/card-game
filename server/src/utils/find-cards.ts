@@ -17,7 +17,8 @@ export type FindCardsFilter = {
     tags?: string | string[];
     cardKeys?: CardKey | CardKey[];
     type?: CardType | CardType[];
-  }
+  },
+  owner?: number | undefined;
 }
 
 export const findCardsByLocation = (match: Match, locations: CardLocation[]) => {
@@ -79,6 +80,10 @@ export const findCards = (
   }
   
   let sourceCards = cardIds.map(cardLibrary.getCard);
+  
+  if (filter.owner) {
+    sourceCards = sourceCards.filter(card => card.owner === filter.owner);
+  }
   
   if (!isUndefined(filter.cards)) {
     if (!isUndefined(filter.cards?.cardKeys)) {
