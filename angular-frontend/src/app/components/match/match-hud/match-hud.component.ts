@@ -83,7 +83,7 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
   playerScore$!: Observable<{ id: PlayerId; score: number; name: string }[]> | undefined;
   logEntries$!: Observable<readonly LogEntryMessage[]> | undefined;
   selfMats$: Observable<{ mat: Mats, content: MatPlayerContent }[]> | undefined;
-  setAsideMat$: Observable<{ mat: Mats; content: MatPlayerContent }> | undefined;
+  setAsideMat$: Observable<{ mat: Mats; content: MatPlayerContent } | undefined> | undefined;
   trashMat$: Observable<{ mat: string; content: CardId[]; }> | undefined;
 
   stickyMat: boolean = false;
@@ -126,10 +126,12 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
           return acc;
         }, {} as MatPlayerContent);
 
-        return {
+        const cardCount = Object.values(matContent).reduce((acc, next) => acc + next.cardIds.length, 0);
+
+        return cardCount > 0 ? {
           mat: 'set-aside',
           content: matContent
-        }
+        } : undefined
       })
     );
 
@@ -200,4 +202,6 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.scoreViewResizer.observe(this.scoreView.nativeElement);
   }
+
+  protected readonly Array = Array;
 }
