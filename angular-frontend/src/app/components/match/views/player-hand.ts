@@ -16,7 +16,13 @@ export class PlayerHandView extends Container {
   private readonly _phaseStatus: PhaseStatus = new PhaseStatus();
   private readonly _nextPhaseButton: AppButton = createAppButton({ text: 'NEXT' });
   private readonly _playAllTreasuresButton: AppButton = createAppButton(
-    { text: 'PLAY ALL\nTREASURE', style: { align: 'center', fill: 'white', fontSize: 24 } }
+    {
+      text: 'PLAY ALL\nTREASURE',
+      style: { align: 'center', fill: '#eddea3', fontSize: 24 }
+    },
+    {
+      color: '#be963a'
+    }
   );
 
   private readonly _cleanup: (() => void)[] = [];
@@ -78,7 +84,7 @@ export class PlayerHandView extends Container {
           break;
       }
 
-      this._nextPhaseButton.button.x = this.width - this._nextPhaseButton.button.width;
+      this._nextPhaseButton.button.x = this.width - this._nextPhaseButton.button.width - STANDARD_GAP;
       this._nextPhaseButton.button.y = Math.floor(this.height * .5 + this._nextPhaseButton.button.height * .5 + STANDARD_GAP);
     }));
     this.addChild(this._nextPhaseButton.button);
@@ -88,7 +94,7 @@ export class PlayerHandView extends Container {
     this._playAllTreasuresButton.button.on('pointerdown', () => {
       this.emit('playAllTreasure');
     });
-    this._playAllTreasuresButton.button.x = this.width - this._playAllTreasuresButton.button.width;
+    this._playAllTreasuresButton.button.x = this.width - this._playAllTreasuresButton.button.width - STANDARD_GAP;
     this._playAllTreasuresButton.button.y = Math.floor(this.height * .5 - this._playAllTreasuresButton.button.height * .5 - STANDARD_GAP);
     this.addChild(this._playAllTreasuresButton.button);
 
