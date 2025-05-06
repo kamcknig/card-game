@@ -688,7 +688,26 @@ const expansion: CardExpansionModule = {
       
       console.log(`[housecarl effect] drawing ${uniqueActionCardsInPlay.length} cards`);
       
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: uniqueActionCardsInPlay.length });
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: uniqueActionCardsInPlay.length
+      });
+    }
+  },
+  'huge-turnip': {
+    registerEffects: () => async (cardEffectArgs) => {
+      await cardEffectArgs.runGameActionDelegate('gainCoffer', { count: 2, playerId: cardEffectArgs.playerId });
+      
+      const coffers = cardEffectArgs.match.coffers?.[cardEffectArgs.playerId] ?? 0;
+      
+      if (coffers === 0) {
+        console.log(`[huge turnip effect] no coffers`);
+        return;
+      }
+      
+      console.log(`[huge turnip effect] gaining ${coffers} treasure`);
+      
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: coffers });
     }
   },
   'hunting-party': {
