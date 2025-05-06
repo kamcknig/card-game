@@ -154,6 +154,82 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'coronet': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const handCards = cardEffectArgs.match.playerHands[cardEffectArgs.playerId]
+        .map(cardEffectArgs.cardLibrary.getCard);
+      
+      const cardSources = [
+        handCards
+          .filter(card => !card.type.includes('REWARD') && card.type.includes('ACTION')),
+        handCards
+          .filter(card => !card.type.includes('REWARD') && card.type.includes('TREASURE'))
+      ]
+      
+      for (let i = 0; i < 2; i++) {
+        console.log(`[coronet effect] processing ${i === 0 ? 'non-reward action instruction' : 'non-reward treasure instruction'}`);
+        const cardSource = cardSources[i];
+        
+        if (cardSource.length === 0) {
+          console.log(`[coronet effect] no non-reward action cards in hand`);
+          return;
+        }
+        
+        const uniqueCardNames = Array.from(new Set(cardSource.map(card => card.cardName)));
+        
+        let selectedCardId: CardId | undefined = undefined;
+        
+        if (uniqueCardNames.length === 1) {
+          console.log(`[coronet effect] only one unique card in hand, prompting to play`);
+          
+          const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+            prompt: `Play ${uniqueCardNames[0]}?`,
+            playerId: cardEffectArgs.playerId,
+            actionButtons: [
+              { label: 'CANCEL', action: 1 }, { label: 'PLAY', action: 2 }
+            ],
+          }) as { action: number, result: number[] };
+          
+          if (result.action === 2) {
+            selectedCardId = cardSource[0].id;
+          }
+        }
+        else {
+          console.log(`[coronet effect] multiple unique cards in hand, prompting to select`);
+          const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+            playerId: cardEffectArgs.playerId,
+            prompt: `Play non-Reward ${i === 0 ? 'Action' : 'Treasure'}?`,
+            restrict: cardSource.map(card => card.id),
+            count: 1,
+            optional: true,
+          }) as CardId[];
+          
+          if (selectedCardIds.length) {
+            selectedCardId = selectedCardIds[0];
+          }
+        }
+        
+        if (!selectedCardId) {
+          console.log(`[coronet effect] no card selected`);
+          return;
+        }
+        
+        const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+        
+        console.log(`[coronet effect] playing ${selectedCard} twice`);
+        
+        for (let i = 0; i < 2; i++) {
+          await cardEffectArgs.runGameActionDelegate('playCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: selectedCardId,
+            overrides: {
+              actionCost: 0
+            }
+          });
+        }
+      }
+    }
+  },
   'fairgrounds': {
     registerScoringFunction: () => (args) => {
       const cards = args.cardLibrary.getAllCardsAsArray().filter(card => card.owner === args.ownerId);
