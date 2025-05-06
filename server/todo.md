@@ -26,12 +26,6 @@ they need to be asked for their input again
 - organize modules again.
 - ui updates
   - need to update app-mat-tab and the visible mat. i've clunked it together for now 
-  - add non-supply cards to right side of kingdom
-    - maybe as tabs similar to the mat tabs that expand or you press to open and show what's in them
-
-
-CORNUCOPIA expansion
-- joust isn't implemented - it uses 'rewards' - need to figure them out. 
 
 need to show the context of the kingdom card for something like young witch, and ferryman
 - dominion.games puts the word "bane" in the type area of the card (but only while it's in the supply)
@@ -40,5 +34,5 @@ other, it will show the opposite card smaller next to it
 
 currently working on
  - joust
-   - need to create non supply cards at start of game
    - need to display non-supply cards in UI
+   - maybe as tabs similar to the mat tabs that expand or you press to open and show what's in them
