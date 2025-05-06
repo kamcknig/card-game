@@ -9,6 +9,8 @@
 so is something like that needed?
 - when using overpay feature, you can overpay with potions. this matters for stone mason. don't know how to do
 the UI for this yet, and doesn't seem super important to get done right away
+- sticky mats aren't working - when you mouse over a mat tab it shows the mat, but pressing it doesn't
+make it stick open
 
 # Higher priority
 

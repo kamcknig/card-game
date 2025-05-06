@@ -24,6 +24,7 @@ import { LogEntryMessage } from '../../../../types';
 import { cardStore } from '../../../state/card-state';
 import { MatPlayerContent } from './types';
 import { selfPlayerIdStore } from '../../../state/match-state';
+import { Rectangle } from 'pixi.js';
 
 @Component({
   selector: 'app-match-hud',
@@ -61,7 +62,7 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
 
   visibleMatContent: { id: PlayerId; playerName: string; cardIds: CardId[] }[] = [];
 
-  scoreViewResize = output<number>();
+  scoreViewResize = output<Rectangle>();
   scoreViewResizer: ResizeObserver | undefined;
   playerIds$: Observable<readonly PlayerId[]> | undefined;
   playerScore$!: Observable<{ id: PlayerId; score: number; name: string }[]> | undefined;
@@ -167,7 +168,7 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
       for (const entry of entries) {
         const rect = entry.target.getBoundingClientRect();
         const right = rect.right;
-        this.scoreViewResize.emit(right);
+        this.scoreViewResize.emit(new Rectangle(rect.x, rect.y, rect.width, rect.height));
       }
     });
 

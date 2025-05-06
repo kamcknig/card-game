@@ -12,7 +12,7 @@ import { AsyncPipe, NgClass, NgSwitch, NgSwitchCase } from '@angular/common';
 import { SocketService } from './core/socket-service/socket.service';
 import { NanostoresService } from '@nanostores/angular';
 import { catchError, Observable, of, tap } from 'rxjs';
-import { Application } from 'pixi.js';
+import { Application, Rectangle } from 'pixi.js';
 import { SceneNames, sceneStore } from './state/game-state';
 import { MatchScene } from './components/match/views/scenes/match-scene';
 import { PIXI_APP } from './core/pixi-application.token';
@@ -66,7 +66,10 @@ export class AppComponent implements AfterViewInit, OnInit {
           this._app.stage.addChild(this.matchScene);
         } else if (scene === 'gameSummary') {
           this.matchSummary = matchSummaryStore.get();
-          !!this.matchScene && this._app.stage.removeChild(this.matchScene);
+
+          if (this.matchScene) {
+            this._app.stage.removeChild(this.matchScene);
+          }
         }
       }),
       catchError(err => {

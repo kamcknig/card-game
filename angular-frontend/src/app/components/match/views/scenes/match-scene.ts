@@ -1,4 +1,4 @@
-import { Application, Assets, Container, Graphics, Sprite, Text } from 'pixi.js';
+import { Application, Assets, Container, Graphics, Rectangle, Sprite, Text } from 'pixi.js';
 import { Scene } from '../../../../core/scene/scene';
 import { PlayerHandView } from '../player-hand';
 import { AppButton, createAppButton } from '../../../../core/create-app-button';
@@ -43,8 +43,9 @@ export class MatchScene extends Scene {
   private _playArea: PlayAreaView | undefined;
   private _kingdomView: KingdomSupplyView | undefined;
   private _selecting: boolean = false;
-  private _supply: Container = new Container();
   private _scoreViewRight: number = 0;
+  private _scoreViewBottom: number = 0;
+
   private _playAllTreasuresButton: AppButton = createAppButton(
     { text: 'PLAY ALL TREASURES', style: { fill: 'white', fontSize: 24 } }
   );
@@ -54,8 +55,9 @@ export class MatchScene extends Scene {
     return !this._selecting && !awaitingServerLockReleaseStore.get();
   }
 
-  public scoreViewWidth(right: number): void {
-    this._scoreViewRight = right;
+  public setScoreViewRect(rect: Rectangle): void {
+    this._scoreViewRight = rect.x + rect.width;
+    this._scoreViewBottom = rect.y + rect.height;
     this.onRendererResize();
   }
 
@@ -215,9 +217,9 @@ export class MatchScene extends Scene {
   private createBoard() {
     this.addChild(this._board);
 
-    this._baseSupply = this._supply.addChild(new BaseSupplyView());
+    this._baseSupply = this.addChild(new BaseSupplyView());
     this._baseSupply.scale = .9;
-    this._kingdomView = this._supply.addChild(new KingdomSupplyView());
+    this._kingdomView = this.addChild(new KingdomSupplyView());
     this._kingdomView.scale = .9;
 
     this._trash = new CardStackView({
@@ -231,9 +233,8 @@ export class MatchScene extends Scene {
     this._trash.on('pointerdown', this.onTrashPressed);
     this._cleanup.push(() => this._trash?.off('pointerdown', this.onTrashPressed));
 
-    this._supply.addChild(this._trash);
+    this.addChild(this._trash);
 
-    this._board.addChild(this._supply);
     this._playArea = this.addChild(new PlayAreaView());
 
     this._deck = new CardStackView({
@@ -590,16 +591,17 @@ export class MatchScene extends Scene {
   }
 
   private onRendererResize = (): void => {
-    if (this._supply && this._kingdomView && this._baseSupply) {
-      this._supply.y = STANDARD_GAP;
+    if (this._kingdomView && this._baseSupply) {
+      this._baseSupply.y = this._scoreViewBottom + STANDARD_GAP;
+      this._baseSupply.x = STANDARD_GAP;
 
-      this._kingdomView.x = Math.floor(this._baseSupply.width + STANDARD_GAP);
+      this._kingdomView.y = STANDARD_GAP;
+      this._kingdomView.x = Math.max(this._scoreViewRight, this._baseSupply.x + this._baseSupply.width) + STANDARD_GAP;
 
       if (this._trash) {
         this._trash.x = this._kingdomView.x + this._kingdomView.width + STANDARD_GAP;
+        this._trash.y = this._kingdomView.y;
       }
-
-      this._supply.x = Math.max(this._scoreViewRight + STANDARD_GAP);
     }
 
     if (this._playerHand) {
@@ -615,12 +617,12 @@ export class MatchScene extends Scene {
       }
 
       if (this._discard) {
-        this._discard.y = this._app.renderer.height - CARD_HEIGHT * .75;
+        this._discard.y = this._app.renderer.height - CARD_HEIGHT * .5;
         this._discard.x = this._playerHand.x + this._playerHand.width + STANDARD_GAP;
       }
 
       if (this._deck) {
-        this._deck.y = this._app.renderer.height - CARD_HEIGHT * .75;
+        this._deck.y = this._app.renderer.height - CARD_HEIGHT * .50;
         this._deck.x = this._playerHand.x - this._deck.width - STANDARD_GAP;
       }
     }

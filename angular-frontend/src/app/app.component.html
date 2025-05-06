@@ -4,7 +4,7 @@
   <app-match-configuration *ngSwitchCase="'configuration'"></app-match-configuration>
   <app-match-hud
     [ngClass]="{'match-started': matchStarted$ | async}"
-    (scoreViewResize)="matchScene?.scoreViewWidth($event)"
+    (scoreViewResize)="matchScene?.setScoreViewRect($event)"
     *ngSwitchCase="'match'">
   </app-match-hud>
   <app-game-summary [matchSummary]="matchSummary!" *ngSwitchCase="'gameSummary'"></app-game-summary>
