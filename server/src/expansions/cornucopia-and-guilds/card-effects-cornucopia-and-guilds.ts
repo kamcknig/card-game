@@ -668,6 +668,29 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: uniquelyNamesCardsInPlay });
     }
   },
+  'housecarl': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const uniqueActionCardsInPlay = Array.from(getCardsInPlay(cardEffectArgs.match)
+        .map(cardEffectArgs.cardLibrary.getCard)
+        .filter(card => card.type.includes('ACTION'))
+        .reduce((map, card) => {
+          if (!map.has(card.cardKey)) {
+            map.set(card.cardKey, card);
+          }
+          return map;
+        }, new Map<Card['cardKey'], Card>())
+        .values());
+      
+      if (uniqueActionCardsInPlay.length === 0) {
+        console.log(`[housecarl effect] no action cards in play`);
+        return;
+      }
+      
+      console.log(`[housecarl effect] drawing ${uniqueActionCardsInPlay.length} cards`);
+      
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: uniqueActionCardsInPlay.length });
+    }
+  },
   'hunting-party': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[hunting party effect] drawing 1 card and gaining 1 action`);
