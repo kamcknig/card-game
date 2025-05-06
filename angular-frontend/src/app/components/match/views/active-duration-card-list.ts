@@ -5,7 +5,7 @@ import { List } from '@pixi/ui';
 import { STANDARD_GAP } from '../../../core/app-contants';
 import { playerStore } from '../../../state/player-state';
 import { createCardView } from '../../../core/card/create-card-view';
-import { appStore } from '../../../state/app-state';
+import { applicationStore } from '../../../state/app-state';
 
 export class ActiveDurationCardList extends Container {
   private _tabContainer: Container = new Container({
@@ -65,7 +65,7 @@ export class ActiveDurationCardList extends Container {
       this._container.removeFromParent();
     }
     else {
-      appStore.get()?.stage.addChild(this._container);
+      applicationStore.get()?.stage.addChild(this._container);
     }
   }
 
@@ -114,7 +114,7 @@ export class ActiveDurationCardList extends Container {
     playersListBackground?.roundRect(0, 0, this._playersList.width + STANDARD_GAP * 2, this._playersList.height + STANDARD_GAP * 2, 5);
     playersListBackground?.fill({color: 'black'});
 
-    const app = appStore.get();
+    const app = applicationStore.get();
 
     this._container.x = Math.floor((app?.renderer.width ?? 0) * .5 - this._playersList.width * .5);
     this._container.y = Math.floor((app?.renderer.height ?? 0) * .5 - this._playersList.height * .5);

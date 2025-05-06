@@ -1,11 +1,25 @@
-import { atom, computed } from 'nanostores';
+import { atom, computed, ReadableAtom } from 'nanostores';
 import { CardId, CardKey, Mats } from 'shared/shared-types';
-import { matchStore, selfPlayerIdStore } from './match-state';
+import { matchStore } from './match-state';
 import { cardStore } from './card-state';
+import { selfPlayerIdStore } from './player-state';
 
 export const basicSupplyStore =
   computed(matchStore, m => m?.basicSupply ?? []);
-(globalThis as any).supplyStore = basicSupplyStore;
+
+export const nonSupplyStore = computed(
+  matchStore,
+  match => match?.nonSupplyCards ?? []
+);
+
+export const rewardsStore: ReadableAtom<number[] | undefined> = computed(
+  [nonSupplyStore, cardStore],
+  (nonSupply, cards) =>
+    nonSupply
+      .map(id => cards[id])
+      .filter(card => card.type.includes('REWARD'))
+      .map(card => card.id) ?? undefined
+);
 
 export const supplyCardKeyStore = atom<[CardKey[], CardKey[]]>([[], []]);
 
@@ -13,15 +27,12 @@ export const kingdomCardKeyStore = atom<CardKey[]>([]);
 
 export const kingdomSupplyStore =
   computed(matchStore, m => m?.kingdomSupply ?? []);
-(globalThis as any).kingdomStore = kingdomSupplyStore;
 
 export const trashStore =
   computed(matchStore, m => m?.trash ?? []);
-(globalThis as any).trashStore = trashStore;
 
 export const playAreaStore =
   computed([matchStore, cardStore], (match, cards) => match?.playArea?.map(cardId => cards[cardId]) ?? []);
-(globalThis as any).playAreaStore = playAreaStore;
 
 type MatStoreType = Record<Mats, CardId[]>;
 export const selfPlayerMatStore = computed(
@@ -30,7 +41,6 @@ export const selfPlayerMatStore = computed(
     return match?.mats?.[selfId!] ?? {} as MatStoreType
   }
 );
-(globalThis as any).matStore = selfPlayerMatStore;
 
 export const setAsideStore = computed(
   [matchStore],
@@ -41,3 +51,13 @@ export const setAsideStore = computed(
 
 export const activeDurationCardStore =
   computed([matchStore, cardStore], (match, cards) => match?.activeDurationCards?.map(cardId => cards[cardId]) ?? []);
+
+(globalThis as any).supplyStore = basicSupplyStore;
+(globalThis as any).kingdomStore = kingdomSupplyStore;
+(globalThis as any).trashStore = trashStore;
+(globalThis as any).playAreaStore = playAreaStore;
+(globalThis as any).matStore = selfPlayerMatStore;
+(globalThis as any).nonSupplyStore = nonSupplyStore;
+(globalThis as any).activeDurationCardStore = activeDurationCardStore;
+(globalThis as any).rewardsStore = rewardsStore;
+(globalThis as any).setAsideStore = setAsideStore;

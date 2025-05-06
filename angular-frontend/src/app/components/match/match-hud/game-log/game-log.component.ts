@@ -1,9 +1,10 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Inject, Input, ViewChild } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { NanostoresService } from '@nanostores/angular';
 import { logStore } from '../../../../state/log-state';
-import { fromEvent, switchMap, throttleTime } from 'rxjs';
+import { finalize, fromEvent, merge, switchMap, takeUntil, throttleTime } from 'rxjs';
 import { LogEntryMessage } from '../../../../../types';
+import { DOCUMENT } from '@angular/common';
 
 @Component({
   selector: 'app-game-log',
@@ -21,6 +22,7 @@ export class GameLogComponent implements AfterViewInit {
   constructor(
     private _sanitizer: DomSanitizer,
     private _nanoService: NanostoresService,
+    @Inject(DOCUMENT) private _document: Document
   ) {
   }
 
@@ -31,25 +33,32 @@ export class GameLogComponent implements AfterViewInit {
 
     let startDragX: number;
     let startWidth: number;
-    fromEvent<DragEvent>(this.resizeHandle.nativeElement, 'dragstart')
+    fromEvent<MouseEvent>(this.resizeHandle.nativeElement, 'mousedown')
       .pipe(
         switchMap((event) => {
+          this._document.body.style.userSelect = 'none';
           startDragX = event.clientX;
           startWidth = this.logContent.nativeElement.clientWidth;
 
-          console.log('startDragX', startDragX, 'startWidth', startWidth);
-
-          return fromEvent<DragEvent>(this.resizeHandle.nativeElement, 'drag').pipe(throttleTime(50));
+          return fromEvent<MouseEvent>(window, 'mousemove').pipe(
+            takeUntil(merge(
+              fromEvent<MouseEvent>(window, 'mouseup')
+            )),
+            throttleTime(50),
+            finalize(() => {
+              this._document.body.style.userSelect = '';
+            })
+          );
         }),
       )
       .subscribe((event) => {
         let diff = startDragX - event.clientX;
 
         let newWidth = 0;
-        console.log(diff);
         if (diff > 0) {
           newWidth = Math.min(800, startWidth + diff);
-        } else {
+        }
+        else {
           newWidth = Math.max(300, startWidth + diff);
         }
 

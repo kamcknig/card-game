@@ -1,11 +1,11 @@
 import { ChangeDetectionStrategy, Component, OnDestroy } from '@angular/core';
 import { ExpansionListElement, MatchConfiguration, CardNoId, PlayerId } from 'shared/shared-types';
 import { NanostoresService } from '@nanostores/angular';
-import { playerIdStore } from '../../state/player-state';
+import { playerIdStore, selfPlayerIdStore } from '../../state/player-state';
 import { combineLatest, map, Observable, Subscription } from 'rxjs';
 import { AsyncPipe, NgClass, NgOptimizedImage, NgStyle } from '@angular/common';
 import { expansionListStore } from '../../state/expansion-list-state';
-import { matchConfigurationStore, selfPlayerIdStore } from '../../state/match-state';
+import { matchConfigurationStore } from '../../state/match-state';
 import { SocketService } from '../../core/socket-service/socket.service';
 import { gameOwnerIdStore } from '../../state/game-state';
 import { PlayerComponent } from './player-name-input/player-name-input.component';

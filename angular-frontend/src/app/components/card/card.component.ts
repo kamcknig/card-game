@@ -7,7 +7,7 @@ import { NgOptimizedImage } from '@angular/common';
 import { CARD_WIDTH } from '../../core/app-contants';
 import { CardSize } from '../../../types';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
-import { selfPlayerIdStore } from '../../state/match-state';
+import { selfPlayerIdStore } from '../../state/player-state';
 
 @Component({
   selector: 'app-card',

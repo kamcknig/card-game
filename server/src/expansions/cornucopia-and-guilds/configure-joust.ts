@@ -3,7 +3,6 @@ import { ExpansionConfiguratorContext } from '../../types.ts';
 import { CardLibrary } from '../../core/card-library.ts';
 import { createCardData } from '../../utils/load-expansion.ts';
 import { createCard } from '../../utils/create-card.ts';
-import { cardLifecycleMap } from '../../core/card-lifecycle-map.ts';
 
 export const configureJoust = async (args: ExpansionConfiguratorContext) => {
   const joustPresent = args.config.kingdomCards.some(card => card.cardKey === 'joust');
@@ -30,14 +29,19 @@ export const configureJoust = async (args: ExpansionConfiguratorContext) => {
   args.config.nonSupplyCardCount ??= {};
   
   for (const key of Object.keys(rewardCardLibrary ?? {})) {
-    const cardData = createCardData(key, 'cornucopia-and-guilds', rewardCardLibrary[key] ?? {});
-    args.config.nonSupplyCards.push({ ...cardData })
+    // adds the REWARD card type
+    const cardData = createCardData(key, 'cornucopia-and-guilds', {
+      ...rewardCardLibrary[key] ?? {},
+      type: [...rewardCardLibrary[key].type, 'REWARD']
+    });
+    args.config.nonSupplyCards.push(cardData)
     args.config.nonSupplyCardCount[key] = args.config.players.length > 2 ? 2 : 1;
   }
   console.log(`[cornucopia configurator - configuring joust] joust configured`);
 }
 
 export const createRewardKingdoms = (args: { match: Match, cardLibrary: CardLibrary }) => {
+  // creates the actual reward cards in the match library
   for (const rewardCard of args.match.config.nonSupplyCards ?? []) {
     for (let i = 0; i < args.match.config.nonSupplyCardCount![rewardCard.cardKey]; i++) {
       const c = createCard(rewardCard.cardKey, rewardCard);

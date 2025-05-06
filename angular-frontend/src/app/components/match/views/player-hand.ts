@@ -8,9 +8,9 @@ import { AppButton, createAppButton } from '../../../core/create-app-button';
 import { currentPlayerTurnIdStore, turnPhaseStore } from '../../../state/turn-state';
 import { CardStackView } from './card-stack';
 import { List } from '@pixi/ui';
-import { selfPlayerIdStore } from '../../../state/match-state';
 import { playerHandStore } from '../../../state/player-logic';
 import { awaitingServerLockReleaseStore } from '../../../state/interactive-state';
+import { selfPlayerIdStore } from '../../../state/player-state';
 
 export class PlayerHandView extends Container {
   private _phaseStatus: PhaseStatus = new PhaseStatus();

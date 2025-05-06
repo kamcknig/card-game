@@ -2,8 +2,8 @@ import { Application, Assets, Container, Graphics, Rectangle, Sprite, Text } fro
 import { Scene } from '../../../../core/scene/scene';
 import { PlayerHandView } from '../player-hand';
 import { AppButton, createAppButton } from '../../../../core/create-app-button';
-import { matchStartedStore, selfPlayerIdStore } from '../../../../state/match-state';
-import { playerStore, } from '../../../../state/player-state';
+import { matchStartedStore } from '../../../../state/match-state';
+import { playerStore, selfPlayerIdStore, } from '../../../../state/player-state';
 import { PlayAreaView } from '../play-area';
 import { KingdomSupplyView } from '../kingdom-supply';
 import { cardStore } from '../../../../state/card-state';

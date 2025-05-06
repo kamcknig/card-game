@@ -16,4 +16,8 @@ declare module 'shared/shared-types.ts' {
   interface ServerListenEvents {
     spendCoffer: (playerId: PlayerId, count: number) => void;
   }
+  
+  interface ExtraCardTypeMap {
+    REWARD: true;
+  }
 }

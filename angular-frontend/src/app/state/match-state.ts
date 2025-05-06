@@ -12,6 +12,3 @@ export const matchStartedStore = atom<boolean>(false);
 
 export const matchSummaryStore = atom<MatchSummary | undefined>(undefined);
 (globalThis as any).matchSummaryStore = matchSummaryStore;
-
-export const selfPlayerIdStore = atom<PlayerId | undefined>();
-(globalThis as any).selfPlayerIdStore = selfPlayerIdStore;

@@ -1,5 +1,6 @@
 import { computed } from 'nanostores';
-import { matchStore, selfPlayerIdStore } from './match-state';
+import { matchStore } from './match-state';
+import { selfPlayerIdStore } from './player-state';
 
 export const cardOverrideStore = computed(
   [matchStore, selfPlayerIdStore],

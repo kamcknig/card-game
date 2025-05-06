@@ -11,7 +11,7 @@ import {
 import { ScoreComponent } from './score/score.component';
 import { GameLogComponent } from './game-log/game-log.component';
 import { NanostoresService } from '@nanostores/angular';
-import { playerIdStore, playerStore } from '../../../state/player-state';
+import { playerIdStore, playerStore, selfPlayerIdStore } from '../../../state/player-state';
 import { combineLatest, combineLatestWith, filter, map, Observable, switchMap } from 'rxjs';
 import { AsyncPipe } from '@angular/common';
 import { CardId, Mats, PlayerId } from 'shared/shared-types';
@@ -23,7 +23,6 @@ import { selfPlayerMatStore, setAsideStore, trashStore } from '../../../state/ma
 import { LogEntryMessage } from '../../../../types';
 import { cardStore } from '../../../state/card-state';
 import { MatPlayerContent } from './types';
-import { selfPlayerIdStore } from '../../../state/match-state';
 import { Rectangle } from 'pixi.js';
 
 export interface Mat {

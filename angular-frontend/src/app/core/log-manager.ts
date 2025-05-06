@@ -1,7 +1,6 @@
 import { Card, CardId, LogEntry, LogEntrySource, Player, PlayerId } from 'shared/shared-types';
 import { cardStore } from '../state/card-state';
-import { playerStore } from '../state/player-state';
-import { selfPlayerIdStore } from '../state/match-state';
+import { playerStore, selfPlayerIdStore } from '../state/player-state';
 import { logEntryIdsStore, logStore } from '../state/log-state';
 
 export const logManager = {

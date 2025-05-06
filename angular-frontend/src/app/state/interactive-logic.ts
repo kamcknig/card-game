@@ -1,6 +1,7 @@
 import { clientSelectableCardsOverrideStore } from './interactive-state';
 import { computed } from 'nanostores';
-import { matchStore, selfPlayerIdStore } from './match-state';
+import { matchStore } from './match-state';
+import { selfPlayerIdStore } from './player-state';
 
 export const serverSelectableCardsStore = computed([matchStore, selfPlayerIdStore], (match, selfPlayerId) => {
   if (!match || selfPlayerId == null) return [];

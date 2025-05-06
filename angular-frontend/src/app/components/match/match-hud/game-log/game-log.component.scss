@@ -1,8 +1,8 @@
 .content {
   color: white;
   background-color: rgba(0, 0, 0, 0.6);
+  border-radius: 5px;
   height: 55vh;
-  max-height: 1000px;
   position: relative;
 
   .resize-container {
@@ -23,8 +23,10 @@
 
   .log-content {
     position: relative;
+    width: 300px;
     min-width: 300px;
-    padding-left: 20px;
+    padding-left: 10px;
+    padding-right: 10px;
     height: 100%;
     overflow: auto;
     flex-grow: 1;

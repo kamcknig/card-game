@@ -7,3 +7,6 @@ export const playerIdStore = atom<number[]>([]);
 const playerStoreCache: Record<PlayerId, WritableAtom<Player | undefined>> = {};
 export const playerStore = (id: PlayerId) => (playerStoreCache[id] ??= atom<Player | undefined>());
 (globalThis as any).playerStore = playerStore;
+
+export const selfPlayerIdStore = atom<PlayerId | undefined>();
+(globalThis as any).selfPlayerIdStore = selfPlayerIdStore;

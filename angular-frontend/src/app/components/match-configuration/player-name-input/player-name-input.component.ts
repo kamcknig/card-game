@@ -3,9 +3,8 @@ import { NanostoresService } from '@nanostores/angular';
 import { Player, PlayerId } from 'shared/shared-types';
 import { debounceTime, map, Observable, Subject } from 'rxjs';
 import { AsyncPipe, NgIf, NgStyle } from '@angular/common';
-import { playerStore } from '../../../state/player-state';
+import { playerStore, selfPlayerIdStore } from '../../../state/player-state';
 import { SocketService } from '../../../core/socket-service/socket.service';
-import { selfPlayerIdStore } from '../../../state/match-state';
 import { gameOwnerIdStore } from '../../../state/game-state';
 
 @Component({

@@ -57,6 +57,5 @@ export class PullOut extends Container {
     this._collapsed = !this._collapsed;
 
     this.x = this._collapsed ? 0 : this.getBounds().minX * -1
-    console.log(this.getLocalBounds());
   }
 }

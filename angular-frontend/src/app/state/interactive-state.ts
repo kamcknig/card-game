@@ -1,6 +1,5 @@
-import { atom, computed } from 'nanostores'
+import { atom } from 'nanostores'
 import { CardId } from 'shared/shared-types';
-import { matchStore, selfPlayerIdStore } from './match-state';
 
 // Tracks client override if one exists
 export const clientSelectableCardsOverrideStore = atom<CardId[] | null>(null);

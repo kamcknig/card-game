@@ -63,7 +63,6 @@ export class BaseSupplyView extends Container {
   }
 
   private createSupplyPiles(victoryCards: readonly Card[], treasureCards: readonly Card[]) {
-    console.log('createSupplyPiles');
     this._cardContainer.removeChildren();
 
     // Sort victory cards by descending cost

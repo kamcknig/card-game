@@ -1,4 +1,3 @@
-// Holds the final boolean value
 import { computed } from 'nanostores';
 import { playerDisconnectedStore } from './game-state';
 

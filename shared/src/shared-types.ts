@@ -287,53 +287,56 @@ export type MatchSummary = {
 /**
  * CARD TYPES
  */
-const CardTypeValues = [
-  'ACTION',
-  'ALLY',
-  'ARTIFACT',
-  'ATTACK',
-  'AUGUR',
-  'BOON',
-  'CASTLE',
-  'CLASH',
-  'COMMAND',
-  'CURSE',
-  'DOOM',
-  'DURATION',
-  'EVENT',
-  'FATE',
-  'FORT',
-  'HEIRLOOM',
-  'HEX',
-  'KNIGHT',
-  'LANDMARK',
-  'LIAISON',
-  'LOOT',
-  'LOOTER',
-  'NIGHT',
-  'ODYSSEY',
-  'OMEN',
-  'PRIZE',
-  'PROJECT',
-  'PROPHECY',
-  'REACTION',
-  'RESERVE',
-  'REWARD',
-  'RUINS',
-  'SHADOW',
-  'SHELTER',
-  'SPIRIT',
-  'STATE',
-  'TOWNSFOLK',
-  'TRAIT',
-  'TRAVELLER',
-  'TREASURE',
-  'VICTORY',
-  'WAY',
-  'WIZARD',
-  'ZOMBIE',
-] as const;
-export type CardType = typeof CardTypeValues[number];
+export type BaseCardType =
+  | 'ACTION'
+  | 'ALLY'
+  | 'ARTIFACT'
+  | 'ATTACK'
+  | 'AUGUR'
+  | 'BOON'
+  | 'CASTLE'
+  | 'CLASH'
+  | 'COMMAND'
+  | 'CURSE'
+  | 'DOOM'
+  | 'DURATION'
+  | 'EVENT'
+  | 'FATE'
+  | 'FORT'
+  | 'HEIRLOOM'
+  | 'HEX'
+  | 'KNIGHT'
+  | 'LANDMARK'
+  | 'LIAISON'
+  | 'LOOT'
+  | 'LOOTER'
+  | 'NIGHT'
+  | 'ODYSSEY'
+  | 'OMEN'
+  | 'PRIZE'
+  | 'PROJECT'
+  | 'PROPHECY'
+  | 'REACTION'
+  | 'RESERVE'
+  | 'RUINS'
+  | 'SHADOW'
+  | 'SHELTER'
+  | 'SPIRIT'
+  | 'STATE'
+  | 'TOWNSFOLK'
+  | 'TRAIT'
+  | 'TRAVELLER'
+  | 'TREASURE'
+  | 'VICTORY'
+  | 'WAY'
+  | 'WIZARD'
+  | 'ZOMBIE';
+
+export interface ExtraCardTypeMap {}
+
+export type ExtraCardType = keyof ExtraCardTypeMap;
+
+export type CardType = BaseCardType | ExtraCardType;
 
 export type CardArgs = {
   tags?: string[];

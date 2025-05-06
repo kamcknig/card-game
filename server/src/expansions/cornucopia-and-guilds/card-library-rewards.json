@@ -3,37 +3,37 @@
     "cost": {
       "treasure": 0
     },
-    "type": ["ACTION", "TREASURE", "REWARD"]
+    "type": ["ACTION", "TREASURE"]
   },
   "courser": {
     "cost": {
       "treasure": 0
     },
-    "type": ["ACTION", "REWARD"]
+    "type": ["ACTION"]
   },
   "demesne": {
     "cost": {
       "treasure": 0
     },
-    "type": ["ACTION", "VICTORY", "REWARD"]
+    "type": ["ACTION", "VICTORY"]
   },
   "housecarl": {
     "cost": {
       "treasure": 0
     },
-    "type": ["ACTION", "REWARD"]
+    "type": ["ACTION"]
   },
   "huge-turnip": {
     "cardName": "Huge Turnip",
     "cost": {
       "treasure": 0
     },
-    "type": ["TREASURE", "REWARD"]
+    "type": ["TREASURE"]
   },
   "renown": {
     "cost": {
       "treasure": 0
     },
-    "type": ["ACTION", "REWARD"]
+    "type": ["ACTION"]
   }
 }

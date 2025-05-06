@@ -1,11 +1,10 @@
 import { CardKey, LogEntry, Match } from 'shared/shared-types';
-import { playerIdStore, playerStore } from '../../state/player-state';
+import { playerIdStore, playerStore, selfPlayerIdStore } from '../../state/player-state';
 import {
   matchConfigurationStore,
   matchStartedStore,
   matchStore,
   matchSummaryStore,
-  selfPlayerIdStore
 } from '../../state/match-state';
 import { gameOwnerIdStore, sceneStore } from '../../state/game-state';
 import { expansionListStore } from '../../state/expansion-list-state';
