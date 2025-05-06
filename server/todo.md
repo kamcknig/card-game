@@ -22,7 +22,6 @@ they need to be asked for their input again
   - need to display coffers in the UI
   - using overpay should account for coffers as
   - need UI to exchange coffers for treasure
-- overpay from cornucopia and guilds
 - organize modules again.
 - ui updates
   - need to update app-mat-tab and the visible mat. i've clunked it together for now 
