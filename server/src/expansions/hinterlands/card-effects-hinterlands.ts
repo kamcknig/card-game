@@ -5,6 +5,7 @@ import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
+import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 
 const expansion: CardExpansionModule = {
   'berserker': {
@@ -912,6 +913,31 @@ const expansion: CardExpansionModule = {
           });
         }
       }
+    }
+  },
+  'nomads': {
+    registerLifeCycleMethods: () => ({
+      onTrashed: async (args, eventArgs) => {
+        if (eventArgs.playerId !== getCurrentPlayer(args.match).id) {
+          return;
+        }
+        
+        console.log(`[nomads onTrashed effect] gaining 2 treasure`);
+        await args.runGameActionDelegate('gainTreasure', { count: 2 });
+      },
+      onGained: async (args, eventArgs) => {
+        if (eventArgs.playerId !== getCurrentPlayer(args.match).id) {
+          return;
+        }
+        
+        console.log(`[nomads onGained effect] gaining 2 treasure`);
+        await args.runGameActionDelegate('gainTreasure', { count: 2 });
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[nomads effect] gaining 1 buy, and 2 treasure`);
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
     }
   },
 }

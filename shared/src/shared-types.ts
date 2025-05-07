@@ -52,7 +52,8 @@ export type MatchStats = {
    */
   playedCards: Record<CardId, CardStats>;
   playedCardsByTurn: Record<number, CardId[]>;
-  trashedCards: Record<PlayerId, CardStats>;
+  trashedCards: Record<CardId, CardStats>;
+  trashedCardsByTurn: Record<number, CardId[]>;
   cardsBought: Record<CardId, CardStats & {
     
     // the cost when it was bought

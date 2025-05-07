@@ -113,8 +113,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     try {
       oldSource = findSourceByCardId(args.cardId, this.match, this.cardLibrary);
-    }
-    catch (e) {
+    } catch (e) {
       console.warn(`[moveCard action] could not find source for card ${args.cardId}`);
     }
     
@@ -370,7 +369,15 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       playerId: getCurrentPlayer(this.match).id
     };
     
+    this.match.stats.trashedCardsByTurn[this.match.turnNumber] ??= [];
+    this.match.stats.trashedCardsByTurn[this.match.turnNumber].push(args.cardId);
+    
     console.log(`[trashCard action] trashed ${card}`);
+    
+    await this.reactionManager.runCardLifecycleEvent('onTrashed', {
+      cardId: args.cardId,
+      playerId: args.playerId
+    });
     
     this.logManager.addLogEntry({
       playerId: args.playerId,
@@ -393,7 +400,12 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     this.match.playerTreasure += args.count;
   };
   
-  async buyCard(args: { cardId: CardId; playerId: PlayerId, overpay?: { inTreasure: number; inCoffer: number; }, cardCost: CardCost }) {
+  async buyCard(args: {
+    cardId: CardId;
+    playerId: PlayerId,
+    overpay?: { inTreasure: number; inCoffer: number; },
+    cardCost: CardCost
+  }) {
     if (args.overpay?.inCoffer) {
       console.log(`[buyCard action] player ${args.playerId} overpaid ${args.overpay.inCoffer} coffers, exchanging for treasure`);
       

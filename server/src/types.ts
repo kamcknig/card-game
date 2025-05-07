@@ -1,6 +1,6 @@
 import { Socket } from 'socket.io';
 import {
-  Card, CardCost,
+  CardCost,
   CardId,
   CardKey,
   CardLocation,
@@ -21,7 +21,7 @@ import { CardLibrary } from './core/card-library.ts';
 import { ReactionManager } from './core/reactions/reaction-manager.ts';
 import { GameActionController } from './core/actions/game-action-controller.ts';
 import { ExpansionData } from '@expansions/expansion-library.ts';
-import { CardPriceRule, CardPriceRulesController } from './core/card-price-rules-controller.ts';
+import { CardPriceRulesController } from './core/card-price-rules-controller.ts';
 
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
 
@@ -114,7 +114,12 @@ export type ModifyActionCardArgs = {
 export interface BaseGameActionDefinitionMap {
   gainCoffer: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
   exchangeCoffer: (args: { playerId: PlayerId; count: number; }) => Promise<void>;
-  buyCard: (args: { cardId: CardId; playerId: PlayerId, cardCost: CardCost, overpay?: { inTreasure: number; inCoffer: number;} }) => Promise<void>;
+  buyCard: (args: {
+    cardId: CardId;
+    playerId: PlayerId,
+    cardCost: CardCost,
+    overpay?: { inTreasure: number; inCoffer: number; }
+  }) => Promise<void>;
   checkForRemainingPlayerActions: () => Promise<void>;
   discardCard: (args: { cardId: CardId, playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
   drawCard: (args: { playerId: PlayerId, count?: number }, context?: GameActionContext) => Promise<CardId[] | null>
@@ -128,7 +133,11 @@ export interface BaseGameActionDefinitionMap {
   }, context?: GameActionContext & { bought?: boolean, overpay?: number }) => Promise<void>;
   gainPotion: (args: { count: number }) => Promise<void>;
   gainTreasure: (args: { count: number }, context?: GameActionContext) => Promise<void>;
-  moveCard: (args: { toPlayerId?: PlayerId, cardId: CardId, to: CardLocationSpec }) => Promise<CardLocation | undefined>;
+  moveCard: (args: {
+    toPlayerId?: PlayerId,
+    cardId: CardId,
+    to: CardLocationSpec
+  }) => Promise<CardLocation | undefined>;
   nextPhase: () => Promise<void>;
   playCard: (args: {
     playerId: PlayerId,
@@ -390,7 +399,7 @@ export type GameLifecycleEvent =
 
 export type GameLifeCycleEventArgsMap = {
   onGameStart: { match: Match };
-  onCardGained: { cardId: CardId, playerId: PlayerId, match: Match}
+  onCardGained: { cardId: CardId, playerId: PlayerId, match: Match }
 }
 
 type CardLifecycleCallbackContext = {
@@ -403,6 +412,7 @@ type CardLifecycleCallbackContext = {
 
 export type CardLifecycleEvent =
   | 'onGained'
+  | 'onTrashed'
   | 'onEnterHand'
   | 'onLeaveHand'
   | 'onEnterPlay'
@@ -410,6 +420,7 @@ export type CardLifecycleEvent =
   | 'onCardPlayed';
 
 export interface CardLifecycleCallbackMap {
+  onTrashed?: CardLifecycleCallback<'onTrashed'>;
   onGained?: CardLifecycleCallback<'onGained'>;
   onEnterHand?: CardLifecycleCallback<'onEnterHand'>;
   onLeaveHand?: CardLifecycleCallback<'onLeaveHand'>;
@@ -420,6 +431,7 @@ export interface CardLifecycleCallbackMap {
 
 export interface CardLifecycleEventArgMap {
   onGained: { playerId: PlayerId, cardId: CardId, bought: boolean; };
+  onTrashed: { playerId: PlayerId, cardId: CardId };
   onEnterHand: { playerId: PlayerId, cardId: CardId };
   onLeaveHand: { playerId: PlayerId, cardId: CardId };
   onEnterPlay: { playerId: PlayerId, cardId: CardId };
