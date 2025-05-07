@@ -56,7 +56,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _registeredEvents: (keyof ServerListenEvents)[] = [];
   
   private _playerHands: Record<CardKey, number>[] = [
-    {
+    /*{
       gold: 3,
       silver: 2,
       estate: 2,
@@ -72,7 +72,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       gold: 4,
       silver: 3,
       copper: 3,
-    }
+    }*/
   ];
   
   constructor(

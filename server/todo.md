@@ -24,6 +24,7 @@ need to show the context of the kingdom card for something like young witch, and
 other, it will show the opposite card smaller next to it
 
 
+
 the rules state that "set aside" cards do not discard. you made that complicated logic for active
 duration cards. but you can just use set-aside and then schedule a movecard reaction at
 the start of next turn, and then they'll be in play and will be discarded. and the gray effect
