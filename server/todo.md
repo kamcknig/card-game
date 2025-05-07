@@ -4,9 +4,6 @@
 - when select card effect happens, the UI needs to remove the play all treasure cards button
 - seaside expansion - i haven't built outpost - taking an extra turn. the rules are so incredibly complicated it's jus tnot worth it right now.
 - alchemy expansion - haven't built possession
-- overpay feature
-  - cards that have it show a "+" on the treasure cost icon; but the game prompts the user
-so is something like that needed?
 - when using overpay feature, you can overpay with potions. this matters for stone mason. don't know how to do
 the UI for this yet, and doesn't seem super important to get done right away
 
@@ -17,11 +14,6 @@ the UI for this yet, and doesn't seem super important to get done right away
   - when player disconnects - ask others to vote to continue. leave the player in game, they just skip their turn 
   - work on the use-case when a player disconnects while waiting on input for that player - when they reconnected
 they need to be asked for their input again
-- need to finish implementation of coffers
-  - state, actions, game setup with cards like baker has been completed
-  - need to display coffers in the UI
-  - using overpay should account for coffers as
-  - need UI to exchange coffers for treasure
 - organize modules again.
 - ui updates
   - need to update app-mat-tab and the visible mat. i've clunked it together for now 
@@ -30,7 +22,6 @@ need to show the context of the kingdom card for something like young witch, and
 - dominion.games puts the word "bane" in the type area of the card (but only while it's in the supply)
 - it also puts it in the detail view of both the witch and the bane card, when viewing the details of one or the
 other, it will show the opposite card smaller next to it
-
 
 
 the rules state that "set aside" cards do not discard. you made that complicated logic for active
