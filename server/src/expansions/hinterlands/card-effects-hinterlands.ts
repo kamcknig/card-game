@@ -2,6 +2,7 @@ import { CardId } from 'shared/shared-types.ts';
 import { CardExpansionModule } from '../../types.ts';
 import { findCards } from '../../utils/find-cards.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
+import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 
 const expansion: CardExpansionModule = {
   'berserker': {
@@ -170,7 +171,10 @@ const expansion: CardExpansionModule = {
         console.log(`[cartographer effect] discarding ${result.result.length} cards`);
         
         for (const cardId of result.result) {
-          await cardEffectArgs.runGameActionDelegate('discardCard', { cardId: cardId, playerId: cardEffectArgs.playerId });
+          await cardEffectArgs.runGameActionDelegate('discardCard', {
+            cardId: cardId,
+            playerId: cardEffectArgs.playerId
+          });
         }
       }
       
@@ -201,6 +205,69 @@ const expansion: CardExpansionModule = {
           to: { location: 'playerDecks' }
         });
       }
+    }
+  },
+  'cauldron': {
+    registerLifeCycleMethods: () => ({
+      onLeavePlay: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`cauldron:${eventArgs.cardId}:gainCard`);
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[cauldron effect] gaining 1 treasure, and 1 buy`);
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+      
+      let actionGainCount = 0;
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate({
+        id: `cauldron:${cardEffectArgs.cardId}:gainCard`,
+        listeningFor: 'gainCard',
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: (conditionArgs) => {
+          const card = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
+          if (card.type.includes('ACTION')) {
+            actionGainCount++;
+            console.log(`[cauldron triggered condition] incrementing action gains for cauldron card ${cardEffectArgs.cardId} to ${actionGainCount}`);
+          }
+          return actionGainCount === 3;
+        },
+        triggeredEffectFn: async () => {
+          cardEffectArgs.reactionManager.unregisterTrigger(`cauldron:${cardEffectArgs.cardId}:gainCard`)
+          const targetPlayerIds = findOrderedTargets({
+            match: cardEffectArgs.match,
+            appliesTo: 'ALL_OTHER',
+            startingPlayerId: cardEffectArgs.playerId
+          }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+          
+          for (const targetPlayerId of targetPlayerIds) {
+            const curseIds = findCards(
+              cardEffectArgs.match,
+              {
+                location: 'supply',
+                cards: { cardKeys: 'curse' }
+              },
+              cardEffectArgs.cardLibrary
+            );
+            
+            if (!curseIds.length) {
+              console.log(`[cauldron triggered effect] no curse cards in supply`);
+              break;
+            }
+            
+            const card = cardEffectArgs.cardLibrary.getCard(curseIds.slice(-1)[0]);
+            console.log(`[cauldron triggered effect] player ${targetPlayerId} gaining ${card}`);
+            await cardEffectArgs.runGameActionDelegate('gainCard', {
+              playerId: targetPlayerId,
+              cardId: curseIds.slice(-1)[0],
+              to: { location: 'playerDiscards' }
+            });
+          }
+        }
+      })
     }
   },
 }

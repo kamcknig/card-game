@@ -16,5 +16,11 @@
     "cost": {
       "treasure": 5
     }
+  },
+  "cauldron": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ATTACK", "TREASURE"]
   }
 }
