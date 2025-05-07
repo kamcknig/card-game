@@ -73,6 +73,60 @@ const expansion: CardExpansionModule = {
       });
     }
   },
+  'border-village': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (args, eventArgs) => {
+        const card = args.cardLibrary.getCard(eventArgs.cardId);
+        const { cost } = args.cardPriceController.applyRules(
+          card,
+          { match: args.match, playerId: eventArgs.playerId }
+        );
+        
+        const cardIds = findCards(
+          args.match,
+          {
+            cost: {
+              cardCostController: args.cardPriceController,
+              spec: { playerId: eventArgs.playerId, kind: 'upTo', amount: { treasure: cost.treasure - 1 } }
+            },
+          },
+          args.cardLibrary
+        );
+        
+        if (!cardIds.length) {
+          console.log(`[border-village onGained effect] no cards costing less than ${cost.treasure - 1}`);
+          return;
+        }
+        
+        const selectedCardIds = await args.runGameActionDelegate('selectCard', {
+          playerId: eventArgs.playerId,
+          prompt: `Gain card`,
+          restrict: cardIds,
+          count: 1,
+        });
+        
+        if (!selectedCardIds.length) {
+          console.warn(`[border-village onGained effect] no card selected`);
+          return;
+        }
+        
+        const selectedCard = args.cardLibrary.getCard(selectedCardIds[0]);
+        
+        console.log(`[border-village onGained effect] gaining card ${selectedCard}`);
+        
+        await args.runGameActionDelegate('gainCard', {
+          playerId: eventArgs.playerId,
+          cardId: selectedCard.id,
+          to: { location: 'playerDiscards' }
+        });
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[border-village effect] drawing 1 card and 2 actions`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
+    }
+  },
 }
 
 export default expansion;

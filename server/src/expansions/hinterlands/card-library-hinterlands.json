@@ -1,8 +1,14 @@
 {
-  'berserker': {
+  "berserker": {
     "cost": {
       "treasure": 5
     },
     "type": ["ACTION", "ATTACK" ]
+  },
+  "border-village": {
+    "type": ["ACTION"],
+    "cost": {
+      "treasure": 6
+    }
   }
 }
