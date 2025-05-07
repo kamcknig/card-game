@@ -68,5 +68,11 @@
       "treasure": 5
     },
     "type": ["ACTION"]
+  },
+  "inn": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"]
   }
 }

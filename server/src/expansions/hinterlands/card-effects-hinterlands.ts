@@ -4,6 +4,7 @@ import { findCards } from '../../utils/find-cards.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
+import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
 
 const expansion: CardExpansionModule = {
   'berserker': {
@@ -705,6 +706,86 @@ const expansion: CardExpansionModule = {
           unsubs.forEach(c => c());
         }
       })
+    }
+  },
+  'inn': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (args, eventArgs) => {
+        const actionsInDiscard = args.match.playerDiscards[eventArgs.playerId]
+          .map(args.cardLibrary.getCard)
+          .filter(card => card.type.includes('ACTION'));
+        
+        if (!actionsInDiscard.length) {
+          console.log(`[inn onGained effect] no actions in discard`);
+          return;
+        }
+        
+        const result = await args.runGameActionDelegate('userPrompt', {
+          prompt: 'Reveal actions to shuffle into deck?',
+          playerId: eventArgs.playerId,
+          actionButtons: [
+            { label: 'DONE', action: 1 }
+          ],
+          content: {
+            type: 'select',
+            cardIds: actionsInDiscard.map(card => card.id),
+            selectCount: {
+              kind: 'upTo',
+              count: actionsInDiscard.length
+            }
+          }
+        }) as { action: number, result: CardId[] };
+        
+        if (!result.result.length) {
+          console.log(`[inn onGained effect] no cards selected`);
+          return;
+        }
+        
+        console.log(`[inn onGained effect] revealing ${result.result.length} cards and moving to deck`);
+        
+        for (const cardId of result.result) {
+          await args.runGameActionDelegate('revealCard', {
+            cardId: cardId,
+            playerId: eventArgs.playerId,
+          });
+          
+          await args.runGameActionDelegate('moveCard', {
+            cardId: cardId,
+            toPlayerId: eventArgs.playerId,
+            to: { location: 'playerDecks' }
+          });
+        }
+        
+        console.log(`[inn onGained effect] shuffling player deck`);
+        
+        fisherYatesShuffle(args.match.playerDecks[eventArgs.playerId]);
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[inn effect] drawing 2 cards, and gaining 2 actions`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Discard cards`,
+        restrict: { from: { location: 'playerHands' } },
+        count: Math.min(2, cardEffectArgs.match.playerHands[cardEffectArgs.playerId].length),
+      }) as CardId[];
+      
+      if (!selectedCardIds) {
+        console.warn(`[inn effect] no card selected`);
+        return;
+      }
+      
+      console.log(`[inn effect] discarding ${selectedCardIds.length} cards`);
+      
+      for (const selectedCardId of selectedCardIds) {
+        await cardEffectArgs.runGameActionDelegate('discardCard', {
+          cardId: selectedCardId,
+          playerId: cardEffectArgs.playerId
+        });
+      }
     }
   },
 }
