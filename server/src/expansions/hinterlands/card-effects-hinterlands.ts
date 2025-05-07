@@ -880,6 +880,40 @@ const expansion: CardExpansionModule = {
       });
     }
   },
+  'margrave': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[margrave effect] drawing 3 cards, and gaining 1 buy`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 3 });
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+      
+      const targetPlayerIds = findOrderedTargets({
+        match: cardEffectArgs.match,
+        startingPlayerId: cardEffectArgs.playerId,
+        appliesTo: 'ALL_OTHER'
+      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      
+      for (const targetPlayerId of targetPlayerIds) {
+        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: targetPlayerId });
+        
+        const hand = cardEffectArgs.match.playerHands[targetPlayerId];
+        const numToDiscard = hand.length > 3 ? hand.length - 3 : 0;
+        
+        if (numToDiscard === 0) {
+          console.log(`[margrave effect] player ${targetPlayerId} already at 3 or less cards`);
+          continue;
+        }
+        
+        console.log(`[margrave effect] player ${targetPlayerId} discarding ${numToDiscard} cards`);
+        
+        for (let i = 0; i < numToDiscard; i++) {
+          await cardEffectArgs.runGameActionDelegate('discardCard', {
+            cardId: hand[i],
+            playerId: targetPlayerId
+          });
+        }
+      }
+    }
+  },
 }
 
 export default expansion;

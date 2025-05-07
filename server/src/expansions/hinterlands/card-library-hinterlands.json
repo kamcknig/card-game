@@ -80,5 +80,11 @@
       "treasure": 4
     },
     "type": ["ACTION"]
+  },
+  "margrave": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "ATTACK"]
   }
 }
