@@ -98,5 +98,11 @@
       "treasure": 3
     },
     "type": ["ACTION"]
+  },
+  "scheme": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION"]
   }
 }

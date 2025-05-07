@@ -6,6 +6,8 @@ import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
+import { async } from 'npm:rxjs@7.8.2';
+import { isLocationInPlay } from '../../utils/is-in-play.ts';
 
 const expansion: CardExpansionModule = {
   'berserker': {
@@ -964,6 +966,40 @@ const expansion: CardExpansionModule = {
       console.log(`[oasis effect] discarding ${card}`);
       
       await cardEffectArgs.runGameActionDelegate('discardCard', { cardId: card.id, playerId: cardEffectArgs.playerId });
+    }
+  },
+  'scheme': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[scheme effect] drawing 1 card, and gaining 1 action`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate({
+        id: `scheme:${cardEffectArgs.cardId}:discardCard`,
+        listeningFor: 'discardCard',
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        compulsory: false,
+        allowMultipleInstances: true,
+        condition: (conditionArgs) => {
+          if (!conditionArgs.trigger.args.previousLocation) return false;
+          if (!isLocationInPlay(conditionArgs.trigger.args.previousLocation)) return false;
+          const card = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
+          if (card.owner !== cardEffectArgs.playerId) return false;
+          return true;
+        },
+        triggeredEffectFn: async (triggeredEffectArgs) => {
+          const card = triggeredEffectArgs.cardLibrary.getCard(triggeredEffectArgs.trigger.args.cardId);
+          
+          console.log(`[scheme triggered effect] moving ${card} to deck`);
+          
+          await triggeredEffectArgs.runGameActionDelegate('moveCard', {
+            cardId: triggeredEffectArgs.trigger.args.cardId,
+            toPlayerId:cardEffectArgs.playerId,
+            to: { location: 'playerDecks' }
+          });
+        }
+      })
     }
   },
 }

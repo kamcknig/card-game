@@ -427,7 +427,7 @@ export interface CardLifecycleCallbackMap {
   onEnterPlay?: CardLifecycleCallback<'onEnterPlay'>;
   onLeavePlay?: CardLifecycleCallback<'onLeavePlay'>;
   onCardPlayed?: CardLifecycleCallback<'onCardPlayed'>;
-};
+}
 
 export interface CardLifecycleEventArgMap {
   onGained: { playerId: PlayerId, cardId: CardId, bought: boolean; };
