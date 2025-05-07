@@ -270,6 +270,43 @@ const expansion: CardExpansionModule = {
       })
     }
   },
+  'crossroads': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const hand = cardEffectArgs.match.playerHands[cardEffectArgs.playerId];
+      
+      console.log(`[crossroads effect] revealing ${hand.length} cards`);
+      
+      for (const cardId of hand) {
+        await cardEffectArgs.runGameActionDelegate('revealCard', {
+          cardId: cardId,
+          playerId: cardEffectArgs.playerId,
+        });
+      }
+      
+      const victoryCardInHandCount = hand.map(cardEffectArgs.cardLibrary.getCard)
+        .filter(card => card.type.includes('VICTORY'))
+        .length;
+      
+      console.log(`[crossroads effect] drawing ${victoryCardInHandCount} cards`);
+      
+      for (let i = 0; i < victoryCardInHandCount; i++) {
+        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      }
+      
+      const crossroadsPlayedThisTurnCount = cardEffectArgs.match.stats.playedCardsByTurn[cardEffectArgs.match.turnNumber]
+        .map(cardEffectArgs.cardLibrary.getCard)
+        .filter(card => card.owner === cardEffectArgs.playerId && card.cardKey === 'crossroads')
+        .length;
+      
+      if (crossroadsPlayedThisTurnCount === 1) {
+        console.log(`[crossroads effect] crossroads played this turn ${crossroadsPlayedThisTurnCount}, gaining 3 actions`);
+        await cardEffectArgs.runGameActionDelegate('gainAction', { count: 3 });
+      }
+      else {
+        console.log(`[crossroads effect] crossroads played this turn ${crossroadsPlayedThisTurnCount}, not gaining actions`);
+      }
+    }
+  },
 }
 
 export default expansion;

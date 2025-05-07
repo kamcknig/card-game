@@ -22,5 +22,11 @@
       "treasure": 5
     },
     "type": ["ATTACK", "TREASURE"]
+  },
+  "crossroads": {
+    "cost": {
+      "treasure": 2
+    },
+    "type": ["ACTION"]
   }
 }
