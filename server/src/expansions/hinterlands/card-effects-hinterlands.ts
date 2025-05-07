@@ -601,6 +601,79 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'haggler': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[haggler effect] gaining 2 treasure`);
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate({
+        id: `haggler:${cardEffectArgs.cardLibrary}:gainCard`,
+        listeningFor: 'gainCard',
+        once: false,
+        compulsory: true,
+        allowMultipleInstances: true,
+        playerId: cardEffectArgs.playerId,
+        condition: conditionArgs => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
+          if (!conditionArgs.trigger.args.bought) return false;
+          return true;
+        },
+        triggeredEffectFn: async (triggeredEffectArgs) => {
+          const card = triggeredEffectArgs.cardLibrary.getCard(triggeredEffectArgs.trigger.args.cardId);
+          
+          const { cost } = cardEffectArgs.cardPriceController.applyRules(card, {
+            match: triggeredEffectArgs.match,
+            playerId: cardEffectArgs.playerId
+          });
+          
+          const cards = findCards(
+            triggeredEffectArgs.match,
+            {
+              location: ['supply', 'kingdom'],
+              cost: {
+                cardCostController: cardEffectArgs.cardPriceController,
+                spec: {
+                  playerId: cardEffectArgs.playerId,
+                  kind: 'upTo',
+                  amount: { treasure: cost.treasure - 1, potion: cost.potion }
+                }
+              }
+            },
+            triggeredEffectArgs.cardLibrary
+          )
+            .map(triggeredEffectArgs.cardLibrary.getCard)
+            .filter(card => !card.type.includes('VICTORY'));
+          
+          if (cards.length === 0) {
+            console.log(`[haggler triggered effect] no cards non-victory cards costing 2 less than ${cost.treasure}`);
+            return;
+          }
+          
+          const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+            playerId: cardEffectArgs.playerId,
+            prompt: `Gain non-Victory card`,
+            restrict: cards.map(card => card.id),
+            count: 1,
+          }) as CardId[];
+          
+          if (!selectedCardIds.length) {
+            console.log(`[haggler triggered effect] no card selected`);
+            return;
+          }
+          
+          const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+          
+          console.log(`[haggler triggered effect] gaining ${selectedCard}`);
+          
+          await cardEffectArgs.runGameActionDelegate('gainCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: selectedCard.id,
+            to: { location: 'playerDiscards' }
+          });
+        }
+      })
+    }
+  },
 }
 
 export default expansion;

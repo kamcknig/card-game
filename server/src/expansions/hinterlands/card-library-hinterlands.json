@@ -56,5 +56,11 @@
       "treasure": 3
     },
     "type": ["ACTION", "REACTION"]
+  },
+  "haggler": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"]
   }
 }
