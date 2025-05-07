@@ -1,4 +1,4 @@
-import { AppSocket } from '../types.ts';
+import { AppSocket, RunGameActionDelegate } from '../types.ts';
 import { CardId, Match, PlayerId, TurnPhaseOrderValues, } from 'shared/shared-types.ts';
 import { isUndefined } from 'es-toolkit/compat';
 import { CardLibrary } from './card-library.ts';
@@ -16,7 +16,7 @@ export class CardInteractivityController {
     private readonly match: Match,
     private readonly _socketMap: Map<PlayerId, AppSocket>,
     private readonly _cardLibrary: CardLibrary,
-    private readonly _matchController: MatchController,
+    private readonly runGameDelegate: RunGameActionDelegate,
   ) {
     this._socketMap.forEach((s) => {
       s.on('cardTapped', (pId, cId) => this.onCardTapped(pId, cId));
@@ -160,7 +160,7 @@ export class CardInteractivityController {
     }
     
     for (const cardId of treasureCards) {
-      await this._matchController.runGameAction('playCard', { playerId, cardId });
+      await this.runGameDelegate('playCard', { playerId, cardId });
     }
     
     this._socketMap.get(playerId)?.emit('playAllTreasureComplete');
@@ -183,40 +183,39 @@ export class CardInteractivityController {
     const phase = getTurnPhase(this.match.turnPhaseIndex);
     
     if (phase === 'buy') {
-      let overpay = 0;
+      let overpay = { inTreasure: 0, inCoffer: 0 };
       
       const hand = this.match.playerHands[playerId];
       if (hand.includes(cardId)) {
-        await this._matchController.runGameAction('playCard', { playerId, cardId });
+        await this.runGameDelegate('playCard', { playerId, cardId });
       }
       else {
         const card = this._cardLibrary.getCard(cardId);
+        const { cost } = this._cardPriceController.applyRules(card, {
+          match: this.match,
+          playerId
+        });
+        
         if (card.tags?.includes('overpay')) {
-          
-          const { cost } = this._cardPriceController.applyRules(card, {
-            match: this.match,
-            playerId
-          });
-          
           if (this.match.playerTreasure > cost.treasure) {
-            const result = await this._matchController.runGameAction('userPrompt', {
+            const result = await this.runGameDelegate('userPrompt', {
               prompt: 'Overpay?',
               actionButtons: [{ label: 'DONE', action: 1 }],
               playerId: playerId,
               content: { type: 'overpay', cost: cost.treasure }
-            }) as { action: number, result: number };
-            overpay = result.result ?? 0;
+            }) as { action: number, result: { inTreasure: number; inCoffer: number;} };
+            overpay = result.result;
           }
         }
         
-        await this._matchController.runGameAction('buyCard', { playerId, cardId, overpay });
+        await this.runGameDelegate('buyCard', { playerId, cardId, overpay, cardCost: cost });
       }
     }
     else if (phase === 'action') {
-      await this._matchController.runGameAction('playCard', { playerId, cardId });
+      await this.runGameDelegate('playCard', { playerId, cardId });
     }
     
-    await this._matchController.runGameAction('checkForRemainingPlayerActions');
+    await this.runGameDelegate('checkForRemainingPlayerActions');
     
     this._socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
   };

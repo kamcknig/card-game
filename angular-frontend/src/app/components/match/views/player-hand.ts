@@ -11,17 +11,18 @@ import { List } from '@pixi/ui';
 import { playerHandStore } from '../../../state/player-logic';
 import { awaitingServerLockReleaseStore } from '../../../state/interactive-state';
 import { selfPlayerIdStore } from '../../../state/player-state';
+import { SocketService } from '../../../core/socket-service/socket.service';
 
 export class PlayerHandView extends Container {
-  private readonly _phaseStatus: PhaseStatus = new PhaseStatus();
+  private readonly _phaseStatus: PhaseStatus;
   private readonly _nextPhaseButton: AppButton = createAppButton({ text: 'NEXT' });
   private readonly _playAllTreasuresButton: AppButton = createAppButton(
     {
       text: 'PLAY ALL\nTREASURE',
-      style: { align: 'center', fill: '#eddea3', fontSize: 24 }
+      style: { align: 'center', fill: '#fff4e6', fontSize: 24 }
     },
     {
-      color: '#be963a'
+      color: '#c1aa1f'
     }
   );
 
@@ -29,8 +30,13 @@ export class PlayerHandView extends Container {
   private readonly _background: Graphics = new Graphics({ label: 'background' });
   private readonly _cardList: List = new List({ type: 'horizontal', elementsMargin: STANDARD_GAP });
 
-  constructor(private playerId: number) {
+  constructor(
+    private playerId: number,
+    private readonly _socketService: SocketService,
+  ) {
     super();
+
+    this._phaseStatus = new PhaseStatus(this._socketService);
 
     this._cardList.label = `cardList`;
     this._cardList.elementsMargin = STANDARD_GAP;

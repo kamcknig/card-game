@@ -1,6 +1,6 @@
 import { Socket } from 'socket.io';
 import {
-  Card,
+  Card, CardCost,
   CardId,
   CardKey,
   CardLocation,
@@ -112,7 +112,9 @@ export type ModifyActionCardArgs = {
 };
 
 export interface BaseGameActionDefinitionMap {
-  buyCard: (args: { cardId: CardId; playerId: PlayerId, overpay?: number }) => Promise<void>;
+  gainCoffer: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
+  exchangeCoffer: (args: { playerId: PlayerId; count: number; }) => Promise<void>;
+  buyCard: (args: { cardId: CardId; playerId: PlayerId, cardCost: CardCost, overpay?: { inTreasure: number; inCoffer: number;} }) => Promise<void>;
   checkForRemainingPlayerActions: () => Promise<void>;
   discardCard: (args: { cardId: CardId, playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
   drawCard: (args: { playerId: PlayerId, count?: number }, context?: GameActionContext) => Promise<CardId[] | null>
@@ -417,7 +419,7 @@ export interface CardLifecycleCallbackMap {
 };
 
 export interface CardLifecycleEventArgMap {
-  onGained: { playerId: PlayerId, cardId: CardId, bought: boolean; overpaid: number; };
+  onGained: { playerId: PlayerId, cardId: CardId, bought: boolean; };
   onEnterHand: { playerId: PlayerId, cardId: CardId };
   onLeaveHand: { playerId: PlayerId, cardId: CardId };
   onEnterPlay: { playerId: PlayerId, cardId: CardId };
@@ -449,7 +451,8 @@ export type EndGameConditionRegistrar = (endGameConditionFn: EndGameConditionFn)
 
 export type ClientEventRegistrar = <T extends keyof ServerListenEvents>(event: T, eventHandler: ServerListenEvents[T]) => void;
 export type ClientEventRegistry = (registrar: ClientEventRegistrar, context: {
-  match: Match
+  match: Match,
+  runGameActionDelegate: RunGameActionDelegate,
 }) => void;
 
 export type GameEventRegistrar = (event: GameLifecycleEvent, handler: GameLifecycleCallback) => void;

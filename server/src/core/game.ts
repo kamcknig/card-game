@@ -47,11 +47,20 @@ export class Game {
     console.log(`[game] created`);
     try {
       const bannedKingdoms = JSON.parse(Deno.readTextFileSync('./banned-kingdoms.json')) as CardNoId[];
-      defaultMatchConfiguration.bannedKingdoms = bannedKingdoms
+      defaultMatchConfiguration.bannedKingdoms = bannedKingdoms;
     } catch (e) {
       console.warn(`Couldn't read banned-kingdoms.json`);
       console.error(e);
     }
+    
+    try {
+      const preselectedKingdoms = JSON.parse(Deno.readTextFileSync('./preselected-kingdoms.json')) as CardNoId[];
+      defaultMatchConfiguration.kingdomCards = preselectedKingdoms;
+    } catch (e) {
+      console.warn(`Couldn't read banned-kingdoms.json`);
+      console.error(e);
+    }
+    
     this.initializeFuseSearch();
     
     this.createNewMatch();
@@ -275,9 +284,16 @@ export class Game {
       }
     }
     
+    const kingdomPatch = compare(currentConfig.kingdomCards, newConfig.kingdomCards);
+    if (kingdomPatch) {
+      Deno.writeTextFileSync('./preselected-kingdoms.json', JSON.stringify(newConfig.kingdomCards));
+      defaultMatchConfiguration.kingdomCards = structuredClone(newConfig.kingdomCards);
+    }
+    
     const bannedKingdomsPatch = compare(currentConfig.bannedKingdoms, newConfig.bannedKingdoms);
     if (bannedKingdomsPatch) {
       Deno.writeTextFileSync('./banned-kingdoms.json', JSON.stringify(newConfig.bannedKingdoms));
+      defaultMatchConfiguration.bannedKingdoms = structuredClone(newConfig.bannedKingdoms);
     }
     
     const patch = compare(currentConfig, newConfig);

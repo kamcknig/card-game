@@ -205,7 +205,7 @@ export class MatchScene extends Scene {
     });
     this.addChild(this._discard);
 
-    this._playerHand = new PlayerHandView(this._selfId);
+    this._playerHand = new PlayerHandView(this._selfId, this._socketService);
     this._playerHand.on('nextPhase', this.onNextPhasePressed);
 
     this._cleanup.push(() => this._playerHand?.off('nextPhase'));

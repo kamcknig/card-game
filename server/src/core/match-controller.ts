@@ -82,6 +82,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     super();
     
     this._match = {
+      playerVictoryTokens: {},
+      coffers: {},
+      nonSupplyCards: [],
       cardOverrides: {},
       activeDurationCards: [],
       scores: {},
@@ -116,7 +119,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
   
   public async initialize(config: MatchConfiguration) {
-    this._matchConfigurator = new MatchConfigurator(config);
+    this.broadcastPatch({} as Match);
+    
+    const snapshot = this.getMatchSnapshot();
+    
+    this._matchConfigurator = new MatchConfigurator(
+      config,
+      (action, ...args) => this.runGameAction(action, ...args)
+    );
     const { config: newConfig } = await this._matchConfigurator.createConfiguration();
     
     this._matchConfiguration = newConfig;
@@ -152,7 +162,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._match,
       this._socketMap,
       this._cardLibrary,
-      this,
+      (action, ...args) => this.runGameAction(action, ...args)
     );
     
     this.gameActionsController = new GameActionController(
@@ -187,12 +197,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this._match.config = this._matchConfiguration;
     this._match.mats = this._matchConfiguration.mats;
     
-    await this._matchConfigurator?.onPostKingdomCreation({
-      match: this._match,
-      cardLibrary: this._cardLibrary
-    });
-    
     console.log(`[match] ready, sending to clients and listening for when clients are ready`);
+    
+    await this._reactionManager?.runGameLifecycleEvent('onGameStart', { match: this._match });
+    
+    this.broadcastPatch(snapshot);
     
     this._socketMap.forEach((s) => {
       s.emit('setCardLibrary', this._cardLibrary.getAllCards());
@@ -212,7 +221,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     console.log(`[match] player ${playerId} reconnecting`);
     this._socketMap.set(playerId, socket);
     
-    socket.emit('setCardLibrary', this._cardLibrary.getAllCards());
     socket.emit('matchReady', this._match);
     socket.on('clientReady', async (_playerId: number, _ready: boolean) => {
       console.log(
@@ -435,12 +443,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       playerId: getCurrentPlayer(this._match).id
     });
     
-    this._matchSnapshot = this.getMatchSnapshot();
-    
-    await this._reactionManager?.runGameLifecycleEvent('onGameStart', { match: this._match });
-    
-    this.broadcastPatch(this._matchSnapshot);
-    
     await this.runGameAction('checkForRemainingPlayerActions');
   }
   
@@ -600,6 +602,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private initializeSocketListeners(socket: AppSocket) {
     socket.on('nextPhase', () => this.onNextPhase());
     socket.on('searchCards', (playerId, searchStr) => this.onSearchCards(playerId, searchStr));
+    socket.on('exchangeCoffer', async (playerId, count) => {
+      await this.runGameAction('exchangeCoffer', { playerId, count });
+    });
   }
   
   private onSearchCards(playerId: PlayerId, searchStr: string) {

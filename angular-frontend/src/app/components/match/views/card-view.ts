@@ -38,15 +38,24 @@ export class CardView extends Container {
   }
 
   public set card(value: Card) {
-    if (value.id !== this._card.id) {
-      this._card = value;
-      this._frontImage = Assets.get(`${this._card.cardKey}-full`);
-    }
+    this._card = value;
+    this._frontImage = Assets.get(`${this._card.cardKey}-full`);
 
-    this.onDraw();
+    if (!this._frontImage) {
+      const size = ['full', 'half'].includes(this._size) ? `${this._size}-size` : 'detail';
+      Assets.load(`/assets/card-images/${this._card.expansionName}/${size}/${this._card.cardKey}.jpg`).then(result => {
+        this._frontImage = result;
+        this._cardView.texture = this._facing === 'front' ? this._frontImage : this._backImage;
+        this.onDraw();
+      })
+    }
+    else {
+      this.onDraw();
+    }
   }
 
   public set facing(value: CardFacing) {
+    this._facing = value;
     if ((value === 'front' && !this._frontImage) || (value === 'back' && !this._backImage)) return;
     this._cardView.texture = value === 'front' ? this._frontImage : this._backImage;
     this._facing = value;

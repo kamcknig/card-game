@@ -53,7 +53,7 @@ export type MatchStats = {
   playedCards: Record<CardId, CardStats>;
   playedCardsByTurn: Record<number, CardId[]>;
   trashedCards: Record<PlayerId, CardStats>;
-  cardsBought: Record<PlayerId, CardStats & {
+  cardsBought: Record<CardId, CardStats & {
     
     // the cost when it was bought
     cost: number;
@@ -64,6 +64,9 @@ export type MatchStats = {
 };
 
 export interface Match {
+  playerVictoryTokens: Record<PlayerId, number>;
+  coffers: Record<PlayerId, number>;
+  nonSupplyCards: CardId[];
   activeDurationCards: CardId[];
   config: ComputedMatchConfiguration,
   currentPlayerTurnIndex: number;
@@ -179,8 +182,8 @@ export type ServerEmitEvents = {
   playerReady: (playerId: PlayerId, ready: boolean) => void;
   searchCardResponse: (cardData: CardNoId[]) => void;
   selectCard: (signalId: string, selectCardArgs: SelectActionCardArgs & { selectableCardIds: CardId[] }) => void;
-  setCardLibrary: (cardLibrary: Record<CardId, Card>) => void;
   setPlayerList: (players: Player[]) => void;
+  setCardLibrary: (library: Record<CardKey, Card>) => void;
   setPlayer: (player: Player) => void;
   userPrompt: (signalId: string, userPromptArgs: UserPromptActionArgs) => void;
   waitingForPlayer: (playerId: PlayerId) => void;
@@ -190,6 +193,7 @@ export interface ServerListenEvents {
   cardsSelected: (selected: CardId[]) => void
   cardTapped: (playerId: PlayerId, cardId: CardId) => void;
   clientReady: (playerId: PlayerId, ready: boolean) => void;
+  exchangeCoffer: (playerId: PlayerId, count: number) => void;
   expansionSelected: (val: string[]) => void;
   matchConfigurationUpdated: (val: MatchConfiguration) => void;
   nextPhase: () => void;
@@ -287,7 +291,7 @@ export type MatchSummary = {
 /**
  * CARD TYPES
  */
-export type BaseCardType =
+export type CardType =
   | 'ACTION'
   | 'ALLY'
   | 'ARTIFACT'
@@ -318,6 +322,7 @@ export type BaseCardType =
   | 'PROPHECY'
   | 'REACTION'
   | 'RESERVE'
+  | 'REWARD'
   | 'RUINS'
   | 'SHADOW'
   | 'SHELTER'
@@ -331,12 +336,6 @@ export type BaseCardType =
   | 'WAY'
   | 'WIZARD'
   | 'ZOMBIE';
-
-export interface ExtraCardTypeMap {}
-
-export type ExtraCardType = keyof ExtraCardTypeMap;
-
-export type CardType = BaseCardType | ExtraCardType;
 
 export type CardArgs = {
   tags?: string[];

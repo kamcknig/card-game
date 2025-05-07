@@ -1,4 +1,4 @@
-import { CardId, LogEntry, PlayerId, SelectActionCardArgs, ServerEmitEvents } from 'shared/shared-types';
+import { CardId, LogEntry, SelectActionCardArgs, ServerEmitEvents } from 'shared/shared-types';
 
 export type ClientListenEvents = ServerEmitEvents;
 export type ServerEmitEventNames = keyof ServerEmitEvents;
@@ -9,16 +9,4 @@ export type SelectCardArgs = SelectActionCardArgs & {
 export type LogEntryMessage = LogEntry & { message: string; id: number; };
 
 export type CardSize = 'full' | 'half' | 'detail';
-
-declare module 'shared/shared-types' {
-  interface Match {
-    playerVictoryTokens?: Record<PlayerId, number>;
-    coffers?: Record<PlayerId, number>;
-    nonSupplyCards?: CardId[];
-  }
-
-  interface ExtraCardTypeMap {
-    REWARD: true;
-  }
-}
 

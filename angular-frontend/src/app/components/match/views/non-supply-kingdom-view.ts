@@ -89,8 +89,10 @@ export class NonSupplyKingdomView extends Container {
       pile.pile = rewards.cards.filter(c => c.cardKey === cardKey);
     }
 
-    background.clear();
-    background.roundRect(0, 0, container.width + STANDARD_GAP * 2, container.height + STANDARD_GAP * 2, 5);
-    background.fill({ color: 0, alpha: .6 });
+    setTimeout(() => {
+      background.clear();
+      background.roundRect(0, 0, container.width + STANDARD_GAP * 2, container.height + STANDARD_GAP * 2, 5);
+      background.fill({ color: 0, alpha: .6 });
+    }, 200);
   }
 }

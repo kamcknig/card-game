@@ -56,13 +56,16 @@ export const socketToGameEventMap = (): SocketEventMap => {
   };
 
   map['matchReady'] = async match => {
-    if (!cardStore.get()) throw new Error('missing card library');
+    const cardsById = cardStore.get();
+    if (!cardsById) throw new Error('missing card library');
 
-    matchStore.set(match);
+    const playerId = selfPlayerIdStore.get();
+    if (!playerId) throw new Error('missing self playerId');
 
-    const allCards = cardStore.get();
+    match = matchStore.get() as Match;
+
     const kingdomSupplyCardKeys = match?.basicSupply.reduce((prev, nextCard) => {
-      const card = allCards[nextCard];
+      const card = cardsById[nextCard];
 
       if (card.type.includes(('VICTORY'))) {
         if (prev[0].includes(card.cardKey)) return prev;
@@ -80,17 +83,12 @@ export const socketToGameEventMap = (): SocketEventMap => {
     supplyCardKeyStore.set(kingdomSupplyCardKeys ?? [[], []]);
 
     const kingdomCardKeys = match?.kingdomSupply.reduce((prev, nextCard) => {
-      const card = allCards[nextCard];
+      const card = cardsById[nextCard];
       if (prev.includes(card.cardKey)) return prev;
       prev.push(card.cardKey);
       return prev;
     }, [] as CardKey[]);
     kingdomCardKeyStore.set(kingdomCardKeys ?? []);
-
-    const playerId = selfPlayerIdStore.get();
-    if (!playerId) throw new Error('missing self playerId');
-
-    const cardsById = cardStore.get();
 
     const baseBundle: Record<string, string> = {
       'card-back-full': `/assets/card-images/base-v2/full-size/card-back.jpg`,
@@ -123,8 +121,8 @@ export const socketToGameEventMap = (): SocketEventMap => {
   };
 
   map['patchUpdate'] = (patchMatch, patchCardLibrary) => {
-    if (patchMatch?.length) map['patchMatch']?.(patchMatch);
     if (patchCardLibrary?.length) map['patchCardLibrary']?.(patchCardLibrary);
+    if (patchMatch?.length) map['patchMatch']?.(patchMatch);
   };
 
   map['patchMatch'] = (patch: Operation[]) => {

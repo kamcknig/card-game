@@ -5,9 +5,3 @@ declare module '../../types' {
     gainVictoryToken: (args: { playerId: PlayerId, count: number; }) => Promise<void>;
   }
 }
-
-declare module 'shared/shared-types.ts' {
-  interface Match {
-    playerVictoryTokens?: Record<PlayerId, number>;
-  }
-}

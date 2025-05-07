@@ -96,7 +96,10 @@ export class PileView extends Container {
       badge.label = 'countBadge';
       this._cardViewContainer.addChild(badge);
     }
-
-    badge.count = this._count;
+    else {
+      badge.count = this._count;
+      badge.x = 5;
+      badge.y = 5;
+    }
   }
 }

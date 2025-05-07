@@ -94,8 +94,12 @@ export const overpayView = (app: Application, args: UserPromptKinds) => {
   const storeUnsub = store.subscribe(val => updateSliderMax(val));
   const sliderOnUpdate = slider.onUpdate.connect(val => {
     const playerTreasure = playerTreasureStore.get();
-    updateAmountOverpayText(Math.min(val, playerTreasure), val > playerTreasure ? val - playerTreasure : 0);
-    overpayContainer.emit('resultsUpdated', val);
+    const extraTreasure = playerTreasure - args.cost;
+    const inTreasure = Math.min(val, extraTreasure);
+    const inCoffer = val > extraTreasure ? val - extraTreasure : 0;
+
+    updateAmountOverpayText(inTreasure, inCoffer);
+    overpayContainer.emit('resultsUpdated', { inTreasure, inCoffer });
   });
 
   setTimeout(() => updateAmountOverpayText(0, 0));

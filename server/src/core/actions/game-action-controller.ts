@@ -1,4 +1,5 @@
 import {
+  CardCost,
   CardId,
   CardKey,
   CardLocationSpec,
@@ -211,8 +212,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     await this.reactionManager.runCardLifecycleEvent('onGained', {
       playerId: args.playerId,
       cardId: args.cardId,
-      bought: context?.bought ?? false,
-      overpaid: context?.overpay ?? 0
+      bought: context?.bought ?? false
     });
     
     await this.reactionManager.runGameLifecycleEvent('onCardGained', {
@@ -380,32 +380,49 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     });
   }
   
-  async buyCard(args: { cardId: CardId; playerId: PlayerId, overpay?: number }) {
-    const card = this.cardLibrary.getCard(args.cardId);
-    
-    const { cost } = this.cardPriceRuleController.applyRules(
-      card,
-      {
-        match: this.match,
-        playerId: args.playerId
-      }
-    );
-    
-    this.match.playerTreasure -= cost.treasure;
-    
-    if (cost.potion !== undefined) {
-      this.match.playerPotions -= cost.potion;
+  async gainCoffer(args: { playerId: PlayerId, count?: number; }, context?: GameActionContext) {
+    console.log(`[gainCoffer action] player ${args.playerId} gained ${args.count} coffers`);
+    this.match.coffers[args.playerId] ??= 0;
+    this.match.coffers[args.playerId] += args.count ?? 1;
+    console.log(`[gainCoffer action] player ${args.playerId} now has ${this.match.coffers[args.playerId]} coffers`);
+  }
+  
+  async exchangeCoffer(args: { playerId: PlayerId, count: number; }, context?: GameActionContext) {
+    console.log(`[exchangeCoffer action] player ${args.playerId} exchanged ${args.count} coffers`);
+    this.match.coffers[args.playerId] -= args.count;
+    this.match.playerTreasure += args.count;
+  };
+  
+  async buyCard(args: { cardId: CardId; playerId: PlayerId, overpay?: { inTreasure: number; inCoffer: number; }, cardCost: CardCost }) {
+    if (args.overpay?.inCoffer) {
+      console.log(`[buyCard action] player ${args.playerId} overpaid ${args.overpay.inCoffer} coffers, exchanging for treasure`);
+      
+      await this.exchangeCoffer({
+        playerId: args.playerId,
+        count: args.overpay.inCoffer
+      });
     }
     
+    console.log(`[buyCard action] reducing ${args.playerId} treasure by card cost ${args.cardCost.treasure} treasure`);
+    this.match.playerTreasure -= args.cardCost.treasure;
+    
+    if (args.cardCost.potion !== undefined) {
+      console.log(`[buyCard action] reducing ${args.playerId} potions by card cost ${args.cardCost.potion} potions`);
+      this.match.playerPotions -= args.cardCost.potion;
+    }
+    
+    console.log(`[buyCard action] reducing ${args.playerId} buys by 1`);
     this.match.playerBuys--;
     
+    console.log(`[buyCard action] adding bought stats to match`);
     this.match.stats.cardsBought[args.cardId] = {
       turnNumber: this.match.turnNumber,
       playerId: args.playerId,
-      cost: cost.treasure,
-      paid: cost.treasure + (args.overpay ?? 0)
+      cost: args.cardCost.treasure,
+      paid: args.cardCost.treasure + (args.overpay?.inTreasure ?? 0) + (args.overpay?.inCoffer ?? 0)
     }
     
+    console.log(`[buyCard action] gaining card to discard pile`);
     await this.gainCard({
       playerId: args.playerId,
       cardId: args.cardId,

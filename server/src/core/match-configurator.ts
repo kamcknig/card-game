@@ -9,7 +9,7 @@ import {
   ExpansionConfiguratorFactory, GameEventRegistrar,
   InitializeExpansionContext,
   MatchBaseConfiguration,
-  PlayerScoreDecoratorRegistrar
+  PlayerScoreDecoratorRegistrar, RunGameActionDelegate
 } from '../types.ts';
 import { addMatToMatchConfig } from '../utils/add-mat-to-match-config.ts';
 import { compare, Operation } from 'https://esm.sh/v123/fast-json-patch@3.1.1/index.js';
@@ -21,7 +21,8 @@ export class MatchConfigurator {
   private readonly _config: ComputedMatchConfiguration;
   
   constructor(
-    config: MatchConfiguration
+    config: MatchConfiguration,
+    private runGameActionDelegate: RunGameActionDelegate
   ) {
     
     this._config = structuredClone(config) as ComputedMatchConfiguration;
@@ -333,29 +334,12 @@ export class MatchConfigurator {
       try {
         const module = await import((`@expansions/${expansion}/configurator-${expansion}.ts`));
         if (!module.registerClientEvents) continue;
-        module.registerClientEvents(registrar, { match });
+        module.registerClientEvents(registrar, { match, runGameActionDelegate: this.runGameActionDelegate });
       } catch (error) {
         if ((error as any)?.code === 'ERR_MODULE_NOT_FOUND') {
           continue;
         }
         console.warn(`[match configurator] failed to register expansion client events for ${expansion}`);
-        console.log(error);
-      }
-    }
-  }
-  
-  async onPostKingdomCreation(args: { match: Match, cardLibrary: CardLibrary }) {
-    const uniqueExpansions = Array.from(new Set(this._config.kingdomCards.map(card => card.expansionName)));
-    for (const expansion of uniqueExpansions) {
-      try {
-        const module = await import((`@expansions/${expansion}/post-kingdom-creation-hook-${expansion}.ts`));
-        if (!module.default) continue;
-        module.default(args);
-      } catch (error) {
-        if ((error as any)?.code === 'ERR_MODULE_NOT_FOUND') {
-          continue;
-        }
-        console.warn(`[match configurator onPostKingdomCreation] failed to load ${expansion}`);
         console.log(error);
       }
     }

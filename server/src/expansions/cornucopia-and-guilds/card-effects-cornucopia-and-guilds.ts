@@ -1,4 +1,3 @@
-import './types.ts';
 import { Card, CardId, CardKey } from 'shared/shared-types.ts';
 import { CardExpansionModule } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
@@ -8,7 +7,6 @@ import { getPlayerStartingFrom } from '../../shared/get-player-position-utils.ts
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
-import { async } from 'npm:rxjs@7.8.2';
 
 const expansion: CardExpansionModule = {
   'advisor': {
@@ -87,7 +85,7 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
       await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
-      await cardEffectArgs.runGameActionDelegate('gainCoffer', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainCoffer', { playerId: cardEffectArgs.playerId, count: 1 });
     }
   },
   'candlestick-maker': {
@@ -95,7 +93,7 @@ const expansion: CardExpansionModule = {
       console.log(`[candlestick maker effect] gaining 1 action, 1 buy, and 1 coffer`);
       await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
       await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
-      await cardEffectArgs.runGameActionDelegate('gainCoffer', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainCoffer', { playerId: cardEffectArgs.playerId, count: 1 });
     }
   },
   'carnival': {
@@ -395,7 +393,10 @@ const expansion: CardExpansionModule = {
   'farrier': {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
-        if (!eventArgs.bought || (eventArgs.overpaid ?? 0) === 0) {
+        const boughtStats = cardEffectArgs.match.stats.cardsBought[eventArgs.cardId];
+        const overpaid = boughtStats.paid - boughtStats.cost;
+        
+        if (!eventArgs.bought || overpaid <= 0) {
           return;
         }
         
@@ -410,7 +411,7 @@ const expansion: CardExpansionModule = {
           triggeredEffectFn: async (triggerEffectArgs) => {
             await triggerEffectArgs.runGameActionDelegate('drawCard', {
               playerId: eventArgs.playerId,
-              count: eventArgs.overpaid
+              count: overpaid
             }, { loggingContext: { source: eventArgs.cardId } });
           }
         });
@@ -582,7 +583,9 @@ const expansion: CardExpansionModule = {
           listeningFor: 'endTurn',
           condition: () => true,
           triggeredEffectFn: async (triggerEffectArgs) => {
-            if (!eventArgs.overpaid) {
+            const boughtStats = triggerEffectArgs.match.stats.cardsBought[eventArgs.cardId];
+            const overpaid = boughtStats.paid - boughtStats.cost;
+            if (!eventArgs.bought || overpaid <= 0) {
               console.log(`[herald triggered effect] no overpay cost spent for ${eventArgs.cardId}`);
               return;
             }
@@ -590,10 +593,10 @@ const expansion: CardExpansionModule = {
             console.log(`[herald triggered effect] ${eventArgs.playerId} overpaid for ${eventArgs.cardId}`);
             
             const discardIds = triggerEffectArgs.match.playerDiscards[eventArgs.playerId];
-            const numToChoose = Math.min(eventArgs.overpaid, discardIds.length);
+            const numToChoose = Math.min(overpaid, discardIds.length);
             
             const result = await triggerEffectArgs.runGameActionDelegate('userPrompt', {
-              prompt: 'Top-deck from discard',
+              prompt: `You may choose up to ${numToChoose} from your discard to top-deck`,
               playerId: eventArgs.playerId,
               actionButtons: [
                 { label: 'DONE', action: 1 }
@@ -779,14 +782,16 @@ const expansion: CardExpansionModule = {
   'infirmary': {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
-        if (!eventArgs.overpaid) {
+        const boughtStats = cardEffectArgs.match.stats.cardsBought[eventArgs.cardId];
+        const overpaid = boughtStats.paid - boughtStats.cost;
+        if (!eventArgs.bought || overpaid <= 0) {
           console.log(`[infirmary onGained] no overpay cost spent for ${eventArgs.cardId}`);
           return;
         }
         
         console.log(`[infirmary onGained] ${eventArgs.playerId} overpaid for ${eventArgs.cardId}`);
         
-        for (let i = 0; i < eventArgs.overpaid; i++) {
+        for (let i = 0; i < overpaid; i++) {
           await cardEffectArgs.runGameActionDelegate('playCard', {
             playerId: eventArgs.playerId,
             cardId: eventArgs.cardId
@@ -1115,7 +1120,7 @@ const expansion: CardExpansionModule = {
           await cardEffectArgs.runGameActionDelegate('gainCoffer', {
             playerId: cardEffectArgs.playerId,
             count: ownGained.length
-          }, { loggingContext: { sourceId: cardEffectArgs.cardId } });
+          }, { loggingContext: { source: cardEffectArgs.cardId } });
         }
       })
     }
@@ -1147,7 +1152,7 @@ const expansion: CardExpansionModule = {
         playerId: cardEffectArgs.playerId
       });
       
-      await cardEffectArgs.runGameActionDelegate('gainCoffer', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainCoffer', { playerId: cardEffectArgs.playerId, count: 1 });
     }
   },
   'remake': {
@@ -1362,7 +1367,9 @@ const expansion: CardExpansionModule = {
   'stonemason': {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
-        if (!eventArgs.overpaid) {
+        const boughtStats = cardEffectArgs.match.stats.cardsBought[eventArgs.cardId];
+        const overpaid = boughtStats.paid - boughtStats.cost;
+        if (!eventArgs.bought || overpaid <= 0) {
           console.log(`[stonemason triggered effect] ${eventArgs.cardId} was not overpaid, skipping`);
           return;
         }
@@ -1374,14 +1381,14 @@ const expansion: CardExpansionModule = {
             cards: { type: 'ACTION' },
             cost: {
               cardCostController: cardEffectArgs.cardPriceController,
-              spec: { playerId: eventArgs.playerId, kind: 'exact', amount: { treasure: eventArgs.overpaid } }
+              spec: { playerId: eventArgs.playerId, kind: 'exact', amount: { treasure: overpaid } }
             }
           },
           cardEffectArgs.cardLibrary
         );
         
         if (!cardIds.length) {
-          console.log(`[stonemason triggered effect] no cards in supply with cost ${eventArgs.overpaid}`);
+          console.log(`[stonemason triggered effect] no cards in supply with cost ${overpaid}`);
           return;
         }
         
