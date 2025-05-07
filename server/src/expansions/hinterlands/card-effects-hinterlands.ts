@@ -417,6 +417,77 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'farmland': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (args, rest) => {
+        const hand = args.match.playerHands[rest.playerId];
+        if (hand.length === 0) {
+          console.log(`[farmland onGained effect] no cards in hand`);
+          return;
+        }
+        
+        let selectedCardIds = await args.runGameActionDelegate('selectCard', {
+          playerId: rest.playerId,
+          prompt: `Trash a card`,
+          restrict: { from: { location: 'playerHands' } },
+          count: 1,
+        }) as CardId[];
+        
+        if (!selectedCardIds.length) {
+          console.warn(`[farmland onGained effect] no card selected`);
+          return;
+        }
+        
+        let selectedCard = args.cardLibrary.getCard(selectedCardIds[0]);
+        
+        const { cost } = args.cardPriceController.applyRules(selectedCard, {
+          match: args.match,
+          playerId: rest.playerId
+        });
+        
+        const nonFarmlandCards = findCards(
+          args.match,
+          {
+            location: ['supply', 'kingdom'],
+            cost: {
+              cardCostController: args.cardPriceController,
+              spec: { playerId: rest.playerId, kind: 'exact', amount: { treasure: cost.treasure + 2 } }
+            }
+          },
+          args.cardLibrary
+        )
+          .map(args.cardLibrary.getCard)
+          .filter(card => card.cardKey !== 'farmland');
+        
+        if (!nonFarmlandCards.length) {
+          console.log(`[farmland onGained effect] no non-farmland cards costing exactly 2 more than ${selectedCard} in supply`);
+          return;
+        }
+        
+        selectedCardIds = await args.runGameActionDelegate('selectCard', {
+          playerId: rest.playerId,
+          prompt: `Gain card`,
+          restrict: nonFarmlandCards.map(card => card.id),
+          count: 1,
+        }) as CardId[];
+        
+        if (!selectedCardIds.length) {
+          console.warn(`[farmland onGained effect] no card selected`);
+          return;
+        }
+        
+        selectedCard = args.cardLibrary.getCard(selectedCardIds[0]);
+        
+        console.log(`[farmland onGained effect] gaining card ${selectedCard}`);
+        
+        await args.runGameActionDelegate('gainCard', {
+          playerId: rest.playerId,
+          cardId: selectedCard.id,
+          to: { location: 'playerDiscards' }
+        });
+      }
+    })
+  },
 }
 
 export default expansion;
