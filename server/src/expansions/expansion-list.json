@@ -28,5 +28,10 @@
     "title": "Cornucopia & Guilds",
     "name": "cornucopia-and-guilds",
     "order": 6
+  },
+  {
+    "title": "Hinterlands",
+    "name": "hinterlands",
+    "order": 7
   }
 ]
