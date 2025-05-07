@@ -74,5 +74,11 @@
       "treasure": 5
     },
     "type": ["ACTION"]
+  },
+  "jack-of-all-trades": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"]
   }
 }

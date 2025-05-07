@@ -788,6 +788,98 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'jack-of-all-trades': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const silverCardIds = findCards(
+        cardEffectArgs.match,
+        {
+          location: 'supply',
+          cards: { cardKeys: 'silver' }
+        },
+        cardEffectArgs.cardLibrary
+      );
+      
+      if (!silverCardIds.length) {
+        console.log(`[jack-of-all-trades effect] no silver cards in supply`);
+      }
+      else {
+        console.log(`[jack-of-all-trades effect] gaining a silver`);
+        
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: silverCardIds.slice(-1)[0],
+          to: { location: 'playerDiscards' }
+        });
+      }
+      
+      const deck = cardEffectArgs.match.playerDecks[cardEffectArgs.playerId];
+      
+      if (deck.length === 0) {
+        console.log(`[jack-of-all-trades effect] no cards in deck, shuffling`);
+        await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+      }
+      
+      if (deck.length === 0) {
+        console.log(`[jack-of-all-trades effect] no cards in deck after shuffling`);
+      }
+      else {
+        const cardId = deck.slice(-1)[0];
+        const card = cardEffectArgs.cardLibrary.getCard(cardId);
+        
+        const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+          prompt: `Discard ${card.cardName}`,
+          playerId: cardEffectArgs.playerId,
+          actionButtons: [
+            { label: 'CANCEL', action: 1}, { label: 'DISCARD', action: 2 }
+          ],
+        }) as { action: number, result: number[] };
+        
+        if (result.action === 2) {
+          console.log(`[jack-of-all-trades effect] discarding ${card}`);
+          await cardEffectArgs.runGameActionDelegate('discardCard', {
+            cardId,
+            playerId: cardEffectArgs.playerId
+          });
+        }
+      }
+      
+      const hand = cardEffectArgs.match.playerHands[cardEffectArgs.playerId];
+      while (deck.length > 0 && hand.length < 5) {
+        console.log(`[jack-of-all-trades effect] drawing card`);
+        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      }
+      
+      const nonTreasureCardsInHand = hand.map(cardEffectArgs.cardLibrary.getCard)
+        .filter(card => !card.type.includes('TREASURE'));
+      
+      if (nonTreasureCardsInHand.length === 0) {
+        console.log(`[jack-of-all-trades effect] no non-treasure cards in hand`);
+        return;
+      }
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Trash a card`,
+        restrict: { from: { location: 'playerHands'}},
+        count: 1,
+        optional: true,
+      }) as CardId[];
+      
+      if (selectedCardIds.length === 0) {
+        console.log(`[jack-of-all-trades effect] no card selected`);
+        return;
+      }
+      
+      const card = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+      
+      console.log(`[jack-of-all-trades effect] trashing ${card}`);
+      
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCardIds[0],
+      });
+    }
+  },
 }
 
 export default expansion;
