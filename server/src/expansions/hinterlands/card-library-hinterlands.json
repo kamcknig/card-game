@@ -6,6 +6,7 @@
     "type": ["ACTION", "ATTACK" ]
   },
   "border-village": {
+    "cardName": "Border Village",
     "type": ["ACTION"],
     "cost": {
       "treasure": 6
@@ -41,5 +42,12 @@
     },
     "type": ["VICTORY"],
     "victoryPoints": 2
+  },
+  "fools-gold": {
+    "cardName": "Fool's Gold",
+    "cost": {
+      "treasure": 2
+    },
+    "type": ["REACTION", "TREASURE"]
   }
 }

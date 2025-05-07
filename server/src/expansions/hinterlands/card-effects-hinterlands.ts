@@ -488,6 +488,77 @@ const expansion: CardExpansionModule = {
       }
     })
   },
+  'fools-gold': {
+    registerLifeCycleMethods: () => ({
+      onLeaveHand: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`fools-gold:${eventArgs.cardId}:gainCard`);
+      },
+      onEnterHand: async (args, eventArgs) => {
+        args.reactionManager.registerReactionTemplate({
+          id: `fools-gold:${eventArgs.cardId}:gainCard`,
+          playerId: eventArgs.playerId,
+          listeningFor: 'gainCard',
+          once: false,
+          compulsory: false,
+          allowMultipleInstances: true,
+          condition: (conditionArgs) => {
+            if (conditionArgs.trigger.args.playerId === eventArgs.playerId) return false;
+            const card = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
+            if (card.cardKey !== 'province') return false;
+            return true;
+          },
+          triggeredEffectFn: async (triggeredEffectArgs) => {
+            console.log(`[fools-gold triggered effect] trashing fools gold`)
+            await triggeredEffectArgs.runGameActionDelegate('trashCard', {
+              playerId: triggeredEffectArgs.trigger.args.playerId,
+              cardId: eventArgs.cardId,
+            });
+            
+            const goldCardIds = findCards(
+              triggeredEffectArgs.match,
+              {
+                location: 'supply',
+                cards: { cardKeys: 'gold' }
+              },
+              triggeredEffectArgs.cardLibrary
+            );
+            
+            if (!goldCardIds.length) {
+              console.log(`[fools-gold triggered effect] no gold cards in supply`);
+              return;
+            }
+            
+            const card = triggeredEffectArgs.cardLibrary.getCard(goldCardIds.slice(-1)[0]);
+            
+            console.log(`[fools-gold triggered effect] gaining ${card}`);
+            
+            await triggeredEffectArgs.runGameActionDelegate('gainCard', {
+              playerId: eventArgs.playerId,
+              cardId: card.id,
+              to: { location: 'playerDecks' }
+            });
+          }
+        });
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      const foolsGoldPlayedThisTurnCount = cardEffectArgs.match.stats.playedCardsByTurn[cardEffectArgs.match.turnNumber]
+        .map(cardEffectArgs.cardLibrary.getCard)
+        .filter(card => card.owner === cardEffectArgs.playerId && card.cardKey === 'fools-gold')
+        .length;
+      
+      console.log(`[fools-gold effect] fools-gold played this turn ${foolsGoldPlayedThisTurnCount}`);
+      
+      if (foolsGoldPlayedThisTurnCount === 1) {
+        console.log(`[fools-gold effect] gaining 1 treasure`);
+        await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+      }
+      else {
+        console.log(`[fools-gold effect] gaining 4 treasure`);
+        await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 4 });
+      }
+    }
+  },
 }
 
 export default expansion;
