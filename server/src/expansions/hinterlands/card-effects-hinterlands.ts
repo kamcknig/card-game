@@ -559,6 +559,48 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'guard-dog': {
+    registerLifeCycleMethods: () => ({
+      onLeaveHand: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`guard-dog:${eventArgs.cardId}:cardPlayed`);
+      },
+      onEnterHand: async (args, eventArgs) => {
+        args.reactionManager.registerReactionTemplate({
+          id: `guard-dog:${eventArgs.cardId}:cardPlayed`,
+          listeningFor: 'cardPlayed',
+          once: false,
+          playerId: eventArgs.playerId,
+          allowMultipleInstances: true,
+          compulsory: false,
+          condition: (conditionArgs) => {
+            if (conditionArgs.trigger.args.playerId === eventArgs.playerId) return false;
+            const card = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
+            if (!card.type.includes('ATTACK')) return false;
+            return true;
+          },
+          triggeredEffectFn: async () => {
+            console.log(`[guard-dog triggered effect] playing guard-dog ${eventArgs.cardId}`);
+            
+            await args.runGameActionDelegate('playCard', {
+              playerId: eventArgs.playerId,
+              cardId: eventArgs.cardId
+            })
+          }
+        })
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[guard-dog effect] drawing 2 cards`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
+      
+      const hand = cardEffectArgs.match.playerHands[cardEffectArgs.playerId];
+      
+      if (hand.length <= 5) {
+        console.log(`[guard-dog effect] hand size is ${hand.length}, drawing 2 more cards`);
+        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
+      }
+    }
+  },
 }
 
 export default expansion;

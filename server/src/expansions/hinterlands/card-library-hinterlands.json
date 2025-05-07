@@ -49,5 +49,12 @@
       "treasure": 2
     },
     "type": ["REACTION", "TREASURE"]
+  },
+  'guard-dog': {
+    "cardName": "Guard Dog",
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION", "REACTION"]
   }
 }
