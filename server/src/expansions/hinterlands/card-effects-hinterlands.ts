@@ -3,6 +3,7 @@ import { CardExpansionModule } from '../../types.ts';
 import { findCards } from '../../utils/find-cards.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
+import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 
 const expansion: CardExpansionModule = {
   'berserker': {
@@ -670,6 +671,38 @@ const expansion: CardExpansionModule = {
             cardId: selectedCard.id,
             to: { location: 'playerDiscards' }
           });
+        }
+      })
+    }
+  },
+  'highway': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[highway effect] drawing 1 card, and gaining 1 action`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      
+      const cards = cardEffectArgs.cardLibrary.getAllCardsAsArray();
+      
+      const unsubs: (() => void)[] = [];
+      
+      const rule: CardPriceRule = (card, context) => {
+        return { restricted: false, cost: { treasure: -1, potion: 0 } };
+      }
+      
+      for (const card of cards) {
+        unsubs.push(cardEffectArgs.cardPriceController.registerRule(card, rule));
+      }
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate({
+        id: `highway:${cardEffectArgs.cardId}:endTurn`,
+        listeningFor: 'endTurn',
+        condition: () => true,
+        once: true,
+        compulsory: true,
+        playerId: cardEffectArgs.playerId,
+        allowMultipleInstances: true,
+        triggeredEffectFn: async () => {
+          unsubs.forEach(c => c());
         }
       })
     }

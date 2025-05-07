@@ -62,5 +62,11 @@
       "treasure": 5
     },
     "type": ["ACTION"]
+  },
+  "highway": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"]
   }
 }
