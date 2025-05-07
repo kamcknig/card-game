@@ -940,6 +940,32 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
     }
   },
+  'oasis': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[oasis effect] drawing 1 card, gaining 1 action, and gaining 1 treasure`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Discard card`,
+        restrict: { from: { location: 'playerHands' } },
+        count: 1,
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.warn(`[oasis effect] no card selected`);
+        return;
+      }
+      
+      const card = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+      
+      console.log(`[oasis effect] discarding ${card}`);
+      
+      await cardEffectArgs.runGameActionDelegate('discardCard', { cardId: card.id, playerId: cardEffectArgs.playerId });
+    }
+  },
 }
 
 export default expansion;

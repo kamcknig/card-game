@@ -92,5 +92,11 @@
       "treasure": 4
     },
     "type": ["ACTION"]
+  },
+  "oasis": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION"]
   }
 }
