@@ -50,7 +50,7 @@
     },
     "type": ["REACTION", "TREASURE"]
   },
-  'guard-dog': {
+  "guard-dog": {
     "cardName": "Guard Dog",
     "cost": {
       "treasure": 3
