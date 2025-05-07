@@ -10,5 +10,11 @@
     "cost": {
       "treasure": 6
     }
+  },
+  "cartographer": {
+    "type": ["ACTION"],
+    "cost": {
+      "treasure": 5
+    }
   }
 }

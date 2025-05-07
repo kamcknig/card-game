@@ -127,6 +127,82 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
     }
   },
+  'cartographer': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[cartographer effect] drawing 1 card and 1 action`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      
+      const deck = cardEffectArgs.match.playerDecks[cardEffectArgs.playerId];
+      const discard = cardEffectArgs.match.playerDiscards[cardEffectArgs.playerId];
+      
+      const numToLookAt = Math.min(4, deck.length + discard.length);
+      
+      console.log(`[cartographer effect] looking at ${numToLookAt} cards`);
+      
+      if (deck.length < numToLookAt) {
+        console.log(`[cartographer effect] no cards in deck, shuffling`);
+        await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+      }
+      
+      const cardsToLookAt = deck.slice(-numToLookAt);
+      
+      let result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        prompt: `May discard up to ${cardsToLookAt.length}`,
+        playerId: cardEffectArgs.playerId,
+        actionButtons: [
+          { label: 'DONE', action: 1 }
+        ],
+        content: {
+          type: 'select',
+          cardIds: cardsToLookAt,
+          selectCount: {
+            kind: 'upTo',
+            count: cardsToLookAt.length
+          }
+        }
+      }) as { action: number, result: CardId[] };
+      
+      if (!result.result.length) {
+        console.warn(`[cartographer effect] no card selected`);
+      }
+      else {
+        console.log(`[cartographer effect] discarding ${result.result.length} cards`);
+        
+        for (const cardId of result.result) {
+          await cardEffectArgs.runGameActionDelegate('discardCard', { cardId: cardId, playerId: cardEffectArgs.playerId });
+        }
+      }
+      
+      const cardsToRearrange = cardsToLookAt.filter(id => !result.result.includes(id));
+      
+      if (!cardsToRearrange.length) {
+        console.log(`[cartographer effect] no cards to rearrange`);
+        return;
+      }
+      
+      console.log(`[cartographer effect] rearranging ${cardsToRearrange.length} cards`);
+      result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        prompt: 'Put back on top of deck in any order',
+        playerId: cardEffectArgs.playerId,
+        actionButtons: [
+          { label: 'DONE', action: 1 }
+        ],
+        content: {
+          type: 'rearrange',
+          cardIds: cardsToRearrange,
+        }
+      }) as { action: number, result: CardId[] };
+      
+      for (const cardId of result.result) {
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
+          cardId: cardId,
+          toPlayerId: cardEffectArgs.playerId,
+          to: { location: 'playerDecks' }
+        });
+      }
+    }
+  },
 }
 
 export default expansion;
