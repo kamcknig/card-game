@@ -307,6 +307,116 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'develop': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const hand = cardEffectArgs.match.playerHands[cardEffectArgs.playerId];
+      
+      if (hand.length === 0) {
+        console.log(`[develop effect] no cards in hand`);
+        return;
+      }
+      
+      let selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Trash card`,
+        restrict: { from: { location: 'playerHands' } },
+        count: 1,
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.warn(`[develop effect] no card selected`);
+        return;
+      }
+      
+      const card = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+      
+      console.log(`[develop effect] trashing ${card}`);
+      
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: card.id,
+      });
+      
+      const { cost } = cardEffectArgs.cardPriceController.applyRules(
+        card,
+        { match: cardEffectArgs.match, playerId: cardEffectArgs.playerId }
+      );
+      
+      const oneLessCards = findCards(
+        cardEffectArgs.match,
+        {
+          location: ['supply', 'kingdom'],
+          cost: {
+            cardCostController: cardEffectArgs.cardPriceController,
+            spec: { playerId: cardEffectArgs.playerId, kind: 'exact', amount: { treasure: cost.treasure - 1 } }
+          }
+        },
+        cardEffectArgs.cardLibrary
+      );
+      
+      const oneMoreCards = findCards(
+        cardEffectArgs.match,
+        {
+          location: ['supply', 'kingdom'],
+          cost: {
+            cardCostController: cardEffectArgs.cardPriceController,
+            spec: { playerId: cardEffectArgs.playerId, kind: 'exact', amount: { treasure: cost.treasure + 1 } }
+          }
+        },
+        cardEffectArgs.cardLibrary
+      );
+      
+      let combined = oneLessCards.concat(oneMoreCards);
+      
+      if (!combined.length) {
+        console.log(`[develop effect] no cards costing 1 less or 1 more in supply`);
+        return;
+      }
+      
+      selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Gain card costing 1 less, or 1 more`,
+        restrict: combined,
+        count: 1
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.warn(`[develop effect] no card selected`);
+        return;
+      }
+      
+      combined = [];
+      
+      let nextPrompt = '';
+      if (oneLessCards.findIndex(id => id === selectedCardIds[0])) {
+        console.log(`[develop effect] card gained was one less`);
+        nextPrompt = `Gain card costing 1 more`;
+        combined = oneMoreCards;
+      }
+      else if (oneMoreCards.findIndex(id => id === selectedCardIds[0])) {
+        console.log(`[develop effect] card gained was one more`);
+        nextPrompt = `Gain card costing 1 less`;
+        combined = oneLessCards
+      }
+      
+      if (!combined.length) {
+        console.log(`[develop effect] no remaining cards to gain`);
+        return;
+      }
+      
+      selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: nextPrompt,
+        restrict: combined,
+        count: 1
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.warn(`[develop effect] no card selected`);
+        return;
+      }
+    }
+  },
 }
 
 export default expansion;
