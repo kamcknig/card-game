@@ -1,13 +1,13 @@
 import { CardKey, CardNoId, ComputedMatchConfiguration, MatchConfiguration } from 'shared/shared-types.ts';
 import { allCardLibrary, ExpansionData, expansionLibrary } from '@expansions/expansion-library.ts';
 import {
-  CardEffectRegistrar,
   EndGameConditionRegistrar,
   ExpansionConfigurator,
-  ExpansionConfiguratorFactory, GameEventRegistrar,
+  ExpansionConfiguratorFactory,
+  GameEventRegistrar,
   InitializeExpansionContext,
   MatchBaseConfiguration,
-  PlayerScoreDecoratorRegistrar, RunGameActionDelegate
+  PlayerScoreDecoratorRegistrar
 } from '../types.ts';
 import { addMatToMatchConfig } from '../utils/add-mat-to-match-config.ts';
 import { compare, Operation } from 'https://esm.sh/v123/fast-json-patch@3.1.1/index.js';
@@ -24,7 +24,6 @@ export class MatchConfigurator {
   private _requestedKingdoms: CardNoId[] = [];
   private _bannedKingdoms: CardNoId[] = [];
   private readonly _config: ComputedMatchConfiguration;
-  private readonly _expansionConfigurators = new Map<string, ExpansionConfigurator>();
   
   constructor(config: MatchConfiguration) {
     
@@ -75,7 +74,7 @@ export class MatchConfigurator {
     
     addMatToMatchConfig('set-aside', this._config);
     
-    await this.runExpansionConfigurators(appContext)
+    await this.runExpansionConfigurators(appContext);
     
     return { config: this._config };
   }
@@ -172,12 +171,10 @@ export class MatchConfigurator {
   }
   
   private async runExpansionConfigurators({
-    match,
     gameEventRegistrar,
     endGameConditionRegistrar,
     playerScoreDecoratorRegistrar,
     cardEffectRegistrar,
-    clientEventRegistrar,
   }: InitializeExpansionContext) {
     const configuratorIterator = (await this.getExpansionConfigurators()).entries();
     
@@ -217,7 +214,7 @@ export class MatchConfigurator {
       
       console.log(`[match configurator] setting card count to ${acc[cardKey]} for ${cardKey}`);
       return acc;
-    }, {} as Record<CardKey, number>)
+    }, {} as Record<CardKey, number>);
     
     console.log(`[match configurator] registering expansion end game conditions`);
     await this.registerExpansionEndGameConditions(endGameConditionRegistrar);

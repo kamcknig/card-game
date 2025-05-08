@@ -3,7 +3,7 @@ import { configureYoungWitch } from './configure-young-witch.ts';
 import { configureFerryman } from './configure-ferryman.ts';
 import { ComputedMatchConfiguration } from 'shared/shared-types.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
-import { configureJoust, createRewardKingdoms } from './configure-joust.ts';
+import { configureJoust } from './configure-joust.ts';
 
 export const configurator: ExpansionConfiguratorFactory = () => {
   return async (args) => {
@@ -40,18 +40,8 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     registrar('onGameStart', async (args) => {
       console.log(`[baker onGameStart event] setting up baker - +1 coffer to each player on game start`);
       for (const player of args.match.players) {
-        args.match.coffers[player.id] ??= 0;
-        args.match.coffers[player.id] += 1;
+        await args.runGameActionDelegate('gainCoffer', { playerId: player.id, count: 1});
       }
-    });
-  }
-  
-  if (config.kingdomCards.some(card => card.cardKey === 'joust')) {
-    console.log(`[cornucopia configurator] setting up joust onGameStart handler`);
-    
-    registrar('onGameStart', async (args) => {
-      console.log(`[joust onGameStart event] setting up baker - +1 coffer to each player on game start`);
-      createRewardKingdoms(args)
     });
   }
 }

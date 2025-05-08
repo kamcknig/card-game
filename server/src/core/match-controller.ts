@@ -16,7 +16,7 @@ import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
 import { ReactionManager } from './reactions/reaction-manager.ts';
 import { scoringFunctionMap } from '@expansions/scoring-function-map.ts';
 import { CardLibrary } from './card-library.ts';
-import { compare, Operation } from 'fast-json-patch';
+import { applyPatch, compare, Operation } from 'fast-json-patch';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
 import { cardEffectFunctionMapFactory } from './effects/card-effect-function-map-factory.ts';
 import { EventEmitter } from '@denosaurs/event';
@@ -190,6 +190,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this._match.players = this._matchConfiguration.players;
     this._match.basicSupply = this.createBaseSupply(this._matchConfiguration);
     this._match.kingdomSupply = this.createKingdom(this._matchConfiguration);
+    this._match.nonSupplyCards = this.createNonSupplyCards(this._matchConfiguration);
     const { playerDecks, playerHands, playerDiscards } = this.createPlayerDecks(this._matchConfiguration);
     this._match.playerDecks = playerDecks;
     this._match.playerHands = playerHands;
@@ -198,8 +199,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this._match.mats = this._matchConfiguration.mats;
     
     console.log(`[match] ready, sending to clients and listening for when clients are ready`);
-    
-    await this._reactionManager?.runGameLifecycleEvent('onGameStart', { match: this._match });
     
     this.broadcastPatch(snapshot);
     
@@ -287,6 +286,28 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }
     
     return kingdomCards.map(card => card.id);
+  }
+  
+  private createNonSupplyCards(config: ComputedMatchConfiguration) {
+    console.log(`[match] creating non-supply cards`);
+    
+    const nonSupplyCards: Card[] = [];
+    
+    for (const [key, count] of Object.entries(config.nonSupplyCardCount ?? {})) {
+      const cardData = config.nonSupplyCards?.find((card) => card.cardKey === key);
+      if (!cardData) {
+        console.warn(`[match] no card data found for ${key}`);
+        continue;
+      }
+      
+      for (let i = 0; i < count; i++) {
+        const c = createCard(key, cardData);
+        this._cardLibrary.addCard(c);
+        nonSupplyCards.push(c);
+      }
+    }
+    
+    return nonSupplyCards.map(card => card.id);
   }
   
   private createPlayerDecks(config: MatchConfiguration) {
@@ -415,6 +436,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   
   private async startMatch() {
     console.log(`[match] starting match`);
+    
+    await this._reactionManager?.runGameLifecycleEvent('onGameStart', { match: this._match });
     
     for (const socket of this._socketMap.values()) {
       this.initializeSocketListeners(socket);

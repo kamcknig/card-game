@@ -14,7 +14,6 @@ the UI for this yet, and doesn't seem super important to get done right away
   - when player disconnects - ask others to vote to continue. leave the player in game, they just skip their turn 
   - work on the use-case when a player disconnects while waiting on input for that player - when they reconnected
 they need to be asked for their input again
-- organize modules again.
 - ui updates
   - need to update app-mat-tab and the visible mat. i've clunked it together for now
 - sound that plays more loudly when action isn't taken soon enough

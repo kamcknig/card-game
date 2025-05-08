@@ -38,15 +38,3 @@ export const configureJoust = async (args: ExpansionConfiguratorContext) => {
   }
   console.log(`[cornucopia configurator - configuring joust] joust configured`);
 }
-
-export const createRewardKingdoms = (args: { match: Match, cardLibrary: CardLibrary }) => {
-  // creates the actual reward cards in the match library
-  for (const rewardCard of args.match.config.nonSupplyCards ?? []) {
-    for (let i = 0; i < args.match.config.nonSupplyCardCount![rewardCard.cardKey]; i++) {
-      const c = createCard(rewardCard.cardKey, rewardCard);
-      args.cardLibrary.addCard(c);
-      args.match.nonSupplyCards ??= [];
-      args.match.nonSupplyCards.push(c.id);
-    }
-  }
-}
