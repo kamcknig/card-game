@@ -402,7 +402,7 @@ export type GameLifeCycleEventArgsMap = {
   onCardGained: { cardId: CardId, playerId: PlayerId, match: Match }
 }
 
-type CardLifecycleCallbackContext = {
+export type CardLifecycleCallbackContext = {
   cardPriceController: CardPriceRulesController,
   cardLibrary: CardLibrary;
   match: Match;
@@ -413,6 +413,7 @@ type CardLifecycleCallbackContext = {
 export type CardLifecycleEvent =
   | 'onGained'
   | 'onTrashed'
+  | 'onDiscarded'
   | 'onEnterHand'
   | 'onLeaveHand'
   | 'onEnterPlay'
@@ -422,6 +423,7 @@ export type CardLifecycleEvent =
 export interface CardLifecycleCallbackMap {
   onTrashed?: CardLifecycleCallback<'onTrashed'>;
   onGained?: CardLifecycleCallback<'onGained'>;
+  onDiscarded?: CardLifecycleCallback<'onDiscarded'>;
   onEnterHand?: CardLifecycleCallback<'onEnterHand'>;
   onLeaveHand?: CardLifecycleCallback<'onLeaveHand'>;
   onEnterPlay?: CardLifecycleCallback<'onEnterPlay'>;
@@ -432,6 +434,7 @@ export interface CardLifecycleCallbackMap {
 export interface CardLifecycleEventArgMap {
   onGained: { playerId: PlayerId, cardId: CardId, bought: boolean; };
   onTrashed: { playerId: PlayerId, cardId: CardId };
+  onDiscarded: { playerId: PlayerId, cardId: CardId };
   onEnterHand: { playerId: PlayerId, cardId: CardId };
   onLeaveHand: { playerId: PlayerId, cardId: CardId };
   onEnterPlay: { playerId: PlayerId, cardId: CardId };

@@ -128,5 +128,11 @@
       "treasure": 4
     },
     "type": ["ACTION", "REACTION"]
+  },
+  "trail": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION", "REACTION"]
   }
 }

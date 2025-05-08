@@ -1,5 +1,5 @@
-import { CardId } from 'shared/shared-types.ts';
-import { CardExpansionModule } from '../../types.ts';
+import { CardId, PlayerId } from 'shared/shared-types.ts';
+import { CardExpansionModule, CardLifecycleCallbackContext, CardLifecycleEventArgMap } from '../../types.ts';
 import { findCards } from '../../utils/find-cards.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
@@ -7,6 +7,7 @@ import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
+import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 
 const expansion: CardExpansionModule = {
   'berserker': {
@@ -1262,6 +1263,56 @@ const expansion: CardExpansionModule = {
           to: { location: 'playerDiscards' }
         });
       }
+    }
+  },
+  'trail': {
+    registerLifeCycleMethods: () => {
+      async function doTrail(args: CardLifecycleCallbackContext, eventArgs: { playerId: PlayerId; cardId: CardId; }) {
+        if (getTurnPhase(args.match.turnPhaseIndex) === 'cleanup') {
+          console.log(`[trail onGained/Trashed/Discarded event] happening during clean-up, skipping`);
+          return;
+        }
+        
+        const result = await args.runGameActionDelegate('userPrompt', {
+          prompt: 'Play Trail?',
+          playerId: eventArgs.playerId,
+          actionButtons: [
+            {label: 'CANCEL', action: 1}, { label: 'PLAY', action: 2 }
+          ],
+        }) as { action: number, result: number[] };
+        
+        if (result.action === 1) {
+          console.log(`[trail onGained/Trashed/Discarded event] not playing trail`);
+          return;
+        }
+        
+        console.log(`[trail onGained/Trashed/Discarded event] playing trail`);
+        
+        await args.runGameActionDelegate('playCard', {
+          playerId: eventArgs.playerId,
+          cardId: eventArgs.cardId,
+          overrides: {
+            actionCost: 0
+          }
+        });
+      }
+      
+      return {
+        onGained: async (args, eventArgs) => {
+          await doTrail(args, eventArgs);
+        },
+        onTrashed: async (args, eventArgs) => {
+          await doTrail(args, eventArgs);
+        },
+        onDiscarded: async (args, eventArgs) => {
+          await doTrail(args, eventArgs);
+        }
+      }
+    },
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[trail effect] drawing 1 card, and gaining 1 action`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
     }
   },
 }
