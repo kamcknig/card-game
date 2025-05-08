@@ -387,6 +387,15 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     });
   }
   
+  async gainVictoryToken(args: { playerId: PlayerId, count: number }, context?: GameActionContext) {
+    console.log(`[gainVictoryToken action] player ${args.playerId} gained ${args.count} victory tokens`);
+    this.match.playerVictoryTokens ??= {};
+    this.match.playerVictoryTokens[args.playerId] ??= 0;
+    const newCount = this.match.playerVictoryTokens[args.playerId] + args.count;
+    this.match.playerVictoryTokens[args.playerId] = newCount;
+    console.log(`[gainVictoryToken action] player ${args.playerId} new victory token count ${newCount}`);
+  }
+  
   async gainCoffer(args: { playerId: PlayerId, count?: number; }, context?: GameActionContext) {
     console.log(`[gainCoffer action] player ${args.playerId} gained ${args.count} coffers`);
     this.match.coffers[args.playerId] ??= 0;

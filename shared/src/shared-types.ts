@@ -23,8 +23,6 @@ export type MatchConfiguration = {
   
   // kingdom cards selected for the game, these are what are available at the beginning of a match
   kingdomCards: CardNoId[];
-  
-  matchPresets?: Partial<Match>;
 }
 
 export type ComputedMatchConfiguration = MatchConfiguration & {

@@ -1,4 +1,3 @@
-import './types.ts';
 import { Card, CardId, CardKey } from 'shared/shared-types.ts';
 import { CardExpansionModule } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
@@ -725,10 +724,10 @@ const expansion: CardExpansionModule = {
     }
   },
   'monument': {
-    registerEffects: () => async ({ runGameActionDelegate }) => {
+    registerEffects: () => async ({ playerId, runGameActionDelegate }) => {
       console.log(`[monument effect] gaining 2 treasure, and 1 victory token`);
       await runGameActionDelegate('gainTreasure', { count: 2 });
-      await runGameActionDelegate('gainVictoryToken', { count: 1 });
+      await runGameActionDelegate('gainVictoryToken', { playerId, count: 1 });
     }
   },
   'peddler': {

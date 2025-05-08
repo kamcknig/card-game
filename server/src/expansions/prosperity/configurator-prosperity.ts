@@ -1,4 +1,3 @@
-import './types.ts';
 import {
   ActionRegistry,
   EndGameConditionRegistrar,
@@ -145,19 +144,6 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         })
       }
     }
-  });
-}
-
-export const registerActions: ActionRegistry = (registerFn, { match }) => {
-  console.log(`[prosperity action registry] registering gainVictoryToken action`);
-  
-  registerFn('gainVictoryToken', async ({ playerId, count }) => {
-    console.log(`[gainVictoryToken action] player ${playerId} gained ${count} victory tokens`);
-    match.playerVictoryTokens ??= {};
-    match.playerVictoryTokens[playerId] ??= 0;
-    const newCount = match.playerVictoryTokens[playerId] + count;
-    match.playerVictoryTokens[playerId] = newCount;
-    console.log(`[gainVictoryToken action] player ${playerId} new victory token count ${newCount}`);
   });
 }
 

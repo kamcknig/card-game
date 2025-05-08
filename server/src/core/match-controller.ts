@@ -37,18 +37,19 @@ import {
 import { createCard } from '../utils/create-card.ts';
 import { getRemainingSupplyCount, getStartingSupplyCount } from '../utils/get-starting-supply-count.ts';
 import { CardPriceRulesController } from './card-price-rules-controller.ts';
-import { findCardsFactory, FindCardsFilter } from '../utils/find-cards.ts';
+import { findCardsFactory } from '../utils/find-cards.ts';
 import { GameActionController } from './actions/game-action-controller.ts';
+import { CardSourceController } from './card-source-controller.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardLibSnapshot = {};
   private _matchSnapshot: Match | null | undefined;
   private _reactionManager: ReactionManager | undefined;
   private _interactivityController: CardInteractivityController | undefined;
-  private _cardLibrary: CardLibrary = new CardLibrary();
+  private readonly _cardLibrary: CardLibrary = new CardLibrary();
   private _logManager: LogManager | undefined;
   private gameActionsController: GameActionController | undefined;
-  private _match: Match = {} as Match;
+  private readonly _match: Match = {} as Match;
   private _matchConfiguration: ComputedMatchConfiguration | undefined;
   private _expansionEndGameConditionFns: EndGameConditionFn[] = [];
   private _cardPriceController: CardPriceRulesController | undefined;
@@ -56,6 +57,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _expansionScoringFns: PlayerScoreDecorator[] = [];
   private _registeredEvents: (keyof ServerListenEvents)[] = [];
   private _findCards: FindCardsFn = (...args) => ([]);
+  private readonly _cardSourceController: CardSourceController = new CardSourceController();
   
   private _playerHands: Record<CardKey, number>[] = [
     /*{
@@ -126,19 +128,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     const snapshot = this.getMatchSnapshot();
     
-    this._matchConfigurator = new MatchConfigurator(
-      config,
-      (action, ...args) => this.runGameAction(action, ...args)
-    );
-    const { config: newConfig } = await this._matchConfigurator.createConfiguration();
-    
     this._findCards = findCardsFactory(this._match, this._cardLibrary);
-    
-    this._matchConfiguration = newConfig;
-    this._match = {
-      ...this._match,
-      ...newConfig.matchPresets ?? {}
-    }
     
     this._logManager = new LogManager({
       socketMap: this._socketMap,
@@ -184,15 +174,18 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._interactivityController,
     );
     
-    await this._matchConfigurator?.onPreKingdomCreation({
+    this._matchConfigurator = new MatchConfigurator(config);
+    
+    const { config: newConfig } = await this._matchConfigurator.createConfiguration({
       match: this._match,
       gameEventRegistrar: (event: GameLifecycleEvent, handler: GameLifecycleCallback) => this._reactionManager?.registerGameEvent(event, handler),
       clientEventRegistrar: (event, handler) => this.clientEventRegistrar(event, handler),
       endGameConditionRegistrar: (val) => this._expansionEndGameConditionFns.push(val),
-      actionRegistrar: (...args) => this.gameActionsController?.registerAction(...args),
       cardEffectRegistrar: (...args) => this.gameActionsController?.registerCardEffect(...args),
       playerScoreDecoratorRegistrar: (val: PlayerScoreDecorator) => this._expansionScoringFns.push(val),
     });
+    
+    this._matchConfiguration = newConfig;
     
     this._match.players = this._matchConfiguration.players;
     this._match.basicSupply = this.createBaseSupply(this._matchConfiguration);

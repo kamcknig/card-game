@@ -1937,6 +1937,11 @@
   resolved "https://registry.yarnpkg.com/@pixi/colord/-/colord-2.9.6.tgz#7e4e7851480da6fd3cef4e331f008d60be7e1204"
   integrity sha512-nezytU2pw587fQstUu1AsJZDVEynjskwOL+kibwcdxsMBFqPsFFNA7xl0ii/gXuDi6M0xj3mfRJj8pBSc2jCfA==
 
+"@pixi/devtools@^2.0.1":
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/@pixi/devtools/-/devtools-2.0.1.tgz#eb0c304f88973e5a2d34c8f0919c96e306a07749"
+  integrity sha512-TFCqNkJoLNYHDELgQ3bKWvA33twWpoUhQB8Y+hneBdDBunRsqZ5ZzwH7+6E5eVaVn7eeLAXHs9QGRGsxM0fRlw==
+
 "@pixi/ui@^2.2.2":
   version "2.2.2"
   resolved "https://registry.yarnpkg.com/@pixi/ui/-/ui-2.2.2.tgz#bc6c20b72aea823c8878395508088601bb438717"

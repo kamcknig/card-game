@@ -114,6 +114,7 @@ export type ModifyActionCardArgs = {
 };
 
 export interface BaseGameActionDefinitionMap {
+  gainVictoryToken: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
   gainCoffer: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
   exchangeCoffer: (args: { playerId: PlayerId; count: number; }) => Promise<void>;
   buyCard: (args: {
@@ -225,7 +226,6 @@ export type ExpansionConfiguratorContext = {
   config: ComputedMatchConfiguration;
   cardLibrary: Record<CardKey, CardNoId>;
   expansionData: ExpansionData;
-  actionRegistrar: GameActionController['registerAction'];
 };
 
 export type ExpansionConfigurator = (args: ExpansionConfiguratorContext) => Promise<ComputedMatchConfiguration>;
@@ -445,12 +445,6 @@ export type CardLifecycleCallbackResult = {
 
 export type CardLifecycleCallback<T extends CardLifecycleEvent> = (args: CardLifecycleCallbackContext, rest: CardLifecycleEventArgMap[T]) => Promise<CardLifecycleCallbackResult | void>;
 
-export type ActionFunctionFactoryContext = {
-  match: Match;
-}
-export type ActionRegistry = (registerAction: ActionRegistrar, args: ActionFunctionFactoryContext) => void;
-export type ActionRegistrar = <K extends GameActions>(key: K, handler: GameActionDefinitionMap[K]) => void;
-
 export type CardEffectRegistrar = (cardKey: CardKey, tag: string, fn: CardEffectFn) => void;
 
 export type PlayerScoreDecoratorRegistrar = (decorator: PlayerScoreDecorator) => void;
@@ -472,7 +466,6 @@ export type InitializeExpansionContext = {
   gameEventRegistrar: GameEventRegistrar,
   match: Match;
   clientEventRegistrar: ClientEventRegistrar;
-  actionRegistrar: ActionRegistrar;
   endGameConditionRegistrar: EndGameConditionRegistrar;
   playerScoreDecoratorRegistrar: PlayerScoreDecoratorRegistrar;
   cardEffectRegistrar: CardEffectRegistrar;
