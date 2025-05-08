@@ -1166,7 +1166,6 @@ const expansion: CardExpansionModule = {
         });
         
         const { cost } = cardEffectArgs.cardPriceController.applyRules(selectedCard, {
-          match: cardEffectArgs.match,
           playerId: cardEffectArgs.playerId
         });
         
@@ -1430,7 +1429,6 @@ const expansion: CardExpansionModule = {
       });
       
       const { cost } = cardEffectArgs.cardPriceController.applyRules(card, {
-        match: cardEffectArgs.match,
         playerId: cardEffectArgs.playerId
       });
       

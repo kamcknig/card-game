@@ -836,7 +836,7 @@ const expansion: CardExpansionModule = {
       await runGameActionDelegate('trashCard', { cardId, playerId });
       
       const card = cardLibrary.getCard(cardId);
-      const { cost: cardCost } = cardPriceController.applyRules(card, { match, playerId });
+      const { cost: cardCost } = cardPriceController.applyRules(card, { playerId });
       
       console.log(`[salvager effect] gaining ${cardCost.treasure} buy...`);
       await runGameActionDelegate('gainTreasure', { count: cardCost.treasure });

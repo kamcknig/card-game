@@ -940,7 +940,7 @@ const expansionModule: CardExpansionModule = {
         cardId,
       });
       
-      const { cost: cardCost } = cardPriceController.applyRules(card, { match, playerId });
+      const { cost: cardCost } = cardPriceController.applyRules(card, { playerId });
       
       console.log(`[REPLACE EFFECT] prompting user to gain a card costing up to ${cardCost.treasure + 2}...`);
       
@@ -1196,7 +1196,7 @@ const expansionModule: CardExpansionModule = {
           cardId: cardId,
         });
         
-        const { cost } = cardPriceController.applyRules(card, { match, playerId });
+        const { cost } = cardPriceController.applyRules(card, { playerId });
         
         console.log(`[SWINDLER EFFECT] prompting user to select card costing ${cost.treasure}...`);
         
@@ -1387,7 +1387,7 @@ const expansionModule: CardExpansionModule = {
         cardId: card.id,
       });
       
-      const { cost: cardCost } = cardPriceController.applyRules(card, { match, playerId });
+      const { cost: cardCost } = cardPriceController.applyRules(card, { playerId });
       
       console.log(`[UPGRADE EFFECT] prompting user to select card costing ${cardCost.treasure + 2}...`);
       

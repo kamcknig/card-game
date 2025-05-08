@@ -720,7 +720,7 @@ const expansionModule: CardExpansionModule = {
       
       let card = cardLibrary.getCard(cardId);
       
-      const { cost: cardCost } = cardPriceController.applyRules(card, { match, playerId });
+      const { cost: cardCost } = cardPriceController.applyRules(card, { playerId });
       
       console.log(`[MINE EFFECT] prompting user to select treasure costing up to ${cardCost.treasure + 3}`);
       
@@ -949,7 +949,7 @@ const expansionModule: CardExpansionModule = {
         cardId,
       });
       
-      const { cost: cardCost } = cardPriceController.applyRules(card, { match, playerId });
+      const { cost: cardCost } = cardPriceController.applyRules(card, { playerId });
       
       console.log(`[REMODEL EFFECT] prompting user to select card costing up to ${cardCost.treasure}...`);
       

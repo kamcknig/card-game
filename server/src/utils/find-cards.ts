@@ -101,7 +101,6 @@ export const findCardsFactory: FindCardsFnFactory = (match: Match, cardLibrary: 
   if (filter.cost) {
     sourceCards = sourceCards.filter(card => {
       const { cost: effectiveCost } = filter.cost!.cardCostController.applyRules(card, {
-        match,
         playerId: filter.cost!.spec.playerId
       });
       return validateCostSpec(filter.cost!.spec, effectiveCost);

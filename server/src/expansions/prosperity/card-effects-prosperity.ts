@@ -107,7 +107,6 @@ const expansion: CardExpansionModule = {
           });
           
           const { cost: selectedCardCost } = effectArgs.cardPriceController.applyRules(selectedCard, {
-            match: effectArgs.match,
             playerId: effectArgs.playerId
           })
           
@@ -372,7 +371,6 @@ const expansion: CardExpansionModule = {
       console.log(`[expand effect] selected ${card} to trash`)
       
       const { cost: effectCost } = effectArgs.cardPriceController.applyRules(card, {
-        match: effectArgs.match,
         playerId: effectArgs.playerId
       });
       
@@ -427,7 +425,6 @@ const expansion: CardExpansionModule = {
         for (const cardId of selectedCardIdsToTrash) {
           const card = effectArgs.cardLibrary.getCard(cardId);
           const { cost: cardCost } = effectArgs.cardPriceController.applyRules(card, {
-            match: effectArgs.match,
             playerId: effectArgs.playerId
           });
           cost = {

@@ -86,7 +86,6 @@ export class CardInteractivityController {
         }
         
         const { restricted, cost } = this._cardPriceController.applyRules(card, {
-          match: this.match,
           playerId: currentPlayer.id
         });
         
@@ -192,7 +191,6 @@ export class CardInteractivityController {
       else {
         const card = this._cardLibrary.getCard(cardId);
         const { cost } = this._cardPriceController.applyRules(card, {
-          match: this.match,
           playerId
         });
         

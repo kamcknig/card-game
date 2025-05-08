@@ -35,7 +35,7 @@ const expansion: CardExpansionModule = {
       const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       const { cost } = cardEffectArgs.cardPriceController.applyRules(
         card,
-        { match: cardEffectArgs.match, playerId: cardEffectArgs.playerId }
+        { playerId: cardEffectArgs.playerId }
       );
       
       const cardIds = cardEffectArgs.findCards(
@@ -82,7 +82,7 @@ const expansion: CardExpansionModule = {
         const card = args.cardLibrary.getCard(eventArgs.cardId);
         const { cost } = args.cardPriceController.applyRules(
           card,
-          { match: args.match, playerId: eventArgs.playerId }
+          { playerId: eventArgs.playerId }
         );
         
         const cardIds = args.findCards(
@@ -336,7 +336,7 @@ const expansion: CardExpansionModule = {
       
       const { cost } = cardEffectArgs.cardPriceController.applyRules(
         card,
-        { match: cardEffectArgs.match, playerId: cardEffectArgs.playerId }
+        { playerId: cardEffectArgs.playerId }
       );
       
       const oneLessCards = cardEffectArgs.findCards(
@@ -440,7 +440,6 @@ const expansion: CardExpansionModule = {
         let selectedCard = args.cardLibrary.getCard(selectedCardIds[0]);
         
         const { cost } = args.cardPriceController.applyRules(selectedCard, {
-          match: args.match,
           playerId: rest.playerId
         });
         
@@ -616,7 +615,6 @@ const expansion: CardExpansionModule = {
           const card = triggeredEffectArgs.cardLibrary.getCard(triggeredEffectArgs.trigger.args.cardId);
           
           const { cost } = cardEffectArgs.cardPriceController.applyRules(card, {
-            match: triggeredEffectArgs.match,
             playerId: cardEffectArgs.playerId
           });
           
@@ -1217,7 +1215,7 @@ const expansion: CardExpansionModule = {
       
       const { cost } = cardEffectArgs.cardPriceController.applyRules(
         selectedCard,
-        { match: cardEffectArgs.match, playerId: cardEffectArgs.playerId }
+        { playerId: cardEffectArgs.playerId }
       );
       
       const silverCardIds = cardEffectArgs.findCards(
@@ -1468,7 +1466,6 @@ const expansion: CardExpansionModule = {
       });
       
       const { cost } = cardEffectArgs.cardPriceController.applyRules(selectedCard, {
-        match: cardEffectArgs.match,
         playerId: cardEffectArgs.playerId
       });
       

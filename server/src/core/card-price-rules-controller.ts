@@ -28,7 +28,7 @@ export class CardPriceRulesController {
     }
   }
   
-  applyRules(card: Card, { match, playerId }: { match: Match, playerId: PlayerId }) {
+  applyRules(card: Card, { playerId }: { playerId: PlayerId }) {
     let restricted = false;
     let modifiedCost = { ...card.cost };
     
@@ -38,7 +38,7 @@ export class CardPriceRulesController {
     }
     
     for (const rule of rules) {
-      const result = rule(card, { match, playerId });
+      const result = rule(card, { match: this.match, playerId });
       
       restricted ||= result.restricted;
       
@@ -58,7 +58,7 @@ export class CardPriceRulesController {
     for (const player of this.match.players) {
       for (const card of cards) {
         const { cost } =
-          this.applyRules(card, { match: this.match, playerId: player.id })
+          this.applyRules(card, { playerId: player.id })
         costOverrides[player.id] ??= {};
         costOverrides[player.id][card.id] = {
           cost
