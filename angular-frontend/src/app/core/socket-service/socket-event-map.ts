@@ -55,14 +55,14 @@ export const socketToGameEventMap = (): SocketEventMap => {
     cardStore.set(cards);
   };
 
-  map['matchReady'] = async match => {
+  map['matchReady'] = async () => {
     const cardsById = cardStore.get();
     if (!cardsById) throw new Error('missing card library');
 
     const playerId = selfPlayerIdStore.get();
     if (!playerId) throw new Error('missing self playerId');
 
-    match = matchStore.get() as Match;
+    const match = matchStore.get() as Match;
 
     const kingdomSupplyCardKeys = match?.basicSupply.reduce((prev, nextCard) => {
       const card = cardsById[nextCard];

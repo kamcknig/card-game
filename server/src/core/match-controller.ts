@@ -1,5 +1,4 @@
 import {
-  Card,
   CardKey,
   CardNoId,
   ComputedMatchConfiguration,
@@ -16,7 +15,7 @@ import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
 import { ReactionManager } from './reactions/reaction-manager.ts';
 import { scoringFunctionMap } from '@expansions/scoring-function-map.ts';
 import { CardLibrary } from './card-library.ts';
-import { applyPatch, compare, Operation } from 'fast-json-patch';
+import { compare, Operation } from 'fast-json-patch';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
 import { cardEffectFunctionMapFactory } from './effects/card-effect-function-map-factory.ts';
 import { EventEmitter } from '@denosaurs/event';
@@ -57,7 +56,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _expansionScoringFns: PlayerScoreDecorator[] = [];
   private _registeredEvents: (keyof ServerListenEvents)[] = [];
   private _findCards: FindCardsFn = (...args) => ([]);
-  private readonly _cardSourceController: CardSourceController = new CardSourceController();
+  private readonly _cardSourceController: CardSourceController;
   
   private _playerHands: Record<CardKey, number>[] = [
     /*{
@@ -86,6 +85,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     super();
     
     this._match = {
+      cardSources: {},
       playerVictoryTokens: {},
       coffers: {},
       nonSupplyCards: [],
@@ -121,6 +121,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         cardsBought: {}
       }
     }
+    this._cardSourceController = new CardSourceController(this._match);
   }
   
   public async initialize(config: MatchConfiguration) {
@@ -128,7 +129,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     const snapshot = this.getMatchSnapshot();
     
-    this._findCards = findCardsFactory(this._match, this._cardLibrary);
+    this._findCards = findCardsFactory(this._cardSourceController, this._cardLibrary);
     
     this._logManager = new LogManager({
       socketMap: this._socketMap,
@@ -140,6 +141,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     );
     
     this._reactionManager = new ReactionManager(
+      this._cardSourceController,
       this._findCards,
       this._cardPriceController,
       this._logManager,
@@ -154,6 +156,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }, {} as CardEffectFunctionMap);
     
     this._interactivityController = new CardInteractivityController(
+      this._cardSourceController,
       this._cardPriceController,
       this._match,
       this._socketMap,
@@ -162,6 +165,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     );
     
     this.gameActionsController = new GameActionController(
+      this._cardSourceController,
       this._findCards,
       this._cardPriceController,
       cardEffectFunctionMap,
@@ -178,6 +182,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     const { config: newConfig } = await this._matchConfigurator.createConfiguration({
       match: this._match,
+      cardSourceController: this._cardSourceController,
       gameEventRegistrar: (event: GameLifecycleEvent, handler: GameLifecycleCallback) => this._reactionManager?.registerGameEvent(event, handler),
       clientEventRegistrar: (event, handler) => this.clientEventRegistrar(event, handler),
       endGameConditionRegistrar: (val) => this._expansionEndGameConditionFns.push(val),
@@ -188,13 +193,10 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this._matchConfiguration = newConfig;
     
     this._match.players = this._matchConfiguration.players;
-    this._match.basicSupply = this.createBaseSupply(this._matchConfiguration);
-    this._match.kingdomSupply = this.createKingdom(this._matchConfiguration);
-    this._match.nonSupplyCards = this.createNonSupplyCards(this._matchConfiguration);
-    const { playerDecks, playerHands, playerDiscards } = this.createPlayerDecks(this._matchConfiguration);
-    this._match.playerDecks = playerDecks;
-    this._match.playerHands = playerHands;
-    this._match.playerDiscards = playerDiscards;
+    this.createBaseSupply(this._matchConfiguration);
+    this.createKingdom(this._matchConfiguration);
+    this.createNonSupplyCards(this._matchConfiguration);
+    this.createPlayerDecks(this._matchConfiguration);
     this._match.config = this._matchConfiguration;
     this._match.mats = this._matchConfiguration.mats;
     
@@ -204,7 +206,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     this._socketMap.forEach((s) => {
       s.emit('setCardLibrary', this._cardLibrary.getAllCards());
-      s.emit('matchReady', this._match);
+      s.emit('matchReady');
       s.on('clientReady', this.onClientReady);
     });
   }
@@ -220,13 +222,12 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     console.log(`[match] player ${playerId} reconnecting`);
     this._socketMap.set(playerId, socket);
     
-    socket.emit('matchReady', this._match);
+    this.broadcastPatch({} as Match, playerId);
+    
+    socket.emit('matchReady');
+    
     socket.on('clientReady', async (_playerId: number, _ready: boolean) => {
-      console.log(
-        `[match] ${
-          this._match.players.find((player) => player.id === playerId)
-        } marked ready`,
-      );
+      console.log(`[match] ${getPlayerById(this._match, playerId)} marked ready`);
       socket.emit('matchStarted');
       socket.off('clientReady');
       
@@ -257,41 +258,49 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   
   private createBaseSupply(config: ComputedMatchConfiguration) {
     console.log(`[match] creating base supply cards`);
-    const supplyCards: Card[] = [];
+    const cardSource = this._cardSourceController.getSource('basicSupply');
+    
+    if (!cardSource) {
+      throw new Error(`[match] no basic supply card source found`);
+    }
     
     for (const [key, count] of Object.entries(config.basicCardCount)) {
       const cardData = config.basicCards.find((card) => card.cardKey === key);
       for (let i = 0; i < count; i++) {
         const c = createCard(key, cardData);
         this._cardLibrary.addCard(c);
-        supplyCards.push(c);
+        cardSource.push(c.id);
       }
     }
-    
-    return supplyCards.map(card => card.id);
   }
   
   private createKingdom(config: ComputedMatchConfiguration) {
     console.log(`[match] creating kingdom cards`);
     
-    const kingdomCards: Card[] = [];
+    const cardSource = this._cardSourceController.getSource('kingdomSupply');
+    
+    if (!cardSource) {
+      throw new Error(`[match] no basic supply card source found`);
+    }
     
     for (const [key, count] of Object.entries(config.kingdomCardCount)) {
       const cardData = config.kingdomCards.find((card) => card.cardKey === key);
       for (let i = 0; i < count; i++) {
         const c = createCard(key, cardData);
         this._cardLibrary.addCard(c);
-        kingdomCards.push(c);
+        cardSource.push(c.id);
       }
     }
-    
-    return kingdomCards.map(card => card.id);
   }
   
   private createNonSupplyCards(config: ComputedMatchConfiguration) {
     console.log(`[match] creating non-supply cards`);
     
-    const nonSupplyCards: Card[] = [];
+    const cardSource = this._cardSourceController.getSource('nonSupplyCards');
+    
+    if (!cardSource) {
+      throw new Error(`[match] no basic supply card source found`);
+    }
     
     for (const [key, count] of Object.entries(config.nonSupplyCardCount ?? {})) {
       const cardData = config.nonSupplyCards?.find((card) => card.cardKey === key);
@@ -303,46 +312,36 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       for (let i = 0; i < count; i++) {
         const c = createCard(key, cardData);
         this._cardLibrary.addCard(c);
-        nonSupplyCards.push(c);
+        cardSource.push(c.id);
       }
     }
-    
-    return nonSupplyCards.map(card => card.id);
   }
   
   private createPlayerDecks(config: MatchConfiguration) {
     console.log(`[match] creating player decks`);
     
-    return Object.values(config.players).reduce((prev, player, _idx) => {
+    return Object.values(config.players).forEach((player, idx) => {
       console.log('initializing player', player.id, 'cards...');
       
-      let playerStartHand = this._playerHands.length > 0 ? this._playerHands[_idx] : MatchBaseConfiguration.playerStartingHand;
+      let playerStartHand = this._playerHands.length > 0 ? this._playerHands[idx] : MatchBaseConfiguration.playerStartingHand;
       playerStartHand ??= MatchBaseConfiguration.playerStartingHand;
       console.log(`[match] using player starting hand ${playerStartHand}`);
       
+      const deck = this._cardSourceController.getSource('playerDeck', player.id);
+      
       Object.entries(playerStartHand).forEach(
         ([key, count]) => {
-          prev['playerDecks'][player.id] ??= [];
-          let deck = prev['playerDecks'][player.id];
-          deck = deck.concat(
-            new Array(count).fill(0).map((_) => {
+          deck.push(
+            ...new Array(count).fill(0).map((_) => {
               const c = createCard(key, { owner: player.id });
               this._cardLibrary.addCard(c);
               return c.id;
             }),
           );
-          prev['playerDecks'][player.id] = fisherYatesShuffle(deck);
+          fisherYatesShuffle(deck);
         },
       );
-      
-      prev['playerHands'][player.id] = [];
-      prev['playerDiscards'][player.id] = [];
-      return prev;
-    }, {
-      playerHands: {},
-      playerDecks: {},
-      playerDiscards: {},
-    } as Pick<Match, 'playerHands' | 'playerDiscards' | 'playerDecks'>);
+    });
   }
   
   public getMatchSnapshot(): Match {
@@ -380,7 +379,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     return result as Promise<GameActionReturnTypeMap[K]>;
   }
   
-  public broadcastPatch(prev: Match) {
+  public broadcastPatch(prev: Match, playerId?: PlayerId) {
     const patch: Operation[] = compare(prev, this._match);
     const cardLibraryPatch = compare(this._cardLibSnapshot, this._cardLibrary.getAllCards());
     
@@ -397,7 +396,12 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         console.log(patch);
       }
       
-      this._socketMap.forEach((s) => s.emit('patchUpdate', patch, cardLibraryPatch));
+      if (playerId) {
+        this._socketMap.get(playerId)?.emit('patchUpdate', patch, cardLibraryPatch);
+      }
+      else {
+        this._socketMap.forEach((s) => s.emit('patchUpdate', patch, cardLibraryPatch));
+      }
     }
   }
   
@@ -487,6 +491,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         if (customScoringFn) {
           console.log(`[match] processing scoring function for ${card}`);
           score += customScoringFn({
+            cardSourceController: this._cardSourceController,
             cardPriceController: this._cardPriceController!,
             findCards: this._findCards,
             reactionManager: this._reactionManager!,
@@ -535,6 +540,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     for (const conditionFn of this._expansionEndGameConditionFns) {
       conditionFn({
+        cardSourceController: this._cardSourceController,
         match: this._match, cardLibrary: this._cardLibrary,
         cardPriceController: this._cardPriceController!,
         reactionManager: this._reactionManager!,
@@ -558,18 +564,16 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     const match = this._match;
     
-    const setAsideCardIds = this._findCards(
-      { location: 'set-aside' },
-    );
-    
-    for (const card of setAsideCardIds) {
-      const owner = this._cardLibrary.getCard(card.id).owner;
-      if (owner === null) continue;
-      await this.runGameAction('moveCard', {
-        toPlayerId: owner,
-        cardId: card.id,
-        to: { location: 'playerDecks' },
-      })
+    for (const player of this._match.players) {
+      const setAsideCardIds = this._cardSourceController.getSource('set-aside', player.id)
+      
+      for (const cardId of setAsideCardIds) {
+        await this.runGameAction('moveCard', {
+          toPlayerId: player.id,
+          cardId,
+          to: { location: 'playerDecks' },
+        })
+      }
     }
     
     for (const event of this._registeredEvents) {

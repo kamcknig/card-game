@@ -159,7 +159,6 @@ export class Game {
     if (this.matchStarted) {
       console.log('[game] game already started');
       this._matchController?.playerReconnected(player.id, socket);
-      socket.emit('matchReady', this._matchController?.getMatchSnapshot()!);
     }
     else {
       console.log(`[game] not yet started, sending player to match configuration`,);

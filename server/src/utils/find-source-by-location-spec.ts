@@ -1,36 +1,34 @@
-import { CardLocationSpec, isLocationMat, Match } from 'shared/shared-types.ts';
+import { CardLocation, isLocationMat, Match } from 'shared/shared-types.ts';
 
-export function findSourceByLocationSpec(
-  spec: { spec: CardLocationSpec; playerId?: number },
+export function findSourceByLocationSpec(args: {
+  location: CardLocation,
+  playerId?: number,
   match: Match,
-) {
-  if (spec.spec.location.length > 1) {
-    throw new Error('findSourceByLocationSpec can only accept one location');
-  }
-  
-  if (['playerDecks', 'playerHands', 'playerDiscards'].includes(spec.spec.location[0])) {
-    if (isNaN(spec.playerId ?? NaN)) {
+}) {
+  const { location, playerId, match } = args;
+  if (['playerDecks', 'playerHands', 'playerDiscards'].includes(location)) {
+    if (isNaN(playerId ?? NaN)) {
       throw new Error('findSourceByLocationSpec with a player spec location needs a player ID');
     }
     
-    switch (spec.spec.location[0]) {
+    switch (location) {
       case 'playerDecks':
-        return match.playerDecks[spec.playerId!];
+        return match.playerDecks[playerId!];
       case 'playerHands':
-        return match.playerHands[spec.playerId!];
+        return match.playerHands[playerId!];
       case 'playerDiscards':
-        return match.playerDiscards[spec.playerId!];
+        return match.playerDiscards[playerId!];
     }
   }
-  else if (isLocationMat(spec.spec.location[0])) {
-    if (isNaN(spec.playerId ?? NaN)) throw new Error('findSourceByLocationSpec requires a player ID with a mat');
-    return match.mats[spec.playerId!][spec.spec.location[0]];
+  else if (isLocationMat(location)) {
+    if (isNaN(playerId ?? NaN)) throw new Error('findSourceByLocationSpec requires a player ID with a mat');
+    return match.mats[playerId!][location];
   }
   else {
-    switch (spec.spec.location[0]) {
-      case 'kingdom':
+    switch (location) {
+      case 'kingdomSupply':
         return match.kingdomSupply;
-      case 'supply':
+      case 'basicSupply':
         return match.basicSupply;
       case 'trash':
         return match.trash;

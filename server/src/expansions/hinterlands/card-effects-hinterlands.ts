@@ -40,7 +40,7 @@ const expansion: CardExpansionModule = {
       
       const cardIds = cardEffectArgs.findCards(
         {
-          location: ['supply', 'kingdom'],
+          location: ['basicSupply', 'kingdomSupply'],
           cost: {
             cardCostController: cardEffectArgs.cardPriceController,
             spec: { playerId: cardEffectArgs.playerId, kind: 'upTo', amount: { treasure: cost.treasure - 1 } }
@@ -246,7 +246,7 @@ const expansion: CardExpansionModule = {
           for (const targetPlayerId of targetPlayerIds) {
             const curseIds = cardEffectArgs.findCards(
               {
-                location: 'supply',
+                location: 'basicSupply',
                 cards: { cardKeys: 'curse' }
               },
             );
@@ -341,7 +341,7 @@ const expansion: CardExpansionModule = {
       
       const oneLessCards = cardEffectArgs.findCards(
         {
-          location: ['supply', 'kingdom'],
+          location: ['basicSupply', 'kingdomSupply'],
           cost: {
             cardCostController: cardEffectArgs.cardPriceController,
             spec: { playerId: cardEffectArgs.playerId, kind: 'exact', amount: { treasure: cost.treasure - 1 } }
@@ -351,7 +351,7 @@ const expansion: CardExpansionModule = {
       
       const oneMoreCards = cardEffectArgs.findCards(
         {
-          location: ['supply', 'kingdom'],
+          location: ['basicSupply', 'kingdomSupply'],
           cost: {
             cardCostController: cardEffectArgs.cardPriceController,
             spec: { playerId: cardEffectArgs.playerId, kind: 'exact', amount: { treasure: cost.treasure + 1 } }
@@ -445,7 +445,7 @@ const expansion: CardExpansionModule = {
         
         const nonFarmlandCards = args.findCards(
           {
-            location: ['supply', 'kingdom'],
+            location: ['basicSupply', 'kingdomSupply'],
             cost: {
               cardCostController: args.cardPriceController,
               spec: { playerId: rest.playerId, kind: 'exact', amount: { treasure: cost.treasure + 2 } }
@@ -511,7 +511,7 @@ const expansion: CardExpansionModule = {
             
             const goldCardIds = triggeredEffectArgs.findCards(
               {
-                location: 'supply',
+                location: 'basicSupply',
                 cards: { cardKeys: 'gold' }
               },
             );
@@ -620,7 +620,7 @@ const expansion: CardExpansionModule = {
           
           const cards = cardEffectArgs.findCards(
             {
-              location: ['supply', 'kingdom'],
+              location: ['basicSupply', 'kingdomSupply'],
               cost: {
                 cardCostController: cardEffectArgs.cardPriceController,
                 spec: {
@@ -779,7 +779,7 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const silverCardIds = cardEffectArgs.findCards(
         {
-          location: 'supply',
+          location: 'basicSupply',
           cards: { cardKeys: 'silver' }
         },
       );
@@ -1162,7 +1162,7 @@ const expansion: CardExpansionModule = {
             
             const silverCardIds = triggerArgs.findCards(
               {
-                location: 'supply',
+                location: 'basicSupply',
                 cards: {
                   cardKeys: 'silver'
                 }
@@ -1220,7 +1220,7 @@ const expansion: CardExpansionModule = {
       
       const silverCardIds = cardEffectArgs.findCards(
         {
-          location: 'supply',
+          location: 'basicSupply',
           cards: { cardKeys: 'silver' }
         },
       );
@@ -1323,7 +1323,7 @@ const expansion: CardExpansionModule = {
         
         const goldCardIds = args.findCards(
           {
-            location: 'supply',
+            location: 'basicSupply',
             cards: {
               cardKeys: 'gold'
             }
@@ -1390,7 +1390,7 @@ const expansion: CardExpansionModule = {
         
         const silverCardIds = cardEffectArgs.findCards(
           {
-            location: 'supply',
+            location: 'basicSupply',
             cards: {
               cardKeys: 'silver'
             }
@@ -1421,7 +1421,7 @@ const expansion: CardExpansionModule = {
           playerId: cardEffectArgs.playerId,
           prompt: `Gain card`,
           restrict: {
-            from: { location: ['supply', 'kingdom'] },
+            from: { location: ['basicSupply', 'kingdomSupply'] },
             cost: { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: { treasure: 4 } }
           },
           count: 1,
@@ -1471,7 +1471,7 @@ const expansion: CardExpansionModule = {
       
       const actionCardIds = cardEffectArgs.findCards(
         {
-          location: ['kingdom'],
+          location: ['kingdomSupply'],
           cards: { type: 'ACTION' },
           cost: {
             cardCostController: cardEffectArgs.cardPriceController,
@@ -1551,7 +1551,7 @@ const expansion: CardExpansionModule = {
           for (const targetPlayerId of targetPlayerIds) {
             const curseCardIds = cardEffectArgs.findCards(
               {
-                location: 'supply',
+                location: 'basicSupply',
                 cards: {
                   cardKeys: 'curse'
                 }

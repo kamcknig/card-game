@@ -1,4 +1,4 @@
-import { CardKey, CardNoId, ComputedMatchConfiguration, MatchConfiguration } from 'shared/shared-types.ts';
+import { CardKey, CardNoId, ComputedMatchConfiguration, Match, MatchConfiguration } from 'shared/shared-types.ts';
 import { allCardLibrary, ExpansionData, expansionLibrary } from '@expansions/expansion-library.ts';
 import {
   EndGameConditionRegistrar,
@@ -11,6 +11,7 @@ import {
 } from '../types.ts';
 import { addMatToMatchConfig } from '../utils/add-mat-to-match-config.ts';
 import { compare, Operation } from 'https://esm.sh/v123/fast-json-patch@3.1.1/index.js';
+import { CardSourceController } from './card-source-controller.ts';
 
 /**
  * The configurator takes a MatchConfiguration instance and creates a ComputedMatchConfiguration.
@@ -76,7 +77,27 @@ export class MatchConfigurator {
     
     await this.runExpansionConfigurators(appContext);
     
+    this.createCardSources(appContext.match, appContext.cardSourceController);
+    
     return { config: this._config };
+  }
+  
+  private createCardSources(match: Match, cardSourceController: CardSourceController) {
+    // todo: right now these register locations that were previously hard-coded in the match state.
+    // i'm converting to use this CardSourceController class and these might be able to be converted
+    // into non-hardcoded locations.
+    cardSourceController.registerZone('kingdomSupply', match.kingdomSupply);
+    cardSourceController.registerZone('basicSupply', match.basicSupply);
+    cardSourceController.registerZone('nonSupplyCards', match.nonSupplyCards);
+    cardSourceController.registerZone('activeDurationCards', match.activeDurationCards);
+    cardSourceController.registerZone('playArea', match.playArea);
+    cardSourceController.registerZone('trash', match.trash);
+    
+    for (const player of this._config.players) {
+      cardSourceController.registerZone('playerHand', [], player.id);
+      cardSourceController.registerZone('playerDiscard', [], player.id);
+      cardSourceController.registerZone('playerDeck', [], player.id);
+    }
   }
   
   private selectKingdomSupply() {

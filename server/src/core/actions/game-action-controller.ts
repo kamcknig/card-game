@@ -1,7 +1,7 @@
 import {
   CardCost,
   CardId,
-  CardKey,
+  CardKey, CardLocation,
   CardLocationSpec,
   Match,
   PlayerId,
@@ -30,18 +30,19 @@ import {
 } from '../../types.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
-import { findSourceByCardId } from '../../utils/find-source-by-card-id.ts';
 import { findSourceByLocationSpec } from '../../utils/find-source-by-location-spec.ts';
-import { castArray, isNumber } from 'es-toolkit/compat';
+import { isNumber } from 'es-toolkit/compat';
 import { ReactionManager } from '../reactions/reaction-manager.ts';
 import { CardInteractivityController } from '../card-interactivity-controller.ts';
 import { CardPriceRulesController } from '../card-price-rules-controller.ts';
+import { CardSourceController } from '../card-source-controller.ts';
 
 export class GameActionController implements BaseGameActionDefinitionMap {
   private customActionHandlers: Partial<GameActionDefinitionMap> = {};
   private customCardEffectHandlers: Record<string, Record<CardKey, CardEffectFn>> = {};
   
   constructor(
+    private _cardSourceController: CardSourceController,
     private _findCards: FindCardsFn,
     private cardPriceRuleController: CardPriceRulesController,
     private cardEffectFunctionMap: CardEffectFunctionMap,
@@ -63,18 +64,6 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     }
     
     this.customCardEffectHandlers[tag][cardKey] = fn;
-  }
-  
-  public registerAction<K extends GameActions>(key: K, handler: GameActionDefinitionMap[K]) {
-    if ((this as any)[key]) {
-      throw new Error(`[action controller] action ${key} is reserved`);
-    }
-    
-    if (this.customActionHandlers[key]) {
-      console.warn(`[action controller] overwriting existing action handler for ${key}`);
-    }
-    
-    this.customActionHandlers[key] = handler;
   }
   
   public async invokeAction<K extends GameActions>(
@@ -110,21 +99,28 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   }
   
   async moveCard(args: { toPlayerId?: PlayerId, cardId: CardId, to: CardLocationSpec }) {
-    let oldSource;
+    if (Array.isArray(args.to.location)) {
+      throw new Error(`[moveCard action] cannot move card to multiple locations`);
+    }
+    
+    let oldSource: { sourceKey: CardLocation; source: CardId[]; index: number } | null = null;
     
     try {
-      oldSource = findSourceByCardId(args.cardId, this.match);
+      oldSource = this._cardSourceController.findCardSource(args.cardId);
     } catch (e) {
       console.warn(`[moveCard action] could not find source for card ${args.cardId}`);
     }
     
-    args.to.location = castArray(args.to.location);
-    const newSource = findSourceByLocationSpec({ spec: args.to, playerId: args.toPlayerId }, this.match);
+    const newSource = this._cardSourceController.getSource( args.to.location,args.toPlayerId);
     
-    oldSource?.sourceStore.splice(oldSource.index, 1);
+    if (!newSource) {
+      throw new Error(`[moveCard action] could not find source for card ${args.cardId}`);
+    }
     
-    switch (oldSource?.storeKey) {
-      case 'playerHands':
+    oldSource?.source.splice(oldSource?.index, 1);
+    
+    switch (oldSource?.sourceKey) {
+      case 'playerHand':
         await this.reactionManager.runCardLifecycleEvent('onLeaveHand', {
           playerId: args.toPlayerId!,
           cardId: args.cardId
@@ -136,12 +132,10 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         await this.reactionManager.runCardLifecycleEvent('onLeavePlay', { cardId: args.cardId });
     }
     
-    args.to.location = castArray(args.to.location);
-    
     newSource.push(args.cardId);
     
-    switch (args.to.location[0]) {
-      case 'playerHands':
+    switch (args.to.location) {
+      case 'playerHand':
         await this.reactionManager.runCardLifecycleEvent('onEnterHand', {
           playerId: args.toPlayerId!,
           cardId: args.cardId
@@ -149,9 +143,9 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         break;
     }
     
-    console.log(`[moveCard action] moved ${this.cardLibrary.getCard(args.cardId)} from ${oldSource?.storeKey} to ${args.to.location}`);
+    console.log(`[moveCard action] moved ${this.cardLibrary.getCard(args.cardId)} from ${oldSource?.sourceKey} to ${args.to.location}`);
     
-    return oldSource?.storeKey;
+    return oldSource?.sourceKey;
   }
   
   async gainAction(args: { count: number }, context?: GameActionContext) {
@@ -785,6 +779,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     if (effectFn) {
       this.logManager.enter();
       await effectFn({
+        cardSourceController: this._cardSourceController,
         cardPriceController: this.cardPriceRuleController,
         reactionManager: this.reactionManager,
         runGameActionDelegate: this.runGameActionDelegate,
@@ -804,6 +799,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       if (effectFn) {
         this.logManager.enter();
         await effectFn({
+          cardSourceController: this._cardSourceController,
           cardPriceController: this.cardPriceRuleController,
           reactionManager: this.reactionManager,
           runGameActionDelegate: this.runGameActionDelegate,

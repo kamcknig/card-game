@@ -262,7 +262,7 @@ const expansion: CardExpansionModule = {
             break;
           case 4: {
             const silverCardIds = cardEffectArgs.findCards(
-              { location: 'supply', cards: { cardKeys: 'silver' } }
+              { location: 'basicSupply', cards: { cardKeys: 'silver' } }
             );
             
             const numToGain = Math.min(4, silverCardIds.length);
@@ -294,7 +294,7 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 2 });
       
       const goldCardIds = cardEffectArgs.findCards(
-        { location: 'supply', cards: { cardKeys: 'gold' } }
+        { location: 'basicSupply', cards: { cardKeys: 'gold' } }
       );
       
       if (!goldCardIds.length) {
@@ -434,7 +434,7 @@ const expansion: CardExpansionModule = {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
         const cardIds = cardEffectArgs.findCards(
-          { location: 'kingdom', cards: { tags: 'ferryman' } },
+          { location: 'kingdomSupply', cards: { tags: 'ferryman' } },
         );
         
         if (!cardIds.length) {
@@ -850,7 +850,7 @@ const expansion: CardExpansionModule = {
         if (card.type.includes('VICTORY')) {
           console.log(`[jester effect] card is a victory card, gaining curse`);
           const curseCardIds = cardEffectArgs.findCards(
-            { location: 'supply', cards: { cardKeys: 'curse' } }
+            { location: 'basicSupply', cards: { cardKeys: 'curse' } }
           );
           
           if (!curseCardIds.length) {
@@ -861,12 +861,12 @@ const expansion: CardExpansionModule = {
           await cardEffectArgs.runGameActionDelegate('gainCard', {
             playerId: targetPlayerId,
             cardId: curseCardIds.slice(-1)[0].id,
-            to: { location: 'supply' }
+            to: { location: 'basicSupply' }
           });
         }
         else {
           const copyIds = cardEffectArgs.findCards(
-            { location: ['supply', 'kingdom'], cards: { cardKeys: card.cardKey } }
+            { location: ['basicSupply', 'kingdomSupply'], cards: { cardKeys: card.cardKey } }
           );
           
           if (!copyIds.length) {
@@ -1171,7 +1171,7 @@ const expansion: CardExpansionModule = {
         
         const availableCardIds = cardEffectArgs.findCards(
           {
-            location: ['supply', 'kingdom'],
+            location: ['basicSupply', 'kingdomSupply'],
             cost: {
               cardCostController: cardEffectArgs.cardPriceController,
               spec: {
@@ -1298,7 +1298,7 @@ const expansion: CardExpansionModule = {
   'soothsayer': {
     registerEffects: () => async (cardEffectArgs) => {
       const goldCardIds = cardEffectArgs.findCards(
-        { location: 'supply', cards: { cardKeys: 'gold' } }
+        { location: 'basicSupply', cards: { cardKeys: 'gold' } }
       );
       
       if (!goldCardIds.length) {
@@ -1322,7 +1322,7 @@ const expansion: CardExpansionModule = {
       
       for (const targetPlayerId of targetPlayerIds) {
         const curseCardIds = cardEffectArgs.findCards(
-          { location: 'supply', cards: { cardKeys: 'curse' } }
+          { location: 'basicSupply', cards: { cardKeys: 'curse' } }
         );
         
         if (!curseCardIds.length) {
@@ -1356,7 +1356,7 @@ const expansion: CardExpansionModule = {
         
         const cardIds = cardEffectArgs.findCards(
           {
-            location: ['supply', 'kingdom'],
+            location: ['basicSupply', 'kingdomSupply'],
             cards: { type: 'ACTION' },
             cost: {
               cardCostController: cardEffectArgs.cardPriceController,
@@ -1434,7 +1434,7 @@ const expansion: CardExpansionModule = {
       
       const cardIds = cardEffectArgs.findCards(
         {
-          location: ['supply', 'kingdom'],
+          location: ['basicSupply', 'kingdomSupply'],
           cost: {
             cardCostController: cardEffectArgs.cardPriceController,
             spec: {
@@ -1515,7 +1515,7 @@ const expansion: CardExpansionModule = {
         const baneCards = handCards.filter(card => card.tags?.includes('bane'));
         
         const curseCardIds = cardEffectArgs.findCards(
-          { location: 'supply', cards: { cardKeys: 'curse' } }
+          { location: 'basicSupply', cards: { cardKeys: 'curse' } }
         );
         
         if (!curseCardIds.length) {

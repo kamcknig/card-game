@@ -2,16 +2,17 @@ import { AppSocket, RunGameActionDelegate } from '../types.ts';
 import { CardId, Match, PlayerId, TurnPhaseOrderValues, } from 'shared/shared-types.ts';
 import { isUndefined } from 'es-toolkit/compat';
 import { CardLibrary } from './card-library.ts';
-import { MatchController } from './match-controller.ts';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
 import { getTurnPhase } from '../utils/get-turn-phase.ts';
 import { CardPriceRulesController } from './card-price-rules-controller.ts';
 import { cardActionConditionMapFactory } from './actions/card-action-condition-map-factory.ts';
+import { CardSourceController } from './card-source-controller.ts';
 
 export class CardInteractivityController {
   private _gameOver: boolean = false;
   
   constructor(
+    private readonly _cardSourceController: CardSourceController,
     private readonly _cardPriceController: CardPriceRulesController,
     private readonly match: Match,
     private readonly _socketMap: Map<PlayerId, AppSocket>,
@@ -58,12 +59,13 @@ export class CardInteractivityController {
     
     const selectableCards: number[] = [];
     
-    const hand = match.playerHands[currentPlayer.id]
+    const hand = this._cardSourceController.getSource('playerHand', currentPlayer.id)
       .map((id) => this._cardLibrary.getCard(id));
     
     if (turnPhase === 'buy' && match.playerBuys > 0) {
       const cardKeysAdded: string[] = [];
-      const supply = match.basicSupply.concat(match.kingdomSupply)
+      
+      const supply = this._cardSourceController.getSource('supply')
         .map((id) => this._cardLibrary.getCard(id));
       
       // a loop going backwards through the supply and kingdom. we only mark the last one as selectable (this should
@@ -201,7 +203,7 @@ export class CardInteractivityController {
               actionButtons: [{ label: 'DONE', action: 1 }],
               playerId: playerId,
               content: { type: 'overpay', cost: cost.treasure }
-            }) as { action: number, result: { inTreasure: number; inCoffer: number;} };
+            }) as { action: number, result: { inTreasure: number; inCoffer: number; } };
             overpay = result.result;
           }
         }

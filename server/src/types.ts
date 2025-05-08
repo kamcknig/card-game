@@ -24,6 +24,7 @@ import { GameActionController } from './core/actions/game-action-controller.ts';
 import { ExpansionData } from '@expansions/expansion-library.ts';
 import { CardPriceRulesController } from './core/card-price-rules-controller.ts';
 import { FindCardsFilter } from './utils/find-cards.ts';
+import { CardSourceController } from './core/card-source-controller.ts';
 
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
 
@@ -190,6 +191,7 @@ export type CardEffectFactory = () => CardEffectFn;
 export type CardEffectFactoryMap = Record<CardKey, CardEffectFactory>;
 
 export interface AppContext {
+  cardSourceController: CardSourceController;
   cardPriceController: CardPriceRulesController;
   match: Match;
   reactionManager: ReactionManager;
@@ -198,7 +200,7 @@ export interface AppContext {
   findCards: FindCardsFn;
 }
 
-export type FindCardsFnFactory = (match: Match, cardLibrary: CardLibrary) => FindCardsFn;
+export type FindCardsFnFactory = (cardSourceController: CardSourceController, cardLibrary: CardLibrary) => FindCardsFn;
 
 export type FindCardsFn = (filter: FindCardsFilter) => Card[];
 
@@ -463,6 +465,7 @@ export type ClientEventRegistry = (registrar: ClientEventRegistrar, context: {
 export type GameEventRegistrar = (event: GameLifecycleEvent, handler: GameLifecycleCallback) => void;
 
 export type InitializeExpansionContext = {
+  cardSourceController: CardSourceController,
   gameEventRegistrar: GameEventRegistrar,
   match: Match;
   clientEventRegistrar: ClientEventRegistrar;

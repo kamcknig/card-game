@@ -63,6 +63,7 @@ export type MatchStats = {
 };
 
 export interface Match {
+  cardSources: Record<CardLocation, CardId[]>;
   playerVictoryTokens: Record<PlayerId, number>;
   coffers: Record<PlayerId, number>;
   nonSupplyCards: CardId[];
@@ -167,7 +168,7 @@ export type ServerEmitEvents = {
   gameOver: (summary: MatchSummary) => void;
   gameOwnerUpdated: (playerId: PlayerId) => void;
   matchConfigurationUpdated: (val: MatchConfiguration) => void;
-  matchReady: (match: Match) => void;
+  matchReady: () => void;
   matchStarted: () => void;
   nextPhaseComplete: () => void;
   patchUpdate: (patchMatch: Operation[], patchCardLibrary: Operation[]) => void;
@@ -215,12 +216,13 @@ export const isLocationMat = (location: any): location is Mats => {
   return !!location && (MatValues as unknown as string[]).indexOf(location) !== -1;
 }
 
-const CardLocationValues = ['activeDuration', 'playerDiscards', 'playerHands', 'trash', 'playArea', 'playerDecks', 'supply', 'kingdom'] as const;
+const CardLocationValues = ['activeDuration', 'playerDiscard', 'playerHand', 'trash', 'playArea', 'playerDeck', 'basicSupply', 'kingdomSupply'] as const;
 export type CardLocations = typeof CardLocationValues[number];
 
 export type CardLocation =
   | CardLocations
   | Mats
+  | string;
 
 export type CardLocationSpec = {
   location: CardLocation | CardLocation[],
@@ -415,11 +417,11 @@ export class Card {
 const EffectTargetValues = ['ANY', 'ALL_OTHER', 'ALL'] as const;
 export type EffectTarget = typeof EffectTargetValues[number] | string;
 export type EffectRestrictionSpec = {
-  from?: CardLocationSpec;
   card?: {
+    ids?: CardId[];
     cardKeys?: CardKey | CardKey[];
     type?: CardType | CardType[];
-  } | CardId[];
+  };
   cost?: CostSpec;
 };
 

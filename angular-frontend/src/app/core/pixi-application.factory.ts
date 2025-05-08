@@ -3,7 +3,6 @@ import { applicationStore } from '../state/app-state';
 import { initDevtools } from '@pixi/devtools';
 
 export let pixiInstance: Application = new Application();
-(globalThis as any).__PIXI_APP__ = pixiInstance;
 
 export const pixiFactory = async () => {
   TexturePool.textureOptions.scaleMode = 'nearest';

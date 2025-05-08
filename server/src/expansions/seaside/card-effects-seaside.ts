@@ -68,7 +68,7 @@ const expansion: CardExpansionModule = {
         prompt: 'Gain card',
         playerId: args.playerId,
         restrict: {
-          from: { location: ['supply', 'kingdom'] },
+          from: { location: ['basicSupply', 'kingdomSupply'] },
           cost: { kind: 'upTo', amount: { treasure: 4 }, playerId: args.playerId },
         },
         count: 1,
@@ -120,7 +120,7 @@ const expansion: CardExpansionModule = {
         triggeredEffectFn: async (args) => {
           const curseCardIds = args.findCards(
             {
-              location: 'supply',
+              location: 'basicSupply',
               cards: { cardKeys: 'curse' }
             },
           );
@@ -640,7 +640,7 @@ const expansion: CardExpansionModule = {
             validPrompt: '',
             playerId,
             restrict: {
-              from: { location: ['supply', 'kingdom'] },
+              from: { location: ['basicSupply', 'kingdomSupply'] },
               card: { type: 'TREASURE' },
               cost: { kind: 'upTo', amount: { treasure: 6 }, playerId }
             },
@@ -940,7 +940,7 @@ const expansion: CardExpansionModule = {
       
       for (const targetPlayerId of targetPlayerIds) {
         const curseCardIds = args.findCards({
-          location: 'supply',
+          location: 'basicSupply',
           cards: { cardKeys: 'curse' }
         });
         if (curseCardIds.length === 0) {

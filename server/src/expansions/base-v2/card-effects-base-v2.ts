@@ -19,7 +19,7 @@ const expansionModule: CardExpansionModule = {
     }
   },
   'artisan': {
-    registerEffects: () => async ({ cardLibrary, runGameActionDelegate, playerId }) => {
+    registerEffects: () => async ({ cardLibrary, runGameActionDelegate, playerId, ...args }) => {
       console.log(`[ARTISAN EFFECT] choosing card to gain...`);
       //Gain a card to your hand costing up to 5 Treasure.
       //Put a card from your hand onto your deck.
@@ -28,7 +28,7 @@ const expansionModule: CardExpansionModule = {
         prompt: 'Choose card to gain',
         playerId: playerId,
         restrict: {
-          from: { location: ['supply', 'kingdom'] },
+          card: { ids: args.cardSourceController.getSource('kingdomSupply').concat(args.cardSourceController.getSource('basicSupply')) },
           cost: { playerId, kind: 'upTo', amount: { treasure: 5 } },
         },
       });
@@ -52,7 +52,7 @@ const expansionModule: CardExpansionModule = {
         prompt: 'Choose card to top-deck',
         playerId: playerId,
         restrict: {
-          from: { location: 'playerHands' },
+          card: { ids: args.cardSourceController.getSource('playerHands', playerId) },
         },
       });
       
@@ -729,7 +729,7 @@ const expansionModule: CardExpansionModule = {
         playerId: playerId,
         count: 1,
         restrict: {
-          from: { location: ['supply', 'kingdom'] },
+          from: { location: ['basicSupply', 'kingdomSupply'] },
           card: { type: ['TREASURE'] },
           cost: { playerId, kind: 'upTo', amount: { treasure: cardCost.treasure + 3, potion: cardCost.potion } },
         },
@@ -958,7 +958,7 @@ const expansionModule: CardExpansionModule = {
         playerId,
         count: 1,
         restrict: {
-          from: { location: ['supply', 'kingdom'] },
+          from: { location: ['basicSupply', 'kingdomSupply'] },
           cost: { playerId, kind: 'upTo', amount: { treasure: cardCost.treasure + 2, potion: card.cost.potion } },
         },
       });
@@ -1293,7 +1293,7 @@ const expansionModule: CardExpansionModule = {
         count: 1,
         restrict: {
           cost: { playerId, kind: 'upTo', amount: { treasure: 4 } },
-          from: { location: ['supply', 'kingdom'] },
+          from: { location: ['basicSupply', 'kingdomSupply'] },
         },
       });
       

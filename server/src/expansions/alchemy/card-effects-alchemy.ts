@@ -145,7 +145,7 @@ const expansion: CardExpansionModule = {
       console.log(`[apprentice effect] gaining 1 action`);
       await args.runGameActionDelegate('gainAction', { count: 1 });
       
-      const hand = args.match.playerHands[args.playerId];
+      const hand = args.cardSourceController.getSource('playerHand', args.playerId);
       if (hand.length === 0) {
         console.log(`[apprentice effect] no cards in hand`);
         return;
@@ -457,7 +457,7 @@ const expansion: CardExpansionModule = {
       const selectedCardIds = await args.runGameActionDelegate('selectCard', {
         playerId: args.playerId,
         prompt: `Trash card`,
-        restrict: { from: { location: 'playerHands' } },
+        restrict: args.cardSourceController.getSource('playerHand', args.playerId),
         count: 1,
       }) as CardId[];
       
@@ -478,7 +478,7 @@ const expansion: CardExpansionModule = {
       if (selectedCard.type.includes('ACTION')) {
         cards = args.findCards(
           {
-            location: ['supply'],
+            location: ['basicSupply'],
             cards: { cardKeys: 'duchy' }
           }
         );
@@ -498,7 +498,7 @@ const expansion: CardExpansionModule = {
       if (selectedCard.type.includes('TREASURE')) {
         cards = args.findCards(
           {
-            location: 'kingdom',
+            location: 'kingdomSupply',
             cards: { cardKeys: 'transmute' }
           },
         );
@@ -518,7 +518,7 @@ const expansion: CardExpansionModule = {
       if (selectedCard.type.includes('VICTORY')) {
         cards = args.findCards(
           {
-            location: 'supply',
+            location: 'basicSupply',
             cards: { cardKeys: 'gold' }
           },
         );
@@ -544,8 +544,7 @@ const expansion: CardExpansionModule = {
         playerId: args.playerId,
         prompt: `Gain card`,
         restrict: {
-          from: { location: ['kingdom'] },
-          card: { type: 'ACTION' },
+          card: { ids: args.cardSourceController.getSource('kingdomSupply'), type: 'ACTION' },
           cost: { kind: 'upTo', amount: { treasure: 5 }, playerId: args.playerId }
         },
         count: 1,

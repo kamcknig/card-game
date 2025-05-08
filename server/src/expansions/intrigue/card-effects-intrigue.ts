@@ -387,7 +387,7 @@ const expansionModule: CardExpansionModule = {
         count: 1,
         restrict: {
           cost: { playerId, amount: { treasure: 4 }, kind: 'upTo' },
-          from: { location: ['supply', 'kingdom'] },
+          from: { location: ['basicSupply', 'kingdomSupply'] },
         },
         playerId,
       }) as number[];
@@ -455,7 +455,7 @@ const expansionModule: CardExpansionModule = {
           count: 1,
           restrict: {
             card: { type: 'ACTION' },
-            from: { location: ['kingdom', 'supply'] },
+            from: { location: ['kingdomSupply', 'basicSupply'] },
           },
         }) as number[];
         
@@ -948,7 +948,7 @@ const expansionModule: CardExpansionModule = {
         prompt: 'Gain card',
         playerId,
         restrict: {
-          from: { location: ['kingdom', 'supply'] },
+          from: { location: ['kingdomSupply', 'basicSupply'] },
           cost: { playerId, kind: 'upTo', amount: { treasure: cardCost.treasure + 2, potion: cardCost.potion } },
         },
         count: 1,
@@ -1204,7 +1204,7 @@ const expansionModule: CardExpansionModule = {
           prompt: 'Choose card',
           playerId,
           restrict: {
-            from: { location: ['supply', 'kingdom'] },
+            from: { location: ['basicSupply', 'kingdomSupply'] },
             cost: { playerId, kind: 'exact', amount: cost },
           },
           count: 1,
@@ -1395,7 +1395,7 @@ const expansionModule: CardExpansionModule = {
         prompt: 'Gain card',
         playerId,
         restrict: {
-          from: { location: ['supply', 'kingdom'] },
+          from: { location: ['basicSupply', 'kingdomSupply'] },
           cost: { playerId, kind: 'exact', amount: { treasure: cardCost.treasure + 1, potion: cardCost.potion } },
         },
         count: 1,
