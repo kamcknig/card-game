@@ -1,5 +1,5 @@
 import { CardId, PlayerId } from 'shared/shared-types.ts';
-import { CardExpansionModule, CardLifecycleCallbackContext, CardLifecycleEventArgMap } from '../../types.ts';
+import { CardExpansionModule, CardLifecycleCallbackContext } from '../../types.ts';
 import { findCards } from '../../utils/find-cards.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
@@ -1277,7 +1277,7 @@ const expansion: CardExpansionModule = {
           prompt: 'Play Trail?',
           playerId: eventArgs.playerId,
           actionButtons: [
-            {label: 'CANCEL', action: 1}, { label: 'PLAY', action: 2 }
+            { label: 'CANCEL', action: 1 }, { label: 'PLAY', action: 2 }
           ],
         }) as { action: number, result: number[] };
         
@@ -1314,6 +1314,62 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
       await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
     }
+  },
+  'tunnel': {
+    registerLifeCycleMethods: () => ({
+      onDiscarded: async (args, eventArgs) => {
+        if (getTurnPhase(args.match.turnPhaseIndex) === 'cleanup') {
+          console.log(`[tunnel onDiscarded event] happening during clean-up, skipping`);
+          return;
+        }
+        
+        const result = await args.runGameActionDelegate('userPrompt', {
+          prompt: 'Reveal tunnel?',
+          playerId: eventArgs.playerId,
+          actionButtons: [
+            { label: 'CANCEL', action: 1 }, { label: 'REVEAL', action: 2 }
+          ],
+        }) as { action: number, result: number[] };
+        
+        if (result.action === 1) {
+          console.log(`[tunnel onDiscarded event] not revealing tunnel`);
+          return;
+        }
+        
+        console.log(`[tunnel onDiscarded event] revealing tunnel`);
+        
+        await args.runGameActionDelegate('revealCard', {
+          cardId: eventArgs.cardId,
+          playerId: eventArgs.playerId,
+        });
+        
+        const goldCardIds = findCards(
+          args.match,
+          {
+            location: 'supply',
+            cards: {
+              cardKeys: 'gold'
+            }
+          },
+          args.cardLibrary
+        );
+        
+        if (!goldCardIds.length) {
+          console.log(`[tunnel onDiscarded event] no gold cards in supply`);
+          return;
+        }
+        
+        const goldCard = args.cardLibrary.getCard(goldCardIds.slice(-1)[0]);
+        
+        console.log(`[tunnel onDiscarded event] gaining ${goldCard}`);
+        
+        await args.runGameActionDelegate('gainCard', {
+          playerId: eventArgs.playerId,
+          cardId: goldCard.id,
+          to: { location: 'playerDiscards' }
+        });
+      }
+    }),
   },
 }
 

@@ -134,5 +134,12 @@
       "treasure": 4
     },
     "type": ["ACTION", "REACTION"]
+  },
+  "tunnel": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["VICTORY", "REACTION"],
+    "victoryPoints": 2
   }
 }
