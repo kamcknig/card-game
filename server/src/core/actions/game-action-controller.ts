@@ -173,7 +173,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     cardId: CardId,
     to: CardLocationSpec
   }, context?: GameActionContextMap['gainCard']) {
-    await this.moveCard({
+    const previousLocation = await this.moveCard({
       cardId: args.cardId,
       to: args.to,
       toPlayerId: args.playerId
@@ -202,6 +202,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       cardId: args.cardId,
       playerId: args.playerId,
       bought: context?.bought,
+      previousLocation
     });
     
     this.logManager.enter();

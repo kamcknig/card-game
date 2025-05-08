@@ -16,7 +16,8 @@ the UI for this yet, and doesn't seem super important to get done right away
 they need to be asked for their input again
 - organize modules again.
 - ui updates
-  - need to update app-mat-tab and the visible mat. i've clunked it together for now 
+  - need to update app-mat-tab and the visible mat. i've clunked it together for now
+- sound that plays more loudly when action isn't taken soon enough
 
 need to show the context of the kingdom card for something like young witch, and ferryman
 - dominion.games puts the word "bane" in the type area of the card (but only while it's in the supply)
@@ -36,3 +37,14 @@ searchable zones as a dynamic way to add things like that. when registering you 
 register the "store key" that would normally be returned as well. for now i think i'll have
 to hard-code searching that new property. maybe this can be done when refactorying the find
 methods into find method factories
+
+
+
+Bugs
+
+rewards can be gained through cards like border village - they need to be removed from some searches
+
+scrying pool might have done stuff out of order - i think it had me do the drawing of my own before
+discadring for everyone
+
+apprentice is incorrect - it's drawing a caard instead of gaining an action -- and doesn't trash the card

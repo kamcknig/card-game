@@ -104,5 +104,29 @@
       "treasure": 3
     },
     "type": ["ACTION"]
+  },
+  "souk": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"]
+  },
+  "spice-merchant": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"]
+  },
+  "stables": {
+    "cost": {
+      "treasure":
+    },
+    "type": ["ACTION"]
+  },
+  "trader": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION", "REACTION"]
   }
 }

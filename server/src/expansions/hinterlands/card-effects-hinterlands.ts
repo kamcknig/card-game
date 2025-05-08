@@ -6,7 +6,6 @@ import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
-import { async } from 'npm:rxjs@7.8.2';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
 
 const expansion: CardExpansionModule = {
@@ -833,7 +832,7 @@ const expansion: CardExpansionModule = {
           prompt: `Discard ${card.cardName}`,
           playerId: cardEffectArgs.playerId,
           actionButtons: [
-            { label: 'CANCEL', action: 1}, { label: 'DISCARD', action: 2 }
+            { label: 'CANCEL', action: 1 }, { label: 'DISCARD', action: 2 }
           ],
         }) as { action: number, result: number[] };
         
@@ -863,7 +862,7 @@ const expansion: CardExpansionModule = {
       const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Trash a card`,
-        restrict: { from: { location: 'playerHands'}},
+        restrict: { from: { location: 'playerHands' } },
         count: 1,
         optional: true,
       }) as CardId[];
@@ -995,11 +994,274 @@ const expansion: CardExpansionModule = {
           
           await triggeredEffectArgs.runGameActionDelegate('moveCard', {
             cardId: triggeredEffectArgs.trigger.args.cardId,
-            toPlayerId:cardEffectArgs.playerId,
+            toPlayerId: cardEffectArgs.playerId,
             to: { location: 'playerDecks' }
           });
         }
       })
+    }
+  },
+  'souk': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (args, eventArgs) => {
+        const numToTrash = Math.min(2, args.match.playerHands[eventArgs.playerId].length);
+        const selectedCardIds = await args.runGameActionDelegate('selectCard', {
+          playerId: eventArgs.playerId,
+          prompt: `Trash card/s`,
+          restrict: { from: { location: 'playerHands' } },
+          count: {
+            kind: 'upTo',
+            count: numToTrash
+          },
+          optional: true,
+        }) as CardId[];
+        
+        if (!selectedCardIds.length) {
+          console.log(`[souk onGained effect] no card selected`);
+          return;
+        }
+        
+        console.log(`[souk onGained effect] trashing ${selectedCardIds.length} cards`);
+        
+        for (const cardId of selectedCardIds) {
+          await args.runGameActionDelegate('trashCard', {
+            playerId: eventArgs.playerId,
+            cardId: cardId,
+          });
+        }
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[souk effect] gaining 1 buy, and gaining 7 treasure`);
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 7 });
+      
+      
+      const handSize = cardEffectArgs.match.playerHands[cardEffectArgs.playerId].length;
+      const numToLose = Math.min(cardEffectArgs.match.playerTreasure, handSize)
+      console.log(`[souk effect] losing ${numToLose} treasure`);
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: handSize });
+    }
+  },
+  'spice-merchant': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const treasuresInHand = cardEffectArgs.match.playerHands[cardEffectArgs.playerId]
+        .map(cardEffectArgs.cardLibrary.getCard)
+        .filter(card => card.type.includes('TREASURE'));
+      
+      if (!treasuresInHand.length) {
+        console.log(`[spice-merchant effect] no treasure cards in hand`);
+        return;
+      }
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Trash card`,
+        restrict: { from: { location: 'playerHands' } },
+        count: 1,
+        optional: true,
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.log(`[spice-merchant effect] no card selected`);
+        return;
+      }
+      
+      const card = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+      
+      console.log(`[spice-merchant effect] trashing ${card}`);
+      
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: card.id,
+      });
+      
+      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        prompt: 'Choose one',
+        playerId: cardEffectArgs.playerId,
+        actionButtons: [
+          { label: '+2 Cards, + 1 Action', action: 1 }, { label: '+1 Buy, +2 Treasure', action: 2 }
+        ],
+      }) as { action: number, result: number[] };
+      
+      switch (result.action) {
+        case 1:
+          console.log(`[spice-merchant effect] drawing 2 cards and gaining 1 action`);
+          await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
+          await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+          break;
+        case 2:
+          console.log(`[spice-merchant effect] gaining 1 buy, and 2 treasure`);
+          await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+          await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+          break;
+      }
+    }
+  },
+  'stables': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const treasuresInHand = cardEffectArgs.match.playerHands[cardEffectArgs.playerId]
+        .map(cardEffectArgs.cardLibrary.getCard)
+        .filter(card => card.type.includes('TREASURE'));
+      
+      if (!treasuresInHand.length) {
+        console.log(`[stables effect] no treasure cards in hand`);
+        return;
+      }
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Discard treasure`,
+        restrict: { from: { location: 'playerHands' } },
+        count: 1,
+        optional: true
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.log(`[stables effect] no card selected`);
+        return;
+      }
+      
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+      
+      console.log(`[stables effect] discarding ${selectedCard}`);
+      
+      await cardEffectArgs.runGameActionDelegate('discardCard', {
+        cardId: selectedCard.id,
+        playerId: cardEffectArgs.playerId
+      });
+      
+      console.log(`[stables effect] drawing 3 cards, and gaining 1 action `);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 3 });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+    }
+  },
+  'trader': {
+    registerLifeCycleMethods: () => ({
+      onLeaveHand: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`trader:${eventArgs.cardId}:gainCard`);
+      },
+      onEnterHand: async (args, eventArgs) => {
+        args.reactionManager.registerReactionTemplate({
+          id: `trader:${eventArgs.cardId}:gainCard`,
+          listeningFor: 'gainCard',
+          playerId: eventArgs.playerId,
+          once: false,
+          allowMultipleInstances: false,
+          compulsory: false,
+          condition: (conditionArgs) => {
+            if (conditionArgs.trigger.args.playerId !== eventArgs.playerId) return false;
+            return true;
+          },
+          triggeredEffectFn: async (triggerArgs) => {
+            const traderCard = triggerArgs.cardLibrary.getCard(eventArgs.cardId);
+            
+            console.log(`[trader onEnterHand event] revealing trader`);
+            
+            await triggerArgs.runGameActionDelegate('revealCard', {
+              cardId: traderCard.id,
+              playerId: eventArgs.playerId,
+            });
+            
+            const gainedCard = triggerArgs.cardLibrary.getCard(triggerArgs.trigger.args.cardId);
+            
+            if (triggerArgs.trigger.args.previousLocation) {
+              console.log(`[trader onEnterHand event] putting ${gainedCard} back in previous location`);
+              await triggerArgs.runGameActionDelegate('moveCard', {
+                cardId: gainedCard.id,
+                toPlayerId: triggerArgs.trigger.args.playerId,
+                to: { location: triggerArgs.trigger.args.previousLocation }
+              });
+            }
+            else {
+              console.warn(`[trader onEnterHand event] gained ${gainedCard} has no previous location`);
+            }
+            
+            const silverCardIds = findCards(
+              triggerArgs.match,
+              {
+                location: 'supply',
+                cards: {
+                  cardKeys: 'silver'
+                }
+              },
+              triggerArgs.cardLibrary
+            );
+            
+            if (!silverCardIds.length) {
+              console.log(`[trader onEnterHand event] no silvers in supply`);
+              return;
+            }
+            
+            const silverCard = triggerArgs.cardLibrary.getCard(silverCardIds[0]);
+            
+            console.log(`[trader onEnterHand event] gaining ${silverCard} instead`);
+            await triggerArgs.runGameActionDelegate('moveCard', {
+              cardId: silverCardIds.slice(-1)[0],
+              toPlayerId: eventArgs.playerId,
+              to: { location: 'playerDiscards' }
+            });
+          }
+        })
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      const hand = cardEffectArgs.match.playerHands[cardEffectArgs.playerId];
+      if (hand.length === 0) {
+        console.log(`[trader effect] no cards in hand`);
+        return;
+      }
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Trash card`,
+        restrict: { from: { location: 'playerHands' } },
+        count: 1,
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.warn(`[trader effect] no card selected`);
+        return;
+      }
+      
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+      
+      console.log(`[trader effect] trashing ${selectedCard}`);
+      
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCard.id,
+      });
+      
+      const { cost } = cardEffectArgs.cardPriceController.applyRules(
+        selectedCard,
+        { match: cardEffectArgs.match, playerId: cardEffectArgs.playerId }
+      );
+      
+      const silverCardIds = findCards(
+        cardEffectArgs.match,
+        {
+          location: 'supply',
+          cards: { cardKeys: 'silver' }
+        },
+        cardEffectArgs.cardLibrary
+      );
+      
+      if (!silverCardIds.length) {
+        console.log(`[trader effect] no silver cards in supply`);
+        return;
+      }
+      
+      const numToGain = Math.min(silverCardIds.length, cost.treasure);
+      
+      console.log(`[trader effect] gaining ${numToGain} silver cards`);
+      
+      for (let i = 0; i < numToGain; i++) {
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: silverCardIds.slice(-i - 1)[0],
+          to: { location: 'playerDiscards' }
+        });
+      }
     }
   },
 }

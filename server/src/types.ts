@@ -284,7 +284,7 @@ export type TriggeredEffectConditionContext<T extends TriggerEventType> = {
 export type TriggerEventTypeContext = {
   cardPlayed: { playerId: PlayerId; cardId: CardId };
   startTurn: { playerId: PlayerId };
-  gainCard: { playerId: PlayerId; cardId: CardId, bought: boolean };
+  gainCard: { playerId: PlayerId; cardId: CardId, bought: boolean, previousLocation?: CardLocation };
   endTurnPhase: { phaseIndex: number; };
   startTurnPhase: { phaseIndex: number; };
   endTurn: void;
