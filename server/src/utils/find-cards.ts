@@ -22,7 +22,7 @@ export type FindCardsFilter = {
   owner?: number | undefined;
 }
 
-export const findCardsByLocation = (match: Match, locations: CardLocation[]) => {
+const findCardsByLocation = (match: Match, locations: CardLocation[]) => {
   let cardIds: CardId[] = [];
   
   for (const location of locations) {
