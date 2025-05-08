@@ -351,13 +351,14 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (args) => {
       console.log(`[scrying-pool effect] gaining 1 action`);
       await args.runGameActionDelegate('gainAction', { count: 1 });
+      
       const playedCard = args.cardLibrary.getCard(args.cardId);
       
       const targetIds = findOrderedTargets({
         match: args.match,
-        appliesTo: playedCard.targetScheme!,
+        appliesTo: 'ALL',
         startingPlayerId: args.playerId
-      }).filter(t => args.reactionContext[t]?.result !== 'immunity');
+      }).filter(playerId => args.reactionContext?.[playerId]?.result !== 'immunity');
       
       for (const targetPlayerId of targetIds) {
         const deck = args.match.playerDecks[targetPlayerId];
@@ -380,12 +381,7 @@ const expansion: CardExpansionModule = {
         await args.runGameActionDelegate('revealCard', {
           cardId: cardId,
           playerId: targetPlayerId,
-        });
-        
-        await args.runGameActionDelegate('moveCard', {
-          cardId: cardId,
-          toPlayerId: targetPlayerId,
-          to: { location: 'set-aside' }
+          moveToSetAside: true
         });
         
         const result = await args.runGameActionDelegate('userPrompt', {
@@ -412,6 +408,47 @@ const expansion: CardExpansionModule = {
             to: { location: 'playerDecks' }
           });
         }
+      }
+      
+      const deck = args.match.playerDecks[args.playerId];
+      const discard = args.match.playerDiscards[args.playerId];
+      
+      const cardsRevealed: Card[] = [];
+      
+      while (deck.length + discard.length > 0) {
+        const cardId = deck.slice(-1)[0];
+        if (!cardId) {
+          console.log(`[scrying-pool effect] no cards in deck, shuffling`);
+          await args.runGameActionDelegate('shuffleDeck', { playerId: args.playerId });
+          
+          if (deck.length === 0) {
+            console.log(`[scrying-pool effect] still no cards in deck`);
+            return;
+          }
+        }
+        
+        const card = args.cardLibrary.getCard(cardId);
+        cardsRevealed.push(card);
+        
+        await args.runGameActionDelegate('revealCard', {
+          cardId: card.id,
+          playerId: args.playerId,
+          moveToSetAside: true
+        });
+        
+        if (!card.type.includes('ACTION')) {
+          break;
+        }
+      }
+      
+      console.log(`[scrying-pool effect] putting ${cardsRevealed.length} cards in hand`);
+      
+      for (const card of cardsRevealed) {
+        await args.runGameActionDelegate('moveCard', {
+          cardId: card.id,
+          toPlayerId: args.playerId,
+          to: { location: 'playerHands' }
+        });
       }
     }
   },

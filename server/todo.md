@@ -42,8 +42,3 @@ methods into find method factories
 Bugs
 
 rewards can be gained through cards like border village - they need to be removed from some searches
-
-scrying pool might have done stuff out of order - i think it had me do the drawing of my own before
-discadring for everyone
-
-apprentice is incorrect - it's drawing a caard instead of gaining an action -- and doesn't trash the card
