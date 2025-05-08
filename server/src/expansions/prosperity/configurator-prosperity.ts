@@ -1,16 +1,16 @@
 import './types.ts';
 import {
-  EndGameConditionRegistrar,
   ActionRegistry,
+  EndGameConditionRegistrar,
   ExpansionConfiguratorFactory,
-  PlayerScoreDecoratorRegistrar, GameEventRegistrar,
+  GameEventRegistrar,
+  PlayerScoreDecoratorRegistrar,
 } from '../../types.ts';
-import { findCards } from '../../utils/find-cards.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
-import { ComputedMatchConfiguration } from "shared/shared-types.ts";
+import { ComputedMatchConfiguration } from 'shared/shared-types.ts';
 
 const configurator: ExpansionConfiguratorFactory = () => {
   let charlatanConfigured: boolean = false;
@@ -61,7 +61,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
 }
 
 export const registerEndGameConditions = (registrar: EndGameConditionRegistrar) => {
-  registrar(({ match, cardLibrary }) => {
+  registrar(({ findCards, match }) => {
     const kingdomCards = match.config.kingdomCards;
     const colonyPresent = kingdomCards.find(card => card.cardKey === 'colony');
     
@@ -70,12 +70,10 @@ export const registerEndGameConditions = (registrar: EndGameConditionRegistrar) 
     }
     
     const colonyCards = findCards(
-      match,
       {
         location: 'supply',
         cards: { cardKeys: 'colony' }
-      },
-      cardLibrary
+      }
     );
     return colonyCards.length === 0;
   })
@@ -84,10 +82,10 @@ export const registerEndGameConditions = (registrar: EndGameConditionRegistrar) 
 export const registerGameEvents: (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => void = (registrar) => {
   registrar('onGameStart', async (args) => {
     
-    const peddlerCardIds = findCards(args.match, {
+    const peddlerCardIds = args.findCards({
       location: 'kingdom',
       cards: { cardKeys: 'peddler' }
-    }, args.cardLibrary);
+    }).map(card => card.id);
     
     if (peddlerCardIds.length === 0) {
       return;

@@ -2,12 +2,9 @@ import './types.ts';
 import { Card, CardId, CardKey } from 'shared/shared-types.ts';
 import { CardExpansionModule } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
-import { findCards } from '../../utils/find-cards.ts';
 import { getRemainingSupplyCount, getStartingSupplyCount } from '../../utils/get-starting-supply-count.ts';
-import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
-import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getPlayerStartingFrom } from '../../shared/get-player-position-utils.ts';
 
 const expansion: CardExpansionModule = {
@@ -169,13 +166,11 @@ const expansion: CardExpansionModule = {
       console.log(`[charlatan effect] targets ${targetPlayerIds} gaining a curse`);
       
       for (const targetPlayerId of targetPlayerIds) {
-        const curseCards = findCards(
-          effectArgs.match,
+        const curseCards = effectArgs.findCards(
           {
             location: 'supply',
             cards: { cardKeys: 'curse' }
           },
-          effectArgs.cardLibrary
         );
         if (!curseCards.length) {
           console.log(`[charlatan effect] no curse cards in supply`);
@@ -184,7 +179,7 @@ const expansion: CardExpansionModule = {
         
         await effectArgs.runGameActionDelegate('gainCard', {
           playerId: targetPlayerId,
-          cardId: curseCards.slice(-1)[0],
+          cardId: curseCards.slice(-1)[0].id,
           to: { location: 'playerDiscards' }
         });
       }
@@ -513,13 +508,11 @@ const expansion: CardExpansionModule = {
           return true;
         },
         triggeredEffectFn: async (triggeredEffectArgs) => {
-          const goldCardIds = findCards(
-            triggeredEffectArgs.match,
+          const goldCardIds = effectArgs.findCards(
             {
               location: 'supply',
               cards: { cardKeys: 'gold' }
-            },
-            triggeredEffectArgs.cardLibrary,
+            }
           );
           
           if (!goldCardIds.length) {
@@ -529,7 +522,7 @@ const expansion: CardExpansionModule = {
           
           await triggeredEffectArgs.runGameActionDelegate('gainCard', {
             playerId: effectArgs.playerId,
-            cardId: goldCardIds.slice(-1)[0],
+            cardId: goldCardIds.slice(-1)[0].id,
             to: { location: 'playerDiscards' }
           });
         },
@@ -714,10 +707,10 @@ const expansion: CardExpansionModule = {
         playerId: effectArgs.playerId,
       });
       
-      const cardsInSupply = findCards(effectArgs.match, {
+      const cardsInSupply = effectArgs.findCards({
         location: selectedCard.isBasic ? 'supply' : 'kingdom',
         cards: { cardKeys: selectedCard.cardKey }
-      }, effectArgs.cardLibrary);
+      });
       
       if (cardsInSupply.length === 0) {
         console.log(`[mint effect] no copies of ${selectedCard} in supply`);
@@ -726,7 +719,7 @@ const expansion: CardExpansionModule = {
       
       await effectArgs.runGameActionDelegate('gainCard', {
         playerId: effectArgs.playerId,
-        cardId: cardsInSupply.slice(-1)[0],
+        cardId: cardsInSupply.slice(-1)[0].id,
         to: { location: 'playerDiscards' }
       });
     }
@@ -756,13 +749,11 @@ const expansion: CardExpansionModule = {
       console.log(`[quarry effect] gaining 1 treasure`);
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
       
-      const actionCards = findCards(
-        cardEffectArgs.match,
+      const actionCards = cardEffectArgs.findCards(
         {
           cards: { type: 'ACTION' },
-        },
-        cardEffectArgs.cardLibrary,
-      ).map(cardEffectArgs.cardLibrary.getCard);
+        }
+      );
       
       const unsubs: (() => void)[] = [];
       for (const actionCard of actionCards) {
@@ -1037,18 +1028,15 @@ const expansion: CardExpansionModule = {
         cardsNamedByTurn[cardEffectArgs.match.turnNumber] ??= [];
         cardsNamedByTurn[cardEffectArgs.match.turnNumber].push(cardKey);
         
-        const cardIds = findCards(
-          cardEffectArgs.match,
+        const cardIds = cardEffectArgs.findCards(
           {
             location: ['supply', 'kingdom'],
             cost: {
               cardCostController: cardEffectArgs.cardPriceController,
               spec: { kind: 'upTo', amount: { treasure: 5 }, playerId: cardEffectArgs.playerId }
             }
-          },
-          cardEffectArgs.cardLibrary,
+          }
         )
-          .map(cardEffectArgs.cardLibrary.getCard)
           .filter(card => !cardsNamedByTurn[cardEffectArgs.match.turnNumber].includes(card.cardKey))
           .map(card => card.id);
         

@@ -5,8 +5,6 @@ import { Card, CardId } from 'shared/shared-types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
-import { findCards } from '../../utils/find-cards.ts';
-import { async } from 'npm:rxjs@7.8.2';
 
 const expansion: CardExpansionModule = {
   'alchemist': {
@@ -427,68 +425,62 @@ const expansion: CardExpansionModule = {
         cardId: selectedCardId,
       });
       
-      let cardIds: CardId[] = [];
+      let cards: Card[] = [];
       if (selectedCard.type.includes('ACTION')) {
-        cardIds = findCards(
-          args.match,
+        cards = args.findCards(
           {
             location: ['supply'],
             cards: { cardKeys: 'duchy' }
-          },
-          args.cardLibrary,
+          }
         );
         
-        const cardId = cardIds.slice(-1)[0];
-        if (cardId) {
+        const card = cards.slice(-1)[0];
+        if (card) {
           console.log(`[transmute effect] card is action, gaining duchy`);
           
           await args.runGameActionDelegate('gainCard', {
             playerId: args.playerId,
-            cardId,
+            cardId: card.id,
             to: { location: 'playerDiscards' }
           })
         }
       }
       
       if (selectedCard.type.includes('TREASURE')) {
-        cardIds = findCards(
-          args.match,
+        cards = args.findCards(
           {
             location: 'kingdom',
             cards: { cardKeys: 'transmute' }
           },
-          args.cardLibrary,
         );
         
-        const cardId = cardIds.slice(-1)[0];
-        if (cardId) {
+        const card = cards.slice(-1)[0];
+        if (card) {
           console.log(`[transmute effect] card is treasure, gaining transmute`);
           
           await args.runGameActionDelegate('gainCard', {
             playerId: args.playerId,
-            cardId,
+            cardId: card.id,
             to: { location: 'playerDiscards' }
           })
         }
       }
       
       if (selectedCard.type.includes('VICTORY')) {
-        cardIds = findCards(
-          args.match,
+        cards = args.findCards(
           {
             location: 'supply',
             cards: { cardKeys: 'gold' }
           },
-          args.cardLibrary,
         );
         
-        const cardId = cardIds.slice(-1)[0];
-        if (cardId) {
+        const card = cards.slice(-1)[0];
+        if (card) {
           console.log(`[transmute effect] card is victory, gaining gold`);
           
           await args.runGameActionDelegate('gainCard', {
             playerId: args.playerId,
-            cardId,
+            cardId: card.id,
             to: { location: 'playerDiscards' }
           });
         }

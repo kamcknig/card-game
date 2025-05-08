@@ -1,5 +1,6 @@
 import { Socket } from 'socket.io';
 import {
+  Card,
   CardCost,
   CardId,
   CardKey,
@@ -22,6 +23,7 @@ import { ReactionManager } from './core/reactions/reaction-manager.ts';
 import { GameActionController } from './core/actions/game-action-controller.ts';
 import { ExpansionData } from '@expansions/expansion-library.ts';
 import { CardPriceRulesController } from './core/card-price-rules-controller.ts';
+import { FindCardsFilter } from './utils/find-cards.ts';
 
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
 
@@ -186,16 +188,23 @@ export type CardEffectFactory = () => CardEffectFn;
 
 export type CardEffectFactoryMap = Record<CardKey, CardEffectFactory>;
 
-export type CardEffectFunctionContext = {
+export interface AppContext {
   cardPriceController: CardPriceRulesController;
   match: Match;
   reactionManager: ReactionManager;
-  runGameActionDelegate: RunGameActionDelegate;
-  gameActionController: GameActionController;
   reactionContext?: ReactionContext;
+  cardLibrary: CardLibrary;
+  findCards: FindCardsFn;
+}
+
+export type FindCardsFnFactory = (match: Match, cardLibrary: CardLibrary) => FindCardsFn;
+
+export type FindCardsFn = (filter: FindCardsFilter) => Card[];
+
+export interface CardEffectFunctionContext extends AppContext {
   playerId: PlayerId;
   cardId: CardId;
-  cardLibrary: CardLibrary;
+  runGameActionDelegate: RunGameActionDelegate;
 }
 
 export type CardTriggeredEffectFn<T extends TriggerEventType> = (context: TriggeredEffectContext<T>) => Promise<any>;
@@ -207,9 +216,7 @@ export type CardEffectFunction = (context: CardEffectFunctionContext) => Promise
 export type CardEffectFunctionMap =
   Record<CardKey, CardEffectFunction>;
 
-export type CardScoringFnContext = {
-  match: Match;
-  cardLibrary: CardLibrary;
+export interface CardScoringFnContext extends AppContext {
   ownerId: number;
 }
 
@@ -265,21 +272,18 @@ export class ReactionTrigger<T extends TriggerEventType = TriggerEventType> {
   }
 }
 
-export type TriggeredEffectContext<T extends TriggerEventType> = {
+export interface TriggeredEffectContext<T extends TriggerEventType> extends AppContext {
+  trigger: ReactionTrigger<T>;
+  reaction: Reaction;
   runGameActionDelegate: RunGameActionDelegate;
-  trigger: ReactionTrigger<T>;
-  reaction: Reaction;
-  match: Match;
-  cardLibrary: CardLibrary;
   isRootLog?: boolean;
-};
+}
 
-export type TriggeredEffectConditionContext<T extends TriggerEventType> = {
-  match: Match;
-  cardLibrary: CardLibrary;
+export interface TriggeredEffectConditionContext<T extends TriggerEventType> extends AppContext {
   trigger: ReactionTrigger<T>;
   reaction: Reaction;
-};
+  runGameActionDelegate: RunGameActionDelegate;
+}
 
 export type TriggerEventTypeContext = {
   cardPlayed: { playerId: PlayerId; cardId: CardId };
@@ -381,12 +385,8 @@ export class Reaction<T extends TriggerEventType = TriggerEventType> {
 
 export type ReactionTemplate<T extends TriggerEventType = TriggerEventType> = Omit<Reaction<T>, 'getSourceId' | 'getSourceKey' | 'getBaseId'>;
 
-export type GameLifecycleCallbackContext = {
+export type GameLifecycleCallbackContext = AppContext & {
   cardId: CardId,
-  cardPriceController: CardPriceRulesController,
-  cardLibrary: CardLibrary;
-  match: Match;
-  reactionManager: ReactionManager;
   runGameActionDelegate: RunGameActionDelegate;
 }
 
@@ -402,11 +402,7 @@ export type GameLifeCycleEventArgsMap = {
   onCardGained: { cardId: CardId, playerId: PlayerId, match: Match }
 }
 
-export type CardLifecycleCallbackContext = {
-  cardPriceController: CardPriceRulesController,
-  cardLibrary: CardLibrary;
-  match: Match;
-  reactionManager: ReactionManager;
+export type CardLifecycleCallbackContext = AppContext & {
   runGameActionDelegate: RunGameActionDelegate;
 }
 
@@ -460,7 +456,7 @@ export type CardEffectRegistrar = (cardKey: CardKey, tag: string, fn: CardEffect
 export type PlayerScoreDecoratorRegistrar = (decorator: PlayerScoreDecorator) => void;
 export type PlayerScoreDecorator = (playerId: PlayerId, match: Match) => void;
 
-export type EndGameConditionFnContext = { match: Match, cardLibrary: CardLibrary };
+export type EndGameConditionFnContext = AppContext;
 export type EndGameConditionFn = (args: EndGameConditionFnContext) => boolean;
 export type EndGameConditionRegistrar = (endGameConditionFn: EndGameConditionFn) => void;
 

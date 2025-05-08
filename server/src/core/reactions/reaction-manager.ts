@@ -9,7 +9,7 @@ import {
   ReactionTemplate,
   ReactionTrigger,
   RunGameActionDelegate,
-  TriggerEventType
+  TriggerEventType, FindCardsFn
 } from '../../types.ts';
 import { CardLibrary } from '../card-library.ts';
 import { getOrderStartingFrom } from '../../utils/get-order-starting-from.ts';
@@ -25,6 +25,7 @@ export class ReactionManager {
   private _expansionGameEventHandlers: Record<GameLifecycleEvent, GameLifecycleCallback[]> = {} as Record<GameLifecycleEvent, GameLifecycleCallback[]>
   
   constructor(
+    private readonly _findCards: FindCardsFn,
     private readonly cardPriceController: CardPriceRulesController,
     private readonly logManager: LogManager,
     private readonly _match: Match,
@@ -50,6 +51,10 @@ export class ReactionManager {
       
       if (reaction.condition !== undefined) {
         return reaction.condition({
+          cardPriceController: this.cardPriceController,
+          reactionManager: this,
+          runGameActionDelegate: this.runGameActionDelegate,
+          findCards: this._findCards,
           match: this._match,
           cardLibrary:
           this._cardLibrary,
@@ -86,6 +91,7 @@ export class ReactionManager {
   async runGameLifecycleEvent<T extends GameLifecycleEvent>(trigger: T, ...args: GameLifeCycleEventArgsMap[T] extends void ? [] : [GameLifeCycleEventArgsMap[T]]) {
     for (const handler of this._expansionGameEventHandlers[trigger] ?? []) {
       await handler({
+        findCards: this._findCards,
         cardPriceController: this.cardPriceController,
         cardLibrary: this._cardLibrary,
         match: this._match,
@@ -106,11 +112,12 @@ export class ReactionManager {
     console.log(`[REACTION MANAGER] running lifecycle trigger '${trigger}' for card ${card}`);
     
     await fn({
+      runGameActionDelegate: this.runGameActionDelegate,
       cardPriceController: this.cardPriceController,
       cardLibrary: this._cardLibrary,
       match: this._match,
       reactionManager: this,
-      runGameActionDelegate: this.runGameActionDelegate,
+      findCards: this._findCards
     }, args as any);
   }
   
@@ -191,6 +198,9 @@ export class ReactionManager {
         }
         
         const reactionResult = await selectedReaction.triggeredEffectFn({
+          findCards: this._findCards,
+          reactionManager: this,
+          cardPriceController: this.cardPriceController,
           isRootLog: false,
           runGameActionDelegate: this.runGameActionDelegate,
           trigger,

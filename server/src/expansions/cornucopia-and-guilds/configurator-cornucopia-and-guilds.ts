@@ -3,7 +3,6 @@ import { configureYoungWitch } from './configure-young-witch.ts';
 import { configureFerryman } from './configure-ferryman.ts';
 import { ComputedMatchConfiguration } from 'shared/shared-types.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
-import { findCards } from '../../utils/find-cards.ts';
 import { configureJoust, createRewardKingdoms } from './configure-joust.ts';
 
 export const configurator: ExpansionConfiguratorFactory = () => {
@@ -27,13 +26,11 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
       console.log(`[footpad onCardGained event] player ${eventArgs.playerId} gained ${card} during action phase, drawing card`);
       
       // todo hacky to use just any card by id for the source. eventually source needs to be more dynamic
-      const footpadCardIds = findCards(
-        args.match,
-        { cards: { cardKeys: 'footpad' } },
-        args.cardLibrary
+      const footpadCardIds = args.findCards(
+        { cards: { cardKeys: 'footpad' } }
       );
       
-      await args.runGameActionDelegate('drawCard', { playerId: eventArgs.playerId }, { loggingContext: { source: footpadCardIds[0] } });
+      await args.runGameActionDelegate('drawCard', { playerId: eventArgs.playerId }, { loggingContext: { source: footpadCardIds[0].id } });
     });
   }
   

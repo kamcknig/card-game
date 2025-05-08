@@ -21,11 +21,11 @@ import { getPlayerById } from '../utils/get-player-by-id.ts';
 import { cardEffectFunctionMapFactory } from './effects/card-effect-function-map-factory.ts';
 import { EventEmitter } from '@denosaurs/event';
 import { LogManager } from './log-manager.ts';
-import { GameActionController } from './actions/game-action-controller.ts';
 import {
   AppSocket,
   CardEffectFunctionMap,
   EndGameConditionFn,
+  FindCardsFn,
   GameActionDefinitionMap,
   GameActionReturnTypeMap,
   GameActions,
@@ -37,7 +37,8 @@ import {
 import { createCard } from '../utils/create-card.ts';
 import { getRemainingSupplyCount, getStartingSupplyCount } from '../utils/get-starting-supply-count.ts';
 import { CardPriceRulesController } from './card-price-rules-controller.ts';
-import { findCards } from '../utils/find-cards.ts';
+import { findCardsFactory, FindCardsFilter } from '../utils/find-cards.ts';
+import { GameActionController } from './actions/game-action-controller.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardLibSnapshot = {};
@@ -54,25 +55,26 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _matchConfigurator: MatchConfigurator | undefined;
   private _expansionScoringFns: PlayerScoreDecorator[] = [];
   private _registeredEvents: (keyof ServerListenEvents)[] = [];
+  private _findCards: FindCardsFn = (...args) => ([]);
   
   private _playerHands: Record<CardKey, number>[] = [
     /*{
-      gold: 3,
-      silver: 2,
-      estate: 2,
-      joust: 2,
-      province: 3,
-    },
-    {
-      gold: 3,
-      silver: 3,
-      copper: 2,
-    },
-    {
-      gold: 4,
-      silver: 3,
-      copper: 3,
-    }*/
+     gold: 3,
+     silver: 2,
+     estate: 2,
+     joust: 2,
+     province: 3,
+     },
+     {
+     gold: 3,
+     silver: 3,
+     copper: 2,
+     },
+     {
+     gold: 4,
+     silver: 3,
+     copper: 3,
+     }*/
   ];
   
   constructor(
@@ -130,6 +132,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     );
     const { config: newConfig } = await this._matchConfigurator.createConfiguration();
     
+    this._findCards = findCardsFactory(this._match, this._cardLibrary);
+    
     this._matchConfiguration = newConfig;
     this._match = {
       ...this._match,
@@ -146,6 +150,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     );
     
     this._reactionManager = new ReactionManager(
+      this._findCards,
       this._cardPriceController,
       this._logManager,
       this._match,
@@ -167,6 +172,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     );
     
     this.gameActionsController = new GameActionController(
+      this._findCards,
       this._cardPriceController,
       cardEffectFunctionMap,
       this._match,
@@ -465,6 +471,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         if (customScoringFn) {
           console.log(`[match] processing scoring function for ${card}`);
           score += customScoringFn({
+            cardPriceController: this._cardPriceController!,
+            findCards: this._findCards,
+            reactionManager: this._reactionManager!,
             match: this._match,
             cardLibrary: this._cardLibrary,
             ownerId: playerId,
@@ -509,7 +518,12 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }
     
     for (const conditionFn of this._expansionEndGameConditionFns) {
-      conditionFn({ match: this._match, cardLibrary: this._cardLibrary });
+      conditionFn({
+        match: this._match, cardLibrary: this._cardLibrary,
+        cardPriceController: this._cardPriceController!,
+        reactionManager: this._reactionManager!,
+        findCards: this._findCards
+      });
     }
     
     return false;
@@ -528,18 +542,16 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     const match = this._match;
     
-    const setAsideCardIds = findCards(
-      match,
+    const setAsideCardIds = this._findCards(
       { location: 'set-aside' },
-      this._cardLibrary
     );
     
-    for (const cardId of setAsideCardIds) {
-      const owner = this._cardLibrary.getCard(cardId).owner;
+    for (const card of setAsideCardIds) {
+      const owner = this._cardLibrary.getCard(card.id).owner;
       if (owner === null) continue;
       await this.runGameAction('moveCard', {
         toPlayerId: owner,
-        cardId,
+        cardId: card.id,
         to: { location: 'playerDecks' },
       })
     }

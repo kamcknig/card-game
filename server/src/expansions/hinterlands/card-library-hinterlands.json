@@ -121,7 +121,7 @@
   },
   "stables": {
     "cost": {
-      "treasure":
+      "treasure": 5
     },
     "type": ["ACTION"]
   },

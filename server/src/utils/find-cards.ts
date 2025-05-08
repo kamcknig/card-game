@@ -6,6 +6,7 @@ import { validateCostSpec } from '../shared/validate-cost-spec.ts';
 
 import { CardLibrary } from '../core/card-library.ts';
 import { CardPriceRulesController } from '../core/card-price-rules-controller.ts';
+import { FindCardsFnFactory } from '../types.ts';
 
 export type FindCardsFilter = {
   location?: CardLocation | CardLocation[];
@@ -64,11 +65,7 @@ export const findCardsByLocation = (match: Match, locations: CardLocation[]) => 
   return cardIds;
 }
 
-export const findCards = (
-  match: Match,
-  filter: FindCardsFilter,
-  cardLibrary: CardLibrary,
-): CardId[] => {
+export const findCardsFactory: FindCardsFnFactory = (match: Match, cardLibrary: CardLibrary) => (filter: FindCardsFilter) => {
   let cardIds: CardId[] = [];
   
   if (filter.location) {
@@ -111,5 +108,5 @@ export const findCards = (
     });
   }
   
-  return sourceCards.map(card => card.id);
+  return sourceCards;
 }

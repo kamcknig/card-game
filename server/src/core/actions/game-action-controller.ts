@@ -18,6 +18,7 @@ import {
   BaseGameActionDefinitionMap,
   CardEffectFn,
   CardEffectFunctionMap,
+  FindCardsFn,
   GameActionContext,
   GameActionContextMap,
   GameActionDefinitionMap,
@@ -31,7 +32,6 @@ import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { findSourceByCardId } from '../../utils/find-source-by-card-id.ts';
 import { findSourceByLocationSpec } from '../../utils/find-source-by-location-spec.ts';
-import { findCards } from '../../utils/find-cards.ts';
 import { castArray, isNumber } from 'es-toolkit/compat';
 import { ReactionManager } from '../reactions/reaction-manager.ts';
 import { CardInteractivityController } from '../card-interactivity-controller.ts';
@@ -42,6 +42,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   private customCardEffectHandlers: Record<string, Record<CardKey, CardEffectFn>> = {};
   
   constructor(
+    private _findCards: FindCardsFn,
     private cardPriceRuleController: CardPriceRulesController,
     private cardEffectFunctionMap: CardEffectFunctionMap,
     private match: Match,
@@ -282,15 +283,13 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         return [];
       }
       
-      selectableCardIds = findCards(
-        this.match,
+      selectableCardIds = this._findCards(
         {
           location: restrict.from.location,
           cards: !Array.isArray(restrict.card) ? restrict.card : undefined,
           cost: restrict.cost ? { spec: restrict.cost, cardCostController: this.cardPriceRuleController } : undefined,
         },
-        this.cardLibrary,
-      );
+      ).map(card => card.id);
       
       console.log(`[selectCard action] found ${selectableCardIds.length} selectable cards`);
     }
@@ -781,11 +780,11 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         reactionManager: this.reactionManager,
         runGameActionDelegate: this.runGameActionDelegate,
         cardId,
-        gameActionController: this,
         playerId,
         match: this.match,
         cardLibrary: this.cardLibrary,
         reactionContext,
+        findCards: this._findCards
       });
       this.logManager.exit();
     }
@@ -800,11 +799,11 @@ export class GameActionController implements BaseGameActionDefinitionMap {
           reactionManager: this.reactionManager,
           runGameActionDelegate: this.runGameActionDelegate,
           cardId,
-          gameActionController: this,
           playerId,
           match: this.match,
           cardLibrary: this.cardLibrary,
           reactionContext,
+          findCards: this._findCards
         });
         this.logManager.exit();
       }

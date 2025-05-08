@@ -1,7 +1,6 @@
 import { CardExpansionModule } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { Card, CardId } from 'shared/shared-types.ts';
-import { findCards } from '../../utils/find-cards.ts';
 import { getPlayerStartingFrom, getPlayerTurnIndex } from '../../shared/get-player-position-utils.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
@@ -63,69 +62,67 @@ const expansion: CardExpansionModule = {
         args.reactionManager.unregisterTrigger(`blockade:${eventArgs.cardId}:gainCard`);
       }
     }),
-    registerEffects: () => async ({ match, reactionManager, runGameActionDelegate, cardLibrary, playerId, cardId }) => {
+    registerEffects: () => async (args) => {
       console.log(`[BLOCKADE EFFECT] prompting user to select card...`);
-      const cardIds = await runGameActionDelegate('selectCard', {
+      const cardIds = await args.runGameActionDelegate('selectCard', {
         prompt: 'Gain card',
-        playerId,
+        playerId: args.playerId,
         restrict: {
           from: { location: ['supply', 'kingdom'] },
-          cost: { kind: 'upTo', amount: { treasure: 4 }, playerId },
+          cost: { kind: 'upTo', amount: { treasure: 4 }, playerId: args.playerId },
         },
         count: 1,
       }) as number[];
       
       const gainedCardId = cardIds[0];
       
-      console.log(`[BLOCKADE EFFECT] selected card ${cardLibrary.getCard(gainedCardId)}`);
+      console.log(`[BLOCKADE EFFECT] selected card ${args.cardLibrary.getCard(gainedCardId)}`);
       
-      await runGameActionDelegate('gainCard', {
-        playerId,
+      await args.runGameActionDelegate('gainCard', {
+        playerId: args.playerId,
         cardId: gainedCardId,
         to: { location: 'set-aside' },
       });
       
-      reactionManager.registerReactionTemplate({
-        playerId,
-        id: `blockade:${cardId}:startTurn`,
+      args.reactionManager.registerReactionTemplate({
+        playerId: args.playerId,
+        id: `blockade:${args.cardId}:startTurn`,
         once: true,
-        condition: ({ trigger }) => trigger.args.playerId === playerId,
+        condition: ({ trigger }) => trigger.args.playerId === args.playerId,
         listeningFor: 'startTurn',
         compulsory: true,
         triggeredEffectFn: async () => {
           console.log(`[BLOCKADE TRIGGERED EFFECT] moving previously selected card to hand...`);
-          await runGameActionDelegate('moveCard', {
+          await args.runGameActionDelegate('moveCard', {
             cardId: gainedCardId,
-            toPlayerId: playerId,
+            toPlayerId: args.playerId,
             to: { location: 'playerHands' }
           });
           
-          reactionManager.unregisterTrigger(`blockade:${cardId}:gainCard`);
+          args.reactionManager.unregisterTrigger(`blockade:${args.cardId}:gainCard`);
         }
       });
       
-      const cardGained = cardLibrary.getCard(gainedCardId);
+      const cardGained = args.cardLibrary.getCard(gainedCardId);
       
-      reactionManager.registerReactionTemplate({
-        playerId,
-        id: `blockade:${cardId}:gainCard`,
-        condition: (args) => {
-          if (getCurrentPlayer(match).id !== args.trigger.args.playerId) {
+      args.reactionManager.registerReactionTemplate({
+        playerId: args.playerId,
+        id: `blockade:${args.cardId}:gainCard`,
+        condition: (conditionArgs) => {
+          if (getCurrentPlayer(args.match).id !== conditionArgs.trigger.args.playerId) {
             return false;
           }
           
-          return args.trigger.args.cardId !== undefined && cardLibrary.getCard(args.trigger.args.cardId).cardKey == cardGained.cardKey;
+          return conditionArgs.trigger.args.cardId !== undefined && args.cardLibrary.getCard(conditionArgs.trigger.args.cardId).cardKey == cardGained.cardKey;
         },
         compulsory: true,
         listeningFor: 'gainCard',
         triggeredEffectFn: async (args) => {
-          const curseCardIds = findCards(
-            match,
+          const curseCardIds = args.findCards(
             {
               location: 'supply',
               cards: { cardKeys: 'curse' }
             },
-            cardLibrary
           );
           
           if (!curseCardIds.length) {
@@ -134,11 +131,11 @@ const expansion: CardExpansionModule = {
           }
           
           console.log(`[BLOCKADE TRIGGERED EFFECT] gaining curse card to player's discard...`);
-          await runGameActionDelegate('gainCard', {
+          await args.runGameActionDelegate('gainCard', {
             playerId: args.trigger.args.playerId!,
-            cardId: curseCardIds[0],
+            cardId: curseCardIds[0].id,
             to: { location: 'playerDiscards' },
-          }, { loggingContext: { source: cardId } });
+          }, { loggingContext: { source: args.trigger.args.cardId } });
         }
       })
     }
@@ -942,10 +939,10 @@ const expansion: CardExpansionModule = {
       }).filter(playerId => args.reactionContext[playerId]?.result !== 'immunity');
       
       for (const targetPlayerId of targetPlayerIds) {
-        const curseCardIds = findCards(args.match, {
+        const curseCardIds = args.findCards({
           location: 'supply',
           cards: { cardKeys: 'curse' }
-        }, args.cardLibrary);
+        });
         if (curseCardIds.length === 0) {
           console.log(`[sea witch effect] no curses in supply...`);
           break;
@@ -953,7 +950,7 @@ const expansion: CardExpansionModule = {
         
         console.log(`[sea witch effect] giving curse to ${getPlayerById(args.match, targetPlayerId)}`);
         await args.runGameActionDelegate('gainCard', {
-          cardId: curseCardIds[0],
+          cardId: curseCardIds[0].id,
           playerId: targetPlayerId,
           to: { location: 'playerDiscards' }
         });
@@ -961,41 +958,39 @@ const expansion: CardExpansionModule = {
     }
   },
   'smugglers': {
-    registerEffects: () => async ({ cardPriceController, match, cardLibrary, playerId, runGameActionDelegate }) => {
+    registerEffects: () => async (cardEffectArgs) => {
       const previousPlayer = getPlayerStartingFrom({
-        startFromIdx: getPlayerTurnIndex({ match, playerId }),
-        match,
+        startFromIdx: getPlayerTurnIndex({ match: cardEffectArgs.match, playerId: cardEffectArgs.playerId }),
+        match: cardEffectArgs.match,
         distance: -1
       });
       
       console.log(`[smugglers effect] looking at ${previousPlayer} cards gained`);
       
-      const cardsGained = match.stats.cardsGained;
+      const cardsGained = cardEffectArgs.match.stats.cardsGained;
       
       const cardIdsGained = Object.keys(cardsGained)
         .map(Number)
         .filter(cardId => {
           return cardsGained[cardId].playerId === previousPlayer.id &&
-            cardsGained[cardId].turnNumber === match.turnNumber - 1;
+            cardsGained[cardId].turnNumber === cardEffectArgs.match.turnNumber - 1;
         });
       
-      let cardIds = findCards(
-        match,
+      let cards = cardEffectArgs.findCards(
         {
           cost: {
-            spec: { kind: 'upTo', amount: { treasure: 6 }, playerId },
-            cardCostController: cardPriceController
+            spec: { kind: 'upTo', amount: { treasure: 6 }, playerId: cardEffectArgs.playerId },
+            cardCostController: cardEffectArgs.cardPriceController
           },
-        },
-        cardLibrary,
-      ).filter(id => cardIdsGained.includes(id));
+        }
+      ).filter(card => cardIdsGained.includes(card.id));
       
-      console.log(`[smugglers effect] found ${cardIds.length} costing up to 6 that were played`);
+      console.log(`[smugglers effect] found ${cards.length} costing up to 6 that were played`);
       
       const inSupply = (card: Card) =>
-        match.basicSupply.concat(match.kingdomSupply).find(id => cardLibrary.getCard(id).cardKey === card.cardKey);
+        cardEffectArgs.match.basicSupply.concat(cardEffectArgs.match.kingdomSupply).find(id => cardEffectArgs.cardLibrary.getCard(id).cardKey === card.cardKey);
       
-      cardIds = cardIds.map(cardLibrary.getCard).map(inSupply).filter(id => id !== undefined);
+      const cardIds = cards.map(inSupply).filter(id => id !== undefined);
       
       console.log(`[smugglers effect] found ${cardIds.length} available cards in supply to choose from`);
       
@@ -1005,8 +1000,8 @@ const expansion: CardExpansionModule = {
       
       console.log(`[smugglers effect] prompting user to select a card...`);
       
-      const results = await runGameActionDelegate('selectCard', {
-        playerId: playerId,
+      const results = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
         restrict: cardIds,
         prompt: `Gain a card`,
       }) as number[];
@@ -1020,8 +1015,8 @@ const expansion: CardExpansionModule = {
       
       console.log(`[smugglers effect] gaining card...`);
       
-      await runGameActionDelegate('gainCard', {
-        playerId,
+      await cardEffectArgs.runGameActionDelegate('gainCard', {
+        playerId: cardEffectArgs.playerId,
         cardId: cardId,
         to: { location: 'playerDiscards' },
       });
