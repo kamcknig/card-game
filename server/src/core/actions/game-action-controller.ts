@@ -113,7 +113,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     let oldSource;
     
     try {
-      oldSource = findSourceByCardId(args.cardId, this.match, this.cardLibrary);
+      oldSource = findSourceByCardId(args.cardId, this.match);
     } catch (e) {
       console.warn(`[moveCard action] could not find source for card ${args.cardId}`);
     }

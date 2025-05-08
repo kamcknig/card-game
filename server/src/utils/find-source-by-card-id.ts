@@ -5,8 +5,7 @@ import { CardLibrary } from '../core/card-library.ts';
 
 export const findSourceByCardId = (
   cardId: number,
-  match: Match,
-  cardLibrary: CardLibrary,
+  match: Match
 ) => {
   let sourceStore: CardId[] | undefined = undefined;
   let storeKey: CardLocation = 'supply';
@@ -75,7 +74,7 @@ export const findSourceByCardId = (
     idx = sourceStore?.findIndex((e) => e === cardId);
   }
   else {
-    console.error(`[FIND CARD SOURCE] could not find card store for ${cardLibrary.getCard(cardId)}`);
+    console.error(`[FIND CARD SOURCE] could not find card store for ${cardId}`);
     throw new Error('Could not find card store');
   }
   
