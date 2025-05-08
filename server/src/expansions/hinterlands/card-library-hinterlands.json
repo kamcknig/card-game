@@ -76,6 +76,7 @@
     "type": ["ACTION"]
   },
   "jack-of-all-trades": {
+    "cardName": "Jack of all Trades",
     "cost": {
       "treasure": 4
     },
@@ -112,6 +113,7 @@
     "type": ["ACTION"]
   },
   "spice-merchant": {
+    "cardName": "Spice Merchant",
     "cost": {
       "treasure": 4
     },
@@ -153,5 +155,12 @@
       "treasure": 5
     },
     "type": ["ACTION"]
+  },
+  "witchs-hut": {
+    "cardName": "Witch's Hut",
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ATTACK", "ACTION"]
   }
 }

@@ -1541,6 +1541,72 @@ const expansion: CardExpansionModule = {
       });
     }
   },
+  'witchs-hut': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[witchs-hut effect] drawing 4 cards`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 4 });
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Discard cards`,
+        restrict: { from: { location: 'playerHands' } },
+        count: Math.min(2, cardEffectArgs.match.playerHands[cardEffectArgs.playerId].length),
+      }) as CardId[];
+      
+      console.log(`[witchs-hut effect] revealing and discarding ${selectedCardIds.length} cards`);
+      
+      for (const selectedCardId of selectedCardIds) {
+        await cardEffectArgs.runGameActionDelegate('revealCard', {
+          cardId: selectedCardId,
+          playerId: cardEffectArgs.playerId,
+        });
+        
+        await cardEffectArgs.runGameActionDelegate('discardCard', {
+          cardId: selectedCardId,
+          playerId: cardEffectArgs.playerId
+        });
+      }
+      
+      if (selectedCardIds.length === 2) {
+        if (selectedCardIds.map(cardEffectArgs.cardLibrary.getCard).every(card => card.type.includes('ACTION'))) {
+          console.log(`[witchs-hut effect] every card discarded is an action, others gaining a curse`);
+          
+          const targetPlayerIds = findOrderedTargets({
+            match: cardEffectArgs.match,
+            startingPlayerId: cardEffectArgs.playerId,
+            appliesTo: 'ALL_OTHER'
+          }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+          
+          for (const targetPlayerId of targetPlayerIds) {
+            const curseCardIds = findCards(
+              cardEffectArgs.match,
+              {
+                location: 'supply',
+                cards: {
+                  cardKeys: 'curse'
+                }
+              },
+              cardEffectArgs.cardLibrary
+            );
+            if (!curseCardIds.length) {
+              console.log(`[witchs-hut effect] no curse cards in supply`);
+              return;
+            }
+            const curseCard = cardEffectArgs.cardLibrary.getCard(curseCardIds.slice(-1)[0]);
+            console.log(`[witchs-hut effect] gaining ${curseCard} to ${targetPlayerId}`);
+            await cardEffectArgs.runGameActionDelegate('gainCard', {
+              playerId: targetPlayerId,
+              cardId: curseCard.id,
+              to: { location: 'playerDiscards' }
+            });
+          }
+        }
+        else {
+          console.log(`[witchs-hut effect] not every card discarded is an action`);
+        }
+      }
+    }
+  },
 }
 
 export default expansion;
