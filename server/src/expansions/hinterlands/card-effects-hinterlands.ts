@@ -1460,6 +1460,87 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'wheelwright': {
+    registerEffects: () => async (cardEffectArgs) => {
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: cardEffectArgs.playerId });
+      
+      const hand = cardEffectArgs.match.playerHands[cardEffectArgs.playerId];
+      
+      if (hand.length === 0) {
+        console.log(`[wheelwright effect] no cards in hand`);
+        return;
+      }
+      
+      let selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Discard card`,
+        restrict: { from: { location: 'playerHands' } },
+        count: 1,
+        optional: true
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.log(`[wheelwright effect] no card selected`);
+        return;
+      }
+      
+      let selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+      await cardEffectArgs.runGameActionDelegate('discardCard', {
+        cardId: selectedCard.id,
+        playerId: cardEffectArgs.playerId
+      });
+      
+      const { cost } = cardEffectArgs.cardPriceController.applyRules(selectedCard, {
+        match: cardEffectArgs.match,
+        playerId: cardEffectArgs.playerId
+      });
+      
+      const actionCardIds = findCards(
+        cardEffectArgs.match,
+        {
+          location: ['kingdom'],
+          cards: { type: 'ACTION' },
+          cost: {
+            cardCostController: cardEffectArgs.cardPriceController,
+            spec: {
+              kind: 'upTo',
+              playerId: cardEffectArgs.playerId,
+              amount: { treasure: cost.treasure, potion: cost.potion }
+            }
+          }
+        },
+        cardEffectArgs.cardLibrary
+      );
+      
+      if (!actionCardIds.length) {
+        console.log(`[wheelwright effect] no action cards in kingdom`);
+        return;
+      }
+      
+      selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Gain card`,
+        restrict: actionCardIds,
+        count: 1,
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.warn(`[wheelwright effect] no card selected`);
+        return;
+      }
+      
+      selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+      
+      console.log(`[wheelwright effect] gaining ${selectedCard}`);
+      
+      await cardEffectArgs.runGameActionDelegate('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCard.id,
+        to: { location: 'playerDiscards' }
+      });
+    }
+  },
 }
 
 export default expansion;
