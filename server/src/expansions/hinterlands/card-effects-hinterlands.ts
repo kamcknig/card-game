@@ -1371,6 +1371,95 @@ const expansion: CardExpansionModule = {
       }
     }),
   },
+  'weaver': {
+    registerLifeCycleMethods: () => ({
+      onDiscarded: async (args, eventArgs) => {
+        if (getTurnPhase(args.match.turnPhaseIndex) === 'cleanup') {
+          console.log(`[weaver onDiscarded event] happening during clean-up, skipping`);
+          return;
+        }
+        
+        const result = await args.runGameActionDelegate('userPrompt', {
+          prompt: 'Play Weaver?',
+          playerId: eventArgs.playerId,
+          actionButtons: [
+            { label: 'CANCEL', action: 1 }, { label: 'PLAY', action: 2 }
+          ]
+        });
+        
+        if (result.action === 1) {
+          console.log(`[weaver onDiscarded event] not playing weaver`);
+          return;
+        }
+        
+        console.log(`[weaver onDiscarded event] playing weaver`);
+        
+        await args.runGameActionDelegate('playCard', {
+          playerId: eventArgs.playerId,
+          cardId: eventArgs.cardId,
+        });
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        prompt: 'Choose two silvers, or gain a card costing up to $4',
+        playerId: cardEffectArgs.playerId,
+        actionButtons: [
+          { label: 'SILVERS', action: 1 }, { label: 'GAIN CARD', action: 2 }
+        ],
+      }) as { action: number, result: number[] };
+      
+      if (result.action === 1) {
+        console.log(`[weaver effect] choosing silvers`);
+        
+        const silverCardIds = findCards(
+          cardEffectArgs.match,
+          {
+            location: 'supply',
+            cards: {
+              cardKeys: 'silver'
+            }
+          },
+          cardEffectArgs.cardLibrary
+        );
+        
+        if (!silverCardIds.length) {
+          console.log(`[weaver effect] no silver cards in supply`);
+          return;
+        }
+        
+        const numToGain = Math.min(silverCardIds.length, 2);
+        
+        console.log(`[weaver effect] gaining ${numToGain} silver cards`);
+        
+        for (let i = 0; i < numToGain; i++) {
+          await cardEffectArgs.runGameActionDelegate('gainCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: silverCardIds.slice(-i - 1)[0],
+            to: { location: 'playerDiscards' }
+          });
+        }
+      }
+      else {
+        console.log(`[weaver effect] choosing card costing up to $4`);
+        
+        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Gain card`,
+          restrict: {
+            from: { location: ['supply', 'kingdom'] },
+            cost: { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: { treasure: 4 } }
+          },
+          count: 1,
+        }) as CardId[];
+        
+        if (!selectedCardIds.length) {
+          console.warn(`[weaver effect] no card selected`);
+          return;
+        }
+      }
+    }
+  },
 }
 
 export default expansion;
