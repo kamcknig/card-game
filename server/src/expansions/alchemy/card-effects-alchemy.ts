@@ -544,7 +544,8 @@ const expansion: CardExpansionModule = {
         playerId: args.playerId,
         prompt: `Gain card`,
         restrict: {
-          card: { ids: args.cardSourceController.getSource('kingdomSupply'), type: 'ACTION' },
+          ids: args.cardSourceController.getSource('kingdomSupply'),
+          card: { type: 'ACTION' },
           cost: { kind: 'upTo', amount: { treasure: 5 }, playerId: args.playerId }
         },
         count: 1,

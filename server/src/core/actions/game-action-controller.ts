@@ -111,7 +111,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       console.warn(`[moveCard action] could not find source for card ${args.cardId}`);
     }
     
-    const newSource = this._cardSourceController.getSource( args.to.location,args.toPlayerId);
+    const newSource = this._cardSourceController.getSource(args.to.location, args.toPlayerId);
     
     if (!newSource) {
       throw new Error(`[moveCard action] could not find source for card ${args.cardId}`);
@@ -271,22 +271,17 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       console.log(`[selectCard action] restricted to set of cards ${restrict}`);
       selectableCardIds = restrict;
     }
-    else if (restrict.from) {
-      if (restrict.from.location === 'playerDecks') {
-        console.warn('[selectCard action] will not be able to select from deck, not sending it to client, nor able to show them to them right now');
-        return [];
-      }
-      
+    else if (restrict.source) {
       selectableCardIds = this._findCards(
         {
-          location: restrict.from.location,
+          source: restrict.source,
           cards: !Array.isArray(restrict.card) ? restrict.card : undefined,
           cost: restrict.cost ? { spec: restrict.cost, cardCostController: this.cardPriceRuleController } : undefined,
         },
       ).map(card => card.id);
-      
-      console.log(`[selectCard action] found ${selectableCardIds.length} selectable cards`);
     }
+    
+    console.log(`[selectCard action] found ${selectableCardIds.length} selectable cards`);
     
     if (selectableCardIds?.length === 0) {
       console.log(`[selectCard action] found no cards within restricted set ${restrict}`);

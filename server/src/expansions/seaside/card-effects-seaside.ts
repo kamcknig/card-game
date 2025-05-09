@@ -309,7 +309,8 @@ const expansion: CardExpansionModule = {
       playerId,
       cardId: playedCardId,
       reactionManager,
-      cardLibrary
+      cardLibrary,
+      ...effectArgs
     }) => {
       console.log(`[haven effect] drawing card...`);
       await runGameActionDelegate('drawCard', { playerId });
@@ -321,7 +322,7 @@ const expansion: CardExpansionModule = {
       const cardIds = await runGameActionDelegate('selectCard', {
         prompt: 'Choose card to set aside',
         playerId,
-        restrict: { from: { location: 'playerHands' } },
+        restrict: effectArgs.cardSourceController.getSource('playerHands', playerId),
         count: 1,
       }) as number[];
       
@@ -363,14 +364,14 @@ const expansion: CardExpansionModule = {
     }
   },
   'island': {
-    registerEffects: () => async ({ runGameActionDelegate, playerId, cardId }) => {
+    registerEffects: () => async ({ runGameActionDelegate, playerId, cardId, ...effectArgs }) => {
       console.log(`[ISLAND EFFECT] prompting user to select card...`);
       
       const cardIds = (await runGameActionDelegate('selectCard', {
         prompt: 'Choose card',
         validPrompt: '',
         playerId,
-        restrict: { from: { location: 'playerHands' } },
+        restrict: effectArgs.cardSourceController.getSource('playerHands', playerId),
         count: 1,
       })) as number[];
       
@@ -618,7 +619,7 @@ const expansion: CardExpansionModule = {
         args.reactionManager.unregisterTrigger(`pirate:${eventArgs.cardId}:startTurn`);
       }
     }),
-    registerEffects: () => async ({ reactionManager, playerId, match, cardId, runGameActionDelegate }) => {
+    registerEffects: () => async ({ reactionManager, playerId, match, cardId, runGameActionDelegate, ...effectArgs }) => {
       const id = `pirate:${cardId}:startTurn`;
       const turnPlayed = match.stats.playedCards[cardId].turnNumber;
       
@@ -640,7 +641,7 @@ const expansion: CardExpansionModule = {
             validPrompt: '',
             playerId,
             restrict: {
-              from: { location: ['basicSupply', 'kingdomSupply'] },
+              ids: effectArgs.cardSourceController.getSource('basicSupply').concat(effectArgs.cardSourceController.getSource('kingdomSupply')),
               card: { type: 'TREASURE' },
               cost: { kind: 'upTo', amount: { treasure: 6 }, playerId }
             },
@@ -785,7 +786,7 @@ const expansion: CardExpansionModule = {
             const cardIds = await args.runGameActionDelegate('selectCard', {
               prompt: 'Trash card',
               playerId: eventArgs.playerId,
-              restrict: { from: { location: 'playerHands' } },
+              restrict: args.cardSourceController.getSource('playerHands', eventArgs.playerId),
               count: 1,
               optional: true,
               cancelPrompt: `Don't trash`
@@ -813,7 +814,7 @@ const expansion: CardExpansionModule = {
     }
   },
   'salvager': {
-    registerEffects: () => async ({ cardPriceController, runGameActionDelegate, playerId, match, cardLibrary }) => {
+    registerEffects: () => async ({ cardPriceController, runGameActionDelegate, playerId, cardLibrary , ...effectArgs}) => {
       console.log(`[salvager effect] gaining 1 buy...`);
       await runGameActionDelegate('gainBuy', { count: 1 });
       
@@ -821,7 +822,7 @@ const expansion: CardExpansionModule = {
       const cardIds = (await runGameActionDelegate('selectCard', {
         prompt: 'Trash card',
         playerId,
-        restrict: { from: { location: 'playerHands' } },
+        restrict: effectArgs.cardSourceController.getSource('playerHands', playerId),
         count: 1,
       })) as number[];
       
@@ -913,7 +914,7 @@ const expansion: CardExpansionModule = {
             
             const selectedCards = await triggerArgs.runGameActionDelegate('selectCard', {
               prompt: 'Discard cards',
-              restrict: { from: { location: 'playerHands' } },
+              restrict: args.cardSourceController.getSource('playerHands', eventArgs.playerId),
               count: 2,
               playerId: eventArgs.playerId
             }) as number[];
@@ -1093,7 +1094,7 @@ const expansion: CardExpansionModule = {
           const selectedCardIds = await triggerArgs.runGameActionDelegate('selectCard', {
             playerId: args.playerId,
             prompt: `Discard cards`,
-            restrict: { from: { location: 'playerHands' } },
+            restrict: args.cardSourceController.getSource('playerHands', args.playerId),
             count: 2
           }) as CardId[];
           
@@ -1194,7 +1195,7 @@ const expansion: CardExpansionModule = {
     }
   },
   'warehouse': {
-    registerEffects: () => async ({ runGameActionDelegate, playerId }) => {
+    registerEffects: () => async ({ runGameActionDelegate, playerId, ...effectArgs }) => {
       console.log(`[warehouse effect] drawing 3 cards...`);
       await runGameActionDelegate('drawCard', { playerId, count: 3 });
       
@@ -1204,7 +1205,7 @@ const expansion: CardExpansionModule = {
       const cardIds = (await runGameActionDelegate('selectCard', {
         prompt: 'Discard cards',
         playerId,
-        restrict: { from: { location: 'playerHands' } },
+        restrict: effectArgs.cardSourceController.getSource('playerHands', playerId),
         count: 3,
       })) as number[];
       

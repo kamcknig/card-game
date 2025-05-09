@@ -1,5 +1,4 @@
 import {
-  ActionRegistry,
   EndGameConditionRegistrar,
   ExpansionConfiguratorFactory,
   GameEventRegistrar,
@@ -70,7 +69,7 @@ export const registerEndGameConditions = (registrar: EndGameConditionRegistrar) 
     
     const colonyCards = findCards(
       {
-        location: 'basicSupply',
+        source: { location: 'basicSupply' },
         cards: { cardKeys: 'colony' }
       }
     );
@@ -82,7 +81,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   registrar('onGameStart', async (args) => {
     
     const peddlerCardIds = args.findCards({
-      location: 'kingdomSupply',
+      source: { location: 'kingdomSupply' },
       cards: { cardKeys: 'peddler' }
     }).map(card => card.id);
     

@@ -417,8 +417,11 @@ export class Card {
 const EffectTargetValues = ['ANY', 'ALL_OTHER', 'ALL'] as const;
 export type EffectTarget = typeof EffectTargetValues[number] | string;
 export type EffectRestrictionSpec = {
+  source: {
+    location: CardLocation | CardLocation[];
+    playerId?: PlayerId;
+  }
   card?: {
-    ids?: CardId[];
     cardKeys?: CardKey | CardKey[];
     type?: CardType | CardType[];
   };

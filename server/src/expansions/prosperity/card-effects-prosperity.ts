@@ -14,7 +14,10 @@ const expansion: CardExpansionModule = {
       const selectedCardToDiscardIds = await effectArgs.runGameActionDelegate('selectCard', {
         playerId: effectArgs.playerId,
         prompt: `Discard treasure`,
-        restrict: { from: { location: 'playerHands' }, card: { type: 'TREASURE' } },
+        restrict: {
+          ids: effectArgs.cardSourceController.getSource('playerHands', effectArgs.playerId),
+          card: { type: 'TREASURE' }
+        },
         count: 1,
         optional: true,
       }) as CardId[];
@@ -37,7 +40,8 @@ const expansion: CardExpansionModule = {
         playerId: effectArgs.playerId,
         prompt: `Gain card`,
         restrict: {
-          from: { location: ['basicSupply', 'kingdomSupply'] },
+          ids: effectArgs.cardSourceController.getSource('basicSupply')
+            .concat(effectArgs.cardSourceController.getSource('kingdomSupply')),
           cost: { playerId: effectArgs.playerId, kind: 'upTo', amount: { treasure: 4 } }
         },
         count: 1,
@@ -87,7 +91,7 @@ const expansion: CardExpansionModule = {
         const selectedCardIds = await effectArgs.runGameActionDelegate('selectCard', {
           playerId: effectArgs.playerId,
           prompt: `Trash card`,
-          restrict: { from: { location: 'playerHands' } },
+          restrict: effectArgs.cardSourceController.getSource('playerHands', effectArgs.playerId),
           count: 1,
         }) as CardId[];
         
@@ -131,7 +135,7 @@ const expansion: CardExpansionModule = {
         const selectedCardIds = await effectArgs.runGameActionDelegate('selectCard', {
           playerId: targetPlayerId,
           prompt: `Trash card`,
-          restrict: { from: { location: 'playerHands' } },
+          restrict: effectArgs.cardSourceController.getSource('playerHands', effectArgs.playerId),
           count: 1,
           optional: true,
         }) as CardId[];
@@ -245,7 +249,7 @@ const expansion: CardExpansionModule = {
         const selectedCardIds = await effectArgs.runGameActionDelegate('selectCard', {
           playerId: targetPlayerId,
           prompt: `Top-deck card`,
-          restrict: { from: { location: 'playerHands' } },
+          restrict: effectArgs.cardSourceController.getSource('playerHands', effectArgs.playerId),
           count: 1
         }) as CardId[];
         
@@ -357,7 +361,7 @@ const expansion: CardExpansionModule = {
       const selectedToTrashIds = await effectArgs.runGameActionDelegate('selectCard', {
         playerId: effectArgs.playerId,
         prompt: `Trash card`,
-        restrict: { from: { location: 'playerHands' } },
+        restrict: effectArgs.cardSourceController.getSource('playerHands', effectArgs.playerId),
         count: 1
       }) as CardId[];
       
@@ -378,7 +382,8 @@ const expansion: CardExpansionModule = {
         playerId: effectArgs.playerId,
         prompt: `Gain card`,
         restrict: {
-          from: { location: ['kingdomSupply', 'basicSupply'] },
+          ids: effectArgs.cardSourceController.getSource('basicSupply')
+            .concat(effectArgs.cardSourceController.getSource('kingdomSupply')),
           cost: {
             kind: 'upTo',
             playerId: effectArgs.playerId,
@@ -409,7 +414,7 @@ const expansion: CardExpansionModule = {
       const selectedCardIdsToTrash = await effectArgs.runGameActionDelegate('selectCard', {
         playerId: effectArgs.playerId,
         prompt: `Trash cards`,
-        restrict: { from: { location: 'playerHands' } },
+        restrict: effectArgs.cardSourceController.getSource('playerHands', effectArgs.playerId),
         count: {
           kind: 'upTo',
           count: effectArgs.match.playerHands[effectArgs.playerId].length
@@ -440,7 +445,8 @@ const expansion: CardExpansionModule = {
         playerId: effectArgs.playerId,
         prompt: `Gain card`,
         restrict: {
-          from: { location: ['basicSupply', 'kingdomSupply'] },
+          ids: effectArgs.cardSourceController.getSource('basicSupply')
+            .concat(effectArgs.cardSourceController.getSource('kingdomSupply')),
           cost: {
             kind: 'exact',
             amount: { treasure: cost.treasure, potion: 0 },
@@ -535,7 +541,7 @@ const expansion: CardExpansionModule = {
         const selectedCardIds = await effectArgs.runGameActionDelegate('selectCard', {
           playerId: effectArgs.playerId,
           prompt: `Trash card`,
-          restrict: { from: { location: 'playerHands' } },
+          restrict: effectArgs.cardSourceController.getSource('playerHands', effectArgs.playerId),
           count: 1
         }) as CardId[];
         
@@ -590,7 +596,7 @@ const expansion: CardExpansionModule = {
         playerId: effectArgs.playerId,
         prompt: `Choose action`,
         restrict: {
-          from: { location: 'playerHands' },
+          ids: effectArgs.cardSourceController.getSource('playerHands', effectArgs.playerId),
           card: { type: 'ACTION' }
         },
         count: 1,
@@ -684,7 +690,7 @@ const expansion: CardExpansionModule = {
         const selectedCardIds = await effectArgs.runGameActionDelegate('selectCard', {
           playerId: effectArgs.playerId,
           prompt: `Reveal card`,
-          restrict: { from: { location: 'playerHands' } },
+          restrict: effectArgs.cardSourceController.getSource('playerHands', effectArgs.playerId),
           count: 1
         }) as CardId[];
         
@@ -908,7 +914,10 @@ const expansion: CardExpansionModule = {
       const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Play treasure`,
-        restrict: { from: { location: 'playerHands' }, card: { type: 'TREASURE' } },
+        restrict: {
+          ids: cardEffectArgs.cardSourceController.getSource('playerHands', cardEffectArgs.playerId),
+          card: { type: 'TREASURE' }
+        },
         count: 1,
         optional: true,
       }) as CardId[];
@@ -942,7 +951,7 @@ const expansion: CardExpansionModule = {
       const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Discard cards`,
-        restrict: { from: { location: 'playerHands' } },
+        restrict: cardEffectArgs.cardSourceController.getSource('playerHands', cardEffectArgs.playerId),
         count: { kind: 'upTo', count: cardEffectArgs.match.playerHands[cardEffectArgs.playerId].length }
       }) as CardId[];
       
@@ -976,7 +985,7 @@ const expansion: CardExpansionModule = {
         const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
           playerId: targetPlayerId,
           prompt: `Discard${hand.length > 1 ? ' to draw' : ''}?`,
-          restrict: { from: { location: 'playerHands' } },
+          restrict: cardEffectArgs.cardSourceController.getSource('playerHands', cardEffectArgs.playerId),
           count: Math.min(2, hand.length),
           optional: true,
         }) as CardId[];

@@ -8,7 +8,7 @@ export class CardSourceController {
   
   registerZone(sourceKey: CardLocation, source: CardId[], index: number = NaN) {
     const key = `${sourceKey}${isNaN(index) ? '' : ':' + index}`
-    if (this._sourceMap.has(key)) {
+    if (this._sourceMap.has(sourceKey) || this._sourceMap.has(key)) {
       throw new Error(`Zone ${key} already exists`);
     }
     

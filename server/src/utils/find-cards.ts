@@ -8,7 +8,10 @@ import { FindCardsFnFactory } from '../types.ts';
 import { CardSourceController } from '../core/card-source-controller.ts';
 
 export type FindCardsFilter = {
-  location?: CardLocation | CardLocation[];
+  source?: {
+    location: CardLocation | CardLocation[],
+    playerId?: PlayerId;
+  },
   cost?: {
     spec: CostSpec
     cardCostController: CardPriceRulesController,
@@ -18,14 +21,18 @@ export type FindCardsFilter = {
     cardKeys?: CardKey | CardKey[];
     type?: CardType | CardType[];
   },
-  owner: PlayerId | undefined;
+  owner?: PlayerId | undefined;
 }
 
-const findCardsByLocation = (locations: CardLocation[], cardSourceController: CardSourceController) => {
+const findCardsByLocation = (locations: CardLocation[], cardSourceController: CardSourceController, playerId?: PlayerId) => {
   let cardIds: CardId[] = [];
   
   for (const location of locations) {
-    const source = cardSourceController.getSource(location);
+    let source = cardSourceController.getSource(location, playerId);
+    if (!source) {
+      source = cardSourceController.getSource(location);
+    }
+    
     if (source) {
       cardIds = cardIds.concat(source);
     }
@@ -36,9 +43,9 @@ const findCardsByLocation = (locations: CardLocation[], cardSourceController: Ca
 export const findCardsFactory: FindCardsFnFactory = (cardSourceController, cardLibrary) => (filter: FindCardsFilter) => {
   let cardIds: CardId[] = [];
   
-  if (filter.location) {
-    filter.location = castArray(filter.location);
-    cardIds = findCardsByLocation(filter.location, cardSourceController);
+  if (filter.source) {
+    filter.source.location = castArray(filter.source.location);
+    cardIds = findCardsByLocation(filter.source.location, cardSourceController, filter.source.playerId);
   }
   else {
     cardIds = cardLibrary.getAllCardsAsArray().map(card => card.id);
