@@ -36,14 +36,6 @@ export const kingdomCardKeyStore = atom<CardKey[]>([]);
 export const playAreaStore =
   computed([getCardSourceStore('playArea'), cardStore], (playAreaCardIds, cardsById) => playAreaCardIds?.map(cardId => cardsById[cardId]) ?? []);
 
-type MatStoreType = Record<Mats, CardId[]>;
-export const selfPlayerMatStore = computed(
-  [selfPlayerIdStore, matchStore],
-  (selfId, match): MatStoreType => {
-    return match?.mats?.[selfId!] ?? {} as MatStoreType
-  }
-);
-
 export const setAsideStore = computed(
   [matchStore],
   (match) => Object.keys(match?.mats ?? {}).reduce((acc, nextPlayerId) => {
@@ -51,12 +43,7 @@ export const setAsideStore = computed(
   }, [] as CardId[])
 );
 
-export const activeDurationCardStore =
-  computed([cardSourceStore, cardStore], (match, cards) => match['activeDurationCards']?.map(cardId => cards[cardId]) ?? []);
-
 (globalThis as any).playAreaStore = playAreaStore;
-(globalThis as any).matStore = selfPlayerMatStore;
 (globalThis as any).nonSupplyStore = nonSupplyStore;
-(globalThis as any).activeDurationCardStore = activeDurationCardStore;
 (globalThis as any).rewardsStore = rewardsStore;
 (globalThis as any).setAsideStore = setAsideStore;

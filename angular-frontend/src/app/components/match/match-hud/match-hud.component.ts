@@ -19,7 +19,7 @@ import { logEntryIdsStore, logStore } from '../../../state/log-state';
 import { MatTabComponent } from './mat-zone/mat-tab.component';
 import { CardComponent } from '../../card/card.component';
 import { playerScoreStore } from '../../../state/player-logic';
-import { selfPlayerMatStore, setAsideStore } from '../../../state/match-logic';
+import { setAsideStore } from '../../../state/match-logic';
 import { LogEntryMessage } from '../../../../types';
 import { cardStore } from '../../../state/card-state';
 import { MatPlayerContent } from './types';
