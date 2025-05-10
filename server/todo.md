@@ -23,21 +23,10 @@ need to show the context of the kingdom card for something like young witch, and
 - it also puts it in the detail view of both the witch and the bane card, when viewing the details of one or the
 other, it will show the opposite card smaller next to it
 
-
-
 the rules state that "set aside" cards do not discard. you made that complicated logic for active
 duration cards. but you can just use set-aside and then schedule a movecard reaction at
 the start of next turn, and then they'll be in play and will be discarded. and the gray effect
 can be checked by seeing if they are in the play area on the turn they were played or not
-
-you've added a "nonSupplyCards" property to Match via the cornucopia types definitions. This
-needs to be searchable in find card utility methods. probably need a way to "register"
-searchable zones as a dynamic way to add things like that. when registering you can
-register the "store key" that would normally be returned as well. for now i think i'll have
-to hard-code searching that new property. maybe this can be done when refactorying the find
-methods into find method factories
-
-
 
 Bugs
 
