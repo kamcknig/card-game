@@ -1,28 +1,16 @@
 import { castArray } from 'es-toolkit/compat';
-import { isUndefined } from 'es-toolkit';
-import { CardId, CardKey, CardLocation, CardType, CostSpec, Match, PlayerId } from 'shared/shared-types.ts';
+import { CardId, CardLocation, PlayerId } from 'shared/shared-types.ts';
 
 import { validateCostSpec } from '../shared/validate-cost-spec.ts';
-import { CardPriceRulesController } from '../core/card-price-rules-controller.ts';
-import { FindCardsFnFactory } from '../types.ts';
+import {
+  FindCardsFnFactory,
+  isCardDataFindCardsFilter,
+  isCostFindCardsFilter,
+  isSourceFindCardsFilter,
+  NonLocationFilters,
+  SourceFindCardsFilter
+} from '../types.ts';
 import { CardSourceController } from '../core/card-source-controller.ts';
-
-export type FindCardsFilter = {
-  source?: {
-    location: CardLocation | CardLocation[],
-    playerId?: PlayerId;
-  },
-  cost?: {
-    spec: CostSpec
-    cardCostController: CardPriceRulesController,
-  };
-  cards?: {
-    tags?: string | string[];
-    cardKeys?: CardKey | CardKey[];
-    type?: CardType | CardType[];
-  },
-  owner?: PlayerId | undefined;
-}
 
 const findCardsByLocation = (locations: CardLocation[], cardSourceController: CardSourceController, playerId?: PlayerId) => {
   let cardIds: CardId[] = [];
@@ -40,12 +28,32 @@ const findCardsByLocation = (locations: CardLocation[], cardSourceController: Ca
   return cardIds;
 }
 
-export const findCardsFactory: FindCardsFnFactory = (cardSourceController, cardLibrary) => (filter: FindCardsFilter) => {
+export const findCardsFactory: FindCardsFnFactory = (cardSourceController, cardCostController, cardLibrary) => filters => {
   let cardIds: CardId[] = [];
+  let locationFilter: SourceFindCardsFilter | undefined = undefined;
+  let otherFilters: NonLocationFilters[] = [];
   
-  if (filter.source) {
-    filter.source.location = castArray(filter.source.location);
-    cardIds = findCardsByLocation(filter.source.location, cardSourceController, filter.source.playerId);
+  if (!Array.isArray(filters)) {
+    if (isSourceFindCardsFilter(filters)) {
+      locationFilter = filters;
+    }
+    else {
+      otherFilters = [filters];
+    }
+  }
+  else {
+    if (isSourceFindCardsFilter(filters[0])) {
+      locationFilter = filters.shift() as SourceFindCardsFilter;
+      otherFilters = [...filters as NonLocationFilters[]];
+    }
+    else {
+      otherFilters = [...filters as NonLocationFilters[]];
+    }
+  }
+  
+  if (locationFilter) {
+    locationFilter.location = castArray(locationFilter.location);
+    cardIds = findCardsByLocation(locationFilter.location, cardSourceController, locationFilter.playerId);
   }
   else {
     cardIds = cardLibrary.getAllCardsAsArray().map(card => card.id);
@@ -53,33 +61,30 @@ export const findCardsFactory: FindCardsFnFactory = (cardSourceController, cardL
   
   let sourceCards = cardIds.map(cardLibrary.getCard);
   
-  if (filter.owner) {
-    sourceCards = sourceCards.filter(card => card.owner === filter.owner);
-  }
-  
-  if (!isUndefined(filter.cards)) {
-    if (!isUndefined(filter.cards?.cardKeys)) {
-      const keys = castArray(filter.cards.cardKeys);
-      sourceCards = sourceCards.filter(card => keys.includes(card.cardKey));
+  for (const otherFilter of otherFilters) {
+    if (isCardDataFindCardsFilter(otherFilter)) {
+      if (otherFilter.tags) {
+        sourceCards = sourceCards.filter(card => card.type.some(t => otherFilter.tags!.includes(t)));
+      }
+      
+      if (otherFilter.cardKeys) {
+        sourceCards = sourceCards.filter(card => otherFilter.cardKeys!.includes(card.cardKey));
+      }
+      if (otherFilter.owner) {
+        sourceCards = sourceCards.filter(card => card.owner === otherFilter.owner);
+      }
+      if (otherFilter.cardType) {
+        sourceCards = sourceCards.filter(card => card.type.some(t => otherFilter.cardType!.includes(t)));
+      }
     }
-    if (!isUndefined(filter.cards?.type)) {
-      const types = castArray(filter.cards.type);
-      sourceCards = sourceCards.filter(card => card.type.some(t => types.includes(t)));
-    }
-    
-    if (!isUndefined(filter.cards?.tags)) {
-      const tags = castArray(filter.cards.tags);
-      sourceCards = sourceCards.filter(card => card.tags?.some(t => tags.includes(t)));
-    }
-  }
-  
-  if (filter.cost) {
-    sourceCards = sourceCards.filter(card => {
-      const { cost: effectiveCost } = filter.cost!.cardCostController.applyRules(card, {
-        playerId: filter.cost!.spec.playerId
+    else if (isCostFindCardsFilter(otherFilter)) {
+      sourceCards = sourceCards.filter(card => {
+        const { cost: effectiveCost } = cardCostController.applyRules(card, {
+          playerId: otherFilter.playerId
+        });
+        return validateCostSpec(otherFilter, effectiveCost);
       });
-      return validateCostSpec(filter.cost!.spec, effectiveCost);
-    });
+    }
   }
   
   return sourceCards;

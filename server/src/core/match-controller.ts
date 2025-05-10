@@ -88,15 +88,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       cardSources: {},
       playerVictoryTokens: {},
       coffers: {},
-      nonSupplyCards: [],
       cardOverrides: {},
-      activeDurationCards: [],
       scores: {},
-      trash: [],
       players: [],
-      basicSupply: [],
-      kingdomSupply: [],
-      playerDecks: {},
       config: {} as ComputedMatchConfiguration,
       turnNumber: 0,
       roundNumber: 0,
@@ -104,12 +98,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       playerPotions: 0,
       playerBuys: 0,
       playerTreasure: 0,
-      playerDiscards: {},
-      playerHands: {},
       playerActions: 0,
       turnPhaseIndex: 0,
       selectableCards: {},
-      playArea: [],
       mats: {},
       stats: {
         playedCardsByTurn: {},
@@ -129,8 +120,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     const snapshot = this.getMatchSnapshot();
     
-    this._findCards = findCardsFactory(this._cardSourceController, this._cardLibrary);
-    
     this._logManager = new LogManager({
       socketMap: this._socketMap,
     });
@@ -139,6 +128,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._cardLibrary,
       this._match
     );
+    
+    this._findCards = findCardsFactory(this._cardSourceController, this._cardPriceController, this._cardLibrary);
     
     this._reactionManager = new ReactionManager(
       this._cardSourceController,
@@ -161,7 +152,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._match,
       this._socketMap,
       this._cardLibrary,
-      (action, ...args) => this.runGameAction(action, ...args)
+      (action, ...args) => this.runGameAction(action, ...args),
+      this._findCards
     );
     
     this.gameActionsController = new GameActionController(
@@ -338,7 +330,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
               return c.id;
             }),
           );
-          fisherYatesShuffle(deck);
+          fisherYatesShuffle(deck, true);
         },
       );
     });
@@ -514,11 +506,10 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     const match = this._match;
     
-    if (
-      match.basicSupply.map((c) => this._cardLibrary.getCard(c)).filter((c) =>
-        c.cardKey === 'province'
-      ).length === 0
-    ) {
+    if (this._findCards([
+      { location: 'basicSupply' },
+      { cardKeys: 'province' }
+    ]).length === 0) {
       console.log(`[match] supply has no more provinces, game over`);
       await this.endGame();
       return true;
@@ -526,7 +517,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     const startingSupplyCount = getStartingSupplyCount(match);
     
-    const remainingSupplyCount = getRemainingSupplyCount(match, this._cardLibrary);
+    const remainingSupplyCount = getRemainingSupplyCount(this._findCards);
     
     const emptyPileCount = startingSupplyCount - remainingSupplyCount;
     
@@ -571,7 +562,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         await this.runGameAction('moveCard', {
           toPlayerId: player.id,
           cardId,
-          to: { location: 'playerDecks' },
+          to: { location: 'playerDeck' },
         })
       }
     }
@@ -596,10 +587,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           playerId,
           turnsTaken,
           score: match.scores[playerId],
-          deck: match.playerDecks[playerId].concat(
-            match.playerHands[playerId],
-            match.playerDiscards[playerId],
-          ),
+          deck: this._findCards([{ owner: playerId }]).map(card => card.id),
         });
         return prev;
       }, [] as MatchSummary['playerSummary'])

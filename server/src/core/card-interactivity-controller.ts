@@ -1,4 +1,4 @@
-import { AppSocket, RunGameActionDelegate } from '../types.ts';
+import { AppSocket, FindCardsFn, RunGameActionDelegate } from '../types.ts';
 import { CardId, Match, PlayerId, TurnPhaseOrderValues, } from 'shared/shared-types.ts';
 import { isUndefined } from 'es-toolkit/compat';
 import { CardLibrary } from './card-library.ts';
@@ -18,6 +18,7 @@ export class CardInteractivityController {
     private readonly _socketMap: Map<PlayerId, AppSocket>,
     private readonly _cardLibrary: CardLibrary,
     private readonly runGameDelegate: RunGameActionDelegate,
+    private readonly _findCards: FindCardsFn
   ) {
     this._socketMap.forEach((s) => {
       s.on('cardTapped', (pId, cId) => this.onCardTapped(pId, cId));
@@ -65,8 +66,7 @@ export class CardInteractivityController {
     if (turnPhase === 'buy' && match.playerBuys > 0) {
       const cardKeysAdded: string[] = [];
       
-      const supply = this._cardSourceController.getSource('supply')
-        .map((id) => this._cardLibrary.getCard(id));
+      const supply = this._findCards({ location: ['basicSupply', 'kingdomSupply'] });
       
       // a loop going backwards through the supply and kingdom. we only mark the last one as selectable (this should
       // be the top of any pile). a bit hacky to assume that.
@@ -151,7 +151,7 @@ export class CardInteractivityController {
       return;
     }
     
-    const hand = match.playerHands[player.id];
+    const hand = this._cardSourceController.getSource('playerHand', player.id);
     const treasureCards = hand.filter((e) =>
       this._cardLibrary.getCard(e).type.includes('TREASURE')
     );
@@ -186,7 +186,8 @@ export class CardInteractivityController {
     if (phase === 'buy') {
       let overpay = { inTreasure: 0, inCoffer: 0 };
       
-      const hand = this.match.playerHands[playerId];
+      const hand = this._cardSourceController.getSource('playerHand', playerId);
+      
       if (hand.includes(cardId)) {
         await this.runGameDelegate('playCard', { playerId, cardId });
       }

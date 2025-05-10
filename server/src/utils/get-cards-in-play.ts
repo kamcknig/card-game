@@ -1,3 +1,3 @@
-import { Match } from "shared/shared-types.ts";
+import { FindCardsFn } from '../types.ts';
 
-export const getCardsInPlay = (match: Match) => match.playArea.concat(match.activeDurationCards);
+export const getCardsInPlay = (findCards: FindCardsFn) => findCards({ location: ['playArea', 'activeDuration'] });

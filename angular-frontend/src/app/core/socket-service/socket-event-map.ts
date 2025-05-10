@@ -14,6 +14,7 @@ import { applyPatch, Operation } from 'fast-json-patch';
 import { ClientListenEventNames, ClientListenEvents } from '../../../types';
 import { logManager } from '../log-manager';
 import { kingdomCardKeyStore, supplyCardKeyStore } from '../../state/match-logic';
+import { cardSourceStore } from '../../state/card-source-store';
 
 export type SocketEventMap = Partial<{ [p in ClientListenEventNames]: ClientListenEvents[p] }>;
 
@@ -64,7 +65,9 @@ export const socketToGameEventMap = (): SocketEventMap => {
 
     const match = matchStore.get() as Match;
 
-    const kingdomSupplyCardKeys = match?.basicSupply.reduce((prev, nextCard) => {
+    const cardSource = cardSourceStore.get();
+
+    const kingdomSupplyCardKeys = cardSource['basicSupply'].reduce((prev, nextCard) => {
       const card = cardsById[nextCard];
 
       if (card.type.includes(('VICTORY'))) {
@@ -82,7 +85,7 @@ export const socketToGameEventMap = (): SocketEventMap => {
     }, [[], []] as [CardKey[], CardKey[]]);
     supplyCardKeyStore.set(kingdomSupplyCardKeys ?? [[], []]);
 
-    const kingdomCardKeys = match?.kingdomSupply.reduce((prev, nextCard) => {
+    const kingdomCardKeys = cardSource['kingdomSupply'].reduce((prev, nextCard) => {
       const card = cardsById[nextCard];
       if (prev.includes(card.cardKey)) return prev;
       prev.push(card.cardKey);
@@ -128,6 +131,7 @@ export const socketToGameEventMap = (): SocketEventMap => {
   map['patchMatch'] = (patch: Operation[]) => {
     const current = structuredClone(matchStore.get()) ?? {} as Match;
     applyPatch(current, patch);
+    cardSourceStore.set(current.cardSources);
     matchStore.set(current);
   };
 

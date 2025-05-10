@@ -23,11 +23,11 @@ import { isNumber, isUndefined } from 'es-toolkit/compat';
 import { AppList } from '../app-list';
 import { SocketService } from '../../../../core/socket-service/socket.service';
 import { gamePausedStore } from '../../../../state/game-logic';
-import { playerDeckStore, playerDiscardStore } from '../../../../state/player-logic';
 import { selectableCardStore } from '../../../../state/interactive-logic';
 import { SelectCardArgs } from '../../../../../types';
 import { BaseSupplyView } from '../base-supply';
 import { NonSupplyKingdomView } from '../non-supply-kingdom-view';
+import { getCardSourceStore } from '../../../../state/card-source-store';
 
 export class MatchScene extends Scene {
   private _board: Container = new Container();
@@ -190,7 +190,7 @@ export class MatchScene extends Scene {
     this._playArea = this.addChild(new PlayAreaView());
 
     this._deck = new CardStackView({
-      $cardIds: playerDeckStore(this._selfId),
+      $cardIds: getCardSourceStore('playerDeck', this._selfId),
       label: 'DECK',
       cardFacing: 'back',
       alwaysShowCountBadge: true
@@ -198,7 +198,7 @@ export class MatchScene extends Scene {
     this.addChild(this._deck);
 
     this._discard = new CardStackView({
-      $cardIds: playerDiscardStore(this._selfId),
+      $cardIds: getCardSourceStore('playerDiscard', this._selfId),
       label: 'DISCARD',
       showCountBadge: false,
       cardFacing: 'front'

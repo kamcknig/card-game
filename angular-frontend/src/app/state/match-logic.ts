@@ -3,14 +3,13 @@ import { Card, CardId, CardKey, CardNoId, Mats } from 'shared/shared-types';
 import { matchStore } from './match-state';
 import { cardStore } from './card-state';
 import { selfPlayerIdStore } from './player-state';
+import { cardSourceStore } from './card-source-store';
 
 export const basicSupplyStore =
-  computed(matchStore, m => m?.basicSupply ?? []);
+  computed(cardSourceStore, m => m['basicSupply'] ?? []);
 
-export const nonSupplyStore = computed(
-  matchStore,
-  match => match?.nonSupplyCards ?? []
-);
+export const nonSupplyStore =
+  computed(cardSourceStore, match => match['nonSupplyCards'] ?? []);
 
 export const rewardsStore: ReadableAtom<{
   startingCards: CardNoId[]; cards: Card[]
@@ -38,13 +37,13 @@ export const supplyCardKeyStore = atom<[CardKey[], CardKey[]]>([[], []]);
 export const kingdomCardKeyStore = atom<CardKey[]>([]);
 
 export const kingdomSupplyStore =
-  computed(matchStore, m => m?.kingdomSupply ?? []);
+  computed(cardSourceStore, m => m['kingdomSupply'] ?? []);
 
 export const trashStore =
-  computed(matchStore, m => m?.trash ?? []);
+  computed(cardSourceStore, m => m['trash'] ?? []);
 
 export const playAreaStore =
-  computed([matchStore, cardStore], (match, cards) => match?.playArea?.map(cardId => cards[cardId]) ?? []);
+  computed([cardSourceStore, cardStore], (match, cards) => match['playArea']?.map(cardId => cards[cardId]) ?? []);
 
 type MatStoreType = Record<Mats, CardId[]>;
 export const selfPlayerMatStore = computed(
@@ -62,7 +61,7 @@ export const setAsideStore = computed(
 );
 
 export const activeDurationCardStore =
-  computed([matchStore, cardStore], (match, cards) => match?.activeDurationCards?.map(cardId => cards[cardId]) ?? []);
+  computed([cardSourceStore, cardStore], (match, cards) => match['activeDurationCards']?.map(cardId => cards[cardId]) ?? []);
 
 (globalThis as any).supplyStore = basicSupplyStore;
 (globalThis as any).kingdomStore = kingdomSupplyStore;

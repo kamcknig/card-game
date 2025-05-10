@@ -1,10 +1,11 @@
 import { Container, Graphics } from 'pixi.js';
 import { SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
 import { computed } from 'nanostores';
-import { basicSupplyStore, supplyCardKeyStore } from '../../../state/match-logic';
+import { supplyCardKeyStore } from '../../../state/match-logic';
 import { cardStore } from '../../../state/card-state';
 import { Card, CardKey } from 'shared/shared-types';
 import { PileView } from './pile';
+import { getCardSourceStore } from '../../../state/card-source-store';
 
 export class BaseSupplyView extends Container {
   private _background: Container;
@@ -41,7 +42,7 @@ export class BaseSupplyView extends Container {
 
     this._cleanup.push(
       computed(
-        [basicSupplyStore, supplyCardKeyStore, cardStore],
+        [getCardSourceStore('basicSupply'), supplyCardKeyStore, cardStore],
         (supply, supplyCardKeys, cards) => {
           const supplyCards = supply.map(id => cards[id]);
 

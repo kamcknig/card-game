@@ -7,7 +7,9 @@ import {
   CardLocation,
   CardLocationSpec,
   CardNoId,
+  CardType,
   ComputedMatchConfiguration,
+  CostSpec,
   EffectTarget,
   Match,
   PlayerId,
@@ -20,16 +22,21 @@ import { toNumber } from 'es-toolkit/compat';
 
 import { CardLibrary } from './core/card-library.ts';
 import { ReactionManager } from './core/reactions/reaction-manager.ts';
-import { GameActionController } from './core/actions/game-action-controller.ts';
 import { ExpansionData } from '@expansions/expansion-library.ts';
 import { CardPriceRulesController } from './core/card-price-rules-controller.ts';
-import { FindCardsFilter } from './utils/find-cards.ts';
 import { CardSourceController } from './core/card-source-controller.ts';
 
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
 
 export type DistributiveOmit<T, K extends PropertyKey> =
   T extends any ? Omit<T, K> : never;
+
+declare module 'shared/shared-types.ts' {
+  interface SelectActionCardArgs {
+    restrict: FindCardsFnInput | CardId[];
+    autoSelect?: boolean;
+  }
+}
 
 /**
  * A base match configuration that can be used to spread default values.
@@ -119,43 +126,43 @@ export interface BaseGameActionDefinitionMap {
   gainCoffer: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
   exchangeCoffer: (args: { playerId: PlayerId; count: number; }) => Promise<void>;
   buyCard: (args: {
-    cardId: CardId;
+    cardId: CardId | Card;
     playerId: PlayerId,
     cardCost: CardCost,
     overpay?: { inTreasure: number; inCoffer: number; }
   }) => Promise<void>;
   checkForRemainingPlayerActions: () => Promise<void>;
-  discardCard: (args: { cardId: CardId, playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
+  discardCard: (args: { cardId: CardId | Card, playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
   drawCard: (args: { playerId: PlayerId, count?: number }, context?: GameActionContext) => Promise<CardId[] | null>
   endTurn: () => Promise<void>;
   gainAction: (args: { count: number }, context?: GameActionContext) => Promise<void>;
   gainBuy: (args: { count: number }, context?: GameActionContext) => Promise<void>;
   gainCard: (args: {
     playerId: PlayerId,
-    cardId: CardId,
+    cardId: CardId | Card,
     to: CardLocationSpec
   }, context?: GameActionContext & { bought?: boolean, overpay?: number }) => Promise<void>;
   gainPotion: (args: { count: number }) => Promise<void>;
   gainTreasure: (args: { count: number }, context?: GameActionContext) => Promise<void>;
   moveCard: (args: {
     toPlayerId?: PlayerId,
-    cardId: CardId,
+    cardId: CardId | Card,
     to: CardLocationSpec
   }) => Promise<CardLocation | undefined>;
   nextPhase: () => Promise<void>;
   playCard: (args: {
     playerId: PlayerId,
-    cardId: CardId,
+    cardId: CardId | Card,
     overrides?: GameActionOverrides
   }, context?: GameActionContext) => Promise<void>;
   revealCard: (args: {
-    cardId: CardId,
+    cardId: CardId | Card,
     playerId: PlayerId,
     moveToSetAside?: boolean
   }, context?: GameActionContext) => Promise<void>;
   selectCard: (args: SelectActionCardArgs) => Promise<CardId[]>;
   shuffleDeck: (args: { playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
-  trashCard: (args: { cardId: CardId, playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
+  trashCard: (args: { cardId: CardId | Card, playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
   userPrompt: (args: UserPromptActionArgs) => Promise<unknown>;
 }
 
@@ -200,9 +207,63 @@ export interface AppContext {
   findCards: FindCardsFn;
 }
 
-export type FindCardsFnFactory = (cardSourceController: CardSourceController, cardLibrary: CardLibrary) => FindCardsFn;
+export type CostFindCardsFilter = CostSpec;
 
-export type FindCardsFn = (filter: FindCardsFilter) => Card[];
+export interface CardDataFindCardsFilter {
+  tags?: string | string[];
+  cardKeys?: CardKey | CardKey[];
+  cardType?: CardType | CardType[];
+  owner?: PlayerId;
+}
+
+export interface SourceFindCardsFilter {
+  location: CardLocation | CardLocation[];
+  playerId?: PlayerId;
+}
+
+export type NonLocationFilters = CostFindCardsFilter | CardDataFindCardsFilter;
+
+export type FindCardsFnFactory = (cardSourceController: CardSourceController, cardCostController: CardPriceRulesController, cardLibrary: CardLibrary) => FindCardsFn;
+
+export type FindCardsFnInput =
+  | NonLocationFilters[]
+  | SourceFindCardsFilter
+  | NonLocationFilters
+  | [SourceFindCardsFilter, ...NonLocationFilters[]];
+
+
+export type FindCardsFn = (filters: FindCardsFnInput) => Card[];
+
+export function isSourceFindCardsFilter(filter: unknown): filter is SourceFindCardsFilter {
+  return (
+    typeof filter === 'object' &&
+    filter !== null &&
+    'location' in filter
+  );
+}
+
+export function isCostFindCardsFilter(filter: unknown): filter is CostFindCardsFilter {
+  return (
+    typeof filter === 'object' &&
+    filter !== null &&
+    'kind' in filter &&
+    'playerId' in filter &&
+    'amount' in filter
+  );
+}
+
+export function isCardDataFindCardsFilter(filter: unknown): filter is CardDataFindCardsFilter {
+  return (
+    typeof filter === 'object' &&
+    filter !== null &&
+    (
+      'tags' in filter ||
+      'cardKeys' in filter ||
+      'cardType' in filter ||
+      'owner' in filter
+    )
+  );
+}
 
 export interface CardEffectFunctionContext extends AppContext {
   playerId: PlayerId;

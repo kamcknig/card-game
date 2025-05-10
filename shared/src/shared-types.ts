@@ -63,33 +63,24 @@ export type MatchStats = {
 };
 
 export interface Match {
+  cardOverrides: CardOverrides;
   cardSources: Record<CardLocation, CardId[]>;
-  playerVictoryTokens: Record<PlayerId, number>;
   coffers: Record<PlayerId, number>;
-  nonSupplyCards: CardId[];
-  activeDurationCards: CardId[];
   config: ComputedMatchConfiguration,
   currentPlayerTurnIndex: number;
-  kingdomSupply: CardId[];
-  playArea: CardId[];
+  mats: PlayerMatMap;
   playerActions: number;
   playerBuys: number;
-  playerDecks: Record<PlayerId, CardId[]>;
-  playerDiscards: Record<PlayerId, CardId[]>;
-  playerHands: Record<PlayerId, CardId[]>;
-  playerTreasure: number;
   playerPotions: number;
+  playerTreasure: number;
   players: Player[];
+  playerVictoryTokens: Record<PlayerId, number>;
   roundNumber: number;
   scores: Record<PlayerId, number>,
   selectableCards: Record<PlayerId, CardId[]>;
-  basicSupply: CardId[];
-  trash: CardId[];
+  stats: MatchStats;
   turnNumber: number;
   turnPhaseIndex: number;
-  mats: PlayerMatMap;
-  stats: MatchStats;
-  cardOverrides: CardOverrides;
 }
 
 export type CardOverrides = Record<PlayerId, Record<CardId, Partial<Card>>>;
@@ -124,10 +115,8 @@ export type LogEntry =
  
  *********************/
 
-export type SelectActionCardArgs = {
-  restrict: EffectRestrictionSpec | number[];
+export interface SelectActionCardArgs {
   count?: CountSpec | number;
-  autoSelect?: boolean;
   playerId: PlayerId;
   optional?: boolean;
   prompt: string;

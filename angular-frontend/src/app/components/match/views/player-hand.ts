@@ -8,10 +8,9 @@ import { AppButton, createAppButton } from '../../../core/create-app-button';
 import { currentPlayerTurnIdStore, turnPhaseStore } from '../../../state/turn-state';
 import { CardStackView } from './card-stack';
 import { List } from '@pixi/ui';
-import { playerHandStore } from '../../../state/player-logic';
 import { awaitingServerLockReleaseStore } from '../../../state/interactive-state';
-import { selfPlayerIdStore } from '../../../state/player-state';
 import { SocketService } from '../../../core/socket-service/socket.service';
+import { getCardSourceStore } from '../../../state/card-source-store';
 
 export class PlayerHandView extends Container {
   private readonly _phaseStatus: PhaseStatus;
@@ -57,25 +56,25 @@ export class PlayerHandView extends Container {
     this._background.fill({ color: 0, alpha: .6 });
 
     this._cleanup.push(computed(
-      [currentPlayerTurnIdStore, selfPlayerIdStore, awaitingServerLockReleaseStore],
-      (currentPlayerTurnId, selfPlayerId, waitingServerLockRelease) => currentPlayerTurnId === selfPlayerId && !waitingServerLockRelease
+      [currentPlayerTurnIdStore, awaitingServerLockReleaseStore],
+      (currentPlayerTurnId, waitingServerLockRelease) => currentPlayerTurnId === playerId && !waitingServerLockRelease
     ).subscribe(visible => {
       this._nextPhaseButton.button.visible = visible
     }));
 
     this._cleanup.push(
       computed(
-        [selfPlayerIdStore, awaitingServerLockReleaseStore, turnPhaseStore, currentPlayerTurnIdStore],
-        (selfId, waiting, turnPhase, currentPlayerTurnId) => {
-          if (!selfId) return false;
+        [awaitingServerLockReleaseStore, turnPhaseStore, currentPlayerTurnIdStore, getCardSourceStore('playerHand', playerId)],
+        (waiting, turnPhase, currentPlayerTurnId, hand) => {
+          if (
+            waiting ||
+            turnPhase !== 'buy' ||
+            !playerId ||
+            currentPlayerTurnId !== playerId ||
+            !hand?.length
+          ) return false;
 
-          const hand = playerHandStore(selfId).get();
-
-          return (
-            !waiting &&
-            turnPhase === 'buy' &&
-            currentPlayerTurnId === selfId && hand.some(cardId => cardStore.get()[cardId].type.includes('TREASURE'))
-          );
+          return hand.some(cardId => cardStore.get()[cardId].type.includes('TREASURE'));
         }
       ).subscribe(visible => this._playAllTreasuresButton.button.visible = visible)
     );
@@ -104,7 +103,7 @@ export class PlayerHandView extends Container {
     this._playAllTreasuresButton.button.y = Math.floor(this.height * .5 - this._playAllTreasuresButton.button.height * .5 - STANDARD_GAP);
     this.addChild(this._playAllTreasuresButton.button);
 
-    this._cleanup.push(playerHandStore(playerId).subscribe(this.drawHand));
+    this._cleanup.push(getCardSourceStore('playerHand', playerId).subscribe(this.drawHand));
     this._nextPhaseButton.button.on('pointerdown', () => {
       this.emit('nextPhase');
     });

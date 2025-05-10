@@ -12,10 +12,11 @@ export class CardSourceController {
       throw new Error(`Zone ${key} already exists`);
     }
     
-    this.match.cardSources[key] = source;
-    this._sourceMap.set(key, source ?? []);
+    const newSource = source ?? [];
+    this.match.cardSources[key] = newSource
+    this._sourceMap.set(key, newSource);
     
-    return this._sourceMap.get(key);
+    return newSource;
   }
   
   findCardSource(cardId: CardId) {

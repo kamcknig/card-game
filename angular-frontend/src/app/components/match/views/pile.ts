@@ -75,6 +75,10 @@ export class PileView extends Container {
       badge?.removeFromParent();
       return;
     }
+    else {
+      this.eventMode = 'static';
+      this._cardViewContainer.filters = [];
+    }
 
     if (this._cardView && (this._cardView.card.id !== card.id || this._cardView.card.cardKey !== card.cardKey)) {
       this._cardView.removeFromParent();

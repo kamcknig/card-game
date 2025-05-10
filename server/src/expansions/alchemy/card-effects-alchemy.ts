@@ -44,7 +44,7 @@ const expansion: CardExpansionModule = {
             return false;
           }
           
-          const cardsInPlay = getCardsInPlay(conditionArgs.match).map(conditionArgs.cardLibrary.getCard);
+          const cardsInPlay = getCardsInPlay(args.findCards);
           const ownedCardsInPlay = cardsInPlay.filter(card => card.owner === args.playerId);
           const potionCardsInPlay = ownedCardsInPlay.filter(card => card.cardKey === 'potion');
           
@@ -65,7 +65,7 @@ const expansion: CardExpansionModule = {
             await triggerEffectArgs.runGameActionDelegate('moveCard', {
               cardId: args.cardId,
               toPlayerId: args.playerId,
-              to: { location: 'playerDecks' }
+              to: { location: 'playerDeck' }
             });
           }
           else {
@@ -81,8 +81,8 @@ const expansion: CardExpansionModule = {
       await args.runGameActionDelegate('drawCard', { playerId: args.playerId });
       await args.runGameActionDelegate('gainAction', { count: 1 });
       
-      const playerDeck = args.match.playerDecks[args.playerId];
-      const playerDiscard = args.match.playerDiscards[args.playerId];
+      const playerDeck = args.cardSourceController.getSource('playerDeck', args.playerId);
+      const playerDiscard = args.cardSourceController.getSource('playerDiscard', args.playerId);
       
       const numToReveal = Math.min(4, playerDeck.length + playerDiscard.length);
       
@@ -103,7 +103,7 @@ const expansion: CardExpansionModule = {
           await args.runGameActionDelegate('moveCard', {
             cardId: card.id,
             toPlayerId: args.playerId,
-            to: { location: 'playerHands' }
+            to: { location: 'playerHand' }
           });
         }
         else {
@@ -134,7 +134,7 @@ const expansion: CardExpansionModule = {
           await args.runGameActionDelegate('moveCard', {
             cardId: cardId,
             toPlayerId: args.playerId,
-            to: { location: 'playerDecks' }
+            to: { location: 'playerDeck' }
           });
         }
       }
@@ -196,7 +196,7 @@ const expansion: CardExpansionModule = {
       
       for (const targetId of targets) {
         const curseCardId =
-          args.match.basicSupply.find(cardId => args.cardLibrary.getCard(cardId).cardKey === 'curse');
+          args.findCards([{ location: 'basicSupply' }, { cardKeys: 'curse' }])?.slice(-1)?.[0]?.id;
         
         if (curseCardId === undefined) {
           console.log(`[familiar effect] no curse card in basic supply`);
@@ -208,7 +208,7 @@ const expansion: CardExpansionModule = {
         await args.runGameActionDelegate('gainCard', {
           cardId: curseCardId,
           playerId: targetId,
-          to: { location: 'playerDiscards' }
+          to: { location: 'playerDiscard' }
         }, {
           loggingContext: {
             source: args.cardId
@@ -219,8 +219,8 @@ const expansion: CardExpansionModule = {
   },
   'golem': {
     registerEffects: () => async (args) => {
-      const deck = args.match.playerDecks[args.playerId];
-      const discard = args.match.playerDiscards[args.playerId];
+      const deck = args.cardSourceController.getSource('playerDeck', args.playerId);
+      const discard = args.cardSourceController.getSource('playerDiscard', args.playerId);
       
       const actionCardsSetAside: Card[] = [];
       const cardsToDiscard: Card[] = [];
@@ -333,7 +333,7 @@ const expansion: CardExpansionModule = {
           await triggeredArgs.runGameActionDelegate('moveCard', {
             cardId: triggeredArgs.trigger.args.cardId,
             toPlayerId: args.playerId,
-            to: { location: 'playerDecks' }
+            to: { location: 'playerDeck' }
           });
         }
       })
@@ -341,7 +341,10 @@ const expansion: CardExpansionModule = {
   },
   'philosophers-stone': {
     registerEffects: () => async (args) => {
-      const cardCount = args.match.playerDecks[args.playerId].length + args.match.playerDiscards[args.playerId].length;
+      const deck = args.cardSourceController.getSource('playerDeck', args.playerId);
+      const discard = args.cardSourceController.getSource('playerDiscard', args.playerId);
+      
+      const cardCount = deck.length + discard.length;
       const amountToGain = Math.floor(cardCount / 5);
       console.log(`[philosophers-stone effect] card count ${cardCount}, gaining ${amountToGain} treasure`);
       await args.runGameActionDelegate('gainTreasure', { count: amountToGain });
@@ -352,8 +355,6 @@ const expansion: CardExpansionModule = {
       console.log(`[scrying-pool effect] gaining 1 action`);
       await args.runGameActionDelegate('gainAction', { count: 1 });
       
-      const playedCard = args.cardLibrary.getCard(args.cardId);
-      
       const targetIds = findOrderedTargets({
         match: args.match,
         appliesTo: 'ALL',
@@ -361,7 +362,7 @@ const expansion: CardExpansionModule = {
       }).filter(playerId => args.reactionContext?.[playerId]?.result !== 'immunity');
       
       for (const targetPlayerId of targetIds) {
-        const deck = args.match.playerDecks[targetPlayerId];
+        const deck = args.cardSourceController.getSource('playerDeck', targetPlayerId);
         
         if (deck.length === 0) {
           console.log(`[scrying-pool effect] no cards in deck, shuffling`);
@@ -405,13 +406,13 @@ const expansion: CardExpansionModule = {
           await args.runGameActionDelegate('moveCard', {
             cardId: cardId,
             toPlayerId: targetPlayerId,
-            to: { location: 'playerDecks' }
+            to: { location: 'playerDeck' }
           });
         }
       }
       
-      const deck = args.match.playerDecks[args.playerId];
-      const discard = args.match.playerDiscards[args.playerId];
+      const deck = args.cardSourceController.getSource('playerDeck', args.playerId);
+      const discard = args.cardSourceController.getSource('playerDiscard', args.playerId);
       
       const cardsRevealed: Card[] = [];
       
@@ -447,7 +448,7 @@ const expansion: CardExpansionModule = {
         await args.runGameActionDelegate('moveCard', {
           cardId: card.id,
           toPlayerId: args.playerId,
-          to: { location: 'playerHands' }
+          to: { location: 'playerHand' }
         });
       }
     }
@@ -476,12 +477,10 @@ const expansion: CardExpansionModule = {
       
       let cards: Card[] = [];
       if (selectedCard.type.includes('ACTION')) {
-        cards = args.findCards(
-          {
-            location: ['basicSupply'],
-            cards: { cardKeys: 'duchy' }
-          }
-        );
+        cards = args.findCards([
+          { location: ['basicSupply'] },
+          { cardKeys: 'duchy' }
+        ]);
         
         const card = cards.slice(-1)[0];
         if (card) {
@@ -490,18 +489,16 @@ const expansion: CardExpansionModule = {
           await args.runGameActionDelegate('gainCard', {
             playerId: args.playerId,
             cardId: card.id,
-            to: { location: 'playerDiscards' }
+            to: { location: 'playerDiscard' }
           })
         }
       }
       
       if (selectedCard.type.includes('TREASURE')) {
-        cards = args.findCards(
-          {
-            location: 'kingdomSupply',
-            cards: { cardKeys: 'transmute' }
-          },
-        );
+        cards = args.findCards([
+          { location: 'kingdomSupply' },
+          { cardKeys: 'transmute' }
+        ]);
         
         const card = cards.slice(-1)[0];
         if (card) {
@@ -510,18 +507,17 @@ const expansion: CardExpansionModule = {
           await args.runGameActionDelegate('gainCard', {
             playerId: args.playerId,
             cardId: card.id,
-            to: { location: 'playerDiscards' }
+            to: { location: 'playerDiscard' }
           })
         }
       }
       
       if (selectedCard.type.includes('VICTORY')) {
         cards = args.findCards(
-          {
-            location: 'basicSupply',
-            cards: { cardKeys: 'gold' }
-          },
-        );
+          [
+            { location: 'basicSupply' },
+            { cardKeys: 'gold' }
+          ]);
         
         const card = cards.slice(-1)[0];
         if (card) {
@@ -530,7 +526,7 @@ const expansion: CardExpansionModule = {
           await args.runGameActionDelegate('gainCard', {
             playerId: args.playerId,
             cardId: card.id,
-            to: { location: 'playerDiscards' }
+            to: { location: 'playerDiscard' }
           });
         }
       }
@@ -543,11 +539,11 @@ const expansion: CardExpansionModule = {
       const selectedCardIds = await args.runGameActionDelegate('selectCard', {
         playerId: args.playerId,
         prompt: `Gain card`,
-        restrict: {
-          ids: args.cardSourceController.getSource('kingdomSupply'),
-          card: { type: 'ACTION' },
-          cost: { kind: 'upTo', amount: { treasure: 5 }, playerId: args.playerId }
-        },
+        restrict: [
+          { location: 'kingdomSupply' },
+          { cardType: 'ACTION' },
+          { kind: 'upTo', amount: { treasure: 5 }, playerId: args.playerId }
+        ],
         count: 1,
         optional: true
       }) as CardId[];
@@ -566,7 +562,7 @@ const expansion: CardExpansionModule = {
       await args.runGameActionDelegate('gainCard', {
         playerId: args.playerId,
         cardId: selectedCardId,
-        to: { location: 'playerDiscards' }
+        to: { location: 'playerDiscard' }
       });
     }
   },
