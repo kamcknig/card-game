@@ -284,8 +284,7 @@ export interface CardScoringFnContext extends AppContext {
   ownerId: number;
 }
 
-export type ExpansionConfiguratorContext = {
-  cardEffectRegistrar: CardEffectRegistrar;
+export type ExpansionConfiguratorContext = InitializeExpansionContext & {
   config: ComputedMatchConfiguration;
   cardLibrary: Record<CardKey, CardNoId>;
   expansionData: ExpansionData;

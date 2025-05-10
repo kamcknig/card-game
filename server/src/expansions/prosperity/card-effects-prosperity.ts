@@ -304,7 +304,7 @@ const expansion: CardExpansionModule = {
       await effectArgs.runGameActionDelegate('gainBuy', { count: 1 });
       
       const deck = effectArgs.cardSourceController.getSource('playerDeck', effectArgs.playerId);
-      const discard = effectArgs.cardSourceController.getSource('playerDiscard'', effectArgs.playerId);
+      const discard = effectArgs.cardSourceController.getSource('playerDiscard', effectArgs.playerId);
       
       if (deck.length + discard.length === 0) {
         console.log(`[crystal-ball effect] no cards to look at`);

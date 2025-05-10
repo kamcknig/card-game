@@ -11,6 +11,12 @@
     },
     "type": ["ACTION"]
   },
+  "butcher": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"]
+  },
   "candlestick-maaker": {
     "cardName": "Candlestick Maker",
     "cost": {

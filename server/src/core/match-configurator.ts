@@ -33,7 +33,7 @@ export class MatchConfigurator {
     console.log(`[match configurator] created`);
   }
   
-  public async createConfiguration(appContext: InitializeExpansionContext) {
+  public async createConfiguration(initContext: InitializeExpansionContext) {
     const requisiteKingdomCardKeys = Deno.env.get('REQUISITE_KINGDOM_CARD_KEYS')
       ?.toLowerCase()
       ?.split(',')
@@ -73,11 +73,11 @@ export class MatchConfigurator {
     this.selectKingdomSupply();
     this.selectBasicSupply();
     
-    addMatToMatchConfig('set-aside', this._config);
+    addMatToMatchConfig('set-aside', this._config, initContext);
     
-    await this.runExpansionConfigurators(appContext);
+    await this.runExpansionConfigurators(initContext);
     
-    this.createCardSources(appContext.match, appContext.cardSourceController);
+    this.createCardSources(initContext.match, initContext.cardSourceController);
     
     return { config: this._config };
   }
@@ -191,12 +191,7 @@ export class MatchConfigurator {
     return configurators
   }
   
-  private async runExpansionConfigurators({
-    gameEventRegistrar,
-    endGameConditionRegistrar,
-    playerScoreDecoratorRegistrar,
-    cardEffectRegistrar,
-  }: InitializeExpansionContext) {
+  private async runExpansionConfigurators(initContext: InitializeExpansionContext) {
     const configuratorIterator = (await this.getExpansionConfigurators()).entries();
     
     let iteration = 0;
@@ -208,7 +203,7 @@ export class MatchConfigurator {
       for (const [expansionName, expansionConfigurator] of configuratorIterator) {
         console.log(`[match configurator] running expansion configurator for expansion '${expansionName}'`);
         await expansionConfigurator({
-          cardEffectRegistrar,
+          ...initContext,
           config: this._config,
           cardLibrary: allCardLibrary,
           expansionData: expansionLibrary[expansionName]
@@ -238,13 +233,13 @@ export class MatchConfigurator {
     }, {} as Record<CardKey, number>);
     
     console.log(`[match configurator] registering expansion end game conditions`);
-    await this.registerExpansionEndGameConditions(endGameConditionRegistrar);
+    await this.registerExpansionEndGameConditions(initContext.endGameConditionRegistrar);
     
     console.log(`[match configurator] registering expansion scoring effects`);
-    await this.registerExpansionPlayerScoreDecorators(playerScoreDecoratorRegistrar);
+    await this.registerExpansionPlayerScoreDecorators(initContext.playerScoreDecoratorRegistrar);
     
     console.log(`[match configurator] registering game event listeners`);
-    await this.registerGameEventListeners(gameEventRegistrar);
+    await this.registerGameEventListeners(initContext.gameEventRegistrar);
   }
   
   private async registerGameEventListeners(gameEventRegistrar: GameEventRegistrar) {

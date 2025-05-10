@@ -491,7 +491,7 @@ const expansion: CardExpansionModule = {
       }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
       
       for (const targetPlayerId of targetPlayerIds) {
-        const hand = cardEffectArgs.cardSourceController.getSource('playerDiscard'', targetPlayerId);
+        const hand = cardEffectArgs.cardSourceController.getSource('playerDiscard', targetPlayerId);
         const numToDiscard = hand.length - 3;
         if (numToDiscard <= 0) {
           console.log(`[footpad effect] player ${targetPlayerId} already at 3 or less`);
@@ -585,7 +585,7 @@ const expansion: CardExpansionModule = {
             
             console.log(`[herald triggered effect] ${eventArgs.playerId} overpaid for ${eventArgs.cardId}`);
             
-            const discardIds = triggerEffectArgs.findCards({ location: 'playerDiscard'', playerId: eventArgs.playerId })
+            const discardIds = triggerEffectArgs.findCards({ location: 'playerDiscard', playerId: eventArgs.playerId })
               .map(card => card.id);
             
             const numToChoose = Math.min(overpaid, discardIds.length);
@@ -1482,7 +1482,7 @@ const expansion: CardExpansionModule = {
       console.log(`[young witch effect] drawing 2 cards`);
       await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
       
-      const hand = cardEffectArgs.match.playerHand[cardEffectArgs.playerId];
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
       const count = Math.min(2, hand.length);
       
       console.log(`[young witch effect] selecting ${count} cards`);

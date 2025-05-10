@@ -3,8 +3,9 @@ import { PileView } from './pile';
 import { cardStore } from '../../../state/card-state';
 import { Card, CardKey } from 'shared/shared-types';
 import { SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
-import { kingdomCardKeyStore, kingdomSupplyStore } from '../../../state/match-logic';
+import { kingdomCardKeyStore } from '../../../state/match-logic';
 import { computed } from 'nanostores';
+import { getCardSourceStore } from '../../../state/card-source-store';
 
 export class KingdomSupplyView extends Container {
   private _background: Container;
@@ -45,7 +46,7 @@ export class KingdomSupplyView extends Container {
 
     this._cleanup.push(
       computed(
-        [kingdomSupplyStore, cardStore],
+        [getCardSourceStore('kingdomSupply'), cardStore],
         (kingdom, cards) => kingdom.map(id => cards[id])
       ).subscribe((val => this.draw(val)))
     );

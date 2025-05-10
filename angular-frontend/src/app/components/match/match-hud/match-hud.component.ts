@@ -19,11 +19,12 @@ import { logEntryIdsStore, logStore } from '../../../state/log-state';
 import { MatTabComponent } from './mat-zone/mat-tab.component';
 import { CardComponent } from '../../card/card.component';
 import { playerScoreStore } from '../../../state/player-logic';
-import { selfPlayerMatStore, setAsideStore, trashStore } from '../../../state/match-logic';
+import { selfPlayerMatStore, setAsideStore } from '../../../state/match-logic';
 import { LogEntryMessage } from '../../../../types';
 import { cardStore } from '../../../state/card-state';
 import { MatPlayerContent } from './types';
 import { Rectangle } from 'pixi.js';
+import { getCardSourceStore } from '../../../state/card-source-store';
 
 export interface Mat {
   mat: Mats | string;
@@ -91,7 +92,7 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.trashMat$ = this._nanoService.useStore(trashStore).pipe(
+    this.trashMat$ = this._nanoService.useStore(getCardSourceStore('trash')).pipe(
       map(trash => {
         return {
           mat: 'trash',

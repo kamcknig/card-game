@@ -6,7 +6,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
     for (const kingdomCard of args.config.kingdomCards) {
       if (kingdomCard.mat) {
         console.log(`[seaside configurator] adding ${kingdomCard.mat} for ${args.cardLibrary[kingdomCard.cardKey]} to config`);
-        addMatToMatchConfig(kingdomCard.mat, args.config)
+        addMatToMatchConfig(kingdomCard.mat, args.config, args);
       }
     }
     

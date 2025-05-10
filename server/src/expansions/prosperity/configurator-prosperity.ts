@@ -67,12 +67,10 @@ export const registerEndGameConditions = (registrar: EndGameConditionRegistrar) 
       return false;
     }
     
-    const colonyCards = findCards(
-      {
-        source: { location: 'basicSupply' },
-        cards: { cardKeys: 'colony' }
-      }
-    );
+    const colonyCards = findCards([
+      { location: 'basicSupply' },
+      { cardKeys: 'colony' }
+    ]);
     return colonyCards.length === 0;
   })
 }
@@ -80,10 +78,10 @@ export const registerEndGameConditions = (registrar: EndGameConditionRegistrar) 
 export const registerGameEvents: (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => void = (registrar) => {
   registrar('onGameStart', async (args) => {
     
-    const peddlerCardIds = args.findCards({
-      source: { location: 'kingdomSupply' },
-      cards: { cardKeys: 'peddler' }
-    }).map(card => card.id);
+    const peddlerCardIds = args.findCards([
+      { location: 'kingdomSupply' },
+      { cardKeys: 'peddler' }
+    ]).map(card => card.id);
     
     if (peddlerCardIds.length === 0) {
       return;
@@ -128,8 +126,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
             console.log(`[peddler triggered effect] adding pricing rule for ${peddlerCard}`);
             
             const rule: CardPriceRule = (ruleCard, ruleContext) => {
-              const cardIdsInPlay = getCardsInPlay(ruleContext.match);
-              const cardsInPlay = cardIdsInPlay.map(triggerEffectArgs.cardLibrary.getCard);
+              const cardsInPlay = getCardsInPlay(args.findCards);
               const actionsInPlay = cardsInPlay.filter(card => card.type.includes('ACTION'));
               if (actionsInPlay.length === 0) {
                 return { restricted: false, cost: { treasure: 0 } };

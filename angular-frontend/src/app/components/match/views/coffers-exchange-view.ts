@@ -5,6 +5,7 @@ import { selfPlayerIdStore } from '../../../state/player-state';
 import { OutlineFilter } from 'pixi-filters/outline';
 import { STANDARD_GAP } from '../../../core/app-contants';
 import { createAppButton } from '../../../core/create-app-button';
+import { currentPlayerStore, turnNumberStore } from '../../../state/turn-state';
 
 export class CoffersExchangeView extends Container {
   private _coffersIcon: Sprite | undefined;
@@ -31,7 +32,7 @@ export class CoffersExchangeView extends Container {
     this.addChild(this._countText);
 
     const drawSub = batched(
-      [cofferStore, selfPlayerIdStore],
+      [cofferStore, selfPlayerIdStore, currentPlayerStore],
       (coffers, selfId) => ({ coffers, selfId })
     ).subscribe(({ coffers, selfId }) => {
       if (!selfId) {
@@ -58,6 +59,28 @@ export class CoffersExchangeView extends Container {
       this.addChildAt(this._coffersIcon, 0);
     }
 
+    this._coffersIcon.off('mouseenter');
+    this._coffersIcon.off('mouseleave');
+    this._coffersIcon.off('pointerdown');
+
+    if (currentPlayerStore.get().id === selfPlayerIdStore.get()) {
+      this._coffersIcon.on('mouseenter', () => {
+        this._coffersIcon!.filters = [
+          new OutlineFilter({
+            color: 'white',
+            thickness: 2
+          })
+        ]
+      });
+      this._coffersIcon.on('mouseleave', () => {
+        this._coffersIcon!.filters = [];
+      });
+
+      this._coffersIcon.on('pointerdown', () => {
+        void this.toggleControls();
+      });
+    }
+
     const countText = this.getChildByLabel('count') as Text;
     if (countText) {
       countText.text = this._coffers;
@@ -73,22 +96,6 @@ export class CoffersExchangeView extends Container {
 
     const maxSize = 45;
     sprite.scale = Math.min(maxSize / sprite.width, maxSize / sprite.height);
-
-    sprite.on('mouseenter', () => {
-      sprite.filters = [
-        new OutlineFilter({
-          color: 'white',
-          thickness: 2
-        })
-      ]
-    });
-    sprite.on('mouseleave', () => {
-      sprite.filters = [];
-    });
-
-    sprite.on('pointerdown', () => {
-      void this.toggleControls();
-    });
 
     return sprite;
   }

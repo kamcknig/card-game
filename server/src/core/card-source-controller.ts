@@ -2,12 +2,14 @@ import { CardId, CardLocation, isLocationMat, Match, Mats } from 'shared/shared-
 
 export class CardSourceController {
   private readonly _sourceMap: Map<string, CardId[]> = new Map();
+  private readonly _tagMap: Map<string, string[]> = new Map();
   
   constructor(private match: Match) {
   }
   
-  registerZone(sourceKey: CardLocation, source: CardId[], index: number = NaN) {
+  registerZone(sourceKey: CardLocation, source: CardId[], index: number = NaN, tags: string[] = []) {
     const key = `${sourceKey}${isNaN(index) ? '' : ':' + index}`
+    
     if (this._sourceMap.has(sourceKey) || this._sourceMap.has(key)) {
       throw new Error(`Zone ${key} already exists`);
     }
@@ -15,6 +17,15 @@ export class CardSourceController {
     const newSource = source ?? [];
     this.match.cardSources[key] = newSource
     this._sourceMap.set(key, newSource);
+    
+    for (const tag of tags) {
+      if (!this._tagMap.has(key)) {
+        this._tagMap.set(key, [tag]);
+      }
+      else {
+        this._tagMap.get(key)!.push(tag);
+      }
+    }
     
     return newSource;
   }

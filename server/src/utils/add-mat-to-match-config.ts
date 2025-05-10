@@ -1,9 +1,8 @@
-import { ComputedMatchConfiguration, Mats } from 'shared/shared-types.ts';
+import { ComputedMatchConfiguration } from 'shared/shared-types.ts';
+import { InitializeExpansionContext } from '../types.ts';
 
-export const addMatToMatchConfig = (mat: string, config: ComputedMatchConfiguration) => {
+export const addMatToMatchConfig = (mat: string, config: ComputedMatchConfiguration, initContext: InitializeExpansionContext) => {
   for (const player of config.players) {
-    config.mats ??= {} as any;
-    config.mats[player.id] ??= {} as any;
-    config.mats[player.id][mat as Mats] = [];
+    initContext.cardSourceController.registerZone(mat, [], player.id, ['mat']);
   }
 }

@@ -82,9 +82,8 @@ const expansion: CardExpansionModule = {
         );
         
         const cardIds = args.findCards([
-          {
-            playerId: eventArgs.playerId, kind: 'upTo', amount: { treasure: cost.treasure - 1 }
-          },
+          { location: ['basicSupply', 'kingdomSupply'] },
+          { playerId: eventArgs.playerId, kind: 'upTo', amount: { treasure: cost.treasure - 1 } },
         ]);
         
         if (!cardIds.length) {

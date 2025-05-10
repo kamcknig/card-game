@@ -26,9 +26,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
       console.log(`[footpad onCardGained event] player ${eventArgs.playerId} gained ${card} during action phase, drawing card`);
       
       // todo hacky to use just any card by id for the source. eventually source needs to be more dynamic
-      const footpadCardIds = args.findCards(
-        { cards: { cardKeys: 'footpad' } }
-      );
+      const footpadCardIds = args.findCards({ cardKeys: 'footpad' });
       
       await args.runGameActionDelegate('drawCard', { playerId: eventArgs.playerId }, { loggingContext: { source: footpadCardIds[0].id } });
     });
@@ -40,7 +38,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     registrar('onGameStart', async (args) => {
       console.log(`[baker onGameStart event] setting up baker - +1 coffer to each player on game start`);
       for (const player of args.match.players) {
-        await args.runGameActionDelegate('gainCoffer', { playerId: player.id, count: 1});
+        await args.runGameActionDelegate('gainCoffer', { playerId: player.id, count: 1 });
       }
     });
   }

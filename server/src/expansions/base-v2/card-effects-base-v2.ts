@@ -747,9 +747,7 @@ const expansionModule: CardExpansionModule = {
         playerId: playerId,
         count: 1,
         restrict: [
-          {
-            location: ['kingdomSupply', 'basicSupply']
-          },
+          { location: ['kingdomSupply', 'basicSupply'] },
           { cardType: ['TREASURE'] },
           { playerId, kind: 'upTo', amount: { treasure: cardCost.treasure + 3, potion: cardCost.potion } },
         ],
@@ -976,9 +974,7 @@ const expansionModule: CardExpansionModule = {
         playerId,
         count: 1,
         restrict: [
-          {
-            location: ['basicSupply', 'kingdomSupply']
-          },
+          { location: ['basicSupply', 'kingdomSupply'] },
           { playerId, kind: 'upTo', amount: { treasure: cardCost.treasure + 2, potion: card.cost.potion } },
         ],
       });
