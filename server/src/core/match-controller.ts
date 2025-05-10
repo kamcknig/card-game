@@ -86,6 +86,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     this._match = {
       cardSources: {},
+      cardSourceTagMap: {},
       playerVictoryTokens: {},
       coffers: {},
       cardOverrides: {},
@@ -190,7 +191,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this.createNonSupplyCards(this._matchConfiguration);
     this.createPlayerDecks(this._matchConfiguration);
     this._match.config = this._matchConfiguration;
-    this._match.mats = this._matchConfiguration.mats;
     
     console.log(`[match] ready, sending to clients and listening for when clients are ready`);
     

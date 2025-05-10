@@ -1,8 +1,8 @@
-import { CardId, CardLocation, isLocationMat, Match, Mats } from 'shared/shared-types.ts';
+import { CardId, CardLocation, Match } from 'shared/shared-types.ts';
 
 export class CardSourceController {
   private readonly _sourceMap: Map<string, CardId[]> = new Map();
-  private readonly _tagMap: Map<string, string[]> = new Map();
+  private readonly _tagMap: Map<string, CardLocation[]> = new Map();
   
   constructor(private match: Match) {
   }
@@ -15,15 +15,17 @@ export class CardSourceController {
     }
     
     const newSource = source ?? [];
-    this.match.cardSources[key] = newSource
+    this.match.cardSources[key] = newSource;
     this._sourceMap.set(key, newSource);
     
     for (const tag of tags) {
-      if (!this._tagMap.has(key)) {
-        this._tagMap.set(key, [tag]);
+      if (!this._tagMap.has(tag)) {
+        this.match.cardSourceTagMap[tag] = [key];
+        this._tagMap.set(tag, [key]);
       }
       else {
-        this._tagMap.get(key)!.push(tag);
+        this._tagMap.get(tag)!.push(key);
+        this.match.cardSourceTagMap[tag].push(key);
       }
     }
     
@@ -38,39 +40,13 @@ export class CardSourceController {
       }
     }
     
-    let sourceKey = '';
-    let source;
-    
-    for (const [playerId, playerMats] of Object.entries(this.match.mats)) {
-      for (const [mat, cardIds] of Object.entries(playerMats)) {
-        if (cardIds.includes(cardId)) {
-          source = this.match.mats[+playerId][mat as Mats];
-          sourceKey = mat as Mats;
-        }
-      }
-    }
-    
-    if (source) {
-      const idx = source.findIndex(id => id === cardId);
-      return { sourceKey: sourceKey.split(':')[0], source, index: idx }
-    }
-  
     throw new Error(`Source for card ${cardId} not found`);
   }
   
   getSource(sourceKey: CardLocation, index: number = NaN) {
     const key = `${sourceKey}${isNaN(index) ? '' : ':' + index}`
     
-    let source = this._sourceMap.get(key);
-    
-    if (!source) {
-      if (isLocationMat(key)) {
-        for (const player of this.match.config.players) {
-          source = this.match.mats[player.id][key];
-          break;
-        }
-      }
-    }
+    const source = this._sourceMap.get(key);
     
     if (!source) {
       throw new Error(`Source for key ${key} not found`);
