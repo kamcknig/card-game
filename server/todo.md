@@ -27,3 +27,10 @@ the rules state that "set aside" cards do not discard. you made that complicated
 duration cards. but you can just use set-aside and then schedule a movecard reaction at
 the start of next turn, and then they'll be in play and will be discarded. and the gray effect
 can be checked by seeing if they are in the play area on the turn they were played or not
+
+
+currently working on
+mats now have card sources, but the UI still looks at the mats propertyl of Match instead of new
+sources. i also added "tags" to sources so they can be grouped. all mats are tagged with "mat" so you 
+can now filter based on tags. though probably need to add hepler methods to card source controller
+to retrievew by tags
