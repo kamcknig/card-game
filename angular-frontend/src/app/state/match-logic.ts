@@ -1,12 +1,8 @@
 import { atom, computed, ReadableAtom } from 'nanostores';
-import { Card, CardId, CardKey, CardNoId, Mats } from 'shared/shared-types';
+import { Card, CardId, CardKey, CardNoId } from 'shared/shared-types';
 import { matchStore } from './match-state';
 import { cardStore } from './card-state';
-import { selfPlayerIdStore } from './player-state';
-import { cardSourceStore, getCardSourceStore } from './card-source-store';
-
-export const nonSupplyStore =
-  computed(cardSourceStore, match => match['nonSupplyCards'] ?? []);
+import { getCardSourceStore } from './card-source-store';
 
 export const rewardsStore: ReadableAtom<{
   startingCards: CardNoId[]; cards: Card[]
@@ -44,6 +40,5 @@ export const setAsideStore = computed(
 );
 
 (globalThis as any).playAreaStore = playAreaStore;
-(globalThis as any).nonSupplyStore = nonSupplyStore;
 (globalThis as any).rewardsStore = rewardsStore;
 (globalThis as any).setAsideStore = setAsideStore;
