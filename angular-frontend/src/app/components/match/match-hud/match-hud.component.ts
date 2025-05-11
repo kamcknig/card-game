@@ -12,14 +12,13 @@ import { ScoreComponent } from './score/score.component';
 import { GameLogComponent } from './game-log/game-log.component';
 import { NanostoresService } from '@nanostores/angular';
 import { playerIdStore, playerStore, selfPlayerIdStore } from '../../../state/player-state';
-import { combineLatest, combineLatestWith, filter, map, mergeMap, Observable, switchMap, tap } from 'rxjs';
+import { combineLatest, combineLatestWith, filter, map, Observable, switchMap } from 'rxjs';
 import { AsyncPipe } from '@angular/common';
 import { CardId, Mats, PlayerId } from 'shared/shared-types';
 import { logEntryIdsStore, logStore } from '../../../state/log-state';
 import { MatTabComponent } from './mat-zone/mat-tab.component';
 import { CardComponent } from '../../card/card.component';
 import { playerScoreStore } from '../../../state/player-logic';
-import { setAsideStore } from '../../../state/match-logic';
 import { LogEntryMessage } from '../../../../types';
 import { cardStore } from '../../../state/card-state';
 import { MatPlayerContent } from './types';
@@ -95,6 +94,7 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
     this.selfMats$ = this._nanoService.useStore(cardSourceTagStore).pipe(
       filter(store => store !== undefined),
       map<any, Mats[]>(store => store['mat']),
+      filter(sourceKeys => sourceKeys !== undefined),
       combineLatestWith(this._nanoService.useStore(selfPlayerIdStore)),
       switchMap(([sourceKeys, selfId]) => {
         sourceKeys = sourceKeys.filter(key => +key.split(':')[1] === selfId);
@@ -135,13 +135,14 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
       })
     );
 
-    this.setAsideMat$ = this._nanoService.useStore(setAsideStore).pipe(
-      combineLatestWith(
-        this._nanoService.useStore(cardStore),
-        this._nanoService.useStore(playerIdStore)
-          .pipe(switchMap(ids => combineLatest(ids.map(id => this._nanoService.useStore(playerStore(id)))))),
-      ),
-      map(([setAsideCardIds, cardsById, players]) => {
+    this.setAsideMat$ = this._nanoService.useStore(playerIdStore).pipe(
+      switchMap(ids => combineLatest([
+        combineLatest(ids.map(id => this._nanoService.useStore(playerStore(id)))),
+        combineLatest(ids.map(id => this._nanoService.useStore(getCardSourceStore('set-aside', id))))
+          .pipe(map(sources => sources.flat()))
+      ])),
+      combineLatestWith(this._nanoService.useStore(cardStore)),
+      map(([[players, setAsideCardIds], cardsById]) => {
         let matContent = setAsideCardIds.reduce((acc, nextCardId) => {
           const card = cardsById[nextCardId];
           const owner = card.owner;

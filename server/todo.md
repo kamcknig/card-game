@@ -27,7 +27,3 @@ the rules state that "set aside" cards do not discard. you made that complicated
 duration cards. but you can just use set-aside and then schedule a movecard reaction at
 the start of next turn, and then they'll be in play and will be discarded. and the gray effect
 can be checked by seeing if they are in the play area on the turn they were played or not
-
-
-currently working on
-mats work, but now need to make sure set-aside works
