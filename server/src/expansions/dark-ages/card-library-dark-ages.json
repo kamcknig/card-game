@@ -4,5 +4,55 @@
       "treasure": 6
     },
     "type": ["ACTION"]
+  },
+  "armory": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"]
+  },
+  "band-of-misfits": {
+    "cardName": "Band of Misfits",
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "COMMAND"]
+  },
+  "bandit-camp":{
+    "cardName": "Bandit Camp",
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"]
+  },
+  "beggar": {
+    "cost": {
+      "treasure": 2
+    },
+    "type": ["ACTION", "REACTION"]
+  },
+  "catacombs": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"]
+  },
+  "count": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"]
+  },
+  "counterfeit": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["TREASURE"]
+  },
+  "cultist": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "ATTACK", "LOOTER"]
   }
 }

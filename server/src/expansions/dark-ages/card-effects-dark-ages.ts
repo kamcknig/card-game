@@ -49,6 +49,37 @@ const cardEffects: CardExpansionModule = {
       });
     }
   },
+  'armory': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Gain card`,
+        restrict: [
+          { location: ['basisSupply', 'kingdomSupply'] }, {
+            kind: 'upTo',
+            playerId: cardEffectArgs.playerId,
+            amount: { treasure: 4 }
+          }
+        ],
+        count: 1,
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.log(`[dark-ages] no card selected`);
+        return;
+      }
+      
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+      
+      console.log(`[dark-ages] gaining card ${selectedCard}`);
+      
+      await cardEffectArgs.runGameActionDelegate('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCard.id,
+        to: { location: 'playerDiscard' }
+      });
+    }
+  },
 }
 
 export default cardEffects;
