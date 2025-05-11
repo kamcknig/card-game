@@ -30,7 +30,4 @@ can be checked by seeing if they are in the play area on the turn they were play
 
 
 currently working on
-mats now have card sources, but the UI still looks at the mats propertyl of Match instead of new
-sources. i also added "tags" to sources so they can be grouped. all mats are tagged with "mat" so you 
-can now filter based on tags. though probably need to add hepler methods to card source controller
-to retrievew by tags
+mats work, but now need to make sure set-aside works
