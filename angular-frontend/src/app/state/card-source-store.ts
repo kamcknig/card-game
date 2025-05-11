@@ -3,6 +3,8 @@ import { atom, listenKeys, map, ReadableAtom } from 'nanostores';
 
 const cardSourceStoreCache: Record<CardLocation, ReadableAtom<CardId[]>> = {};
 
+export const cardSourceTagStore = map<Record<string, CardLocation[]>>({});
+
 export const cardSourceStore = map<Record<CardLocation, CardId[]>>({});
 
 export const getCardSourceStore = (sourceKey: CardLocation, playerId: PlayerId = NaN) => {
@@ -21,3 +23,4 @@ export const getCardSourceStore = (sourceKey: CardLocation, playerId: PlayerId =
 }
 
 (globalThis as any).cardSourceStore = cardSourceStore;
+(globalThis as any).cardSourceTagStore = cardSourceTagStore;

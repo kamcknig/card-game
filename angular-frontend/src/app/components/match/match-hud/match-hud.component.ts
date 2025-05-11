@@ -12,19 +12,19 @@ import { ScoreComponent } from './score/score.component';
 import { GameLogComponent } from './game-log/game-log.component';
 import { NanostoresService } from '@nanostores/angular';
 import { playerIdStore, playerStore, selfPlayerIdStore } from '../../../state/player-state';
-import { combineLatest, combineLatestWith, filter, map, Observable, switchMap } from 'rxjs';
+import { combineLatest, combineLatestWith, filter, map, mergeMap, Observable, switchMap, tap } from 'rxjs';
 import { AsyncPipe } from '@angular/common';
 import { CardId, Mats, PlayerId } from 'shared/shared-types';
 import { logEntryIdsStore, logStore } from '../../../state/log-state';
 import { MatTabComponent } from './mat-zone/mat-tab.component';
 import { CardComponent } from '../../card/card.component';
 import { playerScoreStore } from '../../../state/player-logic';
-import { selfPlayerMatStore, setAsideStore } from '../../../state/match-logic';
+import { setAsideStore } from '../../../state/match-logic';
 import { LogEntryMessage } from '../../../../types';
 import { cardStore } from '../../../state/card-state';
 import { MatPlayerContent } from './types';
 import { Rectangle } from 'pixi.js';
-import { getCardSourceStore } from '../../../state/card-source-store';
+import { cardSourceTagStore, getCardSourceStore } from '../../../state/card-source-store';
 
 export interface Mat {
   mat: Mats | string;
@@ -92,6 +92,40 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnInit() {
+    this.selfMats$ = this._nanoService.useStore(cardSourceTagStore).pipe(
+      filter(store => store !== undefined),
+      map<any, Mats[]>(store => store['mat']),
+      combineLatestWith(this._nanoService.useStore(selfPlayerIdStore)),
+      switchMap(([sourceKeys, selfId]) => {
+        sourceKeys = sourceKeys.filter(key => +key.split(':')[1] === selfId);
+
+        return combineLatest(
+          sourceKeys.map(key => this._nanoService.useStore(getCardSourceStore(key))
+            .pipe(
+              map(source => {
+                return { cardIds: source, sourceKey: key }
+              })
+            )
+          )
+        ).pipe(
+          map(sources => {
+            return sources.filter(source => source.cardIds.length > 0)
+          }),
+          map(sources => {
+            return sources.map(source => ({
+              mat: source.sourceKey,
+              content: {
+                [selfId!]: {
+                  playerName: 'hello',
+                  cardIds: source.cardIds
+                }
+              },
+            }))
+          })
+        )
+      })
+    );
+
     this.trashMat$ = this._nanoService.useStore(getCardSourceStore('trash')).pipe(
       map(trash => {
         return {
@@ -134,31 +168,6 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
         } : undefined
       })
     );
-
-    this.selfMats$ = this._nanoService.useStore(selfPlayerMatStore)
-      .pipe(
-        map(mats => Object.entries(mats).map(entry => ({ mat: entry[0] as Mats, cardIds: entry[1] }))),
-        map(mats => mats.filter(mat => mat.cardIds.length > 0)),
-        map(mats => mats.filter(mat => mat.mat !== 'set-aside')),
-        combineLatestWith(
-          this._nanoService.useStore(selfPlayerIdStore).pipe(filter(vale => vale !== undefined)),
-          this._nanoService.useStore(playerIdStore)
-            .pipe(switchMap(ids => combineLatest(ids.map(id => this._nanoService.useStore(playerStore(id)))))),
-        ),
-        map(([mats, selfId, players]) => mats.map(mat => {
-            const playerName = players.find(p => p?.id === selfId)?.name;
-            return {
-              mat: mat.mat,
-              content: {
-                [selfId]: {
-                  playerName: playerName ?? 'Unknown',
-                  cardIds: mat.cardIds
-                }
-              }
-            }
-          })
-        )
-      );
 
     this.logEntries$ = this._nanoService.useStore(logEntryIdsStore).pipe(
       combineLatestWith(this._nanoService.useStore(logStore)),

@@ -711,7 +711,7 @@ const expansion: CardExpansionModule = {
         return;
       }
       
-      const matCardIds = match.mats[playerId]['native-village'].concat();
+      const matCardIds = args.findCards({ location: 'native-village'});
       
       console.log(`[NATIVE VILLAGE EFFECT] moving ${matCardIds.length} cards from native village mat to hand...`);
       for (const cardId of matCardIds) {

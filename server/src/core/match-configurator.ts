@@ -73,8 +73,6 @@ export class MatchConfigurator {
     this.selectKingdomSupply();
     this.selectBasicSupply();
     
-    addMatToMatchConfig('set-aside', this._config, initContext);
-    
     await this.runExpansionConfigurators(initContext);
     
     this.createCardSources(initContext.match, initContext.cardSourceController);
@@ -97,6 +95,7 @@ export class MatchConfigurator {
       cardSourceController.registerZone('playerHand', [], player.id);
       cardSourceController.registerZone('playerDiscard', [], player.id);
       cardSourceController.registerZone('playerDeck', [], player.id);
+      cardSourceController.registerZone('set-aside', [], player.id);
     }
   }
   

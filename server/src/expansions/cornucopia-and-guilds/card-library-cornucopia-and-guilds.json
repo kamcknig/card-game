@@ -17,7 +17,7 @@
     },
     "type": ["ACTION"]
   },
-  "candlestick-maaker": {
+  "candlestick-maker": {
     "cardName": "Candlestick Maker",
     "cost": {
       "treasure": 2

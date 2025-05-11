@@ -1,11 +1,12 @@
 import { Color, Container, ContainerOptions, Graphics, Point, Text } from 'pixi.js';
 import { Card, PlayerId } from 'shared/shared-types';
-import { activeDurationCardStore } from '../../../state/match-logic';
 import { List } from '@pixi/ui';
 import { STANDARD_GAP } from '../../../core/app-contants';
 import { playerStore } from '../../../state/player-state';
 import { createCardView } from '../../../core/card/create-card-view';
 import { applicationStore } from '../../../state/app-state';
+import { getCardSourceStore } from '../../../state/card-source-store';
+import { cardStore } from '../../../state/card-state';
 
 export class ActiveDurationCardList extends Container {
   private _tabContainer: Container = new Container({
@@ -52,7 +53,10 @@ export class ActiveDurationCardList extends Container {
 
     this._tabContainer.on('pointerdown', () => this.toggleCardList());
 
-    const activeCardSubscription = activeDurationCardStore.subscribe(cards => this.drawCards(cards));
+    const cardsById = cardStore.get();
+
+    const activeCardSubscription = getCardSourceStore('activeDuration')
+      .subscribe(cards => this.drawCards(cards.map(id => cardsById[id])));
 
     this.on('removed', () => {
       activeCardSubscription();
@@ -112,7 +116,7 @@ export class ActiveDurationCardList extends Container {
     const playersListBackground = this._container.getChildByLabel('playersListBackground') as Graphics;
     playersListBackground?.clear();
     playersListBackground?.roundRect(0, 0, this._playersList.width + STANDARD_GAP * 2, this._playersList.height + STANDARD_GAP * 2, 5);
-    playersListBackground?.fill({color: 'black'});
+    playersListBackground?.fill({ color: 'black' });
 
     const app = applicationStore.get();
 

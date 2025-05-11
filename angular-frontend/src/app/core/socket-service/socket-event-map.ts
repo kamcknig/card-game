@@ -14,7 +14,7 @@ import { applyPatch, Operation } from 'fast-json-patch';
 import { ClientListenEventNames, ClientListenEvents } from '../../../types';
 import { logManager } from '../log-manager';
 import { kingdomCardKeyStore, supplyCardKeyStore } from '../../state/match-logic';
-import { cardSourceStore } from '../../state/card-source-store';
+import { cardSourceStore, cardSourceTagStore } from '../../state/card-source-store';
 
 export type SocketEventMap = Partial<{ [p in ClientListenEventNames]: ClientListenEvents[p] }>;
 
@@ -62,8 +62,6 @@ export const socketToGameEventMap = (): SocketEventMap => {
 
     const playerId = selfPlayerIdStore.get();
     if (!playerId) throw new Error('missing self playerId');
-
-    const match = matchStore.get() as Match;
 
     const cardSource = cardSourceStore.get();
 
@@ -132,6 +130,7 @@ export const socketToGameEventMap = (): SocketEventMap => {
     const current = structuredClone(matchStore.get()) ?? {} as Match;
     applyPatch(current, patch);
     cardSourceStore.set(current.cardSources);
+    cardSourceTagStore.set(current.cardSourceTagMap);
     matchStore.set(current);
   };
 

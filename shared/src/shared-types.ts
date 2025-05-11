@@ -65,6 +65,7 @@ export type MatchStats = {
 export interface Match {
   cardOverrides: CardOverrides;
   cardSources: Record<CardLocation, CardId[]>;
+  cardSourceTagMap: Record<string, CardLocation[]>;
   coffers: Record<PlayerId, number>;
   config: ComputedMatchConfiguration,
   currentPlayerTurnIndex: number;
