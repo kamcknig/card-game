@@ -1,0 +1,32 @@
+{
+  "abandoned-mine": {
+    "cost": {
+      "treasure": 0
+    },
+    "type": ["ACTION", "RUINS"]
+  },
+  "ruined-library": {
+    "cost": {
+      "treasure": 0
+    },
+    "type": ["ACTION", "RUINS"]
+  },
+  "ruined-market": {
+    "cost": {
+      "treasure": 0
+    },
+    "type": ["ACTION", "RUINS"]
+  },
+  "ruined-village": {
+    "cost": {
+      "treasure": 0
+    },
+    "type": ["ACTION", "RUINS"]
+  },
+  "survivors": {
+    "cost": {
+      "treasure": 0
+    },
+    "type": ["ACTION", "RUINS"]
+  }
+}
