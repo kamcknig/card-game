@@ -30,10 +30,16 @@ export const configureRuins = async (args: ExpansionConfiguratorContext) => {
   const numPlayers = args.config.players.length;
   
   const ruinsCardKeys = Object.keys(ruinsCardLibrary)
-    .map(cardKey => new Array(Math.max(numPlayers - 1, 1) * 10).fill(cardKey))
+    .map(cardKey => new Array(10).fill(cardKey))
     .flat();
   
   fisherYatesShuffle(ruinsCardKeys, true);
+  
+  console.log(ruinsCardKeys);
+  
+  ruinsCardKeys.length = 10 * Math.max(1, numPlayers - 1);
+  
+  console.log(ruinsCardKeys);
   
   const finalRuins = ruinsCardKeys.reduce((acc, nextRuinsKey) => {
     acc[nextRuinsKey] = (acc[nextRuinsKey] ?? 0) + 1;

@@ -1,5 +1,5 @@
 import { CardKey, CardNoId, ComputedMatchConfiguration, Match, MatchConfiguration } from 'shared/shared-types.ts';
-import { rawExpansionCardLibrary, ExpansionData, expansionLibrary } from '@expansions/expansion-library.ts';
+import { ExpansionData, expansionLibrary, rawExpansionCardLibrary } from '@expansions/expansion-library.ts';
 import {
   EndGameConditionRegistrar,
   ExpansionConfigurator,
@@ -9,7 +9,6 @@ import {
   MatchBaseConfiguration,
   PlayerScoreDecoratorRegistrar
 } from '../types.ts';
-import { addMatToMatchConfig } from '../utils/add-mat-to-match-config.ts';
 import { compare, Operation } from 'https://esm.sh/v123/fast-json-patch@3.1.1/index.js';
 import { CardSourceController } from './card-source-controller.ts';
 
@@ -74,6 +73,17 @@ export class MatchConfigurator {
     this.selectBasicSupply();
     
     await this.runExpansionConfigurators(initContext);
+    
+    // after configurators have run, this now sets the counts for the cards in the supply and kingdoms.
+    this._config.kingdomCardCount = this._config.kingdomCards.reduce((acc, nextKingdom) => {
+      const cardKey = nextKingdom.cardKey;
+      acc[cardKey] = this._config.kingdomCardCount[cardKey] ?? (nextKingdom.type.includes('VICTORY')
+        ? (this._config.players.length < 3 ? 8 : 12)
+        : 10);
+      
+      console.log(`[match configurator] setting card count to ${acc[cardKey]} for ${cardKey}`);
+      return acc;
+    }, {} as Record<CardKey, number>);
     
     this.createCardSources(initContext.match, initContext.cardSourceController);
     
@@ -219,17 +229,6 @@ export class MatchConfigurator {
     if (iteration >= 10) {
       throw new Error(`[match configurator] expansion configurator failed to converge after 10 iterations`);
     }
-    
-    // after configurators have run, this now sets the counts for the cards in the supply and kingdoms.
-    this._config.kingdomCardCount = this._config.kingdomCards.reduce((acc, nextKingdom) => {
-      const cardKey = nextKingdom.cardKey;
-      acc[cardKey] = nextKingdom.type.includes('VICTORY')
-        ? (this._config.players.length < 3 ? 8 : 12)
-        : 10;
-      
-      console.log(`[match configurator] setting card count to ${acc[cardKey]} for ${cardKey}`);
-      return acc;
-    }, {} as Record<CardKey, number>);
     
     console.log(`[match configurator] registering expansion end game conditions`);
     await this.registerExpansionEndGameConditions(initContext.endGameConditionRegistrar);
