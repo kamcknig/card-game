@@ -73,6 +73,7 @@ export const userPromptModal = (
           contentView = overpayView(app, args.content);
           break;
         }
+        case 'display-cards':
         default:
           contentView = cardSelectionView(app, args.content);
 

@@ -170,7 +170,7 @@ const cardEffects: CardExpansionModule = {
               await triggeredArgs.runGameActionDelegate('gainCard', {
                 playerId: triggeredArgs.trigger.args.playerId,
                 cardId: silverCards.slice(-i - 1)[0],
-                to: { location: i === 0 ? 'playerDeck': 'playerDiscard' }
+                to: { location: i === 0 ? 'playerDeck' : 'playerDiscard' }
               });
             }
           }
@@ -193,6 +193,220 @@ const cardEffects: CardExpansionModule = {
           cardId: copperCards.slice(-i - 1)[0],
           to: { location: 'playerHand' }
         });
+      }
+    }
+  },
+  'catacombs': {
+    registerLifeCycleMethods: () => ({
+      onTrashed: async (args, eventArgs) => {
+        const card = args.cardLibrary.getCard(eventArgs.cardId);
+        const { cost } = args.cardPriceController.applyRules(card, { playerId: eventArgs.playerId });
+        const cheaperCards = args.findCards([
+          { location: ['basicSupply', 'kingdomSupply'] },
+          { kind: 'upTo', playerId: eventArgs.playerId, amount: { treasure: cost.treasure - 1 } },
+        ]);
+        
+        if (!cheaperCards.length) {
+          console.log(`[catacombs onTrashed effect] no cards costing less than ${cost.treasure - 1}`);
+          return;
+        }
+        
+        const selectedCardIds = await args.runGameActionDelegate('selectCard', {
+          playerId: eventArgs.playerId,
+          prompt: `Gain card`,
+          restrict: cheaperCards.map(card => card.id),
+          count: 1,
+        });
+        
+        if (!selectedCardIds.length) {
+          console.warn(`[catacombs onTrashed effect] no card selected`);
+          return;
+        }
+        
+        const selectedCard = args.cardLibrary.getCard(selectedCardIds[0]);
+        
+        console.log(`[catacombs onTrashed effect] gaining card ${selectedCard}`);
+        
+        await args.runGameActionDelegate('gainCard', {
+          cardId: selectedCard.id,
+          playerId: eventArgs.playerId,
+          to: { location: 'playerDiscard' }
+        });
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+      
+      let numToLookAt = 3;
+      
+      if (deck.length < 3) {
+        await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+        
+        numToLookAt = Math.min(3, deck.length);
+      }
+      
+      if (numToLookAt < 1) {
+        console.log(`[catacombs effect] no cards in deck`);
+        return;
+      }
+      
+      const cardsToLookAt = deck.slice(-numToLookAt);
+      
+      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        prompt: 'Choose one',
+        playerId: cardEffectArgs.playerId,
+        actionButtons: [
+          { label: 'PUT IN HAND', action: 1 },
+          { label: 'DISCARD AND DRAW', action: 2 }
+        ],
+        content: {
+          type: 'display-cards',
+          cardIds: cardsToLookAt
+        }
+      }) as { action: number, result: number[] };
+      
+      if (result.action === 1) {
+        console.log(`[catacombs effect] moving ${cardsToLookAt.length} cards to hand`);
+        for (let i = 0; i < cardsToLookAt.length; i++) {
+          await cardEffectArgs.runGameActionDelegate('moveCard', {
+            cardId: cardsToLookAt[i],
+            toPlayerId: cardEffectArgs.playerId,
+            to: { location: 'playerHand' }
+          });
+        }
+      }
+      else {
+        console.log(`[catacombs effect] discarding ${cardsToLookAt.length} cards`);
+        for (let i = 0; i < cardsToLookAt.length; i++) {
+          await cardEffectArgs.runGameActionDelegate('discardCard', {
+            cardId: cardsToLookAt[i],
+            playerId: cardEffectArgs.playerId
+          });
+        }
+        
+        console.log(`[catacombs effect] drawing 3 cards`);
+        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 3 });
+      }
+    }
+  },
+  'count': {
+    registerEffects: () => async (cardEffectArgs) => {
+      let result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        prompt: 'Choose one',
+        playerId: cardEffectArgs.playerId,
+        actionButtons: [
+          { label: 'DISCARD 2 CARDS', action: 1 },
+          { label: 'TOP-DECK CARD', action: 2 },
+          { label: 'GAIN 1 COPPER', action: 3 }
+        ],
+      }) as { action: number, result: number[] };
+      
+      switch (result.action) {
+        case 1: {
+          const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+          for (let i = 0; i < 2; i++) {
+            const id = deck.slice(-1)[0];
+            if (!id) {
+              console.log(`[count effect] no cards in deck`);
+              break;
+            }
+            
+            await cardEffectArgs.runGameActionDelegate('discardCard', {
+              cardId: id,
+              playerId: cardEffectArgs.playerId
+            });
+          }
+          break;
+        }
+        case 2: {
+          const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+            playerId: cardEffectArgs.playerId,
+            prompt: `Top-deck card`,
+            restrict: { location: 'playerHand' },
+            count: 1,
+          }) as CardId[];
+          
+          if (!selectedCardIds.length) {
+            console.warn(`[count effect] no card selected`);
+            break;
+          }
+          
+          const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+          
+          console.log(`[count effect] moving ${selectedCard} to deck`);
+          
+          await cardEffectArgs.runGameActionDelegate('moveCard', {
+            cardId: selectedCard.id,
+            toPlayerId: cardEffectArgs.playerId,
+            to: { location: 'playerDeck' }
+          });
+          break;
+        }
+        case 3: {
+          const copperCards = cardEffectArgs.findCards([
+            { location: 'basicSupply' },
+            { cardKeys: 'copper' }
+          ]);
+          if (!copperCards.length) {
+            console.log(`[count effect] no coppers in supply`);
+            break;
+          }
+          console.log(`[count effect] gaining 1 copper`);
+          await cardEffectArgs.runGameActionDelegate('gainCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: copperCards.slice(-1)[0].id,
+            to: { location: 'playerDiscard' }
+          });
+          break;
+        }
+      }
+      
+      result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        prompt: 'Choose one',
+        playerId: cardEffectArgs.playerId,
+        actionButtons: [
+          { label: '+3 TREASURE', action: 1 },
+          { label: 'TRASH HAND', action: 2 },
+          { label: 'GAIN DUCHY', action: 3 }
+        ],
+      }) as { action: number, result: number[] };
+      
+      switch (result.action) {
+        case 1: {
+          console.log(`[count effect] gaining 3 treasure`);
+          await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 3 });
+          break;
+        }
+        case 2: {
+          const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+          
+          console.log(`[count effect] trashing ${hand.length} cards`);
+          
+          for (const cardId of [...hand]) {
+            await cardEffectArgs.runGameActionDelegate('trashCard', {
+              playerId: cardEffectArgs.playerId,
+              cardId
+            });
+          }
+          break;
+        }
+        case 3: {
+          const duchyCards = cardEffectArgs.findCards([
+            { location: 'basicSupply' },
+            { cardKeys: 'duchy' }
+          ]);
+          if (!duchyCards.length) {
+            console.log(`[count effect] no duchies in supply`);
+            break;
+          }
+          console.log(`[count effect] gaining 1 duchy`);
+          await cardEffectArgs.runGameActionDelegate('gainCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: duchyCards.slice(-1)[0],
+            to: { location: 'playerDiscard' }
+          });
+          break;
+        }
       }
     }
   },

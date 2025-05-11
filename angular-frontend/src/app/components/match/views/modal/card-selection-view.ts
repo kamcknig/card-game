@@ -11,8 +11,10 @@ import { validateCountSpec } from '../../../../shared/validate-count-spec';
 import { displayCardDetail } from './display-card-detail';
 
 export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
-  if (args.type !== 'select') throw new Error('card selection modal requires type "select"');
+  if (args.type !== 'select' && args.type !== 'display-cards') throw new Error('card selection modal requires type "select" or "display-cards');
   if (!args.cardIds) throw new Error('Cards cannot be empty');
+
+  const displayOnly = args.type === 'display-cards';
 
   const cardIds = args.cardIds;
 
@@ -20,20 +22,19 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
   let maxId = toNumber(Object.keys(cardStore.get()).sort().slice(-1)[0]);
 
   const cardCount = cardIds.length;
-  args.selectCount ??= 1;
+  const selectCount = 'selectCount' in args ? args.selectCount ?? 1 : 0;
 
   const validate = () => {
-    if (!args.selectCount) throw new Error('selectCount cannot be empty');
-    let validated = validateCountSpec(args.selectCount, selectedCardStore.get().length)
+    let validated = displayOnly ?? validateCountSpec(selectCount, selectedCardStore.get().length);
 
     cardList.emit('validationUpdated', validated);
 
     if (validated) {
-      const count = args.selectCount;
+      const count = selectCount;
 
       cardList.emit('resultsUpdated', selectedCardStore.get().map(id => newCardToOldCardMap.get(id)));
 
-      if (isNumber(count) && count === 1) {
+      if (!displayOnly && isNumber(count) && count === 1) {
         cardList.emit('finished');
       }
     }
@@ -48,23 +49,28 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
       void displayCardDetail(app, cardId);
       return;
     }
+
+    if (displayOnly) return;
+
     const target = event.target as CardView;
     const cardId = target.card.id;
     if (selectedCardStore.get().includes(cardId)) {
       selectedCardStore.set(selectedCardStore.get().filter(c => c !== cardId));
       target.y = 0;
-    } else {
+    }
+    else {
       selectedCardStore.set(selectedCardStore.get().concat(cardId));
       target.y = -10;
     }
 
     validate();
   };
+
   const cardRemovedListener = (view: Container) => {
     view.removeAllListeners();
   }
 
-  const cardList = new List({ type: 'horizontal'});
+  const cardList = new List({ type: 'horizontal' });
   cardList.elementsMargin = cardCount > 6 ? -CARD_WIDTH * .5 : STANDARD_GAP;
 
   for (const cardId of cardIds) {
@@ -78,11 +84,13 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
 
   cardList.x = Math.floor(-cardList.width * .5);
 
-  setTimeout(() => {
-    validate();
-  }, 0);
-
-  clientSelectableCardsOverrideStore.set(Array.from(newCardToOldCardMap.keys()));
+  if (!displayOnly) {
+    setTimeout(() => {
+      validate();
+    }, 0);
+    
+    clientSelectableCardsOverrideStore.set(Array.from(newCardToOldCardMap.keys()));
+  }
 
   return cardList
 }

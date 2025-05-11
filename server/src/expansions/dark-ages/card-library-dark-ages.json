@@ -54,5 +54,11 @@
       "treasure": 5
     },
     "type": ["ACTION", "ATTACK", "LOOTER"]
+  },
+  "catacombs": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"]
   }
 }

@@ -130,6 +130,7 @@ export type UserPromptKinds =
   | { type: 'rearrange'; cardIds: CardId[]; }
   | { type: 'name-card'; }
   | { type: 'overpay'; cost: number; }
+  | { type: 'display-cards'; cardIds: CardId[]; }
   | { type: 'select'; cardIds: CardId[]; selectCount: CountSpec; };
 
 export type UserPromptActionArgs = {
