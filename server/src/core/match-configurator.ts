@@ -1,5 +1,5 @@
 import { CardKey, CardNoId, ComputedMatchConfiguration, Match, MatchConfiguration } from 'shared/shared-types.ts';
-import { ExpansionData, expansionLibrary, rawExpansionCardLibrary } from '@expansions/expansion-library.ts';
+import { ExpansionData, expansionLibrary, rawCardLibrary } from '@expansions/expansion-library.ts';
 import {
   EndGameConditionRegistrar,
   ExpansionConfigurator,
@@ -43,9 +43,9 @@ export class MatchConfigurator {
       console.log(requisiteKingdomCardKeys?.join('\n'));
     }
     
-    if (this._config.kingdomCards?.length > 0) {
-      console.log(`[match configurator] requested kingdom cards ${this._config.kingdomCards.length}`);
-      console.log(this._config.kingdomCards?.map(card => card.cardKey)?.join('\n'));
+    if (this._config.preselectedKingdoms?.length > 0) {
+      console.log(`[match configurator] requested kingdom cards ${this._config.preselectedKingdoms.length}`);
+      console.log(this._config.preselectedKingdoms?.map(card => card.cardKey)?.join('\n'));
     }
     else {
       console.log(`[match configurator] no cards requested in during match configuration`);
@@ -56,9 +56,9 @@ export class MatchConfigurator {
     this._requestedKingdoms =
       Array.from(new Set([
         ...requisiteKingdomCardKeys,
-        ...(this._config.kingdomCards?.map(card => card.cardKey) ?? [])
+        ...(this._config.preselectedKingdoms?.map(card => card.cardKey) ?? [])
       ]))
-        .map(key => structuredClone(rawExpansionCardLibrary[key]))
+        .map(key => structuredClone(rawCardLibrary[key]))
         .filter(card => !!card);
     
     if (this._requestedKingdoms.length > MatchBaseConfiguration.numberOfKingdomPiles) {
@@ -73,17 +73,6 @@ export class MatchConfigurator {
     this.selectBasicSupply();
     
     await this.runExpansionConfigurators(initContext);
-    
-    // after configurators have run, this now sets the counts for the cards in the supply and kingdoms.
-    this._config.kingdomCardCount = this._config.kingdomCards.reduce((acc, nextKingdom) => {
-      const cardKey = nextKingdom.cardKey;
-      acc[cardKey] = this._config.kingdomCardCount[cardKey] ?? (nextKingdom.type.includes('VICTORY')
-        ? (this._config.players.length < 3 ? 8 : 12)
-        : 10);
-      
-      console.log(`[match configurator] setting card count to ${acc[cardKey]} for ${cardKey}`);
-      return acc;
-    }, {} as Record<CardKey, number>);
     
     this.createCardSources(initContext.match, initContext.cardSourceController);
     
@@ -158,10 +147,15 @@ export class MatchConfigurator {
       selectedKingdoms = [...selectedKingdoms, ...additionalKingdoms];
     }
     
-    this._config.kingdomCards = structuredClone(selectedKingdoms);
+    this._config.kingdomSupply = structuredClone(selectedKingdoms.map(card => {
+      return {
+        card,
+        count: card.type.includes('VICTORY') ? (this._config.players.length < 3 ? 8 : 12) : 10
+      }
+    }));
     
-    console.log(`[match configurator] finalized selected kingdoms count ${this._config.kingdomCards.length}`);
-    console.log(this._config.kingdomCards.map(card => card.cardKey).join('\n'));
+    console.log(`[match configurator] finalized selected kingdoms count ${this._config.kingdomSupply.length}`);
+    console.log(this._config.kingdomSupply.map(kingdom => kingdom.card.cardKey).join('\n'));
   }
   
   private selectBasicSupply() {
@@ -170,24 +164,21 @@ export class MatchConfigurator {
     
     // coppers come from the supply, so they are removed here, because these represent the cards IN the supply at the
     // start of game. The coppers in a player's hand come from the supply, whereas the estates do not.
-    this._config.basicCardCount = Object.keys(basicCardCounts).reduce((acc, nextKey) => {
-      acc[nextKey] = nextKey === 'copper' ? this._config.players.length * MatchBaseConfiguration.playerStartingHand.copper : basicCardCounts[nextKey];
+    this._config.basicSupply = Object.keys(basicCardCounts).reduce((acc, nextKey) => {
+      acc.push({
+        card: { ...rawCardLibrary[nextKey] },
+        count: nextKey === 'copper' ? this._config.players.length * MatchBaseConfiguration.playerStartingHand.copper : basicCardCounts[nextKey]
+      });
       return acc;
-    }, {} as Record<CardKey, number>);
+    }, {} as { card: CardNoId; count: number; }[]);
     
-    // create the basic cards map
-    this._config.basicCards = structuredClone(Object.keys(basicCardCounts).reduce((acc, nextKey) => {
-      acc.push({ ...rawExpansionCardLibrary[nextKey] });
-      return acc;
-    }, [] as CardNoId[]));
-    
-    console.log(`[match configurator] setting default basic cards ${this._config.basicCards.map(card => card.cardKey)
-      .join(', ')}`);
+    const basicSupply = this._config.basicSupply.map(basic => basic.card.cardKey).join(', ');
+    console.log(`[match configurator] setting default basic cards ${basicSupply}`);
   }
   
   private async getExpansionConfigurators() {
     const configurators = new Map<string, ExpansionConfigurator>();
-    const uniqueExpansions = Array.from(new Set(this._config.kingdomCards.map(card => card.expansionName)));
+    const uniqueExpansions = Array.from(new Set(this._config.kingdomSupply.map(kingdom => kingdom.card.expansionName)));
     for (const expansionName of uniqueExpansions) {
       try {
         console.log(`[match configurator] loading configurator for expansion '${expansionName}'`);
@@ -214,7 +205,7 @@ export class MatchConfigurator {
         await expansionConfigurator({
           ...initContext,
           config: this._config,
-          cardLibrary: rawExpansionCardLibrary,
+          cardLibrary: rawCardLibrary,
           expansionData: expansionLibrary[expansionName]
         });
       }
@@ -241,7 +232,7 @@ export class MatchConfigurator {
   }
   
   private async registerGameEventListeners(gameEventRegistrar: GameEventRegistrar) {
-    const uniqueExpansions = Array.from(new Set(this._config.kingdomCards.map(card => card.expansionName)));
+    const uniqueExpansions = Array.from(new Set(this._config.kingdomSupply.map(kingdom => kingdom.card.expansionName)));
     for (const expansion of uniqueExpansions) {
       try {
         const module = await import((`@expansions/${expansion}/configurator-${expansion}.ts`));
@@ -258,7 +249,7 @@ export class MatchConfigurator {
   }
   
   private async registerExpansionEndGameConditions(registrar: EndGameConditionRegistrar) {
-    const uniqueExpansions = Array.from(new Set(this._config.kingdomCards.map(card => card.expansionName)));
+    const uniqueExpansions = Array.from(new Set(this._config.kingdomSupply.map(kingdom => kingdom.card.expansionName)));
     for (const expansion of uniqueExpansions) {
       try {
         const module = await import((`@expansions/${expansion}/configurator-${expansion}.ts`));
@@ -275,7 +266,7 @@ export class MatchConfigurator {
   }
   
   private async registerExpansionPlayerScoreDecorators(registrar: PlayerScoreDecoratorRegistrar) {
-    const uniqueExpansions = Array.from(new Set(this._config.kingdomCards.map(card => card.expansionName)));
+    const uniqueExpansions = Array.from(new Set(this._config.kingdomSupply.map(kingdom => kingdom.card.expansionName)));
     for (const expansion of uniqueExpansions) {
       try {
         const module = await import((`@expansions/${expansion}/configurator-${expansion}.ts`));

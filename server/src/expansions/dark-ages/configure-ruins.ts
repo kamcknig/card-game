@@ -4,11 +4,11 @@ import { createCardData } from '../../utils/create-card-data.ts';
 import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
 
 export const configureRuins = async (args: ExpansionConfiguratorContext) => {
-  if (!args.config.kingdomCards.some(card => card.type.includes('LOOTER'))) {
+  if (!args.config.kingdomSupply.some(kingdom => kingdom.card.type.includes('LOOTER'))) {
     return;
   }
   
-  if (args.config.nonSupplyCards?.some(card => card.tags?.includes('ruins'))) {
+  if (args.config.nonSupplyCards?.some(kingdom => kingdom.card.tags?.includes('ruins'))) {
     console.log(`[dark-ages configurator - configuring ruins] ruins already in kingdom, not configuring`);
     return;
   }
@@ -46,8 +46,7 @@ export const configureRuins = async (args: ExpansionConfiguratorContext) => {
     return acc;
   }, {} as Record<CardKey, number>);
   
-  args.config.kingdomCards ??= [];
-  args.config.kingdomCardCount ??= {};
+  args.config.kingdomSupply ??= [];
   
   for (const key of Object.keys(finalRuins)) {
     const cardData = createCardData(key, 'dark-ages', {
@@ -55,8 +54,10 @@ export const configureRuins = async (args: ExpansionConfiguratorContext) => {
       tags: ['ruins'],
     });
     
-    args.config.kingdomCards.push(cardData)
-    args.config.kingdomCardCount[key] = finalRuins[key];
+    args.config.kingdomSupply.push({
+      card: cardData,
+      count: finalRuins[key]
+    });
   }
   
   console.log(`[dark-ages configurator - configuring ruins] ruins configured`);

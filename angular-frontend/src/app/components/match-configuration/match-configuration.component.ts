@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnDestroy } from '@angular/core';
-import { ExpansionListElement, MatchConfiguration, CardNoId, PlayerId } from 'shared/shared-types';
+import { CardNoId, ExpansionListElement, MatchConfiguration, PlayerId } from 'shared/shared-types';
 import { NanostoresService } from '@nanostores/angular';
 import { playerIdStore, selfPlayerIdStore } from '../../state/player-state';
 import { combineLatest, map, Observable, Subscription } from 'rxjs';
@@ -57,8 +57,8 @@ export class MatchConfigurationComponent implements OnDestroy {
 
     this.selectedKingdomsSub = this._nanoStoreService.useStore(matchConfigurationStore)
       .pipe(map(config =>
-        (config?.kingdomCards?.concat(config?.basicCards) ?? [])
-          .sort((a, b) => a.cardKey.localeCompare(b.cardKey))))
+        (config?.kingdomSupply?.concat(config?.basicSupply) ?? [])
+          .sort((a, b) => a.card.cardKey.localeCompare(b.card.cardKey))))
       .subscribe(selectedKingdoms => {
         selectedKingdoms ??= []
         const remainingNulls = new Array(10 - (selectedKingdoms?.length ?? 0)).fill(null);
@@ -67,7 +67,7 @@ export class MatchConfigurationComponent implements OnDestroy {
           selectedKingdoms.push(null as any);
         }
 
-        this.preSelectedKingdoms = selectedKingdoms;
+        this.preSelectedKingdoms = selectedKingdoms.map(k => k.card);
       });
 
     this.gameOwnerSub = combineLatest([
@@ -130,8 +130,14 @@ export class MatchConfigurationComponent implements OnDestroy {
     this._socketService.emit('matchConfigurationUpdated', {
       ...matchConfigurationStore.get() as MatchConfiguration,
       bannedKingdoms: this.bannedKingdoms,
-      kingdomCards: this.preSelectedKingdoms.filter(card => !card?.isBasic).filter(card => card !== null),
-      basicCards: this.preSelectedKingdoms.filter(card => card?.isBasic).filter(card => card !== null),
+      kingdomSupply: this.preSelectedKingdoms
+        .filter(card => !card?.isBasic)
+        .filter(card => card !== null)
+        .map(k => ({ card: k, count: 0 })),
+      basicSupply: this.preSelectedKingdoms
+        .filter(card => card?.isBasic)
+        .filter(card => card !== null)
+        .map(k => ({ card: k, count: 0 }))
     });
   }
 

@@ -1,13 +1,13 @@
-import { CardNoId } from "shared/shared-types.ts";
+import { CardNoId } from 'shared/shared-types.ts';
 import { ExpansionConfiguratorContext } from '../../types.ts';
 import { createCardData } from '../../utils/create-card-data.ts';
 
 export const configureSpoils = async (args: ExpansionConfiguratorContext) => {
-  if (!args.config.kingdomCards.some(card => ['marauder', 'pillage', 'bandit-camp'].includes(card.cardKey))) {
+  if (!args.config.kingdomSupply.some(kingdom => ['marauder', 'pillage', 'bandit-camp'].includes(kingdom.card.cardKey))) {
     return;
   }
   
-  if (args.config.nonSupplyCards?.some(card => card.tags?.includes('spoils'))) {
+  if (args.config.nonSupplyCards?.some(nonSupply => nonSupply.card.tags?.includes('spoils'))) {
     console.log(`[dark-ages configurator - configuring spoils] spoils cards in kingdom already, not configuring`);
     return;
   }
@@ -27,15 +27,16 @@ export const configureSpoils = async (args: ExpansionConfiguratorContext) => {
   }
   
   args.config.nonSupplyCards ??= [];
-  args.config.nonSupplyCardCount ??= {};
   
   for (const key of Object.keys(spoilsCardLibrary ?? {})) {
     const cardData = createCardData(key, 'dark-ages', {
       ...spoilsCardLibrary[key] ?? {},
       tags: ['spoils'],
     });
-    args.config.nonSupplyCards.push(cardData)
-    args.config.nonSupplyCardCount[key] = args.config.players.length > 2 ? 2 : 1;
+    args.config.nonSupplyCards.push({
+      card: cardData,
+      count: args.config.players.length > 2 ? 2 : 1
+    });
   }
   
   console.log(`[dark-ages configurator - configuring spoils] spoils configured`);

@@ -38,3 +38,7 @@ currently - doing dark ages expansion
  - ui needs to properly display ruins. right now they are separated into piles based on 
 card key like everything else. kingdom piles need to be reworked to account for piles like
 ruins, knights, or castles
+
+
+preselecting kingdoms might not be saving and working properly with removing count properties
+for kingdom and sasic and combining them into MathcConfiguration.kingdomSupply and basicSupply

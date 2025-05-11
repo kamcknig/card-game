@@ -18,18 +18,23 @@ export type MatchConfiguration = {
   // cards banned from the match
   bannedKingdoms: CardNoId[];
   
+  preselectedKingdoms: CardNoId[];
+  
   // basic cards selected for the game, these are what are available at the beginning of a match
-  basicCards: CardNoId[];
+  basicSupply: {
+    card: CardNoId;
+    count: number;
+  }[];
   
   // kingdom cards selected for the game, these are what are available at the beginning of a match
-  kingdomCards: CardNoId[];
+  kingdomSupply: {
+    card: CardNoId;
+    count: number;
+  }[];
 }
 
 export type ComputedMatchConfiguration = MatchConfiguration & {
-  nonSupplyCards?: CardNoId[];
-  nonSupplyCardCount?: Record<CardKey, number>;
-  basicCardCount: Record<CardKey, number>;
-  kingdomCardCount: Record<CardKey, number>;
+  nonSupplyCards?: { card: CardNoId; count: number; }[];
   startingHand: Record<CardKey, number>;
   mats: PlayerMatMap;
 }

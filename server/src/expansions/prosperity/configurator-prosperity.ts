@@ -15,12 +15,12 @@ const configurator: ExpansionConfiguratorFactory = () => {
   let prosperityCheckConfigured: boolean = false;
   
   return async (args) => {
-    const kingdomCards = args.config.kingdomCards;
+    const kingdomCards = args.config.kingdomSupply;
     const randomKingdomCard = kingdomCards[Math.floor(kingdomCards.length * Math.random())];
     
     console.log(`[prosperity configurator] random kingdom chosen to determine if colony and prosperity should be added to config '${randomKingdomCard.cardKey}'`);
     
-    const basicCards = args.config.basicCards;
+    const basicCards = args.config.basicSupply;
     
     if (randomKingdomCard.expansionName === 'prosperity' && !prosperityCheckConfigured) {
       console.log(`[prosperity configurator] adding prosperity and colony to config`);
@@ -60,7 +60,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
 export const registerEndGameConditions = (registrar: EndGameConditionRegistrar) => {
   registrar(({ findCards, match }) => {
-    const kingdomCards = match.config.kingdomCards;
+    const kingdomCards = match.config.kingdomSupply;
     const colonyPresent = kingdomCards.find(card => card.cardKey === 'colony');
     
     if (!colonyPresent) {

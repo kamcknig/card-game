@@ -1,6 +1,6 @@
 import { cardEffectFunctionMapFactory } from '../core/effects/card-effect-function-map-factory.ts';
 import { scoringFunctionMap } from '@expansions/scoring-function-map.ts';
-import { expansionLibrary, rawExpansionCardLibrary } from '@expansions/expansion-library.ts';
+import { expansionLibrary, rawCardLibrary } from '@expansions/expansion-library.ts';
 import { cardLifecycleMap } from '../core/card-lifecycle-map.ts';
 import { CardExpansionModule } from '../types.ts';
 import { CardNoId } from 'shared/shared-types.ts';
@@ -57,7 +57,7 @@ export const loadExpansion = async (expansion: { name: string; }) => {
       
       const isBasic = newCardData.isBasic;
       cardData[isBasic ? 'basicSupply' : 'kingdomSupply'][key] = newCardData as any;
-      rawExpansionCardLibrary[key] = newCardData as any;
+      rawCardLibrary[key] = newCardData as any;
     }
     console.log('[expansion loader] card library loaded');
     

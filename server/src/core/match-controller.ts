@@ -256,10 +256,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       throw new Error(`[match] no basic supply card source found`);
     }
     
-    for (const [key, count] of Object.entries(config.basicCardCount)) {
-      const cardData = config.basicCards.find((card) => card.cardKey === key);
-      for (let i = 0; i < count; i++) {
-        const c = createCard(key, cardData);
+    for (const supply of Object.values(config.basicSupply)) {
+      for (let i = 0; i < supply.count; i++) {
+        const c = createCard(supply.card.cardKey, supply.card);
         this._cardLibrary.addCard(c);
         cardSource.push(c.id);
       }
@@ -275,10 +274,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       throw new Error(`[match] no basic supply card source found`);
     }
     
-    for (const [key, count] of Object.entries(config.kingdomCardCount)) {
-      const cardData = config.kingdomCards.find((card) => card.cardKey === key);
-      for (let i = 0; i < count; i++) {
-        const c = createCard(key, cardData);
+    for (const kingdom of Object.values(config.kingdomSupply)) {
+      for (let i = 0; i < kingdom.count; i++) {
+        const c = createCard(kingdom.card.cardKey, kingdom.card);
         this._cardLibrary.addCard(c);
         cardSource.push(c.id);
       }
@@ -294,15 +292,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       throw new Error(`[match] no basic supply card source found`);
     }
     
-    for (const [key, count] of Object.entries(config.nonSupplyCardCount ?? {})) {
-      const cardData = config.nonSupplyCards?.find((card) => card.cardKey === key);
-      if (!cardData) {
-        console.warn(`[match] no card data found for ${key}`);
+    for (const nonSupply of Object.values(config.nonSupplyCards ?? {})) {
+      if (!nonSupply.card) {
+        console.warn(`[match] no card data found for ${nonSupply}`);
         continue;
       }
       
-      for (let i = 0; i < count; i++) {
-        const c = createCard(key, cardData);
+      for (let i = 0; i < nonSupply.count; i++) {
+        const c = createCard(nonSupply.card.cardKey, nonSupply.card);
         this._cardLibrary.addCard(c);
         cardSource.push(c.id);
       }

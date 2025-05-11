@@ -868,8 +868,8 @@ const expansionModule: CardExpansionModule = {
       console.log(`[POACHER EFFECT] gaining 1 treasure...`);
       await runGameActionDelegate('gainTreasure', { count: 1 });
       
-      const allSupplyCardKeys = match.config.basicCards.concat(
-        match.config.kingdomCards,
+      const allSupplyCardKeys = match.config.basicSupply.concat(
+        match.config.kingdomSupply,
       );
       
       console.log(`[POACHER EFFECT] original supply card piles ${allSupplyCardKeys}`);

@@ -13,7 +13,9 @@ export const rewardsStore: ReadableAtom<{
       .map(id => cards[id])
       .filter(card => card.type.includes('REWARD'))
 
-    const startingCards = match?.config.nonSupplyCards?.filter(card => card.type.includes('REWARD')) ?? [];
+    const startingCards = match?.config.nonSupplyCards
+      ?.filter(nonSupply => nonSupply.card.type.includes('REWARD'))
+      ?.map(nonSupply => nonSupply.card) ?? [];
     if (!cardsInSupply.length || !startingCards.length) {
       return undefined;
     }

@@ -3,7 +3,7 @@ import { CardNoId, ExpansionListElement, MatchConfiguration, Player, PlayerId, }
 import { createNewPlayer } from '../utils/create-new-player.ts';
 import { io } from '../server.ts';
 import { MatchController } from './match-controller.ts';
-import { rawExpansionCardLibrary } from "@expansions/expansion-library.ts";
+import { rawCardLibrary } from '@expansions/expansion-library.ts';
 import { applyPatch, compare } from 'https://esm.sh/v123/fast-json-patch@3.1.1/index.js';
 import Fuse, { IFuseOptions } from 'fuse.js';
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
@@ -26,10 +26,11 @@ const defaultMatchConfiguration: MatchConfiguration = {
       'order': 3
     }
   ],
+  preselectedKingdoms: [],
   bannedKingdoms: [],
   players: [],
-  basicCards: [],
-  kingdomCards: [],
+  basicSupply: [],
+  kingdomSupply: [],
 };
 
 export class Game {
@@ -55,7 +56,7 @@ export class Game {
     
     try {
       const preselectedKingdoms = JSON.parse(Deno.readTextFileSync('./preselected-kingdoms.json')) as CardNoId[];
-      defaultMatchConfiguration.kingdomCards = preselectedKingdoms;
+      defaultMatchConfiguration.preselectedKingdoms = preselectedKingdoms;
     } catch (e) {
       console.warn(`Couldn't read banned-kingdoms.json`);
       console.error(e);
@@ -82,7 +83,7 @@ export class Game {
       this._fuse = undefined;
     }
     
-    const libraryArr = Object.values(rawExpansionCardLibrary);
+    const libraryArr = Object.values(rawCardLibrary);
     const index = Fuse.createIndex(['cardName'], libraryArr);
     
     const fuseOptions: IFuseOptions<CardNoId> = {
@@ -255,8 +256,7 @@ export class Game {
           (await import(`../expansions/${expansion.name}/configuration-${expansion.name}.json`, {
             with: { type: 'json' },
           }))?.default;
-      }
-      catch (e) {
+      } catch (e) {
         // nothing
       }
       
@@ -283,10 +283,10 @@ export class Game {
       }
     }
     
-    const kingdomPatch = compare(currentConfig.kingdomCards, newConfig.kingdomCards);
+    const kingdomPatch = compare(currentConfig.kingdomSupply, newConfig.kingdomSupply);
     if (kingdomPatch) {
-      Deno.writeTextFileSync('./preselected-kingdoms.json', JSON.stringify(newConfig.kingdomCards));
-      defaultMatchConfiguration.kingdomCards = structuredClone(newConfig.kingdomCards);
+      Deno.writeTextFileSync('./preselected-kingdoms.json', JSON.stringify(newConfig.kingdomSupply));
+      defaultMatchConfiguration.kingdomSupply = structuredClone(newConfig.kingdomSupply);
     }
     
     const bannedKingdomsPatch = compare(currentConfig.bannedKingdoms, newConfig.bannedKingdoms);

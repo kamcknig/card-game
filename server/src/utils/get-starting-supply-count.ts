@@ -2,8 +2,8 @@ import { Match } from 'shared/shared-types.ts'
 import { FindCardsFn } from '../types.ts';
 
 export const getStartingSupplyCount = (match: Match) => {
-  const allSupplyCardKeys = match.config.basicCards.concat(
-    match.config.kingdomCards,
+  const allSupplyCardKeys = match.config.basicSupply.concat(
+    match.config.kingdomSupply,
   );
   return allSupplyCardKeys.length;
 }

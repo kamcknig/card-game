@@ -5,7 +5,7 @@ import { createCard } from '../../utils/create-card.ts';
 import { createCardData } from '../../utils/create-card-data.ts';
 
 export const configureJoust = async (args: ExpansionConfiguratorContext) => {
-  const joustPresent = args.config.kingdomCards.some(card => card.cardKey === 'joust');
+  const joustPresent = args.config.kingdomSupply.some(kingdom => kingdom.card.cardKey === 'joust');
   
   if (!joustPresent) {
     return;
@@ -26,14 +26,15 @@ export const configureJoust = async (args: ExpansionConfiguratorContext) => {
   }
   
   args.config.nonSupplyCards ??= [];
-  args.config.nonSupplyCardCount ??= {};
   
   for (const key of Object.keys(rewardCardLibrary ?? {})) {
     const cardData = createCardData(key, 'cornucopia-and-guilds', {
       ...rewardCardLibrary[key] ?? {},
     });
-    args.config.nonSupplyCards.push(cardData)
-    args.config.nonSupplyCardCount[key] = args.config.players.length > 2 ? 2 : 1;
+    args.config.nonSupplyCards.push({
+      card: cardData,
+      count: args.config.players.length > 2 ? 2 : 1
+    });
   }
   console.log(`[cornucopia configurator - configuring joust] joust configured`);
 }

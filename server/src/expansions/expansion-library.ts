@@ -22,4 +22,4 @@ export const expansionLibrary: ExpansionDataLibrary = {};
 /**
  * Holds the "raw" JSON data of all cards loaded.
  */
-export const rawExpansionCardLibrary: Record<CardKey, CardNoId> = {};
+export const rawCardLibrary: Record<CardKey, CardNoId> = {};

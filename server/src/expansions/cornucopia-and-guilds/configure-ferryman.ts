@@ -3,10 +3,10 @@ import { ExpansionConfiguratorContext } from '../../types.ts';
 import { expansionLibrary } from '../expansion-library.ts';
 
 export const configureFerryman = (args: ExpansionConfiguratorContext) => {
-  const ferrymanPresent = args.config.kingdomCards.some(card => card.cardKey === 'ferryman');
+  const ferrymanPresent = args.config.kingdomSupply.some(card => card.cardKey === 'ferryman');
   
   // if no witch is present, or if the bane is already configured, no need to configure
-  if (!ferrymanPresent || args.config.kingdomCards.some(card => card.tags?.includes('ferryman'))) {
+  if (!ferrymanPresent || args.config.kingdomSupply.some(card => card.tags?.includes('ferryman'))) {
     return;
   }
   
@@ -27,7 +27,7 @@ export const configureFerryman = (args: ExpansionConfiguratorContext) => {
     return acc;
   }, {} as Record<CardKey, { cardKey: CardKey; expansionName: string }>);
   
-  const kingdomCardKeys = args.config.kingdomCards.map(card => card.cardKey);
+  const kingdomCardKeys = args.config.kingdomSupply.map(card => card.cardKey);
   const bannedKeys = args.config.bannedKingdoms.map(card => card.cardKey);
   const availableKeys = Object.keys(availableKingdoms)
     .filter(key => !bannedKeys.includes(key) && !kingdomCardKeys.includes(key));
@@ -43,5 +43,5 @@ export const configureFerryman = (args: ExpansionConfiguratorContext) => {
   
   const chosenCard = structuredClone(expansionLibrary[availableKingdoms[chosenKey].expansionName].cardData.kingdomSupply[chosenKey]);
   chosenCard.tags = ['ferryman'];
-  args.config.kingdomCards.push(chosenCard);
+  args.config.kingdomSupply.push(chosenCard);
 }
