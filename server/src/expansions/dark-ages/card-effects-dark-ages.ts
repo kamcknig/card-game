@@ -80,6 +80,43 @@ const cardEffects: CardExpansionModule = {
       });
     }
   },
+  'band-of-misfits': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const { cost: thisCost } = cardEffectArgs.cardPriceController.applyRules(thisCard, { playerId: cardEffectArgs.playerId });
+      
+      const cardIds = cardEffectArgs.findCards([
+        { location: ['basicSupply', 'kingdomSupply'] },
+        { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: { treasure: thisCost.treasure - 1 } },
+      ])
+        .filter(card => card.type.includes('ACTION') && !card.type.some(t => ['DURATION', 'COMMAND'].includes(t)));
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Play card`,
+        restrict: cardIds.map(card => card.id),
+        count: 1,
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.log(`[dark-ages] no card selected`);
+        return;
+      }
+      
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+      
+      console.log(`[dark-ages] playing card ${selectedCard}`);
+      
+      await cardEffectArgs.runGameActionDelegate('playCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCard.id,
+        overrides: {
+          actionCost: 0,
+          moveCard: false
+        }
+      })
+    }
+  },
 }
 
 export default cardEffects;
