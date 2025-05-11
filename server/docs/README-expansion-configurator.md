@@ -29,3 +29,9 @@ These should generally be configured in the `ExpansionConfiguratorFactory`. You 
 data to the match's config under the `nonSupplyCard` and `nonSupplyCardCounts` properties.
 
 Make sure to [create](README-card-data.md) the data correctly when inserting it.
+
+The front-end will need some way to display these cards and because it has all expansions
+hard-coded into it for display purposes right now that means we usually tag it. One example
+is Spoils from Dark Ages. When the configurator for the expansion adds the card data
+to the match configuration, it will add the "spoils" tag and the front-end uses this as a 
+filter to display them.

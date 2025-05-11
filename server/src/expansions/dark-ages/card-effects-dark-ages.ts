@@ -124,6 +124,78 @@ const cardEffects: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
     }
   },
+  'beggar': {
+    registerLifeCycleMethods: () => ({
+      onEnterHand: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`beggar:${eventArgs.cardId}:cardPlayed`);
+      },
+      onLeaveHand: async (args, eventArgs) => {
+        args.reactionManager.registerReactionTemplate({
+          id: `beggar:${eventArgs.cardId}:cardPlayed`,
+          playerId: eventArgs.playerId,
+          listeningFor: 'cardPlayed',
+          once: false,
+          allowMultipleInstances: true,
+          compulsory: false,
+          condition: conditionArgs => {
+            if (conditionArgs.trigger.args.playerId === eventArgs.playerId) return false;
+            const card = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
+            if (!card.type.includes('ATTACK')) return false;
+            return true;
+          },
+          triggeredEffectFn: async triggeredArgs => {
+            const thisCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
+            
+            console.log(`[beggar triggered effect] discarding ${thisCard}`);
+            await triggeredArgs.runGameActionDelegate('discardCard', {
+              cardId: thisCard.id,
+              playerId: triggeredArgs.trigger.args.playerId
+            });
+            
+            const silverCards = triggeredArgs.findCards([
+              { location: 'basicSupply' },
+              { cardKeys: 'silver' }
+            ]);
+            
+            const numToGain = Math.min(2, silverCards.length);
+            
+            if (numToGain < 1) {
+              console.log(`[beggar triggered effect] not enough silver in supply`);
+              return;
+            }
+            
+            console.log(`[beggar triggered effect] number of silvers to gain ${numToGain}, one of them to deck`);
+            
+            for (let i = 0; i < numToGain; i++) {
+              await triggeredArgs.runGameActionDelegate('gainCard', {
+                playerId: triggeredArgs.trigger.args.playerId,
+                cardId: silverCards.slice(-i - 1)[0],
+                to: { location: i === 0 ? 'playerDeck': 'playerDiscard' }
+              });
+            }
+          }
+        });
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      const copperCards = cardEffectArgs.findCards([
+        { location: 'basicSupply' },
+        { cardKeys: 'copper' }
+      ]);
+      
+      const numToGain = Math.min(3, copperCards.length);
+      
+      console.log(`[dark-ages] gaining ${numToGain} coppers`);
+      
+      for (let i = 0; i < numToGain; i++) {
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: copperCards.slice(-i - 1)[0],
+          to: { location: 'playerHand' }
+        });
+      }
+    }
+  },
   'spoils': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[dark-ages] gaining 1 treasure`);
@@ -139,6 +211,7 @@ const cardEffects: CardExpansionModule = {
       });
     }
   },
+  
 }
 
 export default cardEffects;
