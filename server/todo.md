@@ -35,3 +35,6 @@ can be checked by seeing if they are in the play area on the turn they were play
 
 currently - doing dark ages expansion
  - ui needs to display spoils. spoils are in nonSupplyCards and have the "spoils" tag
+ - ui needs to properly display ruins. right now they are separated into piles based on 
+card key like everything else. kingdom piles need to be reworked to account for piles like
+ruins, knights, or castles
