@@ -322,7 +322,7 @@ const cardEffects: CardExpansionModule = {
           const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
             playerId: cardEffectArgs.playerId,
             prompt: `Top-deck card`,
-            restrict: { location: 'playerHand' },
+            restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
             count: 1,
           }) as CardId[];
           
@@ -410,6 +410,46 @@ const cardEffects: CardExpansionModule = {
       }
     }
   },
+  'counterfeit': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[dark-ages] gaining 1 treasure, and 1 buy`);
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+      
+      const nonDurationTreasureCards = cardEffectArgs.findCards([
+        { location: 'playerHand', playerId: cardEffectArgs.playerId },
+        { cardType: 'TREASURE' }
+      ])
+        .filter(card => !card.type.includes('DURATION'));
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Play treasure`,
+        restrict: nonDurationTreasureCards.map(card => card.id),
+        count: 1,
+        optional: true
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.log(`[dark-ages] no card selected`);
+        return;
+      }
+      
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+      
+      console.log(`[dark-ages] playing card ${selectedCard} twice`);
+      
+      for (let i = 0; i < 2; i++) {
+        await cardEffectArgs.runGameActionDelegate('playCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: selectedCard.id,
+          overrides: {
+            actionCost: 0,
+          }
+        });
+      }
+    }
+  },
   'spoils': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[dark-ages] gaining 1 treasure`);
@@ -425,7 +465,6 @@ const cardEffects: CardExpansionModule = {
       });
     }
   },
-  
 }
 
 export default cardEffects;
