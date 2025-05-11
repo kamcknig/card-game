@@ -1,5 +1,6 @@
 import { CardId } from 'shared/shared-types.ts';
 import { CardExpansionModule } from '../../types.ts';
+import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 
 const cardEffects: CardExpansionModule = {
   'altar': {
@@ -448,6 +449,61 @@ const cardEffects: CardExpansionModule = {
           }
         });
       }
+    }
+  },
+  'cultist': {
+    registerLifeCycleMethods: () => ({
+      onTrashed: async (args, eventArgs) => {
+        console.log(`[dark-ages onTrashed effect] drawing 3 cards`);
+        await args.runGameActionDelegate('drawCard', { playerId: eventArgs.playerId, count: 3 });
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[dark-ages] drawing 2 cards`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
+      
+      const targetPlayerIds = findOrderedTargets({
+        match: cardEffectArgs.match,
+        appliesTo: 'ALL_OTHER',
+        startingPlayerId: cardEffectArgs.playerId,
+      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      
+      for (const targetPlayerId of targetPlayerIds) {
+      
+      }
+      
+      const cultistsInHand = cardEffectArgs.findCards([
+        { location: 'playerHand', playerId: cardEffectArgs.playerId },
+        { cardKeys: 'cultist' }
+      ]);
+      
+      if (!cultistsInHand.length) {
+        console.log(`[dark-ages] no cultists in hand`);
+        return;
+      }
+      
+      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        prompt: 'Play Cultist?',
+        playerId: cardEffectArgs.playerId,
+        actionButtons: [
+          { label: 'CANCEL', action: 1 }, { label: 'PLAY', action: 2 }
+        ],
+      }) as { action: number, result: number[] };
+      
+      if (result.action === 1) {
+        console.log(`[dark-ages] cancelling play of cultist`);
+        return;
+      }
+      
+      console.log(`[dark-ages] playing cultist`);
+      
+      await cardEffectArgs.runGameActionDelegate('playCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: cultistsInHand.slice(-1)[0].id,
+        overrides: {
+          actionCost: 0,
+        }
+      });
     }
   },
   'spoils': {
