@@ -1,7 +1,7 @@
 import { AppSocket, FindCardsFn, RunGameActionDelegate } from '../types.ts';
 import { CardId, Match, PlayerId, TurnPhaseOrderValues, } from 'shared/shared-types.ts';
 import { isUndefined } from 'es-toolkit/compat';
-import { CardLibrary } from './card-library.ts';
+import { MatchCardLibrary } from './match-card-library.ts';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
 import { getTurnPhase } from '../utils/get-turn-phase.ts';
 import { CardPriceRulesController } from './card-price-rules-controller.ts';
@@ -16,7 +16,7 @@ export class CardInteractivityController {
     private readonly _cardPriceController: CardPriceRulesController,
     private readonly match: Match,
     private readonly _socketMap: Map<PlayerId, AppSocket>,
-    private readonly _cardLibrary: CardLibrary,
+    private readonly _cardLibrary: MatchCardLibrary,
     private readonly runGameDelegate: RunGameActionDelegate,
     private readonly _findCards: FindCardsFn
   ) {

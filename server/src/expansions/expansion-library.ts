@@ -1,4 +1,4 @@
-import { CardKey, CardNoId, Mats } from 'shared/shared-types.ts';
+import { CardKey, CardNoId } from 'shared/shared-types.ts';
 
 export type ExpansionCardData = {
   basicSupply: Record<CardKey, CardNoId>,
@@ -22,4 +22,4 @@ export const expansionLibrary: ExpansionDataLibrary = {};
 /**
  * Holds the "raw" JSON data of all cards loaded.
  */
-export const allCardLibrary: Record<CardKey, CardNoId> = {};
+export const rawExpansionCardLibrary: Record<CardKey, CardNoId> = {};

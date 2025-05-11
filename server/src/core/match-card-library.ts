@@ -6,7 +6,7 @@ import { Card, CardId, PlayerId } from 'shared/shared-types.ts';
  * The library should include every physical card created to be used within a match. This is NOT a library
  * of every card possible; ONLY the ones created and used in a Match.
  */
-export class CardLibrary {
+export class MatchCardLibrary {
   private readonly _library: Map<CardId, Card> = new Map();
   
   public addCard = (card: Card) => {

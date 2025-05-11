@@ -55,7 +55,7 @@ const cardEffects: CardExpansionModule = {
         playerId: cardEffectArgs.playerId,
         prompt: `Gain card`,
         restrict: [
-          { location: ['basisSupply', 'kingdomSupply'] }, {
+          { location: ['basicSupply', 'kingdomSupply'] }, {
             kind: 'upTo',
             playerId: cardEffectArgs.playerId,
             amount: { treasure: 4 }
@@ -115,6 +115,28 @@ const cardEffects: CardExpansionModule = {
           moveCard: false
         }
       })
+    }
+  },
+  'bandit-camp': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[dark-ages] drawing 1 card and gaining 2 actions`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
+    }
+  },
+  'spoils': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[dark-ages] gaining 1 treasure`);
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 3 });
+      
+      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      
+      console.log(`[dark-ages] moving ${thisCard} back to supply`);
+      
+      await cardEffectArgs.runGameActionDelegate('moveCard', {
+        cardId: cardEffectArgs.cardId,
+        to: { location: 'nonSupplyCards' }
+      });
     }
   },
 }

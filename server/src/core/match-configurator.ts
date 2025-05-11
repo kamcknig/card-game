@@ -1,5 +1,5 @@
 import { CardKey, CardNoId, ComputedMatchConfiguration, Match, MatchConfiguration } from 'shared/shared-types.ts';
-import { allCardLibrary, ExpansionData, expansionLibrary } from '@expansions/expansion-library.ts';
+import { rawExpansionCardLibrary, ExpansionData, expansionLibrary } from '@expansions/expansion-library.ts';
 import {
   EndGameConditionRegistrar,
   ExpansionConfigurator,
@@ -59,7 +59,7 @@ export class MatchConfigurator {
         ...requisiteKingdomCardKeys,
         ...(this._config.kingdomCards?.map(card => card.cardKey) ?? [])
       ]))
-        .map(key => structuredClone(allCardLibrary[key]))
+        .map(key => structuredClone(rawExpansionCardLibrary[key]))
         .filter(card => !!card);
     
     if (this._requestedKingdoms.length > MatchBaseConfiguration.numberOfKingdomPiles) {
@@ -167,7 +167,7 @@ export class MatchConfigurator {
     
     // create the basic cards map
     this._config.basicCards = structuredClone(Object.keys(basicCardCounts).reduce((acc, nextKey) => {
-      acc.push({ ...allCardLibrary[nextKey] });
+      acc.push({ ...rawExpansionCardLibrary[nextKey] });
       return acc;
     }, [] as CardNoId[]));
     
@@ -204,7 +204,7 @@ export class MatchConfigurator {
         await expansionConfigurator({
           ...initContext,
           config: this._config,
-          cardLibrary: allCardLibrary,
+          cardLibrary: rawExpansionCardLibrary,
           expansionData: expansionLibrary[expansionName]
         });
       }

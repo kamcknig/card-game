@@ -1,25 +1,11 @@
 import { cardEffectFunctionMapFactory } from '../core/effects/card-effect-function-map-factory.ts';
 import { scoringFunctionMap } from '@expansions/scoring-function-map.ts';
-import { allCardLibrary, expansionLibrary } from '@expansions/expansion-library.ts';
+import { expansionLibrary, rawExpansionCardLibrary } from '@expansions/expansion-library.ts';
 import { cardLifecycleMap } from '../core/card-lifecycle-map.ts';
 import { CardExpansionModule } from '../types.ts';
 import { CardNoId } from 'shared/shared-types.ts';
-import { capitalize } from 'es-toolkit';
 import { cardActionConditionMapFactory } from '../core/actions/card-action-condition-map-factory.ts';
-
-export const createCardData = (cardKey: string, expansionName: string, templateData: Partial<CardNoId>) => {
-  const data = {
-    cardKey,
-    cardName: templateData.cardName ?? capitalize(cardKey),
-    expansionName,
-    detailImagePath: `./assets/card-images/${expansionName}/detail/${cardKey}.jpg`,
-    fullImagePath: `./assets/card-images/${expansionName}/full-size/${cardKey}.jpg`,
-    halfImagePath: `./assets/card-images/${expansionName}/half-size/${cardKey}.jpg`,
-    ...templateData ?? {},
-  }
-  
-  return data as CardNoId;
-};
+import { createCardData } from './create-card-data.ts';
 
 export const loadExpansion = async (expansion: { name: string; }) => {
   const expansionPath = `@expansions/${expansion.name}`;
@@ -71,7 +57,7 @@ export const loadExpansion = async (expansion: { name: string; }) => {
       
       const isBasic = newCardData.isBasic;
       cardData[isBasic ? 'basicSupply' : 'kingdomSupply'][key] = newCardData as any;
-      allCardLibrary[key] = newCardData as any;
+      rawExpansionCardLibrary[key] = newCardData as any;
     }
     console.log('[expansion loader] card library loaded');
     

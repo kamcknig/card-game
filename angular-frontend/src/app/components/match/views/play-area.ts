@@ -4,10 +4,10 @@ import { List } from '@pixi/ui';
 import { STANDARD_GAP } from '../../../core/app-contants';
 import { Card, Match } from 'shared/shared-types';
 import { ActiveDurationCardList } from './active-duration-card-list';
-import { playAreaStore } from '../../../state/match-logic';
 import { computed } from 'nanostores';
 import { matchStore } from '../../../state/match-state';
 import { AdjustmentFilter } from 'pixi-filters';
+import { playAreaStore } from '../../../state/card-source-logic';
 
 export class PlayAreaView extends Container {
   private _background: Graphics = new Graphics();

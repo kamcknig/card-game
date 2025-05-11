@@ -1,9 +1,8 @@
 import { Container, Graphics, Text } from 'pixi.js';
-import { rewardsStore } from '../../../state/match-logic';
 import { Card, CardNoId } from 'shared/shared-types';
 import { PileView } from './pile';
 import { STANDARD_GAP } from '../../../core/app-contants';
-import { cardStore } from '../../../state/card-state';
+import { rewardsStore } from '../../../state/card-source-logic';
 
 export class NonSupplyKingdomView extends Container {
   private _container: Container;
@@ -17,10 +16,6 @@ export class NonSupplyKingdomView extends Container {
       if (!rewards) {
         return;
       }
-
-      // todo: remove this owner check when game actions on the server side properly handles moving cards to/from
-      // locations
-      const cardsById = cardStore.get();
 
       this.drawRewards({
         ...rewards,

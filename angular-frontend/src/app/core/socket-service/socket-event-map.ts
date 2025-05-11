@@ -14,7 +14,7 @@ import { applyPatch, Operation } from 'fast-json-patch';
 import { ClientListenEventNames, ClientListenEvents } from '../../../types';
 import { logManager } from '../log-manager';
 import { kingdomCardKeyStore, supplyCardKeyStore } from '../../state/match-logic';
-import { cardSourceStore, cardSourceTagStore } from '../../state/card-source-store';
+import { cardSourceStore, cardSourceTagMapStore } from '../../state/card-source-store';
 
 export type SocketEventMap = Partial<{ [p in ClientListenEventNames]: ClientListenEvents[p] }>;
 
@@ -130,7 +130,7 @@ export const socketToGameEventMap = (): SocketEventMap => {
     const current = structuredClone(matchStore.get()) ?? {} as Match;
     applyPatch(current, patch);
     cardSourceStore.set(current.cardSources);
-    cardSourceTagStore.set(current.cardSourceTagMap);
+    cardSourceTagMapStore.set(current.cardSourceTagMap);
     matchStore.set(current);
   };
 

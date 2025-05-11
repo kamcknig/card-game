@@ -1,5 +1,5 @@
 import { Card, CardCost, CardId, Match, PlayerId } from 'shared/shared-types.ts';
-import { CardLibrary } from './card-library.ts';
+import { MatchCardLibrary } from './match-card-library.ts';
 
 export type CardPriceRule = (
   card: Card,
@@ -10,7 +10,7 @@ export class CardPriceRulesController {
   private _rules: Record<CardId, CardPriceRule[]> = {};
   
   constructor(
-    private readonly cardLibrary: CardLibrary,
+    private readonly cardLibrary: MatchCardLibrary,
     private readonly match: Match,
   ) {
   }

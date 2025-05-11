@@ -11,7 +11,7 @@ import {
   TurnPhaseOrderValues,
   UserPromptActionArgs
 } from 'shared/shared-types.ts';
-import { CardLibrary } from '../card-library.ts';
+import { MatchCardLibrary } from '../match-card-library.ts';
 import { LogManager } from '../log-manager.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import {
@@ -48,7 +48,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     private cardPriceRuleController: CardPriceRulesController,
     private cardEffectFunctionMap: CardEffectFunctionMap,
     private match: Match,
-    private cardLibrary: CardLibrary,
+    private cardLibrary: MatchCardLibrary,
     private logManager: LogManager,
     private socketMap: Map<PlayerId, AppSocket>,
     private reactionManager: ReactionManager,
@@ -765,9 +765,6 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       source: context?.loggingContext?.source,
     });
     
-    // now add any triggered effects from the card played
-    await this.reactionManager.runCardLifecycleEvent('onCardPlayed', { playerId: args.playerId, cardId });
-    
     // find any reactions for the cardPlayed event type
     const trigger = new ReactionTrigger('cardPlayed', {
       playerId,
@@ -779,6 +776,9 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     this.logManager.enter();
     await this.reactionManager.runTrigger({ trigger, reactionContext });
     this.logManager.exit();
+    
+    // now add any triggered effects from the card played
+    await this.reactionManager.runCardLifecycleEvent('onCardPlayed', { playerId: args.playerId, cardId });
     
     // run the effects of the card played, note passing in the reaction context collected from running the trigger
     // above - e.g., could provide immunity to an attack card played

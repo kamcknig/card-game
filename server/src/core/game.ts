@@ -3,7 +3,7 @@ import { CardNoId, ExpansionListElement, MatchConfiguration, Player, PlayerId, }
 import { createNewPlayer } from '../utils/create-new-player.ts';
 import { io } from '../server.ts';
 import { MatchController } from './match-controller.ts';
-import { allCardLibrary } from "@expansions/expansion-library.ts";
+import { rawExpansionCardLibrary } from "@expansions/expansion-library.ts";
 import { applyPatch, compare } from 'https://esm.sh/v123/fast-json-patch@3.1.1/index.js';
 import Fuse, { IFuseOptions } from 'fuse.js';
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
@@ -82,7 +82,7 @@ export class Game {
       this._fuse = undefined;
     }
     
-    const libraryArr = Object.values(allCardLibrary);
+    const libraryArr = Object.values(rawExpansionCardLibrary);
     const index = Fuse.createIndex(['cardName'], libraryArr);
     
     const fuseOptions: IFuseOptions<CardNoId> = {

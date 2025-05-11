@@ -1,8 +1,8 @@
 import { CardNoId, Match } from 'shared/shared-types.ts';
 import { ExpansionConfiguratorContext } from '../../types.ts';
-import { CardLibrary } from '../../core/card-library.ts';
-import { createCardData } from '../../utils/load-expansion.ts';
+import { MatchCardLibrary } from '../../core/match-card-library.ts';
 import { createCard } from '../../utils/create-card.ts';
+import { createCardData } from '../../utils/create-card-data.ts';
 
 export const configureJoust = async (args: ExpansionConfiguratorContext) => {
   const joustPresent = args.config.kingdomCards.some(card => card.cardKey === 'joust');
@@ -29,7 +29,6 @@ export const configureJoust = async (args: ExpansionConfiguratorContext) => {
   args.config.nonSupplyCardCount ??= {};
   
   for (const key of Object.keys(rewardCardLibrary ?? {})) {
-    // adds the REWARD card type
     const cardData = createCardData(key, 'cornucopia-and-guilds', {
       ...rewardCardLibrary[key] ?? {},
     });

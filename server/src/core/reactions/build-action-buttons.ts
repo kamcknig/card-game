@@ -1,9 +1,9 @@
 import { Reaction } from '../../types.ts';
-import { CardLibrary } from '../card-library.ts';
+import { MatchCardLibrary } from '../match-card-library.ts';
 
 export function buildActionButtons(
   grouped: Map<string, { count: number; reaction: Reaction }>,
-  cardLibrary: CardLibrary,
+  cardLibrary: MatchCardLibrary,
 ) {
   let actionId = 1;
   const buttons = [{ action: 0, label: 'Cancel' }];

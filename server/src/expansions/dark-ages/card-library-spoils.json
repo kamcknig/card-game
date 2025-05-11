@@ -1,0 +1,8 @@
+{
+  "spoils": {
+    "cost": {
+      "treasure": 0
+    },
+    "type": ["TREASURE"]
+  }
+}

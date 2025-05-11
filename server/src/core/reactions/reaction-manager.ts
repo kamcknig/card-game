@@ -11,7 +11,7 @@ import {
   RunGameActionDelegate,
   TriggerEventType, FindCardsFn
 } from '../../types.ts';
-import { CardLibrary } from '../card-library.ts';
+import { MatchCardLibrary } from '../match-card-library.ts';
 import { getOrderStartingFrom } from '../../utils/get-order-starting-from.ts';
 import { groupReactionsByCardKey } from './group-reactions-by-card-key.ts';
 import { buildActionButtons } from './build-action-buttons.ts';
@@ -31,7 +31,7 @@ export class ReactionManager {
     private readonly cardPriceController: CardPriceRulesController,
     private readonly logManager: LogManager,
     private readonly _match: Match,
-    private readonly _cardLibrary: CardLibrary,
+    private readonly _cardLibrary: MatchCardLibrary,
     private readonly runGameActionDelegate: RunGameActionDelegate
   ) {
   }

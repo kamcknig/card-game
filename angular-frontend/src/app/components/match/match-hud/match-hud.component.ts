@@ -23,7 +23,7 @@ import { LogEntryMessage } from '../../../../types';
 import { cardStore } from '../../../state/card-state';
 import { MatPlayerContent } from './types';
 import { Rectangle } from 'pixi.js';
-import { cardSourceTagStore, getCardSourceStore } from '../../../state/card-source-store';
+import { cardSourceTagMapStore, getCardSourceStore } from '../../../state/card-source-store';
 
 export interface Mat {
   mat: Mats | string;
@@ -91,7 +91,7 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.selfMats$ = this._nanoService.useStore(cardSourceTagStore).pipe(
+    this.selfMats$ = this._nanoService.useStore(cardSourceTagMapStore).pipe(
       filter(store => store !== undefined),
       map<any, Mats[]>(store => store['mat']),
       filter(sourceKeys => sourceKeys !== undefined),

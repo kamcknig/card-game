@@ -206,7 +206,7 @@ export const isLocationMat = (location: any): location is Mats => {
   return !!location && (MatValues as unknown as string[]).indexOf(location) !== -1;
 }
 
-const CardLocationValues = ['activeDuration', 'playerDiscard', 'playerHand', 'trash', 'playArea', 'playerDeck', 'basicSupply', 'kingdomSupply'] as const;
+const CardLocationValues = ['nonSupplyCards', 'activeDuration', 'playerDiscard', 'playerHand', 'trash', 'playArea', 'playerDeck', 'basicSupply', 'kingdomSupply'] as const;
 export type CardLocations = typeof CardLocationValues[number];
 
 export type CardLocation =

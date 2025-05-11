@@ -20,7 +20,7 @@ import {
 } from 'shared/shared-types.ts';
 import { toNumber } from 'es-toolkit/compat';
 
-import { CardLibrary } from './core/card-library.ts';
+import { MatchCardLibrary } from './core/match-card-library.ts';
 import { ReactionManager } from './core/reactions/reaction-manager.ts';
 import { ExpansionData } from '@expansions/expansion-library.ts';
 import { CardPriceRulesController } from './core/card-price-rules-controller.ts';
@@ -203,7 +203,7 @@ export interface AppContext {
   match: Match;
   reactionManager: ReactionManager;
   reactionContext?: ReactionContext;
-  cardLibrary: CardLibrary;
+  cardLibrary: MatchCardLibrary;
   findCards: FindCardsFn;
 }
 
@@ -223,7 +223,7 @@ export interface SourceFindCardsFilter {
 
 export type NonLocationFilters = CostFindCardsFilter | CardDataFindCardsFilter;
 
-export type FindCardsFnFactory = (cardSourceController: CardSourceController, cardCostController: CardPriceRulesController, cardLibrary: CardLibrary) => FindCardsFn;
+export type FindCardsFnFactory = (cardSourceController: CardSourceController, cardCostController: CardPriceRulesController, cardLibrary: MatchCardLibrary) => FindCardsFn;
 
 export type FindCardsFnInput =
   | NonLocationFilters[]
@@ -286,6 +286,9 @@ export interface CardScoringFnContext extends AppContext {
 
 export type ExpansionConfiguratorContext = InitializeExpansionContext & {
   config: ComputedMatchConfiguration;
+  /**
+   * This is the *entire* library of cards. This *should* be pristine data loaded from expansions
+   */
   cardLibrary: Record<CardKey, CardNoId>;
   expansionData: ExpansionData;
 };
@@ -296,7 +299,7 @@ export type ExpansionConfiguratorFactory = () => ExpansionConfigurator;
 export type CardScoringFunction = (args: CardScoringFnContext) => number;
 
 export type CardExpansionActionConditionMap = {
-  canBuy?: (args: { match: Match, cardLibrary: CardLibrary, playerId: PlayerId }) => boolean
+  canBuy?: (args: { match: Match, cardLibrary: MatchCardLibrary, playerId: PlayerId }) => boolean
 };
 
 export interface CardExpansionModule {

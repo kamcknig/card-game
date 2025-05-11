@@ -14,7 +14,7 @@ import { CardInteractivityController } from './card-interactivity-controller.ts'
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
 import { ReactionManager } from './reactions/reaction-manager.ts';
 import { scoringFunctionMap } from '@expansions/scoring-function-map.ts';
-import { CardLibrary } from './card-library.ts';
+import { MatchCardLibrary } from './match-card-library.ts';
 import { compare, Operation } from 'fast-json-patch';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
 import { cardEffectFunctionMapFactory } from './effects/card-effect-function-map-factory.ts';
@@ -45,7 +45,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _matchSnapshot: Match | null | undefined;
   private _reactionManager: ReactionManager | undefined;
   private _interactivityController: CardInteractivityController | undefined;
-  private readonly _cardLibrary: CardLibrary = new CardLibrary();
+  private readonly _cardLibrary: MatchCardLibrary = new MatchCardLibrary();
   private _logManager: LogManager | undefined;
   private gameActionsController: GameActionController | undefined;
   private readonly _match: Match = {} as Match;
