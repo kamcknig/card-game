@@ -1,0 +1,8 @@
+{
+  "altar": {
+    "cost": {
+      "treasure": 6
+    },
+    "type": ["ACTION"]
+  }
+}

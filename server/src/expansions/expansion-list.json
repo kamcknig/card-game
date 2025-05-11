@@ -33,5 +33,10 @@
     "title": "Hinterlands",
     "name": "hinterlands",
     "order": 7
+  },
+  {
+    "title": "Dark Ages",
+    "name": "dark-ages",
+    "order": 8
   }
 ]
