@@ -1012,6 +1012,35 @@ const cardEffects: CardExpansionModule = {
       });
     }
   },
+  'junk-dealer': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[junk-dealer effect] drawing 1 card, and gaining 1 action and 1 treasure`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Trash card`,
+        restrict: cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId),
+        count: 1,
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.log(`[junk-dealer effect] no card selected`);
+        return;
+      }
+      
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+      
+      console.log(`[junk-dealer effect] trashing card ${selectedCard}`);
+      
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCard.id,
+      });
+    }
+  },
   'ruined-library': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[ruined library effect] drawing 1 card`);

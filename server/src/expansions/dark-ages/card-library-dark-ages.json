@@ -3,110 +3,159 @@
     "cost": {
       "treasure": 6
     },
-    "type": ["ACTION"]
+    "type": [
+      "ACTION"
+    ]
   },
   "armory": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION"]
+    "type": [
+      "ACTION"
+    ]
   },
   "band-of-misfits": {
     "cardName": "Band of Misfits",
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION", "COMMAND"]
+    "type": [
+      "ACTION",
+      "COMMAND"
+    ]
   },
-  "bandit-camp":{
+  "bandit-camp": {
     "cardName": "Bandit Camp",
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": [
+      "ACTION"
+    ]
   },
   "beggar": {
     "cost": {
       "treasure": 2
     },
-    "type": ["ACTION", "REACTION"]
+    "type": [
+      "ACTION",
+      "REACTION"
+    ]
   },
   "catacombs": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": [
+      "ACTION"
+    ]
   },
   "count": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": [
+      "ACTION"
+    ]
   },
   "counterfeit": {
     "cost": {
       "treasure": 5
     },
-    "type": ["TREASURE"]
+    "type": [
+      "TREASURE"
+    ]
   },
   "cultist": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION", "ATTACK", "LOOTER"]
+    "type": [
+      "ACTION",
+      "ATTACK",
+      "LOOTER"
+    ]
   },
   "catacombs": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": [
+      "ACTION"
+    ]
   },
   "death-cart": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION", "LOOTER"]
+    "type": [
+      "ACTION",
+      "LOOTER"
+    ]
   },
   "feodum": {
     "cost": {
       "treasure": 4
     },
-    "type": ["VICTORY"]
+    "type": [
+      "VICTORY"
+    ]
   },
   "forager": {
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION"]
+    "type": [
+      "ACTION"
+    ]
   },
   "fortress": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION"]
+    "type": [
+      "ACTION"
+    ]
   },
   "graverobber": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": [
+      "ACTION"
+    ]
   },
   "hermit": {
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION"]
+    "type": [
+      "ACTION"
+    ]
   },
   "hunting-grounds": {
     "cost": {
       "treasure": 6
     },
-    "type": ["ACTION"]
+    "type": [
+      "ACTION"
+    ]
   },
   "iron-monger": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION"]
+    "type": [
+      "ACTION"
+    ]
+  },
+  "junk-dealer": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION"
+    ]
   }
 }
