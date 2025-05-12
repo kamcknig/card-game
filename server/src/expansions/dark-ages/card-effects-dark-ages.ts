@@ -5,7 +5,7 @@ import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 const cardEffects: CardExpansionModule = {
   'abandoned-mine': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.log(`[dark-ages] gaining 1 treasure`);
+      console.log(`[abandoned mine effect] gaining 1 treasure`);
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
     }
   },
@@ -19,7 +19,7 @@ const cardEffects: CardExpansionModule = {
       }) as CardId[];
       
       if (!selectedCardIds.length) {
-        console.warn(`[dark-ages] no card selected`);
+        console.warn(`[altar effect] no card selected`);
         return;
       }
       
@@ -41,13 +41,13 @@ const cardEffects: CardExpansionModule = {
       }) as CardId[];
       
       if (!selectedCardIds) {
-        console.log(`[dark-ages] no card selected`);
+        console.log(`[altar effect] no card selected`);
         return;
       }
       
       const cardToGain = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
       
-      console.log(`[dark-ages] gaining card ${cardToGain}`);
+      console.log(`[altar effect] gaining card ${cardToGain}`);
       
       await cardEffectArgs.runGameActionDelegate('gainCard', {
         playerId: cardEffectArgs.playerId,
@@ -72,13 +72,13 @@ const cardEffects: CardExpansionModule = {
       }) as CardId[];
       
       if (!selectedCardIds.length) {
-        console.log(`[dark-ages] no card selected`);
+        console.log(`[armory effect] no card selected`);
         return;
       }
       
       const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
       
-      console.log(`[dark-ages] gaining card ${selectedCard}`);
+      console.log(`[armory effect] gaining card ${selectedCard}`);
       
       await cardEffectArgs.runGameActionDelegate('gainCard', {
         playerId: cardEffectArgs.playerId,
@@ -106,13 +106,13 @@ const cardEffects: CardExpansionModule = {
       }) as CardId[];
       
       if (!selectedCardIds.length) {
-        console.log(`[dark-ages] no card selected`);
+        console.log(`[band of misfits effect] no card selected`);
         return;
       }
       
       const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
       
-      console.log(`[dark-ages] playing card ${selectedCard}`);
+      console.log(`[band of misfits effect] playing card ${selectedCard}`);
       
       await cardEffectArgs.runGameActionDelegate('playCard', {
         playerId: cardEffectArgs.playerId,
@@ -126,7 +126,7 @@ const cardEffects: CardExpansionModule = {
   },
   'bandit-camp': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.log(`[dark-ages] drawing 1 card and gaining 2 actions`);
+      console.log(`[bandit camp effect] drawing 1 card and gaining 2 actions`);
       await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
       await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
     }
@@ -192,7 +192,7 @@ const cardEffects: CardExpansionModule = {
       
       const numToGain = Math.min(3, copperCards.length);
       
-      console.log(`[dark-ages] gaining ${numToGain} coppers`);
+      console.log(`[beggar effect] gaining ${numToGain} coppers`);
       
       for (let i = 0; i < numToGain; i++) {
         await cardEffectArgs.runGameActionDelegate('gainCard', {
@@ -419,7 +419,7 @@ const cardEffects: CardExpansionModule = {
   },
   'counterfeit': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.log(`[dark-ages] gaining 1 treasure, and 1 buy`);
+      console.log(`[counterfeit effect] gaining 1 treasure, and 1 buy`);
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
       await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
       
@@ -438,13 +438,13 @@ const cardEffects: CardExpansionModule = {
       }) as CardId[];
       
       if (!selectedCardIds.length) {
-        console.log(`[dark-ages] no card selected`);
+        console.log(`[counterfeit effect] no card selected`);
         return;
       }
       
       const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
       
-      console.log(`[dark-ages] playing card ${selectedCard} twice`);
+      console.log(`[counterfeit effect] playing card ${selectedCard} twice`);
       
       for (let i = 0; i < 2; i++) {
         await cardEffectArgs.runGameActionDelegate('playCard', {
@@ -460,12 +460,12 @@ const cardEffects: CardExpansionModule = {
   'cultist': {
     registerLifeCycleMethods: () => ({
       onTrashed: async (args, eventArgs) => {
-        console.log(`[dark-ages onTrashed effect] drawing 3 cards`);
+        console.log(`[cultist onTrashed effect] drawing 3 cards`);
         await args.runGameActionDelegate('drawCard', { playerId: eventArgs.playerId, count: 3 });
       }
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      console.log(`[dark-ages] drawing 2 cards`);
+      console.log(`[cultist effect] drawing 2 cards`);
       await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
       
       const targetPlayerIds = findOrderedTargets({
@@ -484,7 +484,7 @@ const cardEffects: CardExpansionModule = {
       ]);
       
       if (!cultistsInHand.length) {
-        console.log(`[dark-ages] no cultists in hand`);
+        console.log(`[cultist effect] no cultists in hand`);
         return;
       }
       
@@ -497,11 +497,11 @@ const cardEffects: CardExpansionModule = {
       }) as { action: number, result: number[] };
       
       if (result.action === 1) {
-        console.log(`[dark-ages] cancelling play of cultist`);
+        console.log(`[cultist effect] cancelling play of cultist`);
         return;
       }
       
-      console.log(`[dark-ages] playing cultist`);
+      console.log(`[cultist effect] playing cultist`);
       
       await cardEffectArgs.runGameActionDelegate('playCard', {
         playerId: cardEffectArgs.playerId,
@@ -512,32 +512,82 @@ const cardEffects: CardExpansionModule = {
       });
     }
   },
+  'death-cart': {
+    registerLifeCycleMethods: () => ({
+      onTrashed: async (args, eventArgs) => {
+        const ruinCards = args.findCards([
+          { location: 'kingdomSupply' },
+          { kingdom: 'ruins' }
+        ]);
+        
+        const numToGain = Math.min(2, ruinCards.length);
+        
+        console.log(`[death cart onTrashed effect] gaining ${numToGain} ruins`);
+        
+        for (let i = 0; i < numToGain; i++) {
+          await args.runGameActionDelegate('gainCard', {
+            playerId: eventArgs.playerId,
+            cardId: ruinCards.slice(-i - 1)[0],
+            to: { location: 'playerDiscard' }
+          });
+        }
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Trash card?`,
+        restrict: [...hand, cardEffectArgs.cardId],
+        count: 1,
+        optional: true,
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.log(`[death cart effect] no card selected`);
+        return;
+      }
+      
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+      
+      console.log(`[death cart effect] trashing card ${selectedCard}`);
+      
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCard.id,
+      });
+      
+      console.log(`[death cart effect] gaining 5 treasure`);
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 5 });
+    }
+  },
   'ruined-library': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.log(`[dark-ages] drawing 1 card`);
+      console.log(`[ruined library effect] drawing 1 card`);
       await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
     }
   },
   'ruined-market': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.log(`[dark-ages] gaining 1 buy`);
+      console.log(`[ruined market effect] gaining 1 buy`);
       await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
     }
   },
   'ruined-village': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.log(`[dark-ages] gaining 1 action`);
+      console.log(`[ruined village effect] gaining 1 action`);
       await cardEffectArgs.runGameActionDelegate('gainAction', { count: cardEffectArgs.playerId });
     }
   },
   'spoils': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.log(`[dark-ages] gaining 1 treasure`);
+      console.log(`[spoils effect] gaining 1 treasure`);
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 3 });
       
       const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       
-      console.log(`[dark-ages] moving ${thisCard} back to supply`);
+      console.log(`[spoils effect] moving ${thisCard} back to supply`);
       
       await cardEffectArgs.runGameActionDelegate('moveCard', {
         cardId: cardEffectArgs.cardId,
@@ -550,7 +600,7 @@ const cardEffects: CardExpansionModule = {
       const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
       
       if (deck.length < 2) {
-        console.log(`[dark-ages effect] deck is empty, shuffling`);
+        console.log(`[survivors effect] deck is empty, shuffling`);
         await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
       }
       
@@ -570,7 +620,7 @@ const cardEffects: CardExpansionModule = {
       }) as { action: number, result: number[] };
       
       if (result.action === 1) {
-        console.log(`[dark-ages effect] discarding ${numToLookAt} cards`);
+        console.log(`[survivors effect] discarding ${numToLookAt} cards`);
         for (let i = 0; i < numToLookAt; i++) {
           await cardEffectArgs.runGameActionDelegate('discardCard', {
             cardId: deck.slice(-i - 1)[0],
@@ -579,10 +629,10 @@ const cardEffects: CardExpansionModule = {
         }
       }
       else {
-        console.log(`[dark-ages effect] putting back ${numToLookAt} cards`);
+        console.log(`[survivors effect] putting back ${numToLookAt} cards`);
         
         if (numToLookAt > 1) {
-          console.log(`[dark-ages effect] rearranging cards`);
+          console.log(`[survivors effect] rearranging cards`);
           
           const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
             prompt: 'Rearrange',
@@ -602,7 +652,7 @@ const cardEffects: CardExpansionModule = {
           }
         }
         else {
-          console.log(`[dark-ages effect] only one card to look at, it's already on top of deck`);
+          console.log(`[survivors effect] only one card to look at, it's already on top of deck`);
         }
       }
     }

@@ -60,5 +60,11 @@
       "treasure": 5
     },
     "type": ["ACTION"]
+  },
+  "death-cart": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION", "LOOTER"]
   }
 }

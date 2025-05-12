@@ -214,6 +214,7 @@ export interface CardDataFindCardsFilter {
   cardKeys?: CardKey | CardKey[];
   cardType?: CardType | CardType[];
   owner?: PlayerId;
+  kingdom?: string;
 }
 
 export interface SourceFindCardsFilter {
