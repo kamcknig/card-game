@@ -1,6 +1,8 @@
 import { Card, CardId } from 'shared/shared-types.ts';
 import { CardExpansionModule } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
+import { getTurnPhase } from '../../utils/get-turn-phase.ts';
+import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 
 const cardEffects: CardExpansionModule = {
   'abandoned-mine': {
@@ -660,14 +662,14 @@ const cardEffects: CardExpansionModule = {
         prompt: 'Choose one',
         playerId: cardEffectArgs.playerId,
         actionButtons: [
-          {label: 'GAIN CARD', action: 1},
-          {label: 'TRASH CARD', action: 1},
+          { label: 'GAIN CARD', action: 1 },
+          { label: 'TRASH CARD', action: 1 },
         ],
       }) as { action: number, result: number[] };
       
       if (result.action === 1) {
         const trashCards = cardEffectArgs.findCards([
-          { location: 'trash'},
+          { location: 'trash' },
         ])
           .filter(card => {
             const cost = cardEffectArgs.cardPriceController.applyRules(card, { playerId: cardEffectArgs.playerId });
@@ -739,7 +741,7 @@ const cardEffects: CardExpansionModule = {
         
         const cards = cardEffectArgs.findCards([
           { location: ['kingdomSupply', 'basicSupply'] },
-          { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: cost}
+          { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: cost }
         ]);
         
         if (!cards.length) {
@@ -769,6 +771,145 @@ const cardEffects: CardExpansionModule = {
           to: { location: 'playerDiscard' }
         });
       }
+    }
+  },
+  'hermit': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const discard = cardEffectArgs.cardSourceController.getSource('playerDiscard', cardEffectArgs.playerId);
+      
+      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        prompt: 'Trash from discard?',
+        playerId: cardEffectArgs.playerId,
+        content: {
+          type: 'select',
+          cardIds: discard,
+          selectCount: {
+            kind: 'upTo',
+            count: 1
+          }
+        },
+        actionButtons: [{ label: 'HAND', action: 1 }]
+      }) as { action: number, result: number[] };
+      
+      let selectedCard: Card | undefined = undefined;
+      if (result.action === 1) {
+        console.log(`[hermit effect] not trashing from discard, selecting card from hand`);
+        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Trash card`,
+          restrict: cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId),
+          count: 1,
+          optional: true,
+        }) as CardId[];
+        
+        if (!selectedCardIds.length) {
+          console.log(`[hermit effect] not trashing from hand`);
+        }
+        else {
+          selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+        }
+      }
+      else {
+        const selectedCardId = result.result[0];
+        selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+      }
+      
+      if (!selectedCard) {
+        console.log(`[hermit effect] no card selected`);
+        return;
+      }
+      else {
+        console.log(`[hermit effect] trashing card ${selectedCard}`);
+        
+        await cardEffectArgs.runGameActionDelegate('trashCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: selectedCard.id,
+        });
+      }
+      
+      const cards = cardEffectArgs.findCards([
+        { location: ['basicSupply', 'kingdomSupply'] },
+        { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: { treasure: 3 } }
+      ]);
+      
+      if (!cards.length) {
+        console.log(`[hermit effect] no cards in supply that cost <= 3`);
+      }
+      else {
+        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Gain card`,
+          restrict: cards.map(card => card.id),
+          count: 1,
+        }) as CardId[];
+        
+        if (!selectedCardIds.length) {
+          console.warn(`[hermit effect] no card selected`);
+        }
+        else {
+          const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+          console.log(`[hermit effect] gaining ${selectedCard}`);
+          
+          await cardEffectArgs.runGameActionDelegate('gainCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: selectedCard.id,
+            to: { location: 'playerDiscard' }
+          });
+        }
+      }
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate({
+        id: `hermit:${cardEffectArgs.cardId}:endTurnPhase`,
+        listeningFor: 'endTurnPhase',
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: conditionArgs => {
+          if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') return false;
+          if (getCurrentPlayer(conditionArgs.match).id !== cardEffectArgs.playerId) return false;
+          
+          const cardIdsGained = conditionArgs.match.stats.cardsGainedByTurn[conditionArgs.match.turnNumber];
+          
+          const cardIdsGainedDuringBuyPhase = cardIdsGained.filter(cardId => {
+            const stats = conditionArgs.match.stats.cardsGained[cardId];
+            return stats.playerId === cardEffectArgs.playerId && stats.turnPhase === 'buy'
+          });
+          
+          if (cardIdsGainedDuringBuyPhase.length > 0) return false;
+          
+          return true;
+        },
+        triggeredEffectFn: async triggeredArgs => {
+          const madmanCards = triggeredArgs.findCards([
+            { location: 'nonSupplyCards' },
+            { kingdom: 'madman' }
+          ]);
+          
+          if (!madmanCards.length) {
+            console.log(`[hermit endTurnPhase effect] no madman in supply`);
+            return;
+          }
+          
+          const hermitCard = triggeredArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+          
+          console.log(`[hermit endTurnPhase effect] moving ${hermitCard} to supply`);
+          
+          await cardEffectArgs.runGameActionDelegate('moveCard', {
+            cardId: hermitCard.id,
+            to: { location: 'kingdomSupply' }
+          });
+          const card = madmanCards.slice(-1)[0];
+          
+          console.log(`[hermit endTurnPhase effect] gaining ${card}`);
+          
+          await cardEffectArgs.runGameActionDelegate('gainCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: card.id,
+            to: { location: 'playerDiscard' }
+          });
+        }
+      })
     }
   },
   'ruined-library': {

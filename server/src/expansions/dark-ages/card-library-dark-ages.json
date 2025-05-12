@@ -90,5 +90,11 @@
       "treasure": 5
     },
     "type": ["ACTION"]
+  },
+  "hermit": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION"]
   }
 }

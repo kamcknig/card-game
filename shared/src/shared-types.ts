@@ -42,6 +42,8 @@ type CardStats = {
   // the turn number on which the card was played.
   turnNumber: number;
   
+  turnPhase: TurnPhase;
+  
   // the player that played the card
   playerId: PlayerId;
 };

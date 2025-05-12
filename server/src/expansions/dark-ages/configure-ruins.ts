@@ -1,4 +1,4 @@
-import { CardKey, CardNoId, Supply } from 'shared/shared-types.ts';
+import { CardNoId, Supply } from 'shared/shared-types.ts';
 import { ExpansionConfiguratorContext } from '../../types.ts';
 import { createCardData } from '../../utils/create-card-data.ts';
 import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';

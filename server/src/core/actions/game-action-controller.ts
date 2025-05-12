@@ -185,6 +185,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     this.match.stats.cardsGainedByTurn[this.match.turnNumber].push(cardId);
     
     this.match.stats.cardsGained[cardId] = {
+      turnPhase: getTurnPhase(this.match.turnPhaseIndex),
       turnNumber: this.match.turnNumber,
       playerId: args.playerId
     };
@@ -356,6 +357,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     card.owner = null;
     
     this.match.stats.trashedCards[cardId] = {
+      turnPhase: getTurnPhase(this.match.turnPhaseIndex),
       turnNumber: this.match.turnNumber,
       playerId: getCurrentPlayer(this.match).id
     };
@@ -431,6 +433,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     console.log(`[buyCard action] adding bought stats to match`);
     this.match.stats.cardsBought[cardId] = {
+      turnPhase: getTurnPhase(this.match.turnPhaseIndex),
       turnNumber: this.match.turnNumber,
       playerId: args.playerId,
       cost: args.cardCost.treasure,
@@ -752,6 +755,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     this.match.stats.playedCardsByTurn[this.match.turnNumber] ??= [];
     this.match.stats.playedCardsByTurn[this.match.turnNumber].push(cardId);
     this.match.stats.playedCards[cardId] = {
+      turnPhase: getTurnPhase(this.match.turnPhaseIndex),
       turnNumber: this.match.turnNumber,
       playerId: playerId,
     };
