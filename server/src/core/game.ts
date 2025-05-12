@@ -55,10 +55,12 @@ export class Game {
     }
     
     try {
-      const preselectedKingdoms = JSON.parse(Deno.readTextFileSync('./preselected-kingdoms.json')) as CardNoId[];
-      defaultMatchConfiguration.preselectedKingdoms = preselectedKingdoms;
+      const preselectedKingdoms = JSON.parse(Deno.readTextFileSync('./preselected-kingdoms.json')) as { name: string; cards: CardNoId[] }[];
+      console.log(preselectedKingdoms);
+      defaultMatchConfiguration.preselectedKingdoms = preselectedKingdoms.map(supply => supply.cards[0]);
+      console.log(defaultMatchConfiguration.preselectedKingdoms)
     } catch (e) {
-      console.warn(`Couldn't read banned-kingdoms.json`);
+      console.warn(`Couldn't read preselected-kingdoms.json`);
       console.error(e);
     }
     

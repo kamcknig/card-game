@@ -3,7 +3,7 @@ import { PileView } from './pile';
 import { cardStore } from '../../../state/card-state';
 import { Card, CardKey } from 'shared/shared-types';
 import { SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
-import { kingdomCardKeyStore } from '../../../state/match-logic';
+import { kingdomSupplies } from '../../../state/match-logic';
 import { computed } from 'nanostores';
 import { getCardSourceStore } from '../../../state/card-source-store';
 
@@ -21,10 +21,11 @@ export class KingdomSupplyView extends Container {
     this._cardContainer = this.addChild(new Container({ x: STANDARD_GAP, y: STANDARD_GAP }));
 
     const pileCreationSub = computed(
-      [kingdomCardKeyStore, cardStore], (kingdom, cards) => {
-        const allCards = Object.values(cards);
-        return kingdom
-          .map(key => allCards.find(c => c.cardKey === key))
+      [kingdomSupplies, cardStore],
+      (kingdomNames, cardById) => {
+        const allCards = Object.values(cardById);
+        return kingdomNames
+          .map(kingdom => allCards.find(c => c.kingdom === kingdom))
           .sort((a, b) => {
             if (!a || !b) throw new Error(`failed to build kingdom, card not found in card store`);
             const result = b.cost.treasure - a.cost.treasure;
@@ -32,7 +33,7 @@ export class KingdomSupplyView extends Container {
             return b.cardName.localeCompare(a.cardName);
           })
           .filter(key => !!key)
-          .map(card => card?.cardKey)
+          .map(card => card?.kingdom)
       }
     ).subscribe(val => {
       if (val.length < 1) {
@@ -62,8 +63,8 @@ export class KingdomSupplyView extends Container {
     if (!cards || cards.length === 0) return;
 
     const piles = cards.reduce((prev, card) => {
-      prev[card.cardKey] ||= [];
-      prev[card.cardKey].push(card);
+      prev[card.kingdom] ||= [];
+      prev[card.kingdom].push(card);
       return prev;
     }, {} as Record<CardKey, Card[]>)
 

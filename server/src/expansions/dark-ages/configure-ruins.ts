@@ -1,15 +1,14 @@
-import { CardKey, CardNoId } from 'shared/shared-types.ts';
+import { CardKey, CardNoId, Supply } from 'shared/shared-types.ts';
 import { ExpansionConfiguratorContext } from '../../types.ts';
 import { createCardData } from '../../utils/create-card-data.ts';
 import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
 
 export const configureRuins = async (args: ExpansionConfiguratorContext) => {
-  if (!args.config.kingdomSupply.some(kingdom => kingdom.card.type.includes('LOOTER'))) {
+  if (!args.config.kingdomSupply.some(supply => supply.cards.some(card => card.type.includes('LOOTER')))) {
     return;
   }
   
-  if (args.config.nonSupplyCards?.some(kingdom => kingdom.card.tags?.includes('ruins'))) {
-    console.log(`[dark-ages configurator - configuring ruins] ruins already in kingdom, not configuring`);
+  if (args.config.kingdomSupply?.some(supply => supply.name === 'ruins')) {
     return;
   }
   
@@ -35,30 +34,22 @@ export const configureRuins = async (args: ExpansionConfiguratorContext) => {
   
   fisherYatesShuffle(ruinsCardKeys, true);
   
-  console.log(ruinsCardKeys);
-  
   ruinsCardKeys.length = 10 * Math.max(1, numPlayers - 1);
-  
-  console.log(ruinsCardKeys);
-  
-  const finalRuins = ruinsCardKeys.reduce((acc, nextRuinsKey) => {
-    acc[nextRuinsKey] = (acc[nextRuinsKey] ?? 0) + 1;
-    return acc;
-  }, {} as Record<CardKey, number>);
   
   args.config.kingdomSupply ??= [];
   
-  for (const key of Object.keys(finalRuins)) {
-    const cardData = createCardData(key, 'dark-ages', {
-      ...ruinsCardLibrary[key] ?? {},
-      tags: ['ruins'],
-    });
-    
-    args.config.kingdomSupply.push({
-      card: cardData,
-      count: finalRuins[key]
-    });
-  }
+  const ruinsKingdom = {
+    name: 'ruins',
+    cards: ruinsCardKeys.map(cardKey => {
+      const cardData = createCardData(cardKey, 'dark-ages', {
+        ...ruinsCardLibrary[cardKey] ?? {},
+        tags: ['ruins'],
+      });
+      return cardData;
+    })
+  } as Supply;
+  
+  args.config.kingdomSupply.push(ruinsKingdom);
   
   console.log(`[dark-ages configurator - configuring ruins] ruins configured`);
 };

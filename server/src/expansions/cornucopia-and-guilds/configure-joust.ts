@@ -1,13 +1,11 @@
-import { CardNoId, Match } from 'shared/shared-types.ts';
+import { CardNoId, Supply } from 'shared/shared-types.ts';
 import { ExpansionConfiguratorContext } from '../../types.ts';
-import { MatchCardLibrary } from '../../core/match-card-library.ts';
-import { createCard } from '../../utils/create-card.ts';
 import { createCardData } from '../../utils/create-card-data.ts';
 
 export const configureJoust = async (args: ExpansionConfiguratorContext) => {
-  const joustPresent = args.config.kingdomSupply.some(kingdom => kingdom.card.cardKey === 'joust');
+  const joustPresent = args.config.kingdomSupply.some(supply => supply.name === 'joust');
   
-  if (!joustPresent) {
+  if (!joustPresent || args.config.nonSupply?.some(supply => supply.name === 'rewards')) {
     return;
   }
   
@@ -25,16 +23,21 @@ export const configureJoust = async (args: ExpansionConfiguratorContext) => {
     }
   }
   
-  args.config.nonSupplyCards ??= [];
+  args.config.nonSupply ??= [];
+  
+  const rewardsKingdom = {
+    name: 'rewards',
+    cards: []
+  } as Supply;
+  
+  args.config.nonSupply.push(rewardsKingdom);
   
   for (const key of Object.keys(rewardCardLibrary ?? {})) {
     const cardData = createCardData(key, 'cornucopia-and-guilds', {
       ...rewardCardLibrary[key] ?? {},
     });
-    args.config.nonSupplyCards.push({
-      card: cardData,
-      count: args.config.players.length > 2 ? 2 : 1
-    });
+    const count = args.config.players.length > 2 ? 2 : 1;
+    rewardsKingdom.cards = [...rewardsKingdom.cards, ...new Array(count).fill(cardData)];
   }
   console.log(`[cornucopia configurator - configuring joust] joust configured`);
 }

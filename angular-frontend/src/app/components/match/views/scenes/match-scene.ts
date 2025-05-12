@@ -25,7 +25,7 @@ import { SocketService } from '../../../../core/socket-service/socket.service';
 import { gamePausedStore } from '../../../../state/game-logic';
 import { selectableCardStore } from '../../../../state/interactive-logic';
 import { SelectCardArgs } from '../../../../../types';
-import { BaseSupplyView } from '../base-supply';
+import { BasicSupplyView } from '../basic-supply';
 import { NonSupplyKingdomView } from '../non-supply-kingdom-view';
 import { getCardSourceStore } from '../../../../state/card-source-store';
 
@@ -180,7 +180,7 @@ export class MatchScene extends Scene {
   private createBoard() {
     this.addChild(this._board);
 
-    this._baseSupply = this.addChild(new BaseSupplyView());
+    this._baseSupply = this.addChild(new BasicSupplyView());
     this._baseSupply.scale = .9;
     this._kingdomView = this.addChild(new KingdomSupplyView());
     this._kingdomView.scale = .9;

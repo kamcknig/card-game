@@ -56,9 +56,8 @@ export class MatchConfigurationComponent implements OnDestroy {
     );
 
     this.selectedKingdomsSub = this._nanoStoreService.useStore(matchConfigurationStore)
-      .pipe(map(config =>
-        (config?.kingdomSupply?.concat(config?.basicSupply) ?? [])
-          .sort((a, b) => a.card.cardKey.localeCompare(b.card.cardKey))))
+      .pipe(map(config => config?.preselectedKingdoms
+        ?.sort((a, b) => a.cardKey.localeCompare(b.cardKey))))
       .subscribe(selectedKingdoms => {
         selectedKingdoms ??= []
         const remainingNulls = new Array(10 - (selectedKingdoms?.length ?? 0)).fill(null);
@@ -67,7 +66,7 @@ export class MatchConfigurationComponent implements OnDestroy {
           selectedKingdoms.push(null as any);
         }
 
-        this.preSelectedKingdoms = selectedKingdoms.map(k => k.card);
+        this.preSelectedKingdoms = selectedKingdoms;
       });
 
     this.gameOwnerSub = combineLatest([
@@ -132,12 +131,12 @@ export class MatchConfigurationComponent implements OnDestroy {
       bannedKingdoms: this.bannedKingdoms,
       kingdomSupply: this.preSelectedKingdoms
         .filter(card => !card?.isBasic)
-        .filter(card => card !== null)
-        .map(k => ({ card: k, count: 0 })),
+        .filter(card => !!card)
+        .map(card => ({ name: card.cardKey, cards: [card] })),
       basicSupply: this.preSelectedKingdoms
         .filter(card => card?.isBasic)
-        .filter(card => card !== null)
-        .map(k => ({ card: k, count: 0 }))
+        .filter(card => !!card)
+        .map(card => ({ name: card.cardKey, cards: [card] }))
     });
   }
 

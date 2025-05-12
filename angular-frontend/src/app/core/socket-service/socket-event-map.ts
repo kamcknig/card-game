@@ -13,8 +13,8 @@ import { Assets } from 'pixi.js';
 import { applyPatch, Operation } from 'fast-json-patch';
 import { ClientListenEventNames, ClientListenEvents } from '../../../types';
 import { logManager } from '../log-manager';
-import { kingdomCardKeyStore, supplyCardKeyStore } from '../../state/match-logic';
 import { cardSourceStore, cardSourceTagMapStore } from '../../state/card-source-store';
+import { basicSupplies, kingdomSupplies } from '../../state/match-logic';
 
 export type SocketEventMap = Partial<{ [p in ClientListenEventNames]: ClientListenEvents[p] }>;
 
@@ -65,31 +65,31 @@ export const socketToGameEventMap = (): SocketEventMap => {
 
     const cardSource = cardSourceStore.get();
 
-    const kingdomSupplyCardKeys = cardSource['basicSupply'].reduce((prev, nextCard) => {
+    let basics = cardSource['basicSupply'].reduce((prev, nextCard) => {
       const card = cardsById[nextCard];
 
       if (card.type.includes(('VICTORY'))) {
-        if (prev[0].includes(card.cardKey)) return prev;
-        prev[0].push(card.cardKey);
+        if (prev[0].includes(card.kingdom)) return prev;
+        prev[0].push(card.kingdom);
         return prev;
       }
       else if (card.type.includes(('TREASURE'))) {
-        if (prev[1].includes(card.cardKey)) return prev;
-        prev[1].push(card.cardKey);
+        if (prev[1].includes(card.kingdom)) return prev;
+        prev[1].push(card.kingdom);
         return prev;
       }
 
       return prev;
     }, [[], []] as [CardKey[], CardKey[]]);
-    supplyCardKeyStore.set(kingdomSupplyCardKeys ?? [[], []]);
+    basicSupplies.set(basics ?? [[], []]);
 
-    const kingdomCardKeys = cardSource['kingdomSupply'].reduce((prev, nextCard) => {
+    const kingdoms = cardSource['kingdomSupply'].reduce((prev, nextCard) => {
       const card = cardsById[nextCard];
-      if (prev.includes(card.cardKey)) return prev;
-      prev.push(card.cardKey);
+      if (prev.includes(card.kingdom)) return prev;
+      prev.push(card.kingdom);
       return prev;
     }, [] as CardKey[]);
-    kingdomCardKeyStore.set(kingdomCardKeys ?? []);
+    kingdomSupplies.set(kingdoms ?? []);
 
     const baseBundle: Record<string, string> = {
       'card-back-full': `/assets/card-images/base-v2/full-size/card-back.jpg`,

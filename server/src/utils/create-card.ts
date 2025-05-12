@@ -4,7 +4,7 @@ import { capitalize } from 'es-toolkit/compat';
 
 let CARD_COUNT: number = 0;
 
-export const createCard = (cardKey: CardKey, card?: Partial<CardNoId>) => {
+export const createCard = (cardKey: CardKey, card?: Partial<CardNoId>): Card => {
   const baseCardData = rawCardLibrary[cardKey] ?? {};
   const c = new Card({
     ...baseCardData,

@@ -17,18 +17,22 @@ const configurator: ExpansionConfiguratorFactory = () => {
       throw new Error(`potion card not found in card library`);
     }
     
-    const expansionCards = args.config.kingdomSupply.filter(card => card.expansionName === 'alchemy');
+    const alchemySupplies = args.config.kingdomSupply.filter(supply => supply.cards.some(card => card.expansionName === 'alchemy'));
     
-    for (const card of expansionCards) {
-      if (card.cost.potion === undefined) {
-        continue;
+    for (const supply of alchemySupplies) {
+      for (const card of supply.cards) {
+        if (card.cost.potion === undefined) {
+          continue;
+        }
+        
+        console.log(`[alchemy match configurator] adding potion card because ${card.cardKey} has a potion cost`);
+        args.config.basicSupply.push({
+          name: 'potion',
+          cards: new Array(16).fill(args.cardLibrary['potion'])
+        });
+        potionConfigured = true;
+        break;
       }
-      
-      console.log(`[alchemy match configurator] adding potion card because ${card.cardKey} has a potion cost`);
-      args.config.basicSupply.push(args.cardLibrary['potion'])
-      args.config.basicCardCount[potionCard.cardKey] = 16;
-      potionConfigured = true;
-      break;
     }
     
     return args.config;

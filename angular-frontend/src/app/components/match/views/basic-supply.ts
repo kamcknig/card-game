@@ -1,13 +1,13 @@
 import { Container, Graphics } from 'pixi.js';
 import { SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
 import { computed } from 'nanostores';
-import { supplyCardKeyStore } from '../../../state/match-logic';
+import { basicSupplies } from '../../../state/match-logic';
 import { cardStore } from '../../../state/card-state';
 import { Card, CardKey } from 'shared/shared-types';
 import { PileView } from './pile';
 import { getCardSourceStore } from '../../../state/card-source-store';
 
-export class BaseSupplyView extends Container {
+export class BasicSupplyView extends Container {
   private _background: Container;
   private _cardContainer: Container;
   private _cleanup: (() => void)[] = [];
@@ -22,7 +22,7 @@ export class BaseSupplyView extends Container {
 
 
     const pileCreationSub = computed(
-      [supplyCardKeyStore, cardStore], ([victorySupply, treasureSupply], cards) => {
+      [basicSupplies, cardStore], ([victorySupply, treasureSupply], cards) => {
         const allCards = Object.values(cards);
         return [
           victorySupply.map(key =>
@@ -42,12 +42,12 @@ export class BaseSupplyView extends Container {
 
     this._cleanup.push(
       computed(
-        [getCardSourceStore('basicSupply'), supplyCardKeyStore, cardStore],
-        (supply, supplyCardKeys, cards) => {
+        [getCardSourceStore('basicSupply'), basicSupplies, cardStore],
+        (supply, supplyNames, cards) => {
           const supplyCards = supply.map(id => cards[id]);
 
           const ob = {} as Record<CardKey, Card[]>;
-          for (const cardKey of supplyCardKeys.flat()) {
+          for (const cardKey of supplyNames.flat()) {
             ob[cardKey] = supplyCards.filter(card => card.cardKey === cardKey);
           }
           return ob;

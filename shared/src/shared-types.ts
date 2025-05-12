@@ -4,12 +4,17 @@ export type CardKey = string;
 export type PlayerId = number;
 export type CardId = number;
 
+export interface Supply {
+  name: string;
+  cards: CardNoId[];
+}
+
 /****************
  
  MATCH types
  
  ***************/
-export type MatchConfiguration = {
+export interface MatchConfiguration {
   players: Player[];
   
   // info about the expansions selected for the match. determines what cards can randomly be selected for the kingdom
@@ -21,20 +26,14 @@ export type MatchConfiguration = {
   preselectedKingdoms: CardNoId[];
   
   // basic cards selected for the game, these are what are available at the beginning of a match
-  basicSupply: {
-    card: CardNoId;
-    count: number;
-  }[];
+  basicSupply: Supply[];
   
   // kingdom cards selected for the game, these are what are available at the beginning of a match
-  kingdomSupply: {
-    card: CardNoId;
-    count: number;
-  }[];
+  kingdomSupply: Supply[];
 }
 
 export type ComputedMatchConfiguration = MatchConfiguration & {
-  nonSupplyCards?: { card: CardNoId; count: number; }[];
+  nonSupply?: Supply[];
   startingHand: Record<CardKey, number>;
   mats: PlayerMatMap;
 }
@@ -335,6 +334,7 @@ export type CardType =
   | 'ZOMBIE';
 
 export type CardArgs = {
+  kingdom: string;
   tags?: string[];
   facing?: CardFacing;
   id: CardId;
@@ -363,6 +363,7 @@ export type CardCost = {
 
 export class Card {
   tags?: string[] = [];
+  kingdom: string;
   facing?: CardFacing;
   id: CardId;
   isBasic?: boolean = false;
@@ -398,6 +399,7 @@ export class Card {
     this.detailImagePath = args.detailImagePath;
     this.owner = args.owner ?? null;
     this.mat = args.mat;
+    this.kingdom = args.kingdom;
   }
   
   toString() {

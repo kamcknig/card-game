@@ -257,8 +257,12 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }
     
     for (const supply of Object.values(config.basicSupply)) {
-      for (let i = 0; i < supply.count; i++) {
-        const c = createCard(supply.card.cardKey, supply.card);
+      for (const card of supply.cards) {
+        if (!card) {
+          throw new Error(`[match] no card data found for ${supply}`);
+        }
+        
+        const c = createCard(card.cardKey, { ...card, kingdom: supply.name });
         this._cardLibrary.addCard(c);
         cardSource.push(c.id);
       }
@@ -275,8 +279,12 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }
     
     for (const kingdom of Object.values(config.kingdomSupply)) {
-      for (let i = 0; i < kingdom.count; i++) {
-        const c = createCard(kingdom.card.cardKey, kingdom.card);
+      for (const card of kingdom.cards) {
+        if (!card) {
+          throw new Error(`[match] no card data found for ${kingdom}`);
+        }
+        
+        const c = createCard(card.cardKey, { ...card, kingdom: kingdom.name });
         this._cardLibrary.addCard(c);
         cardSource.push(c.id);
       }
@@ -292,14 +300,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       throw new Error(`[match] no basic supply card source found`);
     }
     
-    for (const nonSupply of Object.values(config.nonSupplyCards ?? {})) {
-      if (!nonSupply.card) {
-        console.warn(`[match] no card data found for ${nonSupply}`);
-        continue;
-      }
-      
-      for (let i = 0; i < nonSupply.count; i++) {
-        const c = createCard(nonSupply.card.cardKey, nonSupply.card);
+    for (const supply of Object.values(config.nonSupply ?? {})) {
+      for (const card of supply.cards) {
+        if (!card) {
+          throw new Error(`[match] no card data found for ${supply}`);
+        }
+        
+        const c = createCard(card.cardKey, card);
         this._cardLibrary.addCard(c);
         cardSource.push(c.id);
       }

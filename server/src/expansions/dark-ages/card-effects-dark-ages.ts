@@ -3,6 +3,12 @@ import { CardExpansionModule } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 
 const cardEffects: CardExpansionModule = {
+  'abandoned-mine': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[dark-ages] gaining 1 treasure`);
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+    }
+  },
   'altar': {
     registerEffects: () => async (cardEffectArgs) => {
       let selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
@@ -506,6 +512,24 @@ const cardEffects: CardExpansionModule = {
       });
     }
   },
+  'ruined-library': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[dark-ages] drawing 1 card`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+    }
+  },
+  'ruined-market': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[dark-ages] gaining 1 buy`);
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+    }
+  },
+  'ruined-village': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[dark-ages] gaining 1 action`);
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: cardEffectArgs.playerId });
+    }
+  },
   'spoils': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[dark-ages] gaining 1 treasure`);
@@ -519,6 +543,68 @@ const cardEffects: CardExpansionModule = {
         cardId: cardEffectArgs.cardId,
         to: { location: 'nonSupplyCards' }
       });
+    }
+  },
+  'survivors': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+      
+      if (deck.length < 2) {
+        console.log(`[dark-ages effect] deck is empty, shuffling`);
+        await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+      }
+      
+      const numToLookAt = Math.min(2, deck.length);
+      
+      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        prompt: 'Discard or put back on deck?',
+        playerId: cardEffectArgs.playerId,
+        actionButtons: [
+          { label: 'DISCARD', action: 1 },
+          { label: 'PUT BACK', action: 2 }
+        ],
+        content: {
+          type: 'display-cards',
+          cardIds: deck.slice(-numToLookAt)
+        }
+      }) as { action: number, result: number[] };
+      
+      if (result.action === 1) {
+        console.log(`[dark-ages effect] discarding ${numToLookAt} cards`);
+        for (let i = 0; i < numToLookAt; i++) {
+          await cardEffectArgs.runGameActionDelegate('discardCard', {
+            cardId: deck.slice(-i - 1)[0],
+            playerId: cardEffectArgs.playerId
+          });
+        }
+      }
+      else {
+        console.log(`[dark-ages effect] putting back ${numToLookAt} cards`);
+        
+        if (numToLookAt > 1) {
+          console.log(`[dark-ages effect] rearranging cards`);
+          
+          const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+            prompt: 'Rearrange',
+            playerId: cardEffectArgs.playerId,
+            content: {
+              type: 'rearrange',
+              cardIds: deck.slice(-numToLookAt)
+            }
+          }) as { action: number, result: number[] };
+          
+          for (const cardId of result.result) {
+            await cardEffectArgs.runGameActionDelegate('moveCard', {
+              cardId: cardId,
+              toPlayerId: cardEffectArgs.playerId,
+              to: { location: 'playerDeck' }
+            });
+          }
+        }
+        else {
+          console.log(`[dark-ages effect] only one card to look at, it's already on top of deck`);
+        }
+      }
     }
   },
 }
