@@ -352,13 +352,14 @@ export interface TriggeredEffectConditionContext<T extends TriggerEventType> ext
 }
 
 export type TriggerEventTypeContext = {
-  cardPlayed: { playerId: PlayerId; cardId: CardId };
-  startTurn: { playerId: PlayerId };
-  gainCard: { playerId: PlayerId; cardId: CardId, bought: boolean, previousLocation?: CardLocation };
+  cardTrashed: { cardId: CardId; playerId: PlayerId; };
+  cardPlayed: { playerId: PlayerId; cardId: CardId; };
+  startTurn: { playerId: PlayerId; };
+  gainCard: { playerId: PlayerId; cardId: CardId; bought: boolean; previousLocation?: CardLocation; };
   endTurnPhase: { phaseIndex: number; };
   startTurnPhase: { phaseIndex: number; };
   endTurn: void;
-  discardCard: { previousLocation?: CardLocation, playerId: PlayerId, cardId: CardId };
+  discardCard: { previousLocation?: CardLocation; playerId: PlayerId; cardId: CardId; };
 }
 
 export type TriggerEventType = keyof TriggerEventTypeContext;

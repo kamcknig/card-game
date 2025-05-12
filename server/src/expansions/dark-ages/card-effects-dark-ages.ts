@@ -1044,8 +1044,8 @@ const cardEffects: CardExpansionModule = {
   'marauder': {
     registerEffects: () => async (cardEffectArgs) => {
       const spoilCards = cardEffectArgs.findCards([
-        {location: 'nonSupplyCards'},
-        {kingdom: 'spoils'}
+        { location: 'nonSupplyCards' },
+        { kingdom: 'spoils' }
       ]);
       
       if (!spoilCards.length) {
@@ -1053,8 +1053,8 @@ const cardEffects: CardExpansionModule = {
       }
       
       const ruinCards = cardEffectArgs.findCards([
-        {location: 'kingdomSupply'},
-        {kingdom: 'ruins'}
+        { location: 'kingdomSupply' },
+        { kingdom: 'ruins' }
       ]);
       
       if (!ruinCards.length) {
@@ -1081,6 +1081,60 @@ const cardEffects: CardExpansionModule = {
           to: { location: 'playerDiscard' }
         });
       }
+    }
+  },
+  'market-square': {
+    registerLifeCycleMethods: () => ({
+      onLeaveHand: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`market-square:${eventArgs.cardId}:cardTrashed`)
+      },
+      onEnterHand: async (args, eventArgs) => {
+        args.reactionManager.registerReactionTemplate({
+          id: `market-square:${eventArgs.cardId}:cardTrashed`,
+          listeningFor: 'cardTrashed',
+          playerId: eventArgs.playerId,
+          once: false,
+          compulsory: false,
+          allowMultipleInstances: true,
+          condition: conditionArgs => {
+            const trashedCard = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
+            if (trashedCard.owner !== eventArgs.playerId) return false;
+            return true;
+          },
+          triggeredEffectFn: async triggeredArgs => {
+            const marketSquareCard = triggeredArgs.cardLibrary.getCard(eventArgs.cardId);
+            console.log(`[market-square cardTrashed effect] discarding ${marketSquareCard}`);
+            await triggeredArgs.runGameActionDelegate('discardCard', {
+              cardId: marketSquareCard.id,
+              playerId: eventArgs.playerId
+            });
+            
+            const goldCards = triggeredArgs.findCards([
+              { location: 'basicSupply' },
+              { cardKeys: 'gold' }
+            ]);
+            
+            if (!goldCards.length) {
+              console.log(`[market-square cardTrashed effect] no gold cards in supply`);
+              return;
+            }
+            
+            console.log(`[market-square cardTrashed effect] gaining ${goldCards.slice(-1)[0]}`);
+            
+            await triggeredArgs.runGameActionDelegate('gainCard', {
+              playerId: eventArgs.playerId,
+              cardId: goldCards.slice(-1)[0].id,
+              to: { location: 'playerDiscard' }
+            });
+          }
+        })
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[market-square effect] drawing 1 card, gaining 1 action, and 1 buy`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
     }
   },
   'ruined-library': {

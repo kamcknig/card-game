@@ -163,5 +163,11 @@
       "treasure": 4
     },
     "type": ["ACTION", "LOOTER", "ATTACK"]
+  },
+  "market-square": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION", "REACTION"]
   }
 }
