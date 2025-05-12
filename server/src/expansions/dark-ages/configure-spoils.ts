@@ -28,19 +28,15 @@ export const configureSpoils = async (args: ExpansionConfiguratorContext) => {
   
   args.config.nonSupply ??= [];
   
-  for (const key of Object.keys(spoilsCardLibrary ?? {})) {
-    const cardData = createCardData(key, 'dark-ages', {
-      ...spoilsCardLibrary[key] ?? {},
-      tags: ['spoils'],
-    });
-    
-    const count = args.config.players.length > 2 ? 2 : 1;
-    
-    args.config.nonSupply.push({
-      name: 'spoils',
-      cards: new Array(count).fill(cardData),
-    });
-  }
+  const cardData = createCardData('spoils', 'dark-ages', {
+    ...spoilsCardLibrary['spoils'] ?? {},
+    tags: ['spoils'],
+  });
+  
+  args.config.nonSupply.push({
+    name: 'spoils',
+    cards: new Array(15).fill({ ...cardData }),
+  });
   
   console.log(`[dark-ages configurator - configuring spoils] spoils configured`);
 };

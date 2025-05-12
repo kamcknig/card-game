@@ -1041,6 +1041,48 @@ const cardEffects: CardExpansionModule = {
       });
     }
   },
+  'marauder': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const spoilCards = cardEffectArgs.findCards([
+        {location: 'nonSupplyCards'},
+        {kingdom: 'spoils'}
+      ]);
+      
+      if (!spoilCards.length) {
+        console.log(`[marauder effect] no spoils in supply`);
+      }
+      
+      const ruinCards = cardEffectArgs.findCards([
+        {location: 'kingdomSupply'},
+        {kingdom: 'ruins'}
+      ]);
+      
+      if (!ruinCards.length) {
+        console.log(`[marauder effect] no ruins in supply`);
+        return;
+      }
+      
+      const targetPlayerIds = findOrderedTargets({
+        match: cardEffectArgs.match,
+        appliesTo: 'ALL_OTHER',
+        startingPlayerId: cardEffectArgs.playerId
+      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      
+      if (targetPlayerIds.length > ruinCards.length) {
+        targetPlayerIds.length = ruinCards.length;
+      }
+      
+      console.log(`[marauder effect] targeting ${targetPlayerIds.length} players to gain ruins`);
+      
+      for (const targetPlayerId of targetPlayerIds) {
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: targetPlayerId,
+          cardId: ruinCards.slice(-1)[0].id,
+          to: { location: 'playerDiscard' }
+        });
+      }
+    }
+  },
   'ruined-library': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[ruined library effect] drawing 1 card`);
