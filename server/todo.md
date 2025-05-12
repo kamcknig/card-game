@@ -35,4 +35,5 @@ can be checked by seeing if they are in the play area on the turn they were play
 
 currently - doing dark ages expansion
  - ui needs to display spoils. spoils are in nonSupplyCards and have the "spoils" tag
- - ruins - currently it's showing only one card key in the pile - this should be a front-end issue
+   - with this maybe refactor how non supply cards are shown, now that kingdoms have a name separate
+from the card key, might be able to separate them based on that
