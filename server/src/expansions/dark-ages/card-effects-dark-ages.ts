@@ -635,6 +635,25 @@ const cardEffects: CardExpansionModule = {
       }
     }
   },
+  'fortress': {
+    registerLifeCycleMethods: () => ({
+      onTrashed: async (args, eventArgs) => {
+        console.log(`[fortress onTrashed effect] putting fortress back in hand`);
+        
+        await args.runGameActionDelegate('moveCard', {
+          cardId: eventArgs.cardId,
+          toPlayerId: eventArgs.playerId,
+          to: { location: 'playerHand' }
+        });
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[fortress effect] drawing 1 card, and gaining 2 actions`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
+      
+    }
+  },
   'ruined-library': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[ruined library effect] drawing 1 card`);

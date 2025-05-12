@@ -78,5 +78,11 @@
       "treasure": 3
     },
     "type": ["ACTION"]
+  },
+  "fortress": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"]
   }
 }
