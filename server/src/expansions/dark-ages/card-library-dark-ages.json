@@ -102,5 +102,11 @@
       "treasure": 6
     },
     "type": ["ACTION"]
+  },
+  "iron-monger": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"]
   }
 }

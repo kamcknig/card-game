@@ -961,6 +961,57 @@ const cardEffects: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 4 });
     }
   },
+  'ironmonger': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[ironmonger effect] drawing 1 card, and gaining 1 action`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      
+      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+      
+      if (deck.length === 0) {
+        console.log(`[ironmonger effect] no cards in deck, shuffling`);
+        await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+        
+        if (deck.length === 0) {
+          console.log(`[ironmonger effect] still no cards in deck`);
+          return;
+        }
+      }
+      
+      const card = cardEffectArgs.cardLibrary.getCard(deck.slice(-1)[0]);
+      
+      console.log(`[ironmonger effect] revealing ${card}`);
+      
+      await cardEffectArgs.runGameActionDelegate('revealCard', {
+        cardId: card.id,
+        playerId: cardEffectArgs.playerId,
+        moveToSetAside: true
+      });
+      
+      if (card.type.includes('ACTION')) {
+        console.log(`[ironmonger effect] card is action type, gaining 1 action`);
+        await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      }
+      
+      if (card.type.includes('TREASURE')) {
+        console.log(`[ironmonger effect] card is treasure type, gaining 1 treasure`);
+        await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+      }
+      
+      if (card.type.includes('VICTORY')) {
+        console.log(`[ironmonger effect] card is a victory card, gaining 1 victory point`);
+        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      }
+      
+      console.log(`[ironmonger effect] moving revealed ${card} back to deck`);
+      await cardEffectArgs.runGameActionDelegate('moveCard', {
+        cardId: card.id,
+        toPlayerId: cardEffectArgs.playerId,
+        to: { location: 'playerDeck' }
+      });
+    }
+  },
   'ruined-library': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[ruined library effect] drawing 1 card`);
