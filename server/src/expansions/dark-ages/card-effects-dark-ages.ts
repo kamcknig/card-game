@@ -1,4 +1,4 @@
-import { CardId } from 'shared/shared-types.ts';
+import { Card, CardId } from 'shared/shared-types.ts';
 import { CardExpansionModule } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 
@@ -652,6 +652,123 @@ const cardEffects: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
       await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
       
+    }
+  },
+  'graverobber': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        prompt: 'Choose one',
+        playerId: cardEffectArgs.playerId,
+        actionButtons: [
+          {label: 'GAIN CARD', action: 1},
+          {label: 'TRASH CARD', action: 1},
+        ],
+      }) as { action: number, result: number[] };
+      
+      if (result.action === 1) {
+        const trashCards = cardEffectArgs.findCards([
+          { location: 'trash'},
+        ])
+          .filter(card => {
+            const cost = cardEffectArgs.cardPriceController.applyRules(card, { playerId: cardEffectArgs.playerId });
+            return cost.cost.treasure >= 3 && cost.cost.treasure <= 6;
+          });
+        
+        if (!trashCards.length) {
+          console.log(`[graverobber effect] no cards in trash`);
+          return;
+        }
+        
+        const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+          prompt: 'Gain one',
+          playerId: cardEffectArgs.playerId,
+          content: {
+            type: 'select',
+            cardIds: trashCards.map(card => card.id),
+            selectCount: 1
+          }
+        }) as { action: number, cardIds: number[] };
+        
+        if (!result.cardIds) {
+          console.warn(`[graverobber effect] no card selected`);
+          return;
+        }
+        
+        const card = cardEffectArgs.cardLibrary.getCard(result.cardIds[0]);
+        
+        console.log(`[graverobber effect] gaining card ${card}`);
+        
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: card.id,
+          to: { location: 'playerDeck' }
+        });
+      }
+      else {
+        const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+        const actionsInHand = hand.map(cardEffectArgs.cardLibrary.getCard)
+          .filter(card => card.type.includes('ACTION'));
+        
+        if (!actionsInHand.length) {
+          console.log(`[graverobber effect] no actions in hand`);
+          return;
+        }
+        
+        let selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Trash action`,
+          restrict: actionsInHand.map(card => card.id),
+          count: 1,
+        }) as CardId[];
+        
+        if (!selectedCardIds.length) {
+          console.warn(`[graverobber effect] no card selected`);
+          return;
+        }
+        
+        let selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+        
+        console.log(`[graverobber effect] trashing card ${selectedCard}`);
+        
+        await cardEffectArgs.runGameActionDelegate('trashCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: selectedCard.id,
+        });
+        
+        const { cost } = cardEffectArgs.cardPriceController.applyRules(selectedCard, { playerId: cardEffectArgs.playerId });
+        
+        const cards = cardEffectArgs.findCards([
+          { location: ['kingdomSupply', 'basicSupply'] },
+          { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: cost}
+        ]);
+        
+        if (!cards.length) {
+          console.log(`[graverobber effect] no cards in supply that cost <= ${cost.treasure}`);
+          return;
+        }
+        
+        selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Gain card`,
+          restrict: cards.map(card => card.id),
+          count: 1,
+        }) as CardId[];
+        
+        if (!selectedCardIds.length) {
+          console.warn(`[graverobber effect] no card selected`);
+          return;
+        }
+        
+        selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+        
+        console.log(`[graverobber effect] gaining ${selectedCard}`);
+        
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: selectedCard.id,
+          to: { location: 'playerDiscard' }
+        });
+      }
     }
   },
   'ruined-library': {

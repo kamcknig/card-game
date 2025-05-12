@@ -84,5 +84,11 @@
       "treasure": 4
     },
     "type": ["ACTION"]
+  },
+  "graverobber": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"]
   }
 }
