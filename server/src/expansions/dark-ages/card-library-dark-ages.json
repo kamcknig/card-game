@@ -96,5 +96,11 @@
       "treasure": 3
     },
     "type": ["ACTION"]
+  },
+  "hunting-grounds": {
+    "cost": {
+      "treasure": 6
+    },
+    "type": ["ACTION"]
   }
 }

@@ -912,6 +912,55 @@ const cardEffects: CardExpansionModule = {
       })
     }
   },
+  'hunting-grounds': {
+    registerLifeCycleMethods: () => ({
+      onTrashed: async (args, eventArgs) => {
+        const result = await args.runGameActionDelegate('userPrompt', {
+          prompt: 'Choose to gain',
+          playerId: eventArgs.playerId,
+          actionButtons: [
+            { label: '1 Duchy', action: 1 },
+            { label: '3 Estates', action: 2 }
+          ],
+        }) as { action: number, result: number[] };
+        
+        let cards: Card[] = [];
+        let numToGain = 0;
+        if (result.action === 1) {
+          cards = args.findCards([
+            { location: 'basicSupply' },
+            { cardKeys: 'duchy' }
+          ]);
+          numToGain = Math.min(1, cards.length);
+        }
+        else {
+          cards = args.findCards([
+            { location: 'basicSupply' },
+            { cardKeys: 'estate' }
+          ]);
+          numToGain = Math.min(3, cards.length);
+        }
+        
+        if (!numToGain) {
+          console.log(`[hunting-grounds onTrashed effect] no cards to gain`);
+        }
+        
+        console.log(`[hunting-grounds onTrashed effect] gaining ${numToGain} ${result.action === 1 ? 'duchy' : 'estate'}`);
+        
+        for (const card of cards) {
+          await args.runGameActionDelegate('gainCard', {
+            playerId: eventArgs.playerId,
+            cardId: card.id,
+            to: { location: 'playerDiscard' }
+          });
+        }
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[hunting-grounds effect] drawing 4 cards`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 4 });
+    }
+  },
   'ruined-library': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[ruined library effect] drawing 1 card`);
