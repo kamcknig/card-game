@@ -44,7 +44,8 @@ export class MatchConfigurator {
     const requisiteKingdomCardKeys = Deno.env.get('REQUISITE_KINGDOM_CARD_KEYS')
       ?.toLowerCase()
       ?.split(',')
-      ?.map(e => e.trim()) ?? [];
+      ?.map(e => e.trim())
+      ?.filter(e => !!e) ?? [];
     
     if (requisiteKingdomCardKeys && requisiteKingdomCardKeys.length > 0) {
       console.warn(`[match configurator] hard-coded keeper cards ${requisiteKingdomCardKeys}`);
