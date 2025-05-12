@@ -562,6 +562,37 @@ const cardEffects: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 5 });
     }
   },
+  'feodum': {
+    registerScoringFunction: () => (args) => {
+      const ownedSilvers = args.findCards([
+        { owner: args.ownerId },
+        { cardKeys: 'silver' }
+      ]);
+      
+      const amount = Math.floor(ownedSilvers.length / 3);
+      return amount;
+    },
+    registerLifeCycleMethods: () => ({
+      onTrashed: async (args, eventArg) => {
+        const silverCards = args.findCards([
+          { location: 'basicSupply' },
+          { cardKeys: 'silver' }
+        ]);
+        
+        const numToGain = Math.min(3, silverCards.length);
+        
+        console.log(`[feodum onTrashed effect] gaining ${numToGain} silvers`);
+        
+        for (let i = 0; i < numToGain; i++) {
+          await args.runGameActionDelegate('gainCard', {
+            playerId: eventArg.playerId,
+            cardId: silverCards.slice(-i - 1)[0],
+            to: { location: 'playerDiscard' }
+          });
+        }
+      }
+    })
+  },
   'ruined-library': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[ruined library effect] drawing 1 card`);

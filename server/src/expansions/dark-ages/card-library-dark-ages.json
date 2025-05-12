@@ -66,5 +66,11 @@
       "treasure": 4
     },
     "type": ["ACTION", "LOOTER"]
+  },
+  "feodum": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["VICTORY"]
   }
 }
