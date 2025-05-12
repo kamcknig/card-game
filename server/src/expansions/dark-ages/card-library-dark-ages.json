@@ -72,5 +72,11 @@
       "treasure": 4
     },
     "type": ["VICTORY"]
+  },
+  "forager": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION"]
   }
 }

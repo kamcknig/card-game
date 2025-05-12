@@ -593,6 +593,48 @@ const cardEffects: CardExpansionModule = {
       }
     })
   },
+  'forager': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[forager effect] gaining 1 action, and 1 buy`);
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+      
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Trash card`,
+        restrict: hand,
+        count: 1,
+      }) as CardId[];
+      
+      if (selectedCardIds.length === 0) {
+        console.log(`[forager effect] no card selected`);
+        return;
+      }
+      
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+      
+      console.log(`[forager effect] trashing card ${selectedCard}`);
+      
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCard.id,
+      });
+      
+      const uniqueTreasuresInTrash = new Set(
+        hand.map(cardEffectArgs.cardLibrary.getCard)
+          .filter(card => card.type.includes('TREASURE'))
+          .map(card => card.cardKey)
+      ).size;
+      
+      console.log(`[forager effect] gaining ${uniqueTreasuresInTrash} treasure`);
+      
+      if (uniqueTreasuresInTrash > 0) {
+        await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: uniqueTreasuresInTrash });
+      }
+    }
+  },
   'ruined-library': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[ruined library effect] drawing 1 card`);
