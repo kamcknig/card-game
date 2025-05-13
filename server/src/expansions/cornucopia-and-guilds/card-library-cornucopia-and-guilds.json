@@ -1,4 +1,47 @@
 {
+  "coronet": {
+    "cost": {
+      "treasure": 0
+    },
+    "type": ["ACTION", "TREASURE", "REWARD"],
+    "randomizer": null
+  },
+  "courser": {
+    "cost": {
+      "treasure": 0
+    },
+    "type": ["ACTION", "REWARD"],
+    "randomizer": null
+  },
+  "demesne": {
+    "cost": {
+      "treasure": 0
+    },
+    "type": ["ACTION", "VICTORY", "REWARD"],
+    "randomizer": null
+  },
+  "housecarl": {
+    "cost": {
+      "treasure": 0
+    },
+    "type": ["ACTION", "REWARD"],
+    "randomizer": null
+  },
+  "huge-turnip": {
+    "cardName": "Huge Turnip",
+    "cost": {
+      "treasure": 0
+    },
+    "type": ["TREASURE", "REWARD"],
+    "randomizer": null
+  },
+  "renown": {
+    "cost": {
+      "treasure": 0
+    },
+    "type": ["ACTION", "REWARD"],
+    "randomizer": null
+  },
   "advisor": {
     "cost": {
       "treasure": 4
