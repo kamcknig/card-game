@@ -1427,6 +1427,108 @@ const cardEffects: CardExpansionModule = {
       });
     }
   },
+  'rebuild': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[rebuild effect] gaining 1 action`);
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      
+      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        prompt: 'Name a card',
+        playerId: cardEffectArgs.playerId,
+        content: { type: 'name-card' }
+      }) as { action: number, result: CardKey };
+      
+      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+      const discard = cardEffectArgs.cardSourceController.getSource('playerDiscard', cardEffectArgs.playerId);
+      let cardFound: Card | undefined = undefined;
+      const cardsToDiscard: Card[] = [];
+      
+      while (!cardFound) {
+        let cardId = deck.slice(-1)[0];
+        
+        if (!cardId) {
+          console.log(`[rebuild effect] no cards in deck, shuffling`);
+          await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+          
+          cardId = deck.slice(-1)[0];
+          
+          if (!cardId) {
+            console.log(`[rebuild effect] still no cards in deck`);
+            break;
+          }
+        }
+        
+        const card = cardEffectArgs.cardLibrary.getCard(cardId);
+        
+        console.log(`[rebuild effect] revealing ${card}`);
+        
+        await cardEffectArgs.runGameActionDelegate('revealCard', {
+          cardId: card.id,
+          playerId: cardEffectArgs.playerId,
+        });
+        
+        if (card.type.includes('VICTORY') && card.cardKey !== result.result) {
+          cardFound = card;
+          break;
+        }
+        else {
+          cardsToDiscard.push(card);
+        }
+      }
+      
+      console.log(`[rebuild effect] discarding ${cardsToDiscard.length} cards`);
+      
+      for (const card of cardsToDiscard) {
+        await cardEffectArgs.runGameActionDelegate('discardCard', {
+          cardId: card.id,
+          playerId: cardEffectArgs.playerId
+        });
+      }
+      
+      if (cardFound) {
+        console.log(`[rebuild effect] trashing ${cardFound}`);
+        
+        await cardEffectArgs.runGameActionDelegate('trashCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: cardFound.id,
+        });
+        
+        const { cost } = cardEffectArgs.cardPriceController.applyRules(cardFound, { playerId: cardEffectArgs.playerId });
+        
+        const cards = cardEffectArgs.findCards([
+          { location: ['basicSupply', 'kingdomSupply'] },
+          { cardType: 'VICTORY' },
+          {
+            kind: 'upTo',
+            playerId: cardEffectArgs.playerId,
+            amount: { treasure: cost.treasure + 3, potion: cost.potion }
+          }
+        ]);
+        
+        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Gain card`,
+          restrict: cards.map(card => card.id),
+          count: 1,
+        }) as CardId[];
+        
+        if (!selectedCardIds.length) {
+          console.warn(`[rebuild effect] no card selected`);
+          return;
+        }
+        
+        const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+        
+        console.log(`[rebuild effect] gaining card ${selectedCard}`);
+        
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: selectedCard.id,
+          to: { location: 'playerDiscard' }
+        });
+      }
+    }
+  },
   'ruined-library': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[ruined library effect] drawing 1 card`);

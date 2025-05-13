@@ -198,5 +198,11 @@
       "treasure": 4
     },
     "type": ["ACTION"]
+  },
+  "rebuild": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"]
   }
 }
