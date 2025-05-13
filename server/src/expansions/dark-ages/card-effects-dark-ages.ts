@@ -1360,6 +1360,73 @@ const cardEffects: CardExpansionModule = {
       });
     }
   },
+  'rats': {
+    registerLifeCycleMethods: () => ({
+      onTrashed: async (args, eventArgs) => {
+        const trashedCard = args.cardLibrary.getCard(eventArgs.cardId);
+        if (args.match.stats.trashedCards[eventArgs.cardId].playerId !== trashedCard.owner) {
+          return;
+        }
+        
+        console.log(`[rats onTrashed effect] drawing 1 card`);
+        await args.runGameActionDelegate('drawCard', { playerId: eventArgs.playerId });
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[rats effect] drawing 1 card, gaining 1 action`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      
+      const ratCards = cardEffectArgs.findCards([
+        { location: 'kingdomSupply' },
+        { cardKeys: 'rats' }
+      ]);
+      
+      if (!ratCards.length) {
+        console.log(`[rats effect] no rats in supply to gain`);
+      }
+      
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      
+      const nonRatCardsInHand = hand
+        .map(cardEffectArgs.cardLibrary.getCard)
+        .filter(card => card.cardKey !== 'rats');
+      
+      if (!nonRatCardsInHand.length) {
+        console.log(`[rats effect] no non-rat cards in hand to trash, revealing`);
+        
+        for (const cardId of [...hand]) {
+          await cardEffectArgs.runGameActionDelegate('revealCard', {
+            cardId,
+            playerId: cardEffectArgs.playerId,
+          });
+        }
+        
+        return;
+      }
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Trash card',
+        restrict: nonRatCardsInHand.map(card => card.id),
+        count: 1,
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.warn(`[rats effect] no card selected`);
+        return;
+      }
+      
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+      
+      console.log(`[rats effect] trashing card ${selectedCard}`);
+      
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCard.id,
+      });
+    }
+  },
   'ruined-library': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[ruined library effect] drawing 1 card`);
