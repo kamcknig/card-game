@@ -216,5 +216,11 @@
       "treasure": 3
     },
     "type": ["ACTION"]
+  },
+  "scavenger": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"]
   }
 }

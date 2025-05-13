@@ -7,7 +7,8 @@
 - when using overpay feature, you can overpay with potions. this matters for stone mason. don't know how to do
 the UI for this yet, and doesn't seem super important to get done right away
 - The wiki for the Spoils card states. I don't have a solution for that and how to prevent yet
-> If you play an Ambassador and reveal a Spoils, the Spoils is not returned to the Supply (since it is not in the Supply) and other players do not gain Spoils.
+- If you play an Ambassador and reveal a Spoils, the Spoils is not returned to the Supply (since it is not in the Supply) and other players do not gain Spoils.
+- player object seems to get converted to plain object at some point (the tostring isn't working properly)
 
 
 # Higher priority
@@ -37,3 +38,4 @@ currently - doing dark ages expansion
  - ui needs to display spoils. spoils are in nonSupplyCards and have the "spoils" tag
    - with this maybe refactor how non supply cards are shown, now that kingdoms have a name separate
 from the card key, might be able to separate them based on that
+ - i think when adding a new preselected kingdom the game breaks, but then after a reload it seems to work fine

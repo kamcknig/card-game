@@ -1697,7 +1697,71 @@ const cardEffects: CardExpansionModule = {
       console.log(`[sage effect] discarding ${cardsToDiscard.length} cards`);
       
       for (const card of cardsToDiscard) {
-        await cardEffectArgs.runGameActionDelegate('discardCard', { cardId: card.id, playerId: cardEffectArgs.playerId });
+        await cardEffectArgs.runGameActionDelegate('discardCard', {
+          cardId: card.id,
+          playerId: cardEffectArgs.playerId
+        });
+      }
+    }
+  },
+  'squire': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[squire effect] gaining 2 treasure`);
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+      
+      let result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        prompt: 'Put deck onto discard?',
+        playerId: cardEffectArgs.playerId,
+        actionButtons: [
+          { label: 'CANCEL', action: 1 },
+          { label: 'CONFIRM', action: 2 }
+        ],
+      }) as { action: number, result: number[] };
+      
+      if (result.action === 2) {
+        console.log(`[squire effect] putting deck onto discard`);
+        
+        const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+        
+        for (const cardId of [...deck]) {
+          await cardEffectArgs.runGameActionDelegate('moveCard', {
+            cardId,
+            toPlayerId: cardEffectArgs.playerId,
+            to: { location: 'playerDiscard' }
+          });
+        }
+      }
+      
+      const discard = cardEffectArgs.cardSourceController.getSource('playerDiscard', cardEffectArgs.playerId);
+      
+      if (discard.length) {
+        result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+          prompt: 'Put card on top of deck',
+          playerId: cardEffectArgs.playerId,
+          content: {
+            type: 'select',
+            cardIds: discard,
+            selectCount: 1
+          }
+        }) as { action: number, result: number[] };
+        
+        if (!result.result.length) {
+          console.warn(`[squire effect] no card selected`);
+          return;
+        }
+        
+        const selectedCard = cardEffectArgs.cardLibrary.getCard(result.result[0]);
+        
+        console.log(`[squire effect] putting ${selectedCard} on top of deck`);
+        
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
+          cardId: selectedCard.id,
+          toPlayerId: cardEffectArgs.playerId,
+          to: { location: 'playerDeck' }
+        });
+      }
+      else {
+        console.log(`[squire effect] no cards in discard`);
       }
     }
   },
