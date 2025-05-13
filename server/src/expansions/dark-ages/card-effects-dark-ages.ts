@@ -2011,7 +2011,7 @@ const cardEffects: CardExpansionModule = {
         await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
         
         if (!deck.length) {
-          console.log(`[vagrant effect] till no cards in deck`);
+          console.log(`[vagrant effect] still no cards in deck`);
           return;
         }
       }
@@ -2037,7 +2037,79 @@ const cardEffects: CardExpansionModule = {
   },
   'wandering-minstrel': {
     registerEffects: () => async (cardEffectArgs) => {
-    
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
+      
+      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+      const cardsToDiscard: Card[] = [];
+      const actionCards: Card[] = [];
+      
+      for (let i = 0; i < 3; i++) {
+        let cardId = deck.slice(-1)[0];
+        
+        if (!cardId) {
+          console.log(`[wandering-minstrel effect] no cards in deck, shuffling`);
+          await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+          
+          cardId = deck.slice(-1)[0];
+          
+          if (!cardId) {
+            console.log(`[wandering-minstrel effect] still no cards in deck`);
+            break;
+          }
+        }
+        
+        const card = cardEffectArgs.cardLibrary.getCard(cardId);
+        
+        await cardEffectArgs.runGameActionDelegate('revealCard', {
+          cardId: card.id,
+          playerId: cardEffectArgs.playerId,
+          moveToSetAside: true
+        });
+        
+        if (card.type.includes('ACTION')) {
+          actionCards.push(card);
+        }
+        else {
+          cardsToDiscard.push(card);
+        }
+      }
+      
+      let sorted: CardId[] = [];
+      if (actionCards.length > 1) {
+        const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+          prompt: 'Put in any order',
+          playerId: cardEffectArgs.playerId,
+          content: {
+            type: 'rearrange',
+            cardIds: actionCards.map(card => card.id)
+          }
+        }) as { action: number, result: number[] };
+        
+        sorted = [...result.result ?? []];
+      }
+      else {
+        sorted = [...actionCards.map(card => card.id)];
+      }
+      
+      console.log(`[wandering-minstrel effect] putting cards ${cardsToDiscard} on deck`);
+      
+      for (const cardId of sorted) {
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
+          cardId: cardId,
+          toPlayerId: cardEffectArgs.playerId,
+          to: { location: 'playerDeck' }
+        });
+      }
+      
+      console.log(`[wandering-minstrel effect] discarding ${cardsToDiscard.length} cards`);
+      
+      for (const card of cardsToDiscard) {
+        await cardEffectArgs.runGameActionDelegate('discardCard', {
+          cardId: card.id,
+          playerId: cardEffectArgs.playerId
+        });
+      }
     }
   },
   'ruined-library': {
