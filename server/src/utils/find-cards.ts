@@ -67,6 +67,10 @@ export const findCardsFactory: FindCardsFnFactory = (cardSourceController, cardC
         sourceCards = sourceCards.filter(card => card.type.some(t => otherFilter.tags!.includes(t)));
       }
       
+      if (otherFilter.kingdom) {
+        sourceCards = sourceCards.filter(card => card.kingdom === otherFilter.kingdom);
+      }
+      
       if (otherFilter.cardKeys) {
         sourceCards = sourceCards.filter(card => otherFilter.cardKeys!.includes(card.cardKey));
       }

@@ -175,5 +175,11 @@
       "treasure": 5
     },
     "type": ["ACTION"]
+  },
+  "pillage": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ATTACK", "ACTION"]
   }
 }

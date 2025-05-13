@@ -1186,6 +1186,77 @@ const cardEffects: CardExpansionModule = {
       }
     }
   },
+  'pillage': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[pillage effect] trashing pillage`);
+      
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: cardEffectArgs.cardId,
+      });
+      
+      const spoilsCards = cardEffectArgs.findCards({ kingdom: 'spoils' });
+      
+      if (!spoilsCards.length) {
+        console.log(`[pillage effect] no spoils in supply`);
+        return;
+      }
+      
+      const numToGain = Math.min(2, spoilsCards.length);
+      
+      console.log(`[pillage effect] gaining ${numToGain} spoils`);
+      
+      for (let i = 0; i < numToGain; i++) {
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: spoilsCards.slice(-i - 1)[0].id,
+          to: { location: 'playerDiscard' }
+        });
+      }
+      
+      const targetPlayerIds = findOrderedTargets({
+        match: cardEffectArgs.match,
+        appliesTo: 'ALL_OTHER',
+        startingPlayerId: cardEffectArgs.playerId
+      }).filter(playerId =>
+        cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity' &&
+        cardEffectArgs.cardSourceController.getSource('playerHand', playerId).length >= 5
+      );
+      
+      for (const targetPlayerId of targetPlayerIds) {
+        const hand = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
+        
+        console.log(`[pillage effect] revealing player ${targetPlayerId} hand`);
+        for (const cardId of [...hand]) {
+          await cardEffectArgs.runGameActionDelegate('revealCard', {
+            cardId,
+            playerId: targetPlayerId,
+          });
+        }
+        
+        const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+          prompt: 'Discard card',
+          playerId: cardEffectArgs.playerId,
+          content: {
+            type: 'select',
+            cardIds: hand,
+            selectCount: 1
+          }
+        }) as { action: number, result: number[] };
+        
+        if (!result.result.length) {
+          console.warn(`[pillage effect] no card selected`);
+          continue;
+        }
+       
+        const selectedCard = cardEffectArgs.cardLibrary.getCard(result.result[0]);
+        
+        console.log(`[pillage effect] player ${targetPlayerId} discarding ${selectedCard}`);
+        
+        await cardEffectArgs.runGameActionDelegate('discardCard', { cardId: selectedCard.id, playerId: targetPlayerId });
+      }
+    }
+  },
   'ruined-library': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[ruined library effect] drawing 1 card`);
