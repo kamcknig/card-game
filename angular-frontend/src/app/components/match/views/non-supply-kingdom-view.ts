@@ -2,7 +2,8 @@ import { Container, Graphics, Text } from 'pixi.js';
 import { Card, CardNoId } from 'shared/shared-types';
 import { PileView } from './pile';
 import { STANDARD_GAP } from '../../../core/app-contants';
-import { rewardsStore } from '../../../state/card-source-logic';
+import { nonSupplyKingdomMapStore } from '../../../state/card-source-logic';
+import { capitalize } from 'es-toolkit';
 
 export class NonSupplyKingdomView extends Container {
   private _container: Container;
@@ -12,31 +13,30 @@ export class NonSupplyKingdomView extends Container {
 
     this._container = this.addChild(new Container());
 
-    const rewardStoreUnsub = rewardsStore.subscribe(rewards => {
-      if (!rewards) {
-        return;
-      }
-
-      this.drawRewards({
-        ...rewards,
-        cards: rewards?.cards.filter(card => !card.owner) ?? []
-      });
+    const nonSupplyUnsub = nonSupplyKingdomMapStore.subscribe(kingdomMap => {
+      this.draw(kingdomMap);
     });
 
     this.on('removed', () => {
-      rewardStoreUnsub();
+      nonSupplyUnsub();
     });
   }
 
-  private drawRewards(rewards: { startingCards: CardNoId[], cards: readonly Card[] } | undefined) {
-    if (!rewards) {
+  private draw(kingdomMap: Readonly<Record<string, { startingCards: CardNoId[]; cards: readonly Card[]}>>) {
+    for (const kingdomName of Object.keys(kingdomMap)) {
+      const kingdom = this.drawKingdom(kingdomName, kingdomMap[kingdomName]);
+    }
+  }
+
+  private drawKingdom(kingdomName: string, kingdom: { startingCards: CardNoId[], cards: readonly Card[] }) {
+    if (!kingdomName || !kingdom) {
       return;
     }
 
-    let container = this._container.getChildByLabel('rewards');
+    let container = this._container.getChildByLabel(kingdomName);
 
     if (!container) {
-      container = new Container({ label: 'rewards' });
+      container = new Container({ label: kingdomName });
       this._container.addChild(container);
     }
 
@@ -50,7 +50,7 @@ export class NonSupplyKingdomView extends Container {
 
     if (!text) {
       text = new Text({
-        text: 'Rewards',
+        text: capitalize(kingdomName),
         label: 'text',
         style: { fontSize: 18, fill: 'white' }
       });
@@ -68,7 +68,7 @@ export class NonSupplyKingdomView extends Container {
       container.addChild(cardContainer);
     }
 
-    for (const [idx, card] of rewards.startingCards.entries()) {
+    for (const [idx, card] of kingdom.startingCards.entries()) {
       const cardKey = card.cardKey;
       let pile = cardContainer.getChildByLabel(cardKey) as PileView;
       if (!pile) {
@@ -81,13 +81,16 @@ export class NonSupplyKingdomView extends Container {
         cardContainer.addChild(pile);
       }
 
-      pile.pile = rewards.cards.filter(c => c.cardKey === cardKey);
+      pile.pile = kingdom.cards.filter(c => c.cardKey === cardKey);
     }
 
-    setTimeout(() => {
-      background.clear();
-      background.roundRect(0, 0, container.width + STANDARD_GAP * 2, container.height + STANDARD_GAP * 2, 5);
-      background.fill({ color: 0, alpha: .6 });
-    }, 200);
+    return Promise.resolve((resolve: (value: Container) => void) => {
+      setTimeout(() => {
+        background.clear();
+        background.roundRect(0, 0, container.width + STANDARD_GAP * 2, container.height + STANDARD_GAP * 2, 5);
+        background.fill({ color: 0, alpha: .6 });
+        resolve(container);
+      }, 200);
+    });
   }
 }

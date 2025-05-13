@@ -4,6 +4,31 @@ import { getCardSourceStore } from './card-source-store';
 import { cardStore } from './card-state';
 import { matchStore } from './match-state';
 
+export const nonSupplyKingdomMapStore = computed(
+  [getCardSourceStore('nonSupplyKingdomMap'), cardStore, matchStore],
+  (nonSupplyKingdomMap, cards, match) => {
+    const kingdomMap = nonSupplyKingdomMap.reduce((prev, cardId) => {
+      const card = cards[cardId];
+      if (!card) {
+        return prev;
+      }
+
+      const startingCards = match?.config.nonSupply
+        ?.filter(supply => supply.name === 'rewards')
+        ?.map(supply => supply.cards).flat() ?? [];
+
+      prev[card.kingdom] ||= {
+        startingCards: startingCards,
+        cards: [],
+      };
+      prev[card.kingdom].cards.push(card);
+      return prev;
+    }, {} as Record<string, {startingCards: CardNoId[], cards: Card[]}>)
+    return kingdomMap;
+  }
+);
+
+
 export const rewardsStore: ReadableAtom<{
   startingCards: CardNoId[]; cards: Card[]
 } | undefined> = computed(

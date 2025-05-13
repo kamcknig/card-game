@@ -27,6 +27,7 @@ need to show the context of the kingdom card for something like young witch, and
 - dominion.games puts the word "bane" in the type area of the card (but only while it's in the supply)
 - it also puts it in the detail view of both the witch and the bane card, when viewing the details of one or the
 other, it will show the opposite card smaller next to it
+- i think when adding a new preselected kingdom the game breaks, but then after a reload it seems to work fine
 
 the rules state that "set aside" cards do not discard. you made that complicated logic for active
 duration cards. but you can just use set-aside and then schedule a movecard reaction at
@@ -34,8 +35,5 @@ the start of next turn, and then they'll be in play and will be discarded. and t
 can be checked by seeing if they are in the play area on the turn they were played or not
 
 
-currently - doing dark ages expansion
- - ui needs to display spoils. spoils are in nonSupplyCards and have the "spoils" tag
-   - with this maybe refactor how non supply cards are shown, now that kingdoms have a name separate
-from the card key, might be able to separate them based on that
- - i think when adding a new preselected kingdom the game breaks, but then after a reload it seems to work fine
+currently working on
+ - ui to display non supply kingdoms
