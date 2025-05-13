@@ -240,5 +240,18 @@
       "treasure": 3
     },
     "type": ["ACTION", "ATTACK"]
+  },
+  "vagrant": {
+    "cost": {
+      "treasure": 2
+    },
+    "type": ["ACTION"]
+  },
+  "wandering-minstrel": {
+    "cardName": "Wandering Minstrel",
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"]
   }
 }

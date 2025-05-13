@@ -1,4 +1,4 @@
-import { Card, CardId, CardKey } from 'shared/shared-types.ts';
+import { Card, CardId, CardKey, CardType } from 'shared/shared-types.ts';
 import { CardExpansionModule } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
@@ -1996,6 +1996,48 @@ const cardEffects: CardExpansionModule = {
           });
         }
       })
+    }
+  },
+  'vagrant': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[vagrant effect] drawing 1 card and gaining 1 action`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      
+      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+      
+      if (!deck.length) {
+        console.log(`[vagrant effect] no cards in deck, shuffling`);
+        await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+        
+        if (!deck.length) {
+          console.log(`[vagrant effect] till no cards in deck`);
+          return;
+        }
+      }
+      
+      const card = cardEffectArgs.cardLibrary.getCard(deck.slice(-1)[0]);
+      
+      console.log(`[vagrant effect] revealing ${card}`);
+      
+      await cardEffectArgs.runGameActionDelegate('revealCard', {
+        cardId: card.id,
+        playerId: cardEffectArgs.playerId,
+      });
+      
+      if (['CURSE', 'RUINS', 'SHELTER', 'VICTORY'].some(t => card.type.includes(t as CardType))) {
+        console.log(`[vagrant effect] ${card} is a curse, ruins, shelter, or victory; moving to hand`);
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
+          cardId: card.id,
+          toPlayerId: cardEffectArgs.playerId,
+          to: { location: 'playerHand' }
+        });
+      }
+    }
+  },
+  'wandering-minstrel': {
+    registerEffects: () => async (cardEffectArgs) => {
+    
     }
   },
   'ruined-library': {
