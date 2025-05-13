@@ -1647,9 +1647,57 @@ const cardEffects: CardExpansionModule = {
           console.log(`[rogue effect] discarding ${cardsToDiscard.length} cards`);
           
           for (const card of cardsToDiscard) {
-            await cardEffectArgs.runGameActionDelegate('discardCard', { cardId: card.id, playerId: cardEffectArgs.playerId });
+            await cardEffectArgs.runGameActionDelegate('discardCard', {
+              cardId: card.id,
+              playerId: cardEffectArgs.playerId
+            });
           }
         }
+      }
+    }
+  },
+  'sage': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[sage effect] gaining 1 action`);
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      
+      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+      
+      const cardsToDiscard: Card[] = [];
+      
+      while (deck.length > 0) {
+        const cardId = deck.slice(-1)[0];
+        const card = cardEffectArgs.cardLibrary.getCard(cardId);
+        
+        console.log(`[sage effect] revealing ${card}`);
+        
+        await cardEffectArgs.runGameActionDelegate('revealCard', {
+          cardId: card.id,
+          playerId: cardEffectArgs.playerId,
+          moveToSetAside: true
+        });
+        
+        const { cost } = cardEffectArgs.cardPriceController.applyRules(card, { playerId: cardEffectArgs.playerId });
+        if (cost.treasure >= 3) {
+          console.log(`[sage effect] ${card} costs at least 3 treasure, putting in hand`);
+          
+          await cardEffectArgs.runGameActionDelegate('moveCard', {
+            cardId: card.id,
+            toPlayerId: cardEffectArgs.playerId,
+            to: { location: 'playerHand' }
+          });
+          
+          break;
+        }
+        else {
+          cardsToDiscard.push(card);
+        }
+      }
+      
+      console.log(`[sage effect] discarding ${cardsToDiscard.length} cards`);
+      
+      for (const card of cardsToDiscard) {
+        await cardEffectArgs.runGameActionDelegate('discardCard', { cardId: card.id, playerId: cardEffectArgs.playerId });
       }
     }
   },

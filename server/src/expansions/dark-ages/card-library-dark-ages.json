@@ -210,5 +210,11 @@
       "treasure": 5
     },
     "type": ["ACTION", "ATTACK"]
+  },
+  "sage": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION"]
   }
 }
