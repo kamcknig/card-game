@@ -192,5 +192,11 @@
       "treasure": 1
     },
     "type": ["ACTION"]
+  },
+  "procession": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"]
   }
 }

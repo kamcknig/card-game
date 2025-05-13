@@ -1248,12 +1248,15 @@ const cardEffects: CardExpansionModule = {
           console.warn(`[pillage effect] no card selected`);
           continue;
         }
-       
+        
         const selectedCard = cardEffectArgs.cardLibrary.getCard(result.result[0]);
         
         console.log(`[pillage effect] player ${targetPlayerId} discarding ${selectedCard}`);
         
-        await cardEffectArgs.runGameActionDelegate('discardCard', { cardId: selectedCard.id, playerId: targetPlayerId });
+        await cardEffectArgs.runGameActionDelegate('discardCard', {
+          cardId: selectedCard.id,
+          playerId: targetPlayerId
+        });
       }
     }
   },
@@ -1278,6 +1281,83 @@ const cardEffects: CardExpansionModule = {
       
       console.log(`[poor-house effect] losing ${treasureCardsInHand.length} treasure`);
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: -treasureCardsInHand.length });
+    }
+  },
+  'procession': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const nonDurationActionCardsInHand = cardEffectArgs.findCards([
+        { location: 'playerHand', playerId: cardEffectArgs.playerId },
+      ])
+        .filter(card => !card.type.includes('DURATION') && card.type.includes('ACTION'));
+      
+      if (!nonDurationActionCardsInHand.length) {
+        console.log(`[procession effect] no non-duration action cards in hand`);
+        return;
+      }
+      
+      let selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Play card`,
+        restrict: nonDurationActionCardsInHand.map(card => card.id),
+        count: 1,
+        optional: true,
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.log(`[procession effect] no card selected`);
+        return;
+      }
+      
+      let selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+      
+      console.log(`[procession effect] playing card ${selectedCard} twice`);
+      
+      for (let i = 0; i < 2; i++) {
+        await cardEffectArgs.runGameActionDelegate('playCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: selectedCard.id,
+        });
+      }
+      
+      console.log(`[procession effect] trashing ${selectedCard}`);
+      
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCard.id,
+      });
+      
+      const { cost } = cardEffectArgs.cardPriceController.applyRules(selectedCard, { playerId: cardEffectArgs.playerId });
+      
+      const cards = cardEffectArgs.findCards([
+        { location: 'kingdomSupply' },
+        {
+          kind: 'exact',
+          playerId: cardEffectArgs.playerId,
+          amount: { treasure: cost.treasure + 1, potion: cost.potion }
+        }
+      ]);
+      
+      selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Gain card`,
+        restrict: cards.map(card => card.id),
+        count: 1,
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.warn(`[procession effect] no card selected`);
+        return;
+      }
+      
+      selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+      
+      console.log(`[procession effect] gaining card ${selectedCard}`);
+      
+      await cardEffectArgs.runGameActionDelegate('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCard.id,
+        to: { location: 'playerDiscard' }
+      });
     }
   },
   'ruined-library': {
