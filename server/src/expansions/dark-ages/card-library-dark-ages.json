@@ -204,5 +204,11 @@
       "treasure": 5
     },
     "type": ["ACTION"]
+  },
+  "rogue": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "ATTACK"]
   }
 }

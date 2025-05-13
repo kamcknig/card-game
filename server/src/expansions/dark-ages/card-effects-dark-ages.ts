@@ -1529,6 +1529,130 @@ const cardEffects: CardExpansionModule = {
       }
     }
   },
+  'rogue': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[rogue effect] gaining 2 treasure`);
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+      
+      const cards = cardEffectArgs.findCards({ location: 'trash' })
+        .filter(card => {
+          const { cost } = cardEffectArgs.cardPriceController.applyRules(card, { playerId: cardEffectArgs.playerId });
+          return cost.treasure >= 3 && cost.treasure <= 6 && !cost.potion
+        });
+      
+      if (cards.length) {
+        console.log(`[rogue effect] there are cards in trash costing 3 to 6`);
+        
+        const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+          prompt: 'Gain card',
+          playerId: cardEffectArgs.playerId,
+          content: {
+            type: 'select',
+            cardIds: cards.map(card => card.id),
+            selectCount: 1
+          }
+        }) as { action: number, result: number[] };
+        
+        if (!result.result.length) {
+          console.warn(`[rogue effect] no card selected`);
+          return;
+        }
+        
+        const selectedCard = cardEffectArgs.cardLibrary.getCard(result.result[0]);
+        
+        console.log(`[rogue effect] gaining card ${selectedCard}`);
+        
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: selectedCard.id,
+          to: { location: 'playerDiscard' }
+        });
+      }
+      else {
+        console.log(`[rogue effect] no cards in trash costing 3 to 6`);
+        
+        const targetPlayerIds = findOrderedTargets({
+          match: cardEffectArgs.match,
+          appliesTo: 'ALL_OTHER',
+          startingPlayerId: cardEffectArgs.playerId
+        }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+        
+        for (const targetPlayerId of targetPlayerIds) {
+          const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', targetPlayerId);
+          
+          if (deck.length < 2) {
+            console.log(`[rogue effect] player ${targetPlayerId} has less than 2 cards in deck, shuffling`);
+            await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: targetPlayerId });
+          }
+          
+          const numToReveal = Math.min(2, deck.length);
+          
+          console.log(`[rogue effect] revealing ${numToReveal} cards from player ${targetPlayerId} deck`);
+          
+          const cardsToTrash: Card[] = [];
+          const cardsToDiscard: Card[] = [];
+          
+          for (let i = 0; i < numToReveal; i++) {
+            const cardId = deck.slice(-i - 1)[0];
+            
+            const card = cardEffectArgs.cardLibrary.getCard(cardId);
+            const { cost } = cardEffectArgs.cardPriceController.applyRules(card, { playerId: targetPlayerId });
+            
+            if (cost.treasure >= 3 && cost.treasure <= 6 && !cost.potion) {
+              cardsToTrash.push(card);
+            }
+            else {
+              cardsToDiscard.push(card);
+            }
+            
+            await cardEffectArgs.runGameActionDelegate('revealCard', {
+              cardId,
+              playerId: targetPlayerId,
+              moveToSetAside: true
+            });
+          }
+          
+          let cardToTrash: Card | undefined = undefined;
+          if (cardsToTrash.length > 1) {
+            const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+              prompt: 'Trash card',
+              playerId: targetPlayerId,
+              content: {
+                type: 'select',
+                cardIds: cardsToTrash.map(card => card.id),
+                selectCount: 1
+              }
+            }) as { action: number, result: number[] };
+            
+            if (!result.result.length) {
+              console.warn(`[rogue effect] no card selected`);
+            }
+            else {
+              cardToTrash = cardEffectArgs.cardLibrary.getCard(result.result[0]);
+            }
+          }
+          else if (cardsToTrash.length === 1) {
+            cardToTrash = cardsToTrash[0];
+          }
+          
+          if (cardToTrash) {
+            console.log(`[rogue effect] trashing card ${cardToTrash}`);
+            
+            await cardEffectArgs.runGameActionDelegate('trashCard', {
+              playerId: targetPlayerId,
+              cardId: cardToTrash.id,
+            });
+          }
+          
+          console.log(`[rogue effect] discarding ${cardsToDiscard.length} cards`);
+          
+          for (const card of cardsToDiscard) {
+            await cardEffectArgs.runGameActionDelegate('discardCard', { cardId: card.id, playerId: cardEffectArgs.playerId });
+          }
+        }
+      }
+    }
+  },
   'ruined-library': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[ruined library effect] drawing 1 card`);
