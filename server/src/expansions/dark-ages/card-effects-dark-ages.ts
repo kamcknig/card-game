@@ -1,4 +1,4 @@
-import { Card, CardId } from 'shared/shared-types.ts';
+import { Card, CardId, CardKey } from 'shared/shared-types.ts';
 import { CardExpansionModule } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
@@ -1044,8 +1044,8 @@ const cardEffects: CardExpansionModule = {
   'marauder': {
     registerEffects: () => async (cardEffectArgs) => {
       const spoilCards = cardEffectArgs.findCards([
-        {location: 'nonSupplyCards'},
-        {kingdom: 'spoils'}
+        { location: 'nonSupplyCards' },
+        { kingdom: 'spoils' }
       ]);
       
       if (!spoilCards.length) {
@@ -1053,8 +1053,8 @@ const cardEffects: CardExpansionModule = {
       }
       
       const ruinCards = cardEffectArgs.findCards([
-        {location: 'kingdomSupply'},
-        {kingdom: 'ruins'}
+        { location: 'kingdomSupply' },
+        { kingdom: 'ruins' }
       ]);
       
       if (!ruinCards.length) {
@@ -1080,6 +1080,180 @@ const cardEffects: CardExpansionModule = {
           cardId: ruinCards.slice(-1)[0].id,
           to: { location: 'playerDiscard' }
         });
+      }
+    }
+  },
+  'market-square': {
+    registerLifeCycleMethods: () => ({
+      onLeaveHand: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`market-square:${eventArgs.cardId}:cardTrashed`)
+      },
+      onEnterHand: async (args, eventArgs) => {
+        args.reactionManager.registerReactionTemplate({
+          id: `market-square:${eventArgs.cardId}:cardTrashed`,
+          listeningFor: 'cardTrashed',
+          playerId: eventArgs.playerId,
+          once: false,
+          compulsory: false,
+          allowMultipleInstances: true,
+          condition: conditionArgs => {
+            const trashedCard = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
+            if (trashedCard.owner !== eventArgs.playerId) return false;
+            return true;
+          },
+          triggeredEffectFn: async triggeredArgs => {
+            const marketSquareCard = triggeredArgs.cardLibrary.getCard(eventArgs.cardId);
+            console.log(`[market-square cardTrashed effect] discarding ${marketSquareCard}`);
+            await triggeredArgs.runGameActionDelegate('discardCard', {
+              cardId: marketSquareCard.id,
+              playerId: eventArgs.playerId
+            });
+            
+            const goldCards = triggeredArgs.findCards([
+              { location: 'basicSupply' },
+              { cardKeys: 'gold' }
+            ]);
+            
+            if (!goldCards.length) {
+              console.log(`[market-square cardTrashed effect] no gold cards in supply`);
+              return;
+            }
+            
+            console.log(`[market-square cardTrashed effect] gaining ${goldCards.slice(-1)[0]}`);
+            
+            await triggeredArgs.runGameActionDelegate('gainCard', {
+              playerId: eventArgs.playerId,
+              cardId: goldCards.slice(-1)[0].id,
+              to: { location: 'playerDiscard' }
+            });
+          }
+        })
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[market-square effect] drawing 1 card, gaining 1 action, and 1 buy`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+    }
+  },
+  'mystic': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[mystic effect] gaining 1 action, and 1 treasure`);
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+      
+      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        prompt: 'Name a card',
+        playerId: cardEffectArgs.playerId,
+        content: { type: 'name-card' }
+      }) as { action: number, result: CardKey };
+      
+      const namedCardKey = result.result;
+      
+      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+      
+      if (!deck.length) {
+        console.log(`[mystic effect] no cards in deck, shuffling`);
+        await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+        
+        if (!deck.length) {
+          console.log(`[mystic effect] still no cards in deck`);
+          return;
+        }
+      }
+      
+      const revealedCard = cardEffectArgs.cardLibrary.getCard(deck.slice(-1)[0]);
+      
+      console.log(`[mystic effect] revealing ${revealedCard}`);
+      
+      await cardEffectArgs.runGameActionDelegate('revealCard', {
+        cardId: revealedCard.id,
+        playerId: cardEffectArgs.playerId,
+      });
+      
+      if (revealedCard.cardKey === namedCardKey) {
+        console.log(`[mystic effect] moving revealed card to hand`);
+        
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
+          cardId: revealedCard.id,
+          toPlayerId: cardEffectArgs.playerId,
+          to: { location: 'playerHand' }
+        });
+      }
+      else {
+        console.log(`[mystic effect] not moving card to hand`);
+      }
+    }
+  },
+  'pillage': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[pillage effect] trashing pillage`);
+      
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: cardEffectArgs.cardId,
+      });
+      
+      const spoilsCards = cardEffectArgs.findCards({ kingdom: 'spoils' });
+      
+      if (!spoilsCards.length) {
+        console.log(`[pillage effect] no spoils in supply`);
+        return;
+      }
+      
+      const numToGain = Math.min(2, spoilsCards.length);
+      
+      console.log(`[pillage effect] gaining ${numToGain} spoils`);
+      
+      for (let i = 0; i < numToGain; i++) {
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: spoilsCards.slice(-i - 1)[0].id,
+          to: { location: 'playerDiscard' }
+        });
+      }
+      
+      const targetPlayerIds = findOrderedTargets({
+        match: cardEffectArgs.match,
+        appliesTo: 'ALL_OTHER',
+        startingPlayerId: cardEffectArgs.playerId
+      }).filter(playerId =>
+        cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity' &&
+        cardEffectArgs.cardSourceController.getSource('playerHand', playerId).length >= 5
+      );
+      
+      for (const targetPlayerId of targetPlayerIds) {
+        const hand = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
+        
+        console.log(`[pillage effect] revealing player ${targetPlayerId} hand`);
+        for (const cardId of [...hand]) {
+          await cardEffectArgs.runGameActionDelegate('revealCard', {
+            cardId,
+            playerId: targetPlayerId,
+          });
+        }
+        
+        const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+          prompt: 'Discard card',
+          playerId: cardEffectArgs.playerId,
+          content: {
+            type: 'select',
+            cardIds: hand,
+            selectCount: 1
+          }
+        }) as { action: number, result: number[] };
+        
+        if (!result.result.length) {
+          console.warn(`[pillage effect] no card selected`);
+          continue;
+        }
+       
+        const selectedCard = cardEffectArgs.cardLibrary.getCard(result.result[0]);
+        
+        console.log(`[pillage effect] player ${targetPlayerId} discarding ${selectedCard}`);
+        
+        await cardEffectArgs.runGameActionDelegate('discardCard', { cardId: selectedCard.id, playerId: targetPlayerId });
       }
     }
   },
