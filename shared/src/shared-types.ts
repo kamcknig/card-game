@@ -338,6 +338,7 @@ export type CardType =
   | 'ZOMBIE';
 
 export type CardArgs = {
+  randomizer: string | null;
   partOfSupply: boolean;
   kingdom: string;
   tags?: string[];
@@ -367,6 +368,14 @@ export type CardCost = {
 }
 
 export class Card {
+  /**
+   * If null, this card is not used during kingdom selection as part of the pool. If undefined, the cardKey is used.
+   *
+   * This is used in cases where a kingdom supply might contain different cards in one supply such as Knights from
+   * Dark Ages. We set a randomizer of "knights" on it so that it's only gets one vote but it has 10 different knight
+   * cards in the supply
+   */
+  randomizer: string | null;
   /**
    * This indicates if the card is part of the supply or not. shelters, rewards, etc. are not part of the supply.
    *
@@ -412,6 +421,7 @@ export class Card {
     this.mat = args.mat;
     this.kingdom = args.kingdom;
     this.partOfSupply = args.partOfSupply ?? true;
+    this.randomizer = args.randomizer;
   }
   
   toString() {

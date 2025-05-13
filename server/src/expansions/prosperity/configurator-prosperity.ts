@@ -18,24 +18,28 @@ const configurator: ExpansionConfiguratorFactory = () => {
     const kingdomCards = args.config.kingdomSupply;
     const randomKingdomCard = kingdomCards[Math.floor(kingdomCards.length * Math.random())];
     
-    console.log(`[prosperity configurator] random kingdom chosen to determine if colony and prosperity should be added to config '${randomKingdomCard.cardKey}'`);
+    console.log(`[prosperity configurator] random kingdom chosen to determine if colony and prosperity should be added to config '${randomKingdomCard.cards[0].kingdom}'`);
     
     const basicCards = args.config.basicSupply;
     
-    if (randomKingdomCard.expansionName === 'prosperity' && !prosperityCheckConfigured) {
+    if (randomKingdomCard.cards[0].expansionName === 'prosperity' && !prosperityCheckConfigured) {
       console.log(`[prosperity configurator] adding prosperity and colony to config`);
       
-      basicCards.push(args.expansionData.cardData.basicSupply['colony']);
-      args.config.basicCardCount['colony'] = args.config.players.length >= 3 ? 12 : 8;
+      basicCards.push({
+        name: 'colony',
+        cards: new Array(args.config.players.length >= 3 ? 12 : 8).fill(args.expansionData.cardData.basicSupply['colony'])
+      });
       
-      basicCards.push(args.expansionData.cardData.basicSupply['platinum']);
-      args.config.basicCardCount['platinum'] = 12;
+      basicCards.push({
+        name: 'platinum',
+        cards: new Array(12).fill(args.expansionData.cardData.basicSupply['platinum'])
+      });
       
       prosperityCheckConfigured = true;
     }
     
-    const charlatanPresent = kingdomCards.find(card => card.cardKey === 'charlatan');
-    const curseCard = basicCards.find(card => card.cardKey === 'curse');
+    const charlatanPresent = kingdomCards.find(supply => supply.name === 'charlatan');
+    const curseCard = basicCards.find(supply => supply.name === 'curse');
     
     if (charlatanPresent && !charlatanConfigured) {
       console.log(`[prosperity configurator] charlatan is part of kingdom - curses gain the treasure type and +1 treasure effect`);
@@ -44,7 +48,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
         console.warn(`[prosperity configurator] curse card not found in config`);
       }
       
-      curseCard?.type.push('TREASURE');
+      curseCard?.cards?.forEach(card => card.type.push('TREASURE'));
       
       args.cardEffectRegistrar('curse', 'prosperity', async (args) => {
         console.log(`[curse effect - prosperity] curse effect called`);
@@ -61,7 +65,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
 export const registerEndGameConditions = (registrar: EndGameConditionRegistrar) => {
   registrar(({ findCards, match }) => {
     const kingdomCards = match.config.kingdomSupply;
-    const colonyPresent = kingdomCards.find(card => card.cardKey === 'colony');
+    const colonyPresent = kingdomCards.find(supply => supply.name === 'colony');
     
     if (!colonyPresent) {
       return false;

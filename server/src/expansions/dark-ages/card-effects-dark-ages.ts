@@ -3,6 +3,7 @@ import { CardExpansionModule } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
+import { cardLifecycleMap } from '../../core/card-lifecycle-map.ts';
 
 const cardEffects: CardExpansionModule = {
   'abandoned-mine': {
@@ -512,6 +513,129 @@ const cardEffects: CardExpansionModule = {
           actionCost: 0,
         }
       });
+    }
+  },
+  'dame-anna': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Trash cards`,
+        restrict: hand,
+        count: { kind: 'upTo', count: 2 },
+        optional: true,
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.log(`[dame-anna effect] no card selected`);
+      }
+      
+      console.log(`[dame-anna effect] trashing ${selectedCardIds.length} cards`);
+      
+      for (const selectedCardId of selectedCardIds) {
+        await cardEffectArgs.runGameActionDelegate('trashCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: selectedCardId,
+        });
+      }
+      
+      const targetPlayerIds = findOrderedTargets({
+        match: cardEffectArgs.match,
+        appliesTo: 'ALL_OTHER',
+        startingPlayerId: cardEffectArgs.playerId,
+      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      
+      for (const targetPlayerId of targetPlayerIds) {
+        const deck = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
+        
+        const cardsToDiscard: Card[] = [];
+        const cardsToTrash: Card[] = [];
+        
+        for (let i = 0; i < 2; i++) {
+          let cardId = deck.slice(-1)[0];
+          
+          if (!cardId) {
+            console.log(`[dame-anna effect] no cards in deck, shuffling`);
+            await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: targetPlayerId });
+            
+            cardId = deck.slice(-1)[0];
+            
+            if (!cardId) {
+              console.log(`[dame-anna effect] no cards in deck, skipping`);
+              continue;
+            }
+          }
+          
+          const card = cardEffectArgs.cardLibrary.getCard(cardId);
+          
+          console.log(`[dame-anna effect] revealing ${card}`);
+          
+          await cardEffectArgs.runGameActionDelegate('revealCard', {
+            cardId: cardId,
+            playerId: targetPlayerId,
+            moveToSetAside: true
+          });
+          
+          const { cost } = cardEffectArgs.cardPriceController.applyRules(card, { playerId: targetPlayerId });
+          
+          if (cost.treasure >= 3 && cost.treasure <= 6) {
+            cardsToTrash.push(card);
+          }
+          else {
+            cardsToDiscard.push(card);
+          }
+        }
+        
+        let cardToTrash: Card | undefined = undefined;
+        if (cardsToTrash.length === 1) {
+          cardToTrash = cardsToTrash[0];
+        }
+        else if (cardsToTrash.length > 1){
+          const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+            prompt: 'Trash card',
+            playerId: targetPlayerId,
+            content: {
+              type: 'select',
+              cardIds: cardsToTrash.map(card => card.id),
+              selectCount: 1
+            }
+          }) as { action: number, result: number[] };
+          
+          if (!result.result.length) {
+            console.warn(`[dame-anna effect] no card selected`);
+          }
+          else {
+            cardToTrash = cardEffectArgs.cardLibrary.getCard(result.result[0]);
+          }
+        }
+        
+        if (cardToTrash) {
+          console.log(`[dame-anna effect] trashing ${cardToTrash}`);
+          
+          await cardEffectArgs.runGameActionDelegate('trashCard', {
+            playerId: targetPlayerId,
+            cardId: cardToTrash.id,
+          });
+        }
+        
+        console.log(`[dame-anna effect] discarding ${cardsToDiscard.length} cards`);
+        
+        for (const card of cardsToDiscard) {
+          await cardEffectArgs.runGameActionDelegate('discardCard', { cardId: card.id, playerId: cardEffectArgs.playerId });
+        }
+        
+        if (cardToTrash && cardToTrash.type.includes('KNIGHT')) {
+          const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+          
+          console.log(`[dame-anna effect] trashing ${card}`);
+          
+          await cardEffectArgs.runGameActionDelegate('trashCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: card.id,
+          });
+        }
+      }
     }
   },
   'death-cart': {

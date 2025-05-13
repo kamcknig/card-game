@@ -109,11 +109,13 @@ export class MatchConfigurator {
   
   private selectKingdomSupply() {
     let selectedKingdoms: CardNoId[] = this._requestedKingdoms.slice();
+    const additionalKingdoms: { name: string; cards: CardNoId[]; }[] = [];
     
     if (selectedKingdoms.length === MatchBaseConfiguration.numberOfKingdomPiles) {
       console.log(`[match configurator] number of requested kingdoms ${this._requestedKingdoms.length} is enough`);
     }
     else {
+      // reduces the player-configured expansions into an array whose elements are the expansions' library data
       const selectedExpansions = this._config.expansions.reduce((acc, allowedExpansion) => {
         const expansionData = expansionLibrary[allowedExpansion.name];
         if (!expansionData) {
@@ -124,44 +126,64 @@ export class MatchConfigurator {
         return acc;
       }, [] as ExpansionData[]);
       
-      const bannedKingdomKeys = this._bannedKingdoms.map(card => card.cardKey);
-      const alreadyIncludedKeys = selectedKingdoms.map(card => card.cardKey);
+      // list of randomizers that are banned or already pre-selected
+      const bannedKingdomKeys = this._bannedKingdoms.map(card => card.kingdom) as string[];
+      const alreadyIncludedKeys = selectedKingdoms.map(card => card.kingdom) as string[];
       
       console.log(`[match configurator] banned kingdoms ${bannedKingdomKeys.join(', ') ?? '- no banned kingdoms'}`);
       
+      // loop over the selected expansions, and filter out any kingdom cards that
+      // are banned, are already included, or do not have a randomizer
       const availableKingdoms = selectedExpansions.flatMap((nextExpansion) => {
         return Object.values(nextExpansion.cardData.kingdomSupply)
-          .filter(card => !bannedKingdomKeys.includes(card.cardKey) && !alreadyIncludedKeys.includes(card.cardKey));
+          .filter(card => !bannedKingdomKeys.includes(card.cardKey) && !alreadyIncludedKeys.includes(card.cardKey) && card.randomizer !== null);
       });
       
-      console.log(`[match configurator] available kingdoms ${availableKingdoms.length}`);
-      console.log(availableKingdoms.map(card => card.cardKey).join('\n'));
+      const uniqueRandomizers = Array.from(new Set(availableKingdoms.map(card => card.randomizer))) as string[];
+      
+      console.log(`[match configurator] available kingdoms ${uniqueRandomizers.length}`);
+      console.log(uniqueRandomizers.join('\n'));
       
       const numKingdomsToSelect = MatchBaseConfiguration.numberOfKingdomPiles - this._requestedKingdoms.length;
       
       console.log(`[match configurator] need to select ${numKingdomsToSelect} kingdoms`);
       
-      const additionalKingdoms: CardNoId[] = [];
-      
       for (let i = 0; i < numKingdomsToSelect; i++) {
-        const randomIndex = Math.floor(Math.random() * availableKingdoms.length);
-        const randomKingdom = availableKingdoms[randomIndex];
-        additionalKingdoms.push({ ...randomKingdom });
-        availableKingdoms.splice(randomIndex, 1);
+        const randomIndex = Math.floor(Math.random() * uniqueRandomizers.length);
+        const randomizer = uniqueRandomizers[randomIndex];
+        
+        const cardsInRandomizer = availableKingdoms.filter(card => card.randomizer === randomizer);
+        
+        // this makes an assumption that if there are more cards within a randomizer group (such as knights from dark
+        // ages) that they will all be in the same kingdom.
+        const kingdom = cardsInRandomizer[0].kingdom;
+        let cards: CardNoId[] = [];
+        
+        if (cardsInRandomizer.length === 1) {
+          cards = new Array(getDefaultKingdomSupplySize(cardsInRandomizer[0], this._config)).fill(cardsInRandomizer[0]);
+        }
+        else {
+          cards = cardsInRandomizer;
+        }
+        
+        additionalKingdoms.push({
+          name: kingdom,
+          cards
+        });
+        
+        uniqueRandomizers.splice(randomIndex, 1);
       }
-      
-      console.log(`[match configurator] additional kingdoms to add`);
-      console.log(additionalKingdoms.map(card => card.cardKey).join('\n'));
-      
-      selectedKingdoms = [...selectedKingdoms, ...additionalKingdoms];
     }
     
-    this._config.kingdomSupply = structuredClone(selectedKingdoms.map(card => {
-      return {
-        name: card.cardKey,
-        cards: new Array(getDefaultKingdomSupplySize(card, this._config)).fill(card)
-      }
-    }));
+    this._config.kingdomSupply =
+      structuredClone(
+        selectedKingdoms.map(card => {
+          return {
+            name: card.cardKey,
+            cards: new Array(getDefaultKingdomSupplySize(card, this._config)).fill(card)
+          }
+        }).concat(additionalKingdoms)
+      );
     
     console.log(`[match configurator] finalized selected kingdoms count ${this._config.kingdomSupply.length}`);
     console.log(this._config.kingdomSupply.map(supply => supply.name).join('\n'));

@@ -1,8 +1,0 @@
-{
-  "mercenary": {
-    "cost": {
-      "treasure": 0
-    },
-    "type": ["ATTACK", "ACTION"]
-  }
-}

@@ -58,6 +58,10 @@
     "Card": {
       "type": "object",
       "properties": {
+        "randomizer": {
+          "type": "string",
+          "description": "Indicates the 'key' used as the randomizer for selecting a card to be used in a match's kingdom. If it's not defined, the card's key will be used. If it's null then it will not be used in kingdom selection"
+        },
         "victoryPoints": {
           "type": "integer",
           "description": "Number of 'static' victory points the card is worth."

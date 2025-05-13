@@ -89,7 +89,7 @@ export class Game {
       this._fuse = undefined;
     }
     
-    const libraryArr = Object.values(rawCardLibrary).filter(card => card.partOfSupply);
+    const libraryArr = Object.values(rawCardLibrary);
     const index = Fuse.createIndex(['cardName'], libraryArr);
     
     const fuseOptions: IFuseOptions<CardNoId> = {

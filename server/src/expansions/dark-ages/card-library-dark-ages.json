@@ -1,4 +1,14 @@
 {
+  "abandoned-mine": {
+    "cost": {
+      "treasure": 0
+    },
+    "type": [
+      "ACTION",
+      "RUINS"
+    ],
+    "randomizer": null
+  },
   "altar": {
     "cost": {
       "treasure": 6
@@ -85,6 +95,47 @@
       "ACTION"
     ]
   },
+  "dame-anna": {
+    "cardName": "Dame Anna",
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "ATTACK", "KNIGHT"],
+    "randomizer": "knights"
+  },
+  "dame-josephine": {
+    "cardName": "Dame Josephine",
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "ATTACK", "VICTORY", "KNIGHT"],
+    "victoryPoints": 2,
+    "randomizer": "knights"
+  },
+  "dame-molly": {
+    "cardName": "Dame Molly",
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "ATTACK", "KNIGHT"],
+    "randomizer": "knights"
+  },
+  "dame-natalie": {
+    "cardName": "Dame Natalie",
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ATTACK", "ACTION", "KNIGHT"],
+    "randomizer": "knights"
+  },
+  "dame-sylvia": {
+    "cardName": "Dame Sylvia",
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "ATTACK", "KNIGHT"],
+    "randomizer": "knights"
+  },
   "death-cart": {
     "cost": {
       "treasure": 4
@@ -134,6 +185,16 @@
       "ACTION"
     ]
   },
+  "hovel": {
+    "cost": {
+      "treasure": 1
+    },
+    "type": [
+      "REACTION",
+      "SHELTER"
+    ],
+    "randomizer": null
+  },
   "hunting-grounds": {
     "cardName": "Hunting Grounds",
     "cost": {
@@ -161,97 +222,263 @@
       "ACTION"
     ]
   },
+  "madman": {
+    "cost": {
+      "treasure": 0
+    },
+    "type": [
+      "ACTION"
+    ],
+    "randomizer": null
+  },
   "marauder": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION", "LOOTER", "ATTACK"]
+    "type": [
+      "ACTION",
+      "LOOTER",
+      "ATTACK"
+    ]
   },
   "market-square": {
     "cardName": "Market Square",
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION", "REACTION"]
+    "type": [
+      "ACTION",
+      "REACTION"
+    ]
+  },
+  "mercenary": {
+    "cost": {
+      "treasure": 0
+    },
+    "type": [
+      "ATTACK",
+      "ACTION"
+    ],
+    "randomizer": null
   },
   "mystic": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": [
+      "ACTION"
+    ]
+  },
+  "necropolis": {
+    "cost": {
+      "treasure": 1
+    },
+    "type": [
+      "ACTION",
+      "SHELTER"
+    ],
+    "randomizer": null
+  },
+  "overgrown-estate": {
+    "cardName": "Overgrown Estate",
+    "cost": {
+      "treasure": 1
+    },
+    "type": [
+      "VICTORY",
+      "SHELTER"
+    ],
+    "victoryPoints": 0,
+    "randomizer": null
   },
   "pillage": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ATTACK", "ACTION"]
+    "type": [
+      "ATTACK",
+      "ACTION"
+    ]
   },
   "poor-house": {
     "cardName": "Poor House",
     "cost": {
       "treasure": 1
     },
-    "type": ["ACTION"]
+    "type": [
+      "ACTION"
+    ]
   },
   "procession": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION"]
+    "type": [
+      "ACTION"
+    ]
   },
   "rebuild": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": [
+      "ACTION"
+    ]
   },
   "rogue": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION", "ATTACK"]
+    "type": [
+      "ACTION",
+      "ATTACK"
+    ]
+  },
+  "ruined-library": {
+    "cost": {
+      "treasure": 0
+    },
+    "type": [
+      "ACTION",
+      "RUINS"
+    ],
+    "randomizer": null
+  },
+  "ruined-market": {
+    "cost": {
+      "treasure": 0
+    },
+    "type": [
+      "ACTION",
+      "RUINS"
+    ],
+    "randomizer": null
+  },
+  "ruined-village": {
+    "cost": {
+      "treasure": 0
+    },
+    "type": [
+      "ACTION",
+      "RUINS"
+    ],
+    "randomizer": null
   },
   "sage": {
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION"]
+    "type": [
+      "ACTION"
+    ]
   },
   "scavenger": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION"]
+    "type": [
+      "ACTION"
+    ]
+  },
+  "sir-baily": {
+    "cardName": "Sir Bailey",
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "ATTACK", "KNIGHT"],
+    "randomizer": "knights"
+  },
+  "sir-Destry": {
+    "cardName": "Sir Destry",
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "ATTACK", "KNIGHT"],
+    "randomizer": "knights"
+  },
+  "sir-martin": {
+    "cardName": "Sir Martin",
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION", "ATTACK", "KNIGHT"],
+    "randomizer": "knights"
+  },
+  "sir-michael": {
+    "cardName": "Sir Michael",
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "ATTACK", "KNIGHT"],
+    "randomizer": "knights"
+  },
+  "sir-vander": {
+    "cardName": "Sir Vander",
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "ATTACK", "KNIGHT"],
+    "randomizer": "knights"
   },
   "squire": {
     "cost": {
       "treasure": 2
     },
-    "type": ["ACTION"]
+    "type": [
+      "ACTION"
+    ]
   },
   "storeroom": {
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION"]
+    "type": [
+      "ACTION"
+    ]
+  },
+  "survivors": {
+    "cost": {
+      "treasure": 0
+    },
+    "type": [
+      "ACTION",
+      "RUINS"
+    ],
+    "randomizer": null
   },
   "urchin": {
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION", "ATTACK"]
+    "type": [
+      "ACTION",
+      "ATTACK"
+    ]
+  },
+  "spoils": {
+    "cost": {
+      "treasure": 0
+    },
+    "type": [
+      "TREASURE"
+    ],
+    "randomizer": null
   },
   "vagrant": {
     "cost": {
       "treasure": 2
     },
-    "type": ["ACTION"]
+    "type": [
+      "ACTION"
+    ]
   },
   "wandering-minstrel": {
     "cardName": "Wandering Minstrel",
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION"]
+    "type": [
+      "ACTION"
+    ]
   }
 }
