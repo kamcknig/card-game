@@ -367,6 +367,15 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     console.log(`[trashCard action] trashed ${card}`);
     
+    const trigger: ReactionTrigger = {
+      eventType: 'cardTrashed',
+      args: {
+        playerId: args.playerId,
+        cardId: card.id
+      }
+    }
+    await this.reactionManager.runTrigger({ trigger });
+    
     await this.reactionManager.runCardLifecycleEvent('onTrashed', {
       cardId: cardId,
       playerId: args.playerId
@@ -693,7 +702,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   
   // Single, focused implementation of drawCard
   async drawCard(args: { playerId: PlayerId, count?: number }, context?: GameActionContext) {
-    const { playerId , count } = args;
+    const { playerId, count } = args;
     
     console.log(`[drawCard action] player ${playerId} drawing ${count} card(s)`);
     

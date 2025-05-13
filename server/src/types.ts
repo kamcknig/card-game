@@ -94,12 +94,12 @@ export const MatchBaseConfiguration = {
     },
     {
       'province': 18,
-      'gold': 60,
       'duchy': 12,
-      'silver': 80,
       'estate': 12,
-      'copper': 120,
       'curse': 50,
+      'gold': 60,
+      'silver': 80,
+      'copper': 120,
     },
   ],
   playerStartingHand: {

@@ -1,0 +1,22 @@
+{
+  "hovel": {
+    "cost": {
+      "treasure": 1
+    },
+    "type": ["REACTION", "SHELTER"]
+  },
+  "necropolis": {
+    "cost": {
+      "treasure": 1
+    },
+    "type": ["ACTION", "SHELTER"]
+  },
+  "overgrown-estate": {
+    "cardName": "Overgrown Estate",
+    "cost": {
+      "treasure": 1
+    },
+    "type": ["VICTORY", "SHELTER"],
+    "victoryPoints": 0
+  }
+}

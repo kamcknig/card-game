@@ -30,6 +30,8 @@ export interface MatchConfiguration {
   
   // kingdom cards selected for the game, these are what are available at the beginning of a match
   kingdomSupply: Supply[];
+  
+  playerStartingHand: Record<CardKey, number>
 }
 
 export type ComputedMatchConfiguration = MatchConfiguration & {
@@ -336,6 +338,7 @@ export type CardType =
   | 'ZOMBIE';
 
 export type CardArgs = {
+  partOfSupply: boolean;
   kingdom: string;
   tags?: string[];
   facing?: CardFacing;
@@ -364,6 +367,12 @@ export type CardCost = {
 }
 
 export class Card {
+  /**
+   * This indicates if the card is part of the supply or not. shelters, rewards, etc. are not part of the supply.
+   *
+   * @default true
+   */
+  partOfSupply: boolean;
   tags?: string[] = [];
   kingdom: string;
   facing?: CardFacing;
@@ -402,6 +411,7 @@ export class Card {
     this.owner = args.owner ?? null;
     this.mat = args.mat;
     this.kingdom = args.kingdom;
+    this.partOfSupply = args.partOfSupply ?? true;
   }
   
   toString() {

@@ -1,4 +1,4 @@
-import { AppSocket } from '../types.ts';
+import { AppSocket, MatchBaseConfiguration } from '../types.ts';
 import { CardNoId, ExpansionListElement, MatchConfiguration, Player, PlayerId, } from 'shared/shared-types.ts';
 import { createNewPlayer } from '../utils/create-new-player.ts';
 import { io } from '../server.ts';
@@ -31,6 +31,7 @@ const defaultMatchConfiguration: MatchConfiguration = {
   players: [],
   basicSupply: [],
   kingdomSupply: [],
+  playerStartingHand: { ...MatchBaseConfiguration.playerStartingHand }
 };
 
 export class Game {
@@ -55,7 +56,10 @@ export class Game {
     }
     
     try {
-      const preselectedKingdoms = JSON.parse(Deno.readTextFileSync('./preselected-kingdoms.json')) as { name: string; cards: CardNoId[] }[];
+      const preselectedKingdoms = JSON.parse(Deno.readTextFileSync('./preselected-kingdoms.json')) as {
+        name: string;
+        cards: CardNoId[]
+      }[];
       console.log(preselectedKingdoms);
       defaultMatchConfiguration.preselectedKingdoms = preselectedKingdoms.map(supply => supply.cards[0]);
       console.log(defaultMatchConfiguration.preselectedKingdoms)
@@ -85,7 +89,7 @@ export class Game {
       this._fuse = undefined;
     }
     
-    const libraryArr = Object.values(rawCardLibrary);
+    const libraryArr = Object.values(rawCardLibrary).filter(card => card.partOfSupply);
     const index = Fuse.createIndex(['cardName'], libraryArr);
     
     const fuseOptions: IFuseOptions<CardNoId> = {

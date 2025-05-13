@@ -26,7 +26,8 @@ export const configureHermit = async (args: ExpansionConfiguratorContext) => {
   }
   
   const cardData = createCardData('madman', 'dark-ages', {
-    ...madmanCardLibrary['madman'] ?? {}
+    ...madmanCardLibrary['madman'] ?? {},
+    partOfSupply: false
   });
   
   args.config.nonSupply ??= [];

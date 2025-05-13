@@ -912,6 +912,39 @@ const cardEffects: CardExpansionModule = {
       })
     }
   },
+  'hovel': {
+    registerLifeCycleMethods: () => ({
+      onLeaveHand: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`hovel:${eventArgs.cardId}:gainCard`);
+      },
+      onEnterHand: async (args, eventArgs) => {
+        args.reactionManager.registerReactionTemplate({
+          id: `hovel:${eventArgs.cardId}:gainCard`,
+          playerId: eventArgs.playerId,
+          listeningFor: 'gainCard',
+          once: true,
+          compulsory: false,
+          allowMultipleInstances: true,
+          condition: conditionArgs => {
+            if (conditionArgs.trigger.args.playerId !== eventArgs.playerId) return false;
+            const card = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
+            if (!card.type.includes('VICTORY')) return false;
+            return true;
+          },
+          triggeredEffectFn: async triggeredArgs => {
+            const hovelCard = triggeredArgs.cardLibrary.getCard(eventArgs.cardId);
+            
+            console.log(`[hovel gainCard effect] trashing ${hovelCard}`);
+            
+            await triggeredArgs.runGameActionDelegate('trashCard', {
+              playerId: eventArgs.playerId,
+              cardId: hovelCard.id,
+            });
+          }
+        })
+      }
+    })
+  },
   'hunting-grounds': {
     registerLifeCycleMethods: () => ({
       onTrashed: async (args, eventArgs) => {
@@ -1185,6 +1218,24 @@ const cardEffects: CardExpansionModule = {
         console.log(`[mystic effect] not moving card to hand`);
       }
     }
+  },
+  'necropolis': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[necropolis effect] gaining 2 actions`);
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
+    }
+  },
+  'overgrown-estate': {
+    registerLifeCycleMethods: () => ({
+      onTrashed: async (args, eventArgs) => {
+        const card = args.cardLibrary.getCard(eventArgs.cardId);
+        if (card.owner !== eventArgs.playerId) return;
+        
+        console.log(`[overgrown-estate onTrashed effect] drawing 1 card`);
+        
+        await args.runGameActionDelegate('drawCard', { playerId: eventArgs.playerId });
+      }
+    })
   },
   'pillage': {
     registerEffects: () => async (cardEffectArgs) => {

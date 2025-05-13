@@ -30,6 +30,7 @@ export const configureSpoils = async (args: ExpansionConfiguratorContext) => {
   
   const cardData = createCardData('spoils', 'dark-ages', {
     ...spoilsCardLibrary['spoils'] ?? {},
+    partOfSupply: false,
     tags: ['spoils'],
   });
   

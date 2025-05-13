@@ -26,7 +26,8 @@ export const configureUrchin = async (args: ExpansionConfiguratorContext) => {
   }
   
   const cardData = createCardData('mercenary', 'dark-ages', {
-    ...mercenaryCardLibrary['mercenary'] ?? {}
+    ...mercenaryCardLibrary['mercenary'] ?? {},
+    partOfSupply: false,
   });
   
   args.config.nonSupply ??= [];
