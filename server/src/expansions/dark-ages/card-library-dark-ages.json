@@ -222,5 +222,11 @@
       "treasure": 4
     },
     "type": ["ACTION"]
+  },
+  "squire": {
+    "cost": {
+      "treasure": 2
+    },
+    "type": ["ACTION"]
   }
 }

@@ -1704,9 +1704,9 @@ const cardEffects: CardExpansionModule = {
       }
     }
   },
-  'squire': {
+  'scavenger': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.log(`[squire effect] gaining 2 treasure`);
+      console.log(`[scavenger effect] gaining 2 treasure`);
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
       
       let result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
@@ -1719,7 +1719,7 @@ const cardEffects: CardExpansionModule = {
       }) as { action: number, result: number[] };
       
       if (result.action === 2) {
-        console.log(`[squire effect] putting deck onto discard`);
+        console.log(`[scavenger effect] putting deck onto discard`);
         
         const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
         
@@ -1746,13 +1746,13 @@ const cardEffects: CardExpansionModule = {
         }) as { action: number, result: number[] };
         
         if (!result.result.length) {
-          console.warn(`[squire effect] no card selected`);
+          console.warn(`[scavenger effect] no card selected`);
           return;
         }
         
         const selectedCard = cardEffectArgs.cardLibrary.getCard(result.result[0]);
         
-        console.log(`[squire effect] putting ${selectedCard} on top of deck`);
+        console.log(`[scavenger effect] putting ${selectedCard} on top of deck`);
         
         await cardEffectArgs.runGameActionDelegate('moveCard', {
           cardId: selectedCard.id,
@@ -1761,7 +1761,92 @@ const cardEffects: CardExpansionModule = {
         });
       }
       else {
-        console.log(`[squire effect] no cards in discard`);
+        console.log(`[scavenger effect] no cards in discard`);
+      }
+    }
+  },
+  'squire': {
+    registerLifeCycleMethods: () => ({
+      onTrashed: async (args, eventArgs) => {
+        const card = args.cardLibrary.getCard(eventArgs.cardId);
+        if (eventArgs.playerId != card.owner) {
+          return;
+        }
+        
+        const attackCards = args.findCards([
+          { location: 'kingdomSupply' },
+          { cardType: 'ACTION' }
+        ]);
+        
+        if (!attackCards.length) {
+          console.log(`[squire onTrashed effect] no attack cards in supply`);
+          return;
+        }
+        
+        const selectedCardIds = await args.runGameActionDelegate('selectCard', {
+          playerId: eventArgs.playerId,
+          prompt: `Gain card`,
+          restrict: attackCards.map(card => card.id),
+          count: 1,
+        }) as CardId[];
+        
+        if (!selectedCardIds.length) {
+          console.warn(`[squire onTrashed effect] no card selected`);
+          return;
+        }
+        
+        const selectedCard = args.cardLibrary.getCard(selectedCardIds[0]);
+        
+        console.log(`[squire onTrashed effect] gaining ${selectedCard}`);
+        
+        await args.runGameActionDelegate('gainCard', {
+          playerId: eventArgs.playerId,
+          cardId: selectedCard.id,
+          to: { location: 'playerDiscard' }
+        });
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[squire effect] gaining 1 treasure`);
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+      
+      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        prompt: 'Choose one',
+        playerId: cardEffectArgs.playerId,
+        actionButtons: [
+          { label: '+2 ACTIONS', action: 1 },
+          { label: '+2 BUYS', action: 2 },
+          { label: 'GAIN 1 SILVER', action: 3 }
+        ],
+      }) as { action: number, result: number[] };
+      
+      if (result.action === 1) {
+        console.log(`[squire effect] gaining 2 actions`);
+        await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
+      }
+      else if (result.action === 2) {
+        console.log(`[squire effect] gaining 2 buys`);
+        await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 2 });
+      }
+      else {
+        console.log(`[squire effect] gaining 1 silver`);
+        const silverCards = cardEffectArgs.findCards([
+          { location: 'basicSupply' },
+          { cardKeys: 'silver' }
+        ]);
+        
+        if (!silverCards.length) {
+          console.log(`[squire effect] no silver cards in supply`);
+          return;
+        }
+        
+        console.log(`[squire effect] gaining ${silverCards.slice(-1)[0]}`);
+        
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: silverCards.slice(-1)[0].id,
+          to: { location: 'playerDiscard' }
+        });
       }
     }
   },
