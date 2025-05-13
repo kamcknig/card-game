@@ -228,5 +228,11 @@
       "treasure": 2
     },
     "type": ["ACTION"]
+  },
+  "storeroom": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION"]
   }
 }

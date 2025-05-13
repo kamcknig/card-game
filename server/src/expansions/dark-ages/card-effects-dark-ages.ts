@@ -1850,6 +1850,63 @@ const cardEffects: CardExpansionModule = {
       }
     }
   },
+  'storeroom': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[storeroom effect] gaining 1 buy`);
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+      
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      
+      if (!hand.length) {
+        console.log(`[storeroom effect] no cards in hand`);
+        return;
+      }
+      
+      let selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Discard card/s`,
+        restrict: hand,
+        count: {
+          kind: 'upTo',
+          count: hand.length
+        },
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.log(`[storeroom effect] no card/s selected`);
+        return;
+      }
+      
+      console.log(`[storeroom effect] discarding ${selectedCardIds.length} cards`);
+      
+      for (const selectedCardId of selectedCardIds) {
+        await cardEffectArgs.runGameActionDelegate('discardCard', { cardId: selectedCardId, playerId: cardEffectArgs.playerId });
+      }
+      
+      console.log(`[storeroom effect] drawing ${selectedCardIds.length} cards`);
+      
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: selectedCardIds.length });
+      
+      selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Discard card/s`,
+        restrict: hand,
+        count: {
+          kind: 'upTo',
+          count: hand.length
+        },
+        optional: true,
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.log(`[storeroom effect] no card/s selected`);
+        return;
+      }
+      
+      console.log(`[storeroom effect] gaining ${selectedCardIds.length} treasure`);
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: selectedCardIds.length });
+    }
+  },
   'ruined-library': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[ruined library effect] drawing 1 card`);
