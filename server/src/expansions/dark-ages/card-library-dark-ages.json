@@ -189,7 +189,7 @@
   "poor-house": {
     "cardName": "Poor House",
     "cost": {
-      "treasure":
+      "treasure": 1
     },
     "type": ["ACTION"]
   }

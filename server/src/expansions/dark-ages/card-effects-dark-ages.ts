@@ -1257,6 +1257,29 @@ const cardEffects: CardExpansionModule = {
       }
     }
   },
+  'poor-house': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[poor-house effect] gaining 4 treasure`);
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 4 });
+      
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      
+      console.log(`[poor-house effect] revealing player ${cardEffectArgs.playerId} hand`);
+      
+      for (const cardId of [...hand]) {
+        await cardEffectArgs.runGameActionDelegate('revealCard', {
+          cardId,
+          playerId: cardEffectArgs.playerId,
+        });
+      }
+      
+      const treasureCardsInHand = hand.map(cardEffectArgs.cardLibrary.getCard)
+        .filter(card => card.type.includes('TREASURE'));
+      
+      console.log(`[poor-house effect] losing ${treasureCardsInHand.length} treasure`);
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: -treasureCardsInHand.length });
+    }
+  },
   'ruined-library': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[ruined library effect] drawing 1 card`);
