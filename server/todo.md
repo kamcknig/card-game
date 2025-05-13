@@ -39,3 +39,6 @@ currently - doing dark ages expansion
    - with this maybe refactor how non supply cards are shown, now that kingdoms have a name separate
 from the card key, might be able to separate them based on that
  - i think when adding a new preselected kingdom the game breaks, but then after a reload it seems to work fine
+
+
+work on shelters and knights
