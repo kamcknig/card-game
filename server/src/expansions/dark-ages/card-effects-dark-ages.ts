@@ -477,7 +477,7 @@ const cardEffects: CardExpansionModule = {
       }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
       
       for (const targetPlayerId of targetPlayerIds) {
-      
+        
       }
       
       const cultistsInHand = cardEffectArgs.findCards([
@@ -1880,12 +1880,18 @@ const cardEffects: CardExpansionModule = {
       console.log(`[storeroom effect] discarding ${selectedCardIds.length} cards`);
       
       for (const selectedCardId of selectedCardIds) {
-        await cardEffectArgs.runGameActionDelegate('discardCard', { cardId: selectedCardId, playerId: cardEffectArgs.playerId });
+        await cardEffectArgs.runGameActionDelegate('discardCard', {
+          cardId: selectedCardId,
+          playerId: cardEffectArgs.playerId
+        });
       }
       
       console.log(`[storeroom effect] drawing ${selectedCardIds.length} cards`);
       
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: selectedCardIds.length });
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: selectedCardIds.length
+      });
       
       selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
         playerId: cardEffectArgs.playerId,
@@ -1905,6 +1911,91 @@ const cardEffects: CardExpansionModule = {
       
       console.log(`[storeroom effect] gaining ${selectedCardIds.length} treasure`);
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: selectedCardIds.length });
+    }
+  },
+  'urchin': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[urchin effect] drawing 1 card, and gaining 1 action`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      
+      const targetPlayerIds = findOrderedTargets({
+        match: cardEffectArgs.match,
+        appliesTo: 'ALL_OTHER',
+        startingPlayerId: cardEffectArgs.playerId
+      }).filter(playerId => {
+        const hand = cardEffectArgs.cardSourceController.getSource('playerHand', playerId);
+        return cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity' && hand.length > 5;
+      });
+      
+      for (const targetPlayerId of targetPlayerIds) {
+        const hand = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
+        
+        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: targetPlayerId,
+          prompt: `Discard card/s`,
+          restrict: hand,
+          count: hand.length - 4,
+        }) as CardId[];
+        
+        if (!selectedCardIds.length) {
+          console.warn(`[urchin effect] no card/s selected for player ${targetPlayerId}`);
+          continue;
+        }
+        
+        console.log(`[urchin effect] discarding ${selectedCardIds.length} cards for player ${targetPlayerId}`);
+        
+        for (const selectedCardId of selectedCardIds) {
+          await cardEffectArgs.runGameActionDelegate('discardCard', {
+            cardId: selectedCardId,
+            playerId: targetPlayerId
+          });
+        }
+      }
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate({
+        id: `urchin:${cardEffectArgs.cardId}:cardPlayed`,
+        listeningFor: 'cardPlayed',
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        compulsory: false,
+        allowMultipleInstances: true,
+        condition: conditionArgs => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
+          if (conditionArgs.trigger.args.cardId === cardEffectArgs.cardId) return false;
+          const card = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
+          if (!card.type.includes('ATTACK')) return false;
+          return true;
+        },
+        triggeredEffectFn: async triggeredArgs => {
+          const urchinCard = triggeredArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+          
+          console.log(`[urchin cardGained effect] trashing urchin ${urchinCard}`)
+          
+          await triggeredArgs.runGameActionDelegate('trashCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: urchinCard.id,
+          });
+          
+          const mercenaryCards = triggeredArgs.findCards([
+            { location: 'nonSupplyCards' },
+            { kingdom: 'mercenary' }
+          ]);
+          
+          if (!mercenaryCards.length) {
+            console.log(`[urchin cardGained effect] no mercenary cards in supply`);
+            return;
+          }
+          
+          console.log(`[urchin cardGained effect] gaining ${mercenaryCards.slice(-1)[0]}`);
+          
+          await triggeredArgs.runGameActionDelegate('gainCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: mercenaryCards.slice(-1)[0].id,
+            to: { location: 'playerDiscard' }
+          });
+        }
+      })
     }
   },
   'ruined-library': {

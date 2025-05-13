@@ -234,5 +234,11 @@
       "treasure": 3
     },
     "type": ["ACTION"]
+  },
+  "urchin": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION", "ATTACK"]
   }
 }
