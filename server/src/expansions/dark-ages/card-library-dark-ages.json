@@ -135,6 +135,7 @@
     ]
   },
   "hunting-grounds": {
+    "cardName": "Hunting Grounds",
     "cost": {
       "treasure": 6
     },
@@ -143,6 +144,7 @@
     ]
   },
   "iron-monger": {
+    "cardName": "Iron Monger",
     "cost": {
       "treasure": 4
     },
@@ -151,6 +153,7 @@
     ]
   },
   "junk-dealer": {
+    "cardName": "Junk Dealer",
     "cost": {
       "treasure": 5
     },
@@ -165,6 +168,7 @@
     "type": ["ACTION", "LOOTER", "ATTACK"]
   },
   "market-square": {
+    "cardName": "Market Square",
     "cost": {
       "treasure": 3
     },
@@ -181,5 +185,12 @@
       "treasure": 5
     },
     "type": ["ATTACK", "ACTION"]
+  },
+  "poor-house": {
+    "cardName": "Poor House",
+    "cost": {
+      "treasure":
+    },
+    "type": ["ACTION"]
   }
 }
