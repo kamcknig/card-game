@@ -169,5 +169,11 @@
       "treasure": 3
     },
     "type": ["ACTION", "REACTION"]
+  },
+  "mystic": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"]
   }
 }

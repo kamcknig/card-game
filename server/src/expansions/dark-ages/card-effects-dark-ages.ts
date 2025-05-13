@@ -1,4 +1,4 @@
-import { Card, CardId } from 'shared/shared-types.ts';
+import { Card, CardId, CardKey } from 'shared/shared-types.ts';
 import { CardExpansionModule } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
@@ -1135,6 +1135,55 @@ const cardEffects: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
       await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
       await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+    }
+  },
+  'mystic': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[mystic effect] gaining 1 action, and 1 treasure`);
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+      
+      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        prompt: 'Name a card',
+        playerId: cardEffectArgs.playerId,
+        content: { type: 'name-card' }
+      }) as { action: number, result: CardKey };
+      
+      const namedCardKey = result.result;
+      
+      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+      
+      if (!deck.length) {
+        console.log(`[mystic effect] no cards in deck, shuffling`);
+        await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+        
+        if (!deck.length) {
+          console.log(`[mystic effect] still no cards in deck`);
+          return;
+        }
+      }
+      
+      const revealedCard = cardEffectArgs.cardLibrary.getCard(deck.slice(-1)[0]);
+      
+      console.log(`[mystic effect] revealing ${revealedCard}`);
+      
+      await cardEffectArgs.runGameActionDelegate('revealCard', {
+        cardId: revealedCard.id,
+        playerId: cardEffectArgs.playerId,
+      });
+      
+      if (revealedCard.cardKey === namedCardKey) {
+        console.log(`[mystic effect] moving revealed card to hand`);
+        
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
+          cardId: revealedCard.id,
+          toPlayerId: cardEffectArgs.playerId,
+          to: { location: 'playerHand' }
+        });
+      }
+      else {
+        console.log(`[mystic effect] not moving card to hand`);
+      }
     }
   },
   'ruined-library': {
