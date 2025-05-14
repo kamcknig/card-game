@@ -306,7 +306,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           throw new Error(`[match] no card data found for ${supply}`);
         }
         
-        const c = createCard(card.cardKey, card);
+        const c = createCard(card.cardKey, { ...card, kingdom: supply.name });
         this._cardLibrary.addCard(c);
         cardSource.push(c.id);
       }
