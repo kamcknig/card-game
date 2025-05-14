@@ -174,6 +174,7 @@ export type ServerEmitEvents = {
   patchCardLibrary: (patch: Operation[]) => void;
   patchMatch: (patch: Operation[]) => void;
   patchMatchStats: (patch: Operation[]) => void;
+  ping: (pingCount: number) => void;
   playAllTreasureComplete: () => void;
   playerConnected: (player: Player) => void;
   playerDisconnected: (player: Player) => void;

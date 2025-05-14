@@ -41,7 +41,7 @@ const expansion: CardExpansionModule = {
       const leftPlayer = getPlayerStartingFrom({
         startFromIdx: cardEffectArgs.match.currentPlayerTurnIndex,
         match: cardEffectArgs.match,
-        distance: 1
+        distance: -1
       });
       
       console.log(`[advisor effect] player ${leftPlayer} choosing card to discard`);

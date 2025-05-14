@@ -8,7 +8,6 @@
 the UI for this yet, and doesn't seem super important to get done right away
 - The wiki for the Spoils card states. I don't have a solution for that and how to prevent yet
 - If you play an Ambassador and reveal a Spoils, the Spoils is not returned to the Supply (since it is not in the Supply) and other players do not gain Spoils.
-- player object seems to get converted to plain object at some point (the tostring isn't working properly)
 
 
 # Higher priority
@@ -20,17 +19,49 @@ the UI for this yet, and doesn't seem super important to get done right away
 they need to be asked for their input again
 - ui updates
   - need to update app-mat-tab and the visible mat. i've clunked it together for now
-- sound that plays more loudly when action isn't taken soon enough
 - when load bundle on MatchScene fails (add a try/catch maybe) - need to show error screen
 
 need to show the context of the kingdom card for something like young witch, and ferryman
 - dominion.games puts the word "bane" in the type area of the card (but only while it's in the supply)
 - it also puts it in the detail view of both the witch and the bane card, when viewing the details of one or the
 other, it will show the opposite card smaller next to it
-- i think when adding a new preselected kingdom the game breaks, but then after a reload it seems to work fine
 
 the rules state that "set aside" cards do not discard. you made that complicated logic for active
 duration cards. but you can just use set-aside and then schedule a movecard reaction at
 the start of next turn, and then they'll be in play and will be discarded. and the gray effect
 can be checked by seeing if they are in the play area on the turn they were played or not
 
+- normal kingdoms
+baker
+butcher
+candlestick maker
+carnival
+fairgrounds
+farmhands
+farrier
+ferryman
+footpad
+hamlet
+herald
+horn of plenty
+hunting party
+infirmary
+jester
+journeyman
+joust
+menagerie
+merchant guild
+plaza
+remake
+shop
+soothsayer
+stonemason
+young witch
+
+- rewards
+coronet
+courser
+demesne
+housecarl
+huge turnip
+renown

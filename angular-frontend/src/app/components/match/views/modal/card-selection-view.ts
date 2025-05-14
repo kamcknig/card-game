@@ -25,7 +25,7 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
   const selectCount = 'selectCount' in args ? args.selectCount ?? 1 : 0;
 
   const validate = () => {
-    let validated = displayOnly ?? validateCountSpec(selectCount, selectedCardStore.get().length);
+    let validated = displayOnly || validateCountSpec(selectCount, selectedCardStore.get().length);
 
     cardList.emit('validationUpdated', validated);
 
@@ -88,7 +88,7 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
     setTimeout(() => {
       validate();
     }, 0);
-    
+
     clientSelectableCardsOverrideStore.set(Array.from(newCardToOldCardMap.keys()));
   }
 

@@ -74,6 +74,7 @@ export class MatchScene extends Scene {
     this._cleanup.push(matchStartedStore.subscribe(val => this.onMatchStarted(val)));
 
     this._app.renderer.on('resize', this.onRendererResize);
+    this._socketService.on('ping', this.onPing);
     this._socketService.on('selectCard', this.doSelectCards);
     this._socketService.on('userPrompt', this.onUserPrompt);
     this._socketService.on('waitingForPlayer', this.onWaitingOnPlayer);
@@ -95,6 +96,17 @@ export class MatchScene extends Scene {
       this.onRendererResize();
       this._socketService.emit('clientReady', this._selfId, true);
     });
+  }
+
+  private onPing = (pingCount: number) => {
+    try {
+      const s = new Audio(`./assets/sounds/your-turn.mp3`);
+      s.volume = Math.min(.3 + .12 * pingCount, 1);
+      void s?.play();
+    } catch (error) {
+      console.error('Could not play start turn sound');
+      console.log(error);
+    }
   }
 
   private onPauseGameUpdated = (paused: boolean) => {
@@ -131,7 +143,7 @@ export class MatchScene extends Scene {
 
     try {
       const s = new Audio(`./assets/sounds/your-turn.mp3`);
-      s.volume = .4;
+      s.volume = .3;
       void s?.play();
     } catch {
       console.error('Could not play start turn sound');
@@ -283,7 +295,7 @@ export class MatchScene extends Scene {
     if (currentPlayerTurnIdStore.get() !== this._selfId) {
       try {
         const s = new Audio(`./assets/sounds/your-turn.mp3`);
-        s.volume = .4;
+        s.volume = .3;
         void s?.play();
       } catch {
         console.error('Could not play start turn sound');

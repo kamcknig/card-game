@@ -352,13 +352,28 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   ): Promise<GameActionReturnTypeMap[K]> {
     this._matchSnapshot ??= this.getMatchSnapshot();
     
+    let asyncTimeout: number | undefined = undefined;
     if (action === 'selectCard' || action === 'userPrompt') {
       this.broadcastPatch(this._matchSnapshot);
       this._logManager?.flushQueue();
       this._matchSnapshot = this.getMatchSnapshot();
+      let pingCount = 0;
+      let pingTime = 30000;
+      
+      const pingUser = () => {
+        this._socketMap.get(args[0].playerId)?.emit('ping', ++pingCount);
+        pingTime -= 10000;
+        pingTime = Math.max(pingTime, 10000);
+        asyncTimeout = setTimeout(pingUser, pingTime);
+      }
+      
+      asyncTimeout = setTimeout(pingUser, pingTime);
     }
     
     const result = await this.gameActionsController!.invokeAction(action, ...args);
+    
+    clearTimeout(asyncTimeout);
+    asyncTimeout = undefined;
     
     this.calculateScores();
     this._interactivityController?.checkCardInteractivity();
