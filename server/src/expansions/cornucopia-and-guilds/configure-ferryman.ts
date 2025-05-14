@@ -18,7 +18,11 @@ export const configureFerryman = (args: ExpansionConfiguratorContext) => {
     if (!exp) return acc;
     
     for (const key of Object.keys(exp.cardData.kingdomSupply)) {
-      const cost = exp.cardData.kingdomSupply[key].cost.treasure;
+      const cardData = exp.cardData.kingdomSupply[key];
+      
+      if (cardData.randomizer === null) return acc;
+      
+      const cost = cardData.cost.treasure;
       if (cost !== 3 && cost !== 4) {
         return acc;
       }
@@ -46,7 +50,7 @@ export const configureFerryman = (args: ExpansionConfiguratorContext) => {
   const chosenCard = structuredClone(expansionLibrary[availableKingdoms[chosenKey].expansionName].cardData.kingdomSupply[chosenKey]);
   chosenCard.tags = ['ferryman'];
   args.config.kingdomSupply.push({
-    name: chosenCard.cardKey,
+    name: chosenCard.kingdom,
     cards: new Array(getDefaultKingdomSupplySize(chosenCard, args.config)).fill(chosenCard)
   });
 }

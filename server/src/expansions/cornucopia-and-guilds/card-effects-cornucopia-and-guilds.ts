@@ -517,7 +517,7 @@ const expansion: CardExpansionModule = {
           playerId: eventArgs.playerId,
           cardId: cardIds.slice(-1)[0].id,
           to: { location: 'playerDiscard' }
-        });
+        }, { loggingContext: { source: eventArgs.cardId } });
       }
     }),
     registerEffects: () => async (cardEffectArgs) => {
@@ -560,7 +560,7 @@ const expansion: CardExpansionModule = {
       }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
       
       for (const targetPlayerId of targetPlayerIds) {
-        const hand = cardEffectArgs.cardSourceController.getSource('playerDiscard', targetPlayerId);
+        const hand = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
         const numToDiscard = hand.length - 3;
         if (numToDiscard <= 0) {
           console.log(`[footpad effect] player ${targetPlayerId} already at 3 or less`);
@@ -569,8 +569,22 @@ const expansion: CardExpansionModule = {
         
         console.log(`[footpad effect] player ${targetPlayerId} discarding ${numToDiscard} cards`);
         
-        for (let i = 0; i < numToDiscard; i++) {
-          const cardId = hand.slice(-1)[0];
+        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Discard cards`,
+          restrict: hand,
+          count: numToDiscard,
+        }) as CardId[];
+        
+        if (!selectedCardIds.length) {
+          console.warn(`[footpad effect] no cards selected`);
+          continue;
+        }
+        
+        console.log(`[footpad effect] player ${targetPlayerId} discarding ${selectedCardIds.length} cards`);
+        
+        for (let i = 0; i < selectedCardIds.length; i++) {
+          const cardId = selectedCardIds[i];
           await cardEffectArgs.runGameActionDelegate('discardCard', {
             cardId: cardId,
             playerId: targetPlayerId
