@@ -35,7 +35,13 @@ export class MatchConfigurator {
   
   constructor(config: MatchConfiguration) {
     
+    // when creating the clone, it will break the custom Deno.customInspect symbols on classes so they won't
+    // properly print. I'm not sure if we NEED the structured clone, might just remove it eventually. I tested
+    // and that worked as well as of this fix. but i kind of want all changes to be self-contained in the configurator
+    // so i like having that "separation" of it coming in and being clean from then in to this configurator instance
+    const players = [...config.players];
     this._config = structuredClone(config) as ComputedMatchConfiguration;
+    this._config.players = players;
     
     console.log(`[match configurator] created`);
   }
