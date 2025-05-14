@@ -969,13 +969,25 @@ const expansion: CardExpansionModule = {
         listeningFor: 'discardCard',
         playerId: cardEffectArgs.playerId,
         once: true,
-        compulsory: false,
+        compulsory: true,
         allowMultipleInstances: true,
-        condition: (conditionArgs) => {
+        condition: async (conditionArgs) => {
           if (!conditionArgs.trigger.args.previousLocation) return false;
           if (!isLocationInPlay(conditionArgs.trigger.args.previousLocation)) return false;
           const card = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
           if (card.owner !== cardEffectArgs.playerId) return false;
+          if (!card.type.includes('ACTION')) return false;
+          
+          const result = await conditionArgs.runGameActionDelegate('userPrompt', {
+            prompt: `Top-deck ${card.cardName}?`,
+            playerId: conditionArgs.trigger.args.playerId,
+            actionButtons: [
+              { label: 'CANCEL', action: 1},
+              { label: 'CONFIRM', action: 2}
+            ],
+          }) as { action: number, result: number[] };
+          if (result.action === 1) return false;
+          
           return true;
         },
         triggeredEffectFn: async (triggeredEffectArgs) => {

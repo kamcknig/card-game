@@ -1,15 +1,16 @@
 import { Match } from 'shared/shared-types.ts';
 import {
+  CardLifecycleEvent,
   CardLifecycleEventArgMap,
+  FindCardsFn,
   GameLifecycleCallback,
   GameLifecycleEvent,
   GameLifeCycleEventArgsMap,
-  CardLifecycleEvent,
   Reaction,
   ReactionTemplate,
   ReactionTrigger,
   RunGameActionDelegate,
-  TriggerEventType, FindCardsFn
+  TriggerEventType
 } from '../../types.ts';
 import { MatchCardLibrary } from '../match-card-library.ts';
 import { getOrderStartingFrom } from '../../utils/get-order-starting-from.ts';
@@ -44,15 +45,18 @@ export class ReactionManager {
     this._expansionGameEventHandlers[event].push(handler);
   }
   
-  getReactions(trigger: ReactionTrigger, reactionSet?: Reaction[]) {
+  async getReactions(trigger: ReactionTrigger, reactionSet?: Reaction[]) {
     const reactions = reactionSet ?? this._reactions;
-    return reactions.filter(reaction => {
-      if (reaction.listeningFor !== trigger.eventType) return false;
+    const finalReactions: Reaction[] = [];
+    for (const reaction of reactions) {
+      if (reaction.listeningFor !== trigger.eventType) continue;
       
       console.log(`[REACTION MANAGER] checking trigger ${trigger} condition for ${reaction.id} reaction`);
       
+      let include = true;
+      
       if (reaction.condition !== undefined) {
-        return reaction.condition({
+        const result = await reaction.condition({
           cardSourceController: this._cardSourceController,
           cardPriceController: this.cardPriceController,
           reactionManager: this,
@@ -64,16 +68,21 @@ export class ReactionManager {
           trigger,
           reaction
         });
+        
+        include = result;
       }
-      else {
-        return true;
+      
+      if (include) {
+        finalReactions.push(reaction);
       }
-    });
+    }
+    
+    return finalReactions;
   }
   
-  getReactionsForPlayer(trigger: ReactionTrigger, playerId: number) {
+  async getReactionsForPlayer(trigger: ReactionTrigger, playerId: number) {
     const playerReactions = this._reactions.filter(reaction => reaction.playerId === playerId);
-    return this.getReactions(trigger, playerReactions);
+    return await this.getReactions(trigger, playerReactions);
   }
   
   unregisterTrigger(triggerId: string) {
@@ -143,10 +152,10 @@ export class ReactionManager {
       const blockedCardKeys = new Set<string>();
       
       while (true) {
-        const reactions = this.getReactionsForPlayer(
+        const reactions = (await this.getReactionsForPlayer(
           trigger,
           targetPlayer.id,
-        ).filter((r) => {
+        )).filter((r) => {
           const key = r.getSourceKey();
           return !usedReactionIds.has(r.id) && !blockedCardKeys.has(key);
         });

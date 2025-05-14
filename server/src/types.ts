@@ -274,7 +274,7 @@ export interface CardEffectFunctionContext extends AppContext {
 
 export type CardTriggeredEffectFn<T extends TriggerEventType> = (context: TriggeredEffectContext<T>) => Promise<any>;
 
-type CardTriggerEffectConditionFn<T extends TriggerEventType> = (context: TriggeredEffectConditionContext<T>) => boolean;
+type CardTriggerEffectConditionFn<T extends TriggerEventType> = (context: TriggeredEffectConditionContext<T>) => boolean | Promise<boolean>;
 
 export type CardEffectFunction = (context: CardEffectFunctionContext) => Promise<void>;
 

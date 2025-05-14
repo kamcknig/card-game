@@ -44,14 +44,11 @@ the start of next turn, and then they'll be in play and will be discarded. and t
 can be checked by seeing if they are in the play area on the turn they were played or not
 
 Hinterlands testing
-cauldron
 highway
 inn
 jack of all trades
 margrave
 nomads
-oasis
-scheme
 souk
 spice merchant
 stables
