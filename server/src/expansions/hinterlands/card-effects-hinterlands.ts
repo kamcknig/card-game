@@ -44,7 +44,7 @@ const expansion: CardExpansionModule = {
         }
       ]);
       
-      if (cardIds.length > 0) {
+      if (cardIds.length === 0) {
         console.log(`[berserker effect] no cards costing less than ${cost.treasure - 1}`);
         return;
       }
@@ -70,6 +70,31 @@ const expansion: CardExpansionModule = {
         cardId: selectedCardIds[0],
         to: { location: 'playerDiscard' }
       });
+      
+      const targetPlayerIds = findOrderedTargets({
+        match: cardEffectArgs.match,
+        appliesTo: 'ALL_OTHER',
+        startingPlayerId: cardEffectArgs.playerId
+      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      
+      for (const targetPlayerId of targetPlayerIds) {
+        const hand = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
+        
+        const numToDiscard = hand.length - 3;
+        if (numToDiscard <= 0) {
+          console.log(`[berserker triggered effect] no cards to discard for player ${targetPlayerId}`);
+          continue;
+        }
+        
+        console.log(`[berserker triggered effect] player ${targetPlayerId} discarding ${numToDiscard} cards`);
+        
+        for (let i = 0; i < numToDiscard; i++) {
+          await cardEffectArgs.runGameActionDelegate('discardCard', {
+            cardId: hand.slice(-1)[0],
+            playerId: targetPlayerId
+          });
+        }
+      }
     }
   },
   'border-village': {
@@ -111,7 +136,7 @@ const expansion: CardExpansionModule = {
           playerId: eventArgs.playerId,
           cardId: selectedCard.id,
           to: { location: 'playerDiscard' }
-        });
+        }, { loggingContext: { source: eventArgs.cardId } });
       }
     }),
     registerEffects: () => async (cardEffectArgs) => {
@@ -361,12 +386,12 @@ const expansion: CardExpansionModule = {
       combined = [];
       
       let nextPrompt = '';
-      if (oneLessCards.findIndex(card => card.id === selectedCardIds[0])) {
+      if (oneLessCards.findIndex(card => card.id === selectedCardIds[0]) !== -1) {
         console.log(`[develop effect] card gained was one less`);
         nextPrompt = `Gain card costing 1 more`;
         combined = oneMoreCards;
       }
-      else if (oneMoreCards.findIndex(card => card.id === selectedCardIds[0])) {
+      else if (oneMoreCards.findIndex(card => card.id === selectedCardIds[0]) !== -1) {
         console.log(`[develop effect] card gained was one more`);
         nextPrompt = `Gain card costing 1 less`;
         combined = oneLessCards
@@ -408,7 +433,7 @@ const expansion: CardExpansionModule = {
         let selectedCardIds = await args.runGameActionDelegate('selectCard', {
           playerId: rest.playerId,
           prompt: `Trash a card`,
-          restrict: { location: 'playerHand' },
+          restrict: { location: 'playerHand', playerId: rest.playerId },
           count: 1,
         }) as CardId[];
         
@@ -418,6 +443,13 @@ const expansion: CardExpansionModule = {
         }
         
         let selectedCard = args.cardLibrary.getCard(selectedCardIds[0]);
+        
+        console.log(`[farmland onGained effect] trashing ${selectedCard}`);
+        
+        await args.runGameActionDelegate('trashCard', {
+          playerId: rest.playerId,
+          cardId: selectedCard.id,
+        });
         
         const { cost } = args.cardPriceController.applyRules(selectedCard, {
           playerId: rest.playerId
@@ -549,7 +581,10 @@ const expansion: CardExpansionModule = {
             
             await args.runGameActionDelegate('playCard', {
               playerId: eventArgs.playerId,
-              cardId: eventArgs.cardId
+              cardId: eventArgs.cardId,
+              overrides: {
+                actionCost: 0
+              }
             })
           }
         })
@@ -568,12 +603,17 @@ const expansion: CardExpansionModule = {
     }
   },
   'haggler': {
+    registerLifeCycleMethods: () => ({
+      onLeavePlay: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`haggler:${eventArgs.cardId}:gainCard`);
+      }
+    }),
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[haggler effect] gaining 2 treasure`);
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
       
       cardEffectArgs.reactionManager.registerReactionTemplate({
-        id: `haggler:${cardEffectArgs.cardLibrary}:gainCard`,
+        id: `haggler:${cardEffectArgs.cardId}:gainCard`,
         listeningFor: 'gainCard',
         once: false,
         compulsory: true,
@@ -626,7 +666,7 @@ const expansion: CardExpansionModule = {
             playerId: cardEffectArgs.playerId,
             cardId: selectedCard.id,
             to: { location: 'playerDiscard' }
-          });
+          }, { loggingContext: { source: cardEffectArgs.cardId } });
         }
       })
     }
@@ -723,7 +763,7 @@ const expansion: CardExpansionModule = {
       const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Discard cards`,
-        restrict: { location: 'playerHand' },
+        restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
         count: Math.min(2, cardEffectArgs.findCards({
           location: 'playerHand',
           playerId: cardEffectArgs.playerId
@@ -813,7 +853,7 @@ const expansion: CardExpansionModule = {
       const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Trash a card`,
-        restrict: { location: 'playerHand' },
+        restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
         count: 1,
         optional: true,
       }) as CardId[];
@@ -902,7 +942,7 @@ const expansion: CardExpansionModule = {
       const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Discard card`,
-        restrict: { location: 'playerHand' },
+        restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
         count: 1,
       }) as CardId[];
       
@@ -959,7 +999,7 @@ const expansion: CardExpansionModule = {
         const selectedCardIds = await args.runGameActionDelegate('selectCard', {
           playerId: eventArgs.playerId,
           prompt: `Trash card/s`,
-          restrict: { location: 'playerHand' },
+          restrict: { location: 'playerHand', playerId: eventArgs.playerId },
           count: {
             kind: 'upTo',
             count: numToTrash
@@ -1008,7 +1048,7 @@ const expansion: CardExpansionModule = {
       const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Trash card`,
-        restrict: { location: 'playerHand' },
+        restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
         count: 1,
         optional: true,
       }) as CardId[];
@@ -1063,7 +1103,7 @@ const expansion: CardExpansionModule = {
       const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Discard treasure`,
-        restrict: { location: 'playerHand' },
+        restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
         count: 1,
         optional: true
       }) as CardId[];
@@ -1159,7 +1199,7 @@ const expansion: CardExpansionModule = {
       const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Trash card`,
-        restrict: { location: 'playerHand' },
+        restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
         count: 1,
       }) as CardId[];
       
@@ -1403,7 +1443,7 @@ const expansion: CardExpansionModule = {
       let selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Discard card`,
-        restrict: { location: 'playerHand' },
+        restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
         count: 1,
         optional: true
       }) as CardId[];
@@ -1469,7 +1509,7 @@ const expansion: CardExpansionModule = {
       const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Discard cards`,
-        restrict: { location: 'playerHand' },
+        restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
         count: Math.min(2, cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId).length),
       }) as CardId[];
       

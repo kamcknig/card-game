@@ -96,6 +96,7 @@ export const userPromptModal = (
         });
 
         contentView.on('resultsUpdated', result => {
+          console.log(result);
           contentResults = result;
         });
 

@@ -44,16 +44,7 @@ the start of next turn, and then they'll be in play and will be discarded. and t
 can be checked by seeing if they are in the play area on the turn they were played or not
 
 Hinterlands testing
-berserker
-border village
-cartographer
 cauldron
-crossraods
-develop
-farmland
-fool's gold
-guard dog
-haggler
 highway
 inn
 jack of all trades
