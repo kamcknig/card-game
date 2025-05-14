@@ -15,7 +15,7 @@ export const configurator: ExpansionConfiguratorFactory = () => {
 }
 
 export const registerGameEvents: (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => void = (registrar, config) => {
-  if (config.kingdomSupply.some(card => card.cardKey === 'footpad')) {
+  if (config.kingdomSupply.some(supply => supply.name === 'footpad')) {
     console.log(`[cornucopia configurator] setting up footpad onCardGained handler`);
     
     registrar('onCardGained', async (args, eventArgs) => {
@@ -32,7 +32,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     });
   }
   
-  if (config.kingdomSupply.some(card => card.cardKey === 'baker')) {
+  if (config.kingdomSupply.some(supply => supply.name === 'baker')) {
     console.log(`[cornucopia configurator] setting up baker onGameStart handler`);
     
     registrar('onGameStart', async (args) => {
