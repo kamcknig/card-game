@@ -985,7 +985,7 @@ const expansion: CardExpansionModule = {
         allowMultipleInstances: true,
         condition: async (conditionArgs) => {
           if (!conditionArgs.trigger.args.previousLocation) return false;
-          if (!isLocationInPlay(conditionArgs.trigger.args.previousLocation)) return false;
+          if (!isLocationInPlay(conditionArgs.trigger.args.previousLocation.location)) return false;
           const card = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
           if (card.owner !== cardEffectArgs.playerId) return false;
           if (!card.type.includes('ACTION')) return false;
@@ -1184,8 +1184,8 @@ const expansion: CardExpansionModule = {
               console.log(`[trader onEnterHand event] putting ${gainedCard} back in previous location`);
               await triggerArgs.runGameActionDelegate('moveCard', {
                 cardId: gainedCard.id,
-                toPlayerId: triggerArgs.trigger.args.playerId,
-                to: { location: triggerArgs.trigger.args.previousLocation }
+                toPlayerId: triggerArgs.trigger.args.previousLocation.playerId,
+                to: { location: triggerArgs.trigger.args.previousLocation.location }
               });
             }
             else {

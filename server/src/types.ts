@@ -148,7 +148,7 @@ export interface BaseGameActionDefinitionMap {
     toPlayerId?: PlayerId,
     cardId: CardId | Card,
     to: CardLocationSpec
-  }) => Promise<CardLocation | undefined>;
+  }) => Promise<{ location: CardLocation; playerId?: PlayerId; } | undefined>;
   nextPhase: () => Promise<void>;
   playCard: (args: {
     playerId: PlayerId,
@@ -355,11 +355,16 @@ export type TriggerEventTypeContext = {
   cardTrashed: { cardId: CardId; playerId: PlayerId; };
   cardPlayed: { playerId: PlayerId; cardId: CardId; };
   startTurn: { playerId: PlayerId; };
-  gainCard: { playerId: PlayerId; cardId: CardId; bought: boolean; previousLocation?: CardLocation; };
+  gainCard: {
+    playerId: PlayerId;
+    cardId: CardId;
+    bought: boolean;
+    previousLocation?: { location: CardLocation; playerId?: PlayerId; };
+  };
   endTurnPhase: { phaseIndex: number; };
   startTurnPhase: { phaseIndex: number; };
   endTurn: void;
-  discardCard: { previousLocation?: CardLocation; playerId: PlayerId; cardId: CardId; };
+  discardCard: { previousLocation?: { location: CardLocation; playerId?: PlayerId; }; playerId: PlayerId; cardId: CardId; };
 }
 
 export type TriggerEventType = keyof TriggerEventTypeContext;

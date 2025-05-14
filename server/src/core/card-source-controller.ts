@@ -36,7 +36,8 @@ export class CardSourceController {
     for (const [sourceKey, source] of this._sourceMap) {
       const idx = source.findIndex(id => id === cardId);
       if (idx !== -1) {
-        return { sourceKey: sourceKey.split(':')[0], source, index: idx };
+        const [ key, playerId ] = sourceKey.split(':');
+        return { sourceKey: key, source, index: idx, playerId: Number(playerId) };
       }
     }
     

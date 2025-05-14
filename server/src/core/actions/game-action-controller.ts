@@ -109,7 +109,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       throw new Error(`[moveCard action] cannot move card to multiple locations`);
     }
     
-    let oldSource: { sourceKey: CardLocation; source: CardId[]; index: number } | null = null;
+    let oldSource: { sourceKey: CardLocation; source: CardId[]; index: number; playerId?: PlayerId; } | null = null;
     
     try {
       oldSource = this._cardSourceController.findCardSource(cardId);
@@ -151,7 +151,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     console.log(`[moveCard action] moved ${card} from ${oldSource?.sourceKey} to ${args.to.location}`);
     
-    return oldSource?.sourceKey;
+    return { location: oldSource?.sourceKey!, playerId: oldSource?.playerId };
   }
   
   async gainAction(args: { count: number }, context?: GameActionContext) {
@@ -536,6 +536,10 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       to: { location: 'playerDiscard' },
       toPlayerId: args.playerId
     });
+    
+    if (!oldLocation) {
+      throw new Error(`[discardCard action] could not find card ${cardId} in player ${args.playerId}'s discard pile`);
+    }
     
     this.logManager.addLogEntry({
       type: 'discard',

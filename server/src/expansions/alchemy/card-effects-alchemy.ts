@@ -324,7 +324,7 @@ const expansion: CardExpansionModule = {
         condition: (conditionArgs) => {
           if (conditionArgs.trigger.args.playerId !== args.playerId) return false;
           if (!conditionArgs.trigger.args.previousLocation) return false;
-          if (!isLocationInPlay(conditionArgs.trigger.args.previousLocation)) return false;
+          if (!isLocationInPlay(conditionArgs.trigger.args.previousLocation.location)) return false;
           return conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId).type.includes('TREASURE');
         },
         triggeredEffectFn: async (triggeredArgs) => {
