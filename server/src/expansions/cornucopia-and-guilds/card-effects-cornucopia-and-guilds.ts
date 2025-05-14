@@ -87,6 +87,75 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('gainCoffer', { playerId: cardEffectArgs.playerId, count: 1 });
     }
   },
+  'butcher': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[butcher effect] gaining 2 coffers`);
+      await cardEffectArgs.runGameActionDelegate('gainCoffer', { playerId: cardEffectArgs.playerId, count: 2 });
+      
+      let selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Trash card?`,
+        restrict: cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId),
+        count: 1,
+        optional: true,
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.log(`[butcher effect] no card selected`);
+        return;
+      }
+      
+      let selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+      const { cost } = cardEffectArgs.cardPriceController.applyRules(selectedCard, { playerId: cardEffectArgs.playerId });
+      
+      const cards = cardEffectArgs.findCards([
+        { location: ['basicSupply', 'kingdomSupply'] },
+        {
+          kind: 'upTo', playerId: cardEffectArgs.playerId, amount: {
+            treasure: cost.treasure + (cardEffectArgs.match.coffers[cardEffectArgs.playerId] ?? 0),
+            potion: cost.potion
+          }
+        }
+      ]);
+      
+      if (!cards.length) {
+        console.log(`[butcher effect] no cards in supply that match cost`);
+        return;
+      }
+      
+      selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Gain card`,
+        restrict: cards.map(card => card.id),
+        count: 1,
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.warn(`[butcher effect] no card selected`);
+        return;
+      }
+      
+      selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+      
+      const { cost: selectedCardCost } = cardEffectArgs.cardPriceController.applyRules(selectedCard, { playerId: cardEffectArgs.playerId });
+      
+      console.log(`[butcher effect] gaining ${selectedCard}`);
+      
+      await cardEffectArgs.runGameActionDelegate('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCard.id,
+        to: { location: 'playerDiscard' }
+      });
+      
+      if (selectedCardCost.treasure - cost.treasure > 0) {
+        console.log(`[butcher effect] spending ${selectedCardCost.treasure - cost.treasure} coffers`);
+        await cardEffectArgs.runGameActionDelegate('gainCoffer', {
+          playerId: cardEffectArgs.playerId,
+          count: -(selectedCardCost.treasure - cost.treasure)
+        });
+      }
+    }
+  },
   'candlestick-maker': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[candlestick maker effect] gaining 1 action, 1 buy, and 1 coffer`);
