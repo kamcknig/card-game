@@ -673,6 +673,11 @@ const expansion: CardExpansionModule = {
             
             const numToChoose = Math.min(overpaid, discardIds.length);
             
+            if (!numToChoose) {
+              console.log(`[herald onGained effect] no cards in discard`);
+              return;
+            }
+            
             const result = await triggerEffectArgs.runGameActionDelegate('userPrompt', {
               prompt: `You may choose up to ${numToChoose} from your discard to top-deck`,
               playerId: eventArgs.playerId,
