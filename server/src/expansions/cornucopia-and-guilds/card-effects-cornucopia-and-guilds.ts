@@ -1433,7 +1433,10 @@ const expansion: CardExpansionModule = {
       
       await cardEffectArgs.runGameActionDelegate('playCard', {
         playerId: cardEffectArgs.playerId,
-        cardId: selectedCardIds[0]
+        cardId: selectedCardIds[0],
+        overrides: {
+          actionCost: 0
+        }
       });
     }
   },
@@ -1469,7 +1472,7 @@ const expansion: CardExpansionModule = {
         
         if (!curseCardIds.length) {
           console.log(`[soothsayer effect] no curse cards in supply`);
-          continue;
+          break;
         }
         
         console.log(`[soothsayer effect] player ${targetPlayerId} gaining a curse`);
@@ -1489,10 +1492,16 @@ const expansion: CardExpansionModule = {
   'stonemason': {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
+        if (!eventArgs.bought) {
+          console.log(`[stonemason onGained effect] ${eventArgs.cardId} was not bought, skipping`);
+          return;
+        }
+        
         const boughtStats = cardEffectArgs.match.stats.cardsBought[eventArgs.cardId];
         const overpaid = boughtStats.paid - boughtStats.cost;
-        if (!eventArgs.bought || overpaid <= 0) {
-          console.log(`[stonemason triggered effect] ${eventArgs.cardId} was not overpaid, skipping`);
+        
+        if (overpaid <= 0) {
+          console.log(`[stonemason onGained effect] ${eventArgs.cardId} was not overpaid, skipping`);
           return;
         }
         
@@ -1511,7 +1520,7 @@ const expansion: CardExpansionModule = {
         
         const numToGain = Math.min(2, cardIds.length);
         
-        console.log(`[stonemason triggered effect] gaining ${numToGain} cards`);
+        console.log(`[stonemason onGained effect] gaining ${numToGain} cards`);
         
         for (let i = 0; i < numToGain; i++) {
           const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
@@ -1529,7 +1538,7 @@ const expansion: CardExpansionModule = {
           const selectedCardId = selectedCardIds[0];
           const card = cardEffectArgs.cardLibrary.getCard(selectedCardId);
           
-          console.log(`[stonemason triggered effect] player ${eventArgs.playerId} gaining ${card}`);
+          console.log(`[stonemason onGained effect] player ${eventArgs.playerId} gaining ${card}`);
           
           await cardEffectArgs.runGameActionDelegate('gainCard', {
             playerId: eventArgs.playerId,
