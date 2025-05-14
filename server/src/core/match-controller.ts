@@ -382,16 +382,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     if (patch.length || cardLibraryPatch.length) {
       console.log(`[match] sending match update to clients`);
       
-      if (cardLibraryPatch.length) {
-        console.log(`[ match ] card library patch`);
-        console.log(cardLibraryPatch);
-      }
-      
-      if (patch.length) {
-        console.log(`[ match ] match patch`);
-        console.log(patch);
-      }
-      
       if (playerId) {
         this._socketMap.get(playerId)?.emit('patchUpdate', patch, cardLibraryPatch);
       }

@@ -36,4 +36,5 @@ can be checked by seeing if they are in the play area on the turn they were play
 
 
 currently working on
- - ui to display non supply kingdoms
+ - non supply now displays, but i think because of the async nature, it's getting multiple store updates and then 
+having some timing issues where it creates extra colums before thre previous draw is done.
