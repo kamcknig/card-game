@@ -5,3 +5,4 @@ dist/
 logs/
 .env
 banned-kingdoms.json
+preselected-kingdoms.json
