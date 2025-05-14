@@ -5,23 +5,27 @@ import { cardStore } from './card-state';
 import { matchStore } from './match-state';
 
 export const nonSupplyKingdomMapStore = computed(
-  [getCardSourceStore('nonSupplyKingdomMap'), cardStore, matchStore],
-  (nonSupplyKingdomMap, cards, match) => {
-    const kingdomMap = nonSupplyKingdomMap.reduce((prev, cardId) => {
-      const card = cards[cardId];
-      if (!card) {
-        return prev;
-      }
+  [getCardSourceStore('nonSupplyCards'), cardStore, matchStore],
+  (nonSupplyCardIds, cards, match) => {
 
+    const kingdomCardsMap = nonSupplyCardIds
+      .map(cardId => cards[cardId])
+      .filter(card => !!card)
+      .reduce((prev, nextCard) => {
+        prev[nextCard.kingdom] ??= [];
+        prev[nextCard.kingdom].push(nextCard);
+        return prev;
+      }, {} as Record<string, Card[]>);
+
+    const kingdomMap = Object.keys(kingdomCardsMap).reduce((prev, kingdomName) => {
       const startingCards = match?.config.nonSupply
-        ?.filter(supply => supply.name === 'rewards')
+        ?.filter(supply => supply.name === kingdomName)
         ?.map(supply => supply.cards).flat() ?? [];
 
-      prev[card.kingdom] ||= {
+      prev[kingdomName] = {
         startingCards: startingCards,
-        cards: [],
+        cards: kingdomCardsMap[kingdomName],
       };
-      prev[card.kingdom].cards.push(card);
       return prev;
     }, {} as Record<string, {startingCards: CardNoId[], cards: Card[]}>)
     return kingdomMap;

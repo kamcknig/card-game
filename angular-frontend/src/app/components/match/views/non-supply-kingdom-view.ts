@@ -13,8 +13,8 @@ export class NonSupplyKingdomView extends Container {
 
     this._container = this.addChild(new Container());
 
-    const nonSupplyUnsub = nonSupplyKingdomMapStore.subscribe(kingdomMap => {
-      this.draw(kingdomMap);
+    const nonSupplyUnsub = nonSupplyKingdomMapStore.subscribe(async kingdomMap => {
+      await this.draw(kingdomMap);
     });
 
     this.on('removed', () => {
@@ -22,13 +22,46 @@ export class NonSupplyKingdomView extends Container {
     });
   }
 
-  private draw(kingdomMap: Readonly<Record<string, { startingCards: CardNoId[]; cards: readonly Card[]}>>) {
-    for (const kingdomName of Object.keys(kingdomMap)) {
-      const kingdom = this.drawKingdom(kingdomName, kingdomMap[kingdomName]);
+  private _kingdomContainerMap = new Map<string, Container>();
+
+  private async draw(kingdomMap: Readonly<Record<string, { startingCards: CardNoId[]; cards: readonly Card[]}>>) {
+    let colNumber = 1;
+    for (const [idx, kingdomName] of Object.keys(kingdomMap).entries()) {
+      console.log('draw', kingdomName);
+      if (this._kingdomContainerMap.has(kingdomName)) {
+        console.log('found previous colum', this._kingdomContainerMap.get(kingdomName)!.label);
+        await this.drawKingdom(kingdomName, kingdomMap[kingdomName], this._kingdomContainerMap.get(kingdomName)!);
+        continue;
+      }
+
+      let colContainer = this._container.getChildByLabel(`column:${colNumber}`);
+
+      while (true) {
+        if (!colContainer) {
+          colContainer = new Container({ label: `column:${colNumber}` });
+          console.log('created new column', colContainer.label);
+          colContainer.x = this.width + STANDARD_GAP;
+          console.log('setting x to', colContainer.x);
+          this._container.addChild(colContainer);
+        }
+
+        console.log(colContainer.height);
+        if (colContainer.height > 300) {
+          console.log('col container is full, increasing col number to', colNumber + 1);
+          colNumber++;
+          colContainer = null;
+        }
+        else {
+          break;
+        }
+      }
+
+      await this.drawKingdom(kingdomName, kingdomMap[kingdomName], colContainer);
+      this._kingdomContainerMap.set(kingdomName, colContainer);
     }
   }
 
-  private drawKingdom(kingdomName: string, kingdom: { startingCards: CardNoId[], cards: readonly Card[] }) {
+  private async drawKingdom(kingdomName: string, kingdom: { startingCards: CardNoId[], cards: readonly Card[] }, parent: Container) {
     if (!kingdomName || !kingdom) {
       return;
     }
@@ -83,6 +116,9 @@ export class NonSupplyKingdomView extends Container {
 
       pile.pile = kingdom.cards.filter(c => c.cardKey === cardKey);
     }
+
+    container.y = parent.height + STANDARD_GAP;
+    parent.addChild(container);
 
     return Promise.resolve((resolve: (value: Container) => void) => {
       setTimeout(() => {
