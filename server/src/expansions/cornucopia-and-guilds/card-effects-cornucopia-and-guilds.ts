@@ -1154,7 +1154,10 @@ const expansion: CardExpansionModule = {
         }
       });
       
-      const rewardCardIds = cardEffectArgs.findCards({ cardType: 'REWARD' });
+      const rewardCardIds = cardEffectArgs.findCards([
+        { location: 'nonSupplyCards' },
+        { cardType: 'REWARD' }
+      ]);
       
       if (!rewardCardIds.length) {
         console.log(`[joust effect] no reward cards in supply`);

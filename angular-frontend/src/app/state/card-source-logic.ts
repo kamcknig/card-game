@@ -17,17 +17,17 @@ export const nonSupplyKingdomMapStore = computed(
         return prev;
       }, {} as Record<string, Card[]>);
 
-    const kingdomMap = Object.keys(kingdomCardsMap).reduce((prev, kingdomName) => {
-      const startingCards = match?.config.nonSupply
-        ?.filter(supply => supply.name === kingdomName)
-        ?.map(supply => supply.cards).flat() ?? [];
+    const kingdomMap = Object.values(match?.config.nonSupply ?? [])
+      .reduce((acc, nextSupply) => {
+        acc[nextSupply.name] ??= {
+          startingCards: match?.config.nonSupply
+            ?.filter(supply => supply.name === nextSupply.name)
+            ?.map(supply => supply.cards).flat() ?? [],
+          cards: kingdomCardsMap[nextSupply.name] ?? [],
+        }
+        return acc;
+      }, {} as Record<string, { startingCards: CardNoId[], cards: Card[] }>);
 
-      prev[kingdomName] = {
-        startingCards: startingCards,
-        cards: kingdomCardsMap[kingdomName],
-      };
-      return prev;
-    }, {} as Record<string, {startingCards: CardNoId[], cards: Card[]}>)
     return kingdomMap;
   }
 );
