@@ -81,6 +81,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   async gainPotion(args: { count: number }) {
     console.log(`[gainPotion action] gaining ${args.count} potions`);
     this.match.playerPotions += args.count;
+    this.match.playerPotions = Math.max(0, this.match.playerPotions);
     
     console.log(`[gainPotion action] setting player potions to ${this.match.playerPotions}`);
   }
@@ -88,6 +89,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   async gainBuy(args: { count: number }, context?: GameActionContext) {
     console.log(`[gainBuy action] gaining ${args.count} buys`);
     this.match.playerBuys += args.count;
+    this.match.playerBuys = Math.max(this.match.playerBuys, 0);
     
     this.logManager.addLogEntry({
       type: 'gainBuy',
@@ -156,6 +158,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     console.log(`[gainAction action] gaining ${args.count} actions`);
     
     this.match.playerActions += args.count;
+    this.match.playerActions = Math.max(0, this.match.playerActions);
     
     this.logManager.addLogEntry({
       type: 'gainAction',
@@ -402,6 +405,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     console.log(`[gainCoffer action] player ${args.playerId} gained ${args.count} coffers`);
     this.match.coffers[args.playerId] ??= 0;
     this.match.coffers[args.playerId] += args.count ?? 1;
+    this.match.coffers[args.playerId] = Math.max(0, this.match.coffers[args.playerId]);
     console.log(`[gainCoffer action] player ${args.playerId} now has ${this.match.coffers[args.playerId]} coffers`);
   }
   

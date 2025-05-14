@@ -853,7 +853,7 @@ const expansion: CardExpansionModule = {
       const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Trash a card`,
-        restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
+        restrict: nonTreasureCardsInHand.map(card => card.id),
         count: 1,
         optional: true,
       }) as CardId[];
@@ -898,9 +898,21 @@ const expansion: CardExpansionModule = {
         
         console.log(`[margrave effect] player ${targetPlayerId} discarding ${numToDiscard} cards`);
         
-        for (let i = 0; i < numToDiscard; i++) {
+        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: targetPlayerId,
+          prompt: `Discard card/s`,
+          restrict: hand,
+          count: numToDiscard,
+        }) as CardId[];
+        
+        if (!selectedCardIds.length) {
+          console.warn(`[margrave effect] no card selected`);
+          continue;
+        }
+        
+        for (let i = 0; i < selectedCardIds.length; i++) {
           await cardEffectArgs.runGameActionDelegate('discardCard', {
-            cardId: hand[i],
+            cardId: selectedCardIds[i],
             playerId: targetPlayerId
           });
         }
@@ -1043,7 +1055,7 @@ const expansion: CardExpansionModule = {
       const handSize = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId).length;
       const numToLose = Math.min(cardEffectArgs.match.playerTreasure, handSize)
       console.log(`[souk effect] losing ${numToLose} treasure`);
-      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: handSize });
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: -handSize });
     }
   },
   'spice-merchant': {
@@ -1060,7 +1072,7 @@ const expansion: CardExpansionModule = {
       const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Trash card`,
-        restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
+        restrict: treasuresInHand.map(card => card.id),
         count: 1,
         optional: true,
       }) as CardId[];
@@ -1115,7 +1127,7 @@ const expansion: CardExpansionModule = {
       const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Discard treasure`,
-        restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
+        restrict: treasuresInHand.map(card => card.id),
         count: 1,
         optional: true
       }) as CardId[];
