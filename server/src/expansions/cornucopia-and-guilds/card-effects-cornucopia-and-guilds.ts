@@ -1238,20 +1238,20 @@ const expansion: CardExpansionModule = {
         compulsory: true,
         allowMultipleInstances: true,
         condition: (conditionArgs) => {
-          if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) === 'buy') return false;
+          if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') return false;
           return true;
         },
         triggeredEffectFn: async (triggerEffectArgs) => {
-          const turnBought = triggerEffectArgs.match.stats.cardsGained[cardEffectArgs.cardId].turnNumber;
-          const cardIdsGained = triggerEffectArgs.match.stats.cardsGainedByTurn[turnBought];
-          const cardsGained = cardIdsGained.map(triggerEffectArgs.cardLibrary.getCard);
-          const ownGained = cardsGained.filter(card => card.owner === cardEffectArgs.playerId);
+          const stats = triggerEffectArgs.match.stats;
           
-          console.log(`[merchant guild triggered effect] gaining ${ownGained.length} coffers`);
+          const cardIdsGainedThisTurn = stats.cardsGainedByTurn[triggerEffectArgs.match.turnNumber];
+          const selfGainedCardIdsThisTurn = cardIdsGainedThisTurn.filter(cardId => stats.cardsGained[cardId].playerId === cardEffectArgs.playerId);
+          
+          console.log(`[merchant guild triggered effect] gaining ${selfGainedCardIdsThisTurn.length} coffers`);
           
           await cardEffectArgs.runGameActionDelegate('gainCoffer', {
             playerId: cardEffectArgs.playerId,
-            count: ownGained.length
+            count: selfGainedCardIdsThisTurn.length
           }, { loggingContext: { source: cardEffectArgs.cardId } });
         }
       })
