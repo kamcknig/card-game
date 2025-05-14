@@ -496,7 +496,7 @@ const expansion: CardExpansionModule = {
         compulsory: true,
         condition: (conditionArgs) => true,
         triggeredEffectFn: async (triggerEffectArgs) => {
-        
+          
         }
       })
     }
@@ -751,8 +751,45 @@ const expansion: CardExpansionModule = {
         .map(card => card.cardName)
       ).size;
       
-      console.log(`[horn of plenty effect] gaining ${uniquelyNamesCardsInPlay} treasure`);
-      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: uniquelyNamesCardsInPlay });
+      const cards = cardEffectArgs.findCards([
+        { location: ['basicSupply', 'kingdomSupply'] },
+        { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: { treasure: uniquelyNamesCardsInPlay } }
+      ]);
+      
+      if (!cards.length) {
+        console.log(`[horn of plenty effect] no cards in supply costing up to ${uniquelyNamesCardsInPlay}`);
+        return;
+      }
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Gain card`,
+        restrict: cards.map(card => card.id),
+        count: 1,
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.warn(`[horn of plenty effect] no cards selected`);
+        return;
+      }
+      
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds.slice(-1)[0]);
+      
+      console.log(`[horn of plenty effect] gaining ${selectedCard}`);
+      
+      await cardEffectArgs.runGameActionDelegate('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCard.id,
+        to: { location: 'playerDiscard' }
+      });
+      
+      if (selectedCard.type.includes('VICTORY')) {
+        console.log(`[horn of plenty effect] card is a victory card, trashing horn of plenty`);
+        await cardEffectArgs.runGameActionDelegate('trashCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: cardEffectArgs.cardId,
+        });
+      }
     }
   },
   'housecarl': {
@@ -803,16 +840,21 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
       
       const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      
       if (hand.length === 0) {
         console.warn(`[hunting party effect] no cards in hand`);
         return;
       }
+      
+      console.log(`[hunting party effect] revealing ${hand.length} cards`);
+      
       for (const cardId of hand) {
         await cardEffectArgs.runGameActionDelegate('revealCard', {
           cardId: cardId,
           playerId: cardEffectArgs.playerId,
         });
       }
+      
       const uniqueHandCardNames = new Set(hand
         .map(cardEffectArgs.cardLibrary.getCard)
         .map(card => card.cardName)
@@ -820,22 +862,33 @@ const expansion: CardExpansionModule = {
       
       const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
       const discard = cardEffectArgs.cardSourceController.getSource('playerDiscard', cardEffectArgs.playerId);
-      let cardFound = false;
+      
       const cardsToDiscard: CardId[] = [];
-      while (deck.length + discard.length > 0 && !cardFound) {
+      
+      while (deck.length + discard.length > 0) {
         let cardId = deck.slice(-1)[0];
         
         if (!cardId) {
           await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
           
-          if (deck.length < 0) {
+          cardId = deck.slice(-1)[0];
+          
+          if (!cardId) {
             console.warn(`[hunting party effect] no cards in deck after shuffling`);
             return;
           }
         }
         
-        cardId = deck.slice(-1)[0];
         const card = cardEffectArgs.cardLibrary.getCard(cardId);
+        
+        console.log(`[hunting party effect] revealing ${card}`);
+        
+        await cardEffectArgs.runGameActionDelegate('revealCard', {
+          cardId: card.id,
+          playerId: cardEffectArgs.playerId,
+          moveToSetAside: true
+        });
+        
         if (uniqueHandCardNames.has(card.cardName)) {
           console.log(`[hunting party effect] adding ${card.cardName} to discards`);
           cardsToDiscard.push(cardId);
@@ -847,7 +900,7 @@ const expansion: CardExpansionModule = {
             toPlayerId: cardEffectArgs.playerId,
             to: { location: 'playerHand' }
           });
-          cardFound = true;
+          break;
         }
       }
       

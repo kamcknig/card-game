@@ -74,6 +74,12 @@ export const logManager = {
           : `%P${player?.id}% revealed <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`;
         break;
       }
+      case 'shuffleDeck': {
+        msg = selfId === playerId
+          ? `%Y% shuffled your discard to your deck`
+          : `%P${player?.id}% shuffled their discard to their deck`;
+        break;
+      }
       case 'trashCard': {
         const cardName = cardsById[logEntry.cardId]?.cardName;
         msg = selfId === playerId
