@@ -306,7 +306,7 @@ const expansion: CardExpansionModule = {
       let selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Trash card`,
-        restrict: { location: 'playerHand' },
+        restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
         count: 1,
       }) as CardId[];
       
