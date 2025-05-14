@@ -305,6 +305,8 @@ export class Game {
     
     if (patch.length) {
       applyPatch(this._matchConfiguration, patch)
+      defaultMatchConfiguration.preselectedKingdoms = newConfig.kingdomSupply.map(supply => supply.cards[0]);
+      this._matchConfiguration!.preselectedKingdoms = newConfig.kingdomSupply.map(supply => supply.cards[0])
       // lobby phase – raw object still useful for the config screen
       io.in('game').emit('matchConfigurationUpdated', this._matchConfiguration!);
     }

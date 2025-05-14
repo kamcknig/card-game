@@ -52,6 +52,7 @@ export class MatchConfigurator {
       console.log(requisiteKingdomCardKeys?.join('\n'));
     }
     
+    this._config.preselectedKingdoms = this._config.preselectedKingdoms.filter(card => !!card);
     if (this._config.preselectedKingdoms?.length > 0) {
       console.log(`[match configurator] requested kingdom cards ${this._config.preselectedKingdoms.length}`);
       console.log(this._config.preselectedKingdoms?.map(card => card.cardKey)?.join('\n'));
