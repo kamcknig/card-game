@@ -1647,6 +1647,16 @@ const expansion: CardExpansionModule = {
       if (!selectedCardIds.length) {
         console.log(`[young witch effect] no cards selected`);
       }
+      else {
+        console.log(`[young witch effect] player ${cardEffectArgs.playerId} discarding ${selectedCardIds.length} cards`);
+        
+        for (const selectedCardId of selectedCardIds) {
+          await cardEffectArgs.runGameActionDelegate('discardCard', {
+            cardId: selectedCardId,
+            playerId: cardEffectArgs.playerId
+          });
+        }
+      }
       
       const targetPlayerIds = findOrderedTargets({
         match: cardEffectArgs.match,

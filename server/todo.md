@@ -44,7 +44,6 @@ the start of next turn, and then they'll be in play and will be discarded. and t
 can be checked by seeing if they are in the play area on the turn they were played or not
 
 - normal kingdoms
-young witch
 joust
 
 - rewards
