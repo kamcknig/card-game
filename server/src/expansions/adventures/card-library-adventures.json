@@ -1,0 +1,8 @@
+{
+  "amulet": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION", "DURATION"]
+  }
+}

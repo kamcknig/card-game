@@ -38,5 +38,10 @@
     "title": "Dark Ages",
     "name": "dark-ages",
     "order": 8
+  },
+  {
+    "title": "Adventures",
+    "name": "adventures",
+    "order": 9
   }
 ]
