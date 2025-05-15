@@ -1942,7 +1942,10 @@ const cardEffects: CardExpansionModule = {
         console.log(`[mercenary effect] player ${targetPlayerId} discarding ${selectedCardIds.length} cards`);
         
         for (const selectedCardId of selectedCardIds) {
-          await cardEffectArgs.runGameActionDelegate('discardCard', { playerId: targetPlayerId, cardId: selectedCardId });
+          await cardEffectArgs.runGameActionDelegate('discardCard', {
+            playerId: targetPlayerId,
+            cardId: selectedCardId
+          });
         }
       }
     }
@@ -3496,7 +3499,8 @@ const cardEffects: CardExpansionModule = {
           content: {
             type: 'rearrange',
             cardIds: actionCards.map(card => card.id)
-          }
+          },
+          actionButtons: [{ label: 'DONE', action: 1 }]
         }) as { action: number, result: number[] };
         
         sorted = [...result.result ?? []];
