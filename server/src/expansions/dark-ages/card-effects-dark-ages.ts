@@ -1834,6 +1834,8 @@ const cardEffects: CardExpansionModule = {
           condition: conditionArgs => {
             const trashedCard = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
             if (trashedCard.owner !== eventArgs.playerId) return false;
+            if (conditionArgs.trigger.args.previousLocation.location !== 'playerHand') return false;
+            if (conditionArgs.trigger.args.previousLocation.playerId !== eventArgs.playerId) return false;
             return true;
           },
           triggeredEffectFn: async triggeredArgs => {

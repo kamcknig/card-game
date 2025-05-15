@@ -357,7 +357,6 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
     const cardId = card.id;
-    card.owner = null;
     
     this.match.stats.trashedCards[cardId] = {
       turnPhase: getTurnPhase(this.match.turnPhaseIndex),
@@ -374,7 +373,8 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       eventType: 'cardTrashed',
       args: {
         playerId: args.playerId,
-        cardId: card.id
+        cardId: card.id,
+        previousLocation: oldLocation
       }
     }
     await this.reactionManager.runTrigger({ trigger });
@@ -385,6 +385,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       previousLocation: oldLocation
     });
     
+    card.owner = null;
     this.logManager.addLogEntry({
       playerId: args.playerId,
       cardId: cardId,

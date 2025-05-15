@@ -352,7 +352,11 @@ export interface TriggeredEffectConditionContext<T extends TriggerEventType> ext
 }
 
 export type TriggerEventTypeContext = {
-  cardTrashed: { cardId: CardId; playerId: PlayerId; };
+  cardTrashed: {
+    cardId: CardId;
+    playerId: PlayerId;
+    previousLocation: { location: CardLocation; playerId?: PlayerId; };
+  };
   cardPlayed: { playerId: PlayerId; cardId: CardId; };
   startTurn: { playerId: PlayerId; };
   gainCard: {
@@ -364,7 +368,11 @@ export type TriggerEventTypeContext = {
   endTurnPhase: { phaseIndex: number; };
   startTurnPhase: { phaseIndex: number; };
   endTurn: void;
-  discardCard: { previousLocation?: { location: CardLocation; playerId?: PlayerId; }; playerId: PlayerId; cardId: CardId; };
+  discardCard: {
+    previousLocation: { location: CardLocation; playerId?: PlayerId; };
+    playerId: PlayerId;
+    cardId: CardId;
+  };
 }
 
 export type TriggerEventType = keyof TriggerEventTypeContext;
@@ -501,8 +509,16 @@ export interface CardLifecycleCallbackMap {
 
 export interface CardLifecycleEventArgMap {
   onGained: { playerId: PlayerId, cardId: CardId, bought: boolean; };
-  onTrashed: { playerId: PlayerId, cardId: CardId, previousLocation?: { location: CardLocation; playerId?: PlayerId; } };
-  onDiscarded: { playerId: PlayerId, cardId: CardId, previousLocation?: { location: CardLocation; playerId?: PlayerId; } };
+  onTrashed: {
+    playerId: PlayerId,
+    cardId: CardId,
+    previousLocation?: { location: CardLocation; playerId?: PlayerId; }
+  };
+  onDiscarded: {
+    playerId: PlayerId,
+    cardId: CardId,
+    previousLocation?: { location: CardLocation; playerId?: PlayerId; }
+  };
   onEnterHand: { playerId: PlayerId, cardId: CardId };
   onLeaveHand: { playerId: PlayerId, cardId: CardId };
   onEnterPlay: { playerId: PlayerId, cardId: CardId };
