@@ -1875,6 +1875,78 @@ const cardEffects: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
     }
   },
+  'mercenary': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Trash cards?`,
+        restrict: hand,
+        count: {
+          kind: 'upTo',
+          count: Math.min(2, hand.length)
+        },
+        optional: true,
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.log(`[mercenary effect] no cards selected`);
+        return;
+      }
+      
+      console.log(`[mercenary effect] trashing ${selectedCardIds.length} cards`);
+      
+      for (const selectedCardId of selectedCardIds) {
+        await cardEffectArgs.runGameActionDelegate('trashCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: selectedCardId
+        });
+      }
+      
+      if (selectedCardIds.length === 1) {
+        console.log(`[mercenary effect] only one card trashed`);
+        return;
+      }
+      
+      console.log(`[mercenary effect] drawing 2 cards, and gaining 2 treasure`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+      
+      const targetPlayerIds = findOrderedTargets({
+        match: cardEffectArgs.match,
+        appliesTo: 'ALL_OTHER',
+        startingPlayerId: cardEffectArgs.playerId
+      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      
+      for (const targetPlayerId of targetPlayerIds) {
+        const hand = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
+        
+        if (hand.length <= 3) {
+          console.log(`[mercenary effect] ${targetPlayerId} has 3 or fewer cards in hand, skipping`);
+          continue;
+        }
+        
+        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: targetPlayerId,
+          prompt: `Discard to 3`,
+          restrict: hand,
+          count: hand.length - 3,
+        }) as CardId[];
+        
+        if (selectedCardIds.length === 0) {
+          console.warn(`[mercenary effect] no cards selected`);
+          continue;
+        }
+        
+        console.log(`[mercenary effect] player ${targetPlayerId} discarding ${selectedCardIds.length} cards`);
+        
+        for (const selectedCardId of selectedCardIds) {
+          await cardEffectArgs.runGameActionDelegate('discardCard', { playerId: targetPlayerId, cardId: selectedCardId });
+        }
+      }
+    }
+  },
   'mystic': {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[mystic effect] gaining 1 action, and 1 treasure`);
@@ -3250,6 +3322,11 @@ const cardEffects: CardExpansionModule = {
     }
   },
   'urchin': {
+    registerLifeCycleMethods: () => ({
+      onLeavePlay: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`urchin:${eventArgs.cardId}:cardPlayed`);
+      }
+    }),
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[urchin effect] drawing 1 card, and gaining 1 action`);
       await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
@@ -3261,7 +3338,7 @@ const cardEffects: CardExpansionModule = {
         startingPlayerId: cardEffectArgs.playerId
       }).filter(playerId => {
         const hand = cardEffectArgs.cardSourceController.getSource('playerHand', playerId);
-        return cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity' && hand.length > 5;
+        return cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity' && hand.length > 4;
       });
       
       for (const targetPlayerId of targetPlayerIds) {
