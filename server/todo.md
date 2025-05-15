@@ -45,4 +45,3 @@ duration cards. but you can just use set-aside and then schedule a movecard reac
 the start of next turn, and then they'll be in play and will be discarded. and the gray effect
 can be checked by seeing if they are in the play area on the turn they were played or not
 
-knights
