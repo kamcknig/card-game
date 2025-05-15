@@ -30,18 +30,28 @@ library json files? and those that are like that will define a kingdom - that ki
 have the randomizer property now used for selecting the randomized kingdoms that might be in that situation. maybe just
 change that to kingdom. and null stays meaning it can't be chosen like rewards, not defined would use the card key,
 and defined would use the defined value
-- when "waiting on player input" displays, cards ar eselectable. i played warchest, and while waiting on someone to name
-cards, it showed highlights on cards. don't know if they were seleced
+- when "waiting on player input" displays, cards are selectable. i played warchest, and while waiting on someone to name
+cards, it showed highlights on cards. don't know if they were selected
 
 need to show the context of the kingdom card for something like young witch, and ferryman
-- dominion.games puts the word "bane" in the type area of the card (but only while it's in the supply)
-- it also puts it in the detail view of both the witch and the bane card, when viewing the details of one or the
-other, it will show the opposite card smaller next to it
-- a list follows - could be incomplete?
-  - ferryman
+ - young witch (new kingdom)
+ - ferryman (new kingdom)
+ - joust (rewards, maybe not needed since rewards simply appear)
+ - charlatan (curse)
+ - bandit camp (spoils)
+ - pillage (spoils)
+ - marauder (spoils and ruins kingdom)
+ - death cart (ruins kingdom)
+ - cultist (ruins kingdom)
+ - hermit (madman kingdom)
+ - urchin (mercenary kingdom)
 
 the rules state that "set aside" cards do not discard. you made that complicated logic for active
 duration cards. but you can just use set-aside and then schedule a movecard reaction at
 the start of next turn, and then they'll be in play and will be discarded. and the gray effect
 can be checked by seeing if they are in the play area on the turn they were played or not
 
+update knights. i used that stupid randomizer. but there is a knights "card" on the dominion wiki. you can still
+use randomizer null to remove cards like the individual knights, but then the configurator can check for that
+"knights" in thbe config, no need for all the randomizer checks - or the if in the match configurator when creating those
+new cards
