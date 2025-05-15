@@ -2208,11 +2208,10 @@ const cardEffects: CardExpansionModule = {
       }) as { action: number, result: CardKey };
       
       const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
-      const discard = cardEffectArgs.cardSourceController.getSource('playerDiscard', cardEffectArgs.playerId);
       let cardFound: Card | undefined = undefined;
       const cardsToDiscard: Card[] = [];
       
-      while (!cardFound) {
+      while (true) {
         let cardId = deck.slice(-1)[0];
         
         if (!cardId) {
@@ -2234,6 +2233,7 @@ const cardEffects: CardExpansionModule = {
         await cardEffectArgs.runGameActionDelegate('revealCard', {
           cardId: card.id,
           playerId: cardEffectArgs.playerId,
+          moveToSetAside: true
         });
         
         if (card.type.includes('VICTORY') && card.cardKey !== result.result) {
@@ -2415,7 +2415,7 @@ const cardEffects: CardExpansionModule = {
           
           console.log(`[rogue effect] discarding ${cardsToDiscard.length} cards`);
           
-          for (const card of cardsToDiscard) {
+          for (const card of cardsToDiscard.concat(cardsToTrash)) {
             await cardEffectArgs.runGameActionDelegate('discardCard', {
               cardId: card.id,
               playerId: cardEffectArgs.playerId
