@@ -1,8 +1,13 @@
-import { CardId } from "shared/shared-types.ts";
+import { CardId } from 'shared/shared-types.ts';
 import { CardExpansionModule } from '../../types.ts';
 
 const expansion: CardExpansionModule = {
   'amulet': {
+    registerLifeCycleMethods: () => ({
+      onLeavePlay: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`amulet:${eventArgs.cardId}:startTurn`)
+      }
+    }),
     registerEffects: () => async (cardEffectArgs) => {
       const actions = [
         { label: '+1 TREASURE', action: 1 },
@@ -86,6 +91,127 @@ const expansion: CardExpansionModule = {
           await decision();
         }
       })
+    }
+  },
+  'artificer': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[artificer effect] drawing 1 card, gaining 1 action and 1 treasure`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+      
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      
+      let selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Discard cards?`,
+        restrict: hand,
+        count: { kind: 'upTo', count: hand.length },
+        optional: true,
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.log(`[artificer effect] no cards selected`);
+        return;
+      }
+      
+      console.log(`[artificer effect] selected ${selectedCardIds.length} cards to discard`);
+      
+      for (const selectedCardId of selectedCardIds) {
+        await cardEffectArgs.runGameActionDelegate('discardCard', { playerId: cardEffectArgs.playerId, cardId: selectedCardId });
+      }
+      
+      const cardsToSelect = cardEffectArgs.findCards([
+        {location: ['basicSupply', 'kingdomSupply']},
+        {kind: 'upTo', playerId: cardEffectArgs.playerId, amount: { treasure: (selectedCardIds.length ?? 0) }}
+      ]);
+      
+      if (!cardsToSelect.length) {
+        console.log(`[artificer effect] no cards in supply costing ${selectedCardIds.length ?? 0} treasure`);
+        return;
+      }
+      
+      selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Gain card`,
+        restrict: cardsToSelect.map(card => card.id),
+        count: 1,
+        optional: true
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.log(`[artificer effect] no card selected`);
+        return;
+      }
+      
+      const cardToGain = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+      
+      console.log(`[artificer effect] selected ${cardToGain} to gain`);
+      
+      await cardEffectArgs.runGameActionDelegate('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: cardToGain.id,
+        to: { location: 'playerDeck' }
+      });
+    }
+  },
+  'caravan-guard': {
+    registerLifeCycleMethods: () => ({
+      onLeavePlay: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`caravan-guard:${eventArgs.cardId}:startTurn`);
+      },
+      onLeaveHand: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`caravan-guard:${eventArgs.cardId}:cardPlayed`);
+      },
+      onEnterHand: async (args, eventArgs) => {
+        args.reactionManager.registerReactionTemplate({
+          id: `caravan-guard:${eventArgs.cardId}:cardPlayed`,
+          listeningFor: 'cardPlayed',
+          playerId: eventArgs.playerId,
+          once: false,
+          compulsory: false,
+          allowMultipleInstances: true,
+          condition: async conditionArgs => {
+            if (conditionArgs.trigger.args.playerId === eventArgs.playerId) return false;
+            const cardPlayed = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
+            if (!cardPlayed.type.includes('ATTACK')) return false;
+            return true;
+          },
+          triggeredEffectFn: async triggeredArgs => {
+            console.log(`[caravan-guard cardPlayed effect] playing Caravan Guard`);
+            
+            await triggeredArgs.runGameActionDelegate('playCard', {
+              playerId: eventArgs.playerId,
+              cardId: eventArgs.cardId
+            })
+          }
+        });
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[caravan-guard effect] drawing 1 card, gaining 1 action`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      
+      const turnPlayed = cardEffectArgs.match.turnNumber;
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate({
+        id: `caravan-guard:${cardEffectArgs.cardId}:startTurn`,
+        listeningFor: 'startTurn',
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: async conditionArgs => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
+          if (conditionArgs.trigger.args.turnNumber === turnPlayed) return false;
+          return true;
+        },
+        triggeredEffectFn: async triggeredArgs => {
+          console.log(`[caravan-guard startTurn effect] gaining 1 treasure`);
+          await triggeredArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+        }
+      });
     }
   },
 }

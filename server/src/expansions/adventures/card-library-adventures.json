@@ -4,5 +4,17 @@
       "treasure": 3
     },
     "type": ["ACTION", "DURATION"]
+  },
+  "artificer": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"]
+  },
+  "caravan-guard": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION", "DURATION", "REACTION"]
   }
 }

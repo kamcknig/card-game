@@ -122,3 +122,5 @@ and exchanged card is not considered gained, nor is the card returned considered
 The traveller cards included in this expansion anyway will need something similar to using the randomizer. If the base
 traveller card is picked then the other cards available for it to be upgraded are then included in the non-supply
 kingdoms.
+
+skipped bridge troll
