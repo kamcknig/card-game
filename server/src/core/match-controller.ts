@@ -63,15 +63,15 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       gold: 3,
       silver: 2,
       estate: 2,
-      'hunting-grounds': 2,
-      ironmonger: 3,
+      'junk-dealer': 2,
+      marauder: 3,
     },
     {
       gold: 3,
       silver: 2,
       estate: 2,
-      'hunting-grounds': 2,
-      ironmonger: 3,
+      'junk-dealer': 2,
+      marauder: 3,
     },
   ];
   

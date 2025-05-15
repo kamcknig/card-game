@@ -1777,6 +1777,15 @@ const cardEffects: CardExpansionModule = {
       if (!spoilCards.length) {
         console.log(`[marauder effect] no spoils in supply`);
       }
+      else {
+        console.log(`[marauder effect] gaining ${spoilCards.slice(-1)[0]}`);
+        
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: spoilCards.slice(-1)[0].id,
+          to: { location: 'playerDiscard' }
+        });
+      }
       
       const ruinCards = cardEffectArgs.findCards([
         { location: 'kingdomSupply' },
