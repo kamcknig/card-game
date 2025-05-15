@@ -123,4 +123,7 @@ The traveller cards included in this expansion anyway will need something simila
 traveller card is picked then the other cards available for it to be upgraded are then included in the non-supply
 kingdoms.
 
-skipped bridge troll
+skipped
+- bridge troll
+- coin of the realm
+- distant lands

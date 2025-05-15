@@ -16,5 +16,11 @@
       "treasure": 3
     },
     "type": ["ACTION", "DURATION", "REACTION"]
+  },
+  "dungeon": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION", "DURATION"]
   }
 }

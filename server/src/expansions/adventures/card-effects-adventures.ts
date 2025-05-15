@@ -214,6 +214,62 @@ const expansion: CardExpansionModule = {
       });
     }
   },
+  'dungeon': {
+    registerLifeCycleMethods: () => ({
+      onLeavePlay: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`dungeon:${eventArgs.cardId}:startTurn`);
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[dungeon effect] gaining 1 action`);
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      
+      const effects = async () => {
+        console.log(`[dungeon effect] and drawing 2 cards`);
+        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
+        
+        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Discard cards`,
+          restrict: cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId),
+          count: 2,
+        }) as CardId[];
+        
+        if (!selectedCardIds.length) {
+          console.log(`[dungeon effect] no cards selected`);
+          return;
+        }
+        
+        console.log(`[dungeon effect] discarding ${selectedCardIds.length} cards`);
+        
+        for (const selectedCardId of selectedCardIds) {
+          await cardEffectArgs.runGameActionDelegate('discardCard', { playerId: cardEffectArgs.playerId, cardId: selectedCardId });
+        }
+      }
+      
+      const turnPlayed = cardEffectArgs.match.turnNumber;
+      
+      await effects();
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate({
+        id: `dungeon:${cardEffectArgs.cardId}:startTurn`,
+        listeningFor: 'startTurn',
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: async conditionArgs => {
+          if (conditionArgs.trigger.args.turnNumber === turnPlayed) return false;
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
+          return true;
+        },
+        triggeredEffectFn: async triggeredArgs => {
+          console.log(`[dungeon startTurn effect] running`);
+          await effects();
+        }
+      })
+    }
+  },
 }
 
 export default expansion;
