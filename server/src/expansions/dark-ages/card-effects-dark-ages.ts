@@ -153,10 +153,10 @@ const cardEffects: CardExpansionModule = {
   },
   'beggar': {
     registerLifeCycleMethods: () => ({
-      onEnterHand: async (args, eventArgs) => {
+      onLeaveHand: async (args, eventArgs) => {
         args.reactionManager.unregisterTrigger(`beggar:${eventArgs.cardId}:cardPlayed`);
       },
-      onLeaveHand: async (args, eventArgs) => {
+      onEnterHand: async (args, eventArgs) => {
         args.reactionManager.registerReactionTemplate({
           id: `beggar:${eventArgs.cardId}:cardPlayed`,
           playerId: eventArgs.playerId,
@@ -171,12 +171,12 @@ const cardEffects: CardExpansionModule = {
             return true;
           },
           triggeredEffectFn: async triggeredArgs => {
-            const thisCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
+            const thisCard = triggeredArgs.cardLibrary.getCard(eventArgs.cardId);
             
             console.log(`[beggar triggered effect] discarding ${thisCard}`);
             await triggeredArgs.runGameActionDelegate('discardCard', {
               cardId: thisCard.id,
-              playerId: triggeredArgs.trigger.args.playerId
+              playerId: eventArgs.playerId
             });
             
             const silverCards = triggeredArgs.findCards([
@@ -195,7 +195,7 @@ const cardEffects: CardExpansionModule = {
             
             for (let i = 0; i < numToGain; i++) {
               await triggeredArgs.runGameActionDelegate('gainCard', {
-                playerId: triggeredArgs.trigger.args.playerId,
+                playerId: eventArgs.playerId,
                 cardId: silverCards.slice(-i - 1)[0],
                 to: { location: i === 0 ? 'playerDeck' : 'playerDiscard' }
               });
@@ -330,14 +330,22 @@ const cardEffects: CardExpansionModule = {
       
       switch (result.action) {
         case 1: {
-          const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
-          for (let i = 0; i < 2; i++) {
-            const id = deck.slice(-1)[0];
-            if (!id) {
-              console.log(`[count effect] no cards in deck`);
-              break;
-            }
-            
+          const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+          const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+            playerId: cardEffectArgs.playerId,
+            prompt: `Discard Cards`,
+            restrict: hand,
+            count: Math.min(2, hand.length),
+          }) as CardId[];
+          
+          if (!selectedCardIds.length) {
+            console.warn(`[count effect] no card selected`);
+            break;
+          }
+          
+          for (let i = 0; i < selectedCardIds.length; i++) {
+            const id = selectedCardIds[i];
+
             await cardEffectArgs.runGameActionDelegate('discardCard', {
               cardId: id,
               playerId: cardEffectArgs.playerId
