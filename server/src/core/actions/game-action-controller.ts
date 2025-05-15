@@ -631,7 +631,8 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         }
         
         const startTurnTrigger = new ReactionTrigger('startTurn', {
-          playerId: match.players[match.currentPlayerTurnIndex].id
+          playerId: match.players[match.currentPlayerTurnIndex].id,
+          turnNumber: match.turnNumber
         });
         await this.reactionManager.runTrigger({ trigger: startTurnTrigger });
         

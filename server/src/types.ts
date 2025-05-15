@@ -358,7 +358,7 @@ export type TriggerEventTypeContext = {
     previousLocation: { location: CardLocation; playerId?: PlayerId; };
   };
   cardPlayed: { playerId: PlayerId; cardId: CardId; };
-  startTurn: { playerId: PlayerId; };
+  startTurn: { playerId: PlayerId; turnNumber: number; };
   gainCard: {
     playerId: PlayerId;
     cardId: CardId;
