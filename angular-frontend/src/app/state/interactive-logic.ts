@@ -7,11 +7,13 @@ export const serverSelectableCardsStore = computed([matchStore, selfPlayerIdStor
   if (!match || selfPlayerId == null) return [];
   return match.selectableCards?.[selfPlayerId] ?? [];
 });
-(globalThis as any).clientSelectableCardsOverrideStore = serverSelectableCardsStore;
+
 
 // Final store that components should subscribe to
 export const selectableCardStore = computed(
   [clientSelectableCardsOverrideStore, serverSelectableCardsStore],
   (clientOverride, serverCards) => clientOverride ?? serverCards
 );
+
 (globalThis as any).selectableCardStore = selectableCardStore;
+(globalThis as any).serverSelectableCardsStore = serverSelectableCardsStore;

@@ -151,7 +151,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     console.log(`[moveCard action] moved ${card} from ${oldSource?.sourceKey} to ${args.to.location}`);
     
-    return { location: oldSource?.sourceKey!, playerId: oldSource?.playerId };
+    return oldSource ? { location: oldSource?.sourceKey!, playerId: oldSource?.playerId } : undefined;
   }
   
   async gainAction(args: { count: number }, context?: GameActionContext) {
@@ -185,7 +185,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     });
     
     this.match.stats.cardsGainedByTurn[this.match.turnNumber] ??= [];
-    this.match.stats.cardsGainedByTurn[this.match.turnNumber].push(cardId);
+    this.match.stats.cardsGainedByTurn[this.match.turnNumber]!.push(cardId);
     
     this.match.stats.cardsGained[cardId] = {
       turnPhase: getTurnPhase(this.match.turnPhaseIndex),

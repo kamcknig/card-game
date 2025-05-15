@@ -10,6 +10,8 @@ import { clientSelectableCardsOverrideStore, selectedCardStore } from '../../../
 import { validateCountSpec } from '../../../../shared/validate-count-spec';
 import { displayCardDetail } from './display-card-detail';
 
+type NewCardId = CardId;
+
 export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
   if (args.type !== 'select' && args.type !== 'display-cards') throw new Error('card selection modal requires type "select" or "display-cards');
   if (!args.cardIds) throw new Error('Cards cannot be empty');
@@ -17,8 +19,9 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
   const displayOnly = args.type === 'display-cards';
 
   const cardIds = args.cardIds;
+  const selectableCardIds = args.type === 'select' ? args.selectableCardIds ?? cardIds : [];
 
-  let newCardToOldCardMap = new Map<CardId, CardId>();
+  let newCardToOldCardMap = new Map<NewCardId, CardId>();
   let maxId = toNumber(Object.keys(cardStore.get()).sort().slice(-1)[0]);
 
   const cardCount = cardIds.length;
@@ -77,8 +80,13 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
     const view = createCardView(cardId);
     view.card.id = ++maxId;
     newCardToOldCardMap.set(view.card.id, cardId);
-    view.on('pointerdown', cardPointerDownListener)
-    view.on('removed', cardRemovedListener);
+    const idx = selectableCardIds.indexOf(cardId);
+    // if it's selectable add the listeners
+    if (idx !== -1) {
+      selectableCardIds[idx] = view.card.id;
+      view.on('pointerdown', cardPointerDownListener)
+      view.on('removed', cardRemovedListener);
+    }
     cardList.addChild(view);
   }
 
@@ -89,7 +97,7 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
       validate();
     }, 0);
 
-    clientSelectableCardsOverrideStore.set(Array.from(newCardToOldCardMap.keys()));
+    clientSelectableCardsOverrideStore.set(selectableCardIds);
   }
 
   return cardList

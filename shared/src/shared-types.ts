@@ -51,7 +51,7 @@ type CardStats = {
 };
 
 export type MatchStats = {
-  cardsGainedByTurn: Record<number, CardId[]>;
+  cardsGainedByTurn: Record<number, CardId[] | undefined>;
   cardsGained: Record<CardId, CardStats>;
   /**
    * Keys are the card's ID that was played, and values are CardStats objects.
@@ -139,7 +139,7 @@ export type UserPromptKinds =
   | { type: 'name-card'; }
   | { type: 'overpay'; cost: number; }
   | { type: 'display-cards'; cardIds: CardId[]; }
-  | { type: 'select'; cardIds: CardId[]; selectCount: CountSpec; };
+  | { type: 'select'; cardIds: CardId[]; selectCount: CountSpec; selectableCardIds?: CardId[]; };
 
 export type UserPromptActionArgs = {
   playerId: PlayerId;
@@ -235,6 +235,7 @@ export type ComparisonType =
 
 export type CountSpec =
   | { kind: 'upTo'; count: number; }
+  | { kind: 'exact'; count: number; }
   | number;
 
 export type CostSpec =

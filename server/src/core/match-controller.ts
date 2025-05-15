@@ -59,23 +59,20 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private readonly _cardSourceController: CardSourceController;
   
   private _playerHands: Record<CardKey, number>[] = [
-    /*{
-     gold: 3,
-     silver: 2,
-     estate: 2,
-     joust: 2,
-     province: 3,
-     },
-     {
-     gold: 3,
-     silver: 3,
-     copper: 2,
-     },
-     {
-     gold: 4,
-     silver: 3,
-     copper: 3,
-     }*/
+    {
+      gold: 3,
+      silver: 2,
+      estate: 2,
+      graverobber: 2,
+      hermit: 3,
+    },
+    {
+      gold: 3,
+      silver: 2,
+      estate: 2,
+      graverobber: 2,
+      hermit: 3,
+    },
   ];
   
   constructor(

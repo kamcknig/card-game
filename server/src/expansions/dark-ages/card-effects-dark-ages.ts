@@ -345,7 +345,7 @@ const cardEffects: CardExpansionModule = {
           
           for (let i = 0; i < selectedCardIds.length; i++) {
             const id = selectedCardIds[i];
-
+            
             await cardEffectArgs.runGameActionDelegate('discardCard', {
               cardId: id,
               playerId: cardEffectArgs.playerId
@@ -483,6 +483,13 @@ const cardEffects: CardExpansionModule = {
           }
         });
       }
+      
+      console.log(`[counterfeit effect] trashing ${selectedCard}`);
+      
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCard.id,
+      });
     }
   },
   'cultist': {
@@ -503,7 +510,23 @@ const cardEffects: CardExpansionModule = {
       }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
       
       for (const targetPlayerId of targetPlayerIds) {
+        const ruinsCards = cardEffectArgs.findCards([
+          { location: 'kingdomSupply' },
+          { kingdom: 'ruins' }
+        ]);
         
+        if (!ruinsCards.length) {
+          console.log(`[cultist effect] no ruins cards in non-supply`);
+          break;
+        }
+        
+        console.log(`[cultist effect] player ${targetPlayerId} gaining ${ruinsCards.slice(-1)[0]}`);
+        
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: targetPlayerId,
+          cardId: ruinsCards.slice(-1)[0].id,
+          to: { location: 'playerDiscard' }
+        });
       }
       
       const cultistsInHand = cardEffectArgs.findCards([
@@ -1119,7 +1142,7 @@ const cardEffects: CardExpansionModule = {
   },
   'death-cart': {
     registerLifeCycleMethods: () => ({
-      onTrashed: async (args, eventArgs) => {
+      onGained: async (args, eventArgs) => {
         const ruinCards = args.findCards([
           { location: 'kingdomSupply' },
           { kingdom: 'ruins' }
@@ -1127,7 +1150,7 @@ const cardEffects: CardExpansionModule = {
         
         const numToGain = Math.min(2, ruinCards.length);
         
-        console.log(`[death cart onTrashed effect] gaining ${numToGain} ruins`);
+        console.log(`[death cart onGained effect] gaining ${numToGain} ruins`);
         
         for (let i = 0; i < numToGain; i++) {
           await args.runGameActionDelegate('gainCard', {
@@ -1140,11 +1163,14 @@ const cardEffects: CardExpansionModule = {
     }),
     registerEffects: () => async (cardEffectArgs) => {
       const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      const actionCardsInHand = hand
+        .map(cardEffectArgs.cardLibrary.getCard)
+        .filter(card => card.type.includes('ACTION'));
       
       const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Trash card?`,
-        restrict: [...hand, cardEffectArgs.cardId],
+        restrict: [...actionCardsInHand.map(card => card.id), cardEffectArgs.cardId],
         count: 1,
         optional: true,
       }) as CardId[];
@@ -1227,8 +1253,9 @@ const cardEffects: CardExpansionModule = {
         cardId: selectedCard.id,
       });
       
+      const trash = cardEffectArgs.cardSourceController.getSource('trash', cardEffectArgs.playerId);
       const uniqueTreasuresInTrash = new Set(
-        hand.map(cardEffectArgs.cardLibrary.getCard)
+        trash.map(cardEffectArgs.cardLibrary.getCard)
           .filter(card => card.type.includes('TREASURE'))
           .map(card => card.cardKey)
       ).size;
@@ -1266,7 +1293,7 @@ const cardEffects: CardExpansionModule = {
         playerId: cardEffectArgs.playerId,
         actionButtons: [
           { label: 'GAIN CARD', action: 1 },
-          { label: 'TRASH CARD', action: 1 },
+          { label: 'TRASH CARD', action: 2 },
         ],
       }) as { action: number, result: number[] };
       
@@ -1285,7 +1312,7 @@ const cardEffects: CardExpansionModule = {
         }
         
         const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
-          prompt: 'Gain one',
+          prompt: 'Gain card',
           playerId: cardEffectArgs.playerId,
           content: {
             type: 'select',
@@ -1344,11 +1371,15 @@ const cardEffects: CardExpansionModule = {
         
         const cards = cardEffectArgs.findCards([
           { location: ['kingdomSupply', 'basicSupply'] },
-          { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: cost }
+          {
+            kind: 'upTo',
+            playerId: cardEffectArgs.playerId,
+            amount: { treasure: cost.treasure + 3, potion: cost.potion }
+          }
         ]);
         
         if (!cards.length) {
-          console.log(`[graverobber effect] no cards in supply that cost <= ${cost.treasure}`);
+          console.log(`[graverobber effect] no cards in supply that cost <= ${cost.treasure + 3}`);
           return;
         }
         
@@ -1379,28 +1410,49 @@ const cardEffects: CardExpansionModule = {
   'hermit': {
     registerEffects: () => async (cardEffectArgs) => {
       const discard = cardEffectArgs.cardSourceController.getSource('playerDiscard', cardEffectArgs.playerId);
-      
-      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
-        prompt: 'Trash from discard?',
-        playerId: cardEffectArgs.playerId,
-        content: {
-          type: 'select',
-          cardIds: discard,
-          selectCount: {
-            kind: 'upTo',
-            count: 1
-          }
-        },
-        actionButtons: [{ label: 'HAND', action: 1 }]
-      }) as { action: number, result: number[] };
+      let nonTreasureCards = discard
+        .map(cardEffectArgs.cardLibrary.getCard)
+        .filter(card => !card.type.includes('TREASURE'));
       
       let selectedCard: Card | undefined = undefined;
-      if (result.action === 1) {
-        console.log(`[hermit effect] not trashing from discard, selecting card from hand`);
+      
+      if (discard.length > 0) {
+        const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+          prompt: 'Trash from discard?',
+          playerId: cardEffectArgs.playerId,
+          content: {
+            type: 'select',
+            cardIds: discard,
+            selectableCardIds: nonTreasureCards.map(card => card.id),
+            selectCount: 1
+          },
+          actionButtons: [{ label: 'GO TO HAND', action: 1 }]
+        }) as { action: number, result: number[] };
+        
+        if (result.action === 1) {
+          console.warn(`[hermit effect] no card selected from discard`);
+        }
+        else if (result.result.length > 0) {
+          selectedCard = cardEffectArgs.cardLibrary.getCard(result.result[0]);
+          console.log(`[hermit effect] selected ${selectedCard} from discard`);
+        }
+      }
+      else {
+        console.log(`[hermit effect] no cards in discard`);
+      }
+      
+      if (!selectedCard) {
+        console.log(`[hermit effect] selecting card from hand`);
+        
+        const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+        nonTreasureCards = hand
+          .map(cardEffectArgs.cardLibrary.getCard)
+          .filter(card => !card.type.includes('TREASURE'));
+        
         const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
           playerId: cardEffectArgs.playerId,
           prompt: `Trash card`,
-          restrict: cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId),
+          restrict: nonTreasureCards.map(card => card.id),
           count: 1,
           optional: true,
         }) as CardId[];
@@ -1412,14 +1464,9 @@ const cardEffects: CardExpansionModule = {
           selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
         }
       }
-      else {
-        const selectedCardId = result.result[0];
-        selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
-      }
       
       if (!selectedCard) {
-        console.log(`[hermit effect] no card selected`);
-        return;
+        console.log(`[hermit effect] no card selected to trash`);
       }
       else {
         console.log(`[hermit effect] trashing card ${selectedCard}`);
@@ -1472,7 +1519,7 @@ const cardEffects: CardExpansionModule = {
           if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') return false;
           if (getCurrentPlayer(conditionArgs.match).id !== cardEffectArgs.playerId) return false;
           
-          const cardIdsGained = conditionArgs.match.stats.cardsGainedByTurn[conditionArgs.match.turnNumber];
+          const cardIdsGained = conditionArgs.match.stats.cardsGainedByTurn[conditionArgs.match.turnNumber] ?? [];
           
           const cardIdsGainedDuringBuyPhase = cardIdsGained.filter(cardId => {
             const stats = conditionArgs.match.stats.cardsGained[cardId];
@@ -1675,6 +1722,26 @@ const cardEffects: CardExpansionModule = {
         playerId: cardEffectArgs.playerId,
         cardId: selectedCard.id,
       });
+    }
+  },
+  'madman': {
+    registerEffects: () => async (cardEffectArgs) => {
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
+      
+      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      
+      console.log(`[madman effect] moving ${thisCard} back to non supply`);
+      
+      const result = await cardEffectArgs.runGameActionDelegate('moveCard', {
+        cardId: thisCard.id,
+        to: { location: 'nonSupplyCards' }
+      });
+      
+      if (!!result) {
+        const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+        console.log(`[madman effect] drawing ${hand.length} cards`);
+        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: hand.length });
+      }
     }
   },
   'marauder': {
