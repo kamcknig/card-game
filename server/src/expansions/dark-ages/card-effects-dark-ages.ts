@@ -3,6 +3,7 @@ import { CardExpansionModule } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
+import { getPlayerById } from '../../utils/get-player-by-id.ts';
 
 const cardEffects: CardExpansionModule = {
   'abandoned-mine': {
@@ -1950,7 +1951,10 @@ const cardEffects: CardExpansionModule = {
         cardId: cardEffectArgs.cardId,
       });
       
-      const spoilsCards = cardEffectArgs.findCards({ kingdom: 'spoils' });
+      const spoilsCards = cardEffectArgs.findCards([
+        { location: 'nonSupplyCards' },
+        { kingdom: 'spoils' }
+      ]);
       
       if (!spoilsCards.length) {
         console.log(`[pillage effect] no spoils in supply`);
@@ -1990,7 +1994,7 @@ const cardEffects: CardExpansionModule = {
         }
         
         const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
-          prompt: 'Discard card',
+          prompt: `Discard card for ${getPlayerById(cardEffectArgs.match, targetPlayerId)?.name}`,
           playerId: cardEffectArgs.playerId,
           content: {
             type: 'select',
