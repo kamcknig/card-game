@@ -11,7 +11,7 @@ export const createCardData = (cardKey: string, expansionName: string, templateD
     ...templateData ?? {},
     cardName: templateData.cardName ?? capitalize(cardKey),
     kingdom: templateData.kingdom ?? cardKey,
-    randomizer: templateData.randomizer === null ? templateData.randomizer : cardKey
+    randomizer: templateData.randomizer !== undefined ? templateData.randomizer : cardKey
   }
   
   return data as CardNoId;

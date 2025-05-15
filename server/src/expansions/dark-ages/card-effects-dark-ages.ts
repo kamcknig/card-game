@@ -708,20 +708,20 @@ const cardEffects: CardExpansionModule = {
           let cardId = deck.slice(-1)[0];
           
           if (!cardId) {
-            console.log(`[dame-josephine effect] no cards in deck, shuffling`);
+            console.log(`[dame-baily effect] no cards in deck, shuffling`);
             await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: targetPlayerId });
             
             cardId = deck.slice(-1)[0];
             
             if (!cardId) {
-              console.log(`[dame-josephine effect] no cards in deck, skipping`);
+              console.log(`[dame-baily effect] no cards in deck, skipping`);
               continue;
             }
           }
           
           const card = cardEffectArgs.cardLibrary.getCard(cardId);
           
-          console.log(`[dame-josephine effect] revealing ${card}`);
+          console.log(`[dame-baily effect] revealing ${card}`);
           
           await cardEffectArgs.runGameActionDelegate('revealCard', {
             cardId: cardId,
@@ -755,15 +755,16 @@ const cardEffects: CardExpansionModule = {
           }) as { action: number, result: number[] };
           
           if (!result.result.length) {
-            console.warn(`[dame-josephine effect] no card selected`);
+            console.warn(`[dame-baily effect] no card selected`);
           }
           else {
             cardToTrash = cardEffectArgs.cardLibrary.getCard(result.result[0]);
+            cardsToDiscard.concat(cardsToTrash.filter(card => card.id !== cardToTrash!.id));
           }
         }
         
         if (cardToTrash) {
-          console.log(`[dame-josephine effect] trashing ${cardToTrash}`);
+          console.log(`[dame-baily effect] trashing ${cardToTrash}`);
           
           await cardEffectArgs.runGameActionDelegate('trashCard', {
             playerId: targetPlayerId,
@@ -771,19 +772,19 @@ const cardEffects: CardExpansionModule = {
           });
         }
         
-        console.log(`[dame-josephine effect] discarding ${cardsToDiscard.length} cards`);
+        console.log(`[dame-baily effect] discarding ${cardsToDiscard.length} cards`);
         
         for (const card of cardsToDiscard) {
           await cardEffectArgs.runGameActionDelegate('discardCard', {
             cardId: card.id,
-            playerId: cardEffectArgs.playerId
+            playerId: targetPlayerId
           });
         }
         
         if (cardToTrash && cardToTrash.type.includes('KNIGHT')) {
           const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
           
-          console.log(`[dame-josephine effect] trashing ${card}`);
+          console.log(`[dame-baily effect] trashing ${card}`);
           
           await cardEffectArgs.runGameActionDelegate('trashCard', {
             playerId: cardEffectArgs.playerId,
@@ -814,20 +815,20 @@ const cardEffects: CardExpansionModule = {
           let cardId = deck.slice(-1)[0];
           
           if (!cardId) {
-            console.log(`[dame-molly effect] no cards in deck, shuffling`);
+            console.log(`[dame-baily effect] no cards in deck, shuffling`);
             await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: targetPlayerId });
             
             cardId = deck.slice(-1)[0];
             
             if (!cardId) {
-              console.log(`[dame-molly effect] no cards in deck, skipping`);
+              console.log(`[dame-baily effect] no cards in deck, skipping`);
               continue;
             }
           }
           
           const card = cardEffectArgs.cardLibrary.getCard(cardId);
           
-          console.log(`[dame-molly effect] revealing ${card}`);
+          console.log(`[dame-baily effect] revealing ${card}`);
           
           await cardEffectArgs.runGameActionDelegate('revealCard', {
             cardId: cardId,
@@ -861,15 +862,16 @@ const cardEffects: CardExpansionModule = {
           }) as { action: number, result: number[] };
           
           if (!result.result.length) {
-            console.warn(`[dame-molly effect] no card selected`);
+            console.warn(`[dame-baily effect] no card selected`);
           }
           else {
             cardToTrash = cardEffectArgs.cardLibrary.getCard(result.result[0]);
+            cardsToDiscard.concat(cardsToTrash.filter(card => card.id !== cardToTrash!.id));
           }
         }
         
         if (cardToTrash) {
-          console.log(`[dame-molly effect] trashing ${cardToTrash}`);
+          console.log(`[dame-baily effect] trashing ${cardToTrash}`);
           
           await cardEffectArgs.runGameActionDelegate('trashCard', {
             playerId: targetPlayerId,
@@ -877,19 +879,19 @@ const cardEffects: CardExpansionModule = {
           });
         }
         
-        console.log(`[dame-josephine effect] discarding ${cardsToDiscard.length} cards`);
+        console.log(`[dame-baily effect] discarding ${cardsToDiscard.length} cards`);
         
         for (const card of cardsToDiscard) {
           await cardEffectArgs.runGameActionDelegate('discardCard', {
             cardId: card.id,
-            playerId: cardEffectArgs.playerId
+            playerId: targetPlayerId
           });
         }
         
         if (cardToTrash && cardToTrash.type.includes('KNIGHT')) {
           const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
           
-          console.log(`[dame-molly effect] trashing ${card}`);
+          console.log(`[dame-baily effect] trashing ${card}`);
           
           await cardEffectArgs.runGameActionDelegate('trashCard', {
             playerId: cardEffectArgs.playerId,
@@ -950,20 +952,20 @@ const cardEffects: CardExpansionModule = {
           let cardId = deck.slice(-1)[0];
           
           if (!cardId) {
-            console.log(`[dame-natalie effect] no cards in deck, shuffling`);
+            console.log(`[dame-baily effect] no cards in deck, shuffling`);
             await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: targetPlayerId });
             
             cardId = deck.slice(-1)[0];
             
             if (!cardId) {
-              console.log(`[dame-natalie effect] no cards in deck, skipping`);
+              console.log(`[dame-baily effect] no cards in deck, skipping`);
               continue;
             }
           }
           
           const card = cardEffectArgs.cardLibrary.getCard(cardId);
           
-          console.log(`[dame-natalie effect] revealing ${card}`);
+          console.log(`[dame-baily effect] revealing ${card}`);
           
           await cardEffectArgs.runGameActionDelegate('revealCard', {
             cardId: cardId,
@@ -997,15 +999,16 @@ const cardEffects: CardExpansionModule = {
           }) as { action: number, result: number[] };
           
           if (!result.result.length) {
-            console.warn(`[dame-natalie effect] no card selected`);
+            console.warn(`[dame-baily effect] no card selected`);
           }
           else {
             cardToTrash = cardEffectArgs.cardLibrary.getCard(result.result[0]);
+            cardsToDiscard.concat(cardsToTrash.filter(card => card.id !== cardToTrash!.id));
           }
         }
         
         if (cardToTrash) {
-          console.log(`[dame-natalie effect] trashing ${cardToTrash}`);
+          console.log(`[dame-baily effect] trashing ${cardToTrash}`);
           
           await cardEffectArgs.runGameActionDelegate('trashCard', {
             playerId: targetPlayerId,
@@ -1013,19 +1016,19 @@ const cardEffects: CardExpansionModule = {
           });
         }
         
-        console.log(`[dame-natalie effect] discarding ${cardsToDiscard.length} cards`);
+        console.log(`[dame-baily effect] discarding ${cardsToDiscard.length} cards`);
         
         for (const card of cardsToDiscard) {
           await cardEffectArgs.runGameActionDelegate('discardCard', {
             cardId: card.id,
-            playerId: cardEffectArgs.playerId
+            playerId: targetPlayerId
           });
         }
         
         if (cardToTrash && cardToTrash.type.includes('KNIGHT')) {
           const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
           
-          console.log(`[dame-natalie effect] trashing ${card}`);
+          console.log(`[dame-baily effect] trashing ${card}`);
           
           await cardEffectArgs.runGameActionDelegate('trashCard', {
             playerId: cardEffectArgs.playerId,
@@ -1056,20 +1059,20 @@ const cardEffects: CardExpansionModule = {
           let cardId = deck.slice(-1)[0];
           
           if (!cardId) {
-            console.log(`[dame-sylvia effect] no cards in deck, shuffling`);
+            console.log(`[dame-baily effect] no cards in deck, shuffling`);
             await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: targetPlayerId });
             
             cardId = deck.slice(-1)[0];
             
             if (!cardId) {
-              console.log(`[dame-sylvia effect] no cards in deck, skipping`);
+              console.log(`[dame-baily effect] no cards in deck, skipping`);
               continue;
             }
           }
           
           const card = cardEffectArgs.cardLibrary.getCard(cardId);
           
-          console.log(`[dame-sylvia effect] revealing ${card}`);
+          console.log(`[dame-baily effect] revealing ${card}`);
           
           await cardEffectArgs.runGameActionDelegate('revealCard', {
             cardId: cardId,
@@ -1103,15 +1106,16 @@ const cardEffects: CardExpansionModule = {
           }) as { action: number, result: number[] };
           
           if (!result.result.length) {
-            console.warn(`[dame-sylvia effect] no card selected`);
+            console.warn(`[dame-baily effect] no card selected`);
           }
           else {
             cardToTrash = cardEffectArgs.cardLibrary.getCard(result.result[0]);
+            cardsToDiscard.concat(cardsToTrash.filter(card => card.id !== cardToTrash!.id));
           }
         }
         
         if (cardToTrash) {
-          console.log(`[dame-sylvia effect] trashing ${cardToTrash}`);
+          console.log(`[dame-baily effect] trashing ${cardToTrash}`);
           
           await cardEffectArgs.runGameActionDelegate('trashCard', {
             playerId: targetPlayerId,
@@ -1119,19 +1123,19 @@ const cardEffects: CardExpansionModule = {
           });
         }
         
-        console.log(`[dame-sylvia effect] discarding ${cardsToDiscard.length} cards`);
+        console.log(`[dame-baily effect] discarding ${cardsToDiscard.length} cards`);
         
         for (const card of cardsToDiscard) {
           await cardEffectArgs.runGameActionDelegate('discardCard', {
             cardId: card.id,
-            playerId: cardEffectArgs.playerId
+            playerId: targetPlayerId
           });
         }
         
         if (cardToTrash && cardToTrash.type.includes('KNIGHT')) {
           const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
           
-          console.log(`[dame-sylvia effect] trashing ${card}`);
+          console.log(`[dame-baily effect] trashing ${card}`);
           
           await cardEffectArgs.runGameActionDelegate('trashCard', {
             playerId: cardEffectArgs.playerId,
@@ -2609,7 +2613,7 @@ const cardEffects: CardExpansionModule = {
       }
     }
   },
-  'sir-baily': {
+  'sir-bailey': {
     registerEffects: () => async (cardEffectArgs) => {
       await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.cardId });
       await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
@@ -2630,20 +2634,20 @@ const cardEffects: CardExpansionModule = {
           let cardId = deck.slice(-1)[0];
           
           if (!cardId) {
-            console.log(`[dame-baily effect] no cards in deck, shuffling`);
+            console.log(`[sir-bailey effect] no cards in deck, shuffling`);
             await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: targetPlayerId });
             
             cardId = deck.slice(-1)[0];
             
             if (!cardId) {
-              console.log(`[dame-baily effect] no cards in deck, skipping`);
+              console.log(`[sir-bailey effect] no cards in deck, skipping`);
               continue;
             }
           }
           
           const card = cardEffectArgs.cardLibrary.getCard(cardId);
           
-          console.log(`[dame-baily effect] revealing ${card}`);
+          console.log(`[sir-bailey effect] revealing ${card}`);
           
           await cardEffectArgs.runGameActionDelegate('revealCard', {
             cardId: cardId,
@@ -2677,15 +2681,16 @@ const cardEffects: CardExpansionModule = {
           }) as { action: number, result: number[] };
           
           if (!result.result.length) {
-            console.warn(`[dame-baily effect] no card selected`);
+            console.warn(`[sir-bailey effect] no card selected`);
           }
           else {
             cardToTrash = cardEffectArgs.cardLibrary.getCard(result.result[0]);
+            cardsToDiscard.concat(cardsToTrash.filter(card => card.id !== cardToTrash!.id));
           }
         }
         
         if (cardToTrash) {
-          console.log(`[dame-baily effect] trashing ${cardToTrash}`);
+          console.log(`[sir-bailey effect] trashing ${cardToTrash}`);
           
           await cardEffectArgs.runGameActionDelegate('trashCard', {
             playerId: targetPlayerId,
@@ -2693,19 +2698,19 @@ const cardEffects: CardExpansionModule = {
           });
         }
         
-        console.log(`[dame-baily effect] discarding ${cardsToDiscard.length} cards`);
+        console.log(`[sir-bailey effect] discarding ${cardsToDiscard.length} cards`);
         
         for (const card of cardsToDiscard) {
           await cardEffectArgs.runGameActionDelegate('discardCard', {
             cardId: card.id,
-            playerId: cardEffectArgs.playerId
+            playerId: targetPlayerId
           });
         }
         
         if (cardToTrash && cardToTrash.type.includes('KNIGHT')) {
           const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
           
-          console.log(`[dame-baily effect] trashing ${card}`);
+          console.log(`[sir-bailey effect] trashing ${card}`);
           
           await cardEffectArgs.runGameActionDelegate('trashCard', {
             playerId: cardEffectArgs.playerId,
@@ -2735,20 +2740,20 @@ const cardEffects: CardExpansionModule = {
           let cardId = deck.slice(-1)[0];
           
           if (!cardId) {
-            console.log(`[dame-destry effect] no cards in deck, shuffling`);
+            console.log(`[sir-destry effect] no cards in deck, shuffling`);
             await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: targetPlayerId });
             
             cardId = deck.slice(-1)[0];
             
             if (!cardId) {
-              console.log(`[dame-destry effect] no cards in deck, skipping`);
+              console.log(`[sir-destry effect] no cards in deck, skipping`);
               continue;
             }
           }
           
           const card = cardEffectArgs.cardLibrary.getCard(cardId);
           
-          console.log(`[dame-destry effect] revealing ${card}`);
+          console.log(`[sir-destry effect] revealing ${card}`);
           
           await cardEffectArgs.runGameActionDelegate('revealCard', {
             cardId: cardId,
@@ -2782,15 +2787,16 @@ const cardEffects: CardExpansionModule = {
           }) as { action: number, result: number[] };
           
           if (!result.result.length) {
-            console.warn(`[dame-destry effect] no card selected`);
+            console.warn(`[sir-destry effect] no card selected`);
           }
           else {
             cardToTrash = cardEffectArgs.cardLibrary.getCard(result.result[0]);
+            cardsToDiscard.concat(cardsToTrash.filter(card => card.id !== cardToTrash!.id));
           }
         }
         
         if (cardToTrash) {
-          console.log(`[dame-destry effect] trashing ${cardToTrash}`);
+          console.log(`[sir-destry effect] trashing ${cardToTrash}`);
           
           await cardEffectArgs.runGameActionDelegate('trashCard', {
             playerId: targetPlayerId,
@@ -2798,19 +2804,19 @@ const cardEffects: CardExpansionModule = {
           });
         }
         
-        console.log(`[dame-destry effect] discarding ${cardsToDiscard.length} cards`);
+        console.log(`[sir-destry effect] discarding ${cardsToDiscard.length} cards`);
         
         for (const card of cardsToDiscard) {
           await cardEffectArgs.runGameActionDelegate('discardCard', {
             cardId: card.id,
-            playerId: cardEffectArgs.playerId
+            playerId: targetPlayerId
           });
         }
         
         if (cardToTrash && cardToTrash.type.includes('KNIGHT')) {
           const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
           
-          console.log(`[dame-destry effect] trashing ${card}`);
+          console.log(`[sir-destry effect] trashing ${card}`);
           
           await cardEffectArgs.runGameActionDelegate('trashCard', {
             playerId: cardEffectArgs.playerId,
@@ -2840,20 +2846,20 @@ const cardEffects: CardExpansionModule = {
           let cardId = deck.slice(-1)[0];
           
           if (!cardId) {
-            console.log(`[dame-martin effect] no cards in deck, shuffling`);
+            console.log(`[sir-martin effect] no cards in deck, shuffling`);
             await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: targetPlayerId });
             
             cardId = deck.slice(-1)[0];
             
             if (!cardId) {
-              console.log(`[dame-martin effect] no cards in deck, skipping`);
+              console.log(`[sir-martin effect] no cards in deck, skipping`);
               continue;
             }
           }
           
           const card = cardEffectArgs.cardLibrary.getCard(cardId);
           
-          console.log(`[dame-martin effect] revealing ${card}`);
+          console.log(`[sir-martin effect] revealing ${card}`);
           
           await cardEffectArgs.runGameActionDelegate('revealCard', {
             cardId: cardId,
@@ -2887,15 +2893,16 @@ const cardEffects: CardExpansionModule = {
           }) as { action: number, result: number[] };
           
           if (!result.result.length) {
-            console.warn(`[dame-martin effect] no card selected`);
+            console.warn(`[sir-martin effect] no card selected`);
           }
           else {
             cardToTrash = cardEffectArgs.cardLibrary.getCard(result.result[0]);
+            cardsToDiscard.concat(cardsToTrash.filter(card => card.id !== cardToTrash!.id));
           }
         }
         
         if (cardToTrash) {
-          console.log(`[dame-martin effect] trashing ${cardToTrash}`);
+          console.log(`[sir-martin effect] trashing ${cardToTrash}`);
           
           await cardEffectArgs.runGameActionDelegate('trashCard', {
             playerId: targetPlayerId,
@@ -2903,19 +2910,19 @@ const cardEffects: CardExpansionModule = {
           });
         }
         
-        console.log(`[dame-martin effect] discarding ${cardsToDiscard.length} cards`);
+        console.log(`[sir-martin effect] discarding ${cardsToDiscard.length} cards`);
         
         for (const card of cardsToDiscard) {
           await cardEffectArgs.runGameActionDelegate('discardCard', {
             cardId: card.id,
-            playerId: cardEffectArgs.playerId
+            playerId: targetPlayerId
           });
         }
         
         if (cardToTrash && cardToTrash.type.includes('KNIGHT')) {
           const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
           
-          console.log(`[dame-martin effect] trashing ${card}`);
+          console.log(`[sir-martin effect] trashing ${card}`);
           
           await cardEffectArgs.runGameActionDelegate('trashCard', {
             playerId: cardEffectArgs.playerId,
@@ -2942,13 +2949,24 @@ const cardEffects: CardExpansionModule = {
           numToDiscard = hand.length - 3;
         }
         
-        console.log(`[dame-michael effect] player ${targetPlayerId} discarding ${numToDiscard} cards`);
+        console.log(`[sir-michael effect] player ${targetPlayerId} discarding ${numToDiscard} cards`);
         
-        for (let i = 0; i < numToDiscard; i++) {
-          await cardEffectArgs.runGameActionDelegate('discardCard', {
-            cardId: hand.slice(-1)[0],
-            playerId: targetPlayerId
-          });
+        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: targetPlayerId,
+          prompt: `Discard to 3`,
+          restrict: hand,
+          count: numToDiscard,
+        }) as CardId[];
+        
+        if (!selectedCardIds.length) {
+          console.warn(`[sir-michael effect] no cards selected`);
+          continue;
+        }
+        
+        console.log(`[sir-michael effect] player ${targetPlayerId} discarding ${selectedCardIds.length} cards`);
+        
+        for (const selectedCardId of selectedCardIds) {
+          await cardEffectArgs.runGameActionDelegate('discardCard', { playerId: targetPlayerId, cardId: selectedCardId });
         }
       }
       
@@ -2962,20 +2980,20 @@ const cardEffects: CardExpansionModule = {
           let cardId = deck.slice(-1)[0];
           
           if (!cardId) {
-            console.log(`[dame-vander effect] no cards in deck, shuffling`);
+            console.log(`[sir-vander effect] no cards in deck, shuffling`);
             await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: targetPlayerId });
             
             cardId = deck.slice(-1)[0];
             
             if (!cardId) {
-              console.log(`[dame-vander effect] no cards in deck, skipping`);
+              console.log(`[sir-vander effect] no cards in deck, skipping`);
               continue;
             }
           }
           
           const card = cardEffectArgs.cardLibrary.getCard(cardId);
           
-          console.log(`[dame-vander effect] revealing ${card}`);
+          console.log(`[sir-vander effect] revealing ${card}`);
           
           await cardEffectArgs.runGameActionDelegate('revealCard', {
             cardId: cardId,
@@ -3009,15 +3027,16 @@ const cardEffects: CardExpansionModule = {
           }) as { action: number, result: number[] };
           
           if (!result.result.length) {
-            console.warn(`[dame-vander effect] no card selected`);
+            console.warn(`[sir-vander effect] no card selected`);
           }
           else {
             cardToTrash = cardEffectArgs.cardLibrary.getCard(result.result[0]);
+            cardsToDiscard.concat(cardsToTrash.filter(card => card.id !== cardToTrash!.id));
           }
         }
         
         if (cardToTrash) {
-          console.log(`[dame-vander effect] trashing ${cardToTrash}`);
+          console.log(`[sir-vander effect] trashing ${cardToTrash}`);
           
           await cardEffectArgs.runGameActionDelegate('trashCard', {
             playerId: targetPlayerId,
@@ -3025,7 +3044,7 @@ const cardEffects: CardExpansionModule = {
           });
         }
         
-        console.log(`[dame-vander effect] discarding ${cardsToDiscard.length} cards`);
+        console.log(`[sir-vander effect] discarding ${cardsToDiscard.length} cards`);
         
         for (const card of cardsToDiscard) {
           await cardEffectArgs.runGameActionDelegate('discardCard', {
@@ -3037,7 +3056,7 @@ const cardEffects: CardExpansionModule = {
         if (cardToTrash && cardToTrash.type.includes('KNIGHT')) {
           const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
           
-          console.log(`[dame-vander effect] trashing ${card}`);
+          console.log(`[sir-vander effect] trashing ${card}`);
           
           await cardEffectArgs.runGameActionDelegate('trashCard', {
             playerId: cardEffectArgs.playerId,
@@ -3091,20 +3110,20 @@ const cardEffects: CardExpansionModule = {
           let cardId = deck.slice(-1)[0];
           
           if (!cardId) {
-            console.log(`[dame-vander effect] no cards in deck, shuffling`);
+            console.log(`[sir-vander effect] no cards in deck, shuffling`);
             await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: targetPlayerId });
             
             cardId = deck.slice(-1)[0];
             
             if (!cardId) {
-              console.log(`[dame-vander effect] no cards in deck, skipping`);
+              console.log(`[sir-vander effect] no cards in deck, skipping`);
               continue;
             }
           }
           
           const card = cardEffectArgs.cardLibrary.getCard(cardId);
           
-          console.log(`[dame-vander effect] revealing ${card}`);
+          console.log(`[sir-vander effect] revealing ${card}`);
           
           await cardEffectArgs.runGameActionDelegate('revealCard', {
             cardId: cardId,
@@ -3138,15 +3157,16 @@ const cardEffects: CardExpansionModule = {
           }) as { action: number, result: number[] };
           
           if (!result.result.length) {
-            console.warn(`[dame-vander effect] no card selected`);
+            console.warn(`[sir-vander effect] no card selected`);
           }
           else {
             cardToTrash = cardEffectArgs.cardLibrary.getCard(result.result[0]);
+            cardsToDiscard.concat(cardsToTrash.filter(card => card.id !== cardToTrash!.id));
           }
         }
         
         if (cardToTrash) {
-          console.log(`[dame-vander effect] trashing ${cardToTrash}`);
+          console.log(`[sir-vander effect] trashing ${cardToTrash}`);
           
           await cardEffectArgs.runGameActionDelegate('trashCard', {
             playerId: targetPlayerId,
@@ -3154,19 +3174,19 @@ const cardEffects: CardExpansionModule = {
           });
         }
         
-        console.log(`[dame-vander effect] discarding ${cardsToDiscard.length} cards`);
+        console.log(`[sir-vander effect] discarding ${cardsToDiscard.length} cards`);
         
         for (const card of cardsToDiscard) {
           await cardEffectArgs.runGameActionDelegate('discardCard', {
             cardId: card.id,
-            playerId: cardEffectArgs.playerId
+            playerId: targetPlayerId
           });
         }
         
         if (cardToTrash && cardToTrash.type.includes('KNIGHT')) {
           const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
           
-          console.log(`[dame-vander effect] trashing ${card}`);
+          console.log(`[sir-vander effect] trashing ${card}`);
           
           await cardEffectArgs.runGameActionDelegate('trashCard', {
             playerId: cardEffectArgs.playerId,

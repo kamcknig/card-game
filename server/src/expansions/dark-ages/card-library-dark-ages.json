@@ -386,7 +386,7 @@
       "ACTION"
     ]
   },
-  "sir-baily": {
+  "sir-bailey": {
     "cardName": "Sir Bailey",
     "cost": {
       "treasure": 5
@@ -394,7 +394,7 @@
     "type": ["ACTION", "ATTACK", "KNIGHT"],
     "randomizer": "knights"
   },
-  "sir-Destry": {
+  "sir-destry": {
     "cardName": "Sir Destry",
     "cost": {
       "treasure": 5
