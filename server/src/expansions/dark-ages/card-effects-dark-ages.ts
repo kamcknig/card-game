@@ -1258,7 +1258,7 @@ const cardEffects: CardExpansionModule = {
         cardId: selectedCard.id,
       });
       
-      const trash = cardEffectArgs.cardSourceController.getSource('trash', cardEffectArgs.playerId);
+      const trash = cardEffectArgs.cardSourceController.getSource('trash');
       const uniqueTreasuresInTrash = new Set(
         trash.map(cardEffectArgs.cardLibrary.getCard)
           .filter(card => card.type.includes('TREASURE'))
