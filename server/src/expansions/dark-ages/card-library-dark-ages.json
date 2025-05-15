@@ -204,7 +204,7 @@
       "ACTION"
     ]
   },
-  "iron-monger": {
+  "ironmonger": {
     "cardName": "Iron Monger",
     "cost": {
       "treasure": 4

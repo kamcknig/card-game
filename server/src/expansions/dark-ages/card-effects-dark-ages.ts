@@ -1607,8 +1607,9 @@ const cardEffects: CardExpansionModule = {
           ],
         }) as { action: number, result: number[] };
         
-        let cards: Card[] = [];
-        let numToGain = 0;
+        let cards: Card[];
+        let numToGain: number;
+        
         if (result.action === 1) {
           cards = args.findCards([
             { location: 'basicSupply' },
@@ -1630,10 +1631,10 @@ const cardEffects: CardExpansionModule = {
         
         console.log(`[hunting-grounds onTrashed effect] gaining ${numToGain} ${result.action === 1 ? 'duchy' : 'estate'}`);
         
-        for (const card of cards) {
+        for (let i = 0; i < numToGain; i++) {
           await args.runGameActionDelegate('gainCard', {
             playerId: eventArgs.playerId,
-            cardId: card.id,
+            cardId: cards.slice(-1)[0].id,
             to: { location: 'playerDiscard' }
           });
         }
@@ -1672,6 +1673,32 @@ const cardEffects: CardExpansionModule = {
         moveToSetAside: true
       });
       
+      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        prompt: `Discard ${card.cardName}?`,
+        playerId: cardEffectArgs.playerId,
+        actionButtons: [
+          { label: 'CANCEL', action: 1 },
+          { label: 'DISCARD', action: 2 }
+        ],
+      }) as { action: number, result: number[] };
+      
+      if (result.action === 1) {
+        console.log(`[ironmonger effect] not discarding, moving ${card} back to deck`);
+        
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
+          cardId: card.id,
+          toPlayerId: cardEffectArgs.playerId,
+          to: { location: 'playerDeck' }
+        });
+      }
+      else {
+        console.log(`[ironmonger effect] discarding ${card}`);
+        await cardEffectArgs.runGameActionDelegate('discardCard', {
+          cardId: card.id,
+          playerId: cardEffectArgs.playerId
+        });
+      }
+      
       if (card.type.includes('ACTION')) {
         console.log(`[ironmonger effect] card is action type, gaining 1 action`);
         await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
@@ -1686,13 +1713,6 @@ const cardEffects: CardExpansionModule = {
         console.log(`[ironmonger effect] card is a victory card, gaining 1 victory point`);
         await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
       }
-      
-      console.log(`[ironmonger effect] moving revealed ${card} back to deck`);
-      await cardEffectArgs.runGameActionDelegate('moveCard', {
-        cardId: card.id,
-        toPlayerId: cardEffectArgs.playerId,
-        to: { location: 'playerDeck' }
-      });
     }
   },
   'junk-dealer': {
@@ -1737,10 +1757,13 @@ const cardEffects: CardExpansionModule = {
         to: { location: 'nonSupplyCards' }
       });
       
-      if (!!result) {
+      if (result) {
         const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
         console.log(`[madman effect] drawing ${hand.length} cards`);
-        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: hand.length });
+        await cardEffectArgs.runGameActionDelegate('drawCard', {
+          playerId: cardEffectArgs.playerId,
+          count: hand.length
+        });
       }
     }
   },
