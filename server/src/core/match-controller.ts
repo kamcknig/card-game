@@ -59,7 +59,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private readonly _cardSourceController: CardSourceController;
   
   private _playerHands: Record<CardKey, number>[] = [
-    {
+    /*{
       gold: 4,
       silver: 3,
       estate: 3,
@@ -68,7 +68,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       gold: 4,
       silver: 3,
       estate: 3,
-    },
+    },*/
   ];
   
   constructor(
@@ -312,7 +312,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     return Object.values(config.players).forEach((player, idx) => {
       console.log('initializing player', player.id, 'cards...');
       
-      let playerStartHand = this._playerHands.length > 0 ? this._playerHands[idx] : MatchBaseConfiguration.playerStartingHand as Record<string, number>;
+      let playerStartHand = this._playerHands.length > 0 ? this._playerHands[idx] : config.playerStartingHand as Record<string, number>;
       playerStartHand ??= MatchBaseConfiguration.playerStartingHand;
       console.log(`[match] using player starting hand`);
       console.log(Object.keys(playerStartHand).map((key) => `${key}: ${playerStartHand[key]}`).join(', '))

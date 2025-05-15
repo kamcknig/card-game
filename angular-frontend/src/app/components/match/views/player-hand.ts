@@ -123,16 +123,19 @@ export class PlayerHandView extends Container {
     const cardsById = cardStore.get();
 
     // first reduce the cards by card type, actions, then treasures, then victory cards
-    const categoryMap: Record<string, number> = { ACTION: 0, TREASURE: 1, VICTORY: 2 };
+    const categoryMap: Record<string, number> = { ACTION: 0, REACTION: 1, TREASURE: 2, VICTORY: 3, OTHER: 4 };
     const categorized = hand.reduce(
       (acc, cardId) => {
         const category = Object.keys(categoryMap).find(type => cardsById[cardId].type.includes(type as CardType));
         if (category) {
           acc[categoryMap[category]].push(cardsById[cardId]);
         }
+        else {
+          acc[4].push(cardsById[cardId]);
+        }
         return acc;
       },
-      [[], [], []] as Card[][]
+      [[], [], [], [], []] as Card[][]
     );
 
     // now sort within each type. actions by name, treasure and victory by predefined rankings,
@@ -152,7 +155,8 @@ export class PlayerHandView extends Container {
 
     const sortedCards = [
       categorized[0].sort((a, b) => a.cardName.localeCompare(b.cardName)), // actions ordered by name
-      categorized[1].sort((a, b) => {
+      categorized[1].sort((a, b) => a.cardName.localeCompare(b.cardName)), // reactions ordered by name
+      categorized[2].sort((a, b) => {
         const aRank = treasureOrderRanking[a.cardKey] ?? Infinity;
         const bRank = treasureOrderRanking[b.cardKey] ?? Infinity;
 
@@ -162,7 +166,7 @@ export class PlayerHandView extends Container {
 
         return a.cardName.localeCompare(b.cardName);
       }),
-      categorized[2].sort((a, b) => {
+      categorized[3].sort((a, b) => {
         const aRank = victoryOrderRanking[a.cardKey] ?? Infinity;
         const bRank = victoryOrderRanking[b.cardKey] ?? Infinity;
 
@@ -171,7 +175,8 @@ export class PlayerHandView extends Container {
         }
 
         return a.cardName.localeCompare(b.cardName); // sort unknown victories alphabetically
-      })
+      }),
+      categorized[4].sort((a, b) => a.cardName.localeCompare(b.cardName))
     ].flat();
 
     const cardStackCards = Object.values(
