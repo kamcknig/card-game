@@ -1455,7 +1455,7 @@ const expansion: CardExpansionModule = {
   'wheelwright': {
     registerEffects: () => async (cardEffectArgs) => {
       await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
       
       const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
       

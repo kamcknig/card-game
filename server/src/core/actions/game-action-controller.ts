@@ -350,7 +350,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   }
   
   async trashCard(args: { cardId: CardId | Card, playerId: PlayerId }, context?: GameActionContext) {
-    await this.moveCard({
+    const oldLocation = await this.moveCard({
       cardId: args.cardId,
       to: { location: 'trash' }
     });
@@ -381,7 +381,8 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     await this.reactionManager.runCardLifecycleEvent('onTrashed', {
       cardId: cardId,
-      playerId: args.playerId
+      playerId: args.playerId,
+      previousLocation: oldLocation
     });
     
     this.logManager.addLogEntry({
@@ -557,6 +558,12 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     this.logManager.enter();
     await this.reactionManager.runTrigger({ trigger: r });
     this.logManager.exit();
+    
+    await this.reactionManager.runCardLifecycleEvent('onDiscarded', {
+      cardId: cardId,
+      playerId: args.playerId,
+      previousLocation: oldLocation
+    });
   }
   
   async nextPhase() {

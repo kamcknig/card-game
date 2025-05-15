@@ -501,8 +501,8 @@ export interface CardLifecycleCallbackMap {
 
 export interface CardLifecycleEventArgMap {
   onGained: { playerId: PlayerId, cardId: CardId, bought: boolean; };
-  onTrashed: { playerId: PlayerId, cardId: CardId };
-  onDiscarded: { playerId: PlayerId, cardId: CardId };
+  onTrashed: { playerId: PlayerId, cardId: CardId, previousLocation?: { location: CardLocation; playerId?: PlayerId; } };
+  onDiscarded: { playerId: PlayerId, cardId: CardId, previousLocation?: { location: CardLocation; playerId?: PlayerId; } };
   onEnterHand: { playerId: PlayerId, cardId: CardId };
   onLeaveHand: { playerId: PlayerId, cardId: CardId };
   onEnterPlay: { playerId: PlayerId, cardId: CardId };
