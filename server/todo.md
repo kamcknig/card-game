@@ -52,6 +52,73 @@ the start of next turn, and then they'll be in play and will be discarded. and t
 can be checked by seeing if they are in the play area on the turn they were played or not
 
 update knights. i used that stupid randomizer. but there is a knights "card" on the dominion wiki. you can still
-use randomizer null to remove cards like the individual knights, but then the configurator can check for that
-"knights" in thbe config, no need for all the randomizer checks - or the if in the match configurator when creating those
-new cards
+use randomizer null to remove cards like the individual knights. then you can add a "dummy" "knights" card to the 
+library json. when this card is picked the expansion configurator can check for that kingdom in the config and replace
+it with the individual knight. this will remove the need for the randomizer other than removing cards from it.
+
+## Features for Adventures expansion
+
+### Tokens
+
+Coffers are tokens though I think they are a little different than the tokens added in this expansion.
+
+The tokens added here are things like the "+1 action token", "+1 treasure token", etc. 
+
+Token locations can include
+- action supply piles e.g., +1 action token, -2 cost token, etc.
+- player decks e.g., -1 card token
+- in front of player e.g., -1 coin token
+- "global" e.g., journey token
+- even more e.g., the inheritance event - putting aside a card and the token being "on the card"
+
+Token durations can include
+- happening one time e.g., -1 coin token
+- permanent/semi-permanent e.g., +1 action token
+
+### Events
+
+Events are "on-buy" effects. They are _not_ cards. Any reference to "cards" such as reducing prices does not apply
+to events.
+
+They can be bought during a player's buy phase and cost 1 buy. they can be purchased multiple times in the same
+turn by the same player. They count towards the buy rule in that once a buy happens, no further treasures may be played.
+because it's not a card, it doesn't trigger effects like haggler (buying a card).
+
+One way to randomize including them in a game is to add them to the randomization process. And once you hit the 10
+kingdoms, any that had been chosen up to that point will be included. some recommend not including more than 2 total
+in a match - this actually includes landmarks, projects, ways, and traits which aren't developed yet. 
+
+ I think i'll have a checkbox to "use random" to include them or not. if unchecked, use any hardcoded ones by the
+configuration, if checked then if preselected ones are less than 2, then in match configurator when getting available
+kingdoms, also get available events based on the expansions being used and use the above mentioned process.
+
+### Reserve card type
+
+A new card type
+
+when played, they are put onto the tavern mat (a new mat)
+
+then they will have a trigger to "call" them back for additional effects
+
+calling back is to put them into play. this does not count as "playing" them. for triggering effects. however, they are
+now considered in play. calling does not cost an action. you can call a card even if doing so would have no effect
+
+they are discarded during clean up normally on the turn they are called - when they are in play
+
+cards on the tavern mat are included in scoring at end of game
+
+one rule "quirk" - if you play the reserve card at the start of turn via something like way of the turtle (not yet
+developed), then you can also immediately react to that start of turn event to call it
+
+### Traveller card type
+
+A new card type
+
+This is a card type that when discarded from play can be exchanged for other cards that are not in the supply. It cannot
+happen if the card to exchange for is not in the supply
+
+and exchanged card is not considered gained, nor is the card returned considered trashed. - so maybe a new stats block?
+
+The traveller cards included in this expansion anyway will need something similar to using the randomizer. If the base
+traveller card is picked then the other cards available for it to be upgraded are then included in the non-supply
+kingdoms.
