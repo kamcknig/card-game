@@ -766,10 +766,12 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
     const cardId = card.id;
     
-    await this.moveCard({
-      cardId: cardId,
-      to: { location: 'playArea' },
-    });
+    if (args.overrides?.moveCard === undefined || args.overrides.moveCard) {
+      await this.moveCard({
+        cardId: cardId,
+        to: { location: 'playArea' },
+      });
+    }
     
     if (card.type.includes('ACTION') && args.overrides?.actionCost !== 0) {
       this.match.playerActions -= args.overrides?.actionCost ?? 1;

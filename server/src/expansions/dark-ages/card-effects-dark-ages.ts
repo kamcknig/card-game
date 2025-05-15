@@ -85,7 +85,7 @@ const cardEffects: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('gainCard', {
         playerId: cardEffectArgs.playerId,
         cardId: selectedCard.id,
-        to: { location: 'playerDiscard' }
+        to: { location: 'playerDeck' }
       });
     }
   },
@@ -131,6 +131,24 @@ const cardEffects: CardExpansionModule = {
       console.log(`[bandit camp effect] drawing 1 card and gaining 2 actions`);
       await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
       await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
+      
+      const spoilsCards = cardEffectArgs.findCards([
+        { location: 'nonSupplyCards' },
+        { kingdom: 'spoils' }
+      ]);
+      
+      if (!spoilsCards.length) {
+        console.log(`[bandit camp effect] no spoils cards in non-supply`);
+        return;
+      }
+      
+      console.log(`[bandit camp effect] gaining ${spoilsCards.slice(-1)[0]}`);
+      
+      await cardEffectArgs.runGameActionDelegate('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: spoilsCards.slice(-1)[0].id,
+        to: { location: 'playerDiscard' }
+      });
     }
   },
   'beggar': {

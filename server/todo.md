@@ -30,6 +30,8 @@ library json files? and those that are like that will define a kingdom - that ki
 have the randomizer property now used for selecting the randomized kingdoms that might be in that situation. maybe just
 change that to kingdom. and null stays meaning it can't be chosen like rewards, not defined would use the card key,
 and defined would use the defined value
+- when "waiting on player input" displays, cards ar eselectable. i played warchest, and while waiting on someone to name
+cards, it showed highlights on cards. don't know if they were seleced
 
 need to show the context of the kingdom card for something like young witch, and ferryman
 - dominion.games puts the word "bane" in the type area of the card (but only while it's in the supply)
@@ -44,3 +46,34 @@ the start of next turn, and then they'll be in play and will be discarded. and t
 can be checked by seeing if they are in the play area on the turn they were played or not
 
 
+beggar
+catacombs
+count
+counterfeit
+cultist
+death cart
+feodum
+forager
+fortress
+graverobber
+hermit
+hunting grounds
+ironmonger
+junk dealer
+knights
+marauder
+market square
+mystic
+pillage
+poor house
+procession
+rats
+rebuild
+rogue
+sage
+scavenger
+squire
+storeroom
+urchin
+vagrant
+wandering minstrel
