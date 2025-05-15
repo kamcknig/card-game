@@ -2145,6 +2145,16 @@ const cardEffects: CardExpansionModule = {
         console.log(`[rats effect] no rats in supply to gain`);
       }
       
+      const ratCard = ratCards.slice(-1)[0];
+      
+      console.log(`[rats effect] gaining card ${ratCard}`);
+      
+      await cardEffectArgs.runGameActionDelegate('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: ratCard.id,
+        to: { location: 'playerDiscard' }
+      });
+      
       const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
       
       const nonRatCardsInHand = hand
