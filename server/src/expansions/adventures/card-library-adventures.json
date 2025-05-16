@@ -34,5 +34,12 @@
       "treasure": 5
     },
     "type": ["ACTION", "DURATION", "ATTACK"]
+  },
+  "lost-city": {
+    "cardName": "Lost City",
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"]
   }
 }

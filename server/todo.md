@@ -11,6 +11,9 @@ the UI for this yet, and doesn't seem super important to get done right away
 - create some sort of "card picking" function or class. The match configurator has an algorithm to get
 available cards to choose to add to the kingdom. expansion configurators do this too such as the Ferryman card, or the
 Young Witch. They need ways to uniformly get available kingdoms.
+- cards like throne room and disciple when making cards play multiple time need to stay in play as long as the
+card they played stays in play. so if you throne room a duration, it would say until the duration was gone. same with
+other cards that do the same like band of misfits
 
 
 # Higher priority
@@ -130,3 +133,5 @@ skipped
 - duplicate
 - giant
 - guide
+- hireling
+- 

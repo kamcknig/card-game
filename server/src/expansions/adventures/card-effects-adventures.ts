@@ -1,5 +1,6 @@
 import { CardId } from 'shared/shared-types.ts';
 import { CardExpansionModule } from '../../types.ts';
+import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 
 const expansion: CardExpansionModule = {
   'amulet': {
@@ -411,6 +412,26 @@ const expansion: CardExpansionModule = {
           await triggeredArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
         }
       })
+    }
+  },
+  'lost-city': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (args, eventArgs) => {
+        const targetPlayerIds = findOrderedTargets({
+          match: args.match,
+          appliesTo: 'ALL_OTHER',
+          startingPlayerId: eventArgs.playerId
+        });
+        
+        for (const targetPlayerId of targetPlayerIds) {
+          console.log(`[lost-city onGained effect] ${targetPlayerId} drawing 1 card`);
+          await args.runGameActionDelegate('drawCard', { playerId: targetPlayerId });
+        }
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
     }
   },
 }
