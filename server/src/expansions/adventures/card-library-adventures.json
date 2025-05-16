@@ -12,6 +12,7 @@
     "type": ["ACTION"]
   },
   "caravan-guard": {
+    "cardName": "Caravan Guard",
     "cost": {
       "treasure": 3
     },
@@ -30,6 +31,7 @@
     "type": ["ACTION", "DURATION"]
   },
   "haunted-woods": {
+    "cardName": "Haunted Woods",
     "cost": {
       "treasure": 5
     },
@@ -67,6 +69,7 @@
     "type": ["ACTION"]
   },
   "treasure-trove": {
+    "cardName": "Treasure Trove",
     "cost": {
       "treasure": 5
     },
