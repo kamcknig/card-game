@@ -108,23 +108,18 @@ export const MatchBaseConfiguration = {
   },
 } as const;
 
+export interface LifecycleSuppression {
+  events?: CardLifecycleEvent[];
+}
+
 export type GameActionContext = {
-  loggingContext: {
+  loggingContext?: {
     source: CardId
   };
-};
-
-export type ModifyActionCardArgs = {
-  appliesTo: EffectTarget;
-  expiresAt: 'TURN_END';
-  appliesToCard: EffectTarget;
-  amount: number;
+  suppressLifeCycle?: LifecycleSuppression;
 };
 
 export interface BaseGameActionDefinitionMap {
-  gainVictoryToken: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
-  gainCoffer: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
-  exchangeCoffer: (args: { playerId: PlayerId; count: number; }) => Promise<void>;
   buyCard: (args: {
     cardId: CardId | Card;
     playerId: PlayerId,
@@ -132,11 +127,13 @@ export interface BaseGameActionDefinitionMap {
     overpay?: { inTreasure: number; inCoffer: number; }
   }) => Promise<void>;
   checkForRemainingPlayerActions: () => Promise<void>;
+  exchangeCoffer: (args: { playerId: PlayerId; count: number; }) => Promise<void>;
   discardCard: (args: { cardId: CardId | Card, playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
   drawCard: (args: { playerId: PlayerId, count?: number }, context?: GameActionContext) => Promise<CardId[] | null>
   endTurn: () => Promise<void>;
   gainAction: (args: { count: number }, context?: GameActionContext) => Promise<void>;
   gainBuy: (args: { count: number }, context?: GameActionContext) => Promise<void>;
+  gainCoffer: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
   gainCard: (args: {
     playerId: PlayerId,
     cardId: CardId | Card,
@@ -144,6 +141,7 @@ export interface BaseGameActionDefinitionMap {
   }, context?: GameActionContext & { bought?: boolean, overpay?: number }) => Promise<void>;
   gainPotion: (args: { count: number }) => Promise<void>;
   gainTreasure: (args: { count: number }, context?: GameActionContext) => Promise<void>;
+  gainVictoryToken: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
   moveCard: (args: {
     toPlayerId?: PlayerId,
     cardId: CardId | Card,

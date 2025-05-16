@@ -134,4 +134,7 @@ skipped
 - giant
 - guide
 - hireling
+- miser
+- page
+- peasant
 - 

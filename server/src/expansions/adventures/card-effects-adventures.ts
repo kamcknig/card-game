@@ -589,6 +589,36 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'port': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (args, eventArgs) => {
+        const portCards = args.findCards([
+          { location: 'kingdomSupply' },
+          { cardKeys: 'port' }
+        ]);
+        
+        if (!portCards.length) {
+          console.log(`[port onGained effect] no port cards in supply`);
+          return;
+        }
+        
+        const portToGain = portCards.slice(-1)[0];
+        
+        console.log(`[port onGained effect] gaining ${portToGain}`);
+        
+        await args.runGameActionDelegate('gainCard', {
+          playerId: eventArgs.playerId,
+          cardId: portToGain.id,
+          to: { location: 'playerDiscard' }
+        }, { suppressLifeCycle: { events: ['onGained'] } });
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[port effect] drawing 1 card, gaining 2 action`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
+    }
+  },
 }
 
 export default expansion;

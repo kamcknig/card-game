@@ -215,11 +215,21 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     await this.reactionManager.runTrigger({ trigger });
     this.logManager.exit();
     
-    await this.reactionManager.runCardLifecycleEvent('onGained', {
-      playerId: args.playerId,
-      cardId: cardId,
-      bought: context?.bought ?? false
-    });
+    const suppress = context?.suppressLifecycle;
+    const skipOnGain =
+      suppress &&
+      (suppress.events?.includes('onGained') || suppress.events === undefined);
+    
+    if (!skipOnGain) {
+      await this.reactionManager.runCardLifecycleEvent('onGained', {
+        playerId: args.playerId,
+        cardId,
+        bought: context?.bought ?? false
+      });
+    }
+    else {
+      console.log('[gainCard action] lifecycle onGained event suppressed');
+    }
     
     await this.reactionManager.runGameLifecycleEvent('onCardGained', {
       cardId: cardId,
