@@ -781,7 +781,58 @@ const expansion: CardExpansionModule = {
       
       console.log(`[storyteller effect] drawing ${playerTreasure} cards`);
       
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: playerTreasure });
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: playerTreasure
+      });
+    }
+  },
+  'treasure-trove': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[treasure-trove effect] gaining 2 treasure`);
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+      
+      const goldAndCopperCards = cardEffectArgs.findCards([
+        { location: 'basicSupply' },
+        { cardKeys: ['gold', 'copper'] }
+      ]);
+      
+      const [goldCards, copperCards] = goldAndCopperCards.reduce((acc, nextCard) => {
+        if (nextCard.cardKey === 'gold') {
+          acc[0].push(nextCard);
+        }
+        else {
+          acc[1].push(nextCard);
+        }
+        return acc;
+      }, [[], []] as Card[][]);
+      
+      if (!goldCards.length) {
+        console.log(`[treasure-trove effect] no gold cards in supply`);
+      }
+      else {
+        const goldCardToGain = goldCards.slice(-1)[0];
+        console.log(`[treasure-trove effect] gaining ${goldCardToGain}`);
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: goldCardToGain.id,
+          to: { location: 'playerDiscard' }
+        });
+      }
+      
+      if (!copperCards.length) {
+        console.log(`[treasure-trove effect] no copper cards in supply`);
+      }
+      else {
+        const copperCardToGain = copperCards.slice(-1)[0];
+        console.log(`[treasure-trove effect] gaining ${copperCardToGain}`);
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: copperCardToGain.id,
+          to: { location: 'playerDiscard' }
+        });
+      }
+      
     }
   },
 }

@@ -65,5 +65,11 @@
       "treasure": 5
     },
     "type": ["ACTION"]
+  },
+  "treasure-trove": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["TREASURE"]
   }
 }

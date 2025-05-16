@@ -141,3 +141,5 @@ skipped
 - ratcatcher
 - relic
 - royal carriage
+- transmogrify
+- wine merchant
