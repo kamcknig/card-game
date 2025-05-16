@@ -1570,13 +1570,13 @@ const cardEffects: CardExpansionModule = {
   'hovel': {
     registerLifeCycleMethods: () => ({
       onLeaveHand: async (args, eventArgs) => {
-        args.reactionManager.unregisterTrigger(`hovel:${eventArgs.cardId}:gainCard`);
+        args.reactionManager.unregisterTrigger(`hovel:${eventArgs.cardId}:cardGained`);
       },
       onEnterHand: async (args, eventArgs) => {
         args.reactionManager.registerReactionTemplate({
-          id: `hovel:${eventArgs.cardId}:gainCard`,
+          id: `hovel:${eventArgs.cardId}:cardGained`,
           playerId: eventArgs.playerId,
-          listeningFor: 'gainCard',
+          listeningFor: 'cardGained',
           once: true,
           compulsory: false,
           allowMultipleInstances: true,

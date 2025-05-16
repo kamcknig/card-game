@@ -204,7 +204,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       source: context?.loggingContext?.source,
     });
     
-    const trigger = new ReactionTrigger('gainCard', {
+    const trigger = new ReactionTrigger('cardGained', {
       cardId: cardId,
       playerId: args.playerId,
       bought: context?.bought,

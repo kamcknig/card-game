@@ -227,7 +227,7 @@ const expansion: CardExpansionModule = {
   'cauldron': {
     registerLifeCycleMethods: () => ({
       onLeavePlay: async (args, eventArgs) => {
-        args.reactionManager.unregisterTrigger(`cauldron:${eventArgs.cardId}:gainCard`);
+        args.reactionManager.unregisterTrigger(`cauldron:${eventArgs.cardId}:cardGained`);
       }
     }),
     registerEffects: () => async (cardEffectArgs) => {
@@ -238,8 +238,8 @@ const expansion: CardExpansionModule = {
       let actionGainCount = 0;
       
       cardEffectArgs.reactionManager.registerReactionTemplate({
-        id: `cauldron:${cardEffectArgs.cardId}:gainCard`,
-        listeningFor: 'gainCard',
+        id: `cauldron:${cardEffectArgs.cardId}:cardGained`,
+        listeningFor: 'cardGained',
         playerId: cardEffectArgs.playerId,
         once: true,
         compulsory: true,
@@ -253,7 +253,7 @@ const expansion: CardExpansionModule = {
           return actionGainCount === 3;
         },
         triggeredEffectFn: async () => {
-          cardEffectArgs.reactionManager.unregisterTrigger(`cauldron:${cardEffectArgs.cardId}:gainCard`)
+          cardEffectArgs.reactionManager.unregisterTrigger(`cauldron:${cardEffectArgs.cardId}:cardGained`)
           const targetPlayerIds = findOrderedTargets({
             match: cardEffectArgs.match,
             appliesTo: 'ALL_OTHER',
@@ -493,13 +493,13 @@ const expansion: CardExpansionModule = {
   'fools-gold': {
     registerLifeCycleMethods: () => ({
       onLeaveHand: async (args, eventArgs) => {
-        args.reactionManager.unregisterTrigger(`fools-gold:${eventArgs.cardId}:gainCard`);
+        args.reactionManager.unregisterTrigger(`fools-gold:${eventArgs.cardId}:cardGained`);
       },
       onEnterHand: async (args, eventArgs) => {
         args.reactionManager.registerReactionTemplate({
-          id: `fools-gold:${eventArgs.cardId}:gainCard`,
+          id: `fools-gold:${eventArgs.cardId}:cardGained`,
           playerId: eventArgs.playerId,
-          listeningFor: 'gainCard',
+          listeningFor: 'cardGained',
           once: false,
           compulsory: false,
           allowMultipleInstances: true,
@@ -605,7 +605,7 @@ const expansion: CardExpansionModule = {
   'haggler': {
     registerLifeCycleMethods: () => ({
       onLeavePlay: async (args, eventArgs) => {
-        args.reactionManager.unregisterTrigger(`haggler:${eventArgs.cardId}:gainCard`);
+        args.reactionManager.unregisterTrigger(`haggler:${eventArgs.cardId}:cardGained`);
       }
     }),
     registerEffects: () => async (cardEffectArgs) => {
@@ -613,8 +613,8 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
       
       cardEffectArgs.reactionManager.registerReactionTemplate({
-        id: `haggler:${cardEffectArgs.cardId}:gainCard`,
-        listeningFor: 'gainCard',
+        id: `haggler:${cardEffectArgs.cardId}:cardGained`,
+        listeningFor: 'cardGained',
         once: false,
         compulsory: true,
         allowMultipleInstances: true,
@@ -1154,12 +1154,12 @@ const expansion: CardExpansionModule = {
   'trader': {
     registerLifeCycleMethods: () => ({
       onLeaveHand: async (args, eventArgs) => {
-        args.reactionManager.unregisterTrigger(`trader:${eventArgs.cardId}:gainCard`);
+        args.reactionManager.unregisterTrigger(`trader:${eventArgs.cardId}:cardGained`);
       },
       onEnterHand: async (args, eventArgs) => {
         args.reactionManager.registerReactionTemplate({
-          id: `trader:${eventArgs.cardId}:gainCard`,
-          listeningFor: 'gainCard',
+          id: `trader:${eventArgs.cardId}:cardGained`,
+          listeningFor: 'cardGained',
           playerId: eventArgs.playerId,
           once: false,
           allowMultipleInstances: false,

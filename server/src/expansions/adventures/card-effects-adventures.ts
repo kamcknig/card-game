@@ -277,6 +277,11 @@ const expansion: CardExpansionModule = {
     }
   },
   'gear': {
+    registerLifeCycleMethods: () => ({
+      onLeavePlay: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`gear:${eventArgs.cardId}:startTurn`);
+      }
+    }),
     registerEffects: () => async (cardEffectArgs) => {
       await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
       
@@ -332,6 +337,78 @@ const expansion: CardExpansionModule = {
               to: { location: 'playerHand' }
             });
           }
+        }
+      })
+    }
+  },
+  'haunted-woods': {
+    registerLifeCycleMethods: () => ({
+      onLeavePlay: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`haunted-woods:${eventArgs.cardId}:startTurn`);
+        args.reactionManager.unregisterTrigger(`haunted-woods:${eventArgs.cardId}:cardGained`);
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      const turnPlayed = cardEffectArgs.match.turnNumber;
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate({
+        id: `haunted-woods:${cardEffectArgs.cardId}:cardGained`,
+        listeningFor: 'cardGained',
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: async conditionArgs => {
+          if (conditionArgs.trigger.args.playerId === cardEffectArgs.playerId) return false;
+          if (!conditionArgs.trigger.args.bought) return false;
+          return true;
+        },
+        triggeredEffectFn: async triggeredArgs => {
+          const triggeringPlayerId = triggeredArgs.trigger.args.playerId;
+          console.log(`[haunted-woods cardGained effect] player ${triggeringPlayerId} rearranging hand and top-decking`);
+          const hand = triggeredArgs.cardSourceController.getSource('playerHand', triggeringPlayerId);
+          const result = await triggeredArgs.runGameActionDelegate('userPrompt', {
+            playerId: triggeringPlayerId,
+            prompt: 'Rearrange hand to put on deck',
+            actionButtons: [{ label: 'DONE', action: 1 }],
+            content: {
+              type: 'rearrange',
+              cardIds: hand,
+            }
+          }) as { action: number, result: number[] };
+          
+          if (!result.result.length) {
+            console.warn(`[haunted-woods cardGained effect] no cards rearranged`);
+            return;
+          }
+          
+          console.warn(`[haunted-woods cardGained effect] moving ${result.result.length} cards to deck`);
+          
+          for (const cardId of result.result) {
+            await triggeredArgs.runGameActionDelegate('moveCard', {
+              toPlayerId: triggeringPlayerId,
+              cardId,
+              to: { location: 'playerDeck' }
+            });
+          }
+        }
+      });
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate({
+        id: `haunted-woods:${cardEffectArgs.cardId}:startTurn`,
+        listeningFor: 'startTurn',
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: async conditionArgs => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
+          if (conditionArgs.trigger.args.turnNumber === turnPlayed) return false;
+          return true;
+        },
+        triggeredEffectFn: async triggeredArgs => {
+          triggeredArgs.reactionManager.unregisterTrigger(`haunted-woods:${cardEffectArgs.cardId}:cardGained`);
+          await triggeredArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
         }
       })
     }

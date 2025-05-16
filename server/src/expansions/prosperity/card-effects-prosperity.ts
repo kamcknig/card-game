@@ -267,7 +267,7 @@ const expansion: CardExpansionModule = {
   'collection': {
     registerLifeCycleMethods: () => ({
       onLeavePlay: async (args, eventArgs) => {
-        args.reactionManager.unregisterTrigger(`collection:${eventArgs.cardId}:gainCard`);
+        args.reactionManager.unregisterTrigger(`collection:${eventArgs.cardId}:cardGained`);
       }
     }),
     registerEffects: () => async (effectArgs) => {
@@ -276,9 +276,9 @@ const expansion: CardExpansionModule = {
       await effectArgs.runGameActionDelegate('gainBuy', { count: 1 });
       
       effectArgs.reactionManager.registerReactionTemplate({
-        id: `collection:${effectArgs.cardId}:gainCard`,
+        id: `collection:${effectArgs.cardId}:cardGained`,
         playerId: effectArgs.playerId,
-        listeningFor: 'gainCard',
+        listeningFor: 'cardGained',
         compulsory: true,
         once: true,
         allowMultipleInstances: true,
@@ -483,15 +483,15 @@ const expansion: CardExpansionModule = {
   'hoard': {
     registerLifeCycleMethods: () => ({
       onLeavePlay: async (args, eventArgs) => {
-        args.reactionManager.unregisterTrigger(`hoard:${eventArgs.cardId}:gainCard`);
+        args.reactionManager.unregisterTrigger(`hoard:${eventArgs.cardId}:cardGained`);
       }
     }),
     registerEffects: () => async (effectArgs) => {
       await effectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
       
       effectArgs.reactionManager.registerReactionTemplate({
-        id: `hoard:${effectArgs.cardId}:gainCard`,
-        listeningFor: 'gainCard',
+        id: `hoard:${effectArgs.cardId}:cardGained`,
+        listeningFor: 'cardGained',
         compulsory: true,
         allowMultipleInstances: true,
         once: false,
@@ -858,9 +858,9 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
       
       cardEffectArgs.reactionManager.registerReactionTemplate({
-        id: `tiara:${cardEffectArgs.cardId}:gainCard`,
+        id: `tiara:${cardEffectArgs.cardId}:cardGained`,
         playerId: cardEffectArgs.playerId,
-        listeningFor: 'gainCard',
+        listeningFor: 'cardGained',
         once: false,
         allowMultipleInstances: false,
         compulsory: false,
@@ -887,7 +887,7 @@ const expansion: CardExpansionModule = {
         compulsory: true,
         condition: () => true,
         triggeredEffectFn: async (triggerEffectArgs) => {
-          cardEffectArgs.reactionManager.unregisterTrigger(`tiara:${cardEffectArgs.cardId}:gainCard`);
+          cardEffectArgs.reactionManager.unregisterTrigger(`tiara:${cardEffectArgs.cardId}:cardGained`);
           cardEffectArgs.reactionManager.unregisterTrigger(`tiara:${cardEffectArgs.cardId}:endTurn`);
         }
       });
@@ -1065,16 +1065,16 @@ const expansion: CardExpansionModule = {
   'watchtower': {
     registerLifeCycleMethods: () => ({
       onLeaveHand: async (args, eventArgs) => {
-        args.reactionManager.unregisterTrigger(`watchtower:${eventArgs.cardId}:gainCard`);
+        args.reactionManager.unregisterTrigger(`watchtower:${eventArgs.cardId}:cardGained`);
       },
       onEnterHand: async (args, eventArgs) => {
         args.reactionManager.registerReactionTemplate({
-          id: `watchtower:${eventArgs.cardId}:gainCard`,
+          id: `watchtower:${eventArgs.cardId}:cardGained`,
           playerId: eventArgs.playerId,
           once: false,
           compulsory: false,
           allowMultipleInstances: false,
-          listeningFor: 'gainCard',
+          listeningFor: 'cardGained',
           condition: (conditionArgs) => {
             if (conditionArgs.trigger.args.playerId !== eventArgs.playerId) return false;
             return true;

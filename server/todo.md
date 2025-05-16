@@ -128,3 +128,5 @@ skipped
 - coin of the realm
 - distant lands
 - duplicate
+- giant
+- guide

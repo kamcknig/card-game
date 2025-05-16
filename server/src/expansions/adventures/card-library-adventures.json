@@ -28,5 +28,11 @@
       "treasure": 3
     },
     "type": ["ACTION", "DURATION"]
+  },
+  "haunted-woods": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "DURATION", "ATTACK"]
   }
 }

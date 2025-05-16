@@ -59,7 +59,7 @@ const expansion: CardExpansionModule = {
     registerLifeCycleMethods: () => ({
       onLeavePlay: async (args, eventArgs) => {
         args.reactionManager.unregisterTrigger(`blockade:${eventArgs.cardId}:startTurn`);
-        args.reactionManager.unregisterTrigger(`blockade:${eventArgs.cardId}:gainCard`);
+        args.reactionManager.unregisterTrigger(`blockade:${eventArgs.cardId}:cardGained`);
       }
     }),
     registerEffects: () => async (args) => {
@@ -99,7 +99,7 @@ const expansion: CardExpansionModule = {
             to: { location: 'playerHand' }
           });
           
-          args.reactionManager.unregisterTrigger(`blockade:${args.cardId}:gainCard`);
+          args.reactionManager.unregisterTrigger(`blockade:${args.cardId}:cardGained`);
         }
       });
       
@@ -107,7 +107,7 @@ const expansion: CardExpansionModule = {
       
       args.reactionManager.registerReactionTemplate({
         playerId: args.playerId,
-        id: `blockade:${args.cardId}:gainCard`,
+        id: `blockade:${args.cardId}:cardGained`,
         condition: (conditionArgs) => {
           if (getCurrentPlayer(args.match).id !== conditionArgs.trigger.args.playerId) {
             return false;
@@ -116,7 +116,7 @@ const expansion: CardExpansionModule = {
           return conditionArgs.trigger.args.cardId !== undefined && args.cardLibrary.getCard(conditionArgs.trigger.args.cardId).cardKey == cardGained.cardKey;
         },
         compulsory: true,
-        listeningFor: 'gainCard',
+        listeningFor: 'cardGained',
         triggeredEffectFn: async (args) => {
           const curseCardIds = args.findCards([
             { location: 'basicSupply' },
@@ -546,7 +546,7 @@ const expansion: CardExpansionModule = {
     registerLifeCycleMethods: () => ({
       onLeavePlay: async (args, eventArgs) => {
         args.reactionManager.unregisterTrigger(`monkey:${eventArgs.cardId}:startTurn`);
-        args.reactionManager.unregisterTrigger(`monkey:${eventArgs.cardId}:gainCard`)
+        args.reactionManager.unregisterTrigger(`monkey:${eventArgs.cardId}:cardGained`)
       }
     }),
     registerEffects: () => async ({ reactionManager, match, playerId, cardId, runGameActionDelegate }) => {
@@ -562,7 +562,7 @@ const expansion: CardExpansionModule = {
           console.log(`[monkey triggered effect] drawing card at start of turn...`);
           await runGameActionDelegate('drawCard', { playerId }, { loggingContext: { source: cardId } });
           
-          reactionManager.unregisterTrigger(`monkey:${cardId}:gainCard`);
+          reactionManager.unregisterTrigger(`monkey:${cardId}:cardGained`);
         }
       });
       
@@ -574,11 +574,11 @@ const expansion: CardExpansionModule = {
       }).id;
       
       reactionManager.registerReactionTemplate({
-        id: `monkey:${cardId}:gainCard`,
+        id: `monkey:${cardId}:cardGained`,
         playerId,
         compulsory: true,
         allowMultipleInstances: true,
-        listeningFor: 'gainCard',
+        listeningFor: 'cardGained',
         once: false,
         triggeredEffectFn: async () => {
           console.log(`[monkey triggered effect] drawing card, because player to the right gained a card...`);
@@ -592,12 +592,12 @@ const expansion: CardExpansionModule = {
     registerLifeCycleMethods: () => ({
       onEnterHand: async ({ reactionManager }, { playerId, cardId }) => {
         reactionManager.registerReactionTemplate({
-          id: `pirate:${cardId}:gainCard`,
+          id: `pirate:${cardId}:cardGained`,
           playerId,
           compulsory: false,
           allowMultipleInstances: true,
           once: true,
-          listeningFor: 'gainCard',
+          listeningFor: 'cardGained',
           condition: ({ cardLibrary, trigger }) => cardLibrary.getCard(trigger.args.cardId!).type.includes('TREASURE'),
           triggeredEffectFn: async ({ runGameActionDelegate }) => {
             await runGameActionDelegate('playCard', {
@@ -611,7 +611,7 @@ const expansion: CardExpansionModule = {
         });
       },
       onLeaveHand: async ({ reactionManager }, { cardId }) => {
-        reactionManager.unregisterTrigger(`pirate:${cardId}:gainCard`);
+        reactionManager.unregisterTrigger(`pirate:${cardId}:cardGained`);
       },
       onLeavePlay: async (args, eventArgs) => {
         args.reactionManager.unregisterTrigger(`pirate:${eventArgs.cardId}:startTurn`);
@@ -726,7 +726,7 @@ const expansion: CardExpansionModule = {
   'sailor': {
     registerLifeCycleMethods: () => ({
       onLeavePlay: async ({ reactionManager }, { cardId }) => {
-        reactionManager.unregisterTrigger(`sailor:${cardId}:gainCard`);
+        reactionManager.unregisterTrigger(`sailor:${cardId}:cardGained`);
         reactionManager.unregisterTrigger(`sailor:${cardId}:startTurn`);
         reactionManager.unregisterTrigger(`sailor:${cardId}:endTurn`);
       },
@@ -740,15 +740,15 @@ const expansion: CardExpansionModule = {
           once: true,
           condition: () => true,
           triggeredEffectFn: async (triggerArgs) => {
-            args.reactionManager.unregisterTrigger(`sailor:${eventArgs.cardId}:gainCard`);
+            args.reactionManager.unregisterTrigger(`sailor:${eventArgs.cardId}:cardGained`);
             args.reactionManager.unregisterTrigger(`sailor:${eventArgs.cardId}:endTurn`);
           }
         });
         
         args.reactionManager.registerReactionTemplate({
-          id: `sailor:${eventArgs.cardId}:gainCard`,
+          id: `sailor:${eventArgs.cardId}:cardGained`,
           playerId: eventArgs.playerId,
-          listeningFor: 'gainCard',
+          listeningFor: 'cardGained',
           once: true,
           compulsory: false,
           allowMultipleInstances: true,

@@ -359,7 +359,7 @@ export type TriggerEventTypeContext = {
   };
   cardPlayed: { playerId: PlayerId; cardId: CardId; };
   startTurn: { playerId: PlayerId; turnNumber: number; };
-  gainCard: {
+  cardGained: {
     playerId: PlayerId;
     cardId: CardId;
     bought: boolean;
