@@ -22,5 +22,11 @@
       "treasure": 3
     },
     "type": ["ACTION", "DURATION"]
+  },
+  "gear": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION", "DURATION"]
   }
 }

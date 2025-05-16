@@ -118,12 +118,15 @@ const expansion: CardExpansionModule = {
       console.log(`[artificer effect] selected ${selectedCardIds.length} cards to discard`);
       
       for (const selectedCardId of selectedCardIds) {
-        await cardEffectArgs.runGameActionDelegate('discardCard', { playerId: cardEffectArgs.playerId, cardId: selectedCardId });
+        await cardEffectArgs.runGameActionDelegate('discardCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: selectedCardId
+        });
       }
       
       const cardsToSelect = cardEffectArgs.findCards([
-        {location: ['basicSupply', 'kingdomSupply']},
-        {kind: 'upTo', playerId: cardEffectArgs.playerId, amount: { treasure: (selectedCardIds.length ?? 0) }}
+        { location: ['basicSupply', 'kingdomSupply'] },
+        { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: { treasure: (selectedCardIds.length ?? 0) } }
       ]);
       
       if (!cardsToSelect.length) {
@@ -243,7 +246,10 @@ const expansion: CardExpansionModule = {
         console.log(`[dungeon effect] discarding ${selectedCardIds.length} cards`);
         
         for (const selectedCardId of selectedCardIds) {
-          await cardEffectArgs.runGameActionDelegate('discardCard', { playerId: cardEffectArgs.playerId, cardId: selectedCardId });
+          await cardEffectArgs.runGameActionDelegate('discardCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: selectedCardId
+          });
         }
       }
       
@@ -266,6 +272,66 @@ const expansion: CardExpansionModule = {
         triggeredEffectFn: async triggeredArgs => {
           console.log(`[dungeon startTurn effect] running`);
           await effects();
+        }
+      })
+    }
+  },
+  'gear': {
+    registerEffects: () => async (cardEffectArgs) => {
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
+      
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Set aside cards`,
+        restrict: hand,
+        count: {
+          kind: 'upTo',
+          count: Math.min(2, hand.length)
+        },
+        optional: true,
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.log(`[gear effect] no cards selected`);
+        return;
+      }
+      
+      console.log(`[gear effect] set aside ${selectedCardIds.length} cards`);
+      
+      for (const selectedCardId of selectedCardIds) {
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
+          toPlayerId: cardEffectArgs.playerId,
+          cardId: selectedCardId,
+          to: { location: 'set-aside' }
+        });
+      }
+      
+      const turnPlayed = cardEffectArgs.match.turnNumber;
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate({
+        id: `gear:${cardEffectArgs.cardId}:startTurn`,
+        playerId: cardEffectArgs.playerId,
+        listeningFor: 'startTurn',
+        once: true,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: async conditionArgs => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
+          if (conditionArgs.trigger.args.turnNumber === turnPlayed) return false;
+          return true;
+        },
+        triggeredEffectFn: async triggeredArgs => {
+          console.log(`[gear startTurn effect] moving ${selectedCardIds.length} to hand`);
+          
+          for (const selectedCardId of selectedCardIds) {
+            await cardEffectArgs.runGameActionDelegate('moveCard', {
+              toPlayerId: cardEffectArgs.playerId,
+              cardId: selectedCardId,
+              to: { location: 'playerHand' }
+            });
+          }
         }
       })
     }
