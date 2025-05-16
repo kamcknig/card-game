@@ -41,5 +41,11 @@
       "treasure": 5
     },
     "type": ["ACTION"]
+  },
+  "magpie": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"]
   }
 }

@@ -434,6 +434,68 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
     }
   },
+  'magpie': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[magpie effect] drawing 1 card, gaining 1 action`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      
+      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+      
+      if (deck.length) {
+        console.log(`[magpie effect] no cards in deck, shuffling deck`);
+        await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+        
+        if (!deck.length) {
+          console.log(`[magpie effect] still no cards in deck, no cards to reveal`);
+          return;
+        }
+      }
+      
+      const revealedCard = cardEffectArgs.cardLibrary.getCard(deck.slice(-1)[0]);
+      
+       console.log(`[magpie effect] revealing ${revealedCard}`);
+       
+      await cardEffectArgs.runGameActionDelegate('revealCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: revealedCard,
+        moveToSetAside: true
+      });
+      
+      if (revealedCard.type.includes('TREASURE')) {
+        console.log(`[magpie effect] treasure revealed, moving revealed card to hand`);
+        
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
+          toPlayerId: cardEffectArgs.playerId,
+          cardId: revealedCard.id,
+          to: { location: 'playerHand' }
+        });
+      }
+      else if (revealedCard.type.some(t => ['ACTION', 'VICTORY'].includes(t))) {
+        console.log(`[magpie effect] action or victory revealed, gaining magpie`);
+        
+        const magpieCards = cardEffectArgs.findCards([
+          {location: 'kingdomSupply'},
+          {cardKeys: 'magpie'}
+        ]);
+        
+        if (!magpieCards.length) {
+          console.log(`[magpie effect] no magpie cards in supply`);
+          return;
+        }
+        
+        const magPieToGain = magpieCards.slice(-1)[0];
+        
+        console.log(`[magpie effect] gaining ${magPieToGain}`);
+        
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: magPieToGain.id,
+          to: { location: 'playerDiscard' }
+        });
+      }
+    }
+  },
 }
 
 export default expansion;
