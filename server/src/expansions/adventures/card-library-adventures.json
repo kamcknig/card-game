@@ -54,5 +54,10 @@
     },
     "type": ["ACTION"]
   },
-
+  "raze": {
+    "cost": {
+      "treasure": 2
+    },
+    "type": ["ACTION"]
+  }
 }

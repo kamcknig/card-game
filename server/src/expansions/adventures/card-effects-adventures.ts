@@ -1,4 +1,4 @@
-import { CardId } from 'shared/shared-types.ts';
+import { Card, CardId } from 'shared/shared-types.ts';
 import { CardExpansionModule } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 
@@ -617,6 +617,109 @@ const expansion: CardExpansionModule = {
       console.log(`[port effect] drawing 1 card, gaining 2 action`);
       await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
       await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
+    }
+  },
+  'raze': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[raze effect] gaining 1 action`);
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Trash a card`,
+        restrict: cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId)
+          .concat(cardEffectArgs.cardId),
+        count: 1
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.warn(`[raze effect] no card selected`);
+        return;
+      }
+      
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+      
+      console.log(`[raze effect] trashing ${selectedCard}`);
+      
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCard.id
+      });
+      
+      const { cost } = cardEffectArgs.cardPriceController.applyRules(selectedCard, { playerId: cardEffectArgs.playerId });
+      
+      const numToLookAt = cost.treasure;
+      
+      if (numToLookAt === 0) {
+        console.log(`[raze effect] cost is 0, not looking at deck`);
+        return;
+      }
+      
+      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+      
+      if (deck.length === 0) {
+        console.log(`[raze effect] deck is empty, shuffling deck`);
+        await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+        
+        if (deck.length === 0) {
+          console.log(`[raze effect] still empty, no cards to look at`);
+          return;
+        }
+      }
+      
+      const lookingAtCards: Card[] = [];
+      
+      for (let i = 0; i < numToLookAt; i++) {
+        const cardToLookAt = cardEffectArgs.cardLibrary.getCard(deck.slice(-i - 1)[0]);
+        
+        console.log(`[raze effect] looking at ${cardToLookAt}`);
+        
+        lookingAtCards.push(cardToLookAt);
+        
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
+          toPlayerId: cardEffectArgs.playerId,
+          cardId: cardToLookAt.id,
+          to: { location: 'set-aside' }
+        });
+      }
+      
+      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Choose one to put in hand',
+        actionButtons: [
+          { label: 'DONE', action: 1 }
+        ],
+        content: {
+          type: 'select',
+          cardIds: lookingAtCards.map(card => card.id),
+          selectCount: 1
+        }
+      }) as { action: number, result: number[] };
+      
+      if (!result.result.length) {
+        console.warn(`[raze effect] no card selected`);
+        return;
+      }
+      
+      const selectedCardToPutInHand = cardEffectArgs.cardLibrary.getCard(result.result[0]);
+      
+      console.log(`[raze effect] putting ${selectedCardToPutInHand} in hand`);
+      
+      await cardEffectArgs.runGameActionDelegate('moveCard', {
+        toPlayerId: cardEffectArgs.playerId,
+        cardId: selectedCardToPutInHand.id,
+        to: { location: 'playerHand' }
+      });
+      
+      console.log(`[raze effect] discarding ${lookingAtCards.length - 1} cards`);
+      
+      for (const lookingAtCard of lookingAtCards) {
+        if (lookingAtCard.id === selectedCardToPutInHand.id) continue;
+        await cardEffectArgs.runGameActionDelegate('discardCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: lookingAtCard.id
+        });
+      }
     }
   },
 }

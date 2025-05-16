@@ -137,4 +137,6 @@ skipped
 - miser
 - page
 - peasant
+- ranger
+- ratcatcher
 - 
