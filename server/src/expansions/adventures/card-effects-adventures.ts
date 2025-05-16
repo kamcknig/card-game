@@ -454,8 +454,8 @@ const expansion: CardExpansionModule = {
       
       const revealedCard = cardEffectArgs.cardLibrary.getCard(deck.slice(-1)[0]);
       
-       console.log(`[magpie effect] revealing ${revealedCard}`);
-       
+      console.log(`[magpie effect] revealing ${revealedCard}`);
+      
       await cardEffectArgs.runGameActionDelegate('revealCard', {
         playerId: cardEffectArgs.playerId,
         cardId: revealedCard,
@@ -475,8 +475,8 @@ const expansion: CardExpansionModule = {
         console.log(`[magpie effect] action or victory revealed, gaining magpie`);
         
         const magpieCards = cardEffectArgs.findCards([
-          {location: 'kingdomSupply'},
-          {cardKeys: 'magpie'}
+          { location: 'kingdomSupply' },
+          { cardKeys: 'magpie' }
         ]);
         
         if (!magpieCards.length) {
@@ -493,6 +493,99 @@ const expansion: CardExpansionModule = {
           cardId: magPieToGain.id,
           to: { location: 'playerDiscard' }
         });
+      }
+    }
+  },
+  'messenger': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (args, eventArgs) => {
+        const stats = args.match.stats;
+        if (stats.cardsGained?.[eventArgs.cardId]?.turnPhase !== 'buy') {
+          return;
+        }
+        
+        const cardsGainedThisTurnBuyPhase =
+          stats.cardsGainedByTurn?.[args.match.turnNumber]
+            ?.filter(cardId => stats.cardsGained[cardId].playerId === eventArgs.playerId && stats.cardsGained[cardId].turnPhase === 'buy')
+            ?.length ?? 0;
+        
+        if (cardsGainedThisTurnBuyPhase !== 1) {
+          console.log(`[messenger onGained effect] player ${eventArgs.playerId} gained more than 1 card in buy phase`);
+          return;
+        }
+        
+        const selectedCardIds = await args.runGameActionDelegate('selectCard', {
+          playerId: eventArgs.playerId,
+          prompt: `Gain card`,
+          restrict: [{ location: ['basicSupply', 'kingdomSupply'] }, {
+            kind: 'upTo',
+            playerId: eventArgs.playerId,
+            amount: { treasure: 4 }
+          }],
+          count: 1,
+        }) as CardId[];
+        
+        if (!selectedCardIds.length) {
+          console.warn(`[messenger onGained effect] no card selected`);
+          return;
+        }
+        
+        const selectedCard = args.cardLibrary.getCard(selectedCardIds[0]);
+        
+        console.log(`[messenger onGained effect] selected ${selectedCard}`);
+        
+        const copies = args.findCards([
+          { location: ['basicSupply', 'kingdomSupply'] },
+          { cardKeys: selectedCard.cardKey }
+        ]);
+        
+        const targetPlayerIds = findOrderedTargets({
+          match: args.match,
+          appliesTo: 'ALL',
+          startingPlayerId: eventArgs.playerId
+        });
+        
+        targetPlayerIds.length = Math.min(targetPlayerIds.length, copies.length);
+        
+        for (let i = 0; i < targetPlayerIds.length; i++) {
+          console.log(`[messenger onGained effect] gaining ${copies.slice(-i - 1)[0]} to ${targetPlayerIds[i]}`);
+          await args.runGameActionDelegate('gainCard', {
+            playerId: targetPlayerIds[i],
+            cardId: copies.slice(-i - 1)[0].id,
+            to: { location: 'playerDiscard' }
+          });
+        }
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[messenger effect] drawing 1 card, gaining 1 action`);
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+      
+      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Put deck into your discard?',
+        actionButtons: [
+          { label: 'CANCEL', action: 1 },
+          { label: 'PUT IN DISCARD', action: 2 }
+        ],
+      }) as { action: number, result: number[] };
+      
+      if (result.action === 1) {
+        console.log(`[messenger effect] user cancelled`);
+        return;
+      }
+      else {
+        console.log(`[messenger effect] putting deck into discard`);
+        const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+        
+        for (const cardId of [...deck]) {
+          await cardEffectArgs.runGameActionDelegate('moveCard', {
+            toPlayerId: cardEffectArgs.playerId,
+            cardId,
+            to: { location: 'playerDiscard' }
+          });
+        }
       }
     }
   },

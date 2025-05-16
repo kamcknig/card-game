@@ -47,5 +47,11 @@
       "treasure": 4
     },
     "type": ["ACTION"]
+  },
+  "messenger": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"]
   }
 }
