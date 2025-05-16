@@ -719,12 +719,14 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     this.match.playerTreasure += args.count;
     this.match.playerTreasure = Math.max(0, this.match.playerTreasure);
     
-    this.logManager.addLogEntry({
-      type: 'gainTreasure',
-      playerId: getCurrentPlayer(this.match).id,
-      count: args.count,
-      source: context?.loggingContext?.source,
-    });
+    if (!context?.loggingContext?.suppress) {
+      this.logManager.addLogEntry({
+        type: 'gainTreasure',
+        playerId: getCurrentPlayer(this.match).id,
+        count: args.count,
+        source: context?.loggingContext?.source,
+      });
+    }
   }
   
   // Single, focused implementation of drawCard

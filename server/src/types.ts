@@ -114,7 +114,8 @@ export interface LifecycleSuppression {
 
 export type GameActionContext = {
   loggingContext?: {
-    source: CardId
+    suppress?: boolean;
+    source?: CardId;
   };
   suppressLifeCycle?: LifecycleSuppression;
 };

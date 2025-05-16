@@ -722,6 +722,68 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'storyteller': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[storyteller effect] gaining 1 action`);
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      let treasuresInHand = hand
+        .map(cardEffectArgs.cardLibrary.getCard)
+        .filter(card => card.type.includes('TREASURE'));
+      
+      const numCanPlay = Math.min(3, treasuresInHand.length);
+      
+      for (let i = 0; i < numCanPlay; i++) {
+        treasuresInHand = hand
+          .map(cardEffectArgs.cardLibrary.getCard)
+          .filter(card => card.type.includes('TREASURE'));
+        
+        if (!treasuresInHand.length) {
+          console.log(`[storyteller effect] no treasures in hand`);
+          break;
+        }
+        
+        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Play treasure ${i + 1} of ${numCanPlay}?`,
+          restrict: treasuresInHand.map(card => card.id),
+          count: 1,
+          optional: true,
+        }) as CardId[];
+        
+        if (!selectedCardIds.length) {
+          console.log(`[storyteller effect] no treasure selected`);
+          break;
+        }
+        
+        const selectedToPlay = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+        
+        console.log(`[storyteller effect] playing ${selectedToPlay}`);
+        
+        await cardEffectArgs.runGameActionDelegate('playCard', {
+          cardId: selectedCardIds[0],
+          playerId: cardEffectArgs.playerId
+        })
+      }
+      
+      console.log(`[storyteller effect] drawing 1 card`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      
+      const playerTreasure = cardEffectArgs.match.playerTreasure;
+      
+      if (playerTreasure === 0) {
+        console.log(`[storyteller effect] no player treasure, not drawing more cards`);
+        return;
+      }
+      
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: -playerTreasure }, { loggingContext: { suppress: true } });
+      
+      console.log(`[storyteller effect] drawing ${playerTreasure} cards`);
+      
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: playerTreasure });
+    }
+  },
 }
 
 export default expansion;

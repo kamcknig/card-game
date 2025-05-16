@@ -59,5 +59,11 @@
       "treasure": 2
     },
     "type": ["ACTION"]
+  },
+  "storyteller": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"]
   }
 }

@@ -139,4 +139,5 @@ skipped
 - peasant
 - ranger
 - ratcatcher
-- 
+- relic
+- royal carriage
