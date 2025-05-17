@@ -37,6 +37,12 @@
     },
     "type": ["ACTION", "DURATION", "ATTACK"]
   },
+  "hireling": {
+    "cost": {
+      "treasure": 6
+    },
+    "type": ["ACTION", "DURATION"]
+  },
   "lost-city": {
     "cardName": "Lost City",
     "cost": {
@@ -56,6 +62,45 @@
     },
     "type": ["ACTION"]
   },
+  "page": {
+    "cost": {
+      "treasure": 2
+    },
+    "type": ["ACTION", "TRAVELLER"]
+  },
+  "treasure-hunter": {
+    "cardName": "Treasure Hunter",
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION", "TRAVELLER"],
+    "randomizer": null,
+    "kingdom": "page"
+  },
+  "warrior": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION", "TRAVELLER", "ATTACK"],
+    "randomizer": null,
+    "kingdom": "page"
+  },
+  "hero": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "TRAVELLER"],
+    "randomizer": null,
+    "kingdom": "page"
+  },
+  "champion": {
+    "cost": {
+      "treasure": 6
+    },
+    "type": ["ACTION", "DURATION"],
+    "randomizer": null,
+    "kingdom": "page"
+  },
   "raze": {
     "cost": {
       "treasure": 2
@@ -74,5 +119,35 @@
       "treasure": 5
     },
     "type": ["TREASURE"]
+  },
+  "peasant": {
+    "cost": {
+      "treasure": 2
+    },
+    "type": ["ACTION", "TRAVELLER"]
+  },
+  "soldier": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION", "ATTACK", "TRAVELLER"]
+  },
+  "fugitive": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION", "TRAVELLER"]
+  },
+  "disciple": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "TRAVELLER"]
+  },
+  "teacher": {
+    "cost": {
+      "treasure": 6
+    },
+    "type": ["ACTION", "RESERVE"]
   }
 }

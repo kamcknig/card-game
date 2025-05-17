@@ -454,9 +454,11 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     }
     
     console.log(`[buyCard action] reducing player ${args.playerId} buys by 1`);
+    
     this.match.playerBuys--;
     
     console.log(`[buyCard action] adding bought stats to match`);
+    
     this.match.stats.cardsBought[cardId] = {
       turnPhase: getTurnPhase(this.match.turnPhaseIndex),
       turnNumber: this.match.turnNumber,
@@ -466,6 +468,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     }
     
     console.log(`[buyCard action] gaining card to discard pile`);
+    
     await this.gainCard({
       playerId: args.playerId,
       cardId,
@@ -479,7 +482,9 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     moveToSetAside?: boolean
   }, context?: GameActionContext) {
     const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
+    
     console.log(`[revealCard action] ${getPlayerById(this.match, args.playerId)} revealing ${card}`);
+    
     const cardId = card.id;
     
     if (args.moveToSetAside) {

@@ -41,7 +41,7 @@ const expansion: CardExpansionModule = {
       const leftPlayer = getPlayerStartingFrom({
         startFromIdx: cardEffectArgs.match.currentPlayerTurnIndex,
         match: cardEffectArgs.match,
-        distance: -1
+        distance: 1
       });
       
       console.log(`[advisor effect] player ${leftPlayer} choosing card to discard`);
@@ -1248,7 +1248,12 @@ const expansion: CardExpansionModule = {
           const stats = triggerEffectArgs.match.stats;
           
           const cardIdsGainedThisTurn = stats.cardsGainedByTurn[triggerEffectArgs.match.turnNumber];
-          const selfGainedCardIdsThisTurn = cardIdsGainedThisTurn.filter(cardId => stats.cardsGained[cardId].playerId === cardEffectArgs.playerId);
+          const selfGainedCardIdsThisTurn = cardIdsGainedThisTurn?.filter(cardId => stats.cardsGained[cardId].playerId === cardEffectArgs.playerId) ?? [];
+          
+          if (!selfGainedCardIdsThisTurn.length) {
+            console.log(`[merchant guild triggered effect] no cards gained this buy phase`);
+            return;
+          }
           
           console.log(`[merchant guild triggered effect] gaining ${selfGainedCardIdsThisTurn.length} coffers`);
           

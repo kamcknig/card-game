@@ -133,9 +133,7 @@ skipped
 - duplicate
 - giant
 - guide
-- hireling
 - miser
-- page
 - peasant
 - ranger
 - ratcatcher
@@ -143,3 +141,5 @@ skipped
 - royal carriage
 - transmogrify
 - wine merchant
+- champion
+- teacher
