@@ -737,6 +737,54 @@ const expansion: CardExpansionModule = {
       });
     }
   },
+  'guide': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[guide effect] drawing 1 card, and gaining 1 action`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      
+      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      
+      console.log(`[guide effect] moving ${thisCard} to tavern mat`);
+      
+      await cardEffectArgs.runGameActionDelegate('moveCard', {
+        toPlayerId: cardEffectArgs.playerId,
+        cardId: cardEffectArgs.cardId,
+        to: { location: 'tavern' }
+      });
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard.id, 'startTurn', {
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        compulsory: false,
+        allowMultipleInstances: true,
+        condition: async conditionArgs => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
+          return true;
+        },
+        triggeredEffectFn: async triggeredArgs => {
+          console.log(`[guide startTurn effect] calling ${thisCard} to playArea`);
+          
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            cardId: thisCard.id,
+            to: { location: 'playArea' }
+          });
+          
+          const hand = triggeredArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+          
+          console.log(`[guide startTurn effect] discarding hand`);
+          
+          for (const cardId of [...hand]) {
+            await triggeredArgs.runGameActionDelegate('discardCard', { playerId: cardEffectArgs.playerId, cardId });
+          }
+          
+          console.log(`[guide startTurn effect] drawing 5 cards`);
+          
+          await triggeredArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 5 });
+        }
+      })
+    }
+  },
   'haunted-woods': {
     registerLifeCycleMethods: () => ({
       onLeavePlay: async (args, eventArgs) => {

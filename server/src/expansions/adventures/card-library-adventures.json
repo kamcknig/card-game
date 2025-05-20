@@ -70,6 +70,12 @@
     },
     "type": ["ACTION", "DURATION"]
   },
+  "guide": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION", "RESERVE"]
+  },
   "haunted-woods": {
     "cardName": "Haunted Woods",
     "cost": {

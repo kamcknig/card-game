@@ -122,9 +122,7 @@ developed), then you can also immediately react to that start of turn event to c
 skipped
 - bridge troll
 - coin of the realm
-- duplicate
 - giant
-- guide
 - miser
 - peasant
 - ranger
