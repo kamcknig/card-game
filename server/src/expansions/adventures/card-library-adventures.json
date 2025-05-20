@@ -52,6 +52,12 @@
     },
     "type": ["ACTION", "DURATION"]
   },
+  "duplicate": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION", "RESERVE"]
+  },
   "fugitive": {
     "cost": {
       "treasure": 4

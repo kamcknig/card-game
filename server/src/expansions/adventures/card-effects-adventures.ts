@@ -499,6 +499,10 @@ const expansion: CardExpansionModule = {
       return distantLandCards.length * 4;
     },
     registerEffects: () => async (cardEffectArgs) => {
+      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      
+      console.log(`[distant-lands effect] moving ${thisCard} to tavern mat`);
+      
       await cardEffectArgs.runGameActionDelegate('moveCard', {
         toPlayerId: cardEffectArgs.playerId,
         cardId: cardEffectArgs.cardId,
@@ -568,6 +572,63 @@ const expansion: CardExpansionModule = {
           await effects();
         }
       });
+    }
+  },
+  'duplicate': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      
+      console.log(`[duplicate effect] moving ${thisCard} to tavern mat`);
+      
+      await cardEffectArgs.runGameActionDelegate('moveCard', {
+        toPlayerId: cardEffectArgs.playerId,
+        cardId: cardEffectArgs.cardId,
+        to: { location: 'tavern' }
+      });
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard.id, 'cardGained', {
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        compulsory: false,
+        allowMultipleInstances: true,
+        condition: async conditionArgs => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
+          const cardGained = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
+          const { cost } = conditionArgs.cardPriceController.applyRules(cardGained, { playerId: cardEffectArgs.playerId });
+          if (cost.treasure <= 6 && (!cost.potion || cost.potion <= 0)) return false;
+          return true;
+        },
+        triggeredEffectFn: async triggeredArgs => {
+          console.log(`[duplicate cardGained] calling ${thisCard} to play area`);
+          
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            cardId: thisCard.id,
+            to: { location: 'playArea' }
+          });
+          
+          const cardGained = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
+          
+          const copies = triggeredArgs.findCards([
+            { location: ['basicSupply', 'kingdomSupply'] },
+            { cardKeys: cardGained.cardKey }
+          ]);
+          
+          if (!copies.length) {
+            console.log(`[duplicate cardGained], no copies of ${cardGained} in supply`);
+            return;
+          }
+          
+          const cardToGain = copies.slice(-1)[0];
+          
+          console.log(`[duplicate cardGained] gaining ${cardToGain}`);
+          
+          await cardEffectArgs.runGameActionDelegate('gainCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: cardToGain.id,
+            to: { location: 'playerDiscard' }
+          });
+        }
+      })
     }
   },
   'fugitive': {
