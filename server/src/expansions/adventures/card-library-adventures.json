@@ -140,6 +140,13 @@
     },
     "type": ["ACTION"]
   },
+  "royal-carriage": {
+    "cardName": "Royal Carriage",
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "RESERVE"]
+  },
   "soldier": {
     "cost": {
       "treasure": 3

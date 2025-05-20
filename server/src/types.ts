@@ -10,7 +10,6 @@ import {
   CardType,
   ComputedMatchConfiguration,
   CostSpec,
-  EffectTarget,
   Match,
   PlayerId,
   SelectActionCardArgs,
@@ -351,6 +350,10 @@ export interface TriggeredEffectConditionContext<T extends TriggerEventType> ext
 }
 
 export type TriggerEventTypeContext = {
+  afterCardPlayed: {
+    cardId: CardId;
+    playerId: PlayerId;
+  },
   cardTrashed: {
     cardId: CardId;
     playerId: PlayerId;

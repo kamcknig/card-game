@@ -1326,6 +1326,55 @@ const expansion: CardExpansionModule = {
       })
     }
   },
+  'royal-carriage': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[royal-carriage effect] gaining 1 action`);
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      
+      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      
+      console.log(`[royal-carriage effect] moving ${thisCard} to tavern`);
+      
+      await cardEffectArgs.runGameActionDelegate('moveCard', {
+        toPlayerId: cardEffectArgs.playerId,
+        cardId: cardEffectArgs.cardId,
+        to: { location: 'tavern' }
+      });
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard.id, 'afterCardPlayed', {
+        once: true,
+        compulsory: false,
+        allowMultipleInstances: true,
+        playerId: cardEffectArgs.playerId,
+        condition: async conditionArgs => {
+          const cardPlayed = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
+          if (!cardPlayed.type.includes('ACTION')) return false;
+          if (!getCardsInPlay(conditionArgs.findCards).includes(cardPlayed)) return false;
+          return true;
+        },
+        triggeredEffectFn: async triggeredArgs => {
+          const cardToPlay = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
+          
+          console.log(`[royal-carriage afterCardPlayed effect] calling ${thisCard} to playArea`);
+          
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            cardId: thisCard.id,
+            to: { location: 'playArea' }
+          });
+          
+          console.log(`[royal-carriage afterCardPlayed effect] re-playing ${cardToPlay}`);
+          
+          await triggeredArgs.runGameActionDelegate('playCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: cardToPlay.id,
+            overrides: {
+              actionCost: 0,
+            }
+          });
+        }
+      })
+    }
+  },
   'soldier': {
     registerLifeCycleMethods: () => ({
       onDiscarded: async (args, eventArgs) => {

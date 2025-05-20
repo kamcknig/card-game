@@ -775,15 +775,15 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     });
     
     // find any reactions for the cardPlayed event type
-    const trigger = new ReactionTrigger('cardPlayed', {
+    const cardPlayedTrigger = new ReactionTrigger('cardPlayed', {
       playerId,
       cardId,
     });
     
     // handle reactions for the card played
-    const reactionContext = {};
+    let reactionContext = {};
     this.logManager.enter();
-    await this.reactionManager.runTrigger({ trigger, reactionContext });
+    await this.reactionManager.runTrigger({ trigger: cardPlayedTrigger, reactionContext });
     this.logManager.exit();
     
     // now add any triggered effects from the card played
@@ -829,6 +829,17 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         this.logManager.exit();
       }
     }
+    
+    const afterCardPlayedTrigger = new ReactionTrigger('afterCardPlayed', {
+      playerId,
+      cardId,
+    });
+    
+    // handle reactions for the card played
+    reactionContext = {};
+    this.logManager.enter();
+    await this.reactionManager.runTrigger({ trigger: afterCardPlayedTrigger, reactionContext });
+    this.logManager.exit();
   }
   
   // Helper method to shuffle a player's deck
