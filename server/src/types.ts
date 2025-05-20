@@ -400,6 +400,13 @@ export class Reaction<T extends TriggerEventType = TriggerEventType> {
   public compulsory?: boolean = false;
   
   /**
+   * Indicates that the triggered effect happens regardless of game state and user interaction.
+   *
+   * @default false
+   */
+  public system?: boolean = false;
+  
+  /**
    * Indicates that the reaction can be used by multiple different instances of the same card.
    *
    * @default true
@@ -426,6 +433,7 @@ export class Reaction<T extends TriggerEventType = TriggerEventType> {
     this.once = arg.once ?? false;
     this.allowMultipleInstances = arg.allowMultipleInstances ?? true;
     this.compulsory = arg.compulsory ?? false;
+    this.system = arg.system ?? false;
   }
   
   public getBaseId() {

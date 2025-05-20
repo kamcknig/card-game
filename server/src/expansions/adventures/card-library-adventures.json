@@ -18,11 +18,31 @@
     },
     "type": ["ACTION", "DURATION", "REACTION"]
   },
+  "champion": {
+    "cost": {
+      "treasure": 6
+    },
+    "type": ["ACTION", "DURATION"],
+    "randomizer": null,
+    "kingdom": "page"
+  },
+  "disciple": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "TRAVELLER"]
+  },
   "dungeon": {
     "cost": {
       "treasure": 3
     },
     "type": ["ACTION", "DURATION"]
+  },
+  "fugitive": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION", "TRAVELLER"]
   },
   "gear": {
     "cost": {
@@ -36,6 +56,14 @@
       "treasure": 5
     },
     "type": ["ACTION", "DURATION", "ATTACK"]
+  },
+  "hero": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "TRAVELLER"],
+    "randomizer": null,
+    "kingdom": "page"
   },
   "hireling": {
     "cost": {
@@ -68,6 +96,43 @@
     },
     "type": ["ACTION", "TRAVELLER"]
   },
+  "peasant": {
+    "cost": {
+      "treasure": 2
+    },
+    "type": ["ACTION", "TRAVELLER"]
+  },
+  "raze": {
+    "cost": {
+      "treasure": 2
+    },
+    "type": ["ACTION"]
+  },
+  "soldier": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION", "ATTACK", "TRAVELLER"]
+  },
+  "storyteller": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"]
+  },
+  "swamp-hag": {
+    "cardName": "Swamp Hag",
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "DURATION", "ATTACK"]
+  },
+  "teacher": {
+    "cost": {
+      "treasure": 6
+    },
+    "type": ["ACTION", "RESERVE"]
+  },
   "treasure-hunter": {
     "cardName": "Treasure Hunter",
     "cost": {
@@ -77,42 +142,6 @@
     "randomizer": null,
     "kingdom": "page"
   },
-  "warrior": {
-    "cost": {
-      "treasure": 4
-    },
-    "type": ["ACTION", "TRAVELLER", "ATTACK"],
-    "randomizer": null,
-    "kingdom": "page"
-  },
-  "hero": {
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION", "TRAVELLER"],
-    "randomizer": null,
-    "kingdom": "page"
-  },
-  "champion": {
-    "cost": {
-      "treasure": 6
-    },
-    "type": ["ACTION", "DURATION"],
-    "randomizer": null,
-    "kingdom": "page"
-  },
-  "raze": {
-    "cost": {
-      "treasure": 2
-    },
-    "type": ["ACTION"]
-  },
-  "storyteller": {
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION"]
-  },
   "treasure-trove": {
     "cardName": "Treasure Trove",
     "cost": {
@@ -120,34 +149,12 @@
     },
     "type": ["TREASURE"]
   },
-  "peasant": {
-    "cost": {
-      "treasure": 2
-    },
-    "type": ["ACTION", "TRAVELLER"]
-  },
-  "soldier": {
-    "cost": {
-      "treasure": 3
-    },
-    "type": ["ACTION", "ATTACK", "TRAVELLER"]
-  },
-  "fugitive": {
+  "warrior": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION", "TRAVELLER"]
-  },
-  "disciple": {
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION", "TRAVELLER"]
-  },
-  "teacher": {
-    "cost": {
-      "treasure": 6
-    },
-    "type": ["ACTION", "RESERVE"]
+    "type": ["ACTION", "TRAVELLER", "ATTACK"],
+    "randomizer": null,
+    "kingdom": "page"
   }
 }

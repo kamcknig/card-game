@@ -629,22 +629,6 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         
         console.log(`[nextPhase action] new round: ${match.roundNumber}, turn ${match.turnNumber} for ${currentPlayer}`);
         
-        for (const cardId of [...this._findCards({ location: 'activeDuration' })]) {
-          const turnsSincePlayed = match.turnNumber - match.stats.playedCards[cardId.id].turnNumber;
-          
-          const shouldMoveToPlayArea = (
-            currentPlayer.id === match.stats.playedCards[cardId.id].playerId &&
-            turnsSincePlayed > 0
-          );
-          
-          if (shouldMoveToPlayArea) {
-            await this.moveCard({
-              cardId,
-              to: { location: 'playArea' }
-            })
-          }
-        }
-        
         const startTurnTrigger = new ReactionTrigger('startTurn', {
           playerId: match.players[match.currentPlayerTurnIndex].id,
           turnNumber: match.turnNumber
@@ -665,36 +649,11 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         const startPhaseTrigger = new ReactionTrigger('startTurnPhase', { phaseIndex: match.turnPhaseIndex });
         await this.reactionManager.runTrigger({ trigger: startPhaseTrigger });
         
-        const cardsToDiscard = this._findCards({ location: ['activeDuration', 'playArea'] })
+        const cardsToDiscard = this._findCards({ location: 'playArea' })
           .concat(this._findCards({ location: 'playerHand', playerId: currentPlayer.id }));
         
         for (const cardId of cardsToDiscard) {
-          const stats = match?.stats?.playedCards?.[cardId.id];
-          
-          if (!cardId.type.includes('DURATION') || !stats) {
-            await this.discardCard({ cardId, playerId: currentPlayer.id });
-            continue;
-          }
-          
-          const turnsSincePlayed = match.turnNumber - stats.turnNumber;
-          
-          const shouldDiscard = (
-            currentPlayer.id === stats.playerId &&
-            turnsSincePlayed > 0
-          );
-          
-          if (shouldDiscard) {
-            console.log(`[nextPhase action] discarding ${cardId}...`);
-            await this.discardCard({ cardId, playerId: currentPlayer.id });
-          }
-          else {
-            await this.moveCard({
-              cardId: cardId.id,
-              to: { location: 'activeDuration' }
-            });
-            
-            console.log(`[nextPhase action] ${cardId} is duration, leaving in play, moving to 'activeDuration' area`);
-          }
+          await this.discardCard({ cardId, playerId: currentPlayer.id });
         }
         
         for (let i = 0; i < 5; i++) {

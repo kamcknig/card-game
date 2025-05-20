@@ -1,4 +1,4 @@
-import { Match } from 'shared/shared-types.ts';
+import { CardId, Match, Player } from 'shared/shared-types.ts';
 import {
   CardLifecycleEvent,
   CardLifecycleEventArgMap,
@@ -9,7 +9,7 @@ import {
   Reaction,
   ReactionTemplate,
   ReactionTrigger,
-  RunGameActionDelegate,
+  RunGameActionDelegate, TriggeredEffectContext,
   TriggerEventType
 } from '../../types.ts';
 import { MatchCardLibrary } from '../match-card-library.ts';
@@ -95,9 +95,39 @@ export class ReactionManager {
     }
   }
   
-  registerReactionTemplate<T extends TriggerEventType>(reactionTemplate: ReactionTemplate<T>) {
-    console.log(`[REACTION MANAGER] registering trigger template ID ${reactionTemplate.id}, for player ${reactionTemplate.playerId}`,);
-    this._reactions.push(new Reaction(reactionTemplate) as any);
+  registerSystemTemplate<T extends TriggerEventType>(cardId: CardId, event: T, reactionTemplate: Omit<ReactionTemplate<T>, 'id' | 'listeningFor'>): void {
+    const card = this._cardLibrary.getCard(cardId);
+    
+    const systemTemplate = {
+      ...reactionTemplate,
+      id: `${card.cardKey}:${cardId}:${event}:system`,
+      system: true
+    }
+    
+    this.registerReactionTemplate(cardId, event, systemTemplate);
+  }
+  
+  registerReactionTemplate<T extends TriggerEventType>(cardId: CardId, event: T, reactionTemplate: Omit<ReactionTemplate<T>, 'id' | 'listeningFor' | 'system'>): void
+  registerReactionTemplate<T extends TriggerEventType>(reactionTemplate: ReactionTemplate<T>): void
+  registerReactionTemplate<T extends TriggerEventType>(cardIdOrTemplate: CardId | ReactionTemplate<T>, event?: T, reactionTemplate?: Omit<ReactionTemplate<T>, 'id' | 'listeningFor' | 'system'>) {
+    let template: ReactionTemplate<T>;
+    
+    if (typeof cardIdOrTemplate === 'object') {
+      template = cardIdOrTemplate;
+    }
+    else {
+      const card = this._cardLibrary.getCard(cardIdOrTemplate);
+      
+      template = {
+        ...reactionTemplate,
+        listeningFor: event,
+        id: reactionTemplate && 'id' in reactionTemplate ? reactionTemplate.id : `${card.cardName}:${cardIdOrTemplate}:${event}`
+      } as ReactionTemplate<T>;
+    }
+    
+    console.log(`[REACTION MANAGER] registering trigger template ID ${template.id}, for player ${template.playerId}`);
+    
+    this._reactions.push(new Reaction(template) as any);
   }
   
   async runGameLifecycleEvent<T extends GameLifecycleEvent>(trigger: T, ...args: GameLifeCycleEventArgsMap[T] extends void ? [] : [GameLifeCycleEventArgsMap[T]]) {
@@ -164,7 +194,18 @@ export class ReactionManager {
         
         if (!reactions.length) break;
         
-        const compulsoryReactions = reactions.filter(r => r.compulsory);
+        const compulsoryReactions = reactions.filter(r => r.compulsory && !r.system);
+        
+        const systemReactions = reactions.filter(r => r.system);
+        
+        if (systemReactions.length) {
+          for (const systemReaction of systemReactions) {
+            console.log(`[REACTION MANAGER] running system reaction ${systemReaction.id} for ${targetPlayer}`);
+            await this.runReaction(systemReaction, trigger, targetPlayer, reactionContext);
+          }
+          
+          continue;
+        }
         
         let selectedReaction: Reaction | undefined = undefined;
         
@@ -211,7 +252,7 @@ export class ReactionManager {
           continue;
         }
         
-        const reactionResult = await selectedReaction.triggeredEffectFn({
+        await this.runReaction(selectedReaction, trigger, targetPlayer,{
           cardSourceController: this._cardSourceController,
           findCards: this._findCards,
           reactionManager: this,
@@ -222,32 +263,47 @@ export class ReactionManager {
           cardLibrary: this._cardLibrary,
           match: this._match,
           reaction: selectedReaction,
-        });
-        
-        // right now the only card that created that has a reaction that the
-        // card triggering it needs to know about is moat giving immunity.
-        // every other reaction just returns undefined. so if the reaction
-        // doesn't give a result, don't set it on the context. this might
-        // have to expand later.
-        if (reactionResult !== undefined) {
-          reactionContext[targetPlayer.id] = {
-            reaction: selectedReaction,
-            trigger,
-            result: reactionResult,
-          };
-        }
+        }, reactionContext);
         
         usedReactionIds.add(selectedReaction.id);
-        
-        if (selectedReaction.once) {
-          console.log(`[REACTION MANAGER] selected reaction is single-use, unregistering it`);
-          this.unregisterTrigger(selectedReaction.id);
-        }
         
         if (!selectedReaction.allowMultipleInstances) {
           blockedCardKeys.add(selectedReaction.getSourceKey());
         }
       }
+    }
+  }
+  
+  private async runReaction<T extends TriggerEventType>(reaction: Reaction, trigger: ReactionTrigger<T>, targetPlayer: Player, context: TriggeredEffectContext<T>, reactionContext?: any) {
+    const reactionResult = await reaction.triggeredEffectFn({
+      cardSourceController: this._cardSourceController,
+      findCards: this._findCards,
+      reactionManager: this,
+      cardPriceController: this.cardPriceController,
+      isRootLog: false,
+      runGameActionDelegate: this.runGameActionDelegate,
+      trigger,
+      cardLibrary: this._cardLibrary,
+      match: this._match,
+      reaction,
+    });
+    
+    // right now the only card that created that has a reaction that the
+    // card triggering it needs to know about is moat giving immunity.
+    // every other reaction just returns undefined. so if the reaction
+    // doesn't give a result, don't set it on the context. this might
+    // have to expand later.
+    if (reactionResult !== undefined) {
+      reactionContext[targetPlayer.id] = {
+        reaction,
+        trigger,
+        result: reactionResult,
+      };
+    }
+    
+    if (reaction.once) {
+      console.log(`[REACTION MANAGER] selected reaction is single-use, unregistering it`);
+      this.unregisterTrigger(reaction.id);
     }
   }
 }

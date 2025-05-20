@@ -3,15 +3,16 @@ import {
   CardEffectFunctionContext,
   CardExpansionModule,
   CardLifecycleCallbackContext,
-  CardLifecycleEventArgMap
+  CardLifecycleEventArgMap,
+  ReactionTemplate,
+  TriggerEventType
 } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
-import { context } from 'npm:esbuild@0.25.1';
 import { getPlayerStartingFrom } from '../../shared/get-player-position-utils.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
-import { shuffle } from 'es-toolkit/compat';
-import { getCurrentPlayer } from '../../utils/get-current-player.ts';
+import { getTurnPhase } from '../../utils/get-turn-phase.ts';
+import { castArray } from 'es-toolkit/compat';
 
 const addTravellerEffect = async (card: Card, travelTo: CardKey, context: CardLifecycleCallbackContext, eventArgs: CardLifecycleEventArgMap['onDiscarded']) => {
   if (!isLocationInPlay(eventArgs.previousLocation?.location)) {
@@ -60,15 +61,54 @@ const addTravellerEffect = async (card: Card, travelTo: CardKey, context: CardLi
   });
 }
 
-export const addDurationEffect = (card: Card, context:CardEffectFunctionContext) => {
+/**
+ * Adds a system even for the start of the cleanup phase to move the card to the active duration zone so that it's not
+ * discarded
+ *
+ * also registers the given trigger to actually run the duration card's effect
+ *
+ * WARNING make sure to move the card back to the play area when its duration effect has completed. Usually this
+ * will be done at the start of the next turn, but not always.
+ *
+ * WARNING currently the reaction/trigger system doesn't hook into card lifecycle events. So when this card leaves play
+ * the system doesn't currently auto-detect this and remove any triggers. so you must manually remove the trigger
+ * in the onLeavePlay lifecycle hook of the card expansion
+ */
+export const addDurationEffect = <T extends TriggerEventType>(card: Card, context: CardEffectFunctionContext, triggeredTemplate: ReactionTemplate<T> | ReactionTemplate<T>[]) => {
+  // register event for the cleanup phase to move the card to the activeDuration zone. This will leave it "in play,"
+  // but will prevent it from being discarded
+  context.reactionManager.registerSystemTemplate(card.id, 'startTurnPhase', {
+    playerId: context.playerId,
+    once: true,
+    allowMultipleInstances: true,
+    condition: async conditionArgs => {
+      if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'cleanup') return false;
+      return true;
+    },
+    triggeredEffectFn: async triggeredArgs => {
+      console.log(`[${card.cardKey} duration effect] moving to activeDuration zone`);
+      
+      await triggeredArgs.runGameActionDelegate('moveCard', {
+        cardId: card.id,
+        to: { location: 'activeDuration' }
+      });
+    }
+  });
   
+  triggeredTemplate = castArray(triggeredTemplate);
+  
+  // register the trigger to run when the duration card triggers
+  
+  for (const triggeredTemplateElement of triggeredTemplate) {
+    context.reactionManager.registerReactionTemplate(triggeredTemplateElement);
+  }
 }
 
 const expansion: CardExpansionModule = {
   'amulet': {
     registerLifeCycleMethods: () => ({
       onLeavePlay: async (args, eventArgs) => {
-        args.reactionManager.unregisterTrigger(`amulet:${eventArgs.cardId}:startTurn`)
+        args.reactionManager.unregisterTrigger(`amulet:${eventArgs.cardId}:startTurn`);
       }
     }),
     registerEffects: () => async (cardEffectArgs) => {
@@ -137,7 +177,9 @@ const expansion: CardExpansionModule = {
       
       const turnPlayed = cardEffectArgs.match.turnNumber;
       
-      cardEffectArgs.reactionManager.registerReactionTemplate({
+      const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      
+      addDurationEffect(card, cardEffectArgs, {
         id: `amulet:${cardEffectArgs.cardId}:startTurn`,
         listeningFor: 'startTurn',
         playerId: cardEffectArgs.playerId,
@@ -151,9 +193,15 @@ const expansion: CardExpansionModule = {
         },
         triggeredEffectFn: async triggeredArgs => {
           console.log(`[amulet startTurn effect] re-running decision fn`);
+          
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            cardId: card.id,
+            to: { location: 'playArea' }
+          });
+          
           await decision();
         }
-      })
+      });
     }
   },
   'artificer': {
@@ -249,7 +297,7 @@ const expansion: CardExpansionModule = {
             await triggeredArgs.runGameActionDelegate('playCard', {
               playerId: eventArgs.playerId,
               cardId: eventArgs.cardId
-            })
+            });
           }
         });
       }
@@ -261,7 +309,8 @@ const expansion: CardExpansionModule = {
       
       const turnPlayed = cardEffectArgs.match.turnNumber;
       
-      cardEffectArgs.reactionManager.registerReactionTemplate({
+      const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      addDurationEffect(card, cardEffectArgs, {
         id: `caravan-guard:${cardEffectArgs.cardId}:startTurn`,
         listeningFor: 'startTurn',
         playerId: cardEffectArgs.playerId,
@@ -274,10 +323,65 @@ const expansion: CardExpansionModule = {
           return true;
         },
         triggeredEffectFn: async triggeredArgs => {
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            cardId: card.id,
+            to: { location: 'playArea' }
+          });
           console.log(`[caravan-guard startTurn effect] gaining 1 treasure`);
           await triggeredArgs.runGameActionDelegate('gainTreasure', { count: 1 });
         }
       });
+    }
+  },
+  'champion': {
+    registerLifeCycleMethods: () => ({
+      onLeavePlay: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`champion:${eventArgs.cardId}:cardPlayed:attack`);
+        args.reactionManager.unregisterTrigger(`champion:${eventArgs.cardId}:cardPlayed:action`);
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      
+      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      addDurationEffect(thisCard, cardEffectArgs, [
+        {
+          id: `champion:${thisCard.id}:cardPlayed:attack`,
+          listeningFor: 'cardPlayed',
+          playerId: cardEffectArgs.playerId,
+          once: false,
+          compulsory: true,
+          allowMultipleInstances: false,
+          condition: async conditionArgs => {
+            const playedCard = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
+            if (!playedCard.type.includes('ATTACK')) return false;
+            if (conditionArgs.trigger.args.playerId === cardEffectArgs.playerId) return false;
+            return true;
+          },
+          triggeredEffectFn: async triggeredArgs => {
+            console.log(`[champion cardPlayed effect] attack played, gaining immunity`);
+            return 'immunity';
+          }
+        },
+        {
+          id: `champion:${thisCard.id}:cardPlayed:action`,
+          listeningFor: 'cardPlayed',
+          playerId: cardEffectArgs.playerId,
+          once: false,
+          compulsory: true,
+          allowMultipleInstances: false,
+          condition: async conditionArgs => {
+            const playedCard = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
+            if (!playedCard.type.includes('ACTION')) return false;
+            if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
+            return true;
+          },
+          triggeredEffectFn: async triggeredArgs => {
+            console.log(`[champion cardPlayed effect] action played, gaining 1 action`);
+            await triggeredArgs.runGameActionDelegate('gainAction', { count: 1 }, { loggingContext: { source: thisCard.id } });
+          }
+        }
+      ]);
     }
   },
   'disciple': {
@@ -383,7 +487,8 @@ const expansion: CardExpansionModule = {
       
       await effects();
       
-      cardEffectArgs.reactionManager.registerReactionTemplate({
+      const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      addDurationEffect(card, cardEffectArgs, {
         id: `dungeon:${cardEffectArgs.cardId}:startTurn`,
         listeningFor: 'startTurn',
         playerId: cardEffectArgs.playerId,
@@ -397,9 +502,13 @@ const expansion: CardExpansionModule = {
         },
         triggeredEffectFn: async triggeredArgs => {
           console.log(`[dungeon startTurn effect] running`);
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            cardId: card.id,
+            to: { location: 'playArea' }
+          });
           await effects();
         }
-      })
+      });
     }
   },
   'fugitive': {
@@ -475,7 +584,9 @@ const expansion: CardExpansionModule = {
       
       const turnPlayed = cardEffectArgs.match.turnNumber;
       
-      cardEffectArgs.reactionManager.registerReactionTemplate({
+      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      
+      addDurationEffect(thisCard, cardEffectArgs, {
         id: `gear:${cardEffectArgs.cardId}:startTurn`,
         playerId: cardEffectArgs.playerId,
         listeningFor: 'startTurn',
@@ -490,6 +601,11 @@ const expansion: CardExpansionModule = {
         triggeredEffectFn: async triggeredArgs => {
           console.log(`[gear startTurn effect] moving ${selectedCardIds.length} to hand`);
           
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            cardId: thisCard.id,
+            to: { location: 'playArea' }
+          });
+          
           for (const selectedCardId of selectedCardIds) {
             await cardEffectArgs.runGameActionDelegate('moveCard', {
               toPlayerId: cardEffectArgs.playerId,
@@ -498,7 +614,7 @@ const expansion: CardExpansionModule = {
             });
           }
         }
-      })
+      });
     }
   },
   'haunted-woods': {
@@ -554,7 +670,8 @@ const expansion: CardExpansionModule = {
         }
       });
       
-      cardEffectArgs.reactionManager.registerReactionTemplate({
+      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      addDurationEffect(thisCard, cardEffectArgs, {
         id: `haunted-woods:${cardEffectArgs.cardId}:startTurn`,
         listeningFor: 'startTurn',
         playerId: cardEffectArgs.playerId,
@@ -567,10 +684,15 @@ const expansion: CardExpansionModule = {
           return true;
         },
         triggeredEffectFn: async triggeredArgs => {
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            cardId: thisCard.id,
+            to: { location: 'playArea' }
+          });
+          
           triggeredArgs.reactionManager.unregisterTrigger(`haunted-woods:${cardEffectArgs.cardId}:cardGained`);
           await triggeredArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
         }
-      })
+      });
     }
   },
   'hero': {
@@ -618,20 +740,16 @@ const expansion: CardExpansionModule = {
     }
   },
   'hireling': {
+    registerLifeCycleMethods: () => ({
+      onLeavePlay: async (args, eventArgs) => {
+        args.reactionManager.unregisterTrigger(`hireling:${eventArgs.cardId}:startTurn`);
+      }
+    }),
     registerEffects: () => async (cardEffectArgs) => {
       const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      // await addDurationEffect(thisCard, cardEffectArgs);
       
-      
-      // todo: how to do duration cards that last different amounts of time.
-      // 1: set up "compulsory system events" that hook into normal reaction system, and these events
-      // are compulsory but the player is not asked about them, they just happen. then the cards themselves
-      // can control when they move around.
-      
-      // 2: set up a system for reaction type cards to register when they are removed and let the system remove them
-      
-      cardEffectArgs.reactionManager.registerReactionTemplate({
-        id: `hireling:${cardEffectArgs.cardId}:startTurn`,
+      addDurationEffect(thisCard, cardEffectArgs, {
+        id: `hireling:${thisCard.id}:startTurn`,
         listeningFor: 'startTurn',
         playerId: cardEffectArgs.playerId,
         once: false,
@@ -646,7 +764,7 @@ const expansion: CardExpansionModule = {
           console.log(`[hireling startTurn effect] drawing 1 card`);
           await triggeredArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
         }
-      })
+      });
     }
   },
   'lost-city': {
@@ -1100,6 +1218,91 @@ const expansion: CardExpansionModule = {
         playerId: cardEffectArgs.playerId,
         count: playerTreasure
       });
+    }
+  },
+  'swamp-hag': {
+    registerLifeCycleMethods: () => ({
+      onLeavePlay: async (args, eventArgs) => {
+        const thisCard = args.cardLibrary.getCard(eventArgs.cardId);
+        for (const player of args.match.players) {
+          args.reactionManager.unregisterTrigger(`swamp-hag:${thisCard.id}:cardGained:${player.id}`);
+        }
+      }
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      
+      const ids: string[] = [];
+      
+      addDurationEffect(thisCard, cardEffectArgs, {
+        id: `swamp-hag:${thisCard.id}:startTurn`,
+        listeningFor: 'startTurn',
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: async conditionArgs => {
+          if (conditionArgs.trigger.args.turnNumber === conditionArgs.match.turnNumber) return false;
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
+          return true;
+        },
+        triggeredEffectFn: async triggeredArgs => {
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            cardId: thisCard.id,
+            to: { location: 'playArea' }
+          });
+          
+          for (const id of ids) {
+            triggeredArgs.reactionManager.unregisterTrigger(id);
+          }
+          
+          console.log(`[swamp-hag startTurn effect] gaining 3 treasure`);
+          await triggeredArgs.runGameActionDelegate('gainTreasure', { count: 3 });
+        }
+      });
+      
+      const targetPlayerIds = findOrderedTargets({
+        match: cardEffectArgs.match,
+        appliesTo: 'ALL_OTHER',
+        startingPlayerId: cardEffectArgs.playerId
+      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      
+      for (const targetPlayerId of targetPlayerIds) {
+        const id = `swamp-hag:${thisCard.id}:cardGained:${targetPlayerId}`;
+        ids.push(id);
+        cardEffectArgs.reactionManager.registerReactionTemplate({
+          id,
+          listeningFor: 'cardGained',
+          playerId: targetPlayerId,
+          once: false,
+          allowMultipleInstances: true,
+          compulsory: true,
+          condition: async conditionArgs => {
+            if (conditionArgs.trigger.args.playerId !== targetPlayerId) return false;
+            if (!conditionArgs.trigger.args.bought) return false;
+            return true;
+          },
+          triggeredEffectFn: async triggeredArgs => {
+            const curseCards = triggeredArgs.findCards([
+              { location: 'basicSupply' },
+              { cardKeys: 'curse' }
+            ]);
+            
+            if (!curseCards.length) {
+              console.log(`[swamp-hag cardGained effect] no curse cards in supply`);
+              return;
+            }
+            
+            console.log(`[swamp-hag cardGained effect] player ${targetPlayerId} gaining ${curseCards.slice(-1)[0]}`);
+            
+            await triggeredArgs.runGameActionDelegate('gainCard', {
+              playerId: targetPlayerId,
+              cardId: curseCards.slice(-1)[0].id,
+              to: { location: 'playerDiscard' }
+            });
+          }
+        });
+      }
     }
   },
   'treasure-hunter': {

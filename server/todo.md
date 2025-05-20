@@ -35,6 +35,8 @@ change that to kingdom. and null stays meaning it can't be chosen like rewards, 
 and defined would use the defined value
 - when "waiting on player input" displays, cards are selectable. i played warchest, and while waiting on someone to name
 cards, it showed highlights on cards. don't know if they were selected
+- as noted in the gameplay wiki page here https://wiki.dominionstrategy.com/index.php/Gameplay, create game zones
+as noted. revealed area is a separate zone.
 
 need to show the context of the kingdom card for something like young witch, and ferryman
  - young witch (new kingdom)
@@ -141,5 +143,4 @@ skipped
 - royal carriage
 - transmogrify
 - wine merchant
-- champion
 - teacher
