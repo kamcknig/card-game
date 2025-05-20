@@ -1269,6 +1269,63 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'ratcatcher': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[ratcatcher effect] drawing 1 card, gaining 1 action`);
+      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      
+      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      
+      console.log(`[ratcatcher effect] moving ${thisCard} to play area`);
+      
+      await cardEffectArgs.runGameActionDelegate('moveCard', {
+        toPlayerId: cardEffectArgs.playerId,
+        cardId: cardEffectArgs.cardId,
+        to: { location: 'tavern' }
+      });
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard.id, 'startTurn', {
+        once: true,
+        compulsory: false,
+        allowMultipleInstances: true,
+        playerId: cardEffectArgs.playerId,
+        condition: async conditionArgs => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
+          return true;
+        },
+        triggeredEffectFn: async triggeredArgs => {
+          console.log(`[ratcatcher startTurn effect] calling ${thisCard} to playArea`);
+          
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            cardId: thisCard.id,
+            to: { location: 'playArea' }
+          });
+          
+          const selectedCardIds = await triggeredArgs.runGameActionDelegate('selectCard', {
+            playerId: cardEffectArgs.playerId,
+            prompt: `Trash card`,
+            restrict: triggeredArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId),
+            count: 1,
+          }) as CardId[];
+          
+          if (!selectedCardIds.length) {
+            console.log(`[ratcatcher startTurn effect] no cards selected`);
+            return;
+          }
+          
+          const selectedCard = triggeredArgs.cardLibrary.getCard(selectedCardIds[0]);
+          
+          console.log(`[ratcatcher startTurn effect] trashing ${selectedCard}`);
+          
+          await triggeredArgs.runGameActionDelegate('trashCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: selectedCard.id
+          });
+        }
+      })
+    }
+  },
   'soldier': {
     registerLifeCycleMethods: () => ({
       onDiscarded: async (args, eventArgs) => {

@@ -101,32 +101,11 @@ in a match - this actually includes landmarks, projects, ways, and traits which 
 configuration, if checked then if preselected ones are less than 2, then in match configurator when getting available
 kingdoms, also get available events based on the expansions being used and use the above mentioned process.
 
-### Reserve card type
-
-A new card type
-
-when played, they are put onto the tavern mat (a new mat)
-
-then they will have a trigger to "call" them back for additional effects
-
-calling back is to put them into play. this does not count as "playing" them. for triggering effects. however, they are
-now considered in play. calling does not cost an action. you can call a card even if doing so would have no effect
-
-they are discarded during clean up normally on the turn they are called - when they are in play
-
-cards on the tavern mat are included in scoring at end of game
-
-one rule "quirk" - if you play the reserve card at the start of turn via something like way of the turtle (not yet
-developed), then you can also immediately react to that start of turn event to call it
-
 skipped
 - bridge troll
-- coin of the realm
 - giant
 - miser
-- peasant
 - ranger
-- ratcatcher
 - relic
 - royal carriage
 - transmogrify
