@@ -384,6 +384,46 @@ const expansion: CardExpansionModule = {
       ]);
     }
   },
+  'coin-of-the-realm': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[coin-of-the-realm effect] gaining 1 treasure`);
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+      
+      console.log(`[coin-of-the-realm effect] moving card to tavern mat`);
+      
+      await cardEffectArgs.runGameActionDelegate('moveCard', {
+        toPlayerId: cardEffectArgs.playerId,
+        cardId: cardEffectArgs.cardId,
+        to: { location: 'tavern' }
+      });
+      
+      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard.id, 'cardPlayed', {
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        compulsory: false,
+        allowMultipleInstances: true,
+        condition: async conditionArgs => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
+          const cardPlayed = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
+          if (!cardPlayed.type.includes('ACTION')) return false;
+          return true;
+        },
+        triggeredEffectFn: async triggeredArgs => {
+          console.log(`[coin-of-the-realm cardPlayed effect] calling back to play`);
+          
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            cardId: thisCard.id,
+            to: { location: 'playArea' }
+          });
+          
+          console.log(`[coin-of-the-realm cardPlayed effect] gaining 2 actions`);
+          await triggeredArgs.runGameActionDelegate('gainAction', { count: 2 });
+        }
+      })
+    }
+  },
   'disciple': {
     registerLifeCycleMethods: () => ({
       onDiscarded: async (args, eventArgs) => {

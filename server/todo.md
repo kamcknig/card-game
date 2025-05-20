@@ -14,6 +14,8 @@ Young Witch. They need ways to uniformly get available kingdoms.
 - cards like throne room and disciple when making cards play multiple time need to stay in play as long as the
 card they played stays in play. so if you throne room a duration, it would say until the duration was gone. same with
 other cards that do the same like band of misfits
+- mats need a way to define who can view what cards exist on it e.g., the tavern mat i think all cards are visible to 
+all players, but native village and island mat cards  face down and can only be viewed by the player that owns the mat
 
 
 # Higher priority
@@ -115,19 +117,6 @@ cards on the tavern mat are included in scoring at end of game
 one rule "quirk" - if you play the reserve card at the start of turn via something like way of the turtle (not yet
 developed), then you can also immediately react to that start of turn event to call it
 
-### Traveller card type
-
-A new card type
-
-This is a card type that when discarded from play can be exchanged for other cards that are not in the supply. It cannot
-happen if the card to exchange for is not in the supply
-
-and exchanged card is not considered gained, nor is the card returned considered trashed. - so maybe a new stats block?
-
-The traveller cards included in this expansion anyway will need something similar to using the randomizer. If the base
-traveller card is picked then the other cards available for it to be upgraded are then included in the non-supply
-kingdoms.
-
 skipped
 - bridge troll
 - coin of the realm
@@ -144,3 +133,5 @@ skipped
 - transmogrify
 - wine merchant
 - teacher
+
+Will need to update seaside cards with the new duration flow

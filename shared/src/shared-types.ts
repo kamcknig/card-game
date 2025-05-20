@@ -210,6 +210,7 @@ const MatValues = [
   'island',
   'native-village',
   'set-aside',
+  'tavern',
 ] as const;
 export type Mats = typeof MatValues[number];
 export const isLocationMat = (location: any): location is Mats => {

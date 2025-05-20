@@ -13,6 +13,7 @@
     "npm:concurrently@9.1.2": "9.1.2",
     "npm:concurrently@^9.1.2": "9.1.2",
     "npm:esbuild@*": "0.25.1",
+    "npm:esbuild@0.25.1": "0.25.1",
     "npm:fuse.js@7.1.0": "7.1.0",
     "npm:lodash-es@4.17.21": "4.17.21",
     "npm:minimist@^1.2.8": "1.2.8",

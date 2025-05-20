@@ -26,6 +26,13 @@
     "randomizer": null,
     "kingdom": "page"
   },
+  "coin-of-the-ream": {
+    "cardName": "Coin of the Realm",
+    "cost": {
+      "treasure": 2
+    },
+    "type": ["TREASURE", "RESERVE"]
+  },
   "disciple": {
     "cost": {
       "treasure": 5
