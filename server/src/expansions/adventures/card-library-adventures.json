@@ -39,6 +39,13 @@
     },
     "type": ["ACTION", "TRAVELLER"]
   },
+  "distant-lands": {
+    "cardName": "Distant Lands",
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "VICTORY", "RESERVE"]
+  },
   "dungeon": {
     "cost": {
       "treasure": 3

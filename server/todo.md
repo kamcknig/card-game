@@ -39,6 +39,8 @@ and defined would use the defined value
 cards, it showed highlights on cards. don't know if they were selected
 - as noted in the gameplay wiki page here https://wiki.dominionstrategy.com/index.php/Gameplay, create game zones
 as noted. revealed area is a separate zone.
+- some mats have rules that indicate cards are moved to the deck at the end of the game before scoring e.g., native
+village mat. others don't like the tavern mat
 
 need to show the context of the kingdom card for something like young witch, and ferryman
  - young witch (new kingdom)

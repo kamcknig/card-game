@@ -478,8 +478,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       const cards = this._cardLibrary.getCardsByOwner(playerId);
       
       let score = 0;
-      for (const { id: cardId } of cards) {
-        const card = this._cardLibrary.getCard(cardId);
+      
+      for (const card of cards) {
         score += card.victoryPoints ?? 0;
         
         const customScoringFn = scoringFunctionMap[card?.cardKey ?? ''];

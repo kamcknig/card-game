@@ -487,6 +487,25 @@ const expansion: CardExpansionModule = {
       });
     }
   },
+  'distant-lands': {
+    registerScoringFunction: () => (args) => {
+      
+      const distantLandCards = args.cardSourceController.getSource('tavern', args.ownerId)
+        .map(args.cardLibrary.getCard)
+        .filter(card => card.cardKey === 'distant-lands');
+      
+      console.log(`[distant-lands scoring function] number of distant lands on tavern mat ${distantLandCards.length} for player ${args.ownerId}`);
+      
+      return distantLandCards.length * 4;
+    },
+    registerEffects: () => async (cardEffectArgs) => {
+      await cardEffectArgs.runGameActionDelegate('moveCard', {
+        toPlayerId: cardEffectArgs.playerId,
+        cardId: cardEffectArgs.cardId,
+        to: { location: 'tavern' }
+      });
+    }
+  },
   'dungeon': {
     registerLifeCycleMethods: () => ({
       onLeavePlay: async (args, eventArgs) => {
