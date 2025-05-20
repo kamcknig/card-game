@@ -1110,6 +1110,49 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'miser': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const copperCardsOnTreasureMat = cardEffectArgs.findCards([
+        { location: 'tavern', playerId: cardEffectArgs.playerId },
+        { cardKeys: 'copper' }
+      ]);
+      
+      
+      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Choose one',
+        actionButtons: [
+          { label: 'PUT COPPER ON TAVERN', action: 1 },
+          { label: `+${copperCardsOnTreasureMat.length} TREASURE`, action: 2 }
+        ],
+      }) as { action: number, result: number[] };
+      
+      if (result.action === 1) {
+        console.log(`[miser effect] putting copper on tavern`);
+        const coppersInHand = cardEffectArgs.findCards([
+          { location: 'playerHand', playerId: cardEffectArgs.playerId },
+          { cardKeys: 'copper' }
+        ]);
+        
+        if (!coppersInHand.length) {
+          console.log(`[miser effect] no coppers in hand`);
+          return;
+        }
+        
+        console.log(`[miser effect] moving ${coppersInHand[0]} to tavern`);
+        
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
+          toPlayerId: cardEffectArgs.playerId,
+          cardId: coppersInHand[0].id,
+          to: { location: 'tavern' }
+        });
+      }
+      else {
+        console.log(`[miser effect] gaining ${copperCardsOnTreasureMat.length} treasure`);
+        await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: copperCardsOnTreasureMat.length });
+      }
+    }
+  },
   'page': {
     registerLifeCycleMethods: () => ({
       onDiscarded: async (args, eventArgs) => {

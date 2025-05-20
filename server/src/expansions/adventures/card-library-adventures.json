@@ -116,6 +116,12 @@
     },
     "type": ["ACTION"]
   },
+  "miser": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"]
+  },
   "page": {
     "cost": {
       "treasure": 2
