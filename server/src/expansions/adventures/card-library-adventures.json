@@ -201,5 +201,12 @@
     "type": ["ACTION", "TRAVELLER", "ATTACK"],
     "randomizer": null,
     "kingdom": "page"
+  },
+  "wine-merchant": {
+    "cardName": "Wine Merchant",
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "RESERVE"]
   }
 }

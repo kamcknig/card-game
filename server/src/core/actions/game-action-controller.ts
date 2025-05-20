@@ -585,7 +585,9 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   async nextPhase() {
     const match = this.match;
     
-    const trigger = new ReactionTrigger('endTurnPhase', { phaseIndex: match.turnPhaseIndex });
+    let currentPlayer = getCurrentPlayer(match);
+    
+    const trigger = new ReactionTrigger('endTurnPhase', { phaseIndex: match.turnPhaseIndex, playerId: currentPlayer.id });
     await this.reactionManager.runTrigger({ trigger });
     
     match.turnPhaseIndex = match.turnPhaseIndex + 1;
@@ -596,7 +598,6 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     }
     
     const newPhase = getTurnPhase(match.turnPhaseIndex);
-    let currentPlayer = getCurrentPlayer(match);
     
     console.log(`[nextPhase action] entering phase: ${newPhase} for turn ${match.turnNumber}`);
     

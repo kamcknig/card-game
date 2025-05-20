@@ -1824,6 +1824,45 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'wine-merchant': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[wine-merchant effect] gaining 4 treasure, and 1 buy`);
+      
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 4 });
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+      
+      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      
+      console.log(`[wine-merchant effect] moving ${thisCard} to tavern`);
+      
+      await cardEffectArgs.runGameActionDelegate('moveCard', {
+        toPlayerId: cardEffectArgs.playerId,
+        cardId: thisCard.id,
+        to: { location: 'tavern' }
+      });
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard.id, 'endTurnPhase', {
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        compulsory: false,
+        allowMultipleInstances: true,
+        condition: async conditionArgs => {
+          if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') return false;
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
+          if (conditionArgs.match.playerTreasure < 2) return false;
+          return true;
+        },
+        triggeredEffectFn: async triggeredArgs => {
+          console.log(`[wine-merchant endTurnPhase effect] discarding ${thisCard}`);
+          
+          await triggeredArgs.runGameActionDelegate('discardCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: thisCard.id
+          });
+        }
+      })
+    }
+  },
 }
 
 export default expansion;

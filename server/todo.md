@@ -104,11 +104,9 @@ kingdoms, also get available events based on the expansions being used and use t
 skipped
 - bridge troll
 - giant
-- miser
 - ranger
 - relic
 - royal carriage
-- wine merchant
 - teacher
 
 Will need to update seaside cards with the new duration flow

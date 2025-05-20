@@ -367,7 +367,7 @@ export type TriggerEventTypeContext = {
     bought: boolean;
     previousLocation?: { location: CardLocation; playerId?: PlayerId; };
   };
-  endTurnPhase: { phaseIndex: number; };
+  endTurnPhase: { phaseIndex: number; playerId: PlayerId;};
   startTurnPhase: { phaseIndex: number; };
   endTurn: void;
   discardCard: {
