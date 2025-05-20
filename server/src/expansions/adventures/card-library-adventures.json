@@ -172,6 +172,12 @@
     },
     "type": ["ACTION", "RESERVE"]
   },
+  "transmogrify": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION", "RESERVE"]
+  },
   "treasure-hunter": {
     "cardName": "Treasure Hunter",
     "cost": {

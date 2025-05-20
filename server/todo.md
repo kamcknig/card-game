@@ -108,7 +108,6 @@ skipped
 - ranger
 - relic
 - royal carriage
-- transmogrify
 - wine merchant
 - teacher
 

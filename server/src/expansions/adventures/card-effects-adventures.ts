@@ -1579,6 +1579,97 @@ const expansion: CardExpansionModule = {
       }
     }
   },
+  'transmogrify': {
+    registerEffects: () => async (cardEffectArgs) => {
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      
+      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      
+      await cardEffectArgs.runGameActionDelegate('moveCard', {
+        toPlayerId: cardEffectArgs.playerId,
+        cardId: thisCard.id,
+        to: { location: 'tavern' }
+      });
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard.id, 'startTurn', {
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        allowMultipleInstances: true,
+        compulsory: false,
+        condition: async conditionArgs => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
+          return true;
+        },
+        triggeredEffectFn: async triggeredArgs => {
+          console.log(`[transmogrify startTurn effect] calling ${thisCard} to playArea`);
+          
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            cardId: thisCard.id,
+            to: { location: 'playArea' }
+          });
+          
+          const hand = triggeredArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+          
+          let selectedCardIds = await triggeredArgs.runGameActionDelegate('selectCard', {
+            playerId: cardEffectArgs.playerId,
+            prompt: `Trash card`,
+            restrict: hand,
+            count: 1,
+          }) as CardId[];
+          
+          if (!selectedCardIds.length) {
+            console.warn(`[transmogrify startTurn effect] no card selected`);
+            return;
+          }
+          
+          const cardToTrash = triggeredArgs.cardLibrary.getCard(selectedCardIds[0]);
+          
+          await triggeredArgs.runGameActionDelegate('trashCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: cardToTrash.id
+          });
+          
+          const { cost } = triggeredArgs.cardPriceController.applyRules(cardToTrash, { playerId: cardEffectArgs.playerId });
+          
+          const cards = triggeredArgs.findCards([
+            { location: ['basicSupply', 'kingdomSupply'] },
+            {
+              kind: 'upTo',
+              playerId: cardEffectArgs.playerId,
+              amount: { treasure: cost.treasure + 1, potion: cost.potion }
+            }
+          ]);
+          
+          if (!cards.length) {
+            console.log(`[transmogrify startTurn effect] no cards costing less than ${cost.treasure + 1} treasure and ${cost.potion} potions`);
+            return;
+          }
+          
+          selectedCardIds = await triggeredArgs.runGameActionDelegate('selectCard', {
+            playerId: cardEffectArgs.playerId,
+            prompt: `Gain card`,
+            restrict: cards.map(card => card.id),
+            count: 1,
+          }) as CardId[];
+          
+          if (!selectedCardIds.length) {
+            console.warn(`[transmogrify startTurn effect] no cards selected to gain`);
+            return;
+          }
+          
+          const cardToGain = triggeredArgs.cardLibrary.getCard(selectedCardIds[0]);
+          
+          console.warn(`[transmogrify startTurn effect] gaining ${cardToGain} to hand`);
+          
+          await triggeredArgs.runGameActionDelegate('gainCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: cardToGain.id,
+            to: { location: 'playerHand' }
+          });
+        }
+      })
+    }
+  },
   'treasure-hunter': {
     registerLifeCycleMethods: () => ({
       onDiscarded: async (args, eventArgs) => {
