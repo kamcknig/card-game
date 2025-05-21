@@ -291,6 +291,14 @@ export type MatchSummary = {
   }[]
 }
 
+export interface CardLike {
+
+}
+
+export class Event {
+  id: number;
+}
+
 /**
  * CARD TYPES
  */
@@ -439,18 +447,6 @@ export class Card {
 
 const EffectTargetValues = ['ANY', 'ALL_OTHER', 'ALL'] as const;
 export type EffectTarget = typeof EffectTargetValues[number] | string;
-export type EffectRestrictionSpec = {
-  source: {
-    location: CardLocation | CardLocation[];
-    playerId?: PlayerId;
-  }
-  card?: {
-    cardKeys?: CardKey | CardKey[];
-    type?: CardType | CardType[];
-  };
-  cost?: CostSpec;
-};
-
 export type ActionButtons = {
   label: string;
   action: number;

@@ -553,10 +553,6 @@ export type EndGameConditionFn = (args: EndGameConditionFnContext) => boolean;
 export type EndGameConditionRegistrar = (endGameConditionFn: EndGameConditionFn) => void;
 
 export type ClientEventRegistrar = <T extends keyof ServerListenEvents>(event: T, eventHandler: ServerListenEvents[T]) => void;
-export type ClientEventRegistry = (registrar: ClientEventRegistrar, context: {
-  match: Match,
-  runGameActionDelegate: RunGameActionDelegate,
-}) => void;
 
 export type GameEventRegistrar = (event: GameLifecycleEvent, handler: GameLifecycleCallback) => void;
 
