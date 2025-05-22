@@ -1,36 +1,19 @@
-import { Assets, Container, ContainerOptions, Sprite, Texture } from 'pixi.js';
-import { EventNoId } from 'shared/shared-types';
+import { Container, ContainerOptions, FederatedPointerEvent } from 'pixi.js';
 
-interface CardLikeViewOptions {
-  event: EventNoId;
-}
-
-export class CardLikeView extends Container {
-  private _event: EventNoId | undefined;
-  private _cardImage: Texture | undefined;
-  private _cardSprite: Sprite = new Sprite({ label: 'cardSprite' });
-
-  public set event(value: EventNoId) {
-    if (this._event?.cardKey === value.cardKey) return;
-
-    this._event = value;
-    this._cardImage = Assets.get(`${value.cardKey}-full`);
-
-    if (this._cardImage) {
-      this._cardSprite.texture = this._cardImage;
-    }
-
-    this.draw();
-  }
-
-  constructor({ event, ...args }: ContainerOptions & CardLikeViewOptions) {
+export abstract class CardLikeView extends Container {
+  protected constructor(args: ContainerOptions) {
     super(args);
-    this.event = event;
 
-    this.addChild(this._cardSprite);
+    this.eventMode = 'static';
+    this.on('pointerdown', (event) => {
+      this.onPointerdown(event);
+    });
+
+    this.on('removed', () => {
+      this.off('pointerdown');
+      this.off('removed');
+    })
   }
 
-  private draw() {
-
-  }
+  abstract onPointerdown(event: FederatedPointerEvent): void;
 }

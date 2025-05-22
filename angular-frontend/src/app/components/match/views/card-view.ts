@@ -1,4 +1,4 @@
-import { Assets, Container, Graphics, Sprite, Text, Texture } from 'pixi.js';
+import { Assets, Container, ContainerOptions, FederatedPointerEvent, Graphics, Sprite, Text, Texture } from 'pixi.js';
 import { Card, CardFacing } from 'shared/shared-types';
 import { batched } from 'nanostores';
 import { CardSize } from '../../../../types';
@@ -6,14 +6,17 @@ import { selectableCardStore } from '../../../state/interactive-logic';
 import { selectedCardStore } from '../../../state/interactive-state';
 import { cardOverrideStore } from '../../../state/card-logic';
 import { displayCardDetail } from './modal/display-card-detail';
+import { CardLikeView } from './card-like-view';
 
-type CardArgs = Card;
+type CardArgs = {
+  card: Card;
+};
 
 type CardViewArgs = {
   size?: CardSize;
 }
 
-export class CardView extends Container {
+export class CardView extends CardLikeView {
   private readonly _highlight: Graphics = new Graphics({ label: 'highlight' });
   private readonly _cardView: Sprite = new Sprite({ label: 'caredView' });
   private readonly _costView: Container = new Container({ label: 'costView' });
@@ -80,8 +83,8 @@ export class CardView extends Container {
     return this._size;
   }
 
-  constructor({ size, ...card }: CardArgs & CardViewArgs) {
-    super();
+  constructor({ size, card, ...args }: ContainerOptions & CardArgs & CardViewArgs) {
+    super(args);
 
     this._card = card;
 
@@ -133,18 +136,6 @@ export class CardView extends Container {
         (...args) => args
       ).subscribe(this.onDraw));
 
-    this.on('pointerdown', (event) => {
-      if (event.ctrlKey) {
-        console.log(this.card);
-        return;
-      }
-
-      if (event.button === 2 && this.facing === 'front') {
-        void displayCardDetail(this.card);
-        return;
-      }
-    });
-
     const selectableSub =   selectableCardStore.subscribe(selectableCards => {
       this.cursor = selectableCards.includes(this._card.id) ? 'pointer' : 'default';
     });
@@ -190,5 +181,17 @@ export class CardView extends Container {
     this._costView.x = 2;
     this._costView.y = this._cardView.y + this._cardView.height - this._costView.height - 5;
     this._costView.visible = this.facing === 'front';
+  }
+
+  onPointerdown(event: FederatedPointerEvent): void {
+    if (event.ctrlKey) {
+      console.log(this.card);
+      return;
+    }
+
+    if (event.button === 2 && this.facing === 'front') {
+      void displayCardDetail(this.card);
+      return;
+    }
   }
 }

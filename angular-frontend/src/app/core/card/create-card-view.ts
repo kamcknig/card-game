@@ -5,7 +5,7 @@ import { isNumber } from 'es-toolkit/compat';
 
 export const createCardView = (cardOrCardId: Card | number) => {
     const actualCard = isNumber(cardOrCardId) ? cardStore.get()[cardOrCardId] : cardOrCardId;
-    const c = new CardView(actualCard);
+    const c = new CardView({ card: actualCard });
     c.on('removed', () => {
         c.removeAllListeners();
     });

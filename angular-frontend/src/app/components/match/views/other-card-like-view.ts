@@ -2,7 +2,8 @@ import { Container, ContainerOptions, Graphics } from 'pixi.js';
 import { events } from '../../../state/match-logic';
 import { EventNoId } from 'shared/shared-types';
 import { EVENT_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
-import { CardLikeView } from './card-like-view';
+
+import { EventCard } from './event-card';
 
 export class OtherCardLikeView extends Container {
   private background: Graphics = new Graphics({ label: 'background' });
@@ -26,10 +27,10 @@ export class OtherCardLikeView extends Container {
 
   private drawEvents(events: readonly EventNoId[]) {
     for (const event of events) {
-      let cardContainer = this.cardContainer.getChildByLabel(event.cardKey) as CardLikeView;
+      let cardContainer = this.cardContainer.getChildByLabel(event.cardKey) as EventCard;
 
       if (!cardContainer) {
-        cardContainer = new CardLikeView({ label: event.cardKey, event });
+        cardContainer = new EventCard({ label: event.cardKey, event });
         cardContainer.x = this.cardContainer.children.length * (EVENT_WIDTH + STANDARD_GAP);
         this.cardContainer.addChild(cardContainer);
       }

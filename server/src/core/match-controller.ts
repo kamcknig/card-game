@@ -33,7 +33,7 @@ import {
   MatchBaseConfiguration,
   PlayerScoreDecorator,
 } from '../types.ts';
-import { createCard } from '../utils/create-card.ts';
+import { createCard, createEvent } from '../utils/create-card.ts';
 import { getRemainingSupplyCount, getStartingSupplyCount } from '../utils/get-starting-supply-count.ts';
 import { CardPriceRulesController } from './card-price-rules-controller.ts';
 import { findCardsFactory } from '../utils/find-cards.ts';
@@ -651,7 +651,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   
   private createEvents(config: ComputedMatchConfiguration) {
     for (const event of config.events) {
-      this._match.events.push(structuredClone(event));
+      this._match.events.push(createEvent(event));
     }
   }
 }

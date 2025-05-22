@@ -15,7 +15,6 @@ import {
 import { CardView } from '../card-view';
 import { userPromptModal } from '../modal/user-prompt-modal';
 import { CARD_HEIGHT, STANDARD_GAP } from '../../../../core/app-contants';
-import { displayCardDetail } from '../modal/display-card-detail';
 import { validateCountSpec } from '../../../../shared/validate-count-spec';
 import { CardStackView } from '../card-stack';
 import { currentPlayerTurnIdStore } from '../../../../state/turn-state';

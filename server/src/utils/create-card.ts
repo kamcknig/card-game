@@ -1,5 +1,5 @@
-import { Card, CardKey, CardNoId } from 'shared/shared-types.ts';
-import { rawCardLibrary } from "@expansions/expansion-library.ts";
+import { Card, CardKey, CardNoId, Event, EventNoId } from 'shared/shared-types.ts';
+import { rawCardLibrary } from '@expansions/expansion-library.ts';
 import { capitalize } from 'es-toolkit/compat';
 
 let CARD_COUNT: number = 0;
@@ -15,3 +15,10 @@ export const createCard = (cardKey: CardKey, card?: Partial<CardNoId>): Card => 
   });
   return c;
 };
+
+export const createEvent = (event: EventNoId): Event => {
+  return new Event({
+    ...event,
+    id: ++CARD_COUNT,
+  });
+}
