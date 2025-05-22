@@ -47,6 +47,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     private _findCards: FindCardsFn,
     private cardPriceRuleController: CardPriceRulesController,
     private cardEffectFunctionMap: CardEffectFunctionMap,
+    private eventEffectFunctionMap: CardEffectFunctionMap,
     private match: Match,
     private cardLibrary: MatchCardLibrary,
     private logManager: LogManager,

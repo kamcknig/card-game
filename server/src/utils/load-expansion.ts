@@ -6,6 +6,7 @@ import { CardExpansionModule } from '../types.ts';
 import { CardNoId } from 'shared/shared-types.ts';
 import { cardActionConditionMapFactory } from '../core/actions/card-action-condition-map-factory.ts';
 import { createCardData } from './create-card-data.ts';
+import { loadEvents } from '../core/events/load-events.ts';
 
 export const loadExpansion = async (expansion: { name: string; }) => {
   const expansionPath = `@expansions/${expansion.name}`;
@@ -23,7 +24,8 @@ export const loadExpansion = async (expansion: { name: string; }) => {
     cardData: {
       basicSupply: {},
       kingdomSupply: {},
-    }
+    },
+    events: {},
   };
   
   let expansionConfiguration;
@@ -50,8 +52,10 @@ export const loadExpansion = async (expansion: { name: string; }) => {
     const cardData = expansionLibrary[expansionName].cardData;
     
     console.log(`[expansion loader] loading card library for ${expansionName}`);
+    
     const cardLibraryModule = await import(`${expansionPath}/card-library-${expansionName}.json`, { with: { type: 'json' } });
     const cards = cardLibraryModule.default as Record<string, Partial<CardNoId>>;
+    
     for (const key of Object.keys(cards)) {
       const newCardData = createCardData(key, expansionName, cards[key]);
       
@@ -59,9 +63,11 @@ export const loadExpansion = async (expansion: { name: string; }) => {
       cardData[isBasic ? 'basicSupply' : 'kingdomSupply'][key] = newCardData as any;
       rawCardLibrary[key] = newCardData as any;
     }
+    
     console.log('[expansion loader] card library loaded');
     
     console.log(`[expansion loader] loading ${expansionName} card effects`);
+    
     const cardEffectsModule = await import(`${expansionPath}/card-effects-${expansionName}.ts`);
     const cardEffects = cardEffectsModule.default as CardExpansionModule;
     
@@ -91,4 +97,7 @@ export const loadExpansion = async (expansion: { name: string; }) => {
     console.log(error);
     delete expansionLibrary[expansionName];
   }
+  
+  console.log(`[expansion loader] attempting to load events for ${expansionName}`);
+  await loadEvents(expansionName);
 };

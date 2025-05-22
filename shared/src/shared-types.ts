@@ -31,7 +31,9 @@ export interface MatchConfiguration {
   // kingdom cards selected for the game, these are what are available at the beginning of a match
   kingdomSupply: Supply[];
   
-  playerStartingHand: Record<CardKey, number>
+  playerStartingHand: Record<CardKey, number>;
+  
+  events: EventNoId[];
 }
 
 export type ComputedMatchConfiguration = MatchConfiguration & {
@@ -77,6 +79,7 @@ export interface Match {
   coffers: Record<PlayerId, number>;
   config: ComputedMatchConfiguration,
   currentPlayerTurnIndex: number;
+  events: EventNoId[];
   mats: PlayerMatMap;
   playerActions: number;
   playerBuys: number;
@@ -291,13 +294,53 @@ export type MatchSummary = {
   }[]
 }
 
-export interface CardLike {
-
+export class CardLike {
+  id: CardId;
+  cardKey: CardKey;
+  cardName: string;
+  fullImagePath: string;
+  detailImagePath: string;
+  /**
+   * If null, this card is not used during kingdom selection as part of the pool. If undefined, the cardKey is used.
+   *
+   * This is used in cases where a kingdom supply might contain different cards in one supply such as Knights from
+   * Dark Ages. We set a randomizer of "knights" on it so that it's only gets one vote but it has 10 different knight
+   * cards in the supply
+   */
+  randomizer: string | null;
+  
+  constructor(args: CardLike) {
+    this.id = args.id;
+    this.cardKey = args.cardKey ?? '';
+    this.cardName = args.cardName ?? '';
+    this.fullImagePath = args.fullImagePath ?? '';
+    this.detailImagePath = args.detailImagePath ?? '';
+    this.randomizer = args.randomizer ?? null;
+  }
 }
 
-export class Event {
-  id: number;
+export type CardLikeNoId = Omit<CardLike, 'id'>;
+
+type EventArgs = {
+  [p in keyof CardLike]: CardLike[p];
 }
+
+export class Event extends CardLike {
+  constructor(args: EventArgs) {
+    super(args);
+    
+    this.id = args.id;
+    this.cardName = args.cardName;
+    this.fullImagePath = args.fullImagePath;
+    this.detailImagePath = args.detailImagePath;
+  }
+  
+  override toString() {
+    return `[EVENT ${this.id} - ${this.cardKey}]`;
+  }
+}
+
+export type EventNoId = Omit<Event, 'id'>;
 
 /**
  * CARD TYPES
@@ -349,27 +392,23 @@ export type CardType =
   | 'ZOMBIE';
 
 export type CardArgs = {
-  randomizer: string | null;
+  [p in keyof CardLike]: CardLike[p];
+} & {
   partOfSupply: boolean;
   kingdom: string;
   tags?: string[];
   facing?: CardFacing;
-  id: CardId;
   type: CardType[];
   isBasic?: boolean;
-  cardName: string;
   mat: Mats | undefined;
   cost: {
     treasure: number;
   };
   abilityText: string;
-  cardKey: CardKey;
   victoryPoints?: number;
   targetScheme?: EffectTarget;
   expansionName: string;
-  fullImagePath: string;
   halfImagePath: string;
-  detailImagePath: string;
   owner?: PlayerId | null;
 }
 
@@ -378,15 +417,7 @@ export type CardCost = {
   potion?: number | undefined;
 }
 
-export class Card {
-  /**
-   * If null, this card is not used during kingdom selection as part of the pool. If undefined, the cardKey is used.
-   *
-   * This is used in cases where a kingdom supply might contain different cards in one supply such as Knights from
-   * Dark Ages. We set a randomizer of "knights" on it so that it's only gets one vote but it has 10 different knight
-   * cards in the supply
-   */
-  randomizer: string | null;
+export class Card extends CardLike {
   /**
    * This indicates if the card is part of the supply or not. shelters, rewards, etc. are not part of the supply.
    *
@@ -396,23 +427,19 @@ export class Card {
   tags?: string[] = [];
   kingdom: string;
   facing?: CardFacing;
-  id: CardId;
   isBasic?: boolean = false;
-  cardName: string;
   type: CardType[];
   mat: Mats | undefined;
   cost: CardCost;
   victoryPoints: number;
   abilityText: string;
-  cardKey: CardKey;
   targetScheme?: EffectTarget;
   expansionName: string;
-  fullImagePath: string;
-  detailImagePath: string;
   halfImagePath: string;
   owner: PlayerId | null;
   
   constructor(args: CardArgs) {
+    super(args);
     this.tags = args.tags ?? [];
     this.facing = args.facing ?? 'front';
     this.isBasic = args.isBasic ?? false;
@@ -435,7 +462,7 @@ export class Card {
     this.randomizer = args.randomizer;
   }
   
-  toString() {
+  override toString() {
     return `[CARD ${this.id} - ${this.cardKey}]`;
   }
   

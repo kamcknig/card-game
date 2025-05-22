@@ -1,4 +1,4 @@
-import { CardKey, CardNoId } from 'shared/shared-types.ts';
+import { CardKey, CardNoId, EventNoId } from 'shared/shared-types.ts';
 
 export type ExpansionCardData = {
   basicSupply: Record<CardKey, CardNoId>,
@@ -9,6 +9,7 @@ export type ExpansionData = {
   title: string;
   name: string;
   cardData: ExpansionCardData;
+  events: Record<CardKey, EventNoId>;
   mutuallyExclusive?: string[];
 }
 

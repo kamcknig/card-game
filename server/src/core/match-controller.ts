@@ -39,6 +39,7 @@ import { CardPriceRulesController } from './card-price-rules-controller.ts';
 import { findCardsFactory } from '../utils/find-cards.ts';
 import { GameActionController } from './actions/game-action-controller.ts';
 import { CardSourceController } from './card-source-controller.ts';
+import { eventEffectFactoryMap } from './events/event-effect-factory-map.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardLibSnapshot = {};
@@ -78,24 +79,23 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     super();
     
     this._match = {
+      cardOverrides: {},
       cardSources: {},
       cardSourceTagMap: {},
-      playerVictoryTokens: {},
       coffers: {},
-      cardOverrides: {},
-      scores: {},
-      players: [],
       config: {} as ComputedMatchConfiguration,
-      turnNumber: 0,
-      roundNumber: 0,
       currentPlayerTurnIndex: 0,
-      playerPotions: 0,
-      playerBuys: 0,
-      playerTreasure: 0,
-      playerActions: 0,
-      turnPhaseIndex: 0,
-      selectableCards: {},
+      events: [],
       mats: {},
+      playerActions: 0,
+      playerBuys: 0,
+      players: [],
+      playerPotions: 0,
+      playerTreasure: 0,
+      playerVictoryTokens: {},
+      roundNumber: 0,
+      scores: {},
+      selectableCards: {},
       stats: {
         playedCardsByTurn: {},
         cardsGainedByTurn: {},
@@ -104,7 +104,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         trashedCards: {},
         trashedCardsByTurn: {},
         cardsBought: {}
-      }
+      },
+      turnNumber: 0,
+      turnPhaseIndex: 0
     }
     this._cardSourceController = new CardSourceController(this._match);
   }
@@ -140,6 +142,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       return acc;
     }, {} as CardEffectFunctionMap);
     
+    const eventEffectFunctionMap = Object.keys(eventEffectFactoryMap).reduce((acc, nextKey) => {
+      acc[nextKey] = eventEffectFactoryMap[nextKey]();
+      return acc;
+    }, {} as CardEffectFunctionMap);
+    
     this._interactivityController = new CardInteractivityController(
       this._cardSourceController,
       this._cardPriceController,
@@ -155,6 +162,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._findCards,
       this._cardPriceController,
       cardEffectFunctionMap,
+      eventEffectFunctionMap,
       this._match,
       this._cardLibrary,
       this._logManager,
@@ -181,6 +189,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this._match.players = this._matchConfiguration.players;
     this.createBaseSupply(this._matchConfiguration);
     this.createKingdom(this._matchConfiguration);
+    this.createEvents(this._matchConfiguration);
     this.createNonSupplyCards(this._matchConfiguration);
     this.createPlayerDecks(this._matchConfiguration);
     this._match.config = this._matchConfiguration;
@@ -638,5 +647,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       'searchCardResponse',
       this.cardSearchFn(searchStr),
     );
+  }
+  
+  private createEvents(config: ComputedMatchConfiguration) {
+    for (const event of config.events) {
+      this._match.events.push(structuredClone(event));
+    }
   }
 }

@@ -5,6 +5,7 @@ import { CardSize } from '../../../../types';
 import { selectableCardStore } from '../../../state/interactive-logic';
 import { selectedCardStore } from '../../../state/interactive-state';
 import { cardOverrideStore } from '../../../state/card-logic';
+import { displayCardDetail } from './modal/display-card-detail';
 
 type CardArgs = Card;
 
@@ -132,13 +133,28 @@ export class CardView extends Container {
         (...args) => args
       ).subscribe(this.onDraw));
 
-    this.on('removed', this.onRemoved);
-  }
+    this.on('pointerdown', (event) => {
+      if (event.ctrlKey) {
+        console.log(this.card);
+        return;
+      }
 
-  private onRemoved = () => {
-    this._cleanup.forEach(cb => cb());
-    this.removeAllListeners();
-    this.destroy();
+      if (event.button === 2 && this.facing === 'front') {
+        void displayCardDetail(this.card);
+        return;
+      }
+    });
+
+    const selectableSub =   selectableCardStore.subscribe(selectableCards => {
+      this.cursor = selectableCards.includes(this._card.id) ? 'pointer' : 'default';
+    });
+
+    this.on('removed', () => {
+      selectableSub();
+      this._cleanup.forEach(cb => cb());
+      this.removeAllListeners();
+      this.destroy();
+    });
   }
 
   private onDraw = () => {

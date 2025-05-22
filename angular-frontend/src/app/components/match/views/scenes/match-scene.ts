@@ -2,7 +2,7 @@ import { Application, Assets, Container, Graphics, Rectangle, Sprite, Text } fro
 import { Scene } from '../../../../core/scene/scene';
 import { PlayerHandView } from '../player-hand';
 import { createAppButton } from '../../../../core/create-app-button';
-import { matchStartedStore } from '../../../../state/match-state';
+import { matchStartedStore, matchStore } from '../../../../state/match-state';
 import { playerStore, selfPlayerIdStore, } from '../../../../state/player-state';
 import { PlayAreaView } from '../play-area';
 import { KingdomSupplyView } from '../kingdom-supply';
@@ -28,10 +28,11 @@ import { SelectCardArgs } from '../../../../../types';
 import { BasicSupplyView } from '../basic-supply';
 import { NonSupplyKingdomView } from '../non-supply-kingdom-view';
 import { getCardSourceStore } from '../../../../state/card-source-store';
+import { OtherCardLikeView } from '../other-card-like-view';
 
 export class MatchScene extends Scene {
   private _board: Container = new Container();
-  private _baseSupply: Container = new Container({ scale: .9 });
+  private _baseSupply: Container = new Container({ scale: 1 });
   private _playerHand: PlayerHandView | undefined;
   private _deck: CardStackView | undefined;
   private _discard: CardStackView | undefined;
@@ -43,6 +44,7 @@ export class MatchScene extends Scene {
   private _scoreViewBottom: number = 0;
   private _nonSupplyView: NonSupplyKingdomView | undefined;
   private _selfId: PlayerId = selfPlayerIdStore.get()!;
+  private _otherCardLikes: OtherCardLikeView | undefined;
 
   private get uiInteractive(): boolean {
     return !this._selecting && !awaitingServerLockReleaseStore.get();
@@ -93,9 +95,12 @@ export class MatchScene extends Scene {
     this._cleanup.push(gamePausedStore.subscribe(this.onPauseGameUpdated));
 
     setTimeout(() => {
-      this.onRendererResize();
       this._socketService.emit('clientReady', this._selfId, true);
     });
+
+    setTimeout(() => {
+      this.onRendererResize();
+    }, 100);
   }
 
   private onPing = (pingCount: number) => {
@@ -193,11 +198,17 @@ export class MatchScene extends Scene {
     this.addChild(this._board);
 
     this._baseSupply = this.addChild(new BasicSupplyView());
-    this._baseSupply.scale = .9;
+    this._baseSupply.scale = 1;
+
     this._kingdomView = this.addChild(new KingdomSupplyView());
-    this._kingdomView.scale = .9;
+    this._kingdomView.scale = 1;
+
     this._nonSupplyView = this.addChild(new NonSupplyKingdomView());
-    this._nonSupplyView.scale = .9;
+    this._nonSupplyView.scale = 1;
+
+    this._otherCardLikes = new OtherCardLikeView({label: 'otherCardLikes'});
+    this.addChild(this._otherCardLikes);
+    this._otherCardLikes.scale = 1;
 
     this._playArea = this.addChild(new PlayAreaView());
 
@@ -318,15 +329,7 @@ export class MatchScene extends Scene {
       return;
     }
 
-    const cardView = event.target as CardView;
-
     if (event.ctrlKey) {
-      console.log(cardView.card);
-      return;
-    }
-
-    if (event.button === 2 && cardView.facing === 'front') {
-      void displayCardDetail(this._app, event.target.card);
       return;
     }
 
@@ -568,17 +571,26 @@ export class MatchScene extends Scene {
       this._kingdomView.x = Math.max(this._scoreViewRight, this._baseSupply.x + this._baseSupply.width) + STANDARD_GAP;
     }
 
-    if (this._playArea && this._kingdomView && this._nonSupplyView && this._playerHand) {
-      this._playArea.x = this._kingdomView.x;
-      this._playArea.y = Math.max(this._kingdomView.y + this._kingdomView.height, this._nonSupplyView.y + this._nonSupplyView.height) + STANDARD_GAP;
+    const numEvents = matchStore.get()?.events.length ?? 0;
 
-      const height = this._playerHand.y - this._playArea.y;
-      this._playArea.verticalSpace = Math.max(400, height - STANDARD_GAP);
+    if (this._kingdomView && this._otherCardLikes && numEvents > 0) {
+      this._otherCardLikes.x = this._kingdomView.x;
+      this._otherCardLikes.y = this._kingdomView.y + this._kingdomView.height + STANDARD_GAP;
     }
 
     if (this._kingdomView && this._nonSupplyView) {
       this._nonSupplyView.x = this._kingdomView.x + this._kingdomView.width + STANDARD_GAP;
       this._nonSupplyView.y = STANDARD_GAP;
+    }
+
+    if (this._playArea && this._kingdomView && this._nonSupplyView && this._playerHand && this._otherCardLikes) {
+      this._playArea.x = this._kingdomView.x;
+
+      const top = Math.max(this._kingdomView.y + this._kingdomView.height, this._nonSupplyView.y + this._nonSupplyView.height, this._otherCardLikes.y + this._otherCardLikes.height);
+      this._playArea.y = top + STANDARD_GAP;
+
+      const height = this._playerHand.y - this._playArea.y;
+      this._playArea.verticalSpace = Math.max(400, height - STANDARD_GAP);
     }
 
     if (this._playerHand) {

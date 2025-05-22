@@ -105,6 +105,7 @@ export const MatchBaseConfiguration = {
     'copper': 7,
     'estate': 3,
   },
+  numberOfEventsAndOthers: 2,
 } as const;
 
 export interface LifecycleSuppression {

@@ -106,6 +106,11 @@ export const socketToGameEventMap = (): SocketEventMap => {
       return prev;
     }, baseBundle);
 
+    for (const event of matchStore.get()?.events ?? []) {
+      finalBundle[`${event.cardKey}-full`] ??= event.fullImagePath;
+      finalBundle[`${event.cardKey}-detail`] ??= event.detailImagePath;
+    }
+
     Assets.addBundle('cardLibrary', finalBundle);
 
     sceneStore.set('match');

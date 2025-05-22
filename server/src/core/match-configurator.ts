@@ -1,7 +1,9 @@
 import {
   CardKey,
+  CardLikeNoId,
   CardNoId,
   ComputedMatchConfiguration,
+  EventNoId,
   Match,
   MatchConfiguration,
   Supply
@@ -19,6 +21,42 @@ import {
 import { compare, Operation } from 'https://esm.sh/v123/fast-json-patch@3.1.1/index.js';
 import { CardSourceController } from './card-source-controller.ts';
 import { getDefaultKingdomSupplySize } from '../utils/get-default-kingdom-supply-size.ts';
+
+/**
+ * Return a new array with at most one element for every distinct `prop` value.
+ *
+ * @template T extends Record<string, any>
+ * @param   list  Source array
+ * @param   prop  Property whose value determines uniqueness
+ * @param   keep  'first' | 'last'  – keeps the first or last occurrence (default 'first')
+ * @returns Deduplicated array
+ */
+export function uniqueByProp<
+  T extends Record<string, any>,
+  K extends keyof T = keyof T
+>(
+  list: T[],
+  prop: K,
+  keep: 'first' | 'last' = 'first',
+): T[] {
+  if (keep === 'first') {
+    // Keep the first occurrence
+    const seen = new Set<any>();
+    return list.filter(item => {
+      const key = item[prop];
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+  
+  // Keep the **last** occurrence
+  const idxByKey = new Map<any, number>(); // key → index of last sighting
+  list.forEach((item, i) => idxByKey.set(item[prop], i));
+  return list.filter((_, i) => idxByKey.get(list[i][prop]) === i);
+}
+
+
 
 /**
  * The configurator takes a MatchConfiguration instance and creates a ComputedMatchConfiguration.
@@ -59,6 +97,7 @@ export class MatchConfigurator {
     }
     
     this._config.preselectedKingdoms = this._config.preselectedKingdoms.filter(card => !!card);
+    
     if (this._config.preselectedKingdoms?.length > 0) {
       console.log(`[match configurator] requested kingdom cards ${this._config.preselectedKingdoms.length}`);
       console.log(this._config.preselectedKingdoms?.map(card => card.cardKey)?.join('\n'));
@@ -134,19 +173,36 @@ export class MatchConfigurator {
       }, [] as ExpansionData[]);
       
       // list of randomizers that are banned or already pre-selected
-      const bannedKingdomKeys = this._bannedKingdoms.map(card => card.kingdom) as string[];
-      const alreadyIncludedKeys = selectedKingdoms.map(card => card.kingdom) as string[];
+      const bannedKingdomRandomizers = this._bannedKingdoms.map(card => card.randomizer) as string[];
+      const alreadyIncludedKingdomRandomizers = selectedKingdoms.map(card => card.randomizer) as string[];
       
-      console.log(`[match configurator] banned kingdoms ${bannedKingdomKeys.join(', ') ?? '- no banned kingdoms'}`);
+      console.log(`[match configurator] banned kingdoms ${bannedKingdomRandomizers.join(', ') ?? '- no banned kingdoms'}`);
       
       // loop over the selected expansions, and filter out any kingdom cards that
       // are banned, are already included, or do not have a randomizer
-      const availableKingdoms = selectedExpansions.flatMap((nextExpansion) => {
-        return Object.values(nextExpansion.cardData.kingdomSupply)
-          .filter(card => !bannedKingdomKeys.includes(card.cardKey) && !alreadyIncludedKeys.includes(card.cardKey) && card.randomizer !== null);
-      });
+      const availableRandomizers = selectedExpansions.flatMap((nextExpansion) => [
+        ...Object
+          .values(nextExpansion.cardData.kingdomSupply)
+          .filter(card =>
+            card.randomizer !== null && !bannedKingdomRandomizers.includes(card.randomizer) && !alreadyIncludedKingdomRandomizers.includes(card.cardKey)
+          )
+          .map(card => {
+            return {
+              randomizer: card.randomizer,
+              cardLike: card,
+              type: 'card',
+            };
+          }),
+        ...Object.values(nextExpansion.events)
+          .filter(event => event.randomizer !== null)
+          .map(event => ({
+            randomizer: event.randomizer,
+            cardLike: event,
+            type: 'event'
+          }))
+      ]) as { randomizer: string; type: 'card' | 'event'; cardLike: CardLikeNoId; }[];
       
-      const uniqueRandomizers = Array.from(new Set(availableKingdoms.map(card => card.randomizer))) as string[];
+      const uniqueRandomizers = uniqueByProp(availableRandomizers, 'randomizer');
       
       console.log(`[match configurator] available kingdoms ${uniqueRandomizers.length}`);
       console.log(uniqueRandomizers.join('\n'));
@@ -155,29 +211,69 @@ export class MatchConfigurator {
       
       console.log(`[match configurator] need to select ${numKingdomsToSelect} kingdoms`);
       
+      const allowedEventsAndOthers = MatchBaseConfiguration.numberOfEventsAndOthers;
+      let selectedEventsAndOthers = this._config.events.length;
+      
+      let a = false;
+      
       for (let i = 0; i < numKingdomsToSelect; i++) {
-        const randomIndex = Math.floor(Math.random() * uniqueRandomizers.length);
-        const randomizer = uniqueRandomizers[randomIndex];
+        const randomIndex = !a ? uniqueRandomizers.findIndex(randomizer => randomizer.randomizer === 'alms') : Math.floor(Math.random() * uniqueRandomizers.length);
+        a = true;
+        const selectedRandomizer = uniqueRandomizers[randomIndex];
         
-        const cardsInRandomizer = availableKingdoms.filter(card => card.randomizer === randomizer);
-        
-        // this makes an assumption that if there are more cards within a randomizer group (such as knights from dark
-        // ages) that they will all be in the same kingdom.
-        const kingdom = cardsInRandomizer[0].kingdom;
-        let cards: CardNoId[] = [];
-        
-        if (cardsInRandomizer.length === 1) {
-          cards = new Array(getDefaultKingdomSupplySize(cardsInRandomizer[0], this._config)).fill(cardsInRandomizer[0]);
+        if (selectedRandomizer.type === 'card') {
+          console.log(`[match configurator] selected kingdom ${selectedRandomizer.randomizer}`);
+          
+          const cardsInRandomizer = availableRandomizers
+            .filter(randomizer => randomizer.randomizer === selectedRandomizer.randomizer)
+            .map(randomizer => randomizer.cardLike) as CardNoId[];
+          
+          // this makes an assumption that if there are more cards within a randomizer group (such as knights from dark
+          // ages) that they will all be in the same kingdom.
+          const kingdom = cardsInRandomizer[0].kingdom;
+          
+          let cards: CardNoId[] = [];
+          
+          if (!cardsInRandomizer.length) {
+            throw new Error(`[match configurator] no cards found for randomizer ${selectedRandomizer.randomizer}`);
+          }
+          
+          if (cardsInRandomizer.length === 1) {
+            cards = new Array(getDefaultKingdomSupplySize(cardsInRandomizer[0], this._config)).fill(cardsInRandomizer[0]);
+          }
+          else {
+            cards = cardsInRandomizer;
+          }
+          
+          additionalKingdoms.push({
+            name: kingdom,
+            cards
+          });
         }
         else {
-          cards = cardsInRandomizer;
+          console.log(`[match configurator] selected event ${selectedRandomizer.randomizer}`);
+          
+          if (++selectedEventsAndOthers <= allowedEventsAndOthers) {
+            console.log(`[match configurator] selected event ${selectedRandomizer.randomizer} is allowed, adding to match`);
+            const event = availableRandomizers
+              .find(randomizer => randomizer.randomizer === selectedRandomizer.randomizer)
+              ?.cardLike as EventNoId;
+            
+            if (!event) {
+              throw new Error(`[match configurator] event not found for randomizer ${selectedRandomizer.randomizer}`);
+            }
+            
+            this._config.events.push(event);
+          }
+          else {
+            console.log(`[match configurator] selected event ${selectedRandomizer.randomizer} is not allowed, already have max number of events and others`);
+          }
+          
+          // reduce the counter because events don't count against kingdom selection
+          i--;
         }
         
-        additionalKingdoms.push({
-          name: kingdom,
-          cards
-        });
-        
+        // remove the randomizer so it can't be selected again
         uniqueRandomizers.splice(randomIndex, 1);
       }
     }

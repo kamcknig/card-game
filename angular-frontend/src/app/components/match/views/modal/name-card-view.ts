@@ -71,7 +71,7 @@ export const nameCardView = (
     const cardData = cardMap.get(event.target);
 
     if (event.button === 2) {
-      void displayCardDetail(app, cardData);
+      void displayCardDetail(cardData);
       return
     }
 

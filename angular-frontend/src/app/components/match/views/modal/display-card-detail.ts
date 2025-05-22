@@ -1,8 +1,13 @@
 import { Application, Assets, Container, Graphics, Sprite, Texture } from 'pixi.js';
 import { cardStore } from '../../../../state/card-state';
 import { CardNoId } from 'shared/shared-types';
+import { applicationStore } from '../../../../state/app-state';
 
-export async function displayCardDetail(app: Application, arg: number | CardNoId) {
+export async function displayCardDetail(arg: number | CardNoId) {
+  const app = applicationStore.get();
+
+  if (!app) throw new Error('Application is not initialized');
+
   let cardImg: Texture;
   if (typeof arg === 'number') {
     cardImg = await Assets.load(cardStore.get()[arg].detailImagePath);

@@ -1,7 +1,7 @@
-import { ExpansionConfigurator } from '../../types.ts';
+import { ExpansionConfiguratorFactory } from '../../types.ts';
 import { configureReserve } from './configure-reserve.ts';
 
-const configurator: ExpansionConfigurator = async args => {
+const configurator: ExpansionConfiguratorFactory = () => async args => {
   
   configureReserve(args);
   

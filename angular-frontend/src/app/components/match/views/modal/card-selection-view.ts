@@ -49,7 +49,7 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
     if (event.button === 2 && cardView.facing === 'front') {
       const cardId = newCardToOldCardMap.get(cardView.card.id);
       if (!cardId) return;
-      void displayCardDetail(app, cardId);
+      void displayCardDetail(cardId);
       return;
     }
 

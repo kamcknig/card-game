@@ -31,6 +31,7 @@ const defaultMatchConfiguration: MatchConfiguration = {
   players: [],
   basicSupply: [],
   kingdomSupply: [],
+  events: [],
   playerStartingHand: { ...MatchBaseConfiguration.playerStartingHand }
 };
 
