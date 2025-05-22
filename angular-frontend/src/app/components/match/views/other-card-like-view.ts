@@ -1,6 +1,6 @@
 import { Container, ContainerOptions, Graphics } from 'pixi.js';
 import { events } from '../../../state/match-logic';
-import { EventNoId } from 'shared/shared-types';
+import { Event } from 'shared/shared-types';
 import { EVENT_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
 
 import { EventCard } from './event-card';
@@ -25,7 +25,7 @@ export class OtherCardLikeView extends Container {
     });
   }
 
-  private drawEvents(events: readonly EventNoId[]) {
+  private drawEvents(events: readonly Event[]) {
     for (const event of events) {
       let cardContainer = this.cardContainer.getChildByLabel(event.cardKey) as EventCard;
 

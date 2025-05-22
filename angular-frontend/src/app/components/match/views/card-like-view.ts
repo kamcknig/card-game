@@ -16,4 +16,6 @@ export abstract class CardLikeView extends Container {
   }
 
   abstract onPointerdown(event: FederatedPointerEvent): void;
+
+  abstract draw(): void;
 }

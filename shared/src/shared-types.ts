@@ -79,7 +79,7 @@ export interface Match {
   coffers: Record<PlayerId, number>;
   config: ComputedMatchConfiguration,
   currentPlayerTurnIndex: number;
-  events: EventNoId[];
+  events: Event[];
   mats: PlayerMatMap;
   playerActions: number;
   playerBuys: number;
@@ -298,6 +298,10 @@ export class CardLike {
   id: CardId;
   cardKey: CardKey;
   cardName: string;
+  cost: {
+    treasure: number;
+    potion?: number;
+  };
   fullImagePath: string;
   detailImagePath: string;
   /**
@@ -316,6 +320,7 @@ export class CardLike {
     this.fullImagePath = args.fullImagePath ?? '';
     this.detailImagePath = args.detailImagePath ?? '';
     this.randomizer = args.randomizer ?? null;
+    this.cost = args.cost ?? { treasure: 0 };
   }
 }
 
@@ -394,22 +399,19 @@ export type CardType =
 export type CardArgs = {
   [p in keyof CardLike]: CardLike[p];
 } & {
-  partOfSupply: boolean;
-  kingdom: string;
-  tags?: string[];
-  facing?: CardFacing;
-  type: CardType[];
-  isBasic?: boolean;
-  mat: Mats | undefined;
-  cost: {
-    treasure: number;
-  };
   abilityText: string;
-  victoryPoints?: number;
-  targetScheme?: EffectTarget;
   expansionName: string;
+  facing?: CardFacing;
   halfImagePath: string;
+  isBasic?: boolean;
+  kingdom: string;
+  mat: Mats | undefined;
   owner?: PlayerId | null;
+  partOfSupply: boolean;
+  tags?: string[];
+  targetScheme?: EffectTarget;
+  type: CardType[];
+  victoryPoints?: number;
 }
 
 export type CardCost = {
@@ -430,7 +432,6 @@ export class Card extends CardLike {
   isBasic?: boolean = false;
   type: CardType[];
   mat: Mats | undefined;
-  cost: CardCost;
   victoryPoints: number;
   abilityText: string;
   targetScheme?: EffectTarget;

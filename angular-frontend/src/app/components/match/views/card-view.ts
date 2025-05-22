@@ -32,7 +32,7 @@ export class CardView extends CardLikeView {
     if (this._useHighlight === val) return;
 
     this._useHighlight = val;
-    this.onDraw();
+    this.draw();
   }
 
   private _card: Card;
@@ -50,11 +50,11 @@ export class CardView extends CardLikeView {
       Assets.load(`/assets/card-images/${this._card.expansionName}/${size}/${this._card.cardKey}.jpg`).then(result => {
         this._frontImage = result;
         this._cardView.texture = this._facing === 'front' ? this._frontImage : this._backImage;
-        this.onDraw();
+        this.draw();
       })
     }
     else {
-      this.onDraw();
+      this.draw();
     }
   }
 
@@ -63,7 +63,7 @@ export class CardView extends CardLikeView {
     if ((value === 'front' && !this._frontImage) || (value === 'back' && !this._backImage)) return;
     this._cardView.texture = value === 'front' ? this._frontImage : this._backImage;
     this._facing = value;
-    this.onDraw();
+    this.draw();
   }
 
   public get facing(): CardFacing {
@@ -76,7 +76,7 @@ export class CardView extends CardLikeView {
     this._backImage = Assets.get(`card-back-${value}`);
     this._cardView.texture = this._facing === 'front' ? this._frontImage : this._backImage;
     this._size = value;
-    this.onDraw();
+    this.draw();
   }
 
   public get size(): CardSize {
@@ -134,7 +134,7 @@ export class CardView extends CardLikeView {
       batched(
         [selectableCardStore, selectedCardStore, cardOverrideStore],
         (...args) => args
-      ).subscribe(this.onDraw));
+      ).subscribe(this.draw));
 
     const selectableSub =   selectableCardStore.subscribe(selectableCards => {
       this.cursor = selectableCards.includes(this._card.id) ? 'pointer' : 'default';
@@ -148,7 +148,7 @@ export class CardView extends CardLikeView {
     });
   }
 
-  private onDraw = () => {
+  public draw = () => {
     const selected = selectedCardStore.get();
     const selectable = selectableCardStore.get().filter(s => !selected.includes(s));
     const overrides = cardOverrideStore.get();

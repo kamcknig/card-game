@@ -1,5 +1,5 @@
 import { AppSocket, FindCardsFn, RunGameActionDelegate } from '../types.ts';
-import { CardId, Match, PlayerId, TurnPhaseOrderValues, } from 'shared/shared-types.ts';
+import { Card, CardId, CardLike, Match, PlayerId, TurnPhaseOrderValues, } from 'shared/shared-types.ts';
 import { isUndefined } from 'es-toolkit/compat';
 import { MatchCardLibrary } from './match-card-library.ts';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
@@ -66,7 +66,7 @@ export class CardInteractivityController {
     if (turnPhase === 'buy' && match.playerBuys > 0) {
       const cardKeysAdded: string[] = [];
       
-      const supply = this._findCards({ location: ['basicSupply', 'kingdomSupply'] });
+      const supply: CardLike[] = this._findCards({ location: ['basicSupply', 'kingdomSupply'] });
       
       // a loop going backwards through the supply and kingdom. we only mark the last one as selectable (this should
       // be the top of any pile). a bit hacky to assume that.
@@ -87,7 +87,7 @@ export class CardInteractivityController {
           }
         }
         
-        const { restricted, cost } = this._cardPriceController.applyRules(card, {
+        const { restricted, cost } = this._cardPriceController.applyRules(card as Card, {
           playerId: currentPlayer.id
         });
         
@@ -110,6 +110,13 @@ export class CardInteractivityController {
           if (card.type.includes('TREASURE')) {
             selectableCards.push(card.id);
           }
+        }
+      }
+      
+      const events = this.match.events;
+      for (const event of events) {
+        if (event.cost.treasure <= this.match.playerTreasure) {
+          selectableCards.push(event.id);
         }
       }
     }

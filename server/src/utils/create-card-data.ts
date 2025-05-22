@@ -11,7 +11,7 @@ export const createCardData = (cardKey: CardKey, expansionName: string, template
   return data as CardNoId;
 };
 
-export const createCardLike = (cardKey: CardKey, expansionName: string, templateData: Partial<CardLikeNoId>) => {
+export const createCardLike = (cardKey: CardKey, expansionName: string, templateData: Partial<CardLikeNoId>): CardLikeNoId => {
   const data = {
     cardKey,
     expansionName,
@@ -20,6 +20,6 @@ export const createCardLike = (cardKey: CardKey, expansionName: string, template
     ...templateData ?? {},
     cardName: templateData.cardName ?? capitalize(cardKey),
     randomizer: templateData.randomizer !== undefined ? templateData.randomizer : cardKey
-  };
+  } as CardLikeNoId;
   return data;
 }
