@@ -3,6 +3,7 @@ import type { Operation } from 'fast-json-patch';
 export type CardKey = string;
 export type PlayerId = number;
 export type CardId = number;
+export type CardLikeId = number;
 
 export interface Supply {
   name: string;
@@ -53,15 +54,22 @@ type CardStats = {
 };
 
 export type MatchStats = {
+  cardLikesBoughtByTurn: Record<number, CardId[] | undefined>;
+  cardLikesBought: Record<CardId, CardStats>;
+  
   cardsGainedByTurn: Record<number, CardId[] | undefined>;
   cardsGained: Record<CardId, CardStats>;
+  
   /**
    * Keys are the card's ID that was played, and values are CardStats objects.
    */
   playedCards: Record<CardId, CardStats>;
-  playedCardsByTurn: Record<number, CardId[]>;
+  playedCardsByTurn: Record<number, CardId[] | undefined>;
+  
   trashedCards: Record<CardId, CardStats>;
-  trashedCardsByTurn: Record<number, CardId[]>;
+  trashedCardsByTurn: Record<number, CardId[] | undefined>;
+  
+  cardsBoughtByTurn: Record<number, CardId[] | undefined>;
   cardsBought: Record<CardId, CardStats & {
     
     // the cost when it was bought

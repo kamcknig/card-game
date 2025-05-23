@@ -3,7 +3,7 @@ import {
   Card,
   CardCost,
   CardId,
-  CardKey,
+  CardKey, CardLikeId,
   CardLocation,
   CardLocationSpec,
   CardNoId,
@@ -126,6 +126,10 @@ export interface BaseGameActionDefinitionMap {
     playerId: PlayerId,
     cardCost: CardCost,
     overpay?: { inTreasure: number; inCoffer: number; }
+  }) => Promise<void>;
+  buyCardLike: (args: {
+    cardLikeId: CardLikeId;
+    playerId: PlayerId;
   }) => Promise<void>;
   checkForRemainingPlayerActions: () => Promise<void>;
   exchangeCoffer: (args: { playerId: PlayerId; count: number; }) => Promise<void>;

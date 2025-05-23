@@ -3,6 +3,7 @@ import {
   CardCost,
   CardId,
   CardKey,
+  CardLikeId,
   CardLocation,
   CardLocationSpec,
   Match,
@@ -376,7 +377,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     };
     
     this.match.stats.trashedCardsByTurn[this.match.turnNumber] ??= [];
-    this.match.stats.trashedCardsByTurn[this.match.turnNumber].push(cardId);
+    this.match.stats.trashedCardsByTurn[this.match.turnNumber]!.push(cardId);
     
     console.log(`[trashCard action] trashed ${card}`);
     
@@ -430,9 +431,9 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   
   async buyCard(args: {
     cardId: CardId | Card;
-    playerId: PlayerId,
-    overpay?: { inTreasure: number; inCoffer: number; },
-    cardCost: CardCost
+    playerId: PlayerId;
+    overpay?: { inTreasure: number; inCoffer: number; };
+    cardCost: CardCost;
   }) {
     const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
     const cardId = card.id;
@@ -447,6 +448,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     }
     
     console.log(`[buyCard action] reducing player ${args.playerId} treasure by card cost ${args.cardCost.treasure} treasure`);
+    
     this.match.playerTreasure -= args.cardCost.treasure;
     
     if (args.cardCost.potion !== undefined) {
@@ -459,6 +461,9 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     this.match.playerBuys--;
     
     console.log(`[buyCard action] adding bought stats to match`);
+    
+    this.match.stats.cardsBoughtByTurn[this.match.turnNumber] ??= [];
+    this.match.stats.cardsBoughtByTurn[this.match.turnNumber]!.push(cardId);
     
     this.match.stats.cardsBought[cardId] = {
       turnPhase: getTurnPhase(this.match.turnPhaseIndex),
@@ -475,6 +480,62 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       cardId,
       to: { location: 'playerDiscard' }
     }, { bought: true, overpay: args.overpay ?? 0 });
+  }
+  
+  async buyCardLike(args: {
+    cardLikeId: CardLikeId;
+    playerId: PlayerId;
+  }) {
+    const event = this.match.events.find(e => e.id === args.cardLikeId);
+    
+    if (!event) {
+      console.warn(`[buyCardLike action] could not find event ${args.cardLikeId}`);
+      return;
+    }
+    
+    console.log(`[buyCardLike action] buying ${event}`);
+    
+    const cost = event.cost.treasure;
+    
+    this.match.playerTreasure -= cost;
+    
+    console.log(`[buyCardLike action] reducing player ${args.playerId} treasure ${cost} to ${this.match.playerTreasure}`);
+    
+    this.match.playerBuys--;
+    
+    console.log(`[buyCardLike action] reducing player ${args.playerId} buys by 1 to ${this.match.playerBuys}`);
+    
+    this.match.stats.cardLikesBoughtByTurn[this.match.turnNumber] ??= [];
+    this.match.stats.cardLikesBoughtByTurn[this.match.turnNumber]!.push(args.cardLikeId);
+    
+    this.match.stats.cardLikesBought[args.cardLikeId] = {
+      playerId: args.playerId,
+      turnNumber: this.match.turnNumber,
+      turnPhase: getTurnPhase(this.match.turnPhaseIndex)
+    }
+    
+    const effectFn = this.eventEffectFunctionMap[event.cardKey];
+    
+    if (effectFn) {
+      console.log(`[buyCardLike action] running effect for ${event}`);
+      
+      this.logManager.enter();
+      
+      await effectFn({
+        cardSourceController: this._cardSourceController,
+        cardPriceController: this.cardPriceRuleController,
+        reactionManager: this.reactionManager,
+        runGameActionDelegate: this.runGameActionDelegate,
+        cardId: args.cardLikeId,
+        playerId: args.playerId,
+        match: this.match,
+        cardLibrary: this.cardLibrary,
+        reactionContext: {},
+        findCards: this._findCards
+      });
+      
+      this.logManager.exit();
+    }
   }
   
   async revealCard(args: {
@@ -588,7 +649,10 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     let currentPlayer = getCurrentPlayer(match);
     
-    const trigger = new ReactionTrigger('endTurnPhase', { phaseIndex: match.turnPhaseIndex, playerId: currentPlayer.id });
+    const trigger = new ReactionTrigger('endTurnPhase', {
+      phaseIndex: match.turnPhaseIndex,
+      playerId: currentPlayer.id
+    });
     await this.reactionManager.runTrigger({ trigger });
     
     match.turnPhaseIndex = match.turnPhaseIndex + 1;
@@ -760,7 +824,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     }
     
     this.match.stats.playedCardsByTurn[this.match.turnNumber] ??= [];
-    this.match.stats.playedCardsByTurn[this.match.turnNumber].push(cardId);
+    this.match.stats.playedCardsByTurn[this.match.turnNumber]!.push(cardId);
     this.match.stats.playedCards[cardId] = {
       turnPhase: getTurnPhase(this.match.turnPhaseIndex),
       turnNumber: this.match.turnNumber,

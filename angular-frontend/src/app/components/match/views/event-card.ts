@@ -33,6 +33,11 @@ export class EventCard extends CardLikeView {
     this.addChild(this._highlight);
     this.addChild(this._cardSprite);
     this.event = event;
+
+    const selectableCardSub = selectableCardStore.subscribe(() => this.draw());
+    this.on('removed', () => {
+      selectableCardSub();
+    });
   }
 
   override onPointerdown(event: FederatedPointerEvent) {
