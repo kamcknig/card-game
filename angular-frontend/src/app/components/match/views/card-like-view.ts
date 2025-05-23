@@ -1,8 +1,13 @@
 import { Container, ContainerOptions, FederatedPointerEvent } from 'pixi.js';
+import { CardLikeId } from 'shared/shared-types';
 
 export abstract class CardLikeView extends Container {
-  protected constructor(args: ContainerOptions) {
+  public cardId: CardLikeId;
+
+  protected constructor(args: ContainerOptions & { id: CardLikeId }) {
     super(args);
+
+    this.cardId = args.id;
 
     this.eventMode = 'static';
     this.on('pointerdown', (event) => {

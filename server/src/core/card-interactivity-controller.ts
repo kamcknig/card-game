@@ -1,5 +1,5 @@
 import { AppSocket, FindCardsFn, RunGameActionDelegate } from '../types.ts';
-import { Card, CardId, CardLike, Match, PlayerId, TurnPhaseOrderValues, } from 'shared/shared-types.ts';
+import { Card, CardId, CardLike, CardLikeId, Match, PlayerId, TurnPhaseOrderValues, } from 'shared/shared-types.ts';
 import { isUndefined } from 'es-toolkit/compat';
 import { MatchCardLibrary } from './match-card-library.ts';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
@@ -22,17 +22,20 @@ export class CardInteractivityController {
   ) {
     this._socketMap.forEach((s) => {
       s.on('cardTapped', (pId, cId) => this.onCardTapped(pId, cId));
+      s.on('cardLikeTapped', (pId, cId) => this.onCardLikeTapped(pId, cId));
       s.on('playAllTreasure', async (pId) => await this.onPlayAllTreasure(pId));
     });
   }
   
   public playerAdded(s: AppSocket | undefined) {
     s?.on('cardTapped', (pId, cId) => this.onCardTapped(pId, cId));
+    s?.on('cardLikeTapped', (pId, cId) => this.onCardLikeTapped(pId, cId));
     s?.on('playAllTreasure', async (pId) => await this.onPlayAllTreasure(pId));
   }
   
   public playerRemoved(socket: AppSocket | undefined) {
     socket?.off('cardTapped');
+    socket?.off('cardLikeTapped');
     socket?.off('playAllTreasure');
   }
   
@@ -40,6 +43,7 @@ export class CardInteractivityController {
     console.log(`[card interactivity] removing socket listeners and marking ended`,);
     this._socketMap.forEach((s) => {
       s.off('cardTapped');
+      s.off('cardLikeTapped');
       s.off('playAllTreasure');
     });
     this._gameOver = true;
@@ -149,9 +153,8 @@ export class CardInteractivityController {
       console.log(`[card interactivity] game is over, not playing treasures`);
       return;
     }
-    
-    const match = this.match;
-    const player = getPlayerById(match, playerId);
+
+    const player = getPlayerById(this.match, playerId);
     
     if (isUndefined(player)) {
       console.warn(`[card interactivity] could not find current player`);
@@ -174,6 +177,35 @@ export class CardInteractivityController {
     this._socketMap.get(playerId)?.emit('playAllTreasureComplete');
   };
   
+  private async onCardLikeTapped(playerId: PlayerId, cardId: CardLikeId) {
+    const player = getPlayerById(this.match, playerId)
+    
+    if (!player) {
+      throw new Error('could not find player');
+    }
+    
+    console.log(`[card interactivity] ${player} tapped card-like ${cardId}`);
+    
+    if (this._gameOver) {
+      console.log(`[card interactivity] game is over, not processing card-like tap`);
+      return;
+    }
+    
+    const phase = getTurnPhase(this.match.turnPhaseIndex);
+    
+    if (phase === 'buy') {
+      console.log(`[card interactivity] ${player} tapped card-like ${cardId} in phase ${phase}, processing`);
+      await this.runGameDelegate('buyCardLike', { playerId, cardLikeId: cardId });
+    }
+    else {
+      console.log(`[card interactivity] ${player} tapped card-like ${cardId} in phase ${phase}, not processing`);
+    }
+    
+    await this.runGameDelegate('checkForRemainingPlayerActions');
+    
+    this._socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
+  }
+  
   private async onCardTapped(playerId: PlayerId, cardId: CardId) {
     const player = getPlayerById(this.match, playerId)
     
@@ -181,7 +213,7 @@ export class CardInteractivityController {
       throw new Error('could not find player');
     }
     
-    console.log(`[card interactivity] player ${player} tapped card ${this._cardLibrary.getCard(cardId)}`);
+    console.log(`[card interactivity] pl${player} tapped card ${this._cardLibrary.getCard(cardId)}`);
     
     if (this._gameOver) {
       console.log(`[card interactivity] game is over, not processing card tap`);

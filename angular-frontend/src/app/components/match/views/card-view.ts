@@ -84,7 +84,7 @@ export class CardView extends CardLikeView {
   }
 
   constructor({ size, card, ...args }: ContainerOptions & CardArgs & CardViewArgs) {
-    super(args);
+    super({ ...args, id: card.id });
 
     this._card = card;
 

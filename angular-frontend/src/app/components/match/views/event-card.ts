@@ -3,7 +3,6 @@ import { Assets, ContainerOptions, FederatedPointerEvent, Graphics, Sprite, Text
 import { displayCardDetail } from './modal/display-card-detail';
 import { CardLikeView } from './card-like-view';
 import { selectableCardStore } from 'src/app/state/interactive-logic';
-import { STANDARD_GAP } from '../../../core/app-contants';
 
 export interface EventCardArgs {
   event: Event;
@@ -29,7 +28,7 @@ export class EventCard extends CardLikeView {
   }
 
   constructor({ event, ...args }: ContainerOptions & EventCardArgs) {
-    super(args);
+    super({ ...args, id: event.id });
     this.addChild(this._highlight);
     this.addChild(this._cardSprite);
     this.event = event;

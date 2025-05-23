@@ -103,7 +103,10 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         cardsGained: {},
         trashedCards: {},
         trashedCardsByTurn: {},
-        cardsBought: {}
+        cardsBought: {},
+        cardsBoughtByTurn: {},
+        cardLikesBought: {},
+        cardLikesBoughtByTurn: {},
       },
       turnNumber: 0,
       turnPhaseIndex: 0

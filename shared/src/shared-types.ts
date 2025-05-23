@@ -202,6 +202,7 @@ export type ServerEmitEvents = {
 
 export interface ServerListenEvents {
   cardsSelected: (selected: CardId[]) => void
+  cardLikeTapped: (playerId: PlayerId, cardId: CardId) => void;
   cardTapped: (playerId: PlayerId, cardId: CardId) => void;
   clientReady: (playerId: PlayerId, ready: boolean) => void;
   exchangeCoffer: (playerId: PlayerId, count: number) => void;

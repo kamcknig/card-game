@@ -6,7 +6,7 @@ import { matchStartedStore, matchStore } from '../../../../state/match-state';
 import { playerStore, selfPlayerIdStore, } from '../../../../state/player-state';
 import { PlayAreaView } from '../play-area';
 import { KingdomSupplyView } from '../kingdom-supply';
-import { CardId, PlayerId, UserPromptActionArgs } from 'shared/shared-types';
+import { CardId, CardLike, PlayerId, UserPromptActionArgs } from 'shared/shared-types';
 import {
   awaitingServerLockReleaseStore,
   clientSelectableCardsOverrideStore,
@@ -28,6 +28,7 @@ import { BasicSupplyView } from '../basic-supply';
 import { NonSupplyKingdomView } from '../non-supply-kingdom-view';
 import { getCardSourceStore } from '../../../../state/card-source-store';
 import { OtherCardLikeView } from '../other-card-like-view';
+import { CardLikeView } from '../card-like-view';
 
 export class MatchScene extends Scene {
   private _board: Container = new Container();
@@ -324,7 +325,7 @@ export class MatchScene extends Scene {
 
   // todo move the selection stuff to another class, SelectionManager?
   private onPointerDown(event: PointerEvent) {
-    if (!(event.target instanceof CardView)) {
+    if (!(event.target instanceof CardLikeView)) {
       return;
     }
 
@@ -332,8 +333,8 @@ export class MatchScene extends Scene {
       return;
     }
 
-    const view: CardView = event.target as CardView;
-    const cardId = view.card.id;
+    const view = event.target;
+    const cardId = view.cardId;
 
     if (this._selecting) {
       if (!selectableCardStore.get()
@@ -364,7 +365,7 @@ export class MatchScene extends Scene {
           awaitingServerLockReleaseStore.set(false);
         }
         this._socketService.on('cardTappedComplete', updated);
-        this._socketService.emit('cardTapped', this._selfId, cardId);
+        this._socketService.emit(view instanceof CardView ? 'cardTapped' : 'cardLikeTapped', this._selfId, cardId);
       }
     }
   }
