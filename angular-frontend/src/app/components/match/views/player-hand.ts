@@ -192,6 +192,7 @@ export class PlayerHandView extends Container {
         $cardIds: atom(cards.map(c => c.id)),
         cardFacing: 'front',
         showBackground: false,
+        scale: .8
       });
       this._cardList.addChild(c);
     }

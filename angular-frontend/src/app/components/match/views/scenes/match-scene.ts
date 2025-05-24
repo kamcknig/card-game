@@ -198,17 +198,17 @@ export class MatchScene extends Scene {
     this.addChild(this._board);
 
     this._baseSupply = this.addChild(new BasicSupplyView());
-    this._baseSupply.scale = 1;
+    this._baseSupply.scale = .9;
 
     this._kingdomView = this.addChild(new KingdomSupplyView());
-    this._kingdomView.scale = 1;
+    this._kingdomView.scale = .9;
 
     this._nonSupplyView = this.addChild(new NonSupplyKingdomView());
-    this._nonSupplyView.scale = 1;
+    this._nonSupplyView.scale = .9;
 
     this._otherCardLikes = new OtherCardLikeView({label: 'otherCardLikes'});
     this.addChild(this._otherCardLikes);
-    this._otherCardLikes.scale = 1;
+    this._otherCardLikes.scale = .9;
 
     this._playArea = this.addChild(new PlayAreaView());
 
