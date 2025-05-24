@@ -43,7 +43,7 @@ export type ComputedMatchConfiguration = MatchConfiguration & {
   mats: PlayerMatMap;
 }
 
-type CardStats = {
+export type CardStats = {
   // the turn number on which the card was played.
   turnNumber: number;
   

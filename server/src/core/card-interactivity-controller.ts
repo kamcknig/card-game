@@ -1,5 +1,14 @@
 import { AppSocket, FindCardsFn, RunGameActionDelegate } from '../types.ts';
-import { Card, CardId, CardLike, CardLikeId, Match, PlayerId, TurnPhaseOrderValues, } from 'shared/shared-types.ts';
+import {
+  Card,
+  CardId,
+  CardLike,
+  CardLikeId,
+  CardStats,
+  Match,
+  PlayerId,
+  TurnPhaseOrderValues,
+} from 'shared/shared-types.ts';
 import { isUndefined } from 'es-toolkit/compat';
 import { MatchCardLibrary } from './match-card-library.ts';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
@@ -108,7 +117,7 @@ export class CardInteractivityController {
       
       // loop over the player's hand; in the buy phase, one can play treasure as long as you haven't already
       // bought a card
-      if (!Object.values(match.stats.cardsBought)
+      if (!Object.values<CardStats>(match.stats.cardsBought).concat(Object.values(match.stats.cardLikesBought))
         .some(stats => stats.playerId === currentPlayer.id && stats.turnNumber === match.turnNumber)) {
         for (const card of hand) {
           if (card.type.includes('TREASURE')) {
@@ -119,7 +128,11 @@ export class CardInteractivityController {
       
       const events = this.match.events;
       for (const event of events) {
-        if (event.cost.treasure <= this.match.playerTreasure) {
+        const { restricted, cost } = this._cardPriceController.applyRules(event, {
+          playerId: currentPlayer.id
+        });
+        
+        if (!restricted && cost.treasure <= this.match.playerTreasure) {
           selectableCards.push(event.id);
         }
       }

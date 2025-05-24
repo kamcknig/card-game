@@ -1,4 +1,4 @@
-import { CardId, Match, Player } from 'shared/shared-types.ts';
+import { CardId, CardLike, Match, Player } from 'shared/shared-types.ts';
 import {
   CardLifecycleEvent,
   CardLifecycleEventArgMap,
@@ -95,33 +95,29 @@ export class ReactionManager {
     }
   }
   
-  registerSystemTemplate<T extends TriggerEventType>(cardId: CardId, event: T, reactionTemplate: Omit<ReactionTemplate<T>, 'id' | 'listeningFor'>): void {
-    const card = this._cardLibrary.getCard(cardId);
-    
+  registerSystemTemplate<T extends TriggerEventType>(cardLike: CardLike, event: T, reactionTemplate: Omit<ReactionTemplate<T>, 'id' | 'listeningFor'>): void {
     const systemTemplate = {
       ...reactionTemplate,
-      id: `${card.cardKey}:${cardId}:${event}:system`,
+      id: `${cardLike.cardKey}:${cardLike.id}:${event}:system`,
       system: true
     }
     
-    this.registerReactionTemplate(cardId, event, systemTemplate);
+    this.registerReactionTemplate(cardLike, event, systemTemplate);
   }
   
-  registerReactionTemplate<T extends TriggerEventType>(cardId: CardId, event: T, reactionTemplate: Omit<ReactionTemplate<T>, 'id' | 'listeningFor' | 'system'>): void
+  registerReactionTemplate<T extends TriggerEventType>(cardLike: CardLike, event: T, reactionTemplate: Omit<ReactionTemplate<T>, 'id' | 'listeningFor' | 'system'>): void
   registerReactionTemplate<T extends TriggerEventType>(reactionTemplate: ReactionTemplate<T>): void
-  registerReactionTemplate<T extends TriggerEventType>(cardIdOrTemplate: CardId | ReactionTemplate<T>, event?: T, reactionTemplate?: Omit<ReactionTemplate<T>, 'id' | 'listeningFor' | 'system'>) {
+  registerReactionTemplate<T extends TriggerEventType>(cardLikeOrTemplate: CardLike | ReactionTemplate<T>, event?: T, reactionTemplate?: Omit<ReactionTemplate<T>, 'id' | 'listeningFor' | 'system'>) {
     let template: ReactionTemplate<T>;
     
-    if (typeof cardIdOrTemplate === 'object') {
-      template = cardIdOrTemplate;
+    if (!(cardLikeOrTemplate instanceof CardLike)) {
+      template = cardLikeOrTemplate;
     }
     else {
-      const card = this._cardLibrary.getCard(cardIdOrTemplate);
-      
       template = {
         ...reactionTemplate,
         listeningFor: event,
-        id: reactionTemplate && 'id' in reactionTemplate ? reactionTemplate.id : `${card.cardName}:${cardIdOrTemplate}:${event}`
+        id: reactionTemplate && 'id' in reactionTemplate ? reactionTemplate.id : `${cardLikeOrTemplate.cardName}:${cardLikeOrTemplate}:${event}`
       } as ReactionTemplate<T>;
     }
     

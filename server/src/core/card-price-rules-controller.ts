@@ -1,8 +1,8 @@
-import { Card, CardCost, CardId, Match, PlayerId } from 'shared/shared-types.ts';
+import { Card, CardCost, CardId, CardLike, Match, PlayerId } from 'shared/shared-types.ts';
 import { MatchCardLibrary } from './match-card-library.ts';
 
 export type CardPriceRule = (
-  card: Card,
+  card: CardLike,
   context: { match: Match, playerId: PlayerId }
 ) => ({ restricted: boolean; cost: CardCost });
 
@@ -15,7 +15,7 @@ export class CardPriceRulesController {
   ) {
   }
   
-  registerRule(card: Card, rule: CardPriceRule) {
+  registerRule(card: CardLike, rule: CardPriceRule) {
     this._rules[card.id] ??= [];
     this._rules[card.id].push(rule);
     
@@ -28,7 +28,7 @@ export class CardPriceRulesController {
     }
   }
   
-  applyRules(card: Card, { playerId }: { playerId: PlayerId }) {
+  applyRules(card: CardLike, { playerId }: { playerId: PlayerId }) {
     let restricted = false;
     let modifiedCost = { ...card.cost };
     
