@@ -13,5 +13,10 @@
     "cost": {
       "treasure": 3
     }
+  },
+  "quest": {
+    "cost": {
+      "treasure": 0
+    }
   }
 }

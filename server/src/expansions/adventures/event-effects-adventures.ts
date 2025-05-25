@@ -106,6 +106,7 @@ const effectMap: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const event = cardEffectArgs.match.events.find(e => e.id === cardEffectArgs.cardId);
       if (!event) {
+        console.warn(`[expedition effect] event not found`);
         return;
       }
       
@@ -122,9 +123,82 @@ const effectMap: CardExpansionModule = {
         triggeredEffectFn: async triggeredArgs => {
           console.warn(`[expedition effect] i have programmed this to use the reaction system, but technically the effect should modify the amount of cards drawn, and not take place at the end of cleanup`);
           
+          console.log(`[expedition endTurnPhase effect] drawing 2 cards`);
           await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
         }
       })
+    }
+  },
+  'quest': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      const handCards = hand.map(cardEffectArgs.cardLibrary.getCard);
+      
+      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Choose one',
+        actionButtons: [
+          { label: 'DISCARD ATTACK', action: 1 },
+          { label: 'DISCARD 2 COPPER', action: 2 },
+          { label: 'DISCARD 6 CARDS', action: 3 }
+        ],
+      }) as { action: number, result: number[] };
+      
+      let selectedCardIds: CardId[] = [];
+      let gainGold = false;
+      
+      if (result.action === 1) {
+        selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Discard attack`,
+          restrict: handCards.filter(card => card.type.includes('ATTACK')).map(card => card.id),
+          count: { kind: 'upTo', count: hand.length },
+        }) as CardId[];
+        gainGold = true;
+      }
+      else if (result.action === 2) {
+        selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Discard 2 copper`,
+          restrict: handCards.filter(card => card.type.includes('ATTACK')).map(card => card.id),
+          count: { kind: 'upTo', count: hand.length },
+        }) as CardId[];
+        gainGold = selectedCardIds.length === 2;
+      }
+      else {
+        selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Discard 6 cards`,
+          restrict: hand,
+          count: 6,
+        }) as CardId[];
+        gainGold = selectedCardIds.length === 6;
+      }
+      
+      if (!selectedCardIds.length) {
+        console.log(`[quest effect] no card selected`);
+        return;
+      }
+      
+      if (gainGold) {
+        const goldCards = cardEffectArgs.findCards([
+          { location: 'basicSupply' },
+          { cardKeys: 'gold' }
+        ]);
+        
+        if (!goldCards.length) {
+          console.log(`[quest effect] no gold cards in supply`);
+          return;
+        }
+        
+        console.log(`[quest effect] gaining ${goldCards.slice(-1)[0]}`);
+        
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: goldCards.slice(-1)[0],
+          to: { location: 'playerDiscard' }
+        });
+      }
     }
   },
 }

@@ -95,5 +95,13 @@ skipped
 - teacher
 - events
   - ball
+  - ferry
+  - inheritance
+  - lost arts
+  - mission
+  - pathfinding
+  - pilgrimage
+  - plan
+  - 
 
 Will need to update seaside cards with the new duration flow
