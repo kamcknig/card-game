@@ -102,6 +102,8 @@ skipped
   - pathfinding
   - pilgrimage
   - plan
-  - 
+  - raid
+  - seaway
+  - training
 
 Will need to update seaside cards with the new duration flow
