@@ -86,21 +86,6 @@ Token durations can include
 
 ### Events
 
-Events are "on-buy" effects. They are _not_ cards. Any reference to "cards" such as reducing prices does not apply
-to events.
-
-They can be bought during a player's buy phase and cost 1 buy. they can be purchased multiple times in the same
-turn by the same player. They count towards the buy rule in that once a buy happens, no further treasures may be played.
-because it's not a card, it doesn't trigger effects like haggler (buying a card).
-
-One way to randomize including them in a game is to add them to the randomization process. And once you hit the 10
-kingdoms, any that had been chosen up to that point will be included. some recommend not including more than 2 total
-in a match - this actually includes landmarks, projects, ways, and traits which aren't developed yet. 
-
- I think i'll have a checkbox to "use random" to include them or not. if unchecked, use any hardcoded ones by the
-configuration, if checked then if preselected ones are less than 2, then in match configurator when getting available
-kingdoms, also get available events based on the expansions being used and use the above mentioned process.
-
 skipped
 - bridge troll
 - giant
@@ -108,5 +93,7 @@ skipped
 - relic
 - royal carriage
 - teacher
+- events
+  - ball
 
 Will need to update seaside cards with the new duration flow

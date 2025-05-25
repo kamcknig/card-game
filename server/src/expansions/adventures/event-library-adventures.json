@@ -3,5 +3,10 @@
     "cost": {
       "treasure": 0
     }
+  },
+  "bonfire": {
+    "cost": {
+      "treasure": 3
+    }
   }
 }

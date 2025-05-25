@@ -21,8 +21,8 @@ const effectMap: CardExpansionModule = {
         once: true,
         compulsory: true,
         allowMultipleInstances: true,
-        condition: async context => true,
-        triggeredEffectFn: async triggeredArgs => {
+        condition: async () => true,
+        triggeredEffectFn: async () => {
           ruleUnsub();
         }
       });
@@ -67,6 +67,38 @@ const effectMap: CardExpansionModule = {
         cardId: selectedCard.id,
         to: { location: 'playerDiscard' }
       });
+    }
+  },
+  'bonfire': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const coppersInPlay = getCardsInPlay(cardEffectArgs.findCards)
+        .filter(card => card.cardKey === 'copper' && card.owner === cardEffectArgs.playerId);
+      
+      if (!coppersInPlay.length) {
+        console.log(`[bonfire effect] no coppers in play`);
+        return;
+      }
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Trash coppers`,
+        restrict: coppersInPlay.map(card => card.id),
+        count: { kind: 'upTo', count: 2 },
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.warn(`[bonfire effect] no card selected`);
+        return;
+      }
+      
+      console.log(`[bonfire effect] trashing ${selectedCardIds.length} cards`);
+      
+      for (const selectedCardId of selectedCardIds) {
+        await cardEffectArgs.runGameActionDelegate('trashCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: selectedCardId
+        });
+      }
     }
   },
 }
