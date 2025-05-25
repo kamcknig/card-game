@@ -18,5 +18,10 @@
     "cost": {
       "treasure": 0
     }
+  },
+  "save": {
+    "cost": {
+      "treasure": 1
+    }
   }
 }

@@ -110,7 +110,7 @@ const effectMap: CardExpansionModule = {
         return;
       }
       
-      cardEffectArgs.reactionManager.registerReactionTemplate(event, 'endTurnPhase', {
+      cardEffectArgs.reactionManager.registerSystemTemplate(event, 'endTurnPhase', {
         playerId: cardEffectArgs.playerId,
         once: true,
         allowMultipleInstances: true,
@@ -199,6 +199,78 @@ const effectMap: CardExpansionModule = {
           to: { location: 'playerDiscard' }
         });
       }
+    }
+  },
+  'save': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const event = cardEffectArgs.match.events.find(e => e.id === cardEffectArgs.cardId);
+      
+      if (!event) {
+        console.warn(`[save effect] event not found`);
+        return;
+      }
+      
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+      
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Set aside card`,
+        restrict: hand,
+        count: 1,
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.log(`[save effect] no card selected`);
+        return;
+      }
+      
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
+      
+      console.log(`[save effect] setting aside card ${selectedCard}`);
+      
+      await cardEffectArgs.runGameActionDelegate('moveCard', {
+        toPlayerId: cardEffectArgs.playerId,
+        cardId: selectedCard.id,
+        to: { location: 'set-aside' }
+      });
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate(event, 'endTurn', {
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: async () => true,
+        triggeredEffectFn: async triggeredArgs => {
+          console.log(`[save endTurn effect] moving ${selectedCard} to player ${cardEffectArgs.playerId} hand`)
+          
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            toPlayerId: cardEffectArgs.playerId,
+            cardId: selectedCard.id,
+            to: { location: 'playerHand' }
+          });
+        }
+      });
+      
+      const priceUnsub = cardEffectArgs.cardPriceController.registerRule(
+        event,
+        (card, context) => {
+          if (context.playerId === cardEffectArgs.playerId) return { restricted: true, cost: card.cost };
+          return { restricted: false, cost: card.cost };
+        }
+      );
+      
+      cardEffectArgs.reactionManager.registerSystemTemplate(event, 'endTurn', {
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: async () => true,
+        triggeredEffectFn: async triggeredArgs => {
+          priceUnsub();
+        }
+      });
     }
   },
 }
