@@ -34,5 +34,11 @@
     "cost": {
       "treasure": 5
     }
+  },
+  "travelling-fair": {
+    "cardName": "Travelling Fair",
+    "cost": {
+      "treasure": 2
+    }
   }
 }

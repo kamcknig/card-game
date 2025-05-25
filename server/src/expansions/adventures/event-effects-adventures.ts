@@ -406,15 +406,15 @@ const effectMap: CardExpansionModule = {
       }
       
       const silverCards = cardEffectArgs.findCards([
-        {location: 'basicSupply'},
-        {cardKeys: 'silver'}
+        { location: 'basicSupply' },
+        { cardKeys: 'silver' }
       ]);
       
       if (!silverCards.length) {
         console.log(`[trade effect] no silver cards in supply`);
         return;
       }
-
+      
       console.log(`[trade effect] gaining ${selectedCardIds.length} silver cards`);
       
       for (let i = 0; i < selectedCardIds.length; i++) {
@@ -431,6 +431,51 @@ const effectMap: CardExpansionModule = {
           to: { location: 'playerDiscard' }
         });
       }
+    }
+  },
+  'travelling-fair': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const event = cardEffectArgs.match.events.find(e => e.id === cardEffectArgs.cardId);
+      
+      if (!event) {
+        console.warn(`[travelling-fair effect] event not found`);
+        return;
+      }
+      
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 2 });
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate(event, 'cardGained', {
+        playerId: cardEffectArgs.playerId,
+        once: false,
+        allowMultipleInstances: false,
+        compulsory: false,
+        condition: async conditionArgs => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
+          return true;
+        },
+        triggeredEffectFn: async triggeredArgs => {
+          const card = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
+          
+          console.log(`[travelling-fair cardGained effect] putting ${card} on deck`);
+          
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            toPlayerId: cardEffectArgs.playerId,
+            cardId: card.id,
+            to: { location: 'playerDeck' }
+          });
+        }
+      });
+      
+      cardEffectArgs.reactionManager.registerSystemTemplate(event, 'endTurn', {
+        playerId: cardEffectArgs.playerId,
+        once: false,
+        allowMultipleInstances: false,
+        compulsory: false,
+        condition: async () => true,
+        triggeredEffectFn: async triggeredArgs => {
+          triggeredArgs.reactionManager.unregisterTrigger(`travelling-fair:${cardEffectArgs.cardId}:cardGained`);
+        }
+      })
     }
   },
 }
