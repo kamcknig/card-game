@@ -23,5 +23,11 @@
     "cost": {
       "treasure": 1
     }
+  },
+  "scouting-party": {
+    "cardName": "Scouting Party",
+    "cost": {
+      "treasure": 2
+    }
   }
 }

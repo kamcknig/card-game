@@ -273,6 +273,112 @@ const effectMap: CardExpansionModule = {
       });
     }
   },
+  'scouting-party': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const event = cardEffectArgs.match.events.find(e => e.id === cardEffectArgs.cardId);
+      
+      if (!event) {
+        console.warn(`[scouting-party effect] event not found`);
+        return;
+      }
+      
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+      
+      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+      
+      const cardIdsSetAside: CardId[] = [];
+      
+      for (let i = 0; i < 5; i++) {
+        if (!deck.length) {
+          console.log(`[scouting-party effect] no cards in deck, shuffling`);
+          
+          await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+          
+          if (!deck.length) {
+            console.log(`[scouting-party effect] no cards in deck still`);
+            break;
+          }
+        }
+        
+        cardIdsSetAside.push(deck.slice(-1)[0]);
+        
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
+          toPlayerId: cardEffectArgs.playerId,
+          cardId: deck.slice(-1)[0],
+          to: { location: 'set-aside' }
+        });
+      }
+      
+      if (!cardIdsSetAside.length) {
+        console.log(`[scouting-party effect] no cards set aside`);
+        return;
+      }
+      
+      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Discard 3 cards',
+        content: {
+          type: 'select',
+          cardIds: cardIdsSetAside,
+          selectCount: Math.min(3, cardIdsSetAside.length)
+        }
+      }) as { action: number, result: CardId[] };
+      
+      if (!result.result.length) {
+        console.warn(`[scouting-party effect] no card selected`);
+        return;
+      }
+      
+      console.log(`[scouting-party effect] discarding ${result.result.length} cards`);
+      
+      for (const cardId of result.result) {
+        await cardEffectArgs.runGameActionDelegate('discardCard', { playerId: cardEffectArgs.playerId, cardId });
+      }
+      
+      const cardIdsToRearrange = cardIdsSetAside.filter(id => !result.result.includes(id));
+      
+      if (!cardIdsToRearrange.length) {
+        console.log(`[scouting-party effect] no cards to rearrange`);
+        return;
+      }
+      
+      if (cardIdsToRearrange.length === 1) {
+        console.log(`[scouting-party effect] one card left, moving to deck`);
+        
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
+          toPlayerId: cardEffectArgs.playerId,
+          cardId: cardIdsToRearrange[0],
+          to: { location: 'playerDeck' }
+        });
+      }
+      else {
+        const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Put back in any order',
+          actionButtons: [{ label: 'DONE', action: 1 }],
+          content: {
+            type: 'rearrange',
+            cardIds: cardIdsToRearrange
+          }
+        }) as { action: number, result: number[] };
+        
+        if (!result.result.length) {
+          console.warn(`[scouting-party effect] no card selected`);
+          return;
+        }
+        
+        console.log(`[scouting-party effect] putting cards ${result.result} back on deck`);
+        
+        for (const cardId of result.result) {
+          await cardEffectArgs.runGameActionDelegate('moveCard', {
+            toPlayerId: cardEffectArgs.playerId,
+            cardId,
+            to: { location: 'playerDeck' }
+          });
+        }
+      }
+    }
+  },
 }
 
 export default effectMap;
