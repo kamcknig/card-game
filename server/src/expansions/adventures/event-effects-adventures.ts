@@ -379,6 +379,60 @@ const effectMap: CardExpansionModule = {
       }
     }
   },
+  'trade': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const event = cardEffectArgs.match.events.find(e => e.id === cardEffectArgs.cardId);
+      
+      if (!event) {
+        console.warn(`[trade effect] event not found`);
+        return;
+      }
+      
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Trash cards`,
+        restrict: hand,
+        count: {
+          kind: 'upTo',
+          count: 2
+        },
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.log(`[trade effect] no card selected`);
+        return;
+      }
+      
+      const silverCards = cardEffectArgs.findCards([
+        {location: 'basicSupply'},
+        {cardKeys: 'silver'}
+      ]);
+      
+      if (!silverCards.length) {
+        console.log(`[trade effect] no silver cards in supply`);
+        return;
+      }
+
+      console.log(`[trade effect] gaining ${selectedCardIds.length} silver cards`);
+      
+      for (let i = 0; i < selectedCardIds.length; i++) {
+        const silverCard = silverCards.slice(-i - 1)[0];
+        
+        if (!silverCard) {
+          console.log(`[trade effect] no silver cards in supply`);
+          break;
+        }
+        
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: silverCard,
+          to: { location: 'playerDiscard' }
+        });
+      }
+    }
+  },
 }
 
 export default effectMap;

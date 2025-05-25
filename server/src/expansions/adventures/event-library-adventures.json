@@ -29,5 +29,10 @@
     "cost": {
       "treasure": 2
     }
+  },
+  "trade": {
+    "cost": {
+      "treasure": 5
+    }
   }
 }
