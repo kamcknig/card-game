@@ -2,6 +2,7 @@ import { CardExpansionModule } from '../../types.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { CardId } from 'shared/shared-types.ts';
+import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 
 const effectMap: CardExpansionModule = {
   'alms': {
@@ -99,6 +100,31 @@ const effectMap: CardExpansionModule = {
           cardId: selectedCardId
         });
       }
+    }
+  },
+  'expedition': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const event = cardEffectArgs.match.events.find(e => e.id === cardEffectArgs.cardId);
+      if (!event) {
+        return;
+      }
+      
+      cardEffectArgs.reactionManager.registerReactionTemplate(event, 'endTurnPhase', {
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: async conditionArgs => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
+          if (getTurnPhase(conditionArgs.match.turnPhaseIndex) !== 'cleanup') return false;
+          return true;
+        },
+        triggeredEffectFn: async triggeredArgs => {
+          console.warn(`[expedition effect] i have programmed this to use the reaction system, but technically the effect should modify the amount of cards drawn, and not take place at the end of cleanup`);
+          
+          await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
+        }
+      })
     }
   },
 }

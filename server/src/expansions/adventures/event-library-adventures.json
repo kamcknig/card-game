@@ -8,5 +8,10 @@
     "cost": {
       "treasure": 3
     }
+  },
+  "expedition": {
+    "cost": {
+      "treasure": 3
+    }
   }
 }
