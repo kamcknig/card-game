@@ -101,6 +101,10 @@ export interface Match {
   stats: MatchStats;
   turnNumber: number;
   turnPhaseIndex: number;
+  playerTokens: Record<
+    PlayerId,
+    { location: CardKey | 'playerDeck' | 'player'; }
+  >;
 }
 
 export type CardOverrides = Record<PlayerId, Record<CardId, Partial<Card>>>;
