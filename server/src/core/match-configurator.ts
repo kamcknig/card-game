@@ -214,11 +214,8 @@ export class MatchConfigurator {
       const allowedEventsAndOthers = MatchBaseConfiguration.numberOfEventsAndOthers;
       let selectedEventsAndOthers = this._config.events.length;
       
-      let a = false;
-      
       for (let i = 0; i < numKingdomsToSelect; i++) {
-        const randomIndex = !a ? uniqueRandomizers.findIndex(randomizer => randomizer.randomizer === 'alms') : Math.floor(Math.random() * uniqueRandomizers.length);
-        a = true;
+        const randomIndex = Math.floor(Math.random() * uniqueRandomizers.length);
         const selectedRandomizer = uniqueRandomizers[randomIndex];
         
         if (selectedRandomizer.type === 'card') {
