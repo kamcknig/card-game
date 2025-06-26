@@ -1,0 +1,13 @@
+services:
+    card-game-server:
+        container_name: card-game-server
+        build:
+            context: .
+            dockerfile: ./Dockerfile
+        command: deno run --inspect=0.0.0.0:9229 --check --env-file --allow-read --allow-write --allow-net --allow-env --watch src/server.ts
+        volumes:
+            - ./server/.deno:/deno-dir
+            - ./:/app
+        ports:
+            - '3000:3000'
+            - '9229:9229'
