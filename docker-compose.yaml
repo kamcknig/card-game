@@ -4,7 +4,7 @@ services:
         build:
             context: .
             dockerfile: ./Dockerfile
-        command: deno run --inspect=0.0.0.0:9229 --check --env-file --allow-read --allow-write --allow-net --allow-env --watch src/server.ts
+        command: deno run --node-modules-dir --inspect=0.0.0.0:9229 --check --env-file --allow-read --allow-write --allow-net --allow-env --watch src/server.ts
         volumes:
             - ./server/.deno:/deno-dir
             - ./:/app
