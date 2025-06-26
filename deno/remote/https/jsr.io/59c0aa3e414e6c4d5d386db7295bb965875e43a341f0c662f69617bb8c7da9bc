@@ -1,0 +1,66 @@
+import { isMatch } from './isMatch.ts';
+import { toKey } from '../_internal/toKey.ts';
+import { cloneDeep } from '../object/cloneDeep.ts';
+import { get } from '../object/get.ts';
+import { has } from '../object/has.ts';
+
+/**
+ * Creates a function that checks if a given target object matches a specific property value.
+ *
+ * The returned function takes a target object and determines if the property at the
+ * specified path within the target object is equal to the given value.
+ *
+ * @param {PropertyKey | PropertyKey[]} property - The property path to check within the target object.
+ *     This can be a single property key or an array of property keys.
+ * @param {unknown} source - The value to compare against the property value in the target object.
+ *
+ * @returns {(target: unknown) => boolean} - A function that takes a target object and returns
+ *     `true` if the property value at the given path in the target object matches the provided value,
+ *     otherwise returns `false`.
+ *
+ * @example
+ * // Using a single property key
+ * const checkName = matchesProperty('name', 'Alice');
+ * console.log(checkName({ name: 'Alice' })); // true
+ * console.log(checkName({ name: 'Bob' })); // false
+ *
+ * // Using an array of property keys
+ * const checkNested = matchesProperty(['address', 'city'], 'New York');
+ * console.log(checkNested({ address: { city: 'New York' } })); // true
+ * console.log(checkNested({ address: { city: 'Los Angeles' } })); // false
+ */
+export function matchesProperty(
+  property: PropertyKey | readonly PropertyKey[],
+  source: unknown
+): (target?: unknown) => boolean {
+  switch (typeof property) {
+    case 'object': {
+      if (Object.is(property?.valueOf(), -0)) {
+        property = '-0';
+      }
+      break;
+    }
+    case 'number': {
+      property = toKey(property);
+      break;
+    }
+  }
+
+  source = cloneDeep(source);
+
+  return function (target?: unknown) {
+    const result = get(target, property as PropertyKey | PropertyKey[]);
+
+    if (result === undefined) {
+      return has(target, property as PropertyKey | PropertyKey[]);
+    }
+
+    if (source === undefined) {
+      return result === undefined;
+    }
+
+    return isMatch(result, source);
+  };
+}
+
+// denoCacheMetadata={"headers":{"x-goog-generation":"1741509574819201","x-goog-metageneration":"1","x-goog-storage-class":"STANDARD","x-jsr-cache-id":"ATL","expires":"Fri, 26 Jun 2026 21:45:35 GMT","date":"Thu, 26 Jun 2025 21:45:35 GMT","age":"0","x-jsr-cache-status":"revalidated","server":"UploadServer","last-modified":"Sun, 09 Mar 2025 08:39:34 GMT","etag":"\"a2529e61dfff843448a79b6640741e23\"","accept-ranges":"bytes","via":"1.1 google","x-goog-stored-content-length":"2199","cache-control":"public, max-age=31536000, immutable","content-length":"2199","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-robots-tag":"noindex","access-control-allow-origin":"*","content-type":"text/typescript","x-guploader-uploadid":"ABgVH88EFPbgekqnKLLYmaLd8PLv2Kl6shmjRekKeWIqkGDCTp3nOM08RtMd5Mq1zyQ1d2HrGHc5FrQ","x-goog-hash":"crc32c=cz6kKA==,md5=olKeYd//hDRIp5tmQHQeIw==","access-control-expose-headers":"*","cross-origin-resource-policy":"cross-origin","x-content-type-options":"nosniff","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-stored-content-encoding":"identity"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/predicate/matchesProperty.ts","time":1750974334}

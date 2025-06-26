@@ -1,0 +1,69 @@
+import { getLogger } from "../../../../deps.ts";
+import { Transport } from "../transport.ts";
+import { Packet, Parser, RawData } from "../../../engine.io-parser/mod.ts";
+
+export class WS extends Transport {
+  private socket?: WebSocket;
+
+  public get name() {
+    return "websocket";
+  }
+
+  public get upgradesTo(): string[] {
+    return [];
+  }
+
+  public send(packets: Packet[]) {
+    for (const packet of packets) {
+      Parser.encodePacket(packet, true, (data: RawData) => {
+        if (this.writable && this.socket?.readyState === WebSocket.OPEN) {
+          this.socket?.send(data);
+        }
+      });
+    }
+  }
+
+  public onRequest(req: Request): Promise<Response> {
+    const { socket, response } = Deno.upgradeWebSocket(req);
+
+    this.socket = socket;
+
+    socket.onopen = () => {
+      getLogger("engine.io").debug(
+        "[websocket] transport is now writable",
+      );
+      this.writable = true;
+      this.emitReserved("drain");
+    };
+
+    socket.onmessage = ({ data }) => {
+      // note: we use the length of the string here, which might be different from the number of bytes (up to 4 bytes)
+      const byteLength = typeof data === "string"
+        ? data.length
+        : data.byteLength;
+      if (byteLength > this.opts.maxHttpBufferSize) {
+        return this.onError("payload too large");
+      } else {
+        this.onData(data);
+      }
+    };
+
+    socket.onclose = (closeEvent) => {
+      getLogger("engine.io").debug(
+        `[websocket] onclose with code ${closeEvent.code}`,
+      );
+      this.writable = false;
+      this.onClose();
+    };
+
+    // note: response.headers is immutable, so it seems we can't add headers here
+
+    return Promise.resolve(response);
+  }
+
+  protected doClose() {
+    this.socket?.close();
+  }
+}
+
+// denoCacheMetadata={"headers":{"content-length":"1759","via":"http/2 edgeproxy-h","x-amz-cf-pop":"IAD61-P1","x-amz-replication-status":"COMPLETED","x-cache":"Hit from cloudfront","referrer-policy":"strict-origin-when-cross-origin","cache-control":"public, max-age=31536000, immutable","strict-transport-security":"max-age=63072000; includeSubDomains; preload","accept-ranges":"bytes","x-frame-options":"DENY","x-amz-cf-id":"014IJ_ly7ExNSYdRRPPT8N8Wy9bhVQxPSl99ekl3pdxCthxdps3bag==","x-amz-server-side-encryption":"AES256","content-type":"application/typescript; charset=utf-8","date":"Wed, 29 Jan 2025 15:36:35 GMT","vary":"Accept-Encoding, Origin","cross-origin-embedder-policy":"same-origin","access-control-allow-origin":"*","cross-origin-opener-policy":"same-origin","etag":"\"7f9acc5eb4c1acbbc381564544a77815\"","x-amz-version-id":"kdqYxLufNqn_VGXZEPVgDEQnMCWRc4Tx","x-content-type-options":"nosniff","server-timing":"fetchSource;dur=36","cross-origin-resource-policy":"same-origin","content-security-policy":"default-src 'none'; style-src 'unsafe-inline'; sandbox","age":"12809340","last-modified":"Thu, 09 Jan 2025 07:38:35 GMT","server":"deno/gcp-us-east4"},"url":"https://deno.land/x/socket_io@0.2.1/packages/engine.io/lib/transports/websocket.ts","time":1750974334}

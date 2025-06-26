@@ -1,0 +1,18 @@
+/**
+ * Performs a `SameValueZero` comparison between two values to determine if they are equivalent.
+ *
+ * @param {unknown} value - The value to compare.
+ * @param {unknown} other - The other value to compare.
+ * @returns {boolean} Returns `true` if the values are equivalent, else `false`.
+ *
+ * @example
+ * eq(1, 1); // true
+ * eq(0, -0); // true
+ * eq(NaN, NaN); // true
+ * eq('a', Object('a')); // false
+ */
+export function eq(value?: unknown, other?: unknown): boolean {
+  return value === other || (Number.isNaN(value) && Number.isNaN(other));
+}
+
+// denoCacheMetadata={"headers":{"x-robots-tag":"noindex","content-type":"text/typescript","x-jsr-cache-id":"ATL","access-control-expose-headers":"*","x-goog-generation":"1741509575391294","x-goog-stored-content-length":"552","x-goog-stored-content-encoding":"identity","x-goog-storage-class":"STANDARD","content-length":"552","etag":"\"550bb3ecf21b980f5f436e55138a2387\"","expires":"Fri, 26 Jun 2026 21:45:35 GMT","cross-origin-resource-policy":"cross-origin","x-goog-hash":"crc32c=3j7zAw==,md5=VQuz7PIbmA9fQ25VE4ojhw==","x-jsr-cache-status":"revalidated","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","server":"UploadServer","age":"0","x-guploader-uploadid":"ABgVH8_-AV9T6Px3rLAlUYUJ4S8Wmhu6l1TQDwckiPd46JJbcwnQPQh0I4x9s6OtUeuymxKZacEWqv4","date":"Thu, 26 Jun 2025 21:45:35 GMT","via":"1.1 google","access-control-allow-origin":"*","x-content-type-options":"nosniff","cache-control":"public, max-age=31536000, immutable","x-goog-metageneration":"1","accept-ranges":"bytes","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/util/eq.ts","time":1750974334}

@@ -1,0 +1,26 @@
+import { uniq as uniqToolkit } from '../../array/uniq.ts';
+import { isArrayLike } from '../predicate/isArrayLike.ts';
+
+/**
+ * Creates a duplicate-free version of an array.
+ *
+ * This function takes an array and returns a new array containing only the unique values
+ * from the original array, preserving the order of first occurrence.
+ *
+ * @template T - The type of elements in the array.
+ * @param {ArrayLike<T> | null | undefined} arr - The array to process.
+ * @returns {T[]} A new array with only unique values from the original array.
+ *
+ * @example
+ * const array = [1, 2, 2, 3, 4, 4, 5];
+ * const result = uniq(array);
+ * // result will be [1, 2, 3, 4, 5]
+ */
+export function uniq<T>(arr: ArrayLike<T> | null | undefined): T[] {
+  if (!isArrayLike(arr)) {
+    return [];
+  }
+  return uniqToolkit(Array.from(arr));
+}
+
+// denoCacheMetadata={"headers":{"via":"1.1 google","expires":"Fri, 26 Jun 2026 21:45:35 GMT","age":"0","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","accept-ranges":"bytes","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","access-control-allow-origin":"*","x-goog-storage-class":"STANDARD","x-guploader-uploadid":"ABgVH8_tBWriCzuoWiwJFUJZiC45wvo_2SOACxUP9uWTLboavv96L3xMNxtivVgaa_XJY3NxRoxdCzY","cache-control":"public, max-age=31536000, immutable","x-goog-stored-content-encoding":"identity","server":"UploadServer","x-goog-generation":"1741509575507459","x-goog-hash":"crc32c=JbAv7Q==,md5=ahjsEMRoTC7TBojDjFPb5A==","content-length":"824","date":"Thu, 26 Jun 2025 21:45:35 GMT","etag":"\"6a18ec10c4684c2ed30688c38c53dbe4\"","content-type":"text/typescript","x-robots-tag":"noindex","access-control-expose-headers":"*","cross-origin-resource-policy":"cross-origin","x-goog-stored-content-length":"824","x-jsr-cache-status":"revalidated","x-content-type-options":"nosniff","x-jsr-cache-id":"ATL","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-metageneration":"1"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/array/uniq.ts","time":1750974334}

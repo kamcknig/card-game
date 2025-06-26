@@ -1,0 +1,64 @@
+import { compareValues } from '../_internal/compareValues.ts';
+
+/**
+ * Sorts an array of objects based on the given `criteria` and their corresponding order directions.
+ *
+ * - If you provide keys, it sorts the objects by the values of those keys.
+ * - If you provide functions, it sorts based on the values returned by those functions.
+ *
+ * The function returns the array of objects sorted in corresponding order directions.
+ * If two objects have the same value for the current criterion, it uses the next criterion to determine their order.
+ * If the number of orders is less than the number of criteria, it uses the last order for the rest of the criteria.
+ *
+ * @template T - The type of elements in the array.
+ * @param {T[]} arr - The array of objects to be sorted.
+ * @param {Array<((item: T) => unknown) | keyof T>} criteria  - The criteria for sorting. This can be an array of object keys or functions that return values used for sorting.
+ * @param {Array<'asc' | 'desc'>} orders - An array of order directions ('asc' for ascending or 'desc' for descending).
+ * @returns {T[]} - The sorted array.
+ *
+ * @example
+ * // Sort an array of objects by 'user' in ascending order and 'age' in descending order.
+ * const users = [
+ *   { user: 'fred', age: 48 },
+ *   { user: 'barney', age: 34 },
+ *   { user: 'fred', age: 40 },
+ *   { user: 'barney', age: 36 },
+ * ];
+ *
+ * const result = orderBy(users, [obj => obj.user, 'age'], ['asc', 'desc']);
+ * // result will be:
+ * // [
+ * //   { user: 'barney', age: 36 },
+ * //   { user: 'barney', age: 34 },
+ * //   { user: 'fred', age: 48 },
+ * //   { user: 'fred', age: 40 },
+ * // ]
+ */
+export function orderBy<T extends object>(
+  arr: readonly T[],
+  criteria: Array<((item: T) => unknown) | keyof T>,
+  orders: Array<'asc' | 'desc'>
+): T[] {
+  return arr.slice().sort((a, b) => {
+    const ordersLength = orders.length;
+
+    for (let i = 0; i < criteria.length; i++) {
+      const order = ordersLength > i ? orders[i] : orders[ordersLength - 1];
+      const criterion = criteria[i];
+      const criterionIsFunction = typeof criterion === 'function';
+
+      const valueA = criterionIsFunction ? criterion(a) : a[criterion];
+      const valueB = criterionIsFunction ? criterion(b) : b[criterion];
+
+      const result = compareValues(valueA, valueB, order);
+
+      if (result !== 0) {
+        return result;
+      }
+    }
+
+    return 0;
+  });
+}
+
+// denoCacheMetadata={"headers":{"via":"1.1 google","age":"1","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-jsr-cache-status":"revalidated","x-robots-tag":"noindex","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-goog-hash":"crc32c=hz6KmQ==,md5=tmH3Yq8lnmAUgxJkztM9wQ==","x-goog-generation":"1741509575022344","x-goog-metageneration":"1","content-type":"text/typescript","x-content-type-options":"nosniff","x-goog-stored-content-length":"2395","cache-control":"public, max-age=31536000, immutable","accept-ranges":"bytes","x-guploader-uploadid":"ABgVH89knC55NtWHypMJNCAlmJFcjxgBJoSLlxSJi3Vt0SfRKPciNuTamWLtieICNZNYSNTA","etag":"\"b661f762af259e6014831264ced33dc1\"","x-jsr-cache-id":"ATL","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","access-control-allow-origin":"*","content-length":"2395","x-goog-storage-class":"STANDARD","cross-origin-resource-policy":"cross-origin","access-control-expose-headers":"*","x-goog-stored-content-encoding":"identity","server":"UploadServer","expires":"Fri, 26 Jun 2026 21:45:35 GMT"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/array/orderBy.ts","time":1750974334}

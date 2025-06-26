@@ -1,0 +1,21 @@
+import { isIndex } from './isIndex.ts';
+import { isArrayLike } from '../predicate/isArrayLike.ts';
+import { isObject } from '../predicate/isObject.ts';
+import { eq } from '../util/eq.ts';
+
+export function isIterateeCall(value: unknown, index: unknown, object: unknown): boolean {
+  if (!isObject(object)) {
+    return false;
+  }
+
+  if (
+    (typeof index === 'number' && isArrayLike(object) && isIndex(index) && index < object.length) ||
+    (typeof index === 'string' && index in object)
+  ) {
+    return eq((object as any)[index], value);
+  }
+
+  return false;
+}
+
+// denoCacheMetadata={"headers":{"last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","via":"1.1 google","x-goog-generation":"1741509575452471","content-length":"564","expires":"Fri, 26 Jun 2026 21:45:35 GMT","cache-control":"public, max-age=31536000, immutable","content-type":"text/typescript","x-jsr-cache-id":"ATL","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-goog-metageneration":"1","age":"0","x-jsr-cache-status":"revalidated","access-control-allow-origin":"*","x-content-type-options":"nosniff","x-goog-stored-content-encoding":"identity","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","etag":"\"b2c56bc4493c9f568b062a622968f6ce\"","server":"UploadServer","x-goog-hash":"crc32c=4SyFdQ==,md5=ssVrxEk8n1aLBipiKWj2zg==","x-goog-storage-class":"STANDARD","x-robots-tag":"noindex","access-control-expose-headers":"*","cross-origin-resource-policy":"cross-origin","x-goog-stored-content-length":"564","accept-ranges":"bytes","x-guploader-uploadid":"ABgVH88k6qnVcbnqqOrw5htY5YciyUmS4twBAYV5TvIebeKoTOfJUSCdIXQAb5sU0pJhjOxd2ppdNtE","date":"Thu, 26 Jun 2025 21:45:35 GMT"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/_internal/isIterateeCall.ts","time":1750974334}

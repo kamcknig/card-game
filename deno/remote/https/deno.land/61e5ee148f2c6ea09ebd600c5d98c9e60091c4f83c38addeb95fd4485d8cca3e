@@ -1,0 +1,84 @@
+// Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
+
+export interface Reader {
+  /** Reads up to `p.byteLength` bytes into `p`. It resolves to the number of
+   * bytes read (`0` < `n` <= `p.byteLength`) and rejects if any error
+   * encountered. Even if `read()` resolves to `n` < `p.byteLength`, it may
+   * use all of `p` as scratch space during the call. If some data is
+   * available but not `p.byteLength` bytes, `read()` conventionally resolves
+   * to what is available instead of waiting for more.
+   *
+   * When `read()` encounters end-of-file condition, it resolves to EOF
+   * (`null`).
+   *
+   * When `read()` encounters an error, it rejects with an error.
+   *
+   * Callers should always process the `n` > `0` bytes returned before
+   * considering the EOF (`null`). Doing so correctly handles I/O errors that
+   * happen after reading some bytes and also both of the allowed EOF
+   * behaviors.
+   *
+   * Implementations should not retain a reference to `p`.
+   *
+   * Use iterateReader() from https://deno.land/std/streams/conversion.ts to turn a Reader into an
+   * AsyncIterator.
+   */
+  read(p: Uint8Array): Promise<number | null>;
+}
+
+export interface ReaderSync {
+  /** Reads up to `p.byteLength` bytes into `p`. It resolves to the number
+   * of bytes read (`0` < `n` <= `p.byteLength`) and rejects if any error
+   * encountered. Even if `read()` returns `n` < `p.byteLength`, it may use
+   * all of `p` as scratch space during the call. If some data is available
+   * but not `p.byteLength` bytes, `read()` conventionally returns what is
+   * available instead of waiting for more.
+   *
+   * When `readSync()` encounters end-of-file condition, it returns EOF
+   * (`null`).
+   *
+   * When `readSync()` encounters an error, it throws with an error.
+   *
+   * Callers should always process the `n` > `0` bytes returned before
+   * considering the EOF (`null`). Doing so correctly handles I/O errors that happen
+   * after reading some bytes and also both of the allowed EOF behaviors.
+   *
+   * Implementations should not retain a reference to `p`.
+   *
+   * Use iterateReaderSync() from https://deno.land/std/streams/conversion.ts to turn a ReaderSync
+   * into an Iterator.
+   */
+  readSync(p: Uint8Array): number | null;
+}
+
+export interface Writer {
+  /** Writes `p.byteLength` bytes from `p` to the underlying data stream. It
+   * resolves to the number of bytes written from `p` (`0` <= `n` <=
+   * `p.byteLength`) or reject with the error encountered that caused the
+   * write to stop early. `write()` must reject with a non-null error if
+   * would resolve to `n` < `p.byteLength`. `write()` must not modify the
+   * slice data, even temporarily.
+   *
+   * Implementations should not retain a reference to `p`.
+   */
+  write(p: Uint8Array): Promise<number>;
+}
+
+export interface WriterSync {
+  /** Writes `p.byteLength` bytes from `p` to the underlying data
+   * stream. It returns the number of bytes written from `p` (`0` <= `n`
+   * <= `p.byteLength`) and any error encountered that caused the write to
+   * stop early. `writeSync()` must throw a non-null error if it returns `n` <
+   * `p.byteLength`. `writeSync()` must not modify the slice data, even
+   * temporarily.
+   *
+   * Implementations should not retain a reference to `p`.
+   */
+  writeSync(p: Uint8Array): number;
+}
+
+export interface Closer {
+  close(): void;
+}
+
+// denoCacheMetadata={"headers":{"date":"Sun, 06 Oct 2024 10:32:47 GMT","accept-ranges":"bytes","content-length":"3379","etag":"\"e287202b0ded94efb78389b03860f447\"","server":"deno/gcp-us-east4","via":"http/2 edgeproxy-h","x-amz-replication-status":"COMPLETED","x-content-type-options":"nosniff","age":"22763568","x-cache":"Hit from cloudfront","last-modified":"Wed, 28 Sep 2022 21:24:38 GMT","x-frame-options":"DENY","x-amz-cf-id":"bwN5SDHdHoNwfmvNWxAnaBiyg6QFDtlaqvvk90dPbBxz3W9__BeCxw==","strict-transport-security":"max-age=63072000; includeSubDomains; preload","cross-origin-embedder-policy":"same-origin","referrer-policy":"strict-origin-when-cross-origin","x-amz-version-id":"v.fBP519T.VRJr.W6ipxSGmZi7UWP7_M","cross-origin-opener-policy":"same-origin","cross-origin-resource-policy":"same-origin","access-control-allow-origin":"*","content-security-policy":"default-src 'none'; style-src 'unsafe-inline'; sandbox","server-timing":"fetchSource;dur=6","content-type":"application/typescript; charset=utf-8","cache-control":"public, max-age=31536000, immutable","vary":"Accept-Encoding, Origin","x-amz-cf-pop":"IAD61-P1"},"url":"https://deno.land/std@0.158.0/io/types.d.ts","time":1750974334}

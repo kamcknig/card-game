@@ -1,0 +1,8 @@
+import { encodeToBase64 } from "../../engine.io-parser/base64-arraybuffer.ts";
+export function generateId() {
+  const buffer = new Uint8Array(15);
+  crypto.getRandomValues(buffer);
+  return encodeToBase64(buffer).replace(/\//g, "-").replace(/\+/g, "_");
+}
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImh0dHBzOi8vZGVuby5sYW5kL3gvc29ja2V0X2lvQDAuMi4xL3BhY2thZ2VzL2VuZ2luZS5pby9saWIvdXRpbC50cyJdLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgeyBlbmNvZGVUb0Jhc2U2NCB9IGZyb20gXCIuLi8uLi9lbmdpbmUuaW8tcGFyc2VyL2Jhc2U2NC1hcnJheWJ1ZmZlci50c1wiO1xuXG5leHBvcnQgZnVuY3Rpb24gZ2VuZXJhdGVJZCgpOiBzdHJpbmcge1xuICBjb25zdCBidWZmZXIgPSBuZXcgVWludDhBcnJheSgxNSk7XG4gIGNyeXB0by5nZXRSYW5kb21WYWx1ZXMoYnVmZmVyKTtcbiAgcmV0dXJuIGVuY29kZVRvQmFzZTY0KGJ1ZmZlcikucmVwbGFjZSgvXFwvL2csIFwiLVwiKS5yZXBsYWNlKC9cXCsvZywgXCJfXCIpO1xufVxuIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiJBQUFBLFNBQVMsY0FBYyxRQUFRLCtDQUErQztBQUU5RSxPQUFPLFNBQVM7RUFDZCxNQUFNLFNBQVMsSUFBSSxXQUFXO0VBQzlCLE9BQU8sZUFBZSxDQUFDO0VBQ3ZCLE9BQU8sZUFBZSxRQUFRLE9BQU8sQ0FBQyxPQUFPLEtBQUssT0FBTyxDQUFDLE9BQU87QUFDbkUifQ==
+// denoCacheMetadata=15923672827025438627,10460954519591789220

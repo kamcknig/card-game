@@ -1,0 +1,23 @@
+import { words as getWords } from './words.ts';
+
+/**
+ * Converts a string to kebab case.
+ *
+ * Kebab case is the naming convention in which each word is written in lowercase and separated by a dash (-) character.
+ *
+ * @param {string} str - The string that is to be changed to kebab case.
+ * @returns {string} - The converted string to kebab case.
+ *
+ * @example
+ * const convertedStr1 = kebabCase('camelCase') // returns 'camel-case'
+ * const convertedStr2 = kebabCase('some whitespace') // returns 'some-whitespace'
+ * const convertedStr3 = kebabCase('hyphen-text') // returns 'hyphen-text'
+ * const convertedStr4 = kebabCase('HTTPRequest') // returns 'http-request'
+ */
+
+export function kebabCase(str: string): string {
+  const words = getWords(str);
+  return words.map(word => word.toLowerCase()).join('-');
+}
+
+// denoCacheMetadata={"headers":{"x-content-type-options":"nosniff","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-hash":"crc32c=DVoTUw==,md5=ceecQGf92OFItdHEz0ZURw==","x-goog-stored-content-encoding":"identity","x-goog-stored-content-length":"814","x-jsr-cache-status":"revalidated","accept-ranges":"bytes","cross-origin-resource-policy":"cross-origin","x-goog-metageneration":"1","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-goog-storage-class":"STANDARD","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-jsr-cache-id":"ATL","server":"UploadServer","access-control-expose-headers":"*","content-length":"814","cache-control":"public, max-age=31536000, immutable","x-guploader-uploadid":"ABgVH8-byVXjFm0vsFORHgYiNT-_liXpavQlvco5WvdHWs64sNjONOGQP-fpHF87pJ4EUKM2jijymGw","x-goog-generation":"1741509575824120","via":"1.1 google","etag":"\"71e79c4067fdd8e148b5d1c4cf465447\"","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","content-type":"text/typescript","age":"0","x-robots-tag":"noindex","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","access-control-allow-origin":"*"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/string/kebabCase.ts","time":1750974334}

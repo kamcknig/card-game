@@ -1,0 +1,31 @@
+/**
+ * Returns a new array containing only the unique elements from the original array,
+ * based on the values returned by the comparator function.
+ *
+ * @template T - The type of elements in the array.
+ * @param {T[]} arr - The array to process.
+ * @param {(item1: T, item2: T) => boolean} areItemsEqual - The function used to compare the array elements.
+ * @returns {T[]} A new array containing only the unique elements from the original array, based on the values returned by the comparator function.
+ *
+ * @example
+ * ```ts
+ * uniqWith([1.2, 1.5, 2.1, 3.2, 5.7, 5.3, 7.19], (a, b) => Math.abs(a - b) < 1);
+ * // [1.2, 3.2, 5.7, 7.19]
+ * ```
+ */
+export function uniqWith<T>(arr: readonly T[], areItemsEqual: (item1: T, item2: T) => boolean): T[] {
+  const result: T[] = [];
+
+  for (let i = 0; i < arr.length; i++) {
+    const item = arr[i];
+    const isUniq = result.every(v => !areItemsEqual(v, item));
+
+    if (isUniq) {
+      result.push(item);
+    }
+  }
+
+  return result;
+}
+
+// denoCacheMetadata={"headers":{"x-content-type-options":"nosniff","expires":"Fri, 26 Jun 2026 21:45:35 GMT","cross-origin-resource-policy":"cross-origin","x-goog-storage-class":"STANDARD","server":"UploadServer","cache-control":"public, max-age=31536000, immutable","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","accept-ranges":"bytes","content-type":"text/typescript","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-goog-generation":"1741509575978875","x-guploader-uploadid":"ABgVH8_i4S74bRbXB6AhECBfvNFdm4Qzz0YgaBkckh_-djjovylcWixkhfs1YP87sroVBATYSBDjGtY","content-length":"981","etag":"\"a170ca61a0dd608ca923fb0f3e7833c6\"","x-robots-tag":"noindex","access-control-expose-headers":"*","x-goog-stored-content-encoding":"identity","via":"1.1 google","x-goog-stored-content-length":"981","x-goog-hash":"crc32c=opk+SQ==,md5=oXDKYaDdYIypI/sPPngzxg==","last-modified":"Sun, 09 Mar 2025 08:39:36 GMT","age":"0","x-jsr-cache-id":"ATL","x-jsr-cache-status":"revalidated","x-goog-metageneration":"1","date":"Thu, 26 Jun 2025 21:45:35 GMT","access-control-allow-origin":"*"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/array/uniqWith.ts","time":1750974334}

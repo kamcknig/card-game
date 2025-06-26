@@ -1,0 +1,27 @@
+type NotFalsey<T> = Exclude<T, false | null | 0 | 0n | '' | undefined>;
+
+/**
+ * Removes falsey values (false, null, 0, 0n, '', undefined, NaN) from an array.
+ *
+ * @template T - The type of elements in the array.
+ * @param {T[]} arr - The input array to remove falsey values.
+ * @returns {Array<Exclude<T, false | null | 0 | 0n | '' | undefined>>} - A new array with all falsey values removed.
+ *
+ * @example
+ * compact([0, 0n, 1, false, 2, '', 3, null, undefined, 4, NaN, 5]);
+ * Returns: [1, 2, 3, 4, 5]
+ */
+export function compact<T>(arr: readonly T[]): Array<NotFalsey<T>> {
+  const result: Array<NotFalsey<T>> = [];
+
+  for (let i = 0; i < arr.length; i++) {
+    const item = arr[i];
+    if (item) {
+      result.push(item as NotFalsey<T>);
+    }
+  }
+
+  return result;
+}
+
+// denoCacheMetadata={"headers":{"content-type":"text/typescript","access-control-allow-origin":"*","via":"1.1 google","date":"Thu, 26 Jun 2025 21:45:35 GMT","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-goog-generation":"1741509575553090","cross-origin-resource-policy":"cross-origin","x-content-type-options":"nosniff","x-goog-metageneration":"1","x-guploader-uploadid":"ABgVH8_eDmQhr9XNmqJbmLlE8Nwln28se6I2gocMQG3e3fYdijpDjpYVDFhIzzLyeILc9qViejtjZJg","accept-ranges":"bytes","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-goog-stored-content-length":"775","cache-control":"public, max-age=31536000, immutable","etag":"\"28654c9be2151e17a2a22873096f7261\"","age":"0","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-hash":"crc32c=jtM2Lw==,md5=KGVMm+IVHheioihzCW9yYQ==","content-length":"775","x-goog-storage-class":"STANDARD","x-jsr-cache-id":"ATL","x-robots-tag":"noindex","x-jsr-cache-status":"revalidated","server":"UploadServer","access-control-expose-headers":"*","x-goog-stored-content-encoding":"identity"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/array/compact.ts","time":1750974334}

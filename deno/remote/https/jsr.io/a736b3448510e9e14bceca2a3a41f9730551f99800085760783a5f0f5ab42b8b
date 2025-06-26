@@ -1,0 +1,17 @@
+/**
+ * Checks if the value is NaN.
+ *
+ * @param {unknown} value - The value to check.
+ * @returns {value is typeof NaN} `true` if the value is NaN, `false` otherwise.
+ *
+ * @example
+ * isNaN(NaN); // true
+ * isNaN(0); // false
+ * isNaN('NaN'); // false
+ * isNaN(undefined); // false
+ */
+export function isNaN(value?: unknown): value is typeof NaN {
+  return Number.isNaN(value);
+}
+
+// denoCacheMetadata={"headers":{"expires":"Fri, 26 Jun 2026 21:45:35 GMT","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","age":"0","content-type":"text/typescript","x-jsr-cache-id":"ATL","x-goog-storage-class":"STANDARD","cache-control":"public, max-age=31536000, immutable","x-jsr-cache-status":"revalidated","x-goog-stored-content-encoding":"identity","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","access-control-expose-headers":"*","x-content-type-options":"nosniff","x-goog-stored-content-length":"381","server":"UploadServer","etag":"\"a2c25ad017bbcbb8b37fdaa9dee4ece3\"","via":"1.1 google","x-goog-hash":"crc32c=Z1fHGg==,md5=osJa0Be7y7izf9qp3uTs4w==","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-robots-tag":"noindex","access-control-allow-origin":"*","cross-origin-resource-policy":"cross-origin","x-goog-metageneration":"1","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-guploader-uploadid":"ABgVH89MOBltDRHK7O4i7uxMI6blFJFZPpGDtiXStMS5Q_MUr3CNgKfGzaqbl9drSY8neSldLLMO8rY","accept-ranges":"bytes","x-goog-generation":"1741509575199195","content-length":"381"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/predicate/isNaN.ts","time":1750974334}

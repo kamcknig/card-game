@@ -1,0 +1,19 @@
+import { decimalAdjust } from '../_internal/decimalAdjust.ts';
+
+/**
+ * Computes number rounded to precision.
+ *
+ * @param {number | string} number  The number to round.
+ * @param {number | string} precision The precision to round to.
+ * @returns {number} Returns the rounded number.
+ *
+ * @example
+ * round(4.006); // => 4
+ * round(4.006, 2); // => 4.01
+ * round(4060, -2); // => 4100
+ */
+export function round(number: number | string, precision: number | string = 0): number {
+  return decimalAdjust('round', number, precision);
+}
+
+// denoCacheMetadata={"headers":{"last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","x-goog-generation":"1741509574957171","x-goog-metageneration":"1","x-jsr-cache-status":"revalidated","cross-origin-resource-policy":"cross-origin","accept-ranges":"bytes","x-goog-storage-class":"STANDARD","x-goog-stored-content-encoding":"identity","x-content-type-options":"nosniff","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","content-type":"text/typescript","x-guploader-uploadid":"ABgVH8-aRi3OgbCoEXY9rAECuqq8ARJ2FxGjJtMBgVFwrWW0Y9FRX3rQyEUU43QOlG2YgFbPoq74IAs","x-robots-tag":"noindex","expires":"Fri, 26 Jun 2026 21:45:35 GMT","age":"0","server":"UploadServer","access-control-expose-headers":"*","x-goog-hash":"crc32c=wD1ePw==,md5=TtIidTxnVNlsrH2YJIkSCQ==","via":"1.1 google","x-goog-stored-content-length":"532","content-length":"532","date":"Thu, 26 Jun 2025 21:45:35 GMT","cache-control":"public, max-age=31536000, immutable","etag":"\"4ed222753c6754d96cac7d9824891209\"","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","access-control-allow-origin":"*","x-jsr-cache-id":"ATL"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/math/round.ts","time":1750974334}

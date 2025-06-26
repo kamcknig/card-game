@@ -1,0 +1,3 @@
+export { invariant } from './invariant.ts';
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImh0dHBzOi8vanNyLmlvL0Blcy10b29sa2l0L2VzLXRvb2xraXQvMS4zMy4wL3NyYy91dGlsL2luZGV4LnRzIl0sInNvdXJjZXNDb250ZW50IjpbImV4cG9ydCB7IGludmFyaWFudCB9IGZyb20gJy4vaW52YXJpYW50LnRzJztcbiJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiQUFBQSxTQUFTLFNBQVMsUUFBUSxpQkFBaUIifQ==
+// denoCacheMetadata=7612621938214798990,17148141124351927852

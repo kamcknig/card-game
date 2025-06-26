@@ -1,0 +1,21 @@
+import { unescape as unescapeToolkit } from '../../string/unescape.ts';
+import { toString } from '../util/toString.ts';
+
+/**
+ * Converts the HTML entities `&amp;`, `&lt;`, `&gt;`, `&quot;`, and `&#39;` in `str` to their corresponding characters.
+ * It is the inverse of `escape`.
+ *
+ * @param {string} str The string to unescape.
+ * @returns {string} Returns the unescaped string.
+ *
+ * @example
+ * unescape('This is a &lt;div&gt; element.'); // returns 'This is a <div> element.'
+ * unescape('This is a &quot;quote&quot;'); // returns 'This is a "quote"'
+ * unescape('This is a &#39;quote&#39;'); // returns 'This is a 'quote''
+ * unescape('This is a &amp; symbol'); // returns 'This is a & symbol'
+ */
+export function unescape(str?: string): string {
+  return unescapeToolkit(toString(str));
+}
+
+// denoCacheMetadata={"headers":{"x-content-type-options":"nosniff","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-generation":"1741509575947565","via":"1.1 google","x-jsr-cache-id":"ATL","accept-ranges":"bytes","age":"0","x-guploader-uploadid":"ABgVH89lUje3xYTYuk3tGc4Fpp4rBgRyup1Lel1_io_u7WGllKUbse5r5OkHM9flXmSn0HYM","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","x-goog-stored-content-length":"796","expires":"Fri, 26 Jun 2026 21:45:35 GMT","etag":"\"5306e89bbd01b8351313b076edcf1f2e\"","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","access-control-allow-origin":"*","x-goog-metageneration":"1","x-goog-stored-content-encoding":"identity","x-goog-hash":"crc32c=Pdlf2A==,md5=Uwbom70BuDUTE7B27c8fLg==","x-goog-storage-class":"STANDARD","content-type":"text/typescript","access-control-expose-headers":"*","content-length":"796","date":"Thu, 26 Jun 2025 21:45:35 GMT","cache-control":"public, max-age=31536000, immutable","server":"UploadServer","cross-origin-resource-policy":"cross-origin","x-robots-tag":"noindex","x-jsr-cache-status":"revalidated"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/string/unescape.ts","time":1750974334}

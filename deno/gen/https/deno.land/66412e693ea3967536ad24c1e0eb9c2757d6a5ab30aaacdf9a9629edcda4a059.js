@@ -1,0 +1,4 @@
+export { encode } from "./lib/encode.ts";
+export { decode } from "./lib/decode.ts";
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImh0dHBzOi8vZGVuby5sYW5kL3gvc29ja2V0X2lvQDAuMi4xL3BhY2thZ2VzL21zZ3BhY2svbW9kLnRzIl0sInNvdXJjZXNDb250ZW50IjpbImV4cG9ydCB7IGVuY29kZSB9IGZyb20gXCIuL2xpYi9lbmNvZGUudHNcIjtcbmV4cG9ydCB7IGRlY29kZSB9IGZyb20gXCIuL2xpYi9kZWNvZGUudHNcIjtcbiJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiQUFBQSxTQUFTLE1BQU0sUUFBUSxrQkFBa0I7QUFDekMsU0FBUyxNQUFNLFFBQVEsa0JBQWtCIn0=
+// denoCacheMetadata=6364468699823399149,6226910427405125849

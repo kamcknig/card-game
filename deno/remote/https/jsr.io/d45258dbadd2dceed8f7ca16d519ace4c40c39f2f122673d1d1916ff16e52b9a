@@ -1,0 +1,77 @@
+/**
+ * Returns an array of numbers from `end` (exclusive) to `0` (inclusive), decrementing by `1`.
+ *
+ * @param {number} end - The end number of the range (exclusive).
+ * @returns {number[]} An array of numbers from `end` (exclusive) to `0` (inclusive) with a step of `1`.
+ *
+ * @example
+ * // Returns [3, 2, 1, 0]
+ * rangeRight(4);
+ */
+export function rangeRight(end: number): number[];
+
+/**
+ * Returns an array of numbers from `end` (exclusive) to `start` (inclusive), decrementing by `1`.
+ *
+ * @param {number} start - The starting number of the range (inclusive).
+ * @param {number} end - The end number of the range (exclusive).
+ * @returns {number[]} An array of numbers from `end` (exclusive) to `start` (inclusive) with a step of `1`.
+ *
+ * @example
+ * // Returns [3, 2, 1]
+ * rangeRight(1, 4);
+ */
+export function rangeRight(start: number, end: number): number[];
+
+/**
+ * Returns an array of numbers from `end` (exclusive) to `start` (inclusive), decrementing by `step`.
+ *
+ * @param {number} start - The starting number of the range (inclusive).
+ * @param {number} end - The end number of the range (exclusive).
+ * @param {number} step - The step value for the range.
+ * @returns {number[]} An array of numbers from `end` (exclusive) to `start` (inclusive) with the specified `step`.
+ *
+ * @example
+ * // Returns [15, 10, 5, 0]
+ * rangeRight(0, 20, 5);
+ */
+export function rangeRight(start: number, end: number, step: number): number[];
+
+/**
+ * Returns an array of numbers from `end` (exclusive) to `start` (inclusive), decrementing by `step`.
+ *
+ * @param {number} start - The starting number of the range (inclusive).
+ * @param {number} end - The end number of the range (exclusive).
+ * @param {number} step - The step value for the range.
+ * @returns {number[]} An array of numbers from `end` (exclusive) to `start` (inclusive) with the specified `step`.
+ * @throws {Error} Throws an error if the step value is not a non-zero integer.
+ *
+ * @example
+ * // Returns [3, 2, 1, 0]
+ * rangeRight(4);
+ *
+ * @example
+ * // Returns [-3, -2, -1, 0]
+ * rangeRight(0, -4, -1);
+ */
+export function rangeRight(start: number, end?: number, step = 1): number[] {
+  if (end == null) {
+    end = start;
+    start = 0;
+  }
+
+  if (!Number.isInteger(step) || step === 0) {
+    throw new Error(`The step value must be a non-zero integer.`);
+  }
+
+  const length = Math.max(Math.ceil((end - start) / step), 0);
+  const result = new Array(length);
+
+  for (let i = 0; i < length; i++) {
+    result[i] = start + (length - i - 1) * step;
+  }
+
+  return result;
+}
+
+// denoCacheMetadata={"headers":{"access-control-expose-headers":"*","content-length":"2548","x-goog-storage-class":"STANDARD","cross-origin-resource-policy":"cross-origin","accept-ranges":"bytes","etag":"\"3b4aac319ffd121cfd8d8e3ee36b7b8d\"","x-content-type-options":"nosniff","x-robots-tag":"noindex","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","server":"UploadServer","age":"1","x-goog-metageneration":"1","x-guploader-uploadid":"ABgVH8-eYH9x_00Dj2MYdGoqMhvc9pnKkT2Oo7vIwqY9usHPspEj3l3B5VoCPG62bQw2BODATtX9HpY","x-goog-generation":"1741509575370504","x-goog-hash":"crc32c=rwnJ8Q==,md5=O0qsMZ/9Ehz9jY4+42t7jQ==","via":"1.1 google","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-goog-stored-content-length":"2548","date":"Thu, 26 Jun 2025 21:45:35 GMT","cache-control":"public, max-age=31536000, immutable","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","content-type":"text/typescript","x-goog-stored-content-encoding":"identity","x-jsr-cache-id":"ATL","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-jsr-cache-status":"revalidated","access-control-allow-origin":"*"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/math/rangeRight.ts","time":1750974334}

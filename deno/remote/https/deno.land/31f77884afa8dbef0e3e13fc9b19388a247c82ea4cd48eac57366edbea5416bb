@@ -1,0 +1,34 @@
+export interface Backoff {
+  /**
+   * Returns the next backoff interval in milliseconds
+   */
+  (attempts: number): number;
+}
+
+export interface ExponentialBackoffOptions {
+  /**
+   * @default 2
+   */
+  multiplier: number;
+  /**
+   * The maximum backoff interval in milliseconds
+   * @default 5000
+   */
+  maxInterval: number;
+  /**
+   * The minimum backoff interval in milliseconds
+   * @default 500
+   */
+  minInterval: number;
+}
+
+export function exponentialBackoff({
+  multiplier = 2,
+  maxInterval = 5000,
+  minInterval = 500,
+}: Partial<ExponentialBackoffOptions> = {}): Backoff {
+  return (attempts) =>
+    Math.min(maxInterval, minInterval * (multiplier ** (attempts - 1)));
+}
+
+// denoCacheMetadata={"headers":{"accept-ranges":"bytes","date":"Wed, 29 Jan 2025 15:36:35 GMT","x-frame-options":"DENY","last-modified":"Thu, 09 Jan 2025 07:38:36 GMT","x-amz-cf-pop":"IAD61-P1","x-amz-server-side-encryption":"AES256","cache-control":"public, max-age=31536000, immutable","age":"12809339","x-amz-replication-status":"COMPLETED","x-amz-version-id":"lV2oB39A3kSL9tLbW_WwzQldqQCLLqzf","x-cache":"Hit from cloudfront","content-security-policy":"default-src 'none'; style-src 'unsafe-inline'; sandbox","x-amz-cf-id":"L3jxElyxCrkoqwT9PaGzga571_0mpMT9h6rwgY5OOgDABN7ph0E6LQ==","x-content-type-options":"nosniff","server-timing":"fetchSource;dur=18","access-control-allow-origin":"*","etag":"\"e49d46e689b4b5b6a306466ae638b73f\"","referrer-policy":"strict-origin-when-cross-origin","content-length":"683","cross-origin-embedder-policy":"same-origin","cross-origin-opener-policy":"same-origin","cross-origin-resource-policy":"same-origin","content-type":"application/typescript; charset=utf-8","strict-transport-security":"max-age=63072000; includeSubDomains; preload","server":"deno/gcp-us-east4","vary":"Accept-Encoding, Origin","via":"http/2 edgeproxy-h"},"url":"https://deno.land/x/socket_io@0.2.1/vendor/deno.land/x/redis@v0.27.1/backoff.ts","time":1750974332}

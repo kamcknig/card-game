@@ -1,0 +1,40 @@
+/**
+ * Maps each element of an array based on a provided key-generating function.
+ *
+ * This function takes an array and a function that generates a key from each element. It returns
+ * an object where the keys are the generated keys and the values are the corresponding elements.
+ * If there are multiple elements generating the same key, the last element among them is used
+ * as the value.
+ *
+ * @template T - The type of elements in the array.
+ * @template K - The type of keys.
+ * @param {T[]} arr - The array of elements to be mapped.
+ * @param {(item: T) => K} getKeyFromItem - A function that generates a key from an element.
+ * @returns {Record<K, T>} An object where keys are mapped to each element of an array.
+ *
+ * @example
+ * const array = [
+ *   { category: 'fruit', name: 'apple' },
+ *   { category: 'fruit', name: 'banana' },
+ *   { category: 'vegetable', name: 'carrot' }
+ * ];
+ * const result = keyBy(array, item => item.category);
+ * // result will be:
+ * // {
+ * //   fruit: { category: 'fruit', name: 'banana' },
+ * //   vegetable: { category: 'vegetable', name: 'carrot' }
+ * // }
+ */
+export function keyBy<T, K extends PropertyKey>(arr: readonly T[], getKeyFromItem: (item: T) => K): Record<K, T> {
+  const result = {} as Record<K, T>;
+
+  for (let i = 0; i < arr.length; i++) {
+    const item = arr[i];
+    const key = getKeyFromItem(item);
+    result[key] = item;
+  }
+
+  return result;
+}
+
+// denoCacheMetadata={"headers":{"via":"1.1 google","date":"Thu, 26 Jun 2025 21:45:35 GMT","cache-control":"public, max-age=31536000, immutable","expires":"Fri, 26 Jun 2026 21:45:35 GMT","last-modified":"Sun, 09 Mar 2025 08:39:36 GMT","age":"0","server":"UploadServer","access-control-expose-headers":"*","x-goog-stored-content-length":"1413","x-goog-hash":"crc32c=u7tDmg==,md5=CPB4oA7d8hAiXaq4awYS4A==","cross-origin-resource-policy":"cross-origin","x-goog-stored-content-encoding":"identity","x-guploader-uploadid":"ABgVH8-RUxr88pKJv9Nchi2MPRhVxSboiXXDSfFFM-L8ATqOzmG0kTmmMwjvOKljs2rfVbeV","content-type":"text/typescript","x-goog-storage-class":"STANDARD","x-jsr-cache-id":"ATL","x-goog-metageneration":"1","x-goog-generation":"1741509575994652","content-length":"1413","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-jsr-cache-status":"revalidated","x-robots-tag":"noindex","access-control-allow-origin":"*","x-content-type-options":"nosniff","etag":"\"08f078a00eddf210225daab86b0612e0\"","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","accept-ranges":"bytes"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/array/keyBy.ts","time":1750974334}

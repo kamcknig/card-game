@@ -1,0 +1,27 @@
+/**
+ * Returns a new array containing the first `count` elements from the input array `arr`.
+ * If `count` is greater than the length of `arr`, the entire array is returned.
+ *
+ * @template T - Type of elements in the input array.
+ *
+ * @param {T[]} arr - The array to take elements from.
+ * @param {number} count - The number of elements to take.
+ * @returns {T[]} A new array containing the first `count` elements from `arr`.
+ *
+ * @example
+ * // Returns [1, 2, 3]
+ * take([1, 2, 3, 4, 5], 3);
+ *
+ * @example
+ * // Returns ['a', 'b']
+ * take(['a', 'b', 'c'], 2);
+ *
+ * @example
+ * // Returns [1, 2, 3]
+ * take([1, 2, 3], 5);
+ */
+export function take<T>(arr: readonly T[], count: number): T[] {
+  return arr.slice(0, count);
+}
+
+// denoCacheMetadata={"headers":{"age":"0","x-robots-tag":"noindex","content-type":"text/typescript","access-control-allow-origin":"*","etag":"\"70f6365a4b3b1fe262593be924fa94d0\"","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-generation":"1741509574971171","expires":"Fri, 26 Jun 2026 21:45:35 GMT","cache-control":"public, max-age=31536000, immutable","cross-origin-resource-policy":"cross-origin","accept-ranges":"bytes","server":"UploadServer","via":"1.1 google","x-goog-storage-class":"STANDARD","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-goog-hash":"crc32c=Fihbpw==,md5=cPY2Wks7H+JiWTvpJPqU0A==","content-length":"728","x-jsr-cache-status":"revalidated","x-content-type-options":"nosniff","x-goog-metageneration":"1","x-goog-stored-content-length":"728","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-jsr-cache-id":"ATL","access-control-expose-headers":"*","x-guploader-uploadid":"ABgVH8-UZldCrn40ehCjs_sFbfjqZrRyUQh25T9OS4mtYqfNlLZe9V93J7FEzuEwrhba69vm","x-goog-stored-content-encoding":"identity"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/array/take.ts","time":1750974334}

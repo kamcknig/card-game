@@ -1,0 +1,101 @@
+import { unset } from './unset.ts';
+import { cloneDeep } from '../../object/cloneDeep.ts';
+
+/**
+ * Creates a new object with specified keys omitted.
+ *
+ * This function takes an object and an array of keys, and returns a new object that
+ * excludes the properties corresponding to the specified keys.
+ *
+ * @template T - The type of object.
+ * @template K - The type of keys in object.
+ * @param {T} obj - The object to omit keys from.
+ * @param {K[]} keys - An array of keys to be omitted from the object.
+ * @returns {Omit<T, K>} A new object with the specified keys omitted.
+ *
+ * @example
+ * const obj = { a: 1, b: 2, c: 3 };
+ * const result = omit(obj, ['b', 'c']);
+ * // result will be { a: 1 }
+ */
+export function omit<T extends Record<string, any>, K extends keyof T>(obj: T, keys: readonly K[]): Omit<T, K>;
+
+/**
+ * Creates a new object with specified keys omitted.
+ *
+ * This function takes an object and a variable number of keys, and returns a new object that
+ * excludes the properties corresponding to the specified keys.
+ *
+ * Deep keys can be specified for keys.
+ *
+ * @template T - The type of object.
+ * @param {T} obj - The object to omit keys from.
+ * @param {...(PropertyKey | PropertyKey[] | PropertyKey[][])} keys - A variable number of keys to be omitted from the object.
+ * @returns {Partial<T>} A new object with the specified keys omitted.
+ */
+export function omit<
+  // eslint-disable-next-line
+  T extends {},
+>(
+  obj: T | null | undefined,
+  ...keys: Array<PropertyKey | readonly PropertyKey[] | ReadonlyArray<readonly PropertyKey[]>>
+): Partial<T>;
+
+/**
+ * Creates a new object with specified keys omitted.
+ *
+ * This function takes an object and a variable number of keys, and returns a new object that
+ * excludes the properties corresponding to the specified keys. Note that keys can be deep.
+ *
+ * Deep keys can be specified for keys.
+ *
+ * @template T - The type of object.
+ * @param {T} obj - The object to omit keys from.
+ * @param {...(PropertyKey | PropertyKey[] | PropertyKey[][])} keysArr - A variable number of keys to be omitted from the object.
+ * @returns {Partial<T>} A new object with the specified keys omitted.
+ */
+export function omit<
+  // eslint-disable-next-line
+  T extends {},
+>(
+  obj: T | null | undefined,
+  ...keysArr: Array<PropertyKey | readonly PropertyKey[] | ReadonlyArray<readonly PropertyKey[]>>
+): Partial<T> {
+  if (obj == null) {
+    return {};
+  }
+
+  const result = cloneDeep(obj);
+
+  for (let i = 0; i < keysArr.length; i++) {
+    let keys = keysArr[i];
+
+    switch (typeof keys) {
+      case 'object': {
+        if (!Array.isArray(keys)) {
+          // eslint-disable-next-line
+          // @ts-ignore
+          keys = Array.from(keys) as PropertyKey[];
+        }
+
+        for (let j = 0; j < keys.length; j++) {
+          const key = keys[j];
+
+          unset(result, key);
+        }
+
+        break;
+      }
+      case 'string':
+      case 'symbol':
+      case 'number': {
+        unset(result, keys);
+        break;
+      }
+    }
+  }
+
+  return result;
+}
+
+// denoCacheMetadata={"headers":{"content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","access-control-expose-headers":"*","x-goog-generation":"1741509575845081","etag":"\"c239e3ab6d3ba96a2298f0d857b5ce90\"","server":"UploadServer","x-goog-hash":"crc32c=v3V3+g==,md5=wjnjq207qWoimPDYV7XOkA==","expires":"Fri, 26 Jun 2026 21:45:35 GMT","age":"0","x-guploader-uploadid":"ABgVH895kXc4QT2Vi7id_BvjX7IxXkv6SEU2QQ7t-7ygY5inl9yGLdUF9q-yP94TQQAhqdJFpMPtIzg","content-type":"text/typescript","x-jsr-cache-id":"ATL","x-goog-metageneration":"1","x-goog-stored-content-length":"3030","x-robots-tag":"noindex","accept-ranges":"bytes","date":"Thu, 26 Jun 2025 21:45:35 GMT","via":"1.1 google","cache-control":"public, max-age=31536000, immutable","access-control-allow-origin":"*","cross-origin-resource-policy":"cross-origin","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","content-length":"3030","x-jsr-cache-status":"revalidated","x-goog-stored-content-encoding":"identity","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","x-goog-storage-class":"STANDARD","x-content-type-options":"nosniff"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/object/omit.ts","time":1750974334}

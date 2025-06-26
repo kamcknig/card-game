@@ -6,8 +6,18 @@ services:
             dockerfile: ./Dockerfile
         command: deno run --node-modules-dir --inspect=0.0.0.0:9229 --check --env-file --allow-read --allow-write --allow-net --allow-env --watch src/server.ts
         volumes:
-            - ./server/.deno:/deno-dir
+            - ./deno:/deno-dir
             - ./:/app
         ports:
             - '3000:3000'
             - '9229:9229'
+        depends_on:
+            copy-shared-sources:
+                condition: service_started
+
+    copy-shared-sources:
+        image: denoland/deno:alpine-2.3.7
+        command: deno run --check --allow-read --allow-write /app/server/scripts/copy-shared-sources.ts
+        volumes:
+            - ./deno:/deno-dir
+            - ./:/app

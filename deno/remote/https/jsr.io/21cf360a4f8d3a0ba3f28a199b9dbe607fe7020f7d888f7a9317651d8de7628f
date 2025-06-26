@@ -1,0 +1,19 @@
+/**
+ * Checks if `value` is an integer.
+ *
+ * This function can also serve as a type predicate in TypeScript, narrowing the type of the argument to `number`.
+ *
+ * @param {unknown} value - The value to check
+ * @returns {boolean} `true` if `value` is integer, otherwise `false`.
+ *
+ * @example
+ * isInteger(3); // Returns: true
+ * isInteger(Infinity); // Returns: false
+ * isInteger('3'); // Returns: false
+ * isInteger([]); // Returns: false
+ */
+export function isInteger(value?: unknown): value is number {
+  return Number.isInteger(value);
+}
+
+// denoCacheMetadata={"headers":{"x-guploader-uploadid":"ABgVH89wMZJjInOAxdV5J3VuSS4q_e848nplnv04DNi5sSioO2qrQh1c7UMfqsSsrDlLKqnx","x-goog-stored-content-length":"545","x-goog-stored-content-encoding":"identity","x-goog-metageneration":"1","content-length":"545","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","content-type":"text/typescript","x-goog-generation":"1741509575812427","x-goog-storage-class":"STANDARD","via":"1.1 google","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-robots-tag":"noindex","x-jsr-cache-id":"ATL","age":"0","access-control-allow-origin":"*","x-goog-hash":"crc32c=/vbvig==,md5=75Pd/4irg2PtJi3JMMcKtw==","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","expires":"Fri, 26 Jun 2026 21:45:35 GMT","etag":"\"ef93ddff88ab8363ed262dc930c70ab7\"","x-jsr-cache-status":"revalidated","access-control-expose-headers":"*","accept-ranges":"bytes","server":"UploadServer","x-content-type-options":"nosniff","cache-control":"public, max-age=31536000, immutable","cross-origin-resource-policy":"cross-origin"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/predicate/isInteger.ts","time":1750974334}

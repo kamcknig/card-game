@@ -1,0 +1,29 @@
+/**
+ * Computes the difference between two arrays.
+ *
+ * This function takes two arrays and returns a new array containing the elements
+ * that are present in the first array but not in the second array. It effectively
+ * filters out any elements from the first array that also appear in the second array.
+ *
+ * @template T
+ * @param {T[]} firstArr - The array from which to derive the difference. This is the primary array
+ * from which elements will be compared and filtered.
+ * @param {T[]} secondArr - The array containing elements to be excluded from the first array.
+ * Each element in this array will be checked against the first array, and if a match is found,
+ * that element will be excluded from the result.
+ * @returns {T[]} A new array containing the elements that are present in the first array but not
+ * in the second array.
+ *
+ * @example
+ * const array1 = [1, 2, 3, 4, 5];
+ * const array2 = [2, 4];
+ * const result = difference(array1, array2);
+ * // result will be [1, 3, 5] since 2 and 4 are in both arrays and are excluded from the result.
+ */
+export function difference<T>(firstArr: readonly T[], secondArr: readonly T[]): T[] {
+  const secondSet = new Set(secondArr);
+
+  return firstArr.filter(item => !secondSet.has(item));
+}
+
+// denoCacheMetadata={"headers":{"x-robots-tag":"noindex","x-goog-stored-content-length":"1250","x-goog-hash":"crc32c=barYUA==,md5=mSBw4gfjskMjsFZAGYb3YA==","x-jsr-cache-id":"ATL","x-guploader-uploadid":"ABgVH88ypM-dzKD-GyNBXsaWC-r-pvulW4ICDNEyJJ-nVLDs5eXuZktiYtT-EtFxLlYd0ZHlw9U1xRM","x-goog-stored-content-encoding":"identity","x-goog-storage-class":"STANDARD","content-length":"1250","via":"1.1 google","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-jsr-cache-status":"revalidated","accept-ranges":"bytes","last-modified":"Sun, 09 Mar 2025 08:39:36 GMT","access-control-allow-origin":"*","x-goog-generation":"1741509576023571","x-goog-metageneration":"1","cache-control":"public, max-age=31536000, immutable","etag":"\"992070e207e3b24323b056401986f760\"","age":"0","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","access-control-expose-headers":"*","x-content-type-options":"nosniff","cross-origin-resource-policy":"cross-origin","date":"Thu, 26 Jun 2025 21:45:35 GMT","content-type":"text/typescript","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","server":"UploadServer"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/array/difference.ts","time":1750974334}

@@ -1,0 +1,25 @@
+import { isSet as isSetToolkit } from '../../predicate/isSet.ts';
+
+/**
+ * Checks if a given value is `Set`.
+ *
+ * This function can also serve as a type predicate in TypeScript, narrowing the type of the argument to `Set`.
+ *
+ * @param {unknown} value The value to check if it is a `Set`.
+ * @returns {value is Set<any>} Returns `true` if `value` is a `Set`, else `false`.
+ *
+ * @example
+ * const value1 = new Set();
+ * const value2 = new Map();
+ * const value3 = new WeakSet();
+ *
+ * console.log(isSet(value1)); // true
+ * console.log(isSet(value2)); // false
+ * console.log(isSet(value3)); // false
+ */
+
+export function isSet(value?: unknown): value is Set<any> {
+  return isSetToolkit(value);
+}
+
+// denoCacheMetadata={"headers":{"etag":"\"efffd12f4d08c39fae0637001483ba89\"","access-control-expose-headers":"*","x-goog-generation":"1741509574849636","server":"UploadServer","x-jsr-cache-id":"ATL","expires":"Fri, 26 Jun 2026 21:45:35 GMT","via":"1.1 google","x-jsr-cache-status":"revalidated","cross-origin-resource-policy":"cross-origin","x-content-type-options":"nosniff","last-modified":"Sun, 09 Mar 2025 08:39:34 GMT","content-length":"698","age":"0","x-goog-hash":"crc32c=/FUAnQ==,md5=7//RL00Iw5+uBjcAFIO6iQ==","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-robots-tag":"noindex","accept-ranges":"bytes","cache-control":"public, max-age=31536000, immutable","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","access-control-allow-origin":"*","content-type":"text/typescript","x-goog-metageneration":"1","x-guploader-uploadid":"ABgVH8_KJCd1QLeIUG0XAkPYAKa-uffTR_QljKgA5h5kP9sxU_VntDUDUu5dWsi_W4_db3gQ","x-goog-stored-content-length":"698","x-goog-storage-class":"STANDARD","x-goog-stored-content-encoding":"identity"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/predicate/isSet.ts","time":1750974334}

@@ -1,0 +1,81 @@
+import type { Connection } from "./connection.ts";
+import { EOFError } from "./errors.ts";
+import {
+  Deferred,
+  deferred,
+} from "./vendor/https/deno.land/std/async/deferred.ts";
+import { sendCommand } from "./protocol/mod.ts";
+import type { RedisReply, RedisValue } from "./protocol/mod.ts";
+
+export interface CommandExecutor {
+  readonly connection: Connection;
+  exec(
+    command: string,
+    ...args: RedisValue[]
+  ): Promise<RedisReply>;
+
+  /**
+   * Closes a redis connection.
+   */
+  close(): void;
+}
+
+export class MuxExecutor implements CommandExecutor {
+  constructor(readonly connection: Connection) {}
+
+  private queue: {
+    command: string;
+    args: RedisValue[];
+    d: Deferred<RedisReply>;
+  }[] = [];
+
+  exec(
+    command: string,
+    ...args: RedisValue[]
+  ): Promise<RedisReply> {
+    const d = deferred<RedisReply>();
+    this.queue.push({ command, args, d });
+    if (this.queue.length === 1) {
+      this.dequeue();
+    }
+    return d;
+  }
+
+  close(): void {
+    this.connection.close();
+  }
+
+  private dequeue(): void {
+    const [e] = this.queue;
+    if (!e) return;
+    sendCommand(
+      this.connection.writer,
+      this.connection.reader,
+      e.command,
+      ...e.args,
+    )
+      .then(e.d.resolve)
+      .catch(async (error) => {
+        if (
+          this.connection.maxRetryCount > 0 &&
+          // Error `BadResource` is thrown when an attempt is made to write to a closed connection,
+          //  Make sure that the connection wasn't explicitly closed by the user before trying to reconnect.
+          ((error instanceof Deno.errors.BadResource &&
+            !this.connection.isClosed) ||
+            error instanceof Deno.errors.BrokenPipe ||
+            error instanceof Deno.errors.ConnectionAborted ||
+            error instanceof Deno.errors.ConnectionRefused ||
+            error instanceof Deno.errors.ConnectionReset ||
+            error instanceof EOFError)
+        ) {
+          await this.connection.reconnect();
+        } else e.d.reject(error);
+      })
+      .finally(() => {
+        this.queue.shift();
+        this.dequeue();
+      });
+  }
+}
+
+// denoCacheMetadata={"headers":{"accept-ranges":"bytes","cross-origin-opener-policy":"same-origin","etag":"\"26b85255ef17fa64d65c36b6adb02730\"","referrer-policy":"strict-origin-when-cross-origin","vary":"Accept-Encoding, Origin","access-control-allow-origin":"*","age":"12809339","strict-transport-security":"max-age=63072000; includeSubDomains; preload","last-modified":"Thu, 09 Jan 2025 07:38:36 GMT","server":"deno/gcp-us-east4","content-security-policy":"default-src 'none'; style-src 'unsafe-inline'; sandbox","x-amz-replication-status":"COMPLETED","server-timing":"fetchSource;dur=18","x-amz-version-id":"8FJA9JYUKS5NXGcufNEk8u8qu_wo.xxz","x-cache":"Hit from cloudfront","content-type":"application/typescript; charset=utf-8","x-amz-server-side-encryption":"AES256","x-frame-options":"DENY","content-length":"2106","date":"Wed, 29 Jan 2025 15:36:35 GMT","via":"http/2 edgeproxy-h","cross-origin-resource-policy":"same-origin","x-amz-cf-id":"ZA0DJ2I9zS24KV8ZqXWI273whjaQqfrKTgeART7BwKmJ9URncib_yQ==","x-amz-cf-pop":"IAD61-P1","cache-control":"public, max-age=31536000, immutable","cross-origin-embedder-policy":"same-origin","x-content-type-options":"nosniff"},"url":"https://deno.land/x/socket_io@0.2.1/vendor/deno.land/x/redis@v0.27.1/executor.ts","time":1750974332}

@@ -1,0 +1,24 @@
+/**
+ * Calculates the sum of an array of numbers.
+ *
+ * This function takes an array of numbers and returns the sum of all the elements in the array.
+ *
+ * @param {number[]} nums - An array of numbers to be summed.
+ * @returns {number} The sum of all the numbers in the array.
+ *
+ * @example
+ * const numbers = [1, 2, 3, 4, 5];
+ * const result = sum(numbers);
+ * // result will be 15
+ */
+export function sum(nums: readonly number[]): number {
+  let result = 0;
+
+  for (let i = 0; i < nums.length; i++) {
+    result += nums[i];
+  }
+
+  return result;
+}
+
+// denoCacheMetadata={"headers":{"expires":"Fri, 26 Jun 2026 21:45:35 GMT","access-control-expose-headers":"*","x-robots-tag":"noindex","x-jsr-cache-id":"ATL","access-control-allow-origin":"*","x-goog-stored-content-length":"551","x-guploader-uploadid":"ABgVH8_BiWcKh3hVw_eqspoKtRoN2ODx-SlVN3ZW47w0a79767V74AXw1DHlp0FyTC9Z0aptLAGjYQ8","cache-control":"public, max-age=31536000, immutable","x-goog-hash":"crc32c=f+KFUQ==,md5=0jLX8xWu0EhfHgafT7pbQg==","server":"UploadServer","etag":"\"d232d7f315aed0485f1e069f4fba5b42\"","cross-origin-resource-policy":"cross-origin","x-goog-generation":"1741509575728910","x-goog-stored-content-encoding":"identity","x-goog-storage-class":"STANDARD","via":"1.1 google","date":"Thu, 26 Jun 2025 21:45:35 GMT","accept-ranges":"bytes","content-type":"text/typescript","age":"1","x-content-type-options":"nosniff","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","content-length":"551","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","x-jsr-cache-status":"revalidated","x-goog-metageneration":"1"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/math/sum.ts","time":1750974334}

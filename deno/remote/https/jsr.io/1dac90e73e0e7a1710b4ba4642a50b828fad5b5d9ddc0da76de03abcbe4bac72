@@ -1,0 +1,23 @@
+/**
+ * Creates a function that negates the result of the predicate function.
+ *
+ * @template F - The type of the function to negate.
+ * @param {F} func - The function to negate.
+ * @returns {F} The new negated function, which negates the boolean result of `func`.
+ *
+ * @example
+ * const array = [1, 2, 3, 4, 5, 6];
+ * const isEven = (n: number) => n % 2 === 0;
+ * const result = array.filter(negate(isEven));
+ * // result will be [1, 3, 5]
+ */
+export function negate<F extends (...args: any[]) => boolean>(func: F): F {
+  if (typeof func !== 'function') {
+    throw new TypeError('Expected a function');
+  }
+  return function (this: any, ...args: any[]) {
+    return !func.apply(this, args);
+  } as F;
+}
+
+// denoCacheMetadata={"headers":{"date":"Thu, 26 Jun 2025 21:45:35 GMT","x-goog-stored-content-encoding":"identity","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","content-type":"text/typescript","age":"0","x-jsr-cache-id":"ATL","x-robots-tag":"noindex","access-control-allow-origin":"*","access-control-expose-headers":"*","x-guploader-uploadid":"ABgVH8-orr203ulIV0it_czO5FgC_1nJmGtZkrRjdpxd3HyuZgPe0kS-6N4W7Ave33-18fZE6QynQ2I","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-generation":"1741509575427220","content-length":"705","x-content-type-options":"nosniff","cross-origin-resource-policy":"cross-origin","expires":"Fri, 26 Jun 2026 21:45:35 GMT","server":"UploadServer","etag":"\"cbfb1fba597968bbcc609497e28bbe5d\"","x-goog-storage-class":"STANDARD","x-jsr-cache-status":"revalidated","x-goog-metageneration":"1","cache-control":"public, max-age=31536000, immutable","accept-ranges":"bytes","x-goog-stored-content-length":"705","x-goog-hash":"crc32c=BPr1Pw==,md5=y/sfull5aLvMYJSX4ou+XQ==","via":"1.1 google"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/function/negate.ts","time":1750974334}

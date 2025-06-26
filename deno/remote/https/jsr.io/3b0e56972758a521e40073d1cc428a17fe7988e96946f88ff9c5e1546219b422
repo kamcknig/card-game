@@ -1,0 +1,41 @@
+import { trim as trimToolkit } from '../../string/trim.ts';
+
+/**
+ * Removes leading and trailing whitespace or specified characters from a string.
+ *
+ * @param {string} str - The string from which leading and trailing characters will be trimmed.
+ * @param {string | string[]} chars - The character(s) to remove from the end of the string. Defaults to `" "`.
+ * @returns {string} - The resulting string after the specified leading and trailing characters have been removed.
+ *
+ * @example
+ * trim("  hello  "); // "hello"
+ * trim("--hello--", "-"); // "hello"
+ * trim("##hello##", ["#", "o"]); // "hell"
+ */
+export function trim(str: string, chars?: string | string[], guard?: unknown): string {
+  if (str == null) {
+    return '';
+  }
+
+  if (guard != null || chars == null) {
+    return str.toString().trim();
+  }
+
+  switch (typeof chars) {
+    case 'string': {
+      return trimToolkit(str, chars.toString().split(''));
+    }
+    case 'object': {
+      if (Array.isArray(chars)) {
+        return trimToolkit(
+          str,
+          chars.flatMap(x => x.toString().split(''))
+        );
+      } else {
+        return trimToolkit(str, (chars as any).toString().split(''));
+      }
+    }
+  }
+}
+
+// denoCacheMetadata={"headers":{"content-type":"text/typescript","x-jsr-cache-status":"revalidated","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-guploader-uploadid":"ABgVH88I16cP1ucDDshSiUK6N9RRQDRR6MBonx4uB63SWGr-gYK309nJAWFoEoq_ug4VY6ov6jCQmT4","etag":"\"d8e5ee916428c9f613fc639ef9e8f1b6\"","x-robots-tag":"noindex","access-control-allow-origin":"*","cross-origin-resource-policy":"cross-origin","access-control-expose-headers":"*","x-content-type-options":"nosniff","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","last-modified":"Sun, 09 Mar 2025 08:39:34 GMT","x-goog-hash":"crc32c=6k4hiA==,md5=2OXukWQoyfYT/GOe+ejxtg==","accept-ranges":"bytes","x-goog-metageneration":"1","server":"UploadServer","x-goog-storage-class":"STANDARD","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-goog-stored-content-length":"1194","via":"1.1 google","content-length":"1194","expires":"Fri, 26 Jun 2026 21:45:35 GMT","cache-control":"public, max-age=31536000, immutable","x-goog-generation":"1741509574854630","age":"0","x-jsr-cache-id":"ATL","x-goog-stored-content-encoding":"identity"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/string/trim.ts","time":1750974334}

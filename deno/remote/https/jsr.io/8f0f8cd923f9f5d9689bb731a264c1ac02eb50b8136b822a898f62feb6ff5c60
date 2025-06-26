@@ -1,0 +1,45 @@
+/**
+ * Computes the difference between two arrays after mapping their elements through a provided function.
+ *
+ * This function takes two arrays and a mapper function. It returns a new array containing the elements
+ * that are present in the first array but not in the second array, based on the identity calculated
+ * by the mapper function.
+ *
+ * Essentially, it filters out any elements from the first array that, when
+ * mapped, match an element in the mapped version of the second array.
+ *
+ * @template T, U
+ * @param {T[]} firstArr - The primary array from which to derive the difference.
+ * @param {U[]} secondArr - The array containing elements to be excluded from the first array.
+ * @param {(value: T | U) => unknown} mapper - The function to map the elements of both arrays. This function
+ * is applied to each element in both arrays, and the comparison is made based on the mapped values.
+ * @returns {T[]} A new array containing the elements from the first array that do not have a corresponding
+ * mapped identity in the second array.
+ *
+ * @example
+ * const array1 = [{ id: 1 }, { id: 2 }, { id: 3 }];
+ * const array2 = [{ id: 2 }, { id: 4 }];
+ * const mapper = item => item.id;
+ * const result = differenceBy(array1, array2, mapper);
+ * // result will be [{ id: 1 }, { id: 3 }] since the elements with id 2 are in both arrays and are excluded from the result.
+ *
+ * @example
+ * const array1 = [{ id: 1 }, { id: 2 }, { id: 3 }];
+ * const array2 = [2, 4];
+ * const mapper = item => (typeof item === 'object' ? item.id : item);
+ * const result = differenceBy(array1, array2, mapper);
+ * // result will be [{ id: 1 }, { id: 3 }] since 2 is present in both arrays after mapping, and is excluded from the result.
+ */
+export function differenceBy<T, U>(
+  firstArr: readonly T[],
+  secondArr: readonly U[],
+  mapper: (value: T | U) => unknown
+): T[] {
+  const mappedSecondSet = new Set(secondArr.map(item => mapper(item)));
+
+  return firstArr.filter(item => {
+    return !mappedSecondSet.has(mapper(item));
+  });
+}
+
+// denoCacheMetadata={"headers":{"date":"Thu, 26 Jun 2025 21:45:35 GMT","x-jsr-cache-id":"ATL","x-jsr-cache-status":"revalidated","via":"1.1 google","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-goog-stored-content-length":"2025","access-control-allow-origin":"*","cross-origin-resource-policy":"cross-origin","x-goog-metageneration":"1","last-modified":"Sun, 09 Mar 2025 08:39:34 GMT","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-robots-tag":"noindex","content-length":"2025","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","cache-control":"public, max-age=31536000, immutable","age":"0","x-goog-hash":"crc32c=bPGDbA==,md5=kRt3QTJK2DhV6KGPbvhilQ==","x-content-type-options":"nosniff","content-type":"text/typescript","x-guploader-uploadid":"ABgVH8-Osz41qR4XZK9Q-A0GjZ4N7aP2iGyZ7dYyGzFI1W9gLZk9R8FNZR1_LbNIc5f8W14iOsxuMSw","access-control-expose-headers":"*","server":"UploadServer","etag":"\"911b7741324ad83855e8a18f6ef86295\"","x-goog-stored-content-encoding":"identity","x-goog-generation":"1741509574654171","x-goog-storage-class":"STANDARD","accept-ranges":"bytes"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/array/differenceBy.ts","time":1750974334}

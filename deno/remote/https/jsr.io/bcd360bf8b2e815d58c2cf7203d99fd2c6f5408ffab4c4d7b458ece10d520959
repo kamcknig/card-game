@@ -1,0 +1,23 @@
+import { capitalize } from './capitalize.ts';
+import { words as getWords } from './words.ts';
+
+/**
+ * Converts a string to Pascal case.
+ *
+ * Pascal case is the naming convention in which each word is capitalized and concatenated without any separator characters.
+ *
+ * @param {string} str - The string that is to be changed to pascal case.
+ * @returns {string} - The converted string to Pascal case.
+ *
+ * @example
+ * const convertedStr1 = pascalCase('pascalCase') // returns 'PascalCase'
+ * const convertedStr2 = pascalCase('some whitespace') // returns 'SomeWhitespace'
+ * const convertedStr3 = pascalCase('hyphen-text') // returns 'HyphenText'
+ * const convertedStr4 = pascalCase('HTTPRequest') // returns 'HttpRequest'
+ */
+export function pascalCase(str: string): string {
+  const words = getWords(str);
+  return words.map(word => capitalize(word)).join('');
+}
+
+// denoCacheMetadata={"headers":{"access-control-expose-headers":"*","x-goog-metageneration":"1","x-jsr-cache-status":"revalidated","access-control-allow-origin":"*","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","server":"UploadServer","x-guploader-uploadid":"ABgVH89zIomeGRn7yT9wwSoi5UDeLgnkqsPWe3QBK0Gyu7AlDJDwQ9lL83ZOo6i1ygIn9oRpBibm0h8","via":"1.1 google","expires":"Fri, 26 Jun 2026 21:45:36 GMT","x-goog-generation":"1741509575172435","x-robots-tag":"noindex","etag":"\"5c65e3948cf1ec036b41bec43e886fcb\"","x-goog-stored-content-encoding":"identity","accept-ranges":"bytes","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","x-jsr-cache-id":"ATL","x-goog-hash":"crc32c=wgRyLA==,md5=XGXjlIzx7ANrQb7EPohvyw==","cross-origin-resource-policy":"cross-origin","x-content-type-options":"nosniff","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","age":"0","cache-control":"public, max-age=31536000, immutable","x-goog-stored-content-length":"866","x-goog-storage-class":"STANDARD","date":"Thu, 26 Jun 2025 21:45:36 GMT","content-length":"866","content-type":"text/typescript"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/string/pascalCase.ts","time":1750974334}

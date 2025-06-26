@@ -1,0 +1,11 @@
+/**
+ * Returns false.
+ *
+ * @returns {boolean} false.
+ * @example
+ * stubFalse() // Returns false
+ */ export function stubFalse() {
+  return false;
+}
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImh0dHBzOi8vanNyLmlvL0Blcy10b29sa2l0L2VzLXRvb2xraXQvMS4zMy4wL3NyYy9jb21wYXQvdXRpbC9zdHViRmFsc2UudHMiXSwic291cmNlc0NvbnRlbnQiOlsiLyoqXG4gKiBSZXR1cm5zIGZhbHNlLlxuICpcbiAqIEByZXR1cm5zIHtib29sZWFufSBmYWxzZS5cbiAqIEBleGFtcGxlXG4gKiBzdHViRmFsc2UoKSAvLyBSZXR1cm5zIGZhbHNlXG4gKi9cbmV4cG9ydCBmdW5jdGlvbiBzdHViRmFsc2UoKTogYm9vbGVhbiB7XG4gIHJldHVybiBmYWxzZTtcbn1cbiJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiQUFBQTs7Ozs7O0NBTUMsR0FDRCxPQUFPLFNBQVM7RUFDZCxPQUFPO0FBQ1QifQ==
+// denoCacheMetadata=4970402934679992859,17277517517177899330

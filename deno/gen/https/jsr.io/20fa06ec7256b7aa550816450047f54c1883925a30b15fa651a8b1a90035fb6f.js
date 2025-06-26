@@ -1,0 +1,15 @@
+/**
+ * Converts the first character of string to upper case and the remaining to lower case.
+ *
+ * @template T - Literal type of the string.
+ * @param {T} str - The string to be converted to uppercase.
+ * @returns {Capitalize<T>} - The capitalized string.
+ *
+ * @example
+ * const result = capitalize('fred') // returns 'Fred'
+ * const result2 = capitalize('FRED') // returns 'Fred'
+ */ export function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImh0dHBzOi8vanNyLmlvL0Blcy10b29sa2l0L2VzLXRvb2xraXQvMS4zMy4wL3NyYy9zdHJpbmcvY2FwaXRhbGl6ZS50cyJdLCJzb3VyY2VzQ29udGVudCI6WyIvKipcbiAqIENvbnZlcnRzIHRoZSBmaXJzdCBjaGFyYWN0ZXIgb2Ygc3RyaW5nIHRvIHVwcGVyIGNhc2UgYW5kIHRoZSByZW1haW5pbmcgdG8gbG93ZXIgY2FzZS5cbiAqXG4gKiBAdGVtcGxhdGUgVCAtIExpdGVyYWwgdHlwZSBvZiB0aGUgc3RyaW5nLlxuICogQHBhcmFtIHtUfSBzdHIgLSBUaGUgc3RyaW5nIHRvIGJlIGNvbnZlcnRlZCB0byB1cHBlcmNhc2UuXG4gKiBAcmV0dXJucyB7Q2FwaXRhbGl6ZTxUPn0gLSBUaGUgY2FwaXRhbGl6ZWQgc3RyaW5nLlxuICpcbiAqIEBleGFtcGxlXG4gKiBjb25zdCByZXN1bHQgPSBjYXBpdGFsaXplKCdmcmVkJykgLy8gcmV0dXJucyAnRnJlZCdcbiAqIGNvbnN0IHJlc3VsdDIgPSBjYXBpdGFsaXplKCdGUkVEJykgLy8gcmV0dXJucyAnRnJlZCdcbiAqL1xuXG5leHBvcnQgZnVuY3Rpb24gY2FwaXRhbGl6ZTxUIGV4dGVuZHMgc3RyaW5nPihzdHI6IFQpOiBDYXBpdGFsaXplPFQ+IHtcbiAgcmV0dXJuIChzdHIuY2hhckF0KDApLnRvVXBwZXJDYXNlKCkgKyBzdHIuc2xpY2UoMSkudG9Mb3dlckNhc2UoKSkgYXMgQ2FwaXRhbGl6ZTxUPjtcbn1cblxudHlwZSBDYXBpdGFsaXplPFQgZXh0ZW5kcyBzdHJpbmc+ID0gVCBleHRlbmRzIGAke2luZmVyIEZ9JHtpbmZlciBSfWAgPyBgJHtVcHBlcmNhc2U8Rj59JHtMb3dlcmNhc2U8Uj59YCA6IFQ7XG4iXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IkFBQUE7Ozs7Ozs7Ozs7Q0FVQyxHQUVELE9BQU8sU0FBUyxXQUE2QixHQUFNO0VBQ2pELE9BQVEsSUFBSSxNQUFNLENBQUMsR0FBRyxXQUFXLEtBQUssSUFBSSxLQUFLLENBQUMsR0FBRyxXQUFXO0FBQ2hFIn0=
+// denoCacheMetadata=13032182208180156703,2916670865147437559

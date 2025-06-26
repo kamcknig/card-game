@@ -1,0 +1,16 @@
+/**
+ * Converts the first character of string to upper case.
+ *
+ * @param {string} str - The string that is to be changed
+ * @returns {string} - The converted string.
+ *
+ * @example
+ * const convertedStr1 = upperFirst('fred') // returns 'Fred'
+ * const convertedStr2 = upperFirst('Fred') // returns 'Fred'
+ * const convertedStr3 = upperFirst('FRED') // returns 'FRED'
+ */
+export function upperFirst(str: string): string {
+  return str.substring(0, 1).toUpperCase() + str.substring(1);
+}
+
+// denoCacheMetadata={"headers":{"x-goog-stored-content-encoding":"identity","date":"Thu, 26 Jun 2025 21:45:35 GMT","via":"1.1 google","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","x-jsr-cache-status":"revalidated","server":"UploadServer","x-goog-stored-content-length":"487","age":"0","etag":"\"9fa048a5ce1688407eb9f15e6c7bdd44\"","x-goog-metageneration":"1","cache-control":"public, max-age=31536000, immutable","access-control-allow-origin":"*","cross-origin-resource-policy":"cross-origin","x-guploader-uploadid":"ABgVH8_RGjMmEwtcLB6UHcjXZPiIY4F3Pd79KNaLUyxB16KpUfnzyScxlyQzg9Cl0nxy2YHf","x-goog-generation":"1741509575702954","x-goog-storage-class":"STANDARD","content-length":"487","access-control-expose-headers":"*","x-jsr-cache-id":"ATL","x-robots-tag":"noindex","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","content-type":"text/typescript","x-content-type-options":"nosniff","x-goog-hash":"crc32c=XO+Bgg==,md5=n6BIpc4WiEB+ufFebHvdRA==","expires":"Fri, 26 Jun 2026 21:45:35 GMT","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","accept-ranges":"bytes"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/string/upperFirst.ts","time":1750974334}

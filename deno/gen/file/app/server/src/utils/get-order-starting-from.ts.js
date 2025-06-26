@@ -1,0 +1,11 @@
+export const getOrderStartingFrom = (arr, startIdx)=>{
+  const results = [];
+  const len = arr.length;
+  for(let i = 0; i < len; i++){
+    const idx = (startIdx + i) % len;
+    results.push(arr[idx]);
+  }
+  return results;
+};
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImZpbGU6Ly8vYXBwL3NlcnZlci9zcmMvdXRpbHMvZ2V0LW9yZGVyLXN0YXJ0aW5nLWZyb20udHMiXSwic291cmNlc0NvbnRlbnQiOlsiZXhwb3J0IGNvbnN0IGdldE9yZGVyU3RhcnRpbmdGcm9tID0gPFQ+KGFycjogVFtdLCBzdGFydElkeDogbnVtYmVyKTogVFtdID0+IHtcbiAgY29uc3QgcmVzdWx0czogVFtdID0gW107XG4gIGNvbnN0IGxlbiA9IGFyci5sZW5ndGg7XG4gIGZvciAobGV0IGkgPSAwOyBpIDwgbGVuOyBpKyspIHtcbiAgICBjb25zdCBpZHggPSAoc3RhcnRJZHggKyBpKSAlIGxlbjtcbiAgICByZXN1bHRzLnB1c2goYXJyW2lkeF0pO1xuICB9XG4gIHJldHVybiByZXN1bHRzO1xufVxuIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiJBQUFBLE9BQU8sTUFBTSx1QkFBdUIsQ0FBSSxLQUFVO0VBQ2hELE1BQU0sVUFBZSxFQUFFO0VBQ3ZCLE1BQU0sTUFBTSxJQUFJLE1BQU07RUFDdEIsSUFBSyxJQUFJLElBQUksR0FBRyxJQUFJLEtBQUssSUFBSztJQUM1QixNQUFNLE1BQU0sQ0FBQyxXQUFXLENBQUMsSUFBSTtJQUM3QixRQUFRLElBQUksQ0FBQyxHQUFHLENBQUMsSUFBSTtFQUN2QjtFQUNBLE9BQU87QUFDVCxFQUFDIn0=
+// denoCacheMetadata=1401160155402674622,10812923167518682084

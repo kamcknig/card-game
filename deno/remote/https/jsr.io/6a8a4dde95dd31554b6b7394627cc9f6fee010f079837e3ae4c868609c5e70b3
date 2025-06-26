@@ -1,0 +1,134 @@
+import { property } from './property.ts';
+import { findKey as findKeyToolkit } from '../../object/index.ts';
+import { isObject } from '../predicate/isObject.ts';
+import { matches } from '../predicate/matches.ts';
+import { matchesProperty } from '../predicate/matchesProperty.ts';
+
+/**
+ * Finds the key of the first element predicate returns truthy for.
+ *
+ * @template T - The type of the object.
+ * @param {T | null | undefined} obj - The object to inspect.
+ * @param {(value: T[keyof T], key: keyof T, obj: T) => boolean} conditionToFind - The function invoked per iteration.
+ * @returns {keyof T | undefined} Returns the key of the matched element, else `undefined`.
+ *
+ * @example
+ * const users = { 'barney': { 'age': 36 }, 'fred': { 'age': 40 } };
+ * const result = findKey(users, o => o.age < 40);
+ * // => 'barney'
+ */
+export function findKey<T extends Record<any, any>>(
+  obj: T | null | undefined,
+  conditionToFind: (value: T[keyof T], key: keyof T, obj: T) => boolean
+): keyof T | undefined;
+
+/**
+ * Finds the key of the first element that matches the given object.
+ *
+ * @template T - The type of the object.
+ * @param {T | null | undefined} obj - The object to inspect.
+ * @param {Partail<T[keyof T]>} objectToFind - The object to match.
+ * @returns {keyof T | undefined} Returns the key of the matched element, else `undefined`.
+ *
+ * @example
+ * const users = { 'barney': { 'age': 36 }, 'fred': { 'age': 40 } };
+ * const result = findKey(users, { 'age': 36 });
+ * // => 'barney'
+ */
+export function findKey<T extends Record<any, any>>(
+  obj: T | null | undefined,
+  objectToFind: Partial<T[keyof T]>
+): keyof T | undefined;
+
+/**
+ * Finds the key of the first element that matches the given property and value.
+ *
+ * @template T - The type of the object.
+ * @param {T | null | undefined} obj - The object to inspect.
+ * @param {[keyof T[keyof T], any]} propertyToFind - The property and value to match.
+ * @returns {keyof T | undefined} Returns the key of the matched element, else `undefined`.
+ *
+ * @example
+ * const users = { 'barney': { 'age': 36 }, 'fred': { 'age': 40 } };
+ * const result = findKey(users, ['age', 36]);
+ * // => 'barney'
+ */
+export function findKey<T extends Record<any, any>>(
+  obj: T | null | undefined,
+  propertyToFind: [keyof T[keyof T], any]
+): keyof T | undefined;
+
+/**
+ * Finds the key of the first element that has a truthy value for the given property.
+ *
+ * @template T - The type of the object.
+ * @param {T | null | undefined} obj - The object to inspect.
+ * @param {keyof T[keyof T]} propertyToFind - The property to check.
+ * @returns {keyof T | undefined} Returns the key of the matched element, else `undefined`.
+ *
+ * @example
+ * const users = { 'barney': { 'active': true }, 'fred': { 'active': false } };
+ * const result = findKey(users, 'active');
+ * // => 'barney'
+ */
+export function findKey<T extends Record<any, any>>(
+  obj: T | null | undefined,
+  propertyToFind: keyof T[keyof T]
+): keyof T | undefined;
+
+/**
+ * Finds the key of the first element that matches the given predicate.
+ *
+ * This function determines the type of the predicate and delegates the search
+ * to the appropriate helper function. It supports predicates as functions, objects,
+ * arrays, or strings.
+ *
+ * @template T - The type of the object.
+ * @param {T | null | undefined} obj - The object to inspect.
+ * @param {(value: T[keyof T], key: keyof T, obj: T) => boolean | Partial<T[keyof T]> | [keyof T[keyof T], any] | keyof T[keyof T]} predicate - The predicate to match.
+ * @returns {keyof T | undefined} Returns the key of the matched element, else `undefined`.
+ */
+export function findKey<T extends Record<any, any>>(
+  obj: T | null | undefined,
+  predicate:
+    | ((value: T[keyof T], key: keyof T, obj: T) => boolean)
+    | Partial<T[keyof T]>
+    | [keyof T[keyof T], any]
+    | keyof T[keyof T]
+): keyof T | undefined {
+  if (!isObject(obj)) {
+    return undefined;
+  }
+
+  return findKeyImpl(obj, predicate);
+}
+
+function findKeyImpl<T extends Record<any, any>>(
+  obj: T,
+  predicate:
+    | ((value: T[keyof T], key: keyof T, obj: T) => boolean)
+    | Partial<T[keyof T]>
+    | [keyof T[keyof T], any]
+    | keyof T[keyof T]
+) {
+  if (typeof predicate === 'function') {
+    return findKeyToolkit(obj, predicate);
+  }
+
+  if (typeof predicate === 'object') {
+    if (Array.isArray(predicate)) {
+      const key = predicate[0];
+      const value = predicate[1];
+
+      return findKeyToolkit(obj, matchesProperty(key, value));
+    }
+
+    return findKeyToolkit(obj, matches(predicate));
+  }
+
+  if (typeof predicate === 'string') {
+    return findKeyToolkit(obj, property(predicate));
+  }
+}
+
+// denoCacheMetadata={"headers":{"content-length":"4635","x-jsr-cache-id":"ATL","access-control-allow-origin":"*","cross-origin-resource-policy":"cross-origin","content-type":"text/typescript","x-goog-stored-content-length":"4635","x-goog-stored-content-encoding":"identity","x-goog-storage-class":"STANDARD","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","age":"0","via":"1.1 google","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-content-type-options":"nosniff","x-goog-hash":"crc32c=speINQ==,md5=63TrLuwUtgshh2Ly2IxmNA==","etag":"\"eb74eb2eec14b60b218762f2d88c6634\"","x-jsr-cache-status":"revalidated","expires":"Fri, 26 Jun 2026 21:45:35 GMT","date":"Thu, 26 Jun 2025 21:45:35 GMT","access-control-expose-headers":"*","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","server":"UploadServer","cache-control":"public, max-age=31536000, immutable","x-robots-tag":"noindex","x-guploader-uploadid":"ABgVH89yM2as-XhM8yoWnbanDP36Hu39QgeG7ByAs3snxYoDWtLrzvSRQvyl63-HNGYxjcwEGa_dooo","x-goog-metageneration":"1","x-goog-generation":"1741509575256363","accept-ranges":"bytes"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/object/findKey.ts","time":1750974334}

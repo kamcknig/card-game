@@ -1,0 +1,30 @@
+import { toInteger } from './toInteger.ts';
+
+/**
+ * Invokes the getValue function n times, returning an array of the results.
+ *
+ * @template R The return type of the getValue function.
+ * @param {number} n - The number of times to invoke getValue.
+ * @param {(index: number) => R} getValue - The function to invoke for each index.
+ * @returns {R[]} An array containing the results of invoking getValue n times.
+ * @example
+ * times(3, (i) => i * 2); // => [0, 2, 4]
+ * times(2, () => 'es-toolkit'); // => ['es-toolkit', 'es-toolkit']
+ */
+export function times<R = number>(n?: number, getValue?: (index: number) => R): R[] {
+  n = toInteger(n);
+
+  if (n < 1 || !Number.isSafeInteger(n)) {
+    return [];
+  }
+
+  const result = new Array(n);
+
+  for (let i = 0; i < n; i++) {
+    result[i] = typeof getValue === 'function' ? getValue(i) : i;
+  }
+
+  return result;
+}
+
+// denoCacheMetadata={"headers":{"age":"0","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","cross-origin-resource-policy":"cross-origin","date":"Thu, 26 Jun 2025 21:45:35 GMT","content-length":"863","etag":"\"9a00c115c6e28fa91cb109f0caabef97\"","x-goog-stored-content-encoding":"identity","access-control-allow-origin":"*","x-goog-metageneration":"1","x-goog-stored-content-length":"863","via":"1.1 google","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-jsr-cache-status":"revalidated","access-control-expose-headers":"*","accept-ranges":"bytes","x-goog-storage-class":"STANDARD","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","server":"UploadServer","x-robots-tag":"noindex","x-content-type-options":"nosniff","x-guploader-uploadid":"ABgVH8_4VEINd-Ec6J8iuDyUz3gTKB-V9k75RWH_OBc3vc0zbA5pQgkQjxFxSDxa2UYctQ9UgJyiYbY","last-modified":"Sun, 09 Mar 2025 08:39:34 GMT","content-type":"text/typescript","x-goog-generation":"1741509574818592","x-jsr-cache-id":"ATL","cache-control":"public, max-age=31536000, immutable","x-goog-hash":"crc32c=CXlpuw==,md5=mgDBFcbij6kcsQnwyqvvlw=="},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/util/times.ts","time":1750974334}

@@ -1,0 +1,27 @@
+import { isWeakMap as isWeakMapToolkit } from '../../predicate/isWeakMap.ts';
+
+/**
+ * Checks if the given value is a `WeakMap`.
+ *
+ * This function tests whether the provided value is an instance of `WeakMap`.
+ * It returns `true` if the value is a `WeakMap`, and `false` otherwise.
+ *
+ * This function can also serve as a type predicate in TypeScript, narrowing the type of the argument to `WeakMap`.
+ *
+ * @param {unknown} value - The value to test if it is a `WeakMap`.
+ * @returns {value is WeakMap<WeakKey, any>} true if the value is a `WeakMap`, false otherwise.
+ *
+ * @example
+ * const value1 = new WeakMap();
+ * const value2 = new Map();
+ * const value3 = new Set();
+ *
+ * console.log(isWeakMap(value1)); // true
+ * console.log(isWeakMap(value2)); // false
+ * console.log(isWeakMap(value3)); // false
+ */
+export function isWeakMap(value?: unknown): value is WeakMap<WeakKey, any> {
+  return isWeakMapToolkit(value);
+}
+
+// denoCacheMetadata={"headers":{"x-content-type-options":"nosniff","server":"UploadServer","x-goog-metageneration":"1","x-jsr-cache-id":"ATL","x-goog-stored-content-encoding":"identity","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-guploader-uploadid":"ABgVH88J5pi5coTJ2exqixU8KCcZj2ppNpCEWMAvSq7h5cZpJicLJp4W6sWNjfiyTl1zhCYlqr9YB_4","via":"1.1 google","etag":"\"33580cfc391fd2d829b6d70b0bb934b6\"","x-jsr-cache-status":"revalidated","x-robots-tag":"noindex","accept-ranges":"bytes","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-goog-hash":"crc32c=xMV3vg==,md5=M1gM/Dkf0tgpttcLC7k0tg==","x-goog-stored-content-length":"926","last-modified":"Sun, 09 Mar 2025 08:39:34 GMT","x-goog-generation":"1741509574683874","date":"Thu, 26 Jun 2025 21:45:35 GMT","age":"0","access-control-allow-origin":"*","access-control-expose-headers":"*","content-length":"926","cache-control":"public, max-age=31536000, immutable","content-type":"text/typescript","cross-origin-resource-policy":"cross-origin","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-goog-storage-class":"STANDARD"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/predicate/isWeakMap.ts","time":1750974334}

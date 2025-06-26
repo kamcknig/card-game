@@ -1,0 +1,33 @@
+/**
+ * Returns the first element of an array.
+ *
+ * This function takes an array and returns the first element of the array.
+ * If the array is empty, the function returns `undefined`.
+ *
+ * @template T - The type of elements in the array.
+ * @param {[T, ...T[]]} arr - A non-empty array from which to get the first element.
+ * @returns {T} The first element of the array.
+ *
+ * @example
+ * const arr = [1, 2, 3];
+ * const firstElement = head(arr);
+ * // firstElement will be 1
+ */ /**
+ * Returns the first element of an array or `undefined` if the array is empty.
+ *
+ * This function takes an array and returns the first element of the array.
+ * If the array is empty, the function returns `undefined`.
+ *
+ * @template T - The type of elements in the array.
+ * @param {T[]} arr - The array from which to get the first element.
+ * @returns {T | undefined} The first element of the array, or `undefined` if the array is empty.
+ *
+ * @example
+ * const emptyArr: number[] = [];
+ * const noElement = head(emptyArr);
+ * // noElement will be undefined
+ */ export function head(arr) {
+  return arr[0];
+}
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImh0dHBzOi8vanNyLmlvL0Blcy10b29sa2l0L2VzLXRvb2xraXQvMS4zMy4wL3NyYy9hcnJheS9oZWFkLnRzIl0sInNvdXJjZXNDb250ZW50IjpbIi8qKlxuICogUmV0dXJucyB0aGUgZmlyc3QgZWxlbWVudCBvZiBhbiBhcnJheS5cbiAqXG4gKiBUaGlzIGZ1bmN0aW9uIHRha2VzIGFuIGFycmF5IGFuZCByZXR1cm5zIHRoZSBmaXJzdCBlbGVtZW50IG9mIHRoZSBhcnJheS5cbiAqIElmIHRoZSBhcnJheSBpcyBlbXB0eSwgdGhlIGZ1bmN0aW9uIHJldHVybnMgYHVuZGVmaW5lZGAuXG4gKlxuICogQHRlbXBsYXRlIFQgLSBUaGUgdHlwZSBvZiBlbGVtZW50cyBpbiB0aGUgYXJyYXkuXG4gKiBAcGFyYW0ge1tULCAuLi5UW11dfSBhcnIgLSBBIG5vbi1lbXB0eSBhcnJheSBmcm9tIHdoaWNoIHRvIGdldCB0aGUgZmlyc3QgZWxlbWVudC5cbiAqIEByZXR1cm5zIHtUfSBUaGUgZmlyc3QgZWxlbWVudCBvZiB0aGUgYXJyYXkuXG4gKlxuICogQGV4YW1wbGVcbiAqIGNvbnN0IGFyciA9IFsxLCAyLCAzXTtcbiAqIGNvbnN0IGZpcnN0RWxlbWVudCA9IGhlYWQoYXJyKTtcbiAqIC8vIGZpcnN0RWxlbWVudCB3aWxsIGJlIDFcbiAqL1xuZXhwb3J0IGZ1bmN0aW9uIGhlYWQ8VD4oYXJyOiByZWFkb25seSBbVCwgLi4uVFtdXSk6IFQ7XG5cbi8qKlxuICogUmV0dXJucyB0aGUgZmlyc3QgZWxlbWVudCBvZiBhbiBhcnJheSBvciBgdW5kZWZpbmVkYCBpZiB0aGUgYXJyYXkgaXMgZW1wdHkuXG4gKlxuICogVGhpcyBmdW5jdGlvbiB0YWtlcyBhbiBhcnJheSBhbmQgcmV0dXJucyB0aGUgZmlyc3QgZWxlbWVudCBvZiB0aGUgYXJyYXkuXG4gKiBJZiB0aGUgYXJyYXkgaXMgZW1wdHksIHRoZSBmdW5jdGlvbiByZXR1cm5zIGB1bmRlZmluZWRgLlxuICpcbiAqIEB0ZW1wbGF0ZSBUIC0gVGhlIHR5cGUgb2YgZWxlbWVudHMgaW4gdGhlIGFycmF5LlxuICogQHBhcmFtIHtUW119IGFyciAtIFRoZSBhcnJheSBmcm9tIHdoaWNoIHRvIGdldCB0aGUgZmlyc3QgZWxlbWVudC5cbiAqIEByZXR1cm5zIHtUIHwgdW5kZWZpbmVkfSBUaGUgZmlyc3QgZWxlbWVudCBvZiB0aGUgYXJyYXksIG9yIGB1bmRlZmluZWRgIGlmIHRoZSBhcnJheSBpcyBlbXB0eS5cbiAqXG4gKiBAZXhhbXBsZVxuICogY29uc3QgZW1wdHlBcnI6IG51bWJlcltdID0gW107XG4gKiBjb25zdCBub0VsZW1lbnQgPSBoZWFkKGVtcHR5QXJyKTtcbiAqIC8vIG5vRWxlbWVudCB3aWxsIGJlIHVuZGVmaW5lZFxuICovXG5leHBvcnQgZnVuY3Rpb24gaGVhZDxUPihhcnI6IHJlYWRvbmx5IFRbXSk6IFQgfCB1bmRlZmluZWQ7XG5cbi8qKlxuICogUmV0dXJucyB0aGUgZmlyc3QgZWxlbWVudCBvZiBhbiBhcnJheSBvciBgdW5kZWZpbmVkYCBpZiB0aGUgYXJyYXkgaXMgZW1wdHkuXG4gKlxuICogVGhpcyBmdW5jdGlvbiB0YWtlcyBhbiBhcnJheSBhbmQgcmV0dXJucyB0aGUgZmlyc3QgZWxlbWVudCBvZiB0aGUgYXJyYXkuXG4gKiBJZiB0aGUgYXJyYXkgaXMgZW1wdHksIHRoZSBmdW5jdGlvbiByZXR1cm5zIGB1bmRlZmluZWRgLlxuICpcbiAqIEB0ZW1wbGF0ZSBUIC0gVGhlIHR5cGUgb2YgZWxlbWVudHMgaW4gdGhlIGFycmF5LlxuICogQHBhcmFtIHtUW119IGFyciAtIFRoZSBhcnJheSBmcm9tIHdoaWNoIHRvIGdldCB0aGUgZmlyc3QgZWxlbWVudC5cbiAqIEByZXR1cm5zIHtUIHwgdW5kZWZpbmVkfSBUaGUgZmlyc3QgZWxlbWVudCBvZiB0aGUgYXJyYXksIG9yIGB1bmRlZmluZWRgIGlmIHRoZSBhcnJheSBpcyBlbXB0eS5cbiAqXG4gKiBAZXhhbXBsZVxuICogY29uc3QgZW1wdHlBcnI6IG51bWJlcltdID0gW107XG4gKiBjb25zdCBub0VsZW1lbnQgPSBoZWFkKGVtcHR5QXJyKTtcbiAqIC8vIG5vRWxlbWVudCB3aWxsIGJlIHVuZGVmaW5lZFxuICovXG5leHBvcnQgZnVuY3Rpb24gaGVhZDxUPihhcnI6IHJlYWRvbmx5IFRbXSk6IFQgfCB1bmRlZmluZWQge1xuICByZXR1cm4gYXJyWzBdO1xufVxuIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiJBQUFBOzs7Ozs7Ozs7Ozs7OztDQWNDLEdBb0JEOzs7Ozs7Ozs7Ozs7OztDQWNDLEdBQ0QsT0FBTyxTQUFTLEtBQVEsR0FBaUI7RUFDdkMsT0FBTyxHQUFHLENBQUMsRUFBRTtBQUNmIn0=
+// denoCacheMetadata=2275357251146863693,8796212154206993135

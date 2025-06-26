@@ -1,0 +1,5 @@
+/* esm.sh - fast-json-patch@3.1.1 */
+export * from "/v123/fast-json-patch@3.1.1/deno/fast-json-patch.mjs";
+export { default } from "/v123/fast-json-patch@3.1.1/deno/fast-json-patch.mjs";
+
+// denoCacheMetadata={"headers":{"vary":"accept-encoding","content-type":"application/javascript; charset=utf-8","date":"Thu, 26 Jun 2025 21:45:34 GMT","server":"cloudflare","x-esm-id":"v123/fast-json-patch@3.1.1/deno/fast-json-patch.mjs","x-typescript-types":"https://esm.sh/v123/fast-json-patch@3.1.1/index.d.ts","last-modified":"Thu, 26 Jun 2025 21:45:34 GMT","cf-cache-status":"EXPIRED","alt-svc":"h3=\":443\"; ma=86400","cf-ray":"955fe471ad613919-IAD","control-cache":"public, max-age=31536000, immutable","access-control-allow-origin":"*"},"url":"https://esm.sh/fast-json-patch@3.1.1?target=deno&pin=v123","time":1750974333}

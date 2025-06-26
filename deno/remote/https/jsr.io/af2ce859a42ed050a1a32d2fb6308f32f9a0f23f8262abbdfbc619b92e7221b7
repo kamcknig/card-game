@@ -1,0 +1,26 @@
+/**
+ * Rounds a number to a specified precision.
+ *
+ * This function takes a number and an optional precision value, and returns the number rounded
+ * to the specified number of decimal places.
+ *
+ * @param {number} value - The number to round.
+ * @param {number} [precision=0] - The number of decimal places to round to. Defaults to 0.
+ * @returns {number} The rounded number.
+ * @throws {Error} Throws an error if `Precision` is not integer.
+ *
+ * @example
+ * const result1 = round(1.2345); // result1 will be 1
+ * const result2 = round(1.2345, 2); // result2 will be 1.23
+ * const result3 = round(1.2345, 3); // result3 will be 1.235
+ * const result4 = round(1.2345, 3.1); // This will throw an error
+ */
+export function round(value: number, precision = 0): number {
+  if (!Number.isInteger(precision)) {
+    throw new Error('Precision must be an integer.');
+  }
+  const multiplier = Math.pow(10, precision);
+  return Math.round(value * multiplier) / multiplier;
+}
+
+// denoCacheMetadata={"headers":{"cache-control":"public, max-age=31536000, immutable","x-goog-generation":"1741509574667698","access-control-expose-headers":"*","x-guploader-uploadid":"ABgVH8_v-EZZycd-iZqzpSGMYdJLfNJx0E0_in-NX-60mGvw9SqDicNoIvZXi2g-6kY7CUEUtq49T4w","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-metageneration":"1","x-jsr-cache-id":"ATL","content-length":"968","cross-origin-resource-policy":"cross-origin","x-goog-stored-content-encoding":"identity","x-goog-hash":"crc32c=IjCLPA==,md5=FmQXGXYtgpdT5iecbY/CYw==","x-goog-storage-class":"STANDARD","content-type":"text/typescript","server":"UploadServer","x-goog-stored-content-length":"968","via":"1.1 google","date":"Thu, 26 Jun 2025 21:45:35 GMT","last-modified":"Sun, 09 Mar 2025 08:39:34 GMT","age":"1","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-robots-tag":"noindex","accept-ranges":"bytes","access-control-allow-origin":"*","x-content-type-options":"nosniff","etag":"\"16641719762d829753e6279c6d8fc263\"","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-jsr-cache-status":"revalidated"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/math/round.ts","time":1750974334}

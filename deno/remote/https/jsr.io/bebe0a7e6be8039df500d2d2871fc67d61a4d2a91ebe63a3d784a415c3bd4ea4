@@ -1,0 +1,20 @@
+import { isArrayLike } from './isArrayLike.ts';
+import { isObjectLike } from './isObjectLike.ts';
+
+/**
+ * Checks if the given value is a non-primitive, array-like object.
+ *
+ * @param {unknown} value The value to check.
+ * @returns {value is ArrayLike<unknown> & object} `true` if the value is a non-primitive, array-like object, `false` otherwise.
+ *
+ * @example
+ * isArrayLikeObject([1, 2, 3]); // true
+ * isArrayLikeObject({ 0: 'a', length: 1 }); // true
+ * isArrayLikeObject('abc'); // false
+ * isArrayLikeObject(()=>{}); // false
+ */
+export function isArrayLikeObject(value?: unknown): value is ArrayLike<unknown> & object {
+  return isObjectLike(value) && isArrayLike(value);
+}
+
+// denoCacheMetadata={"headers":{"accept-ranges":"bytes","expires":"Fri, 26 Jun 2026 21:45:35 GMT","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","server":"UploadServer","content-length":"684","access-control-allow-origin":"*","access-control-expose-headers":"*","cross-origin-resource-policy":"cross-origin","x-guploader-uploadid":"ABgVH88KE0VD9XJx6Denyv3IYh5FG2XV_hcMEtn2zVr4qvD0d87K-O-e0F13aVzDF-EhaE0iIhj4o6E","cache-control":"public, max-age=31536000, immutable","age":"0","x-robots-tag":"noindex","content-type":"text/typescript","x-goog-hash":"crc32c=t4l7rA==,md5=2wq9LwGiCO+ZzQpPwapJGw==","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-goog-metageneration":"1","x-goog-stored-content-encoding":"identity","x-goog-generation":"1741509575796405","x-goog-stored-content-length":"684","via":"1.1 google","x-jsr-cache-status":"revalidated","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-content-type-options":"nosniff","x-goog-storage-class":"STANDARD","x-jsr-cache-id":"ATL","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","etag":"\"db0abd2f01a208ef99cd0a4fc1aa491b\""},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/predicate/isArrayLikeObject.ts","time":1750974334}

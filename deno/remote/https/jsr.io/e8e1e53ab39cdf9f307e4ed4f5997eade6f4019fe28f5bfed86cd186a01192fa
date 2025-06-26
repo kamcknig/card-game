@@ -1,0 +1,29 @@
+/**
+ * Checks if the given value is an object. An object is a value that is
+ * not a primitive type (string, number, boolean, symbol, null, or undefined).
+ *
+ * This function tests whether the provided value is an object or not.
+ * It returns `true` if the value is an object, and `false` otherwise.
+ *
+ * This function can also serve as a type predicate in TypeScript, narrowing the type of the argument to an object value.
+ *
+ * @param {unknown} value - The value to check if it is an object.
+ * @returns {value is object} `true` if the value is an object, `false` otherwise.
+ *
+ * @example
+ * const value1 = {};
+ * const value2 = [1, 2, 3];
+ * const value3 = () => {};
+ * const value4 = null;
+ *
+ * console.log(isObject(value1)); // true
+ * console.log(isObject(value2)); // true
+ * console.log(isObject(value3)); // true
+ * console.log(isObject(value4)); // false
+ */
+
+export function isObject(value?: unknown): value is object {
+  return value !== null && (typeof value === 'object' || typeof value === 'function');
+}
+
+// denoCacheMetadata={"headers":{"server":"UploadServer","access-control-allow-origin":"*","x-goog-generation":"1741509575955980","content-length":"1023","via":"1.1 google","x-robots-tag":"noindex","last-modified":"Sun, 09 Mar 2025 08:39:36 GMT","access-control-expose-headers":"*","cross-origin-resource-policy":"cross-origin","content-type":"text/typescript","x-goog-stored-content-length":"1023","x-content-type-options":"nosniff","x-goog-metageneration":"1","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-goog-storage-class":"STANDARD","etag":"\"4644819f48462d1c55ef1fd2e42e8515\"","x-goog-stored-content-encoding":"identity","cache-control":"public, max-age=31536000, immutable","age":"0","x-jsr-cache-status":"revalidated","accept-ranges":"bytes","x-goog-hash":"crc32c=XsHvLg==,md5=RkSBn0hGLRxV7x/S5C6FFQ==","x-guploader-uploadid":"ABgVH8_NgVU72Tmi58eJf4fGSVyXjLP6IZ5QiaSckq03f8GSSK543i4pjrt3gSnBsA151SwqfjlOAZM","date":"Thu, 26 Jun 2025 21:45:35 GMT","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-jsr-cache-id":"ATL"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/predicate/isObject.ts","time":1750974334}

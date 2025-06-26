@@ -1,0 +1,135 @@
+import { get } from './get.ts';
+import { has } from './has.ts';
+import { set } from './set.ts';
+import { isNil } from '../predicate/isNil.ts';
+
+/**
+ * Creates a new object composed of the picked object properties.
+ *
+ * This function takes an object and an array of keys, and returns a new object that
+ * includes only the properties corresponding to the specified keys.
+ *
+ * @template T - The type of object.
+ * @template K - The type of keys in object.
+ * @param {T} obj - The object to pick keys from.
+ * @param {K[]} keys - An array of keys to be picked from the object.
+ * @returns {Pick<T, K>} A new object with the specified keys picked.
+ *
+ * @example
+ * const obj = { a: 1, b: 2, c: 3 };
+ * const result = pick(obj, ['a', 'c']);
+ * // result will be { a: 1, c: 3 }
+ */
+export function pick<T extends Record<string, any>, K extends keyof T>(obj: T, keys: readonly K[]): Pick<T, K>;
+
+/**
+ * Creates a new object composed of the picked object properties.
+ *
+ * This function takes an object and an array of keys, and returns a new object that
+ * includes only the properties corresponding to the specified keys.
+ *
+ * @template T - The type of object.
+ * @param {T | null | undefined} obj - The object to pick keys from.
+ * @param {...any} keys
+ * @param {PropertyKey | PropertyKey[] | PropertyKey[][]}} keys - An array of keys to be picked from the object. received keys goes through a flattening process before being used.
+ * @returns {Partial<T, K>} A new object with the specified keys picked.
+ *
+ * @example
+ * const obj = { a: 1, b: 2, c: 3 };
+ * const result = pick(obj, ['a', 'c']);
+ * // result will be { a: 1, c: 3 }
+ *
+ * // each path can be passed individually as an argument
+ * const obj = { a: 1, b: 2, c: 3 };
+ * const result = pick(obj, 'a', 'c');
+ *
+ * // pick a key over a path
+ * const obj = { 'a.b': 1, a: { b: 2 } };
+ * const result = pick(obj, 'a.b');
+ * // result will be { 'a.b': 1 }
+ */
+export function pick<
+  // eslint-disable-next-line
+  T extends {},
+>(
+  obj: T | null | undefined,
+  ...keys: Array<PropertyKey | readonly PropertyKey[] | ReadonlyArray<readonly PropertyKey[]>>
+): Partial<T>;
+
+/**
+ * Creates a new object composed of the picked object properties.
+ *
+ * This function takes an object and an array of keys, and returns a new object that
+ * includes only the properties corresponding to the specified keys.
+ *
+ * @template T - The type of object.
+ * @param {T | null | undefined} obj - The object to pick keys from.
+ * @param {...any} keysArr - An array of keys to be picked from the object. received keys goes through a flattening process before being used.
+ * @param {PropertyKey | PropertyKey[] | PropertyKey[][]}} keys - An array of keys to be picked from the object. received keys goes through a flattening process before being used.
+ * @returns {Partial<T, K>} A new object with the specified keys picked.
+ *
+ * @example
+ * const obj = { a: 1, b: 2, c: 3 };
+ * const result = pick(obj, ['a', 'c']);
+ * // result will be { a: 1, c: 3 }
+ *
+ * // each path can be passed individually as an argument
+ * const obj = { a: 1, b: 2, c: 3 };
+ * const result = pick(obj, 'a', 'c');
+ *
+ * // pick a key over a path
+ * const obj = { 'a.b': 1, a: { b: 2 } };
+ * const result = pick(obj, 'a.b');
+ * // result will be { 'a.b': 1 }
+ */
+export function pick<
+  // eslint-disable-next-line
+  T extends {},
+>(
+  obj: T | null | undefined,
+  ...keysArr: Array<PropertyKey | readonly PropertyKey[] | ReadonlyArray<readonly PropertyKey[]>>
+): Partial<T> {
+  if (isNil(obj)) {
+    return {};
+  }
+
+  const result: any = {};
+
+  for (let i = 0; i < keysArr.length; i++) {
+    let keys = keysArr[i];
+    switch (typeof keys) {
+      case 'object': {
+        if (!Array.isArray(keys)) {
+          // eslint-disable-next-line
+          // @ts-ignore
+          keys = Array.from(keys) as PropertyKey[];
+        }
+        break;
+      }
+      case 'string':
+      case 'symbol':
+      case 'number': {
+        keys = [keys];
+        break;
+      }
+    }
+
+    for (const key of keys) {
+      const value = get(obj, key);
+
+      if (value === undefined && !has(obj, key)) {
+        continue;
+      }
+
+      if (typeof key === 'string' && Object.hasOwn(obj, key)) {
+        result[key] = value;
+      } else {
+        set(result, key, value);
+      }
+    }
+  }
+
+  return result;
+}
+
+// denoCacheMetadata={"headers":{"x-robots-tag":"noindex","server":"UploadServer","x-goog-generation":"1741509575137523","x-goog-stored-content-encoding":"identity","x-goog-metageneration":"1","x-goog-hash":"crc32c=HkS+fA==,md5=/HYjOP+7BbZtfg8Gmhr6pg==","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","access-control-expose-headers":"*","cross-origin-resource-policy":"cross-origin","x-content-type-options":"nosniff","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-jsr-cache-id":"ATL","access-control-allow-origin":"*","x-guploader-uploadid":"ABgVH8_UvhCDeuvgkQe4SxBzO4Is6tZJWXwf3-XtOEROQWBlc8c6adlCx3Cmsr0_C0g5BE_2FM_Mlng","content-length":"4303","expires":"Fri, 26 Jun 2026 21:45:35 GMT","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-goog-storage-class":"STANDARD","x-goog-stored-content-length":"4303","accept-ranges":"bytes","via":"1.1 google","date":"Thu, 26 Jun 2025 21:45:35 GMT","cache-control":"public, max-age=31536000, immutable","etag":"\"fc762338ffbb05b66d7e0f069a1afaa6\"","x-jsr-cache-status":"revalidated","age":"0","content-type":"text/typescript"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/object/pick.ts","time":1750974334}

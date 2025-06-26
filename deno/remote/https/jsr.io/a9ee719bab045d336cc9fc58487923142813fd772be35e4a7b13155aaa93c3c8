@@ -1,0 +1,32 @@
+import { capitalize } from './capitalize.ts';
+import { words as getWords } from './words.ts';
+
+/**
+ * Converts a string to camel case.
+ *
+ * Camel case is the naming convention in which the first word is written in lowercase and
+ * each subsequent word begins with a capital letter, concatenated without any separator characters.
+ *
+ * @param {string} str - The string that is to be changed to camel case.
+ * @returns {string} - The converted string to camel case.
+ *
+ * @example
+ * const convertedStr1 = camelCase('camelCase') // returns 'camelCase'
+ * const convertedStr2 = camelCase('some whitespace') // returns 'someWhitespace'
+ * const convertedStr3 = camelCase('hyphen-text') // returns 'hyphenText'
+ * const convertedStr4 = camelCase('HTTPRequest') // returns 'httpRequest'
+ * const convertedStr5 = camelCase('Keep unicode 😅') // returns 'keepUnicode😅'
+ */
+export function camelCase(str: string): string {
+  const words = getWords(str);
+
+  if (words.length === 0) {
+    return '';
+  }
+
+  const [first, ...rest] = words;
+
+  return `${first.toLowerCase()}${rest.map(word => capitalize(word)).join('')}`;
+}
+
+// denoCacheMetadata={"headers":{"access-control-expose-headers":"*","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-metageneration":"1","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-goog-generation":"1741509575995569","x-goog-stored-content-length":"1118","cache-control":"public, max-age=31536000, immutable","x-goog-stored-content-encoding":"identity","x-jsr-cache-status":"revalidated","content-length":"1118","etag":"\"6497db9e5c7659fc80ddb4541eb0a194\"","accept-ranges":"bytes","x-jsr-cache-id":"ATL","x-goog-storage-class":"STANDARD","date":"Thu, 26 Jun 2025 21:45:35 GMT","access-control-allow-origin":"*","last-modified":"Sun, 09 Mar 2025 08:39:36 GMT","x-goog-hash":"crc32c=AENk5Q==,md5=ZJfbnlx2WfyA3bRUHrChlA==","via":"1.1 google","x-robots-tag":"noindex","cross-origin-resource-policy":"cross-origin","server":"UploadServer","x-content-type-options":"nosniff","content-type":"text/typescript","age":"0","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-guploader-uploadid":"ABgVH89VhOKdStnPgRSxLdrObu0rHwo0ikopVo63IxiQ_H0_tV3qIqAy8--VPRnbj2Ar1pvb"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/string/camelCase.ts","time":1750974334}

@@ -1,0 +1,80 @@
+/**
+ * Iterates over elements of 'arr' from right to left and invokes 'callback' for each element.
+ *
+ * @template T - The type of elements in the array.
+ * @param {T[]} arr - The array to iterate over.
+ * @param {(value: T, index: number, arr: T[]) => void} callback - The function invoked per iteration.
+ * The callback function receives three arguments:
+ *  - 'value': The current element being processed in the array.
+ *  - 'index': The index of the current element being processed in the array.
+ *  - 'arr': The array 'forEachRight' was called upon.
+ *
+ * @example
+ * const array = [1, 2, 3];
+ * const result: number[] = [];
+ *
+ * // Use the forEachRight function to iterate through the array and add each element to the result array.
+ * forEachRight(array, (value) => {
+ *  result.push(value);
+ * })
+ *
+ * console.log(result) // Output: [3, 2, 1]
+ */
+export function forEachRight<T>(arr: T[], callback: (value: T, index: number, arr: T[]) => void): void;
+/**
+ * Iterates over elements of 'arr' from right to left and invokes 'callback' for each element.
+ *
+ * @template T - The type of elements in the array.
+ * @param {T[]} arr - The array to iterate over.
+ * @param {(value: T, index: number, arr: T[]) => void} callback - The function invoked per iteration.
+ * The callback function receives three arguments:
+ *  - 'value': The current element being processed in the array.
+ *  - 'index': The index of the current element being processed in the array.
+ *  - 'arr': The array 'forEachRight' was called upon.
+ *
+ * @example
+ * const array = [1, 2, 3];
+ * const result: number[] = [];
+ *
+ * // Use the forEachRight function to iterate through the array and add each element to the result array.
+ * forEachRight(array, (value) => {
+ *  result.push(value);
+ * })
+ *
+ * console.log(result) // Output: [3, 2, 1]
+ */
+export function forEachRight<T>(
+  arr: readonly T[],
+  callback: (value: T, index: number, arr: readonly T[]) => void
+): void;
+
+/**
+ * Iterates over elements of 'arr' from right to left and invokes 'callback' for each element.
+ *
+ * @template T - The type of elements in the array.
+ * @param {T[]} arr - The array to iterate over.
+ * @param {(value: T, index: number, arr: T[]) => void} callback - The function invoked per iteration.
+ * The callback function receives three arguments:
+ *  - 'value': The current element being processed in the array.
+ *  - 'index': The index of the current element being processed in the array.
+ *  - 'arr': The array 'forEachRight' was called upon.
+ *
+ * @example
+ * const array = [1, 2, 3];
+ * const result: number[] = [];
+ *
+ * // Use the forEachRight function to iterate through the array and add each element to the result array.
+ * forEachRight(array, (value) => {
+ *  result.push(value);
+ * })
+ *
+ * console.log(result) // Output: [3, 2, 1]
+ */
+export function forEachRight<T>(arr: readonly T[], callback: (value: T, index: number, arr: T[]) => void): void {
+  for (let i = arr.length - 1; i >= 0; i--) {
+    const element = arr[i];
+    callback(element, i, arr as T[]);
+  }
+}
+
+// denoCacheMetadata={"headers":{"access-control-expose-headers":"*","expires":"Fri, 26 Jun 2026 21:45:35 GMT","via":"1.1 google","etag":"\"d8601f653069f68cc6c9d2929c9f048e\"","x-guploader-uploadid":"ABgVH88EOvfs4y3XL_CRKp9GoMaSG93qEcJpHrWyM3nPNmW-d4r5JxS41b4vMLTtFFoRILHRxpGyvoU","x-goog-stored-content-length":"3036","x-goog-generation":"1741509576023546","x-goog-stored-content-encoding":"identity","content-type":"text/typescript","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","cache-control":"public, max-age=31536000, immutable","content-length":"3036","x-jsr-cache-id":"ATL","age":"0","x-goog-metageneration":"1","x-jsr-cache-status":"revalidated","accept-ranges":"bytes","x-goog-hash":"crc32c=mcrqJw==,md5=2GAfZTBp9ozGydKSnJ8Ejg==","access-control-allow-origin":"*","cross-origin-resource-policy":"cross-origin","x-content-type-options":"nosniff","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","last-modified":"Sun, 09 Mar 2025 08:39:36 GMT","date":"Thu, 26 Jun 2025 21:45:35 GMT","server":"UploadServer","x-goog-storage-class":"STANDARD","x-robots-tag":"noindex"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/array/forEachRight.ts","time":1750974334}

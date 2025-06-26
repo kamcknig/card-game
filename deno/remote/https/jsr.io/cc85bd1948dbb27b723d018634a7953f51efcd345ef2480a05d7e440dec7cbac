@@ -1,0 +1,22 @@
+/**
+ * Checks if a string contains another string at the end of the string.
+ *
+ * Checks if one string endsWith another string. Optional position parameter to offset searching before a certain index.
+ *
+ * @param {string} str - The string that might contain the target string.
+ * @param {string} target - The string to search for.
+ * @param {number} position - An optional position from the start to search up to this index
+ * @returns {boolean} - True if the str string ends with the target string.
+ *
+ * @example
+ * const isPrefix = endsWith('fooBar', 'foo') // returns true
+ * const isPrefix = endsWith('fooBar', 'bar') // returns false
+ * const isPrefix = endsWith('fooBar', 'abc') // returns false
+ * const isPrefix = endsWith('fooBar', 'foo', 3) // returns true
+ * const isPrefix = endsWith('fooBar', 'abc', 5) // returns false
+ */
+export function endsWith(str: string, target: string, position: number = str.length): boolean {
+  return str.endsWith(target, position);
+}
+
+// denoCacheMetadata={"headers":{"cross-origin-resource-policy":"cross-origin","cache-control":"public, max-age=31536000, immutable","x-goog-metageneration":"1","content-length":"977","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","via":"1.1 google","x-goog-stored-content-length":"977","x-guploader-uploadid":"ABgVH88IgsPZb-uv89O3tEFZqhghCJwvy1lVtBgFq4dzuz8TeQAA70bvfJata4npWeOwGp-5yNE2kpw","x-goog-generation":"1741509575395296","x-goog-storage-class":"STANDARD","accept-ranges":"bytes","etag":"\"61bb3c52748630b3cb37f469fb644f46\"","content-type":"text/typescript","x-jsr-cache-status":"revalidated","x-robots-tag":"noindex","expires":"Fri, 26 Jun 2026 21:45:35 GMT","access-control-allow-origin":"*","access-control-expose-headers":"*","age":"0","x-goog-hash":"crc32c=cxgxUQ==,md5=Ybs8UnSGMLPLN/Rp+2RPRg==","x-content-type-options":"nosniff","x-goog-stored-content-encoding":"identity","server":"UploadServer","date":"Thu, 26 Jun 2025 21:45:35 GMT","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-jsr-cache-id":"ATL"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/string/endsWith.ts","time":1750974334}

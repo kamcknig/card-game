@@ -1,0 +1,27 @@
+/**
+ * Checks if the given value is boolean.
+ *
+ * This function tests whether the provided value is strictly `boolean`.
+ * It returns `true` if the value is `boolean`, and `false` otherwise.
+ *
+ *  This function can also serve as a type predicate in TypeScript, narrowing the type of the argument to `boolean`.
+ *
+ * @param {unknown} value - The Value to test if it is boolean.
+ * @returns {value is boolean} True if the value is boolean, false otherwise.
+ *
+ * @example
+ *
+ * const value1 = true;
+ * const value2 = 0;
+ * const value3 = 'abc';
+ *
+ * console.log(isBoolean(value1)); // true
+ * console.log(isBoolean(value2)); // false
+ * console.log(isBoolean(value3)); // false
+ *
+ */
+export function isBoolean(value?: unknown): value is boolean {
+  return typeof value === 'boolean' || value instanceof Boolean;
+}
+
+// denoCacheMetadata={"headers":{"cross-origin-resource-policy":"cross-origin","server":"UploadServer","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-goog-metageneration":"1","etag":"\"97c752d11fb8ad29e95c8896b60d1aaf\"","accept-ranges":"bytes","x-goog-storage-class":"STANDARD","x-goog-generation":"1741509574523555","x-goog-stored-content-length":"816","x-jsr-cache-status":"revalidated","x-goog-stored-content-encoding":"identity","x-goog-hash":"crc32c=HW2xCw==,md5=l8dS0R+4rSnpXIiWtg0arw==","via":"1.1 google","last-modified":"Sun, 09 Mar 2025 08:39:34 GMT","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-guploader-uploadid":"ABgVH89mUOG8qsbm2ZWgtUU7ZYkk3d_xg4tpQh0FB_6dVRVrM42M73eR5ZO_0Lrkh1eA2PP-H5XRlaQ","x-robots-tag":"noindex","x-jsr-cache-id":"ATL","access-control-expose-headers":"*","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","access-control-allow-origin":"*","content-length":"816","cache-control":"public, max-age=31536000, immutable","content-type":"text/typescript","age":"0","x-content-type-options":"nosniff","expires":"Fri, 26 Jun 2026 21:45:35 GMT"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/predicate/isBoolean.ts","time":1750974334}

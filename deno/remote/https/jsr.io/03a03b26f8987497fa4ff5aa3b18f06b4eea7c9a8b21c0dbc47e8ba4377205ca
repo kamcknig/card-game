@@ -1,0 +1,32 @@
+import { words as getWords } from './words.ts';
+
+/**
+ * Converts a string to upper case.
+ *
+ * Upper case is the naming convention in which each word is written in uppercase and separated by an space ( ) character.
+ *
+ * @param {string} str - The string that is to be changed to upper case.
+ * @returns {string} - The converted string to upper case.
+ *
+ * @example
+ * const convertedStr1 = upperCase('camelCase') // returns 'CAMEL CASE'
+ * const convertedStr2 = upperCase('some whitespace') // returns 'SOME WHITESPACE'
+ * const convertedStr3 = upperCase('hyphen-text') // returns 'HYPHEN TEXT'
+ * const convertedStr4 = upperCase('HTTPRequest') // returns 'HTTP REQUEST'
+ */
+export function upperCase(str: string): string {
+  const words = getWords(str);
+
+  let result = '';
+
+  for (let i = 0; i < words.length; i++) {
+    result += words[i].toUpperCase();
+    if (i < words.length - 1) {
+      result += ' ';
+    }
+  }
+
+  return result;
+}
+
+// denoCacheMetadata={"headers":{"last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","x-robots-tag":"noindex","x-goog-stored-content-encoding":"identity","x-goog-hash":"crc32c=JWMoCQ==,md5=sVcrchXr/qGf7FdaV49P1A==","etag":"\"b1572b7215ebfea19fec575a578f4fd4\"","cross-origin-resource-policy":"cross-origin","x-content-type-options":"nosniff","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-guploader-uploadid":"ABgVH89yQlI2Hrp2nEkCj5TdTU3nOcHchVqpn8XVVXzL7SNajb8cb5xSZVf8nb8Ah0asr-AbjiCzkH8","server":"UploadServer","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","access-control-expose-headers":"*","x-jsr-cache-status":"revalidated","accept-ranges":"bytes","date":"Thu, 26 Jun 2025 21:45:35 GMT","cache-control":"public, max-age=31536000, immutable","age":"0","access-control-allow-origin":"*","content-length":"940","x-jsr-cache-id":"ATL","via":"1.1 google","x-goog-generation":"1741509575448801","x-goog-storage-class":"STANDARD","x-goog-stored-content-length":"940","expires":"Fri, 26 Jun 2026 21:45:35 GMT","content-type":"text/typescript","x-goog-metageneration":"1"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/string/upperCase.ts","time":1750974334}

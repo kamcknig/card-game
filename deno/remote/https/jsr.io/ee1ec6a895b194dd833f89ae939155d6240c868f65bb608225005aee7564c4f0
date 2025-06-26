@@ -1,0 +1,74 @@
+/**
+ * Returns an empty array when the input is a tuple containing exactly one element.
+ *
+ * @template T The type of the single element.
+ * @param {[T]} arr - A tuple containing exactly one element.
+ * @returns {[]} An empty array since there is only one element.
+ *
+ * @example
+ * const array = [100] as const;
+ * const result = initial(array);
+ * // result will be []
+ */
+export function initial<T>(arr: readonly [T]): [];
+
+/**
+ * Returns an empty array when the input array is empty.
+ *
+ * @returns {[]} Always returns an empty array for an empty input.
+ *
+ * @example
+ * const array = [] as const;
+ * const result = initial(array);
+ * // result will be []
+ */
+export function initial(arr: readonly []): [];
+
+/**
+ * Returns a new array containing all elements except the last one from a tuple with multiple elements.
+ *
+ * @template T The types of the initial elements.
+ * @template U The type of the last element in the tuple.
+ * @param {[...T[], U]} arr - A tuple with one or more elements.
+ * @returns {T[]} A new array containing all but the last element of the tuple.
+ *
+ * @example
+ * const array = ['apple', 'banana', 'cherry'] as const;
+ * const result = initial(array);
+ * // result will be ['apple', 'banana']
+ */
+export function initial<T, U>(arr: readonly [...T[], U]): T[];
+
+/**
+ * Returns a new array containing all elements except the last one from the input array.
+ * If the input array is empty or has only one element, the function returns an empty array.
+ *
+ * @template T The type of elements in the array.
+ * @param {T[]} arr - The input array.
+ * @returns {T[]} A new array containing all but the last element of the input array.
+ *
+ * @example
+ * const arr = [1, 2, 3, 4];
+ * const result = initial(arr);
+ * // result will be [1, 2, 3]
+ */
+export function initial<T>(arr: readonly T[]): T[];
+
+/**
+ * Returns a new array containing all elements except the last one from the input array.
+ * If the input array is empty or has only one element, the function returns an empty array.
+ *
+ * @template T The type of elements in the array.
+ * @param {T[]} arr - The input array.
+ * @returns {T[]} A new array containing all but the last element of the input array.
+ *
+ * @example
+ * const arr = [1, 2, 3, 4];
+ * const result = initial(arr);
+ * // result will be [1, 2, 3]
+ */
+export function initial<T>(arr: readonly T[]): T[] {
+  return arr.slice(0, -1);
+}
+
+// denoCacheMetadata={"headers":{"alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-guploader-uploadid":"ABgVH889M3gFdBHRdEl3slJBGCmehwPos7l51VyVgTfSXYqiB8xQERqeYUQXvjdPlgL9KixJFJo94YQ","x-robots-tag":"noindex","accept-ranges":"bytes","x-content-type-options":"nosniff","x-goog-metageneration":"1","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","access-control-expose-headers":"*","x-goog-storage-class":"STANDARD","x-goog-hash":"crc32c=DfCSLw==,md5=qAUpD6Kx4daEHR6Y5A7luw==","age":"0","cache-control":"public, max-age=31536000, immutable","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","x-goog-stored-content-encoding":"identity","server":"UploadServer","x-goog-stored-content-length":"2377","via":"1.1 google","date":"Thu, 26 Jun 2025 21:45:35 GMT","etag":"\"a805290fa2b1e1d6841d1e98e40ee5bb\"","content-length":"2377","content-type":"text/typescript","x-jsr-cache-status":"revalidated","access-control-allow-origin":"*","x-jsr-cache-id":"ATL","x-goog-generation":"1741509575074970","expires":"Fri, 26 Jun 2026 21:45:35 GMT","cross-origin-resource-policy":"cross-origin"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/array/initial.ts","time":1750974334}

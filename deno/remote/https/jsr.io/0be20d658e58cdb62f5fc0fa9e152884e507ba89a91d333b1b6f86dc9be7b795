@@ -1,0 +1,26 @@
+/**
+ * Calculates the sum of an array of numbers when applying
+ * the `getValue` function to each element.
+ *
+ * If the array is empty, this function returns `0`.
+ *
+ * @template T - The type of elements in the array.
+ * @param {T[]} items An array to calculate the sum.
+ * @param {(element: T) => number} getValue A function that selects a numeric value from each element.
+ * @returns {number} The sum of all the numbers as determined by the `getValue` function.
+ *
+ * @example
+ * sumBy([{ a: 1 }, { a: 2 }, { a: 3 }], x => x.a); // Returns: 6
+ * sumBy([], x => x.a); // Returns: 0
+ */
+export function sumBy<T>(items: readonly T[], getValue: (element: T) => number): number {
+  let result = 0;
+
+  for (let i = 0; i < items.length; i++) {
+    result += getValue(items[i]);
+  }
+
+  return result;
+}
+
+// denoCacheMetadata={"headers":{"x-goog-storage-class":"STANDARD","cross-origin-resource-policy":"cross-origin","age":"1","accept-ranges":"bytes","x-content-type-options":"nosniff","cache-control":"public, max-age=31536000, immutable","x-goog-stored-content-encoding":"identity","x-goog-generation":"1741509574672437","server":"UploadServer","x-goog-stored-content-length":"797","etag":"\"467f4fabc11b0f4d1a645ed3bb0f1039\"","content-type":"text/typescript","x-goog-metageneration":"1","x-goog-hash":"crc32c=bARBcQ==,md5=Rn9Pq8EbD00aZF7Tuw8QOQ==","x-robots-tag":"noindex","date":"Thu, 26 Jun 2025 21:45:35 GMT","expires":"Fri, 26 Jun 2026 21:45:35 GMT","last-modified":"Sun, 09 Mar 2025 08:39:34 GMT","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","access-control-expose-headers":"*","x-jsr-cache-status":"revalidated","via":"1.1 google","x-jsr-cache-id":"ATL","x-guploader-uploadid":"ABgVH8-IBZ0oPDn6Et2yXi91FVY6vhtn4yrs8Uc34fcOvGFcp92h0DJ2mNK6z8Ms5x2OK5e05jgkVcs","access-control-allow-origin":"*","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","content-length":"797"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/math/sumBy.ts","time":1750974334}

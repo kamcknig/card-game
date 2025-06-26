@@ -1,0 +1,58 @@
+import { isArrayLike } from '../predicate/isArrayLike.ts';
+
+/**
+ * Converts an array of key-value pairs into an object.
+ *
+ * @param {any[]} pairs - An array of key-value pairs where each key is a `PropertyKey` and each value is of type `U`.
+ * @returns {Record<string, any>} - An object where the keys are from the first element and values are from the second element.
+ *
+ * @example
+ * const pairs = [['a', 1], ['b', 2]];
+ * const result = fromPairs(pairs);
+ * // result will be: { a: 1, b: 2 }
+ */
+export function fromPairs(pairs: readonly any[]): Record<string, any>;
+/**
+ * Converts an array of key-value pairs into an object.
+ *
+ * @template T - The type of the keys in the resulting object. It must extend `PropertyKey`.
+ * @template U - The type of the values in the resulting object.
+ *
+ * @param {Array<[T, U]>} pairs - An array of key-value pairs where each key is a `PropertyKey` and each value is of type `U`.
+ * @returns {Record<T, U>} - An object where the keys are of type `T` and the values are of type `U`.
+ *
+ * @example
+ * const pairs = [['a', 1], ['b', 2]];
+ * const result = fromPairs(pairs);
+ * // result will be: { a: 1, b: 2 }
+ */
+export function fromPairs<T extends PropertyKey, U>(pairs: ReadonlyArray<[T, U]> | Map<T, U>): Record<T, U>;
+/**
+ * Converts an array of key-value pairs into an object.
+ *
+ * @template T - The type of the keys in the resulting object. It must extend `PropertyKey`.
+ * @template U - The type of the values in the resulting object.
+ *
+ * @param {Array<[T, U]>} pairs - An array of key-value pairs where each key is a `PropertyKey` and each value is of type `U`.
+ * @returns {Record<T, U>} - An object where the keys are of type `T` and the values are of type `U`.
+ *
+ * @example
+ * const pairs = [['a', 1], ['b', 2]];
+ * const result = fromPairs(pairs);
+ * // result will be: { a: 1, b: 2 }
+ */
+export function fromPairs<T extends PropertyKey, U>(pairs: ReadonlyArray<[T, U]> | Map<T, U>): Record<T, U> {
+  if (!isArrayLike(pairs) && !(pairs instanceof Map)) {
+    return {} as Record<T, U>;
+  }
+
+  const result = {} as Record<T, U>;
+
+  for (const [key, value] of pairs) {
+    result[key as T] = value;
+  }
+
+  return result;
+}
+
+// denoCacheMetadata={"headers":{"last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-goog-generation":"1741509575671566","etag":"\"0bfc5c98a64b1f0a58ef2ffdbb6d7470\"","x-goog-storage-class":"STANDARD","x-goog-hash":"crc32c=zsk5DA==,md5=C/xcmKZLHwpY7y/9u210cA==","access-control-allow-origin":"*","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-goog-stored-content-length":"2181","expires":"Fri, 26 Jun 2026 21:45:35 GMT","content-type":"text/typescript","x-jsr-cache-id":"ATL","cache-control":"public, max-age=31536000, immutable","accept-ranges":"bytes","via":"1.1 google","cross-origin-resource-policy":"cross-origin","content-length":"2181","x-content-type-options":"nosniff","x-goog-stored-content-encoding":"identity","x-guploader-uploadid":"ABgVH89o1lGTE1WbCTN0ePfF1FwbfKkraYmNkXAh4voE6ghBQVgFdAqpln3LAhmguEQi3XAI","x-robots-tag":"noindex","x-jsr-cache-status":"revalidated","server":"UploadServer","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-metageneration":"1","age":"0","access-control-expose-headers":"*"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/object/fromPairs.ts","time":1750974334}

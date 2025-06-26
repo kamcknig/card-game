@@ -1,0 +1,46 @@
+import { toInteger } from '../util/toInteger.ts';
+
+/**
+ * Creates a function that only executes starting from the `n`-th call.
+ * The provided function will be invoked starting from the `n`-th call.
+ *
+ * This is particularly useful for scenarios involving events or asynchronous operations
+ * where an action should occur only after a certain number of invocations.
+ *
+ * @template F - The type of the function to be invoked.
+ * @param {number} n - The number of calls required for `func` to execute.
+ * @param {F} func - The function to be invoked.
+ * @returns {(...args: Parameters<F>) => ReturnType<F> | undefined} - A new function that:
+ * - Tracks the number of calls.
+ * - Invokes `func` starting from the `n`-th call.
+ * - Returns `undefined` if fewer than `n` calls have been made.
+ * @throws {TypeError} - If `func` is not a function.
+ * @example
+ *
+ * const afterFn = after(3, () => {
+ *  console.log("called")
+ * });
+ *
+ * // Will not log anything.
+ * afterFn()
+ * // Will not log anything.
+ * afterFn()
+ * // Will log 'called'.
+ * afterFn()
+ */
+export function after<F extends (...args: any[]) => any>(
+  n: number,
+  func: F
+): (...args: Parameters<F>) => ReturnType<F> | undefined {
+  if (typeof func !== 'function') {
+    throw new TypeError('Expected a function');
+  }
+  n = toInteger(n);
+  return function (this: any, ...args: Parameters<F>) {
+    if (--n < 1) {
+      return func.apply(this, args);
+    }
+  };
+}
+
+// denoCacheMetadata={"headers":{"date":"Thu, 26 Jun 2025 21:45:35 GMT","expires":"Fri, 26 Jun 2026 21:45:35 GMT","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","access-control-expose-headers":"*","x-goog-stored-content-encoding":"identity","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","x-guploader-uploadid":"ABgVH88wlsFh7Mgia1Z6j21nLJeuGrMknzK_h4yRaypuGZaGdEIw3mRpksb3uPMO0qArvSY47Sx3gHI","accept-ranges":"bytes","age":"0","x-goog-hash":"crc32c=IMOtxg==,md5=tFQpZlLsibw1vqJOa2RjLQ==","x-goog-metageneration":"1","etag":"\"b454296652ec89bc35bea24e6b64632d\"","x-goog-generation":"1741509575681560","content-type":"text/typescript","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","server":"UploadServer","x-jsr-cache-id":"ATL","x-content-type-options":"nosniff","via":"1.1 google","cache-control":"public, max-age=31536000, immutable","x-goog-storage-class":"STANDARD","x-goog-stored-content-length":"1431","x-jsr-cache-status":"revalidated","content-length":"1431","x-robots-tag":"noindex","cross-origin-resource-policy":"cross-origin","access-control-allow-origin":"*"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/function/after.ts","time":1750974334}

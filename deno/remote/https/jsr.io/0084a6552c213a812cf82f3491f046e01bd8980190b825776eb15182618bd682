@@ -1,0 +1,25 @@
+/**
+ * Checks if the given value is undefined.
+ *
+ * This function tests whether the provided value is strictly equal to `undefined`.
+ * It returns `true` if the value is `undefined`, and `false` otherwise.
+ *
+ * This function can also serve as a type predicate in TypeScript, narrowing the type of the argument to `undefined`.
+ *
+ * @param {unknown} x - The value to test if it is undefined.
+ * @returns {x is undefined} true if the value is undefined, false otherwise.
+ *
+ * @example
+ * const value1 = undefined;
+ * const value2 = null;
+ * const value3 = 42;
+ *
+ * console.log(isUndefined(value1)); // true
+ * console.log(isUndefined(value2)); // false
+ * console.log(isUndefined(value3)); // false
+ */
+export function isUndefined(x: unknown): x is undefined {
+  return x === undefined;
+}
+
+// denoCacheMetadata={"headers":{"x-content-type-options":"nosniff","via":"1.1 google","x-goog-stored-content-length":"791","content-length":"791","server":"UploadServer","x-guploader-uploadid":"ABgVH8-RYvS2sBvSLWIyq5_Gm3serkTg2UL_N4sVWqbmiP5B7VpBWjJyI5DMXWbqHlZo7A2tTIpdMC4","x-goog-hash":"crc32c=vBZb0A==,md5=9BpeMl6qPbiWDVqA2//kgA==","expires":"Fri, 26 Jun 2026 21:45:36 GMT","etag":"\"f41a5e325eaa3db8960d5a80dbffe480\"","content-type":"text/typescript","age":"0","access-control-allow-origin":"*","cross-origin-resource-policy":"cross-origin","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-storage-class":"STANDARD","accept-ranges":"bytes","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-goog-stored-content-encoding":"identity","date":"Thu, 26 Jun 2025 21:45:36 GMT","x-robots-tag":"noindex","access-control-expose-headers":"*","x-goog-generation":"1741509575531965","x-goog-metageneration":"1","x-jsr-cache-id":"ATL","x-jsr-cache-status":"revalidated","cache-control":"public, max-age=31536000, immutable","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/predicate/isUndefined.ts","time":1750974334}

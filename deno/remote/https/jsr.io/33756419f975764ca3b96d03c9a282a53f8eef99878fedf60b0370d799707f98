@@ -1,0 +1,18 @@
+/**
+ * Checks if `value` is a function.
+ *
+ * @param {unknown} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is a function, else `false`.
+ *
+ * @example
+ * isFunction(Array.prototype.slice); // true
+ * isFunction(async function () {}); // true
+ * isFunction(function* () {}); // true
+ * isFunction(Proxy); // true
+ * isFunction(Int8Array); // true
+ */
+export function isFunction(value: unknown): value is (...args: unknown[]) => unknown {
+  return typeof value === 'function';
+}
+
+// denoCacheMetadata={"headers":{"last-modified":"Sun, 09 Mar 2025 08:39:34 GMT","cross-origin-resource-policy":"cross-origin","date":"Thu, 26 Jun 2025 21:45:36 GMT","x-jsr-cache-status":"revalidated","x-robots-tag":"noindex","x-goog-stored-content-length":"507","via":"1.1 google","x-goog-metageneration":"1","content-length":"507","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","access-control-allow-origin":"*","access-control-expose-headers":"*","x-goog-stored-content-encoding":"identity","x-goog-storage-class":"STANDARD","cache-control":"public, max-age=31536000, immutable","x-goog-generation":"1741509574447917","expires":"Fri, 26 Jun 2026 21:45:36 GMT","x-jsr-cache-id":"ATL","age":"0","content-type":"text/typescript","x-content-type-options":"nosniff","x-goog-hash":"crc32c=XO/JOA==,md5=tp3q3nLJpYQOdh/WQXq7UA==","accept-ranges":"bytes","server":"UploadServer","x-guploader-uploadid":"ABgVH8-ApALmnBKhzoa6PiGeONWqa5TeF_xcrDmpC69BPJ3n8yXLF2c7uiy_PNswxrplt_681OznLwo","etag":"\"b69deade72c9a5840e761fd6417abb50\"","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/predicate/isFunction.ts","time":1750974334}

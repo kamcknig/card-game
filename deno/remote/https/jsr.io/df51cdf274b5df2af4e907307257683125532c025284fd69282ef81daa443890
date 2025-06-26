@@ -1,0 +1,24 @@
+import { toString } from '../util/toString.ts';
+
+/**
+ * Pads the start of a string with a given character until it reaches the specified length.
+ *
+ * If the length is less than or equal to the original string's length, or if the padding character is an empty string,
+ * the original string is returned unchanged.
+ *
+ * @param {string} str - The string to pad.
+ * @param {number} [length] - The length of the resulting string once padded.
+ * @param {string} [chars] - The character(s) to use for padding.
+ * @returns {string} - The padded string, or the original string if padding is not required.
+ *
+ * @example
+ * const result1 = padStart('abc', 6);          // result will be '   abc'
+ * const result2 = padStart('abc', 6, '_-');    // result will be '_-_abc'
+ * const result3 = padStart('abc', 3);          // result will be 'abc'
+ * const result4 = padStart('abc', 2);          // result will be 'abc'
+ */
+export function padStart(str: string, length = 0, chars = ' '): string {
+  return toString(str).padStart(length, chars);
+}
+
+// denoCacheMetadata={"headers":{"x-goog-stored-content-encoding":"identity","x-jsr-cache-id":"ATL","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-stored-content-length":"1034","content-length":"1034","x-jsr-cache-status":"revalidated","x-goog-hash":"crc32c=l3kLzw==,md5=nFEXpTK5PHKIUSNPdenByQ==","via":"1.1 google","x-robots-tag":"noindex","expires":"Fri, 26 Jun 2026 21:45:35 GMT","age":"0","access-control-allow-origin":"*","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","cross-origin-resource-policy":"cross-origin","x-content-type-options":"nosniff","x-goog-metageneration":"1","etag":"\"9c5117a532b93c728851234f75e9c1c9\"","access-control-expose-headers":"*","x-goog-generation":"1741509575046082","x-guploader-uploadid":"ABgVH8-HLlB_Ay8W2ID1hScUip2SJ8qo_y6UzftQtaW0mTOYwkFoLkUeOdgezAnKvFFGFIfD4ruxvTg","x-goog-storage-class":"STANDARD","date":"Thu, 26 Jun 2025 21:45:35 GMT","cache-control":"public, max-age=31536000, immutable","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","content-type":"text/typescript","accept-ranges":"bytes","server":"UploadServer"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/string/padStart.ts","time":1750974334}

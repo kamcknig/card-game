@@ -1,0 +1,31 @@
+import { differenceBy } from './differenceBy.ts';
+import { intersectionBy } from './intersectionBy.ts';
+import { unionBy } from './unionBy.ts';
+
+/**
+ * Computes the symmetric difference between two arrays using a custom mapping function.
+ * The symmetric difference is the set of elements which are in either of the arrays,
+ * but not in their intersection, determined by the result of the mapping function.
+ *
+ * @template T - Type of elements in the input arrays.
+ * @template U - Type of the values returned by the mapping function.
+ *
+ * @param {T[]} arr1 - The first array.
+ * @param {T[]} arr2 - The second array.
+ * @param {(item: T) => U} mapper - The function to map array elements to comparison values.
+ * @returns {T[]} An array containing the elements that are present in either `arr1` or `arr2` but not in both, based on the values returned by the mapping function.
+ *
+ * @example
+ * // Custom mapping function for objects with an 'id' property
+ * const idMapper = obj => obj.id;
+ * xorBy([{ id: 1 }, { id: 2 }], [{ id: 2 }, { id: 3 }], idMapper);
+ * // Returns [{ id: 1 }, { id: 3 }]
+ */
+export function xorBy<T, U>(arr1: readonly T[], arr2: readonly T[], mapper: (item: T) => U): T[] {
+  const union = unionBy(arr1, arr2, mapper);
+  const intersection = intersectionBy(arr1, arr2, mapper);
+
+  return differenceBy(union, intersection, mapper);
+}
+
+// denoCacheMetadata={"headers":{"server":"UploadServer","date":"Thu, 26 Jun 2025 21:45:35 GMT","expires":"Fri, 26 Jun 2026 21:45:35 GMT","age":"0","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-jsr-cache-id":"ATL","content-type":"text/typescript","x-jsr-cache-status":"revalidated","x-robots-tag":"noindex","x-guploader-uploadid":"ABgVH88lB6yFQf7D3JT54dxbHG2tPR4rCp007wpK6p_3NUy-EsRN_nloJdl7e-yQeINdHCbCbMI8QLM","x-goog-hash":"crc32c=rhbW6g==,md5=5smJDRDYJuxLIdmrsNA1XA==","x-goog-storage-class":"STANDARD","access-control-allow-origin":"*","access-control-expose-headers":"*","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","cross-origin-resource-policy":"cross-origin","x-content-type-options":"nosniff","etag":"\"e6c9890d10d826ec4b21d9abb0d0355c\"","x-goog-generation":"1741509575836143","x-goog-metageneration":"1","via":"1.1 google","cache-control":"public, max-age=31536000, immutable","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","accept-ranges":"bytes","x-goog-stored-content-length":"1360","content-length":"1360","x-goog-stored-content-encoding":"identity"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/array/xorBy.ts","time":1750974334}

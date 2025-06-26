@@ -1,0 +1,20 @@
+import { isRegExp as isRegExpToolkit } from '../../predicate/isRegExp.ts';
+
+/**
+ * Checks if `value` is a RegExp.
+ *
+ * @param {unknown} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is a RegExp, `false` otherwise.
+ *
+ * @example
+ * const value1 = /abc/;
+ * const value2 = '/abc/';
+ *
+ * console.log(isRegExp(value1)); // true
+ * console.log(isRegExp(value2)); // false
+ */
+export function isRegExp(value?: unknown): value is RegExp {
+  return isRegExpToolkit(value);
+}
+
+// denoCacheMetadata={"headers":{"age":"0","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","via":"1.1 google","x-guploader-uploadid":"ABgVH89hvSahi3-7G1zDToTeVgvzc0iXc6TM6sYfqmNw2qNDfgS9kMEXiZC4nD0YuLQO45anWcGVyqc","x-goog-generation":"1741509575721447","accept-ranges":"bytes","cache-control":"public, max-age=31536000, immutable","content-length":"498","access-control-expose-headers":"*","cross-origin-resource-policy":"cross-origin","access-control-allow-origin":"*","x-jsr-cache-status":"revalidated","x-goog-stored-content-encoding":"identity","x-goog-metageneration":"1","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-robots-tag":"noindex","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-jsr-cache-id":"ATL","x-content-type-options":"nosniff","etag":"\"dc6cc2d270c94b85a34e3d318c6aa186\"","x-goog-storage-class":"STANDARD","x-goog-stored-content-length":"498","x-goog-hash":"crc32c=/DCw5Q==,md5=3GzC0nDJS4WjTj0xjGqhhg==","server":"UploadServer","expires":"Fri, 26 Jun 2026 21:45:35 GMT","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","content-type":"text/typescript"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/predicate/isRegExp.ts","time":1750974334}

@@ -1,0 +1,12 @@
+/**
+ * An error class representing an aborted operation.
+ * @augments Error
+ */
+export class AbortError extends Error {
+  constructor(message = 'The operation was aborted') {
+    super(message);
+    this.name = 'AbortError';
+  }
+}
+
+// denoCacheMetadata={"headers":{"access-control-expose-headers":"*","x-guploader-uploadid":"ABgVH8_ohfiBM53qBwVTUkq2A09X0zLUe226p12il95SvgKHeWNmKAgEj_PDAVbftDRBP0s3lvi8OGU","x-goog-storage-class":"STANDARD","content-length":"231","server":"UploadServer","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","content-type":"text/typescript","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-goog-stored-content-encoding":"identity","x-jsr-cache-status":"revalidated","cache-control":"public, max-age=31536000, immutable","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-robots-tag":"noindex","access-control-allow-origin":"*","accept-ranges":"bytes","cross-origin-resource-policy":"cross-origin","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-hash":"crc32c=pENAmA==,md5=NLWDkEFTauvq/XHBfinU4Q==","x-jsr-cache-id":"ATL","etag":"\"34b5839041536aebeafd71c17e29d4e1\"","x-goog-metageneration":"1","x-goog-stored-content-length":"231","x-goog-generation":"1741509575600191","age":"0","x-content-type-options":"nosniff","via":"1.1 google","date":"Thu, 26 Jun 2025 21:45:35 GMT"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/error/AbortError.ts","time":1750974334}

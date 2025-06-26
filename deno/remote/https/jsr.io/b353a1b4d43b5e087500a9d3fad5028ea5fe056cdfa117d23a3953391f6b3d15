@@ -1,0 +1,51 @@
+import { range } from '../../math/range.ts';
+import { isArrayLike } from '../predicate/isArrayLike.ts';
+
+/**
+ * Creates a new object composed of the properties that satisfy the predicate function.
+ *
+ * This function takes an object and a predicate function, and returns a new object that
+ * includes only the properties for which the predicate function returns true.
+ *
+ * @template T - The type of object.
+ * @param {T} obj - The object to pick properties from.
+ * @param {(value: T[keyof T], key: keyof T) => boolean} shouldPick - A predicate function that determines
+ * whether a property should be picked. It takes the property's key and value as arguments and returns `true`
+ * if the property should be picked, and `false` otherwise.
+ * @returns {Partial<T>} A new object with the properties that satisfy the predicate function.
+ *
+ * @example
+ * const obj = { a: 1, b: 'pick', c: 3 };
+ * const shouldPick = (value) => typeof value === 'string';
+ * const result = pickBy(obj, shouldPick);
+ * // result will be { b: 'pick' }
+ */
+export function pickBy<T extends Record<string, any>>(
+  obj: T,
+  shouldPick?: (value: T[keyof T], key: keyof T, obj: T) => boolean
+): Partial<T> {
+  if (obj == null) {
+    return {};
+  }
+
+  const result: Partial<T> = {};
+
+  if (shouldPick == null) {
+    return obj;
+  }
+
+  const keys = isArrayLike(obj) ? range(0, obj.length) : (Object.keys(obj) as Array<keyof T>);
+
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i].toString() as keyof T;
+    const value = obj[key];
+
+    if (shouldPick(value, key, obj)) {
+      result[key] = value;
+    }
+  }
+
+  return result;
+}
+
+// denoCacheMetadata={"headers":{"content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-goog-stored-content-length":"1618","x-goog-hash":"crc32c=tsDgbw==,md5=mHgQkzLpp3me6GnW6QHiqQ==","expires":"Fri, 26 Jun 2026 21:45:35 GMT","via":"1.1 google","x-guploader-uploadid":"ABgVH89HkeoIzROJlBUWqlU25jzjlNAr2CBd-722VCPl-Er3pzjS4wqn4Oo7U1bB4W6HwPkaX9fyrns","cache-control":"public, max-age=31536000, immutable","server":"UploadServer","content-length":"1618","content-type":"text/typescript","age":"0","x-robots-tag":"noindex","x-goog-generation":"1741509575456612","accept-ranges":"bytes","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","access-control-allow-origin":"*","cross-origin-resource-policy":"cross-origin","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-metageneration":"1","etag":"\"9878109332e9a7799ee869d6e901e2a9\"","access-control-expose-headers":"*","x-content-type-options":"nosniff","x-goog-storage-class":"STANDARD","x-goog-stored-content-encoding":"identity","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-jsr-cache-status":"revalidated","x-jsr-cache-id":"ATL"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/object/pickBy.ts","time":1750974334}

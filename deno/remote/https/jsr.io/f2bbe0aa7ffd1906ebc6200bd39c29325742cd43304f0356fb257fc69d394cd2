@@ -1,0 +1,29 @@
+import { uniqBy } from './uniqBy.ts';
+
+/**
+ * Creates an array of unique values, in order, from all given arrays using a provided mapping function to determine equality.
+ *
+ * @template T - The type of elements in the array.
+ * @template U - The type of mapped elements.
+ * @param {T[]} arr1 - The first array.
+ * @param {T[]} arr2 - The second array.
+ * @param {(item: T) => U} mapper - The function to map array elements to comparison values.
+ * @returns {T[]} A new array containing the union of unique elements from `arr1` and `arr2`, based on the values returned by the mapping function.
+ *
+ * @example
+ * // Custom mapping function for numbers (modulo comparison)
+ * const moduloMapper = (x) => x % 3;
+ * unionBy([1, 2, 3], [4, 5, 6], moduloMapper);
+ * // Returns [1, 2, 3]
+ *
+ * @example
+ * // Custom mapping function for objects with an 'id' property
+ * const idMapper = (obj) => obj.id;
+ * unionBy([{ id: 1 }, { id: 2 }], [{ id: 2 }, { id: 3 }], idMapper);
+ * // Returns [{ id: 1 }, { id: 2 }, { id: 3 }]
+ */
+export function unionBy<T, U>(arr1: readonly T[], arr2: readonly T[], mapper: (item: T) => U): T[] {
+  return uniqBy(arr1.concat(arr2), mapper);
+}
+
+// denoCacheMetadata={"headers":{"x-goog-storage-class":"STANDARD","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-jsr-cache-id":"ATL","access-control-allow-origin":"*","date":"Thu, 26 Jun 2025 21:45:35 GMT","age":"0","x-goog-stored-content-length":"1165","access-control-expose-headers":"*","via":"1.1 google","cross-origin-resource-policy":"cross-origin","x-goog-stored-content-encoding":"identity","content-type":"text/typescript","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","cache-control":"public, max-age=31536000, immutable","x-jsr-cache-status":"revalidated","x-robots-tag":"noindex","x-content-type-options":"nosniff","last-modified":"Sun, 09 Mar 2025 08:39:34 GMT","etag":"\"8571e57ea16b86d1c4fd98b139b2405b\"","x-goog-hash":"crc32c=z+/b2g==,md5=hXHlfqFrhtHE/ZixObJAWw==","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-generation":"1741509574813975","accept-ranges":"bytes","server":"UploadServer","content-length":"1165","x-guploader-uploadid":"ABgVH88vSmH3oDRRjyT2SaNXyqdfSHbegVhdi-145L-tvwFMI-MBY63SPRSl3oUC3QtzC_I7QEaExwY","x-goog-metageneration":"1"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/array/unionBy.ts","time":1750974334}

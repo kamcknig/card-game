@@ -1,0 +1,25 @@
+/**
+ * Creates a function that invokes func, with up to n arguments, ignoring any additional arguments.
+ *
+ * @template F - The type of the function.
+ * @param {F} func - The function to cap arguments for.
+ * @param {number} n - The arity cap.
+ * @returns {(...args: any[]) => ReturnType<F>} Returns the new capped function.
+ *
+ * @example
+ * function fn(a: number, b: number, c: number) {
+ *   return Array.from(arguments);
+ * }
+ *
+ * ary(fn, 0)(1, 2, 3) // []
+ * ary(fn, 1)(1, 2, 3) // [1]
+ * ary(fn, 2)(1, 2, 3) // [1, 2]
+ * ary(fn, 3)(1, 2, 3) // [1, 2, 3]
+ */
+export function ary<F extends (...args: any[]) => any>(func: F, n: number): (...args: any[]) => ReturnType<F> {
+  return function (this: any, ...args: Parameters<F>) {
+    return func.apply(this, args.slice(0, n));
+  };
+}
+
+// denoCacheMetadata={"headers":{"x-goog-hash":"crc32c=FnpaNg==,md5=WDdWI53Mtx9YEEujbQwqxg==","accept-ranges":"bytes","cache-control":"public, max-age=31536000, immutable","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-jsr-cache-status":"revalidated","x-guploader-uploadid":"ABgVH8_z5h0jXwEwdk5zy5dmQgJshh-JzpVCr5YJXqZDHAGo8eKmRkWlM7CUkUeHJZq8i4oGSGghlqk","via":"1.1 google","date":"Thu, 26 Jun 2025 21:45:35 GMT","etag":"\"583756239dccb71f58104ba36d0c2ac6\"","x-jsr-cache-id":"ATL","cross-origin-resource-policy":"cross-origin","access-control-expose-headers":"*","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","x-robots-tag":"noindex","server":"UploadServer","x-goog-metageneration":"1","content-type":"text/typescript","x-goog-storage-class":"STANDARD","expires":"Fri, 26 Jun 2026 21:45:35 GMT","access-control-allow-origin":"*","x-goog-stored-content-encoding":"identity","x-content-type-options":"nosniff","x-goog-generation":"1741509575716217","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-stored-content-length":"787","age":"0","content-length":"787"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/function/ary.ts","time":1750974334}

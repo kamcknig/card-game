@@ -1,0 +1,36 @@
+import { isMatch } from './isMatch.ts';
+import { cloneDeep } from '../../object/cloneDeep.ts';
+
+/**
+ * Creates a function that performs a deep comparison between a given target and the source object.
+ *
+ * @param {unknown} source - The source object to create the matcher from.
+ * @returns {(target: unknown) => boolean} - Returns a function that takes a target object and returns `true` if the target matches the source, otherwise `false`.
+ *
+ * @example
+ * // Basic usage
+ * const matcher = matches({ a: 1, b: 2 });
+ * matcher({ a: 1, b: 2, c: 3 }); // true
+ * matcher({ a: 1, c: 3 }); // false
+ *
+ * @example
+ * // Matching arrays
+ * const arrayMatcher = matches([1, 2, 3]);
+ * arrayMatcher([1, 2, 3, 4]); // true
+ * arrayMatcher([4, 5, 6]); // false
+ *
+ * @example
+ * // Matching objects with nested structures
+ * const nestedMatcher = matches({ a: { b: 2 } });
+ * nestedMatcher({ a: { b: 2, c: 3 } }); // true
+ * nestedMatcher({ a: { c: 3 } }); // false
+ */
+export function matches(source: unknown): (target: unknown) => boolean {
+  source = cloneDeep(source);
+
+  return (target?: unknown): boolean => {
+    return isMatch(target, source);
+  };
+}
+
+// denoCacheMetadata={"headers":{"x-content-type-options":"nosniff","last-modified":"Sun, 09 Mar 2025 08:39:34 GMT","x-goog-stored-content-encoding":"identity","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-jsr-cache-status":"revalidated","access-control-allow-origin":"*","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","access-control-expose-headers":"*","accept-ranges":"bytes","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-stored-content-length":"1152","content-type":"text/typescript","content-length":"1152","age":"0","x-goog-generation":"1741509574494580","server":"UploadServer","x-goog-hash":"crc32c=PZlY1w==,md5=iD0iMopoeqF+kpV08pwKcQ==","x-goog-storage-class":"STANDARD","via":"1.1 google","x-guploader-uploadid":"ABgVH8_GhnUpaiEoGiNF6VmnnQu6g_Vs6L6kp9gk5_rrQEo8HM7Ok9qsbuA50jPKnxo0wWwFjBktm50","date":"Thu, 26 Jun 2025 21:45:35 GMT","etag":"\"883d22328a687aa17e929574f29c0a71\"","x-jsr-cache-id":"ATL","x-goog-metageneration":"1","cache-control":"public, max-age=31536000, immutable","x-robots-tag":"noindex","cross-origin-resource-policy":"cross-origin"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/predicate/matches.ts","time":1750974334}

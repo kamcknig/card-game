@@ -1,0 +1,30 @@
+/**
+ * Reverses the elements of an array in place.
+ *
+ * This function takes an array and reverses its elements in place, modifying the original array.
+ * If the input is `null` or `undefined`, it returns the input as is.
+ *
+ * @template T - The type of elements in the array.
+ * @param {T[] | null | undefined} array - The array to reverse. If `null` or `undefined`, the input is returned as is.
+ * @returns {T[] | null | undefined} The reversed array, or `null`/`undefined` if the input was `null`/`undefined`.
+ *
+ * @example
+ * const array = [1, 2, 3, 4, 5];
+ * const reversedArray = reverse(array);
+ * // reversedArray is [5, 4, 3, 2, 1], and array is also modified to [5, 4, 3, 2, 1].
+ *
+ * const emptyArray = reverse([]);
+ * // emptyArray is [].
+ *
+ * const nullArray = reverse(null);
+ * // nullArray is null.
+ */
+export function reverse<T>(array: T[] | null | undefined): T[] | null | undefined {
+  if (array == null) {
+    return array;
+  }
+
+  return array.reverse();
+}
+
+// denoCacheMetadata={"headers":{"x-goog-stored-content-length":"978","x-goog-stored-content-encoding":"identity","x-goog-storage-class":"STANDARD","date":"Thu, 26 Jun 2025 21:45:35 GMT","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","etag":"\"26120abf8e4f178974d774f50cb86982\"","content-type":"text/typescript","x-goog-generation":"1741509575222596","age":"0","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-jsr-cache-status":"revalidated","access-control-allow-origin":"*","x-goog-hash":"crc32c=+WRZhA==,md5=JhIKv45PF4l013T1DLhpgg==","x-jsr-cache-id":"ATL","expires":"Fri, 26 Jun 2026 21:45:35 GMT","access-control-expose-headers":"*","cross-origin-resource-policy":"cross-origin","x-content-type-options":"nosniff","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","cache-control":"public, max-age=31536000, immutable","x-robots-tag":"noindex","accept-ranges":"bytes","x-guploader-uploadid":"ABgVH89igwkmSI7U2Jip8No0kxS4kzD69l5Nnk5c8qLo3oLcor6YgZferMoJrA1BnGqZKGfZuczd0qY","server":"UploadServer","via":"1.1 google","content-length":"978","x-goog-metageneration":"1"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/array/reverse.ts","time":1750974334}

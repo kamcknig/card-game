@@ -1,0 +1,19 @@
+import { escapeRegExp as escapeRegExpToolkit } from '../../string/escapeRegExp.ts';
+import { toString } from '../util/toString.ts';
+
+/**
+ * Escapes the RegExp special characters "^", "$", "\\", ".", "*", "+", "?", "(", ")", "[", "]", "{", "}", and "|" in `str`.
+ *
+ * @param {string} str The string to escape.
+ * @returns {string} Returns the escaped string.
+ *
+ * @example
+ * import { escapeRegExp } from 'es-toolkit/string';
+ *
+ * escapeRegExp('[es-toolkit](https://es-toolkit.slash.page/)'); // returns '\[es-toolkit\]\(https://es-toolkit\.slash\.page/\)'
+ */
+export function escapeRegExp(str?: string): string {
+  return escapeRegExpToolkit(toString(str));
+}
+
+// denoCacheMetadata={"headers":{"x-goog-hash":"crc32c=X0jLSg==,md5=U04DDObhwDaDZ5zGG2jbKg==","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","content-length":"663","content-type":"text/typescript","x-jsr-cache-status":"revalidated","access-control-allow-origin":"*","cross-origin-resource-policy":"cross-origin","x-robots-tag":"noindex","via":"1.1 google","server":"UploadServer","cache-control":"public, max-age=31536000, immutable","x-goog-generation":"1741509575346776","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","access-control-expose-headers":"*","x-content-type-options":"nosniff","x-goog-storage-class":"STANDARD","accept-ranges":"bytes","x-goog-metageneration":"1","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-jsr-cache-id":"ATL","x-guploader-uploadid":"ABgVH88BelM9AmlpMKmrk79sV8_IrKkmTn5VvWgTNyl706WnEvkCWNaZo9ROtXmIzAb_lR-LE5eiWFY","x-goog-stored-content-encoding":"identity","x-goog-stored-content-length":"663","etag":"\"534e030ce6e1c03683679cc61b68db2a\"","expires":"Fri, 26 Jun 2026 21:45:35 GMT","age":"0","date":"Thu, 26 Jun 2025 21:45:35 GMT"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/string/escapeRegExp.ts","time":1750974334}

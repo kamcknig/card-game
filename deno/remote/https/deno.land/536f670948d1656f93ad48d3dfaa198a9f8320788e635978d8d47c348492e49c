@@ -1,0 +1,62 @@
+// Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
+// This module is browser compatible.
+
+/** Get log level numeric values through enum constants */
+export enum LogLevels {
+  NOTSET = 0,
+  DEBUG = 10,
+  INFO = 20,
+  WARNING = 30,
+  ERROR = 40,
+  CRITICAL = 50,
+}
+
+/** Permitted log level names */
+export const LogLevelNames = Object.keys(LogLevels).filter((key) =>
+  isNaN(Number(key))
+);
+
+/** Union of valid log level strings */
+export type LevelName = keyof typeof LogLevels;
+
+const byLevel: Record<string, LevelName> = {
+  [String(LogLevels.NOTSET)]: "NOTSET",
+  [String(LogLevels.DEBUG)]: "DEBUG",
+  [String(LogLevels.INFO)]: "INFO",
+  [String(LogLevels.WARNING)]: "WARNING",
+  [String(LogLevels.ERROR)]: "ERROR",
+  [String(LogLevels.CRITICAL)]: "CRITICAL",
+};
+
+/** Returns the numeric log level associated with the passed,
+ * stringy log level name.
+ */
+export function getLevelByName(name: LevelName): number {
+  switch (name) {
+    case "NOTSET":
+      return LogLevels.NOTSET;
+    case "DEBUG":
+      return LogLevels.DEBUG;
+    case "INFO":
+      return LogLevels.INFO;
+    case "WARNING":
+      return LogLevels.WARNING;
+    case "ERROR":
+      return LogLevels.ERROR;
+    case "CRITICAL":
+      return LogLevels.CRITICAL;
+    default:
+      throw new Error(`no log level found for "${name}"`);
+  }
+}
+
+/** Returns the stringy log level name provided the numeric log level */
+export function getLevelName(level: number): LevelName {
+  const levelName = byLevel[level];
+  if (levelName) {
+    return levelName;
+  }
+  throw new Error(`no level name found for level: ${level}`);
+}
+
+// denoCacheMetadata={"headers":{"cache-control":"public, max-age=31536000, immutable","date":"Mon, 22 Jul 2024 20:12:07 GMT","cross-origin-resource-policy":"same-origin","via":"http/2 edgeproxy-h","x-amz-cf-id":"vax80xgFMciM8Rinwkmiku7VJdWRTJt3MSBb74zex54GmmOJqj9WHg==","age":"29295208","x-amz-cf-pop":"IAD61-P1","referrer-policy":"strict-origin-when-cross-origin","accept-ranges":"bytes","last-modified":"Thu, 28 Jul 2022 16:20:41 GMT","access-control-allow-origin":"*","strict-transport-security":"max-age=63072000; includeSubDomains; preload","x-amz-replication-status":"COMPLETED","x-cache":"Hit from cloudfront","x-content-type-options":"nosniff","x-amz-version-id":"is5NAjiCg.zerTfDIfSVPGId2gPySkfz","content-type":"application/typescript; charset=utf-8","content-security-policy":"default-src 'none'; style-src 'unsafe-inline'; sandbox","server-timing":"fetchSource;dur=18","etag":"\"dfc7fde93b2c8fd2479239b4922041e6\"","content-length":"1611","x-frame-options":"DENY","cross-origin-embedder-policy":"same-origin","cross-origin-opener-policy":"same-origin","server":"deno/gcp-us-east4","vary":"Accept-Encoding, Origin"},"url":"https://deno.land/std@0.150.0/log/levels.ts","time":1750974333}

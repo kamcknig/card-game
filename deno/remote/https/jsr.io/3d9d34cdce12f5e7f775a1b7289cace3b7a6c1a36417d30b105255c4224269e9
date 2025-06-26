@@ -1,0 +1,25 @@
+import { get } from './get.ts';
+
+/**
+ * Creates a function that returns the value at a given path of an object.
+ *
+ * @param {PropertyKey | PropertyKey[]} path - The path of the property to get.
+ * @returns {(object: unknown) => any} - Returns a new function that takes an object and returns the value at the specified path.
+ *
+ * @example
+ * const getObjectValue = property('a.b.c');
+ * const result = getObjectValue({ a: { b: { c: 3 } } });
+ * console.log(result); // => 3
+ *
+ * @example
+ * const getObjectValue = property(['a', 'b', 'c']);
+ * const result = getObjectValue({ a: { b: { c: 3 } } });
+ * console.log(result); // => 3
+ */
+export function property(path: PropertyKey | readonly PropertyKey[]): (object: unknown) => any {
+  return function (object: unknown) {
+    return get(object, path);
+  };
+}
+
+// denoCacheMetadata={"headers":{"etag":"\"a370a3bf8182c87d1cbaffd0445cd6af\"","content-length":"809","x-content-type-options":"nosniff","x-goog-metageneration":"1","access-control-expose-headers":"*","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-goog-hash":"crc32c=aJ0fiw==,md5=o3Cjv4GCyH0cuv/QRFzWrw==","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","age":"0","x-goog-generation":"1741509574971288","x-goog-stored-content-encoding":"identity","server":"UploadServer","date":"Thu, 26 Jun 2025 21:45:35 GMT","via":"1.1 google","content-type":"text/typescript","x-robots-tag":"noindex","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","access-control-allow-origin":"*","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-storage-class":"STANDARD","x-guploader-uploadid":"ABgVH8-c9YdrxPA2QzTnanjAx2GZAWT9DgLGNb-N0PHzXJytVD6jRAk0-DutYkrBsDcUvQ9XR2JKRfQ","cache-control":"public, max-age=31536000, immutable","x-goog-stored-content-length":"809","x-jsr-cache-id":"ATL","x-jsr-cache-status":"revalidated","accept-ranges":"bytes","cross-origin-resource-policy":"cross-origin"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/object/property.ts","time":1750974334}

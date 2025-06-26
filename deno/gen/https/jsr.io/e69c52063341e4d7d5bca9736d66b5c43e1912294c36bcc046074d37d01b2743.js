@@ -1,0 +1,11 @@
+/**
+ * An error class representing an timeout operation.
+ * @augments Error
+ */ export class TimeoutError extends Error {
+  constructor(message = 'The operation was timed out'){
+    super(message);
+    this.name = 'TimeoutError';
+  }
+}
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImh0dHBzOi8vanNyLmlvL0Blcy10b29sa2l0L2VzLXRvb2xraXQvMS4zMy4wL3NyYy9lcnJvci9UaW1lb3V0RXJyb3IudHMiXSwic291cmNlc0NvbnRlbnQiOlsiLyoqXG4gKiBBbiBlcnJvciBjbGFzcyByZXByZXNlbnRpbmcgYW4gdGltZW91dCBvcGVyYXRpb24uXG4gKiBAYXVnbWVudHMgRXJyb3JcbiAqL1xuZXhwb3J0IGNsYXNzIFRpbWVvdXRFcnJvciBleHRlbmRzIEVycm9yIHtcbiAgY29uc3RydWN0b3IobWVzc2FnZSA9ICdUaGUgb3BlcmF0aW9uIHdhcyB0aW1lZCBvdXQnKSB7XG4gICAgc3VwZXIobWVzc2FnZSk7XG4gICAgdGhpcy5uYW1lID0gJ1RpbWVvdXRFcnJvcic7XG4gIH1cbn1cbiJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiQUFBQTs7O0NBR0MsR0FDRCxPQUFPLE1BQU0scUJBQXFCO0VBQ2hDLFlBQVksVUFBVSw2QkFBNkIsQ0FBRTtJQUNuRCxLQUFLLENBQUM7SUFDTixJQUFJLENBQUMsSUFBSSxHQUFHO0VBQ2Q7QUFDRiJ9
+// denoCacheMetadata=9808342948628198822,7446744138359739623

@@ -1,0 +1,19 @@
+import { lowerFirst as lowerFirstToolkit } from '../../string/lowerFirst.ts';
+import { toString } from '../util/toString.ts';
+
+/**
+ * Converts the first character of string to lower case.
+ *
+ * @param {string} str - The string that is to be changed
+ * @returns {string} - The converted string.
+ *
+ * @example
+ * const convertedStr1 = lowerCase('fred') // returns 'fred'
+ * const convertedStr2 = lowerCase('Fred') // returns 'fred'
+ * const convertedStr3 = lowerCase('FRED') // returns 'fRED'
+ */
+export function lowerFirst(str?: string): string {
+  return lowerFirstToolkit(toString(str));
+}
+
+// denoCacheMetadata={"headers":{"x-goog-hash":"crc32c=2I2h1Q==,md5=XbqcVOCE0KjuWZD/qY4YSQ==","cross-origin-resource-policy":"cross-origin","x-robots-tag":"noindex","server":"UploadServer","via":"1.1 google","cache-control":"public, max-age=31536000, immutable","x-guploader-uploadid":"ABgVH8_0VNRagcyONEF0PwNYUq5ehBjoMQyrw7148g0ElBiFa-13SxnwlikdcMDhVX76Dw-rCJpiyyc","x-jsr-cache-id":"ATL","x-goog-metageneration":"1","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","content-length":"592","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","content-type":"text/typescript","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-goog-generation":"1741509575060446","x-goog-storage-class":"STANDARD","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-goog-stored-content-length":"592","access-control-allow-origin":"*","x-goog-stored-content-encoding":"identity","x-content-type-options":"nosniff","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","accept-ranges":"bytes","age":"0","etag":"\"5dba9c54e084d0a8ee5990ffa98e1849\"","x-jsr-cache-status":"revalidated","access-control-expose-headers":"*"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/string/lowerFirst.ts","time":1750974334}

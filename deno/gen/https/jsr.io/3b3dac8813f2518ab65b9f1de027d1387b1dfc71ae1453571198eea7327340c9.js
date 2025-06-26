@@ -1,0 +1,63 @@
+/**
+ * Fills the whole array with a specified value.
+ *
+ * This function mutates the original array and replaces its elements with the provided value, starting from the specified
+ * start index up to the end index (non-inclusive). If the start or end indices are not provided, it defaults to filling the
+ * entire array.
+ *
+ * @template T, U
+ * @param {Array<T | U>} array - The array to fill.
+ * @param {U} value - The value to fill the array with.
+ * @returns {Array<T | U>} The array with the filled values.
+ *
+ * @example
+ * const array = [1, 2, 3];
+ * const result = fill(array, 'a');
+ * // => ['a', 'a', 'a']
+ *
+ * const result = fill(Array(3), 2);
+ * // => [2, 2, 2]
+ *
+ * const result = fill([4, 6, 8, 10], '*', 1, 3);
+ * // => [4, '*', '*', 10]
+ *
+ * const result = fill(array, '*', -2, -1);
+ * // => [1, '*', 3]
+ */ /**
+ * Fills elements of an array with a specified value from the start position up to, but not including, the end position.
+ *
+ * This function mutates the original array and replaces its elements with the provided value, starting from the specified
+ * start index up to the end index (non-inclusive). If the start or end indices are not provided, it defaults to filling the
+ * entire array.
+ *
+ * @template T, U
+ * @param {Array<T | U>} array - The array to fill.
+ * @param {U} value - The value to fill the array with.
+ * @param {number} [start=0] - The start position. Defaults to 0.
+ * @param {number} [end=arr.length] - The end position. Defaults to the array's length.
+ * @returns {Array<T | U>} The array with the filled values.
+ *
+ * @example
+ * const array = [1, 2, 3];
+ * const result = fill(array, 'a');
+ * // => ['a', 'a', 'a']
+ *
+ * const result = fill(Array(3), 2);
+ * // => [2, 2, 2]
+ *
+ * const result = fill([4, 6, 8, 10], '*', 1, 3);
+ * // => [4, '*', '*', 10]
+ *
+ * const result = fill(array, '*', -2, -1);
+ * // => [1, '*', 3]
+ */ export function fill(array, value, start = 0, end = array.length) {
+  const length = array.length;
+  const finalStart = Math.max(start >= 0 ? start : length + start, 0);
+  const finalEnd = Math.min(end >= 0 ? end : length + end, length);
+  for(let i = finalStart; i < finalEnd; i++){
+    array[i] = value;
+  }
+  return array;
+}
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImh0dHBzOi8vanNyLmlvL0Blcy10b29sa2l0L2VzLXRvb2xraXQvMS4zMy4wL3NyYy9hcnJheS9maWxsLnRzIl0sInNvdXJjZXNDb250ZW50IjpbIi8qKlxuICogRmlsbHMgdGhlIHdob2xlIGFycmF5IHdpdGggYSBzcGVjaWZpZWQgdmFsdWUuXG4gKlxuICogVGhpcyBmdW5jdGlvbiBtdXRhdGVzIHRoZSBvcmlnaW5hbCBhcnJheSBhbmQgcmVwbGFjZXMgaXRzIGVsZW1lbnRzIHdpdGggdGhlIHByb3ZpZGVkIHZhbHVlLCBzdGFydGluZyBmcm9tIHRoZSBzcGVjaWZpZWRcbiAqIHN0YXJ0IGluZGV4IHVwIHRvIHRoZSBlbmQgaW5kZXggKG5vbi1pbmNsdXNpdmUpLiBJZiB0aGUgc3RhcnQgb3IgZW5kIGluZGljZXMgYXJlIG5vdCBwcm92aWRlZCwgaXQgZGVmYXVsdHMgdG8gZmlsbGluZyB0aGVcbiAqIGVudGlyZSBhcnJheS5cbiAqXG4gKiBAdGVtcGxhdGUgVCwgVVxuICogQHBhcmFtIHtBcnJheTxUIHwgVT59IGFycmF5IC0gVGhlIGFycmF5IHRvIGZpbGwuXG4gKiBAcGFyYW0ge1V9IHZhbHVlIC0gVGhlIHZhbHVlIHRvIGZpbGwgdGhlIGFycmF5IHdpdGguXG4gKiBAcmV0dXJucyB7QXJyYXk8VCB8IFU+fSBUaGUgYXJyYXkgd2l0aCB0aGUgZmlsbGVkIHZhbHVlcy5cbiAqXG4gKiBAZXhhbXBsZVxuICogY29uc3QgYXJyYXkgPSBbMSwgMiwgM107XG4gKiBjb25zdCByZXN1bHQgPSBmaWxsKGFycmF5LCAnYScpO1xuICogLy8gPT4gWydhJywgJ2EnLCAnYSddXG4gKlxuICogY29uc3QgcmVzdWx0ID0gZmlsbChBcnJheSgzKSwgMik7XG4gKiAvLyA9PiBbMiwgMiwgMl1cbiAqXG4gKiBjb25zdCByZXN1bHQgPSBmaWxsKFs0LCA2LCA4LCAxMF0sICcqJywgMSwgMyk7XG4gKiAvLyA9PiBbNCwgJyonLCAnKicsIDEwXVxuICpcbiAqIGNvbnN0IHJlc3VsdCA9IGZpbGwoYXJyYXksICcqJywgLTIsIC0xKTtcbiAqIC8vID0+IFsxLCAnKicsIDNdXG4gKi9cbmV4cG9ydCBmdW5jdGlvbiBmaWxsPFQ+KGFycmF5OiB1bmtub3duW10sIHZhbHVlOiBUKTogVFtdO1xuLyoqXG4gKiBGaWxscyBlbGVtZW50cyBvZiBhbiBhcnJheSB3aXRoIGEgc3BlY2lmaWVkIHZhbHVlIGZyb20gdGhlIHN0YXJ0IHBvc2l0aW9uIHVwIHRvIHRoZSBlbmQgb2YgdGhlIGFycmF5LlxuICpcbiAqIFRoaXMgZnVuY3Rpb24gbXV0YXRlcyB0aGUgb3JpZ2luYWwgYXJyYXkgYW5kIHJlcGxhY2VzIGl0cyBlbGVtZW50cyB3aXRoIHRoZSBwcm92aWRlZCB2YWx1ZSwgc3RhcnRpbmcgZnJvbSB0aGUgc3BlY2lmaWVkXG4gKiBzdGFydCBpbmRleCB1cCB0byB0aGUgZW5kIGluZGV4IChub24taW5jbHVzaXZlKS4gSWYgdGhlIHN0YXJ0IG9yIGVuZCBpbmRpY2VzIGFyZSBub3QgcHJvdmlkZWQsIGl0IGRlZmF1bHRzIHRvIGZpbGxpbmcgdGhlXG4gKiBlbnRpcmUgYXJyYXkuXG4gKlxuICogQHRlbXBsYXRlIFQsIFVcbiAqIEBwYXJhbSB7QXJyYXk8VCB8IFU+fSBhcnJheSAtIFRoZSBhcnJheSB0byBmaWxsLlxuICogQHBhcmFtIHtVfSB2YWx1ZSAtIFRoZSB2YWx1ZSB0byBmaWxsIHRoZSBhcnJheSB3aXRoLlxuICogQHBhcmFtIHtudW1iZXJ9IFtzdGFydD0wXSAtIFRoZSBzdGFydCBwb3NpdGlvbi4gRGVmYXVsdHMgdG8gMC5cbiAqIEByZXR1cm5zIHtBcnJheTxUIHwgVT59IFRoZSBhcnJheSB3aXRoIHRoZSBmaWxsZWQgdmFsdWVzLlxuICpcbiAqIEBleGFtcGxlXG4gKiBjb25zdCBhcnJheSA9IFsxLCAyLCAzXTtcbiAqIGNvbnN0IHJlc3VsdCA9IGZpbGwoYXJyYXksICdhJyk7XG4gKiAvLyA9PiBbJ2EnLCAnYScsICdhJ11cbiAqXG4gKiBjb25zdCByZXN1bHQgPSBmaWxsKEFycmF5KDMpLCAyKTtcbiAqIC8vID0+IFsyLCAyLCAyXVxuICpcbiAqIGNvbnN0IHJlc3VsdCA9IGZpbGwoWzQsIDYsIDgsIDEwXSwgJyonLCAxLCAzKTtcbiAqIC8vID0+IFs0LCAnKicsICcqJywgMTBdXG4gKlxuICogY29uc3QgcmVzdWx0ID0gZmlsbChhcnJheSwgJyonLCAtMiwgLTEpO1xuICogLy8gPT4gWzEsICcqJywgM11cbiAqL1xuZXhwb3J0IGZ1bmN0aW9uIGZpbGw8VCwgVT4oYXJyYXk6IEFycmF5PFQgfCBVPiwgdmFsdWU6IFUsIHN0YXJ0OiBudW1iZXIpOiBBcnJheTxUIHwgVT47XG4vKipcbiAqIEZpbGxzIGVsZW1lbnRzIG9mIGFuIGFycmF5IHdpdGggYSBzcGVjaWZpZWQgdmFsdWUgZnJvbSB0aGUgc3RhcnQgcG9zaXRpb24gdXAgdG8sIGJ1dCBub3QgaW5jbHVkaW5nLCB0aGUgZW5kIHBvc2l0aW9uLlxuICpcbiAqIFRoaXMgZnVuY3Rpb24gbXV0YXRlcyB0aGUgb3JpZ2luYWwgYXJyYXkgYW5kIHJlcGxhY2VzIGl0cyBlbGVtZW50cyB3aXRoIHRoZSBwcm92aWRlZCB2YWx1ZSwgc3RhcnRpbmcgZnJvbSB0aGUgc3BlY2lmaWVkXG4gKiBzdGFydCBpbmRleCB1cCB0byB0aGUgZW5kIGluZGV4IChub24taW5jbHVzaXZlKS4gSWYgdGhlIHN0YXJ0IG9yIGVuZCBpbmRpY2VzIGFyZSBub3QgcHJvdmlkZWQsIGl0IGRlZmF1bHRzIHRvIGZpbGxpbmcgdGhlXG4gKiBlbnRpcmUgYXJyYXkuXG4gKlxuICogQHRlbXBsYXRlIFQsIFVcbiAqIEBwYXJhbSB7QXJyYXk8VCB8IFU+fSBhcnJheSAtIFRoZSBhcnJheSB0byBmaWxsLlxuICogQHBhcmFtIHtVfSB2YWx1ZSAtIFRoZSB2YWx1ZSB0byBmaWxsIHRoZSBhcnJheSB3aXRoLlxuICogQHBhcmFtIHtudW1iZXJ9IFtzdGFydD0wXSAtIFRoZSBzdGFydCBwb3NpdGlvbi4gRGVmYXVsdHMgdG8gMC5cbiAqIEBwYXJhbSB7bnVtYmVyfSBbZW5kPWFyci5sZW5ndGhdIC0gVGhlIGVuZCBwb3NpdGlvbi4gRGVmYXVsdHMgdG8gdGhlIGFycmF5J3MgbGVuZ3RoLlxuICogQHJldHVybnMge0FycmF5PFQgfCBVPn0gVGhlIGFycmF5IHdpdGggdGhlIGZpbGxlZCB2YWx1ZXMuXG4gKlxuICogQGV4YW1wbGVcbiAqIGNvbnN0IGFycmF5ID0gWzEsIDIsIDNdO1xuICogY29uc3QgcmVzdWx0ID0gZmlsbChhcnJheSwgJ2EnKTtcbiAqIC8vID0+IFsnYScsICdhJywgJ2EnXVxuICpcbiAqIGNvbnN0IHJlc3VsdCA9IGZpbGwoQXJyYXkoMyksIDIpO1xuICogLy8gPT4gWzIsIDIsIDJdXG4gKlxuICogY29uc3QgcmVzdWx0ID0gZmlsbChbNCwgNiwgOCwgMTBdLCAnKicsIDEsIDMpO1xuICogLy8gPT4gWzQsICcqJywgJyonLCAxMF1cbiAqXG4gKiBjb25zdCByZXN1bHQgPSBmaWxsKGFycmF5LCAnKicsIC0yLCAtMSk7XG4gKiAvLyA9PiBbMSwgJyonLCAzXVxuICovXG5leHBvcnQgZnVuY3Rpb24gZmlsbDxULCBVPihhcnJheTogQXJyYXk8VCB8IFU+LCB2YWx1ZTogVSwgc3RhcnQ6IG51bWJlciwgZW5kOiBudW1iZXIpOiBBcnJheTxUIHwgVT47XG4vKipcbiAqIEZpbGxzIGVsZW1lbnRzIG9mIGFuIGFycmF5IHdpdGggYSBzcGVjaWZpZWQgdmFsdWUgZnJvbSB0aGUgc3RhcnQgcG9zaXRpb24gdXAgdG8sIGJ1dCBub3QgaW5jbHVkaW5nLCB0aGUgZW5kIHBvc2l0aW9uLlxuICpcbiAqIFRoaXMgZnVuY3Rpb24gbXV0YXRlcyB0aGUgb3JpZ2luYWwgYXJyYXkgYW5kIHJlcGxhY2VzIGl0cyBlbGVtZW50cyB3aXRoIHRoZSBwcm92aWRlZCB2YWx1ZSwgc3RhcnRpbmcgZnJvbSB0aGUgc3BlY2lmaWVkXG4gKiBzdGFydCBpbmRleCB1cCB0byB0aGUgZW5kIGluZGV4IChub24taW5jbHVzaXZlKS4gSWYgdGhlIHN0YXJ0IG9yIGVuZCBpbmRpY2VzIGFyZSBub3QgcHJvdmlkZWQsIGl0IGRlZmF1bHRzIHRvIGZpbGxpbmcgdGhlXG4gKiBlbnRpcmUgYXJyYXkuXG4gKlxuICogQHRlbXBsYXRlIFQsIFVcbiAqIEBwYXJhbSB7QXJyYXk8VCB8IFU+fSBhcnJheSAtIFRoZSBhcnJheSB0byBmaWxsLlxuICogQHBhcmFtIHtVfSB2YWx1ZSAtIFRoZSB2YWx1ZSB0byBmaWxsIHRoZSBhcnJheSB3aXRoLlxuICogQHBhcmFtIHtudW1iZXJ9IFtzdGFydD0wXSAtIFRoZSBzdGFydCBwb3NpdGlvbi4gRGVmYXVsdHMgdG8gMC5cbiAqIEBwYXJhbSB7bnVtYmVyfSBbZW5kPWFyci5sZW5ndGhdIC0gVGhlIGVuZCBwb3NpdGlvbi4gRGVmYXVsdHMgdG8gdGhlIGFycmF5J3MgbGVuZ3RoLlxuICogQHJldHVybnMge0FycmF5PFQgfCBVPn0gVGhlIGFycmF5IHdpdGggdGhlIGZpbGxlZCB2YWx1ZXMuXG4gKlxuICogQGV4YW1wbGVcbiAqIGNvbnN0IGFycmF5ID0gWzEsIDIsIDNdO1xuICogY29uc3QgcmVzdWx0ID0gZmlsbChhcnJheSwgJ2EnKTtcbiAqIC8vID0+IFsnYScsICdhJywgJ2EnXVxuICpcbiAqIGNvbnN0IHJlc3VsdCA9IGZpbGwoQXJyYXkoMyksIDIpO1xuICogLy8gPT4gWzIsIDIsIDJdXG4gKlxuICogY29uc3QgcmVzdWx0ID0gZmlsbChbNCwgNiwgOCwgMTBdLCAnKicsIDEsIDMpO1xuICogLy8gPT4gWzQsICcqJywgJyonLCAxMF1cbiAqXG4gKiBjb25zdCByZXN1bHQgPSBmaWxsKGFycmF5LCAnKicsIC0yLCAtMSk7XG4gKiAvLyA9PiBbMSwgJyonLCAzXVxuICovXG5leHBvcnQgZnVuY3Rpb24gZmlsbDxULCBVPihhcnJheTogQXJyYXk8VCB8IFU+LCB2YWx1ZTogVSwgc3RhcnQgPSAwLCBlbmQgPSBhcnJheS5sZW5ndGgpOiBBcnJheTxUIHwgVT4ge1xuICBjb25zdCBsZW5ndGggPSBhcnJheS5sZW5ndGg7XG4gIGNvbnN0IGZpbmFsU3RhcnQgPSBNYXRoLm1heChzdGFydCA+PSAwID8gc3RhcnQgOiBsZW5ndGggKyBzdGFydCwgMCk7XG4gIGNvbnN0IGZpbmFsRW5kID0gTWF0aC5taW4oZW5kID49IDAgPyBlbmQgOiBsZW5ndGggKyBlbmQsIGxlbmd0aCk7XG5cbiAgZm9yIChsZXQgaSA9IGZpbmFsU3RhcnQ7IGkgPCBmaW5hbEVuZDsgaSsrKSB7XG4gICAgYXJyYXlbaV0gPSB2YWx1ZTtcbiAgfVxuXG4gIHJldHVybiBhcnJheTtcbn1cbiJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiQUFBQTs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7OztDQXlCQyxHQTJERDs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7O0NBMkJDLEdBQ0QsT0FBTyxTQUFTLEtBQVcsS0FBbUIsRUFBRSxLQUFRLEVBQUUsUUFBUSxDQUFDLEVBQUUsTUFBTSxNQUFNLE1BQU07RUFDckYsTUFBTSxTQUFTLE1BQU0sTUFBTTtFQUMzQixNQUFNLGFBQWEsS0FBSyxHQUFHLENBQUMsU0FBUyxJQUFJLFFBQVEsU0FBUyxPQUFPO0VBQ2pFLE1BQU0sV0FBVyxLQUFLLEdBQUcsQ0FBQyxPQUFPLElBQUksTUFBTSxTQUFTLEtBQUs7RUFFekQsSUFBSyxJQUFJLElBQUksWUFBWSxJQUFJLFVBQVUsSUFBSztJQUMxQyxLQUFLLENBQUMsRUFBRSxHQUFHO0VBQ2I7RUFFQSxPQUFPO0FBQ1QifQ==
+// denoCacheMetadata=6456800006661182161,14318386131439100538

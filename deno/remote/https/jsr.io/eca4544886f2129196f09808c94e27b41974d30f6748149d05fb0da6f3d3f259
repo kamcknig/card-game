@@ -1,0 +1,27 @@
+import { toFinite } from './toFinite.ts';
+
+/**
+ * Converts `value` to an integer.
+ *
+ * This function first converts `value` to a finite number. If the result has any decimal places,
+ * they are removed by rounding down to the nearest whole number.
+ *
+ * @param {unknown} value - The value to convert.
+ * @returns {number} Returns the number.
+ *
+ * @example
+ * toInteger(3.2); // => 3
+ * toInteger(Number.MIN_VALUE); // => 0
+ * toInteger(Infinity); // => 1.7976931348623157e+308
+ * toInteger('3.2'); // => 3
+ * toInteger(Symbol.iterator); // => 0
+ * toInteger(NaN); // => 0
+ */
+export function toInteger(value?: unknown): number {
+  const finite = toFinite(value);
+  const remainder = finite % 1;
+
+  return remainder ? finite - remainder : finite;
+}
+
+// denoCacheMetadata={"headers":{"x-guploader-uploadid":"ABgVH886sY9fWHZMDfObvKFT5pjszEJDXKvrJXvfgQJsPsddopQC3AGIJbQZ3ORi3ftOSgLJ2DJB4DA","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","x-goog-metageneration":"1","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-goog-hash":"crc32c=gg9RZg==,md5=ETJTNVeFa6XSWyd+Yx6fIg==","x-goog-stored-content-length":"750","content-length":"750","x-goog-stored-content-encoding":"identity","date":"Thu, 26 Jun 2025 21:45:35 GMT","cache-control":"public, max-age=31536000, immutable","etag":"\"1132533557856ba5d25b277e631e9f22\"","age":"0","x-jsr-cache-id":"ATL","content-type":"text/typescript","x-robots-tag":"noindex","x-content-type-options":"nosniff","server":"UploadServer","x-goog-storage-class":"STANDARD","x-jsr-cache-status":"revalidated","cross-origin-resource-policy":"cross-origin","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","via":"1.1 google","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","access-control-expose-headers":"*","access-control-allow-origin":"*","accept-ranges":"bytes","x-goog-generation":"1741509575715266"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/util/toInteger.ts","time":1750974334}

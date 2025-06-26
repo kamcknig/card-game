@@ -1,0 +1,24 @@
+import { CASE_SPLIT_PATTERN } from '../../string/words.ts';
+import { toString } from '../util/toString.ts';
+
+/**
+ * Splits `string` into an array of its words.
+ *
+ * @param {string | object} str - The string or object that is to be split into words.
+ * @param {RegExp | string} [pattern] - The pattern to match words.
+ * @returns {string[]} - Returns the words of `string`.
+ *
+ * @example
+ * const wordsArray1 = words('fred, barney, & pebbles');
+ * // => ['fred', 'barney', 'pebbles']
+ *
+ */
+export function words(str?: string | object, pattern: RegExp | string = CASE_SPLIT_PATTERN): string[] {
+  const input = toString(str);
+
+  const words = Array.from(input.match(pattern) ?? []);
+
+  return words.filter(x => x !== '');
+}
+
+// denoCacheMetadata={"headers":{"expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-goog-stored-content-encoding":"identity","x-robots-tag":"noindex","x-goog-stored-content-length":"725","via":"1.1 google","etag":"\"aaad7f8dcaaae5dcababf0f5e7fcb16a\"","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","access-control-allow-origin":"*","x-jsr-cache-status":"revalidated","x-goog-metageneration":"1","x-goog-storage-class":"STANDARD","x-goog-generation":"1741509575043600","date":"Thu, 26 Jun 2025 21:45:35 GMT","content-type":"text/typescript","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","access-control-expose-headers":"*","cross-origin-resource-policy":"cross-origin","accept-ranges":"bytes","x-content-type-options":"nosniff","server":"UploadServer","cache-control":"public, max-age=31536000, immutable","x-guploader-uploadid":"ABgVH89FsOhrY_pCswevNFZQ2c-ZeNWHAQqVB-YyehIKHZ2o3Pj74OrNTei8zYh3CuWCvAtU3unIjMs","x-goog-hash":"crc32c=/aG3gg==,md5=qq1/jcqq5dyrq/D15/yxag==","age":"0","content-length":"725","x-jsr-cache-id":"ATL","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/string/words.ts","time":1750974334}

@@ -1,0 +1,18 @@
+/**
+ * Checks if `value` is an Error object.
+ *
+ * @param {unknown} value The value to check.
+ * @returns {value is Error} Returns `true` if `value` is an Error object, `false` otherwise.
+ *
+ * @example
+ * ```typescript
+ * console.log(isError(new Error())); // true
+ * console.log(isError('Error')); // false
+ * console.log(isError({ name: 'Error', message: '' })); // false
+ * ```
+ */
+export function isError(value: unknown): value is Error {
+  return value instanceof Error;
+}
+
+// denoCacheMetadata={"headers":{"via":"1.1 google","x-content-type-options":"nosniff","x-goog-stored-content-length":"479","x-goog-hash":"crc32c=TS4EBQ==,md5=akAP0P7n2n6QyeDljiR3fw==","age":"0","x-goog-metageneration":"1","x-robots-tag":"noindex","x-goog-storage-class":"STANDARD","cross-origin-resource-policy":"cross-origin","etag":"\"6a400fd0fee7da7e90c9e0e58e24777f\"","content-type":"text/typescript","x-goog-stored-content-encoding":"identity","x-goog-generation":"1741509575932138","x-guploader-uploadid":"ABgVH89b7_6aERU09pTH3V2LPq0Fuhf0iigPYTRWbbrx3ip5pUjjvyWNKnWCbWQ2Hgr2NEnimyz6Syw","content-length":"479","date":"Thu, 26 Jun 2025 21:45:36 GMT","expires":"Fri, 26 Jun 2026 21:45:36 GMT","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","access-control-expose-headers":"*","accept-ranges":"bytes","x-jsr-cache-id":"ATL","access-control-allow-origin":"*","server":"UploadServer","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","cache-control":"public, max-age=31536000, immutable","x-jsr-cache-status":"revalidated"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/predicate/isError.ts","time":1750974334}

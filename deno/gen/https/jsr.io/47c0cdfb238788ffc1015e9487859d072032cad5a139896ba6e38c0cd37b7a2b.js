@@ -1,0 +1,11 @@
+import { toString } from '../util/toString.ts';
+export function normalizeForCase(str) {
+  // Coerce to string
+  if (typeof str !== 'string') {
+    str = toString(str);
+  }
+  // Remove contraction apostrophes
+  return str.replace(/['\u2019]/g, '');
+}
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImh0dHBzOi8vanNyLmlvL0Blcy10b29sa2l0L2VzLXRvb2xraXQvMS4zMy4wL3NyYy9jb21wYXQvX2ludGVybmFsL25vcm1hbGl6ZUZvckNhc2UudHMiXSwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0IHsgdG9TdHJpbmcgfSBmcm9tICcuLi91dGlsL3RvU3RyaW5nLnRzJztcblxuZXhwb3J0IGZ1bmN0aW9uIG5vcm1hbGl6ZUZvckNhc2Uoc3RyOiB1bmtub3duKTogc3RyaW5nIHtcbiAgLy8gQ29lcmNlIHRvIHN0cmluZ1xuICBpZiAodHlwZW9mIHN0ciAhPT0gJ3N0cmluZycpIHtcbiAgICBzdHIgPSB0b1N0cmluZyhzdHIpO1xuICB9XG5cbiAgLy8gUmVtb3ZlIGNvbnRyYWN0aW9uIGFwb3N0cm9waGVzXG4gIHJldHVybiAoc3RyIGFzIHN0cmluZykucmVwbGFjZSgvWydcXHUyMDE5XS9nLCAnJyk7XG59XG4iXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IkFBQUEsU0FBUyxRQUFRLFFBQVEsc0JBQXNCO0FBRS9DLE9BQU8sU0FBUyxpQkFBaUIsR0FBWTtFQUMzQyxtQkFBbUI7RUFDbkIsSUFBSSxPQUFPLFFBQVEsVUFBVTtJQUMzQixNQUFNLFNBQVM7RUFDakI7RUFFQSxpQ0FBaUM7RUFDakMsT0FBTyxBQUFDLElBQWUsT0FBTyxDQUFDLGNBQWM7QUFDL0MifQ==
+// denoCacheMetadata=14093780433645717882,1059779755333728016

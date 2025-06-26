@@ -1,0 +1,29 @@
+import { toString } from '../util/toString.ts';
+
+/**
+ * Replaces the matched pattern with the replacement string.
+ *
+ * @param {string} target - The target string.
+ * @param {string | RegExp} pattern - The pattern to match.
+ * @param {string | ((substring: string, ...args: any[]) => string)} replacement - The replacement string or a function that returns the replacement string.
+ * @returns {string} The new string with the matched pattern replaced.
+ *
+ * @example
+ * replace('abcde', 'de', '123'); // 'abc123'
+ * replace('abcde', /[bd]/g, '-'); // 'a-c-e'
+ * replace('abcde', 'de', substring => substring.toUpperCase()); // 'abcDE'
+ * replace('abcde', /[bd]/g, substring => substring.toUpperCase()); // 'aBcDe'
+ */
+export function replace(
+  target = '',
+  pattern: string | RegExp,
+  replacement: string | ((substring: string, ...args: any[]) => string)
+): string {
+  if (arguments.length < 3) {
+    return toString(target);
+  }
+
+  return toString(target).replace(pattern, replacement as any);
+}
+
+// denoCacheMetadata={"headers":{"server":"UploadServer","access-control-expose-headers":"*","x-goog-storage-class":"STANDARD","cross-origin-resource-policy":"cross-origin","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-content-type-options":"nosniff","via":"1.1 google","expires":"Fri, 26 Jun 2026 21:45:35 GMT","content-type":"text/typescript","x-goog-stored-content-length":"1000","x-goog-metageneration":"1","x-goog-stored-content-encoding":"identity","x-goog-hash":"crc32c=++agdw==,md5=g8/wjR9hO5h3eGSe8emZkA==","accept-ranges":"bytes","x-goog-generation":"1741509575757261","date":"Thu, 26 Jun 2025 21:45:35 GMT","content-length":"1000","cache-control":"public, max-age=31536000, immutable","x-guploader-uploadid":"ABgVH880kio1czU7Xxt1elfYqZDH4p1fW4VmOZX6bUUP-wkl33JItkPxsunI5-P2hS9QOELp3F0t4_k","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","age":"0","x-jsr-cache-id":"ATL","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","x-jsr-cache-status":"revalidated","etag":"\"83cff08d1f613b987778649ef1e99990\"","x-robots-tag":"noindex","access-control-allow-origin":"*"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/string/replace.ts","time":1750974334}

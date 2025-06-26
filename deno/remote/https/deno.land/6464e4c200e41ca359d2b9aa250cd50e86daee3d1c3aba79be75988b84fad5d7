@@ -1,0 +1,191 @@
+// Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
+import { getLevelByName, getLevelName, LogLevels } from "./levels.ts";
+import type { LevelName } from "./levels.ts";
+import type { BaseHandler } from "./handlers.ts";
+
+// deno-lint-ignore no-explicit-any
+export type GenericFunction = (...args: any[]) => any;
+
+export interface LogRecordOptions {
+  msg: string;
+  args: unknown[];
+  level: number;
+  loggerName: string;
+}
+
+export class LogRecord {
+  readonly msg: string;
+  #args: unknown[];
+  #datetime: Date;
+  readonly level: number;
+  readonly levelName: string;
+  readonly loggerName: string;
+
+  constructor(options: LogRecordOptions) {
+    this.msg = options.msg;
+    this.#args = [...options.args];
+    this.level = options.level;
+    this.loggerName = options.loggerName;
+    this.#datetime = new Date();
+    this.levelName = getLevelName(options.level);
+  }
+  get args(): unknown[] {
+    return [...this.#args];
+  }
+  get datetime(): Date {
+    return new Date(this.#datetime.getTime());
+  }
+}
+
+export interface LoggerOptions {
+  handlers?: BaseHandler[];
+}
+
+export class Logger {
+  #level: LogLevels;
+  #handlers: BaseHandler[];
+  readonly #loggerName: string;
+
+  constructor(
+    loggerName: string,
+    levelName: LevelName,
+    options: LoggerOptions = {},
+  ) {
+    this.#loggerName = loggerName;
+    this.#level = getLevelByName(levelName);
+    this.#handlers = options.handlers || [];
+  }
+
+  get level(): LogLevels {
+    return this.#level;
+  }
+  set level(level: LogLevels) {
+    this.#level = level;
+  }
+
+  get levelName(): LevelName {
+    return getLevelName(this.#level);
+  }
+  set levelName(levelName: LevelName) {
+    this.#level = getLevelByName(levelName);
+  }
+
+  get loggerName(): string {
+    return this.#loggerName;
+  }
+
+  set handlers(hndls: BaseHandler[]) {
+    this.#handlers = hndls;
+  }
+  get handlers(): BaseHandler[] {
+    return this.#handlers;
+  }
+
+  /** If the level of the logger is greater than the level to log, then nothing
+   * is logged, otherwise a log record is passed to each log handler.  `msg` data
+   * passed in is returned.  If a function is passed in, it is only evaluated
+   * if the msg will be logged and the return value will be the result of the
+   * function, not the function itself, unless the function isn't called, in which
+   * case undefined is returned.  All types are coerced to strings for logging.
+   */
+  #_log<T>(
+    level: number,
+    msg: (T extends GenericFunction ? never : T) | (() => T),
+    ...args: unknown[]
+  ): T | undefined {
+    if (this.level > level) {
+      return msg instanceof Function ? undefined : msg;
+    }
+
+    let fnResult: T | undefined;
+    let logMessage: string;
+    if (msg instanceof Function) {
+      fnResult = msg();
+      logMessage = this.asString(fnResult);
+    } else {
+      logMessage = this.asString(msg);
+    }
+    const record: LogRecord = new LogRecord({
+      msg: logMessage,
+      args: args,
+      level: level,
+      loggerName: this.loggerName,
+    });
+
+    this.#handlers.forEach((handler): void => {
+      handler.handle(record);
+    });
+
+    return msg instanceof Function ? fnResult : msg;
+  }
+
+  asString(data: unknown): string {
+    if (typeof data === "string") {
+      return data;
+    } else if (
+      data === null ||
+      typeof data === "number" ||
+      typeof data === "bigint" ||
+      typeof data === "boolean" ||
+      typeof data === "undefined" ||
+      typeof data === "symbol"
+    ) {
+      return String(data);
+    } else if (data instanceof Error) {
+      return data.stack!;
+    } else if (typeof data === "object") {
+      return JSON.stringify(data);
+    }
+    return "undefined";
+  }
+
+  debug<T>(msg: () => T, ...args: unknown[]): T | undefined;
+  debug<T>(msg: T extends GenericFunction ? never : T, ...args: unknown[]): T;
+  debug<T>(
+    msg: (T extends GenericFunction ? never : T) | (() => T),
+    ...args: unknown[]
+  ): T | undefined {
+    return this.#_log(LogLevels.DEBUG, msg, ...args);
+  }
+
+  info<T>(msg: () => T, ...args: unknown[]): T | undefined;
+  info<T>(msg: T extends GenericFunction ? never : T, ...args: unknown[]): T;
+  info<T>(
+    msg: (T extends GenericFunction ? never : T) | (() => T),
+    ...args: unknown[]
+  ): T | undefined {
+    return this.#_log(LogLevels.INFO, msg, ...args);
+  }
+
+  warning<T>(msg: () => T, ...args: unknown[]): T | undefined;
+  warning<T>(msg: T extends GenericFunction ? never : T, ...args: unknown[]): T;
+  warning<T>(
+    msg: (T extends GenericFunction ? never : T) | (() => T),
+    ...args: unknown[]
+  ): T | undefined {
+    return this.#_log(LogLevels.WARNING, msg, ...args);
+  }
+
+  error<T>(msg: () => T, ...args: unknown[]): T | undefined;
+  error<T>(msg: T extends GenericFunction ? never : T, ...args: unknown[]): T;
+  error<T>(
+    msg: (T extends GenericFunction ? never : T) | (() => T),
+    ...args: unknown[]
+  ): T | undefined {
+    return this.#_log(LogLevels.ERROR, msg, ...args);
+  }
+
+  critical<T>(msg: () => T, ...args: unknown[]): T | undefined;
+  critical<T>(
+    msg: T extends GenericFunction ? never : T,
+    ...args: unknown[]
+  ): T;
+  critical<T>(
+    msg: (T extends GenericFunction ? never : T) | (() => T),
+    ...args: unknown[]
+  ): T | undefined {
+    return this.#_log(LogLevels.CRITICAL, msg, ...args);
+  }
+}
+
+// denoCacheMetadata={"headers":{"cache-control":"public, max-age=31536000, immutable","content-length":"5274","cross-origin-resource-policy":"same-origin","etag":"\"fad9c2820f56092ab4cf3398916d9320\"","accept-ranges":"bytes","x-frame-options":"DENY","cross-origin-embedder-policy":"same-origin","date":"Wed, 08 Jan 2025 16:20:27 GMT","cross-origin-opener-policy":"same-origin","strict-transport-security":"max-age=63072000; includeSubDomains; preload","vary":"Accept-Encoding, Origin","access-control-allow-origin":"*","content-type":"application/typescript; charset=utf-8","x-amz-cf-id":"SZV9NmQnWOfx_6B7VT155FWLRVBTZP07fOYK6Xbgj-hllBAHoqQh5g==","last-modified":"Thu, 28 Jul 2022 16:20:41 GMT","server":"deno/gcp-us-east4","server-timing":"fetchSource;dur=10","x-amz-replication-status":"COMPLETED","age":"14621108","referrer-policy":"strict-origin-when-cross-origin","x-amz-version-id":"nqyxaKqaCMG6a1jSXr7lL0kg4aVIJwy8","x-cache":"Hit from cloudfront","x-content-type-options":"nosniff","x-amz-cf-pop":"IAD61-P1","content-security-policy":"default-src 'none'; style-src 'unsafe-inline'; sandbox","via":"http/2 edgeproxy-h"},"url":"https://deno.land/std@0.150.0/log/logger.ts","time":1750974333}

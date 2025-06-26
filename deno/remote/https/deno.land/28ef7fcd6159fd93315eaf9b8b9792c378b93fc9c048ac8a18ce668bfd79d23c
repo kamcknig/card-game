@@ -1,0 +1,9 @@
+import { encodeToBase64 } from "../../engine.io-parser/base64-arraybuffer.ts";
+
+export function generateId(): string {
+  const buffer = new Uint8Array(15);
+  crypto.getRandomValues(buffer);
+  return encodeToBase64(buffer).replace(/\//g, "-").replace(/\+/g, "_");
+}
+
+// denoCacheMetadata={"headers":{"server":"deno/gcp-us-east4","content-security-policy":"default-src 'none'; style-src 'unsafe-inline'; sandbox","age":"12809340","via":"http/2 edgeproxy-h","cross-origin-embedder-policy":"same-origin","x-amz-version-id":"IpHvUSzdIJnpb8OD4oTd7Nnkh6QsN7bg","x-cache":"Hit from cloudfront","x-content-type-options":"nosniff","cross-origin-resource-policy":"same-origin","x-amz-server-side-encryption":"AES256","accept-ranges":"bytes","x-frame-options":"DENY","x-amz-cf-id":"kwhTBk7Z7Q9IXuFqkqqnGJEPsYt-H7N1VO7jslZ_OpTRj13k1-URtg==","date":"Wed, 29 Jan 2025 15:36:35 GMT","access-control-allow-origin":"*","vary":"Accept-Encoding, Origin","referrer-policy":"strict-origin-when-cross-origin","server-timing":"fetchSource;dur=10","x-amz-replication-status":"COMPLETED","cross-origin-opener-policy":"same-origin","cache-control":"public, max-age=31536000, immutable","last-modified":"Thu, 09 Jan 2025 07:38:35 GMT","strict-transport-security":"max-age=63072000; includeSubDomains; preload","content-length":"265","content-type":"application/typescript; charset=utf-8","x-amz-cf-pop":"IAD61-P1","etag":"\"ac020d8afb1e08c098134ac89c92a543\""},"url":"https://deno.land/x/socket_io@0.2.1/packages/engine.io/lib/util.ts","time":1750974333}

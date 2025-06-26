@@ -1,0 +1,20 @@
+/**
+ * Returns the number of milliseconds elapsed since January 1, 1970 00:00:00 UTC.
+ *
+ * @returns {number} The current time in milliseconds.
+ *
+ * @example
+ * const currentTime = now();
+ * console.log(currentTime); // Outputs the current time in milliseconds
+ *
+ * @example
+ * const startTime = now();
+ * // Some time-consuming operation
+ * const endTime = now();
+ * console.log(`Operation took ${endTime - startTime} milliseconds`);
+ */
+export function now(): number {
+  return Date.now();
+}
+
+// denoCacheMetadata={"headers":{"x-goog-storage-class":"STANDARD","x-goog-stored-content-encoding":"identity","last-modified":"Sun, 09 Mar 2025 08:39:36 GMT","via":"1.1 google","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-jsr-cache-id":"ATL","x-robots-tag":"noindex","content-type":"text/typescript","cross-origin-resource-policy":"cross-origin","x-goog-stored-content-length":"496","x-goog-hash":"crc32c=6ko+MA==,md5=+rPC3brxr1CS5zqoaLyWmQ==","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-content-type-options":"nosniff","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-guploader-uploadid":"ABgVH8_gUnqbxyKN0SOXsbfhYs6oJYW5RjNinwymNTPE8_UUaeOfijABIaYhHKYjIPqG0D1ROteKA70","etag":"\"fab3c2ddbaf1af5092e73aa868bc9699\"","access-control-allow-origin":"*","age":"0","x-goog-metageneration":"1","x-jsr-cache-status":"revalidated","accept-ranges":"bytes","server":"UploadServer","x-goog-generation":"1741509575955973","access-control-expose-headers":"*","content-length":"496","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","cache-control":"public, max-age=31536000, immutable"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/util/now.ts","time":1750974334}

@@ -1,0 +1,35 @@
+/**
+ * Converts `value` to a string.
+ *
+ * An empty string is returned for `null` and `undefined` values.
+ * The sign of `-0` is preserved.
+ *
+ * @param {unknown} value - The value to convert.
+ * @returns {string} Returns the converted string.
+ *
+ * @example
+ * toString(null) // returns ''
+ * toString(undefined) // returns ''
+ * toString(-0) // returns '-0'
+ * toString([1, 2, -0]) // returns '1,2,-0'
+ * toString([Symbol('a'), Symbol('b')]) // returns 'Symbol(a),Symbol(b)'
+ */
+export function toString(value?: unknown): string {
+  if (value == null) {
+    return '';
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(toString).join(',');
+  }
+
+  const result = String(value);
+
+  if (result === '0' && Object.is(Number(value), -0)) {
+    return '-0';
+  }
+
+  return result;
+}
+
+// denoCacheMetadata={"headers":{"x-goog-metageneration":"1","content-length":"783","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","age":"0","x-goog-stored-content-length":"783","accept-ranges":"bytes","x-robots-tag":"noindex","x-goog-generation":"1741509574340566","via":"1.1 google","x-jsr-cache-id":"ATL","x-guploader-uploadid":"ABgVH8_glXFr55nFhXq0geBCrGhFbbbM9ijNgf4xuwAAPGvXdbKvWvuknDddaFHSyEfI8qd1eQB4Bv8","access-control-allow-origin":"*","etag":"\"525ea0c29e3ddce49c019b164ad0b47b\"","server":"UploadServer","cross-origin-resource-policy":"cross-origin","x-goog-hash":"crc32c=1kqiag==,md5=Ul6gwp493OScAZsWStC0ew==","expires":"Fri, 26 Jun 2026 21:45:35 GMT","last-modified":"Sun, 09 Mar 2025 08:39:34 GMT","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","cache-control":"public, max-age=31536000, immutable","x-goog-storage-class":"STANDARD","content-type":"text/typescript","x-jsr-cache-status":"revalidated","access-control-expose-headers":"*","x-goog-stored-content-encoding":"identity","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-content-type-options":"nosniff"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/util/toString.ts","time":1750974334}

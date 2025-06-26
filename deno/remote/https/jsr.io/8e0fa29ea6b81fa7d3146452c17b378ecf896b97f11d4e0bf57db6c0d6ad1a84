@@ -1,0 +1,30 @@
+import { toInteger } from './toInteger.ts';
+import { MAX_SAFE_INTEGER } from '../_internal/MAX_SAFE_INTEGER.ts';
+import { clamp } from '../math/clamp.ts';
+
+/**
+ * Converts `value` to a safe integer.
+ *
+ * A safe integer can be compared and represented correctly.
+ *
+ * @param {unknown} value - The value to convert.
+ * @returns {number} Returns the value converted to a safe integer.
+ *
+ * @example
+ * toSafeInteger(3.2); // => 3
+ * toSafeInteger(Number.MAX_VALUE); // => 9007199254740991
+ * toSafeInteger(Infinity); // => 9007199254740991
+ * toSafeInteger('3.2'); // => 3
+ * toSafeInteger(NaN); // => 0
+ * toSafeInteger(null); // => 0
+ * toSafeInteger(-Infinity); // => -9007199254740991
+ */
+export function toSafeInteger(value?: unknown): number {
+  if (value == null) {
+    return 0;
+  }
+
+  return clamp(toInteger(value), -MAX_SAFE_INTEGER, MAX_SAFE_INTEGER);
+}
+
+// denoCacheMetadata={"headers":{"cache-control":"public, max-age=31536000, immutable","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-goog-storage-class":"STANDARD","last-modified":"Sun, 09 Mar 2025 08:39:34 GMT","x-goog-metageneration":"1","x-goog-hash":"crc32c=/TSOaA==,md5=UjJVaXvWiuRTKnZBODoGew==","x-goog-generation":"1741509574510768","etag":"\"523255697bd68ae4532a7641383a067b\"","x-goog-stored-content-length":"865","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-jsr-cache-id":"ATL","x-jsr-cache-status":"revalidated","x-goog-stored-content-encoding":"identity","x-robots-tag":"noindex","access-control-expose-headers":"*","content-type":"text/typescript","x-guploader-uploadid":"ABgVH89-iGZVOJPc4m72FBO-WDx8xM6Xh9WOhr8wIbRiTPl4aeKEi1vTwCatRuYVY24ZzS9CWB05RYc","via":"1.1 google","age":"0","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","access-control-allow-origin":"*","accept-ranges":"bytes","cross-origin-resource-policy":"cross-origin","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-content-type-options":"nosniff","server":"UploadServer","content-length":"865"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/util/toSafeInteger.ts","time":1750974334}

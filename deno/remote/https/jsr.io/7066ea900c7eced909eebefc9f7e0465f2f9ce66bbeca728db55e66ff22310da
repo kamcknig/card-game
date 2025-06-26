@@ -1,0 +1,92 @@
+import { isIterateeCall } from '../_internal/isIterateeCall.ts';
+import { toFinite } from '../util/toFinite.ts';
+
+/**
+ * Returns an array of numbers from `0` (inclusive) to `end` (exclusive), incrementing by `1`.
+ *
+ * @param {number} end - The end number of the range (exclusive).
+ * @returns {number[]} An array of numbers from `0` (inclusive) to `end` (exclusive) with a step of `1`.
+ *
+ * @example
+ * // Returns [0, 1, 2, 3]
+ * range(4);
+ */
+export function range(end: number): number[];
+
+/**
+ * Returns an array of numbers from `start` (inclusive) to `end` (exclusive), incrementing by `1`.
+ *
+ * @param {number} start - The starting number of the range (inclusive).
+ * @param {number} end - The end number of the range (exclusive).
+ * @returns {number[]} An array of numbers from `start` (inclusive) to `end` (exclusive) with a step of `1`.
+ *
+ * @example
+ * // Returns [1, 2, 3]
+ * range(1, 4);
+ */
+export function range(start: number, end: number): number[];
+
+/**
+ * Returns an array of numbers from `start` (inclusive) to `end` (exclusive), incrementing by `step`.
+ *
+ * @param {number} start - The starting number of the range (inclusive).
+ * @param {number} end - The end number of the range (exclusive).
+ * @param {number} step - The step value for the range.
+ * @returns {number[]} An array of numbers from `start` (inclusive) to `end` (exclusive) with the specified `step`.
+ *
+ * @example
+ * // Returns [0, 5, 10, 15]
+ * range(0, 20, 5);
+ */
+export function range(start: number, end: number, step: number): number[];
+
+/**
+ * Enables use as an iteratee for methods like `_.map`.
+ *
+ * @param {number} end - The current iteratee value.
+ * @param {PropertyKey} index - The iteration index.
+ * @param {object} guard - The iteratee object.
+ * @returns {number[]} An array of numbers from `start` (inclusive) to `end` (exclusive) with the specified `step`.
+ */
+export function range(end: number, index: PropertyKey, guard: object): number[];
+
+/**
+ * Returns an array of numbers from `start` (inclusive) to `end` (exclusive), incrementing by `step`.
+ *
+ * @param {number} start - The starting number of the range (inclusive).
+ * @param {number} end - The end number of the range (exclusive).
+ * @param {number} step - The step value for the range.
+ * @returns {number[]} An array of numbers from `start` (inclusive) to `end` (exclusive) with the specified `step`.
+ *
+ * @example
+ * // Returns [0, 1, 2, 3]
+ * range(4);
+ *
+ * @example
+ * // Returns [0, -1, -2, -3]
+ * range(0, -4, -1);
+ */
+export function range(start: number, end?: PropertyKey, step?: any): number[] {
+  // Enables use as an iteratee for methods like `_.map`.
+  if (step && typeof step !== 'number' && isIterateeCall(start, end, step)) {
+    end = step = undefined;
+  }
+  start = toFinite(start);
+  if (end === undefined) {
+    end = start;
+    start = 0;
+  } else {
+    end = toFinite(end);
+  }
+  step = step === undefined ? (start < end ? 1 : -1) : toFinite(step);
+
+  const length = Math.max(Math.ceil((end - start) / (step || 1)), 0);
+  const result = new Array(length);
+  for (let index = 0; index < length; index++) {
+    result[index] = start;
+    start += step;
+  }
+  return result;
+}
+
+// denoCacheMetadata={"headers":{"x-robots-tag":"noindex","content-length":"3166","access-control-allow-origin":"*","accept-ranges":"bytes","cross-origin-resource-policy":"cross-origin","x-jsr-cache-id":"ATL","cache-control":"public, max-age=31536000, immutable","x-goog-stored-content-length":"3166","server":"UploadServer","content-type":"text/typescript","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-jsr-cache-status":"revalidated","x-goog-stored-content-encoding":"identity","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-goog-hash":"crc32c=XPZzEA==,md5=FAkl1sG4CDJtYkekaSWIng==","via":"1.1 google","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-guploader-uploadid":"ABgVH89E8D6EK9Bl1o9po4Wz6oiOIJJGrVzGbLTppZ_5s-uIOmpf1bSeHiiT7OoKWkOq3TdAj3TE3T4","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","access-control-expose-headers":"*","x-goog-generation":"1741509575128921","x-goog-storage-class":"STANDARD","etag":"\"140925d6c1b808326d6247a46925889e\"","x-content-type-options":"nosniff","x-goog-metageneration":"1","age":"0"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/math/range.ts","time":1750974334}

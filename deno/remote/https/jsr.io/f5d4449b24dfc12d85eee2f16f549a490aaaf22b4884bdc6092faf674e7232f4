@@ -1,0 +1,22 @@
+import { words as getWords } from './words.ts';
+
+/**
+ * Converts a string to lower case.
+ *
+ * Lower case is the naming convention in which each word is written in lowercase and separated by an space ( ) character.
+ *
+ * @param {string} str - The string that is to be changed to lower case.
+ * @returns {string} - The converted string to lower case.
+ *
+ * @example
+ * const convertedStr1 = lowerCase('camelCase') // returns 'camel case'
+ * const convertedStr2 = lowerCase('some whitespace') // returns 'some whitespace'
+ * const convertedStr3 = lowerCase('hyphen-text') // returns 'hyphen text'
+ * const convertedStr4 = lowerCase('HTTPRequest') // returns 'http request'
+ */
+export function lowerCase(str: string): string {
+  const words = getWords(str);
+  return words.map(word => word.toLowerCase()).join(' ');
+}
+
+// denoCacheMetadata={"headers":{"expires":"Fri, 26 Jun 2026 21:45:35 GMT","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-goog-stored-content-length":"815","x-goog-stored-content-encoding":"identity","content-length":"815","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","etag":"\"cdaa5f8d99f1681f66a98121589fa2ab\"","cache-control":"public, max-age=31536000, immutable","x-goog-storage-class":"STANDARD","content-type":"text/typescript","x-robots-tag":"noindex","x-goog-metageneration":"1","access-control-expose-headers":"*","last-modified":"Sun, 09 Mar 2025 08:39:34 GMT","cross-origin-resource-policy":"cross-origin","x-jsr-cache-id":"ATL","x-jsr-cache-status":"revalidated","x-content-type-options":"nosniff","x-goog-hash":"crc32c=G3VQ/g==,md5=zapfjZnxaB9mqYEhWJ+iqw==","via":"1.1 google","age":"0","x-goog-generation":"1741509574450639","x-guploader-uploadid":"ABgVH8-HfttwqQBdra_tMNpCJb66dXoXP8K65VU5dt1wgSf1Au4Iw4W3nB6AfNTFrkp1Go69D_CrIkU","access-control-allow-origin":"*","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","server":"UploadServer","accept-ranges":"bytes"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/string/lowerCase.ts","time":1750974334}

@@ -1,0 +1,38 @@
+import { ary as aryToolkit } from '../../function/ary.ts';
+
+/**
+ * Creates a function that invokes func, with up to `n` arguments, ignoring any additional arguments.
+ *
+ * @template F - The type of the function.
+ * @param {F} func - The function to cap arguments for.
+ * @param {number} n - The arity cap.
+ * @param {unknown} guard - The value to guard the arity cap.
+ * @returns {(...args: any[]) => ReturnType<F>} Returns the new capped function.
+ *
+ * @example
+ * function fn(a: number, b: number, c: number) {
+ *   return Array.from(arguments);
+ * }
+ *
+ * ary(fn, 0)(1, 2, 3); // []
+ * ary(fn, 1)(1, 2, 3); // [1]
+ * ary(fn, 2)(1, 2, 3); // [1, 2]
+ * ary(fn, 3)(1, 2, 3); // [1, 2, 3]
+ */
+export function ary<F extends (...args: any[]) => any>(
+  func: F,
+  n: number = func.length,
+  guard?: unknown
+): (...args: any[]) => ReturnType<F> {
+  if (guard) {
+    n = func.length;
+  }
+
+  if (Number.isNaN(n) || n < 0) {
+    n = 0;
+  }
+
+  return aryToolkit(func, n);
+}
+
+// denoCacheMetadata={"headers":{"access-control-allow-origin":"*","x-jsr-cache-status":"revalidated","accept-ranges":"bytes","x-guploader-uploadid":"ABgVH88VrBAOAbeltYxu7JemqiDDAe_jvJCqBUTwMvyx_qbeiEQxHh4q3Qr6c5sPvwYV6Ex2uMR51kE","server":"UploadServer","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","x-goog-hash":"crc32c=3cfrYA==,md5=/QHxL1Nh8q/CHRUjEcgesg==","x-goog-storage-class":"STANDARD","etag":"\"fd01f12f5361f2afc21d152311c81eb2\"","age":"0","x-goog-metageneration":"1","x-goog-stored-content-encoding":"identity","content-length":"967","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","cross-origin-resource-policy":"cross-origin","x-content-type-options":"nosniff","content-type":"text/typescript","x-jsr-cache-id":"ATL","x-goog-generation":"1741509575202600","access-control-expose-headers":"*","date":"Thu, 26 Jun 2025 21:45:35 GMT","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","expires":"Fri, 26 Jun 2026 21:45:35 GMT","cache-control":"public, max-age=31536000, immutable","via":"1.1 google","x-goog-stored-content-length":"967","x-robots-tag":"noindex"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/function/ary.ts","time":1750974334}

@@ -1,0 +1,59 @@
+import { zip } from '../../array/zip.ts';
+import { set } from '../object/set.ts';
+import { isArrayLike } from '../predicate/isArrayLike.ts';
+
+/**
+ * Creates a deeply nested object given arrays of paths and values.
+ *
+ * This function takes two arrays: one containing arrays of property paths, and the other containing corresponding values.
+ * It returns a new object where paths from the first array are used as key paths to set values, with corresponding elements from the second array as values.
+ * Paths can be dot-separated strings or arrays of property names.
+ *
+ * If the `keys` array is longer than the `values` array, the remaining keys will have `undefined` as their values.
+ *
+ * @template P - The type of property paths.
+ * @template V - The type of values corresponding to the property paths.
+ * @param {ArrayLike<P | P[]>} keys - An array of property paths, each path can be a dot-separated string or an array of property names.
+ * @param {ArrayLike<V>} values - An array of values corresponding to the property paths.
+ * @returns {Record<P, V>} A new object composed of the given property paths and values.
+ *
+ * @example
+ * const paths = ['a.b.c', 'd.e.f'];
+ * const values = [1, 2];
+ * const result = zipObjectDeep(paths, values);
+ * // result will be { a: { b: { c: 1 } }, d: { e: { f: 2 } } }
+ *
+ * @example
+ * const paths = [['a', 'b', 'c'], ['d', 'e', 'f']];
+ * const values = [1, 2];
+ * const result = zipObjectDeep(paths, values);
+ * // result will be { a: { b: { c: 1 } }, d: { e: { f: 2 } } }
+ *
+ * @example
+ * const paths = ['a.b[0].c', 'a.b[1].d'];
+ * const values = [1, 2];
+ * const result = zipObjectDeep(paths, values);
+ * // result will be { 'a': { 'b': [{ 'c': 1 }, { 'd': 2 }] } }
+ */
+export function zipObjectDeep<P extends PropertyKey, V>(keys: ArrayLike<P | P[]>, values: ArrayLike<V>): Record<P, V> {
+  const result = {} as { [K in P]: V };
+  if (!isArrayLike(keys)) {
+    return result;
+  }
+  if (!isArrayLike(values)) {
+    values = [];
+  }
+  const zipped = zip<P | P[], V>(Array.from(keys), Array.from(values));
+
+  for (let i = 0; i < zipped.length; i++) {
+    const [key, value] = zipped[i];
+
+    if (key != null) {
+      set(result, key, value);
+    }
+  }
+
+  return result;
+}
+
+// denoCacheMetadata={"headers":{"accept-ranges":"bytes","x-robots-tag":"noindex","access-control-expose-headers":"*","x-content-type-options":"nosniff","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","access-control-allow-origin":"*","cross-origin-resource-policy":"cross-origin","x-goog-generation":"1741509574659335","cache-control":"public, max-age=31536000, immutable","x-goog-stored-content-encoding":"identity","x-goog-metageneration":"1","etag":"\"1368d921a0f9df3c785818e0a8f4684f\"","age":"0","x-jsr-cache-status":"revalidated","server":"UploadServer","content-type":"text/typescript","content-length":"2217","x-guploader-uploadid":"ABgVH8_uyFrWndvW32taYULHM_5nSaXIo8Xmo96Dbn0h8ty20n5RNx617YBxPLXom07Xa8OzfTdW1ls","x-goog-hash":"crc32c=WJLWmw==,md5=E2jZIaD53zx4WBjgqPRoTw==","expires":"Fri, 26 Jun 2026 21:45:35 GMT","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-goog-storage-class":"STANDARD","date":"Thu, 26 Jun 2025 21:45:35 GMT","last-modified":"Sun, 09 Mar 2025 08:39:34 GMT","x-jsr-cache-id":"ATL","x-goog-stored-content-length":"2217","via":"1.1 google"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/array/zipObjectDeep.ts","time":1750974334}

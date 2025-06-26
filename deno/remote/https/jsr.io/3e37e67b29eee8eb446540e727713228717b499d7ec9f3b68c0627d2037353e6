@@ -1,0 +1,79 @@
+/**
+ * Finds the element in an array that has the minimum value when applying
+ * the `getValue` function to each element.
+ *
+ * @template T - The type of elements in the array.
+ * @param {[T, ...T[]]} items The nonempty array of elements to search.
+ * @param {(element: T) => number} getValue A function that selects a numeric value from each element.
+ * @returns {T} The element with the minimum value as determined by the `getValue` function.
+ * @example
+ * minBy([{ a: 1 }, { a: 2 }, { a: 3 }], x => x.a); // Returns: { a: 1 }
+ * minBy([], x => x.a); // Returns: undefined
+ * minBy(
+ *   [
+ *     { name: 'john', age: 30 },
+ *     { name: 'jane', age: 28 },
+ *     { name: 'joe', age: 26 },
+ *   ],
+ *   x => x.age
+ * ); // Returns: { name: 'joe', age: 26 }
+ */
+export function minBy<T>(items: readonly [T, ...T[]], getValue: (element: T) => number): T;
+/**
+ * Finds the element in an array that has the minimum value when applying
+ * the `getValue` function to each element.
+ *
+ * @template T - The type of elements in the array.
+ * @param {T[]} items The array of elements to search.
+ * @param {(element: T) => number} getValue A function that selects a numeric value from each element.
+ * @returns {T | undefined} The element with the minimum value as determined by the `getValue` function.
+ * @example
+ * minBy([{ a: 1 }, { a: 2 }, { a: 3 }], x => x.a); // Returns: { a: 1 }
+ * minBy([], x => x.a); // Returns: undefined
+ * minBy(
+ *   [
+ *     { name: 'john', age: 30 },
+ *     { name: 'jane', age: 28 },
+ *     { name: 'joe', age: 26 },
+ *   ],
+ *   x => x.age
+ * ); // Returns: { name: 'joe', age: 26 }
+ */
+export function minBy<T>(items: readonly T[], getValue: (element: T) => number): T | undefined;
+/**
+ * Finds the element in an array that has the minimum value when applying
+ * the `getValue` function to each element.
+ *
+ * @template T - The type of elements in the array.
+ * @param {T[]} items The array of elements to search.
+ * @param {(element: T) => number} getValue A function that selects a numeric value from each element.
+ * @returns {T | undefined} The element with the minimum value as determined by the `getValue` function.
+ * @example
+ * minBy([{ a: 1 }, { a: 2 }, { a: 3 }], x => x.a); // Returns: { a: 1 }
+ * minBy([], x => x.a); // Returns: undefined
+ * minBy(
+ *   [
+ *     { name: 'john', age: 30 },
+ *     { name: 'jane', age: 28 },
+ *     { name: 'joe', age: 26 },
+ *   ],
+ *   x => x.age
+ * ); // Returns: { name: 'joe', age: 26 }
+ */
+export function minBy<T>(items: readonly T[], getValue: (element: T) => number): T | undefined {
+  let minElement = items[0];
+  let min = Infinity;
+
+  for (let i = 0; i < items.length; i++) {
+    const element = items[i];
+    const value = getValue(element);
+    if (value < min) {
+      min = value;
+      minElement = element;
+    }
+  }
+
+  return minElement;
+}
+
+// denoCacheMetadata={"headers":{"expires":"Fri, 26 Jun 2026 21:45:35 GMT","access-control-allow-origin":"*","x-goog-storage-class":"STANDARD","access-control-expose-headers":"*","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-metageneration":"1","etag":"\"3833171feaaa6969a5e5fef6322a6d8f\"","accept-ranges":"bytes","server":"UploadServer","content-type":"text/typescript","cache-control":"public, max-age=31536000, immutable","x-robots-tag":"noindex","cross-origin-resource-policy":"cross-origin","via":"1.1 google","date":"Thu, 26 Jun 2025 21:45:35 GMT","content-length":"2836","x-goog-stored-content-length":"2836","age":"0","x-guploader-uploadid":"ABgVH89MscANYNKlvcfcXxuGVt0340FO7FDubGHiqNQCDXuoh4dUZVXmdccXsObjV-fxKvbVD9LjrOA","last-modified":"Sun, 09 Mar 2025 08:39:36 GMT","x-goog-generation":"1741509576013388","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-jsr-cache-status":"revalidated","x-content-type-options":"nosniff","x-jsr-cache-id":"ATL","x-goog-hash":"crc32c=6OeKfA==,md5=ODMXH+qqaWml5f72Miptjw==","x-goog-stored-content-encoding":"identity"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/array/minBy.ts","time":1750974334}

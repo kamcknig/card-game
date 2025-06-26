@@ -1,0 +1,30 @@
+/**
+ * Checks if the given value is object-like.
+ *
+ * A value is object-like if its type is object and it is not null.
+ *
+ * This function can also serve as a type predicate in TypeScript, narrowing the type of the argument to an object-like value.
+ *
+ * @template T - The type of value.
+ * @param {T} value - The value to test if it is an object-like.
+ * @returns {value is object} `true` if the value is an object-like, `false` otherwise.
+ *
+ * @example
+ * const value1 = { a: 1 };
+ * const value2 = [1, 2, 3];
+ * const value3 = 'abc';
+ * const value4 = () => {};
+ * const value5 = null;
+ *
+ * console.log(isObjectLike(value1)); // true
+ * console.log(isObjectLike(value2)); // true
+ * console.log(isObjectLike(value3)); // false
+ * console.log(isObjectLike(value4)); // false
+ * console.log(isObjectLike(value5)); // false
+ */
+
+export function isObjectLike(value?: unknown): value is object {
+  return typeof value === 'object' && value !== null;
+}
+
+// denoCacheMetadata={"headers":{"x-goog-metageneration":"1","cross-origin-resource-policy":"cross-origin","x-jsr-cache-status":"revalidated","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","cache-control":"public, max-age=31536000, immutable","via":"1.1 google","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","expires":"Fri, 26 Jun 2026 21:45:35 GMT","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-goog-stored-content-encoding":"identity","etag":"\"24f7a8bbd417cad5be4a47b9c939df3b\"","server":"UploadServer","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-jsr-cache-id":"ATL","x-goog-hash":"crc32c=FqP9EA==,md5=JPeou9QXytW+Ske5yTnfOw==","x-goog-stored-content-length":"953","x-goog-generation":"1741509575152553","content-type":"text/typescript","x-guploader-uploadid":"ABgVH88wcoQZtc-WD_rue30tYqU_yyXq1iUGAxnh_mjLV6UFv0_BGKJm7MTfGUFjGv9WdY1gTPspKvo","x-goog-storage-class":"STANDARD","accept-ranges":"bytes","content-length":"953","age":"0","x-robots-tag":"noindex","access-control-allow-origin":"*","access-control-expose-headers":"*","x-content-type-options":"nosniff"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/predicate/isObjectLike.ts","time":1750974334}

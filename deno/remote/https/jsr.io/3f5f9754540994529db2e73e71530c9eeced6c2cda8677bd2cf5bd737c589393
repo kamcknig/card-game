@@ -1,0 +1,32 @@
+import { timeout } from './timeout.ts';
+
+/**
+ * Executes an async function and enforces a timeout.
+ *
+ * If the promise does not resolve within the specified time,
+ * the timeout will trigger and the returned promise will be rejected.
+ *
+ *
+ * @template T
+ * @param {() => Promise<T>} run - A function that returns a promise to be executed.
+ * @param {number} ms - The timeout duration in milliseconds.
+ * @returns {Promise<T>} A promise that resolves with the result of the `run` function or rejects if the timeout is reached.
+ *
+ * @example
+ * async function fetchData() {
+ *   const response = await fetch('https://example.com/data');
+ *   return response.json();
+ * }
+ *
+ * try {
+ *   const data = await withTimeout(fetchData, 1000);
+ *   console.log(data); // Logs the fetched data if `fetchData` is resolved within 1 second.
+ * } catch (error) {
+ *   console.error(error); // Will log 'TimeoutError' if `fetchData` is not resolved within 1 second.
+ * }
+ */
+export async function withTimeout<T>(run: () => Promise<T>, ms: number): Promise<T> {
+  return Promise.race([run(), timeout(ms)]);
+}
+
+// denoCacheMetadata={"headers":{"last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","server":"UploadServer","via":"1.1 google","x-robots-tag":"noindex","expires":"Fri, 26 Jun 2026 21:45:36 GMT","cache-control":"public, max-age=31536000, immutable","access-control-expose-headers":"*","x-content-type-options":"nosniff","x-goog-metageneration":"1","x-goog-storage-class":"STANDARD","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","accept-ranges":"bytes","x-goog-generation":"1741509575431711","x-goog-stored-content-length":"1096","date":"Thu, 26 Jun 2025 21:45:36 GMT","x-goog-hash":"crc32c=MOdhug==,md5=0F+trjy65HMZt01OfvS2OA==","content-type":"text/typescript","etag":"\"d05fadae3cbae47319b74d4e7ef4b638\"","age":"0","x-guploader-uploadid":"ABgVH8_3kaSmGdG0ofvKxoohFYD2Pltpt9EnP6f2YkZ98NiWjBCA5qV02c129SBGqgE-esCixvIMjZI","x-jsr-cache-id":"ATL","x-jsr-cache-status":"revalidated","cross-origin-resource-policy":"cross-origin","access-control-allow-origin":"*","content-length":"1096","x-goog-stored-content-encoding":"identity"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/promise/withTimeout.ts","time":1750974334}

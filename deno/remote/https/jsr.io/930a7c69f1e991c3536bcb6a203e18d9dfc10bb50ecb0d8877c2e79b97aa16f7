@@ -1,0 +1,21 @@
+/**
+ * Defers invoking the `func` until the current call stack has cleared. Any additional arguments are provided to func when it's invoked.
+ *
+ * @param {F} func The function to defer.
+ * @param {Parameters<F>} args The arguments to invoke `func` with.
+ * @returns {number} Returns the timer id.
+ *
+ * @example
+ * defer((text) => {
+ *   console.log(text);
+ * }, 'deferred');
+ * // => Logs 'deferred' after the current call stack has cleared.
+ */
+export function defer<F extends (...args: any[]) => any>(func: F, ...args: Parameters<F>): number {
+  if (typeof func !== 'function') {
+    throw new TypeError('Expected a function');
+  }
+  return setTimeout(func, 1, ...args);
+}
+
+// denoCacheMetadata={"headers":{"x-guploader-uploadid":"ABgVH8-trna7fl2Q_KdsORO45cFQ4sEXPtgAnYLUC-H44RfI2F0EVrW-TuOPbCSFI6kH_a8cxPwiytc","x-goog-stored-content-length":"676","x-robots-tag":"noindex","cross-origin-resource-policy":"cross-origin","x-jsr-cache-id":"ATL","access-control-allow-origin":"*","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","x-goog-stored-content-encoding":"identity","x-content-type-options":"nosniff","age":"0","content-length":"676","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-metageneration":"1","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","via":"1.1 google","expires":"Fri, 26 Jun 2026 21:45:35 GMT","accept-ranges":"bytes","x-goog-storage-class":"STANDARD","server":"UploadServer","cache-control":"public, max-age=31536000, immutable","x-jsr-cache-status":"revalidated","x-goog-hash":"crc32c=zmtkgQ==,md5=68dtOTu8lltGKg4wllj6kQ==","x-goog-generation":"1741509575728532","date":"Thu, 26 Jun 2025 21:45:35 GMT","content-type":"text/typescript","access-control-expose-headers":"*","etag":"\"ebc76d393bbc965b462a0e309658fa91\""},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/function/defer.ts","time":1750974334}

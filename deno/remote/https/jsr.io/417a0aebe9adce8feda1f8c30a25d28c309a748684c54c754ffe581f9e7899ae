@@ -1,0 +1,65 @@
+/**
+ * Creates a function that is restricted to invoking the provided function `func` once.
+ * Repeated calls to the function will return the value from the first invocation.
+ *
+ * @template F - The type of function.
+ * @param {F extends () => any} func - The function to restrict.
+ * @returns {F} A new function that invokes `func` once and caches the result.
+ *
+ * @example
+ * const initialize = once(() => {
+ *   console.log('Initialized!');
+ *   return true;
+ * });
+ *
+ * initialize(); // Logs: 'Initialized!' and returns true
+ * initialize(); // Returns true without logging
+ */
+export function once<F extends () => any>(func: F): F;
+/**
+ * Creates a function that is restricted to invoking the provided function `func` once.
+ * Repeated calls to the function will return the value from the first invocation.
+ *
+ * @template F - The type of function.
+ * @param {F extends (...args: any[]) => void} func - The function to restrict with arguments.
+ * @returns {F} A new function that invokes `func` once.
+ *
+ * @example
+ * const log = once(console.log);
+ *
+ * log('Hello, world!'); // prints 'Hello, world!' and doesn't return anything
+ * log('Hello, world!'); // doesn't print anything and doesn't return anything
+ */
+export function once<F extends (...args: any[]) => void>(func: F): F;
+/**
+ * Creates a function that is restricted to invoking the provided function `func` once.
+ * Repeated calls to the function will return the value from the first invocation.
+ *
+ * @template F - The type of function.
+ * @param {F} func - The function to restrict.
+ * @returns {(...args: Parameters<F>) => ReturnType<F>} A new function that invokes `func` once and caches the result.
+ *
+ * @example
+ * const initialize = once(() => {
+ *   console.log('Initialized!');
+ *   return true;
+ * });
+ *
+ * initialize(); // Logs: 'Initialized!' and returns true
+ * initialize(); // Returns true without logging
+ */
+export function once<F extends (() => any) | ((...args: any[]) => void)>(func: F): F {
+  let called = false;
+  let cache: ReturnType<F>;
+
+  return function (...args: Parameters<F>): ReturnType<F> {
+    if (!called) {
+      called = true;
+      cache = func(...args);
+    }
+
+    return cache;
+  } as F;
+}
+
+// denoCacheMetadata={"headers":{"x-goog-generation":"1741509575364585","x-goog-metageneration":"1","via":"1.1 google","x-content-type-options":"nosniff","content-type":"text/typescript","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","accept-ranges":"bytes","x-goog-stored-content-encoding":"identity","x-goog-stored-content-length":"2202","x-robots-tag":"noindex","cache-control":"public, max-age=31536000, immutable","x-jsr-cache-id":"ATL","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-goog-hash":"crc32c=6zfbNA==,md5=d8ua9m7CImzWBCyNP1VztQ==","content-length":"2202","age":"0","date":"Thu, 26 Jun 2025 21:45:36 GMT","expires":"Fri, 26 Jun 2026 21:45:36 GMT","etag":"\"77cb9af66ec2226cd6042c8d3f5573b5\"","access-control-allow-origin":"*","x-jsr-cache-status":"revalidated","x-goog-storage-class":"STANDARD","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","access-control-expose-headers":"*","server":"UploadServer","cross-origin-resource-policy":"cross-origin","x-guploader-uploadid":"ABgVH89NoOX7mYp7E5qORgSX3rn2t8FEGEPBrfwgbXl4ZBVxt5jGwHE8KwOrDJjN0Jh1EYm8"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/function/once.ts","time":1750974334}

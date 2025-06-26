@@ -1,0 +1,47 @@
+import { random } from './random.ts';
+
+/**
+ * Generates a random integer between 0 (inclusive) and the given maximum (exclusive).
+ *
+ * @param {number} maximum - The upper bound (exclusive).
+ * @returns {number} A random integer between 0 (inclusive) and maximum (exclusive).
+ * @throws {Error} Throws an error if `maximum` is not greater than `0`.
+ *
+ * @example
+ * const result = randomInt(5); // result will be a random integer between 0 (inclusive) and 5 (exclusive)
+ */
+export function randomInt(maximum: number): number;
+
+/**
+ * Generates a random integer between minimum (inclusive) and maximum (exclusive).
+ *
+ * @param {number} minimum - The lower bound (inclusive).
+ * @param {number} maximum - The upper bound (exclusive).
+ * @returns {number} A random integer between minimum (inclusive) and maximum (exclusive).
+ * @throws {Error} Throws an error if `maximum` is not greater than `minimum`.
+ *
+ * @example
+ * const result = randomInt(0, 5); // result will be a random integer between 0 (inclusive) and 5 (exclusive)
+ * const result2 = randomInt(5, 0); // This will throw an error
+ */
+export function randomInt(minimum: number, maximum: number): number;
+
+/**
+ * Generates a random integer between minimum (inclusive) and maximum (exclusive).
+ *
+ * If only one argument is provided, a number between `0` and the given number is returned.
+ *
+ * @param {number} minimum - The lower bound (inclusive).
+ * @param {number} maximum - The upper bound (exclusive).
+ * @returns {number} A random integer between minimum (inclusive) and maximum (exclusive).
+ * @throws {Error} Throws an error if `maximum` is not greater than `minimum`.
+ *
+ * @example
+ * const result = randomInt(0, 5); // result will be a random integer between 0 (inclusive) and 5 (exclusive)
+ * const result2 = randomInt(5, 0); // This will throw an error
+ */
+export function randomInt(minimum: number, maximum?: number): number {
+  return Math.floor(random(minimum, maximum!));
+}
+
+// denoCacheMetadata={"headers":{"accept-ranges":"bytes","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","cache-control":"public, max-age=31536000, immutable","content-type":"text/typescript","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-guploader-uploadid":"ABgVH8-YvFT7iDUSrjW1NDzTbOfdp1dDccKWxRfVeRAc7y6s9_aKYCkED5zY8TzwUULkDdUh9VISuQ0","x-goog-generation":"1741509575605993","server":"UploadServer","x-jsr-cache-status":"revalidated","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-robots-tag":"noindex","etag":"\"1f0a6020d307c441e014429064c6161a\"","x-jsr-cache-id":"ATL","date":"Thu, 26 Jun 2025 21:45:35 GMT","via":"1.1 google","x-content-type-options":"nosniff","content-length":"1952","access-control-expose-headers":"*","x-goog-stored-content-encoding":"identity","x-goog-stored-content-length":"1952","x-goog-hash":"crc32c=XuruYQ==,md5=HwpgINMHxEHgFEKQZMYWGg==","expires":"Fri, 26 Jun 2026 21:45:35 GMT","age":"0","x-goog-metageneration":"1","x-goog-storage-class":"STANDARD","access-control-allow-origin":"*","cross-origin-resource-policy":"cross-origin"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/math/randomInt.ts","time":1750974334}

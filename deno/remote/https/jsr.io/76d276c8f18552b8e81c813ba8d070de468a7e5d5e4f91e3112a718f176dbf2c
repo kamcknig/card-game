@@ -1,0 +1,43 @@
+import { sortedIndexBy } from './sortedIndexBy.ts';
+import { isNil, isNull, isSymbol } from '../../predicate/index.ts';
+import { isNumber } from '../predicate/isNumber.ts';
+
+const MAX_ARRAY_LENGTH = 4294967295;
+const HALF_MAX_ARRAY_LENGTH = MAX_ARRAY_LENGTH >>> 1;
+
+/**
+ * Uses a binary search to determine the lowest index at which `value`
+ * should be inserted into `array` in order to maintain its sort order.
+ *
+ * @category Array
+ * @param {ArrayLike<T> | null | undefined} array The sorted array to inspect.
+ * @param {T} value The value to evaluate.
+ * @returns {number} Returns the index at which `value` should be inserted
+ *  into `array`.
+ * @example
+ * sortedIndex([30, 50], 40)
+ * // => 1
+ */
+export function sortedIndex<T>(array: ArrayLike<T> | null | undefined, value: T): number {
+  if (isNil(array)) {
+    return 0;
+  }
+  let low = 0,
+    high = isNil(array) ? low : array.length;
+
+  if (isNumber(value) && value === value && high <= HALF_MAX_ARRAY_LENGTH) {
+    while (low < high) {
+      const mid = (low + high) >>> 1;
+      const compute = array[mid];
+      if (!isNull(compute) && !isSymbol(compute) && (compute as any) < value) {
+        low = mid + 1;
+      } else {
+        high = mid;
+      }
+    }
+    return high;
+  }
+  return sortedIndexBy(array, value, value => value);
+}
+
+// denoCacheMetadata={"headers":{"x-goog-metageneration":"1","content-length":"1302","expires":"Fri, 26 Jun 2026 21:45:35 GMT","cache-control":"public, max-age=31536000, immutable","content-type":"text/typescript","age":"0","x-jsr-cache-id":"ATL","x-goog-stored-content-length":"1302","x-goog-hash":"crc32c=wWlPEA==,md5=Eon/90sVjQdgw74t7ZXlZA==","server":"UploadServer","via":"1.1 google","x-goog-stored-content-encoding":"identity","date":"Thu, 26 Jun 2025 21:45:35 GMT","etag":"\"1289fff74b158d0760c3be2ded95e564\"","x-jsr-cache-status":"revalidated","x-guploader-uploadid":"ABgVH882BSWvEuc_2VNhn9xyO0ZMIPKYeKxzHTbD9NIbu1wb5HcAH382kK90CHPghkfuhBybKl2zJEM","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","cross-origin-resource-policy":"cross-origin","x-goog-generation":"1741509575701442","access-control-allow-origin":"*","access-control-expose-headers":"*","accept-ranges":"bytes","x-content-type-options":"nosniff","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-robots-tag":"noindex","x-goog-storage-class":"STANDARD"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/array/sortedIndex.ts","time":1750974334}

@@ -1,0 +1,27 @@
+import { head as headToolkit } from '../../array/head.ts';
+import { toArray } from '../_internal/toArray.ts';
+import { isArrayLike } from '../predicate/isArrayLike.ts';
+
+/**
+ * Returns the first element of an array or `undefined` if the array is empty.
+ *
+ * This function takes an array and returns the first element of the array.
+ * If the array is empty, the function returns `undefined`.
+ *
+ * @template T - The type of elements in the array.
+ * @param {ArrayLike<T> | undefined | null} arr - The array from which to get the first element.
+ * @returns {T | undefined} The first element of the array, or `undefined` if the array is empty.
+ *
+ * @example
+ * const emptyArr: number[] = [];
+ * const noElement = head(emptyArr);
+ * // noElement will be undefined
+ */
+export function head<T>(arr: ArrayLike<T> | undefined | null): T | undefined {
+  if (!isArrayLike(arr)) {
+    return undefined;
+  }
+  return headToolkit(toArray(arr));
+}
+
+// denoCacheMetadata={"headers":{"expires":"Fri, 26 Jun 2026 21:45:35 GMT","cache-control":"public, max-age=31536000, immutable","x-guploader-uploadid":"ABgVH8-Z7n6_hUKRChnWHRrVevXnfztdQsIW8K7QgjtrYyyqau-wbxNzF5HC_xkNN3Utk5WUAYJyr1c","via":"1.1 google","x-goog-stored-content-length":"936","access-control-expose-headers":"*","content-type":"text/typescript","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","x-jsr-cache-id":"ATL","accept-ranges":"bytes","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-goog-storage-class":"STANDARD","x-goog-generation":"1741509575646485","date":"Thu, 26 Jun 2025 21:45:35 GMT","etag":"\"8804032ab0c41e215c2284fe68229800\"","x-goog-stored-content-encoding":"identity","x-goog-hash":"crc32c=yP084Q==,md5=iAQDKrDEHiFcIoT+aCKYAA==","x-goog-metageneration":"1","server":"UploadServer","age":"0","content-length":"936","x-jsr-cache-status":"revalidated","access-control-allow-origin":"*","cross-origin-resource-policy":"cross-origin","x-content-type-options":"nosniff","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-robots-tag":"noindex"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/array/head.ts","time":1750974334}

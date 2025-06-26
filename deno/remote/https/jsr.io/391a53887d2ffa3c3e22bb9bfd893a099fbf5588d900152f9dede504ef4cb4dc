@@ -1,0 +1,37 @@
+import { chunk as chunkToolkit } from '../../array/chunk.ts';
+import { toArray } from '../_internal/toArray.ts';
+import { isArrayLike } from '../predicate/isArrayLike.ts';
+
+/**
+ * Splits an array into smaller arrays of a specified length.
+ *
+ * This function takes an input array and divides it into multiple smaller arrays,
+ * each of a specified length. If the input array cannot be evenly divided,
+ * the final sub-array will contain the remaining elements.
+ *
+ * @template T The type of elements in the array.
+ * @param {ArrayLike<T> | null | undefined} arr - The array to be chunked into smaller arrays.
+ * @param {number} size - The size of each smaller array. Must be a positive integer.
+ * @returns {T[][]} A two-dimensional array where each sub-array has a maximum length of `size`.
+ *
+ * @example
+ * // Splits an array of numbers into sub-arrays of length 2
+ * chunk([1, 2, 3, 4, 5], 2);
+ * // Returns: [[1, 2], [3, 4], [5]]
+ *
+ * @example
+ * // Splits an array of strings into sub-arrays of length 3
+ * chunk(['a', 'b', 'c', 'd', 'e', 'f', 'g'], 3);
+ * // Returns: [['a', 'b', 'c'], ['d', 'e', 'f'], ['g']]
+ */
+export function chunk<T>(arr: ArrayLike<T> | null | undefined, size = 1): T[][] {
+  size = Math.max(Math.floor(size), 0);
+
+  if (size === 0 || !isArrayLike(arr)) {
+    return [];
+  }
+
+  return chunkToolkit(toArray(arr), size);
+}
+
+// denoCacheMetadata={"headers":{"last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","accept-ranges":"bytes","content-type":"text/typescript","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-goog-storage-class":"STANDARD","access-control-expose-headers":"*","cross-origin-resource-policy":"cross-origin","x-jsr-cache-id":"ATL","via":"1.1 google","age":"0","server":"UploadServer","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-guploader-uploadid":"ABgVH8_iTtimIAMuWPG3OPsvFnR3Io6vlvJCb2-oRmdhtqh56RKEByGotyDtqQcveMUbj9wNCdhJokc","x-goog-stored-content-length":"1351","x-goog-metageneration":"1","x-goog-generation":"1741509575521306","x-goog-stored-content-encoding":"identity","content-length":"1351","cache-control":"public, max-age=31536000, immutable","etag":"\"a8059fadf0ad61e0e063fd005ec58f21\"","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-robots-tag":"noindex","access-control-allow-origin":"*","x-content-type-options":"nosniff","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-jsr-cache-status":"revalidated","x-goog-hash":"crc32c=iSHWYA==,md5=qAWfrfCtYeDgY/0AXsWPIQ=="},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/array/chunk.ts","time":1750974334}

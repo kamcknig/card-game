@@ -1,0 +1,60 @@
+// Copyright 2018-2024 the Deno authors. All rights reserved. MIT license.
+// This module is browser compatible.
+
+/**
+ * The number of milliseconds in a second.
+ *
+ * @example
+ * ```ts
+ * import { SECOND } from "@std/datetime/constants";
+ *
+ * SECOND; // 1_000
+ * ```
+ */
+export const SECOND = 1e3;
+/**
+ * The number of milliseconds in a minute.
+ *
+ * @example
+ * ```ts
+ * import { MINUTE } from "@std/datetime/constants";
+ *
+ * MINUTE; // 60_000
+ * ```
+ */
+export const MINUTE: number = SECOND * 60;
+/**
+ * The number of milliseconds in an hour.
+ *
+ * @example
+ * ```ts
+ * import { HOUR } from "@std/datetime/constants";
+ *
+ * HOUR; // 3_600_000
+ * ```
+ */
+export const HOUR: number = MINUTE * 60;
+/**
+ * The number of milliseconds in a day.
+ *
+ * @example
+ * ```ts
+ * import { DAY } from "@std/datetime/constants";
+ *
+ * DAY; // 86_400_000
+ * ```
+ */
+export const DAY: number = HOUR * 24;
+/**
+ * The number of milliseconds in a week.
+ *
+ * @example
+ * ```ts
+ * import { WEEK } from "@std/datetime/constants";
+ *
+ * WEEK; // 604_800_000
+ * ```
+ */
+export const WEEK: number = DAY * 7;
+
+// denoCacheMetadata={"headers":{"date":"Thu, 26 Jun 2025 21:45:36 GMT","x-goog-stored-content-length":"1086","x-content-type-options":"nosniff","via":"1.1 google","accept-ranges":"bytes","content-type":"text/typescript","x-goog-generation":"1720781427415604","x-goog-storage-class":"STANDARD","cache-control":"public, max-age=31536000, immutable","last-modified":"Fri, 12 Jul 2024 10:50:27 GMT","age":"0","x-guploader-uploadid":"ABgVH8_DmMfC8vHsfPW6NDfaYc6TIP8CCgrK-uwVmp7b-rLKDmZ7CGQe4tp69thnF16DUimzKWcmTTo","x-robots-tag":"noindex","access-control-expose-headers":"*","x-goog-stored-content-encoding":"identity","content-length":"1086","expires":"Fri, 26 Jun 2026 21:45:36 GMT","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-jsr-cache-id":"ATL","x-goog-metageneration":"1","x-jsr-cache-status":"revalidated","access-control-allow-origin":"*","cross-origin-resource-policy":"cross-origin","x-goog-hash":"crc32c=jks8Yw==,md5=nqv8PTH/fMaf90ihr6/byg==","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","etag":"\"9eabfc3d31ff7cc69ff748a1afafdbca\"","server":"UploadServer"},"url":"https://jsr.io/@std/datetime/0.224.3/constants.ts","time":1750974334}

@@ -1,0 +1,21 @@
+import { escape as escapeToolkit } from '../../string/escape.ts';
+import { toString } from '../util/toString.ts';
+
+/**
+ * Converts the characters "&", "<", ">", '"', and "'" in `str` to their corresponding HTML entities.
+ * For example, "<" becomes "&lt;".
+ *
+ * @param {string} str  The string to escape.
+ * @returns {string} Returns the escaped string.
+ *
+ * @example
+ * escape('This is a <div> element.'); // returns 'This is a &lt;div&gt; element.'
+ * escape('This is a "quote"'); // returns 'This is a &quot;quote&quot;'
+ * escape("This is a 'quote'"); // returns 'This is a &#39;quote&#39;'
+ * escape('This is a & symbol'); // returns 'This is a &amp; symbol'
+ */
+export function escape(string?: string): string {
+  return escapeToolkit(toString(string));
+}
+
+// denoCacheMetadata={"headers":{"cross-origin-resource-policy":"cross-origin","accept-ranges":"bytes","x-goog-stored-content-length":"764","server":"UploadServer","x-goog-hash":"crc32c=g1rpNw==,md5=6Lna1VkPXd7Bc1CqE4EqDA==","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-goog-storage-class":"STANDARD","cache-control":"public, max-age=31536000, immutable","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","content-type":"text/typescript","access-control-allow-origin":"*","etag":"\"e8b9dad5590f5ddec17350aa13812a0c\"","x-guploader-uploadid":"ABgVH88G5wjb0weYmm8dEhxlwReiQvVcg2Mf05dJz3p40t0H2AqG_P_zWWT-IkQb5rID2xQs89PDgu0","x-goog-metageneration":"1","x-jsr-cache-id":"ATL","via":"1.1 google","last-modified":"Sun, 09 Mar 2025 08:39:34 GMT","x-goog-generation":"1741509574768019","age":"0","x-jsr-cache-status":"revalidated","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-robots-tag":"noindex","content-length":"764","access-control-expose-headers":"*","x-content-type-options":"nosniff","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-stored-content-encoding":"identity"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/string/escape.ts","time":1750974334}

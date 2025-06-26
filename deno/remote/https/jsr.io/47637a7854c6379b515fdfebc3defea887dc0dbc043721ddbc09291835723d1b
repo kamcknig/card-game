@@ -1,0 +1,31 @@
+declare let Buffer:
+  | {
+      isBuffer: (a: any) => boolean;
+    }
+  | undefined;
+
+/**
+ * Checks if the given value is a Buffer instance.
+ *
+ * This function tests whether the provided value is an instance of Buffer.
+ * It returns `true` if the value is a Buffer, and `false` otherwise.
+ *
+ * This function can also serve as a type predicate in TypeScript, narrowing the type of the argument to `Buffer`.
+ *
+ * @param {unknown} x - The value to check if it is a Buffer.
+ * @returns {boolean} Returns `true` if `x` is a Buffer, else `false`.
+ *
+ * @example
+ * const buffer = Buffer.from("test");
+ * console.log(isBuffer(buffer)); // true
+ *
+ * const notBuffer = "not a buffer";
+ * console.log(isBuffer(notBuffer)); // false
+ */
+export function isBuffer(x: unknown): boolean {
+  // eslint-disable-next-line
+  // @ts-ignore
+  return typeof Buffer !== 'undefined' && Buffer.isBuffer(x);
+}
+
+// denoCacheMetadata={"headers":{"x-goog-stored-content-length":"887","x-goog-metageneration":"1","access-control-allow-origin":"*","access-control-expose-headers":"*","content-type":"text/typescript","x-jsr-cache-status":"revalidated","x-content-type-options":"nosniff","cache-control":"public, max-age=31536000, immutable","date":"Thu, 26 Jun 2025 21:45:35 GMT","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","last-modified":"Sun, 09 Mar 2025 08:39:34 GMT","etag":"\"e2f7909d123fcf8b2c924c42efefde5d\"","content-length":"887","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","cross-origin-resource-policy":"cross-origin","x-goog-storage-class":"STANDARD","x-goog-generation":"1741509574880112","x-guploader-uploadid":"ABgVH8_-OS0xI0pfnjT9WLlXnSGsZsZpDsaOCbzuYynOQN8SKOkUyeZDlV6MoZyUXOpaufg5tgtWv0I","x-goog-stored-content-encoding":"identity","server":"UploadServer","expires":"Fri, 26 Jun 2026 21:45:35 GMT","age":"0","x-goog-hash":"crc32c=M4ZofQ==,md5=4veQnRI/z4sskkxC7+/eXQ==","accept-ranges":"bytes","x-jsr-cache-id":"ATL","x-robots-tag":"noindex","via":"1.1 google"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/predicate/isBuffer.ts","time":1750974334}

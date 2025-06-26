@@ -1,0 +1,47 @@
+/**
+ * Creates a function that only executes starting from the `n`-th call.
+ * The provided function will be invoked starting from the `n`-th call.
+ *
+ * This is particularly useful for scenarios involving events or asynchronous operations
+ * where an action should occur only after a certain number of invocations.
+ *
+ * @template F - The type of the function to be invoked.
+ * @param {number} n - The number of calls required for `func` to execute.
+ * @param {F} func - The function to be invoked.
+ * @returns {(...args: Parameters<F>) => ReturnType<F> | undefined} - A new function that:
+ * - Tracks the number of calls.
+ * - Invokes `func` starting from the `n`-th call.
+ * - Returns `undefined` if fewer than `n` calls have been made.
+ * @throws {Error} - Throws an error if `n` is negative.
+ * @example
+ *
+ * const afterFn = after(3, () => {
+ *  console.log("called")
+ * });
+ *
+ * // Will not log anything.
+ * afterFn()
+ * // Will not log anything.
+ * afterFn()
+ * // Will log 'called'.
+ * afterFn()
+ */
+
+export function after<F extends (...args: any[]) => any>(
+  n: number,
+  func: F
+): (...args: Parameters<F>) => ReturnType<F> | undefined {
+  if (!Number.isInteger(n) || n < 0) {
+    throw new Error(`n must be a non-negative integer.`);
+  }
+
+  let counter = 0;
+  return (...args: Parameters<F>) => {
+    if (++counter >= n) {
+      return func(...args);
+    }
+    return undefined;
+  };
+}
+
+// denoCacheMetadata={"headers":{"cross-origin-resource-policy":"cross-origin","cache-control":"public, max-age=31536000, immutable","server":"UploadServer","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-guploader-uploadid":"ABgVH88xuQ5WN1XM4FBcvlryLVADf4BRXJpC86ILZsanBWWvU-yYfJzhnZxpCbbKel5ZcDsLnxbGsdU","date":"Thu, 26 Jun 2025 21:45:35 GMT","etag":"\"8d830fa5d6c35639eb218f304d6c6eed\"","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-robots-tag":"noindex","x-goog-stored-content-encoding":"identity","x-content-type-options":"nosniff","x-goog-hash":"crc32c=KpmH1g==,md5=jYMPpdbDVjnrIY8wTWxu7Q==","content-length":"1400","age":"0","x-goog-stored-content-length":"1400","accept-ranges":"bytes","access-control-allow-origin":"*","x-goog-generation":"1741509576023363","via":"1.1 google","x-jsr-cache-id":"ATL","last-modified":"Sun, 09 Mar 2025 08:39:36 GMT","content-type":"text/typescript","x-goog-storage-class":"STANDARD","x-jsr-cache-status":"revalidated","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-metageneration":"1","access-control-expose-headers":"*"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/function/after.ts","time":1750974334}

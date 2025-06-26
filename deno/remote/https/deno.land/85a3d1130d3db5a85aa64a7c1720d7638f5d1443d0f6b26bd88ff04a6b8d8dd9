@@ -1,0 +1,37 @@
+// Copyright 2018-2022 the Deno authors. All rights reserved. MIT license.
+/**
+ * Test whether or not the given path exists by checking with the file system
+ * @deprecated Checking the state of a file before using it causes a race condition. Perform the actual operation directly instead.
+ * @see https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use
+ */
+export async function exists(filePath: string): Promise<boolean> {
+  try {
+    await Deno.lstat(filePath);
+    return true;
+  } catch (err) {
+    if (err instanceof Deno.errors.NotFound) {
+      return false;
+    }
+
+    throw err;
+  }
+}
+
+/**
+ * Test whether or not the given path exists by checking with the file system
+ * @deprecated Checking the state of a file before using it causes a race condition. Perform the actual operation directly instead.
+ * @see https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use
+ */
+export function existsSync(filePath: string): boolean {
+  try {
+    Deno.lstatSync(filePath);
+    return true;
+  } catch (err) {
+    if (err instanceof Deno.errors.NotFound) {
+      return false;
+    }
+    throw err;
+  }
+}
+
+// denoCacheMetadata={"headers":{"server-timing":"fetchSource;dur=6","x-amz-version-id":"INV3TJb7_..GG3LyX8N_XTXHOvSRYDgl","x-amz-replication-status":"COMPLETED","content-security-policy":"default-src 'none'; style-src 'unsafe-inline'; sandbox","x-cache":"Hit from cloudfront","accept-ranges":"bytes","cache-control":"public, max-age=31536000, immutable","cross-origin-opener-policy":"same-origin","vary":"Accept-Encoding, Origin","cross-origin-resource-policy":"same-origin","via":"http/2 edgeproxy-h","date":"Sun, 29 Dec 2024 13:38:34 GMT","etag":"\"53e6a4362081f0cf46ceaac5b47d1b26\"","x-frame-options":"DENY","last-modified":"Thu, 28 Jul 2022 16:20:41 GMT","age":"15494821","x-amz-cf-id":"UfymANcMwqT5MzZ7nl4qAjvwhTfGRgoNqIFvUGj8XIZfOuxeYIPcQg==","cross-origin-embedder-policy":"same-origin","x-content-type-options":"nosniff","access-control-allow-origin":"*","referrer-policy":"strict-origin-when-cross-origin","strict-transport-security":"max-age=63072000; includeSubDomains; preload","server":"deno/gcp-us-east4","content-type":"application/typescript; charset=utf-8","content-length":"1106","x-amz-cf-pop":"IAD61-P1"},"url":"https://deno.land/std@0.150.0/fs/exists.ts","time":1750974334}

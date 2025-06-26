@@ -1,0 +1,23 @@
+/**
+ * Removes a specified number of elements from the beginning of an array and returns the rest.
+ *
+ * This function takes an array and a number, and returns a new array with the specified number
+ * of elements removed from the start.
+ *
+ * @template T - The type of elements in the array.
+ * @param {T[]} arr - The array from which to drop elements.
+ * @param {number} itemsCount - The number of elements to drop from the beginning of the array.
+ * @returns {T[]} A new array with the specified number of elements removed from the start.
+ *
+ * @example
+ * const array = [1, 2, 3, 4, 5];
+ * const result = drop(array, 2);
+ * // result will be [3, 4, 5] since the first two elements are dropped.
+ */
+export function drop<T>(arr: readonly T[], itemsCount: number): T[] {
+  itemsCount = Math.max(itemsCount, 0);
+
+  return arr.slice(itemsCount);
+}
+
+// denoCacheMetadata={"headers":{"x-goog-hash":"crc32c=xrvO0Q==,md5=vO9vsdnbWAihomwbguvyUA==","last-modified":"Sun, 09 Mar 2025 08:39:36 GMT","x-goog-stored-content-length":"846","x-goog-storage-class":"STANDARD","age":"0","cache-control":"public, max-age=31536000, immutable","x-jsr-cache-id":"ATL","x-guploader-uploadid":"ABgVH8_IN-eUCHiKh7dmwMbUUg5YmDVK-yzdyijVnBXshIoaU3HXkH9B7_Hvlur-Rp89mvMiiMfUO-s","x-robots-tag":"noindex","etag":"\"bcef6fb1d9db5808a1a26c1b82ebf250\"","access-control-allow-origin":"*","date":"Thu, 26 Jun 2025 21:45:35 GMT","access-control-expose-headers":"*","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-goog-generation":"1741509575956330","x-jsr-cache-status":"revalidated","x-goog-stored-content-encoding":"identity","via":"1.1 google","server":"UploadServer","accept-ranges":"bytes","content-type":"text/typescript","cross-origin-resource-policy":"cross-origin","x-content-type-options":"nosniff","x-goog-metageneration":"1","content-length":"846","expires":"Fri, 26 Jun 2026 21:45:35 GMT","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/array/drop.ts","time":1750974334}

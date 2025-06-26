@@ -1,0 +1,11 @@
+/**
+ * An asynchronous no-operation function that does nothing.
+ * This can be used as a placeholder or default function.
+ *
+ * @example
+ * asyncNoop(); // Does nothing
+ *
+ * @returns {Promise<void>} This function returns a Promise that resolves to undefined.
+ */ export async function asyncNoop() {}
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImh0dHBzOi8vanNyLmlvL0Blcy10b29sa2l0L2VzLXRvb2xraXQvMS4zMy4wL3NyYy9mdW5jdGlvbi9hc3luY05vb3AudHMiXSwic291cmNlc0NvbnRlbnQiOlsiLyoqXG4gKiBBbiBhc3luY2hyb25vdXMgbm8tb3BlcmF0aW9uIGZ1bmN0aW9uIHRoYXQgZG9lcyBub3RoaW5nLlxuICogVGhpcyBjYW4gYmUgdXNlZCBhcyBhIHBsYWNlaG9sZGVyIG9yIGRlZmF1bHQgZnVuY3Rpb24uXG4gKlxuICogQGV4YW1wbGVcbiAqIGFzeW5jTm9vcCgpOyAvLyBEb2VzIG5vdGhpbmdcbiAqXG4gKiBAcmV0dXJucyB7UHJvbWlzZTx2b2lkPn0gVGhpcyBmdW5jdGlvbiByZXR1cm5zIGEgUHJvbWlzZSB0aGF0IHJlc29sdmVzIHRvIHVuZGVmaW5lZC5cbiAqL1xuZXhwb3J0IGFzeW5jIGZ1bmN0aW9uIGFzeW5jTm9vcCgpOiBQcm9taXNlPHZvaWQ+IHt9XG4iXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IkFBQUE7Ozs7Ozs7O0NBUUMsR0FDRCxPQUFPLGVBQWUsYUFBNEIifQ==
+// denoCacheMetadata=4743205653280689493,52034084908763948

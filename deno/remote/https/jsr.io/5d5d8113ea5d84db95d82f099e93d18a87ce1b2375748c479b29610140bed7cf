@@ -1,0 +1,18 @@
+import { isObjectLike } from './isObjectLike.ts';
+import { isPlainObject } from './isPlainObject.ts';
+
+/**
+ * Checks if `value` is likely a DOM element.
+ *
+ * @param {any} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is a DOM element, else `false`.
+ *
+ * @example
+ * console.log(isElement(document.body)); // true
+ * console.log(isElement('<body>')); // false
+ */
+export function isElement(value?: any): boolean {
+  return isObjectLike(value) && (value as any).nodeType === 1 && !isPlainObject(value);
+}
+
+// denoCacheMetadata={"headers":{"via":"1.1 google","etag":"\"680a384779cb7fc71a01c21a1583c7e8\"","x-robots-tag":"noindex","x-goog-stored-content-length":"533","x-jsr-cache-id":"ATL","date":"Thu, 26 Jun 2025 21:45:35 GMT","cache-control":"public, max-age=31536000, immutable","access-control-allow-origin":"*","cross-origin-resource-policy":"cross-origin","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-metageneration":"1","x-goog-storage-class":"STANDARD","access-control-expose-headers":"*","x-content-type-options":"nosniff","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-jsr-cache-status":"revalidated","content-type":"text/typescript","age":"0","x-guploader-uploadid":"ABgVH897fDUDVa7NFT6KjR2sAYeCQQZTIZdcgaAJH9f-qViB4PCv3adMfeWGox_Wx3hV506dIOPHjCo","last-modified":"Sun, 09 Mar 2025 08:39:34 GMT","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","accept-ranges":"bytes","server":"UploadServer","x-goog-stored-content-encoding":"identity","x-goog-generation":"1741509574654289","x-goog-hash":"crc32c=SAmU5A==,md5=aAo4R3nLf8caAcIaFYPH6A==","content-length":"533"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/predicate/isElement.ts","time":1750974334}

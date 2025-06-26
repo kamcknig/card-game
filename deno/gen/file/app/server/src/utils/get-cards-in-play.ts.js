@@ -1,0 +1,8 @@
+export const getCardsInPlay = (findCards)=>findCards({
+    location: [
+      'playArea',
+      'activeDuration'
+    ]
+  });
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImZpbGU6Ly8vYXBwL3NlcnZlci9zcmMvdXRpbHMvZ2V0LWNhcmRzLWluLXBsYXkudHMiXSwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0IHsgRmluZENhcmRzRm4gfSBmcm9tICcuLi90eXBlcy50cyc7XG5cbmV4cG9ydCBjb25zdCBnZXRDYXJkc0luUGxheSA9IChmaW5kQ2FyZHM6IEZpbmRDYXJkc0ZuKSA9PiBmaW5kQ2FyZHMoeyBsb2NhdGlvbjogWydwbGF5QXJlYScsICdhY3RpdmVEdXJhdGlvbiddIH0pO1xuIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiJBQUVBLE9BQU8sTUFBTSxpQkFBaUIsQ0FBQyxZQUEyQixVQUFVO0lBQUUsVUFBVTtNQUFDO01BQVk7S0FBaUI7RUFBQyxHQUFHIn0=
+// denoCacheMetadata=12098426074916093665,12296184799601020291

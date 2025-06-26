@@ -1,0 +1,39 @@
+import { orderBy } from './orderBy.ts';
+
+/**
+ * Sorts an array of objects based on the given `criteria`.
+ *
+ * - If you provide keys, it sorts the objects by the values of those keys.
+ * - If you provide functions, it sorts based on the values returned by those functions.
+ *
+ * The function returns the array of objects sorted in ascending order.
+ * If two objects have the same value for the current criterion, it uses the next criterion to determine their order.
+ *
+ * @template T - The type of the objects in the array.
+ * @param {T[]} arr - The array of objects to be sorted.
+ * @param {Array<((item: T) => unknown) | keyof T>} criteria - The criteria for sorting. This can be an array of object keys or functions that return values used for sorting.
+ * @returns {T[]} - The sorted array.
+ *
+ * @example
+ * const users = [
+ *  { user: 'foo', age: 24 },
+ *  { user: 'bar', age: 7 },
+ *  { user: 'foo ', age: 8 },
+ *  { user: 'bar ', age: 29 },
+ * ];
+ *
+ * sortBy(users, ['user', 'age']);
+ * sortBy(users, [obj => obj.user, 'age']);
+ * // results will be:
+ * // [
+ * //   { user : 'bar', age: 7 },
+ * //   { user : 'bar', age: 29 },
+ * //   { user : 'foo', age: 8 },
+ * //   { user : 'foo', age: 24 },
+ * // ]
+ */
+export function sortBy<T extends object>(arr: readonly T[], criteria: Array<((item: T) => unknown) | keyof T>): T[] {
+  return orderBy(arr, criteria, ['asc']);
+}
+
+// denoCacheMetadata={"headers":{"x-jsr-cache-status":"revalidated","cross-origin-resource-policy":"cross-origin","access-control-allow-origin":"*","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","date":"Thu, 26 Jun 2025 21:45:35 GMT","expires":"Fri, 26 Jun 2026 21:45:35 GMT","age":"0","x-content-type-options":"nosniff","x-goog-metageneration":"1","via":"1.1 google","content-length":"1379","access-control-expose-headers":"*","cache-control":"public, max-age=31536000, immutable","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-guploader-uploadid":"ABgVH89dDisxAFlIt3ogQwP6w6HXG3cMDw_SI-eZRSlah29UD2proLkO4-4nYIKieq48YgplP8jjUcE","x-jsr-cache-id":"ATL","x-goog-generation":"1741509575544606","etag":"\"97b4b30d4058995c1a3ff79bd0f87293\"","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-stored-content-encoding":"identity","server":"UploadServer","x-goog-hash":"crc32c=MYV9zQ==,md5=l7SzDUBYmVwaP/eb0Phykw==","accept-ranges":"bytes","content-type":"text/typescript","x-goog-stored-content-length":"1379","x-robots-tag":"noindex","x-goog-storage-class":"STANDARD"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/array/sortBy.ts","time":1750974334}

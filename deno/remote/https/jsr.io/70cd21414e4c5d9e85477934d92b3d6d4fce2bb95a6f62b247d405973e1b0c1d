@@ -1,0 +1,27 @@
+import { isSymbol } from '../predicate/isSymbol.ts';
+
+/**
+ * Converts `value` to a number.
+ *
+ * Unlike `Number()`, this function returns `NaN` for symbols.
+ *
+ * @param {unknown} value - The value to convert.
+ * @returns {number} Returns the number.
+ *
+ * @example
+ * toNumber(3.2); // => 3.2
+ * toNumber(Number.MIN_VALUE); // => 5e-324
+ * toNumber(Infinity); // => Infinity
+ * toNumber('3.2'); // => 3.2
+ * toNumber(Symbol.iterator); // => NaN
+ * toNumber(NaN); // => NaN
+ */
+export function toNumber(value?: unknown): number {
+  if (isSymbol(value)) {
+    return NaN;
+  }
+
+  return Number(value);
+}
+
+// denoCacheMetadata={"headers":{"content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-robots-tag":"noindex","cross-origin-resource-policy":"cross-origin","x-goog-stored-content-encoding":"identity","server":"UploadServer","x-goog-generation":"1741509575550756","x-goog-stored-content-length":"602","via":"1.1 google","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","x-jsr-cache-id":"ATL","x-goog-storage-class":"STANDARD","x-jsr-cache-status":"revalidated","access-control-allow-origin":"*","x-goog-hash":"crc32c=3usrjA==,md5=Tnkj/FAZBgkQ/rzlhZ8Y6Q==","accept-ranges":"bytes","access-control-expose-headers":"*","x-guploader-uploadid":"ABgVH8_6oPg4c1ClAq-jQs0A6bcTH2vln63qDM2XQcsFU_zK9fYg0Vuc7klii8IKsmVRTwGGzroynXo","x-content-type-options":"nosniff","content-length":"602","date":"Thu, 26 Jun 2025 21:45:35 GMT","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-metageneration":"1","expires":"Fri, 26 Jun 2026 21:45:35 GMT","age":"0","etag":"\"4e7923fc5019060910febce5859f18e9\"","cache-control":"public, max-age=31536000, immutable","content-type":"text/typescript"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/util/toNumber.ts","time":1750974334}

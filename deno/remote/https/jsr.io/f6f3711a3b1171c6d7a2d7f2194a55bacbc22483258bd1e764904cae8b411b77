@@ -1,0 +1,25 @@
+/**
+ * Converts `string` to an integer of the specified radix. If `radix` is undefined or 0, a `radix` of 10 is used unless `string` is a hexadecimal, in which case a `radix` of 16 is used.
+ *
+ * @param {string} string The string to convert to an integer.
+ * @param {number} radix The radix to use when converting the string to an integer. Defaults to `0`.
+ * @param {unknown} guard Enables use as an iteratee for methods like `Array#map`.
+ * @returns {number} Returns the converted integer.
+ *
+ * @example
+ * parseInt('08'); // => 8
+ * parseInt('0x20'); // => 32
+ *
+ * parseInt('08', 10); // => 8
+ * parseInt('0x20', 16); // => 32
+ *
+ * ['6', '08', '10'].map(parseInt); // => [6, 8, 10]
+ */
+export function parseInt(string: string, radix = 0, guard?: unknown): number {
+  if (guard) {
+    radix = 0;
+  }
+  return Number.parseInt(string, radix);
+}
+
+// denoCacheMetadata={"headers":{"x-jsr-cache-status":"revalidated","x-robots-tag":"noindex","x-guploader-uploadid":"ABgVH88aRQFybE_eaj9haEMWsAU3ldJVRvHkdYnCxDWsPgzGBdlutVY-vi41S5nnZh4mDrq30ct76Zs","x-goog-hash":"crc32c=GtaU4A==,md5=5lG1rGJUQxDojtsDxcDWvg==","via":"1.1 google","content-type":"text/typescript","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","x-goog-generation":"1741509575922558","x-goog-stored-content-encoding":"identity","x-jsr-cache-id":"ATL","access-control-expose-headers":"*","accept-ranges":"bytes","expires":"Fri, 26 Jun 2026 21:45:35 GMT","cross-origin-resource-policy":"cross-origin","x-content-type-options":"nosniff","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","etag":"\"e651b5ac62544310e88edb03c5c0d6be\"","x-goog-stored-content-length":"848","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-goog-storage-class":"STANDARD","x-goog-metageneration":"1","content-length":"848","server":"UploadServer","cache-control":"public, max-age=31536000, immutable","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","age":"0","access-control-allow-origin":"*"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/math/parseInt.ts","time":1750974334}

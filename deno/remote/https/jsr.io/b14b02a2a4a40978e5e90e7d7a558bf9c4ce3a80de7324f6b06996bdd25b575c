@@ -1,0 +1,24 @@
+import { uniq } from './uniq.ts';
+
+/**
+ * Creates an array of unique values from all given arrays.
+ *
+ * This function takes two arrays, merges them into a single array, and returns a new array
+ * containing only the unique values from the merged array.
+ *
+ * @template T - The type of elements in the array.
+ * @param {T[]} arr1 - The first array to merge and filter for unique values.
+ * @param {T[]} arr2 - The second array to merge and filter for unique values.
+ * @returns {T[]} A new array of unique values.
+ *
+ * @example
+ * const array1 = [1, 2, 3];
+ * const array2 = [3, 4, 5];
+ * const result = union(array1, array2);
+ * // result will be [1, 2, 3, 4, 5]
+ */
+export function union<T>(arr1: readonly T[], arr2: readonly T[]): T[] {
+  return uniq(arr1.concat(arr2));
+}
+
+// denoCacheMetadata={"headers":{"content-type":"text/typescript","x-content-type-options":"nosniff","x-jsr-cache-status":"revalidated","x-jsr-cache-id":"ATL","x-goog-stored-content-encoding":"identity","accept-ranges":"bytes","server":"UploadServer","x-guploader-uploadid":"ABgVH89WdV5S7m_ZwEa8Pzo4hm0dS5KSfyG3oyfOH_XmPwiAUhQtm4Fm-ZuFF5M3-P8MapwsfF7pPyc","x-goog-generation":"1741509575383788","content-length":"777","via":"1.1 google","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-robots-tag":"noindex","access-control-allow-origin":"*","access-control-expose-headers":"*","x-goog-storage-class":"STANDARD","cross-origin-resource-policy":"cross-origin","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-goog-hash":"crc32c=qx708g==,md5=+A7v8XljwDEgxgx1EPrtLg==","cache-control":"public, max-age=31536000, immutable","x-goog-stored-content-length":"777","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","etag":"\"f80eeff17963c03120c60c7510faed2e\"","age":"0","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-goog-metageneration":"1"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/array/union.ts","time":1750974334}

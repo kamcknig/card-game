@@ -1,0 +1,32 @@
+/** Counter used to generate unique numeric identifiers. */
+let idCounter = 0;
+
+/**
+ * Generates a unique identifier, optionally prefixed with a given string.
+ *
+ * @param {string} [prefix] - An optional string to prefix the unique identifier.
+ *                            If not provided or not a string, only the unique
+ *                            numeric identifier is returned.
+ * @returns {string} A string containing the unique identifier, with the optional
+ *                   prefix if provided.
+ *
+ * @example
+ * // Generate a unique ID with a prefix
+ * uniqueId('user_');  // => 'user_1'
+ *
+ * @example
+ * // Generate a unique ID without a prefix
+ * uniqueId();  // => '2'
+ *
+ * @example
+ * // Subsequent calls increment the internal counter
+ * uniqueId('item_');  // => 'item_3'
+ * uniqueId();         // => '4'
+ */
+export function uniqueId(prefix = ''): string {
+  const id = ++idCounter;
+
+  return `${prefix}${id}`;
+}
+
+// denoCacheMetadata={"headers":{"alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-storage-class":"STANDARD","accept-ranges":"bytes","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-content-type-options":"nosniff","x-goog-stored-content-encoding":"identity","last-modified":"Sun, 09 Mar 2025 08:39:36 GMT","x-goog-hash":"crc32c=u5Yssw==,md5=baCvtoKZEgkIr6aDAjK0sw==","x-guploader-uploadid":"ABgVH8-1Mwlm0mZpJ8klM7z7kIFeBauyRp026B1OtlFTa2sLJ1nzLbL0fPIEjFPy4HD7g8H0ITpMnmU","x-goog-generation":"1741509575973932","via":"1.1 google","date":"Thu, 26 Jun 2025 21:45:35 GMT","cache-control":"public, max-age=31536000, immutable","etag":"\"6da0afb68299120908afa6830232b4b3\"","server":"UploadServer","content-type":"text/typescript","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-goog-stored-content-length":"935","content-length":"935","x-jsr-cache-id":"ATL","x-robots-tag":"noindex","access-control-expose-headers":"*","age":"0","cross-origin-resource-policy":"cross-origin","access-control-allow-origin":"*","x-goog-metageneration":"1","x-jsr-cache-status":"revalidated"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/util/uniqueId.ts","time":1750974334}

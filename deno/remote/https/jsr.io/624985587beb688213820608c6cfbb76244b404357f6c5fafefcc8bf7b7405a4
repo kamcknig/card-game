@@ -1,0 +1,43 @@
+/**
+ * Returns the intersection of two arrays based on a mapping function.
+ *
+ * This function takes two arrays and a mapping function. It returns a new array containing
+ * the elements from the first array that, when mapped using the provided function, have matching
+ * mapped elements in the second array. It effectively filters out any elements from the first array
+ * that do not have corresponding mapped values in the second array.
+ *
+ * @template T - The type of elements in the first array.
+ * @template U - The type of elements in the second array.
+ * @param {T[]} firstArr - The first array to compare.
+ * @param {U[]} secondArr - The second array to compare.
+ * @param {(item: T | U) => unknown} mapper - A function to map the elements of both arrays for comparison.
+ * @returns {T[]} A new array containing the elements from the first array that have corresponding mapped values in the second array.
+ *
+ * @example
+ * const array1 = [{ id: 1 }, { id: 2 }, { id: 3 }];
+ * const array2 = [{ id: 2 }, { id: 4 }];
+ * const mapper = item => item.id;
+ * const result = intersectionBy(array1, array2, mapper);
+ * // result will be [{ id: 2 }] since only this element has a matching id in both arrays.
+ *
+ * @example
+ * const array1 = [
+ *   { id: 1, name: 'jane' },
+ *   { id: 2, name: 'amy' },
+ *   { id: 3, name: 'michael' },
+ * ];
+ * const array2 = [2, 4];
+ * const mapper = item => (typeof item === 'object' ? item.id : item);
+ * const result = intersectionBy(array1, array2, mapper);
+ * // result will be [{ id: 2, name: 'amy' }] since only this element has a matching id that is equal to seconds array's element.
+ */
+export function intersectionBy<T, U>(
+  firstArr: readonly T[],
+  secondArr: readonly U[],
+  mapper: (item: T | U) => unknown
+): T[] {
+  const mappedSecondSet = new Set(secondArr.map(mapper));
+  return firstArr.filter(item => mappedSecondSet.has(mapper(item)));
+}
+
+// denoCacheMetadata={"headers":{"x-robots-tag":"noindex","access-control-allow-origin":"*","x-goog-storage-class":"STANDARD","access-control-expose-headers":"*","x-goog-stored-content-encoding":"identity","x-content-type-options":"nosniff","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-hash":"crc32c=z5vfBA==,md5=RA6RwtEZfaAxFN6SdRfZ5w==","cross-origin-resource-policy":"cross-origin","accept-ranges":"bytes","server":"UploadServer","x-goog-stored-content-length":"1892","via":"1.1 google","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-guploader-uploadid":"ABgVH8-tdCPYMlBQ_OvYvASUu1fXEqj8GMljqVELwRYuRBxQmqzYisZltn9mDU7D0e53574RJXPW6ow","x-goog-generation":"1741509575482227","cache-control":"public, max-age=31536000, immutable","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","etag":"\"440e91c2d1197da03114de927517d9e7\"","date":"Thu, 26 Jun 2025 21:45:35 GMT","age":"0","x-goog-metageneration":"1","content-length":"1892","content-type":"text/typescript","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-jsr-cache-status":"revalidated","x-jsr-cache-id":"ATL"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/array/intersectionBy.ts","time":1750974334}

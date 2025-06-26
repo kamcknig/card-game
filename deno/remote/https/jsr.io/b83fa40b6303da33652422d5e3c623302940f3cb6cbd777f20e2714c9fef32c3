@@ -1,0 +1,33 @@
+import { isArrayLike } from '../predicate/isArrayLike.ts';
+import { isMap } from '../predicate/isMap.ts';
+
+/**
+ * Converts a value to an array.
+ *
+ * @param {unknown} value - The value to convert.
+ * @returns {any[]} Returns the converted array.
+ *
+ * @example
+ * toArray({ 'a': 1, 'b': 2 }) // => returns [1,2]
+ * toArray('abc') // => returns ['a', 'b', 'c']
+ * toArray(1) // => returns []
+ * toArray(null) // => returns []
+ */
+
+export function toArray(value?: unknown): any[] {
+  if (value == null) {
+    return [];
+  }
+
+  if (isArrayLike(value) || isMap(value)) {
+    return Array.from(value);
+  }
+
+  if (typeof value === 'object') {
+    return Object.values(value);
+  }
+
+  return [];
+}
+
+// denoCacheMetadata={"headers":{"x-goog-generation":"1741509575154648","access-control-expose-headers":"*","x-goog-stored-content-length":"690","age":"0","cross-origin-resource-policy":"cross-origin","x-content-type-options":"nosniff","accept-ranges":"bytes","x-jsr-cache-id":"ATL","via":"1.1 google","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","etag":"\"b687dcf2ee76af03ea156a20f24844af\"","content-length":"690","x-goog-metageneration":"1","server":"UploadServer","date":"Thu, 26 Jun 2025 21:45:35 GMT","cache-control":"public, max-age=31536000, immutable","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","content-type":"text/typescript","x-jsr-cache-status":"revalidated","x-goog-storage-class":"STANDARD","x-robots-tag":"noindex","x-goog-hash":"crc32c=Fa2vVg==,md5=tofc8u52rwPqFWog8khErw==","x-guploader-uploadid":"ABgVH88Yygrt0rSMUIHgtvXQ_6CFfg0qDvH_8_LsKYa7RLsclpsITkm1CQ0xnuG-H93RILt-4UTb9uA","x-goog-stored-content-encoding":"identity","expires":"Fri, 26 Jun 2026 21:45:35 GMT","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","access-control-allow-origin":"*"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/util/toArray.ts","time":1750974334}

@@ -1,0 +1,22 @@
+/**
+ * Checks if a given value is a number.
+ *
+ * This function can also serve as a type predicate in TypeScript, narrowing the type of the argument to `number`.
+ *
+ * @param {unknown} value The value to check if it is a number.
+ * @returns {value is number} Returns `true` if `value` is a number, else `false`.
+ *
+ * @example
+ * const value1 = 123;
+ * const value2 = 'abc';
+ * const value3 = true;
+ *
+ * console.log(isNumber(value1)); // true
+ * console.log(isNumber(value2)); // false
+ * console.log(isNumber(value3)); // false
+ */
+export function isNumber(value?: unknown): value is number {
+  return typeof value === 'number' || value instanceof Number;
+}
+
+// denoCacheMetadata={"headers":{"x-content-type-options":"nosniff","x-goog-hash":"crc32c=PeOKFw==,md5=IRSE7XF84cH187hAAUZoJQ==","age":"0","x-goog-generation":"1741509574345401","via":"1.1 google","access-control-expose-headers":"*","last-modified":"Sun, 09 Mar 2025 08:39:34 GMT","content-type":"text/typescript","etag":"\"211484ed717ce1c1f5f3b84001466825\"","x-jsr-cache-id":"ATL","cache-control":"public, max-age=31536000, immutable","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-metageneration":"1","x-goog-stored-content-length":"660","x-goog-stored-content-encoding":"identity","server":"UploadServer","content-length":"660","date":"Thu, 26 Jun 2025 21:45:35 GMT","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-guploader-uploadid":"ABgVH8-lRrr-Dqx-t1ga683y2ypX0eAwPnOzbSdCpG1Sy7aJ79u57GUPXvEF5dW-cfZlBSl72hk65Ig","x-robots-tag":"noindex","access-control-allow-origin":"*","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-goog-storage-class":"STANDARD","x-jsr-cache-status":"revalidated","cross-origin-resource-policy":"cross-origin","accept-ranges":"bytes"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/predicate/isNumber.ts","time":1750974334}

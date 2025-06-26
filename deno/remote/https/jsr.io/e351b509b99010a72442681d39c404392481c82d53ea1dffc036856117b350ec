@@ -1,0 +1,29 @@
+// Copyright 2018-2024 the Deno authors. All rights reserved. MIT license.
+// This module is browser compatible.
+
+/**
+ * Utilities for dealing with {@linkcode Date} objects.
+ *
+ * ```ts
+ * import { dayOfYear, isLeap, difference } from "@std/datetime";
+ * import { assertEquals } from "@std/assert";
+ *
+ * assertEquals(dayOfYear(new Date("2019-03-11T03:24:00")), 70);
+ * assertEquals(isLeap(1970), false);
+ *
+ * const date0 = new Date("2018-05-14");
+ * const date1 = new Date("2020-05-13");
+ * assertEquals(difference(date0, date1).years, 1);
+ * ```
+ *
+ * @module
+ */
+export * from "./constants.ts";
+export * from "./day_of_year.ts";
+export * from "./difference.ts";
+export * from "./format.ts";
+export * from "./is_leap.ts";
+export * from "./parse.ts";
+export * from "./week_of_year.ts";
+
+// denoCacheMetadata={"headers":{"date":"Thu, 26 Jun 2025 21:45:36 GMT","x-goog-generation":"1720781427415208","via":"1.1 google","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-guploader-uploadid":"ABgVH886t1-hbvZanPupWe2-NNw_9qjMFWL6eTiAis7romhW-q4nXsfQz2iBIO4bOWR5hwkycMgjfvU","last-modified":"Fri, 12 Jul 2024 10:50:27 GMT","x-jsr-cache-id":"ATL","x-goog-metageneration":"1","content-type":"text/typescript","accept-ranges":"bytes","x-jsr-cache-status":"revalidated","x-goog-stored-content-length":"788","x-goog-storage-class":"STANDARD","cache-control":"public, max-age=31536000, immutable","access-control-expose-headers":"*","cross-origin-resource-policy":"cross-origin","server":"UploadServer","etag":"\"e681617536047e1a717f6706c5bd5a95\"","x-content-type-options":"nosniff","x-robots-tag":"noindex","expires":"Fri, 26 Jun 2026 21:45:36 GMT","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-stored-content-encoding":"identity","x-goog-hash":"crc32c=zPKzbg==,md5=5oFhdTYEfhpxf2cGxb1alQ==","access-control-allow-origin":"*","content-length":"788","age":"0"},"url":"https://jsr.io/@std/datetime/0.224.3/mod.ts","time":1750974334}

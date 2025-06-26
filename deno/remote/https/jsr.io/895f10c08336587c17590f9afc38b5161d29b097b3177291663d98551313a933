@@ -1,0 +1,33 @@
+/**
+ * Checks whether a value is a JavaScript primitive.
+ * JavaScript primitives include null, undefined, strings, numbers, booleans, symbols, and bigints.
+ *
+ * @param {unknown} value The value to check.
+ * @returns {value is
+ *     null
+ *   | undefined
+ *   | string
+ *   | number
+ *   | boolean
+ *   | symbol
+ *   | bigint} Returns true if `value` is a primitive, false otherwise.
+ *
+ * @example
+ * isPrimitive(null); // true
+ * isPrimitive(undefined); // true
+ * isPrimitive('123'); // true
+ * isPrimitive(false); // true
+ * isPrimitive(true); // true
+ * isPrimitive(Symbol('a')); // true
+ * isPrimitive(123n); // true
+ * isPrimitive({}); // false
+ * isPrimitive(new Date()); // false
+ * isPrimitive(new Map()); // false
+ * isPrimitive(new Set()); // false
+ * isPrimitive([1, 2, 3]); // false
+ */
+export function isPrimitive(value: unknown): value is null | undefined | string | number | boolean | symbol | bigint {
+  return value == null || (typeof value !== 'object' && typeof value !== 'function');
+}
+
+// denoCacheMetadata={"headers":{"access-control-allow-origin":"*","x-goog-stored-content-length":"1010","x-jsr-cache-status":"revalidated","x-goog-storage-class":"STANDARD","cross-origin-resource-policy":"cross-origin","content-length":"1010","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-goog-generation":"1741509575979305","x-goog-hash":"crc32c=G2EyHQ==,md5=JZZ3FCHvgQw37HfN5hV4/w==","accept-ranges":"bytes","age":"0","access-control-expose-headers":"*","x-robots-tag":"noindex","x-goog-metageneration":"1","server":"UploadServer","cache-control":"public, max-age=31536000, immutable","x-goog-stored-content-encoding":"identity","etag":"\"2596771421ef810c37ec77cde61578ff\"","via":"1.1 google","date":"Thu, 26 Jun 2025 21:45:35 GMT","content-type":"text/typescript","x-guploader-uploadid":"ABgVH887rxX1EZ43RGjJ5cB8-3Zi70jobnRJhuiGpxQ2d7wlGBmtqP7bOZ9YWf9YAXaH3ERc","x-jsr-cache-id":"ATL","x-content-type-options":"nosniff","expires":"Fri, 26 Jun 2026 21:45:35 GMT","last-modified":"Sun, 09 Mar 2025 08:39:36 GMT","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/predicate/isPrimitive.ts","time":1750974334}

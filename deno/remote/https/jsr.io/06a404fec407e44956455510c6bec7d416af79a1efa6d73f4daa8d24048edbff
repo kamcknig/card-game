@@ -1,0 +1,23 @@
+import { delay } from './delay.ts';
+import { TimeoutError } from '../error/TimeoutError.ts';
+
+/**
+ * Returns a promise that rejects with a `TimeoutError` after a specified delay.
+ *
+ * @param {number} ms - The delay duration in milliseconds.
+ * @returns {Promise<never>} A promise that rejects with a `TimeoutError` after the specified delay.
+ * @throws {TimeoutError} Throws a `TimeoutError` after the specified delay.
+ *
+ * @example
+ * try {
+ *   await timeout(1000); // Timeout exception after 1 second
+ * } catch (error) {
+ *   console.error(error); // Will log 'The operation was timed out'
+ * }
+ */
+export async function timeout(ms: number): Promise<never> {
+  await delay(ms);
+  throw new TimeoutError();
+}
+
+// denoCacheMetadata={"headers":{"x-robots-tag":"noindex","x-goog-generation":"1741509574718726","content-length":"714","server":"UploadServer","x-goog-stored-content-encoding":"identity","via":"1.1 google","age":"0","access-control-expose-headers":"*","last-modified":"Sun, 09 Mar 2025 08:39:34 GMT","accept-ranges":"bytes","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-goog-hash":"crc32c=S0Af3A==,md5=UAH6qAahNnPmrx6LNJwFsQ==","date":"Thu, 26 Jun 2025 21:45:36 GMT","x-jsr-cache-id":"ATL","x-jsr-cache-status":"revalidated","access-control-allow-origin":"*","x-goog-metageneration":"1","cache-control":"public, max-age=31536000, immutable","expires":"Fri, 26 Jun 2026 21:45:36 GMT","cross-origin-resource-policy":"cross-origin","x-content-type-options":"nosniff","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-guploader-uploadid":"ABgVH886dgekdP8WceHs85_DnAtz111LybTslhM1duzL8kica2ZunqnsDjIzjHTXDZ5SffXGmxkLI8E","etag":"\"5001faa806a13673e6af1e8b349c05b1\"","x-goog-stored-content-length":"714","x-goog-storage-class":"STANDARD","content-type":"text/typescript"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/promise/timeout.ts","time":1750974334}

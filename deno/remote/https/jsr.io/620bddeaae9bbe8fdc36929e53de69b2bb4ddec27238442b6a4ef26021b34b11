@@ -1,0 +1,88 @@
+import { get } from './get.ts';
+import { isDeepKey } from '../_internal/isDeepKey.ts';
+import { toKey } from '../_internal/toKey.ts';
+import { toPath } from '../util/toPath.ts';
+
+/**
+ * Removes the property at the given path of the object.
+ *
+ * @param {unknown} obj - The object to modify.
+ * @param {PropertyKey | readonly PropertyKey[]} path - The path of the property to unset.
+ * @returns {boolean} - Returns true if the property is deleted, else false.
+ *
+ * @example
+ * const obj = { a: { b: { c: 42 } } };
+ * unset(obj, 'a.b.c'); // true
+ * console.log(obj); // { a: { b: {} } }
+ *
+ * @example
+ * const obj = { a: { b: { c: 42 } } };
+ * unset(obj, ['a', 'b', 'c']); // true
+ * console.log(obj); // { a: { b: {} } }
+ */
+export function unset(obj: any, path: PropertyKey | readonly PropertyKey[]): boolean {
+  if (obj == null) {
+    return true;
+  }
+
+  switch (typeof path) {
+    case 'symbol':
+    case 'number':
+    case 'object': {
+      if (Array.isArray(path)) {
+        return unsetWithPath(obj, path);
+      }
+
+      if (typeof path === 'number') {
+        path = toKey(path);
+      } else if (typeof path === 'object') {
+        if (Object.is(path?.valueOf(), -0)) {
+          path = '-0';
+        } else {
+          path = String(path);
+        }
+      }
+
+      if (obj?.[path] === undefined) {
+        return true;
+      }
+
+      try {
+        delete obj[path];
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    case 'string': {
+      if (obj?.[path] === undefined && isDeepKey(path)) {
+        return unsetWithPath(obj, toPath(path));
+      }
+
+      try {
+        delete obj[path];
+        return true;
+      } catch {
+        return false;
+      }
+    }
+  }
+}
+
+function unsetWithPath(obj: unknown, path: readonly PropertyKey[]): boolean {
+  const parent = get(obj, path.slice(0, -1), obj);
+  const lastKey = path[path.length - 1];
+
+  if (parent?.[lastKey] === undefined) {
+    return true;
+  }
+
+  try {
+    delete parent[lastKey];
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// denoCacheMetadata={"headers":{"date":"Thu, 26 Jun 2025 21:45:35 GMT","expires":"Fri, 26 Jun 2026 21:45:35 GMT","cache-control":"public, max-age=31536000, immutable","access-control-expose-headers":"*","content-length":"2029","x-content-type-options":"nosniff","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-generation":"1741509575094231","x-goog-stored-content-encoding":"identity","via":"1.1 google","server":"UploadServer","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","etag":"\"4ec98721633cc4e4055ef0647b96248e\"","x-jsr-cache-status":"revalidated","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-guploader-uploadid":"ABgVH8-4iZVErcamcIlEs9tFEbCdQILBJ4O65CBpoUj7ctzITsA7ahoQxDXOmmw1m18_d8JV","x-goog-hash":"crc32c=VKRJvw==,md5=TsmHIWM8xOQFXvBke5Ykjg==","x-goog-storage-class":"STANDARD","x-goog-stored-content-length":"2029","x-robots-tag":"noindex","content-type":"text/typescript","accept-ranges":"bytes","age":"0","x-jsr-cache-id":"ATL","access-control-allow-origin":"*","cross-origin-resource-policy":"cross-origin","x-goog-metageneration":"1"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/object/unset.ts","time":1750974334}

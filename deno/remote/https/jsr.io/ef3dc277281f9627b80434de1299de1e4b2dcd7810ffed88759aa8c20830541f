@@ -1,0 +1,23 @@
+/**
+ * Checks if a given value is `ArrayBuffer`.
+ *
+ * This function can also serve as a type predicate in TypeScript, narrowing the type of the argument to `ArrayBuffer`.
+ *
+ * @param {unknown} value The value to check if it is a `ArrayBuffer`.
+ * @returns {value is ArrayBuffer} Returns `true` if `value` is a `ArrayBuffer`, else `false`.
+ *
+ * @example
+ * const value1 = new ArrayBuffer();
+ * const value2 = new Array();
+ * const value3 = new Map();
+ *
+ * console.log(isArrayBuffer(value1)); // true
+ * console.log(isArrayBuffer(value2)); // false
+ * console.log(isArrayBuffer(value3)); // false
+ */
+
+export function isArrayBuffer(value: unknown): value is ArrayBuffer {
+  return value instanceof ArrayBuffer;
+}
+
+// denoCacheMetadata={"headers":{"x-goog-storage-class":"STANDARD","x-guploader-uploadid":"ABgVH8_Po63UUqt-tPlAIsMvSuOsZ5rqUOohrmdtvEkDo57RHnIsdZCShAbvU4x06JeTGrvtm_9UHR4","x-goog-generation":"1741509574575011","via":"1.1 google","access-control-allow-origin":"*","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-stored-content-length":"715","cache-control":"public, max-age=31536000, immutable","x-goog-metageneration":"1","last-modified":"Sun, 09 Mar 2025 08:39:34 GMT","server":"UploadServer","x-goog-stored-content-encoding":"identity","date":"Thu, 26 Jun 2025 21:45:35 GMT","content-length":"715","expires":"Fri, 26 Jun 2026 21:45:35 GMT","etag":"\"0b615264bc649d84ce1e9036bc918e3e\"","content-type":"text/typescript","age":"0","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-jsr-cache-id":"ATL","x-robots-tag":"noindex","accept-ranges":"bytes","access-control-expose-headers":"*","x-jsr-cache-status":"revalidated","cross-origin-resource-policy":"cross-origin","x-content-type-options":"nosniff","x-goog-hash":"crc32c=/2UaXA==,md5=C2FSZLxknYTOHpA2vJGOPg=="},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/predicate/isArrayBuffer.ts","time":1750974334}

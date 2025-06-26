@@ -1,0 +1,23 @@
+/**
+ * Checks if a given value is `Set`.
+ *
+ * This function can also serve as a type predicate in TypeScript, narrowing the type of the argument to `Set`.
+ *
+ * @param {unknown} value The value to check if it is a `Set`.
+ * @returns {value is Set<any>} Returns `true` if `value` is a `Set`, else `false`.
+ *
+ * @example
+ * const value1 = new Set();
+ * const value2 = new Map();
+ * const value3 = new WeakSet();
+ *
+ * console.log(isSet(value1)); // true
+ * console.log(isSet(value2)); // false
+ * console.log(isSet(value3)); // false
+ */
+
+export function isSet(value: unknown): value is Set<any> {
+  return value instanceof Set;
+}
+
+// denoCacheMetadata={"headers":{"access-control-allow-origin":"*","x-goog-metageneration":"1","x-goog-generation":"1741509575349900","via":"1.1 google","x-goog-storage-class":"STANDARD","date":"Thu, 26 Jun 2025 21:45:35 GMT","etag":"\"f286e000f36ea4857262aff7f1913cc4\"","x-jsr-cache-id":"ATL","server":"UploadServer","access-control-expose-headers":"*","content-type":"text/typescript","x-goog-hash":"crc32c=alc2Ow==,md5=8obgAPNupIVyYq/38ZE8xA==","x-goog-stored-content-length":"631","cache-control":"public, max-age=31536000, immutable","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-jsr-cache-status":"revalidated","x-content-type-options":"nosniff","x-robots-tag":"noindex","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","cross-origin-resource-policy":"cross-origin","x-goog-stored-content-encoding":"identity","accept-ranges":"bytes","age":"0","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","content-length":"631","x-guploader-uploadid":"ABgVH88fhUAy97zWnwSmDg_3ziMrufgaTkwzEbLoWuTc4QYrFJmLtUriJRorUPu2gHUmI9G0","expires":"Fri, 26 Jun 2026 21:45:35 GMT"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/predicate/isSet.ts","time":1750974334}

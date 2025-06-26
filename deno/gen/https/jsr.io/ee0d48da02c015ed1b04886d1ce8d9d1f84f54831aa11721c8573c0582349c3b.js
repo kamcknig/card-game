@@ -1,0 +1,47 @@
+/**
+ * Returns the last element of an array.
+ *
+ * This function takes an array and returns the last element of the array.
+ * If the array is empty, the function returns `undefined`.
+ *
+ * Unlike some implementations, this function is optimized for performance
+ * by directly accessing the last index of the array.
+ *
+ * @template T - The type of elements in the array.
+ * @param {[...T[], T]} arr - The array from which to get the last element.
+ * @returns {T} The last element of the array, or `undefined` if the array is empty.
+ *
+ * @example
+ * const arr = [1, 2, 3];
+ * const lastElement = last(arr);
+ * // lastElement will be 3
+ *
+ * const emptyArr: number[] = [];
+ * const noElement = last(emptyArr);
+ * // noElement will be undefined
+ */ /**
+ * Returns the last element of an array.
+ *
+ * This function takes an array and returns the last element of the array.
+ * If the array is empty, the function returns `undefined`.
+ *
+ * Unlike some implementations, this function is optimized for performance
+ * by directly accessing the last index of the array.
+ *
+ * @template T - The type of elements in the array.
+ * @param {T[]} arr - The array from which to get the last element.
+ * @returns {T | undefined} The last element of the array, or `undefined` if the array is empty.
+ *
+ * @example
+ * const arr = [1, 2, 3];
+ * const lastElement = last(arr);
+ * // lastElement will be 3
+ *
+ * const emptyArr: number[] = [];
+ * const noElement = last(emptyArr);
+ * // noElement will be undefined
+ */ export function last(arr) {
+  return arr[arr.length - 1];
+}
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImh0dHBzOi8vanNyLmlvL0Blcy10b29sa2l0L2VzLXRvb2xraXQvMS4zMy4wL3NyYy9hcnJheS9sYXN0LnRzIl0sInNvdXJjZXNDb250ZW50IjpbIi8qKlxuICogUmV0dXJucyB0aGUgbGFzdCBlbGVtZW50IG9mIGFuIGFycmF5LlxuICpcbiAqIFRoaXMgZnVuY3Rpb24gdGFrZXMgYW4gYXJyYXkgYW5kIHJldHVybnMgdGhlIGxhc3QgZWxlbWVudCBvZiB0aGUgYXJyYXkuXG4gKiBJZiB0aGUgYXJyYXkgaXMgZW1wdHksIHRoZSBmdW5jdGlvbiByZXR1cm5zIGB1bmRlZmluZWRgLlxuICpcbiAqIFVubGlrZSBzb21lIGltcGxlbWVudGF0aW9ucywgdGhpcyBmdW5jdGlvbiBpcyBvcHRpbWl6ZWQgZm9yIHBlcmZvcm1hbmNlXG4gKiBieSBkaXJlY3RseSBhY2Nlc3NpbmcgdGhlIGxhc3QgaW5kZXggb2YgdGhlIGFycmF5LlxuICpcbiAqIEB0ZW1wbGF0ZSBUIC0gVGhlIHR5cGUgb2YgZWxlbWVudHMgaW4gdGhlIGFycmF5LlxuICogQHBhcmFtIHtbLi4uVFtdLCBUXX0gYXJyIC0gVGhlIGFycmF5IGZyb20gd2hpY2ggdG8gZ2V0IHRoZSBsYXN0IGVsZW1lbnQuXG4gKiBAcmV0dXJucyB7VH0gVGhlIGxhc3QgZWxlbWVudCBvZiB0aGUgYXJyYXksIG9yIGB1bmRlZmluZWRgIGlmIHRoZSBhcnJheSBpcyBlbXB0eS5cbiAqXG4gKiBAZXhhbXBsZVxuICogY29uc3QgYXJyID0gWzEsIDIsIDNdO1xuICogY29uc3QgbGFzdEVsZW1lbnQgPSBsYXN0KGFycik7XG4gKiAvLyBsYXN0RWxlbWVudCB3aWxsIGJlIDNcbiAqXG4gKiBjb25zdCBlbXB0eUFycjogbnVtYmVyW10gPSBbXTtcbiAqIGNvbnN0IG5vRWxlbWVudCA9IGxhc3QoZW1wdHlBcnIpO1xuICogLy8gbm9FbGVtZW50IHdpbGwgYmUgdW5kZWZpbmVkXG4gKi9cbmV4cG9ydCBmdW5jdGlvbiBsYXN0PFQ+KGFycjogcmVhZG9ubHkgWy4uLlRbXSwgVF0pOiBUO1xuXG4vKipcbiAqIFJldHVybnMgdGhlIGxhc3QgZWxlbWVudCBvZiBhbiBhcnJheS5cbiAqXG4gKiBUaGlzIGZ1bmN0aW9uIHRha2VzIGFuIGFycmF5IGFuZCByZXR1cm5zIHRoZSBsYXN0IGVsZW1lbnQgb2YgdGhlIGFycmF5LlxuICogSWYgdGhlIGFycmF5IGlzIGVtcHR5LCB0aGUgZnVuY3Rpb24gcmV0dXJucyBgdW5kZWZpbmVkYC5cbiAqXG4gKiBVbmxpa2Ugc29tZSBpbXBsZW1lbnRhdGlvbnMsIHRoaXMgZnVuY3Rpb24gaXMgb3B0aW1pemVkIGZvciBwZXJmb3JtYW5jZVxuICogYnkgZGlyZWN0bHkgYWNjZXNzaW5nIHRoZSBsYXN0IGluZGV4IG9mIHRoZSBhcnJheS5cbiAqXG4gKiBAdGVtcGxhdGUgVCAtIFRoZSB0eXBlIG9mIGVsZW1lbnRzIGluIHRoZSBhcnJheS5cbiAqIEBwYXJhbSB7VFtdfSBhcnIgLSBUaGUgYXJyYXkgZnJvbSB3aGljaCB0byBnZXQgdGhlIGxhc3QgZWxlbWVudC5cbiAqIEByZXR1cm5zIHtUIHwgdW5kZWZpbmVkfSBUaGUgbGFzdCBlbGVtZW50IG9mIHRoZSBhcnJheSwgb3IgYHVuZGVmaW5lZGAgaWYgdGhlIGFycmF5IGlzIGVtcHR5LlxuICpcbiAqIEBleGFtcGxlXG4gKiBjb25zdCBhcnIgPSBbMSwgMiwgM107XG4gKiBjb25zdCBsYXN0RWxlbWVudCA9IGxhc3QoYXJyKTtcbiAqIC8vIGxhc3RFbGVtZW50IHdpbGwgYmUgM1xuICpcbiAqIGNvbnN0IGVtcHR5QXJyOiBudW1iZXJbXSA9IFtdO1xuICogY29uc3Qgbm9FbGVtZW50ID0gbGFzdChlbXB0eUFycik7XG4gKiAvLyBub0VsZW1lbnQgd2lsbCBiZSB1bmRlZmluZWRcbiAqL1xuZXhwb3J0IGZ1bmN0aW9uIGxhc3Q8VD4oYXJyOiByZWFkb25seSBUW10pOiBUIHwgdW5kZWZpbmVkO1xuXG4vKipcbiAqIFJldHVybnMgdGhlIGxhc3QgZWxlbWVudCBvZiBhbiBhcnJheS5cbiAqXG4gKiBUaGlzIGZ1bmN0aW9uIHRha2VzIGFuIGFycmF5IGFuZCByZXR1cm5zIHRoZSBsYXN0IGVsZW1lbnQgb2YgdGhlIGFycmF5LlxuICogSWYgdGhlIGFycmF5IGlzIGVtcHR5LCB0aGUgZnVuY3Rpb24gcmV0dXJucyBgdW5kZWZpbmVkYC5cbiAqXG4gKiBVbmxpa2Ugc29tZSBpbXBsZW1lbnRhdGlvbnMsIHRoaXMgZnVuY3Rpb24gaXMgb3B0aW1pemVkIGZvciBwZXJmb3JtYW5jZVxuICogYnkgZGlyZWN0bHkgYWNjZXNzaW5nIHRoZSBsYXN0IGluZGV4IG9mIHRoZSBhcnJheS5cbiAqXG4gKiBAdGVtcGxhdGUgVCAtIFRoZSB0eXBlIG9mIGVsZW1lbnRzIGluIHRoZSBhcnJheS5cbiAqIEBwYXJhbSB7VFtdfSBhcnIgLSBUaGUgYXJyYXkgZnJvbSB3aGljaCB0byBnZXQgdGhlIGxhc3QgZWxlbWVudC5cbiAqIEByZXR1cm5zIHtUIHwgdW5kZWZpbmVkfSBUaGUgbGFzdCBlbGVtZW50IG9mIHRoZSBhcnJheSwgb3IgYHVuZGVmaW5lZGAgaWYgdGhlIGFycmF5IGlzIGVtcHR5LlxuICpcbiAqIEBleGFtcGxlXG4gKiBjb25zdCBhcnIgPSBbMSwgMiwgM107XG4gKiBjb25zdCBsYXN0RWxlbWVudCA9IGxhc3QoYXJyKTtcbiAqIC8vIGxhc3RFbGVtZW50IHdpbGwgYmUgM1xuICpcbiAqIGNvbnN0IGVtcHR5QXJyOiBudW1iZXJbXSA9IFtdO1xuICogY29uc3Qgbm9FbGVtZW50ID0gbGFzdChlbXB0eUFycik7XG4gKiAvLyBub0VsZW1lbnQgd2lsbCBiZSB1bmRlZmluZWRcbiAqL1xuZXhwb3J0IGZ1bmN0aW9uIGxhc3Q8VD4oYXJyOiByZWFkb25seSBUW10pOiBUIHwgdW5kZWZpbmVkIHtcbiAgcmV0dXJuIGFyclthcnIubGVuZ3RoIC0gMV07XG59XG4iXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IkFBQUE7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7OztDQXFCQyxHQTJCRDs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7O0NBcUJDLEdBQ0QsT0FBTyxTQUFTLEtBQVEsR0FBaUI7RUFDdkMsT0FBTyxHQUFHLENBQUMsSUFBSSxNQUFNLEdBQUcsRUFBRTtBQUM1QiJ9
+// denoCacheMetadata=16043669225285517699,1338606228320067981

@@ -1,0 +1,26 @@
+const htmlUnescapes: Record<string, string> = {
+  '&amp;': '&',
+  '&lt;': '<',
+  '&gt;': '>',
+  '&quot;': '"',
+  '&#39;': "'",
+};
+
+/**
+ * Converts the HTML entities `&amp;`, `&lt;`, `&gt;`, `&quot;`, and `&#39;` in `str` to their corresponding characters.
+ * It is the inverse of `escape`.
+ *
+ * @param {string} str The string to unescape.
+ * @returns {string} Returns the unescaped string.
+ *
+ * @example
+ * unescape('This is a &lt;div&gt; element.'); // returns 'This is a <div> element.'
+ * unescape('This is a &quot;quote&quot;'); // returns 'This is a "quote"'
+ * unescape('This is a &#39;quote&#39;'); // returns 'This is a 'quote''
+ * unescape('This is a &amp; symbol'); // returns 'This is a & symbol'
+ */
+export function unescape(str: string): string {
+  return str.replace(/&(?:amp|lt|gt|quot|#(0+)?39);/g, match => htmlUnescapes[match] || "'");
+}
+
+// denoCacheMetadata={"headers":{"x-robots-tag":"noindex","via":"1.1 google","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-goog-storage-class":"STANDARD","content-length":"858","access-control-allow-origin":"*","x-goog-stored-content-length":"858","x-guploader-uploadid":"ABgVH8_7ny7H8FcTZ34uWOI6nYaOmiAq8Iv86HbRDjuMB4baWiNA_3M33JPP_Tgh-RJd_R4_xei7HRM","x-goog-generation":"1741509575804907","expires":"Fri, 26 Jun 2026 21:45:35 GMT","server":"UploadServer","cache-control":"public, max-age=31536000, immutable","access-control-expose-headers":"*","x-content-type-options":"nosniff","x-jsr-cache-status":"revalidated","x-goog-hash":"crc32c=VubGJg==,md5=GOPmGvPUdoOFTMVSagrqwQ==","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-goog-stored-content-encoding":"identity","accept-ranges":"bytes","x-jsr-cache-id":"ATL","content-type":"text/typescript","cross-origin-resource-policy":"cross-origin","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","x-goog-metageneration":"1","etag":"\"18e3e61af3d47683854cc5526a0aeac1\"","age":"0"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/string/unescape.ts","time":1750974334}

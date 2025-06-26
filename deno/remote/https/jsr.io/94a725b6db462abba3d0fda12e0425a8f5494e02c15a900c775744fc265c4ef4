@@ -1,0 +1,27 @@
+import { isWeakSet as isWeakSetToolkit } from '../../predicate/isWeakSet.ts';
+
+/**
+ * Checks if the given value is a `WeakSet`.
+ *
+ * This function tests whether the provided value is an instance of `WeakSet`.
+ * It returns `true` if the value is a `WeakSet`, and `false` otherwise.
+ *
+ * This function can also serve as a type predicate in TypeScript, narrowing the type of the argument to `WeakSet`.
+ *
+ * @param {unknown} value - The value to test if it is a `WeakSet`.
+ * @returns {value is WeakSet<WeakKey>} true if the value is a `WeakSet`, false otherwise.
+ *
+ * @example
+ * const value1 = new WeakSet();
+ * const value2 = new Map();
+ * const value3 = new Set();
+ *
+ * console.log(isWeakSet(value1)); // true
+ * console.log(isWeakSet(value2)); // false
+ * console.log(isWeakSet(value3)); // false
+ */
+export function isWeakSet(value?: unknown): value is WeakSet<WeakKey> {
+  return isWeakSetToolkit(value);
+}
+
+// denoCacheMetadata={"headers":{"x-goog-metageneration":"1","etag":"\"9f8891f0d5b01b045c12dace2d34d3ff\"","content-type":"text/typescript","x-goog-hash":"crc32c=oKaFJA==,md5=n4iR8NWwGwRcEtrOLTTT/w==","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","age":"0","x-goog-generation":"1741509574845876","content-length":"916","x-jsr-cache-status":"revalidated","x-robots-tag":"noindex","x-goog-stored-content-length":"916","expires":"Fri, 26 Jun 2026 21:45:35 GMT","accept-ranges":"bytes","server":"UploadServer","date":"Thu, 26 Jun 2025 21:45:35 GMT","cache-control":"public, max-age=31536000, immutable","access-control-allow-origin":"*","access-control-expose-headers":"*","via":"1.1 google","x-goog-stored-content-encoding":"identity","x-goog-storage-class":"STANDARD","x-content-type-options":"nosniff","x-guploader-uploadid":"ABgVH89R3_9EGYnT1jLRYZZhjn7i4vYNOdv5LNRQM_v6m4OCNPstitOBjr4pZdxwZ-UHnT3v7j4uqlg","x-jsr-cache-id":"ATL","last-modified":"Sun, 09 Mar 2025 08:39:34 GMT","cross-origin-resource-policy":"cross-origin","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/predicate/isWeakSet.ts","time":1750974334}

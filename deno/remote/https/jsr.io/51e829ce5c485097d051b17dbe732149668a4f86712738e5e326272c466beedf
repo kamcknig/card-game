@@ -1,0 +1,47 @@
+import { isArrayLike } from '../predicate/isArrayLike.ts';
+
+/**
+ * Finds the index of the first occurrence of a value in an array.
+ *
+ * This method is similar to `Array.prototype.indexOf`, but it also finds `NaN` values.
+ * It uses strict equality (`===`) to compare elements.
+ *
+ * @template T - The type of elements in the array.
+ * @param {ArrayLike<T> | null | undefined} array - The array to search.
+ * @param {T} searchElement - The value to search for.
+ * @param {number} [fromIndex] - The index to start the search at.
+ * @returns {number} The index (zero-based) of the first occurrence of the value in the array, or `-1` if the value is not found.
+ *
+ * @example
+ * const array = [1, 2, 3, NaN];
+ * indexOf(array, 3); // => 2
+ * indexOf(array, NaN); // => 3
+ */
+export function indexOf<T>(array: ArrayLike<T> | null | undefined, searchElement: T, fromIndex?: number): number {
+  if (!isArrayLike(array)) {
+    return -1;
+  }
+
+  // `Array.prototype.indexOf` doesn't find `NaN` values, so we need to handle that case separately.
+  if (Number.isNaN(searchElement)) {
+    fromIndex = fromIndex ?? 0;
+
+    if (fromIndex < 0) {
+      fromIndex = Math.max(0, array.length + fromIndex);
+    }
+
+    for (let i = fromIndex; i < array.length; i++) {
+      if (Number.isNaN(array[i])) {
+        return i;
+      }
+    }
+
+    return -1;
+  }
+
+  // Array.prototype.indexOf already handles `fromIndex < -array.length`, `fromIndex >= array.length` and converts `fromIndex` to an integer, so we don't need to handle those cases here.
+  // And it uses strict equality (===) to compare elements like `lodash/indexOf` does.
+  return Array.from(array).indexOf(searchElement, fromIndex);
+}
+
+// denoCacheMetadata={"headers":{"alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-metageneration":"1","accept-ranges":"bytes","x-goog-generation":"1741509575455488","x-goog-stored-content-length":"1676","content-length":"1676","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","age":"0","etag":"\"58f72da80d8f40e1d3ee8794b8fe405b\"","x-content-type-options":"nosniff","x-goog-storage-class":"STANDARD","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-goog-hash":"crc32c=jEgb0g==,md5=WPctqA2PQOHT7oeUuP5AWw==","access-control-expose-headers":"*","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","cache-control":"public, max-age=31536000, immutable","date":"Thu, 26 Jun 2025 21:45:35 GMT","server":"UploadServer","x-guploader-uploadid":"ABgVH8-lYH0zYyT9F1bLCf5CRXE5vOttepkjlIObQzPQP1cyIuhmJc3J64yCyQDuwblfLHxy","x-jsr-cache-id":"ATL","x-robots-tag":"noindex","access-control-allow-origin":"*","x-goog-stored-content-encoding":"identity","via":"1.1 google","x-jsr-cache-status":"revalidated","content-type":"text/typescript","cross-origin-resource-policy":"cross-origin"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/array/indexOf.ts","time":1750974334}

@@ -1,0 +1,125 @@
+/**
+ * Fills the whole array with a specified value.
+ *
+ * This function mutates the original array and replaces its elements with the provided value, starting from the specified
+ * start index up to the end index (non-inclusive). If the start or end indices are not provided, it defaults to filling the
+ * entire array.
+ *
+ * @template T, U
+ * @param {Array<T | U>} array - The array to fill.
+ * @param {U} value - The value to fill the array with.
+ * @returns {Array<T | U>} The array with the filled values.
+ *
+ * @example
+ * const array = [1, 2, 3];
+ * const result = fill(array, 'a');
+ * // => ['a', 'a', 'a']
+ *
+ * const result = fill(Array(3), 2);
+ * // => [2, 2, 2]
+ *
+ * const result = fill([4, 6, 8, 10], '*', 1, 3);
+ * // => [4, '*', '*', 10]
+ *
+ * const result = fill(array, '*', -2, -1);
+ * // => [1, '*', 3]
+ */
+export function fill<T>(array: unknown[], value: T): T[];
+/**
+ * Fills elements of an array with a specified value from the start position up to the end of the array.
+ *
+ * This function mutates the original array and replaces its elements with the provided value, starting from the specified
+ * start index up to the end index (non-inclusive). If the start or end indices are not provided, it defaults to filling the
+ * entire array.
+ *
+ * @template T, U
+ * @param {Array<T | U>} array - The array to fill.
+ * @param {U} value - The value to fill the array with.
+ * @param {number} [start=0] - The start position. Defaults to 0.
+ * @returns {Array<T | U>} The array with the filled values.
+ *
+ * @example
+ * const array = [1, 2, 3];
+ * const result = fill(array, 'a');
+ * // => ['a', 'a', 'a']
+ *
+ * const result = fill(Array(3), 2);
+ * // => [2, 2, 2]
+ *
+ * const result = fill([4, 6, 8, 10], '*', 1, 3);
+ * // => [4, '*', '*', 10]
+ *
+ * const result = fill(array, '*', -2, -1);
+ * // => [1, '*', 3]
+ */
+export function fill<T, U>(array: Array<T | U>, value: U, start: number): Array<T | U>;
+/**
+ * Fills elements of an array with a specified value from the start position up to, but not including, the end position.
+ *
+ * This function mutates the original array and replaces its elements with the provided value, starting from the specified
+ * start index up to the end index (non-inclusive). If the start or end indices are not provided, it defaults to filling the
+ * entire array.
+ *
+ * @template T, U
+ * @param {Array<T | U>} array - The array to fill.
+ * @param {U} value - The value to fill the array with.
+ * @param {number} [start=0] - The start position. Defaults to 0.
+ * @param {number} [end=arr.length] - The end position. Defaults to the array's length.
+ * @returns {Array<T | U>} The array with the filled values.
+ *
+ * @example
+ * const array = [1, 2, 3];
+ * const result = fill(array, 'a');
+ * // => ['a', 'a', 'a']
+ *
+ * const result = fill(Array(3), 2);
+ * // => [2, 2, 2]
+ *
+ * const result = fill([4, 6, 8, 10], '*', 1, 3);
+ * // => [4, '*', '*', 10]
+ *
+ * const result = fill(array, '*', -2, -1);
+ * // => [1, '*', 3]
+ */
+export function fill<T, U>(array: Array<T | U>, value: U, start: number, end: number): Array<T | U>;
+/**
+ * Fills elements of an array with a specified value from the start position up to, but not including, the end position.
+ *
+ * This function mutates the original array and replaces its elements with the provided value, starting from the specified
+ * start index up to the end index (non-inclusive). If the start or end indices are not provided, it defaults to filling the
+ * entire array.
+ *
+ * @template T, U
+ * @param {Array<T | U>} array - The array to fill.
+ * @param {U} value - The value to fill the array with.
+ * @param {number} [start=0] - The start position. Defaults to 0.
+ * @param {number} [end=arr.length] - The end position. Defaults to the array's length.
+ * @returns {Array<T | U>} The array with the filled values.
+ *
+ * @example
+ * const array = [1, 2, 3];
+ * const result = fill(array, 'a');
+ * // => ['a', 'a', 'a']
+ *
+ * const result = fill(Array(3), 2);
+ * // => [2, 2, 2]
+ *
+ * const result = fill([4, 6, 8, 10], '*', 1, 3);
+ * // => [4, '*', '*', 10]
+ *
+ * const result = fill(array, '*', -2, -1);
+ * // => [1, '*', 3]
+ */
+export function fill<T, U>(array: Array<T | U>, value: U, start = 0, end = array.length): Array<T | U> {
+  const length = array.length;
+  const finalStart = Math.max(start >= 0 ? start : length + start, 0);
+  const finalEnd = Math.min(end >= 0 ? end : length + end, length);
+
+  for (let i = finalStart; i < finalEnd; i++) {
+    array[i] = value;
+  }
+
+  return array;
+}
+
+// denoCacheMetadata={"headers":{"cache-control":"public, max-age=31536000, immutable","content-type":"text/typescript","via":"1.1 google","access-control-allow-origin":"*","x-goog-metageneration":"1","access-control-expose-headers":"*","age":"0","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","accept-ranges":"bytes","content-length":"4494","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-goog-generation":"1741509575835505","x-goog-stored-content-encoding":"identity","x-robots-tag":"noindex","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","cross-origin-resource-policy":"cross-origin","x-goog-stored-content-length":"4494","x-jsr-cache-status":"revalidated","x-content-type-options":"nosniff","x-guploader-uploadid":"ABgVH88ct_lGjC7ORj63GB3R7eC57qJdcXQxKr0Yntuy-kNHtNO9xR3lDpvODsaw1PItcLPyPIsB6hU","etag":"\"93ce70c9afd4e571070deb643e0b2b86\"","server":"UploadServer","x-goog-hash":"crc32c=gLi2Uw==,md5=k85wya/U5XEHDetkPgsrhg==","x-goog-storage-class":"STANDARD","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-jsr-cache-id":"ATL"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/array/fill.ts","time":1750974334}

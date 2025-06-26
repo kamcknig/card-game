@@ -1,0 +1,28 @@
+import { get } from './get.ts';
+
+/**
+ * Creates a function that returns the value at a given path of an object.
+ *
+ * Unlike `property`, which creates a function bound to a specific path and allows you to query different objects,
+ * `propertyOf` creates a function bound to a specific object and allows you to query different paths within that object.
+ *
+ * @param {unknown} object - The object to query.
+ * @returns {(path: PropertyKey | PropertyKey[]) => unknown} - Returns a new function that takes a path and retrieves the value from the object at the specified path.
+ *
+ * @example
+ * const getValue = propertyOf({ a: { b: { c: 3 } } });
+ * const result = getValue('a.b.c');
+ * console.log(result); // => 3
+ *
+ * @example
+ * const getValue = propertyOf({ a: { b: { c: 3 } } });
+ * const result = getValue(['a', 'b', 'c']);
+ * console.log(result); // => 3
+ */
+export function propertyOf(object: unknown): (path: PropertyKey | readonly PropertyKey[]) => unknown {
+  return function (path: PropertyKey | readonly PropertyKey[]) {
+    return get(object, path);
+  };
+}
+
+// denoCacheMetadata={"headers":{"etag":"\"ec262c7949b9b4d2ce81b75344406bc3\"","x-goog-storage-class":"STANDARD","age":"0","x-goog-stored-content-length":"1069","x-goog-hash":"crc32c=axaHuw==,md5=7CYseUm5tNLOgbdTREBrww==","expires":"Fri, 26 Jun 2026 21:45:35 GMT","content-type":"text/typescript","x-jsr-cache-id":"ATL","accept-ranges":"bytes","access-control-expose-headers":"*","x-jsr-cache-status":"revalidated","x-robots-tag":"noindex","access-control-allow-origin":"*","x-goog-generation":"1741509575408426","x-content-type-options":"nosniff","cache-control":"public, max-age=31536000, immutable","x-goog-stored-content-encoding":"identity","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","cross-origin-resource-policy":"cross-origin","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-guploader-uploadid":"ABgVH8_DAJ6yu440Wal2Ni3GN771I6uYndWwg_lTQjeRybnNTvyLF1MJRRF5lSXOGO1_U-i3dE8K_uo","x-goog-metageneration":"1","content-length":"1069","server":"UploadServer","via":"1.1 google","date":"Thu, 26 Jun 2025 21:45:35 GMT","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/object/propertyOf.ts","time":1750974334}

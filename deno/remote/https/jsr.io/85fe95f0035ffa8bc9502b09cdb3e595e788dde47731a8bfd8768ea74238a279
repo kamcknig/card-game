@@ -1,0 +1,160 @@
+import { isArguments } from './isArguments.ts';
+import { isArrayLike } from './isArrayLike.ts';
+import { isTypedArray } from './isTypedArray.ts';
+import { isPrototype } from '../_internal/isPrototype.ts';
+
+declare let Buffer:
+  | {
+      isBuffer: (a: any) => boolean;
+    }
+  | undefined;
+
+/**
+ * Checks if a given value is empty.
+ *
+ * @returns {true} Always returns true when no arguments are provided.
+ *
+ * @example
+ * isEmpty(); // true
+ */
+export function isEmpty(): true;
+
+/**
+ * Checks if a given string is empty.
+ *
+ * @param {string} value - The string to check.
+ * @returns {boolean} `true` if the string is empty, `false` otherwise.
+ *
+ * @example
+ * isEmpty(""); // true
+ * isEmpty("hello"); // false
+ */
+export function isEmpty(value: string): value is '';
+
+/**
+ * Checks if a given Map is empty.
+ *
+ * @param {Map<any, any>} value - The Map to check.
+ * @returns {boolean} `true` if the Map is empty, `false` otherwise.
+ *
+ * @example
+ * isEmpty(new Map()); // true
+ * isEmpty(new Map([["key", "value"]])); // false
+ */
+export function isEmpty(value: Map<any, any>): boolean;
+
+/**
+ * Checks if a given Set is empty.
+ *
+ * @param {Set<any>} value - The Set to check.
+ * @returns {boolean} `true` if the Set is empty, `false` otherwise.
+ *
+ * @example
+ * isEmpty(new Set()); // true
+ * isEmpty(new Set([1, 2, 3])); // false
+ */
+export function isEmpty(value: Set<any>): boolean;
+
+/**
+ * Checks if a given array is empty.
+ *
+ * @param {any[]} value - The array to check.
+ * @returns {boolean} `true` if the array is empty, `false` otherwise.
+ *
+ * @example
+ * isEmpty([]); // true
+ * isEmpty([1, 2, 3]); // false
+ */
+export function isEmpty(value: any[]): value is [];
+
+/**
+ * Checks if a given object is empty.
+ *
+ * @param {T | null | undefined} value - The object to check.
+ * @returns {boolean} `true` if the object is empty, `false` otherwise.
+ *
+ * @example
+ * isEmpty({}); // true
+ * isEmpty({ a: 1 }); // false
+ */
+export function isEmpty<T extends Record<any, any>>(
+  value: T | null | undefined
+): value is Record<keyof T, never> | null | undefined;
+
+/**
+ * Checks if a given value is empty.
+ *
+ * @param {unknown} value - The value to check.
+ * @returns {boolean} `true` if the value is empty, `false` otherwise.
+ *
+ * @example
+ * isEmpty(null); // true
+ * isEmpty(undefined); // true
+ * isEmpty(42); // true
+ */
+export function isEmpty(value: unknown): boolean;
+
+/**
+ * Checks if a given value is empty.
+ *
+ * - If the given value is a string, checks if it is an empty string.
+ * - If the given value is an array, `Map`, or `Set`, checks if its size is 0.
+ * - If the given value is an [array-like object](../predicate/isArrayLike.md), checks if its length is 0.
+ * - If the given value is an object, checks if it is an empty object with no properties.
+ * - Primitive values (strings, booleans, numbers, or bigints) are considered empty.
+ *
+ * @param {unknown} [value] - The value to check.
+ * @returns {boolean} `true` if the value is empty, `false` otherwise.
+ *
+ * @example
+ * isEmpty(); // true
+ * isEmpty(null); // true
+ * isEmpty(""); // true
+ * isEmpty([]); // true
+ * isEmpty({}); // true
+ * isEmpty(new Map()); // true
+ * isEmpty(new Set()); // true
+ * isEmpty("hello"); // false
+ * isEmpty([1, 2, 3]); // false
+ * isEmpty({ a: 1 }); // false
+ * isEmpty(new Map([["key", "value"]])); // false
+ * isEmpty(new Set([1, 2, 3])); // false
+ */
+export function isEmpty(value?: unknown): boolean {
+  if (value == null) {
+    return true;
+  }
+
+  // Objects like { "length": 0 } are not empty in lodash
+  if (isArrayLike(value)) {
+    if (
+      typeof (value as any).splice !== 'function' &&
+      typeof value !== 'string' &&
+      (typeof Buffer === 'undefined' || !Buffer.isBuffer(value)) &&
+      !isTypedArray(value) &&
+      !isArguments(value)
+    ) {
+      return false;
+    }
+
+    return value.length === 0;
+  }
+
+  if (typeof value === 'object') {
+    if (value instanceof Map || value instanceof Set) {
+      return value.size === 0;
+    }
+
+    const keys = Object.keys(value);
+
+    if (isPrototype(value)) {
+      return keys.filter(x => x !== 'constructor').length === 0;
+    }
+
+    return keys.length === 0;
+  }
+
+  return true;
+}
+
+// denoCacheMetadata={"headers":{"x-robots-tag":"noindex","x-guploader-uploadid":"ABgVH89meIyGERFfStAuaw46oPFspcQYwGzgYkbQ6RKGtzuiNzuU2q7w9fugLUj_NT1g6_mTXZmxLLA","x-content-type-options":"nosniff","access-control-expose-headers":"*","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","etag":"\"62f23142f4e8c64eeff5bad7c0776bd8\"","cache-control":"public, max-age=31536000, immutable","accept-ranges":"bytes","content-type":"text/typescript","x-goog-stored-content-encoding":"identity","server":"UploadServer","x-goog-storage-class":"STANDARD","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","access-control-allow-origin":"*","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","content-length":"4169","x-jsr-cache-id":"ATL","x-goog-generation":"1741509575346935","x-goog-stored-content-length":"4169","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-goog-metageneration":"1","x-goog-hash":"crc32c=z0So0Q==,md5=YvIxQvToxk7v9brXwHdr2A==","via":"1.1 google","age":"0","cross-origin-resource-policy":"cross-origin","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-jsr-cache-status":"revalidated"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/predicate/isEmpty.ts","time":1750974334}

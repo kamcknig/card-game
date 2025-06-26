@@ -1,0 +1,32 @@
+/**
+ * The CardLibrary class provides a way to add cards into a library that is used within a Match.
+ *
+ * The library should include every physical card created to be used within a match. This is NOT a library
+ * of every card possible; ONLY the ones created and used in a Match.
+ */ export class MatchCardLibrary {
+  _library = new Map();
+  addCard = (card)=>{
+    console.log(`[CARD LIBRARY] adding ${card} to library`);
+    this._library.set(card.id, card);
+  };
+  getCard = (cardId)=>{
+    const c = this._library.get(cardId);
+    if (!c) throw new Error(`[CARD LIBRARY] unable to locate card ${cardId}`);
+    return c;
+  };
+  getAllCards = ()=>{
+    return Object.fromEntries(this._library);
+  };
+  getAllCardsAsArray = ()=>{
+    return this._library.values().toArray();
+  };
+  getCardsByOwner(id) {
+    const allCards = this.getAllCardsAsArray();
+    const playerCards = allCards.filter((c)=>{
+      return c.owner === id;
+    });
+    return playerCards;
+  }
+}
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImZpbGU6Ly8vYXBwL3NlcnZlci9zcmMvY29yZS9tYXRjaC1jYXJkLWxpYnJhcnkudHMiXSwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0IHsgQ2FyZCwgQ2FyZElkLCBQbGF5ZXJJZCB9IGZyb20gJ3NoYXJlZC9zaGFyZWQtdHlwZXMudHMnO1xuXG4vKipcbiAqIFRoZSBDYXJkTGlicmFyeSBjbGFzcyBwcm92aWRlcyBhIHdheSB0byBhZGQgY2FyZHMgaW50byBhIGxpYnJhcnkgdGhhdCBpcyB1c2VkIHdpdGhpbiBhIE1hdGNoLlxuICpcbiAqIFRoZSBsaWJyYXJ5IHNob3VsZCBpbmNsdWRlIGV2ZXJ5IHBoeXNpY2FsIGNhcmQgY3JlYXRlZCB0byBiZSB1c2VkIHdpdGhpbiBhIG1hdGNoLiBUaGlzIGlzIE5PVCBhIGxpYnJhcnlcbiAqIG9mIGV2ZXJ5IGNhcmQgcG9zc2libGU7IE9OTFkgdGhlIG9uZXMgY3JlYXRlZCBhbmQgdXNlZCBpbiBhIE1hdGNoLlxuICovXG5leHBvcnQgY2xhc3MgTWF0Y2hDYXJkTGlicmFyeSB7XG4gIHByaXZhdGUgcmVhZG9ubHkgX2xpYnJhcnk6IE1hcDxDYXJkSWQsIENhcmQ+ID0gbmV3IE1hcCgpO1xuICBcbiAgcHVibGljIGFkZENhcmQgPSAoY2FyZDogQ2FyZCkgPT4ge1xuICAgIGNvbnNvbGUubG9nKGBbQ0FSRCBMSUJSQVJZXSBhZGRpbmcgJHtjYXJkfSB0byBsaWJyYXJ5YCk7XG4gICAgdGhpcy5fbGlicmFyeS5zZXQoY2FyZC5pZCwgY2FyZCk7XG4gIH07XG4gIFxuICBwdWJsaWMgZ2V0Q2FyZCA9IChjYXJkSWQ6IENhcmRJZCk6IENhcmQgPT4ge1xuICAgIGNvbnN0IGMgPSB0aGlzLl9saWJyYXJ5LmdldChjYXJkSWQpO1xuICAgIGlmICghYykgdGhyb3cgbmV3IEVycm9yKGBbQ0FSRCBMSUJSQVJZXSB1bmFibGUgdG8gbG9jYXRlIGNhcmQgJHtjYXJkSWR9YCk7XG4gICAgcmV0dXJuIGM7XG4gIH07XG4gIFxuICBwdWJsaWMgZ2V0QWxsQ2FyZHMgPSAoKTogUmVjb3JkPG51bWJlciwgQ2FyZD4gPT4ge1xuICAgIHJldHVybiBPYmplY3QuZnJvbUVudHJpZXModGhpcy5fbGlicmFyeSkgYXMgUmVjb3JkPG51bWJlciwgQ2FyZD47XG4gIH07XG4gIFxuICBwdWJsaWMgZ2V0QWxsQ2FyZHNBc0FycmF5ID0gKCk6IENhcmRbXSA9PiB7XG4gICAgcmV0dXJuIHRoaXMuX2xpYnJhcnkudmFsdWVzKCkudG9BcnJheSgpO1xuICB9XG4gIFxuICBnZXRDYXJkc0J5T3duZXIoaWQ6IFBsYXllcklkKSB7XG4gICAgY29uc3QgYWxsQ2FyZHMgPSB0aGlzLmdldEFsbENhcmRzQXNBcnJheSgpO1xuICAgIGNvbnN0IHBsYXllckNhcmRzID0gYWxsQ2FyZHMuZmlsdGVyKGMgPT4ge1xuICAgICAgcmV0dXJuIGMub3duZXIgPT09IGlkO1xuICAgIH0pO1xuICAgIHJldHVybiBwbGF5ZXJDYXJkcztcbiAgfVxufVxuIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiJBQUVBOzs7OztDQUtDLEdBQ0QsT0FBTyxNQUFNO0VBQ00sV0FBOEIsSUFBSSxNQUFNO0VBRWxELFVBQVUsQ0FBQztJQUNoQixRQUFRLEdBQUcsQ0FBQyxDQUFDLHNCQUFzQixFQUFFLEtBQUssV0FBVyxDQUFDO0lBQ3RELElBQUksQ0FBQyxRQUFRLENBQUMsR0FBRyxDQUFDLEtBQUssRUFBRSxFQUFFO0VBQzdCLEVBQUU7RUFFSyxVQUFVLENBQUM7SUFDaEIsTUFBTSxJQUFJLElBQUksQ0FBQyxRQUFRLENBQUMsR0FBRyxDQUFDO0lBQzVCLElBQUksQ0FBQyxHQUFHLE1BQU0sSUFBSSxNQUFNLENBQUMscUNBQXFDLEVBQUUsUUFBUTtJQUN4RSxPQUFPO0VBQ1QsRUFBRTtFQUVLLGNBQWM7SUFDbkIsT0FBTyxPQUFPLFdBQVcsQ0FBQyxJQUFJLENBQUMsUUFBUTtFQUN6QyxFQUFFO0VBRUsscUJBQXFCO0lBQzFCLE9BQU8sSUFBSSxDQUFDLFFBQVEsQ0FBQyxNQUFNLEdBQUcsT0FBTztFQUN2QyxFQUFDO0VBRUQsZ0JBQWdCLEVBQVksRUFBRTtJQUM1QixNQUFNLFdBQVcsSUFBSSxDQUFDLGtCQUFrQjtJQUN4QyxNQUFNLGNBQWMsU0FBUyxNQUFNLENBQUMsQ0FBQTtNQUNsQyxPQUFPLEVBQUUsS0FBSyxLQUFLO0lBQ3JCO0lBQ0EsT0FBTztFQUNUO0FBQ0YifQ==
+// denoCacheMetadata=8555057480991288025,950571270686449569

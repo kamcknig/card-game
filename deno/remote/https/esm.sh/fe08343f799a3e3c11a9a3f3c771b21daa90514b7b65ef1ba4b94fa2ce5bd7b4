@@ -1,0 +1,25 @@
+import { Operation } from './core.d.ts';
+export interface Observer<T> {
+    object: T;
+    patches: Operation[];
+    unobserve: () => void;
+    callback: (patches: Operation[]) => void;
+}
+/**
+ * Detach an observer from an object
+ */
+export declare function unobserve<T>(root: T, observer: Observer<T>): void;
+/**
+ * Observes changes made to an object, which can then be retrieved using generate
+ */
+export declare function observe<T>(obj: Object | Array<T>, callback?: (patches: Operation[]) => void): Observer<T>;
+/**
+ * Generate an array of patches from an observer
+ */
+export declare function generate<T>(observer: Observer<Object>, invertible?: boolean): Operation[];
+/**
+ * Create an array of patches from the differences in two objects
+ */
+export declare function compare(tree1: Object | Array<any>, tree2: Object | Array<any>, invertible?: boolean): Operation[];
+
+// denoCacheMetadata={"headers":{"date":"Thu, 26 Jun 2025 21:45:34 GMT","content-length":"870","access-control-allow-origin":"*","last-modified":"Thu, 26 Jun 2025 21:45:34 GMT","cf-cache-status":"EXPIRED","vary":"accept-encoding","control-cache":"public, max-age=31536000, immutable","server":"cloudflare","cf-ray":"955fe47619fa3919-IAD","alt-svc":"h3=\":443\"; ma=86400","content-type":"application/typescript; charset=utf-8"},"url":"https://esm.sh/v123/fast-json-patch@3.1.1/module/duplex.d.ts","time":1750974333}

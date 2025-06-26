@@ -1,0 +1,43 @@
+import { maxBy as maxByToolkit } from '../../array/maxBy.ts';
+import { iteratee as iterateeToolkit } from '../util/iteratee.ts';
+
+/**
+ * Finds the element in an array that has the maximum value when applying
+ * the `iteratee` to each element.
+ *
+ * @template T - The type of elements in the array.
+ * @param {T[]} items The array of elements to search.
+ * @param {((element: T) => number) | keyof T | [keyof T, unknown] | Partial<T>} iteratee
+ * The criteria used to determine the maximum value.
+ *  - If a **function** is provided, it extracts a numeric value from each element.
+ *  - If a **string** is provided, it is treated as a key to extract values from the objects.
+ *  - If a **[key, value]** pair is provided, it matches elements with the specified key-value pair.
+ *  - If an **object** is provided, it matches elements that contain the specified properties.
+ * @returns {T | undefined} The element with the maximum value as determined by the `iteratee`.
+ * @example
+ * maxBy([{ a: 1 }, { a: 2 }, { a: 3 }], x => x.a); // Returns: { a: 3 }
+ * maxBy([], x => x.a); // Returns: undefined
+ * maxBy(
+ *   [
+ *     { name: 'john', age: 30 },
+ *     { name: 'jane', age: 28 },
+ *     { name: 'joe', age: 26 },
+ *   ],
+ *   x => x.age
+ * ); // Returns: { name: 'john', age: 30 }
+ * maxBy([{ a: 1 }, { a: 2 }], 'a'); // Returns: { a: 2 }
+ * maxBy([{ a: 1 }, { a: 2 }], ['a', 1]); // Returns: { a: 1 }
+ * maxBy([{ a: 1 }, { a: 2 }], { a: 1 }); // Returns: { a: 1 }
+ */
+export function maxBy<T>(
+  items: ArrayLike<T> | null | undefined,
+  iteratee: ((element: T) => number) | keyof T | [keyof T, unknown] | Partial<T>
+): T | undefined {
+  if (items == null) {
+    return undefined;
+  }
+
+  return maxByToolkit(Array.from(items), iterateeToolkit(iteratee));
+}
+
+// denoCacheMetadata={"headers":{"etag":"\"1b228f549217f60e83040acd7577885c\"","x-jsr-cache-id":"ATL","x-goog-storage-class":"STANDARD","x-goog-stored-content-encoding":"identity","x-jsr-cache-status":"revalidated","x-goog-generation":"1741509576045300","last-modified":"Sun, 09 Mar 2025 08:39:36 GMT","access-control-expose-headers":"*","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","age":"0","x-goog-hash":"crc32c=w7mV7Q==,md5=GyKPVJIX9g6DBArNdXeIXA==","access-control-allow-origin":"*","expires":"Fri, 26 Jun 2026 21:45:35 GMT","content-type":"text/typescript","x-goog-metageneration":"1","date":"Thu, 26 Jun 2025 21:45:35 GMT","cache-control":"public, max-age=31536000, immutable","x-guploader-uploadid":"ABgVH8925MUMVoyAAam20IVmephchJR3YailL0M20x-4g2bpaUd_ypqP80-3F-y8v4UqJC1ew3OdmeU","x-goog-stored-content-length":"1760","server":"UploadServer","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","cross-origin-resource-policy":"cross-origin","content-length":"1760","accept-ranges":"bytes","x-robots-tag":"noindex","x-content-type-options":"nosniff","via":"1.1 google"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/math/maxBy.ts","time":1750974334}

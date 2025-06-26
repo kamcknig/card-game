@@ -1,0 +1,54 @@
+// Copyright 2018-2024 the Deno authors. All rights reserved. MIT license.
+// This module is browser compatible.
+
+import { DAY, WEEK } from "./constants.ts";
+
+const DAYS_PER_WEEK = 7;
+
+const Day = {
+  Sun: 0,
+  Mon: 1,
+  Tue: 2,
+  Wed: 3,
+  Thu: 4,
+  Fri: 5,
+  Sat: 6,
+} as const;
+
+/**
+ * Returns the ISO week number of the provided date (1-53).
+ *
+ * @param date Date to get the week number of.
+ * @returns The week number of the provided date.
+ *
+ * @example Basic usage
+ * ```ts
+ * import { weekOfYear } from "@std/datetime/week-of-year";
+ * import { assertEquals } from "@std/assert";
+ *
+ * assertEquals(weekOfYear(new Date("2020-12-28T03:24:00")), 53);
+ *
+ * assertEquals(weekOfYear(new Date("2020-07-10T03:24:00")), 28);
+ * ```
+ */
+export function weekOfYear(date: Date): number {
+  const workingDate = new Date(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+  );
+
+  const day = workingDate.getUTCDay();
+
+  const nearestThursday = workingDate.getUTCDate() +
+    Day.Thu -
+    (day === Day.Sun ? DAYS_PER_WEEK : day);
+
+  workingDate.setUTCDate(nearestThursday);
+
+  // Get first day of year
+  const yearStart = new Date(Date.UTC(workingDate.getUTCFullYear(), 0, 1));
+
+  // return the calculated full weeks to nearest Thursday
+  return Math.ceil((workingDate.getTime() - yearStart.getTime() + DAY) / WEEK);
+}
+
+// denoCacheMetadata={"headers":{"x-content-type-options":"nosniff","x-goog-generation":"1720781427426058","x-goog-stored-content-encoding":"identity","cache-control":"public, max-age=31536000, immutable","last-modified":"Fri, 12 Jul 2024 10:50:27 GMT","x-robots-tag":"noindex","date":"Thu, 26 Jun 2025 21:45:36 GMT","x-goog-hash":"crc32c=WZ4GEA==,md5=592+KHXy2fkYB//zc/d3hA==","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","content-length":"1333","access-control-expose-headers":"*","x-goog-storage-class":"STANDARD","x-goog-metageneration":"1","via":"1.1 google","expires":"Fri, 26 Jun 2026 21:45:36 GMT","etag":"\"e7ddbe2875f2d9f91807fff373f77784\"","content-type":"text/typescript","x-guploader-uploadid":"ABgVH894jSGNxpWEcDFPjO1OaZtG8ksTHv4EO2466m4r4h1BtJBGXExplyAv2mT7Mn08hznrgYLaSBE","x-jsr-cache-id":"ATL","x-jsr-cache-status":"revalidated","accept-ranges":"bytes","access-control-allow-origin":"*","x-goog-stored-content-length":"1333","cross-origin-resource-policy":"cross-origin","server":"UploadServer","age":"0"},"url":"https://jsr.io/@std/datetime/0.224.3/week_of_year.ts","time":1750974335}

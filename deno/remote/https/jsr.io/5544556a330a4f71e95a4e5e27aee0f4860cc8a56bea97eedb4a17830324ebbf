@@ -1,0 +1,33 @@
+/**
+ * Asserts that a given condition is true. If the condition is false, an error is thrown with the provided message.
+ *
+ * @param {unknown} condition - The condition to evaluate.
+ * @param {string} [message] - The error message to throw if the condition is false.
+ * @returns {void} Returns void if the condition is true.
+ * @throws {Error} Throws an error if the condition is false.
+ *
+ * @example
+ * // This call will succeed without any errors
+ * invariant(true, 'This should not throw');
+ *
+ * // This call will fail and throw an error with the message 'This should throw'
+ * invariant(false, 'This should throw');
+ *
+ * // Example of using invariant with a condition
+ * invariant(condition, 'Expected condition is false');
+ *
+ * // Ensure that the value is neither null nor undefined
+ * invariant(value !== null && value !== undefined, 'Value should not be null or undefined');
+ *
+ * // Example of using invariant to check if a number is positive
+ * invariant(number > 0, 'Number must be positive');
+ */
+export function invariant(condition: unknown, message: string): asserts condition {
+  if (condition) {
+    return;
+  }
+
+  throw new Error(message);
+}
+
+// denoCacheMetadata={"headers":{"cross-origin-resource-policy":"cross-origin","x-jsr-cache-id":"ATL","access-control-expose-headers":"*","expires":"Fri, 26 Jun 2026 21:45:36 GMT","via":"1.1 google","x-goog-storage-class":"STANDARD","x-goog-hash":"crc32c=+YFFPw==,md5=RwK3m25BKN2ZZIxdtdhWjg==","cache-control":"public, max-age=31536000, immutable","date":"Thu, 26 Jun 2025 21:45:36 GMT","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","x-goog-stored-content-encoding":"identity","etag":"\"4702b79b6e4128dd99648c5db5d8568e\"","content-type":"text/typescript","accept-ranges":"bytes","x-goog-metageneration":"1","age":"0","server":"UploadServer","content-length":"1162","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-jsr-cache-status":"revalidated","access-control-allow-origin":"*","x-content-type-options":"nosniff","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-robots-tag":"noindex","x-guploader-uploadid":"ABgVH8-wHVOC6e1HzZRYR849PILJqHRyo4KDJmqhHI8RhicecN0bQ7Zz_sbtOTwvd-Q3P4BOJiNmVPw","x-goog-generation":"1741509575709127","x-goog-stored-content-length":"1162"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/util/invariant.ts","time":1750974334}

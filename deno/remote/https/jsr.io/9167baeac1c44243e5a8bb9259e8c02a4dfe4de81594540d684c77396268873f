@@ -1,0 +1,61 @@
+import { sumBy } from './sumBy.ts';
+
+/**
+ * Computes the sum of the `number` values in `array`.
+ *
+ * @param {ArrayLike<number> | null | undefined} array - The array to iterate over.
+ * @returns {number} Returns the sum.
+ *
+ * @example
+ * sum([1, 2, 3]); // => 6
+ * sum(null); // => 0
+ * sum(undefined); // => 0
+ */
+export function sum(array: ArrayLike<number> | null | undefined): number;
+
+/**
+ * Computes the sum of the `bigint` values in `array`.
+ *
+ * @param {ArrayLike<bigint>} array - The array to iterate over.
+ * @returns {bigint} Returns the sum.
+ *
+ * @example
+ * sum([1n, 2n, 3n]); // => 6n
+ */
+export function sum(array: ArrayLike<bigint>): bigint;
+
+/**
+ * Computes the sum of the values in `array`.
+ *
+ * It does not coerce values to `number`.
+ *
+ * @param {ArrayLike<unknown> | null | undefined} array - The array to iterate over.
+ * @returns {unknown} Returns the sum.
+ *
+ * @example
+ * sum(["1", "2"]); // => "12"
+ * sum([1, undefined, 2]); // => 3
+ */
+export function sum(array: ArrayLike<unknown> | null | undefined): unknown;
+
+/**
+ * Computes the sum of the values that are returned by the `iteratee` function.
+ *
+ * It does not coerce values to `number`.
+ *
+ * @param {ArrayLike<unknown> | null | undefined} array - The array to iterate over.
+ * @returns {unknown} Returns the sum.
+ *
+ * @example
+ * sum([1, 2, 3]); // => 6
+ * sum([1n, 2n, 3n]); // => 6n
+ * sum(["1", "2"]); // => "12"
+ * sum([1, undefined, 2]); // => 3
+ * sum(null); // => 0
+ * sum(undefined); // => 0
+ */
+export function sum(array: ArrayLike<unknown> | null | undefined): unknown {
+  return sumBy(array);
+}
+
+// denoCacheMetadata={"headers":{"x-goog-stored-content-encoding":"identity","x-goog-hash":"crc32c=ITAnvQ==,md5=dN0TSvbdqFiJaojYwJGoYg==","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-goog-stored-content-length":"1596","via":"1.1 google","date":"Thu, 26 Jun 2025 21:45:35 GMT","content-type":"text/typescript","etag":"\"74dd134af6dda858896a88d8c091a862\"","x-jsr-cache-id":"ATL","access-control-allow-origin":"*","x-guploader-uploadid":"ABgVH8_uWuu4rmvgIGgIcSsp5JJzhzoMTzKOlocCZgfU56ntMe05Pv0RCzmJUDveYrFHkIwODMEi3KQ","server":"UploadServer","accept-ranges":"bytes","content-length":"1596","x-goog-storage-class":"STANDARD","x-goog-generation":"1741509575291579","cache-control":"public, max-age=31536000, immutable","x-robots-tag":"noindex","access-control-expose-headers":"*","x-content-type-options":"nosniff","x-goog-metageneration":"1","age":"0","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","expires":"Fri, 26 Jun 2026 21:45:35 GMT","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","x-jsr-cache-status":"revalidated","cross-origin-resource-policy":"cross-origin"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/math/sum.ts","time":1750974334}

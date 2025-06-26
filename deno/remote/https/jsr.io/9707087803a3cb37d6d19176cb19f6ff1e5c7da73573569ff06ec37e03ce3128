@@ -1,0 +1,24 @@
+import { flatten } from './flatten.ts';
+import { pull as pullToolkit } from '../../array/pull.ts';
+
+/**
+ * Removes all specified values from an array.
+ *
+ * This function changes `arr` in place.
+ * If you want to remove values without modifying the original array, use `difference`.
+ *
+ * @template T, U
+ * @param {T[]} arr - The array to modify.
+ * @param {...unknown[]} valuesToRemove - The values to remove from the array.
+ * @returns {T[]} The modified array with the specified values removed.
+ *
+ * @example
+ * const numbers = [1, 2, 3, 4, 5, 2, 4];
+ * pull(numbers, [2, 4]);
+ * console.log(numbers); // [1, 3, 5]
+ */
+export function pull<T>(arr: T[], ...valuesToRemove: readonly unknown[]): T[] {
+  return pullToolkit(arr, valuesToRemove);
+}
+
+// denoCacheMetadata={"headers":{"x-jsr-cache-status":"revalidated","cross-origin-resource-policy":"cross-origin","access-control-allow-origin":"*","cache-control":"public, max-age=31536000, immutable","x-jsr-cache-id":"ATL","etag":"\"70a32258bc9fde2c959a3d6c44757fb4\"","x-robots-tag":"noindex","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-content-type-options":"nosniff","age":"0","date":"Thu, 26 Jun 2025 21:45:35 GMT","expires":"Fri, 26 Jun 2026 21:45:35 GMT","x-goog-metageneration":"1","x-goog-stored-content-length":"748","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","accept-ranges":"bytes","via":"1.1 google","x-goog-stored-content-encoding":"identity","x-goog-hash":"crc32c=PsXVwA==,md5=cKMiWLyf3iyVmj1sRHV/tA==","content-length":"748","access-control-expose-headers":"*","x-goog-generation":"1741509575307408","server":"UploadServer","content-type":"text/typescript","x-guploader-uploadid":"ABgVH8-sky3o5xAzYjzAzPUGUJgWGxXAKZ4Os70242Z39Oz535x2MJ3YhBuCJj6cSpuW5NFe51cCmdI","x-goog-storage-class":"STANDARD","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/compat/array/pull.ts","time":1750974334}

@@ -1,0 +1,21 @@
+import { capitalize } from './capitalize.ts';
+import { words as getWords } from './words.ts';
+/**
+ * Converts a string to Pascal case.
+ *
+ * Pascal case is the naming convention in which each word is capitalized and concatenated without any separator characters.
+ *
+ * @param {string} str - The string that is to be changed to pascal case.
+ * @returns {string} - The converted string to Pascal case.
+ *
+ * @example
+ * const convertedStr1 = pascalCase('pascalCase') // returns 'PascalCase'
+ * const convertedStr2 = pascalCase('some whitespace') // returns 'SomeWhitespace'
+ * const convertedStr3 = pascalCase('hyphen-text') // returns 'HyphenText'
+ * const convertedStr4 = pascalCase('HTTPRequest') // returns 'HttpRequest'
+ */ export function pascalCase(str) {
+  const words = getWords(str);
+  return words.map((word)=>capitalize(word)).join('');
+}
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImh0dHBzOi8vanNyLmlvL0Blcy10b29sa2l0L2VzLXRvb2xraXQvMS4zMy4wL3NyYy9zdHJpbmcvcGFzY2FsQ2FzZS50cyJdLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgeyBjYXBpdGFsaXplIH0gZnJvbSAnLi9jYXBpdGFsaXplLnRzJztcbmltcG9ydCB7IHdvcmRzIGFzIGdldFdvcmRzIH0gZnJvbSAnLi93b3Jkcy50cyc7XG5cbi8qKlxuICogQ29udmVydHMgYSBzdHJpbmcgdG8gUGFzY2FsIGNhc2UuXG4gKlxuICogUGFzY2FsIGNhc2UgaXMgdGhlIG5hbWluZyBjb252ZW50aW9uIGluIHdoaWNoIGVhY2ggd29yZCBpcyBjYXBpdGFsaXplZCBhbmQgY29uY2F0ZW5hdGVkIHdpdGhvdXQgYW55IHNlcGFyYXRvciBjaGFyYWN0ZXJzLlxuICpcbiAqIEBwYXJhbSB7c3RyaW5nfSBzdHIgLSBUaGUgc3RyaW5nIHRoYXQgaXMgdG8gYmUgY2hhbmdlZCB0byBwYXNjYWwgY2FzZS5cbiAqIEByZXR1cm5zIHtzdHJpbmd9IC0gVGhlIGNvbnZlcnRlZCBzdHJpbmcgdG8gUGFzY2FsIGNhc2UuXG4gKlxuICogQGV4YW1wbGVcbiAqIGNvbnN0IGNvbnZlcnRlZFN0cjEgPSBwYXNjYWxDYXNlKCdwYXNjYWxDYXNlJykgLy8gcmV0dXJucyAnUGFzY2FsQ2FzZSdcbiAqIGNvbnN0IGNvbnZlcnRlZFN0cjIgPSBwYXNjYWxDYXNlKCdzb21lIHdoaXRlc3BhY2UnKSAvLyByZXR1cm5zICdTb21lV2hpdGVzcGFjZSdcbiAqIGNvbnN0IGNvbnZlcnRlZFN0cjMgPSBwYXNjYWxDYXNlKCdoeXBoZW4tdGV4dCcpIC8vIHJldHVybnMgJ0h5cGhlblRleHQnXG4gKiBjb25zdCBjb252ZXJ0ZWRTdHI0ID0gcGFzY2FsQ2FzZSgnSFRUUFJlcXVlc3QnKSAvLyByZXR1cm5zICdIdHRwUmVxdWVzdCdcbiAqL1xuZXhwb3J0IGZ1bmN0aW9uIHBhc2NhbENhc2Uoc3RyOiBzdHJpbmcpOiBzdHJpbmcge1xuICBjb25zdCB3b3JkcyA9IGdldFdvcmRzKHN0cik7XG4gIHJldHVybiB3b3Jkcy5tYXAod29yZCA9PiBjYXBpdGFsaXplKHdvcmQpKS5qb2luKCcnKTtcbn1cbiJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiQUFBQSxTQUFTLFVBQVUsUUFBUSxrQkFBa0I7QUFDN0MsU0FBUyxTQUFTLFFBQVEsUUFBUSxhQUFhO0FBRS9DOzs7Ozs7Ozs7Ozs7O0NBYUMsR0FDRCxPQUFPLFNBQVMsV0FBVyxHQUFXO0VBQ3BDLE1BQU0sUUFBUSxTQUFTO0VBQ3ZCLE9BQU8sTUFBTSxHQUFHLENBQUMsQ0FBQSxPQUFRLFdBQVcsT0FBTyxJQUFJLENBQUM7QUFDbEQifQ==
+// denoCacheMetadata=6371837366154073492,14440701155315672234

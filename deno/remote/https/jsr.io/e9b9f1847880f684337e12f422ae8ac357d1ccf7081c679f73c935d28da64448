@@ -1,0 +1,45 @@
+/**
+ * Creates a function that transforms the arguments of the provided function `func`.
+ * The transformed arguments are passed to `func` such that the arguments starting from a specified index
+ * are grouped into an array, while the previous arguments are passed as individual elements.
+ *
+ * @template F - The type of the function being transformed.
+ * @param {F} func - The function whose arguments are to be transformed.
+ * @param {number} [startIndex=func.length - 1] - The index from which to start grouping the remaining arguments into an array.
+ *                                            Defaults to `func.length - 1`, grouping all arguments after the last parameter.
+ * @returns {(...args: any[]) => ReturnType<F>} A new function that, when called, returns the result of calling `func` with the transformed arguments.
+ *
+ * The transformed arguments are:
+ * - The first `start` arguments as individual elements.
+ * - The remaining arguments from index `start` onward grouped into an array.
+ * @example
+ * function fn(a, b, c) {
+ *   return [a, b, c];
+ * }
+ *
+ * // Using default start index (func.length - 1, which is 2 in this case)
+ * const transformedFn = rest(fn);
+ * console.log(transformedFn(1, 2, 3, 4)); // [1, 2, [3, 4]]
+ *
+ * // Using start index 1
+ * const transformedFnWithStart = rest(fn, 1);
+ * console.log(transformedFnWithStart(1, 2, 3, 4)); // [1, [2, 3, 4]]
+ *
+ * // With fewer arguments than the start index
+ * console.log(transformedFn(1)); // [1, undefined, []]
+ */
+export function rest<F extends (...args: any[]) => any>(
+  func: F,
+  startIndex = func.length - 1
+): (...args: any[]) => ReturnType<F> {
+  return function (this: any, ...args: any[]) {
+    const rest = args.slice(startIndex);
+    const params = args.slice(0, startIndex);
+    while (params.length < startIndex) {
+      params.push(undefined);
+    }
+    return func.apply(this, [...params, rest]);
+  };
+}
+
+// denoCacheMetadata={"headers":{"via":"1.1 google","access-control-allow-origin":"*","x-content-type-options":"nosniff","x-goog-stored-content-length":"1905","x-goog-metageneration":"1","content-length":"1905","expires":"Fri, 26 Jun 2026 21:45:35 GMT","etag":"\"2c614506a6e4d5ac45daadfafc48560c\"","x-robots-tag":"noindex","cross-origin-resource-policy":"cross-origin","date":"Thu, 26 Jun 2025 21:45:35 GMT","x-jsr-cache-status":"revalidated","content-type":"text/typescript","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000","x-goog-hash":"crc32c=jdnwZA==,md5=LGFFBqbk1axF2q36/EhWDA==","x-goog-generation":"1741509575812450","x-goog-storage-class":"STANDARD","accept-ranges":"bytes","access-control-expose-headers":"*","x-guploader-uploadid":"ABgVH89KqWqplJklCLmnR2aztPVBvAw8zPod6EXZULlNwV3t_eYVAvyjypdY4p8KIr8Xn9UYlTq3PWw","x-goog-stored-content-encoding":"identity","server":"UploadServer","cache-control":"public, max-age=31536000, immutable","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","x-jsr-cache-id":"ATL","last-modified":"Sun, 09 Mar 2025 08:39:35 GMT","age":"0"},"url":"https://jsr.io/@es-toolkit/es-toolkit/1.33.0/src/function/rest.ts","time":1750974334}
