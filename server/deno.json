@@ -8,7 +8,7 @@
   },
   "tasks": {
     "copy:shared": "deno run --check --allow-read --allow-write scripts/copy-shared-sources.ts",
-    "dev:watch": "deno run --inspect --check --env-file --allow-read --allow-write --allow-net --allow-env --watch src/server.ts",
+    "dev:watch": "deno run --node-modules-dir --inspect --check --env-file --allow-read --allow-write --allow-net --allow-env --watch src/server.ts",
     "dev:runbrowsers": "deno run scripts/run-browsers.js"
   },
   "lint": {
