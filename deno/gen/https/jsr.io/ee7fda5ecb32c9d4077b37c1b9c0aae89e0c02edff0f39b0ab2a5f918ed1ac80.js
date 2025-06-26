@@ -1,5 +1,0 @@
-import * as log from './log.ts';
-export * from './log.ts';
-log.init();
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImh0dHBzOi8vanNyLmlvL0B0aW1lcHAvZW5oYW5jZWQtZGVuby1sb2cvMC40LjEvYXV0by1pbml0LnRzIl0sInNvdXJjZXNDb250ZW50IjpbImltcG9ydCAqIGFzIGxvZyBmcm9tICcuL2xvZy50cydcbmV4cG9ydCAqIGZyb20gJy4vbG9nLnRzJ1xuXG5sb2cuaW5pdCgpIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiJBQUFBLFlBQVksU0FBUyxXQUFVO0FBQy9CLGNBQWMsV0FBVTtBQUV4QixJQUFJLElBQUkifQ==
-// denoCacheMetadata=4279408755089666418,5884491540572419946

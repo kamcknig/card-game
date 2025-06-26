@@ -1,5 +1,0 @@
-/* esm.sh - fast-json-patch@3.1.1/index */
-export * from "/v123/fast-json-patch@3.1.1/denonext/index.js";
-export { default } from "/v123/fast-json-patch@3.1.1/denonext/index.js";
-
-// denoCacheMetadata={"headers":{"x-typescript-types":"https://esm.sh/v123/fast-json-patch@3.1.1/index.d.ts","access-control-allow-origin":"*","cf-cache-status":"EXPIRED","server":"cloudflare","content-type":"application/javascript; charset=utf-8","x-esm-id":"v123/fast-json-patch@3.1.1/denonext/index.js","control-cache":"public, max-age=31536000, immutable","alt-svc":"h3=\":443\"; ma=86400","vary":"accept-encoding","cf-ray":"955fe471ad643919-IAD","date":"Thu, 26 Jun 2025 21:45:34 GMT","last-modified":"Thu, 26 Jun 2025 21:45:34 GMT"},"url":"https://esm.sh/v123/fast-json-patch@3.1.1/index.js","time":1750974333}

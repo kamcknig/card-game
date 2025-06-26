@@ -1,3 +1,0 @@
-export { getLogger } from "https://deno.land/std@0.150.0/log/mod.ts";
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImh0dHBzOi8vZGVuby5sYW5kL3gvc29ja2V0X2lvQDAuMi4xL2RlcHMudHMiXSwic291cmNlc0NvbnRlbnQiOlsiZXhwb3J0IHsgZ2V0TG9nZ2VyIH0gZnJvbSBcImh0dHBzOi8vZGVuby5sYW5kL3N0ZEAwLjE1MC4wL2xvZy9tb2QudHNcIjtcbiJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiQUFBQSxTQUFTLFNBQVMsUUFBUSwyQ0FBMkMifQ==
-// denoCacheMetadata=1784392925638667892,13785683857075511930

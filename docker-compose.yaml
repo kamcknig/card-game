@@ -15,9 +15,11 @@ services:
             copy-shared-sources:
                 condition: service_started
 
+    # this starts a deno container that runs a script to copy them over to the angular
+    # front-end shared directory
     copy-shared-sources:
         image: denoland/deno:alpine-2.3.7
         command: deno run --check --allow-read --allow-write /app/server/scripts/copy-shared-sources.ts
         volumes:
-            - ./deno:/deno-dir
+            - ./.deno:/deno-dir
             - ./:/app
