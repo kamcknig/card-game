@@ -8,7 +8,7 @@ RUN npm install
 
 #############################
 
-FROM denoland/deno:2.3.6
+FROM denoland/deno:2.3.7
 
 WORKDIR /app
 
