@@ -5,9 +5,10 @@ type GetPlayerIndexArgs = {
   playerId: PlayerId;
 };
 
+// Return the current turn index for a given player ID.
 export const getPlayerTurnIndex = ({ match, playerId }: GetPlayerIndexArgs) => {
   return match.players.findIndex(p => p.id === playerId);
-}
+};
 
 type GetPlayerArgs = {
   startFromIdx: number,
@@ -15,6 +16,7 @@ type GetPlayerArgs = {
   distance: number
 };
 
+// Return the player located a given distance from a starting index.
 export const getPlayerStartingFrom = ({ startFromIdx, match, distance }: GetPlayerArgs) => {
   const numPlayers = match.players.length;
   const targetIndex = (startFromIdx + distance + numPlayers) % numPlayers;
@@ -55,7 +57,7 @@ export const getDistanceToPlayer = ({
   
   let base = (targetIdx - startIdx + numPlayers) % numPlayers;
   
-  // Special case: same player, but no base distance — they still count as a full loop
+  // Special case: same player, but no base distance - they still count as a full loop.
   if (startPlayerId === targetPlayerId && repetition === 0) {
     base = 0;
     repetition = 1;

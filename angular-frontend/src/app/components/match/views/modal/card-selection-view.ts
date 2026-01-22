@@ -7,7 +7,7 @@ import { cardStore } from '../../../../state/card-state';
 import { isNumber, toNumber } from 'es-toolkit/compat';
 import { CardView } from '../card-view';
 import { clientSelectableCardsOverrideStore, selectedCardStore } from '../../../../state/interactive-state';
-import { validateCountSpec } from '../../../../shared/validate-count-spec';
+import { validateCountSpec } from 'shared/validate-count-spec';
 import { displayCardDetail } from './display-card-detail';
 
 type NewCardId = CardId;

@@ -251,7 +251,7 @@ export class Game {
       (e) => currentConfig?.expansions?.findIndex(curr => curr.name === e.name) === -1,
     );
     
-    const expansionsToRemove: ExpansionListElement[] = [];
+    const expansionsToRemove: string[] = [];
     
     // go through the new expansions to add, if any are mutually exclusive with some we still have
     // selected, then remove those selected ones as well
@@ -280,24 +280,30 @@ export class Game {
       console.log(`[game] '${expansion.name}' is mutually exclusive with ${configModule.mutuallyExclusiveExpansions}`,);
       
       for (const exclusiveExpansion of configModule.mutuallyExclusiveExpansions) {
-        if (
-          currentConfig.expansions.includes(exclusiveExpansion) &&
-          !expansionsToRemove.includes(exclusiveExpansion)
-        ) {
+        // Compare by name because mutuallyExclusiveExpansions are string keys.
+        const hasExclusiveExpansion = currentConfig.expansions
+          .some(currentExpansion => currentExpansion.name === exclusiveExpansion);
+        if (hasExclusiveExpansion && !expansionsToRemove.includes(exclusiveExpansion)) {
           console.log(`[game] removing expansion ${exclusiveExpansion} as it is not allowed with ${expansion}`,);
           expansionsToRemove.push(exclusiveExpansion);
         }
       }
     }
     
+    if (expansionsToRemove.length) {
+      // Enforce mutual exclusivity by filtering out disallowed expansion names.
+      newConfig.expansions = newConfig.expansions
+        .filter(expansion => !expansionsToRemove.includes(expansion.name));
+    }
+    
     const kingdomPatch = compare(currentConfig.kingdomSupply, newConfig.kingdomSupply);
-    if (kingdomPatch) {
+    if (kingdomPatch.length) {
       Deno.writeTextFileSync('./preselected-kingdoms.json', JSON.stringify(newConfig.kingdomSupply));
       defaultMatchConfiguration.kingdomSupply = structuredClone(newConfig.kingdomSupply);
     }
     
     const bannedKingdomsPatch = compare(currentConfig.bannedKingdoms, newConfig.bannedKingdoms);
-    if (bannedKingdomsPatch) {
+    if (bannedKingdomsPatch.length) {
       Deno.writeTextFileSync('./banned-kingdoms.json', JSON.stringify(newConfig.bannedKingdoms));
       defaultMatchConfiguration.bannedKingdoms = structuredClone(newConfig.bannedKingdoms);
     }

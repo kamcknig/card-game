@@ -42,7 +42,8 @@
     <h2 class="section-title">Kingdom</h2>
 
     <div class="kingdom-list">
-      @for (kingdom of preSelectedKingdoms; track kingdom?.cardKey) {
+      <!-- Track by cardKey, fallback to index for null slots to keep keys unique. -->
+      @for (kingdom of preSelectedKingdoms; track kingdom?.cardKey ?? $index) {
         <div
           class="kingdom"
           [ngStyle]="{'cursor': isGameOwner && kingdom === null ? 'pointer' : 'default'}"

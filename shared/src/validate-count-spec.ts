@@ -1,8 +1,9 @@
 import { CountSpec } from 'shared/shared-types';
-import { isNumber } from 'es-toolkit/compat';
 
+// Validate a count against a CountSpec, supporting exact and upTo comparisons.
 export const validateCountSpec = (spec: CountSpec, count: number): boolean => {
-  if (isNumber(spec)) {
+  // Treat a numeric CountSpec as an exact match.
+  if (typeof spec === 'number') {
     return count === spec;
   }
   
@@ -14,4 +15,4 @@ export const validateCountSpec = (spec: CountSpec, count: number): boolean => {
     default:
       return false;
   }
-}
+};

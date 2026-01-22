@@ -1,7 +1,7 @@
 import { castArray } from 'es-toolkit/compat';
 import { CardId, CardLocation, PlayerId } from 'shared/shared-types.ts';
 
-import { validateCostSpec } from '../shared/validate-cost-spec.ts';
+import { validateCostSpec } from 'shared/validate-cost-spec.ts';
 import {
   FindCardsFnFactory,
   isCardDataFindCardsFilter,

@@ -128,12 +128,19 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     oldSource?.source.splice(oldSource?.index, 1);
     
     switch (oldSource?.sourceKey) {
-      case 'playerHand':
-        await this.reactionManager.runCardLifecycleEvent('onLeaveHand', {
-          playerId: args.toPlayerId!,
-          cardId
-        });
+      case 'playerHand': {
+        // Use the origin player ID for leave-hand events; destination can be undefined for play area moves.
+        const fromPlayerId = oldSource?.playerId ?? args.toPlayerId;
+        if (fromPlayerId !== undefined) {
+          await this.reactionManager.runCardLifecycleEvent('onLeaveHand', {
+            playerId: fromPlayerId,
+            cardId
+          });
+        } else {
+          console.warn(`[moveCard action] could not resolve fromPlayerId for onLeaveHand for ${card}`);
+        }
         break;
+      }
       case 'playArea':
       case 'activeDuration':
         if (args.to.location === 'playArea' || args.to.location === 'activeDuration') break;

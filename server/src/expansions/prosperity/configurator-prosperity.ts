@@ -16,13 +16,14 @@ const configurator: ExpansionConfiguratorFactory = () => {
   
   return async (args) => {
     const kingdomCards = args.config.kingdomSupply;
-    const randomKingdomCard = kingdomCards[Math.floor(kingdomCards.length * Math.random())];
-    
-    console.log(`[prosperity configurator] random kingdom chosen to determine if colony and prosperity should be added to config '${randomKingdomCard.cards[0].kingdom}'`);
+    // Standard Dominion rule: add Colony/Platinum when any Prosperity kingdom card is present.
+    const hasProsperityKingdom = kingdomCards.some(supply =>
+      supply.cards.some(card => card.expansionName === 'prosperity')
+    );
     
     const basicCards = args.config.basicSupply;
     
-    if (randomKingdomCard.cards[0].expansionName === 'prosperity' && !prosperityCheckConfigured) {
+    if (hasProsperityKingdom && !prosperityCheckConfigured) {
       console.log(`[prosperity configurator] adding prosperity and colony to config`);
       
       basicCards.push({

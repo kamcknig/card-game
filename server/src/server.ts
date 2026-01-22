@@ -14,7 +14,7 @@ if (Deno.env.get('LOG_TO_FILE')?.toLowerCase() === 'false') {
 
 log.init();
 
-const PORT = toNumber(process.env.PORT) || 3000;
+const PORT = toNumber(process.env.PORT) || 3001;
 
 const game = new Game();
 

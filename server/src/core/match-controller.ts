@@ -546,13 +546,19 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }
     
     for (const conditionFn of this._expansionEndGameConditionFns) {
-      conditionFn({
+      // End immediately when any registered expansion end-game condition triggers.
+      const shouldEnd = conditionFn({
         cardSourceController: this._cardSourceController,
         match: this._match, cardLibrary: this._cardLibrary,
         cardPriceController: this._cardPriceController!,
         reactionManager: this._reactionManager!,
         findCards: this._findCards
       });
+      if (shouldEnd) {
+        console.log('[match] expansion end-game condition met, game over');
+        await this.endGame();
+        return true;
+      }
     }
     
     return false;

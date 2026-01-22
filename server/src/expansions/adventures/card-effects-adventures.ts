@@ -9,7 +9,7 @@ import {
 } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
-import { getPlayerStartingFrom } from '../../shared/get-player-position-utils.ts';
+import { getPlayerStartingFrom } from 'shared/get-player-position-utils.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { castArray } from 'es-toolkit/compat';

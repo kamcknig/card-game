@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "server:watch": "concurrently \"deno task copy:shared\" \"deno task dev:watch\""
+    "server:watch": "deno task dev:watch"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

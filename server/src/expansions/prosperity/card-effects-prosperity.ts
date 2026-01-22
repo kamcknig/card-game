@@ -4,7 +4,7 @@ import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getRemainingSupplyCount, getStartingSupplyCount } from '../../utils/get-starting-supply-count.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
-import { getPlayerStartingFrom } from '../../shared/get-player-position-utils.ts';
+import { getPlayerStartingFrom } from 'shared/get-player-position-utils.ts';
 
 const expansion: CardExpansionModule = {
   'anvil': {

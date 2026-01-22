@@ -1,8 +1,8 @@
 **/Dockerfile
 **/.dockerignore
-**/.deno/
-**/node_modules/
+**/.deno
+**/node_modules
 **/npm-debug.log
-**/dist/
-**/.git/
+**/dist
+**/.git
 **/.gitignore

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "server:watch": "cd server && deno task deno:dev",
+    "server:watch": "cd server && deno task dev:watch",
     "web:watch": "webpack serve --mode=development --config ./app/webpack.config.mjs",
     "watch": "concurrently \"npm run watch:server\" \"npm run watch:web\""
   },
