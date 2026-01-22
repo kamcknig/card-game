@@ -47,4 +47,15 @@ export class LogManager {
   public exit() {
     this._depth = Math.max(0, this._depth - 1);
   }
+
+  public async withIndent<T>(fn: () => Promise<T> | T): Promise<T> {
+    // Keep indentation balanced even if a reaction throws.
+    this.enter();
+    try {
+      return await fn();
+    }
+    finally {
+      this.exit();
+    }
+  }
 }

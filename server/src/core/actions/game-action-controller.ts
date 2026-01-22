@@ -220,9 +220,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       previousLocation
     });
     
-    this.logManager.enter();
     await this.reactionManager.runTrigger({ trigger });
-    this.logManager.exit();
     
     const suppress = context?.suppressLifecycle;
     const skipOnGain =
@@ -525,23 +523,21 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     if (effectFn) {
       console.log(`[buyCardLike action] running effect for ${event}`);
-      
-      this.logManager.enter();
-      
-      await effectFn({
-        cardSourceController: this._cardSourceController,
-        cardPriceController: this.cardPriceRuleController,
-        reactionManager: this.reactionManager,
-        runGameActionDelegate: this.runGameActionDelegate,
-        cardId: args.cardLikeId,
-        playerId: args.playerId,
-        match: this.match,
-        cardLibrary: this.cardLibrary,
-        reactionContext: {},
-        findCards: this._findCards
+
+      await this.logManager.withIndent(async () => {
+        await effectFn({
+          cardSourceController: this._cardSourceController,
+          cardPriceController: this.cardPriceRuleController,
+          reactionManager: this.reactionManager,
+          runGameActionDelegate: this.runGameActionDelegate,
+          cardId: args.cardLikeId,
+          playerId: args.playerId,
+          match: this.match,
+          cardLibrary: this.cardLibrary,
+          reactionContext: {},
+          findCards: this._findCards
+        });
       });
-      
-      this.logManager.exit();
     }
   }
   
@@ -640,9 +636,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       cardId
     });
     
-    this.logManager.enter();
     await this.reactionManager.runTrigger({ trigger: r });
-    this.logManager.exit();
     
     await this.reactionManager.runCardLifecycleEvent('onDiscarded', {
       cardId: cardId,
@@ -855,9 +849,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     // handle reactions for the card played
     let reactionContext = {};
-    this.logManager.enter();
     await this.reactionManager.runTrigger({ trigger: cardPlayedTrigger, reactionContext });
-    this.logManager.exit();
     
     // now add any triggered effects from the card played
     await this.reactionManager.runCardLifecycleEvent('onCardPlayed', { playerId: args.playerId, cardId });
@@ -866,27 +858,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     // above - e.g., could provide immunity to an attack card played
     let effectFn = this.cardEffectFunctionMap[card.cardKey];
     if (effectFn) {
-      this.logManager.enter();
-      await effectFn({
-        cardSourceController: this._cardSourceController,
-        cardPriceController: this.cardPriceRuleController,
-        reactionManager: this.reactionManager,
-        runGameActionDelegate: this.runGameActionDelegate,
-        cardId,
-        playerId,
-        match: this.match,
-        cardLibrary: this.cardLibrary,
-        reactionContext,
-        findCards: this._findCards
-      });
-      this.logManager.exit();
-    }
-    
-    for (const expansion of Object.keys(this.customCardEffectHandlers)) {
-      const effects = this.customCardEffectHandlers[expansion];
-      effectFn = effects[card.cardKey];
-      if (effectFn) {
-        this.logManager.enter();
+      await this.logManager.withIndent(async () => {
         await effectFn({
           cardSourceController: this._cardSourceController,
           cardPriceController: this.cardPriceRuleController,
@@ -899,7 +871,27 @@ export class GameActionController implements BaseGameActionDefinitionMap {
           reactionContext,
           findCards: this._findCards
         });
-        this.logManager.exit();
+      });
+    }
+    
+    for (const expansion of Object.keys(this.customCardEffectHandlers)) {
+      const effects = this.customCardEffectHandlers[expansion];
+      effectFn = effects[card.cardKey];
+      if (effectFn) {
+        await this.logManager.withIndent(async () => {
+          await effectFn({
+            cardSourceController: this._cardSourceController,
+            cardPriceController: this.cardPriceRuleController,
+            reactionManager: this.reactionManager,
+            runGameActionDelegate: this.runGameActionDelegate,
+            cardId,
+            playerId,
+            match: this.match,
+            cardLibrary: this.cardLibrary,
+            reactionContext,
+            findCards: this._findCards
+          });
+        });
       }
     }
     
@@ -910,9 +902,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     // handle reactions for the card played
     reactionContext = {};
-    this.logManager.enter();
     await this.reactionManager.runTrigger({ trigger: afterCardPlayedTrigger, reactionContext });
-    this.logManager.exit();
   }
   
   // Helper method to shuffle a player's deck

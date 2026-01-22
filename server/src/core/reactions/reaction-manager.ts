@@ -271,17 +271,20 @@ export class ReactionManager {
   }
   
   private async runReaction<T extends TriggerEventType>(reaction: Reaction, trigger: ReactionTrigger<T>, targetPlayer: Player, context: TriggeredEffectContext<T>, reactionContext?: any) {
-    const reactionResult = await reaction.triggeredEffectFn({
-      cardSourceController: this._cardSourceController,
-      findCards: this._findCards,
-      reactionManager: this,
-      cardPriceController: this.cardPriceController,
-      isRootLog: false,
-      runGameActionDelegate: this.runGameActionDelegate,
-      trigger,
-      cardLibrary: this._cardLibrary,
-      match: this._match,
-      reaction,
+    const reactionResult = await this.logManager.withIndent(async () => {
+      // Ensure reaction-caused logs are scoped and unwind cleanly.
+      return await reaction.triggeredEffectFn({
+        cardSourceController: this._cardSourceController,
+        findCards: this._findCards,
+        reactionManager: this,
+        cardPriceController: this.cardPriceController,
+        isRootLog: false,
+        runGameActionDelegate: this.runGameActionDelegate,
+        trigger,
+        cardLibrary: this._cardLibrary,
+        match: this._match,
+        reaction,
+      });
     });
     
     // right now the only card that created that has a reaction that the
