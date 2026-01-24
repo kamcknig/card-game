@@ -1,6 +1,6 @@
 import { AppSocket, MatchBaseConfiguration } from '../types.ts';
 import { Card, CardId, CardNoId, ExpansionListElement, Match, MatchConfiguration, Player, PlayerId, } from 'shared/shared-types.ts';
-import { createNewPlayer } from '../utils/create-new-player.ts';
+import { createComputerPlayer, createNewPlayer } from '../utils/create-new-player.ts';
 import { io } from '../server.ts';
 import { MatchController } from './match-controller.ts';
 import { rawCardLibrary } from '@expansions/expansion-library.ts';
@@ -143,6 +143,7 @@ export class Game {
       console.log(`[game] ${player} already in match - assigning socket ID`);
       player.socketId = socket.id;
       player.sessionId = sessionId;
+      player.connected = true;
     }
     else {
       player = createNewPlayer(sessionId, socket);
@@ -161,6 +162,8 @@ export class Game {
       console.log(`[game] game owner does not exist, setting to ${player}`);
       this.owner = player;
       socket.on('matchConfigurationUpdated', this.onMatchConfigurationUpdated);
+      // Allow the owner to add computer players during lobby.
+      socket.on('addComputerPlayer', (count?: number) => this.onAddComputerPlayer(player.id, count));
       socket.on('searchCards', (playerId, searchTerm) => {
         this._socketMap.get(playerId)?.emit('searchCardResponse', this.onSearchCards(searchTerm));
       });
@@ -205,8 +208,9 @@ export class Game {
     player.connected = false;
     player.ready = false;
     
-    if (!this.players.some((p) => p.connected)) {
-      console.log('[game] no players left in game, clearing game state completely',);
+    const hasConnectedHuman = this.players.some((p) => p.connected && !p.isComputer);
+    if (!hasConnectedHuman) {
+      console.log('[game] no human players left in game, clearing game state completely',);
       this.clearMatch()
       return;
     }
@@ -214,6 +218,7 @@ export class Game {
     if (player.id === this.owner?.id) {
       this._socketMap.get(player.id)?.off('matchConfigurationUpdated');
       this._socketMap.get(player.id)?.off('searchCards');
+      this._socketMap.get(player.id)?.off('addComputerPlayer');
       
       const replacement = this.players.find(p => p.connected);
       if (replacement) {
@@ -223,6 +228,7 @@ export class Game {
           this._socketMap.get(playerId)?.emit('searchCardResponse', this.onSearchCards(searchTerm));
         });
         this._socketMap.get(replacement.id)?.on('matchConfigurationUpdated', this.onMatchConfigurationUpdated);
+        this._socketMap.get(replacement.id)?.on('addComputerPlayer', (count?: number) => this.onAddComputerPlayer(replacement.id, count));
       }
     }
     
@@ -364,6 +370,30 @@ export class Game {
     
     this.startMatch();
   };
+
+  // Adds one or more computer players to the lobby, owned by the game owner.
+  private onAddComputerPlayer = (ownerId: PlayerId, count: number = 1) => {
+    if (!this.owner || this.owner.id !== ownerId) {
+      console.warn(`[game] ignoring addComputerPlayer from non-owner ${ownerId}`);
+      return;
+    }
+    
+    if (this.matchStarted) {
+      console.warn('[game] match already started, cannot add computer players');
+      return;
+    }
+    
+    for (let i = 0; i < count; i++) {
+      if (this.players.length >= 6) {
+        console.warn('[game] player limit reached, cannot add computer player');
+        break;
+      }
+      
+      const bot = createComputerPlayer();
+      this.players.push(bot);
+      io.in('game').emit('playerConnected', bot);
+    }
+  };
   
   private startMatch() {
     console.log(`[game] all connected players ready, proceeding to start match`);
@@ -382,7 +412,8 @@ export class Game {
       this.players
         .filter(p => p.connected)
         .map((p, idx) => {
-          p.ready = false;
+          // Keep computer players ready to avoid blocking match start.
+          p.ready = p.isComputer ? true : false;
           p.color = colors[idx]
           return p;
         })

@@ -1,4 +1,4 @@
-import { Container } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import { createCardView } from '../../../core/card/create-card-view';
 import { CountBadgeView } from './count-badge-view';
 import { Card, CardFacing, CardKey } from 'shared/shared-types';
@@ -6,6 +6,9 @@ import { CardSize } from '../../../../types';
 import { CardView } from './card-view';
 import { AdjustmentFilter } from 'pixi-filters';
 import { TokenBadgeView } from './token-badge-view';
+import { selectablePileStore } from '../../../state/interactive-pile-logic';
+import { selectedPileStore } from '../../../state/interactive-state';
+import { CARD_HEIGHT, CARD_WIDTH, SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH } from '../../../core/app-contants';
 
 type PileArgs = {
   cards?: Card[];
@@ -27,9 +30,11 @@ export class PileView extends Container {
   private readonly _facing: CardFacing = 'front';
   private readonly _cardViewContainer: Container;
   private readonly _tokenContainer: Container;
+  private readonly _highlight: Graphics = new Graphics({ label: 'pileHighlight' });
   private _cardView: CardView | undefined | null;
   private _pileKey: CardKey | undefined;
   private _tokenBadges: TokenBadgeData[] = [];
+  private _cleanup: (() => void)[] = [];
 
   set pile(val: Card[]) {
     this._cards = [...val];
@@ -40,6 +45,7 @@ export class PileView extends Container {
   // Sets a stable pile key so tokens can be mapped to this pile.
   set pileKey(val: CardKey) {
     this._pileKey = val;
+    this.drawHighlight();
   }
   
   get pileKey(): CardKey | undefined {
@@ -50,6 +56,7 @@ export class PileView extends Container {
   set tokenBadges(val: TokenBadgeData[]) {
     this._tokenBadges = [...val];
     this.drawTokenBadges();
+    this.drawHighlight();
   }
 
   constructor(args: PileArgs) {
@@ -61,6 +68,7 @@ export class PileView extends Container {
     this._facing = args.facing ?? 'front';
 
     this._cardViewContainer = new Container({ label: 'cardView' });
+    this.addChild(this._highlight);
     this.addChild(this._cardViewContainer);
     
     // Token container sits above the card view for token indicators.
@@ -80,9 +88,13 @@ export class PileView extends Container {
     });
 
     this.on('removed', () => {
+      this._cleanup.forEach(cb => cb());
       this.removeAllListeners();
       this.destroy();
     });
+    
+    this._cleanup.push(selectablePileStore.subscribe(this.drawHighlight));
+    this._cleanup.push(selectedPileStore.subscribe(this.drawHighlight));
   }
 
   draw() {
@@ -138,9 +150,39 @@ export class PileView extends Container {
     this.drawTokenBadges();
   }
   
+  // Draws highlight around the pile if selectable or selected.
+  private drawHighlight = () => {
+    if (!this._pileKey) {
+      this._highlight.clear();
+      return;
+    }
+    
+    const selectable = selectablePileStore.get();
+    const selected = selectedPileStore.get();
+    
+    this._highlight.clear();
+    
+    const fallbackWidth = this._size === 'half' ? SMALL_CARD_WIDTH : CARD_WIDTH;
+    const fallbackHeight = this._size === 'half' ? SMALL_CARD_HEIGHT : CARD_HEIGHT;
+    const width = this._cardView?.width ?? fallbackWidth;
+    const height = this._cardView?.height ?? fallbackHeight;
+    
+    if (selectable.includes(this._pileKey)) {
+      this._highlight
+        .roundRect(-3, -3, width + 6, height + 6, 5)
+        .fill(0xffaaaa);
+    }
+    
+    if (selected.includes(this._pileKey)) {
+      this._highlight
+        .roundRect(-3, -3, width + 6, height + 6, 5)
+        .fill(0x6DFF8C);
+    }
+  }
+  
   // Renders token badges in the top-right corner of the pile.
   private drawTokenBadges() {
-    const tokenSize = this._size === 'half' ? 18 : 22;
+    const tokenSize = this._size === 'half' ? 25 : 35;
     const gap = 2;
     const baseX = (this._cardView?.width ?? this.width) - tokenSize - 4;
     const baseY = 4;

@@ -100,6 +100,11 @@ export class MatchConfigurationComponent implements OnDestroy {
     });
   }
 
+  // Adds a single computer player to the lobby.
+  addComputerPlayer() {
+    this._socketService.emit('addComputerPlayer', 1);
+  }
+
   deleteKingdom(kingdom: CardNoId) {
     const idx = this.preSelectedKingdoms.findIndex(k => k !== null && k?.cardKey === kingdom.cardKey);
     this.preSelectedKingdoms = this.preSelectedKingdoms

@@ -1,68 +1,98 @@
-import { Card, CardId, CardKey } from 'shared/shared-types.ts';
+import {
+  Card,
+  CardId,
+  CardKey,
+  CardNoId,
+  CountSpec,
+} from "shared/shared-types.ts";
 import {
   CardEffectFunctionContext,
   CardExpansionModule,
   CardLifecycleCallbackContext,
   CardLifecycleEventArgMap,
   ReactionTemplate,
-  TriggerEventType
-} from '../../types.ts';
-import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
-import { isLocationInPlay } from '../../utils/is-in-play.ts';
-import { getPlayerStartingFrom } from 'shared/get-player-position-utils.ts';
-import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
-import { getTurnPhase } from '../../utils/get-turn-phase.ts';
-import { castArray } from 'es-toolkit/compat';
+  TriggerEventType,
+} from "../../types.ts";
+import { findOrderedTargets } from "../../utils/find-ordered-targets.ts";
+import { isLocationInPlay } from "../../utils/is-in-play.ts";
+import { getPlayerStartingFrom } from "shared/get-player-position-utils.ts";
+import { getCardsInPlay } from "../../utils/get-cards-in-play.ts";
+import { getTurnPhase } from "../../utils/get-turn-phase.ts";
+import { castArray } from "es-toolkit/compat";
+import { adventuresTokenIds } from "./token-ids-adventures.ts";
+import { tokenDefinitionMap } from "../../core/tokens/token-definition-map.ts";
 
-const addTravellerEffect = async (card: Card, travelTo: CardKey, context: CardLifecycleCallbackContext, eventArgs: CardLifecycleEventArgMap['onDiscarded']) => {
+// Determines the card that defines the pile's type by matching the pile randomizer.
+// todo: the randomizer card needs to be part of a card's definition or in the library creation and game/match creation.
+const getPileRandomizerCard = (
+  cards: CardNoId[],
+  pileName: string,
+): CardNoId | undefined => {
+  return cards.find((card) => card.randomizer === pileName) ?? cards[0];
+};
+
+const addTravellerEffect = async (
+  card: Card,
+  travelTo: CardKey,
+  context: CardLifecycleCallbackContext,
+  eventArgs: CardLifecycleEventArgMap["onDiscarded"],
+) => {
   if (!isLocationInPlay(eventArgs.previousLocation?.location)) {
     return;
   }
-  
+
   const newCards = context.findCards([
-    { location: ['basicSupply', 'kingdomSupply'] },
-    { cardKeys: travelTo }
+    { location: ["basicSupply", "kingdomSupply"] },
+    { cardKeys: travelTo },
   ]);
-  
+
   if (!newCards.length) {
-    console.log(`[${card.cardKey} onDiscarded effect] no ${travelTo} cards in supply`);
+    console.log(
+      `[${card.cardKey} onDiscarded effect] no ${travelTo} cards in supply`,
+    );
     return;
   }
-  
+
   const newCard = newCards.slice(-1)[0];
-  
-  const result = await context.runGameActionDelegate('userPrompt', {
+
+  const result = await context.runGameActionDelegate("userPrompt", {
     playerId: eventArgs.playerId,
     prompt: `Exchange ${card.cardName} for ${newCard.cardName}?`,
     actionButtons: [
-      { label: 'CANCEL', action: 1 },
-      { label: 'EXCHANGE', action: 2 }
+      { label: "CANCEL", action: 1 },
+      { label: "EXCHANGE", action: 2 },
     ],
-  }) as { action: number, result: number[] };
-  
+  }) as { action: number; result: number[] };
+
   if (result.action === 1) {
-    console.log(`[${card.cardKey} onDiscarded effect] user chose not to exchange`);
+    console.log(
+      `[${card.cardKey} onDiscarded effect] user chose not to exchange`,
+    );
     return;
   }
-  
-  console.log(`[${card.cardKey} onDiscarded effect] moving ${card} back to supply`);
-  
-  await context.runGameActionDelegate('moveCard', {
+
+  console.log(
+    `[${card.cardKey} onDiscarded effect] moving ${card} back to supply`,
+  );
+
+  await context.runGameActionDelegate("moveCard", {
     cardId: card.id,
-    to: { location: 'kingdomSupply' }
+    to: { location: "kingdomSupply" },
   });
-  
-  console.log(`[${card.cardKey} onDiscarded effect] moving ${newCard} to discard pile`);
-  
-  await context.runGameActionDelegate('moveCard', {
+
+  console.log(
+    `[${card.cardKey} onDiscarded effect] moving ${newCard} to discard pile`,
+  );
+
+  await context.runGameActionDelegate("moveCard", {
     toPlayerId: eventArgs.playerId,
     cardId: newCard.id,
-    to: { location: 'playerDiscard' }
+    to: { location: "playerDiscard" },
   });
-}
+};
 
 /**
- * Adds a system even for the start of the cleanup phase to move the card to the active duration zone so that it's not
+ * Adds a system event for the start of the cleanup phase to move the card to the active duration zone so that it's not
  * discarded
  *
  * also registers the given trigger to actually run the duration card's effect
@@ -74,1838 +104,2423 @@ const addTravellerEffect = async (card: Card, travelTo: CardKey, context: CardLi
  * the system doesn't currently auto-detect this and remove any triggers. so you must manually remove the trigger
  * in the onLeavePlay lifecycle hook of the card expansion
  */
-export const addDurationEffect = <T extends TriggerEventType>(card: Card, context: CardEffectFunctionContext, triggeredTemplate: ReactionTemplate<T> | ReactionTemplate<T>[]) => {
+export const addDurationEffect = <T extends TriggerEventType>(
+  card: Card,
+  context: CardEffectFunctionContext,
+  triggeredTemplate: ReactionTemplate<T> | ReactionTemplate<T>[],
+) => {
   // register event for the cleanup phase to move the card to the activeDuration zone. This will leave it "in play,"
   // but will prevent it from being discarded
-  context.reactionManager.registerSystemTemplate(card, 'startTurnPhase', {
+  context.reactionManager.registerSystemTemplate(card, "startTurnPhase", {
     playerId: context.playerId,
     once: true,
     allowMultipleInstances: true,
-    condition: async conditionArgs => {
-      if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'cleanup') return false;
+    condition: async (conditionArgs) => {
+      if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== "cleanup") {
+        return false;
+      }
       return true;
     },
-    triggeredEffectFn: async triggeredArgs => {
-      console.log(`[${card.cardKey} duration effect] moving to activeDuration zone`);
-      
-      await triggeredArgs.runGameActionDelegate('moveCard', {
+    triggeredEffectFn: async (triggeredArgs) => {
+      console.log(
+        `[${card.cardKey} duration effect] moving to activeDuration zone`,
+      );
+
+      await triggeredArgs.runGameActionDelegate("moveCard", {
         cardId: card.id,
-        to: { location: 'activeDuration' }
+        to: { location: "activeDuration" },
       });
-    }
+    },
   });
-  
+
   triggeredTemplate = castArray(triggeredTemplate);
-  
+
   // register the trigger to run when the duration card triggers
-  
+
   for (const triggeredTemplateElement of triggeredTemplate) {
     context.reactionManager.registerReactionTemplate(triggeredTemplateElement);
   }
-}
+};
 
 const expansion: CardExpansionModule = {
-  'amulet': {
+  "amulet": {
     registerLifeCycleMethods: () => ({
       onLeavePlay: async (args, eventArgs) => {
-        args.reactionManager.unregisterTrigger(`amulet:${eventArgs.cardId}:startTurn`);
-      }
+        args.reactionManager.unregisterTrigger(
+          `amulet:${eventArgs.cardId}:startTurn`,
+        );
+      },
     }),
     registerEffects: () => async (cardEffectArgs) => {
       const actions = [
-        { label: '+1 TREASURE', action: 1 },
-        { label: 'TRASH A CARD', action: 2 },
-        { label: 'GAIN A SILVER', action: 3 }
+        { label: "+1 TREASURE", action: 1 },
+        { label: "TRASH A CARD", action: 2 },
+        { label: "GAIN A SILVER", action: 3 },
       ];
-      
+
       const decision = async () => {
-        const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
-          playerId: cardEffectArgs.playerId,
-          prompt: 'Choose one',
-          actionButtons: actions,
-        }) as { action: number, result: number[] };
-        
+        const result = await cardEffectArgs.runGameActionDelegate(
+          "userPrompt",
+          {
+            playerId: cardEffectArgs.playerId,
+            prompt: "Choose one",
+            actionButtons: actions,
+          },
+        ) as { action: number; result: number[] };
+
         if (result.action === 1) {
           console.log(`[amulet effect] gaining 1 treasure`);
-          await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
-        }
-        else if (result.action === 2) {
-          const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
-          const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
-            playerId: cardEffectArgs.playerId,
-            prompt: `Trash card`,
-            restrict: hand,
+          await cardEffectArgs.runGameActionDelegate("gainTreasure", {
             count: 1,
-          }) as CardId[];
-          
+          });
+        } else if (result.action === 2) {
+          const hand = cardEffectArgs.cardSourceController.getSource(
+            "playerHand",
+            cardEffectArgs.playerId,
+          );
+          const selectedCardIds = await cardEffectArgs.runGameActionDelegate(
+            "selectCard",
+            {
+              playerId: cardEffectArgs.playerId,
+              prompt: `Trash card`,
+              restrict: hand,
+              count: 1,
+            },
+          ) as CardId[];
+
           if (!selectedCardIds.length) {
             console.log(`[amulet effect] no card selected`);
-          }
-          else {
-            const cardToTrash = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
-            
+          } else {
+            const cardToTrash = cardEffectArgs.cardLibrary.getCard(
+              selectedCardIds[0],
+            );
+
             console.log(`[amulet effect] selected ${cardToTrash} to trash`);
-            
-            await cardEffectArgs.runGameActionDelegate('trashCard', {
+
+            await cardEffectArgs.runGameActionDelegate("trashCard", {
               playerId: cardEffectArgs.playerId,
-              cardId: cardToTrash.id
+              cardId: cardToTrash.id,
             });
           }
-        }
-        else {
+        } else {
           const silverCards = cardEffectArgs.findCards([
-            { location: 'basicSupply' },
-            { cardKeys: 'silver' }
+            { location: "basicSupply" },
+            { cardKeys: "silver" },
           ]);
-          
+
           if (!silverCards.length) {
             console.log(`[amulet effect] no silver cards in supply`);
-          }
-          else {
+          } else {
             const silverCardToGain = silverCards.slice(-1)[0];
-            
-            await cardEffectArgs.runGameActionDelegate('gainCard', {
+
+            await cardEffectArgs.runGameActionDelegate("gainCard", {
               playerId: cardEffectArgs.playerId,
               cardId: silverCardToGain.id,
-              to: { location: 'playerDiscard' }
+              to: { location: "playerDiscard" },
             });
           }
         }
-      }
-      
+      };
+
       await decision();
-      
+
       const turnPlayed = cardEffectArgs.match.turnNumber;
-      
+
       const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      
+
       addDurationEffect(card, cardEffectArgs, {
         id: `amulet:${cardEffectArgs.cardId}:startTurn`,
-        listeningFor: 'startTurn',
+        listeningFor: "startTurn",
         playerId: cardEffectArgs.playerId,
         once: true,
         allowMultipleInstances: true,
         compulsory: true,
-        condition: async conditionArgs => {
-          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
-          if (conditionArgs.trigger.args.turnNumber === turnPlayed) return false;
+        condition: async (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
+            return false;
+          }
+          if (conditionArgs.trigger.args.turnNumber === turnPlayed) {
+            return false;
+          }
           return true;
         },
-        triggeredEffectFn: async triggeredArgs => {
+        triggeredEffectFn: async (triggeredArgs) => {
           console.log(`[amulet startTurn effect] re-running decision fn`);
-          
-          await triggeredArgs.runGameActionDelegate('moveCard', {
+
+          await triggeredArgs.runGameActionDelegate("moveCard", {
             cardId: card.id,
-            to: { location: 'playArea' }
+            to: { location: "playArea" },
           });
-          
+
           await decision();
-        }
+        },
       });
-    }
+    },
   },
-  'artificer': {
+  "artificer": {
     registerEffects: () => async (cardEffectArgs) => {
-      console.log(`[artificer effect] drawing 1 card, gaining 1 action and 1 treasure`);
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
-      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
-      
-      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
-      
-      let selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+      console.log(
+        `[artificer effect] drawing 1 card, gaining 1 action and 1 treasure`,
+      );
+      await cardEffectArgs.runGameActionDelegate("drawCard", {
         playerId: cardEffectArgs.playerId,
-        prompt: `Discard cards?`,
-        restrict: hand,
-        count: { kind: 'upTo', count: hand.length },
-        optional: true,
-      }) as CardId[];
-      
+      });
+      await cardEffectArgs.runGameActionDelegate("gainAction", { count: 1 });
+      await cardEffectArgs.runGameActionDelegate("gainTreasure", { count: 1 });
+
+      const hand = cardEffectArgs.cardSourceController.getSource(
+        "playerHand",
+        cardEffectArgs.playerId,
+      );
+
+      let selectedCardIds = await cardEffectArgs.runGameActionDelegate(
+        "selectCard",
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Discard cards?`,
+          restrict: hand,
+          count: { kind: "upTo", count: hand.length },
+          optional: true,
+        },
+      ) as CardId[];
+
       if (!selectedCardIds.length) {
         console.log(`[artificer effect] no cards selected`);
         return;
       }
-      
-      console.log(`[artificer effect] selected ${selectedCardIds.length} cards to discard`);
-      
+
+      console.log(
+        `[artificer effect] selected ${selectedCardIds.length} cards to discard`,
+      );
+
       for (const selectedCardId of selectedCardIds) {
-        await cardEffectArgs.runGameActionDelegate('discardCard', {
+        await cardEffectArgs.runGameActionDelegate("discardCard", {
           playerId: cardEffectArgs.playerId,
-          cardId: selectedCardId
+          cardId: selectedCardId,
         });
       }
-      
+
       const cardsToSelect = cardEffectArgs.findCards([
-        { location: ['basicSupply', 'kingdomSupply'] },
-        { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: { treasure: (selectedCardIds.length ?? 0) } }
+        { location: ["basicSupply", "kingdomSupply"] },
+        {
+          kind: "upTo",
+          playerId: cardEffectArgs.playerId,
+          amount: { treasure: (selectedCardIds.length ?? 0) },
+        },
       ]);
-      
+
       if (!cardsToSelect.length) {
-        console.log(`[artificer effect] no cards in supply costing ${selectedCardIds.length ?? 0} treasure`);
+        console.log(
+          `[artificer effect] no cards in supply costing ${
+            selectedCardIds.length ?? 0
+          } treasure`,
+        );
         return;
       }
-      
-      selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
-        playerId: cardEffectArgs.playerId,
-        prompt: `Gain card`,
-        restrict: cardsToSelect.map(card => card.id),
-        count: 1,
-        optional: true
-      }) as CardId[];
-      
+
+      selectedCardIds = await cardEffectArgs.runGameActionDelegate(
+        "selectCard",
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Gain card`,
+          restrict: cardsToSelect.map((card) => card.id),
+          count: 1,
+          optional: true,
+        },
+      ) as CardId[];
+
       if (!selectedCardIds.length) {
         console.log(`[artificer effect] no card selected`);
         return;
       }
-      
+
       const cardToGain = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
-      
+
       console.log(`[artificer effect] selected ${cardToGain} to gain`);
-      
-      await cardEffectArgs.runGameActionDelegate('gainCard', {
+
+      await cardEffectArgs.runGameActionDelegate("gainCard", {
         playerId: cardEffectArgs.playerId,
         cardId: cardToGain.id,
-        to: { location: 'playerDeck' }
+        to: { location: "playerDeck" },
       });
-    }
+    },
   },
-  'caravan-guard': {
+  "caravan-guard": {
     registerLifeCycleMethods: () => ({
       onLeavePlay: async (args, eventArgs) => {
-        args.reactionManager.unregisterTrigger(`caravan-guard:${eventArgs.cardId}:startTurn`);
+        args.reactionManager.unregisterTrigger(
+          `caravan-guard:${eventArgs.cardId}:startTurn`,
+        );
       },
       onLeaveHand: async (args, eventArgs) => {
-        args.reactionManager.unregisterTrigger(`caravan-guard:${eventArgs.cardId}:cardPlayed`);
+        args.reactionManager.unregisterTrigger(
+          `caravan-guard:${eventArgs.cardId}:cardPlayed`,
+        );
       },
       onEnterHand: async (args, eventArgs) => {
         args.reactionManager.registerReactionTemplate({
           id: `caravan-guard:${eventArgs.cardId}:cardPlayed`,
-          listeningFor: 'cardPlayed',
+          listeningFor: "cardPlayed",
           playerId: eventArgs.playerId,
           once: false,
           compulsory: false,
           allowMultipleInstances: true,
-          condition: async conditionArgs => {
-            if (conditionArgs.trigger.args.playerId === eventArgs.playerId) return false;
-            const cardPlayed = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
-            if (!cardPlayed.type.includes('ATTACK')) return false;
+          condition: async (conditionArgs) => {
+            if (conditionArgs.trigger.args.playerId === eventArgs.playerId) {
+              return false;
+            }
+            const cardPlayed = conditionArgs.cardLibrary.getCard(
+              conditionArgs.trigger.args.cardId,
+            );
+            if (!cardPlayed.type.includes("ATTACK")) return false;
             return true;
           },
-          triggeredEffectFn: async triggeredArgs => {
-            console.log(`[caravan-guard cardPlayed effect] playing Caravan Guard`);
-            
-            await triggeredArgs.runGameActionDelegate('playCard', {
+          triggeredEffectFn: async (triggeredArgs) => {
+            console.log(
+              `[caravan-guard cardPlayed effect] playing Caravan Guard`,
+            );
+
+            await triggeredArgs.runGameActionDelegate("playCard", {
               playerId: eventArgs.playerId,
-              cardId: eventArgs.cardId
+              cardId: eventArgs.cardId,
             });
-          }
+          },
         });
-      }
+      },
     }),
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[caravan-guard effect] drawing 1 card, gaining 1 action`);
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
-      
+      await cardEffectArgs.runGameActionDelegate("drawCard", {
+        playerId: cardEffectArgs.playerId,
+      });
+      await cardEffectArgs.runGameActionDelegate("gainAction", { count: 1 });
+
       const turnPlayed = cardEffectArgs.match.turnNumber;
-      
+
       const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       addDurationEffect(card, cardEffectArgs, {
         id: `caravan-guard:${cardEffectArgs.cardId}:startTurn`,
-        listeningFor: 'startTurn',
+        listeningFor: "startTurn",
         playerId: cardEffectArgs.playerId,
         once: true,
         compulsory: true,
         allowMultipleInstances: true,
-        condition: async conditionArgs => {
-          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
-          if (conditionArgs.trigger.args.turnNumber === turnPlayed) return false;
+        condition: async (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
+            return false;
+          }
+          if (conditionArgs.trigger.args.turnNumber === turnPlayed) {
+            return false;
+          }
           return true;
         },
-        triggeredEffectFn: async triggeredArgs => {
-          await triggeredArgs.runGameActionDelegate('moveCard', {
+        triggeredEffectFn: async (triggeredArgs) => {
+          await triggeredArgs.runGameActionDelegate("moveCard", {
             cardId: card.id,
-            to: { location: 'playArea' }
+            to: { location: "playArea" },
           });
           console.log(`[caravan-guard startTurn effect] gaining 1 treasure`);
-          await triggeredArgs.runGameActionDelegate('gainTreasure', { count: 1 });
-        }
+          await triggeredArgs.runGameActionDelegate("gainTreasure", {
+            count: 1,
+          });
+        },
       });
-    }
+    },
   },
-  'champion': {
+  "champion": {
     registerLifeCycleMethods: () => ({
       onLeavePlay: async (args, eventArgs) => {
-        args.reactionManager.unregisterTrigger(`champion:${eventArgs.cardId}:cardPlayed:attack`);
-        args.reactionManager.unregisterTrigger(`champion:${eventArgs.cardId}:cardPlayed:action`);
-      }
+        args.reactionManager.unregisterTrigger(
+          `champion:${eventArgs.cardId}:cardPlayed:attack`,
+        );
+        args.reactionManager.unregisterTrigger(
+          `champion:${eventArgs.cardId}:cardPlayed:action`,
+        );
+      },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
-      
-      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      await cardEffectArgs.runGameActionDelegate("gainAction", { count: 1 });
+
+      const thisCard = cardEffectArgs.cardLibrary.getCard(
+        cardEffectArgs.cardId,
+      );
       addDurationEffect(thisCard, cardEffectArgs, [
         {
           id: `champion:${thisCard.id}:cardPlayed:attack`,
-          listeningFor: 'cardPlayed',
+          listeningFor: "cardPlayed",
           playerId: cardEffectArgs.playerId,
           once: false,
           compulsory: true,
           allowMultipleInstances: false,
-          condition: async conditionArgs => {
-            const playedCard = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
-            if (!playedCard.type.includes('ATTACK')) return false;
-            if (conditionArgs.trigger.args.playerId === cardEffectArgs.playerId) return false;
+          condition: async (conditionArgs) => {
+            const playedCard = conditionArgs.cardLibrary.getCard(
+              conditionArgs.trigger.args.cardId,
+            );
+            if (!playedCard.type.includes("ATTACK")) return false;
+            if (
+              conditionArgs.trigger.args.playerId === cardEffectArgs.playerId
+            ) return false;
             return true;
           },
-          triggeredEffectFn: async triggeredArgs => {
-            console.log(`[champion cardPlayed effect] attack played, gaining immunity`);
-            return 'immunity';
-          }
+          triggeredEffectFn: async (triggeredArgs) => {
+            console.log(
+              `[champion cardPlayed effect] attack played, gaining immunity`,
+            );
+            return "immunity";
+          },
         },
         {
           id: `champion:${thisCard.id}:cardPlayed:action`,
-          listeningFor: 'cardPlayed',
+          listeningFor: "cardPlayed",
           playerId: cardEffectArgs.playerId,
           once: false,
           compulsory: true,
           allowMultipleInstances: false,
-          condition: async conditionArgs => {
-            const playedCard = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
-            if (!playedCard.type.includes('ACTION')) return false;
-            if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
+          condition: async (conditionArgs) => {
+            const playedCard = conditionArgs.cardLibrary.getCard(
+              conditionArgs.trigger.args.cardId,
+            );
+            if (!playedCard.type.includes("ACTION")) return false;
+            if (
+              conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId
+            ) return false;
             return true;
           },
-          triggeredEffectFn: async triggeredArgs => {
-            console.log(`[champion cardPlayed effect] action played, gaining 1 action`);
-            await triggeredArgs.runGameActionDelegate('gainAction', { count: 1 }, { loggingContext: { source: thisCard.id } });
-          }
-        }
+          triggeredEffectFn: async (triggeredArgs) => {
+            console.log(
+              `[champion cardPlayed effect] action played, gaining 1 action`,
+            );
+            await triggeredArgs.runGameActionDelegate("gainAction", {
+              count: 1,
+            }, { loggingContext: { source: thisCard.id } });
+          },
+        },
       ]);
-    }
+    },
   },
-  'coin-of-the-realm': {
+  "coin-of-the-realm": {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[coin-of-the-realm effect] gaining 1 treasure`);
-      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
-      
+      await cardEffectArgs.runGameActionDelegate("gainTreasure", { count: 1 });
+
       console.log(`[coin-of-the-realm effect] moving card to tavern mat`);
-      
-      await cardEffectArgs.runGameActionDelegate('moveCard', {
+
+      await cardEffectArgs.runGameActionDelegate("moveCard", {
         toPlayerId: cardEffectArgs.playerId,
         cardId: cardEffectArgs.cardId,
-        to: { location: 'tavern' }
+        to: { location: "tavern" },
       });
-      
-      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      
-      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard, 'cardPlayed', {
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: false,
-        allowMultipleInstances: true,
-        condition: async conditionArgs => {
-          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
-          const cardPlayed = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
-          if (!cardPlayed.type.includes('ACTION')) return false;
-          return true;
+
+      const thisCard = cardEffectArgs.cardLibrary.getCard(
+        cardEffectArgs.cardId,
+      );
+
+      cardEffectArgs.reactionManager.registerReactionTemplate(
+        thisCard,
+        "cardPlayed",
+        {
+          playerId: cardEffectArgs.playerId,
+          once: true,
+          compulsory: false,
+          allowMultipleInstances: true,
+          condition: async (conditionArgs) => {
+            if (
+              conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId
+            ) return false;
+            const cardPlayed = conditionArgs.cardLibrary.getCard(
+              conditionArgs.trigger.args.cardId,
+            );
+            if (!cardPlayed.type.includes("ACTION")) return false;
+            return true;
+          },
+          triggeredEffectFn: async (triggeredArgs) => {
+            console.log(
+              `[coin-of-the-realm cardPlayed effect] calling back to play`,
+            );
+
+            await triggeredArgs.runGameActionDelegate("moveCard", {
+              cardId: thisCard.id,
+              to: { location: "playArea" },
+            });
+
+            console.log(
+              `[coin-of-the-realm cardPlayed effect] gaining 2 actions`,
+            );
+            await triggeredArgs.runGameActionDelegate("gainAction", {
+              count: 2,
+            });
+          },
         },
-        triggeredEffectFn: async triggeredArgs => {
-          console.log(`[coin-of-the-realm cardPlayed effect] calling back to play`);
-          
-          await triggeredArgs.runGameActionDelegate('moveCard', {
-            cardId: thisCard.id,
-            to: { location: 'playArea' }
-          });
-          
-          console.log(`[coin-of-the-realm cardPlayed effect] gaining 2 actions`);
-          await triggeredArgs.runGameActionDelegate('gainAction', { count: 2 });
-        }
-      })
-    }
+      );
+    },
   },
-  'disciple': {
+  "disciple": {
     registerLifeCycleMethods: () => ({
       onDiscarded: async (args, eventArgs) => {
         const card = args.cardLibrary.getCard(eventArgs.cardId);
-        await addTravellerEffect(card, 'teacher', args, eventArgs);
-      }
+        await addTravellerEffect(card, "teacher", args, eventArgs);
+      },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      const hand = cardEffectArgs.cardSourceController.getSource(
+        "playerHand",
+        cardEffectArgs.playerId,
+      );
       const actionCardsInHand = hand.map(cardEffectArgs.cardLibrary.getCard)
-        .filter(card => card.type.includes('ACTION'));
-      
+        .filter((card) => card.type.includes("ACTION"));
+
       if (!actionCardsInHand.length) {
         console.log(`[disciple effect] no action cards in hand`);
         return;
       }
-      
-      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
-        playerId: cardEffectArgs.playerId,
-        prompt: `Play action card`,
-        restrict: actionCardsInHand.map(card => card.id),
-        count: 1,
-        optional: true,
-      }) as CardId[];
-      
+
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate(
+        "selectCard",
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Play action card`,
+          restrict: actionCardsInHand.map((card) => card.id),
+          count: 1,
+          optional: true,
+        },
+      ) as CardId[];
+
       if (!selectedCardIds.length) {
         console.log(`[disciple effect] no card selected`);
         return;
       }
-      
-      const selectedCardToPlay = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
-      
+
+      const selectedCardToPlay = cardEffectArgs.cardLibrary.getCard(
+        selectedCardIds[0],
+      );
+
       console.log(`[disciple effect] playing ${selectedCardToPlay} twice`);
-      
+
       for (let i = 0; i < 2; i++) {
-        await cardEffectArgs.runGameActionDelegate('playCard', {
+        await cardEffectArgs.runGameActionDelegate("playCard", {
           playerId: cardEffectArgs.playerId,
           cardId: selectedCardToPlay.id,
           overrides: {
             actionCost: 0,
-          }
+          },
         });
       }
-      
+
       const copies = cardEffectArgs.findCards([
-        { location: ['basicSupply', 'kingdomSupply'] },
-        { cardKeys: selectedCardToPlay.cardKey }
+        { location: ["basicSupply", "kingdomSupply"] },
+        { cardKeys: selectedCardToPlay.cardKey },
       ]);
-      
+
       if (!copies.length) {
-        console.log(`[disciple effect] no copies of ${selectedCardToPlay} in supply`);
+        console.log(
+          `[disciple effect] no copies of ${selectedCardToPlay} in supply`,
+        );
         return;
       }
-      
+
       console.log(`[disciple effect] gaining ${selectedCardToPlay}`);
-      
-      await cardEffectArgs.runGameActionDelegate('gainCard', {
+
+      await cardEffectArgs.runGameActionDelegate("gainCard", {
         playerId: cardEffectArgs.playerId,
         cardId: copies.slice(-1)[0],
-        to: { location: 'playerDiscard' }
+        to: { location: "playerDiscard" },
       });
-    }
+    },
   },
-  'distant-lands': {
+  "distant-lands": {
     registerScoringFunction: () => (args) => {
-      
-      const distantLandCards = args.cardSourceController.getSource('tavern', args.ownerId)
+      const distantLandCards = args.cardSourceController.getSource(
+        "tavern",
+        args.ownerId,
+      )
         .map(args.cardLibrary.getCard)
-        .filter(card => card.cardKey === 'distant-lands');
-      
-      console.log(`[distant-lands scoring function] number of distant lands on tavern mat ${distantLandCards.length} for player ${args.ownerId}`);
-      
+        .filter((card) => card.cardKey === "distant-lands");
+
+      console.log(
+        `[distant-lands scoring function] number of distant lands on tavern mat ${distantLandCards.length} for player ${args.ownerId}`,
+      );
+
       return distantLandCards.length * 4;
     },
     registerEffects: () => async (cardEffectArgs) => {
-      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      
+      const thisCard = cardEffectArgs.cardLibrary.getCard(
+        cardEffectArgs.cardId,
+      );
+
       console.log(`[distant-lands effect] moving ${thisCard} to tavern mat`);
-      
-      await cardEffectArgs.runGameActionDelegate('moveCard', {
+
+      await cardEffectArgs.runGameActionDelegate("moveCard", {
         toPlayerId: cardEffectArgs.playerId,
         cardId: cardEffectArgs.cardId,
-        to: { location: 'tavern' }
+        to: { location: "tavern" },
       });
-    }
+    },
   },
-  'dungeon': {
+  "dungeon": {
     registerLifeCycleMethods: () => ({
       onLeavePlay: async (args, eventArgs) => {
-        args.reactionManager.unregisterTrigger(`dungeon:${eventArgs.cardId}:startTurn`);
-      }
+        args.reactionManager.unregisterTrigger(
+          `dungeon:${eventArgs.cardId}:startTurn`,
+        );
+      },
     }),
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[dungeon effect] gaining 1 action`);
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
-      
+      await cardEffectArgs.runGameActionDelegate("gainAction", { count: 1 });
+
       const effects = async () => {
         console.log(`[dungeon effect] and drawing 2 cards`);
-        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
-        
-        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        await cardEffectArgs.runGameActionDelegate("drawCard", {
           playerId: cardEffectArgs.playerId,
-          prompt: `Discard cards`,
-          restrict: cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId),
           count: 2,
-        }) as CardId[];
-        
+        });
+
+        const selectedCardIds = await cardEffectArgs.runGameActionDelegate(
+          "selectCard",
+          {
+            playerId: cardEffectArgs.playerId,
+            prompt: `Discard cards`,
+            restrict: cardEffectArgs.cardSourceController.getSource(
+              "playerHand",
+              cardEffectArgs.playerId,
+            ),
+            count: 2,
+          },
+        ) as CardId[];
+
         if (!selectedCardIds.length) {
           console.log(`[dungeon effect] no cards selected`);
           return;
         }
-        
-        console.log(`[dungeon effect] discarding ${selectedCardIds.length} cards`);
-        
+
+        console.log(
+          `[dungeon effect] discarding ${selectedCardIds.length} cards`,
+        );
+
         for (const selectedCardId of selectedCardIds) {
-          await cardEffectArgs.runGameActionDelegate('discardCard', {
+          await cardEffectArgs.runGameActionDelegate("discardCard", {
             playerId: cardEffectArgs.playerId,
-            cardId: selectedCardId
+            cardId: selectedCardId,
           });
         }
-      }
-      
+      };
+
       const turnPlayed = cardEffectArgs.match.turnNumber;
-      
+
       await effects();
-      
+
       const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       addDurationEffect(card, cardEffectArgs, {
         id: `dungeon:${cardEffectArgs.cardId}:startTurn`,
-        listeningFor: 'startTurn',
+        listeningFor: "startTurn",
         playerId: cardEffectArgs.playerId,
         once: true,
         compulsory: true,
         allowMultipleInstances: true,
-        condition: async conditionArgs => {
-          if (conditionArgs.trigger.args.turnNumber === turnPlayed) return false;
-          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
+        condition: async (conditionArgs) => {
+          if (conditionArgs.trigger.args.turnNumber === turnPlayed) {
+            return false;
+          }
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
+            return false;
+          }
           return true;
         },
-        triggeredEffectFn: async triggeredArgs => {
+        triggeredEffectFn: async (triggeredArgs) => {
           console.log(`[dungeon startTurn effect] running`);
-          await triggeredArgs.runGameActionDelegate('moveCard', {
+          await triggeredArgs.runGameActionDelegate("moveCard", {
             cardId: card.id,
-            to: { location: 'playArea' }
+            to: { location: "playArea" },
           });
           await effects();
-        }
+        },
       });
-    }
+    },
   },
-  'duplicate': {
+  "duplicate": {
     registerEffects: () => async (cardEffectArgs) => {
-      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      
+      const thisCard = cardEffectArgs.cardLibrary.getCard(
+        cardEffectArgs.cardId,
+      );
+
       console.log(`[duplicate effect] moving ${thisCard} to tavern mat`);
-      
-      await cardEffectArgs.runGameActionDelegate('moveCard', {
+
+      await cardEffectArgs.runGameActionDelegate("moveCard", {
         toPlayerId: cardEffectArgs.playerId,
         cardId: cardEffectArgs.cardId,
-        to: { location: 'tavern' }
+        to: { location: "tavern" },
       });
-      
-      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard, 'cardGained', {
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: false,
-        allowMultipleInstances: true,
-        condition: async conditionArgs => {
-          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
-          const cardGained = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
-          const { cost } = conditionArgs.cardPriceController.applyRules(cardGained, { playerId: cardEffectArgs.playerId });
-          if (cost.treasure <= 6 && (!cost.potion || cost.potion <= 0)) return false;
-          return true;
+
+      cardEffectArgs.reactionManager.registerReactionTemplate(
+        thisCard,
+        "cardGained",
+        {
+          playerId: cardEffectArgs.playerId,
+          once: true,
+          compulsory: false,
+          allowMultipleInstances: true,
+          condition: async (conditionArgs) => {
+            if (
+              conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId
+            ) return false;
+            const cardGained = conditionArgs.cardLibrary.getCard(
+              conditionArgs.trigger.args.cardId,
+            );
+            const { cost } = conditionArgs.cardPriceController.applyRules(
+              cardGained,
+              { playerId: cardEffectArgs.playerId },
+            );
+            if (
+              cost.treasure <= 6 && (!cost.potion || cost.potion <= 0)
+            ) return false;
+            return true;
+          },
+          triggeredEffectFn: async (triggeredArgs) => {
+            console.log(
+              `[duplicate cardGained] calling ${thisCard} to play area`,
+            );
+
+            await triggeredArgs.runGameActionDelegate("moveCard", {
+              cardId: thisCard.id,
+              to: { location: "playArea" },
+            });
+
+            const cardGained = triggeredArgs.cardLibrary.getCard(
+              triggeredArgs.trigger.args.cardId,
+            );
+
+            const copies = triggeredArgs.findCards([
+              { location: ["basicSupply", "kingdomSupply"] },
+              { cardKeys: cardGained.cardKey },
+            ]);
+
+            if (!copies.length) {
+              console.log(
+                `[duplicate cardGained], no copies of ${cardGained} in supply`,
+              );
+              return;
+            }
+
+            const cardToGain = copies.slice(-1)[0];
+
+            console.log(`[duplicate cardGained] gaining ${cardToGain}`);
+
+            await cardEffectArgs.runGameActionDelegate("gainCard", {
+              playerId: cardEffectArgs.playerId,
+              cardId: cardToGain.id,
+              to: { location: "playerDiscard" },
+            });
+          },
         },
-        triggeredEffectFn: async triggeredArgs => {
-          console.log(`[duplicate cardGained] calling ${thisCard} to play area`);
-          
-          await triggeredArgs.runGameActionDelegate('moveCard', {
-            cardId: thisCard.id,
-            to: { location: 'playArea' }
-          });
-          
-          const cardGained = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
-          
-          const copies = triggeredArgs.findCards([
-            { location: ['basicSupply', 'kingdomSupply'] },
-            { cardKeys: cardGained.cardKey }
-          ]);
-          
-          if (!copies.length) {
-            console.log(`[duplicate cardGained], no copies of ${cardGained} in supply`);
-            return;
-          }
-          
-          const cardToGain = copies.slice(-1)[0];
-          
-          console.log(`[duplicate cardGained] gaining ${cardToGain}`);
-          
-          await cardEffectArgs.runGameActionDelegate('gainCard', {
-            playerId: cardEffectArgs.playerId,
-            cardId: cardToGain.id,
-            to: { location: 'playerDiscard' }
-          });
-        }
-      })
-    }
+      );
+    },
   },
-  'fugitive': {
+  "fugitive": {
     registerLifeCycleMethods: () => ({
       onDiscarded: async (args, eventArgs) => {
         const card = args.cardLibrary.getCard(eventArgs.cardId);
-        await addTravellerEffect(card, 'disciple', args, eventArgs);
-      }
+        await addTravellerEffect(card, "disciple", args, eventArgs);
+      },
     }),
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[fugitive effect] drawing 2 cards and gaining 1 action`);
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
-      
-      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+      await cardEffectArgs.runGameActionDelegate("drawCard", {
         playerId: cardEffectArgs.playerId,
-        prompt: `Discard card`,
-        restrict: cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId),
-        count: 1,
-      }) as CardId[];
-      
+        count: 2,
+      });
+      await cardEffectArgs.runGameActionDelegate("gainAction", { count: 1 });
+
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate(
+        "selectCard",
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Discard card`,
+          restrict: cardEffectArgs.cardSourceController.getSource(
+            "playerHand",
+            cardEffectArgs.playerId,
+          ),
+          count: 1,
+        },
+      ) as CardId[];
+
       if (!selectedCardIds.length) {
         console.log(`[fugitive effect] no card selected`);
         return;
       }
-      
-      const cardToDiscard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
-      
+
+      const cardToDiscard = cardEffectArgs.cardLibrary.getCard(
+        selectedCardIds[0],
+      );
+
       console.log(`[fugitive effect] discarding ${cardToDiscard}`);
-      
-      await cardEffectArgs.runGameActionDelegate('discardCard', {
+
+      await cardEffectArgs.runGameActionDelegate("discardCard", {
         playerId: cardEffectArgs.playerId,
-        cardId: cardToDiscard.id
+        cardId: cardToDiscard.id,
       });
-    }
+    },
   },
-  'gear': {
+  "gear": {
     registerLifeCycleMethods: () => ({
       onLeavePlay: async (args, eventArgs) => {
-        args.reactionManager.unregisterTrigger(`gear:${eventArgs.cardId}:startTurn`);
-      }
+        args.reactionManager.unregisterTrigger(
+          `gear:${eventArgs.cardId}:startTurn`,
+        );
+      },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
-      
-      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
-      
-      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+      await cardEffectArgs.runGameActionDelegate("drawCard", {
         playerId: cardEffectArgs.playerId,
-        prompt: `Set aside cards`,
-        restrict: hand,
-        count: {
-          kind: 'upTo',
-          count: Math.min(2, hand.length)
+        count: 2,
+      });
+
+      const hand = cardEffectArgs.cardSourceController.getSource(
+        "playerHand",
+        cardEffectArgs.playerId,
+      );
+
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate(
+        "selectCard",
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Set aside cards`,
+          restrict: hand,
+          count: {
+            kind: "upTo",
+            count: Math.min(2, hand.length),
+          },
+          optional: true,
         },
-        optional: true,
-      }) as CardId[];
-      
+      ) as CardId[];
+
       if (!selectedCardIds.length) {
         console.log(`[gear effect] no cards selected`);
         return;
       }
-      
+
       console.log(`[gear effect] set aside ${selectedCardIds.length} cards`);
-      
+
       for (const selectedCardId of selectedCardIds) {
-        await cardEffectArgs.runGameActionDelegate('moveCard', {
+        await cardEffectArgs.runGameActionDelegate("moveCard", {
           toPlayerId: cardEffectArgs.playerId,
           cardId: selectedCardId,
-          to: { location: 'set-aside' }
+          to: { location: "set-aside" },
         });
       }
-      
+
       const turnPlayed = cardEffectArgs.match.turnNumber;
-      
-      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      
+
+      const thisCard = cardEffectArgs.cardLibrary.getCard(
+        cardEffectArgs.cardId,
+      );
+
       addDurationEffect(thisCard, cardEffectArgs, {
         id: `gear:${cardEffectArgs.cardId}:startTurn`,
         playerId: cardEffectArgs.playerId,
-        listeningFor: 'startTurn',
+        listeningFor: "startTurn",
         once: true,
         allowMultipleInstances: true,
         compulsory: true,
-        condition: async conditionArgs => {
-          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
-          if (conditionArgs.trigger.args.turnNumber === turnPlayed) return false;
+        condition: async (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
+            return false;
+          }
+          if (conditionArgs.trigger.args.turnNumber === turnPlayed) {
+            return false;
+          }
           return true;
         },
-        triggeredEffectFn: async triggeredArgs => {
-          console.log(`[gear startTurn effect] moving ${selectedCardIds.length} to hand`);
-          
-          await triggeredArgs.runGameActionDelegate('moveCard', {
+        triggeredEffectFn: async (triggeredArgs) => {
+          console.log(
+            `[gear startTurn effect] moving ${selectedCardIds.length} to hand`,
+          );
+
+          await triggeredArgs.runGameActionDelegate("moveCard", {
             cardId: thisCard.id,
-            to: { location: 'playArea' }
+            to: { location: "playArea" },
           });
-          
+
           for (const selectedCardId of selectedCardIds) {
-            await cardEffectArgs.runGameActionDelegate('moveCard', {
+            await cardEffectArgs.runGameActionDelegate("moveCard", {
               toPlayerId: cardEffectArgs.playerId,
               cardId: selectedCardId,
-              to: { location: 'playerHand' }
+              to: { location: "playerHand" },
             });
           }
-        }
+        },
       });
-    }
+    },
   },
-  'guide': {
+  "guide": {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[guide effect] drawing 1 card, and gaining 1 action`);
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
-      
-      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      
+      await cardEffectArgs.runGameActionDelegate("drawCard", {
+        playerId: cardEffectArgs.playerId,
+      });
+      await cardEffectArgs.runGameActionDelegate("gainAction", { count: 1 });
+
+      const thisCard = cardEffectArgs.cardLibrary.getCard(
+        cardEffectArgs.cardId,
+      );
+
       console.log(`[guide effect] moving ${thisCard} to tavern mat`);
-      
-      await cardEffectArgs.runGameActionDelegate('moveCard', {
+
+      await cardEffectArgs.runGameActionDelegate("moveCard", {
         toPlayerId: cardEffectArgs.playerId,
         cardId: cardEffectArgs.cardId,
-        to: { location: 'tavern' }
+        to: { location: "tavern" },
       });
-      
-      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard, 'startTurn', {
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: false,
-        allowMultipleInstances: true,
-        condition: async conditionArgs => {
-          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
-          return true;
+
+      cardEffectArgs.reactionManager.registerReactionTemplate(
+        thisCard,
+        "startTurn",
+        {
+          playerId: cardEffectArgs.playerId,
+          once: true,
+          compulsory: false,
+          allowMultipleInstances: true,
+          condition: async (conditionArgs) => {
+            if (
+              conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId
+            ) return false;
+            return true;
+          },
+          triggeredEffectFn: async (triggeredArgs) => {
+            console.log(
+              `[guide startTurn effect] calling ${thisCard} to playArea`,
+            );
+
+            await triggeredArgs.runGameActionDelegate("moveCard", {
+              cardId: thisCard.id,
+              to: { location: "playArea" },
+            });
+
+            const hand = triggeredArgs.cardSourceController.getSource(
+              "playerHand",
+              cardEffectArgs.playerId,
+            );
+
+            console.log(`[guide startTurn effect] discarding hand`);
+
+            for (const cardId of [...hand]) {
+              await triggeredArgs.runGameActionDelegate("discardCard", {
+                playerId: cardEffectArgs.playerId,
+                cardId,
+              });
+            }
+
+            console.log(`[guide startTurn effect] drawing 5 cards`);
+
+            await triggeredArgs.runGameActionDelegate("drawCard", {
+              playerId: cardEffectArgs.playerId,
+              count: 5,
+            });
+          },
         },
-        triggeredEffectFn: async triggeredArgs => {
-          console.log(`[guide startTurn effect] calling ${thisCard} to playArea`);
-          
-          await triggeredArgs.runGameActionDelegate('moveCard', {
-            cardId: thisCard.id,
-            to: { location: 'playArea' }
-          });
-          
-          const hand = triggeredArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
-          
-          console.log(`[guide startTurn effect] discarding hand`);
-          
-          for (const cardId of [...hand]) {
-            await triggeredArgs.runGameActionDelegate('discardCard', { playerId: cardEffectArgs.playerId, cardId });
-          }
-          
-          console.log(`[guide startTurn effect] drawing 5 cards`);
-          
-          await triggeredArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 5 });
-        }
-      })
-    }
+      );
+    },
   },
-  'haunted-woods': {
+  "haunted-woods": {
     registerLifeCycleMethods: () => ({
       onLeavePlay: async (args, eventArgs) => {
-        args.reactionManager.unregisterTrigger(`haunted-woods:${eventArgs.cardId}:startTurn`);
-        args.reactionManager.unregisterTrigger(`haunted-woods:${eventArgs.cardId}:cardGained`);
-      }
+        args.reactionManager.unregisterTrigger(
+          `haunted-woods:${eventArgs.cardId}:startTurn`,
+        );
+        args.reactionManager.unregisterTrigger(
+          `haunted-woods:${eventArgs.cardId}:cardGained`,
+        );
+      },
     }),
     registerEffects: () => async (cardEffectArgs) => {
       const turnPlayed = cardEffectArgs.match.turnNumber;
-      
+
       cardEffectArgs.reactionManager.registerReactionTemplate({
         id: `haunted-woods:${cardEffectArgs.cardId}:cardGained`,
-        listeningFor: 'cardGained',
+        listeningFor: "cardGained",
         playerId: cardEffectArgs.playerId,
         once: true,
         compulsory: true,
         allowMultipleInstances: true,
-        condition: async conditionArgs => {
-          if (conditionArgs.trigger.args.playerId === cardEffectArgs.playerId) return false;
+        condition: async (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId === cardEffectArgs.playerId) {
+            return false;
+          }
           if (!conditionArgs.trigger.args.bought) return false;
           return true;
         },
-        triggeredEffectFn: async triggeredArgs => {
+        triggeredEffectFn: async (triggeredArgs) => {
           const triggeringPlayerId = triggeredArgs.trigger.args.playerId;
-          console.log(`[haunted-woods cardGained effect] player ${triggeringPlayerId} rearranging hand and top-decking`);
-          const hand = triggeredArgs.cardSourceController.getSource('playerHand', triggeringPlayerId);
-          const result = await triggeredArgs.runGameActionDelegate('userPrompt', {
-            playerId: triggeringPlayerId,
-            prompt: 'Rearrange hand to put on deck',
-            actionButtons: [{ label: 'DONE', action: 1 }],
-            content: {
-              type: 'rearrange',
-              cardIds: hand,
-            }
-          }) as { action: number, result: number[] };
-          
+          console.log(
+            `[haunted-woods cardGained effect] player ${triggeringPlayerId} rearranging hand and top-decking`,
+          );
+          const hand = triggeredArgs.cardSourceController.getSource(
+            "playerHand",
+            triggeringPlayerId,
+          );
+          const result = await triggeredArgs.runGameActionDelegate(
+            "userPrompt",
+            {
+              playerId: triggeringPlayerId,
+              prompt: "Rearrange hand to put on deck",
+              actionButtons: [{ label: "DONE", action: 1 }],
+              content: {
+                type: "rearrange",
+                cardIds: hand,
+              },
+            },
+          ) as { action: number; result: number[] };
+
           if (!result.result.length) {
-            console.warn(`[haunted-woods cardGained effect] no cards rearranged`);
+            console.warn(
+              `[haunted-woods cardGained effect] no cards rearranged`,
+            );
             return;
           }
-          
-          console.warn(`[haunted-woods cardGained effect] moving ${result.result.length} cards to deck`);
-          
+
+          console.warn(
+            `[haunted-woods cardGained effect] moving ${result.result.length} cards to deck`,
+          );
+
           for (const cardId of result.result) {
-            await triggeredArgs.runGameActionDelegate('moveCard', {
+            await triggeredArgs.runGameActionDelegate("moveCard", {
               toPlayerId: triggeringPlayerId,
               cardId,
-              to: { location: 'playerDeck' }
+              to: { location: "playerDeck" },
             });
           }
-        }
+        },
       });
-      
-      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+
+      const thisCard = cardEffectArgs.cardLibrary.getCard(
+        cardEffectArgs.cardId,
+      );
       addDurationEffect(thisCard, cardEffectArgs, {
         id: `haunted-woods:${cardEffectArgs.cardId}:startTurn`,
-        listeningFor: 'startTurn',
+        listeningFor: "startTurn",
         playerId: cardEffectArgs.playerId,
         once: true,
         compulsory: true,
         allowMultipleInstances: true,
-        condition: async conditionArgs => {
-          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
-          if (conditionArgs.trigger.args.turnNumber === turnPlayed) return false;
+        condition: async (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
+            return false;
+          }
+          if (conditionArgs.trigger.args.turnNumber === turnPlayed) {
+            return false;
+          }
           return true;
         },
-        triggeredEffectFn: async triggeredArgs => {
-          await triggeredArgs.runGameActionDelegate('moveCard', {
+        triggeredEffectFn: async (triggeredArgs) => {
+          await triggeredArgs.runGameActionDelegate("moveCard", {
             cardId: thisCard.id,
-            to: { location: 'playArea' }
+            to: { location: "playArea" },
           });
-          
-          triggeredArgs.reactionManager.unregisterTrigger(`haunted-woods:${cardEffectArgs.cardId}:cardGained`);
-          await triggeredArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
-        }
+
+          triggeredArgs.reactionManager.unregisterTrigger(
+            `haunted-woods:${cardEffectArgs.cardId}:cardGained`,
+          );
+          await triggeredArgs.runGameActionDelegate("drawCard", {
+            playerId: cardEffectArgs.playerId,
+            count: 2,
+          });
+        },
       });
-    }
+    },
   },
-  'hero': {
+  "hero": {
     registerLifeCycleMethods: () => ({
       onDiscarded: async (args, eventArgs) => {
         const card = args.cardLibrary.getCard(eventArgs.cardId);
-        await addTravellerEffect(card, 'champion', args, eventArgs);
-      }
+        await addTravellerEffect(card, "champion", args, eventArgs);
+      },
     }),
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[hero effect] gaining 2 treasure`);
-      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
-      
+      await cardEffectArgs.runGameActionDelegate("gainTreasure", { count: 2 });
+
       const treasureCards = cardEffectArgs.findCards([
-        { location: ['basicSupply', 'kingdomSupply'] },
-        { cardType: 'TREASURE' }
+        { location: ["basicSupply", "kingdomSupply"] },
+        { cardType: "TREASURE" },
       ]);
-      
+
       if (!treasureCards.length) {
         console.log(`[hero effect] no treasure cards in supply`);
         return;
       }
-      
-      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
-        playerId: cardEffectArgs.playerId,
-        prompt: `Gain treasure`,
-        restrict: treasureCards.map(card => card.id),
-        count: 1,
-      }) as CardId[];
-      
+
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate(
+        "selectCard",
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Gain treasure`,
+          restrict: treasureCards.map((card) => card.id),
+          count: 1,
+        },
+      ) as CardId[];
+
       if (!selectedCardIds.length) {
         console.warn(`[hero effect] no card selected`);
         return;
       }
-      
-      const selectedCardToGain = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
-      
+
+      const selectedCardToGain = cardEffectArgs.cardLibrary.getCard(
+        selectedCardIds[0],
+      );
+
       console.log(`[hero effect] gaining ${selectedCardToGain}`);
-      
-      await cardEffectArgs.runGameActionDelegate('gainCard', {
+
+      await cardEffectArgs.runGameActionDelegate("gainCard", {
         playerId: cardEffectArgs.playerId,
         cardId: selectedCardToGain.id,
-        to: { location: 'playerDiscard' }
+        to: { location: "playerDiscard" },
       });
-    }
+    },
   },
-  'hireling': {
+  "hireling": {
     registerLifeCycleMethods: () => ({
       onLeavePlay: async (args, eventArgs) => {
-        args.reactionManager.unregisterTrigger(`hireling:${eventArgs.cardId}:startTurn`);
-      }
+        args.reactionManager.unregisterTrigger(
+          `hireling:${eventArgs.cardId}:startTurn`,
+        );
+      },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      
+      const thisCard = cardEffectArgs.cardLibrary.getCard(
+        cardEffectArgs.cardId,
+      );
+
       addDurationEffect(thisCard, cardEffectArgs, {
         id: `hireling:${thisCard.id}:startTurn`,
-        listeningFor: 'startTurn',
+        listeningFor: "startTurn",
         playerId: cardEffectArgs.playerId,
         once: false,
         compulsory: true,
         allowMultipleInstances: true,
-        condition: async conditionArgs => {
-          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
-          if (conditionArgs.trigger.args.turnNumber === conditionArgs.match.turnNumber) return false;
+        condition: async (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
+            return false;
+          }
+          if (
+            conditionArgs.trigger.args.turnNumber ===
+              conditionArgs.match.turnNumber
+          ) return false;
           return true;
         },
-        triggeredEffectFn: async triggeredArgs => {
+        triggeredEffectFn: async (triggeredArgs) => {
           console.log(`[hireling startTurn effect] drawing 1 card`);
-          await triggeredArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
-        }
+          await triggeredArgs.runGameActionDelegate("drawCard", {
+            playerId: cardEffectArgs.playerId,
+          });
+        },
       });
-    }
+    },
   },
-  'lost-city': {
+  "lost-city": {
     registerLifeCycleMethods: () => ({
       onGained: async (args, eventArgs) => {
         const targetPlayerIds = findOrderedTargets({
           match: args.match,
-          appliesTo: 'ALL_OTHER',
-          startingPlayerId: eventArgs.playerId
+          appliesTo: "ALL_OTHER",
+          startingPlayerId: eventArgs.playerId,
         });
-        
+
         for (const targetPlayerId of targetPlayerIds) {
-          console.log(`[lost-city onGained effect] ${targetPlayerId} drawing 1 card`);
-          await args.runGameActionDelegate('drawCard', { playerId: targetPlayerId });
+          console.log(
+            `[lost-city onGained effect] ${targetPlayerId} drawing 1 card`,
+          );
+          await args.runGameActionDelegate("drawCard", {
+            playerId: targetPlayerId,
+          });
         }
-      }
+      },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
-    }
+      await cardEffectArgs.runGameActionDelegate("drawCard", {
+        playerId: cardEffectArgs.playerId,
+        count: 2,
+      });
+      await cardEffectArgs.runGameActionDelegate("gainAction", { count: 2 });
+    },
   },
-  'magpie': {
+  "magpie": {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[magpie effect] drawing 1 card, gaining 1 action`);
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
-      
-      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
-      
+      await cardEffectArgs.runGameActionDelegate("drawCard", {
+        playerId: cardEffectArgs.playerId,
+      });
+      await cardEffectArgs.runGameActionDelegate("gainAction", { count: 1 });
+
+      const deck = cardEffectArgs.cardSourceController.getSource(
+        "playerDeck",
+        cardEffectArgs.playerId,
+      );
+
       if (deck.length) {
         console.log(`[magpie effect] no cards in deck, shuffling deck`);
-        await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
-        
+        await cardEffectArgs.runGameActionDelegate("shuffleDeck", {
+          playerId: cardEffectArgs.playerId,
+        });
+
         if (!deck.length) {
-          console.log(`[magpie effect] still no cards in deck, no cards to reveal`);
+          console.log(
+            `[magpie effect] still no cards in deck, no cards to reveal`,
+          );
           return;
         }
       }
-      
-      const revealedCard = cardEffectArgs.cardLibrary.getCard(deck.slice(-1)[0]);
-      
+
+      const revealedCard = cardEffectArgs.cardLibrary.getCard(
+        deck.slice(-1)[0],
+      );
+
       console.log(`[magpie effect] revealing ${revealedCard}`);
-      
-      await cardEffectArgs.runGameActionDelegate('revealCard', {
+
+      await cardEffectArgs.runGameActionDelegate("revealCard", {
         playerId: cardEffectArgs.playerId,
         cardId: revealedCard,
-        moveToSetAside: true
+        moveToSetAside: true,
       });
-      
-      if (revealedCard.type.includes('TREASURE')) {
-        console.log(`[magpie effect] treasure revealed, moving revealed card to hand`);
-        
-        await cardEffectArgs.runGameActionDelegate('moveCard', {
+
+      if (revealedCard.type.includes("TREASURE")) {
+        console.log(
+          `[magpie effect] treasure revealed, moving revealed card to hand`,
+        );
+
+        await cardEffectArgs.runGameActionDelegate("moveCard", {
           toPlayerId: cardEffectArgs.playerId,
           cardId: revealedCard.id,
-          to: { location: 'playerHand' }
+          to: { location: "playerHand" },
         });
-      }
-      else if (revealedCard.type.some(t => ['ACTION', 'VICTORY'].includes(t))) {
-        console.log(`[magpie effect] action or victory revealed, gaining magpie`);
-        
+      } else if (
+        revealedCard.type.some((t) => ["ACTION", "VICTORY"].includes(t))
+      ) {
+        console.log(
+          `[magpie effect] action or victory revealed, gaining magpie`,
+        );
+
         const magpieCards = cardEffectArgs.findCards([
-          { location: 'kingdomSupply' },
-          { cardKeys: 'magpie' }
+          { location: "kingdomSupply" },
+          { cardKeys: "magpie" },
         ]);
-        
+
         if (!magpieCards.length) {
           console.log(`[magpie effect] no magpie cards in supply`);
           return;
         }
-        
+
         const magPieToGain = magpieCards.slice(-1)[0];
-        
+
         console.log(`[magpie effect] gaining ${magPieToGain}`);
-        
-        await cardEffectArgs.runGameActionDelegate('gainCard', {
+
+        await cardEffectArgs.runGameActionDelegate("gainCard", {
           playerId: cardEffectArgs.playerId,
           cardId: magPieToGain.id,
-          to: { location: 'playerDiscard' }
+          to: { location: "playerDiscard" },
         });
       }
-    }
+    },
   },
-  'messenger': {
+  "messenger": {
     registerLifeCycleMethods: () => ({
       onGained: async (args, eventArgs) => {
         const stats = args.match.stats;
-        if (stats.cardsGained?.[eventArgs.cardId]?.turnPhase !== 'buy') {
+        if (stats.cardsGained?.[eventArgs.cardId]?.turnPhase !== "buy") {
           return;
         }
-        
+
         const cardsGainedThisTurnBuyPhase =
           stats.cardsGainedByTurn?.[args.match.turnNumber]
-            ?.filter(cardId => stats.cardsGained[cardId].playerId === eventArgs.playerId && stats.cardsGained[cardId].turnPhase === 'buy')
+            ?.filter((cardId) =>
+              stats.cardsGained[cardId].playerId === eventArgs.playerId &&
+              stats.cardsGained[cardId].turnPhase === "buy"
+            )
             ?.length ?? 0;
-        
+
         if (cardsGainedThisTurnBuyPhase !== 1) {
-          console.log(`[messenger onGained effect] player ${eventArgs.playerId} gained more than 1 card in buy phase`);
+          console.log(
+            `[messenger onGained effect] player ${eventArgs.playerId} gained more than 1 card in buy phase`,
+          );
           return;
         }
-        
-        const selectedCardIds = await args.runGameActionDelegate('selectCard', {
+
+        const selectedCardIds = await args.runGameActionDelegate("selectCard", {
           playerId: eventArgs.playerId,
           prompt: `Gain card`,
-          restrict: [{ location: ['basicSupply', 'kingdomSupply'] }, {
-            kind: 'upTo',
+          restrict: [{ location: ["basicSupply", "kingdomSupply"] }, {
+            kind: "upTo",
             playerId: eventArgs.playerId,
-            amount: { treasure: 4 }
+            amount: { treasure: 4 },
           }],
           count: 1,
         }) as CardId[];
-        
+
         if (!selectedCardIds.length) {
           console.warn(`[messenger onGained effect] no card selected`);
           return;
         }
-        
+
         const selectedCard = args.cardLibrary.getCard(selectedCardIds[0]);
-        
+
         console.log(`[messenger onGained effect] selected ${selectedCard}`);
-        
+
         const copies = args.findCards([
-          { location: ['basicSupply', 'kingdomSupply'] },
-          { cardKeys: selectedCard.cardKey }
+          { location: ["basicSupply", "kingdomSupply"] },
+          { cardKeys: selectedCard.cardKey },
         ]);
-        
+
         const targetPlayerIds = findOrderedTargets({
           match: args.match,
-          appliesTo: 'ALL',
-          startingPlayerId: eventArgs.playerId
+          appliesTo: "ALL",
+          startingPlayerId: eventArgs.playerId,
         });
-        
-        targetPlayerIds.length = Math.min(targetPlayerIds.length, copies.length);
-        
+
+        targetPlayerIds.length = Math.min(
+          targetPlayerIds.length,
+          copies.length,
+        );
+
         for (let i = 0; i < targetPlayerIds.length; i++) {
-          console.log(`[messenger onGained effect] gaining ${copies.slice(-i - 1)[0]} to ${targetPlayerIds[i]}`);
-          await args.runGameActionDelegate('gainCard', {
+          console.log(
+            `[messenger onGained effect] gaining ${
+              copies.slice(-i - 1)[0]
+            } to ${targetPlayerIds[i]}`,
+          );
+          await args.runGameActionDelegate("gainCard", {
             playerId: targetPlayerIds[i],
             cardId: copies.slice(-i - 1)[0].id,
-            to: { location: 'playerDiscard' }
+            to: { location: "playerDiscard" },
           });
         }
-      }
+      },
     }),
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[messenger effect] drawing 1 card, gaining 1 action`);
-      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
-      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
-      
-      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+      await cardEffectArgs.runGameActionDelegate("gainBuy", { count: 1 });
+      await cardEffectArgs.runGameActionDelegate("gainTreasure", { count: 2 });
+
+      const result = await cardEffectArgs.runGameActionDelegate("userPrompt", {
         playerId: cardEffectArgs.playerId,
-        prompt: 'Put deck into your discard?',
+        prompt: "Put deck into your discard?",
         actionButtons: [
-          { label: 'CANCEL', action: 1 },
-          { label: 'PUT IN DISCARD', action: 2 }
+          { label: "CANCEL", action: 1 },
+          { label: "PUT IN DISCARD", action: 2 },
         ],
-      }) as { action: number, result: number[] };
-      
+      }) as { action: number; result: number[] };
+
       if (result.action === 1) {
         console.log(`[messenger effect] user cancelled`);
         return;
-      }
-      else {
+      } else {
         console.log(`[messenger effect] putting deck into discard`);
-        const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
-        
+        const deck = cardEffectArgs.cardSourceController.getSource(
+          "playerDeck",
+          cardEffectArgs.playerId,
+        );
+
         for (const cardId of [...deck]) {
-          await cardEffectArgs.runGameActionDelegate('moveCard', {
+          await cardEffectArgs.runGameActionDelegate("moveCard", {
             toPlayerId: cardEffectArgs.playerId,
             cardId,
-            to: { location: 'playerDiscard' }
+            to: { location: "playerDiscard" },
           });
         }
       }
-    }
+    },
   },
-  'miser': {
+  "miser": {
     registerEffects: () => async (cardEffectArgs) => {
       const copperCardsOnTreasureMat = cardEffectArgs.findCards([
-        { location: 'tavern', playerId: cardEffectArgs.playerId },
-        { cardKeys: 'copper' }
+        { location: "tavern", playerId: cardEffectArgs.playerId },
+        { cardKeys: "copper" },
       ]);
-      
-      
-      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+
+      const result = await cardEffectArgs.runGameActionDelegate("userPrompt", {
         playerId: cardEffectArgs.playerId,
-        prompt: 'Choose one',
+        prompt: "Choose one",
         actionButtons: [
-          { label: 'PUT COPPER ON TAVERN', action: 1 },
-          { label: `+${copperCardsOnTreasureMat.length} TREASURE`, action: 2 }
+          { label: "PUT COPPER ON TAVERN", action: 1 },
+          { label: `+${copperCardsOnTreasureMat.length} TREASURE`, action: 2 },
         ],
-      }) as { action: number, result: number[] };
-      
+      }) as { action: number; result: number[] };
+
       if (result.action === 1) {
         console.log(`[miser effect] putting copper on tavern`);
         const coppersInHand = cardEffectArgs.findCards([
-          { location: 'playerHand', playerId: cardEffectArgs.playerId },
-          { cardKeys: 'copper' }
+          { location: "playerHand", playerId: cardEffectArgs.playerId },
+          { cardKeys: "copper" },
         ]);
-        
+
         if (!coppersInHand.length) {
           console.log(`[miser effect] no coppers in hand`);
           return;
         }
-        
+
         console.log(`[miser effect] moving ${coppersInHand[0]} to tavern`);
-        
-        await cardEffectArgs.runGameActionDelegate('moveCard', {
+
+        await cardEffectArgs.runGameActionDelegate("moveCard", {
           toPlayerId: cardEffectArgs.playerId,
           cardId: coppersInHand[0].id,
-          to: { location: 'tavern' }
+          to: { location: "tavern" },
+        });
+      } else {
+        console.log(
+          `[miser effect] gaining ${copperCardsOnTreasureMat.length} treasure`,
+        );
+        await cardEffectArgs.runGameActionDelegate("gainTreasure", {
+          count: copperCardsOnTreasureMat.length,
         });
       }
-      else {
-        console.log(`[miser effect] gaining ${copperCardsOnTreasureMat.length} treasure`);
-        await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: copperCardsOnTreasureMat.length });
-      }
-    }
+    },
   },
-  'page': {
+  "page": {
     registerLifeCycleMethods: () => ({
       onDiscarded: async (args, eventArgs) => {
         const card = args.cardLibrary.getCard(eventArgs.cardId);
-        await addTravellerEffect(card, 'treasure-hunter', args, eventArgs);
-      }
+        await addTravellerEffect(card, "treasure-hunter", args, eventArgs);
+      },
     }),
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[page effect] drawing 1 card, gaining 1 action`);
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
-    }
+      await cardEffectArgs.runGameActionDelegate("drawCard", {
+        playerId: cardEffectArgs.playerId,
+      });
+      await cardEffectArgs.runGameActionDelegate("gainAction", { count: 1 });
+    },
   },
-  'peasant': {
+  "peasant": {
     registerLifeCycleMethods: () => ({
       onDiscarded: async (args, eventArgs) => {
         const card = args.cardLibrary.getCard(eventArgs.cardId);
-        await addTravellerEffect(card, 'soldier', args, eventArgs);
-      }
+        await addTravellerEffect(card, "soldier", args, eventArgs);
+      },
     }),
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[peasant effect] gaining 1 buy, and 1 treasure`);
-      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
-      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
-    }
+      await cardEffectArgs.runGameActionDelegate("gainBuy", { count: 1 });
+      await cardEffectArgs.runGameActionDelegate("gainTreasure", { count: 1 });
+    },
   },
-  'port': {
+  "port": {
     registerLifeCycleMethods: () => ({
       onGained: async (args, eventArgs) => {
         const portCards = args.findCards([
-          { location: 'kingdomSupply' },
-          { cardKeys: 'port' }
+          { location: "kingdomSupply" },
+          { cardKeys: "port" },
         ]);
-        
+
         if (!portCards.length) {
           console.log(`[port onGained effect] no port cards in supply`);
           return;
         }
-        
+
         const portToGain = portCards.slice(-1)[0];
-        
+
         console.log(`[port onGained effect] gaining ${portToGain}`);
-        
-        await args.runGameActionDelegate('gainCard', {
+
+        await args.runGameActionDelegate("gainCard", {
           playerId: eventArgs.playerId,
           cardId: portToGain.id,
-          to: { location: 'playerDiscard' }
-        }, { suppressLifeCycle: { events: ['onGained'] } });
-      }
+          to: { location: "playerDiscard" },
+        }, { suppressLifeCycle: { events: ["onGained"] } });
+      },
     }),
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[port effect] drawing 1 card, gaining 2 action`);
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
-    }
+      await cardEffectArgs.runGameActionDelegate("drawCard", {
+        playerId: cardEffectArgs.playerId,
+      });
+      await cardEffectArgs.runGameActionDelegate("gainAction", { count: 2 });
+    },
   },
-  'raze': {
+  "raze": {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[raze effect] gaining 1 action`);
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
-      
-      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
-        playerId: cardEffectArgs.playerId,
-        prompt: `Trash a card`,
-        restrict: cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId)
-          .concat(cardEffectArgs.cardId),
-        count: 1
-      }) as CardId[];
-      
+      await cardEffectArgs.runGameActionDelegate("gainAction", { count: 1 });
+
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate(
+        "selectCard",
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Trash a card`,
+          restrict: cardEffectArgs.cardSourceController.getSource(
+            "playerHand",
+            cardEffectArgs.playerId,
+          )
+            .concat(cardEffectArgs.cardId),
+          count: 1,
+        },
+      ) as CardId[];
+
       if (!selectedCardIds.length) {
         console.warn(`[raze effect] no card selected`);
         return;
       }
-      
-      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
-      
+
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(
+        selectedCardIds[0],
+      );
+
       console.log(`[raze effect] trashing ${selectedCard}`);
-      
-      await cardEffectArgs.runGameActionDelegate('trashCard', {
+
+      await cardEffectArgs.runGameActionDelegate("trashCard", {
         playerId: cardEffectArgs.playerId,
-        cardId: selectedCard.id
+        cardId: selectedCard.id,
       });
-      
-      const { cost } = cardEffectArgs.cardPriceController.applyRules(selectedCard, { playerId: cardEffectArgs.playerId });
-      
+
+      const { cost } = cardEffectArgs.cardPriceController.applyRules(
+        selectedCard,
+        { playerId: cardEffectArgs.playerId },
+      );
+
       const numToLookAt = cost.treasure;
-      
+
       if (numToLookAt === 0) {
         console.log(`[raze effect] cost is 0, not looking at deck`);
         return;
       }
-      
-      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
-      
+
+      const deck = cardEffectArgs.cardSourceController.getSource(
+        "playerDeck",
+        cardEffectArgs.playerId,
+      );
+
       if (deck.length === 0) {
         console.log(`[raze effect] deck is empty, shuffling deck`);
-        await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
-        
+        await cardEffectArgs.runGameActionDelegate("shuffleDeck", {
+          playerId: cardEffectArgs.playerId,
+        });
+
         if (deck.length === 0) {
           console.log(`[raze effect] still empty, no cards to look at`);
           return;
         }
       }
-      
+
       const lookingAtCards: Card[] = [];
-      
+
       for (let i = 0; i < numToLookAt; i++) {
-        const cardToLookAt = cardEffectArgs.cardLibrary.getCard(deck.slice(-i - 1)[0]);
-        
+        const cardToLookAt = cardEffectArgs.cardLibrary.getCard(
+          deck.slice(-i - 1)[0],
+        );
+
         console.log(`[raze effect] looking at ${cardToLookAt}`);
-        
+
         lookingAtCards.push(cardToLookAt);
-        
-        await cardEffectArgs.runGameActionDelegate('moveCard', {
+
+        await cardEffectArgs.runGameActionDelegate("moveCard", {
           toPlayerId: cardEffectArgs.playerId,
           cardId: cardToLookAt.id,
-          to: { location: 'set-aside' }
+          to: { location: "set-aside" },
         });
       }
-      
-      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+
+      const result = await cardEffectArgs.runGameActionDelegate("userPrompt", {
         playerId: cardEffectArgs.playerId,
-        prompt: 'Choose one to put in hand',
+        prompt: "Choose one to put in hand",
         actionButtons: [
-          { label: 'DONE', action: 1 }
+          { label: "DONE", action: 1 },
         ],
         content: {
-          type: 'select',
-          cardIds: lookingAtCards.map(card => card.id),
-          selectCount: 1
-        }
-      }) as { action: number, result: number[] };
-      
+          type: "select",
+          cardIds: lookingAtCards.map((card) => card.id),
+          selectCount: 1,
+        },
+      }) as { action: number; result: number[] };
+
       if (!result.result.length) {
         console.warn(`[raze effect] no card selected`);
         return;
       }
-      
-      const selectedCardToPutInHand = cardEffectArgs.cardLibrary.getCard(result.result[0]);
-      
+
+      const selectedCardToPutInHand = cardEffectArgs.cardLibrary.getCard(
+        result.result[0],
+      );
+
       console.log(`[raze effect] putting ${selectedCardToPutInHand} in hand`);
-      
-      await cardEffectArgs.runGameActionDelegate('moveCard', {
+
+      await cardEffectArgs.runGameActionDelegate("moveCard", {
         toPlayerId: cardEffectArgs.playerId,
         cardId: selectedCardToPutInHand.id,
-        to: { location: 'playerHand' }
+        to: { location: "playerHand" },
       });
-      
-      console.log(`[raze effect] discarding ${lookingAtCards.length - 1} cards`);
-      
+
+      console.log(
+        `[raze effect] discarding ${lookingAtCards.length - 1} cards`,
+      );
+
       for (const lookingAtCard of lookingAtCards) {
         if (lookingAtCard.id === selectedCardToPutInHand.id) continue;
-        await cardEffectArgs.runGameActionDelegate('discardCard', {
+        await cardEffectArgs.runGameActionDelegate("discardCard", {
           playerId: cardEffectArgs.playerId,
-          cardId: lookingAtCard.id
+          cardId: lookingAtCard.id,
         });
       }
-    }
+    },
   },
-  'ratcatcher': {
+  "ratcatcher": {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[ratcatcher effect] drawing 1 card, gaining 1 action`);
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
-      
-      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      
+      await cardEffectArgs.runGameActionDelegate("drawCard", {
+        playerId: cardEffectArgs.playerId,
+      });
+      await cardEffectArgs.runGameActionDelegate("gainAction", { count: 1 });
+
+      const thisCard = cardEffectArgs.cardLibrary.getCard(
+        cardEffectArgs.cardId,
+      );
+
       console.log(`[ratcatcher effect] moving ${thisCard} to play area`);
-      
-      await cardEffectArgs.runGameActionDelegate('moveCard', {
+
+      await cardEffectArgs.runGameActionDelegate("moveCard", {
         toPlayerId: cardEffectArgs.playerId,
         cardId: cardEffectArgs.cardId,
-        to: { location: 'tavern' }
+        to: { location: "tavern" },
       });
-      
-      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard, 'startTurn', {
-        once: true,
-        compulsory: false,
-        allowMultipleInstances: true,
-        playerId: cardEffectArgs.playerId,
-        condition: async conditionArgs => {
-          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
-          return true;
+
+      cardEffectArgs.reactionManager.registerReactionTemplate(
+        thisCard,
+        "startTurn",
+        {
+          once: true,
+          compulsory: false,
+          allowMultipleInstances: true,
+          playerId: cardEffectArgs.playerId,
+          condition: async (conditionArgs) => {
+            if (
+              conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId
+            ) return false;
+            return true;
+          },
+          triggeredEffectFn: async (triggeredArgs) => {
+            console.log(
+              `[ratcatcher startTurn effect] calling ${thisCard} to playArea`,
+            );
+
+            await triggeredArgs.runGameActionDelegate("moveCard", {
+              cardId: thisCard.id,
+              to: { location: "playArea" },
+            });
+
+            const selectedCardIds = await triggeredArgs.runGameActionDelegate(
+              "selectCard",
+              {
+                playerId: cardEffectArgs.playerId,
+                prompt: `Trash card`,
+                restrict: triggeredArgs.cardSourceController.getSource(
+                  "playerHand",
+                  cardEffectArgs.playerId,
+                ),
+                count: 1,
+              },
+            ) as CardId[];
+
+            if (!selectedCardIds.length) {
+              console.log(`[ratcatcher startTurn effect] no cards selected`);
+              return;
+            }
+
+            const selectedCard = triggeredArgs.cardLibrary.getCard(
+              selectedCardIds[0],
+            );
+
+            console.log(
+              `[ratcatcher startTurn effect] trashing ${selectedCard}`,
+            );
+
+            await triggeredArgs.runGameActionDelegate("trashCard", {
+              playerId: cardEffectArgs.playerId,
+              cardId: selectedCard.id,
+            });
+          },
         },
-        triggeredEffectFn: async triggeredArgs => {
-          console.log(`[ratcatcher startTurn effect] calling ${thisCard} to playArea`);
-          
-          await triggeredArgs.runGameActionDelegate('moveCard', {
-            cardId: thisCard.id,
-            to: { location: 'playArea' }
-          });
-          
-          const selectedCardIds = await triggeredArgs.runGameActionDelegate('selectCard', {
-            playerId: cardEffectArgs.playerId,
-            prompt: `Trash card`,
-            restrict: triggeredArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId),
-            count: 1,
-          }) as CardId[];
-          
-          if (!selectedCardIds.length) {
-            console.log(`[ratcatcher startTurn effect] no cards selected`);
-            return;
-          }
-          
-          const selectedCard = triggeredArgs.cardLibrary.getCard(selectedCardIds[0]);
-          
-          console.log(`[ratcatcher startTurn effect] trashing ${selectedCard}`);
-          
-          await triggeredArgs.runGameActionDelegate('trashCard', {
-            playerId: cardEffectArgs.playerId,
-            cardId: selectedCard.id
-          });
-        }
-      })
-    }
+      );
+    },
   },
-  'royal-carriage': {
+  "royal-carriage": {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[royal-carriage effect] gaining 1 action`);
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
-      
-      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      
+      await cardEffectArgs.runGameActionDelegate("gainAction", { count: 1 });
+
+      const thisCard = cardEffectArgs.cardLibrary.getCard(
+        cardEffectArgs.cardId,
+      );
+
       console.log(`[royal-carriage effect] moving ${thisCard} to tavern`);
-      
-      await cardEffectArgs.runGameActionDelegate('moveCard', {
+
+      await cardEffectArgs.runGameActionDelegate("moveCard", {
         toPlayerId: cardEffectArgs.playerId,
         cardId: cardEffectArgs.cardId,
-        to: { location: 'tavern' }
+        to: { location: "tavern" },
       });
-      
-      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard, 'afterCardPlayed', {
-        once: true,
-        compulsory: false,
-        allowMultipleInstances: true,
-        playerId: cardEffectArgs.playerId,
-        condition: async conditionArgs => {
-          const cardPlayed = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
-          if (!cardPlayed.type.includes('ACTION')) return false;
-          if (!getCardsInPlay(conditionArgs.findCards).includes(cardPlayed)) return false;
-          return true;
+
+      cardEffectArgs.reactionManager.registerReactionTemplate(
+        thisCard,
+        "afterCardPlayed",
+        {
+          once: true,
+          compulsory: false,
+          allowMultipleInstances: true,
+          playerId: cardEffectArgs.playerId,
+          condition: async (conditionArgs) => {
+            const cardPlayed = conditionArgs.cardLibrary.getCard(
+              conditionArgs.trigger.args.cardId,
+            );
+            if (!cardPlayed.type.includes("ACTION")) return false;
+            if (
+              !getCardsInPlay(conditionArgs.findCards).includes(cardPlayed)
+            ) return false;
+            return true;
+          },
+          triggeredEffectFn: async (triggeredArgs) => {
+            const cardToPlay = triggeredArgs.cardLibrary.getCard(
+              triggeredArgs.trigger.args.cardId,
+            );
+
+            console.log(
+              `[royal-carriage afterCardPlayed effect] calling ${thisCard} to playArea`,
+            );
+
+            await triggeredArgs.runGameActionDelegate("moveCard", {
+              cardId: thisCard.id,
+              to: { location: "playArea" },
+            });
+
+            console.log(
+              `[royal-carriage afterCardPlayed effect] re-playing ${cardToPlay}`,
+            );
+
+            await triggeredArgs.runGameActionDelegate("playCard", {
+              playerId: cardEffectArgs.playerId,
+              cardId: cardToPlay.id,
+              overrides: {
+                actionCost: 0,
+              },
+            });
+          },
         },
-        triggeredEffectFn: async triggeredArgs => {
-          const cardToPlay = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
-          
-          console.log(`[royal-carriage afterCardPlayed effect] calling ${thisCard} to playArea`);
-          
-          await triggeredArgs.runGameActionDelegate('moveCard', {
-            cardId: thisCard.id,
-            to: { location: 'playArea' }
-          });
-          
-          console.log(`[royal-carriage afterCardPlayed effect] re-playing ${cardToPlay}`);
-          
-          await triggeredArgs.runGameActionDelegate('playCard', {
-            playerId: cardEffectArgs.playerId,
-            cardId: cardToPlay.id,
-            overrides: {
-              actionCost: 0,
-            }
-          });
-        }
-      })
-    }
+      );
+    },
   },
-  'soldier': {
+  "soldier": {
     registerLifeCycleMethods: () => ({
       onDiscarded: async (args, eventArgs) => {
         const card = args.cardLibrary.getCard(eventArgs.cardId);
-        await addTravellerEffect(card, 'fugitive', args, eventArgs);
-      }
+        await addTravellerEffect(card, "fugitive", args, eventArgs);
+      },
     }),
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[soldier effect] gaining 2 treasure`);
-      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
-      
+      await cardEffectArgs.runGameActionDelegate("gainTreasure", { count: 2 });
+
       const attacksInPlay = getCardsInPlay(cardEffectArgs.findCards)
-        .filter(card => card.owner === cardEffectArgs.playerId && card.type.includes('ATTACK'));
-      
+        .filter((card) =>
+          card.owner === cardEffectArgs.playerId && card.type.includes("ATTACK")
+        );
+
       if (attacksInPlay.length > 0) {
-        console.log(`[soldier effect] ${attacksInPlay.length} attacks in play, gaining that much treasure`);
-        await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: attacksInPlay.length });
+        console.log(
+          `[soldier effect] ${attacksInPlay.length} attacks in play, gaining that much treasure`,
+        );
+        await cardEffectArgs.runGameActionDelegate("gainTreasure", {
+          count: attacksInPlay.length,
+        });
       }
-      
+
       const targetPlayerIds = findOrderedTargets({
         match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId
-      }).filter(playerId => {
-        const hand = cardEffectArgs.cardSourceController.getSource('playerHand', playerId);
-        return cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity' && hand.length >= 4;
+        appliesTo: "ALL_OTHER",
+        startingPlayerId: cardEffectArgs.playerId,
+      }).filter((playerId) => {
+        const hand = cardEffectArgs.cardSourceController.getSource(
+          "playerHand",
+          playerId,
+        );
+        return cardEffectArgs.reactionContext?.[playerId]?.result !==
+            "immunity" && hand.length >= 4;
       });
-      
+
       for (const targetPlayerId of targetPlayerIds) {
-        const hand = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
-        
-        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
-          playerId: targetPlayerId,
-          prompt: `Discard card`,
-          restrict: hand,
-          count: 1,
-        }) as CardId[];
-        
+        const hand = cardEffectArgs.cardSourceController.getSource(
+          "playerHand",
+          targetPlayerId,
+        );
+
+        const selectedCardIds = await cardEffectArgs.runGameActionDelegate(
+          "selectCard",
+          {
+            playerId: targetPlayerId,
+            prompt: `Discard card`,
+            restrict: hand,
+            count: 1,
+          },
+        ) as CardId[];
+
         if (!selectedCardIds.length) {
           console.warn(`[soldier effect] no card selected`);
           continue;
         }
-        
-        const cardToDiscard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
-        
-        console.log(`[soldier effect] player ${targetPlayerId} discarding ${cardToDiscard}`);
-        
-        await cardEffectArgs.runGameActionDelegate('discardCard', {
+
+        const cardToDiscard = cardEffectArgs.cardLibrary.getCard(
+          selectedCardIds[0],
+        );
+
+        console.log(
+          `[soldier effect] player ${targetPlayerId} discarding ${cardToDiscard}`,
+        );
+
+        await cardEffectArgs.runGameActionDelegate("discardCard", {
           playerId: targetPlayerId,
-          cardId: cardToDiscard.id
+          cardId: cardToDiscard.id,
         });
       }
-    }
+    },
   },
-  'storyteller': {
+  "storyteller": {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[storyteller effect] gaining 1 action`);
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
-      
-      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      await cardEffectArgs.runGameActionDelegate("gainAction", { count: 1 });
+
+      const hand = cardEffectArgs.cardSourceController.getSource(
+        "playerHand",
+        cardEffectArgs.playerId,
+      );
       let treasuresInHand = hand
         .map(cardEffectArgs.cardLibrary.getCard)
-        .filter(card => card.type.includes('TREASURE'));
-      
+        .filter((card) => card.type.includes("TREASURE"));
+
       const numCanPlay = Math.min(3, treasuresInHand.length);
-      
+
       for (let i = 0; i < numCanPlay; i++) {
         treasuresInHand = hand
           .map(cardEffectArgs.cardLibrary.getCard)
-          .filter(card => card.type.includes('TREASURE'));
-        
+          .filter((card) => card.type.includes("TREASURE"));
+
         if (!treasuresInHand.length) {
           console.log(`[storyteller effect] no treasures in hand`);
           break;
         }
-        
-        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
-          playerId: cardEffectArgs.playerId,
-          prompt: `Play treasure ${i + 1} of ${numCanPlay}?`,
-          restrict: treasuresInHand.map(card => card.id),
-          count: 1,
-          optional: true,
-        }) as CardId[];
-        
+
+        const selectedCardIds = await cardEffectArgs.runGameActionDelegate(
+          "selectCard",
+          {
+            playerId: cardEffectArgs.playerId,
+            prompt: `Play treasure ${i + 1} of ${numCanPlay}?`,
+            restrict: treasuresInHand.map((card) => card.id),
+            count: 1,
+            optional: true,
+          },
+        ) as CardId[];
+
         if (!selectedCardIds.length) {
           console.log(`[storyteller effect] no treasure selected`);
           break;
         }
-        
-        const selectedToPlay = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
-        
+
+        const selectedToPlay = cardEffectArgs.cardLibrary.getCard(
+          selectedCardIds[0],
+        );
+
         console.log(`[storyteller effect] playing ${selectedToPlay}`);
-        
-        await cardEffectArgs.runGameActionDelegate('playCard', {
+
+        await cardEffectArgs.runGameActionDelegate("playCard", {
           cardId: selectedCardIds[0],
-          playerId: cardEffectArgs.playerId
-        })
+          playerId: cardEffectArgs.playerId,
+        });
       }
-      
+
       console.log(`[storyteller effect] drawing 1 card`);
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
-      
+      await cardEffectArgs.runGameActionDelegate("drawCard", {
+        playerId: cardEffectArgs.playerId,
+      });
+
       const playerTreasure = cardEffectArgs.match.playerTreasure;
-      
+
       if (playerTreasure === 0) {
-        console.log(`[storyteller effect] no player treasure, not drawing more cards`);
+        console.log(
+          `[storyteller effect] no player treasure, not drawing more cards`,
+        );
         return;
       }
-      
-      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: -playerTreasure }, { loggingContext: { suppress: true } });
-      
+
+      await cardEffectArgs.runGameActionDelegate("gainTreasure", {
+        count: -playerTreasure,
+      }, { loggingContext: { suppress: true } });
+
       console.log(`[storyteller effect] drawing ${playerTreasure} cards`);
-      
-      await cardEffectArgs.runGameActionDelegate('drawCard', {
+
+      await cardEffectArgs.runGameActionDelegate("drawCard", {
         playerId: cardEffectArgs.playerId,
-        count: playerTreasure
+        count: playerTreasure,
       });
-    }
+    },
   },
-  'swamp-hag': {
+  "swamp-hag": {
     registerLifeCycleMethods: () => ({
       onLeavePlay: async (args, eventArgs) => {
         const thisCard = args.cardLibrary.getCard(eventArgs.cardId);
         for (const player of args.match.players) {
-          args.reactionManager.unregisterTrigger(`swamp-hag:${thisCard.id}:cardGained:${player.id}`);
+          args.reactionManager.unregisterTrigger(
+            `swamp-hag:${thisCard.id}:cardGained:${player.id}`,
+          );
         }
-      }
+      },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      
+      const thisCard = cardEffectArgs.cardLibrary.getCard(
+        cardEffectArgs.cardId,
+      );
+
       const ids: string[] = [];
-      
+
       addDurationEffect(thisCard, cardEffectArgs, {
         id: `swamp-hag:${thisCard.id}:startTurn`,
-        listeningFor: 'startTurn',
+        listeningFor: "startTurn",
         playerId: cardEffectArgs.playerId,
         once: true,
         compulsory: true,
         allowMultipleInstances: true,
-        condition: async conditionArgs => {
-          if (conditionArgs.trigger.args.turnNumber === conditionArgs.match.turnNumber) return false;
-          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
+        condition: async (conditionArgs) => {
+          if (
+            conditionArgs.trigger.args.turnNumber ===
+              conditionArgs.match.turnNumber
+          ) return false;
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
+            return false;
+          }
           return true;
         },
-        triggeredEffectFn: async triggeredArgs => {
-          await triggeredArgs.runGameActionDelegate('moveCard', {
+        triggeredEffectFn: async (triggeredArgs) => {
+          await triggeredArgs.runGameActionDelegate("moveCard", {
             cardId: thisCard.id,
-            to: { location: 'playArea' }
+            to: { location: "playArea" },
           });
-          
+
           for (const id of ids) {
             triggeredArgs.reactionManager.unregisterTrigger(id);
           }
-          
+
           console.log(`[swamp-hag startTurn effect] gaining 3 treasure`);
-          await triggeredArgs.runGameActionDelegate('gainTreasure', { count: 3 });
-        }
+          await triggeredArgs.runGameActionDelegate("gainTreasure", {
+            count: 3,
+          });
+        },
       });
-      
+
       const targetPlayerIds = findOrderedTargets({
         match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId
-      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
-      
+        appliesTo: "ALL_OTHER",
+        startingPlayerId: cardEffectArgs.playerId,
+      }).filter((playerId) =>
+        cardEffectArgs.reactionContext?.[playerId]?.result !== "immunity"
+      );
+
       for (const targetPlayerId of targetPlayerIds) {
         const id = `swamp-hag:${thisCard.id}:cardGained:${targetPlayerId}`;
         ids.push(id);
         cardEffectArgs.reactionManager.registerReactionTemplate({
           id,
-          listeningFor: 'cardGained',
+          listeningFor: "cardGained",
           playerId: targetPlayerId,
           once: false,
           allowMultipleInstances: true,
           compulsory: true,
-          condition: async conditionArgs => {
-            if (conditionArgs.trigger.args.playerId !== targetPlayerId) return false;
+          condition: async (conditionArgs) => {
+            if (conditionArgs.trigger.args.playerId !== targetPlayerId) {
+              return false;
+            }
             if (!conditionArgs.trigger.args.bought) return false;
             return true;
           },
-          triggeredEffectFn: async triggeredArgs => {
+          triggeredEffectFn: async (triggeredArgs) => {
             const curseCards = triggeredArgs.findCards([
-              { location: 'basicSupply' },
-              { cardKeys: 'curse' }
+              { location: "basicSupply" },
+              { cardKeys: "curse" },
             ]);
-            
+
             if (!curseCards.length) {
-              console.log(`[swamp-hag cardGained effect] no curse cards in supply`);
+              console.log(
+                `[swamp-hag cardGained effect] no curse cards in supply`,
+              );
               return;
             }
-            
-            console.log(`[swamp-hag cardGained effect] player ${targetPlayerId} gaining ${curseCards.slice(-1)[0]}`);
-            
-            await triggeredArgs.runGameActionDelegate('gainCard', {
+
+            console.log(
+              `[swamp-hag cardGained effect] player ${targetPlayerId} gaining ${
+                curseCards.slice(-1)[0]
+              }`,
+            );
+
+            await triggeredArgs.runGameActionDelegate("gainCard", {
               playerId: targetPlayerId,
               cardId: curseCards.slice(-1)[0].id,
-              to: { location: 'playerDiscard' }
+              to: { location: "playerDiscard" },
             });
-          }
+          },
         });
       }
-    }
+    },
   },
-  'transmogrify': {
+  "teacher": {
     registerEffects: () => async (cardEffectArgs) => {
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
-      
-      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      
-      await cardEffectArgs.runGameActionDelegate('moveCard', {
+      await cardEffectArgs.runGameActionDelegate("moveCard", {
+        toPlayerId: cardEffectArgs.playerId,
+        cardId: cardEffectArgs.cardId,
+        to: { location: "tavern" },
+      });
+
+      const thisCard = cardEffectArgs.cardLibrary.getCard(
+        cardEffectArgs.cardId,
+      );
+      cardEffectArgs.reactionManager.registerReactionTemplate(
+        thisCard,
+        "startTurn",
+        {
+          playerId: cardEffectArgs.playerId,
+          once: true,
+          allowMultipleInstances: true,
+          compulsory: false,
+          condition: async (conditionArgs) =>
+            conditionArgs.trigger.args.playerId === cardEffectArgs.playerId,
+          triggeredEffectFn: async (triggeredEffectArgs) => {
+            await triggeredEffectArgs.runGameActionDelegate("moveCard", {
+              cardId: thisCard.id,
+              to: { location: "playArea" },
+            });
+
+            const allowedTokens: string[] = [
+              adventuresTokenIds.plusBuy,
+              adventuresTokenIds.plusAction,
+              adventuresTokenIds.plusCoin,
+              adventuresTokenIds.plusCard,
+            ];
+            const tokens = triggeredEffectArgs.match.tokens;
+            const tokenInstanceIds = Object.keys(tokens).filter((t) =>
+              allowedTokens.includes(tokens[t].tokenId) &&
+              tokens[t].ownerId === triggeredEffectArgs.trigger.args.playerId
+            );
+
+            const tokenChoice = await triggeredEffectArgs.runGameActionDelegate(
+              "userPrompt",
+              {
+                playerId: triggeredEffectArgs.trigger.args.playerId,
+                prompt: "Which token?",
+                actionButtons: [
+                  { action: 0, label: "Cancel" },
+                  ...tokenInstanceIds.map((t, idx) => ({
+                    label: tokenDefinitionMap[tokens[t].tokenId].name,
+                    action: idx + 1,
+                  })),
+                ],
+              },
+            ) as { action: number };
+
+            if (tokenChoice.action === 0) {
+              return;
+            }
+
+            const selectedTokenInstance = tokenInstanceIds[tokenChoice.action - 1];
+            if (!selectedTokenInstance) {
+              console.warn(`[teacher effect] selected token instance not found`);
+              return;
+            }
+
+            const actionSupplyPiles = triggeredEffectArgs.match.config
+              .kingdomSupply
+              .map((supply) => {
+                const pileCard = getPileRandomizerCard(
+                  supply.cards,
+                  supply.name,
+                );
+                if (!pileCard?.type?.includes("ACTION")) return null;
+                return pileCard.randomizer ?? supply.name;
+              })
+              .filter((pile): pile is string => !!pile);
+
+            if (!actionSupplyPiles.length) {
+              console.warn(`[teacher effect] no action supply piles available`);
+              return;
+            }
+
+            const result = await triggeredEffectArgs.runGameActionDelegate(
+              "userPrompt",
+              {
+                playerId: triggeredEffectArgs.trigger.args.playerId,
+                prompt: "Which supply?",
+                content: {
+                  type: "select-pile",
+                  pileNames: actionSupplyPiles,
+                  selectCount: { kind: "exact", count: 1 } as CountSpec,
+                },
+              },
+            ) as { result?: string[] };
+
+            const selectedPile = result?.result?.[0];
+            if (!selectedPile) {
+              console.warn(`[teacher effect] no pile selected`);
+              return;
+            }
+
+            await triggeredEffectArgs.runGameActionDelegate("moveToken", {
+              tokenInstanceId: selectedTokenInstance,
+              location: { type: "supplyPile", cardKey: selectedPile },
+            });
+          },
+        },
+      );
+    },
+  },
+  "transmogrify": {
+    registerEffects: () => async (cardEffectArgs) => {
+      await cardEffectArgs.runGameActionDelegate("gainAction", { count: 1 });
+
+      const thisCard = cardEffectArgs.cardLibrary.getCard(
+        cardEffectArgs.cardId,
+      );
+
+      await cardEffectArgs.runGameActionDelegate("moveCard", {
         toPlayerId: cardEffectArgs.playerId,
         cardId: thisCard.id,
-        to: { location: 'tavern' }
+        to: { location: "tavern" },
       });
-      
-      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard, 'startTurn', {
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        allowMultipleInstances: true,
-        compulsory: false,
-        condition: async conditionArgs => {
-          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
-          return true;
-        },
-        triggeredEffectFn: async triggeredArgs => {
-          console.log(`[transmogrify startTurn effect] calling ${thisCard} to playArea`);
-          
-          await triggeredArgs.runGameActionDelegate('moveCard', {
-            cardId: thisCard.id,
-            to: { location: 'playArea' }
-          });
-          
-          const hand = triggeredArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
-          
-          let selectedCardIds = await triggeredArgs.runGameActionDelegate('selectCard', {
-            playerId: cardEffectArgs.playerId,
-            prompt: `Trash card`,
-            restrict: hand,
-            count: 1,
-          }) as CardId[];
-          
-          if (!selectedCardIds.length) {
-            console.warn(`[transmogrify startTurn effect] no card selected`);
-            return;
-          }
-          
-          const cardToTrash = triggeredArgs.cardLibrary.getCard(selectedCardIds[0]);
-          
-          await triggeredArgs.runGameActionDelegate('trashCard', {
-            playerId: cardEffectArgs.playerId,
-            cardId: cardToTrash.id
-          });
-          
-          const { cost } = triggeredArgs.cardPriceController.applyRules(cardToTrash, { playerId: cardEffectArgs.playerId });
-          
-          const cards = triggeredArgs.findCards([
-            { location: ['basicSupply', 'kingdomSupply'] },
-            {
-              kind: 'upTo',
-              playerId: cardEffectArgs.playerId,
-              amount: { treasure: cost.treasure + 1, potion: cost.potion }
+
+      cardEffectArgs.reactionManager.registerReactionTemplate(
+        thisCard,
+        "startTurn",
+        {
+          playerId: cardEffectArgs.playerId,
+          once: true,
+          allowMultipleInstances: true,
+          compulsory: false,
+          condition: async (conditionArgs) => {
+            if (
+              conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId
+            ) return false;
+            return true;
+          },
+          triggeredEffectFn: async (triggeredArgs) => {
+            console.log(
+              `[transmogrify startTurn effect] calling ${thisCard} to playArea`,
+            );
+
+            await triggeredArgs.runGameActionDelegate("moveCard", {
+              cardId: thisCard.id,
+              to: { location: "playArea" },
+            });
+
+            const hand = triggeredArgs.cardSourceController.getSource(
+              "playerHand",
+              cardEffectArgs.playerId,
+            );
+
+            let selectedCardIds = await triggeredArgs.runGameActionDelegate(
+              "selectCard",
+              {
+                playerId: cardEffectArgs.playerId,
+                prompt: `Trash card`,
+                restrict: hand,
+                count: 1,
+              },
+            ) as CardId[];
+
+            if (!selectedCardIds.length) {
+              console.warn(`[transmogrify startTurn effect] no card selected`);
+              return;
             }
-          ]);
-          
-          if (!cards.length) {
-            console.log(`[transmogrify startTurn effect] no cards costing less than ${cost.treasure + 1} treasure and ${cost.potion} potions`);
-            return;
-          }
-          
-          selectedCardIds = await triggeredArgs.runGameActionDelegate('selectCard', {
-            playerId: cardEffectArgs.playerId,
-            prompt: `Gain card`,
-            restrict: cards.map(card => card.id),
-            count: 1,
-          }) as CardId[];
-          
-          if (!selectedCardIds.length) {
-            console.warn(`[transmogrify startTurn effect] no cards selected to gain`);
-            return;
-          }
-          
-          const cardToGain = triggeredArgs.cardLibrary.getCard(selectedCardIds[0]);
-          
-          console.warn(`[transmogrify startTurn effect] gaining ${cardToGain} to hand`);
-          
-          await triggeredArgs.runGameActionDelegate('gainCard', {
-            playerId: cardEffectArgs.playerId,
-            cardId: cardToGain.id,
-            to: { location: 'playerHand' }
-          });
-        }
-      })
-    }
+
+            const cardToTrash = triggeredArgs.cardLibrary.getCard(
+              selectedCardIds[0],
+            );
+
+            await triggeredArgs.runGameActionDelegate("trashCard", {
+              playerId: cardEffectArgs.playerId,
+              cardId: cardToTrash.id,
+            });
+
+            const { cost } = triggeredArgs.cardPriceController.applyRules(
+              cardToTrash,
+              { playerId: cardEffectArgs.playerId },
+            );
+
+            const cards = triggeredArgs.findCards([
+              { location: ["basicSupply", "kingdomSupply"] },
+              {
+                kind: "upTo",
+                playerId: cardEffectArgs.playerId,
+                amount: { treasure: cost.treasure + 1, potion: cost.potion },
+              },
+            ]);
+
+            if (!cards.length) {
+              console.log(
+                `[transmogrify startTurn effect] no cards costing less than ${
+                  cost.treasure + 1
+                } treasure and ${cost.potion} potions`,
+              );
+              return;
+            }
+
+            selectedCardIds = await triggeredArgs.runGameActionDelegate(
+              "selectCard",
+              {
+                playerId: cardEffectArgs.playerId,
+                prompt: `Gain card`,
+                restrict: cards.map((card) => card.id),
+                count: 1,
+              },
+            ) as CardId[];
+
+            if (!selectedCardIds.length) {
+              console.warn(
+                `[transmogrify startTurn effect] no cards selected to gain`,
+              );
+              return;
+            }
+
+            const cardToGain = triggeredArgs.cardLibrary.getCard(
+              selectedCardIds[0],
+            );
+
+            console.warn(
+              `[transmogrify startTurn effect] gaining ${cardToGain} to hand`,
+            );
+
+            await triggeredArgs.runGameActionDelegate("gainCard", {
+              playerId: cardEffectArgs.playerId,
+              cardId: cardToGain.id,
+              to: { location: "playerHand" },
+            });
+          },
+        },
+      );
+    },
   },
-  'treasure-hunter': {
+  "treasure-hunter": {
     registerLifeCycleMethods: () => ({
       onDiscarded: async (args, eventArgs) => {
         const card = args.cardLibrary.getCard(eventArgs.cardId);
-        await addTravellerEffect(card, 'warrior', args, eventArgs);
-      }
+        await addTravellerEffect(card, "warrior", args, eventArgs);
+      },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      console.log(`[treasure-hunter effect] gaining 1 action, gaining 1 treasure`);
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
-      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
-      
+      console.log(
+        `[treasure-hunter effect] gaining 1 action, gaining 1 treasure`,
+      );
+      await cardEffectArgs.runGameActionDelegate("gainAction", { count: 1 });
+      await cardEffectArgs.runGameActionDelegate("gainTreasure", { count: 1 });
+
       const silverCards = cardEffectArgs.findCards([
-        { location: 'basicSupply' },
-        { cardKeys: 'silver' }
+        { location: "basicSupply" },
+        { cardKeys: "silver" },
       ]);
-      
+
       if (!silverCards.length) {
         console.log(`[treasure-hunter effect] no silver cards in supply`);
         return;
       }
-      
+
       const rightPlayer = getPlayerStartingFrom({
         startFromIdx: cardEffectArgs.match.currentPlayerTurnIndex,
         match: cardEffectArgs.match,
-        distance: -1
+        distance: -1,
       });
-      
-      const cardsGained = cardEffectArgs.match.stats.cardsGainedByTurn?.[cardEffectArgs.match.turnNumber]
+
+      const cardsGained = cardEffectArgs.match.stats.cardsGainedByTurn
+        ?.[cardEffectArgs.match.turnNumber]
         ?.map(cardEffectArgs.cardLibrary.getCard)
-        ?.filter(card => card.owner === rightPlayer.id) ?? [];
-      
+        ?.filter((card) => card.owner === rightPlayer.id) ?? [];
+
       const numToGain = Math.min(silverCards.length, cardsGained.length);
-      
+
       for (let i = 0; i < numToGain; i++) {
-        await cardEffectArgs.runGameActionDelegate('gainCard', {
+        await cardEffectArgs.runGameActionDelegate("gainCard", {
           playerId: cardEffectArgs.playerId,
           cardId: silverCards.slice(-i - 1)[0].id,
-          to: { location: 'playerDiscard' }
+          to: { location: "playerDiscard" },
         });
       }
-    }
+    },
   },
-  'treasure-trove': {
+  "treasure-trove": {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[treasure-trove effect] gaining 2 treasure`);
-      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
-      
+      await cardEffectArgs.runGameActionDelegate("gainTreasure", { count: 2 });
+
       const goldAndCopperCards = cardEffectArgs.findCards([
-        { location: 'basicSupply' },
-        { cardKeys: ['gold', 'copper'] }
+        { location: "basicSupply" },
+        { cardKeys: ["gold", "copper"] },
       ]);
-      
-      const [goldCards, copperCards] = goldAndCopperCards.reduce((acc, nextCard) => {
-        if (nextCard.cardKey === 'gold') {
-          acc[0].push(nextCard);
-        }
-        else {
-          acc[1].push(nextCard);
-        }
-        return acc;
-      }, [[], []] as Card[][]);
-      
+
+      const [goldCards, copperCards] = goldAndCopperCards.reduce(
+        (acc, nextCard) => {
+          if (nextCard.cardKey === "gold") {
+            acc[0].push(nextCard);
+          } else {
+            acc[1].push(nextCard);
+          }
+          return acc;
+        },
+        [[], []] as Card[][],
+      );
+
       if (!goldCards.length) {
         console.log(`[treasure-trove effect] no gold cards in supply`);
-      }
-      else {
+      } else {
         const goldCardToGain = goldCards.slice(-1)[0];
         console.log(`[treasure-trove effect] gaining ${goldCardToGain}`);
-        await cardEffectArgs.runGameActionDelegate('gainCard', {
+        await cardEffectArgs.runGameActionDelegate("gainCard", {
           playerId: cardEffectArgs.playerId,
           cardId: goldCardToGain.id,
-          to: { location: 'playerDiscard' }
+          to: { location: "playerDiscard" },
         });
       }
-      
+
       if (!copperCards.length) {
         console.log(`[treasure-trove effect] no copper cards in supply`);
-      }
-      else {
+      } else {
         const copperCardToGain = copperCards.slice(-1)[0];
         console.log(`[treasure-trove effect] gaining ${copperCardToGain}`);
-        await cardEffectArgs.runGameActionDelegate('gainCard', {
+        await cardEffectArgs.runGameActionDelegate("gainCard", {
           playerId: cardEffectArgs.playerId,
           cardId: copperCardToGain.id,
-          to: { location: 'playerDiscard' }
+          to: { location: "playerDiscard" },
         });
       }
-      
-    }
+    },
   },
-  'warrior': {
+  "warrior": {
     registerLifeCycleMethods: () => ({
       onDiscarded: async (args, eventArgs) => {
         const card = args.cardLibrary.getCard(eventArgs.cardId);
-        await addTravellerEffect(card, 'hero', args, eventArgs);
-      }
+        await addTravellerEffect(card, "hero", args, eventArgs);
+      },
     }),
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[warrior effect] drawing 2 cards`);
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
-      
+      await cardEffectArgs.runGameActionDelegate("drawCard", {
+        playerId: cardEffectArgs.playerId,
+        count: 2,
+      });
+
       const travellersInPlay = getCardsInPlay(cardEffectArgs.findCards)
-        .filter(card => card.owner === cardEffectArgs.playerId && card.type.includes('TRAVELLER'));
-      
+        .filter((card) =>
+          card.owner === cardEffectArgs.playerId &&
+          card.type.includes("TRAVELLER")
+        );
+
       if (!travellersInPlay.length) {
         console.log(`[warrior effect] no travellers in play`);
         return;
       }
-      
+
       const targetPlayerIds = findOrderedTargets({
         match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId
-      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
-      
+        appliesTo: "ALL_OTHER",
+        startingPlayerId: cardEffectArgs.playerId,
+      }).filter((playerId) =>
+        cardEffectArgs.reactionContext?.[playerId]?.result !== "immunity"
+      );
+
       for (const targetPlayerId of targetPlayerIds) {
-        const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', targetPlayerId);
-        
+        const deck = cardEffectArgs.cardSourceController.getSource(
+          "playerDeck",
+          targetPlayerId,
+        );
+
         for (let i = 0; i < travellersInPlay.length; i++) {
           if (deck.length === 0) {
             console.log(`[warrior effect] no cards in deck, shuffling`);
-            
-            await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
-            
+
+            await cardEffectArgs.runGameActionDelegate("shuffleDeck", {
+              playerId: cardEffectArgs.playerId,
+            });
+
             if (deck.length === 0) {
               console.log(`[warrior effect] still empty, no cards to look at`);
               break;
             }
           }
-          
-          const cardToDiscard = cardEffectArgs.cardLibrary.getCard(deck.slice(-1)[0]);
-          
+
+          const cardToDiscard = cardEffectArgs.cardLibrary.getCard(
+            deck.slice(-1)[0],
+          );
+
           console.log(`[warrior effect] discarding ${cardToDiscard}`);
-          
-          await cardEffectArgs.runGameActionDelegate('discardCard', {
+
+          await cardEffectArgs.runGameActionDelegate("discardCard", {
             playerId: targetPlayerId,
-            cardId: cardToDiscard.id
+            cardId: cardToDiscard.id,
           });
-          
-          const { cost } = cardEffectArgs.cardPriceController.applyRules(cardToDiscard, { playerId: cardEffectArgs.playerId });
-          
+
+          const { cost } = cardEffectArgs.cardPriceController.applyRules(
+            cardToDiscard,
+            { playerId: cardEffectArgs.playerId },
+          );
+
           if (cost.treasure === 3 || cost.treasure === 4) {
-            console.log(`[warrior effect] card costs 3 or 3, trashing ${cardToDiscard}`);
-            
-            await cardEffectArgs.runGameActionDelegate('trashCard', {
+            console.log(
+              `[warrior effect] card costs 3 or 3, trashing ${cardToDiscard}`,
+            );
+
+            await cardEffectArgs.runGameActionDelegate("trashCard", {
               playerId: targetPlayerId,
-              cardId: cardToDiscard.id
+              cardId: cardToDiscard.id,
             });
           }
         }
       }
-    }
+    },
   },
-  'wine-merchant': {
+  "wine-merchant": {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[wine-merchant effect] gaining 4 treasure, and 1 buy`);
-      
-      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 4 });
-      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
-      
-      const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      
+
+      await cardEffectArgs.runGameActionDelegate("gainTreasure", { count: 4 });
+      await cardEffectArgs.runGameActionDelegate("gainBuy", { count: 1 });
+
+      const thisCard = cardEffectArgs.cardLibrary.getCard(
+        cardEffectArgs.cardId,
+      );
+
       console.log(`[wine-merchant effect] moving ${thisCard} to tavern`);
-      
-      await cardEffectArgs.runGameActionDelegate('moveCard', {
+
+      await cardEffectArgs.runGameActionDelegate("moveCard", {
         toPlayerId: cardEffectArgs.playerId,
         cardId: thisCard.id,
-        to: { location: 'tavern' }
+        to: { location: "tavern" },
       });
-      
-      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard, 'endTurnPhase', {
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: false,
-        allowMultipleInstances: true,
-        condition: async conditionArgs => {
-          if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') return false;
-          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
-          if (conditionArgs.match.playerTreasure < 2) return false;
-          return true;
+
+      cardEffectArgs.reactionManager.registerReactionTemplate(
+        thisCard,
+        "endTurnPhase",
+        {
+          playerId: cardEffectArgs.playerId,
+          once: true,
+          compulsory: false,
+          allowMultipleInstances: true,
+          condition: async (conditionArgs) => {
+            if (
+              getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== "buy"
+            ) return false;
+            if (
+              conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId
+            ) return false;
+            if (conditionArgs.match.playerTreasure < 2) return false;
+            return true;
+          },
+          triggeredEffectFn: async (triggeredArgs) => {
+            console.log(
+              `[wine-merchant endTurnPhase effect] discarding ${thisCard}`,
+            );
+
+            await triggeredArgs.runGameActionDelegate("discardCard", {
+              playerId: cardEffectArgs.playerId,
+              cardId: thisCard.id,
+            });
+          },
         },
-        triggeredEffectFn: async triggeredArgs => {
-          console.log(`[wine-merchant endTurnPhase effect] discarding ${thisCard}`);
-          
-          await triggeredArgs.runGameActionDelegate('discardCard', {
-            playerId: cardEffectArgs.playerId,
-            cardId: thisCard.id
-          });
-        }
-      })
-    }
+      );
+    },
   },
-}
+};
 
 export default expansion;

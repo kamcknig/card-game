@@ -1,3 +1,12 @@
+# randomzier
+
+each kingdom card has a randomizer card which is typcally how a kingdom is chosen. but the randomizer card
+also gives you things like the supply's types (action, reaction, etc). Some kingdom piles
+could have different cards with different types, but the randomzier is what says what that
+pile actually is; this also applies to costs of a pile or cards in it.
+
+this can also be used for pile selection instead of using cards.
+
 # Lower priority
 - undo turn/steps
 - when can't load assets (expansion modules) it still just goes on rather than stopping

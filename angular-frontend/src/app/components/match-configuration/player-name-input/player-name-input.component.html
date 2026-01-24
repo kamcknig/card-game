@@ -1,5 +1,8 @@
 <div class="content" *ngIf="$player | async as player">
   <span [ngStyle]="{'visibility': ($isOwner | async) ? 'visible' : 'hidden'}">👑</span>
+  @if (player.isComputer) {
+    <span title="Computer player">🤖</span>
+  }
 
   <input
     #readyCheckbox

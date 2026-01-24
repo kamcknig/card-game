@@ -8,6 +8,17 @@
         <app-player-name-input [playerId]="id"></app-player-name-input>
       }
     </div>
+    
+    @if (isGameOwner) {
+      @let playerCount = (playerIds$ | async)?.length ?? 0;
+      <button
+        class="add-computer-player"
+        (click)="addComputerPlayer()"
+        [disabled]="playerCount >= 6"
+      >
+        Add Computer Player
+      </button>
+    }
   </section>
 
   <!-- ░░░  Expansion List  ░░░ -->

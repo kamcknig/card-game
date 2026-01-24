@@ -150,7 +150,7 @@ export class PlayerHandView extends Container {
         const definition = tokenDefinitions[token.tokenId];
         const label = getTokenShortLabel(token.tokenId, definition);
         const badge = new TokenBadgeView({
-          size: 22,
+          size: 35,
           labelText: label,
           color: this.parseColor(playerColor),
         });

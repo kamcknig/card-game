@@ -147,10 +147,6 @@ export interface Match {
   tokenInstanceCounter: number;
   turnNumber: number;
   turnPhaseIndex: number;
-  playerTokens: Record<
-    PlayerId,
-    { location: CardKey | 'playerDeck' | 'player'; }
-  >;
 }
 
 export type CardOverrides = Record<PlayerId, Record<CardId, Partial<Card>>>;
@@ -201,7 +197,8 @@ export type UserPromptKinds =
   | { type: 'name-card'; }
   | { type: 'overpay'; cost: number; }
   | { type: 'display-cards'; cardIds: CardId[]; }
-  | { type: 'select'; cardIds: CardId[]; selectCount: CountSpec; selectableCardIds?: CardId[]; };
+  | { type: 'select'; cardIds: CardId[]; selectCount: CountSpec; selectableCardIds?: CardId[]; }
+  | { type: 'select-pile'; pileNames: CardKey[]; selectCount: CountSpec; };
 
 export type UserPromptActionArgs = {
   playerId: PlayerId;
@@ -256,6 +253,7 @@ export interface ServerListenEvents {
   cardsSelected: (selected: CardId[]) => void
   cardLikeTapped: (playerId: PlayerId, cardId: CardId) => void;
   cardTapped: (playerId: PlayerId, cardId: CardId) => void;
+  addComputerPlayer: (count?: number) => void;
   clientReady: (playerId: PlayerId, ready: boolean) => void;
   exchangeCoffer: (playerId: PlayerId, count: number) => void;
   expansionSelected: (val: string[]) => void;
@@ -315,6 +313,7 @@ export type PlayerArgs = {
   connected: boolean;
   ready: boolean;
   color: string;
+  isComputer?: boolean;
 }
 
 export class Player {
@@ -325,8 +324,9 @@ export class Player {
   connected: boolean;
   ready: boolean;
   color: string;
+  isComputer: boolean;
   
-  constructor({ color, id, name, sessionId, socketId, connected, ready }: PlayerArgs) {
+  constructor({ color, id, name, sessionId, socketId, connected, ready, isComputer }: PlayerArgs) {
     this.id = id;
     this.name = name;
     this.sessionId = sessionId;
@@ -334,6 +334,7 @@ export class Player {
     this.connected = connected;
     this.ready = ready;
     this.color = color;
+    this.isComputer = isComputer ?? false;
   }
   
   toString() {
@@ -538,7 +539,7 @@ const EffectTargetValues = ['ANY', 'ALL_OTHER', 'ALL'] as const;
 export type EffectTarget = typeof EffectTargetValues[number] | string;
 export type ActionButtons = {
   label: string;
-  action: number;
+  action: string | number;
 }[];
 export type CardNoId = Omit<Card, 'id'>;
 export type CardFacing = 'front' | 'back';

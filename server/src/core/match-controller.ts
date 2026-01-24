@@ -96,7 +96,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       playerBuys: 0,
       players: [],
       playerPotions: 0,
-      playerTokens: {},
       playerTreasure: 0,
       playerVictoryTokens: {},
       roundNumber: 0,
@@ -277,8 +276,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     this.broadcastPatch({} as Match, playerId);
     
-    socket.emit('matchReady');
+    socket.emit('setCardLibrary', this._cardLibrary.getAllCards());
     socket.emit('setTokenDefinitions', tokenDefinitionMap);
+    socket.emit('matchReady');
     
     socket.on('clientReady', async (_playerId: number, _ready: boolean) => {
       console.log(`[match] ${getPlayerById(this._match, playerId)} marked ready`);
@@ -541,6 +541,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       turn: Math.floor(this._match.turnNumber / this._match.players.length) + 1,
       playerId: getCurrentPlayer(this._match).id
     });
+    
+    // Kick off the first turn, including any computer player automation.
+    await this.runGameAction('checkForRemainingPlayerActions');
     
     await this.runGameAction('checkForRemainingPlayerActions');
   }

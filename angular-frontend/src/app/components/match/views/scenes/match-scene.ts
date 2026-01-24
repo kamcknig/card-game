@@ -6,11 +6,13 @@ import { matchStartedStore, matchStore } from '../../../../state/match-state';
 import { playerStore, selfPlayerIdStore, } from '../../../../state/player-state';
 import { PlayAreaView } from '../play-area';
 import { KingdomSupplyView } from '../kingdom-supply';
-import { CardId, CardLike, PlayerId, UserPromptActionArgs } from 'shared/shared-types';
+import { CardId, CardKey, CardLike, PlayerId, UserPromptActionArgs } from 'shared/shared-types';
 import {
   awaitingServerLockReleaseStore,
   clientSelectableCardsOverrideStore,
-  selectedCardStore
+  clientSelectablePilesOverrideStore,
+  selectedCardStore,
+  selectedPileStore
 } from '../../../../state/interactive-state';
 import { CardView } from '../card-view';
 import { userPromptModal } from '../modal/user-prompt-modal';
@@ -23,12 +25,14 @@ import { AppList } from '../app-list';
 import { SocketService } from '../../../../core/socket-service/socket.service';
 import { gamePausedStore } from '../../../../state/game-logic';
 import { selectableCardStore } from '../../../../state/interactive-logic';
+import { selectablePileStore } from '../../../../state/interactive-pile-logic';
 import { SelectCardArgs } from '../../../../../types';
 import { BasicSupplyView } from '../basic-supply';
 import { NonSupplyKingdomView } from '../non-supply-kingdom-view';
 import { getCardSourceStore } from '../../../../state/card-source-store';
 import { OtherCardLikeView } from '../other-card-like-view';
 import { CardLikeView } from '../card-like-view';
+import { PileView } from '../pile';
 
 export class MatchScene extends Scene {
   private _board: Container = new Container();
@@ -40,6 +44,7 @@ export class MatchScene extends Scene {
   private _playArea: PlayAreaView | undefined;
   private _kingdomView: KingdomSupplyView | undefined;
   private _selecting: boolean = false;
+  private _selectingPiles: boolean = false;
   private _scoreViewRight: number = 0;
   private _scoreViewBottom: number = 0;
   private _nonSupplyView: NonSupplyKingdomView | undefined;
@@ -47,7 +52,7 @@ export class MatchScene extends Scene {
   private _otherCardLikes: OtherCardLikeView | undefined;
 
   private get uiInteractive(): boolean {
-    return !this._selecting && !awaitingServerLockReleaseStore.get();
+    return !this._selecting && !this._selectingPiles && !awaitingServerLockReleaseStore.get();
   }
 
   public setScoreViewRect(rect: Rectangle): void {
@@ -312,6 +317,11 @@ export class MatchScene extends Scene {
         console.error('Could not play start turn sound');
       }
     }
+    if (args.content?.type === 'select-pile') {
+      await this.doSelectPiles(signalId, args);
+      return;
+    }
+    
     this._selecting = true;
     const result = await userPromptModal(
       this._app,
@@ -325,6 +335,27 @@ export class MatchScene extends Scene {
 
   // todo move the selection stuff to another class, SelectionManager?
   private onPointerDown(event: PointerEvent) {
+    if (this._selectingPiles) {
+      const pileView = this.getPileViewFromTarget(event.target as any);
+      if (!pileView?.pileKey) {
+        return;
+      }
+      const selectablePiles = selectablePileStore.get();
+      if (!selectablePiles.includes(pileView.pileKey)) {
+        return;
+      }
+      const selected = selectedPileStore.get();
+      const idx = selected.indexOf(pileView.pileKey);
+      if (idx >= 0) {
+        selected.splice(idx, 1);
+      }
+      else {
+        selected.push(pileView.pileKey);
+      }
+      selectedPileStore.set([...selected]);
+      return;
+    }
+    
     if (!(event.target instanceof CardLikeView)) {
       return;
     }
@@ -560,6 +591,95 @@ export class MatchScene extends Scene {
     });
 
     validateSelection(selectedCardStore.get());
+  }
+
+  // Handles pile selection prompts by highlighting piles and capturing a selection.
+  private doSelectPiles = async (signalId: string, args: UserPromptActionArgs) => {
+    const content = args.content;
+    if (!content || content.type !== 'select-pile') {
+      this._socketService.emit('userInputReceived', signalId, []);
+      return;
+    }
+    
+    const pileNames = content.pileNames ?? [];
+    const selectCount = content.selectCount;
+    
+    if (!pileNames.length) {
+      this._socketService.emit('userInputReceived', signalId, []);
+      return;
+    }
+    
+    clientSelectablePilesOverrideStore.set(pileNames);
+    selectedPileStore.set([]);
+    this._selectingPiles = true;
+    
+    const doSelectButtonContainer = new AppList({
+      type: 'horizontal',
+      elementsMargin: STANDARD_GAP,
+      padding: STANDARD_GAP
+    });
+    
+    const doneSelectingBtn = new Container();
+    const button = createAppButton({
+      text: args.prompt ?? 'Select pile',
+      style: {
+        fill: 'white',
+        fontSize: 36,
+      },
+    });
+    button.button.label = 'doneSelectingPileButton';
+    doneSelectingBtn.eventMode = 'static';
+    doneSelectingBtn.on('removed', () => doneSelectingBtn.removeAllListeners());
+    doneSelectingBtn.addChild(button.button);
+    
+    doSelectButtonContainer.addChild(doneSelectingBtn);
+    
+    doSelectButtonContainer.x = Math.floor(
+      (this._playerHand?.x ?? 0) + (this._playerHand?.width ?? 0) * .5 - doSelectButtonContainer.width * .5
+    );
+    doSelectButtonContainer.y = Math.floor((this._playerHand?.y ?? 0) - doSelectButtonContainer.height - STANDARD_GAP);
+    this.addChild(doSelectButtonContainer);
+    
+    const updateButtonState = (selected: readonly CardKey[]) => {
+      const valid = validateCountSpec(selectCount, selected.length);
+      button.button.alpha = valid ? 1 : .6;
+      button.button.eventMode = valid ? 'static' : 'none';
+    };
+    
+    const selectedListenerCleanup = selectedPileStore.subscribe(selected => {
+      updateButtonState(selected);
+    });
+    
+    const cleanupSelection = () => {
+      selectedListenerCleanup();
+      selectedPileStore.set([]);
+      clientSelectablePilesOverrideStore.set(null);
+      this._selectingPiles = false;
+      doSelectButtonContainer.removeChildren();
+      doSelectButtonContainer.removeFromParent();
+    };
+    
+    const doneListener = (cancelled?: boolean) => {
+      const selectedPiles = cancelled ? [] : selectedPileStore.get();
+      cleanupSelection();
+      this._socketService.emit('userInputReceived', signalId, selectedPiles);
+    };
+    
+    doneSelectingBtn.on('pointerdown', () => doneListener());
+    
+    updateButtonState(selectedPileStore.get());
+  }
+
+  // Walks up the display tree to find the pile view under a pointer event.
+  private getPileViewFromTarget(target: any): PileView | null {
+    let current = target;
+    while (current) {
+      if (current instanceof PileView) {
+        return current;
+      }
+      current = current.parent;
+    }
+    return null;
   }
 
   private onRendererResize = (): void => {

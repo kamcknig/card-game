@@ -36,8 +36,11 @@ export class KingdomSupplyView extends Container {
             if (result !== 0) return result;
             return b.cardName.localeCompare(a.cardName);
           })
-          .filter(key => !!key)
-          .map(card => card?.kingdom)
+          .filter(card => !!card)
+          .map(card => ({
+            kingdom: card!.kingdom,
+            pileKey: card!.randomizer ?? card!.cardKey
+          }))
       }
     ).subscribe(val => {
       if (val.length < 1) {
@@ -80,7 +83,8 @@ export class KingdomSupplyView extends Container {
     }, {} as Record<CardKey, Card[]>)
 
     Object.entries(piles).forEach(([cardKey, pile], idx) => {
-      const p = this._cardContainer.getChildByLabel(`pile:${cardKey}`) as PileView;
+      const pileKey = pile[0]?.randomizer ?? pile[0]?.cardKey ?? cardKey;
+      const p = this._cardContainer.getChildByLabel(`pile:${pileKey}`) as PileView;
       if (!p) {
         return;
       }
@@ -102,15 +106,15 @@ export class KingdomSupplyView extends Container {
       });
   }
 
-  private createKingdomPiles(cardKeys: readonly CardKey[]) {
+  private createKingdomPiles(cardKeys: readonly { kingdom: CardKey; pileKey: CardKey }[]) {
     this._cardContainer.removeChildren();
 
     const numColumns = 5;
 
     for (const [idx, cardKey] of cardKeys.entries()) {
       const p = new PileView({ size: 'half' });
-      p.label = `pile:${cardKey}`;
-      p.pileKey = cardKey;
+      p.label = `pile:${cardKey.pileKey}`;
+      p.pileKey = cardKey.pileKey;
 
       const col = numColumns - 1 - (idx % numColumns);
       const row = Math.floor(idx / numColumns);

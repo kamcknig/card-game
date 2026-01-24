@@ -74,8 +74,8 @@ export class BasicSupplyView extends Container {
     for (const [idx, card] of sortedVictoryCards.entries()) {
       const pileView = new PileView({ size: 'half' });
       pileView.y = idx * SMALL_CARD_HEIGHT + idx * STANDARD_GAP;
-      pileView.label = `pile:${card.cardKey}`;
-      pileView.pileKey = card.cardKey;
+      pileView.label = `pile:${card.randomizer ?? card.cardKey}`;
+      pileView.pileKey = card.randomizer ?? card.cardKey;
       this._cardContainer.addChild(pileView);
     }
 
@@ -88,8 +88,8 @@ export class BasicSupplyView extends Container {
       const pileView = new PileView({ size: 'half' });
       pileView.x = SMALL_CARD_WIDTH + STANDARD_GAP;
       pileView.y = idx * SMALL_CARD_HEIGHT + idx * STANDARD_GAP;
-      pileView.label = `pile:${card.cardKey}`;
-      pileView.pileKey = card.cardKey;
+      pileView.label = `pile:${card.randomizer ?? card.cardKey}`;
+      pileView.pileKey = card.randomizer ?? card.cardKey;
       this._cardContainer.addChild(pileView);
     }
   }
@@ -98,7 +98,8 @@ export class BasicSupplyView extends Container {
     if (!piles) return;
 
     for (const [cardKey, pile] of Object.entries(piles)) {
-      const p = this._cardContainer.getChildByLabel(`pile:${cardKey}`) as PileView;
+      const pileKey = pile[0]?.randomizer ?? pile[0]?.cardKey ?? cardKey;
+      const p = this._cardContainer.getChildByLabel(`pile:${pileKey}`) as PileView;
       if (!p) {
         return;
       }

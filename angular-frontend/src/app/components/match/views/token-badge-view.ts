@@ -27,7 +27,7 @@ export class TokenBadgeView extends Container {
   
   constructor(args: TokenBadgeArgs) {
     super();
-    
+
     this._size = args.size;
     this._labelText = args.labelText;
     this._color = args.color;
@@ -38,8 +38,8 @@ export class TokenBadgeView extends Container {
     this._text = new Text({
       text: this._labelText,
       style: {
-        fill: 0xffffff,
-        fontSize: Math.max(10, Math.floor(this._size * 0.55)),
+        fill: 'black',
+        fontSize: Math.max(10, Math.floor(this._size * 0.40)),
       }
     });
     this._text.anchor.set(0.5);

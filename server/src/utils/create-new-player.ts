@@ -12,7 +12,24 @@ export const createNewPlayer = (sessionId: string, socket: AppSocket) => {
     connected: false,
     ready: false,
     socketId: socket.id,
+    isComputer: false,
   } as Player);
   console.log(`[createNewPlayer] new player created ${p}`);
+  return p;
+}
+
+// Creates a computer-controlled player without a socket connection.
+export const createComputerPlayer = () => {
+  const newId = ++PLAYER_ID;
+  const p = new Player({
+    name: `Computer ${newId}`,
+    id: newId,
+    sessionId: `computer:${newId}`,
+    connected: true,
+    ready: true,
+    socketId: '',
+    isComputer: true,
+  } as Player);
+  console.log(`[createNewPlayer] new computer player created ${p}`);
   return p;
 }

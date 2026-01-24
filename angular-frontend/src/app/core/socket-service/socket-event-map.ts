@@ -37,12 +37,10 @@ export const socketToGameEventMap = (): SocketEventMap => {
   };
 
   map['gameOver'] = async summary => {
-    try {
-      const s = new Audio('./assets/sounds/game-over.mp3');
-      await s?.play();
-    } catch (error) {
-      console.error('error playing game over sound');
-      console.error(error);
+    const s = new Audio('./assets/sounds/game-over.mp3');
+    // Autoplay is blocked without user interaction, so guard and swallow the error.
+    if (navigator.userActivation?.hasBeenActive) {
+      void s.play().catch(() => null);
     }
 
     matchSummaryStore.set(summary);
@@ -63,15 +61,23 @@ export const socketToGameEventMap = (): SocketEventMap => {
 
   map['matchReady'] = async () => {
     const cardsById = cardStore.get();
-    if (!cardsById) throw new Error('missing card library');
+    if (!cardsById || Object.keys(cardsById).length === 0) {
+      console.warn('missing card library on matchReady, skipping setup');
+      return;
+    }
 
     const playerId = selfPlayerIdStore.get();
     if (!playerId) throw new Error('missing self playerId');
 
     const cardSource = cardSourceStore.get();
+    if (!cardSource?.['basicSupply'] || !cardSource?.['kingdomSupply']) {
+      console.warn('missing card source on matchReady, skipping setup');
+      return;
+    }
 
     let basics = cardSource['basicSupply'].reduce((prev, nextCard) => {
       const card = cardsById[nextCard];
+      if (!card) return prev;
 
       if (card.type.includes(('VICTORY'))) {
         if (prev[0].includes(card.kingdom)) return prev;

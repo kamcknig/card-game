@@ -6,6 +6,7 @@ import {
   CardLikeId,
   CardLocation,
   CardLocationSpec,
+  CountSpec,
   Match,
   PlayerId,
   SelectActionCardArgs,
@@ -16,7 +17,7 @@ import {
   TokenLocation,
   TurnPhaseOrderValues,
   UserPromptActionArgs
-} from 'shared/shared-types';
+} from 'shared/shared-types.ts';
 import { MatchCardLibrary } from '../match-card-library.ts';
 import { LogManager } from '../log-manager.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
@@ -49,6 +50,8 @@ import { tokenDefinitionMap } from '../tokens/token-definition-map.ts';
 export class GameActionController implements BaseGameActionDefinitionMap {
   private customActionHandlers: Partial<GameActionDefinitionMap> = {};
   private customCardEffectHandlers: Record<string, Record<CardKey, CardEffectFn>> = {};
+  // Guards against re-entrant computer turns triggered by nested game actions.
+  private _computerTurnInProgress: boolean = false;
   
   constructor(
     private _cardSourceController: CardSourceController,
@@ -104,16 +107,104 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     return token;
   }
 
+  // Resolves the count spec into a deterministic selection count for computer picks.
+  private resolveCountSpec(count: CountSpec | number, available: number, optional: boolean): number {
+    if (typeof count === 'number') {
+      return Math.min(count, available);
+    }
+    if (count.kind === 'exact') {
+      return Math.min(count.count, available);
+    }
+    if (count.kind === 'upTo') {
+      return Math.min(count.count, available);
+    }
+    if (optional) {
+      return Math.min(1, available);
+    }
+    return Math.min(1, available);
+  }
+
+  // Executes a single automatic action for the current computer player.
+  private async runComputerTurnStep(): Promise<void> {
+    if (this._computerTurnInProgress) return;
+    
+    const match = this.match;
+    const currentPlayer = getCurrentPlayer(match);
+    
+    if (!currentPlayer.isComputer) return;
+    
+    this._computerTurnInProgress = true;
+    
+    try {
+      const turnPhase = getTurnPhase(match.turnPhaseIndex);
+      const selectable = match.selectableCards[currentPlayer.id] ?? [];
+      
+      if (turnPhase === 'action') {
+        const actionCardId = selectable.find(id => this.cardLibrary.getCard(id).type.includes('ACTION'));
+        if (actionCardId) {
+          await this.runGameActionDelegate('playCard', { playerId: currentPlayer.id, cardId: actionCardId });
+        }
+        // Always move to the next phase after one action attempt.
+        this._computerTurnInProgress = false;
+        await this.runGameActionDelegate('nextPhase');
+        return;
+      }
+      
+      if (turnPhase === 'buy') {
+        const selectedId = selectable[0];
+        if (selectedId === undefined) {
+          this._computerTurnInProgress = false;
+          await this.runGameActionDelegate('nextPhase');
+          return;
+        }
+        
+        const event = match.events.find(e => e.id === selectedId);
+        if (event) {
+          await this.runGameActionDelegate('buyCardLike', { playerId: currentPlayer.id, cardLikeId: selectedId });
+          this._computerTurnInProgress = false;
+          await this.runGameActionDelegate('nextPhase');
+          return;
+        }
+        
+        const card = this.cardLibrary.getCard(selectedId);
+        const inHand = this._cardSourceController.getSource('playerHand', currentPlayer.id).includes(selectedId);
+        if (inHand && card.type.includes('TREASURE')) {
+          await this.runGameActionDelegate('playCard', { playerId: currentPlayer.id, cardId: selectedId });
+          this._computerTurnInProgress = false;
+          await this.runGameActionDelegate('nextPhase');
+          return;
+        }
+        
+        const { restricted, cost } = this.cardPriceRuleController.applyRules(card, { playerId: currentPlayer.id });
+        if (!restricted) {
+          await this.runGameActionDelegate('buyCard', {
+            playerId: currentPlayer.id,
+            cardId: card.id,
+            cardCost: cost
+          });
+        }
+        
+        this._computerTurnInProgress = false;
+        await this.runGameActionDelegate('nextPhase');
+        return;
+      }
+    }
+    finally {
+      this._computerTurnInProgress = false;
+    }
+  }
+
   // Applies any token bonuses for the player when a card is played from a tokened supply pile.
   private async applyTokenBonusesOnCardPlayed(playerId: PlayerId, cardId: CardId): Promise<void> {
     const card = this.cardLibrary.getCard(cardId);
+    const pileKey = card.randomizer ?? card.cardKey;
     const tokenInstanceIds = Object.keys(this.match.tokens).sort();
     await this.logManager.withIndent(async () => {
       for (const tokenInstanceId of tokenInstanceIds) {
         const token = this.match.tokens[tokenInstanceId];
         if (token.ownerId !== playerId) continue;
         if (token.location.type !== 'supplyPile') continue;
-        if (token.location.cardKey !== card.cardKey) continue;
+      if (token.location.cardKey !== pileKey && token.location.cardKey !== card.cardKey) continue;
         const handler = tokenCardPlayedHandlerMap[token.tokenId];
         if (!handler) continue;
         const definition = tokenDefinitionMap[token.tokenId];
@@ -373,6 +464,18 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     const signalId = `userPrompt:${playerId}:${Date.now()}`;
     
+    const player = getPlayerById(this.match, playerId);
+    if (player?.isComputer) {
+      // Computer players always pick the first available action button when prompted.
+      if (args.content?.type === 'select-pile') {
+        const pileNames = args.content.pileNames ?? [];
+        return { result: pileNames.length ? [pileNames[0]] : [] };
+      }
+      const actionButtons = args.actionButtons ?? [];
+      const firstAction = actionButtons.find(button => button.action !== 0)?.action ?? 0;
+      return { action: firstAction };
+    }
+    
     const socket = this.socketMap.get(playerId);
     if (!socket) {
       console.log(`[userPrompt] No socket for player ${playerId}`);
@@ -431,6 +534,13 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     if (selectableCardIds?.length === 0) {
       console.log(`[selectCard action] found no cards within restricted set ${restrict}`);
       return [];
+    }
+    
+    const player = getPlayerById(this.match, playerId);
+    if (player?.isComputer) {
+      // Computer players choose the first available card(s) from the selectable list.
+      const count = this.resolveCountSpec(args.count ?? 1, selectableCardIds.length, args.optional ?? false);
+      return selectableCardIds.slice(0, count);
     }
     
     // if there aren't enough cards, depending on the selection type, we might simply implicitly select cards
@@ -710,6 +820,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       if (!hasActions || !hasActionCards) {
         console.log('[checkForRemainingPlayerActions action] skipping to next phase');
         await this.nextPhase();
+        return;
       }
     }
     
@@ -721,12 +832,17 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       if (!hasBuys) {
         console.log('[checkForRemainingPlayerActions action] skipping to next phase');
         await this.nextPhase();
+        return;
       }
     }
     
     if (turnPhase === 'cleanup') {
       await this.nextPhase();
+      return;
     }
+    
+    // Allow computer players to take a single action per phase.
+    await this.runComputerTurnStep();
   }
   
   
