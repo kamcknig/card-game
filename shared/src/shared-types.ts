@@ -4,6 +4,48 @@ export type CardKey = string;
 export type PlayerId = number;
 export type CardId = number;
 export type CardLikeId = number;
+// Token identifiers are unique across the match for deterministic state updates.
+export type TokenId = string;
+// Token instance identifiers are unique per placed token to support multiple copies.
+export type TokenInstanceId = string;
+
+// Token duration controls how long a placed token remains in effect.
+export type TokenDuration = 'oneShot' | 'turn' | 'permanent' | 'eventBound';
+
+// Token facing is used for tokens like Journey that can be face up or face down.
+export type TokenFacing = 'faceUp' | 'faceDown';
+
+// Token locations describe where a token is placed and how it is targeted.
+export type TokenLocation =
+  | { type: 'supplyPile'; cardKey: CardKey; }
+  | { type: 'player'; playerId: PlayerId; }
+  | { type: 'playerDeck'; playerId: PlayerId; }
+  | { type: 'playerDiscard'; playerId: PlayerId; }
+  | { type: 'playerMat'; playerId: PlayerId; matKey: string; }
+  | { type: 'card'; cardId: CardId; }
+  | { type: 'global'; };
+
+// Token definitions are static rules metadata used by both server logic and UI.
+export type TokenDefinition = {
+  id: TokenId;
+  name: string;
+  rulesText: string;
+  duration: TokenDuration;
+  expansion?: string;
+};
+
+// Token instances represent placed tokens and their current targets.
+export type TokenInstance = {
+  id: TokenInstanceId;
+  tokenId: TokenId;
+  location: TokenLocation;
+  ownerId?: PlayerId;
+  // When null/undefined/0, the token has infinite counters.
+  counters?: number | null;
+  // Optional facing for tokens that can be flipped.
+  facing?: TokenFacing;
+  sourceCardId?: CardId;
+};
 
 export interface Supply {
   name: string;
@@ -99,6 +141,10 @@ export interface Match {
   scores: Record<PlayerId, number>,
   selectableCards: Record<PlayerId, CardId[]>;
   stats: MatchStats;
+  // Token instances placed in the match.
+  tokens: Record<TokenInstanceId, TokenInstance>;
+  // Monotonic counter for deterministic token instance IDs.
+  tokenInstanceCounter: number;
   turnNumber: number;
   turnPhaseIndex: number;
   playerTokens: Record<
@@ -124,6 +170,7 @@ export type LogEntry =
   | { type: 'gainBuy'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'gainTreasure'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'gainVictoryToken'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
+  | { type: 'tokenEffect'; playerId: PlayerId; cardId: CardId; tokenId: TokenId; effectText: string; depth?: number; source?: LogEntrySource }
   | { type: 'gainCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'cardPlayed'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'revealCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource }
@@ -199,6 +246,7 @@ export type ServerEmitEvents = {
   selectCard: (signalId: string, selectCardArgs: SelectActionCardArgs & { selectableCardIds: CardId[] }) => void;
   setPlayerList: (players: Player[]) => void;
   setCardLibrary: (library: Record<CardKey, Card>) => void;
+  setTokenDefinitions: (definitions: Record<TokenId, TokenDefinition>) => void;
   setPlayer: (player: Player) => void;
   userPrompt: (signalId: string, userPromptArgs: UserPromptActionArgs) => void;
   waitingForPlayer: (playerId: PlayerId) => void;

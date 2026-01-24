@@ -77,7 +77,7 @@ const addTravellerEffect = async (card: Card, travelTo: CardKey, context: CardLi
 export const addDurationEffect = <T extends TriggerEventType>(card: Card, context: CardEffectFunctionContext, triggeredTemplate: ReactionTemplate<T> | ReactionTemplate<T>[]) => {
   // register event for the cleanup phase to move the card to the activeDuration zone. This will leave it "in play,"
   // but will prevent it from being discarded
-  context.reactionManager.registerSystemTemplate(card.id, 'startTurnPhase', {
+  context.reactionManager.registerSystemTemplate(card, 'startTurnPhase', {
     playerId: context.playerId,
     once: true,
     allowMultipleInstances: true,
@@ -399,7 +399,7 @@ const expansion: CardExpansionModule = {
       
       const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       
-      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard.id, 'cardPlayed', {
+      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard, 'cardPlayed', {
         playerId: cardEffectArgs.playerId,
         once: true,
         compulsory: false,
@@ -586,7 +586,7 @@ const expansion: CardExpansionModule = {
         to: { location: 'tavern' }
       });
       
-      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard.id, 'cardGained', {
+      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard, 'cardGained', {
         playerId: cardEffectArgs.playerId,
         once: true,
         compulsory: false,
@@ -753,7 +753,7 @@ const expansion: CardExpansionModule = {
         to: { location: 'tavern' }
       });
       
-      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard.id, 'startTurn', {
+      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard, 'startTurn', {
         playerId: cardEffectArgs.playerId,
         once: true,
         compulsory: false,
@@ -1328,7 +1328,7 @@ const expansion: CardExpansionModule = {
         to: { location: 'tavern' }
       });
       
-      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard.id, 'startTurn', {
+      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard, 'startTurn', {
         once: true,
         compulsory: false,
         allowMultipleInstances: true,
@@ -1384,7 +1384,7 @@ const expansion: CardExpansionModule = {
         to: { location: 'tavern' }
       });
       
-      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard.id, 'afterCardPlayed', {
+      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard, 'afterCardPlayed', {
         once: true,
         compulsory: false,
         allowMultipleInstances: true,
@@ -1634,7 +1634,7 @@ const expansion: CardExpansionModule = {
         to: { location: 'tavern' }
       });
       
-      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard.id, 'startTurn', {
+      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard, 'startTurn', {
         playerId: cardEffectArgs.playerId,
         once: true,
         allowMultipleInstances: true,
@@ -1884,7 +1884,7 @@ const expansion: CardExpansionModule = {
         to: { location: 'tavern' }
       });
       
-      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard.id, 'endTurnPhase', {
+      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard, 'endTurnPhase', {
         playerId: cardEffectArgs.playerId,
         once: true,
         compulsory: false,

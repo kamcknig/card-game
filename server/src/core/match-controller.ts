@@ -40,6 +40,7 @@ import { findCardsFactory } from '../utils/find-cards.ts';
 import { GameActionController } from './actions/game-action-controller.ts';
 import { CardSourceController } from './card-source-controller.ts';
 import { eventEffectFactoryMap } from './events/event-effect-factory-map.ts';
+import { tokenDefinitionMap } from './tokens/token-definition-map.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardLibSnapshot = {};
@@ -109,6 +110,10 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         cardLikesBought: {},
         cardLikesBoughtByTurn: {},
       },
+      // Token instances placed in the match.
+      tokens: {},
+      // Monotonic counter for deterministic token instance IDs.
+      tokenInstanceCounter: 0,
       turnNumber: 0,
       turnPhaseIndex: 0
     }
@@ -204,6 +209,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     this._socketMap.forEach((s) => {
       s.emit('setCardLibrary', this._cardLibrary.getAllCards());
+      s.emit('setTokenDefinitions', tokenDefinitionMap);
       s.emit('matchReady');
       s.on('clientReady', this.onClientReady);
     });
@@ -223,6 +229,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this.broadcastPatch({} as Match, playerId);
     
     socket.emit('matchReady');
+    socket.emit('setTokenDefinitions', tokenDefinitionMap);
     
     socket.on('clientReady', async (_playerId: number, _ready: boolean) => {
       console.log(`[match] ${getPlayerById(this._match, playerId)} marked ready`);

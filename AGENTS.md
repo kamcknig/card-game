@@ -1,5 +1,7 @@
 See GAME_SUMMARY.md for a high-level overview of the project.
 
+See https://wiki.dominionstrategy.com/index.php/Main_Page for documentation on the dominion game including rules, game setup, expansions, and card rule clarifications.
+
 # agents.md
 
 This file defines the behavior, scope, and constraints of the **Game Development Agent**.

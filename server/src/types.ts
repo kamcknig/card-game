@@ -13,6 +13,11 @@ import {
   Match,
   PlayerId,
   SelectActionCardArgs,
+  TokenId,
+  TokenInstance,
+  TokenInstanceId,
+  TokenFacing,
+  TokenLocation,
   ServerEmitEvents,
   ServerListenEvents,
   UserPromptActionArgs,
@@ -147,6 +152,23 @@ export interface BaseGameActionDefinitionMap {
   gainPotion: (args: { count: number }) => Promise<void>;
   gainTreasure: (args: { count: number }, context?: GameActionContext) => Promise<void>;
   gainVictoryToken: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
+  // Token actions are used by expansions to place and manage token instances.
+  placeToken: (args: {
+    tokenId: TokenId;
+    location: TokenLocation;
+    ownerId?: PlayerId;
+    counters?: number;
+    facing?: TokenFacing;
+    sourceCardId?: CardId;
+  }, context?: GameActionContext) => Promise<TokenInstance>;
+  // Token actions are used by expansions to place and manage token instances.
+  moveToken: (args: { tokenInstanceId: TokenInstanceId; location: TokenLocation; }, context?: GameActionContext) => Promise<void>;
+  // Token actions are used by expansions to place and manage token instances.
+  removeToken: (args: { tokenInstanceId: TokenInstanceId; }, context?: GameActionContext) => Promise<void>;
+  // Token actions are used by expansions to place and manage token instances.
+  consumeToken: (args: { tokenInstanceId: TokenInstanceId; amount?: number; }, context?: GameActionContext) => Promise<void>;
+  // Token actions are used by expansions to place and manage token instances.
+  flipToken: (args: { tokenInstanceId: TokenInstanceId; facing: TokenFacing; }, context?: GameActionContext) => Promise<void>;
   moveCard: (args: {
     toPlayerId?: PlayerId,
     cardId: CardId | Card,

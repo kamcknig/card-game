@@ -9,9 +9,14 @@ import {
   Match,
   PlayerId,
   SelectActionCardArgs,
+  TokenId,
+  TokenInstance,
+  TokenInstanceId,
+  TokenFacing,
+  TokenLocation,
   TurnPhaseOrderValues,
   UserPromptActionArgs
-} from 'shared/shared-types.ts';
+} from 'shared/shared-types';
 import { MatchCardLibrary } from '../match-card-library.ts';
 import { LogManager } from '../log-manager.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
@@ -38,6 +43,8 @@ import { CardPriceRulesController } from '../card-price-rules-controller.ts';
 import { CardSourceController } from '../card-source-controller.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
+import { tokenCardPlayedHandlerMap } from '../tokens/token-trigger-map.ts';
+import { tokenDefinitionMap } from '../tokens/token-definition-map.ts';
 
 export class GameActionController implements BaseGameActionDefinitionMap {
   private customActionHandlers: Partial<GameActionDefinitionMap> = {};
@@ -79,6 +86,55 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     }
     return await handler.bind(this)(...args);
   }
+
+  // Builds a deterministic token instance id for stable patch ordering.
+  private buildTokenInstanceId(tokenId: TokenId): TokenInstanceId {
+    // Monotonic counter lives on match state to keep determinism across runs.
+    const counter = this.match.tokenInstanceCounter;
+    this.match.tokenInstanceCounter += 1;
+    return `token:${tokenId}:${counter}`;
+  }
+
+  // Returns the token instance or throws if missing to keep token mutations explicit.
+  private getTokenInstance(tokenInstanceId: TokenInstanceId): TokenInstance {
+    const token = this.match.tokens[tokenInstanceId];
+    if (!token) {
+      throw new Error(`[token action] missing token instance ${tokenInstanceId}`);
+    }
+    return token;
+  }
+
+  // Applies any token bonuses for the player when a card is played from a tokened supply pile.
+  private async applyTokenBonusesOnCardPlayed(playerId: PlayerId, cardId: CardId): Promise<void> {
+    const card = this.cardLibrary.getCard(cardId);
+    const tokenInstanceIds = Object.keys(this.match.tokens).sort();
+    await this.logManager.withIndent(async () => {
+      for (const tokenInstanceId of tokenInstanceIds) {
+        const token = this.match.tokens[tokenInstanceId];
+        if (token.ownerId !== playerId) continue;
+        if (token.location.type !== 'supplyPile') continue;
+        if (token.location.cardKey !== card.cardKey) continue;
+        const handler = tokenCardPlayedHandlerMap[token.tokenId];
+        if (!handler) continue;
+        const definition = tokenDefinitionMap[token.tokenId];
+        const effectText = definition?.name ?? 'token bonus';
+        // Log the token effect before applying its bonus for clarity in the log.
+        this.logManager.addLogEntry({
+          type: 'tokenEffect',
+          playerId,
+          cardId,
+          tokenId: token.tokenId,
+          effectText,
+        });
+        await handler({
+          match: this.match,
+          playerId,
+          cardId,
+          runGameAction: this.runGameActionDelegate,
+        });
+      }
+    });
+  }
   
   async gainPotion(args: { count: number }) {
     console.log(`[gainPotion action] gaining ${args.count} potions`);
@@ -101,6 +157,73 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     });
     
     console.log(`[gainBuy action] setting player guys to ${this.match.playerBuys}`);
+  }
+
+  async placeToken(args: {
+    tokenId: TokenId;
+    location: TokenLocation;
+    ownerId?: PlayerId;
+    counters?: number;
+    facing?: TokenFacing;
+    sourceCardId?: CardId;
+  }): Promise<TokenInstance> {
+    // Create a deterministic token instance id for stable patching.
+    const tokenInstanceId = this.buildTokenInstanceId(args.tokenId);
+    // Create the token instance with explicit location and ownership metadata.
+    const tokenInstance: TokenInstance = {
+      id: tokenInstanceId,
+      tokenId: args.tokenId,
+      location: args.location,
+      ownerId: args.ownerId,
+      counters: args.counters,
+      facing: args.facing,
+      sourceCardId: args.sourceCardId,
+    };
+    // Persist the token instance on match state for patch broadcasting.
+    this.match.tokens[tokenInstanceId] = tokenInstance;
+    console.log(`[placeToken action] placed token ${args.tokenId} as ${tokenInstanceId}`);
+    return tokenInstance;
+  }
+
+  async moveToken(args: { tokenInstanceId: TokenInstanceId; location: TokenLocation; }): Promise<void> {
+    // Resolve the token instance to ensure we don't mutate a missing token.
+    const token = this.getTokenInstance(args.tokenInstanceId);
+    // Update location in-place for a stable token reference.
+    token.location = args.location;
+    console.log(`[moveToken action] moved token ${args.tokenInstanceId}`);
+  }
+
+  async removeToken(args: { tokenInstanceId: TokenInstanceId; }): Promise<void> {
+    // Ensure the token exists before removal for deterministic behavior.
+    this.getTokenInstance(args.tokenInstanceId);
+    delete this.match.tokens[args.tokenInstanceId];
+    console.log(`[removeToken action] removed token ${args.tokenInstanceId}`);
+  }
+
+  async consumeToken(args: { tokenInstanceId: TokenInstanceId; amount?: number; }): Promise<void> {
+    // Resolve the token instance before modifying counters or removal.
+    const token = this.getTokenInstance(args.tokenInstanceId);
+    const amount = args.amount ?? 1;
+    // Tokens with null/undefined/0 counters are infinite and do not decrement.
+    if (token.counters === undefined || token.counters === null || token.counters === 0) {
+      console.log(`[consumeToken action] token ${args.tokenInstanceId} is infinite`);
+      return;
+    }
+    // Decrement counters and remove the token if exhausted.
+    token.counters = Math.max(0, token.counters - amount);
+    if (token.counters === 0) {
+      delete this.match.tokens[args.tokenInstanceId];
+      console.log(`[consumeToken action] consumed token ${args.tokenInstanceId}`);
+      return;
+    }
+    console.log(`[consumeToken action] decremented token ${args.tokenInstanceId} to ${token.counters}`);
+  }
+
+  async flipToken(args: { tokenInstanceId: TokenInstanceId; facing: TokenFacing; }): Promise<void> {
+    // Resolve the token instance before modifying facing.
+    const token = this.getTokenInstance(args.tokenInstanceId);
+    token.facing = args.facing;
+    console.log(`[flipToken action] set token ${args.tokenInstanceId} to ${args.facing}`);
   }
   
   async moveCard(args: { toPlayerId?: PlayerId, cardId: CardId | Card, to: CardLocationSpec }) {
@@ -850,6 +973,9 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     // handle reactions for the card played
     let reactionContext = {};
     await this.reactionManager.runTrigger({ trigger: cardPlayedTrigger, reactionContext });
+    
+    // Apply supply pile token bonuses before the card's own lifecycle/effects.
+    await this.applyTokenBonusesOnCardPlayed(playerId, cardId);
     
     // now add any triggered effects from the card played
     await this.reactionManager.runCardLifecycleEvent('onCardPlayed', { playerId: args.playerId, cardId });
