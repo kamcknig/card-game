@@ -9,6 +9,7 @@ import {
 import { gameOwnerIdStore, sceneStore } from '../../state/game-state';
 import { expansionListStore } from '../../state/expansion-list-state';
 import { cardStore } from '../../state/card-state';
+import { tokenDefinitionStore } from '../../state/token-definition-state';
 import { Assets } from 'pixi.js';
 import { applyPatch, Operation } from 'fast-json-patch';
 import { ClientListenEventNames, ClientListenEvents } from '../../../types';
@@ -54,6 +55,10 @@ export const socketToGameEventMap = (): SocketEventMap => {
 
   map['setCardLibrary'] = cards => {
     cardStore.set(cards);
+  };
+  
+  map['setTokenDefinitions'] = definitions => {
+    tokenDefinitionStore.set(definitions);
   };
 
   map['matchReady'] = async () => {

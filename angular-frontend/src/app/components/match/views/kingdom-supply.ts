@@ -1,11 +1,14 @@
 import { Container, Graphics } from 'pixi.js';
 import { PileView } from './pile';
 import { cardStore } from '../../../state/card-state';
-import { Card, CardKey } from 'shared/shared-types';
+import { matchStore } from '../../../state/match-state';
+import { tokenDefinitionStore } from '../../../state/token-definition-state';
+import { Card, CardKey, Match, TokenDefinition, TokenId, TokenInstance } from 'shared/shared-types';
 import { SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
 import { kingdomSupplies } from '../../../state/match-logic';
 import { computed } from 'nanostores';
 import { getCardSourceStore } from '../../../state/card-source-store';
+import { TokenBadgeData } from './pile';
 
 export class KingdomSupplyView extends Container {
   private _background: Container;
@@ -50,6 +53,13 @@ export class KingdomSupplyView extends Container {
         [getCardSourceStore('kingdomSupply'), cardStore],
         (kingdom, cards) => kingdom.map(id => cards[id])
       ).subscribe((val => this.draw(val)))
+    );
+    
+    this._cleanup.push(
+      computed(
+        [matchStore, tokenDefinitionStore],
+        (match, tokenDefinitions) => ({ match, tokenDefinitions })
+      ).subscribe(({ match, tokenDefinitions }) => this.updateTokenBadges(match, tokenDefinitions))
     );
     this.off('removed', this.onRemoved);
   }
@@ -99,6 +109,7 @@ export class KingdomSupplyView extends Container {
     for (const [idx, cardKey] of cardKeys.entries()) {
       const p = new PileView({ size: 'half' });
       p.label = `pile:${cardKey}`;
+      p.pileKey = cardKey;
 
       const col = numColumns - 1 - (idx % numColumns);
       const row = Math.floor(idx / numColumns);
@@ -107,5 +118,60 @@ export class KingdomSupplyView extends Container {
       p.y = row * (SMALL_CARD_HEIGHT + STANDARD_GAP);
       this._cardContainer.addChild(p);
     }
+  }
+  
+  // Updates token badges on each pile based on match token state.
+  private updateTokenBadges(match: Match | null, tokenDefinitions: Record<TokenId, TokenDefinition>) {
+    const piles = this._cardContainer.children.filter(child => child instanceof PileView) as PileView[];
+    if (!match) {
+      piles.forEach(pile => pile.tokenBadges = []);
+      return;
+    }
+    
+    const playerColorMap = new Map(match.players.map(player => [player.id, player.color]));
+    const tokensByPile: Record<CardKey, TokenBadgeData[]> = {};
+    const tokens = Object.values(match.tokens ?? {}) as TokenInstance[];
+    
+    for (const token of tokens) {
+      if (token.location.type !== 'supplyPile') continue;
+      // Render unowned tokens with a neutral color.
+      const cardKey = token.location.cardKey;
+      const tokenDefinition = tokenDefinitions[token.tokenId];
+      const label = this.getTokenShortLabel(token.tokenId, tokenDefinition);
+      const color = this.parseColor(
+        token.ownerId !== undefined && token.ownerId !== null
+          ? playerColorMap.get(token.ownerId) ?? '#ffffff'
+          : '#cccccc'
+      );
+      tokensByPile[cardKey] ??= [];
+      tokensByPile[cardKey].push({
+        id: token.id,
+        label,
+        color,
+      });
+    }
+    
+    piles.forEach(pile => {
+      const key = pile.pileKey;
+      pile.tokenBadges = key ? (tokensByPile[key] ?? []) : [];
+    });
+  }
+  
+  // Maps token definitions to short labels for compact pile display.
+  private getTokenShortLabel(tokenId: TokenId, tokenDefinition?: TokenDefinition): string {
+    const labelMap: Record<string, string> = {
+      'adventures:plus-action': 'A',
+      'adventures:plus-buy': 'B',
+      'adventures:plus-card': 'C',
+      'adventures:plus-coin': '$',
+    };
+    return labelMap[tokenId] ?? tokenDefinition?.name ?? 'T';
+  }
+  
+  // Parses a hex color string into a numeric color for Pixi.
+  private parseColor(color: string): number {
+    if (!color) return 0xffffff;
+    const normalized = color.replace('#', '');
+    return Number.parseInt(normalized, 16);
   }
 }

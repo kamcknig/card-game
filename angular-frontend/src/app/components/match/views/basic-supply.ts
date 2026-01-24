@@ -75,6 +75,7 @@ export class BasicSupplyView extends Container {
       const pileView = new PileView({ size: 'half' });
       pileView.y = idx * SMALL_CARD_HEIGHT + idx * STANDARD_GAP;
       pileView.label = `pile:${card.cardKey}`;
+      pileView.pileKey = card.cardKey;
       this._cardContainer.addChild(pileView);
     }
 
@@ -88,6 +89,7 @@ export class BasicSupplyView extends Container {
       pileView.x = SMALL_CARD_WIDTH + STANDARD_GAP;
       pileView.y = idx * SMALL_CARD_HEIGHT + idx * STANDARD_GAP;
       pileView.label = `pile:${card.cardKey}`;
+      pileView.pileKey = card.cardKey;
       this._cardContainer.addChild(pileView);
     }
   }

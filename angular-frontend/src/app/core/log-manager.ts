@@ -53,6 +53,13 @@ export const logManager = {
         msg = selfId === playerId ? `%Y% gained ${amount}` : `%P${player?.id}% gained ${amount}`;
         break;
       }
+      case 'tokenEffect': {
+        const cardName = cardsById[logEntry.cardId]?.cardName;
+        msg = selfId === playerId
+          ? `%Y% triggered ${logEntry.effectText} from <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`
+          : `%P${player?.id}% triggered ${logEntry.effectText} from <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`;
+        break;
+      }
       case 'gainCard': {
         const cardName = cardsById[logEntry.cardId]?.cardName;
         msg = selfId === playerId
