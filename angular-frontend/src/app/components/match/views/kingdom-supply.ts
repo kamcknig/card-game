@@ -9,6 +9,7 @@ import { kingdomSupplies } from '../../../state/match-logic';
 import { computed } from 'nanostores';
 import { getCardSourceStore } from '../../../state/card-source-store';
 import { TokenBadgeData } from './pile';
+import { getTokenShortLabel } from './token-utils';
 
 export class KingdomSupplyView extends Container {
   private _background: Container;
@@ -137,7 +138,7 @@ export class KingdomSupplyView extends Container {
       // Render unowned tokens with a neutral color.
       const cardKey = token.location.cardKey;
       const tokenDefinition = tokenDefinitions[token.tokenId];
-      const label = this.getTokenShortLabel(token.tokenId, tokenDefinition);
+      const label = getTokenShortLabel(token.tokenId, tokenDefinition);
       const color = this.parseColor(
         token.ownerId !== undefined && token.ownerId !== null
           ? playerColorMap.get(token.ownerId) ?? '#ffffff'
@@ -155,17 +156,6 @@ export class KingdomSupplyView extends Container {
       const key = pile.pileKey;
       pile.tokenBadges = key ? (tokensByPile[key] ?? []) : [];
     });
-  }
-  
-  // Maps token definitions to short labels for compact pile display.
-  private getTokenShortLabel(tokenId: TokenId, tokenDefinition?: TokenDefinition): string {
-    const labelMap: Record<string, string> = {
-      'adventures:plus-action': 'A',
-      'adventures:plus-buy': 'B',
-      'adventures:plus-card': 'C',
-      'adventures:plus-coin': '$',
-    };
-    return labelMap[tokenId] ?? tokenDefinition?.name ?? 'T';
   }
   
   // Parses a hex color string into a numeric color for Pixi.

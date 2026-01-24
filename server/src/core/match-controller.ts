@@ -1,4 +1,6 @@
 import {
+  Card,
+  CardId,
   CardKey,
   CardNoId,
   ComputedMatchConfiguration,
@@ -59,6 +61,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _registeredEvents: (keyof ServerListenEvents)[] = [];
   private _findCards: FindCardsFn = (...args) => ([]);
   private readonly _cardSourceController: CardSourceController;
+  // Cached match state override loaded from disk, if provided.
+  private _loadedMatchState: { match: Match; cardLibrary: Record<CardId, Card> } | null = null;
   
   private _playerHands: Record<CardKey, number>[] = [
     /*{
@@ -124,6 +128,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this.broadcastPatch({} as Match);
     
     const snapshot = this.getMatchSnapshot();
+    // Load an optional match override from disk for local dev/debugging.
+    this._loadedMatchState = await this.tryLoadMatchStateOverride();
     
     this._logManager = new LogManager({
       socketMap: this._socketMap,
@@ -193,15 +199,25 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       playerScoreDecoratorRegistrar: (val: PlayerScoreDecorator) => this._expansionScoringFns.push(val),
     });
     
-    this._matchConfiguration = newConfig;
-    
-    this._match.players = this._matchConfiguration.players;
-    this.createBaseSupply(this._matchConfiguration);
-    this.createKingdom(this._matchConfiguration);
-    this.createEvents(this._matchConfiguration);
-    this.createNonSupplyCards(this._matchConfiguration);
-    this.createPlayerDecks(this._matchConfiguration);
-    this._match.config = this._matchConfiguration;
+    // Use the loaded match state if provided; otherwise build a fresh match state.
+    if (this._loadedMatchState) {
+      this.applyLoadedMatchState(this._loadedMatchState.match);
+      this.loadCardLibraryFromState(this._loadedMatchState.cardLibrary);
+      this._matchConfiguration = this._loadedMatchState.match.config ?? newConfig;
+      // Ensure match config is always populated for downstream logic.
+      this._match.config = this._match.config ?? this._matchConfiguration;
+    }
+    else {
+      this._matchConfiguration = newConfig;
+      
+      this._match.players = this._matchConfiguration.players;
+      this.createBaseSupply(this._matchConfiguration);
+      this.createKingdom(this._matchConfiguration);
+      this.createEvents(this._matchConfiguration);
+      this.createNonSupplyCards(this._matchConfiguration);
+      this.createPlayerDecks(this._matchConfiguration);
+      this._match.config = this._matchConfiguration;
+    }
     
     console.log(`[match] ready, sending to clients and listening for when clients are ready`);
     
@@ -213,6 +229,39 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       s.emit('matchReady');
       s.on('clientReady', this.onClientReady);
     });
+  }
+
+  // Attempts to load a match state JSON override from disk for development.
+  private async tryLoadMatchStateOverride(): Promise<{ match: Match; cardLibrary: Record<CardId, Card> } | null> {
+    const matchStatePath = Deno.env.get('MATCH_STATE_PATH');
+    if (!matchStatePath) return null;
+    try {
+      const contents = await Deno.readTextFile(matchStatePath);
+      const parsed = JSON.parse(contents) as { match: Match; cardLibrary: Record<CardId, Card> };
+      if (!parsed?.match || !parsed?.cardLibrary) {
+        throw new Error('match state file must include match and cardLibrary');
+      }
+      console.log(`[match] loaded match state override from ${matchStatePath}`);
+      return parsed;
+    }
+    catch (error) {
+      console.warn(`[match] failed to load match state override from ${matchStatePath}`);
+      console.error(error);
+      return null;
+    }
+  }
+
+  // Applies a loaded match state onto the current match instance.
+  private applyLoadedMatchState(loadedMatch: Match): void {
+    Object.assign(this._match, loadedMatch);
+  }
+
+  // Loads a card library snapshot for a loaded match state.
+  private loadCardLibraryFromState(cardLibrary: Record<CardId, Card>): void {
+    for (const card of Object.values(cardLibrary)) {
+      // Rehydrate card instances so downstream logic uses Card class methods.
+      this._cardLibrary.addCard(new Card({ ...card }));
+    }
   }
   
   private clientEventRegistrar<T extends keyof ServerListenEvents>(event: T, handler: ServerListenEvents[T]) {
@@ -357,6 +406,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   public getMatchSnapshot(): Match {
     this._cardLibSnapshot = structuredClone(this._cardLibrary.getAllCards());
     return structuredClone(this._match);
+  }
+
+  // Returns a full match state export for debugging and local test setups.
+  public exportMatchState(): { match: Match; cardLibrary: Record<CardId, Card> } {
+    return {
+      match: structuredClone(this._match),
+      cardLibrary: structuredClone(this._cardLibrary.getAllCards()),
+    };
   }
   
   async runGameAction<K extends GameActions>(

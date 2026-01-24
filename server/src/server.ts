@@ -14,7 +14,7 @@ if (Deno.env.get('LOG_TO_FILE')?.toLowerCase() === 'false') {
 
 log.init();
 
-const PORT = toNumber(process.env.PORT) || 3001;
+const PORT = toNumber(Deno.env.get('PORT')) || 3001;
 
 const game = new Game();
 
@@ -40,8 +40,26 @@ io.on('connection', (socket) => {
     game.addPlayer(sessionId, socket);
 });
 
+const ioHandler = io.handler();
+
 Deno.serve({
-    handler: io.handler(),
+    handler: (req, info) => {
+        const url = new URL(req.url);
+        // Debug-only endpoint to export a full match state snapshot.
+        if (url.pathname === '/debug/match-state') {
+            if (Deno.env.get('MATCH_STATE_EXPORT_ENABLED') !== 'true') {
+                return new Response('match state export disabled', { status: 403 });
+            }
+            const exportState = game.exportMatchState();
+            if (!exportState) {
+                return new Response('match not initialized', { status: 400 });
+            }
+            return new Response(JSON.stringify(exportState), {
+                headers: { 'content-type': 'application/json' },
+            });
+        }
+        return ioHandler(req, info);
+    },
     port: PORT,
 });
 

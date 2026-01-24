@@ -1,5 +1,5 @@
 import { AppSocket, MatchBaseConfiguration } from '../types.ts';
-import { CardNoId, ExpansionListElement, MatchConfiguration, Player, PlayerId, } from 'shared/shared-types.ts';
+import { Card, CardId, CardNoId, ExpansionListElement, Match, MatchConfiguration, Player, PlayerId, } from 'shared/shared-types.ts';
 import { createNewPlayer } from '../utils/create-new-player.ts';
 import { io } from '../server.ts';
 import { MatchController } from './match-controller.ts';
@@ -116,6 +116,12 @@ export class Game {
     );
     
     this.initializeFuseSearch();
+  }
+
+  // Exports the current match state and card library for local debug tooling.
+  public exportMatchState(): { match: Match; cardLibrary: Record<CardId, Card> } | null {
+    if (!this._matchController) return null;
+    return this._matchController.exportMatchState();
   }
   
   public addPlayer(sessionId: string, socket: AppSocket) {
