@@ -4,19 +4,17 @@ import {
   CardExpansionModule,
   CardLifecycleCallbackContext,
   CardLifecycleEventArgMap,
-  ReactionTemplate,
-  TriggerEventType,
 } from "../../types.ts";
 import {findOrderedTargets} from "../../utils/find-ordered-targets.ts";
 import {isLocationInPlay} from "../../utils/is-in-play.ts";
 import {getPlayerStartingFrom} from "shared/get-player-position-utils.ts";
 import {getCardsInPlay} from "../../utils/get-cards-in-play.ts";
 import {getTurnPhase} from "../../utils/get-turn-phase.ts";
-import {castArray} from "es-toolkit/compat";
 import {adventuresTokenIds} from "./token-ids-adventures.ts";
 import {tokenDefinitionMap} from "../../core/tokens/token-definition-map.ts";
 import {getCurrentPlayer} from "../../utils/get-current-player.ts";
 import {CardPriceRule} from "../../core/card-price-rules-controller.ts";
+import {addDurationEffect} from "../../utils/add-duration-effect.ts";
 
 // Determines the card that defines the pile's type by matching the pile randomizer.
 // todo: the randomizer card needs to be part of a card's definition or in the library creation and game/match creation.
@@ -122,38 +120,7 @@ const applyBridgeTrollCostReduction = (
  * the system doesn't currently auto-detect this and remove any triggers. so you must manually remove the trigger
  * in the onLeavePlay lifecycle hook of the card expansion
  */
-export const addDurationEffect = <T extends TriggerEventType>(
-  card: Card,
-  context: CardEffectFunctionContext,
-  triggeredTemplate: ReactionTemplate<T> | ReactionTemplate<T>[],
-) => {
-  // register event for the cleanup phase to move the card to the activeDuration zone. This will leave it "in play,"
-  // but will prevent it from being discarded
-  context.reactionManager.registerSystemTemplate(card, "startTurnPhase", {
-    playerId: context.playerId,
-    once: true,
-    allowMultipleInstances: true,
-    condition: async (conditionArgs) => getTurnPhase(conditionArgs.trigger.args.phaseIndex) === "cleanup",
-    triggeredEffectFn: async (triggeredArgs) => {
-      console.log(
-        `[${card.cardKey} duration effect] moving to activeDuration zone`,
-      );
-
-      await triggeredArgs.runGameActionDelegate("moveCard", {
-        cardId: card.id,
-        to: { location: "activeDuration" },
-      });
-    },
-  });
-
-  triggeredTemplate = castArray(triggeredTemplate);
-
-  // register the trigger to run when the duration card triggers
-
-  for (const triggeredTemplateElement of triggeredTemplate) {
-    context.reactionManager.registerReactionTemplate(triggeredTemplateElement);
-  }
-};
+// Duration helper is shared in utils to keep duration flow consistent across expansions.
 
 const expansion: CardExpansionModule = {
   "amulet": {
