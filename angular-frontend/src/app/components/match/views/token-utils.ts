@@ -8,6 +8,7 @@ export const getTokenShortLabel = (tokenId: TokenId, tokenDefinition?: TokenDefi
     'adventures:plus-card': '+1C',
     'adventures:plus-coin': '+1$',
     'adventures:minus-coin': '-1$',
+    'adventures:minus-card': '-1C',
   };
   return labelMap[tokenId] ?? tokenDefinition?.name ?? 'T';
 };

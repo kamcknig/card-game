@@ -42,4 +42,12 @@ export const registerAdventuresTokenDefinitions = (): void => {
     duration: 'oneShot',
     expansion: 'adventures',
   });
+  
+  registerTokenDefinition({
+    id: adventuresTokenIds.minusCard,
+    name: '-1 Card token',
+    rulesText: 'The next time you draw cards, draw one fewer.',
+    duration: 'oneShot',
+    expansion: 'adventures',
+  });
 };

@@ -153,6 +153,12 @@
     },
     "type": ["ACTION"]
   },
+  "relic": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["TREASURE", "ATTACK"]
+  },
   "royal-carriage": {
     "cardName": "Royal Carriage",
     "cost": {

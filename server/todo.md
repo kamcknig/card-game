@@ -98,7 +98,6 @@ Token durations can include
 skipped
 - giant
 - ranger
-- relic
 - royal carriage
 - events
   - ball

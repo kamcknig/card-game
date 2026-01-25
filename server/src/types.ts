@@ -387,6 +387,12 @@ export type TriggerEventTypeContext = {
     // Optional source card for token/log attribution.
     source?: CardId;
   },
+  drawCards: {
+    playerId: PlayerId;
+    count: number;
+    // Optional source card for token/log attribution.
+    source?: CardId;
+  },
   cardTrashed: {
     cardId: CardId;
     playerId: PlayerId;

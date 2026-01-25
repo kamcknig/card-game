@@ -464,6 +464,38 @@ const expansion: CardExpansionModule = {
       });
     },
   },
+  "relic": {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[relic effect] gaining 2 treasure`);
+      await cardEffectArgs.runGameActionDelegate("gainTreasure", { count: 2 });
+
+      const targetPlayerIds = findOrderedTargets({
+        match: cardEffectArgs.match,
+        appliesTo: "ALL_OTHER",
+        startingPlayerId: cardEffectArgs.playerId,
+      }).filter((playerId) =>
+        cardEffectArgs.reactionContext?.[playerId]?.result !== "immunity"
+      );
+
+      for (const targetPlayerId of targetPlayerIds) {
+        const alreadyHasToken = Object.values(cardEffectArgs.match.tokens ?? {})
+          .some((token) =>
+            token.tokenId === adventuresTokenIds.minusCard &&
+            token.ownerId === targetPlayerId &&
+            token.location.type === "playerDeck" &&
+            token.location.playerId === targetPlayerId
+          );
+        if (alreadyHasToken) continue;
+        // Place the -1 Card token on top of each affected player's deck.
+        // Include the source card so token placement logs can attribute it.
+        await cardEffectArgs.runGameActionDelegate("placeToken", {
+          tokenId: adventuresTokenIds.minusCard,
+          ownerId: targetPlayerId,
+          location: { type: "playerDeck", playerId: targetPlayerId },
+        }, { loggingContext: { source: cardEffectArgs.cardId } });
+      }
+    },
+  },
   "caravan-guard": {
     registerLifeCycleMethods: () => ({
       onLeavePlay: async (args, eventArgs) => {

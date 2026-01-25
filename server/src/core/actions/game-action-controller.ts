@@ -1036,11 +1036,21 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     const { playerId, count } = args;
     
     console.log(`[drawCard action] player ${playerId} drawing ${count} card(s)`);
+
+    let drawCount = count ?? 1;
+    // Allow reactions to modify incoming draw amounts (e.g., -1 Card token).
+    const trigger = new ReactionTrigger('drawCards', {
+      playerId,
+      count: drawCount,
+      source: context?.loggingContext?.source,
+    });
+    await this.reactionManager.runTrigger({ trigger });
+    drawCount = Math.max(0, trigger.args.count);
     
     const deck = this._cardSourceController.getSource('playerDeck', playerId);
     const drawnCardIds: CardId[] = [];
     
-    for (let i = 0; i < (count ?? 1); i++) {
+    for (let i = 0; i < drawCount; i++) {
       if (deck.length < 1) {
         console.log(`[drawCard action] Shuffling discard pile`);
         await this.shuffleDeck({ playerId });

@@ -33,6 +33,7 @@ import { getCardSourceStore } from '../../../../state/card-source-store';
 import { OtherCardLikeView } from '../other-card-like-view';
 import { CardLikeView } from '../card-like-view';
 import { PileView } from '../pile';
+import { tokenDefinitionStore } from '../../../../state/token-definition-state';
 
 export class MatchScene extends Scene {
   private _board: Container = new Container();
@@ -118,6 +119,7 @@ export class MatchScene extends Scene {
       console.log(error);
     }
   }
+
 
   private onPauseGameUpdated = (paused: boolean) => {
     if (paused) {
@@ -221,7 +223,10 @@ export class MatchScene extends Scene {
       $cardIds: getCardSourceStore('playerDeck', this._selfId),
       label: 'DECK',
       cardFacing: 'back',
-      alwaysShowCountBadge: true
+      alwaysShowCountBadge: true,
+      tokenPlayerId: this._selfId,
+      $match: matchStore,
+      $tokenDefinitions: tokenDefinitionStore
     });
     this.addChild(this._deck);
 
@@ -735,4 +740,5 @@ export class MatchScene extends Scene {
       }
     }
   }
+
 }

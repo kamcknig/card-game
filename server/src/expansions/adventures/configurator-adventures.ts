@@ -45,9 +45,49 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
             token.location.playerId === player.id
           );
           if (!tokenEntry) return;
+
+          console.log(`[adventures treasureGain trigger] - receiving one less treasure`);
+
           // Consume the -$1 token once when a positive treasure gain occurs.
           trigger.args.count = Math.max(0, trigger.args.count - 1);
-          await runGameActionDelegate('removeToken', { tokenInstanceId: tokenEntry[0] });
+          // Carry the treasure source into the token consumption log.
+          await runGameActionDelegate('removeToken', { tokenInstanceId: tokenEntry[0] }, { loggingContext: { source: trigger.args.source } });
+        }
+      });
+      args.reactionManager.registerReactionTemplate({
+        id: `adventures-minus-card-token:0:drawCards:${player.id}`,
+        listeningFor: 'drawCards',
+        playerId: player.id,
+        once: false,
+        compulsory: true,
+        allowMultipleInstances: true,
+        system: true,
+        condition: async ({ trigger, match }) => {
+          if (trigger.args.playerId !== player.id) return false;
+          if (trigger.args.count <= 0) return false;
+          // Only react when the player's -1 Card token is on their deck.
+          return Object.values(match.tokens ?? {}).some(token =>
+            token.tokenId === adventuresTokenIds.minusCard &&
+            token.ownerId === player.id &&
+            token.location.type === 'playerDeck' &&
+            token.location.playerId === player.id
+          );
+        },
+        triggeredEffectFn: async ({ match, runGameActionDelegate, trigger }) => {
+          const tokenEntry = Object.entries(match.tokens ?? {}).find(([_tokenInstanceId, token]) =>
+            token.tokenId === adventuresTokenIds.minusCard &&
+            token.ownerId === player.id &&
+            token.location.type === 'playerDeck' &&
+            token.location.playerId === player.id
+          );
+          if (!tokenEntry) return;
+
+          console.log(`[adventures drawCards trigger] - drawing one less card`);
+
+          // Consume the -1 Card token once when a draw is attempted.
+          trigger.args.count = Math.max(0, trigger.args.count - 1);
+          // Carry the draw source into the token consumption log.
+          await runGameActionDelegate('removeToken', { tokenInstanceId: tokenEntry[0] }, { loggingContext: { source: trigger.args.source } });
         }
       });
     }
