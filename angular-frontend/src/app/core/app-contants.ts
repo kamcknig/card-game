@@ -1,6 +1,12 @@
 export const SMALL_CARD_WIDTH: number = 164;
 export const SMALL_CARD_HEIGHT: number = 164;
 
+export const EVENT_CARD_WIDTH: number = 280;
+export const EVENT_CARD_HEIGHT: number = 124;
+
+export const SMALL_EVENT_CARD_WIDTH: number = 280;
+export const SMALL_EVENT_CARD_HEIGHT: number = 124;
+
 export const CARD_WIDTH: number = 175;
 export const CARD_HEIGHT: number = 280;
 

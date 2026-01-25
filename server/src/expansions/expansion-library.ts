@@ -1,4 +1,4 @@
-import { CardKey, CardNoId, EventNoId } from 'shared/shared-types.ts';
+import { CardKey, CardNoId, EventNoId } from 'shared/shared-types';
 
 export type ExpansionCardData = {
   basicSupply: Record<CardKey, CardNoId>,

@@ -1,9 +1,9 @@
 import { AppSocket, MatchBaseConfiguration } from '../types.ts';
-import { Card, CardId, CardNoId, ExpansionListElement, Match, MatchConfiguration, Player, PlayerId, } from 'shared/shared-types.ts';
+import { Card, CardId, CardNoId, EventNoId, ExpansionListElement, Match, MatchConfiguration, Player, PlayerId, } from 'shared/shared-types.ts';
 import { createComputerPlayer, createNewPlayer } from '../utils/create-new-player.ts';
 import { io } from '../server.ts';
 import { MatchController } from './match-controller.ts';
-import { rawCardLibrary } from '@expansions/expansion-library.ts';
+import { expansionLibrary, rawCardLibrary } from '@expansions/expansion-library.ts';
 import { applyPatch, compare } from 'https://esm.sh/v123/fast-json-patch@3.1.1/index.js';
 import Fuse, { IFuseOptions } from 'fuse.js';
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
@@ -45,6 +45,8 @@ export class Game {
   private _matchConfiguration: MatchConfiguration | undefined;
   private _availableExpansion: ExpansionListElement[] = [];
   private _fuse: Fuse<CardNoId> | undefined;
+  // Event search uses a separate index from kingdom cards.
+  private _eventFuse: Fuse<EventNoId> | undefined;
   
   constructor() {
     console.log(`[game] created`);
@@ -70,6 +72,7 @@ export class Game {
     }
     
     this.initializeFuseSearch();
+    this.initializeEventFuse();
     
     this.createNewMatch();
   }
@@ -102,8 +105,36 @@ export class Game {
     this._fuse = new Fuse(libraryArr, fuseOptions, index);
   }
   
+  // Builds the event search index from loaded expansion events.
+  private initializeEventFuse() {
+    console.log(`[game] initializing event fuse search`);
+    
+    if (this._eventFuse) {
+      this._eventFuse.remove(() => true);
+      this._eventFuse = undefined;
+    }
+    
+    const eventLibraryArr = Object.values(expansionLibrary)
+      .flatMap(expansion => Object.values(expansion.events ?? {}));
+    const index = Fuse.createIndex(['cardName'], eventLibraryArr);
+    
+    const fuseOptions: IFuseOptions<EventNoId> = {
+      ignoreDiacritics: true,
+      minMatchCharLength: 1,
+      distance: 2,
+      keys: ['cardName']
+    };
+    this._eventFuse = new Fuse(eventLibraryArr, fuseOptions, index);
+  }
+  
   private onSearchCards = (searchStr: string) => {
     const results = this._fuse?.search(searchStr);
+    return results?.map(r => r.item) ?? [];
+  };
+  
+  // Returns event search results for the given query.
+  private onSearchEvents = (searchStr: string) => {
+    const results = this._eventFuse?.search(searchStr);
     return results?.map(r => r.item) ?? [];
   };
   
@@ -116,6 +147,7 @@ export class Game {
     );
     
     this.initializeFuseSearch();
+    this.initializeEventFuse();
   }
 
   // Exports the current match state and card library for local debug tooling.
@@ -166,6 +198,10 @@ export class Game {
       socket.on('addComputerPlayer', (count?: number) => this.onAddComputerPlayer(player.id, count));
       socket.on('searchCards', (playerId, searchTerm) => {
         this._socketMap.get(playerId)?.emit('searchCardResponse', this.onSearchCards(searchTerm));
+      });
+      // Relay event search results to the requesting client.
+      socket.on('searchEvents', (playerId, searchTerm) => {
+        this._socketMap.get(playerId)?.emit('searchEventResponse', this.onSearchEvents(searchTerm));
       });
     }
     
@@ -218,6 +254,7 @@ export class Game {
     if (player.id === this.owner?.id) {
       this._socketMap.get(player.id)?.off('matchConfigurationUpdated');
       this._socketMap.get(player.id)?.off('searchCards');
+      this._socketMap.get(player.id)?.off('searchEvents');
       this._socketMap.get(player.id)?.off('addComputerPlayer');
       
       const replacement = this.players.find(p => p.connected);
@@ -226,6 +263,10 @@ export class Game {
         io.in('game').emit('gameOwnerUpdated', replacement.id);
         this._socketMap.get(replacement.id)?.on('searchCards', (playerId, searchTerm) => {
           this._socketMap.get(playerId)?.emit('searchCardResponse', this.onSearchCards(searchTerm));
+        });
+        // Relay event search results to the requesting client.
+        this._socketMap.get(replacement.id)?.on('searchEvents', (playerId, searchTerm) => {
+          this._socketMap.get(playerId)?.emit('searchEventResponse', this.onSearchEvents(searchTerm));
         });
         this._socketMap.get(replacement.id)?.on('matchConfigurationUpdated', this.onMatchConfigurationUpdated);
         this._socketMap.get(replacement.id)?.on('addComputerPlayer', (count?: number) => this.onAddComputerPlayer(replacement.id, count));
@@ -320,6 +361,12 @@ export class Game {
       defaultMatchConfiguration.bannedKingdoms = structuredClone(newConfig.bannedKingdoms);
     }
     
+    const eventsPatch = compare(currentConfig.events, newConfig.events);
+    if (eventsPatch.length) {
+      // Persist the selected events in the default match configuration.
+      defaultMatchConfiguration.events = structuredClone(newConfig.events);
+    }
+    
     const patch = compare(currentConfig, newConfig);
     
     if (patch.length) {
@@ -405,6 +452,7 @@ export class Game {
       socket.off('playerReady');
       socket.off('matchConfigurationUpdated');
       socket.off('searchCards');
+      socket.off('searchEvents');
     });
     
     const colors = ['#10FF19', '#3c69ff', '#FF0BF2', '#FFF114', '#FF1F11', '#FF9900'];

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnDestroy } from '@angular/core';
-import { CardNoId, ExpansionListElement, MatchConfiguration, PlayerId } from 'shared/shared-types';
+import { CardNoId, EventNoId, ExpansionListElement, MatchConfiguration, PlayerId } from 'shared/shared-types';
 import { NanostoresService } from '@nanostores/angular';
 import { playerIdStore, selfPlayerIdStore } from '../../state/player-state';
 import { combineLatest, map, Observable, Subscription } from 'rxjs';
@@ -10,6 +10,7 @@ import { SocketService } from '../../core/socket-service/socket.service';
 import { gameOwnerIdStore } from '../../state/game-state';
 import { PlayerComponent } from './player-name-input/player-name-input.component';
 import { SelectKingdomModalComponent } from './select-kingdom-modal/select-kingdom-modal.component';
+import { SelectEventModalComponent } from './select-event-modal/select-event-modal.component';
 
 @Component({
   selector: 'app-match-configuration',
@@ -19,6 +20,7 @@ import { SelectKingdomModalComponent } from './select-kingdom-modal/select-kingd
     NgClass,
     PlayerComponent,
     SelectKingdomModalComponent,
+    SelectEventModalComponent,
     NgStyle
   ],
   templateUrl: './match-configuration.component.html',
@@ -31,13 +33,21 @@ export class MatchConfigurationComponent implements OnDestroy {
   matchExpansions$!: Observable<readonly string[]>;
   isGameOwner: boolean = false;
   preSelectedKingdoms: (CardNoId | null)[] = [];
+  // Tracks the fixed events selected for the match.
+  preSelectedEvents: (EventNoId | null)[] = [];
   selectingKingdom: boolean = false;
+  // Controls the event selection modal visibility.
+  selectingEvents: boolean = false;
   selectingBannedCards: boolean = false
   bannedKingdoms$: Observable<readonly CardNoId[]>;
 
   private gameOwnerSub: Subscription;
   private bannedKingdoms: CardNoId[] = [];
   private selectedKingdomsSub: Subscription;
+  // Keeps the preselected events list in sync with configuration changes.
+  private selectedEventsSub: Subscription;
+  // Events are capped to the base match limit.
+  private readonly _maxEvents: number = 2;
 
   constructor(
     private _nanoStoreService: NanostoresService,
@@ -68,6 +78,20 @@ export class MatchConfigurationComponent implements OnDestroy {
 
         this.preSelectedKingdoms = selectedKingdoms;
       });
+    
+    this.selectedEventsSub = this._nanoStoreService.useStore(matchConfigurationStore)
+      .pipe(map(config => config?.events
+        ?.sort((a, b) => a.cardKey.localeCompare(b.cardKey))))
+      .subscribe(selectedEvents => {
+        selectedEvents ??= [];
+        const remainingNulls = new Array(this._maxEvents - (selectedEvents?.length ?? 0)).fill(null);
+        
+        for (const _ of remainingNulls) {
+          selectedEvents.push(null as any);
+        }
+        
+        this.preSelectedEvents = selectedEvents;
+      });
 
     this.gameOwnerSub = combineLatest([
       this._nanoStoreService.useStore(gameOwnerIdStore),
@@ -75,11 +99,14 @@ export class MatchConfigurationComponent implements OnDestroy {
     ]).subscribe(([ownerId, playerId]) => this.isGameOwner = playerId === ownerId);
 
     this.preSelectedKingdoms = new Array(10).fill(null);
+    // Initialize event slots to the base limit.
+    this.preSelectedEvents = new Array(this._maxEvents).fill(null);
   }
 
   ngOnDestroy(): void {
     this.gameOwnerSub.unsubscribe();
     this.selectedKingdomsSub.unsubscribe()
+    this.selectedEventsSub.unsubscribe();
   }
 
   onToggleExpansion(expansion: ExpansionListElement) {
@@ -117,6 +144,20 @@ export class MatchConfigurationComponent implements OnDestroy {
 
     this.sendMatchConfigUpdate();
   }
+  
+  // Removes a selected event from the fixed event list.
+  deleteEvent(event: EventNoId) {
+    const idx = this.preSelectedEvents.findIndex(k => k !== null && k?.cardKey === event.cardKey);
+    this.preSelectedEvents = this.preSelectedEvents
+      .toSpliced(idx, 1, null)
+      .sort((a, b) => {
+        if (a === null && b !== null) return 1;
+        if (a !== null && b === null) return -1;
+        else return 0;
+      });
+    
+    this.sendMatchConfigUpdate();
+  }
 
   /**
    * user has selected a kingdom card from the modal to add to the starting kingdom
@@ -129,11 +170,27 @@ export class MatchConfigurationComponent implements OnDestroy {
     this.selectingKingdom = false;
     this.sendMatchConfigUpdate();
   }
+  
+  // Adds a selected event to the fixed event list.
+  onEventSelected($event: EventNoId) {
+    const idx = this.preSelectedEvents.findIndex(k => k === null);
+    if (idx === -1) {
+      // Guard against selecting more events than the configured limit.
+      return;
+    }
+    this.preSelectedEvents = this.preSelectedEvents.toSpliced(idx, 1, $event);
+    this.selectingEvents = false;
+    this.sendMatchConfigUpdate();
+  }
 
   private sendMatchConfigUpdate() {
     this._socketService.emit('matchConfigurationUpdated', {
       ...matchConfigurationStore.get() as MatchConfiguration,
       bannedKingdoms: this.bannedKingdoms,
+      // Pass the fixed events through the match configuration.
+      events: this.preSelectedEvents
+        .filter(event => !!event)
+        .map(event => event as EventNoId),
       kingdomSupply: this.preSelectedKingdoms
         .filter(card => !card?.isBasic)
         .filter(card => !!card)

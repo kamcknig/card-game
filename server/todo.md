@@ -74,27 +74,6 @@ use randomizer null to remove cards like the individual knights. then you can ad
 library json. when this card is picked the expansion configurator can check for that kingdom in the config and replace
 it with the individual knight. this will remove the need for the randomizer other than removing cards from it.
 
-## Features for Adventures expansion
-
-### Tokens
-
-Coffers are tokens though I think they are a little different than the tokens added in this expansion.
-
-The tokens added here are things like the "+1 action token", "+1 treasure token", etc. 
-
-Token locations can include
-- action supply piles e.g., +1 action token, -2 cost token, etc.
-- player decks e.g., -1 card token
-- in front of player e.g., -1 coin token
-- "global" e.g., journey token
-- even more e.g., the inheritance event - putting aside a card and the token being "on the card"
-
-Token durations can include
-- happening one time e.g., -1 coin token
-- permanent/semi-permanent e.g., +1 action token
-
-### Events
-
 skipped
 - giant
 - ranger

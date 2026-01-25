@@ -243,6 +243,8 @@ export type ServerEmitEvents = {
   playerNameUpdated: (playerId: PlayerId, name: string) => void;
   playerReady: (playerId: PlayerId, ready: boolean) => void;
   searchCardResponse: (cardData: CardNoId[]) => void;
+  // Sends event search results to the client.
+  searchEventResponse: (eventData: EventNoId[]) => void;
   selectCard: (signalId: string, selectCardArgs: SelectActionCardArgs & { selectableCardIds: CardId[] }) => void;
   setPlayerList: (players: Player[]) => void;
   setCardLibrary: (library: Record<CardKey, Card>) => void;
@@ -265,6 +267,8 @@ export interface ServerListenEvents {
   playerReady: (playerId: PlayerId, ready: boolean) => void;
   playAllTreasure: (playerId: PlayerId) => void;
   searchCards: (playerId: PlayerId, searchStr: string) => void;
+  // Requests event search results from the server.
+  searchEvents: (playerId: PlayerId, searchStr: string) => void;
   updatePlayerName: (playerId: PlayerId, name: string) => void;
   userInputReceived: (signalId: string, input: unknown) => void;
 }

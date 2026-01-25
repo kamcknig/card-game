@@ -49,35 +49,68 @@
     </div>
   </section>
 
-  <section class="kingdom-section">
-    <h2 class="section-title">Kingdom</h2>
+  <section>
+      <section class="kingdom-section">
+        <h2 class="section-title">Kingdom</h2>
 
-    <div class="kingdom-list">
-      <!-- Track by cardKey, fallback to index for null slots to keep keys unique. -->
-      @for (kingdom of preSelectedKingdoms; track kingdom?.cardKey ?? $index) {
-        <div
-          class="kingdom"
-          [ngStyle]="{'cursor': isGameOwner && kingdom === null ? 'pointer' : 'default'}"
-          (click)="kingdom === null && isGameOwner ? selectingKingdom = true : null"
-        >
-          @if (kingdom !== null && isGameOwner) {
-            <div (click)="deleteKingdom(kingdom)" class="close-button">X</div>
+        <div class="kingdom-list">
+          <!-- Track by cardKey, fallback to index for null slots to keep keys unique. -->
+          @for (kingdom of preSelectedKingdoms; track kingdom?.cardKey ?? $index) {
+            <div
+              class="kingdom"
+              [ngStyle]="{'cursor': isGameOwner && kingdom === null ? 'pointer' : 'default'}"
+              (click)="kingdom === null && isGameOwner ? selectingKingdom = true : null"
+            >
+              @if (kingdom !== null && isGameOwner) {
+                <div (click)="deleteKingdom(kingdom)" class="close-button">X</div>
+              }
+              <div>
+                @if (kingdom !== null) {
+                  <img
+                    alt="{{kingdom.cardName}} image"
+                    ngSrc="{{kingdom.halfImagePath}}"
+                    height="122"
+                    width="122"
+                  />
+                } @else {
+                  <span class="no-kingdom">?</span>
+                }
+              </div>
+            </div>
           }
-          <div>
-            @if (kingdom !== null) {
-              <img
-                alt="{{kingdom.cardName}} image"
-                ngSrc="{{kingdom.halfImagePath}}"
-                height="122"
-                width="122"
-              />
-            } @else {
-              <span class="no-kingdom">?</span>
-            }
-          </div>
         </div>
-      }
-    </div>
+      </section>
+
+      <!-- ░░░  Events  ░░░ -->
+      <section class="events-section">
+        <h2 class="section-title">Events</h2>
+
+        <div class="events-list">
+          @for (event of preSelectedEvents; track event?.cardKey ?? $index) {
+            <div
+              class="event-slot"
+              [ngStyle]="{'cursor': isGameOwner && event === null ? 'pointer' : 'default'}"
+              (click)="event === null && isGameOwner ? selectingEvents = true : null"
+            >
+              @if (event !== null && isGameOwner) {
+                <div (click)="deleteEvent(event)" class="close-button">X</div>
+              }
+              <div>
+                @if (event !== null) {
+                  <img
+                    alt="{{event.cardName}} image"
+                    ngSrc="{{event.fullImagePath}}"
+                    height="124"
+                    width="280"
+                  />
+                } @else {
+                  <span class="no-event">?</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </section>
   </section>
 
   <section class="banned-cards-section">
@@ -121,4 +154,15 @@
     autofocus
     (kingdomSelected)="onKingdomSelected($event)">
   </app-select-kingdom-modal>
+}
+
+<!-- select events to include in match -->
+@if (selectingEvents) {
+  <app-select-event-modal
+    [excludedEvents]="preSelectedEvents"
+    [ngStyle]="{'visibility': selectingEvents ? 'visible' : 'hidden'}"
+    (close)="selectingEvents = false"
+    autofocus
+    (eventSelected)="onEventSelected($event)">
+  </app-select-event-modal>
 }
