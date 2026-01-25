@@ -58,6 +58,7 @@ export class Game {
       console.error(e);
     }
     
+    // Load preselected events from disk when available.
     try {
       const preselectedKingdoms = JSON.parse(Deno.readTextFileSync('./preselected-kingdoms.json')) as {
         name: string;
@@ -68,6 +69,14 @@ export class Game {
       console.log(defaultMatchConfiguration.preselectedKingdoms)
     } catch (e) {
       console.warn(`Couldn't read preselected-kingdoms.json`);
+      console.error(e);
+    }
+    
+    try {
+      const preselectedEvents = JSON.parse(Deno.readTextFileSync('./preselected-events.json')) as EventNoId[];
+      defaultMatchConfiguration.events = preselectedEvents;
+    } catch (e) {
+      console.warn(`Couldn't read preselected-events.json`);
       console.error(e);
     }
     
@@ -363,7 +372,8 @@ export class Game {
     
     const eventsPatch = compare(currentConfig.events, newConfig.events);
     if (eventsPatch.length) {
-      // Persist the selected events in the default match configuration.
+      // Persist selected events between sessions.
+      Deno.writeTextFileSync('./preselected-events.json', JSON.stringify(newConfig.events));
       defaultMatchConfiguration.events = structuredClone(newConfig.events);
     }
     
