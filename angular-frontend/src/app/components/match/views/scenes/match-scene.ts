@@ -603,6 +603,7 @@ export class MatchScene extends Scene {
     
     const pileNames = content.pileNames ?? [];
     const selectCount = content.selectCount;
+    const isOptional = content.optional ?? false;
     
     if (!pileNames.length) {
       this._socketService.emit('userInputReceived', signalId, []);
@@ -644,6 +645,12 @@ export class MatchScene extends Scene {
       const valid = validateCountSpec(selectCount, selected.length);
       button.button.alpha = valid ? 1 : .6;
       button.button.eventMode = valid ? 'static' : 'none';
+      if (!isOptional && typeof selectCount !== 'number' && selectCount.kind === 'exact' && selected.length === selectCount.count) {
+        doneListener();
+      }
+      if (!isOptional && typeof selectCount === 'number' && selected.length === selectCount) {
+        doneListener();
+      }
     };
     
     const selectedListenerCleanup = selectedPileStore.subscribe(selected => {

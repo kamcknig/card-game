@@ -117,7 +117,7 @@ export class ReactionManager {
       template = {
         ...reactionTemplate,
         listeningFor: event,
-        id: reactionTemplate && 'id' in reactionTemplate ? reactionTemplate.id : `${cardLikeOrTemplate.cardName}:${cardLikeOrTemplate}:${event}`
+        id: reactionTemplate && 'id' in reactionTemplate ? reactionTemplate.id : `${cardLikeOrTemplate.cardName}:${cardLikeOrTemplate.id}:${event}`
       } as ReactionTemplate<T>;
     }
     

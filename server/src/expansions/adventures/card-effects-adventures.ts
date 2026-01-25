@@ -2105,7 +2105,6 @@ const expansion: CardExpansionModule = {
                 playerId: triggeredEffectArgs.trigger.args.playerId,
                 prompt: "Which token?",
                 actionButtons: [
-                  { action: 0, label: "Cancel" },
                   ...tokenInstanceIds.map((t, idx) => ({
                     label: tokenDefinitionMap[tokens[t].tokenId].name,
                     action: idx + 1,
@@ -2152,13 +2151,15 @@ const expansion: CardExpansionModule = {
                   selectCount: { kind: "exact", count: 1 } as CountSpec,
                 },
               },
-            ) as { result?: string[] };
+            ) as string[];
 
-            const selectedPile = result?.result?.[0];
+            const selectedPile = result?.[0];
             if (!selectedPile) {
               console.warn(`[teacher effect] no pile selected`);
               return;
             }
+
+            console.log(`[teacher effect] selected ${selectedPile}`);
 
             await triggeredEffectArgs.runGameActionDelegate("moveToken", {
               tokenInstanceId: selectedTokenInstance,

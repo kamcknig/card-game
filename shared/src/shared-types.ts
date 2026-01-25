@@ -198,7 +198,7 @@ export type UserPromptKinds =
   | { type: 'overpay'; cost: number; }
   | { type: 'display-cards'; cardIds: CardId[]; }
   | { type: 'select'; cardIds: CardId[]; selectCount: CountSpec; selectableCardIds?: CardId[]; }
-  | { type: 'select-pile'; pileNames: CardKey[]; selectCount: CountSpec; };
+  | { type: 'select-pile'; pileNames: CardKey[]; selectCount: CountSpec; optional?: boolean; };
 
 export type UserPromptActionArgs = {
   playerId: PlayerId;

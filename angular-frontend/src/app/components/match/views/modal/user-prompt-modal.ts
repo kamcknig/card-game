@@ -46,7 +46,7 @@ export const userPromptModal = (
       clientSelectableCardsOverrideStore.set(null);
     };
 
-    const actionButtonListener = (args?: { action?: number; result?: unknown }) => {
+    const actionButtonListener = (args?: { action?: string | number; result?: unknown }) => {
       resolve({
         action: args?.action,
         result: args?.result ?? contentResults
