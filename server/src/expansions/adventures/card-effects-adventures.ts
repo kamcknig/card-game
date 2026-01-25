@@ -2107,21 +2107,23 @@ const expansion: CardExpansionModule = {
                 actionButtons: [
                   ...tokenInstanceIds.map((t, idx) => ({
                     label: tokenDefinitionMap[tokens[t].tokenId].name,
-                    action: idx + 1,
+                    action: idx,
                   })),
                 ],
               },
             ) as { action: number };
 
-            if (tokenChoice.action === 0) {
+            const selectedTokenInstanceId =
+              tokenInstanceIds[tokenChoice.action];
+            if (!selectedTokenInstanceId) {
+              console.warn(
+                `[teacher effect] selected token instance not found`,
+              );
               return;
             }
 
-            const selectedTokenInstance = tokenInstanceIds[tokenChoice.action - 1];
-            if (!selectedTokenInstance) {
-              console.warn(`[teacher effect] selected token instance not found`);
-              return;
-            }
+            const allTokens = Object.values(triggeredEffectArgs.match.tokens);
+            const ownedTokens = allTokens.filter((t) => t.ownerId === triggeredEffectArgs.trigger.args.playerId);
 
             const actionSupplyPiles = triggeredEffectArgs.match.config
               .kingdomSupply
@@ -2130,8 +2132,19 @@ const expansion: CardExpansionModule = {
                   supply.cards,
                   supply.name,
                 );
+
                 if (!pileCard?.type?.includes("ACTION")) return null;
-                return pileCard.randomizer ?? supply.name;
+
+                const pileName = pileCard.randomizer ?? supply.name;
+                // can't place on pile with any other tokens on it
+                if (
+                  ownedTokens.find((t) =>
+                    t.location.type === "supplyPile" &&
+                    t.location.cardKey === pileName
+                  )
+                ) return null;
+
+                return pileName;
               })
               .filter((pile): pile is string => !!pile);
 
@@ -2144,7 +2157,7 @@ const expansion: CardExpansionModule = {
               "userPrompt",
               {
                 playerId: triggeredEffectArgs.trigger.args.playerId,
-                prompt: "Which supply?",
+                prompt: "Which Action supply?",
                 content: {
                   type: "select-pile",
                   pileNames: actionSupplyPiles,
@@ -2162,7 +2175,7 @@ const expansion: CardExpansionModule = {
             console.log(`[teacher effect] selected ${selectedPile}`);
 
             await triggeredEffectArgs.runGameActionDelegate("moveToken", {
-              tokenInstanceId: selectedTokenInstance,
+              tokenInstanceId: selectedTokenInstanceId,
               location: { type: "supplyPile", cardKey: selectedPile },
             });
           },

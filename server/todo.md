@@ -101,7 +101,6 @@ skipped
 - ranger
 - relic
 - royal carriage
-- teacher
 - events
   - ball
   - ferry
