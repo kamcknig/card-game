@@ -47,9 +47,14 @@ export class Game {
   private _fuse: Fuse<CardNoId> | undefined;
   // Event search uses a separate index from kingdom cards.
   private _eventFuse: Fuse<EventNoId> | undefined;
+  // When true, the game ends automatically if no human players remain connected.
+  private readonly _endMatchWhenNoHumans: boolean;
   
   constructor() {
     console.log(`[game] created`);
+    // Configure whether to end the match when all human players leave (default: true).
+    const endOnNoHumansEnv = Deno.env.get('END_MATCH_ON_NO_HUMANS') ?? 'true';
+    this._endMatchWhenNoHumans = endOnNoHumansEnv.toLowerCase() !== 'false';
     try {
       const bannedKingdoms = JSON.parse(Deno.readTextFileSync('./banned-kingdoms.json')) as CardNoId[];
       defaultMatchConfiguration.bannedKingdoms = bannedKingdoms;
@@ -199,9 +204,12 @@ export class Game {
     io.in('game').emit('playerConnected', player);
     socket.emit('setPlayer', player);
     
-    if (!this.owner) {
+    if (!this.owner || this.owner.isComputer) {
       console.log(`[game] game owner does not exist, setting to ${player}`);
       this.owner = player;
+    }
+    
+    if (this.owner?.id === player.id) {
       socket.on('matchConfigurationUpdated', this.onMatchConfigurationUpdated);
       // Allow the owner to add computer players during lobby.
       socket.on('addComputerPlayer', (count?: number) => this.onAddComputerPlayer(player.id, count));
@@ -254,7 +262,7 @@ export class Game {
     player.ready = false;
     
     const hasConnectedHuman = this.players.some((p) => p.connected && !p.isComputer);
-    if (!hasConnectedHuman) {
+    if (!hasConnectedHuman && this._endMatchWhenNoHumans) {
       console.log('[game] no human players left in game, clearing game state completely',);
       this.clearMatch()
       return;
@@ -266,7 +274,7 @@ export class Game {
       this._socketMap.get(player.id)?.off('searchEvents');
       this._socketMap.get(player.id)?.off('addComputerPlayer');
       
-      const replacement = this.players.find(p => p.connected);
+      const replacement = this.players.find(p => p.connected && !p.isComputer);
       if (replacement) {
         this.owner = replacement;
         io.in('game').emit('gameOwnerUpdated', replacement.id);

@@ -29,7 +29,6 @@ all players, but native village and island mat cards  face down and can only be 
 
 # Higher priority
 
-- for overrides like cost overrides, look into rules that are applied based on filters rather than rules placed on every single card
 - player disconnection
   - when player disconnects - ask others to vote to continue. leave the player in game, they just skip their turn 
   - work on the use-case when a player disconnects while waiting on input for that player - when they reconnected
