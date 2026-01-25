@@ -1,10 +1,4 @@
-import {
-  Card,
-  CardId,
-  CardKey,
-  CardNoId,
-  CountSpec,
-} from "shared/shared-types.ts";
+import {Card, CardId, CardKey, CardNoId, CountSpec,} from "shared/shared-types";
 import {
   CardEffectFunctionContext,
   CardExpansionModule,
@@ -13,14 +7,16 @@ import {
   ReactionTemplate,
   TriggerEventType,
 } from "../../types.ts";
-import { findOrderedTargets } from "../../utils/find-ordered-targets.ts";
-import { isLocationInPlay } from "../../utils/is-in-play.ts";
-import { getPlayerStartingFrom } from "shared/get-player-position-utils.ts";
-import { getCardsInPlay } from "../../utils/get-cards-in-play.ts";
-import { getTurnPhase } from "../../utils/get-turn-phase.ts";
-import { castArray } from "es-toolkit/compat";
-import { adventuresTokenIds } from "./token-ids-adventures.ts";
-import { tokenDefinitionMap } from "../../core/tokens/token-definition-map.ts";
+import {findOrderedTargets} from "../../utils/find-ordered-targets.ts";
+import {isLocationInPlay} from "../../utils/is-in-play.ts";
+import {getPlayerStartingFrom} from "shared/get-player-position-utils.ts";
+import {getCardsInPlay} from "../../utils/get-cards-in-play.ts";
+import {getTurnPhase} from "../../utils/get-turn-phase.ts";
+import {castArray} from "es-toolkit/compat";
+import {adventuresTokenIds} from "./token-ids-adventures.ts";
+import {tokenDefinitionMap} from "../../core/tokens/token-definition-map.ts";
+import {getCurrentPlayer} from "../../utils/get-current-player.ts";
+import {CardPriceRule} from "../../core/card-price-rules-controller.ts";
 
 // Determines the card that defines the pile's type by matching the pile randomizer.
 // todo: the randomizer card needs to be part of a card's definition or in the library creation and game/match creation.
@@ -91,6 +87,28 @@ const addTravellerEffect = async (
   });
 };
 
+// Applies Bridge Troll's cost reduction for a single turn for the owning player.
+const applyBridgeTrollCostReduction = (
+  context: Pick<CardEffectFunctionContext, "cardLibrary" | "cardPriceController" | "match">,
+  ownerId: number,
+): (() => void) => {
+  const allCards = context.cardLibrary.getAllCardsAsArray();
+  const ruleCleanups: (() => void)[] = [];
+  for (const card of allCards) {
+    const rule: CardPriceRule = (_card, ruleContext) => {
+      if (ruleContext.playerId !== ownerId) {
+        return { restricted: false, cost: { treasure: 0 } };
+      }
+      if (getCurrentPlayer(context.match).id !== ownerId) {
+        return { restricted: false, cost: { treasure: 0 } };
+      }
+      return { restricted: false, cost: { treasure: -1 } };
+    };
+    ruleCleanups.push(context.cardPriceController.registerRule(card, rule));
+  }
+  return () => ruleCleanups.forEach((cleanup) => cleanup());
+};
+
 /**
  * Adds a system event for the start of the cleanup phase to move the card to the active duration zone so that it's not
  * discarded
@@ -115,12 +133,7 @@ export const addDurationEffect = <T extends TriggerEventType>(
     playerId: context.playerId,
     once: true,
     allowMultipleInstances: true,
-    condition: async (conditionArgs) => {
-      if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== "cleanup") {
-        return false;
-      }
-      return true;
-    },
+    condition: async (conditionArgs) => getTurnPhase(conditionArgs.trigger.args.phaseIndex) === "cleanup",
     triggeredEffectFn: async (triggeredArgs) => {
       console.log(
         `[${card.cardKey} duration effect] moving to activeDuration zone`,
@@ -239,10 +252,8 @@ const expansion: CardExpansionModule = {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
-          if (conditionArgs.trigger.args.turnNumber === turnPlayed) {
-            return false;
-          }
-          return true;
+          return conditionArgs.trigger.args.turnNumber !== turnPlayed;
+
         },
         triggeredEffectFn: async (triggeredArgs) => {
           console.log(`[amulet startTurn effect] re-running decision fn`);
@@ -345,6 +356,114 @@ const expansion: CardExpansionModule = {
       });
     },
   },
+  "bridge-troll": {
+    registerLifeCycleMethods: () => ({
+      onLeavePlay: async (args, eventArgs) => {
+        // Ensure the duration trigger is removed when the card leaves play.
+        args.reactionManager.unregisterTrigger(
+          `bridge-troll:${eventArgs.cardId}:startTurn`,
+        );
+      },
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.log(`[bridge-troll effect] gaining 1 buy`);
+      await cardEffectArgs.runGameActionDelegate("gainBuy", { count: 1 });
+
+      console.log(`[bridge-troll effect] applying cost reduction for this turn`);
+      const cleanupCurrentTurnRules = applyBridgeTrollCostReduction(
+        cardEffectArgs,
+        cardEffectArgs.playerId,
+      );
+
+      cardEffectArgs.reactionManager.registerReactionTemplate({
+        id: `bridge-troll:${cardEffectArgs.cardId}:endTurn`,
+        listeningFor: "endTurn",
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: async () => true,
+        triggeredEffectFn: async () => {
+          // Remove the current-turn cost reduction rules.
+          cleanupCurrentTurnRules();
+        },
+      });
+
+      const targetPlayerIds = findOrderedTargets({
+        match: cardEffectArgs.match,
+        appliesTo: "ALL_OTHER",
+        startingPlayerId: cardEffectArgs.playerId,
+      }).filter((playerId) =>
+        cardEffectArgs.reactionContext?.[playerId]?.result !== "immunity"
+      );
+
+      for (const targetPlayerId of targetPlayerIds) {
+        const alreadyHasToken = Object.values(cardEffectArgs.match.tokens ?? {})
+          .some((token) =>
+            token.tokenId === adventuresTokenIds.minusCoin &&
+            token.ownerId === targetPlayerId &&
+            token.location.type === "player" &&
+            token.location.playerId === targetPlayerId
+          );
+        if (alreadyHasToken) continue;
+        // Place the -$1 token in front of each affected player.
+        // Include the source card so the token placement log can attribute it.
+        await cardEffectArgs.runGameActionDelegate("placeToken", {
+          tokenId: adventuresTokenIds.minusCoin,
+          ownerId: targetPlayerId,
+          location: { type: "player", playerId: targetPlayerId },
+        }, { loggingContext: { source: cardEffectArgs.cardId } });
+      }
+
+      const turnPlayed = cardEffectArgs.match.turnNumber;
+      const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+
+      addDurationEffect(card, cardEffectArgs, {
+        id: `bridge-troll:${cardEffectArgs.cardId}:startTurn`,
+        listeningFor: "startTurn",
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: async (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
+            return false;
+          }
+          return conditionArgs.trigger.args.turnNumber !== turnPlayed;
+
+        },
+        triggeredEffectFn: async (triggeredArgs) => {
+          // Move the duration card back to play and apply the next-turn bonuses.
+          await triggeredArgs.runGameActionDelegate("moveCard", {
+            cardId: card.id,
+            to: { location: "playArea" },
+          });
+          console.log(`[bridge-troll startTurn effect] gaining 1 buy`);
+          await triggeredArgs.runGameActionDelegate("gainBuy", { count: 1 });
+          console.log(
+            `[bridge-troll startTurn effect] applying cost reduction for this turn`,
+          );
+          const cleanupNextTurnRules = applyBridgeTrollCostReduction(
+            triggeredArgs,
+            cardEffectArgs.playerId,
+          );
+          triggeredArgs.reactionManager.registerReactionTemplate({
+            id: `bridge-troll:${cardEffectArgs.cardId}:endTurn:duration`,
+            listeningFor: "endTurn",
+            playerId: cardEffectArgs.playerId,
+            once: true,
+            allowMultipleInstances: true,
+            compulsory: true,
+            condition: async () => true,
+            triggeredEffectFn: async () => {
+              // Remove the next-turn cost reduction rules.
+              cleanupNextTurnRules();
+            },
+          });
+        },
+      });
+    },
+  },
   "caravan-guard": {
     registerLifeCycleMethods: () => ({
       onLeavePlay: async (args, eventArgs) => {
@@ -372,8 +491,8 @@ const expansion: CardExpansionModule = {
             const cardPlayed = conditionArgs.cardLibrary.getCard(
               conditionArgs.trigger.args.cardId,
             );
-            if (!cardPlayed.type.includes("ATTACK")) return false;
-            return true;
+            return cardPlayed.type.includes("ATTACK");
+
           },
           triggeredEffectFn: async (triggeredArgs) => {
             console.log(
@@ -409,10 +528,8 @@ const expansion: CardExpansionModule = {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
-          if (conditionArgs.trigger.args.turnNumber === turnPlayed) {
-            return false;
-          }
-          return true;
+          return conditionArgs.trigger.args.turnNumber !== turnPlayed;
+
         },
         triggeredEffectFn: async (triggeredArgs) => {
           await triggeredArgs.runGameActionDelegate("moveCard", {
@@ -457,12 +574,10 @@ const expansion: CardExpansionModule = {
               conditionArgs.trigger.args.cardId,
             );
             if (!playedCard.type.includes("ATTACK")) return false;
-            if (
-              conditionArgs.trigger.args.playerId === cardEffectArgs.playerId
-            ) return false;
-            return true;
+            return conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId;
+
           },
-          triggeredEffectFn: async (triggeredArgs) => {
+          triggeredEffectFn: async () => {
             console.log(
               `[champion cardPlayed effect] attack played, gaining immunity`,
             );
@@ -481,10 +596,8 @@ const expansion: CardExpansionModule = {
               conditionArgs.trigger.args.cardId,
             );
             if (!playedCard.type.includes("ACTION")) return false;
-            if (
-              conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId
-            ) return false;
-            return true;
+            return conditionArgs.trigger.args.playerId === cardEffectArgs.playerId;
+
           },
           triggeredEffectFn: async (triggeredArgs) => {
             console.log(
@@ -530,8 +643,8 @@ const expansion: CardExpansionModule = {
             const cardPlayed = conditionArgs.cardLibrary.getCard(
               conditionArgs.trigger.args.cardId,
             );
-            if (!cardPlayed.type.includes("ACTION")) return false;
-            return true;
+            return cardPlayed.type.includes("ACTION");
+
           },
           triggeredEffectFn: async (triggeredArgs) => {
             console.log(
@@ -721,10 +834,8 @@ const expansion: CardExpansionModule = {
           if (conditionArgs.trigger.args.turnNumber === turnPlayed) {
             return false;
           }
-          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
-            return false;
-          }
-          return true;
+          return conditionArgs.trigger.args.playerId === cardEffectArgs.playerId;
+
         },
         triggeredEffectFn: async (triggeredArgs) => {
           console.log(`[dungeon startTurn effect] running`);
@@ -770,10 +881,8 @@ const expansion: CardExpansionModule = {
               cardGained,
               { playerId: cardEffectArgs.playerId },
             );
-            if (
-              cost.treasure <= 6 && (!cost.potion || cost.potion <= 0)
-            ) return false;
-            return true;
+            return !(cost.treasure <= 6 && (!cost.potion || cost.potion <= 0));
+
           },
           triggeredEffectFn: async (triggeredArgs) => {
             console.log(
@@ -925,10 +1034,8 @@ const expansion: CardExpansionModule = {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
-          if (conditionArgs.trigger.args.turnNumber === turnPlayed) {
-            return false;
-          }
-          return true;
+          return conditionArgs.trigger.args.turnNumber !== turnPlayed;
+
         },
         triggeredEffectFn: async (triggeredArgs) => {
           console.log(
@@ -980,10 +1087,8 @@ const expansion: CardExpansionModule = {
           compulsory: false,
           allowMultipleInstances: true,
           condition: async (conditionArgs) => {
-            if (
-              conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId
-            ) return false;
-            return true;
+            return conditionArgs.trigger.args.playerId === cardEffectArgs.playerId;
+
           },
           triggeredEffectFn: async (triggeredArgs) => {
             console.log(
@@ -1045,8 +1150,8 @@ const expansion: CardExpansionModule = {
           if (conditionArgs.trigger.args.playerId === cardEffectArgs.playerId) {
             return false;
           }
-          if (!conditionArgs.trigger.args.bought) return false;
-          return true;
+          return conditionArgs.trigger.args.bought;
+
         },
         triggeredEffectFn: async (triggeredArgs) => {
           const triggeringPlayerId = triggeredArgs.trigger.args.playerId;
@@ -1105,10 +1210,8 @@ const expansion: CardExpansionModule = {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
-          if (conditionArgs.trigger.args.turnNumber === turnPlayed) {
-            return false;
-          }
-          return true;
+          return conditionArgs.trigger.args.turnNumber !== turnPlayed;
+
         },
         triggeredEffectFn: async (triggeredArgs) => {
           await triggeredArgs.runGameActionDelegate("moveCard", {
@@ -1200,11 +1303,8 @@ const expansion: CardExpansionModule = {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
-          if (
-            conditionArgs.trigger.args.turnNumber ===
-              conditionArgs.match.turnNumber
-          ) return false;
-          return true;
+          return conditionArgs.trigger.args.turnNumber !== conditionArgs.match.turnNumber;
+
         },
         triggeredEffectFn: async (triggeredArgs) => {
           console.log(`[hireling startTurn effect] drawing 1 card`);
@@ -1686,10 +1786,8 @@ const expansion: CardExpansionModule = {
           allowMultipleInstances: true,
           playerId: cardEffectArgs.playerId,
           condition: async (conditionArgs) => {
-            if (
-              conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId
-            ) return false;
-            return true;
+            return conditionArgs.trigger.args.playerId === cardEffectArgs.playerId;
+
           },
           triggeredEffectFn: async (triggeredArgs) => {
             console.log(
@@ -1766,10 +1864,8 @@ const expansion: CardExpansionModule = {
               conditionArgs.trigger.args.cardId,
             );
             if (!cardPlayed.type.includes("ACTION")) return false;
-            if (
-              !getCardsInPlay(conditionArgs.findCards).includes(cardPlayed)
-            ) return false;
-            return true;
+            return getCardsInPlay(conditionArgs.findCards).includes(cardPlayed);
+
           },
           triggeredEffectFn: async (triggeredArgs) => {
             const cardToPlay = triggeredArgs.cardLibrary.getCard(
@@ -1984,10 +2080,8 @@ const expansion: CardExpansionModule = {
             conditionArgs.trigger.args.turnNumber ===
               conditionArgs.match.turnNumber
           ) return false;
-          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
-            return false;
-          }
-          return true;
+          return conditionArgs.trigger.args.playerId === cardEffectArgs.playerId;
+
         },
         triggeredEffectFn: async (triggeredArgs) => {
           await triggeredArgs.runGameActionDelegate("moveCard", {
@@ -2028,8 +2122,8 @@ const expansion: CardExpansionModule = {
             if (conditionArgs.trigger.args.playerId !== targetPlayerId) {
               return false;
             }
-            if (!conditionArgs.trigger.args.bought) return false;
-            return true;
+            return conditionArgs.trigger.args.bought;
+
           },
           triggeredEffectFn: async (triggeredArgs) => {
             const curseCards = triggeredArgs.findCards([
@@ -2206,10 +2300,8 @@ const expansion: CardExpansionModule = {
           allowMultipleInstances: true,
           compulsory: false,
           condition: async (conditionArgs) => {
-            if (
-              conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId
-            ) return false;
-            return true;
+            return conditionArgs.trigger.args.playerId === cardEffectArgs.playerId;
+
           },
           triggeredEffectFn: async (triggeredArgs) => {
             console.log(
@@ -2518,8 +2610,8 @@ const expansion: CardExpansionModule = {
             if (
               conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId
             ) return false;
-            if (conditionArgs.match.playerTreasure < 2) return false;
-            return true;
+            return conditionArgs.match.playerTreasure >= 2;
+
           },
           triggeredEffectFn: async (triggeredArgs) => {
             console.log(

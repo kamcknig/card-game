@@ -2,11 +2,14 @@ import { Card, CardId, LogEntry, LogEntrySource, Player, PlayerId } from 'shared
 import { cardStore } from '../state/card-state';
 import { playerStore, selfPlayerIdStore } from '../state/player-state';
 import { logEntryIdsStore, logStore } from '../state/log-state';
+import { tokenDefinitionStore } from '../state/token-definition-state';
 
 export const logManager = {
   addLogEntry(logEntry: LogEntry) {
     let msg: string = '';
     const cardsById = cardStore.get();
+    // Token definitions are used for readable log labels.
+    const tokenDefinitions = tokenDefinitionStore.get();
 
     let playerId: PlayerId | undefined = undefined;
     let player: Player | undefined = undefined;
@@ -58,6 +61,21 @@ export const logManager = {
         msg = selfId === playerId
           ? `%Y% triggered ${logEntry.effectText} from <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`
           : `%P${player?.id}% triggered ${logEntry.effectText} from <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`;
+        break;
+      }
+      // Token placement and consumption logs.
+      case 'tokenPlaced': {
+        const tokenName = tokenDefinitions[logEntry.tokenId]?.name ?? logEntry.tokenId;
+        msg = selfId === playerId
+          ? `%Y% received ${tokenName}`
+          : `%P${player?.id}% received ${tokenName}`;
+        break;
+      }
+      case 'tokenConsumed': {
+        const tokenName = tokenDefinitions[logEntry.tokenId]?.name ?? logEntry.tokenId;
+        msg = selfId === playerId
+          ? `%Y% used ${tokenName}`
+          : `%P${player?.id}% used ${tokenName}`;
         break;
       }
       case 'gainCard': {

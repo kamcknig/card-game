@@ -257,7 +257,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     counters?: number;
     facing?: TokenFacing;
     sourceCardId?: CardId;
-  }): Promise<TokenInstance> {
+  }, context?: GameActionContext): Promise<TokenInstance> {
     // Create a deterministic token instance id for stable patching.
     const tokenInstanceId = this.buildTokenInstanceId(args.tokenId);
     // Create the token instance with explicit location and ownership metadata.
@@ -273,6 +273,16 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     // Persist the token instance on match state for patch broadcasting.
     this.match.tokens[tokenInstanceId] = tokenInstance;
     console.log(`[placeToken action] placed token ${args.tokenId} as ${tokenInstanceId}`);
+    // Emit token placement logs only when callers provide logging context.
+    if (context && !context.loggingContext?.suppress) {
+      const targetPlayerId = args.ownerId ?? getCurrentPlayer(this.match).id;
+      this.logManager.addLogEntry({
+        type: 'tokenPlaced',
+        playerId: targetPlayerId,
+        tokenId: args.tokenId,
+        source: context.loggingContext?.source,
+      });
+    }
     return tokenInstance;
   }
 
@@ -284,11 +294,21 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     console.log(`[moveToken action] moved token ${args.tokenInstanceId}`);
   }
 
-  async removeToken(args: { tokenInstanceId: TokenInstanceId; }): Promise<void> {
+  async removeToken(args: { tokenInstanceId: TokenInstanceId; }, context?: GameActionContext): Promise<void> {
     // Ensure the token exists before removal for deterministic behavior.
-    this.getTokenInstance(args.tokenInstanceId);
+    const token = this.getTokenInstance(args.tokenInstanceId);
     delete this.match.tokens[args.tokenInstanceId];
     console.log(`[removeToken action] removed token ${args.tokenInstanceId}`);
+    // Emit token consumption logs only when callers provide logging context.
+    if (context && !context.loggingContext?.suppress) {
+      const targetPlayerId = token.ownerId ?? getCurrentPlayer(this.match).id;
+      this.logManager.addLogEntry({
+        type: 'tokenConsumed',
+        playerId: targetPlayerId,
+        tokenId: token.tokenId,
+        source: context.loggingContext?.source,
+      });
+    }
   }
 
   async consumeToken(args: { tokenInstanceId: TokenInstanceId; amount?: number; }): Promise<void> {
@@ -988,9 +1008,11 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     const currentPlayer = getCurrentPlayer(this.match);
     let gainAmount = args.count;
     // Allow reactions to modify incoming treasure gains.
+    // Include the source card so reactions can attribute token logs.
     const trigger = new ReactionTrigger('treasureGain', {
       playerId: currentPlayer.id,
       count: gainAmount,
+      source: context?.loggingContext?.source,
     });
     await this.reactionManager.runTrigger({ trigger });
     gainAmount = Math.max(0, trigger.args.count);

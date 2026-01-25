@@ -11,6 +11,13 @@
     },
     "type": ["ACTION"]
   },
+  "bridge-troll": {
+    "cardName": "Bridge Troll",
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "DURATION", "ATTACK"]
+  },
   "caravan-guard": {
     "cardName": "Caravan Guard",
     "cost": {

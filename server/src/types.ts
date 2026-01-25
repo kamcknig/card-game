@@ -384,6 +384,8 @@ export type TriggerEventTypeContext = {
   treasureGain: {
     playerId: PlayerId;
     count: number;
+    // Optional source card for token/log attribution.
+    source?: CardId;
   },
   cardTrashed: {
     cardId: CardId;

@@ -96,7 +96,6 @@ Token durations can include
 ### Events
 
 skipped
-- bridge troll
 - giant
 - ranger
 - relic
