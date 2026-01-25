@@ -56,13 +56,24 @@ export class CardPriceRulesController {
     
     const cards = this.cardLibrary.getAllCardsAsArray();
     for (const player of this.match.players) {
+      let hasOverrides = false;
       for (const card of cards) {
-        const { cost } =
-          this.applyRules(card, { playerId: player.id })
-        costOverrides[player.id] ??= {};
-        costOverrides[player.id][card.id] = {
-          cost
+        const { cost, restricted } = this.applyRules(card, { playerId: player.id });
+        const baseCost = card.cost;
+        const costChanged =
+          cost.treasure !== baseCost.treasure ||
+          (cost.potion ?? 0) !== (baseCost.potion ?? 0);
+        if (costChanged || restricted) {
+          // Only store entries when a rule actually changes cost or restriction state.
+          costOverrides[player.id] ??= {};
+          costOverrides[player.id][card.id] = {
+            cost
+          };
+          hasOverrides = true;
         }
+      }
+      if (!hasOverrides) {
+        delete costOverrides[player.id];
       }
     }
     
