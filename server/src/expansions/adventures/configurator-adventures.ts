@@ -15,6 +15,43 @@ const configurator: ExpansionConfiguratorFactory = () => async args => {
 }
 
 export const registerGameEvents: (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => void = (registrar, config) => {
+  // Register the -$1 token reaction handler for all Adventures games.
+  registrar('onGameStart', async (args) => {
+    for (const player of args.match.players) {
+      args.reactionManager.registerReactionTemplate({
+        id: `adventures-minus-coin-token:0:treasureGain:${player.id}`,
+        listeningFor: 'treasureGain',
+        playerId: player.id,
+        once: false,
+        compulsory: true,
+        allowMultipleInstances: true,
+        system: true,
+        condition: async ({ trigger, match }) => {
+          if (trigger.args.playerId !== player.id) return false;
+          if (trigger.args.count <= 0) return false;
+          // Only react when the player's -$1 token is currently in front of them.
+          return Object.values(match.tokens ?? {}).some(token =>
+            token.tokenId === adventuresTokenIds.minusCoin &&
+            token.ownerId === player.id &&
+            token.location.type === 'player' &&
+            token.location.playerId === player.id
+          );
+        },
+        triggeredEffectFn: async ({ match, runGameActionDelegate, trigger }) => {
+          const tokenEntry = Object.entries(match.tokens ?? {}).find(([_tokenInstanceId, token]) =>
+            token.tokenId === adventuresTokenIds.minusCoin &&
+            token.ownerId === player.id &&
+            token.location.type === 'player' &&
+            token.location.playerId === player.id
+          );
+          if (!tokenEntry) return;
+          // Consume the -$1 token once when a positive treasure gain occurs.
+          trigger.args.count = Math.max(0, trigger.args.count - 1);
+          await runGameActionDelegate('removeToken', { tokenInstanceId: tokenEntry[0] });
+        }
+      });
+    }
+  });
   // Only grant the vanilla bonus tokens when Teacher is in the kingdom.
   if (!config.kingdomSupply.some(supply => supply.name === 'teacher')) {
     return;

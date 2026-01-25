@@ -985,15 +985,25 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   }
   
   async gainTreasure(args: { count: number }, context?: GameActionContext) {
-    console.log(`[gainTreasure action] gaining ${args.count} treasure`);
-    this.match.playerTreasure += args.count;
+    const currentPlayer = getCurrentPlayer(this.match);
+    let gainAmount = args.count;
+    // Allow reactions to modify incoming treasure gains.
+    const trigger = new ReactionTrigger('treasureGain', {
+      playerId: currentPlayer.id,
+      count: gainAmount,
+    });
+    await this.reactionManager.runTrigger({ trigger });
+    gainAmount = Math.max(0, trigger.args.count);
+    
+    console.log(`[gainTreasure action] gaining ${gainAmount} treasure`);
+    this.match.playerTreasure += gainAmount;
     this.match.playerTreasure = Math.max(0, this.match.playerTreasure);
     
     if (!context?.loggingContext?.suppress) {
       this.logManager.addLogEntry({
         type: 'gainTreasure',
-        playerId: getCurrentPlayer(this.match).id,
-        count: args.count,
+        playerId: currentPlayer.id,
+        count: gainAmount,
         source: context?.loggingContext?.source,
       });
     }

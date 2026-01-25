@@ -381,6 +381,10 @@ export type TriggerEventTypeContext = {
     cardId: CardId;
     playerId: PlayerId;
   },
+  treasureGain: {
+    playerId: PlayerId;
+    count: number;
+  },
   cardTrashed: {
     cardId: CardId;
     playerId: PlayerId;

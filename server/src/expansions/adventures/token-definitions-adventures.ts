@@ -34,4 +34,12 @@ export const registerAdventuresTokenDefinitions = (): void => {
     duration: 'permanent',
     expansion: 'adventures',
   });
+  
+  registerTokenDefinition({
+    id: adventuresTokenIds.minusCoin,
+    name: '-$1 token',
+    rulesText: 'The next time you get $, get $1 less.',
+    duration: 'oneShot',
+    expansion: 'adventures',
+  });
 };
