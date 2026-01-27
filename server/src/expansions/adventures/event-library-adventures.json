@@ -4,6 +4,11 @@
       "treasure": 0
     }
   },
+  "ball": {
+    "cost": {
+      "treasure": 5
+    }
+  },
   "bonfire": {
     "cost": {
       "treasure": 3

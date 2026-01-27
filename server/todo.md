@@ -75,7 +75,6 @@ it with the individual knight. this will remove the need for the randomizer othe
 
 skipped
 - events
-  - ball
   - ferry
   - inheritance
   - lost arts

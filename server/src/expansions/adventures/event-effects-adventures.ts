@@ -3,6 +3,7 @@ import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { CardId } from 'shared/shared-types.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
+import { adventuresTokenIds } from './token-ids-adventures.ts';
 
 const effectMap: CardExpansionModule = {
   'alms': {
@@ -68,6 +69,67 @@ const effectMap: CardExpansionModule = {
         cardId: selectedCard.id,
         to: { location: 'playerDiscard' }
       });
+    }
+  },
+  'ball': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const event = cardEffectArgs.match.events.find(e => e.id === cardEffectArgs.cardId);
+      if (!event) {
+        console.warn(`[ball effect] event not found`);
+        return;
+      }
+      
+      // Take the -$1 token once if the player does not already have it.
+      const alreadyHasToken = Object.values(cardEffectArgs.match.tokens ?? {})
+        .some(token =>
+          token.tokenId === adventuresTokenIds.minusCoin &&
+          token.ownerId === cardEffectArgs.playerId &&
+          token.location.type === 'player' &&
+          token.location.playerId === cardEffectArgs.playerId
+        );
+      if (!alreadyHasToken) {
+        console.log(`[ball effect] placing -$1 token for player ${cardEffectArgs.playerId}`);
+        await cardEffectArgs.runGameActionDelegate('placeToken', {
+          tokenId: adventuresTokenIds.minusCoin,
+          ownerId: cardEffectArgs.playerId,
+          location: { type: 'player', playerId: cardEffectArgs.playerId },
+          sourceCardId: event.id,
+        }, { loggingContext: { source: event.id } });
+      }
+      
+      const cards = cardEffectArgs.findCards([
+        { location: ['basicSupply', 'kingdomSupply'] },
+        { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: { treasure: 4 } }
+      ]);
+      
+      if (!cards.length) {
+        console.log(`[ball effect] no cards to gain`);
+        return;
+      }
+      
+      const gainCount = Math.min(2, cards.length);
+
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Gain ${gainCount} card${gainCount === 1 ? '' : 's'}`,
+        restrict: cards.map(card => card.id),
+        count: gainCount,
+      }) as CardId[];
+      
+      if (!selectedCardIds.length) {
+        console.warn(`[ball effect] no card selected`);
+        return;
+      }
+      
+      for (const selectedCardId of selectedCardIds) {
+        const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+        console.log(`[ball effect] gaining ${selectedCard}`);
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: selectedCard.id,
+          to: { location: 'playerDiscard' }
+        });
+      }
     }
   },
   'bonfire': {
