@@ -15,6 +15,10 @@ const configurator: ExpansionConfiguratorFactory = () => async args => {
 }
 
 export const registerGameEvents: (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => void = (registrar, config) => {
+  // Determine whether the Journey token is required for this match.
+  const usesJourneyToken = config.kingdomSupply.some(supply =>
+    supply.name === 'giant' || supply.name === 'ranger'
+  ) || config.events.some(event => event.cardKey === 'pilgrimage');
   // Register the -$1 token reaction handler for all Adventures games.
   registrar('onGameStart', async (args) => {
     for (const player of args.match.players) {
@@ -92,6 +96,26 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
       });
     }
   });
+  // Place Journey tokens face up for each player when needed.
+  if (usesJourneyToken) {
+    registrar('onGameStart', async (args) => {
+      for (const player of args.match.players) {
+        // Avoid duplicating Journey tokens when reloading saved state.
+        const alreadyOwned = Object.values(args.match.tokens ?? {}).some(token =>
+          token.ownerId === player.id &&
+          token.tokenId === adventuresTokenIds.journey
+        );
+        if (alreadyOwned) continue;
+        // Place the Journey token in the player's area, face up to start.
+        await args.runGameActionDelegate('placeToken', {
+          tokenId: adventuresTokenIds.journey,
+          ownerId: player.id,
+          location: { type: 'player', playerId: player.id },
+          facing: 'faceUp',
+        });
+      }
+    });
+  }
   // Only grant the vanilla bonus tokens when Teacher is in the kingdom.
   if (!config.kingdomSupply.some(supply => supply.name === 'teacher')) {
     return;

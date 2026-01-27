@@ -3,6 +3,15 @@ import { adventuresTokenIds } from './token-ids-adventures.ts';
 
 // Registers Adventures vanilla bonus token definitions.
 export const registerAdventuresTokenDefinitions = (): void => {
+  // Register the Journey token used by Adventures cards that flip it.
+  registerTokenDefinition({
+    id: adventuresTokenIds.journey,
+    name: 'Journey token',
+    rulesText: 'Starts face up. Cards may turn it over to check its facing.',
+    duration: 'permanent',
+    expansion: 'adventures',
+  });
+  
   registerTokenDefinition({
     id: adventuresTokenIds.plusAction,
     name: '+1 Action token',

@@ -74,8 +74,6 @@ library json. when this card is picked the expansion configurator can check for 
 it with the individual knight. this will remove the need for the randomizer other than removing cards from it.
 
 skipped
-- giant
-- ranger
 - royal carriage
 - events
   - ball

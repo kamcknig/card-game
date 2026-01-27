@@ -1057,6 +1057,132 @@ const expansion: CardExpansionModule = {
       });
     },
   },
+  "giant": {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Resolve the current player's Journey token, ensuring it exists.
+      const existingJourneyTokenEntry = Object.entries(
+        cardEffectArgs.match.tokens ?? {},
+      ).find(([_tokenInstanceId, token]) =>
+        token.tokenId === adventuresTokenIds.journey &&
+        token.ownerId === cardEffectArgs.playerId &&
+        token.location.type === "player" &&
+        token.location.playerId === cardEffectArgs.playerId
+      );
+
+      const journeyTokenInstanceId = existingJourneyTokenEntry?.[0];
+      const journeyToken = existingJourneyTokenEntry?.[1];
+
+      if (!journeyToken) {
+        console.warn(`[giant effect] no journey token for user`);
+        return;
+      }
+
+      // Flip the Journey token before checking its facing.
+      const currentFacing = journeyToken.facing ?? "faceUp";
+      const nextFacing = currentFacing === "faceUp" ? "faceDown" : "faceUp";
+
+      await cardEffectArgs.runGameActionDelegate("flipToken", {
+        tokenInstanceId: journeyTokenInstanceId!,
+        facing: nextFacing,
+      });
+
+      if (nextFacing === "faceDown") {
+        // Face down: +$1 and no attack.
+        console.log(`[giant effect] Journey face down, gaining 1 treasure`);
+        await cardEffectArgs.runGameActionDelegate("gainTreasure", {
+          count: 1,
+        });
+        return;
+      }
+
+      // Face up: +$5 and attack all other players.
+      console.log(`[giant effect] Journey face up, gaining 5 treasure`);
+      await cardEffectArgs.runGameActionDelegate("gainTreasure", { count: 5 });
+
+      const targetPlayerIds = findOrderedTargets({
+        match: cardEffectArgs.match,
+        appliesTo: "ALL_OTHER",
+        startingPlayerId: cardEffectArgs.playerId,
+      }).filter((playerId) =>
+        cardEffectArgs.reactionContext?.[playerId]?.result !== "immunity"
+      );
+
+      for (const targetPlayerId of targetPlayerIds) {
+        const deck = cardEffectArgs.cardSourceController.getSource(
+          "playerDeck",
+          targetPlayerId,
+        );
+
+        if (deck.length === 0) {
+          // Shuffle if the target has no cards in deck.
+          console.log(`[giant effect] no cards in deck, shuffling`);
+          await cardEffectArgs.runGameActionDelegate("shuffleDeck", {
+            playerId: targetPlayerId,
+          });
+        }
+
+        const gainCurse = async () => {
+          const curseCards = cardEffectArgs.findCards([
+            { location: "basicSupply" },
+            { cardKeys: "curse" },
+          ]);
+          if (!curseCards.length) {
+            console.log(`[giant effect] no curse cards in supply`);
+            return false;
+          }
+          await cardEffectArgs.runGameActionDelegate("gainCard", {
+            playerId: targetPlayerId,
+            cardId: curseCards.slice(-1)[0].id,
+            to: { location: "playerDiscard" },
+          });
+          return true;
+        }
+
+        if (deck.length === 0) {
+          // Still empty: target gains a Curse.
+          console.log(`[giant effect] still no cards, gaining a Curse`);
+          if (!await gainCurse()) {
+            continue;
+          }
+        }
+
+        // Reveal the top card of the target player's deck.
+        const revealedCardId = deck.slice(-1)[0];
+        const revealedCard = cardEffectArgs.cardLibrary.getCard(revealedCardId);
+
+        console.log(`[giant effect] revealing ${revealedCard}`);
+        await cardEffectArgs.runGameActionDelegate("revealCard", {
+          playerId: targetPlayerId,
+          cardId: revealedCardId,
+          moveToSetAside: true,
+        });
+
+        const { cost } = cardEffectArgs.cardPriceController.applyRules(
+          revealedCard,
+          { playerId: targetPlayerId },
+        );
+
+        if (cost.treasure >= 3 && cost.treasure <= 6 && !cost.potion) {
+          // Trash cards costing $3-$6 with no potion in their cost.
+          console.log(`[giant effect] trashing ${revealedCard}`);
+          await cardEffectArgs.runGameActionDelegate("trashCard", {
+            playerId: targetPlayerId,
+            cardId: revealedCard.id,
+          });
+          continue;
+        }
+
+        // Otherwise discard it and gain a Curse.
+        console.log(`[giant effect] discarding ${revealedCard}`);
+        await cardEffectArgs.runGameActionDelegate("discardCard", {
+          playerId: targetPlayerId,
+          cardId: revealedCard.id,
+        });
+
+        await gainCurse();
+      }
+    },
+  },
   "guide": {
     registerEffects: () => async (cardEffectArgs) => {
       console.log(`[guide effect] drawing 1 card, and gaining 1 action`);
@@ -1122,6 +1248,52 @@ const expansion: CardExpansionModule = {
           },
         },
       );
+    },
+  },
+  "ranger": {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Ranger always grants +1 Buy first.
+      console.log(`[ranger effect] gaining 1 buy`);
+      await cardEffectArgs.runGameActionDelegate("gainBuy", { count: 1 });
+
+      // Resolve the current player's Journey token, ensuring it exists.
+      const existingJourneyTokenEntry = Object.entries(
+        cardEffectArgs.match.tokens ?? {},
+      ).find(([_tokenInstanceId, token]) =>
+        token.tokenId === adventuresTokenIds.journey &&
+        token.ownerId === cardEffectArgs.playerId &&
+        token.location.type === "player" &&
+        token.location.playerId === cardEffectArgs.playerId
+      );
+
+      const journeyTokenInstanceId = existingJourneyTokenEntry?.[0];
+      const journeyToken = existingJourneyTokenEntry?.[1];
+
+      if (!journeyTokenInstanceId) {
+        console.warn(`[ranger effect] missing Journey token instance id`);
+        return;
+      }
+
+      // Flip the Journey token before checking its facing.
+      const currentFacing = journeyToken!.facing ?? "faceUp";
+      const nextFacing = currentFacing === "faceUp" ? "faceDown" : "faceUp";
+
+      await cardEffectArgs.runGameActionDelegate("flipToken", {
+        tokenInstanceId: journeyTokenInstanceId,
+        facing: nextFacing,
+      });
+
+      if (nextFacing !== "faceUp") {
+        console.log(`[ranger effect] Journey face down, no draw`);
+        return;
+      }
+
+      // Face up: draw 5 cards.
+      console.log(`[ranger effect] Journey face up, drawing 5 cards`);
+      await cardEffectArgs.runGameActionDelegate("drawCard", {
+        playerId: cardEffectArgs.playerId,
+        count: 5,
+      });
     },
   },
   "haunted-woods": {
