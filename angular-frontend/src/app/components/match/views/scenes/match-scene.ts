@@ -368,6 +368,11 @@ export class MatchScene extends Scene {
     if (event.ctrlKey) {
       return;
     }
+    
+    // Right-click should only open the detail view, never trigger selection/gain.
+    if (event.button === 2) {
+      return;
+    }
 
     const view = event.target;
     const cardId = view.cardId;

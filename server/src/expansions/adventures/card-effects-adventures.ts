@@ -2026,15 +2026,28 @@ const expansion: CardExpansionModule = {
         thisCard,
         "afterCardPlayed",
         {
+          // Royal Carriage stays on the Tavern mat until called, then is single-use.
           once: true,
           compulsory: false,
           allowMultipleInstances: true,
           playerId: cardEffectArgs.playerId,
           condition: async (conditionArgs) => {
+            // Only respond to actions played by the Royal Carriage owner.
+            if (
+              conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId
+            ) return false;
+            // Royal Carriage must still be waiting on the Tavern mat to be called.
+            if (
+              !conditionArgs.cardSourceController.getSource(
+                "tavern",
+                cardEffectArgs.playerId,
+              ).includes(thisCard.id)
+            ) return false;
             const cardPlayed = conditionArgs.cardLibrary.getCard(
               conditionArgs.trigger.args.cardId,
             );
             if (!cardPlayed.type.includes("ACTION")) return false;
+            // Only allow calling if the Action is still in play.
             return getCardsInPlay(conditionArgs.findCards).includes(cardPlayed);
 
           },
@@ -2063,6 +2076,66 @@ const expansion: CardExpansionModule = {
                 actionCost: 0,
               },
             });
+
+            // If the replayed card is a Duration still in play, track Royal Carriage until cleanup.
+            if (
+              cardToPlay.type.includes("DURATION") &&
+              getCardsInPlay(triggeredArgs.findCards).includes(cardToPlay)
+            ) {
+              // Keep Royal Carriage in the duration zone during cleanup.
+              triggeredArgs.reactionManager.registerSystemTemplate(
+                thisCard,
+                "startTurnPhase",
+                {
+                  playerId: cardEffectArgs.playerId,
+                  once: true,
+                  allowMultipleInstances: true,
+                  condition: async (conditionArgs) =>
+                    getTurnPhase(conditionArgs.trigger.args.phaseIndex) ===
+                      "cleanup" &&
+                    getCardsInPlay(conditionArgs.findCards).includes(thisCard),
+                  triggeredEffectFn: async (durationArgs) => {
+                    console.log(
+                      `[royal-carriage duration effect] moving ${thisCard} to activeDuration zone`,
+                    );
+                    await durationArgs.runGameActionDelegate("moveCard", {
+                      cardId: thisCard.id,
+                      to: { location: "activeDuration" },
+                    });
+                  },
+                },
+              );
+
+              // Return Royal Carriage to playArea when the owner's next turn starts.
+              triggeredArgs.reactionManager.registerReactionTemplate({
+                id: `royal-carriage:${thisCard.id}:startTurn`,
+                listeningFor: "startTurn",
+                playerId: cardEffectArgs.playerId,
+                once: true,
+                // Auto-resolve the return after the replayed Duration resolves.
+                autoResolve: true,
+                compulsory: true,
+                allowMultipleInstances: true,
+                condition: async (conditionArgs) => {
+                  return (
+                    conditionArgs.trigger.args.playerId ===
+                      cardEffectArgs.playerId &&
+                    conditionArgs.cardSourceController.getSource(
+                      "activeDuration",
+                    ).includes(thisCard.id)
+                  );
+                },
+                triggeredEffectFn: async (durationArgs) => {
+                  console.log(
+                    `[royal-carriage duration effect] returning ${thisCard} to playArea`,
+                  );
+                  await durationArgs.runGameActionDelegate("moveCard", {
+                    cardId: thisCard.id,
+                    to: { location: "playArea" },
+                  });
+                },
+              });
+            }
           },
         },
       );

@@ -176,6 +176,8 @@ export class ReactionManager {
       
       const usedReactionIds = new Set<string>();
       const blockedCardKeys = new Set<string>();
+      const queuedAutoReactions: Reaction[] = [];
+      const queuedAutoIds = new Set<string>();
       
       while (true) {
         const reactions = (await this.getReactionsForPlayer(
@@ -186,13 +188,23 @@ export class ReactionManager {
           return !usedReactionIds.has(r.id) && !blockedCardKeys.has(key);
         });
         
-        console.log(`[REACTION MANAGER] ${targetPlayer} has ${reactions.length} remaining reactions`);
+        // Queue auto-resolve reactions to run after player-driven ordering is complete.
+        for (const reaction of reactions) {
+          if (reaction.autoResolve && !queuedAutoIds.has(reaction.id)) {
+            queuedAutoReactions.push(reaction);
+            queuedAutoIds.add(reaction.id);
+          }
+        }
         
-        if (!reactions.length) break;
+        const promptReactions = reactions.filter((reaction) => !reaction.autoResolve);
         
-        const compulsoryReactions = reactions.filter(r => r.compulsory && !r.system);
+        console.log(`[REACTION MANAGER] ${targetPlayer} has ${promptReactions.length} remaining reactions`);
         
-        const systemReactions = reactions.filter(r => r.system);
+        if (!promptReactions.length) break;
+        
+        const compulsoryReactions = promptReactions.filter(r => r.compulsory && !r.system);
+        
+        const systemReactions = promptReactions.filter(r => r.system);
         
         if (systemReactions.length) {
           for (const systemReaction of systemReactions) {
@@ -206,9 +218,9 @@ export class ReactionManager {
         let selectedReaction: Reaction | undefined = undefined;
         
         const shouldPrompt = (
-          reactions.length > 1 &&
+          promptReactions.length > 1 &&
           (
-            compulsoryReactions.length !== reactions.length || // mix of compulsory + optional
+            compulsoryReactions.length !== promptReactions.length || // mix of compulsory + optional
             !compulsoryReactions.every(r => r.getSourceKey() === compulsoryReactions[0].getSourceKey()) // different
                                                                                                         // cards
           )
@@ -216,8 +228,8 @@ export class ReactionManager {
         
         // when multiple reactions can occur, the user chooses unless they are all compulsory
         // and the same card
-        if (shouldPrompt || (reactions.length === 1 && compulsoryReactions.length === 0)) {
-          const grouped = groupReactionsByCardKey(reactions);
+        if (shouldPrompt || (promptReactions.length === 1 && compulsoryReactions.length === 0)) {
+          const grouped = groupReactionsByCardKey(promptReactions);
           const actionButtons = buildActionButtons(grouped, this._cardLibrary);
           const actionMap = buildActionMap(grouped);
           
@@ -266,6 +278,16 @@ export class ReactionManager {
         if (!selectedReaction.allowMultipleInstances) {
           blockedCardKeys.add(selectedReaction.getSourceKey());
         }
+      }
+      
+      // Auto-resolve any queued reactions after player ordering decisions.
+      for (const autoReaction of queuedAutoReactions) {
+        // Re-check the reaction condition against the latest game state.
+        const stillValid = (await this.getReactions(trigger, [autoReaction])).length > 0;
+        if (!stillValid) continue;
+        
+        console.log(`[REACTION MANAGER] auto-resolving reaction ${autoReaction.id} for ${targetPlayer}`);
+        await this.runReaction(autoReaction, trigger, targetPlayer, reactionContext);
       }
     }
   }

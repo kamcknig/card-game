@@ -447,6 +447,13 @@ export class Reaction<T extends TriggerEventType = TriggerEventType> {
    * @default false
    */
   public system?: boolean = false;
+
+  /**
+   * Indicates the reaction should auto-resolve without prompting the player.
+   *
+   * @default false
+   */
+  public autoResolve?: boolean = false;
   
   /**
    * Indicates that the reaction can be used by multiple different instances of the same card.
@@ -476,6 +483,7 @@ export class Reaction<T extends TriggerEventType = TriggerEventType> {
     this.allowMultipleInstances = arg.allowMultipleInstances ?? true;
     this.compulsory = arg.compulsory ?? false;
     this.system = arg.system ?? false;
+    this.autoResolve = arg.autoResolve ?? false;
   }
   
   public getBaseId() {
