@@ -314,6 +314,9 @@ const effectMap: CardExpansionModule = {
         (c) => c.randomizer === selectedPile
       );
 
+      // todo: this never cleans up old rules, but those old rules won't work when a token moves because the rule
+      // checks the location s that's ok. but it really should be cleaned up. there isn'ta  good way in general to
+      // track price rules per effect/card/etc
       for (const card of cards) {
         const rule: CardPriceRule = (_card, ruleContext) => {
           const currentPlayer = getCurrentPlayer(ruleContext.match);
