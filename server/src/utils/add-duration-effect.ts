@@ -28,7 +28,7 @@ export const addDurationEffect = <T extends TriggerEventType>(
     allowMultipleInstances: true,
     condition: async (conditionArgs) => getTurnPhase(conditionArgs.trigger.args.phaseIndex) === 'cleanup',
     triggeredEffectFn: async (triggeredArgs) => {
-      console.log(
+      console.debug(
         `[${card.cardKey} duration effect] moving to activeDuration zone`,
       );
 

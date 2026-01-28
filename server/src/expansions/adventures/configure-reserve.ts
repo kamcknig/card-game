@@ -6,7 +6,7 @@ export const configureReserve = (args: ExpansionConfiguratorContext) => {
     return;
   }
   
-  console.log(`[adventures configurator - configuring reserve] cards of type RESERVE included in supply, configuring tavern mat`);
+  console.debug(`[adventures configurator - configuring reserve] cards of type RESERVE included in supply, configuring tavern mat`);
   
   addMatToMatchConfig('tavern', args.config, args);
 }

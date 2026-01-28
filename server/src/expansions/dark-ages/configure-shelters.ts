@@ -7,7 +7,7 @@ export const configureShelters = async (args: ExpansionConfiguratorContext) => {
     return;
   }
   
-  console.log(`[dark-ages configurator - configuring shelters] shelters needs to be configured`);
+  console.debug(`[dark-ages configurator - configuring shelters] shelters needs to be configured`);
   
   delete args.config.playerStartingHand['estate'];
   

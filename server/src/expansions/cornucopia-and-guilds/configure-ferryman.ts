@@ -11,7 +11,7 @@ export const configureFerryman = (args: ExpansionConfiguratorContext) => {
     return;
   }
   
-  console.log(`[cornucopia configurator - configuring ferryman] ferryman present in supply`);
+  console.debug(`[cornucopia configurator - configuring ferryman] ferryman present in supply`);
   
   const availableKingdoms = args.config.expansions.reduce((acc, nextExpansion) => {
     const exp = expansionLibrary[nextExpansion.name];
@@ -39,13 +39,13 @@ export const configureFerryman = (args: ExpansionConfiguratorContext) => {
     .filter(key => !bannedKeys.includes(key) && !kingdomCardKeys.includes(key));
   
   if (!availableKeys.length) {
-    console.log(`[cornucopia configurator - configuring ferryman] no available kingdoms, not adding new kingdom`);
+    console.debug(`[cornucopia configurator - configuring ferryman] no available kingdoms, not adding new kingdom`);
     return;
   }
   
   const chosenKey = availableKeys[Math.floor(Math.random() * availableKeys.length)];
   
-  console.log(`[cornucopia configurator - configuring ferryman] adding ${chosenKey} to kingdom as the "ferryman" card`);
+  console.debug(`[cornucopia configurator - configuring ferryman] adding ${chosenKey} to kingdom as the "ferryman" card`);
   
   const chosenCard = structuredClone(expansionLibrary[availableKingdoms[chosenKey].expansionName].cardData.kingdomSupply[chosenKey]);
   chosenCard.tags = ['ferryman'];

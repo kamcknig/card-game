@@ -50,7 +50,7 @@ const effectMap: CardExpansionModule = {
         .filter((card) => card.owner === cardEffectArgs.playerId);
 
       if (treasuresInPlay.length > 0) {
-        console.log(
+        console.debug(
           `[alms effect] ${treasuresInPlay.length} treasures in play, not gaining card`,
         );
         return;
@@ -66,7 +66,7 @@ const effectMap: CardExpansionModule = {
       ]);
 
       if (!cards.length) {
-        console.log(`[alms effect] no cards to gain`);
+        console.debug(`[alms effect] no cards to gain`);
         return;
       }
 
@@ -89,7 +89,7 @@ const effectMap: CardExpansionModule = {
         selectedCardIds[0],
       );
 
-      console.log(`[alms effect] gaining card ${selectedCard}`);
+      console.debug(`[alms effect] gaining card ${selectedCard}`);
 
       await cardEffectArgs.runGameActionDelegate("gainCard", {
         playerId: cardEffectArgs.playerId,
@@ -117,7 +117,7 @@ const effectMap: CardExpansionModule = {
           token.location.playerId === cardEffectArgs.playerId
         );
       if (!alreadyHasToken) {
-        console.log(
+        console.debug(
           `[ball effect] placing -$1 token for player ${cardEffectArgs.playerId}`,
         );
         await cardEffectArgs.runGameActionDelegate("placeToken", {
@@ -138,7 +138,7 @@ const effectMap: CardExpansionModule = {
       ]);
 
       if (!cards.length) {
-        console.log(`[ball effect] no cards to gain`);
+        console.debug(`[ball effect] no cards to gain`);
         return;
       }
 
@@ -161,7 +161,7 @@ const effectMap: CardExpansionModule = {
 
       for (const selectedCardId of selectedCardIds) {
         const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
-        console.log(`[ball effect] gaining ${selectedCard}`);
+        console.debug(`[ball effect] gaining ${selectedCard}`);
         await cardEffectArgs.runGameActionDelegate("gainCard", {
           playerId: cardEffectArgs.playerId,
           cardId: selectedCard.id,
@@ -178,7 +178,7 @@ const effectMap: CardExpansionModule = {
         );
 
       if (!coppersInPlay.length) {
-        console.log(`[bonfire effect] no coppers in play`);
+        console.debug(`[bonfire effect] no coppers in play`);
         return;
       }
 
@@ -197,7 +197,7 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      console.log(`[bonfire effect] trashing ${selectedCardIds.length} cards`);
+      console.debug(`[bonfire effect] trashing ${selectedCardIds.length} cards`);
 
       for (const selectedCardId of selectedCardIds) {
         await cardEffectArgs.runGameActionDelegate("trashCard", {
@@ -239,7 +239,7 @@ const effectMap: CardExpansionModule = {
               `[expedition effect] i have programmed this to use the reaction system, but technically the effect should modify the amount of cards drawn, and not take place at the end of cleanup`,
             );
 
-            console.log(`[expedition endTurnPhase effect] drawing 2 cards`);
+            console.debug(`[expedition endTurnPhase effect] drawing 2 cards`);
             await cardEffectArgs.runGameActionDelegate("drawCard", {
               playerId: cardEffectArgs.playerId,
               count: 2,
@@ -292,7 +292,7 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      console.log(`[ferry effect] moving -$2 cost token to ${selectedPile}`);
+      console.debug(`[ferry effect] moving -$2 cost token to ${selectedPile}`);
 
       const existingTokenEntry = Object.entries(
         cardEffectArgs.match.tokens ?? {},
@@ -437,7 +437,7 @@ const effectMap: CardExpansionModule = {
       }
 
       if (!selectedCardIds.length) {
-        console.log(`[quest effect] no card selected`);
+        console.debug(`[quest effect] no card selected`);
         return;
       }
 
@@ -448,11 +448,11 @@ const effectMap: CardExpansionModule = {
         ]);
 
         if (!goldCards.length) {
-          console.log(`[quest effect] no gold cards in supply`);
+          console.debug(`[quest effect] no gold cards in supply`);
           return;
         }
 
-        console.log(`[quest effect] gaining ${goldCards.slice(-1)[0]}`);
+        console.debug(`[quest effect] gaining ${goldCards.slice(-1)[0]}`);
 
         await cardEffectArgs.runGameActionDelegate("gainCard", {
           playerId: cardEffectArgs.playerId,
@@ -491,7 +491,7 @@ const effectMap: CardExpansionModule = {
       ) as CardId[];
 
       if (!selectedCardIds.length) {
-        console.log(`[save effect] no card selected`);
+        console.debug(`[save effect] no card selected`);
         return;
       }
 
@@ -499,7 +499,7 @@ const effectMap: CardExpansionModule = {
         selectedCardIds[0],
       );
 
-      console.log(`[save effect] setting aside card ${selectedCard}`);
+      console.debug(`[save effect] setting aside card ${selectedCard}`);
 
       await cardEffectArgs.runGameActionDelegate("moveCard", {
         toPlayerId: cardEffectArgs.playerId,
@@ -517,7 +517,7 @@ const effectMap: CardExpansionModule = {
           compulsory: true,
           condition: async () => true,
           triggeredEffectFn: async (triggeredArgs) => {
-            console.log(
+            console.debug(
               `[save endTurn effect] moving ${selectedCard} to player ${cardEffectArgs.playerId} hand`,
             );
 
@@ -574,14 +574,14 @@ const effectMap: CardExpansionModule = {
 
       for (let i = 0; i < 5; i++) {
         if (!deck.length) {
-          console.log(`[scouting-party effect] no cards in deck, shuffling`);
+          console.debug(`[scouting-party effect] no cards in deck, shuffling`);
 
           await cardEffectArgs.runGameActionDelegate("shuffleDeck", {
             playerId: cardEffectArgs.playerId,
           });
 
           if (!deck.length) {
-            console.log(`[scouting-party effect] no cards in deck still`);
+            console.debug(`[scouting-party effect] no cards in deck still`);
             break;
           }
         }
@@ -596,7 +596,7 @@ const effectMap: CardExpansionModule = {
       }
 
       if (!cardIdsSetAside.length) {
-        console.log(`[scouting-party effect] no cards set aside`);
+        console.debug(`[scouting-party effect] no cards set aside`);
         return;
       }
 
@@ -615,7 +615,7 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      console.log(
+      console.debug(
         `[scouting-party effect] discarding ${result.result.length} cards`,
       );
 
@@ -631,12 +631,12 @@ const effectMap: CardExpansionModule = {
       );
 
       if (!cardIdsToRearrange.length) {
-        console.log(`[scouting-party effect] no cards to rearrange`);
+        console.debug(`[scouting-party effect] no cards to rearrange`);
         return;
       }
 
       if (cardIdsToRearrange.length === 1) {
-        console.log(`[scouting-party effect] one card left, moving to deck`);
+        console.debug(`[scouting-party effect] one card left, moving to deck`);
 
         await cardEffectArgs.runGameActionDelegate("moveCard", {
           toPlayerId: cardEffectArgs.playerId,
@@ -662,7 +662,7 @@ const effectMap: CardExpansionModule = {
           return;
         }
 
-        console.log(
+        console.debug(
           `[scouting-party effect] putting cards ${result.result} back on deck`,
         );
 
@@ -706,7 +706,7 @@ const effectMap: CardExpansionModule = {
       ) as CardId[];
 
       if (!selectedCardIds.length) {
-        console.log(`[trade effect] no card selected`);
+        console.debug(`[trade effect] no card selected`);
         return;
       }
 
@@ -716,11 +716,11 @@ const effectMap: CardExpansionModule = {
       ]);
 
       if (!silverCards.length) {
-        console.log(`[trade effect] no silver cards in supply`);
+        console.debug(`[trade effect] no silver cards in supply`);
         return;
       }
 
-      console.log(
+      console.debug(
         `[trade effect] gaining ${selectedCardIds.length} silver cards`,
       );
 
@@ -728,7 +728,7 @@ const effectMap: CardExpansionModule = {
         const silverCard = silverCards.slice(-i - 1)[0];
 
         if (!silverCard) {
-          console.log(`[trade effect] no silver cards in supply`);
+          console.debug(`[trade effect] no silver cards in supply`);
           break;
         }
 
@@ -772,7 +772,7 @@ const effectMap: CardExpansionModule = {
               triggeredArgs.trigger.args.cardId,
             );
 
-            console.log(
+            console.debug(
               `[travelling-fair cardGained effect] putting ${card} on deck`,
             );
 

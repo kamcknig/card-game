@@ -11,7 +11,7 @@ export const configureUrchin = async (args: ExpansionConfiguratorContext) => {
     return;
   }
   
-  console.log(`[dark-ages configurator - configuring urchin] urchin needs to be configured`);
+  console.debug(`[dark-ages configurator - configuring urchin] urchin needs to be configured`);
   
   const cardData = {
     ...structuredClone(expansionLibrary['dark-ages'].cardData.kingdomSupply['mercenary']) ?? {},
@@ -25,5 +25,5 @@ export const configureUrchin = async (args: ExpansionConfiguratorContext) => {
     cards: new Array(10).fill({...cardData})
   } as Supply);
   
-  console.log(`[dark-ages configurator - configuring urchin] urchin configured`);
+  console.debug(`[dark-ages configurator - configuring urchin] urchin configured`);
 };

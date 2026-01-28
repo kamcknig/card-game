@@ -44,7 +44,7 @@ export const loadExpansion = async (expansion: { name: string; }) => {
   } catch (error) {
     if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
       console.warn(`[expansion loader] failed to load configuration for expansion ${expansionName}`);
-      console.log(error);
+      console.error(error);
     }
   }
   
@@ -73,17 +73,17 @@ export const loadExpansion = async (expansion: { name: string; }) => {
     
     Object.keys(cardEffects).forEach(key => {
       if (cardEffects[key].registerScoringFunction) {
-        console.log(`[expansion loader] registering scoring function for ${key}`);
+        console.debug(`[expansion loader] registering scoring function for ${key}`);
         scoringFunctionMap[key] = cardEffects[key].registerScoringFunction();
       }
       
       if (cardEffects[key].registerLifeCycleMethods) {
-        console.log(`[expansion loader] registering lifecycle methods for ${key}`);
+        console.debug(`[expansion loader] registering lifecycle methods for ${key}`);
         cardLifecycleMap[key] = cardEffects[key].registerLifeCycleMethods()
       }
       
       if (cardEffects[key].registerEffects) {
-        console.log(`[expansion loader] registering effects for ${key}`);
+        console.debug(`[expansion loader] registering effects for ${key}`);
         cardEffectFunctionMapFactory[key] = cardEffects[key].registerEffects;
       }
       
@@ -94,10 +94,11 @@ export const loadExpansion = async (expansion: { name: string; }) => {
     console.log('[expansion loader] base supply card effects loaded');
   } catch (error) {
     console.warn(`[expansion loader] Failed to load expansion: ${expansionName}`);
-    console.log(error);
+    console.error(error);
     delete expansionLibrary[expansionName];
   }
   
   console.log(`[expansion loader] attempting to load events for ${expansionName}`);
   await loadEvents(expansionName);
+  console.log(`[expansion loader] finished loading events for ${expansionName}`);
 };

@@ -10,14 +10,14 @@ type FindTargetsArgs = {
 export const findOrderedTargets = (args: FindTargetsArgs): number[] => {
   const { startingPlayerId: currentPlayerTurnId, match } = args;
   let { appliesTo: target } = args;
-  console.log('findEffectTargetIds current player', currentPlayerTurnId, 'target', target);
+  console.trace('findEffectTargetIds current player', currentPlayerTurnId, 'target', target);
   
   const otherCountRegExResult = /(\d+)_OTHER/.exec(target);
   let otherCount;
   if (!isNull(otherCountRegExResult)) {
     target = 'X_OTHER';
     otherCount = otherCountRegExResult[1];
-    console.log('X_OTHER count', otherCount);
+    console.trace('X_OTHER count', otherCount);
   }
   
   let result: Player[] = [];
@@ -25,21 +25,21 @@ export const findOrderedTargets = (args: FindTargetsArgs): number[] => {
   
   switch (target) {
     case 'ALL': {
-      console.log('find targets for ALL');
+      console.trace('find targets for ALL');
       const startIndex = currentTurnOrder.findIndex(player => player.id === currentPlayerTurnId);
       const l = currentTurnOrder.length;
       for (let i = 0; i < l; i++) {
         const idx = (startIndex + i) % currentTurnOrder.length;
         result.push(currentTurnOrder[idx]);
       }
-      console.log('target players in order starting from current player', result);
+      console.trace('target players in order starting from current player', result);
       break;
     }
     case 'ANY':
       console.error('find targets for ANY not implemented');
       return [1];
     case 'ALL_OTHER': {
-      console.log('find targets for ALL_OTHER');
+      console.trace('find targets for ALL_OTHER');
       const fullOrder = match.players;
       const currentIndex = fullOrder.findIndex(player => player.id === currentPlayerTurnId);
       
@@ -51,7 +51,7 @@ export const findOrderedTargets = (args: FindTargetsArgs): number[] => {
       }
       
       result = reordered;
-      console.log('target players in order (ALL_OTHER)', result);
+      console.trace('target players in order (ALL_OTHER)', result);
       break;
     }
     case 'X_OTHER':

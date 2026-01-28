@@ -228,15 +228,15 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   }
   
   async gainPotion(args: { count: number }) {
-    console.log(`[gainPotion action] gaining ${args.count} potions`);
+    console.debug(`[gainPotion action] gaining ${args.count} potions`);
     this.match.playerPotions += args.count;
     this.match.playerPotions = Math.max(0, this.match.playerPotions);
     
-    console.log(`[gainPotion action] setting player potions to ${this.match.playerPotions}`);
+    console.debug(`[gainPotion action] setting player potions to ${this.match.playerPotions}`);
   }
   
   async gainBuy(args: { count: number }, context?: GameActionContext) {
-    console.log(`[gainBuy action] gaining ${args.count} buys`);
+    console.debug(`[gainBuy action] gaining ${args.count} buys`);
     this.match.playerBuys += args.count;
     this.match.playerBuys = Math.max(this.match.playerBuys, 0);
     
@@ -247,7 +247,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       source: context?.loggingContext?.source,
     });
     
-    console.log(`[gainBuy action] setting player guys to ${this.match.playerBuys}`);
+    console.debug(`[gainBuy action] setting player guys to ${this.match.playerBuys}`);
   }
 
   async placeToken(args: {
@@ -272,7 +272,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     };
     // Persist the token instance on match state for patch broadcasting.
     this.match.tokens[tokenInstanceId] = tokenInstance;
-    console.log(`[placeToken action] placed token ${args.tokenId} as ${tokenInstanceId}`);
+    console.debug(`[placeToken action] placed token ${args.tokenId} as ${tokenInstanceId}`);
     // Emit token placement logs only when callers provide logging context.
     if (context && !context.loggingContext?.suppress) {
       const targetPlayerId = args.ownerId ?? getCurrentPlayer(this.match).id;
@@ -291,14 +291,14 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     const token = this.getTokenInstance(args.tokenInstanceId);
     // Update location in-place for a stable token reference.
     token.location = args.location;
-    console.log(`[moveToken action] moved token ${args.tokenInstanceId}`);
+    console.debug(`[moveToken action] moved token ${args.tokenInstanceId}`);
   }
 
   async removeToken(args: { tokenInstanceId: TokenInstanceId; }, context?: GameActionContext): Promise<void> {
     // Ensure the token exists before removal for deterministic behavior.
     const token = this.getTokenInstance(args.tokenInstanceId);
     delete this.match.tokens[args.tokenInstanceId];
-    console.log(`[removeToken action] removed token ${args.tokenInstanceId}`);
+    console.debug(`[removeToken action] removed token ${args.tokenInstanceId}`);
     // Emit token consumption logs only when callers provide logging context.
     if (context && !context.loggingContext?.suppress) {
       const targetPlayerId = token.ownerId ?? getCurrentPlayer(this.match).id;
@@ -317,24 +317,24 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     const amount = args.amount ?? 1;
     // Tokens with null/undefined/0 counters are infinite and do not decrement.
     if (token.counters === undefined || token.counters === null || token.counters === 0) {
-      console.log(`[consumeToken action] token ${args.tokenInstanceId} is infinite`);
+      console.debug(`[consumeToken action] token ${args.tokenInstanceId} is infinite`);
       return;
     }
     // Decrement counters and remove the token if exhausted.
     token.counters = Math.max(0, token.counters - amount);
     if (token.counters === 0) {
       delete this.match.tokens[args.tokenInstanceId];
-      console.log(`[consumeToken action] consumed token ${args.tokenInstanceId}`);
+      console.debug(`[consumeToken action] consumed token ${args.tokenInstanceId}`);
       return;
     }
-    console.log(`[consumeToken action] decremented token ${args.tokenInstanceId} to ${token.counters}`);
+    console.debug(`[consumeToken action] decremented token ${args.tokenInstanceId} to ${token.counters}`);
   }
 
   async flipToken(args: { tokenInstanceId: TokenInstanceId; facing: TokenFacing; }): Promise<void> {
     // Resolve the token instance before modifying facing.
     const token = this.getTokenInstance(args.tokenInstanceId);
     token.facing = args.facing;
-    console.log(`[flipToken action] set token ${args.tokenInstanceId} to ${args.facing}`);
+    console.debug(`[flipToken action] set token ${args.tokenInstanceId} to ${args.facing}`);
   }
   
   async moveCard(args: { toPlayerId?: PlayerId, cardId: CardId | Card, to: CardLocationSpec }) {
@@ -392,13 +392,13 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         break;
     }
     
-    console.log(`[moveCard action] moved ${card} from ${oldSource?.sourceKey} to ${args.to.location}`);
+    console.debug(`[moveCard action] moved ${card} from ${oldSource?.sourceKey} to ${args.to.location}`);
     
     return oldSource ? { location: oldSource?.sourceKey!, playerId: oldSource?.playerId } : undefined;
   }
   
   async gainAction(args: { count: number }, context?: GameActionContext) {
-    console.log(`[gainAction action] gaining ${args.count} actions`);
+    console.debug(`[gainAction action] gaining ${args.count} actions`);
     
     this.match.playerActions += args.count;
     this.match.playerActions = Math.max(0, this.match.playerActions);
@@ -410,7 +410,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       source: context?.loggingContext?.source,
     })
     
-    console.log(`[gainAction action] setting player actions to ${args.count}`);
+    console.debug(`[gainAction action] setting player actions to ${args.count}`);
   }
   
   async gainCard(args: {
@@ -438,7 +438,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     card.owner = args.playerId;
     
-    console.log(`[gainCard action] ${getPlayerById(this.match, args.playerId)} gained ${card}`);
+    console.debug(`[gainCard action] ${getPlayerById(this.match, args.playerId)} gained ${card}`);
     
     this.logManager.addLogEntry({
       playerId: args.playerId,
@@ -469,7 +469,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       });
     }
     else {
-      console.log('[gainCard action] lifecycle onGained event suppressed');
+      console.debug('[gainCard action] lifecycle onGained event suppressed');
     }
     
     await this.reactionManager.runGameLifecycleEvent('onCardGained', {
@@ -498,7 +498,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     const socket = this.socketMap.get(playerId);
     if (!socket) {
-      console.log(`[userPrompt] No socket for player ${playerId}`);
+      console.debug(`[userPrompt] No socket for player ${playerId}`);
       return null
     }
     
@@ -542,17 +542,17 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     const { count, playerId, restrict } = args;
     
     if (Array.isArray(restrict) && typeof restrict[0] === 'number') {
-      console.log(`[selectCard action] restricted to set of cards ${restrict}`);
+      console.debug(`[selectCard action] restricted to set of cards ${restrict}`);
       selectableCardIds = restrict as CardId[];
     }
     else if (restrict !== undefined) {
       selectableCardIds = this._findCards(restrict as FindCardsFnInput).map(card => card.id);
     }
     
-    console.log(`[selectCard action] found ${selectableCardIds.length} selectable cards`);
+    console.debug(`[selectCard action] found ${selectableCardIds.length} selectable cards`);
     
     if (selectableCardIds?.length === 0) {
-      console.log(`[selectCard action] found no cards within restricted set ${restrict}`);
+      console.debug(`[selectCard action] found no cards within restricted set ${restrict}`);
       return [];
     }
     
@@ -566,10 +566,10 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     // if there aren't enough cards, depending on the selection type, we might simply implicitly select cards
     // because the player would be forced to select hem all anyway
     if (typeof count === 'number' && !args.optional) {
-      console.log(`[selectCard action] selection count is an exact count ${count} checking if user has that many cards`);
+      console.debug(`[selectCard action] selection count is an exact count ${count} checking if user has that many cards`);
       
       if (selectableCardIds.length <= count) {
-        console.log('[selectCard action] user does not have enough, or has exactly the amount of cards to select from, selecting all automatically');
+        console.debug('[selectCard action] user does not have enough, or has exactly the amount of cards to select from, selecting all automatically');
         return selectableCardIds;
       }
     }
@@ -577,7 +577,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     const socket = this.socketMap.get(playerId);
     
     if (!socket) {
-      console.log(`[selectCard action] no socket found for ${getPlayerById(this.match, playerId)}, skipping`);
+      console.debug(`[selectCard action] no socket found for ${getPlayerById(this.match, playerId)}, skipping`);
       return [];
     }
     
@@ -637,7 +637,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     this.match.stats.trashedCardsByTurn[this.match.turnNumber] ??= [];
     this.match.stats.trashedCardsByTurn[this.match.turnNumber]!.push(cardId);
     
-    console.log(`[trashCard action] trashed ${card}`);
+    console.debug(`[trashCard action] trashed ${card}`);
     
     const trigger: ReactionTrigger = {
       eventType: 'cardTrashed',
@@ -665,24 +665,24 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   }
   
   async gainVictoryToken(args: { playerId: PlayerId, count: number }, context?: GameActionContext) {
-    console.log(`[gainVictoryToken action] player ${args.playerId} gained ${args.count} victory tokens`);
+    console.debug(`[gainVictoryToken action] player ${args.playerId} gained ${args.count} victory tokens`);
     this.match.playerVictoryTokens ??= {};
     this.match.playerVictoryTokens[args.playerId] ??= 0;
     const newCount = this.match.playerVictoryTokens[args.playerId] + args.count;
     this.match.playerVictoryTokens[args.playerId] = newCount;
-    console.log(`[gainVictoryToken action] player ${args.playerId} new victory token count ${newCount}`);
+    console.debug(`[gainVictoryToken action] player ${args.playerId} new victory token count ${newCount}`);
   }
   
   async gainCoffer(args: { playerId: PlayerId, count?: number; }, context?: GameActionContext) {
-    console.log(`[gainCoffer action] player ${args.playerId} gained ${args.count} coffers`);
+    console.debug(`[gainCoffer action] player ${args.playerId} gained ${args.count} coffers`);
     this.match.coffers[args.playerId] ??= 0;
     this.match.coffers[args.playerId] += args.count ?? 1;
     this.match.coffers[args.playerId] = Math.max(0, this.match.coffers[args.playerId]);
-    console.log(`[gainCoffer action] player ${args.playerId} now has ${this.match.coffers[args.playerId]} coffers`);
+    console.debug(`[gainCoffer action] player ${args.playerId} now has ${this.match.coffers[args.playerId]} coffers`);
   }
   
   async exchangeCoffer(args: { playerId: PlayerId, count: number; }, context?: GameActionContext) {
-    console.log(`[exchangeCoffer action] player ${args.playerId} exchanged ${args.count} coffers`);
+    console.debug(`[exchangeCoffer action] player ${args.playerId} exchanged ${args.count} coffers`);
     this.match.coffers[args.playerId] -= args.count;
     this.match.playerTreasure += args.count;
   };
@@ -697,7 +697,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     const cardId = card.id;
     
     if (args.overpay?.inCoffer) {
-      console.log(`[buyCard action] player ${args.playerId} overpaid ${args.overpay.inCoffer} coffers, exchanging for treasure`);
+      console.debug(`[buyCard action] player ${args.playerId} overpaid ${args.overpay.inCoffer} coffers, exchanging for treasure`);
       
       await this.exchangeCoffer({
         playerId: args.playerId,
@@ -705,20 +705,20 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       });
     }
     
-    console.log(`[buyCard action] reducing player ${args.playerId} treasure by card cost ${args.cardCost.treasure} treasure`);
+    console.debug(`[buyCard action] reducing player ${args.playerId} treasure by card cost ${args.cardCost.treasure} treasure`);
     
     this.match.playerTreasure -= args.cardCost.treasure;
     
     if (args.cardCost.potion !== undefined) {
-      console.log(`[buyCard action] reducing player ${args.playerId} potions by card cost ${args.cardCost.potion} potions`);
+      console.debug(`[buyCard action] reducing player ${args.playerId} potions by card cost ${args.cardCost.potion} potions`);
       this.match.playerPotions -= args.cardCost.potion;
     }
     
-    console.log(`[buyCard action] reducing player ${args.playerId} buys by 1`);
+    console.debug(`[buyCard action] reducing player ${args.playerId} buys by 1`);
     
     this.match.playerBuys--;
     
-    console.log(`[buyCard action] adding bought stats to match`);
+    console.debug(`[buyCard action] adding bought stats to match`);
     
     this.match.stats.cardsBoughtByTurn[this.match.turnNumber] ??= [];
     this.match.stats.cardsBoughtByTurn[this.match.turnNumber]!.push(cardId);
@@ -731,7 +731,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       paid: args.cardCost.treasure + (args.overpay?.inTreasure ?? 0) + (args.overpay?.inCoffer ?? 0)
     }
     
-    console.log(`[buyCard action] gaining card to discard pile`);
+    console.debug(`[buyCard action] gaining card to discard pile`);
     
     await this.gainCard({
       playerId: args.playerId,
@@ -751,17 +751,17 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       return;
     }
     
-    console.log(`[buyCardLike action] buying ${event}`);
+    console.debug(`[buyCardLike action] buying ${event}`);
     
     const cost = event.cost.treasure;
     
     this.match.playerTreasure -= cost;
     
-    console.log(`[buyCardLike action] reducing player ${args.playerId} treasure ${cost} to ${this.match.playerTreasure}`);
+    console.debug(`[buyCardLike action] reducing player ${args.playerId} treasure ${cost} to ${this.match.playerTreasure}`);
     
     this.match.playerBuys--;
     
-    console.log(`[buyCardLike action] reducing player ${args.playerId} buys by 1 to ${this.match.playerBuys}`);
+    console.debug(`[buyCardLike action] reducing player ${args.playerId} buys by 1 to ${this.match.playerBuys}`);
     
     this.match.stats.cardLikesBoughtByTurn[this.match.turnNumber] ??= [];
     this.match.stats.cardLikesBoughtByTurn[this.match.turnNumber]!.push(args.cardLikeId);
@@ -775,7 +775,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     const effectFn = this.eventEffectFunctionMap[event.cardKey];
     
     if (effectFn) {
-      console.log(`[buyCardLike action] running effect for ${event}`);
+      console.debug(`[buyCardLike action] running effect for ${event}`);
 
       await this.logManager.withIndent(async () => {
         await effectFn({
@@ -801,12 +801,12 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   }, context?: GameActionContext) {
     const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
     
-    console.log(`[revealCard action] ${getPlayerById(this.match, args.playerId)} revealing ${card}`);
+    console.debug(`[revealCard action] ${getPlayerById(this.match, args.playerId)} revealing ${card}`);
     
     const cardId = card.id;
     
     if (args.moveToSetAside) {
-      console.log(`[revealCard action] moving card to 'revealed' zone`);
+      console.debug(`[revealCard action] moving card to 'revealed' zone`);
       
       await this.moveCard({
         cardId: cardId,
@@ -828,7 +828,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     const currentPlayer = getCurrentPlayer(match);
     const turnPhase = getTurnPhase(match.turnPhaseIndex);
     
-    console.log(`[checkForRemainingPlayerActions action] phase: ${turnPhase} for ${currentPlayer} turn ${match.turnNumber}`);
+    console.debug(`[checkForRemainingPlayerActions action] phase: ${turnPhase} for ${currentPlayer} turn ${match.turnNumber}`);
     
     this.interactivityController.checkCardInteractivity();
     
@@ -838,7 +838,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         .some(cardId => cardId.type.includes('ACTION'));
       
       if (!hasActions || !hasActionCards) {
-        console.log('[checkForRemainingPlayerActions action] skipping to next phase');
+        console.debug('[checkForRemainingPlayerActions action] skipping to next phase');
         await this.nextPhase();
         return;
       }
@@ -847,10 +847,10 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     if (turnPhase === 'buy') {
       const hasBuys = match.playerBuys > 0;
       
-      console.log(`[checkForRemainingPlayerActions action] ${currentPlayer} as ${hasBuys} buys remaining`);
+      console.debug(`[checkForRemainingPlayerActions action] ${currentPlayer} as ${hasBuys} buys remaining`);
       
       if (!hasBuys) {
-        console.log('[checkForRemainingPlayerActions action] skipping to next phase');
+        console.debug('[checkForRemainingPlayerActions action] skipping to next phase');
         await this.nextPhase();
         return;
       }
@@ -870,7 +870,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
     const cardId = card.id;
     
-    console.log(`[discardCard action] discarding ${card} from ${getPlayerById(this.match, args.playerId)}`);
+    console.debug(`[discardCard action] discarding ${card} from ${getPlayerById(this.match, args.playerId)}`);
     
     const oldLocation = await this.moveCard({
       cardId,
@@ -924,7 +924,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     const newPhase = getTurnPhase(match.turnPhaseIndex);
     
-    console.log(`[nextPhase action] entering phase: ${newPhase} for turn ${match.turnNumber}`);
+    console.debug(`[nextPhase action] entering phase: ${newPhase} for turn ${match.turnNumber}`);
     
     switch (newPhase) {
       case 'action': {
@@ -953,7 +953,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         
         currentPlayer = getCurrentPlayer(match);
         
-        console.log(`[nextPhase action] new round: ${match.roundNumber}, turn ${match.turnNumber} for ${currentPlayer}`);
+        console.debug(`[nextPhase action] new round: ${match.roundNumber}, turn ${match.turnNumber} for ${currentPlayer}`);
         
         const startTurnTrigger = new ReactionTrigger('startTurn', {
           playerId: match.players[match.currentPlayerTurnIndex].id,
@@ -983,7 +983,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         }
         
         for (let i = 0; i < 5; i++) {
-          console.log(`[nextPhase action] drawing card...`);
+          console.debug(`[nextPhase action] drawing card...`);
           
           await this.drawCard({ playerId: currentPlayer.id });
         }
@@ -998,7 +998,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   }
   
   async endTurn() {
-    console.log('[endTurn action] removing overrides');
+    console.debug('[endTurn action] removing overrides');
     
     const trigger = new ReactionTrigger('endTurn',);
     await this.reactionManager.runTrigger({ trigger });
@@ -1017,7 +1017,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     await this.reactionManager.runTrigger({ trigger });
     gainAmount = Math.max(0, trigger.args.count);
     
-    console.log(`[gainTreasure action] gaining ${gainAmount} treasure`);
+    console.debug(`[gainTreasure action] gaining ${gainAmount} treasure`);
     this.match.playerTreasure += gainAmount;
     this.match.playerTreasure = Math.max(0, this.match.playerTreasure);
     
@@ -1035,7 +1035,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   async drawCard(args: { playerId: PlayerId, count?: number }, context?: GameActionContext) {
     const { playerId, count } = args;
     
-    console.log(`[drawCard action] player ${playerId} drawing ${count} card(s)`);
+    console.debug(`[drawCard action] player ${playerId} drawing ${count} card(s)`);
 
     let drawCount = count ?? 1;
     // Allow reactions to modify incoming draw amounts (e.g., -1 Card token).
@@ -1052,11 +1052,11 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     
     for (let i = 0; i < drawCount; i++) {
       if (deck.length < 1) {
-        console.log(`[drawCard action] Shuffling discard pile`);
+        console.debug(`[drawCard action] Shuffling discard pile`);
         await this.shuffleDeck({ playerId });
         
         if (deck.length < 1) {
-          console.log(`[drawCard action] No cards left in deck, returning null`);
+          console.debug(`[drawCard action] No cards left in deck, returning null`);
           return drawnCardIds.length > 0 ? drawnCardIds : null;
         }
       }
@@ -1077,7 +1077,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         source: context?.loggingContext?.source,
       });
       
-      console.log(`[drawCard action] Drew card ${drawnCardId}`);
+      console.debug(`[drawCard action] Drew card ${drawnCardId}`);
     }
     
     return drawnCardIds;
@@ -1102,7 +1102,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     if (card.type.includes('ACTION') && args.overrides?.actionCost !== 0) {
       this.match.playerActions -= args.overrides?.actionCost ?? 1;
       
-      console.log(`[playCard action] Reducing player's action count to ${this.match.playerActions}`);
+      console.debug(`[playCard action] Reducing player's action count to ${this.match.playerActions}`);
     }
     
     this.match.stats.playedCardsByTurn[this.match.turnNumber] ??= [];
@@ -1113,7 +1113,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       playerId: playerId,
     };
     
-    console.log(`[playCard action] ${getPlayerById(this.match, playerId)} played card ${card}`);
+    console.debug(`[playCard action] ${getPlayerById(this.match, playerId)} played card ${card}`);
     
     this.logManager.addLogEntry({
       type: 'cardPlayed',
@@ -1193,7 +1193,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   async shuffleDeck(args: { playerId: PlayerId }, context?: GameActionContext): Promise<void> {
     const { playerId } = args;
     
-    console.log(`[shuffleDeck action] shuffling deck`);
+    console.debug(`[shuffleDeck action] shuffling deck`);
     
     const deck = this._cardSourceController.getSource('playerDeck', playerId);
     const discard = this._cardSourceController.getSource('playerDiscard', playerId);

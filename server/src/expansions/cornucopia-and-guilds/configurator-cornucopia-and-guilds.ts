@@ -16,14 +16,14 @@ export const configurator: ExpansionConfiguratorFactory = () => {
 
 export const registerGameEvents: (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => void = (registrar, config) => {
   if (config.kingdomSupply.some(supply => supply.name === 'footpad')) {
-    console.log(`[cornucopia configurator] setting up footpad onCardGained handler`);
+    console.debug(`[cornucopia configurator] setting up footpad onCardGained handler`);
     
     registrar('onCardGained', async (args, eventArgs) => {
       if (getTurnPhase(args.match.turnPhaseIndex) !== 'action') return;
       
       const card = args.cardLibrary.getCard(eventArgs.cardId);
       
-      console.log(`[footpad onCardGained event] player ${eventArgs.playerId} gained ${card} during action phase, drawing card`);
+      console.debug(`[footpad onCardGained event] player ${eventArgs.playerId} gained ${card} during action phase, drawing card`);
       
       // todo hacky to use just any card by id for the source. eventually source needs to be more dynamic
       const footpadCardIds = args.findCards({ cardKeys: 'footpad' });
@@ -33,10 +33,10 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   }
   
   if (config.kingdomSupply.some(supply => supply.name === 'baker')) {
-    console.log(`[cornucopia configurator] setting up baker onGameStart handler`);
+    console.debug(`[cornucopia configurator] setting up baker onGameStart handler`);
     
     registrar('onGameStart', async (args) => {
-      console.log(`[baker onGameStart event] setting up baker - +1 coffer to each player on game start`);
+      console.debug(`[baker onGameStart event] setting up baker - +1 coffer to each player on game start`);
       for (const player of args.match.players) {
         await args.runGameActionDelegate('gainCoffer', { playerId: player.id, count: 1 });
       }

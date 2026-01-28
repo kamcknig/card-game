@@ -218,7 +218,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._match.config = this._matchConfiguration;
     }
     
-    console.log(`[match] ready, sending to clients and listening for when clients are ready`);
+    console.debug(`[match] ready, sending to clients and listening for when clients are ready`);
     
     this.broadcastPatch(snapshot);
     
@@ -240,7 +240,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       if (!parsed?.match || !parsed?.cardLibrary) {
         throw new Error('match state file must include match and cardLibrary');
       }
-      console.log(`[match] loaded match state override from ${matchStatePath}`);
+      console.debug(`[match] loaded match state override from ${matchStatePath}`);
       return parsed;
     }
     catch (error) {
@@ -271,7 +271,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
   
   public playerReconnected(playerId: PlayerId, socket: AppSocket) {
-    console.log(`[match] player ${playerId} reconnecting`);
+    console.debug(`[match] player ${playerId} reconnecting`);
     this._socketMap.set(playerId, socket);
     
     this.broadcastPatch({} as Match, playerId);
@@ -281,7 +281,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     socket.emit('matchReady');
     
     socket.on('clientReady', async (_playerId: number, _ready: boolean) => {
-      console.log(`[match] ${getPlayerById(this._match, playerId)} marked ready`);
+      console.debug(`[match] ${getPlayerById(this._match, playerId)} marked ready`);
       socket.emit('matchStarted');
       socket.off('clientReady');
       
@@ -303,7 +303,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     // There should always be at least one entry after a single disconnect
     const leaving = roster.find((p) => p.id === playerId);
-    console.log(`[match] ${leaving ?? `{id:${playerId}}`} has disconnected`);
+    console.debug(`[match] ${leaving ?? `{id:${playerId}}`} has disconnected`);
     
     this._socketMap.get(playerId)?.offAnyIncoming();
     this._interactivityController?.playerRemoved(this._socketMap.get(playerId));
@@ -311,7 +311,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
   
   private createBaseSupply(config: ComputedMatchConfiguration) {
-    console.log(`[match] creating base supply cards`);
+    console.debug(`[match] creating base supply cards`);
     const cardSource = this._cardSourceController.getSource('basicSupply');
     
     if (!cardSource) {
@@ -332,7 +332,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
   
   private createKingdom(config: ComputedMatchConfiguration) {
-    console.log(`[match] creating kingdom cards`);
+    console.debug(`[match] creating kingdom cards`);
     
     const cardSource = this._cardSourceController.getSource('kingdomSupply');
     
@@ -354,7 +354,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
   
   private createNonSupplyCards(config: ComputedMatchConfiguration) {
-    console.log(`[match] creating non-supply cards`);
+    console.debug(`[match] creating non-supply cards`);
     
     const cardSource = this._cardSourceController.getSource('nonSupplyCards');
     
@@ -376,15 +376,15 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
   
   private createPlayerDecks(config: MatchConfiguration) {
-    console.log(`[match] creating player decks`);
+    console.debug(`[match] creating player decks`);
     
     return Object.values(config.players).forEach((player, idx) => {
-      console.log('initializing player', player.id, 'cards...');
+      console.debug('initializing player', player.id, 'cards...');
       
       let playerStartHand = this._playerHands.length > 0 ? this._playerHands[idx] : config.playerStartingHand as Record<string, number>;
       playerStartHand ??= MatchBaseConfiguration.playerStartingHand;
-      console.log(`[match] using player starting hand`);
-      console.log(Object.keys(playerStartHand).map((key) => `${key}: ${playerStartHand[key]}`).join(', '))
+      console.debug(`[match] using player starting hand`);
+      console.debug(Object.keys(playerStartHand).map((key) => `${key}: ${playerStartHand[key]}`).join(', '))
       
       const deck = this._cardSourceController.getSource('playerDeck', player.id);
       
@@ -455,7 +455,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this._matchSnapshot = null;
     
     if (await this.checkGameEnd()) {
-      console.log(`[match] game ended`)
+      console.debug(`[match] game ended`)
     }
     
     return result as Promise<GameActionReturnTypeMap[K]>;
@@ -466,7 +466,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const cardLibraryPatch = compare(this._cardLibSnapshot, this._cardLibrary.getAllCards());
     
     if (patch.length || cardLibraryPatch.length) {
-      console.log(`[match] sending match update to clients`);
+      console.debug(`[match] sending match update to clients`);
       
       if (playerId) {
         this._socketMap.get(playerId)?.emit('patchUpdate', patch, cardLibraryPatch);
@@ -482,7 +482,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       player.id === playerId
     );
     
-    console.log(`[match] received clientReady event from ${player}`);
+    console.debug(`[match] received clientReady event from ${player}`);
     
     if (!player) {
       console.error(`[match] player not found`);
@@ -497,11 +497,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     player.ready = true;
     
     if (this._match.config.players.some((p) => !p.ready)) {
-      console.log(`[match] not all players marked ready, waiting for everyone`,);
+      console.debug(`[match] not all players marked ready, waiting for everyone`,);
       return;
     }
     
-    console.log('[match] all players ready');
+    console.debug('[match] all players ready');
     
     for (const socket of this._socketMap.values()) {
       socket.off('clientReady', this.onClientReady);
@@ -511,7 +511,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   };
   
   private async startMatch() {
-    console.log(`[match] starting match`);
+    console.debug(`[match] starting match`);
     
     await this._reactionManager?.runGameLifecycleEvent('onGameStart', { match: this._match });
     
@@ -549,7 +549,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
   
   private calculateScores() {
-    console.log(`[match] calculating scores`);
+    console.debug(`[match] calculating scores`);
     
     const match = this._match;
     
@@ -564,7 +564,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         
         const customScoringFn = scoringFunctionMap[card?.cardKey ?? ''];
         if (customScoringFn) {
-          console.log(`[match] processing scoring function for ${card}`);
+          console.debug(`[match] processing scoring function for ${card}`);
           score += customScoringFn({
             cardSourceController: this._cardSourceController,
             cardPriceController: this._cardPriceController!,
@@ -585,7 +585,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
   
   private async checkGameEnd() {
-    console.log(`[match] checking if the game has ended`);
+    console.debug(`[match] checking if the game has ended`);
     
     const match = this._match;
     
@@ -593,7 +593,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       { location: 'basicSupply' },
       { cardKeys: 'province' }
     ]).length === 0) {
-      console.log(`[match] supply has no more provinces, game over`);
+      console.debug(`[match] supply has no more provinces, game over`);
       await this.endGame();
       return true;
     }
@@ -604,10 +604,10 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     
     const emptyPileCount = startingSupplyCount - remainingSupplyCount;
     
-    console.log(`[match] empty pile count ${emptyPileCount}`);
+    console.debug(`[match] empty pile count ${emptyPileCount}`);
     
     if (emptyPileCount === 3) {
-      console.log(`[match] three supply piles are empty, game over`);
+      console.debug(`[match] three supply piles are empty, game over`);
       await this.endGame();
       return true;
     }
@@ -622,7 +622,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         findCards: this._findCards
       });
       if (shouldEnd) {
-        console.log('[match] expansion end-game condition met, game over');
+        console.debug('[match] expansion end-game condition met, game over');
         await this.endGame();
         return true;
       }
@@ -632,15 +632,15 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
   
   private async endGame() {
-    console.log(`[match] ending the game`);
+    console.debug(`[match] ending the game`);
     
     this._reactionManager?.endGame();
     this._interactivityController?.endGame();
     
-    console.log(`[match] removing socket listeners for 'nextPhase'`);
+    console.debug(`[match] removing socket listeners for 'nextPhase'`);
     this._socketMap.forEach((s) => s.off('nextPhase'));
     
-    console.log(`[match] removing listener for match state updates`);
+    console.debug(`[match] removing listener for match state updates`);
     
     const match = this._match;
     
@@ -697,8 +697,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         }),
     };
     
-    console.log(`[match] match summary created`);
-    console.log(summary);
+    console.debug(`[match] match summary created`);
+    console.debug(summary);
     
     this._socketMap.forEach((s) => s.emit('gameOver', summary));
     this.emit('gameOver');
@@ -718,7 +718,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
   
   private onSearchCards(playerId: PlayerId, searchStr: string) {
-    console.log(`[match] ${getPlayerById(this._match, playerId)} searching for cards using term '${searchStr}'`);
+    console.debug(`[match] ${getPlayerById(this._match, playerId)} searching for cards using term '${searchStr}'`);
     
     this._socketMap.get(playerId)?.emit(
       'searchCardResponse',

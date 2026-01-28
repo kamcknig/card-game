@@ -12,7 +12,7 @@ export const configureRuins = async (args: ExpansionConfiguratorContext) => {
     return;
   }
   
-  console.log(`[dark-ages configurator - configuring ruins] ruins needs to be configured`);
+  console.debug(`[dark-ages configurator - configuring ruins] ruins needs to be configured`);
   
   const expansionData = expansionLibrary['dark-ages'];
   const expansionKingdoms = expansionData.cardData.kingdomSupply;
@@ -43,5 +43,5 @@ export const configureRuins = async (args: ExpansionConfiguratorContext) => {
   
   args.config.kingdomSupply.push(ruinsKingdom);
   
-  console.log(`[dark-ages configurator - configuring ruins] ruins configured`);
+  console.debug(`[dark-ages configurator - configuring ruins] ruins configured`);
 };

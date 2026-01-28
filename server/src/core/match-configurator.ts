@@ -81,7 +81,7 @@ export class MatchConfigurator {
     this._config = structuredClone(config) as ComputedMatchConfiguration;
     this._config.players = players;
     
-    console.log(`[match configurator] created`);
+    console.trace(`[match configurator] created`);
   }
   
   public async createConfiguration(initContext: InitializeExpansionContext) {
@@ -93,20 +93,20 @@ export class MatchConfigurator {
     
     if (requisiteKingdomCardKeys && requisiteKingdomCardKeys.length > 0) {
       console.warn(`[match configurator] hard-coded keeper cards ${requisiteKingdomCardKeys}`);
-      console.log(requisiteKingdomCardKeys?.join('\n'));
+      console.trace(requisiteKingdomCardKeys?.join('\n'));
     }
     
     this._config.preselectedKingdoms = this._config.preselectedKingdoms.filter(card => !!card);
     
     if (this._config.preselectedKingdoms?.length > 0) {
-      console.log(`[match configurator] requested kingdom cards ${this._config.preselectedKingdoms.length}`);
-      console.log(this._config.preselectedKingdoms?.map(card => card.cardKey)?.join('\n'));
+      console.trace(`[match configurator] requested kingdom cards ${this._config.preselectedKingdoms.length}`);
+      console.trace(this._config.preselectedKingdoms?.map(card => card.cardKey)?.join('\n'));
     }
     else {
-      console.log(`[match configurator] no cards requested in during match configuration`);
+      console.trace(`[match configurator] no cards requested in during match configuration`);
     }
     
-    console.log(`[match configurator] removing possible duplicates from requested and hard-coded kingdoms`);
+    console.trace(`[match configurator] removing possible duplicates from requested and hard-coded kingdoms`);
     
     this._requestedKingdoms =
       Array.from(new Set([
@@ -118,7 +118,7 @@ export class MatchConfigurator {
     
     if (this._requestedKingdoms.length > MatchBaseConfiguration.numberOfKingdomPiles) {
       const requestedKingdomCardKeys = this._requestedKingdoms.map(card => card.cardKey);
-      console.log(`[match configurator] requested kingdom cards exceeds 10, truncating to 10 ${requestedKingdomCardKeys.join(', ')}`);
+      console.trace(`[match configurator] requested kingdom cards exceeds 10, truncating to 10 ${requestedKingdomCardKeys.join(', ')}`);
       this._requestedKingdoms.length = MatchBaseConfiguration.numberOfKingdomPiles;
     }
     
@@ -158,7 +158,7 @@ export class MatchConfigurator {
     const additionalKingdoms: { name: string; cards: CardNoId[]; }[] = [];
     
     if (selectedKingdoms.length === MatchBaseConfiguration.numberOfKingdomPiles) {
-      console.log(`[match configurator] number of requested kingdoms ${this._requestedKingdoms.length} is enough`);
+      console.trace(`[match configurator] number of requested kingdoms ${this._requestedKingdoms.length} is enough`);
     }
     else {
       // reduces the player-configured expansions into an array whose elements are the expansions' library data
@@ -176,7 +176,7 @@ export class MatchConfigurator {
       const bannedKingdomRandomizers = this._bannedKingdoms.map(card => card.randomizer) as string[];
       const alreadyIncludedKingdomRandomizers = selectedKingdoms.map(card => card.randomizer) as string[];
       
-      console.log(`[match configurator] banned kingdoms ${bannedKingdomRandomizers.join(', ') ?? '- no banned kingdoms'}`);
+      console.trace(`[match configurator] banned kingdoms ${bannedKingdomRandomizers.join(', ') ?? '- no banned kingdoms'}`);
       
       // loop over the selected expansions, and filter out any kingdom cards that
       // are banned, are already included, or do not have a randomizer
@@ -204,12 +204,12 @@ export class MatchConfigurator {
       
       const uniqueRandomizers = uniqueByProp(availableRandomizers, 'randomizer');
       
-      console.log(`[match configurator] available kingdoms ${uniqueRandomizers.length}`);
-      console.log(uniqueRandomizers.join('\n'));
+      console.trace(`[match configurator] available kingdoms ${uniqueRandomizers.length}`);
+      console.trace(uniqueRandomizers.join('\n'));
       
       const numKingdomsToSelect = MatchBaseConfiguration.numberOfKingdomPiles - this._requestedKingdoms.length;
       
-      console.log(`[match configurator] need to select ${numKingdomsToSelect} kingdoms`);
+      console.trace(`[match configurator] need to select ${numKingdomsToSelect} kingdoms`);
       
       const allowedEventsAndOthers = MatchBaseConfiguration.numberOfEventsAndOthers;
       let selectedEventsAndOthers = this._config.events.length;
@@ -219,7 +219,7 @@ export class MatchConfigurator {
         const selectedRandomizer = uniqueRandomizers[randomIndex];
         
         if (selectedRandomizer.type === 'card') {
-          console.log(`[match configurator] selected kingdom ${selectedRandomizer.randomizer}`);
+          console.trace(`[match configurator] selected kingdom ${selectedRandomizer.randomizer}`);
           
           const cardsInRandomizer = availableRandomizers
             .filter(randomizer => randomizer.randomizer === selectedRandomizer.randomizer)
@@ -248,10 +248,10 @@ export class MatchConfigurator {
           });
         }
         else {
-          console.log(`[match configurator] selected event ${selectedRandomizer.randomizer}`);
+          console.trace(`[match configurator] selected event ${selectedRandomizer.randomizer}`);
           
           if (++selectedEventsAndOthers <= allowedEventsAndOthers) {
-            console.log(`[match configurator] selected event ${selectedRandomizer.randomizer} is allowed, adding to match`);
+            console.trace(`[match configurator] selected event ${selectedRandomizer.randomizer} is allowed, adding to match`);
             const event = availableRandomizers
               .find(randomizer => randomizer.randomizer === selectedRandomizer.randomizer)
               ?.cardLike as EventNoId;
@@ -263,7 +263,7 @@ export class MatchConfigurator {
             this._config.events.push(event);
           }
           else {
-            console.log(`[match configurator] selected event ${selectedRandomizer.randomizer} is not allowed, already have max number of events and others`);
+            console.trace(`[match configurator] selected event ${selectedRandomizer.randomizer} is not allowed, already have max number of events and others`);
           }
           
           // reduce the counter because events don't count against kingdom selection
@@ -285,8 +285,8 @@ export class MatchConfigurator {
         }).concat(additionalKingdoms)
       );
     
-    console.log(`[match configurator] finalized selected kingdoms count ${this._config.kingdomSupply.length}`);
-    console.log(this._config.kingdomSupply.map(supply => supply.name).join('\n'));
+    console.trace(`[match configurator] finalized selected kingdoms count ${this._config.kingdomSupply.length}`);
+    console.trace(this._config.kingdomSupply.map(supply => supply.name).join('\n'));
   }
   
   private selectBasicSupply() {
@@ -305,7 +305,7 @@ export class MatchConfigurator {
     }, [] as Supply[]);
     
     const basicSupply = this._config.basicSupply.map(supply => supply.name).join(', ');
-    console.log(`[match configurator] setting default basic cards ${basicSupply}`);
+    console.trace(`[match configurator] setting default basic cards ${basicSupply}`);
   }
   
   private async getExpansionConfigurators() {
@@ -319,11 +319,11 @@ export class MatchConfigurator {
       );
     for (const expansionName of uniqueExpansions) {
       try {
-        console.log(`[match configurator] loading configurator for expansion '${expansionName}'`);
+        console.trace(`[match configurator] loading configurator for expansion '${expansionName}'`);
         const configuratorFactory = (await import(`@expansions/${expansionName}/configurator-${expansionName}.ts`)).default as ExpansionConfiguratorFactory;
         configurators.set(expansionName, configuratorFactory());
       } catch (error) {
-        console.log(`[match configurator] no configurator factory found for expansion '${expansionName}'`);
+        console.trace(`[match configurator] no configurator factory found for expansion '${expansionName}'`);
       }
     }
     return configurators
@@ -339,7 +339,7 @@ export class MatchConfigurator {
     do {
       iteration++;
       for (const [expansionName, expansionConfigurator] of configuratorIterator) {
-        console.log(`[match configurator] running expansion configurator for expansion '${expansionName}'`);
+        console.trace(`[match configurator] running expansion configurator for expansion '${expansionName}'`);
         await expansionConfigurator({
           ...initContext,
           config: this._config,
@@ -350,7 +350,7 @@ export class MatchConfigurator {
       
       changes = compare(configSnapshot, this._config);
       
-      console.log(`[match configurator] expansion configurator iteration ${iteration} changes ${changes.length}`);
+      console.trace(`[match configurator] expansion configurator iteration ${iteration} changes ${changes.length}`);
       
       configSnapshot = structuredClone(this._config);
     } while (changes.length > 0 && iteration < 10);
@@ -359,13 +359,13 @@ export class MatchConfigurator {
       throw new Error(`[match configurator] expansion configurator failed to converge after 10 iterations`);
     }
     
-    console.log(`[match configurator] registering expansion end game conditions`);
+    console.trace(`[match configurator] registering expansion end game conditions`);
     await this.registerExpansionEndGameConditions(initContext.endGameConditionRegistrar);
     
-    console.log(`[match configurator] registering expansion scoring effects`);
+    console.trace(`[match configurator] registering expansion scoring effects`);
     await this.registerExpansionPlayerScoreDecorators(initContext.playerScoreDecoratorRegistrar);
     
-    console.log(`[match configurator] registering game event listeners`);
+    console.trace(`[match configurator] registering game event listeners`);
     await this.registerGameEventListeners(initContext.gameEventRegistrar);
   }
   
@@ -382,7 +382,7 @@ export class MatchConfigurator {
           continue;
         }
         console.warn(`[match configurator] failed to register expansion actions for ${expansion}`);
-        console.log(error);
+        console.error(error);
       }
     }
   }
@@ -400,7 +400,7 @@ export class MatchConfigurator {
           continue;
         }
         console.warn(`[match configurator] failed to register expansion end game conditions for ${expansion}`);
-        console.log(error);
+        console.error(error);
       }
     }
   }
@@ -418,7 +418,7 @@ export class MatchConfigurator {
           continue;
         }
         console.warn(`[match configurator] failed to register expansion scoring functions for ${expansion}`);
-        console.log(error);
+        console.error(error);
       }
     }
   }

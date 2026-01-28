@@ -18,7 +18,7 @@ export const loadEvents = async (expansionName: string) => {
   catch (error) {
     if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
       console.warn(`[load-events] failed to load expansion event library for expansion ${expansionName}`);
-      console.log(error);
+      console.error(error);
     }
   }
   
@@ -32,7 +32,7 @@ export const loadEvents = async (expansionName: string) => {
       }
       
       if (events[cardKey].registerEffects) {
-        console.log(`[load-events] registering event effects for ${cardKey}`);
+        console.debug(`[load-events] registering event effects for ${cardKey}`);
         eventEffectFactoryMap[cardKey] = events[cardKey].registerEffects;
       }
     }
@@ -40,7 +40,7 @@ export const loadEvents = async (expansionName: string) => {
   catch (error) {
     if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
       console.warn(`[load-events] failed to load expansion event effects for expansion ${expansionName}`);
-      console.log(error);
+      console.error(error);
     }
   }
 }

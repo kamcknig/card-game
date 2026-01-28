@@ -24,7 +24,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
     const basicCards = args.config.basicSupply;
     
     if (hasProsperityKingdom && !prosperityCheckConfigured) {
-      console.log(`[prosperity configurator] adding prosperity and colony to config`);
+      console.debug(`[prosperity configurator] adding prosperity and colony to config`);
       
       basicCards.push({
         name: 'colony',
@@ -43,7 +43,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
     const curseCard = basicCards.find(supply => supply.name === 'curse');
     
     if (charlatanPresent && !charlatanConfigured) {
-      console.log(`[prosperity configurator] charlatan is part of kingdom - curses gain the treasure type and +1 treasure effect`);
+      console.debug(`[prosperity configurator] charlatan is part of kingdom - curses gain the treasure type and +1 treasure effect`);
       
       if (!curseCard) {
         console.warn(`[prosperity configurator] curse card not found in config`);
@@ -52,7 +52,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
       curseCard?.cards?.forEach(card => card.type.push('TREASURE'));
       
       args.cardEffectRegistrar('curse', 'prosperity', async (args) => {
-        console.log(`[curse effect - prosperity] curse effect called`);
+        console.debug(`[curse effect - prosperity] curse effect called`);
         await args.runGameActionDelegate('gainTreasure', { count: 1 });
       });
       
@@ -92,7 +92,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
       return;
     }
     
-    console.log(`[prosperity onGameStart event] registering peddler game events`);
+    console.debug(`[prosperity onGameStart event] registering peddler game events`);
     
     for (const cardId of peddlerCardIds) {
       for (const player of args.match.players) {
@@ -128,7 +128,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           triggeredEffectFn: async (triggerEffectArgs) => {
             const peddlerCard = triggerEffectArgs.cardLibrary.getCard(cardId);
             
-            console.log(`[peddler triggered effect] adding pricing rule for ${peddlerCard}`);
+            console.debug(`[peddler triggered effect] adding pricing rule for ${peddlerCard}`);
             
             const rule: CardPriceRule = (ruleCard, ruleContext) => {
               const cardsInPlay = getCardsInPlay(args.findCards);

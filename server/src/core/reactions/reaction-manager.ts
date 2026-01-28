@@ -51,7 +51,7 @@ export class ReactionManager {
     for (const reaction of reactions) {
       if (reaction.listeningFor !== trigger.eventType) continue;
       
-      console.log(`[REACTION MANAGER] checking trigger ${trigger} condition for ${reaction.id} reaction`);
+      console.trace(`[REACTION MANAGER] checking trigger ${trigger} condition for ${reaction.id} reaction`);
       
       let include = true;
       
@@ -90,7 +90,7 @@ export class ReactionManager {
       const trigger = this._reactions[i];
       if (trigger.id === triggerId) {
         this._reactions.splice(i, 1);
-        console.log(`[REACTION MANAGER] removing trigger reaction ${triggerId} for player ${this._match.players?.find((player) => player.id === trigger.playerId)}`);
+        console.trace(`[REACTION MANAGER] removing trigger reaction ${triggerId} for player ${this._match.players?.find((player) => player.id === trigger.playerId)}`);
       }
     }
   }
@@ -121,7 +121,7 @@ export class ReactionManager {
       } as ReactionTemplate<T>;
     }
     
-    console.log(`[REACTION MANAGER] registering trigger template ID ${template.id}, for player ${template.playerId}`);
+    console.trace(`[REACTION MANAGER] registering trigger template ID ${template.id}, for player ${template.playerId}`);
     
     this._reactions.push(new Reaction(template) as any);
   }
@@ -148,7 +148,7 @@ export class ReactionManager {
       return;
     }
     
-    console.log(`[REACTION MANAGER] running lifecycle trigger '${trigger}' for card ${card}`);
+    console.trace(`[REACTION MANAGER] running lifecycle trigger '${trigger}' for card ${card}`);
     
     await fn({
       cardSourceController: this._cardSourceController,
@@ -172,7 +172,7 @@ export class ReactionManager {
     );
     
     for (const targetPlayer of targetOrder) {
-      console.log(`[REACTION MANAGER] checking '${trigger.eventType}' reactions for ${targetPlayer}`);
+      console.trace(`[REACTION MANAGER] checking '${trigger.eventType}' reactions for ${targetPlayer}`);
       
       const usedReactionIds = new Set<string>();
       const blockedCardKeys = new Set<string>();
@@ -198,7 +198,7 @@ export class ReactionManager {
         
         const promptReactions = reactions.filter((reaction) => !reaction.autoResolve);
         
-        console.log(`[REACTION MANAGER] ${targetPlayer} has ${promptReactions.length} remaining reactions`);
+        console.trace(`[REACTION MANAGER] ${targetPlayer} has ${promptReactions.length} remaining reactions`);
         
         if (!promptReactions.length) break;
         
@@ -208,7 +208,7 @@ export class ReactionManager {
         
         if (systemReactions.length) {
           for (const systemReaction of systemReactions) {
-            console.log(`[REACTION MANAGER] running system reaction ${systemReaction.id} for ${targetPlayer}`);
+            console.trace(`[REACTION MANAGER] running system reaction ${systemReaction.id} for ${targetPlayer}`);
             await this.runReaction(systemReaction, trigger, targetPlayer, reactionContext);
           }
           
@@ -233,7 +233,7 @@ export class ReactionManager {
           const actionButtons = buildActionButtons(grouped, this._cardLibrary);
           const actionMap = buildActionMap(grouped);
           
-          console.log(`[REACTION MANAGER] prompting ${targetPlayer} to choose reaction`);
+          console.trace(`[REACTION MANAGER] prompting ${targetPlayer} to choose reaction`);
           
           const result = await this.runGameActionDelegate('userPrompt', {
             playerId: targetPlayer.id,
@@ -242,11 +242,11 @@ export class ReactionManager {
           }) as { action: number };
           
           if (result.action === 0) {
-            console.log(`[REACTION MANAGER] ${targetPlayer} chose not to react`);
+            console.trace(`[REACTION MANAGER] ${targetPlayer} chose not to react`);
             break;
           }
           else {
-            console.log(`[REACTION MANAGER] ${targetPlayer} reacts with ${actionMap.get(result.action)}`);
+            console.trace(`[REACTION MANAGER] ${targetPlayer} reacts with ${actionMap.get(result.action)}`);
           }
           
           selectedReaction = actionMap.get(result.action);
@@ -286,7 +286,7 @@ export class ReactionManager {
         const stillValid = (await this.getReactions(trigger, [autoReaction])).length > 0;
         if (!stillValid) continue;
         
-        console.log(`[REACTION MANAGER] auto-resolving reaction ${autoReaction.id} for ${targetPlayer}`);
+        console.trace(`[REACTION MANAGER] auto-resolving reaction ${autoReaction.id} for ${targetPlayer}`);
         await this.runReaction(autoReaction, trigger, targetPlayer, reactionContext);
       }
     }
@@ -323,7 +323,7 @@ export class ReactionManager {
     }
     
     if (reaction.once) {
-      console.log(`[REACTION MANAGER] selected reaction is single-use, unregistering it`);
+      console.trace(`[REACTION MANAGER] selected reaction is single-use, unregistering it`);
       this.unregisterTrigger(reaction.id);
     }
   }

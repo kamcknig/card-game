@@ -10,7 +10,7 @@ export class MatchCardLibrary {
   private readonly _library: Map<CardId, Card> = new Map();
   
   public addCard = (card: Card) => {
-    console.log(`[CARD LIBRARY] adding ${card} to library`);
+    console.debug(`[CARD LIBRARY] adding ${card} to library`);
     this._library.set(card.id, card);
   };
   

@@ -49,7 +49,7 @@ export class CardInteractivityController {
   }
   
   public endGame() {
-    console.log(`[card interactivity] removing socket listeners and marking ended`,);
+    console.debug(`[card interactivity] removing socket listeners and marking ended`,);
     this._socketMap.forEach((s) => {
       s.off('cardTapped');
       s.off('cardLikeTapped');
@@ -60,7 +60,7 @@ export class CardInteractivityController {
   
   public checkCardInteractivity(): void {
     if (this._gameOver) {
-      console.log(`[card interactivity] game is over, not processing match update`,);
+      console.debug(`[card interactivity] game is over, not processing match update`,);
       return;
     }
     
@@ -69,7 +69,7 @@ export class CardInteractivityController {
     const currentPlayer = match.players[match.currentPlayerTurnIndex];
     const turnPhase = TurnPhaseOrderValues[match.turnPhaseIndex];
     
-    console.log(`[card interactivity] determining selectable cards - phase '${turnPhase}, player ${currentPlayer}', player Index '${match.currentPlayerTurnIndex}'`);
+    console.debug(`[card interactivity] determining selectable cards - phase '${turnPhase}, player ${currentPlayer}', player Index '${match.currentPlayerTurnIndex}'`);
     
     const selectableCards: number[] = [];
     
@@ -150,20 +150,20 @@ export class CardInteractivityController {
       return prev;
     }, {} as Record<PlayerId, CardId[]>);
     
-    console.log(`[card interactivity] selectable cards`);
+    console.debug(`[card interactivity] selectable cards`);
     
     for (const key of Object.keys(match.selectableCards)) {
       const tmp = match.selectableCards[+key]?.concat() ?? [];
       const p = getPlayerById(match, +key);
-      console.log(`${p} can select ${tmp.length} cards`);
+      console.debug(`${p} can select ${tmp.length} cards`);
     }
   }
   
   private async onPlayAllTreasure(playerId: PlayerId) {
-    console.log('[card interactivity] playing all treasures for current player');
+    console.debug('[card interactivity] playing all treasures for current player');
     
     if (this._gameOver) {
-      console.log(`[card interactivity] game is over, not playing treasures`);
+      console.debug(`[card interactivity] game is over, not playing treasures`);
       return;
     }
 
@@ -178,7 +178,7 @@ export class CardInteractivityController {
     const treasureCards = hand.filter((e) =>
       this._cardLibrary.getCard(e).type.includes('TREASURE')
     );
-    console.log(`[card interactivity] ${player} has ${treasureCards.length} treasure cards in hand`);
+    console.debug(`[card interactivity] ${player} has ${treasureCards.length} treasure cards in hand`);
     if (hand.length === 0 || treasureCards.length === 0) {
       return;
     }
@@ -197,21 +197,21 @@ export class CardInteractivityController {
       throw new Error('could not find player');
     }
     
-    console.log(`[card interactivity] ${player} tapped card-like ${cardId}`);
+    console.debug(`[card interactivity] ${player} tapped card-like ${cardId}`);
     
     if (this._gameOver) {
-      console.log(`[card interactivity] game is over, not processing card-like tap`);
+      console.debug(`[card interactivity] game is over, not processing card-like tap`);
       return;
     }
     
     const phase = getTurnPhase(this.match.turnPhaseIndex);
     
     if (phase === 'buy') {
-      console.log(`[card interactivity] ${player} tapped card-like ${cardId} in phase ${phase}, processing`);
+      console.debug(`[card interactivity] ${player} tapped card-like ${cardId} in phase ${phase}, processing`);
       await this.runGameDelegate('buyCardLike', { playerId, cardLikeId: cardId });
     }
     else {
-      console.log(`[card interactivity] ${player} tapped card-like ${cardId} in phase ${phase}, not processing`);
+      console.debug(`[card interactivity] ${player} tapped card-like ${cardId} in phase ${phase}, not processing`);
     }
     
     await this.runGameDelegate('checkForRemainingPlayerActions');
@@ -226,10 +226,10 @@ export class CardInteractivityController {
       throw new Error('could not find player');
     }
     
-    console.log(`[card interactivity] pl${player} tapped card ${this._cardLibrary.getCard(cardId)}`);
+    console.debug(`[card interactivity] pl${player} tapped card ${this._cardLibrary.getCard(cardId)}`);
     
     if (this._gameOver) {
-      console.log(`[card interactivity] game is over, not processing card tap`);
+      console.debug(`[card interactivity] game is over, not processing card tap`);
       return;
     }
     

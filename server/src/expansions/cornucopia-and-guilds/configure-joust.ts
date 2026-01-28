@@ -9,7 +9,7 @@ export const configureJoust = async (args: ExpansionConfiguratorContext) => {
     return;
   }
   
-  console.log(`[cornucopia configurator - configuring joust] joust present in supply`);
+  console.debug(`[cornucopia configurator - configuring joust] joust present in supply`);
   
   args.config.nonSupply ??= [];
   
@@ -32,5 +32,5 @@ export const configureJoust = async (args: ExpansionConfiguratorContext) => {
     const count = args.config.players.length > 2 ? 2 : 1;
     rewardsKingdom.cards = [...rewardsKingdom.cards, ...new Array(count).fill(cardData)];
   }
-  console.log(`[cornucopia configurator - configuring joust] joust configured`);
+  console.debug(`[cornucopia configurator - configuring joust] joust configured`);
 }
