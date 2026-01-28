@@ -1,10 +1,37 @@
 import {Server} from 'socket.io';
-import {ServerEmitEvents, ServerListenEvents} from 'shared/shared-types.ts';
-import process from 'node:process';
+import {ServerEmitEvents, ServerListenEvents} from 'shared/shared-types';
 import {toNumber} from 'es-toolkit/compat';
-import * as log from '@timepp/enhanced-deno-log/auto-init';
+import * as log from '@timepp/enhanced-deno-log';
 import {Game} from './core/game.ts';
 import {loadExpansion} from './utils/load-expansion.ts';
+
+// Colorize server console logs for easier scanning (disable with LOG_COLOR=false).
+const isTerminal = (() => {
+    const stdoutAny = Deno.stdout;
+    if (typeof stdoutAny.isTerminal === 'function') {
+        return stdoutAny.isTerminal();
+    }
+    if (typeof stdoutAny.isTerminal === 'boolean') {
+        return stdoutAny.isTerminal;
+    }
+    return false;
+})();
+const enableLogColor = isTerminal && Deno.env.get('LOG_COLOR')?.toLowerCase() !== 'false';
+const colorWrap = (colorCode: string, value: unknown): unknown => {
+    if (!enableLogColor) return value;
+    if (typeof value !== 'string') return value;
+    return `\x1b[${colorCode}m${value}\x1b[0m`;
+};
+const wrapConsole = (level: 'debug' | 'trace' | 'warn' | 'error', colorCode: string) => {
+    const original = console[level].bind(console);
+    console[level] = (...args: unknown[]) => {
+        original(...args.map(arg => colorWrap(colorCode, arg)));
+    };
+};
+wrapConsole('trace', '97'); // almost white
+wrapConsole('debug', '36'); // cyan
+wrapConsole('warn', '33');  // yellow
+wrapConsole('error', '31'); // red
 
 if (Deno.env.get('LOG_TO_FILE')?.toLowerCase() === 'false') {
     log.setConfig({

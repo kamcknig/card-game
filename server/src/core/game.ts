@@ -78,8 +78,7 @@ export class Game {
     }
     
     try {
-      const preselectedEvents = JSON.parse(Deno.readTextFileSync('./preselected-events.json')) as EventNoId[];
-      defaultMatchConfiguration.events = preselectedEvents;
+      defaultMatchConfiguration.events = JSON.parse(Deno.readTextFileSync('./preselected-events.json')) as EventNoId[];
     } catch (e) {
       console.warn(`Couldn't read preselected-events.json`);
       console.error(e);
