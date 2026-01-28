@@ -13,13 +13,14 @@ if (Deno.env.get('LOG_TO_FILE')?.toLowerCase() === 'false') {
 
 // Configure console colors to match desired log level styling.
 log.setConfig({
+    enabledLevels: ['log'],
     colors: {
-        debug: 'cyan',
         info: 'blue',
         log: 'white',
-        func: '#f5f5f5',
+        debug: 'cyan',
         warn: 'yellow',
         error: 'red',
+        func: '#f5f5f5',
         timer: 'green',
     },
 });
