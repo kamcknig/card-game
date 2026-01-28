@@ -11,6 +11,14 @@ export const registerAdventuresTokenDefinitions = (): void => {
     duration: 'permanent',
     expansion: 'adventures',
   });
+
+  registerTokenDefinition({
+    id: adventuresTokenIds.minusCostTwo,
+    name: '-$2 cost token',
+    rulesText: 'Cards from this pile cost $2 less on your turns.',
+    duration: 'permanent',
+    expansion: 'adventures',
+  });
   
   registerTokenDefinition({
     id: adventuresTokenIds.plusAction,

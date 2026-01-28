@@ -1,4 +1,4 @@
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, Text } from 'pixi.js';
 import { cardStore } from '../../../state/card-state';
 import { Card, CardType, Match, TokenDefinition, TokenId, TokenInstance } from 'shared/shared-types';
 import { atom, computed } from 'nanostores';
@@ -32,7 +32,16 @@ export class PlayerHandView extends Container {
   private readonly _cleanup: (() => void)[] = [];
   private readonly _background: Graphics = new Graphics({ label: 'background' });
   private readonly _cardList: List = new List({ type: 'horizontal', elementsMargin: STANDARD_GAP });
-  private readonly _tokenTray: List = new List({ type: 'horizontal', elementsMargin: Math.floor(STANDARD_GAP * 0.5) });
+  private readonly _availableTokenTray: List = new List({ type: 'horizontal', elementsMargin: Math.floor(STANDARD_GAP * 0.5) });
+  private readonly _activeTokenTray: List = new List({ type: 'horizontal', elementsMargin: Math.floor(STANDARD_GAP * 0.5) });
+  private readonly _availableTokenLabel: Text = new Text({
+    text: 'Available Tokens',
+    style: { fill: '#ffffff', fontSize: 12 }
+  });
+  private readonly _activeTokenLabel: Text = new Text({
+    text: 'Active Tokens',
+    style: { fill: '#ffffff', fontSize: 12 }
+  });
 
   constructor(
     private playerId: number,
@@ -50,17 +59,18 @@ export class PlayerHandView extends Container {
 
     this.addChild(this._background);
     this.addChild(this._phaseStatus);
-    this.addChild(this._tokenTray);
+    this.addChild(this._availableTokenLabel);
+    this.addChild(this._availableTokenTray);
+    this.addChild(this._activeTokenLabel);
+    this.addChild(this._activeTokenTray);
     this.addChild(this._cardList);
     this.addChild(this._nextPhaseButton.button);
 
     this._background.y = this._phaseStatus.y + this._phaseStatus.height;
-    this._tokenTray.x = STANDARD_GAP;
-    this._tokenTray.y = this._background.y + Math.floor(STANDARD_GAP * 0.5);
     this._cardList.y = this._background.y + STANDARD_GAP;
 
     this._background.clear();
-    this._background.roundRect(0, 0, (CARD_WIDTH + STANDARD_GAP) * 6, CARD_HEIGHT + STANDARD_GAP * 4, 5);
+    this._background.roundRect(0, 0, (CARD_WIDTH + STANDARD_GAP) * 6, CARD_HEIGHT + STANDARD_GAP * 6, 5);
     this._background.fill({ color: 0, alpha: .6 });
 
     this._cleanup.push(computed(
@@ -133,7 +143,8 @@ export class PlayerHandView extends Container {
   
   // Renders any unplaced tokens owned by this player in the token tray.
   private drawTokenTray(match: Match | null, tokenDefinitions: Record<TokenId, TokenDefinition>) {
-    this._tokenTray.removeChildren();
+    this._availableTokenTray.removeChildren();
+    this._activeTokenTray.removeChildren();
     
     if (!match) {
       this.updateHandLayout();
@@ -142,9 +153,11 @@ export class PlayerHandView extends Container {
     
     const playerColor = match.players.find(player => player.id === this.playerId)?.color ?? '#ffffff';
     const tokens = Object.values(match.tokens ?? {})
-      .filter(token => token.ownerId === this.playerId && token.location.type === 'player') as TokenInstance[];
+      .filter(token => token.ownerId === this.playerId) as TokenInstance[];
+    const availableTokens = tokens.filter(token => token.location.type === 'playerAvailable');
+    const activeTokens = tokens.filter(token => token.location.type === 'player');
     
-    tokens
+    availableTokens
       .sort((a, b) => a.tokenId.localeCompare(b.tokenId))
       .forEach(token => {
         const definition = tokenDefinitions[token.tokenId];
@@ -154,7 +167,20 @@ export class PlayerHandView extends Container {
           labelText: label,
           color: this.parseColor(playerColor),
         });
-        this._tokenTray.addChild(badge);
+        this._availableTokenTray.addChild(badge);
+      });
+    
+    activeTokens
+      .sort((a, b) => a.tokenId.localeCompare(b.tokenId))
+      .forEach(token => {
+        const definition = tokenDefinitions[token.tokenId];
+        const label = getTokenShortLabel(token.tokenId, definition);
+        const badge = new TokenBadgeView({
+          size: 35,
+          labelText: label,
+          color: this.parseColor(playerColor),
+        });
+        this._activeTokenTray.addChild(badge);
       });
     
     this.updateHandLayout();
@@ -162,8 +188,42 @@ export class PlayerHandView extends Container {
   
   // Updates layout so the hand sits below any visible token tray.
   private updateHandLayout() {
-    const trayHeight = this._tokenTray.children.length > 0 ? this._tokenTray.height + STANDARD_GAP : 0;
-    this._cardList.y = this._background.y + STANDARD_GAP + trayHeight;
+    const hasAvailable = this._availableTokenTray.children.length > 0;
+    const hasActive = this._activeTokenTray.children.length > 0;
+    
+    this._availableTokenLabel.visible = hasAvailable;
+    this._availableTokenTray.visible = hasAvailable;
+    this._activeTokenLabel.visible = hasActive;
+    this._activeTokenTray.visible = hasActive;
+    
+    let y = this._background.y + Math.floor(STANDARD_GAP * 0.5);
+    
+    if (hasAvailable) {
+      this._availableTokenLabel.x = STANDARD_GAP;
+      this._availableTokenLabel.y = y;
+      y += this._availableTokenLabel.height + Math.floor(STANDARD_GAP * 0.25);
+      this._availableTokenTray.x = STANDARD_GAP;
+      this._availableTokenTray.y = y;
+      y += this._availableTokenTray.height + STANDARD_GAP;
+    }
+    
+    if (hasActive) {
+      this._activeTokenLabel.x = STANDARD_GAP;
+      this._activeTokenLabel.y = y;
+      y += this._activeTokenLabel.height + Math.floor(STANDARD_GAP * 0.25);
+      this._activeTokenTray.x = STANDARD_GAP;
+      this._activeTokenTray.y = y;
+      y += this._activeTokenTray.height + STANDARD_GAP;
+    }
+    
+    this._cardList.y = y;
+    
+    const minHeight = CARD_HEIGHT + STANDARD_GAP * 4;
+    const neededHeight = (this._cardList.y - this._background.y) + CARD_HEIGHT + STANDARD_GAP * 2;
+    const height = Math.max(minHeight, neededHeight);
+    this._background.clear();
+    this._background.roundRect(0, 0, (CARD_WIDTH + STANDARD_GAP) * 6, height, 5);
+    this._background.fill({ color: 0, alpha: .6 });
   }
   
   // Parses a hex color string into a numeric color for Pixi.

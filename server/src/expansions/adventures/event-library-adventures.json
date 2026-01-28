@@ -19,6 +19,11 @@
       "treasure": 3
     }
   },
+  "ferry": {
+    "cost": {
+      "treasure": 3
+    }
+  },
   "quest": {
     "cost": {
       "treasure": 0

@@ -2434,7 +2434,8 @@ const expansion: CardExpansionModule = {
             const tokens = triggeredEffectArgs.match.tokens;
             const tokenInstanceIds = Object.keys(tokens).filter((t) =>
               allowedTokens.includes(tokens[t].tokenId) &&
-              tokens[t].ownerId === triggeredEffectArgs.trigger.args.playerId
+              tokens[t].ownerId === triggeredEffectArgs.trigger.args.playerId &&
+              tokens[t].location.type === "playerAvailable"
             );
 
             const tokenChoice = await triggeredEffectArgs.runGameActionDelegate(

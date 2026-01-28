@@ -19,6 +19,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   const usesJourneyToken = config.kingdomSupply.some(supply =>
     supply.name === 'giant' || supply.name === 'ranger'
   ) || config.events.some(event => event.cardKey === 'pilgrimage');
+  const usesFerryToken = config.events.some(event => event.cardKey === 'ferry');
   // Register the -$1 token reaction handler for all Adventures games.
   registrar('onGameStart', async (args) => {
     for (const player of args.match.players) {
@@ -116,6 +117,21 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
       }
     });
   }
+  if (usesFerryToken) {
+    registrar('onGameStart', async (args) => {
+      for (const player of args.match.players) {
+        const alreadyOwned = Object.values(args.match.tokens ?? {}).some(token =>
+          token.ownerId === player.id && token.tokenId === adventuresTokenIds.minusCostTwo
+        );
+        if (alreadyOwned) continue;
+        await args.runGameActionDelegate('placeToken', {
+          tokenId: adventuresTokenIds.minusCostTwo,
+          ownerId: player.id,
+          location: { type: 'playerAvailable', playerId: player.id },
+        });
+      }
+    });
+  }
   // Only grant the vanilla bonus tokens when Teacher is in the kingdom.
   if (!config.kingdomSupply.some(supply => supply.name === 'teacher')) {
     return;
@@ -141,7 +157,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         await args.runGameActionDelegate('placeToken', {
           tokenId,
           ownerId: player.id,
-          location: { type: 'player', playerId: player.id },
+          location: { type: 'playerAvailable', playerId: player.id },
         });
       }
     }

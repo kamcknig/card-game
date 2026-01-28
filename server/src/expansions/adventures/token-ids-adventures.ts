@@ -1,4 +1,6 @@
 export const adventuresTokenIds = {
+  // Ferry token that reduces costs by $2 on a chosen Action pile.
+  minusCostTwo: 'adventures:minus-cost-two',
   // Journey token used by Giant/Ranger/Pilgrimage.
   journey: 'adventures:journey',
   plusAction: 'adventures:plus-action',

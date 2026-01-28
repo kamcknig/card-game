@@ -19,6 +19,7 @@ export type TokenFacing = 'faceUp' | 'faceDown';
 export type TokenLocation =
   | { type: 'supplyPile'; cardKey: CardKey; }
   | { type: 'player'; playerId: PlayerId; }
+  | { type: 'playerAvailable'; playerId: PlayerId; }
   | { type: 'playerDeck'; playerId: PlayerId; }
   | { type: 'playerDiscard'; playerId: PlayerId; }
   | { type: 'playerMat'; playerId: PlayerId; matKey: string; }
