@@ -197,7 +197,9 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      console.debug(`[bonfire effect] trashing ${selectedCardIds.length} cards`);
+      console.debug(
+        `[bonfire effect] trashing ${selectedCardIds.length} cards`,
+      );
 
       for (const selectedCardId of selectedCardIds) {
         await cardEffectArgs.runGameActionDelegate("trashCard", {
@@ -302,55 +304,16 @@ const effectMap: CardExpansionModule = {
           token.ownerId === cardEffectArgs.playerId
         );
 
-      if (existingTokenEntry) {
-        const existingToken = existingTokenEntry[1];
-        if (existingToken.location.type !== "supplyPile") {
-          // Register the Ferry cost rule the first time the token is placed.
-          const cards = cardEffectArgs.cardLibrary.getAllCardsAsArray();
-          const pileKeyByCardKey: Record<string, string> = {};
-          for (const supply of cardEffectArgs.match.config.kingdomSupply) {
-            const pileCard = getPileRandomizerCard(supply.cards, supply.name);
-            const pileKey = pileCard?.randomizer ?? supply.name;
-            for (const card of supply.cards) {
-              pileKeyByCardKey[card.cardKey] = pileKey;
-            }
-          }
-          for (const card of cards) {
-            const rule: CardPriceRule = (_card, ruleContext) => {
-              const currentPlayer = getCurrentPlayer(ruleContext.match);
-              const tokenMatchesTurn = Object.values(
-                ruleContext.match.tokens ?? {},
-              ).some((token) =>
-                token.tokenId === adventuresTokenIds.minusCostTwo &&
-                token.ownerId === currentPlayer.id &&
-                token.location.type === "supplyPile" &&
-                token.location.cardKey === pileKeyByCardKey[_card.cardKey]
-              );
-              if (!tokenMatchesTurn) {
-                return { restricted: false, cost: { treasure: 0 } };
-              }
-              return { restricted: false, cost: { treasure: -2 } };
-            };
-            cardEffectArgs.cardPriceController.registerRule(card, rule);
-          }
-        }
-        await cardEffectArgs.runGameActionDelegate("moveToken", {
-          tokenInstanceId: existingTokenEntry[0],
-          location: { type: "supplyPile", cardKey: selectedPile },
-        });
+      if (!existingTokenEntry) {
+        console.warn(`[ferry effect] no -$2 cost token for player`);
         return;
       }
 
       // Register the Ferry cost rule the first time the token is placed.
-      const cards = cardEffectArgs.cardLibrary.getAllCardsAsArray();
-      const pileKeyByCardKey: Record<string, string> = {};
-      for (const supply of cardEffectArgs.match.config.kingdomSupply) {
-        const pileCard = getPileRandomizerCard(supply.cards, supply.name);
-        const pileKey = pileCard?.randomizer ?? supply.name;
-        for (const card of supply.cards) {
-          pileKeyByCardKey[card.cardKey] = pileKey;
-        }
-      }
+      const cards = cardEffectArgs.cardLibrary.getAllCardsAsArray().filter(
+        (c) => c.randomizer === selectedPile
+      );
+
       for (const card of cards) {
         const rule: CardPriceRule = (_card, ruleContext) => {
           const currentPlayer = getCurrentPlayer(ruleContext.match);
@@ -359,7 +322,7 @@ const effectMap: CardExpansionModule = {
               token.tokenId === adventuresTokenIds.minusCostTwo &&
               token.ownerId === currentPlayer.id &&
               token.location.type === "supplyPile" &&
-              token.location.cardKey === pileKeyByCardKey[_card.cardKey]
+              token.location.cardKey === selectedPile
             );
           if (!tokenMatchesTurn) {
             return { restricted: false, cost: { treasure: 0 } };
@@ -370,11 +333,9 @@ const effectMap: CardExpansionModule = {
       }
 
       // Place the -$2 cost token on the chosen pile if it does not exist yet.
-      await cardEffectArgs.runGameActionDelegate("placeToken", {
-        tokenId: adventuresTokenIds.minusCostTwo,
-        ownerId: cardEffectArgs.playerId,
+      await cardEffectArgs.runGameActionDelegate("moveToken", {
+        tokenInstanceId: existingTokenEntry[0],
         location: { type: "supplyPile", cardKey: selectedPile },
-        sourceCardId: event.id,
       }, { loggingContext: { source: event.id } });
     },
   },
