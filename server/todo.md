@@ -76,7 +76,6 @@ it with the individual knight. this will remove the need for the randomizer othe
 skipped
 - events
   - inheritance
-  - lost arts
   - mission
   - pathfinding
   - pilgrimage

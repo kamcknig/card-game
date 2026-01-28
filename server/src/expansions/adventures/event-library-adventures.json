@@ -24,6 +24,12 @@
       "treasure": 3
     }
   },
+  "lost-arts": {
+    "cardName": "Lost Arts",
+    "cost": {
+      "treasure": 6
+    }
+  },
   "quest": {
     "cost": {
       "treasure": 0

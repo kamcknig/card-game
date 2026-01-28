@@ -342,6 +342,63 @@ const effectMap: CardExpansionModule = {
       }, { loggingContext: { source: event.id } });
     },
   },
+  "lost-arts": {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Build the list of Action supply piles using the randomizer card types.
+      const actionSupplyPiles = cardEffectArgs.match.config.kingdomSupply
+        .map((supply) => {
+          const pileCard = getPileRandomizerCard(supply.cards, supply.name);
+          if (!pileCard?.type?.includes("ACTION")) return null;
+          return pileCard.randomizer ?? supply.name;
+        })
+        .filter((pile): pile is string => !!pile);
+
+      if (!actionSupplyPiles.length) {
+        console.warn(`[lost-arts effect] no Action supply piles available`);
+        return;
+      }
+
+      const result = await cardEffectArgs.runGameActionDelegate(
+        "userPrompt",
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: "Which Action supply?",
+          content: {
+            type: "select-pile",
+            pileNames: actionSupplyPiles,
+            selectCount: { kind: "exact", count: 1 } as CountSpec,
+          },
+        },
+      ) as string[];
+
+      const selectedPile = result?.[0];
+      if (!selectedPile) {
+        console.warn(`[lost-arts effect] no pile selected`);
+        return;
+      }
+
+      console.debug(`[lost-arts effect] moving +1 Action token to ${selectedPile}`);
+
+      // Find the player's +1 Action token instance to move.
+      const existingTokenEntry = Object.entries(
+        cardEffectArgs.match.tokens ?? {},
+      )
+        .find(([_tokenInstanceId, token]) =>
+          token.tokenId === adventuresTokenIds.plusAction &&
+          token.ownerId === cardEffectArgs.playerId
+        );
+
+      if (!existingTokenEntry) {
+        console.warn(`[lost-arts effect] no +1 Action token found for player`);
+        return;
+      }
+
+      await cardEffectArgs.runGameActionDelegate("moveToken", {
+        tokenInstanceId: existingTokenEntry[0],
+        location: { type: "supplyPile", cardKey: selectedPile },
+      }, { loggingContext: { source: cardEffectArgs.cardId } });
+    },
+  },
   "quest": {
     registerEffects: () => async (cardEffectArgs) => {
       const hand = cardEffectArgs.cardSourceController.getSource(
