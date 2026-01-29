@@ -49,6 +49,9 @@ export class Game {
   public players: Player[] = [];
   public owner: Player | undefined;
   public matchStarted: boolean = false;
+  // Track pending removal votes for disconnected human players in queue order.
+  private _pendingRemovalQueue: PlayerId[] = [];
+  private _removalVotes: Map<PlayerId, Set<PlayerId>> = new Map();
   
   private _socketMap: Map<PlayerId, AppSocket> = new Map();
   private _matchController: MatchController | undefined;
@@ -248,7 +251,17 @@ export class Game {
     
     if (this.matchStarted) {
       console.debug('[game] game already started');
+      // Restore the current turn order for reconnecting clients.
+      socket.emit('setPlayerList', this.players);
+      // Remove any pending removal vote if the player reconnects.
+      this.removePendingRemovalPlayer(player.id);
       this._matchController?.playerReconnected(player.id, socket);
+      this.registerRemovalVoteHandler(socket, player.id);
+      // Resume flow if no human players remain disconnected.
+      const hasDisconnectedHuman = this.players.some(p => !p.connected && !p.isComputer);
+      if (!hasDisconnectedHuman) {
+        void this._matchController?.runGameAction('checkForRemainingPlayerActions');
+      }
     }
     else {
       console.debug(`[game] not yet started, sending player to match configuration`,);
@@ -312,6 +325,10 @@ export class Game {
     
     if (this.matchStarted) {
       this._matchController?.playerDisconnected(player.id);
+      // Begin removal vote flow for disconnected humans.
+      if (!player.isComputer) {
+        this.addPendingRemovalPlayer(player.id);
+      }
     }
     io.in('game').emit('playerDisconnected', player);
   };
@@ -504,6 +521,9 @@ export class Game {
           return p;
         })
     );
+
+    // Lock in turn order for the active match.
+    this.players = players;
     
     io.in('game').emit('setPlayerList', players);
     
@@ -516,5 +536,90 @@ export class Game {
         players,
       } as MatchConfiguration
     );
+
+    // Register removal vote handlers once the match is active.
+    for (const [playerId, socket] of this._socketMap.entries()) {
+      this.registerRemovalVoteHandler(socket, playerId);
+    }
+  }
+
+  // Registers the socket handler for removal votes.
+  private registerRemovalVoteHandler(socket: AppSocket, playerId: PlayerId) {
+    socket.on('removeDisconnectedPlayer', (targetPlayerId: PlayerId) => {
+      this.onRemoveDisconnectedPlayerVote(playerId, targetPlayerId);
+    });
+  }
+
+  // Handles a connected human player's vote to remove a disconnected player.
+  private onRemoveDisconnectedPlayerVote(voterId: PlayerId, targetPlayerId: PlayerId) {
+    if (!this.matchStarted) return;
+    // Only allow voting for the current pending target.
+    if (this.getPendingRemovalPlayerId() !== targetPlayerId) return;
+
+    const voter = this.players.find(p => p.id === voterId);
+    const target = this.players.find(p => p.id === targetPlayerId);
+    if (!voter || !target) return;
+    if (voter.isComputer || !voter.connected) return;
+    if (target.isComputer || target.connected) return;
+
+    const connectedHumans = this.players.filter(p => p.connected && !p.isComputer && p.id !== targetPlayerId);
+    if (!connectedHumans.length) return;
+
+    const votes = this._removalVotes.get(targetPlayerId) ?? new Set<PlayerId>();
+    votes.add(voterId);
+    this._removalVotes.set(targetPlayerId, votes);
+
+    const allVoted = connectedHumans.every(p => votes.has(p.id));
+    if (!allVoted) return;
+
+    // Remove the player from the match and resume play.
+    this.players = this.players.filter(p => p.id !== targetPlayerId);
+    this._socketMap.delete(targetPlayerId);
+    this._matchController?.removePlayerFromMatch(targetPlayerId);
+    io.in('game').emit('setPlayerList', this.players);
+
+    if (this.owner?.id === targetPlayerId) {
+      const replacement = this.players.find(p => p.connected && !p.isComputer);
+      if (replacement) {
+        this.owner = replacement;
+        io.in('game').emit('gameOwnerUpdated', replacement.id);
+      }
+    }
+
+    this.removePendingRemovalPlayer(targetPlayerId);
+    void this._matchController?.runGameAction('checkForRemainingPlayerActions');
+  }
+
+  // Returns the current pending removal target, if any.
+  private getPendingRemovalPlayerId(): PlayerId | undefined {
+    return this._pendingRemovalQueue[0];
+  }
+
+  // Adds a disconnected human player to the removal queue.
+  private addPendingRemovalPlayer(playerId: PlayerId) {
+    if (this._pendingRemovalQueue.includes(playerId)) return;
+    this._pendingRemovalQueue.push(playerId);
+    this.sortPendingRemovalQueue();
+    // Ensure we track votes for the pending player.
+    this._removalVotes.set(playerId, this._removalVotes.get(playerId) ?? new Set());
+  }
+
+  // Removes a player from the pending queue and clears their votes.
+  private removePendingRemovalPlayer(playerId: PlayerId) {
+    this._pendingRemovalQueue = this._pendingRemovalQueue.filter(id => id !== playerId);
+    this._removalVotes.delete(playerId);
+    this.sortPendingRemovalQueue();
+  }
+
+  // Keeps the queue ordered by current player list while filtering out reconnected/computer players.
+  private sortPendingRemovalQueue() {
+    const disconnectedHumans = new Set(
+      this.players
+        .filter(p => !p.connected && !p.isComputer)
+        .map(p => p.id)
+    );
+    this._pendingRemovalQueue = this._pendingRemovalQueue.filter(id => disconnectedHumans.has(id));
+    const order = new Map(this.players.map((p, idx) => [p.id, idx]));
+    this._pendingRemovalQueue.sort((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0));
   }
 }

@@ -12,7 +12,7 @@ import { ScoreComponent } from './score/score.component';
 import { GameLogComponent } from './game-log/game-log.component';
 import { NanostoresService } from '@nanostores/angular';
 import { playerIdStore, playerStore, selfPlayerIdStore } from '../../../state/player-state';
-import { combineLatest, combineLatestWith, filter, map, Observable, switchMap } from 'rxjs';
+import { combineLatest, combineLatestWith, filter, map, Observable, of, switchMap } from 'rxjs';
 import { AsyncPipe } from '@angular/common';
 import { CardId, Mats, PlayerId } from 'shared/shared-types';
 import { logEntryIdsStore, logStore } from '../../../state/log-state';
@@ -24,6 +24,8 @@ import { cardStore } from '../../../state/card-state';
 import { MatPlayerContent } from './types';
 import { Rectangle } from 'pixi.js';
 import { cardSourceTagMapStore, getCardSourceStore } from '../../../state/card-source-store';
+import { disconnectedHumanIdsStore } from '../../../state/game-state';
+import { SocketService } from '../../../core/socket-service/socket.service';
 
 export interface Mat {
   mat: Mats | string;
@@ -84,10 +86,15 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
   selfMats$: Observable<{ mat: Mats, content: MatPlayerContent }[]> | undefined;
   setAsideMat$: Observable<{ mat: Mats; content: MatPlayerContent } | undefined> | undefined;
   trashMat$: Observable<{ mat: string; content: CardId[]; }> | undefined;
+  disconnectedHumans$: Observable<{ id: PlayerId; name: string }[]> | undefined;
+  private _disconnectedHumanIds: PlayerId[] = [];
 
   stickyMat: boolean = false;
 
-  constructor(private _nanoService: NanostoresService) {
+  constructor(
+    private _nanoService: NanostoresService,
+    private _socketService: SocketService,
+  ) {
   }
 
   ngOnInit() {
@@ -191,6 +198,15 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
         );
       })))
     );
+
+    this.disconnectedHumans$ = this._nanoService.useStore(disconnectedHumanIdsStore).pipe(
+      switchMap(ids => {
+        this._disconnectedHumanIds = [...ids];
+        if (!ids.length) return of([]);
+        return combineLatest(ids.map(id => this._nanoService.useStore(playerStore(id))));
+      }),
+      map(players => players.filter(p => !!p).map(p => ({ id: p!.id, name: p!.name })))
+    );
   }
 
   openMat(event: { mat: Mats, content: MatPlayerContent } | null) {
@@ -211,6 +227,12 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
     });
 
     this.scoreViewResizer.observe(this.scoreView.nativeElement);
+  }
+
+  onRemoveDisconnectedPlayer() {
+    const targetId = this._disconnectedHumanIds[0];
+    if (!targetId) return;
+    this._socketService.emit('removeDisconnectedPlayer', targetId);
   }
 
   protected readonly Array = Array;

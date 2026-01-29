@@ -267,6 +267,8 @@ export interface ServerListenEvents {
   nextPhase: () => void;
   playerReady: (playerId: PlayerId, ready: boolean) => void;
   playAllTreasure: (playerId: PlayerId) => void;
+  // Vote to remove a disconnected human player and resume the match.
+  removeDisconnectedPlayer: (playerId: PlayerId) => void;
   searchCards: (playerId: PlayerId, searchStr: string) => void;
   // Requests event search results from the server.
   searchEvents: (playerId: PlayerId, searchStr: string) => void;

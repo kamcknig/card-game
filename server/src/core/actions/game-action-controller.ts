@@ -830,6 +830,13 @@ export class GameActionController implements BaseGameActionDefinitionMap {
 
         console.debug(`[checkForRemainingPlayerActions action] phase: ${turnPhase} for ${currentPlayer} turn ${match.turnNumber}`);
 
+        // Pause automated flow while any human player is disconnected.
+        const hasDisconnectedHuman = match.players.some((player) => !player.connected && !player.isComputer);
+        if (hasDisconnectedHuman) {
+            console.debug('[checkForRemainingPlayerActions action] human disconnected, pausing flow');
+            return;
+        }
+
         this.interactivityController.checkCardInteractivity();
 
         if (turnPhase === 'action') {

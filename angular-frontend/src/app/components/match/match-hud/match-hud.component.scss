@@ -69,3 +69,48 @@ app-game-log {
   top: 10px;
   right: 10px
 }
+
+.disconnect-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+}
+
+.disconnect-card {
+  background: rgba(20, 20, 20, 0.95);
+  color: #ffffff;
+  padding: 18px 22px;
+  border-radius: 10px;
+  min-width: 280px;
+  text-align: center;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+
+.disconnect-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.disconnect-names {
+  margin-bottom: 12px;
+}
+
+.disconnect-name {
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.disconnect-button {
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  background: #ff6b4a;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+}

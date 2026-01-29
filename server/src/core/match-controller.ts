@@ -415,6 +415,34 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       cardLibrary: structuredClone(this._cardLibrary.getAllCards()),
     };
   }
+
+  // Removes a player from the live match state and updates turn ordering.
+  public removePlayerFromMatch(playerId: PlayerId): void {
+    const prev = structuredClone(this._match);
+    const playerIdx = this._match.players.findIndex((player) => player.id === playerId);
+    if (playerIdx === -1) return;
+
+    this._match.players.splice(playerIdx, 1);
+    if (this._match.config?.players) {
+      const configIdx = this._match.config.players.findIndex((player) => player.id === playerId);
+      if (configIdx !== -1) {
+        this._match.config.players.splice(configIdx, 1);
+      }
+    }
+
+    delete this._match.scores[playerId];
+    delete this._match.playerVictoryTokens[playerId];
+
+    if (this._match.currentPlayerTurnIndex > playerIdx) {
+      this._match.currentPlayerTurnIndex -= 1;
+    }
+    if (this._match.currentPlayerTurnIndex >= this._match.players.length) {
+      this._match.currentPlayerTurnIndex = 0;
+    }
+
+    this._interactivityController?.checkCardInteractivity();
+    this.broadcastPatch(prev);
+  }
   
   async runGameAction<K extends GameActions>(
     action: K,

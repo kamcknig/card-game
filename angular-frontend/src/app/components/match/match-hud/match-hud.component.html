@@ -31,6 +31,22 @@
 
 <app-game-log [entries]="logEntries$ | async"></app-game-log>
 
+@if ((disconnectedHumans$ | async)?.length) {
+  <div class="disconnect-overlay">
+    <div class="disconnect-card">
+      <div class="disconnect-title">Player disconnected</div>
+      <div class="disconnect-names">
+        @for (player of disconnectedHumans$ | async; track player.id) {
+          <div class="disconnect-name">{{ player.name }}</div>
+        }
+      </div>
+      <button class="disconnect-button" (click)="onRemoveDisconnectedPlayer()">
+        Remove player and keep playing
+      </button>
+    </div>
+  </div>
+}
+
 @if (visibleMat) {
   <div class="mat-modal-backdrop">
     <div class="mat-modal-content">

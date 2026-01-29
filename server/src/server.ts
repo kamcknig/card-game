@@ -5,7 +5,10 @@ import * as log from '@timepp/enhanced-deno-log';
 import {Game} from './core/game.ts';
 import {loadExpansion} from './utils/load-expansion.ts';
 
-if (Deno.env.get('LOG_TO_FILE')?.toLowerCase() === 'false') {
+// Default to disabling file logs unless explicitly enabled.
+const logToFileEnv = Deno.env.get('LOG_TO_FILE');
+const logToFileEnabled = logToFileEnv?.trim().toLowerCase() === 'true';
+if (!logToFileEnabled) {
     log.setConfig({
         enabledLevels: []
     }, 'file');
