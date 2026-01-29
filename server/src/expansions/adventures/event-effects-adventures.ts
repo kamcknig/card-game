@@ -778,6 +778,71 @@ const effectMap: CardExpansionModule = {
       });
     },
   },
+  "seaway": {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Gather Action cards in the Supply costing up to $4 with no potion cost.
+      const actionCards = cardEffectArgs.findCards([
+        { location: ["basicSupply", "kingdomSupply"] },
+        { cardType: ["ACTION"] },
+        {
+          kind: "upTo",
+          playerId: cardEffectArgs.playerId,
+          amount: { treasure: 4, potion: 0 },
+        },
+      ]);
+
+      if (!actionCards.length) {
+        console.warn(`[seaway effect] no Action cards costing up to $4`);
+        return;
+      }
+
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate(
+        "selectCard",
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: "Gain Action card",
+          restrict: actionCards.map((card) => card.id),
+          count: 1,
+        },
+      ) as CardId[];
+
+      if (!selectedCardIds.length) {
+        console.warn(`[seaway effect] no card selected`);
+        return;
+      }
+
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(
+        selectedCardIds[0],
+      );
+
+      // Gain the selected card from the Supply first (after on-gain effects resolve, move the token).
+      await cardEffectArgs.runGameActionDelegate("gainCard", {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCard.id,
+        to: { location: "playerDiscard" },
+      });
+
+      const existingTokenEntry = Object.entries(
+        cardEffectArgs.match.tokens ?? {},
+      ).find(([_tokenInstanceId, token]) =>
+        token.tokenId === adventuresTokenIds.plusBuy &&
+        token.ownerId === cardEffectArgs.playerId
+      );
+
+      if (!existingTokenEntry) {
+        console.warn(`[seaway effect] no +1 Buy token for player`);
+        return;
+      }
+
+      const pileKey = selectedCard.randomizer ?? selectedCard.cardKey;
+      console.debug(`[seaway effect] moving +1 Buy token to ${pileKey}`);
+
+      await cardEffectArgs.runGameActionDelegate("moveToken", {
+        tokenInstanceId: existingTokenEntry[0],
+        location: { type: "supplyPile", cardKey: pileKey },
+      }, { loggingContext: { source: cardEffectArgs.cardId } });
+    },
+  },
   "scouting-party": {
     registerEffects: () => async (cardEffectArgs) => {
       const event = cardEffectArgs.match.events.find((e) =>

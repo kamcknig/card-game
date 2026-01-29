@@ -57,6 +57,12 @@
       "treasure": 2
     }
   },
+  "seaway": {
+    "cardName": "Seaway",
+    "cost": {
+      "treasure": 5
+    }
+  },
   "trade": {
     "cost": {
       "treasure": 5
