@@ -51,6 +51,14 @@ export const registerAdventuresTokenDefinitions = (): void => {
     duration: 'permanent',
     expansion: 'adventures',
   });
+
+  registerTokenDefinition({
+    id: adventuresTokenIds.trashing,
+    name: 'Trashing token',
+    rulesText: 'When you gain a card from this pile, you may trash a card from your hand.',
+    duration: 'permanent',
+    expansion: 'adventures',
+  });
   
   registerTokenDefinition({
     id: adventuresTokenIds.minusCoin,

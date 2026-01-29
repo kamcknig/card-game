@@ -7,6 +7,7 @@ export const adventuresTokenIds = {
   plusBuy: 'adventures:plus-buy',
   plusCard: 'adventures:plus-card',
   plusCoin: 'adventures:plus-coin',
+  trashing: 'adventures:trashing',
   minusCoin: 'adventures:minus-coin',
   minusCard: 'adventures:minus-card',
 } as const;

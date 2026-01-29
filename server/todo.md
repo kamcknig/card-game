@@ -78,4 +78,3 @@ skipped
   - inheritance
   - mission
   - pathfinding
-  - plan

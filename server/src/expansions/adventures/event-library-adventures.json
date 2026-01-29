@@ -19,6 +19,12 @@
       "treasure": 3
     }
   },
+  "plan": {
+    "cardName": "Plan",
+    "cost": {
+      "treasure": 3
+    }
+  },
   "ferry": {
     "cost": {
       "treasure": 3

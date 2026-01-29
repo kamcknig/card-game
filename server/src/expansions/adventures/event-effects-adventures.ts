@@ -252,6 +252,70 @@ const effectMap: CardExpansionModule = {
       );
     },
   },
+  "plan": {
+    registerEffects: () => async (cardEffectArgs) => {
+      const event = cardEffectArgs.match.events.find((e) =>
+        e.id === cardEffectArgs.cardId
+      );
+      if (!event) {
+        console.warn(`[plan effect] event not found`);
+        return;
+      }
+
+      // Build the list of Action supply piles using the randomizer card types.
+      const actionSupplyPiles = cardEffectArgs.match.config.kingdomSupply
+        .map((supply) => {
+          const pileCard = getPileRandomizerCard(supply.cards, supply.name);
+          if (!pileCard?.type?.includes("ACTION")) return null;
+          return pileCard.randomizer ?? supply.name;
+        })
+        .filter((pile): pile is string => !!pile);
+
+      if (!actionSupplyPiles.length) {
+        console.warn(`[plan effect] no Action supply piles available`);
+        return;
+      }
+
+      const result = await cardEffectArgs.runGameActionDelegate(
+        "userPrompt",
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: "Which Action supply?",
+          content: {
+            type: "select-pile",
+            pileNames: actionSupplyPiles,
+            selectCount: { kind: "exact", count: 1 } as CountSpec,
+          },
+        },
+      ) as string[];
+
+      const selectedPile = result?.[0];
+      if (!selectedPile) {
+        console.warn(`[plan effect] no pile selected`);
+        return;
+      }
+
+      console.debug(`[plan effect] moving Trashing token to ${selectedPile}`);
+
+      const existingTokenEntry = Object.entries(
+        cardEffectArgs.match.tokens ?? {},
+      )
+        .find(([_tokenInstanceId, token]) =>
+          token.tokenId === adventuresTokenIds.trashing &&
+          token.ownerId === cardEffectArgs.playerId
+        );
+
+      if (!existingTokenEntry) {
+        console.warn(`[plan effect] no Trashing token found for player`);
+        return;
+      }
+
+      await cardEffectArgs.runGameActionDelegate("moveToken", {
+        tokenInstanceId: existingTokenEntry[0],
+        location: { type: "supplyPile", cardKey: selectedPile },
+      }, { loggingContext: { source: event.id } });
+    },
+  },
   "ferry": {
     registerEffects: () => async (cardEffectArgs) => {
       const event = cardEffectArgs.match.events.find((e) =>

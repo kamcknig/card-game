@@ -28,6 +28,8 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   const usesSeawayToken = config.events.some(event => event.cardKey === 'seaway');
   // Determine whether Training is in the event lineup and needs the +$1 token.
   const usesTrainingToken = config.events.some(event => event.cardKey === 'training');
+  // Determine whether Plan is in the event lineup and needs the Trashing token.
+  const usesPlanToken = config.events.some(event => event.cardKey === 'plan');
   // Register the -$1 token reaction handler for all Adventures games.
   registrar('onGameStart', async (args) => {
     for (const player of args.match.players) {
@@ -200,6 +202,61 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           tokenId: adventuresTokenIds.plusCoin,
           ownerId: player.id,
           location: { type: 'playerAvailable', playerId: player.id },
+        });
+      }
+    });
+  }
+  if (usesPlanToken) {
+    registrar('onGameStart', async (args) => {
+      // Plan supplies a Trashing token per player and registers the on-gain trash option.
+      for (const player of args.match.players) {
+        const alreadyOwned = Object.values(args.match.tokens ?? {}).some(token =>
+          token.ownerId === player.id && token.tokenId === adventuresTokenIds.trashing
+        );
+        if (!alreadyOwned) {
+          await args.runGameActionDelegate('placeToken', {
+            tokenId: adventuresTokenIds.trashing,
+            ownerId: player.id,
+            location: { type: 'playerAvailable', playerId: player.id },
+          });
+        }
+
+        args.reactionManager.registerReactionTemplate({
+          id: `adventures-trashing-token:0:cardGained:${player.id}`,
+          listeningFor: 'cardGained',
+          playerId: player.id,
+          once: false,
+          compulsory: false,
+          allowMultipleInstances: true,
+          system: true,
+          condition: async ({ trigger, match, cardLibrary }) => {
+            if (trigger.args.playerId !== player.id) return false;
+            // Match the gained card's originating pile to the player's Trashing token location.
+            const gainedCard = cardLibrary.getCard(trigger.args.cardId);
+            const pileKey = gainedCard.randomizer ?? gainedCard.cardKey;
+            return Object.values(match.tokens ?? {}).some(token =>
+              token.tokenId === adventuresTokenIds.trashing &&
+              token.ownerId === player.id &&
+              token.location.type === 'supplyPile' &&
+              token.location.cardKey === pileKey
+            );
+          },
+          triggeredEffectFn: async ({ cardSourceController, runGameActionDelegate }) => {
+            // Offer to trash a card from hand when the token matches the gained pile.
+            const hand = cardSourceController.getSource('playerHand', player.id);
+            if (!hand.length) return;
+            const selectedCardIds = await runGameActionDelegate('selectCard', {
+              playerId: player.id,
+              prompt: 'Trash a card',
+              restrict: hand,
+              count: { kind: 'upTo', count: 1 },
+            }) as number[];
+            if (!selectedCardIds.length) return;
+            await runGameActionDelegate('trashCard', {
+              playerId: player.id,
+              cardId: selectedCardIds[0],
+            });
+          }
         });
       }
     });
