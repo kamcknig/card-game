@@ -22,6 +22,8 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   const usesFerryToken = config.events.some(event => event.cardKey === 'ferry');
   // Determine whether Lost Arts is in the event lineup and needs the +1 Action token.
   const usesLostArtsToken = config.events.some(event => event.cardKey === 'lost-arts');
+  // Determine whether Raid is in the event lineup and needs the -1 Card token.
+  const usesRaidToken = config.events.some(event => event.cardKey === 'raid');
   // Register the -$1 token reaction handler for all Adventures games.
   registrar('onGameStart', async (args) => {
     for (const player of args.match.players) {
@@ -144,6 +146,22 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         if (alreadyOwned) continue;
         await args.runGameActionDelegate('placeToken', {
           tokenId: adventuresTokenIds.plusAction,
+          ownerId: player.id,
+          location: { type: 'playerAvailable', playerId: player.id },
+        });
+      }
+    });
+  }
+  if (usesRaidToken) {
+    registrar('onGameStart', async (args) => {
+      // Raid supplies a -1 Card token per player when the event is selected.
+      for (const player of args.match.players) {
+        const alreadyOwned = Object.values(args.match.tokens ?? {}).some(token =>
+          token.ownerId === player.id && token.tokenId === adventuresTokenIds.minusCard
+        );
+        if (alreadyOwned) continue;
+        await args.runGameActionDelegate('placeToken', {
+          tokenId: adventuresTokenIds.minusCard,
           ownerId: player.id,
           location: { type: 'playerAvailable', playerId: player.id },
         });

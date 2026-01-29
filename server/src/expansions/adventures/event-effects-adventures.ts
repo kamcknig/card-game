@@ -3,6 +3,7 @@ import { CardPriceRule } from "../../core/card-price-rules-controller.ts";
 import { getCardsInPlay } from "../../utils/get-cards-in-play.ts";
 import { Card, CardId, CardKey, CardNoId, CountSpec } from "shared/shared-types";
 import { getTurnPhase } from "../../utils/get-turn-phase.ts";
+import { findOrderedTargets } from "../../utils/find-ordered-targets.ts";
 import { adventuresTokenIds } from "./token-ids-adventures.ts";
 import { getCurrentPlayer } from "../../utils/get-current-player.ts";
 
@@ -624,6 +625,66 @@ const effectMap: CardExpansionModule = {
           cardId: goldCards.slice(-1)[0],
           to: { location: "playerDiscard" },
         });
+      }
+    },
+  },
+  "raid": {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Count Silvers in play for the current player.
+      const silversInPlay = getCardsInPlay(cardEffectArgs.findCards)
+        .filter((card) =>
+          card.cardKey === "silver" &&
+          card.owner === cardEffectArgs.playerId
+        );
+
+      if (!silversInPlay.length) {
+        console.debug(`[raid effect] no silvers in play`);
+      } else {
+        const supplySilvers = cardEffectArgs.findCards([
+          { location: "basicSupply" },
+          { cardKeys: "silver" },
+        ]);
+
+        if (!supplySilvers.length) {
+          console.debug(`[raid effect] no silvers in supply`);
+        } else {
+          const gainCount = Math.min(silversInPlay.length, supplySilvers.length);
+          console.debug(`[raid effect] gaining ${gainCount} silvers`);
+          for (let i = 0; i < gainCount; i++) {
+            const silverCardId = supplySilvers.slice(-i - 1)[0];
+            await cardEffectArgs.runGameActionDelegate("gainCard", {
+              playerId: cardEffectArgs.playerId,
+              cardId: silverCardId,
+              to: { location: "playerDiscard" },
+            });
+          }
+        }
+      }
+
+      // Each other player puts their -1 Card token on top of their deck.
+      const targetPlayerIds = findOrderedTargets({
+        match: cardEffectArgs.match,
+        appliesTo: "ALL_OTHER",
+        startingPlayerId: cardEffectArgs.playerId,
+      });
+
+      for (const targetPlayerId of targetPlayerIds) {
+        const existingTokenEntry = Object.entries(
+          cardEffectArgs.match.tokens ?? {},
+        ).find(([_tokenInstanceId, token]) =>
+          token.tokenId === adventuresTokenIds.minusCard &&
+          token.ownerId === targetPlayerId
+        );
+
+        if (!existingTokenEntry) {
+          console.warn(`[raid effect] no -1 Card token for player`);
+          continue;
+        }
+
+        await cardEffectArgs.runGameActionDelegate("moveToken", {
+          tokenInstanceId: existingTokenEntry[0],
+          location: { type: "playerDeck", playerId: targetPlayerId },
+        }, { loggingContext: { source: cardEffectArgs.cardId } });
       }
     },
   },

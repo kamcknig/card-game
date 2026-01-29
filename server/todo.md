@@ -79,6 +79,5 @@ skipped
   - mission
   - pathfinding
   - plan
-  - raid
   - seaway
   - training

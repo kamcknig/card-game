@@ -41,6 +41,11 @@
       "treasure": 0
     }
   },
+  "raid": {
+    "cost": {
+      "treasure": 5
+    }
+  },
   "save": {
     "cost": {
       "treasure": 1
