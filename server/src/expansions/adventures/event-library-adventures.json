@@ -68,6 +68,12 @@
       "treasure": 5
     }
   },
+  "training": {
+    "cardName": "Training",
+    "cost": {
+      "treasure": 6
+    }
+  },
   "travelling-fair": {
     "cardName": "Travelling Fair",
     "cost": {

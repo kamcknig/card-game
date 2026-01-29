@@ -79,4 +79,3 @@ skipped
   - mission
   - pathfinding
   - plan
-  - training
