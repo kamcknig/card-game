@@ -1,0 +1,38 @@
+when user first visits with no games started they are shown the match configuration screen and then add a computer
+player, then in the console logs we see these socket events logged
+
+setPlayerList
+playerConnected
+setPlayer
+gameOwnerUpdated
+expansionList
+matchConfigurationUpdated
+playerConnected
+
+if the user presses the ready button and we go to the game screen we then see
+these socket events
+
+setPlayerList
+patchUpdate
+setCardLibrary
+setTokenDefinitions
+matchReady
+matchStarted
+patchUpdate
+addLogEntry
+
+we see varying number of patchUpdate/addLogEntry depending if the computer or human player goes first.
+
+and then the game is ready to be started by the first player.
+
+upon refresh after that while in the game we see this list of events
+
+setPlayerList
+playerConnected
+setPlayer
+gameOwnerUpdated
+patchUpdate
+setCardLibrary
+setTokenDefinitions
+matchReady
+matchStarted

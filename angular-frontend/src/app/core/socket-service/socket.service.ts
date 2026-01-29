@@ -24,6 +24,8 @@ export class SocketService {
 
     this._socket = io(environment.wsHost, {
       transports: ['websocket', 'polling'],
+      // Defer connection until handlers are registered to avoid missing early events.
+      autoConnect: false,
       timeout: environment.wsTimeout,
       requestTimeout: environment.wsRequestTimeout,
       query: {sessionId}
@@ -51,6 +53,10 @@ export class SocketService {
       if (!handler) return;
       this.registerMappedEvent(eventName, handler);
     });
+    // Connect after handlers are wired to prevent missed rehydration events.
+    if (!this._socket.connected) {
+      this._socket.connect();
+    }
   }
 
   private onConnectError = (error: any) => {

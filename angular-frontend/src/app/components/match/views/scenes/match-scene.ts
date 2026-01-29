@@ -109,11 +109,11 @@ export class MatchScene extends Scene {
     }, 100);
   }
 
-  private onPing = (pingCount: number) => {
+  private onPing = async (pingCount: number) => {
     try {
       const s = new Audio(`./assets/sounds/your-turn.mp3`);
       s.volume = Math.min(.3 + .12 * pingCount, 1);
-      void s?.play();
+      await s?.play();
     } catch (error) {
       console.error('Could not play start turn sound');
       console.log(error);
@@ -148,7 +148,7 @@ export class MatchScene extends Scene {
     c?.destroy();
   }
 
-  private onCurrentPlayerTurnUpdated = (playerId: number) => {
+  private onCurrentPlayerTurnUpdated = async (playerId: number) => {
     document.title = `Dominion - ${playerStore(playerId).get()?.name}`;
 
     if (playerId !== selfPlayerIdStore.get()) return;
@@ -156,7 +156,7 @@ export class MatchScene extends Scene {
     try {
       const s = new Audio(`./assets/sounds/your-turn.mp3`);
       s.volume = .3;
-      void s?.play();
+      await s?.play();
     } catch {
       console.error('Could not play start turn sound');
     }
@@ -317,7 +317,7 @@ export class MatchScene extends Scene {
       try {
         const s = new Audio(`./assets/sounds/your-turn.mp3`);
         s.volume = .3;
-        void s?.play();
+        await s?.play();
       } catch {
         console.error('Could not play start turn sound');
       }
@@ -326,7 +326,7 @@ export class MatchScene extends Scene {
       await this.doSelectPiles(signalId, args);
       return;
     }
-    
+
     this._selecting = true;
     const result = await userPromptModal(
       this._app,
@@ -360,7 +360,7 @@ export class MatchScene extends Scene {
       selectedPileStore.set([...selected]);
       return;
     }
-    
+
     if (!(event.target instanceof CardLikeView)) {
       return;
     }
@@ -368,7 +368,7 @@ export class MatchScene extends Scene {
     if (event.ctrlKey) {
       return;
     }
-    
+
     // Right-click should only open the detail view, never trigger selection/gain.
     if (event.button === 2) {
       return;
@@ -432,7 +432,7 @@ export class MatchScene extends Scene {
       try {
         const s = new Audio(`./assets/sounds/your-turn.mp3`);
         s.volume = .4;
-        void s?.play();
+        await s?.play();
       } catch {
         console.error('Could not play start turn sound');
       }
@@ -610,26 +610,26 @@ export class MatchScene extends Scene {
       this._socketService.emit('userInputReceived', signalId, []);
       return;
     }
-    
+
     const pileNames = content.pileNames ?? [];
     const selectCount = content.selectCount;
     const isOptional = content.optional ?? false;
-    
+
     if (!pileNames.length) {
       this._socketService.emit('userInputReceived', signalId, []);
       return;
     }
-    
+
     clientSelectablePilesOverrideStore.set(pileNames);
     selectedPileStore.set([]);
     this._selectingPiles = true;
-    
+
     const doSelectButtonContainer = new AppList({
       type: 'horizontal',
       elementsMargin: STANDARD_GAP,
       padding: STANDARD_GAP
     });
-    
+
     const doneSelectingBtn = new Container();
     const button = createAppButton({
       text: args.prompt ?? 'Select pile',
@@ -642,15 +642,15 @@ export class MatchScene extends Scene {
     doneSelectingBtn.eventMode = 'static';
     doneSelectingBtn.on('removed', () => doneSelectingBtn.removeAllListeners());
     doneSelectingBtn.addChild(button.button);
-    
+
     doSelectButtonContainer.addChild(doneSelectingBtn);
-    
+
     doSelectButtonContainer.x = Math.floor(
       (this._playerHand?.x ?? 0) + (this._playerHand?.width ?? 0) * .5 - doSelectButtonContainer.width * .5
     );
     doSelectButtonContainer.y = Math.floor((this._playerHand?.y ?? 0) - doSelectButtonContainer.height - STANDARD_GAP);
     this.addChild(doSelectButtonContainer);
-    
+
     const updateButtonState = (selected: readonly CardKey[]) => {
       const valid = validateCountSpec(selectCount, selected.length);
       button.button.alpha = valid ? 1 : .6;
@@ -662,11 +662,11 @@ export class MatchScene extends Scene {
         doneListener();
       }
     };
-    
+
     const selectedListenerCleanup = selectedPileStore.subscribe(selected => {
       updateButtonState(selected);
     });
-    
+
     const cleanupSelection = () => {
       selectedListenerCleanup();
       selectedPileStore.set([]);
@@ -675,15 +675,15 @@ export class MatchScene extends Scene {
       doSelectButtonContainer.removeChildren();
       doSelectButtonContainer.removeFromParent();
     };
-    
+
     const doneListener = (cancelled?: boolean) => {
       const selectedPiles = cancelled ? [] : selectedPileStore.get();
       cleanupSelection();
       this._socketService.emit('userInputReceived', signalId, selectedPiles);
     };
-    
+
     doneSelectingBtn.on('pointerdown', () => doneListener());
-    
+
     updateButtonState(selectedPileStore.get());
   }
 
