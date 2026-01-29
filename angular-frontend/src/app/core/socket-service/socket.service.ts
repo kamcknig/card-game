@@ -1,10 +1,10 @@
-import { Injectable } from '@angular/core';
-import { io, Socket } from 'socket.io-client';
-import { environment } from '../../../environments/environment';
-import { v4 as uuidV4 } from 'uuid';
-import { SocketEventMap } from './socket-event-map';
-import { ServerEmitEvents, ServerListenEvents } from 'shared/shared-types';
-import { ServerEmitEventNames } from '../../../types';
+import {Injectable} from '@angular/core';
+import {io, Socket} from 'socket.io-client';
+import {environment} from '../../../environments/environment';
+import {v4 as uuidV4} from 'uuid';
+import {SocketEventMap} from './socket-event-map';
+import {ServerEmitEvents, ServerListenEvents} from 'shared/shared-types';
+import {ServerEmitEventNames} from '../../../types';
 
 @Injectable({
   providedIn: 'root',
@@ -26,11 +26,22 @@ export class SocketService {
       transports: ['websocket', 'polling'],
       timeout: environment.wsTimeout,
       requestTimeout: environment.wsRequestTimeout,
-      query: { sessionId }
+      query: {sessionId}
     }) as unknown as Socket<ServerListenEvents, ServerEmitEvents>;
 
     this._socket.on('connect_error', this.onConnectError);
     this._socket.on('disconnect', this.onDisconnect);
+  }
+
+  private registerMappedEvent<K extends ServerEmitEventNames>(
+    eventName: K,
+    handler: ServerEmitEvents[K]
+  ) {
+      (this._socket as unknown as Socket).on(eventName as string, (...args: unknown[]) => {
+        console.log(`[socket service] received event ${eventName}`);
+        // Cast for Angular compiler; ServerEmitEvents carries tuple types, but runtime args are untyped.
+        (handler as (...handlerArgs: unknown[]) => void)(...args);
+      });
   }
 
   public setEventMap(map: SocketEventMap) {
@@ -38,7 +49,7 @@ export class SocketService {
     (Object.keys(this._socketEventMap) as ServerEmitEventNames[]).forEach(eventName => {
       const handler = this._socketEventMap![eventName];
       if (!handler) return;
-      (this._socket as unknown as Socket).on(eventName as string, handler);
+      this.registerMappedEvent(eventName, handler);
     });
   }
 

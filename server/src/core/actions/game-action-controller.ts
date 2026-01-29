@@ -1001,7 +1001,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         console.debug('[endTurn action] removing overrides');
 
         const trigger = new ReactionTrigger('endTurn', {
-            playerId: getCurrentPlayer(this.match),
+            playerId: getCurrentPlayer(this.match).id,
             turnNumber: this.match.turnNumber
         });
         await this.reactionManager.runTrigger({trigger});

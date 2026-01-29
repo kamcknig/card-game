@@ -54,7 +54,7 @@ export const socketToGameEventMap = (): SocketEventMap => {
   map['setCardLibrary'] = cards => {
     cardStore.set(cards);
   };
-  
+
   map['setTokenDefinitions'] = definitions => {
     tokenDefinitionStore.set(definitions);
   };
