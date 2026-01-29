@@ -1,7 +1,7 @@
 import { CardExpansionModule } from "../../types.ts";
 import { CardPriceRule } from "../../core/card-price-rules-controller.ts";
 import { getCardsInPlay } from "../../utils/get-cards-in-play.ts";
-import { CardId, CardNoId, CountSpec } from "shared/shared-types";
+import { Card, CardId, CardKey, CardNoId, CountSpec } from "shared/shared-types";
 import { getTurnPhase } from "../../utils/get-turn-phase.ts";
 import { adventuresTokenIds } from "./token-ids-adventures.ts";
 import { getCurrentPlayer } from "../../utils/get-current-player.ts";
@@ -340,6 +340,150 @@ const effectMap: CardExpansionModule = {
         tokenInstanceId: existingTokenEntry[0],
         location: { type: "supplyPile", cardKey: selectedPile },
       }, { loggingContext: { source: event.id } });
+    },
+  },
+  "pilgrimage": {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Load the event instance so we can scope "once per turn" price rules.
+      const event = cardEffectArgs.match.events.find((e) =>
+        e.id === cardEffectArgs.cardId
+      );
+      if (!event) {
+        console.warn(`[pilgrimage effect] event not found`);
+        return;
+      }
+
+      // Enforce "once per turn" by restricting this event for the current player until end of turn.
+      const priceUnsub = cardEffectArgs.cardPriceController.registerRule(
+        event,
+        (card, context) => {
+          if (context.playerId === cardEffectArgs.playerId) {
+            return { restricted: true, cost: card.cost };
+          }
+          return { restricted: false, cost: card.cost };
+        },
+      );
+      cardEffectArgs.reactionManager.registerSystemTemplate(event, "endTurn", {
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: async () => true,
+        triggeredEffectFn: async () => {
+          priceUnsub();
+        },
+      });
+
+      // Resolve the current player's Journey token, ensuring it exists.
+      const existingJourneyTokenEntry = Object.entries(
+        cardEffectArgs.match.tokens ?? {},
+      ).find(([_tokenInstanceId, token]) =>
+        token.tokenId === adventuresTokenIds.journey &&
+        token.ownerId === cardEffectArgs.playerId &&
+        token.location.type === "player" &&
+        token.location.playerId === cardEffectArgs.playerId
+      );
+      const journeyTokenInstanceId = existingJourneyTokenEntry?.[0];
+      const journeyToken = existingJourneyTokenEntry?.[1];
+
+      if (!journeyTokenInstanceId || !journeyToken) {
+        console.warn(`[pilgrimage effect] no journey token for player`);
+        return;
+      }
+
+      // Flip the Journey token before checking its facing.
+      const currentFacing = journeyToken.facing ?? "faceUp";
+      const nextFacing = currentFacing === "faceUp" ? "faceDown" : "faceUp";
+
+      await cardEffectArgs.runGameActionDelegate("flipToken", {
+        tokenInstanceId: journeyTokenInstanceId,
+        facing: nextFacing,
+      });
+
+      if (nextFacing === "faceDown") {
+        console.debug(`[pilgrimage effect] Journey face down, no gains`);
+        return;
+      }
+
+      // Collect unique in-play cards with supply copies available.
+      const inPlayCards = getCardsInPlay(cardEffectArgs.findCards)
+        .filter((card) => card.owner === cardEffectArgs.playerId);
+      const uniqueSupplyInPlay: Card[] = [];
+      const seenCardKeys = new Set<CardKey>();
+
+      for (const card of inPlayCards) {
+        if (seenCardKeys.has(card.cardKey)) continue;
+        const supplyCopies = cardEffectArgs.findCards([
+          { location: ["basicSupply", "kingdomSupply"] },
+          { cardKeys: card.cardKey },
+        ]);
+        if (!supplyCopies.length) continue;
+        seenCardKeys.add(card.cardKey);
+        uniqueSupplyInPlay.push(card);
+      }
+
+      if (!uniqueSupplyInPlay.length) {
+        console.debug(`[pilgrimage effect] no eligible cards in play`);
+        return;
+      }
+
+      // Choose up to 3 differently named cards from the eligible in-play list.
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate(
+        "selectCard",
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: "Choose up to 3 cards in play",
+          restrict: uniqueSupplyInPlay.map((card) => card.id),
+          count: { kind: "upTo", count: Math.min(3, uniqueSupplyInPlay.length) },
+        },
+      ) as CardId[];
+
+      if (!selectedCardIds.length) {
+        console.debug(`[pilgrimage effect] no cards selected`);
+        return;
+      }
+
+      // Allow the player to set the gain order when multiple cards were selected.
+      let orderedSelection = selectedCardIds;
+      if (selectedCardIds.length > 1) {
+        const orderResult = await cardEffectArgs.runGameActionDelegate(
+          "userPrompt",
+          {
+            playerId: cardEffectArgs.playerId,
+            prompt: "Choose gain order",
+            content: {
+              type: "rearrange",
+              cardIds: selectedCardIds,
+            },
+            actionButtons: [{ label: "DONE", action: 1 }],
+          },
+        ) as { action: number; result: CardId[] };
+        if (orderResult?.result?.length) {
+          orderedSelection = orderResult.result;
+        }
+      }
+
+      // Gain a copy of each selected card from the Supply, in the chosen order.
+      for (const selectedCardId of orderedSelection) {
+        const selectedCard = cardEffectArgs.cardLibrary.getCard(
+          selectedCardId,
+        );
+        const supplyCopies = cardEffectArgs.findCards([
+          { location: ["basicSupply", "kingdomSupply"] },
+          { cardKeys: selectedCard.cardKey },
+        ]);
+        if (!supplyCopies.length) {
+          console.debug(
+            `[pilgrimage effect] no supply copy available for ${selectedCard.cardKey}`,
+          );
+          continue;
+        }
+        await cardEffectArgs.runGameActionDelegate("gainCard", {
+          playerId: cardEffectArgs.playerId,
+          cardId: supplyCopies.slice(-1)[0],
+          to: { location: "playerDiscard" },
+        });
+      }
     },
   },
   "lost-arts": {

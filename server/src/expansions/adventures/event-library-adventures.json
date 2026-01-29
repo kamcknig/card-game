@@ -24,6 +24,12 @@
       "treasure": 3
     }
   },
+  "pilgrimage": {
+    "cardName": "Pilgrimage",
+    "cost": {
+      "treasure": 4
+    }
+  },
   "lost-arts": {
     "cardName": "Lost Arts",
     "cost": {

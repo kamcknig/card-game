@@ -78,7 +78,6 @@ skipped
   - inheritance
   - mission
   - pathfinding
-  - pilgrimage
   - plan
   - raid
   - seaway
