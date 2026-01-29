@@ -23,15 +23,15 @@ Young Witch. They need ways to uniformly get available kingdoms.
 - cards like throne room and disciple when making cards play multiple time need to stay in play as long as the
 card they played stays in play. so if you throne room a duration, it would say until the duration was gone. same with
 other cards that do the same like band of misfits
-- mats need a way to define who can view what cards exist on it e.g., the tavern mat i think all cards are visible to 
+- mats need a way to define who can view what cards exist on it e.g., the tavern mat i think all cards are visible to
 all players, but native village and island mat cards  face down and can only be viewed by the player that owns the mat
-- prosperity has the card that changes curses into a treasure card type, and also gains the effect to gain 1 treasure on play. need a way to visually denote this properly
+- prosperity has the card that changes curses into a treasure card type, and also gains the effect to gain 1 treasure on play. need a way to visually denote this properly. also similar to inheritance in adventures
 
 
 # Higher priority
 
 - player disconnection
-  - when player disconnects - ask others to vote to continue. leave the player in game, they just skip their turn 
+  - when player disconnects - ask others to vote to continue. leave the player in game, they just skip their turn
   - work on the use-case when a player disconnects while waiting on input for that player - when they reconnected
 they need to be asked for their input again
 - ui updates
@@ -70,13 +70,10 @@ the start of next turn, and then they'll be in play and will be discarded. and t
 can be checked by seeing if they are in the play area on the turn they were played or not
 
 update knights. i used that stupid randomizer. but there is a knights "card" on the dominion wiki. you can still
-use randomizer null to remove cards like the individual knights. then you can add a "dummy" "knights" card to the 
+use randomizer null to remove cards like the individual knights. then you can add a "dummy" "knights" card to the
 library json. when this card is picked the expansion configurator can check for that kingdom in the config and replace
 it with the individual knight. this will remove the need for the randomizer other than removing cards from it.
 
 skipped
 - events
-  - inheritance
-    - Need to add the action to the selected cards for the user on their turn, and remove them not on the turn.
-    - Need to implement only once per game
   - mission
