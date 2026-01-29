@@ -77,4 +77,3 @@ skipped
 - events
   - inheritance
   - mission
-  - pathfinding

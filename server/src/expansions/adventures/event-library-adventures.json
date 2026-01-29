@@ -42,6 +42,12 @@
       "treasure": 6
     }
   },
+  "pathfinding": {
+    "cardName": "Pathfinding",
+    "cost": {
+      "treasure": 8
+    }
+  },
   "quest": {
     "cost": {
       "treasure": 0

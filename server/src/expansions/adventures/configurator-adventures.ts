@@ -30,6 +30,8 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   const usesTrainingToken = config.events.some(event => event.cardKey === 'training');
   // Determine whether Plan is in the event lineup and needs the Trashing token.
   const usesPlanToken = config.events.some(event => event.cardKey === 'plan');
+  // Determine whether Pathfinding is in the event lineup and needs the +1 Card token.
+  const usesPathfindingToken = config.events.some(event => event.cardKey === 'pathfinding');
   // Register the -$1 token reaction handler for all Adventures games.
   registrar('onGameStart', async (args) => {
     for (const player of args.match.players) {
@@ -257,6 +259,22 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
               cardId: selectedCardIds[0],
             });
           }
+        });
+      }
+    });
+  }
+  if (usesPathfindingToken) {
+    registrar('onGameStart', async (args) => {
+      // Pathfinding supplies a +1 Card token per player when the event is selected.
+      for (const player of args.match.players) {
+        const alreadyOwned = Object.values(args.match.tokens ?? {}).some(token =>
+          token.ownerId === player.id && token.tokenId === adventuresTokenIds.plusCard
+        );
+        if (alreadyOwned) continue;
+        await args.runGameActionDelegate('placeToken', {
+          tokenId: adventuresTokenIds.plusCard,
+          ownerId: player.id,
+          location: { type: 'playerAvailable', playerId: player.id },
         });
       }
     });
