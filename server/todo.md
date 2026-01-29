@@ -25,6 +25,7 @@ card they played stays in play. so if you throne room a duration, it would say u
 other cards that do the same like band of misfits
 - mats need a way to define who can view what cards exist on it e.g., the tavern mat i think all cards are visible to 
 all players, but native village and island mat cards  face down and can only be viewed by the player that owns the mat
+- prosperity has the card that changes curses into a treasure card type, and also gains the effect to gain 1 treasure on play. need a way to visually denote this properly
 
 
 # Higher priority
@@ -76,4 +77,6 @@ it with the individual knight. this will remove the need for the randomizer othe
 skipped
 - events
   - inheritance
+    - Need to add the action to the selected cards for the user on their turn, and remove them not on the turn.
+    - Need to implement only once per game
   - mission

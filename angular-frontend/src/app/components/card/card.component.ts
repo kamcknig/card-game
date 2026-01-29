@@ -2,12 +2,21 @@ import { ChangeDetectionStrategy, Component, Input, OnDestroy, OnInit } from '@a
 import { NanostoresService } from '@nanostores/angular';
 import { cardStore } from '../../state/card-state';
 import { combineLatestWith, map, Subscription } from 'rxjs';
-import { CardId } from 'shared/shared-types';
+import { CardId, Match, TokenDefinition, TokenId, TokenInstance } from 'shared/shared-types';
 import { NgOptimizedImage } from '@angular/common';
 import { CARD_WIDTH } from '../../core/app-contants';
 import { CardSize } from '../../../types';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { selfPlayerIdStore } from '../../state/player-state';
+import { matchStore } from '../../state/match-state';
+import { tokenDefinitionStore } from '../../state/token-definition-state';
+import { getTokenShortLabel } from '../match/views/token-utils';
+
+type CardTokenBadge = {
+  id: string;
+  label: string;
+  color: string;
+};
 
 @Component({
   selector: 'app-card',
@@ -23,6 +32,8 @@ export class CardComponent implements OnInit, OnDestroy {
   @Input() size: CardSize = 'full';
 
   path: SafeUrl | undefined;
+  // Token badges to display on top of the card image.
+  tokenBadges: CardTokenBadge[] = [];
 
   cardSub$: Subscription | undefined;
 
@@ -39,8 +50,12 @@ export class CardComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.cardSub$ = this._nanoStores.useStore(cardStore).pipe(
       map(store => store[this.cardId]),
-      combineLatestWith(this._nanoStores.useStore(selfPlayerIdStore)),
-    ).subscribe(([card, selfId]) => {
+      combineLatestWith(
+        this._nanoStores.useStore(selfPlayerIdStore),
+        this._nanoStores.useStore(matchStore),
+        this._nanoStores.useStore(tokenDefinitionStore),
+      ),
+    ).subscribe(([card, selfId, match, tokenDefinitions]) => {
       let path: string = '';
 
       if (card.owner === selfId) {
@@ -54,7 +69,35 @@ export class CardComponent implements OnInit, OnDestroy {
 
       this.path = this._sanitizer.bypassSecurityTrustUrl(path);
 
+      // Render tokens that are currently attached to this card.
+      this.tokenBadges = this.buildTokenBadges(match, tokenDefinitions);
+
     });
+  }
+
+  // Computes token badge data for tokens located on this card.
+  private buildTokenBadges(match: Match | null, tokenDefinitions: Record<TokenId, TokenDefinition>): CardTokenBadge[] {
+    if (!match) return [];
+    const playerColorMap = new Map(match.players.map(player => [player.id, player.color]));
+    const tokens = Object.values(match.tokens ?? {}) as TokenInstance[];
+    return tokens
+      .filter(token => token.location.type === 'card' && token.location.cardId === this.cardId)
+      .map(token => {
+        const definition = tokenDefinitions[token.tokenId];
+        return {
+          id: token.id,
+          label: getTokenShortLabel(token.tokenId, definition),
+          color: token.ownerId !== undefined && token.ownerId !== null
+            ? playerColorMap.get(token.ownerId) ?? '#ffffff'
+            : '#ffffff',
+        };
+      })
+      .sort((a, b) => a.id.localeCompare(b.id));
+  }
+
+  // Token size mirrors pile badges: smaller for half-sized cards.
+  get tokenSize(): number {
+    return this.size === 'half' ? 25 : 35;
   }
 
   protected readonly CARD_WIDTH = CARD_WIDTH;

@@ -352,7 +352,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     } catch (e) {
       console.warn(`[moveCard action] could not find source for ${card}`);
     }
-    
+
     const newSource = this._cardSourceController.getSource(args.to.location, args.toPlayerId);
     
     if (!newSource) {

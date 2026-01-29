@@ -1,6 +1,15 @@
-<img
-  class="card-image"
-  [ngSrc]="path ?? ''"
-  width="{{CARD_WIDTH}}"
-  height="20"
-/>
+<div class="card-container" [style.--token-size.px]="tokenSize">
+  <img
+    class="card-image"
+    [ngSrc]="path ?? ''"
+    width="{{CARD_WIDTH}}"
+    height="20"
+  />
+  <div class="token-container">
+    @for (badge of tokenBadges; track badge.id) {
+      <div class="token-badge" [style.background]="badge.color">
+        <span class="token-text">{{ badge.label }}</span>
+      </div>
+    }
+  </div>
+</div>

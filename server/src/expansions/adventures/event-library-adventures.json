@@ -30,6 +30,12 @@
       "treasure": 3
     }
   },
+  "inheritance": {
+    "cardName": "Inheritance",
+    "cost": {
+      "treasure": 7
+    }
+  },
   "pilgrimage": {
     "cardName": "Pilgrimage",
     "cost": {

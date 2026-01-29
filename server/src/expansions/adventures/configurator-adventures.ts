@@ -32,6 +32,8 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   const usesPlanToken = config.events.some(event => event.cardKey === 'plan');
   // Determine whether Pathfinding is in the event lineup and needs the +1 Card token.
   const usesPathfindingToken = config.events.some(event => event.cardKey === 'pathfinding');
+  // Determine whether Inheritance is in the event lineup and needs the Estate token.
+  const usesInheritanceToken = config.events.some(event => event.cardKey === 'inheritance');
   // Register the -$1 token reaction handler for all Adventures games.
   registrar('onGameStart', async (args) => {
     for (const player of args.match.players) {
@@ -275,6 +277,56 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           tokenId: adventuresTokenIds.plusCard,
           ownerId: player.id,
           location: { type: 'playerAvailable', playerId: player.id },
+        });
+      }
+    });
+  }
+  if (usesInheritanceToken) {
+    registrar('onGameStart', async (args) => {
+      // Inheritance supplies an Estate token per player and registers Estate play handling.
+      for (const player of args.match.players) {
+        const alreadyOwned = Object.values(args.match.tokens ?? {}).some(token =>
+          token.ownerId === player.id && token.tokenId === adventuresTokenIds.estate
+        );
+        if (!alreadyOwned) {
+          await args.runGameActionDelegate('placeToken', {
+            tokenId: adventuresTokenIds.estate,
+            ownerId: player.id,
+            location: { type: 'playerAvailable', playerId: player.id },
+          });
+        }
+
+        args.reactionManager.registerReactionTemplate({
+          id: `adventures-estate-token:0:cardPlayed:${player.id}`,
+          listeningFor: 'cardPlayed',
+          playerId: player.id,
+          once: false,
+          compulsory: true,
+          allowMultipleInstances: true,
+          system: true,
+          condition: async ({ trigger, match, cardLibrary }) => {
+            if (trigger.args.playerId !== player.id) return false;
+            const playedCard = cardLibrary.getCard(trigger.args.cardId);
+            if (playedCard.cardKey !== 'estate') return false;
+            return Object.values(match.tokens ?? {}).some(token =>
+              token.tokenId === adventuresTokenIds.estate &&
+              token.ownerId === player.id &&
+              token.location.type === 'card'
+            );
+          },
+          triggeredEffectFn: async ({ match, runGameActionDelegate }) => {
+            const estateToken = Object.values(match.tokens ?? {}).find(token =>
+              token.tokenId === adventuresTokenIds.estate &&
+              token.ownerId === player.id &&
+              token.location.type === 'card'
+            );
+            if (!estateToken || estateToken.location.type !== 'card') return;
+            await runGameActionDelegate('playCard', {
+              playerId: player.id,
+              cardId: estateToken.location.cardId,
+              overrides: { actionCost: 0, moveCard: false },
+            });
+          }
         });
       }
     });

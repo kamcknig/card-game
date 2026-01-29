@@ -1,3 +1,37 @@
 .card-image {
   height: auto;
 }
+
+.card-container {
+  position: relative;
+  display: inline-block;
+}
+
+.token-container {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  pointer-events: none;
+}
+
+.token-badge {
+  width: var(--token-size, 28px);
+  height: var(--token-size, 28px);
+  border-radius: 999px;
+  border: 2px solid #000000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #000000;
+  font-weight: 600;
+  font-size: calc(var(--token-size, 28px) * 0.4);
+  box-sizing: border-box;
+  background: #ffffff;
+}
+
+.token-text {
+  line-height: 1;
+}

@@ -24,7 +24,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
     const basicCards = args.config.basicSupply;
     
     if (hasProsperityKingdom && !prosperityCheckConfigured) {
-      console.debug(`[prosperity configurator] adding prosperity and colony to config`);
+      console.log(`[prosperity configurator] adding prosperity and colony to config`);
       
       basicCards.push({
         name: 'colony',
@@ -40,10 +40,11 @@ const configurator: ExpansionConfiguratorFactory = () => {
     }
     
     const charlatanPresent = kingdomCards.find(supply => supply.name === 'charlatan');
-    const curseCard = basicCards.find(supply => supply.name === 'curse');
-    
+
     if (charlatanPresent && !charlatanConfigured) {
-      console.debug(`[prosperity configurator] charlatan is part of kingdom - curses gain the treasure type and +1 treasure effect`);
+      console.log(`[prosperity configurator] charlatan is part of kingdom - curses gain the treasure type and +1 treasure effect`);
+
+      const curseCard = basicCards.find(supply => supply.name === 'curse');
       
       if (!curseCard) {
         console.warn(`[prosperity configurator] curse card not found in config`);

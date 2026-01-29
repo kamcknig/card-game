@@ -16,6 +16,8 @@ export const getTokenShortLabel = (tokenId: TokenId, tokenDefinition?: TokenDefi
     'adventures:minus-coin': '-1$',
     // relic -1 card token
     'adventures:minus-card': '-1C',
+    // Inheritance estate token
+    'adventures:estate': 'E',
   };
   return labelMap[tokenId] ?? tokenDefinition?.name ?? 'T';
 };

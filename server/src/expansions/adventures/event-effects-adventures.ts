@@ -1,11 +1,11 @@
-import { CardExpansionModule } from "../../types.ts";
-import { CardPriceRule } from "../../core/card-price-rules-controller.ts";
-import { getCardsInPlay } from "../../utils/get-cards-in-play.ts";
-import { Card, CardId, CardKey, CardNoId, CountSpec } from "shared/shared-types";
-import { getTurnPhase } from "../../utils/get-turn-phase.ts";
-import { findOrderedTargets } from "../../utils/find-ordered-targets.ts";
-import { adventuresTokenIds } from "./token-ids-adventures.ts";
-import { getCurrentPlayer } from "../../utils/get-current-player.ts";
+import { CardExpansionModule } from '../../types.ts';
+import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
+import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
+import { Card, CardId, CardKey, CardNoId, CountSpec } from 'shared/shared-types';
+import { getTurnPhase } from '../../utils/get-turn-phase.ts';
+import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
+import { adventuresTokenIds } from './token-ids-adventures.ts';
+import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 
 // Determines the card that defines the pile's type by matching the pile randomizer.
 const getPileRandomizerCard = (
@@ -16,7 +16,7 @@ const getPileRandomizerCard = (
 };
 
 const effectMap: CardExpansionModule = {
-  "alms": {
+  'alms': {
     registerEffects: () => async (cardEffectArgs) => {
       const event = cardEffectArgs.match.events.find((e) =>
         e.id === cardEffectArgs.cardId
@@ -35,7 +35,7 @@ const effectMap: CardExpansionModule = {
         priceRule,
       );
 
-      cardEffectArgs.reactionManager.registerSystemTemplate(event, "endTurn", {
+      cardEffectArgs.reactionManager.registerSystemTemplate(event, 'endTurn', {
         playerId: cardEffectArgs.playerId,
         once: true,
         compulsory: true,
@@ -47,7 +47,7 @@ const effectMap: CardExpansionModule = {
       });
 
       const treasuresInPlay = getCardsInPlay(cardEffectArgs.findCards)
-        .filter((card) => card.type.includes("TREASURE"))
+        .filter((card) => card.type.includes('TREASURE'))
         .filter((card) => card.owner === cardEffectArgs.playerId);
 
       if (treasuresInPlay.length > 0) {
@@ -58,9 +58,9 @@ const effectMap: CardExpansionModule = {
       }
 
       const cards = cardEffectArgs.findCards([
-        { location: ["basicSupply", "kingdomSupply"] },
+        { location: ['basicSupply', 'kingdomSupply'] },
         {
-          kind: "upTo",
+          kind: 'upTo',
           playerId: cardEffectArgs.playerId,
           amount: { treasure: 4 },
         },
@@ -72,7 +72,7 @@ const effectMap: CardExpansionModule = {
       }
 
       const selectedCardIds = await cardEffectArgs.runGameActionDelegate(
-        "selectCard",
+        'selectCard',
         {
           playerId: cardEffectArgs.playerId,
           prompt: `Gain card`,
@@ -92,14 +92,14 @@ const effectMap: CardExpansionModule = {
 
       console.debug(`[alms effect] gaining card ${selectedCard}`);
 
-      await cardEffectArgs.runGameActionDelegate("gainCard", {
+      await cardEffectArgs.runGameActionDelegate('gainCard', {
         playerId: cardEffectArgs.playerId,
         cardId: selectedCard.id,
-        to: { location: "playerDiscard" },
+        to: { location: 'playerDiscard' },
       });
     },
   },
-  "ball": {
+  'ball': {
     registerEffects: () => async (cardEffectArgs) => {
       const event = cardEffectArgs.match.events.find((e) =>
         e.id === cardEffectArgs.cardId
@@ -114,25 +114,25 @@ const effectMap: CardExpansionModule = {
         .some((token) =>
           token.tokenId === adventuresTokenIds.minusCoin &&
           token.ownerId === cardEffectArgs.playerId &&
-          token.location.type === "player" &&
+          token.location.type === 'player' &&
           token.location.playerId === cardEffectArgs.playerId
         );
       if (!alreadyHasToken) {
         console.debug(
           `[ball effect] placing -$1 token for player ${cardEffectArgs.playerId}`,
         );
-        await cardEffectArgs.runGameActionDelegate("placeToken", {
+        await cardEffectArgs.runGameActionDelegate('placeToken', {
           tokenId: adventuresTokenIds.minusCoin,
           ownerId: cardEffectArgs.playerId,
-          location: { type: "player", playerId: cardEffectArgs.playerId },
+          location: { type: 'player', playerId: cardEffectArgs.playerId },
           sourceCardId: event.id,
         }, { loggingContext: { source: event.id } });
       }
 
       const cards = cardEffectArgs.findCards([
-        { location: ["basicSupply", "kingdomSupply"] },
+        { location: ['basicSupply', 'kingdomSupply'] },
         {
-          kind: "upTo",
+          kind: 'upTo',
           playerId: cardEffectArgs.playerId,
           amount: { treasure: 4 },
         },
@@ -146,10 +146,10 @@ const effectMap: CardExpansionModule = {
       const gainCount = Math.min(2, cards.length);
 
       const selectedCardIds = await cardEffectArgs.runGameActionDelegate(
-        "selectCard",
+        'selectCard',
         {
           playerId: cardEffectArgs.playerId,
-          prompt: `Gain ${gainCount} card${gainCount === 1 ? "" : "s"}`,
+          prompt: `Gain ${gainCount} card${gainCount === 1 ? '' : 's'}`,
           restrict: cards.map((card) => card.id),
           count: gainCount,
         },
@@ -163,19 +163,19 @@ const effectMap: CardExpansionModule = {
       for (const selectedCardId of selectedCardIds) {
         const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
         console.debug(`[ball effect] gaining ${selectedCard}`);
-        await cardEffectArgs.runGameActionDelegate("gainCard", {
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
           playerId: cardEffectArgs.playerId,
           cardId: selectedCard.id,
-          to: { location: "playerDiscard" },
+          to: { location: 'playerDiscard' },
         });
       }
     },
   },
-  "bonfire": {
+  'bonfire': {
     registerEffects: () => async (cardEffectArgs) => {
       const coppersInPlay = getCardsInPlay(cardEffectArgs.findCards)
         .filter((card) =>
-          card.cardKey === "copper" && card.owner === cardEffectArgs.playerId
+          card.cardKey === 'copper' && card.owner === cardEffectArgs.playerId
         );
 
       if (!coppersInPlay.length) {
@@ -184,12 +184,12 @@ const effectMap: CardExpansionModule = {
       }
 
       const selectedCardIds = await cardEffectArgs.runGameActionDelegate(
-        "selectCard",
+        'selectCard',
         {
           playerId: cardEffectArgs.playerId,
           prompt: `Trash coppers`,
           restrict: coppersInPlay.map((card) => card.id),
-          count: { kind: "upTo", count: 2 },
+          count: { kind: 'upTo', count: 2 },
         },
       ) as CardId[];
 
@@ -203,14 +203,14 @@ const effectMap: CardExpansionModule = {
       );
 
       for (const selectedCardId of selectedCardIds) {
-        await cardEffectArgs.runGameActionDelegate("trashCard", {
+        await cardEffectArgs.runGameActionDelegate('trashCard', {
           playerId: cardEffectArgs.playerId,
           cardId: selectedCardId,
         });
       }
     },
   },
-  "expedition": {
+  'expedition': {
     registerEffects: () => async (cardEffectArgs) => {
       const event = cardEffectArgs.match.events.find((e) =>
         e.id === cardEffectArgs.cardId
@@ -222,7 +222,7 @@ const effectMap: CardExpansionModule = {
 
       cardEffectArgs.reactionManager.registerSystemTemplate(
         event,
-        "endTurnPhase",
+        'endTurnPhase',
         {
           playerId: cardEffectArgs.playerId,
           once: true,
@@ -233,7 +233,7 @@ const effectMap: CardExpansionModule = {
               conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId
             ) return false;
             if (
-              getTurnPhase(conditionArgs.match.turnPhaseIndex) !== "cleanup"
+              getTurnPhase(conditionArgs.match.turnPhaseIndex) !== 'cleanup'
             ) return false;
             return true;
           },
@@ -243,7 +243,7 @@ const effectMap: CardExpansionModule = {
             );
 
             console.debug(`[expedition endTurnPhase effect] drawing 2 cards`);
-            await cardEffectArgs.runGameActionDelegate("drawCard", {
+            await cardEffectArgs.runGameActionDelegate('drawCard', {
               playerId: cardEffectArgs.playerId,
               count: 2,
             });
@@ -252,7 +252,7 @@ const effectMap: CardExpansionModule = {
       );
     },
   },
-  "plan": {
+  'plan': {
     registerEffects: () => async (cardEffectArgs) => {
       const event = cardEffectArgs.match.events.find((e) =>
         e.id === cardEffectArgs.cardId
@@ -266,7 +266,7 @@ const effectMap: CardExpansionModule = {
       const actionSupplyPiles = cardEffectArgs.match.config.kingdomSupply
         .map((supply) => {
           const pileCard = getPileRandomizerCard(supply.cards, supply.name);
-          if (!pileCard?.type?.includes("ACTION")) return null;
+          if (!pileCard?.type?.includes('ACTION')) return null;
           return pileCard.randomizer ?? supply.name;
         })
         .filter((pile): pile is string => !!pile);
@@ -277,14 +277,14 @@ const effectMap: CardExpansionModule = {
       }
 
       const result = await cardEffectArgs.runGameActionDelegate(
-        "userPrompt",
+        'userPrompt',
         {
           playerId: cardEffectArgs.playerId,
-          prompt: "Which Action supply?",
+          prompt: 'Which Action supply?',
           content: {
-            type: "select-pile",
+            type: 'select-pile',
             pileNames: actionSupplyPiles,
-            selectCount: { kind: "exact", count: 1 } as CountSpec,
+            selectCount: { kind: 'exact', count: 1 } as CountSpec,
           },
         },
       ) as string[];
@@ -310,13 +310,13 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      await cardEffectArgs.runGameActionDelegate("moveToken", {
+      await cardEffectArgs.runGameActionDelegate('moveToken', {
         tokenInstanceId: existingTokenEntry[0],
-        location: { type: "supplyPile", cardKey: selectedPile },
+        location: { type: 'supplyPile', cardKey: selectedPile },
       }, { loggingContext: { source: event.id } });
     },
   },
-  "ferry": {
+  'ferry': {
     registerEffects: () => async (cardEffectArgs) => {
       const event = cardEffectArgs.match.events.find((e) =>
         e.id === cardEffectArgs.cardId
@@ -330,7 +330,7 @@ const effectMap: CardExpansionModule = {
       const actionSupplyPiles = cardEffectArgs.match.config.kingdomSupply
         .map((supply) => {
           const pileCard = getPileRandomizerCard(supply.cards, supply.name);
-          if (!pileCard?.type?.includes("ACTION")) return null;
+          if (!pileCard?.type?.includes('ACTION')) return null;
           return pileCard.randomizer ?? supply.name;
         })
         .filter((pile): pile is string => !!pile);
@@ -341,14 +341,14 @@ const effectMap: CardExpansionModule = {
       }
 
       const result = await cardEffectArgs.runGameActionDelegate(
-        "userPrompt",
+        'userPrompt',
         {
           playerId: cardEffectArgs.playerId,
-          prompt: "Which Action supply?",
+          prompt: 'Which Action supply?',
           content: {
-            type: "select-pile",
+            type: 'select-pile',
             pileNames: actionSupplyPiles,
-            selectCount: { kind: "exact", count: 1 } as CountSpec,
+            selectCount: { kind: 'exact', count: 1 } as CountSpec,
           },
         },
       ) as string[];
@@ -389,7 +389,7 @@ const effectMap: CardExpansionModule = {
             .some((token) =>
               token.tokenId === adventuresTokenIds.minusCostTwo &&
               token.ownerId === currentPlayer.id &&
-              token.location.type === "supplyPile" &&
+              token.location.type === 'supplyPile' &&
               token.location.cardKey === selectedPile
             );
           if (!tokenMatchesTurn) {
@@ -401,15 +401,88 @@ const effectMap: CardExpansionModule = {
       }
 
       // Place the -$2 cost token on the chosen pile if it does not exist yet.
-      await cardEffectArgs.runGameActionDelegate("moveToken", {
+      await cardEffectArgs.runGameActionDelegate('moveToken', {
         tokenInstanceId: existingTokenEntry[0],
-        location: { type: "supplyPile", cardKey: selectedPile },
+        location: { type: 'supplyPile', cardKey: selectedPile },
       }, { loggingContext: { source: event.id } });
     },
   },
-  "pilgrimage": {
+  'inheritance': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Load the event instance so we can scope "once per turn" price rules.
+      const event = cardEffectArgs.match.events.find((e) =>
+        e.id === cardEffectArgs.cardId
+      );
+      if (!event) {
+        console.warn(`[inheritance effect] event not found`);
+        return;
+      }
+
+      const eligibleCards = cardEffectArgs.findCards([
+        { location: ['basicSupply', 'kingdomSupply'] },
+        { cardType: ['ACTION'] },
+        {
+          kind: 'upTo',
+          playerId: cardEffectArgs.playerId,
+          amount: { treasure: 4, potion: 0 },
+        },
+      ]).filter((card) =>
+        !card.type.includes('DURATION') && !card.type.includes('COMMAND')
+      );
+
+      if (!eligibleCards.length) {
+        console.warn(`[inheritance effect] no eligible Action cards in supply`);
+        return;
+      }
+
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate(
+        'selectCard',
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Set aside Action card',
+          restrict: eligibleCards.map((card) => card.id),
+          count: 1,
+        },
+      ) as CardId[];
+
+      if (!selectedCardIds.length) {
+        console.warn(`[inheritance effect] no card selected`);
+        return;
+      }
+
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(
+        selectedCardIds[0],
+      );
+
+      console.debug(`[inheritance effect] setting aside ${selectedCard}`);
+
+      await cardEffectArgs.runGameActionDelegate('moveCard', {
+        toPlayerId: cardEffectArgs.playerId,
+        cardId: selectedCard.id,
+        to: { location: 'set-aside' },
+      });
+
+      const existingTokenEntry = Object.entries(
+        cardEffectArgs.match.tokens ?? {},
+      )
+        .find(([_tokenInstanceId, token]) =>
+          token.tokenId === adventuresTokenIds.estate &&
+          token.ownerId === cardEffectArgs.playerId
+        );
+
+      if (!existingTokenEntry) {
+        console.warn(`[inheritance effect] no Estate token found for player`);
+        return;
+      }
+
+      await cardEffectArgs.runGameActionDelegate('moveToken', {
+        tokenInstanceId: existingTokenEntry[0],
+        location: { type: 'card', cardId: selectedCard.id },
+      }, { loggingContext: { source: event.id } });
+    },
+  },
+  'pilgrimage': {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Load the event instance so we can scope 'once per turn' price rules.
       const event = cardEffectArgs.match.events.find((e) =>
         e.id === cardEffectArgs.cardId
       );
@@ -418,7 +491,7 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      // Enforce "once per turn" by restricting this event for the current player until end of turn.
+      // Enforce 'once per turn' by restricting this event for the current player until end of turn.
       const priceUnsub = cardEffectArgs.cardPriceController.registerRule(
         event,
         (card, context) => {
@@ -428,7 +501,7 @@ const effectMap: CardExpansionModule = {
           return { restricted: false, cost: card.cost };
         },
       );
-      cardEffectArgs.reactionManager.registerSystemTemplate(event, "endTurn", {
+      cardEffectArgs.reactionManager.registerSystemTemplate(event, 'endTurn', {
         playerId: cardEffectArgs.playerId,
         once: true,
         allowMultipleInstances: true,
@@ -445,7 +518,7 @@ const effectMap: CardExpansionModule = {
       ).find(([_tokenInstanceId, token]) =>
         token.tokenId === adventuresTokenIds.journey &&
         token.ownerId === cardEffectArgs.playerId &&
-        token.location.type === "player" &&
+        token.location.type === 'player' &&
         token.location.playerId === cardEffectArgs.playerId
       );
       const journeyTokenInstanceId = existingJourneyTokenEntry?.[0];
@@ -457,15 +530,15 @@ const effectMap: CardExpansionModule = {
       }
 
       // Flip the Journey token before checking its facing.
-      const currentFacing = journeyToken.facing ?? "faceUp";
-      const nextFacing = currentFacing === "faceUp" ? "faceDown" : "faceUp";
+      const currentFacing = journeyToken.facing ?? 'faceUp';
+      const nextFacing = currentFacing === 'faceUp' ? 'faceDown' : 'faceUp';
 
-      await cardEffectArgs.runGameActionDelegate("flipToken", {
+      await cardEffectArgs.runGameActionDelegate('flipToken', {
         tokenInstanceId: journeyTokenInstanceId,
         facing: nextFacing,
       });
 
-      if (nextFacing === "faceDown") {
+      if (nextFacing === 'faceDown') {
         console.debug(`[pilgrimage effect] Journey face down, no gains`);
         return;
       }
@@ -479,7 +552,7 @@ const effectMap: CardExpansionModule = {
       for (const card of inPlayCards) {
         if (seenCardKeys.has(card.cardKey)) continue;
         const supplyCopies = cardEffectArgs.findCards([
-          { location: ["basicSupply", "kingdomSupply"] },
+          { location: ['basicSupply', 'kingdomSupply'] },
           { cardKeys: card.cardKey },
         ]);
         if (!supplyCopies.length) continue;
@@ -494,12 +567,12 @@ const effectMap: CardExpansionModule = {
 
       // Choose up to 3 differently named cards from the eligible in-play list.
       const selectedCardIds = await cardEffectArgs.runGameActionDelegate(
-        "selectCard",
+        'selectCard',
         {
           playerId: cardEffectArgs.playerId,
-          prompt: "Choose up to 3 cards in play",
+          prompt: 'Choose up to 3 cards in play',
           restrict: uniqueSupplyInPlay.map((card) => card.id),
-          count: { kind: "upTo", count: Math.min(3, uniqueSupplyInPlay.length) },
+          count: { kind: 'upTo', count: Math.min(3, uniqueSupplyInPlay.length) },
         },
       ) as CardId[];
 
@@ -512,15 +585,15 @@ const effectMap: CardExpansionModule = {
       let orderedSelection = selectedCardIds;
       if (selectedCardIds.length > 1) {
         const orderResult = await cardEffectArgs.runGameActionDelegate(
-          "userPrompt",
+          'userPrompt',
           {
             playerId: cardEffectArgs.playerId,
-            prompt: "Choose gain order",
+            prompt: 'Choose gain order',
             content: {
-              type: "rearrange",
+              type: 'rearrange',
               cardIds: selectedCardIds,
             },
-            actionButtons: [{ label: "DONE", action: 1 }],
+            actionButtons: [{ label: 'DONE', action: 1 }],
           },
         ) as { action: number; result: CardId[] };
         if (orderResult?.result?.length) {
@@ -534,7 +607,7 @@ const effectMap: CardExpansionModule = {
           selectedCardId,
         );
         const supplyCopies = cardEffectArgs.findCards([
-          { location: ["basicSupply", "kingdomSupply"] },
+          { location: ['basicSupply', 'kingdomSupply'] },
           { cardKeys: selectedCard.cardKey },
         ]);
         if (!supplyCopies.length) {
@@ -543,21 +616,21 @@ const effectMap: CardExpansionModule = {
           );
           continue;
         }
-        await cardEffectArgs.runGameActionDelegate("gainCard", {
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
           playerId: cardEffectArgs.playerId,
           cardId: supplyCopies.slice(-1)[0],
-          to: { location: "playerDiscard" },
+          to: { location: 'playerDiscard' },
         });
       }
     },
   },
-  "lost-arts": {
+  'lost-arts': {
     registerEffects: () => async (cardEffectArgs) => {
       // Build the list of Action supply piles using the randomizer card types.
       const actionSupplyPiles = cardEffectArgs.match.config.kingdomSupply
         .map((supply) => {
           const pileCard = getPileRandomizerCard(supply.cards, supply.name);
-          if (!pileCard?.type?.includes("ACTION")) return null;
+          if (!pileCard?.type?.includes('ACTION')) return null;
           return pileCard.randomizer ?? supply.name;
         })
         .filter((pile): pile is string => !!pile);
@@ -568,14 +641,14 @@ const effectMap: CardExpansionModule = {
       }
 
       const result = await cardEffectArgs.runGameActionDelegate(
-        "userPrompt",
+        'userPrompt',
         {
           playerId: cardEffectArgs.playerId,
-          prompt: "Which Action supply?",
+          prompt: 'Which Action supply?',
           content: {
-            type: "select-pile",
+            type: 'select-pile',
             pileNames: actionSupplyPiles,
-            selectCount: { kind: "exact", count: 1 } as CountSpec,
+            selectCount: { kind: 'exact', count: 1 } as CountSpec,
           },
         },
       ) as string[];
@@ -602,13 +675,13 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      await cardEffectArgs.runGameActionDelegate("moveToken", {
+      await cardEffectArgs.runGameActionDelegate('moveToken', {
         tokenInstanceId: existingTokenEntry[0],
-        location: { type: "supplyPile", cardKey: selectedPile },
+        location: { type: 'supplyPile', cardKey: selectedPile },
       }, { loggingContext: { source: cardEffectArgs.cardId } });
     },
   },
-  "pathfinding": {
+  'pathfinding': {
     registerEffects: () => async (cardEffectArgs) => {
       const event = cardEffectArgs.match.events.find((e) =>
         e.id === cardEffectArgs.cardId
@@ -622,7 +695,7 @@ const effectMap: CardExpansionModule = {
       const actionSupplyPiles = cardEffectArgs.match.config.kingdomSupply
         .map((supply) => {
           const pileCard = getPileRandomizerCard(supply.cards, supply.name);
-          if (!pileCard?.type?.includes("ACTION")) return null;
+          if (!pileCard?.type?.includes('ACTION')) return null;
           return pileCard.randomizer ?? supply.name;
         })
         .filter((pile): pile is string => !!pile);
@@ -633,14 +706,14 @@ const effectMap: CardExpansionModule = {
       }
 
       const result = await cardEffectArgs.runGameActionDelegate(
-        "userPrompt",
+        'userPrompt',
         {
           playerId: cardEffectArgs.playerId,
-          prompt: "Which Action supply?",
+          prompt: 'Which Action supply?',
           content: {
-            type: "select-pile",
+            type: 'select-pile',
             pileNames: actionSupplyPiles,
-            selectCount: { kind: "exact", count: 1 } as CountSpec,
+            selectCount: { kind: 'exact', count: 1 } as CountSpec,
           },
         },
       ) as string[];
@@ -666,27 +739,27 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      await cardEffectArgs.runGameActionDelegate("moveToken", {
+      await cardEffectArgs.runGameActionDelegate('moveToken', {
         tokenInstanceId: existingTokenEntry[0],
-        location: { type: "supplyPile", cardKey: selectedPile },
+        location: { type: 'supplyPile', cardKey: selectedPile },
       }, { loggingContext: { source: event.id } });
     },
   },
-  "quest": {
+  'quest': {
     registerEffects: () => async (cardEffectArgs) => {
       const hand = cardEffectArgs.cardSourceController.getSource(
-        "playerHand",
+        'playerHand',
         cardEffectArgs.playerId,
       );
       const handCards = hand.map(cardEffectArgs.cardLibrary.getCard);
 
-      const result = await cardEffectArgs.runGameActionDelegate("userPrompt", {
+      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
         playerId: cardEffectArgs.playerId,
-        prompt: "Choose one",
+        prompt: 'Choose one',
         actionButtons: [
-          { label: "DISCARD ATTACK", action: 1 },
-          { label: "DISCARD 2 COPPER", action: 2 },
-          { label: "DISCARD 6 CARDS", action: 3 },
+          { label: 'DISCARD ATTACK', action: 1 },
+          { label: 'DISCARD 2 COPPER', action: 2 },
+          { label: 'DISCARD 6 CARDS', action: 3 },
         ],
       }) as { action: number; result: number[] };
 
@@ -695,31 +768,31 @@ const effectMap: CardExpansionModule = {
 
       if (result.action === 1) {
         selectedCardIds = await cardEffectArgs.runGameActionDelegate(
-          "selectCard",
+          'selectCard',
           {
             playerId: cardEffectArgs.playerId,
             prompt: `Discard attack`,
-            restrict: handCards.filter((card) => card.type.includes("ATTACK"))
+            restrict: handCards.filter((card) => card.type.includes('ATTACK'))
               .map((card) => card.id),
-            count: { kind: "upTo", count: hand.length },
+            count: { kind: 'upTo', count: hand.length },
           },
         ) as CardId[];
         gainGold = true;
       } else if (result.action === 2) {
         selectedCardIds = await cardEffectArgs.runGameActionDelegate(
-          "selectCard",
+          'selectCard',
           {
             playerId: cardEffectArgs.playerId,
             prompt: `Discard 2 copper`,
-            restrict: handCards.filter((card) => card.type.includes("ATTACK"))
+            restrict: handCards.filter((card) => card.type.includes('ATTACK'))
               .map((card) => card.id),
-            count: { kind: "upTo", count: hand.length },
+            count: { kind: 'upTo', count: hand.length },
           },
         ) as CardId[];
         gainGold = selectedCardIds.length === 2;
       } else {
         selectedCardIds = await cardEffectArgs.runGameActionDelegate(
-          "selectCard",
+          'selectCard',
           {
             playerId: cardEffectArgs.playerId,
             prompt: `Discard 6 cards`,
@@ -737,8 +810,8 @@ const effectMap: CardExpansionModule = {
 
       if (gainGold) {
         const goldCards = cardEffectArgs.findCards([
-          { location: "basicSupply" },
-          { cardKeys: "gold" },
+          { location: 'basicSupply' },
+          { cardKeys: 'gold' },
         ]);
 
         if (!goldCards.length) {
@@ -748,20 +821,20 @@ const effectMap: CardExpansionModule = {
 
         console.debug(`[quest effect] gaining ${goldCards.slice(-1)[0]}`);
 
-        await cardEffectArgs.runGameActionDelegate("gainCard", {
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
           playerId: cardEffectArgs.playerId,
           cardId: goldCards.slice(-1)[0],
-          to: { location: "playerDiscard" },
+          to: { location: 'playerDiscard' },
         });
       }
     },
   },
-  "raid": {
+  'raid': {
     registerEffects: () => async (cardEffectArgs) => {
       // Count Silvers in play for the current player.
       const silversInPlay = getCardsInPlay(cardEffectArgs.findCards)
         .filter((card) =>
-          card.cardKey === "silver" &&
+          card.cardKey === 'silver' &&
           card.owner === cardEffectArgs.playerId
         );
 
@@ -769,8 +842,8 @@ const effectMap: CardExpansionModule = {
         console.debug(`[raid effect] no silvers in play`);
       } else {
         const supplySilvers = cardEffectArgs.findCards([
-          { location: "basicSupply" },
-          { cardKeys: "silver" },
+          { location: 'basicSupply' },
+          { cardKeys: 'silver' },
         ]);
 
         if (!supplySilvers.length) {
@@ -780,10 +853,10 @@ const effectMap: CardExpansionModule = {
           console.debug(`[raid effect] gaining ${gainCount} silvers`);
           for (let i = 0; i < gainCount; i++) {
             const silverCardId = supplySilvers.slice(-i - 1)[0];
-            await cardEffectArgs.runGameActionDelegate("gainCard", {
+            await cardEffectArgs.runGameActionDelegate('gainCard', {
               playerId: cardEffectArgs.playerId,
               cardId: silverCardId,
-              to: { location: "playerDiscard" },
+              to: { location: 'playerDiscard' },
             });
           }
         }
@@ -792,7 +865,7 @@ const effectMap: CardExpansionModule = {
       // Each other player puts their -1 Card token on top of their deck.
       const targetPlayerIds = findOrderedTargets({
         match: cardEffectArgs.match,
-        appliesTo: "ALL_OTHER",
+        appliesTo: 'ALL_OTHER',
         startingPlayerId: cardEffectArgs.playerId,
       });
 
@@ -809,14 +882,14 @@ const effectMap: CardExpansionModule = {
           continue;
         }
 
-        await cardEffectArgs.runGameActionDelegate("moveToken", {
+        await cardEffectArgs.runGameActionDelegate('moveToken', {
           tokenInstanceId: existingTokenEntry[0],
-          location: { type: "playerDeck", playerId: targetPlayerId },
+          location: { type: 'playerDeck', playerId: targetPlayerId },
         }, { loggingContext: { source: cardEffectArgs.cardId } });
       }
     },
   },
-  "save": {
+  'save': {
     registerEffects: () => async (cardEffectArgs) => {
       const event = cardEffectArgs.match.events.find((e) =>
         e.id === cardEffectArgs.cardId
@@ -827,15 +900,15 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      await cardEffectArgs.runGameActionDelegate("gainBuy", { count: 1 });
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
 
       const hand = cardEffectArgs.cardSourceController.getSource(
-        "playerHand",
+        'playerHand',
         cardEffectArgs.playerId,
       );
 
       const selectedCardIds = await cardEffectArgs.runGameActionDelegate(
-        "selectCard",
+        'selectCard',
         {
           playerId: cardEffectArgs.playerId,
           prompt: `Set aside card`,
@@ -855,15 +928,15 @@ const effectMap: CardExpansionModule = {
 
       console.debug(`[save effect] setting aside card ${selectedCard}`);
 
-      await cardEffectArgs.runGameActionDelegate("moveCard", {
+      await cardEffectArgs.runGameActionDelegate('moveCard', {
         toPlayerId: cardEffectArgs.playerId,
         cardId: selectedCard.id,
-        to: { location: "set-aside" },
+        to: { location: 'set-aside' },
       });
 
       cardEffectArgs.reactionManager.registerReactionTemplate(
         event,
-        "endTurn",
+        'endTurn',
         {
           playerId: cardEffectArgs.playerId,
           once: true,
@@ -875,10 +948,10 @@ const effectMap: CardExpansionModule = {
               `[save endTurn effect] moving ${selectedCard} to player ${cardEffectArgs.playerId} hand`,
             );
 
-            await triggeredArgs.runGameActionDelegate("moveCard", {
+            await triggeredArgs.runGameActionDelegate('moveCard', {
               toPlayerId: cardEffectArgs.playerId,
               cardId: selectedCard.id,
-              to: { location: "playerHand" },
+              to: { location: 'playerHand' },
             });
           },
         },
@@ -894,7 +967,7 @@ const effectMap: CardExpansionModule = {
         },
       );
 
-      cardEffectArgs.reactionManager.registerSystemTemplate(event, "endTurn", {
+      cardEffectArgs.reactionManager.registerSystemTemplate(event, 'endTurn', {
         playerId: cardEffectArgs.playerId,
         once: true,
         allowMultipleInstances: true,
@@ -906,14 +979,14 @@ const effectMap: CardExpansionModule = {
       });
     },
   },
-  "seaway": {
+  'seaway': {
     registerEffects: () => async (cardEffectArgs) => {
       // Gather Action cards in the Supply costing up to $4 with no potion cost.
       const actionCards = cardEffectArgs.findCards([
-        { location: ["basicSupply", "kingdomSupply"] },
-        { cardType: ["ACTION"] },
+        { location: ['basicSupply', 'kingdomSupply'] },
+        { cardType: ['ACTION'] },
         {
-          kind: "upTo",
+          kind: 'upTo',
           playerId: cardEffectArgs.playerId,
           amount: { treasure: 4, potion: 0 },
         },
@@ -925,10 +998,10 @@ const effectMap: CardExpansionModule = {
       }
 
       const selectedCardIds = await cardEffectArgs.runGameActionDelegate(
-        "selectCard",
+        'selectCard',
         {
           playerId: cardEffectArgs.playerId,
-          prompt: "Gain Action card",
+          prompt: 'Gain Action card',
           restrict: actionCards.map((card) => card.id),
           count: 1,
         },
@@ -944,10 +1017,10 @@ const effectMap: CardExpansionModule = {
       );
 
       // Gain the selected card from the Supply first (after on-gain effects resolve, move the token).
-      await cardEffectArgs.runGameActionDelegate("gainCard", {
+      await cardEffectArgs.runGameActionDelegate('gainCard', {
         playerId: cardEffectArgs.playerId,
         cardId: selectedCard.id,
-        to: { location: "playerDiscard" },
+        to: { location: 'playerDiscard' },
       });
 
       const existingTokenEntry = Object.entries(
@@ -965,13 +1038,13 @@ const effectMap: CardExpansionModule = {
       const pileKey = selectedCard.randomizer ?? selectedCard.cardKey;
       console.debug(`[seaway effect] moving +1 Buy token to ${pileKey}`);
 
-      await cardEffectArgs.runGameActionDelegate("moveToken", {
+      await cardEffectArgs.runGameActionDelegate('moveToken', {
         tokenInstanceId: existingTokenEntry[0],
-        location: { type: "supplyPile", cardKey: pileKey },
+        location: { type: 'supplyPile', cardKey: pileKey },
       }, { loggingContext: { source: cardEffectArgs.cardId } });
     },
   },
-  "scouting-party": {
+  'scouting-party': {
     registerEffects: () => async (cardEffectArgs) => {
       const event = cardEffectArgs.match.events.find((e) =>
         e.id === cardEffectArgs.cardId
@@ -982,10 +1055,10 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      await cardEffectArgs.runGameActionDelegate("gainBuy", { count: 1 });
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
 
       const deck = cardEffectArgs.cardSourceController.getSource(
-        "playerDeck",
+        'playerDeck',
         cardEffectArgs.playerId,
       );
 
@@ -995,7 +1068,7 @@ const effectMap: CardExpansionModule = {
         if (!deck.length) {
           console.debug(`[scouting-party effect] no cards in deck, shuffling`);
 
-          await cardEffectArgs.runGameActionDelegate("shuffleDeck", {
+          await cardEffectArgs.runGameActionDelegate('shuffleDeck', {
             playerId: cardEffectArgs.playerId,
           });
 
@@ -1007,10 +1080,10 @@ const effectMap: CardExpansionModule = {
 
         cardIdsSetAside.push(deck.slice(-1)[0]);
 
-        await cardEffectArgs.runGameActionDelegate("moveCard", {
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
           toPlayerId: cardEffectArgs.playerId,
           cardId: deck.slice(-1)[0],
-          to: { location: "set-aside" },
+          to: { location: 'set-aside' },
         });
       }
 
@@ -1019,11 +1092,11 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      const result = await cardEffectArgs.runGameActionDelegate("userPrompt", {
+      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
         playerId: cardEffectArgs.playerId,
-        prompt: "Discard 3 cards",
+        prompt: 'Discard 3 cards',
         content: {
-          type: "select",
+          type: 'select',
           cardIds: cardIdsSetAside,
           selectCount: Math.min(3, cardIdsSetAside.length),
         },
@@ -1039,7 +1112,7 @@ const effectMap: CardExpansionModule = {
       );
 
       for (const cardId of result.result) {
-        await cardEffectArgs.runGameActionDelegate("discardCard", {
+        await cardEffectArgs.runGameActionDelegate('discardCard', {
           playerId: cardEffectArgs.playerId,
           cardId,
         });
@@ -1057,20 +1130,20 @@ const effectMap: CardExpansionModule = {
       if (cardIdsToRearrange.length === 1) {
         console.debug(`[scouting-party effect] one card left, moving to deck`);
 
-        await cardEffectArgs.runGameActionDelegate("moveCard", {
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
           toPlayerId: cardEffectArgs.playerId,
           cardId: cardIdsToRearrange[0],
-          to: { location: "playerDeck" },
+          to: { location: 'playerDeck' },
         });
       } else {
         const result = await cardEffectArgs.runGameActionDelegate(
-          "userPrompt",
+          'userPrompt',
           {
             playerId: cardEffectArgs.playerId,
-            prompt: "Put back in any order",
-            actionButtons: [{ label: "DONE", action: 1 }],
+            prompt: 'Put back in any order',
+            actionButtons: [{ label: 'DONE', action: 1 }],
             content: {
-              type: "rearrange",
+              type: 'rearrange',
               cardIds: cardIdsToRearrange,
             },
           },
@@ -1086,16 +1159,16 @@ const effectMap: CardExpansionModule = {
         );
 
         for (const cardId of result.result) {
-          await cardEffectArgs.runGameActionDelegate("moveCard", {
+          await cardEffectArgs.runGameActionDelegate('moveCard', {
             toPlayerId: cardEffectArgs.playerId,
             cardId,
-            to: { location: "playerDeck" },
+            to: { location: 'playerDeck' },
           });
         }
       }
     },
   },
-  "trade": {
+  'trade': {
     registerEffects: () => async (cardEffectArgs) => {
       const event = cardEffectArgs.match.events.find((e) =>
         e.id === cardEffectArgs.cardId
@@ -1107,18 +1180,18 @@ const effectMap: CardExpansionModule = {
       }
 
       const hand = cardEffectArgs.cardSourceController.getSource(
-        "playerHand",
+        'playerHand',
         cardEffectArgs.playerId,
       );
 
       const selectedCardIds = await cardEffectArgs.runGameActionDelegate(
-        "selectCard",
+        'selectCard',
         {
           playerId: cardEffectArgs.playerId,
           prompt: `Trash cards`,
           restrict: hand,
           count: {
-            kind: "upTo",
+            kind: 'upTo',
             count: 2,
           },
         },
@@ -1130,8 +1203,8 @@ const effectMap: CardExpansionModule = {
       }
 
       const silverCards = cardEffectArgs.findCards([
-        { location: "basicSupply" },
-        { cardKeys: "silver" },
+        { location: 'basicSupply' },
+        { cardKeys: 'silver' },
       ]);
 
       if (!silverCards.length) {
@@ -1151,15 +1224,15 @@ const effectMap: CardExpansionModule = {
           break;
         }
 
-        await cardEffectArgs.runGameActionDelegate("gainCard", {
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
           playerId: cardEffectArgs.playerId,
           cardId: silverCard,
-          to: { location: "playerDiscard" },
+          to: { location: 'playerDiscard' },
         });
       }
     },
   },
-  "training": {
+  'training': {
     registerEffects: () => async (cardEffectArgs) => {
       const event = cardEffectArgs.match.events.find((e) =>
         e.id === cardEffectArgs.cardId
@@ -1173,7 +1246,7 @@ const effectMap: CardExpansionModule = {
       const actionSupplyPiles = cardEffectArgs.match.config.kingdomSupply
         .map((supply) => {
           const pileCard = getPileRandomizerCard(supply.cards, supply.name);
-          if (!pileCard?.type?.includes("ACTION")) return null;
+          if (!pileCard?.type?.includes('ACTION')) return null;
           return pileCard.randomizer ?? supply.name;
         })
         .filter((pile): pile is string => !!pile);
@@ -1184,14 +1257,14 @@ const effectMap: CardExpansionModule = {
       }
 
       const result = await cardEffectArgs.runGameActionDelegate(
-        "userPrompt",
+        'userPrompt',
         {
           playerId: cardEffectArgs.playerId,
-          prompt: "Which Action supply?",
+          prompt: 'Which Action supply?',
           content: {
-            type: "select-pile",
+            type: 'select-pile',
             pileNames: actionSupplyPiles,
-            selectCount: { kind: "exact", count: 1 } as CountSpec,
+            selectCount: { kind: 'exact', count: 1 } as CountSpec,
           },
         },
       ) as string[];
@@ -1217,13 +1290,13 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      await cardEffectArgs.runGameActionDelegate("moveToken", {
+      await cardEffectArgs.runGameActionDelegate('moveToken', {
         tokenInstanceId: existingTokenEntry[0],
-        location: { type: "supplyPile", cardKey: selectedPile },
+        location: { type: 'supplyPile', cardKey: selectedPile },
       }, { loggingContext: { source: event.id } });
     },
   },
-  "travelling-fair": {
+  'travelling-fair': {
     registerEffects: () => async (cardEffectArgs) => {
       const event = cardEffectArgs.match.events.find((e) =>
         e.id === cardEffectArgs.cardId
@@ -1234,11 +1307,11 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      await cardEffectArgs.runGameActionDelegate("gainBuy", { count: 2 });
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 2 });
 
       cardEffectArgs.reactionManager.registerReactionTemplate(
         event,
-        "cardGained",
+        'cardGained',
         {
           playerId: cardEffectArgs.playerId,
           once: false,
@@ -1259,16 +1332,16 @@ const effectMap: CardExpansionModule = {
               `[travelling-fair cardGained effect] putting ${card} on deck`,
             );
 
-            await triggeredArgs.runGameActionDelegate("moveCard", {
+            await triggeredArgs.runGameActionDelegate('moveCard', {
               toPlayerId: cardEffectArgs.playerId,
               cardId: card.id,
-              to: { location: "playerDeck" },
+              to: { location: 'playerDeck' },
             });
           },
         },
       );
 
-      cardEffectArgs.reactionManager.registerSystemTemplate(event, "endTurn", {
+      cardEffectArgs.reactionManager.registerSystemTemplate(event, 'endTurn', {
         playerId: cardEffectArgs.playerId,
         once: false,
         allowMultipleInstances: false,

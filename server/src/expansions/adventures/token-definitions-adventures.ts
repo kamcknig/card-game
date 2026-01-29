@@ -53,6 +53,14 @@ export const registerAdventuresTokenDefinitions = (): void => {
   });
 
   registerTokenDefinition({
+    id: adventuresTokenIds.estate,
+    name: 'Estate token',
+    rulesText: 'Estates played by this player play the set aside card.',
+    duration: 'permanent',
+    expansion: 'adventures',
+  });
+
+  registerTokenDefinition({
     id: adventuresTokenIds.trashing,
     name: 'Trashing token',
     rulesText: 'When you gain a card from this pile, you may trash a card from your hand.',

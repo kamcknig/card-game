@@ -7,6 +7,13 @@ import { selectedCardStore } from '../../../state/interactive-state';
 import { cardOverrideStore } from '../../../state/card-logic';
 import { displayCardDetail } from './modal/display-card-detail';
 import { CardLikeView } from './card-like-view';
+import { TokenBadgeView } from './token-badge-view';
+
+type TokenBadgeData = {
+  id: string;
+  label: string;
+  color: number;
+};
 
 type CardArgs = {
   card: Card;
@@ -20,6 +27,8 @@ export class CardView extends CardLikeView {
   private readonly _highlight: Graphics = new Graphics({ label: 'highlight' });
   private readonly _cardView: Sprite = new Sprite({ label: 'caredView' });
   private readonly _costView: Container = new Container({ label: 'costView' });
+  // Token container sits above the card image for badge overlays.
+  private readonly _tokenContainer: Container = new Container({ label: 'tokenContainer' });
   private readonly _cleanup: (() => void)[] = [];
 
   private _frontImage: Texture;
@@ -27,6 +36,14 @@ export class CardView extends CardLikeView {
   private _facing: CardFacing = 'back';
   private _size: CardSize = 'full';
   private _useHighlight: boolean = true;
+  // Token badges to render on this card view.
+  private _tokenBadges: TokenBadgeData[] = [];
+
+  // Updates the tokens rendered on top of the card view.
+  set tokenBadges(val: TokenBadgeData[]) {
+    this._tokenBadges = [...val];
+    this.drawTokenBadges();
+  }
 
   set useHighlight(val: boolean) {
     if (this._useHighlight === val) return;
@@ -94,6 +111,7 @@ export class CardView extends CardLikeView {
 
     this.addChild(this._highlight);
     this.addChild(this._cardView);
+    this.addChild(this._tokenContainer);
 
     this._frontImage = Assets.get(`${this._card.cardKey}-full`);
     this._backImage = Assets.get('card-back-full');
@@ -181,6 +199,42 @@ export class CardView extends CardLikeView {
     this._costView.x = 2;
     this._costView.y = this._cardView.y + this._cardView.height - this._costView.height - 5;
     this._costView.visible = this.facing === 'front';
+
+    this.drawTokenBadges();
+  }
+
+  // Renders token badges in the top-right corner of the card.
+  private drawTokenBadges() {
+    const tokenSize = this._size === 'half' ? 25 : 35;
+    const gap = 2;
+    const baseX = (this._cardView.width || 0) - tokenSize - 4;
+    const baseY = 4;
+
+    const orderedBadges = [...this._tokenBadges].sort((a, b) => a.id.localeCompare(b.id));
+    const existing = new Set(orderedBadges.map(badge => `token:${badge.id}`));
+
+    // Remove any badges that are no longer present.
+    for (const child of [...this._tokenContainer.children]) {
+      if (!existing.has(child.label ?? '')) {
+        child.removeFromParent();
+      }
+    }
+
+    orderedBadges.forEach((badge, idx) => {
+      const label = `token:${badge.id}`;
+      let view = this._tokenContainer.getChildByLabel(label) as TokenBadgeView;
+      if (!view) {
+        view = new TokenBadgeView({ size: tokenSize, labelText: badge.label, color: badge.color });
+        view.label = label;
+        this._tokenContainer.addChild(view);
+      }
+      else {
+        view.labelText = badge.label;
+        view.color = badge.color;
+      }
+      view.x = baseX;
+      view.y = baseY + idx * (tokenSize + gap);
+    });
   }
 
   onPointerdown(event: FederatedPointerEvent): void {
