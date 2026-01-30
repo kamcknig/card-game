@@ -68,6 +68,8 @@ export class CardInteractivityController {
     
     const currentPlayer = match.players[match.currentPlayerTurnIndex];
     const turnPhase = TurnPhaseOrderValues[match.turnPhaseIndex];
+    // Debt prevents buying but should not block treasure play.
+    const currentDebt = match.debt?.[currentPlayer.id] ?? 0;
     
     console.debug(`[card interactivity] determining selectable cards - phase '${turnPhase}, player ${currentPlayer}', player Index '${match.currentPlayerTurnIndex}'`);
     
@@ -78,40 +80,42 @@ export class CardInteractivityController {
     
     if (turnPhase === 'buy' && match.playerBuys > 0) {
       const cardKeysAdded: string[] = [];
-      
-      const supply: CardLike[] = this._findCards({ location: ['basicSupply', 'kingdomSupply'] });
-      
-      // a loop going backwards through the supply and kingdom. we only mark the last one as selectable (this should
-      // be the top of any pile). a bit hacky to assume that.
-      for (let i = supply.length - 1; i >= 0; i--) {
-        const card = supply[i];
-        // we already marked this type of card as selectable based on cost
-        if (cardKeysAdded.includes(card.cardKey)) {
-          continue;
-        }
-        
-        if (cardActionConditionMapFactory[card.cardKey]?.canBuy) {
-          if (!cardActionConditionMapFactory[card.cardKey].canBuy?.({
-            match: this.match,
-            cardLibrary: this._cardLibrary,
-            playerId: currentPlayer.id
-          })) {
+      // Only offer buys if the player has no debt tokens.
+      if (currentDebt === 0) {
+        const supply: CardLike[] = this._findCards({ location: ['basicSupply', 'kingdomSupply'] });
+
+        // a loop going backwards through the supply and kingdom. we only mark the last one as selectable (this should
+        // be the top of any pile). a bit hacky to assume that.
+        for (let i = supply.length - 1; i >= 0; i--) {
+          const card = supply[i];
+          // we already marked this type of card as selectable based on cost
+          if (cardKeysAdded.includes(card.cardKey)) {
             continue;
           }
-        }
-        
-        const { restricted, cost } = this._cardPriceController.applyRules(card as Card, {
-          playerId: currentPlayer.id
-        });
-        
-        // if the player has enough treasure and buys
-        if (
-          !restricted &&
-          cost.treasure <= match.playerTreasure &&
-          (cost.potion === undefined || cost.potion <= match.playerPotions)
-        ) {
-          selectableCards.push(card.id);
-          cardKeysAdded.push(card.cardKey);
+
+          if (cardActionConditionMapFactory[card.cardKey]?.canBuy) {
+            if (!cardActionConditionMapFactory[card.cardKey].canBuy?.({
+              match: this.match,
+              cardLibrary: this._cardLibrary,
+              playerId: currentPlayer.id
+            })) {
+              continue;
+            }
+          }
+
+          const { restricted, cost } = this._cardPriceController.applyRules(card as Card, {
+            playerId: currentPlayer.id
+          });
+
+          // if the player has enough treasure and buys
+          if (
+            !restricted &&
+            cost.treasure <= match.playerTreasure &&
+            (cost.potion === undefined || cost.potion <= match.playerPotions)
+          ) {
+            selectableCards.push(card.id);
+            cardKeysAdded.push(card.cardKey);
+          }
         }
       }
       
@@ -126,14 +130,17 @@ export class CardInteractivityController {
         }
       }
       
-      const events = this.match.events;
-      for (const event of events) {
-        const { restricted, cost } = this._cardPriceController.applyRules(event, {
-          playerId: currentPlayer.id
-        });
-        
-        if (!restricted && cost.treasure <= this.match.playerTreasure) {
-          selectableCards.push(event.id);
+      // Only offer event buys if the player has no debt tokens.
+      if (currentDebt === 0) {
+        const events = this.match.events;
+        for (const event of events) {
+          const { restricted, cost } = this._cardPriceController.applyRules(event, {
+            playerId: currentPlayer.id
+          });
+
+          if (!restricted && cost.treasure <= this.match.playerTreasure) {
+            selectableCards.push(event.id);
+          }
         }
       }
     }
@@ -207,6 +214,11 @@ export class CardInteractivityController {
     const phase = getTurnPhase(this.match.turnPhaseIndex);
     
     if (phase === 'buy') {
+      // Block buying events while the player has debt tokens.
+      if ((this.match.debt?.[playerId] ?? 0) > 0) {
+        console.debug(`[card interactivity] ${player} has debt, blocking card-like buy`);
+        return;
+      }
       console.debug(`[card interactivity] ${player} tapped card-like ${cardId} in phase ${phase}, processing`);
       await this.runGameDelegate('buyCardLike', { playerId, cardLikeId: cardId });
     }
@@ -244,6 +256,11 @@ export class CardInteractivityController {
         await this.runGameDelegate('playCard', { playerId, cardId });
       }
       else {
+        // Block buying cards while the player has debt tokens.
+        if ((this.match.debt?.[playerId] ?? 0) > 0) {
+          console.debug(`[card interactivity] ${player} has debt, blocking buy`);
+          return;
+        }
         const card = this._cardLibrary.getCard(cardId);
         const { cost } = this._cardPriceController.applyRules(card, {
           playerId

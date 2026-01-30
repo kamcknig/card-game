@@ -192,6 +192,14 @@ export class Game {
     if (!this._matchController) return null;
     return this._matchController.exportMatchState();
   }
+
+  // Merges a partial match update into the live match state and broadcasts it.
+  public mergeMatchState(partial: Partial<Match>): { ok: boolean; errors?: string[] } {
+    if (!this._matchController) {
+      return { ok: false, errors: ['match not initialized'] };
+    }
+    return this._matchController.applyPartialMatchUpdate(partial);
+  }
   
   public addPlayer(sessionId: string, socket: AppSocket) {
     if (this.players.length >= 6) {

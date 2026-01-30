@@ -3,9 +3,10 @@ import { batched } from 'nanostores';
 import { playerActionsStore, playerBuysStore, playerPotionStore, playerTreasureStore } from '../../../state/turn-state';
 import { STANDARD_GAP } from '../../../core/app-contants';
 import { CoffersExchangeView } from './coffers-exchange-view';
-import { cofferStore } from '../../../state/resource-logic';
+import { cofferStore, debtStore } from '../../../state/resource-logic';
 import { selfPlayerIdStore } from '../../../state/player-state';
 import { SocketService } from '../../../core/socket-service/socket.service';
+import { DebtPayView } from './debt-pay-view';
 
 export class PhaseStatus extends Container {
   private _background: Graphics = new Graphics();
@@ -16,6 +17,23 @@ export class PhaseStatus extends Container {
   private _potionsCountText: Text = new Text({ style: { fill: 0xffffff, fontSize: 18 } });
   private _potionView: Sprite = Sprite.from(Assets.get('potion-icon'));
   private _coffersExchangeView: CoffersExchangeView = new CoffersExchangeView();
+  // Displays debt and allows paying it down.
+  private _debtPayView: DebtPayView = new DebtPayView();
+  // Fixed widths to avoid layout shifts when controls expand.
+  private static readonly COFFER_ICON_SIZE = 45;
+  private static readonly DEBT_ICON_SIZE = 45;
+  private static readonly BAR_WIDTH = 900;
+  private static readonly BAR_HEIGHT = 50;
+  private _onExchangeCoffer = (amount: number) => {
+    const selfId = selfPlayerIdStore.get();
+    if (!selfId) return;
+    this._socketService.emit('exchangeCoffer', selfId, amount);
+  };
+  private _onPayDebt = (amount: number) => {
+    const selfId = selfPlayerIdStore.get();
+    if (!selfId) return;
+    this._socketService.emit('payDebt', selfId, amount);
+  };
 
   constructor(private readonly _socketService: SocketService) {
     super();
@@ -25,27 +43,27 @@ export class PhaseStatus extends Container {
     this.addChild(this._buyLabel);
     this.addChild(this._actionLabel);
 
-    this._coffersExchangeView.on('exchange', (amount: number) => {
-      const selfId = selfPlayerIdStore.get();
-      if (!selfId) return;
-      this._socketService.emit('exchangeCoffer', selfId, amount);
-    });
+    this._coffersExchangeView.on('exchange', this._onExchangeCoffer);
 
     this.addChild(this._coffersExchangeView);
+    this.addChild(this._debtPayView);
+
+    this._debtPayView.on('pay', this._onPayDebt);
 
     this._background
-      .roundRect(0, 0, 900, 50, 5)
+      .roundRect(0, 0, PhaseStatus.BAR_WIDTH, PhaseStatus.BAR_HEIGHT, 5)
       .fill({ color: 0, alpha: .6 });
 
     this._cleanup.push(
       batched(
-        [playerTreasureStore, playerBuysStore, playerActionsStore, playerPotionStore, cofferStore, selfPlayerIdStore],
-        (treasure, buys, actions, potions, coffers, selfId) => ({
+        [playerTreasureStore, playerBuysStore, playerActionsStore, playerPotionStore, cofferStore, debtStore, selfPlayerIdStore],
+        (treasure, buys, actions, potions, coffers, debt, selfId) => ({
           treasure,
           buys,
           actions,
           potions,
-          coffers: selfId ? coffers[selfId] : 0
+          coffers: selfId ? coffers[selfId] : 0,
+          debt: selfId ? debt[selfId] : 0
         })
       ).subscribe(vals => this.drawPhase(vals))
     );
@@ -58,15 +76,18 @@ export class PhaseStatus extends Container {
 
   private onRemoved = () => {
     this._cleanup.forEach(c => c());
+    this._coffersExchangeView.off('exchange', this._onExchangeCoffer);
+    this._debtPayView.off('pay', this._onPayDebt);
     this.off('removed', this.onRemoved);
   }
 
-  private drawPhase({ treasure, buys, actions, potions, coffers }: { treasure: number; buys: number; actions: number; potions: number; coffers: number; }) {
+  private drawPhase({ treasure, buys, actions, potions, coffers, debt }: { treasure: number; buys: number; actions: number; potions: number; coffers: number; debt: number; }) {
     this._buyLabel.text = `  BUYS ${buys}`;
     this._treasureLabel.text = `  TREASURE ${treasure}   /`;
     this._actionLabel.text = `ACTIONS ${actions}   /`;
 
-    this._actionLabel.y = this._treasureLabel.y = this._buyLabel.y = this._potionView.y = this._potionsCountText.y = this.height * .5 - this._actionLabel.height * .5;
+    const centerY = PhaseStatus.BAR_HEIGHT * .5;
+    this._actionLabel.y = this._treasureLabel.y = this._buyLabel.y = this._potionView.y = this._potionsCountText.y = centerY - this._actionLabel.height * .5;
 
     this._actionLabel.x = STANDARD_GAP;
 
@@ -91,9 +112,21 @@ export class PhaseStatus extends Container {
     this._buyLabel.x = c.x + c.width + STANDARD_GAP;
 
     this._coffersExchangeView.visible = coffers > 0;
+    // Debt is shown when present and right-aligned with other resource controls.
+    this._debtPayView.visible = debt > 0;
+    let rightEdge = PhaseStatus.BAR_WIDTH - STANDARD_GAP;
+
+    if (this._debtPayView.visible) {
+      // Use fixed icon width so expanded controls don't shift layout.
+      this._debtPayView.x = Math.floor(rightEdge - PhaseStatus.DEBT_ICON_SIZE);
+      this._debtPayView.y = Math.floor(centerY - PhaseStatus.DEBT_ICON_SIZE * .5);
+      rightEdge = this._debtPayView.x - STANDARD_GAP;
+    }
+
     if (coffers > 0) {
-      this._coffersExchangeView.x = this.width - 40 - STANDARD_GAP;
-      this._coffersExchangeView.y = Math.floor(this.height * .5 - 40 * .5);
+      // Use fixed icon width so expanded controls don't shift layout.
+      this._coffersExchangeView.x = Math.floor(rightEdge - PhaseStatus.COFFER_ICON_SIZE);
+      this._coffersExchangeView.y = Math.floor(centerY - PhaseStatus.COFFER_ICON_SIZE * .5);
     }
   }
 }

@@ -86,6 +86,10 @@
             "potion": {
               "type": "integer",
               "minimum": 1
+            },
+            "debt": {
+              "type": "integer",
+              "minimum": 1
             }
           },
           "required": ["treasure"],

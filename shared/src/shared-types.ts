@@ -54,29 +54,29 @@ export interface Supply {
 }
 
 /****************
- 
+
  MATCH types
- 
+
  ***************/
 export interface MatchConfiguration {
   players: Player[];
-  
+
   // info about the expansions selected for the match. determines what cards can randomly be selected for the kingdom
   expansions: ExpansionListElement[];
-  
+
   // cards banned from the match
   bannedKingdoms: CardNoId[];
-  
+
   preselectedKingdoms: CardNoId[];
-  
+
   // basic cards selected for the game, these are what are available at the beginning of a match
   basicSupply: Supply[];
-  
+
   // kingdom cards selected for the game, these are what are available at the beginning of a match
   kingdomSupply: Supply[];
-  
+
   playerStartingHand: Record<CardKey, number>;
-  
+
   events: EventNoId[];
 }
 
@@ -89,9 +89,9 @@ export type ComputedMatchConfiguration = MatchConfiguration & {
 export type CardStats = {
   // the turn number on which the card was played.
   turnNumber: number;
-  
+
   turnPhase: TurnPhase;
-  
+
   // the player that played the card
   playerId: PlayerId;
 };
@@ -99,25 +99,25 @@ export type CardStats = {
 export type MatchStats = {
   cardLikesBoughtByTurn: Record<number, CardId[] | undefined>;
   cardLikesBought: Record<CardId, CardStats>;
-  
+
   cardsGainedByTurn: Record<number, CardId[] | undefined>;
   cardsGained: Record<CardId, CardStats>;
-  
+
   /**
    * Keys are the card's ID that was played, and values are CardStats objects.
    */
   playedCards: Record<CardId, CardStats>;
   playedCardsByTurn: Record<number, CardId[] | undefined>;
-  
+
   trashedCards: Record<CardId, CardStats>;
   trashedCardsByTurn: Record<number, CardId[] | undefined>;
-  
+
   cardsBoughtByTurn: Record<number, CardId[] | undefined>;
   cardsBought: Record<CardId, CardStats & {
-    
+
     // the cost when it was bought
     cost: number;
-    
+
     // the amount used to buy it
     paid: number;
   }>;
@@ -128,6 +128,8 @@ export interface Match {
   cardSources: Record<CardLocation, CardId[]>;
   cardSourceTagMap: Record<string, CardLocation[]>;
   coffers: Record<PlayerId, number>;
+  // Tracks per-player debt tokens for Empires-style costs.
+  debt: Record<PlayerId, number>;
   config: ComputedMatchConfiguration,
   currentPlayerTurnIndex: number;
   events: Event[];
@@ -153,9 +155,9 @@ export interface Match {
 export type CardOverrides = Record<PlayerId, Record<CardId, Partial<Card>>>;
 
 /**************
- 
+
  LOG types
- 
+
  ******************/
 
 export type LogEntrySource = CardId;
@@ -181,9 +183,9 @@ export type LogEntry =
 
 
 /***************
- 
+
  GAME ACTION types
- 
+
  *********************/
 
 export interface SelectActionCardArgs {
@@ -262,6 +264,8 @@ export interface ServerListenEvents {
   addComputerPlayer: (count?: number) => void;
   clientReady: (playerId: PlayerId, ready: boolean) => void;
   exchangeCoffer: (playerId: PlayerId, count: number) => void;
+  // Pays down debt tokens using available treasure.
+  payDebt: (playerId: PlayerId, count: number) => void;
   expansionSelected: (val: string[]) => void;
   matchConfigurationUpdated: (val: MatchConfiguration) => void;
   nextPhase: () => void;
@@ -335,7 +339,7 @@ export class Player {
   ready: boolean;
   color: string;
   isComputer: boolean;
-  
+
   constructor({ color, id, name, sessionId, socketId, connected, ready, isComputer }: PlayerArgs) {
     this.id = id;
     this.name = name;
@@ -346,11 +350,11 @@ export class Player {
     this.color = color;
     this.isComputer = isComputer ?? false;
   }
-  
+
   toString() {
     return `[PLAYER ${this.id} - ${this.name}]`;
   }
-  
+
   // @ts-ignore
   [Symbol.for('Deno.customInspect')]() {
     return this.toString();
@@ -370,10 +374,7 @@ export class CardLike {
   id: CardId;
   cardKey: CardKey;
   cardName: string;
-  cost: {
-    treasure: number;
-    potion?: number;
-  };
+  cost: CardCost;
   fullImagePath: string;
   detailImagePath: string;
   /**
@@ -384,7 +385,7 @@ export class CardLike {
    * cards in the supply
    */
   randomizer: string | null;
-  
+
   constructor(args: CardLike) {
     this.id = args.id;
     this.cardKey = args.cardKey ?? '';
@@ -405,13 +406,13 @@ type EventArgs = {
 export class Event extends CardLike {
   constructor(args: EventArgs) {
     super(args);
-    
+
     this.id = args.id;
     this.cardName = args.cardName;
     this.fullImagePath = args.fullImagePath;
     this.detailImagePath = args.detailImagePath;
   }
-  
+
   override toString() {
     return `[EVENT ${this.id} - ${this.cardKey}]`;
   }
@@ -489,6 +490,8 @@ export type CardArgs = {
 export type CardCost = {
   treasure: number;
   potion?: number | undefined;
+  // Optional debt cost for Empires-style cards/events.
+  debt?: number | undefined;
 }
 
 export class Card extends CardLike {
@@ -510,7 +513,7 @@ export class Card extends CardLike {
   expansionName: string;
   halfImagePath: string;
   owner: PlayerId | null;
-  
+
   constructor(args: CardArgs) {
     super(args);
     this.tags = args.tags ?? [];
@@ -534,11 +537,11 @@ export class Card extends CardLike {
     this.partOfSupply = args.partOfSupply ?? true;
     this.randomizer = args.randomizer;
   }
-  
+
   override toString() {
     return `[CARD ${this.id} - ${this.cardKey}]`;
   }
-  
+
   // @ts-ignore
   [Symbol.for('Deno.customInspect')]() {
     return this.toString();

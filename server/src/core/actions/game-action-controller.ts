@@ -17,7 +17,7 @@ import {
     TokenLocation,
     TurnPhaseOrderValues,
     UserPromptActionArgs
-} from 'shared/shared-types.ts';
+} from 'shared/shared-types';
 import {MatchCardLibrary} from '../match-card-library.ts';
 import {LogManager} from '../log-manager.ts';
 import {getCurrentPlayer} from '../../utils/get-current-player.ts';
@@ -665,7 +665,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     }
 
     async gainVictoryToken(args: { playerId: PlayerId, count: number }, context?: GameActionContext) {
-        console.debug(`[gainVictoryToken action] player ${args.playerId} gained ${args.count} victory tokens`);
+        console.log(`[gainVictoryToken action] player ${args.playerId} gained ${args.count} victory tokens`);
         this.match.playerVictoryTokens ??= {};
         this.match.playerVictoryTokens[args.playerId] ??= 0;
         const newCount = this.match.playerVictoryTokens[args.playerId] + args.count;
@@ -674,18 +674,45 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     }
 
     async gainCoffer(args: { playerId: PlayerId, count?: number; }, context?: GameActionContext) {
-        console.debug(`[gainCoffer action] player ${args.playerId} gained ${args.count} coffers`);
+        console.log(`[gainCoffer action] player ${args.playerId} gained ${args.count} coffers`);
         this.match.coffers[args.playerId] ??= 0;
         this.match.coffers[args.playerId] += args.count ?? 1;
         this.match.coffers[args.playerId] = Math.max(0, this.match.coffers[args.playerId]);
         console.debug(`[gainCoffer action] player ${args.playerId} now has ${this.match.coffers[args.playerId]} coffers`);
     }
 
+    // Adds debt tokens to a player without spending treasure.
+    async gainDebt(args: { playerId: PlayerId; count: number; }, context?: GameActionContext) {
+        console.log(`[gainDebt action] player ${args.playerId} gained ${args.count} debt`);
+        // Ensure debt map exists for older saved states.
+        this.match.debt ??= {};
+        this.match.debt[args.playerId] ??= 0;
+        this.match.debt[args.playerId] += args.count;
+        this.match.debt[args.playerId] = Math.max(0, this.match.debt[args.playerId]);
+        console.debug(`[gainDebt action] player ${args.playerId} now has ${this.match.debt[args.playerId]} debt`);
+    }
+
     async exchangeCoffer(args: { playerId: PlayerId, count: number; }, context?: GameActionContext) {
-        console.debug(`[exchangeCoffer action] player ${args.playerId} exchanged ${args.count} coffers`);
+        console.log(`[exchangeCoffer action] player ${args.playerId} exchanged ${args.count} coffers`);
         this.match.coffers[args.playerId] -= args.count;
         this.match.playerTreasure += args.count;
     };
+
+    // Pays down debt tokens using the current treasure pool.
+    async payDebt(args: { playerId: PlayerId; count: number; }, context?: GameActionContext) {
+        // Ensure debt map exists for older saved states.
+        this.match.debt ??= {};
+        const currentDebt = this.match.debt[args.playerId] ?? 0;
+        const payable = Math.min(args.count, currentDebt, this.match.playerTreasure);
+        console.log(`[payDebt action] player ${args.playerId} paying ${payable} debt`);
+        if (payable <= 0) {
+            console.debug(`[payDebt action] player ${args.playerId} not enough payable ${payable} to pay debt`);
+            return;
+        }
+        this.match.debt[args.playerId] = currentDebt - payable;
+        this.match.playerTreasure = Math.max(0, this.match.playerTreasure - payable);
+        console.debug(`[payDebt action] player ${args.playerId} now has ${this.match.debt[args.playerId]} debt, treasure ${this.match.playerTreasure}`);
+    }
 
     async buyCard(args: {
         cardId: CardId | Card;
@@ -693,6 +720,14 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         overpay?: { inTreasure: number; inCoffer: number; };
         cardCost: CardCost;
     }) {
+        // Ensure debt map exists for older saved states.
+        this.match.debt ??= {};
+        // Prevent buying if the player already has debt tokens.
+        const existingDebt = this.match.debt[args.playerId] ?? 0;
+        if (existingDebt > 0) {
+            console.debug(`[buyCard action] player ${args.playerId} has debt (${existingDebt}), blocking buy`);
+            return;
+        }
         const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
         const cardId = card.id;
 
@@ -712,6 +747,11 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         if (args.cardCost.potion !== undefined) {
             console.debug(`[buyCard action] reducing player ${args.playerId} potions by card cost ${args.cardCost.potion} potions`);
             this.match.playerPotions -= args.cardCost.potion;
+        }
+
+        if ((args.cardCost.debt ?? 0) > 0) {
+            console.debug(`[buyCard action] adding ${args.cardCost.debt} debt to player ${args.playerId}`);
+            await this.gainDebt({ playerId: args.playerId, count: args.cardCost.debt! });
         }
 
         console.debug(`[buyCard action] reducing player ${args.playerId} buys by 1`);
@@ -744,6 +784,14 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         cardLikeId: CardLikeId;
         playerId: PlayerId;
     }) {
+        // Ensure debt map exists for older saved states.
+        this.match.debt ??= {};
+        // Prevent buying card-likes if the player already has debt tokens.
+        const existingDebt = this.match.debt[args.playerId] ?? 0;
+        if (existingDebt > 0) {
+            console.debug(`[buyCardLike action] player ${args.playerId} has debt (${existingDebt}), blocking buy`);
+            return;
+        }
         const event = this.match.events.find(e => e.id === args.cardLikeId);
 
         if (!event) {
@@ -758,6 +806,11 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         this.match.playerTreasure -= cost;
 
         console.debug(`[buyCardLike action] reducing player ${args.playerId} treasure ${cost} to ${this.match.playerTreasure}`);
+
+        if ((event.cost.debt ?? 0) > 0) {
+            console.debug(`[buyCardLike action] adding ${event.cost.debt} debt to player ${args.playerId}`);
+            await this.gainDebt({ playerId: args.playerId, count: event.cost.debt! });
+        }
 
         this.match.playerBuys--;
 

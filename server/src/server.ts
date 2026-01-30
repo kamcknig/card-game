@@ -73,6 +73,37 @@ Deno.serve({
         headers: {'content-type': 'application/json'},
       });
     }
+    // Debug-only endpoint to merge a partial match state into the live match.
+    if (url.pathname === '/debug/match-state/merge') {
+      if (Deno.env.get('MATCH_STATE_MERGE_ENABLED') !== 'true') {
+        return new Response('match state merge disabled', {status: 403});
+      }
+      if (req.method !== 'POST') {
+        return new Response('method not allowed', {status: 405});
+      }
+      return req.json()
+        .then((body) => {
+          // Require a JSON object as the partial match payload.
+          if (!body || typeof body !== 'object' || Array.isArray(body)) {
+            return new Response('invalid match payload', {status: 400});
+          }
+
+          const result = game.mergeMatchState(body);
+          if (!result.ok) {
+            return new Response(JSON.stringify({error: 'invalid match update', errors: result.errors}), {
+              status: 400,
+              headers: {'content-type': 'application/json'},
+            });
+          }
+
+          return new Response(JSON.stringify({ok: true}), {
+            headers: {'content-type': 'application/json'},
+          });
+        })
+        .catch(() => {
+          return new Response('invalid json', {status: 400});
+        });
+    }
     return ioHandler(req, info);
   },
   port: PORT,

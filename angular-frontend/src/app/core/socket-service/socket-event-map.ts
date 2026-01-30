@@ -108,6 +108,8 @@ export const socketToGameEventMap = (): SocketEventMap => {
       'card-back-half': `/assets/card-images/base-v2/half-size/card-back.jpg`,
       'treasure-bg': '/assets/ui-icons/treasure-bg.png',
       'potion-icon': '/assets/ui-icons/potion.png',
+      // Shared debt icon for Empires-style costs.
+      'debt-icon': '/assets/ui-icons/64px-debt.png',
     };
 
     const finalBundle = Object.values(cardsById).reduce((prev, c) => {

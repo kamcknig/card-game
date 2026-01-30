@@ -134,13 +134,39 @@ export class CardView extends CardLikeView {
     costText.y = Math.floor(costBgSprite.height * .5);
     this._costView.addChild(costText);
 
+    // Track the next cost element position as we add potion/debt icons.
+    let nextCostX = costBgSprite.x + costBgSprite.width + 3;
+
     if ((card.cost?.potion ?? 0) > 0) {
       const potion = Sprite.from(Assets.get('potion-icon'));
       const maxSide = 32;
       potion.scale = Math.min(maxSide / potion.width, maxSide / potion.height);
-      potion.x = costBgSprite.x + costBgSprite.width + 3;
+      potion.x = nextCostX;
       potion.y = Math.floor(costBgSprite.y + costBgSprite.height - potion.height);
       this._costView.addChild(potion);
+      nextCostX = potion.x + potion.width + 3;
+    }
+
+    // Render debt costs using the debt icon and an overlaid count.
+    if ((card.cost?.debt ?? 0) > 0) {
+      const debt = Sprite.from(Assets.get('debt-icon'));
+      const maxSide = 32;
+      debt.scale = Math.min(maxSide / debt.width, maxSide / debt.height);
+      debt.x = nextCostX;
+      debt.y = Math.floor(costBgSprite.y + costBgSprite.height - debt.height);
+      this._costView.addChild(debt);
+
+      const debtText = new Text({
+        label: 'debtText',
+        text: card.cost.debt,
+        style: {
+          fill: 'black'
+        },
+        anchor: .5,
+      });
+      debtText.x = Math.floor(debt.x + debt.width * .5);
+      debtText.y = Math.floor(debt.y + debt.height * .5);
+      this._costView.addChild(debtText);
     }
 
     this.addChild(this._costView);
@@ -194,6 +220,11 @@ export class CardView extends CardLikeView {
     const costText = this._costView.getChildByLabel('costText') as Text;
     if (costText) {
       costText.text = overrides?.[this._card.id]?.cost?.treasure ?? this._card.cost.treasure;
+    }
+    // Update debt text if present in the cost view.
+    const debtText = this._costView.getChildByLabel('debtText') as Text;
+    if (debtText) {
+      debtText.text = overrides?.[this._card.id]?.cost?.debt ?? this._card.cost.debt ?? 0;
     }
 
     this._costView.x = 2;

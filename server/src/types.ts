@@ -145,6 +145,8 @@ export interface BaseGameActionDefinitionMap {
     gainAction: (args: { count: number }, context?: GameActionContext) => Promise<void>;
     gainBuy: (args: { count: number }, context?: GameActionContext) => Promise<void>;
     gainCoffer: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
+    // Adds debt tokens to a player (used by Empires-style costs/effects).
+    gainDebt: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
     gainCard: (args: {
         playerId: PlayerId,
         cardId: CardId | Card,
@@ -153,6 +155,8 @@ export interface BaseGameActionDefinitionMap {
     gainPotion: (args: { count: number }) => Promise<void>;
     gainTreasure: (args: { count: number }, context?: GameActionContext) => Promise<void>;
     gainVictoryToken: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
+    // Pays down debt tokens using the current player's treasure pool.
+    payDebt: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
     // Token actions are used by expansions to place and manage token instances.
     placeToken: (args: {
         tokenId: TokenId;

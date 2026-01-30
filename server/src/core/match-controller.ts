@@ -63,7 +63,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private readonly _cardSourceController: CardSourceController;
   // Cached match state override loaded from disk, if provided.
   private _loadedMatchState: { match: Match; cardLibrary: Record<CardId, Card> } | null = null;
-  
+
   private _playerHands: Record<CardKey, number>[] = [
     /*{
       gold: 4,
@@ -76,18 +76,20 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       estate: 3,
     },*/
   ];
-  
+
   constructor(
     private readonly _socketMap: Map<PlayerId, AppSocket>,
     private readonly cardSearchFn: (searchTerm: string) => CardNoId[],
   ) {
     super();
-    
+
     this._match = {
       cardOverrides: {},
       cardSources: {},
       cardSourceTagMap: {},
       coffers: {},
+      // Per-player debt tokens for Empires-style costs.
+      debt: {},
       config: {} as ComputedMatchConfiguration,
       currentPlayerTurnIndex: 0,
       events: [],
@@ -122,25 +124,86 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }
     this._cardSourceController = new CardSourceController(this._match);
   }
-  
+
+  // Returns true for non-null plain object values.
+  private static isPlainObject(value: unknown): value is Record<string, unknown> {
+    return !!value && typeof value === 'object' && !Array.isArray(value);
+  }
+
+  // Validates that a partial match update only includes keys present in the live match structure.
+  private static validatePartialMatch(
+    partial: unknown,
+    base: unknown,
+    pathPrefix = '',
+    allowExtraKeys = false,
+  ): string[] {
+    const errors: string[] = [];
+    if (!MatchController.isPlainObject(partial)) {
+      return errors;
+    }
+    const baseObj = MatchController.isPlainObject(base) ? base : undefined;
+    for (const [key, val] of Object.entries(partial)) {
+      // Prevent prototype pollution paths from being accepted.
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+        errors.push(`${pathPrefix}${key}`);
+        continue;
+      }
+      if (!allowExtraKeys && (!baseObj || !(key in baseObj))) {
+        errors.push(`${pathPrefix}${key}`);
+        continue;
+      }
+      const baseVal = baseObj ? (baseObj as Record<string, unknown>)[key] : undefined;
+      if (MatchController.isPlainObject(val) && MatchController.isPlainObject(baseVal)) {
+        errors.push(...MatchController.validatePartialMatch(val, baseVal, `${pathPrefix}${key}.`, allowExtraKeys));
+      }
+    }
+    return errors;
+  }
+
+  // Deep merges a partial match into the live match state without mutating arrays by reference.
+  private static mergePartialMatch(target: Record<string, unknown>, patch: Record<string, unknown>) {
+    for (const [key, value] of Object.entries(patch)) {
+      // Prevent prototype pollution paths from being merged.
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+        continue;
+      }
+      if (value === undefined) continue;
+      if (Array.isArray(value)) {
+        target[key] = structuredClone(value);
+        continue;
+      }
+      if (MatchController.isPlainObject(value)) {
+        const existing = target[key];
+        if (MatchController.isPlainObject(existing)) {
+          MatchController.mergePartialMatch(existing, value);
+        }
+        else {
+          target[key] = structuredClone(value);
+        }
+        continue;
+      }
+      target[key] = value;
+    }
+  }
+
   public async initialize(config: MatchConfiguration) {
     this.broadcastPatch({} as Match);
-    
+
     const snapshot = this.getMatchSnapshot();
     // Load an optional match override from disk for local dev/debugging.
     this._loadedMatchState = await this.tryLoadMatchStateOverride();
-    
+
     this._logManager = new LogManager({
       socketMap: this._socketMap,
     });
-    
+
     this._cardPriceController = new CardPriceRulesController(
       this._cardLibrary,
       this._match
     );
-    
+
     this._findCards = findCardsFactory(this._cardSourceController, this._cardPriceController, this._cardLibrary);
-    
+
     this._reactionManager = new ReactionManager(
       this._cardSourceController,
       this._findCards,
@@ -150,17 +213,17 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._cardLibrary,
       (action, ...args) => this.runGameAction(action, ...args)
     );
-    
+
     const cardEffectFunctionMap = Object.keys(cardEffectFunctionMapFactory).reduce((acc, nextKey) => {
       acc[nextKey] = cardEffectFunctionMapFactory[nextKey]();
       return acc;
     }, {} as CardEffectFunctionMap);
-    
+
     const eventEffectFunctionMap = Object.keys(eventEffectFactoryMap).reduce((acc, nextKey) => {
       acc[nextKey] = eventEffectFactoryMap[nextKey]();
       return acc;
     }, {} as CardEffectFunctionMap);
-    
+
     this._interactivityController = new CardInteractivityController(
       this._cardSourceController,
       this._cardPriceController,
@@ -170,7 +233,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       (action, ...args) => this.runGameAction(action, ...args),
       this._findCards
     );
-    
+
     this.gameActionsController = new GameActionController(
       this._cardSourceController,
       this._findCards,
@@ -185,9 +248,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       (action, ...args) => this.runGameAction(action, ...args),
       this._interactivityController,
     );
-    
+
     this._matchConfigurator = new MatchConfigurator(config);
-    
+
     const { config: newConfig } = await this._matchConfigurator.createConfiguration({
       match: this._match,
       cardSourceController: this._cardSourceController,
@@ -197,7 +260,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       cardEffectRegistrar: (...args) => this.gameActionsController?.registerCardEffect(...args),
       playerScoreDecoratorRegistrar: (val: PlayerScoreDecorator) => this._expansionScoringFns.push(val),
     });
-    
+
     // Use the loaded match state if provided; otherwise build a fresh match state.
     if (this._loadedMatchState) {
       this.applyLoadedMatchState(this._loadedMatchState.match);
@@ -208,7 +271,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }
     else {
       this._matchConfiguration = newConfig;
-      
+
       this._match.players = this._matchConfiguration.players;
       this.createBaseSupply(this._matchConfiguration);
       this.createKingdom(this._matchConfiguration);
@@ -217,11 +280,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this.createPlayerDecks(this._matchConfiguration);
       this._match.config = this._matchConfiguration;
     }
-    
+
     console.debug(`[match] ready, sending to clients and listening for when clients are ready`);
-    
+
     this.broadcastPatch(snapshot);
-    
+
     this._socketMap.forEach((s) => {
       s.emit('setCardLibrary', this._cardLibrary.getAllCards());
       s.emit('setTokenDefinitions', tokenDefinitionMap);
@@ -262,132 +325,132 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._cardLibrary.addCard(new Card({ ...card }));
     }
   }
-  
+
   private clientEventRegistrar<T extends keyof ServerListenEvents>(event: T, handler: ServerListenEvents[T]) {
     this._registeredEvents.push(event);
     this._socketMap.forEach(s => {
       s.on(event, handler as any);
     })
   }
-  
+
   public playerReconnected(playerId: PlayerId, socket: AppSocket) {
     console.debug(`[match] player ${playerId} reconnecting`);
     this._socketMap.set(playerId, socket);
-    
+
     this.broadcastPatch({} as Match, playerId);
-    
+
     socket.emit('setCardLibrary', this._cardLibrary.getAllCards());
     socket.emit('setTokenDefinitions', tokenDefinitionMap);
     socket.emit('matchReady');
-    
+
     socket.on('clientReady', async (_playerId: number, _ready: boolean) => {
       console.debug(`[match] ${getPlayerById(this._match, playerId)} marked ready`);
       socket.emit('matchStarted');
       socket.off('clientReady');
-      
+
       this.initializeSocketListeners(socket);
-      
+
       this._interactivityController?.playerAdded(socket);
-      
+
       if (getCurrentPlayer(this._match).id === playerId) {
         await this.runGameAction('checkForRemainingPlayerActions');
       }
     });
   }
-  
+
   public playerDisconnected(playerId: number) {
     // Use whichever array is populated depending on phase
     const roster = this._match.players?.length
       ? this._match.players
       : this._match.config.players;
-    
+
     // There should always be at least one entry after a single disconnect
     const leaving = roster.find((p) => p.id === playerId);
     console.debug(`[match] ${leaving ?? `{id:${playerId}}`} has disconnected`);
-    
+
     this._socketMap.get(playerId)?.offAnyIncoming();
     this._interactivityController?.playerRemoved(this._socketMap.get(playerId));
     this._socketMap.delete(playerId);
   }
-  
+
   private createBaseSupply(config: ComputedMatchConfiguration) {
     console.debug(`[match] creating base supply cards`);
     const cardSource = this._cardSourceController.getSource('basicSupply');
-    
+
     if (!cardSource) {
       throw new Error(`[match] no basic supply card source found`);
     }
-    
+
     for (const supply of Object.values(config.basicSupply)) {
       for (const card of supply.cards) {
         if (!card) {
           throw new Error(`[match] no card data found for ${supply}`);
         }
-        
+
         const c = createCard(card.cardKey, { ...card, kingdom: supply.name });
         this._cardLibrary.addCard(c);
         cardSource.push(c.id);
       }
     }
   }
-  
+
   private createKingdom(config: ComputedMatchConfiguration) {
     console.debug(`[match] creating kingdom cards`);
-    
+
     const cardSource = this._cardSourceController.getSource('kingdomSupply');
-    
+
     if (!cardSource) {
       throw new Error(`[match] no basic supply card source found`);
     }
-    
+
     for (const kingdom of Object.values(config.kingdomSupply)) {
       for (const card of kingdom.cards) {
         if (!card) {
           throw new Error(`[match] no card data found for ${kingdom}`);
         }
-        
+
         const c = createCard(card.cardKey, { ...card, kingdom: kingdom.name });
         this._cardLibrary.addCard(c);
         cardSource.push(c.id);
       }
     }
   }
-  
+
   private createNonSupplyCards(config: ComputedMatchConfiguration) {
     console.debug(`[match] creating non-supply cards`);
-    
+
     const cardSource = this._cardSourceController.getSource('nonSupplyCards');
-    
+
     if (!cardSource) {
       throw new Error(`[match] no basic supply card source found`);
     }
-    
+
     for (const supply of Object.values(config.nonSupply ?? {})) {
       for (const card of supply.cards) {
         if (!card) {
           throw new Error(`[match] no card data found for ${supply}`);
         }
-        
+
         const c = createCard(card.cardKey, { ...card, kingdom: supply.name });
         this._cardLibrary.addCard(c);
         cardSource.push(c.id);
       }
     }
   }
-  
+
   private createPlayerDecks(config: MatchConfiguration) {
     console.debug(`[match] creating player decks`);
-    
+
     return Object.values(config.players).forEach((player, idx) => {
       console.debug('initializing player', player.id, 'cards...');
-      
+
       let playerStartHand = this._playerHands.length > 0 ? this._playerHands[idx] : config.playerStartingHand as Record<string, number>;
       playerStartHand ??= MatchBaseConfiguration.playerStartingHand;
       console.debug(`[match] using player starting hand`);
       console.debug(Object.keys(playerStartHand).map((key) => `${key}: ${playerStartHand[key]}`).join(', '))
-      
+
       const deck = this._cardSourceController.getSource('playerDeck', player.id);
-      
+
       Object.entries(playerStartHand).forEach(
         ([key, count]) => {
           deck.push(
@@ -402,7 +465,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       );
     });
   }
-  
+
   public getMatchSnapshot(): Match {
     this._cardLibSnapshot = structuredClone(this._cardLibrary.getAllCards());
     return structuredClone(this._match);
@@ -414,6 +477,59 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       match: structuredClone(this._match),
       cardLibrary: structuredClone(this._cardLibrary.getAllCards()),
     };
+  }
+
+  // Applies a partial match update, recalculates derived state, and broadcasts to clients.
+  public applyPartialMatchUpdate(partial: Partial<Match>): { ok: boolean; errors?: string[] } {
+    const prev = this.getMatchSnapshot();
+
+    const recordKeyAllowList = new Set([
+      'cardOverrides',
+      'cardSources',
+      'cardSourceTagMap',
+      'coffers',
+      'debt',
+      'mats',
+      'playerVictoryTokens',
+      'scores',
+      'selectableCards',
+      'tokens',
+    ]);
+
+    const validationErrors: string[] = [];
+    if (MatchController.isPlainObject(partial)) {
+      for (const [key, val] of Object.entries(partial)) {
+        if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+          validationErrors.push(`${key}`);
+          continue;
+        }
+        if (!(key in this._match)) {
+          validationErrors.push(`${key}`);
+          continue;
+        }
+        const baseVal = (this._match as unknown as Record<string, unknown>)[key];
+        if (recordKeyAllowList.has(key)) {
+          validationErrors.push(...MatchController.validatePartialMatch(val, baseVal, `${key}.`, true));
+        }
+        else if (MatchController.isPlainObject(val) && MatchController.isPlainObject(baseVal)) {
+          validationErrors.push(...MatchController.validatePartialMatch(val, baseVal, `${key}.`));
+        }
+      }
+    }
+    if (validationErrors.length > 0) {
+      console.warn('[match] partial match update rejected due to unknown keys', validationErrors);
+      return { ok: false, errors: validationErrors };
+    }
+
+    MatchController.mergePartialMatch(this._match as unknown as Record<string, unknown>, partial as Record<string, unknown>);
+
+    this.calculateScores();
+    this._interactivityController?.checkCardInteractivity();
+    this._match.cardOverrides = this._cardPriceController?.calculateOverrides() ?? {};
+
+    this.broadcastPatch(prev);
+
+    return { ok: true };
   }
 
   // Removes a player from the live match state and updates turn ordering.
@@ -443,13 +559,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this._interactivityController?.checkCardInteractivity();
     this.broadcastPatch(prev);
   }
-  
+
   async runGameAction<K extends GameActions>(
     action: K,
     ...args: Parameters<GameActionDefinitionMap[K]>
   ): Promise<GameActionReturnTypeMap[K]> {
     this._matchSnapshot ??= this.getMatchSnapshot();
-    
+
     let asyncTimeout: number | undefined = undefined;
     if (action === 'selectCard' || action === 'userPrompt') {
       this.broadcastPatch(this._matchSnapshot);
@@ -457,45 +573,45 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._matchSnapshot = this.getMatchSnapshot();
       let pingCount = 0;
       let pingTime = 30000;
-      
+
       const pingUser = () => {
         this._socketMap.get(args[0].playerId)?.emit('ping', ++pingCount);
         pingTime -= 10000;
         pingTime = Math.max(pingTime, 10000);
         asyncTimeout = setTimeout(pingUser, pingTime);
       }
-      
+
       asyncTimeout = setTimeout(pingUser, pingTime);
     }
-    
+
     const result = await this.gameActionsController!.invokeAction(action, ...args);
-    
+
     clearTimeout(asyncTimeout);
     asyncTimeout = undefined;
-    
+
     this.calculateScores();
     this._interactivityController?.checkCardInteractivity();
     this._match.cardOverrides = this._cardPriceController?.calculateOverrides() ?? {};
-    
+
     this.broadcastPatch({ ...this._matchSnapshot });
     this._logManager?.flushQueue();
-    
+
     this._matchSnapshot = null;
-    
+
     if (await this.checkGameEnd()) {
       console.debug(`[match] game ended`)
     }
-    
+
     return result as Promise<GameActionReturnTypeMap[K]>;
   }
-  
+
   public broadcastPatch(prev: Match, playerId?: PlayerId) {
     const patch: Operation[] = compare(prev, this._match);
     const cardLibraryPatch = compare(this._cardLibSnapshot, this._cardLibrary.getAllCards());
-    
+
     if (patch.length || cardLibraryPatch.length) {
       console.debug(`[match] sending match update to clients`);
-      
+
       if (playerId) {
         this._socketMap.get(playerId)?.emit('patchUpdate', patch, cardLibraryPatch);
       }
@@ -504,92 +620,92 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       }
     }
   }
-  
+
   private onClientReady = (playerId: number) => {
     const player = this._match.config?.players.find((player) =>
       player.id === playerId
     );
-    
+
     console.debug(`[match] received clientReady event from ${player}`);
-    
+
     if (!player) {
       console.error(`[match] player not found`);
       return;
     }
-    
+
     if (!this._match.config) {
       console.error(`[match] no match config`);
       return;
     }
-    
+
     player.ready = true;
-    
+
     if (this._match.config.players.some((p) => !p.ready)) {
       console.debug(`[match] not all players marked ready, waiting for everyone`,);
       return;
     }
-    
+
     console.debug('[match] all players ready');
-    
+
     for (const socket of this._socketMap.values()) {
       socket.off('clientReady', this.onClientReady);
     }
-    
+
     void this.startMatch();
   };
-  
+
   private async startMatch() {
     console.debug(`[match] starting match`);
-    
+
     await this._reactionManager?.runGameLifecycleEvent('onGameStart', { match: this._match });
-    
+
     for (const socket of this._socketMap.values()) {
       this.initializeSocketListeners(socket);
     }
-    
+
     this._matchSnapshot = this.getMatchSnapshot();
     this._match.playerBuys = 1;
     this._match.playerActions = 1;
-    
+
     this._socketMap.forEach((s) => s.emit('matchStarted'));
-    
+
     for (const player of this._match.players!) {
       await this.runGameAction('drawCard', { playerId: player.id, count: 5 });
     }
-    
+
     this._logManager?.addLogEntry({
       root: true,
       type: 'newTurn',
       turn: Math.floor(this._match.turnNumber / this._match.players.length) + 1,
     });
-    
+
     this._logManager?.addLogEntry({
       root: true,
       type: 'newPlayerTurn',
       turn: Math.floor(this._match.turnNumber / this._match.players.length) + 1,
       playerId: getCurrentPlayer(this._match).id
     });
-    
+
     // Kick off the first turn, including any computer player automation.
     await this.runGameAction('checkForRemainingPlayerActions');
-    
+
     await this.runGameAction('checkForRemainingPlayerActions');
   }
-  
+
   private calculateScores() {
     console.debug(`[match] calculating scores`);
-    
+
     const match = this._match;
-    
+
     for (const player of match.players ?? []) {
       const playerId = player.id;
       const cards = this._cardLibrary.getCardsByOwner(playerId);
-      
+
       let score = 0;
-      
+
       for (const card of cards) {
         score += card.victoryPoints ?? 0;
-        
+
         const customScoringFn = scoringFunctionMap[card?.cardKey ?? ''];
         if (customScoringFn) {
           console.debug(`[match] processing scoring function for ${card}`);
@@ -605,18 +721,18 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         }
       }
       match.scores[playerId] = score;
-      
+
       for (const expansionScoringFn of this._expansionScoringFns) {
         expansionScoringFn(playerId, match);
       }
     }
   }
-  
+
   private async checkGameEnd() {
     console.debug(`[match] checking if the game has ended`);
-    
+
     const match = this._match;
-    
+
     if (this._findCards([
       { location: 'basicSupply' },
       { cardKeys: 'province' }
@@ -625,21 +741,21 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       await this.endGame();
       return true;
     }
-    
+
     const startingSupplyCount = getStartingSupplyCount(match);
-    
+
     const remainingSupplyCount = getRemainingSupplyCount(this._findCards);
-    
+
     const emptyPileCount = startingSupplyCount - remainingSupplyCount;
-    
+
     console.debug(`[match] empty pile count ${emptyPileCount}`);
-    
+
     if (emptyPileCount === 3) {
       console.debug(`[match] three supply piles are empty, game over`);
       await this.endGame();
       return true;
     }
-    
+
     for (const conditionFn of this._expansionEndGameConditionFns) {
       // End immediately when any registered expansion end-game condition triggers.
       const shouldEnd = conditionFn({
@@ -655,26 +771,26 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         return true;
       }
     }
-    
+
     return false;
   }
-  
+
   private async endGame() {
     console.debug(`[match] ending the game`);
-    
+
     this._reactionManager?.endGame();
     this._interactivityController?.endGame();
-    
+
     console.debug(`[match] removing socket listeners for 'nextPhase'`);
     this._socketMap.forEach((s) => s.off('nextPhase'));
-    
+
     console.debug(`[match] removing listener for match state updates`);
-    
+
     const match = this._match;
-    
+
     for (const player of this._match.players) {
       const setAsideCardIds = this._cardSourceController.getSource('set-aside', player.id)
-      
+
       for (const cardId of setAsideCardIds) {
         await this.runGameAction('moveCard', {
           toPlayerId: player.id,
@@ -683,14 +799,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         })
       }
     }
-    
+
     for (const event of this._registeredEvents) {
       this._socketMap.forEach(s => s.off(event));
     }
-    
+
     const currentTurn = match.turnNumber;
     const currentPlayerTurnIndex = match.currentPlayerTurnIndex;
-    
+
     const summary: MatchSummary = {
       playerSummary: match.players.reduce((prev, player) => {
         const playerId = player.id;
@@ -699,7 +815,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         ) <= currentPlayerTurnIndex
           ? (Math.floor(currentTurn / match.players.length) + 1)
           : Math.floor(currentTurn / match.players.length);
-        
+
         prev.push({
           playerId,
           turnsTaken,
@@ -724,36 +840,40 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           return 0;
         }),
     };
-    
+
     console.debug(`[match] match summary created`);
     console.debug(summary);
-    
+
     this._socketMap.forEach((s) => s.emit('gameOver', summary));
     this.emit('gameOver');
   }
-  
+
   private async onNextPhase() {
     await this.runGameAction('nextPhase');
     this._socketMap.forEach(s => s.emit('nextPhaseComplete'));
   }
-  
+
   private initializeSocketListeners(socket: AppSocket) {
     socket.on('nextPhase', () => this.onNextPhase());
     socket.on('searchCards', (playerId, searchStr) => this.onSearchCards(playerId, searchStr));
     socket.on('exchangeCoffer', async (playerId, count) => {
       await this.runGameAction('exchangeCoffer', { playerId, count });
     });
+    // Allows the current player to pay down debt using available treasure.
+    socket.on('payDebt', async (playerId, count) => {
+      await this.runGameAction('payDebt', { playerId, count });
+    });
   }
-  
+
   private onSearchCards(playerId: PlayerId, searchStr: string) {
     console.debug(`[match] ${getPlayerById(this._match, playerId)} searching for cards using term '${searchStr}'`);
-    
+
     this._socketMap.get(playerId)?.emit(
       'searchCardResponse',
       this.cardSearchFn(searchStr),
     );
   }
-  
+
   private createEvents(config: ComputedMatchConfiguration) {
     for (const event of config.events) {
       this._match.events.push(createEvent(event));

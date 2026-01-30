@@ -44,7 +44,9 @@ export class CardPriceRulesController {
       
       modifiedCost = {
         treasure: Math.max(0, modifiedCost.treasure + (result.cost.treasure ?? 0)),
-        potion: Math.max(0, (modifiedCost.potion ?? 0) + (result.cost.potion ?? 0))
+        potion: Math.max(0, (modifiedCost.potion ?? 0) + (result.cost.potion ?? 0)),
+        // Debt is adjusted independently from treasure/potions.
+        debt: Math.max(0, (modifiedCost.debt ?? 0) + (result.cost.debt ?? 0)),
       }
     }
     
@@ -62,7 +64,8 @@ export class CardPriceRulesController {
         const baseCost = card.cost;
         const costChanged =
           cost.treasure !== baseCost.treasure ||
-          (cost.potion ?? 0) !== (baseCost.potion ?? 0);
+          (cost.potion ?? 0) !== (baseCost.potion ?? 0) ||
+          (cost.debt ?? 0) !== (baseCost.debt ?? 0);
         if (costChanged || restricted) {
           // Only store entries when a rule actually changes cost or restriction state.
           costOverrides[player.id] ??= {};
