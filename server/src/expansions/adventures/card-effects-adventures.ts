@@ -107,21 +107,6 @@ const applyBridgeTrollCostReduction = (
   return () => ruleCleanups.forEach((cleanup) => cleanup());
 };
 
-/**
- * Adds a system event for the start of the cleanup phase to move the card to the active duration zone so that it's not
- * discarded
- *
- * also registers the given trigger to actually run the duration card's effect
- *
- * WARNING make sure to move the card back to the play area when its duration effect has completed. Usually this
- * will be done at the start of the next turn, but not always.
- *
- * WARNING currently the reaction/trigger system doesn't hook into card lifecycle events. So when this card leaves play
- * the system doesn't currently auto-detect this and remove any triggers. so you must manually remove the trigger
- * in the onLeavePlay lifecycle hook of the card expansion
- */
-// Duration helper is shared in utils to keep duration flow consistent across expansions.
-
 const expansion: CardExpansionModule = {
   "amulet": {
     registerLifeCycleMethods: () => ({

@@ -23,7 +23,8 @@ available cards to choose to add to the kingdom. expansion configurators do this
 Young Witch. They need ways to uniformly get available kingdoms.
 - cards like throne room and disciple when making cards play multiple time need to stay in play as long as the
 card they played stays in play. so if you throne room a duration, it would say until the duration was gone. same with
-other cards that do the same like band of misfits
+other cards that do the same like band of misfits. this was implemented with royal carriage in adventures expansion though
+it's not great.
 - mats need a way to define who can view what cards exist on it e.g., the tavern mat i think all cards are visible to
 all players, but native village and island mat cards  face down and can only be viewed by the player that owns the mat
 - prosperity has the card that changes curses into a treasure card type, and also gains the effect to gain 1 treasure on play. need a way to visually denote this properly. also similar to inheritance in adventures
