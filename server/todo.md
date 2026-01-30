@@ -32,21 +32,11 @@ all players, but native village and island mat cards  face down and can only be 
 # Higher priority
 
 - player disconnection
-  - when player disconnects - ask others to vote to continue. leave the player in game, they just skip their turn
-  - work on the use-case when a player disconnects while waiting on input for that player - when they reconnected
-they need to be asked for their input again
+  - work on the use-case when a player disconnects while waiting on input for that player - when they reconnected they need to be asked for their input again
 - ui updates
   - need to update app-mat-tab and the visible mat. i've clunked it together for now
-- when load bundle on MatchScene fails (add a try/catch maybe) - need to show error screen
-- the kingdom property of a Card is set when the card is created in MatchController. I think this should be set
-before that point. Maybe on card data creation when loading the expansions. the problem with that is the mixed
-kingdoms where cards within a single kingdom might be different; do i allow a optional kingdom property in the card
-library json files? and those that are like that will define a kingdom - that kind of stinks to have to remember. we
-have the randomizer property now used for selecting the randomized kingdoms that might be in that situation. maybe just
-change that to kingdom. and null stays meaning it can't be chosen like rewards, not defined would use the card key,
-and defined would use the defined value
 - when "waiting on player input" displays, cards are selectable. i played warchest, and while waiting on someone to name
-cards, it showed highlights on cards. don't know if they were selected
+cards, it showed highlights on cards. don't know if they were selectable
 - as noted in the gameplay wiki page here https://wiki.dominionstrategy.com/index.php/Gameplay, create game zones
 as noted. revealed area is a separate zone.
 - some mats have rules that indicate cards are moved to the deck at the end of the game before scoring e.g., native
