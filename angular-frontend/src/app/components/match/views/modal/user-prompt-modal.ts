@@ -39,6 +39,8 @@ export const userPromptModal = (
       modalContainer.addChild(prompt);
     }
     clientSelectableCardsOverrideStore.set([]);
+    // Reset any prior selection state so prompt validation doesn't auto-complete.
+    selectedCardStore.set([]);
 
     const cleanup = () => {
       app.stage.removeChild(modalContainer);
@@ -96,7 +98,6 @@ export const userPromptModal = (
         });
 
         contentView.on('resultsUpdated', result => {
-          console.log(result);
           contentResults = result;
         });
 

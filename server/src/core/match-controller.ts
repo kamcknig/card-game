@@ -61,6 +61,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _registeredEvents: (keyof ServerListenEvents)[] = [];
   private _findCards: FindCardsFn = (...args) => ([]);
   private readonly _cardSourceController: CardSourceController;
+  // Tracks nested runGameAction calls to avoid corrupting patch snapshots.
+  private _actionDepth: number = 0;
   // Cached match state override loaded from disk, if provided.
   private _loadedMatchState: { match: Match; cardLibrary: Record<CardId, Card> } | null = null;
 
@@ -461,6 +463,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           deck.push(
             ...new Array(count).fill(0).map((_) => {
               const c = createCard(key, { owner: player.id });
+              // Cards in the deck should start face down; client rendering uses facing.
+              c.facing = 'back';
               this._cardLibrary.addCard(c);
               return c.id;
             }),
@@ -569,45 +573,55 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     action: K,
     ...args: Parameters<GameActionDefinitionMap[K]>
   ): Promise<GameActionReturnTypeMap[K]> {
+    const isTopLevel = this._actionDepth === 0;
+    this._actionDepth += 1;
     this._matchSnapshot ??= this.getMatchSnapshot();
 
     let asyncTimeout: number | undefined = undefined;
-    if (action === 'selectCard' || action === 'userPrompt') {
-      this.broadcastPatch(this._matchSnapshot);
-      this._logManager?.flushQueue();
-      this._matchSnapshot = this.getMatchSnapshot();
-      let pingCount = 0;
-      let pingTime = 30000;
 
-      const pingUser = () => {
-        this._socketMap.get(args[0].playerId)?.emit('ping', ++pingCount);
-        pingTime -= 10000;
-        pingTime = Math.max(pingTime, 10000);
+    try {
+      if (action === 'selectCard' || action === 'userPrompt') {
+        // Always sync patches before prompting; advance the snapshot to avoid duplicate diffs.
+        this.broadcastPatch(this._matchSnapshot);
+        this._logManager?.flushQueue();
+        this._matchSnapshot = this.getMatchSnapshot();
+
+        let pingCount = 0;
+        let pingTime = 30000;
+
+        const pingUser = () => {
+          this._socketMap.get(args[0].playerId)?.emit('ping', ++pingCount);
+          pingTime -= 10000;
+          pingTime = Math.max(pingTime, 10000);
+          asyncTimeout = setTimeout(pingUser, pingTime);
+        };
+
         asyncTimeout = setTimeout(pingUser, pingTime);
       }
 
-      asyncTimeout = setTimeout(pingUser, pingTime);
+      const result = await this.gameActionsController!.invokeAction(action, ...args);
+
+      clearTimeout(asyncTimeout);
+      asyncTimeout = undefined;
+
+      this.calculateScores();
+      this._interactivityController?.checkCardInteractivity();
+      this._match.cardOverrides = this._cardPriceController?.calculateOverrides() ?? {};
+
+      if (isTopLevel) {
+        this.broadcastPatch({ ...this._matchSnapshot });
+        this._logManager?.flushQueue();
+        this._matchSnapshot = null;
+      }
+
+      if (await this.checkGameEnd()) {
+        console.debug(`[match] game ended`)
+      }
+
+      return result as Promise<GameActionReturnTypeMap[K]>;
+    } finally {
+      this._actionDepth = Math.max(0, this._actionDepth - 1);
     }
-
-    const result = await this.gameActionsController!.invokeAction(action, ...args);
-
-    clearTimeout(asyncTimeout);
-    asyncTimeout = undefined;
-
-    this.calculateScores();
-    this._interactivityController?.checkCardInteractivity();
-    this._match.cardOverrides = this._cardPriceController?.calculateOverrides() ?? {};
-
-    this.broadcastPatch({ ...this._matchSnapshot });
-    this._logManager?.flushQueue();
-
-    this._matchSnapshot = null;
-
-    if (await this.checkGameEnd()) {
-      console.debug(`[match] game ended`)
-    }
-
-    return result as Promise<GameActionReturnTypeMap[K]>;
   }
 
   public broadcastPatch(prev: Match, playerId?: PlayerId) {

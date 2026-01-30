@@ -415,7 +415,8 @@ export class MatchScene extends Scene {
   }
 
   private doSelectCards = async (signalId: string, arg: SelectCardArgs) => {
-    const cardIds = selectableCardStore.get();
+    const selectableCardIds = arg.selectableCardIds ?? [];
+    const cardIds = selectableCardIds;
 
     let doSelectButtonContainer: Container | null;
 

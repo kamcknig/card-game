@@ -172,7 +172,7 @@ export class CardView extends CardLikeView {
     this.addChild(this._costView);
 
     this.size = 'full'
-    this.facing = 'front';
+    this.facing = this._card.facing ?? 'front';
 
     this._cleanup.push(
       batched(
