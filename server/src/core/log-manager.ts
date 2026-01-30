@@ -4,6 +4,9 @@ import { AppSocket, DistributiveOmit } from '../types.ts';
 export class LogManager {
   private _depth: number = 0;
   private readonly _socketMap: Map<PlayerId, AppSocket>;
+  private _history: LogEntry[] = [];
+  // Cap history to prevent unbounded growth.
+  private readonly _historyLimit = 5000;
   
   constructor(args: { socketMap: Map<PlayerId, AppSocket> }) {
     this._socketMap = args.socketMap;
@@ -32,8 +35,18 @@ export class LogManager {
   
   public flushQueue() {
     if (!this._queue.length) return;
-    this._socketMap.forEach((s) => s.emit('addLogEntry', [...this._queue]));
+    const entries = [...this._queue];
+    this._history.push(...entries);
+    if (this._history.length > this._historyLimit) {
+      this._history = this._history.slice(-this._historyLimit);
+    }
+    this._socketMap.forEach((s) => s.emit('addLogEntry', entries));
     this._queue = [];
+  }
+
+  // Returns a cloned copy of the log history for reconnecting clients.
+  public getHistory(): LogEntry[] {
+    return [...this._history];
   }
   
   public startChain() {

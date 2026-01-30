@@ -712,6 +712,13 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         this.match.debt[args.playerId] = currentDebt - payable;
         this.match.playerTreasure = Math.max(0, this.match.playerTreasure - payable);
         console.debug(`[payDebt action] player ${args.playerId} now has ${this.match.debt[args.playerId]} debt, treasure ${this.match.playerTreasure}`);
+        // Log the debt payment for the UI log.
+        this.logManager.addLogEntry({
+            type: 'payDebt',
+            playerId: args.playerId,
+            count: payable,
+            source: context?.loggingContext?.source,
+        });
     }
 
     async buyCard(args: {

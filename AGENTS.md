@@ -120,6 +120,11 @@ The agent has failed if it:
 Maintain a stable, extensible, and mechanically sound game engine that can
 scale in complexity without collapsing under rule interactions.
 
+## Debugging
+
+The current match state can be found at [debug match state](http://192.168.0.149:3001/debug/match-state)
+if the server is running.
+
 ## Documentation
 
 Expansion-related documentation is located in the

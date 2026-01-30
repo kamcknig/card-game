@@ -51,6 +51,11 @@ export const logManager = {
         msg = selfId === playerId ? `%Y% gained ${amount}` : `%P${player?.id}% gained ${amount}`;
         break;
       }
+      case 'payDebt': {
+        const amount = `${logEntry.count} <span style="color: #9F5F2D">Debt</span>`;
+        msg = selfId === playerId ? `%Y% paid ${amount}` : `%P${player?.id}% paid ${amount}`;
+        break;
+      }
       case 'gainAction': {
         const amount = `${logEntry.count} action${logEntry.count > 1 ? 's' : ''}`;
         msg = selfId === playerId ? `%Y% gained ${amount}` : `%P${player?.id}% gained ${amount}`;

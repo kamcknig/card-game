@@ -342,6 +342,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     socket.emit('setCardLibrary', this._cardLibrary.getAllCards());
     socket.emit('setTokenDefinitions', tokenDefinitionMap);
     socket.emit('matchReady');
+    // Rehydrate log history after reconnect so the client can rebuild the UI log.
+    const logHistory = this._logManager?.getHistory() ?? [];
+    if (logHistory.length > 0) {
+      socket.emit('addLogEntry', logHistory);
+    }
 
     socket.on('clientReady', async (_playerId: number, _ready: boolean) => {
       console.debug(`[match] ${getPlayerById(this._match, playerId)} marked ready`);

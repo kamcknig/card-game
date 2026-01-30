@@ -168,6 +168,7 @@ export type LogEntry =
   | { type: 'gainAction'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'gainBuy'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'gainTreasure'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
+  | { type: 'payDebt'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'gainVictoryToken'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'tokenEffect'; playerId: PlayerId; cardId: CardId; tokenId: TokenId; effectText: string; depth?: number; source?: LogEntrySource }
   // Token placement and consumption logs.

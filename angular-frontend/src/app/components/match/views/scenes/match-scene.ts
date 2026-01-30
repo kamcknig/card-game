@@ -78,6 +78,8 @@ export class MatchScene extends Scene {
     await this.loadAssets();
 
     this.createBoard();
+    // Ensure UI lock state doesn't persist across page refreshes.
+    awaitingServerLockReleaseStore.set(false);
 
     this._cleanup.push(matchStartedStore.subscribe(val => this.onMatchStarted(val)));
 
@@ -310,6 +312,7 @@ export class MatchScene extends Scene {
 
   private onRemoved = () => {
     this._cleanup.forEach(c => c());
+    awaitingServerLockReleaseStore.set(false);
   }
 
   private onUserPrompt = async (signalId: string, args: UserPromptActionArgs) => {

@@ -82,19 +82,9 @@ export class PlayerHandView extends Container {
 
     this._cleanup.push(
       computed(
-        [awaitingServerLockReleaseStore, turnPhaseStore, currentPlayerTurnIdStore, getCardSourceStore('playerHand', playerId)],
-        (waiting, turnPhase, currentPlayerTurnId, hand) => {
-          if (
-            waiting ||
-            turnPhase !== 'buy' ||
-            !playerId ||
-            currentPlayerTurnId !== playerId ||
-            !hand?.length
-          ) return false;
-
-          return hand.some(cardId => cardStore.get()[cardId].type.includes('TREASURE'));
-        }
-      ).subscribe(visible => this._playAllTreasuresButton.button.visible = visible)
+        [awaitingServerLockReleaseStore, turnPhaseStore, currentPlayerTurnIdStore, getCardSourceStore('playerHand', playerId), cardStore],
+        () => null
+      ).subscribe(this.updatePlayAllTreasureVisibility)
     );
 
     this._cleanup.push(turnPhaseStore.subscribe((phase) => {
@@ -106,9 +96,7 @@ export class PlayerHandView extends Container {
           this._nextPhaseButton.text('END BUYS');
           break;
       }
-
-      this._nextPhaseButton.button.x = this.width - this._nextPhaseButton.button.width - STANDARD_GAP;
-      this._nextPhaseButton.button.y = Math.floor(this.height * .5 + this._nextPhaseButton.button.height * .5 + STANDARD_GAP);
+      this.updateButtonLayout();
     }));
     this.addChild(this._nextPhaseButton.button);
 
@@ -117,9 +105,10 @@ export class PlayerHandView extends Container {
     this._playAllTreasuresButton.button.on('pointerdown', () => {
       this.emit('playAllTreasure');
     });
-    this._playAllTreasuresButton.button.x = this.width - this._playAllTreasuresButton.button.width - STANDARD_GAP;
-    this._playAllTreasuresButton.button.y = Math.floor(this.height * .5 - this._playAllTreasuresButton.button.height * .5 - STANDARD_GAP);
     this.addChild(this._playAllTreasuresButton.button);
+
+    this.updatePlayAllTreasureVisibility();
+    this.updateButtonLayout();
 
     this._cleanup.push(getCardSourceStore('playerHand', playerId).subscribe(this.drawHand));
     this._cleanup.push(
@@ -224,6 +213,43 @@ export class PlayerHandView extends Container {
     this._background.clear();
     this._background.roundRect(0, 0, (CARD_WIDTH + STANDARD_GAP) * 6, height, 5);
     this._background.fill({ color: 0, alpha: .6 });
+    this.updateButtonLayout();
+  }
+
+  // Controls the visibility of the "Play All Treasure" button based on current match state.
+  private updatePlayAllTreasureVisibility = () => {
+    const waiting = awaitingServerLockReleaseStore.get();
+    const turnPhase = turnPhaseStore.get();
+    const currentPlayerTurnId = currentPlayerTurnIdStore.get();
+    const hand = getCardSourceStore('playerHand', this.playerId).get();
+    const cardsById = cardStore.get();
+
+    if (
+      waiting ||
+      turnPhase !== 'buy' ||
+      !this.playerId ||
+      currentPlayerTurnId !== this.playerId ||
+      !hand?.length
+    ) {
+      this._playAllTreasuresButton.button.visible = false;
+      return;
+    }
+
+    const hasTreasure = hand.some(cardId => cardsById[cardId]?.type?.includes('TREASURE'));
+    this._playAllTreasuresButton.button.visible = hasTreasure;
+  };
+
+  // Positions the phase action buttons relative to the background size.
+  private updateButtonLayout() {
+    const width = this._background.width || (CARD_WIDTH + STANDARD_GAP) * 6;
+    const totalHeight = this._background.y + this._background.height;
+    const centerY = totalHeight * .5;
+
+    this._nextPhaseButton.button.x = width - this._nextPhaseButton.button.width - STANDARD_GAP;
+    this._nextPhaseButton.button.y = Math.floor(centerY + this._nextPhaseButton.button.height * .5 + STANDARD_GAP);
+
+    this._playAllTreasuresButton.button.x = width - this._playAllTreasuresButton.button.width - STANDARD_GAP;
+    this._playAllTreasuresButton.button.y = Math.floor(centerY - this._playAllTreasuresButton.button.height * .5 - STANDARD_GAP);
   }
   
   // Parses a hex color string into a numeric color for Pixi.
