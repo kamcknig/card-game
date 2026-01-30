@@ -1,0 +1,14 @@
+{
+  "version": "4",
+  "remote": {
+    "https://esm.sh/v123/fast-json-patch@3.1.1/denonext/index.js": "611ba66c07322160f184cd4fb8bb716f46c3e9265ca20d5bcf69499524d9f77a",
+    "https://esm.sh/v123/fast-json-patch@3.1.1/index.js": "1146b1996cdd600ab306d8c9ea8bc73d1e4e16632db8e7cb1e5cb5fcef5d0ff7"
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:concurrently@^9.1.2"
+      ]
+    }
+  }
+}
