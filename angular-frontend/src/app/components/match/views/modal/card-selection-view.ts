@@ -1,5 +1,5 @@
 import { Application, Container, FederatedPointerEvent } from 'pixi.js'
-import { CardId, UserPromptKinds } from 'shared/shared-types';
+import { Card, CardId, UserPromptKinds } from 'shared/shared-types';
 import { CARD_WIDTH, STANDARD_GAP } from '../../../../core/app-contants';
 import { createCardView } from '../../../../core/card/create-card-view';
 import { List } from '@pixi/ui';
@@ -9,6 +9,7 @@ import { CardView } from '../card-view';
 import { clientSelectableCardsOverrideStore, selectedCardStore } from '../../../../state/interactive-state';
 import { validateCountSpec } from 'shared/validate-count-spec';
 import { displayCardDetail } from './display-card-detail';
+import { selfPlayerIdStore } from '../../../../state/player-state';
 
 type NewCardId = CardId;
 
@@ -77,13 +78,23 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
   cardList.elementsMargin = cardCount > 6 ? -CARD_WIDTH * .5 : STANDARD_GAP;
 
   for (const cardId of cardIds) {
-    const view = createCardView(cardId);
-    view.card.id = ++maxId;
-    newCardToOldCardMap.set(view.card.id, cardId);
+    const baseCard = cardStore.get()[cardId];
+    if (!baseCard) {
+      console.warn(`[card-selection] missing card data for id ${cardId}`);
+      continue;
+    }
+    // Clone the card data so we don't mutate the shared card store when remapping IDs.
+    const tempCard = new Card({ ...baseCard, id: ++maxId });
+    const view = createCardView(tempCard);
+    if (baseCard.owner === selfPlayerIdStore.get()) {
+      // Allow the owning player to see their own facedown cards in selection prompts.
+      view.facing = 'front';
+    }
+    newCardToOldCardMap.set(tempCard.id, cardId);
     const idx = selectableCardIds.indexOf(cardId);
     // if it's selectable add the listeners
     if (idx !== -1) {
-      selectableCardIds[idx] = view.card.id;
+      selectableCardIds[idx] = tempCard.id;
       view.on('pointerdown', cardPointerDownListener)
       view.on('removed', cardRemovedListener);
     }

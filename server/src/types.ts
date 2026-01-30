@@ -2,6 +2,7 @@ import {Socket} from 'socket.io';
 import {
     Card,
     CardCost,
+    CardFacing,
     CardId,
     CardKey,
     CardLikeId,
@@ -187,6 +188,8 @@ export interface BaseGameActionDefinitionMap {
         toPlayerId?: PlayerId,
         cardId: CardId | Card,
         to: CardLocationSpec
+        // Optional facing update applied when the card moves.
+        facing?: CardFacing;
     }) => Promise<{ location: CardLocation; playerId?: PlayerId; } | undefined>;
     nextPhase: () => Promise<void>;
     playCard: (args: {
@@ -309,7 +312,20 @@ export interface CardEffectFunctionContext extends AppContext {
     playerId: PlayerId;
     cardId: CardId;
     runGameActionDelegate: RunGameActionDelegate;
+    // Registers duration triggers with engine-managed cleanup for the given card.
+    registerDurationEffect: <T extends TriggerEventType>(
+        card: Card,
+        triggeredTemplate: ReactionTemplate<T> | ReactionTemplate<T>[],
+        options?: DurationEffectOptions,
+    ) => string[];
 }
+
+// Options for duration cards that persist across multiple cleanup phases.
+export type DurationEffectOptions = {
+    cleanupCount?: number;
+    // When true, remove all registered duration triggers once cleanup is exhausted.
+    autoRemoveTriggersOnExhaust?: boolean;
+};
 
 export type CardTriggeredEffectFn<T extends TriggerEventType> = (context: TriggeredEffectContext<T>) => Promise<any>;
 

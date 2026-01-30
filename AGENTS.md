@@ -53,6 +53,7 @@ execution
 - Marketing copy or narrative flavor unless explicitly requested
 - Refactors that are not directly justified by correctness or extensibility
 - Removing commented code without being asked
+- whitespace changes
 
 ---
 
@@ -76,6 +77,7 @@ execution
 - Never remove pre-existing comments, but they can be updated if the code they
   apply to changes
 - Comment all new code written
+- logging for debugging purposes.
 
 ---
 
@@ -119,6 +121,11 @@ The agent has failed if it:
 
 Maintain a stable, extensible, and mechanically sound game engine that can
 scale in complexity without collapsing under rule interactions.
+
+## Logging
+
+Use proper logging levels and conventions to identify and debug issues. Make
+sure to add detailed logs.
 
 ## Debugging
 

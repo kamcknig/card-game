@@ -43,5 +43,10 @@
     "title": "Adventures",
     "name": "adventures",
     "order": 9
+  },
+  {
+    "title": "Empires",
+    "name": "empires",
+    "order": 10
   }
 ]

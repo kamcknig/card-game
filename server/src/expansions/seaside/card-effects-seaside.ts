@@ -368,9 +368,8 @@ const expansion: CardExpansionModule = {
         cardId,
         toPlayerId: cardEffectArgs.playerId,
         to: { location: 'set-aside' },
+        facing: 'back',
       });
-      
-      cardEffectArgs.cardLibrary.getCard(cardId).facing = 'back';
       
       const havenCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       // Use the shared duration flow to keep the card active through cleanup.
@@ -391,11 +390,9 @@ const expansion: CardExpansionModule = {
           await triggerEffectArgs.runGameActionDelegate('moveCard', {
             cardId,
             toPlayerId: cardEffectArgs.playerId,
-            to: { location: 'playerHand' }
+            to: { location: 'playerHand' },
+            facing: 'front',
           });
-          
-          const card = triggerEffectArgs.cardLibrary.getCard(cardId);
-          card.facing = 'front';
         }
       });
     }

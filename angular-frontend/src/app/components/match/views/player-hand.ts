@@ -83,7 +83,14 @@ export class PlayerHandView extends Container {
     this._cleanup.push(
       computed(
         [awaitingServerLockReleaseStore, turnPhaseStore, currentPlayerTurnIdStore, getCardSourceStore('playerHand', playerId), cardStore],
-        () => null
+        // Emit a new object so visibility updates when any dependency changes.
+        (waiting, phase, currentPlayerTurnId, hand, cardsById) => ({
+          waiting,
+          phase,
+          currentPlayerTurnId,
+          hand,
+          cardsById
+        })
       ).subscribe(this.updatePlayAllTreasureVisibility)
     );
 
@@ -217,12 +224,18 @@ export class PlayerHandView extends Container {
   }
 
   // Controls the visibility of the "Play All Treasure" button based on current match state.
-  private updatePlayAllTreasureVisibility = () => {
-    const waiting = awaitingServerLockReleaseStore.get();
-    const turnPhase = turnPhaseStore.get();
-    const currentPlayerTurnId = currentPlayerTurnIdStore.get();
-    const hand = getCardSourceStore('playerHand', this.playerId).get();
-    const cardsById = cardStore.get();
+  private updatePlayAllTreasureVisibility = (args?: {
+    waiting: boolean;
+    phase: string | undefined;
+    currentPlayerTurnId: number | undefined;
+    hand: ReadonlyArray<number>;
+    cardsById: Record<number, Card>;
+  }) => {
+    const waiting = args?.waiting ?? awaitingServerLockReleaseStore.get();
+    const turnPhase = (args?.phase ?? turnPhaseStore.get()) as string;
+    const currentPlayerTurnId = args?.currentPlayerTurnId ?? currentPlayerTurnIdStore.get();
+    const hand = args?.hand ?? getCardSourceStore('playerHand', this.playerId).get();
+    const cardsById = args?.cardsById ?? cardStore.get();
 
     if (
       waiting ||
@@ -268,12 +281,18 @@ export class PlayerHandView extends Container {
     const categoryMap: Record<string, number> = { ACTION: 0, REACTION: 1, TREASURE: 2, VICTORY: 3, OTHER: 4 };
     const categorized = hand.reduce(
       (acc, cardId) => {
-        const category = Object.keys(categoryMap).find(type => cardsById[cardId].type.includes(type as CardType));
+        const card = cardsById[cardId];
+        // Skip missing card data to avoid crashes from stale IDs.
+        if (!card) {
+          console.warn(`[player-hand] missing card data for id ${cardId}`);
+          return acc;
+        }
+        const category = Object.keys(categoryMap).find(type => card.type.includes(type as CardType));
         if (category) {
-          acc[categoryMap[category]].push(cardsById[cardId]);
+          acc[categoryMap[category]].push(card);
         }
         else {
-          acc[4].push(cardsById[cardId]);
+          acc[4].push(card);
         }
         return acc;
       },

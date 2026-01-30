@@ -25,6 +25,8 @@ import { CardSourceController } from '../card-source-controller.ts';
 export class ReactionManager {
   private _reactions: Reaction[] = [];
   private _expansionGameEventHandlers: Record<GameLifecycleEvent, GameLifecycleCallback[]> = {} as Record<GameLifecycleEvent, GameLifecycleCallback[]>
+  // Tracks duration-trigger IDs so they can be cleaned up when a card leaves play.
+  private _durationTriggerIdsByCardId: Map<CardId, Set<string>> = new Map();
 
   constructor(
     private readonly _cardSourceController: CardSourceController,
@@ -43,6 +45,26 @@ export class ReactionManager {
   registerGameEvent(event: GameLifecycleEvent, handler: GameLifecycleCallback) {
     this._expansionGameEventHandlers[event] ??= [];
     this._expansionGameEventHandlers[event].push(handler);
+  }
+
+  // Associates duration triggers with a card ID for cleanup on leave-play.
+  registerDurationTriggers(cardId: CardId, triggerIds: string[]) {
+    if (!triggerIds.length) return;
+    const existing = this._durationTriggerIdsByCardId.get(cardId) ?? new Set<string>();
+    for (const triggerId of triggerIds) {
+      existing.add(triggerId);
+    }
+    this._durationTriggerIdsByCardId.set(cardId, existing);
+  }
+
+  // Removes any duration triggers associated with the given card ID.
+  cleanupDurationTriggers(cardId: CardId) {
+    const triggerIds = this._durationTriggerIdsByCardId.get(cardId);
+    if (!triggerIds) return;
+    for (const triggerId of triggerIds) {
+      this.unregisterTrigger(triggerId);
+    }
+    this._durationTriggerIdsByCardId.delete(cardId);
   }
 
   async getReactions(trigger: ReactionTrigger, reactionSet?: Reaction[]) {

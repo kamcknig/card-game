@@ -165,9 +165,15 @@ export class CardStackView extends Container {
     this._cardContainer.removeChildren();
 
     for (const cardId of cardIds) {
-      const c = this._cardContainer.addChild(createCardView(cardStore.get()[cardId]));
+      const cardData = cardStore.get()[cardId];
+      // Guard against stale card sources pointing at missing card data.
+      if (!cardData) {
+        console.warn(`[card-stack] missing card data for id ${cardId}`);
+        continue;
+      }
+      const c = this._cardContainer.addChild(createCardView(cardData));
       c.size = 'full';
-      c.facing = this._cardFacing;
+      c.facing = cardData?.facing ?? this._cardFacing;
       c.scale = this._sscale;
     }
 

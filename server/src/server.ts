@@ -15,7 +15,6 @@ if (!logToFileEnabled) {
 
 // Configure console colors to match desired log level styling.
 log.setConfig({
-  enabledLevels: ['log'],
   colors: {
     info: 'blue',
     log: 'white',
