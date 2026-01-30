@@ -31,7 +31,9 @@ all players, but native village and island mat cards  face down and can only be 
 
 
 # Higher priority
-
+- when cards are in zones like set aside or a mat, they can be face up or
+  face down. make sure all players who shoudl be able to see cards can see
+  them and all those that can't are not able to
 - player disconnection
   - work on the use-case when a player disconnects while waiting on input for that player - when they reconnected they need to be asked for their input again
 - ui updates
