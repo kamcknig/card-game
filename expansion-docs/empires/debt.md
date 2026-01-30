@@ -1,5 +1,9 @@
 Debt (represented by the symbol D) is an alternate cost for some cards and Events in Empires and Rising Sun. It allows the buyer to take D tokens rather than paying \$ immediately to buy the card. Players who have D tokens may not buy cards, Events, or Projects. D tokens can be removed from a player by paying $1 per D token at any time during their turn.
 
+The debt token image is located at [debt image](../../angular-frontend/public/assets/ui-icons/64px-debt.png).
+This can be used as the background image with text on top to indicate the amount
+of D tokens the player has or on a card as the cost in D.
+
 A cost in D is orthogonal to a cost in a \$; cards with D in their cost do not cost less or more than cards with a $ cost. D and P are similarly not comparable.
 
 Apart from buying things with a D cost, D tokens can be accumulated in a handful of other ways, mainly as as a result of playing certain cards.

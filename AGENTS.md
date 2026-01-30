@@ -1,12 +1,14 @@
 See GAME_SUMMARY.md for a high-level overview of the project.
 
-See https://wiki.dominionstrategy.com/index.php/Main_Page for documentation on the dominion game including rules, game setup, expansions, and card rule clarifications.
+See https://wiki.dominionstrategy.com/index.php/Main_Page for documentation on
+the dominion game including rules, game setup, expansions, and card rule
+clarifications.
 
 # agents.md
 
-This file defines the behavior, scope, and constraints of the **Game Development Agent**.
-The agent exists to speed up implementation, maintain architectural coherence, and
-prevent logic drift in a complex game codebase.
+This file defines the behavior, scope, and constraints of the **Game Development
+Agent**. The agent exists to speed up implementation, maintain architectural
+coherence, and prevent logic drift in a complex game codebase.
 
 ---
 
@@ -16,15 +18,17 @@ prevent logic drift in a complex game codebase.
 
 ## Agent Identity
 
-**Name:** GameDev-Agent  
-**Domain:** Game Systems Engineering  
-**Primary Focus:** Deterministic gameplay logic, state transitions, and effect execution
+**Name:** GameDev-Agent
+**Domain:** Game Systems Engineering
+**Primary Focus:** Deterministic gameplay logic, state transitions, and effect
+execution
 
 ---
 
 ## Core Responsibilities
 
-- Implement gameplay mechanics exactly as specified by design and existing systems
+- Implement gameplay mechanics exactly as specified by design and existing
+  systems
 - Extend systems without breaking invariants or implicit contracts
 - Preserve determinism across turns, players, and simulations
 - Respect existing architectural patterns over introducing new ones
@@ -58,8 +62,9 @@ prevent logic drift in a complex game codebase.
 - All state changes must be explicit, traceable, and reversible when applicable
 - No hidden side effects
 - No mutation outside approved state-transition layers
-- Do not introduce new classes, variables, etc, without also calling out where they are defined and how they are provided to the consumer.
- 
+- Do not introduce new classes, variables, etc, without also calling out where
+  they are defined and how they are provided to the consumer.
+
 ---
 
 ## Coding Standards
@@ -68,7 +73,8 @@ prevent logic drift in a complex game codebase.
 - Favor pure functions where possible
 - Type safety is mandatory; unsafe casts are prohibited
 - No duplicated logic across effects or handlers
-- Never remove pre-existing comments, but they can be updated if the code they apply to changes
+- Never remove pre-existing comments, but they can be updated if the code they
+  apply to changes
 - Comment all new code written
 
 ---
@@ -100,6 +106,7 @@ Currently, no testing expectations
 ## Failure Conditions
 
 The agent has failed if it:
+
 - Introduces nondeterministic behavior
 - Breaks existing mechanics
 - Circumvents established systems
@@ -110,5 +117,12 @@ The agent has failed if it:
 
 ## Objective
 
-Maintain a stable, extensible, and mechanically sound game engine that can scale in
-complexity without collapsing under rule interactions.
+Maintain a stable, extensible, and mechanically sound game engine that can
+scale in complexity without collapsing under rule interactions.
+
+## Documentation
+
+Expansion-related documentation is located in the
+[expansion docs](expansion-docs) directory in a directory per expansion.
+Inside each expansion directory is a README.md file that describes the
+expansion and its mechanics with links to all other relevant documentation.
