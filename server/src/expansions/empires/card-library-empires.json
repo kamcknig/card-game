@@ -5,5 +5,13 @@
     },
     "type": ["ACTION", "DURATION"],
     "abilityText": "+1 Action\nSet aside the top 3 cards of your deck face down (you may look at them). Now and at the start of your next two turns, put one into your hand."
+  },
+  "capital": {
+    "cost": {
+      "treasure": 6
+    },
+    "type": ["TREASURE"],
+    "cardName": "Capital",
+    "abilityText": "+1 Buy\n+6 Treasure\nWhen you discard this from play, +6 Debt"
   }
 }

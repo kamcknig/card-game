@@ -114,6 +114,29 @@ const expansion: CardExpansionModule = {
       });
     },
   },
+  'capital': {
+    registerEffects: () => async (args) => {
+      // Capital grants treasure and buys immediately on play.
+      console.debug(`[capital effect] gaining +6 treasure and +1 buy`);
+      // Gain the $ from Capital.
+      await args.runGameActionDelegate('gainTreasure', { count: 6 });
+      // Gain the extra buy from Capital.
+      await args.runGameActionDelegate('gainBuy', { count: 1 });
+    },
+    registerLifeCycleMethods: () => ({
+      onDiscarded: async (args, eventArgs) => {
+        // Only apply debt when Capital is discarded from play.
+        const previousLocation = eventArgs.previousLocation?.location;
+        if (previousLocation !== 'playArea') {
+          console.debug(`[capital onDiscarded] not discarded from play, skipping`);
+          return;
+        }
+        // Apply the debt penalty when Capital leaves play.
+        console.debug(`[capital onDiscarded] gaining +6 debt for player ${eventArgs.playerId}`);
+        await args.runGameActionDelegate('gainDebt', { playerId: eventArgs.playerId, count: 6 });
+      },
+    }),
+  },
 };
 
 export default expansion;

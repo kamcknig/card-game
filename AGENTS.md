@@ -127,6 +127,15 @@ scale in complexity without collapsing under rule interactions.
 Use proper logging levels and conventions to identify and debug issues. Make
 sure to add detailed logs.
 
+The following log levels are used for debugging-related information. They
+are ordered from least to most verbose.
+
+- `log`
+- `info`
+- `debug`
+
+Warn and error should also be used when appropriate.
+
 ## Debugging
 
 The current match state can be found at [debug match state](http://192.168.0.149:3001/debug/match-state)
