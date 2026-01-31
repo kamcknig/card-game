@@ -6,6 +6,7 @@ import {
   GameLifecycleCallback,
   GameLifecycleEvent,
   GameLifeCycleEventArgsMap,
+  ReactionContext,
   Reaction,
   ReactionTemplate,
   ReactionTrigger,
@@ -15,6 +16,7 @@ import {
 import { MatchCardLibrary } from '../match-card-library.ts';
 import { getOrderStartingFrom } from '../../utils/get-order-starting-from.ts';
 import { groupReactionsByCardKey } from './group-reactions-by-card-key.ts';
+import { initImmunityScope } from '../../utils/reaction-immunity.ts';
 import { buildActionButtons } from './build-action-buttons.ts';
 import { buildActionMap } from './build-action-map.ts';
 import { cardLifecycleMap } from '../card-lifecycle-map.ts';
@@ -184,8 +186,10 @@ export class ReactionManager {
     }, args as any);
   }
 
-  async runTrigger({ trigger, reactionContext }: { trigger: ReactionTrigger, reactionContext?: any }) {
+  async runTrigger({ trigger, reactionContext }: { trigger: ReactionTrigger, reactionContext?: ReactionContext }) {
     reactionContext ??= {};
+    // Track immunity scope to ensure context is not reused across triggers.
+    initImmunityScope(reactionContext, trigger);
 
     // now we get the order of players that could be affected by the play (including the current player),
     // then get reactions for them and run them
@@ -316,34 +320,22 @@ export class ReactionManager {
   }
 
   private async runReaction<T extends TriggerEventType>(reaction: Reaction, trigger: ReactionTrigger<T>, targetPlayer: Player, context: TriggeredEffectContext<T>, reactionContext?: any) {
-    const reactionResult = await this.logManager.withIndent(async () => {
+    await this.logManager.withIndent(async () => {
       // Ensure reaction-caused logs are scoped and unwind cleanly.
-      return await reaction.triggeredEffectFn({
+      await reaction.triggeredEffectFn({
         cardSourceController: this._cardSourceController,
         findCards: this._findCards,
         reactionManager: this,
         cardPriceController: this.cardPriceController,
         isRootLog: false,
         runGameActionDelegate: this.runGameActionDelegate,
+        reactionContext,
         trigger,
         cardLibrary: this._cardLibrary,
         match: this._match,
         reaction,
       });
     });
-
-    // right now the only card that created that has a reaction that the
-    // card triggering it needs to know about is moat giving immunity.
-    // every other reaction just returns undefined. so if the reaction
-    // doesn't give a result, don't set it on the context. this might
-    // have to expand later.
-    if (reactionResult !== undefined) {
-      reactionContext[targetPlayer.id] = {
-        reaction,
-        trigger,
-        result: reactionResult,
-      };
-    }
 
     if (reaction.once) {
       console.info(`[REACTION MANAGER] selected reaction is single-use, unregistering it`);

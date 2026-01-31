@@ -4,6 +4,7 @@ import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
+import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 
 const cardEffects: CardExpansionModule = {
   'abandoned-mine': {
@@ -508,7 +509,7 @@ const cardEffects: CardExpansionModule = {
         match: cardEffectArgs.match,
         appliesTo: 'ALL_OTHER',
         startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
       
       for (const targetPlayerId of targetPlayerIds) {
         const ruinsCards = cardEffectArgs.findCards([
@@ -593,7 +594,7 @@ const cardEffects: CardExpansionModule = {
         match: cardEffectArgs.match,
         appliesTo: 'ALL_OTHER',
         startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
       
       for (const targetPlayerId of targetPlayerIds) {
         const deck = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
@@ -696,7 +697,7 @@ const cardEffects: CardExpansionModule = {
         match: cardEffectArgs.match,
         appliesTo: 'ALL_OTHER',
         startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
       
       for (const targetPlayerId of targetPlayerIds) {
         const deck = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
@@ -803,7 +804,7 @@ const cardEffects: CardExpansionModule = {
         match: cardEffectArgs.match,
         appliesTo: 'ALL_OTHER',
         startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
       
       for (const targetPlayerId of targetPlayerIds) {
         const deck = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
@@ -940,7 +941,7 @@ const cardEffects: CardExpansionModule = {
         match: cardEffectArgs.match,
         appliesTo: 'ALL_OTHER',
         startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
       
       for (const targetPlayerId of targetPlayerIds) {
         const deck = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
@@ -1047,7 +1048,7 @@ const cardEffects: CardExpansionModule = {
         match: cardEffectArgs.match,
         appliesTo: 'ALL_OTHER',
         startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
       
       for (const targetPlayerId of targetPlayerIds) {
         const deck = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
@@ -1806,7 +1807,7 @@ const cardEffects: CardExpansionModule = {
         match: cardEffectArgs.match,
         appliesTo: 'ALL_OTHER',
         startingPlayerId: cardEffectArgs.playerId
-      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
       
       if (targetPlayerIds.length > ruinCards.length) {
         targetPlayerIds.length = ruinCards.length;
@@ -1921,7 +1922,7 @@ const cardEffects: CardExpansionModule = {
         match: cardEffectArgs.match,
         appliesTo: 'ALL_OTHER',
         startingPlayerId: cardEffectArgs.playerId
-      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
       
       for (const targetPlayerId of targetPlayerIds) {
         const hand = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
@@ -2057,7 +2058,7 @@ const cardEffects: CardExpansionModule = {
         appliesTo: 'ALL_OTHER',
         startingPlayerId: cardEffectArgs.playerId
       }).filter(playerId =>
-        cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity' &&
+        !isPlayerImmune(cardEffectArgs.reactionContext, playerId) &&
         cardEffectArgs.cardSourceController.getSource('playerHand', playerId).length >= 5
       );
       
@@ -2423,7 +2424,7 @@ const cardEffects: CardExpansionModule = {
           match: cardEffectArgs.match,
           appliesTo: 'ALL_OTHER',
           startingPlayerId: cardEffectArgs.playerId
-        }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+        }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
         
         for (const targetPlayerId of targetPlayerIds) {
           const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', targetPlayerId);
@@ -2622,7 +2623,7 @@ const cardEffects: CardExpansionModule = {
         match: cardEffectArgs.match,
         appliesTo: 'ALL_OTHER',
         startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
       
       for (const targetPlayerId of targetPlayerIds) {
         const deck = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
@@ -2728,7 +2729,7 @@ const cardEffects: CardExpansionModule = {
         match: cardEffectArgs.match,
         appliesTo: 'ALL_OTHER',
         startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
       
       for (const targetPlayerId of targetPlayerIds) {
         const deck = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
@@ -2834,7 +2835,7 @@ const cardEffects: CardExpansionModule = {
         match: cardEffectArgs.match,
         appliesTo: 'ALL_OTHER',
         startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
       
       for (const targetPlayerId of targetPlayerIds) {
         const deck = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
@@ -2938,7 +2939,7 @@ const cardEffects: CardExpansionModule = {
         match: cardEffectArgs.match,
         appliesTo: 'ALL_OTHER',
         startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
       
       for (const targetPlayerId of targetPlayerIds) {
         const hand = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
@@ -3098,7 +3099,7 @@ const cardEffects: CardExpansionModule = {
         match: cardEffectArgs.match,
         appliesTo: 'ALL_OTHER',
         startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
       
       for (const targetPlayerId of targetPlayerIds) {
         const deck = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
@@ -3361,7 +3362,7 @@ const cardEffects: CardExpansionModule = {
         startingPlayerId: cardEffectArgs.playerId
       }).filter(playerId => {
         const hand = cardEffectArgs.cardSourceController.getSource('playerHand', playerId);
-        return cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity' && hand.length > 4;
+        return !isPlayerImmune(cardEffectArgs.reactionContext, playerId) && hand.length > 4;
       });
       
       for (const targetPlayerId of targetPlayerIds) {

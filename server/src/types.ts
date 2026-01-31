@@ -231,7 +231,12 @@ export type RunGameActionDelegate = <K extends GameActions>(
     ...args: Parameters<GameActionDefinitionMap[K]>
 ) => Promise<GameActionReturnTypeMap[K]>;
 
-export type ReactionContext = any;
+export type ReactionContext = {
+    // Track per-player immunity flags for the current trigger.
+    immunityByPlayerId?: Partial<Record<PlayerId, true>>;
+    // Captures the trigger scope that initialized the reaction context.
+    immunityScope?: string;
+};
 
 export type CardEffectFn = (context: CardEffectFunctionContext) => Promise<void>;
 
@@ -327,7 +332,7 @@ export type DurationEffectOptions = {
     autoRemoveTriggersOnExhaust?: boolean;
 };
 
-export type CardTriggeredEffectFn<T extends TriggerEventType> = (context: TriggeredEffectContext<T>) => Promise<any>;
+export type CardTriggeredEffectFn<T extends TriggerEventType> = (context: TriggeredEffectContext<T>) => Promise<void>;
 
 type CardTriggerEffectConditionFn<T extends TriggerEventType> = (context: TriggeredEffectConditionContext<T>) => boolean | Promise<boolean>;
 

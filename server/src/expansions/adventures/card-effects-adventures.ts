@@ -1,5 +1,6 @@
 import {Card, CardId, CardKey, CardNoId, CountSpec,} from "shared/shared-types";
 import {
+import { isPlayerImmune, markPlayerImmune } from '../../utils/reaction-immunity.ts';
   CardEffectFunctionContext,
   CardExpansionModule,
   CardLifecycleCallbackContext,
@@ -345,7 +346,7 @@ const expansion: CardExpansionModule = {
         appliesTo: "ALL_OTHER",
         startingPlayerId: cardEffectArgs.playerId,
       }).filter((playerId) =>
-        cardEffectArgs.reactionContext?.[playerId]?.result !== "immunity"
+        !isPlayerImmune(cardEffectArgs.reactionContext, playerId)
       );
 
       for (const targetPlayerId of targetPlayerIds) {
@@ -425,7 +426,7 @@ const expansion: CardExpansionModule = {
         appliesTo: "ALL_OTHER",
         startingPlayerId: cardEffectArgs.playerId,
       }).filter((playerId) =>
-        cardEffectArgs.reactionContext?.[playerId]?.result !== "immunity"
+        !isPlayerImmune(cardEffectArgs.reactionContext, playerId)
       );
 
       for (const targetPlayerId of targetPlayerIds) {
@@ -560,11 +561,12 @@ const expansion: CardExpansionModule = {
             return conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId;
 
           },
-          triggeredEffectFn: async () => {
+          triggeredEffectFn: async ({ reactionContext }) => {
             console.debug(
               `[champion cardPlayed effect] attack played, gaining immunity`,
             );
-            return "immunity";
+            // Record immunity so downstream attacks skip this player.
+            markPlayerImmune(reactionContext, cardEffectArgs.playerId);
           },
         },
         {
@@ -1088,7 +1090,7 @@ const expansion: CardExpansionModule = {
         appliesTo: "ALL_OTHER",
         startingPlayerId: cardEffectArgs.playerId,
       }).filter((playerId) =>
-        cardEffectArgs.reactionContext?.[playerId]?.result !== "immunity"
+        !isPlayerImmune(cardEffectArgs.reactionContext, playerId)
       );
 
       for (const targetPlayerId of targetPlayerIds) {
@@ -2159,8 +2161,7 @@ const expansion: CardExpansionModule = {
           "playerHand",
           playerId,
         );
-        return cardEffectArgs.reactionContext?.[playerId]?.result !==
-            "immunity" && hand.length >= 4;
+        return !isPlayerImmune(cardEffectArgs.reactionContext, playerId) && hand.length >= 4;
       });
 
       for (const targetPlayerId of targetPlayerIds) {
@@ -2333,7 +2334,7 @@ const expansion: CardExpansionModule = {
         appliesTo: "ALL_OTHER",
         startingPlayerId: cardEffectArgs.playerId,
       }).filter((playerId) =>
-        cardEffectArgs.reactionContext?.[playerId]?.result !== "immunity"
+        !isPlayerImmune(cardEffectArgs.reactionContext, playerId)
       );
 
       for (const targetPlayerId of targetPlayerIds) {
@@ -2752,7 +2753,7 @@ const expansion: CardExpansionModule = {
         appliesTo: "ALL_OTHER",
         startingPlayerId: cardEffectArgs.playerId,
       }).filter((playerId) =>
-        cardEffectArgs.reactionContext?.[playerId]?.result !== "immunity"
+        !isPlayerImmune(cardEffectArgs.reactionContext, playerId)
       );
 
       for (const targetPlayerId of targetPlayerIds) {

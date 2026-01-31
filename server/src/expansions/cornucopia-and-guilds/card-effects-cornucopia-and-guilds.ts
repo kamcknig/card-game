@@ -6,6 +6,7 @@ import { getPlayerStartingFrom } from 'shared/get-player-position-utils.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
+import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 
 const expansion: CardExpansionModule = {
   'advisor': {
@@ -557,7 +558,7 @@ const expansion: CardExpansionModule = {
         match: cardEffectArgs.match,
         appliesTo: 'ALL_OTHER',
         startingPlayerId: cardEffectArgs.playerId
-      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
       
       for (const targetPlayerId of targetPlayerIds) {
         const hand = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
@@ -969,7 +970,7 @@ const expansion: CardExpansionModule = {
         match: cardEffectArgs.match,
         appliesTo: 'ALL_OTHER',
         startingPlayerId: cardEffectArgs.playerId
-      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
       
       for (const targetPlayerId of targetPlayerIds) {
         const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', targetPlayerId);
@@ -1471,7 +1472,7 @@ const expansion: CardExpansionModule = {
         match: cardEffectArgs.match,
         appliesTo: 'ALL_OTHER',
         startingPlayerId: cardEffectArgs.playerId
-      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
       
       for (const targetPlayerId of targetPlayerIds) {
         const curseCardIds = cardEffectArgs.findCards(
@@ -1670,7 +1671,7 @@ const expansion: CardExpansionModule = {
         match: cardEffectArgs.match,
         appliesTo: 'ALL_OTHER',
         startingPlayerId: cardEffectArgs.playerId
-      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
       
       for (const targetPlayerId of targetPlayerIds) {
         const handIds = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);

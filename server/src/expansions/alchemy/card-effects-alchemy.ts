@@ -5,6 +5,7 @@ import { Card, CardId } from 'shared/shared-types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
+import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 
 const expansion: CardExpansionModule = {
   'alchemist': {
@@ -192,7 +193,7 @@ const expansion: CardExpansionModule = {
         match: args.match,
         appliesTo: 'ALL_OTHER',
         startingPlayerId: args.playerId
-      }).filter((id) => args.reactionContext?.[id]?.result !== 'immunity');
+      }).filter((id) => !isPlayerImmune(args.reactionContext, id));
       
       for (const targetId of targets) {
         const curseCardId =
@@ -359,7 +360,7 @@ const expansion: CardExpansionModule = {
         match: args.match,
         appliesTo: 'ALL',
         startingPlayerId: args.playerId
-      }).filter(playerId => args.reactionContext?.[playerId]?.result !== 'immunity');
+      }).filter(playerId => !isPlayerImmune(args.reactionContext, playerId));
       
       for (const targetPlayerId of targetIds) {
         const deck = args.cardSourceController.getSource('playerDeck', targetPlayerId);

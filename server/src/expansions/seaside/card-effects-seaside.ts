@@ -5,6 +5,7 @@ import { getPlayerStartingFrom, getPlayerTurnIndex } from 'shared/get-player-pos
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
+import { isPlayerImmune, markPlayerImmune } from '../../utils/reaction-immunity.ts';
 
 const expansion: CardExpansionModule = {
   'astrolabe': {
@@ -214,7 +215,7 @@ const expansion: CardExpansionModule = {
         condition: ({ match, trigger, cardLibrary }) => {
           if (!trigger.args.cardId || trigger.args.playerId === cardEffectArgs.playerId) return false;
 
-          if (cardEffectArgs.reactionContext[trigger.args.playerId!]?.result === 'immunity') {
+          if (isPlayerImmune(cardEffectArgs.reactionContext, trigger.args.playerId!)) {
             console.debug(`[corsair triggered effect] ${getPlayerById(match, trigger.args.playerId!)} is immune`);
             return false;
           }
@@ -259,7 +260,7 @@ const expansion: CardExpansionModule = {
         startingPlayerId: playerId,
         appliesTo: 'ALL_OTHER',
         match
-      }).filter((id) => reactionContext?.[id]?.result !== 'immunity');
+      }).filter((id) => !isPlayerImmune(reactionContext, id));
 
       for (const targetId of targetIds) {
         const hand = args.cardSourceController.getSource('playerHand', targetId);
@@ -427,8 +428,10 @@ const expansion: CardExpansionModule = {
         once: false,
         allowMultipleInstances: false,
         compulsory: true,
-        triggeredEffectFn: async () => {
-          return 'immunity';
+        triggeredEffectFn: async ({ reactionContext }) => {
+          // Record immunity so downstream attacks skip this player.
+          console.debug(`[LIGHTHOUSE REACTION] granting immunity to player ${args.playerId}`);
+          markPlayerImmune(reactionContext, args.playerId);
         }
       });
 
@@ -992,7 +995,7 @@ const expansion: CardExpansionModule = {
         startingPlayerId: args.playerId,
         appliesTo: 'ALL_OTHER',
         match: args.match
-      }).filter(playerId => args.reactionContext[playerId]?.result !== 'immunity');
+      }).filter(playerId => !isPlayerImmune(args.reactionContext, playerId));
 
       for (const targetPlayerId of targetPlayerIds) {
         const curseCardIds = args.findCards([

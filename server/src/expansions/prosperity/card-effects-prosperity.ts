@@ -5,6 +5,7 @@ import { getRemainingSupplyCount, getStartingSupplyCount } from '../../utils/get
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { getPlayerStartingFrom } from 'shared/get-player-position-utils.ts';
+import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 
 const expansion: CardExpansionModule = {
   'anvil': {
@@ -162,7 +163,7 @@ const expansion: CardExpansionModule = {
         match: effectArgs.match,
         appliesTo: 'ALL_OTHER',
         startingPlayerId: effectArgs.playerId
-      }).filter(playerId => effectArgs.reactionContext?.[playerId].result !== 'immunity');
+      }).filter(playerId => !isPlayerImmune(effectArgs.reactionContext, playerId));
       
       console.debug(`[charlatan effect] targets ${targetPlayerIds} gaining a curse`);
       
@@ -239,7 +240,7 @@ const expansion: CardExpansionModule = {
         appliesTo: 'ALL_OTHER',
         startingPlayerId: effectArgs.playerId
       }).filter(playerId => {
-        return effectArgs.reactionContext?.[playerId]?.result !== 'immunity' &&
+        return !isPlayerImmune(effectArgs.reactionContext, playerId) &&
           effectArgs.cardSourceController.getSource('playerHand', playerId).length >= 5;
       });
       
@@ -777,7 +778,7 @@ const expansion: CardExpansionModule = {
         match: cardEffectArgs.match,
         appliesTo: 'ALL_OTHER',
         startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
+      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
       
       for (const targetPlayerId of targetPlayerIds) {
         const match = cardEffectArgs.match;

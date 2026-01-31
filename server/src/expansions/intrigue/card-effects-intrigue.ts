@@ -2,6 +2,7 @@ import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { CardExpansionModule } from '../../types.ts';
 import { ActionButtons, Card, CardId, CardKey, PlayerId } from 'shared/shared-types.ts';
+import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 
 const expansionModule: CardExpansionModule = {
   'baron': {
@@ -693,7 +694,7 @@ const expansionModule: CardExpansionModule = {
           const hand = args.cardSourceController.getSource('playerHand', playerId);
           const handCount = hand.length;
           return playerId === playerId ||
-            (handCount >= 5 && reactionContext?.[playerId]?.result !== 'immunity');
+            (handCount >= 5 && !isPlayerImmune(reactionContext, playerId));
         });
         
         for (const playerId of targets) {
@@ -960,7 +961,7 @@ const expansionModule: CardExpansionModule = {
           startingPlayerId: playerId,
           appliesTo: 'ALL_OTHER',
           match,
-        }).filter((id) => reactionContext?.[id]?.result !== 'immunity');
+        }).filter((id) => !isPlayerImmune(reactionContext, id));
         
         for (const targetId of targets) {
           const curseCardId = args.findCards([{ location: 'basicSupply' }, { cardKeys: 'curse' }])
@@ -1158,7 +1159,7 @@ const expansionModule: CardExpansionModule = {
         startingPlayerId: playerId,
         appliesTo: 'ALL_OTHER',
         match,
-      }).filter(id => reactionContext?.[id]?.result !== 'immunity');
+      }).filter(id => !isPlayerImmune(reactionContext, id));
       
       console.debug(`[SWINDLER EFFECT] targets in order ${targets.map(id => getPlayerById(match, id)).join(',')}`);
       
@@ -1229,7 +1230,7 @@ const expansionModule: CardExpansionModule = {
         startingPlayerId: playerId,
         appliesTo: 'ALL_OTHER',
         match,
-      }).filter((id) => reactionContext?.[id]?.result !== 'immunity');
+      }).filter((id) => !isPlayerImmune(reactionContext, id));
       
       console.debug(`[TORTURER EFFECT] targets ${targets.map(id => getPlayerById(match, id)).join(',')}`);
       

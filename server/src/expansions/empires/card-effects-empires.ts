@@ -5,6 +5,7 @@ import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
+import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 
 type ArchiveEffectContext = Pick<CardEffectFunctionContext, 'runGameActionDelegate' | 'cardLibrary' | 'cardSourceController'>;
 
@@ -270,7 +271,7 @@ const expansion: CardExpansionModule = {
         startingPlayerId: playerId,
         appliesTo: 'ALL_OTHER',
         match,
-      }).filter((id) => reactionContext?.[id]?.result !== 'immunity');
+      }).filter((id) => !isPlayerImmune(reactionContext, id));
 
       console.debug(`[catapult effect] targets ${targetPlayerIds.join(', ') || 'none'}`);
 

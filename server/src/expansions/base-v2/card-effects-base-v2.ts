@@ -3,6 +3,7 @@ import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { CardExpansionModule } from '../../types.ts';
 import { Card } from "shared/shared-types.ts";
+import { isPlayerImmune, markPlayerImmune } from '../../utils/reaction-immunity.ts';
 
 const expansionModule: CardExpansionModule = {
   'copper': {
@@ -107,7 +108,7 @@ const expansionModule: CardExpansionModule = {
         startingPlayerId: playerId,
         appliesTo: 'ALL_OTHER',
         match,
-      }).filter((id) => reactionContext?.[id]?.result !== 'immunity');
+      }).filter((id) => !isPlayerImmune(reactionContext, id));
       
       console.debug(`[BANDIT EFFECT] targets ${targetPlayerIds}`);
       
@@ -249,7 +250,7 @@ const expansionModule: CardExpansionModule = {
         startingPlayerId: playerId,
         appliesTo: 'ALL_OTHER',
         match,
-      }).filter((id) => reactionContext?.[id]?.result !== 'immunity');
+      }).filter((id) => !isPlayerImmune(reactionContext, id));
       
       console.debug(`[BUREAUCRAT EFFECT] targeting ${targetPlayerIds.map((id) => getPlayerById(match, id))}`);
       
@@ -650,7 +651,7 @@ const expansionModule: CardExpansionModule = {
         startingPlayerId: playerId,
         appliesTo: 'ALL_OTHER',
         match,
-      }).filter((id) => reactionContext?.[id]?.result !== 'immunity');
+      }).filter((id) => !isPlayerImmune(reactionContext, id));
       
       console.debug(`[MILITIA EFFECT] targets ${playerIds.map((id) => getPlayerById(match, id))}`);
       
@@ -772,15 +773,17 @@ const expansionModule: CardExpansionModule = {
               'ATTACK',
             ) && trigger.args.playerId !== playerId;
           },
-          triggeredEffectFn: async function ({ runGameActionDelegate, reaction }) {
+          triggeredEffectFn: async function ({ runGameActionDelegate, reaction, reactionContext }) {
             const sourceId = reaction.getSourceId();
             
             await runGameActionDelegate('revealCard', {
               cardId: sourceId,
               playerId: reaction.playerId,
             });
-            
-            return 'immunity';
+
+            // Record immunity so downstream attacks skip this player.
+            console.debug(`[MOAT REACTION] granting immunity to player ${reaction.playerId}`);
+            markPlayerImmune(reactionContext, reaction.playerId);
           },
         });
       },
@@ -1271,7 +1274,7 @@ const expansionModule: CardExpansionModule = {
         startingPlayerId: playerId,
         appliesTo: 'ALL_OTHER',
         match,
-      }).filter((id) => reactionContext?.[id]?.result !== 'immunity');
+      }).filter((id) => !isPlayerImmune(reactionContext, id));
       
       console.debug(`[WITCH EFFECT] targets ${playerIds.map((id) => getPlayerById(match, id))}`);
       
@@ -1318,4 +1321,3 @@ const expansionModule: CardExpansionModule = {
 };
 
 export default expansionModule;
-
