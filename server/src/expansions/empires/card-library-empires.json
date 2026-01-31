@@ -14,6 +14,24 @@
     "cardName": "Capital",
     "abilityText": "+1 Buy\n+6 Treasure\nWhen you discard this from play, +6 Debt"
   },
+  "catapult": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION", "ATTACK"],
+    "cardName": "Catapult",
+    "randomizer": "catapult/rocks",
+    "abilityText": "+1 Treasure\nTrash a card from your hand. If it costs $3 or more, each other player gains a Curse. If it's a Treasure, each other player discards down to 3 cards in hand."
+  },
+  "rocks": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["TREASURE"],
+    "cardName": "Rocks",
+    "randomizer": "catapult/rocks",
+    "abilityText": "+1 Treasure\nWhen you gain or trash this: If it's your Buy phase, gain a Silver onto your deck, otherwise gain a Silver to your hand."
+  },
   "kings-castle": {
     "cardName": "King's Castle",
     "cost": {

@@ -8,21 +8,24 @@ List of cards
     - randomizer type is victory, castle,
     - randomizer cost is 3 treasure
 - [catapult](catapult.md)/[rocks](rocks.md)
-    - randomizer type is action, attack
+    - randomizer type is action, attack (so the PILE is not a treasure even
+      though rocks is a treasure)
     - randomizer cost is 3 treasure
 - [chariot race](chariot-race.md)
 - [charm](charm.md)
 - [city quarter](city-quarter.md)
 - [crown](crown.md)
 - [encampment](encampment.md)/[plunder](plunder.md)
-    - randomizer type is action,
+    - randomizer type is action (so the PILE is not a treasure even
+      though plunder is a treasure)
     - randomizer cost is 2 treasure
 - [enchantress](enchantress.md)
 - [engineer](engineer.md)
 - [farmer's market](farmers-market.md)
 - [forum](forum.md)
 - [gladiator](gladiator.md)/[fortune](fortune.md)
-    - randomizer type is action,
+    - randomizer type is action (so the PILE is not a treasure even
+      though fortune is a treasure)
     - randomizer cost is 3 treasure
 - [groundskeeper](groundskeeper.md)
 - [legionary](legionary.md)

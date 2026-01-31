@@ -1,8 +1,10 @@
 import { CardExpansionModule, CardEffectFunctionContext } from '../../types.ts';
 import { CardId, CardKey, PlayerId } from 'shared/shared-types';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
+import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
+import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 
 type ArchiveEffectContext = Pick<CardEffectFunctionContext, 'runGameActionDelegate' | 'cardLibrary' | 'cardSourceController'>;
 
@@ -23,7 +25,7 @@ const getTopCastleCardId = (findCards: CardEffectFunctionContext['findCards']) =
 // Gain the top copy of a specific card from a supply location into a destination.
 const gainTopSupplyCard = async (
   context: GainTopSupplyContext,
-  args: { playerId: PlayerId; cardKey: CardKey; location: 'basicSupply' | 'kingdomSupply'; to: { location: 'playerDiscard' | 'playerDeck' }; logTag: string; }
+  args: { playerId: PlayerId; cardKey: CardKey; location: 'basicSupply' | 'kingdomSupply'; to: { location: 'playerDiscard' | 'playerDeck' | 'playerHand' }; logTag: string; }
 ) => {
   const supplyCards = context.findCards([{ location: args.location }, { cardKeys: [args.cardKey] }]);
   const topCardId = supplyCards.slice(-1)[0]?.id;
@@ -64,6 +66,27 @@ const resolveCrumblingCastleBonus = async (context: GainTopSupplyContext, player
     location: 'basicSupply',
     to: { location: 'playerDiscard' },
     logTag: 'crumbling castle bonus',
+  });
+};
+
+// Resolve the Rocks on-gain/on-trash Silver bonus with buy-phase routing.
+const resolveRocksSilverGain = async (
+  context: Pick<CardEffectFunctionContext, 'match' | 'findCards' | 'runGameActionDelegate'>,
+  args: { playerId: PlayerId; source: 'gained' | 'trashed'; }
+) => {
+  // Determine whether the gain happens during the player's buy phase.
+  const currentPlayerId = getCurrentPlayer(context.match).id;
+  const isBuyPhase = currentPlayerId === args.playerId && getTurnPhase(context.match.turnPhaseIndex) === 'buy';
+  const toLocation = isBuyPhase ? { location: 'playerDeck' as const } : { location: 'playerHand' as const };
+
+  console.debug(`[rocks ${args.source}] player ${args.playerId} ${isBuyPhase ? 'in buy phase' : 'not in buy phase'}; gaining Silver to ${toLocation.location}`);
+
+  await gainTopSupplyCard(context, {
+    playerId: args.playerId,
+    cardKey: 'silver',
+    location: 'basicSupply',
+    to: toLocation,
+    logTag: `rocks ${args.source}`,
   });
 };
 
@@ -201,6 +224,91 @@ const expansion: CardExpansionModule = {
       },
     }),
   },
+  'catapult': {
+    registerEffects: () => async (args) => {
+      const { playerId, match, reactionContext, cardLibrary } = args;
+
+      // Catapult always grants +$1 on play.
+      console.debug(`[catapult effect] gaining 1 treasure`);
+      await args.runGameActionDelegate('gainTreasure', { count: 1 });
+
+      // Catapult requires trashing a card from hand if possible.
+      const hand = args.cardSourceController.getSource('playerHand', playerId);
+      if (hand.length < 1) {
+        console.debug(`[catapult effect] no cards in hand to trash`);
+        return;
+      }
+
+      console.debug(`[catapult effect] prompting player ${playerId} to trash a card`);
+      const selectedCardIds = await args.runGameActionDelegate('selectCard', {
+        playerId,
+        prompt: 'Trash a card',
+        restrict: { location: 'playerHand', playerId },
+        count: 1,
+      }) as CardId[];
+
+      if (!selectedCardIds?.length) {
+        console.warn(`[catapult effect] no card selected to trash`);
+        return;
+      }
+
+      const trashedCard = cardLibrary.getCard(selectedCardIds[0]);
+      console.debug(`[catapult effect] trashing ${trashedCard}`);
+      await args.runGameActionDelegate('trashCard', {
+        playerId,
+        cardId: trashedCard.id,
+      });
+
+      // Determine which attack effects apply based on the trashed card.
+      const { cost } = args.cardPriceController.applyRules(trashedCard, { playerId });
+      const triggersCurse = (cost.treasure ?? 0) >= 3;
+      const triggersDiscard = trashedCard.type.includes('TREASURE');
+
+      console.debug(`[catapult effect] trashed card cost=${cost.treasure ?? 0}, treasure=${triggersDiscard}`);
+
+      const targetPlayerIds = findOrderedTargets({
+        startingPlayerId: playerId,
+        appliesTo: 'ALL_OTHER',
+        match,
+      }).filter((id) => reactionContext?.[id]?.result !== 'immunity');
+
+      console.debug(`[catapult effect] targets ${targetPlayerIds.join(', ') || 'none'}`);
+
+      // Apply curse gains in turn order when the trashed card costs $3+.
+      if (triggersCurse) {
+        for (const targetPlayerId of targetPlayerIds) {
+          const curseCards = args.findCards([{ location: 'basicSupply' }, { cardKeys: 'curse' }]);
+          if (!curseCards.length) {
+            console.debug(`[catapult effect] no curse cards left in supply`);
+            break;
+          }
+
+          console.debug(`[catapult effect] ${targetPlayerId} gaining Curse`);
+          await args.runGameActionDelegate('gainCard', {
+            playerId: targetPlayerId,
+            cardId: curseCards.slice(-1)[0].id,
+            to: { location: 'playerDiscard' },
+          });
+        }
+      }
+
+      // Apply discard-down-to-3 in turn order after curses when the trashed card is a Treasure.
+      if (triggersDiscard) {
+        for (const targetPlayerId of targetPlayerIds) {
+          await discardDownTo({
+            cardSourceController: args.cardSourceController,
+            runGameActionDelegate: args.runGameActionDelegate,
+            cardLibrary: args.cardLibrary,
+          }, {
+            playerId: targetPlayerId,
+            targetHandSize: 3,
+            prompt: 'Confirm discard',
+            logTag: 'catapult effect',
+          });
+        }
+      }
+    },
+  },
   'crumbling-castle': {
     registerLifeCycleMethods: () => ({
       onGained: async (args, eventArgs) => {
@@ -212,6 +320,25 @@ const expansion: CardExpansionModule = {
         // Apply the Crumbling Castle bonus when trashed.
         console.debug(`[crumbling castle onTrashed] player ${eventArgs.playerId} trashed Crumbling Castle`);
         await resolveCrumblingCastleBonus(args, eventArgs.playerId);
+      },
+    }),
+  },
+  'rocks': {
+    registerEffects: () => async ({ runGameActionDelegate }) => {
+      // Rocks provides +$1 when played.
+      console.debug(`[rocks effect] gaining 1 treasure`);
+      await runGameActionDelegate('gainTreasure', { count: 1 });
+    },
+    registerLifeCycleMethods: () => ({
+      onGained: async (args, eventArgs) => {
+        // Apply the Rocks Silver gain when gained.
+        console.debug(`[rocks onGained] player ${eventArgs.playerId} gained Rocks`);
+        await resolveRocksSilverGain(args, { playerId: eventArgs.playerId, source: 'gained' });
+      },
+      onTrashed: async (args, eventArgs) => {
+        // Apply the Rocks Silver gain when trashed.
+        console.debug(`[rocks onTrashed] player ${eventArgs.playerId} trashed Rocks`);
+        await resolveRocksSilverGain(args, { playerId: eventArgs.playerId, source: 'trashed' });
       },
     }),
   },

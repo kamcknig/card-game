@@ -29,6 +29,20 @@ const castleOrderThreePlus: CardKey[] = [
   'humble-castle',
 ];
 
+// Canonical Catapult/Rocks split pile order (bottom -> top).
+const catapultRocksOrder: CardKey[] = [
+  'rocks',
+  'rocks',
+  'rocks',
+  'rocks',
+  'rocks',
+  'catapult',
+  'catapult',
+  'catapult',
+  'catapult',
+  'catapult',
+];
+
 const configurator: ExpansionConfiguratorFactory = () => {
   return async (args) => {
     // Locate the Castles split pile in the kingdom supply, if present.
@@ -37,35 +51,67 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
     if (!castlesSupply) {
       console.info(`[empires configurator] no castles pile in kingdom supply`);
+    }
+    else {
+      // Choose the canonical order based on player count.
+      const playerCount = args.config.players.length;
+      const desiredOrder = playerCount > 2 ? castleOrderThreePlus : castleOrderTwoPlayers;
+      const currentOrder = castlesSupply.cards.map(card => card.cardKey);
+
+      const orderMatches = currentOrder.length === desiredOrder.length
+        && currentOrder.every((key, index) => key === desiredOrder[index]);
+
+      if (orderMatches) {
+        console.info(`[empires configurator] castles pile already configured for ${playerCount} players`);
+      }
+      else {
+        // Replace the pile with the canonical ordering, cloning card templates for safety.
+        const nextCastleCards = [];
+        for (const cardKey of desiredOrder) {
+          const cardTemplate = args.cardLibrary[cardKey];
+          if (!cardTemplate) {
+            console.warn(`[empires configurator] missing card template for ${cardKey}`);
+            continue;
+          }
+          nextCastleCards.push(structuredClone(cardTemplate));
+        }
+        castlesSupply.cards = nextCastleCards;
+
+        console.log(`[empires configurator] configured castles pile for ${playerCount} players`);
+      }
+    }
+
+    // Locate the Catapult/Rocks split pile in the kingdom supply, if present.
+    const catapultRocksSupply = args.config.kingdomSupply
+      .find(supply => supply.cards.some(card => card.randomizer === 'catapult/rocks'));
+
+    if (!catapultRocksSupply) {
+      console.info(`[empires configurator] no catapult/rocks pile in kingdom supply`);
       return args.config;
     }
 
-    // Choose the canonical order based on player count.
-    const playerCount = args.config.players.length;
-    const desiredOrder = playerCount > 2 ? castleOrderThreePlus : castleOrderTwoPlayers;
-    const currentOrder = castlesSupply.cards.map(card => card.cardKey);
+    const currentCatapultRocksOrder = catapultRocksSupply.cards.map(card => card.cardKey);
+    const catapultRocksMatches = currentCatapultRocksOrder.length === catapultRocksOrder.length
+      && currentCatapultRocksOrder.every((key, index) => key === catapultRocksOrder[index]);
 
-    const orderMatches = currentOrder.length === desiredOrder.length
-      && currentOrder.every((key, index) => key === desiredOrder[index]);
-
-    if (orderMatches) {
-      console.info(`[empires configurator] castles pile already configured for ${playerCount} players`);
+    if (catapultRocksMatches) {
+      console.info(`[empires configurator] catapult/rocks pile already configured`);
       return args.config;
     }
 
-    // Replace the pile with the canonical ordering, cloning card templates for safety.
-    const nextCastleCards = [];
-    for (const cardKey of desiredOrder) {
+    // Replace the pile with the canonical Catapult/Rocks ordering.
+    const nextCatapultRocksCards = [];
+    for (const cardKey of catapultRocksOrder) {
       const cardTemplate = args.cardLibrary[cardKey];
       if (!cardTemplate) {
         console.warn(`[empires configurator] missing card template for ${cardKey}`);
         continue;
       }
-      nextCastleCards.push(structuredClone(cardTemplate));
+      nextCatapultRocksCards.push(structuredClone(cardTemplate));
     }
-    castlesSupply.cards = nextCastleCards;
+    catapultRocksSupply.cards = nextCatapultRocksCards;
 
-    console.log(`[empires configurator] configured castles pile for ${playerCount} players`);
+    console.log(`[empires configurator] configured catapult/rocks split pile`);
 
     return args.config;
   };

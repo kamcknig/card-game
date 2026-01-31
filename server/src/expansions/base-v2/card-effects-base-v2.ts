@@ -1,5 +1,6 @@
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
+import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { CardExpansionModule } from '../../types.ts';
 import { Card } from "shared/shared-types.ts";
 
@@ -654,32 +655,17 @@ const expansionModule: CardExpansionModule = {
       console.debug(`[MILITIA EFFECT] targets ${playerIds.map((id) => getPlayerById(match, id))}`);
       
       for (const playerId of playerIds) {
-        const hand = args.cardSourceController.getSource('playerHand', playerId);
-        const handCount = hand.length;
-        
-        console.debug(`[MILITIA EFFECT] ${getPlayerById(match, playerId)} has ${handCount} cards in hand`);
-        if (handCount <= 3) {
-          continue;
-        }
-        
-        const selectCount = handCount - 3;
-        console.debug(`[MILITIA EFFECT] prompting user to select ${selectCount} hands`);
-        
-        const cardIds = await runGameActionDelegate('selectCard', {
-          prompt: 'Confirm discard',
+        // Use shared discard helper to avoid duplicating discard-down logic.
+        await discardDownTo({
+          cardSourceController: args.cardSourceController,
+          runGameActionDelegate,
+          cardLibrary,
+        }, {
           playerId,
-          count: selectCount,
-          restrict: args.cardSourceController.getSource('playerHand', playerId),
+          targetHandSize: 3,
+          prompt: 'Confirm discard',
+          logTag: 'MILITIA EFFECT',
         });
-        
-        for (const cardId of cardIds) {
-          console.debug(`[MILITIA EFFECT] discarding ${cardLibrary.getCard(cardId)}...`);
-          
-          await runGameActionDelegate('discardCard', {
-            cardId,
-            playerId,
-          });
-        }
       }
     }
   },
