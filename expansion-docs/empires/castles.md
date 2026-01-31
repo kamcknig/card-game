@@ -1,4 +1,5 @@
-Castles are a Victory-Castle split pile from Empires. It contains 8 differently-named unique cards with the Castle type; when Castles are selected as a Kingdom card for a game, they are ordered in ascending order of cost from $3 to $10 in a single Supply pile, of which only the top card can be gained at any given time, though you may look through the pile to see which Castles are next.
+Castles are a Victory-Castle split pile from Empires. It contains 8
+differently-named unique cards with the Castle type; when Castles are selected as a Kingdom card for a game, they are ordered in ascending order of cost from \$3 to $10 in a single Supply pile, of which only the top card can be gained at any given time, though you may look through the pile to see which Castles are next.
 
 Every Castle is a Victory-Castle card, though 3 have an additional type as well. They are all worth some amount of  VP (and are thus considered alt-VP), and most have different abilities as well.
 

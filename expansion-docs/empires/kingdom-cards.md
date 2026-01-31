@@ -5,6 +5,8 @@ List of cards
 - [archive](archive.md)
 - [capital](capital.md)
 - [castles](castles.md)
+    - randomizer type is victory, castle,
+    - randomizer cost is 3 treasure
 - [catapult](catapult.md)/[rocks](rocks.md)
     - randomizer type is action, attack
     - randomizer cost is 3 treasure
