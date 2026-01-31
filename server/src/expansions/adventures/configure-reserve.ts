@@ -1,8 +1,10 @@
 import { ExpansionConfiguratorContext } from '../../types.ts';
 import { addMatToMatchConfig } from '../../utils/add-mat-to-match-config.ts';
+import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 
 export const configureReserve = (args: ExpansionConfiguratorContext) => {
-  if (!args.config.kingdomSupply.some(supply => supply.cards[0].type.includes('RESERVE'))) {
+  // Use pile-level type overrides when determining whether Reserve cards are present.
+  if (!args.config.kingdomSupply.some(supply => getPileDefinitionCard(supply.cards, supply.name)?.type.includes('RESERVE'))) {
     return;
   }
   

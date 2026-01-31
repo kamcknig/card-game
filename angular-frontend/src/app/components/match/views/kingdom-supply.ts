@@ -39,7 +39,7 @@ export class KingdomSupplyView extends Container {
           .filter(card => !!card)
           .map(card => ({
             kingdom: card!.kingdom,
-            pileKey: card!.randomizer ?? card!.cardKey
+            pileKey: card!.randomizerData?.randomizer ?? card!.cardKey
           }))
       }
     ).subscribe(val => {
@@ -83,7 +83,7 @@ export class KingdomSupplyView extends Container {
     }, {} as Record<CardKey, Card[]>)
 
     Object.entries(piles).forEach(([cardKey, pile], idx) => {
-      const pileKey = pile[0]?.randomizer ?? pile[0]?.cardKey ?? cardKey;
+      const pileKey = pile[0]?.randomizerData?.randomizer ?? pile[0]?.cardKey ?? cardKey;
       const p = this._cardContainer.getChildByLabel(`pile:${pileKey}`) as PileView;
       if (!p) {
         return;

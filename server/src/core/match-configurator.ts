@@ -21,6 +21,7 @@ import {
 import { compare, Operation } from 'https://esm.sh/v123/fast-json-patch@3.1.1/index.js';
 import { CardSourceController } from './card-source-controller.ts';
 import { getDefaultKingdomSupplySize } from '../utils/get-default-kingdom-supply-size.ts';
+import { getCardPileKey } from '../utils/get-card-pile-key.ts';
 
 /**
  * Return a new array with at most one element for every distinct `prop` value.
@@ -172,27 +173,29 @@ export class MatchConfigurator {
         return acc;
       }, [] as ExpansionData[]);
 
-      // list of randomizers that are banned or already pre-selected
-      const bannedKingdomRandomizers = this._bannedKingdoms.map(card => card.randomizer) as string[];
-      const alreadyIncludedKingdomRandomizers = selectedKingdoms.map(card => card.randomizer) as string[];
+      // list of pile keys that are banned or already pre-selected
+      const bannedKingdomRandomizers = this._bannedKingdoms.map(card => getCardPileKey(card));
+      const alreadyIncludedKingdomRandomizers = selectedKingdoms.map(card => getCardPileKey(card));
 
       console.info(`[match configurator] banned kingdoms ${bannedKingdomRandomizers.join(', ') ?? '- no banned kingdoms'}`);
 
       // loop over the selected expansions, and filter out any kingdom cards that
-      // are banned, are already included, or do not have a randomizer
+      // are banned, are already included, or are not kingdom-selectable
       const availableRandomizers = selectedExpansions.flatMap((nextExpansion) => [
         ...Object
           .values(nextExpansion.cardData.kingdomSupply)
-          .filter(card =>
-            card.randomizer !== null && !bannedKingdomRandomizers.includes(card.randomizer) && !alreadyIncludedKingdomRandomizers.includes(card.cardKey)
-          )
+          .filter(card => (card.kingdomSelectable ?? true))
           .map(card => {
+            const pileKey = getCardPileKey(card);
+            if (bannedKingdomRandomizers.includes(pileKey)) return null;
+            if (alreadyIncludedKingdomRandomizers.includes(pileKey)) return null;
             return {
-              randomizer: card.randomizer,
+              randomizer: pileKey,
               cardLike: card,
               type: 'card',
             };
-          }),
+          })
+          .filter((entry): entry is NonNullable<typeof entry> => !!entry),
         ...Object.values(nextExpansion.events)
           .filter(event => event.randomizer !== null)
           .map(event => ({
@@ -200,7 +203,7 @@ export class MatchConfigurator {
             cardLike: event,
             type: 'event'
           }))
-      ]) as { randomizer: string; type: 'card' | 'event'; cardLike: CardLikeNoId; }[];
+      ]) as { randomizer: string; type: 'card' | 'event'; cardLike: CardLikeNoId | CardNoId; }[];
 
       const uniqueRandomizers = uniqueByProp(availableRandomizers, 'randomizer');
 
@@ -270,7 +273,7 @@ export class MatchConfigurator {
           i--;
         }
 
-        // remove the randomizer so it can't be selected again
+        // remove the selected pile so it can't be selected again
         uniqueRandomizers.splice(randomIndex, 1);
       }
     }

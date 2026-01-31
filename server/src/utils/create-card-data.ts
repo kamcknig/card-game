@@ -1,5 +1,5 @@
 import { capitalize } from "es-toolkit";
-import { CardKey, CardLikeNoId, CardNoId } from 'shared/shared-types.ts';
+import { CardKey, CardLikeNoId, CardNoId } from 'shared/shared-types';
 
 export const createCardData = (cardKey: CardKey, expansionName: string, templateData: Partial<CardNoId>) => {
   const data = {
@@ -7,11 +7,16 @@ export const createCardData = (cardKey: CardKey, expansionName: string, template
     halfImagePath: `./assets/card-images/${expansionName}/half-size/${cardKey}.jpg`,
     kingdom: templateData.kingdom ?? cardKey,
   }
-  
+
   return data as CardNoId;
 };
 
-export const createCardLike = (cardKey: CardKey, expansionName: string, templateData: Partial<CardLikeNoId>): CardLikeNoId => {
+type CreateCardLikeTemplate = Partial<CardLikeNoId> & { kingdom?: string };
+
+export const createCardLike = (cardKey: CardKey, expansionName: string, templateData: CreateCardLikeTemplate): CardLikeNoId => {
+  // Default the pile/kingdom key to the randomizer data when provided.
+  const randomizerFromData = templateData.randomizerData?.randomizer;
+  const resolvedKingdom = templateData.kingdom ?? (randomizerFromData ?? cardKey);
   const data = {
     cardKey,
     expansionName,
@@ -19,7 +24,7 @@ export const createCardLike = (cardKey: CardKey, expansionName: string, template
     fullImagePath: `./assets/card-images/${expansionName}/full-size/${cardKey}.jpg`,
     ...templateData ?? {},
     cardName: templateData.cardName ?? capitalize(cardKey),
-    randomizer: templateData.randomizer !== undefined ? templateData.randomizer : cardKey
+    kingdom: resolvedKingdom
   } as CardLikeNoId;
   return data;
 }

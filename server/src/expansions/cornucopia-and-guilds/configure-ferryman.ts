@@ -20,7 +20,7 @@ export const configureFerryman = (args: ExpansionConfiguratorContext) => {
     for (const key of Object.keys(exp.cardData.kingdomSupply)) {
       const cardData = exp.cardData.kingdomSupply[key];
       
-      if (cardData.randomizer === null) return acc;
+      if (cardData.kingdomSelectable === false) return acc;
       
       const cost = cardData.cost.treasure;
       if (cost !== 3 && cost !== 4) {

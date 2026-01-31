@@ -4,6 +4,7 @@ import { registerAdventuresTokenDefinitions } from './token-definitions-adventur
 import { registerAdventuresTokenTriggers } from './token-triggers-adventures.ts';
 import { ComputedMatchConfiguration, TokenId } from 'shared/shared-types.ts';
 import { adventuresTokenIds } from './token-ids-adventures.ts';
+import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 
 const configurator: ExpansionConfiguratorFactory = () => async args => {
   
@@ -237,7 +238,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
             if (trigger.args.playerId !== player.id) return false;
             // Match the gained card's originating pile to the player's Trashing token location.
             const gainedCard = cardLibrary.getCard(trigger.args.cardId);
-            const pileKey = gainedCard.randomizer ?? gainedCard.cardKey;
+            const pileKey = getCardPileKey(gainedCard);
             return Object.values(match.tokens ?? {}).some(token =>
               token.tokenId === adventuresTokenIds.trashing &&
               token.ownerId === player.id &&

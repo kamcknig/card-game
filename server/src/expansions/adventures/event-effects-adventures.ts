@@ -6,13 +6,16 @@ import {getTurnPhase} from '../../utils/get-turn-phase.ts';
 import {findOrderedTargets} from '../../utils/find-ordered-targets.ts';
 import {adventuresTokenIds} from './token-ids-adventures.ts';
 import {getCurrentPlayer} from '../../utils/get-current-player.ts';
+import {getPileDefinitionCard} from '../../utils/get-pile-definition-card.ts';
+import {getCardPileKey} from '../../utils/get-card-pile-key.ts';
 
 // Determines the card that defines the pile's type by matching the pile randomizer.
 const getPileRandomizerCard = (
   cards: CardNoId[],
   pileName: string,
 ): CardNoId | undefined => {
-  return cards.find((card) => card.randomizer === pileName) ?? cards[0];
+  // Use shared pile definition logic to honor randomizer overrides.
+  return getPileDefinitionCard(cards, pileName);
 };
 
 const effectMap: CardExpansionModule = {
@@ -267,7 +270,7 @@ const effectMap: CardExpansionModule = {
         .map((supply) => {
           const pileCard = getPileRandomizerCard(supply.cards, supply.name);
           if (!pileCard?.type?.includes('ACTION')) return null;
-          return pileCard.randomizer ?? supply.name;
+          return getCardPileKey(pileCard);
         })
         .filter((pile): pile is string => !!pile);
 
@@ -331,7 +334,7 @@ const effectMap: CardExpansionModule = {
         .map((supply) => {
           const pileCard = getPileRandomizerCard(supply.cards, supply.name);
           if (!pileCard?.type?.includes('ACTION')) return null;
-          return pileCard.randomizer ?? supply.name;
+          return getCardPileKey(pileCard);
         })
         .filter((pile): pile is string => !!pile);
 
@@ -376,7 +379,7 @@ const effectMap: CardExpansionModule = {
 
       // Register the Ferry cost rule the first time the token is placed.
       const cards = cardEffectArgs.cardLibrary.getAllCardsAsArray().filter(
-        (c) => c.randomizer === selectedPile
+        (c) => getCardPileKey(c) === selectedPile
       );
 
       // todo: this never cleans up old rules, but those old rules won't work when a token moves because the rule
@@ -719,7 +722,7 @@ const effectMap: CardExpansionModule = {
         .map((supply) => {
           const pileCard = getPileRandomizerCard(supply.cards, supply.name);
           if (!pileCard?.type?.includes('ACTION')) return null;
-          return pileCard.randomizer ?? supply.name;
+          return getCardPileKey(pileCard);
         })
         .filter((pile): pile is string => !!pile);
 
@@ -784,7 +787,7 @@ const effectMap: CardExpansionModule = {
         .map((supply) => {
           const pileCard = getPileRandomizerCard(supply.cards, supply.name);
           if (!pileCard?.type?.includes('ACTION')) return null;
-          return pileCard.randomizer ?? supply.name;
+          return getCardPileKey(pileCard);
         })
         .filter((pile): pile is string => !!pile);
 
@@ -1123,7 +1126,7 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      const pileKey = selectedCard.randomizer ?? selectedCard.cardKey;
+      const pileKey = getCardPileKey(selectedCard);
       console.debug(`[seaway effect] moving +1 Buy token to ${pileKey}`);
 
       await cardEffectArgs.runGameActionDelegate('moveToken', {
@@ -1335,7 +1338,7 @@ const effectMap: CardExpansionModule = {
         .map((supply) => {
           const pileCard = getPileRandomizerCard(supply.cards, supply.name);
           if (!pileCard?.type?.includes('ACTION')) return null;
-          return pileCard.randomizer ?? supply.name;
+          return getCardPileKey(pileCard);
         })
         .filter((pile): pile is string => !!pile);
 

@@ -378,14 +378,10 @@ export class CardLike {
   cost: CardCost;
   fullImagePath: string;
   detailImagePath: string;
-  /**
-   * If null, this card is not used during kingdom selection as part of the pool. If undefined, the cardKey is used.
-   *
-   * This is used in cases where a kingdom supply might contain different cards in one supply such as Knights from
-   * Dark Ages. We set a randomizer of "knights" on it so that it's only gets one vote but it has 10 different knight
-   * cards in the supply
-   */
-  randomizer: string | null;
+  // Optional randomizer overrides for pile-level cost/type metadata.
+  randomizerData?: RandomizerData;
+  // Indicates whether the card is eligible for kingdom selection.
+  kingdomSelectable?: boolean;
 
   constructor(args: CardLike) {
     this.id = args.id;
@@ -393,7 +389,8 @@ export class CardLike {
     this.cardName = args.cardName ?? '';
     this.fullImagePath = args.fullImagePath ?? '';
     this.detailImagePath = args.detailImagePath ?? '';
-    this.randomizer = args.randomizer ?? null;
+    this.randomizerData = args.randomizerData;
+    this.kingdomSelectable = args.kingdomSelectable ?? true;
     this.cost = args.cost ?? { treasure: 0 };
   }
 }
@@ -402,9 +399,14 @@ export type CardLikeNoId = Omit<CardLike, 'id'>;
 
 type EventArgs = {
   [p in keyof CardLike]: CardLike[p];
-}
+} & {
+  randomizer?: string | null;
+};
 
 export class Event extends CardLike {
+  // Randomizer key used to group events during selection.
+  randomizer: string | null;
+
   constructor(args: EventArgs) {
     super(args);
 
@@ -412,6 +414,7 @@ export class Event extends CardLike {
     this.cardName = args.cardName;
     this.fullImagePath = args.fullImagePath;
     this.detailImagePath = args.detailImagePath;
+    this.randomizer = args.randomizer ?? null;
   }
 
   override toString() {
@@ -488,6 +491,13 @@ export type CardArgs = {
   victoryPoints?: number;
 }
 
+// Defines pile-level overrides for cards that share a randomizer.
+export type RandomizerData = {
+  randomizer: string;
+  cost?: CardCost;
+  type?: CardType[];
+};
+
 export type CardCost = {
   treasure: number;
   potion?: number | undefined;
@@ -514,6 +524,10 @@ export class Card extends CardLike {
   expansionName: string;
   halfImagePath: string;
   owner: PlayerId | null;
+  // Optional pile-level overrides for randomizer-based piles.
+  randomizerData?: RandomizerData;
+  // Indicates whether the card is eligible for kingdom selection.
+  kingdomSelectable?: boolean;
 
   constructor(args: CardArgs) {
     super(args);
@@ -536,7 +550,8 @@ export class Card extends CardLike {
     this.mat = args.mat;
     this.kingdom = args.kingdom;
     this.partOfSupply = args.partOfSupply ?? true;
-    this.randomizer = args.randomizer;
+    this.randomizerData = args.randomizerData;
+    this.kingdomSelectable = args.kingdomSelectable ?? true;
   }
 
   override toString() {

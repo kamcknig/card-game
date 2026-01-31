@@ -15,6 +15,8 @@ import {adventuresTokenIds} from "./token-ids-adventures.ts";
 import {tokenDefinitionMap} from "../../core/tokens/token-definition-map.ts";
 import {getCurrentPlayer} from "../../utils/get-current-player.ts";
 import {CardPriceRule} from "../../core/card-price-rules-controller.ts";
+import {getPileDefinitionCard} from "../../utils/get-pile-definition-card.ts";
+import {getCardPileKey} from "../../utils/get-card-pile-key.ts";
 
 // Determines the card that defines the pile's type by matching the pile randomizer.
 // todo: the randomizer card needs to be part of a card's definition or in the library creation and game/match creation.
@@ -22,7 +24,8 @@ const getPileRandomizerCard = (
   cards: CardNoId[],
   pileName: string,
 ): CardNoId | undefined => {
-  return cards.find((card) => card.randomizer === pileName) ?? cards[0];
+  // Use shared pile definition logic to honor randomizer overrides.
+  return getPileDefinitionCard(cards, pileName);
 };
 
 const addTravellerEffect = async (
@@ -2459,7 +2462,7 @@ const expansion: CardExpansionModule = {
 
                 if (!pileCard?.type?.includes("ACTION")) return null;
 
-                const pileName = pileCard.randomizer ?? supply.name;
+                const pileName = getCardPileKey(pileCard);
                 // can't place on pile with any other tokens on it
                 if (
                   ownedTokens.find((t) =>

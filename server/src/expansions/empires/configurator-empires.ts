@@ -1,5 +1,6 @@
 import { CardKey } from 'shared/shared-types.ts';
 import { ExpansionConfiguratorFactory } from '../../types.ts';
+import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 
 // Canonical Castle pile order for 2-player games (bottom -> top).
 const castleOrderTwoPlayers: CardKey[] = [
@@ -47,7 +48,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
   return async (args) => {
     // Locate the Castles split pile in the kingdom supply, if present.
     const castlesSupply = args.config.kingdomSupply
-      .find(supply => supply.cards.some(card => card.randomizer === 'castles'));
+      .find(supply => supply.cards.some(card => getCardPileKey(card) === 'castles'));
 
     if (!castlesSupply) {
       console.info(`[empires configurator] no castles pile in kingdom supply`);
@@ -83,7 +84,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
     // Locate the Catapult/Rocks split pile in the kingdom supply, if present.
     const catapultRocksSupply = args.config.kingdomSupply
-      .find(supply => supply.cards.some(card => card.randomizer === 'catapult/rocks'));
+      .find(supply => supply.cards.some(card => getCardPileKey(card) === 'catapult/rocks'));
 
     if (!catapultRocksSupply) {
       console.info(`[empires configurator] no catapult/rocks pile in kingdom supply`);

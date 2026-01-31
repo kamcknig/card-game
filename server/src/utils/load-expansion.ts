@@ -3,10 +3,29 @@ import { scoringFunctionMap } from '@expansions/scoring-function-map.ts';
 import { expansionLibrary, rawCardLibrary } from '@expansions/expansion-library.ts';
 import { cardLifecycleMap } from '../core/card-lifecycle-map.ts';
 import { CardExpansionModule } from '../types.ts';
-import { CardNoId } from 'shared/shared-types.ts';
+import { CardCost, CardKey, CardNoId, CardType } from 'shared/shared-types.ts';
 import { cardActionConditionMapFactory } from '../core/actions/card-action-condition-map-factory.ts';
 import { createCardData } from './create-card-data.ts';
 import { loadEvents } from '../core/events/load-events.ts';
+
+// Randomizer pile definition for split piles in card libraries.
+type RandomizerPileDefinition = {
+  pile: {
+    randomizer?: string;
+    cost?: CardCost;
+    type?: CardType[];
+  };
+  cards: Array<Partial<CardNoId> & { cardKey: CardKey }>;
+};
+
+// Type guard for randomizer pile entries in card library JSON.
+const isRandomizerPileDefinition = (entry: unknown): entry is RandomizerPileDefinition => {
+  if (!entry || typeof entry !== 'object') {
+    return false;
+  }
+  const maybeEntry = entry as { pile?: unknown; cards?: unknown };
+  return Array.isArray(maybeEntry.cards) && !!maybeEntry.pile;
+};
 
 export const loadExpansion = async (expansion: { name: string; }) => {
   const expansionPath = `@expansions/${expansion.name}`;
@@ -54,10 +73,40 @@ export const loadExpansion = async (expansion: { name: string; }) => {
     console.info(`[expansion loader] loading card library for ${expansionName}`);
     
     const cardLibraryModule = await import(`${expansionPath}/card-library-${expansionName}.json`, { with: { type: 'json' } });
-    const cards = cardLibraryModule.default as Record<string, Partial<CardNoId>>;
+    const cards = cardLibraryModule.default as Record<string, Partial<CardNoId> | RandomizerPileDefinition>;
     
     for (const key of Object.keys(cards)) {
-      const newCardData = createCardData(key, expansionName, cards[key]);
+      const entry = cards[key];
+      if (isRandomizerPileDefinition(entry)) {
+        // Build cards from a randomizer pile entry with shared pile metadata.
+        const pileRandomizer = entry.pile.randomizer ?? key;
+        const randomizerData = {
+          randomizer: pileRandomizer,
+          cost: entry.pile.cost,
+          type: entry.pile.type,
+        };
+        console.debug(`[expansion loader] processing randomizer pile ${pileRandomizer} with ${entry.cards.length} cards`);
+        for (const cardEntry of entry.cards) {
+          const cardKey = cardEntry.cardKey;
+          if (!cardKey) {
+            console.warn(`[expansion loader] randomizer pile ${pileRandomizer} missing cardKey`);
+            continue;
+          }
+          // Apply pile-level randomizer metadata to each card in the pile.
+          const templateData = {
+            ...cardEntry,
+            randomizerData,
+            kingdom: cardEntry.kingdom ?? pileRandomizer,
+          };
+          const newCardData = createCardData(cardKey, expansionName, templateData);
+          const isBasic = newCardData.isBasic;
+          cardData[isBasic ? 'basicSupply' : 'kingdomSupply'][cardKey] = newCardData as any;
+          rawCardLibrary[cardKey] = newCardData as any;
+        }
+        continue;
+      }
+
+      const newCardData = createCardData(key as CardKey, expansionName, entry as Partial<CardNoId>);
       
       const isBasic = newCardData.isBasic;
       cardData[isBasic ? 'basicSupply' : 'kingdomSupply'][key] = newCardData as any;

@@ -49,6 +49,7 @@ import {CardPriceRulesController} from '../card-price-rules-controller.ts';
 import {CardSourceController} from '../card-source-controller.ts';
 import {getTurnPhase} from '../../utils/get-turn-phase.ts';
 import {fisherYatesShuffle} from '../../utils/fisher-yates-shuffler.ts';
+import {getCardPileKey} from '../../utils/get-card-pile-key.ts';
 import {tokenCardPlayedHandlerMap} from '../tokens/token-trigger-map.ts';
 import {tokenDefinitionMap} from '../tokens/token-definition-map.ts';
 
@@ -263,7 +264,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   // Applies any token bonuses for the player when a card is played from a tokened supply pile.
   private async applyTokenBonusesOnCardPlayed(playerId: PlayerId, cardId: CardId): Promise<void> {
     const card = this.cardLibrary.getCard(cardId);
-    const pileKey = card.randomizer ?? card.cardKey;
+    const pileKey = getCardPileKey(card);
     const tokenInstanceIds = Object.keys(this.match.tokens).sort();
     await this.logManager.withIndent(async () => {
       for (const tokenInstanceId of tokenInstanceIds) {
