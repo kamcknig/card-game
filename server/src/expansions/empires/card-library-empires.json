@@ -19,63 +19,6 @@
     "cardName": "Capital",
     "abilityText": "+1 Buy\n+6 Treasure\nWhen you discard this from play, +6 Debt"
   },
-  "charm": {
-    "cost": {
-      "treasure": 5
-    },
-    "type": [
-      "TREASURE"
-    ],
-    "abilityText": "Choose one: +1 Buy and +2 Treasure; or the next time you gain a card this turn, you may also gain a differently named card with the same cost."
-  },
-  "catapult/rocks": {
-    "pile": {
-      "randomizer": "catapult/rocks",
-      "cost": {
-        "treasure": 3
-      },
-      "type": [
-        "ACTION",
-        "ATTACK"
-      ]
-    },
-    "cards": [
-      {
-        "cardKey": "catapult",
-        "cost": {
-          "treasure": 3
-        },
-        "type": [
-          "ACTION",
-          "ATTACK"
-        ],
-        "cardName": "Catapult",
-        "abilityText": "+1 Treasure\nTrash a card from your hand. If it costs $3 or more, each other player gains a Curse. If it's a Treasure, each other player discards down to 3 cards in hand.",
-        "targetScheme": "ALL_OTHER"
-      },
-      {
-        "cardKey": "rocks",
-        "cost": {
-          "treasure": 4
-        },
-        "type": [
-          "TREASURE"
-        ],
-        "cardName": "Rocks",
-        "abilityText": "+1 Treasure\nWhen you gain or trash this: If it's your Buy phase, gain a Silver onto your deck, otherwise gain a Silver to your hand."
-      }
-    ]
-  },
-  "chariot-race": {
-    "cost": {
-      "treasure": 3
-    },
-    "type": [
-      "ACTION"
-    ],
-    "cardName": "Chariot Race",
-    "abilityText": "+1 Action\n+1 Card, revealing it. The player to your left reveals the top card of their deck. If your card costs more, +$1 and +1VP."
-  },
   "castles": {
     "pile": {
       "randomizer": "castles",
@@ -196,5 +139,72 @@
         "victoryPoints": 0
       }
     ]
+  },
+  "catapult/rocks": {
+    "pile": {
+      "randomizer": "catapult/rocks",
+      "cost": {
+        "treasure": 3
+      },
+      "type": [
+        "ACTION",
+        "ATTACK"
+      ]
+    },
+    "cards": [
+      {
+        "cardKey": "catapult",
+        "cost": {
+          "treasure": 3
+        },
+        "type": [
+          "ACTION",
+          "ATTACK"
+        ],
+        "cardName": "Catapult",
+        "abilityText": "+1 Treasure\nTrash a card from your hand. If it costs $3 or more, each other player gains a Curse. If it's a Treasure, each other player discards down to 3 cards in hand.",
+        "targetScheme": "ALL_OTHER"
+      },
+      {
+        "cardKey": "rocks",
+        "cost": {
+          "treasure": 4
+        },
+        "type": [
+          "TREASURE"
+        ],
+        "cardName": "Rocks",
+        "abilityText": "+1 Treasure\nWhen you gain or trash this: If it's your Buy phase, gain a Silver onto your deck, otherwise gain a Silver to your hand."
+      }
+    ]
+  },
+  "chariot-race": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": [
+      "ACTION"
+    ],
+    "cardName": "Chariot Race",
+    "abilityText": "+1 Action\n+1 Card, revealing it. The player to your left reveals the top card of their deck. If your card costs more, +$1 and +1VP."
+  },
+  "charm": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "TREASURE"
+    ],
+    "abilityText": "Choose one: +1 Buy and +2 Treasure; or the next time you gain a card this turn, you may also gain a differently named card with the same cost."
+  },
+  "crown": {
+    "type": [
+      "ACTION",
+      "TREASURE"
+    ],
+    "abilityText": "If it's your Action phase, you may play an Action from your hand twice.\nIf it's your Buy phase, you may play a Treasure from your hand twice.",
+    "cost": {
+      "treasure": 5
+    }
   }
 }
