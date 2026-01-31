@@ -9,15 +9,6 @@ import {getCurrentPlayer} from '../../utils/get-current-player.ts';
 import {getPileDefinitionCard} from '../../utils/get-pile-definition-card.ts';
 import {getCardPileKey} from '../../utils/get-card-pile-key.ts';
 
-// Determines the card that defines the pile's type by matching the pile randomizer.
-const getPileRandomizerCard = (
-  cards: CardNoId[],
-  pileName: string,
-): CardNoId | undefined => {
-  // Use shared pile definition logic to honor randomizer overrides.
-  return getPileDefinitionCard(cards, pileName);
-};
-
 const effectMap: CardExpansionModule = {
   'alms': {
     registerEffects: () => async (cardEffectArgs) => {
@@ -268,7 +259,7 @@ const effectMap: CardExpansionModule = {
       // Build the list of Action supply piles using the randomizer card types.
       const actionSupplyPiles = cardEffectArgs.match.config.kingdomSupply
         .map((supply) => {
-          const pileCard = getPileRandomizerCard(supply.cards, supply.name);
+          const pileCard = getPileDefinitionCard(supply.cards, supply.name);
           if (!pileCard?.type?.includes('ACTION')) return null;
           return getCardPileKey(pileCard);
         })
@@ -332,7 +323,7 @@ const effectMap: CardExpansionModule = {
       // Build the list of Action supply piles using the randomizer card types.
       const actionSupplyPiles = cardEffectArgs.match.config.kingdomSupply
         .map((supply) => {
-          const pileCard = getPileRandomizerCard(supply.cards, supply.name);
+          const pileCard = getPileDefinitionCard(supply.cards, supply.name);
           if (!pileCard?.type?.includes('ACTION')) return null;
           return getCardPileKey(pileCard);
         })
@@ -720,7 +711,7 @@ const effectMap: CardExpansionModule = {
       // Build the list of Action supply piles using the randomizer card types.
       const actionSupplyPiles = cardEffectArgs.match.config.kingdomSupply
         .map((supply) => {
-          const pileCard = getPileRandomizerCard(supply.cards, supply.name);
+          const pileCard = getPileDefinitionCard(supply.cards, supply.name);
           if (!pileCard?.type?.includes('ACTION')) return null;
           return getCardPileKey(pileCard);
         })
@@ -785,7 +776,7 @@ const effectMap: CardExpansionModule = {
       // Build the list of Action supply piles using the randomizer card types.
       const actionSupplyPiles = cardEffectArgs.match.config.kingdomSupply
         .map((supply) => {
-          const pileCard = getPileRandomizerCard(supply.cards, supply.name);
+          const pileCard = getPileDefinitionCard(supply.cards, supply.name);
           if (!pileCard?.type?.includes('ACTION')) return null;
           return getCardPileKey(pileCard);
         })
@@ -1336,7 +1327,7 @@ const effectMap: CardExpansionModule = {
       // Build the list of Action supply piles using the randomizer card types.
       const actionSupplyPiles = cardEffectArgs.match.config.kingdomSupply
         .map((supply) => {
-          const pileCard = getPileRandomizerCard(supply.cards, supply.name);
+          const pileCard = getPileDefinitionCard(supply.cards, supply.name);
           if (!pileCard?.type?.includes('ACTION')) return null;
           return getCardPileKey(pileCard);
         })

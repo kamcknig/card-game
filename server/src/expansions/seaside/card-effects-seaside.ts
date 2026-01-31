@@ -431,7 +431,7 @@ const expansion: CardExpansionModule = {
         triggeredEffectFn: async ({ reactionContext }) => {
           // Record immunity so downstream attacks skip this player.
           console.debug(`[LIGHTHOUSE REACTION] granting immunity to player ${args.playerId}`);
-          markPlayerImmune(reactionContext, args.playerId);
+          markPlayerImmune(args.playerId, reactionContext);
         }
       });
 

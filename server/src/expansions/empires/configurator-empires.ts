@@ -1,5 +1,5 @@
 import { CardKey } from 'shared/shared-types.ts';
-import { ExpansionConfiguratorFactory } from '../../types.ts';
+import {ExpansionConfiguratorContext, ExpansionConfiguratorFactory} from '../../types.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 
 // Canonical Castle pile order for 2-player games (bottom -> top).
@@ -44,6 +44,20 @@ const catapultRocksOrder: CardKey[] = [
   'catapult',
 ];
 
+// Canonical encampment/plunder split pile order (bottom -> top).
+const encampmentPlunderOrder: CardKey[] = [
+  'plunder',
+  'plunder',
+  'plunder',
+  'plunder',
+  'plunder',
+  'encampment',
+  'encampment',
+  'encampment',
+  'encampment',
+  'encampment',
+];
+
 const configurator: ExpansionConfiguratorFactory = () => {
   return async (args) => {
     // Locate the Castles split pile in the kingdom supply, if present.
@@ -82,7 +96,15 @@ const configurator: ExpansionConfiguratorFactory = () => {
       }
     }
 
-    // Locate the Catapult/Rocks split pile in the kingdom supply, if present.
+    configureCatapultRockPile(args);
+    configureEncampmentPlunderPile(args);
+
+    return args.config;
+  };
+};
+
+const configureCatapultRockPile = (args: ExpansionConfiguratorContext) => {
+  // Locate the Catapult/Rocks split pile in the kingdom supply, if present.
     const catapultRocksSupply = args.config.kingdomSupply
       .find(supply => supply.cards.some(card => getCardPileKey(card) === 'catapult/rocks'));
 
@@ -113,10 +135,41 @@ const configurator: ExpansionConfiguratorFactory = () => {
     catapultRocksSupply.cards = nextCatapultRocksCards;
 
     console.log(`[empires configurator] configured catapult/rocks split pile`);
+}
 
-    return args.config;
-  };
-};
+const configureEncampmentPlunderPile = (args: ExpansionConfiguratorContext) => {
+  // Locate the encampment/plunder split pile in the kingdom supply, if present.
+    const encampmentPlunderSupply = args.config.kingdomSupply
+      .find(supply => supply.cards.some(card => getCardPileKey(card) === 'encampment/plunder'));
+
+    if (!encampmentPlunderSupply) {
+      console.info(`[empires configurator] no encampment/plunder pile in kingdom supply`);
+      return args.config;
+    }
+
+    const currentEncampmentPlunderOrder = encampmentPlunderSupply.cards.map(card => card.cardKey);
+    const encampmentPlunderMatches = currentEncampmentPlunderOrder.length === encampmentPlunderOrder.length
+      && currentEncampmentPlunderOrder.every((key, index) => key === encampmentPlunderOrder[index]);
+
+    if (encampmentPlunderMatches) {
+      console.info(`[empires configurator] encampment/plunder pile already configured`);
+      return args.config;
+    }
+
+    // Replace the pile with the canonical Catapult/Rocks ordering.
+    const nextEncampmentPlunderCards = [];
+    for (const cardKey of encampmentPlunderOrder) {
+      const cardTemplate = args.cardLibrary[cardKey];
+      if (!cardTemplate) {
+        console.warn(`[empires configurator] missing card template for ${cardKey}`);
+        continue;
+      }
+      nextEncampmentPlunderCards.push(structuredClone(cardTemplate));
+    }
+    encampmentPlunderSupply.cards = nextEncampmentPlunderCards;
+
+    console.log(`[empires configurator] configured encampment/plunder split pile`);
+}
 
 // Ensure victory tokens contribute to score in Empires games.
 export default configurator;

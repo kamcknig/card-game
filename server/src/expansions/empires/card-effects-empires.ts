@@ -7,6 +7,7 @@ import { getCardsInPlay } from "../../utils/get-cards-in-play.ts";
 import { getCurrentPlayer } from "../../utils/get-current-player.ts";
 import { getTurnPhase } from "../../utils/get-turn-phase.ts";
 import { isPlayerImmune } from "../../utils/reaction-immunity.ts";
+import { getPileDefinitionCard } from "../../utils/get-pile-definition-card.ts";
 
 type ArchiveEffectContext = Pick<
   CardEffectFunctionContext,
@@ -743,9 +744,12 @@ const expansion: CardExpansionModule = {
       if (isBuyPhase) {
         console.debug(`[crown effect] player ${args.playerId} is in buy phase`);
 
-        const treasureInHand = args.cardSourceController.getSource('playerHand', args.playerId);
+        const treasureInHand = args.cardSourceController.getSource(
+          "playerHand",
+          args.playerId,
+        );
 
-          if (treasureInHand.length) {
+        if (treasureInHand.length) {
           const selectedCardIds = await args.runGameActionDelegate(
             "selectCard",
             {
@@ -764,7 +768,7 @@ const expansion: CardExpansionModule = {
             );
           } else {
             for (let i = 0; i < 2; i++) {
-              await args.runGameActionDelegate('playCard', {
+              await args.runGameActionDelegate("playCard", {
                 cardId: selectedCardIds[0],
                 playerId: args.playerId,
                 overrides: {
@@ -798,6 +802,92 @@ const expansion: CardExpansionModule = {
         await resolveCrumblingCastleBonus(args, eventArgs.playerId);
       },
     }),
+  },
+  "encampment": {
+    registerEffects: () => async (args) => {
+      console.debug(`[encampment effect] gaining 2 treasure`);
+      await args.runGameActionDelegate("drawCard", {
+        playerId: args.playerId,
+        count: 2,
+      });
+
+      console.debug(`[encampment effect] gaining 2 actions`);
+      await args.runGameActionDelegate("gainAction", { count: 2 });
+
+      const validCards = args.findCards([
+        { location: "playerHand", playerId: args.playerId },
+        { cardKeys: ["gold", "plunder"] },
+      ]);
+
+      const doSetAside = async () => {
+        const thisCard = args.cardLibrary.getCard(args.cardId);
+        const thisId = thisCard.id;
+        await args.runGameActionDelegate("moveCard", {
+          toPlayerId: args.playerId,
+          cardId: thisId,
+          to: { location: "set-aside" },
+        });
+
+        args.reactionManager.registerReactionTemplate(
+          thisCard,
+          "startTurnPhase",
+          {
+            playerId: args.playerId,
+            once: true,
+            allowMultipleInstances: false,
+            compulsory: true,
+            condition: async (conditionArgs) => {
+              return getTurnPhase(conditionArgs.trigger.args.phaseIndex) ===
+                "cleanup";
+            },
+            triggeredEffectFn: async () => {
+              console.debug(
+                `[encampment startTurnPhase effect] moving back to pile`,
+              );
+
+              const pile = getPileDefinitionCard(
+                [thisCard],
+                "encampment/plunder",
+              );
+
+              if (!pile) {
+                console.debug(
+                  `[encampment startTurnPhase effect] pile not in kingdom`,
+                );
+                return;
+              }
+
+              await args.runGameActionDelegate("moveCard", {
+                cardId: thisId,
+                to: { location: "kingdomSupply" },
+              });
+            },
+          },
+        );
+      };
+
+      if (!validCards.length) {
+        console.debug(`[encampment effect] no valid cards in hand`);
+        await doSetAside();
+        return;
+      }
+
+      const selectedCardIds = await args.runGameActionDelegate("selectCard", {
+        playerId: args.playerId,
+        prompt: `Select Gold or Plunder to reveal?`,
+        restrict: validCards.map((c) => c.id),
+        count: 1,
+        optional: true,
+        autoSelect: false,
+        cancelPrompt: "NO",
+      }) as CardId[];
+
+      if (!selectedCardIds.length) {
+        console.debug(`[encampment effect] no card selected`);
+        await doSetAside();
+        return;
+      }
+    },
   },
   "rocks": {
     registerEffects: () => async ({ runGameActionDelegate }) => {
@@ -1006,6 +1096,18 @@ const expansion: CardExpansionModule = {
       const treasureGain = selectedIds.length * 2;
       console.debug(`[opulent castle effect] gaining ${treasureGain} treasure`);
       await args.runGameActionDelegate("gainTreasure", { count: treasureGain });
+    },
+  },
+  "plunder": {
+    registerEffects: () => async (args) => {
+      console.debug(`[plunder effect] gaining 2 treasure`);
+      await args.runGameActionDelegate("gainTreasure", { count: 2 });
+
+      console.debug(`[plunder effect] gaining 1 victory token`);
+      await args.runGameActionDelegate("gainVictoryToken", {
+        playerId: args.playerId,
+        count: 1,
+      });
     },
   },
   "small-castle": {

@@ -1,32 +1,25 @@
-import {Card, CardId, CardKey, CardNoId, CountSpec,} from "shared/shared-types";
+import { Card, CardId, CardKey, CountSpec } from "shared/shared-types";
 import {
   CardEffectFunctionContext,
   CardExpansionModule,
   CardLifecycleCallbackContext,
   CardLifecycleEventArgMap,
 } from "../../types.ts";
-import { isPlayerImmune, markPlayerImmune } from '../../utils/reaction-immunity.ts';
-import {findOrderedTargets} from "../../utils/find-ordered-targets.ts";
-import {isLocationInPlay} from "../../utils/is-in-play.ts";
-import {getPlayerStartingFrom} from "shared/get-player-position-utils.ts";
-import {getCardsInPlay} from "../../utils/get-cards-in-play.ts";
-import {getTurnPhase} from "../../utils/get-turn-phase.ts";
-import {adventuresTokenIds} from "./token-ids-adventures.ts";
-import {tokenDefinitionMap} from "../../core/tokens/token-definition-map.ts";
-import {getCurrentPlayer} from "../../utils/get-current-player.ts";
-import {CardPriceRule} from "../../core/card-price-rules-controller.ts";
-import {getPileDefinitionCard} from "../../utils/get-pile-definition-card.ts";
-import {getCardPileKey} from "../../utils/get-card-pile-key.ts";
-
-// Determines the card that defines the pile's type by matching the pile randomizer.
-// todo: the randomizer card needs to be part of a card's definition or in the library creation and game/match creation.
-const getPileRandomizerCard = (
-  cards: CardNoId[],
-  pileName: string,
-): CardNoId | undefined => {
-  // Use shared pile definition logic to honor randomizer overrides.
-  return getPileDefinitionCard(cards, pileName);
-};
+import {
+  isPlayerImmune,
+  markPlayerImmune,
+} from "../../utils/reaction-immunity.ts";
+import { findOrderedTargets } from "../../utils/find-ordered-targets.ts";
+import { isLocationInPlay } from "../../utils/is-in-play.ts";
+import { getPlayerStartingFrom } from "shared/get-player-position-utils.ts";
+import { getCardsInPlay } from "../../utils/get-cards-in-play.ts";
+import { getTurnPhase } from "../../utils/get-turn-phase.ts";
+import { adventuresTokenIds } from "./token-ids-adventures.ts";
+import { tokenDefinitionMap } from "../../core/tokens/token-definition-map.ts";
+import { getCurrentPlayer } from "../../utils/get-current-player.ts";
+import { CardPriceRule } from "../../core/card-price-rules-controller.ts";
+import { getPileDefinitionCard } from "../../utils/get-pile-definition-card.ts";
+import { getCardPileKey } from "../../utils/get-card-pile-key.ts";
 
 const addTravellerEffect = async (
   card: Card,
@@ -90,9 +83,12 @@ const addTravellerEffect = async (
 
 // Applies Bridge Troll's cost reduction for a single turn for the owning player.
 const applyBridgeTrollCostReduction = (
-  context: Pick<CardEffectFunctionContext, "cardLibrary" | "cardPriceController" | "match">,
+  context: Pick<
+    CardEffectFunctionContext,
+    "cardLibrary" | "cardPriceController" | "match"
+  >,
   ownerId: number,
-): (() => void) => {
+): () => void => {
   const allCards = context.cardLibrary.getAllCardsAsArray();
   const ruleCleanups: (() => void)[] = [];
   for (const card of allCards) {
@@ -208,7 +204,6 @@ const expansion: CardExpansionModule = {
             return false;
           }
           return conditionArgs.trigger.args.turnNumber !== turnPlayed;
-
         },
         triggeredEffectFn: async (triggeredArgs) => {
           console.debug(`[amulet startTurn effect] re-running decision fn`);
@@ -324,7 +319,9 @@ const expansion: CardExpansionModule = {
       console.debug(`[bridge-troll effect] gaining 1 buy`);
       await cardEffectArgs.runGameActionDelegate("gainBuy", { count: 1 });
 
-      console.debug(`[bridge-troll effect] applying cost reduction for this turn`);
+      console.debug(
+        `[bridge-troll effect] applying cost reduction for this turn`,
+      );
       const cleanupCurrentTurnRules = applyBridgeTrollCostReduction(
         cardEffectArgs,
         cardEffectArgs.playerId,
@@ -385,7 +382,6 @@ const expansion: CardExpansionModule = {
             return false;
           }
           return conditionArgs.trigger.args.turnNumber !== turnPlayed;
-
         },
         triggeredEffectFn: async (triggeredArgs) => {
           // Move the duration card back to play and apply the next-turn bonuses.
@@ -479,7 +475,6 @@ const expansion: CardExpansionModule = {
               conditionArgs.trigger.args.cardId,
             );
             return cardPlayed.type.includes("ATTACK");
-
           },
           triggeredEffectFn: async (triggeredArgs) => {
             console.debug(
@@ -516,7 +511,6 @@ const expansion: CardExpansionModule = {
             return false;
           }
           return conditionArgs.trigger.args.turnNumber !== turnPlayed;
-
         },
         triggeredEffectFn: async (triggeredArgs) => {
           await triggeredArgs.runGameActionDelegate("moveCard", {
@@ -561,15 +555,15 @@ const expansion: CardExpansionModule = {
               conditionArgs.trigger.args.cardId,
             );
             if (!playedCard.type.includes("ATTACK")) return false;
-            return conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId;
-
+            return conditionArgs.trigger.args.playerId !==
+              cardEffectArgs.playerId;
           },
           triggeredEffectFn: async ({ reactionContext }) => {
             console.debug(
               `[champion cardPlayed effect] attack played, gaining immunity`,
             );
             // Record immunity so downstream attacks skip this player.
-            markPlayerImmune(reactionContext, cardEffectArgs.playerId);
+            markPlayerImmune(cardEffectArgs.playerId, reactionContext);
           },
         },
         {
@@ -584,8 +578,8 @@ const expansion: CardExpansionModule = {
               conditionArgs.trigger.args.cardId,
             );
             if (!playedCard.type.includes("ACTION")) return false;
-            return conditionArgs.trigger.args.playerId === cardEffectArgs.playerId;
-
+            return conditionArgs.trigger.args.playerId ===
+              cardEffectArgs.playerId;
           },
           triggeredEffectFn: async (triggeredArgs) => {
             console.debug(
@@ -632,7 +626,6 @@ const expansion: CardExpansionModule = {
               conditionArgs.trigger.args.cardId,
             );
             return cardPlayed.type.includes("ACTION");
-
           },
           triggeredEffectFn: async (triggeredArgs) => {
             console.debug(
@@ -822,8 +815,8 @@ const expansion: CardExpansionModule = {
           if (conditionArgs.trigger.args.turnNumber === turnPlayed) {
             return false;
           }
-          return conditionArgs.trigger.args.playerId === cardEffectArgs.playerId;
-
+          return conditionArgs.trigger.args.playerId ===
+            cardEffectArgs.playerId;
         },
         triggeredEffectFn: async (triggeredArgs) => {
           console.debug(`[dungeon startTurn effect] running`);
@@ -870,7 +863,6 @@ const expansion: CardExpansionModule = {
               { playerId: cardEffectArgs.playerId },
             );
             return !(cost.treasure <= 6 && (!cost.potion || cost.potion <= 0));
-
           },
           triggeredEffectFn: async (triggeredArgs) => {
             console.debug(
@@ -1023,7 +1015,6 @@ const expansion: CardExpansionModule = {
             return false;
           }
           return conditionArgs.trigger.args.turnNumber !== turnPlayed;
-
         },
         triggeredEffectFn: async (triggeredArgs) => {
           console.debug(
@@ -1125,7 +1116,7 @@ const expansion: CardExpansionModule = {
             to: { location: "playerDiscard" },
           });
           return true;
-        }
+        };
 
         if (deck.length === 0) {
           // Still empty: target gains a Curse.
@@ -1201,8 +1192,8 @@ const expansion: CardExpansionModule = {
           compulsory: false,
           allowMultipleInstances: true,
           condition: async (conditionArgs) => {
-            return conditionArgs.trigger.args.playerId === cardEffectArgs.playerId;
-
+            return conditionArgs.trigger.args.playerId ===
+              cardEffectArgs.playerId;
           },
           triggeredEffectFn: async (triggeredArgs) => {
             console.debug(
@@ -1311,7 +1302,6 @@ const expansion: CardExpansionModule = {
             return false;
           }
           return conditionArgs.trigger.args.bought;
-
         },
         triggeredEffectFn: async (triggeredArgs) => {
           const triggeringPlayerId = triggeredArgs.trigger.args.playerId;
@@ -1371,7 +1361,6 @@ const expansion: CardExpansionModule = {
             return false;
           }
           return conditionArgs.trigger.args.turnNumber !== turnPlayed;
-
         },
         triggeredEffectFn: async (triggeredArgs) => {
           await triggeredArgs.runGameActionDelegate("moveCard", {
@@ -1463,8 +1452,8 @@ const expansion: CardExpansionModule = {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
-          return conditionArgs.trigger.args.turnNumber !== conditionArgs.match.turnNumber;
-
+          return conditionArgs.trigger.args.turnNumber !==
+            conditionArgs.match.turnNumber;
         },
         triggeredEffectFn: async (triggeredArgs) => {
           console.debug(`[hireling startTurn effect] drawing 1 card`);
@@ -1946,8 +1935,8 @@ const expansion: CardExpansionModule = {
           allowMultipleInstances: true,
           playerId: cardEffectArgs.playerId,
           condition: async (conditionArgs) => {
-            return conditionArgs.trigger.args.playerId === cardEffectArgs.playerId;
-
+            return conditionArgs.trigger.args.playerId ===
+              cardEffectArgs.playerId;
           },
           triggeredEffectFn: async (triggeredArgs) => {
             console.debug(
@@ -2038,7 +2027,6 @@ const expansion: CardExpansionModule = {
             if (!cardPlayed.type.includes("ACTION")) return false;
             // Only allow calling if the Action is still in play.
             return getCardsInPlay(conditionArgs.findCards).includes(cardPlayed);
-
           },
           triggeredEffectFn: async (triggeredArgs) => {
             const cardToPlay = triggeredArgs.cardLibrary.getCard(
@@ -2164,7 +2152,8 @@ const expansion: CardExpansionModule = {
           "playerHand",
           playerId,
         );
-        return !isPlayerImmune(cardEffectArgs.reactionContext, playerId) && hand.length >= 4;
+        return !isPlayerImmune(cardEffectArgs.reactionContext, playerId) &&
+          hand.length >= 4;
       });
 
       for (const targetPlayerId of targetPlayerIds) {
@@ -2312,8 +2301,8 @@ const expansion: CardExpansionModule = {
             conditionArgs.trigger.args.turnNumber ===
               conditionArgs.match.turnNumber
           ) return false;
-          return conditionArgs.trigger.args.playerId === cardEffectArgs.playerId;
-
+          return conditionArgs.trigger.args.playerId ===
+            cardEffectArgs.playerId;
         },
         triggeredEffectFn: async (triggeredArgs) => {
           await triggeredArgs.runGameActionDelegate("moveCard", {
@@ -2355,7 +2344,6 @@ const expansion: CardExpansionModule = {
               return false;
             }
             return conditionArgs.trigger.args.bought;
-
           },
           triggeredEffectFn: async (triggeredArgs) => {
             const curseCards = triggeredArgs.findCards([
@@ -2450,12 +2438,14 @@ const expansion: CardExpansionModule = {
             }
 
             const allTokens = Object.values(triggeredEffectArgs.match.tokens);
-            const ownedTokens = allTokens.filter((t) => t.ownerId === triggeredEffectArgs.trigger.args.playerId);
+            const ownedTokens = allTokens.filter((t) =>
+              t.ownerId === triggeredEffectArgs.trigger.args.playerId
+            );
 
             const actionSupplyPiles = triggeredEffectArgs.match.config
               .kingdomSupply
               .map((supply) => {
-                const pileCard = getPileRandomizerCard(
+                const pileCard = getPileDefinitionCard(
                   supply.cards,
                   supply.name,
                 );
@@ -2533,8 +2523,8 @@ const expansion: CardExpansionModule = {
           allowMultipleInstances: true,
           compulsory: false,
           condition: async (conditionArgs) => {
-            return conditionArgs.trigger.args.playerId === cardEffectArgs.playerId;
-
+            return conditionArgs.trigger.args.playerId ===
+              cardEffectArgs.playerId;
           },
           triggeredEffectFn: async (triggeredArgs) => {
             console.debug(
@@ -2774,7 +2764,9 @@ const expansion: CardExpansionModule = {
             });
 
             if (deck.length === 0) {
-              console.debug(`[warrior effect] still empty, no cards to look at`);
+              console.debug(
+                `[warrior effect] still empty, no cards to look at`,
+              );
               break;
             }
           }
@@ -2844,7 +2836,6 @@ const expansion: CardExpansionModule = {
               conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId
             ) return false;
             return conditionArgs.match.playerTreasure >= 2;
-
           },
           triggeredEffectFn: async (triggeredArgs) => {
             console.debug(

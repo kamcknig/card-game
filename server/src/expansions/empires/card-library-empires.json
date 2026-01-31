@@ -206,5 +206,32 @@
     "cost": {
       "treasure": 5
     }
+  },
+  "encampment/plunder": {
+    "pile": {
+
+    },
+    "cards": [
+      {
+        "cardKey": "encampment",
+        "cost": {
+          "treasure": 2
+        },
+        "abilityText": "+2 Cards\n+2 Actions\nYou may reveal a Gold or Plunder from your hand. If you do not, set this aside, and return it to its pile at the start of Clean-up.",
+        "type": [
+          "ACTION"
+        ]
+      },
+      {
+        "cardKey": "plunder",
+        "cost": {
+          "treasure": 5
+        },
+        "abilityText": "$2\n+1VP",
+        "type": [
+          "TREASURE"
+        ]
+      }
+    ]
   }
 }
