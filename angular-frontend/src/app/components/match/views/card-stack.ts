@@ -134,7 +134,7 @@ export class CardStackView extends Container {
 
     this.on('pointerdown', (event) => {
       if (event.ctrlKey) {
-        console.log(this._$cardIds.get().map(cId => cardStore.get()[cId]));
+        console.debug(this._$cardIds.get().map(cId => cardStore.get()[cId]));
       }
     });
   }

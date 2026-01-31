@@ -14,7 +14,7 @@ export const createNewPlayer = (sessionId: string, socket: AppSocket) => {
     socketId: socket.id,
     isComputer: false,
   } as Player);
-  console.debug(`[createNewPlayer] new player created ${p}`);
+  console.info(`[createNewPlayer] new player created ${p}`);
   return p;
 }
 
@@ -30,6 +30,6 @@ export const createComputerPlayer = () => {
     socketId: '',
     isComputer: true,
   } as Player);
-  console.debug(`[createNewPlayer] new computer player created ${p}`);
+  console.info(`[createNewPlayer] new computer player created ${p}`);
   return p;
 }

@@ -83,7 +83,7 @@ export class PileView extends Container {
 
     this.on('pointerdown', (event) => {
       if (event.ctrlKey) {
-        console.log(this._cards);
+        console.debug(this._cards);
       }
     });
 

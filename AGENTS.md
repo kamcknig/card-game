@@ -130,9 +130,9 @@ sure to add detailed logs.
 The following log levels are used for debugging-related information. They
 are ordered from least to most verbose.
 
-- `log`
-- `info`
-- `debug`
+- `log` - high level information what the program is doing
+- `info` - why the program is doing things
+- `debug` - low level details including state at each step
 
 Warn and error should also be used when appropriate.
 

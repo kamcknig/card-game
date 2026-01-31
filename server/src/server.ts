@@ -41,7 +41,7 @@ io.on('connection', (socket) => {
 
   const sessionId = socket.handshake.query.get('sessionId');
 
-  console.log(
+  console.info(
     `[SERVER] connection from ${socket.handshake.address} - session ID ${sessionId}`,
   );
 
@@ -122,7 +122,7 @@ addEventListener('SIGINT', () => {
   })).default;
 
   for (const expansion of expansionList) {
-    console.log(`[SERVER] loading expansion card data for ${expansion.title}`);
+    console.info(`[SERVER] loading expansion card data for ${expansion.title}`);
     await loadExpansion(expansion).then(() => game.expansionLoaded(expansion));
   }
 })();

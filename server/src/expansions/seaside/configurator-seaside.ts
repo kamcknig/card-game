@@ -7,7 +7,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
       const matsAdded: string[] = [];
       for (const card of supply.cards) {
         if (card.mat && !matsAdded.includes(card.mat)) {
-          console.debug(`[seaside configurator] adding ${card.mat} for ${args.cardLibrary[card.cardKey]} to config`);
+          console.info(`[seaside configurator] adding ${card.mat} for ${args.cardLibrary[card.cardKey]} to config`);
           addMatToMatchConfig(card.mat, args.config, args);
           matsAdded.push(card.mat);
         }

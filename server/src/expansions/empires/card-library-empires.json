@@ -13,5 +13,83 @@
     "type": ["TREASURE"],
     "cardName": "Capital",
     "abilityText": "+1 Buy\n+6 Treasure\nWhen you discard this from play, +6 Debt"
+  },
+  "kings-castle": {
+    "cardName": "King's Castle",
+    "cost": {
+      "treasure": 10
+    },
+    "type": ["VICTORY", "CASTLE"],
+    "randomizer": "castles",
+    "abilityText": "Worth 2VP per Castle you have."
+  },
+  "grand-castle": {
+    "cardName": "Grand Castle",
+    "cost": {
+      "treasure": 9
+    },
+    "type": ["VICTORY", "CASTLE"],
+    "randomizer": "castles",
+    "victoryPoints": 5,
+    "abilityText": "5VP\nWhen you gain this, reveal your hand. +1VP per Victory card in your hand and/or in play."
+  },
+  "sprawling-castle": {
+    "cardName": "Sprawling Castle",
+    "cost": {
+      "treasure": 8
+    },
+    "type": ["VICTORY", "CASTLE"],
+    "randomizer": "castles",
+    "victoryPoints": 4,
+    "abilityText": "4VP\nWhen you gain this, gain a Duchy or 3 Estates."
+  },
+  "opulent-castle": {
+    "cardName": "Opulent Castle",
+    "cost": {
+      "treasure": 7
+    },
+    "type": ["ACTION", "VICTORY", "CASTLE"],
+    "randomizer": "castles",
+    "victoryPoints": 3,
+    "abilityText": "Discard any number of Victory cards, revealed. +$2 per card discarded.\n3VP"
+  },
+  "haunted-castle": {
+    "cardName": "Haunted Castle",
+    "cost": {
+      "treasure": 6
+    },
+    "type": ["VICTORY", "CASTLE"],
+    "randomizer": "castles",
+    "victoryPoints": 2,
+    "abilityText": "2VP\nWhen you gain this during your turn, gain a Gold, and each other player with 5 or more cards in hand puts 2 of them onto their deck."
+  },
+  "small-castle": {
+    "cardName": "Small Castle",
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "VICTORY", "CASTLE"],
+    "randomizer": "castles",
+    "victoryPoints": 2,
+    "abilityText": "Trash this or a Castle from your hand. If you do, gain a Castle.\n2VP"
+  },
+  "crumbling-castle": {
+    "cardName": "Crumbling Castle",
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["VICTORY", "CASTLE"],
+    "randomizer": "castles",
+    "victoryPoints": 1,
+    "abilityText": "1VP\nWhen you gain or trash this, +1VP and gain a Silver."
+  },
+  "humble-castle": {
+    "cardName": "Humble Castle",
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["TREASURE", "VICTORY", "CASTLE"],
+    "randomizer": "castles",
+    "abilityText": "$1\nWorth 1VP per Castle you have"
   }
 }

@@ -11,7 +11,7 @@ export const configureYoungWitch = (args: ExpansionConfiguratorContext) => {
     return;
   }
   
-  console.debug(`[cornucopia configurator - configuring young-witch] young witch present in supply`);
+  console.info(`[cornucopia configurator - configuring young-witch] young witch present in supply`);
   
   const availableKingdoms = args.config.expansions.reduce((acc, nextExpansion) => {
     const exp = expansionLibrary[nextExpansion.name];
@@ -34,13 +34,13 @@ export const configureYoungWitch = (args: ExpansionConfiguratorContext) => {
     .filter(key => !bannedKeys.includes(key) && !kingdomCardKeys.includes(key));
   
   if (!availableKeys.length) {
-    console.debug(`[cornucopia configurator - configuring young-witch] no available kingdoms, not adding new kingdom`);
+    console.info(`[cornucopia configurator - configuring young-witch] no available kingdoms, not adding new kingdom`);
     return;
   }
   
   const chosenKey = availableKeys[Math.floor(Math.random() * availableKeys.length)];
   
-  console.debug(`[cornucopia configurator - configuring young-witch] adding ${chosenKey} to kingdom as the "bane" card`);
+  console.info(`[cornucopia configurator - configuring young-witch] adding ${chosenKey} to kingdom as the "bane" card`);
   
   const chosenCard = structuredClone(expansionLibrary[availableKingdoms[chosenKey].expansionName].cardData.kingdomSupply[chosenKey]);
   chosenCard.tags = ['bane'];

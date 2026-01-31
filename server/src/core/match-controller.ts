@@ -283,7 +283,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._match.config = this._matchConfiguration;
     }
 
-    console.debug(`[match] ready, sending to clients and listening for when clients are ready`);
+    console.log(`[match] ready, sending to clients and listening for when clients are ready`);
 
     this.broadcastPatch(snapshot);
 
@@ -305,7 +305,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       if (!parsed?.match || !parsed?.cardLibrary) {
         throw new Error('match state file must include match and cardLibrary');
       }
-      console.debug(`[match] loaded match state override from ${matchStatePath}`);
+      console.info(`[match] loaded match state override from ${matchStatePath}`);
       return parsed;
     }
     catch (error) {
@@ -336,7 +336,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
 
   public playerReconnected(playerId: PlayerId, socket: AppSocket) {
-    console.debug(`[match] player ${playerId} reconnecting`);
+    console.info(`[match] player ${playerId} reconnecting`);
     this._socketMap.set(playerId, socket);
 
     this.broadcastPatch({} as Match, playerId);
@@ -351,7 +351,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }
 
     socket.on('clientReady', async (_playerId: number, _ready: boolean) => {
-      console.debug(`[match] ${getPlayerById(this._match, playerId)} marked ready`);
+      console.info(`[match] ${getPlayerById(this._match, playerId)} marked ready`);
       socket.emit('matchStarted');
       socket.off('clientReady');
 
@@ -373,7 +373,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
     // There should always be at least one entry after a single disconnect
     const leaving = roster.find((p) => p.id === playerId);
-    console.debug(`[match] ${leaving ?? `{id:${playerId}}`} has disconnected`);
+    console.info(`[match] ${leaving ?? `{id:${playerId}}`} has disconnected`);
 
     this._socketMap.get(playerId)?.offAnyIncoming();
     this._interactivityController?.playerRemoved(this._socketMap.get(playerId));
@@ -381,7 +381,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
 
   private createBaseSupply(config: ComputedMatchConfiguration) {
-    console.debug(`[match] creating base supply cards`);
+    console.info(`[match] creating base supply cards`);
     const cardSource = this._cardSourceController.getSource('basicSupply');
 
     if (!cardSource) {
@@ -402,7 +402,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
 
   private createKingdom(config: ComputedMatchConfiguration) {
-    console.debug(`[match] creating kingdom cards`);
+    console.info(`[match] creating kingdom cards`);
 
     const cardSource = this._cardSourceController.getSource('kingdomSupply');
 
@@ -424,7 +424,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
 
   private createNonSupplyCards(config: ComputedMatchConfiguration) {
-    console.debug(`[match] creating non-supply cards`);
+    console.info(`[match] creating non-supply cards`);
 
     const cardSource = this._cardSourceController.getSource('nonSupplyCards');
 
@@ -446,7 +446,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
 
   private createPlayerDecks(config: MatchConfiguration) {
-    console.debug(`[match] creating player decks`);
+    console.info(`[match] creating player decks`);
 
     return Object.values(config.players).forEach((player, idx) => {
       console.debug('initializing player', player.id, 'cards...');
@@ -615,7 +615,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       }
 
       if (await this.checkGameEnd()) {
-        console.debug(`[match] game ended`)
+        console.log(`[match] game ended`)
       }
 
       return result as Promise<GameActionReturnTypeMap[K]>;
@@ -629,7 +629,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const cardLibraryPatch = compare(this._cardLibSnapshot, this._cardLibrary.getAllCards());
 
     if (patch.length || cardLibraryPatch.length) {
-      console.debug(`[match] sending match update to clients`);
+    console.debug(`[match] sending match update to clients`);
 
       if (playerId) {
         this._socketMap.get(playerId)?.emit('patchUpdate', patch, cardLibraryPatch);
@@ -645,7 +645,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       player.id === playerId
     );
 
-    console.debug(`[match] received clientReady event from ${player}`);
+    console.info(`[match] received clientReady event from ${player}`);
 
     if (!player) {
       console.error(`[match] player not found`);
@@ -664,7 +664,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       return;
     }
 
-    console.debug('[match] all players ready');
+    console.log('[match] all players ready');
 
     for (const socket of this._socketMap.values()) {
       socket.off('clientReady', this.onClientReady);
@@ -674,7 +674,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   };
 
   private async startMatch() {
-    console.debug(`[match] starting match`);
+    console.log(`[match] starting match`);
 
     await this._reactionManager?.runGameLifecycleEvent('onGameStart', { match: this._match });
 
@@ -712,7 +712,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
 
   private calculateScores() {
-    console.debug(`[match] calculating scores`);
+    console.info(`[match] calculating scores`);
 
     const match = this._match;
 
@@ -739,6 +739,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           });
         }
       }
+      // Add victory tokens to the player's score.
+      score += match.playerVictoryTokens?.[playerId] ?? 0;
       match.scores[playerId] = score;
 
       for (const expansionScoringFn of this._expansionScoringFns) {
@@ -748,7 +750,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
 
   private async checkGameEnd() {
-    console.debug(`[match] checking if the game has ended`);
+    console.info(`[match] checking if the game has ended`);
 
     const match = this._match;
 
@@ -756,7 +758,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       { location: 'basicSupply' },
       { cardKeys: 'province' }
     ]).length === 0) {
-      console.debug(`[match] supply has no more provinces, game over`);
+      console.info(`[match] supply has no more provinces, game over`);
       await this.endGame();
       return true;
     }
@@ -770,7 +772,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     console.debug(`[match] empty pile count ${emptyPileCount}`);
 
     if (emptyPileCount === 3) {
-      console.debug(`[match] three supply piles are empty, game over`);
+      console.info(`[match] three supply piles are empty, game over`);
       await this.endGame();
       return true;
     }
@@ -785,7 +787,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         findCards: this._findCards
       });
       if (shouldEnd) {
-        console.debug('[match] expansion end-game condition met, game over');
+        console.info('[match] expansion end-game condition met, game over');
         await this.endGame();
         return true;
       }
@@ -795,7 +797,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
 
   private async endGame() {
-    console.debug(`[match] ending the game`);
+    console.log(`[match] ending the game`);
 
     this._reactionManager?.endGame();
     this._interactivityController?.endGame();
@@ -860,7 +862,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         }),
     };
 
-    console.debug(`[match] match summary created`);
+    console.info(`[match] match summary created`);
     console.debug(summary);
 
     this._socketMap.forEach((s) => s.emit('gameOver', summary));

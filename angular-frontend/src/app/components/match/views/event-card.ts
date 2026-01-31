@@ -99,7 +99,7 @@ export class EventCard extends CardLikeView {
   override onPointerdown(event: FederatedPointerEvent) {
     if (this._event) {
       if (event.ctrlKey) {
-        console.log(this._event);
+        console.debug(this._event);
         return;
       }
 

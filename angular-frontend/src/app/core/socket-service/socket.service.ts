@@ -40,7 +40,7 @@ export class SocketService {
     handler: ServerEmitEvents[K]
   ) {
       (this._socket as unknown as Socket).on(eventName as string, (...args: unknown[]) => {
-        console.log(`[socket service] received event ${eventName}`);
+        console.debug(`[socket service] received event ${eventName}`);
         // Cast for Angular compiler; ServerEmitEvents carries tuple types, but runtime args are untyped.
         (handler as (...handlerArgs: unknown[]) => void)(...args);
       });
@@ -61,12 +61,12 @@ export class SocketService {
 
   private onConnectError = (error: any) => {
     // todo show error screen
-    console.log('socket failed to connect');
+    console.warn('socket failed to connect');
     console.error(error);
   }
 
   private onDisconnect = () => {
-    console.log('socket disconnected');
+    console.info('socket disconnected');
   }
 
   public off<K extends keyof ServerEmitEvents>(

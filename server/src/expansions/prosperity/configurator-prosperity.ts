@@ -2,7 +2,6 @@ import {
   EndGameConditionRegistrar,
   ExpansionConfiguratorFactory,
   GameEventRegistrar,
-  PlayerScoreDecoratorRegistrar,
 } from '../../types.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
@@ -53,7 +52,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
       curseCard?.cards?.forEach(card => card.type.push('TREASURE'));
       
       args.cardEffectRegistrar('curse', 'prosperity', async (args) => {
-        console.debug(`[curse effect - prosperity] curse effect called`);
+        console.info(`[curse effect - prosperity] curse effect called`);
         await args.runGameActionDelegate('gainTreasure', { count: 1 });
       });
       
@@ -93,7 +92,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
       return;
     }
     
-    console.debug(`[prosperity onGameStart event] registering peddler game events`);
+    console.info(`[prosperity onGameStart event] registering peddler game events`);
     
     for (const cardId of peddlerCardIds) {
       for (const player of args.match.players) {
@@ -129,7 +128,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           triggeredEffectFn: async (triggerEffectArgs) => {
             const peddlerCard = triggerEffectArgs.cardLibrary.getCard(cardId);
             
-            console.debug(`[peddler triggered effect] adding pricing rule for ${peddlerCard}`);
+            console.info(`[peddler triggered effect] adding pricing rule for ${peddlerCard}`);
             
             const rule: CardPriceRule = (ruleCard, ruleContext) => {
               const cardsInPlay = getCardsInPlay(args.findCards);
@@ -148,11 +147,5 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     }
   });
 }
-
-export const registerScoringFunctions = (registrar: PlayerScoreDecoratorRegistrar) => {
-  registrar((playerId, match) => {
-    match.scores[playerId] += match.playerVictoryTokens?.[playerId] ?? 0;
-  });
-};
 
 export default configurator;

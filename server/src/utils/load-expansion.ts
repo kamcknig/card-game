@@ -12,7 +12,7 @@ export const loadExpansion = async (expansion: { name: string; }) => {
   const expansionPath = `@expansions/${expansion.name}`;
   const expansionName = expansion.name;
   if (expansionLibrary[expansionName]) {
-    console.log(`[expansion loader] expansion ${expansionName} already loaded`);
+    console.info(`[expansion loader] expansion ${expansionName} already loaded`);
     return;
   }
   
@@ -32,11 +32,11 @@ export const loadExpansion = async (expansion: { name: string; }) => {
   
   try {
     // loads the configuration file for the module if any
-    console.log(`[expansion loader] loading expansion configuration for ${expansionName}`);
+    console.info(`[expansion loader] loading expansion configuration for ${expansionName}`);
     
     const configModule = await import(`${expansionPath}/configuration-${expansionName}.json`, { with: { type: 'json' } });
     expansionConfiguration = configModule.default;
-    console.log(`[expansion loader] expansion configuration loaded`);
+    console.info(`[expansion loader] expansion configuration loaded`);
     
     const currValue = expansionLibrary[expansionName].title;
     expansionLibrary[expansionName].title = expansionConfiguration.title ? expansionConfiguration.title : currValue;
@@ -51,7 +51,7 @@ export const loadExpansion = async (expansion: { name: string; }) => {
   try {
     const cardData = expansionLibrary[expansionName].cardData;
     
-    console.log(`[expansion loader] loading card library for ${expansionName}`);
+    console.info(`[expansion loader] loading card library for ${expansionName}`);
     
     const cardLibraryModule = await import(`${expansionPath}/card-library-${expansionName}.json`, { with: { type: 'json' } });
     const cards = cardLibraryModule.default as Record<string, Partial<CardNoId>>;
@@ -64,9 +64,9 @@ export const loadExpansion = async (expansion: { name: string; }) => {
       rawCardLibrary[key] = newCardData as any;
     }
     
-    console.log('[expansion loader] card library loaded');
+    console.info('[expansion loader] card library loaded');
     
-    console.log(`[expansion loader] loading ${expansionName} card effects`);
+    console.info(`[expansion loader] loading ${expansionName} card effects`);
     
     const cardEffectsModule = await import(`${expansionPath}/card-effects-${expansionName}.ts`);
     const cardEffects = cardEffectsModule.default as CardExpansionModule;
@@ -98,7 +98,7 @@ export const loadExpansion = async (expansion: { name: string; }) => {
     delete expansionLibrary[expansionName];
   }
   
-  console.log(`[expansion loader] attempting to load events for ${expansionName}`);
+  console.info(`[expansion loader] attempting to load events for ${expansionName}`);
   await loadEvents(expansionName);
   console.log(`[expansion loader] finished loading events for ${expansionName}`);
 };

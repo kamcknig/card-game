@@ -77,7 +77,7 @@ export class Game {
     
     // Load preselected events from disk when available.
     try {
-      console.log(`[game] loading preselected kingdoms from disk`);
+      console.info(`[game] loading preselected kingdoms from disk`);
       const preselectedKingdoms = JSON.parse(Deno.readTextFileSync('./preselected-kingdoms.json')) as {
         name: string;
         cards: CardNoId[]
@@ -94,7 +94,7 @@ export class Game {
     }
     
     try {
-      console.log(`[game] loading preselected events from disk`);
+      console.info(`[game] loading preselected events from disk`);
 
       const preselectedEvents = JSON.parse(Deno.readTextFileSync('./preselected-events.json')) as EventNoId[];
 
@@ -123,7 +123,7 @@ export class Game {
   }
   
   private initializeFuseSearch() {
-    console.log(`[game] initializing fuse search`);
+    console.info(`[game] initializing fuse search`);
     
     if (this._fuse) {
       this._fuse.remove(() => true);
@@ -144,7 +144,7 @@ export class Game {
   
   // Builds the event search index from loaded expansion events.
   private initializeEventFuse() {
-    console.log(`[game] initializing event fuse search`);
+    console.info(`[game] initializing event fuse search`);
     
     if (this._eventFuse) {
       this._eventFuse.remove(() => true);
@@ -203,7 +203,7 @@ export class Game {
   
   public addPlayer(sessionId: string, socket: AppSocket) {
     if (this.players.length >= 6) {
-      console.debug(`[game] game has 6 players, rejecting`);
+      console.info(`[game] game has 6 players, rejecting`);
       socket.disconnect(true);
       return;
     }
@@ -211,13 +211,13 @@ export class Game {
     let player = this.players.find((p) => p.sessionId === sessionId);
     
     if (this.matchStarted && !player) {
-      console.debug(`[game] match has already started, and player not found in game, rejecting`,);
+      console.info(`[game] match has already started, and player not found in game, rejecting`,);
       socket.disconnect();
       return;
     }
     
     if (player) {
-      console.debug(`[game] ${player} already in match - assigning socket ID`);
+      console.info(`[game] ${player} already in match - assigning socket ID`);
       player.socketId = socket.id;
       player.sessionId = sessionId;
       player.connected = true;
@@ -236,7 +236,7 @@ export class Game {
     socket.emit('setPlayer', player);
     
     if (!this.owner || this.owner.isComputer) {
-      console.debug(`[game] game owner does not exist, setting to ${player}`);
+      console.info(`[game] game owner does not exist, setting to ${player}`);
       this.owner = player;
     }
     
@@ -255,10 +255,10 @@ export class Game {
     
     io.in('game').emit('gameOwnerUpdated', this.owner.id);
     
-    console.debug(`[game] ${player} added to game`);
+    console.log(`[game] ${player} added to game`);
     
     if (this.matchStarted) {
-      console.debug('[game] game already started');
+      console.info('[game] game already started');
       // Restore the current turn order for reconnecting clients.
       socket.emit('setPlayerList', this.players);
       // Remove any pending removal vote if the player reconnects.
@@ -272,7 +272,7 @@ export class Game {
       }
     }
     else {
-      console.debug(`[game] not yet started, sending player to match configuration`,);
+      console.info(`[game] not yet started, sending player to match configuration`,);
       socket.emit(
         'expansionList',
         this._availableExpansion.sort((a, b) => a.order - b.order),
@@ -290,7 +290,7 @@ export class Game {
   }
   
   private onPlayerDisconnected = (playerId: number, reason: string) => {
-    console.debug(`[game] ${playerId} disconnected - ${reason}`);
+    console.info(`[game] ${playerId} disconnected - ${reason}`);
     
     const player = this.players.find((player) => player.id === playerId);
     if (!player) {
@@ -304,7 +304,7 @@ export class Game {
     
     const hasConnectedHuman = this.players.some((p) => p.connected && !p.isComputer);
     if (!hasConnectedHuman && this._endMatchWhenNoHumans) {
-      console.debug('[game] no human players left in game, clearing game state completely',);
+      console.log('[game] no human players left in game, clearing game state completely',);
       this.clearMatch()
       return;
     }
@@ -342,7 +342,7 @@ export class Game {
   };
   
   private clearMatch = () => {
-    console.debug(`[game] clearing match`);
+    console.log(`[game] clearing match`);
     
     this._socketMap.forEach((socket) => {
       socket.offAnyIncoming();
@@ -357,7 +357,7 @@ export class Game {
   }
   
   private onMatchConfigurationUpdated = async (newConfig: MatchConfiguration) => {
-    console.debug(`[game] received expansionSelected socket event`);
+    console.info(`[game] received expansionSelected socket event`);
     console.debug(newConfig);
     
     const currentConfig = structuredClone(this._matchConfiguration ?? {}) as MatchConfiguration;
@@ -392,14 +392,14 @@ export class Game {
         continue;
       }
       
-      console.debug(`[game] '${expansion.name}' is mutually exclusive with ${configModule.mutuallyExclusiveExpansions}`,);
+      console.info(`[game] '${expansion.name}' is mutually exclusive with ${configModule.mutuallyExclusiveExpansions}`,);
       
       for (const exclusiveExpansion of configModule.mutuallyExclusiveExpansions) {
         // Compare by name because mutuallyExclusiveExpansions are string keys.
         const hasExclusiveExpansion = currentConfig.expansions
           .some(currentExpansion => currentExpansion.name === exclusiveExpansion);
         if (hasExclusiveExpansion && !expansionsToRemove.includes(exclusiveExpansion)) {
-          console.debug(`[game] removing expansion ${exclusiveExpansion} as it is not allowed with ${expansion}`,);
+          console.info(`[game] removing expansion ${exclusiveExpansion} as it is not allowed with ${expansion}`,);
           expansionsToRemove.push(exclusiveExpansion);
         }
       }
@@ -442,7 +442,7 @@ export class Game {
   };
   
   private onUpdatePlayerName = (playerId: number, name: string) => {
-    console.debug(
+    console.info(
       `[game] player ${playerId} request to update name to '${name}'`,
     );
     
@@ -450,10 +450,10 @@ export class Game {
     
     if (player) {
       player.name = name;
-      console.debug(`[game] ${player} name updated to '${name}'`);
+      console.info(`[game] ${player} name updated to '${name}'`);
     }
     else {
-      console.debug(`[game] player ${playerId} not found`);
+      console.info(`[game] player ${playerId} not found`);
     }
     
     io.in('game').emit('playerNameUpdated', playerId, name);
@@ -463,14 +463,14 @@ export class Game {
     const player = this.players.find((player) => player.id === playerId);
     
     if (!player) {
-      console.debug(`[game] received player ready event from ${playerId} but could not find Player object`,);
+      console.warn(`[game] received player ready event from ${playerId} but could not find Player object`,);
       return;
     }
     
-    console.debug(`[game] received ready event from ${player}`);
+    console.info(`[game] received ready event from ${player}`);
     
     player.ready = !player.ready;
-    console.debug(`[game] marking ${player} as ${player.ready}`);
+    console.info(`[game] marking ${player} as ${player.ready}`);
     io.in('game').except(player.socketId).emit('playerReady', playerId, player.ready);
     
     if (this.players.some((p) => !p.ready && p.connected)) {
@@ -506,7 +506,7 @@ export class Game {
   };
   
   private startMatch() {
-    console.debug(`[game] all connected players ready, proceeding to start match`);
+    console.log(`[game] all connected players ready, proceeding to start match`);
     
     this.matchStarted = true;
     

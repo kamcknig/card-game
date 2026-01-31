@@ -270,7 +270,7 @@ export class CardView extends CardLikeView {
 
   onPointerdown(event: FederatedPointerEvent): void {
     if (event.ctrlKey) {
-      console.log(this.card);
+      console.debug(this.card);
       return;
     }
 

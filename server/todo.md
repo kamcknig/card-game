@@ -28,7 +28,7 @@ it's not great.
 - mats need a way to define who can view what cards exist on it e.g., the tavern mat i think all cards are visible to
 all players, but native village and island mat cards  face down and can only be viewed by the player that owns the mat
 - prosperity has the card that changes curses into a treasure card type, and also gains the effect to gain 1 treasure on play. need a way to visually denote this properly. also similar to inheritance in adventures
-
+- missing card abilities [file](../missing-card-abilities.md)
 
 # Higher priority
 - when cards are in zones like set aside or a mat, they can be face up or

@@ -294,15 +294,15 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   }
 
   async gainPotion(args: { count: number }) {
-    console.debug(`[gainPotion action] gaining ${args.count} potions`);
+    console.info(`[gainPotion action] gaining ${args.count} potions`);
     this.match.playerPotions += args.count;
     this.match.playerPotions = Math.max(0, this.match.playerPotions);
 
-    console.debug(`[gainPotion action] setting player potions to ${this.match.playerPotions}`);
+    console.info(`[gainPotion action] setting player potions to ${this.match.playerPotions}`);
   }
 
   async gainBuy(args: { count: number }, context?: GameActionContext) {
-    console.debug(`[gainBuy action] gaining ${args.count} buys`);
+    console.info(`[gainBuy action] gaining ${args.count} buys`);
     this.match.playerBuys += args.count;
     this.match.playerBuys = Math.max(this.match.playerBuys, 0);
 
@@ -313,7 +313,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       source: context?.loggingContext?.source,
     });
 
-    console.debug(`[gainBuy action] setting player guys to ${this.match.playerBuys}`);
+    console.info(`[gainBuy action] setting player guys to ${this.match.playerBuys}`);
   }
 
   async placeToken(args: {
@@ -483,7 +483,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     }
 
   async gainAction(args: { count: number }, context?: GameActionContext) {
-    console.debug(`[gainAction action] gaining ${args.count} actions`);
+    console.info(`[gainAction action] gaining ${args.count} actions`);
 
     this.match.playerActions += args.count;
     this.match.playerActions = Math.max(0, this.match.playerActions);
@@ -495,7 +495,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       source: context?.loggingContext?.source,
     })
 
-    console.debug(`[gainAction action] setting player actions to ${args.count}`);
+    console.info(`[gainAction action] setting player actions to ${args.count}`);
   }
 
   async gainCard(args: {
@@ -523,7 +523,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
 
     card.owner = args.playerId;
 
-    console.debug(`[gainCard action] ${getPlayerById(this.match, args.playerId)} gained ${card}`);
+    console.info(`[gainCard action] ${getPlayerById(this.match, args.playerId)} gained ${card}`);
 
     this.logManager.addLogEntry({
       playerId: args.playerId,
@@ -720,7 +720,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     this.match.stats.trashedCardsByTurn[this.match.turnNumber] ??= [];
     this.match.stats.trashedCardsByTurn[this.match.turnNumber]!.push(cardId);
 
-    console.debug(`[trashCard action] trashed ${card}`);
+    console.info(`[trashCard action] trashed ${card}`);
 
     const trigger: ReactionTrigger = {
       eventType: 'cardTrashed',
@@ -1029,7 +1029,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
     const cardId = card.id;
 
-    console.debug(`[discardCard action] discarding ${card} from ${getPlayerById(this.match, args.playerId)}`);
+    console.info(`[discardCard action] discarding ${card} from ${getPlayerById(this.match, args.playerId)}`);
 
     const oldLocation = await this.moveCard({
       cardId,
@@ -1083,7 +1083,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
 
     const newPhase = getTurnPhase(match.turnPhaseIndex);
 
-    console.debug(`[nextPhase action] entering phase: ${newPhase} for turn ${match.turnNumber}`);
+    console.log(`[nextPhase action] entering phase: ${newPhase} for turn ${match.turnNumber}`);
 
     switch (newPhase) {
       case 'action': {
@@ -1112,7 +1112,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
 
         currentPlayer = getCurrentPlayer(match);
 
-        console.debug(`[nextPhase action] new round: ${match.roundNumber}, turn ${match.turnNumber} for ${currentPlayer}`);
+        console.info(`[nextPhase action] new round: ${match.roundNumber}, turn ${match.turnNumber} for ${currentPlayer}`);
 
         const startTurnTrigger = new ReactionTrigger('startTurn', {
           playerId: match.players[match.currentPlayerTurnIndex].id,
@@ -1157,7 +1157,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   }
 
   async endTurn() {
-    console.debug('[endTurn action] removing overrides');
+    console.info('[endTurn action] removing overrides');
 
     const trigger = new ReactionTrigger('endTurn', {
       playerId: getCurrentPlayer(this.match).id,
@@ -1179,7 +1179,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     await this.reactionManager.runTrigger({trigger});
     gainAmount = Math.max(0, trigger.args.count);
 
-    console.debug(`[gainTreasure action] gaining ${gainAmount} treasure`);
+    console.info(`[gainTreasure action] gaining ${gainAmount} treasure`);
     this.match.playerTreasure += gainAmount;
     this.match.playerTreasure = Math.max(0, this.match.playerTreasure);
 
@@ -1264,7 +1264,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     if (card.type.includes('ACTION') && args.overrides?.actionCost !== 0) {
       this.match.playerActions -= args.overrides?.actionCost ?? 1;
 
-      console.debug(`[playCard action] Reducing player's action count to ${this.match.playerActions}`);
+    console.info(`[playCard action] Reducing player's action count to ${this.match.playerActions}`);
     }
 
     this.match.stats.playedCardsByTurn[this.match.turnNumber] ??= [];
@@ -1275,7 +1275,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       playerId: playerId,
     };
 
-    console.debug(`[playCard action] ${getPlayerById(this.match, playerId)} played card ${card}`);
+    console.info(`[playCard action] ${getPlayerById(this.match, playerId)} played card ${card}`);
 
     this.logManager.addLogEntry({
       type: 'cardPlayed',

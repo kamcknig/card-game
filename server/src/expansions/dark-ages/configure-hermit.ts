@@ -11,7 +11,7 @@ export const configureHermit = async (args: ExpansionConfiguratorContext) => {
     return;
   }
   
-  console.debug(`[dark-ages configurator - configuring hermit] hermit needs to be configured`);
+  console.info(`[dark-ages configurator - configuring hermit] hermit needs to be configured`);
   
   const cardData = {
     ...structuredClone(expansionLibrary['dark-ages'].cardData.kingdomSupply['madman']) ?? {},
@@ -25,5 +25,5 @@ export const configureHermit = async (args: ExpansionConfiguratorContext) => {
     cards: new Array(10).fill({...cardData})
   } as Supply);
   
-  console.debug(`[dark-ages configurator - configuring hermit] ruins configured`);
+  console.info(`[dark-ages configurator - configuring hermit] ruins configured`);
 };

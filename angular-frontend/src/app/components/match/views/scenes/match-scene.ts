@@ -118,7 +118,7 @@ export class MatchScene extends Scene {
       await s?.play();
     } catch (error) {
       console.error('Could not play start turn sound');
-      console.log(error);
+      console.debug(error);
     }
   }
 

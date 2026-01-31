@@ -4,10 +4,10 @@ const configurator: ExpansionConfiguratorFactory = () => {
   let potionConfigured = false;
   
   return async (args) => {
-    console.debug(`configuring match for alchemy`);
+    console.info(`configuring match for alchemy`);
     
     if (potionConfigured) {
-      console.debug(`[alchemy match configurator] potion already configured`);
+      console.info(`[alchemy match configurator] potion already configured`);
       return args.config;
     }
     
@@ -25,7 +25,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
           continue;
         }
         
-        console.debug(`[alchemy match configurator] adding potion card because ${card.cardKey} has a potion cost`);
+        console.info(`[alchemy match configurator] adding potion card because ${card.cardKey} has a potion cost`);
         args.config.basicSupply.push({
           name: 'potion',
           cards: new Array(16).fill(args.cardLibrary['potion'])

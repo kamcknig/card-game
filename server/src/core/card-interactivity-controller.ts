@@ -49,7 +49,7 @@ export class CardInteractivityController {
   }
   
   public endGame() {
-    console.debug(`[card interactivity] removing socket listeners and marking ended`,);
+    console.log(`[card interactivity] removing socket listeners and marking ended`,);
     this._socketMap.forEach((s) => {
       s.off('cardTapped');
       s.off('cardLikeTapped');
@@ -167,7 +167,7 @@ export class CardInteractivityController {
   }
   
   private async onPlayAllTreasure(playerId: PlayerId) {
-    console.debug('[card interactivity] playing all treasures for current player');
+    console.info('[card interactivity] playing all treasures for current player');
     
     if (this._gameOver) {
       console.debug(`[card interactivity] game is over, not playing treasures`);
@@ -204,7 +204,7 @@ export class CardInteractivityController {
       throw new Error('could not find player');
     }
     
-    console.debug(`[card interactivity] ${player} tapped card-like ${cardId}`);
+    console.info(`[card interactivity] ${player} tapped card-like ${cardId}`);
     
     if (this._gameOver) {
       console.debug(`[card interactivity] game is over, not processing card-like tap`);
@@ -219,7 +219,7 @@ export class CardInteractivityController {
         console.debug(`[card interactivity] ${player} has debt, blocking card-like buy`);
         return;
       }
-      console.debug(`[card interactivity] ${player} tapped card-like ${cardId} in phase ${phase}, processing`);
+      console.info(`[card interactivity] ${player} tapped card-like ${cardId} in phase ${phase}, processing`);
       await this.runGameDelegate('buyCardLike', { playerId, cardLikeId: cardId });
     }
     else {
@@ -238,7 +238,7 @@ export class CardInteractivityController {
       throw new Error('could not find player');
     }
     
-    console.debug(`[card interactivity] pl${player} tapped card ${this._cardLibrary.getCard(cardId)}`);
+    console.info(`[card interactivity] pl${player} tapped card ${this._cardLibrary.getCard(cardId)}`);
     
     if (this._gameOver) {
       console.debug(`[card interactivity] game is over, not processing card tap`);

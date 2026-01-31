@@ -32,7 +32,7 @@ export const loadEvents = async (expansionName: string) => {
       }
       
       if (events[cardKey].registerEffects) {
-        console.debug(`[load-events] registering event effects for ${cardKey}`);
+        console.info(`[load-events] registering event effects for ${cardKey}`);
         eventEffectFactoryMap[cardKey] = events[cardKey].registerEffects;
       }
     }
