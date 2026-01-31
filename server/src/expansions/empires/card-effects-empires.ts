@@ -1,5 +1,6 @@
 import { CardExpansionModule, CardEffectFunctionContext } from '../../types.ts';
 import { CardId, CardKey, PlayerId } from 'shared/shared-types';
+import { compareCardCosts } from 'shared/compare-card-cost.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
@@ -90,6 +91,7 @@ const resolveRocksSilverGain = async (
     logTag: `rocks ${args.source}`,
   });
 };
+
 
 const expansion: CardExpansionModule = {
   'archive': {
@@ -308,6 +310,91 @@ const expansion: CardExpansionModule = {
           });
         }
       }
+    },
+  },
+  'chariot-race': {
+    registerEffects: () => async (args) => {
+      // Pull commonly used effect context fields.
+      const { playerId, match, cardLibrary } = args;
+
+      // Chariot Race grants +1 Action.
+      console.debug(`[chariot race effect] gaining 1 action`);
+      await args.runGameActionDelegate('gainAction', { count: 1 });
+
+      // Draw one card, then reveal it.
+      console.debug(`[chariot race effect] drawing 1 card to reveal`);
+      const drawnCardIds = await args.runGameActionDelegate('drawCard', { playerId }) as CardId[] | null;
+      const drawnCardId = drawnCardIds?.[0];
+      if (drawnCardId) {
+        console.debug(`[chariot race effect] revealing drawn card ${drawnCardId}`);
+        await args.runGameActionDelegate('revealCard', {
+          playerId,
+          cardId: drawnCardId,
+        });
+      } else {
+        console.debug(`[chariot race effect] no card drawn to reveal`);
+      }
+
+      // Identify the player to the left (next in turn order).
+      const leftPlayerId = findOrderedTargets({
+        startingPlayerId: playerId,
+        appliesTo: 'ALL_OTHER',
+        match,
+      })[0];
+
+      if (!leftPlayerId) {
+        console.debug(`[chariot race effect] no left player found, skipping comparison`);
+        return;
+      }
+
+      // Helper to reveal the top card of a player's deck, shuffling if needed.
+      const revealTopCard = async (targetPlayerId: PlayerId) => {
+        const deck = args.cardSourceController.getSource('playerDeck', targetPlayerId);
+        if (deck.length < 1) {
+          console.debug(`[chariot race effect] player ${targetPlayerId} deck empty, shuffling discard`);
+          await args.runGameActionDelegate('shuffleDeck', { playerId: targetPlayerId });
+        }
+
+        if (deck.length < 1) {
+          console.debug(`[chariot race effect] player ${targetPlayerId} still has no cards to reveal`);
+          return null;
+        }
+
+        const topCardId = deck.slice(-1)[0];
+        console.debug(`[chariot race effect] revealing top card ${topCardId} for player ${targetPlayerId}`);
+        await args.runGameActionDelegate('revealCard', {
+          playerId: targetPlayerId,
+          cardId: topCardId,
+        });
+        return topCardId;
+      };
+
+      // Reveal the left player's top card.
+      const leftCardId = await revealTopCard(leftPlayerId);
+
+      if (!drawnCardId || !leftCardId) {
+        console.debug(`[chariot race effect] missing revealed cards, skipping rewards`);
+        return;
+      }
+
+      // Compare effective costs (including price rules) for each player.
+      const drawnCard = cardLibrary.getCard(drawnCardId);
+      const leftCard = cardLibrary.getCard(leftCardId);
+      const { cost: drawnCost } = args.cardPriceController.applyRules(drawnCard, { playerId });
+      const { cost: leftCost } = args.cardPriceController.applyRules(leftCard, { playerId: leftPlayerId });
+
+      // Compare costs using shared multi-axis rules.
+      const costsMore = compareCardCosts(drawnCost, leftCost) > 0;
+      console.debug(`[chariot race effect] costsMore=${costsMore} (drawn=${JSON.stringify(drawnCost)} left=${JSON.stringify(leftCost)})`);
+
+      if (!costsMore) {
+        return;
+      }
+
+      // Award the +$1 and +1 VP token when the revealed card costs more.
+      console.debug(`[chariot race effect] gaining 1 treasure and 1 victory token`);
+      await args.runGameActionDelegate('gainTreasure', { count: 1 });
+      await args.runGameActionDelegate('gainVictoryToken', { playerId, count: 1 });
     },
   },
   'crumbling-castle': {

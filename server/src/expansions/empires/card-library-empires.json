@@ -23,6 +23,14 @@
     "randomizer": "catapult/rocks",
     "abilityText": "+1 Treasure\nTrash a card from your hand. If it costs $3 or more, each other player gains a Curse. If it's a Treasure, each other player discards down to 3 cards in hand."
   },
+  "chariot-race": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION"],
+    "cardName": "Chariot Race",
+    "abilityText": "+1 Action\n+1 Card, revealing it. The player to your left reveals the top card of their deck. If your card costs more, +$1 and +1VP."
+  },
   "rocks": {
     "cost": {
       "treasure": 4

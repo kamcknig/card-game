@@ -1,11 +1,11 @@
 import {Card, CardId, CardKey, CardNoId, CountSpec,} from "shared/shared-types";
 import {
-import { isPlayerImmune, markPlayerImmune } from '../../utils/reaction-immunity.ts';
   CardEffectFunctionContext,
   CardExpansionModule,
   CardLifecycleCallbackContext,
   CardLifecycleEventArgMap,
 } from "../../types.ts";
+import { isPlayerImmune, markPlayerImmune } from '../../utils/reaction-immunity.ts';
 import {findOrderedTargets} from "../../utils/find-ordered-targets.ts";
 import {isLocationInPlay} from "../../utils/is-in-play.ts";
 import {getPlayerStartingFrom} from "shared/get-player-position-utils.ts";
