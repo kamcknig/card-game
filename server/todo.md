@@ -71,3 +71,8 @@ update knights. i used that stupid randomizer. but there is a knights "card" on 
 use randomizer null to remove cards like the individual knights. then you can add a "dummy" "knights" card to the
 library json. when this card is picked the expansion configurator can check for that kingdom in the config and replace
 it with the individual knight. this will remove the need for the randomizer other than removing cards from it.
+
+empires
+- for encampment/plunder, not sure if moving back to a kingdom supply works
+- enchantress - need to replace a cards effects instead of just adding to
+  them like we currently can.

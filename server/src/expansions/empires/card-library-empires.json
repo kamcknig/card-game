@@ -209,7 +209,6 @@
   },
   "encampment/plunder": {
     "pile": {
-
     },
     "cards": [
       {
@@ -233,5 +232,27 @@
         ]
       }
     ]
+  },
+  "enchantress": {
+    "cost": {
+      "treasure": 3
+    },
+    "abilityText": "Until your next turn, the first time each other player plays an Action card on their turn, they get +1 Card and +1 Action instead of following its instructions.\nAt the start of your next turn, +2 Cards",
+    "type": [
+      "ATTACK",
+      "ACTION",
+      "DURATION"
+    ],
+    "targetScheme": "ALL_OTHER"
+  },
+  "engineer": {
+    "cost": {
+      "debt": 4,
+      "treasure": 0
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "Gain a card costing up to $4. You may trash this. If you do, gain a card costing up to $4."
   }
 }

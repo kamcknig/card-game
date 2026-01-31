@@ -889,6 +889,70 @@ const expansion: CardExpansionModule = {
       }
     },
   },
+  "enchantress": {
+    registerEffects: () => async (args) => {
+    },
+  },
+  "engineer": {
+    registerEffects: () => async (args) => {
+      const gainCard = async () => {
+        const validCards = args.findCards([
+          { location: ["basicSupply", "kingdomSupply"] },
+          { amount: { treasure: 4 }, playerId: args.playerId, kind: "upTo" },
+        ]);
+
+        if (!validCards.length) {
+          console.debug(`[engineer effect] no valid cards in supply`);
+        } else {
+          const selectedCardIds = await args.runGameActionDelegate(
+            "selectCard",
+            {
+              playerId: args.playerId,
+              prompt: `Select card up to $4`,
+              restrict: validCards.map((c) => c.id),
+              count: 1,
+              optional: false,
+              autoSelect: false,
+            },
+          ) as CardId[];
+
+          if (!selectedCardIds.length) {
+            console.debug(`[engineer effect] no card selected`);
+          } else {
+            console.debug(`[engineer effect] gaining ${selectedCardIds[0]}`);
+            await args.runGameActionDelegate("gainCard", {
+              playerId: args.playerId,
+              cardId: selectedCardIds[0],
+              to: { location: "playerDiscard" },
+            });
+          }
+        }
+      };
+
+      await gainCard();
+
+      const result = await args.runGameActionDelegate("userPrompt", {
+        playerId: args.playerId,
+        prompt: "Trash Engineer?",
+        actionButtons: [
+          { label: "TRASH", action: 1 },
+          { label: "NO", action: 2 },
+        ],
+      }) as { action: number; result: number[] };
+
+      if (result.action !== 1) {
+        console.debug(`[engineer effect] user chose not to trash Engineer`);
+        return;
+      }
+
+      await args.runGameActionDelegate("trashCard", {
+        playerId: args.playerId,
+        cardId: args.cardId,
+      });
+
+      await gainCard();
+    },
+  },
   "rocks": {
     registerEffects: () => async ({ runGameActionDelegate }) => {
       // Rocks provides +$1 when played.
