@@ -288,6 +288,16 @@ const expansion: CardExpansionModule = {
           .filter(card => card.type.includes('VICTORY'));
         const victoryInPlay = getCardsInPlay(args.findCards)
           .filter(card => card.type.includes('VICTORY'));
+        // Reveal the gaining player's hand before awarding VP tokens.
+        const handCardIds = args.cardSourceController.getSource('playerHand', eventArgs.playerId);
+        console.info(`[grand castle onGained] revealing ${handCardIds.length} card(s) in hand for player ${eventArgs.playerId}`);
+        for (const handCardId of handCardIds) {
+          // Use revealCard to keep reveal effects consistent with other cards.
+          await args.runGameActionDelegate('revealCard', {
+            playerId: eventArgs.playerId,
+            cardId: handCardId,
+          });
+        }
         const totalVictoryCards = victoryInHand.length + victoryInPlay.length;
         console.debug(`[grand castle onGained] granting ${totalVictoryCards} VP tokens`);
         await args.runGameActionDelegate('gainVictoryToken', {
