@@ -28,6 +28,7 @@ import {
   CardEffectFn,
   CardEffectFunctionContext,
   CardEffectFunctionMap,
+  DurationEffectOptions,
   FindCardsFn,
   FindCardsFnInput,
   GameActionContext,
@@ -36,8 +37,10 @@ import {
   GameActionOverrides,
   GameActionReturnTypeMap,
   GameActions,
+  ReactionTemplate,
   ReactionTrigger,
   RunGameActionDelegate,
+  TriggerEventType,
 } from '../../types.ts';
 import {getPlayerById} from '../../utils/get-player-by-id.ts';
 import {ReactionManager} from '../reactions/reaction-manager.ts';
@@ -48,7 +51,6 @@ import {getTurnPhase} from '../../utils/get-turn-phase.ts';
 import {fisherYatesShuffle} from '../../utils/fisher-yates-shuffler.ts';
 import {tokenCardPlayedHandlerMap} from '../tokens/token-trigger-map.ts';
 import {tokenDefinitionMap} from '../tokens/token-definition-map.ts';
-import {addDurationEffect} from '../../utils/add-duration-effect.ts';
 
 export class GameActionController implements BaseGameActionDefinitionMap {
   private customActionHandlers: Partial<GameActionDefinitionMap> = {};
@@ -125,6 +127,65 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       return Math.min(1, available);
     }
     return Math.min(1, available);
+  }
+
+  // Registers duration cleanup and effect triggers with centralized cleanup tracking.
+  private registerDurationEffectInternal<T extends TriggerEventType>(
+    card: Card,
+    context: CardEffectFunctionContext,
+    triggeredTemplate: ReactionTemplate<T> | ReactionTemplate<T>[],
+    options?: DurationEffectOptions,
+  ): string[] {
+    // Track trigger ids to enable cleanup when a card leaves play.
+    const registeredTriggerIds: string[] = [];
+    // Register cleanup handling to keep duration cards from being discarded.
+    const cleanupCount = Math.max(0, options?.cleanupCount ?? 1);
+    if (cleanupCount > 0) {
+      let remainingCleanups = cleanupCount;
+      let lastCleanupTurnNumber: number | null = null;
+      const systemTriggerId = context.reactionManager.registerSystemTemplate(card, 'startTurnPhase', {
+        playerId: context.playerId,
+        // Allow multi-turn duration cards to stay in play across multiple cleanups.
+        once: cleanupCount === 1,
+        allowMultipleInstances: true,
+        condition: async (conditionArgs) => {
+          const isCleanup = getTurnPhase(conditionArgs.trigger.args.phaseIndex) === 'cleanup';
+          const isNewCleanup = lastCleanupTurnNumber !== conditionArgs.match.turnNumber;
+          return isCleanup && isNewCleanup && remainingCleanups > 0;
+        },
+        triggeredEffectFn: async (triggeredArgs) => {
+          console.debug(
+            `[${card.cardKey} duration effect] moving to activeDuration zone`,
+          );
+
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            cardId: card.id,
+            to: { location: 'activeDuration' },
+          });
+
+          // Decrement remaining cleanups and unregister when finished.
+          lastCleanupTurnNumber = triggeredArgs.match.turnNumber;
+          remainingCleanups = Math.max(0, remainingCleanups - 1);
+          if (remainingCleanups <= 0) {
+            if (options?.autoRemoveTriggersOnExhaust) {
+              triggeredArgs.reactionManager.cleanupDurationTriggers(card.id);
+            } else {
+              triggeredArgs.reactionManager.unregisterTrigger(triggeredArgs.reaction.id);
+            }
+          }
+        },
+      });
+      registeredTriggerIds.push(systemTriggerId);
+    }
+
+    // Register the trigger to run when the duration card triggers.
+    const templates = Array.isArray(triggeredTemplate) ? triggeredTemplate : [triggeredTemplate];
+    for (const triggeredTemplateElement of templates) {
+      const triggerId = context.reactionManager.registerReactionTemplate(triggeredTemplateElement);
+      registeredTriggerIds.push(triggerId);
+    }
+
+    return registeredTriggerIds;
   }
 
   // Executes a single automatic action for the current computer player.
@@ -875,7 +936,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
 
         // Centralized duration registration with automatic cleanup on leave-play.
         context.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
-          const triggerIds = addDurationEffect(durationCard, context, triggeredTemplate, options);
+          const triggerIds = this.registerDurationEffectInternal(durationCard, context, triggeredTemplate, options);
           this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
           return triggerIds;
         };
@@ -1257,7 +1318,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
 
       // Centralized duration registration with automatic cleanup on leave-play.
       context.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
-        const triggerIds = addDurationEffect(durationCard, context, triggeredTemplate, options);
+        const triggerIds = this.registerDurationEffectInternal(durationCard, context, triggeredTemplate, options);
         this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
         return triggerIds;
       };

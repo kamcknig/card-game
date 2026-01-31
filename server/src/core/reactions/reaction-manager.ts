@@ -117,19 +117,19 @@ export class ReactionManager {
     }
   }
 
-  registerSystemTemplate<T extends TriggerEventType>(cardLike: CardLike, event: T, reactionTemplate: Omit<ReactionTemplate<T>, 'id' | 'listeningFor'>): void {
+  registerSystemTemplate<T extends TriggerEventType>(cardLike: CardLike, event: T, reactionTemplate: Omit<ReactionTemplate<T>, 'id' | 'listeningFor'>): string {
     const systemTemplate = {
       ...reactionTemplate,
       id: `${cardLike.cardKey}:${cardLike.id}:${event}:system`,
       system: true
     }
 
-    this.registerReactionTemplate(cardLike, event, systemTemplate);
+    return this.registerReactionTemplate(cardLike, event, systemTemplate);
   }
 
-  registerReactionTemplate<T extends TriggerEventType>(cardLike: CardLike, event: T, reactionTemplate: Omit<ReactionTemplate<T>, 'id' | 'listeningFor' | 'system'>): void
-  registerReactionTemplate<T extends TriggerEventType>(reactionTemplate: ReactionTemplate<T>): void
-  registerReactionTemplate<T extends TriggerEventType>(cardLikeOrTemplate: CardLike | ReactionTemplate<T>, event?: T, reactionTemplate?: Omit<ReactionTemplate<T>, 'id' | 'listeningFor' | 'system'>) {
+  registerReactionTemplate<T extends TriggerEventType>(cardLike: CardLike, event: T, reactionTemplate: Omit<ReactionTemplate<T>, 'id' | 'listeningFor' | 'system'>): string
+  registerReactionTemplate<T extends TriggerEventType>(reactionTemplate: ReactionTemplate<T>): string
+  registerReactionTemplate<T extends TriggerEventType>(cardLikeOrTemplate: CardLike | ReactionTemplate<T>, event?: T, reactionTemplate?: Omit<ReactionTemplate<T>, 'id' | 'listeningFor' | 'system'>): string {
     let template: ReactionTemplate<T>;
 
     if (!(cardLikeOrTemplate instanceof CardLike)) {
@@ -146,6 +146,7 @@ export class ReactionManager {
     console.info(`[REACTION MANAGER] registering trigger template ID ${template.id}, for player ${template.playerId}`);
 
     this._reactions.push(new Reaction(template) as any);
+    return template.id;
   }
 
   async runGameLifecycleEvent<T extends GameLifecycleEvent>(trigger: T, ...args: GameLifeCycleEventArgsMap[T] extends void ? [] : [GameLifeCycleEventArgsMap[T]]) {

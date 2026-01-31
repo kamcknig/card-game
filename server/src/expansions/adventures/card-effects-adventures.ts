@@ -14,7 +14,6 @@ import {adventuresTokenIds} from "./token-ids-adventures.ts";
 import {tokenDefinitionMap} from "../../core/tokens/token-definition-map.ts";
 import {getCurrentPlayer} from "../../utils/get-current-player.ts";
 import {CardPriceRule} from "../../core/card-price-rules-controller.ts";
-import {addDurationEffect} from "../../utils/add-duration-effect.ts";
 
 // Determines the card that defines the pile's type by matching the pile randomizer.
 // todo: the randomizer card needs to be part of a card's definition or in the library creation and game/match creation.
@@ -193,7 +192,7 @@ const expansion: CardExpansionModule = {
 
       const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
-      addDurationEffect(card, cardEffectArgs, {
+      cardEffectArgs.registerDurationEffect(card, {
         id: `amulet:${cardEffectArgs.cardId}:startTurn`,
         listeningFor: "startTurn",
         playerId: cardEffectArgs.playerId,
@@ -370,7 +369,7 @@ const expansion: CardExpansionModule = {
       const turnPlayed = cardEffectArgs.match.turnNumber;
       const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
-      addDurationEffect(card, cardEffectArgs, {
+      cardEffectArgs.registerDurationEffect(card, {
         id: `bridge-troll:${cardEffectArgs.cardId}:startTurn`,
         listeningFor: "startTurn",
         playerId: cardEffectArgs.playerId,
@@ -501,7 +500,7 @@ const expansion: CardExpansionModule = {
       const turnPlayed = cardEffectArgs.match.turnNumber;
 
       const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      addDurationEffect(card, cardEffectArgs, {
+      cardEffectArgs.registerDurationEffect(card, {
         id: `caravan-guard:${cardEffectArgs.cardId}:startTurn`,
         listeningFor: "startTurn",
         playerId: cardEffectArgs.playerId,
@@ -545,7 +544,7 @@ const expansion: CardExpansionModule = {
       const thisCard = cardEffectArgs.cardLibrary.getCard(
         cardEffectArgs.cardId,
       );
-      addDurationEffect(thisCard, cardEffectArgs, [
+      cardEffectArgs.registerDurationEffect(thisCard, [
         {
           id: `champion:${thisCard.id}:cardPlayed:attack`,
           listeningFor: "cardPlayed",
@@ -807,7 +806,7 @@ const expansion: CardExpansionModule = {
       await effects();
 
       const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      addDurationEffect(card, cardEffectArgs, {
+      cardEffectArgs.registerDurationEffect(card, {
         id: `dungeon:${cardEffectArgs.cardId}:startTurn`,
         listeningFor: "startTurn",
         playerId: cardEffectArgs.playerId,
@@ -1007,7 +1006,7 @@ const expansion: CardExpansionModule = {
         cardEffectArgs.cardId,
       );
 
-      addDurationEffect(thisCard, cardEffectArgs, {
+      cardEffectArgs.registerDurationEffect(thisCard, {
         id: `gear:${cardEffectArgs.cardId}:startTurn`,
         playerId: cardEffectArgs.playerId,
         listeningFor: "startTurn",
@@ -1355,7 +1354,7 @@ const expansion: CardExpansionModule = {
       const thisCard = cardEffectArgs.cardLibrary.getCard(
         cardEffectArgs.cardId,
       );
-      addDurationEffect(thisCard, cardEffectArgs, {
+      cardEffectArgs.registerDurationEffect(thisCard, {
         id: `haunted-woods:${cardEffectArgs.cardId}:startTurn`,
         listeningFor: "startTurn",
         playerId: cardEffectArgs.playerId,
@@ -1448,7 +1447,7 @@ const expansion: CardExpansionModule = {
         cardEffectArgs.cardId,
       );
 
-      addDurationEffect(thisCard, cardEffectArgs, {
+      cardEffectArgs.registerDurationEffect(thisCard, {
         id: `hireling:${thisCard.id}:startTurn`,
         listeningFor: "startTurn",
         playerId: cardEffectArgs.playerId,
@@ -2297,7 +2296,7 @@ const expansion: CardExpansionModule = {
 
       const ids: string[] = [];
 
-      addDurationEffect(thisCard, cardEffectArgs, {
+      cardEffectArgs.registerDurationEffect(thisCard, {
         id: `swamp-hag:${thisCard.id}:startTurn`,
         listeningFor: "startTurn",
         playerId: cardEffectArgs.playerId,
