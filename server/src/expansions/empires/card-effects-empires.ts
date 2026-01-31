@@ -227,6 +227,108 @@ const expansion: CardExpansionModule = {
       },
     }),
   },
+  'charm': {
+    registerEffects: () => async (args) => {
+      // Charm offers a choice between immediate +Buy/+Treasure or a delayed gain trigger.
+      console.debug(`[charm effect] prompting player ${args.playerId} to choose an option`);
+      const choice = await args.runGameActionDelegate('userPrompt', {
+        playerId: args.playerId,
+        prompt: 'Choose one',
+        actionButtons: [
+          { action: 1, label: '+1 Buy and +2 Treasure' },
+          { action: 2, label: 'Next gain: different extra card with same cost' },
+        ],
+      }) as { action: number };
+
+      if (choice.action === 1) {
+        console.debug(`[charm effect] granting +1 buy and +2 treasure`);
+        await args.runGameActionDelegate('gainBuy', { count: 1 });
+        await args.runGameActionDelegate('gainTreasure', { count: 2 });
+        return;
+      }
+
+      // Register a one-time reaction for the next gained card this turn.
+      console.info(`[charm effect] registering next-gain reaction for player ${args.playerId}`);
+      const charmCard = args.cardLibrary.getCard(args.cardId);
+      const reactionId = `charm:${args.cardId}:cardGained`;
+
+      args.reactionManager.registerReactionTemplate({
+        id: reactionId,
+        listeningFor: 'cardGained',
+        playerId: args.playerId,
+        once: true,
+        compulsory: false,
+        allowMultipleInstances: true,
+        condition: (conditionArgs) => {
+          // Only trigger off the current player's gains.
+          return conditionArgs.trigger.args.playerId === args.playerId;
+        },
+        triggeredEffectFn: async (triggeredArgs) => {
+          const gainedCard = triggeredArgs.cardLibrary.getCard(
+            triggeredArgs.trigger.args.cardId,
+          );
+          // Apply price rules to the gained card to determine the comparison cost.
+          const { cost: gainedCost } = triggeredArgs.cardPriceController.applyRules(
+            gainedCard,
+            { playerId: args.playerId },
+          );
+
+          console.debug(
+            `[charm cardGained] gained ${gainedCard}, matching cost ${JSON.stringify(gainedCost)}`,
+          );
+
+          // Find supply cards with the exact same cost but a different name.
+          const matchingCards = triggeredArgs.findCards([
+            { location: ['basicSupply', 'kingdomSupply'] },
+            { playerId: args.playerId, kind: 'exact', amount: gainedCost },
+          ]).filter((card) => card.cardKey !== gainedCard.cardKey);
+
+          if (!matchingCards.length) {
+            console.debug(`[charm cardGained] no differently named cards with same cost`);
+            return;
+          }
+
+          console.debug(
+            `[charm cardGained] prompting to gain one of ${matchingCards.length} cards`,
+          );
+          const selectedIds = await triggeredArgs.runGameActionDelegate('selectCard', {
+            playerId: args.playerId,
+            prompt: 'Gain a differently named card with the same cost',
+            restrict: matchingCards.map((card) => card.id),
+            count: 1,
+            optional: true,
+          }) as CardId[];
+
+          if (!selectedIds.length) {
+            console.debug(`[charm cardGained] player chose not to gain a card`);
+            return;
+          }
+
+          const selectedCard = triggeredArgs.cardLibrary.getCard(selectedIds[0]);
+          console.debug(`[charm cardGained] gaining ${selectedCard} to discard`);
+          await triggeredArgs.runGameActionDelegate('gainCard', {
+            playerId: args.playerId,
+            cardId: selectedCard.id,
+            to: { location: 'playerDiscard' },
+          }, { loggingContext: { source: args.cardId } });
+        },
+      });
+
+      // Clean up the pending reaction at end of turn if it never triggers.
+      args.reactionManager.registerSystemTemplate(charmCard, 'endTurn', {
+        playerId: args.playerId,
+        once: true,
+        allowMultipleInstances: true,
+        compulsory: true,
+        autoResolve: true,
+        condition: (conditionArgs) => conditionArgs.trigger.args.playerId === args.playerId,
+        triggeredEffectFn: async (triggeredArgs) => {
+          console.debug(`[charm endTurn] clearing pending next-gain reaction`);
+          triggeredArgs.reactionManager.unregisterTrigger(reactionId);
+        },
+      });
+    },
+  },
   'catapult': {
     registerEffects: () => async (args) => {
       const { playerId, match, reactionContext, cardLibrary } = args;

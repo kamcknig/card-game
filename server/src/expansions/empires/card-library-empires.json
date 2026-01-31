@@ -19,6 +19,15 @@
     "cardName": "Capital",
     "abilityText": "+1 Buy\n+6 Treasure\nWhen you discard this from play, +6 Debt"
   },
+  "charm": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "TREASURE"
+    ],
+    "abilityText": "Choose one: +1 Buy and +2 Treasure; or the next time you gain a card this turn, you may also gain a differently named card with the same cost."
+  },
   "catapult/rocks": {
     "pile": {
       "randomizer": "catapult/rocks",
