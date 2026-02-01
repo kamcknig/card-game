@@ -234,10 +234,11 @@ export class ReactionManager {
         const systemReactions = promptReactions.filter(r => r.system);
 
         if (systemReactions.length) {
-          for (const systemReaction of systemReactions) {
-            console.info(`[REACTION MANAGER] running system reaction ${systemReaction.id} for ${targetPlayer}`);
-            await this.runReaction(systemReaction, trigger, targetPlayer, reactionContext);
-          }
+    for (const systemReaction of systemReactions) {
+      console.info(`[REACTION MANAGER] running system reaction ${systemReaction.id} for ${targetPlayer}`);
+      const systemContext = this.buildTriggeredEffectContext(trigger, systemReaction);
+      await this.runReaction(systemReaction, trigger, targetPlayer, systemContext, reactionContext);
+    }
 
           continue;
         }
@@ -287,18 +288,17 @@ export class ReactionManager {
           continue;
         }
 
-        await this.runReaction(selectedReaction, trigger, targetPlayer,{
-          cardSourceController: this._cardSourceController,
-          findCards: this._findCards,
-          reactionManager: this,
-          cardPriceController: this.cardPriceController,
-          isRootLog: false,
-          runGameActionDelegate: this.runGameActionDelegate,
+        const reactionContextObject = this.buildTriggeredEffectContext(
           trigger,
-          cardLibrary: this._cardLibrary,
-          match: this._match,
-          reaction: selectedReaction,
-        }, reactionContext);
+          selectedReaction,
+        );
+        await this.runReaction(
+          selectedReaction,
+          trigger,
+          targetPlayer,
+          reactionContextObject,
+          reactionContext,
+        );
 
         usedReactionIds.add(selectedReaction.id);
 
@@ -314,7 +314,17 @@ export class ReactionManager {
         if (!stillValid) continue;
 
         console.info(`[REACTION MANAGER] auto-resolving reaction ${autoReaction.id} for ${targetPlayer}`);
-        await this.runReaction(autoReaction, trigger, targetPlayer, reactionContext);
+        const autoReactionContext = this.buildTriggeredEffectContext(
+          trigger,
+          autoReaction,
+        );
+        await this.runReaction(
+          autoReaction,
+          trigger,
+          targetPlayer,
+          autoReactionContext,
+          reactionContext,
+        );
       }
     }
   }
@@ -323,17 +333,8 @@ export class ReactionManager {
     await this.logManager.withIndent(async () => {
       // Ensure reaction-caused logs are scoped and unwind cleanly.
       await reaction.triggeredEffectFn({
-        cardSourceController: this._cardSourceController,
-        findCards: this._findCards,
-        reactionManager: this,
-        cardPriceController: this.cardPriceController,
-        isRootLog: false,
-        runGameActionDelegate: this.runGameActionDelegate,
+        ...context,
         reactionContext,
-        trigger,
-        cardLibrary: this._cardLibrary,
-        match: this._match,
-        reaction,
       });
     });
 
@@ -341,5 +342,23 @@ export class ReactionManager {
       console.info(`[REACTION MANAGER] selected reaction is single-use, unregistering it`);
       this.unregisterTrigger(reaction.id);
     }
+  }
+
+  private buildTriggeredEffectContext<T extends TriggerEventType>(
+    trigger: ReactionTrigger<T>,
+    reaction: Reaction,
+  ): TriggeredEffectContext<T> {
+    return {
+      cardSourceController: this._cardSourceController,
+      findCards: this._findCards,
+      reactionManager: this,
+      cardPriceController: this.cardPriceController,
+      isRootLog: false,
+      runGameActionDelegate: this.runGameActionDelegate,
+      trigger,
+      cardLibrary: this._cardLibrary,
+      match: this._match,
+      reaction,
+    };
   }
 }
