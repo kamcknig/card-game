@@ -308,5 +308,14 @@
         "abilityText": "+1 Buy\nDouble your $ if you haven't yet this turn.\nWhen you gain this, gain a Gold per Gladiator you have in play"
       }
     ]
+  },
+  "groundskeeper": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+1 Card\n+1 Action\nThis turn, when you gain a Victory card, +1VP."
   }
 }

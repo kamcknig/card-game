@@ -1099,6 +1099,68 @@ const expansion: CardExpansionModule = {
       }
     },
   },
+  "groundskeeper": {
+    registerEffects: () => async (args) => {
+      console.debug(`[groundskeeper effect] drawing 1 card and gaining 1 action`);
+      await args.runGameActionDelegate("drawCard", {
+        playerId: args.playerId,
+        count: 1,
+      });
+      await args.runGameActionDelegate("gainAction", { count: 1 });
+
+      const thisCard = args.cardLibrary.getCard(args.cardId);
+
+      const cardGainedReactionId = args.reactionManager.registerReactionTemplate(
+        thisCard,
+        "cardGained",
+        {
+          playerId: args.playerId,
+          once: false,
+          allowMultipleInstances: true,
+          compulsory: true,
+          condition: (conditionArgs) => {
+            if (conditionArgs.trigger.args.playerId !== args.playerId) {
+              return false;
+            }
+            const gainedCard = conditionArgs.cardLibrary.getCard(
+              conditionArgs.trigger.args.cardId,
+            );
+            return gainedCard.type.includes("VICTORY");
+          },
+          triggeredEffectFn: async (triggeredArgs) => {
+            const gainedCard = triggeredArgs.cardLibrary.getCard(
+              triggeredArgs.trigger.args.cardId,
+            );
+            console.debug(
+              `[groundskeeper cardGained effect] awarding token for ${gainedCard}`,
+            );
+            await triggeredArgs.runGameActionDelegate("gainVictoryToken", {
+              playerId: args.playerId,
+              count: 1,
+            });
+          },
+        },
+      );
+
+      const endTurnReactionId = args.reactionManager.registerReactionTemplate(
+        thisCard,
+        "endTurn",
+        {
+          playerId: args.playerId,
+          once: true,
+          allowMultipleInstances: true,
+          compulsory: true,
+          condition: (conditionArgs) =>
+            conditionArgs.trigger.args.playerId === args.playerId,
+          triggeredEffectFn: async () => {
+            console.debug(`[groundskeeper endTurn effect] cleaning up reactions`);
+            args.reactionManager.unregisterTrigger(cardGainedReactionId);
+            args.reactionManager.unregisterTrigger(endTurnReactionId);
+          },
+        },
+      );
+    },
+  },
   "gladiator": {
     registerEffects: () => async (args) => {
       console.debug(`[gladiator effect] gaining 2 treasure`);
