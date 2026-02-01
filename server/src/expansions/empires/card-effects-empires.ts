@@ -1731,6 +1731,112 @@ const expansion: CardExpansionModule = {
       },
     }),
   },
+  'settlers': {
+    registerEffects: () => async (args) => {
+      // Settlers draws a card, gains an action, then optionally retrieves a Copper from discard.
+      console.debug(
+        `[settlers effect] drawing 1 card and gaining 1 action`,
+      );
+      await args.runGameActionDelegate('drawCard', {
+        playerId: args.playerId,
+        count: 1,
+      });
+      await args.runGameActionDelegate('gainAction', { count: 1 });
+
+      const copperInDiscard = args.findCards([{
+        location: 'playerDiscard',
+        playerId: args.playerId,
+      }, { cardKeys: 'copper' }]);
+
+      if (!copperInDiscard.length) {
+        console.debug(`[settlers effect] no Copper in discard to reveal`);
+        return;
+      }
+
+      console.debug(
+        `[settlers effect] prompting player ${args.playerId} to reveal Copper from discard`,
+      );
+      const selectedCardIds = await args.runGameActionDelegate('selectCard', {
+        playerId: args.playerId,
+        prompt: 'Reveal a Copper to put into your hand',
+        restrict: copperInDiscard.map((card) => card.id),
+        count: 1,
+        optional: true,
+      }) as CardId[];
+
+      if (!selectedCardIds.length) {
+        console.debug(`[settlers effect] player chose not to reveal Copper`);
+        return;
+      }
+
+      const selectedCard = args.cardLibrary.getCard(selectedCardIds[0]);
+      console.info(
+        `[settlers effect] revealing ${selectedCard} from discard to hand`,
+      );
+      await args.runGameActionDelegate('revealCard', {
+        playerId: args.playerId,
+        cardId: selectedCard.id,
+      });
+      await args.runGameActionDelegate('moveCard', {
+        cardId: selectedCard.id,
+        toPlayerId: args.playerId,
+        to: { location: 'playerHand' },
+      });
+    },
+  },
+  'bustling-village': {
+    registerEffects: () => async (args) => {
+      // Bustling Village draws a card, gains 3 actions, then optionally retrieves a Settlers from discard.
+      console.debug(
+        `[bustling village effect] drawing 1 card and gaining 3 actions`,
+      );
+      await args.runGameActionDelegate('drawCard', {
+        playerId: args.playerId,
+        count: 1,
+      });
+      await args.runGameActionDelegate('gainAction', { count: 3 });
+
+      const settlersInDiscard = args.findCards([{
+        location: 'playerDiscard',
+        playerId: args.playerId,
+      }, { cardKeys: 'settlers' }]);
+
+      if (!settlersInDiscard.length) {
+        console.debug(`[bustling village effect] no Settlers in discard to reveal`);
+        return;
+      }
+
+      console.debug(
+        `[bustling village effect] prompting player ${args.playerId} to reveal Settlers from discard`,
+      );
+      const selectedCardIds = await args.runGameActionDelegate('selectCard', {
+        playerId: args.playerId,
+        prompt: 'Reveal a Settlers to put into your hand',
+        restrict: settlersInDiscard.map((card) => card.id),
+        count: 1,
+        optional: true,
+      }) as CardId[];
+
+      if (!selectedCardIds.length) {
+        console.debug(`[bustling village effect] player chose not to reveal Settlers`);
+        return;
+      }
+
+      const selectedCard = args.cardLibrary.getCard(selectedCardIds[0]);
+      console.info(
+        `[bustling village effect] revealing ${selectedCard} from discard to hand`,
+      );
+      await args.runGameActionDelegate('revealCard', {
+        playerId: args.playerId,
+        cardId: selectedCard.id,
+      });
+      await args.runGameActionDelegate('moveCard', {
+        cardId: selectedCard.id,
+        toPlayerId: args.playerId,
+        to: { location: 'playerHand' },
+      });
+    },
+  },
   'sacrifice': {
     registerEffects: () => async (args) => {
       // Sacrifice trashes a card from hand and grants bonuses based on its types.

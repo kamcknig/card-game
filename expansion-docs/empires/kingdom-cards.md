@@ -35,7 +35,7 @@ List of cards
     - randomizer cost is 2 treasure
 - [royal blacksmith](royal-blacksmith.md)
 - [sacrifice](sacrifice.md)
-- [settlers](settlers.md)/[busling village](busling-village.md)
+- [settlers](settlers.md)/[busling village](bustling_village.md)
     - randomizer type is action,
     - randomizer cost is 2 treasure
 - [temple](temple.md)

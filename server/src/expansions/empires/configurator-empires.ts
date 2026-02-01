@@ -90,6 +90,20 @@ const patricianEmporiumOrder: CardKey[] = [
   'patrician',
 ];
 
+// Canonical settlers/bustling-village split pile order (bottom -> top).
+const settlersBustlingVillageOrder: CardKey[] = [
+  'bustling-village',
+  'bustling-village',
+  'bustling-village',
+  'bustling-village',
+  'bustling-village',
+  'settlers',
+  'settlers',
+  'settlers',
+  'settlers',
+  'settlers',
+];
+
 const configurator: ExpansionConfiguratorFactory = () => {
   return async (args) => {
     // Locate the Castles split pile in the kingdom supply, if present.
@@ -140,6 +154,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
     configureEncampmentPlunderPile(args);
     configureGladiatorFortune(args);
     configurePatricianEmporium(args);
+    configureSettlersBustlingVillage(args);
 
     return args.config;
   };
@@ -182,6 +197,18 @@ const configurePatricianEmporium = (args: ExpansionConfiguratorContext) => {
     pileKey: 'patrician/emporium',
     desiredOrder: patricianEmporiumOrder,
     logLabel: 'patrician/emporium',
+  });
+};
+
+const configureSettlersBustlingVillage = (
+  args: ExpansionConfiguratorContext,
+) => {
+  // Locate the settlers/bustling-village split pile in the kingdom supply, if present.
+  // Use the shared split pile configurator for canonical ordering.
+  configureSplitPile(args, {
+    pileKey: 'settlers/bustling-village',
+    desiredOrder: settlersBustlingVillageOrder,
+    logLabel: 'settlers/bustling-village',
   });
 };
 

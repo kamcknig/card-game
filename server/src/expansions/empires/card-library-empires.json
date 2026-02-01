@@ -331,6 +331,39 @@
       }
     ]
   },
+  "settlers/bustling-village": {
+    "pile": {
+      "randomizer": "settlers/bustling-village",
+      "cost": {
+        "treasure": 2
+      },
+      "type": [
+        "ACTION"
+      ]
+    },
+    "cards": [
+      {
+        "cardKey": "settlers",
+        "cost": {
+          "treasure": 2
+        },
+        "type": [
+          "ACTION"
+        ],
+        "abilityText": "+1 Card\n+1 Action\nYou may reveal a Copper from your discard pile and put it into your hand."
+      },
+      {
+        "cardKey": "bustling-village",
+        "cost": {
+          "treasure": 5
+        },
+        "type": [
+          "ACTION"
+        ],
+        "abilityText": "+1 Card\n+3 Actions\nYou may reveal a Settlers from your discard pile and put it into your hand."
+      }
+    ]
+  },
   "sacrifice": {
     "cost": {
       "treasure": 4
