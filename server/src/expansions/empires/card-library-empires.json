@@ -254,5 +254,15 @@
       "ACTION"
     ],
     "abilityText": "Gain a card costing up to $4. You may trash this. If you do, gain a card costing up to $4."
+  },
+  "farmers-market": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": [
+      "ACTION",
+      "GATHERING"
+    ],
+    "abilityText": "+1 Buy\nIf there are 4VP or more on the Farmers' Market pile, take them and trash this. Otherwise, add 1VP to the pile and then +$1 per 1VP on the pile."
   }
 }

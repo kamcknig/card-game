@@ -953,6 +953,24 @@ const expansion: CardExpansionModule = {
       await gainCard();
     },
   },
+  "farmers-market": {
+    registerEffects: () => async (args) => {
+      console.debug(`[farmers market effect] gaining 1 buy`);
+      await args.runGameActionDelegate('gainBuy', { count: 1 });
+
+      const tokensOnPile = Object.values(args.match.tokens).filter(t => t.location.type === 'supplyPile' && t.location.cardKey === 'farmers-market');
+
+      if (tokensOnPile.length >= 4) {
+        console.debug(`[farmers market effect] 4 or more tokens on pile`);
+        for (const token of tokensOnPile) {
+          moveToken
+        }
+        await args.runGameActionDelegate('trashCard', {playerId: args.playerId, cardId: args.cardId});
+      } else {
+        console.debug(`[farmers market effect] less than 4 tokens on pile`);
+      }
+    }
+  },
   "rocks": {
     registerEffects: () => async ({ runGameActionDelegate }) => {
       // Rocks provides +$1 when played.
