@@ -35,6 +35,9 @@ all players, but native village and island mat cards  face down and can only be 
   disard could matter
 - TokenIds are defined in expansion modules; so they are hard-coded strings
   in the front-end application. can we share them somehow between both
+- update usages of `tags` to use a hard-coded list. these will be known tags
+  from cards like young witch that adds a "bane" card. then you can add a
+  custom tags property to track more custom ones.
 
 # Higher priority
 - when cards are in zones like set aside or a mat, they can be face up or

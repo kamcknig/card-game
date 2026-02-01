@@ -326,6 +326,18 @@
       "ACTION",
       "ATTACK"
     ],
+    "targetScheme": "ALL_OTHER",
     "abilityText": "+$3\nYou may reveal a Gold from your hand. If you do, each other player discards down to 2 cards in hand, then draws a card."
+  },
+  "overlord": {
+    "cost": {
+      "treasure": 0,
+      "debt": 8
+    },
+    "type": [
+      "ACTION",
+      "COMMAND"
+    ],
+    "abilityText": "Play a non-Command non-Duration Action card from the Supply costing up to $5, leaving it there."
   }
 }

@@ -80,6 +80,8 @@ execution
 - logging for debugging purposes.
 - use single quotes for strings where possible (backticks for string
   literals with variables is fine).
+- follow current standards in code for both syntax and logic where applicable.
+- json files should follow proper schema validation
 
 ---
 

@@ -1,5 +1,5 @@
 import { CardEffectFunctionContext, CardExpansionModule } from "../../types.ts";
-import { CardId, CardKey, PlayerId } from "shared/shared-types";
+import { CardId, CardKey, CardLocation, PlayerId } from "shared/shared-types";
 import { compareCardCosts } from "shared/compare-card-cost.ts";
 import { findOrderedTargets } from "../../utils/find-ordered-targets.ts";
 import { discardDownTo } from "../../utils/discard-down-to.ts";
@@ -1337,6 +1337,61 @@ const expansion: CardExpansionModule = {
           count: 1,
         });
       }
+    },
+  },
+  "overlord": {
+    registerEffects: () => async (args) => {
+      // Overlord plays one eligible supply Action at no extra action cost while leaving that pile in place.
+      console.debug(`[overlord effect] evaluating supply options for player ${args.playerId}`);
+
+      const supplyLocations: CardLocation[] = ['kingdomSupply', 'basicSupply'];
+      const supplyCards = args.findCards([{ location: supplyLocations }]);
+      const topCardByPile = new Map<string, typeof supplyCards[number]>();
+      for (const card of supplyCards) {
+        topCardByPile.set(card.kingdom, card);
+      }
+
+      const maxCost = { treasure: 5 };
+      const eligibleCards = Array.from(topCardByPile.values()).filter((card) => {
+        if (!card.type.includes('ACTION')) return false;
+        if (card.type.includes('COMMAND') || card.type.includes('DURATION')) return false;
+        return compareCardCosts(card.cost, maxCost) <= 0;
+      });
+
+      if (!eligibleCards.length) {
+        console.debug(`[overlord effect] no eligible supply actions remain`);
+        return;
+      }
+
+      console.debug(
+        `[overlord effect] player ${args.playerId} can play: ${
+          eligibleCards.map((card) => card.cardKey).join(', ')
+        }`,
+      );
+
+      const selectedCardIds = await args.runGameActionDelegate('selectCard', {
+        playerId: args.playerId,
+        prompt: 'Select a supply action costing up to $5 to play',
+        restrict: eligibleCards.map((card) => card.id),
+        count: 1,
+      }) as CardId[];
+
+      if (!selectedCardIds.length) {
+        console.debug(`[overlord effect] player declined to play a supply action`);
+        return;
+      }
+
+      const selectedCard = args.cardLibrary.getCard(selectedCardIds[0]);
+      console.info(`[overlord effect] playing ${selectedCard.cardKey} from supply`);
+
+      await args.runGameActionDelegate('playCard', {
+        playerId: args.playerId,
+        cardId: selectedCardIds[0],
+        overrides: {
+          actionCost: 0,
+          moveCard: false,
+        },
+      });
     },
   },
   "rocks": {
