@@ -364,6 +364,16 @@
       }
     ]
   },
+  "temple": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION",
+      "GATHERING"
+    ],
+    "abilityText": "+1VP\nTrash from 1 to 3 differently named cards from your hand. Add 1VP to the Temple pile.\nWhen you gain this, take the VP from the Temple pile."
+  },
   "sacrifice": {
     "cost": {
       "treasure": 4

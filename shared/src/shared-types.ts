@@ -313,11 +313,14 @@ export type ComparisonType =
 export type CountSpec =
   | { kind: 'upTo'; count: number; }
   | { kind: 'exact'; count: number; }
+  // Range selection allows a minimum and maximum count.
+  | { kind: 'range'; min: number; max: number; }
   | number;
 
+// Cost specs can optionally include a minimum ("from") threshold per cost axis.
 export type CostSpec =
-  | { kind: 'exact'; amount: CardCost, playerId: PlayerId }
-  | { kind: 'upTo'; amount: CardCost, playerId: PlayerId };
+  | { kind: 'exact'; amount: CardCost, playerId: PlayerId, from?: CardCost }
+  | { kind: 'upTo'; amount: CardCost, playerId: PlayerId, from?: CardCost };
 
 export type PlayerArgs = {
   id: PlayerId;

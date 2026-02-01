@@ -1837,6 +1837,95 @@ const expansion: CardExpansionModule = {
       });
     },
   },
+  'temple': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (args, eventArgs) => {
+        // Temple gathers VP tokens on its pile; gaining it transfers them to the player.
+        const tokensOnPile = Object.values(args.match.tokens).filter((token) =>
+          token.tokenId === prosperityTokenIds.victory &&
+          token.location.type === 'supplyPile' &&
+          token.location.cardKey === 'temple'
+        );
+
+        if (!tokensOnPile.length) {
+          console.debug(`[temple onGained] no victory tokens on Temple pile`);
+          return;
+        }
+
+        console.info(
+          `[temple onGained] moving ${tokensOnPile.length} victory token(s) to player ${eventArgs.playerId}`,
+        );
+
+        for (const token of tokensOnPile) {
+          await args.runGameActionDelegate('moveToken', {
+            tokenInstanceId: token.id,
+            location: { type: 'player', playerId: eventArgs.playerId },
+            ownerId: eventArgs.playerId,
+          });
+        }
+      },
+    }),
+    registerEffects: () => async (args) => {
+      // Temple grants 1 VP, trashes 1-3 differently named cards, then adds a VP token to the pile.
+      console.debug(`[temple effect] gaining 1 victory token`);
+      await args.runGameActionDelegate('gainVictoryToken', {
+        playerId: args.playerId,
+        count: 1,
+      });
+
+      // Build a list of unique-name cards in hand for the trash selection.
+      const handCardIds = [
+        ...args.cardSourceController.getSource('playerHand', args.playerId),
+      ];
+      const uniqueCandidates: { id: CardId; name: string }[] = [];
+      const seenNames = new Set<string>();
+      for (const cardId of handCardIds) {
+        const card = args.cardLibrary.getCard(cardId);
+        const cardName = card.cardName ?? card.cardKey;
+        if (seenNames.has(cardName)) continue;
+        seenNames.add(cardName);
+        uniqueCandidates.push({ id: cardId, name: cardName });
+      }
+
+      if (!uniqueCandidates.length) {
+        console.debug(`[temple effect] no cards in hand to trash`);
+      } else {
+        const maxSelectable = Math.min(3, uniqueCandidates.length);
+        console.debug(
+          `[temple effect] prompting player ${args.playerId} to trash 1 to ${maxSelectable} card(s)`,
+        );
+        // Use a range count so the player can choose 1-3 cards in a single prompt.
+        const selectedCardIds = await args.runGameActionDelegate('selectCard', {
+          playerId: args.playerId,
+          prompt: `Trash 1 to ${maxSelectable} differently named cards`,
+          restrict: uniqueCandidates.map((candidate) => candidate.id),
+          count: { kind: 'range', min: 1, max: maxSelectable },
+          optional: false,
+        }) as CardId[];
+
+        if (!selectedCardIds.length) {
+          console.warn(`[temple effect] no card selected to trash`);
+        } else {
+          console.info(
+            `[temple effect] trashing ${selectedCardIds.length} card(s)`,
+          );
+          for (const cardId of selectedCardIds) {
+            await args.runGameActionDelegate('trashCard', {
+              playerId: args.playerId,
+              cardId,
+            });
+          }
+        }
+      }
+
+      // Always add a victory token to the Temple pile after resolving trashing.
+      console.debug(`[temple effect] placing 1 victory token on Temple pile`);
+      await args.runGameActionDelegate('placeToken', {
+        tokenId: prosperityTokenIds.victory,
+        location: { type: 'supplyPile', cardKey: 'temple' },
+      });
+    },
+  },
   'sacrifice': {
     registerEffects: () => async (args) => {
       // Sacrifice trashes a card from hand and grants bonuses based on its types.

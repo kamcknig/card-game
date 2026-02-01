@@ -429,7 +429,12 @@ export class MatchScene extends Scene {
 
     const count = isNumber(arg.count) ? arg.count : (!isNumber(arg.count) ? arg.count?.count : NaN);
     if (count === undefined || isNaN(count)) {
-      throw new Error(`Selection count couldn't be determined`);
+      if (!isNumber(arg.count) && arg.count?.kind === 'range') {
+        // Range selections don't use a single count value.
+      }
+      else {
+        throw new Error(`Selection count couldn't be determined`);
+      }
     }
 
     if (currentPlayerTurnIdStore.get() !== this._selfId) {
@@ -569,6 +574,12 @@ export class MatchScene extends Scene {
         if (isNumber(arg.count) && !arg.optional) {
           if (arg.count === selectedCardStore.get().length) doneListener();
         }
+        if (!isNumber(arg.count) && !arg.optional && arg.count?.kind === 'range') {
+          // Auto-complete when range is fixed to a single value.
+          if (arg.count.min === arg.count.max && arg.count.max === selectedCardStore.get().length) {
+            doneListener();
+          }
+        }
 
       }
       else {
@@ -660,6 +671,10 @@ export class MatchScene extends Scene {
       button.button.alpha = valid ? 1 : .6;
       button.button.eventMode = valid ? 'static' : 'none';
       if (!isOptional && typeof selectCount !== 'number' && selectCount.kind === 'exact' && selected.length === selectCount.count) {
+        doneListener();
+      }
+      if (!isOptional && typeof selectCount !== 'number' && selectCount.kind === 'range' && selectCount.min === selectCount.max && selected.length === selectCount.max) {
+        // Auto-complete when range is fixed to a single value.
         doneListener();
       }
       if (!isOptional && typeof selectCount === 'number' && selected.length === selectCount) {

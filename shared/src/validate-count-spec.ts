@@ -12,6 +12,9 @@ export const validateCountSpec = (spec: CountSpec, count: number): boolean => {
       return count <= spec.count;
     case 'exact':
       return count === spec.count;
+    case 'range':
+      // Range is inclusive of min/max.
+      return count >= spec.min && count <= spec.max;
     default:
       return false;
   }

@@ -41,6 +41,10 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
       if (!displayOnly && isNumber(count) && count === 1) {
         cardList.emit('finished');
       }
+      if (!displayOnly && !isNumber(count) && count?.kind === 'range' && count.min === 1 && count.max === 1) {
+        // Auto-finish for a fixed range of 1.
+        cardList.emit('finished');
+      }
     }
     return validated;
   };

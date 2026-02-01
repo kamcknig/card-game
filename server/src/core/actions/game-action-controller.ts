@@ -125,6 +125,10 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     if (count.kind === 'upTo') {
       return Math.min(count.count, available);
     }
+    if (count.kind === 'range') {
+      // Use the upper bound for deterministic computer selections.
+      return Math.min(count.max, available);
+    }
     if (optional) {
       return Math.min(1, available);
     }
