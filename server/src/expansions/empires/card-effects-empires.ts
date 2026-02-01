@@ -1263,6 +1263,82 @@ const expansion: CardExpansionModule = {
       await trashCard();
     },
   },
+  "legionary": {
+    registerEffects: () => async (args) => {
+      console.debug(`[legionary effect] gaining 3 treasure`);
+      await args.runGameActionDelegate("gainTreasure", { count: 3 });
+
+      const hand = args.cardSourceController.getSource(
+        "playerHand",
+        args.playerId,
+      );
+      const goldInHand = hand.filter((cardId) =>
+        args.cardLibrary.getCard(cardId).cardKey === "gold"
+      );
+
+      if (!goldInHand.length) {
+        console.debug(`[legionary effect] no Gold available to reveal`);
+        return;
+      }
+
+      const selectedGold = await args.runGameActionDelegate("selectCard", {
+        playerId: args.playerId,
+        prompt: "Reveal a Gold to hit each other player?",
+        restrict: goldInHand,
+        count: 1,
+        optional: true,
+        autoSelect: goldInHand.length === 1,
+      }) as CardId[] | null;
+
+      if (!selectedGold?.length) {
+        console.debug(`[legionary effect] player declined to reveal Gold`);
+        return;
+      }
+
+      const goldCardId = selectedGold[0];
+      console.debug(
+        `[legionary effect] revealing Gold ${goldCardId} for player ${args.playerId}`,
+      );
+      await args.runGameActionDelegate("revealCard", {
+        playerId: args.playerId,
+        cardId: goldCardId,
+      });
+
+      const targetPlayerIds = findOrderedTargets({
+        startingPlayerId: args.playerId,
+        appliesTo: "ALL_OTHER",
+        match: args.match,
+      }).filter((targetPlayerId) =>
+        !isPlayerImmune(args.reactionContext, targetPlayerId)
+      );
+
+      if (!targetPlayerIds.length) {
+        console.debug(`[legionary effect] no valid targets`);
+        return;
+      }
+
+      for (const targetPlayerId of targetPlayerIds) {
+        await discardDownTo({
+          cardLibrary: args.cardLibrary,
+          cardSourceController: args.cardSourceController,
+          runGameActionDelegate: args.runGameActionDelegate,
+        }, {
+          playerId: targetPlayerId,
+          targetHandSize: 2,
+          prompt: "Discard down to 2 cards",
+          logTag: "legionary effect",
+        });
+
+        console.debug(
+          `[legionary effect] ${targetPlayerId} drawing a card after discard`,
+        );
+        await args.runGameActionDelegate("drawCard", {
+          playerId: targetPlayerId,
+          count: 1,
+        });
+      }
+    },
+  },
   "rocks": {
     registerEffects: () => async ({ runGameActionDelegate }) => {
       // Rocks provides +$1 when played.

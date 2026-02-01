@@ -78,6 +78,8 @@ execution
   apply to changes
 - Comment all new code written
 - logging for debugging purposes.
+- use single quotes for strings where possible (backticks for string
+  literals with variables is fine).
 
 ---
 
@@ -147,3 +149,9 @@ Expansion-related documentation is located in the
 [expansion docs](expansion-docs) directory in a directory per expansion.
 Inside each expansion directory is a README.md file that describes the
 expansion and its mechanics with links to all other relevant documentation.
+
+## 3rd-party tools
+
+When using deno don't use deno run for tasks that are long-running without
+permission. other deno tasks can as long as they have an expected output.
+use deno check to check for errors, not deno run with --check flag

@@ -317,5 +317,15 @@
       "ACTION"
     ],
     "abilityText": "+1 Card\n+1 Action\nThis turn, when you gain a Victory card, +1VP."
+  },
+  "legionary": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION",
+      "ATTACK"
+    ],
+    "abilityText": "+$3\nYou may reveal a Gold from your hand. If you do, each other player discards down to 2 cards in hand, then draws a card."
   }
 }
