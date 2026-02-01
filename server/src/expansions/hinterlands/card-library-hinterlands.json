@@ -6,7 +6,6 @@
     "type": ["ACTION", "ATTACK" ]
   },
   "border-village": {
-    "cardName": "Border Village",
     "type": ["ACTION"],
     "cost": {
       "treasure": 6
@@ -51,7 +50,6 @@
     "type": ["REACTION", "TREASURE"]
   },
   "guard-dog": {
-    "cardName": "Guard Dog",
     "cost": {
       "treasure": 3
     },
@@ -113,7 +111,6 @@
     "type": ["ACTION"]
   },
   "spice-merchant": {
-    "cardName": "Spice Merchant",
     "cost": {
       "treasure": 4
     },

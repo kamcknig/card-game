@@ -38,6 +38,8 @@ all players, but native village and island mat cards  face down and can only be 
 - update usages of `tags` to use a hard-coded list. these will be known tags
   from cards like young witch that adds a "bane" card. then you can add a
   custom tags property to track more custom ones.
+- possible keep the enhanced logging for console logs but switch to a
+  buffered file logger solution later for production.
 
 # Higher priority
 - when cards are in zones like set aside or a mat, they can be face up or

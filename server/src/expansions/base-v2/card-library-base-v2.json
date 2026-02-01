@@ -7,7 +7,6 @@
     "type": [
       "TREASURE"
     ],
-    "cardName": "Copper"
   },
   "curse": {
     "cost": {
@@ -18,7 +17,6 @@
       "VICTORY"
     ],
     "victoryPoints": -1,
-    "cardName": "Curse"
   },
   "duchy": {
     "cost": {
@@ -29,7 +27,6 @@
     ],
     "isBasic": true,
     "victoryPoints": 3,
-    "cardName": "Duchy"
   },
   "estate": {
     "cost": {
@@ -40,7 +37,6 @@
     ],
     "isBasic": true,
     "victoryPoints": 1,
-    "cardName": "Estate"
   },
   "gold": {
     "cost": {
@@ -50,7 +46,6 @@
       "TREASURE"
     ],
     "isBasic": true,
-    "cardName": "Gold"
   },
   "province": {
     "cost": {
@@ -61,7 +56,6 @@
     ],
     "isBasic": true,
     "victoryPoints": 6,
-    "cardName": "Province"
   },
   "silver": {
     "cost": {
@@ -71,7 +65,6 @@
       "TREASURE"
     ],
     "isBasic": true,
-    "cardName": "Silver"
   },
   "artisan": {
     "cost": {
@@ -81,7 +74,6 @@
       "ACTION"
     ],
     "abilityText": "Gain a card to your hand costing up to 5 Treasure.\nPut a card from your hand onto your deck.",
-    "cardName": "Artisan"
   },
   "bandit": {
     "cost": {
@@ -93,7 +85,6 @@
     ],
     "targetScheme": "ALL_OTHER",
     "abilityText": "Gain a Gold. Each other player reveals the top 2 cards of their deck, trashes a revealed Treasure other than Copper, and discards the rest.",
-    "cardName": "Bandit"
   },
   "bureaucrat": {
     "cost": {
@@ -105,7 +96,6 @@
     ],
     "targetScheme": "ALL_OTHER",
     "abilityText": "Gain a Silver onto your deck. Each other player reveals a Victory card from their hand and puts it onto their deck (or reveals a hand with no Victory cards).",
-    "cardName": "Bureaucrat"
   },
   "cellar": {
     "cost": {
@@ -115,7 +105,6 @@
       "ACTION"
     ],
     "abilityText": "+1 Action\nDiscard any number of cards. +1 Card per card discarded.",
-    "cardName": "Cellar"
   },
   "chapel": {
     "cost": {
@@ -125,7 +114,6 @@
       "ACTION"
     ],
     "abilityText": "Trash up to 4 cards from your hand.",
-    "cardName": "Chapel"
   },
   "council-room": {
     "cost": {
@@ -135,7 +123,6 @@
       "ACTION"
     ],
     "abilityText": "+4 Cards\n+1 Buy\nEach other player draws a card.",
-    "cardName": "Council Room"
   },
   "festival": {
     "cost": {
@@ -145,7 +132,6 @@
       "ACTION"
     ],
     "abilityText": "+2 Actions\n+1 Buy\n+2 Treasure",
-    "cardName": "Festival"
   },
   "gardens": {
     "victoryPoints": 0,
@@ -156,7 +142,6 @@
       "VICTORY"
     ],
     "abilityText": "Worth 1 Victory for every 10 cards in your deck rounded down.",
-    "cardName": "Gardens"
   },
   "harbinger": {
     "type": [
@@ -166,7 +151,6 @@
       "treasure": 3
     },
     "abilityText": "+1 Card\n+1 Action\nLook through your discard pile. You may put a card from it onto your deck.",
-    "cardName": "Harbinger"
   },
   "laboratory": {
     "cost": {
@@ -176,7 +160,6 @@
       "ACTION"
     ],
     "abilityText": "+2 Cards\n+1 Action",
-    "cardName": "Laboratory"
   },
   "library": {
     "cost": {
@@ -186,7 +169,6 @@
       "ACTION"
     ],
     "abilityText": "Draw until you have 7 cards in hand, skipping any Action cards you choose to; set those aside, discarding them afterward.",
-    "cardName": "Library"
   },
   "market": {
     "cost": {
@@ -196,7 +178,6 @@
       "ACTION"
     ],
     "abilityText": "+1 Card\n+1 Action\n+1 Buy\n+1 Treasure",
-    "cardName": "Market"
   },
   "merchant": {
     "cost": {
@@ -206,7 +187,6 @@
       "ACTION"
     ],
     "abilityText": "+1 Card\n+1 Action\nThe first time you play a Silver this turn, +1 Treasure.",
-    "cardName": "Merchant"
   },
   "militia": {
     "cost": {
@@ -218,7 +198,6 @@
     ],
     "targetScheme": "ALL_OTHER",
     "abilityText": "+2 Treasure\nEach other player discards down to 3 cards in hand.",
-    "cardName": "Militia"
   },
   "mine": {
     "cost": {
@@ -228,7 +207,6 @@
       "ACTION"
     ],
     "abilityText": "You may trash a Treasure from your hand. Gain a Treasure to your hand costing up to 3 Treasure more than it.",
-    "cardName": "Mine"
   },
   "moat": {
     "cost": {
@@ -239,7 +217,6 @@
       "REACTION"
     ],
     "abilityText": "+2 Cards\n--------------\nWhen another player plays an Attack card, you may first reveal this from your hand, to be unaffected by it.",
-    "cardName": "Moat"
   },
   "moneylender": {
     "cost": {
@@ -249,7 +226,6 @@
       "ACTION"
     ],
     "abilityText": "You may trash a Copper from your hand for +3 Treasure.",
-    "cardName": "Moneylender"
   },
   "poacher": {
     "cost": {
@@ -259,7 +235,6 @@
       "ACTION"
     ],
     "abilityText": "+1 Card\n+1 Action\n+1 Treasure\nDiscard a card per empty Supply pile.",
-    "cardName": "Poacher"
   },
   "remodel": {
     "cost": {
@@ -269,7 +244,6 @@
       "ACTION"
     ],
     "abilityText": "Trash a card from your hand. Gain a card costing up to 2 Treasure more than it.",
-    "cardName": "Remodel"
   },
   "sentry": {
     "cost": {
@@ -279,7 +253,6 @@
       "ACTION"
     ],
     "abilityText": "+1 Card\n+1 Action\nLook at the top 2 cards of your deck. Trash and/or discard any number of them. Put the rest back on top in any order.",
-    "cardName": "Sentry"
   },
   "smithy": {
     "cost": {
@@ -289,7 +262,6 @@
       "ACTION"
     ],
     "abilityText": "+3 Cards",
-    "cardName": "Smithy"
   },
   "throne-room": {
     "cost": {
@@ -299,7 +271,6 @@
       "ACTION"
     ],
     "abilityText": "You may play an Action card from your hand twice.",
-    "cardName": "Throne Room"
   },
   "vassal": {
     "cost": {
@@ -309,7 +280,6 @@
       "ACTION"
     ],
     "abilityText": "+2 Treasure\nDiscard the top card of your deck. If it's an Action card, you may play it.",
-    "cardName": "Vassal"
   },
   "village": {
     "cost": {
@@ -319,7 +289,6 @@
       "ACTION"
     ],
     "abilityText": "+1 Card\n+2 Actions",
-    "cardName": "Village"
   },
   "witch": {
     "cost": {
@@ -331,7 +300,6 @@
     ],
     "targetScheme": "ALL_OTHER",
     "abilityText": "+2 Cards\nEach other player gains a Curse.",
-    "cardName": "Witch"
   },
   "workshop": {
     "cost": {
@@ -341,6 +309,5 @@
       "ACTION"
     ],
     "abilityText": "Gain a card costing up to 4 Treasure.",
-    "cardName": "Workshop"
   }
 }

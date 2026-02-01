@@ -1,5 +1,5 @@
-import { capitalize } from "es-toolkit";
 import { CardKey, CardLikeNoId, CardNoId } from 'shared/shared-types';
+import { formatCardName } from './format-card-name.ts';
 
 export const createCardData = (cardKey: CardKey, expansionName: string, templateData: Partial<CardNoId>) => {
   const data = {
@@ -23,7 +23,8 @@ export const createCardLike = (cardKey: CardKey, expansionName: string, template
     detailImagePath: `./assets/card-images/${expansionName}/detail/${cardKey}.jpg`,
     fullImagePath: `./assets/card-images/${expansionName}/full-size/${cardKey}.jpg`,
     ...templateData ?? {},
-    cardName: templateData.cardName ?? capitalize(cardKey),
+    // Default card names follow the standard format rules unless overridden by card data.
+    cardName: templateData.cardName ?? formatCardName(cardKey),
     kingdom: resolvedKingdom
   } as CardLikeNoId;
   return data;

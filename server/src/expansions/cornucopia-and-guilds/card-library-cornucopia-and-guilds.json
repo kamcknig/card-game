@@ -30,7 +30,6 @@
     "kingdomSelectable": false
   },
   "huge-turnip": {
-    "cardName": "Huge Turnip",
     "cost": {
       "treasure": 0
     },
@@ -63,7 +62,6 @@
     "type": ["ACTION"]
   },
   "candlestick-maker": {
-    "cardName": "Candlestick Maker",
     "cost": {
       "treasure": 2
     },
@@ -209,7 +207,6 @@
     "tags": ["overpay"]
   },
   "young-witch": {
-    "cardName": "Young Witch",
     "cost": {
       "treasure": 4
     },
@@ -218,3 +215,4 @@
     "abilityText": "+2 Cards\nDiscard 2 cards. Each other player gains a Curse unless they reveal a Bane from their hand.\nSetup: Add an extra Kingdom card pile costing $2 or $3 to the Supply. Its cards are Banes."
   }
 }
+

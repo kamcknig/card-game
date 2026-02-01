@@ -16,7 +16,6 @@
     "type": [
       "TREASURE"
     ],
-    "cardName": "Capital",
     "abilityText": "+1 Buy\n+6 Treasure\nWhen you discard this from play, +6 Debt"
   },
   "castles": {
@@ -46,7 +45,6 @@
       },
       {
         "cardKey": "grand-castle",
-        "cardName": "Grand Castle",
         "cost": {
           "treasure": 9
         },
@@ -59,7 +57,6 @@
       },
       {
         "cardKey": "sprawling-castle",
-        "cardName": "Sprawling Castle",
         "cost": {
           "treasure": 8
         },
@@ -72,7 +69,6 @@
       },
       {
         "cardKey": "opulent-castle",
-        "cardName": "Opulent Castle",
         "cost": {
           "treasure": 7
         },
@@ -86,7 +82,6 @@
       },
       {
         "cardKey": "haunted-castle",
-        "cardName": "Haunted Castle",
         "cost": {
           "treasure": 6
         },
@@ -99,7 +94,6 @@
       },
       {
         "cardKey": "small-castle",
-        "cardName": "Small Castle",
         "cost": {
           "treasure": 5
         },
@@ -113,7 +107,6 @@
       },
       {
         "cardKey": "crumbling-castle",
-        "cardName": "Crumbling Castle",
         "cost": {
           "treasure": 4
         },
@@ -126,7 +119,6 @@
       },
       {
         "cardKey": "humble-castle",
-        "cardName": "Humble Castle",
         "cost": {
           "treasure": 3
         },
@@ -161,7 +153,6 @@
           "ACTION",
           "ATTACK"
         ],
-        "cardName": "Catapult",
         "abilityText": "+1 Treasure\nTrash a card from your hand. If it costs $3 or more, each other player gains a Curse. If it's a Treasure, each other player discards down to 3 cards in hand.",
         "targetScheme": "ALL_OTHER"
       },
@@ -173,7 +164,6 @@
         "type": [
           "TREASURE"
         ],
-        "cardName": "Rocks",
         "abilityText": "+1 Treasure\nWhen you gain or trash this: If it's your Buy phase, gain a Silver onto your deck, otherwise gain a Silver to your hand."
       }
     ]
@@ -185,7 +175,6 @@
     "type": [
       "ACTION"
     ],
-    "cardName": "Chariot Race",
     "abilityText": "+1 Action\n+1 Card, revealing it. The player to your left reveals the top card of their deck. If your card costs more, +$1 and +1VP."
   },
   "charm": {
@@ -322,7 +311,6 @@
     "cards": [
       {
         "cardKey": "patrician",
-        "cardName": "Patrician",
         "cost": {
           "treasure": 2
         },
@@ -333,7 +321,6 @@
       },
       {
         "cardKey": "emporium",
-        "cardName": "Emporium",
         "cost": {
           "treasure": 5
         },
@@ -343,6 +330,16 @@
         "abilityText": "+1 Card\n+1 Action\n+$1\nWhen you gain this, if you have at least 5 Action cards in play, +2VP."
       }
     ]
+  },
+  "royal-blacksmith": {
+    "cost": {
+      "treasure": 0,
+      "debt": 8
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+5 Cards\nReveal your hand. Discard all Coppers from it."
   },
   "groundskeeper": {
     "cost": {
@@ -376,3 +373,4 @@
     "abilityText": "Play a non-Command non-Duration Action card from the Supply costing up to $5, leaving it there."
   }
 }
+

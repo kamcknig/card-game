@@ -39,7 +39,6 @@
     "targetScheme": "ALL_OTHER"
   },
   "fishing-village": {
-    "cardName": "Fishing Village",
     "cost": {
       "treasure": 3
     },
@@ -72,7 +71,6 @@
     "type": ["ACTION"]
   },
   "merchant-ship": {
-    "cardName": "Merchant Ship",
     "cost": {
       "treasure": 5
     },
@@ -85,7 +83,6 @@
     "type": ["ACTION", "DURATION"]
   },
   "native-village": {
-    "cardName": "Native Village",
     "cost": {
       "treasure": 2
     },
@@ -111,14 +108,12 @@
     "type": ["ACTION"]
   },
   "sea-chart": {
-    "cardName": "Sea Chart",
     "cost": {
       "treasure": 3
     },
     "type": ["ACTION"]
   },
   "sea-witch": {
-    "cardName": "Sea Witch",
     "cost": {
       "treasure": 5
     },
@@ -138,14 +133,12 @@
     "type": ["ACTION", "DURATION"]
   },
   "tide-pools": {
-    "cardName": "Tide Pools",
     "cost": {
       "treasure": 4
     },
     "type": ["ACTION", "DURATION"]
   },
   "treasure-map": {
-    "cardName": "Treasure Map",
     "cost": {
       "treasure": 4
     },

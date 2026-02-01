@@ -36,7 +36,6 @@
     ]
   },
   "bandit-camp": {
-    "cardName": "Bandit Camp",
     "cost": {
       "treasure": 5
     },
@@ -104,7 +103,6 @@
     "cards": [
       {
         "cardKey": "dame-anna",
-        "cardName": "Dame Anna",
         "cost": {
           "treasure": 5
         },
@@ -117,7 +115,6 @@
       },
       {
         "cardKey": "dame-josephine",
-        "cardName": "Dame Josephine",
         "cost": {
           "treasure": 5
         },
@@ -132,7 +129,6 @@
       },
       {
         "cardKey": "dame-molly",
-        "cardName": "Dame Molly",
         "cost": {
           "treasure": 5
         },
@@ -145,7 +141,6 @@
       },
       {
         "cardKey": "dame-natalie",
-        "cardName": "Dame Natalie",
         "cost": {
           "treasure": 5
         },
@@ -158,7 +153,6 @@
       },
       {
         "cardKey": "dame-sylvia",
-        "cardName": "Dame Sylvia",
         "cost": {
           "treasure": 5
         },
@@ -171,7 +165,6 @@
       },
       {
         "cardKey": "sir-bailey",
-        "cardName": "Sir Bailey",
         "cost": {
           "treasure": 5
         },
@@ -184,7 +177,6 @@
       },
       {
         "cardKey": "sir-destry",
-        "cardName": "Sir Destry",
         "cost": {
           "treasure": 5
         },
@@ -197,7 +189,6 @@
       },
       {
         "cardKey": "sir-martin",
-        "cardName": "Sir Martin",
         "cost": {
           "treasure": 4
         },
@@ -210,7 +201,6 @@
       },
       {
         "cardKey": "sir-michael",
-        "cardName": "Sir Michael",
         "cost": {
           "treasure": 5
         },
@@ -223,7 +213,6 @@
       },
       {
         "cardKey": "sir-vander",
-        "cardName": "Sir Vander",
         "cost": {
           "treasure": 5
         },
@@ -298,7 +287,6 @@
     "kingdomSelectable": false
   },
   "hunting-grounds": {
-    "cardName": "Hunting Grounds",
     "cost": {
       "treasure": 6
     },
@@ -316,7 +304,6 @@
     ]
   },
   "junk-dealer": {
-    "cardName": "Junk Dealer",
     "cost": {
       "treasure": 5
     },
@@ -346,7 +333,6 @@
     "abilityText": "Gain a Spoils. Each other player gains a Ruins."
   },
   "market-square": {
-    "cardName": "Market Square",
     "cost": {
       "treasure": 3
     },
@@ -386,7 +372,6 @@
     "kingdomSelectable": false
   },
   "overgrown-estate": {
-    "cardName": "Overgrown Estate",
     "cost": {
       "treasure": 1
     },
@@ -409,7 +394,6 @@
     "abilityText": "Trash this. If you did, gain 2 Spoils, and each other player with 5 or more cards in hand reveals their hand and discards a card that you choose."
   },
   "poor-house": {
-    "cardName": "Poor House",
     "cost": {
       "treasure": 1
     },
@@ -553,7 +537,6 @@
     ]
   },
   "wandering-minstrel": {
-    "cardName": "Wandering Minstrel",
     "cost": {
       "treasure": 4
     },
@@ -562,3 +545,4 @@
     ]
   }
 }
+

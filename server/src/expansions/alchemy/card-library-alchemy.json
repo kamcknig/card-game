@@ -58,7 +58,6 @@
     "type": ["TREASURE"]
   },
   "scrying-pool": {
-    "cardName": "Scrying Pool",
     "cost": {
       "treasure": 2,
       "potion": 1

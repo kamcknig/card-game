@@ -1,6 +1,6 @@
 import { Card, CardKey, CardNoId, Event, EventNoId } from 'shared/shared-types.ts';
 import { rawCardLibrary } from '@expansions/expansion-library.ts';
-import { capitalize } from 'es-toolkit/compat';
+import { formatCardName } from './format-card-name.ts';
 
 let CARD_COUNT: number = 0;
 
@@ -9,7 +9,8 @@ export const createCard = (cardKey: CardKey, card?: Partial<CardNoId>): Card => 
   const c = new Card({
     ...baseCardData,
     cardKey: cardKey,
-    cardName: baseCardData.cardName ?? capitalize(cardKey),
+    // Default card names follow the standard format rules unless overridden by card data.
+    cardName: baseCardData.cardName ?? formatCardName(cardKey),
     ...card ?? {},
     id: ++CARD_COUNT,
   });

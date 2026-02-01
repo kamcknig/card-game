@@ -1731,6 +1731,50 @@ const expansion: CardExpansionModule = {
       },
     }),
   },
+  'royal-blacksmith': {
+    registerEffects: () => async (args) => {
+      // Royal Blacksmith draws 5 cards, reveals hand, then discards all Coppers from hand.
+      console.debug(`[royal blacksmith effect] drawing 5 cards`);
+      await args.runGameActionDelegate('drawCard', {
+        playerId: args.playerId,
+        count: 5,
+      });
+
+      const handCardIds = [
+        ...args.cardSourceController.getSource('playerHand', args.playerId),
+      ];
+      console.debug(
+        `[royal blacksmith effect] revealing ${handCardIds.length} cards in hand`,
+      );
+      for (const cardId of handCardIds) {
+        await args.runGameActionDelegate('revealCard', {
+          cardId,
+          playerId: args.playerId,
+        });
+      }
+
+      // Discard all Copper cards from the revealed hand.
+      const copperCardIds = handCardIds
+        .map((cardId) => args.cardLibrary.getCard(cardId))
+        .filter((card) => card.cardKey === 'copper')
+        .map((card) => card.id);
+
+      if (!copperCardIds.length) {
+        console.debug(`[royal blacksmith effect] no Coppers to discard`);
+        return;
+      }
+
+      console.info(
+        `[royal blacksmith effect] discarding ${copperCardIds.length} Copper(s)`,
+      );
+      for (const cardId of copperCardIds) {
+        await args.runGameActionDelegate('discardCard', {
+          playerId: args.playerId,
+          cardId,
+        });
+      }
+    },
+  },
   "small-castle": {
     registerEffects: () => async (args) => {
       // Small Castle allows trashing itself or a Castle from hand to gain a Castle.
