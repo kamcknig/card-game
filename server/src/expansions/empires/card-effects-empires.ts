@@ -1,5 +1,15 @@
-import { CardEffectFunctionContext, CardExpansionModule } from "../../types.ts";
-import { CardId, CardKey, CardLocation, PlayerId } from "shared/shared-types";
+import {
+  CardEffectFunctionContext,
+  CardExpansionModule,
+  ReactionTrigger,
+} from "../../types.ts";
+import {
+  CardId,
+  CardKey,
+  CardLocation,
+  PlayerId,
+  TurnPhaseOrderValues,
+} from "shared/shared-types";
 import { compareCardCosts } from "shared/compare-card-cost.ts";
 import { findOrderedTargets } from "../../utils/find-ordered-targets.ts";
 import { discardDownTo } from "../../utils/discard-down-to.ts";
@@ -1924,6 +1934,53 @@ const expansion: CardExpansionModule = {
         tokenId: prosperityTokenIds.victory,
         location: { type: 'supplyPile', cardKey: 'temple' },
       });
+    },
+  },
+  'villa': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (args, eventArgs) => {
+        // Villa moves to hand, grants +1 Action, and can return you to the action phase.
+        console.debug(
+          `[villa onGained] player ${eventArgs.playerId} gained Villa`,
+        );
+
+        const villaCard = args.cardLibrary.getCard(eventArgs.cardId);
+
+        console.info(
+          `[villa onGained] moving ${villaCard} to hand for player ${eventArgs.playerId}`,
+        );
+        await args.runGameActionDelegate('moveCard', {
+          cardId: eventArgs.cardId,
+          toPlayerId: eventArgs.playerId,
+          to: { location: 'playerHand' },
+        });
+
+        const currentPlayerId = getCurrentPlayer(args.match).id;
+        if (currentPlayerId !== eventArgs.playerId) {
+          console.info(
+            `[villa onGained] gained off-turn, skipping action gain and phase change`,
+          );
+          return;
+        }
+
+        console.debug(`[villa onGained] gaining 1 action`);
+        await args.runGameActionDelegate('gainAction', { count: 1 });
+
+        const isBuyPhase = getTurnPhase(args.match.turnPhaseIndex) === 'buy';
+        if (!isBuyPhase) {
+          console.debug(`[villa onGained] not in buy phase, no phase change`);
+          return;
+        }
+      },
+    }),
+    registerEffects: () => async (args) => {
+      // Villa grants actions, a buy, and treasure when played.
+      console.debug(`[villa effect] gaining 2 actions`);
+      await args.runGameActionDelegate('gainAction', { count: 2 });
+      console.debug(`[villa effect] gaining 1 buy`);
+      await args.runGameActionDelegate('gainBuy', { count: 1 });
+      console.debug(`[villa effect] gaining 1 treasure`);
+      await args.runGameActionDelegate('gainTreasure', { count: 1 });
     },
   },
   'sacrifice': {

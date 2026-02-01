@@ -374,6 +374,15 @@
     ],
     "abilityText": "+1VP\nTrash from 1 to 3 differently named cards from your hand. Add 1VP to the Temple pile.\nWhen you gain this, take the VP from the Temple pile."
   },
+  "villa": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+2 Actions\n+1 Buy\n+$1\nWhen you gain this, put it into your hand, +1 Action, and if it's your Buy phase return to your Action phase."
+  },
   "sacrifice": {
     "cost": {
       "treasure": 4
