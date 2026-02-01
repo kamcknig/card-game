@@ -9,6 +9,8 @@ import { getTurnPhase } from "../../utils/get-turn-phase.ts";
 import { isPlayerImmune } from "../../utils/reaction-immunity.ts";
 import { getPileDefinitionCard } from "../../utils/get-pile-definition-card.ts";
 import { prosperityTokenIds } from "../prosperity/token-prosperity-ids.ts";
+import { FortuneMetadata } from "../prosperity/types.ts";
+import { getPlayerStartingFrom } from "shared/get-player-position-utils.ts";
 
 type ArchiveEffectContext = Pick<
   CardEffectFunctionContext,
@@ -998,6 +1000,61 @@ const expansion: CardExpansionModule = {
       }
     },
   },
+  "fortune": {
+    registerLifeCycleMethods: () => ({
+      onGained: async (args) => {
+        console.debug(`[fortune onGained] running`);
+
+        const gladiatorsInPlay = getCardsInPlay(args.findCards).filter((card) =>
+          card.cardKey === "gladiators"
+        );
+
+        if (!gladiatorsInPlay.length) {
+          console.debug(`[fortune onGained] no gladiators in play`);
+          return;
+        }
+
+        console.debug(
+          `[fortune onGained] gaining ${gladiatorsInPlay.length} treasure`,
+        );
+        await args.runGameActionDelegate("gainTreasure", {
+          count: gladiatorsInPlay.length,
+        });
+      },
+    }),
+    registerEffects: () => async (args) => {
+      console.debug(`[fortune effect] gaining 1 buy`);
+      await args.runGameActionDelegate("gainBuy", { count: 1 });
+
+      const thisCard = args.cardLibrary.getCard<FortuneMetadata>(args.cardId);
+      if (!thisCard.metadata.doubled[args.playerId]) {
+        console.debug(`[fortune effect] doubling treasure`);
+        await args.runGameActionDelegate("gainTreasure", {
+          count: args.match.playerTreasure,
+        });
+        thisCard.metadata.doubled[args.playerId] = true;
+      }
+
+      args.reactionManager.registerReactionTemplate(thisCard, "endTurn", {
+        playerId: args.playerId,
+        once: true,
+        compulsory: true,
+        autoResolve: true,
+        allowMultipleInstances: false,
+        condition: async (conditionArgs) => {
+          const fortuneCards = getCardsInPlay(conditionArgs.findCards).filter(
+            (c) => c.cardKey === "fortune",
+          );
+          if (fortuneCards.length > 0) return false;
+          return conditionArgs.trigger.args.playerId === args.playerId;
+        },
+        triggeredEffectFn: async () => {
+          console.debug(`[fortune endTurn trigger] running`);
+          thisCard.metadata.doubled[args.playerId] = false;
+        },
+      });
+    },
+  },
   "forum": {
     registerLifeCycleMethods: () => ({
       onGained: async (args, eventArgs) => {
@@ -1016,6 +1073,108 @@ const expansion: CardExpansionModule = {
 
       console.debug(`[forum effect] gaining 1 action`);
       await args.runGameActionDelegate("gainAction", { count: 1 });
+    },
+  },
+  "gladiator": {
+    registerEffects: () => async (args) => {
+      console.debug(`[gladiator effect] gaining 2 treasure`);
+      await args.runGameActionDelegate("gainTreasure", { count: 2 });
+
+      const hand = args.cardSourceController.getSource(
+        "playerHand",
+        args.playerId,
+      );
+
+      const trashCard = async () => {
+        await args.runGameActionDelegate("gainTreasure", { count: 1 });
+        const gladiators = args.findCards([
+          { location: "kingdomSupply" },
+          { cardKeys: "gladiators" },
+        ]);
+
+        if (!gladiators.length) {
+          console.debug(`[gladiator effect] no gladiators in supply`);
+          return;
+        }
+
+        console.debug(`[gladiator effect] gaining gladiator`);
+
+        await args.runGameActionDelegate("gainCard", {
+          playerId: args.playerId,
+          cardId: gladiators[0].id,
+          to: { location: "playerDiscard" },
+        });
+      };
+
+      if (!hand.length) {
+        console.debug(
+          `[gladiator effect] player ${args.playerId} has no cards in hand`,
+        );
+        await trashCard();
+        return;
+      }
+
+      const selectedCardIds = await args.runGameActionDelegate("selectCard", {
+        playerId: args.playerId,
+        prompt: `Select card to reveal`,
+        restrict: hand,
+        count: 1,
+        optional: false,
+        autoSelect: true,
+      }) as CardId[];
+
+      if (!selectedCardIds.length) {
+        console.debug(`[gladiator effect] no card selected`);
+        await trashCard();
+        return;
+      }
+
+      const selectedCard = args.cardLibrary.getCard(selectedCardIds[0]);
+
+      await args.runGameActionDelegate("revealCard", {
+        playerId: args.playerId,
+        cardId: selectedCard.id,
+      });
+
+      const leftPlayer = getPlayerStartingFrom({
+        startFromIdx: args.match.currentPlayerTurnIndex,
+        match: args.match,
+        distance: 1,
+      });
+
+      const leftPlayerHand = args.cardSourceController.getSource(
+        "playerHand",
+        leftPlayer.id,
+      ).map((id) => args.cardLibrary.getCard(id)).filter((c) =>
+        c.cardKey === selectedCard.cardName
+      ).map((c) => c.id);
+
+      if (!leftPlayerHand.length) {
+        console.debug(`[gladiator effect] no cards in left player's hand`);
+        await trashCard();
+        return;
+      }
+
+      const result = await args.runGameActionDelegate("userPrompt", {
+        playerId: leftPlayer.id,
+        prompt: `Reveal ${selectedCard.cardName}?`,
+        actionButtons: [
+          { label: "YES", action: 1 },
+          { label: "NO", action: 2 },
+        ],
+      }) as { action: number; result: number[] };
+
+      if (result.action !== 1) {
+        console.debug(`[gladiator effect] user chose to reveal card`);
+        await args.runGameActionDelegate("revealCard", {
+          playerId: leftPlayer.id,
+          cardId: leftPlayerHand[0],
+        });
+        return;
+      }
+
+      console.debug(`[gladiator effect] user chose to reveal card`);
+      await trashCard();
     },
   },
   "rocks": {

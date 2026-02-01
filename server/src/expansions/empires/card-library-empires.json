@@ -273,5 +273,33 @@
       "ACTION"
     ],
     "abilityText": "+3 Cards\n+1 Action\nDiscard 2 cards.\nWhen you gain this, +1 Buy."
+  },
+  "gladiator/future": {
+    "pile": {
+      "randomizer": "gladiator/future",
+      "type": ["ACTION"],
+      "cost": {
+        "treasure": 3
+      }
+    },
+    "cards": [
+      {
+        "cardKey": "fortune",
+        "type": ["ACTION"],
+        "cost": {
+          "treasure": 3
+        },
+        "abilityText": "+$2\nReveal a card from your hand. The player to your left may reveal a copy from their hand. If they don't, +$1 and trash a Gladiator from its pile."
+      },
+      {
+        "cardKey": "gladiator",
+        "type": ["TREASURE"],
+        "cost": {
+          "treasure": 8,
+          "debt": 8
+        },
+        "abilityText": "+1 Buy\nDouble your $ if you haven't yet this turn.\nWhen you gain this, gain a Gold per Gladiator you have in play"
+      }
+    ]
   }
 }

@@ -1,4 +1,4 @@
-import { Card, CardId, PlayerId } from 'shared/shared-types.ts';
+import { Card, CardId, PlayerId } from 'shared/shared-types';
 
 /**
  * The CardLibrary class provides a way to add cards into a library that is used within a Match.
@@ -8,26 +8,26 @@ import { Card, CardId, PlayerId } from 'shared/shared-types.ts';
  */
 export class MatchCardLibrary {
   private readonly _library: Map<CardId, Card> = new Map();
-  
+
   public addCard = (card: Card) => {
     console.debug(`[CARD LIBRARY] adding ${card} to library`);
     this._library.set(card.id, card);
   };
-  
-  public getCard = (cardId: CardId): Card => {
+
+  public getCard = <M = unknown>(cardId: CardId): Card<M> => {
     const c = this._library.get(cardId);
     if (!c) throw new Error(`[CARD LIBRARY] unable to locate card ${cardId}`);
-    return c;
+    return c as Card<M>;
   };
-  
+
   public getAllCards = (): Record<number, Card> => {
     return Object.fromEntries(this._library) as Record<number, Card>;
   };
-  
+
   public getAllCardsAsArray = (): Card[] => {
     return this._library.values().toArray();
   }
-  
+
   getCardsByOwner(id: PlayerId) {
     const allCards = this.getAllCardsAsArray();
     const playerCards = allCards.filter(c => {

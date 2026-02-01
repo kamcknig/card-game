@@ -371,7 +371,7 @@ export type MatchSummary = {
   }[]
 }
 
-export class CardLike {
+export class CardLike<M = unknown> {
   id: CardId;
   cardKey: CardKey;
   cardName: string;
@@ -382,6 +382,7 @@ export class CardLike {
   randomizerData?: RandomizerData;
   // Indicates whether the card is eligible for kingdom selection.
   kingdomSelectable?: boolean;
+  metadata: M;
 
   constructor(args: CardLike) {
     this.id = args.id;
@@ -505,7 +506,7 @@ export type CardCost = {
   debt?: number | undefined;
 }
 
-export class Card extends CardLike {
+export class Card<M = unknown> extends CardLike<M> {
   /**
    * This indicates if the card is part of the supply or not. shelters, rewards, etc. are not part of the supply.
    *
