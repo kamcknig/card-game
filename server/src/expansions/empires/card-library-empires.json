@@ -264,5 +264,14 @@
       "GATHERING"
     ],
     "abilityText": "+1 Buy\nIf there are 4VP or more on the Farmers' Market pile, take them and trash this. Otherwise, add 1VP to the pile and then +$1 per 1VP on the pile."
+  },
+  "forum": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+3 Cards\n+1 Action\nDiscard 2 cards.\nWhen you gain this, +1 Buy."
   }
 }

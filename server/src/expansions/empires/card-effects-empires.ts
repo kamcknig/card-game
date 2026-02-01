@@ -998,6 +998,26 @@ const expansion: CardExpansionModule = {
       }
     },
   },
+  "forum": {
+    registerLifeCycleMethods: () => ({
+      onGained: async (args, eventArgs) => {
+        console.debug(
+          `[forum onGained] player ${eventArgs.playerId} gained Forum`,
+        );
+        await args.runGameActionDelegate("gainBuy", { count: 1 });
+      },
+    }),
+    registerEffects: () => async (args) => {
+      console.debug(`[forum effect] gaining 3 cards`);
+      await args.runGameActionDelegate("drawCard", {
+        playerId: args.playerId,
+        count: 3,
+      });
+
+      console.debug(`[forum effect] gaining 1 action`);
+      await args.runGameActionDelegate("gainAction", { count: 1 });
+    },
+  },
   "rocks": {
     registerEffects: () => async ({ runGameActionDelegate }) => {
       // Rocks provides +$1 when played.
