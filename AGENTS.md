@@ -83,6 +83,7 @@ execution
 - follow current standards in code for both syntax and logic where applicable.
 - json files should follow proper schema validation
 - cardName in the card library is only needed
+- prefer returning early from methods over nesting
 
 ---
 

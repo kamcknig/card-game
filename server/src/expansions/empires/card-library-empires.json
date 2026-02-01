@@ -331,6 +331,15 @@
       }
     ]
   },
+  "sacrifice": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "Trash a card from your hand. If it's an...\nAction card, +2 Cards and +2 Actions\nTreasure card, +$2\nVictory card, +2VP"
+  },
   "royal-blacksmith": {
     "cost": {
       "treasure": 0,
@@ -373,4 +382,3 @@
     "abilityText": "Play a non-Command non-Duration Action card from the Supply costing up to $5, leaving it there."
   }
 }
-

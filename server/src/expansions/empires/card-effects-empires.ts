@@ -1731,6 +1731,72 @@ const expansion: CardExpansionModule = {
       },
     }),
   },
+  'sacrifice': {
+    registerEffects: () => async (args) => {
+      // Sacrifice trashes a card from hand and grants bonuses based on its types.
+      const hand = args.cardSourceController.getSource(
+        'playerHand',
+        args.playerId,
+      );
+      if (!hand.length) {
+        console.debug(`[sacrifice effect] no cards in hand to trash`);
+        return;
+      }
+
+      console.debug(
+        `[sacrifice effect] prompting player ${args.playerId} to trash a card`,
+      );
+      const selectedCardIds = await args.runGameActionDelegate('selectCard', {
+        playerId: args.playerId,
+        prompt: 'Trash a card',
+        restrict: { location: 'playerHand', playerId: args.playerId },
+        count: 1,
+      }) as CardId[];
+
+      if (!selectedCardIds?.length) {
+        console.warn(`[sacrifice effect] no card selected to trash`);
+        return;
+      }
+
+      const trashedCard = args.cardLibrary.getCard(selectedCardIds[0]);
+      console.debug(`[sacrifice effect] trashing ${trashedCard}`);
+      await args.runGameActionDelegate('trashCard', {
+        playerId: args.playerId,
+        cardId: trashedCard.id,
+      });
+
+      // Apply all bonuses that match the trashed card's types.
+      const isAction = trashedCard.type.includes('ACTION');
+      const isTreasure = trashedCard.type.includes('TREASURE');
+      const isVictory = trashedCard.type.includes('VICTORY');
+
+      console.debug(
+        `[sacrifice effect] trashed types action=${isAction} treasure=${isTreasure} victory=${isVictory}`,
+      );
+
+      if (isAction) {
+        console.debug(`[sacrifice effect] gaining 2 cards and 2 actions`);
+        await args.runGameActionDelegate('drawCard', {
+          playerId: args.playerId,
+          count: 2,
+        });
+        await args.runGameActionDelegate('gainAction', { count: 2 });
+      }
+
+      if (isTreasure) {
+        console.debug(`[sacrifice effect] gaining 2 treasure`);
+        await args.runGameActionDelegate('gainTreasure', { count: 2 });
+      }
+
+      if (isVictory) {
+        console.debug(`[sacrifice effect] gaining 2 victory tokens`);
+        await args.runGameActionDelegate('gainVictoryToken', {
+          playerId: args.playerId,
+          count: 2,
+        });
+      }
+    },
+  },
   'royal-blacksmith': {
     registerEffects: () => async (args) => {
       // Royal Blacksmith draws 5 cards, reveals hand, then discards all Coppers from hand.
