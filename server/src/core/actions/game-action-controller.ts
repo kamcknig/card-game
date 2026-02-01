@@ -1,10 +1,10 @@
 import {
   Card,
   CardCost,
+  CardFacing,
   CardId,
   CardKey,
-    CardFacing,
-    CardLikeId,
+  CardLikeId,
   CardLocation,
   CardLocationSpec,
   CountSpec,
@@ -16,6 +16,7 @@ import {
   TokenInstance,
   TokenInstanceId,
   TokenLocation,
+  TurnPhase,
   TurnPhaseOrderValues,
   UserPromptActionArgs
 } from 'shared/shared-types';
@@ -52,7 +53,7 @@ import {fisherYatesShuffle} from '../../utils/fisher-yates-shuffler.ts';
 import {getCardPileKey} from '../../utils/get-card-pile-key.ts';
 import {tokenCardPlayedHandlerMap} from '../tokens/token-trigger-map.ts';
 import {tokenDefinitionMap} from '../tokens/token-definition-map.ts';
-import { prosperityTokenIds } from '../../expansions/prosperity/token-prosperity-ids.ts';
+import {prosperityTokenIds} from '../../expansions/prosperity/token-prosperity-ids.ts';
 
 export class GameActionController implements BaseGameActionDefinitionMap {
   private customActionHandlers: Partial<GameActionDefinitionMap> = {};
@@ -166,7 +167,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
 
           await triggeredArgs.runGameActionDelegate('moveCard', {
             cardId: card.id,
-            to: { location: 'activeDuration' },
+            to: {location: 'activeDuration'},
           });
 
           // Decrement remaining cleanups and unregister when finished.
@@ -358,7 +359,11 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     return tokenInstance;
   }
 
-  async moveToken(args: { tokenInstanceId: TokenInstanceId; location: TokenLocation; ownerId?: PlayerId; }): Promise<void> {
+  async moveToken(args: {
+    tokenInstanceId: TokenInstanceId;
+    location: TokenLocation;
+    ownerId?: PlayerId;
+  }): Promise<void> {
     // Resolve the token instance to ensure we don't mutate a missing token.
     const token = this.getTokenInstance(args.tokenInstanceId);
     // Update location in-place for a stable token reference.
@@ -413,9 +418,9 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     console.debug(`[flipToken action] set token ${args.tokenInstanceId} to ${args.facing}`);
   }
 
-    async moveCard(args: { toPlayerId?: PlayerId, cardId: CardId | Card, to: CardLocationSpec, facing?: CardFacing }) {
-        const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
-        const cardId = card.id;
+  async moveCard(args: { toPlayerId?: PlayerId, cardId: CardId | Card, to: CardLocationSpec, facing?: CardFacing }) {
+    const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
+    const cardId = card.id;
 
     if (Array.isArray(args.to.location)) {
       throw new Error(`[moveCard action] cannot move card to multiple locations`);
@@ -429,19 +434,19 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       console.warn(`[moveCard action] could not find source for ${card}`);
     }
 
-        const newSource = this._cardSourceController.getSource(args.to.location, args.toPlayerId);
+    const newSource = this._cardSourceController.getSource(args.to.location, args.toPlayerId);
 
     if (!newSource) {
       throw new Error(`[moveCard action] could not find source for ${card}`);
     }
 
-        oldSource?.source.splice(oldSource?.index, 1);
+    oldSource?.source.splice(oldSource?.index, 1);
 
-        // Apply default facing rules or explicit facing updates for the destination.
-        const destinationFacing = args.facing ?? this.getDefaultFacingForLocation(args.to.location);
-        if (destinationFacing) {
-            card.facing = destinationFacing;
-        }
+    // Apply default facing rules or explicit facing updates for the destination.
+    const destinationFacing = args.facing ?? this.getDefaultFacingForLocation(args.to.location);
+    if (destinationFacing) {
+      card.facing = destinationFacing;
+    }
 
     switch (oldSource?.sourceKey) {
       case 'playerHand': {
@@ -465,7 +470,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         this.reactionManager.cleanupDurationTriggers(cardId);
     }
 
-        newSource.push(cardId);
+    newSource.push(cardId);
 
     switch (args.to.location) {
       case 'playerHand':
@@ -476,21 +481,21 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         break;
     }
 
-        console.debug(`[moveCard action] moved ${card} from ${oldSource?.sourceKey} to ${args.to.location}`);
+    console.debug(`[moveCard action] moved ${card} from ${oldSource?.sourceKey} to ${args.to.location}`);
 
-        return oldSource ? {location: oldSource?.sourceKey!, playerId: oldSource?.playerId} : undefined;
-    }
+    return oldSource ? {location: oldSource?.sourceKey!, playerId: oldSource?.playerId} : undefined;
+  }
 
-    // Sets default facing for common locations; set-aside is left untouched by default.
-    private getDefaultFacingForLocation(location: CardLocation): CardFacing | undefined {
-        if (location === 'playerDeck') {
-            return 'back';
-        }
-        if (location === 'set-aside') {
-            return undefined;
-        }
-        return 'front';
+  // Sets default facing for common locations; set-aside is left untouched by default.
+  private getDefaultFacingForLocation(location: CardLocation): CardFacing | undefined {
+    if (location === 'playerDeck') {
+      return 'back';
     }
+    if (location === 'set-aside') {
+      return undefined;
+    }
+    return 'front';
+  }
 
   async gainAction(args: { count: number }, context?: GameActionContext) {
     console.info(`[gainAction action] gaining ${args.count} actions`);
@@ -769,7 +774,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       await this.placeToken({
         tokenId: victoryTokenId,
         ownerId: args.playerId,
-        location: { type: 'player', playerId: args.playerId },
+        location: {type: 'player', playerId: args.playerId},
       }, context);
     }
     console.debug(`[gainVictoryToken action] player ${args.playerId} placed ${args.count} victory tokens`);
@@ -1087,11 +1092,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
 
     let currentPlayer = getCurrentPlayer(match);
 
-    const trigger = new ReactionTrigger('endTurnPhase', {
-      phaseIndex: match.turnPhaseIndex,
-      playerId: currentPlayer.id
-    });
-    await this.reactionManager.runTrigger({trigger});
+    await this.runEndTurnPhaseTrigger(match.turnPhaseIndex, currentPlayer.id);
 
     match.turnPhaseIndex = match.turnPhaseIndex + 1;
 
@@ -1102,59 +1103,88 @@ export class GameActionController implements BaseGameActionDefinitionMap {
 
     const newPhase = getTurnPhase(match.turnPhaseIndex);
 
-    console.log(`[nextPhase action] entering phase: ${newPhase} for turn ${match.turnNumber}`);
+    if (newPhase === 'action') {
+      match.playerActions = 1;
+      match.playerBuys = 1;
+      match.playerTreasure = 0;
+      match.playerPotions = 0;
 
-    switch (newPhase) {
-      case 'action': {
-        match.playerActions = 1;
-        match.playerBuys = 1;
-        match.playerTreasure = 0;
-        match.playerPotions = 0;
-        match.currentPlayerTurnIndex++;
+      match.currentPlayerTurnIndex++;
 
-        if (match.currentPlayerTurnIndex >= match.players.length) {
-          match.currentPlayerTurnIndex = 0;
-          match.roundNumber++;
-
-          this.logManager.addLogEntry({
-            root: true,
-            type: 'newTurn',
-            turn: Math.floor(match.turnNumber / match.players.length) + 1,
-          });
-        }
+      if (match.currentPlayerTurnIndex >= match.players.length) {
+        match.currentPlayerTurnIndex = 0;
+        match.roundNumber++;
 
         this.logManager.addLogEntry({
-          type: 'newPlayerTurn',
+          root: true,
+          type: 'newTurn',
           turn: Math.floor(match.turnNumber / match.players.length) + 1,
-          playerId: match.players[match.currentPlayerTurnIndex].id
         });
-
-        currentPlayer = getCurrentPlayer(match);
-
-        console.info(`[nextPhase action] new round: ${match.roundNumber}, turn ${match.turnNumber} for ${currentPlayer}`);
-
-        const startTurnTrigger = new ReactionTrigger('startTurn', {
-          playerId: match.players[match.currentPlayerTurnIndex].id,
-          turnNumber: match.turnNumber
-        });
-        await this.reactionManager.runTrigger({trigger: startTurnTrigger});
-
-        const startPhaseTrigger = new ReactionTrigger('startTurnPhase', {phaseIndex: match.turnPhaseIndex});
-        await this.reactionManager.runTrigger({trigger: startPhaseTrigger});
-
-        break;
       }
-      case 'buy': {
-        const startPhaseTrigger = new ReactionTrigger('startTurnPhase', {phaseIndex: match.turnPhaseIndex});
-        await this.reactionManager.runTrigger({trigger: startPhaseTrigger});
-        break;
-      }
+
+      this.logManager.addLogEntry({
+        type: 'newPlayerTurn',
+        turn: Math.floor(match.turnNumber / match.players.length) + 1,
+        playerId: match.players[match.currentPlayerTurnIndex].id,
+      });
+
+      currentPlayer = getCurrentPlayer(match);
+
+      console.info(
+        `[nextPhase action] new round: ${match.roundNumber}, turn ${match.turnNumber} for ${currentPlayer}`,
+      );
+
+      const startTurnTrigger = new ReactionTrigger('startTurn', {
+        playerId: match.players[match.currentPlayerTurnIndex].id,
+        turnNumber: match.turnNumber,
+      });
+
+      await this.reactionManager.runTrigger({trigger: startTurnTrigger});
+    }
+
+    await this.enterPhase({
+      phaseIndex: match.turnPhaseIndex,
+      runPhaseEntryEffects: true,
+      runStartPhaseTrigger: true,
+      logLabel: 'nextPhase action',
+    });
+  }
+
+  private async runEndTurnPhaseTrigger(phaseIndex: number, playerId: PlayerId) {
+    const trigger = new ReactionTrigger('endTurnPhase', {
+      phaseIndex,
+      playerId,
+    });
+    await this.reactionManager.runTrigger({trigger});
+  }
+
+  private async runStartTurnPhaseTrigger(phaseIndex: number) {
+    const trigger = new ReactionTrigger('startTurnPhase', {phaseIndex});
+    await this.reactionManager.runTrigger({trigger});
+  }
+
+  private async handlePhaseEntryEffects(
+    phase: TurnPhase,
+    runStartPhaseTrigger: boolean,
+  ) {
+    const match = this.match;
+
+    switch (phase) {
+      case 'action':
+      case 'buy':
       case 'cleanup': {
-        const startPhaseTrigger = new ReactionTrigger('startTurnPhase', {phaseIndex: match.turnPhaseIndex});
-        await this.reactionManager.runTrigger({trigger: startPhaseTrigger});
+        if (runStartPhaseTrigger) {
+          await this.runStartTurnPhaseTrigger(match.turnPhaseIndex);
+        }
 
+        const currentPlayer = getCurrentPlayer(match);
         const cardsToDiscard = this._findCards({location: 'playArea'})
-          .concat(this._findCards({location: 'playerHand', playerId: currentPlayer.id}));
+          .concat(
+            this._findCards({
+              location: 'playerHand',
+              playerId: currentPlayer.id,
+            }),
+          );
 
         for (const cardId of cardsToDiscard) {
           await this.discardCard({cardId, playerId: currentPlayer.id});
@@ -1171,8 +1201,80 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         break;
       }
     }
+  }
+
+  private async enterPhase(args: {
+    phaseIndex: number;
+    runPhaseEntryEffects: boolean;
+    runStartPhaseTrigger: boolean;
+    logLabel: string;
+  }) {
+    const match = this.match;
+    const phase = getTurnPhase(args.phaseIndex);
+
+    match.turnPhaseIndex = args.phaseIndex;
+
+    console.log(
+      `[${args.logLabel}] entering phase: ${phase} for turn ${match.turnNumber}`,
+    );
+
+    if (args.runPhaseEntryEffects) {
+      await this.handlePhaseEntryEffects(phase, args.runStartPhaseTrigger);
+    } else if (args.runStartPhaseTrigger) {
+      await this.runStartTurnPhaseTrigger(match.turnPhaseIndex);
+    }
 
     await this.checkForRemainingPlayerActions();
+  }
+
+  // Sets the turn phase explicitly without changing turn or player order.
+  async setTurnPhase(args: {
+    phase: TurnPhase;
+    playerId?: PlayerId;
+    endCurrentPhase?: boolean;
+    startNewPhase?: boolean;
+  }) {
+    const match = this.match;
+    const currentPlayer = getCurrentPlayer(match);
+    const targetPlayerId = args.playerId ?? currentPlayer.id;
+
+    if (targetPlayerId !== currentPlayer.id) {
+      console.warn(
+        `[setTurnPhase action] requested by non-current player ${targetPlayerId}, current is ${currentPlayer.id}`,
+      );
+      return;
+    }
+
+    const currentPhase = getTurnPhase(match.turnPhaseIndex);
+    if (currentPhase === args.phase) {
+      console.debug(
+        `[setTurnPhase action] already in ${args.phase} phase, skipping`,
+      );
+      return;
+    }
+
+    const targetIndex = TurnPhaseOrderValues.indexOf(args.phase);
+    if (targetIndex < 0) {
+      throw new Error(`[setTurnPhase action] invalid phase ${args.phase}`);
+    }
+
+    const shouldEnd = args.endCurrentPhase ?? true;
+    const shouldStart = args.startNewPhase ?? true;
+
+    if (shouldEnd) {
+      await this.runEndTurnPhaseTrigger(match.turnPhaseIndex, currentPlayer.id);
+    }
+
+    await this.enterPhase({
+      phaseIndex: targetIndex,
+      runPhaseEntryEffects: false,
+      runStartPhaseTrigger: shouldStart,
+      logLabel: 'setTurnPhase action',
+    });
+
+    if (!shouldStart) {
+      console.debug(`[setTurnPhase action] start phase trigger suppressed`);
+    }
   }
 
   async endTurn() {
@@ -1283,7 +1385,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     if (card.type.includes('ACTION') && args.overrides?.actionCost !== 0) {
       this.match.playerActions -= args.overrides?.actionCost ?? 1;
 
-    console.info(`[playCard action] Reducing player's action count to ${this.match.playerActions}`);
+      console.info(`[playCard action] Reducing player's action count to ${this.match.playerActions}`);
     }
 
     this.match.stats.playedCardsByTurn[this.match.turnNumber] ??= [];

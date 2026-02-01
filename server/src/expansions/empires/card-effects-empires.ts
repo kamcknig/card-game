@@ -1,14 +1,9 @@
-import {
-  CardEffectFunctionContext,
-  CardExpansionModule,
-  ReactionTrigger,
-} from "../../types.ts";
+import { CardEffectFunctionContext, CardExpansionModule } from "../../types.ts";
 import {
   CardId,
   CardKey,
   CardLocation,
   PlayerId,
-  TurnPhaseOrderValues,
 } from "shared/shared-types";
 import { compareCardCosts } from "shared/compare-card-cost.ts";
 import { findOrderedTargets } from "../../utils/find-ordered-targets.ts";
@@ -1971,6 +1966,13 @@ const expansion: CardExpansionModule = {
           console.debug(`[villa onGained] not in buy phase, no phase change`);
           return;
         }
+
+        await args.runGameActionDelegate('setTurnPhase', {
+          phase: 'action',
+          playerId: eventArgs.playerId,
+          endCurrentPhase: true,
+          startNewPhase: true,
+        });
       },
     }),
     registerEffects: () => async (args) => {

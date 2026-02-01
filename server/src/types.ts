@@ -22,6 +22,7 @@ import {
     TokenInstance,
     TokenInstanceId,
     TokenLocation,
+    TurnPhase,
     UserPromptActionArgs,
 } from 'shared/shared-types.ts';
 import {toNumber} from 'es-toolkit/compat';
@@ -192,6 +193,13 @@ export interface BaseGameActionDefinitionMap {
         // Optional facing update applied when the card moves.
         facing?: CardFacing;
     }) => Promise<{ location: CardLocation; playerId?: PlayerId; } | undefined>;
+    // Sets the current turn phase without advancing the turn counter.
+    setTurnPhase: (args: {
+        phase: TurnPhase;
+        playerId?: PlayerId;
+        endCurrentPhase?: boolean;
+        startNewPhase?: boolean;
+    }) => Promise<void>;
     nextPhase: () => Promise<void>;
     playCard: (args: {
         playerId: PlayerId,
