@@ -392,6 +392,8 @@ export class CardLike<M = unknown> {
     this.randomizerData = args.randomizerData;
     this.kingdomSelectable = args.kingdomSelectable ?? true;
     this.cost = args.cost ?? { treasure: 0 };
+    const metadata = args.metadata ?? {};
+    this.metadata = metadata as M;
   }
 }
 
@@ -524,10 +526,6 @@ export class Card<M = unknown> extends CardLike<M> {
   expansionName: string;
   halfImagePath: string;
   owner: PlayerId | null;
-  // Optional pile-level overrides for randomizer-based piles.
-  randomizerData?: RandomizerData;
-  // Indicates whether the card is eligible for kingdom selection.
-  kingdomSelectable?: boolean;
 
   constructor(args: CardArgs) {
     super(args);

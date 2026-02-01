@@ -12,7 +12,12 @@ export const loadEvents = async (expansionName: string) => {
     const events = eventLibraryModule.default as Record<string, Partial<EventNoId>>;
     
     for (const cardKey of Object.keys(events)) {
-      expansionEvents[cardKey] = createCardLike(cardKey, expansionName, events[cardKey]);
+      const eventTemplate = events[cardKey];
+      const cardLike = createCardLike(cardKey, expansionName, eventTemplate);
+      expansionEvents[cardKey] = {
+        ...cardLike,
+        randomizer: eventTemplate.randomizer ?? null,
+      };
     }
   }
   catch (error) {
