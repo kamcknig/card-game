@@ -8,6 +8,7 @@ import { getCurrentPlayer } from "../../utils/get-current-player.ts";
 import { getTurnPhase } from "../../utils/get-turn-phase.ts";
 import { isPlayerImmune } from "../../utils/reaction-immunity.ts";
 import { getPileDefinitionCard } from "../../utils/get-pile-definition-card.ts";
+import { prosperityTokenIds } from "../prosperity/token-prosperity-ids.ts";
 
 type ArchiveEffectContext = Pick<
   CardEffectFunctionContext,
@@ -956,20 +957,46 @@ const expansion: CardExpansionModule = {
   "farmers-market": {
     registerEffects: () => async (args) => {
       console.debug(`[farmers market effect] gaining 1 buy`);
-      await args.runGameActionDelegate('gainBuy', { count: 1 });
+      await args.runGameActionDelegate("gainBuy", { count: 1 });
 
-      const tokensOnPile = Object.values(args.match.tokens).filter(t => t.location.type === 'supplyPile' && t.location.cardKey === 'farmers-market');
+      const tokensOnPile = Object.values(args.match.tokens).filter((t) =>
+        t.location.type === "supplyPile" &&
+        t.location.cardKey === "farmers-market"
+      );
 
       if (tokensOnPile.length >= 4) {
         console.debug(`[farmers market effect] 4 or more tokens on pile`);
+
         for (const token of tokensOnPile) {
-          moveToken
+          await args.runGameActionDelegate("removeToken", {
+            tokenInstanceId: token.id,
+          });
+
+          await args.runGameActionDelegate("moveToken", {
+            tokenInstanceId: token.id,
+            location: { type: "player", playerId: args.playerId },
+          });
         }
-        await args.runGameActionDelegate('trashCard', {playerId: args.playerId, cardId: args.cardId});
+
+        console.debug(`[farmers market effect] trashing farmer's market`);
+
+        await args.runGameActionDelegate("trashCard", {
+          playerId: args.playerId,
+          cardId: args.cardId,
+        });
       } else {
         console.debug(`[farmers market effect] less than 4 tokens on pile`);
+
+        await args.runGameActionDelegate("placeToken", {
+          tokenId: prosperityTokenIds.victory,
+          location: { type: "supplyPile", cardKey: "farmers-market" },
+        });
+
+        await args.runGameActionDelegate("gainTreasure", {
+          count: tokensOnPile.length + 1,
+        });
       }
-    }
+    },
   },
   "rocks": {
     registerEffects: () => async ({ runGameActionDelegate }) => {
