@@ -171,6 +171,7 @@ export interface BaseGameActionDefinitionMap {
     moveToken: (args: {
         tokenInstanceId: TokenInstanceId;
         location: TokenLocation;
+        ownerId?: PlayerId;
     }, context?: GameActionContext) => Promise<void>;
     // Token actions are used by expansions to place and manage token instances.
     removeToken: (args: { tokenInstanceId: TokenInstanceId; }, context?: GameActionContext) => Promise<void>;

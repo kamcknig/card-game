@@ -148,8 +148,10 @@ export class PlayerHandView extends Container {
     }
     
     const playerColor = match.players.find(player => player.id === this.playerId)?.color ?? '#ffffff';
+    // Victory tokens are scored separately and should not render in the token tray.
+    const victoryTokenId = 'prosperity:victory';
     const tokens = Object.values(match.tokens ?? {})
-      .filter(token => token.ownerId === this.playerId) as TokenInstance[];
+      .filter(token => token.ownerId === this.playerId && token.tokenId !== victoryTokenId) as TokenInstance[];
     const availableTokens = tokens.filter(token => token.location.type === 'playerAvailable');
     const activeTokens = tokens.filter(token => token.location.type === 'player');
     

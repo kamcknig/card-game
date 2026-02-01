@@ -209,6 +209,13 @@
   },
   "encampment/plunder": {
     "pile": {
+      "randomizer": "encampment/plunder",
+      "cost": {
+        "treasure": 2
+      },
+      "type": [
+        "ACTION"
+      ]
     },
     "cards": [
       {
@@ -274,9 +281,9 @@
     ],
     "abilityText": "+3 Cards\n+1 Action\nDiscard 2 cards.\nWhen you gain this, +1 Buy."
   },
-  "gladiator/future": {
+  "gladiator/fortune": {
     "pile": {
-      "randomizer": "gladiator/future",
+      "randomizer": "gladiator/fortune",
       "type": ["ACTION"],
       "cost": {
         "treasure": 3
@@ -284,7 +291,7 @@
     },
     "cards": [
       {
-        "cardKey": "fortune",
+        "cardKey": "gladiator",
         "type": ["ACTION"],
         "cost": {
           "treasure": 3
@@ -292,7 +299,7 @@
         "abilityText": "+$2\nReveal a card from your hand. The player to your left may reveal a copy from their hand. If they don't, +$1 and trash a Gladiator from its pile."
       },
       {
-        "cardKey": "gladiator",
+        "cardKey": "fortune",
         "type": ["TREASURE"],
         "cost": {
           "treasure": 8,

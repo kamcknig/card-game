@@ -52,6 +52,7 @@ import {fisherYatesShuffle} from '../../utils/fisher-yates-shuffler.ts';
 import {getCardPileKey} from '../../utils/get-card-pile-key.ts';
 import {tokenCardPlayedHandlerMap} from '../tokens/token-trigger-map.ts';
 import {tokenDefinitionMap} from '../tokens/token-definition-map.ts';
+import { prosperityTokenIds } from '../../expansions/prosperity/token-prosperity-ids.ts';
 
 export class GameActionController implements BaseGameActionDefinitionMap {
   private customActionHandlers: Partial<GameActionDefinitionMap> = {};
@@ -353,11 +354,15 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     return tokenInstance;
   }
 
-  async moveToken(args: { tokenInstanceId: TokenInstanceId; location: TokenLocation; }): Promise<void> {
+  async moveToken(args: { tokenInstanceId: TokenInstanceId; location: TokenLocation; ownerId?: PlayerId; }): Promise<void> {
     // Resolve the token instance to ensure we don't mutate a missing token.
     const token = this.getTokenInstance(args.tokenInstanceId);
     // Update location in-place for a stable token reference.
     token.location = args.location;
+    // Optionally transfer ownership when tokens move between players.
+    if (args.ownerId !== undefined) {
+      token.ownerId = args.ownerId;
+    }
     console.debug(`[moveToken action] moved token ${args.tokenInstanceId}`);
   }
 
@@ -750,11 +755,20 @@ export class GameActionController implements BaseGameActionDefinitionMap {
 
   async gainVictoryToken(args: { playerId: PlayerId, count: number }, context?: GameActionContext) {
     console.log(`[gainVictoryToken action] player ${args.playerId} gained ${args.count} victory tokens`);
-    this.match.playerVictoryTokens ??= {};
-    this.match.playerVictoryTokens[args.playerId] ??= 0;
-    const newCount = this.match.playerVictoryTokens[args.playerId] + args.count;
-    this.match.playerVictoryTokens[args.playerId] = newCount;
-    console.debug(`[gainVictoryToken action] player ${args.playerId} new victory token count ${newCount}`);
+    // Victory tokens are stored as token instances on the player.
+    if (args.count <= 0) {
+      console.debug(`[gainVictoryToken action] non-positive victory token count ${args.count}, skipping`);
+      return;
+    }
+    const victoryTokenId = prosperityTokenIds.victory;
+    for (let i = 0; i < args.count; i += 1) {
+      await this.placeToken({
+        tokenId: victoryTokenId,
+        ownerId: args.playerId,
+        location: { type: 'player', playerId: args.playerId },
+      }, context);
+    }
+    console.debug(`[gainVictoryToken action] player ${args.playerId} placed ${args.count} victory tokens`);
   }
 
   async gainCoffer(args: { playerId: PlayerId, count?: number; }, context?: GameActionContext) {

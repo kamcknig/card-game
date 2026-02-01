@@ -33,6 +33,11 @@ all players, but native village and island mat cards  face down and can only be 
   multiple, gaining treasure, etc. discarding could be a special case in
   that only the last discarded card is seen so ordering of when they go to
   disard could matter
+- TokenIds are defined in expansion modules; so they are hard-coded strings
+  in the front-end application. can we share them somehow between both
+- victory token counts are calculated on both the front and back end.
+  back-end for end of game scoring and front-end for displaying them. might
+  want to unify that
 
 # Higher priority
 - when cards are in zones like set aside or a mat, they can be face up or

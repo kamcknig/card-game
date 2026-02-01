@@ -3,7 +3,7 @@ import { NanostoresService } from '@nanostores/angular';
 import { currentPlayerTurnIdStore, turnNumberStore } from '../../../../state/turn-state';
 import { map, Observable, tap } from 'rxjs';
 import { AsyncPipe, NgClass, NgOptimizedImage, UpperCasePipe } from '@angular/common';
-import { PlayerId } from 'shared/shared-types';
+import { PlayerId, TokenInstance } from 'shared/shared-types';
 import { playerIdStore, playerStore } from '../../../../state/player-state';
 import tinycolor from 'tinycolor2'
 import { roundNumberStore } from '../../../../state/turn-logic';
@@ -31,7 +31,19 @@ export class ScoreComponent implements OnInit {
 
   constructor(private _nanoService: NanostoresService) {
     this.victoryTokens$ = this._nanoService.useStore(matchStore).pipe(
-      map(match => match?.playerVictoryTokens ?? {})
+      map(match => {
+        // Victory tokens are stored as token instances on the player.
+        const victoryTokenId = 'prosperity:victory';
+        const counts: Record<PlayerId, number> = {};
+        const tokens = Object.values(match?.tokens ?? {}) as TokenInstance[];
+        for (const token of tokens) {
+          if (token.tokenId !== victoryTokenId) continue;
+          if (token.location.type !== 'player') continue;
+          const tokenCount = token.counters ?? 1;
+          counts[token.location.playerId] = (counts[token.location.playerId] ?? 0) + tokenCount;
+        }
+        return counts;
+      })
     )
   }
 

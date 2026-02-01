@@ -43,6 +43,7 @@ import { GameActionController } from './actions/game-action-controller.ts';
 import { CardSourceController } from './card-source-controller.ts';
 import { eventEffectFactoryMap } from './events/event-effect-factory-map.ts';
 import { tokenDefinitionMap } from './tokens/token-definition-map.ts';
+import { prosperityTokenIds } from '../expansions/prosperity/token-prosperity-ids.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardLibSnapshot = {};
@@ -101,7 +102,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       players: [],
       playerPotions: 0,
       playerTreasure: 0,
-      playerVictoryTokens: {},
       roundNumber: 0,
       scores: {},
       selectableCards: {},
@@ -499,7 +499,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       'coffers',
       'debt',
       'mats',
-      'playerVictoryTokens',
       'scores',
       'selectableCards',
       'tokens',
@@ -556,7 +555,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }
 
     delete this._match.scores[playerId];
-    delete this._match.playerVictoryTokens[playerId];
 
     if (this._match.currentPlayerTurnIndex > playerIdx) {
       this._match.currentPlayerTurnIndex -= 1;
@@ -715,6 +713,16 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     console.info(`[match] calculating scores`);
 
     const match = this._match;
+    // Victory tokens now live as token instances; precompute counts per player for scoring.
+    const victoryTokenCounts = new Map<PlayerId, number>();
+    const victoryTokenId = prosperityTokenIds.victory;
+    for (const token of Object.values(match.tokens ?? {})) {
+      if (token.tokenId !== victoryTokenId) continue;
+      if (token.location.type !== 'player') continue;
+      const tokenCount = token.counters ?? 1;
+      const currentCount = victoryTokenCounts.get(token.location.playerId) ?? 0;
+      victoryTokenCounts.set(token.location.playerId, currentCount + tokenCount);
+    }
 
     for (const player of match.players ?? []) {
       const playerId = player.id;
@@ -739,8 +747,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           });
         }
       }
-      // Add victory tokens to the player's score.
-      score += match.playerVictoryTokens?.[playerId] ?? 0;
+      // Add victory tokens counted from token instances.
+      score += victoryTokenCounts.get(playerId) ?? 0;
       match.scores[playerId] = score;
 
       for (const expansionScoringFn of this._expansionScoringFns) {

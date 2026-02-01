@@ -139,7 +139,6 @@ export interface Match {
   playerPotions: number;
   playerTreasure: number;
   players: Player[];
-  playerVictoryTokens: Record<PlayerId, number>;
   roundNumber: number;
   scores: Record<PlayerId, number>,
   selectableCards: Record<PlayerId, CardId[]>;

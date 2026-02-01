@@ -747,9 +747,12 @@ const expansion: CardExpansionModule = {
       if (isBuyPhase) {
         console.debug(`[crown effect] player ${args.playerId} is in buy phase`);
 
+        // Restrict Crown's buy-phase effect to Treasure cards.
         const treasureInHand = args.cardSourceController.getSource(
           "playerHand",
           args.playerId,
+        ).filter((card) =>
+          args.cardLibrary.getCard(card)?.type.includes("TREASURE")
         );
 
         if (treasureInHand.length) {
@@ -808,7 +811,7 @@ const expansion: CardExpansionModule = {
   },
   "encampment": {
     registerEffects: () => async (args) => {
-      console.debug(`[encampment effect] gaining 2 treasure`);
+      console.debug(`[encampment effect] drawing 2 cards`);
       await args.runGameActionDelegate("drawCard", {
         playerId: args.playerId,
         count: 2,
@@ -962,6 +965,7 @@ const expansion: CardExpansionModule = {
       await args.runGameActionDelegate("gainBuy", { count: 1 });
 
       const tokensOnPile = Object.values(args.match.tokens).filter((t) =>
+        t.tokenId === prosperityTokenIds.victory &&
         t.location.type === "supplyPile" &&
         t.location.cardKey === "farmers-market"
       );
@@ -969,14 +973,12 @@ const expansion: CardExpansionModule = {
       if (tokensOnPile.length >= 4) {
         console.debug(`[farmers market effect] 4 or more tokens on pile`);
 
+        // Move pile victory tokens into the player's victory token pool.
         for (const token of tokensOnPile) {
-          await args.runGameActionDelegate("removeToken", {
-            tokenInstanceId: token.id,
-          });
-
           await args.runGameActionDelegate("moveToken", {
             tokenInstanceId: token.id,
             location: { type: "player", playerId: args.playerId },
+            ownerId: args.playerId,
           });
         }
 
@@ -1006,7 +1008,7 @@ const expansion: CardExpansionModule = {
         console.debug(`[fortune onGained] running`);
 
         const gladiatorsInPlay = getCardsInPlay(args.findCards).filter((card) =>
-          card.cardKey === "gladiators"
+          card.cardKey === "gladiator"
         );
 
         if (!gladiatorsInPlay.length) {
@@ -1073,6 +1075,28 @@ const expansion: CardExpansionModule = {
 
       console.debug(`[forum effect] gaining 1 action`);
       await args.runGameActionDelegate("gainAction", { count: 1 });
+
+      // Forum requires discarding 2 cards after drawing.
+      const hand = args.cardSourceController.getSource("playerHand", args.playerId);
+      if (!hand.length) {
+        console.debug(`[forum effect] no cards to discard`);
+        return;
+      }
+      const discardCount = Math.min(2, hand.length);
+      const selectedCardIds = await args.runGameActionDelegate("selectCard", {
+        playerId: args.playerId,
+        prompt: `Select ${discardCount} card${discardCount === 1 ? '' : 's'} to discard`,
+        restrict: hand,
+        count: discardCount,
+        optional: false,
+        autoSelect: discardCount === hand.length,
+      }) as CardId[];
+      for (const cardId of selectedCardIds) {
+        await args.runGameActionDelegate("discardCard", {
+          playerId: args.playerId,
+          cardId,
+        });
+      }
     },
   },
   "gladiator": {
@@ -1089,7 +1113,7 @@ const expansion: CardExpansionModule = {
         await args.runGameActionDelegate("gainTreasure", { count: 1 });
         const gladiators = args.findCards([
           { location: "kingdomSupply" },
-          { cardKeys: "gladiators" },
+          { cardKeys: "gladiator" },
         ]);
 
         if (!gladiators.length) {
@@ -1146,7 +1170,7 @@ const expansion: CardExpansionModule = {
         "playerHand",
         leftPlayer.id,
       ).map((id) => args.cardLibrary.getCard(id)).filter((c) =>
-        c.cardKey === selectedCard.cardName
+        c.cardKey === selectedCard.cardKey
       ).map((c) => c.id);
 
       if (!leftPlayerHand.length) {
@@ -1164,7 +1188,7 @@ const expansion: CardExpansionModule = {
         ],
       }) as { action: number; result: number[] };
 
-      if (result.action !== 1) {
+      if (result.action === 1) {
         console.debug(`[gladiator effect] user chose to reveal card`);
         await args.runGameActionDelegate("revealCard", {
           playerId: leftPlayer.id,
@@ -1173,7 +1197,7 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      console.debug(`[gladiator effect] user chose to reveal card`);
+      console.debug(`[gladiator effect] user chose not to reveal card`);
       await trashCard();
     },
   },
