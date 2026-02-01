@@ -1615,6 +1615,122 @@ const expansion: CardExpansionModule = {
       });
     },
   },
+  "patrician": {
+    registerEffects: () => async (args) => {
+      console.debug(
+        `[patrician effect] drawing 1 card, gaining 1 action, and revealing top deck card`,
+      );
+      await args.runGameActionDelegate("drawCard", {
+        playerId: args.playerId,
+      });
+      await args.runGameActionDelegate("gainAction", { count: 1 });
+
+      const revealTopDeckCard = async () => {
+        let deck = args.cardSourceController.getSource(
+          "playerDeck",
+          args.playerId,
+        );
+        if (!deck.length) {
+          console.debug(
+            `[patrician effect] player ${args.playerId} deck empty, shuffling discard`,
+          );
+          await args.runGameActionDelegate("shuffleDeck", {
+            playerId: args.playerId,
+          });
+          deck = args.cardSourceController.getSource(
+            "playerDeck",
+            args.playerId,
+          );
+        }
+
+        if (!deck.length) {
+          console.debug(
+            `[patrician effect] still no cards to reveal after shuffling`,
+          );
+          return null;
+        }
+
+        const topCardId = deck.slice(-1)[0];
+        console.debug(
+          `[patrician effect] revealing top card ${topCardId} of deck`,
+        );
+        await args.runGameActionDelegate("revealCard", {
+          playerId: args.playerId,
+          cardId: topCardId,
+        });
+        return topCardId;
+      };
+
+      const revealedCardId = await revealTopDeckCard();
+      if (!revealedCardId) {
+        console.debug(`[patrician effect] no card revealed`);
+        return;
+      }
+
+      const revealedCard = args.cardLibrary.getCard(revealedCardId);
+      const { cost: revealedCost } = args.cardPriceController.applyRules(
+        revealedCard,
+        { playerId: args.playerId },
+      );
+
+      const qualifiesForDraw = compareCardCosts(revealedCost, { treasure: 5 }) >= 0;
+      if (!qualifiesForDraw) {
+        console.debug(
+          `[patrician effect] revealed ${revealedCard.cardKey} costs less than $5`,
+        );
+        return;
+      }
+
+      console.info(
+        `[patrician effect] revealed ${revealedCard.cardKey} costs $5 or more, moving to hand`,
+      );
+      await args.runGameActionDelegate("moveCard", {
+        cardId: revealedCardId,
+        toPlayerId: args.playerId,
+        to: { location: "playerHand" },
+      });
+    },
+  },
+  "emporium": {
+    registerEffects: () => async (args) => {
+      console.debug(
+        `[emporium effect] drawing 1 card, gaining 1 action, and gaining 1 treasure`,
+      );
+      await args.runGameActionDelegate("drawCard", {
+        playerId: args.playerId,
+        count: 1,
+      });
+      await args.runGameActionDelegate("gainAction", { count: 1 });
+      await args.runGameActionDelegate("gainTreasure", { count: 1 });
+    },
+    registerLifeCycleMethods: () => ({
+      onGained: async (args, eventArgs) => {
+        const actionCardsInPlay = getCardsInPlay(args.findCards).filter(
+          (card) =>
+            card.type.includes("ACTION") && card.owner === eventArgs.playerId,
+        );
+
+        console.debug(
+          `[emporium onGained] player ${eventArgs.playerId} has ${
+            actionCardsInPlay.length
+          } action cards in play`,
+        );
+
+        if (actionCardsInPlay.length < 5) {
+          console.debug(`[emporium onGained] insufficient actions for bonus`);
+          return;
+        }
+
+        console.info(
+          `[emporium onGained] awarding 2 victory tokens to player ${eventArgs.playerId}`,
+        );
+        await args.runGameActionDelegate("gainVictoryToken", {
+          playerId: eventArgs.playerId,
+          count: 2,
+        });
+      },
+    }),
+  },
   "small-castle": {
     registerEffects: () => async (args) => {
       // Small Castle allows trashing itself or a Castle from hand to gain a Castle.

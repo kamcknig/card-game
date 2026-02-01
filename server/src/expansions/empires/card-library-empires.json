@@ -309,6 +309,41 @@
       }
     ]
   },
+  "patrician/emporium": {
+    "pile": {
+      "randomizer": "patrician/emporium",
+      "cost": {
+        "treasure": 2
+      },
+      "type": [
+        "ACTION"
+      ]
+    },
+    "cards": [
+      {
+        "cardKey": "patrician",
+        "cardName": "Patrician",
+        "cost": {
+          "treasure": 2
+        },
+        "type": [
+          "ACTION"
+        ],
+        "abilityText": "+1 Card\n+1 Action\nReveal the top card of your deck. If it costs $5 or more, put it into your hand."
+      },
+      {
+        "cardKey": "emporium",
+        "cardName": "Emporium",
+        "cost": {
+          "treasure": 5
+        },
+        "type": [
+          "ACTION"
+        ],
+        "abilityText": "+1 Card\n+1 Action\n+$1\nWhen you gain this, if you have at least 5 Action cards in play, +2VP."
+      }
+    ]
+  },
   "groundskeeper": {
     "cost": {
       "treasure": 5
