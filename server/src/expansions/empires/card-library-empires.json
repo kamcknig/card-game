@@ -374,6 +374,16 @@
     ],
     "abilityText": "+1VP\nTrash from 1 to 3 differently named cards from your hand. Add 1VP to the Temple pile.\nWhen you gain this, take the VP from the Temple pile."
   },
+  "wild-hunt": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION",
+      "GATHERING"
+    ],
+    "abilityText": "Choose one: +3 Cards and add 1VP to the Wild Hunt pile; or gain an Estate, and if you do, take the VP from the pile."
+  },
   "villa": {
     "cost": {
       "treasure": 4
