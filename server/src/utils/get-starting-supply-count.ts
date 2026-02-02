@@ -1,4 +1,5 @@
 import { Match } from 'shared/shared-types.ts'
+import { getCardPileKey } from './get-card-pile-key.ts';
 import { FindCardsFn } from '../types.ts';
 
 export const getStartingSupplyCount = (match: Match) => {
@@ -10,14 +11,15 @@ export const getStartingSupplyCount = (match: Match) => {
 
 
 export const getRemainingSupplyCount = (findCards: FindCardsFn) => {
-  const remainingSupplyCardKeys = findCards({ location: ['kingdomSupply', 'basicSupply'] })
-    .map(card => card.cardKey)
-    .reduce((prev, cardKey) => {
-      if (prev.includes(cardKey)) {
+  const remainingSupplyPileKeys = findCards({ location: ['kingdomSupply', 'basicSupply'] })
+    // Use pile keys so split piles and randomizer data count as one supply pile.
+    .map(card => getCardPileKey(card))
+    .reduce((prev, pileKey) => {
+      if (prev.includes(pileKey)) {
         return prev;
       }
-      return prev.concat(cardKey);
+      return prev.concat(pileKey);
     }, [] as string[]);
   
-  return remainingSupplyCardKeys.length;
+  return remainingSupplyPileKeys.length;
 }

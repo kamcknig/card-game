@@ -494,6 +494,80 @@ export const registerScoringFunctions = (
     console.info(`[palace scoring] player ${playerId} earns ${bonus} VP`);
     match.scores[playerId] = (match.scores[playerId] ?? 0) + bonus;
   });
+
+  // Register Empires landmark scoring bonuses (e.g., Tower).
+  registrar((playerId, match, cardLibrary) => {
+    // Only apply Tower bonuses when the landmark is active.
+    const hasTower = (match.landmarks ?? []).some(
+      (landmark) => landmark.cardKey === 'tower',
+    );
+    if (!hasTower) return;
+
+    // Collect all supply pile keys in the match.
+    const supplyPiles = [
+      ...(match.config.basicSupply ?? []),
+      ...(match.config.kingdomSupply ?? []),
+    ];
+    const supplyPileKeys = new Set<CardKey>();
+    for (const supply of supplyPiles) {
+      supplyPileKeys.add(supply.name as CardKey);
+    }
+
+    if (!supplyPileKeys.size) {
+      console.debug('[tower scoring] no supply piles in match, skipping');
+      return;
+    }
+
+    // Count remaining cards in each supply pile based on current supply sources.
+    const remainingCounts = new Map<CardKey, number>();
+    const supplyCardIds = [
+      ...(match.cardSources.basicSupply ?? []),
+      ...(match.cardSources.kingdomSupply ?? []),
+    ];
+    for (const cardId of supplyCardIds) {
+      const supplyCard = cardLibrary.getCard(cardId);
+      const pileKey = getCardPileKey(supplyCard);
+      let count = remainingCounts.get(pileKey) ?? 0;
+      count++;
+      remainingCounts.set(pileKey, count);
+    }
+
+    // Identify which supply piles are empty.
+    const emptyPileKeys = new Set<CardKey>();
+    for (const pileKey of supplyPileKeys) {
+      const remaining = remainingCounts.get(pileKey) ?? 0;
+      if (remaining === 0) {
+        emptyPileKeys.add(pileKey);
+      }
+    }
+
+    if (!emptyPileKeys.size) {
+      console.debug('[tower scoring] no empty supply piles, skipping');
+      return;
+    }
+
+    // Count non-Victory cards owned by the player from empty supply piles.
+    const playerCards = cardLibrary.getCardsByOwner(playerId);
+    let qualifyingCards = 0;
+    for (const card of playerCards) {
+      if (!card.partOfSupply) continue;
+      if (card.type.includes('VICTORY')) continue;
+
+      const pileKey = getCardPileKey(card);
+      if (!emptyPileKeys.has(pileKey)) continue;
+
+      qualifyingCards++;
+    }
+
+    const bonus = qualifyingCards;
+    console.debug(
+      `[tower scoring] player ${playerId} qualifying ${qualifyingCards} bonus ${bonus}`,
+    );
+    if (bonus === 0) return;
+
+    console.info(`[tower scoring] player ${playerId} earns ${bonus} VP`);
+    match.scores[playerId] = (match.scores[playerId] ?? 0) + bonus;
+  });
 };
 
 // Ensure victory tokens contribute to score in Empires games.

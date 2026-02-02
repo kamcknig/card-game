@@ -62,5 +62,9 @@
   "tomb": {
     "randomizer": "tomb",
     "abilityText": "When you trash a card, +1VP."
+  },
+  "tower": {
+    "randomizer": "tower",
+    "abilityText": "When scoring, 1VP per non-Victory card you have from an empty Supply pile."
   }
 }
