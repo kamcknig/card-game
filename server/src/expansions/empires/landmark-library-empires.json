@@ -22,5 +22,9 @@
   "baths": {
     "randomizer": "baths",
     "abilityText": "When you end your turn without having gained a card, take 2VP from here.\nSetup: Put 6VP here per player."
+  },
+  "colonnade": {
+    "randomizer": "colonnade",
+    "abilityText": "When you gain an Action card in your Buy phase, if you have a copy of it in play, take 2VP from here.\nSetup: Put 6VP here per player."
   }
 }
