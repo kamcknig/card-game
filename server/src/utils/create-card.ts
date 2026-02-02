@@ -1,4 +1,12 @@
-import { Card, CardKey, CardNoId, Event, EventNoId } from 'shared/shared-types.ts';
+import {
+  Card,
+  CardKey,
+  CardNoId,
+  Event,
+  EventNoId,
+  Landmark,
+  LandmarkNoId,
+} from 'shared/shared-types.ts';
 import { rawCardLibrary } from '@expansions/expansion-library.ts';
 import { formatCardName } from './format-card-name.ts';
 
@@ -20,6 +28,14 @@ export const createCard = (cardKey: CardKey, card?: Partial<CardNoId>): Card => 
 export const createEvent = (event: EventNoId): Event => {
   return new Event({
     ...event,
+    id: ++CARD_COUNT,
+  });
+}
+
+// Landmarks are card-like objects that live alongside events in the match.
+export const createLandmark = (landmark: LandmarkNoId): Landmark => {
+  return new Landmark({
+    ...landmark,
     id: ++CARD_COUNT,
   });
 }

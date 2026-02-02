@@ -35,7 +35,7 @@ import {
   MatchBaseConfiguration,
   PlayerScoreDecorator,
 } from '../types.ts';
-import { createCard, createEvent } from '../utils/create-card.ts';
+import { createCard, createEvent, createLandmark } from '../utils/create-card.ts';
 import { getRemainingSupplyCount, getStartingSupplyCount } from '../utils/get-starting-supply-count.ts';
 import { CardPriceRulesController } from './card-price-rules-controller.ts';
 import { findCardsFactory } from '../utils/find-cards.ts';
@@ -96,6 +96,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       config: {} as ComputedMatchConfiguration,
       currentPlayerTurnIndex: 0,
       events: [],
+      // Active landmark card-likes in the match.
+      landmarks: [],
       mats: {},
       playerActions: 0,
       playerBuys: 0,
@@ -278,6 +280,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this.createBaseSupply(this._matchConfiguration);
       this.createKingdom(this._matchConfiguration);
       this.createEvents(this._matchConfiguration);
+      // Landmarks are landscape card-likes that should be created alongside events.
+      this.createLandmarks(this._matchConfiguration);
       this.createNonSupplyCards(this._matchConfiguration);
       this.createPlayerDecks(this._matchConfiguration);
       this._match.config = this._matchConfiguration;
@@ -318,6 +322,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   // Applies a loaded match state onto the current match instance.
   private applyLoadedMatchState(loadedMatch: Match): void {
     Object.assign(this._match, loadedMatch);
+    // Ensure landmarks are present on older match state snapshots.
+    this._match.landmarks ??= [];
   }
 
   // Loads a card library snapshot for a loaded match state.
@@ -904,8 +910,17 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
 
   private createEvents(config: ComputedMatchConfiguration) {
+    console.debug(`[match] creating events`);
     for (const event of config.events) {
       this._match.events.push(createEvent(event));
+    }
+  }
+
+  private createLandmarks(config: ComputedMatchConfiguration) {
+    // Create landmark card-like instances for the active match.
+    console.debug(`[match] creating landmarks`);
+    for (const landmark of config.landmarks ?? []) {
+      this._match.landmarks.push(createLandmark(landmark));
     }
   }
 }

@@ -4,6 +4,7 @@ import {
   CardNoId,
   ComputedMatchConfiguration,
   EventNoId,
+  LandmarkNoId,
   Match,
   MatchConfiguration,
   Supply
@@ -81,6 +82,8 @@ export class MatchConfigurator {
     const players = [...config.players];
     this._config = structuredClone(config) as ComputedMatchConfiguration;
     this._config.players = players;
+    // Ensure landmarks array exists for downstream selection logic.
+    this._config.landmarks ??= [];
 
     console.info(`[match configurator] created`);
   }
@@ -125,6 +128,8 @@ export class MatchConfigurator {
 
     this._bannedKingdoms = this._config.bannedKingdoms?.slice() ?? [];
 
+    // Trim preselected events/landmarks to the configured landscape cap before selection.
+    this.enforceLandscapeLimit();
     this.selectKingdomSupply();
     this.selectBasicSupply();
 
@@ -133,6 +138,22 @@ export class MatchConfigurator {
     this.createCardSources(initContext.match, initContext.cardSourceController);
 
     return { config: this._config };
+  }
+
+  // Logs when preselected landscapes exceed the configured cap; random selection handles limits.
+  private enforceLandscapeLimit(): void {
+    const allowedEventsAndOthers = MatchBaseConfiguration.numberOfEventsAndOthers;
+    const events = this._config.events ?? [];
+    const landmarks = this._config.landmarks ?? [];
+    const total = events.length + landmarks.length;
+
+    if (total <= allowedEventsAndOthers) {
+      return;
+    }
+
+    console.info(
+      `[match configurator] ${total} landscapes preselected, skipping random landscape selection cap of ${allowedEventsAndOthers}`,
+    );
   }
 
   private createCardSources(match: Match, cardSourceController: CardSourceController) {
@@ -202,8 +223,16 @@ export class MatchConfigurator {
             randomizer: event.randomizer,
             cardLike: event,
             type: 'event'
+          })),
+        // Landmarks participate in the shared "events and others" randomizer pool.
+        ...Object.values(nextExpansion.landmarks)
+          .filter(landmark => landmark.randomizer !== null)
+          .map(landmark => ({
+            randomizer: landmark.randomizer,
+            cardLike: landmark,
+            type: 'landmark'
           }))
-      ]) as { randomizer: string; type: 'card' | 'event'; cardLike: CardLikeNoId | CardNoId; }[];
+      ]) as { randomizer: string; type: 'card' | 'event' | 'landmark'; cardLike: CardLikeNoId | CardNoId; }[];
 
       const uniqueRandomizers = uniqueByProp(availableRandomizers, 'randomizer');
 
@@ -215,7 +244,8 @@ export class MatchConfigurator {
       console.info(`[match configurator] need to select ${numKingdomsToSelect} kingdoms`);
 
       const allowedEventsAndOthers = MatchBaseConfiguration.numberOfEventsAndOthers;
-      let selectedEventsAndOthers = this._config.events.length;
+      // Track the combined limit for events and other landscape types (landmarks included).
+      let selectedEventsAndOthers = this._config.events.length + (this._config.landmarks?.length ?? 0);
 
       for (let i = 0; i < numKingdomsToSelect; i++) {
         const randomIndex = Math.floor(Math.random() * uniqueRandomizers.length);
@@ -250,7 +280,7 @@ export class MatchConfigurator {
             cards
           });
         }
-        else {
+        else if (selectedRandomizer.type === 'event') {
           console.info(`[match configurator] selected event ${selectedRandomizer.randomizer}`);
 
           if (++selectedEventsAndOthers <= allowedEventsAndOthers) {
@@ -270,6 +300,30 @@ export class MatchConfigurator {
           }
 
           // reduce the counter because events don't count against kingdom selection
+          i--;
+        }
+        else {
+          // Landmarks are treated as "others" alongside events for random selection limits.
+          console.info(`[match configurator] selected landmark ${selectedRandomizer.randomizer}`);
+
+          if (++selectedEventsAndOthers <= allowedEventsAndOthers) {
+            console.info(`[match configurator] selected landmark ${selectedRandomizer.randomizer} is allowed, adding to match`);
+            const landmark = availableRandomizers
+              .find(randomizer => randomizer.randomizer === selectedRandomizer.randomizer)
+              ?.cardLike as LandmarkNoId;
+
+            if (!landmark) {
+              throw new Error(`[match configurator] landmark not found for randomizer ${selectedRandomizer.randomizer}`);
+            }
+
+            this._config.landmarks ??= [];
+            this._config.landmarks.push(landmark);
+          }
+          else {
+            console.info(`[match configurator] selected landmark ${selectedRandomizer.randomizer} is not allowed, already have max number of events and others`);
+          }
+
+          // reduce the counter because landmarks don't count against kingdom selection
           i--;
         }
 

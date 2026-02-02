@@ -1,12 +1,12 @@
-import { Application, Assets, Container, Graphics, Rectangle, Sprite, Text } from 'pixi.js';
-import { Scene } from '../../../../core/scene/scene';
-import { PlayerHandView } from '../player-hand';
-import { createAppButton } from '../../../../core/create-app-button';
-import { matchStartedStore, matchStore } from '../../../../state/match-state';
-import { playerStore, selfPlayerIdStore, } from '../../../../state/player-state';
-import { PlayAreaView } from '../play-area';
-import { KingdomSupplyView } from '../kingdom-supply';
-import { CardId, CardKey, CardLike, PlayerId, UserPromptActionArgs } from 'shared/shared-types';
+import {Application, Assets, Container, Graphics, Rectangle, Sprite, Text} from 'pixi.js';
+import {Scene} from '../../../../core/scene/scene';
+import {PlayerHandView} from '../player-hand';
+import {createAppButton} from '../../../../core/create-app-button';
+import {matchStartedStore, matchStore} from '../../../../state/match-state';
+import {playerStore, selfPlayerIdStore,} from '../../../../state/player-state';
+import {PlayAreaView} from '../play-area';
+import {KingdomSupplyView} from '../kingdom-supply';
+import {CardId, CardKey, PlayerId, UserPromptActionArgs} from 'shared/shared-types';
 import {
   awaitingServerLockReleaseStore,
   clientSelectableCardsOverrideStore,
@@ -14,26 +14,27 @@ import {
   selectedCardStore,
   selectedPileStore
 } from '../../../../state/interactive-state';
-import { CardView } from '../card-view';
-import { userPromptModal } from '../modal/user-prompt-modal';
-import { CARD_HEIGHT, STANDARD_GAP } from '../../../../core/app-contants';
-import { validateCountSpec } from 'shared/validate-count-spec';
-import { CardStackView } from '../card-stack';
-import { currentPlayerTurnIdStore } from '../../../../state/turn-state';
-import { isNumber, isUndefined } from 'es-toolkit/compat';
-import { AppList } from '../app-list';
-import { SocketService } from '../../../../core/socket-service/socket.service';
-import { gamePausedStore } from '../../../../state/game-logic';
-import { selectableCardStore } from '../../../../state/interactive-logic';
-import { selectablePileStore } from '../../../../state/interactive-pile-logic';
-import { SelectCardArgs } from '../../../../../types';
-import { BasicSupplyView } from '../basic-supply';
-import { NonSupplyKingdomView } from '../non-supply-kingdom-view';
-import { getCardSourceStore } from '../../../../state/card-source-store';
-import { OtherCardLikeView } from '../other-card-like-view';
-import { CardLikeView } from '../card-like-view';
-import { PileView } from '../pile';
-import { tokenDefinitionStore } from '../../../../state/token-definition-state';
+import {CardView} from '../card-view';
+import {userPromptModal} from '../modal/user-prompt-modal';
+import {CARD_HEIGHT, STANDARD_GAP} from '../../../../core/app-contants';
+import {resolveCountSpec} from 'shared/resolve-count-spec';
+import {validateCountSpec} from 'shared/validate-count-spec';
+import {CardStackView} from '../card-stack';
+import {currentPlayerTurnIdStore} from '../../../../state/turn-state';
+import {isNumber, isUndefined} from 'es-toolkit/compat';
+import {AppList} from '../app-list';
+import {SocketService} from '../../../../core/socket-service/socket.service';
+import {gamePausedStore} from '../../../../state/game-logic';
+import {selectableCardStore} from '../../../../state/interactive-logic';
+import {selectablePileStore} from '../../../../state/interactive-pile-logic';
+import {SelectCardArgs} from '../../../../../types';
+import {BasicSupplyView} from '../basic-supply';
+import {NonSupplyKingdomView} from '../non-supply-kingdom-view';
+import {getCardSourceStore} from '../../../../state/card-source-store';
+import {OtherCardLikeView} from '../other-card-like-view';
+import {CardLikeView} from '../card-like-view';
+import {PileView} from '../pile';
+import {tokenDefinitionStore} from '../../../../state/token-definition-state';
 
 export class MatchScene extends Scene {
   private _board: Container = new Container();
@@ -415,8 +416,7 @@ export class MatchScene extends Scene {
   }
 
   private doSelectCards = async (signalId: string, arg: SelectCardArgs) => {
-    const selectableCardIds = arg.selectableCardIds ?? [];
-    const cardIds = selectableCardIds;
+    const cardIds = arg.selectableCardIds ?? [];
 
     let doSelectButtonContainer: Container | null;
 
@@ -427,15 +427,11 @@ export class MatchScene extends Scene {
       return;
     }
 
-    const count = isNumber(arg.count) ? arg.count : (!isNumber(arg.count) ? arg.count?.count : NaN);
-    if (count === undefined || isNaN(count)) {
-      if (!isNumber(arg.count) && arg.count?.kind === 'range') {
-        // Range selections don't use a single count value.
-      }
-      else {
-        throw new Error(`Selection count couldn't be determined`);
-      }
-    }
+    // Resolve the selection count when it is a fixed number (range selections have no single count).
+    const resolvedCountSpec = resolveCountSpec(arg.count);
+    const count = resolvedCountSpec.kind === 'fixed'
+      ? resolvedCountSpec.count
+      : undefined;
 
     if (currentPlayerTurnIdStore.get() !== this._selfId) {
       try {
@@ -604,8 +600,11 @@ export class MatchScene extends Scene {
       const countText = this.getChildByLabel('cardCountContainer')?.getChildByLabel('count') as Text;
 
       if (countText) {
-        if (isNumber(arg.count)) {
-          updateCountText(countText, Math.max(count - cardIds.length, 0));
+        if (resolvedCountSpec.kind === 'fixed') {
+          updateCountText(
+            countText,
+            Math.max(resolvedCountSpec.count - cardIds.length, 0),
+          );
         }
         else {
           updateCountText(countText, cardIds.length);
@@ -727,9 +726,12 @@ export class MatchScene extends Scene {
       this._kingdomView.x = Math.max(this._scoreViewRight, this._baseSupply.x + this._baseSupply.width) + STANDARD_GAP;
     }
 
+    // Position the landscape area if events or landmarks are present.
     const numEvents = matchStore.get()?.events.length ?? 0;
+    const numLandmarks = matchStore.get()?.landmarks.length ?? 0;
+    const numOtherCardLikes = numEvents + numLandmarks;
 
-    if (this._kingdomView && this._otherCardLikes && numEvents > 0) {
+    if (this._kingdomView && this._otherCardLikes && numOtherCardLikes > 0) {
       this._otherCardLikes.x = this._kingdomView.x;
       this._otherCardLikes.y = this._kingdomView.y + this._kingdomView.height + STANDARD_GAP;
     }

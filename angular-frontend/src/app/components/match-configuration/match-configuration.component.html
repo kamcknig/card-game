@@ -111,6 +111,37 @@
           }
         </div>
       </section>
+
+      <!-- ░░░  Landmarks  ░░░ -->
+      <section class="landmarks-section">
+        <h2 class="section-title">Landmarks</h2>
+
+        <div class="landmarks-list">
+          @for (landmark of preSelectedLandmarks; track landmark?.cardKey ?? $index) {
+            <div
+              class="landmark-slot"
+              [ngStyle]="{'cursor': isGameOwner && landmark === null ? 'pointer' : 'default'}"
+              (click)="landmark === null && isGameOwner ? selectingLandmarks = true : null"
+            >
+              @if (landmark !== null && isGameOwner) {
+                <div (click)="deleteLandmark(landmark)" class="close-button">X</div>
+              }
+              <div>
+                @if (landmark !== null) {
+                  <img
+                    alt="{{landmark.cardName}} image"
+                    ngSrc="{{landmark.fullImagePath}}"
+                    height="124"
+                    width="280"
+                  />
+                } @else {
+                  <span class="no-landmark">?</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </section>
   </section>
 
   <section class="banned-cards-section">
@@ -165,4 +196,15 @@
     autofocus
     (eventSelected)="onEventSelected($event)">
   </app-select-event-modal>
+}
+
+<!-- select landmarks to include in match -->
+@if (selectingLandmarks) {
+  <app-select-landmark-modal
+    [excludedLandmarks]="preSelectedLandmarks"
+    [ngStyle]="{'visibility': selectingLandmarks ? 'visible' : 'hidden'}"
+    (close)="selectingLandmarks = false"
+    autofocus
+    (landmarkSelected)="onLandmarkSelected($event)">
+  </app-select-landmark-modal>
 }

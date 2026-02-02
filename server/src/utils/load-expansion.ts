@@ -7,6 +7,7 @@ import { CardCost, CardKey, CardNoId, CardType } from 'shared/shared-types.ts';
 import { cardActionConditionMapFactory } from '../core/actions/card-action-condition-map-factory.ts';
 import { createCardData } from './create-card-data.ts';
 import { loadEvents } from '../core/events/load-events.ts';
+import { loadLandmarks } from '../core/landmarks/load-landmarks.ts';
 
 // Randomizer pile definition for split piles in card libraries.
 type RandomizerPileDefinition = {
@@ -45,6 +46,8 @@ export const loadExpansion = async (expansion: { name: string; }) => {
       kingdomSupply: {},
     },
     events: {},
+    // Landmarks live alongside events as landscape card-likes.
+    landmarks: {},
   };
   
   let expansionConfiguration;
@@ -150,4 +153,9 @@ export const loadExpansion = async (expansion: { name: string; }) => {
   console.info(`[expansion loader] attempting to load events for ${expansionName}`);
   await loadEvents(expansionName);
   console.log(`[expansion loader] finished loading events for ${expansionName}`);
+
+  // Landmarks are loaded after events to mirror landscape loading order.
+  console.info(`[expansion loader] attempting to load landmarks for ${expansionName}`);
+  await loadLandmarks(expansionName);
+  console.log(`[expansion loader] finished loading landmarks for ${expansionName}`);
 };

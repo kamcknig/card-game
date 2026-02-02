@@ -4,9 +4,10 @@ import { CARD_WIDTH, STANDARD_GAP } from '../../../../core/app-contants';
 import { createCardView } from '../../../../core/card/create-card-view';
 import { List } from '@pixi/ui';
 import { cardStore } from '../../../../state/card-state';
-import { isNumber, toNumber } from 'es-toolkit/compat';
+import { toNumber } from 'es-toolkit/compat';
 import { CardView } from '../card-view';
 import { clientSelectableCardsOverrideStore, selectedCardStore } from '../../../../state/interactive-state';
+import { resolveCountSpec } from 'shared/resolve-count-spec';
 import { validateCountSpec } from 'shared/validate-count-spec';
 import { displayCardDetail } from './display-card-detail';
 import { selfPlayerIdStore } from '../../../../state/player-state';
@@ -27,6 +28,8 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
 
   const cardCount = cardIds.length;
   const selectCount = 'selectCount' in args ? args.selectCount ?? 1 : 0;
+  // Normalize the selection count for auto-finish logic.
+  const resolvedCountSpec = resolveCountSpec(selectCount);
 
   const validate = () => {
     let validated = displayOnly || validateCountSpec(selectCount, selectedCardStore.get().length);
@@ -34,14 +37,12 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
     cardList.emit('validationUpdated', validated);
 
     if (validated) {
-      const count = selectCount;
-
       cardList.emit('resultsUpdated', selectedCardStore.get().map(id => newCardToOldCardMap.get(id)));
 
-      if (!displayOnly && isNumber(count) && count === 1) {
+      if (!displayOnly && resolvedCountSpec.kind === 'fixed' && resolvedCountSpec.count === 1) {
         cardList.emit('finished');
       }
-      if (!displayOnly && !isNumber(count) && count?.kind === 'range' && count.min === 1 && count.max === 1) {
+      if (!displayOnly && resolvedCountSpec.kind === 'range' && resolvedCountSpec.min === 1 && resolvedCountSpec.max === 1) {
         // Auto-finish for a fixed range of 1.
         cardList.emit('finished');
       }

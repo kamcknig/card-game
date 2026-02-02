@@ -78,6 +78,8 @@ export interface MatchConfiguration {
   playerStartingHand: Record<CardKey, number>;
 
   events: EventNoId[];
+  // Landmarks are landscape card-likes that affect scoring or gameplay.
+  landmarks: LandmarkNoId[];
 }
 
 export type ComputedMatchConfiguration = MatchConfiguration & {
@@ -133,6 +135,8 @@ export interface Match {
   config: ComputedMatchConfiguration,
   currentPlayerTurnIndex: number;
   events: Event[];
+  // Active landmarks in the match (not part of the supply).
+  landmarks: Landmark[];
   mats: PlayerMatMap;
   playerActions: number;
   playerBuys: number;
@@ -248,6 +252,8 @@ export type ServerEmitEvents = {
   searchCardResponse: (cardData: CardNoId[]) => void;
   // Sends event search results to the client.
   searchEventResponse: (eventData: EventNoId[]) => void;
+  // Sends landmark search results to the client.
+  searchLandmarkResponse: (landmarkData: LandmarkNoId[]) => void;
   selectCard: (signalId: string, selectCardArgs: SelectActionCardArgs & { selectableCardIds: CardId[] }) => void;
   setPlayerList: (players: Player[]) => void;
   setCardLibrary: (library: Record<CardKey, Card>) => void;
@@ -276,6 +282,8 @@ export interface ServerListenEvents {
   searchCards: (playerId: PlayerId, searchStr: string) => void;
   // Requests event search results from the server.
   searchEvents: (playerId: PlayerId, searchStr: string) => void;
+  // Requests landmark search results from the server.
+  searchLandmarks: (playerId: PlayerId, searchStr: string) => void;
   updatePlayerName: (playerId: PlayerId, name: string) => void;
   userInputReceived: (signalId: string, input: unknown) => void;
 }
@@ -428,6 +436,34 @@ export class Event extends CardLike {
 }
 
 export type EventNoId = Omit<Event, 'id'>;
+
+type LandmarkArgs = {
+  [p in keyof CardLike]: CardLike[p];
+} & {
+  randomizer?: string | null;
+};
+
+// Landmarks are landscape card-likes that are always in effect once in play.
+export class Landmark extends CardLike {
+  // Randomizer key used to group landmarks during selection.
+  randomizer: string | null;
+
+  constructor(args: LandmarkArgs) {
+    super(args);
+
+    this.id = args.id;
+    this.cardName = args.cardName;
+    this.fullImagePath = args.fullImagePath;
+    this.detailImagePath = args.detailImagePath;
+    this.randomizer = args.randomizer ?? null;
+  }
+
+  override toString() {
+    return `[LANDMARK ${this.id} - ${this.cardKey}]`;
+  }
+}
+
+export type LandmarkNoId = Omit<Landmark, 'id'>;
 
 /**
  * CARD TYPES

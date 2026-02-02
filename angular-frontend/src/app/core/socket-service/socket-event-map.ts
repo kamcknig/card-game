@@ -124,6 +124,12 @@ export const socketToGameEventMap = (): SocketEventMap => {
       finalBundle[`${event.cardKey}-detail`] ??= event.detailImagePath;
     }
 
+    // Ensure landmark images are loaded alongside events.
+    for (const landmark of matchStore.get()?.landmarks ?? []) {
+      finalBundle[`${landmark.cardKey}-full`] ??= landmark.fullImagePath;
+      finalBundle[`${landmark.cardKey}-detail`] ??= landmark.detailImagePath;
+    }
+
     Assets.addBundle('cardLibrary', finalBundle);
 
     sceneStore.set('match');

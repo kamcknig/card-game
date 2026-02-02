@@ -189,7 +189,7 @@
     ],
     "cost": {
       "treasure": 3
-    },
+    }
   },
   "steward": {
     "abilityText": "Choose one: +2 Cards; or +$2; or trash 2 cards from your hand.",
@@ -229,7 +229,7 @@
     ],
     "cost": {
       "treasure": 5
-    },
+    }
   },
   "upgrade": {
     "abilityText": "+1 Card\n+1 Action\nTrash a card from your hand. Gain a card costing exactly $1 more than it.",
@@ -247,6 +247,6 @@
     ],
     "cost": {
       "treasure": 3
-    },
+    }
   }
 }

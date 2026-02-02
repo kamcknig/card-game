@@ -75,6 +75,24 @@
   }
 }
 
+/* Landmarks selection layout */
+.landmarks-section {
+  .landmarks-list {
+    display: grid;
+    grid-template-columns: repeat(2, 280px);
+    grid-auto-flow: row;
+    gap: 10px;
+    justify-content: start;
+  }
+
+  .landmark-slot {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+}
+
 .player-list {
   display: flex;
   flex-direction: column;
@@ -129,6 +147,21 @@
   height: 124px;
 
   .no-event {
+    font-size: 32px;
+  }
+
+  .close-button {
+    font-size: 10px;
+  }
+}
+
+/* Landmark slot styling mirrors event slots */
+.landmark-slot {
+  border: 2px solid black;
+  width: 280px;
+  height: 124px;
+
+  .no-landmark {
     font-size: 32px;
   }
 

@@ -1,0 +1,23 @@
+<div class="modal-container">
+  <div class="card-content">
+    <!-- Close button for the landmark selection modal -->
+    <div (click)="searchTermInput.value = ''; onClose()" class="close-button">X</div>
+    <div class="card-container">
+      @for (landmark of searchResults$ | async; track landmark.cardKey) {
+        <img
+          (click)="onLandmarkSelected(landmark); searchTermInput.value = ''"
+          [ngSrc]="landmark.fullImagePath"
+          height="{{EVENT_CARD_HEIGHT}}"
+          width="{{EVENT_CARD_WIDTH}}"
+          class="card-image">
+      }
+    </div>
+  </div>
+
+  <!-- Search input for landmarks -->
+  <input
+    #searchTermInput
+    autofocus
+    (input)="updateSearchTerm(searchTermInput.value)"
+    type="text">
+</div>

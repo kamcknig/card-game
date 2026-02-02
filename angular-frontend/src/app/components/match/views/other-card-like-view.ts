@@ -1,48 +1,89 @@
 import { Container, ContainerOptions, Graphics } from 'pixi.js';
-import { events } from '../../../state/match-logic';
-import { Event } from 'shared/shared-types';
+import { events, landmarks } from '../../../state/match-logic';
+import { Event, Landmark } from 'shared/shared-types';
 import { EVENT_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
 
 import { EventCard } from './event-card';
+import { LandmarkCard } from './landmark-card';
 
 export class OtherCardLikeView extends Container {
   private background: Graphics = new Graphics({ label: 'background' });
   private cardContainer: Container = new Container({ label: 'cardContainer' });
+  private eventContainer: Container = new Container({ label: 'eventContainer' });
+  private landmarkContainer: Container = new Container({ label: 'landmarkContainer' });
+  private currentEvents: readonly Event[] = [];
+  private currentLandmarks: readonly Landmark[] = [];
 
   constructor(args: ContainerOptions) {
     super(args);
 
-    const eventsSub = events.subscribe(events => this.drawEvents(events));
+    const eventsSub = events.subscribe(eventsList => {
+      this.currentEvents = eventsList;
+      this.draw();
+    });
+    const landmarksSub = landmarks.subscribe(landmarkList => {
+      this.currentLandmarks = landmarkList;
+      this.draw();
+    });
 
     this.addChild(this.background);
 
     this.cardContainer.x = STANDARD_GAP;
     this.cardContainer.y = STANDARD_GAP;
+    this.cardContainer.addChild(this.eventContainer);
+    this.cardContainer.addChild(this.landmarkContainer);
     this.addChild(this.cardContainer);
 
     this.on('removed', () => {
       eventsSub();
+      landmarksSub();
     });
   }
 
+  private draw() {
+    this.drawEvents(this.currentEvents);
+    this.drawLandmarks(this.currentLandmarks);
+
+    this.background.clear();
+
+    if (this.currentEvents.length > 0 || this.currentLandmarks.length > 0) {
+      this.background.roundRect(0, 0, this.cardContainer.width + STANDARD_GAP * 2, this.cardContainer.height + STANDARD_GAP * 2, 5);
+      this.background.fill({ color: 'black', alpha: .6 });
+    }
+  }
+
+  // Draws the event row in the card-like container.
   private drawEvents(events: readonly Event[]) {
     for (const event of events) {
-      let cardContainer = this.cardContainer.getChildByLabel(event.cardKey) as EventCard;
+      let cardContainer = this.eventContainer.getChildByLabel(event.cardKey) as EventCard;
 
       if (!cardContainer) {
         cardContainer = new EventCard({ label: event.cardKey, event });
-        cardContainer.x = this.cardContainer.children.length * (EVENT_WIDTH + STANDARD_GAP);
-        this.cardContainer.addChild(cardContainer);
+        cardContainer.x = this.eventContainer.children.length * (EVENT_WIDTH + STANDARD_GAP);
+        this.eventContainer.addChild(cardContainer);
       }
 
       cardContainer.event = event;
     }
+    this.eventContainer.y = 0;
+  }
 
-    this.background.clear();
+  // Draws the landmark row beneath events when present.
+  private drawLandmarks(landmarkList: readonly Landmark[]) {
+    for (const landmark of landmarkList) {
+      let cardContainer = this.landmarkContainer.getChildByLabel(landmark.cardKey) as LandmarkCard;
 
-    if (events.length > 0) {
-      this.background.roundRect(0, 0, this.cardContainer.width + STANDARD_GAP * 2, this.cardContainer.height + STANDARD_GAP * 2, 5);
-      this.background.fill({ color: 'black', alpha: .6 });
+      if (!cardContainer) {
+        cardContainer = new LandmarkCard({ label: landmark.cardKey, landmark });
+        cardContainer.x = this.landmarkContainer.children.length * (EVENT_WIDTH + STANDARD_GAP);
+        this.landmarkContainer.addChild(cardContainer);
+      }
+
+      cardContainer.landmark = landmark;
     }
+
+    this.landmarkContainer.y = this.eventContainer.height > 0
+      ? this.eventContainer.height + STANDARD_GAP
+      : 0;
   }
 }
