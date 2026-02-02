@@ -257,9 +257,9 @@ export const registerScoringFunctions = (
     let goldCount = 0;
     for (const card of playerCards) {
       if (card.cardKey === 'silver') {
-        silverCount += 1;
+        silverCount++;
       } else if (card.cardKey === 'gold') {
-        goldCount += 1;
+        goldCount++;
       }
     }
 
@@ -387,6 +387,33 @@ export const registerScoringFunctions = (
     if (bonus === 0) return;
 
     console.info(`[keep scoring] player ${playerId} earns ${bonus} VP`);
+    match.scores[playerId] = (match.scores[playerId] ?? 0) + bonus;
+  });
+
+  // Register Empires landmark scoring bonuses (e.g., Museum).
+  registrar((playerId, match, cardLibrary) => {
+    // Only apply Museum bonuses when the landmark is active.
+    const hasMuseum = (match.landmarks ?? []).some(
+      (landmark) => landmark.cardKey === 'museum',
+    );
+    if (!hasMuseum) return;
+
+    // Track unique card names owned by the player.
+    const playerCards = cardLibrary.getCardsByOwner(playerId);
+    const uniqueCardKeys = new Set<CardKey>();
+    for (const card of playerCards) {
+      uniqueCardKeys.add(card.cardKey);
+    }
+
+    // Museum awards 2 VP per differently named card.
+    const uniqueCount = uniqueCardKeys.size;
+    const bonus = uniqueCount * 2;
+    console.debug(
+      `[museum scoring] player ${playerId} unique ${uniqueCount} bonus ${bonus}`,
+    );
+    if (bonus === 0) return;
+
+    console.info(`[museum scoring] player ${playerId} earns ${bonus} VP`);
     match.scores[playerId] = (match.scores[playerId] ?? 0) + bonus;
   });
 };

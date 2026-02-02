@@ -46,5 +46,9 @@
   "mountain-pass": {
     "randomizer": "mountain-pass",
     "abilityText": "When you are the first player to gain a Province, each player bids once, up to 40D, ending with you. High bidder gets +8VP and takes the D they bid."
+  },
+  "museum": {
+    "randomizer": "museum",
+    "abilityText": "When scoring, 2VP per differently named card you have."
   }
 }
