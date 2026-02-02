@@ -44,6 +44,8 @@ execution
 - State mutation, patch generation, and reconciliation
 - AI decision logic constrained by the same rules as players
 - Serialization and deserialization of game state
+- keeping json schemas up to date with any new properties or changes to
+  existing json files.
 
 ---
 

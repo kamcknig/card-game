@@ -8,7 +8,7 @@ Setup: Put 6VP here per player.
 
 ## Official FAQ
 
-- With Villa it is possible for your Buy phase to start twice or more in a turn; you can make use of Arena each time.
+- With Villa, it is possible for your Buy phase to start twice or more in a turn; you can make use of Arena each time.
 
 ## Other rules clarifications
 

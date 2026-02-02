@@ -2,5 +2,9 @@
   "aqueduct": {
     "randomizer": "aqueduct",
     "abilityText": "When you gain a Treasure, move 1VP from its pile to this. When you gain a Victory card, take the VP from this.\nSetup: Put 8VP on the Silver and Gold piles."
+  },
+  "arena": {
+    "randomizer": "arena",
+    "abilityText": "At the start of your Buy phase, you may discard an Action card. If you do, take 2VP from here.\nSetup: Put 6VP here per player."
   }
 }
