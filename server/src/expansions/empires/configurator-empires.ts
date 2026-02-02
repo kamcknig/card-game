@@ -9,6 +9,7 @@ import {configureSplitPile} from '../../utils/configure-split-pile.ts';
 import {getCardPileKey} from '../../utils/get-card-pile-key.ts';
 import {configureAqueduct} from './configure-aqueduct.ts';
 import {configureArena} from './configure-arena.ts';
+import {configureBasilica} from './configure-basilica.ts';
 
 // Canonical Castle pile order for 2-player games (bottom -> top).
 const castleOrderTwoPlayers: CardKey[] = [
@@ -224,6 +225,7 @@ export const registerGameEvents: (
   // Determine which Empires landmarks are in this match.
   configureAqueduct(registrar, config);
   configureArena(registrar, config);
+  configureBasilica(registrar, config);
 };
 
 export const registerScoringFunctions = (
