@@ -206,6 +206,20 @@ export type UserPromptKinds =
   | { type: 'rearrange'; cardIds: CardId[]; }
   | { type: 'name-card'; }
   | { type: 'overpay'; cost: number; }
+  // Prompt for a numeric input within a min/max range.
+  | {
+    type: 'number-input';
+    // Optional minimum bound for numeric input.
+    min?: number;
+    // Optional maximum bound for numeric input.
+    max?: number;
+    value?: number;
+    // Optional prompt controls whether a cancel action is available.
+    optional?: boolean;
+    submitText?: string;
+    cancelText?: string;
+    placeholder?: string;
+  }
   | { type: 'display-cards'; cardIds: CardId[]; }
   | { type: 'select'; cardIds: CardId[]; selectCount: CountSpec; selectableCardIds?: CardId[]; }
   | { type: 'select-pile'; pileNames: CardKey[]; selectCount: CountSpec; optional?: boolean; };

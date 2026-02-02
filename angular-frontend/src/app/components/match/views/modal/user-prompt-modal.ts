@@ -10,6 +10,7 @@ import { cardBlindRearrangeView } from './card-blind-rearrange-view';
 import { nameCardView } from './name-card-view';
 import { SocketService } from '../../../../core/socket-service/socket.service';
 import { overpayView } from './overpay-view';
+import { numberInputView } from './number-input-view';
 
 export const userPromptModal = (
   app: Application,
@@ -21,6 +22,8 @@ export const userPromptModal = (
     let validationBtn: AppButton;
     let contentView: Container;
     let contentResults: unknown;
+    // Cache validation updates that happen before buttons render.
+    let validationState: boolean | null = null;
 
     const modalContainer = new Container();
     const background = new Graphics();
@@ -48,10 +51,19 @@ export const userPromptModal = (
       clientSelectableCardsOverrideStore.set(null);
     };
 
-    const actionButtonListener = (args?: { action?: string | number; result?: unknown }) => {
+    const actionButtonListener = (actionArgs?: { action?: string | number; result?: unknown }) => {
+      const isNumberInput = args.content?.type === 'number-input';
+      // Number-input prompts only emit a value when the submit action is used.
+      const shouldEmitValue = isNumberInput &&
+        actionArgs?.action !== undefined &&
+        actionArgs.action === 1;
+      const result = isNumberInput
+        ? (shouldEmitValue ? (actionArgs?.result ?? contentResults) : actionArgs?.result)
+        : (actionArgs?.result ?? contentResults);
+
       resolve({
-        action: args?.action,
-        result: args?.result ?? contentResults
+        action: actionArgs?.action,
+        result
       });
 
       cleanup();
@@ -71,6 +83,10 @@ export const userPromptModal = (
             actionButtonListener()
           });
           break;
+        case 'number-input':
+          // Render a numeric input prompt with validation.
+          contentView = numberInputView(app, args.content);
+          break;
         case 'overpay': {
           contentView = overpayView(app, args.content);
           break;
@@ -83,18 +99,21 @@ export const userPromptModal = (
             actionButtonListener()
           });
 
-          contentView.on('validationUpdated', valid => {
-            if (validationBtn) {
-              validationBtn.button.alpha = valid ? 1 : .6;
-              validationBtn.button.eventMode = valid ? 'static' : 'none';
-            }
-          });
           break;
       }
 
       if (contentView) {
         contentView.on('removed', () => {
           contentView.removeAllListeners();
+        });
+
+        contentView.on('validationUpdated', valid => {
+          // Cache validation state so we can apply it once the button exists.
+          validationState = valid;
+          if (validationBtn) {
+            validationBtn.button.alpha = valid ? 1 : .6;
+            validationBtn.button.eventMode = valid ? 'static' : 'none';
+          }
         });
 
         contentView.on('resultsUpdated', result => {
@@ -106,15 +125,30 @@ export const userPromptModal = (
         modalContainer.addChild(contentView);
       }
     }
+    // Number-input prompts always use submit/cancel buttons with fixed actions.
+    const actionButtons = args.content?.type === 'number-input'
+      ? (() => {
+        const buttons = [{ label: args.content.submitText ?? 'SUBMIT', action: 1 }];
+        // Only show cancel when the prompt is optional.
+        if (args.content.optional) {
+          buttons.push({ label: args.content.cancelText ?? 'CANCEL', action: 0 });
+        }
+        return buttons;
+      })()
+      : args.actionButtons;
+    // Number-input prompts always validate against the submit action.
+    const validationAction = args.content?.type === 'number-input'
+      ? 1
+      : args.validationAction;
     setTimeout(() => {
-      if (args.actionButtons) {
+      if (actionButtons) {
         const actionList = new List({
           maxWidth: 300,
           type: 'bidirectional',
           elementsMargin: STANDARD_GAP
         });
 
-        args.actionButtons?.forEach(actionButton => {
+        actionButtons?.forEach(actionButton => {
           const btn = createAppButton({
             text: actionButton.label,
             style: {
@@ -124,13 +158,18 @@ export const userPromptModal = (
               fontSize: 24,
             }
           });
-          if (args.validationAction === actionButton.action) {
+          if (validationAction !== undefined && validationAction === actionButton.action) {
             validationBtn = btn;
           }
           btn.button.on('pointerdown', () => actionButtonListener({ action: actionButton.action }));
           btn.button.on('removed', () => btn.button.removeAllListeners());
           actionList.addChild(btn.button);
         });
+        // Apply cached validation state if it fired before the buttons were created.
+        if (validationBtn && validationState !== null) {
+          validationBtn.button.alpha = validationState ? 1 : .6;
+          validationBtn.button.eventMode = validationState ? 'static' : 'none';
+        }
 
         actionList.y = modalContainer.height + STANDARD_GAP * 2;
         actionList.x = Math.floor(-actionList.width * .5);

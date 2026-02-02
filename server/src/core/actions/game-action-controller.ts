@@ -590,6 +590,17 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         const pileNames = args.content.pileNames ?? [];
         return {result: pileNames.length ? [pileNames[0]] : []};
       }
+      if (args.content?.type === 'number-input') {
+        // Provide a deterministic numeric answer for AI prompts.
+        // Resolve bounds with infinite defaults when min/max are omitted.
+        const minValue = args.content.min ?? Number.NEGATIVE_INFINITY;
+        const maxValue = args.content.max ?? Number.POSITIVE_INFINITY;
+        // Prefer the provided value, otherwise use the min if finite or 0 as a fallback.
+        const requestedValue = args.content.value ?? (Number.isFinite(minValue) ? minValue : 0);
+        // Clamp into the allowed range.
+        const clamped = Math.min(Math.max(requestedValue, minValue), maxValue);
+        return {action: 1, result: clamped};
+      }
       const actionButtons = args.actionButtons ?? [];
       const firstAction = actionButtons.find(button => button.action !== 0)?.action ?? 0;
       return {action: firstAction};
