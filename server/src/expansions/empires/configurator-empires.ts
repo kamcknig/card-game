@@ -416,6 +416,46 @@ export const registerScoringFunctions = (
     console.info(`[museum scoring] player ${playerId} earns ${bonus} VP`);
     match.scores[playerId] = (match.scores[playerId] ?? 0) + bonus;
   });
+
+  // Register Empires landmark scoring bonuses (e.g., Orchard).
+  registrar((playerId, match, cardLibrary) => {
+    // Only apply Orchard bonuses when the landmark is active.
+    const hasOrchard = (match.landmarks ?? []).some(
+      (landmark) => landmark.cardKey === 'orchard',
+    );
+    if (!hasOrchard) return;
+
+    // Count Action cards by name for the player.
+    const playerCards = cardLibrary.getCardsByOwner(playerId);
+    const actionCounts = new Map<CardKey, number>();
+    for (const card of playerCards) {
+      if (!card.type.includes('ACTION')) continue;
+
+      let count = actionCounts.get(card.cardKey) ?? 0;
+      count++;
+      actionCounts.set(card.cardKey, count);
+    }
+
+    // Orchard awards 4 VP per differently named Action card with 3+ copies.
+    let qualifyingActions = 0;
+    for (const [cardKey, count] of actionCounts.entries()) {
+      if (count < 3) continue;
+
+      qualifyingActions++;
+      console.debug(
+        `[orchard scoring] player ${playerId} qualifies for ${cardKey} (${count})`,
+      );
+    }
+
+    const bonus = qualifyingActions * 4;
+    console.debug(
+      `[orchard scoring] player ${playerId} qualifying ${qualifyingActions} bonus ${bonus}`,
+    );
+    if (bonus === 0) return;
+
+    console.info(`[orchard scoring] player ${playerId} earns ${bonus} VP`);
+    match.scores[playerId] = (match.scores[playerId] ?? 0) + bonus;
+  });
 };
 
 // Ensure victory tokens contribute to score in Empires games.
