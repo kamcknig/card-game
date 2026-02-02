@@ -629,6 +629,40 @@ export const registerScoringFunctions = (
     console.info(`[wall scoring] player ${playerId} earns ${penalty} VP`);
     match.scores[playerId] = (match.scores[playerId] ?? 0) + penalty;
   });
+
+  // Register Empires landmark scoring penalties (e.g., Wolf Den).
+  registrar((playerId, match, cardLibrary) => {
+    // Only apply Wolf Den penalties when the landmark is active.
+    const hasWolfDen = (match.landmarks ?? []).some(
+      (landmark) => landmark.cardKey === 'wolf-den',
+    );
+    if (!hasWolfDen) return;
+
+    // Count all cards owned by the player by name.
+    const playerCards = cardLibrary.getCardsByOwner(playerId);
+    const cardCounts = new Map<CardKey, number>();
+    for (const card of playerCards) {
+      let count = cardCounts.get(card.cardKey) ?? 0;
+      count++;
+      cardCounts.set(card.cardKey, count);
+    }
+
+    // Wolf Den penalizes each card name you have exactly one copy of.
+    let singletons = 0;
+    for (const count of cardCounts.values()) {
+      if (count !== 1) continue;
+      singletons++;
+    }
+
+    const penalty = singletons * -3;
+    console.debug(
+      `[wolf-den scoring] player ${playerId} singletons ${singletons} penalty ${penalty}`,
+    );
+    if (penalty === 0) return;
+
+    console.info(`[wolf-den scoring] player ${playerId} earns ${penalty} VP`);
+    match.scores[playerId] = (match.scores[playerId] ?? 0) + penalty;
+  });
 };
 
 // Ensure victory tokens contribute to score in Empires games.

@@ -80,4 +80,4 @@ List of cards
 - [tower](cardlikes/tower.md)
 - [triumphal arch](cardlikes/triumphal-arch.md)
 - [wall](cardlikes/walll.md)
-- [wolf den](cardlikes/wofl-den.md)
+- [wolf den](cardlikes/wolf-den.md)

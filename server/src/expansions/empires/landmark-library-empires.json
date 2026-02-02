@@ -74,5 +74,9 @@
   "wall": {
     "randomizer": "wall",
     "abilityText": "When scoring, -1VP per card you have after the first 15."
+  },
+  "wolf-den": {
+    "randomizer": "wolf-den",
+    "abilityText": "When scoring, -3VP per card you have exactly one copy of."
   }
 }
