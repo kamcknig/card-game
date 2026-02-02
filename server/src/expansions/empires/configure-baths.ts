@@ -1,6 +1,7 @@
 import { ComputedMatchConfiguration } from 'shared/shared-types.ts';
 import { GameEventRegistrar } from '../../types.ts';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
+import { placeVictoryTokensPerPlayer } from './landmark-utils.ts';
 
 export const configureBaths = (
   registrar: GameEventRegistrar,
@@ -15,20 +16,12 @@ export const configureBaths = (
   console.info(`[empires configurator] setting up baths landmark handlers`);
 
   registrar('onGameStart', async (args) => {
-    // Baths setup: put 6 VP tokens per player on the landmark.
-    const victoryTokenId = prosperityTokenIds.victory;
-    const totalTokens = Math.max(0, args.match.players.length * 6);
-
-    console.info(
-      `[baths onGameStart] placing ${totalTokens} VP token(s) on Baths`,
-    );
-
-    for (let i = 0; i < totalTokens; i++) {
-      await args.runGameActionDelegate('placeToken', {
-        tokenId: victoryTokenId,
-        location: { type: 'supplyPile', cardKey: 'baths' },
-      });
-    }
+    // Baths setup: put 6 VP tokens per player on the landmark using the shared helper.
+    await placeVictoryTokensPerPlayer(args, {
+      landmarkKey: 'baths',
+      logKey: 'baths',
+      landmarkName: 'Baths',
+    });
 
     // Find the Baths landmark instance for reaction registration.
     const bathsLandmark = args.match.landmarks.find(
@@ -78,6 +71,8 @@ export const configureBaths = (
               `[baths endTurn] player ${player.id} gained no cards, taking 2 VP`,
             );
 
+            // Resolve the Victory token id for token filtering.
+            const victoryTokenId = prosperityTokenIds.victory;
             const tokensOnBaths = Object.values(
               triggeredArgs.match.tokens ?? {},
             ).filter((token) =>

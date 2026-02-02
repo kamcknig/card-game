@@ -3,6 +3,7 @@ import {CardId, ComputedMatchConfiguration} from 'shared/shared-types';
 import { prosperityTokenIds } from "../prosperity/token-prosperity-ids.ts";
 import {getTurnPhase} from '../../utils/get-turn-phase.ts';
 import {getCurrentPlayer} from '../../utils/get-current-player.ts';
+import { placeVictoryTokensPerPlayer } from './landmark-utils.ts';
 
 export const configureArena = (
   registrar: GameEventRegistrar,
@@ -15,20 +16,12 @@ export const configureArena = (
   console.info(`[empires configurator] setting up arena landmark handlers`);
 
   registrar("onGameStart", async (args) => {
-    // Arena setup: put 6 VP tokens per player on the landmark.
-    const victoryTokenId = prosperityTokenIds.victory;
-    const totalTokens = Math.max(0, args.match.players.length * 6);
-
-    console.info(
-      `[arena onGameStart] placing ${totalTokens} VP token(s) on Arena`,
-    );
-
-    for (let i = 0; i < totalTokens; i += 1) {
-      await args.runGameActionDelegate("placeToken", {
-        tokenId: victoryTokenId,
-        location: { type: "supplyPile", cardKey: "arena" },
-      });
-    }
+    // Arena setup: put 6 VP tokens per player on the landmark using the shared helper.
+    await placeVictoryTokensPerPlayer(args, {
+      landmarkKey: 'arena',
+      logKey: 'arena',
+      landmarkName: 'Arena',
+    });
 
     // Find the Arena landmark instance for reaction registration.
     const arenaLandmark = args.match.landmarks.find(
@@ -118,6 +111,8 @@ export const configureArena = (
             });
 
             // Move up to 2 VP tokens from the Arena pile to the player.
+            // Resolve the Victory token id for token filtering.
+            const victoryTokenId = prosperityTokenIds.victory;
             const tokensOnArena = Object.values(
               triggeredArgs.match.tokens ?? {},
             ).filter((token) =>

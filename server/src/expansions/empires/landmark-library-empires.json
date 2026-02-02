@@ -15,6 +15,10 @@
     "randomizer": "bandit-fort",
     "abilityText": "When scoring, -2VP for each Silver and each Gold you have."
   },
+  "battlefield": {
+    "randomizer": "battlefield",
+    "abilityText": "When you gain a Victory card, take 2VP from here.\nSetup: Put 6VP here per player."
+  },
   "baths": {
     "randomizer": "baths",
     "abilityText": "When you end your turn without having gained a card, take 2VP from here.\nSetup: Put 6VP here per player."

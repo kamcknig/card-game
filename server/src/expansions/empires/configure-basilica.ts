@@ -3,6 +3,7 @@ import { GameEventRegistrar } from '../../types.ts';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
+import { placeVictoryTokensPerPlayer } from './landmark-utils.ts';
 
 export const configureBasilica = (
   registrar: GameEventRegistrar,
@@ -19,20 +20,12 @@ export const configureBasilica = (
   );
 
   registrar('onGameStart', async (args) => {
-    // Basilica setup: put 6 VP tokens per player on the landmark.
-    const victoryTokenId = prosperityTokenIds.victory;
-    const totalTokens = Math.max(0, args.match.players.length * 6);
-
-    console.info(
-      `[basilica onGameStart] placing ${totalTokens} VP token(s) on Basilica`,
-    );
-
-    for (let i = 0; i < totalTokens; i += 1) {
-      await args.runGameActionDelegate('placeToken', {
-        tokenId: victoryTokenId,
-        location: { type: 'supplyPile', cardKey: 'basilica' },
-      });
-    }
+    // Basilica setup: put 6 VP tokens per player on the landmark using the shared helper.
+    await placeVictoryTokensPerPlayer(args, {
+      landmarkKey: 'basilica',
+      logKey: 'basilica',
+      landmarkName: 'Basilica',
+    });
   });
 
   registrar('onCardGained', async (args, eventArgs) => {

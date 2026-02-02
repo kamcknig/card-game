@@ -9,6 +9,7 @@ import {configureSplitPile} from '../../utils/configure-split-pile.ts';
 import {getCardPileKey} from '../../utils/get-card-pile-key.ts';
 import {configureAqueduct} from './configure-aqueduct.ts';
 import {configureArena} from './configure-arena.ts';
+import {configureBattlefield} from './configure-battlefield.ts';
 import {configureBasilica} from './configure-basilica.ts';
 import {configureBaths} from './configure-baths.ts';
 
@@ -226,6 +227,7 @@ export const registerGameEvents: (
   // Determine which Empires landmarks are in this match.
   configureAqueduct(registrar, config);
   configureArena(registrar, config);
+  configureBattlefield(registrar, config);
   configureBasilica(registrar, config);
   configureBaths(registrar, config);
 };
