@@ -1,0 +1,6 @@
+{
+  "aqueduct": {
+    "randomizer": "aqueduct",
+    "abilityText": "When you gain a Treasure, move 1VP from its pile to this. When you gain a Victory card, take the VP from this.\nSetup: Put 8VP on the Silver and Gold piles."
+  }
+}
