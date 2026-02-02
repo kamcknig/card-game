@@ -484,6 +484,7 @@ export type CardType =
   | 'EVENT'
   | 'FATE'
   | 'FORT'
+  | 'GATHERING'
   | 'HEIRLOOM'
   | 'HEX'
   | 'KNIGHT'
