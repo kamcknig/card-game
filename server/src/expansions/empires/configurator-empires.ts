@@ -568,6 +568,45 @@ export const registerScoringFunctions = (
     console.info(`[tower scoring] player ${playerId} earns ${bonus} VP`);
     match.scores[playerId] = (match.scores[playerId] ?? 0) + bonus;
   });
+
+  // Register Empires landmark scoring bonuses (e.g., Triumphal Arch).
+  registrar((playerId, match, cardLibrary) => {
+    // Only apply Triumphal Arch bonuses when the landmark is active.
+    const hasTriumphalArch = (match.landmarks ?? []).some(
+      (landmark) => landmark.cardKey === 'triumphal-arch',
+    );
+    if (!hasTriumphalArch) return;
+
+    // Count Action cards by name for the player.
+    const playerCards = cardLibrary.getCardsByOwner(playerId);
+    const actionCounts = new Map<CardKey, number>();
+    for (const card of playerCards) {
+      if (!card.type.includes('ACTION')) continue;
+
+      let count = actionCounts.get(card.cardKey) ?? 0;
+      count++;
+      actionCounts.set(card.cardKey, count);
+    }
+
+    if (actionCounts.size < 2) {
+      console.debug(
+        `[triumphal-arch scoring] player ${playerId} has fewer than 2 Action names`,
+      );
+      return;
+    }
+
+    // Triumphal Arch awards 3 VP per copy of the 2nd most common Action.
+    const sortedCounts = Array.from(actionCounts.values()).sort((a, b) => b - a);
+    const secondMostCount = sortedCounts[1] ?? 0;
+    const bonus = secondMostCount * 3;
+    console.debug(
+      `[triumphal-arch scoring] player ${playerId} second-most ${secondMostCount} bonus ${bonus}`,
+    );
+    if (bonus === 0) return;
+
+    console.info(`[triumphal-arch scoring] player ${playerId} earns ${bonus} VP`);
+    match.scores[playerId] = (match.scores[playerId] ?? 0) + bonus;
+  });
 };
 
 // Ensure victory tokens contribute to score in Empires games.

@@ -66,5 +66,9 @@
   "tower": {
     "randomizer": "tower",
     "abilityText": "When scoring, 1VP per non-Victory card you have from an empty Supply pile."
+  },
+  "triumphal-arch": {
+    "randomizer": "triumphal-arch",
+    "abilityText": "When scoring, 3VP per copy you have of the 2nd most common Action card among your cards (if it's a tie, count either)."
   }
 }
