@@ -105,6 +105,8 @@ export const configureBaths = (
             }
           },
         },
+        // Ensure each player's reaction has a unique id suffix.
+        { idSuffix: player.id.toString() },
       );
     }
   });

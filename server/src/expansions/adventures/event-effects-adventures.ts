@@ -1,7 +1,7 @@
 import {CardExpansionModule} from '../../types.ts';
 import {CardPriceRule} from '../../core/card-price-rules-controller.ts';
 import {getCardsInPlay} from '../../utils/get-cards-in-play.ts';
-import {Card, CardId, CardKey, CardNoId, CountSpec} from 'shared/shared-types';
+import {Card, CardId, CardKey, CountSpec} from 'shared/shared-types';
 import {getTurnPhase} from '../../utils/get-turn-phase.ts';
 import {findOrderedTargets} from '../../utils/find-ordered-targets.ts';
 import {adventuresTokenIds} from './token-ids-adventures.ts';

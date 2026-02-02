@@ -10,6 +10,7 @@ import {
   Reaction,
   ReactionSourceType,
   ReactionTemplate,
+  ReactionTemplateOptions,
   ReactionTrigger,
   RunGameActionDelegate, TriggeredEffectContext,
   TriggerEventType
@@ -120,19 +121,37 @@ export class ReactionManager {
     }
   }
 
-  registerSystemTemplate<T extends TriggerEventType>(cardLike: CardLike, event: T, reactionTemplate: Omit<ReactionTemplate<T>, 'id' | 'listeningFor'>): string {
+  registerSystemTemplate<T extends TriggerEventType>(
+    cardLike: CardLike,
+    event: T,
+    reactionTemplate: Omit<ReactionTemplate<T>, 'id' | 'listeningFor'>,
+    templateOptions?: ReactionTemplateOptions,
+  ): string {
+    // Support an optional suffix for system reaction IDs.
+    const idSuffix = templateOptions?.idSuffix;
     const systemTemplate = {
       ...reactionTemplate,
-      id: `${cardLike.cardKey}:${cardLike.id}:${event}:system`,
+      id: `${cardLike.cardKey}:${cardLike.id}:${event}:system` +
+        (idSuffix ? `:${idSuffix}` : ''),
       system: true
     }
 
     return this.registerReactionTemplate(cardLike, event, systemTemplate);
   }
 
-  registerReactionTemplate<T extends TriggerEventType>(cardLike: CardLike, event: T, reactionTemplate: Omit<ReactionTemplate<T>, 'id' | 'listeningFor' | 'system'>): string
+  registerReactionTemplate<T extends TriggerEventType>(
+    cardLike: CardLike,
+    event: T,
+    reactionTemplate: Omit<ReactionTemplate<T>, 'id' | 'listeningFor' | 'system'>,
+    templateOptions?: ReactionTemplateOptions,
+  ): string
   registerReactionTemplate<T extends TriggerEventType>(reactionTemplate: ReactionTemplate<T>): string
-  registerReactionTemplate<T extends TriggerEventType>(cardLikeOrTemplate: CardLike | ReactionTemplate<T>, event?: T, reactionTemplate?: Omit<ReactionTemplate<T>, 'id' | 'listeningFor' | 'system'>): string {
+  registerReactionTemplate<T extends TriggerEventType>(
+    cardLikeOrTemplate: CardLike | ReactionTemplate<T>,
+    event?: T,
+    reactionTemplate?: Omit<ReactionTemplate<T>, 'id' | 'listeningFor' | 'system'>,
+    templateOptions?: ReactionTemplateOptions,
+  ): string {
     let template: ReactionTemplate<T>;
 
     if (!(cardLikeOrTemplate instanceof CardLike)) {
@@ -147,10 +166,14 @@ export class ReactionManager {
         : cardLikeOrTemplate instanceof Card
         ? 'card'
         : 'other';
+      // Allow optional ID suffixes for default reaction IDs.
+      const idSuffix = templateOptions?.idSuffix;
+      const defaultId = `${cardLikeOrTemplate.cardName}:${cardLikeOrTemplate.id}:${event}` +
+        (idSuffix ? `:${idSuffix}` : '');
       template = {
         ...reactionTemplate,
         listeningFor: event,
-        id: reactionTemplate && 'id' in reactionTemplate ? reactionTemplate.id : `${cardLikeOrTemplate.cardName}:${cardLikeOrTemplate.id}:${event}`,
+        id: reactionTemplate && 'id' in reactionTemplate ? reactionTemplate.id : defaultId,
         // Populate reaction source metadata for UI labels.
         sourceId: reactionTemplate?.sourceId ?? cardLikeOrTemplate.id,
         sourceKey: reactionTemplate?.sourceKey ?? cardLikeOrTemplate.cardKey,

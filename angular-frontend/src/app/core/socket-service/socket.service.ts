@@ -1,58 +1,63 @@
-import {Injectable} from '@angular/core';
-import {io, Socket} from 'socket.io-client';
-import {environment} from '../../../environments/environment';
-import {v4 as uuidV4} from 'uuid';
-import {SocketEventMap} from './socket-event-map';
-import {ServerEmitEvents, ServerListenEvents} from 'shared/shared-types';
-import {ServerEmitEventNames} from '../../../types';
+import { Injectable } from "@angular/core";
+import { io, Socket } from "socket.io-client";
+import { environment } from "../../../environments/environment";
+import { v4 as uuidV4 } from "uuid";
+import { SocketEventMap } from "./socket-event-map";
+import { ServerEmitEvents, ServerListenEvents } from "shared/shared-types";
+import { ServerEmitEventNames } from "../../../types";
 
 @Injectable({
-  providedIn: 'root',
+  providedIn: "root",
 })
 export class SocketService {
   private _socket: Socket<ServerListenEvents, ServerEmitEvents>;
-  private _socketEventMap: SocketEventMap | undefined
+  private _socketEventMap: SocketEventMap | undefined;
 
   constructor() {
-    let sessionId = localStorage.getItem('sessionId');
+    let sessionId = localStorage.getItem("sessionId");
 
     if (!sessionId) {
       sessionId = uuidV4();
     }
 
-    localStorage.setItem('sessionId', sessionId);
-
+    localStorage.setItem("sessionId", sessionId);
     this._socket = io(environment.wsHost, {
-      transports: ['websocket', 'polling'],
+      path: "/socket.io",
+      transports: ["websocket", "polling"],
       // Defer connection until handlers are registered to avoid missing early events.
       autoConnect: false,
       timeout: environment.wsTimeout,
       requestTimeout: environment.wsRequestTimeout,
-      query: {sessionId}
+      query: { sessionId },
     }) as unknown as Socket<ServerListenEvents, ServerEmitEvents>;
 
-    this._socket.on('connect_error', this.onConnectError);
-    this._socket.on('disconnect', this.onDisconnect);
+    this._socket.on("connect_error", this.onConnectError);
+    this._socket.on("disconnect", this.onDisconnect);
   }
 
   private registerMappedEvent<K extends ServerEmitEventNames>(
     eventName: K,
-    handler: ServerEmitEvents[K]
+    handler: ServerEmitEvents[K],
   ) {
-      (this._socket as unknown as Socket).on(eventName as string, (...args: unknown[]) => {
+    (this._socket as unknown as Socket).on(
+      eventName as string,
+      (...args: unknown[]) => {
         console.debug(`[socket service] received event ${eventName}`);
         // Cast for Angular compiler; ServerEmitEvents carries tuple types, but runtime args are untyped.
         (handler as (...handlerArgs: unknown[]) => void)(...args);
-      });
+      },
+    );
   }
 
   public setEventMap(map: SocketEventMap) {
     this._socketEventMap = map;
-    (Object.keys(this._socketEventMap) as ServerEmitEventNames[]).forEach(eventName => {
-      const handler = this._socketEventMap![eventName];
-      if (!handler) return;
-      this.registerMappedEvent(eventName, handler);
-    });
+    (Object.keys(this._socketEventMap) as ServerEmitEventNames[]).forEach(
+      (eventName) => {
+        const handler = this._socketEventMap![eventName];
+        if (!handler) return;
+        this.registerMappedEvent(eventName, handler);
+      },
+    );
     // Connect after handlers are wired to prevent missed rehydration events.
     if (!this._socket.connected) {
       this._socket.connect();
@@ -61,13 +66,13 @@ export class SocketService {
 
   private onConnectError = (error: any) => {
     // todo show error screen
-    console.warn('socket failed to connect');
+    console.warn("socket failed to connect");
     console.error(error);
-  }
+  };
 
   private onDisconnect = () => {
-    console.info('socket disconnected');
-  }
+    console.info("socket disconnected");
+  };
 
   public off<K extends keyof ServerEmitEvents>(
     eventName: K,

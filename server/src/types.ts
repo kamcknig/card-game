@@ -589,6 +589,9 @@ export class Reaction<T extends TriggerEventType = TriggerEventType> {
 
 export type ReactionTemplate<T extends TriggerEventType = TriggerEventType> = Omit<Reaction<T>, 'getSourceId' | 'getSourceKey' | 'getBaseId'>;
 
+// Optional configuration for reaction templates.
+export type ReactionTemplateOptions = { idSuffix?: string };
+
 export type GameLifecycleCallbackContext = AppContext & {
     cardId: CardId,
     runGameActionDelegate: RunGameActionDelegate;
