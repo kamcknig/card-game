@@ -456,6 +456,41 @@ export const registerScoringFunctions = (
     console.info(`[orchard scoring] player ${playerId} earns ${bonus} VP`);
     match.scores[playerId] = (match.scores[playerId] ?? 0) + bonus;
   });
+
+  // Register Empires landmark scoring bonuses (e.g., Palace).
+  registrar((playerId, match, cardLibrary) => {
+    // Only apply Palace bonuses when the landmark is active.
+    const hasPalace = (match.landmarks ?? []).some(
+      (landmark) => landmark.cardKey === 'palace',
+    );
+    if (!hasPalace) return;
+
+    // Count basic Treasures (Copper, Silver, Gold) owned by the player.
+    const playerCards = cardLibrary.getCardsByOwner(playerId);
+    let copperCount = 0;
+    let silverCount = 0;
+    let goldCount = 0;
+    for (const card of playerCards) {
+      if (card.cardKey === 'copper') {
+        copperCount++;
+      } else if (card.cardKey === 'silver') {
+        silverCount++;
+      } else if (card.cardKey === 'gold') {
+        goldCount++;
+      }
+    }
+
+    // Palace awards 3 VP per complete set of Copper, Silver, and Gold.
+    const setCount = Math.min(copperCount, silverCount, goldCount);
+    const bonus = setCount * 3;
+    console.debug(
+      `[palace scoring] player ${playerId} copper ${copperCount} silver ${silverCount} gold ${goldCount} sets ${setCount} bonus ${bonus}`,
+    );
+    if (bonus === 0) return;
+
+    console.info(`[palace scoring] player ${playerId} earns ${bonus} VP`);
+    match.scores[playerId] = (match.scores[playerId] ?? 0) + bonus;
+  });
 };
 
 // Ensure victory tokens contribute to score in Empires games.

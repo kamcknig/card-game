@@ -54,5 +54,9 @@
   "orchard": {
     "randomizer": "orchard",
     "abilityText": "When scoring, 4VP per differently named Action card you have 3 or more copies of."
+  },
+  "palace": {
+    "randomizer": "palace",
+    "abilityText": "When scoring, 3VP per set you have of Copper - Silver - Gold."
   }
 }
