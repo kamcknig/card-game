@@ -6,5 +6,9 @@
   "arena": {
     "randomizer": "arena",
     "abilityText": "At the start of your Buy phase, you may discard an Action card. If you do, take 2VP from here.\nSetup: Put 6VP here per player."
+  },
+  "bandit-fort": {
+    "randomizer": "bandit-fort",
+    "abilityText": "When scoring, -2VP for each Silver and each Gold you have."
   }
 }

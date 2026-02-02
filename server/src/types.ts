@@ -660,7 +660,7 @@ export type CardLifecycleCallback<T extends CardLifecycleEvent> = (args: CardLif
 export type CardEffectRegistrar = (cardKey: CardKey, tag: string, fn: CardEffectFn) => void;
 
 export type PlayerScoreDecoratorRegistrar = (decorator: PlayerScoreDecorator) => void;
-export type PlayerScoreDecorator = (playerId: PlayerId, match: Match) => void;
+export type PlayerScoreDecorator = (playerId: PlayerId, match: Match, cardLibrary: MatchCardLibrary) => void;
 
 export type EndGameConditionFnContext = AppContext;
 export type EndGameConditionFn = (args: EndGameConditionFnContext) => boolean;

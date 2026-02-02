@@ -758,7 +758,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       match.scores[playerId] = score;
 
       for (const expansionScoringFn of this._expansionScoringFns) {
-        expansionScoringFn(playerId, match);
+        expansionScoringFn(playerId, match, this._cardLibrary);
       }
     }
   }

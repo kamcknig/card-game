@@ -1,14 +1,12 @@
-import { CardId, CardKey, ComputedMatchConfiguration } from "shared/shared-types.ts";
+import {CardKey, ComputedMatchConfiguration} from 'shared/shared-types.ts';
 import {
   ExpansionConfiguratorContext,
   ExpansionConfiguratorFactory,
   GameEventRegistrar,
-} from "../../types.ts";
-import { configureSplitPile } from "../../utils/configure-split-pile.ts";
-import { getCurrentPlayer } from '../../utils/get-current-player.ts';
-import { getCardPileKey } from "../../utils/get-card-pile-key.ts";
-import { getTurnPhase } from '../../utils/get-turn-phase.ts';
-import { prosperityTokenIds } from "../prosperity/token-prosperity-ids.ts";
+  PlayerScoreDecoratorRegistrar,
+} from '../../types.ts';
+import {configureSplitPile} from '../../utils/configure-split-pile.ts';
+import {getCardPileKey} from '../../utils/get-card-pile-key.ts';
 import {configureAqueduct} from './configure-aqueduct.ts';
 import {configureArena} from './configure-arena.ts';
 
@@ -226,6 +224,40 @@ export const registerGameEvents: (
   // Determine which Empires landmarks are in this match.
   configureAqueduct(registrar, config);
   configureArena(registrar, config);
+};
+
+export const registerScoringFunctions = (
+  registrar: PlayerScoreDecoratorRegistrar,
+) => {
+  // Register Empires landmark scoring adjustments (e.g., Bandit Fort).
+  registrar((playerId, match, cardLibrary) => {
+    // Only apply Bandit Fort penalties when the landmark is active.
+    const hasBanditFort = (match.landmarks ?? []).some(
+      (landmark) => landmark.cardKey === 'bandit-fort',
+    );
+    if (!hasBanditFort) return;
+
+    // Count Silver and Gold cards owned by the player.
+    const playerCards = cardLibrary.getCardsByOwner(playerId);
+    let silverCount = 0;
+    let goldCount = 0;
+    for (const card of playerCards) {
+      if (card.cardKey === 'silver') {
+        silverCount += 1;
+      } else if (card.cardKey === 'gold') {
+        goldCount += 1;
+      }
+    }
+
+    const totalTreasures = silverCount + goldCount;
+    const penalty = totalTreasures * -2;
+    console.debug(
+      `[bandit fort scoring] player ${playerId} silver ${silverCount} gold ${goldCount} penalty ${penalty}`,
+    );
+    if (penalty === 0) return;
+
+    match.scores[playerId] = (match.scores[playerId] ?? 0) + penalty;
+  });
 };
 
 // Ensure victory tokens contribute to score in Empires games.
