@@ -40,14 +40,13 @@ export const findOrderedTargets = (args: FindTargetsArgs): number[] => {
       return [1];
     case 'ALL_OTHER': {
       console.info('find targets for ALL_OTHER');
-      const fullOrder = match.players;
-      const currentIndex = fullOrder.findIndex(player => player.id === currentPlayerTurnId);
+      const currentIndex = currentTurnOrder.findIndex(player => player.id === currentPlayerTurnId);
 
       const reordered = [];
-      const l = fullOrder.length;
+      const l = currentTurnOrder.length;
       for (let i = 1; i < l; i++) {
         const idx = (currentIndex + i) % l;
-        reordered.push(fullOrder[idx]);
+        reordered.push(currentTurnOrder[idx]);
       }
 
       result = reordered;

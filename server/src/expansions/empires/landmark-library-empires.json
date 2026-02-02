@@ -35,8 +35,16 @@
     "randomizer": "fountain",
     "abilityText": "When scoring, 15VP if you have at least 10 Coppers."
   },
+  "keep": {
+    "randomizer": "keep",
+    "abilityText": "When scoring, 5VP per differently named Treasure you have, that you have more copies of than each other player, or tied for most."
+  },
   "labyrinth": {
     "randomizer": "labyrinth",
     "abilityText": "When you gain a 2nd card in one of your turns, take 2VP from here.\nSetup: Put 6VP here per player."
+  },
+  "mountain-pass": {
+    "randomizer": "mountain-pass",
+    "abilityText": "When you are the first player to gain a Province, each player bids once, up to 40D, ending with you. High bidder gets +8VP and takes the D they bid."
   }
 }
