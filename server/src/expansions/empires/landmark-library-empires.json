@@ -51,6 +51,10 @@
     "randomizer": "museum",
     "abilityText": "When scoring, 2VP per differently named card you have."
   },
+  "obelisk": {
+    "randomizer": "obelisk",
+    "abilityText": "When scoring, 2VP per card you have from the chosen pile.\nSetup: Choose a random Action Supply pile."
+  },
   "orchard": {
     "randomizer": "orchard",
     "abilityText": "When scoring, 4VP per differently named Action card you have 3 or more copies of."

@@ -16,6 +16,7 @@ import {configureColonnade} from './configure-colonnade.ts';
 import {configureDefiledShrine} from './configure-defiled-shrine.ts';
 import {configureLabyrinth} from './configure-labyrinth.ts';
 import {configureMountainPass} from './configure-mountain-pass.ts';
+import {configureObelisk, ObeliskMetadata} from './configure-obelisk.ts';
 import {configureTomb} from './configure-tomb.ts';
 
 // Canonical Castle pile order for 2-player games (bottom -> top).
@@ -239,6 +240,7 @@ export const registerGameEvents: (
   configureDefiledShrine(registrar, config);
   configureLabyrinth(registrar, config);
   configureMountainPass(registrar, config);
+  configureObelisk(registrar, config);
   // Register the Tomb landmark on-trash VP bonus.
   configureTomb(registrar, config);
 };
@@ -662,6 +664,58 @@ export const registerScoringFunctions = (
 
     console.info(`[wolf-den scoring] player ${playerId} earns ${penalty} VP`);
     match.scores[playerId] = (match.scores[playerId] ?? 0) + penalty;
+  });
+
+  // Register Empires landmark scoring bonuses (e.g., Obelisk).
+  registrar((playerId, match, cardLibrary) => {
+    // Only apply Obelisk bonuses when the landmark is active.
+    const obeliskLandmark = (match.landmarks ?? []).find(
+      (landmark) => landmark.cardKey === 'obelisk',
+    );
+    if (!obeliskLandmark) return;
+
+    const metadata = obeliskLandmark.metadata as ObeliskMetadata;
+    const chosenPileKey = metadata?.chosenPileKey;
+    if (!chosenPileKey) {
+      console.debug(
+        `[obelisk scoring] no chosen pile metadata found, skipping`,
+      );
+      return;
+    }
+
+    // Resolve the chosen pile's card keys from the match configuration.
+    const supplyPiles = [
+      ...(match.config.basicSupply ?? []),
+      ...(match.config.kingdomSupply ?? []),
+    ];
+    const chosenPile = supplyPiles.find(
+      (supply) => supply.name === chosenPileKey,
+    );
+    if (!chosenPile) {
+      console.debug(
+        `[obelisk scoring] chosen pile ${chosenPileKey} not found in supply`,
+      );
+      return;
+    }
+
+    const chosenKeySet = new Set<CardKey>(
+      chosenPile.cards.map((card) => card.cardKey),
+    );
+    const playerCards = cardLibrary.getCardsByOwner(playerId);
+    let qualifyingCards = 0;
+    for (const card of playerCards) {
+      if (!chosenKeySet.has(card.cardKey)) continue;
+      qualifyingCards++;
+    }
+
+    const bonus = qualifyingCards * 2;
+    console.debug(
+      `[obelisk scoring] player ${playerId} qualifying ${qualifyingCards} bonus ${bonus}`,
+    );
+    if (bonus === 0) return;
+
+    console.info(`[obelisk scoring] player ${playerId} earns ${bonus} VP`);
+    match.scores[playerId] = (match.scores[playerId] ?? 0) + bonus;
   });
 };
 
