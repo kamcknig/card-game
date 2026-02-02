@@ -469,6 +469,9 @@ export type TriggerEventTypeContext = {
 
 export type TriggerEventType = keyof TriggerEventTypeContext;
 
+// Explicit metadata for reaction sources used in prompts and logging.
+export type ReactionSourceType = 'card' | 'event' | 'landmark' | 'token' | 'other';
+
 export class Reaction<T extends TriggerEventType = TriggerEventType> {
     // a concatenation of the card key and card id with a '-'
     public id: string;
@@ -515,6 +518,12 @@ export class Reaction<T extends TriggerEventType = TriggerEventType> {
      */
     public allowMultipleInstances?: boolean = true;
 
+    // Source metadata for reaction prompts and grouping.
+    public sourceId?: number;
+    public sourceKey?: string;
+    public sourceName?: string;
+    public sourceType?: ReactionSourceType;
+
     public extraData?: any;
 
     // todo working on moat right now which has no condition other than it be an attack.
@@ -537,6 +546,11 @@ export class Reaction<T extends TriggerEventType = TriggerEventType> {
         this.compulsory = arg.compulsory ?? false;
         this.system = arg.system ?? false;
         this.autoResolve = arg.autoResolve ?? false;
+        // Preserve explicit reaction source metadata when provided.
+        this.sourceId = arg.sourceId;
+        this.sourceKey = arg.sourceKey;
+        this.sourceName = arg.sourceName;
+        this.sourceType = arg.sourceType;
     }
 
     public getBaseId() {

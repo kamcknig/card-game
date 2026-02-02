@@ -1,0 +1,152 @@
+import { GameEventRegistrar } from "../../types.ts";
+import {CardId, ComputedMatchConfiguration} from 'shared/shared-types';
+import { prosperityTokenIds } from "../prosperity/token-prosperity-ids.ts";
+import {getTurnPhase} from '../../utils/get-turn-phase.ts';
+import {getCurrentPlayer} from '../../utils/get-current-player.ts';
+
+export const configureArena = (
+  registrar: GameEventRegistrar,
+  config: ComputedMatchConfiguration,
+) => {
+  const hasArena = (config.landmarks ?? []).some(
+    (landmark) => landmark.cardKey === "arena",
+  );
+
+  console.info(`[empires configurator] setting up arena landmark handlers`);
+
+  registrar("onGameStart", async (args) => {
+    // Arena setup: put 6 VP tokens per player on the landmark.
+    const victoryTokenId = prosperityTokenIds.victory;
+    const totalTokens = Math.max(0, args.match.players.length * 6);
+
+    console.info(
+      `[arena onGameStart] placing ${totalTokens} VP token(s) on Arena`,
+    );
+
+    for (let i = 0; i < totalTokens; i += 1) {
+      await args.runGameActionDelegate("placeToken", {
+        tokenId: victoryTokenId,
+        location: { type: "supplyPile", cardKey: "arena" },
+      });
+    }
+
+    // Find the Arena landmark instance for reaction registration.
+    const arenaLandmark = args.match.landmarks.find(
+      (landmark) => landmark.cardKey === "arena",
+    );
+    if (!arenaLandmark) {
+      console.warn(
+        `[arena onGameStart] Arena landmark instance missing, skipping reaction registration`,
+      );
+      return;
+    }
+
+    // Register the start-of-buy-phase reaction for each player.
+    for (const player of args.match.players) {
+        args.reactionManager.registerReactionTemplate(
+          arenaLandmark,
+          "startTurnPhase",
+          {
+            playerId: player.id,
+            once: false,
+            allowMultipleInstances: true,
+            compulsory: false,
+            condition: async (conditionArgs) => {
+            // Only react at the start of the current player's buy phase.
+            if (
+              getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== "buy"
+            ) {
+              return false;
+            }
+            if (getCurrentPlayer(conditionArgs.match).id !== player.id) {
+              return false;
+            }
+            // Only offer the reaction if the player has an Action to discard.
+            const actionCards = conditionArgs.findCards([
+              { location: "playerHand", playerId: player.id },
+              { cardType: "ACTION" },
+            ]);
+            return actionCards.length > 0;
+          },
+          triggeredEffectFn: async (triggeredArgs) => {
+            console.debug(
+              `[arena startTurnPhase] resolving for player ${player.id}`,
+            );
+
+            // Find Action cards in hand for the discard choice.
+            const actionCards = triggeredArgs.findCards([
+              { location: "playerHand", playerId: player.id },
+              { cardType: "ACTION" },
+            ]);
+            if (!actionCards.length) {
+              console.debug(
+                `[arena startTurnPhase] no Action cards available to discard`,
+              );
+              return;
+            }
+
+            const selectedCardIds = await triggeredArgs.runGameActionDelegate(
+              "selectCard",
+              {
+                playerId: player.id,
+                prompt: "Discard an Action card for Arena?",
+                restrict: actionCards.map((card) => card.id),
+                count: 1,
+                optional: true,
+                cancelPrompt: "NO",
+                autoSelect: false,
+              },
+            ) as CardId[];
+
+            if (!selectedCardIds.length) {
+              console.debug(
+                `[arena startTurnPhase] player chose not to discard`,
+              );
+              return;
+            }
+
+            // Discard the selected Action card.
+            const selectedCard = triggeredArgs.cardLibrary.getCard(
+              selectedCardIds[0],
+            );
+            console.info(
+              `[arena startTurnPhase] discarding ${selectedCard} for 2 VP`,
+            );
+            await triggeredArgs.runGameActionDelegate("discardCard", {
+              playerId: player.id,
+              cardId: selectedCard.id,
+            });
+
+            // Move up to 2 VP tokens from the Arena pile to the player.
+            const tokensOnArena = Object.values(
+              triggeredArgs.match.tokens ?? {},
+            ).filter((token) =>
+              token.tokenId === victoryTokenId &&
+              token.location.type === "supplyPile" &&
+              token.location.cardKey === "arena"
+            ).sort((a, b) => a.id.localeCompare(b.id));
+
+            if (!tokensOnArena.length) {
+              console.debug(
+                `[arena startTurnPhase] no VP tokens remaining on Arena`,
+              );
+              return;
+            }
+
+            const tokensToMove = tokensOnArena.slice(0, 2);
+            console.info(
+              `[arena startTurnPhase] moving ${tokensToMove.length} VP token(s) to player ${player.id}`,
+            );
+            for (const token of tokensToMove) {
+              await triggeredArgs.runGameActionDelegate("moveToken", {
+                tokenInstanceId: token.id,
+                location: { type: "player", playerId: player.id },
+                ownerId: player.id,
+              });
+            }
+          },
+        },
+      );
+    }
+  });
+};

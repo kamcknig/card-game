@@ -1,4 +1,4 @@
-import { CardId, CardLike, Match, Player } from 'shared/shared-types.ts';
+import { Card, CardId, CardLike, Event, Landmark, Match, Player } from 'shared/shared-types.ts';
 import {
   CardLifecycleEvent,
   CardLifecycleEventArgMap,
@@ -8,6 +8,7 @@ import {
   GameLifeCycleEventArgsMap,
   ReactionContext,
   Reaction,
+  ReactionSourceType,
   ReactionTemplate,
   ReactionTrigger,
   RunGameActionDelegate, TriggeredEffectContext,
@@ -138,10 +139,23 @@ export class ReactionManager {
       template = cardLikeOrTemplate;
     }
     else {
+      // Resolve a stable source type for card-like reactions.
+      const sourceType: ReactionSourceType = cardLikeOrTemplate instanceof Event
+        ? 'event'
+        : cardLikeOrTemplate instanceof Landmark
+        ? 'landmark'
+        : cardLikeOrTemplate instanceof Card
+        ? 'card'
+        : 'other';
       template = {
         ...reactionTemplate,
         listeningFor: event,
-        id: reactionTemplate && 'id' in reactionTemplate ? reactionTemplate.id : `${cardLikeOrTemplate.cardName}:${cardLikeOrTemplate.id}:${event}`
+        id: reactionTemplate && 'id' in reactionTemplate ? reactionTemplate.id : `${cardLikeOrTemplate.cardName}:${cardLikeOrTemplate.id}:${event}`,
+        // Populate reaction source metadata for UI labels.
+        sourceId: reactionTemplate?.sourceId ?? cardLikeOrTemplate.id,
+        sourceKey: reactionTemplate?.sourceKey ?? cardLikeOrTemplate.cardKey,
+        sourceName: reactionTemplate?.sourceName ?? cardLikeOrTemplate.cardName,
+        sourceType: reactionTemplate?.sourceType ?? sourceType,
       } as ReactionTemplate<T>;
     }
 
