@@ -607,6 +607,28 @@ export const registerScoringFunctions = (
     console.info(`[triumphal-arch scoring] player ${playerId} earns ${bonus} VP`);
     match.scores[playerId] = (match.scores[playerId] ?? 0) + bonus;
   });
+
+  // Register Empires landmark scoring penalties (e.g., Wall).
+  registrar((playerId, match, cardLibrary) => {
+    // Only apply Wall penalties when the landmark is active.
+    const hasWall = (match.landmarks ?? []).some(
+      (landmark) => landmark.cardKey === 'wall',
+    );
+    if (!hasWall) return;
+
+    // Count all cards owned by the player (Wall cares about total deck size).
+    const playerCards = cardLibrary.getCardsByOwner(playerId);
+    const totalCards = playerCards.length;
+    const excessCards = Math.max(0, totalCards - 15);
+    const penalty = excessCards * -1;
+    console.debug(
+      `[wall scoring] player ${playerId} total ${totalCards} excess ${excessCards} penalty ${penalty}`,
+    );
+    if (penalty === 0) return;
+
+    console.info(`[wall scoring] player ${playerId} earns ${penalty} VP`);
+    match.scores[playerId] = (match.scores[playerId] ?? 0) + penalty;
+  });
 };
 
 // Ensure victory tokens contribute to score in Empires games.

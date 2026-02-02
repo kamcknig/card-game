@@ -70,5 +70,9 @@
   "triumphal-arch": {
     "randomizer": "triumphal-arch",
     "abilityText": "When scoring, 3VP per copy you have of the 2nd most common Action card among your cards (if it's a tie, count either)."
+  },
+  "wall": {
+    "randomizer": "wall",
+    "abilityText": "When scoring, -1VP per card you have after the first 15."
   }
 }
