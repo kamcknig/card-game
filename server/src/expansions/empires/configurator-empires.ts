@@ -10,6 +10,7 @@ import {getCardPileKey} from '../../utils/get-card-pile-key.ts';
 import {configureAqueduct} from './configure-aqueduct.ts';
 import {configureArena} from './configure-arena.ts';
 import {configureBasilica} from './configure-basilica.ts';
+import {configureBaths} from './configure-baths.ts';
 
 // Canonical Castle pile order for 2-player games (bottom -> top).
 const castleOrderTwoPlayers: CardKey[] = [
@@ -226,6 +227,7 @@ export const registerGameEvents: (
   configureAqueduct(registrar, config);
   configureArena(registrar, config);
   configureBasilica(registrar, config);
+  configureBaths(registrar, config);
 };
 
 export const registerScoringFunctions = (

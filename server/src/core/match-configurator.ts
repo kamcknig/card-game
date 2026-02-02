@@ -8,7 +8,7 @@ import {
   Match,
   MatchConfiguration,
   Supply
-} from 'shared/shared-types.ts';
+} from 'shared/shared-types';
 import { ExpansionData, expansionLibrary, rawCardLibrary } from '@expansions/expansion-library.ts';
 import {
   EndGameConditionRegistrar,

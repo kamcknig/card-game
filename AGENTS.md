@@ -86,6 +86,7 @@ execution
 - json files should follow proper schema validation
 - cardName in the card library is only needed
 - prefer returning early from methods over nesting
+- prefer ++ to += where possible
 
 ---
 
