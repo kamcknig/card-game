@@ -1,4 +1,4 @@
-import {CardKey, ComputedMatchConfiguration} from 'shared/shared-types.ts';
+import {CardKey, ComputedMatchConfiguration, PlayerId} from 'shared/shared-types';
 import {
   ExpansionConfiguratorContext,
   ExpansionConfiguratorFactory,
@@ -280,10 +280,13 @@ export const registerScoringFunctions = (
     // Count Copper cards owned by the player for the Fountain threshold.
     const playerCards = cardLibrary.getCardsByOwner(playerId);
     let copperCount = 0;
+    // Count up to the Fountain threshold and stop early once it is met.
     for (const card of playerCards) {
-      if (card.cardKey === 'copper') {
-        copperCount += 1;
-      }
+      if (card.cardKey !== 'copper') continue;
+
+      copperCount++;
+      // Stop once the Fountain threshold is reached to avoid extra iteration.
+      if (copperCount >= 10) break;
     }
 
     console.debug(
@@ -296,6 +299,90 @@ export const registerScoringFunctions = (
     console.info(
       `[fountain scoring] player ${playerId} qualifies, adding ${bonus} VP`,
     );
+    match.scores[playerId] = (match.scores[playerId] ?? 0) + bonus;
+  });
+
+  // Register Empires landmark scoring bonuses (e.g., Keep).
+  registrar((playerId, match, cardLibrary) => {
+    // Only apply Keep bonuses when the landmark is active.
+    const hasKeep = (match.landmarks ?? []).some(
+      (landmark) => landmark.cardKey === 'keep',
+    );
+    if (!hasKeep) return;
+
+    // Collect every Treasure card key that exists in this match.
+    const treasureKeys = new Set<CardKey>();
+    const allCards = cardLibrary.getAllCardsAsArray();
+    for (const card of allCards) {
+      if (!card.type.includes('TREASURE')) continue;
+      treasureKeys.add(card.cardKey);
+    }
+
+    if (treasureKeys.size === 0) {
+      console.debug('[keep scoring] no treasure cards in game, skipping');
+      return;
+    }
+
+    // Build per-player Treasure counts for each treasure key in the match.
+    const playerTreasureCounts = new Map<PlayerId, Record<CardKey, number>>();
+    for (const player of match.players) {
+      const playerCards = cardLibrary.getCardsByOwner(player.id);
+      const counts: Record<CardKey, number> = {};
+      for (const card of playerCards) {
+        if (!card.type.includes('TREASURE')) continue;
+
+        let count = counts[card.cardKey] ?? 0;
+        count++;
+        counts[card.cardKey] = count;
+      }
+      playerTreasureCounts.set(player.id, counts);
+    }
+
+    const currentPlayerCounts = playerTreasureCounts.get(playerId) ?? {};
+    let bonus = 0;
+
+    // Award 5 VP per Treasure where the player is tied for most (including ties at 0).
+    for (const treasureKey of treasureKeys) {
+      let maxCount = 0;
+      for (const player of match.players) {
+        const counts = playerTreasureCounts.get(player.id);
+        const count = counts?.[treasureKey] ?? 0;
+        if (count > maxCount) {
+          maxCount = count;
+        }
+      }
+
+      if (maxCount === 0) {
+        console.debug(
+          `[keep scoring] no players have ${treasureKey}, skipping`,
+        );
+        continue;
+      }
+
+      const playerCount = currentPlayerCounts[treasureKey] ?? 0;
+      // Keep only scores treasures the player has at least one copy of.
+      if (playerCount === 0) {
+        console.debug(
+          `[keep scoring] player ${playerId} has none of ${treasureKey}, skipping`,
+        );
+        continue;
+      }
+      if (playerCount !== maxCount) {
+        console.debug(
+          `[keep scoring] player ${playerId} does not qualify for ${treasureKey} (player ${playerCount}, max ${maxCount})`,
+        );
+        continue;
+      }
+
+      bonus += 5;
+      console.debug(
+        `[keep scoring] player ${playerId} qualifies for ${treasureKey} (player ${playerCount}, max ${maxCount})`,
+      );
+    }
+
+    if (bonus === 0) return;
+
+    console.info(`[keep scoring] player ${playerId} earns ${bonus} VP`);
     match.scores[playerId] = (match.scores[playerId] ?? 0) + bonus;
   });
 };
