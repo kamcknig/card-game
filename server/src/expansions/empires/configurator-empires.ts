@@ -14,6 +14,7 @@ import {configureBasilica} from './configure-basilica.ts';
 import {configureBaths} from './configure-baths.ts';
 import {configureColonnade} from './configure-colonnade.ts';
 import {configureDefiledShrine} from './configure-defiled-shrine.ts';
+import {configureLabyrinth} from './configure-labyrinth.ts';
 
 // Canonical Castle pile order for 2-player games (bottom -> top).
 const castleOrderTwoPlayers: CardKey[] = [
@@ -234,6 +235,7 @@ export const registerGameEvents: (
   configureBaths(registrar, config);
   configureColonnade(registrar, config);
   configureDefiledShrine(registrar, config);
+  configureLabyrinth(registrar, config);
 };
 
 export const registerScoringFunctions = (

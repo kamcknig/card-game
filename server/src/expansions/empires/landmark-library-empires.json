@@ -34,5 +34,9 @@
   "fountain": {
     "randomizer": "fountain",
     "abilityText": "When scoring, 15VP if you have at least 10 Coppers."
+  },
+  "labyrinth": {
+    "randomizer": "labyrinth",
+    "abilityText": "When you gain a 2nd card in one of your turns, take 2VP from here.\nSetup: Put 6VP here per player."
   }
 }
