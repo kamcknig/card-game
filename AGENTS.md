@@ -15,6 +15,7 @@ coherence, and prevent logic drift in a complex game codebase.
 ## Agent Permissions
 
 - Can always read files
+- Can always make requests to local network services
 
 ## Agent Identity
 

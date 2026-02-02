@@ -268,6 +268,36 @@ export const registerScoringFunctions = (
 
     match.scores[playerId] = (match.scores[playerId] ?? 0) + penalty;
   });
+
+  // Register Empires landmark scoring bonuses (e.g., Fountain).
+  registrar((playerId, match, cardLibrary) => {
+    // Only apply Fountain bonuses when the landmark is active.
+    const hasFountain = (match.landmarks ?? []).some(
+      (landmark) => landmark.cardKey === 'fountain',
+    );
+    if (!hasFountain) return;
+
+    // Count Copper cards owned by the player for the Fountain threshold.
+    const playerCards = cardLibrary.getCardsByOwner(playerId);
+    let copperCount = 0;
+    for (const card of playerCards) {
+      if (card.cardKey === 'copper') {
+        copperCount += 1;
+      }
+    }
+
+    console.debug(
+      `[fountain scoring] player ${playerId} copper ${copperCount}`,
+    );
+
+    if (copperCount < 10) return;
+
+    const bonus = 15;
+    console.info(
+      `[fountain scoring] player ${playerId} qualifies, adding ${bonus} VP`,
+    );
+    match.scores[playerId] = (match.scores[playerId] ?? 0) + bonus;
+  });
 };
 
 // Ensure victory tokens contribute to score in Empires games.

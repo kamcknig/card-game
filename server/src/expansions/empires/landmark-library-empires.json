@@ -30,5 +30,9 @@
   "defiled-shrine": {
     "randomizer": "defiled-shrine",
     "abilityText": "When you gain an Action, move 1VP from its pile to this. When you gain a Curse in your Buy phase, take the VP from this.\nSetup: Put 2VP on each non-Gathering Action Supply pile."
+  },
+  "fountain": {
+    "randomizer": "fountain",
+    "abilityText": "When scoring, 15VP if you have at least 10 Coppers."
   }
 }
