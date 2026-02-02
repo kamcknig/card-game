@@ -58,5 +58,9 @@
   "palace": {
     "randomizer": "palace",
     "abilityText": "When scoring, 3VP per set you have of Copper - Silver - Gold."
+  },
+  "tomb": {
+    "randomizer": "tomb",
+    "abilityText": "When you trash a card, +1VP."
   }
 }

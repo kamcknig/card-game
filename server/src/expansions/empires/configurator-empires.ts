@@ -16,6 +16,7 @@ import {configureColonnade} from './configure-colonnade.ts';
 import {configureDefiledShrine} from './configure-defiled-shrine.ts';
 import {configureLabyrinth} from './configure-labyrinth.ts';
 import {configureMountainPass} from './configure-mountain-pass.ts';
+import {configureTomb} from './configure-tomb.ts';
 
 // Canonical Castle pile order for 2-player games (bottom -> top).
 const castleOrderTwoPlayers: CardKey[] = [
@@ -238,6 +239,8 @@ export const registerGameEvents: (
   configureDefiledShrine(registrar, config);
   configureLabyrinth(registrar, config);
   configureMountainPass(registrar, config);
+  // Register the Tomb landmark on-trash VP bonus.
+  configureTomb(registrar, config);
 };
 
 export const registerScoringFunctions = (
