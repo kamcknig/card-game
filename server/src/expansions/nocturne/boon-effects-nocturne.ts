@@ -25,6 +25,8 @@ export const registerNocturneBoonEffects = (registerBoonEffect: BoonEffectRegist
   registerSunsGift(registerBoonEffect);
   // Register The Swamp's Gift boon effect.
   registerSwampsGift(registerBoonEffect);
+  // Register The Wind's Gift boon effect.
+  registerWindsGift(registerBoonEffect);
 };
 
 // Registers The Earth's Gift boon effect logic.
@@ -532,5 +534,43 @@ const registerSwampsGift = (registerBoonEffect: BoonEffectRegistrar) => {
       cardId: willOWispId,
       to: { location: 'playerDiscard' },
     });
+  });
+};
+
+// Registers The Wind's Gift boon effect logic.
+const registerWindsGift = (registerBoonEffect: BoonEffectRegistrar) => {
+  registerBoonEffect('the-winds-gift', async ({
+    playerId,
+    runGameActionDelegate,
+    cardLibrary,
+    cardSourceController,
+  }) => {
+    console.info(`[the-winds-gift boon] resolving for player ${playerId}`);
+
+    // Draw two cards before discarding.
+    await runGameActionDelegate('drawCard', { playerId, count: 2 });
+
+    const hand = cardSourceController.getSource('playerHand', playerId);
+    if (hand.length < 1) {
+      console.info('[the-winds-gift boon] no cards in hand to discard');
+      return;
+    }
+
+    const cardIds = hand.length < 2 ?
+      hand :
+      await runGameActionDelegate('selectCard', {
+        prompt: 'Discard 2 cards',
+        playerId: playerId,
+        restrict: hand,
+        count: 2,
+      }) as CardId[];
+
+    for (const cardId of cardIds) {
+      console.debug(`[the-winds-gift boon] discarding ${cardLibrary.getCard(cardId)}`);
+      await runGameActionDelegate('discardCard', {
+        cardId: cardId,
+        playerId: playerId,
+      });
+    }
   });
 };
