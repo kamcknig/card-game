@@ -445,6 +445,39 @@ const expansion: CardExpansionModule = {
       });
     },
   },
+  'cursed-village': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (cardEffectArgs, eventArgs) => {
+        console.info(`[cursed-village onGained] resolving for player ${eventArgs.playerId}`);
+
+        // Cursed Village forces the gaining player to receive a Hex.
+        await cardEffectArgs.runGameActionDelegate('receiveHex', {
+          playerId: eventArgs.playerId,
+        });
+      },
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.info(`[cursed-village effect] resolving for player ${cardEffectArgs.playerId}`);
+
+      // Apply the immediate +2 Actions.
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
+
+      // Draw one at a time so triggered draws are accounted for before checking again.
+      let hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      console.debug(`[cursed-village effect] starting draw loop at ${hand.length} card(s) in hand`);
+
+      while (hand.length < 6) {
+        console.debug('[cursed-village effect] drawing 1 card to reach 6 in hand');
+        await cardEffectArgs.runGameActionDelegate('drawCard', {
+          playerId: cardEffectArgs.playerId,
+          count: 1,
+        });
+
+        hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+        console.debug(`[cursed-village effect] hand now has ${hand.length} card(s)`);
+      }
+    },
+  },
   'ghost': {
     registerEffects: () => async (cardEffectArgs) => {
       console.info(`[ghost effect] resolving for player ${cardEffectArgs.playerId}`);

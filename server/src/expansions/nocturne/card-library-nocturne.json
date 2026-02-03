@@ -53,6 +53,17 @@
     ],
     "abilityText": "Set aside any number of non-Duration Treasures you have in play, face down. While any remain, at the start of each of your turns, put one of them into your hand."
   },
+  "cursed-village": {
+    "cardName": "Cursed Village",
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION",
+      "DOOM"
+    ],
+    "abilityText": "+2 Actions\nDraw until you have 6 cards in hand.\nWhen you gain this, receive a Hex."
+  },
   "cobbler": {
     "cardName": "Cobbler",
     "cost": {
@@ -194,6 +205,102 @@
     },
     "kingdomSelectable": false,
     "type": ["BOON"]
+  },
+  "bad-omens": {
+    "cardName": "Bad Omens",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["HEX"]
+  },
+  "delusion": {
+    "cardName": "Delusion",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["HEX"]
+  },
+  "envy": {
+    "cardName": "Envy",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["HEX"]
+  },
+  "famine": {
+    "cardName": "Famine",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["HEX"]
+  },
+  "fear": {
+    "cardName": "Fear",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["HEX"]
+  },
+  "greed": {
+    "cardName": "Greed",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["HEX"]
+  },
+  "haunting": {
+    "cardName": "Haunting",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["HEX"]
+  },
+  "locusts": {
+    "cardName": "Locusts",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["HEX"]
+  },
+  "misery": {
+    "cardName": "Misery",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["HEX"]
+  },
+  "plague": {
+    "cardName": "Plague",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["HEX"]
+  },
+  "poverty": {
+    "cardName": "Poverty",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["HEX"]
+  },
+  "war": {
+    "cardName": "War",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["HEX"]
   },
   "will-o-wisp": {
     "cardName": "Will-o'-Wisp",

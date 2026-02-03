@@ -1,4 +1,4 @@
-import { BoonNoId, CardKey, CardNoId, EventNoId, LandmarkNoId } from 'shared/shared-types';
+import { BoonNoId, CardKey, CardNoId, EventNoId, HexNoId, LandmarkNoId } from 'shared/shared-types';
 
 export type ExpansionCardData = {
   basicSupply: Record<CardKey, CardNoId>,
@@ -14,6 +14,8 @@ export type ExpansionData = {
   landmarks: Record<CardKey, LandmarkNoId>;
   // Boons are stored separately from supply cards.
   boons: Record<CardKey, BoonNoId>;
+  // Hexes are stored separately from supply cards.
+  hexes: Record<CardKey, HexNoId>;
   mutuallyExclusive?: string[];
 }
 

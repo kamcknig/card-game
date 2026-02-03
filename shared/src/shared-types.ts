@@ -82,6 +82,8 @@ export interface MatchConfiguration {
   landmarks: LandmarkNoId[];
   // Boons available for Fate cards in this match.
   boons: BoonNoId[];
+  // Hexes available for Doom cards in this match.
+  hexes: HexNoId[];
 }
 
 export type ComputedMatchConfiguration = MatchConfiguration & {
@@ -142,6 +144,12 @@ export interface Match {
   // Boon deck state for Fate cards in this match.
   boons: {
     cards: Boon[];
+    deck: CardLikeId[];
+    discard: CardLikeId[];
+  };
+  // Hex deck state for Doom cards in this match.
+  hexes: {
+    cards: Hex[];
     deck: CardLikeId[];
     discard: CardLikeId[];
   };
@@ -510,6 +518,29 @@ export class Boon extends CardLike {
 }
 
 export type BoonNoId = Omit<Boon, 'id'>;
+
+// Hex constructor args mirror base CardLike fields.
+type HexArgs = {
+  [p in keyof CardLike]: CardLike[p];
+};
+
+// Hexes are landscape card-likes that provide harmful effects.
+export class Hex extends CardLike {
+  constructor(args: HexArgs) {
+    super(args);
+
+    this.id = args.id;
+    this.cardName = args.cardName;
+    this.fullImagePath = args.fullImagePath;
+    this.detailImagePath = args.detailImagePath;
+  }
+
+  override toString() {
+    return `[HEX ${this.id} - ${this.cardKey}]`;
+  }
+}
+
+export type HexNoId = Omit<Hex, 'id'>;
 
 /**
  * CARD TYPES

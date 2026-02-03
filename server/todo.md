@@ -48,6 +48,8 @@ all players, but native village and island mat cards  face down and can only be 
 - can the ruins pile be updated to use the newer randomizer and piles?
 
 # Higher priority
+- boon and hex indicator views need to be displayed. boon-indicator-view and
+  hex-indicator-view
 - when cards are in zones like set aside or a mat, they can be face up or
   face down. make sure all players who shoudl be able to see cards can see
   them and all those that can't are not able to

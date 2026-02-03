@@ -47,6 +47,8 @@ const defaultMatchConfiguration: MatchConfiguration = {
   landmarks: [],
   // Default boons selection for new lobbies.
   boons: [],
+  // Default hexes selection for new lobbies.
+  hexes: [],
   playerStartingHand: { ...MatchBaseConfiguration.playerStartingHand }
 };
 

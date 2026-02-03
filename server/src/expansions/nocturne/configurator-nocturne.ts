@@ -43,32 +43,66 @@ const configurator: ExpansionConfiguratorFactory = () => {
       }
       // Ensure boons are cleared when Fate cards are absent.
       args.config.boons = [];
+    }
+    else {
+      // Limit boon selection to expansions that actually contributed Fate cards.
+      const expansionsWithFate = Array.from(new Set(fateCards.map(card => card.expansionName)));
+
+      // Pull boon definitions from the expansion library.
+      const boons = expansionsWithFate.flatMap(expansionName =>
+        Object.values(expansionLibrary[expansionName]?.boons ?? {})
+      );
+      // De-duplicate boons across expansions by card key.
+      const uniqueBoons = uniqueByProp(boons, 'cardKey');
+
+      if (uniqueBoons.length < 1) {
+        // Log missing boon definitions so configuration issues are visible.
+        console.warn(`[nocturne configurator] Fate cards present but no boons found for expansions ${expansionsWithFate.join(', ')}`);
+        args.config.boons = [];
+      }
+      else {
+        // Ensure Will-o'-Wisp pile exists when boons are active.
+        configureWillOWisp(args);
+
+        // Seed the computed configuration with the selected boons.
+        console.info(`[nocturne configurator] Fate cards present, seeding ${uniqueBoons.length} boons`);
+        args.config.boons = structuredClone(uniqueBoons);
+      }
+    }
+
+    // Doom cards determine whether hexes are active for this match.
+    const doomCards = kingdomCards.filter(card => card.type?.includes('DOOM'));
+
+    if (doomCards.length < 1) {
+      // Clear out hexes when the match does not contain any Doom cards.
+      if ((args.config.hexes ?? []).length > 0) {
+        console.info('[nocturne configurator] clearing hexes because no Doom cards are present');
+      }
+      // Ensure hexes are cleared when Doom cards are absent.
+      args.config.hexes = [];
       return args.config;
     }
 
-    // Limit boon selection to expansions that actually contributed Fate cards.
-    const expansionsWithFate = Array.from(new Set(fateCards.map(card => card.expansionName)));
+    // Limit hex selection to expansions that actually contributed Doom cards.
+    const expansionsWithDoom = Array.from(new Set(doomCards.map(card => card.expansionName)));
 
-    // Pull boon definitions from the expansion library.
-    const boons = expansionsWithFate.flatMap(expansionName =>
-      Object.values(expansionLibrary[expansionName]?.boons ?? {})
+    // Pull hex definitions from the expansion library.
+    const hexes = expansionsWithDoom.flatMap(expansionName =>
+      Object.values(expansionLibrary[expansionName]?.hexes ?? {})
     );
-    // De-duplicate boons across expansions by card key.
-    const uniqueBoons = uniqueByProp(boons, 'cardKey');
+    // De-duplicate hexes across expansions by card key.
+    const uniqueHexes = uniqueByProp(hexes, 'cardKey');
 
-    if (uniqueBoons.length < 1) {
-      // Log missing boon definitions so configuration issues are visible.
-      console.warn(`[nocturne configurator] Fate cards present but no boons found for expansions ${expansionsWithFate.join(', ')}`);
-      args.config.boons = [];
+    if (uniqueHexes.length < 1) {
+      // Log missing hex definitions so configuration issues are visible.
+      console.warn(`[nocturne configurator] Doom cards present but no hexes found for expansions ${expansionsWithDoom.join(', ')}`);
+      args.config.hexes = [];
       return args.config;
     }
 
-    // Ensure Will-o'-Wisp pile exists when boons are active.
-    configureWillOWisp(args);
-
-    // Seed the computed configuration with the selected boons.
-    console.info(`[nocturne configurator] Fate cards present, seeding ${uniqueBoons.length} boons`);
-    args.config.boons = structuredClone(uniqueBoons);
+    // Seed the computed configuration with the selected hexes.
+    console.info(`[nocturne configurator] Doom cards present, seeding ${uniqueHexes.length} hexes`);
+    args.config.hexes = structuredClone(uniqueHexes);
     return args.config;
   };
 };

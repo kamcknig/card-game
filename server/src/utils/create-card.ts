@@ -6,6 +6,8 @@ import {
   CardNoId,
   Event,
   EventNoId,
+  Hex,
+  HexNoId,
   Landmark,
   LandmarkNoId,
 } from 'shared/shared-types.ts';
@@ -38,6 +40,14 @@ export const createEvent = (event: EventNoId): Event => {
 export const createBoon = (boon: BoonNoId): Boon => {
   return new Boon({
     ...boon,
+    id: ++CARD_COUNT,
+  });
+}
+
+// Hexes are card-like objects that live outside the supply and are drawn from a shared deck.
+export const createHex = (hex: HexNoId): Hex => {
+  return new Hex({
+    ...hex,
     id: ++CARD_COUNT,
   });
 }

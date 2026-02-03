@@ -35,7 +35,7 @@ import {
   MatchBaseConfiguration,
   PlayerScoreDecorator,
 } from '../types.ts';
-import { createBoon, createCard, createEvent, createLandmark } from '../utils/create-card.ts';
+import { createBoon, createCard, createEvent, createHex, createLandmark } from '../utils/create-card.ts';
 import { getRemainingSupplyCount, getStartingSupplyCount } from '../utils/get-starting-supply-count.ts';
 import { CardPriceRulesController } from './card-price-rules-controller.ts';
 import { findCardsFactory } from '../utils/find-cards.ts';
@@ -100,6 +100,12 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       landmarks: [],
       // Boon deck state for Fate cards.
       boons: {
+        cards: [],
+        deck: [],
+        discard: [],
+      },
+      // Hex deck state for Doom cards.
+      hexes: {
         cards: [],
         deck: [],
         discard: [],
@@ -236,6 +242,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
     // Boon effects are registered per-match via expansion configurators.
     const boonEffectFunctionMap = {} as CardEffectFunctionMap;
+    // Hex effects are registered per-match via expansion configurators.
+    const hexEffectFunctionMap = {} as CardEffectFunctionMap;
 
     this._interactivityController = new CardInteractivityController(
       this._cardSourceController,
@@ -254,6 +262,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       cardEffectFunctionMap,
       eventEffectFunctionMap,
       boonEffectFunctionMap,
+      hexEffectFunctionMap,
       this._match,
       this._cardLibrary,
       this._logManager,
@@ -273,6 +282,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       endGameConditionRegistrar: (val) => this._expansionEndGameConditionFns.push(val),
       cardEffectRegistrar: (...args) => this.gameActionsController?.registerCardEffect(...args),
       boonEffectRegistrar: (cardKey, effectFn) => this.gameActionsController?.registerBoonEffect(cardKey, effectFn),
+      hexEffectRegistrar: (cardKey, effectFn) => this.gameActionsController?.registerHexEffect(cardKey, effectFn),
       playerScoreDecoratorRegistrar: (val: PlayerScoreDecorator) => this._expansionScoringFns.push(val),
     });
 
@@ -295,6 +305,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this.createLandmarks(this._matchConfiguration);
       // Boons are initialized after events/landmarks if Fate cards are present.
       this.createBoons(this._matchConfiguration);
+      // Hexes are initialized after boons if Doom cards are present.
+      this.createHexes(this._matchConfiguration);
       this.createNonSupplyCards(this._matchConfiguration);
       this.createPlayerDecks(this._matchConfiguration);
       this._match.config = this._matchConfiguration;
@@ -953,6 +965,34 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     fisherYatesShuffle(this._match.boons.deck, true);
 
     console.debug(`[match] boon deck initialized with ${this._match.boons.deck.length} boons`);
+  }
+
+  // Creates and shuffles the hex deck when Doom cards are present.
+  private createHexes(config: ComputedMatchConfiguration) {
+    const hexes = config.hexes ?? [];
+    if (hexes.length < 1) {
+      console.info('[match] no hexes configured for this match');
+      return;
+    }
+
+    console.info('[match] creating hexes');
+    // Initialize hex deck state before shuffling.
+    this._match.hexes = {
+      cards: [],
+      deck: [],
+      discard: [],
+    };
+
+    for (const hex of hexes) {
+      const hexInstance = createHex(hex);
+      this._match.hexes.cards.push(hexInstance);
+      this._match.hexes.deck.push(hexInstance.id);
+    }
+
+    // Shuffle the hex deck for randomized draws.
+    fisherYatesShuffle(this._match.hexes.deck, true);
+
+    console.debug(`[match] hex deck initialized with ${this._match.hexes.deck.length} hexes`);
   }
 
   private createLandmarks(config: ComputedMatchConfiguration) {

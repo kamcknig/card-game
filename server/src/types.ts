@@ -159,6 +159,8 @@ export interface BaseGameActionDefinitionMap {
     gainVictoryToken: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
     // Receives a boon from the shared boon deck (used by Fate cards).
     receiveBoon: (args: { playerId: PlayerId; immediate?: boolean; boonId?: CardLikeId; }, context?: GameActionContext) => Promise<CardLikeId | undefined>;
+    // Receives a hex from the shared hex deck (used by Doom cards).
+    receiveHex: (args: { playerId: PlayerId; hexId?: CardLikeId; }, context?: GameActionContext) => Promise<CardLikeId | undefined>;
     // Pays down debt tokens using the current player's treasure pool.
     payDebt: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
     // Token actions are used by expansions to place and manage token instances.
@@ -671,6 +673,8 @@ export type CardLifecycleCallback<T extends CardLifecycleEvent> = (args: CardLif
 export type CardEffectRegistrar = (cardKey: CardKey, tag: string, fn: CardEffectFn) => void;
 // Registers boon effects by card key for the current match.
 export type BoonEffectRegistrar = (cardKey: CardKey, fn: CardEffectFn) => void;
+// Registers hex effects by card key for the current match.
+export type HexEffectRegistrar = (cardKey: CardKey, fn: CardEffectFn) => void;
 
 export type PlayerScoreDecoratorRegistrar = (decorator: PlayerScoreDecorator) => void;
 export type PlayerScoreDecorator = (playerId: PlayerId, match: Match, cardLibrary: MatchCardLibrary) => void;
@@ -692,4 +696,5 @@ export type InitializeExpansionContext = {
     playerScoreDecoratorRegistrar: PlayerScoreDecoratorRegistrar;
     cardEffectRegistrar: CardEffectRegistrar;
     boonEffectRegistrar: BoonEffectRegistrar;
+    hexEffectRegistrar: HexEffectRegistrar;
 }

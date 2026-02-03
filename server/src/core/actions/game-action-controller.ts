@@ -68,6 +68,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     private cardEffectFunctionMap: CardEffectFunctionMap,
     private eventEffectFunctionMap: CardEffectFunctionMap,
     private boonEffectFunctionMap: CardEffectFunctionMap,
+    private hexEffectFunctionMap: CardEffectFunctionMap,
     private match: Match,
     private cardLibrary: MatchCardLibrary,
     private logManager: LogManager,
@@ -94,6 +95,14 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       console.warn(`[action controller] boon effect for ${cardKey} already exists, overwriting it`);
     }
     this.boonEffectFunctionMap[cardKey] = fn;
+  }
+
+  // Registers hex effects for the current match.
+  public registerHexEffect(cardKey: CardKey, fn: CardEffectFn) {
+    if (this.hexEffectFunctionMap[cardKey]) {
+      console.warn(`[action controller] hex effect for ${cardKey} already exists, overwriting it`);
+    }
+    this.hexEffectFunctionMap[cardKey] = fn;
   }
 
   public async invokeAction<K extends GameActions>(
@@ -526,7 +535,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     return oldSource ? {location: oldSource?.sourceKey!, playerId: oldSource?.playerId} : undefined;
   }
 
-  // Moves a card-like (boon/event/landmark) between supported locations.
+  // Moves a card-like (boon/hex/event/landmark) between supported locations.
   async moveCardLike(args: { toPlayerId?: PlayerId; cardLikeId: CardLikeId; to: CardLocationSpec }) {
     if (typeof args.cardLikeId !== 'number') {
       throw new Error('[moveCardLike action] invalid cardLikeId');
@@ -579,6 +588,20 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       previousLocation ??= { location: 'boonDiscard' };
     }
 
+    // Remove from hex deck/discard piles if present.
+    const hexDeck = this.match.hexes?.deck;
+    const hexDiscard = this.match.hexes?.discard;
+    const hexDeckIndex = hexDeck ? hexDeck.indexOf(cardLike.id) : -1;
+    if (hexDeckIndex !== -1 && hexDeck) {
+      hexDeck.splice(hexDeckIndex, 1);
+      previousLocation ??= { location: 'hexDeck' };
+    }
+    const hexDiscardIndex = hexDiscard ? hexDiscard.indexOf(cardLike.id) : -1;
+    if (hexDiscardIndex !== -1 && hexDiscard) {
+      hexDiscard.splice(hexDiscardIndex, 1);
+      previousLocation ??= { location: 'hexDiscard' };
+    }
+
     switch (args.to.location) {
       case 'set-aside': {
         if (args.toPlayerId === undefined) {
@@ -619,6 +642,36 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         console.debug(`[moveCardLike action] moved ${cardLike} to boon deck`);
         break;
       }
+      // Hex discard pile for Doom effects.
+      case 'hexDiscard': {
+        const isHex = this.match.hexes?.cards?.some(card => card.id === cardLike.id);
+        if (!isHex) {
+          throw new Error(`[moveCardLike action] ${cardLike} is not a hex; cannot move to hexDiscard`);
+        }
+        if (!this.match.hexes?.discard) {
+          throw new Error('[moveCardLike action] hex discard pile is not initialized');
+        }
+        if (!this.match.hexes.discard.includes(cardLike.id)) {
+          this.match.hexes.discard.push(cardLike.id);
+        }
+        console.debug(`[moveCardLike action] moved ${cardLike} to hex discard`);
+        break;
+      }
+      // Hex deck for Doom effects.
+      case 'hexDeck': {
+        const isHex = this.match.hexes?.cards?.some(card => card.id === cardLike.id);
+        if (!isHex) {
+          throw new Error(`[moveCardLike action] ${cardLike} is not a hex; cannot move to hexDeck`);
+        }
+        if (!this.match.hexes?.deck) {
+          throw new Error('[moveCardLike action] hex deck is not initialized');
+        }
+        if (!this.match.hexes.deck.includes(cardLike.id)) {
+          this.match.hexes.deck.push(cardLike.id);
+        }
+        console.debug(`[moveCardLike action] moved ${cardLike} to hex deck`);
+        break;
+      }
       default:
         throw new Error(`[moveCardLike action] unsupported location '${args.to.location}'`);
     }
@@ -630,6 +683,8 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   private findCardLike(cardLikeId: CardLikeId) {
     const boon = this.match.boons?.cards?.find(card => card.id === cardLikeId);
     if (boon) return boon;
+    const hex = this.match.hexes?.cards?.find(card => card.id === cardLikeId);
+    if (hex) return hex;
     const event = this.match.events?.find(card => card.id === cardLikeId);
     if (event) return event;
     return this.match.landmarks?.find(card => card.id === cardLikeId);
@@ -1300,6 +1355,106 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     await resolveBoon('immediate');
 
     return boonId;
+  }
+
+  // Receives a hex from the shared hex deck and resolves its effect.
+  async receiveHex(args: { playerId: PlayerId; hexId?: CardLikeId }, context?: GameActionContext) {
+    console.log(`[receiveHex action] player ${args.playerId} receiving a hex`);
+
+    // Ensure hex piles exist for older saved states.
+    this.match.hexes ??= { cards: [], deck: [], discard: [] };
+    this.match.hexes.cards ??= [];
+    this.match.hexes.deck ??= [];
+    this.match.hexes.discard ??= [];
+
+    if (this.match.hexes.cards.length < 1) {
+      console.info('[receiveHex action] no hexes configured, skipping');
+      return;
+    }
+
+    if (this.match.hexes.deck.length < 1 && this.match.hexes.discard.length > 0) {
+      console.info('[receiveHex action] hex deck empty, reshuffling discard');
+      this.match.hexes.deck = fisherYatesShuffle(this.match.hexes.discard, false);
+      this.match.hexes.discard = [];
+    }
+
+    let hexId = args.hexId;
+    let hex = hexId !== undefined
+      ? this.match.hexes.cards.find(candidate => candidate.id === hexId)
+      : undefined;
+
+    if (hexId !== undefined && !hex) {
+      console.warn(`[receiveHex action] could not find hex ${hexId}`);
+      return;
+    }
+
+    if (hexId === undefined || !hex) {
+      if (this.match.hexes.deck.length < 1) {
+        console.info('[receiveHex action] no hexes available to draw');
+        return;
+      }
+
+      hexId = this.match.hexes.deck.pop();
+      if (hexId === undefined) {
+        console.warn('[receiveHex action] hex deck draw failed');
+        return;
+      }
+
+      hex = this.match.hexes.cards.find(h => h.id === hexId);
+      if (!hex) {
+        console.warn(`[receiveHex action] could not find hex ${hexId}`);
+        this.match.hexes.discard.push(hexId);
+        return;
+      }
+    }
+
+    // Remove the hex from deck/discard if it was already staged there.
+    const deckIndex = this.match.hexes.deck.indexOf(hexId);
+    if (deckIndex !== -1) {
+      this.match.hexes.deck.splice(deckIndex, 1);
+    }
+    const discardIndex = this.match.hexes.discard.indexOf(hexId);
+    if (discardIndex !== -1) {
+      this.match.hexes.discard.splice(discardIndex, 1);
+    }
+
+    const effectFn = this.hexEffectFunctionMap[hex.cardKey];
+    if (effectFn) {
+      console.debug(`[receiveHex action] running effect for ${hex}`);
+
+      await this.logManager.withIndent(async () => {
+        const effectContext = {
+          cardSourceController: this._cardSourceController,
+          cardPriceController: this.cardPriceRuleController,
+          reactionManager: this.reactionManager,
+          runGameActionDelegate: this.runGameActionDelegate,
+          cardId: hexId,
+          playerId: args.playerId,
+          match: this.match,
+          cardLibrary: this.cardLibrary,
+          reactionContext: {},
+          findCards: this._findCards
+        } as CardEffectFunctionContext;
+
+        // Centralized duration registration with automatic cleanup on leave-play.
+        effectContext.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
+          const triggerIds = this.registerDurationEffectInternal(durationCard, effectContext, triggeredTemplate, options);
+          this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
+          return triggerIds;
+        };
+
+        await effectFn(effectContext);
+      });
+    }
+    else {
+      console.debug(`[receiveHex action] no effect registered for ${hex.cardKey}`);
+    }
+
+    // Received hexes always go to the discard pile after resolving.
+    this.match.hexes.discard.push(hexId);
+    console.debug(`[receiveHex action] discarded ${hex}`);
+
+    return hexId;
   }
 
   async revealCard(args: {
