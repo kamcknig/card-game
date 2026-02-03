@@ -15,6 +15,8 @@ export const registerNocturneBoonEffects = (registerBoonEffect: BoonEffectRegist
   registerMoonsGift(registerBoonEffect);
   // Register The Mountain's Gift boon effect.
   registerMountainsGift(registerBoonEffect);
+  // Register The River's Gift boon effect.
+  registerRiversGift(registerBoonEffect);
 };
 
 // Registers The Earth's Gift boon effect logic.
@@ -288,6 +290,52 @@ const registerMountainsGift = (registerBoonEffect: BoonEffectRegistrar) => {
       playerId: playerId,
       cardId: silverCardId,
       to: { location: 'playerDiscard' },
+    });
+  });
+};
+
+// Registers The River's Gift boon effect logic.
+const registerRiversGift = (registerBoonEffect: BoonEffectRegistrar) => {
+  registerBoonEffect('the-rivers-gift', async ({
+    playerId,
+    runGameActionDelegate,
+    match,
+    reactionManager,
+    cardId,
+  }) => {
+    console.info(`[the-rivers-gift boon] resolving for player ${playerId}`);
+
+    // Resolve the boon instance for set-aside tracking.
+    const boon = match.boons.cards.find(candidate => candidate.id === cardId);
+    if (!boon) {
+      console.warn(`[the-rivers-gift boon] could not find boon instance ${cardId}`);
+      return;
+    }
+
+    // Move the boon into the player's set-aside zone until cleanup.
+    await runGameActionDelegate('moveCardLike', {
+      cardLikeId: boon.id,
+      toPlayerId: playerId,
+      to: { location: 'set-aside' },
+    });
+
+    // Register cleanup to grant +1 card at end of turn, then return the boon.
+    reactionManager.registerSystemTemplate(boon, 'endTurn', {
+      playerId: playerId,
+      once: true,
+      compulsory: true,
+      allowMultipleInstances: true,
+      triggeredEffectFn: async ({ runGameActionDelegate: runTriggerAction }) => {
+        // Draw the extra card at end of turn.
+        await runTriggerAction('drawCard', { playerId, count: 1 });
+        // Return the boon to the boon discard pile at cleanup.
+        await runTriggerAction('moveCardLike', {
+          cardLikeId: boon.id,
+          to: { location: 'boonDiscard' },
+        });
+
+        console.debug(`[the-rivers-gift boon] resolved and returned ${boon} to boon discard`);
+      },
     });
   });
 };
