@@ -42,6 +42,17 @@
     ],
     "abilityText": "+$2\nYou may play an Action card from your hand that you don't have a copy of in play. If you do, +1 Action."
   },
+  "crypt": {
+    "cardName": "Crypt",
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "NIGHT",
+      "DURATION"
+    ],
+    "abilityText": "Set aside any number of non-Duration Treasures you have in play, face down. While any remain, at the start of each of your turns, put one of them into your hand."
+  },
   "cobbler": {
     "cardName": "Cobbler",
     "cost": {

@@ -330,6 +330,121 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
     },
   },
+  'crypt': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.info(`[crypt effect] resolving for player ${cardEffectArgs.playerId}`);
+
+      // Determine eligible non-Duration Treasures in play for this player.
+      const inPlayCards = getCardsInPlay(cardEffectArgs.findCards)
+        .filter(card => cardEffectArgs.match.stats.playedCards[card.id]?.playerId === cardEffectArgs.playerId);
+      const eligibleTreasures = inPlayCards.filter(card =>
+        card.type.includes('TREASURE') && !card.type.includes('DURATION')
+      );
+
+      if (!eligibleTreasures.length) {
+        console.debug('[crypt effect] no eligible Treasures in play to set aside');
+        return;
+      }
+
+      console.debug(`[crypt effect] eligible treasures: ${eligibleTreasures.length}`);
+
+      // Prompt the player to set aside any number of eligible treasures.
+      const selectionResult = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Set aside any number of non-Duration Treasures',
+        actionButtons: [{ label: 'DONE', action: 1 }],
+        content: {
+          type: 'select',
+          cardIds: eligibleTreasures.map(card => card.id),
+          selectCount: { kind: 'upTo', count: eligibleTreasures.length },
+        },
+      }) as { result: CardId[] };
+
+      const setAsideTreasureIds = selectionResult.result ?? [];
+      if (!setAsideTreasureIds.length) {
+        console.debug('[crypt effect] no treasures selected to set aside');
+        return;
+      }
+
+      console.info(`[crypt effect] setting aside ${setAsideTreasureIds.length} treasure(s)`);
+      for (const cardId of setAsideTreasureIds) {
+        console.debug(`[crypt effect] setting aside ${cardEffectArgs.cardLibrary.getCard(cardId)}`);
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
+          cardId,
+          toPlayerId: cardEffectArgs.playerId,
+          to: { location: 'set-aside' },
+          facing: 'back',
+        });
+      }
+
+      const cryptCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const turnPlayed = cardEffectArgs.match.turnNumber;
+
+      // Move one set-aside treasure to hand at the start of each of the player's next turns.
+      cardEffectArgs.registerDurationEffect(cryptCard, {
+        id: `crypt:${cryptCard.id}:startTurn`,
+        listeningFor: 'startTurn',
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId
+          && trigger.args.turnNumber !== turnPlayed
+          && setAsideTreasureIds.length > 0,
+        triggeredEffectFn: async (triggeredArgs) => {
+          console.info(`[crypt startTurn] resolving for player ${cardEffectArgs.playerId}`);
+          console.debug(`[crypt startTurn] remaining set aside: ${setAsideTreasureIds.length}`);
+
+          // Bring Crypt back into play while it continues to resolve.
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            cardId: cryptCard.id,
+            to: { location: 'playArea' },
+          });
+
+          let chosenTreasureId = setAsideTreasureIds[0];
+          if (setAsideTreasureIds.length > 1) {
+            const promptResult = await triggeredArgs.runGameActionDelegate('userPrompt', {
+              playerId: cardEffectArgs.playerId,
+              prompt: 'Choose a set aside Treasure to put into your hand',
+              content: {
+                type: 'select',
+                cardIds: setAsideTreasureIds,
+                selectCount: 1,
+              },
+            }) as { result: CardId[] };
+            chosenTreasureId = promptResult.result?.[0] ?? chosenTreasureId;
+          }
+
+          if (!chosenTreasureId) {
+            console.warn('[crypt startTurn] no set aside treasure selected');
+            return;
+          }
+
+          console.debug(`[crypt startTurn] moving ${triggeredArgs.cardLibrary.getCard(chosenTreasureId)} to hand`);
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            cardId: chosenTreasureId,
+            toPlayerId: cardEffectArgs.playerId,
+            to: { location: 'playerHand' },
+            facing: 'front',
+          });
+
+          const index = setAsideTreasureIds.indexOf(chosenTreasureId);
+          if (index >= 0) {
+            setAsideTreasureIds.splice(index, 1);
+          }
+
+          console.debug(`[crypt startTurn] remaining set aside: ${setAsideTreasureIds.length}`);
+
+          if (!setAsideTreasureIds.length) {
+            console.info('[crypt startTurn] set-aside treasures exhausted, cleaning duration triggers');
+            triggeredArgs.reactionManager.cleanupDurationTriggers(cryptCard.id);
+          }
+        },
+      }, {
+        cleanupCount: setAsideTreasureIds.length,
+      });
+    },
+  },
   'ghost': {
     registerEffects: () => async (cardEffectArgs) => {
       console.info(`[ghost effect] resolving for player ${cardEffectArgs.playerId}`);
