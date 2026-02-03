@@ -21,6 +21,8 @@ export const registerNocturneBoonEffects = (registerBoonEffect: BoonEffectRegist
   registerSeasGift(registerBoonEffect);
   // Register The Sky's Gift boon effect.
   registerSkysGift(registerBoonEffect);
+  // Register The Sun's Gift boon effect.
+  registerSunsGift(registerBoonEffect);
 };
 
 // Registers The Earth's Gift boon effect logic.
@@ -419,5 +421,85 @@ const registerSkysGift = (registerBoonEffect: BoonEffectRegistrar) => {
       cardId: goldCardId,
       to: { location: 'playerDiscard' },
     });
+  });
+};
+
+// Registers The Sun's Gift boon effect logic.
+const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
+  registerBoonEffect('the-suns-gift', async ({
+    playerId,
+    runGameActionDelegate,
+    cardSourceController,
+  }) => {
+    console.info(`[the-suns-gift boon] resolving for player ${playerId}`);
+
+    const deck = cardSourceController.getSource('playerDeck', playerId);
+    const discard = cardSourceController.getSource('playerDiscard', playerId);
+
+    const numToLookAt = Math.min(4, deck.length + discard.length);
+    if (numToLookAt < 1) {
+      console.info('[the-suns-gift boon] no cards available to look at');
+      return;
+    }
+
+    if (deck.length < numToLookAt) {
+      console.debug('[the-suns-gift boon] shuffling discard into deck');
+      await runGameActionDelegate('shuffleDeck', { playerId });
+    }
+
+    const cardsToLookAt = deck.slice(-numToLookAt);
+
+    let result = await runGameActionDelegate('userPrompt', {
+      prompt: `Discard any number of the ${cardsToLookAt.length} cards`,
+      playerId: playerId,
+      actionButtons: [{ label: 'DONE', action: 1 }],
+      content: {
+        type: 'select',
+        cardIds: cardsToLookAt,
+        selectCount: { kind: 'upTo', count: cardsToLookAt.length },
+      },
+    }) as { action: number; result: CardId[] };
+
+    const cardsToDiscard = result?.result ?? [];
+    if (cardsToDiscard.length > 0) {
+      console.debug(`[the-suns-gift boon] discarding ${cardsToDiscard.length} cards`);
+      for (const cardId of cardsToDiscard) {
+        await runGameActionDelegate('discardCard', {
+          cardId: cardId,
+          playerId: playerId,
+        });
+      }
+    }
+
+    const cardsToRearrange = cardsToLookAt.filter(id => !cardsToDiscard.includes(id));
+    if (cardsToRearrange.length < 2) {
+      if (cardsToRearrange.length === 1) {
+        await runGameActionDelegate('moveCard', {
+          cardId: cardsToRearrange[0],
+          toPlayerId: playerId,
+          to: { location: 'playerDeck' },
+        });
+      }
+      console.debug('[the-suns-gift boon] not enough cards to rearrange');
+      return;
+    }
+
+    result = await runGameActionDelegate('userPrompt', {
+      prompt: 'Put the rest back on top of your deck in any order',
+      playerId: playerId,
+      actionButtons: [{ label: 'DONE', action: 1 }],
+      content: {
+        type: 'rearrange',
+        cardIds: cardsToRearrange,
+      },
+    }) as { action: number; result: CardId[] };
+
+    for (const cardId of result.result) {
+      await runGameActionDelegate('moveCard', {
+        cardId: cardId,
+        toPlayerId: playerId,
+        to: { location: 'playerDeck' },
+      });
+    }
   });
 };
