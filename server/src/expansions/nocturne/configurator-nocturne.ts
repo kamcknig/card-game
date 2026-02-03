@@ -2,6 +2,7 @@ import { expansionLibrary } from '../expansion-library.ts';
 import { ExpansionConfiguratorFactory } from '../../types.ts';
 import { uniqueByProp } from '../../core/match-configurator.ts';
 import { registerNocturneBoonEffects } from './boon-effects-nocturne.ts';
+import { configureWillOWisp } from './configure-will-o-wisp.ts';
 
 // Seeds boons when Fate cards are present in the selected kingdom.
 const configurator: ExpansionConfiguratorFactory = () => {
@@ -46,6 +47,9 @@ const configurator: ExpansionConfiguratorFactory = () => {
       args.config.boons = [];
       return args.config;
     }
+
+    // Ensure Will-o'-Wisp pile exists when boons are active.
+    configureWillOWisp(args);
 
     // Seed the computed configuration with the selected boons.
     console.info(`[nocturne configurator] Fate cards present, seeding ${uniqueBoons.length} boons`);

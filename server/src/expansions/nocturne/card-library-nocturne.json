@@ -94,5 +94,13 @@
     },
     "kingdomSelectable": false,
     "type": ["BOON"]
+  },
+  "will-o-wisp": {
+    "cardName": "Will-o'-Wisp",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["ACTION", "SPIRIT"]
   }
 }

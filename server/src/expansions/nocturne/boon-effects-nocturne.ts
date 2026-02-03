@@ -23,6 +23,8 @@ export const registerNocturneBoonEffects = (registerBoonEffect: BoonEffectRegist
   registerSkysGift(registerBoonEffect);
   // Register The Sun's Gift boon effect.
   registerSunsGift(registerBoonEffect);
+  // Register The Swamp's Gift boon effect.
+  registerSwampsGift(registerBoonEffect);
 };
 
 // Registers The Earth's Gift boon effect logic.
@@ -501,5 +503,34 @@ const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
         to: { location: 'playerDeck' },
       });
     }
+  });
+};
+
+// Registers The Swamp's Gift boon effect logic.
+const registerSwampsGift = (registerBoonEffect: BoonEffectRegistrar) => {
+  registerBoonEffect('the-swamps-gift', async ({
+    playerId,
+    runGameActionDelegate,
+    findCards,
+  }) => {
+    console.info(`[the-swamps-gift boon] resolving for player ${playerId}`);
+
+    const willOWispCards = findCards([
+      { location: 'nonSupplyCards' },
+      { cardKeys: 'will-o-wisp' },
+    ]);
+
+    if (willOWispCards.length < 1) {
+      console.info('[the-swamps-gift boon] no Will-o\'-Wisps available to gain');
+      return;
+    }
+
+    const willOWispId = willOWispCards.slice(-1)[0].id;
+    console.debug(`[the-swamps-gift boon] gaining Will-o\'-Wisp ${willOWispId}`);
+    await runGameActionDelegate('gainCard', {
+      playerId: playerId,
+      cardId: willOWispId,
+      to: { location: 'playerDiscard' },
+    });
   });
 };

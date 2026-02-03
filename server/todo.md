@@ -45,6 +45,7 @@ all players, but native village and island mat cards  face down and can only be 
   custom tags property to track more custom ones.
 - possible keep the enhanced logging for console logs but switch to a
   buffered file logger solution later for production.
+- can the ruins pile be updated to use the newer randomizer and piles?
 
 # Higher priority
 - when cards are in zones like set aside or a mat, they can be face up or
