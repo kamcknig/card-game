@@ -1,5 +1,6 @@
 import { CardExpansionModule } from '../../types.ts';
 import { CardId } from 'shared/shared-types.ts';
+import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 
 // Nocturne card effects module for non-supply cards and other mechanics.
 const expansion: CardExpansionModule = {
@@ -159,18 +160,19 @@ const expansion: CardExpansionModule = {
         await cardEffectArgs.runGameActionDelegate('revealCard', {
           playerId: cardEffectArgs.playerId,
           cardId: revealedCardId,
-          moveToSetAside: true,
+        });
+
+        // Move the revealed card to set-aside (face up) to avoid shuffling it back.
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
+          cardId: revealedCardId,
+          toPlayerId: cardEffectArgs.playerId,
+          to: { location: 'set-aside' },
+          facing: 'front',
         });
 
         if (revealedCard.type.includes('ACTION')) {
           console.info(`[ghost effect] set aside Action ${revealedCard}`);
           actionCardId = revealedCardId;
-          // Keep the action in play/active duration until it is played next turn.
-          await cardEffectArgs.runGameActionDelegate('moveCard', {
-            cardId: revealedCardId,
-            toPlayerId: cardEffectArgs.playerId,
-            to: { location: 'activeDuration' },
-          });
           break;
         }
 
@@ -193,9 +195,31 @@ const expansion: CardExpansionModule = {
         return;
       }
 
+      // Move the set-aside Action card to active duration at cleanup to keep it in play.
+      const actionCard = cardEffectArgs.cardLibrary.getCard(actionCardId);
+      const turnPlayed = cardEffectArgs.match.turnNumber;
+      cardEffectArgs.reactionManager.registerSystemTemplate(actionCard, 'startTurnPhase', {
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        autoResolve: true,
+        condition: ({ trigger, match }) => getTurnPhase(trigger.args.phaseIndex) === 'cleanup'
+          && match.turnNumber === turnPlayed,
+        triggeredEffectFn: async (triggeredArgs) => {
+          console.debug(`[ghost cleanup effect] moving ${actionCard} to active duration`);
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            cardId: actionCardId,
+            toPlayerId: cardEffectArgs.playerId,
+            to: { location: 'activeDuration' },
+            facing: 'front',
+          });
+        },
+      });
+
       // Register the start-of-turn trigger to play the Action twice next turn.
       const ghostCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const turnPlayed = cardEffectArgs.match.turnNumber;
+      const ghostTurnPlayed = cardEffectArgs.match.turnNumber;
       cardEffectArgs.registerDurationEffect(ghostCard, {
         id: `ghost:${ghostCard.id}:startTurn`,
         listeningFor: 'startTurn',
@@ -204,7 +228,7 @@ const expansion: CardExpansionModule = {
         compulsory: true,
         allowMultipleInstances: true,
         condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId
-          && trigger.args.turnNumber !== turnPlayed,
+          && trigger.args.turnNumber !== ghostTurnPlayed,
         triggeredEffectFn: async (triggeredArgs) => {
           // Bring Ghost back to play area for its next-turn effect.
           await triggeredArgs.runGameActionDelegate('moveCard', {
