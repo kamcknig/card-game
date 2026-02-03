@@ -17,6 +17,8 @@ export const registerNocturneBoonEffects = (registerBoonEffect: BoonEffectRegist
   registerMountainsGift(registerBoonEffect);
   // Register The River's Gift boon effect.
   registerRiversGift(registerBoonEffect);
+  // Register The Sea's Gift boon effect.
+  registerSeasGift(registerBoonEffect);
 };
 
 // Registers The Earth's Gift boon effect logic.
@@ -337,5 +339,17 @@ const registerRiversGift = (registerBoonEffect: BoonEffectRegistrar) => {
         console.debug(`[the-rivers-gift boon] resolved and returned ${boon} to boon discard`);
       },
     });
+  });
+};
+
+// Registers The Sea's Gift boon effect logic.
+const registerSeasGift = (registerBoonEffect: BoonEffectRegistrar) => {
+  registerBoonEffect('the-seas-gift', async ({
+    playerId,
+    runGameActionDelegate,
+  }) => {
+    console.info(`[the-seas-gift boon] resolving for player ${playerId}`);
+
+    await runGameActionDelegate('drawCard', { playerId, count: 1 });
   });
 };
