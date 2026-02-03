@@ -1,8 +1,11 @@
 import { expansionLibrary } from '../expansion-library.ts';
-import { ExpansionConfiguratorFactory } from '../../types.ts';
+import { ExpansionConfiguratorFactory, GameEventRegistrar } from '../../types.ts';
 import { uniqueByProp } from '../../core/match-configurator.ts';
 import { registerNocturneBoonEffects } from './boon-effects-nocturne.ts';
 import { configureWillOWisp } from './configure-will-o-wisp.ts';
+import { ComputedMatchConfiguration } from 'shared/shared-types.ts';
+import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
+import { createCard } from '../../utils/create-card.ts';
 
 // Seeds boons when Fate cards are present in the selected kingdom.
 const configurator: ExpansionConfiguratorFactory = () => {
@@ -59,3 +62,54 @@ const configurator: ExpansionConfiguratorFactory = () => {
 };
 
 export default configurator;
+
+// Registers the Cemetery heirloom swap at game start when present in the kingdom.
+export const registerGameEvents: (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => void = (registrar, config) => {
+  const hasCemetery = config.kingdomSupply.some(
+    supply => supply.cards.some(card => getCardPileKey(card) === 'cemetery')
+  );
+  if (!hasCemetery) {
+    return;
+  }
+
+  console.info('[nocturne configurator] setting up cemetery heirloom onGameStart handler');
+
+  registrar('onGameStart', async (args) => {
+    console.info('[nocturne onGameStart] replacing starting Copper with Haunted Mirror');
+
+    for (const player of args.match.players) {
+      // Locate all Copper cards in the player deck.
+      const deck = args.cardSourceController.getSource('playerDeck', player.id);
+      const copperIndices: number[] = [];
+
+      for (let idx = 0; idx < deck.length; idx++) {
+        const card = args.cardLibrary.getCard(deck[idx]);
+        if (card.cardKey === 'copper') {
+          copperIndices.push(idx);
+        }
+      }
+
+      if (copperIndices.length < 1) {
+        console.warn(`[nocturne onGameStart] player ${player.id} has no Copper to replace`);
+        continue;
+      }
+
+      // Choose a random Copper to swap so the heirloom position is uniformly random.
+      const chosenIndex = copperIndices[Math.floor(Math.random() * copperIndices.length)];
+      const copperId = deck[chosenIndex];
+
+      await args.runGameActionDelegate('moveCard', {
+        cardId: copperId,
+        to: { location: 'basicSupply' }
+      });
+
+      // Create the Haunted Mirror and insert it in the same deck position.
+      const hauntedMirror = createCard('haunted-mirror', { owner: player.id, partOfSupply: false });
+      hauntedMirror.facing = 'back';
+      args.cardLibrary.addCard(hauntedMirror);
+      deck.splice(chosenIndex, 0, hauntedMirror.id);
+
+      console.info(`[nocturne onGameStart] player ${player.id} replaced Copper with Haunted Mirror`);
+    }
+  });
+};
