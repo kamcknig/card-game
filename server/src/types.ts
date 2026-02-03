@@ -158,7 +158,7 @@ export interface BaseGameActionDefinitionMap {
     gainTreasure: (args: { count: number }, context?: GameActionContext) => Promise<void>;
     gainVictoryToken: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
     // Receives a boon from the shared boon deck (used by Fate cards).
-    receiveBoon: (args: { playerId: PlayerId; }, context?: GameActionContext) => Promise<void>;
+    receiveBoon: (args: { playerId: PlayerId; immediate?: boolean; boonId?: CardLikeId; }, context?: GameActionContext) => Promise<CardLikeId | undefined>;
     // Pays down debt tokens using the current player's treasure pool.
     payDebt: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
     // Token actions are used by expansions to place and manage token instances.

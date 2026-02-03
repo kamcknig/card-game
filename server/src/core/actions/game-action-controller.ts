@@ -1119,8 +1119,14 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   }
 
   // Receives a boon from the shared boon deck and resolves its effect.
-  async receiveBoon(args: { playerId: PlayerId }, context?: GameActionContext) {
+  async receiveBoon(args: { playerId: PlayerId; immediate?: boolean; boonId?: CardLikeId }, context?: GameActionContext) {
+    // Default to immediate resolution unless explicitly deferred.
+    const immediate = args.immediate !== false;
     console.log(`[receiveBoon action] player ${args.playerId} receiving a boon`);
+
+    if (!immediate) {
+      console.debug('[receiveBoon action] boon will be deferred until resolved');
+    }
 
     // Ensure boon piles exist for older saved states.
     this.match.boons ??= { cards: [], deck: [], discard: [] };
@@ -1139,76 +1145,149 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       this.match.boons.discard = [];
     }
 
-    if (this.match.boons.deck.length < 1) {
-      console.info('[receiveBoon action] no boons available to draw');
-      return;
-    }
+    let boonId = args.boonId;
+    let boon = boonId !== undefined
+      ? this.match.boons.cards.find(candidate => candidate.id === boonId)
+      : undefined;
 
-    const boonId = this.match.boons.deck.pop();
-    if (boonId === undefined) {
-      console.warn('[receiveBoon action] boon deck draw failed');
-      return;
-    }
-
-    const boon = this.match.boons.cards.find(b => b.id === boonId);
-    if (!boon) {
+    if (boonId !== undefined && !boon) {
       console.warn(`[receiveBoon action] could not find boon ${boonId}`);
+      return;
+    }
+
+    if (boonId === undefined || !boon) {
+      if (this.match.boons.deck.length < 1) {
+        console.info('[receiveBoon action] no boons available to draw');
+        return;
+      }
+
+      boonId = this.match.boons.deck.pop();
+      if (boonId === undefined) {
+        console.warn('[receiveBoon action] boon deck draw failed');
+        return;
+      }
+
+      boon = this.match.boons.cards.find(b => b.id === boonId);
+      if (!boon) {
+        console.warn(`[receiveBoon action] could not find boon ${boonId}`);
+        this.match.boons.discard.push(boonId);
+        return;
+      }
+    }
+
+    // Remove the boon from deck/discard if it was already staged there.
+    const deckIndex = this.match.boons.deck.indexOf(boonId);
+    if (deckIndex !== -1) {
+      this.match.boons.deck.splice(deckIndex, 1);
+    }
+    const discardIndex = this.match.boons.discard.indexOf(boonId);
+    if (discardIndex !== -1) {
+      this.match.boons.discard.splice(discardIndex, 1);
+    }
+
+    // Helper to remove a boon from set-aside before resolving its effect.
+    const removeSetAside = (source: string) => {
+      try {
+        const setAsideSource = this._cardSourceController.getSource('set-aside', args.playerId);
+        const setAsideIndex = setAsideSource.indexOf(boonId);
+        if (setAsideIndex !== -1) {
+          setAsideSource.splice(setAsideIndex, 1);
+          console.debug(`[receiveBoon action] removed ${boon} from set-aside for ${source}`);
+        }
+      }
+      catch (error) {
+        console.warn(`[receiveBoon action] could not update set-aside for boon ${boonId}`);
+        console.error(error);
+      }
+    };
+
+    // Helper to resolve the boon effect and handle discard logic.
+    const resolveBoon = async (source: string) => {
+      // TODO: Surface the received boon to the player via detail modal or prompt.
+      const effectFn = this.boonEffectFunctionMap[boon.cardKey];
+
+      if (effectFn) {
+        console.debug(`[receiveBoon action] running effect for ${boon} (${source})`);
+
+        await this.logManager.withIndent(async () => {
+          const effectContext = {
+            cardSourceController: this._cardSourceController,
+            cardPriceController: this.cardPriceRuleController,
+            reactionManager: this.reactionManager,
+            runGameActionDelegate: this.runGameActionDelegate,
+            cardId: boonId,
+            playerId: args.playerId,
+            match: this.match,
+            cardLibrary: this.cardLibrary,
+            reactionContext: {},
+            findCards: this._findCards
+          } as CardEffectFunctionContext;
+
+          // Centralized duration registration with automatic cleanup on leave-play.
+          effectContext.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
+            const triggerIds = this.registerDurationEffectInternal(durationCard, effectContext, triggeredTemplate, options);
+            this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
+            return triggerIds;
+          };
+
+          await effectFn(effectContext);
+        });
+      }
+      else {
+        console.debug(`[receiveBoon action] no effect registered for ${boon.cardKey}`);
+      }
+
+      // Skip discarding if the boon was set aside by its effect.
+      let isSetAside = false;
+      try {
+        const setAsideSource = this._cardSourceController.getSource('set-aside', args.playerId);
+        isSetAside = setAsideSource.includes(boonId);
+      }
+      catch (error) {
+        console.warn(`[receiveBoon action] could not verify set-aside for boon ${boonId}`);
+        console.error(error);
+      }
+
+      if (isSetAside) {
+        console.debug(`[receiveBoon action] boon ${boon.cardKey} set aside until cleanup`);
+        return;
+      }
+
       this.match.boons.discard.push(boonId);
-      return;
+      console.debug(`[receiveBoon action] discarded ${boon}`);
+    };
+
+    if (!immediate) {
+      // Set the boon aside for delayed resolution unless already set aside.
+      let alreadySetAside = false;
+      try {
+        const setAsideSource = this._cardSourceController.getSource('set-aside', args.playerId);
+        alreadySetAside = setAsideSource.includes(boonId);
+      }
+      catch (error) {
+        console.warn(`[receiveBoon action] could not check set-aside for boon ${boonId}`);
+        console.error(error);
+      }
+
+      if (!alreadySetAside) {
+        await this.moveCardLike({
+          cardLikeId: boonId,
+          toPlayerId: args.playerId,
+          to: { location: 'set-aside' },
+        });
+      }
+
+      console.debug(`[receiveBoon action] set aside ${boon} for deferred resolution`);
+      return boonId;
     }
 
-    // TODO: Surface the received boon to the player via detail modal or prompt.
-    const effectFn = this.boonEffectFunctionMap[boon.cardKey];
+    // Ensure deferred boons are removed from set-aside before resolving.
+    removeSetAside('immediate resolution');
 
-    if (effectFn) {
-      console.debug(`[receiveBoon action] running effect for ${boon}`);
+    // Resolve the boon immediately (default behavior).
+    await resolveBoon('immediate');
 
-      await this.logManager.withIndent(async () => {
-        const effectContext = {
-          cardSourceController: this._cardSourceController,
-          cardPriceController: this.cardPriceRuleController,
-          reactionManager: this.reactionManager,
-          runGameActionDelegate: this.runGameActionDelegate,
-          cardId: boonId,
-          playerId: args.playerId,
-          match: this.match,
-          cardLibrary: this.cardLibrary,
-          reactionContext: {},
-          findCards: this._findCards
-        } as CardEffectFunctionContext;
-
-        // Centralized duration registration with automatic cleanup on leave-play.
-        effectContext.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
-          const triggerIds = this.registerDurationEffectInternal(durationCard, effectContext, triggeredTemplate, options);
-          this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
-          return triggerIds;
-        };
-
-        await effectFn(effectContext);
-      });
-    }
-    else {
-      console.debug(`[receiveBoon action] no effect registered for ${boon.cardKey}`);
-    }
-
-    // Skip discarding if the boon was set aside by its effect.
-    let isSetAside = false;
-    try {
-      const setAsideSource = this._cardSourceController.getSource('set-aside', args.playerId);
-      isSetAside = setAsideSource.includes(boonId);
-    }
-    catch (error) {
-      console.warn(`[receiveBoon action] could not verify set-aside for boon ${boonId}`);
-      console.error(error);
-    }
-
-    if (isSetAside) {
-      console.debug(`[receiveBoon action] boon ${boon.cardKey} set aside until cleanup`);
-      return;
-    }
-
-    this.match.boons.discard.push(boonId);
-    console.debug(`[receiveBoon action] discarded ${boon}`);
+    return boonId;
   }
 
   async revealCard(args: {

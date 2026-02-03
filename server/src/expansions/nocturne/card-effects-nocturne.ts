@@ -15,6 +15,85 @@ const expansion: CardExpansionModule = {
       });
     },
   },
+  'blessed-village': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (cardEffectArgs, eventArgs) => {
+        console.info(`[blessed-village onGained] resolving for player ${eventArgs.playerId}`);
+
+        // Take a boon and set it aside so the player can decide timing.
+        const boonId = await cardEffectArgs.runGameActionDelegate('receiveBoon', {
+          playerId: eventArgs.playerId,
+          immediate: false,
+        });
+
+        if (boonId === undefined) {
+          console.info('[blessed-village onGained] no boon available to defer');
+          return;
+        }
+
+        // Prompt the player to decide when to receive the boon.
+        const decision = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+          playerId: eventArgs.playerId,
+          prompt: 'Receive a Boon now or at the start of your next turn?',
+          actionButtons: [
+            { label: 'NOW', action: 1 },
+            { label: 'NEXT TURN', action: 2 },
+          ],
+        }) as { action: number };
+
+        const immediate = decision.action === 1;
+        console.debug(`[blessed-village onGained] player chose ${immediate ? 'now' : 'next turn'} for boon`);
+
+        if (immediate) {
+          // Resolve the deferred boon immediately.
+          await cardEffectArgs.runGameActionDelegate('receiveBoon', {
+            playerId: eventArgs.playerId,
+            immediate: true,
+            boonId: boonId,
+          });
+          return;
+        }
+
+        const deferredBoon = cardEffectArgs.match.boons?.cards?.find(card => card.id === boonId);
+        if (!deferredBoon) {
+          console.warn(`[blessed-village onGained] deferred boon ${boonId} not found in match`);
+          return;
+        }
+
+        // Register a one-shot start-of-turn trigger to resolve the deferred boon.
+        const turnNumber = cardEffectArgs.match.turnNumber;
+        cardEffectArgs.reactionManager.registerSystemTemplate(deferredBoon, 'startTurn', {
+          playerId: eventArgs.playerId,
+          once: true,
+          compulsory: true,
+          allowMultipleInstances: true,
+          condition: (conditionArgs) => {
+            if (conditionArgs.trigger.args.playerId !== eventArgs.playerId) {
+              return false;
+            }
+            return conditionArgs.trigger.args.turnNumber !== turnNumber;
+          },
+          triggeredEffectFn: async (triggeredArgs) => {
+            // Resolve the deferred boon at the start of the next turn.
+            await triggeredArgs.runGameActionDelegate('receiveBoon', {
+              playerId: eventArgs.playerId,
+              immediate: true,
+              boonId: boonId,
+            });
+          },
+        });
+      },
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.info(`[blessed-village effect] resolving for player ${cardEffectArgs.playerId}`);
+
+      // Apply the immediate +1 Card and +2 Actions.
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+      });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
+    },
+  },
   "will-o-wisp": {
     registerEffects: () => async (cardEffectArgs) => {
       console.info(

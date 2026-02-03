@@ -10,6 +10,17 @@
     ],
     "abilityText": "+$2\nReceive a Boon."
   },
+  "blessed-village": {
+    "cardName": "Blessed Village",
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION",
+      "FATE"
+    ],
+    "abilityText": "+1 Card\n+2 Actions\nWhen you gain this, take a Boon. Receive it now or at the start of your next turn."
+  },
   "the-earths-gift": {
     "cardName": "The Earth's Gift",
     "cost": {
