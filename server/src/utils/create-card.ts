@@ -1,4 +1,6 @@
 import {
+  Boon,
+  BoonNoId,
   Card,
   CardKey,
   CardNoId,
@@ -28,6 +30,14 @@ export const createCard = (cardKey: CardKey, card?: Partial<CardNoId>): Card => 
 export const createEvent = (event: EventNoId): Event => {
   return new Event({
     ...event,
+    id: ++CARD_COUNT,
+  });
+}
+
+// Boons are card-like objects that live outside the supply and are drawn from a shared deck.
+export const createBoon = (boon: BoonNoId): Boon => {
+  return new Boon({
+    ...boon,
     id: ++CARD_COUNT,
   });
 }

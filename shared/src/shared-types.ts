@@ -76,10 +76,12 @@ export interface MatchConfiguration {
   kingdomSupply: Supply[];
 
   playerStartingHand: Record<CardKey, number>;
-
+  // events are card-likes that can be bought for their effects
   events: EventNoId[];
-  // Landmarks are landscape card-likes that affect scoring or gameplay.
+  // Landmarks are card-likes that affect scoring or gameplay.
   landmarks: LandmarkNoId[];
+  // Boons available for Fate cards in this match.
+  boons: BoonNoId[];
 }
 
 export type ComputedMatchConfiguration = MatchConfiguration & {
@@ -137,6 +139,12 @@ export interface Match {
   events: Event[];
   // Active landmarks in the match (not part of the supply).
   landmarks: Landmark[];
+  // Boon deck state for Fate cards in this match.
+  boons: {
+    cards: Boon[];
+    deck: CardLikeId[];
+    discard: CardLikeId[];
+  };
   mats: PlayerMatMap;
   playerActions: number;
   playerBuys: number;
@@ -302,7 +310,8 @@ export interface ServerListenEvents {
   userInputReceived: (signalId: string, input: unknown) => void;
 }
 
-export type PlayerMatMap = Record<PlayerId, Record<Mats, CardId[]>>;
+// Player mats can include card-like ids (e.g., boons set aside).
+export type PlayerMatMap = Record<PlayerId, Record<Mats, CardLikeId[]>>;
 
 const MatValues = [
   'island',
@@ -478,6 +487,29 @@ export class Landmark extends CardLike {
 }
 
 export type LandmarkNoId = Omit<Landmark, 'id'>;
+
+// Boon constructor args mirror base CardLike fields.
+type BoonArgs = {
+  [p in keyof CardLike]: CardLike[p];
+};
+
+// Boons are landscape card-likes that provide a one-shot or temporary effect.
+export class Boon extends CardLike {
+  constructor(args: BoonArgs) {
+    super(args);
+
+    this.id = args.id;
+    this.cardName = args.cardName;
+    this.fullImagePath = args.fullImagePath;
+    this.detailImagePath = args.detailImagePath;
+  }
+
+  override toString() {
+    return `[BOON ${this.id} - ${this.cardKey}]`;
+  }
+}
+
+export type BoonNoId = Omit<Boon, 'id'>;
 
 /**
  * CARD TYPES

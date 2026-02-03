@@ -35,7 +35,7 @@ import {
   MatchBaseConfiguration,
   PlayerScoreDecorator,
 } from '../types.ts';
-import { createCard, createEvent, createLandmark } from '../utils/create-card.ts';
+import { createBoon, createCard, createEvent, createLandmark } from '../utils/create-card.ts';
 import { getRemainingSupplyCount, getStartingSupplyCount } from '../utils/get-starting-supply-count.ts';
 import { CardPriceRulesController } from './card-price-rules-controller.ts';
 import { findCardsFactory } from '../utils/find-cards.ts';
@@ -98,6 +98,12 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       events: [],
       // Active landmark card-likes in the match.
       landmarks: [],
+      // Boon deck state for Fate cards.
+      boons: {
+        cards: [],
+        deck: [],
+        discard: [],
+      },
       mats: {},
       playerActions: 0,
       playerBuys: 0,
@@ -228,6 +234,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       return acc;
     }, {} as CardEffectFunctionMap);
 
+    // Boon effects are registered per-match via expansion configurators.
+    const boonEffectFunctionMap = {} as CardEffectFunctionMap;
+
     this._interactivityController = new CardInteractivityController(
       this._cardSourceController,
       this._cardPriceController,
@@ -244,6 +253,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._cardPriceController,
       cardEffectFunctionMap,
       eventEffectFunctionMap,
+      boonEffectFunctionMap,
       this._match,
       this._cardLibrary,
       this._logManager,
@@ -262,6 +272,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       clientEventRegistrar: (event, handler) => this.clientEventRegistrar(event, handler),
       endGameConditionRegistrar: (val) => this._expansionEndGameConditionFns.push(val),
       cardEffectRegistrar: (...args) => this.gameActionsController?.registerCardEffect(...args),
+      boonEffectRegistrar: (cardKey, effectFn) => this.gameActionsController?.registerBoonEffect(cardKey, effectFn),
       playerScoreDecoratorRegistrar: (val: PlayerScoreDecorator) => this._expansionScoringFns.push(val),
     });
 
@@ -282,6 +293,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this.createEvents(this._matchConfiguration);
       // Landmarks are landscape card-likes that should be created alongside events.
       this.createLandmarks(this._matchConfiguration);
+      // Boons are initialized after events/landmarks if Fate cards are present.
+      this.createBoons(this._matchConfiguration);
       this.createNonSupplyCards(this._matchConfiguration);
       this.createPlayerDecks(this._matchConfiguration);
       this._match.config = this._matchConfiguration;
@@ -322,8 +335,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   // Applies a loaded match state onto the current match instance.
   private applyLoadedMatchState(loadedMatch: Match): void {
     Object.assign(this._match, loadedMatch);
-    // Ensure landmarks are present on older match state snapshots.
-    this._match.landmarks ??= [];
   }
 
   // Loads a card library snapshot for a loaded match state.
@@ -914,6 +925,34 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     for (const event of config.events) {
       this._match.events.push(createEvent(event));
     }
+  }
+
+  // Creates and shuffles the boon deck when Fate cards are present.
+  private createBoons(config: ComputedMatchConfiguration) {
+    const boons = config.boons ?? [];
+    if (boons.length < 1) {
+      console.info('[match] no boons configured for this match');
+      return;
+    }
+
+    console.info('[match] creating boons');
+    // Initialize boon deck state before shuffling.
+    this._match.boons = {
+      cards: [],
+      deck: [],
+      discard: [],
+    };
+
+    for (const boon of boons) {
+      const boonInstance = createBoon(boon);
+      this._match.boons.cards.push(boonInstance);
+      this._match.boons.deck.push(boonInstance.id);
+    }
+
+    // Shuffle the boon deck for randomized draws.
+    fisherYatesShuffle(this._match.boons.deck, true);
+
+    console.debug(`[match] boon deck initialized with ${this._match.boons.deck.length} boons`);
   }
 
   private createLandmarks(config: ComputedMatchConfiguration) {

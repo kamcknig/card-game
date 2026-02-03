@@ -59,11 +59,20 @@
             }
             <div class="card-flex-container">
               @for (cardId of playerMatContent.cardIds; track cardId) {
-                <div class="card-item">
-                  <app-card
-                    [size]="'half'"
-                    [cardId]="cardId"
-                  ></app-card>
+              <div class="card-item">
+                  <!-- Set-aside renders card-likes so boons are visible to all players. -->
+                  @if (visibleMat?.mat === 'set-aside') {
+                    <app-card-like
+                      [size]="'half'"
+                      [cardLikeId]="cardId"
+                    ></app-card-like>
+                  }
+                  @else {
+                    <app-card
+                      [size]="'half'"
+                      [cardId]="cardId"
+                    ></app-card>
+                  }
                 </div>
               }
             </div>

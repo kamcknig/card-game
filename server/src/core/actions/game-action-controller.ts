@@ -67,6 +67,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     private cardPriceRuleController: CardPriceRulesController,
     private cardEffectFunctionMap: CardEffectFunctionMap,
     private eventEffectFunctionMap: CardEffectFunctionMap,
+    private boonEffectFunctionMap: CardEffectFunctionMap,
     private match: Match,
     private cardLibrary: MatchCardLibrary,
     private logManager: LogManager,
@@ -85,6 +86,14 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     }
 
     this.customCardEffectHandlers[tag][cardKey] = fn;
+  }
+
+  // Registers boon effects for the current match.
+  public registerBoonEffect(cardKey: CardKey, fn: CardEffectFn) {
+    if (this.boonEffectFunctionMap[cardKey]) {
+      console.warn(`[action controller] boon effect for ${cardKey} already exists, overwriting it`);
+    }
+    this.boonEffectFunctionMap[cardKey] = fn;
   }
 
   public async invokeAction<K extends GameActions>(
@@ -979,6 +988,83 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         await effectFn(context);
       });
     }
+  }
+
+  // Receives a boon from the shared boon deck and resolves its effect.
+  async receiveBoon(args: { playerId: PlayerId }, context?: GameActionContext) {
+    console.log(`[receiveBoon action] player ${args.playerId} receiving a boon`);
+
+    // Ensure boon piles exist for older saved states.
+    this.match.boons ??= { cards: [], deck: [], discard: [] };
+    this.match.boons.cards ??= [];
+    this.match.boons.deck ??= [];
+    this.match.boons.discard ??= [];
+
+    if (this.match.boons.cards.length < 1) {
+      console.info('[receiveBoon action] no boons configured, skipping');
+      return;
+    }
+
+    if (this.match.boons.deck.length < 1 && this.match.boons.discard.length > 0) {
+      console.info('[receiveBoon action] boon deck empty, reshuffling discard');
+      this.match.boons.deck = fisherYatesShuffle(this.match.boons.discard, false);
+      this.match.boons.discard = [];
+    }
+
+    if (this.match.boons.deck.length < 1) {
+      console.info('[receiveBoon action] no boons available to draw');
+      return;
+    }
+
+    const boonId = this.match.boons.deck.pop();
+    if (boonId === undefined) {
+      console.warn('[receiveBoon action] boon deck draw failed');
+      return;
+    }
+
+    const boon = this.match.boons.cards.find(b => b.id === boonId);
+    if (!boon) {
+      console.warn(`[receiveBoon action] could not find boon ${boonId}`);
+      this.match.boons.discard.push(boonId);
+      return;
+    }
+
+    // TODO: Surface the received boon to the player via detail modal or prompt.
+    const effectFn = this.boonEffectFunctionMap[boon.cardKey];
+
+    if (effectFn) {
+      console.debug(`[receiveBoon action] running effect for ${boon}`);
+
+      await this.logManager.withIndent(async () => {
+        const effectContext = {
+          cardSourceController: this._cardSourceController,
+          cardPriceController: this.cardPriceRuleController,
+          reactionManager: this.reactionManager,
+          runGameActionDelegate: this.runGameActionDelegate,
+          cardId: boonId,
+          playerId: args.playerId,
+          match: this.match,
+          cardLibrary: this.cardLibrary,
+          reactionContext: {},
+          findCards: this._findCards
+        } as CardEffectFunctionContext;
+
+        // Centralized duration registration with automatic cleanup on leave-play.
+        effectContext.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
+          const triggerIds = this.registerDurationEffectInternal(durationCard, effectContext, triggeredTemplate, options);
+          this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
+          return triggerIds;
+        };
+
+        await effectFn(effectContext);
+      });
+    }
+    else {
+      console.debug(`[receiveBoon action] no effect registered for ${boon.cardKey}`);
+    }
+
+    this.match.boons.discard.push(boonId);
+    console.debug(`[receiveBoon action] discarded ${boon}`);
   }
 
   async revealCard(args: {

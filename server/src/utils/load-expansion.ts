@@ -5,7 +5,7 @@ import { cardLifecycleMap } from '../core/card-lifecycle-map.ts';
 import { CardExpansionModule } from '../types.ts';
 import { CardCost, CardKey, CardNoId, CardType } from 'shared/shared-types.ts';
 import { cardActionConditionMapFactory } from '../core/actions/card-action-condition-map-factory.ts';
-import { createCardData } from './create-card-data.ts';
+import { createCardData, createCardLike } from './create-card-data.ts';
 import { loadEvents } from '../core/events/load-events.ts';
 import { loadLandmarks } from '../core/landmarks/load-landmarks.ts';
 
@@ -17,6 +17,11 @@ type RandomizerPileDefinition = {
     type?: CardType[];
   };
   cards: Array<Partial<CardNoId> & { cardKey: CardKey }>;
+};
+
+// Type guard for boon entries in card libraries.
+const isBoonCardEntry = (entry: Partial<CardNoId>): boolean => {
+  return (entry.type ?? []).includes('BOON');
 };
 
 // Type guard for randomizer pile entries in card library JSON.
@@ -48,6 +53,8 @@ export const loadExpansion = async (expansion: { name: string; }) => {
     events: {},
     // Landmarks live alongside events as landscape card-likes.
     landmarks: {},
+    // Boons live alongside other non-supply card-likes.
+    boons: {},
   };
   
   let expansionConfiguration;
@@ -95,6 +102,16 @@ export const loadExpansion = async (expansion: { name: string; }) => {
             console.warn(`[expansion loader] randomizer pile ${pileRandomizer} missing cardKey`);
             continue;
           }
+          // Route boon definitions to the boon library instead of the supply.
+          if (isBoonCardEntry(cardEntry)) {
+            console.debug(`[expansion loader] registering boon ${cardKey} from pile ${pileRandomizer}`);
+            const boonData = createCardLike(cardKey, expansionName, {
+              ...cardEntry,
+              kingdomSelectable: cardEntry.kingdomSelectable ?? false,
+            });
+            expansionLibrary[expansionName].boons[cardKey] = boonData as any;
+            continue;
+          }
           // Apply pile-level randomizer metadata to each card in the pile.
           const templateData = {
             ...cardEntry,
@@ -106,6 +123,17 @@ export const loadExpansion = async (expansion: { name: string; }) => {
           cardData[isBasic ? 'basicSupply' : 'kingdomSupply'][cardKey] = newCardData as any;
           rawCardLibrary[cardKey] = newCardData as any;
         }
+        continue;
+      }
+
+      // Route boon definitions to the boon library instead of the supply.
+      if (isBoonCardEntry(entry as Partial<CardNoId>)) {
+        console.debug(`[expansion loader] registering boon ${key}`);
+        const boonData = createCardLike(key as CardKey, expansionName, {
+          ...(entry as Partial<CardNoId>),
+          kingdomSelectable: (entry as Partial<CardNoId>).kingdomSelectable ?? false,
+        });
+        expansionLibrary[expansionName].boons[key] = boonData as any;
         continue;
       }
 

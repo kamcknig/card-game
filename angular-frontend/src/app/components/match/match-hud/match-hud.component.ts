@@ -14,13 +14,13 @@ import { NanostoresService } from '@nanostores/angular';
 import { playerIdStore, playerStore, selfPlayerIdStore } from '../../../state/player-state';
 import { combineLatest, combineLatestWith, filter, map, Observable, of, switchMap } from 'rxjs';
 import { AsyncPipe } from '@angular/common';
-import { CardId, Mats, PlayerId } from 'shared/shared-types';
+import { CardLikeId, Mats, PlayerId } from 'shared/shared-types';
 import { logEntryIdsStore, logStore } from '../../../state/log-state';
 import { MatTabComponent } from './mat-zone/mat-tab.component';
 import { CardComponent } from '../../card/card.component';
+import { CardLikeComponent } from '../../card-like/card-like.component';
 import { playerScoreStore } from '../../../state/player-logic';
 import { LogEntryMessage } from '../../../../types';
-import { cardStore } from '../../../state/card-state';
 import { MatPlayerContent } from './types';
 import { Rectangle } from 'pixi.js';
 import { cardSourceTagMapStore, getCardSourceStore } from '../../../state/card-source-store';
@@ -28,8 +28,10 @@ import { disconnectedHumanIdsStore } from '../../../state/game-state';
 import { SocketService } from '../../../core/socket-service/socket.service';
 
 export interface Mat {
+  // Mat identifier (standard mats or custom keys).
   mat: Mats | string;
-  content: MatPlayerContent | CardId[];
+  // Mat content can be grouped by player or flat for global piles.
+  content: MatPlayerContent | CardLikeId[];
 }
 
 @Component({
@@ -39,7 +41,8 @@ export interface Mat {
     GameLogComponent,
     AsyncPipe,
     MatTabComponent,
-    CardComponent
+    CardComponent,
+    CardLikeComponent
   ],
   templateUrl: './match-hud.component.html',
   styleUrl: './match-hud.component.scss',
@@ -76,7 +79,8 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  visibleMatContent: { id: PlayerId | null; playerName: string | null; cardIds: CardId[] }[] = [];
+  // Normalized mat content for modal display.
+  visibleMatContent: { id: PlayerId | null; playerName: string | null; cardIds: CardLikeId[] }[] = [];
 
   scoreViewResize = output<Rectangle>();
   scoreViewResizer: ResizeObserver | undefined;
@@ -85,7 +89,7 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
   logEntries$!: Observable<readonly LogEntryMessage[]> | undefined;
   selfMats$: Observable<{ mat: Mats, content: MatPlayerContent }[]> | undefined;
   setAsideMat$: Observable<{ mat: Mats; content: MatPlayerContent } | undefined> | undefined;
-  trashMat$: Observable<{ mat: string; content: CardId[]; }> | undefined;
+  trashMat$: Observable<{ mat: string; content: CardLikeId[]; }> | undefined;
   disconnectedHumans$: Observable<{ id: PlayerId; name: string }[]> | undefined;
   private _disconnectedHumanIds: PlayerId[] = [];
 
@@ -142,29 +146,24 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
       })
     );
 
+    // Build set-aside mat content grouped by player id for card-like rendering.
     this.setAsideMat$ = this._nanoService.useStore(playerIdStore).pipe(
       switchMap(ids => combineLatest([
         combineLatest(ids.map(id => this._nanoService.useStore(playerStore(id)))),
-        combineLatest(ids.map(id => this._nanoService.useStore(getCardSourceStore('set-aside', id))))
-          .pipe(map(sources => sources.flat()))
+        combineLatest(ids.map(id =>
+          this._nanoService.useStore(getCardSourceStore('set-aside', id))
+            .pipe(map(cardIds => ({ playerId: id, cardIds })))
+        )),
       ])),
-      combineLatestWith(this._nanoService.useStore(cardStore)),
-      map(([[players, setAsideCardIds], cardsById]) => {
-        let matContent = setAsideCardIds.reduce((acc, nextCardId) => {
-          const card = cardsById[nextCardId];
-          const owner = card.owner;
-
-          if (!owner) return acc;
-
-          const playerName = players.find(p => p?.id === owner)?.name;
-
+      map(([players, setAsideSources]) => {
+        const matContent = setAsideSources.reduce((acc, source) => {
+          if (source.cardIds.length < 1) return acc;
+          const playerName = players.find(p => p?.id === source.playerId)?.name;
           if (!playerName) return acc;
-
-          acc[owner] ??= {
+          acc[source.playerId] = {
             playerName: playerName,
-            cardIds: []
+            cardIds: source.cardIds
           };
-          acc[owner].cardIds.push(nextCardId);
           return acc;
         }, {} as MatPlayerContent);
 
@@ -173,7 +172,7 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
         return cardCount > 0 ? {
           mat: 'set-aside',
           content: matContent
-        } : undefined
+        } : undefined;
       })
     );
 
@@ -207,10 +206,6 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
       }),
       map(players => players.filter(p => !!p).map(p => ({ id: p!.id, name: p!.name })))
     );
-  }
-
-  openMat(event: { mat: Mats, content: MatPlayerContent } | null) {
-    this.visibleMat = event;
   }
 
   ngOnDestroy() {

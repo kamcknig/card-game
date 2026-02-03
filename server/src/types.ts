@@ -157,6 +157,8 @@ export interface BaseGameActionDefinitionMap {
     gainPotion: (args: { count: number }) => Promise<void>;
     gainTreasure: (args: { count: number }, context?: GameActionContext) => Promise<void>;
     gainVictoryToken: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
+    // Receives a boon from the shared boon deck (used by Fate cards).
+    receiveBoon: (args: { playerId: PlayerId; }, context?: GameActionContext) => Promise<void>;
     // Pays down debt tokens using the current player's treasure pool.
     payDebt: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
     // Token actions are used by expansions to place and manage token instances.
@@ -661,6 +663,8 @@ export type CardLifecycleCallbackResult = {
 export type CardLifecycleCallback<T extends CardLifecycleEvent> = (args: CardLifecycleCallbackContext, rest: CardLifecycleEventArgMap[T]) => Promise<CardLifecycleCallbackResult | void>;
 
 export type CardEffectRegistrar = (cardKey: CardKey, tag: string, fn: CardEffectFn) => void;
+// Registers boon effects by card key for the current match.
+export type BoonEffectRegistrar = (cardKey: CardKey, fn: CardEffectFn) => void;
 
 export type PlayerScoreDecoratorRegistrar = (decorator: PlayerScoreDecorator) => void;
 export type PlayerScoreDecorator = (playerId: PlayerId, match: Match, cardLibrary: MatchCardLibrary) => void;
@@ -681,4 +685,5 @@ export type InitializeExpansionContext = {
     endGameConditionRegistrar: EndGameConditionRegistrar;
     playerScoreDecoratorRegistrar: PlayerScoreDecoratorRegistrar;
     cardEffectRegistrar: CardEffectRegistrar;
+    boonEffectRegistrar: BoonEffectRegistrar;
 }

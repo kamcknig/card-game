@@ -9,8 +9,6 @@ Boons are not "cards"; any text referring to a "card" does not apply to Boons. H
 ## Official Rules
 
 - Boons are a face-down deck of cards that are revealed as needed.
-    - this can be displayed in the UI as a pile view of cards. label it as
-      others are labeled as well.
 - The phrase "receive a Boon" (new game action `receiveBoon`) means, turn
   over the top Boon, and follow the instructions on it. If the Boons deck
   is empty, first shuffle the discarded Boons to reform the deck; you may also do this any time all Boons are in their discard pile.
@@ -28,3 +26,18 @@ Boons are not "cards"; any text referring to a "card" does not apply to Boons. H
 
 - In the unlikely event that all the Boons are set aside or otherwise
   occupied at the same time, so there are no Boons in the Boons deck or discard pile when you are told to receive a Boon, you don't receive one.
+
+## list of boons
+
+- The Earth's Gift
+- The Field's Gift
+- The Flame's Gift
+- The Forest's Gift
+- The Moon's Gift
+- The Mountain's Gift
+- The River's Gift
+- The Sea's Gift
+- The Sky's Gift
+- The Sun's Gift
+- The Swamp's Gift
+- The Wind's Gift

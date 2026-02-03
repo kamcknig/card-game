@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
-import { CardId, Mats } from 'shared/shared-types';
+import { CardLikeId, Mats } from 'shared/shared-types';
 import { MatPlayerContent } from '../types';
 
 @Component({
@@ -10,7 +10,7 @@ import { MatPlayerContent } from '../types';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MatTabComponent {
-  @Input() mat!: { mat: Mats | string; content: MatPlayerContent | CardId[]  };
+  @Input() mat!: { mat: Mats | string; content: MatPlayerContent | CardLikeId[]  };
 
   getCount() {
     if (!Array.isArray(this.mat.content)) {

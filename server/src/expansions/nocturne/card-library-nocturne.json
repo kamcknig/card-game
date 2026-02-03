@@ -1,0 +1,98 @@
+{
+  "the-earths-gift": {
+    "cardName": "The Earth's Gift",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["BOON"]
+  },
+  "the-fields-gift": {
+    "cardName": "The Field's Gift",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["BOON"]
+  },
+  "the-flames-gift": {
+    "cardName": "The Flame's Gift",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["BOON"]
+  },
+  "the-forests-gift": {
+    "cardName": "The Forest's Gift",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["BOON"]
+  },
+  "the-moons-gift": {
+    "cardName": "The Moon's Gift",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["BOON"]
+  },
+  "the-mountains-gift": {
+    "cardName": "The Mountain's Gift",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["BOON"]
+  },
+  "the-rivers-gift": {
+    "cardName": "The River's Gift",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["BOON"]
+  },
+  "the-seas-gift": {
+    "cardName": "The Sea's Gift",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["BOON"]
+  },
+  "the-skys-gift": {
+    "cardName": "The Sky's Gift",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["BOON"]
+  },
+  "the-suns-gift": {
+    "cardName": "The Sun's Gift",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["BOON"]
+  },
+  "the-swamps-gift": {
+    "cardName": "The Swamp's Gift",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["BOON"]
+  },
+  "the-winds-gift": {
+    "cardName": "The Wind's Gift",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["BOON"]
+  }
+}
