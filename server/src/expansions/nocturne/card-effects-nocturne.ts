@@ -209,6 +209,62 @@ const expansion: CardExpansionModule = {
       });
     },
   },
+  'cobbler': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.info(`[cobbler effect] resolving for player ${cardEffectArgs.playerId}`);
+
+      const cobblerCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const turnPlayed = cardEffectArgs.match.turnNumber;
+
+      // Register the start-of-next-turn gain effect.
+      cardEffectArgs.registerDurationEffect(cobblerCard, {
+        id: `cobbler:${cobblerCard.id}:startTurn`,
+        listeningFor: 'startTurn',
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId
+          && trigger.args.turnNumber !== turnPlayed,
+        triggeredEffectFn: async (triggeredArgs) => {
+          console.info(`[cobbler startTurn] resolving for player ${cardEffectArgs.playerId}`);
+
+          // Skip if no eligible cards remain in supply.
+          const eligibleCards = triggeredArgs.findCards([
+            { location: ['basicSupply', 'kingdomSupply'] },
+            { playerId: cardEffectArgs.playerId, kind: 'upTo', amount: { treasure: 4 } },
+          ]);
+          if (!eligibleCards.length) {
+            console.debug('[cobbler startTurn] no eligible cards in supply');
+            return;
+          }
+
+          const gainCardIds = await triggeredArgs.runGameActionDelegate('selectCard', {
+            prompt: 'Gain a card to your hand costing up to $4',
+            playerId: cardEffectArgs.playerId,
+            count: 1,
+            restrict: [
+              { location: ['basicSupply', 'kingdomSupply'] },
+              { playerId: cardEffectArgs.playerId, kind: 'upTo', amount: { treasure: 4 } },
+            ],
+          }) as CardId[];
+
+          const gainCardId = gainCardIds[0];
+          if (!gainCardId) {
+            console.debug('[cobbler startTurn] no eligible card selected to gain');
+            return;
+          }
+
+          console.debug(`[cobbler startTurn] gaining ${triggeredArgs.cardLibrary.getCard(gainCardId)} to hand`);
+          await triggeredArgs.runGameActionDelegate('gainCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: gainCardId,
+            to: { location: 'playerHand' },
+          });
+        },
+      });
+    },
+  },
   'ghost': {
     registerEffects: () => async (cardEffectArgs) => {
       console.info(`[ghost effect] resolving for player ${cardEffectArgs.playerId}`);

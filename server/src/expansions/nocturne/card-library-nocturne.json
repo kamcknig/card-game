@@ -32,6 +32,17 @@
     "victoryPoints": 2,
     "abilityText": "2VP\nWhen you gain this, trash up to 4 cards from your hand.\nHeirloom: Haunted Mirror"
   },
+  "cobbler": {
+    "cardName": "Cobbler",
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "NIGHT",
+      "DURATION"
+    ],
+    "abilityText": "At the start of your next turn, gain a card to your hand costing up to $4."
+  },
   "changeling": {
     "cardName": "Changeling",
     "cost": {
