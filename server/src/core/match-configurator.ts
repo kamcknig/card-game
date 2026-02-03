@@ -19,7 +19,7 @@ import {
   MatchBaseConfiguration,
   PlayerScoreDecoratorRegistrar
 } from '../types.ts';
-import { compare, Operation } from 'https://esm.sh/v123/fast-json-patch@3.1.1/index.js';
+import { compare, Operation } from "fast-json-patch";
 import { CardSourceController } from './card-source-controller.ts';
 import { getDefaultKingdomSupplySize } from '../utils/get-default-kingdom-supply-size.ts';
 import { getCardPileKey } from '../utils/get-card-pile-key.ts';
