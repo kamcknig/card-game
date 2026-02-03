@@ -8,6 +8,7 @@ import { compareCardCosts } from 'shared/compare-card-cost.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { createCard } from '../../utils/create-card.ts';
 import { configureGhost } from './configure-ghost.ts';
+import { configureImp } from './configure-imp.ts';
 
 // Seeds boons when Fate cards are present in the selected kingdom.
 const configurator: ExpansionConfiguratorFactory = () => {
@@ -24,6 +25,9 @@ const configurator: ExpansionConfiguratorFactory = () => {
     // Gather all selected kingdom cards for boons and heirloom-linked piles.
     const kingdomCards = args.config.kingdomSupply.flatMap(supply => supply.cards);
     const hasCemetery = kingdomCards.some(card => getCardPileKey(card) === 'cemetery');
+    // Track which kingdom cards require the Imp pile.
+    const impSources = new Set(['devils-workshop', 'tormentor', 'exorcist']);
+    const hasImpSource = kingdomCards.some(card => impSources.has(getCardPileKey(card)));
 
     if (hasCemetery) {
       configureGhost(args);
@@ -31,6 +35,15 @@ const configurator: ExpansionConfiguratorFactory = () => {
     else if (args.config.nonSupply?.some(supply => supply.name === 'ghost')) {
       console.info('[nocturne configurator] removing Ghost pile because Cemetery is absent');
       args.config.nonSupply = args.config.nonSupply.filter(supply => supply.name !== 'ghost');
+    }
+
+    // Ensure the Imp pile is present only when needed.
+    if (hasImpSource) {
+      configureImp(args);
+    }
+    else if (args.config.nonSupply?.some(supply => supply.name === 'imp')) {
+      console.info('[nocturne configurator] removing Imp pile because no Imp gainers are present');
+      args.config.nonSupply = args.config.nonSupply.filter(supply => supply.name !== 'imp');
     }
 
     // Fate cards determine whether boons are active for this match.

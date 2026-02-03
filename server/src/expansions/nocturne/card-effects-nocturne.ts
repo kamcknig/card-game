@@ -1,8 +1,63 @@
-import { CardExpansionModule } from '../../types.ts';
+import { CardEffectFunctionContext, CardExpansionModule } from '../../types.ts';
 import { CardId } from 'shared/shared-types';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
+
+// Prompts a player to choose an Action from hand not already represented in play.
+const promptUniqueActionFromHand = async (
+  cardEffectArgs: CardEffectFunctionContext,
+  prompt: string,
+  logPrefix: string,
+): Promise<CardId | undefined> => {
+  // Gather Action cards in hand for eligibility filtering.
+  const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+  const handActions = hand
+    .map(cardEffectArgs.cardLibrary.getCard)
+    .filter(card => card.type.includes('ACTION'));
+
+  if (!handActions.length) {
+    console.debug(`[${logPrefix}] no action cards in hand to play`);
+    return undefined;
+  }
+
+  // Determine which Action card keys are already in play for this player.
+  const inPlayCards = getCardsInPlay(cardEffectArgs.findCards)
+    .filter(card => cardEffectArgs.match.stats.playedCards[card.id]?.playerId === cardEffectArgs.playerId);
+  const inPlayKeys = new Set(inPlayCards.map(card => card.cardKey));
+
+  // Only allow Actions that are not already represented in play.
+  const eligibleActions = handActions.filter(card => !inPlayKeys.has(card.cardKey));
+  if (!eligibleActions.length) {
+    console.debug(`[${logPrefix}] no eligible action cards not already in play`);
+    return undefined;
+  }
+
+  // Prompt the player to optionally select an eligible Action card to play.
+  const selectionResult = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+    playerId: cardEffectArgs.playerId,
+    prompt,
+    actionButtons: [{ label: 'CANCEL', action: 1 }],
+    content: {
+      type: 'select',
+      cardIds: eligibleActions.map(card => card.id),
+      selectCount: 1,
+    },
+  }) as { action: number; result: CardId[] };
+
+  if (selectionResult.action === 1 || !selectionResult.result.length) {
+    console.debug(`[${logPrefix}] player declined to play an action`);
+    return undefined;
+  }
+
+  const selectedCardId = selectionResult.result[0];
+  if (!selectedCardId) {
+    console.debug(`[${logPrefix}] no action selected to play`);
+    return undefined;
+  }
+
+  return selectedCardId;
+};
 
 // Nocturne card effects module for non-supply cards and other mechanics.
 const expansion: CardExpansionModule = {
@@ -272,49 +327,14 @@ const expansion: CardExpansionModule = {
       // Apply the immediate +$2.
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
 
-      // Gather Action cards in hand for eligibility filtering.
-      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
-      const handActions = hand
-        .map(cardEffectArgs.cardLibrary.getCard)
-        .filter(card => card.type.includes('ACTION'));
+      // Prompt the player to choose a unique Action card to play.
+      const selectedCardId = await promptUniqueActionFromHand(
+        cardEffectArgs,
+        'You may play an Action card you do not have in play',
+        'conclave effect',
+      );
 
-      if (!handActions.length) {
-        console.debug('[conclave effect] no action cards in hand to play');
-        return;
-      }
-
-      // Determine which Action card keys are already in play for this player.
-      const inPlayCards = getCardsInPlay(cardEffectArgs.findCards)
-        .filter(card => cardEffectArgs.match.stats.playedCards[card.id]?.playerId === cardEffectArgs.playerId);
-      const inPlayKeys = new Set(inPlayCards.map(card => card.cardKey));
-
-      // Only allow Actions that are not already represented in play.
-      const eligibleActions = handActions.filter(card => !inPlayKeys.has(card.cardKey));
-      if (!eligibleActions.length) {
-        console.debug('[conclave effect] no eligible action cards not already in play');
-        return;
-      }
-
-      // Prompt the player to optionally select an eligible Action card to play.
-      const selectionResult = await cardEffectArgs.runGameActionDelegate('userPrompt', {
-        playerId: cardEffectArgs.playerId,
-        prompt: 'You may play an Action card you do not have in play',
-        actionButtons: [{ label: 'CANCEL', action: 1 }],
-        content: {
-          type: 'select',
-          cardIds: eligibleActions.map(card => card.id),
-          selectCount: 1,
-        },
-      }) as { action: number; result: CardId[] };
-
-      if (selectionResult.action === 1 || !selectionResult.result.length) {
-        console.debug('[conclave effect] player declined to play an action');
-        return;
-      }
-
-      const selectedCardId = selectionResult.result[0];
       if (!selectedCardId) {
-        console.debug('[conclave effect] no action selected to play');
         return;
       }
 
@@ -328,6 +348,36 @@ const expansion: CardExpansionModule = {
 
       console.debug('[conclave effect] gained +1 Action for playing an action');
       await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+    },
+  },
+  'imp': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.info(`[imp effect] resolving for player ${cardEffectArgs.playerId}`);
+
+      // Apply the immediate +2 Cards.
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: 2,
+      });
+
+      // Prompt the player to choose a unique Action card to play.
+      const selectedCardId = await promptUniqueActionFromHand(
+        cardEffectArgs,
+        'You may play an Action card you do not have in play',
+        'imp effect',
+      );
+
+      if (!selectedCardId) {
+        return;
+      }
+
+      // Play the chosen Action card.
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+      console.debug(`[imp effect] playing ${selectedCard}`);
+      await cardEffectArgs.runGameActionDelegate('playCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCardId,
+      });
     },
   },
   'crypt': {
@@ -525,6 +575,97 @@ const expansion: CardExpansionModule = {
             count: 2,
           });
         },
+      });
+    },
+  },
+  'devils-workshop': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.info(`[devils-workshop effect] resolving for player ${cardEffectArgs.playerId}`);
+
+      // Count the cards this player has gained this turn.
+      const gainedThisTurn = cardEffectArgs.match.stats.cardsGainedByTurn[cardEffectArgs.match.turnNumber] ?? [];
+      const gainedCount = gainedThisTurn.filter(cardId =>
+        cardEffectArgs.match.stats.cardsGained[cardId]?.playerId === cardEffectArgs.playerId
+      ).length;
+
+      console.debug(`[devils-workshop effect] player gained ${gainedCount} card(s) this turn`);
+
+      if (gainedCount >= 2) {
+        // Gain an Imp from the non-supply pile.
+        const impCards = cardEffectArgs.findCards([
+          { location: 'nonSupplyCards' },
+          { cardKeys: 'imp' },
+        ]);
+
+        if (!impCards.length) {
+          console.warn('[devils-workshop effect] no Imp cards available to gain');
+          return;
+        }
+
+        const impCardId = impCards.slice(-1)[0].id;
+        console.debug(`[devils-workshop effect] gaining Imp ${impCardId}`);
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: impCardId,
+          to: { location: 'playerDiscard' },
+        });
+        return;
+      }
+
+      if (gainedCount === 1) {
+        // Gain a card costing up to $4 from the supply.
+        const eligibleCards = cardEffectArgs.findCards([
+          { location: ['basicSupply', 'kingdomSupply'] },
+          { playerId: cardEffectArgs.playerId, kind: 'upTo', amount: { treasure: 4 } },
+        ]);
+
+        if (!eligibleCards.length) {
+          console.debug('[devils-workshop effect] no eligible cards in supply to gain');
+          return;
+        }
+
+        const gainCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          prompt: 'Gain a card costing up to $4',
+          playerId: cardEffectArgs.playerId,
+          count: 1,
+          restrict: [
+            { location: ['basicSupply', 'kingdomSupply'] },
+            { playerId: cardEffectArgs.playerId, kind: 'upTo', amount: { treasure: 4 } },
+          ],
+        }) as CardId[];
+
+        const gainCardId = gainCardIds[0];
+        if (!gainCardId) {
+          console.debug('[devils-workshop effect] no card selected to gain');
+          return;
+        }
+
+        console.debug(`[devils-workshop effect] gaining ${cardEffectArgs.cardLibrary.getCard(gainCardId)}`);
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: gainCardId,
+          to: { location: 'playerDiscard' },
+        });
+        return;
+      }
+
+      // Gain a Gold if no cards were gained previously this turn.
+      const goldCards = cardEffectArgs.findCards([
+        { location: 'basicSupply' },
+        { cardKeys: 'gold' },
+      ]);
+
+      if (!goldCards.length) {
+        console.warn('[devils-workshop effect] no Gold cards available to gain');
+        return;
+      }
+
+      const goldCardId = goldCards.slice(-1)[0].id;
+      console.debug(`[devils-workshop effect] gaining Gold ${goldCardId}`);
+      await cardEffectArgs.runGameActionDelegate('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: goldCardId,
+        to: { location: 'playerDiscard' },
       });
     },
   },

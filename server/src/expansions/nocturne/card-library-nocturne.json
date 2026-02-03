@@ -75,6 +75,16 @@
     ],
     "abilityText": "At the start of your next turn, +2 Cards.\nThis is gained to your hand (instead of your discard pile)."
   },
+  "devils-workshop": {
+    "cardName": "Devil's Workshop",
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "NIGHT"
+    ],
+    "abilityText": "If the number of cards you've gained this turn is:\n2+, gain an Imp;\n1, gain a card costing up to $4;\n0, gain a Gold."
+  },
   "cobbler": {
     "cardName": "Cobbler",
     "cost": {
@@ -120,6 +130,18 @@
       "HEIRLOOM"
     ],
     "abilityText": "+$1\nWhen you trash this, you may discard an Action card, to gain a Ghost."
+  },
+  "imp": {
+    "cardName": "Imp",
+    "cost": {
+      "treasure": 2
+    },
+    "kingdomSelectable": false,
+    "type": [
+      "ACTION",
+      "SPIRIT"
+    ],
+    "abilityText": "+2 Cards\nYou may play an Action card from your hand that you don't have a copy of in play.\n(This is not in the Supply.)"
   },
   "the-earths-gift": {
     "cardName": "The Earth's Gift",
