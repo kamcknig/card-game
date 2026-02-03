@@ -64,6 +64,17 @@
     ],
     "abilityText": "+2 Actions\nDraw until you have 6 cards in hand.\nWhen you gain this, receive a Hex."
   },
+  "den-of-sin": {
+    "cardName": "Den of Sin",
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "NIGHT",
+      "DURATION"
+    ],
+    "abilityText": "At the start of your next turn, +2 Cards.\nThis is gained to your hand (instead of your discard pile)."
+  },
   "cobbler": {
     "cardName": "Cobbler",
     "cost": {

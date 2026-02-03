@@ -478,6 +478,56 @@ const expansion: CardExpansionModule = {
       }
     },
   },
+  'den-of-sin': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (cardEffectArgs, eventArgs) => {
+        console.info(`[den-of-sin onGained] resolving for player ${eventArgs.playerId}`);
+
+        // Only move to hand if it was gained to the player's discard pile.
+        const source = cardEffectArgs.cardSourceController.findCardSource(eventArgs.cardId);
+        if (source.sourceKey !== 'playerDiscard' || source.playerId !== eventArgs.playerId) {
+          console.debug('[den-of-sin onGained] not in discard pile, skipping move to hand');
+          return;
+        }
+
+        console.debug('[den-of-sin onGained] moving gained card from discard to hand');
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
+          cardId: eventArgs.cardId,
+          toPlayerId: eventArgs.playerId,
+          to: {
+            location: 'playerHand',
+          },
+        });
+      },
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.info(`[den-of-sin effect] resolving for player ${cardEffectArgs.playerId}`);
+
+      const denOfSinCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const turnPlayed = cardEffectArgs.match.turnNumber;
+
+      // Register the start-of-next-turn draw effect.
+      cardEffectArgs.registerDurationEffect(denOfSinCard, {
+        id: `den-of-sin:${denOfSinCard.id}:startTurn`,
+        listeningFor: 'startTurn',
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId
+          && trigger.args.turnNumber !== turnPlayed,
+        triggeredEffectFn: async (triggeredArgs) => {
+          console.info(`[den-of-sin startTurn] resolving for player ${cardEffectArgs.playerId}`);
+
+          // Apply the +2 Cards at the start of the next turn.
+          await triggeredArgs.runGameActionDelegate('drawCard', {
+            playerId: cardEffectArgs.playerId,
+            count: 2,
+          });
+        },
+      });
+    },
+  },
   'ghost': {
     registerEffects: () => async (cardEffectArgs) => {
       console.info(`[ghost effect] resolving for player ${cardEffectArgs.playerId}`);
