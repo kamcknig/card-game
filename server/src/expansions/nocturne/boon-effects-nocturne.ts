@@ -9,6 +9,8 @@ export const registerNocturneBoonEffects = (registerBoonEffect: BoonEffectRegist
   registerFieldsGift(registerBoonEffect);
   // Register The Flame's Gift boon effect.
   registerFlamesGift(registerBoonEffect);
+  // Register The Forest's Gift boon effect.
+  registerForestsGift(registerBoonEffect);
 };
 
 // Registers The Earth's Gift boon effect logic.
@@ -162,6 +164,54 @@ const registerFlamesGift = (registerBoonEffect: BoonEffectRegistrar) => {
     await runGameActionDelegate('trashCard', {
       playerId: playerId,
       cardId: selectedCardId,
+    });
+  });
+};
+
+// Registers The Forest's Gift boon effect logic.
+const registerForestsGift = (registerBoonEffect: BoonEffectRegistrar) => {
+  registerBoonEffect('the-forests-gift', async ({
+    playerId,
+    runGameActionDelegate,
+    match,
+    reactionManager,
+    cardId,
+  }) => {
+    console.info(`[the-forests-gift boon] resolving for player ${playerId}`);
+
+    // Apply the immediate +1 Buy and +1 Treasure.
+    await runGameActionDelegate('gainBuy', { count: 1 });
+    await runGameActionDelegate('gainTreasure', { count: 1 });
+
+    // Resolve the boon instance for set-aside tracking.
+    const boon = match.boons.cards.find(candidate => candidate.id === cardId);
+    if (!boon) {
+      console.warn(`[the-forests-gift boon] could not find boon instance ${cardId}`);
+      return;
+    }
+
+    // Move the boon into the player's set-aside zone until cleanup.
+    await runGameActionDelegate('moveCardLike', {
+      cardLikeId: boon.id,
+      toPlayerId: playerId,
+      to: { location: 'set-aside' },
+    });
+
+    // Register cleanup to return the boon to the discard pile at end of turn.
+    reactionManager.registerSystemTemplate(boon, 'endTurn', {
+      playerId: playerId,
+      once: true,
+      compulsory: true,
+      allowMultipleInstances: true,
+      triggeredEffectFn: async ({ runGameActionDelegate: runTriggerAction }) => {
+        // Return the boon to the boon discard pile at cleanup.
+        await runTriggerAction('moveCardLike', {
+          cardLikeId: boon.id,
+          to: { location: 'boonDiscard' },
+        });
+
+        console.debug(`[the-forests-gift boon] returned ${boon} to boon discard`);
+      },
     });
   });
 };
