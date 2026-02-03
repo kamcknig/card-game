@@ -7,6 +7,8 @@ export const registerNocturneBoonEffects = (registerBoonEffect: BoonEffectRegist
   registerEarthsGift(registerBoonEffect);
   // Register The Field's Gift boon effect.
   registerFieldsGift(registerBoonEffect);
+  // Register The Flame's Gift boon effect.
+  registerFlamesGift(registerBoonEffect);
 };
 
 // Registers The Earth's Gift boon effect logic.
@@ -120,6 +122,46 @@ const registerFieldsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 
         console.debug(`[the-fields-gift boon] returned ${boon} to boon discard`);
       },
+    });
+  });
+};
+
+// Registers The Flame's Gift boon effect logic.
+const registerFlamesGift = (registerBoonEffect: BoonEffectRegistrar) => {
+  registerBoonEffect('the-flames-gift', async ({
+    playerId,
+    runGameActionDelegate,
+    cardLibrary,
+    findCards,
+  }) => {
+    console.info(`[the-flames-gift boon] resolving for player ${playerId}`);
+
+    const handCards = findCards({ location: 'playerHand', playerId });
+    if (handCards.length < 1) {
+      console.info('[the-flames-gift boon] no cards in hand, skipping');
+      return;
+    }
+
+    const selectedCardIds = await runGameActionDelegate('selectCard', {
+      prompt: 'You may trash a card from your hand',
+      playerId: playerId,
+      count: 1,
+      optional: true,
+      restrict: [
+        { location: 'playerHand', playerId },
+      ],
+    }) as CardId[];
+
+    const selectedCardId = selectedCardIds[0];
+    if (!selectedCardId) {
+      console.debug('[the-flames-gift boon] player declined to trash a card');
+      return;
+    }
+
+    console.debug(`[the-flames-gift boon] trashing ${cardLibrary.getCard(selectedCardId)}`);
+    await runGameActionDelegate('trashCard', {
+      playerId: playerId,
+      cardId: selectedCardId,
     });
   });
 };
