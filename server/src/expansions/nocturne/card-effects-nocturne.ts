@@ -265,6 +265,71 @@ const expansion: CardExpansionModule = {
       });
     },
   },
+  'conclave': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.info(`[conclave effect] resolving for player ${cardEffectArgs.playerId}`);
+
+      // Apply the immediate +$2.
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+
+      // Gather Action cards in hand for eligibility filtering.
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      const handActions = hand
+        .map(cardEffectArgs.cardLibrary.getCard)
+        .filter(card => card.type.includes('ACTION'));
+
+      if (!handActions.length) {
+        console.debug('[conclave effect] no action cards in hand to play');
+        return;
+      }
+
+      // Determine which Action card keys are already in play for this player.
+      const inPlayCards = getCardsInPlay(cardEffectArgs.findCards)
+        .filter(card => cardEffectArgs.match.stats.playedCards[card.id]?.playerId === cardEffectArgs.playerId);
+      const inPlayKeys = new Set(inPlayCards.map(card => card.cardKey));
+
+      // Only allow Actions that are not already represented in play.
+      const eligibleActions = handActions.filter(card => !inPlayKeys.has(card.cardKey));
+      if (!eligibleActions.length) {
+        console.debug('[conclave effect] no eligible action cards not already in play');
+        return;
+      }
+
+      // Prompt the player to optionally select an eligible Action card to play.
+      const selectionResult = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'You may play an Action card you do not have in play',
+        actionButtons: [{ label: 'CANCEL', action: 1 }],
+        content: {
+          type: 'select',
+          cardIds: eligibleActions.map(card => card.id),
+          selectCount: 1,
+        },
+      }) as { action: number; result: CardId[] };
+
+      if (selectionResult.action === 1 || !selectionResult.result.length) {
+        console.debug('[conclave effect] player declined to play an action');
+        return;
+      }
+
+      const selectedCardId = selectionResult.result[0];
+      if (!selectedCardId) {
+        console.debug('[conclave effect] no action selected to play');
+        return;
+      }
+
+      // Play the chosen Action card, then award +1 Action.
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+      console.debug(`[conclave effect] playing ${selectedCard}`);
+      await cardEffectArgs.runGameActionDelegate('playCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCardId,
+      });
+
+      console.debug('[conclave effect] gained +1 Action for playing an action');
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+    },
+  },
   'ghost': {
     registerEffects: () => async (cardEffectArgs) => {
       console.info(`[ghost effect] resolving for player ${cardEffectArgs.playerId}`);

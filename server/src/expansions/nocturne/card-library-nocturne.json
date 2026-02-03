@@ -32,6 +32,16 @@
     "victoryPoints": 2,
     "abilityText": "2VP\nWhen you gain this, trash up to 4 cards from your hand.\nHeirloom: Haunted Mirror"
   },
+  "conclave": {
+    "cardName": "Conclave",
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+$2\nYou may play an Action card from your hand that you don't have a copy of in play. If you do, +1 Action."
+  },
   "cobbler": {
     "cardName": "Cobbler",
     "cost": {
