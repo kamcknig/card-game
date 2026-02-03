@@ -19,6 +19,8 @@ export const registerNocturneBoonEffects = (registerBoonEffect: BoonEffectRegist
   registerRiversGift(registerBoonEffect);
   // Register The Sea's Gift boon effect.
   registerSeasGift(registerBoonEffect);
+  // Register The Sky's Gift boon effect.
+  registerSkysGift(registerBoonEffect);
 };
 
 // Registers The Earth's Gift boon effect logic.
@@ -351,5 +353,71 @@ const registerSeasGift = (registerBoonEffect: BoonEffectRegistrar) => {
     console.info(`[the-seas-gift boon] resolving for player ${playerId}`);
 
     await runGameActionDelegate('drawCard', { playerId, count: 1 });
+  });
+};
+
+// Registers The Sky's Gift boon effect logic.
+const registerSkysGift = (registerBoonEffect: BoonEffectRegistrar) => {
+  registerBoonEffect('the-skys-gift', async ({
+    playerId,
+    runGameActionDelegate,
+    cardLibrary,
+    findCards,
+    cardSourceController,
+  }) => {
+    console.info(`[the-skys-gift boon] resolving for player ${playerId}`);
+
+    const confirm = await runGameActionDelegate('userPrompt', {
+      playerId,
+      prompt: 'Discard 3 cards to gain a Gold?',
+      actionButtons: [
+        { label: `DON'T DISCARD`, action: 1 },
+        { label: 'DISCARD', action: 2 },
+      ],
+    }) as { action: number };
+
+    if (confirm.action !== 2) {
+      console.debug('[the-skys-gift boon] player declined to discard 3 cards');
+      return;
+    }
+
+    const hand = cardSourceController.getSource('playerHand', playerId);
+    const selectedCardIds = await runGameActionDelegate('selectCard', {
+      prompt: 'Discard 3 cards',
+      playerId: playerId,
+      count: 3,
+      restrict: hand,
+    }) as CardId[];
+
+    for (const cardId of selectedCardIds) {
+      console.debug(`[the-skys-gift boon] discarding ${cardLibrary.getCard(cardId)}`);
+      await runGameActionDelegate('discardCard', {
+        cardId: cardId,
+        playerId: playerId,
+      });
+    }
+
+    if (selectedCardIds.length < 3) {
+      console.info('[the-skys-gift boon] discarded fewer than 3 cards, skipping Gold gain');
+      return;
+    }
+
+    const goldCards = findCards([
+      { location: 'basicSupply' },
+      { cardKeys: 'gold' },
+    ]);
+
+    if (goldCards.length < 1) {
+      console.info('[the-skys-gift boon] no gold cards in supply');
+      return;
+    }
+
+    const goldCardId = goldCards.slice(-1)[0].id;
+    console.debug(`[the-skys-gift boon] gaining gold ${goldCardId}`);
+    await runGameActionDelegate('gainCard', {
+      playerId: playerId,
+      cardId: goldCardId,
+      to: { location: 'playerDiscard' },
+    });
   });
 };
