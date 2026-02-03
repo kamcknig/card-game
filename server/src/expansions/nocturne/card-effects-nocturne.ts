@@ -2,6 +2,19 @@ import { CardExpansionModule } from "../../types.ts";
 
 // Nocturne card effects module for non-supply cards and other mechanics.
 const expansion: CardExpansionModule = {
+  'bard': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.info(`[bard effect] resolving for player ${cardEffectArgs.playerId}`);
+
+      // Apply the immediate +$2.
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+
+      // Receive a boon from the boon deck.
+      await cardEffectArgs.runGameActionDelegate('receiveBoon', {
+        playerId: cardEffectArgs.playerId,
+      });
+    },
+  },
   "will-o-wisp": {
     registerEffects: () => async (cardEffectArgs) => {
       console.info(

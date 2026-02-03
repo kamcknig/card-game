@@ -1,4 +1,15 @@
 {
+  "bard": {
+    "cardName": "Bard",
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION",
+      "FATE"
+    ],
+    "abilityText": "+$2\nReceive a Boon."
+  },
   "the-earths-gift": {
     "cardName": "The Earth's Gift",
     "cost": {
