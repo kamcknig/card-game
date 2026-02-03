@@ -1211,6 +1211,13 @@ export class GameActionController implements BaseGameActionDefinitionMap {
 
         break;
       }
+      case 'night': {
+        // Night phase currently only triggers phase start reactions.
+        if (runStartPhaseTrigger) {
+          await this.runStartTurnPhaseTrigger(match.turnPhaseIndex);
+        }
+        break;
+      }
     }
   }
 

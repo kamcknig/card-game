@@ -232,7 +232,7 @@ export type UserPromptActionArgs = {
   validationAction?: number;
 }
 
-export const TurnPhaseOrderValues = ['action', 'buy', 'cleanup'] as const;
+export const TurnPhaseOrderValues = ['action', 'buy', 'night', 'cleanup'] as const;
 export type TurnPhase = typeof TurnPhaseOrderValues[number];
 
 export type ExpansionListElement = {
