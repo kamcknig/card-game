@@ -13,6 +13,8 @@ export const registerNocturneBoonEffects = (registerBoonEffect: BoonEffectRegist
   registerForestsGift(registerBoonEffect);
   // Register The Moon's Gift boon effect.
   registerMoonsGift(registerBoonEffect);
+  // Register The Mountain's Gift boon effect.
+  registerMountainsGift(registerBoonEffect);
 };
 
 // Registers The Earth's Gift boon effect logic.
@@ -256,6 +258,36 @@ const registerMoonsGift = (registerBoonEffect: BoonEffectRegistrar) => {
       cardId: selectedCardId,
       toPlayerId: playerId,
       to: { location: 'playerDeck' },
+    });
+  });
+};
+
+// Registers The Mountain's Gift boon effect logic.
+const registerMountainsGift = (registerBoonEffect: BoonEffectRegistrar) => {
+  registerBoonEffect('the-mountains-gift', async ({
+    playerId,
+    runGameActionDelegate,
+    findCards,
+  }) => {
+    console.info(`[the-mountains-gift boon] resolving for player ${playerId}`);
+
+    const silverCards = findCards([
+      { location: 'basicSupply' },
+      { cardKeys: 'silver' },
+    ]);
+
+    if (silverCards.length < 1) {
+      console.info('[the-mountains-gift boon] no silver cards in supply');
+      return;
+    }
+
+    const silverCardId = silverCards.slice(-1)[0].id;
+
+    console.debug(`[the-mountains-gift boon] gaining silver ${silverCardId}`);
+    await runGameActionDelegate('gainCard', {
+      playerId: playerId,
+      cardId: silverCardId,
+      to: { location: 'playerDiscard' },
     });
   });
 };
