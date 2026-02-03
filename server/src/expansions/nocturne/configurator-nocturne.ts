@@ -4,6 +4,7 @@ import { uniqueByProp } from '../../core/match-configurator.ts';
 import { registerNocturneBoonEffects } from './boon-effects-nocturne.ts';
 import { configureWillOWisp } from './configure-will-o-wisp.ts';
 import { ComputedMatchConfiguration } from 'shared/shared-types.ts';
+import { compareCardCosts } from 'shared/compare-card-cost.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { createCard } from '../../utils/create-card.ts';
 import { configureGhost } from './configure-ghost.ts';
@@ -31,7 +32,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
       console.info('[nocturne configurator] removing Ghost pile because Cemetery is absent');
       args.config.nonSupply = args.config.nonSupply.filter(supply => supply.name !== 'ghost');
     }
-    
+
     // Fate cards determine whether boons are active for this match.
     const fateCards = kingdomCards.filter(card => card.type?.includes('FATE'));
 
@@ -79,48 +80,199 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   const hasCemetery = config.kingdomSupply.some(
     supply => supply.cards.some(card => getCardPileKey(card) === 'cemetery')
   );
-  if (!hasCemetery) {
+  if (hasCemetery) {
+    console.info('[nocturne configurator] setting up cemetery heirloom onGameStart handler');
+
+    registrar('onGameStart', async (args) => {
+      console.info('[nocturne onGameStart] replacing starting Copper with Haunted Mirror');
+
+      for (const player of args.match.players) {
+        // Locate all Copper cards in the player deck.
+        const deck = args.cardSourceController.getSource('playerDeck', player.id);
+        const copperIndices: number[] = [];
+
+        for (let idx = 0; idx < deck.length; idx++) {
+          const card = args.cardLibrary.getCard(deck[idx]);
+          if (card.cardKey === 'copper') {
+            copperIndices.push(idx);
+          }
+        }
+
+        if (copperIndices.length < 1) {
+          console.warn(`[nocturne onGameStart] player ${player.id} has no Copper to replace`);
+          continue;
+        }
+
+        // Choose a random Copper to swap so the heirloom position is uniformly random.
+        const chosenIndex = copperIndices[Math.floor(Math.random() * copperIndices.length)];
+        const copperId = deck[chosenIndex];
+
+        await args.runGameActionDelegate('moveCard', {
+          cardId: copperId,
+          to: { location: 'basicSupply' }
+        });
+
+        // Create the Haunted Mirror and insert it in the same deck position.
+        const hauntedMirror = createCard('haunted-mirror', { owner: player.id, partOfSupply: false });
+        hauntedMirror.facing = 'back';
+        args.cardLibrary.addCard(hauntedMirror);
+        deck.splice(chosenIndex, 0, hauntedMirror.id);
+
+        console.info(`[nocturne onGameStart] player ${player.id} replaced Copper with Haunted Mirror`);
+      }
+    });
+  }
+
+  // Register Changeling exchange rules when Changeling is in the kingdom supply.
+  const hasChangeling = config.kingdomSupply.some(
+    supply => supply.cards.some(card => getCardPileKey(card) === 'changeling')
+  );
+
+  if (!hasChangeling) {
     return;
   }
 
-  console.info('[nocturne configurator] setting up cemetery heirloom onGameStart handler');
+  console.info('[nocturne configurator] setting up changeling exchange onGameStart handler');
 
   registrar('onGameStart', async (args) => {
-    console.info('[nocturne onGameStart] replacing starting Copper with Haunted Mirror');
+    console.info('[nocturne onGameStart] registering changeling exchange reactions');
 
     for (const player of args.match.players) {
-      // Locate all Copper cards in the player deck.
-      const deck = args.cardSourceController.getSource('playerDeck', player.id);
-      const copperIndices: number[] = [];
+      // Listen for qualifying gains so the player can exchange for Changeling.
+      args.reactionManager.registerReactionTemplate({
+        id: `changeling:exchange:${player.id}`,
+        listeningFor: 'cardGained',
+        playerId: player.id,
+        once: false,
+        compulsory: false,
+        allowMultipleInstances: true,
+        system: true,
+        condition: async (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId !== player.id) {
+            return false;
+          }
 
-      for (let idx = 0; idx < deck.length; idx++) {
-        const card = args.cardLibrary.getCard(deck[idx]);
-        if (card.cardKey === 'copper') {
-          copperIndices.push(idx);
-        }
-      }
+          const gainedCard = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
 
-      if (copperIndices.length < 1) {
-        console.warn(`[nocturne onGameStart] player ${player.id} has no Copper to replace`);
-        continue;
-      }
+          if (!gainedCard.partOfSupply) {
+            console.debug('[changeling exchange condition] gained card is not part of supply');
+            return false;
+          }
 
-      // Choose a random Copper to swap so the heirloom position is uniformly random.
-      const chosenIndex = copperIndices[Math.floor(Math.random() * copperIndices.length)];
-      const copperId = deck[chosenIndex];
+          // Only allow exchanging when the gained card has a supply pile in the match.
+          const pileKey = getCardPileKey(gainedCard);
+          // Check match configuration to ensure the pile exists, regardless of where it was gained from.
+          const inBasicSupply = conditionArgs.match.config.basicSupply.some(supply =>
+            supply.cards.some(card => getCardPileKey(card) === pileKey)
+          );
+          const inKingdomSupply = conditionArgs.match.config.kingdomSupply.some(supply =>
+            supply.cards.some(card => getCardPileKey(card) === pileKey)
+          );
 
-      await args.runGameActionDelegate('moveCard', {
-        cardId: copperId,
-        to: { location: 'basicSupply' }
+          if (!inBasicSupply && !inKingdomSupply) {
+            console.debug('[changeling exchange condition] gained card has no supply pile in match');
+            return false;
+          }
+
+          // Changeling exchange only applies to comparable treasure-cost cards costing at least $3.
+          const { cost } = conditionArgs.cardPriceController.applyRules(gainedCard, {
+            playerId: player.id,
+          });
+
+          const costComparison = compareCardCosts(cost, {treasure: 3});
+          if (costComparison < 0 || (cost.treasure ?? 0) < 3) {
+            console.debug('[changeling exchange condition] gained card costs less than $3');
+            return false;
+          }
+
+          // Ensure there is at least one Changeling in the supply pile.
+          const changelingCards = conditionArgs.findCards([
+            { location: 'kingdomSupply' },
+            { cardKeys: 'changeling' },
+          ]);
+
+          if (!changelingCards.length) {
+            console.debug('[changeling exchange condition] no changelings in supply');
+            return false;
+          }
+
+          console.debug(`[changeling exchange condition] ${gainedCard} eligible for exchange`);
+          return changelingCards.length > 0;
+        },
+        triggeredEffectFn: async (triggeredArgs) => {
+          const gainedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
+          console.info(`[changeling exchange] prompting exchange for ${gainedCard}`);
+
+          // Offer the exchange decision to the gaining player.
+          const decision = await triggeredArgs.runGameActionDelegate('userPrompt', {
+            playerId: player.id,
+            prompt: `Exchange ${gainedCard.cardName} for Changeling?`,
+            actionButtons: [
+              { label: 'CANCEL', action: 1 },
+              { label: 'EXCHANGE', action: 2 },
+            ],
+          }) as { action: number };
+
+          if (decision.action === 1) {
+            console.debug('[changeling exchange] player declined exchange');
+            return;
+          }
+
+          // Confirm the gained card still exists in a source before moving it.
+          try {
+            triggeredArgs.cardSourceController.findCardSource(gainedCard.id);
+          }
+          catch (error) {
+            console.warn('[changeling exchange] gained card source not found, skipping exchange');
+            return;
+          }
+
+          const pileKey = getCardPileKey(gainedCard);
+          // Resolve the pile location from the match configuration for the return.
+          const inBasicSupply = triggeredArgs.match.config.basicSupply.some(supply =>
+            supply.cards.some(card => getCardPileKey(card) === pileKey)
+          );
+          const inKingdomSupply = triggeredArgs.match.config.kingdomSupply.some(supply =>
+            supply.cards.some(card => getCardPileKey(card) === pileKey)
+          );
+
+          if (!inBasicSupply && !inKingdomSupply) {
+            console.warn('[changeling exchange] gained card has no supply pile in match, skipping exchange');
+            return;
+          }
+
+          // Prefer basic supply if both are present (should not happen in normal setups).
+          const returnLocation = inBasicSupply ? 'basicSupply' : 'kingdomSupply';
+
+          // Return the gained card to its original supply pile.
+          console.debug(`[changeling exchange] returning ${gainedCard} to supply`);
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            cardId: gainedCard.id,
+            to: { location: returnLocation },
+          });
+
+          // Move the top Changeling to the player's discard (exchange is not a gain).
+          const changelingCards = triggeredArgs.findCards([
+            { location: 'kingdomSupply' },
+            { cardKeys: 'changeling' },
+          ]);
+
+          if (!changelingCards.length) {
+            console.warn('[changeling exchange] no changelings available to exchange');
+            return;
+          }
+
+          const changelingCard = changelingCards.slice(-1)[0];
+          console.debug(`[changeling exchange] moving ${changelingCard} to discard`);
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            cardId: changelingCard.id,
+            toPlayerId: player.id,
+            to: { location: 'playerDiscard' },
+          });
+
+          console.info(`[changeling exchange] exchanged ${gainedCard} for ${changelingCard}`);
+        },
       });
-
-      // Create the Haunted Mirror and insert it in the same deck position.
-      const hauntedMirror = createCard('haunted-mirror', { owner: player.id, partOfSupply: false });
-      hauntedMirror.facing = 'back';
-      args.cardLibrary.addCard(hauntedMirror);
-      deck.splice(chosenIndex, 0, hauntedMirror.id);
-
-      console.info(`[nocturne onGameStart] player ${player.id} replaced Copper with Haunted Mirror`);
     }
   });
 };

@@ -151,6 +151,15 @@ export class CardInteractivityController {
         }
       }
     }
+    else if (turnPhase === 'night') {
+      // Allow playing any Night cards during the Night phase.
+      for (const card of hand) {
+        if (card.type.includes('NIGHT')) {
+          selectableCards.push(card.id);
+        }
+      }
+      console.debug(`[card interactivity] night phase selectable count ${selectableCards.length}`);
+    }
     
     match.selectableCards = match.players.reduce((prev, { id }) => {
       prev[id] = id === currentPlayer.id ? selectableCards : [];
@@ -283,6 +292,23 @@ export class CardInteractivityController {
     }
     else if (phase === 'action') {
       await this.runGameDelegate('playCard', { playerId, cardId });
+    }
+    else if (phase === 'night') {
+      // Night phase allows playing Night cards from hand without action cost.
+      const hand = this._cardSourceController.getSource('playerHand', playerId);
+      if (hand.includes(cardId)) {
+        const card = this._cardLibrary.getCard(cardId);
+        if (card.type.includes('NIGHT')) {
+          await this.runGameDelegate('playCard', { playerId, cardId });
+          console.debug(`[card interactivity] played night card ${card}`);
+        }
+        else {
+          console.debug(`[card interactivity] tapped non-night card ${card} during night phase`);
+        }
+      }
+      else {
+        console.debug(`[card interactivity] tapped card ${cardId} not in hand during night phase`);
+      }
     }
     
     await this.runGameDelegate('checkForRemainingPlayerActions');

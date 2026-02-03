@@ -271,6 +271,18 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         await this.runGameActionDelegate('nextPhase');
         return;
       }
+
+      if (turnPhase === 'night') {
+        // Computer players play one Night card per Night phase, then advance.
+        const nightCardId = selectable.find(id => this.cardLibrary.getCard(id).type.includes('NIGHT'));
+        console.debug(`[computer turn] night phase selectable night card ${nightCardId ?? 'none'}`);
+        if (nightCardId !== undefined) {
+          await this.runGameActionDelegate('playCard', {playerId: currentPlayer.id, cardId: nightCardId});
+        }
+        this._computerTurnInProgress = false;
+        await this.runGameActionDelegate('nextPhase');
+        return;
+      }
     } finally {
       this._computerTurnInProgress = false;
     }
@@ -1358,6 +1370,19 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         await this.nextPhase();
         return;
       }
+    }
+
+    if (turnPhase === 'night') {
+      // Skip Night phase automatically if the player has no Night cards to play.
+      const hasNightCards = this._findCards({location: 'playerHand', playerId: currentPlayer.id})
+        .some(cardId => cardId.type.includes('NIGHT'));
+
+      if (!hasNightCards) {
+        console.debug('[checkForRemainingPlayerActions action] no night cards, skipping to next phase');
+        await this.nextPhase();
+        return;
+      }
+      console.debug('[checkForRemainingPlayerActions action] night cards available, waiting for play');
     }
 
     if (turnPhase === 'cleanup') {

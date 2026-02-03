@@ -32,6 +32,16 @@
     "victoryPoints": 2,
     "abilityText": "2VP\nWhen you gain this, trash up to 4 cards from your hand.\nHeirloom: Haunted Mirror"
   },
+  "changeling": {
+    "cardName": "Changeling",
+    "cost": {
+      "treasure": 3
+    },
+    "type": [
+      "NIGHT"
+    ],
+    "abilityText": "Trash this. Gain a copy of a card you have in play.\nWhen you gain a card costing $3 or more, you may exchange it for a Changeling."
+  },
   "ghost": {
     "cardName": "Ghost",
     "cost": {

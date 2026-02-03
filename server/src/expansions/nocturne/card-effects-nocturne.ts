@@ -1,6 +1,8 @@
 import { CardExpansionModule } from '../../types.ts';
-import { CardId } from 'shared/shared-types.ts';
+import { CardId } from 'shared/shared-types';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
+import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
+import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 
 // Nocturne card effects module for non-supply cards and other mechanics.
 const expansion: CardExpansionModule = {
@@ -132,6 +134,80 @@ const expansion: CardExpansionModule = {
         }
       },
     }),
+  },
+  'changeling': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.info(`[changeling effect] resolving for player ${cardEffectArgs.playerId}`);
+
+      // Changeling trashes itself before gaining a copy.
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: cardEffectArgs.cardId,
+      });
+      console.debug('[changeling effect] trashed changeling');
+
+      // Gather all cards this player has in play, including active durations.
+      const cardsInPlay = getCardsInPlay(cardEffectArgs.findCards)
+        .filter(card => cardEffectArgs.match.stats.playedCards[card.id]?.playerId === cardEffectArgs.playerId);
+
+      if (!cardsInPlay.length) {
+        console.debug('[changeling effect] no cards in play to copy');
+        return;
+      }
+      console.debug(`[changeling effect] ${cardsInPlay.length} cards in play available to copy`);
+
+      // Prompt to select a card in play to copy.
+      const selectionResult = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Choose a card in play to gain a copy of',
+        content: {
+          type: 'select',
+          cardIds: cardsInPlay.map(card => card.id),
+          selectCount: 1,
+        }
+      }) as { result: CardId[] };
+
+      const selectedCardId = selectionResult.result[0];
+      if (!selectedCardId) {
+        console.debug('[changeling effect] no card selected to copy');
+        return;
+      }
+
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+      const pileKey = getCardPileKey(selectedCard);
+      console.debug(`[changeling effect] selected ${selectedCard} (pile ${pileKey})`);
+
+      // Determine which supply pile matches the selected card's pile key.
+      const basicPileCards = cardEffectArgs.findCards([
+        { location: 'basicSupply' },
+        { kingdom: pileKey },
+      ]);
+      const kingdomPileCards = cardEffectArgs.findCards([
+        { location: 'kingdomSupply' },
+        { kingdom: pileKey },
+      ]);
+
+      const pileCards = basicPileCards.length ? basicPileCards : kingdomPileCards;
+      if (!pileCards.length) {
+        console.debug(`[changeling effect] no supply pile found for ${selectedCard}`);
+        return;
+      }
+      console.debug(`[changeling effect] found ${pileCards.length} cards in pile ${pileKey}`);
+
+      // The top card must match the selected card's name for split piles.
+      const topCard = pileCards.slice(-1)[0];
+      if (!topCard || topCard.cardKey !== selectedCard.cardKey) {
+        console.debug(`[changeling effect] top of pile does not match ${selectedCard}`);
+        return;
+      }
+
+      console.debug(`[changeling effect] gaining a copy of ${selectedCard}`);
+      await cardEffectArgs.runGameActionDelegate('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: topCard.id,
+        to: { location: 'playerDiscard' },
+      });
+    },
   },
   'ghost': {
     registerEffects: () => async (cardEffectArgs) => {
