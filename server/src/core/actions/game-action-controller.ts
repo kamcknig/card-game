@@ -1307,7 +1307,8 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       await this.moveCard({
         cardId: cardId,
         toPlayerId: args.playerId,
-        to: {location: 'set-aside'}
+        to: {location: 'set-aside'},
+        facing: 'front',
       });
     }
 

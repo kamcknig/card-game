@@ -159,19 +159,18 @@ const expansion: CardExpansionModule = {
         await cardEffectArgs.runGameActionDelegate('revealCard', {
           playerId: cardEffectArgs.playerId,
           cardId: revealedCardId,
-        });
-
-        // Move the revealed card to set-aside to avoid shuffling it back.
-        await cardEffectArgs.runGameActionDelegate('moveCard', {
-          cardId: revealedCardId,
-          toPlayerId: cardEffectArgs.playerId,
-          to: { location: 'set-aside' },
-          facing: 'front',
+          moveToSetAside: true,
         });
 
         if (revealedCard.type.includes('ACTION')) {
           console.info(`[ghost effect] set aside Action ${revealedCard}`);
           actionCardId = revealedCardId;
+          // Keep the action in play/active duration until it is played next turn.
+          await cardEffectArgs.runGameActionDelegate('moveCard', {
+            cardId: revealedCardId,
+            toPlayerId: cardEffectArgs.playerId,
+            to: { location: 'activeDuration' },
+          });
           break;
         }
 
