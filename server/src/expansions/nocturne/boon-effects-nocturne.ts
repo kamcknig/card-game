@@ -1,5 +1,5 @@
 import { BoonEffectRegistrar } from '../../types.ts';
-import { CardId, PlayerId } from 'shared/shared-types.ts';
+import { CardId } from 'shared/shared-types';
 
 // Registers all Nocturne boon effects for the current match.
 export const registerNocturneBoonEffects = (registerBoonEffect: BoonEffectRegistrar) => {
@@ -83,7 +83,6 @@ const registerFieldsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     runGameActionDelegate,
     match,
     reactionManager,
-    cardSourceController,
     cardId,
   }) => {
     console.info(`[the-fields-gift boon] resolving for player ${playerId}`);
@@ -100,20 +99,11 @@ const registerFieldsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     }
 
     // Move the boon into the player's set-aside zone until cleanup.
-    let setAsideSource: CardId[] | undefined;
-    try {
-      setAsideSource = cardSourceController.getSource('set-aside', playerId);
-    }
-    catch (error) {
-      console.warn('[the-fields-gift boon] could not access set-aside zone');
-      console.error(error);
-      return;
-    }
-
-    if (!setAsideSource.includes(boon.id)) {
-      setAsideSource.push(boon.id);
-      console.debug(`[the-fields-gift boon] set aside ${boon}`);
-    }
+    await runGameActionDelegate('moveCardLike', {
+      cardLikeId: boon.id,
+      toPlayerId: playerId,
+      to: { location: 'set-aside' },
+    });
 
     // Register cleanup to return the boon to the discard pile at end of turn.
     reactionManager.registerSystemTemplate(boon, 'endTurn', {
@@ -121,18 +111,12 @@ const registerFieldsGift = (registerBoonEffect: BoonEffectRegistrar) => {
       once: true,
       compulsory: true,
       allowMultipleInstances: true,
-      triggeredEffectFn: async ({ match: triggerMatch, cardSourceController: triggerCardSource }) => {
-        // Remove the boon from set-aside.
-        const cleanupSetAside = triggerCardSource.getSource('set-aside', playerId);
-        const boonIndex = cleanupSetAside.indexOf(boon.id);
-        if (boonIndex !== -1) {
-          cleanupSetAside.splice(boonIndex, 1);
-        }
-
-        // Return the boon to the boon discard pile if not already present.
-        if (!triggerMatch.boons.discard.includes(boon.id)) {
-          triggerMatch.boons.discard.push(boon.id);
-        }
+      triggeredEffectFn: async ({ runGameActionDelegate: runTriggerAction }) => {
+        // Return the boon to the boon discard pile at cleanup.
+        await runTriggerAction('moveCardLike', {
+          cardLikeId: boon.id,
+          to: { location: 'boonDiscard' },
+        });
 
         console.debug(`[the-fields-gift boon] returned ${boon} to boon discard`);
       },

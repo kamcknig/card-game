@@ -195,6 +195,12 @@ export interface BaseGameActionDefinitionMap {
         // Optional facing update applied when the card moves.
         facing?: CardFacing;
     }) => Promise<{ location: CardLocation; playerId?: PlayerId; } | undefined>;
+    // Moves a card-like (boon/event/landmark) to a supported location.
+    moveCardLike: (args: {
+        toPlayerId?: PlayerId,
+        cardLikeId: CardLikeId,
+        to: CardLocationSpec
+    }) => Promise<{ location: CardLocation; playerId?: PlayerId; } | undefined>;
     // Sets the current turn phase without advancing the turn counter.
     setTurnPhase: (args: {
         phase: TurnPhase;

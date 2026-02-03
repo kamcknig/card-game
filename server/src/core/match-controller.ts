@@ -836,13 +836,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
     for (const player of this._match.players) {
       const setAsideCardIds = this._cardSourceController.getSource('set-aside', player.id)
-
-      for (const cardId of setAsideCardIds) {
+      // Iterate over a snapshot since move actions mutate the source array.
+      for (const cardId of [...setAsideCardIds]) {
         await this.runGameAction('moveCard', {
           toPlayerId: player.id,
           cardId,
           to: { location: 'playerDeck' },
-        })
+        });
       }
     }
 

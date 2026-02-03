@@ -428,7 +428,26 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   }
 
   async moveCard(args: { toPlayerId?: PlayerId, cardId: CardId | Card, to: CardLocationSpec, facing?: CardFacing }) {
-    const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
+    // Ensure we are only moving actual cards with moveCard.
+    let card: Card;
+    if (args.cardId instanceof Card) {
+      card = args.cardId;
+    }
+    else if (typeof args.cardId === 'number') {
+      try {
+        card = this.cardLibrary.getCard(args.cardId);
+      }
+      catch (error) {
+        const cardLike = this.findCardLike(args.cardId);
+        if (cardLike) {
+          throw new Error(`[moveCard action] ${cardLike} is a card-like; use moveCardLike instead`);
+        }
+        throw error;
+      }
+    }
+    else {
+      throw new Error('[moveCard action] invalid card argument');
+    }
     const cardId = card.id;
 
     if (Array.isArray(args.to.location)) {
@@ -493,6 +512,115 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     console.debug(`[moveCard action] moved ${card} from ${oldSource?.sourceKey} to ${args.to.location}`);
 
     return oldSource ? {location: oldSource?.sourceKey!, playerId: oldSource?.playerId} : undefined;
+  }
+
+  // Moves a card-like (boon/event/landmark) between supported locations.
+  async moveCardLike(args: { toPlayerId?: PlayerId; cardLikeId: CardLikeId; to: CardLocationSpec }) {
+    if (typeof args.cardLikeId !== 'number') {
+      throw new Error('[moveCardLike action] invalid cardLikeId');
+    }
+
+    // Prevent card IDs from being moved through the card-like path.
+    try {
+      const card = this.cardLibrary.getCard(args.cardLikeId);
+      throw new Error(`[moveCardLike action] ${card} is a card; use moveCard instead`);
+    }
+    catch (error) {
+      // Ignore missing card errors; those indicate a card-like ID.
+      if (!(error instanceof Error) || !error.message.includes('unable to locate card')) {
+        throw error;
+      }
+    }
+
+    const cardLike = this.findCardLike(args.cardLikeId);
+    if (!cardLike) {
+      throw new Error(`[moveCardLike action] could not find card-like ${args.cardLikeId}`);
+    }
+
+    if (Array.isArray(args.to.location)) {
+      throw new Error('[moveCardLike action] cannot move card-like to multiple locations');
+    }
+
+    let previousLocation: { location: CardLocation; playerId?: PlayerId; } | undefined;
+
+    // Remove from any existing card source location (set-aside only).
+    try {
+      const existingSource = this._cardSourceController.findCardSource(cardLike.id);
+      existingSource.source.splice(existingSource.index, 1);
+      previousLocation = { location: existingSource.sourceKey, playerId: existingSource.playerId };
+    }
+    catch (error) {
+      // No existing card-source location found; this is expected for boons in deck/discard.
+    }
+
+    // Remove from boon deck/discard piles if present.
+    const boonDeck = this.match.boons?.deck;
+    const boonDiscard = this.match.boons?.discard;
+    const deckIndex = boonDeck ? boonDeck.indexOf(cardLike.id) : -1;
+    if (deckIndex !== -1 && boonDeck) {
+      boonDeck.splice(deckIndex, 1);
+      previousLocation ??= { location: 'boonDeck' };
+    }
+    const discardIndex = boonDiscard ? boonDiscard.indexOf(cardLike.id) : -1;
+    if (discardIndex !== -1 && boonDiscard) {
+      boonDiscard.splice(discardIndex, 1);
+      previousLocation ??= { location: 'boonDiscard' };
+    }
+
+    switch (args.to.location) {
+      case 'set-aside': {
+        if (args.toPlayerId === undefined) {
+          throw new Error('[moveCardLike action] set-aside requires a player id');
+        }
+        const setAside = this._cardSourceController.getSource('set-aside', args.toPlayerId);
+        if (!setAside.includes(cardLike.id)) {
+          setAside.push(cardLike.id);
+        }
+        console.debug(`[moveCardLike action] set aside ${cardLike} for player ${args.toPlayerId}`);
+        break;
+      }
+      case 'boonDiscard': {
+        const isBoon = this.match.boons?.cards?.some(card => card.id === cardLike.id);
+        if (!isBoon) {
+          throw new Error(`[moveCardLike action] ${cardLike} is not a boon; cannot move to boonDiscard`);
+        }
+        if (!this.match.boons?.discard) {
+          throw new Error('[moveCardLike action] boon discard pile is not initialized');
+        }
+        if (!this.match.boons.discard.includes(cardLike.id)) {
+          this.match.boons.discard.push(cardLike.id);
+        }
+        console.debug(`[moveCardLike action] moved ${cardLike} to boon discard`);
+        break;
+      }
+      case 'boonDeck': {
+        const isBoon = this.match.boons?.cards?.some(card => card.id === cardLike.id);
+        if (!isBoon) {
+          throw new Error(`[moveCardLike action] ${cardLike} is not a boon; cannot move to boonDeck`);
+        }
+        if (!this.match.boons?.deck) {
+          throw new Error('[moveCardLike action] boon deck is not initialized');
+        }
+        if (!this.match.boons.deck.includes(cardLike.id)) {
+          this.match.boons.deck.push(cardLike.id);
+        }
+        console.debug(`[moveCardLike action] moved ${cardLike} to boon deck`);
+        break;
+      }
+      default:
+        throw new Error(`[moveCardLike action] unsupported location '${args.to.location}'`);
+    }
+
+    return previousLocation;
+  }
+
+  // Finds a card-like instance by id in the current match.
+  private findCardLike(cardLikeId: CardLikeId) {
+    const boon = this.match.boons?.cards?.find(card => card.id === cardLikeId);
+    if (boon) return boon;
+    const event = this.match.events?.find(card => card.id === cardLikeId);
+    if (event) return event;
+    return this.match.landmarks?.find(card => card.id === cardLikeId);
   }
 
   // Sets default facing for common locations; set-aside is left untouched by default.
