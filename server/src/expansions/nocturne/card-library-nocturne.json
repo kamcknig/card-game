@@ -21,6 +21,42 @@
     ],
     "abilityText": "+1 Card\n+2 Actions\nWhen you gain this, take a Boon. Receive it now or at the start of your next turn."
   },
+  "cemetery": {
+    "cardName": "Cemetery",
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "VICTORY"
+    ],
+    "victoryPoints": 2,
+    "abilityText": "2VP\nWhen you gain this, trash up to 4 cards from your hand.\nHeirloom: Haunted Mirror"
+  },
+  "ghost": {
+    "cardName": "Ghost",
+    "cost": {
+      "treasure": 4
+    },
+    "kingdomSelectable": false,
+    "type": [
+      "NIGHT",
+      "DURATION",
+      "SPIRIT"
+    ],
+    "abilityText": "Reveal cards from your deck until you reveal an Action card. Set it aside and discard the rest. At the start of your next turn, play it twice."
+  },
+  "haunted-mirror": {
+    "cardName": "Haunted Mirror",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": [
+      "TREASURE",
+      "HEIRLOOM"
+    ],
+    "abilityText": "+$1\nWhen you trash this, you may discard an Action card, to gain a Ghost."
+  },
   "the-earths-gift": {
     "cardName": "The Earth's Gift",
     "cost": {
