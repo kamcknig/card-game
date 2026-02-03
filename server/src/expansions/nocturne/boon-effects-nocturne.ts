@@ -11,6 +11,8 @@ export const registerNocturneBoonEffects = (registerBoonEffect: BoonEffectRegist
   registerFlamesGift(registerBoonEffect);
   // Register The Forest's Gift boon effect.
   registerForestsGift(registerBoonEffect);
+  // Register The Moon's Gift boon effect.
+  registerMoonsGift(registerBoonEffect);
 };
 
 // Registers The Earth's Gift boon effect logic.
@@ -212,6 +214,48 @@ const registerForestsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 
         console.debug(`[the-forests-gift boon] returned ${boon} to boon discard`);
       },
+    });
+  });
+};
+
+// Registers The Moon's Gift boon effect logic.
+const registerMoonsGift = (registerBoonEffect: BoonEffectRegistrar) => {
+  registerBoonEffect('the-moons-gift', async ({
+    playerId,
+    runGameActionDelegate,
+    findCards,
+  }) => {
+    console.info(`[the-moons-gift boon] resolving for player ${playerId}`);
+
+    const discardCards = findCards({ location: 'playerDiscard', playerId });
+    if (discardCards.length < 1) {
+      console.info('[the-moons-gift boon] no cards in discard, skipping');
+      return;
+    }
+
+    const discardIds = discardCards.map(card => card.id);
+    const selectionResult = await runGameActionDelegate('userPrompt', {
+      prompt: 'You may put a card from your discard onto your deck',
+      playerId: playerId,
+      actionButtons: [{ label: 'DONE', action: 1 }],
+      content: {
+        type: 'select',
+        cardIds: discardIds,
+        selectCount: { kind: 'upTo', count: 1 },
+      },
+    }) as { action: number; result?: CardId[] };
+
+    const selectedCardId = selectionResult?.result?.[0];
+    if (!selectedCardId) {
+      console.debug('[the-moons-gift boon] player declined to topdeck a card');
+      return;
+    }
+
+    console.debug(`[the-moons-gift boon] topdecking card ${selectedCardId}`);
+    await runGameActionDelegate('moveCard', {
+      cardId: selectedCardId,
+      toPlayerId: playerId,
+      to: { location: 'playerDeck' },
     });
   });
 };
