@@ -1,6 +1,7 @@
 import { expansionLibrary } from '../expansion-library.ts';
 import { ExpansionConfiguratorFactory } from '../../types.ts';
 import { uniqueByProp } from '../../core/match-configurator.ts';
+import { registerNocturneBoonEffects } from './boon-effects-nocturne.ts';
 
 // Seeds boons when Fate cards are present in the selected kingdom.
 const configurator: ExpansionConfiguratorFactory = () => {
@@ -9,69 +10,8 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
   return async (args) => {
     if (!boonEffectsRegistered) {
-      // Register The Earth's Gift boon effect for the current match.
-      args.boonEffectRegistrar('the-earths-gift', async ({ playerId, runGameActionDelegate, cardLibrary, findCards }) => {
-        console.info(`[the-earths-gift boon] resolving for player ${playerId}`);
-
-        const treasuresInHand = findCards([
-          { location: 'playerHand', playerId },
-          { cardType: ['TREASURE'] },
-        ]);
-
-        if (treasuresInHand.length < 1) {
-          console.info('[the-earths-gift boon] no Treasures in hand, skipping discard');
-          return;
-        }
-
-        const discardedTreasureIds = await runGameActionDelegate('selectCard', {
-          prompt: 'Discard a Treasure to gain a card costing up to $4',
-          playerId: playerId,
-          count: 1,
-          optional: true,
-          restrict: [
-            { location: 'playerHand', playerId },
-            { cardType: ['TREASURE'] },
-          ],
-        });
-
-        const discardedTreasureId = discardedTreasureIds[0];
-        if (!discardedTreasureId) {
-          console.debug('[the-earths-gift boon] player declined to discard a Treasure');
-          return;
-        }
-
-        console.debug(`[the-earths-gift boon] discarding Treasure ${cardLibrary.getCard(discardedTreasureId)}`);
-        await runGameActionDelegate('moveCard', {
-          cardId: discardedTreasureId,
-          toPlayerId: playerId,
-          to: { location: 'playerDiscard' },
-        });
-
-        console.debug('[the-earths-gift boon] selecting card to gain costing up to $4');
-        const gainCardIds = await runGameActionDelegate('selectCard', {
-          prompt: 'Gain a card costing up to $4',
-          playerId: playerId,
-          count: 1,
-          restrict: [
-            { location: ['basicSupply', 'kingdomSupply'] },
-            { playerId, kind: 'upTo', amount: { treasure: 4 } },
-          ],
-        });
-
-        const gainCardId = gainCardIds[0];
-        if (!gainCardId) {
-          console.info('[the-earths-gift boon] no eligible cards to gain');
-          return;
-        }
-
-        console.debug(`[the-earths-gift boon] gaining card ${cardLibrary.getCard(gainCardId)}`);
-        await runGameActionDelegate('gainCard', {
-          playerId: playerId,
-          cardId: gainCardId,
-          to: { location: 'playerDiscard' },
-        });
-      });
-
+      // Register all Nocturne boon effects once per match.
+      registerNocturneBoonEffects(args.boonEffectRegistrar);
       boonEffectsRegistered = true;
     }
 

@@ -1063,6 +1063,22 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       console.debug(`[receiveBoon action] no effect registered for ${boon.cardKey}`);
     }
 
+    // Skip discarding if the boon was set aside by its effect.
+    let isSetAside = false;
+    try {
+      const setAsideSource = this._cardSourceController.getSource('set-aside', args.playerId);
+      isSetAside = setAsideSource.includes(boonId);
+    }
+    catch (error) {
+      console.warn(`[receiveBoon action] could not verify set-aside for boon ${boonId}`);
+      console.error(error);
+    }
+
+    if (isSetAside) {
+      console.debug(`[receiveBoon action] boon ${boon.cardKey} set aside until cleanup`);
+      return;
+    }
+
     this.match.boons.discard.push(boonId);
     console.debug(`[receiveBoon action] discarded ${boon}`);
   }
