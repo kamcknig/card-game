@@ -6,6 +6,7 @@ import { configureWillOWisp } from './configure-will-o-wisp.ts';
 import { ComputedMatchConfiguration } from 'shared/shared-types.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { createCard } from '../../utils/create-card.ts';
+import { configureGhost } from './configure-ghost.ts';
 
 // Seeds boons when Fate cards are present in the selected kingdom.
 const configurator: ExpansionConfiguratorFactory = () => {
@@ -19,8 +20,18 @@ const configurator: ExpansionConfiguratorFactory = () => {
       boonEffectsRegistered = true;
     }
 
-    // Gather all selected kingdom cards to detect Fate types.
+    // Gather all selected kingdom cards for boons and heirloom-linked piles.
     const kingdomCards = args.config.kingdomSupply.flatMap(supply => supply.cards);
+    const hasCemetery = kingdomCards.some(card => getCardPileKey(card) === 'cemetery');
+
+    if (hasCemetery) {
+      configureGhost(args);
+    }
+    else if (args.config.nonSupply?.some(supply => supply.name === 'ghost')) {
+      console.info('[nocturne configurator] removing Ghost pile because Cemetery is absent');
+      args.config.nonSupply = args.config.nonSupply.filter(supply => supply.name !== 'ghost');
+    }
+    
     // Fate cards determine whether boons are active for this match.
     const fateCards = kingdomCards.filter(card => card.type?.includes('FATE'));
 
