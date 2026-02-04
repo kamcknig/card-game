@@ -196,6 +196,9 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   const hasSecretCave = config.kingdomSupply.some(
     supply => supply.cards.some(card => getCardPileKey(card) === 'secret-cave')
   );
+  const hasShepherd = config.kingdomSupply.some(
+    supply => supply.cards.some(card => getCardPileKey(card) === 'shepherd')
+  );
   const hasNecromancer = config.kingdomSupply.some(
     supply => supply.cards.some(card => getCardPileKey(card) === 'necromancer')
   );
@@ -410,6 +413,49 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         deck.splice(chosenIndex, 0, magicLamp.id);
 
         console.info(`[nocturne onGameStart] player ${player.id} replaced Copper with Magic Lamp`);
+      }
+    });
+  }
+
+  if (hasShepherd) {
+    console.info('[nocturne configurator] setting up shepherd heirloom onGameStart handler');
+
+    registrar('onGameStart', async (args) => {
+      console.info('[nocturne onGameStart] replacing starting Copper with Pasture');
+
+      for (const player of args.match.players) {
+        // Locate all Copper cards in the player deck.
+        const deck = args.cardSourceController.getSource('playerDeck', player.id);
+        const copperIndices: number[] = [];
+
+        for (let idx = 0; idx < deck.length; idx++) {
+          const card = args.cardLibrary.getCard(deck[idx]);
+          if (card.cardKey === 'copper') {
+            copperIndices.push(idx);
+          }
+        }
+
+        if (copperIndices.length < 1) {
+          console.warn(`[nocturne onGameStart] player ${player.id} has no Copper to replace with Pasture`);
+          continue;
+        }
+
+        // Choose a random Copper to swap so the heirloom position is uniformly random.
+        const chosenIndex = copperIndices[Math.floor(Math.random() * copperIndices.length)];
+        const copperId = deck[chosenIndex];
+
+        await args.runGameActionDelegate('moveCard', {
+          cardId: copperId,
+          to: { location: 'basicSupply' }
+        });
+
+        // Create the Pasture and insert it in the same deck position.
+        const pasture = createCard('pasture', { owner: player.id, partOfSupply: false });
+        pasture.facing = 'back';
+        args.cardLibrary.addCard(pasture);
+        deck.splice(chosenIndex, 0, pasture.id);
+
+        console.info(`[nocturne onGameStart] player ${player.id} replaced Copper with Pasture`);
       }
     });
   }

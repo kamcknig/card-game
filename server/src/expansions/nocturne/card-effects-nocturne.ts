@@ -1024,6 +1024,55 @@ const expansion: CardExpansionModule = {
       }
     },
   },
+  'shepherd': {
+    registerEffects: () => async (cardEffectArgs) => {
+
+      // Apply the immediate +1 Action.
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+
+      const victoryCards = cardEffectArgs.findCards([
+        { location: 'playerHand', playerId: cardEffectArgs.playerId },
+        { cardType: ['VICTORY'] },
+      ]);
+
+      if (!victoryCards.length) {
+        console.debug('[shepherd effect] no Victory cards in hand to discard');
+        return;
+      }
+
+      // Prompt the player to discard any number of Victory cards.
+      const selectedIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Discard any number of Victory cards',
+        count: { kind: 'upTo', count: victoryCards.length },
+        optional: true,
+        restrict: victoryCards.map(card => card.id),
+      }) as CardId[];
+
+      if (!selectedIds.length) {
+        console.debug('[shepherd effect] player declined to discard Victory cards');
+        return;
+      }
+
+      console.debug(`[shepherd effect] revealing and discarding ${selectedIds.length} card(s)`);
+      for (const cardId of selectedIds) {
+        await cardEffectArgs.runGameActionDelegate('revealCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId,
+        });
+        await cardEffectArgs.runGameActionDelegate('discardCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId,
+        });
+      }
+
+      // Draw 2 cards per discarded Victory card.
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: selectedIds.length * 2,
+      });
+    },
+  },
   'secret-cave': {
     registerEffects: () => async (cardEffectArgs) => {
 
@@ -2191,6 +2240,19 @@ const expansion: CardExpansionModule = {
           to: { location: 'playerDiscard' },
         });
       }
+    },
+  },
+  'pasture': {
+    registerScoringFunction: () => ({ match, ownerId, ...args }) => {
+      // Pasture is worth 1VP per Estate the owner has.
+      const estates = args.findCards([{ owner: ownerId }, { cardKeys: 'estate' }]);
+      console.debug(`[pasture scoring] player ${getPlayerById(match, ownerId)} has ${estates.length} Estate(s)`);
+      return estates.length;
+    },
+    registerEffects: () => async (cardEffectArgs) => {
+
+      // Apply the immediate +$1.
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
     },
   },
   'wish': {

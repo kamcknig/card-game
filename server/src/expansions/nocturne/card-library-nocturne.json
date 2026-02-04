@@ -218,6 +218,16 @@
     ],
     "abilityText": "+1 Buy\n+$3\nReceive a Boon. If it doesn't give +$1, each other player may receive it."
   },
+  "shepherd": {
+    "cardName": "Shepherd",
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+1 Action\nDiscard any number of Victory cards, revealing them. +2 Cards per card discarded.\nHeirloom: Pasture"
+  },
   "secret-cave": {
     "cardName": "Secret Cave",
     "cost": {
@@ -341,6 +351,20 @@
       "HEIRLOOM"
     ],
     "abilityText": "+$3\nGain a Curse"
+  },
+  "pasture": {
+    "cardName": "Pasture",
+    "cost": {
+      "treasure": 2
+    },
+    "kingdomSelectable": false,
+    "type": [
+      "TREASURE",
+      "VICTORY",
+      "HEIRLOOM"
+    ],
+    "victoryPoints": 0,
+    "abilityText": "+$1\nWorth 1VP per Estate you have."
   },
   "goat": {
     "cardName": "Goat",
