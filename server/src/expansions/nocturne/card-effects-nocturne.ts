@@ -65,7 +65,6 @@ const promptUniqueActionFromHand = async (
 const expansion: CardExpansionModule = {
   'bard': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.info(`[bard effect] resolving for player ${cardEffectArgs.playerId}`);
 
       // Apply the immediate +$2.
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
@@ -146,7 +145,6 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      console.info(`[blessed-village effect] resolving for player ${cardEffectArgs.playerId}`);
 
       // Apply the immediate +1 Card and +2 Actions.
       await cardEffectArgs.runGameActionDelegate('drawCard', {
@@ -194,7 +192,6 @@ const expansion: CardExpansionModule = {
   },
   'changeling': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.info(`[changeling effect] resolving for player ${cardEffectArgs.playerId}`);
 
       // Changeling trashes itself before gaining a copy.
       await cardEffectArgs.runGameActionDelegate('trashCard', {
@@ -268,7 +265,6 @@ const expansion: CardExpansionModule = {
   },
   'cobbler': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.info(`[cobbler effect] resolving for player ${cardEffectArgs.playerId}`);
 
       const cobblerCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       const turnPlayed = cardEffectArgs.match.turnNumber;
@@ -324,7 +320,6 @@ const expansion: CardExpansionModule = {
   },
   'conclave': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.info(`[conclave effect] resolving for player ${cardEffectArgs.playerId}`);
 
       // Apply the immediate +$2.
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
@@ -354,7 +349,6 @@ const expansion: CardExpansionModule = {
   },
   'imp': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.info(`[imp effect] resolving for player ${cardEffectArgs.playerId}`);
 
       // Apply the immediate +2 Cards.
       await cardEffectArgs.runGameActionDelegate('drawCard', {
@@ -384,7 +378,6 @@ const expansion: CardExpansionModule = {
   },
   'crypt': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.info(`[crypt effect] resolving for player ${cardEffectArgs.playerId}`);
 
       // Determine eligible non-Duration Treasures in play for this player.
       const inPlayCards = getCardsInPlay(cardEffectArgs.findCards)
@@ -509,7 +502,6 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      console.info(`[cursed-village effect] resolving for player ${cardEffectArgs.playerId}`);
 
       // Apply the immediate +2 Actions.
       await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
@@ -553,7 +545,6 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      console.info(`[den-of-sin effect] resolving for player ${cardEffectArgs.playerId}`);
 
       const denOfSinCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       const turnPlayed = cardEffectArgs.match.turnNumber;
@@ -596,7 +587,6 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      console.info(`[ghost-town effect] resolving for player ${cardEffectArgs.playerId}`);
 
       const ghostTownCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       const turnPlayed = cardEffectArgs.match.turnNumber;
@@ -630,7 +620,6 @@ const expansion: CardExpansionModule = {
   },
   'devils-workshop': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.info(`[devils-workshop effect] resolving for player ${cardEffectArgs.playerId}`);
 
       // Count the cards this player has gained this turn.
       const gainedThisTurn = cardEffectArgs.match.stats.cardsGainedByTurn[cardEffectArgs.match.turnNumber] ?? [];
@@ -721,7 +710,6 @@ const expansion: CardExpansionModule = {
   },
   'druid': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.info(`[druid effect] resolving for player ${cardEffectArgs.playerId}`);
 
       // Apply the immediate +1 Buy.
       await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
@@ -761,7 +749,6 @@ const expansion: CardExpansionModule = {
   },
   'exorcist': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.info(`[exorcist effect] resolving for player ${cardEffectArgs.playerId}`);
 
       const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
       if (!hand.length) {
@@ -839,7 +826,6 @@ const expansion: CardExpansionModule = {
   },
   'fool': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.info(`[fool effect] resolving for player ${cardEffectArgs.playerId}`);
 
       // Check current Lost in the Woods ownership to decide whether to resolve Fool.
       const lostInTheWoods = cardEffectArgs.match.states?.cards?.find(state => state.cardKey === 'lost-in-the-woods');
@@ -988,7 +974,6 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      console.info(`[faithful-hound effect] resolving for player ${cardEffectArgs.playerId}`);
 
       // Apply the immediate +2 Cards.
       await cardEffectArgs.runGameActionDelegate('drawCard', {
@@ -999,7 +984,6 @@ const expansion: CardExpansionModule = {
   },
   'lucky-coin': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.info(`[lucky-coin effect] resolving for player ${cardEffectArgs.playerId}`);
 
       // Apply the immediate +$1.
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
@@ -1025,7 +1009,6 @@ const expansion: CardExpansionModule = {
   },
   'ghost': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.info(`[ghost effect] resolving for player ${cardEffectArgs.playerId}`);
 
       // Reveal cards until an Action card is found or the deck is exhausted.
       const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
@@ -1199,7 +1182,6 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      console.info(`[haunted-mirror effect] resolving for player ${cardEffectArgs.playerId}`);
 
       // Haunted Mirror is a $1 Treasure.
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
@@ -1207,9 +1189,6 @@ const expansion: CardExpansionModule = {
   },
   "will-o-wisp": {
     registerEffects: () => async (cardEffectArgs) => {
-      console.info(
-        `[will-o-wisp effect] resolving for player ${cardEffectArgs.playerId}`,
-      );
 
       // Apply the immediate +1 Card and +1 Action.
       await cardEffectArgs.runGameActionDelegate("drawCard", {

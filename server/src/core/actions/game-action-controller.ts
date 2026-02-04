@@ -222,6 +222,29 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     return registeredTriggerIds;
   }
 
+  // Executes an effect with consistent logging and error reporting.
+  private async runEffectWithLogging(args: {
+    source: string;
+    sourceType: string;
+    playerId: PlayerId;
+    effectFn: CardEffectFn;
+    context: CardEffectFunctionContext;
+  }): Promise<void> {
+    console.info(`[${args.sourceType} effect] start ${args.source} for player ${args.playerId}`);
+    console.debug(`[${args.sourceType} effect] context cardId ${args.context.cardId}`);
+    try {
+      await this.logManager.withIndent(async () => {
+        await args.effectFn(args.context);
+      });
+    }
+    catch (error) {
+      console.error(`[${args.sourceType} effect] error ${args.source} for player ${args.playerId}`);
+      console.error(error);
+      throw error;
+    }
+    console.info(`[${args.sourceType} effect] complete ${args.source} for player ${args.playerId}`);
+  }
+
   // Executes a single automatic action for the current computer player.
   private async runComputerTurnStep(): Promise<void> {
     if (this._computerTurnInProgress) return;
@@ -1168,28 +1191,33 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     if (effectFn) {
       console.debug(`[buyCardLike action] running effect for ${event}`);
 
-      await this.logManager.withIndent(async () => {
-        const context = {
-          cardSourceController: this._cardSourceController,
-          cardPriceController: this.cardPriceRuleController,
-          reactionManager: this.reactionManager,
-          runGameActionDelegate: this.runGameActionDelegate,
-          cardId: args.cardLikeId,
-          playerId: args.playerId,
-          match: this.match,
-          cardLibrary: this.cardLibrary,
-          reactionContext: {},
-          findCards: this._findCards
-        } as CardEffectFunctionContext;
+      const context = {
+        cardSourceController: this._cardSourceController,
+        cardPriceController: this.cardPriceRuleController,
+        reactionManager: this.reactionManager,
+        runGameActionDelegate: this.runGameActionDelegate,
+        cardId: args.cardLikeId,
+        playerId: args.playerId,
+        match: this.match,
+        cardLibrary: this.cardLibrary,
+        reactionContext: {},
+        findCards: this._findCards
+      } as CardEffectFunctionContext;
 
-        // Centralized duration registration with automatic cleanup on leave-play.
-        context.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
-          const triggerIds = this.registerDurationEffectInternal(durationCard, context, triggeredTemplate, options);
-          this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
-          return triggerIds;
-        };
+      // Centralized duration registration with automatic cleanup on leave-play.
+      context.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
+        const triggerIds = this.registerDurationEffectInternal(durationCard, context, triggeredTemplate, options);
+        this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
+        return triggerIds;
+      };
 
-        await effectFn(context);
+      // Run event effects with standardized logging.
+      await this.runEffectWithLogging({
+        source: event.toString(),
+        sourceType: 'event',
+        playerId: args.playerId,
+        effectFn,
+        context,
       });
     }
   }
@@ -1286,28 +1314,33 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       if (effectFn) {
         console.debug(`[receiveBoon action] running effect for ${boon} (${source})`);
 
-        await this.logManager.withIndent(async () => {
-          const effectContext = {
-            cardSourceController: this._cardSourceController,
-            cardPriceController: this.cardPriceRuleController,
-            reactionManager: this.reactionManager,
-            runGameActionDelegate: this.runGameActionDelegate,
-            cardId: boonId,
-            playerId: args.playerId,
-            match: this.match,
-            cardLibrary: this.cardLibrary,
-            reactionContext: {},
-            findCards: this._findCards
-          } as CardEffectFunctionContext;
+        const effectContext = {
+          cardSourceController: this._cardSourceController,
+          cardPriceController: this.cardPriceRuleController,
+          reactionManager: this.reactionManager,
+          runGameActionDelegate: this.runGameActionDelegate,
+          cardId: boonId,
+          playerId: args.playerId,
+          match: this.match,
+          cardLibrary: this.cardLibrary,
+          reactionContext: {},
+          findCards: this._findCards
+        } as CardEffectFunctionContext;
 
-          // Centralized duration registration with automatic cleanup on leave-play.
-          effectContext.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
-            const triggerIds = this.registerDurationEffectInternal(durationCard, effectContext, triggeredTemplate, options);
-            this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
-            return triggerIds;
-          };
+        // Centralized duration registration with automatic cleanup on leave-play.
+        effectContext.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
+          const triggerIds = this.registerDurationEffectInternal(durationCard, effectContext, triggeredTemplate, options);
+          this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
+          return triggerIds;
+        };
 
-          await effectFn(effectContext);
+        // Run boon effects with standardized logging.
+        await this.runEffectWithLogging({
+          source: boon.toString(),
+          sourceType: 'boon',
+          playerId: args.playerId,
+          effectFn,
+          context: effectContext,
         });
       }
       else {
@@ -1437,28 +1470,33 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     if (effectFn) {
       console.debug(`[receiveHex action] running effect for ${hex}`);
 
-      await this.logManager.withIndent(async () => {
-        const effectContext = {
-          cardSourceController: this._cardSourceController,
-          cardPriceController: this.cardPriceRuleController,
-          reactionManager: this.reactionManager,
-          runGameActionDelegate: this.runGameActionDelegate,
-          cardId: hexId,
-          playerId: args.playerId,
-          match: this.match,
-          cardLibrary: this.cardLibrary,
-          reactionContext: {},
-          findCards: this._findCards
-        } as CardEffectFunctionContext;
+      const effectContext = {
+        cardSourceController: this._cardSourceController,
+        cardPriceController: this.cardPriceRuleController,
+        reactionManager: this.reactionManager,
+        runGameActionDelegate: this.runGameActionDelegate,
+        cardId: hexId,
+        playerId: args.playerId,
+        match: this.match,
+        cardLibrary: this.cardLibrary,
+        reactionContext: {},
+        findCards: this._findCards
+      } as CardEffectFunctionContext;
 
-        // Centralized duration registration with automatic cleanup on leave-play.
-        effectContext.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
-          const triggerIds = this.registerDurationEffectInternal(durationCard, effectContext, triggeredTemplate, options);
-          this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
-          return triggerIds;
-        };
+      // Centralized duration registration with automatic cleanup on leave-play.
+      effectContext.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
+        const triggerIds = this.registerDurationEffectInternal(durationCard, effectContext, triggeredTemplate, options);
+        this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
+        return triggerIds;
+      };
 
-        await effectFn(effectContext);
+      // Run hex effects with standardized logging.
+      await this.runEffectWithLogging({
+        source: hex.toString(),
+        sourceType: 'hex',
+        playerId: args.playerId,
+        effectFn,
+        context: effectContext,
       });
     }
     else {
@@ -1531,28 +1569,33 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     }
 
     console.debug(`[gainState action] registering effects for ${state}`);
-    await this.logManager.withIndent(async () => {
-      const effectContext = {
-        cardSourceController: this._cardSourceController,
-        cardPriceController: this.cardPriceRuleController,
-        reactionManager: this.reactionManager,
-        runGameActionDelegate: this.runGameActionDelegate,
-        cardId: state.id,
-        playerId: args.playerId,
-        match: this.match,
-        cardLibrary: this.cardLibrary,
-        reactionContext: {},
-        findCards: this._findCards
-      } as CardEffectFunctionContext;
+    const effectContext = {
+      cardSourceController: this._cardSourceController,
+      cardPriceController: this.cardPriceRuleController,
+      reactionManager: this.reactionManager,
+      runGameActionDelegate: this.runGameActionDelegate,
+      cardId: state.id,
+      playerId: args.playerId,
+      match: this.match,
+      cardLibrary: this.cardLibrary,
+      reactionContext: {},
+      findCards: this._findCards
+    } as CardEffectFunctionContext;
 
-      // Centralized duration registration with automatic cleanup on leave-play.
-      effectContext.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
-        const triggerIds = this.registerDurationEffectInternal(durationCard, effectContext, triggeredTemplate, options);
-        this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
-        return triggerIds;
-      };
+    // Centralized duration registration with automatic cleanup on leave-play.
+    effectContext.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
+      const triggerIds = this.registerDurationEffectInternal(durationCard, effectContext, triggeredTemplate, options);
+      this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
+      return triggerIds;
+    };
 
-      await effectFn(effectContext);
+    // Run state effects with standardized logging.
+    await this.runEffectWithLogging({
+      source: state.toString(),
+      sourceType: 'state',
+      playerId: args.playerId,
+      effectFn,
+      context: effectContext,
     });
 
     return state.id;
@@ -2058,8 +2101,13 @@ export class GameActionController implements BaseGameActionDefinitionMap {
 
     let effectFn = this.cardEffectFunctionMap[card.cardKey];
     if (effectFn) {
-      await this.logManager.withIndent(async () => {
-        await effectFn(buildEffectContext());
+      // Run base card effects with standardized logging.
+      await this.runEffectWithLogging({
+        source: card.toString(),
+        sourceType: 'card',
+        playerId,
+        effectFn,
+        context: buildEffectContext(),
       });
     }
 
@@ -2067,8 +2115,13 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       const effects = this.customCardEffectHandlers[expansion];
       effectFn = effects[card.cardKey];
       if (effectFn) {
-        await this.logManager.withIndent(async () => {
-          await effectFn(buildEffectContext());
+        // Run expansion-registered card effects with standardized logging.
+        await this.runEffectWithLogging({
+          source: card.toString(),
+          sourceType: `card:${expansion}`,
+          playerId,
+          effectFn,
+          context: buildEffectContext(),
         });
       }
     }
