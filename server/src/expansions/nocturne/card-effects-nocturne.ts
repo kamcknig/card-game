@@ -689,7 +689,8 @@ const expansion: CardExpansionModule = {
         playerId: cardEffectArgs.playerId,
         prompt: 'Choose a boon to receive',
         content: {
-          type: 'select-card-likes',
+          type: 'select',
+          cardIds: [],
           cardLikeIds: setAsideBoons,
           selectCount: 1,
         },
@@ -856,7 +857,8 @@ const expansion: CardExpansionModule = {
             playerId: cardEffectArgs.playerId,
             prompt: 'Choose a Boon to receive',
             content: {
-              type: 'select-card-likes',
+              type: 'select',
+              cardIds: [],
               cardLikeIds: boonsToReceive,
               selectCount: 1,
             },

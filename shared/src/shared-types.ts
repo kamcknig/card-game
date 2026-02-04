@@ -245,10 +245,17 @@ export type UserPromptKinds =
     cancelText?: string;
     placeholder?: string;
   }
-  | { type: 'display-cards'; cardIds: CardId[]; }
-  | { type: 'display-card-likes'; cardLikeIds: CardLikeId[]; }
-  | { type: 'select'; cardIds: CardId[]; selectCount: CountSpec; selectableCardIds?: CardId[]; }
-  | { type: 'select-card-likes'; cardLikeIds: CardLikeId[]; selectCount: CountSpec; selectableCardLikeIds?: CardLikeId[]; }
+  // Display prompt can optionally include card-likes shown below cards.
+  | { type: 'display-cards'; cardIds: CardId[]; cardLikeIds?: CardLikeId[]; }
+  | {
+    type: 'select';
+    cardIds: CardId[];
+    selectCount: CountSpec;
+    selectableCardIds?: CardId[];
+    // Optional card-like entries to include in the selection prompt.
+    cardLikeIds?: CardLikeId[];
+    selectableCardLikeIds?: CardLikeId[];
+  }
   | { type: 'select-pile'; pileNames: CardKey[]; selectCount: CountSpec; optional?: boolean; };
 
 export type UserPromptActionArgs = {

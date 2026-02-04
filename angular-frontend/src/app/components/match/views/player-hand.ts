@@ -157,7 +157,8 @@ export class PlayerHandView extends Container {
       playerId: this.playerId,
       prompt: 'States',
       content: {
-        type: 'display-card-likes',
+        type: 'display-cards',
+        cardIds: [],
         cardLikeIds: this._currentStateIds,
       },
     }, this.playerId);

@@ -23,45 +23,49 @@ type SelectionView = Container & {
 };
 
 export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
-  const isCardLike = args.type === 'select-card-likes' || args.type === 'display-card-likes';
-  if (!isCardLike && args.type !== 'select' && args.type !== 'display-cards') {
+  if (args.type !== 'select' && args.type !== 'display-cards') {
     throw new Error('card selection modal requires card or card-like selection types');
   }
 
-  const displayOnly = args.type === 'display-cards' || args.type === 'display-card-likes';
+  const displayOnly = args.type === 'display-cards';
 
-  const cardLikeIds = isCardLike ? (args as { cardLikeIds: CardLikeId[] }).cardLikeIds : undefined;
-  const cardIds = isCardLike ? cardLikeIds : (args as { cardIds: CardId[] }).cardIds;
-  if (!cardIds) throw new Error('Cards cannot be empty');
+  // Support combined card and card-like lists in a single prompt.
+  const cardIds = args.cardIds ?? [];
+  const cardLikeIds = args.cardLikeIds ?? [];
+  if (!cardIds.length && !cardLikeIds.length) throw new Error('Cards cannot be empty');
 
   const selectableCardIds = args.type === 'select'
-    ? (args as { selectableCardIds?: CardId[] }).selectableCardIds ?? cardIds
-    : args.type === 'select-card-likes'
-    ? (args as { selectableCardLikeIds?: CardLikeId[] }).selectableCardLikeIds ?? cardIds
+    ? args.selectableCardIds ?? cardIds
+    : [];
+  const selectableCardLikeIds = args.type === 'select'
+    ? args.selectableCardLikeIds ?? cardLikeIds
     : [];
 
   let newCardToOldCardMap = new Map<NewCardId, CardId | CardLikeId>();
   let maxId = toNumber(Object.keys(cardStore.get()).sort().slice(-1)[0]);
 
   const cardCount = cardIds.length;
+  const cardLikeCount = cardLikeIds.length;
   const selectCount = 'selectCount' in args ? args.selectCount ?? 1 : 0;
   // Normalize the selection count for auto-finish logic.
   const resolvedCountSpec = resolveCountSpec(selectCount);
+  // Parent container hosts card and card-like rows.
+  const contentView = new Container();
 
   const validate = () => {
     let validated = displayOnly || validateCountSpec(selectCount, selectedCardStore.get().length);
 
-    cardList.emit('validationUpdated', validated);
+    contentView.emit('validationUpdated', validated);
 
     if (validated) {
-      cardList.emit('resultsUpdated', selectedCardStore.get().map(id => newCardToOldCardMap.get(id)));
+      contentView.emit('resultsUpdated', selectedCardStore.get().map(id => newCardToOldCardMap.get(id)));
 
       if (!displayOnly && resolvedCountSpec.kind === 'fixed' && resolvedCountSpec.count === 1) {
-        cardList.emit('finished');
+        contentView.emit('finished');
       }
       if (!displayOnly && resolvedCountSpec.kind === 'range' && resolvedCountSpec.min === 1 && resolvedCountSpec.max === 1) {
         // Auto-finish for a fixed range of 1.
-        cardList.emit('finished');
+        contentView.emit('finished');
       }
     }
     return validated;
@@ -107,50 +111,6 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
   cardList.elementsMargin = cardCount > 6 ? -CARD_WIDTH * .5 : STANDARD_GAP;
 
   for (const cardId of cardIds) {
-    if (isCardLike) {
-      const match = matchStore.get();
-      const cardLike = match?.boons?.cards?.find(card => card.id === cardId)
-        ?? match?.hexes?.cards?.find(card => card.id === cardId)
-        ?? match?.events?.find(card => card.id === cardId)
-        ?? match?.landmarks?.find(card => card.id === cardId)
-        ?? match?.states?.cards?.find(card => card.id === cardId);
-
-      if (!cardLike) {
-        console.warn(`[card-selection] missing card-like data for id ${cardId}`);
-        continue;
-      }
-
-      const displayId = ++maxId;
-      // Build a card-like sprite view for selection prompts.
-      const view = new Container() as SelectionView;
-      view.label = `card-like-${cardLike.cardKey}:${displayId}`;
-      view.eventMode = 'static';
-      const sprite = new Sprite({ label: 'cardLikeSprite' });
-      const texture = Assets.get(`${cardLike.cardKey}-full`);
-      if (texture) {
-        sprite.texture = texture;
-      }
-      else {
-        Assets.load(cardLike.fullImagePath).then(result => {
-          sprite.texture = result;
-        });
-      }
-      view.addChild(sprite);
-
-      view.selectionId = displayId;
-      view.detailImagePath = cardLike.detailImagePath;
-      newCardToOldCardMap.set(displayId, cardId);
-
-      const idx = (selectableCardIds as CardLikeId[]).indexOf(cardId as CardLikeId);
-      if (idx !== -1) {
-        (selectableCardIds as CardLikeId[])[idx] = displayId;
-        view.on('pointerdown', cardPointerDownListener);
-        view.on('removed', cardRemovedListener);
-      }
-      cardList.addChild(view);
-      continue;
-    }
-
     const baseCard = cardStore.get()[cardId as CardId];
     if (!baseCard) {
       console.warn(`[card-selection] missing card data for id ${cardId}`);
@@ -174,15 +134,75 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
     cardList.addChild(view);
   }
 
-  cardList.x = Math.floor(-cardList.width * .5);
+  // Build a separate row for card-like entries below the cards.
+  const cardLikeList = new List({ type: 'horizontal' });
+  cardLikeList.elementsMargin = cardLikeCount > 6 ? -CARD_WIDTH * .5 : STANDARD_GAP;
+
+  for (const cardLikeId of cardLikeIds) {
+    const match = matchStore.get();
+    const cardLike = match?.boons?.cards?.find(card => card.id === cardLikeId)
+      ?? match?.hexes?.cards?.find(card => card.id === cardLikeId)
+      ?? match?.events?.find(card => card.id === cardLikeId)
+      ?? match?.landmarks?.find(card => card.id === cardLikeId)
+      ?? match?.states?.cards?.find(card => card.id === cardLikeId);
+
+    if (!cardLike) {
+      console.warn(`[card-selection] missing card-like data for id ${cardLikeId}`);
+      continue;
+    }
+
+    const displayId = ++maxId;
+    // Build a card-like sprite view for selection prompts.
+    const view = new Container() as SelectionView;
+    view.label = `card-like-${cardLike.cardKey}:${displayId}`;
+    view.eventMode = 'static';
+    const sprite = new Sprite({ label: 'cardLikeSprite' });
+    const texture = Assets.get(`${cardLike.cardKey}-full`);
+    if (texture) {
+      sprite.texture = texture;
+    }
+    else {
+      Assets.load(cardLike.fullImagePath).then(result => {
+        sprite.texture = result;
+      });
+    }
+    view.addChild(sprite);
+
+    view.selectionId = displayId;
+    view.detailImagePath = cardLike.detailImagePath;
+    newCardToOldCardMap.set(displayId, cardLikeId);
+
+    const idx = selectableCardLikeIds.indexOf(cardLikeId);
+    if (idx !== -1) {
+      selectableCardLikeIds[idx] = displayId;
+      view.on('pointerdown', cardPointerDownListener);
+      view.on('removed', cardRemovedListener);
+    }
+    cardLikeList.addChild(view);
+  }
+
+  // Layout cards first, then card-likes beneath them.
+  let yOffset = 0;
+  if (cardList.children.length > 0) {
+    cardList.x = Math.floor(-cardList.width * .5);
+    cardList.y = yOffset;
+    contentView.addChild(cardList);
+    yOffset += cardList.height + STANDARD_GAP;
+  }
+
+  if (cardLikeList.children.length > 0) {
+    cardLikeList.x = Math.floor(-cardLikeList.width * .5);
+    cardLikeList.y = yOffset;
+    contentView.addChild(cardLikeList);
+  }
 
   if (!displayOnly) {
     setTimeout(() => {
       validate();
     }, 0);
 
-    clientSelectableCardsOverrideStore.set(selectableCardIds);
+    clientSelectableCardsOverrideStore.set([...selectableCardIds, ...selectableCardLikeIds]);
   }
 
-  return cardList
+  return contentView
 }
