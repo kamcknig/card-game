@@ -194,6 +194,19 @@
     ],
     "abilityText": "You may trash a Treasure other than Cursed Gold from your hand, for +4 Cards.\nHeirloom: Cursed Gold"
   },
+  "raider": {
+    "cardName": "Raider",
+    "cost": {
+      "treasure": 6
+    },
+    "type": [
+      "NIGHT",
+      "DURATION",
+      "ATTACK"
+    ],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "Each other player with 5 or more cards in hand discards a copy of a card you have in play (or reveals they can't).\nAt the start of your next turn, +$3."
+  },
   "pixie": {
     "cardName": "Pixie",
     "cost": {

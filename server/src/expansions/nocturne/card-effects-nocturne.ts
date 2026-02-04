@@ -878,6 +878,88 @@ const expansion: CardExpansionModule = {
       });
     },
   },
+  'raider': {
+    registerEffects: () => async (cardEffectArgs) => {
+
+      // Determine the card keys currently in play for the Raider's owner.
+      const inPlayCards = getCardsInPlay(cardEffectArgs.findCards)
+        .filter(card => cardEffectArgs.match.stats.playedCards[card.id]?.playerId === cardEffectArgs.playerId);
+      const inPlayKeys = new Set(inPlayCards.map(card => card.cardKey));
+
+      const targetPlayerIds = findOrderedTargets({
+        startingPlayerId: cardEffectArgs.playerId,
+        appliesTo: 'ALL_OTHER',
+        match: cardEffectArgs.match,
+      }).filter((id) => !isPlayerImmune(cardEffectArgs.reactionContext, id));
+
+      console.debug(`[raider effect] targeting ${targetPlayerIds.map(id => getPlayerById(cardEffectArgs.match, id))}`);
+
+      for (const targetPlayerId of targetPlayerIds) {
+        const hand = cardEffectArgs.findCards({ location: 'playerHand', playerId: targetPlayerId });
+
+        if (hand.length < 5) {
+          console.debug(`[raider effect] ${getPlayerById(cardEffectArgs.match, targetPlayerId)} has ${hand.length} cards, skipping`);
+          continue;
+        }
+
+        const eligibleIds = hand.filter(card => inPlayKeys.has(card.cardKey)).map(card => card.id);
+
+        if (!eligibleIds.length) {
+          console.debug(`[raider effect] ${getPlayerById(cardEffectArgs.match, targetPlayerId)} cannot discard, revealing hand`);
+          for (const card of hand) {
+            await cardEffectArgs.runGameActionDelegate('revealCard', {
+              playerId: targetPlayerId,
+              cardId: card.id,
+            });
+          }
+          continue;
+        }
+
+        let discardId = eligibleIds[0];
+        if (eligibleIds.length > 1) {
+          const selectedIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+            playerId: targetPlayerId,
+            prompt: 'Discard a copy of a card in play',
+            count: 1,
+            autoSelect: true,
+            restrict: eligibleIds,
+          }) as CardId[];
+          discardId = selectedIds[0];
+        }
+
+        if (!discardId) {
+          console.warn(`[raider effect] no card selected for ${getPlayerById(cardEffectArgs.match, targetPlayerId)}`);
+          continue;
+        }
+
+        console.debug(`[raider effect] ${getPlayerById(cardEffectArgs.match, targetPlayerId)} discarding ${cardEffectArgs.cardLibrary.getCard(discardId)}`);
+        await cardEffectArgs.runGameActionDelegate('discardCard', {
+          playerId: targetPlayerId,
+          cardId: discardId,
+        });
+      }
+
+      const raiderCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const turnPlayed = cardEffectArgs.match.turnNumber;
+
+      // Register the start-of-next-turn +$3.
+      cardEffectArgs.registerDurationEffect(raiderCard, {
+        id: `raider:${raiderCard.id}:startTurn`,
+        listeningFor: 'startTurn',
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId
+          && trigger.args.turnNumber !== turnPlayed,
+        triggeredEffectFn: async (triggeredArgs) => {
+          await triggeredArgs.runGameActionDelegate('gainTreasure', {
+            count: 3,
+          }, { loggingContext: { source: raiderCard.id } });
+        },
+      });
+    },
+  },
   'pixie': {
     registerEffects: () => async (cardEffectArgs) => {
 
