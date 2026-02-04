@@ -960,6 +960,70 @@ const expansion: CardExpansionModule = {
       });
     },
   },
+  'sacred-grove': {
+    registerEffects: () => async (cardEffectArgs) => {
+
+      // Apply the immediate +1 Buy and +$3.
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 3 });
+
+      // Receive a boon and determine whether it grants +$1.
+      const boonId = await cardEffectArgs.runGameActionDelegate('receiveBoon', {
+        playerId: cardEffectArgs.playerId,
+      });
+
+      if (!boonId) {
+        console.debug('[sacred-grove effect] no boon received');
+        return;
+      }
+
+      const boon = cardEffectArgs.match.boons?.cards?.find(candidate => candidate.id === boonId);
+      if (!boon) {
+        console.warn(`[sacred-grove effect] boon ${boonId} not found in match`);
+        return;
+      }
+
+      // Only share boons that do not grant +$1 (Field's Gift, Forest's Gift are excluded).
+      const grantsTreasure = new Set(['the-fields-gift', 'the-forests-gift']);
+      if (grantsTreasure.has(boon.cardKey)) {
+        console.debug('[sacred-grove effect] boon grants +$1, not sharing');
+        return;
+      }
+
+      const targetPlayerIds = findOrderedTargets({
+        startingPlayerId: cardEffectArgs.playerId,
+        appliesTo: 'ALL_OTHER',
+        match: cardEffectArgs.match,
+      });
+
+      for (const targetPlayerId of targetPlayerIds) {
+        const decision = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+          playerId: targetPlayerId,
+          prompt: `Receive ${boon.cardName}?\n\n${boon.abilityText}`,
+          actionButtons: [
+            { label: 'NO', action: 1 },
+            { label: 'YES', action: 2 },
+          ],
+          content: {
+            type: 'display-cards',
+            cardIds: [],
+            cardLikeIds: [boonId],
+          },
+        }) as { action: number };
+
+        if (decision.action !== 2) {
+          console.debug(`[sacred-grove effect] ${getPlayerById(cardEffectArgs.match, targetPlayerId)} declined`);
+          continue;
+        }
+
+        await cardEffectArgs.runGameActionDelegate('receiveBoon', {
+          playerId: targetPlayerId,
+          immediate: true,
+          boonId: boonId,
+        });
+      }
+    },
+  },
   'pixie': {
     registerEffects: () => async (cardEffectArgs) => {
 

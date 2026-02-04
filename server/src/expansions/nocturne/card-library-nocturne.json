@@ -207,6 +207,17 @@
     "targetScheme": "ALL_OTHER",
     "abilityText": "Each other player with 5 or more cards in hand discards a copy of a card you have in play (or reveals they can't).\nAt the start of your next turn, +$3."
   },
+  "sacred-grove": {
+    "cardName": "Sacred Grove",
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION",
+      "FATE"
+    ],
+    "abilityText": "+1 Buy\n+$3\nReceive a Boon. If it doesn't give +$1, each other player may receive it."
+  },
   "pixie": {
     "cardName": "Pixie",
     "cost": {

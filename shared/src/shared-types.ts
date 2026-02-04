@@ -435,6 +435,8 @@ export class CardLike<M = unknown> {
   cardKey: CardKey;
   cardName: string;
   cost: CardCost;
+  // Optional rules text for card-like display.
+  abilityText?: string;
   fullImagePath: string;
   detailImagePath: string;
   // Optional randomizer overrides for pile-level cost/type metadata.
@@ -447,6 +449,7 @@ export class CardLike<M = unknown> {
     this.id = args.id;
     this.cardKey = args.cardKey ?? '';
     this.cardName = args.cardName ?? '';
+    this.abilityText = args.abilityText ?? '';
     this.fullImagePath = args.fullImagePath ?? '';
     this.detailImagePath = args.detailImagePath ?? '';
     this.randomizerData = args.randomizerData;
