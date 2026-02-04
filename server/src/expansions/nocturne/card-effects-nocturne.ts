@@ -3,6 +3,7 @@ import { CardId } from 'shared/shared-types';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
+import { compareCardCosts } from 'shared/compare-card-cost.ts';
 
 // Prompts a player to choose an Action from hand not already represented in play.
 const promptUniqueActionFromHand = async (
@@ -705,6 +706,84 @@ const expansion: CardExpansionModule = {
         boonId: selectedBoonId,
         immediate: true,
         keepSetAside: true,
+      });
+    },
+  },
+  'exorcist': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.info(`[exorcist effect] resolving for player ${cardEffectArgs.playerId}`);
+
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      if (!hand.length) {
+        console.debug('[exorcist effect] no cards in hand to trash');
+        return;
+      }
+
+      const selectedIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        prompt: 'Trash a card from your hand',
+        playerId: cardEffectArgs.playerId,
+        count: 1,
+        restrict: hand,
+      }) as CardId[];
+
+      const trashedCardId = selectedIds[0];
+      if (!trashedCardId) {
+        console.debug('[exorcist effect] no card selected to trash');
+        return;
+      }
+
+      const trashedCard = cardEffectArgs.cardLibrary.getCard(trashedCardId);
+      const trashedCost = cardEffectArgs.cardPriceController.applyRules(trashedCard, {
+        playerId: cardEffectArgs.playerId,
+      }).cost;
+
+      console.debug(`[exorcist effect] trashing ${trashedCard}`);
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: trashedCardId,
+      });
+
+      const spiritCards = cardEffectArgs.findCards([
+        { location: 'nonSupplyCards' },
+        { cardType: ['SPIRIT'] },
+      ]);
+
+      if (!spiritCards.length) {
+        console.warn('[exorcist effect] no Spirit cards available to gain');
+        return;
+      }
+
+      const eligibleSpirits = spiritCards.filter(spirit => {
+        const spiritCost = cardEffectArgs.cardPriceController.applyRules(spirit, {
+          playerId: cardEffectArgs.playerId,
+        }).cost;
+        return compareCardCosts(spiritCost, trashedCost) === -1;
+      });
+
+      if (!eligibleSpirits.length) {
+        console.debug('[exorcist effect] no cheaper Spirit available to gain');
+        return;
+      }
+
+      const eligibleIds = eligibleSpirits.map(spirit => spirit.id);
+      const gainIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        prompt: 'Gain a cheaper Spirit',
+        playerId: cardEffectArgs.playerId,
+        count: 1,
+        restrict: eligibleIds,
+      }) as CardId[];
+
+      const gainId = gainIds[0];
+      if (!gainId) {
+        console.debug('[exorcist effect] no Spirit selected to gain');
+        return;
+      }
+
+      console.debug(`[exorcist effect] gaining ${cardEffectArgs.cardLibrary.getCard(gainId)}`);
+      await cardEffectArgs.runGameActionDelegate('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: gainId,
+        to: { location: 'playerDiscard' },
       });
     },
   },

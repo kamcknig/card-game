@@ -96,6 +96,16 @@
     ],
     "abilityText": "+1 Buy\nReceive one of the set-aside Boons (leaving it there).\nSetup: Set aside the top 3 Boons face up."
   },
+  "exorcist": {
+    "cardName": "Exorcist",
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "NIGHT"
+    ],
+    "abilityText": "Trash a card from your hand. Gain a cheaper Spirit from one of the Spirit piles."
+  },
   "cobbler": {
     "cardName": "Cobbler",
     "cost": {

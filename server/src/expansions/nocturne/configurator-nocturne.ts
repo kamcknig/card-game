@@ -26,15 +26,17 @@ const configurator: ExpansionConfiguratorFactory = () => {
     // Gather all selected kingdom cards for boons and heirloom-linked piles.
     const kingdomCards = args.config.kingdomSupply.flatMap(supply => supply.cards);
     const hasCemetery = kingdomCards.some(card => getCardPileKey(card) === 'cemetery');
+    const hasExorcist = kingdomCards.some(card => getCardPileKey(card) === 'exorcist');
     // Track which kingdom cards require the Imp pile.
     const impSources = new Set(['devils-workshop', 'tormentor', 'exorcist']);
     const hasImpSource = kingdomCards.some(card => impSources.has(getCardPileKey(card)));
+    const hasGhostSource = hasCemetery || hasExorcist;
 
-    if (hasCemetery) {
+    if (hasGhostSource) {
       configureGhost(args);
     }
     else if (args.config.nonSupply?.some(supply => supply.name === 'ghost')) {
-      console.info('[nocturne configurator] removing Ghost pile because Cemetery is absent');
+      console.info('[nocturne configurator] removing Ghost pile because Cemetery/Exorcist are absent');
       args.config.nonSupply = args.config.nonSupply.filter(supply => supply.name !== 'ghost');
     }
 
@@ -82,6 +84,11 @@ const configurator: ExpansionConfiguratorFactory = () => {
         console.info(`[nocturne configurator] Fate cards present, seeding ${uniqueBoons.length} boons`);
         args.config.boons = structuredClone(uniqueBoons);
       }
+    }
+
+    // Ensure Will-o'-Wisp pile exists when Exorcist is present without other Fate cards.
+    if (hasExorcist && fateCards.length < 1) {
+      configureWillOWisp(args);
     }
 
     // Doom cards determine whether hexes are active for this match.
