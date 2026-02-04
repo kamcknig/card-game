@@ -788,6 +788,55 @@ const expansion: CardExpansionModule = {
       });
     },
   },
+  'monastery': {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Count cards gained earlier this turn (do not update during trashing).
+      const gainedThisTurn = cardEffectArgs.match.stats.cardsGainedByTurn[cardEffectArgs.match.turnNumber] ?? [];
+      const gainedCount = gainedThisTurn.filter(cardId =>
+        cardEffectArgs.match.stats.cardsGained[cardId]?.playerId === cardEffectArgs.playerId
+      ).length;
+
+      console.debug(`[monastery effect] player gained ${gainedCount} card(s) earlier this turn`);
+
+      if (gainedCount < 1) {
+        return;
+      }
+
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      const copperInPlay = getCardsInPlay(cardEffectArgs.findCards)
+        .filter(card => card.cardKey === 'copper'
+          && cardEffectArgs.match.stats.playedCards[card.id]?.playerId === cardEffectArgs.playerId)
+        .map(card => card.id);
+
+      const eligibleIds = [...hand, ...copperInPlay];
+      if (!eligibleIds.length) {
+        console.debug('[monastery effect] no eligible cards to trash');
+        return;
+      }
+
+      const maxTrashCount = Math.min(gainedCount, eligibleIds.length);
+      const selectedIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        prompt: 'Trash cards from your hand or Coppers in play',
+        playerId: cardEffectArgs.playerId,
+        count: { kind: 'upTo', count: maxTrashCount },
+        optional: true,
+        restrict: eligibleIds,
+      }) as CardId[];
+
+      if (!selectedIds.length) {
+        console.debug('[monastery effect] player declined to trash');
+        return;
+      }
+
+      for (const selectedId of selectedIds) {
+        console.debug(`[monastery effect] trashing ${cardEffectArgs.cardLibrary.getCard(selectedId)}`);
+        await cardEffectArgs.runGameActionDelegate('trashCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: selectedId,
+        });
+      }
+    },
+  },
   'devils-workshop': {
     registerEffects: () => async (cardEffectArgs) => {
 

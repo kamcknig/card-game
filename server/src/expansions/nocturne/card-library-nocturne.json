@@ -174,6 +174,16 @@
     ],
     "abilityText": "Gain a Gold. If you have exactly 7 cards in play, gain a Wish. Otherwise, receive a Hex."
   },
+  "monastery": {
+    "cardName": "Monastery",
+    "cost": {
+      "treasure": 2
+    },
+    "type": [
+      "NIGHT"
+    ],
+    "abilityText": "For each card you've gained this turn, you may trash a card from your hand or a Copper you have in play."
+  },
   "lucky-coin": {
     "cardName": "Lucky Coin",
     "cost": {
