@@ -6,13 +6,6 @@ States are not "cards"; any text referring to a "card" does not apply to States.
 
 When a player is affected by a State, the State card is placed in front of them for as long as the State's effect needs to be tracked.
 
-## Contents
-1. Official Rules
-2. List of States
-3. Gallery
-4. Trivia
-    1. In other languages
-
 ## Official Rules
 
 - Three Hexes and one Kingdom card give players a State; this is a card that
