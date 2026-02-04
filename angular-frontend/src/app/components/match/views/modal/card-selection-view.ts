@@ -12,6 +12,7 @@ import { validateCountSpec } from 'shared/validate-count-spec';
 import { displayCardDetail } from './display-card-detail';
 import { selfPlayerIdStore } from '../../../../state/player-state';
 import { matchStore } from '../../../../state/match-state';
+import { getCardSourceStore } from '../../../../state/card-source-store';
 
 // Local id alias used for temporary selection mapping.
 type NewCardId = CardId;
@@ -40,6 +41,9 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
   const selectableCardLikeIds = args.type === 'select'
     ? args.selectableCardLikeIds ?? cardLikeIds
     : [];
+
+  // Snapshot the trash pile so cards from trash render face up in prompts.
+  const trashCardIds = new Set(getCardSourceStore('trash').get());
 
   let newCardToOldCardMap = new Map<NewCardId, CardId | CardLikeId>();
   let maxId = toNumber(Object.keys(cardStore.get()).sort().slice(-1)[0]);
@@ -72,19 +76,25 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
   };
 
   const cardPointerDownListener = (event: FederatedPointerEvent) => {
-    const target = event.currentTarget as SelectionView;
-    const selectionId = target.selectionId;
+    const target = event.currentTarget as Container;
+    const isCardView = 'card' in target && 'facing' in target;
+    const selectionId = isCardView
+      ? (target as CardView).card.id
+      : 'selectionId' in target
+        ? (target as SelectionView).selectionId
+        : undefined;
     if (!selectionId) return;
 
     if (event.button === 2) {
-      if (target instanceof CardView && target.facing === 'front') {
-        const cardId = newCardToOldCardMap.get(target.card.id);
+      if (isCardView && (target as CardView).facing === 'front') {
+        const cardId = newCardToOldCardMap.get((target as CardView).card.id);
         if (!cardId) return;
         void displayCardDetail(cardId);
         return;
       }
-      if (target.detailImagePath) {
-        void displayCardDetail({ detailImagePath: target.detailImagePath });
+      // Card-like views expose a detail image path for right-click inspection.
+      if ('detailImagePath' in target && (target as SelectionView).detailImagePath) {
+        void displayCardDetail({ detailImagePath: (target as SelectionView).detailImagePath });
         return;
       }
     }
@@ -111,6 +121,7 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
   cardList.elementsMargin = cardCount > 6 ? -CARD_WIDTH * .5 : STANDARD_GAP;
 
   for (const cardId of cardIds) {
+    const isTrashCard = trashCardIds.has(cardId as CardId);
     const baseCard = cardStore.get()[cardId as CardId];
     if (!baseCard) {
       console.warn(`[card-selection] missing card data for id ${cardId}`);
@@ -121,6 +132,10 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
     const view = createCardView(tempCard);
     if (baseCard.owner === selfPlayerIdStore.get()) {
       // Allow the owning player to see their own facedown cards in selection prompts.
+      view.facing = 'front';
+    }
+    if (isTrashCard) {
+      // Trash viewing should always show the card face up regardless of owner.
       view.facing = 'front';
     }
     newCardToOldCardMap.set(tempCard.id, cardId as CardId);

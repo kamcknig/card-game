@@ -187,6 +187,9 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   const hasDruid = config.kingdomSupply.some(
     supply => supply.cards.some(card => getCardPileKey(card) === 'druid')
   );
+  const hasNecromancer = config.kingdomSupply.some(
+    supply => supply.cards.some(card => getCardPileKey(card) === 'necromancer')
+  );
   if (hasCemetery) {
     console.info('[nocturne configurator] setting up cemetery heirloom onGameStart handler');
 
@@ -308,6 +311,26 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
       }
 
       console.info(`[nocturne onGameStart] set aside ${args.match.boons.setAside.length} boon(s) for Druid`);
+    });
+  }
+
+  if (hasNecromancer) {
+    console.info('[nocturne configurator] setting up Necromancer zombies onGameStart handler');
+
+    registrar('onGameStart', async (args) => {
+      console.info('[nocturne onGameStart] adding Zombies to the trash');
+
+      // Create and place the three Zombies into the trash pile.
+      const zombieKeys = ['zombie-apprentice', 'zombie-mason', 'zombie-spy'] as const;
+      for (const zombieKey of zombieKeys) {
+        const zombieCard = createCard(zombieKey, { partOfSupply: false });
+        args.cardLibrary.addCard(zombieCard);
+        await args.runGameActionDelegate('moveCard', {
+          cardId: zombieCard.id,
+          to: { location: 'trash' },
+        });
+        console.debug(`[nocturne onGameStart] moved ${zombieCard} to trash`);
+      }
     });
   }
 

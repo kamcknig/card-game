@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, Input, OnDestroy, OnInit } from '@a
 import { NanostoresService } from '@nanostores/angular';
 import { cardStore } from '../../state/card-state';
 import { combineLatestWith, map, Subscription } from 'rxjs';
-import { CardId, Match, TokenDefinition, TokenId, TokenInstance } from 'shared/shared-types';
+import { CardFacing, CardId, Match, TokenDefinition, TokenId, TokenInstance } from 'shared/shared-types';
 import { NgOptimizedImage } from '@angular/common';
 import { CARD_WIDTH } from '../../core/app-contants';
 import { CardSize } from '../../../types';
@@ -30,6 +30,8 @@ type CardTokenBadge = {
 export class CardComponent implements OnInit, OnDestroy {
   @Input() cardId!: CardId;
   @Input() size: CardSize = 'full';
+  // Optional override to force a card to render face up/down regardless of ownership.
+  @Input() forceFacing?: CardFacing;
 
   path: SafeUrl | undefined;
   // Token badges to display on top of the card image.
@@ -58,13 +60,20 @@ export class CardComponent implements OnInit, OnDestroy {
     ).subscribe(([card, selfId, match, tokenDefinitions]) => {
       let path: string = '';
 
-      if (card.owner === selfId) {
-        path = this.size === 'half' ? card.halfImagePath : this.size === 'full' ? card.fullImagePath : card.detailImagePath
+      const effectiveFacing = this.forceFacing ?? card.facing ?? 'front';
+      if (this.forceFacing) {
+        // Force the facing when requested (e.g. trash previews for all players).
+        path = effectiveFacing === 'back'
+          ? `/assets/card-images/base-v2/${this.size}-size/card-back.jpg`
+          : this.size === 'half' ? card.halfImagePath : this.size === 'full' ? card.fullImagePath : card.detailImagePath;
+      }
+      else if (card.owner === selfId) {
+        path = this.size === 'half' ? card.halfImagePath : this.size === 'full' ? card.fullImagePath : card.detailImagePath;
       }
       else {
-        path = card.facing === 'back' ?
-          `/assets/card-images/base-v2/${this.size}-size/card-back.jpg` :
-          this.size === 'half' ? card.halfImagePath : this.size === 'full' ? card.fullImagePath : card.detailImagePath;
+        path = effectiveFacing === 'back'
+          ? `/assets/card-images/base-v2/${this.size}-size/card-back.jpg`
+          : this.size === 'half' ? card.halfImagePath : this.size === 'full' ? card.fullImagePath : card.detailImagePath;
       }
 
       this.path = this._sanitizer.bypassSecurityTrustUrl(path);

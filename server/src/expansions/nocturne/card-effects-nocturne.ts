@@ -837,6 +837,235 @@ const expansion: CardExpansionModule = {
       }
     },
   },
+  'necromancer': {
+    registerEffects: () => async (cardEffectArgs) => {
+
+      // Identify face-up non-Duration Action cards in the trash.
+      const trashCards = cardEffectArgs.findCards({ location: 'trash' });
+      const eligibleCards = trashCards.filter(card =>
+        card.type.includes('ACTION')
+        && !card.type.includes('DURATION')
+        && card.facing !== 'back',
+      );
+
+      if (!eligibleCards.length) {
+        console.debug('[necromancer effect] no eligible Action cards in trash');
+        return;
+      }
+
+      // Prompt the player to choose a trashed Action to play.
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Choose a trashed Action to play',
+        count: 1,
+        restrict: eligibleCards.map(card => card.id),
+      }) as CardId[];
+
+      const selectedCardId = selectedCardIds[0];
+      if (!selectedCardId) {
+        console.debug('[necromancer effect] no card selected');
+        return;
+      }
+
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+      console.debug(`[necromancer effect] selected ${selectedCard}`);
+
+      // Turn the selected card face down for the turn to prevent reuse.
+      selectedCard.facing = 'back';
+      console.debug(`[necromancer effect] turned ${selectedCard} face down`);
+
+      // Flip the card back face up at end of turn.
+      const turnNumber = cardEffectArgs.match.turnNumber;
+      cardEffectArgs.reactionManager.registerReactionTemplate(selectedCard, 'endTurn', {
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: (conditionArgs) => conditionArgs.trigger.args.turnNumber === turnNumber,
+        triggeredEffectFn: async (triggeredArgs) => {
+          const faceUpCard = triggeredArgs.cardLibrary.getCard(selectedCardId);
+          faceUpCard.facing = 'front';
+          console.debug(`[necromancer endTurn] turned ${faceUpCard} face up`);
+        },
+      });
+
+      // Play the trashed card without moving it or spending an Action.
+      await cardEffectArgs.runGameActionDelegate('playCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCardId,
+        overrides: {
+          moveCard: false,
+          actionCost: 0,
+        },
+      });
+    },
+  },
+  'zombie-apprentice': {
+    registerEffects: () => async (cardEffectArgs) => {
+
+      // Gather Action cards in hand for the optional trash.
+      const actionCards = cardEffectArgs.findCards([
+        { location: 'playerHand', playerId: cardEffectArgs.playerId },
+        { cardType: ['ACTION'] },
+      ]);
+
+      if (!actionCards.length) {
+        console.debug('[zombie-apprentice effect] no Action cards in hand to trash');
+        return;
+      }
+
+      // Prompt the player to optionally trash an Action for the bonus.
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Trash an Action for +3 Cards and +1 Action',
+        count: 1,
+        optional: true,
+        restrict: actionCards.map(card => card.id),
+      }) as CardId[];
+
+      const selectedCardId = selectedCardIds[0];
+      if (!selectedCardId) {
+        console.debug('[zombie-apprentice effect] player declined to trash an Action');
+        return;
+      }
+
+      console.debug(`[zombie-apprentice effect] trashing ${cardEffectArgs.cardLibrary.getCard(selectedCardId)}`);
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCardId,
+      });
+
+      // Apply the bonus after trashing.
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: 3,
+      });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+    },
+  },
+  'zombie-mason': {
+    registerEffects: () => async (cardEffectArgs) => {
+
+      // Ensure there is at least one card to trash from the deck.
+      let deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+      const discard = cardEffectArgs.cardSourceController.getSource('playerDiscard', cardEffectArgs.playerId);
+
+      if (!deck.length && discard.length) {
+        console.debug('[zombie-mason effect] deck empty, shuffling discard');
+        await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+        deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+      }
+
+      if (!deck.length) {
+        console.debug('[zombie-mason effect] no cards in deck to trash');
+        return;
+      }
+
+      const topCardId = deck.slice(-1)[0];
+      const trashedCard = cardEffectArgs.cardLibrary.getCard(topCardId);
+      console.debug(`[zombie-mason effect] trashing top card ${trashedCard}`);
+
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: topCardId,
+      });
+
+      // Determine the maximum gain cost (up to $1 more than the trashed card).
+      const { cost: trashedCost } = cardEffectArgs.cardPriceController.applyRules(trashedCard, {
+        playerId: cardEffectArgs.playerId,
+      });
+      const maxCost = {
+        treasure: trashedCost.treasure + 1,
+        potion: trashedCost.potion ?? 0,
+        debt: trashedCost.debt ?? 0,
+      };
+
+      const eligibleCards = cardEffectArgs.findCards([
+        { location: ['basicSupply', 'kingdomSupply'] },
+        { playerId: cardEffectArgs.playerId, kind: 'upTo', amount: maxCost },
+      ]);
+
+      if (!eligibleCards.length) {
+        console.debug('[zombie-mason effect] no cards available to gain');
+        return;
+      }
+
+      // Prompt the player to optionally gain a card.
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Gain a card costing up to $1 more',
+        count: 1,
+        optional: true,
+        restrict: eligibleCards.map(card => card.id),
+      }) as CardId[];
+
+      const selectedCardId = selectedCardIds[0];
+      if (!selectedCardId) {
+        console.debug('[zombie-mason effect] player declined to gain a card');
+        return;
+      }
+
+      console.debug(`[zombie-mason effect] gaining ${cardEffectArgs.cardLibrary.getCard(selectedCardId)}`);
+      await cardEffectArgs.runGameActionDelegate('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCardId,
+        to: { location: 'playerDiscard' },
+      });
+    },
+  },
+  'zombie-spy': {
+    registerEffects: () => async (cardEffectArgs) => {
+
+      // Apply the cantrip bonus first.
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+      });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+
+      // Ensure there is a top card to look at.
+      let deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+      const discard = cardEffectArgs.cardSourceController.getSource('playerDiscard', cardEffectArgs.playerId);
+
+      if (!deck.length && discard.length) {
+        console.debug('[zombie-spy effect] deck empty, shuffling discard');
+        await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+        deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+      }
+
+      if (!deck.length) {
+        console.debug('[zombie-spy effect] no cards left to look at');
+        return;
+      }
+
+      const topCardId = deck.slice(-1)[0];
+      const topCard = cardEffectArgs.cardLibrary.getCard(topCardId);
+      console.debug(`[zombie-spy effect] looking at top card ${topCard}`);
+
+      const decision = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Discard the top card?',
+        actionButtons: [
+          { label: 'DISCARD', action: 1 },
+          { label: 'PUT BACK', action: 2 },
+        ],
+        content: {
+          type: 'display-cards',
+          cardIds: [topCardId],
+        },
+      }) as { action: number };
+
+      if (decision.action === 1) {
+        console.debug(`[zombie-spy effect] discarding ${topCard}`);
+        await cardEffectArgs.runGameActionDelegate('discardCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: topCardId,
+        });
+        return;
+      }
+
+      console.debug('[zombie-spy effect] leaving top card in place');
+    },
+  },
   'devils-workshop': {
     registerEffects: () => async (cardEffectArgs) => {
 

@@ -184,6 +184,16 @@
     ],
     "abilityText": "For each card you've gained this turn, you may trash a card from your hand or a Copper you have in play."
   },
+  "necromancer": {
+    "cardName": "Necromancer",
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "Choose a face up, non-Duration Action card in the trash. Turn it face down for the turn, and play it, leaving it there.\nSetup: Put the 3 Zombies into the trash."
+  },
   "lucky-coin": {
     "cardName": "Lucky Coin",
     "cost": {
@@ -253,6 +263,42 @@
       "SPIRIT"
     ],
     "abilityText": "+2 Cards\nYou may play an Action card from your hand that you don't have a copy of in play.\n(This is not in the Supply.)"
+  },
+  "zombie-apprentice": {
+    "cardName": "Zombie Apprentice",
+    "cost": {
+      "treasure": 3
+    },
+    "kingdomSelectable": false,
+    "type": [
+      "ACTION",
+      "ZOMBIE"
+    ],
+    "abilityText": "You may trash an Action card from your hand for +3 Cards and +1 Action."
+  },
+  "zombie-mason": {
+    "cardName": "Zombie Mason",
+    "cost": {
+      "treasure": 3
+    },
+    "kingdomSelectable": false,
+    "type": [
+      "ACTION",
+      "ZOMBIE"
+    ],
+    "abilityText": "Trash the top card of your deck. You may gain a card costing up to $1 more than it."
+  },
+  "zombie-spy": {
+    "cardName": "Zombie Spy",
+    "cost": {
+      "treasure": 3
+    },
+    "kingdomSelectable": false,
+    "type": [
+      "ACTION",
+      "ZOMBIE"
+    ],
+    "abilityText": "+1 Card\n+1 Action\nLook at the top card of your deck. Discard it or put it back."
   },
   "the-earths-gift": {
     "cardName": "The Earth's Gift",

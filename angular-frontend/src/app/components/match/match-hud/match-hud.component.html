@@ -71,6 +71,7 @@
                     <app-card
                       [size]="'half'"
                       [cardId]="cardId"
+                      [forceFacing]="visibleMat?.mat === 'trash' ? 'front' : undefined"
                     ></app-card>
                   }
                 </div>
