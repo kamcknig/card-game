@@ -6,6 +6,7 @@ import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { compareCardCosts } from 'shared/compare-card-cost.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
+import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { isPlayerImmune, markPlayerImmune } from '../../utils/reaction-immunity.ts';
 
 // Prompts a player to choose an Action from hand not already represented in play.
@@ -1392,6 +1393,38 @@ const expansion: CardExpansionModule = {
         toPlayerId: cardEffectArgs.playerId,
         to: { location: 'playerDiscard' },
       });
+    },
+  },
+  'werewolf': {
+    registerEffects: () => async (cardEffectArgs) => {
+
+      // Check if this is the current player's Night phase.
+      const currentPhase = getTurnPhase(cardEffectArgs.match.turnPhaseIndex);
+      const currentPlayerId = getCurrentPlayer(cardEffectArgs.match).id;
+      const isOwnNightPhase = currentPhase === 'night' && currentPlayerId === cardEffectArgs.playerId;
+      console.debug(`[werewolf effect] phase=${currentPhase} currentPlayer=${currentPlayerId} ownNight=${isOwnNightPhase}`);
+
+      if (!isOwnNightPhase) {
+        await cardEffectArgs.runGameActionDelegate('drawCard', {
+          playerId: cardEffectArgs.playerId,
+          count: 3,
+        });
+        return;
+      }
+
+      const targetPlayerIds = findOrderedTargets({
+        startingPlayerId: cardEffectArgs.playerId,
+        appliesTo: 'ALL_OTHER',
+        match: cardEffectArgs.match,
+      }).filter((id) => !isPlayerImmune(cardEffectArgs.reactionContext, id));
+
+      console.debug(`[werewolf effect] hex targets ${targetPlayerIds.map(id => getPlayerById(cardEffectArgs.match, id))}`);
+
+      for (const targetPlayerId of targetPlayerIds) {
+        await cardEffectArgs.runGameActionDelegate('receiveHex', {
+          playerId: targetPlayerId,
+        });
+      }
     },
   },
   'tormentor': {

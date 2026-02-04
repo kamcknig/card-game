@@ -278,6 +278,20 @@
     "targetScheme": "ALL_OTHER",
     "abilityText": "Each other player receives the next Hex.\nGain a card costing up to $5 other than a Vampire.\nExchange this for a Bat."
   },
+  "werewolf": {
+    "cardName": "Werewolf",
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION",
+      "NIGHT",
+      "ATTACK",
+      "DOOM"
+    ],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "If it's your Night phase, each other player receives the next Hex. Otherwise, +3 Cards."
+  },
   "tragic-hero": {
     "cardName": "Tragic Hero",
     "cost": {
