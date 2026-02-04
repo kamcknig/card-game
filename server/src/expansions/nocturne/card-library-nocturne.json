@@ -150,6 +150,19 @@
     ],
     "abilityText": "Until your next turn, when another player plays an Attack card, it doesn't affect you. At the start of your next turn, +$1.\nThis is gained to your hand (instead of your discard pile)."
   },
+  "idol": {
+    "cardName": "Idol",
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "TREASURE",
+      "ATTACK",
+      "FATE"
+    ],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+$2\nIf you have an odd number of Idols in play (counting this), receive a Boon; otherwise, each other player gains a Curse."
+  },
   "lucky-coin": {
     "cardName": "Lucky Coin",
     "cost": {

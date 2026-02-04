@@ -5,7 +5,9 @@ import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { compareCardCosts } from 'shared/compare-card-cost.ts';
 import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
-import { markPlayerImmune } from '../../utils/reaction-immunity.ts';
+import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
+import { getPlayerById } from '../../utils/get-player-by-id.ts';
+import { isPlayerImmune, markPlayerImmune } from '../../utils/reaction-immunity.ts';
 
 // Prompts a player to choose an Action from hand not already represented in play.
 const promptUniqueActionFromHand = async (
@@ -677,6 +679,57 @@ const expansion: CardExpansionModule = {
           }, { loggingContext: { source: guardianCard.id } });
         },
       });
+    },
+  },
+  'idol': {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Apply the immediate +$2.
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+
+      // Count Idols in play for the current player (including this one).
+      const idolsInPlay = getCardsInPlay(cardEffectArgs.findCards)
+        .filter(card => card.cardKey === 'idol'
+          && cardEffectArgs.match.stats.playedCards[card.id]?.playerId === cardEffectArgs.playerId);
+      const idolCount = idolsInPlay.length;
+      const isOdd = idolCount % 2 === 1;
+
+      console.debug(`[idol effect] player has ${idolCount} Idol(s) in play (odd=${isOdd})`);
+
+      if (isOdd) {
+        // Receive a boon when the count is odd.
+        await cardEffectArgs.runGameActionDelegate('receiveBoon', {
+          playerId: cardEffectArgs.playerId,
+        });
+        return;
+      }
+
+      // Otherwise, each other player gains a Curse (respecting immunity).
+      const targetPlayerIds = findOrderedTargets({
+        startingPlayerId: cardEffectArgs.playerId,
+        appliesTo: 'ALL_OTHER',
+        match: cardEffectArgs.match,
+      }).filter((id) => !isPlayerImmune(cardEffectArgs.reactionContext, id));
+
+      console.debug(`[idol effect] curse targets ${targetPlayerIds.map(id => getPlayerById(cardEffectArgs.match, id))}`);
+
+      for (const targetPlayerId of targetPlayerIds) {
+        const curseCards = cardEffectArgs.findCards([
+          { location: 'basicSupply' },
+          { cardKeys: 'curse' },
+        ]);
+        if (!curseCards.length) {
+          console.debug('[idol effect] no curse cards in supply');
+          return;
+        }
+
+        const curseCardId = curseCards.slice(-1)[0].id;
+        console.debug(`[idol effect] giving curse to ${getPlayerById(cardEffectArgs.match, targetPlayerId)}`);
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: targetPlayerId,
+          cardId: curseCardId,
+          to: { location: 'playerDiscard' },
+        });
+      }
     },
   },
   'devils-workshop': {

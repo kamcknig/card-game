@@ -1225,7 +1225,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   // Receives a boon from the shared boon deck and resolves its effect.
   async receiveBoon(args: { playerId: PlayerId; immediate?: boolean; boonId?: CardLikeId; keepSetAside?: boolean }, context?: GameActionContext) {
     // Default to immediate resolution unless explicitly deferred.
-    const immediate = args.immediate !== false;
+    const immediate = args.immediate ?? true;
     console.log(`[receiveBoon action] player ${args.playerId} receiving a boon`);
 
     if (!immediate) {
