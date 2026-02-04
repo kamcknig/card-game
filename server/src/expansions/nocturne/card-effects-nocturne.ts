@@ -837,6 +837,87 @@ const expansion: CardExpansionModule = {
       }
     },
   },
+  'pixie': {
+    registerEffects: () => async (cardEffectArgs) => {
+
+      // Apply the cantrip bonus.
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+      });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+
+      if (!cardEffectArgs.match.boons) {
+        console.warn('[pixie effect] no boons configured');
+        return;
+      }
+
+      if (cardEffectArgs.match.boons.cards.length < 1) {
+        console.warn('[pixie effect] boon list empty');
+        return;
+      }
+
+      if (cardEffectArgs.match.boons.deck.length < 1 && cardEffectArgs.match.boons.discard.length > 0) {
+        console.debug('[pixie effect] boon deck empty, reshuffling discard');
+        cardEffectArgs.match.boons.deck = fisherYatesShuffle(cardEffectArgs.match.boons.discard, false);
+        cardEffectArgs.match.boons.discard = [];
+      }
+
+      if (cardEffectArgs.match.boons.deck.length < 1) {
+        console.debug('[pixie effect] no boons available to discard');
+        return;
+      }
+
+      // Discard the top boon without receiving its effect.
+      const boonId = cardEffectArgs.match.boons.deck.pop();
+      if (boonId === undefined) {
+        console.warn('[pixie effect] boon draw failed');
+        return;
+      }
+
+      const boon = cardEffectArgs.match.boons.cards.find(candidate => candidate.id === boonId);
+      if (!boon) {
+        console.warn(`[pixie effect] missing boon ${boonId}, discarding id only`);
+        cardEffectArgs.match.boons.discard.push(boonId);
+        return;
+      }
+
+      cardEffectArgs.match.boons.discard.push(boonId);
+      console.debug(`[pixie effect] discarded ${boon}`);
+
+      // Prompt to trash Pixie to receive the discarded boon twice.
+      const decision = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        playerId: cardEffectArgs.playerId,
+        prompt: `Trash Pixie to receive ${boon.cardName} twice?`,
+        actionButtons: [
+          { label: `DON'T TRASH`, action: 1 },
+          { label: 'TRASH', action: 2 },
+        ],
+        content: {
+          type: 'display-cards',
+          cardLikeIds: [boonId],
+        },
+      }) as { action: number };
+
+      if (decision.action !== 2) {
+        console.debug('[pixie effect] player declined to trash Pixie');
+        return;
+      }
+
+      console.debug('[pixie effect] trashing Pixie to receive boon twice');
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: cardEffectArgs.cardId,
+      });
+
+      for (let i = 0; i < 2; i++) {
+        await cardEffectArgs.runGameActionDelegate('receiveBoon', {
+          playerId: cardEffectArgs.playerId,
+          immediate: true,
+          boonId: boonId,
+        });
+      }
+    },
+  },
   'night-watchman': {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
@@ -1728,6 +1809,40 @@ const expansion: CardExpansionModule = {
 
       // Haunted Mirror is a $1 Treasure.
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+    },
+  },
+  'goat': {
+    registerEffects: () => async (cardEffectArgs) => {
+
+      // Apply the immediate +$1.
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      if (!hand.length) {
+        console.debug('[goat effect] no cards in hand to trash');
+        return;
+      }
+
+      // Prompt the player to optionally trash a card from hand.
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Trash a card from your hand?',
+        count: 1,
+        optional: true,
+        restrict: hand,
+      }) as CardId[];
+
+      const selectedCardId = selectedCardIds[0];
+      if (!selectedCardId) {
+        console.debug('[goat effect] player declined to trash');
+        return;
+      }
+
+      console.debug(`[goat effect] trashing ${cardEffectArgs.cardLibrary.getCard(selectedCardId)}`);
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCardId,
+      });
     },
   },
   'wish': {

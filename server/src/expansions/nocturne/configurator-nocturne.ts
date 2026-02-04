@@ -187,6 +187,9 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   const hasDruid = config.kingdomSupply.some(
     supply => supply.cards.some(card => getCardPileKey(card) === 'druid')
   );
+  const hasPixie = config.kingdomSupply.some(
+    supply => supply.cards.some(card => getCardPileKey(card) === 'pixie')
+  );
   const hasNecromancer = config.kingdomSupply.some(
     supply => supply.cards.some(card => getCardPileKey(card) === 'necromancer')
   );
@@ -272,6 +275,49 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         deck.splice(chosenIndex, 0, luckyCoin.id);
 
         console.info(`[nocturne onGameStart] player ${player.id} replaced Copper with Lucky Coin`);
+      }
+    });
+  }
+
+  if (hasPixie) {
+    console.info('[nocturne configurator] setting up pixie heirloom onGameStart handler');
+
+    registrar('onGameStart', async (args) => {
+      console.info('[nocturne onGameStart] replacing starting Copper with Goat');
+
+      for (const player of args.match.players) {
+        // Locate all Copper cards in the player deck.
+        const deck = args.cardSourceController.getSource('playerDeck', player.id);
+        const copperIndices: number[] = [];
+
+        for (let idx = 0; idx < deck.length; idx++) {
+          const card = args.cardLibrary.getCard(deck[idx]);
+          if (card.cardKey === 'copper') {
+            copperIndices.push(idx);
+          }
+        }
+
+        if (copperIndices.length < 1) {
+          console.warn(`[nocturne onGameStart] player ${player.id} has no Copper to replace with Goat`);
+          continue;
+        }
+
+        // Choose a random Copper to swap so the heirloom position is uniformly random.
+        const chosenIndex = copperIndices[Math.floor(Math.random() * copperIndices.length)];
+        const copperId = deck[chosenIndex];
+
+        await args.runGameActionDelegate('moveCard', {
+          cardId: copperId,
+          to: { location: 'basicSupply' }
+        });
+
+        // Create the Goat and insert it in the same deck position.
+        const goat = createCard('goat', { owner: player.id, partOfSupply: false });
+        goat.facing = 'back';
+        args.cardLibrary.addCard(goat);
+        deck.splice(chosenIndex, 0, goat.id);
+
+        console.info(`[nocturne onGameStart] player ${player.id} replaced Copper with Goat`);
       }
     });
   }
