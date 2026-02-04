@@ -1117,6 +1117,73 @@ const expansion: CardExpansionModule = {
       }
     },
   },
+  'tracker': {
+    registerEffects: () => async (cardEffectArgs) => {
+
+      // Apply the immediate +$1.
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+
+      // Ensure only one tracker gain trigger is active per player per turn.
+      const gainTriggerId = `tracker:${cardEffectArgs.playerId}:cardGained`;
+      cardEffectArgs.reactionManager.unregisterTrigger(gainTriggerId);
+
+      // Register a gain trigger for the rest of the turn.
+      cardEffectArgs.reactionManager.registerReactionTemplate({
+        id: gainTriggerId,
+        listeningFor: 'cardGained',
+        playerId: cardEffectArgs.playerId,
+        once: false,
+        allowMultipleInstances: false,
+        compulsory: false,
+        condition: (conditionArgs) => conditionArgs.trigger.args.playerId === cardEffectArgs.playerId,
+        triggeredEffectFn: async (triggeredArgs) => {
+          const gainedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
+
+          const decision = await triggeredArgs.runGameActionDelegate('userPrompt', {
+            playerId: cardEffectArgs.playerId,
+            prompt: `Put ${gainedCard.cardName} onto your deck?`,
+            actionButtons: [
+              { label: 'NO', action: 1 },
+              { label: 'YES', action: 2 },
+            ],
+          }) as { action: number };
+
+          if (decision.action !== 2) {
+            console.debug('[tracker effect] player declined to topdeck gained card');
+            return;
+          }
+
+          console.debug(`[tracker effect] moving ${gainedCard} to top of deck`);
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            cardId: gainedCard.id,
+            toPlayerId: cardEffectArgs.playerId,
+            to: { location: 'playerDeck' },
+          });
+        },
+      });
+
+      // Unregister the gain trigger at end of turn.
+      const trackerCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const turnPlayed = cardEffectArgs.match.turnNumber;
+      cardEffectArgs.reactionManager.registerSystemTemplate(trackerCard, 'endTurn', {
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: (conditionArgs) => conditionArgs.trigger.args.playerId === cardEffectArgs.playerId
+          && conditionArgs.trigger.args.turnNumber === turnPlayed,
+        triggeredEffectFn: async (triggeredArgs) => {
+          triggeredArgs.reactionManager.unregisterTrigger(gainTriggerId);
+          console.debug('[tracker effect] end turn cleanup, removed gain trigger');
+        },
+      });
+
+      // Receive a boon after setting up the gain trigger.
+      await cardEffectArgs.runGameActionDelegate('receiveBoon', {
+        playerId: cardEffectArgs.playerId,
+      });
+    },
+  },
   'tormentor': {
     registerEffects: () => async (cardEffectArgs) => {
 
@@ -2345,6 +2412,14 @@ const expansion: CardExpansionModule = {
 
       // Apply the immediate +$1.
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+    },
+  },
+  'pouch': {
+    registerEffects: () => async (cardEffectArgs) => {
+
+      // Apply the immediate +$1 and +1 Buy.
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
     },
   },
   'wish': {

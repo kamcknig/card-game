@@ -241,6 +241,17 @@
     "targetScheme": "ALL_OTHER",
     "abilityText": "+1 Buy\nEach other player receives the next Hex.\nWhen you gain this, gain a Gold."
   },
+  "tracker": {
+    "cardName": "Tracker",
+    "cost": {
+      "treasure": 2
+    },
+    "type": [
+      "ACTION",
+      "FATE"
+    ],
+    "abilityText": "+$1\nThis turn, when you gain a card, you may put it onto your deck. Receive a Boon.\nHeirloom: Pouch"
+  },
   "tormentor": {
     "cardName": "Tormentor",
     "cost": {
@@ -391,6 +402,18 @@
     ],
     "victoryPoints": 0,
     "abilityText": "+$1\nWorth 1VP per Estate you have."
+  },
+  "pouch": {
+    "cardName": "Pouch",
+    "cost": {
+      "treasure": 2
+    },
+    "kingdomSelectable": false,
+    "type": [
+      "TREASURE",
+      "HEIRLOOM"
+    ],
+    "abilityText": "+$1\n+1 Buy"
   },
   "goat": {
     "cardName": "Goat",
