@@ -48,6 +48,10 @@ all players, but native village and island mat cards  face down and can only be 
 - can the ruins pile be updated to use the newer randomizer and piles?
 
 # Higher priority
+- Need to look into cards that might prevent movement. An example is the
+  Necromancer card that has this in the official faq for it "The restriction on
+  movement only"
+  applies to effects that would have moved the card out of the play area if it were played normally, for example, Island will fail to move itself out of the trash and onto your Island Mat, although any other effect will still apply, such as moving a card from your hand onto your Island Mat; if a card is looking to move a card out of the trash, it may move itself - thus, if you choose to play a Lurker, Graverobber or Rogue in the trash, it can gain itself out of the trash as a result.
 - boon and hex indicator views need to be displayed. boon-indicator-view and
   hex-indicator-view
 - when cards are in zones like set aside or a mat, they can be face up or
