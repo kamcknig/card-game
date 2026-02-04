@@ -837,6 +837,103 @@ const expansion: CardExpansionModule = {
       }
     },
   },
+  'night-watchman': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (cardEffectArgs, eventArgs) => {
+        console.debug('[night-watchman onGained] moving gained Night Watchman to hand');
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
+          cardId: eventArgs.cardId,
+          toPlayerId: eventArgs.playerId,
+          to: { location: 'playerHand' },
+        });
+      },
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      // Resolve the top 5 cards of the deck (shuffling if needed).
+      let deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+      const discard = cardEffectArgs.cardSourceController.getSource('playerDiscard', cardEffectArgs.playerId);
+
+      let numToLookAt = 5;
+      if (deck.length + discard.length < numToLookAt) {
+        numToLookAt = deck.length + discard.length;
+        console.debug(`[night-watchman effect] adjusting look count to ${numToLookAt}`);
+      }
+
+      if (numToLookAt === 0) {
+        console.debug('[night-watchman effect] no cards to look at');
+        return;
+      }
+
+      if (deck.length < numToLookAt) {
+        console.debug('[night-watchman effect] deck short, shuffling discard');
+        await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+        deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+      }
+
+      const cardsToLookAt = deck.slice(-numToLookAt);
+      console.debug(`[night-watchman effect] looking at ${cardsToLookAt.length} card(s)`);
+
+      // Prompt the player to discard any number of the looked-at cards.
+      const discardResult = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Choose card/s to discard?',
+        validationAction: 1,
+        actionButtons: [
+          { label: `DON'T DISCARD`, action: 2 },
+          { label: 'DISCARD', action: 1 },
+        ],
+        content: {
+          type: 'select',
+          cardIds: cardsToLookAt,
+          selectCount: {
+            kind: 'upTo',
+            count: cardsToLookAt.length,
+          },
+        },
+      }) as { action: number; result: CardId[] };
+
+      const cardsToDiscard = discardResult.action === 1 ? (discardResult.result ?? []) : [];
+      if (!cardsToDiscard.length) {
+        console.debug('[night-watchman effect] no cards selected to discard');
+      }
+      else {
+        console.debug(`[night-watchman effect] discarding ${cardsToDiscard.length} card(s)`);
+        for (const cardId of cardsToDiscard) {
+          await cardEffectArgs.runGameActionDelegate('discardCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: cardId,
+          });
+        }
+      }
+
+      const remainingCards = cardsToLookAt.filter(cardId => !cardsToDiscard.includes(cardId));
+      if (remainingCards.length <= 1) {
+        console.debug('[night-watchman effect] no reorder needed');
+        return;
+      }
+
+      // Prompt the player to reorder the remaining cards.
+      const reorderResult = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Put the rest back on top of your deck in any order',
+        actionButtons: [
+          { action: 1, label: 'DONE' },
+        ],
+        content: {
+          type: 'rearrange',
+          cardIds: remainingCards,
+        }
+      }) as { action: number; result: CardId[] };
+
+      for (const cardId of reorderResult.result) {
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
+          cardId,
+          toPlayerId: cardEffectArgs.playerId,
+          to: { location: 'playerDeck' },
+        });
+      }
+    },
+  },
   'necromancer': {
     registerEffects: () => async (cardEffectArgs) => {
 

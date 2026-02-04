@@ -184,6 +184,16 @@
     ],
     "abilityText": "For each card you've gained this turn, you may trash a card from your hand or a Copper you have in play."
   },
+  "night-watchman": {
+    "cardName": "Night Watchman",
+    "cost": {
+      "treasure": 3
+    },
+    "type": [
+      "NIGHT"
+    ],
+    "abilityText": "Look at the top 5 cards of your deck, discard any number, and put the rest back in any order.\nThis is gained to your hand (instead of your discard pile)."
+  },
   "necromancer": {
     "cardName": "Necromancer",
     "cost": {
