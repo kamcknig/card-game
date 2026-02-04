@@ -9,6 +9,7 @@ import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { createCard } from '../../utils/create-card.ts';
 import { configureGhost } from './configure-ghost.ts';
 import { configureImp } from './configure-imp.ts';
+import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
 
 // Seeds boons when Fate cards are present in the selected kingdom.
 const configurator: ExpansionConfiguratorFactory = () => {
@@ -127,6 +128,9 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   const hasCemetery = config.kingdomSupply.some(
     supply => supply.cards.some(card => getCardPileKey(card) === 'cemetery')
   );
+  const hasDruid = config.kingdomSupply.some(
+    supply => supply.cards.some(card => getCardPileKey(card) === 'druid')
+  );
   if (hasCemetery) {
     console.info('[nocturne configurator] setting up cemetery heirloom onGameStart handler');
 
@@ -167,6 +171,44 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
         console.info(`[nocturne onGameStart] player ${player.id} replaced Copper with Haunted Mirror`);
       }
+    });
+  }
+
+  if (hasDruid) {
+    console.info('[nocturne configurator] setting up druid boon set-aside onGameStart handler');
+
+    registrar('onGameStart', async (args) => {
+      console.info('[nocturne onGameStart] setting aside top 3 boons for Druid');
+
+      if (!args.match.boons) {
+        console.warn('[nocturne onGameStart] no boons configured for Druid');
+        return;
+      }
+
+      args.match.boons.setAside ??= [];
+
+      if (args.match.boons.setAside.length > 0) {
+        console.info('[nocturne onGameStart] boons already set aside for Druid');
+        return;
+      }
+
+      const availableBoons = args.match.boons.deck.length;
+      if (availableBoons < 1) {
+        console.warn('[nocturne onGameStart] boon deck empty, cannot set aside for Druid');
+        return;
+      }
+
+      const setAsideCount = Math.min(3, availableBoons);
+      for (let index = 0; index < setAsideCount; index++) {
+        const boonId = args.match.boons.deck.pop();
+        if (boonId === undefined) {
+          console.warn('[nocturne onGameStart] boon draw failed while setting aside for Druid');
+          break;
+        }
+        args.match.boons.setAside.push(boonId);
+      }
+
+      console.info(`[nocturne onGameStart] set aside ${args.match.boons.setAside.length} boon(s) for Druid`);
     });
   }
 

@@ -146,6 +146,8 @@ export interface Match {
     cards: Boon[];
     deck: CardLikeId[];
     discard: CardLikeId[];
+    // Boons set aside for Druid (face up).
+    setAside: CardLikeId[];
   };
   // Hex deck state for Doom cards in this match.
   hexes: {

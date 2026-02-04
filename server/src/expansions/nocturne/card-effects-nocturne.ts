@@ -669,6 +669,45 @@ const expansion: CardExpansionModule = {
       });
     },
   },
+  'druid': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.info(`[druid effect] resolving for player ${cardEffectArgs.playerId}`);
+
+      // Apply the immediate +1 Buy.
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+
+      const setAsideBoons = cardEffectArgs.match.boons?.setAside ?? [];
+      if (!setAsideBoons.length) {
+        console.warn('[druid effect] no set-aside boons available');
+        return;
+      }
+
+      console.debug(`[druid effect] selecting from ${setAsideBoons.length} set-aside boon(s)`);
+      const selectionResult = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Choose a boon to receive',
+        content: {
+          type: 'select',
+          cardIds: setAsideBoons,
+          selectCount: 1,
+        },
+      }) as { result?: CardId[] };
+
+      const selectedBoonId = selectionResult?.result?.[0] ?? setAsideBoons[0];
+      if (!selectedBoonId) {
+        console.warn('[druid effect] no boon selected to receive');
+        return;
+      }
+
+      console.debug(`[druid effect] receiving boon ${selectedBoonId}`);
+      await cardEffectArgs.runGameActionDelegate('receiveBoon', {
+        playerId: cardEffectArgs.playerId,
+        boonId: selectedBoonId,
+        immediate: true,
+        keepSetAside: true,
+      });
+    },
+  },
   'ghost': {
     registerEffects: () => async (cardEffectArgs) => {
       console.info(`[ghost effect] resolving for player ${cardEffectArgs.playerId}`);

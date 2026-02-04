@@ -85,6 +85,17 @@
     ],
     "abilityText": "If the number of cards you've gained this turn is:\n2+, gain an Imp;\n1, gain a card costing up to $4;\n0, gain a Gold."
   },
+  "druid": {
+    "cardName": "Druid",
+    "cost": {
+      "treasure": 2
+    },
+    "type": [
+      "ACTION",
+      "FATE"
+    ],
+    "abilityText": "+1 Buy\nReceive one of the set-aside Boons (leaving it there).\nSetup: Set aside the top 3 Boons face up."
+  },
   "cobbler": {
     "cardName": "Cobbler",
     "cost": {

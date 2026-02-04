@@ -1186,7 +1186,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   }
 
   // Receives a boon from the shared boon deck and resolves its effect.
-  async receiveBoon(args: { playerId: PlayerId; immediate?: boolean; boonId?: CardLikeId }, context?: GameActionContext) {
+  async receiveBoon(args: { playerId: PlayerId; immediate?: boolean; boonId?: CardLikeId; keepSetAside?: boolean }, context?: GameActionContext) {
     // Default to immediate resolution unless explicitly deferred.
     const immediate = args.immediate !== false;
     console.log(`[receiveBoon action] player ${args.playerId} receiving a boon`);
@@ -1196,10 +1196,11 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     }
 
     // Ensure boon piles exist for older saved states.
-    this.match.boons ??= { cards: [], deck: [], discard: [] };
+    this.match.boons ??= { cards: [], deck: [], discard: [], setAside: [] };
     this.match.boons.cards ??= [];
     this.match.boons.deck ??= [];
     this.match.boons.discard ??= [];
+    this.match.boons.setAside ??= [];
 
     if (this.match.boons.cards.length < 1) {
       console.info('[receiveBoon action] no boons configured, skipping');
@@ -1317,6 +1318,11 @@ export class GameActionController implements BaseGameActionDefinitionMap {
 
       if (isSetAside) {
         console.debug(`[receiveBoon action] boon ${boon.cardKey} set aside until cleanup`);
+        return;
+      }
+
+      if (args.keepSetAside) {
+        console.debug(`[receiveBoon action] preserving ${boon} in set-aside`);
         return;
       }
 

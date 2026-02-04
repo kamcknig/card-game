@@ -103,6 +103,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         cards: [],
         deck: [],
         discard: [],
+        setAside: [],
       },
       // Hex deck state for Doom cards.
       hexes: {
@@ -953,6 +954,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       cards: [],
       deck: [],
       discard: [],
+      setAside: [],
     };
 
     for (const boon of boons) {
