@@ -1073,6 +1073,50 @@ const expansion: CardExpansionModule = {
       });
     },
   },
+  'skulk': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (cardEffectArgs, eventArgs) => {
+
+        // Gain a Gold when Skulk is gained.
+        const goldCards = cardEffectArgs.findCards([
+          { location: 'basicSupply' },
+          { cardKeys: 'gold' },
+        ]);
+
+        if (!goldCards.length) {
+          console.debug('[skulk onGained] no Gold cards available to gain');
+          return;
+        }
+
+        const goldCardId = goldCards.slice(-1)[0].id;
+        console.debug(`[skulk onGained] gaining Gold ${cardEffectArgs.cardLibrary.getCard(goldCardId)}`);
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: eventArgs.playerId,
+          cardId: goldCardId,
+          to: { location: 'playerDiscard' },
+        });
+      },
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+
+      // Apply the immediate +1 Buy.
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+
+      const targetPlayerIds = findOrderedTargets({
+        startingPlayerId: cardEffectArgs.playerId,
+        appliesTo: 'ALL_OTHER',
+        match: cardEffectArgs.match,
+      }).filter((id) => !isPlayerImmune(cardEffectArgs.reactionContext, id));
+
+      console.debug(`[skulk effect] hex targets ${targetPlayerIds.map(id => getPlayerById(cardEffectArgs.match, id))}`);
+
+      for (const targetPlayerId of targetPlayerIds) {
+        await cardEffectArgs.runGameActionDelegate('receiveHex', {
+          playerId: targetPlayerId,
+        });
+      }
+    },
+  },
   'secret-cave': {
     registerEffects: () => async (cardEffectArgs) => {
 
@@ -1102,7 +1146,7 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      let discardIds: CardId[] = [];
+      let discardIds: CardId[];
       if (hand.length <= 3) {
         // When fewer than 3 cards in hand, discard all of them.
         discardIds = [...hand];

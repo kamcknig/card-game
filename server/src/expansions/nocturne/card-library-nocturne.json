@@ -228,6 +228,19 @@
     ],
     "abilityText": "+1 Action\nDiscard any number of Victory cards, revealing them. +2 Cards per card discarded.\nHeirloom: Pasture"
   },
+  "skulk": {
+    "cardName": "Skulk",
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION",
+      "ATTACK",
+      "DOOM"
+    ],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+1 Buy\nEach other player receives the next Hex.\nWhen you gain this, gain a Gold."
+  },
   "secret-cave": {
     "cardName": "Secret Cave",
     "cost": {

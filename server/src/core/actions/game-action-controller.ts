@@ -1421,8 +1421,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
 
     if (this.match.hexes.deck.length < 1 && this.match.hexes.discard.length > 0) {
       console.info('[receiveHex action] hex deck empty, reshuffling discard');
-      this.match.hexes.deck = fisherYatesShuffle(this.match.hexes.discard, false);
-      this.match.hexes.discard = [];
+      await this.shuffleCardLike({ kind: 'hex', includeDiscard: true });
     }
 
     let hexId = args.hexId;
