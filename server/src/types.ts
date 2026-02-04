@@ -359,8 +359,9 @@ type CardTriggerEffectConditionFn<T extends TriggerEventType> = (context: Trigge
 
 export type CardEffectFunction = (context: CardEffectFunctionContext) => Promise<void>;
 
+// Effect maps are sparse; only registered card keys are populated.
 export type CardEffectFunctionMap =
-    Record<CardKey, CardEffectFunction>;
+    Partial<Record<CardKey, CardEffectFunction>>;
 
 export interface CardScoringFnContext extends AppContext {
     ownerId: number;

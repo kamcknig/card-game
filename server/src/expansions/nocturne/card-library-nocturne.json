@@ -163,6 +163,17 @@
     "targetScheme": "ALL_OTHER",
     "abilityText": "+$2\nIf you have an odd number of Idols in play (counting this), receive a Boon; otherwise, each other player gains a Curse."
   },
+  "leprechaun": {
+    "cardName": "Leprechaun",
+    "cost": {
+      "treasure": 3
+    },
+    "type": [
+      "ACTION",
+      "DOOM"
+    ],
+    "abilityText": "Gain a Gold. If you have exactly 7 cards in play, gain a Wish. Otherwise, receive a Hex."
+  },
   "lucky-coin": {
     "cardName": "Lucky Coin",
     "cost": {
@@ -441,5 +452,14 @@
     },
     "kingdomSelectable": false,
     "type": ["ACTION", "SPIRIT"]
+  },
+  "wish": {
+    "cardName": "Wish",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["ACTION"],
+    "abilityText": "+1 Action\nReturn this to the Wish pile. If you did, gain a card to your hand costing up to $6."
   }
 }

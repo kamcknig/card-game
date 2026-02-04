@@ -53,11 +53,11 @@ import {fisherYatesShuffle} from '../../utils/fisher-yates-shuffler.ts';
 import {getCardPileKey} from '../../utils/get-card-pile-key.ts';
 import {tokenCardPlayedHandlerMap} from '../tokens/token-trigger-map.ts';
 import {tokenDefinitionMap} from '../tokens/token-definition-map.ts';
-import {prosperityTokenIds} from '../../expansions/prosperity/token-prosperity-ids.ts';
+import {prosperityTokenIds} from "@expansions/prosperity/token-prosperity-ids.ts";
 
 export class GameActionController implements BaseGameActionDefinitionMap {
   private customActionHandlers: Partial<GameActionDefinitionMap> = {};
-  private customCardEffectHandlers: Record<string, Record<CardKey, CardEffectFn>> = {};
+  private customCardEffectHandlers: Record<string, Partial<Record<CardKey, CardEffectFn>>> = {};
   // Guards against re-entrant computer turns triggered by nested game actions.
   private _computerTurnInProgress: boolean = false;
 

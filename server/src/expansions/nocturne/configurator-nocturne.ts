@@ -3,13 +3,13 @@ import { ExpansionConfiguratorFactory, GameEventRegistrar } from '../../types.ts
 import { uniqueByProp } from '../../core/match-configurator.ts';
 import { registerNocturneBoonEffects } from './boon-effects-nocturne.ts';
 import { configureWillOWisp } from './configure-will-o-wisp.ts';
-import { ComputedMatchConfiguration } from 'shared/shared-types.ts';
+import { ComputedMatchConfiguration } from 'shared/shared-types';
 import { compareCardCosts } from 'shared/compare-card-cost.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { createCard } from '../../utils/create-card.ts';
 import { configureGhost } from './configure-ghost.ts';
 import { configureImp } from './configure-imp.ts';
-import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
+import { configureWish } from './configure-wish.ts';
 import { registerStateEffects } from './state-effects-nocturne.ts';
 
 // Seeds boons when Fate cards are present in the selected kingdom.
@@ -40,6 +40,9 @@ const configurator: ExpansionConfiguratorFactory = () => {
     const impSources = new Set(['devils-workshop', 'tormentor', 'exorcist']);
     const hasImpSource = kingdomCards.some(card => impSources.has(getCardPileKey(card)));
     const hasGhostSource = hasCemetery || hasExorcist;
+    // Track which kingdom cards require the Wish pile.
+    const wishSources = new Set(['leprechaun', 'secret-cave']);
+    const hasWishSource = kingdomCards.some(card => wishSources.has(getCardPileKey(card)));
 
     if (hasGhostSource) {
       configureGhost(args);
@@ -56,6 +59,15 @@ const configurator: ExpansionConfiguratorFactory = () => {
     else if (args.config.nonSupply?.some(supply => supply.name === 'imp')) {
       console.info('[nocturne configurator] removing Imp pile because no Imp gainers are present');
       args.config.nonSupply = args.config.nonSupply.filter(supply => supply.name !== 'imp');
+    }
+
+    // Ensure the Wish pile is present only when needed.
+    if (hasWishSource) {
+      configureWish(args);
+    }
+    else if (args.config.nonSupply?.some(supply => supply.name === 'wish')) {
+      console.info('[nocturne configurator] removing Wish pile because no Wish gainers are present');
+      args.config.nonSupply = args.config.nonSupply.filter(supply => supply.name !== 'wish');
     }
 
     // Fate cards determine whether boons are active for this match.

@@ -33,7 +33,9 @@ execution
 - Extend systems without breaking invariants or implicit contracts
 - Preserve determinism across turns, players, and simulations
 - Respect existing architectural patterns over introducing new ones
-
+- all match configurations must be stable. if configurations are added and
+  the cards that trigger those configuration changes are removed, then the
+  added configurations should also be removed.
 ---
 
 ## In-Scope Work

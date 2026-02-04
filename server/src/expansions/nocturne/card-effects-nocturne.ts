@@ -732,6 +732,62 @@ const expansion: CardExpansionModule = {
       }
     },
   },
+  'leprechaun': {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Gain a Gold first.
+      const goldCards = cardEffectArgs.findCards([
+        { location: 'basicSupply' },
+        { cardKeys: 'gold' },
+      ]);
+
+      if (!goldCards.length) {
+        console.debug('[leprechaun effect] no Gold cards in supply');
+      }
+      else {
+        const goldCardId = goldCards.slice(-1)[0].id;
+        console.debug(`[leprechaun effect] gaining Gold ${cardEffectArgs.cardLibrary.getCard(goldCardId)}`);
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: goldCardId,
+          to: { location: 'playerDiscard' },
+        });
+      }
+
+      // Count cards in play after the Gold gain resolves.
+      const cardsInPlay = getCardsInPlay(cardEffectArgs.findCards)
+        .filter(card => cardEffectArgs.match.stats.playedCards[card.id]?.playerId === cardEffectArgs.playerId);
+      const inPlayCount = cardsInPlay.length;
+
+      console.debug(`[leprechaun effect] player has ${inPlayCount} card(s) in play`);
+
+      if (inPlayCount === 7) {
+        // Gain a Wish when the count is exactly 7.
+        const wishCards = cardEffectArgs.findCards([
+          { location: 'nonSupplyCards' },
+          { cardKeys: 'wish' },
+        ]);
+
+        if (!wishCards.length) {
+          console.warn('[leprechaun effect] no Wish cards available to gain');
+          return;
+        }
+
+        const wishCardId = wishCards.slice(-1)[0].id;
+        console.debug(`[leprechaun effect] gaining Wish ${cardEffectArgs.cardLibrary.getCard(wishCardId)}`);
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: wishCardId,
+          to: { location: 'playerDiscard' },
+        });
+        return;
+      }
+
+      // Otherwise, receive a Hex.
+      await cardEffectArgs.runGameActionDelegate('receiveHex', {
+        playerId: cardEffectArgs.playerId,
+      });
+    },
+  },
   'devils-workshop': {
     registerEffects: () => async (cardEffectArgs) => {
 
@@ -1297,6 +1353,48 @@ const expansion: CardExpansionModule = {
 
       // Haunted Mirror is a $1 Treasure.
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+    },
+  },
+  'wish': {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Apply the immediate +1 Action.
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+
+      const wishCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      console.debug(`[wish effect] returning ${wishCard} to wish pile`);
+
+      const moveResult = await cardEffectArgs.runGameActionDelegate('moveCard', {
+        cardId: wishCard.id,
+        to: { location: 'nonSupplyCards' },
+      });
+
+      if (!moveResult) {
+        console.debug('[wish effect] wish did not return to pile, skipping gain');
+        return;
+      }
+
+      const gainCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        prompt: 'Gain a card to your hand costing up to $6',
+        playerId: cardEffectArgs.playerId,
+        count: 1,
+        restrict: [
+          { location: ['basicSupply', 'kingdomSupply'] },
+          { playerId: cardEffectArgs.playerId, kind: 'upTo', amount: { treasure: 6 } },
+        ],
+      }) as CardId[];
+
+      const gainCardId = gainCardIds[0];
+      if (!gainCardId) {
+        console.debug('[wish effect] no card selected to gain');
+        return;
+      }
+
+      console.debug(`[wish effect] gaining ${cardEffectArgs.cardLibrary.getCard(gainCardId)} to hand`);
+      await cardEffectArgs.runGameActionDelegate('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: gainCardId,
+        to: { location: 'playerHand' },
+      });
     },
   },
   "will-o-wisp": {
