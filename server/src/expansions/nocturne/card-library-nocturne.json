@@ -106,6 +106,17 @@
     ],
     "abilityText": "Trash a card from your hand. Gain a cheaper Spirit from one of the Spirit piles."
   },
+  "faithful-hound": {
+    "cardName": "Faithful Hound",
+    "cost": {
+      "treasure": 2
+    },
+    "type": [
+      "ACTION",
+      "REACTION"
+    ],
+    "abilityText": "+2 Cards\nWhen you discard this other than during Clean-up, you may set it aside, and put it into your hand at end of turn."
+  },
   "cobbler": {
     "cardName": "Cobbler",
     "cost": {

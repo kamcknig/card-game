@@ -787,6 +787,74 @@ const expansion: CardExpansionModule = {
       });
     },
   },
+  'faithful-hound': {
+    registerLifeCycleMethods: () => ({
+      onDiscarded: async (args, eventArgs) => {
+        // Faithful Hound does nothing if discarded during cleanup.
+        if (getTurnPhase(args.match.turnPhaseIndex) === 'cleanup') {
+          console.debug('[faithful-hound onDiscarded] discard during cleanup, skipping');
+          return;
+        }
+
+        // Prompt the owner to set it aside for end-of-turn return.
+        const faithfulHound = args.cardLibrary.getCard(eventArgs.cardId);
+        console.info(`[faithful-hound onDiscarded] resolving for ${faithfulHound}`);
+
+        const result = await args.runGameActionDelegate('userPrompt', {
+          prompt: 'Set Faithful Hound aside?',
+          playerId: eventArgs.playerId,
+          actionButtons: [
+            { label: 'CANCEL', action: 1 },
+            { label: 'SET ASIDE', action: 2 },
+          ],
+        }) as { action: number };
+
+        if (result.action === 1) {
+          console.debug('[faithful-hound onDiscarded] player declined to set aside');
+          return;
+        }
+
+        // Set the card aside on the owner's mat.
+        console.debug(`[faithful-hound onDiscarded] setting aside ${faithfulHound}`);
+        await args.runGameActionDelegate('moveCard', {
+          cardId: eventArgs.cardId,
+          toPlayerId: eventArgs.playerId,
+          to: { location: 'set-aside' },
+        });
+
+        // Return it to hand at the end of the current turn.
+        const discardTurnNumber = args.match.turnNumber;
+        args.reactionManager.registerReactionTemplate(
+          faithfulHound,
+          'endTurn',
+          {
+            playerId: eventArgs.playerId,
+            once: true,
+            allowMultipleInstances: true,
+            compulsory: true,
+            condition: (conditionArgs) => conditionArgs.trigger.args.turnNumber === discardTurnNumber,
+            triggeredEffectFn: async (triggeredArgs) => {
+              console.debug(`[faithful-hound endTurn] moving ${faithfulHound} to hand`);
+              await triggeredArgs.runGameActionDelegate('moveCard', {
+                cardId: eventArgs.cardId,
+                toPlayerId: eventArgs.playerId,
+                to: { location: 'playerHand' },
+              });
+            },
+          },
+        );
+      },
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.info(`[faithful-hound effect] resolving for player ${cardEffectArgs.playerId}`);
+
+      // Apply the immediate +2 Cards.
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: 2,
+      });
+    },
+  },
   'ghost': {
     registerEffects: () => async (cardEffectArgs) => {
       console.info(`[ghost effect] resolving for player ${cardEffectArgs.playerId}`);
