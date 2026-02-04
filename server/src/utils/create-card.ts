@@ -10,6 +10,8 @@ import {
   HexNoId,
   Landmark,
   LandmarkNoId,
+  State,
+  StateNoId,
 } from 'shared/shared-types.ts';
 import { rawCardLibrary } from '@expansions/expansion-library.ts';
 import { formatCardName } from './format-card-name.ts';
@@ -56,6 +58,14 @@ export const createHex = (hex: HexNoId): Hex => {
 export const createLandmark = (landmark: LandmarkNoId): Landmark => {
   return new Landmark({
     ...landmark,
+    id: ++CARD_COUNT,
+  });
+}
+
+// States are card-like objects that track persistent player effects.
+export const createState = (state: StateNoId): State => {
+  return new State({
+    ...state,
     id: ++CARD_COUNT,
   });
 }

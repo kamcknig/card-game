@@ -1,6 +1,6 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { cardStore } from '../../../state/card-state';
-import { Card, CardType, Match, TokenDefinition, TokenId, TokenInstance } from 'shared/shared-types';
+import { Card, CardLikeId, CardType, Match, TokenDefinition, TokenId, TokenInstance } from 'shared/shared-types';
 import { atom, computed } from 'nanostores';
 import { CARD_HEIGHT, CARD_WIDTH, SMALL_CARD_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
 import { PhaseStatus } from './phase-status';
@@ -15,6 +15,8 @@ import { matchStore } from '../../../state/match-state';
 import { tokenDefinitionStore } from '../../../state/token-definition-state';
 import { TokenBadgeView } from './token-badge-view';
 import { getTokenShortLabel } from './token-utils';
+import { applicationStore } from '../../../state/app-state';
+import { userPromptModal } from './modal/user-prompt-modal';
 
 export class PlayerHandView extends Container {
   private readonly _phaseStatus: PhaseStatus;
@@ -34,6 +36,7 @@ export class PlayerHandView extends Container {
   private readonly _cardList: List = new List({ type: 'horizontal', elementsMargin: STANDARD_GAP });
   private readonly _availableTokenTray: List = new List({ type: 'horizontal', elementsMargin: Math.floor(STANDARD_GAP * 0.5) });
   private readonly _activeTokenTray: List = new List({ type: 'horizontal', elementsMargin: Math.floor(STANDARD_GAP * 0.5) });
+  private readonly _statesButton: AppButton = createAppButton({ text: 'States', style: { fill: '#ffffff', fontSize: 16 } });
   private readonly _availableTokenLabel: Text = new Text({
     text: 'Available Tokens',
     style: { fill: '#ffffff', fontSize: 12 }
@@ -42,6 +45,8 @@ export class PlayerHandView extends Container {
     text: 'Active Tokens',
     style: { fill: '#ffffff', fontSize: 12 }
   });
+  // Track current state ids affecting this player for the states modal.
+  private _currentStateIds: CardLikeId[] = [];
 
   constructor(
     private playerId: number,
@@ -63,6 +68,7 @@ export class PlayerHandView extends Container {
     this.addChild(this._availableTokenTray);
     this.addChild(this._activeTokenLabel);
     this.addChild(this._activeTokenTray);
+    this.addChild(this._statesButton.button);
     this.addChild(this._cardList);
     this.addChild(this._nextPhaseButton.button);
 
@@ -113,6 +119,7 @@ export class PlayerHandView extends Container {
       this.emit('playAllTreasure');
     });
     this.addChild(this._playAllTreasuresButton.button);
+    this._statesButton.button.on('pointerdown', () => this.openStatesModal());
 
     this.updatePlayAllTreasureVisibility();
     this.updateButtonLayout();
@@ -134,9 +141,28 @@ export class PlayerHandView extends Container {
     this._cleanup.forEach(c => c());
     this._nextPhaseButton.button.off('pointerdown');
     this._playAllTreasuresButton.button.off('pointerdown');
+    this._statesButton.button.off('pointerdown');
     this.off('removed');
   }
   
+  // Opens the states modal for the current player.
+  private openStatesModal() {
+    if (!this._currentStateIds.length) return;
+    const app = applicationStore.get();
+    if (!app) {
+      console.warn('[player hand] application not ready for states modal');
+      return;
+    }
+    void userPromptModal(app, this._socketService, {
+      playerId: this.playerId,
+      prompt: 'States',
+      content: {
+        type: 'display-card-likes',
+        cardLikeIds: this._currentStateIds,
+      },
+    }, this.playerId);
+  }
+
   // Renders any unplaced tokens owned by this player in the token tray.
   private drawTokenTray(match: Match | null, tokenDefinitions: Record<TokenId, TokenDefinition>) {
     this._availableTokenTray.removeChildren();
@@ -148,6 +174,9 @@ export class PlayerHandView extends Container {
     }
     
     const playerColor = match.players.find(player => player.id === this.playerId)?.color ?? '#ffffff';
+    // Track current state ids for the states modal.
+    this._currentStateIds = match.states?.byPlayer?.[this.playerId] ?? [];
+    this._statesButton.button.visible = this._currentStateIds.length > 0;
     // Victory tokens are scored separately and should not render in the token tray.
     const victoryTokenId = 'prosperity:victory';
     const tokens = Object.values(match.tokens ?? {})
@@ -193,6 +222,11 @@ export class PlayerHandView extends Container {
     this._availableTokenTray.visible = hasAvailable;
     this._activeTokenLabel.visible = hasActive;
     this._activeTokenTray.visible = hasActive;
+
+    if (this._statesButton.button.visible) {
+      this._statesButton.button.x = this._background.width - this._statesButton.button.width - STANDARD_GAP;
+      this._statesButton.button.y = this._background.y + Math.floor(STANDARD_GAP * 0.5);
+    }
     
     let y = this._background.y + Math.floor(STANDARD_GAP * 0.5);
     

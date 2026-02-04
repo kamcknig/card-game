@@ -29,6 +29,11 @@ const isHexCardEntry = (entry: Partial<CardNoId>): boolean => {
   return (entry.type ?? []).includes('HEX');
 };
 
+// Type guard for state entries in card libraries.
+const isStateCardEntry = (entry: Partial<CardNoId>): boolean => {
+  return (entry.type ?? []).includes('STATE');
+};
+
 // Type guard for randomizer pile entries in card library JSON.
 const isRandomizerPileDefinition = (entry: unknown): entry is RandomizerPileDefinition => {
   if (!entry || typeof entry !== 'object') {
@@ -62,6 +67,8 @@ export const loadExpansion = async (expansion: { name: string; }) => {
     boons: {},
     // Hexes live alongside boons as non-supply card-likes.
     hexes: {},
+    // States live alongside other non-supply card-likes.
+    states: {},
   };
   
   let expansionConfiguration;
@@ -128,6 +135,15 @@ export const loadExpansion = async (expansion: { name: string; }) => {
             expansionLibrary[expansionName].hexes[cardKey] = hexData as any;
             continue;
           }
+          if (isStateCardEntry(cardEntry)) {
+            console.debug(`[expansion loader] registering state ${cardKey} from pile ${pileRandomizer}`);
+            const stateData = createCardLike(cardKey, expansionName, {
+              ...cardEntry,
+              kingdomSelectable: cardEntry.kingdomSelectable ?? false,
+            });
+            expansionLibrary[expansionName].states[cardKey] = stateData as any;
+            continue;
+          }
           // Apply pile-level randomizer metadata to each card in the pile.
           const templateData = {
             ...cardEntry,
@@ -159,6 +175,15 @@ export const loadExpansion = async (expansion: { name: string; }) => {
           kingdomSelectable: (entry as Partial<CardNoId>).kingdomSelectable ?? false,
         });
         expansionLibrary[expansionName].hexes[key] = hexData as any;
+        continue;
+      }
+      if (isStateCardEntry(entry as Partial<CardNoId>)) {
+        console.debug(`[expansion loader] registering state ${key}`);
+        const stateData = createCardLike(key as CardKey, expansionName, {
+          ...(entry as Partial<CardNoId>),
+          kingdomSelectable: (entry as Partial<CardNoId>).kingdomSelectable ?? false,
+        });
+        expansionLibrary[expansionName].states[key] = stateData as any;
         continue;
       }
 

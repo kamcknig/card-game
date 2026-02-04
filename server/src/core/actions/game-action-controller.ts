@@ -69,6 +69,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     private eventEffectFunctionMap: CardEffectFunctionMap,
     private boonEffectFunctionMap: CardEffectFunctionMap,
     private hexEffectFunctionMap: CardEffectFunctionMap,
+    private stateEffectFunctionMap: CardEffectFunctionMap,
     private match: Match,
     private cardLibrary: MatchCardLibrary,
     private logManager: LogManager,
@@ -103,6 +104,14 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       console.warn(`[action controller] hex effect for ${cardKey} already exists, overwriting it`);
     }
     this.hexEffectFunctionMap[cardKey] = fn;
+  }
+
+  // Registers state effects for the current match.
+  public registerStateEffect(cardKey: CardKey, fn: CardEffectFn) {
+    if (this.stateEffectFunctionMap[cardKey]) {
+      console.warn(`[action controller] state effect for ${cardKey} already exists, overwriting it`);
+    }
+    this.stateEffectFunctionMap[cardKey] = fn;
   }
 
   public async invokeAction<K extends GameActions>(
@@ -1461,6 +1470,92 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     console.debug(`[receiveHex action] discarded ${hex}`);
 
     return hexId;
+  }
+
+  // Assigns a state to a player and registers its effect triggers.
+  async gainState(args: { playerId: PlayerId; stateId?: CardLikeId; stateKey?: CardKey }, context?: GameActionContext) {
+    console.log(`[gainState action] player ${args.playerId} gaining state`);
+
+    // Ensure state storage exists for older saved states.
+    this.match.states ??= { cards: [], byPlayer: {} };
+    this.match.states.cards ??= [];
+    this.match.states.byPlayer ??= {};
+
+    if (this.match.states.cards.length < 1) {
+      console.info('[gainState action] no states configured, skipping');
+      return;
+    }
+
+    const state = args.stateId !== undefined
+      ? this.match.states.cards.find(candidate => candidate.id === args.stateId)
+      : this.match.states.cards.find(candidate => candidate.cardKey === args.stateKey);
+
+    if (!state) {
+      console.warn('[gainState action] could not resolve state to gain');
+      return;
+    }
+
+    let previousOwnerId: PlayerId | undefined;
+    for (const [playerId, stateIds] of Object.entries(this.match.states.byPlayer)) {
+      if (stateIds.includes(state.id)) {
+        previousOwnerId = Number(playerId);
+        break;
+      }
+    }
+
+    if (previousOwnerId === args.playerId) {
+      console.debug(`[gainState action] player ${args.playerId} already has ${state}`);
+      return state.id;
+    }
+
+    if (previousOwnerId !== undefined) {
+      const previousStates = this.match.states.byPlayer[previousOwnerId] ?? [];
+      const index = previousStates.indexOf(state.id);
+      if (index !== -1) {
+        previousStates.splice(index, 1);
+      }
+      const previousTriggerId = `state:${state.id}:startTurn:${previousOwnerId}`;
+      this.reactionManager.unregisterTrigger(previousTriggerId);
+      console.debug(`[gainState action] removed ${state} from player ${previousOwnerId}`);
+    }
+
+    this.match.states.byPlayer[args.playerId] ??= [];
+    if (!this.match.states.byPlayer[args.playerId].includes(state.id)) {
+      this.match.states.byPlayer[args.playerId].push(state.id);
+    }
+
+    const effectFn = this.stateEffectFunctionMap[state.cardKey];
+    if (!effectFn) {
+      console.debug(`[gainState action] no effect registered for ${state.cardKey}`);
+      return state.id;
+    }
+
+    console.debug(`[gainState action] registering effects for ${state}`);
+    await this.logManager.withIndent(async () => {
+      const effectContext = {
+        cardSourceController: this._cardSourceController,
+        cardPriceController: this.cardPriceRuleController,
+        reactionManager: this.reactionManager,
+        runGameActionDelegate: this.runGameActionDelegate,
+        cardId: state.id,
+        playerId: args.playerId,
+        match: this.match,
+        cardLibrary: this.cardLibrary,
+        reactionContext: {},
+        findCards: this._findCards
+      } as CardEffectFunctionContext;
+
+      // Centralized duration registration with automatic cleanup on leave-play.
+      effectContext.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
+        const triggerIds = this.registerDurationEffectInternal(durationCard, effectContext, triggeredTemplate, options);
+        this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
+        return triggerIds;
+      };
+
+      await effectFn(effectContext);
+    });
+
+    return state.id;
   }
 
   async revealCard(args: {

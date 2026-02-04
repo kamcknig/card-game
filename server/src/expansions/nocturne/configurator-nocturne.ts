@@ -10,11 +10,14 @@ import { createCard } from '../../utils/create-card.ts';
 import { configureGhost } from './configure-ghost.ts';
 import { configureImp } from './configure-imp.ts';
 import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
+import { registerStateEffects } from './state-effects-nocturne.ts';
 
 // Seeds boons when Fate cards are present in the selected kingdom.
 const configurator: ExpansionConfiguratorFactory = () => {
   // Track boon effect registration to avoid duplicates across configurator iterations.
   let boonEffectsRegistered = false;
+  // Track state effect registration to avoid duplicates across configurator iterations.
+  let stateEffectsRegistered = false;
 
   return async (args) => {
     if (!boonEffectsRegistered) {
@@ -22,11 +25,17 @@ const configurator: ExpansionConfiguratorFactory = () => {
       registerNocturneBoonEffects(args.boonEffectRegistrar);
       boonEffectsRegistered = true;
     }
+    if (!stateEffectsRegistered) {
+      // Register all state effects once per match.
+      registerStateEffects(args.stateEffectRegistrar);
+      stateEffectsRegistered = true;
+    }
 
     // Gather all selected kingdom cards for boons and heirloom-linked piles.
     const kingdomCards = args.config.kingdomSupply.flatMap(supply => supply.cards);
     const hasCemetery = kingdomCards.some(card => getCardPileKey(card) === 'cemetery');
     const hasExorcist = kingdomCards.some(card => getCardPileKey(card) === 'exorcist');
+    const hasFool = kingdomCards.some(card => getCardPileKey(card) === 'fool');
     // Track which kingdom cards require the Imp pile.
     const impSources = new Set(['devils-workshop', 'tormentor', 'exorcist']);
     const hasImpSource = kingdomCards.some(card => impSources.has(getCardPileKey(card)));
@@ -101,29 +110,54 @@ const configurator: ExpansionConfiguratorFactory = () => {
       }
       // Ensure hexes are cleared when Doom cards are absent.
       args.config.hexes = [];
+    }
+    else {
+      // Limit hex selection to expansions that actually contributed Doom cards.
+      const expansionsWithDoom = Array.from(new Set(doomCards.map(card => card.expansionName)));
+
+      // Pull hex definitions from the expansion library.
+      const hexes = expansionsWithDoom.flatMap(expansionName =>
+        Object.values(expansionLibrary[expansionName]?.hexes ?? {})
+      );
+      // De-duplicate hexes across expansions by card key.
+      const uniqueHexes = uniqueByProp(hexes, 'cardKey');
+
+      if (uniqueHexes.length < 1) {
+        // Log missing hex definitions so configuration issues are visible.
+        console.warn(`[nocturne configurator] Doom cards present but no hexes found for expansions ${expansionsWithDoom.join(', ')}`);
+        args.config.hexes = [];
+      }
+      else {
+        // Seed the computed configuration with the selected hexes.
+        console.info(`[nocturne configurator] Doom cards present, seeding ${uniqueHexes.length} hexes`);
+        args.config.hexes = structuredClone(uniqueHexes);
+      }
+    }
+
+    // Preserve any non-Nocturne states while toggling Lost in the Woods.
+    const existingStates = args.config.states ?? [];
+    const filteredStates = existingStates.filter(state => state.cardKey !== 'lost-in-the-woods');
+
+    if (!hasFool) {
+      if (existingStates.length !== filteredStates.length) {
+        console.info('[nocturne configurator] removing Lost in the Woods because Fool is absent');
+      }
+      args.config.states = filteredStates;
       return args.config;
     }
 
-    // Limit hex selection to expansions that actually contributed Doom cards.
-    const expansionsWithDoom = Array.from(new Set(doomCards.map(card => card.expansionName)));
+    const lostInTheWoods = expansionLibrary['nocturne']?.states?.['lost-in-the-woods'];
+    if (!lostInTheWoods) {
+      console.warn('[nocturne configurator] Fool present but Lost in the Woods state not found');
+      args.config.states = filteredStates;
+      return args.config;
+    }
 
-    // Pull hex definitions from the expansion library.
-    const hexes = expansionsWithDoom.flatMap(expansionName =>
-      Object.values(expansionLibrary[expansionName]?.hexes ?? {})
+    console.info('[nocturne configurator] Fool present, ensuring Lost in the Woods state');
+    args.config.states = uniqueByProp(
+      [...filteredStates, structuredClone(lostInTheWoods)],
+      'cardKey',
     );
-    // De-duplicate hexes across expansions by card key.
-    const uniqueHexes = uniqueByProp(hexes, 'cardKey');
-
-    if (uniqueHexes.length < 1) {
-      // Log missing hex definitions so configuration issues are visible.
-      console.warn(`[nocturne configurator] Doom cards present but no hexes found for expansions ${expansionsWithDoom.join(', ')}`);
-      args.config.hexes = [];
-      return args.config;
-    }
-
-    // Seed the computed configuration with the selected hexes.
-    console.info(`[nocturne configurator] Doom cards present, seeding ${uniqueHexes.length} hexes`);
-    args.config.hexes = structuredClone(uniqueHexes);
     return args.config;
   };
 };
@@ -134,6 +168,9 @@ export default configurator;
 export const registerGameEvents: (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => void = (registrar, config) => {
   const hasCemetery = config.kingdomSupply.some(
     supply => supply.cards.some(card => getCardPileKey(card) === 'cemetery')
+  );
+  const hasFool = config.kingdomSupply.some(
+    supply => supply.cards.some(card => getCardPileKey(card) === 'fool')
   );
   const hasDruid = config.kingdomSupply.some(
     supply => supply.cards.some(card => getCardPileKey(card) === 'druid')
@@ -177,6 +214,49 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         deck.splice(chosenIndex, 0, hauntedMirror.id);
 
         console.info(`[nocturne onGameStart] player ${player.id} replaced Copper with Haunted Mirror`);
+      }
+    });
+  }
+
+  if (hasFool) {
+    console.info('[nocturne configurator] setting up fool heirloom onGameStart handler');
+
+    registrar('onGameStart', async (args) => {
+      console.info('[nocturne onGameStart] replacing starting Copper with Lucky Coin');
+
+      for (const player of args.match.players) {
+        // Locate all Copper cards in the player deck.
+        const deck = args.cardSourceController.getSource('playerDeck', player.id);
+        const copperIndices: number[] = [];
+
+        for (let idx = 0; idx < deck.length; idx++) {
+          const card = args.cardLibrary.getCard(deck[idx]);
+          if (card.cardKey === 'copper') {
+            copperIndices.push(idx);
+          }
+        }
+
+        if (copperIndices.length < 1) {
+          console.warn(`[nocturne onGameStart] player ${player.id} has no Copper to replace with Lucky Coin`);
+          continue;
+        }
+
+        // Choose a random Copper to swap so the heirloom position is uniformly random.
+        const chosenIndex = copperIndices[Math.floor(Math.random() * copperIndices.length)];
+        const copperId = deck[chosenIndex];
+
+        await args.runGameActionDelegate('moveCard', {
+          cardId: copperId,
+          to: { location: 'basicSupply' }
+        });
+
+        // Create the Lucky Coin and insert it in the same deck position.
+        const luckyCoin = createCard('lucky-coin', { owner: player.id, partOfSupply: false });
+        luckyCoin.facing = 'back';
+        args.cardLibrary.addCard(luckyCoin);
+        deck.splice(chosenIndex, 0, luckyCoin.id);
+
+        console.info(`[nocturne onGameStart] player ${player.id} replaced Copper with Lucky Coin`);
       }
     });
   }

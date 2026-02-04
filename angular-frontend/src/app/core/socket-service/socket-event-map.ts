@@ -130,6 +130,24 @@ export const socketToGameEventMap = (): SocketEventMap => {
       finalBundle[`${landmark.cardKey}-detail`] ??= landmark.detailImagePath;
     }
 
+    // Ensure boon images are loaded for card-like selection prompts.
+    for (const boon of matchStore.get()?.boons?.cards ?? []) {
+      finalBundle[`${boon.cardKey}-full`] ??= boon.fullImagePath;
+      finalBundle[`${boon.cardKey}-detail`] ??= boon.detailImagePath;
+    }
+
+    // Ensure hex images are loaded for card-like selection prompts.
+    for (const hex of matchStore.get()?.hexes?.cards ?? []) {
+      finalBundle[`${hex.cardKey}-full`] ??= hex.fullImagePath;
+      finalBundle[`${hex.cardKey}-detail`] ??= hex.detailImagePath;
+    }
+
+    // Ensure state images are loaded for state display prompts.
+    for (const state of matchStore.get()?.states?.cards ?? []) {
+      finalBundle[`${state.cardKey}-full`] ??= state.fullImagePath;
+      finalBundle[`${state.cardKey}-detail`] ??= state.detailImagePath;
+    }
+
     Assets.addBundle('cardLibrary', finalBundle);
 
     sceneStore.set('match');

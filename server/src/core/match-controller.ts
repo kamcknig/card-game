@@ -35,7 +35,7 @@ import {
   MatchBaseConfiguration,
   PlayerScoreDecorator,
 } from '../types.ts';
-import { createBoon, createCard, createEvent, createHex, createLandmark } from '../utils/create-card.ts';
+import { createBoon, createCard, createEvent, createHex, createLandmark, createState } from '../utils/create-card.ts';
 import { getRemainingSupplyCount, getStartingSupplyCount } from '../utils/get-starting-supply-count.ts';
 import { CardPriceRulesController } from './card-price-rules-controller.ts';
 import { findCardsFactory } from '../utils/find-cards.ts';
@@ -110,6 +110,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         cards: [],
         deck: [],
         discard: [],
+      },
+      // State instances and ownership tracking.
+      states: {
+        cards: [],
+        byPlayer: {},
       },
       mats: {},
       playerActions: 0,
@@ -245,6 +250,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const boonEffectFunctionMap = {} as CardEffectFunctionMap;
     // Hex effects are registered per-match via expansion configurators.
     const hexEffectFunctionMap = {} as CardEffectFunctionMap;
+    // State effects are registered per-match via expansion configurators.
+    const stateEffectFunctionMap = {} as CardEffectFunctionMap;
 
     this._interactivityController = new CardInteractivityController(
       this._cardSourceController,
@@ -264,6 +271,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       eventEffectFunctionMap,
       boonEffectFunctionMap,
       hexEffectFunctionMap,
+      stateEffectFunctionMap,
       this._match,
       this._cardLibrary,
       this._logManager,
@@ -284,6 +292,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       cardEffectRegistrar: (...args) => this.gameActionsController?.registerCardEffect(...args),
       boonEffectRegistrar: (cardKey, effectFn) => this.gameActionsController?.registerBoonEffect(cardKey, effectFn),
       hexEffectRegistrar: (cardKey, effectFn) => this.gameActionsController?.registerHexEffect(cardKey, effectFn),
+      stateEffectRegistrar: (cardKey, effectFn) => this.gameActionsController?.registerStateEffect(cardKey, effectFn),
       playerScoreDecoratorRegistrar: (val: PlayerScoreDecorator) => this._expansionScoringFns.push(val),
     });
 
@@ -308,6 +317,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this.createBoons(this._matchConfiguration);
       // Hexes are initialized after boons if Doom cards are present.
       this.createHexes(this._matchConfiguration);
+      // States are initialized after boons/hexes for any state-granting cards.
+      this.createStates(this._matchConfiguration);
       this.createNonSupplyCards(this._matchConfiguration);
       this.createPlayerDecks(this._matchConfiguration);
       this._match.config = this._matchConfiguration;
@@ -995,6 +1006,29 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     fisherYatesShuffle(this._match.hexes.deck, true);
 
     console.debug(`[match] hex deck initialized with ${this._match.hexes.deck.length} hexes`);
+  }
+
+  // Creates state instances for the match when state cards are present.
+  private createStates(config: ComputedMatchConfiguration) {
+    const states = config.states ?? [];
+    if (states.length < 1) {
+      console.info('[match] no states configured for this match');
+      return;
+    }
+
+    console.info('[match] creating states');
+    // Initialize state storage before instantiating state cards.
+    this._match.states = {
+      cards: [],
+      byPlayer: {},
+    };
+
+    for (const state of states) {
+      const stateInstance = createState(state);
+      this._match.states.cards.push(stateInstance);
+    }
+
+    console.debug(`[match] states initialized with ${this._match.states.cards.length} state(s)`);
   }
 
   private createLandmarks(config: ComputedMatchConfiguration) {

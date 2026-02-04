@@ -106,6 +106,17 @@
     ],
     "abilityText": "Trash a card from your hand. Gain a cheaper Spirit from one of the Spirit piles."
   },
+  "fool": {
+    "cardName": "Fool",
+    "cost": {
+      "treasure": 3
+    },
+    "type": [
+      "ACTION",
+      "FATE"
+    ],
+    "abilityText": "If you aren't the player with Lost in the Woods: take it, take 3 Boons, and receive the Boons in any order.\nHeirloom: Lucky Coin"
+  },
   "faithful-hound": {
     "cardName": "Faithful Hound",
     "cost": {
@@ -116,6 +127,18 @@
       "REACTION"
     ],
     "abilityText": "+2 Cards\nWhen you discard this other than during Clean-up, you may set it aside, and put it into your hand at end of turn."
+  },
+  "lucky-coin": {
+    "cardName": "Lucky Coin",
+    "cost": {
+      "treasure": 4
+    },
+    "kingdomSelectable": false,
+    "type": [
+      "TREASURE",
+      "HEIRLOOM"
+    ],
+    "abilityText": "+$1\nGain a Silver."
   },
   "cobbler": {
     "cardName": "Cobbler",
@@ -366,6 +389,15 @@
     },
     "kingdomSelectable": false,
     "type": ["HEX"]
+  },
+  "lost-in-the-woods": {
+    "cardName": "Lost in the Woods",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["STATE"],
+    "abilityText": "At the start of your turn, you may discard a card to receive a Boon."
   },
   "will-o-wisp": {
     "cardName": "Will-o'-Wisp",

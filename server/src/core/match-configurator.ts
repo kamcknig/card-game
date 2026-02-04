@@ -84,6 +84,8 @@ export class MatchConfigurator {
     this._config.players = players;
     // Ensure landmarks array exists for downstream selection logic.
     this._config.landmarks ??= [];
+    // Ensure states array exists for downstream configuration logic.
+    this._config.states ??= [];
 
     console.info(`[match configurator] created`);
   }

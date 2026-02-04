@@ -91,6 +91,8 @@ export const userPromptModal = (
           contentView = overpayView(app, args.content);
           break;
         }
+        case 'display-card-likes':
+        case 'select-card-likes':
         case 'display-cards':
         default:
           contentView = cardSelectionView(app, args.content);
@@ -187,6 +189,21 @@ export const userPromptModal = (
         .fill({ color: 'black', alpha: .8 });
 
       modalContainer.addChildAt(background, 0);
+
+      // Display-only card-like modals use a close button for dismissal.
+      const showCloseButton = args.content?.type === 'display-cards'
+        || args.content?.type === 'display-card-likes';
+      if (showCloseButton) {
+        const closeButton = createAppButton({
+          text: 'X',
+          style: { fill: 'white', fontSize: 18 }
+        });
+        closeButton.button.on('pointerdown', () => actionButtonListener({ action: 0 }));
+        closeButton.button.on('removed', () => closeButton.button.removeAllListeners());
+        closeButton.button.x = Math.floor(modalContainer.width * .5) - closeButton.button.width - STANDARD_GAP;
+        closeButton.button.y = Math.floor(-STANDARD_GAP * 1.5);
+        modalContainer.addChild(closeButton.button);
+      }
 
       modalContainer.x = app.renderer.width * .5;
       modalContainer.y = app.renderer.height * .5 - modalContainer.height * .5;

@@ -98,9 +98,13 @@ export class CardLikeComponent implements OnInit, OnDestroy {
     if (!match) return undefined;
     const boon = match.boons?.cards?.find(card => card.id === this.cardLikeId);
     if (boon) return boon;
+    const hex = match.hexes?.cards?.find(card => card.id === this.cardLikeId);
+    if (hex) return hex;
     const event = match.events?.find(card => card.id === this.cardLikeId);
     if (event) return event;
-    return match.landmarks?.find(card => card.id === this.cardLikeId);
+    const landmark = match.landmarks?.find(card => card.id === this.cardLikeId);
+    if (landmark) return landmark;
+    return match.states?.cards?.find(card => card.id === this.cardLikeId);
   }
 
   // Card-likes always use full-size art until half-size assets exist.

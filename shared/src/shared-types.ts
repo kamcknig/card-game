@@ -84,6 +84,8 @@ export interface MatchConfiguration {
   boons: BoonNoId[];
   // Hexes available for Doom cards in this match.
   hexes: HexNoId[];
+  // States available for cards that grant them (e.g., Lost in the Woods).
+  states: StateNoId[];
 }
 
 export type ComputedMatchConfiguration = MatchConfiguration & {
@@ -154,6 +156,11 @@ export interface Match {
     cards: Hex[];
     deck: CardLikeId[];
     discard: CardLikeId[];
+  };
+  // State instances in the match and who currently has them.
+  states: {
+    cards: State[];
+    byPlayer: Record<PlayerId, CardLikeId[]>;
   };
   mats: PlayerMatMap;
   playerActions: number;
@@ -239,7 +246,9 @@ export type UserPromptKinds =
     placeholder?: string;
   }
   | { type: 'display-cards'; cardIds: CardId[]; }
+  | { type: 'display-card-likes'; cardLikeIds: CardLikeId[]; }
   | { type: 'select'; cardIds: CardId[]; selectCount: CountSpec; selectableCardIds?: CardId[]; }
+  | { type: 'select-card-likes'; cardLikeIds: CardLikeId[]; selectCount: CountSpec; selectableCardLikeIds?: CardLikeId[]; }
   | { type: 'select-pile'; pileNames: CardKey[]; selectCount: CountSpec; optional?: boolean; };
 
 export type UserPromptActionArgs = {
@@ -543,6 +552,29 @@ export class Hex extends CardLike {
 }
 
 export type HexNoId = Omit<Hex, 'id'>;
+
+// State constructor args mirror base CardLike fields.
+type StateArgs = {
+  [p in keyof CardLike]: CardLike[p];
+};
+
+// States are landscape card-likes that apply persistent player effects.
+export class State extends CardLike {
+  constructor(args: StateArgs) {
+    super(args);
+
+    this.id = args.id;
+    this.cardName = args.cardName;
+    this.fullImagePath = args.fullImagePath;
+    this.detailImagePath = args.detailImagePath;
+  }
+
+  override toString() {
+    return `[STATE ${this.id} - ${this.cardKey}]`;
+  }
+}
+
+export type StateNoId = Omit<State, 'id'>;
 
 /**
  * CARD TYPES

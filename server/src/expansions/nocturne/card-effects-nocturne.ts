@@ -1,9 +1,10 @@
 import { CardEffectFunctionContext, CardExpansionModule } from '../../types.ts';
-import { CardId } from 'shared/shared-types';
+import { CardId, CardLikeId } from 'shared/shared-types';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { compareCardCosts } from 'shared/compare-card-cost.ts';
+import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
 
 // Prompts a player to choose an Action from hand not already represented in play.
 const promptUniqueActionFromHand = async (
@@ -688,11 +689,11 @@ const expansion: CardExpansionModule = {
         playerId: cardEffectArgs.playerId,
         prompt: 'Choose a boon to receive',
         content: {
-          type: 'select',
-          cardIds: setAsideBoons,
+          type: 'select-card-likes',
+          cardLikeIds: setAsideBoons,
           selectCount: 1,
         },
-      }) as { result?: CardId[] };
+      }) as { result?: CardLikeId[] };
 
       const selectedBoonId = selectionResult?.result?.[0] ?? setAsideBoons[0];
       if (!selectedBoonId) {
@@ -787,6 +788,97 @@ const expansion: CardExpansionModule = {
       });
     },
   },
+  'fool': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.info(`[fool effect] resolving for player ${cardEffectArgs.playerId}`);
+
+      // Check current Lost in the Woods ownership to decide whether to resolve Fool.
+      const lostInTheWoods = cardEffectArgs.match.states?.cards?.find(state => state.cardKey === 'lost-in-the-woods');
+      let currentOwnerId: number | undefined;
+      if (lostInTheWoods) {
+        for (const [playerId, stateIds] of Object.entries(cardEffectArgs.match.states?.byPlayer ?? {})) {
+          if (stateIds.includes(lostInTheWoods.id)) {
+            currentOwnerId = Number(playerId);
+            break;
+          }
+        }
+      }
+
+      if (currentOwnerId === cardEffectArgs.playerId) {
+        console.debug('[fool effect] player already has Lost in the Woods, skipping');
+        return;
+      }
+
+      if (lostInTheWoods) {
+        console.debug('[fool effect] taking Lost in the Woods');
+        await cardEffectArgs.runGameActionDelegate('gainState', {
+          playerId: cardEffectArgs.playerId,
+          stateId: lostInTheWoods.id,
+        });
+      }
+      else {
+        console.warn('[fool effect] Lost in the Woods state not found');
+      }
+
+      const boons = cardEffectArgs.match.boons;
+      if (!boons || boons.cards.length < 1) {
+        console.warn('[fool effect] no boons configured for this match');
+        return;
+      }
+
+      // Draw up to three boons from the shared boon deck.
+      const boonsToReceive: CardLikeId[] = [];
+      for (let index = 0; index < 3; index++) {
+        if (boons.deck.length < 1 && boons.discard.length > 0) {
+          console.debug('[fool effect] boon deck empty, reshuffling discard');
+          boons.deck = fisherYatesShuffle(boons.discard, false);
+          boons.discard = [];
+        }
+
+        const boonId = boons.deck.pop();
+        if (boonId === undefined) {
+          console.warn('[fool effect] boon deck empty, stopping early');
+          break;
+        }
+        boonsToReceive.push(boonId);
+      }
+
+      if (!boonsToReceive.length) {
+        console.warn('[fool effect] no boons available to receive');
+        return;
+      }
+
+      // Prompt the player to choose the order to receive the boons.
+      while (boonsToReceive.length > 0) {
+        let chosenBoonId = boonsToReceive[0];
+        if (boonsToReceive.length > 1) {
+          const selectionResult = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+            playerId: cardEffectArgs.playerId,
+            prompt: 'Choose a Boon to receive',
+            content: {
+              type: 'select-card-likes',
+              cardLikeIds: boonsToReceive,
+              selectCount: 1,
+            },
+          }) as { result?: CardLikeId[] };
+
+          chosenBoonId = selectionResult?.result?.[0] ?? boonsToReceive[0];
+        }
+
+        const chosenIndex = boonsToReceive.indexOf(chosenBoonId);
+        if (chosenIndex !== -1) {
+          boonsToReceive.splice(chosenIndex, 1);
+        }
+
+        console.debug(`[fool effect] receiving boon ${chosenBoonId}`);
+        await cardEffectArgs.runGameActionDelegate('receiveBoon', {
+          playerId: cardEffectArgs.playerId,
+          boonId: chosenBoonId,
+          immediate: true,
+        });
+      }
+    },
+  },
   'faithful-hound': {
     registerLifeCycleMethods: () => ({
       onDiscarded: async (args, eventArgs) => {
@@ -852,6 +944,32 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 2,
+      });
+    },
+  },
+  'lucky-coin': {
+    registerEffects: () => async (cardEffectArgs) => {
+      console.info(`[lucky-coin effect] resolving for player ${cardEffectArgs.playerId}`);
+
+      // Apply the immediate +$1.
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+
+      const silverCards = cardEffectArgs.findCards([
+        { location: 'basicSupply' },
+        { cardKeys: 'silver' },
+      ]);
+
+      if (!silverCards.length) {
+        console.debug('[lucky-coin effect] no Silver cards available to gain');
+        return;
+      }
+
+      const silverCardId = silverCards.slice(-1)[0].id;
+      console.debug(`[lucky-coin effect] gaining ${cardEffectArgs.cardLibrary.getCard(silverCardId)}`);
+      await cardEffectArgs.runGameActionDelegate('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: silverCardId,
+        to: { location: 'playerDiscard' },
       });
     },
   },
