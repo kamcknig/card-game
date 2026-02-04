@@ -139,6 +139,17 @@
     ],
     "abilityText": "At the start of your next turn, +1 Card and +1 Action.\nThis is gained to your hand (instead of your discard pile)."
   },
+  "guardian": {
+    "cardName": "Guardian",
+    "cost": {
+      "treasure": 2
+    },
+    "type": [
+      "NIGHT",
+      "DURATION"
+    ],
+    "abilityText": "Until your next turn, when another player plays an Attack card, it doesn't affect you. At the start of your next turn, +$1.\nThis is gained to your hand (instead of your discard pile)."
+  },
   "lucky-coin": {
     "cardName": "Lucky Coin",
     "cost": {

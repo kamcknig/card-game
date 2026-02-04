@@ -5,6 +5,7 @@ import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { compareCardCosts } from 'shared/compare-card-cost.ts';
 import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
+import { markPlayerImmune } from '../../utils/reaction-immunity.ts';
 
 // Prompts a player to choose an Action from hand not already represented in play.
 const promptUniqueActionFromHand = async (
@@ -78,7 +79,6 @@ const expansion: CardExpansionModule = {
   'blessed-village': {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
-        console.info(`[blessed-village onGained] resolving for player ${eventArgs.playerId}`);
 
         // Take a boon and set it aside so the player can decide timing.
         const boonId = await cardEffectArgs.runGameActionDelegate('receiveBoon', {
@@ -156,7 +156,6 @@ const expansion: CardExpansionModule = {
   'cemetery': {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
-        console.info(`[cemetery onGained] resolving for player ${eventArgs.playerId}`);
 
         // Gather the player's hand for the on-gain trash.
         const hand = cardEffectArgs.cardSourceController.getSource('playerHand', eventArgs.playerId);
@@ -280,7 +279,6 @@ const expansion: CardExpansionModule = {
         condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId
           && trigger.args.turnNumber !== turnPlayed,
         triggeredEffectFn: async (triggeredArgs) => {
-          console.info(`[cobbler startTurn] resolving for player ${cardEffectArgs.playerId}`);
 
           // Skip if no eligible cards remain in supply.
           const eligibleCards = triggeredArgs.findCards([
@@ -437,7 +435,6 @@ const expansion: CardExpansionModule = {
           && trigger.args.turnNumber !== turnPlayed
           && setAsideTreasureIds.length > 0,
         triggeredEffectFn: async (triggeredArgs) => {
-          console.info(`[crypt startTurn] resolving for player ${cardEffectArgs.playerId}`);
           console.debug(`[crypt startTurn] remaining set aside: ${setAsideTreasureIds.length}`);
 
           // Bring Crypt back into play while it continues to resolve.
@@ -493,7 +490,6 @@ const expansion: CardExpansionModule = {
   'cursed-village': {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
-        console.info(`[cursed-village onGained] resolving for player ${eventArgs.playerId}`);
 
         // Cursed Village forces the gaining player to receive a Hex.
         await cardEffectArgs.runGameActionDelegate('receiveHex', {
@@ -525,7 +521,6 @@ const expansion: CardExpansionModule = {
   'den-of-sin': {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
-        console.info(`[den-of-sin onGained] resolving for player ${eventArgs.playerId}`);
 
         // Only move to hand if it was gained to the player's discard pile.
         const source = cardEffectArgs.cardSourceController.findCardSource(eventArgs.cardId);
@@ -560,7 +555,6 @@ const expansion: CardExpansionModule = {
         condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId
           && trigger.args.turnNumber !== turnPlayed,
         triggeredEffectFn: async (triggeredArgs) => {
-          console.info(`[den-of-sin startTurn] resolving for player ${cardEffectArgs.playerId}`);
 
           // Apply the +2 Cards at the start of the next turn.
           await triggeredArgs.runGameActionDelegate('drawCard', {
@@ -574,8 +568,6 @@ const expansion: CardExpansionModule = {
   'ghost-town': {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
-        console.info(`[ghost-town onGained] resolving for player ${eventArgs.playerId}`);
-
         console.debug('[ghost-town onGained] moving gained card from discard to hand');
         await cardEffectArgs.runGameActionDelegate('moveCard', {
           cardId: eventArgs.cardId,
@@ -602,7 +594,6 @@ const expansion: CardExpansionModule = {
         condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId
           && trigger.args.turnNumber !== turnPlayed,
         triggeredEffectFn: async (triggeredArgs) => {
-          console.info(`[ghost-town startTurn] resolving for player ${cardEffectArgs.playerId}`);
 
           // Apply +1 Card.
           await triggeredArgs.runGameActionDelegate('drawCard', {
@@ -614,6 +605,76 @@ const expansion: CardExpansionModule = {
           await triggeredArgs.runGameActionDelegate('gainAction', {
             count: 1,
           });
+        },
+      });
+    },
+  },
+  'guardian': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (cardEffectArgs, eventArgs) => {
+        console.debug('[guardian onGained] moving gained card from discard to hand');
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
+          cardId: eventArgs.cardId,
+          toPlayerId: eventArgs.playerId,
+          to: {
+            location: 'playerHand',
+          },
+        });
+      },
+      onLeavePlay: async (cardEffectArgs, eventArgs) => {
+        // Remove the attack-immunity trigger when Guardian leaves play.
+        cardEffectArgs.reactionManager.unregisterTrigger(`guardian:${eventArgs.cardId}:cardPlayed`);
+      },
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      // Register Guardian immunity against attacks until the next turn.
+      cardEffectArgs.reactionManager.registerReactionTemplate({
+        id: `guardian:${cardEffectArgs.cardId}:cardPlayed`,
+        playerId: cardEffectArgs.playerId,
+        listeningFor: 'cardPlayed',
+        condition: ({ trigger, cardLibrary }) => {
+          const playedCard = cardLibrary.getCard(trigger.args.cardId!);
+          return trigger.args.playerId !== cardEffectArgs.playerId
+            && playedCard.type.includes('ATTACK');
+        },
+        once: false,
+        allowMultipleInstances: false,
+        compulsory: true,
+        triggeredEffectFn: async ({ reactionContext }) => {
+          console.debug(`[guardian reaction] granting immunity to player ${cardEffectArgs.playerId}`);
+          // Record immunity so downstream attacks skip this player.
+          markPlayerImmune(cardEffectArgs.playerId, reactionContext);
+        },
+      });
+
+      const guardianCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const turnPlayed = cardEffectArgs.match.turnNumber;
+
+      // Keep the duration card active through cleanup and apply next-turn bonus.
+      cardEffectArgs.registerDurationEffect(guardianCard, {
+        id: `guardian:${guardianCard.id}:startTurn`,
+        playerId: cardEffectArgs.playerId,
+        listeningFor: 'startTurn',
+        once: true,
+        allowMultipleInstances: true,
+        compulsory: true,
+        autoResolve: true,
+        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId
+          && trigger.args.turnNumber !== turnPlayed,
+        triggeredEffectFn: async (triggeredArgs) => {
+          // Return Guardian to the play area before resolving its next-turn effect.
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            cardId: guardianCard.id,
+            to: { location: 'playArea' },
+          });
+
+          // Stop granting immunity after the start of the next turn.
+          cardEffectArgs.reactionManager.unregisterTrigger(`guardian:${guardianCard.id}:cardPlayed`);
+
+          // Apply the +$1 at the start of the next turn.
+          await triggeredArgs.runGameActionDelegate('gainTreasure', {
+            count: 1,
+          }, { loggingContext: { source: guardianCard.id } });
         },
       });
     },
@@ -926,7 +987,6 @@ const expansion: CardExpansionModule = {
 
         // Prompt the owner to set it aside for end-of-turn return.
         const faithfulHound = args.cardLibrary.getCard(eventArgs.cardId);
-        console.info(`[faithful-hound onDiscarded] resolving for ${faithfulHound}`);
 
         const result = await args.runGameActionDelegate('userPrompt', {
           prompt: 'Set Faithful Hound aside?',
@@ -1127,7 +1187,6 @@ const expansion: CardExpansionModule = {
   'haunted-mirror': {
     registerLifeCycleMethods: () => ({
       onTrashed: async (cardEffectArgs, eventArgs) => {
-        console.info(`[haunted-mirror onTrashed] resolving for player ${eventArgs.playerId}`);
 
         // Find Action cards in the player's hand to discard.
         const actionCards = cardEffectArgs.findCards([

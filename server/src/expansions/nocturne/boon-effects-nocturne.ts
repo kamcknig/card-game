@@ -32,7 +32,6 @@ export const registerNocturneBoonEffects = (registerBoonEffect: BoonEffectRegist
 // Registers The Earth's Gift boon effect logic.
 const registerEarthsGift = (registerBoonEffect: BoonEffectRegistrar) => {
   registerBoonEffect('the-earths-gift', async ({ playerId, runGameActionDelegate, cardLibrary, findCards }) => {
-    console.info(`[the-earths-gift boon] resolving for player ${playerId}`);
 
     // Determine if the player has any Treasures to discard.
     const treasuresInHand = findCards([
@@ -105,7 +104,6 @@ const registerFieldsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     reactionManager,
     cardId,
   }) => {
-    console.info(`[the-fields-gift boon] resolving for player ${playerId}`);
 
     // Apply the immediate +1 Action and +1 Treasure.
     await runGameActionDelegate('gainAction', { count: 1 });
@@ -152,7 +150,6 @@ const registerFlamesGift = (registerBoonEffect: BoonEffectRegistrar) => {
     cardLibrary,
     findCards,
   }) => {
-    console.info(`[the-flames-gift boon] resolving for player ${playerId}`);
 
     const handCards = findCards({ location: 'playerHand', playerId });
     if (handCards.length < 1) {
@@ -193,7 +190,6 @@ const registerForestsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     reactionManager,
     cardId,
   }) => {
-    console.info(`[the-forests-gift boon] resolving for player ${playerId}`);
 
     // Apply the immediate +1 Buy and +1 Treasure.
     await runGameActionDelegate('gainBuy', { count: 1 });
@@ -239,7 +235,6 @@ const registerMoonsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     runGameActionDelegate,
     findCards,
   }) => {
-    console.info(`[the-moons-gift boon] resolving for player ${playerId}`);
 
     const discardCards = findCards({ location: 'playerDiscard', playerId });
     if (discardCards.length < 1) {
@@ -281,7 +276,6 @@ const registerMountainsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     runGameActionDelegate,
     findCards,
   }) => {
-    console.info(`[the-mountains-gift boon] resolving for player ${playerId}`);
 
     const silverCards = findCards([
       { location: 'basicSupply' },
@@ -313,7 +307,6 @@ const registerRiversGift = (registerBoonEffect: BoonEffectRegistrar) => {
     reactionManager,
     cardId,
   }) => {
-    console.info(`[the-rivers-gift boon] resolving for player ${playerId}`);
 
     // Resolve the boon instance for set-aside tracking.
     const boon = match.boons.cards.find(candidate => candidate.id === cardId);
@@ -356,7 +349,6 @@ const registerSeasGift = (registerBoonEffect: BoonEffectRegistrar) => {
     playerId,
     runGameActionDelegate,
   }) => {
-    console.info(`[the-seas-gift boon] resolving for player ${playerId}`);
 
     await runGameActionDelegate('drawCard', { playerId, count: 1 });
   });
@@ -371,7 +363,6 @@ const registerSkysGift = (registerBoonEffect: BoonEffectRegistrar) => {
     findCards,
     cardSourceController,
   }) => {
-    console.info(`[the-skys-gift boon] resolving for player ${playerId}`);
 
     const confirm = await runGameActionDelegate('userPrompt', {
       playerId,
@@ -435,7 +426,6 @@ const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     runGameActionDelegate,
     cardSourceController,
   }) => {
-    console.info(`[the-suns-gift boon] resolving for player ${playerId}`);
 
     const deck = cardSourceController.getSource('playerDeck', playerId);
     const discard = cardSourceController.getSource('playerDiscard', playerId);
@@ -515,7 +505,6 @@ const registerSwampsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     runGameActionDelegate,
     findCards,
   }) => {
-    console.info(`[the-swamps-gift boon] resolving for player ${playerId}`);
 
     const willOWispCards = findCards([
       { location: 'nonSupplyCards' },
@@ -545,7 +534,6 @@ const registerWindsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     cardLibrary,
     cardSourceController,
   }) => {
-    console.info(`[the-winds-gift boon] resolving for player ${playerId}`);
 
     // Draw two cards before discarding.
     await runGameActionDelegate('drawCard', { playerId, count: 2 });
