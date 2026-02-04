@@ -184,6 +184,16 @@
     ],
     "abilityText": "For each card you've gained this turn, you may trash a card from your hand or a Copper you have in play."
   },
+  "pooka": {
+    "cardName": "Pooka",
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "You may trash a Treasure other than Cursed Gold from your hand, for +4 Cards.\nHeirloom: Cursed Gold"
+  },
   "pixie": {
     "cardName": "Pixie",
     "cost": {
@@ -272,6 +282,18 @@
       "HEIRLOOM"
     ],
     "abilityText": "+$1\nWhen you trash this, you may discard an Action card, to gain a Ghost."
+  },
+  "cursed-gold": {
+    "cardName": "Cursed Gold",
+    "cost": {
+      "treasure": 4
+    },
+    "kingdomSelectable": false,
+    "type": [
+      "TREASURE",
+      "HEIRLOOM"
+    ],
+    "abilityText": "+$3\nGain a Curse"
   },
   "goat": {
     "cardName": "Goat",

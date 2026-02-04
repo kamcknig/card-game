@@ -836,6 +836,48 @@ const expansion: CardExpansionModule = {
       }
     },
   },
+  'pooka': {
+    registerEffects: () => async (cardEffectArgs) => {
+
+      // Gather Treasures in hand excluding Cursed Gold.
+      const treasuresInHand = cardEffectArgs.findCards([
+        { location: 'playerHand', playerId: cardEffectArgs.playerId },
+        { cardType: ['TREASURE'] },
+      ]).filter(card => card.cardKey !== 'cursed-gold');
+
+      if (!treasuresInHand.length) {
+        console.debug('[pooka effect] no eligible Treasures to trash');
+        return;
+      }
+
+      // Prompt the player to optionally trash a Treasure for +4 Cards.
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Trash a Treasure to draw 4 cards?',
+        count: 1,
+        optional: true,
+        restrict: treasuresInHand.map(card => card.id),
+      }) as CardId[];
+
+      const selectedCardId = selectedCardIds[0];
+      if (!selectedCardId) {
+        console.debug('[pooka effect] player declined to trash a Treasure');
+        return;
+      }
+
+      console.debug(`[pooka effect] trashing ${cardEffectArgs.cardLibrary.getCard(selectedCardId)}`);
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCardId,
+      });
+
+      // Draw 4 cards after trashing.
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: 4,
+      });
+    },
+  },
   'pixie': {
     registerEffects: () => async (cardEffectArgs) => {
 
@@ -1846,6 +1888,32 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('trashCard', {
         playerId: cardEffectArgs.playerId,
         cardId: selectedCardId,
+      });
+    },
+  },
+  'cursed-gold': {
+    registerEffects: () => async (cardEffectArgs) => {
+
+      // Apply the immediate +$3.
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 3 });
+
+      // Gain a Curse when played.
+      const curseCards = cardEffectArgs.findCards([
+        { location: 'basicSupply' },
+        { cardKeys: 'curse' },
+      ]);
+
+      if (!curseCards.length) {
+        console.debug('[cursed-gold effect] no Curses available to gain');
+        return;
+      }
+
+      const curseCardId = curseCards.slice(-1)[0].id;
+      console.debug(`[cursed-gold effect] gaining Curse ${cardEffectArgs.cardLibrary.getCard(curseCardId)}`);
+      await cardEffectArgs.runGameActionDelegate('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: curseCardId,
+        to: { location: 'playerDiscard' },
       });
     },
   },

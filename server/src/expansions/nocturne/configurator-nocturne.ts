@@ -190,6 +190,9 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   const hasPixie = config.kingdomSupply.some(
     supply => supply.cards.some(card => getCardPileKey(card) === 'pixie')
   );
+  const hasPooka = config.kingdomSupply.some(
+    supply => supply.cards.some(card => getCardPileKey(card) === 'pooka')
+  );
   const hasNecromancer = config.kingdomSupply.some(
     supply => supply.cards.some(card => getCardPileKey(card) === 'necromancer')
   );
@@ -318,6 +321,49 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         deck.splice(chosenIndex, 0, goat.id);
 
         console.info(`[nocturne onGameStart] player ${player.id} replaced Copper with Goat`);
+      }
+    });
+  }
+
+  if (hasPooka) {
+    console.info('[nocturne configurator] setting up pooka heirloom onGameStart handler');
+
+    registrar('onGameStart', async (args) => {
+      console.info('[nocturne onGameStart] replacing starting Copper with Cursed Gold');
+
+      for (const player of args.match.players) {
+        // Locate all Copper cards in the player deck.
+        const deck = args.cardSourceController.getSource('playerDeck', player.id);
+        const copperIndices: number[] = [];
+
+        for (let idx = 0; idx < deck.length; idx++) {
+          const card = args.cardLibrary.getCard(deck[idx]);
+          if (card.cardKey === 'copper') {
+            copperIndices.push(idx);
+          }
+        }
+
+        if (copperIndices.length < 1) {
+          console.warn(`[nocturne onGameStart] player ${player.id} has no Copper to replace with Cursed Gold`);
+          continue;
+        }
+
+        // Choose a random Copper to swap so the heirloom position is uniformly random.
+        const chosenIndex = copperIndices[Math.floor(Math.random() * copperIndices.length)];
+        const copperId = deck[chosenIndex];
+
+        await args.runGameActionDelegate('moveCard', {
+          cardId: copperId,
+          to: { location: 'basicSupply' }
+        });
+
+        // Create the Cursed Gold and insert it in the same deck position.
+        const cursedGold = createCard('cursed-gold', { owner: player.id, partOfSupply: false });
+        cursedGold.facing = 'back';
+        args.cardLibrary.addCard(cursedGold);
+        deck.splice(chosenIndex, 0, cursedGold.id);
+
+        console.info(`[nocturne onGameStart] player ${player.id} replaced Copper with Cursed Gold`);
       }
     });
   }
