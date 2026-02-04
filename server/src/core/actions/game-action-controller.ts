@@ -1246,8 +1246,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
 
     if (this.match.boons.deck.length < 1 && this.match.boons.discard.length > 0) {
       console.info('[receiveBoon action] boon deck empty, reshuffling discard');
-      this.match.boons.deck = fisherYatesShuffle(this.match.boons.discard, false);
-      this.match.boons.discard = [];
+      await this.shuffleCardLike({ kind: 'boon', includeDiscard: true });
     }
 
     let boonId = args.boonId;
@@ -2154,5 +2153,32 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       playerId: args.playerId,
       source: context?.loggingContext?.source,
     });
+  }
+
+  // Shuffles a card-like deck (boons or hexes), optionally pulling in discards.
+  async shuffleCardLike(args: { kind: 'boon' | 'hex'; includeDiscard?: boolean }, context?: GameActionContext): Promise<void> {
+    const includeDiscard = args.includeDiscard ?? false;
+
+    // Resolve the target piles based on kind and ensure they exist.
+    const piles = args.kind === 'boon' ? (this.match.boons ??= { cards: [], deck: [], discard: [], setAside: [] })
+      : (this.match.hexes ??= { cards: [], deck: [], discard: [] });
+    piles.deck ??= [];
+    piles.discard ??= [];
+
+    const deck = piles.deck;
+    const discard = piles.discard;
+    if (includeDiscard && discard.length) {
+      // Move all discarded cards into the deck before shuffling.
+      deck.push(...discard.splice(0, discard.length));
+      console.debug(`[shuffleCardLike action] moved discard into ${args.kind} deck (${deck.length} total)`);
+    }
+
+    if (deck.length < 2) {
+      console.debug(`[shuffleCardLike action] ${args.kind} deck has ${deck.length} card(s), skipping shuffle`);
+      return;
+    }
+
+    fisherYatesShuffle(deck, true);
+    console.info(`[shuffleCardLike action] shuffled ${args.kind} deck (${deck.length} cards)`);
   }
 }

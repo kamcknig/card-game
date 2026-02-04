@@ -4,7 +4,6 @@ import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { compareCardCosts } from 'shared/compare-card-cost.ts';
-import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { isPlayerImmune, markPlayerImmune } from '../../utils/reaction-immunity.ts';
@@ -858,8 +857,10 @@ const expansion: CardExpansionModule = {
 
       if (cardEffectArgs.match.boons.deck.length < 1 && cardEffectArgs.match.boons.discard.length > 0) {
         console.debug('[pixie effect] boon deck empty, reshuffling discard');
-        cardEffectArgs.match.boons.deck = fisherYatesShuffle(cardEffectArgs.match.boons.discard, false);
-        cardEffectArgs.match.boons.discard = [];
+        await cardEffectArgs.runGameActionDelegate('shuffleCardLike', {
+          kind: 'boon',
+          includeDiscard: true,
+        });
       }
 
       if (cardEffectArgs.match.boons.deck.length < 1) {
@@ -894,6 +895,7 @@ const expansion: CardExpansionModule = {
         ],
         content: {
           type: 'display-cards',
+          cardIds: [],
           cardLikeIds: [boonId],
         },
       }) as { action: number };
@@ -1492,8 +1494,10 @@ const expansion: CardExpansionModule = {
       for (let index = 0; index < 3; index++) {
         if (boons.deck.length < 1 && boons.discard.length > 0) {
           console.debug('[fool effect] boon deck empty, reshuffling discard');
-          boons.deck = fisherYatesShuffle(boons.discard, false);
-          boons.discard = [];
+          await cardEffectArgs.runGameActionDelegate('shuffleCardLike', {
+            kind: 'boon',
+            includeDiscard: true,
+          });
         }
 
         const boonId = boons.deck.pop();

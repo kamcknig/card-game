@@ -975,7 +975,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }
 
     // Shuffle the boon deck for randomized draws.
-    fisherYatesShuffle(this._match.boons.deck, true);
+    void this.gameActionsController?.shuffleCardLike({ kind: 'boon' });
 
     console.debug(`[match] boon deck initialized with ${this._match.boons.deck.length} boons`);
   }

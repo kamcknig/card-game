@@ -225,6 +225,8 @@ export interface BaseGameActionDefinitionMap {
     }, context?: GameActionContext) => Promise<void>;
     selectCard: (args: SelectActionCardArgs) => Promise<CardId[]>;
     shuffleDeck: (args: { playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
+    // Shuffles a card-like deck such as boons or hexes.
+    shuffleCardLike: (args: { kind: 'boon' | 'hex'; includeDiscard?: boolean }, context?: GameActionContext) => Promise<void>;
     trashCard: (args: { cardId: CardId | Card, playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
     userPrompt: (args: UserPromptActionArgs) => Promise<unknown>;
 }

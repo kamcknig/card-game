@@ -246,7 +246,7 @@ export type UserPromptKinds =
     placeholder?: string;
   }
   // Display prompt can optionally include card-likes shown below cards.
-  | { type: 'display-cards'; cardIds: CardId[]; cardLikeIds?: CardLikeId[]; }
+  | { type: 'display-cards'; cardIds?: CardId[]; cardLikeIds?: CardLikeId[]; }
   | {
     type: 'select';
     cardIds: CardId[];
