@@ -1117,6 +1117,54 @@ const expansion: CardExpansionModule = {
       }
     },
   },
+  'tormentor': {
+    registerEffects: () => async (cardEffectArgs) => {
+
+      // Apply the immediate +$2.
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+
+      const cardsInPlay = getCardsInPlay(cardEffectArgs.findCards)
+        .filter(card => cardEffectArgs.match.stats.playedCards[card.id]?.playerId === cardEffectArgs.playerId);
+      const otherCardsInPlay = cardsInPlay.filter(card => card.id !== cardEffectArgs.cardId);
+
+      console.debug(`[tormentor effect] other cards in play: ${otherCardsInPlay.length}`);
+
+      if (!otherCardsInPlay.length) {
+        const impCards = cardEffectArgs.findCards([
+          { location: 'nonSupplyCards' },
+          { cardKeys: 'imp' },
+        ]);
+
+        if (!impCards.length) {
+          console.warn('[tormentor effect] no Imp cards available to gain');
+          return;
+        }
+
+        const impCardId = impCards.slice(-1)[0].id;
+        console.debug(`[tormentor effect] gaining Imp ${cardEffectArgs.cardLibrary.getCard(impCardId)}`);
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: impCardId,
+          to: { location: 'playerDiscard' },
+        });
+        return;
+      }
+
+      const targetPlayerIds = findOrderedTargets({
+        startingPlayerId: cardEffectArgs.playerId,
+        appliesTo: 'ALL_OTHER',
+        match: cardEffectArgs.match,
+      }).filter((id) => !isPlayerImmune(cardEffectArgs.reactionContext, id));
+
+      console.debug(`[tormentor effect] hex targets ${targetPlayerIds.map(id => getPlayerById(cardEffectArgs.match, id))}`);
+
+      for (const targetPlayerId of targetPlayerIds) {
+        await cardEffectArgs.runGameActionDelegate('receiveHex', {
+          playerId: targetPlayerId,
+        });
+      }
+    },
+  },
   'secret-cave': {
     registerEffects: () => async (cardEffectArgs) => {
 

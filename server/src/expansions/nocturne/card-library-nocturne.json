@@ -241,6 +241,19 @@
     "targetScheme": "ALL_OTHER",
     "abilityText": "+1 Buy\nEach other player receives the next Hex.\nWhen you gain this, gain a Gold."
   },
+  "tormentor": {
+    "cardName": "Tormentor",
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION",
+      "ATTACK",
+      "DOOM"
+    ],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+$2\nIf you have no other cards in play, gain an Imp. Otherwise, each other player receives the next Hex."
+  },
   "secret-cave": {
     "cardName": "Secret Cave",
     "cost": {
