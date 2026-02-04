@@ -265,6 +265,16 @@
     "targetScheme": "ALL_OTHER",
     "abilityText": "+$2\nIf you have no other cards in play, gain an Imp. Otherwise, each other player receives the next Hex."
   },
+  "tragic-hero": {
+    "cardName": "Tragic Hero",
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+3 Cards\n+1 Buy\nIf you have 8 or more cards in hand (after drawing), trash this and gain a Treasure."
+  },
   "secret-cave": {
     "cardName": "Secret Cave",
     "cost": {

@@ -1184,6 +1184,59 @@ const expansion: CardExpansionModule = {
       });
     },
   },
+  'tragic-hero': {
+    registerEffects: () => async (cardEffectArgs) => {
+
+      // Apply the immediate +3 Cards and +1 Buy.
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: 3,
+      });
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      console.debug(`[tragic-hero effect] hand size after draw: ${hand.length}`);
+
+      if (hand.length < 8) {
+        return;
+      }
+
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: cardEffectArgs.cardId,
+      });
+
+      const treasureCards = cardEffectArgs.findCards([
+        { location: ['basicSupply', 'kingdomSupply'] },
+        { cardType: 'TREASURE' },
+      ]);
+
+      if (!treasureCards.length) {
+        console.debug('[tragic-hero effect] no Treasure cards available to gain');
+        return;
+      }
+
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Gain a Treasure',
+        count: 1,
+        restrict: treasureCards.map(card => card.id),
+      }) as CardId[];
+
+      const selectedCardId = selectedCardIds[0];
+      if (!selectedCardId) {
+        console.debug('[tragic-hero effect] no Treasure selected');
+        return;
+      }
+
+      console.debug(`[tragic-hero effect] gaining ${cardEffectArgs.cardLibrary.getCard(selectedCardId)}`);
+      await cardEffectArgs.runGameActionDelegate('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCardId,
+        to: { location: 'playerDiscard' },
+      });
+    },
+  },
   'tormentor': {
     registerEffects: () => async (cardEffectArgs) => {
 

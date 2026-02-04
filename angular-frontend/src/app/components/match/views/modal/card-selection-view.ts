@@ -5,7 +5,6 @@ import { createCardView } from '../../../../core/card/create-card-view';
 import { List } from '@pixi/ui';
 import { cardStore } from '../../../../state/card-state';
 import { toNumber } from 'es-toolkit/compat';
-import { CardView } from '../card-view';
 import { clientSelectableCardsOverrideStore, selectedCardStore } from '../../../../state/interactive-state';
 import { resolveCountSpec } from 'shared/resolve-count-spec';
 import { validateCountSpec } from 'shared/validate-count-spec';
@@ -22,6 +21,15 @@ type SelectionView = Container & {
   selectionId?: number;
   detailImagePath?: string;
 };
+
+// Structural typing for card views to avoid instanceof checks in Pixi containers.
+type CardViewLike = Container & {
+  card: Card;
+  facing: string;
+};
+
+// Type guard for card view containers.
+const isCardViewLike = (target: Container): target is CardViewLike => 'card' in target && 'facing' in target;
 
 export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
   if (args.type !== 'select' && args.type !== 'display-cards') {
@@ -77,17 +85,17 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
 
   const cardPointerDownListener = (event: FederatedPointerEvent) => {
     const target = event.currentTarget as Container;
-    const isCardView = 'card' in target && 'facing' in target;
+    const isCardView = isCardViewLike(target);
     const selectionId = isCardView
-      ? (target as CardView).card.id
+      ? target.card.id
       : 'selectionId' in target
         ? (target as SelectionView).selectionId
         : undefined;
     if (!selectionId) return;
 
     if (event.button === 2) {
-      if (isCardView && (target as CardView).facing === 'front') {
-        const cardId = newCardToOldCardMap.get((target as CardView).card.id);
+      if (isCardView && target.facing === 'front') {
+        const cardId = newCardToOldCardMap.get(target.card.id);
         if (!cardId) return;
         void displayCardDetail(cardId);
         return;
