@@ -11,6 +11,7 @@ import { configureGhost } from './configure-ghost.ts';
 import { configureImp } from './configure-imp.ts';
 import { configureWish } from './configure-wish.ts';
 import { registerStateEffects } from './state-effects-nocturne.ts';
+import { configureBat } from './configure-bat.ts';
 
 // Seeds boons when Fate cards are present in the selected kingdom.
 const configurator: ExpansionConfiguratorFactory = () => {
@@ -36,6 +37,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
     const hasCemetery = kingdomCards.some(card => getCardPileKey(card) === 'cemetery');
     const hasExorcist = kingdomCards.some(card => getCardPileKey(card) === 'exorcist');
     const hasFool = kingdomCards.some(card => getCardPileKey(card) === 'fool');
+    const hasVampire = kingdomCards.some(card => getCardPileKey(card) === 'vampire');
     // Track which kingdom cards require the Imp pile.
     const impSources = new Set(['devils-workshop', 'tormentor', 'exorcist']);
     const hasImpSource = kingdomCards.some(card => impSources.has(getCardPileKey(card)));
@@ -68,6 +70,15 @@ const configurator: ExpansionConfiguratorFactory = () => {
     else if (args.config.nonSupply?.some(supply => supply.name === 'wish')) {
       console.info('[nocturne configurator] removing Wish pile because no Wish gainers are present');
       args.config.nonSupply = args.config.nonSupply.filter(supply => supply.name !== 'wish');
+    }
+
+    // Ensure the Bat pile is present only when Vampire is in the kingdom.
+    if (hasVampire) {
+      configureBat(args);
+    }
+    else if (args.config.nonSupply?.some(supply => supply.name === 'bat')) {
+      console.info('[nocturne configurator] removing Bat pile because Vampire is absent');
+      args.config.nonSupply = args.config.nonSupply.filter(supply => supply.name !== 'bat');
     }
 
     // Fate cards determine whether boons are active for this match.

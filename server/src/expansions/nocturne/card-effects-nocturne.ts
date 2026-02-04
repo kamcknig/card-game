@@ -77,6 +77,67 @@ const expansion: CardExpansionModule = {
       });
     },
   },
+  'bat': {
+    registerEffects: () => async (cardEffectArgs) => {
+
+      // Gather cards in hand for trashing.
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      if (!hand.length) {
+        console.debug('[bat effect] no cards in hand to trash');
+        return;
+      }
+
+      const maxTrashCount = Math.min(2, hand.length);
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Trash up to 2 cards from your hand',
+        count: { kind: 'upTo', count: maxTrashCount },
+        restrict: hand,
+      }) as CardId[];
+
+      if (!selectedCardIds.length) {
+        console.debug('[bat effect] no cards selected to trash');
+        return;
+      }
+
+      for (const cardId of selectedCardIds) {
+        console.debug(`[bat effect] trashing ${cardEffectArgs.cardLibrary.getCard(cardId)}`);
+        await cardEffectArgs.runGameActionDelegate('trashCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId,
+        });
+      }
+
+      // Exchange Bat for a Vampire if available and pile exists.
+      const batPileExists = cardEffectArgs.match.config.nonSupply?.some(supply => supply.name === 'bat');
+      if (!batPileExists) {
+        console.warn('[bat effect] bat pile not configured, skipping exchange');
+        return;
+      }
+
+      const vampireCards = cardEffectArgs.findCards([
+        { location: 'kingdomSupply' },
+        { cardKeys: 'vampire' },
+      ]);
+
+      if (!vampireCards.length) {
+        console.debug('[bat effect] no Vampire cards available to exchange');
+        return;
+      }
+
+      const vampireCard = vampireCards.slice(-1)[0];
+      console.debug(`[bat effect] exchanging for ${vampireCard}`);
+      await cardEffectArgs.runGameActionDelegate('moveCard', {
+        cardId: cardEffectArgs.cardId,
+        to: { location: 'nonSupplyCards' },
+      });
+      await cardEffectArgs.runGameActionDelegate('moveCard', {
+        cardId: vampireCard.id,
+        toPlayerId: cardEffectArgs.playerId,
+        to: { location: 'playerDiscard' },
+      });
+    },
+  },
   'blessed-village': {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
@@ -1233,6 +1294,102 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('gainCard', {
         playerId: cardEffectArgs.playerId,
         cardId: selectedCardId,
+        to: { location: 'playerDiscard' },
+      });
+    },
+  },
+  'vampire': {
+    registerEffects: () => async (cardEffectArgs) => {
+
+      // Each other player receives a Hex (respecting immunity).
+      const targetPlayerIds = findOrderedTargets({
+        startingPlayerId: cardEffectArgs.playerId,
+        appliesTo: 'ALL_OTHER',
+        match: cardEffectArgs.match,
+      }).filter((id) => !isPlayerImmune(cardEffectArgs.reactionContext, id));
+
+      console.debug(`[vampire effect] hex targets ${targetPlayerIds.map(id => getPlayerById(cardEffectArgs.match, id))}`);
+
+      for (const targetPlayerId of targetPlayerIds) {
+        await cardEffectArgs.runGameActionDelegate('receiveHex', {
+          playerId: targetPlayerId,
+        });
+      }
+
+      // Gain a card costing up to $5 other than a Vampire.
+      const eligibleCards = cardEffectArgs.findCards([
+        { location: ['basicSupply', 'kingdomSupply'] },
+        { playerId: cardEffectArgs.playerId, kind: 'upTo', amount: { treasure: 5 } },
+      ]).filter(card => card.cardKey !== 'vampire');
+
+      if (!eligibleCards.length) {
+        console.debug('[vampire effect] no eligible cards to gain');
+      }
+      else {
+        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Gain a card costing up to $5 (not Vampire)',
+          count: 1,
+          restrict: eligibleCards.map(card => card.id),
+        }) as CardId[];
+
+        const selectedCardId = selectedCardIds[0];
+        if (selectedCardId) {
+          console.debug(`[vampire effect] gaining ${cardEffectArgs.cardLibrary.getCard(selectedCardId)}`);
+          await cardEffectArgs.runGameActionDelegate('gainCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: selectedCardId,
+            to: { location: 'playerDiscard' },
+          });
+        }
+        else {
+          console.debug('[vampire effect] no card selected to gain');
+        }
+      }
+
+      // Exchange Vampire for a Bat if possible.
+      const batCards = cardEffectArgs.findCards([
+        { location: 'nonSupplyCards' },
+        { cardKeys: 'bat' },
+      ]);
+
+      if (!batCards.length) {
+        console.debug('[vampire effect] no Bat cards available to exchange');
+        return;
+      }
+
+      const pileKey = getCardPileKey(cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId));
+      const inKingdomSupply = cardEffectArgs.match.config.kingdomSupply.some(supply =>
+        supply.cards.some(card => getCardPileKey(card) === pileKey)
+      );
+      const inBasicSupply = cardEffectArgs.match.config.basicSupply.some(supply =>
+        supply.cards.some(card => getCardPileKey(card) === pileKey)
+      );
+
+      if (!inKingdomSupply && !inBasicSupply) {
+        console.warn('[vampire effect] vampire pile not found in match config, skipping exchange');
+        return;
+      }
+
+      try {
+        cardEffectArgs.cardSourceController.findCardSource(cardEffectArgs.cardId);
+      }
+      catch (error) {
+        console.warn('[vampire effect] vampire source not found, skipping exchange');
+        return;
+      }
+
+      const returnLocation = inBasicSupply ? 'basicSupply' : 'kingdomSupply';
+      const batCard = batCards.slice(-1)[0];
+
+      console.debug(`[vampire effect] exchanging for ${batCard}`);
+      await cardEffectArgs.runGameActionDelegate('moveCard', {
+        cardId: cardEffectArgs.cardId,
+        to: { location: returnLocation },
+      });
+      await cardEffectArgs.runGameActionDelegate('moveCard', {
+        cardId: batCard.id,
+        toPlayerId: cardEffectArgs.playerId,
         to: { location: 'playerDiscard' },
       });
     },

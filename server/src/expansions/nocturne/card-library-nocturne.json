@@ -265,6 +265,19 @@
     "targetScheme": "ALL_OTHER",
     "abilityText": "+$2\nIf you have no other cards in play, gain an Imp. Otherwise, each other player receives the next Hex."
   },
+  "vampire": {
+    "cardName": "Vampire",
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "NIGHT",
+      "ATTACK",
+      "DOOM"
+    ],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "Each other player receives the next Hex.\nGain a card costing up to $5 other than a Vampire.\nExchange this for a Bat."
+  },
   "tragic-hero": {
     "cardName": "Tragic Hero",
     "cost": {
@@ -448,6 +461,17 @@
       "SPIRIT"
     ],
     "abilityText": "+2 Cards\nYou may play an Action card from your hand that you don't have a copy of in play.\n(This is not in the Supply.)"
+  },
+  "bat": {
+    "cardName": "Bat",
+    "cost": {
+      "treasure": 2
+    },
+    "kingdomSelectable": false,
+    "type": [
+      "NIGHT"
+    ],
+    "abilityText": "Trash up to 2 cards from your hand. If you trashed at least one, exchange this for a Vampire.\n(This is not in the Supply.)"
   },
   "zombie-apprentice": {
     "cardName": "Zombie Apprentice",
