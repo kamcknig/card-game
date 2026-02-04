@@ -193,6 +193,9 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   const hasPooka = config.kingdomSupply.some(
     supply => supply.cards.some(card => getCardPileKey(card) === 'pooka')
   );
+  const hasSecretCave = config.kingdomSupply.some(
+    supply => supply.cards.some(card => getCardPileKey(card) === 'secret-cave')
+  );
   const hasNecromancer = config.kingdomSupply.some(
     supply => supply.cards.some(card => getCardPileKey(card) === 'necromancer')
   );
@@ -364,6 +367,49 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         deck.splice(chosenIndex, 0, cursedGold.id);
 
         console.info(`[nocturne onGameStart] player ${player.id} replaced Copper with Cursed Gold`);
+      }
+    });
+  }
+
+  if (hasSecretCave) {
+    console.info('[nocturne configurator] setting up secret cave heirloom onGameStart handler');
+
+    registrar('onGameStart', async (args) => {
+      console.info('[nocturne onGameStart] replacing starting Copper with Magic Lamp');
+
+      for (const player of args.match.players) {
+        // Locate all Copper cards in the player deck.
+        const deck = args.cardSourceController.getSource('playerDeck', player.id);
+        const copperIndices: number[] = [];
+
+        for (let idx = 0; idx < deck.length; idx++) {
+          const card = args.cardLibrary.getCard(deck[idx]);
+          if (card.cardKey === 'copper') {
+            copperIndices.push(idx);
+          }
+        }
+
+        if (copperIndices.length < 1) {
+          console.warn(`[nocturne onGameStart] player ${player.id} has no Copper to replace with Magic Lamp`);
+          continue;
+        }
+
+        // Choose a random Copper to swap so the heirloom position is uniformly random.
+        const chosenIndex = copperIndices[Math.floor(Math.random() * copperIndices.length)];
+        const copperId = deck[chosenIndex];
+
+        await args.runGameActionDelegate('moveCard', {
+          cardId: copperId,
+          to: { location: 'basicSupply' }
+        });
+
+        // Create the Magic Lamp and insert it in the same deck position.
+        const magicLamp = createCard('magic-lamp', { owner: player.id, partOfSupply: false });
+        magicLamp.facing = 'back';
+        args.cardLibrary.addCard(magicLamp);
+        deck.splice(chosenIndex, 0, magicLamp.id);
+
+        console.info(`[nocturne onGameStart] player ${player.id} replaced Copper with Magic Lamp`);
       }
     });
   }

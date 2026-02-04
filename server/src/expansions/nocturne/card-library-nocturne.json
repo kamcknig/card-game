@@ -218,6 +218,17 @@
     ],
     "abilityText": "+1 Buy\n+$3\nReceive a Boon. If it doesn't give +$1, each other player may receive it."
   },
+  "secret-cave": {
+    "cardName": "Secret Cave",
+    "cost": {
+      "treasure": 3
+    },
+    "type": [
+      "ACTION",
+      "DURATION"
+    ],
+    "abilityText": "+1 Card\n+1 Action\nYou may discard 3 cards. If you did, then at the start of your next turn, +$3.\nHeirloom: Magic Lamp"
+  },
   "pixie": {
     "cardName": "Pixie",
     "cost": {
@@ -306,6 +317,18 @@
       "HEIRLOOM"
     ],
     "abilityText": "+$1\nWhen you trash this, you may discard an Action card, to gain a Ghost."
+  },
+  "magic-lamp": {
+    "cardName": "Magic Lamp",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": [
+      "TREASURE",
+      "HEIRLOOM"
+    ],
+    "abilityText": "+$1\nIf there are at least 6 cards that you have exactly 1 copy of in play (counting this), trash this. If you did, gain 3 Wishes."
   },
   "cursed-gold": {
     "cardName": "Cursed Gold",

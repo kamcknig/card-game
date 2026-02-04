@@ -1024,6 +1024,87 @@ const expansion: CardExpansionModule = {
       }
     },
   },
+  'secret-cave': {
+    registerEffects: () => async (cardEffectArgs) => {
+
+      // Apply the cantrip bonus.
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+      });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      if (!hand.length) {
+        console.debug('[secret-cave effect] no cards in hand to discard');
+        return;
+      }
+
+      const decision = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Discard 3 cards?',
+        actionButtons: [
+          { label: 'NO', action: 1 },
+          { label: 'YES', action: 2 },
+        ],
+      }) as { action: number };
+
+      if (decision.action !== 2) {
+        console.debug('[secret-cave effect] player chose not to discard');
+        return;
+      }
+
+      let discardIds: CardId[] = [];
+      if (hand.length <= 3) {
+        // When fewer than 3 cards in hand, discard all of them.
+        discardIds = [...hand];
+      } else {
+        discardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Discard 3 cards',
+          count: 3,
+          restrict: hand,
+        }) as CardId[];
+      }
+
+      if (!discardIds.length) {
+        console.warn('[secret-cave effect] no cards selected to discard after confirming');
+        return;
+      }
+
+      console.debug(`[secret-cave effect] discarding ${discardIds.length} card(s)`);
+      for (const cardId of discardIds) {
+        await cardEffectArgs.runGameActionDelegate('discardCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId,
+        });
+      }
+
+      if (discardIds.length < 3) {
+        console.debug('[secret-cave effect] discarded fewer than 3 cards, skipping duration bonus');
+        return;
+      }
+
+      const secretCaveCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const turnPlayed = cardEffectArgs.match.turnNumber;
+
+      // Register the start-of-next-turn +$3 if 3 cards were discarded.
+      cardEffectArgs.registerDurationEffect(secretCaveCard, {
+        id: `secret-cave:${secretCaveCard.id}:startTurn`,
+        listeningFor: 'startTurn',
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId
+          && trigger.args.turnNumber !== turnPlayed,
+        triggeredEffectFn: async (triggeredArgs) => {
+          await triggeredArgs.runGameActionDelegate('gainTreasure', {
+            count: 3,
+          }, { loggingContext: { source: secretCaveCard.id } });
+        },
+      });
+    },
+  },
   'pixie': {
     registerEffects: () => async (cardEffectArgs) => {
 
@@ -2061,6 +2142,55 @@ const expansion: CardExpansionModule = {
         cardId: curseCardId,
         to: { location: 'playerDiscard' },
       });
+    },
+  },
+  'magic-lamp': {
+    registerEffects: () => async (cardEffectArgs) => {
+
+      // Apply the immediate +$1.
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+
+      // Count cards in play for this player with exactly one copy (including this).
+      const cardsInPlay = getCardsInPlay(cardEffectArgs.findCards)
+        .filter(card => cardEffectArgs.match.stats.playedCards[card.id]?.playerId === cardEffectArgs.playerId);
+
+      const countsByKey: Record<string, number> = {};
+      for (const card of cardsInPlay) {
+        countsByKey[card.cardKey] = (countsByKey[card.cardKey] ?? 0) + 1;
+      }
+
+      const uniqueCount = Object.values(countsByKey).filter(count => count === 1).length;
+      console.debug(`[magic-lamp effect] unique-in-play count ${uniqueCount}`);
+
+      if (uniqueCount < 6) {
+        return;
+      }
+
+      // Trash Magic Lamp to gain 3 Wishes.
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: cardEffectArgs.cardId,
+      });
+      console.debug('[magic-lamp effect] trashed Magic Lamp, gaining 3 Wishes');
+
+      for (let i = 0; i < 3; i++) {
+        const wishCards = cardEffectArgs.findCards([
+          { location: 'nonSupplyCards' },
+          { cardKeys: 'wish' },
+        ]);
+
+        if (!wishCards.length) {
+          console.warn('[magic-lamp effect] no Wishes available to gain');
+          return;
+        }
+
+        const wishCardId = wishCards.slice(-1)[0].id;
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: wishCardId,
+          to: { location: 'playerDiscard' },
+        });
+      }
     },
   },
   'wish': {
