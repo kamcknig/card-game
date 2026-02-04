@@ -580,6 +580,54 @@ const expansion: CardExpansionModule = {
       });
     },
   },
+  'ghost-town': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (cardEffectArgs, eventArgs) => {
+        console.info(`[ghost-town onGained] resolving for player ${eventArgs.playerId}`);
+
+        console.debug('[ghost-town onGained] moving gained card from discard to hand');
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
+          cardId: eventArgs.cardId,
+          toPlayerId: eventArgs.playerId,
+          to: {
+            location: 'playerHand',
+          },
+        });
+      },
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      console.info(`[ghost-town effect] resolving for player ${cardEffectArgs.playerId}`);
+
+      const ghostTownCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const turnPlayed = cardEffectArgs.match.turnNumber;
+
+      // Register the start-of-next-turn +1 Card/+1 Action.
+      cardEffectArgs.registerDurationEffect(ghostTownCard, {
+        id: `ghost-town:${ghostTownCard.id}:startTurn`,
+        listeningFor: 'startTurn',
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId
+          && trigger.args.turnNumber !== turnPlayed,
+        triggeredEffectFn: async (triggeredArgs) => {
+          console.info(`[ghost-town startTurn] resolving for player ${cardEffectArgs.playerId}`);
+
+          // Apply +1 Card.
+          await triggeredArgs.runGameActionDelegate('drawCard', {
+            playerId: cardEffectArgs.playerId,
+            count: 1,
+          });
+
+          // Apply +1 Action.
+          await triggeredArgs.runGameActionDelegate('gainAction', {
+            count: 1,
+          });
+        },
+      });
+    },
+  },
   'devils-workshop': {
     registerEffects: () => async (cardEffectArgs) => {
       console.info(`[devils-workshop effect] resolving for player ${cardEffectArgs.playerId}`);
