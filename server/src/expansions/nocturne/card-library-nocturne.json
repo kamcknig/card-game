@@ -625,7 +625,8 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["HEX"]
+    "type": ["HEX"],
+    "abilityText": "Put your deck into your discard pile. Look through it and put 2 Coppers from it onto your deck (or reveal you can't)."
   },
   "delusion": {
     "cardName": "Delusion",
@@ -633,7 +634,8 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["HEX"]
+    "type": ["HEX"],
+    "abilityText": "If you don't have Deluded or Envious, take Deluded."
   },
   "envy": {
     "cardName": "Envy",
@@ -641,7 +643,8 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["HEX"]
+    "type": ["HEX"],
+    "abilityText": "If you don't have Deluded or Envious, take Envious."
   },
   "famine": {
     "cardName": "Famine",
@@ -649,7 +652,8 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["HEX"]
+    "type": ["HEX"],
+    "abilityText": "Reveal the top 3 cards of your deck. Discard the Actions. Shuffle the rest into your deck."
   },
   "fear": {
     "cardName": "Fear",
@@ -657,7 +661,8 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["HEX"]
+    "type": ["HEX"],
+    "abilityText": "If you have at least 5 cards in hand, discard an Action or Treasure (or reveal you can't)."
   },
   "greed": {
     "cardName": "Greed",
@@ -665,7 +670,8 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["HEX"]
+    "type": ["HEX"],
+    "abilityText": "Gain a Copper onto your deck."
   },
   "haunting": {
     "cardName": "Haunting",
@@ -673,7 +679,8 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["HEX"]
+    "type": ["HEX"],
+    "abilityText": "If you have at least 4 cards in hand, put one of them onto your deck."
   },
   "locusts": {
     "cardName": "Locusts",
@@ -681,7 +688,8 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["HEX"]
+    "type": ["HEX"],
+    "abilityText": "Trash the top card of your deck. If it's Copper or Estate, gain a Curse. Otherwise, gain a cheaper card that shares a type with it."
   },
   "misery": {
     "cardName": "Misery",
@@ -689,7 +697,8 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["HEX"]
+    "type": ["HEX"],
+    "abilityText": "If this is your first Misery this game, take Miserable. Otherwise, flip it over to Twice Miserable."
   },
   "plague": {
     "cardName": "Plague",
@@ -697,7 +706,8 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["HEX"]
+    "type": ["HEX"],
+    "abilityText": "Gain a Curse to your hand."
   },
   "poverty": {
     "cardName": "Poverty",
@@ -705,7 +715,8 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["HEX"]
+    "type": ["HEX"],
+    "abilityText": "Discard down to 3 cards in hand."
   },
   "war": {
     "cardName": "War",
@@ -713,7 +724,44 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["HEX"]
+    "type": ["HEX"],
+    "abilityText": "Reveal cards from your deck until revealing one costing $3 or $4. Trash it and discard the rest."
+  },
+  "deluded": {
+    "cardName": "Deluded",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["STATE"],
+    "abilityText": "At the start of your Buy phase, return this. You can't buy Actions this turn."
+  },
+  "envious": {
+    "cardName": "Envious",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["STATE"],
+    "abilityText": "At the start of your Buy phase, return this. Silver and Gold make $1 this turn."
+  },
+  "miserable": {
+    "cardName": "Miserable",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["STATE"],
+    "abilityText": "-2 VP."
+  },
+  "twice-miserable": {
+    "cardName": "Twice Miserable",
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["STATE"],
+    "abilityText": "-4 VP."
   },
   "lost-in-the-woods": {
     "cardName": "Lost in the Woods",

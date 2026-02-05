@@ -70,6 +70,7 @@ execution
 - No mutation outside approved state-transition layers
 - Do not introduce new classes, variables, etc, without also calling out where
   they are defined and how they are provided to the consumer.
+- Do not add custom ids when registering reactions unless you have to
 
 ---
 

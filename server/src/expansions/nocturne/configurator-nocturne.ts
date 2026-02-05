@@ -1,5 +1,5 @@
 import { expansionLibrary } from '../expansion-library.ts';
-import { ExpansionConfiguratorFactory, GameEventRegistrar } from '../../types.ts';
+import { ExpansionConfiguratorFactory, GameEventRegistrar, PlayerScoreDecoratorRegistrar } from '../../types.ts';
 import { uniqueByProp } from '../../core/match-configurator.ts';
 import { registerNocturneBoonEffects } from './boon-effects-nocturne.ts';
 import { configureWillOWisp } from './configure-will-o-wisp.ts';
@@ -12,11 +12,14 @@ import { configureImp } from './configure-imp.ts';
 import { configureWish } from './configure-wish.ts';
 import { registerStateEffects } from './state-effects-nocturne.ts';
 import { configureBat } from './configure-bat.ts';
+import { registerNocturneHexEffects } from './hex-effects-nocturne.ts';
 
 // Seeds boons when Fate cards are present in the selected kingdom.
 const configurator: ExpansionConfiguratorFactory = () => {
   // Track boon effect registration to avoid duplicates across configurator iterations.
   let boonEffectsRegistered = false;
+  // Track hex effect registration to avoid duplicates across configurator iterations.
+  let hexEffectsRegistered = false;
   // Track state effect registration to avoid duplicates across configurator iterations.
   let stateEffectsRegistered = false;
 
@@ -30,6 +33,11 @@ const configurator: ExpansionConfiguratorFactory = () => {
       // Register all state effects once per match.
       registerStateEffects(args.stateEffectRegistrar);
       stateEffectsRegistered = true;
+    }
+    if (!hexEffectsRegistered) {
+      // Register all Nocturne hex effects once per match.
+      registerNocturneHexEffects(args.hexEffectRegistrar);
+      hexEffectsRegistered = true;
     }
 
     // Gather all selected kingdom cards for boons and heirloom-linked piles.
@@ -157,12 +165,35 @@ const configurator: ExpansionConfiguratorFactory = () => {
       }
     }
 
-    // Preserve any non-Nocturne states while toggling Lost in the Woods.
+    // Ensure Doom-linked states are present when hexes are active.
+    const doomStateKeys = new Set(['deluded', 'envious', 'miserable', 'twice-miserable']);
     const existingStates = args.config.states ?? [];
-    const filteredStates = existingStates.filter(state => state.cardKey !== 'lost-in-the-woods');
+    const nonDoomStates = existingStates.filter(state => !doomStateKeys.has(state.cardKey));
+    const doomStates = Array.from(doomStateKeys).flatMap(stateKey => {
+      const state = expansionLibrary['nocturne']?.states?.[stateKey];
+      if (!state) {
+        console.warn(`[nocturne configurator] missing doom state ${stateKey}`);
+        return [];
+      }
+      return structuredClone(state);
+    });
+
+    if (doomCards.length < 1) {
+      if (existingStates.length !== nonDoomStates.length) {
+        console.info('[nocturne configurator] removing Doom states because no Doom cards are present');
+      }
+      args.config.states = nonDoomStates;
+    }
+    else {
+      args.config.states = uniqueByProp([...nonDoomStates, ...doomStates], 'cardKey');
+    }
+
+    // Preserve any non-Nocturne states while toggling Lost in the Woods.
+    const updatedStates = args.config.states ?? [];
+    const filteredStates = updatedStates.filter(state => state.cardKey !== 'lost-in-the-woods');
 
     if (!hasFool) {
-      if (existingStates.length !== filteredStates.length) {
+      if (updatedStates.length !== filteredStates.length) {
         console.info('[nocturne configurator] removing Lost in the Woods because Fool is absent');
       }
       args.config.states = filteredStates;
@@ -186,6 +217,29 @@ const configurator: ExpansionConfiguratorFactory = () => {
 };
 
 export default configurator;
+
+// Registers scoring adjustments for Nocturne states like Miserable.
+export const registerScoringFunctions = (registrar: PlayerScoreDecoratorRegistrar) => {
+  registrar((playerId, match) => {
+    const stateIds = match.states?.byPlayer?.[playerId] ?? [];
+    if (!stateIds.length) {
+      return;
+    }
+
+    const states = match.states?.cards ?? [];
+    const hasTwiceMiserable = states.some(state => state.cardKey === 'twice-miserable' && stateIds.includes(state.id));
+    const hasMiserable = states.some(state => state.cardKey === 'miserable' && stateIds.includes(state.id));
+
+    if (hasTwiceMiserable) {
+      match.scores[playerId] = (match.scores[playerId] ?? 0) - 4;
+      return;
+    }
+
+    if (hasMiserable) {
+      match.scores[playerId] = (match.scores[playerId] ?? 0) - 2;
+    }
+  });
+};
 
 // Registers the Cemetery heirloom swap at game start when present in the kingdom.
 export const registerGameEvents: (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => void = (registrar, config) => {

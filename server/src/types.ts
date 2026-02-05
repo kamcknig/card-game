@@ -162,7 +162,9 @@ export interface BaseGameActionDefinitionMap {
     // Receives a hex from the shared hex deck (used by Doom cards).
     receiveHex: (args: { playerId: PlayerId; hexId?: CardLikeId; }, context?: GameActionContext) => Promise<CardLikeId | undefined>;
     // Assigns a state to a player (used by state-granting cards).
-    gainState: (args: { playerId: PlayerId; stateId?: CardLikeId; stateKey?: CardKey; }, context?: GameActionContext) => Promise<CardLikeId | undefined>;
+    gainState: (args: { playerId: PlayerId; stateId?: CardLikeId; stateKey?: CardKey; removeFromCurrentOwner?: boolean; }, context?: GameActionContext) => Promise<CardLikeId | undefined>;
+    // Removes a state from a player (used by state cleanup and effects).
+    removeState: (args: { playerId: PlayerId; stateId?: CardLikeId; stateKey?: CardKey; }, context?: GameActionContext) => Promise<void>;
     // Pays down debt tokens using the current player's treasure pool.
     payDebt: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
     // Token actions are used by expansions to place and manage token instances.
@@ -224,7 +226,7 @@ export interface BaseGameActionDefinitionMap {
         moveToSetAside?: boolean
     }, context?: GameActionContext) => Promise<void>;
     selectCard: (args: SelectActionCardArgs) => Promise<CardId[]>;
-    shuffleDeck: (args: { playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
+    shuffleDeck: (args: { playerId: PlayerId; includeDiscard?: boolean }, context?: GameActionContext) => Promise<void>;
     // Shuffles a card-like deck such as boons or hexes.
     shuffleCardLike: (args: { kind: 'boon' | 'hex'; includeDiscard?: boolean }, context?: GameActionContext) => Promise<void>;
     trashCard: (args: { cardId: CardId | Card, playerId: PlayerId }, context?: GameActionContext) => Promise<void>;

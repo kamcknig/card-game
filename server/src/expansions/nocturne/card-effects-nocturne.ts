@@ -2197,6 +2197,8 @@ const expansion: CardExpansionModule = {
         await cardEffectArgs.runGameActionDelegate('gainState', {
           playerId: cardEffectArgs.playerId,
           stateId: lostInTheWoods.id,
+          // Lost in the Woods can only be owned by one player at a time.
+          removeFromCurrentOwner: true,
         });
       }
       else {

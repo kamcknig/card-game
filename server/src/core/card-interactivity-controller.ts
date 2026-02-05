@@ -8,7 +8,7 @@ import {
   Match,
   PlayerId,
   TurnPhaseOrderValues,
-} from 'shared/shared-types.ts';
+} from 'shared/shared-types';
 import { isUndefined } from 'es-toolkit/compat';
 import { MatchCardLibrary } from './match-card-library.ts';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
@@ -19,7 +19,7 @@ import { CardSourceController } from './card-source-controller.ts';
 
 export class CardInteractivityController {
   private _gameOver: boolean = false;
-  
+
   constructor(
     private readonly _cardSourceController: CardSourceController,
     private readonly _cardPriceController: CardPriceRulesController,
@@ -35,19 +35,19 @@ export class CardInteractivityController {
       s.on('playAllTreasure', async (pId) => await this.onPlayAllTreasure(pId));
     });
   }
-  
+
   public playerAdded(s: AppSocket | undefined) {
     s?.on('cardTapped', (pId, cId) => this.onCardTapped(pId, cId));
     s?.on('cardLikeTapped', (pId, cId) => this.onCardLikeTapped(pId, cId));
     s?.on('playAllTreasure', async (pId) => await this.onPlayAllTreasure(pId));
   }
-  
+
   public playerRemoved(socket: AppSocket | undefined) {
     socket?.off('cardTapped');
     socket?.off('cardLikeTapped');
     socket?.off('playAllTreasure');
   }
-  
+
   public endGame() {
     console.log(`[card interactivity] removing socket listeners and marking ended`,);
     this._socketMap.forEach((s) => {
@@ -57,27 +57,27 @@ export class CardInteractivityController {
     });
     this._gameOver = true;
   }
-  
+
   public checkCardInteractivity(): void {
     if (this._gameOver) {
       console.debug(`[card interactivity] game is over, not processing match update`,);
       return;
     }
-    
+
     const match = this.match;
-    
+
     const currentPlayer = match.players[match.currentPlayerTurnIndex];
     const turnPhase = TurnPhaseOrderValues[match.turnPhaseIndex];
     // Debt prevents buying but should not block treasure play.
     const currentDebt = match.debt?.[currentPlayer.id] ?? 0;
-    
+
     console.debug(`[card interactivity] determining selectable cards - phase '${turnPhase}, player ${currentPlayer}', player Index '${match.currentPlayerTurnIndex}'`);
-    
+
     const selectableCards: number[] = [];
-    
+
     const hand = this._cardSourceController.getSource('playerHand', currentPlayer.id)
       .map((id) => this._cardLibrary.getCard(id));
-    
+
     if (turnPhase === 'buy' && match.playerBuys > 0) {
       const cardKeysAdded: string[] = [];
       // Only offer buys if the player has no debt tokens.
@@ -118,7 +118,7 @@ export class CardInteractivityController {
           }
         }
       }
-      
+
       // loop over the player's hand; in the buy phase, one can play treasure as long as you haven't already
       // bought a card
       if (!Object.values<CardStats>(match.stats.cardsBought).concat(Object.values(match.stats.cardLikesBought))
@@ -129,7 +129,7 @@ export class CardInteractivityController {
           }
         }
       }
-      
+
       // Only offer event buys if the player has no debt tokens.
       if (currentDebt === 0) {
         const events = this.match.events;
@@ -160,36 +160,36 @@ export class CardInteractivityController {
       }
       console.debug(`[card interactivity] night phase selectable count ${selectableCards.length}`);
     }
-    
+
     match.selectableCards = match.players.reduce((prev, { id }) => {
       prev[id] = id === currentPlayer.id ? selectableCards : [];
       return prev;
     }, {} as Record<PlayerId, CardId[]>);
-    
+
     console.debug(`[card interactivity] selectable cards`);
-    
+
     for (const key of Object.keys(match.selectableCards)) {
       const tmp = match.selectableCards[+key]?.concat() ?? [];
       const p = getPlayerById(match, +key);
       console.debug(`${p} can select ${tmp.length} cards`);
     }
   }
-  
+
   private async onPlayAllTreasure(playerId: PlayerId) {
     console.info('[card interactivity] playing all treasures for current player');
-    
+
     if (this._gameOver) {
       console.debug(`[card interactivity] game is over, not playing treasures`);
       return;
     }
 
     const player = getPlayerById(this.match, playerId);
-    
+
     if (isUndefined(player)) {
       console.warn(`[card interactivity] could not find current player`);
       return;
     }
-    
+
     const hand = this._cardSourceController.getSource('playerHand', player.id);
     const treasureCards = hand.filter((e) =>
       this._cardLibrary.getCard(e).type.includes('TREASURE')
@@ -198,30 +198,30 @@ export class CardInteractivityController {
     if (hand.length === 0 || treasureCards.length === 0) {
       return;
     }
-    
+
     for (const cardId of treasureCards) {
       await this.runGameDelegate('playCard', { playerId, cardId });
     }
-    
+
     this._socketMap.get(playerId)?.emit('playAllTreasureComplete');
   };
-  
+
   private async onCardLikeTapped(playerId: PlayerId, cardId: CardLikeId) {
     const player = getPlayerById(this.match, playerId)
-    
+
     if (!player) {
       throw new Error('could not find player');
     }
-    
+
     console.info(`[card interactivity] ${player} tapped card-like ${cardId}`);
-    
+
     if (this._gameOver) {
       console.debug(`[card interactivity] game is over, not processing card-like tap`);
       return;
     }
-    
+
     const phase = getTurnPhase(this.match.turnPhaseIndex);
-    
+
     if (phase === 'buy') {
       // Block buying events while the player has debt tokens.
       if ((this.match.debt?.[playerId] ?? 0) > 0) {
@@ -234,33 +234,33 @@ export class CardInteractivityController {
     else {
       console.debug(`[card interactivity] ${player} tapped card-like ${cardId} in phase ${phase}, not processing`);
     }
-    
+
     await this.runGameDelegate('checkForRemainingPlayerActions');
-    
+
     this._socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
   }
-  
+
   private async onCardTapped(playerId: PlayerId, cardId: CardId) {
     const player = getPlayerById(this.match, playerId)
-    
+
     if (!player) {
       throw new Error('could not find player');
     }
-    
+
     console.info(`[card interactivity] pl${player} tapped card ${this._cardLibrary.getCard(cardId)}`);
-    
+
     if (this._gameOver) {
       console.debug(`[card interactivity] game is over, not processing card tap`);
       return;
     }
-    
+
     const phase = getTurnPhase(this.match.turnPhaseIndex);
-    
+
     if (phase === 'buy') {
       let overpay = { inTreasure: 0, inCoffer: 0 };
-      
+
       const hand = this._cardSourceController.getSource('playerHand', playerId);
-      
+
       if (hand.includes(cardId)) {
         await this.runGameDelegate('playCard', { playerId, cardId });
       }
@@ -274,7 +274,7 @@ export class CardInteractivityController {
         const { cost } = this._cardPriceController.applyRules(card, {
           playerId
         });
-        
+
         if (card.tags?.includes('overpay')) {
           if (this.match.playerTreasure > cost.treasure) {
             const result = await this.runGameDelegate('userPrompt', {
@@ -286,7 +286,7 @@ export class CardInteractivityController {
             overpay = result.result;
           }
         }
-        
+
         await this.runGameDelegate('buyCard', { playerId, cardId, overpay, cardCost: cost });
       }
     }
@@ -310,9 +310,9 @@ export class CardInteractivityController {
         console.debug(`[card interactivity] tapped card ${cardId} not in hand during night phase`);
       }
     }
-    
+
     await this.runGameDelegate('checkForRemainingPlayerActions');
-    
+
     this._socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
   };
 }

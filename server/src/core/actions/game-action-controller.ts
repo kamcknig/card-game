@@ -1509,7 +1509,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   }
 
   // Assigns a state to a player and registers its effect triggers.
-  async gainState(args: { playerId: PlayerId; stateId?: CardLikeId; stateKey?: CardKey }, context?: GameActionContext) {
+  async gainState(args: { playerId: PlayerId; stateId?: CardLikeId; stateKey?: CardKey; removeFromCurrentOwner?: boolean }, context?: GameActionContext) {
     console.log(`[gainState action] player ${args.playerId} gaining state`);
 
     // Ensure state storage exists for older saved states.
@@ -1544,15 +1544,9 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       return state.id;
     }
 
-    if (previousOwnerId !== undefined) {
-      const previousStates = this.match.states.byPlayer[previousOwnerId] ?? [];
-      const index = previousStates.indexOf(state.id);
-      if (index !== -1) {
-        previousStates.splice(index, 1);
-      }
-      const previousTriggerId = `state:${state.id}:startTurn:${previousOwnerId}`;
-      this.reactionManager.unregisterTrigger(previousTriggerId);
-      console.debug(`[gainState action] removed ${state} from player ${previousOwnerId}`);
+    // Only strip the state from a previous owner when explicitly requested.
+    if (previousOwnerId !== undefined && args.removeFromCurrentOwner) {
+      await this.removeState({ playerId: previousOwnerId, stateId: state.id });
     }
 
     this.match.states.byPlayer[args.playerId] ??= [];
@@ -1597,6 +1591,36 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     });
 
     return state.id;
+  }
+
+  // Removes a state from a player and cleans up any registered triggers.
+  async removeState(args: { playerId: PlayerId; stateId?: CardLikeId; stateKey?: CardKey }, context?: GameActionContext): Promise<void> {
+    console.log(`[removeState action] player ${args.playerId} removing state`);
+
+    // Ensure state storage exists for older saved states.
+    this.match.states ??= { cards: [], byPlayer: {} };
+    this.match.states.cards ??= [];
+    this.match.states.byPlayer ??= {};
+
+    const state = args.stateId !== undefined
+      ? this.match.states.cards.find(candidate => candidate.id === args.stateId)
+      : this.match.states.cards.find(candidate => candidate.cardKey === args.stateKey);
+
+    if (!state) {
+      console.warn('[removeState action] could not resolve state to remove');
+      return;
+    }
+
+    const ownedStates = this.match.states.byPlayer[args.playerId] ?? [];
+    const index = ownedStates.indexOf(state.id);
+    if (index === -1) {
+      console.debug(`[removeState action] player ${args.playerId} does not have ${state}`);
+      return;
+    }
+
+    ownedStates.splice(index, 1);
+    // State-trigger cleanup is handled by the state effect that registered them.
+    console.debug(`[removeState action] removed ${state} from player ${args.playerId}`);
   }
 
   async revealCard(args: {
@@ -2135,17 +2159,22 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   }
 
   // Helper method to shuffle a player's deck
-  async shuffleDeck(args: { playerId: PlayerId }, context?: GameActionContext): Promise<void> {
+  async shuffleDeck(args: { playerId: PlayerId; includeDiscard?: boolean }, context?: GameActionContext): Promise<void> {
     const {playerId} = args;
+    const includeDiscard = args.includeDiscard ?? true;
 
     console.debug(`[shuffleDeck action] shuffling deck`);
 
     const deck = this._cardSourceController.getSource('playerDeck', playerId);
     const discard = this._cardSourceController.getSource('playerDiscard', playerId);
 
-    fisherYatesShuffle(discard, true);
-    deck.unshift(...discard);
-    discard.length = 0;
+    if (includeDiscard) {
+      fisherYatesShuffle(discard, true);
+      deck.unshift(...discard);
+      discard.length = 0;
+    } else {
+      fisherYatesShuffle(deck, true);
+    }
 
     this.logManager.addLogEntry({
       type: 'shuffleDeck',

@@ -2,23 +2,24 @@ import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { CardExpansionModule } from '../../types.ts';
-import { Card } from "shared/shared-types.ts";
+import { Card } from "shared/shared-types";
 import { isPlayerImmune, markPlayerImmune } from '../../utils/reaction-immunity.ts';
 
 const expansionModule: CardExpansionModule = {
+  // Include the source card id for treasure gains so state effects can adjust values.
   'copper': {
-    registerEffects: () => async ({ runGameActionDelegate }) => {
-      await runGameActionDelegate('gainTreasure', { count: 1 });
+    registerEffects: () => async ({ runGameActionDelegate, cardId }) => {
+      await runGameActionDelegate('gainTreasure', { count: 1 }, { loggingContext: { source: cardId } });
     }
   },
   'gold': {
-    registerEffects: () => async ({ runGameActionDelegate }) => {
-      await runGameActionDelegate('gainTreasure', { count: 3 });
+    registerEffects: () => async ({ runGameActionDelegate, cardId }) => {
+      await runGameActionDelegate('gainTreasure', { count: 3 }, { loggingContext: { source: cardId } });
     }
   },
   'silver': {
-    registerEffects: () => async ({ runGameActionDelegate }) => {
-      await runGameActionDelegate('gainTreasure', { count: 2 });
+    registerEffects: () => async ({ runGameActionDelegate, cardId }) => {
+      await runGameActionDelegate('gainTreasure', { count: 2 }, { loggingContext: { source: cardId } });
     }
   },
   'artisan': {
