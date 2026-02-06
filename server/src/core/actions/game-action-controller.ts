@@ -1035,6 +1035,17 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     console.debug(`[gainCoffer action] player ${args.playerId} now has ${this.match.coffers[args.playerId]} coffers`);
   }
 
+  // Adds Villagers tokens (Renaissance) to a player.
+  async gainVillager(args: { playerId: PlayerId, count?: number; }, context?: GameActionContext) {
+    console.log(`[gainVillager action] player ${args.playerId} gained ${args.count} villagers`);
+    // Ensure villagers map exists for older saved states.
+    this.match.villagers ??= {};
+    this.match.villagers[args.playerId] ??= 0;
+    this.match.villagers[args.playerId] += args.count ?? 1;
+    this.match.villagers[args.playerId] = Math.max(0, this.match.villagers[args.playerId]);
+    console.debug(`[gainVillager action] player ${args.playerId} now has ${this.match.villagers[args.playerId]} villagers`);
+  }
+
   // Adds debt tokens to a player without spending treasure.
   async gainDebt(args: { playerId: PlayerId; count: number; }, context?: GameActionContext) {
     console.log(`[gainDebt action] player ${args.playerId} gained ${args.count} debt`);
@@ -1051,6 +1062,22 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     this.match.coffers[args.playerId] -= args.count;
     this.match.playerTreasure += args.count;
   };
+
+  // Spends Villagers to gain actions during the Action phase.
+  async spendVillager(args: { playerId: PlayerId, count: number; }, context?: GameActionContext) {
+    console.log(`[spendVillager action] player ${args.playerId} spending ${args.count} villagers`);
+    // Ensure villagers map exists for older saved states.
+    this.match.villagers ??= {};
+    const currentVillagers = this.match.villagers[args.playerId] ?? 0;
+    const spendCount = Math.min(args.count, currentVillagers);
+    if (spendCount <= 0) {
+      console.debug(`[spendVillager action] player ${args.playerId} has no villagers to spend`);
+      return;
+    }
+    this.match.villagers[args.playerId] = currentVillagers - spendCount;
+    console.debug(`[spendVillager action] player ${args.playerId} now has ${this.match.villagers[args.playerId]} villagers`);
+    await this.gainAction({ count: spendCount }, context);
+  }
 
   // Pays down debt tokens using the current treasure pool.
   async payDebt(args: { playerId: PlayerId; count: number; }, context?: GameActionContext) {

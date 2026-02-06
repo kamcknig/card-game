@@ -136,6 +136,8 @@ export interface Match {
   cardSources: Record<CardLocation, CardId[]>;
   cardSourceTagMap: Record<string, CardLocation[]>;
   coffers: Record<PlayerId, number>;
+  // Tracks per-player Villagers tokens from Renaissance.
+  villagers: Record<PlayerId, number>;
   // Tracks per-player debt tokens for Empires-style costs.
   debt: Record<PlayerId, number>;
   config: ComputedMatchConfiguration,
@@ -318,6 +320,8 @@ export interface ServerListenEvents {
   addComputerPlayer: (count?: number) => void;
   clientReady: (playerId: PlayerId, ready: boolean) => void;
   exchangeCoffer: (playerId: PlayerId, count: number) => void;
+  // Spends Villagers to gain actions during the Action phase.
+  spendVillager: (playerId: PlayerId, count: number) => void;
   // Pays down debt tokens using available treasure.
   payDebt: (playerId: PlayerId, count: number) => void;
   expansionSelected: (val: string[]) => void;

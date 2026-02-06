@@ -3,10 +3,11 @@ import { batched } from 'nanostores';
 import { playerActionsStore, playerBuysStore, playerPotionStore, playerTreasureStore } from '../../../state/turn-state';
 import { STANDARD_GAP } from '../../../core/app-contants';
 import { CoffersExchangeView } from './coffers-exchange-view';
-import { cofferStore, debtStore } from '../../../state/resource-logic';
+import { cofferStore, debtStore, villagerStore } from '../../../state/resource-logic';
 import { selfPlayerIdStore } from '../../../state/player-state';
 import { SocketService } from '../../../core/socket-service/socket.service';
 import { DebtPayView } from './debt-pay-view';
+import { VillagersSpendView } from './villagers-spend-view';
 
 export class PhaseStatus extends Container {
   private _background: Graphics = new Graphics();
@@ -17,10 +18,13 @@ export class PhaseStatus extends Container {
   private _potionsCountText: Text = new Text({ style: { fill: 0xffffff, fontSize: 18 } });
   private _potionView: Sprite = Sprite.from(Assets.get('potion-icon'));
   private _coffersExchangeView: CoffersExchangeView = new CoffersExchangeView();
+  // Displays Villagers and allows spending them for actions.
+  private _villagersSpendView: VillagersSpendView = new VillagersSpendView();
   // Displays debt and allows paying it down.
   private _debtPayView: DebtPayView = new DebtPayView();
   // Fixed widths to avoid layout shifts when controls expand.
   private static readonly COFFER_ICON_SIZE = 45;
+  private static readonly VILLAGER_ICON_SIZE = 45;
   private static readonly DEBT_ICON_SIZE = 45;
   private static readonly BAR_WIDTH = 900;
   private static readonly BAR_HEIGHT = 50;
@@ -34,6 +38,12 @@ export class PhaseStatus extends Container {
     if (!selfId) return;
     this._socketService.emit('payDebt', selfId, amount);
   };
+  // Spends Villagers to gain actions.
+  private _onSpendVillager = (amount: number) => {
+    const selfId = selfPlayerIdStore.get();
+    if (!selfId) return;
+    this._socketService.emit('spendVillager', selfId, amount);
+  };
 
   constructor(private readonly _socketService: SocketService) {
     super();
@@ -44,8 +54,10 @@ export class PhaseStatus extends Container {
     this.addChild(this._actionLabel);
 
     this._coffersExchangeView.on('exchange', this._onExchangeCoffer);
+    this._villagersSpendView.on('spend', this._onSpendVillager);
 
     this.addChild(this._coffersExchangeView);
+    this.addChild(this._villagersSpendView);
     this.addChild(this._debtPayView);
 
     this._debtPayView.on('pay', this._onPayDebt);
@@ -56,13 +68,14 @@ export class PhaseStatus extends Container {
 
     this._cleanup.push(
       batched(
-        [playerTreasureStore, playerBuysStore, playerActionsStore, playerPotionStore, cofferStore, debtStore, selfPlayerIdStore],
-        (treasure, buys, actions, potions, coffers, debt, selfId) => ({
+        [playerTreasureStore, playerBuysStore, playerActionsStore, playerPotionStore, cofferStore, villagerStore, debtStore, selfPlayerIdStore],
+        (treasure, buys, actions, potions, coffers, villagers, debt, selfId) => ({
           treasure,
           buys,
           actions,
           potions,
           coffers: selfId ? coffers[selfId] : 0,
+          villagers: selfId ? villagers[selfId] : 0,
           debt: selfId ? debt[selfId] : 0
         })
       ).subscribe(vals => this.drawPhase(vals))
@@ -78,10 +91,11 @@ export class PhaseStatus extends Container {
     this._cleanup.forEach(c => c());
     this._coffersExchangeView.off('exchange', this._onExchangeCoffer);
     this._debtPayView.off('pay', this._onPayDebt);
+    this._villagersSpendView.off('spend', this._onSpendVillager);
     this.off('removed', this.onRemoved);
   }
 
-  private drawPhase({ treasure, buys, actions, potions, coffers, debt }: { treasure: number; buys: number; actions: number; potions: number; coffers: number; debt: number; }) {
+  private drawPhase({ treasure, buys, actions, potions, coffers, villagers, debt }: { treasure: number; buys: number; actions: number; potions: number; coffers: number; villagers: number; debt: number; }) {
     this._buyLabel.text = `  BUYS ${buys}`;
     this._treasureLabel.text = `  TREASURE ${treasure}   /`;
     this._actionLabel.text = `ACTIONS ${actions}   /`;
@@ -112,6 +126,7 @@ export class PhaseStatus extends Container {
     this._buyLabel.x = c.x + c.width + STANDARD_GAP;
 
     this._coffersExchangeView.visible = coffers > 0;
+    this._villagersSpendView.visible = villagers > 0;
     // Debt is shown when present and right-aligned with other resource controls.
     this._debtPayView.visible = debt > 0;
     let rightEdge = PhaseStatus.BAR_WIDTH - STANDARD_GAP;
@@ -127,6 +142,14 @@ export class PhaseStatus extends Container {
       // Use fixed icon width so expanded controls don't shift layout.
       this._coffersExchangeView.x = Math.floor(rightEdge - PhaseStatus.COFFER_ICON_SIZE);
       this._coffersExchangeView.y = Math.floor(centerY - PhaseStatus.COFFER_ICON_SIZE * .5);
+      rightEdge = this._coffersExchangeView.x - STANDARD_GAP;
+    }
+
+    if (villagers > 0) {
+      // Villagers are shown to the left of coffers.
+      // Use fixed icon width so expanded controls don't shift layout.
+      this._villagersSpendView.x = Math.floor(rightEdge - PhaseStatus.VILLAGER_ICON_SIZE);
+      this._villagersSpendView.y = Math.floor(centerY - PhaseStatus.VILLAGER_ICON_SIZE * .5);
     }
   }
 }

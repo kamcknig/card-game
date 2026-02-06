@@ -147,8 +147,12 @@ export interface BaseGameActionDefinitionMap {
     gainAction: (args: { count: number }, context?: GameActionContext) => Promise<void>;
     gainBuy: (args: { count: number }, context?: GameActionContext) => Promise<void>;
     gainCoffer: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
+    // Adds Villagers tokens to a player (Renaissance).
+    gainVillager: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
     // Adds debt tokens to a player (used by Empires-style costs/effects).
     gainDebt: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
+    // Spends Villagers tokens to gain actions.
+    spendVillager: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
     gainCard: (args: {
         playerId: PlayerId,
         cardId: CardId | Card,

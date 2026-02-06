@@ -91,6 +91,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       cardSources: {},
       cardSourceTagMap: {},
       coffers: {},
+      // Per-player Villagers tokens for Renaissance.
+      villagers: {},
       // Per-player debt tokens for Empires-style costs.
       debt: {},
       config: {} as ComputedMatchConfiguration,
@@ -533,14 +535,15 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   public applyPartialMatchUpdate(partial: Partial<Match>): { ok: boolean; errors?: string[] } {
     const prev = this.getMatchSnapshot();
 
-    const recordKeyAllowList = new Set([
-      'cardOverrides',
-      'cardSources',
-      'cardSourceTagMap',
-      'coffers',
-      'debt',
-      'mats',
-      'scores',
+      const recordKeyAllowList = new Set([
+        'cardOverrides',
+        'cardSources',
+        'cardSourceTagMap',
+        'coffers',
+        'villagers',
+        'debt',
+        'mats',
+        'scores',
       'selectableCards',
       'tokens',
     ]);
@@ -928,6 +931,10 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     socket.on('searchCards', (playerId, searchStr) => this.onSearchCards(playerId, searchStr));
     socket.on('exchangeCoffer', async (playerId, count) => {
       await this.runGameAction('exchangeCoffer', { playerId, count });
+    });
+    // Allows the current player to spend Villagers for actions.
+    socket.on('spendVillager', async (playerId, count) => {
+      await this.runGameAction('spendVillager', { playerId, count });
     });
     // Allows the current player to pay down debt using available treasure.
     socket.on('payDebt', async (playerId, count) => {
