@@ -1,6 +1,6 @@
 import { Assets, Container, Graphics, Sprite, Text } from 'pixi.js';
 import { batched } from 'nanostores';
-import { playerActionsStore, playerBuysStore, playerPotionStore, playerTreasureStore } from '../../../state/turn-state';
+import { currentPlayerTurnIdStore, playerActionsStore, playerBuysStore, playerPotionStore, playerTreasureStore, turnPhaseStore } from '../../../state/turn-state';
 import { STANDARD_GAP } from '../../../core/app-contants';
 import { CoffersExchangeView } from './coffers-exchange-view';
 import { cofferStore, debtStore, villagerStore } from '../../../state/resource-logic';
@@ -68,15 +68,18 @@ export class PhaseStatus extends Container {
 
     this._cleanup.push(
       batched(
-        [playerTreasureStore, playerBuysStore, playerActionsStore, playerPotionStore, cofferStore, villagerStore, debtStore, selfPlayerIdStore],
-        (treasure, buys, actions, potions, coffers, villagers, debt, selfId) => ({
+        [playerTreasureStore, playerBuysStore, playerActionsStore, playerPotionStore, cofferStore, villagerStore, debtStore, selfPlayerIdStore, currentPlayerTurnIdStore, turnPhaseStore],
+        (treasure, buys, actions, potions, coffers, villagers, debt, selfId, currentPlayerId, turnPhase) => ({
           treasure,
           buys,
           actions,
           potions,
           coffers: selfId ? coffers[selfId] : 0,
           villagers: selfId ? villagers[selfId] : 0,
-          debt: selfId ? debt[selfId] : 0
+          debt: selfId ? debt[selfId] : 0,
+          selfId,
+          currentPlayerId,
+          turnPhase,
         })
       ).subscribe(vals => this.drawPhase(vals))
     );
@@ -95,7 +98,7 @@ export class PhaseStatus extends Container {
     this.off('removed', this.onRemoved);
   }
 
-  private drawPhase({ treasure, buys, actions, potions, coffers, villagers, debt }: { treasure: number; buys: number; actions: number; potions: number; coffers: number; villagers: number; debt: number; }) {
+  private drawPhase({ treasure, buys, actions, potions, coffers, villagers, debt, selfId, currentPlayerId, turnPhase }: { treasure: number; buys: number; actions: number; potions: number; coffers: number; villagers: number; debt: number; selfId?: number; currentPlayerId?: number; turnPhase?: string; }) {
     this._buyLabel.text = `  BUYS ${buys}`;
     this._treasureLabel.text = `  TREASURE ${treasure}   /`;
     this._actionLabel.text = `ACTIONS ${actions}   /`;
@@ -126,7 +129,8 @@ export class PhaseStatus extends Container {
     this._buyLabel.x = c.x + c.width + STANDARD_GAP;
 
     this._coffersExchangeView.visible = coffers > 0;
-    this._villagersSpendView.visible = villagers > 0;
+    const canSpendVillagers = !!selfId && selfId === currentPlayerId && turnPhase === 'action' && villagers > 0;
+    this._villagersSpendView.visible = canSpendVillagers;
     // Debt is shown when present and right-aligned with other resource controls.
     this._debtPayView.visible = debt > 0;
     let rightEdge = PhaseStatus.BAR_WIDTH - STANDARD_GAP;

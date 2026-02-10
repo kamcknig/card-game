@@ -1066,6 +1066,12 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   // Spends Villagers to gain actions during the Action phase.
   async spendVillager(args: { playerId: PlayerId, count: number; }, context?: GameActionContext) {
     console.log(`[spendVillager action] player ${args.playerId} spending ${args.count} villagers`);
+    const currentPhase = getTurnPhase(this.match.turnPhaseIndex);
+    // Villagers can only be spent during the Action phase.
+    if (currentPhase !== 'action') {
+      console.warn(`[spendVillager action] player ${args.playerId} cannot spend villagers during ${currentPhase} phase`);
+      return;
+    }
     // Ensure villagers map exists for older saved states.
     this.match.villagers ??= {};
     const currentVillagers = this.match.villagers[args.playerId] ?? 0;
