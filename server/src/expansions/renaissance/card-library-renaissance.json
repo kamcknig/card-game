@@ -1,0 +1,42 @@
+{
+  "flag": {
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["ARTIFACT"],
+    "abilityText": "When drawing your hand, +1 Card."
+  },
+  "horn": {
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["ARTIFACT"],
+    "abilityText": "Once per turn, when you discard a Border Guard from play, you may put it onto your deck."
+  },
+  "key": {
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["ARTIFACT"],
+    "abilityText": "At the start of your turn, +$1."
+  },
+  "lantern": {
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["ARTIFACT"],
+    "abilityText": "Border Guards you play reveal 3 cards and discard 2. (It takes all 3 being Actions to take the Horn.)"
+  },
+  "treasure-chest": {
+    "cost": {
+      "treasure": 0
+    },
+    "kingdomSelectable": false,
+    "type": ["ARTIFACT"],
+    "abilityText": "At the start of your Buy phase, gain a Gold."
+  }
+}

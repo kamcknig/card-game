@@ -148,6 +148,12 @@ export const socketToGameEventMap = (): SocketEventMap => {
       finalBundle[`${state.cardKey}-detail`] ??= state.detailImagePath;
     }
 
+    // Ensure artifact images are loaded for artifact display prompts.
+    for (const artifact of matchStore.get()?.artifacts?.cards ?? []) {
+      finalBundle[`${artifact.cardKey}-full`] ??= artifact.fullImagePath;
+      finalBundle[`${artifact.cardKey}-detail`] ??= artifact.detailImagePath;
+    }
+
     Assets.addBundle('cardLibrary', finalBundle);
 
     sceneStore.set('match');

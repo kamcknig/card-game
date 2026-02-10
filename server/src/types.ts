@@ -169,6 +169,10 @@ export interface BaseGameActionDefinitionMap {
     gainState: (args: { playerId: PlayerId; stateId?: CardLikeId; stateKey?: CardKey; removeFromCurrentOwner?: boolean; }, context?: GameActionContext) => Promise<CardLikeId | undefined>;
     // Removes a state from a player (used by state cleanup and effects).
     removeState: (args: { playerId: PlayerId; stateId?: CardLikeId; stateKey?: CardKey; }, context?: GameActionContext) => Promise<void>;
+    // Assigns an artifact to a player (used by artifact-granting cards).
+    gainArtifact: (args: { playerId: PlayerId; artifactId?: CardLikeId; artifactKey?: CardKey; }, context?: GameActionContext) => Promise<CardLikeId | undefined>;
+    // Removes an artifact from a player (used by artifact cleanup and effects).
+    removeArtifact: (args: { playerId: PlayerId; artifactId?: CardLikeId; artifactKey?: CardKey; }, context?: GameActionContext) => Promise<void>;
     // Pays down debt tokens using the current player's treasure pool.
     payDebt: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
     // Token actions are used by expansions to place and manage token instances.
@@ -688,6 +692,8 @@ export type BoonEffectRegistrar = (cardKey: CardKey, fn: CardEffectFn) => void;
 export type HexEffectRegistrar = (cardKey: CardKey, fn: CardEffectFn) => void;
 // Registers state effects by card key for the current match.
 export type StateEffectRegistrar = (cardKey: CardKey, fn: CardEffectFn) => void;
+// Registers artifact effects by card key for the current match.
+export type ArtifactEffectRegistrar = (cardKey: CardKey, fn: CardEffectFn) => void;
 
 export type PlayerScoreDecoratorRegistrar = (decorator: PlayerScoreDecorator) => void;
 export type PlayerScoreDecorator = (playerId: PlayerId, match: Match, cardLibrary: MatchCardLibrary) => void;
@@ -711,4 +717,5 @@ export type InitializeExpansionContext = {
     boonEffectRegistrar: BoonEffectRegistrar;
     hexEffectRegistrar: HexEffectRegistrar;
     stateEffectRegistrar: StateEffectRegistrar;
+    artifactEffectRegistrar: ArtifactEffectRegistrar;
 }

@@ -70,6 +70,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     private boonEffectFunctionMap: CardEffectFunctionMap,
     private hexEffectFunctionMap: CardEffectFunctionMap,
     private stateEffectFunctionMap: CardEffectFunctionMap,
+    private artifactEffectFunctionMap: CardEffectFunctionMap,
     private match: Match,
     private cardLibrary: MatchCardLibrary,
     private logManager: LogManager,
@@ -112,6 +113,53 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       console.warn(`[action controller] state effect for ${cardKey} already exists, overwriting it`);
     }
     this.stateEffectFunctionMap[cardKey] = fn;
+  }
+
+  // Registers artifact effects for the current match.
+  public registerArtifactEffect(cardKey: CardKey, fn: CardEffectFn) {
+    if (this.artifactEffectFunctionMap[cardKey]) {
+      console.warn(`[action controller] artifact effect for ${cardKey} already exists, overwriting it`);
+    }
+    this.artifactEffectFunctionMap[cardKey] = fn;
+  }
+
+  // Ensures a status-like store (state/artifact) exists on match state.
+  private ensureStatusStore(kind: 'state' | 'artifact') {
+    if (kind === 'state') {
+      this.match.states ??= { cards: [], byPlayer: {} };
+      this.match.states.cards ??= [];
+      this.match.states.byPlayer ??= {};
+      return this.match.states;
+    }
+    this.match.artifacts ??= { cards: [], byPlayer: {} };
+    this.match.artifacts.cards ??= [];
+    this.match.artifacts.byPlayer ??= {};
+    return this.match.artifacts;
+  }
+
+  // Resolves a status-like card from its id or key.
+  private resolveStatusCard(
+    store: { cards: { id: CardLikeId; cardKey: CardKey }[] },
+    args: { statusId?: CardLikeId; statusKey?: CardKey },
+  ) {
+    return args.statusId !== undefined
+      ? store.cards.find(candidate => candidate.id === args.statusId)
+      : store.cards.find(candidate => candidate.cardKey === args.statusKey);
+  }
+
+  // Finds all owners of a status-like card id.
+  private findStatusOwners(store: { byPlayer: Record<PlayerId, CardLikeId[]> }, statusId: CardLikeId): PlayerId[] {
+    return Object.entries(store.byPlayer)
+      .filter(([, statusIds]) => statusIds.includes(statusId))
+      .map(([playerId]) => Number(playerId));
+  }
+
+  // Adds a status-like card to a player if not already owned.
+  private addStatusToPlayer(store: { byPlayer: Record<PlayerId, CardLikeId[]> }, playerId: PlayerId, statusId: CardLikeId) {
+    store.byPlayer[playerId] ??= [];
+    if (!store.byPlayer[playerId].includes(statusId)) {
+      store.byPlayer[playerId].push(statusId);
+    }
   }
 
   public async invokeAction<K extends GameActions>(
@@ -1545,47 +1593,34 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   async gainState(args: { playerId: PlayerId; stateId?: CardLikeId; stateKey?: CardKey; removeFromCurrentOwner?: boolean }, context?: GameActionContext) {
     console.log(`[gainState action] player ${args.playerId} gaining state`);
 
-    // Ensure state storage exists for older saved states.
-    this.match.states ??= { cards: [], byPlayer: {} };
-    this.match.states.cards ??= [];
-    this.match.states.byPlayer ??= {};
-
-    if (this.match.states.cards.length < 1) {
+    const store = this.ensureStatusStore('state');
+    if (store.cards.length < 1) {
       console.info('[gainState action] no states configured, skipping');
       return;
     }
 
-    const state = args.stateId !== undefined
-      ? this.match.states.cards.find(candidate => candidate.id === args.stateId)
-      : this.match.states.cards.find(candidate => candidate.cardKey === args.stateKey);
+    const state = this.resolveStatusCard(store, { statusId: args.stateId, statusKey: args.stateKey });
 
     if (!state) {
       console.warn('[gainState action] could not resolve state to gain');
       return;
     }
 
-    let previousOwnerId: PlayerId | undefined;
-    for (const [playerId, stateIds] of Object.entries(this.match.states.byPlayer)) {
-      if (stateIds.includes(state.id)) {
-        previousOwnerId = Number(playerId);
-        break;
-      }
-    }
-
-    if (previousOwnerId === args.playerId) {
+    const ownedStates = store.byPlayer[args.playerId] ?? [];
+    if (ownedStates.includes(state.id)) {
       console.debug(`[gainState action] player ${args.playerId} already has ${state}`);
       return state.id;
     }
 
-    // Only strip the state from a previous owner when explicitly requested.
-    if (previousOwnerId !== undefined && args.removeFromCurrentOwner) {
-      await this.removeState({ playerId: previousOwnerId, stateId: state.id });
+    // Only strip the state from previous owners when explicitly requested.
+    if (args.removeFromCurrentOwner) {
+      const ownerIds = this.findStatusOwners(store, state.id);
+      for (const ownerId of ownerIds) {
+        await this.removeState({ playerId: ownerId, stateId: state.id });
+      }
     }
 
-    this.match.states.byPlayer[args.playerId] ??= [];
-    if (!this.match.states.byPlayer[args.playerId].includes(state.id)) {
-      this.match.states.byPlayer[args.playerId].push(state.id);
-    }
+    this.addStatusToPlayer(store, args.playerId, state.id);
 
     const effectFn = this.stateEffectFunctionMap[state.cardKey];
     if (!effectFn) {
@@ -1630,21 +1665,15 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   async removeState(args: { playerId: PlayerId; stateId?: CardLikeId; stateKey?: CardKey }, context?: GameActionContext): Promise<void> {
     console.log(`[removeState action] player ${args.playerId} removing state`);
 
-    // Ensure state storage exists for older saved states.
-    this.match.states ??= { cards: [], byPlayer: {} };
-    this.match.states.cards ??= [];
-    this.match.states.byPlayer ??= {};
-
-    const state = args.stateId !== undefined
-      ? this.match.states.cards.find(candidate => candidate.id === args.stateId)
-      : this.match.states.cards.find(candidate => candidate.cardKey === args.stateKey);
+    const store = this.ensureStatusStore('state');
+    const state = this.resolveStatusCard(store, { statusId: args.stateId, statusKey: args.stateKey });
 
     if (!state) {
       console.warn('[removeState action] could not resolve state to remove');
       return;
     }
 
-    const ownedStates = this.match.states.byPlayer[args.playerId] ?? [];
+    const ownedStates = store.byPlayer[args.playerId] ?? [];
     const index = ownedStates.indexOf(state.id);
     if (index === -1) {
       console.debug(`[removeState action] player ${args.playerId} does not have ${state}`);
@@ -1654,6 +1683,98 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     ownedStates.splice(index, 1);
     // State-trigger cleanup is handled by the state effect that registered them.
     console.debug(`[removeState action] removed ${state} from player ${args.playerId}`);
+  }
+
+  // Assigns an artifact to a player and registers its effect triggers.
+  async gainArtifact(args: { playerId: PlayerId; artifactId?: CardLikeId; artifactKey?: CardKey }, context?: GameActionContext) {
+    console.log(`[gainArtifact action] player ${args.playerId} gaining artifact`);
+
+    const store = this.ensureStatusStore('artifact');
+    if (store.cards.length < 1) {
+      console.info('[gainArtifact action] no artifacts configured, skipping');
+      return;
+    }
+
+    const artifact = this.resolveStatusCard(store, { statusId: args.artifactId, statusKey: args.artifactKey });
+    if (!artifact) {
+      console.warn('[gainArtifact action] could not resolve artifact to gain');
+      return;
+    }
+
+    const ownedArtifacts = store.byPlayer[args.playerId] ?? [];
+    if (ownedArtifacts.includes(artifact.id)) {
+      console.debug(`[gainArtifact action] player ${args.playerId} already has ${artifact}`);
+      return artifact.id;
+    }
+
+    // Artifacts are unique; remove from all previous owners.
+    const ownerIds = this.findStatusOwners(store, artifact.id);
+    for (const ownerId of ownerIds) {
+      await this.removeArtifact({ playerId: ownerId, artifactId: artifact.id });
+    }
+
+    this.addStatusToPlayer(store, args.playerId, artifact.id);
+
+    const effectFn = this.artifactEffectFunctionMap[artifact.cardKey];
+    if (!effectFn) {
+      console.debug(`[gainArtifact action] no effect registered for ${artifact.cardKey}`);
+      return artifact.id;
+    }
+
+    console.debug(`[gainArtifact action] registering effects for ${artifact}`);
+    const effectContext = {
+      cardSourceController: this._cardSourceController,
+      cardPriceController: this.cardPriceRuleController,
+      reactionManager: this.reactionManager,
+      runGameActionDelegate: this.runGameActionDelegate,
+      cardId: artifact.id,
+      playerId: args.playerId,
+      match: this.match,
+      cardLibrary: this.cardLibrary,
+      reactionContext: {},
+      findCards: this._findCards
+    } as CardEffectFunctionContext;
+
+    // Centralized duration registration with automatic cleanup on leave-play.
+    effectContext.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
+      const triggerIds = this.registerDurationEffectInternal(durationCard, effectContext, triggeredTemplate, options);
+      this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
+      return triggerIds;
+    };
+
+    // Run artifact effects with standardized logging.
+    await this.runEffectWithLogging({
+      source: artifact.toString(),
+      sourceType: 'artifact',
+      playerId: args.playerId,
+      effectFn,
+      context: effectContext,
+    });
+
+    return artifact.id;
+  }
+
+  // Removes an artifact from a player and cleans up any registered triggers.
+  async removeArtifact(args: { playerId: PlayerId; artifactId?: CardLikeId; artifactKey?: CardKey }, context?: GameActionContext): Promise<void> {
+    console.log(`[removeArtifact action] player ${args.playerId} removing artifact`);
+
+    const store = this.ensureStatusStore('artifact');
+    const artifact = this.resolveStatusCard(store, { statusId: args.artifactId, statusKey: args.artifactKey });
+    if (!artifact) {
+      console.warn('[removeArtifact action] could not resolve artifact to remove');
+      return;
+    }
+
+    const ownedArtifacts = store.byPlayer[args.playerId] ?? [];
+    const index = ownedArtifacts.indexOf(artifact.id);
+    if (index === -1) {
+      console.debug(`[removeArtifact action] player ${args.playerId} does not have ${artifact}`);
+      return;
+    }
+
+    ownedArtifacts.splice(index, 1);
+    // Artifact-trigger cleanup is handled by the artifact effect that registered them.
+    console.debug(`[removeArtifact action] removed ${artifact} from player ${args.playerId}`);
   }
 
   async revealCard(args: {

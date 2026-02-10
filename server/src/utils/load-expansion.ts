@@ -34,6 +34,11 @@ const isStateCardEntry = (entry: Partial<CardNoId>): boolean => {
   return (entry.type ?? []).includes('STATE');
 };
 
+// Type guard for artifact entries in card libraries.
+const isArtifactCardEntry = (entry: Partial<CardNoId>): boolean => {
+  return (entry.type ?? []).includes('ARTIFACT');
+};
+
 // Type guard for randomizer pile entries in card library JSON.
 const isRandomizerPileDefinition = (entry: unknown): entry is RandomizerPileDefinition => {
   if (!entry || typeof entry !== 'object') {
@@ -69,6 +74,8 @@ export const loadExpansion = async (expansion: { name: string; }) => {
     hexes: {},
     // States live alongside other non-supply card-likes.
     states: {},
+    // Artifacts live alongside other non-supply card-likes.
+    artifacts: {},
   };
   
   let expansionConfiguration;
@@ -144,6 +151,15 @@ export const loadExpansion = async (expansion: { name: string; }) => {
             expansionLibrary[expansionName].states[cardKey] = stateData as any;
             continue;
           }
+          if (isArtifactCardEntry(cardEntry)) {
+            console.debug(`[expansion loader] registering artifact ${cardKey} from pile ${pileRandomizer}`);
+            const artifactData = createCardLike(cardKey, expansionName, {
+              ...cardEntry,
+              kingdomSelectable: cardEntry.kingdomSelectable ?? false,
+            });
+            expansionLibrary[expansionName].artifacts[cardKey] = artifactData as any;
+            continue;
+          }
           // Apply pile-level randomizer metadata to each card in the pile.
           const templateData = {
             ...cardEntry,
@@ -184,6 +200,15 @@ export const loadExpansion = async (expansion: { name: string; }) => {
           kingdomSelectable: (entry as Partial<CardNoId>).kingdomSelectable ?? false,
         });
         expansionLibrary[expansionName].states[key] = stateData as any;
+        continue;
+      }
+      if (isArtifactCardEntry(entry as Partial<CardNoId>)) {
+        console.debug(`[expansion loader] registering artifact ${key}`);
+        const artifactData = createCardLike(key as CardKey, expansionName, {
+          ...(entry as Partial<CardNoId>),
+          kingdomSelectable: (entry as Partial<CardNoId>).kingdomSelectable ?? false,
+        });
+        expansionLibrary[expansionName].artifacts[key] = artifactData as any;
         continue;
       }
 

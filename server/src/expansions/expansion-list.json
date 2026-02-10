@@ -48,5 +48,10 @@
     "title": "Empires",
     "name": "empires",
     "order": 10
+  },
+  {
+    "title": "Renaissance",
+    "name": "renaissance",
+    "order": 11
   }
 ]

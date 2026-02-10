@@ -86,6 +86,8 @@ export class MatchConfigurator {
     this._config.landmarks ??= [];
     // Ensure states array exists for downstream configuration logic.
     this._config.states ??= [];
+    // Ensure artifacts array exists for downstream configuration logic.
+    this._config.artifacts ??= [];
 
     console.info(`[match configurator] created`);
   }

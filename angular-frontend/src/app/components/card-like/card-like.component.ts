@@ -104,7 +104,10 @@ export class CardLikeComponent implements OnInit, OnDestroy {
     if (event) return event;
     const landmark = match.landmarks?.find(card => card.id === this.cardLikeId);
     if (landmark) return landmark;
-    return match.states?.cards?.find(card => card.id === this.cardLikeId);
+    const state = match.states?.cards?.find(card => card.id === this.cardLikeId);
+    if (state) return state;
+    // Artifacts are stored alongside states in match state.
+    return match.artifacts?.cards?.find(card => card.id === this.cardLikeId);
   }
 
   // Card-likes always use full-size art until half-size assets exist.

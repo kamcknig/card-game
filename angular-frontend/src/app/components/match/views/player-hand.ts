@@ -37,6 +37,8 @@ export class PlayerHandView extends Container {
   private readonly _availableTokenTray: List = new List({ type: 'horizontal', elementsMargin: Math.floor(STANDARD_GAP * 0.5) });
   private readonly _activeTokenTray: List = new List({ type: 'horizontal', elementsMargin: Math.floor(STANDARD_GAP * 0.5) });
   private readonly _statesButton: AppButton = createAppButton({ text: 'States', style: { fill: '#ffffff', fontSize: 16 } });
+  // Opens the artifacts modal when the player owns artifacts.
+  private readonly _artifactsButton: AppButton = createAppButton({ text: 'ARTIFACTS', style: { fill: '#ffffff', fontSize: 16 } });
   private readonly _availableTokenLabel: Text = new Text({
     text: 'Available Tokens',
     style: { fill: '#ffffff', fontSize: 12 }
@@ -47,6 +49,8 @@ export class PlayerHandView extends Container {
   });
   // Track current state ids affecting this player for the states modal.
   private _currentStateIds: CardLikeId[] = [];
+  // Track current artifact ids affecting this player for the artifacts modal.
+  private _currentArtifactIds: CardLikeId[] = [];
 
   constructor(
     private playerId: number,
@@ -69,6 +73,7 @@ export class PlayerHandView extends Container {
     this.addChild(this._activeTokenLabel);
     this.addChild(this._activeTokenTray);
     this.addChild(this._statesButton.button);
+    this.addChild(this._artifactsButton.button);
     this.addChild(this._cardList);
     this.addChild(this._nextPhaseButton.button);
 
@@ -120,6 +125,7 @@ export class PlayerHandView extends Container {
     });
     this.addChild(this._playAllTreasuresButton.button);
     this._statesButton.button.on('pointerdown', () => this.openStatesModal());
+    this._artifactsButton.button.on('pointerdown', () => this.openArtifactsModal());
 
     this.updatePlayAllTreasureVisibility();
     this.updateButtonLayout();
@@ -142,6 +148,7 @@ export class PlayerHandView extends Container {
     this._nextPhaseButton.button.off('pointerdown');
     this._playAllTreasuresButton.button.off('pointerdown');
     this._statesButton.button.off('pointerdown');
+    this._artifactsButton.button.off('pointerdown');
     this.off('removed');
   }
   
@@ -164,6 +171,25 @@ export class PlayerHandView extends Container {
     }, this.playerId);
   }
 
+  // Opens the artifacts modal for the current player.
+  private openArtifactsModal() {
+    if (!this._currentArtifactIds.length) return;
+    const app = applicationStore.get();
+    if (!app) {
+      console.warn('[player hand] application not ready for artifacts modal');
+      return;
+    }
+    void userPromptModal(app, this._socketService, {
+      playerId: this.playerId,
+      prompt: 'Artifacts',
+      content: {
+        type: 'display-cards',
+        cardIds: [],
+        cardLikeIds: this._currentArtifactIds,
+      },
+    }, this.playerId);
+  }
+
   // Renders any unplaced tokens owned by this player in the token tray.
   private drawTokenTray(match: Match | null, tokenDefinitions: Record<TokenId, TokenDefinition>) {
     this._availableTokenTray.removeChildren();
@@ -178,6 +204,9 @@ export class PlayerHandView extends Container {
     // Track current state ids for the states modal.
     this._currentStateIds = match.states?.byPlayer?.[this.playerId] ?? [];
     this._statesButton.button.visible = this._currentStateIds.length > 0;
+    // Track current artifact ids for the artifacts modal.
+    this._currentArtifactIds = match.artifacts?.byPlayer?.[this.playerId] ?? [];
+    this._artifactsButton.button.visible = this._currentArtifactIds.length > 0;
     // Victory tokens are scored separately and should not render in the token tray.
     const victoryTokenId = 'prosperity:victory';
     const tokens = Object.values(match.tokens ?? {})
@@ -224,9 +253,16 @@ export class PlayerHandView extends Container {
     this._activeTokenLabel.visible = hasActive;
     this._activeTokenTray.visible = hasActive;
 
+    // Stack state/artifact buttons in the top-right corner.
+    let buttonY = this._background.y + Math.floor(STANDARD_GAP * 0.5);
     if (this._statesButton.button.visible) {
       this._statesButton.button.x = this._background.width - this._statesButton.button.width - STANDARD_GAP;
-      this._statesButton.button.y = this._background.y + Math.floor(STANDARD_GAP * 0.5);
+      this._statesButton.button.y = buttonY;
+      buttonY += this._statesButton.button.height + Math.floor(STANDARD_GAP * 0.5);
+    }
+    if (this._artifactsButton.button.visible) {
+      this._artifactsButton.button.x = this._background.width - this._artifactsButton.button.width - STANDARD_GAP;
+      this._artifactsButton.button.y = buttonY;
     }
     
     let y = this._background.y + Math.floor(STANDARD_GAP * 0.5);

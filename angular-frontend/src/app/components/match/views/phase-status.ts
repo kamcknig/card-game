@@ -130,6 +130,9 @@ export class PhaseStatus extends Container {
 
     this._coffersExchangeView.visible = coffers > 0;
     const canSpendVillagers = !!selfId && selfId === currentPlayerId && turnPhase === 'action' && villagers > 0;
+    if (!canSpendVillagers) {
+      this._villagersSpendView.collapseControls();
+    }
     this._villagersSpendView.visible = canSpendVillagers;
     // Debt is shown when present and right-aligned with other resource controls.
     this._debtPayView.visible = debt > 0;

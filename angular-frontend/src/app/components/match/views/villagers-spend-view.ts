@@ -3,7 +3,6 @@ import { batched } from 'nanostores';
 import { OutlineFilter } from 'pixi-filters/outline';
 import { STANDARD_GAP } from '../../../core/app-contants';
 import { createAppButton } from '../../../core/create-app-button';
-import { currentPlayerStore, turnPhaseStore } from '../../../state/turn-state';
 import { selfPlayerIdStore } from '../../../state/player-state';
 import { villagerStore } from '../../../state/resource-logic';
 
@@ -13,7 +12,6 @@ export class VillagersSpendView extends Container {
   private readonly _countText: Text;
   private _controlsCollapsed = true;
   private _villagers: number = 0;
-  private _turnPhase: string | undefined;
 
   constructor() {
     super();
@@ -34,16 +32,15 @@ export class VillagersSpendView extends Container {
     this.addChild(this._countText);
 
     const drawSub = batched(
-      [villagerStore, selfPlayerIdStore, currentPlayerStore, turnPhaseStore],
-      (villagers, selfId, _currentPlayer, turnPhase) => ({ villagers, selfId, turnPhase })
-    ).subscribe(({ villagers, selfId, turnPhase }) => {
+      [villagerStore, selfPlayerIdStore],
+      (villagers, selfId) => ({ villagers, selfId })
+    ).subscribe(({ villagers, selfId }) => {
       if (!selfId) {
         this._villagers = 0;
       }
       else {
         this._villagers = villagers[selfId] ?? 0;
       }
-      this._turnPhase = turnPhase;
 
       void this.draw();
     });
@@ -66,39 +63,23 @@ export class VillagersSpendView extends Container {
     this._villagersIcon.off('mouseleave');
     this._villagersIcon.off('pointerdown');
 
-    const isActionPhase = this._turnPhase === 'action';
-    const isSelfTurn = currentPlayerStore.get().id === selfPlayerIdStore.get();
-    // Only allow spending Villagers during the Action phase.
-    const canSpend = isActionPhase && isSelfTurn;
-
-    if (!canSpend && !this._controlsCollapsed) {
-      // Collapse the spend controls if the phase changed.
-      this.toggleControls();
-    }
-
-    this._villagersIcon.cursor = canSpend ? 'pointer' : 'default';
-    this._villagersIcon.eventMode = canSpend ? 'static' : 'none';
-
-    if (canSpend) {
-      this._villagersIcon.on('mouseenter', () => {
-        this._villagersIcon!.filters = [
-          new OutlineFilter({
-            color: 'white',
-            thickness: 2
-          })
-        ];
-      });
-      this._villagersIcon.on('mouseleave', () => {
-        this._villagersIcon!.filters = [];
-      });
-
-      this._villagersIcon.on('pointerdown', () => {
-        void this.toggleControls();
-      });
-    }
-    else {
-      this._villagersIcon.filters = [];
-    }
+    // Visibility is controlled by the parent view when spending is possible.
+    this._villagersIcon.cursor = 'pointer';
+    this._villagersIcon.eventMode = 'static';
+    this._villagersIcon.on('mouseenter', () => {
+      this._villagersIcon!.filters = [
+        new OutlineFilter({
+          color: 'white',
+          thickness: 2
+        })
+      ];
+    });
+    this._villagersIcon.on('mouseleave', () => {
+      this._villagersIcon!.filters = [];
+    });
+    this._villagersIcon.on('pointerdown', () => {
+      void this.toggleControls();
+    });
 
     const countText = this.getChildByLabel('count') as Text;
     if (countText) {
@@ -251,5 +232,13 @@ export class VillagersSpendView extends Container {
       leftArrow.off('pointerdown');
       executeButton.off('pointerdown');
     });
+  }
+
+  // Collapses the spend controls when the view is hidden by the parent.
+  public collapseControls() {
+    if (this._controlsCollapsed) {
+      return;
+    }
+    void this.toggleControls();
   }
 }

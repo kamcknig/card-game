@@ -142,6 +142,37 @@
           }
         </div>
       </section>
+
+      <!-- ░░░  Artifacts  ░░░ -->
+      <section class="artifacts-section">
+        <h2 class="section-title">Artifacts</h2>
+
+        <div class="artifacts-list">
+          @for (artifact of preSelectedArtifacts; track artifact?.cardKey ?? $index) {
+            <div
+              class="artifact-slot"
+              [ngStyle]="{'cursor': isGameOwner && artifact === null ? 'pointer' : 'default'}"
+              (click)="artifact === null && isGameOwner ? selectingArtifacts = true : null"
+            >
+              @if (artifact !== null && isGameOwner) {
+                <div (click)="deleteArtifact(artifact)" class="close-button">X</div>
+              }
+              <div>
+                @if (artifact !== null) {
+                  <img
+                    alt="{{artifact.cardName}} image"
+                    ngSrc="{{artifact.fullImagePath}}"
+                    height="124"
+                    width="280"
+                  />
+                } @else {
+                  <span class="no-artifact">?</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </section>
   </section>
 
   <section class="banned-cards-section">
@@ -207,4 +238,15 @@
     autofocus
     (landmarkSelected)="onLandmarkSelected($event)">
   </app-select-landmark-modal>
+}
+
+<!-- select artifacts to include in match -->
+@if (selectingArtifacts) {
+  <app-select-artifact-modal
+    [excludedArtifacts]="preSelectedArtifacts"
+    [ngStyle]="{'visibility': selectingArtifacts ? 'visible' : 'hidden'}"
+    (close)="selectingArtifacts = false"
+    autofocus
+    (artifactSelected)="onArtifactSelected($event)">
+  </app-select-artifact-modal>
 }

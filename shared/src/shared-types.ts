@@ -86,6 +86,8 @@ export interface MatchConfiguration {
   hexes: HexNoId[];
   // States available for cards that grant them (e.g., Lost in the Woods).
   states: StateNoId[];
+  // Artifacts available for cards that grant them (e.g., Treasurer).
+  artifacts: ArtifactNoId[];
 }
 
 export type ComputedMatchConfiguration = MatchConfiguration & {
@@ -162,6 +164,11 @@ export interface Match {
   // State instances in the match and who currently has them.
   states: {
     cards: State[];
+    byPlayer: Record<PlayerId, CardLikeId[]>;
+  };
+  // Artifact instances in the match and who currently has them.
+  artifacts: {
+    cards: Artifact[];
     byPlayer: Record<PlayerId, CardLikeId[]>;
   };
   mats: PlayerMatMap;
@@ -304,6 +311,8 @@ export type ServerEmitEvents = {
   searchEventResponse: (eventData: EventNoId[]) => void;
   // Sends landmark search results to the client.
   searchLandmarkResponse: (landmarkData: LandmarkNoId[]) => void;
+  // Sends artifact search results to the client.
+  searchArtifactResponse: (artifactData: ArtifactNoId[]) => void;
   selectCard: (signalId: string, selectCardArgs: SelectActionCardArgs & { selectableCardIds: CardId[] }) => void;
   setPlayerList: (players: Player[]) => void;
   setCardLibrary: (library: Record<CardKey, Card>) => void;
@@ -336,6 +345,8 @@ export interface ServerListenEvents {
   searchEvents: (playerId: PlayerId, searchStr: string) => void;
   // Requests landmark search results from the server.
   searchLandmarks: (playerId: PlayerId, searchStr: string) => void;
+  // Requests artifact search results from the server.
+  searchArtifacts: (playerId: PlayerId, searchStr: string) => void;
   updatePlayerName: (playerId: PlayerId, name: string) => void;
   userInputReceived: (signalId: string, input: unknown) => void;
 }
@@ -590,6 +601,29 @@ export class State extends CardLike {
 
 export type StateNoId = Omit<State, 'id'>;
 
+// Artifact constructor args mirror base CardLike fields.
+type ArtifactArgs = {
+  [p in keyof CardLike]: CardLike[p];
+};
+
+// Artifacts are landscape card-likes that apply persistent player effects.
+export class Artifact extends CardLike {
+  constructor(args: ArtifactArgs) {
+    super(args);
+
+    this.id = args.id;
+    this.cardName = args.cardName;
+    this.fullImagePath = args.fullImagePath;
+    this.detailImagePath = args.detailImagePath;
+  }
+
+  override toString() {
+    return `[ARTIFACT ${this.id} - ${this.cardKey}]`;
+  }
+}
+
+export type ArtifactNoId = Omit<Artifact, 'id'>;
+
 /**
  * CARD TYPES
  */
@@ -686,7 +720,7 @@ export class Card<M = unknown> extends CardLike<M> {
   type: CardType[];
   mat: Mats | undefined;
   victoryPoints: number;
-  abilityText: string;
+  override abilityText: string;
   targetScheme?: EffectTarget;
   expansionName: string;
   halfImagePath: string;

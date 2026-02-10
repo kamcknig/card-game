@@ -35,7 +35,7 @@ import {
   MatchBaseConfiguration,
   PlayerScoreDecorator,
 } from '../types.ts';
-import { createBoon, createCard, createEvent, createHex, createLandmark, createState } from '../utils/create-card.ts';
+import { createArtifact, createBoon, createCard, createEvent, createHex, createLandmark, createState } from '../utils/create-card.ts';
 import { getRemainingSupplyCount, getStartingSupplyCount } from '../utils/get-starting-supply-count.ts';
 import { CardPriceRulesController } from './card-price-rules-controller.ts';
 import { findCardsFactory } from '../utils/find-cards.ts';
@@ -115,6 +115,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       },
       // State instances and ownership tracking.
       states: {
+        cards: [],
+        byPlayer: {},
+      },
+      // Artifact instances and ownership tracking.
+      artifacts: {
         cards: [],
         byPlayer: {},
       },
@@ -254,6 +259,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const hexEffectFunctionMap = {} as CardEffectFunctionMap;
     // State effects are registered per-match via expansion configurators.
     const stateEffectFunctionMap = {} as CardEffectFunctionMap;
+    // Artifact effects are registered per-match via expansion configurators.
+    const artifactEffectFunctionMap = {} as CardEffectFunctionMap;
 
     this._interactivityController = new CardInteractivityController(
       this._cardSourceController,
@@ -274,6 +281,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       boonEffectFunctionMap,
       hexEffectFunctionMap,
       stateEffectFunctionMap,
+      artifactEffectFunctionMap,
       this._match,
       this._cardLibrary,
       this._logManager,
@@ -295,6 +303,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       boonEffectRegistrar: (cardKey, effectFn) => this.gameActionsController?.registerBoonEffect(cardKey, effectFn),
       hexEffectRegistrar: (cardKey, effectFn) => this.gameActionsController?.registerHexEffect(cardKey, effectFn),
       stateEffectRegistrar: (cardKey, effectFn) => this.gameActionsController?.registerStateEffect(cardKey, effectFn),
+      artifactEffectRegistrar: (cardKey, effectFn) => this.gameActionsController?.registerArtifactEffect(cardKey, effectFn),
       playerScoreDecoratorRegistrar: (val: PlayerScoreDecorator) => this._expansionScoringFns.push(val),
     });
 
@@ -321,6 +330,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this.createHexes(this._matchConfiguration);
       // States are initialized after boons/hexes for any state-granting cards.
       this.createStates(this._matchConfiguration);
+      // Artifacts are initialized after states for any artifact-granting cards.
+      this.createArtifacts(this._matchConfiguration);
       this.createNonSupplyCards(this._matchConfiguration);
       this.createPlayerDecks(this._matchConfiguration);
       this._match.config = this._matchConfiguration;
@@ -1036,6 +1047,29 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }
 
     console.debug(`[match] states initialized with ${this._match.states.cards.length} state(s)`);
+  }
+
+  // Creates artifact instances for the match when artifact cards are present.
+  private createArtifacts(config: ComputedMatchConfiguration) {
+    const artifacts = config.artifacts ?? [];
+    if (artifacts.length < 1) {
+      console.info('[match] no artifacts configured for this match');
+      return;
+    }
+
+    console.info('[match] creating artifacts');
+    // Initialize artifact storage before instantiating artifact cards.
+    this._match.artifacts = {
+      cards: [],
+      byPlayer: {},
+    };
+
+    for (const artifact of artifacts) {
+      const artifactInstance = createArtifact(artifact);
+      this._match.artifacts.cards.push(artifactInstance);
+    }
+
+    console.debug(`[match] artifacts initialized with ${this._match.artifacts.cards.length} artifact(s)`);
   }
 
   private createLandmarks(config: ComputedMatchConfiguration) {

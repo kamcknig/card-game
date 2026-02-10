@@ -1,5 +1,6 @@
 import {AppSocket, MatchBaseConfiguration} from '../types.ts';
 import {
+  ArtifactNoId,
   Card,
   CardId,
   CardNoId,
@@ -51,6 +52,8 @@ const defaultMatchConfiguration: MatchConfiguration = {
   hexes: [],
   // Default states selection for new lobbies.
   states: [],
+  // Default artifacts selection for new lobbies.
+  artifacts: [],
   playerStartingHand: { ...MatchBaseConfiguration.playerStartingHand }
 };
 
@@ -71,6 +74,8 @@ export class Game {
   private _eventFuse: Fuse<EventNoId> | undefined;
   // Landmark search uses a separate index from events and kingdom cards.
   private _landmarkFuse: Fuse<LandmarkNoId> | undefined;
+  // Artifact search uses a separate index from landscapes.
+  private _artifactFuse: Fuse<ArtifactNoId> | undefined;
   // When true, the game ends automatically if no human players remain connected.
   private readonly _endMatchWhenNoHumans: boolean;
 
@@ -134,9 +139,26 @@ export class Game {
       console.error(e);
     }
 
+    // Load preselected artifacts from disk when available.
+    try {
+      console.info(`[game] loading preselected artifacts from disk`);
+
+      const preselectedArtifacts = JSON.parse(Deno.readTextFileSync('./preselected-artifacts.json')) as ArtifactNoId[];
+
+      if (preselectedArtifacts?.length > 0) {
+        console.debug(preselectedArtifacts);
+      }
+
+      defaultMatchConfiguration.artifacts = preselectedArtifacts;
+    } catch (e) {
+      console.warn(`Couldn't read preselected-artifacts.json`);
+      console.error(e);
+    }
+
     this.initializeFuseSearch();
     this.initializeEventFuse();
     this.initializeLandmarkFuse();
+    this.initializeArtifactFuse();
 
     this.createNewMatch();
   }
@@ -213,6 +235,28 @@ export class Game {
     this._landmarkFuse = new Fuse(landmarkLibraryArr, fuseOptions, index);
   }
 
+  // Builds the artifact search index from loaded expansion artifacts.
+  private initializeArtifactFuse() {
+    console.info(`[game] initializing artifact fuse search`);
+
+    if (this._artifactFuse) {
+      this._artifactFuse.remove(() => true);
+      this._artifactFuse = undefined;
+    }
+
+    const artifactLibraryArr = Object.values(expansionLibrary)
+      .flatMap(expansion => Object.values(expansion.artifacts ?? {}));
+    const index = Fuse.createIndex(['cardName'], artifactLibraryArr);
+
+    const fuseOptions: IFuseOptions<ArtifactNoId> = {
+      ignoreDiacritics: true,
+      minMatchCharLength: 1,
+      distance: 2,
+      keys: ['cardName']
+    };
+    this._artifactFuse = new Fuse(artifactLibraryArr, fuseOptions, index);
+  }
+
   private onSearchCards = (searchStr: string) => {
     const results = this._fuse?.search(searchStr);
     return results?.map(r => r.item) ?? [];
@@ -230,6 +274,12 @@ export class Game {
     return results?.map(r => r.item) ?? [];
   };
 
+  // Returns artifact search results for the given query.
+  private onSearchArtifacts = (searchStr: string) => {
+    const results = this._artifactFuse?.search(searchStr);
+    return results?.map(r => r.item) ?? [];
+  };
+
   public expansionLoaded(expansion: ExpansionListElement) {
     console.log(`[game] expansion '${expansion.name}' loaded`);
     this._availableExpansion.push(expansion);
@@ -241,6 +291,7 @@ export class Game {
     this.initializeFuseSearch();
     this.initializeEventFuse();
     this.initializeLandmarkFuse();
+    this.initializeArtifactFuse();
   }
 
   // Exports the current match state and card library for local debug tooling.
@@ -311,6 +362,10 @@ export class Game {
       socket.on('searchLandmarks', (playerId, searchTerm) => {
         this._socketMap.get(playerId)?.emit('searchLandmarkResponse', this.onSearchLandmarks(searchTerm));
       });
+      // Relay artifact search results to the requesting client.
+      socket.on('searchArtifacts', (playerId, searchTerm) => {
+        this._socketMap.get(playerId)?.emit('searchArtifactResponse', this.onSearchArtifacts(searchTerm));
+      });
     }
 
     io.in('game').emit('gameOwnerUpdated', this.owner.id);
@@ -374,6 +429,7 @@ export class Game {
       this._socketMap.get(player.id)?.off('searchCards');
       this._socketMap.get(player.id)?.off('searchEvents');
       this._socketMap.get(player.id)?.off('searchLandmarks');
+      this._socketMap.get(player.id)?.off('searchArtifacts');
       this._socketMap.get(player.id)?.off('addComputerPlayer');
 
       const replacement = this.players.find(p => p.connected && !p.isComputer);
@@ -390,6 +446,10 @@ export class Game {
         // Relay landmark search results to the requesting client.
         this._socketMap.get(replacement.id)?.on('searchLandmarks', (playerId, searchTerm) => {
           this._socketMap.get(playerId)?.emit('searchLandmarkResponse', this.onSearchLandmarks(searchTerm));
+        });
+        // Relay artifact search results to the requesting client.
+        this._socketMap.get(replacement.id)?.on('searchArtifacts', (playerId, searchTerm) => {
+          this._socketMap.get(playerId)?.emit('searchArtifactResponse', this.onSearchArtifacts(searchTerm));
         });
         this._socketMap.get(replacement.id)?.on('matchConfigurationUpdated', this.onMatchConfigurationUpdated);
         this._socketMap.get(replacement.id)?.on('addComputerPlayer', (count?: number) => this.onAddComputerPlayer(replacement.id, count));
@@ -502,6 +562,13 @@ export class Game {
       defaultMatchConfiguration.landmarks = structuredClone(newConfig.landmarks);
     }
 
+    const artifactsPatch = compare(currentConfig.artifacts, newConfig.artifacts);
+    if (artifactsPatch.length) {
+      // Persist selected artifacts between sessions.
+      Deno.writeTextFileSync('./preselected-artifacts.json', JSON.stringify(newConfig.artifacts));
+      defaultMatchConfiguration.artifacts = structuredClone(newConfig.artifacts);
+    }
+
     const patch = compare(currentConfig, newConfig);
 
     if (patch.length) {
@@ -588,6 +655,7 @@ export class Game {
       socket.off('matchConfigurationUpdated');
       socket.off('searchCards');
       socket.off('searchEvents');
+      socket.off('searchArtifacts');
     });
 
     const colors = ['#10FF19', '#3c69ff', '#FF0BF2', '#FFF114', '#FF1F11', '#FF9900'];

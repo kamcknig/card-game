@@ -10,6 +10,8 @@ import {
   HexNoId,
   Landmark,
   LandmarkNoId,
+  Artifact,
+  ArtifactNoId,
   State,
   StateNoId,
 } from 'shared/shared-types.ts';
@@ -66,6 +68,14 @@ export const createLandmark = (landmark: LandmarkNoId): Landmark => {
 export const createState = (state: StateNoId): State => {
   return new State({
     ...state,
+    id: ++CARD_COUNT,
+  });
+}
+
+// Artifacts are card-like objects that track persistent player effects.
+export const createArtifact = (artifact: ArtifactNoId): Artifact => {
+  return new Artifact({
+    ...artifact,
     id: ++CARD_COUNT,
   });
 }

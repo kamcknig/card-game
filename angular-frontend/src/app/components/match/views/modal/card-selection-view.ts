@@ -30,6 +30,8 @@ type CardViewLike = Container & {
 
 // Type guard for card view containers.
 const isCardViewLike = (target: Container): target is CardViewLike => 'card' in target && 'facing' in target;
+// Type guard for card-like selection containers.
+const isSelectionView = (target: Container): target is SelectionView => 'selectionId' in target;
 
 export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
   if (args.type !== 'select' && args.type !== 'display-cards') {
@@ -101,8 +103,8 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
         return;
       }
       // Card-like views expose a detail image path for right-click inspection.
-      if ('detailImagePath' in target && (target as SelectionView).detailImagePath) {
-        void displayCardDetail({ detailImagePath: (target as SelectionView).detailImagePath });
+      if (isSelectionView(target) && target.detailImagePath) {
+        void displayCardDetail({ detailImagePath: target.detailImagePath });
         return;
       }
     }
@@ -167,7 +169,9 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
       ?? match?.hexes?.cards?.find(card => card.id === cardLikeId)
       ?? match?.events?.find(card => card.id === cardLikeId)
       ?? match?.landmarks?.find(card => card.id === cardLikeId)
-      ?? match?.states?.cards?.find(card => card.id === cardLikeId);
+      ?? match?.states?.cards?.find(card => card.id === cardLikeId)
+      // Artifacts are stored alongside states in match state.
+      ?? match?.artifacts?.cards?.find(card => card.id === cardLikeId);
 
     if (!cardLike) {
       console.warn(`[card-selection] missing card-like data for id ${cardLikeId}`);
