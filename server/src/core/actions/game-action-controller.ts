@@ -1275,6 +1275,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       const context = {
         cardSourceController: this._cardSourceController,
         cardPriceController: this.cardPriceRuleController,
+        logManager: this.logManager,
         reactionManager: this.reactionManager,
         runGameActionDelegate: this.runGameActionDelegate,
         cardId: args.cardLikeId,
@@ -1397,6 +1398,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         const effectContext = {
           cardSourceController: this._cardSourceController,
           cardPriceController: this.cardPriceRuleController,
+          logManager: this.logManager,
           reactionManager: this.reactionManager,
           runGameActionDelegate: this.runGameActionDelegate,
           cardId: boonId,
@@ -1552,6 +1554,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       const effectContext = {
         cardSourceController: this._cardSourceController,
         cardPriceController: this.cardPriceRuleController,
+        logManager: this.logManager,
         reactionManager: this.reactionManager,
         runGameActionDelegate: this.runGameActionDelegate,
         cardId: hexId,
@@ -1632,6 +1635,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     const effectContext = {
       cardSourceController: this._cardSourceController,
       cardPriceController: this.cardPriceRuleController,
+      logManager: this.logManager,
       reactionManager: this.reactionManager,
       runGameActionDelegate: this.runGameActionDelegate,
       cardId: state.id,
@@ -1725,6 +1729,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     const effectContext = {
       cardSourceController: this._cardSourceController,
       cardPriceController: this.cardPriceRuleController,
+      logManager: this.logManager,
       reactionManager: this.reactionManager,
       runGameActionDelegate: this.runGameActionDelegate,
       cardId: artifact.id,
@@ -2200,6 +2205,13 @@ export class GameActionController implements BaseGameActionDefinitionMap {
 
     console.log(`[drawHand action] player ${playerId} drawing ${drawCount} card(s) for hand`);
 
+    // Anchor draw-hand logs so reaction effects nest underneath.
+    this.logManager.addLogEntry({
+      type: 'drawHand',
+      playerId,
+      source: context?.loggingContext?.source,
+    });
+
     const trigger = new ReactionTrigger('drawHand', {
       playerId,
       count: drawCount,
@@ -2278,6 +2290,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       const context = {
         cardSourceController: this._cardSourceController,
         cardPriceController: this.cardPriceRuleController,
+        logManager: this.logManager,
         reactionManager: this.reactionManager,
         runGameActionDelegate: this.runGameActionDelegate,
         cardId,

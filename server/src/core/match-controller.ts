@@ -794,6 +794,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           score += customScoringFn({
             cardSourceController: this._cardSourceController,
             cardPriceController: this._cardPriceController!,
+            logManager: this._logManager!,
             findCards: this._findCards,
             reactionManager: this._reactionManager!,
             match: this._match,
@@ -846,6 +847,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         cardSourceController: this._cardSourceController,
         match: this._match, cardLibrary: this._cardLibrary,
         cardPriceController: this._cardPriceController!,
+        logManager: this._logManager!,
         reactionManager: this._reactionManager!,
         findCards: this._findCards
       });

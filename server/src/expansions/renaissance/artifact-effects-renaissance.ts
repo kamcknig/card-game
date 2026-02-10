@@ -45,8 +45,15 @@ const registerFlag = (registerArtifactEffect: ArtifactEffectRegistrar) => {
         const ownedArtifacts = triggerMatch.artifacts?.byPlayer?.[playerId] ?? [];
         return ownedArtifacts.includes(cardId);
       },
-      triggeredEffectFn: async ({ trigger, match: triggeredMatch }) => {
+      triggeredEffectFn: async ({ trigger, match: triggeredMatch, logManager }) => {
         trigger.args.count = Math.max(0, trigger.args.count + 1);
+        // Log the Flag modifier as a nested reaction under the draw-hand entry.
+        logManager.addLogEntry({
+          type: 'cardLikeEffect',
+          playerId,
+          cardLikeId: cardId,
+          effectText: '+1 Card',
+        });
         console.debug(`[flag artifact] granting +1 card for hand draw on turn ${triggeredMatch.turnNumber}`);
       },
     });

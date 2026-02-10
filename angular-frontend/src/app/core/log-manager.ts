@@ -3,6 +3,7 @@ import { cardStore } from '../state/card-state';
 import { playerStore, selfPlayerIdStore } from '../state/player-state';
 import { logEntryIdsStore, logStore } from '../state/log-state';
 import { tokenDefinitionStore } from '../state/token-definition-state';
+import { matchStore } from '../state/match-state';
 
 export const logManager = {
   addLogEntry(logEntry: LogEntry) {
@@ -32,6 +33,12 @@ export const logManager = {
         msg = selfId === playerId
           ? `%Y% drew <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`
           : `%P${player?.id}% drew a card`;
+        break;
+      }
+      case 'drawHand': {
+        msg = selfId === playerId
+          ? `%Y% drew a new hand`
+          : `%P${player?.id}% drew a new hand`;
         break;
       }
       case 'discard': {
@@ -66,6 +73,13 @@ export const logManager = {
         msg = selfId === playerId
           ? `%Y% triggered ${logEntry.effectText} from <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`
           : `%P${player?.id}% triggered ${logEntry.effectText} from <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`;
+        break;
+      }
+      case 'cardLikeEffect': {
+        const display = getCardLikeDisplay(logEntry.cardLikeId);
+        msg = selfId === playerId
+          ? `${logEntry.effectText} from <span style="color: ${display.color}">${display.name}</span>`
+          : `${logEntry.effectText} from <span style="color: ${display.color}">${display.name}</span>`;
         break;
       }
       // Token placement and consumption logs.
@@ -177,4 +191,21 @@ const getSourceColor = (source: LogEntrySource, cardsById: Record<CardId, Card>)
   }
 
   return 'white';
+}
+
+// Resolves card-like names for log entries (events/landmarks/boons/hexes/states/artifacts).
+const getCardLikeDisplay = (cardLikeId: number) => {
+  const match = matchStore.get();
+  if (!match) {
+    return { name: 'Card-like', color: 'white' };
+  }
+
+  const cardLike = match.events?.find(card => card.id === cardLikeId)
+    ?? match.landmarks?.find(card => card.id === cardLikeId)
+    ?? match.boons?.cards?.find(card => card.id === cardLikeId)
+    ?? match.hexes?.cards?.find(card => card.id === cardLikeId)
+    ?? match.states?.cards?.find(card => card.id === cardLikeId)
+    ?? match.artifacts?.cards?.find(card => card.id === cardLikeId);
+
+  return { name: cardLike?.cardName ?? 'Card-like', color: 'white' };
 }

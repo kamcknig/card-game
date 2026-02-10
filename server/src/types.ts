@@ -24,7 +24,7 @@ import {
     TokenLocation,
     TurnPhase,
     UserPromptActionArgs,
-} from 'shared/shared-types.ts';
+} from 'shared/shared-types';
 import {toNumber} from 'es-toolkit/compat';
 
 import {MatchCardLibrary} from './core/match-card-library.ts';
@@ -32,13 +32,14 @@ import {ReactionManager} from './core/reactions/reaction-manager.ts';
 import {ExpansionData} from '@expansions/expansion-library.ts';
 import {CardPriceRulesController} from './core/card-price-rules-controller.ts';
 import {CardSourceController} from './core/card-source-controller.ts';
+import { LogManager } from './core/log-manager.ts';
 
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
 
 export type DistributiveOmit<T, K extends PropertyKey> =
     T extends any ? Omit<T, K> : never;
 
-declare module 'shared/shared-types.ts' {
+declare module 'shared/shared-types' {
     interface SelectActionCardArgs {
         restrict: FindCardsFnInput | CardId[];
         autoSelect?: boolean;
@@ -282,6 +283,7 @@ export type CardEffectFactoryMap = Record<CardKey, CardEffectFactory>;
 export interface AppContext {
     cardSourceController: CardSourceController;
     cardPriceController: CardPriceRulesController;
+    logManager: LogManager;
     match: Match;
     reactionManager: ReactionManager;
     reactionContext?: ReactionContext;
