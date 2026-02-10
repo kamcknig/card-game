@@ -48,6 +48,14 @@ all players, but native village and island mat cards  face down and can only be 
 - can the ruins pile be updated to use the newer randomizer and piles?
 
 # Higher priority
+- check duration behvavior. the offical rules say this "Additionally, if a
+  Duration card is played extra times by a card such as [Throne Room,
+  Scepter, Mastermind, Specialist, Flagship, or Daimyo], that card also
+  stays in play until the Duration card is discarded, to track the fact that
+  the Duration card was played extra times." Just make sure cards stay in
+  play that need to stay in play. some has already been done, but ensure
+  duration cards from the past before something like the nocturne expansion
+  work the same
 - Need to look into cards that might prevent movement. An example is the
   Necromancer card that has this in the official faq for it "The restriction on
   movement only"

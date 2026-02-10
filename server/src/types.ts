@@ -142,7 +142,9 @@ export interface BaseGameActionDefinitionMap {
     checkForRemainingPlayerActions: () => Promise<void>;
     exchangeCoffer: (args: { playerId: PlayerId; count: number; }) => Promise<void>;
     discardCard: (args: { cardId: CardId | Card, playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
-    drawCard: (args: { playerId: PlayerId, count?: number }, context?: GameActionContext) => Promise<CardId[] | null>
+    drawCard: (args: { playerId: PlayerId, count?: number; suppressReactions?: boolean; }, context?: GameActionContext) => Promise<CardId[] | null>
+    // Draws a hand of cards (default 5), triggering drawHand reactions.
+    drawHand: (args: { playerId: PlayerId, count?: number }, context?: GameActionContext) => Promise<CardId[] | null>
     endTurn: () => Promise<void>;
     gainAction: (args: { count: number }, context?: GameActionContext) => Promise<void>;
     gainBuy: (args: { count: number }, context?: GameActionContext) => Promise<void>;
@@ -451,6 +453,12 @@ export type TriggerEventTypeContext = {
         playerId: PlayerId;
     },
     treasureGain: {
+        playerId: PlayerId;
+        count: number;
+        // Optional source card for token/log attribution.
+        source?: CardId;
+    },
+    drawHand: {
         playerId: PlayerId;
         count: number;
         // Optional source card for token/log attribution.

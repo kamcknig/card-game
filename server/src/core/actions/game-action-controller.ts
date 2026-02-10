@@ -2011,11 +2011,8 @@ export class GameActionController implements BaseGameActionDefinitionMap {
           await this.discardCard({cardId, playerId: currentPlayer.id});
         }
 
-        for (let i = 0; i < 5; i++) {
-          console.debug(`[nextPhase action] drawing card...`);
-
-          await this.drawCard({playerId: currentPlayer.id});
-        }
+        // Draw a full hand for the next turn.
+        await this.drawHand({ playerId: currentPlayer.id });
 
         await this.endTurn();
 
@@ -2143,20 +2140,22 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   }
 
   // Single, focused implementation of drawCard
-  async drawCard(args: { playerId: PlayerId, count?: number }, context?: GameActionContext) {
+  async drawCard(args: { playerId: PlayerId, count?: number; suppressReactions?: boolean }, context?: GameActionContext) {
     const {playerId, count} = args;
 
     console.debug(`[drawCard action] player ${playerId} drawing ${count} card(s)`);
 
     let drawCount = count ?? 1;
-    // Allow reactions to modify incoming draw amounts (e.g., -1 Card token).
-    const trigger = new ReactionTrigger('drawCards', {
-      playerId,
-      count: drawCount,
-      source: context?.loggingContext?.source,
-    });
-    await this.reactionManager.runTrigger({trigger});
-    drawCount = Math.max(0, trigger.args.count);
+    if (!args.suppressReactions) {
+      // Allow reactions to modify incoming draw amounts (e.g., -1 Card token).
+      const trigger = new ReactionTrigger('drawCards', {
+        playerId,
+        count: drawCount,
+        source: context?.loggingContext?.source,
+      });
+      await this.reactionManager.runTrigger({trigger});
+      drawCount = Math.max(0, trigger.args.count);
+    }
 
     const deck = this._cardSourceController.getSource('playerDeck', playerId);
     const drawnCardIds: CardId[] = [];
@@ -2192,6 +2191,30 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     }
 
     return drawnCardIds;
+  }
+
+  // Draws a full hand (default 5), allowing draw-hand reactions to adjust the count.
+  async drawHand(args: { playerId: PlayerId; count?: number }, context?: GameActionContext) {
+    const { playerId } = args;
+    let drawCount = args.count ?? 5;
+
+    console.log(`[drawHand action] player ${playerId} drawing ${drawCount} card(s) for hand`);
+
+    const trigger = new ReactionTrigger('drawHand', {
+      playerId,
+      count: drawCount,
+      source: context?.loggingContext?.source,
+    });
+    await this.reactionManager.runTrigger({ trigger });
+    drawCount = Math.max(0, trigger.args.count);
+
+    if (drawCount < 1) {
+      console.debug('[drawHand action] draw count is 0, skipping');
+      return null;
+    }
+
+    // Draw hands should not trigger drawCards reactions.
+    return await this.drawCard({ playerId, count: drawCount, suppressReactions: true }, context);
   }
 
   async playCard(args: {
