@@ -97,6 +97,13 @@ export const logManager = {
           : `%P${player?.id}% used ${tokenName}`;
         break;
       }
+      case 'buyProject': {
+        const display = getCardLikeDisplay(logEntry.cardLikeId);
+        msg = selfId === playerId
+          ? `%Y% bought <span style="color: ${display.color}">${display.name}</span>`
+          : `%P${player?.id}% bought <span style="color: ${display.color}">${display.name}</span>`;
+        break;
+      }
       case 'gainCard': {
         const cardName = cardsById[logEntry.cardId]?.cardName;
         msg = selfId === playerId
@@ -202,6 +209,7 @@ const getCardLikeDisplay = (cardLikeId: number) => {
 
   const cardLike = match.events?.find(card => card.id === cardLikeId)
     ?? match.landmarks?.find(card => card.id === cardLikeId)
+    ?? match.projects?.find(card => card.id === cardLikeId)
     ?? match.boons?.cards?.find(card => card.id === cardLikeId)
     ?? match.hexes?.cards?.find(card => card.id === cardLikeId)
     ?? match.states?.cards?.find(card => card.id === cardLikeId)

@@ -11,6 +11,7 @@ import {
   MatchConfiguration,
   Player,
   PlayerId,
+  ProjectNoId,
 } from 'shared/shared-types';
 import {createComputerPlayer, createNewPlayer} from '../utils/create-new-player.ts';
 import {io} from '../server.ts';
@@ -46,6 +47,8 @@ const defaultMatchConfiguration: MatchConfiguration = {
   events: [],
   // Default landmark selection for new lobbies.
   landmarks: [],
+  // Default project selection for new lobbies.
+  projects: [],
   // Default boons selection for new lobbies.
   boons: [],
   // Default hexes selection for new lobbies.
@@ -76,6 +79,8 @@ export class Game {
   private _landmarkFuse: Fuse<LandmarkNoId> | undefined;
   // Artifact search uses a separate index from landscapes.
   private _artifactFuse: Fuse<ArtifactNoId> | undefined;
+  // Project search uses a separate index from events and landmarks.
+  private _projectFuse: Fuse<ProjectNoId> | undefined;
   // When true, the game ends automatically if no human players remain connected.
   private readonly _endMatchWhenNoHumans: boolean;
 
@@ -257,6 +262,28 @@ export class Game {
     this._artifactFuse = new Fuse(artifactLibraryArr, fuseOptions, index);
   }
 
+  // Builds the project search index from loaded expansion projects.
+  private initializeProjectFuse() {
+    console.info(`[game] initializing project fuse search`);
+
+    if (this._projectFuse) {
+      this._projectFuse.remove(() => true);
+      this._projectFuse = undefined;
+    }
+
+    const projectLibraryArr = Object.values(expansionLibrary)
+      .flatMap(expansion => Object.values(expansion.projects ?? {}));
+    const index = Fuse.createIndex(['cardName'], projectLibraryArr);
+
+    const fuseOptions: IFuseOptions<ProjectNoId> = {
+      ignoreDiacritics: true,
+      minMatchCharLength: 1,
+      distance: 2,
+      keys: ['cardName']
+    };
+    this._projectFuse = new Fuse(projectLibraryArr, fuseOptions, index);
+  }
+
   private onSearchCards = (searchStr: string) => {
     const results = this._fuse?.search(searchStr);
     return results?.map(r => r.item) ?? [];
@@ -280,6 +307,12 @@ export class Game {
     return results?.map(r => r.item) ?? [];
   };
 
+  // Returns project search results for the given query.
+  private onSearchProjects = (searchStr: string) => {
+    const results = this._projectFuse?.search(searchStr);
+    return results?.map(r => r.item) ?? [];
+  };
+
   public expansionLoaded(expansion: ExpansionListElement) {
     console.log(`[game] expansion '${expansion.name}' loaded`);
     this._availableExpansion.push(expansion);
@@ -292,6 +325,7 @@ export class Game {
     this.initializeEventFuse();
     this.initializeLandmarkFuse();
     this.initializeArtifactFuse();
+    this.initializeProjectFuse();
   }
 
   // Exports the current match state and card library for local debug tooling.
@@ -366,6 +400,10 @@ export class Game {
       socket.on('searchArtifacts', (playerId, searchTerm) => {
         this._socketMap.get(playerId)?.emit('searchArtifactResponse', this.onSearchArtifacts(searchTerm));
       });
+      // Relay project search results to the requesting client.
+      socket.on('searchProjects', (playerId, searchTerm) => {
+        this._socketMap.get(playerId)?.emit('searchProjectResponse', this.onSearchProjects(searchTerm));
+      });
     }
 
     io.in('game').emit('gameOwnerUpdated', this.owner.id);
@@ -430,6 +468,7 @@ export class Game {
       this._socketMap.get(player.id)?.off('searchEvents');
       this._socketMap.get(player.id)?.off('searchLandmarks');
       this._socketMap.get(player.id)?.off('searchArtifacts');
+      this._socketMap.get(player.id)?.off('searchProjects');
       this._socketMap.get(player.id)?.off('addComputerPlayer');
 
       const replacement = this.players.find(p => p.connected && !p.isComputer);
@@ -450,6 +489,10 @@ export class Game {
         // Relay artifact search results to the requesting client.
         this._socketMap.get(replacement.id)?.on('searchArtifacts', (playerId, searchTerm) => {
           this._socketMap.get(playerId)?.emit('searchArtifactResponse', this.onSearchArtifacts(searchTerm));
+        });
+        // Relay project search results to the requesting client.
+        this._socketMap.get(replacement.id)?.on('searchProjects', (playerId, searchTerm) => {
+          this._socketMap.get(playerId)?.emit('searchProjectResponse', this.onSearchProjects(searchTerm));
         });
         this._socketMap.get(replacement.id)?.on('matchConfigurationUpdated', this.onMatchConfigurationUpdated);
         this._socketMap.get(replacement.id)?.on('addComputerPlayer', (count?: number) => this.onAddComputerPlayer(replacement.id, count));
@@ -655,7 +698,9 @@ export class Game {
       socket.off('matchConfigurationUpdated');
       socket.off('searchCards');
       socket.off('searchEvents');
+      socket.off('searchLandmarks');
       socket.off('searchArtifacts');
+      socket.off('searchProjects');
     });
 
     const colors = ['#10FF19', '#3c69ff', '#FF0BF2', '#FFF114', '#FF1F11', '#FF9900'];

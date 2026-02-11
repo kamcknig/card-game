@@ -5,6 +5,7 @@ import {
   EventNoId,
   ExpansionListElement,
   LandmarkNoId,
+  ProjectNoId,
   MatchConfiguration,
   PlayerId
 } from 'shared/shared-types';
@@ -21,6 +22,7 @@ import { SelectKingdomModalComponent } from './select-kingdom-modal/select-kingd
 import { SelectEventModalComponent } from './select-event-modal/select-event-modal.component';
 import { SelectLandmarkModalComponent } from './select-landmark-modal/select-landmark-modal.component';
 import { SelectArtifactModalComponent } from './select-artifact-modal/select-artifact-modal.component';
+import { SelectProjectModalComponent } from './select-project-modal/select-project-modal.component';
 
 @Component({
   selector: 'app-match-configuration',
@@ -33,6 +35,7 @@ import { SelectArtifactModalComponent } from './select-artifact-modal/select-art
     SelectEventModalComponent,
     SelectLandmarkModalComponent,
     SelectArtifactModalComponent,
+    SelectProjectModalComponent,
     NgStyle
   ],
   templateUrl: './match-configuration.component.html',
@@ -51,6 +54,8 @@ export class MatchConfigurationComponent implements OnDestroy {
   preSelectedLandmarks: (LandmarkNoId | null)[] = [];
   // Tracks the fixed artifacts selected for the match.
   preSelectedArtifacts: (ArtifactNoId | null)[] = [];
+  // Tracks the fixed projects selected for the match.
+  preSelectedProjects: (ProjectNoId | null)[] = [];
   selectingKingdom: boolean = false;
   // Controls the event selection modal visibility.
   selectingEvents: boolean = false;
@@ -58,6 +63,8 @@ export class MatchConfigurationComponent implements OnDestroy {
   selectingLandmarks: boolean = false;
   // Controls the artifact selection modal visibility.
   selectingArtifacts: boolean = false;
+  // Controls the project selection modal visibility.
+  selectingProjects: boolean = false;
   selectingBannedCards: boolean = false
   bannedKingdoms$: Observable<readonly CardNoId[]>;
 
@@ -70,6 +77,8 @@ export class MatchConfigurationComponent implements OnDestroy {
   private selectedLandmarksSub: Subscription;
   // Keeps the preselected artifacts list in sync with configuration changes.
   private selectedArtifactsSub: Subscription;
+  // Keeps the preselected projects list in sync with configuration changes.
+  private selectedProjectsSub: Subscription;
 
   constructor(
     private _nanoStoreService: NanostoresService,
@@ -128,6 +137,16 @@ export class MatchConfigurationComponent implements OnDestroy {
         this.preSelectedArtifacts = [...selectedArtifacts, null];
       });
 
+    // Keep project selections synced with the match configuration.
+    this.selectedProjectsSub = this._nanoStoreService.useStore(matchConfigurationStore)
+      .pipe(map(config => config?.projects
+        ?.sort((a, b) => a.cardKey.localeCompare(b.cardKey))))
+      .subscribe(selectedProjects => {
+        selectedProjects ??= [];
+        // Always keep a single empty slot for adding additional projects.
+        this.preSelectedProjects = [...selectedProjects, null];
+      });
+
     this.gameOwnerSub = combineLatest([
       this._nanoStoreService.useStore(gameOwnerIdStore),
       this._nanoStoreService.useStore(selfPlayerIdStore)
@@ -138,6 +157,7 @@ export class MatchConfigurationComponent implements OnDestroy {
     this.preSelectedEvents = [null];
     this.preSelectedLandmarks = [null];
     this.preSelectedArtifacts = [null];
+    this.preSelectedProjects = [null];
   }
 
   ngOnDestroy(): void {
@@ -146,6 +166,7 @@ export class MatchConfigurationComponent implements OnDestroy {
     this.selectedEventsSub.unsubscribe();
     this.selectedLandmarksSub.unsubscribe();
     this.selectedArtifactsSub.unsubscribe();
+    this.selectedProjectsSub.unsubscribe();
   }
 
   onToggleExpansion(expansion: ExpansionListElement) {
@@ -220,6 +241,18 @@ export class MatchConfigurationComponent implements OnDestroy {
     this.sendMatchConfigUpdate();
   }
 
+  // Removes a selected project from the fixed project list.
+  deleteProject(project: ProjectNoId) {
+    const remainingProjects = this.preSelectedProjects
+      .filter((entry): entry is ProjectNoId => !!entry)
+      .filter(entry => entry.cardKey !== project.cardKey)
+      .sort((a, b) => a.cardKey.localeCompare(b.cardKey));
+    // Keep one empty slot after removing the project.
+    this.preSelectedProjects = [...remainingProjects, null];
+
+    this.sendMatchConfigUpdate();
+  }
+
   /**
    * user has selected a kingdom card from the modal to add to the starting kingdom
    *
@@ -265,6 +298,17 @@ export class MatchConfigurationComponent implements OnDestroy {
     this.sendMatchConfigUpdate();
   }
 
+  // Adds a selected project to the fixed project list.
+  onProjectSelected($event: ProjectNoId) {
+    const selectedProjects = this.preSelectedProjects
+      .filter((entry): entry is ProjectNoId => !!entry);
+    selectedProjects.push($event);
+    // Keep one empty slot after adding the project.
+    this.preSelectedProjects = [...selectedProjects.sort((a, b) => a.cardKey.localeCompare(b.cardKey)), null];
+    this.selectingProjects = false;
+    this.sendMatchConfigUpdate();
+  }
+
   private sendMatchConfigUpdate() {
     this._socketService.emit('matchConfigurationUpdated', {
       ...matchConfigurationStore.get() as MatchConfiguration,
@@ -281,6 +325,10 @@ export class MatchConfigurationComponent implements OnDestroy {
       artifacts: this.preSelectedArtifacts
         .filter(artifact => !!artifact)
         .map(artifact => artifact as ArtifactNoId),
+      // Pass the fixed projects through the match configuration.
+      projects: this.preSelectedProjects
+        .filter(project => !!project)
+        .map(project => project as ProjectNoId),
       kingdomSupply: this.preSelectedKingdoms
         .filter(card => !card?.isBasic)
         .filter(card => !!card)

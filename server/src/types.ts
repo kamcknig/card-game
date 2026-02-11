@@ -129,7 +129,11 @@ export interface BaseGameActionDefinitionMap {
         cardCost: CardCost,
         overpay?: { inTreasure: number; inCoffer: number; }
     }) => Promise<void>;
-    buyCardLike: (args: {
+    buyEvent: (args: {
+        cardLikeId: CardLikeId;
+        playerId: PlayerId;
+    }) => Promise<void>;
+    buyProject: (args: {
         cardLikeId: CardLikeId;
         playerId: PlayerId;
     }) => Promise<void>;
@@ -493,7 +497,7 @@ export type TriggerEventTypeContext = {
 export type TriggerEventType = keyof TriggerEventTypeContext;
 
 // Explicit metadata for reaction sources used in prompts and logging.
-export type ReactionSourceType = 'card' | 'event' | 'landmark' | 'token' | 'other';
+export type ReactionSourceType = 'card' | 'event' | 'landmark' | 'project' | 'token' | 'other';
 
 export class Reaction<T extends TriggerEventType = TriggerEventType> {
     // a concatenation of the card key and card id with a '-'
@@ -688,6 +692,8 @@ export type HexEffectRegistrar = (cardKey: CardKey, fn: CardEffectFn) => void;
 export type StateEffectRegistrar = (cardKey: CardKey, fn: CardEffectFn) => void;
 // Registers artifact effects by card key for the current match.
 export type ArtifactEffectRegistrar = (cardKey: CardKey, fn: CardEffectFn) => void;
+// Registers project effects by card key for the current match.
+export type ProjectEffectRegistrar = (cardKey: CardKey, fn: CardEffectFn) => void;
 
 export type PlayerScoreDecoratorRegistrar = (decorator: PlayerScoreDecorator) => void;
 export type PlayerScoreDecorator = (playerId: PlayerId, match: Match, cardLibrary: MatchCardLibrary) => void;
@@ -712,4 +718,5 @@ export type InitializeExpansionContext = {
     hexEffectRegistrar: HexEffectRegistrar;
     stateEffectRegistrar: StateEffectRegistrar;
     artifactEffectRegistrar: ArtifactEffectRegistrar;
+    projectEffectRegistrar: ProjectEffectRegistrar;
 }

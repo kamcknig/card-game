@@ -17,6 +17,7 @@ import { TokenBadgeView } from './token-badge-view';
 import { getTokenShortLabel } from './token-utils';
 import { applicationStore } from '../../../state/app-state';
 import { userPromptModal } from './modal/user-prompt-modal';
+import { CubeTokenView } from './cube-token-view';
 
 export class PlayerHandView extends Container {
   private readonly _phaseStatus: PhaseStatus;
@@ -209,12 +210,26 @@ export class PlayerHandView extends Container {
     this._artifactsButton.button.visible = this._currentArtifactIds.length > 0;
     // Victory tokens are scored separately and should not render in the token tray.
     const victoryTokenId = 'prosperity:victory';
+    // Project cubes use a special view rather than the badge label.
+    const cubeTokenId = 'cube-token';
     const tokens = Object.values(match.tokens ?? {})
       .filter(token => token.ownerId === this.playerId && token.tokenId !== victoryTokenId) as TokenInstance[];
     const availableTokens = tokens.filter(token => token.location.type === 'playerAvailable');
     const activeTokens = tokens.filter(token => token.location.type === 'player');
     
-    availableTokens
+    // Render available project cubes first, then other token badges.
+    const availableCubes = availableTokens.filter(token => token.tokenId === cubeTokenId);
+    const availableBadges = availableTokens.filter(token => token.tokenId !== cubeTokenId);
+
+    availableCubes.forEach(() => {
+      const cube = new CubeTokenView({
+        size: 22,
+        color: this.parseColor(playerColor),
+      });
+      this._availableTokenTray.addChild(cube);
+    });
+
+    availableBadges
       .sort((a, b) => a.tokenId.localeCompare(b.tokenId))
       .forEach(token => {
         const definition = tokenDefinitions[token.tokenId];

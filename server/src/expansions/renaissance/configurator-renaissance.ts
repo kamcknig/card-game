@@ -1,8 +1,10 @@
 import { expansionLibrary } from '../expansion-library.ts';
-import { ExpansionConfiguratorFactory } from '../../types.ts';
+import { ComputedMatchConfiguration } from 'shared/shared-types.ts';
+import { ExpansionConfiguratorFactory, GameEventRegistrar } from '../../types.ts';
 import { uniqueByProp } from '../../core/match-configurator.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { registerArtifactEffects } from './artifact-effects-renaissance.ts';
+import { registerRenaissanceTokenDefinitions } from './token-definitions-renaissance.ts';
 
 // Maps Renaissance kingdom cards to the artifacts they can grant.
 const artifactSourceMap: Record<string, string[]> = {
@@ -20,6 +22,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
   let artifactEffectsRegistered = false;
 
   return async (args) => {
+    registerRenaissanceTokenDefinitions();
     if (!artifactEffectsRegistered) {
       registerArtifactEffects(args.artifactEffectRegistrar);
       artifactEffectsRegistered = true;
@@ -63,3 +66,34 @@ const configurator: ExpansionConfiguratorFactory = () => {
 };
 
 export default configurator;
+
+export const registerGameEvents: (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => void = (registrar, config) => {
+  registrar('onGameStart', async (args) => {
+    const projectCount = config.projects?.length ?? 0;
+    if (projectCount < 1) {
+      console.debug('[renaissance configurator] no projects configured, skipping cube placement');
+      return;
+    }
+
+    for (const player of args.match.players) {
+      const existingCubes = Object.values(args.match.tokens ?? {}).filter(token =>
+        token.tokenId === 'cube-token' && token.ownerId === player.id
+      );
+      const cubesToAdd = Math.max(0, projectCount - existingCubes.length);
+
+      if (cubesToAdd < 1) {
+        console.debug(`[renaissance configurator] player ${player.id} already has ${existingCubes.length} cube token(s)`);
+        continue;
+      }
+
+      console.info(`[renaissance configurator] adding ${cubesToAdd} cube token(s) for player ${player.id}`);
+      for (let i = 0; i < cubesToAdd; i++) {
+        await args.runGameActionDelegate('placeToken', {
+          tokenId: 'cube-token',
+          ownerId: player.id,
+          location: { type: 'playerAvailable', playerId: player.id },
+        });
+      }
+    }
+  });
+};

@@ -35,15 +35,16 @@ import {
   MatchBaseConfiguration,
   PlayerScoreDecorator,
 } from '../types.ts';
-import { createArtifact, createBoon, createCard, createEvent, createHex, createLandmark, createState } from '../utils/create-card.ts';
+import { createArtifact, createBoon, createCard, createEvent, createHex, createLandmark, createProject, createState } from '../utils/create-card.ts';
 import { getRemainingSupplyCount, getStartingSupplyCount } from '../utils/get-starting-supply-count.ts';
 import { CardPriceRulesController } from './card-price-rules-controller.ts';
 import { findCardsFactory } from '../utils/find-cards.ts';
 import { GameActionController } from './actions/game-action-controller.ts';
 import { CardSourceController } from './card-source-controller.ts';
 import { eventEffectFactoryMap } from './events/event-effect-factory-map.ts';
+import { projectEffectFactoryMap } from './projects/project-effect-factory-map.ts';
 import { tokenDefinitionMap } from './tokens/token-definition-map.ts';
-import { prosperityTokenIds } from '../expansions/prosperity/token-prosperity-ids.ts';
+import { prosperityTokenIds } from "@expansions/prosperity/token-prosperity-ids.ts";
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardLibSnapshot = {};
@@ -100,6 +101,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       events: [],
       // Active landmark card-likes in the match.
       landmarks: [],
+      // Active project card-likes in the match.
+      projects: [],
       // Boon deck state for Fate cards.
       boons: {
         cards: [],
@@ -253,6 +256,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       return acc;
     }, {} as CardEffectFunctionMap);
 
+    const projectEffectFunctionMap = Object.keys(projectEffectFactoryMap).reduce((acc, nextKey) => {
+      acc[nextKey] = projectEffectFactoryMap[nextKey]();
+      return acc;
+    }, {} as CardEffectFunctionMap);
+
     // Boon effects are registered per-match via expansion configurators.
     const boonEffectFunctionMap = {} as CardEffectFunctionMap;
     // Hex effects are registered per-match via expansion configurators.
@@ -278,6 +286,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._cardPriceController,
       cardEffectFunctionMap,
       eventEffectFunctionMap,
+      projectEffectFunctionMap,
       boonEffectFunctionMap,
       hexEffectFunctionMap,
       stateEffectFunctionMap,
@@ -304,6 +313,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       hexEffectRegistrar: (cardKey, effectFn) => this.gameActionsController?.registerHexEffect(cardKey, effectFn),
       stateEffectRegistrar: (cardKey, effectFn) => this.gameActionsController?.registerStateEffect(cardKey, effectFn),
       artifactEffectRegistrar: (cardKey, effectFn) => this.gameActionsController?.registerArtifactEffect(cardKey, effectFn),
+      projectEffectRegistrar: (cardKey, effectFn) => this.gameActionsController?.registerProjectEffect(cardKey, effectFn),
       playerScoreDecoratorRegistrar: (val: PlayerScoreDecorator) => this._expansionScoringFns.push(val),
     });
 
@@ -324,6 +334,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this.createEvents(this._matchConfiguration);
       // Landmarks are landscape card-likes that should be created alongside events.
       this.createLandmarks(this._matchConfiguration);
+      // Projects are landscape card-likes that should be created alongside events.
+      this.createProjects(this._matchConfiguration);
       // Boons are initialized after events/landmarks if Fate cards are present.
       this.createBoons(this._matchConfiguration);
       // Hexes are initialized after boons if Doom cards are present.
@@ -1079,6 +1091,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     console.debug(`[match] creating landmarks`);
     for (const landmark of config.landmarks ?? []) {
       this._match.landmarks.push(createLandmark(landmark));
+    }
+  }
+
+  private createProjects(config: ComputedMatchConfiguration) {
+    // Create project card-like instances for the active match.
+    console.debug(`[match] creating projects`);
+    for (const project of config.projects ?? []) {
+      this._match.projects.push(createProject(project));
     }
   }
 }

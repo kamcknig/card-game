@@ -170,6 +170,7 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
       ?? match?.events?.find(card => card.id === cardLikeId)
       ?? match?.landmarks?.find(card => card.id === cardLikeId)
       ?? match?.states?.cards?.find(card => card.id === cardLikeId)
+      ?? match?.projects?.find(card => card.id === cardLikeId)
       // Artifacts are stored alongside states in match state.
       ?? match?.artifacts?.cards?.find(card => card.id === cardLikeId);
 

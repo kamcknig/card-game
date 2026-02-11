@@ -10,6 +10,8 @@ import {
   HexNoId,
   Landmark,
   LandmarkNoId,
+  Project,
+  ProjectNoId,
   Artifact,
   ArtifactNoId,
   State,
@@ -60,6 +62,14 @@ export const createHex = (hex: HexNoId): Hex => {
 export const createLandmark = (landmark: LandmarkNoId): Landmark => {
   return new Landmark({
     ...landmark,
+    id: ++CARD_COUNT,
+  });
+}
+
+// Projects are card-like objects that grant permanent abilities.
+export const createProject = (project: ProjectNoId): Project => {
+  return new Project({
+    ...project,
     id: ++CARD_COUNT,
   });
 }

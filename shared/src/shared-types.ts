@@ -24,6 +24,8 @@ export type TokenLocation =
   | { type: 'playerDiscard'; playerId: PlayerId; }
   | { type: 'playerMat'; playerId: PlayerId; matKey: string; }
   | { type: 'card'; cardId: CardId; }
+  // Allows tokens to attach to card-like entities such as Projects.
+  | { type: 'cardLike'; cardLikeId: CardLikeId; }
   | { type: 'global'; };
 
 // Token definitions are static rules metadata used by both server logic and UI.
@@ -80,6 +82,8 @@ export interface MatchConfiguration {
   events: EventNoId[];
   // Landmarks are card-likes that affect scoring or gameplay.
   landmarks: LandmarkNoId[];
+  // Projects are card-likes that grant permanent abilities.
+  projects: ProjectNoId[];
   // Boons available for Fate cards in this match.
   boons: BoonNoId[];
   // Hexes available for Doom cards in this match.
@@ -147,6 +151,8 @@ export interface Match {
   events: Event[];
   // Active landmarks in the match (not part of the supply).
   landmarks: Landmark[];
+  // Active projects in the match (not part of the supply).
+  projects: Project[];
   // Boon deck state for Fate cards in this match.
   boons: {
     cards: Boon[];
@@ -215,6 +221,8 @@ export type LogEntry =
   // Token placement and consumption logs.
   | { type: 'tokenPlaced'; playerId: PlayerId; tokenId: TokenId; depth?: number; source?: LogEntrySource }
   | { type: 'tokenConsumed'; playerId: PlayerId; tokenId: TokenId; depth?: number; source?: LogEntrySource }
+  // Logs when a player buys a Project.
+  | { type: 'buyProject'; playerId: PlayerId; cardLikeId: CardLikeId; depth?: number; source?: LogEntrySource }
   | { type: 'gainCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'cardPlayed'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'revealCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource }
@@ -318,6 +326,8 @@ export type ServerEmitEvents = {
   searchLandmarkResponse: (landmarkData: LandmarkNoId[]) => void;
   // Sends artifact search results to the client.
   searchArtifactResponse: (artifactData: ArtifactNoId[]) => void;
+  // Sends project search results to the client.
+  searchProjectResponse: (projectData: ProjectNoId[]) => void;
   selectCard: (signalId: string, selectCardArgs: SelectActionCardArgs & { selectableCardIds: CardId[] }) => void;
   setPlayerList: (players: Player[]) => void;
   setCardLibrary: (library: Record<CardKey, Card>) => void;
@@ -352,6 +362,8 @@ export interface ServerListenEvents {
   searchLandmarks: (playerId: PlayerId, searchStr: string) => void;
   // Requests artifact search results from the server.
   searchArtifacts: (playerId: PlayerId, searchStr: string) => void;
+  // Requests project search results from the server.
+  searchProjects: (playerId: PlayerId, searchStr: string) => void;
   updatePlayerName: (playerId: PlayerId, name: string) => void;
   userInputReceived: (signalId: string, input: unknown) => void;
 }
@@ -560,6 +572,34 @@ export class Landmark extends CardLike {
 }
 
 export type LandmarkNoId = Omit<Landmark, 'id'>;
+
+type ProjectArgs = {
+  [p in keyof CardLike]: CardLike[p];
+} & {
+  randomizer?: string | null;
+};
+
+// Projects are landscape card-likes that grant permanent abilities.
+export class Project extends CardLike {
+  // Randomizer key used to group projects during selection.
+  randomizer: string | null;
+
+  constructor(args: ProjectArgs) {
+    super(args);
+
+    this.id = args.id;
+    this.cardName = args.cardName;
+    this.fullImagePath = args.fullImagePath;
+    this.detailImagePath = args.detailImagePath;
+    this.randomizer = args.randomizer ?? null;
+  }
+
+  override toString() {
+    return `[PROJECT ${this.id} - ${this.cardKey}]`;
+  }
+}
+
+export type ProjectNoId = Omit<Project, 'id'>;
 
 // Boon constructor args mirror base CardLike fields.
 type BoonArgs = {

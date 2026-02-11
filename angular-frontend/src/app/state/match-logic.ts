@@ -16,3 +16,9 @@ export const landmarks = computed(
   matchStore,
   match => match?.landmarks ?? []
 );
+
+// Expose projects from the current match state for UI rendering.
+export const projects = computed(
+  matchStore,
+  match => match?.projects ?? []
+);

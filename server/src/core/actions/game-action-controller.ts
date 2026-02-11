@@ -67,6 +67,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     private cardPriceRuleController: CardPriceRulesController,
     private cardEffectFunctionMap: CardEffectFunctionMap,
     private eventEffectFunctionMap: CardEffectFunctionMap,
+    private projectEffectFunctionMap: CardEffectFunctionMap,
     private boonEffectFunctionMap: CardEffectFunctionMap,
     private hexEffectFunctionMap: CardEffectFunctionMap,
     private stateEffectFunctionMap: CardEffectFunctionMap,
@@ -121,6 +122,14 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       console.warn(`[action controller] artifact effect for ${cardKey} already exists, overwriting it`);
     }
     this.artifactEffectFunctionMap[cardKey] = fn;
+  }
+
+  // Registers project effects for the current match.
+  public registerProjectEffect(cardKey: CardKey, fn: CardEffectFn) {
+    if (this.projectEffectFunctionMap[cardKey]) {
+      console.warn(`[action controller] project effect for ${cardKey} already exists, overwriting it`);
+    }
+    this.projectEffectFunctionMap[cardKey] = fn;
   }
 
   // Ensures a status-like store (state/artifact) exists on match state.
@@ -329,7 +338,18 @@ export class GameActionController implements BaseGameActionDefinitionMap {
 
         const event = match.events.find(e => e.id === selectedId);
         if (event) {
-          await this.runGameActionDelegate('buyCardLike', {
+          await this.runGameActionDelegate('buyEvent', {
+            playerId: currentPlayer.id,
+            cardLikeId: selectedId
+          });
+          this._computerTurnInProgress = false;
+          await this.runGameActionDelegate('nextPhase');
+          return;
+        }
+
+        const project = match.projects?.find(candidate => candidate.id === selectedId);
+        if (project) {
+          await this.runGameActionDelegate('buyProject', {
             playerId: currentPlayer.id,
             cardLikeId: selectedId
           });
@@ -767,7 +787,9 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     if (hex) return hex;
     const event = this.match.events?.find(card => card.id === cardLikeId);
     if (event) return event;
-    return this.match.landmarks?.find(card => card.id === cardLikeId);
+    const landmark = this.match.landmarks?.find(card => card.id === cardLikeId);
+    if (landmark) return landmark;
+    return this.match.projects?.find(card => card.id === cardLikeId);
   }
 
   // Sets default facing for common locations; set-aside is left untouched by default.
@@ -1222,7 +1244,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     }, {bought: true, overpay: args.overpay ?? 0});
   }
 
-  async buyCardLike(args: {
+  async buyEvent(args: {
     cardLikeId: CardLikeId;
     playerId: PlayerId;
   }) {
@@ -1231,32 +1253,32 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     // Prevent buying card-likes if the player already has debt tokens.
     const existingDebt = this.match.debt[args.playerId] ?? 0;
     if (existingDebt > 0) {
-      console.debug(`[buyCardLike action] player ${args.playerId} has debt (${existingDebt}), blocking buy`);
+      console.debug(`[buyEvent action] player ${args.playerId} has debt (${existingDebt}), blocking buy`);
       return;
     }
     const event = this.match.events.find(e => e.id === args.cardLikeId);
 
     if (!event) {
-      console.warn(`[buyCardLike action] could not find event ${args.cardLikeId}`);
+      console.warn(`[buyEvent action] could not find event ${args.cardLikeId}`);
       return;
     }
 
-    console.debug(`[buyCardLike action] buying ${event}`);
+    console.debug(`[buyEvent action] buying ${event}`);
 
     const cost = event.cost.treasure;
 
     this.match.playerTreasure -= cost;
 
-    console.debug(`[buyCardLike action] reducing player ${args.playerId} treasure ${cost} to ${this.match.playerTreasure}`);
+    console.debug(`[buyEvent action] reducing player ${args.playerId} treasure ${cost} to ${this.match.playerTreasure}`);
 
     if ((event.cost.debt ?? 0) > 0) {
-      console.debug(`[buyCardLike action] adding ${event.cost.debt} debt to player ${args.playerId}`);
+      console.debug(`[buyEvent action] adding ${event.cost.debt} debt to player ${args.playerId}`);
       await this.gainDebt({playerId: args.playerId, count: event.cost.debt!});
     }
 
     this.match.playerBuys--;
 
-    console.debug(`[buyCardLike action] reducing player ${args.playerId} buys by 1 to ${this.match.playerBuys}`);
+    console.debug(`[buyEvent action] reducing player ${args.playerId} buys by 1 to ${this.match.playerBuys}`);
 
     this.match.stats.cardLikesBoughtByTurn[this.match.turnNumber] ??= [];
     this.match.stats.cardLikesBoughtByTurn[this.match.turnNumber]!.push(args.cardLikeId);
@@ -1270,7 +1292,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     const effectFn = this.eventEffectFunctionMap[event.cardKey];
 
     if (effectFn) {
-      console.debug(`[buyCardLike action] running effect for ${event}`);
+      console.debug(`[buyEvent action] running effect for ${event}`);
 
       const context = {
         cardSourceController: this._cardSourceController,
@@ -1297,6 +1319,119 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       await this.runEffectWithLogging({
         source: event.toString(),
         sourceType: 'event',
+        playerId: args.playerId,
+        effectFn,
+        context,
+      });
+    }
+  }
+
+  async buyProject(args: {
+    cardLikeId: CardLikeId;
+    playerId: PlayerId;
+  }) {
+    // Ensure debt map exists for older saved states.
+    this.match.debt ??= {};
+    // Prevent buying projects if the player already has debt tokens.
+    const existingDebt = this.match.debt[args.playerId] ?? 0;
+    if (existingDebt > 0) {
+      console.debug(`[buyProject action] player ${args.playerId} has debt (${existingDebt}), blocking buy`);
+      return;
+    }
+
+    const project = this.match.projects.find(candidate => candidate.id === args.cardLikeId);
+    if (!project) {
+      console.warn(`[buyProject action] could not find project ${args.cardLikeId}`);
+      return;
+    }
+
+    // Ensure the player has an available cube token to place.
+    const cubeTokenId = 'cube-token';
+    const tokens = Object.values(this.match.tokens ?? {});
+    const availableCube = tokens.find(token =>
+      token.tokenId === cubeTokenId &&
+      token.ownerId === args.playerId &&
+      token.location.type === 'playerAvailable' &&
+      token.location.playerId === args.playerId
+    );
+
+    if (!availableCube) {
+      console.debug(`[buyProject action] player ${args.playerId} has no available cube tokens`);
+      return;
+    }
+
+    // Prevent placing multiple cubes on the same project for the same player.
+    const alreadyPlaced = tokens.some(token =>
+      token.tokenId === cubeTokenId &&
+      token.ownerId === args.playerId &&
+      token.location.type === 'cardLike' &&
+      token.location.cardLikeId === project.id
+    );
+
+    if (alreadyPlaced) {
+      console.debug(`[buyProject action] player ${args.playerId} already owns ${project}`);
+      return;
+    }
+
+    console.debug(`[buyProject action] buying ${project}`);
+
+    const cost = project.cost.treasure ?? 0;
+    this.match.playerTreasure -= cost;
+    console.debug(`[buyProject action] reducing player ${args.playerId} treasure ${cost} to ${this.match.playerTreasure}`);
+
+    this.match.playerBuys--;
+    console.debug(`[buyProject action] reducing player ${args.playerId} buys by 1 to ${this.match.playerBuys}`);
+
+    this.match.stats.cardLikesBoughtByTurn[this.match.turnNumber] ??= [];
+    this.match.stats.cardLikesBoughtByTurn[this.match.turnNumber]!.push(args.cardLikeId);
+
+    this.match.stats.cardLikesBought[args.cardLikeId] = {
+      playerId: args.playerId,
+      turnNumber: this.match.turnNumber,
+      turnPhase: getTurnPhase(this.match.turnPhaseIndex)
+    }
+
+    this.logManager.addLogEntry({
+      type: 'buyProject',
+      playerId: args.playerId,
+      cardLikeId: project.id,
+    });
+
+    // Move a cube token onto the project to mark ownership.
+    await this.moveToken({
+      tokenInstanceId: availableCube.id,
+      location: { type: 'cardLike', cardLikeId: project.id },
+    });
+
+    const effectFn = this.projectEffectFunctionMap[project.cardKey];
+    if (effectFn) {
+      console.debug(`[buyProject action] running effect for ${project}`);
+
+      const context = {
+        cardSourceController: this._cardSourceController,
+        cardPriceController: this.cardPriceRuleController,
+        logManager: this.logManager,
+        reactionManager: this.reactionManager,
+        runGameActionDelegate: this.runGameActionDelegate,
+        cardId: args.cardLikeId,
+        playerId: args.playerId,
+        match: this.match,
+        cardLibrary: this.cardLibrary,
+        reactionContext: {},
+        findCards: this._findCards
+      } as CardEffectFunctionContext;
+
+      // Centralized duration registration with automatic cleanup on leave-play.
+      context.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
+        const triggerIds = this.registerDurationEffectInternal(durationCard, context, triggeredTemplate, options);
+        this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
+        return triggerIds;
+      };
+
+      // Run project effects with standardized logging.
+      await this.runEffectWithLogging({
+        source: project.toString(),
+        sourceType: 'project',
         playerId: args.playerId,
         effectFn,
         context,

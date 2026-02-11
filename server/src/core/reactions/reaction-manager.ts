@@ -1,4 +1,4 @@
-import { Card, CardId, CardLike, Event, Landmark, Match, Player } from 'shared/shared-types.ts';
+import { Card, CardId, CardLike, Event, Landmark, Match, Player, Project } from 'shared/shared-types.ts';
 import {
   CardLifecycleEvent,
   CardLifecycleEventArgMap,
@@ -164,6 +164,8 @@ export class ReactionManager {
         ? 'event'
         : cardLikeOrTemplate instanceof Landmark
         ? 'landmark'
+        : cardLikeOrTemplate instanceof Project
+        ? 'project'
         : cardLikeOrTemplate instanceof Card
         ? 'card'
         : 'other';

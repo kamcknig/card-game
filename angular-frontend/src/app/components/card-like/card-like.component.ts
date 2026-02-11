@@ -106,6 +106,8 @@ export class CardLikeComponent implements OnInit, OnDestroy {
     if (landmark) return landmark;
     const state = match.states?.cards?.find(card => card.id === this.cardLikeId);
     if (state) return state;
+    const project = match.projects?.find(card => card.id === this.cardLikeId);
+    if (project) return project;
     // Artifacts are stored alongside states in match state.
     return match.artifacts?.cards?.find(card => card.id === this.cardLikeId);
   }

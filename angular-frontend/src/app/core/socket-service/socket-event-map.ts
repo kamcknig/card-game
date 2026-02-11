@@ -130,6 +130,12 @@ export const socketToGameEventMap = (): SocketEventMap => {
       finalBundle[`${landmark.cardKey}-detail`] ??= landmark.detailImagePath;
     }
 
+    // Ensure project images are loaded alongside other landscapes.
+    for (const project of matchStore.get()?.projects ?? []) {
+      finalBundle[`${project.cardKey}-full`] ??= project.fullImagePath;
+      finalBundle[`${project.cardKey}-detail`] ??= project.detailImagePath;
+    }
+
     // Ensure boon images are loaded for card-like selection prompts.
     for (const boon of matchStore.get()?.boons?.cards ?? []) {
       finalBundle[`${boon.cardKey}-full`] ??= boon.fullImagePath;

@@ -173,6 +173,37 @@
           }
         </div>
       </section>
+
+      <!-- ░░░  Projects  ░░░ -->
+      <section class="projects-section">
+        <h2 class="section-title">Projects</h2>
+
+        <div class="projects-list">
+          @for (project of preSelectedProjects; track project?.cardKey ?? $index) {
+            <div
+              class="project-slot"
+              [ngStyle]="{'cursor': isGameOwner && project === null ? 'pointer' : 'default'}"
+              (click)="project === null && isGameOwner ? selectingProjects = true : null"
+            >
+              @if (project !== null && isGameOwner) {
+                <div (click)="deleteProject(project)" class="close-button">X</div>
+              }
+              <div>
+                @if (project !== null) {
+                  <img
+                    alt="{{project.cardName}} image"
+                    ngSrc="{{project.fullImagePath}}"
+                    height="124"
+                    width="280"
+                  />
+                } @else {
+                  <span class="no-project">?</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </section>
   </section>
 
   <section class="banned-cards-section">
@@ -249,4 +280,15 @@
     autofocus
     (artifactSelected)="onArtifactSelected($event)">
   </app-select-artifact-modal>
+}
+
+<!-- select projects to include in match -->
+@if (selectingProjects) {
+  <app-select-project-modal
+    [excludedProjects]="preSelectedProjects"
+    [ngStyle]="{'visibility': selectingProjects ? 'visible' : 'hidden'}"
+    (close)="selectingProjects = false"
+    autofocus
+    (projectSelected)="onProjectSelected($event)">
+  </app-select-project-modal>
 }

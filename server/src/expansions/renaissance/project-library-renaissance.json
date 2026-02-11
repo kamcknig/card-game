@@ -1,0 +1,142 @@
+{
+  "academy": {
+    "cost": {
+      "treasure": 5
+    },
+    "kingdomSelectable": false,
+    "abilityText": "When you gain an Action card, +1 Villager."
+  },
+  "barracks": {
+    "cost": {
+      "treasure": 6
+    },
+    "kingdomSelectable": false,
+    "abilityText": "At the start of your turn, +1 Action."
+  },
+  "canal": {
+    "cost": {
+      "treasure": 7
+    },
+    "kingdomSelectable": false,
+    "abilityText": "During your turns, cards cost $1 less."
+  },
+  "capitalism": {
+    "cost": {
+      "treasure": 5
+    },
+    "kingdomSelectable": false,
+    "abilityText": "During your turns, Actions with +$ amounts in their text are also Treasures."
+  },
+  "cathedral": {
+    "cost": {
+      "treasure": 3
+    },
+    "kingdomSelectable": false,
+    "abilityText": "At the start of your turn, trash a card from your hand."
+  },
+  "citadel": {
+    "cost": {
+      "treasure": 8
+    },
+    "kingdomSelectable": false,
+    "abilityText": "The first time you play an Action card during each of your turns, replay it afterwards."
+  },
+  "city-gate": {
+    "cost": {
+      "treasure": 3
+    },
+    "kingdomSelectable": false,
+    "abilityText": "At the start of your turn, +1 Card, then put a card from your hand onto your deck."
+  },
+  "crop-rotation": {
+    "cost": {
+      "treasure": 6
+    },
+    "kingdomSelectable": false,
+    "abilityText": "At the start of your turn, you may discard a Victory card for +2 Cards."
+  },
+  "exploration": {
+    "cost": {
+      "treasure": 4
+    },
+    "kingdomSelectable": false,
+    "abilityText": "At the end of your Buy phase, if you didn't gain any cards during it, +1 Coffers and +1 Villager."
+  },
+  "fair": {
+    "cost": {
+      "treasure": 4
+    },
+    "kingdomSelectable": false,
+    "abilityText": "At the start of your turn, +1 Buy."
+  },
+  "fleet": {
+    "cost": {
+      "treasure": 5
+    },
+    "kingdomSelectable": false,
+    "abilityText": "After the game ends, there's an extra round of turns just for players with this."
+  },
+  "guildhall": {
+    "cost": {
+      "treasure": 5
+    },
+    "kingdomSelectable": false,
+    "abilityText": "When you gain a Treasure, +1 Coffers."
+  },
+  "innovation": {
+    "cost": {
+      "treasure": 6
+    },
+    "kingdomSelectable": false,
+    "abilityText": "Once during each of your turns, when you gain an Action card, you may play it."
+  },
+  "pageant": {
+    "cost": {
+      "treasure": 3
+    },
+    "kingdomSelectable": false,
+    "abilityText": "At the end of your Buy phase, you may pay $1 for +1 Coffers."
+  },
+  "piazza": {
+    "cost": {
+      "treasure": 5
+    },
+    "kingdomSelectable": false,
+    "abilityText": "At the start of your turn, reveal the top card of your deck. If it's an Action, play it."
+  },
+  "road-network": {
+    "cost": {
+      "treasure": 5
+    },
+    "kingdomSelectable": false,
+    "abilityText": "When another player gains a Victory card, +1 Card."
+  },
+  "sewers": {
+    "cost": {
+      "treasure": 3
+    },
+    "kingdomSelectable": false,
+    "abilityText": "When you trash a card other than with this, you may trash a card from your hand."
+  },
+  "silos": {
+    "cost": {
+      "treasure": 4
+    },
+    "kingdomSelectable": false,
+    "abilityText": "At the start of your turn, discard any number of Coppers, revealed, and draw that many cards."
+  },
+  "sinister-plot": {
+    "cost": {
+      "treasure": 4
+    },
+    "kingdomSelectable": false,
+    "abilityText": "At the start of your turn, add a token here, or remove your tokens here for +1 Card each."
+  },
+  "star-chart": {
+    "cost": {
+      "treasure": 3
+    },
+    "kingdomSelectable": false,
+    "abilityText": "When shuffling, you may pick one of the cards to go on top."
+  }
+}

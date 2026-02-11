@@ -726,10 +726,11 @@ export class MatchScene extends Scene {
       this._kingdomView.x = Math.max(this._scoreViewRight, this._baseSupply.x + this._baseSupply.width) + STANDARD_GAP;
     }
 
-    // Position the landscape area if events or landmarks are present.
+    // Position the landscape area if events, landmarks, or projects are present.
     const numEvents = matchStore.get()?.events.length ?? 0;
     const numLandmarks = matchStore.get()?.landmarks.length ?? 0;
-    const numOtherCardLikes = numEvents + numLandmarks;
+    const numProjects = matchStore.get()?.projects.length ?? 0;
+    const numOtherCardLikes = numEvents + numLandmarks + numProjects;
 
     if (this._kingdomView && this._otherCardLikes && numOtherCardLikes > 0) {
       this._otherCardLikes.x = this._kingdomView.x;

@@ -2,7 +2,6 @@ import { AppSocket, FindCardsFn, RunGameActionDelegate } from '../types.ts';
 import {
   Card,
   CardId,
-  CardLike,
   CardLikeId,
   CardStats,
   Match,
@@ -82,7 +81,8 @@ export class CardInteractivityController {
       const cardKeysAdded: string[] = [];
       // Only offer buys if the player has no debt tokens.
       if (currentDebt === 0) {
-        const supply: CardLike[] = this._findCards({ location: ['basicSupply', 'kingdomSupply'] });
+        // Supply lookups return full card data for purchase checks.
+        const supply: Card[] = this._findCards({ location: ['basicSupply', 'kingdomSupply'] });
 
         // a loop going backwards through the supply and kingdom. we only mark the last one as selectable (this should
         // be the top of any pile). a bit hacky to assume that.
@@ -140,6 +140,36 @@ export class CardInteractivityController {
 
           if (!restricted && cost.treasure <= this.match.playerTreasure) {
             selectableCards.push(event.id);
+          }
+        }
+
+        // Projects are purchased for their printed cost and require available cube tokens.
+        const cubeTokenId = 'cube-token';
+        const tokens = Object.values(this.match.tokens ?? {});
+        const hasAvailableCube = tokens.some(token =>
+          token.tokenId === cubeTokenId &&
+          token.ownerId === currentPlayer.id &&
+          token.location.type === 'playerAvailable' &&
+          token.location.playerId === currentPlayer.id
+        );
+
+        if (hasAvailableCube) {
+          const projects = this.match.projects ?? [];
+          for (const project of projects) {
+            const alreadyOwned = tokens.some(token =>
+              token.tokenId === cubeTokenId &&
+              token.ownerId === currentPlayer.id &&
+              token.location.type === 'cardLike' &&
+              token.location.cardLikeId === project.id
+            );
+            if (alreadyOwned) {
+              continue;
+            }
+
+            const cost = project.cost.treasure ?? 0;
+            if (cost <= this.match.playerTreasure) {
+              selectableCards.push(project.id);
+            }
           }
         }
       }
@@ -229,7 +259,20 @@ export class CardInteractivityController {
         return;
       }
       console.info(`[card interactivity] ${player} tapped card-like ${cardId} in phase ${phase}, processing`);
-      await this.runGameDelegate('buyCardLike', { playerId, cardLikeId: cardId });
+
+      const event = this.match.events.find(candidate => candidate.id === cardId);
+      if (event) {
+        await this.runGameDelegate('buyEvent', { playerId, cardLikeId: cardId });
+      }
+      else {
+        const project = this.match.projects?.find(candidate => candidate.id === cardId);
+        if (project) {
+          await this.runGameDelegate('buyProject', { playerId, cardLikeId: cardId });
+        }
+        else {
+          console.debug(`[card interactivity] ${player} tapped non-buyable card-like ${cardId}`);
+        }
+      }
     }
     else {
       console.debug(`[card interactivity] ${player} tapped card-like ${cardId} in phase ${phase}, not processing`);
