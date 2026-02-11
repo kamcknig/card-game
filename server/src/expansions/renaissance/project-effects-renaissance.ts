@@ -798,6 +798,147 @@ const effectMap: CardExpansionModule = {
       });
     },
   },
+  'pageant': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      if (!project) {
+        console.warn('[pageant project] project card not found');
+        return;
+      }
+
+      console.info(`[pageant project] registering end buy phase trigger for player ${cardEffectArgs.playerId}`);
+
+      cardEffectArgs.reactionManager.registerSystemTemplate(project, 'endTurnPhase', {
+        playerId: cardEffectArgs.playerId,
+        once: false,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
+            return false;
+          }
+          if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') {
+            return false;
+          }
+
+          const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
+          if (!owned) {
+            console.debug(`[pageant project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+          }
+          return owned;
+        },
+        triggeredEffectFn: async (triggeredArgs) => {
+          if (triggeredArgs.match.playerTreasure < 1) {
+            console.debug('[pageant project] no treasure available to pay $1');
+            return;
+          }
+
+          const result = await triggeredArgs.runGameActionDelegate('userPrompt', {
+            playerId: cardEffectArgs.playerId,
+            prompt: 'Pay $1 for +1 Coffers? (Pageant)',
+            actionButtons: [
+              { label: 'NO', action: 1 },
+              { label: 'YES', action: 2 },
+            ],
+          }) as { action: number };
+
+          if (result.action !== 2) {
+            console.debug('[pageant project] player declined to pay $1');
+            return;
+          }
+
+          if (triggeredArgs.match.playerTreasure < 1) {
+            console.debug('[pageant project] player no longer has $1 to pay');
+            return;
+          }
+
+          triggeredArgs.logManager.addLogEntry({
+            type: 'cardLikeEffect',
+            playerId: cardEffectArgs.playerId,
+            cardLikeId: project.id,
+            effectText: 'Pay $1 for +1 Coffer',
+          });
+
+          console.debug('[pageant project] paying $1 and granting +1 Coffer');
+          await triggeredArgs.runGameActionDelegate('gainTreasure', { count: -1 });
+          await triggeredArgs.runGameActionDelegate('gainCoffer', {
+            playerId: cardEffectArgs.playerId,
+            count: 1,
+          });
+        },
+      });
+    },
+  },
+  'piazza': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      if (!project) {
+        console.warn('[piazza project] project card not found');
+        return;
+      }
+
+      console.info(`[piazza project] registering start turn trigger for player ${cardEffectArgs.playerId}`);
+
+      cardEffectArgs.reactionManager.registerSystemTemplate(project, 'startTurn', {
+        playerId: cardEffectArgs.playerId,
+        once: false,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
+            return false;
+          }
+
+          const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
+          if (!owned) {
+            console.debug(`[piazza project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+          }
+          return owned;
+        },
+        triggeredEffectFn: async (triggeredArgs) => {
+          let deck = triggeredArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+
+          if (!deck.length) {
+            console.debug('[piazza project] deck empty, shuffling');
+            await triggeredArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+            deck = triggeredArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+          }
+
+          if (!deck.length) {
+            console.debug('[piazza project] no cards to reveal after shuffling');
+            return;
+          }
+
+          const topCardId = deck.slice(-1)[0];
+          const topCard = triggeredArgs.cardLibrary.getCard(topCardId);
+          console.debug(`[piazza project] revealing ${topCard}`);
+
+          await triggeredArgs.runGameActionDelegate('revealCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: topCardId,
+          });
+
+          if (!topCard.type.includes('ACTION')) {
+            console.debug('[piazza project] revealed card is not an Action, leaving on top');
+            return;
+          }
+
+          triggeredArgs.logManager.addLogEntry({
+            type: 'cardLikeEffect',
+            playerId: cardEffectArgs.playerId,
+            cardLikeId: project.id,
+            effectText: 'Play top Action',
+          });
+
+          console.debug(`[piazza project] playing ${topCard}`);
+          await triggeredArgs.runGameActionDelegate('playCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: topCardId,
+          });
+        },
+      });
+    },
+  },
 };
 
 export default effectMap;

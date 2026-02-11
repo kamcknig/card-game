@@ -80,6 +80,8 @@ village mat. others don't like the tavern mat
 - there are a lot of reactions that happen where a condition and a trigger
   query the exact same data. one example is [arena](../expansion-docs/empires/cardlikes/arena.md).
   I think maybe we can pass some data from the condition to the trigger.
+- game actions that manipulate the deck can shuffle it rather than shuffling
+  manually in card and card like effects
 
 need to show the context of the kingdom card for something like young witch, and ferryman
  - young witch (new kingdom)
