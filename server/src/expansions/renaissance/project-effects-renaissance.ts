@@ -939,6 +939,124 @@ const effectMap: CardExpansionModule = {
       });
     },
   },
+  'road-network': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      if (!project) {
+        console.warn('[road-network project] project card not found');
+        return;
+      }
+
+      console.info(`[road-network project] registering victory gain trigger for player ${cardEffectArgs.playerId}`);
+
+      cardEffectArgs.reactionManager.registerSystemTemplate(project, 'cardGained', {
+        playerId: cardEffectArgs.playerId,
+        once: false,
+        allowMultipleInstances: false,
+        compulsory: true,
+        condition: (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId === cardEffectArgs.playerId) {
+            return false;
+          }
+
+          const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
+          if (!owned) {
+            console.debug(`[road-network project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+            return false;
+          }
+
+          const gainedCard = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
+          console.debug(`[road-network project] evaluating gained card ${gainedCard}`);
+          return gainedCard.type.includes('VICTORY');
+        },
+        triggeredEffectFn: async (triggeredArgs) => {
+          triggeredArgs.logManager.addLogEntry({
+            type: 'cardLikeEffect',
+            playerId: cardEffectArgs.playerId,
+            cardLikeId: project.id,
+            effectText: '+1 Card',
+          });
+
+          console.debug(`[road-network project] drawing 1 card for player ${cardEffectArgs.playerId}`);
+          await triggeredArgs.runGameActionDelegate('drawCard', {
+            playerId: cardEffectArgs.playerId,
+            count: 1,
+          });
+        },
+      });
+    },
+  },
+  'sewers': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      if (!project) {
+        console.warn('[sewers project] project card not found');
+        return;
+      }
+
+      console.info(`[sewers project] registering trash trigger for player ${cardEffectArgs.playerId}`);
+
+      cardEffectArgs.reactionManager.registerSystemTemplate(project, 'cardTrashed', {
+        playerId: cardEffectArgs.playerId,
+        once: false,
+        allowMultipleInstances: true,
+        compulsory: false,
+        condition: (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
+            return false;
+          }
+
+          const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
+          if (!owned) {
+            console.debug(`[sewers project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+            return false;
+          }
+
+          const hand = conditionArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+          if (!hand.length) {
+            console.debug('[sewers project] no cards in hand to trash');
+            return false;
+          }
+
+          return true;
+        },
+        triggeredEffectFn: async (triggeredArgs) => {
+          const hand = triggeredArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+          if (!hand.length) {
+            console.debug('[sewers project] no cards in hand to trash');
+            return;
+          }
+
+          console.debug(`[sewers project] prompting to trash from ${hand.length} card(s)`);
+          const selectedCardIds = await triggeredArgs.runGameActionDelegate('selectCard', {
+            playerId: cardEffectArgs.playerId,
+            prompt: 'Trash a card from your hand',
+            restrict: hand,
+            count: 1,
+            optional: true,
+          }) as CardId[];
+
+          if (!selectedCardIds.length) {
+            console.debug('[sewers project] player declined to trash');
+            return;
+          }
+
+          triggeredArgs.logManager.addLogEntry({
+            type: 'cardLikeEffect',
+            playerId: cardEffectArgs.playerId,
+            cardLikeId: project.id,
+            effectText: 'Trash a card',
+          });
+
+          console.debug(`[sewers project] trashing ${selectedCardIds[0]}`);
+          await triggeredArgs.runGameActionDelegate('trashCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: selectedCardIds[0],
+          });
+        },
+      });
+    },
+  },
 };
 
 export default effectMap;
