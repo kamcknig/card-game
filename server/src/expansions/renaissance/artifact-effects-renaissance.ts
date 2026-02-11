@@ -8,6 +8,8 @@ export const registerArtifactEffects = (registerArtifactEffect: ArtifactEffectRe
   registerFlag(registerArtifactEffect);
   // Register the Horn artifact effect.
   registerHorn(registerArtifactEffect);
+  // Register the Key artifact effect.
+  registerKey(registerArtifactEffect);
 };
 
 // Registers the Flag artifact effect.
@@ -119,6 +121,56 @@ const registerHorn = (registerArtifactEffect: ArtifactEffectRegistrar) => {
         });
 
         lastUsedTurnNumber = triggeredArgs.match.turnNumber;
+      },
+    });
+  });
+};
+
+// Registers the Key artifact effect.
+const registerKey = (registerArtifactEffect: ArtifactEffectRegistrar) => {
+  let startTurnTriggerId: string | undefined;
+
+  registerArtifactEffect('key', async ({
+    playerId,
+    match,
+    reactionManager,
+    cardId,
+  }) => {
+    const artifact = match.artifacts?.cards?.find(candidate => candidate.id === cardId);
+    if (!artifact) {
+      console.warn('[key artifact] artifact card not found');
+      return;
+    }
+
+    // Clear any previous trigger when the Key changes owners.
+    if (startTurnTriggerId) {
+      reactionManager.unregisterTrigger(startTurnTriggerId);
+      startTurnTriggerId = undefined;
+    }
+
+    console.info(`[key artifact] registering triggers for player ${playerId}`);
+
+    startTurnTriggerId = reactionManager.registerSystemTemplate(artifact, 'startTurn', {
+      playerId,
+      once: false,
+      allowMultipleInstances: true,
+      compulsory: true,
+      condition: ({ trigger, match: triggerMatch }) => {
+        if (trigger.args.playerId !== playerId) {
+          return false;
+        }
+        const ownedArtifacts = triggerMatch.artifacts?.byPlayer?.[playerId] ?? [];
+        return ownedArtifacts.includes(cardId);
+      },
+      triggeredEffectFn: async ({ logManager, runGameActionDelegate, match: triggeredMatch }) => {
+        console.debug(`[key artifact] granting +$1 on turn ${triggeredMatch.turnNumber}`);
+        logManager.addLogEntry({
+          type: 'cardLikeEffect',
+          playerId,
+          cardLikeId: cardId,
+          effectText: '+$1',
+        });
+        await runGameActionDelegate('gainTreasure', { count: 1 });
       },
     });
   });
