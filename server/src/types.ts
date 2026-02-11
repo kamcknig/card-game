@@ -171,7 +171,7 @@ export interface BaseGameActionDefinitionMap {
     removeArtifact: (args: { playerId: PlayerId; artifactId?: CardLikeId; artifactKey?: CardKey; }, context?: GameActionContext) => Promise<void>;
     // Pays down debt tokens using the current player's treasure pool.
     payDebt: (args: { playerId: PlayerId; count: number; }, context?: GameActionContext) => Promise<void>;
-    // Token actions are used by expansions to place and manage token instances.
+    // Expansions use token actions to place and manage token instances.
     placeToken: (args: {
         tokenId: TokenId;
         location: TokenLocation;
@@ -180,20 +180,20 @@ export interface BaseGameActionDefinitionMap {
         facing?: TokenFacing;
         sourceCardId?: CardId;
     }, context?: GameActionContext) => Promise<TokenInstance>;
-    // Token actions are used by expansions to place and manage token instances.
+    // Expansions use token actions to place and manage token instances.
     moveToken: (args: {
         tokenInstanceId: TokenInstanceId;
         location: TokenLocation;
         ownerId?: PlayerId;
     }, context?: GameActionContext) => Promise<void>;
-    // Token actions are used by expansions to place and manage token instances.
+    // Expansions use token actions to place and manage token instances.
     removeToken: (args: { tokenInstanceId: TokenInstanceId; }, context?: GameActionContext) => Promise<void>;
-    // Token actions are used by expansions to place and manage token instances.
+    // Expansions use token actions to place and manage token instances.
     consumeToken: (args: {
         tokenInstanceId: TokenInstanceId;
         amount?: number;
     }, context?: GameActionContext) => Promise<void>;
-    // Token actions are used by expansions to place and manage token instances.
+    // Expansions use token actions to place and manage token instances.
     flipToken: (args: {
         tokenInstanceId: TokenInstanceId;
         facing: TokenFacing;
@@ -242,10 +242,6 @@ export interface GameActionDefinitionMap extends BaseGameActionDefinitionMap {
 }
 
 export type GameActions = keyof GameActionDefinitionMap;
-
-export type GameActionArgsMap = {
-    [K in GameActions]: Parameters<GameActionDefinitionMap[K]>[0];
-};
 
 export type GameActionContextMap = {
     [K in GameActions]: Parameters<GameActionDefinitionMap[K]>[1];
@@ -423,7 +419,6 @@ export class ReactionTrigger<T extends TriggerEventType = TriggerEventType> {
         return `[TRIGGER ${this.eventType}]`;
     }
 
-    // @ts-ignore
     [Symbol.for('Deno.customInspect')]() {
         return this.toString();
     }
@@ -552,8 +547,6 @@ export class Reaction<T extends TriggerEventType = TriggerEventType> {
     public sourceName?: string;
     public sourceType?: ReactionSourceType;
 
-    public extraData?: any;
-
     // todo working on moat right now which has no condition other than it be an attack.
     // in the future we might need to define this condition method elsewhere such as
     // in the expansion's module? need to wait to see what kind of conditions there are i think
@@ -609,7 +602,6 @@ export class Reaction<T extends TriggerEventType = TriggerEventType> {
         return `[REACTION ${this.id} - owner {${this.playerId}}]`;
     }
 
-    // @ts-ignore
     [Symbol.for('Deno.customInspect')]() {
         return this.toString();
     }
@@ -626,7 +618,6 @@ export type GameLifecycleCallbackContext = AppContext & {
 }
 
 export type GameLifecycleCallback = (args: Omit<GameLifecycleCallbackContext, 'cardId'>, ...rest: any[]) => Promise<CardLifecycleCallbackResult | void>;
-export type CardGameLifeCycleCallback = (args: GameLifecycleCallbackContext, ...rest: any[]) => Promise<void>;
 
 export type GameLifecycleEvent =
     | 'onGameStart'

@@ -399,6 +399,30 @@ export type CostSpec =
   | { kind: 'exact'; amount: CardCost, playerId: PlayerId, from?: CardCost }
   | { kind: 'upTo'; amount: CardCost, playerId: PlayerId, from?: CardCost };
 
+// Filters for card-search requests (used by selectCard restrictions).
+export type CostFindCardsFilter = CostSpec;
+
+export interface CardDataFindCardsFilter {
+  tags?: string | string[];
+  cardKeys?: CardKey | CardKey[];
+  cardType?: CardType | CardType[];
+  owner?: PlayerId;
+  kingdom?: string;
+}
+
+export interface SourceFindCardsFilter {
+  location: CardLocation | CardLocation[];
+  playerId?: PlayerId;
+}
+
+export type NonLocationFilters = CostFindCardsFilter | CardDataFindCardsFilter;
+
+export type FindCardsFnInput =
+  | NonLocationFilters[]
+  | SourceFindCardsFilter
+  | NonLocationFilters
+  | [SourceFindCardsFilter, ...NonLocationFilters[]];
+
 export type PlayerArgs = {
   id: PlayerId;
   name: string;
