@@ -1,6 +1,7 @@
 import { ArtifactEffectRegistrar } from '../../types.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
+import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 
 // Registers Renaissance artifact effects.
 export const registerArtifactEffects = (registerArtifactEffect: ArtifactEffectRegistrar) => {
@@ -10,6 +11,8 @@ export const registerArtifactEffects = (registerArtifactEffect: ArtifactEffectRe
   registerHorn(registerArtifactEffect);
   // Register the Key artifact effect.
   registerKey(registerArtifactEffect);
+  // Register the Treasure Chest artifact effect.
+  registerTreasureChest(registerArtifactEffect);
 };
 
 // Registers the Flag artifact effect.
@@ -171,6 +174,74 @@ const registerKey = (registerArtifactEffect: ArtifactEffectRegistrar) => {
           effectText: '+$1',
         });
         await runGameActionDelegate('gainTreasure', { count: 1 });
+      },
+    });
+  });
+};
+
+// Registers the Treasure Chest artifact effect.
+const registerTreasureChest = (registerArtifactEffect: ArtifactEffectRegistrar) => {
+  let startTurnPhaseTriggerId: string | undefined;
+
+  registerArtifactEffect('treasure-chest', async ({
+    playerId,
+    match,
+    reactionManager,
+    cardId,
+    findCards,
+  }) => {
+    const artifact = match.artifacts?.cards?.find(candidate => candidate.id === cardId);
+    if (!artifact) {
+      console.warn('[treasure-chest artifact] artifact card not found');
+      return;
+    }
+
+    if (startTurnPhaseTriggerId) {
+      reactionManager.unregisterTrigger(startTurnPhaseTriggerId);
+      startTurnPhaseTriggerId = undefined;
+    }
+
+    console.info(`[treasure-chest artifact] registering triggers for player ${playerId}`);
+
+    startTurnPhaseTriggerId = reactionManager.registerSystemTemplate(artifact, 'startTurnPhase', {
+      playerId,
+      once: false,
+      allowMultipleInstances: true,
+      compulsory: true,
+      condition: (conditionArgs) => {
+        if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') {
+          return false;
+        }
+        if (getCurrentPlayer(conditionArgs.match).id !== playerId) {
+          return false;
+        }
+        const ownedArtifacts = conditionArgs.match.artifacts?.byPlayer?.[playerId] ?? [];
+        return ownedArtifacts.includes(cardId);
+      },
+      triggeredEffectFn: async ({ logManager, runGameActionDelegate, match: triggeredMatch }) => {
+        const goldCards = findCards([
+          { location: 'basicSupply' },
+          { cardKeys: 'gold' },
+        ]);
+
+        if (!goldCards.length) {
+          console.debug('[treasure-chest artifact] no Gold cards available in supply');
+          return;
+        }
+
+        const goldCardId = goldCards.slice(-1)[0].id;
+        console.debug(`[treasure-chest artifact] gaining Gold on turn ${triggeredMatch.turnNumber}`);
+        logManager.addLogEntry({
+          type: 'cardLikeEffect',
+          playerId,
+          cardLikeId: cardId,
+          effectText: 'Gain a Gold',
+        });
+        await runGameActionDelegate('gainCard', {
+          playerId,
+          cardId: goldCardId,
+          to: { location: 'playerDiscard' },
+        });
       },
     });
   });
