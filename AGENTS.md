@@ -71,6 +71,8 @@ execution
 - Do not introduce new classes, variables, etc, without also calling out where
   they are defined and how they are provided to the consumer.
 - Do not add custom ids when registering reactions unless you have to
+- make sure to follow the lose track rules https://wiki.dominionstrategycom/index.php/Lose_Track_rule
+- make sure to follow the stop moving rule https://wiki.dominionstrategy.com/index.php/Stop-Moving_rule
 
 ---
 

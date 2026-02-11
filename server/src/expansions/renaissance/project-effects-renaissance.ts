@@ -597,7 +597,7 @@ const effectMap: CardExpansionModule = {
             cardLikeId: project.id,
             effectText: '+1 Coffer, +1 Villager',
           });
-          
+
           console.debug(`[exploration project] granting +1 Coffer and +1 Villager to player ${cardEffectArgs.playerId}`);
           await triggeredArgs.runGameActionDelegate('gainCoffer', {
             playerId: cardEffectArgs.playerId,
@@ -647,6 +647,153 @@ const effectMap: CardExpansionModule = {
 
           console.debug(`[fair project] granting +1 Buy to player ${cardEffectArgs.playerId}`);
           await triggeredArgs.runGameActionDelegate('gainBuy', { count: 1 });
+        },
+      });
+    },
+  },
+  'guildhall': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      if (!project) {
+        console.warn('[guildhall project] project card not found');
+        return;
+      }
+
+      console.info(`[guildhall project] registering treasure-gain trigger for player ${cardEffectArgs.playerId}`);
+
+      cardEffectArgs.reactionManager.registerSystemTemplate(project, 'cardGained', {
+        playerId: cardEffectArgs.playerId,
+        once: false,
+        allowMultipleInstances: false,
+        compulsory: true,
+        condition: (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
+            return false;
+          }
+
+          const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
+          if (!owned) {
+            console.debug(`[guildhall project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+            return false;
+          }
+
+          const gainedCard = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
+          console.debug(`[guildhall project] evaluating gained card ${gainedCard}`);
+          return gainedCard.type.includes('TREASURE');
+        },
+        triggeredEffectFn: async (triggeredArgs) => {
+          triggeredArgs.logManager.addLogEntry({
+            type: 'cardLikeEffect',
+            playerId: cardEffectArgs.playerId,
+            cardLikeId: project.id,
+            effectText: '+1 Coffer',
+          });
+
+          console.debug(`[guildhall project] granting +1 Coffer to player ${cardEffectArgs.playerId}`);
+          await triggeredArgs.runGameActionDelegate('gainCoffer', {
+            playerId: cardEffectArgs.playerId,
+            count: 1,
+          });
+        },
+      });
+    },
+  },
+  'innovation': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      if (!project) {
+        console.warn('[innovation project] project card not found');
+        return;
+      }
+
+      console.info(`[innovation project] registering gain trigger for player ${cardEffectArgs.playerId}`);
+
+      let usedThisTurn = false;
+
+      cardEffectArgs.reactionManager.registerSystemTemplate(project, 'startTurn', {
+        playerId: cardEffectArgs.playerId,
+        once: false,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
+            return false;
+          }
+          const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
+          if (!owned) {
+            console.debug(`[innovation project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+          }
+          return owned;
+        },
+        triggeredEffectFn: async () => {
+          usedThisTurn = false;
+          console.debug(`[innovation project] reset usage for player ${cardEffectArgs.playerId}`);
+        },
+      });
+
+      cardEffectArgs.reactionManager.registerSystemTemplate(project, 'cardGained', {
+        playerId: cardEffectArgs.playerId,
+        once: false,
+        allowMultipleInstances: false,
+        compulsory: false,
+        condition: (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
+            return false;
+          }
+
+          const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
+          if (!owned) {
+            return false;
+          }
+
+          if (usedThisTurn) {
+            console.debug('[innovation project] already used this turn, skipping');
+            return false;
+          }
+
+          const gainedCard = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
+          console.debug(`[innovation project] evaluating gained card ${gainedCard}`);
+          return gainedCard.type.includes('ACTION');
+        },
+        triggeredEffectFn: async (triggeredArgs) => {
+          const gainedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
+          console.debug(`[innovation project] prompting to play gained card ${gainedCard}`);
+
+          const promptResult = await triggeredArgs.runGameActionDelegate('userPrompt', {
+            playerId: cardEffectArgs.playerId,
+            prompt: `Play ${gainedCard.cardName}?`,
+            actionButtons: [
+              { label: 'NO', action: 1 },
+              { label: 'YES', action: 2 },
+            ],
+            content: {
+              type: 'display-cards',
+              cardIds: [gainedCard.id],
+            },
+          }) as { action: number };
+
+          if (promptResult.action !== 2) {
+            console.debug('[innovation project] player declined to play gained card');
+            return;
+          }
+
+          triggeredArgs.logManager.addLogEntry({
+            type: 'cardLikeEffect',
+            playerId: cardEffectArgs.playerId,
+            cardLikeId: project.id,
+            effectText: 'Play gained Action',
+          });
+
+          console.debug(`[innovation project] playing ${gainedCard}`);
+          await triggeredArgs.runGameActionDelegate('playCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: gainedCard.id,
+            overrides: {
+              actionCost: 0,
+            },
+          });
+
+          usedThisTurn = true;
         },
       });
     },
