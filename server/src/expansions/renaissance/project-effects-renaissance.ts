@@ -1,5 +1,7 @@
 import {CardExpansionModule} from '../../types.ts';
 import {CardId, Match, PlayerId, Project} from 'shared/shared-types';
+import {getCurrentPlayer} from '../../utils/get-current-player.ts';
+import {getTurnPhase} from '../../utils/get-turn-phase.ts';
 
 // Checks whether a player has a cube placed on the given project.
 function isProjectOwned(match: Match, playerId: PlayerId, project: Project) {
@@ -491,6 +493,160 @@ const effectMap: CardExpansionModule = {
             playerId: cardEffectArgs.playerId,
             count: 2,
           });
+        },
+      });
+    },
+  },
+  'exploration': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      if (!project) {
+        console.warn('[exploration project] project card not found');
+        return;
+      }
+
+      console.info(`[exploration project] registering buy-phase triggers for player ${cardEffectArgs.playerId}`);
+
+      let gainedDuringBuyPhase = false;
+
+      cardEffectArgs.reactionManager.registerSystemTemplate(project, 'startTurnPhase', {
+        playerId: cardEffectArgs.playerId,
+        once: false,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: (conditionArgs) => {
+          if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') {
+            return false;
+          }
+          if (getCurrentPlayer(conditionArgs.match).id !== cardEffectArgs.playerId) {
+            return false;
+          }
+          const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
+          if (!owned) {
+            console.debug(`[exploration project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+          }
+          return owned;
+        },
+        triggeredEffectFn: async () => {
+          gainedDuringBuyPhase = false;
+          console.debug(`[exploration project] reset buy-phase gain tracking for player ${cardEffectArgs.playerId}`);
+        },
+      });
+
+      cardEffectArgs.reactionManager.registerSystemTemplate(project, 'cardGained', {
+        playerId: cardEffectArgs.playerId,
+        once: false,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
+            return false;
+          }
+          if (getTurnPhase(conditionArgs.match.turnPhaseIndex) !== 'buy') {
+            return false;
+          }
+          const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
+
+          if (!owned) {
+            return false;
+          }
+
+          return true;
+        },
+        triggeredEffectFn: async (triggeredArgs) => {
+          if (gainedDuringBuyPhase) {
+            console.debug('[exploration project] already recorded a gain this buy phase');
+            return;
+          }
+          gainedDuringBuyPhase = true;
+          const gainedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
+          console.debug(`[exploration project] recorded gain of ${gainedCard} during buy phase`);
+        },
+      });
+
+      cardEffectArgs.reactionManager.registerSystemTemplate(project, 'endTurnPhase', {
+        playerId: cardEffectArgs.playerId,
+        once: false,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
+            return false;
+          }
+
+          if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') {
+            return false;
+          }
+
+          if (gainedDuringBuyPhase) {
+            console.debug('[exploration project] player gained a card during buy phase, skipping reward');
+            return false;
+          }
+
+          const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
+          if (!owned) {
+            console.debug(`[exploration project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+            return false;
+          }
+          return true;
+        },
+        triggeredEffectFn: async (triggeredArgs) => {
+          triggeredArgs.logManager.addLogEntry({
+            type: 'cardLikeEffect',
+            playerId: cardEffectArgs.playerId,
+            cardLikeId: project.id,
+            effectText: '+1 Coffer, +1 Villager',
+          });
+          
+          console.debug(`[exploration project] granting +1 Coffer and +1 Villager to player ${cardEffectArgs.playerId}`);
+          await triggeredArgs.runGameActionDelegate('gainCoffer', {
+            playerId: cardEffectArgs.playerId,
+            count: 1,
+          });
+          await triggeredArgs.runGameActionDelegate('gainVillager', {
+            playerId: cardEffectArgs.playerId,
+            count: 1,
+          });
+        },
+      });
+    },
+  },
+  'fair': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      if (!project) {
+        console.warn('[fair project] project card not found');
+        return;
+      }
+
+      console.info(`[fair project] registering start turn trigger for player ${cardEffectArgs.playerId}`);
+
+      cardEffectArgs.reactionManager.registerSystemTemplate(project, 'startTurn', {
+        playerId: cardEffectArgs.playerId,
+        once: false,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
+            return false;
+          }
+
+          const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
+          if (!owned) {
+            console.debug(`[fair project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+          }
+          return owned;
+        },
+        triggeredEffectFn: async (triggeredArgs) => {
+          triggeredArgs.logManager.addLogEntry({
+            type: 'cardLikeEffect',
+            playerId: cardEffectArgs.playerId,
+            cardLikeId: project.id,
+            effectText: '+1 Buy',
+          });
+
+          console.debug(`[fair project] granting +1 Buy to player ${cardEffectArgs.playerId}`);
+          await triggeredArgs.runGameActionDelegate('gainBuy', { count: 1 });
         },
       });
     },
