@@ -1,4 +1,14 @@
 {
+  "border-guard": {
+    "cardName": "Border Guard",
+    "cost": {
+      "treasure": 2
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+1 Action\nReveal the top 2 cards of your deck. Put one into your hand and discard the other. If both were Actions, take the Lantern or Horn."
+  },
   "flag": {
     "cost": {
       "treasure": 0

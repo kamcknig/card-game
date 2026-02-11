@@ -983,7 +983,6 @@ const expansion: CardExpansionModule = {
             playerId: targetPlayerId,
             prompt: 'Discard a copy of a card in play',
             count: 1,
-            autoSelect: true,
             restrict: eligibleIds,
           }) as CardId[];
           discardId = selectedIds[0];

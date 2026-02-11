@@ -884,7 +884,6 @@ const expansion: CardExpansionModule = {
         restrict: validCards.map((c) => c.id),
         count: 1,
         optional: true,
-        autoSelect: false,
         cancelPrompt: 'NO',
       }) as CardId[];
 
@@ -918,7 +917,6 @@ const expansion: CardExpansionModule = {
               restrict: validCards.map((c) => c.id),
               count: 1,
               optional: false,
-              autoSelect: false,
             },
           ) as CardId[];
 
@@ -1089,7 +1087,6 @@ const expansion: CardExpansionModule = {
         restrict: hand,
         count: discardCount,
         optional: false,
-        autoSelect: discardCount === hand.length,
       }) as CardId[];
       for (const cardId of selectedCardIds) {
         await args.runGameActionDelegate('discardCard', {
@@ -1206,7 +1203,6 @@ const expansion: CardExpansionModule = {
         restrict: hand,
         count: 1,
         optional: false,
-        autoSelect: true,
       }) as CardId[];
 
       if (!selectedCardIds.length) {
@@ -1287,7 +1283,6 @@ const expansion: CardExpansionModule = {
         restrict: goldInHand,
         count: 1,
         optional: true,
-        autoSelect: goldInHand.length === 1,
       }) as CardId[] | null;
 
       if (!selectedGold?.length) {

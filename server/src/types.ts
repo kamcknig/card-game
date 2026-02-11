@@ -42,7 +42,6 @@ export type DistributiveOmit<T, K extends PropertyKey> =
 declare module 'shared/shared-types' {
     interface SelectActionCardArgs {
         restrict: FindCardsFnInput | CardId[];
-        autoSelect?: boolean;
     }
 }
 

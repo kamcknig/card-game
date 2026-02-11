@@ -87,7 +87,6 @@ export const configureArena = (
                 count: 1,
                 optional: true,
                 cancelPrompt: "NO",
-                autoSelect: false,
               },
             ) as CardId[];
 
