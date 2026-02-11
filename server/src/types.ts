@@ -39,12 +39,6 @@ export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
 export type DistributiveOmit<T, K extends PropertyKey> =
     T extends any ? Omit<T, K> : never;
 
-declare module 'shared/shared-types' {
-    interface SelectActionCardArgs {
-        restrict: FindCardsFnInput | CardId[];
-    }
-}
-
 /**
  * A base match configuration that can be used to spread default values.
  *

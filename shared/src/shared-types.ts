@@ -233,6 +233,7 @@ export type LogEntry =
 export interface SelectActionCardArgs {
   count?: CountSpec | number;
   playerId: PlayerId;
+  restrict: FindCardsFnInput | CardId[];
   optional?: boolean;
   prompt: string;
   validPrompt?: string;
