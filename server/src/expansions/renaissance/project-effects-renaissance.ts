@@ -338,6 +338,163 @@ const effectMap: CardExpansionModule = {
       });
     },
   },
+  'city-gate': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      if (!project) {
+        console.warn('[city-gate project] project card not found');
+        return;
+      }
+
+      console.info(`[city-gate project] registering start turn trigger for player ${cardEffectArgs.playerId}`);
+
+      cardEffectArgs.reactionManager.registerSystemTemplate(project, 'startTurn', {
+        playerId: cardEffectArgs.playerId,
+        once: false,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
+            return false;
+          }
+
+          const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
+          if (!owned) {
+            console.debug(`[city-gate project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+          }
+          return owned;
+        },
+        triggeredEffectFn: async (triggeredArgs) => {
+          // Draw first, then topdeck a card from hand.
+          triggeredArgs.logManager.addLogEntry({
+            type: 'cardLikeEffect',
+            playerId: cardEffectArgs.playerId,
+            cardLikeId: project.id,
+            effectText: '+1 Card',
+          });
+
+          console.debug(`[city-gate project] drawing 1 card for player ${cardEffectArgs.playerId}`);
+          await triggeredArgs.runGameActionDelegate('drawCard', {
+            playerId: cardEffectArgs.playerId,
+            count: 1,
+          });
+
+          const hand = triggeredArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+          if (!hand.length) {
+            console.debug('[city-gate project] no cards in hand to topdeck');
+            return;
+          }
+
+          triggeredArgs.logManager.addLogEntry({
+            type: 'cardLikeEffect',
+            playerId: cardEffectArgs.playerId,
+            cardLikeId: project.id,
+            effectText: 'Topdeck a card',
+          });
+
+          console.debug(`[city-gate project] prompting to topdeck from ${hand.length} card(s)`);
+          const selectedCardIds = await triggeredArgs.runGameActionDelegate('selectCard', {
+            playerId: cardEffectArgs.playerId,
+            prompt: 'Put a card from your hand onto your deck',
+            restrict: hand,
+            count: 1,
+          }) as CardId[];
+
+          if (!selectedCardIds.length) {
+            console.warn('[city-gate project] no card selected to topdeck');
+            return;
+          }
+
+          console.debug(`[city-gate project] topdecking ${selectedCardIds[0]}`);
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            cardId: selectedCardIds[0],
+            toPlayerId: cardEffectArgs.playerId,
+            to: { location: 'playerDeck' },
+          });
+        },
+      });
+    },
+  },
+  'crop-rotation': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      if (!project) {
+        console.warn('[crop-rotation project] project card not found');
+        return;
+      }
+
+      console.info(`[crop-rotation project] registering start turn trigger for player ${cardEffectArgs.playerId}`);
+
+      cardEffectArgs.reactionManager.registerSystemTemplate(project, 'startTurn', {
+        playerId: cardEffectArgs.playerId,
+        once: false,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
+            return false;
+          }
+
+          const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
+          if (!owned) {
+            console.debug(`[crop-rotation project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+          }
+          return owned;
+        },
+        triggeredEffectFn: async (triggeredArgs) => {
+          const victoryCards = triggeredArgs.findCards([
+            { location: 'playerHand', playerId: cardEffectArgs.playerId },
+            { cardType: ['VICTORY'] },
+          ]);
+
+          if (!victoryCards.length) {
+            console.debug('[crop-rotation project] no Victory cards in hand to discard');
+            return;
+          }
+
+          console.debug(`[crop-rotation project] prompting discard from ${victoryCards.length} Victory card(s)`);
+          const selectedCardIds = await triggeredArgs.runGameActionDelegate('selectCard', {
+            playerId: cardEffectArgs.playerId,
+            prompt: 'Discard a Victory card for +2 Cards?',
+            restrict: victoryCards.map(card => card.id),
+            count: 1,
+            optional: true,
+          }) as CardId[];
+
+          if (!selectedCardIds.length) {
+            console.debug('[crop-rotation project] player declined to discard a Victory card');
+            return;
+          }
+
+          triggeredArgs.logManager.addLogEntry({
+            type: 'cardLikeEffect',
+            playerId: cardEffectArgs.playerId,
+            cardLikeId: project.id,
+            effectText: 'Discard a Victory card',
+          });
+
+          console.debug(`[crop-rotation project] discarding ${selectedCardIds[0]}`);
+          await triggeredArgs.runGameActionDelegate('discardCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: selectedCardIds[0],
+          });
+
+          triggeredArgs.logManager.addLogEntry({
+            type: 'cardLikeEffect',
+            playerId: cardEffectArgs.playerId,
+            cardLikeId: project.id,
+            effectText: '+2 Cards',
+          });
+
+          console.debug(`[crop-rotation project] drawing 2 cards for player ${cardEffectArgs.playerId}`);
+          await triggeredArgs.runGameActionDelegate('drawCard', {
+            playerId: cardEffectArgs.playerId,
+            count: 2,
+          });
+        },
+      });
+    },
+  },
 };
 
 export default effectMap;
