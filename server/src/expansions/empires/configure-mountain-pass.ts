@@ -1,4 +1,4 @@
-import { ComputedMatchConfiguration, PlayerId } from 'shared/shared-types.ts';
+import { ComputedMatchConfiguration, PlayerId } from 'shared/shared-types';
 import { GameEventRegistrar } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 

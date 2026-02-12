@@ -3,7 +3,7 @@ import { scoringFunctionMap } from '@expansions/scoring-function-map.ts';
 import { expansionLibrary, rawCardLibrary } from '@expansions/expansion-library.ts';
 import { cardLifecycleMap } from '../core/card-lifecycle-map.ts';
 import { CardExpansionModule } from '../types.ts';
-import { CardCost, CardKey, CardNoId, CardType } from 'shared/shared-types.ts';
+import { CardCost, CardKey, CardNoId, CardType } from 'shared/shared-types';
 import { cardActionConditionMapFactory } from '../core/actions/card-action-condition-map-factory.ts';
 import { createCardData, createCardLike } from './create-card-data.ts';
 import { loadEvents } from '../core/events/load-events.ts';

@@ -1,6 +1,6 @@
 import { expansionLibrary } from '../expansion-library.ts';
 import { ExpansionConfiguratorContext } from '../../types.ts';
-import { CardKey } from 'shared/shared-types.ts';
+import { CardKey } from 'shared/shared-types';
 import { getDefaultKingdomSupplySize } from '../../utils/get-default-kingdom-supply-size.ts';
 
 export const configureYoungWitch = (args: ExpansionConfiguratorContext) => {

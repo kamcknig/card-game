@@ -1,4 +1,4 @@
-import { ComputedMatchConfiguration } from 'shared/shared-types.ts';
+import { ComputedMatchConfiguration } from 'shared/shared-types';
 import { GameEventRegistrar } from '../../types.ts';
 
 export const configureTomb = (

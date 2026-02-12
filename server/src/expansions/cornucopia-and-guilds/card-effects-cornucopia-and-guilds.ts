@@ -1,8 +1,8 @@
-import { Card, CardId, CardKey } from 'shared/shared-types.ts';
+import { Card, CardId, CardKey } from 'shared/shared-types';
 import { CardExpansionModule } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
-import { getPlayerStartingFrom } from 'shared/get-player-position-utils.ts';
+import { getPlayerStartingFrom } from '@shared/get-player-position-utils.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';

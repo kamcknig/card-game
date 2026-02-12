@@ -1,4 +1,4 @@
-import { LogEntry, PlayerId } from 'shared/shared-types.ts';
+import { LogEntry, PlayerId } from 'shared/shared-types';
 import { AppSocket, DistributiveOmit } from '../types.ts';
 
 export class LogManager {

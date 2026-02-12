@@ -1,4 +1,4 @@
-import { Card, CardCost, CardId, CardLike, Match, PlayerId } from 'shared/shared-types.ts';
+import { Card, CardCost, CardId, CardLike, Match, PlayerId } from 'shared/shared-types';
 import { MatchCardLibrary } from './match-card-library.ts';
 
 export type CardPriceRule = (

@@ -1,7 +1,7 @@
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { CardExpansionModule } from '../../types.ts';
-import { ActionButtons, Card, CardId, CardKey, PlayerId } from 'shared/shared-types.ts';
+import { ActionButtons, Card, CardId, CardKey, PlayerId } from 'shared/shared-types';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 
 const expansionModule: CardExpansionModule = {

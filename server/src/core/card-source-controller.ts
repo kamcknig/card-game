@@ -1,4 +1,4 @@
-import { CardId, CardLocation, Match } from 'shared/shared-types.ts';
+import { CardId, CardLocation, Match } from 'shared/shared-types';
 
 export class CardSourceController {
   private readonly _sourceMap: Map<string, CardId[]> = new Map();

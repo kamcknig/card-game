@@ -2,7 +2,7 @@ import { ExpansionConfiguratorFactory, GameEventRegistrar } from '../../types.ts
 import { configureReserve } from './configure-reserve.ts';
 import { registerAdventuresTokenDefinitions } from './token-definitions-adventures.ts';
 import { registerAdventuresTokenTriggers } from './token-triggers-adventures.ts';
-import { ComputedMatchConfiguration, TokenId } from 'shared/shared-types.ts';
+import { ComputedMatchConfiguration, TokenId } from 'shared/shared-types';
 import { adventuresTokenIds } from './token-ids-adventures.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 

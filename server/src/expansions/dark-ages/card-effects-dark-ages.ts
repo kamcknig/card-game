@@ -1,4 +1,4 @@
-import { Card, CardId, CardKey, CardType } from 'shared/shared-types.ts';
+import { Card, CardId, CardKey, CardType } from 'shared/shared-types';
 import { CardExpansionModule } from '../../types.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';

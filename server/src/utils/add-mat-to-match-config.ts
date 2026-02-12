@@ -1,4 +1,4 @@
-import { ComputedMatchConfiguration } from 'shared/shared-types.ts';
+import { ComputedMatchConfiguration } from 'shared/shared-types';
 import { InitializeExpansionContext } from '../types.ts';
 
 export const addMatToMatchConfig = (

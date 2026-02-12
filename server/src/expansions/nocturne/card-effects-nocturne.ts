@@ -3,7 +3,7 @@ import { CardId, CardLikeId } from 'shared/shared-types';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
-import { compareCardCosts } from 'shared/compare-card-cost.ts';
+import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';

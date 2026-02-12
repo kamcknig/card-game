@@ -1,4 +1,4 @@
-import { Match } from 'shared/shared-types.ts';
+import { Match } from 'shared/shared-types';
 import { getCardPileKey } from './get-card-pile-key.ts';
 import { FindCardsFn } from '../types.ts';
 

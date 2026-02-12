@@ -1,6 +1,6 @@
 import { CardEffectFunctionContext, CardExpansionModule } from '../../types.ts';
 import { CardId, CardKey, CardLocation, PlayerId } from 'shared/shared-types';
-import { compareCardCosts } from 'shared/compare-card-cost.ts';
+import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
@@ -10,7 +10,7 @@ import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
 import { FortuneMetadata } from '../prosperity/types.ts';
-import { getPlayerStartingFrom } from 'shared/get-player-position-utils.ts';
+import { getPlayerStartingFrom } from '@shared/get-player-position-utils.ts';
 
 type ArchiveEffectContext = Pick<
   CardEffectFunctionContext,

@@ -1,4 +1,4 @@
-import { Card, CardId, CardLike, Event, Landmark, Match, Player, Project } from 'shared/shared-types.ts';
+import { Card, CardId, CardLike, Event, Landmark, Match, Player, Project } from 'shared/shared-types';
 import {
   CardLifecycleEvent,
   CardLifecycleEventArgMap,

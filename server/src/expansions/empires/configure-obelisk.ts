@@ -1,4 +1,4 @@
-import { CardKey, ComputedMatchConfiguration } from 'shared/shared-types.ts';
+import { CardKey, ComputedMatchConfiguration } from 'shared/shared-types';
 import { GameEventRegistrar } from '../../types.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 

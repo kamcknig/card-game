@@ -1,4 +1,4 @@
-import { ComputedMatchConfiguration } from 'shared/shared-types.ts';
+import { ComputedMatchConfiguration } from 'shared/shared-types';
 import { GameEventRegistrar } from '../../types.ts';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
 import { placeVictoryTokensPerPlayer } from './landmark-utils.ts';

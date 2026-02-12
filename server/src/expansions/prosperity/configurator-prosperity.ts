@@ -3,7 +3,7 @@ import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
-import { ComputedMatchConfiguration } from 'shared/shared-types.ts';
+import { ComputedMatchConfiguration } from 'shared/shared-types';
 import { registerProsperityTokenDefinitions } from './token-definitions-prosperity.ts';
 
 const configurator: ExpansionConfiguratorFactory = () => {

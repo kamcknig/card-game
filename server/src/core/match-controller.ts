@@ -9,7 +9,7 @@ import {
   MatchSummary,
   PlayerId,
   ServerListenEvents,
-} from 'shared/shared-types.ts';
+} from 'shared/shared-types';
 import { MatchConfigurator } from './match-configurator.ts';
 import { getCurrentPlayer } from '../utils/get-current-player.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';

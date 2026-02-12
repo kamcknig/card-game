@@ -4,7 +4,7 @@ import { uniqueByProp } from '../../core/match-configurator.ts';
 import { registerNocturneBoonEffects } from './boon-effects-nocturne.ts';
 import { configureWillOWisp } from './configure-will-o-wisp.ts';
 import { ComputedMatchConfiguration } from 'shared/shared-types';
-import { compareCardCosts } from 'shared/compare-card-cost.ts';
+import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { createCard } from '../../utils/create-card.ts';
 import { configureGhost } from './configure-ghost.ts';

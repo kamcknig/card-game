@@ -1,7 +1,7 @@
 import { expansionLibrary } from '@expansions/expansion-library.ts';
 import { createCardLike } from '../../utils/create-card-data.ts';
 import { CardExpansionModule } from '../../types.ts';
-import { EventNoId } from 'shared/shared-types.ts';
+import { EventNoId } from 'shared/shared-types';
 import { eventEffectFactoryMap } from './event-effect-factory-map.ts';
 
 export const loadEvents = async (expansionName: string) => {

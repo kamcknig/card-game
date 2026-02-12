@@ -1,4 +1,4 @@
-import { CardKey } from 'shared/shared-types.ts';
+import { CardKey } from 'shared/shared-types';
 import { GameLifecycleCallbackContext } from '../../types.ts';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
 

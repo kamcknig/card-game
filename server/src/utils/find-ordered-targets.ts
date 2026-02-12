@@ -1,4 +1,4 @@
-import { EffectTarget, Match, Player, PlayerId } from 'shared/shared-types.ts';
+import { EffectTarget, Match, Player, PlayerId } from 'shared/shared-types';
 import { isNull } from 'es-toolkit';
 
 type FindTargetsArgs = {

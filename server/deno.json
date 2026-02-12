@@ -26,6 +26,7 @@
     "semiColons": true
   },
   "imports": {
+    "@shared/": "../shared/src/",
     "@expansions/": "./src/expansions/",
     "@denosaurs/event": "jsr:@denosaurs/event@^2.0.2",
     "@timepp/enhanced-deno-log": "jsr:@timepp/enhanced-deno-log@^0.4.1",
@@ -34,7 +35,6 @@
     "fast-json-patch": "https://esm.sh/v123/fast-json-patch@3.1.1/index.js",
     "lodash-es": "npm:lodash-es@4.17.21",
     "nanostores": "npm:nanostores@0.11.4",
-    "shared/": "../shared/src/",
     "shared/shared-types": "../shared/src/shared-types.ts",
     "socket.io": "https://deno.land/x/socket_io@0.2.1/mod.ts",
     "fuse.js": "npm:fuse.js@7.1.0"

@@ -1,4 +1,4 @@
-import { CardId, PlayerId } from 'shared/shared-types.ts';
+import { CardId, PlayerId } from 'shared/shared-types';
 import { CardExpansionModule, CardLifecycleCallbackContext } from '../../types.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';

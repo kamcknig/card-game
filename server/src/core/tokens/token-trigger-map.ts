@@ -1,4 +1,4 @@
-import { CardId, Match, PlayerId, TokenId } from 'shared/shared-types.ts';
+import { CardId, Match, PlayerId, TokenId } from 'shared/shared-types';
 import { RunGameActionDelegate } from '../../types.ts';
 
 export type TokenCardPlayedContext = {
