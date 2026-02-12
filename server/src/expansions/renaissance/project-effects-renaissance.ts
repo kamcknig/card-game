@@ -1012,6 +1012,12 @@ const effectMap: CardExpansionModule = {
             return false;
           }
 
+          // Ignore trashing caused by Sewers itself.
+          if (conditionArgs.trigger.args.source === project.id) {
+            console.debug('[sewers project] ignoring trash triggered by sewers');
+            return false;
+          }
+
           const hand = conditionArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
           if (!hand.length) {
             console.debug('[sewers project] no cards in hand to trash');
@@ -1052,6 +1058,9 @@ const effectMap: CardExpansionModule = {
           await triggeredArgs.runGameActionDelegate('trashCard', {
             playerId: cardEffectArgs.playerId,
             cardId: selectedCardIds[0],
+          }, {
+            // Mark the source so Sewers can ignore its own trash trigger.
+            loggingContext: { source: project.id }
           });
         },
       });

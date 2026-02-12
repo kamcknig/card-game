@@ -468,6 +468,8 @@ export type TriggerEventTypeContext = {
         cardId: CardId;
         playerId: PlayerId;
         previousLocation: { location: CardLocation; playerId?: PlayerId; };
+        // Optional source card-like for trigger attribution.
+        source?: CardId;
     };
     cardPlayed: { playerId: PlayerId; cardId: CardId; };
     // Triggered at the start of a player's turn

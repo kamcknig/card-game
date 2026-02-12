@@ -1054,12 +1054,14 @@ export class GameActionController implements BaseGameActionDefinitionMap {
 
     console.info(`[trashCard action] trashed ${card}`);
 
+    // Include the source to allow reactions to ignore self-triggered trash effects.
     const trigger: ReactionTrigger = {
       eventType: 'cardTrashed',
       args: {
         playerId: args.playerId,
         cardId: card.id,
-        previousLocation: oldLocation
+        previousLocation: oldLocation,
+        source: context?.loggingContext?.source
       }
     }
     await this.reactionManager.runTrigger({trigger});
