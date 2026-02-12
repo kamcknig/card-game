@@ -1,3 +1,3 @@
 export const prosperityTokenIds = {
-  victory: "prosperity:victory",
+  victory: 'prosperity:victory',
 } as const;

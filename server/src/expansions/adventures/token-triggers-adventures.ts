@@ -6,15 +6,15 @@ export const registerAdventuresTokenTriggers = (): void => {
   registerTokenCardPlayedHandler(adventuresTokenIds.plusAction, async ({ runGameAction }) => {
     await runGameAction('gainAction', { count: 1 });
   });
-  
+
   registerTokenCardPlayedHandler(adventuresTokenIds.plusBuy, async ({ runGameAction }) => {
     await runGameAction('gainBuy', { count: 1 });
   });
-  
+
   registerTokenCardPlayedHandler(adventuresTokenIds.plusCard, async ({ runGameAction, playerId }) => {
     await runGameAction('drawCard', { playerId, count: 1 });
   });
-  
+
   registerTokenCardPlayedHandler(adventuresTokenIds.plusCoin, async ({ runGameAction }) => {
     await runGameAction('gainTreasure', { count: 1 });
   });

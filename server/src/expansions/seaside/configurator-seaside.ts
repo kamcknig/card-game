@@ -13,9 +13,9 @@ const configurator: ExpansionConfiguratorFactory = () => {
         }
       }
     }
-    
+
     return args.config;
-  }
-}
+  };
+};
 
 export default configurator;

@@ -2,12 +2,15 @@ import { CardEffectFunctionContext } from '../types.ts';
 import { PlayerId } from 'shared/shared-types.ts';
 
 // Shared helper context for discard-down-to effects.
-type DiscardDownToContext = Pick<CardEffectFunctionContext, 'cardSourceController' | 'runGameActionDelegate' | 'cardLibrary'>;
+type DiscardDownToContext = Pick<
+  CardEffectFunctionContext,
+  'cardSourceController' | 'runGameActionDelegate' | 'cardLibrary'
+>;
 
 // Force a player to discard down to a target hand size.
 export const discardDownTo = async (
   context: DiscardDownToContext,
-  args: { playerId: PlayerId; targetHandSize: number; prompt?: string; logTag: string; }
+  args: { playerId: PlayerId; targetHandSize: number; prompt?: string; logTag: string },
 ) => {
   // Inspect the current hand size for the target player.
   const hand = context.cardSourceController.getSource('playerHand', args.playerId);

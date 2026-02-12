@@ -26,7 +26,7 @@ const registerLostInTheWoods = (registerStateEffect: StateEffectRegistrar) => {
     cardId,
     cardSourceController,
   }) => {
-    const state = match.states?.cards?.find(candidate => candidate.id === cardId);
+    const state = match.states?.cards?.find((candidate) => candidate.id === cardId);
     if (!state) {
       console.warn('[lost-in-the-woods state] state card not found');
       return;
@@ -108,7 +108,7 @@ const registerDeluded = (registerStateEffect: StateEffectRegistrar) => {
     cardLibrary,
     cardPriceController,
   }) => {
-    const state = match.states?.cards?.find(candidate => candidate.id === cardId);
+    const state = match.states?.cards?.find((candidate) => candidate.id === cardId);
     if (!state) {
       console.warn('[deluded state] state card not found');
       return;
@@ -200,7 +200,7 @@ const registerEnvious = (registerStateEffect: StateEffectRegistrar) => {
     cardId,
     cardLibrary,
   }) => {
-    const state = match.states?.cards?.find(candidate => candidate.id === cardId);
+    const state = match.states?.cards?.find((candidate) => candidate.id === cardId);
     if (!state) {
       console.warn('[envious state] state card not found');
       return;

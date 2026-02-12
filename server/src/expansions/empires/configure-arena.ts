@@ -1,8 +1,8 @@
-import { GameEventRegistrar } from "../../types.ts";
-import {CardId, ComputedMatchConfiguration} from 'shared/shared-types';
-import { prosperityTokenIds } from "../prosperity/token-prosperity-ids.ts";
-import {getTurnPhase} from '../../utils/get-turn-phase.ts';
-import {getCurrentPlayer} from '../../utils/get-current-player.ts';
+import { GameEventRegistrar } from '../../types.ts';
+import { CardId, ComputedMatchConfiguration } from 'shared/shared-types';
+import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
+import { getTurnPhase } from '../../utils/get-turn-phase.ts';
+import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { placeVictoryTokensPerPlayer } from './landmark-utils.ts';
 
 export const configureArena = (
@@ -10,12 +10,12 @@ export const configureArena = (
   config: ComputedMatchConfiguration,
 ) => {
   const hasArena = (config.landmarks ?? []).some(
-    (landmark) => landmark.cardKey === "arena",
+    (landmark) => landmark.cardKey === 'arena',
   );
 
   console.info(`[empires configurator] setting up arena landmark handlers`);
 
-  registrar("onGameStart", async (args) => {
+  registrar('onGameStart', async (args) => {
     // Arena setup: put 6 VP tokens per player on the landmark using the shared helper.
     await placeVictoryTokensPerPlayer(args, {
       landmarkKey: 'arena',
@@ -25,7 +25,7 @@ export const configureArena = (
 
     // Find the Arena landmark instance for reaction registration.
     const arenaLandmark = args.match.landmarks.find(
-      (landmark) => landmark.cardKey === "arena",
+      (landmark) => landmark.cardKey === 'arena',
     );
     if (!arenaLandmark) {
       console.warn(
@@ -36,18 +36,18 @@ export const configureArena = (
 
     // Register the start-of-buy-phase reaction for each player.
     for (const player of args.match.players) {
-        args.reactionManager.registerReactionTemplate(
-          arenaLandmark,
-          "startTurnPhase",
-          {
-            playerId: player.id,
-            once: false,
-            allowMultipleInstances: true,
-            compulsory: false,
-            condition: async (conditionArgs) => {
+      args.reactionManager.registerReactionTemplate(
+        arenaLandmark,
+        'startTurnPhase',
+        {
+          playerId: player.id,
+          once: false,
+          allowMultipleInstances: true,
+          compulsory: false,
+          condition: async (conditionArgs) => {
             // Only react at the start of the current player's buy phase.
             if (
-              getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== "buy"
+              getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy'
             ) {
               return false;
             }
@@ -56,8 +56,8 @@ export const configureArena = (
             }
             // Only offer the reaction if the player has an Action to discard.
             const actionCards = conditionArgs.findCards([
-              { location: "playerHand", playerId: player.id },
-              { cardType: "ACTION" },
+              { location: 'playerHand', playerId: player.id },
+              { cardType: 'ACTION' },
             ]);
             return actionCards.length > 0;
           },
@@ -68,8 +68,8 @@ export const configureArena = (
 
             // Find Action cards in hand for the discard choice.
             const actionCards = triggeredArgs.findCards([
-              { location: "playerHand", playerId: player.id },
-              { cardType: "ACTION" },
+              { location: 'playerHand', playerId: player.id },
+              { cardType: 'ACTION' },
             ]);
             if (!actionCards.length) {
               console.debug(
@@ -79,14 +79,14 @@ export const configureArena = (
             }
 
             const selectedCardIds = await triggeredArgs.runGameActionDelegate(
-              "selectCard",
+              'selectCard',
               {
                 playerId: player.id,
-                prompt: "Discard an Action card for Arena?",
+                prompt: 'Discard an Action card for Arena?',
                 restrict: actionCards.map((card) => card.id),
                 count: 1,
                 optional: true,
-                cancelPrompt: "NO",
+                cancelPrompt: 'NO',
               },
             ) as CardId[];
 
@@ -104,7 +104,7 @@ export const configureArena = (
             console.info(
               `[arena startTurnPhase] discarding ${selectedCard} for 2 VP`,
             );
-            await triggeredArgs.runGameActionDelegate("discardCard", {
+            await triggeredArgs.runGameActionDelegate('discardCard', {
               playerId: player.id,
               cardId: selectedCard.id,
             });
@@ -116,8 +116,8 @@ export const configureArena = (
               triggeredArgs.match.tokens ?? {},
             ).filter((token) =>
               token.tokenId === victoryTokenId &&
-              token.location.type === "supplyPile" &&
-              token.location.cardKey === "arena"
+              token.location.type === 'supplyPile' &&
+              token.location.cardKey === 'arena'
             ).sort((a, b) => a.id.localeCompare(b.id));
 
             if (!tokensOnArena.length) {
@@ -132,9 +132,9 @@ export const configureArena = (
               `[arena startTurnPhase] moving ${tokensToMove.length} VP token(s) to player ${player.id}`,
             );
             for (const token of tokensToMove) {
-              await triggeredArgs.runGameActionDelegate("moveToken", {
+              await triggeredArgs.runGameActionDelegate('moveToken', {
                 tokenInstanceId: token.id,
-                location: { type: "player", playerId: player.id },
+                location: { type: 'player', playerId: player.id },
                 ownerId: player.id,
               });
             }

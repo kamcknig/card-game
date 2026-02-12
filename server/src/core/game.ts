@@ -1,4 +1,4 @@
-import {AppSocket, MatchBaseConfiguration} from '../types.ts';
+import { AppSocket, MatchBaseConfiguration } from '../types.ts';
 import {
   ArtifactNoId,
   Card,
@@ -13,31 +13,31 @@ import {
   PlayerId,
   ProjectNoId,
 } from 'shared/shared-types';
-import {createComputerPlayer, createNewPlayer} from '../utils/create-new-player.ts';
-import {io} from '../server.ts';
-import {MatchController} from './match-controller.ts';
-import {expansionLibrary, rawCardLibrary} from '@expansions/expansion-library.ts';
-import {applyPatch, compare} from 'fast-json-patch';
-import Fuse, {IFuseOptions} from 'fuse.js';
-import {fisherYatesShuffle} from '../utils/fisher-yates-shuffler.ts';
+import { createComputerPlayer, createNewPlayer } from '../utils/create-new-player.ts';
+import { io } from '../server.ts';
+import { MatchController } from './match-controller.ts';
+import { expansionLibrary, rawCardLibrary } from '@expansions/expansion-library.ts';
+import { applyPatch, compare } from 'fast-json-patch';
+import Fuse, { IFuseOptions } from 'fuse.js';
+import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
 
 const defaultMatchConfiguration: MatchConfiguration = {
   expansions: [
     {
       'title': 'Base',
       'name': 'base-v2',
-      'order': 1
+      'order': 1,
     },
     {
       'title': 'Intrigue',
       'name': 'intrigue',
-      'order': 2
+      'order': 2,
     },
     {
       'title': 'Seaside',
       'name': 'seaside',
-      'order': 3
-    }
+      'order': 3,
+    },
   ],
   preselectedKingdoms: [],
   bannedKingdoms: [],
@@ -57,7 +57,7 @@ const defaultMatchConfiguration: MatchConfiguration = {
   states: [],
   // Default artifacts selection for new lobbies.
   artifacts: [],
-  playerStartingHand: { ...MatchBaseConfiguration.playerStartingHand }
+  playerStartingHand: { ...MatchBaseConfiguration.playerStartingHand },
 };
 
 export class Game {
@@ -90,7 +90,9 @@ export class Game {
     const endOnNoHumansEnv = Deno.env.get('END_MATCH_ON_NO_HUMANS') ?? 'true';
     this._endMatchWhenNoHumans = endOnNoHumansEnv.toLowerCase() !== 'false';
     try {
-      defaultMatchConfiguration.bannedKingdoms = JSON.parse(Deno.readTextFileSync('./banned-kingdoms.json')) as CardNoId[];
+      defaultMatchConfiguration.bannedKingdoms = JSON.parse(
+        Deno.readTextFileSync('./banned-kingdoms.json'),
+      ) as CardNoId[];
     } catch (e) {
       console.warn(`Couldn't read banned-kingdoms.json`);
       console.error(e);
@@ -101,14 +103,14 @@ export class Game {
       console.info(`[game] loading preselected kingdoms from disk`);
       const preselectedKingdoms = JSON.parse(Deno.readTextFileSync('./preselected-kingdoms.json')) as {
         name: string;
-        cards: CardNoId[]
+        cards: CardNoId[];
       }[];
 
       if (preselectedKingdoms?.length > 0) {
         console.debug(preselectedKingdoms);
       }
 
-      defaultMatchConfiguration.preselectedKingdoms = preselectedKingdoms.map(supply => supply.cards[0]);
+      defaultMatchConfiguration.preselectedKingdoms = preselectedKingdoms.map((supply) => supply.cards[0]);
     } catch (e) {
       console.warn(`Couldn't read preselected-kingdoms.json`);
       console.error(e);
@@ -171,9 +173,9 @@ export class Game {
   private createNewMatch() {
     this._matchController = new MatchController(
       this._socketMap,
-      (searchTerm: string) => this.onSearchCards(searchTerm)
+      (searchTerm: string) => this.onSearchCards(searchTerm),
     );
-    this._matchConfiguration = { ...structuredClone(defaultMatchConfiguration) }
+    this._matchConfiguration = { ...structuredClone(defaultMatchConfiguration) };
   }
 
   private initializeFuseSearch() {
@@ -191,7 +193,7 @@ export class Game {
       ignoreDiacritics: true,
       minMatchCharLength: 1,
       distance: 2,
-      keys: ['cardName']
+      keys: ['cardName'],
     };
     this._fuse = new Fuse(libraryArr, fuseOptions, index);
   }
@@ -206,14 +208,14 @@ export class Game {
     }
 
     const eventLibraryArr = Object.values(expansionLibrary)
-      .flatMap(expansion => Object.values(expansion.events ?? {}));
+      .flatMap((expansion) => Object.values(expansion.events ?? {}));
     const index = Fuse.createIndex(['cardName'], eventLibraryArr);
 
     const fuseOptions: IFuseOptions<EventNoId> = {
       ignoreDiacritics: true,
       minMatchCharLength: 1,
       distance: 2,
-      keys: ['cardName']
+      keys: ['cardName'],
     };
     this._eventFuse = new Fuse(eventLibraryArr, fuseOptions, index);
   }
@@ -228,14 +230,14 @@ export class Game {
     }
 
     const landmarkLibraryArr = Object.values(expansionLibrary)
-      .flatMap(expansion => Object.values(expansion.landmarks ?? {}));
+      .flatMap((expansion) => Object.values(expansion.landmarks ?? {}));
     const index = Fuse.createIndex(['cardName'], landmarkLibraryArr);
 
     const fuseOptions: IFuseOptions<LandmarkNoId> = {
       ignoreDiacritics: true,
       minMatchCharLength: 1,
       distance: 2,
-      keys: ['cardName']
+      keys: ['cardName'],
     };
     this._landmarkFuse = new Fuse(landmarkLibraryArr, fuseOptions, index);
   }
@@ -250,14 +252,14 @@ export class Game {
     }
 
     const artifactLibraryArr = Object.values(expansionLibrary)
-      .flatMap(expansion => Object.values(expansion.artifacts ?? {}));
+      .flatMap((expansion) => Object.values(expansion.artifacts ?? {}));
     const index = Fuse.createIndex(['cardName'], artifactLibraryArr);
 
     const fuseOptions: IFuseOptions<ArtifactNoId> = {
       ignoreDiacritics: true,
       minMatchCharLength: 1,
       distance: 2,
-      keys: ['cardName']
+      keys: ['cardName'],
     };
     this._artifactFuse = new Fuse(artifactLibraryArr, fuseOptions, index);
   }
@@ -272,45 +274,45 @@ export class Game {
     }
 
     const projectLibraryArr = Object.values(expansionLibrary)
-      .flatMap(expansion => Object.values(expansion.projects ?? {}));
+      .flatMap((expansion) => Object.values(expansion.projects ?? {}));
     const index = Fuse.createIndex(['cardName'], projectLibraryArr);
 
     const fuseOptions: IFuseOptions<ProjectNoId> = {
       ignoreDiacritics: true,
       minMatchCharLength: 1,
       distance: 2,
-      keys: ['cardName']
+      keys: ['cardName'],
     };
     this._projectFuse = new Fuse(projectLibraryArr, fuseOptions, index);
   }
 
   private onSearchCards = (searchStr: string) => {
     const results = this._fuse?.search(searchStr);
-    return results?.map(r => r.item) ?? [];
+    return results?.map((r) => r.item) ?? [];
   };
 
   // Returns event search results for the given query.
   private onSearchEvents = (searchStr: string) => {
     const results = this._eventFuse?.search(searchStr);
-    return results?.map(r => r.item) ?? [];
+    return results?.map((r) => r.item) ?? [];
   };
 
   // Returns landmark search results for the given query.
   private onSearchLandmarks = (searchStr: string) => {
     const results = this._landmarkFuse?.search(searchStr);
-    return results?.map(r => r.item) ?? [];
+    return results?.map((r) => r.item) ?? [];
   };
 
   // Returns artifact search results for the given query.
   private onSearchArtifacts = (searchStr: string) => {
     const results = this._artifactFuse?.search(searchStr);
-    return results?.map(r => r.item) ?? [];
+    return results?.map((r) => r.item) ?? [];
   };
 
   // Returns project search results for the given query.
   private onSearchProjects = (searchStr: string) => {
     const results = this._projectFuse?.search(searchStr);
-    return results?.map(r => r.item) ?? [];
+    return results?.map((r) => r.item) ?? [];
   };
 
   public expansionLoaded(expansion: ExpansionListElement) {
@@ -352,7 +354,7 @@ export class Game {
     let player = this.players.find((p) => p.sessionId === sessionId);
 
     if (this.matchStarted && !player) {
-      console.info(`[game] match has already started, and player not found in game, rejecting`,);
+      console.info(`[game] match has already started, and player not found in game, rejecting`);
       socket.disconnect();
       return;
     }
@@ -362,8 +364,7 @@ export class Game {
       player.socketId = socket.id;
       player.sessionId = sessionId;
       player.connected = true;
-    }
-    else {
+    } else {
       player = createNewPlayer(sessionId, socket);
       this.players.push(player);
     }
@@ -419,13 +420,12 @@ export class Game {
       this._matchController?.playerReconnected(player.id, socket);
       this.registerRemovalVoteHandler(socket, player.id);
       // Resume flow if no human players remain disconnected.
-      const hasDisconnectedHuman = this.players.some(p => !p.connected && !p.isComputer);
+      const hasDisconnectedHuman = this.players.some((p) => !p.connected && !p.isComputer);
       if (!hasDisconnectedHuman) {
         void this._matchController?.runGameAction('checkForRemainingPlayerActions');
       }
-    }
-    else {
-      console.info(`[game] not yet started, sending player to match configuration`,);
+    } else {
+      console.info(`[game] not yet started, sending player to match configuration`);
       socket.emit(
         'expansionList',
         this._availableExpansion.sort((a, b) => a.order - b.order),
@@ -457,8 +457,8 @@ export class Game {
 
     const hasConnectedHuman = this.players.some((p) => p.connected && !p.isComputer);
     if (!hasConnectedHuman && this._endMatchWhenNoHumans) {
-      console.log('[game] no human players left in game, clearing game state completely',);
-      this.clearMatch()
+      console.log('[game] no human players left in game, clearing game state completely');
+      this.clearMatch();
       return;
     }
 
@@ -471,7 +471,7 @@ export class Game {
       this._socketMap.get(player.id)?.off('searchProjects');
       this._socketMap.get(player.id)?.off('addComputerPlayer');
 
-      const replacement = this.players.find(p => p.connected && !p.isComputer);
+      const replacement = this.players.find((p) => p.connected && !p.isComputer);
       if (replacement) {
         this.owner = replacement;
         io.in('game').emit('gameOwnerUpdated', replacement.id);
@@ -495,7 +495,10 @@ export class Game {
           this._socketMap.get(playerId)?.emit('searchProjectResponse', this.onSearchProjects(searchTerm));
         });
         this._socketMap.get(replacement.id)?.on('matchConfigurationUpdated', this.onMatchConfigurationUpdated);
-        this._socketMap.get(replacement.id)?.on('addComputerPlayer', (count?: number) => this.onAddComputerPlayer(replacement.id, count));
+        this._socketMap.get(replacement.id)?.on(
+          'addComputerPlayer',
+          (count?: number) => this.onAddComputerPlayer(replacement.id, count),
+        );
       }
     }
 
@@ -522,7 +525,7 @@ export class Game {
     this.owner = undefined;
     this.matchStarted = false;
     this.createNewMatch();
-  }
+  };
 
   private onMatchConfigurationUpdated = async (newConfig: MatchConfiguration) => {
     console.info(`[game] received expansionSelected socket event`);
@@ -531,7 +534,7 @@ export class Game {
     const currentConfig = structuredClone(this._matchConfiguration ?? {}) as MatchConfiguration;
 
     const newExpansions = newConfig.expansions.filter(
-      (e) => currentConfig?.expansions?.findIndex(curr => curr.name === e.name) === -1,
+      (e) => currentConfig?.expansions?.findIndex((curr) => curr.name === e.name) === -1,
     );
 
     const expansionsToRemove: string[] = [];
@@ -542,32 +545,31 @@ export class Game {
       let configModule = undefined;
 
       try {
-        configModule =
-          (await import(`../expansions/${expansion.name}/configuration-${expansion.name}.json`, {
-            with: { type: 'json' },
-          }))?.default;
+        configModule = (await import(`../expansions/${expansion.name}/configuration-${expansion.name}.json`, {
+          with: { type: 'json' },
+        }))?.default;
       } catch (e) {
         // nothing
       }
 
       if (!configModule) {
-        console.warn(`[game] could not find config module for expansion '${expansion.name}'`,);
+        console.warn(`[game] could not find config module for expansion '${expansion.name}'`);
         continue;
       }
 
       if (!configModule.mutuallyExclusiveExpansions) {
-        console.debug(`[game] module for expansion '${expansion.name}' contains no mutually exclusive expansions`,);
+        console.debug(`[game] module for expansion '${expansion.name}' contains no mutually exclusive expansions`);
         continue;
       }
 
-      console.info(`[game] '${expansion.name}' is mutually exclusive with ${configModule.mutuallyExclusiveExpansions}`,);
+      console.info(`[game] '${expansion.name}' is mutually exclusive with ${configModule.mutuallyExclusiveExpansions}`);
 
       for (const exclusiveExpansion of configModule.mutuallyExclusiveExpansions) {
         // Compare by name because mutuallyExclusiveExpansions are string keys.
         const hasExclusiveExpansion = currentConfig.expansions
-          .some(currentExpansion => currentExpansion.name === exclusiveExpansion);
+          .some((currentExpansion) => currentExpansion.name === exclusiveExpansion);
         if (hasExclusiveExpansion && !expansionsToRemove.includes(exclusiveExpansion)) {
-          console.info(`[game] removing expansion ${exclusiveExpansion} as it is not allowed with ${expansion}`,);
+          console.info(`[game] removing expansion ${exclusiveExpansion} as it is not allowed with ${expansion}`);
           expansionsToRemove.push(exclusiveExpansion);
         }
       }
@@ -576,7 +578,7 @@ export class Game {
     if (expansionsToRemove.length) {
       // Enforce mutual exclusivity by filtering out disallowed expansion names.
       newConfig.expansions = newConfig.expansions
-        .filter(expansion => !expansionsToRemove.includes(expansion.name));
+        .filter((expansion) => !expansionsToRemove.includes(expansion.name));
     }
 
     const kingdomPatch = compare(currentConfig.kingdomSupply, newConfig.kingdomSupply);
@@ -615,9 +617,9 @@ export class Game {
     const patch = compare(currentConfig, newConfig);
 
     if (patch.length) {
-      applyPatch(this._matchConfiguration, patch)
-      defaultMatchConfiguration.preselectedKingdoms = newConfig.kingdomSupply.map(supply => supply.cards[0]);
-      this._matchConfiguration!.preselectedKingdoms = newConfig.kingdomSupply.map(supply => supply.cards[0])
+      applyPatch(this._matchConfiguration, patch);
+      defaultMatchConfiguration.preselectedKingdoms = newConfig.kingdomSupply.map((supply) => supply.cards[0]);
+      this._matchConfiguration!.preselectedKingdoms = newConfig.kingdomSupply.map((supply) => supply.cards[0]);
       // lobby phase – raw object still useful for the config screen
       io.in('game').emit('matchConfigurationUpdated', this._matchConfiguration!);
     }
@@ -633,8 +635,7 @@ export class Game {
     if (player) {
       player.name = name;
       console.info(`[game] ${player} name updated to '${name}'`);
-    }
-    else {
+    } else {
       console.info(`[game] player ${playerId} not found`);
     }
 
@@ -645,7 +646,7 @@ export class Game {
     const player = this.players.find((player) => player.id === playerId);
 
     if (!player) {
-      console.warn(`[game] received player ready event from ${playerId} but could not find Player object`,);
+      console.warn(`[game] received player ready event from ${playerId} but could not find Player object`);
       return;
     }
 
@@ -706,13 +707,13 @@ export class Game {
     const colors = ['#10FF19', '#3c69ff', '#FF0BF2', '#FFF114', '#FF1F11', '#FF9900'];
     const players = fisherYatesShuffle(
       this.players
-        .filter(p => p.connected)
+        .filter((p) => p.connected)
         .map((p, idx) => {
           // Keep computer players ready to avoid blocking match start.
           p.ready = p.isComputer;
-          p.color = colors[idx]
+          p.color = colors[idx];
           return p;
-        })
+        }),
     );
 
     // Lock in turn order for the active match.
@@ -727,7 +728,7 @@ export class Game {
         ...structuredClone(defaultMatchConfiguration),
         ...this._matchConfiguration,
         players,
-      } as MatchConfiguration
+      } as MatchConfiguration,
     );
 
     // Register removal vote handlers once the match is active.
@@ -749,30 +750,30 @@ export class Game {
     // Only allow voting for the current pending target.
     if (this.getPendingRemovalPlayerId() !== targetPlayerId) return;
 
-    const voter = this.players.find(p => p.id === voterId);
-    const target = this.players.find(p => p.id === targetPlayerId);
+    const voter = this.players.find((p) => p.id === voterId);
+    const target = this.players.find((p) => p.id === targetPlayerId);
     if (!voter || !target) return;
     if (voter.isComputer || !voter.connected) return;
     if (target.isComputer || target.connected) return;
 
-    const connectedHumans = this.players.filter(p => p.connected && !p.isComputer && p.id !== targetPlayerId);
+    const connectedHumans = this.players.filter((p) => p.connected && !p.isComputer && p.id !== targetPlayerId);
     if (!connectedHumans.length) return;
 
     const votes = this._removalVotes.get(targetPlayerId) ?? new Set<PlayerId>();
     votes.add(voterId);
     this._removalVotes.set(targetPlayerId, votes);
 
-    const allVoted = connectedHumans.every(p => votes.has(p.id));
+    const allVoted = connectedHumans.every((p) => votes.has(p.id));
     if (!allVoted) return;
 
     // Remove the player from the match and resume play.
-    this.players = this.players.filter(p => p.id !== targetPlayerId);
+    this.players = this.players.filter((p) => p.id !== targetPlayerId);
     this._socketMap.delete(targetPlayerId);
     this._matchController?.removePlayerFromMatch(targetPlayerId);
     io.in('game').emit('setPlayerList', this.players);
 
     if (this.owner?.id === targetPlayerId) {
-      const replacement = this.players.find(p => p.connected && !p.isComputer);
+      const replacement = this.players.find((p) => p.connected && !p.isComputer);
       if (replacement) {
         this.owner = replacement;
         io.in('game').emit('gameOwnerUpdated', replacement.id);
@@ -799,7 +800,7 @@ export class Game {
 
   // Removes a player from the pending queue and clears their votes.
   private removePendingRemovalPlayer(playerId: PlayerId) {
-    this._pendingRemovalQueue = this._pendingRemovalQueue.filter(id => id !== playerId);
+    this._pendingRemovalQueue = this._pendingRemovalQueue.filter((id) => id !== playerId);
     this._removalVotes.delete(playerId);
     this.sortPendingRemovalQueue();
   }
@@ -808,10 +809,10 @@ export class Game {
   private sortPendingRemovalQueue() {
     const disconnectedHumans = new Set(
       this.players
-        .filter(p => !p.connected && !p.isComputer)
-        .map(p => p.id)
+        .filter((p) => !p.connected && !p.isComputer)
+        .map((p) => p.id),
     );
-    this._pendingRemovalQueue = this._pendingRemovalQueue.filter(id => disconnectedHumans.has(id));
+    this._pendingRemovalQueue = this._pendingRemovalQueue.filter((id) => disconnectedHumans.has(id));
     const order = new Map(this.players.map((p, idx) => [p.id, idx]));
     this._pendingRemovalQueue.sort((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0));
   }

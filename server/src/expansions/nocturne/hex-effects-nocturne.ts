@@ -52,7 +52,7 @@ const registerBadOmens = (registerHexEffect: HexEffectRegistrar) => {
     }
 
     const discard = cardSourceController.getSource('playerDiscard', playerId);
-    const copperIds = discard.filter(cardId => cardLibrary.getCard(cardId).cardKey === 'copper');
+    const copperIds = discard.filter((cardId) => cardLibrary.getCard(cardId).cardKey === 'copper');
 
     if (copperIds.length < 1) {
       console.debug('[bad-omens hex] no Copper cards available, revealing discard');
@@ -132,11 +132,11 @@ const registerFamine = (registerHexEffect: HexEffectRegistrar) => {
     for (const revealId of revealedIds) {
       await runGameActionDelegate('revealCard', {
         playerId,
-        cardId: revealId
+        cardId: revealId,
       });
     }
 
-    const actionIds = revealedIds.filter(cardId => cardLibrary.getCard(cardId).type.includes('ACTION'));
+    const actionIds = revealedIds.filter((cardId) => cardLibrary.getCard(cardId).type.includes('ACTION'));
     console.debug(`[famine hex] discarding ${actionIds.length} Action card(s)`);
 
     for (const cardId of actionIds) {
@@ -160,7 +160,7 @@ const registerFear = (registerHexEffect: HexEffectRegistrar) => {
       return;
     }
 
-    const eligibleIds = hand.filter(cardId => {
+    const eligibleIds = hand.filter((cardId) => {
       const card = cardLibrary.getCard(cardId);
       return card.type.includes('ACTION') || card.type.includes('TREASURE');
     });
@@ -308,8 +308,8 @@ const registerLocusts = (registerHexEffect: HexEffectRegistrar) => {
     const trashedCost = cardPriceController.applyRules(trashedCard, { playerId }).cost;
     const eligibleCards = findCards([
       { location: ['basicSupply', 'kingdomSupply'] },
-    ]).filter(card => {
-      if (!card.type.some(type => trashedCard.type.includes(type))) {
+    ]).filter((card) => {
+      if (!card.type.some((type) => trashedCard.type.includes(type))) {
         return false;
       }
       const candidateCost = cardPriceController.applyRules(card, { playerId }).cost;
@@ -325,7 +325,7 @@ const registerLocusts = (registerHexEffect: HexEffectRegistrar) => {
       playerId,
       prompt: 'Gain a cheaper card sharing a type',
       count: 1,
-      restrict: eligibleCards.map(card => card.id),
+      restrict: eligibleCards.map((card) => card.id),
     }) as CardId[];
 
     const selectedId = selectedIds[0];
@@ -413,37 +413,40 @@ const registerPoverty = (registerHexEffect: HexEffectRegistrar) => {
 
 // Registers War hex effect logic.
 const registerWar = (registerHexEffect: HexEffectRegistrar) => {
-  registerHexEffect('war', async ({ playerId, cardSourceController, cardLibrary, cardPriceController, runGameActionDelegate }) => {
-    const deck = cardSourceController.getSource('playerDeck', playerId);
-    if (!deck.length) {
-      console.debug('[war hex] no cards in deck to reveal');
-      return;
-    }
-
-    while (deck.length > 0) {
-      const topCardId = deck[deck.length - 1];
-      const card = cardLibrary.getCard(topCardId);
-      const cost = cardPriceController.applyRules(card, { playerId }).cost;
-      const matchesCost = (cost.treasure === 3 || cost.treasure === 4)
-        && (cost.potion ?? 0) === 0
-        && (cost.debt ?? 0) === 0;
-
-      if (matchesCost) {
-        console.debug(`[war hex] trashing ${card}`);
-        await runGameActionDelegate('trashCard', {
-          playerId,
-          cardId: topCardId,
-        });
+  registerHexEffect(
+    'war',
+    async ({ playerId, cardSourceController, cardLibrary, cardPriceController, runGameActionDelegate }) => {
+      const deck = cardSourceController.getSource('playerDeck', playerId);
+      if (!deck.length) {
+        console.debug('[war hex] no cards in deck to reveal');
         return;
       }
 
-      console.debug(`[war hex] discarding ${card}`);
-      await runGameActionDelegate('discardCard', {
-        playerId,
-        cardId: topCardId,
-      });
-    }
+      while (deck.length > 0) {
+        const topCardId = deck[deck.length - 1];
+        const card = cardLibrary.getCard(topCardId);
+        const cost = cardPriceController.applyRules(card, { playerId }).cost;
+        const matchesCost = (cost.treasure === 3 || cost.treasure === 4) &&
+          (cost.potion ?? 0) === 0 &&
+          (cost.debt ?? 0) === 0;
 
-    console.debug('[war hex] no eligible card found, discarded entire deck');
-  });
+        if (matchesCost) {
+          console.debug(`[war hex] trashing ${card}`);
+          await runGameActionDelegate('trashCard', {
+            playerId,
+            cardId: topCardId,
+          });
+          return;
+        }
+
+        console.debug(`[war hex] discarding ${card}`);
+        await runGameActionDelegate('discardCard', {
+          playerId,
+          cardId: topCardId,
+        });
+      }
+
+      console.debug('[war hex] no eligible card found, discarded entire deck');
+    },
+  );
 };

@@ -32,7 +32,6 @@ export const registerNocturneBoonEffects = (registerBoonEffect: BoonEffectRegist
 // Registers The Earth's Gift boon effect logic.
 const registerEarthsGift = (registerBoonEffect: BoonEffectRegistrar) => {
   registerBoonEffect('the-earths-gift', async ({ playerId, runGameActionDelegate, cardLibrary, findCards }) => {
-
     // Determine if the player has any Treasures to discard.
     const treasuresInHand = findCards([
       { location: 'playerHand', playerId },
@@ -104,13 +103,12 @@ const registerFieldsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     reactionManager,
     cardId,
   }) => {
-
     // Apply the immediate +1 Action and +1 Treasure.
     await runGameActionDelegate('gainAction', { count: 1 });
     await runGameActionDelegate('gainTreasure', { count: 1 });
 
     // Resolve the boon instance for set-aside tracking.
-    const boon = match.boons.cards.find(candidate => candidate.id === cardId);
+    const boon = match.boons.cards.find((candidate) => candidate.id === cardId);
     if (!boon) {
       console.warn(`[the-fields-gift boon] could not find boon instance ${cardId}`);
       return;
@@ -150,7 +148,6 @@ const registerFlamesGift = (registerBoonEffect: BoonEffectRegistrar) => {
     cardLibrary,
     findCards,
   }) => {
-
     const handCards = findCards({ location: 'playerHand', playerId });
     if (handCards.length < 1) {
       console.info('[the-flames-gift boon] no cards in hand, skipping');
@@ -190,13 +187,12 @@ const registerForestsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     reactionManager,
     cardId,
   }) => {
-
     // Apply the immediate +1 Buy and +1 Treasure.
     await runGameActionDelegate('gainBuy', { count: 1 });
     await runGameActionDelegate('gainTreasure', { count: 1 });
 
     // Resolve the boon instance for set-aside tracking.
-    const boon = match.boons.cards.find(candidate => candidate.id === cardId);
+    const boon = match.boons.cards.find((candidate) => candidate.id === cardId);
     if (!boon) {
       console.warn(`[the-forests-gift boon] could not find boon instance ${cardId}`);
       return;
@@ -235,14 +231,13 @@ const registerMoonsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     runGameActionDelegate,
     findCards,
   }) => {
-
     const discardCards = findCards({ location: 'playerDiscard', playerId });
     if (discardCards.length < 1) {
       console.info('[the-moons-gift boon] no cards in discard, skipping');
       return;
     }
 
-    const discardIds = discardCards.map(card => card.id);
+    const discardIds = discardCards.map((card) => card.id);
     const selectionResult = await runGameActionDelegate('userPrompt', {
       prompt: 'You may put a card from your discard onto your deck',
       playerId: playerId,
@@ -276,7 +271,6 @@ const registerMountainsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     runGameActionDelegate,
     findCards,
   }) => {
-
     const silverCards = findCards([
       { location: 'basicSupply' },
       { cardKeys: 'silver' },
@@ -307,9 +301,8 @@ const registerRiversGift = (registerBoonEffect: BoonEffectRegistrar) => {
     reactionManager,
     cardId,
   }) => {
-
     // Resolve the boon instance for set-aside tracking.
-    const boon = match.boons.cards.find(candidate => candidate.id === cardId);
+    const boon = match.boons.cards.find((candidate) => candidate.id === cardId);
     if (!boon) {
       console.warn(`[the-rivers-gift boon] could not find boon instance ${cardId}`);
       return;
@@ -349,7 +342,6 @@ const registerSeasGift = (registerBoonEffect: BoonEffectRegistrar) => {
     playerId,
     runGameActionDelegate,
   }) => {
-
     await runGameActionDelegate('drawCard', { playerId, count: 1 });
   });
 };
@@ -363,7 +355,6 @@ const registerSkysGift = (registerBoonEffect: BoonEffectRegistrar) => {
     findCards,
     cardSourceController,
   }) => {
-
     const confirm = await runGameActionDelegate('userPrompt', {
       playerId,
       prompt: 'Discard 3 cards to gain a Gold?',
@@ -426,7 +417,6 @@ const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     runGameActionDelegate,
     cardSourceController,
   }) => {
-
     const deck = cardSourceController.getSource('playerDeck', playerId);
     const discard = cardSourceController.getSource('playerDiscard', playerId);
 
@@ -465,7 +455,7 @@ const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
       }
     }
 
-    const cardsToRearrange = cardsToLookAt.filter(id => !cardsToDiscard.includes(id));
+    const cardsToRearrange = cardsToLookAt.filter((id) => !cardsToDiscard.includes(id));
     if (cardsToRearrange.length < 2) {
       if (cardsToRearrange.length === 1) {
         await runGameActionDelegate('moveCard', {
@@ -505,14 +495,13 @@ const registerSwampsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     runGameActionDelegate,
     findCards,
   }) => {
-
     const willOWispCards = findCards([
       { location: 'nonSupplyCards' },
       { cardKeys: 'will-o-wisp' },
     ]);
 
     if (willOWispCards.length < 1) {
-      console.info('[the-swamps-gift boon] no Will-o\'-Wisps available to gain');
+      console.info("[the-swamps-gift boon] no Will-o'-Wisps available to gain");
       return;
     }
 
@@ -534,7 +523,6 @@ const registerWindsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     cardLibrary,
     cardSourceController,
   }) => {
-
     // Draw two cards before discarding.
     await runGameActionDelegate('drawCard', { playerId, count: 2 });
 
@@ -544,14 +532,12 @@ const registerWindsGift = (registerBoonEffect: BoonEffectRegistrar) => {
       return;
     }
 
-    const cardIds = hand.length < 2 ?
-      hand :
-      await runGameActionDelegate('selectCard', {
-        prompt: 'Discard 2 cards',
-        playerId: playerId,
-        restrict: hand,
-        count: 2,
-      }) as CardId[];
+    const cardIds = hand.length < 2 ? hand : await runGameActionDelegate('selectCard', {
+      prompt: 'Discard 2 cards',
+      playerId: playerId,
+      restrict: hand,
+      count: 2,
+    }) as CardId[];
 
     for (const cardId of cardIds) {
       console.debug(`[the-winds-gift boon] discarding ${cardLibrary.getCard(cardId)}`);

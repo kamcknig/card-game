@@ -32,9 +32,7 @@ export const configureDefiledShrine = (
       if (!pileCards.length) continue;
 
       // Skip Gathering piles so Farmers' Market/Temple/Wild Hunt keep their own tokens.
-      const hasGathering = pileCards.some((card) =>
-        card.type.includes('GATHERING')
-      );
+      const hasGathering = pileCards.some((card) => card.type.includes('GATHERING'));
       if (hasGathering) {
         console.debug(
           `[defiled-shrine onGameStart] skipping Gathering pile ${supply.name}`,

@@ -9,9 +9,9 @@ const configurator: ExpansionConfiguratorFactory = () => async (args) => {
   await configureSpoils(args);
   await configureRuins(args);
   await configureHermit(args);
-  await configureUrchin(args)
+  await configureUrchin(args);
   await configureShelters(args);
   return args.config;
-}
+};
 
 export default configurator;

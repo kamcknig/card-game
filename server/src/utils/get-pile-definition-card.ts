@@ -2,9 +2,7 @@ import { CardNoId } from 'shared/shared-types';
 
 // Returns a pile-level card definition, applying randomizer overrides when present.
 export const getPileDefinitionCard = (cards: CardNoId[], pileName: string): CardNoId | undefined => {
-  const pileCard = cards.find((card) =>
-    (card.randomizerData?.randomizer ?? card.cardKey) === pileName
-  ) ?? cards[0];
+  const pileCard = cards.find((card) => (card.randomizerData?.randomizer ?? card.cardKey) === pileName) ?? cards[0];
 
   if (!pileCard) {
     return undefined;

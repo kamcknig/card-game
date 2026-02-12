@@ -35,7 +35,16 @@ import {
   MatchBaseConfiguration,
   PlayerScoreDecorator,
 } from '../types.ts';
-import { createArtifact, createBoon, createCard, createEvent, createHex, createLandmark, createProject, createState } from '../utils/create-card.ts';
+import {
+  createArtifact,
+  createBoon,
+  createCard,
+  createEvent,
+  createHex,
+  createLandmark,
+  createProject,
+  createState,
+} from '../utils/create-card.ts';
 import { getRemainingSupplyCount, getStartingSupplyCount } from '../utils/get-starting-supply-count.ts';
 import { CardPriceRulesController } from './card-price-rules-controller.ts';
 import { findCardsFactory } from '../utils/find-cards.ts';
@@ -44,7 +53,7 @@ import { CardSourceController } from './card-source-controller.ts';
 import { eventEffectFactoryMap } from './events/event-effect-factory-map.ts';
 import { projectEffectFactoryMap } from './projects/project-effect-factory-map.ts';
 import { tokenDefinitionMap } from './tokens/token-definition-map.ts';
-import { prosperityTokenIds } from "@expansions/prosperity/token-prosperity-ids.ts";
+import { prosperityTokenIds } from '@expansions/prosperity/token-prosperity-ids.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardLibSnapshot = {};
@@ -61,7 +70,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _matchConfigurator: MatchConfigurator | undefined;
   private _expansionScoringFns: PlayerScoreDecorator[] = [];
   private _registeredEvents: (keyof ServerListenEvents)[] = [];
-  private _findCards: FindCardsFn = (...args) => ([]);
+  private _findCards: FindCardsFn = (...args) => [];
   private readonly _cardSourceController: CardSourceController;
   // Tracks nested runGameAction calls to avoid corrupting patch snapshots.
   private _actionDepth: number = 0;
@@ -152,8 +161,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       // Monotonic counter for deterministic token instance IDs.
       tokenInstanceCounter: 0,
       turnNumber: 0,
-      turnPhaseIndex: 0
-    }
+      turnPhaseIndex: 0,
+    };
     this._cardSourceController = new CardSourceController(this._match);
   }
 
@@ -208,8 +217,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         const existing = target[key];
         if (MatchController.isPlainObject(existing)) {
           MatchController.mergePartialMatch(existing, value);
-        }
-        else {
+        } else {
           target[key] = structuredClone(value);
         }
         continue;
@@ -231,7 +239,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
     this._cardPriceController = new CardPriceRulesController(
       this._cardLibrary,
-      this._match
+      this._match,
     );
 
     this._findCards = findCardsFactory(this._cardSourceController, this._cardPriceController, this._cardLibrary);
@@ -243,7 +251,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._logManager,
       this._match,
       this._cardLibrary,
-      (action, ...args) => this.runGameAction(action, ...args)
+      (action, ...args) => this.runGameAction(action, ...args),
     );
 
     const cardEffectFunctionMap = Object.keys(cardEffectFunctionMapFactory).reduce((acc, nextKey) => {
@@ -277,7 +285,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._socketMap,
       this._cardLibrary,
       (action, ...args) => this.runGameAction(action, ...args),
-      this._findCards
+      this._findCards,
     );
 
     this.gameActionsController = new GameActionController(
@@ -305,15 +313,18 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const { config: newConfig } = await this._matchConfigurator.createConfiguration({
       match: this._match,
       cardSourceController: this._cardSourceController,
-      gameEventRegistrar: (event: GameLifecycleEvent, handler: GameLifecycleCallback) => this._reactionManager?.registerGameEvent(event, handler),
+      gameEventRegistrar: (event: GameLifecycleEvent, handler: GameLifecycleCallback) =>
+        this._reactionManager?.registerGameEvent(event, handler),
       clientEventRegistrar: (event, handler) => this.clientEventRegistrar(event, handler),
       endGameConditionRegistrar: (val) => this._expansionEndGameConditionFns.push(val),
       cardEffectRegistrar: (...args) => this.gameActionsController?.registerCardEffect(...args),
       boonEffectRegistrar: (cardKey, effectFn) => this.gameActionsController?.registerBoonEffect(cardKey, effectFn),
       hexEffectRegistrar: (cardKey, effectFn) => this.gameActionsController?.registerHexEffect(cardKey, effectFn),
       stateEffectRegistrar: (cardKey, effectFn) => this.gameActionsController?.registerStateEffect(cardKey, effectFn),
-      artifactEffectRegistrar: (cardKey, effectFn) => this.gameActionsController?.registerArtifactEffect(cardKey, effectFn),
-      projectEffectRegistrar: (cardKey, effectFn) => this.gameActionsController?.registerProjectEffect(cardKey, effectFn),
+      artifactEffectRegistrar: (cardKey, effectFn) =>
+        this.gameActionsController?.registerArtifactEffect(cardKey, effectFn),
+      projectEffectRegistrar: (cardKey, effectFn) =>
+        this.gameActionsController?.registerProjectEffect(cardKey, effectFn),
       playerScoreDecoratorRegistrar: (val: PlayerScoreDecorator) => this._expansionScoringFns.push(val),
     });
 
@@ -324,8 +335,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._matchConfiguration = this._loadedMatchState.match.config ?? newConfig;
       // Ensure match config is always populated for downstream logic.
       this._match.config = this._match.config ?? this._matchConfiguration;
-    }
-    else {
+    } else {
       this._matchConfiguration = newConfig;
 
       this._match.players = this._matchConfiguration.players;
@@ -373,8 +383,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       }
       console.info(`[match] loaded match state override from ${matchStatePath}`);
       return parsed;
-    }
-    catch (error) {
+    } catch (error) {
       console.warn(`[match] failed to load match state override from ${matchStatePath}`);
       console.error(error);
       return null;
@@ -396,9 +405,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
   private clientEventRegistrar<T extends keyof ServerListenEvents>(event: T, handler: ServerListenEvents[T]) {
     this._registeredEvents.push(event);
-    this._socketMap.forEach(s => {
+    this._socketMap.forEach((s) => {
       s.on(event, handler as any);
-    })
+    });
   }
 
   public playerReconnected(playerId: PlayerId, socket: AppSocket) {
@@ -433,9 +442,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
   public playerDisconnected(playerId: number) {
     // Use whichever array is populated depending on phase
-    const roster = this._match.players?.length
-      ? this._match.players
-      : this._match.config.players;
+    const roster = this._match.players?.length ? this._match.players : this._match.config.players;
 
     // There should always be at least one entry after a single disconnect
     const leaving = roster.find((p) => p.id === playerId);
@@ -517,10 +524,12 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     return Object.values(config.players).forEach((player, idx) => {
       console.debug('initializing player', player.id, 'cards...');
 
-      let playerStartHand = this._playerHands.length > 0 ? this._playerHands[idx] : config.playerStartingHand as Record<string, number>;
+      let playerStartHand = this._playerHands.length > 0
+        ? this._playerHands[idx]
+        : config.playerStartingHand as Record<string, number>;
       playerStartHand ??= MatchBaseConfiguration.playerStartingHand;
       console.debug(`[match] using player starting hand`);
-      console.debug(Object.keys(playerStartHand).map((key) => `${key}: ${playerStartHand[key]}`).join(', '))
+      console.debug(Object.keys(playerStartHand).map((key) => `${key}: ${playerStartHand[key]}`).join(', '));
 
       const deck = this._cardSourceController.getSource('playerDeck', player.id);
 
@@ -558,15 +567,15 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   public applyPartialMatchUpdate(partial: Partial<Match>): { ok: boolean; errors?: string[] } {
     const prev = this.getMatchSnapshot();
 
-      const recordKeyAllowList = new Set([
-        'cardOverrides',
-        'cardSources',
-        'cardSourceTagMap',
-        'coffers',
-        'villagers',
-        'debt',
-        'mats',
-        'scores',
+    const recordKeyAllowList = new Set([
+      'cardOverrides',
+      'cardSources',
+      'cardSourceTagMap',
+      'coffers',
+      'villagers',
+      'debt',
+      'mats',
+      'scores',
       'selectableCards',
       'tokens',
     ]);
@@ -585,8 +594,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         const baseVal = (this._match as unknown as Record<string, unknown>)[key];
         if (recordKeyAllowList.has(key)) {
           validationErrors.push(...MatchController.validatePartialMatch(val, baseVal, `${key}.`, true));
-        }
-        else if (MatchController.isPlainObject(val) && MatchController.isPlainObject(baseVal)) {
+        } else if (MatchController.isPlainObject(val) && MatchController.isPlainObject(baseVal)) {
           validationErrors.push(...MatchController.validatePartialMatch(val, baseVal, `${key}.`));
         }
       }
@@ -596,7 +604,10 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       return { ok: false, errors: validationErrors };
     }
 
-    MatchController.mergePartialMatch(this._match as unknown as Record<string, unknown>, partial as Record<string, unknown>);
+    MatchController.mergePartialMatch(
+      this._match as unknown as Record<string, unknown>,
+      partial as Record<string, unknown>,
+    );
 
     this.calculateScores();
     this._interactivityController?.checkCardInteractivity();
@@ -680,7 +691,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       }
 
       if (await this.checkGameEnd()) {
-        console.log(`[match] game ended`)
+        console.log(`[match] game ended`);
       }
 
       return result as Promise<GameActionReturnTypeMap[K]>;
@@ -694,21 +705,18 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const cardLibraryPatch = compare(this._cardLibSnapshot, this._cardLibrary.getAllCards());
 
     if (patch.length || cardLibraryPatch.length) {
-    console.debug(`[match] sending match update to clients`);
+      console.debug(`[match] sending match update to clients`);
 
       if (playerId) {
         this._socketMap.get(playerId)?.emit('patchUpdate', patch, cardLibraryPatch);
-      }
-      else {
+      } else {
         this._socketMap.forEach((s) => s.emit('patchUpdate', patch, cardLibraryPatch));
       }
     }
   }
 
   private onClientReady = (playerId: number) => {
-    const player = this._match.config?.players.find((player) =>
-      player.id === playerId
-    );
+    const player = this._match.config?.players.find((player) => player.id === playerId);
 
     console.info(`[match] received clientReady event from ${player}`);
 
@@ -725,7 +733,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     player.ready = true;
 
     if (this._match.config.players.some((p) => !p.ready)) {
-      console.debug(`[match] not all players marked ready, waiting for everyone`,);
+      console.debug(`[match] not all players marked ready, waiting for everyone`);
       return;
     }
 
@@ -767,7 +775,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       root: true,
       type: 'newPlayerTurn',
       turn: Math.floor(this._match.turnNumber / this._match.players.length) + 1,
-      playerId: getCurrentPlayer(this._match).id
+      playerId: getCurrentPlayer(this._match).id,
     });
 
     // Kick off the first turn, including any computer player automation.
@@ -830,10 +838,12 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
     const match = this._match;
 
-    if (this._findCards([
-      { location: 'basicSupply' },
-      { cardKeys: 'province' }
-    ]).length === 0) {
+    if (
+      this._findCards([
+        { location: 'basicSupply' },
+        { cardKeys: 'province' },
+      ]).length === 0
+    ) {
       console.info(`[match] supply has no more provinces, game over`);
       await this.endGame();
       return true;
@@ -857,11 +867,12 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       // End immediately when any registered expansion end-game condition triggers.
       const shouldEnd = conditionFn({
         cardSourceController: this._cardSourceController,
-        match: this._match, cardLibrary: this._cardLibrary,
+        match: this._match,
+        cardLibrary: this._cardLibrary,
         cardPriceController: this._cardPriceController!,
         logManager: this._logManager!,
         reactionManager: this._reactionManager!,
-        findCards: this._findCards
+        findCards: this._findCards,
       });
       if (shouldEnd) {
         console.info('[match] expansion end-game condition met, game over');
@@ -887,7 +898,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const match = this._match;
 
     for (const player of this._match.players) {
-      const setAsideCardIds = this._cardSourceController.getSource('set-aside', player.id)
+      const setAsideCardIds = this._cardSourceController.getSource('set-aside', player.id);
       // Iterate over a snapshot since move actions mutate the source array.
       for (const cardId of [...setAsideCardIds]) {
         await this.runGameAction('moveCard', {
@@ -899,7 +910,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }
 
     for (const event of this._registeredEvents) {
-      this._socketMap.forEach(s => s.off(event));
+      this._socketMap.forEach((s) => s.off(event));
     }
 
     const currentTurn = match.turnNumber;
@@ -908,9 +919,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const summary: MatchSummary = {
       playerSummary: match.players.reduce((prev, player) => {
         const playerId = player.id;
-        const turnsTaken = match.players.findIndex((p) =>
-          p.id === playerId
-        ) <= currentPlayerTurnIndex
+        const turnsTaken = match.players.findIndex((p) => p.id === playerId) <= currentPlayerTurnIndex
           ? (Math.floor(currentTurn / match.players.length) + 1)
           : Math.floor(currentTurn / match.players.length);
 
@@ -918,7 +927,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           playerId,
           turnsTaken,
           score: match.scores[playerId],
-          deck: this._findCards([{ owner: playerId }]).map(card => card.id),
+          deck: this._findCards([{ owner: playerId }]).map((card) => card.id),
         });
         return prev;
       }, [] as MatchSummary['playerSummary'])
@@ -927,12 +936,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           if (b.score < a.score) return -1;
           if (a.turnsTaken < b.turnsTaken) return -1;
           if (b.turnsTaken < a.turnsTaken) return 1;
-          const aIdx = match.players.findIndex((player) =>
-            player.id === a.playerId
-          );
-          const bIdx = match.players.findIndex((player) =>
-            player.id === b.playerId
-          );
+          const aIdx = match.players.findIndex((player) => player.id === a.playerId);
+          const bIdx = match.players.findIndex((player) => player.id === b.playerId);
           if (aIdx < bIdx) return -1;
           if (bIdx < aIdx) return 1;
           return 0;
@@ -948,7 +953,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
   private async onNextPhase() {
     await this.runGameAction('nextPhase');
-    this._socketMap.forEach(s => s.emit('nextPhaseComplete'));
+    this._socketMap.forEach((s) => s.emit('nextPhaseComplete'));
   }
 
   private initializeSocketListeners(socket: AppSocket) {

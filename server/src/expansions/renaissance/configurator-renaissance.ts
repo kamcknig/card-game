@@ -28,7 +28,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
       artifactEffectsRegistered = true;
     }
 
-    const kingdomCards = args.config.kingdomSupply.flatMap(supply => supply.cards);
+    const kingdomCards = args.config.kingdomSupply.flatMap((supply) => supply.cards);
     const requiredArtifactKeys = new Set<string>();
 
     for (const card of kingdomCards) {
@@ -41,7 +41,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
     }
 
     const existingArtifacts = args.config.artifacts ?? [];
-    const nonManagedArtifacts = existingArtifacts.filter(artifact => !managedArtifactKeys.has(artifact.cardKey));
+    const nonManagedArtifacts = existingArtifacts.filter((artifact) => !managedArtifactKeys.has(artifact.cardKey));
 
     if (requiredArtifactKeys.size < 1) {
       if (existingArtifacts.length !== nonManagedArtifacts.length) {
@@ -67,7 +67,10 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
 export default configurator;
 
-export const registerGameEvents: (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => void = (registrar, config) => {
+export const registerGameEvents: (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => void = (
+  registrar,
+  config,
+) => {
   registrar('onGameStart', async (args) => {
     const projectCount = config.projects?.length ?? 0;
     if (projectCount < 1) {
@@ -76,13 +79,15 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     }
 
     for (const player of args.match.players) {
-      const existingCubes = Object.values(args.match.tokens ?? {}).filter(token =>
+      const existingCubes = Object.values(args.match.tokens ?? {}).filter((token) =>
         token.tokenId === 'cube-token' && token.ownerId === player.id
       );
       const cubesToAdd = Math.max(0, projectCount - existingCubes.length);
 
       if (cubesToAdd < 1) {
-        console.debug(`[renaissance configurator] player ${player.id} already has ${existingCubes.length} cube token(s)`);
+        console.debug(
+          `[renaissance configurator] player ${player.id} already has ${existingCubes.length} cube token(s)`,
+        );
         continue;
       }
 

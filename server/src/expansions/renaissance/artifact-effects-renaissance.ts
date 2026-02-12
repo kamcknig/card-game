@@ -25,7 +25,7 @@ const registerFlag = (registerArtifactEffect: ArtifactEffectRegistrar) => {
     reactionManager,
     cardId,
   }) => {
-    const artifact = match.artifacts?.cards?.find(candidate => candidate.id === cardId);
+    const artifact = match.artifacts?.cards?.find((candidate) => candidate.id === cardId);
     if (!artifact) {
       console.warn('[flag artifact] artifact card not found');
       return;
@@ -79,7 +79,7 @@ const registerHorn = (registerArtifactEffect: ArtifactEffectRegistrar) => {
     reactionManager,
     cardId,
   }) => {
-    const artifact = match.artifacts?.cards?.find(candidate => candidate.id === cardId);
+    const artifact = match.artifacts?.cards?.find((candidate) => candidate.id === cardId);
     if (!artifact) {
       console.warn('[horn artifact] artifact card not found');
       return;
@@ -139,7 +139,7 @@ const registerKey = (registerArtifactEffect: ArtifactEffectRegistrar) => {
     reactionManager,
     cardId,
   }) => {
-    const artifact = match.artifacts?.cards?.find(candidate => candidate.id === cardId);
+    const artifact = match.artifacts?.cards?.find((candidate) => candidate.id === cardId);
     if (!artifact) {
       console.warn('[key artifact] artifact card not found');
       return;
@@ -190,7 +190,7 @@ const registerTreasureChest = (registerArtifactEffect: ArtifactEffectRegistrar) 
     cardId,
     findCards,
   }) => {
-    const artifact = match.artifacts?.cards?.find(candidate => candidate.id === cardId);
+    const artifact = match.artifacts?.cards?.find((candidate) => candidate.id === cardId);
     if (!artifact) {
       console.warn('[treasure-chest artifact] artifact card not found');
       return;

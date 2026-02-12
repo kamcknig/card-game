@@ -1,9 +1,19 @@
-import { ArtifactNoId, BoonNoId, CardKey, CardNoId, EventNoId, HexNoId, LandmarkNoId, ProjectNoId, StateNoId } from 'shared/shared-types';
+import {
+  ArtifactNoId,
+  BoonNoId,
+  CardKey,
+  CardNoId,
+  EventNoId,
+  HexNoId,
+  LandmarkNoId,
+  ProjectNoId,
+  StateNoId,
+} from 'shared/shared-types';
 
 export type ExpansionCardData = {
-  basicSupply: Record<CardKey, CardNoId>,
-  kingdomSupply: Record<CardKey, CardNoId>
-}
+  basicSupply: Record<CardKey, CardNoId>;
+  kingdomSupply: Record<CardKey, CardNoId>;
+};
 
 export type ExpansionData = {
   title: string;
@@ -23,7 +33,7 @@ export type ExpansionData = {
   // Projects are stored separately from supply cards.
   projects: Record<CardKey, ProjectNoId>;
   mutuallyExclusive?: string[];
-}
+};
 
 export type ExpansionDataLibrary = Record<string, ExpansionData>;
 

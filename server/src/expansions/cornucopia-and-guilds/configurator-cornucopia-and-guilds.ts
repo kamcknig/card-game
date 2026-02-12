@@ -11,30 +11,37 @@ export const configurator: ExpansionConfiguratorFactory = () => {
     configureFerryman(args);
     await configureJoust(args);
     return args.config;
-  }
-}
+  };
+};
 
-export const registerGameEvents: (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => void = (registrar, config) => {
-  if (config.kingdomSupply.some(supply => supply.name === 'footpad')) {
+export const registerGameEvents: (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => void = (
+  registrar,
+  config,
+) => {
+  if (config.kingdomSupply.some((supply) => supply.name === 'footpad')) {
     console.info(`[cornucopia configurator] setting up footpad onCardGained handler`);
-    
+
     registrar('onCardGained', async (args, eventArgs) => {
       if (getTurnPhase(args.match.turnPhaseIndex) !== 'action') return;
-      
+
       const card = args.cardLibrary.getCard(eventArgs.cardId);
-      
-      console.info(`[footpad onCardGained event] player ${eventArgs.playerId} gained ${card} during action phase, drawing card`);
-      
+
+      console.info(
+        `[footpad onCardGained event] player ${eventArgs.playerId} gained ${card} during action phase, drawing card`,
+      );
+
       // todo hacky to use just any card by id for the source. eventually source needs to be more dynamic
       const footpadCardIds = args.findCards({ cardKeys: 'footpad' });
-      
-      await args.runGameActionDelegate('drawCard', { playerId: eventArgs.playerId }, { loggingContext: { source: footpadCardIds[0].id } });
+
+      await args.runGameActionDelegate('drawCard', { playerId: eventArgs.playerId }, {
+        loggingContext: { source: footpadCardIds[0].id },
+      });
     });
   }
-  
-  if (config.kingdomSupply.some(supply => supply.name === 'baker')) {
+
+  if (config.kingdomSupply.some((supply) => supply.name === 'baker')) {
     console.info(`[cornucopia configurator] setting up baker onGameStart handler`);
-    
+
     registrar('onGameStart', async (args) => {
       console.info(`[baker onGameStart event] setting up baker - +1 coffer to each player on game start`);
       for (const player of args.match.players) {
@@ -42,6 +49,6 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
       }
     });
   }
-}
+};
 
 export default configurator;

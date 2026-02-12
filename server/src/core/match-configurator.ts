@@ -5,10 +5,10 @@ import {
   ComputedMatchConfiguration,
   EventNoId,
   LandmarkNoId,
-  ProjectNoId,
   Match,
   MatchConfiguration,
-  Supply
+  ProjectNoId,
+  Supply,
 } from 'shared/shared-types';
 import { ExpansionData, expansionLibrary, rawCardLibrary } from '@expansions/expansion-library.ts';
 import {
@@ -18,9 +18,9 @@ import {
   GameEventRegistrar,
   InitializeExpansionContext,
   MatchBaseConfiguration,
-  PlayerScoreDecoratorRegistrar
+  PlayerScoreDecoratorRegistrar,
 } from '../types.ts';
-import { compare, Operation } from "fast-json-patch";
+import { compare, Operation } from 'fast-json-patch';
 import { CardSourceController } from './card-source-controller.ts';
 import { getDefaultKingdomSupplySize } from '../utils/get-default-kingdom-supply-size.ts';
 import { getCardPileKey } from '../utils/get-card-pile-key.ts';
@@ -36,7 +36,7 @@ import { getCardPileKey } from '../utils/get-card-pile-key.ts';
  */
 export function uniqueByProp<
   T extends Record<string, any>,
-  K extends keyof T = keyof T
+  K extends keyof T = keyof T,
 >(
   list: T[],
   prop: K,
@@ -45,7 +45,7 @@ export function uniqueByProp<
   if (keep === 'first') {
     // Keep the first occurrence
     const seen = new Set<any>();
-    return list.filter(item => {
+    return list.filter((item) => {
       const key = item[prop];
       if (seen.has(key)) return false;
       seen.add(key);
@@ -58,8 +58,6 @@ export function uniqueByProp<
   list.forEach((item, i) => idxByKey.set(item[prop], i));
   return list.filter((_, i) => idxByKey.get(list[i][prop]) === i);
 }
-
-
 
 /**
  * The configurator takes a MatchConfiguration instance and creates a ComputedMatchConfiguration.
@@ -75,7 +73,6 @@ export class MatchConfigurator {
   private readonly _config: ComputedMatchConfiguration;
 
   constructor(config: MatchConfiguration) {
-
     // when creating the clone, it will break the custom Deno.customInspect symbols on classes so they won't
     // properly print. I'm not sure if we NEED the structured clone, might just remove it eventually. I tested
     // and that worked as well as of this fix. but i kind of want all changes to be self-contained in the configurator
@@ -99,37 +96,41 @@ export class MatchConfigurator {
     const requisiteKingdomCardKeys = Deno.env.get('REQUISITE_KINGDOM_CARD_KEYS')
       ?.toLowerCase()
       ?.split(',')
-      ?.map(e => e.trim())
-      ?.filter(e => !!e) ?? [];
+      ?.map((e) => e.trim())
+      ?.filter((e) => !!e) ?? [];
 
     if (requisiteKingdomCardKeys && requisiteKingdomCardKeys.length > 0) {
       console.warn(`[match configurator] hard-coded keeper cards ${requisiteKingdomCardKeys}`);
       console.info(requisiteKingdomCardKeys?.join('\n'));
     }
 
-    this._config.preselectedKingdoms = this._config.preselectedKingdoms.filter(card => !!card);
+    this._config.preselectedKingdoms = this._config.preselectedKingdoms.filter((card) => !!card);
 
     if (this._config.preselectedKingdoms?.length > 0) {
       console.info(`[match configurator] requested kingdom cards ${this._config.preselectedKingdoms.length}`);
-      console.info(this._config.preselectedKingdoms?.map(card => card.cardKey)?.join('\n'));
-    }
-    else {
+      console.info(this._config.preselectedKingdoms?.map((card) => card.cardKey)?.join('\n'));
+    } else {
       console.info(`[match configurator] no cards requested in during match configuration`);
     }
 
     console.info(`[match configurator] removing possible duplicates from requested and hard-coded kingdoms`);
 
-    this._requestedKingdoms =
-      Array.from(new Set([
+    this._requestedKingdoms = Array.from(
+      new Set([
         ...requisiteKingdomCardKeys,
-        ...(this._config.preselectedKingdoms?.map(card => card.cardKey) ?? [])
-      ]))
-        .map(key => structuredClone(rawCardLibrary[key]))
-        .filter(card => !!card);
+        ...(this._config.preselectedKingdoms?.map((card) => card.cardKey) ?? []),
+      ]),
+    )
+      .map((key) => structuredClone(rawCardLibrary[key]))
+      .filter((card) => !!card);
 
     if (this._requestedKingdoms.length > MatchBaseConfiguration.numberOfKingdomPiles) {
-      const requestedKingdomCardKeys = this._requestedKingdoms.map(card => card.cardKey);
-      console.info(`[match configurator] requested kingdom cards exceeds 10, truncating to 10 ${requestedKingdomCardKeys.join(', ')}`);
+      const requestedKingdomCardKeys = this._requestedKingdoms.map((card) => card.cardKey);
+      console.info(
+        `[match configurator] requested kingdom cards exceeds 10, truncating to 10 ${
+          requestedKingdomCardKeys.join(', ')
+        }`,
+      );
       this._requestedKingdoms.length = MatchBaseConfiguration.numberOfKingdomPiles;
     }
 
@@ -185,12 +186,11 @@ export class MatchConfigurator {
 
   private selectKingdomSupply() {
     let selectedKingdoms: CardNoId[] = this._requestedKingdoms.slice();
-    const additionalKingdoms: { name: string; cards: CardNoId[]; }[] = [];
+    const additionalKingdoms: { name: string; cards: CardNoId[] }[] = [];
 
     if (selectedKingdoms.length === MatchBaseConfiguration.numberOfKingdomPiles) {
       console.info(`[match configurator] number of requested kingdoms ${this._requestedKingdoms.length} is enough`);
-    }
-    else {
+    } else {
       // reduces the player-configured expansions into an array whose elements are the expansions' library data
       const selectedExpansions = this._config.expansions.reduce((acc, allowedExpansion) => {
         const expansionData = expansionLibrary[allowedExpansion.name];
@@ -203,18 +203,20 @@ export class MatchConfigurator {
       }, [] as ExpansionData[]);
 
       // list of pile keys that are banned or already pre-selected
-      const bannedKingdomRandomizers = this._bannedKingdoms.map(card => getCardPileKey(card));
-      const alreadyIncludedKingdomRandomizers = selectedKingdoms.map(card => getCardPileKey(card));
+      const bannedKingdomRandomizers = this._bannedKingdoms.map((card) => getCardPileKey(card));
+      const alreadyIncludedKingdomRandomizers = selectedKingdoms.map((card) => getCardPileKey(card));
 
-      console.info(`[match configurator] banned kingdoms ${bannedKingdomRandomizers.join(', ') ?? '- no banned kingdoms'}`);
+      console.info(
+        `[match configurator] banned kingdoms ${bannedKingdomRandomizers.join(', ') ?? '- no banned kingdoms'}`,
+      );
 
       // loop over the selected expansions, and filter out any kingdom cards that
       // are banned, are already included, or are not kingdom-selectable
       const availableRandomizers = selectedExpansions.flatMap((nextExpansion) => [
         ...Object
           .values(nextExpansion.cardData.kingdomSupply)
-          .filter(card => (card.kingdomSelectable ?? true))
-          .map(card => {
+          .filter((card) => (card.kingdomSelectable ?? true))
+          .map((card) => {
             const pileKey = getCardPileKey(card);
             if (bannedKingdomRandomizers.includes(pileKey)) return null;
             if (alreadyIncludedKingdomRandomizers.includes(pileKey)) return null;
@@ -226,29 +228,33 @@ export class MatchConfigurator {
           })
           .filter((entry): entry is NonNullable<typeof entry> => !!entry),
         ...Object.values(nextExpansion.events)
-          .filter(event => event.randomizer !== null)
-          .map(event => ({
+          .filter((event) => event.randomizer !== null)
+          .map((event) => ({
             randomizer: event.randomizer,
             cardLike: event,
-            type: 'event'
+            type: 'event',
           })),
         // Landmarks participate in the shared "events and others" randomizer pool.
         ...Object.values(nextExpansion.landmarks)
-          .filter(landmark => landmark.randomizer !== null)
-          .map(landmark => ({
+          .filter((landmark) => landmark.randomizer !== null)
+          .map((landmark) => ({
             randomizer: landmark.randomizer,
             cardLike: landmark,
-            type: 'landmark'
+            type: 'landmark',
           })),
         // Projects participate in the shared "events and others" randomizer pool.
         ...Object.values(nextExpansion.projects ?? {})
-          .filter(project => project.randomizer !== null)
-          .map(project => ({
+          .filter((project) => project.randomizer !== null)
+          .map((project) => ({
             randomizer: project.randomizer,
             cardLike: project,
-            type: 'project'
-          }))
-      ]) as { randomizer: string; type: 'card' | 'event' | 'landmark' | 'project'; cardLike: CardLikeNoId | CardNoId; }[];
+            type: 'project',
+          })),
+      ]) as {
+        randomizer: string;
+        type: 'card' | 'event' | 'landmark' | 'project';
+        cardLike: CardLikeNoId | CardNoId;
+      }[];
 
       const uniqueRandomizers = uniqueByProp(availableRandomizers, 'randomizer');
 
@@ -261,9 +267,9 @@ export class MatchConfigurator {
 
       const allowedEventsAndOthers = MatchBaseConfiguration.numberOfEventsAndOthers;
       // Track the combined limit for events and other landscape types (landmarks included).
-      let selectedEventsAndOthers = this._config.events.length
-        + (this._config.landmarks?.length ?? 0)
-        + (this._config.projects?.length ?? 0);
+      let selectedEventsAndOthers = this._config.events.length +
+        (this._config.landmarks?.length ?? 0) +
+        (this._config.projects?.length ?? 0);
 
       for (let i = 0; i < numKingdomsToSelect; i++) {
         const randomIndex = Math.floor(Math.random() * uniqueRandomizers.length);
@@ -273,8 +279,8 @@ export class MatchConfigurator {
           console.info(`[match configurator] selected kingdom ${selectedRandomizer.randomizer}`);
 
           const cardsInRandomizer = availableRandomizers
-            .filter(randomizer => randomizer.randomizer === selectedRandomizer.randomizer)
-            .map(randomizer => randomizer.cardLike) as CardNoId[];
+            .filter((randomizer) => randomizer.randomizer === selectedRandomizer.randomizer)
+            .map((randomizer) => randomizer.cardLike) as CardNoId[];
 
           // this makes an assumption that if there are more cards within a randomizer group (such as knights from dark
           // ages) that they will all be in the same kingdom.
@@ -287,24 +293,26 @@ export class MatchConfigurator {
           }
 
           if (cardsInRandomizer.length === 1) {
-            cards = new Array(getDefaultKingdomSupplySize(cardsInRandomizer[0], this._config)).fill(cardsInRandomizer[0]);
-          }
-          else {
+            cards = new Array(getDefaultKingdomSupplySize(cardsInRandomizer[0], this._config)).fill(
+              cardsInRandomizer[0],
+            );
+          } else {
             cards = cardsInRandomizer;
           }
 
           additionalKingdoms.push({
             name: kingdom,
-            cards
+            cards,
           });
-        }
-        else if (selectedRandomizer.type === 'event') {
+        } else if (selectedRandomizer.type === 'event') {
           console.info(`[match configurator] selected event ${selectedRandomizer.randomizer}`);
 
           if (++selectedEventsAndOthers <= allowedEventsAndOthers) {
-            console.info(`[match configurator] selected event ${selectedRandomizer.randomizer} is allowed, adding to match`);
+            console.info(
+              `[match configurator] selected event ${selectedRandomizer.randomizer} is allowed, adding to match`,
+            );
             const event = availableRandomizers
-              .find(randomizer => randomizer.randomizer === selectedRandomizer.randomizer)
+              .find((randomizer) => randomizer.randomizer === selectedRandomizer.randomizer)
               ?.cardLike as EventNoId;
 
             if (!event) {
@@ -312,46 +320,52 @@ export class MatchConfigurator {
             }
 
             this._config.events.push(event);
-          }
-          else {
-            console.info(`[match configurator] selected event ${selectedRandomizer.randomizer} is not allowed, already have max number of events and others`);
+          } else {
+            console.info(
+              `[match configurator] selected event ${selectedRandomizer.randomizer} is not allowed, already have max number of events and others`,
+            );
           }
 
           // reduce the counter because events don't count against kingdom selection
           i--;
-        }
-        else if (selectedRandomizer.type === 'landmark') {
+        } else if (selectedRandomizer.type === 'landmark') {
           // Landmarks are treated as "others" alongside events for random selection limits.
           console.info(`[match configurator] selected landmark ${selectedRandomizer.randomizer}`);
 
           if (++selectedEventsAndOthers <= allowedEventsAndOthers) {
-            console.info(`[match configurator] selected landmark ${selectedRandomizer.randomizer} is allowed, adding to match`);
+            console.info(
+              `[match configurator] selected landmark ${selectedRandomizer.randomizer} is allowed, adding to match`,
+            );
             const landmark = availableRandomizers
-              .find(randomizer => randomizer.randomizer === selectedRandomizer.randomizer)
+              .find((randomizer) => randomizer.randomizer === selectedRandomizer.randomizer)
               ?.cardLike as LandmarkNoId;
 
             if (!landmark) {
-              throw new Error(`[match configurator] landmark not found for randomizer ${selectedRandomizer.randomizer}`);
+              throw new Error(
+                `[match configurator] landmark not found for randomizer ${selectedRandomizer.randomizer}`,
+              );
             }
 
             this._config.landmarks ??= [];
             this._config.landmarks.push(landmark);
-          }
-          else {
-            console.info(`[match configurator] selected landmark ${selectedRandomizer.randomizer} is not allowed, already have max number of events and others`);
+          } else {
+            console.info(
+              `[match configurator] selected landmark ${selectedRandomizer.randomizer} is not allowed, already have max number of events and others`,
+            );
           }
 
           // reduce the counter because landmarks don't count against kingdom selection
           i--;
-        }
-        else {
+        } else {
           // Projects are treated as "others" alongside events for random selection limits.
           console.info(`[match configurator] selected project ${selectedRandomizer.randomizer}`);
 
           if (++selectedEventsAndOthers <= allowedEventsAndOthers) {
-            console.info(`[match configurator] selected project ${selectedRandomizer.randomizer} is allowed, adding to match`);
+            console.info(
+              `[match configurator] selected project ${selectedRandomizer.randomizer} is allowed, adding to match`,
+            );
             const project = availableRandomizers
-              .find(randomizer => randomizer.randomizer === selectedRandomizer.randomizer)
+              .find((randomizer) => randomizer.randomizer === selectedRandomizer.randomizer)
               ?.cardLike as ProjectNoId;
 
             if (!project) {
@@ -360,9 +374,10 @@ export class MatchConfigurator {
 
             this._config.projects ??= [];
             this._config.projects.push(project);
-          }
-          else {
-            console.info(`[match configurator] selected project ${selectedRandomizer.randomizer} is not allowed, already have max number of events and others`);
+          } else {
+            console.info(
+              `[match configurator] selected project ${selectedRandomizer.randomizer} is not allowed, already have max number of events and others`,
+            );
           }
 
           // reduce the counter because projects don't count against kingdom selection
@@ -374,23 +389,24 @@ export class MatchConfigurator {
       }
     }
 
-    this._config.kingdomSupply =
-      structuredClone(
-        selectedKingdoms.map(card => {
-          return {
-            name: card.cardKey,
-            cards: new Array(getDefaultKingdomSupplySize(card, this._config)).fill(card)
-          }
-        }).concat(additionalKingdoms)
-      );
+    this._config.kingdomSupply = structuredClone(
+      selectedKingdoms.map((card) => {
+        return {
+          name: card.cardKey,
+          cards: new Array(getDefaultKingdomSupplySize(card, this._config)).fill(card),
+        };
+      }).concat(additionalKingdoms),
+    );
 
     console.info(`[match configurator] finalized selected kingdoms count ${this._config.kingdomSupply.length}`);
-    console.info(this._config.kingdomSupply.map(supply => supply.name).join('\n'));
+    console.info(this._config.kingdomSupply.map((supply) => supply.name).join('\n'));
   }
 
   private selectBasicSupply() {
     // based on the number of players, get the basic supply card counts
-    const basicCardCounts = { ...MatchBaseConfiguration.basicSupplyByPlayerCount[this._config.players.length - 1] } as Record<CardKey, number>;
+    const basicCardCounts = {
+      ...MatchBaseConfiguration.basicSupplyByPlayerCount[this._config.players.length - 1],
+    } as Record<CardKey, number>;
 
     // coppers come from the supply, so they are removed here, because these represent the cards IN the supply at the
     // start of game. The coppers in a player's hand come from the supply, whereas the estates do not.
@@ -398,34 +414,39 @@ export class MatchConfigurator {
       const cardData = { ...rawCardLibrary[nextKey] };
       acc.push({
         name: cardData.cardKey,
-        cards: new Array(nextKey === 'copper' ? this._config.players.length * MatchBaseConfiguration.playerStartingHand.copper : basicCardCounts[nextKey]).fill(cardData)
+        cards: new Array(
+          nextKey === 'copper'
+            ? this._config.players.length * MatchBaseConfiguration.playerStartingHand.copper
+            : basicCardCounts[nextKey],
+        ).fill(cardData),
       });
       return acc;
     }, [] as Supply[]);
 
-    const basicSupply = this._config.basicSupply.map(supply => supply.name).join(', ');
+    const basicSupply = this._config.basicSupply.map((supply) => supply.name).join(', ');
     console.info(`[match configurator] setting default basic cards ${basicSupply}`);
   }
 
   private async getExpansionConfigurators() {
     const configurators = new Map<string, ExpansionConfigurator>();
-    const uniqueExpansions =
-      Array.from(
-        new Set(this._config.kingdomSupply
-          .map(supply => supply.cards.map(card => card.expansionName))
-          .flat()
-        )
-      );
+    const uniqueExpansions = Array.from(
+      new Set(
+        this._config.kingdomSupply
+          .map((supply) => supply.cards.map((card) => card.expansionName))
+          .flat(),
+      ),
+    );
     for (const expansionName of uniqueExpansions) {
       try {
         console.info(`[match configurator] loading configurator for expansion '${expansionName}'`);
-        const configuratorFactory = (await import(`@expansions/${expansionName}/configurator-${expansionName}.ts`)).default as ExpansionConfiguratorFactory;
+        const configuratorFactory = (await import(`@expansions/${expansionName}/configurator-${expansionName}.ts`))
+          .default as ExpansionConfiguratorFactory;
         configurators.set(expansionName, configuratorFactory());
       } catch (error) {
         console.info(`[match configurator] no configurator factory found for expansion '${expansionName}'`);
       }
     }
-    return configurators
+    return configurators;
   }
 
   private async runExpansionConfigurators(initContext: InitializeExpansionContext) {
@@ -443,7 +464,7 @@ export class MatchConfigurator {
           ...initContext,
           config: this._config,
           cardLibrary: rawCardLibrary,
-          expansionData: expansionLibrary[expansionName]
+          expansionData: expansionLibrary[expansionName],
         });
       }
 
@@ -469,11 +490,15 @@ export class MatchConfigurator {
   }
 
   private async registerGameEventListeners(gameEventRegistrar: GameEventRegistrar) {
-    const uniqueExpansions = Array.from(new Set(this._config.kingdomSupply.map(supply => supply.cards.map(card => card.expansionName))
-      .flat()));
+    const uniqueExpansions = Array.from(
+      new Set(
+        this._config.kingdomSupply.map((supply) => supply.cards.map((card) => card.expansionName))
+          .flat(),
+      ),
+    );
     for (const expansion of uniqueExpansions) {
       try {
-        const module = await import((`@expansions/${expansion}/configurator-${expansion}.ts`));
+        const module = await import(`@expansions/${expansion}/configurator-${expansion}.ts`);
         if (!module.registerGameEvents) continue;
         module.registerGameEvents(gameEventRegistrar, this._config);
       } catch (error) {
@@ -487,11 +512,15 @@ export class MatchConfigurator {
   }
 
   private async registerExpansionEndGameConditions(registrar: EndGameConditionRegistrar) {
-    const uniqueExpansions = Array.from(new Set(this._config.kingdomSupply.map(supply => supply.cards.map(card => card.expansionName))
-      .flat()));
+    const uniqueExpansions = Array.from(
+      new Set(
+        this._config.kingdomSupply.map((supply) => supply.cards.map((card) => card.expansionName))
+          .flat(),
+      ),
+    );
     for (const expansion of uniqueExpansions) {
       try {
-        const module = await import((`@expansions/${expansion}/configurator-${expansion}.ts`));
+        const module = await import(`@expansions/${expansion}/configurator-${expansion}.ts`);
         if (!module.registerEndGameConditions) continue;
         module.registerEndGameConditions(registrar);
       } catch (error) {
@@ -505,11 +534,15 @@ export class MatchConfigurator {
   }
 
   private async registerExpansionPlayerScoreDecorators(registrar: PlayerScoreDecoratorRegistrar) {
-    const uniqueExpansions = Array.from(new Set(this._config.kingdomSupply.map(supply => supply.cards.map(card => card.expansionName))
-      .flat()));
+    const uniqueExpansions = Array.from(
+      new Set(
+        this._config.kingdomSupply.map((supply) => supply.cards.map((card) => card.expansionName))
+          .flat(),
+      ),
+    );
     for (const expansion of uniqueExpansions) {
       try {
-        const module = await import((`@expansions/${expansion}/configurator-${expansion}.ts`));
+        const module = await import(`@expansions/${expansion}/configurator-${expansion}.ts`);
         if (!module.registerScoringFunctions) continue;
         module.registerScoringFunctions(registrar);
       } catch (error) {

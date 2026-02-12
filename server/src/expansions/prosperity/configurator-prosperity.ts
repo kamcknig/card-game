@@ -1,14 +1,10 @@
-import {
-  EndGameConditionRegistrar,
-  ExpansionConfiguratorFactory,
-  GameEventRegistrar,
-} from "../../types.ts";
-import { getTurnPhase } from "../../utils/get-turn-phase.ts";
-import { getCurrentPlayer } from "../../utils/get-current-player.ts";
-import { CardPriceRule } from "../../core/card-price-rules-controller.ts";
-import { getCardsInPlay } from "../../utils/get-cards-in-play.ts";
-import { ComputedMatchConfiguration } from "shared/shared-types.ts";
-import { registerProsperityTokenDefinitions } from "./token-definitions-prosperity.ts";
+import { EndGameConditionRegistrar, ExpansionConfiguratorFactory, GameEventRegistrar } from '../../types.ts';
+import { getTurnPhase } from '../../utils/get-turn-phase.ts';
+import { getCurrentPlayer } from '../../utils/get-current-player.ts';
+import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
+import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
+import { ComputedMatchConfiguration } from 'shared/shared-types.ts';
+import { registerProsperityTokenDefinitions } from './token-definitions-prosperity.ts';
 
 const configurator: ExpansionConfiguratorFactory = () => {
   let charlatanConfigured: boolean = false;
@@ -20,7 +16,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
     const kingdomCards = args.config.kingdomSupply;
     // Standard Dominion rule: add Colony/Platinum when any Prosperity kingdom card is present.
     const hasProsperityKingdom = kingdomCards.some((supply) =>
-      supply.cards.some((card) => card.expansionName === "prosperity")
+      supply.cards.some((card) => card.expansionName === 'prosperity')
     );
 
     const basicCards = args.config.basicSupply;
@@ -31,32 +27,30 @@ const configurator: ExpansionConfiguratorFactory = () => {
       );
 
       basicCards.push({
-        name: "colony",
+        name: 'colony',
         cards: new Array(args.config.players.length >= 3 ? 12 : 8).fill(
-          args.expansionData.cardData.basicSupply["colony"],
+          args.expansionData.cardData.basicSupply['colony'],
         ),
       });
 
       basicCards.push({
-        name: "platinum",
+        name: 'platinum',
         cards: new Array(12).fill(
-          args.expansionData.cardData.basicSupply["platinum"],
+          args.expansionData.cardData.basicSupply['platinum'],
         ),
       });
 
       prosperityCheckConfigured = true;
     }
 
-    const charlatanPresent = kingdomCards.find((supply) =>
-      supply.name === "charlatan"
-    );
+    const charlatanPresent = kingdomCards.find((supply) => supply.name === 'charlatan');
 
     if (charlatanPresent && !charlatanConfigured) {
       console.log(
         `[prosperity configurator] charlatan is part of kingdom - curses gain the treasure type and +1 treasure effect`,
       );
 
-      const curseCard = basicCards.find((supply) => supply.name === "curse");
+      const curseCard = basicCards.find((supply) => supply.name === 'curse');
 
       if (!curseCard) {
         console.warn(
@@ -64,11 +58,11 @@ const configurator: ExpansionConfiguratorFactory = () => {
         );
       }
 
-      curseCard?.cards?.forEach((card) => card.type.push("TREASURE"));
+      curseCard?.cards?.forEach((card) => card.type.push('TREASURE'));
 
-      args.cardEffectRegistrar("curse", "prosperity", async (args) => {
+      args.cardEffectRegistrar('curse', 'prosperity', async (args) => {
         console.info(`[curse effect - prosperity] curse effect called`);
-        await args.runGameActionDelegate("gainTreasure", { count: 1 });
+        await args.runGameActionDelegate('gainTreasure', { count: 1 });
       });
 
       charlatanConfigured = true;
@@ -83,17 +77,15 @@ export const registerEndGameConditions = (
 ) => {
   registrar(({ findCards, match }) => {
     const kingdomCards = match.config.kingdomSupply;
-    const colonyPresent = kingdomCards.find((supply) =>
-      supply.name === "colony"
-    );
+    const colonyPresent = kingdomCards.find((supply) => supply.name === 'colony');
 
     if (!colonyPresent) {
       return false;
     }
 
     const colonyCards = findCards([
-      { location: "basicSupply" },
-      { cardKeys: "colony" },
+      { location: 'basicSupply' },
+      { cardKeys: 'colony' },
     ]);
     return colonyCards.length === 0;
   });
@@ -103,10 +95,10 @@ export const registerGameEvents: (
   registrar: GameEventRegistrar,
   config: ComputedMatchConfiguration,
 ) => void = (registrar) => {
-  registrar("onGameStart", async (args) => {
+  registrar('onGameStart', async (args) => {
     const peddlerCardIds = args.findCards([
-      { location: "kingdomSupply" },
-      { cardKeys: "peddler" },
+      { location: 'kingdomSupply' },
+      { cardKeys: 'peddler' },
     ]).map((card) => card.id);
 
     if (peddlerCardIds.length === 0) {
@@ -122,13 +114,13 @@ export const registerGameEvents: (
         let ruleUnsub = () => void 0;
         args.reactionManager.registerReactionTemplate({
           id: `peddler:${cardId}:endTurnPhase`,
-          listeningFor: "endTurnPhase",
+          listeningFor: 'endTurnPhase',
           playerId: player.id,
           once: false,
           compulsory: true,
           allowMultipleInstances: true,
           condition: (conditionArgs) => {
-            if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== "buy") {
+            if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') {
               return false;
             }
             return getCurrentPlayer(conditionArgs.match).id === player.id;
@@ -141,13 +133,13 @@ export const registerGameEvents: (
 
         args.reactionManager.registerReactionTemplate({
           id: `peddler:${cardId}:startTurnPhase`,
-          listeningFor: "startTurnPhase",
+          listeningFor: 'startTurnPhase',
           playerId: player.id,
           compulsory: true,
           once: false,
           allowMultipleInstances: true,
           condition: (conditionArgs) => {
-            if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== "buy") {
+            if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') {
               return false;
             }
             return getCurrentPlayer(conditionArgs.match).id === player.id;
@@ -161,9 +153,7 @@ export const registerGameEvents: (
 
             const rule: CardPriceRule = (ruleCard, ruleContext) => {
               const cardsInPlay = getCardsInPlay(args.findCards);
-              const actionsInPlay = cardsInPlay.filter((card) =>
-                card.type.includes("ACTION")
-              );
+              const actionsInPlay = cardsInPlay.filter((card) => card.type.includes('ACTION'));
               if (actionsInPlay.length === 0) {
                 return { restricted: false, cost: { treasure: 0 } };
               }

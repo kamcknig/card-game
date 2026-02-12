@@ -1,11 +1,11 @@
-import {CardExpansionModule} from '../../types.ts';
-import {Card, CardId, Match, PlayerId, Project} from 'shared/shared-types';
-import {getCurrentPlayer} from '../../utils/get-current-player.ts';
-import {getTurnPhase} from '../../utils/get-turn-phase.ts';
+import { CardExpansionModule } from '../../types.ts';
+import { Card, CardId, Match, PlayerId, Project } from 'shared/shared-types';
+import { getCurrentPlayer } from '../../utils/get-current-player.ts';
+import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 
 // Checks whether a player has a cube placed on the given project.
 function isProjectOwned(match: Match, playerId: PlayerId, project: Project) {
-  return Object.values(match.tokens ?? {}).some(token =>
+  return Object.values(match.tokens ?? {}).some((token) =>
     token.tokenId === 'cube-token' &&
     token.ownerId === playerId &&
     token.location.type === 'cardLike' &&
@@ -32,13 +32,13 @@ const hasPrintedPlusCoinAmount = (abilityText: string) => PLUS_DOLLAR_AMOUNT_PAT
 const getCapitalismMetadata = (card: Card<CapitalismCardMetadata>) => {
   card.metadata.capitalism ??= {};
   return card.metadata.capitalism;
-}
+};
 
 // Returns true when it is currently the specified player's turn.
 const isCurrentTurnPlayer = (match: Match, playerId: PlayerId) => {
   const currentPlayer = match.players[match.currentPlayerTurnIndex];
   return currentPlayer?.id === playerId;
-}
+};
 
 // Evaluates and caches whether a card has printed +$ text for Capitalism.
 const isCapitalismTextQualified = (card: Card<CapitalismCardMetadata>) => {
@@ -51,7 +51,7 @@ const isCapitalismTextQualified = (card: Card<CapitalismCardMetadata>) => {
   }
 
   return metadata.hasPlusCoinAmountInText;
-}
+};
 
 // Applies Capitalism's temporary Treasure type to all qualifying Action cards in the match library.
 const applyCapitalismTreasureTypes = (match: Match, cardLibrary: {
@@ -61,7 +61,7 @@ const applyCapitalismTreasureTypes = (match: Match, cardLibrary: {
   let addedCount = 0;
   // Iterate in id order to keep deterministic type mutation/log order.
   const cards = cardLibrary.getAllCardsAsArray()
-    .map(card => cardLibrary.getCard<CapitalismCardMetadata>(card.id))
+    .map((card) => cardLibrary.getCard<CapitalismCardMetadata>(card.id))
     .sort((a, b) => a.id - b.id);
 
   for (const card of cards) {
@@ -85,7 +85,7 @@ const applyCapitalismTreasureTypes = (match: Match, cardLibrary: {
   }
 
   return addedCount;
-}
+};
 
 // Removes only the Treasure types that were temporarily added by Capitalism for the specified player.
 function clearCapitalismTreasureTypes(cardLibrary: {
@@ -95,7 +95,7 @@ function clearCapitalismTreasureTypes(cardLibrary: {
   let removedCount = 0;
   // Iterate in id order to keep deterministic cleanup order.
   const cards = cardLibrary.getAllCardsAsArray()
-    .map(card => cardLibrary.getCard<CapitalismCardMetadata>(card.id))
+    .map((card) => cardLibrary.getCard<CapitalismCardMetadata>(card.id))
     .sort((a, b) => a.id - b.id);
 
   for (const card of cards) {
@@ -120,7 +120,7 @@ function clearCapitalismTreasureTypes(cardLibrary: {
 const effectMap: CardExpansionModule = {
   'academy': {
     registerEffects: () => async (cardEffectArgs) => {
-      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      const project = cardEffectArgs.match.projects?.find((candidate) => candidate.id === cardEffectArgs.cardId);
       if (!project) {
         console.warn('[academy project] project card not found');
         return;
@@ -141,7 +141,9 @@ const effectMap: CardExpansionModule = {
 
           if (!projectOwned) {
             // Log ownership failures to help trace missing cube issues.
-            console.debug(`[academy project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+            console.debug(
+              `[academy project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`,
+            );
             return false;
           }
 
@@ -152,7 +154,9 @@ const effectMap: CardExpansionModule = {
         },
         triggeredEffectFn: async (triggeredArgs) => {
           // Log the Villager grant before applying it.
-          console.debug(`[academy project] granting +1 Villager to player ${cardEffectArgs.playerId} on turn ${triggeredArgs.match.turnNumber}`);
+          console.debug(
+            `[academy project] granting +1 Villager to player ${cardEffectArgs.playerId} on turn ${triggeredArgs.match.turnNumber}`,
+          );
           triggeredArgs.logManager.addLogEntry({
             type: 'cardLikeEffect',
             playerId: cardEffectArgs.playerId,
@@ -170,7 +174,7 @@ const effectMap: CardExpansionModule = {
   },
   'barracks': {
     registerEffects: () => async (cardEffectArgs) => {
-      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      const project = cardEffectArgs.match.projects?.find((candidate) => candidate.id === cardEffectArgs.cardId);
       if (!project) {
         console.warn('[barracks project] project card not found');
         return;
@@ -191,13 +195,17 @@ const effectMap: CardExpansionModule = {
           const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
           // Log ownership checks to aid debugging missing cubes.
           if (!owned) {
-            console.debug(`[barracks project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+            console.debug(
+              `[barracks project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`,
+            );
           }
           return owned;
         },
         triggeredEffectFn: async (triggeredArgs) => {
           // Log the timing for the Barracks bonus.
-          console.debug(`[barracks project] granting +1 Action to player ${cardEffectArgs.playerId} on turn ${triggeredArgs.match.turnNumber}`);
+          console.debug(
+            `[barracks project] granting +1 Action to player ${cardEffectArgs.playerId} on turn ${triggeredArgs.match.turnNumber}`,
+          );
           triggeredArgs.logManager.addLogEntry({
             type: 'cardLikeEffect',
             playerId: cardEffectArgs.playerId,
@@ -205,14 +213,14 @@ const effectMap: CardExpansionModule = {
             effectText: '+1 Action',
           });
 
-          await triggeredArgs.runGameActionDelegate('gainAction', {count: 1});
+          await triggeredArgs.runGameActionDelegate('gainAction', { count: 1 });
         },
       });
     },
   },
   'canal': {
     registerEffects: () => async (cardEffectArgs) => {
-      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      const project = cardEffectArgs.match.projects?.find((candidate) => candidate.id === cardEffectArgs.cardId);
       if (!project) {
         console.warn('[canal project] project card not found');
         return;
@@ -225,7 +233,7 @@ const effectMap: CardExpansionModule = {
       // Apply the per-card cost rules for this player's turn.
       const registerRules = () => {
         if (ruleUnsubs.length > 0) {
-          ruleUnsubs.forEach(unsub => unsub());
+          ruleUnsubs.forEach((unsub) => unsub());
           ruleUnsubs = [];
         }
 
@@ -236,21 +244,21 @@ const effectMap: CardExpansionModule = {
         for (const card of allCards) {
           const unsub = cardEffectArgs.cardPriceController.registerRule(card, (_targetCard, context) => {
             if (context.playerId !== cardEffectArgs.playerId) {
-              return {restricted: false, cost: {treasure: 0}};
+              return { restricted: false, cost: { treasure: 0 } };
             }
 
             const currentPlayer = context.match.players[context.match.currentPlayerTurnIndex];
             if (currentPlayer?.id !== cardEffectArgs.playerId) {
-              return {restricted: false, cost: {treasure: 0}};
+              return { restricted: false, cost: { treasure: 0 } };
             }
 
             const projectOwned = isProjectOwned(context.match, cardEffectArgs.playerId, project);
 
             if (!projectOwned) {
-              return {restricted: false, cost: {treasure: 0}};
+              return { restricted: false, cost: { treasure: 0 } };
             }
 
-            return {restricted: false, cost: {treasure: -1}};
+            return { restricted: false, cost: { treasure: -1 } };
           });
 
           ruleUnsubs.push(unsub);
@@ -261,7 +269,7 @@ const effectMap: CardExpansionModule = {
       const clearRules = () => {
         if (!ruleUnsubs.length) return;
         console.debug(`[canal project] clearing ${ruleUnsubs.length} cost rules`);
-        ruleUnsubs.forEach(unsub => unsub());
+        ruleUnsubs.forEach((unsub) => unsub());
         ruleUnsubs = [];
       };
 
@@ -277,7 +285,9 @@ const effectMap: CardExpansionModule = {
           const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
           // Log ownership failures to avoid silent skips.
           if (!owned) {
-            console.debug(`[canal project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+            console.debug(
+              `[canal project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`,
+            );
           }
           return owned;
         },
@@ -302,13 +312,15 @@ const effectMap: CardExpansionModule = {
   },
   'capitalism': {
     registerEffects: () => async (cardEffectArgs) => {
-      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      const project = cardEffectArgs.match.projects?.find((candidate) => candidate.id === cardEffectArgs.cardId);
       if (!project) {
         console.warn('[capitalism project] project card not found');
         return;
       }
 
-      console.info(`[capitalism project] registering turn type mutation triggers for player ${cardEffectArgs.playerId}`);
+      console.info(
+        `[capitalism project] registering turn type mutation triggers for player ${cardEffectArgs.playerId}`,
+      );
 
       // Apply Capitalism at the start of each owned turn.
       cardEffectArgs.reactionManager.registerSystemTemplate(project, 'startTurn', {
@@ -324,13 +336,21 @@ const effectMap: CardExpansionModule = {
 
           const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
           if (!owned) {
-            console.debug(`[capitalism project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+            console.debug(
+              `[capitalism project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`,
+            );
           }
           return owned;
         },
         triggeredEffectFn: async (triggeredArgs) => {
-          const addedCount = applyCapitalismTreasureTypes(triggeredArgs.match, triggeredArgs.cardLibrary, cardEffectArgs.playerId);
-          console.debug(`[capitalism project] added TREASURE type to ${addedCount} card(s) for player ${cardEffectArgs.playerId} on turn ${triggeredArgs.match.turnNumber}`);
+          const addedCount = applyCapitalismTreasureTypes(
+            triggeredArgs.match,
+            triggeredArgs.cardLibrary,
+            cardEffectArgs.playerId,
+          );
+          console.debug(
+            `[capitalism project] added TREASURE type to ${addedCount} card(s) for player ${cardEffectArgs.playerId} on turn ${triggeredArgs.match.turnNumber}`,
+          );
         },
       });
 
@@ -344,7 +364,9 @@ const effectMap: CardExpansionModule = {
         condition: (conditionArgs) => conditionArgs.trigger.args.playerId === cardEffectArgs.playerId,
         triggeredEffectFn: async (triggeredArgs) => {
           const removedCount = clearCapitalismTreasureTypes(triggeredArgs.cardLibrary, cardEffectArgs.playerId);
-          console.debug(`[capitalism project] removed TREASURE type from ${removedCount} card(s) for player ${cardEffectArgs.playerId} on turn ${triggeredArgs.match.turnNumber}`);
+          console.debug(
+            `[capitalism project] removed TREASURE type from ${removedCount} card(s) for player ${cardEffectArgs.playerId} on turn ${triggeredArgs.match.turnNumber}`,
+          );
         },
       });
 
@@ -354,17 +376,25 @@ const effectMap: CardExpansionModule = {
       }
 
       if (!isProjectOwned(cardEffectArgs.match, cardEffectArgs.playerId, project)) {
-        console.debug(`[capitalism project] player ${cardEffectArgs.playerId} does not own cube yet for immediate apply`);
+        console.debug(
+          `[capitalism project] player ${cardEffectArgs.playerId} does not own cube yet for immediate apply`,
+        );
         return;
       }
 
-      const addedCount = applyCapitalismTreasureTypes(cardEffectArgs.match, cardEffectArgs.cardLibrary, cardEffectArgs.playerId);
-      console.debug(`[capitalism project] immediate apply added TREASURE type to ${addedCount} card(s) for player ${cardEffectArgs.playerId} on turn ${cardEffectArgs.match.turnNumber}`);
+      const addedCount = applyCapitalismTreasureTypes(
+        cardEffectArgs.match,
+        cardEffectArgs.cardLibrary,
+        cardEffectArgs.playerId,
+      );
+      console.debug(
+        `[capitalism project] immediate apply added TREASURE type to ${addedCount} card(s) for player ${cardEffectArgs.playerId} on turn ${cardEffectArgs.match.turnNumber}`,
+      );
     },
   },
   'cathedral': {
     registerEffects: () => async (cardEffectArgs) => {
-      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      const project = cardEffectArgs.match.projects?.find((candidate) => candidate.id === cardEffectArgs.cardId);
       if (!project) {
         console.warn('[cathedral project] project card not found');
         return;
@@ -386,7 +416,9 @@ const effectMap: CardExpansionModule = {
           const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
           // Log missing cube ownership for Cathedral.
           if (!owned) {
-            console.debug(`[cathedral project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+            console.debug(
+              `[cathedral project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`,
+            );
           }
           return owned;
         },
@@ -398,7 +430,9 @@ const effectMap: CardExpansionModule = {
           }
 
           // Log the mandatory trash prompt for tracing turn start effects.
-          console.debug(`[cathedral project] prompting player ${cardEffectArgs.playerId} to trash from ${hand.length} card(s)`);
+          console.debug(
+            `[cathedral project] prompting player ${cardEffectArgs.playerId} to trash from ${hand.length} card(s)`,
+          );
           triggeredArgs.logManager.addLogEntry({
             type: 'cardLikeEffect',
             playerId: cardEffectArgs.playerId,
@@ -430,7 +464,7 @@ const effectMap: CardExpansionModule = {
   },
   'citadel': {
     registerEffects: () => async (cardEffectArgs) => {
-      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      const project = cardEffectArgs.match.projects?.find((candidate) => candidate.id === cardEffectArgs.cardId);
       if (!project) {
         console.warn('[citadel project] project card not found');
         return;
@@ -456,7 +490,9 @@ const effectMap: CardExpansionModule = {
 
           const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
           if (!owned) {
-            console.debug(`[citadel project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+            console.debug(
+              `[citadel project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`,
+            );
             return false;
           }
 
@@ -469,7 +505,7 @@ const effectMap: CardExpansionModule = {
 
           const turnNumber = conditionArgs.match.turnNumber;
           const playedThisTurn = conditionArgs.match.stats.playedCardsByTurn[turnNumber] ?? [];
-          const actionPlaysThisTurn = playedThisTurn.filter(cardId => {
+          const actionPlaysThisTurn = playedThisTurn.filter((cardId) => {
             const playStats = conditionArgs.match.stats.playedCards[cardId];
             if (playStats?.playerId !== cardEffectArgs.playerId) {
               return false;
@@ -479,7 +515,9 @@ const effectMap: CardExpansionModule = {
           });
           const isFirstAction = actionPlaysThisTurn.length === 1;
           if (!isFirstAction) {
-            console.debug(`[citadel project] action count for player ${cardEffectArgs.playerId} this turn is ${actionPlaysThisTurn.length}`);
+            console.debug(
+              `[citadel project] action count for player ${cardEffectArgs.playerId} this turn is ${actionPlaysThisTurn.length}`,
+            );
           }
           return isFirstAction;
         },
@@ -508,7 +546,7 @@ const effectMap: CardExpansionModule = {
   },
   'city-gate': {
     registerEffects: () => async (cardEffectArgs) => {
-      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      const project = cardEffectArgs.match.projects?.find((candidate) => candidate.id === cardEffectArgs.cardId);
       if (!project) {
         console.warn('[city-gate project] project card not found');
         return;
@@ -528,7 +566,9 @@ const effectMap: CardExpansionModule = {
 
           const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
           if (!owned) {
-            console.debug(`[city-gate project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+            console.debug(
+              `[city-gate project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`,
+            );
           }
           return owned;
         },
@@ -577,7 +617,7 @@ const effectMap: CardExpansionModule = {
           await triggeredArgs.runGameActionDelegate('moveCard', {
             cardId: selectedCardIds[0],
             toPlayerId: cardEffectArgs.playerId,
-            to: {location: 'playerDeck'},
+            to: { location: 'playerDeck' },
           });
         },
       });
@@ -585,7 +625,7 @@ const effectMap: CardExpansionModule = {
   },
   'crop-rotation': {
     registerEffects: () => async (cardEffectArgs) => {
-      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      const project = cardEffectArgs.match.projects?.find((candidate) => candidate.id === cardEffectArgs.cardId);
       if (!project) {
         console.warn('[crop-rotation project] project card not found');
         return;
@@ -605,14 +645,16 @@ const effectMap: CardExpansionModule = {
 
           const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
           if (!owned) {
-            console.debug(`[crop-rotation project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+            console.debug(
+              `[crop-rotation project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`,
+            );
           }
           return owned;
         },
         triggeredEffectFn: async (triggeredArgs) => {
           const victoryCards = triggeredArgs.findCards([
-            {location: 'playerHand', playerId: cardEffectArgs.playerId},
-            {cardType: ['VICTORY']},
+            { location: 'playerHand', playerId: cardEffectArgs.playerId },
+            { cardType: ['VICTORY'] },
           ]);
 
           if (!victoryCards.length) {
@@ -624,7 +666,7 @@ const effectMap: CardExpansionModule = {
           const selectedCardIds = await triggeredArgs.runGameActionDelegate('selectCard', {
             playerId: cardEffectArgs.playerId,
             prompt: 'Discard a Victory card for +2 Cards?',
-            restrict: victoryCards.map(card => card.id),
+            restrict: victoryCards.map((card) => card.id),
             count: 1,
             optional: true,
           }) as CardId[];
@@ -665,7 +707,7 @@ const effectMap: CardExpansionModule = {
   },
   'exploration': {
     registerEffects: () => async (cardEffectArgs) => {
-      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      const project = cardEffectArgs.match.projects?.find((candidate) => candidate.id === cardEffectArgs.cardId);
       if (!project) {
         console.warn('[exploration project] project card not found');
         return;
@@ -689,7 +731,9 @@ const effectMap: CardExpansionModule = {
           }
           const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
           if (!owned) {
-            console.debug(`[exploration project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+            console.debug(
+              `[exploration project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`,
+            );
           }
           return owned;
         },
@@ -751,7 +795,9 @@ const effectMap: CardExpansionModule = {
 
           const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
           if (!owned) {
-            console.debug(`[exploration project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+            console.debug(
+              `[exploration project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`,
+            );
             return false;
           }
           return true;
@@ -764,7 +810,9 @@ const effectMap: CardExpansionModule = {
             effectText: '+1 Coffer, +1 Villager',
           });
 
-          console.debug(`[exploration project] granting +1 Coffer and +1 Villager to player ${cardEffectArgs.playerId}`);
+          console.debug(
+            `[exploration project] granting +1 Coffer and +1 Villager to player ${cardEffectArgs.playerId}`,
+          );
           await triggeredArgs.runGameActionDelegate('gainCoffer', {
             playerId: cardEffectArgs.playerId,
             count: 1,
@@ -779,7 +827,7 @@ const effectMap: CardExpansionModule = {
   },
   'fair': {
     registerEffects: () => async (cardEffectArgs) => {
-      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      const project = cardEffectArgs.match.projects?.find((candidate) => candidate.id === cardEffectArgs.cardId);
       if (!project) {
         console.warn('[fair project] project card not found');
         return;
@@ -799,7 +847,9 @@ const effectMap: CardExpansionModule = {
 
           const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
           if (!owned) {
-            console.debug(`[fair project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+            console.debug(
+              `[fair project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`,
+            );
           }
           return owned;
         },
@@ -812,14 +862,14 @@ const effectMap: CardExpansionModule = {
           });
 
           console.debug(`[fair project] granting +1 Buy to player ${cardEffectArgs.playerId}`);
-          await triggeredArgs.runGameActionDelegate('gainBuy', {count: 1});
+          await triggeredArgs.runGameActionDelegate('gainBuy', { count: 1 });
         },
       });
     },
   },
   'guildhall': {
     registerEffects: () => async (cardEffectArgs) => {
-      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      const project = cardEffectArgs.match.projects?.find((candidate) => candidate.id === cardEffectArgs.cardId);
       if (!project) {
         console.warn('[guildhall project] project card not found');
         return;
@@ -839,7 +889,9 @@ const effectMap: CardExpansionModule = {
 
           const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
           if (!owned) {
-            console.debug(`[guildhall project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+            console.debug(
+              `[guildhall project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`,
+            );
             return false;
           }
 
@@ -866,7 +918,7 @@ const effectMap: CardExpansionModule = {
   },
   'innovation': {
     registerEffects: () => async (cardEffectArgs) => {
-      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      const project = cardEffectArgs.match.projects?.find((candidate) => candidate.id === cardEffectArgs.cardId);
       if (!project) {
         console.warn('[innovation project] project card not found');
         return;
@@ -887,7 +939,9 @@ const effectMap: CardExpansionModule = {
           }
           const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
           if (!owned) {
-            console.debug(`[innovation project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+            console.debug(
+              `[innovation project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`,
+            );
           }
           return owned;
         },
@@ -929,8 +983,8 @@ const effectMap: CardExpansionModule = {
             playerId: cardEffectArgs.playerId,
             prompt: `Play ${gainedCard.cardName}?`,
             actionButtons: [
-              {label: 'NO', action: 1},
-              {label: 'YES', action: 2},
+              { label: 'NO', action: 1 },
+              { label: 'YES', action: 2 },
             ],
             content: {
               type: 'display-cards',
@@ -966,7 +1020,7 @@ const effectMap: CardExpansionModule = {
   },
   'pageant': {
     registerEffects: () => async (cardEffectArgs) => {
-      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      const project = cardEffectArgs.match.projects?.find((candidate) => candidate.id === cardEffectArgs.cardId);
       if (!project) {
         console.warn('[pageant project] project card not found');
         return;
@@ -989,7 +1043,9 @@ const effectMap: CardExpansionModule = {
 
           const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
           if (!owned) {
-            console.debug(`[pageant project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+            console.debug(
+              `[pageant project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`,
+            );
           }
           return owned;
         },
@@ -1003,8 +1059,8 @@ const effectMap: CardExpansionModule = {
             playerId: cardEffectArgs.playerId,
             prompt: 'Pay $1 for +1 Coffers? (Pageant)',
             actionButtons: [
-              {label: 'NO', action: 1},
-              {label: 'YES', action: 2},
+              { label: 'NO', action: 1 },
+              { label: 'YES', action: 2 },
             ],
           }) as { action: number };
 
@@ -1026,7 +1082,7 @@ const effectMap: CardExpansionModule = {
           });
 
           console.debug('[pageant project] paying $1 and granting +1 Coffer');
-          await triggeredArgs.runGameActionDelegate('gainTreasure', {count: -1});
+          await triggeredArgs.runGameActionDelegate('gainTreasure', { count: -1 });
           await triggeredArgs.runGameActionDelegate('gainCoffer', {
             playerId: cardEffectArgs.playerId,
             count: 1,
@@ -1037,7 +1093,7 @@ const effectMap: CardExpansionModule = {
   },
   'piazza': {
     registerEffects: () => async (cardEffectArgs) => {
-      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      const project = cardEffectArgs.match.projects?.find((candidate) => candidate.id === cardEffectArgs.cardId);
       if (!project) {
         console.warn('[piazza project] project card not found');
         return;
@@ -1057,7 +1113,9 @@ const effectMap: CardExpansionModule = {
 
           const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
           if (!owned) {
-            console.debug(`[piazza project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+            console.debug(
+              `[piazza project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`,
+            );
           }
           return owned;
         },
@@ -1066,7 +1124,7 @@ const effectMap: CardExpansionModule = {
 
           if (!deck.length) {
             console.debug('[piazza project] deck empty, shuffling');
-            await triggeredArgs.runGameActionDelegate('shuffleDeck', {playerId: cardEffectArgs.playerId});
+            await triggeredArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
             deck = triggeredArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
           }
 
@@ -1107,7 +1165,7 @@ const effectMap: CardExpansionModule = {
   },
   'road-network': {
     registerEffects: () => async (cardEffectArgs) => {
-      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      const project = cardEffectArgs.match.projects?.find((candidate) => candidate.id === cardEffectArgs.cardId);
       if (!project) {
         console.warn('[road-network project] project card not found');
         return;
@@ -1127,7 +1185,9 @@ const effectMap: CardExpansionModule = {
 
           const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
           if (!owned) {
-            console.debug(`[road-network project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+            console.debug(
+              `[road-network project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`,
+            );
             return false;
           }
 
@@ -1154,7 +1214,7 @@ const effectMap: CardExpansionModule = {
   },
   'sewers': {
     registerEffects: () => async (cardEffectArgs) => {
-      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      const project = cardEffectArgs.match.projects?.find((candidate) => candidate.id === cardEffectArgs.cardId);
       if (!project) {
         console.warn('[sewers project] project card not found');
         return;
@@ -1174,7 +1234,9 @@ const effectMap: CardExpansionModule = {
 
           const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
           if (!owned) {
-            console.debug(`[sewers project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+            console.debug(
+              `[sewers project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`,
+            );
             return false;
           }
 
@@ -1226,7 +1288,7 @@ const effectMap: CardExpansionModule = {
             cardId: selectedCardIds[0],
           }, {
             // Mark the source so Sewers can ignore its own trash trigger.
-            loggingContext: {source: project.id}
+            loggingContext: { source: project.id },
           });
         },
       });
@@ -1235,7 +1297,7 @@ const effectMap: CardExpansionModule = {
   'silos': {
     registerEffects: () => async (cardEffectArgs) => {
       // Resolve the Silos project to attach start-of-turn behavior.
-      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      const project = cardEffectArgs.match.projects?.find((candidate) => candidate.id === cardEffectArgs.cardId);
       if (!project) {
         console.warn('[silos project] project card not found');
         return;
@@ -1254,12 +1316,16 @@ const effectMap: CardExpansionModule = {
 
           const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
           if (!owned) {
-            console.debug(`[silos project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+            console.debug(
+              `[silos project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`,
+            );
             return false;
           }
 
           const hand = conditionArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
-          const copperCount = hand.filter(cardId => conditionArgs.cardLibrary.getCard(cardId).cardKey === 'copper').length;
+          const copperCount = hand.filter((cardId) =>
+            conditionArgs.cardLibrary.getCard(cardId).cardKey === 'copper'
+          ).length;
           if (!copperCount) {
             console.debug('[silos project] no Copper cards in hand to discard');
             return false;
@@ -1269,7 +1335,7 @@ const effectMap: CardExpansionModule = {
         },
         triggeredEffectFn: async (triggeredArgs) => {
           const hand = triggeredArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
-          const copperIds = hand.filter(cardId => triggeredArgs.cardLibrary.getCard(cardId).cardKey === 'copper');
+          const copperIds = hand.filter((cardId) => triggeredArgs.cardLibrary.getCard(cardId).cardKey === 'copper');
           if (!copperIds.length) {
             console.debug('[silos project] no Copper cards in hand to discard');
             return;
@@ -1279,7 +1345,7 @@ const effectMap: CardExpansionModule = {
           const selectedIds = await triggeredArgs.runGameActionDelegate('selectCard', {
             playerId: cardEffectArgs.playerId,
             prompt: 'Discard any number of Coppers',
-            count: {kind: 'upTo', count: copperIds.length},
+            count: { kind: 'upTo', count: copperIds.length },
             optional: true,
             restrict: copperIds,
           }) as CardId[];

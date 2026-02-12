@@ -19,7 +19,7 @@ export const registerAdventuresTokenDefinitions = (): void => {
     duration: 'permanent',
     expansion: 'adventures',
   });
-  
+
   registerTokenDefinition({
     id: adventuresTokenIds.plusAction,
     name: '+1 Action token',
@@ -27,7 +27,7 @@ export const registerAdventuresTokenDefinitions = (): void => {
     duration: 'permanent',
     expansion: 'adventures',
   });
-  
+
   registerTokenDefinition({
     id: adventuresTokenIds.plusBuy,
     name: '+1 Buy token',
@@ -35,7 +35,7 @@ export const registerAdventuresTokenDefinitions = (): void => {
     duration: 'permanent',
     expansion: 'adventures',
   });
-  
+
   registerTokenDefinition({
     id: adventuresTokenIds.plusCard,
     name: '+1 Card token',
@@ -43,7 +43,7 @@ export const registerAdventuresTokenDefinitions = (): void => {
     duration: 'permanent',
     expansion: 'adventures',
   });
-  
+
   registerTokenDefinition({
     id: adventuresTokenIds.plusCoin,
     name: '+$1 token',
@@ -67,7 +67,7 @@ export const registerAdventuresTokenDefinitions = (): void => {
     duration: 'permanent',
     expansion: 'adventures',
   });
-  
+
   registerTokenDefinition({
     id: adventuresTokenIds.minusCoin,
     name: '-$1 token',
@@ -75,7 +75,7 @@ export const registerAdventuresTokenDefinitions = (): void => {
     duration: 'oneShot',
     expansion: 'adventures',
   });
-  
+
   registerTokenDefinition({
     id: adventuresTokenIds.minusCard,
     name: '-1 Card token',

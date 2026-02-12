@@ -26,11 +26,11 @@ export class MatchCardLibrary {
 
   public getAllCardsAsArray = (): Card[] => {
     return this._library.values().toArray();
-  }
+  };
 
   getCardsByOwner(id: PlayerId) {
     const allCards = this.getAllCardsAsArray();
-    const playerCards = allCards.filter(c => {
+    const playerCards = allCards.filter((c) => {
       return c.owner === id;
     });
     return playerCards;

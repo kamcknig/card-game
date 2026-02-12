@@ -6,4 +6,4 @@ export const getOrderStartingFrom = <T>(arr: T[], startIdx: number): T[] => {
     results.push(arr[idx]);
   }
   return results;
-}
+};

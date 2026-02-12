@@ -6,14 +6,18 @@ export const createCardData = (cardKey: CardKey, expansionName: string, template
     ...createCardLike(cardKey, expansionName, templateData),
     halfImagePath: `./assets/card-images/${expansionName}/half-size/${cardKey}.jpg`,
     kingdom: templateData.kingdom ?? cardKey,
-  }
+  };
 
   return data as CardNoId;
 };
 
 type CreateCardLikeTemplate = Partial<CardLikeNoId> & { kingdom?: string };
 
-export const createCardLike = (cardKey: CardKey, expansionName: string, templateData: CreateCardLikeTemplate): CardLikeNoId => {
+export const createCardLike = (
+  cardKey: CardKey,
+  expansionName: string,
+  templateData: CreateCardLikeTemplate,
+): CardLikeNoId => {
   // Default the pile/kingdom key to the randomizer data when provided.
   const randomizerFromData = templateData.randomizerData?.randomizer;
   const resolvedKingdom = templateData.kingdom ?? (randomizerFromData ?? cardKey);
@@ -25,7 +29,7 @@ export const createCardLike = (cardKey: CardKey, expansionName: string, template
     ...templateData ?? {},
     // Default card names follow the standard format rules unless overridden by card data.
     cardName: templateData.cardName ?? formatCardName(cardKey),
-    kingdom: resolvedKingdom
+    kingdom: resolvedKingdom,
   } as CardLikeNoId;
   return data;
-}
+};

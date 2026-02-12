@@ -6,35 +6,36 @@ import { ComputedMatchConfiguration, TokenId } from 'shared/shared-types.ts';
 import { adventuresTokenIds } from './token-ids-adventures.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 
-const configurator: ExpansionConfiguratorFactory = () => async args => {
-  
+const configurator: ExpansionConfiguratorFactory = () => async (args) => {
   configureReserve(args);
   registerAdventuresTokenDefinitions();
   registerAdventuresTokenTriggers();
-  
-  return args.config;
-}
 
-export const registerGameEvents: (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => void = (registrar, config) => {
+  return args.config;
+};
+
+export const registerGameEvents: (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => void = (
+  registrar,
+  config,
+) => {
   // Determine whether the Journey token is required for this match.
-  const usesJourneyToken = config.kingdomSupply.some(supply =>
-    supply.name === 'giant' || supply.name === 'ranger'
-  ) || config.events.some(event => event.cardKey === 'pilgrimage');
-  const usesFerryToken = config.events.some(event => event.cardKey === 'ferry');
+  const usesJourneyToken = config.kingdomSupply.some((supply) => supply.name === 'giant' || supply.name === 'ranger') ||
+    config.events.some((event) => event.cardKey === 'pilgrimage');
+  const usesFerryToken = config.events.some((event) => event.cardKey === 'ferry');
   // Determine whether Lost Arts is in the event lineup and needs the +1 Action token.
-  const usesLostArtsToken = config.events.some(event => event.cardKey === 'lost-arts');
+  const usesLostArtsToken = config.events.some((event) => event.cardKey === 'lost-arts');
   // Determine whether Raid is in the event lineup and needs the -1 Card token.
-  const usesRaidToken = config.events.some(event => event.cardKey === 'raid');
+  const usesRaidToken = config.events.some((event) => event.cardKey === 'raid');
   // Determine whether Seaway is in the event lineup and needs the +1 Buy token.
-  const usesSeawayToken = config.events.some(event => event.cardKey === 'seaway');
+  const usesSeawayToken = config.events.some((event) => event.cardKey === 'seaway');
   // Determine whether Training is in the event lineup and needs the +$1 token.
-  const usesTrainingToken = config.events.some(event => event.cardKey === 'training');
+  const usesTrainingToken = config.events.some((event) => event.cardKey === 'training');
   // Determine whether Plan is in the event lineup and needs the Trashing token.
-  const usesPlanToken = config.events.some(event => event.cardKey === 'plan');
+  const usesPlanToken = config.events.some((event) => event.cardKey === 'plan');
   // Determine whether Pathfinding is in the event lineup and needs the +1 Card token.
-  const usesPathfindingToken = config.events.some(event => event.cardKey === 'pathfinding');
+  const usesPathfindingToken = config.events.some((event) => event.cardKey === 'pathfinding');
   // Determine whether Inheritance is in the event lineup and needs the Estate token.
-  const usesInheritanceToken = config.events.some(event => event.cardKey === 'inheritance');
+  const usesInheritanceToken = config.events.some((event) => event.cardKey === 'inheritance');
   // Register the -$1 token reaction handler for all Adventures games.
   registrar('onGameStart', async (args) => {
     for (const player of args.match.players) {
@@ -50,7 +51,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           if (trigger.args.playerId !== player.id) return false;
           if (trigger.args.count <= 0) return false;
           // Only react when the player's -$1 token is currently in front of them.
-          return Object.values(match.tokens ?? {}).some(token =>
+          return Object.values(match.tokens ?? {}).some((token) =>
             token.tokenId === adventuresTokenIds.minusCoin &&
             token.ownerId === player.id &&
             token.location.type === 'player' &&
@@ -71,8 +72,10 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           // Consume the -$1 token once when a positive treasure gain occurs.
           trigger.args.count = Math.max(0, trigger.args.count - 1);
           // Carry the treasure source into the token consumption log.
-          await runGameActionDelegate('removeToken', { tokenInstanceId: tokenEntry[0] }, { loggingContext: { source: trigger.args.source } });
-        }
+          await runGameActionDelegate('removeToken', { tokenInstanceId: tokenEntry[0] }, {
+            loggingContext: { source: trigger.args.source },
+          });
+        },
       });
       args.reactionManager.registerReactionTemplate({
         id: `adventures-minus-card-token:0:drawCards:${player.id}`,
@@ -86,7 +89,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           if (trigger.args.playerId !== player.id) return false;
           if (trigger.args.count <= 0) return false;
           // Only react when the player's -1 Card token is on their deck.
-          return Object.values(match.tokens ?? {}).some(token =>
+          return Object.values(match.tokens ?? {}).some((token) =>
             token.tokenId === adventuresTokenIds.minusCard &&
             token.ownerId === player.id &&
             token.location.type === 'playerDeck' &&
@@ -107,8 +110,10 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           // Consume the -1 Card token once when a draw is attempted.
           trigger.args.count = Math.max(0, trigger.args.count - 1);
           // Carry the draw source into the token consumption log.
-          await runGameActionDelegate('removeToken', { tokenInstanceId: tokenEntry[0] }, { loggingContext: { source: trigger.args.source } });
-        }
+          await runGameActionDelegate('removeToken', { tokenInstanceId: tokenEntry[0] }, {
+            loggingContext: { source: trigger.args.source },
+          });
+        },
       });
     }
   });
@@ -117,7 +122,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     registrar('onGameStart', async (args) => {
       for (const player of args.match.players) {
         // Avoid duplicating Journey tokens when reloading saved state.
-        const alreadyOwned = Object.values(args.match.tokens ?? {}).some(token =>
+        const alreadyOwned = Object.values(args.match.tokens ?? {}).some((token) =>
           token.ownerId === player.id &&
           token.tokenId === adventuresTokenIds.journey
         );
@@ -135,7 +140,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   if (usesFerryToken) {
     registrar('onGameStart', async (args) => {
       for (const player of args.match.players) {
-        const alreadyOwned = Object.values(args.match.tokens ?? {}).some(token =>
+        const alreadyOwned = Object.values(args.match.tokens ?? {}).some((token) =>
           token.ownerId === player.id && token.tokenId === adventuresTokenIds.minusCostTwo
         );
         if (alreadyOwned) continue;
@@ -151,7 +156,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     registrar('onGameStart', async (args) => {
       // Lost Arts supplies a +1 Action token per player when the event is selected.
       for (const player of args.match.players) {
-        const alreadyOwned = Object.values(args.match.tokens ?? {}).some(token =>
+        const alreadyOwned = Object.values(args.match.tokens ?? {}).some((token) =>
           token.ownerId === player.id && token.tokenId === adventuresTokenIds.plusAction
         );
         if (alreadyOwned) continue;
@@ -167,7 +172,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     registrar('onGameStart', async (args) => {
       // Raid supplies a -1 Card token per player when the event is selected.
       for (const player of args.match.players) {
-        const alreadyOwned = Object.values(args.match.tokens ?? {}).some(token =>
+        const alreadyOwned = Object.values(args.match.tokens ?? {}).some((token) =>
           token.ownerId === player.id && token.tokenId === adventuresTokenIds.minusCard
         );
         if (alreadyOwned) continue;
@@ -183,7 +188,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     registrar('onGameStart', async (args) => {
       // Seaway supplies a +1 Buy token per player when the event is selected.
       for (const player of args.match.players) {
-        const alreadyOwned = Object.values(args.match.tokens ?? {}).some(token =>
+        const alreadyOwned = Object.values(args.match.tokens ?? {}).some((token) =>
           token.ownerId === player.id && token.tokenId === adventuresTokenIds.plusBuy
         );
         if (alreadyOwned) continue;
@@ -199,7 +204,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     registrar('onGameStart', async (args) => {
       // Training supplies a +$1 token per player when the event is selected.
       for (const player of args.match.players) {
-        const alreadyOwned = Object.values(args.match.tokens ?? {}).some(token =>
+        const alreadyOwned = Object.values(args.match.tokens ?? {}).some((token) =>
           token.ownerId === player.id && token.tokenId === adventuresTokenIds.plusCoin
         );
         if (alreadyOwned) continue;
@@ -215,7 +220,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     registrar('onGameStart', async (args) => {
       // Plan supplies a Trashing token per player and registers the on-gain trash option.
       for (const player of args.match.players) {
-        const alreadyOwned = Object.values(args.match.tokens ?? {}).some(token =>
+        const alreadyOwned = Object.values(args.match.tokens ?? {}).some((token) =>
           token.ownerId === player.id && token.tokenId === adventuresTokenIds.trashing
         );
         if (!alreadyOwned) {
@@ -239,7 +244,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
             // Match the gained card's originating pile to the player's Trashing token location.
             const gainedCard = cardLibrary.getCard(trigger.args.cardId);
             const pileKey = getCardPileKey(gainedCard);
-            return Object.values(match.tokens ?? {}).some(token =>
+            return Object.values(match.tokens ?? {}).some((token) =>
               token.tokenId === adventuresTokenIds.trashing &&
               token.ownerId === player.id &&
               token.location.type === 'supplyPile' &&
@@ -261,7 +266,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
               playerId: player.id,
               cardId: selectedCardIds[0],
             });
-          }
+          },
         });
       }
     });
@@ -270,7 +275,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     registrar('onGameStart', async (args) => {
       // Pathfinding supplies a +1 Card token per player when the event is selected.
       for (const player of args.match.players) {
-        const alreadyOwned = Object.values(args.match.tokens ?? {}).some(token =>
+        const alreadyOwned = Object.values(args.match.tokens ?? {}).some((token) =>
           token.ownerId === player.id && token.tokenId === adventuresTokenIds.plusCard
         );
         if (alreadyOwned) continue;
@@ -286,7 +291,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     registrar('onGameStart', async (args) => {
       // Inheritance supplies an Estate token per player and registers Estate play handling.
       for (const player of args.match.players) {
-        const alreadyOwned = Object.values(args.match.tokens ?? {}).some(token =>
+        const alreadyOwned = Object.values(args.match.tokens ?? {}).some((token) =>
           token.ownerId === player.id && token.tokenId === adventuresTokenIds.estate
         );
         if (!alreadyOwned) {
@@ -309,14 +314,14 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
             if (trigger.args.playerId !== player.id) return false;
             const playedCard = cardLibrary.getCard(trigger.args.cardId);
             if (playedCard.cardKey !== 'estate') return false;
-            return Object.values(match.tokens ?? {}).some(token =>
+            return Object.values(match.tokens ?? {}).some((token) =>
               token.tokenId === adventuresTokenIds.estate &&
               token.ownerId === player.id &&
               token.location.type === 'card'
             );
           },
           triggeredEffectFn: async ({ match, runGameActionDelegate }) => {
-            const estateToken = Object.values(match.tokens ?? {}).find(token =>
+            const estateToken = Object.values(match.tokens ?? {}).find((token) =>
               token.tokenId === adventuresTokenIds.estate &&
               token.ownerId === player.id &&
               token.location.type === 'card'
@@ -327,18 +332,18 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
               cardId: estateToken.location.cardId,
               overrides: { actionCost: 0, moveCard: false },
             });
-          }
+          },
         });
       }
     });
   }
   // Only grant the vanilla bonus tokens when Teacher is in the kingdom.
-  if (!config.kingdomSupply.some(supply => supply.name === 'teacher')) {
+  if (!config.kingdomSupply.some((supply) => supply.name === 'teacher')) {
     return;
   }
-  
+
   console.info(`[adventures configurator] setting up teacher onGameStart handler for vanilla tokens`);
-  
+
   registrar('onGameStart', async (args) => {
     // Teacher grants one of each vanilla bonus token to every player.
     const tokenIds: TokenId[] = [
@@ -347,11 +352,13 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
       adventuresTokenIds.plusCard,
       adventuresTokenIds.plusCoin,
     ];
-    
+
     for (const player of args.match.players) {
       for (const tokenId of tokenIds) {
         // Avoid duplicating tokens when a saved state already contains them.
-        const alreadyOwned = Object.values(args.match.tokens ?? {}).some(token => token.ownerId === player.id && token.tokenId === tokenId);
+        const alreadyOwned = Object.values(args.match.tokens ?? {}).some((token) =>
+          token.ownerId === player.id && token.tokenId === tokenId
+        );
         if (alreadyOwned) continue;
         // Place unassigned tokens in the player's area until they are moved to a supply pile.
         await args.runGameActionDelegate('placeToken', {

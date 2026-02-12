@@ -1,92 +1,92 @@
-import {CardKey, ComputedMatchConfiguration, PlayerId} from 'shared/shared-types';
+import { CardKey, ComputedMatchConfiguration, PlayerId } from 'shared/shared-types';
 import {
   ExpansionConfiguratorContext,
   ExpansionConfiguratorFactory,
   GameEventRegistrar,
   PlayerScoreDecoratorRegistrar,
 } from '../../types.ts';
-import {configureSplitPile} from '../../utils/configure-split-pile.ts';
-import {getCardPileKey} from '../../utils/get-card-pile-key.ts';
-import {configureAqueduct} from './configure-aqueduct.ts';
-import {configureArena} from './configure-arena.ts';
-import {configureBattlefield} from './configure-battlefield.ts';
-import {configureBasilica} from './configure-basilica.ts';
-import {configureBaths} from './configure-baths.ts';
-import {configureColonnade} from './configure-colonnade.ts';
-import {configureDefiledShrine} from './configure-defiled-shrine.ts';
-import {configureLabyrinth} from './configure-labyrinth.ts';
-import {configureMountainPass} from './configure-mountain-pass.ts';
-import {configureObelisk, ObeliskMetadata} from './configure-obelisk.ts';
-import {configureTomb} from './configure-tomb.ts';
+import { configureSplitPile } from '../../utils/configure-split-pile.ts';
+import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
+import { configureAqueduct } from './configure-aqueduct.ts';
+import { configureArena } from './configure-arena.ts';
+import { configureBattlefield } from './configure-battlefield.ts';
+import { configureBasilica } from './configure-basilica.ts';
+import { configureBaths } from './configure-baths.ts';
+import { configureColonnade } from './configure-colonnade.ts';
+import { configureDefiledShrine } from './configure-defiled-shrine.ts';
+import { configureLabyrinth } from './configure-labyrinth.ts';
+import { configureMountainPass } from './configure-mountain-pass.ts';
+import { configureObelisk, ObeliskMetadata } from './configure-obelisk.ts';
+import { configureTomb } from './configure-tomb.ts';
 
 // Canonical Castle pile order for 2-player games (bottom -> top).
 const castleOrderTwoPlayers: CardKey[] = [
-  "kings-castle",
-  "grand-castle",
-  "sprawling-castle",
-  "opulent-castle",
-  "haunted-castle",
-  "small-castle",
-  "crumbling-castle",
-  "humble-castle",
+  'kings-castle',
+  'grand-castle',
+  'sprawling-castle',
+  'opulent-castle',
+  'haunted-castle',
+  'small-castle',
+  'crumbling-castle',
+  'humble-castle',
 ];
 
 // Canonical Castle pile order for 3+ players (bottom -> top), doubling select Castles.
 const castleOrderThreePlus: CardKey[] = [
-  "kings-castle",
-  "kings-castle",
-  "grand-castle",
-  "sprawling-castle",
-  "opulent-castle",
-  "opulent-castle",
-  "haunted-castle",
-  "small-castle",
-  "small-castle",
-  "crumbling-castle",
-  "humble-castle",
-  "humble-castle",
+  'kings-castle',
+  'kings-castle',
+  'grand-castle',
+  'sprawling-castle',
+  'opulent-castle',
+  'opulent-castle',
+  'haunted-castle',
+  'small-castle',
+  'small-castle',
+  'crumbling-castle',
+  'humble-castle',
+  'humble-castle',
 ];
 
 // Canonical Catapult/Rocks split pile order (bottom -> top).
 const catapultRocksOrder: CardKey[] = [
-  "rocks",
-  "rocks",
-  "rocks",
-  "rocks",
-  "rocks",
-  "catapult",
-  "catapult",
-  "catapult",
-  "catapult",
-  "catapult",
+  'rocks',
+  'rocks',
+  'rocks',
+  'rocks',
+  'rocks',
+  'catapult',
+  'catapult',
+  'catapult',
+  'catapult',
+  'catapult',
 ];
 
 // Canonical encampment/plunder split pile order (bottom -> top).
 const encampmentPlunder: CardKey[] = [
-  "plunder",
-  "plunder",
-  "plunder",
-  "plunder",
-  "plunder",
-  "encampment",
-  "encampment",
-  "encampment",
-  "encampment",
-  "encampment",
+  'plunder',
+  'plunder',
+  'plunder',
+  'plunder',
+  'plunder',
+  'encampment',
+  'encampment',
+  'encampment',
+  'encampment',
+  'encampment',
 ];
 
 // Canonical gladiator/fortune split pile order (bottom -> top).
 const gladiatorFortuneOrder: CardKey[] = [
-  "fortune",
-  "fortune",
-  "fortune",
-  "fortune",
-  "fortune",
-  "gladiator",
-  "gladiator",
-  "gladiator",
-  "gladiator",
-  "gladiator",
+  'fortune',
+  'fortune',
+  'fortune',
+  'fortune',
+  'fortune',
+  'gladiator',
+  'gladiator',
+  'gladiator',
+  'gladiator',
+  'gladiator',
 ];
 
 // Canonical patrician/emporium split pile order (bottom -> top).
@@ -121,18 +121,14 @@ const configurator: ExpansionConfiguratorFactory = () => {
   return async (args) => {
     // Locate the Castles split pile in the kingdom supply, if present.
     const castlesSupply = args.config.kingdomSupply
-      .find((supply) =>
-        supply.cards.some((card) => getCardPileKey(card) === "castles")
-      );
+      .find((supply) => supply.cards.some((card) => getCardPileKey(card) === 'castles'));
 
     if (!castlesSupply) {
       console.info(`[empires configurator] no castles pile in kingdom supply`);
     } else {
       // Choose the canonical order based on player count.
       const playerCount = args.config.players.length;
-      const desiredOrder = playerCount > 2
-        ? castleOrderThreePlus
-        : castleOrderTwoPlayers;
+      const desiredOrder = playerCount > 2 ? castleOrderThreePlus : castleOrderTwoPlayers;
       const currentOrder = castlesSupply.cards.map((card) => card.cardKey);
 
       const orderMatches = currentOrder.length === desiredOrder.length &&

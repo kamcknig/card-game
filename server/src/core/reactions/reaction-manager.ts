@@ -6,14 +6,15 @@ import {
   GameLifecycleCallback,
   GameLifecycleEvent,
   GameLifeCycleEventArgsMap,
-  ReactionContext,
   Reaction,
+  ReactionContext,
   ReactionSourceType,
   ReactionTemplate,
   ReactionTemplateOptions,
   ReactionTrigger,
-  RunGameActionDelegate, TriggeredEffectContext,
-  TriggerEventType
+  RunGameActionDelegate,
+  TriggeredEffectContext,
+  TriggerEventType,
 } from '../../types.ts';
 import { MatchCardLibrary } from '../match-card-library.ts';
 import { getOrderStartingFrom } from '../../utils/get-order-starting-from.ts';
@@ -28,7 +29,10 @@ import { CardSourceController } from '../card-source-controller.ts';
 
 export class ReactionManager {
   private _reactions: Reaction[] = [];
-  private _expansionGameEventHandlers: Record<GameLifecycleEvent, GameLifecycleCallback[]> = {} as Record<GameLifecycleEvent, GameLifecycleCallback[]>
+  private _expansionGameEventHandlers: Record<GameLifecycleEvent, GameLifecycleCallback[]> = {} as Record<
+    GameLifecycleEvent,
+    GameLifecycleCallback[]
+  >;
   // Tracks duration-trigger IDs so they can be cleaned up when a card leaves play.
   private _durationTriggerIdsByCardId: Map<CardId, Set<string>> = new Map();
 
@@ -39,7 +43,7 @@ export class ReactionManager {
     private readonly logManager: LogManager,
     private readonly _match: Match,
     private readonly _cardLibrary: MatchCardLibrary,
-    private readonly runGameActionDelegate: RunGameActionDelegate
+    private readonly runGameActionDelegate: RunGameActionDelegate,
   ) {
   }
 
@@ -90,10 +94,9 @@ export class ReactionManager {
           runGameActionDelegate: this.runGameActionDelegate,
           findCards: this._findCards,
           match: this._match,
-          cardLibrary:
-          this._cardLibrary,
+          cardLibrary: this._cardLibrary,
           trigger,
-          reaction
+          reaction,
         });
 
         include = result;
@@ -108,7 +111,7 @@ export class ReactionManager {
   }
 
   async getReactionsForPlayer(trigger: ReactionTrigger, playerId: number) {
-    const playerReactions = this._reactions.filter(reaction => reaction.playerId === playerId);
+    const playerReactions = this._reactions.filter((reaction) => reaction.playerId === playerId);
     return await this.getReactions(trigger, playerReactions);
   }
 
@@ -117,7 +120,11 @@ export class ReactionManager {
       const trigger = this._reactions[i];
       if (trigger.id === triggerId) {
         this._reactions.splice(i, 1);
-        console.info(`[REACTION MANAGER] removing trigger reaction ${triggerId} for player ${this._match.players?.find((player) => player.id === trigger.playerId)}`);
+        console.info(
+          `[REACTION MANAGER] removing trigger reaction ${triggerId} for player ${
+            this._match.players?.find((player) => player.id === trigger.playerId)
+          }`,
+        );
       }
     }
   }
@@ -134,8 +141,8 @@ export class ReactionManager {
       ...reactionTemplate,
       id: `${cardLike.cardKey}:${cardLike.id}:${event}:system` +
         (idSuffix ? `:${idSuffix}` : ''),
-      system: true
-    }
+      system: true,
+    };
 
     return this.registerReactionTemplate(cardLike, event, systemTemplate);
   }
@@ -145,8 +152,8 @@ export class ReactionManager {
     event: T,
     reactionTemplate: Omit<ReactionTemplate<T>, 'id' | 'listeningFor' | 'system'>,
     templateOptions?: ReactionTemplateOptions,
-  ): string
-  registerReactionTemplate<T extends TriggerEventType>(reactionTemplate: ReactionTemplate<T>): string
+  ): string;
+  registerReactionTemplate<T extends TriggerEventType>(reactionTemplate: ReactionTemplate<T>): string;
   registerReactionTemplate<T extends TriggerEventType>(
     cardLikeOrTemplate: CardLike | ReactionTemplate<T>,
     event?: T,
@@ -157,8 +164,7 @@ export class ReactionManager {
 
     if (!(cardLikeOrTemplate instanceof CardLike)) {
       template = cardLikeOrTemplate;
-    }
-    else {
+    } else {
       // Resolve a stable source type for card-like reactions.
       const sourceType: ReactionSourceType = cardLikeOrTemplate instanceof Event
         ? 'event'
@@ -191,7 +197,10 @@ export class ReactionManager {
     return template.id;
   }
 
-  async runGameLifecycleEvent<T extends GameLifecycleEvent>(trigger: T, ...args: GameLifeCycleEventArgsMap[T] extends void ? [] : [GameLifeCycleEventArgsMap[T]]) {
+  async runGameLifecycleEvent<T extends GameLifecycleEvent>(
+    trigger: T,
+    ...args: GameLifeCycleEventArgsMap[T] extends void ? [] : [GameLifeCycleEventArgsMap[T]]
+  ) {
     for (const handler of this._expansionGameEventHandlers[trigger] ?? []) {
       await handler({
         cardSourceController: this._cardSourceController,
@@ -202,7 +211,7 @@ export class ReactionManager {
         match: this._match,
         reactionManager: this,
         runGameActionDelegate: this.runGameActionDelegate,
-      }, ...args)
+      }, ...args);
     }
   }
 
@@ -224,11 +233,11 @@ export class ReactionManager {
       cardLibrary: this._cardLibrary,
       match: this._match,
       reactionManager: this,
-      findCards: this._findCards
+      findCards: this._findCards,
     }, args as any);
   }
 
-  async runTrigger({ trigger, reactionContext }: { trigger: ReactionTrigger, reactionContext?: ReactionContext }) {
+  async runTrigger({ trigger, reactionContext }: { trigger: ReactionTrigger; reactionContext?: ReactionContext }) {
     reactionContext ??= {};
     // Track immunity scope to ensure context is not reused across triggers.
     initImmunityScope(reactionContext, trigger);
@@ -271,30 +280,28 @@ export class ReactionManager {
 
         if (!promptReactions.length) break;
 
-        const compulsoryReactions = promptReactions.filter(r => r.compulsory && !r.system);
+        const compulsoryReactions = promptReactions.filter((r) => r.compulsory && !r.system);
 
-        const systemReactions = promptReactions.filter(r => r.system);
+        const systemReactions = promptReactions.filter((r) => r.system);
 
         if (systemReactions.length) {
-    for (const systemReaction of systemReactions) {
-      console.info(`[REACTION MANAGER] running system reaction ${systemReaction.id} for ${targetPlayer}`);
-      const systemContext = this.buildTriggeredEffectContext(trigger, systemReaction);
-      await this.runReaction(systemReaction, trigger, targetPlayer, systemContext, reactionContext);
-    }
+          for (const systemReaction of systemReactions) {
+            console.info(`[REACTION MANAGER] running system reaction ${systemReaction.id} for ${targetPlayer}`);
+            const systemContext = this.buildTriggeredEffectContext(trigger, systemReaction);
+            await this.runReaction(systemReaction, trigger, targetPlayer, systemContext, reactionContext);
+          }
 
           continue;
         }
 
         let selectedReaction: Reaction | undefined = undefined;
 
-        const shouldPrompt = (
-          promptReactions.length > 1 &&
+        const shouldPrompt = promptReactions.length > 1 &&
           (
             compulsoryReactions.length !== promptReactions.length || // mix of compulsory + optional
-            !compulsoryReactions.every(r => r.getSourceKey() === compulsoryReactions[0].getSourceKey()) // different
-                                                                                                        // cards
-          )
-        );
+            !compulsoryReactions.every((r) => r.getSourceKey() === compulsoryReactions[0].getSourceKey()) // different
+            // cards
+          );
 
         // when multiple reactions can occur, the user chooses unless they are all compulsory
         // and the same card
@@ -314,14 +321,12 @@ export class ReactionManager {
           if (result.action === 0) {
             console.info(`[REACTION MANAGER] ${targetPlayer} chose not to react`);
             break;
-          }
-          else {
+          } else {
             console.info(`[REACTION MANAGER] ${targetPlayer} reacts with ${actionMap.get(result.action)}`);
           }
 
           selectedReaction = actionMap.get(result.action);
-        }
-        else {
+        } else {
           selectedReaction = compulsoryReactions[0];
         }
 
@@ -371,7 +376,13 @@ export class ReactionManager {
     }
   }
 
-  private async runReaction<T extends TriggerEventType>(reaction: Reaction, trigger: ReactionTrigger<T>, targetPlayer: Player, context: TriggeredEffectContext<T>, reactionContext?: any) {
+  private async runReaction<T extends TriggerEventType>(
+    reaction: Reaction,
+    trigger: ReactionTrigger<T>,
+    targetPlayer: Player,
+    context: TriggeredEffectContext<T>,
+    reactionContext?: any,
+  ) {
     await this.logManager.withIndent(async () => {
       // Ensure reaction-caused logs are scoped and unwind cleanly.
       await reaction.triggeredEffectFn({

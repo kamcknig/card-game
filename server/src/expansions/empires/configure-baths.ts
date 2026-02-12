@@ -48,10 +48,9 @@ export const configureBaths = (
             // Only check for the player whose turn just ended.
             if (conditionArgs.trigger.args.playerId !== player.id) return false;
 
-            const cardIdsGainedThisTurn =
-              conditionArgs.match.stats.cardsGainedByTurn?.[
-                conditionArgs.trigger.args.turnNumber
-              ] ?? [];
+            const cardIdsGainedThisTurn = conditionArgs.match.stats.cardsGainedByTurn?.[
+              conditionArgs.trigger.args.turnNumber
+            ] ?? [];
             const selfGainedCardIds = cardIdsGainedThisTurn.filter((cardId) =>
               conditionArgs.match.stats.cardsGained[cardId]?.playerId ===
                 player.id

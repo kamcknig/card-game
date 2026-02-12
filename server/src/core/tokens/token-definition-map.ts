@@ -1,4 +1,4 @@
-import { TokenDefinition, TokenId } from "shared/shared-types";
+import { TokenDefinition, TokenId } from 'shared/shared-types';
 
 // Central registry for token definitions; expansions can extend this map.
 export const tokenDefinitionMap: Record<TokenId, TokenDefinition> = {};

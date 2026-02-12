@@ -41,56 +41,52 @@ const configurator: ExpansionConfiguratorFactory = () => {
     }
 
     // Gather all selected kingdom cards for boons and heirloom-linked piles.
-    const kingdomCards = args.config.kingdomSupply.flatMap(supply => supply.cards);
-    const hasCemetery = kingdomCards.some(card => getCardPileKey(card) === 'cemetery');
-    const hasExorcist = kingdomCards.some(card => getCardPileKey(card) === 'exorcist');
-    const hasFool = kingdomCards.some(card => getCardPileKey(card) === 'fool');
-    const hasVampire = kingdomCards.some(card => getCardPileKey(card) === 'vampire');
+    const kingdomCards = args.config.kingdomSupply.flatMap((supply) => supply.cards);
+    const hasCemetery = kingdomCards.some((card) => getCardPileKey(card) === 'cemetery');
+    const hasExorcist = kingdomCards.some((card) => getCardPileKey(card) === 'exorcist');
+    const hasFool = kingdomCards.some((card) => getCardPileKey(card) === 'fool');
+    const hasVampire = kingdomCards.some((card) => getCardPileKey(card) === 'vampire');
     // Track which kingdom cards require the Imp pile.
     const impSources = new Set(['devils-workshop', 'tormentor', 'exorcist']);
-    const hasImpSource = kingdomCards.some(card => impSources.has(getCardPileKey(card)));
+    const hasImpSource = kingdomCards.some((card) => impSources.has(getCardPileKey(card)));
     const hasGhostSource = hasCemetery || hasExorcist;
     // Track which kingdom cards require the Wish pile.
     const wishSources = new Set(['leprechaun', 'secret-cave']);
-    const hasWishSource = kingdomCards.some(card => wishSources.has(getCardPileKey(card)));
+    const hasWishSource = kingdomCards.some((card) => wishSources.has(getCardPileKey(card)));
 
     if (hasGhostSource) {
       configureGhost(args);
-    }
-    else if (args.config.nonSupply?.some(supply => supply.name === 'ghost')) {
+    } else if (args.config.nonSupply?.some((supply) => supply.name === 'ghost')) {
       console.info('[nocturne configurator] removing Ghost pile because Cemetery/Exorcist are absent');
-      args.config.nonSupply = args.config.nonSupply.filter(supply => supply.name !== 'ghost');
+      args.config.nonSupply = args.config.nonSupply.filter((supply) => supply.name !== 'ghost');
     }
 
     // Ensure the Imp pile is present only when needed.
     if (hasImpSource) {
       configureImp(args);
-    }
-    else if (args.config.nonSupply?.some(supply => supply.name === 'imp')) {
+    } else if (args.config.nonSupply?.some((supply) => supply.name === 'imp')) {
       console.info('[nocturne configurator] removing Imp pile because no Imp gainers are present');
-      args.config.nonSupply = args.config.nonSupply.filter(supply => supply.name !== 'imp');
+      args.config.nonSupply = args.config.nonSupply.filter((supply) => supply.name !== 'imp');
     }
 
     // Ensure the Wish pile is present only when needed.
     if (hasWishSource) {
       configureWish(args);
-    }
-    else if (args.config.nonSupply?.some(supply => supply.name === 'wish')) {
+    } else if (args.config.nonSupply?.some((supply) => supply.name === 'wish')) {
       console.info('[nocturne configurator] removing Wish pile because no Wish gainers are present');
-      args.config.nonSupply = args.config.nonSupply.filter(supply => supply.name !== 'wish');
+      args.config.nonSupply = args.config.nonSupply.filter((supply) => supply.name !== 'wish');
     }
 
     // Ensure the Bat pile is present only when Vampire is in the kingdom.
     if (hasVampire) {
       configureBat(args);
-    }
-    else if (args.config.nonSupply?.some(supply => supply.name === 'bat')) {
+    } else if (args.config.nonSupply?.some((supply) => supply.name === 'bat')) {
       console.info('[nocturne configurator] removing Bat pile because Vampire is absent');
-      args.config.nonSupply = args.config.nonSupply.filter(supply => supply.name !== 'bat');
+      args.config.nonSupply = args.config.nonSupply.filter((supply) => supply.name !== 'bat');
     }
 
     // Fate cards determine whether boons are active for this match.
-    const fateCards = kingdomCards.filter(card => card.type?.includes('FATE'));
+    const fateCards = kingdomCards.filter((card) => card.type?.includes('FATE'));
 
     if (fateCards.length < 1) {
       // Clear out boons when the match does not contain any Fate cards.
@@ -99,13 +95,12 @@ const configurator: ExpansionConfiguratorFactory = () => {
       }
       // Ensure boons are cleared when Fate cards are absent.
       args.config.boons = [];
-    }
-    else {
+    } else {
       // Limit boon selection to expansions that actually contributed Fate cards.
-      const expansionsWithFate = Array.from(new Set(fateCards.map(card => card.expansionName)));
+      const expansionsWithFate = Array.from(new Set(fateCards.map((card) => card.expansionName)));
 
       // Pull boon definitions from the expansion library.
-      const boons = expansionsWithFate.flatMap(expansionName =>
+      const boons = expansionsWithFate.flatMap((expansionName) =>
         Object.values(expansionLibrary[expansionName]?.boons ?? {})
       );
       // De-duplicate boons across expansions by card key.
@@ -113,10 +108,13 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
       if (uniqueBoons.length < 1) {
         // Log missing boon definitions so configuration issues are visible.
-        console.warn(`[nocturne configurator] Fate cards present but no boons found for expansions ${expansionsWithFate.join(', ')}`);
+        console.warn(
+          `[nocturne configurator] Fate cards present but no boons found for expansions ${
+            expansionsWithFate.join(', ')
+          }`,
+        );
         args.config.boons = [];
-      }
-      else {
+      } else {
         // Ensure Will-o'-Wisp pile exists when boons are active.
         configureWillOWisp(args);
 
@@ -132,7 +130,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
     }
 
     // Doom cards determine whether hexes are active for this match.
-    const doomCards = kingdomCards.filter(card => card.type?.includes('DOOM'));
+    const doomCards = kingdomCards.filter((card) => card.type?.includes('DOOM'));
 
     if (doomCards.length < 1) {
       // Clear out hexes when the match does not contain any Doom cards.
@@ -141,13 +139,12 @@ const configurator: ExpansionConfiguratorFactory = () => {
       }
       // Ensure hexes are cleared when Doom cards are absent.
       args.config.hexes = [];
-    }
-    else {
+    } else {
       // Limit hex selection to expansions that actually contributed Doom cards.
-      const expansionsWithDoom = Array.from(new Set(doomCards.map(card => card.expansionName)));
+      const expansionsWithDoom = Array.from(new Set(doomCards.map((card) => card.expansionName)));
 
       // Pull hex definitions from the expansion library.
-      const hexes = expansionsWithDoom.flatMap(expansionName =>
+      const hexes = expansionsWithDoom.flatMap((expansionName) =>
         Object.values(expansionLibrary[expansionName]?.hexes ?? {})
       );
       // De-duplicate hexes across expansions by card key.
@@ -155,10 +152,13 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
       if (uniqueHexes.length < 1) {
         // Log missing hex definitions so configuration issues are visible.
-        console.warn(`[nocturne configurator] Doom cards present but no hexes found for expansions ${expansionsWithDoom.join(', ')}`);
+        console.warn(
+          `[nocturne configurator] Doom cards present but no hexes found for expansions ${
+            expansionsWithDoom.join(', ')
+          }`,
+        );
         args.config.hexes = [];
-      }
-      else {
+      } else {
         // Seed the computed configuration with the selected hexes.
         console.info(`[nocturne configurator] Doom cards present, seeding ${uniqueHexes.length} hexes`);
         args.config.hexes = structuredClone(uniqueHexes);
@@ -168,8 +168,8 @@ const configurator: ExpansionConfiguratorFactory = () => {
     // Ensure Doom-linked states are present when hexes are active.
     const doomStateKeys = new Set(['deluded', 'envious', 'miserable', 'twice-miserable']);
     const existingStates = args.config.states ?? [];
-    const nonDoomStates = existingStates.filter(state => !doomStateKeys.has(state.cardKey));
-    const doomStates = Array.from(doomStateKeys).flatMap(stateKey => {
+    const nonDoomStates = existingStates.filter((state) => !doomStateKeys.has(state.cardKey));
+    const doomStates = Array.from(doomStateKeys).flatMap((stateKey) => {
       const state = expansionLibrary['nocturne']?.states?.[stateKey];
       if (!state) {
         console.warn(`[nocturne configurator] missing doom state ${stateKey}`);
@@ -183,14 +183,13 @@ const configurator: ExpansionConfiguratorFactory = () => {
         console.info('[nocturne configurator] removing Doom states because no Doom cards are present');
       }
       args.config.states = nonDoomStates;
-    }
-    else {
+    } else {
       args.config.states = uniqueByProp([...nonDoomStates, ...doomStates], 'cardKey');
     }
 
     // Preserve any non-Nocturne states while toggling Lost in the Woods.
     const updatedStates = args.config.states ?? [];
-    const filteredStates = updatedStates.filter(state => state.cardKey !== 'lost-in-the-woods');
+    const filteredStates = updatedStates.filter((state) => state.cardKey !== 'lost-in-the-woods');
 
     if (!hasFool) {
       if (updatedStates.length !== filteredStates.length) {
@@ -227,8 +226,10 @@ export const registerScoringFunctions = (registrar: PlayerScoreDecoratorRegistra
     }
 
     const states = match.states?.cards ?? [];
-    const hasTwiceMiserable = states.some(state => state.cardKey === 'twice-miserable' && stateIds.includes(state.id));
-    const hasMiserable = states.some(state => state.cardKey === 'miserable' && stateIds.includes(state.id));
+    const hasTwiceMiserable = states.some((state) =>
+      state.cardKey === 'twice-miserable' && stateIds.includes(state.id)
+    );
+    const hasMiserable = states.some((state) => state.cardKey === 'miserable' && stateIds.includes(state.id));
 
     if (hasTwiceMiserable) {
       match.scores[playerId] = (match.scores[playerId] ?? 0) - 4;
@@ -242,33 +243,36 @@ export const registerScoringFunctions = (registrar: PlayerScoreDecoratorRegistra
 };
 
 // Registers the Cemetery heirloom swap at game start when present in the kingdom.
-export const registerGameEvents: (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => void = (registrar, config) => {
+export const registerGameEvents: (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => void = (
+  registrar,
+  config,
+) => {
   const hasCemetery = config.kingdomSupply.some(
-    supply => supply.cards.some(card => getCardPileKey(card) === 'cemetery')
+    (supply) => supply.cards.some((card) => getCardPileKey(card) === 'cemetery'),
   );
   const hasFool = config.kingdomSupply.some(
-    supply => supply.cards.some(card => getCardPileKey(card) === 'fool')
+    (supply) => supply.cards.some((card) => getCardPileKey(card) === 'fool'),
   );
   const hasDruid = config.kingdomSupply.some(
-    supply => supply.cards.some(card => getCardPileKey(card) === 'druid')
+    (supply) => supply.cards.some((card) => getCardPileKey(card) === 'druid'),
   );
   const hasPixie = config.kingdomSupply.some(
-    supply => supply.cards.some(card => getCardPileKey(card) === 'pixie')
+    (supply) => supply.cards.some((card) => getCardPileKey(card) === 'pixie'),
   );
   const hasPooka = config.kingdomSupply.some(
-    supply => supply.cards.some(card => getCardPileKey(card) === 'pooka')
+    (supply) => supply.cards.some((card) => getCardPileKey(card) === 'pooka'),
   );
   const hasSecretCave = config.kingdomSupply.some(
-    supply => supply.cards.some(card => getCardPileKey(card) === 'secret-cave')
+    (supply) => supply.cards.some((card) => getCardPileKey(card) === 'secret-cave'),
   );
   const hasShepherd = config.kingdomSupply.some(
-    supply => supply.cards.some(card => getCardPileKey(card) === 'shepherd')
+    (supply) => supply.cards.some((card) => getCardPileKey(card) === 'shepherd'),
   );
   const hasTracker = config.kingdomSupply.some(
-    supply => supply.cards.some(card => getCardPileKey(card) === 'tracker')
+    (supply) => supply.cards.some((card) => getCardPileKey(card) === 'tracker'),
   );
   const hasNecromancer = config.kingdomSupply.some(
-    supply => supply.cards.some(card => getCardPileKey(card) === 'necromancer')
+    (supply) => supply.cards.some((card) => getCardPileKey(card) === 'necromancer'),
   );
   if (hasCemetery) {
     console.info('[nocturne configurator] setting up cemetery heirloom onGameStart handler');
@@ -299,7 +303,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
         await args.runGameActionDelegate('moveCard', {
           cardId: copperId,
-          to: { location: 'basicSupply' }
+          to: { location: 'basicSupply' },
         });
 
         // Create the Haunted Mirror and insert it in the same deck position.
@@ -342,7 +346,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
         await args.runGameActionDelegate('moveCard', {
           cardId: copperId,
-          to: { location: 'basicSupply' }
+          to: { location: 'basicSupply' },
         });
 
         // Create the Lucky Coin and insert it in the same deck position.
@@ -385,7 +389,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
         await args.runGameActionDelegate('moveCard', {
           cardId: copperId,
-          to: { location: 'basicSupply' }
+          to: { location: 'basicSupply' },
         });
 
         // Create the Goat and insert it in the same deck position.
@@ -428,7 +432,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
         await args.runGameActionDelegate('moveCard', {
           cardId: copperId,
-          to: { location: 'basicSupply' }
+          to: { location: 'basicSupply' },
         });
 
         // Create the Cursed Gold and insert it in the same deck position.
@@ -471,7 +475,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
         await args.runGameActionDelegate('moveCard', {
           cardId: copperId,
-          to: { location: 'basicSupply' }
+          to: { location: 'basicSupply' },
         });
 
         // Create the Magic Lamp and insert it in the same deck position.
@@ -514,7 +518,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
         await args.runGameActionDelegate('moveCard', {
           cardId: copperId,
-          to: { location: 'basicSupply' }
+          to: { location: 'basicSupply' },
         });
 
         // Create the Pasture and insert it in the same deck position.
@@ -557,7 +561,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
         await args.runGameActionDelegate('moveCard', {
           cardId: copperId,
-          to: { location: 'basicSupply' }
+          to: { location: 'basicSupply' },
         });
 
         // Create the Pouch and insert it in the same deck position.
@@ -631,7 +635,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
   // Register Changeling exchange rules when Changeling is in the kingdom supply.
   const hasChangeling = config.kingdomSupply.some(
-    supply => supply.cards.some(card => getCardPileKey(card) === 'changeling')
+    (supply) => supply.cards.some((card) => getCardPileKey(card) === 'changeling'),
   );
 
   if (!hasChangeling) {
@@ -668,11 +672,11 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           // Only allow exchanging when the gained card has a supply pile in the match.
           const pileKey = getCardPileKey(gainedCard);
           // Check match configuration to ensure the pile exists, regardless of where it was gained from.
-          const inBasicSupply = conditionArgs.match.config.basicSupply.some(supply =>
-            supply.cards.some(card => getCardPileKey(card) === pileKey)
+          const inBasicSupply = conditionArgs.match.config.basicSupply.some((supply) =>
+            supply.cards.some((card) => getCardPileKey(card) === pileKey)
           );
-          const inKingdomSupply = conditionArgs.match.config.kingdomSupply.some(supply =>
-            supply.cards.some(card => getCardPileKey(card) === pileKey)
+          const inKingdomSupply = conditionArgs.match.config.kingdomSupply.some((supply) =>
+            supply.cards.some((card) => getCardPileKey(card) === pileKey)
           );
 
           if (!inBasicSupply && !inKingdomSupply) {
@@ -685,7 +689,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
             playerId: player.id,
           });
 
-          const costComparison = compareCardCosts(cost, {treasure: 3});
+          const costComparison = compareCardCosts(cost, { treasure: 3 });
           if (costComparison < 0 || (cost.treasure ?? 0) < 3) {
             console.debug('[changeling exchange condition] gained card costs less than $3');
             return false;
@@ -727,19 +731,18 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           // Confirm the gained card still exists in a source before moving it.
           try {
             triggeredArgs.cardSourceController.findCardSource(gainedCard.id);
-          }
-          catch (error) {
+          } catch (error) {
             console.warn('[changeling exchange] gained card source not found, skipping exchange');
             return;
           }
 
           const pileKey = getCardPileKey(gainedCard);
           // Resolve the pile location from the match configuration for the return.
-          const inBasicSupply = triggeredArgs.match.config.basicSupply.some(supply =>
-            supply.cards.some(card => getCardPileKey(card) === pileKey)
+          const inBasicSupply = triggeredArgs.match.config.basicSupply.some((supply) =>
+            supply.cards.some((card) => getCardPileKey(card) === pileKey)
           );
-          const inKingdomSupply = triggeredArgs.match.config.kingdomSupply.some(supply =>
-            supply.cards.some(card => getCardPileKey(card) === pileKey)
+          const inKingdomSupply = triggeredArgs.match.config.kingdomSupply.some((supply) =>
+            supply.cards.some((card) => getCardPileKey(card) === pileKey)
           );
 
           if (!inBasicSupply && !inKingdomSupply) {

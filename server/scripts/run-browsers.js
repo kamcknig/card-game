@@ -1,5 +1,5 @@
-const { chromium } = require("playwright");
-const { v4: uuidv4 } = require("uuid");
+const { chromium } = require('playwright');
+const { v4: uuidv4 } = require('uuid');
 const minimist = require('minimist');
 
 const args = minimist(process.argv.slice(2), {
@@ -21,8 +21,8 @@ const PAGE_HEIGHT = 720;
       headless: false,
       args: [
         `--window-position=${i % COLUMNS * PAGE_WIDTH},${Math.floor(i / COLUMNS) * PAGE_HEIGHT}`,
-        `--window-size=${PAGE_WIDTH},${PAGE_HEIGHT}`
-      ]
+        `--window-size=${PAGE_WIDTH},${PAGE_HEIGHT}`,
+      ],
     });
     const context = await browser.newContext();
     const sessionId = uuidv4();
@@ -30,22 +30,22 @@ const PAGE_HEIGHT = 720;
     console.log(`Session ${i + 1}: ${sessionId}`);
 
     await context.addInitScript((id) => {
-      window.localStorage.setItem("sessionId", id);
+      window.localStorage.setItem('sessionId', id);
     }, sessionId);
 
     const page = await context.newPage();
 
     // Track page close
-    page.on("close", () => {
+    page.on('close', () => {
       closedCount++;
       console.log(`❌ Page ${i + 1} closed (${closedCount}/${numSessions})`);
       if (closedCount === numSessions) {
-        console.log("✅ All pages closed. Exiting.");
+        console.log('✅ All pages closed. Exiting.');
         process.exit(0);
       }
     });
 
-    await page.goto("http://localhost:5143");
+    await page.goto('http://localhost:5143');
   }
 
   console.log(`🕵️‍♂️ All ${numSessions} pages launched. Close them to end the script.`);

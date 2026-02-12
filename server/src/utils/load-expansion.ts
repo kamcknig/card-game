@@ -49,16 +49,16 @@ const isRandomizerPileDefinition = (entry: unknown): entry is RandomizerPileDefi
   return Array.isArray(maybeEntry.cards) && !!maybeEntry.pile;
 };
 
-export const loadExpansion = async (expansion: { name: string; }) => {
+export const loadExpansion = async (expansion: { name: string }) => {
   const expansionPath = `@expansions/${expansion.name}`;
   const expansionName = expansion.name;
   if (expansionLibrary[expansionName]) {
     console.info(`[expansion loader] expansion ${expansionName} already loaded`);
     return;
   }
-  
+
   console.log(`[expansion loader] loading expansion ${expansionName}`);
-  
+
   expansionLibrary[expansionName] = {
     title: expansionName,
     name: expansionName,
@@ -80,17 +80,19 @@ export const loadExpansion = async (expansion: { name: string; }) => {
     // Projects live alongside other non-supply card-likes.
     projects: {},
   };
-  
+
   let expansionConfiguration;
-  
+
   try {
     // loads the configuration file for the module if any
     console.info(`[expansion loader] loading expansion configuration for ${expansionName}`);
-    
-    const configModule = await import(`${expansionPath}/configuration-${expansionName}.json`, { with: { type: 'json' } });
+
+    const configModule = await import(`${expansionPath}/configuration-${expansionName}.json`, {
+      with: { type: 'json' },
+    });
     expansionConfiguration = configModule.default;
     console.info(`[expansion loader] expansion configuration loaded`);
-    
+
     const currValue = expansionLibrary[expansionName].title;
     expansionLibrary[expansionName].title = expansionConfiguration.title ? expansionConfiguration.title : currValue;
     expansionLibrary[expansionName].mutuallyExclusive = expansionConfiguration.mutuallyExclusive ?? [];
@@ -100,15 +102,17 @@ export const loadExpansion = async (expansion: { name: string; }) => {
       console.error(error);
     }
   }
-  
+
   try {
     const cardData = expansionLibrary[expansionName].cardData;
-    
+
     console.info(`[expansion loader] loading card library for ${expansionName}`);
-    
-    const cardLibraryModule = await import(`${expansionPath}/card-library-${expansionName}.json`, { with: { type: 'json' } });
+
+    const cardLibraryModule = await import(`${expansionPath}/card-library-${expansionName}.json`, {
+      with: { type: 'json' },
+    });
     const cards = cardLibraryModule.default as Record<string, Partial<CardNoId> | RandomizerPileDefinition>;
-    
+
     for (const key of Object.keys(cards)) {
       const entry = cards[key];
       if (isRandomizerPileDefinition(entry)) {
@@ -119,7 +123,9 @@ export const loadExpansion = async (expansion: { name: string; }) => {
           cost: entry.pile.cost,
           type: entry.pile.type,
         };
-        console.debug(`[expansion loader] processing randomizer pile ${pileRandomizer} with ${entry.cards.length} cards`);
+        console.debug(
+          `[expansion loader] processing randomizer pile ${pileRandomizer} with ${entry.cards.length} cards`,
+        );
         for (const cardEntry of entry.cards) {
           const cardKey = cardEntry.cardKey;
           if (!cardKey) {
@@ -216,37 +222,37 @@ export const loadExpansion = async (expansion: { name: string; }) => {
       }
 
       const newCardData = createCardData(key as CardKey, expansionName, entry as Partial<CardNoId>);
-      
+
       const isBasic = newCardData.isBasic;
       cardData[isBasic ? 'basicSupply' : 'kingdomSupply'][key] = newCardData as any;
       rawCardLibrary[key] = newCardData as any;
     }
-    
+
     console.info('[expansion loader] card library loaded');
-    
+
     console.info(`[expansion loader] loading ${expansionName} card effects`);
-    
+
     const cardEffectsModule = await import(`${expansionPath}/card-effects-${expansionName}.ts`);
     const cardEffects = cardEffectsModule.default as CardExpansionModule;
-    
-    Object.keys(cardEffects).forEach(key => {
+
+    Object.keys(cardEffects).forEach((key) => {
       if (cardEffects[key].registerScoringFunction) {
         console.debug(`[expansion loader] registering scoring function for ${key}`);
         scoringFunctionMap[key] = cardEffects[key].registerScoringFunction();
       }
-      
+
       if (cardEffects[key].registerLifeCycleMethods) {
         console.debug(`[expansion loader] registering lifecycle methods for ${key}`);
-        cardLifecycleMap[key] = cardEffects[key].registerLifeCycleMethods()
+        cardLifecycleMap[key] = cardEffects[key].registerLifeCycleMethods();
       }
-      
+
       if (cardEffects[key].registerEffects) {
         console.debug(`[expansion loader] registering effects for ${key}`);
         cardEffectFunctionMapFactory[key] = cardEffects[key].registerEffects;
       }
-      
+
       if (cardEffects[key].registerActionConditions) {
-        cardActionConditionMapFactory[key] = cardEffects[key].registerActionConditions()
+        cardActionConditionMapFactory[key] = cardEffects[key].registerActionConditions();
       }
     });
     console.log('[expansion loader] base supply card effects loaded');
@@ -255,7 +261,7 @@ export const loadExpansion = async (expansion: { name: string; }) => {
     console.error(error);
     delete expansionLibrary[expansionName];
   }
-  
+
   console.info(`[expansion loader] attempting to load events for ${expansionName}`);
   await loadEvents(expansionName);
   console.log(`[expansion loader] finished loading events for ${expansionName}`);

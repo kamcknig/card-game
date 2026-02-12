@@ -1,4 +1,6 @@
 import {
+  Artifact,
+  ArtifactNoId,
   Boon,
   BoonNoId,
   Card,
@@ -12,8 +14,6 @@ import {
   LandmarkNoId,
   Project,
   ProjectNoId,
-  Artifact,
-  ArtifactNoId,
   State,
   StateNoId,
 } from 'shared/shared-types.ts';
@@ -40,7 +40,7 @@ export const createEvent = (event: EventNoId): Event => {
     ...event,
     id: ++CARD_COUNT,
   });
-}
+};
 
 // Boons are card-like objects that live outside the supply and are drawn from a shared deck.
 export const createBoon = (boon: BoonNoId): Boon => {
@@ -48,7 +48,7 @@ export const createBoon = (boon: BoonNoId): Boon => {
     ...boon,
     id: ++CARD_COUNT,
   });
-}
+};
 
 // Hexes are card-like objects that live outside the supply and are drawn from a shared deck.
 export const createHex = (hex: HexNoId): Hex => {
@@ -56,7 +56,7 @@ export const createHex = (hex: HexNoId): Hex => {
     ...hex,
     id: ++CARD_COUNT,
   });
-}
+};
 
 // Landmarks are card-like objects that live alongside events in the match.
 export const createLandmark = (landmark: LandmarkNoId): Landmark => {
@@ -64,7 +64,7 @@ export const createLandmark = (landmark: LandmarkNoId): Landmark => {
     ...landmark,
     id: ++CARD_COUNT,
   });
-}
+};
 
 // Projects are card-like objects that grant permanent abilities.
 export const createProject = (project: ProjectNoId): Project => {
@@ -72,7 +72,7 @@ export const createProject = (project: ProjectNoId): Project => {
     ...project,
     id: ++CARD_COUNT,
   });
-}
+};
 
 // States are card-like objects that track persistent player effects.
 export const createState = (state: StateNoId): State => {
@@ -80,7 +80,7 @@ export const createState = (state: StateNoId): State => {
     ...state,
     id: ++CARD_COUNT,
   });
-}
+};
 
 // Artifacts are card-like objects that track persistent player effects.
 export const createArtifact = (artifact: ArtifactNoId): Artifact => {
@@ -88,4 +88,4 @@ export const createArtifact = (artifact: ArtifactNoId): Artifact => {
     ...artifact,
     id: ++CARD_COUNT,
   });
-}
+};

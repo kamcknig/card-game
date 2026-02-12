@@ -3,7 +3,7 @@
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION", "ATTACK" ]
+    "type": ["ACTION", "ATTACK"]
   },
   "border-village": {
     "type": ["ACTION"],

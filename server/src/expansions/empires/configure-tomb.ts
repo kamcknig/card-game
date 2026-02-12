@@ -1,5 +1,5 @@
-import {ComputedMatchConfiguration} from 'shared/shared-types.ts';
-import {GameEventRegistrar} from '../../types.ts';
+import { ComputedMatchConfiguration } from 'shared/shared-types.ts';
+import { GameEventRegistrar } from '../../types.ts';
 
 export const configureTomb = (
   registrar: GameEventRegistrar,
@@ -56,7 +56,7 @@ export const configureTomb = (
           },
         },
         // Ensure each player's reaction has a unique id suffix.
-        {idSuffix: player.id.toString()},
+        { idSuffix: player.id.toString() },
       );
     }
   });

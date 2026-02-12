@@ -11,7 +11,7 @@ export const loadProjects = async (expansionName: string) => {
     // Load the project library JSON for the expansion when present.
     const projectLibraryModule = await import(
       `@expansions/${expansionName}/project-library-${expansionName}.json`,
-      { with: { type: 'json' } },
+      { with: { type: 'json' } }
     );
     const projects = projectLibraryModule.default as Record<string, Partial<ProjectNoId>>;
 
@@ -36,7 +36,7 @@ export const loadProjects = async (expansionName: string) => {
   try {
     // Register project effects if the expansion provides them.
     const projectModule = await import(
-      `@expansions/${expansionName}/project-effects-${expansionName}.ts`,
+      `@expansions/${expansionName}/project-effects-${expansionName}.ts`
     );
     const projects = projectModule.default as CardExpansionModule;
 

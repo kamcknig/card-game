@@ -5,7 +5,7 @@ type FindTargetsArgs = {
   match: Match;
   startingPlayerId?: PlayerId;
   appliesTo: EffectTarget;
-}
+};
 
 export const findOrderedTargets = (args: FindTargetsArgs): number[] => {
   const { startingPlayerId: currentPlayerTurnId, match } = args;
@@ -26,7 +26,7 @@ export const findOrderedTargets = (args: FindTargetsArgs): number[] => {
   switch (target) {
     case 'ALL': {
       console.info('find targets for ALL');
-      const startIndex = currentTurnOrder.findIndex(player => player.id === currentPlayerTurnId);
+      const startIndex = currentTurnOrder.findIndex((player) => player.id === currentPlayerTurnId);
       const l = currentTurnOrder.length;
       for (let i = 0; i < l; i++) {
         const idx = (startIndex + i) % currentTurnOrder.length;
@@ -40,7 +40,7 @@ export const findOrderedTargets = (args: FindTargetsArgs): number[] => {
       return [1];
     case 'ALL_OTHER': {
       console.info('find targets for ALL_OTHER');
-      const currentIndex = currentTurnOrder.findIndex(player => player.id === currentPlayerTurnId);
+      const currentIndex = currentTurnOrder.findIndex((player) => player.id === currentPlayerTurnId);
 
       const reordered = [];
       const l = currentTurnOrder.length;
@@ -62,5 +62,5 @@ export const findOrderedTargets = (args: FindTargetsArgs): number[] => {
       break;
   }
 
-  return result.map(player => player.id);
-}
+  return result.map((player) => player.id);
+};

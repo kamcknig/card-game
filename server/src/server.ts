@@ -1,15 +1,15 @@
-import {Server} from 'socket.io';
-import {ServerEmitEvents, ServerListenEvents} from 'shared/shared-types';
-import {toNumber} from 'es-toolkit/compat';
+import { Server } from 'socket.io';
+import { ServerEmitEvents, ServerListenEvents } from 'shared/shared-types';
+import { toNumber } from 'es-toolkit/compat';
 import * as log from '@timepp/enhanced-deno-log';
-import {Game} from './core/game.ts';
-import {loadExpansion} from './utils/load-expansion.ts';
+import { Game } from './core/game.ts';
+import { loadExpansion } from './utils/load-expansion.ts';
 
 // Default to disabling file logs unless explicitly enabled.
 const logToFileEnabled = Deno.env.get('LOG_TO_FILE')?.trim().toLowerCase() === 'true';
 if (!logToFileEnabled) {
   log.setConfig({
-    enabledLevels: []
+    enabledLevels: [],
   }, 'file');
 }
 
@@ -62,45 +62,45 @@ Deno.serve({
     // Debug-only endpoint to export a full match state snapshot.
     if (url.pathname === '/debug/match-state') {
       if (Deno.env.get('MATCH_STATE_EXPORT_ENABLED') !== 'true') {
-        return new Response('match state export disabled', {status: 403});
+        return new Response('match state export disabled', { status: 403 });
       }
       const exportState = game.exportMatchState();
       if (!exportState) {
-        return new Response('match not initialized', {status: 400});
+        return new Response('match not initialized', { status: 400 });
       }
       return new Response(JSON.stringify(exportState), {
-        headers: {'content-type': 'application/json'},
+        headers: { 'content-type': 'application/json' },
       });
     }
     // Debug-only endpoint to merge a partial match state into the live match.
     if (url.pathname === '/debug/match-state/merge') {
       if (Deno.env.get('MATCH_STATE_MERGE_ENABLED') !== 'true') {
-        return new Response('match state merge disabled', {status: 403});
+        return new Response('match state merge disabled', { status: 403 });
       }
       if (req.method !== 'POST') {
-        return new Response('method not allowed', {status: 405});
+        return new Response('method not allowed', { status: 405 });
       }
       return req.json()
         .then((body) => {
           // Require a JSON object as the partial match payload.
           if (!body || typeof body !== 'object' || Array.isArray(body)) {
-            return new Response('invalid match payload', {status: 400});
+            return new Response('invalid match payload', { status: 400 });
           }
 
           const result = game.mergeMatchState(body);
           if (!result.ok) {
-            return new Response(JSON.stringify({error: 'invalid match update', errors: result.errors}), {
+            return new Response(JSON.stringify({ error: 'invalid match update', errors: result.errors }), {
               status: 400,
-              headers: {'content-type': 'application/json'},
+              headers: { 'content-type': 'application/json' },
             });
           }
 
-          return new Response(JSON.stringify({ok: true}), {
-            headers: {'content-type': 'application/json'},
+          return new Response(JSON.stringify({ ok: true }), {
+            headers: { 'content-type': 'application/json' },
           });
         })
         .catch(() => {
-          return new Response('invalid json', {status: 400});
+          return new Response('invalid json', { status: 400 });
         });
     }
     return ioHandler(req, info);
@@ -112,13 +112,13 @@ const controller = new AbortController();
 
 addEventListener('SIGINT', () => {
   console.log('Shutting down cleanly...');
-  controller.abort()
+  controller.abort();
   Deno.exit();
 });
 
 (async () => {
   const expansionList = (await import('@expansions/expansion-list.json', {
-    with: {type: 'json'},
+    with: { type: 'json' },
   })).default;
 
   for (const expansion of expansionList) {

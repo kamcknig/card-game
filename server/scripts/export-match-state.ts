@@ -13,7 +13,8 @@ const parseArgs = (args: string[]) => {
 };
 
 const args = parseArgs(Deno.args);
-const url = args.url ?? Deno.env.get('MATCH_STATE_EXPORT_URL') ?? `http://localhost:${Deno.env.get('PORT') || 3001}/debug/match-state`;
+const url = args.url ?? Deno.env.get('MATCH_STATE_EXPORT_URL') ??
+  `http://localhost:${Deno.env.get('PORT') || 3001}/debug/match-state`;
 const outPath = args.out ?? Deno.env.get('MATCH_STATE_EXPORT_OUT') ?? './match-state-export.json';
 
 const response = await fetch(url);

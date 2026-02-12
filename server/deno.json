@@ -19,17 +19,11 @@
   },
   "fmt": {
     "singleQuote": true,
-    "bracePosition": "sameLine",
     "indentWidth": 2,
     "useTabs": false,
     "lineWidth": 120,
     "proseWrap": "always",
-    "endOfLine": "lf",
-    "quoteProps": "asNeeded",
-    "semiColons": true,
-    "useBraces": "always",
-    "trailingCommas": "onlyMultiLine",
-    "spaceAround": true
+    "semiColons": true
   },
   "imports": {
     "@expansions/": "./src/expansions/",

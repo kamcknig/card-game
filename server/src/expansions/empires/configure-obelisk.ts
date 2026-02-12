@@ -1,6 +1,6 @@
-import {CardKey, ComputedMatchConfiguration} from 'shared/shared-types.ts';
-import {GameEventRegistrar} from '../../types.ts';
-import {getPileDefinitionCard} from '../../utils/get-pile-definition-card.ts';
+import { CardKey, ComputedMatchConfiguration } from 'shared/shared-types.ts';
+import { GameEventRegistrar } from '../../types.ts';
+import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 
 export type ObeliskMetadata = {
   chosenPileKey?: CardKey;
@@ -53,8 +53,7 @@ export const configureObelisk = (
     }
 
     // Choose a random Action pile and store its key on the landmark metadata.
-    const chosenPileKey =
-      actionPileKeys[Math.floor(Math.random() * actionPileKeys.length)];
+    const chosenPileKey = actionPileKeys[Math.floor(Math.random() * actionPileKeys.length)];
     const metadata = obeliskLandmark.metadata as ObeliskMetadata;
     metadata.chosenPileKey = chosenPileKey;
 
@@ -62,9 +61,7 @@ export const configureObelisk = (
     const chosenPile = supplyPiles.find(
       (supply) => supply.name === chosenPileKey,
     );
-    const chosenCardKeys = chosenPile
-      ? Array.from(new Set(chosenPile.cards.map((card) => card.cardKey)))
-      : [];
+    const chosenCardKeys = chosenPile ? Array.from(new Set(chosenPile.cards.map((card) => card.cardKey))) : [];
     console.info(
       `[obelisk onGameStart] chosen pile ${chosenPileKey} with cards ${chosenCardKeys.join(', ')}`,
     );

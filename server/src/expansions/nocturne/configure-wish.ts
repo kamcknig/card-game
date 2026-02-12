@@ -3,7 +3,7 @@ import { expansionLibrary } from '../expansion-library.ts';
 
 // Adds the Wish non-supply pile when cards that gain Wishes are present.
 export const configureWish = (args: ExpansionConfiguratorContext) => {
-  if (args.config.nonSupply?.some(supply => supply.name === 'wish')) {
+  if (args.config.nonSupply?.some((supply) => supply.name === 'wish')) {
     console.info('[nocturne configurator - wish] pile already configured');
     return;
   }
@@ -13,7 +13,7 @@ export const configureWish = (args: ExpansionConfiguratorContext) => {
   args.config.nonSupply ??= [];
 
   const baseCard = structuredClone(
-    expansionLibrary['nocturne'].cardData.kingdomSupply['wish']
+    expansionLibrary['nocturne'].cardData.kingdomSupply['wish'],
   );
 
   if (!baseCard) {

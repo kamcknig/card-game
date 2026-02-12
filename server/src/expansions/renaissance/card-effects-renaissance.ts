@@ -12,7 +12,7 @@ const expansion: CardExpansionModule = {
       // Resolve whether the player currently owns the Lantern artifact.
       const artifacts = cardEffectArgs.match.artifacts;
       const ownedArtifacts = artifacts?.byPlayer?.[cardEffectArgs.playerId] ?? [];
-      const lantern = artifacts?.cards?.find(candidate => candidate.cardKey === 'lantern');
+      const lantern = artifacts?.cards?.find((candidate) => candidate.cardKey === 'lantern');
       const hasLantern = !!lantern && ownedArtifacts.includes(lantern.id);
       const revealCount = hasLantern ? 3 : 2;
 
@@ -48,12 +48,12 @@ const expansion: CardExpansionModule = {
       }
 
       // Prompt the player to choose one revealed card to put into hand.
-      const revealedIds = revealedCards.map(card => card.id);
+      const revealedIds = revealedCards.map((card) => card.id);
       const selectedIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Choose a card to put into your hand',
         restrict: revealedIds,
-        count: 1
+        count: 1,
       }) as CardId[];
 
       const chosenId = selectedIds[0] ?? revealedIds[0];
@@ -79,14 +79,14 @@ const expansion: CardExpansionModule = {
         console.debug('[border-guard effect] revealed fewer than required, skipping artifact');
         return;
       }
-      const allActions = revealedCards.every(card => card.type.includes('ACTION'));
+      const allActions = revealedCards.every((card) => card.type.includes('ACTION'));
       if (!allActions) {
         console.debug('[border-guard effect] revealed cards not all actions, skipping artifact');
         return;
       }
 
       // Determine which artifacts are available to take.
-      const horn = artifacts?.cards?.find(candidate => candidate.cardKey === 'horn');
+      const horn = artifacts?.cards?.find((candidate) => candidate.cardKey === 'horn');
       const ownedLantern = !!lantern && ownedArtifacts.includes(lantern.id);
       const ownedHorn = !!horn && ownedArtifacts.includes(horn.id);
       const availableArtifacts: { label: string; artifactId: number }[] = [];
@@ -95,8 +95,7 @@ const expansion: CardExpansionModule = {
         if (horn && !ownedHorn) {
           availableArtifacts.push({ label: 'TAKE HORN', artifactId: horn.id });
         }
-      }
-      else {
+      } else {
         if (lantern && !ownedLantern) {
           availableArtifacts.push({ label: 'TAKE LANTERN', artifactId: lantern.id });
         }

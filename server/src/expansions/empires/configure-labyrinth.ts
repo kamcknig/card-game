@@ -38,8 +38,7 @@ export const configureLabyrinth = (
     }
 
     // Count cards gained by the player this turn to find their 2nd gain.
-    const cardIdsGainedThisTurn =
-      args.match.stats.cardsGainedByTurn?.[args.match.turnNumber] ?? [];
+    const cardIdsGainedThisTurn = args.match.stats.cardsGainedByTurn?.[args.match.turnNumber] ?? [];
     let selfGainedCount = 0;
     for (const cardId of cardIdsGainedThisTurn) {
       const gainStats = args.match.stats.cardsGained[cardId];
