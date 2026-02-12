@@ -5,10 +5,13 @@ import { CardLikeView } from './card-like-view';
 import { selectableCardStore } from 'src/app/state/interactive-logic';
 import { matchStore } from '../../../state/match-state';
 import { CubeTokenView } from './cube-token-view';
+import { TokenBadgeView } from './token-badge-view';
 
 export interface ProjectCardArgs {
   project: Project;
 }
+
+const sinisterPlotTokenId = 'renaissance:sinister-plot';
 
 // Renders a project card-like with optional highlight and cube overlays.
 export class ProjectCard extends CardLikeView {
@@ -120,7 +123,7 @@ export class ProjectCard extends CardLikeView {
     }
   }
 
-  // Draws selection highlights and cube overlays when the project is selectable.
+  // Draws selection highlights and project token overlays when the project is selectable.
   public draw() {
     this._highlight.clear();
 
@@ -135,23 +138,28 @@ export class ProjectCard extends CardLikeView {
       this.buildCostView(this._project);
       this._costView.x = 2;
       this._costView.y = this._cardSprite.y + this._cardSprite.height - this._costView.height - 5;
-      this.drawCubes(this._project);
+      this.drawProjectTokens(this._project);
     }
   }
 
-  // Draws cube tokens that have been placed on this project.
-  private drawCubes(project: Project) {
+  // Draws cube ownership and Sinister Plot token counts for this project.
+  private drawProjectTokens(project: Project) {
     this._cubeContainer.removeChildren();
 
     const match = matchStore.get();
     if (!match) return;
 
     const tokens = Object.values(match.tokens ?? {}) as TokenInstance[];
+    // Keep cube ordering stable across redraws.
     const cubeTokens = tokens.filter(token =>
       token.tokenId === 'cube-token' &&
       token.location.type === 'cardLike' &&
       token.location.cardLikeId === project.id
-    );
+    ).sort((a, b) => {
+      const ownerDiff = (a.ownerId ?? -1) - (b.ownerId ?? -1);
+      if (ownerDiff !== 0) return ownerDiff;
+      return a.id.localeCompare(b.id);
+    });
 
     const playerColorMap = new Map(match.players.map(player => [player.id, player.color]));
     const cubeSize = 16;
@@ -166,6 +174,38 @@ export class ProjectCard extends CardLikeView {
       cube.x = 8 + index * (cubeSize + gap);
       cube.y = 8;
       this._cubeContainer.addChild(cube);
+    });
+
+    // Group Sinister Plot tokens by owner so each player gets one count badge.
+    const sinisterPlotTokenCounts = new Map<number, number>();
+    tokens.filter((token) =>
+      token.tokenId === sinisterPlotTokenId &&
+      token.location.type === 'cardLike' &&
+      token.location.cardLikeId === project.id &&
+      token.ownerId !== undefined
+    ).forEach((token) => {
+      const ownerId = token.ownerId;
+      if (ownerId === undefined) {
+        return;
+      }
+      sinisterPlotTokenCounts.set(ownerId, (sinisterPlotTokenCounts.get(ownerId) ?? 0) + 1);
+    });
+
+    const sinisterEntries = [...sinisterPlotTokenCounts.entries()]
+      .filter(([, count]) => count > 0)
+      .sort((a, b) => a[0] - b[0]);
+
+    const badgeSize = 16;
+    sinisterEntries.forEach(([ownerId, count], index) => {
+      const playerColor = playerColorMap.get(ownerId) ?? '#ffffff';
+      const badge = new TokenBadgeView({
+        size: badgeSize,
+        labelText: `S${count}`,
+        color: this.parseColor(playerColor),
+      });
+      badge.x = 8 + index * (badgeSize + gap);
+      badge.y = 8 + cubeSize + 3;
+      this._cubeContainer.addChild(badge);
     });
   }
 
