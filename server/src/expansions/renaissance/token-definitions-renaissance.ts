@@ -9,4 +9,12 @@ export const registerRenaissanceTokenDefinitions = (): void => {
     duration: 'permanent',
     expansion: 'renaissance',
   });
+
+  registerTokenDefinition({
+    id: 'renaissance:sinister-plot',
+    name: 'Sinister Plot token',
+    rulesText: 'At the start of your turn, either add one here or remove yours to draw that many cards.',
+    duration: 'permanent',
+    expansion: 'renaissance',
+  });
 };

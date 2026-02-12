@@ -1384,6 +1384,111 @@ const effectMap: CardExpansionModule = {
       });
     },
   },
+  'sinister-plot': {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Resolve the Sinister Plot project to attach start-of-turn behavior.
+      const project = cardEffectArgs.match.projects?.find((candidate) => candidate.id === cardEffectArgs.cardId);
+      if (!project) {
+        console.warn('[sinister-plot project] project card not found');
+        return;
+      }
+
+      console.info(`[sinister-plot project] registering start turn trigger for player ${cardEffectArgs.playerId}`);
+
+      cardEffectArgs.reactionManager.registerSystemTemplate(project, 'startTurn', {
+        playerId: cardEffectArgs.playerId,
+        once: false,
+        allowMultipleInstances: false,
+        compulsory: true,
+        autoResolve: true,
+        condition: (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
+            return false;
+          }
+
+          const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
+          if (!owned) {
+            console.debug(
+              `[sinister-plot project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`,
+            );
+          }
+          return owned;
+        },
+        triggeredEffectFn: async (triggeredArgs) => {
+          // Gather this player's Sinister Plot tokens at this project in deterministic order.
+          const ownedTokenIds = Object.values(triggeredArgs.match.tokens ?? {})
+            .filter((token) =>
+              token.tokenId === 'renaissance:sinister-plot' &&
+              token.ownerId === cardEffectArgs.playerId &&
+              token.location.type === 'cardLike' &&
+              token.location.cardLikeId === project.id
+            )
+            .map((token) => token.id)
+            .sort((a, b) => a.localeCompare(b));
+
+          const promptResult = await triggeredArgs.runGameActionDelegate('userPrompt', {
+            playerId: cardEffectArgs.playerId,
+            prompt: `Sinister Plot: Add a token, or remove ${ownedTokenIds.length} token(s) to draw that many cards?`,
+            actionButtons: [
+              { label: 'ADD TOKEN', action: 1 },
+              { label: 'REMOVE TOKENS', action: 2 },
+            ],
+            content: {
+              type: 'display-cards',
+              cardLikeIds: [project.id],
+            },
+          }) as { action?: number } | null;
+
+          const selectedAction = promptResult?.action === 2 ? 2 : 1;
+
+          if (selectedAction === 2) {
+            const removedCount = ownedTokenIds.length;
+            console.debug(
+              `[sinister-plot project] removing ${removedCount} token(s) for player ${cardEffectArgs.playerId}`,
+            );
+            for (const tokenInstanceId of ownedTokenIds) {
+              await triggeredArgs.runGameActionDelegate('removeToken', { tokenInstanceId });
+            }
+
+            if (removedCount <= 0) {
+              console.debug('[sinister-plot project] no tokens to remove, skipping draw');
+              return;
+            }
+
+            triggeredArgs.logManager.addLogEntry({
+              type: 'cardLikeEffect',
+              playerId: cardEffectArgs.playerId,
+              cardLikeId: project.id,
+              effectText: `Remove ${removedCount} Sinister Plot token(s) for +${removedCount} Card(s)`,
+            });
+
+            console.debug(
+              `[sinister-plot project] drawing ${removedCount} card(s) for player ${cardEffectArgs.playerId}`,
+            );
+            await triggeredArgs.runGameActionDelegate('drawCard', {
+              playerId: cardEffectArgs.playerId,
+              count: removedCount,
+            });
+            return;
+          }
+
+          triggeredArgs.logManager.addLogEntry({
+            type: 'cardLikeEffect',
+            playerId: cardEffectArgs.playerId,
+            cardLikeId: project.id,
+            effectText: 'Add 1 Sinister Plot token',
+          });
+
+          console.debug(`[sinister-plot project] adding token for player ${cardEffectArgs.playerId}`);
+          await triggeredArgs.runGameActionDelegate('placeToken', {
+            tokenId: 'renaissance:sinister-plot',
+            ownerId: cardEffectArgs.playerId,
+            location: { type: 'cardLike', cardLikeId: project.id },
+          });
+        },
+      });
+    },
+  },
 };
 
 export default effectMap;
