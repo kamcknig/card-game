@@ -1579,6 +1579,7 @@ const expansion: CardExpansionModule = {
         await cardEffectArgs.runGameActionDelegate('shuffleCardLike', {
           kind: 'boon',
           includeDiscard: true,
+          playerId: cardEffectArgs.playerId,
         });
       }
 
@@ -2209,6 +2210,7 @@ const expansion: CardExpansionModule = {
           await cardEffectArgs.runGameActionDelegate('shuffleCardLike', {
             kind: 'boon',
             includeDiscard: true,
+            playerId: cardEffectArgs.playerId,
           });
         }
 

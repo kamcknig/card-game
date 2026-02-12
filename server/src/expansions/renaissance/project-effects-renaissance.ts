@@ -1489,6 +1489,83 @@ const effectMap: CardExpansionModule = {
       });
     },
   },
+  'star-chart': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const project = cardEffectArgs.match.projects?.find((candidate) => candidate.id === cardEffectArgs.cardId);
+      if (!project) {
+        console.warn('[star-chart project] project card not found');
+        return;
+      }
+
+      console.info(`[star-chart project] registering shuffle trigger for player ${cardEffectArgs.playerId}`);
+
+      cardEffectArgs.reactionManager.registerSystemTemplate(project, 'shuffle', {
+        playerId: cardEffectArgs.playerId,
+        once: false,
+        allowMultipleInstances: false,
+        compulsory: true,
+        condition: (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
+            return false;
+          }
+
+          const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
+          if (!owned) {
+            console.debug(
+              `[star-chart project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`,
+            );
+            return false;
+          }
+
+          const shuffledCardIds = conditionArgs.trigger.args.cardIds ?? [];
+          if (shuffledCardIds.length < 2) {
+            console.debug('[star-chart project] fewer than 2 shuffled cards, skipping');
+            return false;
+          }
+
+          return true;
+        },
+        triggeredEffectFn: async (triggeredArgs) => {
+          const shuffledCardIds = triggeredArgs.trigger.args.cardIds ?? [];
+          if (shuffledCardIds.length < 2) {
+            return;
+          }
+
+          console.debug(
+            `[star-chart project] prompting player ${cardEffectArgs.playerId} to choose top card from ${shuffledCardIds.length} shuffled card(s)`,
+          );
+          const selectedCardIds = await triggeredArgs.runGameActionDelegate('selectCard', {
+            playerId: cardEffectArgs.playerId,
+            prompt: 'Choose a shuffled card to put on top (Star Chart)',
+            restrict: shuffledCardIds,
+            count: 1,
+            optional: true,
+          }) as CardId[];
+
+          const selectedCardId = selectedCardIds[0];
+          if (!selectedCardId) {
+            console.debug('[star-chart project] player declined to choose a top card');
+            return;
+          }
+
+          const selectedCard = triggeredArgs.cardLibrary.getCard(selectedCardId);
+          console.debug(`[star-chart project] moving ${selectedCard} to top of shuffled cards`);
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            cardId: selectedCardId,
+            toPlayerId: cardEffectArgs.playerId,
+            to: { location: 'playerDeck' },
+          });
+
+          triggeredArgs.logManager.addLogEntry({
+            type: 'cardLikeEffect',
+            playerId: cardEffectArgs.playerId,
+            cardLikeId: project.id,
+            effectText: `Put ${selectedCard.cardName} on top of shuffled cards`,
+          });
+        },
+      });
+    },
+  },
 };
 
 export default effectMap;

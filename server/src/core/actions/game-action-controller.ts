@@ -1493,7 +1493,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
 
     if (this.match.boons.deck.length < 1 && this.match.boons.discard.length > 0) {
       console.info('[receiveBoon action] boon deck empty, reshuffling discard');
-      await this.shuffleCardLike({ kind: 'boon', includeDiscard: true });
+      await this.shuffleCardLike({ kind: 'boon', includeDiscard: true, playerId: args.playerId });
     }
 
     let boonId = args.boonId;
@@ -1668,7 +1668,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
 
     if (this.match.hexes.deck.length < 1 && this.match.hexes.discard.length > 0) {
       console.info('[receiveHex action] hex deck empty, reshuffling discard');
-      await this.shuffleCardLike({ kind: 'hex', includeDiscard: true });
+      await this.shuffleCardLike({ kind: 'hex', includeDiscard: true, playerId: args.playerId });
     }
 
     let hexId = args.hexId;
@@ -2528,6 +2528,44 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     await this.reactionManager.runTrigger({ trigger: afterCardPlayedTrigger, reactionContext });
   }
 
+  // Generic shuffle action used by card and card-like shuffles.
+  async shuffle(
+    args: { playerId?: PlayerId; cardIds?: CardId[]; cardLikeIds?: CardLikeId[] },
+    context?: GameActionContext,
+  ): Promise<void> {
+    const cardIds = args.cardIds ?? [];
+    const cardLikeIds = args.cardLikeIds ?? [];
+
+    if (cardIds.length > 1) {
+      fisherYatesShuffle(cardIds, true);
+      console.debug(`[shuffle action] shuffled ${cardIds.length} card(s)`);
+    }
+
+    if (cardLikeIds.length > 1) {
+      fisherYatesShuffle(cardLikeIds, true);
+      console.debug(`[shuffle action] shuffled ${cardLikeIds.length} card-like id(s)`);
+    }
+
+    if (args.playerId === undefined) {
+      return;
+    }
+
+    if (cardIds.length <= 1 && cardLikeIds.length <= 1) {
+      // Ignore non-shuffles where there are not enough elements.
+      return;
+    }
+
+    // Emit a generic shuffle trigger so reactions can respond to all player shuffles.
+    const trigger = new ReactionTrigger('shuffle', {
+      playerId: args.playerId,
+      // Pass snapshots for reaction inspection/selection.
+      cardIds: cardIds.length ? [...cardIds] : undefined,
+      cardLikeIds: cardLikeIds.length ? [...cardLikeIds] : undefined,
+      source: context?.loggingContext?.source,
+    });
+    await this.reactionManager.runTrigger({ trigger });
+  }
+
   // Helper method to shuffle a player's deck
   async shuffleDeck(
     args: { playerId: PlayerId; includeDiscard?: boolean },
@@ -2542,11 +2580,12 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     const discard = this._cardSourceController.getSource('playerDiscard', playerId);
 
     if (includeDiscard) {
-      fisherYatesShuffle(discard, true);
+      // Shuffle the cards being recycled into the deck.
+      await this.shuffle({ playerId, cardIds: discard }, context);
       deck.unshift(...discard);
       discard.length = 0;
     } else {
-      fisherYatesShuffle(deck, true);
+      await this.shuffle({ playerId, cardIds: deck }, context);
     }
 
     this.logManager.addLogEntry({
@@ -2558,7 +2597,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
 
   // Shuffles a card-like deck (boons or hexes), optionally pulling in discards.
   async shuffleCardLike(
-    args: { kind: 'boon' | 'hex'; includeDiscard?: boolean },
+    args: { kind: 'boon' | 'hex'; includeDiscard?: boolean; playerId?: PlayerId },
     context?: GameActionContext,
   ): Promise<void> {
     const includeDiscard = args.includeDiscard ?? false;
@@ -2583,7 +2622,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       return;
     }
 
-    fisherYatesShuffle(deck, true);
+    await this.shuffle({ playerId: args.playerId, cardLikeIds: deck }, context);
     console.info(`[shuffleCardLike action] shuffled ${args.kind} deck (${deck.length} cards)`);
   }
 }

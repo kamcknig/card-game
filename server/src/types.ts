@@ -254,10 +254,15 @@ export interface BaseGameActionDefinitionMap {
     moveToSetAside?: boolean;
   }, context?: GameActionContext) => Promise<void>;
   selectCard: (args: SelectActionCardArgs) => Promise<CardId[]>;
+  // Generic shuffle action for cards and card-likes; does not add UI log entries.
+  shuffle: (
+    args: { playerId?: PlayerId; cardIds?: CardId[]; cardLikeIds?: CardLikeId[] },
+    context?: GameActionContext,
+  ) => Promise<void>;
   shuffleDeck: (args: { playerId: PlayerId; includeDiscard?: boolean }, context?: GameActionContext) => Promise<void>;
   // Shuffles a card-like deck such as boons or hexes.
   shuffleCardLike: (
-    args: { kind: 'boon' | 'hex'; includeDiscard?: boolean },
+    args: { kind: 'boon' | 'hex'; includeDiscard?: boolean; playerId?: PlayerId },
     context?: GameActionContext,
   ) => Promise<void>;
   trashCard: (args: { cardId: CardId | Card; playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
@@ -511,6 +516,14 @@ export type TriggerEventTypeContext = {
   endTurnPhase: { phaseIndex: number; playerId: PlayerId };
   // Triggered on the start of each phase of a player's turn
   startTurnPhase: { phaseIndex: number };
+  // Triggered when cards/card-likes are shuffled for a specific player.
+  shuffle: {
+    playerId: PlayerId;
+    cardIds?: CardId[];
+    cardLikeIds?: CardLikeId[];
+    // Optional source card for token/log attribution.
+    source?: CardId;
+  };
   // Triggered at the end of each player's turn
   endTurn: {
     playerId: PlayerId;
