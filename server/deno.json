@@ -17,6 +17,20 @@
       "exclude": ["require-await", "no-unused-vars"]
     }
   },
+  "fmt": {
+    "singleQuote": true,
+    "bracePosition": "sameLine",
+    "indentWidth": 2,
+    "useTabs": false,
+    "lineWidth": 120,
+    "proseWrap": "always",
+    "endOfLine": "lf",
+    "quoteProps": "asNeeded",
+    "semiColons": true,
+    "useBraces": "always",
+    "trailingCommas": "onlyMultiLine",
+    "spaceAround": true
+  },
   "imports": {
     "@expansions/": "./src/expansions/",
     "@denosaurs/event": "jsr:@denosaurs/event@^2.0.2",

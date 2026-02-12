@@ -230,7 +230,11 @@ export class CardInteractivityController {
     }
 
     for (const cardId of treasureCards) {
-      await this.runGameDelegate('playCard', { playerId, cardId });
+      await this.runGameDelegate('playCard', {
+        playerId,
+        cardId,
+        overrides: { actionCost: 0 },
+      });
     }
 
     this._socketMap.get(playerId)?.emit('playAllTreasureComplete');
@@ -305,7 +309,17 @@ export class CardInteractivityController {
       const hand = this._cardSourceController.getSource('playerHand', playerId);
 
       if (hand.includes(cardId)) {
-        await this.runGameDelegate('playCard', { playerId, cardId });
+        const card = this._cardLibrary.getCard(cardId);
+        if (!card.type.includes('TREASURE')) {
+          console.debug(`[card interactivity] tapped non-treasure hand card ${card} during buy phase`);
+          return;
+        }
+
+        await this.runGameDelegate('playCard', {
+          playerId,
+          cardId,
+          overrides: { actionCost: 0 },
+        });
       }
       else {
         // Block buying cards while the player has debt tokens.

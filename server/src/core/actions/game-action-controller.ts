@@ -361,7 +361,11 @@ export class GameActionController implements BaseGameActionDefinitionMap {
         const card = this.cardLibrary.getCard(selectedId);
         const inHand = this._cardSourceController.getSource('playerHand', currentPlayer.id).includes(selectedId);
         if (inHand && card.type.includes('TREASURE')) {
-          await this.runGameActionDelegate('playCard', {playerId: currentPlayer.id, cardId: selectedId});
+          await this.runGameActionDelegate('playCard', {
+            playerId: currentPlayer.id,
+            cardId: selectedId,
+            overrides: { actionCost: 0 },
+          });
           this._computerTurnInProgress = false;
           await this.runGameActionDelegate('nextPhase');
           return;
@@ -2382,7 +2386,8 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       });
     }
 
-    if (card.type.includes('ACTION') && args.overrides?.actionCost !== 0) {
+    if (card.type.includes('ACTION') &&
+      args.overrides?.actionCost !== 0) {
       this.match.playerActions -= args.overrides?.actionCost ?? 1;
 
       console.info(`[playCard action] Reducing player's action count to ${this.match.playerActions}`);

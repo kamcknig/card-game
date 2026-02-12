@@ -1,5 +1,5 @@
 import {CardExpansionModule} from '../../types.ts';
-import {CardId, Match, PlayerId, Project} from 'shared/shared-types';
+import {Card, CardId, Match, PlayerId, Project} from 'shared/shared-types';
 import {getCurrentPlayer} from '../../utils/get-current-player.ts';
 import {getTurnPhase} from '../../utils/get-turn-phase.ts';
 
@@ -11,6 +11,110 @@ function isProjectOwned(match: Match, playerId: PlayerId, project: Project) {
     token.location.type === 'cardLike' &&
     token.location.cardLikeId === project.id
   );
+}
+
+// Runtime metadata used by Capitalism to cache qualification and track temporary type changes.
+type CapitalismCardMetadata = {
+  capitalism?: {
+    hasPlusCoinAmountInText?: boolean;
+    treasureTypeAddedForPlayerId?: PlayerId;
+    treasureTypeAddedForTurnNumber?: number;
+  };
+};
+
+// Matches printed +$ amounts (e.g., "+$1", "+$X") for Capitalism qualification checks.
+const PLUS_DOLLAR_AMOUNT_PATTERN = /\+\$[0-9Xx*]+/;
+
+// Returns true when the card text has a printed +$ amount using either supported text style.
+const hasPrintedPlusCoinAmount = (abilityText: string) => PLUS_DOLLAR_AMOUNT_PATTERN.test(abilityText);
+
+// Returns the Capitalism metadata bucket for the given card, creating it when absent.
+const getCapitalismMetadata = (card: Card<CapitalismCardMetadata>) => {
+  card.metadata.capitalism ??= {};
+  return card.metadata.capitalism;
+}
+
+// Returns true when it is currently the specified player's turn.
+const isCurrentTurnPlayer = (match: Match, playerId: PlayerId) => {
+  const currentPlayer = match.players[match.currentPlayerTurnIndex];
+  return currentPlayer?.id === playerId;
+}
+
+// Evaluates and caches whether a card has printed +$ text for Capitalism.
+const isCapitalismTextQualified = (card: Card<CapitalismCardMetadata>) => {
+  const metadata = getCapitalismMetadata(card);
+
+  if (metadata.hasPlusCoinAmountInText === undefined) {
+    metadata.hasPlusCoinAmountInText = hasPrintedPlusCoinAmount(card.abilityText ?? '');
+    // Cache decisions once to avoid repeated regex work each turn.
+    console.debug(`[capitalism project] cached +$ text qualification for ${card}: ${metadata.hasPlusCoinAmountInText}`);
+  }
+
+  return metadata.hasPlusCoinAmountInText;
+}
+
+// Applies Capitalism's temporary Treasure type to all qualifying Action cards in the match library.
+const applyCapitalismTreasureTypes = (match: Match, cardLibrary: {
+  getAllCardsAsArray: () => Card[];
+  getCard: <M = unknown>(cardId: number) => Card<M>;
+}, playerId: PlayerId) => {
+  let addedCount = 0;
+  // Iterate in id order to keep deterministic type mutation/log order.
+  const cards = cardLibrary.getAllCardsAsArray()
+    .map(card => cardLibrary.getCard<CapitalismCardMetadata>(card.id))
+    .sort((a, b) => a.id - b.id);
+
+  for (const card of cards) {
+    if (!card.type.includes('ACTION')) {
+      continue;
+    }
+
+    if (!isCapitalismTextQualified(card)) {
+      continue;
+    }
+
+    if (card.type.includes('TREASURE')) {
+      continue;
+    }
+
+    card.type.push('TREASURE');
+    const metadata = getCapitalismMetadata(card);
+    metadata.treasureTypeAddedForPlayerId = playerId;
+    metadata.treasureTypeAddedForTurnNumber = match.turnNumber;
+    addedCount++;
+  }
+
+  return addedCount;
+}
+
+// Removes only the Treasure types that were temporarily added by Capitalism for the specified player.
+function clearCapitalismTreasureTypes(cardLibrary: {
+  getAllCardsAsArray: () => Card[];
+  getCard: <M = unknown>(cardId: number) => Card<M>;
+}, playerId: PlayerId) {
+  let removedCount = 0;
+  // Iterate in id order to keep deterministic cleanup order.
+  const cards = cardLibrary.getAllCardsAsArray()
+    .map(card => cardLibrary.getCard<CapitalismCardMetadata>(card.id))
+    .sort((a, b) => a.id - b.id);
+
+  for (const card of cards) {
+    const metadata = getCapitalismMetadata(card);
+    if (metadata.treasureTypeAddedForPlayerId !== playerId) {
+      continue;
+    }
+
+    const treasureTypeIndex = card.type.indexOf('TREASURE');
+    if (treasureTypeIndex !== -1) {
+      card.type.splice(treasureTypeIndex, 1);
+      removedCount++;
+    }
+
+    delete metadata.treasureTypeAddedForPlayerId;
+    delete metadata.treasureTypeAddedForTurnNumber;
+  }
+
+  return removedCount;
 }
 
 const effectMap: CardExpansionModule = {
@@ -101,7 +205,7 @@ const effectMap: CardExpansionModule = {
             effectText: '+1 Action',
           });
 
-          await triggeredArgs.runGameActionDelegate('gainAction', { count: 1 });
+          await triggeredArgs.runGameActionDelegate('gainAction', {count: 1});
         },
       });
     },
@@ -132,21 +236,21 @@ const effectMap: CardExpansionModule = {
         for (const card of allCards) {
           const unsub = cardEffectArgs.cardPriceController.registerRule(card, (_targetCard, context) => {
             if (context.playerId !== cardEffectArgs.playerId) {
-              return { restricted: false, cost: { treasure: 0 } };
+              return {restricted: false, cost: {treasure: 0}};
             }
 
             const currentPlayer = context.match.players[context.match.currentPlayerTurnIndex];
             if (currentPlayer?.id !== cardEffectArgs.playerId) {
-              return { restricted: false, cost: { treasure: 0 } };
+              return {restricted: false, cost: {treasure: 0}};
             }
 
             const projectOwned = isProjectOwned(context.match, cardEffectArgs.playerId, project);
 
             if (!projectOwned) {
-              return { restricted: false, cost: { treasure: 0 } };
+              return {restricted: false, cost: {treasure: 0}};
             }
 
-            return { restricted: false, cost: { treasure: -1 } };
+            return {restricted: false, cost: {treasure: -1}};
           });
 
           ruleUnsubs.push(unsub);
@@ -194,6 +298,68 @@ const effectMap: CardExpansionModule = {
           clearRules();
         },
       });
+    },
+  },
+  'capitalism': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      if (!project) {
+        console.warn('[capitalism project] project card not found');
+        return;
+      }
+
+      console.info(`[capitalism project] registering turn type mutation triggers for player ${cardEffectArgs.playerId}`);
+
+      // Apply Capitalism at the start of each owned turn.
+      cardEffectArgs.reactionManager.registerSystemTemplate(project, 'startTurn', {
+        playerId: cardEffectArgs.playerId,
+        once: false,
+        allowMultipleInstances: false,
+        compulsory: true,
+        autoResolve: true,
+        condition: (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
+            return false;
+          }
+
+          const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
+          if (!owned) {
+            console.debug(`[capitalism project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+          }
+          return owned;
+        },
+        triggeredEffectFn: async (triggeredArgs) => {
+          const addedCount = applyCapitalismTreasureTypes(triggeredArgs.match, triggeredArgs.cardLibrary, cardEffectArgs.playerId);
+          console.debug(`[capitalism project] added TREASURE type to ${addedCount} card(s) for player ${cardEffectArgs.playerId} on turn ${triggeredArgs.match.turnNumber}`);
+        },
+      });
+
+      // Remove Capitalism's temporary Treasure types at end of the owner's turn.
+      cardEffectArgs.reactionManager.registerSystemTemplate(project, 'endTurn', {
+        playerId: cardEffectArgs.playerId,
+        once: false,
+        allowMultipleInstances: false,
+        compulsory: true,
+        autoResolve: true,
+        condition: (conditionArgs) => conditionArgs.trigger.args.playerId === cardEffectArgs.playerId,
+        triggeredEffectFn: async (triggeredArgs) => {
+          const removedCount = clearCapitalismTreasureTypes(triggeredArgs.cardLibrary, cardEffectArgs.playerId);
+          console.debug(`[capitalism project] removed TREASURE type from ${removedCount} card(s) for player ${cardEffectArgs.playerId} on turn ${triggeredArgs.match.turnNumber}`);
+        },
+      });
+
+      // Buying Capitalism mid-turn should apply immediately for the rest of that turn.
+      if (!isCurrentTurnPlayer(cardEffectArgs.match, cardEffectArgs.playerId)) {
+        return;
+      }
+
+      if (!isProjectOwned(cardEffectArgs.match, cardEffectArgs.playerId, project)) {
+        console.debug(`[capitalism project] player ${cardEffectArgs.playerId} does not own cube yet for immediate apply`);
+        return;
+      }
+
+      const addedCount = applyCapitalismTreasureTypes(cardEffectArgs.match, cardEffectArgs.cardLibrary, cardEffectArgs.playerId);
+      console.debug(`[capitalism project] immediate apply added TREASURE type to ${addedCount} card(s) for player ${cardEffectArgs.playerId} on turn ${cardEffectArgs.match.turnNumber}`);
     },
   },
   'cathedral': {
@@ -411,7 +577,7 @@ const effectMap: CardExpansionModule = {
           await triggeredArgs.runGameActionDelegate('moveCard', {
             cardId: selectedCardIds[0],
             toPlayerId: cardEffectArgs.playerId,
-            to: { location: 'playerDeck' },
+            to: {location: 'playerDeck'},
           });
         },
       });
@@ -445,8 +611,8 @@ const effectMap: CardExpansionModule = {
         },
         triggeredEffectFn: async (triggeredArgs) => {
           const victoryCards = triggeredArgs.findCards([
-            { location: 'playerHand', playerId: cardEffectArgs.playerId },
-            { cardType: ['VICTORY'] },
+            {location: 'playerHand', playerId: cardEffectArgs.playerId},
+            {cardType: ['VICTORY']},
           ]);
 
           if (!victoryCards.length) {
@@ -646,7 +812,7 @@ const effectMap: CardExpansionModule = {
           });
 
           console.debug(`[fair project] granting +1 Buy to player ${cardEffectArgs.playerId}`);
-          await triggeredArgs.runGameActionDelegate('gainBuy', { count: 1 });
+          await triggeredArgs.runGameActionDelegate('gainBuy', {count: 1});
         },
       });
     },
@@ -763,8 +929,8 @@ const effectMap: CardExpansionModule = {
             playerId: cardEffectArgs.playerId,
             prompt: `Play ${gainedCard.cardName}?`,
             actionButtons: [
-              { label: 'NO', action: 1 },
-              { label: 'YES', action: 2 },
+              {label: 'NO', action: 1},
+              {label: 'YES', action: 2},
             ],
             content: {
               type: 'display-cards',
@@ -837,8 +1003,8 @@ const effectMap: CardExpansionModule = {
             playerId: cardEffectArgs.playerId,
             prompt: 'Pay $1 for +1 Coffers? (Pageant)',
             actionButtons: [
-              { label: 'NO', action: 1 },
-              { label: 'YES', action: 2 },
+              {label: 'NO', action: 1},
+              {label: 'YES', action: 2},
             ],
           }) as { action: number };
 
@@ -860,7 +1026,7 @@ const effectMap: CardExpansionModule = {
           });
 
           console.debug('[pageant project] paying $1 and granting +1 Coffer');
-          await triggeredArgs.runGameActionDelegate('gainTreasure', { count: -1 });
+          await triggeredArgs.runGameActionDelegate('gainTreasure', {count: -1});
           await triggeredArgs.runGameActionDelegate('gainCoffer', {
             playerId: cardEffectArgs.playerId,
             count: 1,
@@ -900,7 +1066,7 @@ const effectMap: CardExpansionModule = {
 
           if (!deck.length) {
             console.debug('[piazza project] deck empty, shuffling');
-            await triggeredArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+            await triggeredArgs.runGameActionDelegate('shuffleDeck', {playerId: cardEffectArgs.playerId});
             deck = triggeredArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
           }
 
@@ -1060,7 +1226,7 @@ const effectMap: CardExpansionModule = {
             cardId: selectedCardIds[0],
           }, {
             // Mark the source so Sewers can ignore its own trash trigger.
-            loggingContext: { source: project.id }
+            loggingContext: {source: project.id}
           });
         },
       });
@@ -1113,7 +1279,7 @@ const effectMap: CardExpansionModule = {
           const selectedIds = await triggeredArgs.runGameActionDelegate('selectCard', {
             playerId: cardEffectArgs.playerId,
             prompt: 'Discard any number of Coppers',
-            count: { kind: 'upTo', count: copperIds.length },
+            count: {kind: 'upTo', count: copperIds.length},
             optional: true,
             restrict: copperIds,
           }) as CardId[];
