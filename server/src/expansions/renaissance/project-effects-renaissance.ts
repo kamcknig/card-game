@@ -1066,6 +1066,92 @@ const effectMap: CardExpansionModule = {
       });
     },
   },
+  'silos': {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Resolve the Silos project to attach start-of-turn behavior.
+      const project = cardEffectArgs.match.projects?.find(candidate => candidate.id === cardEffectArgs.cardId);
+      if (!project) {
+        console.warn('[silos project] project card not found');
+        return;
+      }
+
+      console.info(`[silos project] registering start turn trigger for player ${cardEffectArgs.playerId}`);
+      cardEffectArgs.reactionManager.registerSystemTemplate(project, 'startTurn', {
+        playerId: cardEffectArgs.playerId,
+        once: false,
+        allowMultipleInstances: false,
+        compulsory: false,
+        condition: (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
+            return false;
+          }
+
+          const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
+          if (!owned) {
+            console.debug(`[silos project] player ${cardEffectArgs.playerId} does not own cube for project ${project.id}`);
+            return false;
+          }
+
+          const hand = conditionArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+          const copperCount = hand.filter(cardId => conditionArgs.cardLibrary.getCard(cardId).cardKey === 'copper').length;
+          if (!copperCount) {
+            console.debug('[silos project] no Copper cards in hand to discard');
+            return false;
+          }
+
+          return true;
+        },
+        triggeredEffectFn: async (triggeredArgs) => {
+          const hand = triggeredArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+          const copperIds = hand.filter(cardId => triggeredArgs.cardLibrary.getCard(cardId).cardKey === 'copper');
+          if (!copperIds.length) {
+            console.debug('[silos project] no Copper cards in hand to discard');
+            return;
+          }
+
+          console.debug(`[silos project] prompting to discard from ${copperIds.length} Copper(s)`);
+          const selectedIds = await triggeredArgs.runGameActionDelegate('selectCard', {
+            playerId: cardEffectArgs.playerId,
+            prompt: 'Discard any number of Coppers',
+            count: { kind: 'upTo', count: copperIds.length },
+            optional: true,
+            restrict: copperIds,
+          }) as CardId[];
+
+          if (!selectedIds.length) {
+            console.debug('[silos project] player declined to discard Coppers');
+            return;
+          }
+
+          // Log the Silos effect once before the discard/draw sequence.
+          triggeredArgs.logManager.addLogEntry({
+            type: 'cardLikeEffect',
+            playerId: cardEffectArgs.playerId,
+            cardLikeId: project.id,
+            effectText: 'Discard Coppers to draw that many cards',
+          });
+
+          console.debug(`[silos project] revealing and discarding ${selectedIds.length} Copper(s)`);
+          for (const cardId of selectedIds) {
+            await triggeredArgs.runGameActionDelegate('revealCard', {
+              playerId: cardEffectArgs.playerId,
+              cardId,
+            });
+            await triggeredArgs.runGameActionDelegate('discardCard', {
+              playerId: cardEffectArgs.playerId,
+              cardId,
+            });
+          }
+
+          console.debug(`[silos project] drawing ${selectedIds.length} card(s) after discarding Coppers`);
+          await triggeredArgs.runGameActionDelegate('drawCard', {
+            playerId: cardEffectArgs.playerId,
+            count: selectedIds.length,
+          });
+        },
+      });
+    },
+  },
 };
 
 export default effectMap;
