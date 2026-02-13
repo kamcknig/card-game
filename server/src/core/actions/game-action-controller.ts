@@ -132,17 +132,11 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     this.projectEffectFunctionMap[cardKey] = fn;
   }
 
-  // Ensures a status-like store (state/artifact) exists on match state.
-  private ensureStatusStore(kind: 'state' | 'artifact') {
+  // Returns the requested status-like store (state/artifact) from match state.
+  private getStatusStore(kind: 'state' | 'artifact') {
     if (kind === 'state') {
-      this.match.states ??= { cards: [], byPlayer: {} };
-      this.match.states.cards ??= [];
-      this.match.states.byPlayer ??= {};
       return this.match.states;
     }
-    this.match.artifacts ??= { cards: [], byPlayer: {} };
-    this.match.artifacts.cards ??= [];
-    this.match.artifacts.byPlayer ??= {};
     return this.match.artifacts;
   }
 
@@ -1115,8 +1109,6 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   // Adds Villagers tokens (Renaissance) to a player.
   async gainVillager(args: { playerId: PlayerId; count?: number }, context?: GameActionContext) {
     console.log(`[gainVillager action] player ${args.playerId} gained ${args.count} villagers`);
-    // Ensure villagers map exists for older saved states.
-    this.match.villagers ??= {};
     this.match.villagers[args.playerId] ??= 0;
     this.match.villagers[args.playerId] += args.count ?? 1;
     this.match.villagers[args.playerId] = Math.max(0, this.match.villagers[args.playerId]);
@@ -1128,8 +1120,6 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   // Adds debt tokens to a player without spending treasure.
   async gainDebt(args: { playerId: PlayerId; count: number }, context?: GameActionContext) {
     console.log(`[gainDebt action] player ${args.playerId} gained ${args.count} debt`);
-    // Ensure debt map exists for older saved states.
-    this.match.debt ??= {};
     this.match.debt[args.playerId] ??= 0;
     this.match.debt[args.playerId] += args.count;
     this.match.debt[args.playerId] = Math.max(0, this.match.debt[args.playerId]);
@@ -1153,8 +1143,6 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       );
       return;
     }
-    // Ensure villagers map exists for older saved states.
-    this.match.villagers ??= {};
     const currentVillagers = this.match.villagers[args.playerId] ?? 0;
     const spendCount = Math.min(args.count, currentVillagers);
     if (spendCount <= 0) {
@@ -1170,8 +1158,6 @@ export class GameActionController implements BaseGameActionDefinitionMap {
 
   // Pays down debt tokens using the current treasure pool.
   async payDebt(args: { playerId: PlayerId; count: number }, context?: GameActionContext) {
-    // Ensure debt map exists for older saved states.
-    this.match.debt ??= {};
     const currentDebt = this.match.debt[args.playerId] ?? 0;
     const payable = Math.min(args.count, currentDebt, this.match.playerTreasure);
     console.log(`[payDebt action] player ${args.playerId} paying ${payable} debt`);
@@ -1201,8 +1187,6 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     overpay?: { inTreasure: number; inCoffer: number };
     cardCost: CardCost;
   }) {
-    // Ensure debt map exists for older saved states.
-    this.match.debt ??= {};
     // Prevent buying if the player already has debt tokens.
     const existingDebt = this.match.debt[args.playerId] ?? 0;
     if (existingDebt > 0) {
@@ -1271,8 +1255,6 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     cardLikeId: CardLikeId;
     playerId: PlayerId;
   }) {
-    // Ensure debt map exists for older saved states.
-    this.match.debt ??= {};
     // Prevent buying card-likes if the player already has debt tokens.
     const existingDebt = this.match.debt[args.playerId] ?? 0;
     if (existingDebt > 0) {
@@ -1355,8 +1337,6 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     cardLikeId: CardLikeId;
     playerId: PlayerId;
   }) {
-    // Ensure debt map exists for older saved states.
-    this.match.debt ??= {};
     // Prevent buying projects if the player already has debt tokens.
     const existingDebt = this.match.debt[args.playerId] ?? 0;
     if (existingDebt > 0) {
@@ -1372,7 +1352,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
 
     // Ensure the player has an available cube token to place.
     const cubeTokenId = 'cube-token';
-    const tokens = Object.values(this.match.tokens ?? {});
+    const tokens = Object.values(this.match.tokens);
     const availableCube = tokens.find((token) =>
       token.tokenId === cubeTokenId &&
       token.ownerId === args.playerId &&
@@ -1478,13 +1458,6 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     if (!immediate) {
       console.debug('[receiveBoon action] boon will be deferred until resolved');
     }
-
-    // Ensure boon piles exist for older saved states.
-    this.match.boons ??= { cards: [], deck: [], discard: [], setAside: [] };
-    this.match.boons.cards ??= [];
-    this.match.boons.deck ??= [];
-    this.match.boons.discard ??= [];
-    this.match.boons.setAside ??= [];
 
     if (this.match.boons.cards.length < 1) {
       console.info('[receiveBoon action] no boons configured, skipping');
@@ -1655,12 +1628,6 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   async receiveHex(args: { playerId: PlayerId; hexId?: CardLikeId }, context?: GameActionContext) {
     console.log(`[receiveHex action] player ${args.playerId} receiving a hex`);
 
-    // Ensure hex piles exist for older saved states.
-    this.match.hexes ??= { cards: [], deck: [], discard: [] };
-    this.match.hexes.cards ??= [];
-    this.match.hexes.deck ??= [];
-    this.match.hexes.discard ??= [];
-
     if (this.match.hexes.cards.length < 1) {
       console.info('[receiveHex action] no hexes configured, skipping');
       return;
@@ -1760,7 +1727,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   ) {
     console.log(`[gainState action] player ${args.playerId} gaining state`);
 
-    const store = this.ensureStatusStore('state');
+    const store = this.getStatusStore('state');
     if (store.cards.length < 1) {
       console.info('[gainState action] no states configured, skipping');
       return;
@@ -1836,7 +1803,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   ): Promise<void> {
     console.log(`[removeState action] player ${args.playerId} removing state`);
 
-    const store = this.ensureStatusStore('state');
+    const store = this.getStatusStore('state');
     const state = this.resolveStatusCard(store, { statusId: args.stateId, statusKey: args.stateKey });
 
     if (!state) {
@@ -1863,7 +1830,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   ) {
     console.log(`[gainArtifact action] player ${args.playerId} gaining artifact`);
 
-    const store = this.ensureStatusStore('artifact');
+    const store = this.getStatusStore('artifact');
     if (store.cards.length < 1) {
       console.info('[gainArtifact action] no artifacts configured, skipping');
       return;
@@ -1936,7 +1903,7 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   ): Promise<void> {
     console.log(`[removeArtifact action] player ${args.playerId} removing artifact`);
 
-    const store = this.ensureStatusStore('artifact');
+    const store = this.getStatusStore('artifact');
     const artifact = this.resolveStatusCard(store, { statusId: args.artifactId, statusKey: args.artifactKey });
     if (!artifact) {
       console.warn('[removeArtifact action] could not resolve artifact to remove');
@@ -2602,12 +2569,8 @@ export class GameActionController implements BaseGameActionDefinitionMap {
   ): Promise<void> {
     const includeDiscard = args.includeDiscard ?? false;
 
-    // Resolve the target piles based on kind and ensure they exist.
-    const piles = args.kind === 'boon'
-      ? (this.match.boons ??= { cards: [], deck: [], discard: [], setAside: [] })
-      : (this.match.hexes ??= { cards: [], deck: [], discard: [] });
-    piles.deck ??= [];
-    piles.discard ??= [];
+    // Resolve the target piles based on kind.
+    const piles = args.kind === 'boon' ? this.match.boons : this.match.hexes;
 
     const deck = piles.deck;
     const discard = piles.discard;

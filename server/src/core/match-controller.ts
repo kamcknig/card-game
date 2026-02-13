@@ -393,6 +393,42 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   // Applies a loaded match state onto the current match instance.
   private applyLoadedMatchState(loadedMatch: Match): void {
     Object.assign(this._match, loadedMatch);
+    // Normalize persisted snapshots once at match load, not during gameplay actions.
+    this._match.coffers ??= {};
+    this._match.villagers ??= {};
+    this._match.debt ??= {};
+    this._match.boons ??= {
+      cards: [],
+      deck: [],
+      discard: [],
+      setAside: [],
+    };
+    this._match.boons.cards ??= [];
+    this._match.boons.deck ??= [];
+    this._match.boons.discard ??= [];
+    this._match.boons.setAside ??= [];
+    this._match.hexes ??= {
+      cards: [],
+      deck: [],
+      discard: [],
+    };
+    this._match.hexes.cards ??= [];
+    this._match.hexes.deck ??= [];
+    this._match.hexes.discard ??= [];
+    this._match.states ??= {
+      cards: [],
+      byPlayer: {},
+    };
+    this._match.states.cards ??= [];
+    this._match.states.byPlayer ??= {};
+    this._match.artifacts ??= {
+      cards: [],
+      byPlayer: {},
+    };
+    this._match.artifacts.cards ??= [];
+    this._match.artifacts.byPlayer ??= {};
+    this._match.tokens ??= {};
+    this._match.tokenInstanceCounter ??= 0;
   }
 
   // Loads a card library snapshot for a loaded match state.
