@@ -1,6 +1,6 @@
-import { CardExpansionModule } from '../../types.ts';
+import { CardExpansionModule } from '@server-types/index.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
-import { Card, CardId } from 'shared/shared-types';
+import { Card, CardId } from 'shared/types/index.ts';
 import { getPlayerStartingFrom, getPlayerTurnIndex } from '@shared/get-player-position-utils.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';

@@ -1,5 +1,5 @@
-import { Card, CardId, CardKey } from 'shared/shared-types';
-import { CardExpansionModule } from '../../types.ts';
+import { Card, CardId, CardKey } from 'shared/types/index.ts';
+import { CardExpansionModule } from '@server-types/index.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getRemainingSupplyCount, getStartingSupplyCount } from '../../utils/get-starting-supply-count.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';

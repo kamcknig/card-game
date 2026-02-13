@@ -1,5 +1,5 @@
-import { CardEffectFunctionContext } from '../types.ts';
-import { PlayerId } from 'shared/shared-types';
+import { CardEffectFunctionContext } from '@server-types/index.ts';
+import { PlayerId } from 'shared/types/index.ts';
 
 // Shared helper context for discard-down-to effects.
 type DiscardDownToContext = Pick<

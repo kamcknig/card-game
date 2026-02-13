@@ -1,6 +1,6 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { cardStore } from '../../../state/card-state';
-import { Card, CardLikeId, CardType, Match, TokenDefinition, TokenId, TokenInstance } from 'shared/shared-types';
+import { Card, CardLikeId, CardType, Match, TokenDefinition, TokenId, TokenInstance } from 'shared/types/index.ts';
 import { atom, computed } from 'nanostores';
 import { CARD_HEIGHT, CARD_WIDTH, SMALL_CARD_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
 import { PhaseStatus } from './phase-status';

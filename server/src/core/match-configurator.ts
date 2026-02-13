@@ -9,7 +9,7 @@ import {
   MatchConfiguration,
   ProjectNoId,
   Supply,
-} from 'shared/shared-types';
+} from 'shared/types/index.ts';
 import { ExpansionData, expansionLibrary, rawCardLibrary } from '@expansions/expansion-library.ts';
 import {
   EndGameConditionRegistrar,
@@ -19,7 +19,7 @@ import {
   InitializeExpansionContext,
   MatchBaseConfiguration,
   PlayerScoreDecoratorRegistrar,
-} from '../types.ts';
+} from '@server-types/index.ts';
 import { compare, Operation } from 'fast-json-patch';
 import { CardSourceController } from './card-source-controller.ts';
 import { getDefaultKingdomSupplySize } from '../utils/get-default-kingdom-supply-size.ts';

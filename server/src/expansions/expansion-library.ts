@@ -8,7 +8,7 @@ import {
   LandmarkNoId,
   ProjectNoId,
   StateNoId,
-} from 'shared/shared-types';
+} from 'shared/types/index.ts';
 
 export type ExpansionCardData = {
   basicSupply: Record<CardKey, CardNoId>;

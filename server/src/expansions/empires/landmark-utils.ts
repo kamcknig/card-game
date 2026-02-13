@@ -1,5 +1,5 @@
-import { CardKey } from 'shared/shared-types';
-import { GameLifecycleCallbackContext } from '../../types.ts';
+import { CardKey } from 'shared/types/index.ts';
+import { GameLifecycleCallbackContext } from '@server-types/index.ts';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
 
 // Configuration for placing victory tokens on a landmark.

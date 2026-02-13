@@ -1,4 +1,4 @@
-import { ExpansionConfiguratorFactory } from '../../types.ts';
+import { ExpansionConfiguratorFactory } from '@server-types/index.ts';
 
 const configurator: ExpansionConfiguratorFactory = () => {
   let potionConfigured = false;

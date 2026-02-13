@@ -18,7 +18,7 @@ import { MatchScene } from './components/match/views/scenes/match-scene';
 import { PIXI_APP } from './core/pixi-application.token';
 import { MatchConfigurationComponent } from './components/match-configuration/match-configuration.component';
 import { GameSummaryComponent } from './components/game-summary/game-summary.component';
-import { MatchSummary } from 'shared/shared-types';
+import { MatchSummary } from 'shared/types/index.ts';
 import { matchStartedStore, matchSummaryStore } from './state/match-state';
 import { MatchHudComponent } from './components/match/match-hud/match-hud.component';
 

@@ -1,4 +1,4 @@
-import { ExpansionConfiguratorFactory } from '../../types.ts';
+import { ExpansionConfiguratorFactory } from '@server-types/index.ts';
 import { configureSpoils } from './configure-spoils.ts';
 import { configureRuins } from './configure-ruins.ts';
 import { configureHermit } from './configure-hermit.ts';

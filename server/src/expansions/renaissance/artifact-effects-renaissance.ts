@@ -1,4 +1,4 @@
-import { ArtifactEffectRegistrar } from '../../types.ts';
+import { ArtifactEffectRegistrar } from '@server-types/index.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';

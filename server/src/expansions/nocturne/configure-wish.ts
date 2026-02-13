@@ -1,4 +1,4 @@
-import { ExpansionConfiguratorContext } from '../../types.ts';
+import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 import { expansionLibrary } from '../expansion-library.ts';
 
 // Adds the Wish non-supply pile when cards that gain Wishes are present.

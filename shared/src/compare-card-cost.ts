@@ -1,4 +1,4 @@
-import { CardCost } from 'shared/shared-types';
+import { CardCost } from './types/index.ts';
 
 // Normalize a CardCost for multi-axis comparisons.
 const normalizeCost = (cost: CardCost) => ({

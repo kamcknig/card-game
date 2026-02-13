@@ -1,5 +1,5 @@
 import { castArray } from 'es-toolkit/compat';
-import { CardId, CardLocation, PlayerId } from 'shared/shared-types';
+import { CardId, CardLocation, PlayerId } from 'shared/types/index.ts';
 
 import { validateCostSpec } from '@shared/validate-cost-spec.ts';
 import {
@@ -9,7 +9,7 @@ import {
   isSourceFindCardsFilter,
   NonLocationFilters,
   SourceFindCardsFilter,
-} from '../types.ts';
+} from '@server-types/index.ts';
 import { CardSourceController } from '../core/card-source-controller.ts';
 
 const findCardsByLocation = (

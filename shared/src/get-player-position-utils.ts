@@ -1,4 +1,4 @@
-import { Match, PlayerId } from 'shared/shared-types';
+import { Match, PlayerId } from './types/index.ts';
 
 type GetPlayerIndexArgs = {
   match: Match;

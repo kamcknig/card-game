@@ -1,5 +1,5 @@
 import { computed } from 'nanostores';
-import { TurnPhaseOrderValues } from 'shared/shared-types';
+import { TurnPhaseOrderValues } from 'shared/types/index.ts';
 
 import { matchStore } from './match-state';
 

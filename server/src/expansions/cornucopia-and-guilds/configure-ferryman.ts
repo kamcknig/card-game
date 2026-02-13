@@ -1,5 +1,5 @@
-import { CardKey } from 'shared/shared-types';
-import { ExpansionConfiguratorContext } from '../../types.ts';
+import { CardKey } from 'shared/types/index.ts';
+import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 import { expansionLibrary } from '../expansion-library.ts';
 import { getDefaultKingdomSupplySize } from '../../utils/get-default-kingdom-supply-size.ts';
 

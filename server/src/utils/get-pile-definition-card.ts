@@ -1,4 +1,4 @@
-import { CardNoId } from 'shared/shared-types';
+import { CardNoId } from 'shared/types/index.ts';
 
 // Returns a pile-level card definition, applying randomizer overrides when present.
 export const getPileDefinitionCard = (cards: CardNoId[], pileName: string): CardNoId | undefined => {

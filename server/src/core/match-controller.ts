@@ -9,7 +9,7 @@ import {
   MatchSummary,
   PlayerId,
   ServerListenEvents,
-} from 'shared/shared-types';
+} from 'shared/types/index.ts';
 import { MatchConfigurator } from './match-configurator.ts';
 import { getCurrentPlayer } from '../utils/get-current-player.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';
@@ -34,7 +34,7 @@ import {
   GameLifecycleEvent,
   MatchBaseConfiguration,
   PlayerScoreDecorator,
-} from '../types.ts';
+} from '@server-types/index.ts';
 import {
   createArtifact,
   createBoon,

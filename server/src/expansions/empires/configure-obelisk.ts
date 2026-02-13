@@ -1,5 +1,5 @@
-import { CardKey, ComputedMatchConfiguration } from 'shared/shared-types';
-import { GameEventRegistrar } from '../../types.ts';
+import { CardKey, ComputedMatchConfiguration } from 'shared/types/index.ts';
+import { GameEventRegistrar } from '@server-types/index.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 
 export type ObeliskMetadata = {

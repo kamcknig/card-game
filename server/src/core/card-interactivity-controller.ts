@@ -1,5 +1,5 @@
-import { AppSocket, FindCardsFn, RunGameActionDelegate } from '../types.ts';
-import { Card, CardId, CardLikeId, CardStats, Match, PlayerId, TurnPhaseOrderValues } from 'shared/shared-types';
+import { AppSocket, FindCardsFn, RunGameActionDelegate } from '@server-types/index.ts';
+import { Card, CardId, CardLikeId, CardStats, Match, PlayerId, TurnPhaseOrderValues } from 'shared/types/index.ts';
 import { isUndefined } from 'es-toolkit/compat';
 import { MatchCardLibrary } from './match-card-library.ts';
 import { getPlayerById } from '../utils/get-player-by-id.ts';

@@ -1,4 +1,4 @@
-import { CardKey, Match, PlayerId, State } from 'shared/shared-types';
+import { CardKey, Match, PlayerId, State } from 'shared/types/index.ts';
 
 // Returns the state ids owned by a player.
 export const getPlayerStateIds = (match: Match, playerId: PlayerId): number[] => {

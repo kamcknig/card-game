@@ -62,7 +62,7 @@ Match instance. You can extend the Match interface by declaring a module in a "t
 directory.
 
 ```ts
-declare module 'shared/shared-types.ts' {
+declare module 'shared/types/index.ts' {
   interface Match {
     coffers?: Record<PlayerId, number>;
   }

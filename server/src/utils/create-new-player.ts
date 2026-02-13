@@ -1,5 +1,5 @@
-import { Player } from "shared/shared-types"
-import { AppSocket } from '../types.ts';
+import { Player } from 'shared/types/index.ts';
+import { AppSocket } from '@server-types/index.ts';
 
 let PLAYER_ID: number = 0;
 

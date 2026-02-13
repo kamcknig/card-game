@@ -1,4 +1,4 @@
-import { ExpansionConfiguratorContext } from '../../types.ts';
+import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 import { expansionLibrary } from '../expansion-library.ts';
 
 // Adds the Will-o'-Wisp non-supply pile when boons are in use.

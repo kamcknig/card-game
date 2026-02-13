@@ -1,10 +1,10 @@
-import { Card, CardId, CardKey, CountSpec } from 'shared/shared-types';
+import { Card, CardId, CardKey, CountSpec } from 'shared/types/index.ts';
 import {
   CardEffectFunctionContext,
   CardExpansionModule,
   CardLifecycleCallbackContext,
   CardLifecycleEventArgMap,
-} from '../../types.ts';
+} from '@server-types/index.ts';
 import { isPlayerImmune, markPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';

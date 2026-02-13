@@ -1,4 +1,4 @@
-import { CardCost, CostSpec } from 'shared/shared-types';
+import { CardCost, CostSpec } from './types/index.ts';
 
 // Validate a card's cost against a CostSpec, supporting exact and upTo comparisons.
 export const validateCostSpec = (validateAmount: CostSpec, cardCost: CardCost): boolean => {

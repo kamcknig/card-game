@@ -1,4 +1,4 @@
-import { AppSocket, MatchBaseConfiguration } from '../types.ts';
+import { AppSocket, MatchBaseConfiguration } from '@server-types/index.ts';
 import {
   ArtifactNoId,
   Card,
@@ -12,7 +12,7 @@ import {
   Player,
   PlayerId,
   ProjectNoId,
-} from 'shared/shared-types';
+} from 'shared/types/index.ts';
 import { createComputerPlayer, createNewPlayer } from '../utils/create-new-player.ts';
 import { io } from '../server.ts';
 import { MatchController } from './match-controller.ts';

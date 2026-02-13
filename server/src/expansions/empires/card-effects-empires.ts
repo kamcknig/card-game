@@ -1,5 +1,5 @@
-import { CardEffectFunctionContext, CardExpansionModule } from '../../types.ts';
-import { CardId, CardKey, CardLocation, PlayerId } from 'shared/shared-types';
+import { CardEffectFunctionContext, CardExpansionModule } from '@server-types/index.ts';
+import { CardId, CardKey, CardLocation, PlayerId } from 'shared/types/index.ts';
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';

@@ -1,5 +1,5 @@
-import { Card, CardId } from 'shared/shared-types';
-import { CardExpansionModule } from '../../types.ts';
+import { Card, CardId } from 'shared/types/index.ts';
+import { CardExpansionModule } from '@server-types/index.ts';
 
 // Renaissance card effects module (artifacts handled separately).
 const expansion: CardExpansionModule = {

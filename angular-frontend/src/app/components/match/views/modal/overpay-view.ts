@@ -3,7 +3,7 @@ import { cofferStore } from '../../../../state/resource-logic';
 import { currentPlayerStore, playerTreasureStore } from '../../../../state/turn-state';
 import { computed } from 'nanostores';
 import { Slider } from '@pixi/ui';
-import { UserPromptKinds } from 'shared/shared-types';
+import { UserPromptKinds } from 'shared/types/index.ts';
 import { STANDARD_GAP } from '../../../../core/app-contants';
 
 export const overpayView = (app: Application, args: UserPromptKinds) => {

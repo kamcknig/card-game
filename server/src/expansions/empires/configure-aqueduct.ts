@@ -1,6 +1,6 @@
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
-import { CardKey, ComputedMatchConfiguration } from 'shared/shared-types';
-import { GameEventRegistrar } from '../../types.ts';
+import { CardKey, ComputedMatchConfiguration } from 'shared/types/index.ts';
+import { GameEventRegistrar } from '@server-types/index.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 
 export const configureAqueduct = (

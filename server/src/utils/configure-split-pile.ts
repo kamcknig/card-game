@@ -1,5 +1,5 @@
-import { CardKey } from 'shared/shared-types';
-import { ExpansionConfiguratorContext } from '../types.ts';
+import { CardKey } from 'shared/types/index.ts';
+import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 import { getCardPileKey } from './get-card-pile-key.ts';
 
 type SplitPileConfiguration = {

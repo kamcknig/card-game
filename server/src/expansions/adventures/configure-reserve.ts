@@ -1,4 +1,4 @@
-import { ExpansionConfiguratorContext } from '../../types.ts';
+import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 import { addMatToMatchConfig } from '../../utils/add-mat-to-match-config.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 

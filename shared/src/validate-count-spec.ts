@@ -1,4 +1,4 @@
-import { CountSpec } from 'shared/shared-types';
+import { CountSpec } from './types/index.ts';
 
 // Validate a count against a CountSpec, supporting exact and upTo comparisons.
 export const validateCountSpec = (spec: CountSpec, count: number): boolean => {

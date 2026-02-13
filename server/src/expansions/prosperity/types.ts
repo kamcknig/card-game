@@ -1,4 +1,4 @@
-import { PlayerId } from 'shared/shared-types';
+import { PlayerId } from 'shared/types/index.ts';
 
 export interface FortuneMetadata {
   doubled: Record<PlayerId, boolean>;

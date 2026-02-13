@@ -1,4 +1,4 @@
-import { CountSpec } from 'shared/shared-types';
+import { CountSpec } from './types/index.ts';
 
 export type ResolvedCountSpec =
   | { kind: 'fixed'; count: number }

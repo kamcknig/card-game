@@ -1,6 +1,6 @@
-import { Match } from 'shared/shared-types';
+import { Match } from 'shared/types/index.ts';
 import { getCardPileKey } from './get-card-pile-key.ts';
-import { FindCardsFn } from '../types.ts';
+import { FindCardsFn } from '@server-types/index.ts';
 
 export const getStartingSupplyCount = (match: Match) => {
   const allSupplyCardKeys = match.config.basicSupply.concat(

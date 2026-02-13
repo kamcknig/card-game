@@ -14,7 +14,7 @@ import { NanostoresService } from '@nanostores/angular';
 import { playerIdStore, playerStore, selfPlayerIdStore } from '../../../state/player-state';
 import { combineLatest, combineLatestWith, filter, map, Observable, of, switchMap } from 'rxjs';
 import { AsyncPipe } from '@angular/common';
-import { CardLikeId, Mats, PlayerId } from 'shared/shared-types';
+import { CardLikeId, Mats, PlayerId } from 'shared/types/index.ts';
 import { logEntryIdsStore, logStore } from '../../../state/log-state';
 import { MatTabComponent } from './mat-zone/mat-tab.component';
 import { CardComponent } from '../../card/card.component';

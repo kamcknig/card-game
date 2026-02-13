@@ -1,7 +1,7 @@
-import { ExpansionConfiguratorFactory, GameEventRegistrar } from '../../types.ts';
+import { ExpansionConfiguratorFactory, GameEventRegistrar } from '@server-types/index.ts';
 import { configureYoungWitch } from './configure-young-witch.ts';
 import { configureFerryman } from './configure-ferryman.ts';
-import { ComputedMatchConfiguration } from 'shared/shared-types';
+import { ComputedMatchConfiguration } from 'shared/types/index.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { configureJoust } from './configure-joust.ts';
 

@@ -1,4 +1,4 @@
-import { ExpansionConfiguratorFactory } from '../../types.ts';
+import { ExpansionConfiguratorFactory } from '@server-types/index.ts';
 import { addMatToMatchConfig } from '../../utils/add-mat-to-match-config.ts';
 
 const configurator: ExpansionConfiguratorFactory = () => {

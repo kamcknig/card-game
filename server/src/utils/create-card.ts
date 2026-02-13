@@ -16,7 +16,7 @@ import {
   ProjectNoId,
   State,
   StateNoId,
-} from "shared/shared-types"
+} from 'shared/types/index.ts';
 import { rawCardLibrary } from '@expansions/expansion-library.ts';
 import { formatCardName } from './format-card-name.ts';
 

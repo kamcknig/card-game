@@ -1,0 +1,12 @@
+// Game action signatures and execution context types.
+export type {
+  BaseGameActionDefinitionMap,
+  GameActionContext,
+  GameActionContextMap,
+  GameActionDefinitionMap,
+  GameActionOverrides,
+  GameActionReturnTypeMap,
+  GameActions,
+  LifecycleSuppression,
+  RunGameActionDelegate,
+} from '../types.ts';

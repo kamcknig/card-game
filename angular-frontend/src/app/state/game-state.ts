@@ -1,5 +1,5 @@
 import { atom } from 'nanostores';
-import { PlayerId } from 'shared/shared-types';
+import { PlayerId } from 'shared/types/index.ts';
 import { playerIdStore, playerStore } from './player-state';
 
 

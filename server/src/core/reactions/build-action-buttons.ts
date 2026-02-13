@@ -1,4 +1,4 @@
-import { Reaction } from '../../types.ts';
+import { Reaction } from '@server-types/index.ts';
 import { formatCardName } from '../../utils/format-card-name.ts';
 import { MatchCardLibrary } from '../match-card-library.ts';
 

@@ -1,4 +1,4 @@
-import { Card, CardId, PlayerId } from 'shared/shared-types';
+import { Card, CardId, PlayerId } from 'shared/types/index.ts';
 
 /**
  * The CardLibrary class provides a way to add cards into a library that is used within a Match.

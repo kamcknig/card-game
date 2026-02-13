@@ -1,4 +1,4 @@
-import { Reaction } from '../../types.ts';
+import { Reaction } from '@server-types/index.ts';
 
 export function buildActionMap(
   grouped: Map<string, { count: number; reaction: Reaction }>,

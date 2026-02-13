@@ -1,4 +1,4 @@
-import { Card, CardId, CardLike, Event, Landmark, Match, Player, Project } from 'shared/shared-types';
+import { Card, CardId, CardLike, Event, Landmark, Match, Player, Project } from 'shared/types/index.ts';
 import {
   CardLifecycleEvent,
   CardLifecycleEventArgMap,
@@ -15,7 +15,7 @@ import {
   RunGameActionDelegate,
   TriggeredEffectContext,
   TriggerEventType,
-} from '../../types.ts';
+} from '@server-types/index.ts';
 import { MatchCardLibrary } from '../match-card-library.ts';
 import { getOrderStartingFrom } from '../../utils/get-order-starting-from.ts';
 import { groupReactionsByCardKey } from './group-reactions-by-card-key.ts';

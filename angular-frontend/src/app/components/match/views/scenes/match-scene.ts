@@ -6,7 +6,7 @@ import {matchStartedStore, matchStore} from '../../../../state/match-state';
 import {playerStore, selfPlayerIdStore,} from '../../../../state/player-state';
 import {PlayAreaView} from '../play-area';
 import {KingdomSupplyView} from '../kingdom-supply';
-import {CardId, CardKey, PlayerId, UserPromptActionArgs} from 'shared/shared-types';
+import {CardId, CardKey, PlayerId, UserPromptActionArgs} from 'shared/types/index.ts';
 import {
   awaitingServerLockReleaseStore,
   clientSelectableCardsOverrideStore,

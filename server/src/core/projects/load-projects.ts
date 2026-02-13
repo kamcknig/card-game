@@ -1,7 +1,7 @@
 import { expansionLibrary } from '@expansions/expansion-library.ts';
 import { createCardLike } from '../../utils/create-card-data.ts';
-import { CardExpansionModule } from '../../types.ts';
-import { ProjectNoId } from 'shared/shared-types';
+import { CardExpansionModule } from '@server-types/index.ts';
+import { ProjectNoId } from 'shared/types/index.ts';
 import { projectEffectFactoryMap } from './project-effect-factory-map.ts';
 
 export const loadProjects = async (expansionName: string) => {

@@ -1,5 +1,5 @@
-import { Supply } from 'shared/shared-types';
-import { ExpansionConfiguratorContext } from '../../types.ts';
+import { Supply } from 'shared/types/index.ts';
+import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 import { expansionLibrary } from '../expansion-library.ts';
 
 export const configureJoust = async (args: ExpansionConfiguratorContext) => {

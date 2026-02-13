@@ -1,5 +1,5 @@
-import { HexEffectRegistrar } from '../../types.ts';
-import { CardId } from 'shared/shared-types';
+import { HexEffectRegistrar } from '@server-types/index.ts';
+import { CardId } from 'shared/types/index.ts';
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { getPlayerStateByKey, playerHasState } from '../../utils/player-state-utils.ts';

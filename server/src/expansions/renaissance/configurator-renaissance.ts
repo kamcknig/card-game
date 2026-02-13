@@ -1,6 +1,6 @@
 import { expansionLibrary } from '../expansion-library.ts';
-import { ComputedMatchConfiguration } from 'shared/shared-types';
-import { ExpansionConfiguratorFactory, GameEventRegistrar } from '../../types.ts';
+import { ComputedMatchConfiguration } from 'shared/types/index.ts';
+import { ExpansionConfiguratorFactory, GameEventRegistrar } from '@server-types/index.ts';
 import { uniqueByProp } from '../../core/match-configurator.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { registerArtifactEffects } from './artifact-effects-renaissance.ts';

@@ -1,8 +1,8 @@
-import { ExpansionConfiguratorFactory, GameEventRegistrar } from '../../types.ts';
+import { ExpansionConfiguratorFactory, GameEventRegistrar } from '@server-types/index.ts';
 import { configureReserve } from './configure-reserve.ts';
 import { registerAdventuresTokenDefinitions } from './token-definitions-adventures.ts';
 import { registerAdventuresTokenTriggers } from './token-triggers-adventures.ts';
-import { ComputedMatchConfiguration, TokenId } from 'shared/shared-types';
+import { ComputedMatchConfiguration, TokenId } from 'shared/types/index.ts';
 import { adventuresTokenIds } from './token-ids-adventures.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 

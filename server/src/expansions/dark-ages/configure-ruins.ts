@@ -1,5 +1,5 @@
-import { Supply } from 'shared/shared-types';
-import { ExpansionConfiguratorContext } from '../../types.ts';
+import { Supply } from 'shared/types/index.ts';
+import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
 import { expansionLibrary, rawCardLibrary } from '../expansion-library.ts';
 

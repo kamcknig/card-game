@@ -1,5 +1,5 @@
-import { BoonEffectRegistrar } from '../../types.ts';
-import { CardId } from 'shared/shared-types';
+import { BoonEffectRegistrar } from '@server-types/index.ts';
+import { CardId } from 'shared/types/index.ts';
 
 // Registers all Nocturne boon effects for the current match.
 export const registerNocturneBoonEffects = (registerBoonEffect: BoonEffectRegistrar) => {

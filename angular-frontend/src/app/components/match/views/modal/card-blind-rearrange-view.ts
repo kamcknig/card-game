@@ -1,6 +1,6 @@
 import { Container, Graphics } from 'pixi.js';
 import { Slider } from '@pixi/ui';
-import { UserPromptKinds } from 'shared/shared-types';
+import { UserPromptKinds } from 'shared/types/index.ts';
 import { STANDARD_GAP } from '../../../../core/app-contants';
 
 export const cardBlindRearrangeView = (args: UserPromptKinds) => {

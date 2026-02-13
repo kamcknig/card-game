@@ -1,5 +1,5 @@
-import { CardEffectFunctionContext, CardExpansionModule } from '../../types.ts';
-import { CardId, CardLikeId } from 'shared/shared-types';
+import { CardEffectFunctionContext, CardExpansionModule } from '@server-types/index.ts';
+import { CardId, CardLikeId } from 'shared/types/index.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';

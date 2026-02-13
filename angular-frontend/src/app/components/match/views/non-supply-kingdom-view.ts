@@ -1,5 +1,5 @@
 import { Container, Graphics, Text } from 'pixi.js';
-import { Card, CardNoId } from 'shared/shared-types';
+import { Card, CardNoId } from 'shared/types/index.ts';
 import { PileView } from './pile';
 import { STANDARD_GAP } from '../../../core/app-contants';
 import { nonSupplyKingdomMapStore } from '../../../state/card-source-logic';

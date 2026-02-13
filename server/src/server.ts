@@ -1,5 +1,5 @@
 import { Server } from 'socket.io';
-import { ServerEmitEvents, ServerListenEvents } from 'shared/shared-types';
+import { ServerEmitEvents, ServerListenEvents } from 'shared/types/index.ts';
 import { toNumber } from 'es-toolkit/compat';
 import * as log from '@timepp/enhanced-deno-log';
 import { Game } from './core/game.ts';

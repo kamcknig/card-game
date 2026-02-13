@@ -1,5 +1,5 @@
-import { ComputedMatchConfiguration, PlayerId } from 'shared/shared-types';
-import { GameEventRegistrar } from '../../types.ts';
+import { ComputedMatchConfiguration, PlayerId } from 'shared/types/index.ts';
+import { GameEventRegistrar } from '@server-types/index.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 
 export const configureMountainPass = (

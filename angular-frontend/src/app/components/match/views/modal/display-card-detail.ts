@@ -1,6 +1,6 @@
 import { Application, Assets, Container, Graphics, Sprite, Texture } from 'pixi.js';
 import { cardStore } from '../../../../state/card-state';
-import { CardNoId } from 'shared/shared-types';
+import { CardNoId } from 'shared/types/index.ts';
 import { applicationStore } from '../../../../state/app-state';
 
 export async function displayCardDetail(arg: number | { detailImagePath: string; }) {

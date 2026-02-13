@@ -1,4 +1,4 @@
-import { Landmark } from 'shared/shared-types';
+import { Landmark } from 'shared/types/index.ts';
 import { Assets, ContainerOptions, FederatedPointerEvent, Graphics, Sprite, Texture } from 'pixi.js';
 import { displayCardDetail } from './modal/display-card-detail';
 import { CardLikeView } from './card-like-view';

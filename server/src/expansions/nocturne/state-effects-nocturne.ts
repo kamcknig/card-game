@@ -1,5 +1,5 @@
-import { StateEffectRegistrar } from '../../types.ts';
-import { Card, CardId } from 'shared/shared-types';
+import { StateEffectRegistrar } from '@server-types/index.ts';
+import { Card, CardId } from 'shared/types/index.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';

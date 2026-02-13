@@ -1,10 +1,10 @@
-import { CardKey, ComputedMatchConfiguration, PlayerId } from 'shared/shared-types';
+import { CardKey, ComputedMatchConfiguration, PlayerId } from 'shared/types/index.ts';
 import {
   ExpansionConfiguratorContext,
   ExpansionConfiguratorFactory,
   GameEventRegistrar,
   PlayerScoreDecoratorRegistrar,
-} from '../../types.ts';
+} from '@server-types/index.ts';
 import { configureSplitPile } from '../../utils/configure-split-pile.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { configureAqueduct } from './configure-aqueduct.ts';

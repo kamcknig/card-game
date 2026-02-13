@@ -2,8 +2,8 @@ import { cardEffectFunctionMapFactory } from '../core/effects/card-effect-functi
 import { scoringFunctionMap } from '@expansions/scoring-function-map.ts';
 import { expansionLibrary, rawCardLibrary } from '@expansions/expansion-library.ts';
 import { cardLifecycleMap } from '../core/card-lifecycle-map.ts';
-import { CardExpansionModule } from '../types.ts';
-import { CardCost, CardKey, CardNoId, CardType } from 'shared/shared-types';
+import { CardExpansionModule } from '@server-types/index.ts';
+import { CardCost, CardKey, CardNoId, CardType } from 'shared/types/index.ts';
 import { cardActionConditionMapFactory } from '../core/actions/card-action-condition-map-factory.ts';
 import { createCardData, createCardLike } from './create-card-data.ts';
 import { loadEvents } from '../core/events/load-events.ts';

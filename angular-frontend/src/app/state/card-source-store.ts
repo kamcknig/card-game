@@ -1,4 +1,4 @@
-import { CardId, CardLocation, PlayerId } from 'shared/shared-types';
+import { CardId, CardLocation, PlayerId } from 'shared/types/index.ts';
 import { atom, listenKeys, map, ReadableAtom } from 'nanostores';
 import { compare } from 'fast-json-patch/';
 

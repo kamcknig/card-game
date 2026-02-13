@@ -1,5 +1,5 @@
-import { CardExpansionModule } from '../../types.ts';
-import { Card, CardId, Match, PlayerId, Project } from 'shared/shared-types';
+import { CardExpansionModule } from '@server-types/index.ts';
+import { Card, CardId, Match, PlayerId, Project } from 'shared/types/index.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 

@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, Input, OnInit } from '@angular/core';
 import { NanostoresService } from '@nanostores/angular';
-import { Player, PlayerId } from 'shared/shared-types';
+import { Player, PlayerId } from 'shared/types/index.ts';
 import { debounceTime, map, Observable, Subject } from 'rxjs';
 import { AsyncPipe, NgIf, NgStyle } from '@angular/common';
 import { playerStore, selfPlayerIdStore } from '../../../state/player-state';

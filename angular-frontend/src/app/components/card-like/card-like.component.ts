@@ -3,7 +3,7 @@ import { NanostoresService } from '@nanostores/angular';
 import { combineLatestWith, Subscription } from 'rxjs';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { NgOptimizedImage } from '@angular/common';
-import { CardLikeId, Match } from 'shared/shared-types';
+import { CardLikeId, Match } from 'shared/types/index.ts';
 import { CardSize } from '../../../types';
 import { cardStore } from '../../state/card-state';
 import { matchStore } from '../../state/match-state';

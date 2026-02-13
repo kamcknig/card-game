@@ -19,7 +19,7 @@ import {
   TurnPhase,
   TurnPhaseOrderValues,
   UserPromptActionArgs,
-} from 'shared/shared-types';
+} from 'shared/types/index.ts';
 import { MatchCardLibrary } from '../match-card-library.ts';
 import { LogManager } from '../log-manager.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
@@ -42,7 +42,7 @@ import {
   ReactionTrigger,
   RunGameActionDelegate,
   TriggerEventType,
-} from '../../types.ts';
+} from '@server-types/index.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { ReactionManager } from '../reactions/reaction-manager.ts';
 import { CardInteractivityController } from '../card-interactivity-controller.ts';

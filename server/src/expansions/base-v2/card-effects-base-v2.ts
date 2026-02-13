@@ -1,8 +1,8 @@
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
-import { CardExpansionModule } from '../../types.ts';
-import { Card } from 'shared/shared-types';
+import { CardExpansionModule } from '@server-types/index.ts';
+import { Card } from 'shared/types/index.ts';
 import { isPlayerImmune, markPlayerImmune } from '../../utils/reaction-immunity.ts';
 
 const expansionModule: CardExpansionModule = {

@@ -1,5 +1,5 @@
-import { GameEventRegistrar } from '../../types.ts';
-import { CardId, ComputedMatchConfiguration } from 'shared/shared-types';
+import { GameEventRegistrar } from '@server-types/index.ts';
+import { CardId, ComputedMatchConfiguration } from 'shared/types/index.ts';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';

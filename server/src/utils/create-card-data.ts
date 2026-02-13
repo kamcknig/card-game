@@ -1,4 +1,4 @@
-import { CardKey, CardLikeNoId, CardNoId } from 'shared/shared-types';
+import { CardKey, CardLikeNoId, CardNoId } from 'shared/types/index.ts';
 import { formatCardName } from './format-card-name.ts';
 
 export const createCardData = (cardKey: CardKey, expansionName: string, templateData: Partial<CardNoId>) => {

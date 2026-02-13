@@ -1,5 +1,5 @@
 import { atom, computed } from 'nanostores';
-import { CardKey, Match } from 'shared/shared-types';
+import { CardKey, Match } from 'shared/types/index.ts';
 import { matchStore } from './match-state';
 
 export const basicSupplies = atom<[CardKey[], CardKey[]]>([[], []]);

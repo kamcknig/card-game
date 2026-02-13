@@ -1,7 +1,7 @@
 import { expansionLibrary } from '@expansions/expansion-library.ts';
 import { createCardLike } from '../../utils/create-card-data.ts';
-import { CardExpansionModule } from '../../types.ts';
-import { LandmarkNoId } from 'shared/shared-types';
+import { CardExpansionModule } from '@server-types/index.ts';
+import { LandmarkNoId } from 'shared/types/index.ts';
 import { landmarkEffectFactoryMap } from './landmark-effect-factory-map.ts';
 
 export const loadLandmarks = async (expansionName: string) => {

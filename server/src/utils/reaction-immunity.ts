@@ -1,5 +1,5 @@
-import { ReactionContext, ReactionTrigger } from '../types.ts';
-import { PlayerId } from 'shared/shared-types';
+import { ReactionContext, ReactionTrigger } from '@server-types/index.ts';
+import { PlayerId } from 'shared/types/index.ts';
 
 // Read-only immunity check so attack effects do not need to inspect raw reaction payloads.
 export function isPlayerImmune(

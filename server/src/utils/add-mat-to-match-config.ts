@@ -1,5 +1,5 @@
-import { ComputedMatchConfiguration } from 'shared/shared-types';
-import { InitializeExpansionContext } from '../types.ts';
+import { ComputedMatchConfiguration } from 'shared/types/index.ts';
+import { InitializeExpansionContext } from '@server-types/index.ts';
 
 export const addMatToMatchConfig = (
   mat: string,

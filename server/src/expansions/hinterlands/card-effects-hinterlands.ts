@@ -1,5 +1,5 @@
-import { CardId, PlayerId } from 'shared/shared-types';
-import { CardExpansionModule, CardLifecycleCallbackContext } from '../../types.ts';
+import { CardId, PlayerId } from 'shared/types/index.ts';
+import { CardExpansionModule, CardLifecycleCallbackContext } from '@server-types/index.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
@@ -310,7 +310,7 @@ const expansion: CardExpansionModule = {
       }
 
       const crossroadsPlayedThisTurnCount =
-        cardEffectArgs.match.stats.playedCardsByTurn[cardEffectArgs.match.turnNumber]
+        (cardEffectArgs.match.stats.playedCardsByTurn[cardEffectArgs.match.turnNumber] ?? [])
           .map(cardEffectArgs.cardLibrary.getCard)
           .filter((card) => card.owner === cardEffectArgs.playerId && card.cardKey === 'crossroads')
           .length;
@@ -549,10 +549,11 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      const foolsGoldPlayedThisTurnCount = cardEffectArgs.match.stats.playedCardsByTurn[cardEffectArgs.match.turnNumber]
-        .map(cardEffectArgs.cardLibrary.getCard)
-        .filter((card) => card.owner === cardEffectArgs.playerId && card.cardKey === 'fools-gold')
-        .length;
+      const foolsGoldPlayedThisTurnCount =
+        (cardEffectArgs.match.stats.playedCardsByTurn[cardEffectArgs.match.turnNumber] ?? [])
+          .map(cardEffectArgs.cardLibrary.getCard)
+          .filter((card) => card.owner === cardEffectArgs.playerId && card.cardKey === 'fools-gold')
+          .length;
 
       console.debug(`[fools-gold effect] fools-gold played this turn ${foolsGoldPlayedThisTurnCount}`);
 

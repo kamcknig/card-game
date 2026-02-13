@@ -2,6 +2,7 @@ import { Socket } from 'socket.io';
 import {
   Card,
   CardCost,
+  CardDataFindCardsFilter,
   CardFacing,
   CardId,
   CardKey,
@@ -9,14 +10,16 @@ import {
   CardLocation,
   CardLocationSpec,
   CardNoId,
-  CardType,
   ComputedMatchConfiguration,
-  CostSpec,
+  CostFindCardsFilter,
+  FindCardsFnInput,
   Match,
+  NonLocationFilters,
   PlayerId,
   SelectActionCardArgs,
   ServerEmitEvents,
   ServerListenEvents,
+  SourceFindCardsFilter,
   TokenFacing,
   TokenId,
   TokenInstance,
@@ -24,7 +27,7 @@ import {
   TokenLocation,
   TurnPhase,
   UserPromptActionArgs,
-} from 'shared/shared-types';
+} from 'shared/types/index.ts';
 import { toNumber } from 'es-toolkit/compat';
 
 import { MatchCardLibrary } from './core/match-card-library.ts';
@@ -37,6 +40,15 @@ import { LogManager } from './core/log-manager.ts';
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
 
 export type DistributiveOmit<T, K extends PropertyKey> = T extends any ? Omit<T, K> : never;
+
+// Re-export shared find-card filter types used by server consumers.
+export type {
+  CardDataFindCardsFilter,
+  CostFindCardsFilter,
+  FindCardsFnInput,
+  NonLocationFilters,
+  SourceFindCardsFilter,
+};
 
 /**
  * A base match configuration that can be used to spread default values.
@@ -312,34 +324,11 @@ export interface AppContext {
   findCards: FindCardsFn;
 }
 
-export type CostFindCardsFilter = CostSpec;
-
-export interface CardDataFindCardsFilter {
-  tags?: string | string[];
-  cardKeys?: CardKey | CardKey[];
-  cardType?: CardType | CardType[];
-  owner?: PlayerId;
-  kingdom?: string;
-}
-
-export interface SourceFindCardsFilter {
-  location: CardLocation | CardLocation[];
-  playerId?: PlayerId;
-}
-
-export type NonLocationFilters = CostFindCardsFilter | CardDataFindCardsFilter;
-
 export type FindCardsFnFactory = (
   cardSourceController: CardSourceController,
   cardCostController: CardPriceRulesController,
   cardLibrary: MatchCardLibrary,
 ) => FindCardsFn;
-
-export type FindCardsFnInput =
-  | NonLocationFilters[]
-  | SourceFindCardsFilter
-  | NonLocationFilters
-  | [SourceFindCardsFilter, ...NonLocationFilters[]];
 
 export type FindCardsFn = (filters: FindCardsFnInput) => Card[];
 
