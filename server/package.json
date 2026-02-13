@@ -1,9 +1,0 @@
-{
-  "scripts": {
-    "server:watch": "deno task dev:watch"
-  },
-  "devDependencies": {
-    "concurrently": "^9.1.2",
-    "minimist": "^1.2.8"
-  }
-}

@@ -82,6 +82,13 @@
     },
     "type": ["ACTION", "DURATION"]
   },
+  "outpost": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "DURATION"],
+    "abilityText": "You only draw 3 cards for your next hand. Take an extra turn after this one (but not a 3rd turn in a row)."
+  },
   "native-village": {
     "cost": {
       "treasure": 2

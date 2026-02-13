@@ -45,6 +45,12 @@
       "treasure": 6
     }
   },
+  "mission": {
+    "cost": {
+      "treasure": 4
+    },
+    "abilityText": "Take an extra turn after this one, in which you can't buy cards."
+  },
   "pathfinding": {
     "cost": {
       "treasure": 8
