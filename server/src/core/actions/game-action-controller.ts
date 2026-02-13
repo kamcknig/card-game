@@ -8,6 +8,7 @@ import {
   CardLocation,
   CardLocationSpec,
   CountSpec,
+  ExtraTurn,
   Match,
   PlayerId,
   SelectActionCardArgs,
@@ -1097,7 +1098,16 @@ export class GameActionController implements GameActionDefinitionMap {
     console.debug(`[gainVictoryToken action] player ${args.playerId} placed ${args.count} victory tokens`);
   }
 
-  async gainCoffer(args: { playerId: PlayerId; count?: number }, context?: GameActionContext) {
+  // Adds an extra turn to the queue for processing at turn end.
+  async queueExtraTurn(args: { turn: ExtraTurn }) {
+    console.info(
+      `[queueExtraTurn action] queueing extra turn owner ${args.turn.ownerId} player ${args.turn.playerId}`,
+    );
+    this.match.extraTurnQueue.push({ ...args.turn });
+    console.debug(`[queueExtraTurn action] queue size now ${this.match.extraTurnQueue.length}`);
+  }
+
+  async gainCoffer(args: { playerId: PlayerId; count?: number }, _context?: GameActionContext) {
     console.log(`[gainCoffer action] player ${args.playerId} gained ${args.count} coffers`);
     this.match.coffers[args.playerId] ??= 0;
     this.match.coffers[args.playerId] += args.count ?? 1;
@@ -2063,11 +2073,12 @@ export class GameActionController implements GameActionDefinitionMap {
 
     await this.runEndTurnPhaseTrigger(match.turnPhaseIndex, currentPlayer.id);
 
-    match.turnPhaseIndex = match.turnPhaseIndex + 1;
+    let newTurnPhaseIndex = match.turnPhaseIndex + 1;
+    let newTurnNumber = match.turnNumber;
 
-    if (match.turnPhaseIndex >= TurnPhaseOrderValues.length) {
-      match.turnPhaseIndex = 0;
-      match.turnNumber++;
+    if (newTurnPhaseIndex >= TurnPhaseOrderValues.length) {
+      newTurnPhaseIndex = 0;
+      newTurnNumber += 1;
     }
 
     const newPhase = getTurnPhase(match.turnPhaseIndex);
@@ -2077,6 +2088,14 @@ export class GameActionController implements GameActionDefinitionMap {
       match.playerBuys = 1;
       match.playerTreasure = 0;
       match.playerPotions = 0;
+
+      if (this.match.extraTurnQueue.length > 0) {
+        await this.resolveExtraTurn(this.match.extraTurnQueue.shift()!)
+        return;
+      }
+
+      match.turnPhaseIndex = newTurnPhaseIndex;
+      match.turnNumber = newTurnNumber;
 
       match.currentPlayerTurnIndex++;
 
@@ -2589,5 +2608,14 @@ export class GameActionController implements GameActionDefinitionMap {
 
     await this.shuffle({ playerId: args.playerId, cardLikeIds: deck }, context);
     console.info(`[shuffleCardLike action] shuffled ${args.kind} deck (${deck.length} cards)`);
+  }
+
+  /**
+   * Resolves an ExtraTurn instance
+   *
+   * @private
+   */
+  private async resolveExtraTurn(turn: ExtraTurn) {
+    
   }
 }

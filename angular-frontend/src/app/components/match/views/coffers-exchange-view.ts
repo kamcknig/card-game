@@ -5,7 +5,7 @@ import { selfPlayerIdStore } from '../../../state/player-state';
 import { OutlineFilter } from 'pixi-filters/outline';
 import { STANDARD_GAP } from '../../../core/app-contants';
 import { createAppButton } from '../../../core/create-app-button';
-import { currentPlayerStore, turnNumberStore } from '../../../state/turn-state';
+import { currentPlayerStore } from '../../../state/turn-state';
 
 export class CoffersExchangeView extends Container {
   private _coffersIcon: Sprite | undefined;

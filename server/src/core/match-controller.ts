@@ -8,7 +8,9 @@ import {
   MatchConfiguration,
   MatchSummary,
   PlayerId,
+  SelectActionCardArgs,
   ServerListenEvents,
+  UserPromptActionArgs,
 } from 'shared/types/index.ts';
 import { MatchConfigurator } from './match-configurator.ts';
 import { getCurrentPlayer } from '../utils/get-current-player.ts';
@@ -119,6 +121,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         discard: [],
         setAside: [],
       },
+      extraTurnQueue: [],
       // Hex deck state for Doom cards.
       hexes: {
         cards: [],
@@ -697,12 +700,17 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         this.broadcastPatch(this._matchSnapshot);
         this._logManager?.flushQueue();
         this._matchSnapshot = this.getMatchSnapshot();
+        const promptArgs = args[0] as SelectActionCardArgs | UserPromptActionArgs | undefined;
+        if (!promptArgs) {
+          throw new Error(`[match] missing prompt args for ${String(action)}`);
+        }
+        const promptPlayerId = promptArgs.playerId;
 
         let pingCount = 0;
         let pingTime = 30000;
 
         const pingUser = () => {
-          this._socketMap.get(args[0].playerId)?.emit('ping', ++pingCount);
+          this._socketMap.get(promptPlayerId)?.emit('ping', ++pingCount);
           pingTime -= 10000;
           pingTime = Math.max(pingTime, 10000);
           asyncTimeout = setTimeout(pingUser, pingTime);

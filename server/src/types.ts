@@ -12,6 +12,7 @@ import {
   CardNoId,
   ComputedMatchConfiguration,
   CostFindCardsFilter,
+  ExtraTurn,
   FindCardsFnInput,
   Match,
   NonLocationFilters,
@@ -175,6 +176,8 @@ export interface GameActionDefinitionMap {
   gainPotion: (args: { count: number }) => Promise<void>;
   gainTreasure: (args: { count: number }, context?: GameActionContext) => Promise<void>;
   gainVictoryToken: (args: { playerId: PlayerId; count: number }, context?: GameActionContext) => Promise<void>;
+  // adds a turn to the extra turn queue
+  queueExtraTurn: (args: { turn: ExtraTurn }) => Promise<void>;
   // Receives a boon from the shared boon deck (used by Fate cards).
   receiveBoon: (
     args: { playerId: PlayerId; immediate?: boolean; boonId?: CardLikeId; keepSetAside?: boolean },

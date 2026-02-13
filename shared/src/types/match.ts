@@ -3,6 +3,7 @@ export type {
   CardOverrides,
   CardStats,
   ComputedMatchConfiguration,
+  ExtraTurn,
   Match,
   MatchConfiguration,
   MatchStats,

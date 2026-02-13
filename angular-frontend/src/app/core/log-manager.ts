@@ -139,7 +139,7 @@ export const logManager = {
         break;
       }
       case 'newTurn': {
-        msg = `<hr class="new-turn"><br>TURN ${logEntry.turn}<br>`;
+        msg = `<hr class="new-turn"><br>NEW TURN<br>`;
         break;
       }
       case 'newPlayerTurn': {

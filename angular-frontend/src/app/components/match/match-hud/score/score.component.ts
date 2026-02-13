@@ -1,19 +1,17 @@
 import { ChangeDetectionStrategy, Component, Input, OnInit } from '@angular/core';
 import { NanostoresService } from '@nanostores/angular';
-import { currentPlayerTurnIdStore, turnNumberStore } from '../../../../state/turn-state';
-import { map, Observable, tap } from 'rxjs';
-import { AsyncPipe, NgClass, NgOptimizedImage, UpperCasePipe } from '@angular/common';
+import { currentPlayerTurnIdStore } from '../../../../state/turn-state';
+import { map, Observable } from 'rxjs';
+import { AsyncPipe, NgClass, NgOptimizedImage } from '@angular/common';
 import { PlayerId, TokenInstance } from 'shared/types/index.ts';
 import { playerIdStore, playerStore } from '../../../../state/player-state';
 import tinycolor from 'tinycolor2'
-import { roundNumberStore } from '../../../../state/turn-logic';
 import { matchStore } from '../../../../state/match-state';
 
 @Component({
   selector: 'app-score',
   imports: [
     AsyncPipe,
-    UpperCasePipe,
     NgClass,
     NgOptimizedImage,
   ],
@@ -24,8 +22,6 @@ import { matchStore } from '../../../../state/match-state';
 export class ScoreComponent implements OnInit {
   @Input() playerScores!: { id: number; score: number; name: string }[] | null;
 
-  turnNumber$: Observable<number> | undefined;
-  roundNumber$: Observable<number> | undefined;
   currentPlayerTurnId$: Observable<PlayerId> | undefined;
   victoryTokens$: Observable<Record<PlayerId, number>> | undefined;
 
@@ -68,8 +64,6 @@ export class ScoreComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.turnNumber$ = this._nanoService.useStore(turnNumberStore);
-    this.roundNumber$ = this._nanoService.useStore(roundNumberStore);
     this.currentPlayerTurnId$ = this._nanoService.useStore(currentPlayerTurnIdStore)
   }
 }

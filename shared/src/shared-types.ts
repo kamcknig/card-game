@@ -193,6 +193,18 @@ export interface Match {
   tokenInstanceCounter: number;
   turnNumber: number;
   turnPhaseIndex: number;
+  // when a player gains an extra turn
+  extraTurnQueue: ExtraTurn[];
+}
+
+export type ExtraTurn = {
+  // the owner/controller of the turn. typically this is the same as `playerId`. but in some cases might be another
+  // player e.g., with Possession from the Alchemy expansion
+  ownerId: PlayerId;
+  // the player whose turn it is. This is not necessarily the one actually controlling the turn
+  playerId: PlayerId;
+  // the source of the effect that provided the extra turn
+  sourceId?: CardId | CardLikeId;
 }
 
 export type CardOverrides = Record<PlayerId, Record<CardId, Partial<Card>>>;
