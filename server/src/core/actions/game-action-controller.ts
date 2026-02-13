@@ -25,7 +25,6 @@ import { LogManager } from '../log-manager.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import {
   AppSocket,
-  BaseGameActionDefinitionMap,
   CardEffectFn,
   CardEffectFunctionContext,
   CardEffectFunctionMap,
@@ -55,7 +54,7 @@ import { tokenCardPlayedHandlerMap } from '../tokens/token-trigger-map.ts';
 import { tokenDefinitionMap } from '../tokens/token-definition-map.ts';
 import { prosperityTokenIds } from '@expansions/prosperity/token-prosperity-ids.ts';
 
-export class GameActionController implements BaseGameActionDefinitionMap {
+export class GameActionController implements GameActionDefinitionMap {
   private customActionHandlers: Partial<GameActionDefinitionMap> = {};
   private customCardEffectHandlers: Record<string, Partial<Record<CardKey, CardEffectFn>>> = {};
   // Guards against re-entrant computer turns triggered by nested game actions.
@@ -852,13 +851,13 @@ export class GameActionController implements BaseGameActionDefinitionMap {
     const trigger = new ReactionTrigger('cardGained', {
       cardId: cardId,
       playerId: args.playerId,
-      bought: context?.bought,
+      bought: context?.bought ?? false,
       previousLocation,
     });
 
     await this.reactionManager.runTrigger({ trigger });
 
-    const suppress = context?.suppressLifecycle;
+    const suppress = context?.suppressLifeCycle;
     const skipOnGain = suppress &&
       (suppress.events?.includes('onGained') || suppress.events === undefined);
 
@@ -1248,7 +1247,10 @@ export class GameActionController implements BaseGameActionDefinitionMap {
       playerId: args.playerId,
       cardId,
       to: { location: 'playerDiscard' },
-    }, { bought: true, overpay: args.overpay ?? 0 });
+    }, {
+      bought: true,
+      overpay: (args.overpay?.inTreasure ?? 0) + (args.overpay?.inCoffer ?? 0),
+    });
   }
 
   async buyEvent(args: {

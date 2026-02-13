@@ -133,7 +133,7 @@ export type GameActionContext = {
   suppressLifeCycle?: LifecycleSuppression;
 };
 
-export interface BaseGameActionDefinitionMap {
+export interface GameActionDefinitionMap {
   buyCard: (args: {
     cardId: CardId | Card;
     playerId: PlayerId;
@@ -279,10 +279,6 @@ export interface BaseGameActionDefinitionMap {
   ) => Promise<void>;
   trashCard: (args: { cardId: CardId | Card; playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
   userPrompt: (args: UserPromptActionArgs) => Promise<unknown>;
-}
-
-export interface GameActionDefinitionMap extends BaseGameActionDefinitionMap {
-  [key: string]: (...args: any[]) => Promise<any>;
 }
 
 export type GameActions = keyof GameActionDefinitionMap;

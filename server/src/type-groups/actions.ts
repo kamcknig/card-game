@@ -1,6 +1,5 @@
 // Game action signatures and execution context types.
 export type {
-  BaseGameActionDefinitionMap,
   GameActionContext,
   GameActionContextMap,
   GameActionDefinitionMap,
