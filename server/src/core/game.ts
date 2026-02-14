@@ -198,6 +198,30 @@ export class Game {
     this._fuse = new Fuse(libraryArr, fuseOptions, index);
   }
 
+  // Returns the currently selected expansion names used by lobby card search filtering.
+  private getSelectedExpansionNames(): Set<string> {
+    const selectedExpansions = this._matchConfiguration?.expansions ?? defaultMatchConfiguration.expansions;
+    return new Set(selectedExpansions.map((expansion) => expansion.name));
+  }
+
+  // Kingdom search should only return supply kingdom cards that can be selected in configuration.
+  private isCardEligibleForKingdomSearch(card: CardNoId): boolean {
+    if (card.isBasic) {
+      return false;
+    }
+
+    if (!card.partOfSupply) {
+      return false;
+    }
+
+    if (card.kingdomSelectable === false) {
+      return false;
+    }
+
+    const selectedExpansionNames = this.getSelectedExpansionNames();
+    return selectedExpansionNames.has(card.expansionName);
+  }
+
   // Builds the event search index from loaded expansion events.
   private initializeEventFuse() {
     console.info(`[game] initializing event fuse search`);
@@ -288,7 +312,12 @@ export class Game {
 
   private onSearchCards = (searchStr: string) => {
     const results = this._fuse?.search(searchStr);
-    return results?.map((r) => r.item) ?? [];
+    const cards = results?.map((r) => r.item) ?? [];
+    const filteredCards = cards.filter((card) => this.isCardEligibleForKingdomSearch(card));
+    console.debug(
+      `[game] kingdom search '${searchStr}' returned ${filteredCards.length}/${cards.length} eligible card(s)`,
+    );
+    return filteredCards;
   };
 
   // Returns event search results for the given query.
