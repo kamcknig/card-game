@@ -9,6 +9,47 @@
     ],
     "abilityText": "+1 Action\nReveal the top 2 cards of your deck. Put one into your hand and discard the other. If both were Actions, take the Lantern or Horn."
   },
+  "acting-troupe": {
+    "cardName": "Acting Troupe",
+    "cost": {
+      "treasure": 3
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+4 Villagers\nTrash this."
+  },
+  "cargo-ship": {
+    "cardName": "Cargo Ship",
+    "cost": {
+      "treasure": 3
+    },
+    "type": [
+      "ACTION",
+      "DURATION"
+    ],
+    "abilityText": "+$2\nOnce this turn, when you gain a card, you may set it aside face up (on this). At the start of your next turn, put it into your hand."
+  },
+  "ducat": {
+    "cardName": "Ducat",
+    "cost": {
+      "treasure": 2
+    },
+    "type": [
+      "TREASURE"
+    ],
+    "abilityText": "+1 Coffers\n+1 Buy\nWhen you gain this, you may trash a Copper from your hand."
+  },
+  "experiment": {
+    "cardName": "Experiment",
+    "cost": {
+      "treasure": 3
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+2 Cards\n+1 Action\nReturn this to its pile.\nWhen you gain this, gain another Experiment (that doesn't come with another)."
+  },
   "flag": {
     "cost": {
       "treasure": 0
