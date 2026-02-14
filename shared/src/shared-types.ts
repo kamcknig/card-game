@@ -147,6 +147,21 @@ export type MatchTurnStats = ExtraTurn & {
   turnNumber: number;
 };
 
+export type FleetRoundState = {
+  // Indicates that Fleet endgame turns are currently being played.
+  active: boolean;
+  // Indicates Fleet processing already completed and game should finalize immediately.
+  completed: boolean;
+  // Snapshot of players eligible for Fleet turns in deterministic play order.
+  eligiblePlayerIdsInOrder: PlayerId[];
+  // Index of the next Fleet player in eligiblePlayerIdsInOrder.
+  nextFleetPlayerIndex: number;
+  // Player whose turn caused game-end conditions to be met.
+  endingPlayerId?: PlayerId;
+  // Turn number when Fleet processing was activated.
+  startedAtTurnNumber?: number;
+};
+
 export interface Match {
   cardOverrides: CardOverrides;
   cardSources: Record<CardLocation, CardId[]>;
@@ -205,6 +220,8 @@ export interface Match {
   turnPhaseIndex: number;
   // when a player gains an extra turn
   extraTurnQueue: ExtraTurn[];
+  // Fleet endgame round state.
+  fleetRound: FleetRoundState;
 }
 
 export type ExtraTurn = {

@@ -868,6 +868,21 @@ const effectMap: CardExpansionModule = {
       });
     },
   },
+  'fleet': {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Resolve Fleet so project purchases still register an effect entry for consistent diagnostics.
+      const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      if (!project) {
+        console.warn('[fleet project] project card not found');
+        return;
+      }
+
+      // Fleet turn scheduling is handled centrally at game-end in MatchController.
+      console.info(
+        `[fleet project] registered ownership tracking for player ${cardEffectArgs.playerId} on project ${project.id}`,
+      );
+    },
+  },
   'guildhall': {
     registerEffects: () => async (cardEffectArgs) => {
       const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);

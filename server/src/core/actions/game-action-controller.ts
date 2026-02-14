@@ -2082,6 +2082,7 @@ export class GameActionController implements GameActionDefinitionMap {
 
     let currentPlayer = getCurrentPlayer(match);
     let extraTurn: ExtraTurn | undefined;
+    let fleetTurnPlayerId: PlayerId | undefined;
 
     await this.runEndTurnPhaseTrigger(match.turnPhaseIndex, currentPlayer.id);
 
@@ -2089,6 +2090,26 @@ export class GameActionController implements GameActionDefinitionMap {
 
     if (match.turnPhaseIndex >= TurnPhaseOrderValues.length) {
       match.turnPhaseIndex = 0;
+
+      // If Fleet round has already assigned all Fleet turns, stop turn scheduling and finalize game next.
+      if (
+        match.fleetRound.active &&
+        match.fleetRound.nextFleetPlayerIndex >= match.fleetRound.eligiblePlayerIdsInOrder.length
+      ) {
+        const discardedExtraTurnCount = match.extraTurnQueue.length;
+        if (discardedExtraTurnCount > 0) {
+          console.info(
+            `[nextPhase action] Fleet round ended; discarding ${discardedExtraTurnCount} remaining extra turn(s)`,
+          );
+        } else {
+          console.info('[nextPhase action] Fleet round ended; no remaining extra turns to discard');
+        }
+
+        match.extraTurnQueue = [];
+        match.fleetRound.active = false;
+        match.fleetRound.completed = true;
+        return;
+      }
 
       // Resolve the next valid extra turn, skipping entries that would create a third consecutive turn.
       while (match.extraTurnQueue.length > 0) {
@@ -2114,6 +2135,21 @@ export class GameActionController implements GameActionDefinitionMap {
         break;
       }
 
+      // Fleet turns happen after normal extra turns while Fleet round is active.
+      if (!extraTurn && match.fleetRound.active) {
+        const nextFleetTurnIndex = match.fleetRound.nextFleetPlayerIndex;
+        const nextFleetPlayerId = match.fleetRound.eligiblePlayerIdsInOrder[nextFleetTurnIndex];
+        if (nextFleetPlayerId !== undefined) {
+          fleetTurnPlayerId = nextFleetPlayerId;
+          match.fleetRound.nextFleetPlayerIndex++;
+          console.info(
+            `[nextPhase action] scheduling Fleet turn for player ${fleetTurnPlayerId} (${
+              nextFleetTurnIndex + 1
+            }/${match.fleetRound.eligiblePlayerIdsInOrder.length})`,
+          );
+        }
+      }
+
       // if there is an extra turn in the queue, and it's the same player as the current player, then the turn number
       // remains the same, only if it actually is a new player do we increase the turn.
       match.turnNumber = extraTurn && extraTurn.playerId === currentPlayer.id ? match.turnNumber : match.turnNumber + 1;
@@ -2129,6 +2165,8 @@ export class GameActionController implements GameActionDefinitionMap {
 
       if (extraTurn) {
         match.currentPlayerTurnIndex = getPlayerTurnIndex({match, playerId: extraTurn.playerId});
+      } else if (fleetTurnPlayerId !== undefined) {
+        match.currentPlayerTurnIndex = getPlayerTurnIndex({match, playerId: fleetTurnPlayerId});
       } else {
         match.currentPlayerTurnIndex++;
       }

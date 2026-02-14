@@ -122,6 +122,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         setAside: [],
       },
       extraTurnQueue: [],
+      // Fleet round scheduler state for endgame extra-round handling.
+      fleetRound: {
+        active: false,
+        completed: false,
+        eligiblePlayerIdsInOrder: [],
+        nextFleetPlayerIndex: 0,
+      },
       // Hex deck state for Doom cards.
       hexes: {
         cards: [],
@@ -433,6 +440,16 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this._match.artifacts.byPlayer ??= {};
     this._match.tokens ??= {};
     this._match.tokenInstanceCounter ??= 0;
+    this._match.fleetRound ??= {
+      active: false,
+      completed: false,
+      eligiblePlayerIdsInOrder: [],
+      nextFleetPlayerIndex: 0,
+    };
+    this._match.fleetRound.active ??= false;
+    this._match.fleetRound.completed ??= false;
+    this._match.fleetRound.eligiblePlayerIdsInOrder ??= [];
+    this._match.fleetRound.nextFleetPlayerIndex ??= 0;
   }
 
   // Loads a card library snapshot for a loaded match state.
@@ -883,10 +900,64 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }
   }
 
+  // Returns the Fleet project id when Fleet is in the current project lineup.
+  private getFleetProjectId(): CardId | undefined {
+    return this._match.projects.find((project) => project.cardKey === 'fleet')?.id;
+  }
+
+  // Returns true when the given player currently owns Fleet via a cube token.
+  private doesPlayerOwnFleet(playerId: PlayerId): boolean {
+    const fleetProjectId = this.getFleetProjectId();
+    if (fleetProjectId === undefined) {
+      return false;
+    }
+
+    return Object.values(this._match.tokens ?? {}).some((token) =>
+      token.tokenId === 'cube-token' &&
+      token.ownerId === playerId &&
+      token.location.type === 'cardLike' &&
+      token.location.cardLikeId === fleetProjectId
+    );
+  }
+
+  // Builds Fleet turn order starting with the next player after the player ending the game.
+  private getFleetEligiblePlayerIdsInOrder(endingPlayerIndex: number): PlayerId[] {
+    const players = this._match.players;
+    const eligiblePlayerIds: PlayerId[] = [];
+    if (!players.length) {
+      return eligiblePlayerIds;
+    }
+
+    for (let offset = 1; offset <= players.length; offset++) {
+      const playerIndex = (endingPlayerIndex + offset) % players.length;
+      const player = players[playerIndex];
+      if (!player) {
+        continue;
+      }
+      if (this.doesPlayerOwnFleet(player.id)) {
+        eligiblePlayerIds.push(player.id);
+      }
+    }
+
+    return eligiblePlayerIds;
+  }
+
   private async checkGameEnd() {
     console.info(`[match] checking if the game has ended`);
 
     const match = this._match;
+    // Fleet latches game-end state once activated; do not re-evaluate end conditions during Fleet turns.
+    if (match.fleetRound.completed) {
+      console.info('[match] Fleet round completed; finalizing game end');
+      await this.endGame();
+      return true;
+    }
+    if (match.fleetRound.active) {
+      console.info('[match] game end latched; Fleet round still active');
+      return false;
+    }
+
+    let shouldEndGame = false;
 
     if (
       this._findCards([
@@ -894,42 +965,67 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         { cardKeys: 'province' },
       ]).length === 0
     ) {
-      console.info(`[match] supply has no more provinces, game over`);
-      await this.endGame();
-      return true;
+      console.info(`[match] supply has no more provinces`);
+      shouldEndGame = true;
     }
+    if (!shouldEndGame) {
+      const startingSupplyCount = getStartingSupplyCount(match);
+      const remainingSupplyCount = getRemainingSupplyCount(this._findCards);
+      const emptyPileCount = startingSupplyCount - remainingSupplyCount;
 
-    const startingSupplyCount = getStartingSupplyCount(match);
+      console.debug(`[match] empty pile count ${emptyPileCount}`);
 
-    const remainingSupplyCount = getRemainingSupplyCount(this._findCards);
-
-    const emptyPileCount = startingSupplyCount - remainingSupplyCount;
-
-    console.debug(`[match] empty pile count ${emptyPileCount}`);
-
-    if (emptyPileCount === 3) {
-      console.info(`[match] three supply piles are empty, game over`);
-      await this.endGame();
-      return true;
-    }
-
-    for (const conditionFn of this._expansionEndGameConditionFns) {
-      // End immediately when any registered expansion end-game condition triggers.
-      const shouldEnd = conditionFn({
-        cardSourceController: this._cardSourceController,
-        match: this._match,
-        cardLibrary: this._cardLibrary,
-        cardPriceController: this._cardPriceController!,
-        logManager: this._logManager!,
-        reactionManager: this._reactionManager!,
-        findCards: this._findCards,
-      });
-      if (shouldEnd) {
-        console.info('[match] expansion end-game condition met, game over');
-        await this.endGame();
-        return true;
+      if (emptyPileCount === 3) {
+        console.info(`[match] three supply piles are empty`);
+        shouldEndGame = true;
       }
     }
+
+    if (!shouldEndGame) {
+      for (const conditionFn of this._expansionEndGameConditionFns) {
+        // End immediately when any registered expansion end-game condition triggers.
+        const shouldEnd = conditionFn({
+          cardSourceController: this._cardSourceController,
+          match: this._match,
+          cardLibrary: this._cardLibrary,
+          cardPriceController: this._cardPriceController!,
+          logManager: this._logManager!,
+          reactionManager: this._reactionManager!,
+          findCards: this._findCards,
+        });
+        if (shouldEnd) {
+          console.info('[match] expansion end-game condition met');
+          shouldEndGame = true;
+          break;
+        }
+      }
+    }
+
+    if (!shouldEndGame) {
+      return false;
+    }
+
+    // Determine Fleet-eligible players once at game-end latch time.
+    const fleetEligiblePlayerIds = this.getFleetEligiblePlayerIdsInOrder(match.currentPlayerTurnIndex);
+    if (!fleetEligiblePlayerIds.length) {
+      console.info('[match] no Fleet owners; ending game immediately');
+      await this.endGame();
+      return true;
+    }
+
+    // Activate Fleet endgame round and defer final scoring until all Fleet turns are complete.
+    match.fleetRound.active = true;
+    match.fleetRound.completed = false;
+    match.fleetRound.eligiblePlayerIdsInOrder = fleetEligiblePlayerIds;
+    match.fleetRound.nextFleetPlayerIndex = 0;
+    match.fleetRound.endingPlayerId = getCurrentPlayer(match).id;
+    match.fleetRound.startedAtTurnNumber = match.turnNumber;
+
+    console.info(
+      `[match] Fleet round activated by player ${match.fleetRound.endingPlayerId}; order: ${
+        fleetEligiblePlayerIds.join(', ')
+      }`,
+    );
 
     return false;
   }
