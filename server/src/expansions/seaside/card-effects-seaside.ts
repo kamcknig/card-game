@@ -661,7 +661,6 @@ const expansion: CardExpansionModule = {
       ...effectArgs
     }) => {
       const id = `pirate:${cardId}:startTurn`;
-      const turnPlayed = match.stats.playedCards[cardId].turnNumber;
       const pirateCard = effectArgs.cardLibrary.getCard(cardId);
       // Use the shared duration flow to keep the card active through cleanup.
       effectArgs.registerDurationEffect(pirateCard, {
@@ -674,7 +673,7 @@ const expansion: CardExpansionModule = {
         condition: ({
           trigger,
           reaction,
-        }) => trigger.args.playerId === playerId && reaction.id === id && match.turnNumber !== turnPlayed,
+        }) => trigger.args.playerId === playerId && reaction.id === id,
         triggeredEffectFn: async (triggeredArgs) => {
           await triggeredArgs.runGameActionDelegate('moveCard', {
             cardId: pirateCard.id,
@@ -829,9 +828,7 @@ const expansion: CardExpansionModule = {
         compulsory: true,
         once: true,
         allowMultipleInstances: true,
-        condition: ({ trigger, match }) =>
-          trigger.args.playerId === args.playerId &&
-          match.stats.playedCards[args.cardId].turnNumber !== match.turnNumber,
+        condition: ({ trigger }) => trigger.args.playerId === args.playerId,
         triggeredEffectFn: async (triggeredArgs) => {
           await triggeredArgs.runGameActionDelegate('moveCard', {
             cardId: sailorCard.id,
@@ -1106,8 +1103,7 @@ const expansion: CardExpansionModule = {
         compulsory: true,
         allowMultipleInstances: true,
         condition: (conditionArgs) => {
-          return conditionArgs.trigger.args.playerId === args.playerId &&
-            args.match.stats.playedCards[args.cardId].turnNumber < args.match.turnNumber;
+          return conditionArgs.trigger.args.playerId === args.playerId;
         },
         triggeredEffectFn: async (triggerArgs) => {
           await triggerArgs.runGameActionDelegate('moveCard', {
@@ -1146,9 +1142,7 @@ const expansion: CardExpansionModule = {
         once: true,
         compulsory: true,
         allowMultipleInstances: true,
-        condition: (conditionArgs) =>
-          conditionArgs.trigger.args.playerId === args.playerId &&
-          args.match.stats.playedCards[args.cardId].turnNumber < args.match.turnNumber,
+        condition: (conditionArgs) => conditionArgs.trigger.args.playerId === args.playerId,
         triggeredEffectFn: async (triggerArgs) => {
           await triggerArgs.runGameActionDelegate('moveCard', {
             cardId: tidePoolsCard.id,
@@ -1298,8 +1292,7 @@ const expansion: CardExpansionModule = {
         compulsory: true,
         allowMultipleInstances: true,
         condition: (conditionArgs) => {
-          return conditionArgs.trigger.args.playerId === args.playerId &&
-            conditionArgs.match.stats.playedCards[args.cardId].turnNumber < conditionArgs.match.turnNumber;
+          return conditionArgs.trigger.args.playerId === args.playerId;
         },
         triggeredEffectFn: async (triggerArgs) => {
           await triggerArgs.runGameActionDelegate('moveCard', {

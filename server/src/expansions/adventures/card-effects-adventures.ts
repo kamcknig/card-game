@@ -185,8 +185,6 @@ const expansion: CardExpansionModule = {
 
       await decision();
 
-      const turnPlayed = cardEffectArgs.match.turnNumber;
-
       const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
       cardEffectArgs.registerDurationEffect(card, {
@@ -200,7 +198,7 @@ const expansion: CardExpansionModule = {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
-          return conditionArgs.trigger.args.turnNumber !== turnPlayed;
+          return true;
         },
         triggeredEffectFn: async (triggeredArgs) => {
           console.debug(`[amulet startTurn effect] re-running decision fn`);
@@ -360,7 +358,6 @@ const expansion: CardExpansionModule = {
         }, { loggingContext: { source: cardEffectArgs.cardId } });
       }
 
-      const turnPlayed = cardEffectArgs.match.turnNumber;
       const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
       cardEffectArgs.registerDurationEffect(card, {
@@ -374,7 +371,7 @@ const expansion: CardExpansionModule = {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
-          return conditionArgs.trigger.args.turnNumber !== turnPlayed;
+          return true;
         },
         triggeredEffectFn: async (triggeredArgs) => {
           // Move the duration card back to play and apply the next-turn bonuses.
@@ -487,8 +484,6 @@ const expansion: CardExpansionModule = {
       });
       await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
 
-      const turnPlayed = cardEffectArgs.match.turnNumber;
-
       const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       cardEffectArgs.registerDurationEffect(card, {
         id: `caravan-guard:${cardEffectArgs.cardId}:startTurn`,
@@ -501,7 +496,7 @@ const expansion: CardExpansionModule = {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
-          return conditionArgs.trigger.args.turnNumber !== turnPlayed;
+          return true;
         },
         triggeredEffectFn: async (triggeredArgs) => {
           await triggeredArgs.runGameActionDelegate('moveCard', {
@@ -790,8 +785,6 @@ const expansion: CardExpansionModule = {
         }
       };
 
-      const turnPlayed = cardEffectArgs.match.turnNumber;
-
       await effects();
 
       const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
@@ -803,9 +796,6 @@ const expansion: CardExpansionModule = {
         compulsory: true,
         allowMultipleInstances: true,
         condition: async (conditionArgs) => {
-          if (conditionArgs.trigger.args.turnNumber === turnPlayed) {
-            return false;
-          }
           return conditionArgs.trigger.args.playerId ===
             cardEffectArgs.playerId;
         },
@@ -988,8 +978,6 @@ const expansion: CardExpansionModule = {
         });
       }
 
-      const turnPlayed = cardEffectArgs.match.turnNumber;
-
       const thisCard = cardEffectArgs.cardLibrary.getCard(
         cardEffectArgs.cardId,
       );
@@ -1005,7 +993,7 @@ const expansion: CardExpansionModule = {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
-          return conditionArgs.trigger.args.turnNumber !== turnPlayed;
+          return true;
         },
         triggeredEffectFn: async (triggeredArgs) => {
           console.debug(
@@ -1277,8 +1265,6 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      const turnPlayed = cardEffectArgs.match.turnNumber;
-
       cardEffectArgs.reactionManager.registerReactionTemplate({
         id: `haunted-woods:${cardEffectArgs.cardId}:cardGained`,
         listeningFor: 'cardGained',
@@ -1349,7 +1335,7 @@ const expansion: CardExpansionModule = {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
-          return conditionArgs.trigger.args.turnNumber !== turnPlayed;
+          return true;
         },
         triggeredEffectFn: async (triggeredArgs) => {
           await triggeredArgs.runGameActionDelegate('moveCard', {
@@ -1441,8 +1427,7 @@ const expansion: CardExpansionModule = {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
-          return conditionArgs.trigger.args.turnNumber !==
-            conditionArgs.match.turnNumber;
+          return true;
         },
         triggeredEffectFn: async (triggeredArgs) => {
           console.debug(`[hireling startTurn effect] drawing 1 card`);
@@ -2281,10 +2266,6 @@ const expansion: CardExpansionModule = {
         compulsory: true,
         allowMultipleInstances: true,
         condition: async (conditionArgs) => {
-          if (
-            conditionArgs.trigger.args.turnNumber ===
-              conditionArgs.match.turnNumber
-          ) return false;
           return conditionArgs.trigger.args.playerId ===
             cardEffectArgs.playerId;
         },

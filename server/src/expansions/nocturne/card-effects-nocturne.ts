@@ -182,7 +182,6 @@ const expansion: CardExpansionModule = {
         }
 
         // Register a one-shot start-of-turn trigger to resolve the deferred boon.
-        const turnNumber = cardEffectArgs.match.turnNumber;
         cardEffectArgs.reactionManager.registerSystemTemplate(deferredBoon, 'startTurn', {
           playerId: eventArgs.playerId,
           once: true,
@@ -192,7 +191,7 @@ const expansion: CardExpansionModule = {
             if (conditionArgs.trigger.args.playerId !== eventArgs.playerId) {
               return false;
             }
-            return conditionArgs.trigger.args.turnNumber !== turnNumber;
+            return true;
           },
           triggeredEffectFn: async (triggeredArgs) => {
             // Resolve the deferred boon at the start of the next turn.
@@ -323,7 +322,6 @@ const expansion: CardExpansionModule = {
   'cobbler': {
     registerEffects: () => async (cardEffectArgs) => {
       const cobblerCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const turnPlayed = cardEffectArgs.match.turnNumber;
 
       // Register the start-of-next-turn gain effect.
       cardEffectArgs.registerDurationEffect(cobblerCard, {
@@ -333,9 +331,7 @@ const expansion: CardExpansionModule = {
         once: true,
         compulsory: true,
         allowMultipleInstances: true,
-        condition: ({ trigger }) =>
-          trigger.args.playerId === cardEffectArgs.playerId &&
-          trigger.args.turnNumber !== turnPlayed,
+        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
         triggeredEffectFn: async (triggeredArgs) => {
           // Skip if no eligible cards remain in supply.
           const eligibleCards = triggeredArgs.findCards([
@@ -475,7 +471,6 @@ const expansion: CardExpansionModule = {
       }
 
       const cryptCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const turnPlayed = cardEffectArgs.match.turnNumber;
 
       // Move one set-aside treasure to hand at the start of each of the player's next turns.
       cardEffectArgs.registerDurationEffect(cryptCard, {
@@ -487,7 +482,6 @@ const expansion: CardExpansionModule = {
         allowMultipleInstances: true,
         condition: ({ trigger }) =>
           trigger.args.playerId === cardEffectArgs.playerId &&
-          trigger.args.turnNumber !== turnPlayed &&
           setAsideTreasureIds.length > 0,
         triggeredEffectFn: async (triggeredArgs) => {
           console.debug(`[crypt startTurn] remaining set aside: ${setAsideTreasureIds.length}`);
@@ -593,7 +587,6 @@ const expansion: CardExpansionModule = {
     }),
     registerEffects: () => async (cardEffectArgs) => {
       const denOfSinCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const turnPlayed = cardEffectArgs.match.turnNumber;
 
       // Register the start-of-next-turn draw effect.
       cardEffectArgs.registerDurationEffect(denOfSinCard, {
@@ -603,9 +596,7 @@ const expansion: CardExpansionModule = {
         once: true,
         compulsory: true,
         allowMultipleInstances: true,
-        condition: ({ trigger }) =>
-          trigger.args.playerId === cardEffectArgs.playerId &&
-          trigger.args.turnNumber !== turnPlayed,
+        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
         triggeredEffectFn: async (triggeredArgs) => {
           // Apply the +2 Cards at the start of the next turn.
           await triggeredArgs.runGameActionDelegate('drawCard', {
@@ -631,7 +622,6 @@ const expansion: CardExpansionModule = {
     }),
     registerEffects: () => async (cardEffectArgs) => {
       const ghostTownCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const turnPlayed = cardEffectArgs.match.turnNumber;
 
       // Register the start-of-next-turn +1 Card/+1 Action.
       cardEffectArgs.registerDurationEffect(ghostTownCard, {
@@ -641,9 +631,7 @@ const expansion: CardExpansionModule = {
         once: true,
         compulsory: true,
         allowMultipleInstances: true,
-        condition: ({ trigger }) =>
-          trigger.args.playerId === cardEffectArgs.playerId &&
-          trigger.args.turnNumber !== turnPlayed,
+        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
         triggeredEffectFn: async (triggeredArgs) => {
           // Apply +1 Card.
           await triggeredArgs.runGameActionDelegate('drawCard', {
@@ -698,7 +686,6 @@ const expansion: CardExpansionModule = {
       });
 
       const guardianCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const turnPlayed = cardEffectArgs.match.turnNumber;
 
       // Keep the duration card active through cleanup and apply next-turn bonus.
       cardEffectArgs.registerDurationEffect(guardianCard, {
@@ -709,9 +696,7 @@ const expansion: CardExpansionModule = {
         allowMultipleInstances: true,
         compulsory: true,
         autoResolve: true,
-        condition: ({ trigger }) =>
-          trigger.args.playerId === cardEffectArgs.playerId &&
-          trigger.args.turnNumber !== turnPlayed,
+        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
         triggeredEffectFn: async (triggeredArgs) => {
           // Return Guardian to the play area before resolving its next-turn effect.
           await triggeredArgs.runGameActionDelegate('moveCard', {
@@ -1003,7 +988,6 @@ const expansion: CardExpansionModule = {
       }
 
       const raiderCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const turnPlayed = cardEffectArgs.match.turnNumber;
 
       // Register the start-of-next-turn +$3.
       cardEffectArgs.registerDurationEffect(raiderCard, {
@@ -1013,9 +997,7 @@ const expansion: CardExpansionModule = {
         once: true,
         compulsory: true,
         allowMultipleInstances: true,
-        condition: ({ trigger }) =>
-          trigger.args.playerId === cardEffectArgs.playerId &&
-          trigger.args.turnNumber !== turnPlayed,
+        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
         triggeredEffectFn: async (triggeredArgs) => {
           await triggeredArgs.runGameActionDelegate('gainTreasure', {
             count: 3,
@@ -1536,7 +1518,6 @@ const expansion: CardExpansionModule = {
       }
 
       const secretCaveCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const turnPlayed = cardEffectArgs.match.turnNumber;
 
       // Register the start-of-next-turn +$3 if 3 cards were discarded.
       cardEffectArgs.registerDurationEffect(secretCaveCard, {
@@ -1546,9 +1527,7 @@ const expansion: CardExpansionModule = {
         once: true,
         compulsory: true,
         allowMultipleInstances: true,
-        condition: ({ trigger }) =>
-          trigger.args.playerId === cardEffectArgs.playerId &&
-          trigger.args.turnNumber !== turnPlayed,
+        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
         triggeredEffectFn: async (triggeredArgs) => {
           await triggeredArgs.runGameActionDelegate('gainTreasure', {
             count: 3,
@@ -2434,7 +2413,6 @@ const expansion: CardExpansionModule = {
 
       // Register the start-of-turn trigger to play the Action twice next turn.
       const ghostCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const ghostTurnPlayed = cardEffectArgs.match.turnNumber;
       cardEffectArgs.registerDurationEffect(ghostCard, {
         id: `ghost:${ghostCard.id}:startTurn`,
         listeningFor: 'startTurn',
@@ -2442,9 +2420,7 @@ const expansion: CardExpansionModule = {
         once: true,
         compulsory: true,
         allowMultipleInstances: true,
-        condition: ({ trigger }) =>
-          trigger.args.playerId === cardEffectArgs.playerId &&
-          trigger.args.turnNumber !== ghostTurnPlayed,
+        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
         triggeredEffectFn: async (triggeredArgs) => {
           // Bring Ghost back to play area for its next-turn effect.
           await triggeredArgs.runGameActionDelegate('moveCard', {

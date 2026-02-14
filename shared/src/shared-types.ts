@@ -205,9 +205,6 @@ export type ExtraTurn = {
   playerId: PlayerId;
   // the source of the effect that provided the extra turn
   sourceId?: CardId | CardLikeId;
-  // this is the turn number the extra turn takes place on i.e., if a player gains an extra turn while on turn 25
-  // then the extra turn's turn number will also be 25
-  turnNumber: number;
 }
 
 export type CardOverrides = Record<PlayerId, Record<CardId, Partial<Card>>>;
