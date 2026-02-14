@@ -2,7 +2,7 @@ Renaissance is the twelfth expansion to Dominion. The box contains 25 sets
 of Kingdom cards. It features the return of Coffers, first seen in
 Cornucopia & Guilds, and introduces [Villagers](README_villagers.md), [Projects](README_project.
 md), and
-[Artifacts](./README_artifact.md).
+[Artifacts](README_artifact.md).
 
 ## Kingdom cards
 

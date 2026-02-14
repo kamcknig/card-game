@@ -159,7 +159,7 @@ if the server is running.
 ## Documentation
 
 Expansion-related documentation is located in the
-[expansion docs](expansion-docs) directory in a directory per expansion.
+[expansion docs](dominion-docs/expansion-docs) directory in a directory per expansion.
 Inside each expansion directory is a README.md file that describes the
 expansion and its mechanics with links to all other relevant documentation.
 

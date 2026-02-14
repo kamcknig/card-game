@@ -5,7 +5,7 @@ Fate and Doom cards, which give out Boons and Hexes, respectively.
 
 ## Kingdom
 
-See individual king cards in the [kingdom directory](./kingdom)
+See individual king cards in the [kingdom directory](kingdom)
 
 ### Kingdom cards
 
