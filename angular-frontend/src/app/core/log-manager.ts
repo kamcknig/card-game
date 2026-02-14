@@ -4,6 +4,7 @@ import { playerStore, selfPlayerIdStore } from '../state/player-state';
 import { logEntryIdsStore, logStore } from '../state/log-state';
 import { tokenDefinitionStore } from '../state/token-definition-state';
 import { matchStore } from '../state/match-state';
+import { findCardLikeInMatch } from 'shared/find-card-like-in-match';
 
 export const logManager = {
   addLogEntry(logEntry: LogEntry) {
@@ -207,13 +208,7 @@ const getCardLikeDisplay = (cardLikeId: number) => {
     return { name: 'Card-like', color: 'white' };
   }
 
-  const cardLike = match.events?.find(card => card.id === cardLikeId)
-    ?? match.landmarks?.find(card => card.id === cardLikeId)
-    ?? match.projects?.find(card => card.id === cardLikeId)
-    ?? match.boons?.cards?.find(card => card.id === cardLikeId)
-    ?? match.hexes?.cards?.find(card => card.id === cardLikeId)
-    ?? match.states?.cards?.find(card => card.id === cardLikeId)
-    ?? match.artifacts?.cards?.find(card => card.id === cardLikeId);
+  const cardLike = findCardLikeInMatch(match, cardLikeId);
 
   return { name: cardLike?.cardName ?? 'Card-like', color: 'white' };
 }

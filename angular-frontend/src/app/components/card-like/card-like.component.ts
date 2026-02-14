@@ -3,7 +3,8 @@ import { NanostoresService } from '@nanostores/angular';
 import { combineLatestWith, Subscription } from 'rxjs';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { NgOptimizedImage } from '@angular/common';
-import { CardLikeId, Match } from 'shared/types/index.ts';
+import { CardLikeId } from 'shared/types/index.ts';
+import { findCardLikeInMatch } from 'shared/find-card-like-in-match';
 import { CardSize } from '../../../types';
 import { cardStore } from '../../state/card-state';
 import { matchStore } from '../../state/match-state';
@@ -56,7 +57,7 @@ export class CardLikeComponent implements OnInit, OnDestroy {
         return;
       }
 
-      const cardLike = this.findCardLike(match);
+      const cardLike = findCardLikeInMatch(match, this.cardLikeId);
       if (!cardLike) {
         // Clear bindings when the card-like cannot be resolved.
         this._detailPath = undefined;
@@ -91,25 +92,6 @@ export class CardLikeComponent implements OnInit, OnDestroy {
     if (this._resolvedPath === this._fallbackPath) return;
     this._resolvedPath = this._fallbackPath;
     this.path = this._sanitizer.bypassSecurityTrustUrl(this._fallbackPath);
-  }
-
-  // Resolves the first matching card-like from match state.
-  private findCardLike(match: Match | null) {
-    if (!match) return undefined;
-    const boon = match.boons?.cards?.find(card => card.id === this.cardLikeId);
-    if (boon) return boon;
-    const hex = match.hexes?.cards?.find(card => card.id === this.cardLikeId);
-    if (hex) return hex;
-    const event = match.events?.find(card => card.id === this.cardLikeId);
-    if (event) return event;
-    const landmark = match.landmarks?.find(card => card.id === this.cardLikeId);
-    if (landmark) return landmark;
-    const state = match.states?.cards?.find(card => card.id === this.cardLikeId);
-    if (state) return state;
-    const project = match.projects?.find(card => card.id === this.cardLikeId);
-    if (project) return project;
-    // Artifacts are stored alongside states in match state.
-    return match.artifacts?.cards?.find(card => card.id === this.cardLikeId);
   }
 
   // Card-likes always use full-size art until half-size assets exist.

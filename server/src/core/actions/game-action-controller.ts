@@ -54,6 +54,7 @@ import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { tokenCardPlayedHandlerMap } from '../tokens/token-trigger-map.ts';
 import { tokenDefinitionMap } from '../tokens/token-definition-map.ts';
 import { prosperityTokenIds } from '@expansions/prosperity/token-prosperity-ids.ts';
+import { findCardLikeInMatch } from '@shared/find-card-like-in-match.ts';
 
 export class GameActionController implements GameActionDefinitionMap {
   private customActionHandlers: Partial<GameActionDefinitionMap> = {};
@@ -777,15 +778,10 @@ export class GameActionController implements GameActionDefinitionMap {
 
   // Finds a card-like instance by id in the current match.
   private findCardLike(cardLikeId: CardLikeId) {
-    const boon = this.match.boons?.cards?.find((card) => card.id === cardLikeId);
-    if (boon) return boon;
-    const hex = this.match.hexes?.cards?.find((card) => card.id === cardLikeId);
-    if (hex) return hex;
-    const event = this.match.events?.find((card) => card.id === cardLikeId);
-    if (event) return event;
-    const landmark = this.match.landmarks?.find((card) => card.id === cardLikeId);
-    if (landmark) return landmark;
-    return this.match.projects?.find((card) => card.id === cardLikeId);
+    // moveCardLike only supports these movable card-like categories.
+    return findCardLikeInMatch(this.match, cardLikeId, {
+      includeKinds: ['boon', 'hex', 'event', 'landmark', 'project'],
+    });
   }
 
   // Sets default facing for common locations; set-aside is left untouched by default.
@@ -2073,12 +2069,15 @@ export class GameActionController implements GameActionDefinitionMap {
 
     await this.runEndTurnPhaseTrigger(match.turnPhaseIndex, currentPlayer.id);
 
-    let newTurnPhaseIndex = match.turnPhaseIndex + 1;
-    let newTurnNumber = match.turnNumber;
+    if (this.match.extraTurnQueue) {
 
-    if (newTurnPhaseIndex >= TurnPhaseOrderValues.length) {
-      newTurnPhaseIndex = 0;
-      newTurnNumber += 1;
+    }
+
+    match.turnPhaseIndex = match.turnPhaseIndex + 1;
+
+    if (match.turnPhaseIndex >= TurnPhaseOrderValues.length) {
+      match.turnPhaseIndex = 0;
+      match.turnNumber++;
     }
 
     const newPhase = getTurnPhase(match.turnPhaseIndex);
@@ -2088,14 +2087,6 @@ export class GameActionController implements GameActionDefinitionMap {
       match.playerBuys = 1;
       match.playerTreasure = 0;
       match.playerPotions = 0;
-
-      if (this.match.extraTurnQueue.length > 0) {
-        await this.resolveExtraTurn(this.match.extraTurnQueue.shift()!)
-        return;
-      }
-
-      match.turnPhaseIndex = newTurnPhaseIndex;
-      match.turnNumber = newTurnNumber;
 
       match.currentPlayerTurnIndex++;
 
@@ -2616,6 +2607,6 @@ export class GameActionController implements GameActionDefinitionMap {
    * @private
    */
   private async resolveExtraTurn(turn: ExtraTurn) {
-    
+
   }
 }

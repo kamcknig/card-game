@@ -8,6 +8,7 @@ import { toNumber } from 'es-toolkit/compat';
 import { clientSelectableCardsOverrideStore, selectedCardStore } from '../../../../state/interactive-state';
 import { resolveCountSpec } from 'shared/resolve-count-spec';
 import { validateCountSpec } from 'shared/validate-count-spec';
+import { findCardLikeInMatch } from 'shared/find-card-like-in-match';
 import { displayCardDetail } from './display-card-detail';
 import { selfPlayerIdStore } from '../../../../state/player-state';
 import { matchStore } from '../../../../state/match-state';
@@ -163,16 +164,10 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
   const cardLikeList = new List({ type: 'horizontal' });
   cardLikeList.elementsMargin = cardLikeCount > 6 ? -CARD_WIDTH * .5 : STANDARD_GAP;
 
+  // Snapshot match once for consistent card-like resolution during render.
+  const match = matchStore.get();
   for (const cardLikeId of cardLikeIds) {
-    const match = matchStore.get();
-    const cardLike = match?.boons?.cards?.find(card => card.id === cardLikeId)
-      ?? match?.hexes?.cards?.find(card => card.id === cardLikeId)
-      ?? match?.events?.find(card => card.id === cardLikeId)
-      ?? match?.landmarks?.find(card => card.id === cardLikeId)
-      ?? match?.states?.cards?.find(card => card.id === cardLikeId)
-      ?? match?.projects?.find(card => card.id === cardLikeId)
-      // Artifacts are stored alongside states in match state.
-      ?? match?.artifacts?.cards?.find(card => card.id === cardLikeId);
+    const cardLike = findCardLikeInMatch(match, cardLikeId);
 
     if (!cardLike) {
       console.warn(`[card-selection] missing card-like data for id ${cardLikeId}`);
