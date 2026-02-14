@@ -1,5 +1,5 @@
 import { Application, Assets, Container, FederatedPointerEvent, Sprite } from 'pixi.js'
-import { Card, CardId, CardLikeId, UserPromptKinds } from 'shared/types/index.ts';
+import { Card, CardId, CardLikeId, UserPromptKinds } from 'shared/types';
 import { CARD_WIDTH, STANDARD_GAP } from '../../../../core/app-contants';
 import { createCardView } from '../../../../core/card/create-card-view';
 import { List } from '@pixi/ui';

@@ -3,7 +3,7 @@ import { SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP } from '../../../core
 import { computed } from 'nanostores';
 import { basicSupplies } from '../../../state/match-logic';
 import { cardStore } from '../../../state/card-state';
-import { Card, CardKey } from 'shared/types/index.ts';
+import { Card, CardKey } from 'shared/types';
 import { PileView } from './pile';
 import { getCardSourceStore } from '../../../state/card-source-store';
 

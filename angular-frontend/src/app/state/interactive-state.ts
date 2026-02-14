@@ -1,5 +1,5 @@
 import { atom } from 'nanostores'
-import { CardId, CardKey } from 'shared/types/index.ts';
+import { CardId, CardKey } from 'shared/types';
 import { serverSelectableCardsStore } from './interactive-logic';
 
 // Tracks client override if one exists

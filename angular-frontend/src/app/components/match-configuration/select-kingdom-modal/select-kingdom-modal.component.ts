@@ -11,7 +11,7 @@ import {
 import { combineLatestWith, debounceTime, filter, Subject, Subscription } from 'rxjs';
 import { SocketService } from '../../../core/socket-service/socket.service';
 import { NanostoresService } from '@nanostores/angular';
-import { CardNoId } from 'shared/types/index.ts';
+import { CardNoId } from 'shared/types';
 import { AsyncPipe, NgOptimizedImage } from '@angular/common';
 import { SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH } from '../../../core/app-contants';
 import { selfPlayerIdStore } from '../../../state/player-state';

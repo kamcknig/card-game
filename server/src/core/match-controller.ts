@@ -824,8 +824,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
     // Kick off the first turn, including any computer player automation.
     await this.runGameAction('checkForRemainingPlayerActions');
-
-    await this.runGameAction('checkForRemainingPlayerActions');
   }
 
   private calculateScores() {

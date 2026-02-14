@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, Inject, Input, OnInit } from '@angular/core';
-import { Card, CardId, CardKey, MatchSummary, PlayerId } from 'shared/types/index.ts';
+import { Card, CardId, CardKey, MatchSummary, PlayerId } from 'shared/types';
 import { playerStore } from '../../state/player-state';
 import { DOCUMENT, NgOptimizedImage } from '@angular/common';
 import { cardStore } from '../../state/card-state';

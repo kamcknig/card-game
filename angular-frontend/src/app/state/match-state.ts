@@ -1,5 +1,5 @@
 import { atom } from 'nanostores';
-import { Match, MatchConfiguration, MatchSummary, PlayerId } from 'shared/types/index.ts';
+import { Match, MatchConfiguration, MatchSummary, PlayerId } from 'shared/types';
 
 export const matchStore = atom<Match | null>(null);
 export const matchConfigurationStore = atom<MatchConfiguration | null>(null);

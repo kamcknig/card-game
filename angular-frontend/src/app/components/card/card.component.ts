@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, Input, OnDestroy, OnInit } from '@a
 import { NanostoresService } from '@nanostores/angular';
 import { cardStore } from '../../state/card-state';
 import { combineLatestWith, map, Subscription } from 'rxjs';
-import { CardFacing, CardId, Match, TokenDefinition, TokenId, TokenInstance } from 'shared/types/index.ts';
+import { CardFacing, CardId, Match, TokenDefinition, TokenId, TokenInstance } from 'shared/types';
 import { NgOptimizedImage } from '@angular/common';
 import { CARD_WIDTH } from '../../core/app-contants';
 import { CardSize } from '../../../types';

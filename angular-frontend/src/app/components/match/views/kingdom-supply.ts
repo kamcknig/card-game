@@ -3,7 +3,7 @@ import { PileView } from './pile';
 import { cardStore } from '../../../state/card-state';
 import { matchStore } from '../../../state/match-state';
 import { tokenDefinitionStore } from '../../../state/token-definition-state';
-import { Card, CardKey, Match, TokenDefinition, TokenId, TokenInstance } from 'shared/types/index.ts';
+import { Card, CardKey, Match, TokenDefinition, TokenId, TokenInstance } from 'shared/types';
 import { SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
 import { kingdomSupplies } from '../../../state/match-logic';
 import { computed } from 'nanostores';

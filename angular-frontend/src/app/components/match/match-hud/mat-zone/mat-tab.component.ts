@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
-import { CardLikeId, Mats } from 'shared/types/index.ts';
+import { CardLikeId, Mats } from 'shared/types';
 import { MatPlayerContent } from '../types';
 
 @Component({

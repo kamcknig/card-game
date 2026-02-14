@@ -1,4 +1,4 @@
-import { CardKey, CardNoId, PlayerId, UserPromptKinds } from 'shared/types/index.ts';
+import { CardKey, CardNoId, PlayerId, UserPromptKinds } from 'shared/types';
 import { Application, Assets, Color, Container, Graphics, Point, Sprite } from 'pixi.js';
 import { Input, List } from '@pixi/ui'
 import { CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP } from '../../../../core/app-contants';

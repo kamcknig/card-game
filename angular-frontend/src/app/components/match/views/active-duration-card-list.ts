@@ -1,5 +1,5 @@
 import { Color, Container, ContainerOptions, Graphics, Point, Text } from 'pixi.js';
-import { Card, PlayerId } from 'shared/types/index.ts';
+import { Card, PlayerId } from 'shared/types';
 import { List } from '@pixi/ui';
 import { STANDARD_GAP } from '../../../core/app-contants';
 import { playerStore } from '../../../state/player-state';

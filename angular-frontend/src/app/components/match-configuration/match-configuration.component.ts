@@ -8,7 +8,7 @@ import {
   ProjectNoId,
   MatchConfiguration,
   PlayerId
-} from 'shared/types/index.ts';
+} from 'shared/types';
 import { NanostoresService } from '@nanostores/angular';
 import { playerIdStore, selfPlayerIdStore } from '../../state/player-state';
 import { combineLatest, map, Observable, Subscription } from 'rxjs';

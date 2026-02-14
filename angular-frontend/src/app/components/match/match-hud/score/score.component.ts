@@ -3,7 +3,7 @@ import { NanostoresService } from '@nanostores/angular';
 import { currentPlayerTurnIdStore } from '../../../../state/turn-state';
 import { map, Observable } from 'rxjs';
 import { AsyncPipe, NgClass, NgOptimizedImage } from '@angular/common';
-import { PlayerId, TokenInstance } from 'shared/types/index.ts';
+import { PlayerId, TokenInstance } from 'shared/types';
 import { playerIdStore, playerStore } from '../../../../state/player-state';
 import tinycolor from 'tinycolor2'
 import { matchStore } from '../../../../state/match-state';

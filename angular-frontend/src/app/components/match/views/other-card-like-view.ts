@@ -1,6 +1,6 @@
 import { Container, ContainerOptions, Graphics } from 'pixi.js';
 import { events, landmarks, projects } from '../../../state/match-logic';
-import { Event, Landmark, Project } from 'shared/types/index.ts';
+import { Event, Landmark, Project } from 'shared/types';
 import { EVENT_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
 
 import { EventCard } from './event-card';

@@ -1,4 +1,4 @@
-import { CardKey, LogEntry, Match } from 'shared/types/index.ts';
+import { CardKey, LogEntry, Match } from 'shared/types';
 import { playerIdStore, playerStore, selfPlayerIdStore } from '../../state/player-state';
 import {
   matchConfigurationStore,

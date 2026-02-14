@@ -1,5 +1,5 @@
 import { Pipe, PipeTransform } from '@angular/core';
-import { CardId, CardKey } from 'shared/types/index.ts';
+import { CardId, CardKey } from 'shared/types';
 
 @Pipe({ name: 'deckEntries', standalone: true })
 export class DeckEntriesPipe implements PipeTransform {

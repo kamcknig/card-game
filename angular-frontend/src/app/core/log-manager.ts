@@ -1,4 +1,4 @@
-import { Card, CardId, LogEntry, LogEntrySource, Player, PlayerId } from 'shared/types/index.ts';
+import { Card, CardId, LogEntry, LogEntrySource, Player, PlayerId } from 'shared/types';
 import { cardStore } from '../state/card-state';
 import { playerStore, selfPlayerIdStore } from '../state/player-state';
 import { logEntryIdsStore, logStore } from '../state/log-state';

@@ -2075,10 +2075,6 @@ export class GameActionController implements GameActionDefinitionMap {
 
     await this.runEndTurnPhaseTrigger(match.turnPhaseIndex, currentPlayer.id);
 
-    if (this.match.extraTurnQueue) {
-
-    }
-
     match.turnPhaseIndex = match.turnPhaseIndex + 1;
 
     if (match.turnPhaseIndex >= TurnPhaseOrderValues.length) {

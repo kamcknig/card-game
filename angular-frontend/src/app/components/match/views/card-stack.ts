@@ -8,7 +8,7 @@ import { isUndefined } from 'es-toolkit';
 import { CardView } from './card-view';
 import { selectedCardStore } from '../../../state/interactive-state';
 import { TokenBadgeView } from './token-badge-view';
-import { Match, PlayerId, TokenDefinition, TokenId, TokenInstance } from 'shared/types/index.ts';
+import { Match, PlayerId, TokenDefinition, TokenId, TokenInstance } from 'shared/types';
 import { getTokenShortLabel } from './token-utils';
 
 type TokenBadgeData = {

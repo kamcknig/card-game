@@ -1,4 +1,4 @@
-import { TokenDefinition, TokenId } from 'shared/types/index.ts';
+import { TokenDefinition, TokenId } from 'shared/types';
 
 // Maps token definitions to compact labels for in-game badges.
 export const getTokenShortLabel = (tokenId: TokenId, tokenDefinition?: TokenDefinition): string => {

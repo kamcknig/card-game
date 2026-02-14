@@ -1,5 +1,5 @@
 import { Assets, Container, ContainerOptions, FederatedPointerEvent, Graphics, Sprite, Text, Texture } from 'pixi.js';
-import { Card, CardFacing } from 'shared/types/index.ts';
+import { Card, CardFacing } from 'shared/types';
 import { batched } from 'nanostores';
 import { CardSize } from '../../../../types';
 import { selectableCardStore } from '../../../state/interactive-logic';

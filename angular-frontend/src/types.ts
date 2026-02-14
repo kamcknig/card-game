@@ -1,4 +1,4 @@
-import { CardId, LogEntry, SelectActionCardArgs, ServerEmitEvents } from 'shared/types/index.ts';
+import { CardId, LogEntry, SelectActionCardArgs, ServerEmitEvents } from 'shared/types';
 
 export type ClientListenEvents = ServerEmitEvents;
 export type ServerEmitEventNames = keyof ServerEmitEvents;

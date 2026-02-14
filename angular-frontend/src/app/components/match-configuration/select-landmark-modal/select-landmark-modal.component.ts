@@ -12,7 +12,7 @@ import {
 import { combineLatestWith, debounceTime, filter, Subject, Subscription } from 'rxjs';
 import { SocketService } from '../../../core/socket-service/socket.service';
 import { NanostoresService } from '@nanostores/angular';
-import { LandmarkNoId } from 'shared/types/index.ts';
+import { LandmarkNoId } from 'shared/types';
 import { AsyncPipe, NgOptimizedImage } from '@angular/common';
 import { EVENT_CARD_HEIGHT, EVENT_CARD_WIDTH } from '../../../core/app-contants';
 import { selfPlayerIdStore } from '../../../state/player-state';

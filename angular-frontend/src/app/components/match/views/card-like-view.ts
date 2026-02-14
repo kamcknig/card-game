@@ -1,5 +1,5 @@
 import { Container, ContainerOptions, FederatedPointerEvent } from 'pixi.js';
-import { CardLikeId } from 'shared/types/index.ts';
+import { CardLikeId } from 'shared/types';
 
 export abstract class CardLikeView extends Container {
   public cardId: CardLikeId;

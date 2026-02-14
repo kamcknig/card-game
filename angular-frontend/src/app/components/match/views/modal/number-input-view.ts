@@ -1,6 +1,6 @@
 import { Application, Container, Graphics, Text } from 'pixi.js';
 import { Input } from '@pixi/ui';
-import { UserPromptKinds } from 'shared/types/index.ts';
+import { UserPromptKinds } from 'shared/types';
 import { STANDARD_GAP } from '../../../../core/app-contants';
 
 export const numberInputView = (app: Application, args: UserPromptKinds) => {

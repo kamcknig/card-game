@@ -1,4 +1,4 @@
-import { Project, TokenInstance } from 'shared/types/index.ts';
+import { Project, TokenInstance } from 'shared/types';
 import { Assets, Container, ContainerOptions, FederatedPointerEvent, Graphics, Sprite, Text, Texture } from 'pixi.js';
 import { displayCardDetail } from './modal/display-card-detail';
 import { CardLikeView } from './card-like-view';

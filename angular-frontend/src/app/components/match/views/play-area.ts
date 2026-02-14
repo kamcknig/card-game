@@ -2,7 +2,7 @@ import { Container, Graphics } from 'pixi.js';
 import { createCardView } from '../../../core/card/create-card-view';
 import { List } from '@pixi/ui';
 import { STANDARD_GAP } from '../../../core/app-contants';
-import { Card, Match } from 'shared/types/index.ts';
+import { Card, Match } from 'shared/types';
 import { ActiveDurationCardList } from './active-duration-card-list';
 import { computed } from 'nanostores';
 import { matchStore } from '../../../state/match-state';

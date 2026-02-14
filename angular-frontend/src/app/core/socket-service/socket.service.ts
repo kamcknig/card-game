@@ -3,7 +3,7 @@ import { io, Socket } from "socket.io-client";
 import { environment } from "../../../environments/environment";
 import { v4 as uuidV4 } from "uuid";
 import { SocketEventMap } from "./socket-event-map";
-import { ServerEmitEvents, ServerListenEvents } from "shared/types/index.ts";
+import { ServerEmitEvents, ServerListenEvents } from "shared/types";
 import { ServerEmitEventNames } from "../../../types";
 
 @Injectable({

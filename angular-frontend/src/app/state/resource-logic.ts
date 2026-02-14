@@ -1,6 +1,6 @@
 import { computed, ReadableAtom } from 'nanostores';
 import { matchStore } from './match-state';
-import { PlayerId } from 'shared/types/index.ts';
+import { PlayerId } from 'shared/types';
 
 export const cofferStore: ReadableAtom<Record<PlayerId, number>> = computed(matchStore, store => (store as any).coffers ?? {});
 // Tracks per-player Villagers tokens for UI rendering.

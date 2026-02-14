@@ -2,7 +2,7 @@ import { Application, Container, Graphics, Text } from 'pixi.js';
 import { AppButton, createAppButton } from '../../../../core/create-app-button';
 import { clientSelectableCardsOverrideStore, selectedCardStore } from '../../../../state/interactive-state';
 import { STANDARD_GAP } from '../../../../core/app-contants';
-import { PlayerId, UserPromptActionArgs } from 'shared/types/index.ts';
+import { PlayerId, UserPromptActionArgs } from 'shared/types';
 import { List } from '@pixi/ui';
 import { cardSelectionView } from './card-selection-view';
 import { cardRearrangeView } from './card-rearrange-view';
