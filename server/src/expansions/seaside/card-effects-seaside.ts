@@ -623,6 +623,57 @@ const expansion: CardExpansionModule = {
       });
     },
   },
+  'outpost': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const outpostCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+
+      // Limit the next hand draw to 3 cards, regardless of whether the extra turn is eventually taken.
+      cardEffectArgs.reactionManager.registerSystemTemplate(
+        outpostCard,
+        'drawHand',
+        {
+          playerId: cardEffectArgs.playerId,
+          once: true,
+          compulsory: true,
+          allowMultipleInstances: true,
+          condition: ({trigger}) => trigger.args.playerId === cardEffectArgs.playerId,
+          triggeredEffectFn: async (triggeredArgs) => {
+            const previousCount = triggeredArgs.trigger.args.count;
+            triggeredArgs.trigger.args.count = Math.min(previousCount, 3);
+            console.info(
+              `[outpost drawHand trigger] limiting next hand draw for player ${cardEffectArgs.playerId} from ${previousCount} to ${triggeredArgs.trigger.args.count}`,
+            );
+          },
+        },
+        {idSuffix: 'next-hand-limit'},
+      );
+
+      // Queue the extra turn; turn scheduling decides if this can be taken.
+      await cardEffectArgs.runGameActionDelegate('queueExtraTurn', {
+        turn: {
+          playerId: cardEffectArgs.playerId,
+          sourceId: cardEffectArgs.cardId,
+        },
+      });
+
+      // Keep Outpost in duration state until the owner's next start-of-turn.
+      cardEffectArgs.registerDurationEffect(outpostCard, {
+        id: `outpost:${cardEffectArgs.cardId}:startTurn`,
+        playerId: cardEffectArgs.playerId,
+        listeningFor: 'startTurn',
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: ({trigger}) => trigger.args.playerId === cardEffectArgs.playerId,
+        triggeredEffectFn: async (triggeredArgs) => {
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            cardId: outpostCard.id,
+            to: {location: 'playArea'},
+          });
+        },
+      });
+    },
+  },
   'pirate': {
     registerLifeCycleMethods: () => ({
       onEnterHand: async ({ reactionManager }, { playerId, cardId }) => {

@@ -205,6 +205,12 @@ export class GameActionController implements GameActionDefinitionMap {
     return token;
   }
 
+  // Returns the active turn-history index to disambiguate same-number extra turns.
+  private getCurrentTurnHistoryIndex(): number | undefined {
+    const turnHistoryIndex = this.match.stats.turns.length - 1;
+    return turnHistoryIndex >= 0 ? turnHistoryIndex : undefined;
+  }
+
   // Resolves the count spec into a deterministic selection count for computer picks.
   private resolveCountSpec(count: CountSpec | number, available: number, optional: boolean): number {
     if (typeof count === 'number') {
@@ -835,6 +841,7 @@ export class GameActionController implements GameActionDefinitionMap {
     this.match.stats.cardsGained[cardId] = {
       turnPhase: getTurnPhase(this.match.turnPhaseIndex),
       turnNumber: this.match.turnNumber,
+      turnHistoryIndex: this.getCurrentTurnHistoryIndex(),
       playerId: args.playerId,
     };
 
@@ -1045,6 +1052,7 @@ export class GameActionController implements GameActionDefinitionMap {
     this.match.stats.trashedCards[cardId] = {
       turnPhase: getTurnPhase(this.match.turnPhaseIndex),
       turnNumber: this.match.turnNumber,
+      turnHistoryIndex: this.getCurrentTurnHistoryIndex(),
       playerId: getCurrentPlayer(this.match).id,
     };
 
@@ -1101,7 +1109,7 @@ export class GameActionController implements GameActionDefinitionMap {
   // Adds an extra turn to the queue for processing at turn end.
   async queueExtraTurn(args: { turn: ExtraTurn }) {
     console.info(
-      `[queueExtraTurn action] queueing extra turn owner ${args.turn.ownerId} player ${args.turn.playerId}`,
+      `[queueExtraTurn action] queueing extra turn owner ${args.turn.controllerId} player ${args.turn.playerId}`,
     );
     this.match.extraTurnQueue.push({...args.turn});
     console.debug(`[queueExtraTurn action] queue size now ${this.match.extraTurnQueue.length}`);
@@ -1246,6 +1254,7 @@ export class GameActionController implements GameActionDefinitionMap {
     this.match.stats.cardsBought[cardId] = {
       turnPhase: getTurnPhase(this.match.turnPhaseIndex),
       turnNumber: this.match.turnNumber,
+      turnHistoryIndex: this.getCurrentTurnHistoryIndex(),
       playerId: args.playerId,
       cost: args.cardCost.treasure,
       paid: args.cardCost.treasure + (args.overpay?.inTreasure ?? 0) + (args.overpay?.inCoffer ?? 0),
@@ -1305,6 +1314,7 @@ export class GameActionController implements GameActionDefinitionMap {
     this.match.stats.cardLikesBought[args.cardLikeId] = {
       playerId: args.playerId,
       turnNumber: this.match.turnNumber,
+      turnHistoryIndex: this.getCurrentTurnHistoryIndex(),
       turnPhase: getTurnPhase(this.match.turnPhaseIndex),
     };
 
@@ -1407,6 +1417,7 @@ export class GameActionController implements GameActionDefinitionMap {
     this.match.stats.cardLikesBought[args.cardLikeId] = {
       playerId: args.playerId,
       turnNumber: this.match.turnNumber,
+      turnHistoryIndex: this.getCurrentTurnHistoryIndex(),
       turnPhase: getTurnPhase(this.match.turnPhaseIndex),
     };
 
@@ -2070,15 +2081,39 @@ export class GameActionController implements GameActionDefinitionMap {
     const match = this.match;
 
     let currentPlayer = getCurrentPlayer(match);
+    let extraTurn: ExtraTurn | undefined;
 
     await this.runEndTurnPhaseTrigger(match.turnPhaseIndex, currentPlayer.id);
 
     match.turnPhaseIndex = match.turnPhaseIndex + 1;
 
-    const extraTurn = match.extraTurnQueue.shift();
-
     if (match.turnPhaseIndex >= TurnPhaseOrderValues.length) {
       match.turnPhaseIndex = 0;
+
+      // Resolve the next valid extra turn, skipping entries that would create a third consecutive turn.
+      while (match.extraTurnQueue.length > 0) {
+        const queuedExtraTurn = match.extraTurnQueue.shift();
+        if (!queuedExtraTurn) {
+          break;
+        }
+
+        const turns = match.stats.turns;
+        const previousTurn = turns.length >= 1 ? turns[turns.length - 1] : undefined;
+        const secondPreviousTurn = turns.length >= 2 ? turns[turns.length - 2] : undefined;
+        const wouldBeThirdTurnInARow = previousTurn?.playerId === queuedExtraTurn.playerId &&
+          secondPreviousTurn?.playerId === queuedExtraTurn.playerId;
+
+        if (wouldBeThirdTurnInARow) {
+          console.info(
+            `[nextPhase action] skipping extra turn for player ${queuedExtraTurn.playerId}; would be a third consecutive turn`,
+          );
+          continue;
+        }
+
+        extraTurn = queuedExtraTurn;
+        break;
+      }
+
       // if there is an extra turn in the queue, and it's the same player as the current player, then the turn number
       // remains the same, only if it actually is a new player do we increase the turn.
       match.turnNumber = extraTurn && extraTurn.playerId === currentPlayer.id ? match.turnNumber : match.turnNumber + 1;
@@ -2118,6 +2153,13 @@ export class GameActionController implements GameActionDefinitionMap {
       });
 
       currentPlayer = getCurrentPlayer(match);
+      // Track every started turn, including extra turns and owner/controller overrides.
+      match.stats.turns.push({
+        turnNumber: match.turnNumber,
+        controllerId: extraTurn?.controllerId ?? currentPlayer.id,
+        playerId: currentPlayer.id,
+        sourceId: extraTurn?.sourceId,
+      });
 
       console.info(
         `[nextPhase action] new round: ${match.roundNumber}, turn ${match.turnNumber} for ${currentPlayer}`,
@@ -2160,8 +2202,15 @@ export class GameActionController implements GameActionDefinitionMap {
 
     switch (phase) {
       case 'action':
-      case 'buy':
+      case 'buy': {
+        // Action and buy phase entry should only run start-of-phase triggers.
+        if (runStartPhaseTrigger) {
+          await this.runStartTurnPhaseTrigger(match.turnPhaseIndex);
+        }
+        break;
+      }
       case 'cleanup': {
+        // Cleanup phase entry performs the end-of-turn card movement and redraw.
         if (runStartPhaseTrigger) {
           await this.runStartTurnPhaseTrigger(match.turnPhaseIndex);
         }
@@ -2425,6 +2474,7 @@ export class GameActionController implements GameActionDefinitionMap {
     this.match.stats.playedCards[cardId] = {
       turnPhase: getTurnPhase(this.match.turnPhaseIndex),
       turnNumber: this.match.turnNumber,
+      turnHistoryIndex: this.getCurrentTurnHistoryIndex(),
       playerId: playerId,
     };
 

@@ -103,6 +103,8 @@ export type ComputedMatchConfiguration = MatchConfiguration & {
 export type CardStats = {
   // the turn number on which the card was played.
   turnNumber: number;
+  // Index in match.stats.turns for the turn where this stat was recorded.
+  turnHistoryIndex?: number;
 
   turnPhase: TurnPhase;
 
@@ -111,6 +113,9 @@ export type CardStats = {
 };
 
 export type MatchStats = {
+  // Chronological turn history, including extra turns.
+  turns: MatchTurnStats[];
+
   cardLikesBoughtByTurn: Record<number, CardId[] | undefined>;
   cardLikesBought: Record<CardId, CardStats>;
 
@@ -135,6 +140,11 @@ export type MatchStats = {
     // the amount used to buy it
     paid: number;
   }>;
+};
+
+export type MatchTurnStats = ExtraTurn & {
+  // Engine turn number at turn start (can repeat for same-player extra turns).
+  turnNumber: number;
 };
 
 export interface Match {
@@ -200,7 +210,7 @@ export interface Match {
 export type ExtraTurn = {
   // the owner/controller of the turn. typically this is the same as `playerId`. but in some cases might be another
   // player e.g., with Possession from the Alchemy expansion
-  ownerId: PlayerId;
+  controllerId?: PlayerId;
   // the player whose turn it is. This is not necessarily the one actually controlling the turn
   playerId: PlayerId;
   // the source of the effect that provided the extra turn

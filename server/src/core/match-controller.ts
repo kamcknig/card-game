@@ -148,6 +148,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       scores: {},
       selectableCards: {},
       stats: {
+        turns: [],
         playedCardsByTurn: {},
         cardsGainedByTurn: {},
         playedCards: {},
@@ -821,6 +822,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       turn: Math.floor(this._match.turnNumber / this._match.players.length) + 1,
       playerId: getCurrentPlayer(this._match).id,
     });
+
+    // Seed turn history with the initial started turn.
+    this._match.stats.turns = [{
+      turnNumber: this._match.turnNumber,
+      controllerId: getCurrentPlayer(this._match).id,
+      playerId: getCurrentPlayer(this._match).id,
+    }];
 
     // Kick off the first turn, including any computer player automation.
     await this.runGameAction('checkForRemainingPlayerActions');

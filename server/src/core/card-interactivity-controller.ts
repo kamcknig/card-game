@@ -71,6 +71,8 @@ export class CardInteractivityController {
 
     const hand = this._cardSourceController.getSource('playerHand', currentPlayer.id)
       .map((id) => this._cardLibrary.getCard(id));
+    // Turn history index uniquely identifies the active turn, even when turn numbers repeat.
+    const currentTurnHistoryIndex = match.stats.turns.length - 1;
 
     if (turnPhase === 'buy' && match.playerBuys > 0) {
       const cardKeysAdded: string[] = [];
@@ -120,7 +122,15 @@ export class CardInteractivityController {
       // bought a card
       if (
         !Object.values<CardStats>(match.stats.cardsBought).concat(Object.values(match.stats.cardLikesBought))
-          .some((stats) => stats.playerId === currentPlayer.id && stats.turnNumber === match.turnNumber)
+          .some((stats) =>
+            stats.playerId === currentPlayer.id &&
+            (
+              // Prefer turn-history matching to handle same-number extra turns (e.g., Outpost).
+              (stats.turnHistoryIndex !== undefined && stats.turnHistoryIndex === currentTurnHistoryIndex) ||
+              // Fallback for older stats records that predate turnHistoryIndex.
+              (stats.turnHistoryIndex === undefined && stats.turnNumber === match.turnNumber)
+            )
+          )
       ) {
         for (const card of hand) {
           if (card.type.includes('TREASURE')) {
