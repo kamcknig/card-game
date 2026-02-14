@@ -749,6 +749,79 @@ const effectMap: CardExpansionModule = {
       }, { loggingContext: { source: cardEffectArgs.cardId } });
     },
   },
+  'mission': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      if (!event) {
+        console.warn(`[mission effect] event not found`);
+        return;
+      }
+
+      // Queue the extra turn and tag it with the Mission event id so buy restrictions can be applied on that turn.
+      console.debug(`[mission effect] queueing extra turn for player ${cardEffectArgs.playerId}`);
+      await cardEffectArgs.runGameActionDelegate('queueExtraTurn', {
+        turn: {
+          playerId: cardEffectArgs.playerId,
+          sourceId: event.id,
+        },
+      });
+
+      // Apply Mission's "you can't buy cards" restriction at the start of the Mission extra turn.
+      cardEffectArgs.reactionManager.registerSystemTemplate(event, 'startTurn', {
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: async (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
+            return false;
+          }
+
+          // Mission restriction only applies on the turn created by this Mission event.
+          const currentTurnStats = conditionArgs.match.stats.turns[conditionArgs.match.stats.turns.length - 1];
+          if (!currentTurnStats) {
+            return false;
+          }
+
+          return currentTurnStats.playerId === cardEffectArgs.playerId && currentTurnStats.sourceId === event.id;
+        },
+        triggeredEffectFn: async (triggeredArgs) => {
+          console.debug(
+            `[mission startTurn effect] applying buy restriction for player ${cardEffectArgs.playerId}`,
+          );
+
+          const missionBuyRestrictionRule: CardPriceRule = (_card, context) => {
+            if (context.playerId !== cardEffectArgs.playerId) {
+              return {restricted: false, cost: {treasure: 0}};
+            }
+            return {restricted: true, cost: {treasure: 0}};
+          };
+
+          // Apply to every card so buys from any source (including non-supply buys) are restricted.
+          const ruleUnsubs = cardEffectArgs.cardLibrary
+            .getAllCardsAsArray()
+            .map((card) => cardEffectArgs.cardPriceController.registerRule(card, missionBuyRestrictionRule));
+
+          // Remove Mission's buy restriction when the Mission turn ends.
+          triggeredArgs.reactionManager.registerSystemTemplate(event, 'endTurn', {
+            playerId: cardEffectArgs.playerId,
+            once: true,
+            allowMultipleInstances: true,
+            compulsory: true,
+            condition: async (endTurnArgs) => endTurnArgs.trigger.args.playerId === cardEffectArgs.playerId,
+            triggeredEffectFn: async () => {
+              console.debug(
+                `[mission endTurn effect] removing buy restriction for player ${cardEffectArgs.playerId}`,
+              );
+              for (const ruleUnsub of ruleUnsubs) {
+                ruleUnsub();
+              }
+            },
+          });
+        },
+      });
+    },
+  },
   'pathfinding': {
     registerEffects: () => async (cardEffectArgs) => {
       const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
