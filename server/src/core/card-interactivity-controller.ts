@@ -7,6 +7,7 @@ import { getTurnPhase } from '../utils/get-turn-phase.ts';
 import { CardPriceRulesController } from './card-price-rules-controller.ts';
 import { cardActionConditionMapFactory } from './actions/card-action-condition-map-factory.ts';
 import { CardSourceController } from './card-source-controller.ts';
+import { findEventInMatch, findProjectInMatch } from '@shared/find-card-like-in-match.ts';
 
 export class CardInteractivityController {
   private _gameOver: boolean = false;
@@ -258,11 +259,11 @@ export class CardInteractivityController {
       }
       console.info(`[card interactivity] ${player} tapped card-like ${cardId} in phase ${phase}, processing`);
 
-      const event = this.match.events.find((candidate) => candidate.id === cardId);
+      const event = findEventInMatch(this.match, cardId);
       if (event) {
         await this.runGameDelegate('buyEvent', { playerId, cardLikeId: cardId });
       } else {
-        const project = this.match.projects?.find((candidate) => candidate.id === cardId);
+        const project = findProjectInMatch(this.match, cardId);
         if (project) {
           await this.runGameDelegate('buyProject', { playerId, cardLikeId: cardId });
         } else {

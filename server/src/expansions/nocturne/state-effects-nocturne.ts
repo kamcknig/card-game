@@ -3,6 +3,7 @@ import { Card, CardId } from 'shared/types/index.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
+import { findStateInMatch } from '@shared/find-card-like-in-match.ts';
 
 // Registers all state effects for the current match.
 export const registerStateEffects = (registerStateEffect: StateEffectRegistrar) => {
@@ -26,7 +27,7 @@ const registerLostInTheWoods = (registerStateEffect: StateEffectRegistrar) => {
     cardId,
     cardSourceController,
   }) => {
-    const state = match.states?.cards?.find((candidate) => candidate.id === cardId);
+    const state = findStateInMatch(match, cardId);
     if (!state) {
       console.warn('[lost-in-the-woods state] state card not found');
       return;
@@ -108,7 +109,7 @@ const registerDeluded = (registerStateEffect: StateEffectRegistrar) => {
     cardLibrary,
     cardPriceController,
   }) => {
-    const state = match.states?.cards?.find((candidate) => candidate.id === cardId);
+    const state = findStateInMatch(match, cardId);
     if (!state) {
       console.warn('[deluded state] state card not found');
       return;
@@ -200,7 +201,7 @@ const registerEnvious = (registerStateEffect: StateEffectRegistrar) => {
     cardId,
     cardLibrary,
   }) => {
-    const state = match.states?.cards?.find((candidate) => candidate.id === cardId);
+    const state = findStateInMatch(match, cardId);
     if (!state) {
       console.warn('[envious state] state card not found');
       return;

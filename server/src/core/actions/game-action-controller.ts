@@ -54,7 +54,13 @@ import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { tokenCardPlayedHandlerMap } from '../tokens/token-trigger-map.ts';
 import { tokenDefinitionMap } from '../tokens/token-definition-map.ts';
 import { prosperityTokenIds } from '@expansions/prosperity/token-prosperity-ids.ts';
-import { findCardLikeInMatch } from '@shared/find-card-like-in-match.ts';
+import {
+  findBoonInMatch,
+  findCardLikeInMatch,
+  findEventInMatch,
+  findHexInMatch,
+  findProjectInMatch,
+} from '@shared/find-card-like-in-match.ts';
 
 export class GameActionController implements GameActionDefinitionMap {
   private customActionHandlers: Partial<GameActionDefinitionMap> = {};
@@ -334,7 +340,7 @@ export class GameActionController implements GameActionDefinitionMap {
           return;
         }
 
-        const event = match.events.find((e) => e.id === selectedId);
+        const event = findEventInMatch(match, selectedId);
         if (event) {
           await this.runGameActionDelegate('buyEvent', {
             playerId: currentPlayer.id,
@@ -345,7 +351,7 @@ export class GameActionController implements GameActionDefinitionMap {
           return;
         }
 
-        const project = match.projects?.find((candidate) => candidate.id === selectedId);
+        const project = findProjectInMatch(match, selectedId);
         if (project) {
           await this.runGameActionDelegate('buyProject', {
             playerId: currentPlayer.id,
@@ -1269,7 +1275,7 @@ export class GameActionController implements GameActionDefinitionMap {
       console.debug(`[buyEvent action] player ${args.playerId} has debt (${existingDebt}), blocking buy`);
       return;
     }
-    const event = this.match.events.find((e) => e.id === args.cardLikeId);
+    const event = findEventInMatch(this.match, args.cardLikeId);
 
     if (!event) {
       console.warn(`[buyEvent action] could not find event ${args.cardLikeId}`);
@@ -1352,7 +1358,7 @@ export class GameActionController implements GameActionDefinitionMap {
       return;
     }
 
-    const project = this.match.projects.find((candidate) => candidate.id === args.cardLikeId);
+    const project = findProjectInMatch(this.match, args.cardLikeId);
     if (!project) {
       console.warn(`[buyProject action] could not find project ${args.cardLikeId}`);
       return;
@@ -1478,7 +1484,7 @@ export class GameActionController implements GameActionDefinitionMap {
     }
 
     let boonId = args.boonId;
-    let boon = boonId !== undefined ? this.match.boons.cards.find((candidate) => candidate.id === boonId) : undefined;
+    let boon = boonId !== undefined ? findBoonInMatch(this.match, boonId) : undefined;
 
     if (boonId !== undefined && !boon) {
       console.warn(`[receiveBoon action] could not find boon ${boonId}`);
@@ -1497,7 +1503,7 @@ export class GameActionController implements GameActionDefinitionMap {
         return;
       }
 
-      boon = this.match.boons.cards.find((b) => b.id === boonId);
+      boon = findBoonInMatch(this.match, boonId);
       if (!boon) {
         console.warn(`[receiveBoon action] could not find boon ${boonId}`);
         this.match.boons.discard.push(boonId);
@@ -1647,7 +1653,7 @@ export class GameActionController implements GameActionDefinitionMap {
     }
 
     let hexId = args.hexId;
-    let hex = hexId !== undefined ? this.match.hexes.cards.find((candidate) => candidate.id === hexId) : undefined;
+    let hex = hexId !== undefined ? findHexInMatch(this.match, hexId) : undefined;
 
     if (hexId !== undefined && !hex) {
       console.warn(`[receiveHex action] could not find hex ${hexId}`);
@@ -1666,7 +1672,7 @@ export class GameActionController implements GameActionDefinitionMap {
         return;
       }
 
-      hex = this.match.hexes.cards.find((h) => h.id === hexId);
+      hex = findHexInMatch(this.match, hexId);
       if (!hex) {
         console.warn(`[receiveHex action] could not find hex ${hexId}`);
         this.match.hexes.discard.push(hexId);

@@ -8,6 +8,7 @@ import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { isPlayerImmune, markPlayerImmune } from '../../utils/reaction-immunity.ts';
+import { findBoonInMatch } from '@shared/find-card-like-in-match.ts';
 
 // Prompts a player to choose an Action from hand not already represented in play.
 const promptUniqueActionFromHand = async (
@@ -174,7 +175,7 @@ const expansion: CardExpansionModule = {
           return;
         }
 
-        const deferredBoon = cardEffectArgs.match.boons?.cards?.find((card) => card.id === boonId);
+        const deferredBoon = findBoonInMatch(cardEffectArgs.match, boonId);
         if (!deferredBoon) {
           console.warn(`[blessed-village onGained] deferred boon ${boonId} not found in match`);
           return;
@@ -1039,7 +1040,7 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const boon = cardEffectArgs.match.boons?.cards?.find((candidate) => candidate.id === boonId);
+      const boon = findBoonInMatch(cardEffectArgs.match, boonId);
       if (!boon) {
         console.warn(`[sacred-grove effect] boon ${boonId} not found in match`);
         return;
@@ -1595,7 +1596,7 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const boon = cardEffectArgs.match.boons.cards.find((candidate) => candidate.id === boonId);
+      const boon = findBoonInMatch(cardEffectArgs.match, boonId);
       if (!boon) {
         console.warn(`[pixie effect] missing boon ${boonId}, discarding id only`);
         cardEffectArgs.match.boons.discard.push(boonId);

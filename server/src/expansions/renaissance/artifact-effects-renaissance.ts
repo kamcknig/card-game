@@ -2,6 +2,7 @@ import { ArtifactEffectRegistrar } from '@server-types/index.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
+import { findArtifactInMatch } from '@shared/find-card-like-in-match.ts';
 
 // Registers Renaissance artifact effects.
 export const registerArtifactEffects = (registerArtifactEffect: ArtifactEffectRegistrar) => {
@@ -25,7 +26,7 @@ const registerFlag = (registerArtifactEffect: ArtifactEffectRegistrar) => {
     reactionManager,
     cardId,
   }) => {
-    const artifact = match.artifacts?.cards?.find((candidate) => candidate.id === cardId);
+    const artifact = findArtifactInMatch(match, cardId);
     if (!artifact) {
       console.warn('[flag artifact] artifact card not found');
       return;
@@ -79,7 +80,7 @@ const registerHorn = (registerArtifactEffect: ArtifactEffectRegistrar) => {
     reactionManager,
     cardId,
   }) => {
-    const artifact = match.artifacts?.cards?.find((candidate) => candidate.id === cardId);
+    const artifact = findArtifactInMatch(match, cardId);
     if (!artifact) {
       console.warn('[horn artifact] artifact card not found');
       return;
@@ -139,7 +140,7 @@ const registerKey = (registerArtifactEffect: ArtifactEffectRegistrar) => {
     reactionManager,
     cardId,
   }) => {
-    const artifact = match.artifacts?.cards?.find((candidate) => candidate.id === cardId);
+    const artifact = findArtifactInMatch(match, cardId);
     if (!artifact) {
       console.warn('[key artifact] artifact card not found');
       return;
@@ -190,7 +191,7 @@ const registerTreasureChest = (registerArtifactEffect: ArtifactEffectRegistrar) 
     cardId,
     findCards,
   }) => {
-    const artifact = match.artifacts?.cards?.find((candidate) => candidate.id === cardId);
+    const artifact = findArtifactInMatch(match, cardId);
     if (!artifact) {
       console.warn('[treasure-chest artifact] artifact card not found');
       return;

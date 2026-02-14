@@ -30,6 +30,17 @@ export type MatchCardLike =
   | State
   | Artifact;
 
+// Card-like instance mapping by kind for strongly typed lookups.
+export type MatchCardLikeByKind = {
+  event: MatchEvent;
+  landmark: Landmark;
+  project: Project;
+  boon: Boon;
+  hex: Hex;
+  state: State;
+  artifact: Artifact;
+};
+
 // Result shape when callers need both kind and card-like instance.
 export type MatchCardLikeEntry = {
   kind: MatchCardLikeKind;
@@ -52,6 +63,33 @@ const getCardLikeCollections = (match: Match): { kind: MatchCardLikeKind; cards:
     { kind: 'state', cards: match.states?.cards ?? [] },
     { kind: 'artifact', cards: match.artifacts?.cards ?? [] },
   ];
+};
+
+// Returns the card-like collection for a specific kind.
+const getCardLikeCollectionByKind = <K extends MatchCardLikeKind>(
+  match: Match,
+  kind: K,
+): MatchCardLikeByKind[K][] => {
+  switch (kind) {
+    case 'event':
+      return (match.events ?? []) as MatchCardLikeByKind[K][];
+    case 'landmark':
+      return (match.landmarks ?? []) as MatchCardLikeByKind[K][];
+    case 'project':
+      return (match.projects ?? []) as MatchCardLikeByKind[K][];
+    case 'boon':
+      return (match.boons?.cards ?? []) as MatchCardLikeByKind[K][];
+    case 'hex':
+      return (match.hexes?.cards ?? []) as MatchCardLikeByKind[K][];
+    case 'state':
+      return (match.states?.cards ?? []) as MatchCardLikeByKind[K][];
+    case 'artifact':
+      return (match.artifacts?.cards ?? []) as MatchCardLikeByKind[K][];
+    default: {
+      const unreachableKind: never = kind;
+      throw new Error(`[find-card-like-in-match] unsupported kind ${unreachableKind}`);
+    }
+  }
 };
 
 // Finds a card-like entry by id and optionally restricts lookup to specific kinds.
@@ -84,3 +122,36 @@ export const findCardLikeInMatch = (
 ): MatchCardLike | undefined => {
   return findCardLikeEntryInMatch(match, cardLikeId, options)?.cardLike;
 };
+
+// Finds a card-like by id restricted to a specific kind.
+export const findCardLikeByKindInMatch = <K extends MatchCardLikeKind>(
+  match: Match | null | undefined,
+  cardLikeId: CardLikeId,
+  kind: K,
+): MatchCardLikeByKind[K] | undefined => {
+  if (!match) return undefined;
+  const collection = getCardLikeCollectionByKind(match, kind);
+  return collection.find((candidate) => candidate.id === cardLikeId);
+};
+
+// Convenience wrappers for specific card-like kinds.
+export const findEventInMatch = (match: Match | null | undefined, cardLikeId: CardLikeId) =>
+  findCardLikeByKindInMatch(match, cardLikeId, 'event');
+
+export const findLandmarkInMatch = (match: Match | null | undefined, cardLikeId: CardLikeId) =>
+  findCardLikeByKindInMatch(match, cardLikeId, 'landmark');
+
+export const findProjectInMatch = (match: Match | null | undefined, cardLikeId: CardLikeId) =>
+  findCardLikeByKindInMatch(match, cardLikeId, 'project');
+
+export const findBoonInMatch = (match: Match | null | undefined, cardLikeId: CardLikeId) =>
+  findCardLikeByKindInMatch(match, cardLikeId, 'boon');
+
+export const findHexInMatch = (match: Match | null | undefined, cardLikeId: CardLikeId) =>
+  findCardLikeByKindInMatch(match, cardLikeId, 'hex');
+
+export const findStateInMatch = (match: Match | null | undefined, cardLikeId: CardLikeId) =>
+  findCardLikeByKindInMatch(match, cardLikeId, 'state');
+
+export const findArtifactInMatch = (match: Match | null | undefined, cardLikeId: CardLikeId) =>
+  findCardLikeByKindInMatch(match, cardLikeId, 'artifact');

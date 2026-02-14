@@ -1,5 +1,6 @@
 import { BoonEffectRegistrar } from '@server-types/index.ts';
 import { CardId } from 'shared/types/index.ts';
+import { findBoonInMatch } from '@shared/find-card-like-in-match.ts';
 
 // Registers all Nocturne boon effects for the current match.
 export const registerNocturneBoonEffects = (registerBoonEffect: BoonEffectRegistrar) => {
@@ -108,7 +109,7 @@ const registerFieldsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     await runGameActionDelegate('gainTreasure', { count: 1 });
 
     // Resolve the boon instance for set-aside tracking.
-    const boon = match.boons.cards.find((candidate) => candidate.id === cardId);
+    const boon = findBoonInMatch(match, cardId);
     if (!boon) {
       console.warn(`[the-fields-gift boon] could not find boon instance ${cardId}`);
       return;
@@ -192,7 +193,7 @@ const registerForestsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     await runGameActionDelegate('gainTreasure', { count: 1 });
 
     // Resolve the boon instance for set-aside tracking.
-    const boon = match.boons.cards.find((candidate) => candidate.id === cardId);
+    const boon = findBoonInMatch(match, cardId);
     if (!boon) {
       console.warn(`[the-forests-gift boon] could not find boon instance ${cardId}`);
       return;
@@ -302,7 +303,7 @@ const registerRiversGift = (registerBoonEffect: BoonEffectRegistrar) => {
     cardId,
   }) => {
     // Resolve the boon instance for set-aside tracking.
-    const boon = match.boons.cards.find((candidate) => candidate.id === cardId);
+    const boon = findBoonInMatch(match, cardId);
     if (!boon) {
       console.warn(`[the-rivers-gift boon] could not find boon instance ${cardId}`);
       return;
