@@ -1951,6 +1951,7 @@ export class GameActionController implements GameActionDefinitionMap {
     moveToSetAside?: boolean;
   }, context?: GameActionContext) {
     const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
+    let previousLocation: { location: CardLocation; playerId?: PlayerId } | undefined;
 
     console.debug(`[revealCard action] ${getPlayerById(this.match, args.playerId)} revealing ${card}`);
 
@@ -1959,7 +1960,7 @@ export class GameActionController implements GameActionDefinitionMap {
     if (args.moveToSetAside) {
       console.debug(`[revealCard action] moving card to 'revealed' zone`);
 
-      await this.moveCard({
+      previousLocation = await this.moveCard({
         cardId: cardId,
         toPlayerId: args.playerId,
         to: {location: 'set-aside'},
@@ -1972,6 +1973,12 @@ export class GameActionController implements GameActionDefinitionMap {
       cardId: cardId,
       playerId: args.playerId,
       source: context?.loggingContext?.source,
+    });
+
+    await this.reactionManager.runCardLifecycleEvent('onRevealed', {
+      playerId: args.playerId,
+      cardId,
+      previousLocation,
     });
   }
 

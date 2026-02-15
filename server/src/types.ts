@@ -675,6 +675,7 @@ export type CardLifecycleCallbackContext = AppContext & {
 export type CardLifecycleEvent =
   | 'onGained'
   | 'onTrashed'
+  | 'onRevealed'
   | 'onDiscarded'
   | 'onEnterHand'
   | 'onLeaveHand'
@@ -685,6 +686,7 @@ export type CardLifecycleEvent =
 export interface CardLifecycleCallbackMap {
   onTrashed?: CardLifecycleCallback<'onTrashed'>;
   onGained?: CardLifecycleCallback<'onGained'>;
+  onRevealed?: CardLifecycleCallback<'onRevealed'>;
   onDiscarded?: CardLifecycleCallback<'onDiscarded'>;
   onEnterHand?: CardLifecycleCallback<'onEnterHand'>;
   onLeaveHand?: CardLifecycleCallback<'onLeaveHand'>;
@@ -696,6 +698,11 @@ export interface CardLifecycleCallbackMap {
 export interface CardLifecycleEventArgMap {
   onGained: { playerId: PlayerId; cardId: CardId; bought: boolean };
   onTrashed: {
+    playerId: PlayerId;
+    cardId: CardId;
+    previousLocation?: { location: CardLocation; playerId?: PlayerId };
+  };
+  onRevealed: {
     playerId: PlayerId;
     cardId: CardId;
     previousLocation?: { location: CardLocation; playerId?: PlayerId };

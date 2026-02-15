@@ -2,6 +2,8 @@ import { Card, CardId } from 'shared/types/index.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
+import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
+import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 
 // Renaissance card effects module (artifacts handled separately).
 const expansion: CardExpansionModule = {
@@ -666,6 +668,167 @@ const expansion: CardExpansionModule = {
         },
         { idSuffix: `cleanup-upgrade:${improvePlayInstance}` },
       );
+    },
+  },
+  'lackeys': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (cardEffectArgs, eventArgs) => {
+        // Gaining Lackeys grants +2 Villagers to the player that gained it.
+        console.debug(`[lackeys onGained effect] player ${eventArgs.playerId} gaining 2 Villagers`);
+        await cardEffectArgs.runGameActionDelegate('gainVillager', {
+          playerId: eventArgs.playerId,
+          count: 2,
+        });
+      },
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      // Playing Lackeys grants +2 Cards.
+      console.debug('[lackeys effect] drawing 2 cards');
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: 2,
+      });
+    },
+  },
+  'mountain-village': {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Mountain Village grants +2 Actions.
+      console.debug('[mountain-village effect] gaining 2 actions');
+      await cardEffectArgs.runGameActionDelegate('gainAction', {
+        count: 2,
+      });
+
+      // If discard has cards, player must take one into hand.
+      const discard = cardEffectArgs.cardSourceController.getSource('playerDiscard', cardEffectArgs.playerId);
+      if (discard.length) {
+        console.debug(`[mountain-village effect] selecting card from discard (${discard.length} card(s))`);
+        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Choose a card from your discard pile to put into your hand',
+          restrict: discard,
+          count: 1,
+        }) as CardId[];
+
+        const selectedCardId = selectedCardIds[0];
+        if (selectedCardId === undefined) {
+          console.warn('[mountain-village effect] no card selected from discard');
+          return;
+        }
+
+        console.debug(`[mountain-village effect] moving card ${selectedCardId} from discard to hand`);
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
+          cardId: selectedCardId,
+          toPlayerId: cardEffectArgs.playerId,
+          to: { location: 'playerHand' },
+        });
+        return;
+      }
+
+      // If discard is empty, draw one card.
+      console.debug('[mountain-village effect] discard empty, drawing 1 card');
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: 1,
+      });
+    },
+  },
+  'old-witch': {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Old Witch grants +3 Cards first.
+      console.debug('[old-witch effect] drawing 3 cards');
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: 3,
+      });
+
+      // Attack each other non-immune player in turn order.
+      const targetPlayerIds = findOrderedTargets({
+        startingPlayerId: cardEffectArgs.playerId,
+        appliesTo: 'ALL_OTHER',
+        match: cardEffectArgs.match,
+      }).filter((id) => !isPlayerImmune(cardEffectArgs.reactionContext, id));
+
+      console.debug(`[old-witch effect] targets ${targetPlayerIds.join(', ')}`);
+
+      for (const targetPlayerId of targetPlayerIds) {
+        // Gain a Curse if available.
+        const curseCards = cardEffectArgs.findCards([
+          { location: 'basicSupply' },
+          { cardKeys: 'curse' },
+        ]);
+
+        if (curseCards.length) {
+          const curseCard = curseCards.slice(-1)[0];
+          console.debug(`[old-witch effect] player ${targetPlayerId} gaining ${curseCard}`);
+          await cardEffectArgs.runGameActionDelegate('gainCard', {
+            playerId: targetPlayerId,
+            cardId: curseCard.id,
+            to: { location: 'playerDiscard' },
+          });
+        } else {
+          console.debug('[old-witch effect] no Curse in supply to gain');
+        }
+
+        // Then they may trash a Curse from hand (still allowed if Curse pile is empty).
+        const targetHand = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
+        const curseInHandIds = targetHand.filter((cardId) => cardEffectArgs.cardLibrary.getCard(cardId).cardKey === 'curse');
+        if (!curseInHandIds.length) {
+          console.debug(`[old-witch effect] player ${targetPlayerId} has no Curse in hand to trash`);
+          continue;
+        }
+
+        console.debug(`[old-witch effect] player ${targetPlayerId} may trash a Curse from hand`);
+        const promptResult = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+          playerId: targetPlayerId,
+          prompt: 'Trash a Curse from your hand?',
+          actionButtons: [
+            { label: 'NO', action: 1 },
+            { label: 'YES', action: 2 },
+          ],
+        }) as { action?: number } | null;
+
+        if (promptResult?.action !== 2) {
+          console.debug(`[old-witch effect] player ${targetPlayerId} declined to trash a Curse`);
+          continue;
+        }
+
+        const curseToTrashId = curseInHandIds[0];
+        const curseToTrash = cardEffectArgs.cardLibrary.getCard(curseToTrashId);
+        console.debug(`[old-witch effect] player ${targetPlayerId} trashing ${curseToTrash}`);
+        await cardEffectArgs.runGameActionDelegate('trashCard', {
+          playerId: targetPlayerId,
+          cardId: curseToTrashId,
+        });
+      }
+    },
+  },
+  'patron': {
+    registerLifeCycleMethods: () => ({
+      onRevealed: async (cardEffectArgs, eventArgs) => {
+        // Patron only grants Coffers when revealed during an Action phase.
+        const turnPhase = getTurnPhase(cardEffectArgs.match.turnPhaseIndex);
+        if (turnPhase !== 'action') {
+          console.debug(`[patron onRevealed effect] reveal in ${turnPhase} phase; no Coffers granted`);
+          return;
+        }
+
+        console.debug(`[patron onRevealed effect] player ${eventArgs.playerId} gaining 1 Coffer`);
+        await cardEffectArgs.runGameActionDelegate('gainCoffer', {
+          playerId: eventArgs.playerId,
+          count: 1,
+        });
+      },
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      // Patron grants +1 Villager and +$2 when played.
+      console.debug('[patron effect] gaining 1 Villager and 2 treasure');
+      await cardEffectArgs.runGameActionDelegate('gainVillager', {
+        playerId: cardEffectArgs.playerId,
+        count: 1,
+      });
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', {
+        count: 2,
+      });
     },
   },
 };

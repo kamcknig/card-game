@@ -80,6 +80,48 @@
     ],
     "abilityText": "+$2\nAt the start of Clean-up, you may trash an Action card you would discard from play this turn, to gain a card costing exactly $1 more than it."
   },
+  "lackeys": {
+    "cardName": "Lackeys",
+    "cost": {
+      "treasure": 2
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+2 Cards\nWhen you gain this, +2 Villagers."
+  },
+  "mountain-village": {
+    "cardName": "Mountain Village",
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+2 Actions\nLook through your discard pile and put a card from it into your hand; if you can't, +1 Card."
+  },
+  "old-witch": {
+    "cardName": "Old Witch",
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION",
+      "ATTACK"
+    ],
+    "abilityText": "+3 Cards\nEach other player gains a Curse and may trash a Curse from their hand."
+  },
+  "patron": {
+    "cardName": "Patron",
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION",
+      "REACTION"
+    ],
+    "abilityText": "+1 Villager\n+$2\nWhen something causes you to reveal this (using the word \"reveal\") in an Action phase, +1 Coffers."
+  },
   "flag": {
     "cost": {
       "treasure": 0
