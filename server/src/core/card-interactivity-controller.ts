@@ -124,12 +124,7 @@ export class CardInteractivityController {
         !Object.values<CardStats>(match.stats.cardsBought).concat(Object.values(match.stats.cardLikesBought))
           .some((stats) =>
             stats.playerId === currentPlayer.id &&
-            (
-              // Prefer turn-history matching to handle same-number extra turns (e.g., Outpost).
-              (stats.turnHistoryIndex !== undefined && stats.turnHistoryIndex === currentTurnHistoryIndex) ||
-              // Fallback for older stats records that predate turnHistoryIndex.
-              (stats.turnHistoryIndex === undefined && stats.turnNumber === match.turnNumber)
-            )
+            stats.turnHistoryIndex === currentTurnHistoryIndex
           )
       ) {
         for (const card of hand) {

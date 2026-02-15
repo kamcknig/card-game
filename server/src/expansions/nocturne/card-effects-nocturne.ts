@@ -828,7 +828,9 @@ const expansion: CardExpansionModule = {
   'monastery': {
     registerEffects: () => async (cardEffectArgs) => {
       // Count cards gained earlier this turn (do not update during trashing).
-      const gainedThisTurn = cardEffectArgs.match.stats.cardsGainedByTurn[cardEffectArgs.match.turnNumber] ?? [];
+      const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
+      const turnStatsIndex = turnHistoryIndex;
+      const gainedThisTurn = cardEffectArgs.match.stats.cardsGainedByTurn[turnStatsIndex] ?? [];
       const gainedCount =
         gainedThisTurn.filter((cardId) =>
           cardEffectArgs.match.stats.cardsGained[cardId]?.playerId === cardEffectArgs.playerId
@@ -1944,7 +1946,9 @@ const expansion: CardExpansionModule = {
   'devils-workshop': {
     registerEffects: () => async (cardEffectArgs) => {
       // Count the cards this player has gained this turn.
-      const gainedThisTurn = cardEffectArgs.match.stats.cardsGainedByTurn[cardEffectArgs.match.turnNumber] ?? [];
+      const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
+      const turnStatsIndex = turnHistoryIndex;
+      const gainedThisTurn = cardEffectArgs.match.stats.cardsGainedByTurn[turnStatsIndex] ?? [];
       const gainedCount =
         gainedThisTurn.filter((cardId) =>
           cardEffectArgs.match.stats.cardsGained[cardId]?.playerId === cardEffectArgs.playerId

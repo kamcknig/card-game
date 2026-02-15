@@ -4,6 +4,7 @@ import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
+import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 
 // Renaissance card effects module (artifacts handled separately).
 const expansion: CardExpansionModule = {
@@ -187,7 +188,9 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const cargoShipCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       // Build a per-play identifier so replaying Cargo Ship in one turn doesn't collide trigger IDs.
-      const playedThisTurn = cardEffectArgs.match.stats.playedCardsByTurn[cardEffectArgs.match.turnNumber] ?? [];
+      const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
+      const turnStatsIndex = turnHistoryIndex;
+      const playedThisTurn = cardEffectArgs.match.stats.playedCardsByTurn[turnStatsIndex] ?? [];
       const cargoShipPlayInstance = playedThisTurn
         .filter((playedCardId) => playedCardId === cardEffectArgs.cardId)
         .length;
@@ -564,7 +567,9 @@ const expansion: CardExpansionModule = {
   'improve': {
     registerEffects: () => async (cardEffectArgs) => {
       const improveCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const playedThisTurn = cardEffectArgs.match.stats.playedCardsByTurn[cardEffectArgs.match.turnNumber] ?? [];
+      const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
+      const turnStatsIndex = turnHistoryIndex;
+      const playedThisTurn = cardEffectArgs.match.stats.playedCardsByTurn[turnStatsIndex] ?? [];
       const improvePlayInstance = playedThisTurn
         .filter((playedCardId) => playedCardId === cardEffectArgs.cardId)
         .length;
@@ -829,6 +834,405 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('gainTreasure', {
         count: 2,
       });
+    },
+  },
+  'priest': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const priestCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
+      const turnStatsIndex = turnHistoryIndex;
+      const playedThisTurn = cardEffectArgs.match.stats.playedCardsByTurn[turnStatsIndex] ?? [];
+      const priestPlayInstance = playedThisTurn
+        .filter((playedCardId) => playedCardId === cardEffectArgs.cardId)
+        .length;
+
+      // Priest gives +$2 immediately when played.
+      console.debug('[priest effect] gaining 2 treasure');
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', {
+        count: 2,
+      });
+
+      // Priest requires trashing a card from hand if possible.
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      if (!hand.length) {
+        console.debug('[priest effect] no cards in hand to trash');
+      } else {
+        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Trash a card from your hand',
+          restrict: hand,
+          count: 1,
+        }) as CardId[];
+
+        const selectedCardId = selectedCardIds[0];
+        if (selectedCardId === undefined) {
+          console.warn('[priest effect] no card selected to trash');
+        } else {
+          const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+          console.debug(`[priest effect] trashing ${selectedCard}`);
+          await cardEffectArgs.runGameActionDelegate('trashCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: selectedCardId,
+          });
+        }
+      }
+
+      // For the rest of this turn, each card trashed by this player grants +$2.
+      const trashBonusTriggerId = cardEffectArgs.reactionManager.registerReactionTemplate(
+        priestCard,
+        'cardTrashed',
+        {
+          playerId: cardEffectArgs.playerId,
+          once: false,
+          compulsory: true,
+          allowMultipleInstances: true,
+          condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
+          triggeredEffectFn: async (triggeredArgs) => {
+            console.debug('[priest cardTrashed effect] gaining 2 treasure from trash trigger');
+            await triggeredArgs.runGameActionDelegate('gainTreasure', {
+              count: 2,
+            });
+          },
+        },
+        { idSuffix: `trash-bonus:${priestPlayInstance}` },
+      );
+
+      // Remove this Priest's trash bonus at end of turn.
+      cardEffectArgs.reactionManager.registerSystemTemplate(
+        priestCard,
+        'endTurn',
+        {
+          playerId: cardEffectArgs.playerId,
+          once: true,
+          compulsory: true,
+          allowMultipleInstances: true,
+          condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
+          triggeredEffectFn: async (triggeredArgs) => {
+            console.debug('[priest endTurn effect] removing trash bonus trigger');
+            triggeredArgs.reactionManager.unregisterTrigger(trashBonusTriggerId);
+          },
+        },
+        { idSuffix: `cleanup-trash-bonus:${priestPlayInstance}` },
+      );
+    },
+  },
+  'recruiter': {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Recruiter gives +2 Cards.
+      console.debug('[recruiter effect] drawing 2 cards');
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: 2,
+      });
+
+      // Recruiter requires trashing a card from hand if possible.
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      if (!hand.length) {
+        console.debug('[recruiter effect] no cards in hand to trash');
+        return;
+      }
+
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Trash a card from your hand',
+        restrict: hand,
+        count: 1,
+      }) as CardId[];
+
+      const selectedCardId = selectedCardIds[0];
+      if (selectedCardId === undefined) {
+        console.warn('[recruiter effect] no card selected to trash');
+        return;
+      }
+
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+      const { cost } = cardEffectArgs.cardPriceController.applyRules(selectedCard, {
+        playerId: cardEffectArgs.playerId,
+      });
+      const villagersToGain = Math.max(0, cost.treasure ?? 0);
+
+      console.debug(`[recruiter effect] trashing ${selectedCard}`);
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCardId,
+      });
+
+      if (!villagersToGain) {
+        console.debug('[recruiter effect] trashed card has no coin cost, gaining 0 Villagers');
+        return;
+      }
+
+      console.debug(`[recruiter effect] gaining ${villagersToGain} Villagers`);
+      await cardEffectArgs.runGameActionDelegate('gainVillager', {
+        playerId: cardEffectArgs.playerId,
+        count: villagersToGain,
+      });
+    },
+  },
+  'research': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const researchCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
+      const turnStatsIndex = turnHistoryIndex;
+      const playedThisTurn = cardEffectArgs.match.stats.playedCardsByTurn[turnStatsIndex] ?? [];
+      const researchPlayInstance = playedThisTurn
+        .filter((playedCardId) => playedCardId === cardEffectArgs.cardId)
+        .length;
+
+      // Research gives +1 Action.
+      console.debug('[research effect] gaining 1 action');
+      await cardEffectArgs.runGameActionDelegate('gainAction', {
+        count: 1,
+      });
+
+      // Research requires trashing a card from hand if possible.
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      if (!hand.length) {
+        console.debug('[research effect] no cards in hand to trash');
+        return;
+      }
+
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Trash a card from your hand',
+        restrict: hand,
+        count: 1,
+      }) as CardId[];
+
+      const selectedCardId = selectedCardIds[0];
+      if (selectedCardId === undefined) {
+        console.warn('[research effect] no card selected to trash');
+        return;
+      }
+
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+      const { cost } = cardEffectArgs.cardPriceController.applyRules(selectedCard, {
+        playerId: cardEffectArgs.playerId,
+      });
+      const setAsideCount = Math.max(0, cost.treasure ?? 0);
+
+      console.debug(`[research effect] trashing ${selectedCard}`);
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCardId,
+      });
+
+      // Set aside cards from the top of deck equal to trashed card's coin cost.
+      const setAsideCardIds: CardId[] = [];
+      for (let index = 0; index < setAsideCount; index++) {
+        const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+        if (!deck.length) {
+          console.debug('[research effect] deck empty, shuffling discard');
+          await cardEffectArgs.runGameActionDelegate('shuffleDeck', {
+            playerId: cardEffectArgs.playerId,
+          });
+        }
+
+        const updatedDeck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+        if (!updatedDeck.length) {
+          console.debug('[research effect] no cards left to set aside');
+          break;
+        }
+
+        const topCardId = updatedDeck.slice(-1)[0];
+        setAsideCardIds.push(topCardId);
+        console.debug(`[research effect] setting aside card ${topCardId} face down`);
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
+          cardId: topCardId,
+          toPlayerId: cardEffectArgs.playerId,
+          to: { location: 'set-aside' },
+          facing: 'back',
+        });
+      }
+
+      console.debug(`[research effect] set aside ${setAsideCardIds.length} card(s)`);
+
+      // Keep Research through cleanup and return set-aside cards to hand next turn.
+      cardEffectArgs.registerDurationEffect(
+        researchCard,
+        {
+          id: `research:${cardEffectArgs.cardId}:startTurn:${researchPlayInstance}`,
+          playerId: cardEffectArgs.playerId,
+          once: true,
+          compulsory: true,
+          allowMultipleInstances: true,
+          listeningFor: 'startTurn',
+          condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
+          triggeredEffectFn: async (triggeredArgs) => {
+            console.debug('[research startTurn effect] returning Research to play area');
+            await triggeredArgs.runGameActionDelegate('moveCard', {
+              cardId: researchCard.id,
+              to: { location: 'playArea' },
+            });
+
+            for (const setAsideCardId of setAsideCardIds) {
+              const setAside = triggeredArgs.cardSourceController.getSource('set-aside', cardEffectArgs.playerId);
+              if (!setAside.includes(setAsideCardId)) {
+                console.debug(`[research startTurn effect] set-aside card ${setAsideCardId} is no longer set aside`);
+                continue;
+              }
+
+              console.debug(`[research startTurn effect] moving set-aside card ${setAsideCardId} to hand`);
+              await triggeredArgs.runGameActionDelegate('moveCard', {
+                cardId: setAsideCardId,
+                toPlayerId: cardEffectArgs.playerId,
+                to: { location: 'playerHand' },
+              });
+            }
+          },
+        },
+      );
+    },
+  },
+  'scepter': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const scepterCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
+      const turnStatsIndex = turnHistoryIndex;
+      const playedThisTurn = cardEffectArgs.match.stats.playedCardsByTurn[turnStatsIndex] ?? [];
+      const scepterPlayInstance = playedThisTurn
+        .filter((playedCardId) => playedCardId === cardEffectArgs.cardId)
+        .length;
+
+      // Scepter can replay a non-Command Action played this turn and still in play.
+      const playedThisTurnSet = new Set(playedThisTurn);
+      const uniquePlayedActionIds = getCardsInPlay(cardEffectArgs.findCards)
+        .filter((card) => playedThisTurnSet.has(card.id))
+        .filter((card) => card.type.includes('ACTION') && !card.type.includes('COMMAND'))
+        .map((card) => card.id);
+
+      // If no replay target exists, Scepter must take +$2.
+      if (!uniquePlayedActionIds.length) {
+        console.debug('[scepter effect] no eligible Action card to replay, gaining 2 treasure');
+        await cardEffectArgs.runGameActionDelegate('gainTreasure', {
+          count: 2,
+        });
+        return;
+      }
+
+      const promptResult = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Choose one',
+        actionButtons: [
+          { label: '+$2', action: 1 },
+          { label: 'REPLAY ACTION', action: 2 },
+        ],
+      }) as { action?: number } | null;
+
+      if (promptResult?.action !== 2) {
+        console.debug('[scepter effect] player chose +2 treasure');
+        await cardEffectArgs.runGameActionDelegate('gainTreasure', {
+          count: 2,
+        });
+        return;
+      }
+
+      const selectedActionIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Choose an Action card to replay',
+        restrict: uniquePlayedActionIds,
+        count: 1,
+      }) as CardId[];
+
+      const selectedActionId = selectedActionIds[0];
+      if (selectedActionId === undefined) {
+        console.warn('[scepter effect] no Action selected to replay, gaining 2 treasure');
+        await cardEffectArgs.runGameActionDelegate('gainTreasure', {
+          count: 2,
+        });
+        return;
+      }
+
+      const selectedActionCard = cardEffectArgs.cardLibrary.getCard(selectedActionId);
+      console.debug(`[scepter effect] replaying ${selectedActionCard}`);
+      await cardEffectArgs.runGameActionDelegate('playCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedActionId,
+        overrides: {
+          actionCost: 0,
+          moveCard: false,
+        },
+      });
+
+      // When replaying a Duration card that stays in play, keep Scepter in play as well.
+      if (!selectedActionCard.type.includes('DURATION')) {
+        return;
+      }
+
+      const isReplayedCardInPlay = () =>
+        getCardsInPlay(cardEffectArgs.findCards).some((card) => card.id === selectedActionCard.id);
+
+      if (!isReplayedCardInPlay()) {
+        console.debug('[scepter effect] replayed Duration is not in play, no duration hold needed');
+        return;
+      }
+
+      console.debug('[scepter effect] replayed Duration is in play, registering duration hold');
+
+      // Move Scepter to activeDuration at cleanup if the replayed Duration is still in play.
+      cardEffectArgs.reactionManager.registerSystemTemplate(
+        scepterCard,
+        'startTurnPhase',
+        {
+          playerId: cardEffectArgs.playerId,
+          once: true,
+          compulsory: true,
+          allowMultipleInstances: true,
+          condition: ({ trigger }) => {
+            if (getTurnPhase(trigger.args.phaseIndex) !== 'cleanup') {
+              return false;
+            }
+
+            const currentPlayerId = getCurrentPlayer(cardEffectArgs.match).id;
+            if (currentPlayerId !== cardEffectArgs.playerId) {
+              return false;
+            }
+
+            return isReplayedCardInPlay();
+          },
+          triggeredEffectFn: async (triggeredArgs) => {
+            console.debug('[scepter duration effect] moving Scepter to activeDuration');
+            await triggeredArgs.runGameActionDelegate('moveCard', {
+              cardId: scepterCard.id,
+              to: { location: 'activeDuration' },
+            });
+          },
+        },
+        { idSuffix: `duration-cleanup:${scepterPlayInstance}` },
+      );
+
+      let durationHoldTriggerId = '';
+      durationHoldTriggerId = cardEffectArgs.reactionManager.registerReactionTemplate(
+        scepterCard,
+        'startTurn',
+        {
+          playerId: cardEffectArgs.playerId,
+          once: false,
+          compulsory: true,
+          allowMultipleInstances: true,
+          condition: ({ trigger, cardSourceController }) => {
+            if (trigger.args.playerId !== cardEffectArgs.playerId) {
+              return false;
+            }
+
+            return cardSourceController.getSource('activeDuration').includes(scepterCard.id);
+          },
+          triggeredEffectFn: async (triggeredArgs) => {
+            if (isReplayedCardInPlay()) {
+              console.debug('[scepter duration effect] replayed Duration still in play; keeping Scepter active');
+              return;
+            }
+
+            console.debug('[scepter duration effect] replayed Duration left play; returning Scepter to play area');
+            await triggeredArgs.runGameActionDelegate('moveCard', {
+              cardId: scepterCard.id,
+              to: { location: 'playArea' },
+            });
+            triggeredArgs.reactionManager.unregisterTrigger(durationHoldTriggerId);
+          },
+        },
+        { idSuffix: `duration-hold:${scepterPlayInstance}` },
+      );
     },
   },
 };

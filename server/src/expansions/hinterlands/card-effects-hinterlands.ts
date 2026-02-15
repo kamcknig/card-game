@@ -310,7 +310,7 @@ const expansion: CardExpansionModule = {
       }
 
       const crossroadsPlayedThisTurnCount =
-        (cardEffectArgs.match.stats.playedCardsByTurn[cardEffectArgs.match.turnNumber] ?? [])
+        (cardEffectArgs.match.stats.playedCardsByTurn[cardEffectArgs.match.stats.turns.length - 1] ?? [])
           .map(cardEffectArgs.cardLibrary.getCard)
           .filter((card) => card.owner === cardEffectArgs.playerId && card.cardKey === 'crossroads')
           .length;
@@ -550,7 +550,7 @@ const expansion: CardExpansionModule = {
     }),
     registerEffects: () => async (cardEffectArgs) => {
       const foolsGoldPlayedThisTurnCount =
-        (cardEffectArgs.match.stats.playedCardsByTurn[cardEffectArgs.match.turnNumber] ?? [])
+        (cardEffectArgs.match.stats.playedCardsByTurn[cardEffectArgs.match.stats.turns.length - 1] ?? [])
           .map(cardEffectArgs.cardLibrary.getCard)
           .filter((card) => card.owner === cardEffectArgs.playerId && card.cardKey === 'fools-gold')
           .length;

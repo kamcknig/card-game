@@ -211,6 +211,15 @@ export class GameActionController implements GameActionDefinitionMap {
     return turnHistoryIndex >= 0 ? turnHistoryIndex : undefined;
   }
 
+  // Returns the stats bucket key for the active turn.
+  private getCurrentTurnStatsIndex(): number {
+    const turnHistoryIndex = this.getCurrentTurnHistoryIndex();
+    if (turnHistoryIndex === undefined) {
+      throw new Error('[game action controller] turn history is not initialized');
+    }
+    return turnHistoryIndex;
+  }
+
   // Resolves the count spec into a deterministic selection count for computer picks.
   private resolveCountSpec(count: CountSpec | number, available: number, optional: boolean): number {
     if (typeof count === 'number') {
@@ -835,8 +844,9 @@ export class GameActionController implements GameActionDefinitionMap {
       toPlayerId: args.playerId,
     });
 
-    this.match.stats.cardsGainedByTurn[this.match.turnNumber] ??= [];
-    this.match.stats.cardsGainedByTurn[this.match.turnNumber]!.push(cardId);
+    const turnStatsIndex = this.getCurrentTurnStatsIndex();
+    this.match.stats.cardsGainedByTurn[turnStatsIndex] ??= [];
+    this.match.stats.cardsGainedByTurn[turnStatsIndex]!.push(cardId);
 
     this.match.stats.cardsGained[cardId] = {
       turnPhase: getTurnPhase(this.match.turnPhaseIndex),
@@ -1057,8 +1067,9 @@ export class GameActionController implements GameActionDefinitionMap {
       playerId: getCurrentPlayer(this.match).id,
     };
 
-    this.match.stats.trashedCardsByTurn[this.match.turnNumber] ??= [];
-    this.match.stats.trashedCardsByTurn[this.match.turnNumber]!.push(cardId);
+    const turnStatsIndex = this.getCurrentTurnStatsIndex();
+    this.match.stats.trashedCardsByTurn[turnStatsIndex] ??= [];
+    this.match.stats.trashedCardsByTurn[turnStatsIndex]!.push(cardId);
 
     console.info(`[trashCard action] trashed ${card}`);
 
@@ -1249,8 +1260,9 @@ export class GameActionController implements GameActionDefinitionMap {
 
     console.debug(`[buyCard action] adding bought stats to match`);
 
-    this.match.stats.cardsBoughtByTurn[this.match.turnNumber] ??= [];
-    this.match.stats.cardsBoughtByTurn[this.match.turnNumber]!.push(cardId);
+    const turnStatsIndex = this.getCurrentTurnStatsIndex();
+    this.match.stats.cardsBoughtByTurn[turnStatsIndex] ??= [];
+    this.match.stats.cardsBoughtByTurn[turnStatsIndex]!.push(cardId);
 
     this.match.stats.cardsBought[cardId] = {
       turnPhase: getTurnPhase(this.match.turnPhaseIndex),
@@ -1309,8 +1321,9 @@ export class GameActionController implements GameActionDefinitionMap {
 
     console.debug(`[buyEvent action] reducing player ${args.playerId} buys by 1 to ${this.match.playerBuys}`);
 
-    this.match.stats.cardLikesBoughtByTurn[this.match.turnNumber] ??= [];
-    this.match.stats.cardLikesBoughtByTurn[this.match.turnNumber]!.push(args.cardLikeId);
+    const turnStatsIndex = this.getCurrentTurnStatsIndex();
+    this.match.stats.cardLikesBoughtByTurn[turnStatsIndex] ??= [];
+    this.match.stats.cardLikesBoughtByTurn[turnStatsIndex]!.push(args.cardLikeId);
 
     this.match.stats.cardLikesBought[args.cardLikeId] = {
       playerId: args.playerId,
@@ -1412,8 +1425,9 @@ export class GameActionController implements GameActionDefinitionMap {
     this.match.playerBuys--;
     console.debug(`[buyProject action] reducing player ${args.playerId} buys by 1 to ${this.match.playerBuys}`);
 
-    this.match.stats.cardLikesBoughtByTurn[this.match.turnNumber] ??= [];
-    this.match.stats.cardLikesBoughtByTurn[this.match.turnNumber]!.push(args.cardLikeId);
+    const turnStatsIndex = this.getCurrentTurnStatsIndex();
+    this.match.stats.cardLikesBoughtByTurn[turnStatsIndex] ??= [];
+    this.match.stats.cardLikesBoughtByTurn[turnStatsIndex]!.push(args.cardLikeId);
 
     this.match.stats.cardLikesBought[args.cardLikeId] = {
       playerId: args.playerId,
@@ -2515,8 +2529,9 @@ export class GameActionController implements GameActionDefinitionMap {
       console.info(`[playCard action] Reducing player's action count to ${this.match.playerActions}`);
     }
 
-    this.match.stats.playedCardsByTurn[this.match.turnNumber] ??= [];
-    this.match.stats.playedCardsByTurn[this.match.turnNumber]!.push(cardId);
+    const turnStatsIndex = this.getCurrentTurnStatsIndex();
+    this.match.stats.playedCardsByTurn[turnStatsIndex] ??= [];
+    this.match.stats.playedCardsByTurn[turnStatsIndex]!.push(cardId);
     this.match.stats.playedCards[cardId] = {
       turnPhase: getTurnPhase(this.match.turnPhaseIndex),
       turnNumber: this.match.turnNumber,

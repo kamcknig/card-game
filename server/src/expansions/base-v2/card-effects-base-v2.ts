@@ -605,10 +605,11 @@ const expansionModule: CardExpansionModule = {
             if (silverCard.cardKey !== 'silver') return false;
 
             const playedCardInfo = match.stats.playedCards;
+            const currentTurnHistoryIndex = match.stats.turns.length - 1;
             const playedSilvers = Object.keys(playedCardInfo)
               .filter((cardId) =>
                 cardLibrary.getCard(+cardId).cardKey === 'silver' &&
-                playedCardInfo[+cardId].turnNumber === match.turnNumber &&
+                playedCardInfo[+cardId].turnHistoryIndex === currentTurnHistoryIndex &&
                 playedCardInfo[+cardId].playerId === silverTrigger.args.playerId
               );
 

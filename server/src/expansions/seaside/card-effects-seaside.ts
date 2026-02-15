@@ -227,9 +227,11 @@ const expansion: CardExpansionModule = {
 
           const playedSilverCards = Object.keys(match.stats.playedCards)
             .filter((cardId) => {
+              const currentTurnHistoryIndex = match.stats.turns.length - 1;
+              const playedStats = match.stats.playedCards[+cardId];
               return ['silver', 'gold'].includes(cardLibrary.getCard(+cardId).cardKey) &&
-                match.stats.playedCards[+cardId].turnNumber === match.turnNumber &&
-                match.stats.playedCards[+cardId].playerId === trigger.args.playerId;
+                playedStats.turnHistoryIndex === currentTurnHistoryIndex &&
+                playedStats.playerId === trigger.args.playerId;
             });
 
           return playedSilverCards.length === 1;
@@ -1082,12 +1084,24 @@ const expansion: CardExpansionModule = {
       console.debug(`[smugglers effect] looking at ${previousPlayer} cards gained`);
 
       const cardsGained = cardEffectArgs.match.stats.cardsGained;
+      const currentTurnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
+      const previousPlayerLastTurnHistoryIndex = (() => {
+        for (let index = currentTurnHistoryIndex - 1; index >= 0; index--) {
+          if (cardEffectArgs.match.stats.turns[index]?.playerId === previousPlayer.id) {
+            return index;
+          }
+        }
+        return undefined;
+      })();
 
       const cardIdsGained = Object.keys(cardsGained)
         .map(Number)
         .filter((cardId) => {
-          return cardsGained[cardId].playerId === previousPlayer.id &&
-            cardsGained[cardId].turnNumber === cardEffectArgs.match.turnNumber - 1;
+          const gainStats = cardsGained[cardId];
+          if (gainStats.playerId !== previousPlayer.id || previousPlayerLastTurnHistoryIndex === undefined) {
+            return false;
+          }
+          return gainStats.turnHistoryIndex === previousPlayerLastTurnHistoryIndex;
         });
 
       let cards = cardEffectArgs.findCards({ kind: 'upTo', amount: { treasure: 6 }, playerId: cardEffectArgs.playerId })
@@ -1286,7 +1300,9 @@ const expansion: CardExpansionModule = {
 
           const victoryCardsGained = Object.entries(conditionArgs.match.stats.cardsGained)
             .filter(([id, stats]) => {
-              return stats.turnNumber === conditionArgs.match.turnNumber &&
+              const currentTurnHistoryIndex = conditionArgs.match.stats.turns.length - 1;
+              const gainedThisTurn = stats.turnHistoryIndex === currentTurnHistoryIndex;
+              return gainedThisTurn &&
                 conditionArgs.cardLibrary.getCard(+id).type.includes('VICTORY');
             }).map((results) => Number(results[0]));
 

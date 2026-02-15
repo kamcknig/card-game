@@ -504,8 +504,9 @@ const effectMap: CardExpansionModule = {
             return false;
           }
 
-          const turnNumber = conditionArgs.match.turnNumber;
-          const playedThisTurn = conditionArgs.match.stats.playedCardsByTurn[turnNumber] ?? [];
+          const turnHistoryIndex = conditionArgs.match.stats.turns.length - 1;
+          const turnStatsIndex = turnHistoryIndex;
+          const playedThisTurn = conditionArgs.match.stats.playedCardsByTurn[turnStatsIndex] ?? [];
           const actionPlaysThisTurn = playedThisTurn.filter((cardId) => {
             const playStats = conditionArgs.match.stats.playedCards[cardId];
             if (playStats?.playerId !== cardEffectArgs.playerId) {

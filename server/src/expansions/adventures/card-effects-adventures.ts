@@ -1547,11 +1547,13 @@ const expansion: CardExpansionModule = {
     registerLifeCycleMethods: () => ({
       onGained: async (args, eventArgs) => {
         const stats = args.match.stats;
+        const turnHistoryIndex = args.match.stats.turns.length - 1;
+        const turnStatsIndex = turnHistoryIndex;
         if (stats.cardsGained?.[eventArgs.cardId]?.turnPhase !== 'buy') {
           return;
         }
 
-        const cardsGainedThisTurnBuyPhase = stats.cardsGainedByTurn?.[args.match.turnNumber]
+        const cardsGainedThisTurnBuyPhase = stats.cardsGainedByTurn?.[turnStatsIndex]
           ?.filter((cardId) =>
             stats.cardsGained[cardId].playerId === eventArgs.playerId &&
             stats.cardsGained[cardId].turnPhase === 'buy'
@@ -2628,8 +2630,10 @@ const expansion: CardExpansionModule = {
         distance: -1,
       });
 
+      const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
+      const turnStatsIndex = turnHistoryIndex;
       const cardsGained = cardEffectArgs.match.stats.cardsGainedByTurn
-        ?.[cardEffectArgs.match.turnNumber]
+        ?.[turnStatsIndex]
         ?.map(cardEffectArgs.cardLibrary.getCard)
         ?.filter((card) => card.owner === rightPlayer.id) ?? [];
 

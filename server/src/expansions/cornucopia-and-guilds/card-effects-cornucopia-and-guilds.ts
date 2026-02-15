@@ -1251,8 +1251,10 @@ const expansion: CardExpansionModule = {
         },
         triggeredEffectFn: async (triggerEffectArgs) => {
           const stats = triggerEffectArgs.match.stats;
+          const turnHistoryIndex = triggerEffectArgs.match.stats.turns.length - 1;
+          const turnStatsIndex = turnHistoryIndex;
 
-          const cardIdsGainedThisTurn = stats.cardsGainedByTurn[triggerEffectArgs.match.turnNumber];
+          const cardIdsGainedThisTurn = stats.cardsGainedByTurn[turnStatsIndex];
           const selfGainedCardIdsThisTurn = cardIdsGainedThisTurn?.filter((cardId) =>
             stats.cardsGained[cardId].playerId === cardEffectArgs.playerId
           ) ?? [];

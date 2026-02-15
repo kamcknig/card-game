@@ -113,7 +113,7 @@ export type CardStats = {
 };
 
 export type MatchStats = {
-  // Chronological turn history, including extra turns.
+  // Chronological turn history, including extra turns. The last turn in the list is the current turn.
   turns: MatchTurnStats[];
 
   cardLikesBoughtByTurn: Record<number, CardId[] | undefined>;

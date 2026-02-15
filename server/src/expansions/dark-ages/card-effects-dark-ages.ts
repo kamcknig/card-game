@@ -1505,7 +1505,9 @@ const cardEffects: CardExpansionModule = {
           if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') return false;
           if (getCurrentPlayer(conditionArgs.match).id !== cardEffectArgs.playerId) return false;
 
-          const cardIdsGained = conditionArgs.match.stats.cardsGainedByTurn[conditionArgs.match.turnNumber] ?? [];
+          const turnHistoryIndex = conditionArgs.match.stats.turns.length - 1;
+          const turnStatsIndex = turnHistoryIndex;
+          const cardIdsGained = conditionArgs.match.stats.cardsGainedByTurn[turnStatsIndex] ?? [];
 
           const cardIdsGainedDuringBuyPhase = cardIdsGained.filter((cardId) => {
             const stats = conditionArgs.match.stats.cardsGained[cardId];

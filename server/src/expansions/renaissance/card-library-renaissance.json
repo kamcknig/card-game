@@ -122,6 +122,48 @@
     ],
     "abilityText": "+1 Villager\n+$2\nWhen something causes you to reveal this (using the word \"reveal\") in an Action phase, +1 Coffers."
   },
+  "priest": {
+    "cardName": "Priest",
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+$2\nTrash a card from your hand. For the rest of this turn, when you trash a card, +$2."
+  },
+  "recruiter": {
+    "cardName": "Recruiter",
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+2 Cards\nTrash a card from your hand. +1 Villager per $1 it costs."
+  },
+  "research": {
+    "cardName": "Research",
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION",
+      "DURATION"
+    ],
+    "abilityText": "+1 Action\nTrash a card from your hand. Per $1 it costs, set aside a card from your deck face down (on this). At the start of your next turn, put those cards into your hand."
+  },
+  "scepter": {
+    "cardName": "Scepter",
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "TREASURE",
+      "COMMAND"
+    ],
+    "abilityText": "Choose one: +$2; or replay a non-Command Action card you played this turn that's still in play."
+  },
   "flag": {
     "cost": {
       "treasure": 0

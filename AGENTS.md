@@ -59,6 +59,8 @@ execution
 - Refactors that are not directly justified by correctness or extensibility
 - Removing commented code without being asked
 - whitespace changes
+- backwards compatibility. this is alpha software. so unless explicitly told,
+  this is not a priority
 
 ---
 

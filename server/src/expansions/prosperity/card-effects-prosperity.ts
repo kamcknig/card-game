@@ -67,7 +67,9 @@ const expansion: CardExpansionModule = {
   },
   'bank': {
     registerEffects: () => async (effectArgs) => {
-      const playedCardIds = effectArgs.match.stats.playedCardsByTurn[effectArgs.match.turnNumber];
+      const turnHistoryIndex = effectArgs.match.stats.turns.length - 1;
+      const turnStatsIndex = turnHistoryIndex;
+      const playedCardIds = effectArgs.match.stats.playedCardsByTurn[turnStatsIndex];
       const playedTreasureCards = playedCardIds?.map(effectArgs.cardLibrary.getCard)
         .filter((card) => card.type.includes('TREASURE'));
 
@@ -289,10 +291,11 @@ const expansion: CardExpansionModule = {
         once: true,
         allowMultipleInstances: true,
         condition: (conditionArgs) => {
-          const currentTurnNumber = conditionArgs.match.turnNumber;
-          if (
-            currentTurnNumber !== conditionArgs.match.stats.cardsGained[conditionArgs.trigger.args.cardId].turnNumber
-          ) return false;
+          const gainStats = conditionArgs.match.stats.cardsGained[conditionArgs.trigger.args.cardId];
+          if (!gainStats) return false;
+          const currentTurnHistoryIndex = conditionArgs.match.stats.turns.length - 1;
+          const gainedThisTurn = gainStats.turnHistoryIndex === currentTurnHistoryIndex;
+          if (!gainedThisTurn) return false;
           const card = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
           if (!card.type.includes('ACTION')) return false;
           return true;
@@ -474,7 +477,7 @@ const expansion: CardExpansionModule = {
   'grand-market': {
     registerActionConditions: () => ({
       canBuy: ({ match, cardLibrary, playerId }) =>
-        !match.stats.playedCardsByTurn[match.turnNumber]?.find((cardId) => {
+        !match.stats.playedCardsByTurn[match.stats.turns.length - 1]?.find((cardId) => {
           return cardLibrary.getCard(cardId).cardKey === 'copper' &&
             match.stats.playedCards[cardId].playerId === playerId;
         }),
@@ -1024,17 +1027,19 @@ const expansion: CardExpansionModule = {
           },
         }) as { action: number; result: CardKey };
 
-        const cardKey = namedCardResult.result;
+      const cardKey = namedCardResult.result;
+      const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
+      const turnStatsIndex = turnHistoryIndex;
 
-        cardsNamedByTurn[cardEffectArgs.match.turnNumber] ??= [];
-        cardsNamedByTurn[cardEffectArgs.match.turnNumber].push(cardKey);
+      cardsNamedByTurn[turnStatsIndex] ??= [];
+      cardsNamedByTurn[turnStatsIndex].push(cardKey);
 
         const cardIds = cardEffectArgs.findCards([
           { location: ['basicSupply', 'kingdomSupply'] },
           { kind: 'upTo', amount: { treasure: 5 }, playerId: cardEffectArgs.playerId },
         ])
-          .filter((card) => !cardsNamedByTurn[cardEffectArgs.match.turnNumber].includes(card.cardKey))
-          .map((card) => card.id);
+        .filter((card) => !cardsNamedByTurn[turnStatsIndex].includes(card.cardKey))
+        .map((card) => card.id);
 
         if (!cardIds.length) {
           console.debug(`[war-chest effect] no cards found`);
