@@ -424,8 +424,8 @@ export type CardExpansionActionConditionMap = {
   canBuy?: (args: { match: Match; cardLibrary: MatchCardLibrary; playerId: PlayerId }) => boolean;
 };
 
-// Shared context for checking whether an alternate buy option can currently be used.
-export type CardAlternateBuyOptionCanUseContext = {
+// Shared context for checking whether an alternate buy option can currently be bought.
+export type CardAlternateBuyOptionCanBuyContext = {
   match: Match;
   playerId: PlayerId;
   card: Card;
@@ -436,7 +436,7 @@ export type CardAlternateBuyOptionCanUseContext = {
 };
 
 // Runtime context for applying an alternate buy option.
-export type CardAlternateBuyOptionApplyContext = CardAlternateBuyOptionCanUseContext & {
+export type CardAlternateBuyOptionApplyContext = CardAlternateBuyOptionCanBuyContext & {
   runGameActionDelegate: RunGameActionDelegate;
   reactionManager: ReactionManager;
   logManager: LogManager;
@@ -452,7 +452,7 @@ export type CardAlternateBuyOptionApplyResult = {
 export type CardAlternateBuyOption = {
   id: string;
   label: string;
-  canBuy: (args: CardAlternateBuyOptionCanUseContext) => boolean;
+  canBuy: (args: CardAlternateBuyOptionCanBuyContext) => boolean;
   apply: (args: CardAlternateBuyOptionApplyContext) => Promise<CardAlternateBuyOptionApplyResult | void>;
 };
 

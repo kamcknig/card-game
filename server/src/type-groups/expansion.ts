@@ -3,7 +3,7 @@ export type {
   CardAlternateBuyOption,
   CardAlternateBuyOptionApplyContext,
   CardAlternateBuyOptionApplyResult,
-  CardAlternateBuyOptionCanUseContext,
+  CardAlternateBuyOptionCanBuyContext,
   CardExpansionActionConditionMap,
   CardExpansionModule,
   ClientEventRegistrar,
