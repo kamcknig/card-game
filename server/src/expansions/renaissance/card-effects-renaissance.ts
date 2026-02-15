@@ -1,5 +1,7 @@
 import { Card, CardId } from 'shared/types/index.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
+import { getCurrentPlayer } from '../../utils/get-current-player.ts';
+import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 
 // Renaissance card effects module (artifacts handled separately).
 const expansion: CardExpansionModule = {
@@ -381,6 +383,17 @@ const expansion: CardExpansionModule = {
   'experiment': {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
+        // Marked extra copies should still be gained normally, but should not chain another extra gain.
+        const gainedExperimentCard = cardEffectArgs.cardLibrary.getCard<{ suppressNextOnGained?: boolean }>(
+          eventArgs.cardId,
+        );
+        const gainedExperimentMetadata = gainedExperimentCard.metadata;
+        if (gainedExperimentMetadata.suppressNextOnGained) {
+          delete gainedExperimentMetadata.suppressNextOnGained;
+          console.debug('[experiment onGained effect] skipping chained extra gain for marked Experiment');
+          return;
+        }
+
         // Experiment gains one additional copy from supply without chaining further onGained effects.
         const experimentCardsInSupply = cardEffectArgs.findCards([
           { location: ['kingdomSupply', 'basicSupply'] },
@@ -393,14 +406,19 @@ const expansion: CardExpansionModule = {
         }
 
         const experimentToGain = experimentCardsInSupply.slice(-1)[0];
-        console.debug(`[experiment onGained effect] gaining additional ${experimentToGain}`);
+        // Mark the extra copy so its own onGained resolves but does not grant another Experiment.
+        const extraExperimentCard = cardEffectArgs.cardLibrary.getCard<{ suppressNextOnGained?: boolean }>(
+          experimentToGain.id,
+        );
+        const extraExperimentMetadata = extraExperimentCard.metadata;
+        extraExperimentMetadata.suppressNextOnGained = true;
+        console.debug(`[experiment onGained effect] gaining additional ${extraExperimentCard}`);
         await cardEffectArgs.runGameActionDelegate('gainCard', {
           playerId: eventArgs.playerId,
-          cardId: experimentToGain.id,
+          cardId: extraExperimentCard.id,
           to: { location: 'playerDiscard' },
         }, {
           loggingContext: { source: eventArgs.cardId },
-          suppressLifeCycle: { events: ['onGained'] },
         });
       },
     }),
@@ -451,6 +469,203 @@ const expansion: CardExpansionModule = {
         cardId: experimentCard.id,
         to: { location: returnLocation },
       });
+    },
+  },
+  'flag-bearer': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (cardEffectArgs, eventArgs) => {
+        // Flag Bearer grants the Flag artifact to the player that gained it.
+        console.debug(`[flag-bearer onGained effect] player ${eventArgs.playerId} taking Flag`);
+        await cardEffectArgs.runGameActionDelegate('gainArtifact', {
+          playerId: eventArgs.playerId,
+          artifactKey: 'flag',
+        });
+      },
+      onTrashed: async (cardEffectArgs, eventArgs) => {
+        // Flag Bearer grants the Flag artifact to the player that trashed it.
+        console.debug(`[flag-bearer onTrashed effect] player ${eventArgs.playerId} taking Flag`);
+        await cardEffectArgs.runGameActionDelegate('gainArtifact', {
+          playerId: eventArgs.playerId,
+          artifactKey: 'flag',
+        });
+      },
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      // Flag Bearer gives +$2 when played.
+      console.debug('[flag-bearer effect] gaining +2 treasure');
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+    },
+  },
+  'hideout': {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Hideout gives +1 Card and +2 Actions before the mandatory trash.
+      console.debug('[hideout effect] drawing 1 card and gaining 2 actions');
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: 1,
+      });
+      await cardEffectArgs.runGameActionDelegate('gainAction', {
+        count: 2,
+      });
+
+      // Trashing is mandatory; if hand is empty there is no legal card to trash.
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      if (!hand.length) {
+        console.debug('[hideout effect] no cards in hand to trash');
+        return;
+      }
+
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Trash a card from your hand',
+        restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
+        count: 1,
+      }) as CardId[];
+
+      const selectedCardId = selectedCardIds[0];
+      if (selectedCardId === undefined) {
+        console.warn('[hideout effect] no card selected to trash');
+        return;
+      }
+
+      const trashedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+      console.debug(`[hideout effect] trashing ${trashedCard}`);
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCardId,
+      });
+
+      // Only trashing a Victory card causes a Curse gain.
+      if (!trashedCard.type.includes('VICTORY')) {
+        console.debug('[hideout effect] trashed card is not a Victory card');
+        return;
+      }
+
+      const curseCards = cardEffectArgs.findCards([
+        { location: 'basicSupply' },
+        { cardKeys: 'curse' },
+      ]);
+      if (!curseCards.length) {
+        console.debug('[hideout effect] no Curse cards in supply');
+        return;
+      }
+
+      const curseCard = curseCards.slice(-1)[0];
+      console.debug(`[hideout effect] trashed Victory card, gaining ${curseCard}`);
+      await cardEffectArgs.runGameActionDelegate('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: curseCard.id,
+        to: { location: 'playerDiscard' },
+      });
+    },
+  },
+  'improve': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const improveCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const playedThisTurn = cardEffectArgs.match.stats.playedCardsByTurn[cardEffectArgs.match.turnNumber] ?? [];
+      const improvePlayInstance = playedThisTurn
+        .filter((playedCardId) => playedCardId === cardEffectArgs.cardId)
+        .length;
+
+      // Improve gives +$2 immediately when played.
+      console.debug('[improve effect] gaining +2 treasure');
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+
+      // Register a one-time cleanup trigger for this play instance.
+      cardEffectArgs.reactionManager.registerReactionTemplate(
+        improveCard,
+        'startTurnPhase',
+        {
+          playerId: cardEffectArgs.playerId,
+          once: true,
+          compulsory: true,
+          allowMultipleInstances: true,
+          condition: ({ trigger, match }) => {
+            if (getTurnPhase(trigger.args.phaseIndex) !== 'cleanup') {
+              return false;
+            }
+
+            return getCurrentPlayer(match).id === cardEffectArgs.playerId;
+          },
+          triggeredEffectFn: async (triggeredArgs) => {
+            // Improve can only trash Actions currently in play that would be discarded this cleanup.
+            const actionCardsInPlay = triggeredArgs.cardSourceController
+              .getSource('playArea')
+              .filter((cardId) => triggeredArgs.cardLibrary.getCard(cardId).type.includes('ACTION'));
+
+            if (!actionCardsInPlay.length) {
+              console.debug('[improve cleanup effect] no Action cards in play to trash');
+              return;
+            }
+
+            const selectedCardIds = await triggeredArgs.runGameActionDelegate('selectCard', {
+              playerId: cardEffectArgs.playerId,
+              prompt: 'You may trash an Action card from play',
+              restrict: actionCardsInPlay,
+              count: 1,
+              optional: true,
+            }) as CardId[];
+
+            const selectedCardId = selectedCardIds[0];
+            if (selectedCardId === undefined) {
+              console.debug('[improve cleanup effect] player declined to trash an Action card');
+              return;
+            }
+
+            const selectedCard = triggeredArgs.cardLibrary.getCard(selectedCardId);
+            const { cost } = triggeredArgs.cardPriceController.applyRules(selectedCard, {
+              playerId: cardEffectArgs.playerId,
+            });
+
+            console.debug(`[improve cleanup effect] trashing ${selectedCard}`);
+            await triggeredArgs.runGameActionDelegate('trashCard', {
+              playerId: cardEffectArgs.playerId,
+              cardId: selectedCardId,
+            });
+
+            // If a card was trashed, gaining exactly $1 more is mandatory when possible.
+            const gainCandidates = triggeredArgs.findCards([
+              { location: ['basicSupply', 'kingdomSupply'] },
+              {
+                playerId: cardEffectArgs.playerId,
+                kind: 'exact',
+                amount: {
+                  treasure: cost.treasure + 1,
+                  potion: cost.potion,
+                  debt: cost.debt,
+                },
+              },
+            ]);
+
+            if (!gainCandidates.length) {
+              console.debug('[improve cleanup effect] no cards costing exactly $1 more');
+              return;
+            }
+
+            const gainCardIds = await triggeredArgs.runGameActionDelegate('selectCard', {
+              playerId: cardEffectArgs.playerId,
+              prompt: `Gain a card costing exactly $1 more than ${selectedCard.cardName}`,
+              restrict: gainCandidates.map((card) => card.id),
+              count: 1,
+            }) as CardId[];
+
+            const gainCardId = gainCardIds[0];
+            if (gainCardId === undefined) {
+              console.warn('[improve cleanup effect] no card selected to gain');
+              return;
+            }
+
+            const gainedCard = triggeredArgs.cardLibrary.getCard(gainCardId);
+            console.debug(`[improve cleanup effect] gaining ${gainedCard}`);
+            await triggeredArgs.runGameActionDelegate('gainCard', {
+              playerId: cardEffectArgs.playerId,
+              cardId: gainCardId,
+              to: { location: 'playerDiscard' },
+            });
+          },
+        },
+        { idSuffix: `cleanup-upgrade:${improvePlayInstance}` },
+      );
     },
   },
 };

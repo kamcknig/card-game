@@ -50,6 +50,36 @@
     ],
     "abilityText": "+2 Cards\n+1 Action\nReturn this to its pile.\nWhen you gain this, gain another Experiment (that doesn't come with another)."
   },
+  "flag-bearer": {
+    "cardName": "Flag Bearer",
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+$2\nWhen you gain or trash this, take the Flag."
+  },
+  "hideout": {
+    "cardName": "Hideout",
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+1 Card\n+2 Actions\nTrash a card from your hand. If it's a Victory card, gain a Curse."
+  },
+  "improve": {
+    "cardName": "Improve",
+    "cost": {
+      "treasure": 3
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+$2\nAt the start of Clean-up, you may trash an Action card you would discard from play this turn, to gain a card costing exactly $1 more than it."
+  },
   "flag": {
     "cost": {
       "treasure": 0

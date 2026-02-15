@@ -1723,6 +1723,15 @@ const expansion: CardExpansionModule = {
   'port': {
     registerLifeCycleMethods: () => ({
       onGained: async (args, eventArgs) => {
+        // Marked extra copies should still be gained normally, but should not chain another extra Port gain.
+        const gainedPortCard = args.cardLibrary.getCard<{ suppressNextOnGained?: boolean }>(eventArgs.cardId);
+        const gainedPortMetadata = gainedPortCard.metadata;
+        if (gainedPortMetadata.suppressNextOnGained) {
+          delete gainedPortMetadata.suppressNextOnGained;
+          console.debug('[port onGained effect] skipping chained extra gain for marked Port');
+          return;
+        }
+
         const portCards = args.findCards([
           { location: 'kingdomSupply' },
           { cardKeys: 'port' },
@@ -1734,14 +1743,18 @@ const expansion: CardExpansionModule = {
         }
 
         const portToGain = portCards.slice(-1)[0];
+        // Mark the extra copy so its own onGained resolves but does not grant another Port.
+        const extraPortCard = args.cardLibrary.getCard<{ suppressNextOnGained?: boolean }>(portToGain.id);
+        const extraPortMetadata = extraPortCard.metadata;
+        extraPortMetadata.suppressNextOnGained = true;
 
-        console.debug(`[port onGained effect] gaining ${portToGain}`);
+        console.debug(`[port onGained effect] gaining ${extraPortCard}`);
 
         await args.runGameActionDelegate('gainCard', {
           playerId: eventArgs.playerId,
-          cardId: portToGain.id,
+          cardId: extraPortCard.id,
           to: { location: 'playerDiscard' },
-        }, { suppressLifeCycle: { events: ['onGained'] } });
+        });
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
