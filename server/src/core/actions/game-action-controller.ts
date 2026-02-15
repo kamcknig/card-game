@@ -874,6 +874,7 @@ export class GameActionController implements GameActionDefinitionMap {
         playerId: args.playerId,
         cardId,
         bought: context?.bought ?? false,
+        gainContext: context?.lifecycleContext?.onGained,
       });
     } else {
       console.debug('[gainCard action] lifecycle onGained event suppressed');

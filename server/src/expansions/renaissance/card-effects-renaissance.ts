@@ -385,15 +385,15 @@ const expansion: CardExpansionModule = {
   'experiment': {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
-        // Marked extra copies should still be gained normally, but should not chain another extra gain.
-        const gainedExperimentCard = cardEffectArgs.cardLibrary.getCard<{ suppressNextOnGained?: boolean }>(
-          eventArgs.cardId,
-        );
-        const gainedExperimentMetadata = gainedExperimentCard.metadata;
-        if (gainedExperimentMetadata.suppressNextOnGained) {
-          delete gainedExperimentMetadata.suppressNextOnGained;
-          console.debug('[experiment onGained effect] skipping chained extra gain for marked Experiment');
-          return;
+        // Extra copies still fire onGained, but must not chain another extra gain.
+        // If the gain source is another Experiment instance, skip chaining.
+        if (eventArgs.gainContext?.sourceCardId !== undefined) {
+          const gainedCard = cardEffectArgs.cardLibrary.getCard(eventArgs.cardId);
+          const sourceCard = cardEffectArgs.cardLibrary.getCard(eventArgs.gainContext.sourceCardId);
+          if (gainedCard.cardKey === sourceCard.cardKey) {
+            console.debug('[experiment onGained effect] skipping chained extra gain for same card key source');
+            return;
+          }
         }
 
         // Experiment gains one additional copy from supply without chaining further onGained effects.
@@ -408,12 +408,7 @@ const expansion: CardExpansionModule = {
         }
 
         const experimentToGain = experimentCardsInSupply.slice(-1)[0];
-        // Mark the extra copy so its own onGained resolves but does not grant another Experiment.
-        const extraExperimentCard = cardEffectArgs.cardLibrary.getCard<{ suppressNextOnGained?: boolean }>(
-          experimentToGain.id,
-        );
-        const extraExperimentMetadata = extraExperimentCard.metadata;
-        extraExperimentMetadata.suppressNextOnGained = true;
+        const extraExperimentCard = cardEffectArgs.cardLibrary.getCard(experimentToGain.id);
         console.debug(`[experiment onGained effect] gaining additional ${extraExperimentCard}`);
         await cardEffectArgs.runGameActionDelegate('gainCard', {
           playerId: eventArgs.playerId,
@@ -421,6 +416,11 @@ const expansion: CardExpansionModule = {
           to: { location: 'playerDiscard' },
         }, {
           loggingContext: { source: eventArgs.cardId },
+          lifecycleContext: {
+            onGained: {
+              sourceCardId: eventArgs.cardId,
+            },
+          },
         });
       },
     }),

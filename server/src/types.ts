@@ -126,12 +126,21 @@ export interface LifecycleSuppression {
   events?: CardLifecycleEvent[];
 }
 
+export interface OnGainedLifecycleContext {
+  // Card that initiated the gain, if any.
+  sourceCardId?: CardId;
+}
+
 export type GameActionContext = {
   loggingContext?: {
     suppress?: boolean;
     source?: CardId;
   };
   suppressLifeCycle?: LifecycleSuppression;
+  // Ephemeral lifecycle payload passed only for this specific action call.
+  lifecycleContext?: {
+    onGained?: OnGainedLifecycleContext;
+  };
 };
 
 export interface GameActionDefinitionMap {
@@ -696,7 +705,12 @@ export interface CardLifecycleCallbackMap {
 }
 
 export interface CardLifecycleEventArgMap {
-  onGained: { playerId: PlayerId; cardId: CardId; bought: boolean };
+  onGained: {
+    playerId: PlayerId;
+    cardId: CardId;
+    bought: boolean;
+    gainContext?: OnGainedLifecycleContext;
+  };
   onTrashed: {
     playerId: PlayerId;
     cardId: CardId;

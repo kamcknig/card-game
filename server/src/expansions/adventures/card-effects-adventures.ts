@@ -1723,13 +1723,15 @@ const expansion: CardExpansionModule = {
   'port': {
     registerLifeCycleMethods: () => ({
       onGained: async (args, eventArgs) => {
-        // Marked extra copies should still be gained normally, but should not chain another extra Port gain.
-        const gainedPortCard = args.cardLibrary.getCard<{ suppressNextOnGained?: boolean }>(eventArgs.cardId);
-        const gainedPortMetadata = gainedPortCard.metadata;
-        if (gainedPortMetadata.suppressNextOnGained) {
-          delete gainedPortMetadata.suppressNextOnGained;
-          console.debug('[port onGained effect] skipping chained extra gain for marked Port');
-          return;
+        // Extra copies still fire onGained, but must not chain another extra gain.
+        // If the gain source is another Port instance, skip chaining.
+        if (eventArgs.gainContext?.sourceCardId !== undefined) {
+          const gainedCard = args.cardLibrary.getCard(eventArgs.cardId);
+          const sourceCard = args.cardLibrary.getCard(eventArgs.gainContext.sourceCardId);
+          if (gainedCard.cardKey === sourceCard.cardKey) {
+            console.debug('[port onGained effect] skipping chained extra gain for same card key source');
+            return;
+          }
         }
 
         const portCards = args.findCards([
@@ -1743,10 +1745,7 @@ const expansion: CardExpansionModule = {
         }
 
         const portToGain = portCards.slice(-1)[0];
-        // Mark the extra copy so its own onGained resolves but does not grant another Port.
-        const extraPortCard = args.cardLibrary.getCard<{ suppressNextOnGained?: boolean }>(portToGain.id);
-        const extraPortMetadata = extraPortCard.metadata;
-        extraPortMetadata.suppressNextOnGained = true;
+        const extraPortCard = args.cardLibrary.getCard(portToGain.id);
 
         console.debug(`[port onGained effect] gaining ${extraPortCard}`);
 
@@ -1754,6 +1753,12 @@ const expansion: CardExpansionModule = {
           playerId: eventArgs.playerId,
           cardId: extraPortCard.id,
           to: { location: 'playerDiscard' },
+        }, {
+          lifecycleContext: {
+            onGained: {
+              sourceCardId: eventArgs.cardId,
+            },
+          },
         });
       },
     }),
