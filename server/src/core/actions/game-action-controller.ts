@@ -54,6 +54,7 @@ import {getCardPileKey} from '../../utils/get-card-pile-key.ts';
 import {tokenCardPlayedHandlerMap} from '../tokens/token-trigger-map.ts';
 import {tokenDefinitionMap} from '../tokens/token-definition-map.ts';
 import {prosperityTokenIds} from '@expansions/prosperity/token-prosperity-ids.ts';
+import {renaissanceTokenIds} from '@expansions/renaissance/token-ids-renaissance.ts';
 import {
   findBoonInMatch,
   findCardLikeInMatch,
@@ -1387,7 +1388,7 @@ export class GameActionController implements GameActionDefinitionMap {
     }
 
     // Ensure the player has an available cube token to place.
-    const cubeTokenId = 'cube-token';
+    const cubeTokenId = renaissanceTokenIds.cube;
     const tokens = Object.values(this.match.tokens);
     const availableCube = tokens.find((token) =>
       token.tokenId === cubeTokenId &&

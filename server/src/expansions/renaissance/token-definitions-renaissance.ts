@@ -1,9 +1,10 @@
 import { registerTokenDefinition } from '../../core/tokens/token-definition-map.ts';
+import { renaissanceTokenIds } from './token-ids-renaissance.ts';
 
 // Registers Renaissance token definitions (e.g., Project cubes).
 export const registerRenaissanceTokenDefinitions = (): void => {
   registerTokenDefinition({
-    id: 'cube-token',
+    id: renaissanceTokenIds.cube,
     name: 'Cube',
     rulesText: 'Used to claim Projects.',
     duration: 'permanent',
@@ -11,7 +12,7 @@ export const registerRenaissanceTokenDefinitions = (): void => {
   });
 
   registerTokenDefinition({
-    id: 'renaissance:sinister-plot',
+    id: renaissanceTokenIds.sinisterPlot,
     name: 'Sinister Plot token',
     rulesText: 'At the start of your turn, either add one here or remove yours to draw that many cards.',
     duration: 'permanent',

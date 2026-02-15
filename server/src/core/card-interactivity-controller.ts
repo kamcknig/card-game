@@ -8,6 +8,7 @@ import { CardPriceRulesController } from './card-price-rules-controller.ts';
 import { cardActionConditionMapFactory } from './actions/card-action-condition-map-factory.ts';
 import { CardSourceController } from './card-source-controller.ts';
 import { findEventInMatch, findProjectInMatch } from '@shared/find-card-like-in-match.ts';
+import { renaissanceTokenIds } from '@expansions/renaissance/token-ids-renaissance.ts';
 
 export class CardInteractivityController {
   private _gameOver: boolean = false;
@@ -148,7 +149,7 @@ export class CardInteractivityController {
         }
 
         // Projects are purchased for their printed cost and require available cube tokens.
-        const cubeTokenId = 'cube-token';
+        const cubeTokenId = renaissanceTokenIds.cube;
         const tokens = Object.values(this.match.tokens ?? {});
         const hasAvailableCube = tokens.some((token) =>
           token.tokenId === cubeTokenId &&

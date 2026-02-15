@@ -4,18 +4,20 @@ import { ExpansionConfiguratorFactory, GameEventRegistrar } from '@server-types/
 import { uniqueByProp } from '../../core/match-configurator.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { registerArtifactEffects } from './artifact-effects-renaissance.ts';
+import { renaissanceArtifactKeys, RenaissanceArtifactKey } from './artifact-keys-renaissance.ts';
 import { registerRenaissanceTokenDefinitions } from './token-definitions-renaissance.ts';
+import { renaissanceTokenIds } from './token-ids-renaissance.ts';
 
 // Maps Renaissance kingdom cards to the artifacts they can grant.
-const artifactSourceMap: Record<string, string[]> = {
-  'border-guard': ['horn', 'lantern'],
-  'flag-bearer': ['flag'],
-  'swashbuckler': ['treasure-chest'],
-  'treasurer': ['key'],
+const artifactSourceMap: Record<string, RenaissanceArtifactKey[]> = {
+  'border-guard': [renaissanceArtifactKeys.horn, renaissanceArtifactKeys.lantern],
+  'flag-bearer': [renaissanceArtifactKeys.flag],
+  'swashbuckler': [renaissanceArtifactKeys.treasureChest],
+  'treasurer': [renaissanceArtifactKeys.key],
 };
 
 // Tracks artifact keys managed by the Renaissance configurator.
-const managedArtifactKeys = new Set(Object.values(artifactSourceMap).flat());
+const managedArtifactKeys = new Set<string>(Object.values(artifactSourceMap).flat());
 
 const configurator: ExpansionConfiguratorFactory = () => {
   // Track artifact effect registration to avoid duplicates across configurator iterations.
@@ -29,7 +31,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
     }
 
     const kingdomCards = args.config.kingdomSupply.flatMap((supply) => supply.cards);
-    const requiredArtifactKeys = new Set<string>();
+    const requiredArtifactKeys = new Set<RenaissanceArtifactKey>();
 
     for (const card of kingdomCards) {
       const pileKey = getCardPileKey(card);
@@ -80,7 +82,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
     for (const player of args.match.players) {
       const existingCubes = Object.values(args.match.tokens ?? {}).filter((token) =>
-        token.tokenId === 'cube-token' && token.ownerId === player.id
+        token.tokenId === renaissanceTokenIds.cube && token.ownerId === player.id
       );
       const cubesToAdd = Math.max(0, projectCount - existingCubes.length);
 
@@ -94,7 +96,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
       console.info(`[renaissance configurator] adding ${cubesToAdd} cube token(s) for player ${player.id}`);
       for (let i = 0; i < cubesToAdd; i++) {
         await args.runGameActionDelegate('placeToken', {
-          tokenId: 'cube-token',
+          tokenId: renaissanceTokenIds.cube,
           ownerId: player.id,
           location: { type: 'playerAvailable', playerId: player.id },
         });

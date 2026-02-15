@@ -153,6 +153,87 @@
     ],
     "abilityText": "+1 Action\nTrash a card from your hand. Per $1 it costs, set aside a card from your deck face down (on this). At the start of your next turn, put those cards into your hand."
   },
+  "scholar": {
+    "cardName": "Scholar",
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "Discard your hand.\n+7 Cards."
+  },
+  "sculptor": {
+    "cardName": "Sculptor",
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "Gain a card to your hand costing up to $4.\nIf it's a Treasure, +1 Villager."
+  },
+  "seer": {
+    "cardName": "Seer",
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+1 Card\n+1 Action\nReveal the top 3 cards of your deck. Put the ones costing from $2 to $4 into your hand. Put the rest back in any order."
+  },
+  "silk-merchant": {
+    "cardName": "Silk Merchant",
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+2 Cards\n+1 Buy\nWhen you gain or trash this, +1 Coffers and +1 Villager."
+  },
+  "spices": {
+    "cardName": "Spices",
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "TREASURE"
+    ],
+    "abilityText": "+$2\n+1 Buy\nWhen you gain this, +2 Coffers."
+  },
+  "swashbuckler": {
+    "cardName": "Swashbuckler",
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+3 Cards\nIf your discard pile has any cards in it: +1 Coffers, then if you have at least 4 Coffers tokens, take the Treasure Chest."
+  },
+  "treasurer": {
+    "cardName": "Treasurer",
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+$3\nChoose one: Trash a Treasure from your hand; or gain a Treasure from the trash to your hand; or take the Key."
+  },
+  "villain": {
+    "cardName": "Villain",
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION",
+      "ATTACK"
+    ],
+    "abilityText": "+2 Coffers\nEach other player with 5 or more cards in hand discards one costing $2 or more (or reveals they can't)."
+  },
   "scepter": {
     "cardName": "Scepter",
     "cost": {

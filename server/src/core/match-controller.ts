@@ -56,6 +56,7 @@ import { eventEffectFactoryMap } from './events/event-effect-factory-map.ts';
 import { projectEffectFactoryMap } from './projects/project-effect-factory-map.ts';
 import { tokenDefinitionMap } from './tokens/token-definition-map.ts';
 import { prosperityTokenIds } from '@expansions/prosperity/token-prosperity-ids.ts';
+import { renaissanceTokenIds } from '@expansions/renaissance/token-ids-renaissance.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardLibSnapshot = {};
@@ -913,7 +914,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }
 
     return Object.values(this._match.tokens ?? {}).some((token) =>
-      token.tokenId === 'cube-token' &&
+      token.tokenId === renaissanceTokenIds.cube &&
       token.ownerId === playerId &&
       token.location.type === 'cardLike' &&
       token.location.cardLikeId === fleetProjectId

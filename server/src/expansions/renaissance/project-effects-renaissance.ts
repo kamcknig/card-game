@@ -3,11 +3,12 @@ import { Card, CardId, Match, PlayerId, Project } from 'shared/types/index.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { findProjectInMatch } from '@shared/find-card-like-in-match.ts';
+import { renaissanceTokenIds } from './token-ids-renaissance.ts';
 
 // Checks whether a player has a cube placed on the given project.
 function isProjectOwned(match: Match, playerId: PlayerId, project: Project) {
   return Object.values(match.tokens ?? {}).some((token) =>
-    token.tokenId === 'cube-token' &&
+    token.tokenId === renaissanceTokenIds.cube &&
     token.ownerId === playerId &&
     token.location.type === 'cardLike' &&
     token.location.cardLikeId === project.id
@@ -1435,7 +1436,7 @@ const effectMap: CardExpansionModule = {
           // Gather this player's Sinister Plot tokens at this project in deterministic order.
           const ownedTokenIds = Object.values(triggeredArgs.match.tokens ?? {})
             .filter((token) =>
-              token.tokenId === 'renaissance:sinister-plot' &&
+              token.tokenId === renaissanceTokenIds.sinisterPlot &&
               token.ownerId === cardEffectArgs.playerId &&
               token.location.type === 'cardLike' &&
               token.location.cardLikeId === project.id
@@ -1498,7 +1499,7 @@ const effectMap: CardExpansionModule = {
 
           console.debug(`[sinister-plot project] adding token for player ${cardEffectArgs.playerId}`);
           await triggeredArgs.runGameActionDelegate('placeToken', {
-            tokenId: 'renaissance:sinister-plot',
+            tokenId: renaissanceTokenIds.sinisterPlot,
             ownerId: cardEffectArgs.playerId,
             location: { type: 'cardLike', cardLikeId: project.id },
           });

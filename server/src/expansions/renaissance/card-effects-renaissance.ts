@@ -5,6 +5,8 @@ import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
+import { compareCardCosts } from '@shared/compare-card-cost.ts';
+import { renaissanceArtifactKeys } from './artifact-keys-renaissance.ts';
 
 // Renaissance card effects module (artifacts handled separately).
 const expansion: CardExpansionModule = {
@@ -17,7 +19,7 @@ const expansion: CardExpansionModule = {
       // Resolve whether the player currently owns the Lantern artifact.
       const artifacts = cardEffectArgs.match.artifacts;
       const ownedArtifacts = artifacts?.byPlayer?.[cardEffectArgs.playerId] ?? [];
-      const lantern = artifacts?.cards?.find((candidate) => candidate.cardKey === 'lantern');
+      const lantern = artifacts?.cards?.find((candidate) => candidate.cardKey === renaissanceArtifactKeys.lantern);
       const hasLantern = !!lantern && ownedArtifacts.includes(lantern.id);
       const revealCount = hasLantern ? 3 : 2;
 
@@ -91,7 +93,7 @@ const expansion: CardExpansionModule = {
       }
 
       // Determine which artifacts are available to take.
-      const horn = artifacts?.cards?.find((candidate) => candidate.cardKey === 'horn');
+      const horn = artifacts?.cards?.find((candidate) => candidate.cardKey === renaissanceArtifactKeys.horn);
       const ownedLantern = !!lantern && ownedArtifacts.includes(lantern.id);
       const ownedHorn = !!horn && ownedArtifacts.includes(horn.id);
       const availableArtifacts: { label: string; artifactId: number }[] = [];
@@ -483,7 +485,7 @@ const expansion: CardExpansionModule = {
         console.debug(`[flag-bearer onGained effect] player ${eventArgs.playerId} taking Flag`);
         await cardEffectArgs.runGameActionDelegate('gainArtifact', {
           playerId: eventArgs.playerId,
-          artifactKey: 'flag',
+          artifactKey: renaissanceArtifactKeys.flag,
         });
       },
       onTrashed: async (cardEffectArgs, eventArgs) => {
@@ -491,7 +493,7 @@ const expansion: CardExpansionModule = {
         console.debug(`[flag-bearer onTrashed effect] player ${eventArgs.playerId} taking Flag`);
         await cardEffectArgs.runGameActionDelegate('gainArtifact', {
           playerId: eventArgs.playerId,
-          artifactKey: 'flag',
+          artifactKey: renaissanceArtifactKeys.flag,
         });
       },
     }),
@@ -1233,6 +1235,423 @@ const expansion: CardExpansionModule = {
         },
         { idSuffix: `duration-hold:${scepterPlayInstance}` },
       );
+    },
+  },
+  'scholar': {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Scholar discards the entire hand first.
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      console.debug(`[scholar effect] discarding ${hand.length} card(s) from hand`);
+      for (const cardId of [...hand]) {
+        await cardEffectArgs.runGameActionDelegate('discardCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId,
+        });
+      }
+
+      // Then it draws 7 cards.
+      console.debug('[scholar effect] drawing 7 cards');
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: 7,
+      });
+    },
+  },
+  'sculptor': {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Sculptor gains a card to hand costing up to $4.
+      const gainableCards = cardEffectArgs.findCards([
+        { location: ['basicSupply', 'kingdomSupply'] },
+        { playerId: cardEffectArgs.playerId, kind: 'upTo', amount: { treasure: 4 } },
+      ]);
+
+      if (!gainableCards.length) {
+        console.debug('[sculptor effect] no cards in supply costing up to 4');
+        return;
+      }
+
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Gain a card to your hand',
+        restrict: gainableCards.map((card) => card.id),
+        count: 1,
+      }) as CardId[];
+
+      const selectedCardId = selectedCardIds[0];
+      if (selectedCardId === undefined) {
+        console.warn('[sculptor effect] no card selected to gain');
+        return;
+      }
+
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+      console.debug(`[sculptor effect] gaining ${selectedCard} to hand`);
+      await cardEffectArgs.runGameActionDelegate('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCardId,
+        to: { location: 'playerHand' },
+      });
+
+      // If the gained card is a Treasure, gain +1 Villager.
+      if (!selectedCard.type.includes('TREASURE')) {
+        return;
+      }
+
+      console.debug('[sculptor effect] gained Treasure, gaining 1 Villager');
+      await cardEffectArgs.runGameActionDelegate('gainVillager', {
+        playerId: cardEffectArgs.playerId,
+        count: 1,
+      });
+    },
+  },
+  'seer': {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Seer first gives +1 Card and +1 Action.
+      console.debug('[seer effect] drawing 1 card and gaining 1 action');
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: 1,
+      });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+
+      // Reveal up to the top 3 cards of deck, shuffling if needed.
+      const revealedCardIds: CardId[] = [];
+      for (let index = 0; index < 3; index++) {
+        let deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+        if (!deck.length) {
+          console.debug('[seer effect] deck empty, shuffling discard');
+          await cardEffectArgs.runGameActionDelegate('shuffleDeck', {
+            playerId: cardEffectArgs.playerId,
+          });
+          deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+        }
+
+        if (!deck.length) {
+          console.debug('[seer effect] no cards left to reveal');
+          break;
+        }
+
+        const topCardId = deck.slice(-1)[0];
+        const topCard = cardEffectArgs.cardLibrary.getCard(topCardId);
+        console.debug(`[seer effect] revealing ${topCard}`);
+        await cardEffectArgs.runGameActionDelegate('revealCard', {
+          cardId: topCardId,
+          playerId: cardEffectArgs.playerId,
+          moveToSetAside: true,
+        });
+        revealedCardIds.push(topCardId);
+      }
+
+      if (!revealedCardIds.length) {
+        return;
+      }
+
+      const cardsToHand: CardId[] = [];
+      const cardsToReturn: CardId[] = [];
+
+      // Split revealed cards by current cost: exactly coin-cost from $2 to $4, no debt/potion.
+      for (const revealedCardId of revealedCardIds) {
+        const revealedCard = cardEffectArgs.cardLibrary.getCard(revealedCardId);
+        const { cost } = cardEffectArgs.cardPriceController.applyRules(revealedCard, {
+          playerId: cardEffectArgs.playerId,
+        });
+
+        const hasDebt = (cost.debt ?? 0) > 0;
+        const hasPotion = (cost.potion ?? 0) > 0;
+        const inRange = !hasDebt &&
+          !hasPotion &&
+          compareCardCosts(cost, { treasure: 2 }) >= 0 &&
+          compareCardCosts(cost, { treasure: 4 }) <= 0;
+
+        if (inRange) {
+          cardsToHand.push(revealedCardId);
+          continue;
+        }
+        cardsToReturn.push(revealedCardId);
+      }
+
+      // Put qualifying cards into hand.
+      for (const cardId of cardsToHand) {
+        const card = cardEffectArgs.cardLibrary.getCard(cardId);
+        console.debug(`[seer effect] moving ${card} to hand`);
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
+          cardId,
+          toPlayerId: cardEffectArgs.playerId,
+          to: { location: 'playerHand' },
+        });
+      }
+
+      if (!cardsToReturn.length) {
+        return;
+      }
+
+      // Put non-qualifying cards back on deck in player-chosen order.
+      let orderedCardsToReturn = [...cardsToReturn];
+      if (cardsToReturn.length > 1) {
+        const reorderResult = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Put the rest back on top of your deck in any order',
+          actionButtons: [{ label: 'DONE', action: 1 }],
+          content: {
+            type: 'rearrange',
+            cardIds: cardsToReturn,
+          },
+        }) as { result?: CardId[] } | null;
+
+        if (Array.isArray(reorderResult?.result) && reorderResult.result.length === cardsToReturn.length) {
+          orderedCardsToReturn = reorderResult.result;
+        }
+      }
+
+      for (const cardId of orderedCardsToReturn) {
+        const card = cardEffectArgs.cardLibrary.getCard(cardId);
+        console.debug(`[seer effect] returning ${card} to top of deck`);
+        await cardEffectArgs.runGameActionDelegate('moveCard', {
+          cardId,
+          toPlayerId: cardEffectArgs.playerId,
+          to: { location: 'playerDeck' },
+        });
+      }
+    },
+  },
+  'silk-merchant': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (cardEffectArgs, eventArgs) => {
+        // Silk Merchant grants +1 Coffer and +1 Villager when gained.
+        console.debug(`[silk-merchant onGained effect] player ${eventArgs.playerId} gaining 1 Coffer and 1 Villager`);
+        await cardEffectArgs.runGameActionDelegate('gainCoffer', {
+          playerId: eventArgs.playerId,
+          count: 1,
+        });
+        await cardEffectArgs.runGameActionDelegate('gainVillager', {
+          playerId: eventArgs.playerId,
+          count: 1,
+        });
+      },
+      onTrashed: async (cardEffectArgs, eventArgs) => {
+        // Silk Merchant grants +1 Coffer and +1 Villager to the player who trashed it.
+        console.debug(`[silk-merchant onTrashed effect] player ${eventArgs.playerId} gaining 1 Coffer and 1 Villager`);
+        await cardEffectArgs.runGameActionDelegate('gainCoffer', {
+          playerId: eventArgs.playerId,
+          count: 1,
+        });
+        await cardEffectArgs.runGameActionDelegate('gainVillager', {
+          playerId: eventArgs.playerId,
+          count: 1,
+        });
+      },
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      // Silk Merchant gives +2 Cards and +1 Buy on play.
+      console.debug('[silk-merchant effect] drawing 2 cards and gaining 1 buy');
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: 2,
+      });
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+    },
+  },
+  'spices': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (cardEffectArgs, eventArgs) => {
+        // Spices grants +2 Coffers when gained.
+        console.debug(`[spices onGained effect] player ${eventArgs.playerId} gaining 2 Coffers`);
+        await cardEffectArgs.runGameActionDelegate('gainCoffer', {
+          playerId: eventArgs.playerId,
+          count: 2,
+        });
+      },
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      // Spices gives +$2 and +1 Buy on play.
+      console.debug('[spices effect] gaining 2 treasure and 1 buy');
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+    },
+  },
+  'swashbuckler': {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Swashbuckler gives +3 Cards first.
+      console.debug('[swashbuckler effect] drawing 3 cards');
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: 3,
+      });
+
+      // Additional rewards only happen if discard pile has at least one card.
+      const discardPile = cardEffectArgs.cardSourceController.getSource('playerDiscard', cardEffectArgs.playerId);
+      if (!discardPile.length) {
+        console.debug('[swashbuckler effect] discard pile empty, skipping Coffers and Treasure Chest');
+        return;
+      }
+
+      console.debug('[swashbuckler effect] discard pile has cards, gaining 1 Coffer');
+      await cardEffectArgs.runGameActionDelegate('gainCoffer', {
+        playerId: cardEffectArgs.playerId,
+        count: 1,
+      });
+
+      // If player has at least 4 Coffers after the gain, take Treasure Chest.
+      const cofferCount = cardEffectArgs.match.coffers[cardEffectArgs.playerId] ?? 0;
+      if (cofferCount < 4) {
+        console.debug(`[swashbuckler effect] player has ${cofferCount} Coffers, not taking Treasure Chest`);
+        return;
+      }
+
+      console.debug('[swashbuckler effect] player has at least 4 Coffers, taking Treasure Chest');
+      await cardEffectArgs.runGameActionDelegate('gainArtifact', {
+        playerId: cardEffectArgs.playerId,
+        artifactKey: renaissanceArtifactKeys.treasureChest,
+      });
+    },
+  },
+  'treasurer': {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Treasurer gives +$3 on play.
+      console.debug('[treasurer effect] gaining 3 treasure');
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 3 });
+
+      const promptResult = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Choose one',
+        actionButtons: [
+          { label: 'TRASH TREASURE FROM HAND', action: 1 },
+          { label: 'GAIN TREASURE FROM TRASH', action: 2 },
+          { label: 'TAKE THE KEY', action: 3 },
+        ],
+      }) as { action?: number } | null;
+
+      const selectedAction = promptResult?.action ?? 1;
+
+      if (selectedAction === 1) {
+        // Option 1: trash a Treasure from hand.
+        const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+        const treasureIdsInHand = hand.filter((cardId) => cardEffectArgs.cardLibrary.getCard(cardId).type.includes('TREASURE'));
+        if (!treasureIdsInHand.length) {
+          console.debug('[treasurer effect] no Treasure in hand to trash');
+          return;
+        }
+
+        const selectedTreasureIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Trash a Treasure from your hand',
+          restrict: treasureIdsInHand,
+          count: 1,
+        }) as CardId[];
+
+        const selectedTreasureId = selectedTreasureIds[0];
+        if (selectedTreasureId === undefined) {
+          console.warn('[treasurer effect] no Treasure selected to trash');
+          return;
+        }
+
+        const selectedTreasure = cardEffectArgs.cardLibrary.getCard(selectedTreasureId);
+        console.debug(`[treasurer effect] trashing ${selectedTreasure}`);
+        await cardEffectArgs.runGameActionDelegate('trashCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: selectedTreasureId,
+        });
+        return;
+      }
+
+      if (selectedAction === 2) {
+        // Option 2: gain a Treasure from trash to hand.
+        const treasureIdsInTrash = cardEffectArgs.cardSourceController.getSource('trash')
+          .filter((cardId) => cardEffectArgs.cardLibrary.getCard(cardId).type.includes('TREASURE'));
+        if (!treasureIdsInTrash.length) {
+          console.debug('[treasurer effect] no Treasure in trash to gain');
+          return;
+        }
+
+        const selectedTreasureIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Gain a Treasure from the trash to your hand',
+          restrict: treasureIdsInTrash,
+          count: 1,
+        }) as CardId[];
+
+        const selectedTreasureId = selectedTreasureIds[0];
+        if (selectedTreasureId === undefined) {
+          console.warn('[treasurer effect] no Treasure selected to gain');
+          return;
+        }
+
+        const selectedTreasure = cardEffectArgs.cardLibrary.getCard(selectedTreasureId);
+        console.debug(`[treasurer effect] gaining ${selectedTreasure} from trash to hand`);
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: selectedTreasureId,
+          to: { location: 'playerHand' },
+        });
+        return;
+      }
+
+      // Option 3: take the Key artifact.
+      console.debug('[treasurer effect] taking the Key artifact');
+      await cardEffectArgs.runGameActionDelegate('gainArtifact', {
+        playerId: cardEffectArgs.playerId,
+        artifactKey: renaissanceArtifactKeys.key,
+      });
+    },
+  },
+  'villain': {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Villain grants +2 Coffers.
+      console.debug('[villain effect] gaining 2 Coffers');
+      await cardEffectArgs.runGameActionDelegate('gainCoffer', {
+        playerId: cardEffectArgs.playerId,
+        count: 2,
+      });
+
+      // Attack each other non-immune player in turn order.
+      const targetPlayerIds = findOrderedTargets({
+        startingPlayerId: cardEffectArgs.playerId,
+        appliesTo: 'ALL_OTHER',
+        match: cardEffectArgs.match,
+      }).filter((id) => !isPlayerImmune(cardEffectArgs.reactionContext, id));
+
+      for (const targetPlayerId of targetPlayerIds) {
+        const hand = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
+        if (hand.length < 5) {
+          console.debug(`[villain effect] player ${targetPlayerId} has fewer than 5 cards, skipping`);
+          continue;
+        }
+
+        // Find cards in hand currently costing $2 or more.
+        const discardableIds = hand.filter((cardId) => {
+          const card = cardEffectArgs.cardLibrary.getCard(cardId);
+          const { cost } = cardEffectArgs.cardPriceController.applyRules(card, {
+            playerId: targetPlayerId,
+          });
+          return (cost.treasure ?? 0) >= 2;
+        });
+
+        // If no eligible discard exists, reveal hand.
+        if (!discardableIds.length) {
+          console.debug(`[villain effect] player ${targetPlayerId} cannot discard, revealing hand`);
+          for (const cardId of hand) {
+            await cardEffectArgs.runGameActionDelegate('revealCard', {
+              playerId: targetPlayerId,
+              cardId,
+            });
+          }
+          continue;
+        }
+
+        const selectedDiscardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: targetPlayerId,
+          prompt: 'Discard a card costing $2 or more',
+          restrict: discardableIds,
+          count: 1,
+        }) as CardId[];
+
+        const selectedDiscardId = selectedDiscardIds[0] ?? discardableIds[0];
+        const selectedDiscardCard = cardEffectArgs.cardLibrary.getCard(selectedDiscardId);
+        console.debug(`[villain effect] player ${targetPlayerId} discarding ${selectedDiscardCard}`);
+        await cardEffectArgs.runGameActionDelegate('discardCard', {
+          playerId: targetPlayerId,
+          cardId: selectedDiscardId,
+        });
+      }
     },
   },
 };

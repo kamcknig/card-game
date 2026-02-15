@@ -3,6 +3,7 @@ import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { findArtifactInMatch } from '@shared/find-card-like-in-match.ts';
+import { renaissanceArtifactKeys } from './artifact-keys-renaissance.ts';
 
 // Registers Renaissance artifact effects.
 export const registerArtifactEffects = (registerArtifactEffect: ArtifactEffectRegistrar) => {
@@ -20,7 +21,7 @@ export const registerArtifactEffects = (registerArtifactEffect: ArtifactEffectRe
 const registerFlag = (registerArtifactEffect: ArtifactEffectRegistrar) => {
   let drawHandTriggerId: string | undefined;
 
-  registerArtifactEffect('flag', async ({
+  registerArtifactEffect(renaissanceArtifactKeys.flag, async ({
     playerId,
     match,
     reactionManager,
@@ -74,7 +75,7 @@ const registerHorn = (registerArtifactEffect: ArtifactEffectRegistrar) => {
   let discardTriggerId: string | undefined;
   let lastUsedTurnNumber: number | undefined;
 
-  registerArtifactEffect('horn', async ({
+  registerArtifactEffect(renaissanceArtifactKeys.horn, async ({
     playerId,
     match,
     reactionManager,
@@ -134,7 +135,7 @@ const registerHorn = (registerArtifactEffect: ArtifactEffectRegistrar) => {
 const registerKey = (registerArtifactEffect: ArtifactEffectRegistrar) => {
   let startTurnTriggerId: string | undefined;
 
-  registerArtifactEffect('key', async ({
+  registerArtifactEffect(renaissanceArtifactKeys.key, async ({
     playerId,
     match,
     reactionManager,
@@ -184,7 +185,7 @@ const registerKey = (registerArtifactEffect: ArtifactEffectRegistrar) => {
 const registerTreasureChest = (registerArtifactEffect: ArtifactEffectRegistrar) => {
   let startTurnPhaseTriggerId: string | undefined;
 
-  registerArtifactEffect('treasure-chest', async ({
+  registerArtifactEffect(renaissanceArtifactKeys.treasureChest, async ({
     playerId,
     match,
     reactionManager,
