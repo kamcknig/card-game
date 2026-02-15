@@ -53,5 +53,10 @@
     "title": "Renaissance",
     "name": "renaissance",
     "order": 11
+  },
+  {
+    "title": "Menagerie",
+    "name": "menagerie",
+    "order": 12
   }
 ]

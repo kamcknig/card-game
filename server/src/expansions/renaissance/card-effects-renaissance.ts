@@ -174,7 +174,9 @@ const expansion: CardExpansionModule = {
       const isInPlay = sourceLocation === 'playArea' || sourceLocation === 'activeDuration';
       if (!isInPlay) {
         console.debug(
-          `[acting-troupe effect] skipping trash for ${actingTroupeCard}; source location is ${sourceLocation ?? 'unknown'}`,
+          `[acting-troupe effect] skipping trash for ${actingTroupeCard}; source location is ${
+            sourceLocation ?? 'unknown'
+          }`,
         );
         return;
       }
@@ -345,13 +347,17 @@ const expansion: CardExpansionModule = {
       onGained: async (cardEffectArgs, eventArgs) => {
         // Ducat lets you optionally trash one Copper from hand when gained.
         const hand = cardEffectArgs.cardSourceController.getSource('playerHand', eventArgs.playerId);
-        const copperInHandIds = hand.filter((cardId) => cardEffectArgs.cardLibrary.getCard(cardId).cardKey === 'copper');
+        const copperInHandIds = hand.filter((cardId) =>
+          cardEffectArgs.cardLibrary.getCard(cardId).cardKey === 'copper'
+        );
         if (!copperInHandIds.length) {
           console.debug('[ducat onGained effect] no Copper in hand to trash');
           return;
         }
 
-        console.debug(`[ducat onGained effect] prompting whether to trash Copper from ${copperInHandIds.length} card(s)`);
+        console.debug(
+          `[ducat onGained effect] prompting whether to trash Copper from ${copperInHandIds.length} card(s)`,
+        );
         const promptResult = await cardEffectArgs.runGameActionDelegate('userPrompt', {
           playerId: eventArgs.playerId,
           prompt: 'Trash a Copper from your hand?',
@@ -461,7 +467,9 @@ const expansion: CardExpansionModule = {
       }
 
       // If no Experiment pile exists in this game, Experiment stays where it is.
-      const hasBasicPile = (cardEffectArgs.match.config.basicSupply ?? []).some((supply) => supply.name === 'experiment');
+      const hasBasicPile = (cardEffectArgs.match.config.basicSupply ?? []).some((supply) =>
+        supply.name === 'experiment'
+      );
       const hasKingdomPile = (cardEffectArgs.match.config.kingdomSupply ?? []).some((supply) =>
         supply.name === 'experiment'
       );
@@ -778,7 +786,9 @@ const expansion: CardExpansionModule = {
 
         // Then they may trash a Curse from hand (still allowed if Curse pile is empty).
         const targetHand = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
-        const curseInHandIds = targetHand.filter((cardId) => cardEffectArgs.cardLibrary.getCard(cardId).cardKey === 'curse');
+        const curseInHandIds = targetHand.filter((cardId) =>
+          cardEffectArgs.cardLibrary.getCard(cardId).cardKey === 'curse'
+        );
         if (!curseInHandIds.length) {
           console.debug(`[old-witch effect] player ${targetPlayerId} has no Curse in hand to trash`);
           continue;
@@ -1525,7 +1535,9 @@ const expansion: CardExpansionModule = {
       if (selectedAction === 1) {
         // Option 1: trash a Treasure from hand.
         const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
-        const treasureIdsInHand = hand.filter((cardId) => cardEffectArgs.cardLibrary.getCard(cardId).type.includes('TREASURE'));
+        const treasureIdsInHand = hand.filter((cardId) =>
+          cardEffectArgs.cardLibrary.getCard(cardId).type.includes('TREASURE')
+        );
         if (!treasureIdsInHand.length) {
           console.debug('[treasurer effect] no Treasure in hand to trash');
           return;

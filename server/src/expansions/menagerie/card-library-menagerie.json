@@ -1,0 +1,12 @@
+{
+  "animal-fair": {
+    "cardName": "Animal Fair",
+    "cost": {
+      "treasure": 7
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+$4\n+1 Buy per empty Supply pile.\nWhen you buy this, you may pay by trashing an Action card from your hand instead of paying $7."
+  }
+}

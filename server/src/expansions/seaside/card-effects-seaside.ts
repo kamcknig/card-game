@@ -638,7 +638,7 @@ const expansion: CardExpansionModule = {
           once: true,
           compulsory: true,
           allowMultipleInstances: true,
-          condition: ({trigger}) => trigger.args.playerId === cardEffectArgs.playerId,
+          condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
           triggeredEffectFn: async (triggeredArgs) => {
             const previousCount = triggeredArgs.trigger.args.count;
             triggeredArgs.trigger.args.count = Math.min(previousCount, 3);
@@ -647,7 +647,7 @@ const expansion: CardExpansionModule = {
             );
           },
         },
-        {idSuffix: 'next-hand-limit'},
+        { idSuffix: 'next-hand-limit' },
       );
 
       // Queue the extra turn; turn scheduling decides if this can be taken.
@@ -666,11 +666,11 @@ const expansion: CardExpansionModule = {
         once: true,
         compulsory: true,
         allowMultipleInstances: true,
-        condition: ({trigger}) => trigger.args.playerId === cardEffectArgs.playerId,
+        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
         triggeredEffectFn: async (triggeredArgs) => {
           await triggeredArgs.runGameActionDelegate('moveCard', {
             cardId: outpostCard.id,
-            to: {location: 'playArea'},
+            to: { location: 'playArea' },
           });
         },
       });

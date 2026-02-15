@@ -5,10 +5,10 @@ import { MatchCardLibrary } from './match-card-library.ts';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
 import { getTurnPhase } from '../utils/get-turn-phase.ts';
 import { CardPriceRulesController } from './card-price-rules-controller.ts';
-import { cardActionConditionMapFactory } from './actions/card-action-condition-map-factory.ts';
 import { CardSourceController } from './card-source-controller.ts';
 import { findEventInMatch, findProjectInMatch } from '@shared/find-card-like-in-match.ts';
 import { renaissanceTokenIds } from '@expansions/renaissance/token-ids-renaissance.ts';
+import { resolveBuyOptions, ResolvedBuyOption } from './actions/resolve-buy-options.ts';
 
 export class CardInteractivityController {
   private _gameOver: boolean = false;
@@ -91,28 +91,18 @@ export class CardInteractivityController {
             continue;
           }
 
-          if (cardActionConditionMapFactory[card.cardKey]?.canBuy) {
-            if (
-              !cardActionConditionMapFactory[card.cardKey].canBuy?.({
-                match: this.match,
-                cardLibrary: this._cardLibrary,
-                playerId: currentPlayer.id,
-              })
-            ) {
-              continue;
-            }
-          }
-
-          const { restricted, cost } = this._cardPriceController.applyRules(card as Card, {
+          // Include cards if any legal purchase path exists (standard or alternate).
+          const buyOptions = resolveBuyOptions({
+            match: this.match,
+            cardId: card,
             playerId: currentPlayer.id,
+            cardLibrary: this._cardLibrary,
+            cardPriceController: this._cardPriceController,
+            cardSourceController: this._cardSourceController,
+            findCards: this._findCards,
           });
 
-          // if the player has enough treasure and buys
-          if (
-            !restricted &&
-            cost.treasure <= match.playerTreasure &&
-            (cost.potion === undefined || cost.potion <= match.playerPotions)
-          ) {
+          if (buyOptions.options.length > 0) {
             selectableCards.push(card.id);
             cardKeysAdded.push(card.cardKey);
           }
@@ -325,11 +315,45 @@ export class CardInteractivityController {
           return;
         }
         const card = this._cardLibrary.getCard(cardId);
-        const { cost } = this._cardPriceController.applyRules(card, {
+        const resolvedBuyOptions = resolveBuyOptions({
+          match: this.match,
+          cardId: card,
           playerId,
+          cardLibrary: this._cardLibrary,
+          cardPriceController: this._cardPriceController,
+          cardSourceController: this._cardSourceController,
+          findCards: this._findCards,
         });
+        const { cost } = resolvedBuyOptions;
+        const { options } = resolvedBuyOptions;
 
-        if (card.tags?.includes('overpay')) {
+        // Exit if there are currently no legal ways to buy this card.
+        if (options.length === 0) {
+          console.debug(`[card interactivity] no legal buy options for ${card}`);
+          return;
+        }
+
+        let selectedBuyOption: ResolvedBuyOption | undefined = options[0];
+        if (options.length > 1) {
+          // Let the user choose the payment method when multiple paths are legal.
+          const buyOptionPrompt = await this.runGameDelegate('userPrompt', {
+            playerId,
+            prompt: `Choose how to buy ${card.cardName}`,
+            actionButtons: options.map((option, index) => ({ label: option.label, action: index + 1 })),
+          }) as { action?: number };
+          if (buyOptionPrompt.action === undefined || buyOptionPrompt.action < 1) {
+            console.debug(`[card interactivity] buy option prompt cancelled`);
+            return;
+          }
+          selectedBuyOption = options[buyOptionPrompt.action - 1];
+        }
+
+        if (!selectedBuyOption) {
+          console.debug(`[card interactivity] selected buy option missing`);
+          return;
+        }
+
+        if (selectedBuyOption.kind === 'standard' && card.tags?.includes('overpay')) {
           if (this.match.playerTreasure > cost.treasure) {
             const result = await this.runGameDelegate('userPrompt', {
               prompt: 'Overpay?',
@@ -341,7 +365,13 @@ export class CardInteractivityController {
           }
         }
 
-        await this.runGameDelegate('buyCard', { playerId, cardId, overpay, cardCost: cost });
+        await this.runGameDelegate('buyCard', {
+          playerId,
+          cardId,
+          overpay,
+          cardCost: cost,
+          buyOptionId: selectedBuyOption.id,
+        });
       }
     } else if (phase === 'action') {
       await this.runGameDelegate('playCard', { playerId, cardId });

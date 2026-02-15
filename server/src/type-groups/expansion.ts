@@ -1,5 +1,9 @@
 // Expansion module registration and configurator contracts.
 export type {
+  CardAlternateBuyOption,
+  CardAlternateBuyOptionApplyContext,
+  CardAlternateBuyOptionApplyResult,
+  CardAlternateBuyOptionCanUseContext,
   CardExpansionActionConditionMap,
   CardExpansionModule,
   ClientEventRegistrar,

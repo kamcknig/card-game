@@ -5,6 +5,7 @@ import { cardLifecycleMap } from '../core/card-lifecycle-map.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
 import { CardCost, CardKey, CardNoId, CardType } from 'shared/types/index.ts';
 import { cardActionConditionMapFactory } from '../core/actions/card-action-condition-map-factory.ts';
+import { cardAlternateBuyOptionMapFactory } from '../core/actions/card-alternate-buy-option-map-factory.ts';
 import { createCardData, createCardLike } from './create-card-data.ts';
 import { loadEvents } from '../core/events/load-events.ts';
 import { loadLandmarks } from '../core/landmarks/load-landmarks.ts';
@@ -253,6 +254,11 @@ export const loadExpansion = async (expansion: { name: string }) => {
 
       if (cardEffects[key].registerActionConditions) {
         cardActionConditionMapFactory[key] = cardEffects[key].registerActionConditions();
+      }
+
+      if (cardEffects[key].registerAlternateBuyOptions) {
+        // Register expansion-provided alternate buy paths for this card key.
+        cardAlternateBuyOptionMapFactory[key] = cardEffects[key].registerAlternateBuyOptions();
       }
     });
     console.log('[expansion loader] base supply card effects loaded');

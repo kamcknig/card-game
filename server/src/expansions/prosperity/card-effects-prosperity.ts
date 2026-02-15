@@ -1027,19 +1027,19 @@ const expansion: CardExpansionModule = {
           },
         }) as { action: number; result: CardKey };
 
-      const cardKey = namedCardResult.result;
-      const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
-      const turnStatsIndex = turnHistoryIndex;
+        const cardKey = namedCardResult.result;
+        const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
+        const turnStatsIndex = turnHistoryIndex;
 
-      cardsNamedByTurn[turnStatsIndex] ??= [];
-      cardsNamedByTurn[turnStatsIndex].push(cardKey);
+        cardsNamedByTurn[turnStatsIndex] ??= [];
+        cardsNamedByTurn[turnStatsIndex].push(cardKey);
 
         const cardIds = cardEffectArgs.findCards([
           { location: ['basicSupply', 'kingdomSupply'] },
           { kind: 'upTo', amount: { treasure: 5 }, playerId: cardEffectArgs.playerId },
         ])
-        .filter((card) => !cardsNamedByTurn[turnStatsIndex].includes(card.cardKey))
-        .map((card) => card.id);
+          .filter((card) => !cardsNamedByTurn[turnStatsIndex].includes(card.cardKey))
+          .map((card) => card.id);
 
         if (!cardIds.length) {
           console.debug(`[war-chest effect] no cards found`);

@@ -4,7 +4,7 @@ import { ExpansionConfiguratorFactory, GameEventRegistrar } from '@server-types/
 import { uniqueByProp } from '../../core/match-configurator.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { registerArtifactEffects } from './artifact-effects-renaissance.ts';
-import { renaissanceArtifactKeys, RenaissanceArtifactKey } from './artifact-keys-renaissance.ts';
+import { RenaissanceArtifactKey, renaissanceArtifactKeys } from './artifact-keys-renaissance.ts';
 import { registerRenaissanceTokenDefinitions } from './token-definitions-renaissance.ts';
 import { renaissanceTokenIds } from './token-ids-renaissance.ts';
 

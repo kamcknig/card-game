@@ -792,9 +792,9 @@ const effectMap: CardExpansionModule = {
 
           const missionBuyRestrictionRule: CardPriceRule = (_card, context) => {
             if (context.playerId !== cardEffectArgs.playerId) {
-              return {restricted: false, cost: {treasure: 0}};
+              return { restricted: false, cost: { treasure: 0 } };
             }
-            return {restricted: true, cost: {treasure: 0}};
+            return { restricted: true, cost: { treasure: 0 } };
           };
 
           // Apply to every card so buys from any source (including non-supply buys) are restricted.

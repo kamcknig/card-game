@@ -1,5 +1,9 @@
 import { expansionLibrary } from '../expansion-library.ts';
-import { ExpansionConfiguratorFactory, GameEventRegistrar, PlayerScoreDecoratorRegistrar } from '@server-types/index.ts';
+import {
+  ExpansionConfiguratorFactory,
+  GameEventRegistrar,
+  PlayerScoreDecoratorRegistrar,
+} from '@server-types/index.ts';
 import { uniqueByProp } from '../../core/match-configurator.ts';
 import { registerNocturneBoonEffects } from './boon-effects-nocturne.ts';
 import { configureWillOWisp } from './configure-will-o-wisp.ts';

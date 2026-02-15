@@ -148,6 +148,7 @@ export interface GameActionDefinitionMap {
     cardId: CardId | Card;
     playerId: PlayerId;
     cardCost: CardCost;
+    buyOptionId?: string;
     overpay?: { inTreasure: number; inCoffer: number };
   }) => Promise<void>;
   buyEvent: (args: {
@@ -423,9 +424,42 @@ export type CardExpansionActionConditionMap = {
   canBuy?: (args: { match: Match; cardLibrary: MatchCardLibrary; playerId: PlayerId }) => boolean;
 };
 
+// Shared context for checking whether an alternate buy option can currently be used.
+export type CardAlternateBuyOptionCanUseContext = {
+  match: Match;
+  playerId: PlayerId;
+  card: Card;
+  cardLibrary: MatchCardLibrary;
+  findCards: FindCardsFn;
+  cardSourceController: CardSourceController;
+  cardPriceController: CardPriceRulesController;
+};
+
+// Runtime context for applying an alternate buy option.
+export type CardAlternateBuyOptionApplyContext = CardAlternateBuyOptionCanUseContext & {
+  runGameActionDelegate: RunGameActionDelegate;
+  reactionManager: ReactionManager;
+  logManager: LogManager;
+};
+
+// Optional summary data returned after applying an alternate buy option.
+export type CardAlternateBuyOptionApplyResult = {
+  paidTreasure?: number;
+  successful?: boolean;
+};
+
+// Defines a non-standard way to pay for buying a card.
+export type CardAlternateBuyOption = {
+  id: string;
+  label: string;
+  canBuy: (args: CardAlternateBuyOptionCanUseContext) => boolean;
+  apply: (args: CardAlternateBuyOptionApplyContext) => Promise<CardAlternateBuyOptionApplyResult | void>;
+};
+
 export interface CardExpansionModule {
   [p: CardKey]: {
     registerActionConditions?: () => CardExpansionActionConditionMap;
+    registerAlternateBuyOptions?: () => CardAlternateBuyOption[];
     registerLifeCycleMethods?: () => CardLifecycleCallbackMap;
     registerScoringFunction?: () => CardScoringFunction;
     registerEffects?: CardEffectFactory;
