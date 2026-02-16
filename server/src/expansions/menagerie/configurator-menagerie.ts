@@ -15,9 +15,26 @@ const horseSourcePiles = new Set([
   'supplies',
 ]);
 
+// Menagerie events that require the Horse non-supply pile.
+const horseSourceEvents = new Set([
+  'bargain',
+  'demand',
+  'ride',
+  'stampede',
+]);
+
+// Menagerie events that require the Exile mat.
+const exileMatEvents = new Set([
+  'banish',
+  'enclave',
+  'invest',
+  'transport',
+]);
+
 // Ensures the Horse pile is present only when required by selected kingdom cards.
 const configureHorsePile = (config: ComputedMatchConfiguration) => {
-  const hasHorseSource = config.kingdomSupply.some((supply) => horseSourcePiles.has(supply.name));
+  const hasHorseSource = config.kingdomSupply.some((supply) => horseSourcePiles.has(supply.name)) ||
+    config.events.some((event) => horseSourceEvents.has(event.cardKey));
   const hasHorsePile = config.nonSupply?.some((supply) => supply.name === 'horse') ?? false;
 
   if (!hasHorseSource) {
@@ -54,10 +71,10 @@ const configureHorsePile = (config: ComputedMatchConfiguration) => {
 
 const configurator: ExpansionConfiguratorFactory = () => {
   return async (args) => {
-    // Menagerie Exile mat is only needed when at least one selected Kingdom card uses it.
+    // Menagerie Exile mat is needed when selected Kingdom cards or Events use Exile.
     const requiresExileMat = args.config.kingdomSupply.some((supply) =>
       supply.cards.some((card) => card.mat === 'exile')
-    );
+    ) || args.config.events.some((event) => exileMatEvents.has(event.cardKey));
 
     if (!requiresExileMat) {
       configureHorsePile(args.config);

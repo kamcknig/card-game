@@ -4,6 +4,7 @@ import { isLocationInPlay } from '../../utils/is-in-play.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { findArtifactInMatch } from '@shared/find-card-like-in-match.ts';
 import { renaissanceArtifactKeys } from './artifact-keys-renaissance.ts';
+import { gainTopSupplyCardForPileKey } from '../../utils/gain-top-supply-card-by-key.ts';
 
 // Registers Renaissance artifact effects.
 export const registerArtifactEffects = (registerArtifactEffect: ArtifactEffectRegistrar) => {
@@ -221,28 +222,23 @@ const registerTreasureChest = (registerArtifactEffect: ArtifactEffectRegistrar) 
         return ownedArtifacts.includes(cardId);
       },
       triggeredEffectFn: async ({ logManager, runGameActionDelegate, match: triggeredMatch }) => {
-        const goldCards = findCards([
-          { location: 'basicSupply' },
-          { cardKeys: 'gold' },
-        ]);
-
-        if (!goldCards.length) {
+        const gainedGoldId = await gainTopSupplyCardForPileKey({ findCards, runGameActionDelegate }, {
+          playerId,
+          pileKey: 'gold',
+          from: 'basicSupply',
+          to: { location: 'playerDiscard' },
+          logTag: 'treasure-chest artifact',
+        });
+        if (!gainedGoldId) {
           console.debug('[treasure-chest artifact] no Gold cards available in supply');
           return;
         }
-
-        const goldCardId = goldCards.slice(-1)[0].id;
         console.debug(`[treasure-chest artifact] gaining Gold on turn ${triggeredMatch.turnNumber}`);
         logManager.addLogEntry({
           type: 'cardLikeEffect',
           playerId,
           cardLikeId: cardId,
           effectText: 'Gain a Gold',
-        });
-        await runGameActionDelegate('gainCard', {
-          playerId,
-          cardId: goldCardId,
-          to: { location: 'playerDiscard' },
         });
       },
     });

@@ -41,6 +41,11 @@ export type MatchCardLikeByKind = {
   artifact: Artifact;
 };
 
+// Replaces unknown metadata with caller-provided metadata shape.
+type CardLikeWithMetadata<TCardLike, M> = Omit<TCardLike, 'metadata'> & {
+  metadata: M;
+};
+
 // Result shape when callers need both kind and card-like instance.
 export type MatchCardLikeEntry = {
   kind: MatchCardLikeKind;
@@ -134,24 +139,34 @@ export const findCardLikeByKindInMatch = <K extends MatchCardLikeKind>(
   return collection.find((candidate) => candidate.id === cardLikeId);
 };
 
+// Finds a card-like by id restricted to a specific kind with metadata typing.
+export const findCardLikeByKindInMatchWithMetadata = <K extends MatchCardLikeKind, M = unknown>(
+  match: Match | null | undefined,
+  cardLikeId: CardLikeId,
+  kind: K,
+): CardLikeWithMetadata<MatchCardLikeByKind[K], M> | undefined => {
+  const cardLike = findCardLikeByKindInMatch(match, cardLikeId, kind);
+  return cardLike as CardLikeWithMetadata<MatchCardLikeByKind[K], M> | undefined;
+};
+
 // Convenience wrappers for specific card-like kinds.
-export const findEventInMatch = (match: Match | null | undefined, cardLikeId: CardLikeId) =>
-  findCardLikeByKindInMatch(match, cardLikeId, 'event');
+export const findEventInMatch = <M = unknown>(match: Match | null | undefined, cardLikeId: CardLikeId) =>
+  findCardLikeByKindInMatchWithMetadata<'event', M>(match, cardLikeId, 'event');
 
-export const findLandmarkInMatch = (match: Match | null | undefined, cardLikeId: CardLikeId) =>
-  findCardLikeByKindInMatch(match, cardLikeId, 'landmark');
+export const findLandmarkInMatch = <M = unknown>(match: Match | null | undefined, cardLikeId: CardLikeId) =>
+  findCardLikeByKindInMatchWithMetadata<'landmark', M>(match, cardLikeId, 'landmark');
 
-export const findProjectInMatch = (match: Match | null | undefined, cardLikeId: CardLikeId) =>
-  findCardLikeByKindInMatch(match, cardLikeId, 'project');
+export const findProjectInMatch = <M = unknown>(match: Match | null | undefined, cardLikeId: CardLikeId) =>
+  findCardLikeByKindInMatchWithMetadata<'project', M>(match, cardLikeId, 'project');
 
-export const findBoonInMatch = (match: Match | null | undefined, cardLikeId: CardLikeId) =>
-  findCardLikeByKindInMatch(match, cardLikeId, 'boon');
+export const findBoonInMatch = <M = unknown>(match: Match | null | undefined, cardLikeId: CardLikeId) =>
+  findCardLikeByKindInMatchWithMetadata<'boon', M>(match, cardLikeId, 'boon');
 
-export const findHexInMatch = (match: Match | null | undefined, cardLikeId: CardLikeId) =>
-  findCardLikeByKindInMatch(match, cardLikeId, 'hex');
+export const findHexInMatch = <M = unknown>(match: Match | null | undefined, cardLikeId: CardLikeId) =>
+  findCardLikeByKindInMatchWithMetadata<'hex', M>(match, cardLikeId, 'hex');
 
-export const findStateInMatch = (match: Match | null | undefined, cardLikeId: CardLikeId) =>
-  findCardLikeByKindInMatch(match, cardLikeId, 'state');
+export const findStateInMatch = <M = unknown>(match: Match | null | undefined, cardLikeId: CardLikeId) =>
+  findCardLikeByKindInMatchWithMetadata<'state', M>(match, cardLikeId, 'state');
 
-export const findArtifactInMatch = (match: Match | null | undefined, cardLikeId: CardLikeId) =>
-  findCardLikeByKindInMatch(match, cardLikeId, 'artifact');
+export const findArtifactInMatch = <M = unknown>(match: Match | null | undefined, cardLikeId: CardLikeId) =>
+  findCardLikeByKindInMatchWithMetadata<'artifact', M>(match, cardLikeId, 'artifact');

@@ -1060,15 +1060,28 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._socketMap.forEach((s) => s.off(event));
     }
 
-    const currentTurn = match.turnNumber;
-    const currentPlayerTurnIndex = match.currentPlayerTurnIndex;
-
     const summary: MatchSummary = {
       playerSummary: match.players.reduce((prev, player) => {
         const playerId = player.id;
-        const turnsTaken = match.players.findIndex((p) => p.id === playerId) <= currentPlayerTurnIndex
-          ? (Math.floor(currentTurn / match.players.length) + 1)
-          : Math.floor(currentTurn / match.players.length);
+        // Tiebreaker turns are counted from recorded turn history.
+        // Seize the Day turns are excluded from this count per event FAQ.
+        const turnsTaken = match.stats.turns.filter((turnStats) => {
+          if (turnStats.playerId !== playerId) {
+            return false;
+          }
+
+          const sourceId = turnStats.sourceId;
+          if (sourceId === undefined) {
+            return true;
+          }
+
+          const sourceEvent = match.events.find((event) => event.id === sourceId);
+          if (!sourceEvent) {
+            return true;
+          }
+
+          return sourceEvent.cardKey !== 'seize-the-day';
+        }).length;
 
         prev.push({
           playerId,

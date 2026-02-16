@@ -17,6 +17,7 @@ import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
+import { findTopSupplyCardForPileKey, gainTopSupplyCardForPileKey } from '../../utils/gain-top-supply-card-by-key.ts';
 
 const addTravellerEffect = async (
   card: Card,
@@ -164,21 +165,15 @@ const expansion: CardExpansionModule = {
             });
           }
         } else {
-          const silverCards = cardEffectArgs.findCards([
-            { location: 'basicSupply' },
-            { cardKeys: 'silver' },
-          ]);
-
-          if (!silverCards.length) {
+          const gainedSilverId = await gainTopSupplyCardForPileKey(cardEffectArgs, {
+            playerId: cardEffectArgs.playerId,
+            pileKey: 'silver',
+            from: 'basicSupply',
+            to: { location: 'playerDiscard' },
+            logTag: 'amulet effect',
+          });
+          if (!gainedSilverId) {
             console.debug(`[amulet effect] no silver cards in supply`);
-          } else {
-            const silverCardToGain = silverCards.slice(-1)[0];
-
-            await cardEffectArgs.runGameActionDelegate('gainCard', {
-              playerId: cardEffectArgs.playerId,
-              cardId: silverCardToGain.id,
-              to: { location: 'playerDiscard' },
-            });
           }
         }
       };
@@ -1521,25 +1516,19 @@ const expansion: CardExpansionModule = {
           `[magpie effect] action or victory revealed, gaining magpie`,
         );
 
-        const magpieCards = cardEffectArgs.findCards([
-          { location: 'kingdomSupply' },
-          { cardKeys: 'magpie' },
-        ]);
-
-        if (!magpieCards.length) {
+        const gainedMagpieId = await gainTopSupplyCardForPileKey(cardEffectArgs, {
+          playerId: cardEffectArgs.playerId,
+          pileKey: 'magpie',
+          from: 'kingdomSupply',
+          to: { location: 'playerDiscard' },
+          logTag: 'magpie effect',
+        });
+        if (!gainedMagpieId) {
           console.debug(`[magpie effect] no magpie cards in supply`);
           return;
         }
 
-        const magPieToGain = magpieCards.slice(-1)[0];
-
-        console.debug(`[magpie effect] gaining ${magPieToGain}`);
-
-        await cardEffectArgs.runGameActionDelegate('gainCard', {
-          playerId: cardEffectArgs.playerId,
-          cardId: magPieToGain.id,
-          to: { location: 'playerDiscard' },
-        });
+        console.debug(`[magpie effect] gained magpie ${gainedMagpieId}`);
       }
     },
   },
@@ -1736,18 +1725,16 @@ const expansion: CardExpansionModule = {
           }
         }
 
-        const portCards = args.findCards([
-          { location: 'kingdomSupply' },
-          { cardKeys: 'port' },
-        ]);
-
-        if (!portCards.length) {
+        const topPortCard = findTopSupplyCardForPileKey(args, {
+          pileKey: 'port',
+          from: 'kingdomSupply',
+        });
+        if (!topPortCard) {
           console.debug(`[port onGained effect] no port cards in supply`);
           return;
         }
 
-        const portToGain = portCards.slice(-1)[0];
-        const extraPortCard = args.cardLibrary.getCard(portToGain.id);
+        const extraPortCard = args.cardLibrary.getCard(topPortCard.id);
 
         console.debug(`[port onGained effect] gaining ${extraPortCard}`);
 
@@ -2653,45 +2640,30 @@ const expansion: CardExpansionModule = {
       console.debug(`[treasure-trove effect] gaining 2 treasure`);
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
 
-      const goldAndCopperCards = cardEffectArgs.findCards([
-        { location: 'basicSupply' },
-        { cardKeys: ['gold', 'copper'] },
-      ]);
-
-      const [goldCards, copperCards] = goldAndCopperCards.reduce(
-        (acc, nextCard) => {
-          if (nextCard.cardKey === 'gold') {
-            acc[0].push(nextCard);
-          } else {
-            acc[1].push(nextCard);
-          }
-          return acc;
-        },
-        [[], []] as Card[][],
-      );
-
-      if (!goldCards.length) {
+      const gainedGoldId = await gainTopSupplyCardForPileKey(cardEffectArgs, {
+        playerId: cardEffectArgs.playerId,
+        pileKey: 'gold',
+        from: 'basicSupply',
+        to: { location: 'playerDiscard' },
+        logTag: 'treasure-trove effect',
+      });
+      if (!gainedGoldId) {
         console.debug(`[treasure-trove effect] no gold cards in supply`);
       } else {
-        const goldCardToGain = goldCards.slice(-1)[0];
-        console.debug(`[treasure-trove effect] gaining ${goldCardToGain}`);
-        await cardEffectArgs.runGameActionDelegate('gainCard', {
-          playerId: cardEffectArgs.playerId,
-          cardId: goldCardToGain.id,
-          to: { location: 'playerDiscard' },
-        });
+        console.debug(`[treasure-trove effect] gaining gold ${gainedGoldId}`);
       }
 
-      if (!copperCards.length) {
+      const gainedCopperId = await gainTopSupplyCardForPileKey(cardEffectArgs, {
+        playerId: cardEffectArgs.playerId,
+        pileKey: 'copper',
+        from: 'basicSupply',
+        to: { location: 'playerDiscard' },
+        logTag: 'treasure-trove effect',
+      });
+      if (!gainedCopperId) {
         console.debug(`[treasure-trove effect] no copper cards in supply`);
       } else {
-        const copperCardToGain = copperCards.slice(-1)[0];
-        console.debug(`[treasure-trove effect] gaining ${copperCardToGain}`);
-        await cardEffectArgs.runGameActionDelegate('gainCard', {
-          playerId: cardEffectArgs.playerId,
-          cardId: copperCardToGain.id,
-          to: { location: 'playerDiscard' },
-        });
+        console.debug(`[treasure-trove effect] gaining copper ${gainedCopperId}`);
       }
     },
   },

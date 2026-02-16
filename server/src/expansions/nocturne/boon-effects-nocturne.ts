@@ -1,6 +1,7 @@
 import { BoonEffectRegistrar } from '@server-types/index.ts';
 import { CardId } from 'shared/types/index.ts';
 import { findBoonInMatch } from '@shared/find-card-like-in-match.ts';
+import { gainTopSupplyCardForPileKey } from '../../utils/gain-top-supply-card-by-key.ts';
 
 // Registers all Nocturne boon effects for the current match.
 export const registerNocturneBoonEffects = (registerBoonEffect: BoonEffectRegistrar) => {
@@ -272,24 +273,18 @@ const registerMountainsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     runGameActionDelegate,
     findCards,
   }) => {
-    const silverCards = findCards([
-      { location: 'basicSupply' },
-      { cardKeys: 'silver' },
-    ]);
-
-    if (silverCards.length < 1) {
+    const gainedSilverId = await gainTopSupplyCardForPileKey({ runGameActionDelegate, findCards }, {
+      playerId: playerId,
+      pileKey: 'silver',
+      from: 'basicSupply',
+      to: { location: 'playerDiscard' },
+      logTag: 'the-mountains-gift boon',
+    });
+    if (!gainedSilverId) {
       console.info('[the-mountains-gift boon] no silver cards in supply');
       return;
     }
-
-    const silverCardId = silverCards.slice(-1)[0].id;
-
-    console.debug(`[the-mountains-gift boon] gaining silver ${silverCardId}`);
-    await runGameActionDelegate('gainCard', {
-      playerId: playerId,
-      cardId: silverCardId,
-      to: { location: 'playerDiscard' },
-    });
+    console.debug(`[the-mountains-gift boon] gaining silver ${gainedSilverId}`);
   });
 };
 
@@ -391,23 +386,19 @@ const registerSkysGift = (registerBoonEffect: BoonEffectRegistrar) => {
       return;
     }
 
-    const goldCards = findCards([
-      { location: 'basicSupply' },
-      { cardKeys: 'gold' },
-    ]);
-
-    if (goldCards.length < 1) {
+    const gainedGoldId = await gainTopSupplyCardForPileKey({ runGameActionDelegate, findCards }, {
+      playerId: playerId,
+      pileKey: 'gold',
+      from: 'basicSupply',
+      to: { location: 'playerDiscard' },
+      logTag: 'the-skys-gift boon',
+    });
+    if (!gainedGoldId) {
       console.info('[the-skys-gift boon] no gold cards in supply');
       return;
     }
 
-    const goldCardId = goldCards.slice(-1)[0].id;
-    console.debug(`[the-skys-gift boon] gaining gold ${goldCardId}`);
-    await runGameActionDelegate('gainCard', {
-      playerId: playerId,
-      cardId: goldCardId,
-      to: { location: 'playerDiscard' },
-    });
+    console.debug(`[the-skys-gift boon] gaining gold ${gainedGoldId}`);
   });
 };
 

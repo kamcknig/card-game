@@ -3,6 +3,7 @@ import { CardId } from 'shared/types/index.ts';
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { getPlayerStateByKey, playerHasState } from '../../utils/player-state-utils.ts';
+import { gainTopSupplyCardForPileKey } from '../../utils/gain-top-supply-card-by-key.ts';
 
 // Registers all Nocturne hex effects for the current match.
 export const registerNocturneHexEffects = (registerHexEffect: HexEffectRegistrar) => {
@@ -200,23 +201,18 @@ const registerFear = (registerHexEffect: HexEffectRegistrar) => {
 // Registers Greed hex effect logic.
 const registerGreed = (registerHexEffect: HexEffectRegistrar) => {
   registerHexEffect('greed', async ({ playerId, findCards, runGameActionDelegate, cardLibrary }) => {
-    const copperCards = findCards([
-      { location: 'basicSupply' },
-      { cardKeys: 'copper' },
-    ]);
-
-    if (!copperCards.length) {
+    const gainedCopperId = await gainTopSupplyCardForPileKey({ findCards, runGameActionDelegate }, {
+      playerId,
+      pileKey: 'copper',
+      from: 'basicSupply',
+      to: { location: 'playerDeck' },
+      logTag: 'greed hex',
+    });
+    if (!gainedCopperId) {
       console.debug('[greed hex] no Copper cards available to gain');
       return;
     }
-
-    const copperId = copperCards.slice(-1)[0].id;
-    console.debug(`[greed hex] gaining ${cardLibrary.getCard(copperId)} to deck`);
-    await runGameActionDelegate('gainCard', {
-      playerId,
-      cardId: copperId,
-      to: { location: 'playerDeck' },
-    });
+    console.debug(`[greed hex] gaining ${cardLibrary.getCard(gainedCopperId)} to deck`);
   });
 };
 
@@ -285,23 +281,18 @@ const registerLocusts = (registerHexEffect: HexEffectRegistrar) => {
     });
 
     if (trashedCard.cardKey === 'copper' || trashedCard.cardKey === 'estate') {
-      const curseCards = findCards([
-        { location: 'basicSupply' },
-        { cardKeys: 'curse' },
-      ]);
-
-      if (!curseCards.length) {
+      const gainedCurseId = await gainTopSupplyCardForPileKey({ findCards, runGameActionDelegate }, {
+        playerId,
+        pileKey: 'curse',
+        from: 'basicSupply',
+        to: { location: 'playerDiscard' },
+        logTag: 'locusts hex',
+      });
+      if (!gainedCurseId) {
         console.debug('[locusts hex] no Curse cards available to gain');
         return;
       }
-
-      const curseId = curseCards.slice(-1)[0].id;
-      console.debug(`[locusts hex] gaining ${cardLibrary.getCard(curseId)}`);
-      await runGameActionDelegate('gainCard', {
-        playerId,
-        cardId: curseId,
-        to: { location: 'playerDiscard' },
-      });
+      console.debug(`[locusts hex] gaining ${cardLibrary.getCard(gainedCurseId)}`);
       return;
     }
 
@@ -378,23 +369,18 @@ const registerMisery = (registerHexEffect: HexEffectRegistrar) => {
 // Registers Plague hex effect logic.
 const registerPlague = (registerHexEffect: HexEffectRegistrar) => {
   registerHexEffect('plague', async ({ playerId, findCards, runGameActionDelegate, cardLibrary }) => {
-    const curseCards = findCards([
-      { location: 'basicSupply' },
-      { cardKeys: 'curse' },
-    ]);
-
-    if (!curseCards.length) {
+    const gainedCurseId = await gainTopSupplyCardForPileKey({ findCards, runGameActionDelegate }, {
+      playerId,
+      pileKey: 'curse',
+      from: 'basicSupply',
+      to: { location: 'playerHand' },
+      logTag: 'plague hex',
+    });
+    if (!gainedCurseId) {
       console.debug('[plague hex] no Curse cards available to gain');
       return;
     }
-
-    const curseId = curseCards.slice(-1)[0].id;
-    console.debug(`[plague hex] gaining ${cardLibrary.getCard(curseId)} to hand`);
-    await runGameActionDelegate('gainCard', {
-      playerId,
-      cardId: curseId,
-      to: { location: 'playerHand' },
-    });
+    console.debug(`[plague hex] gaining ${cardLibrary.getCard(gainedCurseId)} to hand`);
   });
 };
 

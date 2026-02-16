@@ -8,6 +8,7 @@ import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
+import { findTopSupplyCardForPileKey, gainTopSupplyCardForPileKey } from '../../utils/gain-top-supply-card-by-key.ts';
 
 const expansion: CardExpansionModule = {
   'animal-fair': {
@@ -220,22 +221,17 @@ const expansion: CardExpansionModule = {
 
       console.debug(`[black-cat effect] curse targets ${targetPlayerIds.join(', ')}`);
       for (const targetPlayerId of targetPlayerIds) {
-        const curseCards = cardEffectArgs.findCards([
-          { location: 'basicSupply' },
-          { cardKeys: 'curse' },
-        ]);
-
-        if (!curseCards.length) {
+        const gainedCurseId = await gainTopSupplyCardForPileKey(cardEffectArgs, {
+          playerId: targetPlayerId,
+          pileKey: 'curse',
+          from: 'basicSupply',
+          to: { location: 'playerDiscard' },
+          logTag: 'black-cat effect',
+        });
+        if (!gainedCurseId) {
           console.debug('[black-cat effect] no Curse remaining in supply');
           return;
         }
-
-        const curseCard = curseCards.slice(-1)[0];
-        await cardEffectArgs.runGameActionDelegate('gainCard', {
-          playerId: targetPlayerId,
-          cardId: curseCard.id,
-          to: { location: 'playerDiscard' },
-        });
       }
     },
   },
@@ -296,17 +292,15 @@ const expansion: CardExpansionModule = {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
         // Camel Train always exiles a Gold from supply when gained.
-        const goldCards = cardEffectArgs.findCards([
-          { location: 'basicSupply' },
-          { cardKeys: 'gold' },
-        ]);
-
-        if (!goldCards.length) {
+        const goldCard = findTopSupplyCardForPileKey(cardEffectArgs, {
+          pileKey: 'gold',
+          from: 'basicSupply',
+        });
+        if (!goldCard) {
           console.debug('[camel-train onGained] no Gold in supply to exile');
           return;
         }
 
-        const goldCard = goldCards.slice(-1)[0];
         console.debug(`[camel-train onGained] exiling ${goldCard}`);
         await cardEffectArgs.runGameActionDelegate('exileCard', {
           cardId: goldCard.id,
@@ -959,21 +953,17 @@ const expansion: CardExpansionModule = {
       }
 
       if (selectedCard.type.includes('TREASURE')) {
-        const silverCards = cardEffectArgs.findCards([
-          { location: 'basicSupply' },
-          { cardKeys: 'silver' },
-        ]);
-
-        if (!silverCards.length) {
+        const gainedSilverId = await gainTopSupplyCardForPileKey(cardEffectArgs, {
+          playerId: cardEffectArgs.playerId,
+          pileKey: 'silver',
+          from: 'basicSupply',
+          to: { location: 'playerDiscard' },
+          logTag: 'groom effect',
+        });
+        if (!gainedSilverId) {
           console.debug('[groom effect] no Silver cards remain to gain for Treasure bonus');
         } else {
-          const silverCard = silverCards.slice(-1)[0];
-          console.debug(`[groom effect] gained Treasure card, gaining Silver ${silverCard}`);
-          await cardEffectArgs.runGameActionDelegate('gainCard', {
-            playerId: cardEffectArgs.playerId,
-            cardId: silverCard.id,
-            to: { location: 'playerDiscard' },
-          });
+          console.debug(`[groom effect] gained Treasure card, gaining Silver ${gainedSilverId}`);
         }
       }
 
@@ -1556,21 +1546,17 @@ const expansion: CardExpansionModule = {
         }
 
         if (bonusId === 'silver') {
-          const silverCards = cardEffectArgs.findCards([
-            { location: 'basicSupply' },
-            { cardKeys: 'silver' },
-          ]);
-
-          if (!silverCards.length) {
+          const gainedSilverId = await gainTopSupplyCardForPileKey(cardEffectArgs, {
+            playerId: cardEffectArgs.playerId,
+            pileKey: 'silver',
+            from: 'basicSupply',
+            to: { location: 'playerDiscard' },
+            logTag: 'scrap effect',
+          });
+          if (!gainedSilverId) {
             console.debug('[scrap effect] no Silver cards remain to gain');
             return;
           }
-
-          await cardEffectArgs.runGameActionDelegate('gainCard', {
-            playerId: cardEffectArgs.playerId,
-            cardId: silverCards.slice(-1)[0].id,
-            to: { location: 'playerDiscard' },
-          });
           return;
         }
 
@@ -1981,12 +1967,11 @@ const expansion: CardExpansionModule = {
         count: 3,
       });
 
-      const silverCards = cardEffectArgs.findCards([
-        { location: 'basicSupply' },
-        { cardKeys: 'silver' },
-      ]);
-
-      if (!silverCards.length) {
+      const topSilverCard = findTopSupplyCardForPileKey(cardEffectArgs, {
+        pileKey: 'silver',
+        from: 'basicSupply',
+      });
+      if (!topSilverCard) {
         console.debug('[wayfarer effect] no Silver cards remain to gain');
         return;
       }
@@ -2000,7 +1985,7 @@ const expansion: CardExpansionModule = {
         ],
         content: {
           type: 'display-cards',
-          cardIds: [silverCards.slice(-1)[0].id],
+          cardIds: [topSilverCard.id],
         },
       }) as { action?: number } | null;
 
@@ -2009,10 +1994,12 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      await cardEffectArgs.runGameActionDelegate('gainCard', {
+      await gainTopSupplyCardForPileKey(cardEffectArgs, {
         playerId: cardEffectArgs.playerId,
-        cardId: silverCards.slice(-1)[0].id,
+        pileKey: 'silver',
+        from: 'basicSupply',
         to: { location: 'playerDiscard' },
+        logTag: 'wayfarer effect',
       });
     },
   },

@@ -7,6 +7,7 @@ import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { renaissanceArtifactKeys } from './artifact-keys-renaissance.ts';
+import { findTopSupplyCardForPileKey, gainTopSupplyCardForPileKey } from '../../utils/gain-top-supply-card-by-key.ts';
 
 // Renaissance card effects module (artifacts handled separately).
 const expansion: CardExpansionModule = {
@@ -408,17 +409,15 @@ const expansion: CardExpansionModule = {
         }
 
         // Experiment gains one additional copy from supply without chaining further onGained effects.
-        const experimentCardsInSupply = cardEffectArgs.findCards([
-          { location: ['kingdomSupply', 'basicSupply'] },
-          { cardKeys: 'experiment' },
-        ]);
-
-        if (!experimentCardsInSupply.length) {
+        const experimentToGain = findTopSupplyCardForPileKey(cardEffectArgs, {
+          pileKey: 'experiment',
+          from: ['kingdomSupply', 'basicSupply'],
+        });
+        if (!experimentToGain) {
           console.debug('[experiment onGained effect] no Experiment in supply to gain');
           return;
         }
 
-        const experimentToGain = experimentCardsInSupply.slice(-1)[0];
         const extraExperimentCard = cardEffectArgs.cardLibrary.getCard(experimentToGain.id);
         console.debug(`[experiment onGained effect] gaining additional ${extraExperimentCard}`);
         await cardEffectArgs.runGameActionDelegate('gainCard', {
@@ -556,22 +555,20 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const curseCards = cardEffectArgs.findCards([
-        { location: 'basicSupply' },
-        { cardKeys: 'curse' },
-      ]);
-      if (!curseCards.length) {
+      const gainedCurseId = await gainTopSupplyCardForPileKey(cardEffectArgs, {
+        playerId: cardEffectArgs.playerId,
+        pileKey: 'curse',
+        from: 'basicSupply',
+        to: { location: 'playerDiscard' },
+        logTag: 'hideout effect',
+      });
+      if (!gainedCurseId) {
         console.debug('[hideout effect] no Curse cards in supply');
         return;
       }
 
-      const curseCard = curseCards.slice(-1)[0];
+      const curseCard = cardEffectArgs.cardLibrary.getCard(gainedCurseId);
       console.debug(`[hideout effect] trashed Victory card, gaining ${curseCard}`);
-      await cardEffectArgs.runGameActionDelegate('gainCard', {
-        playerId: cardEffectArgs.playerId,
-        cardId: curseCard.id,
-        to: { location: 'playerDiscard' },
-      });
     },
   },
   'improve': {
@@ -767,19 +764,16 @@ const expansion: CardExpansionModule = {
 
       for (const targetPlayerId of targetPlayerIds) {
         // Gain a Curse if available.
-        const curseCards = cardEffectArgs.findCards([
-          { location: 'basicSupply' },
-          { cardKeys: 'curse' },
-        ]);
-
-        if (curseCards.length) {
-          const curseCard = curseCards.slice(-1)[0];
+        const gainedCurseId = await gainTopSupplyCardForPileKey(cardEffectArgs, {
+          playerId: targetPlayerId,
+          pileKey: 'curse',
+          from: 'basicSupply',
+          to: { location: 'playerDiscard' },
+          logTag: 'old-witch effect',
+        });
+        if (gainedCurseId) {
+          const curseCard = cardEffectArgs.cardLibrary.getCard(gainedCurseId);
           console.debug(`[old-witch effect] player ${targetPlayerId} gaining ${curseCard}`);
-          await cardEffectArgs.runGameActionDelegate('gainCard', {
-            playerId: targetPlayerId,
-            cardId: curseCard.id,
-            to: { location: 'playerDiscard' },
-          });
         } else {
           console.debug('[old-witch effect] no Curse in supply to gain');
         }

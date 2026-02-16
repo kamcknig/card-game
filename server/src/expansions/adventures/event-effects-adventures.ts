@@ -8,6 +8,7 @@ import { adventuresTokenIds } from './token-ids-adventures.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
+import { findTopSupplyCardForPileKey, gainTopSupplyCardForPileKey } from '../../utils/gain-top-supply-card-by-key.ts';
 import { findEventInMatch } from '@shared/find-card-like-in-match.ts';
 
 const effectMap: CardExpansionModule = {
@@ -619,11 +620,8 @@ const effectMap: CardExpansionModule = {
 
       for (const card of inPlayCards) {
         if (seenCardKeys.has(card.cardKey)) continue;
-        const supplyCopies = cardEffectArgs.findCards([
-          { location: ['basicSupply', 'kingdomSupply'] },
-          { cardKeys: card.cardKey },
-        ]);
-        if (!supplyCopies.length) continue;
+        const supplyTopCard = findTopSupplyCardForPileKey(cardEffectArgs, { pileKey: getCardPileKey(card) });
+        if (!supplyTopCard) continue;
         seenCardKeys.add(card.cardKey);
         uniqueSupplyInPlay.push(card);
       }
@@ -674,20 +672,11 @@ const effectMap: CardExpansionModule = {
         const selectedCard = cardEffectArgs.cardLibrary.getCard(
           selectedCardId,
         );
-        const supplyCopies = cardEffectArgs.findCards([
-          { location: ['basicSupply', 'kingdomSupply'] },
-          { cardKeys: selectedCard.cardKey },
-        ]);
-        if (!supplyCopies.length) {
-          console.debug(
-            `[pilgrimage effect] no supply copy available for ${selectedCard.cardKey}`,
-          );
-          continue;
-        }
-        await cardEffectArgs.runGameActionDelegate('gainCard', {
+        await gainTopSupplyCardForPileKey(cardEffectArgs, {
           playerId: cardEffectArgs.playerId,
-          cardId: supplyCopies.slice(-1)[0],
+          pileKey: getCardPileKey(selectedCard),
           to: { location: 'playerDiscard' },
+          logTag: 'pilgrimage effect',
         });
       }
     },
@@ -948,22 +937,12 @@ const effectMap: CardExpansionModule = {
       }
 
       if (gainGold) {
-        const goldCards = cardEffectArgs.findCards([
-          { location: 'basicSupply' },
-          { cardKeys: 'gold' },
-        ]);
-
-        if (!goldCards.length) {
-          console.debug(`[quest effect] no gold cards in supply`);
-          return;
-        }
-
-        console.debug(`[quest effect] gaining ${goldCards.slice(-1)[0]}`);
-
-        await cardEffectArgs.runGameActionDelegate('gainCard', {
+        await gainTopSupplyCardForPileKey(cardEffectArgs, {
           playerId: cardEffectArgs.playerId,
-          cardId: goldCards.slice(-1)[0],
+          pileKey: 'gold',
           to: { location: 'playerDiscard' },
+          from: 'basicSupply',
+          logTag: 'quest effect',
         });
       }
     },
@@ -980,23 +959,18 @@ const effectMap: CardExpansionModule = {
       if (!silversInPlay.length) {
         console.debug(`[raid effect] no silvers in play`);
       } else {
-        const supplySilvers = cardEffectArgs.findCards([
-          { location: 'basicSupply' },
-          { cardKeys: 'silver' },
-        ]);
-
-        if (!supplySilvers.length) {
-          console.debug(`[raid effect] no silvers in supply`);
-        } else {
-          const gainCount = Math.min(silversInPlay.length, supplySilvers.length);
-          console.debug(`[raid effect] gaining ${gainCount} silvers`);
-          for (let i = 0; i < gainCount; i++) {
-            const silverCardId = supplySilvers.slice(-i - 1)[0];
-            await cardEffectArgs.runGameActionDelegate('gainCard', {
-              playerId: cardEffectArgs.playerId,
-              cardId: silverCardId,
-              to: { location: 'playerDiscard' },
-            });
+        const gainCount = silversInPlay.length;
+        console.debug(`[raid effect] gaining up to ${gainCount} silvers`);
+        for (let i = 0; i < gainCount; i++) {
+          const gainedSilverCardId = await gainTopSupplyCardForPileKey(cardEffectArgs, {
+            playerId: cardEffectArgs.playerId,
+            pileKey: 'silver',
+            to: { location: 'playerDiscard' },
+            from: 'basicSupply',
+            logTag: 'raid effect',
+          });
+          if (gainedSilverCardId === undefined) {
+            break;
           }
         }
       }
@@ -1333,33 +1307,22 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      const silverCards = cardEffectArgs.findCards([
-        { location: 'basicSupply' },
-        { cardKeys: 'silver' },
-      ]);
-
-      if (!silverCards.length) {
-        console.debug(`[trade effect] no silver cards in supply`);
-        return;
-      }
-
       console.debug(
         `[trade effect] gaining ${selectedCardIds.length} silver cards`,
       );
 
       for (let i = 0; i < selectedCardIds.length; i++) {
-        const silverCard = silverCards.slice(-i - 1)[0];
+        const gainedSilverCardId = await gainTopSupplyCardForPileKey(cardEffectArgs, {
+          playerId: cardEffectArgs.playerId,
+          pileKey: 'silver',
+          to: { location: 'playerDiscard' },
+          from: 'basicSupply',
+          logTag: 'trade effect',
+        });
 
-        if (!silverCard) {
-          console.debug(`[trade effect] no silver cards in supply`);
+        if (gainedSilverCardId === undefined) {
           break;
         }
-
-        await cardEffectArgs.runGameActionDelegate('gainCard', {
-          playerId: cardEffectArgs.playerId,
-          cardId: silverCard,
-          to: { location: 'playerDiscard' },
-        });
       }
     },
   },
