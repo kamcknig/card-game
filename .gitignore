@@ -9,3 +9,8 @@ preselected-kingdoms.json
 preselected-events.json
 preselected-landmarks.json
 .deno/
+
+# Ignore Codex runtime/config artifacts, but keep project skills versioned.
+.codex/*
+!.codex/skills/
+!.codex/skills/**
