@@ -946,6 +946,20 @@ export class GameActionController implements GameActionDefinitionMap {
       playerId: args.playerId,
       bought: context?.bought ?? false,
       previousLocation,
+      gainedLocation: Array.isArray(args.to.location)
+        ? undefined
+        : {
+          location: args.to.location,
+          playerId: (
+            args.to.location === 'playerHand' ||
+            args.to.location === 'playerDeck' ||
+            args.to.location === 'playerDiscard' ||
+            args.to.location === 'playArea' ||
+            args.to.location === 'activeDuration'
+          )
+            ? args.playerId
+            : undefined,
+        },
     });
 
     await this.reactionManager.runTrigger({ trigger });
@@ -2107,16 +2121,48 @@ export class GameActionController implements GameActionDefinitionMap {
   }
 
   async revealCard(args: {
-    cardId: CardId | Card;
+    cardId?: CardId | Card;
     playerId: PlayerId;
+    source?: 'playerDeck' | 'playerDiscard';
     moveToSetAside?: boolean;
-  }, context?: GameActionContext) {
-    const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
+  }, context?: GameActionContext): Promise<CardId | undefined> {
+    let cardId: CardId | undefined;
+    // Resolve reveal target either from an explicit card id or from a source zone.
+    if (args.cardId instanceof Card) {
+      cardId = args.cardId.id;
+    } else if (typeof args.cardId === 'number') {
+      cardId = args.cardId;
+    } else if (args.source === 'playerDeck') {
+      let deck = this._cardSourceController.getSource('playerDeck', args.playerId);
+      if (!deck.length) {
+        console.debug(`[revealCard action] player ${args.playerId} deck empty, shuffling discard into deck`);
+        await this.shuffleDeck({ playerId: args.playerId }, context);
+        deck = this._cardSourceController.getSource('playerDeck', args.playerId);
+      }
+      cardId = deck.slice(-1)[0];
+    } else if (args.source === 'playerDiscard') {
+      const discard = this._cardSourceController.getSource('playerDiscard', args.playerId);
+      if (!discard.length) {
+        console.debug(`[revealCard action] player ${args.playerId} discard empty, shuffling for reveal fallback`);
+        await this.shuffleDeck({ playerId: args.playerId }, context);
+        const deck = this._cardSourceController.getSource('playerDeck', args.playerId);
+        cardId = deck.slice(-1)[0];
+      } else {
+        cardId = discard.slice(-1)[0];
+      }
+    } else {
+      throw new Error('[revealCard action] cardId or source is required');
+    }
+
+    if (cardId === undefined) {
+      console.debug(`[revealCard action] player ${args.playerId} has no card to reveal`);
+      return undefined;
+    }
+
+    const card = this.cardLibrary.getCard(cardId);
     let previousLocation: { location: CardLocation; playerId?: PlayerId } | undefined;
 
     console.debug(`[revealCard action] ${getPlayerById(this.match, args.playerId)} revealing ${card}`);
-
-    const cardId = card.id;
 
     if (args.moveToSetAside) {
       console.debug(`[revealCard action] moving card to 'revealed' zone`);
@@ -2141,6 +2187,8 @@ export class GameActionController implements GameActionDefinitionMap {
       cardId,
       previousLocation,
     });
+
+    return cardId;
   }
 
   async checkForRemainingPlayerActions(): Promise<void> {

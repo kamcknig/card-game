@@ -40,5 +40,118 @@
     ],
     "mat": "exile",
     "abilityText": "+1 Action\nExile a card from your hand. If you didn't have a copy of it in Exile, +$3."
+  },
+  "camel-train": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": [
+      "ACTION"
+    ],
+    "mat": "exile",
+    "abilityText": "Exile a non-Victory card from the Supply.\nWhen you gain this, Exile a Gold from the Supply."
+  },
+  "cardinal": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION",
+      "ATTACK"
+    ],
+    "targetScheme": "ALL_OTHER",
+    "mat": "exile",
+    "abilityText": "+$2\nEach other player reveals the top 2 cards of their deck, Exiles one costing from $3 to $6, and discards the rest."
+  },
+  "cavalry": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "Gain 2 Horses.\nWhen you gain this, +2 Cards, +1 Buy, and if it's your Buy phase return to your Action phase."
+  },
+  "coven": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION",
+      "ATTACK"
+    ],
+    "targetScheme": "ALL_OTHER",
+    "mat": "exile",
+    "abilityText": "+1 Action\n+$2\nEach other player Exiles a Curse from the Supply. If they can't, they discard their Exiled Curses."
+  },
+  "destrier": {
+    "cost": {
+      "treasure": 6
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+2 Cards\n+1 Action\nDuring your turns, this costs $1 less per card you've gained this turn."
+  },
+  "displace": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION"
+    ],
+    "mat": "exile",
+    "abilityText": "Exile a card from your hand. Gain a differently named card costing up to $2 more than it."
+  },
+  "falconer": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION",
+      "REACTION"
+    ],
+    "abilityText": "Gain a card to your hand costing less than this.\nWhen any player gains a card with 2 or more types, you may play this from your hand."
+  },
+  "fisherman": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+1 Card\n+1 Action\n+$1\nDuring your turns, if your discard pile is empty, this costs $3 less."
+  },
+  "gatekeeper": {
+    "cost": {
+      "treasure": 6
+    },
+    "type": [
+      "ACTION",
+      "DURATION",
+      "ATTACK"
+    ],
+    "targetScheme": "ALL_OTHER",
+    "mat": "exile",
+    "abilityText": "At the start of your next turn, +$3. Until then, when another player gains an Action or Treasure card they don't have an Exiled copy of, they Exile it."
+  },
+  "goatherd": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+1 Action\nYou may trash a card from your hand.\n+1 Card per card the player to your right trashed on their last turn."
+  },
+  "horse": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": [
+      "ACTION"
+    ],
+    "kingdomSelectable": false,
+    "abilityText": "+2 Cards\nReturn this to its pile."
   }
 }

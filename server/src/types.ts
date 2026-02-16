@@ -276,10 +276,12 @@ export interface GameActionDefinitionMap {
     overrides?: GameActionOverrides;
   }, context?: GameActionContext) => Promise<void>;
   revealCard: (args: {
-    cardId: CardId | Card;
+    cardId?: CardId | Card;
     playerId: PlayerId;
+    // Optional source to reveal from when cardId is not provided.
+    source?: 'playerDeck' | 'playerDiscard';
     moveToSetAside?: boolean;
-  }, context?: GameActionContext) => Promise<void>;
+  }, context?: GameActionContext) => Promise<CardId | undefined>;
   selectCard: (args: SelectActionCardArgs) => Promise<CardId[]>;
   // Generic shuffle action for cards and card-likes; does not add UI log entries.
   shuffle: (
@@ -544,6 +546,8 @@ export type TriggerEventTypeContext = {
     cardId: CardId;
     bought: boolean;
     previousLocation?: { location: CardLocation; playerId?: PlayerId };
+    // Destination where the card was gained before any cardGained reactions resolve.
+    gainedLocation?: { location: CardLocation; playerId?: PlayerId };
   };
   // Triggered on the end of each phase of a player's turn
   endTurnPhase: { phaseIndex: number; playerId: PlayerId };
