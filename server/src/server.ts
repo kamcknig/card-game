@@ -3,6 +3,7 @@ import { ServerEmitEvents, ServerListenEvents } from 'shared/types/index.ts';
 import { toNumber } from 'es-toolkit/compat';
 import * as log from '@timepp/enhanced-deno-log';
 import { defaultMatchControllerFactory, Game } from './core/game.ts';
+import { FileGameConfigurationStore } from './core/game-configuration-store.ts';
 import { loadExpansion } from './utils/load-expansion.ts';
 import { asClass, asValue, createContainer, InjectionMode } from 'awilix';
 
@@ -44,6 +45,7 @@ const container = createContainer({
 container.register({
   io: asValue(io),
   matchControllerFactory: asValue(defaultMatchControllerFactory),
+  configStore: asClass(FileGameConfigurationStore).singleton(),
   game: asClass(Game).singleton(),
 });
 

@@ -22,6 +22,7 @@ import jsonPatch from 'fast-json-patch';
 import Fuse, { IFuseOptions } from 'fuse.js';
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
 import { Server } from 'socket.io';
+import { FileGameConfigurationStore, GameConfigurationStore } from './game-configuration-store.ts';
 
 // Factory signature for creating a match controller instance.
 export type MatchControllerFactory = (
@@ -37,6 +38,7 @@ export const defaultMatchControllerFactory: MatchControllerFactory = (socketMap,
 export interface GameDependencies {
   io: Server<ServerListenEvents, ServerEmitEvents>;
   matchControllerFactory?: MatchControllerFactory;
+  configStore?: GameConfigurationStore;
 }
 
 const defaultMatchConfiguration: MatchConfiguration = {
@@ -91,6 +93,8 @@ export class Game {
   private readonly _io: Server<ServerListenEvents, ServerEmitEvents>;
   // Match controller factory injected from composition root for explicit wiring.
   private readonly _matchControllerFactory: MatchControllerFactory;
+  // Store abstraction for persisted lobby configuration.
+  private readonly _configStore: GameConfigurationStore;
   private _matchController: MatchController | undefined;
   private _matchConfiguration: MatchConfiguration | undefined;
   private _availableExpansion: ExpansionListElement[] = [];
@@ -106,85 +110,20 @@ export class Game {
   // When true, the game ends automatically if no human players remain connected.
   private readonly _endMatchWhenNoHumans: boolean;
 
-  constructor({ io, matchControllerFactory = defaultMatchControllerFactory }: GameDependencies) {
+  constructor({
+    io,
+    matchControllerFactory = defaultMatchControllerFactory,
+    configStore = new FileGameConfigurationStore(),
+  }: GameDependencies) {
     console.log(`[game] created`);
     this._io = io;
     this._matchControllerFactory = matchControllerFactory;
+    this._configStore = configStore;
     // Configure whether to end the match when all human players leave (default: true).
     const endOnNoHumansEnv = Deno.env.get('END_MATCH_ON_NO_HUMANS') ?? 'true';
     this._endMatchWhenNoHumans = endOnNoHumansEnv.toLowerCase() !== 'false';
-    try {
-      defaultMatchConfiguration.bannedKingdoms = JSON.parse(
-        Deno.readTextFileSync('./banned-kingdoms.json'),
-      ) as CardNoId[];
-    } catch (e) {
-      console.warn(`Couldn't read banned-kingdoms.json`);
-      console.error(e);
-    }
-
-    // Load preselected events from disk when available.
-    try {
-      console.info(`[game] loading preselected kingdoms from disk`);
-      const preselectedKingdoms = JSON.parse(Deno.readTextFileSync('./preselected-kingdoms.json')) as {
-        name: string;
-        cards: CardNoId[];
-      }[];
-
-      if (preselectedKingdoms?.length > 0) {
-        console.debug(preselectedKingdoms);
-      }
-
-      defaultMatchConfiguration.preselectedKingdoms = preselectedKingdoms.map((supply) => supply.cards[0]);
-    } catch (e) {
-      console.warn(`Couldn't read preselected-kingdoms.json`);
-      console.error(e);
-    }
-
-    try {
-      console.info(`[game] loading preselected events from disk`);
-
-      const preselectedEvents = JSON.parse(Deno.readTextFileSync('./preselected-events.json')) as EventNoId[];
-
-      if (preselectedEvents?.length > 0) {
-        console.debug(preselectedEvents);
-      }
-
-      defaultMatchConfiguration.events = preselectedEvents;
-    } catch (e) {
-      console.warn(`Couldn't read preselected-events.json`);
-      console.error(e);
-    }
-
-    try {
-      console.info(`[game] loading preselected landmarks from disk`);
-
-      const preselectedLandmarks = JSON.parse(Deno.readTextFileSync('./preselected-landmarks.json')) as LandmarkNoId[];
-
-      if (preselectedLandmarks?.length > 0) {
-        console.debug(preselectedLandmarks);
-      }
-
-      defaultMatchConfiguration.landmarks = preselectedLandmarks;
-    } catch (e) {
-      console.warn(`Couldn't read preselected-landmarks.json`);
-      console.error(e);
-    }
-
-    // Load preselected artifacts from disk when available.
-    try {
-      console.info(`[game] loading preselected artifacts from disk`);
-
-      const preselectedArtifacts = JSON.parse(Deno.readTextFileSync('./preselected-artifacts.json')) as ArtifactNoId[];
-
-      if (preselectedArtifacts?.length > 0) {
-        console.debug(preselectedArtifacts);
-      }
-
-      defaultMatchConfiguration.artifacts = preselectedArtifacts;
-    } catch (e) {
-      console.warn(`Couldn't read preselected-artifacts.json`);
-      console.error(e);
-    }
+    // Hydrate lobby defaults from persisted local files.
+    this._configStore.load(defaultMatchConfiguration);
 
     this.initializeFuseSearch();
     this.initializeEventFuse();
@@ -636,34 +575,34 @@ export class Game {
 
     const kingdomPatch = jsonPatch.compare(currentConfig.kingdomSupply, newConfig.kingdomSupply);
     if (kingdomPatch.length) {
-      Deno.writeTextFileSync('./preselected-kingdoms.json', JSON.stringify(newConfig.kingdomSupply));
+      this._configStore.persistPreselectedKingdoms(newConfig.kingdomSupply);
       defaultMatchConfiguration.kingdomSupply = structuredClone(newConfig.kingdomSupply);
     }
 
     const bannedKingdomsPatch = jsonPatch.compare(currentConfig.bannedKingdoms, newConfig.bannedKingdoms);
     if (bannedKingdomsPatch.length) {
-      Deno.writeTextFileSync('./banned-kingdoms.json', JSON.stringify(newConfig.bannedKingdoms));
+      this._configStore.persistBannedKingdoms(newConfig.bannedKingdoms);
       defaultMatchConfiguration.bannedKingdoms = structuredClone(newConfig.bannedKingdoms);
     }
 
     const eventsPatch = jsonPatch.compare(currentConfig.events, newConfig.events);
     if (eventsPatch.length) {
       // Persist selected events between sessions.
-      Deno.writeTextFileSync('./preselected-events.json', JSON.stringify(newConfig.events));
+      this._configStore.persistEvents(newConfig.events);
       defaultMatchConfiguration.events = structuredClone(newConfig.events);
     }
 
     const landmarksPatch = jsonPatch.compare(currentConfig.landmarks, newConfig.landmarks);
     if (landmarksPatch.length) {
       // Persist selected landmarks between sessions.
-      Deno.writeTextFileSync('./preselected-landmarks.json', JSON.stringify(newConfig.landmarks));
+      this._configStore.persistLandmarks(newConfig.landmarks);
       defaultMatchConfiguration.landmarks = structuredClone(newConfig.landmarks);
     }
 
     const artifactsPatch = jsonPatch.compare(currentConfig.artifacts, newConfig.artifacts);
     if (artifactsPatch.length) {
       // Persist selected artifacts between sessions.
-      Deno.writeTextFileSync('./preselected-artifacts.json', JSON.stringify(newConfig.artifacts));
+      this._configStore.persistArtifacts(newConfig.artifacts);
       defaultMatchConfiguration.artifacts = structuredClone(newConfig.artifacts);
     }
 
