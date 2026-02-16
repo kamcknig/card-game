@@ -4,6 +4,7 @@ import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { getPlayerStartingFrom } from '@shared/get-player-position-utils.ts';
 import { getRemainingSupplyCount, getStartingSupplyCount } from '../../utils/get-starting-supply-count.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
+import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
@@ -900,6 +901,546 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: trashedOnRightPlayersLastTurn,
+      });
+    },
+  },
+  'groom': {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Groom gains one card from the Supply costing up to $4.
+      const gainableCards = cardEffectArgs.findCards([
+        { location: ['basicSupply', 'kingdomSupply'] },
+        { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: { treasure: 4 } },
+      ]);
+
+      if (!gainableCards.length) {
+        console.debug('[groom effect] no gainable cards in supply costing up to 4');
+        return;
+      }
+
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Gain a card costing up to $4',
+        restrict: gainableCards.map((card) => card.id),
+        count: 1,
+      }) as CardId[];
+
+      const selectedCardId = selectedCardIds[0];
+      if (selectedCardId === undefined) {
+        console.warn('[groom effect] no card selected to gain');
+        return;
+      }
+
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+      console.debug(`[groom effect] gaining ${selectedCard}`);
+      await cardEffectArgs.runGameActionDelegate('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCard.id,
+        to: { location: 'playerDiscard' },
+      });
+
+      // Groom bonuses are cumulative when a gained card has multiple relevant types.
+      if (selectedCard.type.includes('ACTION')) {
+        const horseCards = cardEffectArgs.findCards([
+          { location: 'nonSupplyCards' },
+          { cardKeys: 'horse' },
+        ]);
+
+        if (!horseCards.length) {
+          console.debug('[groom effect] no Horse cards remain to gain for Action bonus');
+        } else {
+          const horseCard = horseCards.slice(-1)[0];
+          console.debug(`[groom effect] gained Action card, gaining Horse ${horseCard}`);
+          await cardEffectArgs.runGameActionDelegate('gainCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: horseCard.id,
+            to: { location: 'playerDiscard' },
+          });
+        }
+      }
+
+      if (selectedCard.type.includes('TREASURE')) {
+        const silverCards = cardEffectArgs.findCards([
+          { location: 'basicSupply' },
+          { cardKeys: 'silver' },
+        ]);
+
+        if (!silverCards.length) {
+          console.debug('[groom effect] no Silver cards remain to gain for Treasure bonus');
+        } else {
+          const silverCard = silverCards.slice(-1)[0];
+          console.debug(`[groom effect] gained Treasure card, gaining Silver ${silverCard}`);
+          await cardEffectArgs.runGameActionDelegate('gainCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: silverCard.id,
+            to: { location: 'playerDiscard' },
+          });
+        }
+      }
+
+      if (selectedCard.type.includes('VICTORY')) {
+        console.debug('[groom effect] gained Victory card, drawing 1 and gaining 1 Action');
+        await cardEffectArgs.runGameActionDelegate('drawCard', {
+          playerId: cardEffectArgs.playerId,
+          count: 1,
+        });
+        await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      }
+    },
+  },
+  'hostelry': {
+    registerLifeCycleMethods: () => ({
+      onGained: async (cardEffectArgs, eventArgs) => {
+        // Hostelry may discard any number of Treasures from hand when gained.
+        const treasureInHand = cardEffectArgs.cardSourceController.getSource('playerHand', eventArgs.playerId)
+          .filter((cardId) => cardEffectArgs.cardLibrary.getCard(cardId).type.includes('TREASURE'));
+
+        if (!treasureInHand.length) {
+          console.debug('[hostelry onGained effect] no Treasures in hand to discard');
+          return;
+        }
+
+        const selectedTreasureIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+          playerId: eventArgs.playerId,
+          prompt: 'You may discard any number of Treasures to gain that many Horses',
+          restrict: treasureInHand,
+          count: { kind: 'upTo', count: treasureInHand.length },
+          optional: true,
+        }) as CardId[];
+
+        if (!selectedTreasureIds.length) {
+          console.debug('[hostelry onGained effect] no Treasures selected to discard');
+          return;
+        }
+
+        // Revealing happens before discard per Hostelry FAQ text.
+        for (const selectedTreasureId of selectedTreasureIds) {
+          const revealedCard = cardEffectArgs.cardLibrary.getCard(selectedTreasureId);
+          console.debug(`[hostelry onGained effect] revealing ${revealedCard}`);
+          await cardEffectArgs.runGameActionDelegate('revealCard', {
+            playerId: eventArgs.playerId,
+            cardId: selectedTreasureId,
+          });
+        }
+
+        for (const selectedTreasureId of selectedTreasureIds) {
+          const discardedCard = cardEffectArgs.cardLibrary.getCard(selectedTreasureId);
+          console.debug(`[hostelry onGained effect] discarding ${discardedCard}`);
+          await cardEffectArgs.runGameActionDelegate('discardCard', {
+            playerId: eventArgs.playerId,
+            cardId: selectedTreasureId,
+          });
+        }
+
+        // Gain one Horse per discarded Treasure from the Horse pile.
+        for (let index = 0; index < selectedTreasureIds.length; index++) {
+          const horseCards = cardEffectArgs.findCards([
+            { location: 'nonSupplyCards' },
+            { cardKeys: 'horse' },
+          ]);
+
+          if (!horseCards.length) {
+            console.debug('[hostelry onGained effect] no Horse cards remain to gain');
+            return;
+          }
+
+          const horseCard = horseCards.slice(-1)[0];
+          await cardEffectArgs.runGameActionDelegate('gainCard', {
+            playerId: eventArgs.playerId,
+            cardId: horseCard.id,
+            to: { location: 'playerDiscard' },
+          });
+        }
+      },
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      // Hostelry is a +1 Card +2 Actions village.
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: 1,
+      });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
+    },
+  },
+  'hunting-lodge': {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Hunting Lodge always resolves +1 Card and +2 Actions first.
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: 1,
+      });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
+
+      const promptResult = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Discard your hand for +5 Cards?',
+        actionButtons: [
+          { label: 'NO', action: 1 },
+          { label: 'YES', action: 2 },
+        ],
+      }) as { action?: number } | null;
+
+      if (promptResult?.action !== 2) {
+        console.debug('[hunting-lodge effect] player declined to discard hand');
+        return;
+      }
+
+      // Discard the full hand at resolution time, then draw 5.
+      const hand = [...cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId)];
+      console.debug(`[hunting-lodge effect] discarding ${hand.length} card(s) from hand`);
+      for (const cardId of hand) {
+        await cardEffectArgs.runGameActionDelegate('discardCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId,
+        });
+      }
+
+      console.debug('[hunting-lodge effect] drawing 5 cards');
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: 5,
+      });
+    },
+  },
+  'kiln': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const kilnCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
+      const playedThisTurn = cardEffectArgs.match.stats.playedCardsByTurn[turnHistoryIndex] ?? [];
+      const kilnPlayInstance = playedThisTurn.filter((playedCardId) => playedCardId === cardEffectArgs.cardId).length;
+
+      // Kiln starts with +$2.
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+
+      // Register a one-shot trigger for the next card played this turn.
+      let nextPlayedTriggerId = '';
+      nextPlayedTriggerId = cardEffectArgs.reactionManager.registerReactionTemplate(
+        kilnCard,
+        'cardPlayed',
+        {
+          playerId: cardEffectArgs.playerId,
+          once: true,
+          compulsory: false,
+          allowMultipleInstances: true,
+          condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
+          triggeredEffectFn: async (triggeredArgs) => {
+            const playedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
+            const copyCandidates = triggeredArgs.findCards([
+              { location: ['basicSupply', 'kingdomSupply'] },
+              { cardKeys: playedCard.cardKey },
+            ]);
+
+            if (!copyCandidates.length) {
+              console.debug(`[kiln effect] no supply copy available for ${playedCard}`);
+              return;
+            }
+
+            const copyCard = copyCandidates.slice(-1)[0];
+            const promptResult = await triggeredArgs.runGameActionDelegate('userPrompt', {
+              playerId: cardEffectArgs.playerId,
+              prompt: `Gain a copy of ${playedCard.cardName} with Kiln?`,
+              actionButtons: [
+                { label: 'NO', action: 1 },
+                { label: 'YES', action: 2 },
+              ],
+              content: {
+                type: 'display-cards',
+                cardIds: [copyCard.id],
+              },
+            }) as { action?: number } | null;
+
+            if (promptResult?.action !== 2) {
+              console.debug('[kiln effect] player declined to gain copy');
+              return;
+            }
+
+            console.debug(`[kiln effect] gaining copy ${copyCard}`);
+            await triggeredArgs.runGameActionDelegate('gainCard', {
+              playerId: cardEffectArgs.playerId,
+              cardId: copyCard.id,
+              to: { location: 'playerDiscard' },
+            });
+          },
+        },
+        // Suffix is required so multiple Kiln plays can each track their own next-card trigger.
+        { idSuffix: `next-play:${kilnPlayInstance}` },
+      );
+
+      // Remove unused next-card trigger at end of turn.
+      cardEffectArgs.reactionManager.registerSystemTemplate(kilnCard, 'endTurn', {
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
+        triggeredEffectFn: async (triggeredArgs) => {
+          console.debug('[kiln endTurn effect] cleaning up next-card trigger');
+          triggeredArgs.reactionManager.unregisterTrigger(nextPlayedTriggerId);
+        },
+      }, { idSuffix: `cleanup-next-play:${kilnPlayInstance}` });
+    },
+  },
+  'livery': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const liveryCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
+      const playedThisTurn = cardEffectArgs.match.stats.playedCardsByTurn[turnHistoryIndex] ?? [];
+      const liveryPlayInstance = playedThisTurn.filter((playedCardId) => playedCardId === cardEffectArgs.cardId).length;
+
+      // Livery starts with +$3.
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 3 });
+
+      // Register this-turn gain listener for cards costing $4 or more.
+      const gainTriggerId = cardEffectArgs.reactionManager.registerReactionTemplate(
+        liveryCard,
+        'cardGained',
+        {
+          playerId: cardEffectArgs.playerId,
+          once: false,
+          compulsory: true,
+          allowMultipleInstances: true,
+          condition: ({ trigger, cardLibrary, cardPriceController }) => {
+            if (trigger.args.playerId !== cardEffectArgs.playerId) {
+              return false;
+            }
+
+            const gainedCard = cardLibrary.getCard(trigger.args.cardId);
+            const { cost } = cardPriceController.applyRules(gainedCard, {
+              playerId: cardEffectArgs.playerId,
+            });
+
+            return cost.treasure >= 4;
+          },
+          triggeredEffectFn: async (triggeredArgs) => {
+            const horseCards = triggeredArgs.findCards([
+              { location: 'nonSupplyCards' },
+              { cardKeys: 'horse' },
+            ]);
+
+            if (!horseCards.length) {
+              console.debug('[livery effect] no Horse cards remain to gain');
+              return;
+            }
+
+            const horseCard = horseCards.slice(-1)[0];
+            console.debug(`[livery effect] gaining Horse ${horseCard}`);
+            await triggeredArgs.runGameActionDelegate('gainCard', {
+              playerId: cardEffectArgs.playerId,
+              cardId: horseCard.id,
+              to: { location: 'playerDiscard' },
+            });
+          },
+        },
+        // Suffix is required so replay effects (e.g. Mastermind) stack multiple Livery instances.
+        { idSuffix: `card-gained:${liveryPlayInstance}` },
+      );
+
+      // Remove this-turn gain listener when the turn ends.
+      cardEffectArgs.reactionManager.registerSystemTemplate(liveryCard, 'endTurn', {
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
+        triggeredEffectFn: async (triggeredArgs) => {
+          console.debug('[livery endTurn effect] cleaning up this-turn gain listener');
+          triggeredArgs.reactionManager.unregisterTrigger(gainTriggerId);
+        },
+      }, { idSuffix: `cleanup-gain-listener:${liveryPlayInstance}` });
+    },
+  },
+  'mastermind': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const mastermindCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
+      const playedThisTurn = cardEffectArgs.match.stats.playedCardsByTurn[turnHistoryIndex] ?? [];
+      const mastermindPlayInstance = playedThisTurn.filter((playedCardId) => playedCardId === cardEffectArgs.cardId)
+        .length;
+
+      // Mastermind resolves at the start of the next turn.
+      cardEffectArgs.registerDurationEffect(mastermindCard, {
+        id: `mastermind:${cardEffectArgs.cardId}:startTurn:${mastermindPlayInstance}`,
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        listeningFor: 'startTurn',
+        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
+        triggeredEffectFn: async (triggeredArgs) => {
+          console.debug('[mastermind startTurn effect] resolving delayed triple-play');
+
+          // Return Mastermind to play area while resolving its start-turn effect.
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            cardId: mastermindCard.id,
+            to: { location: 'playArea' },
+          });
+
+          const actionCardIdsInHand = triggeredArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId)
+            .filter((cardId) => triggeredArgs.cardLibrary.getCard(cardId).type.includes('ACTION'));
+
+          if (!actionCardIdsInHand.length) {
+            console.debug('[mastermind startTurn effect] no Action cards in hand to play');
+            return;
+          }
+
+          const selectedCardIds = await triggeredArgs.runGameActionDelegate('selectCard', {
+            playerId: cardEffectArgs.playerId,
+            prompt: 'You may play an Action card from your hand three times',
+            restrict: actionCardIdsInHand,
+            count: 1,
+            optional: true,
+          }) as CardId[];
+
+          const selectedActionId = selectedCardIds[0];
+          if (selectedActionId === undefined) {
+            console.debug('[mastermind startTurn effect] player declined to play an Action');
+            return;
+          }
+
+          const selectedActionCard = triggeredArgs.cardLibrary.getCard(selectedActionId);
+          console.debug(`[mastermind startTurn effect] playing ${selectedActionCard} three times`);
+
+          // First play moves the selected Action from hand to play area.
+          await triggeredArgs.runGameActionDelegate('playCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: selectedActionId,
+            overrides: {
+              actionCost: 0,
+            },
+          });
+
+          // Replays do not move the card again and do not spend Action plays.
+          await triggeredArgs.runGameActionDelegate('playCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: selectedActionId,
+            overrides: {
+              actionCost: 0,
+              moveCard: false,
+            },
+          });
+
+          await triggeredArgs.runGameActionDelegate('playCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: selectedActionId,
+            overrides: {
+              actionCost: 0,
+              moveCard: false,
+            },
+          });
+
+          // Mastermind only needs duration-hold behavior when replaying a Duration card still in play.
+          if (!selectedActionCard.type.includes('DURATION')) {
+            return;
+          }
+
+          const isReplayedDurationInPlay = () =>
+            getCardsInPlay(triggeredArgs.findCards).some((card) => card.id === selectedActionId);
+
+          if (!isReplayedDurationInPlay()) {
+            console.debug('[mastermind startTurn effect] replayed Duration not in play, no hold needed');
+            return;
+          }
+
+          console.debug('[mastermind startTurn effect] replayed Duration still in play, registering hold');
+
+          // Move Mastermind back to activeDuration in cleanup while the replayed Duration remains in play.
+          triggeredArgs.reactionManager.registerSystemTemplate(mastermindCard, 'startTurnPhase', {
+            playerId: cardEffectArgs.playerId,
+            once: true,
+            compulsory: true,
+            allowMultipleInstances: true,
+            condition: ({ trigger, match }) => {
+              if (getTurnPhase(trigger.args.phaseIndex) !== 'cleanup') {
+                return false;
+              }
+
+              if (getCurrentPlayer(match).id !== cardEffectArgs.playerId) {
+                return false;
+              }
+
+              return isReplayedDurationInPlay();
+            },
+            triggeredEffectFn: async (cleanupArgs) => {
+              console.debug('[mastermind duration effect] moving Mastermind to activeDuration');
+              await cleanupArgs.runGameActionDelegate('moveCard', {
+                cardId: mastermindCard.id,
+                to: { location: 'activeDuration' },
+              });
+            },
+          }, { idSuffix: `duration-cleanup:${mastermindPlayInstance}` });
+
+          let durationHoldTriggerId = '';
+          durationHoldTriggerId = triggeredArgs.reactionManager.registerReactionTemplate(
+            mastermindCard,
+            'startTurn',
+            {
+              playerId: cardEffectArgs.playerId,
+              once: false,
+              compulsory: true,
+              allowMultipleInstances: true,
+              condition: ({ trigger, cardSourceController }) => {
+                if (trigger.args.playerId !== cardEffectArgs.playerId) {
+                  return false;
+                }
+
+                return cardSourceController.getSource('activeDuration').includes(mastermindCard.id);
+              },
+              triggeredEffectFn: async (startTurnArgs) => {
+                if (isReplayedDurationInPlay()) {
+                  console.debug('[mastermind duration effect] replayed Duration still in play; keeping Mastermind');
+                  return;
+                }
+
+                console.debug('[mastermind duration effect] replayed Duration left play; releasing Mastermind');
+                await startTurnArgs.runGameActionDelegate('moveCard', {
+                  cardId: mastermindCard.id,
+                  to: { location: 'playArea' },
+                });
+                startTurnArgs.reactionManager.unregisterTrigger(durationHoldTriggerId);
+              },
+            },
+            { idSuffix: `duration-hold:${mastermindPlayInstance}` },
+          );
+        },
+      });
+    },
+  },
+  'paddock': {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Paddock starts with +$2.
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+
+      // Gain 2 Horses from the Horse pile.
+      for (let index = 0; index < 2; index++) {
+        const horseCards = cardEffectArgs.findCards([
+          { location: 'nonSupplyCards' },
+          { cardKeys: 'horse' },
+        ]);
+
+        if (!horseCards.length) {
+          console.debug('[paddock effect] no Horse cards remain to gain');
+          break;
+        }
+
+        const horseCard = horseCards.slice(-1)[0];
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: horseCard.id,
+          to: { location: 'playerDiscard' },
+        });
+      }
+
+      // Empty pile count is evaluated at this point in resolution.
+      const emptySupplyPiles = getStartingSupplyCount(cardEffectArgs.match) -
+        getRemainingSupplyCount(cardEffectArgs.findCards);
+
+      if (emptySupplyPiles < 1) {
+        console.debug('[paddock effect] no empty supply piles, gaining 0 Actions');
+        return;
+      }
+
+      console.debug(`[paddock effect] gaining ${emptySupplyPiles} Action(s) from empty supply piles`);
+      await cardEffectArgs.runGameActionDelegate('gainAction', {
+        count: emptySupplyPiles,
       });
     },
   },

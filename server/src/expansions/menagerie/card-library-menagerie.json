@@ -144,6 +144,70 @@
     ],
     "abilityText": "+1 Action\nYou may trash a card from your hand.\n+1 Card per card the player to your right trashed on their last turn."
   },
+  "groom": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "Gain a card costing up to $4. If it's an...\nAction card, gain a Horse; Treasure card, gain a Silver; Victory card, +1 Card and +1 Action."
+  },
+  "hostelry": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+1 Card\n+2 Actions\nWhen you gain this, you may discard any number of Treasures, revealed, to gain that many Horses."
+  },
+  "hunting-lodge": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+1 Card\n+2 Actions\nYou may discard your hand for +5 Cards."
+  },
+  "kiln": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+$2\nThe next time you play a card this turn, you may first gain a copy of it."
+  },
+  "livery": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+$3\nThis turn, when you gain a card costing $4 or more, gain a Horse."
+  },
+  "mastermind": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION",
+      "DURATION"
+    ],
+    "abilityText": "At the start of your next turn, you may play an Action card from your hand three times."
+  },
+  "paddock": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+$2\nGain 2 Horses.\n+1 Action per empty Supply pile."
+  },
   "horse": {
     "cost": {
       "treasure": 3

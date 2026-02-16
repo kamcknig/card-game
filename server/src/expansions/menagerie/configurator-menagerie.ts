@@ -4,7 +4,13 @@ import { addMatToMatchConfig } from '../../utils/add-mat-to-match-config.ts';
 import { expansionLibrary } from '../expansion-library.ts';
 
 // Menagerie cards that require the Horse non-supply pile to be configured.
-const horseSourcePiles = new Set(['cavalry']);
+const horseSourcePiles = new Set([
+  'cavalry',
+  'groom',
+  'hostelry',
+  'livery',
+  'paddock',
+]);
 
 // Ensures the Horse pile is present only when required by selected kingdom cards.
 const configureHorsePile = (config: ComputedMatchConfiguration) => {
