@@ -413,6 +413,7 @@ export type PlayerMatMap = Record<PlayerId, Record<Mats, CardLikeId[]>>;
 const MatValues = [
   'island',
   'native-village',
+  'exile',
   'set-aside',
   'tavern',
 ] as const;

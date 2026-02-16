@@ -222,6 +222,79 @@ export class GameActionController implements GameActionDefinitionMap {
     return turnHistoryIndex;
   }
 
+  // Returns the player's Exile zone source when available.
+  private getExileSource(playerId: PlayerId): CardId[] | undefined {
+    try {
+      return this._cardSourceController.getSource('exile', playerId);
+    } catch {
+      return undefined;
+    }
+  }
+
+  // Resolves "discard all or none from Exile on gain" for the gained card key.
+  private async resolveExileDiscardOnGain(args: {
+    playerId: PlayerId;
+    gainedCardId: CardId;
+    gainedCardKey: CardKey;
+    loggingContext?: GameActionContext['loggingContext'];
+  }) {
+    const exileSource = this.getExileSource(args.playerId);
+    if (!exileSource || exileSource.length === 0) {
+      return;
+    }
+
+    // Exile only allows discarding other copies of the gained card, never the gained card itself.
+    const matchingExileCardIds = exileSource.filter((cardId) =>
+      cardId !== args.gainedCardId && this.cardLibrary.getCard(cardId).cardKey === args.gainedCardKey
+    );
+
+    if (matchingExileCardIds.length === 0) {
+      return;
+    }
+
+    const player = getPlayerById(this.match, args.playerId);
+    let shouldDiscardFromExile = false;
+    const gainedCardName = this.cardLibrary.getCard(args.gainedCardId).cardName;
+
+    if (player?.isComputer) {
+      // Computer policy is deterministic: always discard all matching cards from Exile.
+      shouldDiscardFromExile = true;
+    } else {
+      const promptResult = await this.userPrompt({
+        playerId: args.playerId,
+        prompt: `Discard ${matchingExileCardIds.length} ${gainedCardName} card(s) from Exile?`,
+        actionButtons: [
+          { label: 'NO', action: 1 },
+          { label: 'YES', action: 2 },
+        ],
+      }) as { action?: number } | null;
+
+      shouldDiscardFromExile = promptResult?.action === 2;
+    }
+
+    if (!shouldDiscardFromExile) {
+      console.debug(
+        `[gainCard action] player ${args.playerId} kept ${matchingExileCardIds.length} ${args.gainedCardKey} card(s) in Exile`,
+      );
+      return;
+    }
+
+    console.debug(
+      `[gainCard action] player ${args.playerId} discarding ${matchingExileCardIds.length} ${args.gainedCardKey} card(s) from Exile`,
+    );
+
+    // Exile rule requires discarding all matching cards, and discard semantics should trigger normally.
+    for (const exileCardId of matchingExileCardIds) {
+      await this.discardCard(
+        {
+          playerId: args.playerId,
+          cardId: exileCardId,
+        },
+        { loggingContext: args.loggingContext },
+      );
+    }
+  }
+
   // Resolves the count spec into a deterministic selection count for computer picks.
   private resolveCountSpec(count: CountSpec | number, available: number, optional: boolean): number {
     if (typeof count === 'number') {
@@ -897,6 +970,31 @@ export class GameActionController implements GameActionDefinitionMap {
       playerId: args.playerId,
       match: this.match,
     });
+
+    // Exile rule: when you gain a card, you may discard all other copies of it from Exile.
+    await this.resolveExileDiscardOnGain({
+      playerId: args.playerId,
+      gainedCardId: cardId,
+      gainedCardKey: card.cardKey,
+      loggingContext: context?.loggingContext,
+    });
+  }
+
+  async exileCard(args: { cardId: CardId | Card; playerId: PlayerId }, _context?: GameActionContext) {
+    const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
+
+    console.info(`[exileCard action] exiling ${card} for ${getPlayerById(this.match, args.playerId)}`);
+
+    await this.moveCard({
+      cardId: card.id,
+      toPlayerId: args.playerId,
+      to: { location: 'exile' },
+    });
+
+    // Cards in Exile are owned by the exiling player.
+    card.owner = args.playerId;
+
+    console.debug(`[exileCard action] ${card} moved to exile for player ${args.playerId}`);
   }
 
   async userPrompt(args: UserPromptActionArgs) {

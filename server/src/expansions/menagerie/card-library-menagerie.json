@@ -8,5 +8,37 @@
       "ACTION"
     ],
     "abilityText": "+$4\n+1 Buy per empty Supply pile.\nWhen you buy this, you may pay by trashing an Action card from your hand instead of paying $7."
+  },
+  "barge": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION",
+      "DURATION"
+    ],
+    "abilityText": "Either now or at the start of your next turn, +3 Cards and +1 Buy."
+  },
+  "black-cat": {
+    "cost": {
+      "treasure": 2
+    },
+    "type": [
+      "ACTION",
+      "ATTACK",
+      "REACTION"
+    ],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+2 Cards\nIf it isn't your turn, each other player gains a Curse.\nWhen another player gains a Victory card, you may play this from your hand."
+  },
+  "bounty-hunter": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION"
+    ],
+    "mat": "exile",
+    "abilityText": "+1 Action\nExile a card from your hand. If you didn't have a copy of it in Exile, +$3."
   }
 }

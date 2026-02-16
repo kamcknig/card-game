@@ -169,6 +169,8 @@ export interface GameActionDefinitionMap {
   // Draws a hand of cards (default 5), triggering drawHand reactions.
   drawHand: (args: { playerId: PlayerId; count?: number }, context?: GameActionContext) => Promise<CardId[] | null>;
   endTurn: () => Promise<void>;
+  // Moves a card to the player's Exile mat without treating it as gain/trash.
+  exileCard: (args: { cardId: CardId | Card; playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
   gainAction: (args: { count: number }, context?: GameActionContext) => Promise<void>;
   gainBuy: (args: { count: number }, context?: GameActionContext) => Promise<void>;
   gainCoffer: (args: { playerId: PlayerId; count: number }, context?: GameActionContext) => Promise<void>;
