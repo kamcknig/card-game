@@ -3,7 +3,10 @@ import { ServerEmitEvents, ServerListenEvents } from 'shared/types/index.ts';
 import { toNumber } from 'es-toolkit/compat';
 import * as log from '@timepp/enhanced-deno-log';
 import { defaultMatchControllerFactory, Game } from './core/game.ts';
+import { ExpansionSearchService } from './core/expansion-search-service.ts';
+import { ExpansionCompatibilityService } from './core/expansion-compatibility-service.ts';
 import { FileGameConfigurationStore } from './core/game-configuration-store.ts';
+import { LobbySocketBindings } from './core/lobby-socket-bindings.ts';
 import { loadExpansion } from './utils/load-expansion.ts';
 import { asClass, asValue, createContainer, InjectionMode } from 'awilix';
 
@@ -45,7 +48,10 @@ const container = createContainer({
 container.register({
   io: asValue(io),
   matchControllerFactory: asValue(defaultMatchControllerFactory),
+  expansionSearchService: asClass(ExpansionSearchService).singleton(),
+  expansionCompatibilityService: asClass(ExpansionCompatibilityService).singleton(),
   configStore: asClass(FileGameConfigurationStore).singleton(),
+  lobbySocketBindings: asClass(LobbySocketBindings).singleton(),
   game: asClass(Game).singleton(),
 });
 

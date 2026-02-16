@@ -1,28 +1,25 @@
-import { AppSocket, MatchBaseConfiguration } from '@server-types/index.ts';
+import {AppSocket, MatchBaseConfiguration} from '@server-types/index.ts';
 import {
-  ArtifactNoId,
   Card,
   CardId,
   CardNoId,
-  EventNoId,
   ExpansionListElement,
-  LandmarkNoId,
   Match,
   MatchConfiguration,
   Player,
   PlayerId,
-  ProjectNoId,
   ServerEmitEvents,
   ServerListenEvents,
 } from 'shared/types/index.ts';
-import { createComputerPlayer, createNewPlayer } from '../utils/create-new-player.ts';
-import { MatchController } from './match-controller.ts';
-import { expansionLibrary, rawCardLibrary } from '@expansions/expansion-library.ts';
+import {createComputerPlayer, createNewPlayer} from '../utils/create-new-player.ts';
+import {MatchController} from './match-controller.ts';
 import jsonPatch from 'fast-json-patch';
-import Fuse, { IFuseOptions } from 'fuse.js';
-import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
-import { Server } from 'socket.io';
-import { FileGameConfigurationStore, GameConfigurationStore } from './game-configuration-store.ts';
+import {fisherYatesShuffle} from '../utils/fisher-yates-shuffler.ts';
+import {Server} from 'socket.io';
+import {FileGameConfigurationStore, GameConfigurationStore} from './game-configuration-store.ts';
+import {LobbySocketBindings} from './lobby-socket-bindings.ts';
+import {ExpansionSearchService} from './expansion-search-service.ts';
+import {ExpansionCompatibilityService} from './expansion-compatibility-service.ts';
 
 // Factory signature for creating a match controller instance.
 export type MatchControllerFactory = (
@@ -39,6 +36,9 @@ export interface GameDependencies {
   io: Server<ServerListenEvents, ServerEmitEvents>;
   matchControllerFactory?: MatchControllerFactory;
   configStore?: GameConfigurationStore;
+  lobbySocketBindings?: LobbySocketBindings;
+  expansionSearchService?: ExpansionSearchService;
+  expansionCompatibilityService?: ExpansionCompatibilityService;
 }
 
 const defaultMatchConfiguration: MatchConfiguration = {
@@ -95,18 +95,15 @@ export class Game {
   private readonly _matchControllerFactory: MatchControllerFactory;
   // Store abstraction for persisted lobby configuration.
   private readonly _configStore: GameConfigurationStore;
+  // Socket binding helper that owns lobby transport event registrations.
+  private readonly _lobbySocketBindings: LobbySocketBindings;
+  // Search service that owns all lobby card-like indexes.
+  private readonly _expansionSearchService: ExpansionSearchService;
+  // Compatibility service that enforces expansion mutual-exclusion rules.
+  private readonly _expansionCompatibilityService: ExpansionCompatibilityService;
   private _matchController: MatchController | undefined;
   private _matchConfiguration: MatchConfiguration | undefined;
   private _availableExpansion: ExpansionListElement[] = [];
-  private _fuse: Fuse<CardNoId> | undefined;
-  // Event search uses a separate index from kingdom cards.
-  private _eventFuse: Fuse<EventNoId> | undefined;
-  // Landmark search uses a separate index from events and kingdom cards.
-  private _landmarkFuse: Fuse<LandmarkNoId> | undefined;
-  // Artifact search uses a separate index from landscapes.
-  private _artifactFuse: Fuse<ArtifactNoId> | undefined;
-  // Project search uses a separate index from events and landmarks.
-  private _projectFuse: Fuse<ProjectNoId> | undefined;
   // When true, the game ends automatically if no human players remain connected.
   private readonly _endMatchWhenNoHumans: boolean;
 
@@ -114,21 +111,24 @@ export class Game {
     io,
     matchControllerFactory = defaultMatchControllerFactory,
     configStore = new FileGameConfigurationStore(),
+    lobbySocketBindings = new LobbySocketBindings(),
+    expansionSearchService = new ExpansionSearchService(),
+    expansionCompatibilityService = new ExpansionCompatibilityService(),
   }: GameDependencies) {
     console.log(`[game] created`);
     this._io = io;
     this._matchControllerFactory = matchControllerFactory;
     this._configStore = configStore;
+    this._lobbySocketBindings = lobbySocketBindings;
+    this._expansionSearchService = expansionSearchService;
+    this._expansionCompatibilityService = expansionCompatibilityService;
     // Configure whether to end the match when all human players leave (default: true).
     const endOnNoHumansEnv = Deno.env.get('END_MATCH_ON_NO_HUMANS') ?? 'true';
     this._endMatchWhenNoHumans = endOnNoHumansEnv.toLowerCase() !== 'false';
     // Hydrate lobby defaults from persisted local files.
     this._configStore.load(defaultMatchConfiguration);
 
-    this.initializeFuseSearch();
-    this.initializeEventFuse();
-    this.initializeLandmarkFuse();
-    this.initializeArtifactFuse();
+    this._expansionSearchService.rebuildIndexes();
 
     this.createNewMatch();
   }
@@ -141,170 +141,38 @@ export class Game {
     this._matchConfiguration = { ...structuredClone(defaultMatchConfiguration) };
   }
 
-  private initializeFuseSearch() {
-    console.info(`[game] initializing fuse search`);
-
-    if (this._fuse) {
-      this._fuse.remove(() => true);
-      this._fuse = undefined;
-    }
-
-    const libraryArr = Object.values(rawCardLibrary);
-    const index = Fuse.createIndex(['cardName'], libraryArr);
-
-    const fuseOptions: IFuseOptions<CardNoId> = {
-      ignoreDiacritics: true,
-      minMatchCharLength: 1,
-      distance: 2,
-      keys: ['cardName'],
-    };
-    this._fuse = new Fuse(libraryArr, fuseOptions, index);
-  }
-
   // Returns the currently selected expansion names used by lobby card search filtering.
   private getSelectedExpansionNames(): Set<string> {
     const selectedExpansions = this._matchConfiguration?.expansions ?? defaultMatchConfiguration.expansions;
     return new Set(selectedExpansions.map((expansion) => expansion.name));
   }
 
-  // Kingdom search should only return supply kingdom cards that can be selected in configuration.
-  private isCardEligibleForKingdomSearch(card: CardNoId): boolean {
-    if (card.isBasic) {
-      return false;
-    }
-
-    if (!card.partOfSupply) {
-      return false;
-    }
-
-    if (card.kingdomSelectable === false) {
-      return false;
-    }
-
-    const selectedExpansionNames = this.getSelectedExpansionNames();
-    return selectedExpansionNames.has(card.expansionName);
-  }
-
-  // Builds the event search index from loaded expansion events.
-  private initializeEventFuse() {
-    console.info(`[game] initializing event fuse search`);
-
-    if (this._eventFuse) {
-      this._eventFuse.remove(() => true);
-      this._eventFuse = undefined;
-    }
-
-    const eventLibraryArr = Object.values(expansionLibrary)
-      .flatMap((expansion) => Object.values(expansion.events ?? {}));
-    const index = Fuse.createIndex(['cardName'], eventLibraryArr);
-
-    const fuseOptions: IFuseOptions<EventNoId> = {
-      ignoreDiacritics: true,
-      minMatchCharLength: 1,
-      distance: 2,
-      keys: ['cardName'],
-    };
-    this._eventFuse = new Fuse(eventLibraryArr, fuseOptions, index);
-  }
-
-  // Builds the landmark search index from loaded expansion landmarks.
-  private initializeLandmarkFuse() {
-    console.info(`[game] initializing landmark fuse search`);
-
-    if (this._landmarkFuse) {
-      this._landmarkFuse.remove(() => true);
-      this._landmarkFuse = undefined;
-    }
-
-    const landmarkLibraryArr = Object.values(expansionLibrary)
-      .flatMap((expansion) => Object.values(expansion.landmarks ?? {}));
-    const index = Fuse.createIndex(['cardName'], landmarkLibraryArr);
-
-    const fuseOptions: IFuseOptions<LandmarkNoId> = {
-      ignoreDiacritics: true,
-      minMatchCharLength: 1,
-      distance: 2,
-      keys: ['cardName'],
-    };
-    this._landmarkFuse = new Fuse(landmarkLibraryArr, fuseOptions, index);
-  }
-
-  // Builds the artifact search index from loaded expansion artifacts.
-  private initializeArtifactFuse() {
-    console.info(`[game] initializing artifact fuse search`);
-
-    if (this._artifactFuse) {
-      this._artifactFuse.remove(() => true);
-      this._artifactFuse = undefined;
-    }
-
-    const artifactLibraryArr = Object.values(expansionLibrary)
-      .flatMap((expansion) => Object.values(expansion.artifacts ?? {}));
-    const index = Fuse.createIndex(['cardName'], artifactLibraryArr);
-
-    const fuseOptions: IFuseOptions<ArtifactNoId> = {
-      ignoreDiacritics: true,
-      minMatchCharLength: 1,
-      distance: 2,
-      keys: ['cardName'],
-    };
-    this._artifactFuse = new Fuse(artifactLibraryArr, fuseOptions, index);
-  }
-
-  // Builds the project search index from loaded expansion projects.
-  private initializeProjectFuse() {
-    console.info(`[game] initializing project fuse search`);
-
-    if (this._projectFuse) {
-      this._projectFuse.remove(() => true);
-      this._projectFuse = undefined;
-    }
-
-    const projectLibraryArr = Object.values(expansionLibrary)
-      .flatMap((expansion) => Object.values(expansion.projects ?? {}));
-    const index = Fuse.createIndex(['cardName'], projectLibraryArr);
-
-    const fuseOptions: IFuseOptions<ProjectNoId> = {
-      ignoreDiacritics: true,
-      minMatchCharLength: 1,
-      distance: 2,
-      keys: ['cardName'],
-    };
-    this._projectFuse = new Fuse(projectLibraryArr, fuseOptions, index);
-  }
-
   private onSearchCards = (searchStr: string) => {
-    const results = this._fuse?.search(searchStr);
-    const cards = results?.map((r) => r.item) ?? [];
-    const filteredCards = cards.filter((card) => this.isCardEligibleForKingdomSearch(card));
+    const filteredCards = this._expansionSearchService.searchKingdomCards(searchStr, this.getSelectedExpansionNames());
     console.debug(
-      `[game] kingdom search '${searchStr}' returned ${filteredCards.length}/${cards.length} eligible card(s)`,
+      `[game] kingdom search '${searchStr}' returned ${filteredCards.length} eligible card(s)`,
     );
     return filteredCards;
   };
 
   // Returns event search results for the given query.
   private onSearchEvents = (searchStr: string) => {
-    const results = this._eventFuse?.search(searchStr);
-    return results?.map((r) => r.item) ?? [];
+    return this._expansionSearchService.searchEvents(searchStr);
   };
 
   // Returns landmark search results for the given query.
   private onSearchLandmarks = (searchStr: string) => {
-    const results = this._landmarkFuse?.search(searchStr);
-    return results?.map((r) => r.item) ?? [];
+    return this._expansionSearchService.searchLandmarks(searchStr);
   };
 
   // Returns artifact search results for the given query.
   private onSearchArtifacts = (searchStr: string) => {
-    const results = this._artifactFuse?.search(searchStr);
-    return results?.map((r) => r.item) ?? [];
+    return this._expansionSearchService.searchArtifacts(searchStr);
   };
 
   // Returns project search results for the given query.
   private onSearchProjects = (searchStr: string) => {
-    const results = this._projectFuse?.search(searchStr);
-    return results?.map((r) => r.item) ?? [];
+    return this._expansionSearchService.searchProjects(searchStr);
   };
 
   public expansionLoaded(expansion: ExpansionListElement) {
@@ -315,11 +183,7 @@ export class Game {
       this._availableExpansion.sort((a, b) => b.order - a.order),
     );
 
-    this.initializeFuseSearch();
-    this.initializeEventFuse();
-    this.initializeLandmarkFuse();
-    this.initializeArtifactFuse();
-    this.initializeProjectFuse();
+    this._expansionSearchService.rebuildIndexes();
   }
 
   // Exports the current match state and card library for local debug tooling.
@@ -375,28 +239,7 @@ export class Game {
     }
 
     if (this.owner?.id === player.id) {
-      socket.on('matchConfigurationUpdated', this.onMatchConfigurationUpdated);
-      // Allow the owner to add computer players during lobby.
-      socket.on('addComputerPlayer', (count?: number) => this.onAddComputerPlayer(player.id, count));
-      socket.on('searchCards', (playerId, searchTerm) => {
-        this._socketMap.get(playerId)?.emit('searchCardResponse', this.onSearchCards(searchTerm));
-      });
-      // Relay event search results to the requesting client.
-      socket.on('searchEvents', (playerId, searchTerm) => {
-        this._socketMap.get(playerId)?.emit('searchEventResponse', this.onSearchEvents(searchTerm));
-      });
-      // Relay landmark search results to the requesting client.
-      socket.on('searchLandmarks', (playerId, searchTerm) => {
-        this._socketMap.get(playerId)?.emit('searchLandmarkResponse', this.onSearchLandmarks(searchTerm));
-      });
-      // Relay artifact search results to the requesting client.
-      socket.on('searchArtifacts', (playerId, searchTerm) => {
-        this._socketMap.get(playerId)?.emit('searchArtifactResponse', this.onSearchArtifacts(searchTerm));
-      });
-      // Relay project search results to the requesting client.
-      socket.on('searchProjects', (playerId, searchTerm) => {
-        this._socketMap.get(playerId)?.emit('searchProjectResponse', this.onSearchProjects(searchTerm));
-      });
+      this.bindOwnerLobbyHandlers(socket, player.id);
     }
 
     this._io.in('game').emit('gameOwnerUpdated', this.owner.id);
@@ -424,8 +267,10 @@ export class Game {
       );
 
       socket.emit('matchConfigurationUpdated', this._matchConfiguration!);
-      socket.on('updatePlayerName', this.onUpdatePlayerName);
-      socket.on('playerReady', this.onPlayerReady);
+      this._lobbySocketBindings.bindPlayerLobbyHandlers(socket, {
+        onUpdatePlayerName: this.onUpdatePlayerName,
+        onPlayerReady: this.onPlayerReady,
+      });
     }
 
     socket.on(
@@ -455,42 +300,16 @@ export class Game {
     }
 
     if (player.id === this.owner?.id) {
-      this._socketMap.get(player.id)?.off('matchConfigurationUpdated');
-      this._socketMap.get(player.id)?.off('searchCards');
-      this._socketMap.get(player.id)?.off('searchEvents');
-      this._socketMap.get(player.id)?.off('searchLandmarks');
-      this._socketMap.get(player.id)?.off('searchArtifacts');
-      this._socketMap.get(player.id)?.off('searchProjects');
-      this._socketMap.get(player.id)?.off('addComputerPlayer');
+      this._lobbySocketBindings.unbindOwnerLobbyHandlers(this._socketMap.get(player.id));
 
       const replacement = this.players.find((p) => p.connected && !p.isComputer);
       if (replacement) {
         this.owner = replacement;
         this._io.in('game').emit('gameOwnerUpdated', replacement.id);
-        this._socketMap.get(replacement.id)?.on('searchCards', (playerId, searchTerm) => {
-          this._socketMap.get(playerId)?.emit('searchCardResponse', this.onSearchCards(searchTerm));
-        });
-        // Relay event search results to the requesting client.
-        this._socketMap.get(replacement.id)?.on('searchEvents', (playerId, searchTerm) => {
-          this._socketMap.get(playerId)?.emit('searchEventResponse', this.onSearchEvents(searchTerm));
-        });
-        // Relay landmark search results to the requesting client.
-        this._socketMap.get(replacement.id)?.on('searchLandmarks', (playerId, searchTerm) => {
-          this._socketMap.get(playerId)?.emit('searchLandmarkResponse', this.onSearchLandmarks(searchTerm));
-        });
-        // Relay artifact search results to the requesting client.
-        this._socketMap.get(replacement.id)?.on('searchArtifacts', (playerId, searchTerm) => {
-          this._socketMap.get(playerId)?.emit('searchArtifactResponse', this.onSearchArtifacts(searchTerm));
-        });
-        // Relay project search results to the requesting client.
-        this._socketMap.get(replacement.id)?.on('searchProjects', (playerId, searchTerm) => {
-          this._socketMap.get(playerId)?.emit('searchProjectResponse', this.onSearchProjects(searchTerm));
-        });
-        this._socketMap.get(replacement.id)?.on('matchConfigurationUpdated', this.onMatchConfigurationUpdated);
-        this._socketMap.get(replacement.id)?.on(
-          'addComputerPlayer',
-          (count?: number) => this.onAddComputerPlayer(replacement.id, count),
-        );
+        const replacementSocket = this._socketMap.get(replacement.id);
+        if (replacementSocket) {
+          this.bindOwnerLobbyHandlers(replacementSocket, replacement.id);
+        }
       }
     }
 
@@ -524,54 +343,8 @@ export class Game {
     console.debug(newConfig);
 
     const currentConfig = structuredClone(this._matchConfiguration ?? {}) as MatchConfiguration;
-
-    const newExpansions = newConfig.expansions.filter(
-      (e) => currentConfig?.expansions?.findIndex((curr) => curr.name === e.name) === -1,
-    );
-
-    const expansionsToRemove: string[] = [];
-
-    // go through the new expansions to add, if any are mutually exclusive with some we still have
-    // selected, then remove those selected ones as well
-    for (const expansion of newExpansions) {
-      let configModule = undefined;
-
-      try {
-        configModule = (await import(`../expansions/${expansion.name}/configuration-${expansion.name}.json`, {
-          with: { type: 'json' },
-        }))?.default;
-      } catch (e) {
-        // nothing
-      }
-
-      if (!configModule) {
-        console.warn(`[game] could not find config module for expansion '${expansion.name}'`);
-        continue;
-      }
-
-      if (!configModule.mutuallyExclusiveExpansions) {
-        console.debug(`[game] module for expansion '${expansion.name}' contains no mutually exclusive expansions`);
-        continue;
-      }
-
-      console.info(`[game] '${expansion.name}' is mutually exclusive with ${configModule.mutuallyExclusiveExpansions}`);
-
-      for (const exclusiveExpansion of configModule.mutuallyExclusiveExpansions) {
-        // Compare by name because mutuallyExclusiveExpansions are string keys.
-        const hasExclusiveExpansion = currentConfig.expansions
-          .some((currentExpansion) => currentExpansion.name === exclusiveExpansion);
-        if (hasExclusiveExpansion && !expansionsToRemove.includes(exclusiveExpansion)) {
-          console.info(`[game] removing expansion ${exclusiveExpansion} as it is not allowed with ${expansion}`);
-          expansionsToRemove.push(exclusiveExpansion);
-        }
-      }
-    }
-
-    if (expansionsToRemove.length) {
-      // Enforce mutual exclusivity by filtering out disallowed expansion names.
-      newConfig.expansions = newConfig.expansions
-        .filter((expansion) => !expansionsToRemove.includes(expansion.name));
-    }
+    // Enforce expansion mutual-exclusion rules before applying the updated lobby config.
+    await this._expansionCompatibilityService.applyMutualExclusions(currentConfig, newConfig);
 
     const kingdomPatch = jsonPatch.compare(currentConfig.kingdomSupply, newConfig.kingdomSupply);
     if (kingdomPatch.length) {
@@ -686,14 +459,8 @@ export class Game {
     this.matchStarted = true;
 
     this._socketMap.forEach((socket) => {
-      socket.off('updatePlayerName');
-      socket.off('playerReady');
-      socket.off('matchConfigurationUpdated');
-      socket.off('searchCards');
-      socket.off('searchEvents');
-      socket.off('searchLandmarks');
-      socket.off('searchArtifacts');
-      socket.off('searchProjects');
+      this._lobbySocketBindings.unbindPlayerLobbyHandlers(socket);
+      this._lobbySocketBindings.unbindOwnerLobbyHandlers(socket);
     });
 
     const colors = ['#10FF19', '#3c69ff', '#FF0BF2', '#FFF114', '#FF1F11', '#FF9900'];
@@ -807,5 +574,28 @@ export class Game {
     this._pendingRemovalQueue = this._pendingRemovalQueue.filter((id) => disconnectedHumans.has(id));
     const order = new Map(this.players.map((p, idx) => [p.id, idx]));
     this._pendingRemovalQueue.sort((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0));
+  }
+
+  // Binds owner-only lobby handlers for the provided owner socket.
+  private bindOwnerLobbyHandlers(socket: AppSocket, ownerId: PlayerId) {
+    this._lobbySocketBindings.bindOwnerLobbyHandlers(socket, {
+      onMatchConfigurationUpdated: this.onMatchConfigurationUpdated,
+      onAddComputerPlayer: (count?: number) => this.onAddComputerPlayer(ownerId, count),
+      onSearchCards: (playerId, searchTerm) => {
+        this._socketMap.get(playerId)?.emit('searchCardResponse', this.onSearchCards(searchTerm));
+      },
+      onSearchEvents: (playerId, searchTerm) => {
+        this._socketMap.get(playerId)?.emit('searchEventResponse', this.onSearchEvents(searchTerm));
+      },
+      onSearchLandmarks: (playerId, searchTerm) => {
+        this._socketMap.get(playerId)?.emit('searchLandmarkResponse', this.onSearchLandmarks(searchTerm));
+      },
+      onSearchArtifacts: (playerId, searchTerm) => {
+        this._socketMap.get(playerId)?.emit('searchArtifactResponse', this.onSearchArtifacts(searchTerm));
+      },
+      onSearchProjects: (playerId, searchTerm) => {
+        this._socketMap.get(playerId)?.emit('searchProjectResponse', this.onSearchProjects(searchTerm));
+      },
+    });
   }
 }
