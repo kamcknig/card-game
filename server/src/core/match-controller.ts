@@ -19,7 +19,8 @@ import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
 import { ReactionManager } from './reactions/reaction-manager.ts';
 import { scoringFunctionMap } from '@expansions/scoring-function-map.ts';
 import { MatchCardLibrary } from './match-card-library.ts';
-import { compare, Operation } from 'fast-json-patch';
+import jsonPatch from 'fast-json-patch';
+import type { Operation } from 'fast-json-patch';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
 import { cardEffectFunctionMapFactory } from './effects/card-effect-function-map-factory.ts';
 import { EventEmitter } from '@denosaurs/event';
@@ -764,8 +765,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
 
   public broadcastPatch(prev: Match, playerId?: PlayerId) {
-    const patch: Operation[] = compare(prev, this._match);
-    const cardLibraryPatch = compare(this._cardLibSnapshot, this._cardLibrary.getAllCards());
+    const patch: Operation[] = jsonPatch.compare(prev, this._match);
+    const cardLibraryPatch = jsonPatch.compare(this._cardLibSnapshot, this._cardLibrary.getAllCards());
 
     if (patch.length || cardLibraryPatch.length) {
       console.debug(`[match] sending match update to clients`);

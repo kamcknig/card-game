@@ -12,14 +12,32 @@ import {
   Player,
   PlayerId,
   ProjectNoId,
+  ServerEmitEvents,
+  ServerListenEvents,
 } from 'shared/types/index.ts';
 import { createComputerPlayer, createNewPlayer } from '../utils/create-new-player.ts';
-import { io } from '../server.ts';
 import { MatchController } from './match-controller.ts';
 import { expansionLibrary, rawCardLibrary } from '@expansions/expansion-library.ts';
-import { applyPatch, compare } from 'fast-json-patch';
+import jsonPatch from 'fast-json-patch';
 import Fuse, { IFuseOptions } from 'fuse.js';
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
+import { Server } from 'socket.io';
+
+// Factory signature for creating a match controller instance.
+export type MatchControllerFactory = (
+  socketMap: Map<PlayerId, AppSocket>,
+  cardSearchFn: (searchTerm: string) => CardNoId[],
+) => MatchController;
+
+// Default match controller factory used by the composition root.
+export const defaultMatchControllerFactory: MatchControllerFactory = (socketMap, cardSearchFn) =>
+  new MatchController(socketMap, cardSearchFn);
+
+// Dependencies injected by the server composition root.
+export interface GameDependencies {
+  io: Server<ServerListenEvents, ServerEmitEvents>;
+  matchControllerFactory?: MatchControllerFactory;
+}
 
 const defaultMatchConfiguration: MatchConfiguration = {
   expansions: [
@@ -69,6 +87,10 @@ export class Game {
   private _removalVotes: Map<PlayerId, Set<PlayerId>> = new Map();
 
   private _socketMap: Map<PlayerId, AppSocket> = new Map();
+  // Socket.io server injected from composition root.
+  private readonly _io: Server<ServerListenEvents, ServerEmitEvents>;
+  // Match controller factory injected from composition root for explicit wiring.
+  private readonly _matchControllerFactory: MatchControllerFactory;
   private _matchController: MatchController | undefined;
   private _matchConfiguration: MatchConfiguration | undefined;
   private _availableExpansion: ExpansionListElement[] = [];
@@ -84,8 +106,10 @@ export class Game {
   // When true, the game ends automatically if no human players remain connected.
   private readonly _endMatchWhenNoHumans: boolean;
 
-  constructor() {
+  constructor({ io, matchControllerFactory = defaultMatchControllerFactory }: GameDependencies) {
     console.log(`[game] created`);
+    this._io = io;
+    this._matchControllerFactory = matchControllerFactory;
     // Configure whether to end the match when all human players leave (default: true).
     const endOnNoHumansEnv = Deno.env.get('END_MATCH_ON_NO_HUMANS') ?? 'true';
     this._endMatchWhenNoHumans = endOnNoHumansEnv.toLowerCase() !== 'false';
@@ -171,7 +195,7 @@ export class Game {
   }
 
   private createNewMatch() {
-    this._matchController = new MatchController(
+    this._matchController = this._matchControllerFactory(
       this._socketMap,
       (searchTerm: string) => this.onSearchCards(searchTerm),
     );
@@ -347,7 +371,7 @@ export class Game {
   public expansionLoaded(expansion: ExpansionListElement) {
     console.log(`[game] expansion '${expansion.name}' loaded`);
     this._availableExpansion.push(expansion);
-    io.in('game').emit(
+    this._io.in('game').emit(
       'expansionList',
       this._availableExpansion.sort((a, b) => b.order - a.order),
     );
@@ -403,7 +427,7 @@ export class Game {
     this._socketMap.set(player.id, socket);
 
     socket.emit('setPlayerList', this.players);
-    io.in('game').emit('playerConnected', player);
+    this._io.in('game').emit('playerConnected', player);
     socket.emit('setPlayer', player);
 
     if (!this.owner || this.owner.isComputer) {
@@ -436,7 +460,7 @@ export class Game {
       });
     }
 
-    io.in('game').emit('gameOwnerUpdated', this.owner.id);
+    this._io.in('game').emit('gameOwnerUpdated', this.owner.id);
 
     console.log(`[game] ${player} added to game`);
 
@@ -503,7 +527,7 @@ export class Game {
       const replacement = this.players.find((p) => p.connected && !p.isComputer);
       if (replacement) {
         this.owner = replacement;
-        io.in('game').emit('gameOwnerUpdated', replacement.id);
+        this._io.in('game').emit('gameOwnerUpdated', replacement.id);
         this._socketMap.get(replacement.id)?.on('searchCards', (playerId, searchTerm) => {
           this._socketMap.get(playerId)?.emit('searchCardResponse', this.onSearchCards(searchTerm));
         });
@@ -538,7 +562,7 @@ export class Game {
         this.addPendingRemovalPlayer(player.id);
       }
     }
-    io.in('game').emit('playerDisconnected', player);
+    this._io.in('game').emit('playerDisconnected', player);
   };
 
   private clearMatch = () => {
@@ -610,47 +634,47 @@ export class Game {
         .filter((expansion) => !expansionsToRemove.includes(expansion.name));
     }
 
-    const kingdomPatch = compare(currentConfig.kingdomSupply, newConfig.kingdomSupply);
+    const kingdomPatch = jsonPatch.compare(currentConfig.kingdomSupply, newConfig.kingdomSupply);
     if (kingdomPatch.length) {
       Deno.writeTextFileSync('./preselected-kingdoms.json', JSON.stringify(newConfig.kingdomSupply));
       defaultMatchConfiguration.kingdomSupply = structuredClone(newConfig.kingdomSupply);
     }
 
-    const bannedKingdomsPatch = compare(currentConfig.bannedKingdoms, newConfig.bannedKingdoms);
+    const bannedKingdomsPatch = jsonPatch.compare(currentConfig.bannedKingdoms, newConfig.bannedKingdoms);
     if (bannedKingdomsPatch.length) {
       Deno.writeTextFileSync('./banned-kingdoms.json', JSON.stringify(newConfig.bannedKingdoms));
       defaultMatchConfiguration.bannedKingdoms = structuredClone(newConfig.bannedKingdoms);
     }
 
-    const eventsPatch = compare(currentConfig.events, newConfig.events);
+    const eventsPatch = jsonPatch.compare(currentConfig.events, newConfig.events);
     if (eventsPatch.length) {
       // Persist selected events between sessions.
       Deno.writeTextFileSync('./preselected-events.json', JSON.stringify(newConfig.events));
       defaultMatchConfiguration.events = structuredClone(newConfig.events);
     }
 
-    const landmarksPatch = compare(currentConfig.landmarks, newConfig.landmarks);
+    const landmarksPatch = jsonPatch.compare(currentConfig.landmarks, newConfig.landmarks);
     if (landmarksPatch.length) {
       // Persist selected landmarks between sessions.
       Deno.writeTextFileSync('./preselected-landmarks.json', JSON.stringify(newConfig.landmarks));
       defaultMatchConfiguration.landmarks = structuredClone(newConfig.landmarks);
     }
 
-    const artifactsPatch = compare(currentConfig.artifacts, newConfig.artifacts);
+    const artifactsPatch = jsonPatch.compare(currentConfig.artifacts, newConfig.artifacts);
     if (artifactsPatch.length) {
       // Persist selected artifacts between sessions.
       Deno.writeTextFileSync('./preselected-artifacts.json', JSON.stringify(newConfig.artifacts));
       defaultMatchConfiguration.artifacts = structuredClone(newConfig.artifacts);
     }
 
-    const patch = compare(currentConfig, newConfig);
+    const patch = jsonPatch.compare(currentConfig, newConfig);
 
     if (patch.length) {
-      applyPatch(this._matchConfiguration, patch);
+      jsonPatch.applyPatch(this._matchConfiguration, patch);
       defaultMatchConfiguration.preselectedKingdoms = newConfig.kingdomSupply.map((supply) => supply.cards[0]);
       this._matchConfiguration!.preselectedKingdoms = newConfig.kingdomSupply.map((supply) => supply.cards[0]);
       // lobby phase – raw object still useful for the config screen
-      io.in('game').emit('matchConfigurationUpdated', this._matchConfiguration!);
+      this._io.in('game').emit('matchConfigurationUpdated', this._matchConfiguration!);
     }
   };
 
@@ -668,7 +692,7 @@ export class Game {
       console.info(`[game] player ${playerId} not found`);
     }
 
-    io.in('game').emit('playerNameUpdated', playerId, name);
+    this._io.in('game').emit('playerNameUpdated', playerId, name);
   };
 
   private onPlayerReady = (playerId: number) => {
@@ -683,7 +707,7 @@ export class Game {
 
     player.ready = !player.ready;
     console.info(`[game] marking ${player} as ${player.ready}`);
-    io.in('game').except(player.socketId).emit('playerReady', playerId, player.ready);
+    this._io.in('game').except(player.socketId).emit('playerReady', playerId, player.ready);
 
     if (this.players.some((p) => !p.ready && p.connected)) {
       console.debug(`[game] not all players ready yet`);
@@ -713,7 +737,7 @@ export class Game {
 
       const bot = createComputerPlayer();
       this.players.push(bot);
-      io.in('game').emit('playerConnected', bot);
+      this._io.in('game').emit('playerConnected', bot);
     }
   };
 
@@ -748,7 +772,7 @@ export class Game {
     // Lock in turn order for the active match.
     this.players = players;
 
-    io.in('game').emit('setPlayerList', players);
+    this._io.in('game').emit('setPlayerList', players);
 
     this._matchController?.on('gameOver', this.clearMatch);
 
@@ -799,13 +823,13 @@ export class Game {
     this.players = this.players.filter((p) => p.id !== targetPlayerId);
     this._socketMap.delete(targetPlayerId);
     this._matchController?.removePlayerFromMatch(targetPlayerId);
-    io.in('game').emit('setPlayerList', this.players);
+    this._io.in('game').emit('setPlayerList', this.players);
 
     if (this.owner?.id === targetPlayerId) {
       const replacement = this.players.find((p) => p.connected && !p.isComputer);
       if (replacement) {
         this.owner = replacement;
-        io.in('game').emit('gameOwnerUpdated', replacement.id);
+        this._io.in('game').emit('gameOwnerUpdated', replacement.id);
       }
     }
 

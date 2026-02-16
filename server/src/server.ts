@@ -2,8 +2,9 @@ import { Server } from 'socket.io';
 import { ServerEmitEvents, ServerListenEvents } from 'shared/types/index.ts';
 import { toNumber } from 'es-toolkit/compat';
 import * as log from '@timepp/enhanced-deno-log';
-import { Game } from './core/game.ts';
+import { defaultMatchControllerFactory, Game } from './core/game.ts';
 import { loadExpansion } from './utils/load-expansion.ts';
+import { asClass, asValue, createContainer, InjectionMode } from 'awilix';
 
 // Default to disabling file logs unless explicitly enabled.
 const logToFileEnabled = Deno.env.get('LOG_TO_FILE')?.trim().toLowerCase() === 'true';
@@ -30,11 +31,24 @@ log.init();
 
 const PORT = toNumber(Deno.env.get('PORT')) || 3001;
 
-const game = new Game();
-
 export const io = new Server<ServerListenEvents, ServerEmitEvents>({
   pingTimeout: 1000 * 60 * 10,
 });
+
+// Build a single composition root so server dependencies are wired explicitly.
+const container = createContainer({
+  injectionMode: InjectionMode.PROXY,
+});
+
+// Register long-lived singleton dependencies used by the server runtime.
+container.register({
+  io: asValue(io),
+  matchControllerFactory: asValue(defaultMatchControllerFactory),
+  game: asClass(Game).singleton(),
+});
+
+// Resolve the game singleton after all dependencies are registered.
+const game = container.resolve<Game>('game');
 
 io.on('connection', (socket) => {
   console.log('[SERVER] new client connected');

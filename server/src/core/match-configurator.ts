@@ -20,7 +20,8 @@ import {
   MatchBaseConfiguration,
   PlayerScoreDecoratorRegistrar,
 } from '@server-types/index.ts';
-import { compare, Operation } from 'fast-json-patch';
+import jsonPatch from 'fast-json-patch';
+import type { Operation } from 'fast-json-patch';
 import { CardSourceController } from './card-source-controller.ts';
 import { getDefaultKingdomSupplySize } from '../utils/get-default-kingdom-supply-size.ts';
 import { getCardPileKey } from '../utils/get-card-pile-key.ts';
@@ -468,7 +469,7 @@ export class MatchConfigurator {
         });
       }
 
-      changes = compare(configSnapshot, this._config);
+      changes = jsonPatch.compare(configSnapshot, this._config);
 
       console.info(`[match configurator] expansion configurator iteration ${iteration} changes ${changes.length}`);
 
