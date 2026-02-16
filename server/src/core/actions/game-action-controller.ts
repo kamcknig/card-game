@@ -890,19 +890,29 @@ export class GameActionController implements GameActionDefinitionMap {
   }
 
   async gainAction(args: { count: number }, context?: GameActionContext) {
-    console.info(`[gainAction action] gaining ${args.count} actions`);
+    let gainAmount = args.count;
+    // Allow reactions to modify incoming action gains (e.g., Snowy Village lockout).
+    const trigger = new ReactionTrigger('actionGain', {
+      playerId: getCurrentPlayer(this.match).id,
+      count: gainAmount,
+      source: context?.loggingContext?.source,
+    });
+    await this.reactionManager.runTrigger({ trigger });
+    gainAmount = Math.max(0, trigger.args.count);
 
-    this.match.playerActions += args.count;
+    console.info(`[gainAction action] gaining ${gainAmount} actions`);
+
+    this.match.playerActions += gainAmount;
     this.match.playerActions = Math.max(0, this.match.playerActions);
 
     this.logManager.addLogEntry({
       type: 'gainAction',
       playerId: getCurrentPlayer(this.match).id,
-      count: args.count,
+      count: gainAmount,
       source: context?.loggingContext?.source,
     });
 
-    console.info(`[gainAction action] setting player actions to ${args.count}`);
+    console.info(`[gainAction action] setting player actions to ${this.match.playerActions}`);
   }
 
   async gainCard(args: {

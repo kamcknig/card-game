@@ -10,6 +10,9 @@ const horseSourcePiles = new Set([
   'hostelry',
   'livery',
   'paddock',
+  'scrap',
+  'sleigh',
+  'supplies',
 ]);
 
 // Ensures the Horse pile is present only when required by selected kingdom cards.
@@ -93,8 +96,9 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 ) => {
   const hasFisherman = config.kingdomSupply.some((supply) => supply.name === 'fisherman');
   const hasDestrier = config.kingdomSupply.some((supply) => supply.name === 'destrier');
+  const hasWayfarer = config.kingdomSupply.some((supply) => supply.name === 'wayfarer');
 
-  if (!hasFisherman && !hasDestrier) {
+  if (!hasFisherman && !hasDestrier && !hasWayfarer) {
     return;
   }
 
@@ -154,6 +158,62 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           }
 
           return { restricted: false, cost: { treasure: -gainedCardCount } };
+        });
+      }
+    }
+
+    if (hasWayfarer) {
+      console.info('[menagerie configurator] registering Wayfarer cost rules');
+      const wayfarerCards = args.findCards([
+        { location: 'kingdomSupply' },
+        { cardKeys: 'wayfarer' },
+      ]);
+
+      for (const wayfarerCard of wayfarerCards) {
+        args.cardPriceController.registerRule(wayfarerCard, (_card, context) => {
+          const currentTurnHistoryIndex = context.match.stats.turns.length - 1;
+          if (currentTurnHistoryIndex < 0) {
+            return { restricted: false, cost: { treasure: 0 } };
+          }
+
+          const gainedCardIds = context.match.stats.cardsGainedByTurn[currentTurnHistoryIndex] ?? [];
+          let lastOtherGainedCardId: number | undefined;
+
+          // Scan backward to find the last non-Wayfarer card gained this turn.
+          for (let gainIndex = gainedCardIds.length - 1; gainIndex >= 0; gainIndex--) {
+            const gainedCardId = gainedCardIds[gainIndex];
+            const gainStats = context.match.stats.cardsGained[gainedCardId];
+            if (gainStats?.turnHistoryIndex !== currentTurnHistoryIndex) {
+              continue;
+            }
+
+            const gainedCard = args.cardLibrary.getCard(gainedCardId);
+            if (gainedCard.cardKey === 'wayfarer') {
+              continue;
+            }
+
+            lastOtherGainedCardId = gainedCardId;
+            break;
+          }
+
+          if (lastOtherGainedCardId === undefined) {
+            return { restricted: false, cost: { treasure: 0 } };
+          }
+
+          const lastOtherGainedCard = args.cardLibrary.getCard(lastOtherGainedCardId);
+          const { cost: lastGainedCardCost } = args.cardPriceController.applyRules(lastOtherGainedCard, {
+            playerId: context.playerId,
+          });
+
+          // Adjust Wayfarer by the delta from its printed cost to the tracked gained-card cost.
+          return {
+            restricted: false,
+            cost: {
+              treasure: lastGainedCardCost.treasure - (wayfarerCard.cost.treasure ?? 0),
+              potion: (lastGainedCardCost.potion ?? 0) - (wayfarerCard.cost.potion ?? 0),
+              debt: (lastGainedCardCost.debt ?? 0) - (wayfarerCard.cost.debt ?? 0),
+            },
+          };
         });
       }
     }

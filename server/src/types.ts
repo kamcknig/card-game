@@ -519,6 +519,12 @@ export type TriggerEventTypeContext = {
     // Optional source card for token/log attribution.
     source?: CardId;
   };
+  actionGain: {
+    playerId: PlayerId;
+    count: number;
+    // Optional source card for token/log attribution.
+    source?: CardId;
+  };
   drawHand: {
     playerId: PlayerId;
     count: number;

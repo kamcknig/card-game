@@ -208,6 +208,93 @@
     ],
     "abilityText": "+$2\nGain 2 Horses.\n+1 Action per empty Supply pile."
   },
+  "sanctuary": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION"
+    ],
+    "mat": "exile",
+    "abilityText": "+1 Card\n+1 Action\n+1 Buy\nYou may Exile a card from your hand."
+  },
+  "scrap": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "Trash a card from your hand. Choose a different thing per $1 it costs: +1 Card; +1 Action; +1 Buy; +$1; gain a Silver; gain a Horse."
+  },
+  "sheepdog": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": [
+      "ACTION",
+      "REACTION"
+    ],
+    "abilityText": "+2 Cards\nWhen you gain a card, you may play this from your hand."
+  },
+  "sleigh": {
+    "cost": {
+      "treasure": 2
+    },
+    "type": [
+      "ACTION",
+      "REACTION"
+    ],
+    "abilityText": "Gain 2 Horses.\nWhen you gain a card, you may discard this, to put that card into your hand or onto your deck."
+  },
+  "snowy-village": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+1 Card\n+4 Actions\n+1 Buy\nIgnore any further +Actions you get this turn."
+  },
+  "stockpile": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": [
+      "TREASURE"
+    ],
+    "mat": "exile",
+    "abilityText": "+$3\n+1 Buy\nExile this."
+  },
+  "supplies": {
+    "cost": {
+      "treasure": 2
+    },
+    "type": [
+      "TREASURE"
+    ],
+    "abilityText": "+$1\nGain a Horse onto your deck."
+  },
+  "village-green": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION",
+      "DURATION",
+      "REACTION"
+    ],
+    "abilityText": "Either now or at the start of your next turn, +1 Card and +2 Actions.\nWhen you discard this other than during Clean-up, you may play it."
+  },
+  "wayfarer": {
+    "cost": {
+      "treasure": 6
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "+3 Cards\nYou may gain a Silver.\nThis has the same cost as the last other card gained this turn, if any."
+  },
   "horse": {
     "cost": {
       "treasure": 3

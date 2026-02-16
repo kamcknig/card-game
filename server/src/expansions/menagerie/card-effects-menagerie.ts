@@ -1444,6 +1444,578 @@ const expansion: CardExpansionModule = {
       });
     },
   },
+  'sanctuary': {
+    registerEffects: () => async (cardEffectArgs) => {
+      // Sanctuary is a cantrip +Buy with an optional exile from hand.
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: 1,
+      });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      if (!hand.length) {
+        console.debug('[sanctuary effect] no cards in hand to exile');
+        return;
+      }
+
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'You may Exile a card from your hand',
+        restrict: hand,
+        count: 1,
+        optional: true,
+      }) as CardId[];
+
+      const selectedCardId = selectedCardIds[0];
+      if (selectedCardId === undefined) {
+        console.debug('[sanctuary effect] player declined to exile a card');
+        return;
+      }
+
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+      console.debug(`[sanctuary effect] exiling ${selectedCard}`);
+      await cardEffectArgs.runGameActionDelegate('exileCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCardId,
+      });
+    },
+  },
+  'scrap': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      if (!hand.length) {
+        console.debug('[scrap effect] no cards in hand to trash');
+        return;
+      }
+
+      // Scrap starts by trashing exactly one card from hand.
+      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Trash a card from your hand',
+        restrict: hand,
+        count: 1,
+      }) as CardId[];
+
+      const selectedCardId = selectedCardIds[0];
+      if (selectedCardId === undefined) {
+        console.warn('[scrap effect] no card selected to trash');
+        return;
+      }
+
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+      const { cost: selectedCardCost } = cardEffectArgs.cardPriceController.applyRules(selectedCard, {
+        playerId: cardEffectArgs.playerId,
+      });
+
+      console.debug(`[scrap effect] trashing ${selectedCard}`);
+      await cardEffectArgs.runGameActionDelegate('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCardId,
+      });
+
+      const bonusCount = Math.max(0, Math.min(6, selectedCardCost.treasure ?? 0));
+      if (bonusCount < 1) {
+        console.debug('[scrap effect] trashed card cost is 0, no bonus choices');
+        return;
+      }
+
+      const bonusOptions = [
+        { id: 'draw', label: '+1 Card' },
+        { id: 'action', label: '+1 Action' },
+        { id: 'buy', label: '+1 Buy' },
+        { id: 'treasure', label: '+$1' },
+        { id: 'silver', label: 'Gain a Silver' },
+        { id: 'horse', label: 'Gain a Horse' },
+      ] as const;
+
+      // Resolve each selected bonus immediately before asking for the next one.
+      const resolveBonus = async (bonusId: (typeof bonusOptions)[number]['id']) => {
+        if (bonusId === 'draw') {
+          await cardEffectArgs.runGameActionDelegate('drawCard', {
+            playerId: cardEffectArgs.playerId,
+            count: 1,
+          });
+          return;
+        }
+
+        if (bonusId === 'action') {
+          await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+          return;
+        }
+
+        if (bonusId === 'buy') {
+          await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+          return;
+        }
+
+        if (bonusId === 'treasure') {
+          await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+          return;
+        }
+
+        if (bonusId === 'silver') {
+          const silverCards = cardEffectArgs.findCards([
+            { location: 'basicSupply' },
+            { cardKeys: 'silver' },
+          ]);
+
+          if (!silverCards.length) {
+            console.debug('[scrap effect] no Silver cards remain to gain');
+            return;
+          }
+
+          await cardEffectArgs.runGameActionDelegate('gainCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: silverCards.slice(-1)[0].id,
+            to: { location: 'playerDiscard' },
+          });
+          return;
+        }
+
+        const horseCards = cardEffectArgs.findCards([
+          { location: 'nonSupplyCards' },
+          { cardKeys: 'horse' },
+        ]);
+
+        if (!horseCards.length) {
+          console.debug('[scrap effect] no Horse cards remain to gain');
+          return;
+        }
+
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: horseCards.slice(-1)[0].id,
+          to: { location: 'playerDiscard' },
+        });
+      };
+
+      const selectedBonusIds = new Set<string>();
+      while (selectedBonusIds.size < bonusCount) {
+        const remainingOptions = bonusOptions.filter((option) => !selectedBonusIds.has(option.id));
+        const selectedOption = bonusCount >= bonusOptions.length
+          ? remainingOptions[0]
+          : remainingOptions[Math.max(0, ((await cardEffectArgs.runGameActionDelegate('userPrompt', {
+            playerId: cardEffectArgs.playerId,
+            prompt: `Choose bonus ${selectedBonusIds.size + 1} of ${bonusCount} (Scrap)`,
+            actionButtons: remainingOptions.map((option, index) => ({
+              label: option.label,
+              action: index + 1,
+            })),
+          }) as { action?: number } | null)?.action ?? 1) - 1)] ?? remainingOptions[0];
+
+        selectedBonusIds.add(selectedOption.id);
+        await resolveBonus(selectedOption.id);
+      }
+    },
+  },
+  'sheepdog': {
+    registerLifeCycleMethods: () => ({
+      onEnterHand: async ({ reactionManager, cardLibrary }, { playerId, cardId }) => {
+        const sheepdogCard = cardLibrary.getCard(cardId);
+
+        reactionManager.registerReactionTemplate(sheepdogCard, 'cardGained', {
+          playerId,
+          once: false,
+          compulsory: false,
+          allowMultipleInstances: true,
+          condition: ({ cardSourceController }) => {
+            // Sheepdog must still be in hand to be reactable.
+            try {
+              const source = cardSourceController.findCardSource(cardId);
+              return source.sourceKey === 'playerHand' && source.playerId === playerId;
+            } catch {
+              return false;
+            }
+          },
+          triggeredEffectFn: async (triggeredArgs) => {
+            const promptResult = await triggeredArgs.runGameActionDelegate('userPrompt', {
+              playerId,
+              prompt: 'Play Sheepdog?',
+              actionButtons: [
+                { label: 'NO', action: 1 },
+                { label: 'YES', action: 2 },
+              ],
+            }) as { action?: number } | null;
+
+            if (promptResult?.action !== 2) {
+              console.debug('[sheepdog reaction] player declined to play Sheepdog');
+              return;
+            }
+
+            // Re-check source in case a prior reaction moved this card.
+            try {
+              const source = triggeredArgs.cardSourceController.findCardSource(cardId);
+              if (source.sourceKey !== 'playerHand' || source.playerId !== playerId) {
+                console.debug('[sheepdog reaction] Sheepdog not in hand anymore, skipping play');
+                return;
+              }
+            } catch {
+              console.debug('[sheepdog reaction] Sheepdog source not found, skipping play');
+              return;
+            }
+
+            await triggeredArgs.runGameActionDelegate('playCard', {
+              playerId,
+              cardId,
+              overrides: {
+                actionCost: 0,
+              },
+            });
+          },
+        });
+      },
+      onLeaveHand: async ({ reactionManager, cardLibrary }, { cardId }) => {
+        const sheepdogCard = cardLibrary.getCard(cardId);
+        reactionManager.unregisterTrigger(`${sheepdogCard.cardName}:${cardId}:cardGained`);
+      },
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      // Sheepdog is a terminal +2 Cards.
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: 2,
+      });
+    },
+  },
+  'sleigh': {
+    registerLifeCycleMethods: () => ({
+      onEnterHand: async ({ reactionManager, cardLibrary }, { playerId, cardId }) => {
+        const sleighCard = cardLibrary.getCard(cardId);
+
+        reactionManager.registerReactionTemplate(sleighCard, 'cardGained', {
+          playerId,
+          once: false,
+          compulsory: false,
+          allowMultipleInstances: true,
+          condition: ({ trigger, cardSourceController }) => {
+            // Sleigh only reacts to gains by its owner and only while this copy remains in hand.
+            if (trigger.args.playerId !== playerId) {
+              return false;
+            }
+            try {
+              const source = cardSourceController.findCardSource(cardId);
+              return source.sourceKey === 'playerHand' && source.playerId === playerId;
+            } catch {
+              return false;
+            }
+          },
+          triggeredEffectFn: async (triggeredArgs) => {
+            const gainedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
+            const promptResult = await triggeredArgs.runGameActionDelegate('userPrompt', {
+              playerId,
+              prompt: `Discard Sleigh to move ${gainedCard.cardName}?`,
+              actionButtons: [
+                { label: 'NO', action: 1 },
+                { label: 'TO HAND', action: 2 },
+                { label: 'TO DECK', action: 3 },
+              ],
+              content: {
+                type: 'display-cards',
+                cardIds: [gainedCard.id],
+              },
+            }) as { action?: number } | null;
+
+            if (promptResult?.action !== 2 && promptResult?.action !== 3) {
+              console.debug('[sleigh reaction] player declined to discard Sleigh');
+              return;
+            }
+
+            console.debug('[sleigh reaction] discarding Sleigh as reaction cost');
+            await triggeredArgs.runGameActionDelegate('discardCard', {
+              playerId,
+              cardId,
+            });
+
+            const gainedLocation = triggeredArgs.trigger.args.gainedLocation;
+            if (!gainedLocation) {
+              console.debug('[sleigh reaction] gained location is unknown; cannot move gained card');
+              return;
+            }
+
+            // Stop-moving/lose-track guard: only move if the gained card is still where it was gained to.
+            try {
+              const currentSource = triggeredArgs.cardSourceController.findCardSource(gainedCard.id);
+              if (
+                currentSource.sourceKey !== gainedLocation.location ||
+                currentSource.playerId !== gainedLocation.playerId
+              ) {
+                console.debug('[sleigh reaction] gained card moved since gain, skipping move');
+                return;
+              }
+            } catch {
+              console.debug('[sleigh reaction] gained card source no longer exists, skipping move');
+              return;
+            }
+
+            const destination = promptResult.action === 2 ? 'playerHand' : 'playerDeck';
+            console.debug(`[sleigh reaction] moving gained card ${gainedCard} to ${destination}`);
+            await triggeredArgs.runGameActionDelegate('moveCard', {
+              cardId: gainedCard.id,
+              toPlayerId: playerId,
+              to: { location: destination },
+            });
+          },
+        });
+      },
+      onLeaveHand: async ({ reactionManager, cardLibrary }, { cardId }) => {
+        const sleighCard = cardLibrary.getCard(cardId);
+        reactionManager.unregisterTrigger(`${sleighCard.cardName}:${cardId}:cardGained`);
+      },
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      // Sleigh gains 2 Horses from the Horse pile.
+      for (let index = 0; index < 2; index++) {
+        const horseCards = cardEffectArgs.findCards([
+          { location: 'nonSupplyCards' },
+          { cardKeys: 'horse' },
+        ]);
+
+        if (!horseCards.length) {
+          console.debug('[sleigh effect] no Horse cards remain to gain');
+          return;
+        }
+
+        await cardEffectArgs.runGameActionDelegate('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: horseCards.slice(-1)[0].id,
+          to: { location: 'playerDiscard' },
+        });
+      }
+    },
+  },
+  'snowy-village': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const snowyVillageCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
+      const playedThisTurn = cardEffectArgs.match.stats.playedCardsByTurn[turnHistoryIndex] ?? [];
+      const snowyVillagePlayInstance = playedThisTurn
+        .filter((playedCardId) => playedCardId === cardEffectArgs.cardId)
+        .length;
+
+      // Snowy Village grants its printed bonuses before locking further +Actions.
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: 1,
+      });
+      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 4 });
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+
+      const actionLockTriggerId = cardEffectArgs.reactionManager.registerReactionTemplate(
+        snowyVillageCard,
+        'actionGain',
+        {
+          playerId: cardEffectArgs.playerId,
+          once: false,
+          compulsory: true,
+          allowMultipleInstances: true,
+          condition: ({ trigger, match }) =>
+            trigger.args.playerId === cardEffectArgs.playerId &&
+            getCurrentPlayer(match).id === cardEffectArgs.playerId,
+          triggeredEffectFn: async (triggeredArgs) => {
+            if (triggeredArgs.trigger.args.count <= 0) {
+              return;
+            }
+            console.debug(
+              `[snowy-village action lock] ignoring +${triggeredArgs.trigger.args.count} Action(s) for player ${cardEffectArgs.playerId}`,
+            );
+            triggeredArgs.trigger.args.count = 0;
+          },
+        },
+        { idSuffix: `lock-actions:${snowyVillagePlayInstance}` },
+      );
+
+      // Cleanup the lock at end turn; it only applies for the current turn.
+      cardEffectArgs.reactionManager.registerSystemTemplate(snowyVillageCard, 'endTurn', {
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
+        triggeredEffectFn: async (triggeredArgs) => {
+          console.debug('[snowy-village effect] removing action-gain lock at end turn');
+          triggeredArgs.reactionManager.unregisterTrigger(actionLockTriggerId);
+        },
+      }, { idSuffix: `cleanup-action-lock:${snowyVillagePlayInstance}` });
+    },
+  },
+  'stockpile': {
+    registerEffects: () => async (cardEffectArgs) => {
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 3 });
+      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+
+      // Stockpile exiles itself if it is still a card in play when this resolves.
+      try {
+        const source = cardEffectArgs.cardSourceController.findCardSource(cardEffectArgs.cardId);
+        if (source.sourceKey !== 'playArea' && source.sourceKey !== 'activeDuration') {
+          console.debug('[stockpile effect] Stockpile is no longer in play, skipping exile');
+          return;
+        }
+      } catch {
+        console.debug('[stockpile effect] Stockpile source not found, skipping exile');
+        return;
+      }
+
+      await cardEffectArgs.runGameActionDelegate('exileCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: cardEffectArgs.cardId,
+      });
+    },
+  },
+  'supplies': {
+    registerEffects: () => async (cardEffectArgs) => {
+      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+
+      const horseCards = cardEffectArgs.findCards([
+        { location: 'nonSupplyCards' },
+        { cardKeys: 'horse' },
+      ]);
+
+      if (!horseCards.length) {
+        console.debug('[supplies effect] no Horse cards remain to gain');
+        return;
+      }
+
+      // Supplies gains a Horse directly onto your deck.
+      await cardEffectArgs.runGameActionDelegate('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: horseCards.slice(-1)[0].id,
+        to: { location: 'playerDeck' },
+      });
+    },
+  },
+  'village-green': {
+    registerLifeCycleMethods: () => ({
+      onDiscarded: async (args, eventArgs) => {
+        if (getTurnPhase(args.match.turnPhaseIndex) === 'cleanup') {
+          console.debug('[village-green onDiscarded] discarded during cleanup, skipping reaction');
+          return;
+        }
+
+        const promptResult = await args.runGameActionDelegate('userPrompt', {
+          playerId: eventArgs.playerId,
+          prompt: 'Play Village Green?',
+          actionButtons: [
+            { label: 'NO', action: 1 },
+            { label: 'YES', action: 2 },
+          ],
+        }) as { action?: number } | null;
+
+        if (promptResult?.action !== 2) {
+          console.debug('[village-green onDiscarded] player declined to play Village Green');
+          return;
+        }
+
+        console.debug('[village-green onDiscarded] playing Village Green from discard');
+        await args.runGameActionDelegate('playCard', {
+          playerId: eventArgs.playerId,
+          cardId: eventArgs.cardId,
+          overrides: {
+            actionCost: 0,
+          },
+        });
+      },
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      const villageGreenCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
+      const playedThisTurn = cardEffectArgs.match.stats.playedCardsByTurn[turnHistoryIndex] ?? [];
+      const villageGreenPlayInstance = playedThisTurn
+        .filter((playedCardId) => playedCardId === cardEffectArgs.cardId)
+        .length;
+
+      const promptResult = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Use Village Green now or at the start of your next turn?',
+        actionButtons: [
+          { label: 'NOW', action: 1 },
+          { label: 'NEXT TURN', action: 2 },
+        ],
+      }) as { action?: number } | null;
+
+      if (promptResult?.action !== 2) {
+        console.debug('[village-green effect] resolving immediate mode');
+        await cardEffectArgs.runGameActionDelegate('drawCard', {
+          playerId: cardEffectArgs.playerId,
+          count: 1,
+        });
+
+        // Off-turn immediate plays still draw, but +Actions only matter on your own turn.
+        if (getCurrentPlayer(cardEffectArgs.match).id === cardEffectArgs.playerId) {
+          await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
+        } else {
+          console.debug('[village-green effect] off-turn immediate play, skipping +Actions');
+        }
+        return;
+      }
+
+      console.debug('[village-green effect] registering delayed mode');
+      cardEffectArgs.registerDurationEffect(villageGreenCard, {
+        id: `village-green:${cardEffectArgs.cardId}:startTurn:${villageGreenPlayInstance}`,
+        listeningFor: 'startTurn',
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
+        triggeredEffectFn: async (triggeredArgs) => {
+          await triggeredArgs.runGameActionDelegate('moveCard', {
+            cardId: villageGreenCard.id,
+            to: { location: 'playArea' },
+          });
+
+          await triggeredArgs.runGameActionDelegate('drawCard', {
+            playerId: cardEffectArgs.playerId,
+            count: 1,
+          });
+          await triggeredArgs.runGameActionDelegate('gainAction', { count: 2 });
+        },
+      });
+    },
+  },
+  'wayfarer': {
+    registerEffects: () => async (cardEffectArgs) => {
+      await cardEffectArgs.runGameActionDelegate('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: 3,
+      });
+
+      const silverCards = cardEffectArgs.findCards([
+        { location: 'basicSupply' },
+        { cardKeys: 'silver' },
+      ]);
+
+      if (!silverCards.length) {
+        console.debug('[wayfarer effect] no Silver cards remain to gain');
+        return;
+      }
+
+      const promptResult = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Gain a Silver?',
+        actionButtons: [
+          { label: 'NO', action: 1 },
+          { label: 'YES', action: 2 },
+        ],
+        content: {
+          type: 'display-cards',
+          cardIds: [silverCards.slice(-1)[0].id],
+        },
+      }) as { action?: number } | null;
+
+      if (promptResult?.action !== 2) {
+        console.debug('[wayfarer effect] player declined to gain Silver');
+        return;
+      }
+
+      await cardEffectArgs.runGameActionDelegate('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: silverCards.slice(-1)[0].id,
+        to: { location: 'playerDiscard' },
+      });
+    },
+  },
   'horse': {
     registerEffects: () => async (cardEffectArgs) => {
       // Horse draws 2 cards and then returns itself to the Horse pile.
