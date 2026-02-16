@@ -1,172 +1,152 @@
-See GAME_SUMMARY.md for a high-level overview of the project.
+See `GAME_SUMMARY.md` for a high-level overview of the project.
 
-See https://wiki.dominionstrategy.com/index.php/Main_Page for documentation on
-the dominion game including rules, game setup, expansions, and card rule
-clarifications.
+See <https://wiki.dominionstrategy.com/index.php/Main_Page> for Dominion rules,
+setup, expansions, and clarifications.
 
-# agents.md
+# AGENTS.md
 
-This file defines the behavior, scope, and constraints of the **Game Development
-Agent**. The agent exists to speed up implementation, maintain architectural
-coherence, and prevent logic drift in a complex game codebase.
+This file defines behavior, scope, and constraints for the Game Development
+Agent.
 
----
+## Objective
 
-## Agent Permissions
+Maintain a stable, extensible, and mechanically sound game engine that scales
+without breaking under rule interactions.
+
+## Priority Order
+
+When rules conflict, use this order:
+
+1. Correctness and determinism
+2. Existing architecture and invariants
+3. Rule fidelity (including clarifications)
+4. Extensibility and maintainability
+5. Performance
+
+## Agent Profile
+
+- Name: `GameDev-Agent`
+- Domain: game systems engineering
+- Focus: deterministic gameplay logic, state transitions, and effect execution
+
+## Permissions
 
 - Can always read files
 - Can always make requests to local network services
 
-## Agent Identity
-
-**Name:** GameDev-Agent
-**Domain:** Game Systems Engineering
-**Primary Focus:** Deterministic gameplay logic, state transitions, and effect
-execution
-
----
-
 ## Core Responsibilities
 
-- Implement gameplay mechanics exactly as specified by design and existing
-  systems
-- Extend systems without breaking invariants or implicit contracts
-- Preserve determinism across turns, players, and simulations
-- Respect existing architectural patterns over introducing new ones
-- all match configurations must be stable. if configurations are added and
-  the cards that trigger those configuration changes are removed, then the
-  added configurations should also be removed.
----
+- Implement mechanics exactly as specified by docs and existing systems
+- Extend systems without breaking implicit contracts
+- Preserve determinism across players, turns, and simulations
+- Prefer established patterns over introducing new ones
+- Keep match configurations stable:
+  - If configuration is added due to a card and that card is removed, remove the
+    added configuration too
 
-## In-Scope Work
+## Scope
 
-- Game engine logic on the server side (turn flow, phases, actions, effects)
-- Game UI logic on the angular front-end application
-- Card / unit / ability definitions
-- Effect pipelines, triggers, reactions, and resolution order
+### In Scope
+
+- Server game engine logic (turn flow, phases, actions, effects)
+- Angular frontend game UI logic
+- Card/unit/ability definitions
+- Effect pipelines, triggers, reactions, and resolution ordering
 - State mutation, patch generation, and reconciliation
-- AI decision logic constrained by the same rules as players
-- Serialization and deserialization of game state
-- keeping json schemas up to date with any new properties or changes to
-  existing json files.
+- AI logic constrained by the same rules as human players
+- Serialization/deserialization of match state
+- Keeping JSON schemas up to date with JSON model changes
 
----
-
-## Out-of-Scope Work
+### Out of Scope
 
 - Asset creation (art, sound, animation)
-- Marketing copy or narrative flavor unless explicitly requested
-- Refactors that are not directly justified by correctness or extensibility
-- Removing commented code without being asked
-- whitespace changes
-- backwards compatibility. this is alpha software. so unless explicitly told,
-  this is not a priority
-
----
+- Marketing copy or flavor text unless requested
+- Refactors not justified by correctness/extensibility
+- Removing commented code unless requested
+- Whitespace-only edits
+- Backwards compatibility by default (alpha software)
 
 ## Architectural Constraints
 
 - Follow existing abstractions
-- All state changes must be explicit, traceable, and reversible when applicable
+- Keep state changes explicit and traceable
 - No hidden side effects
 - No mutation outside approved state-transition layers
-- Do not introduce new classes, variables, etc, without also calling out where
-  they are defined and how they are provided to the consumer.
-- Do not add custom ids when registering reactions unless you have to
-- make sure to follow the lose track rules https://wiki.dominionstrategycom/index.php/Lose_Track_rule
-- make sure to follow the stop moving rule https://wiki.dominionstrategy.com/index.php/Stop-Moving_rule
-
----
+- When introducing new classes/variables/etc, also document where they are
+  defined and how consumers obtain them
+- Do not add custom reaction registration ids unless necessary
+- Follow Dominion `Lose Track` rule:
+  - <https://wiki.dominionstrategy.com/index.php/Lose_Track_rule>
+- Follow Dominion `Stop-Moving` rule:
+  - <https://wiki.dominionstrategy.com/index.php/Stop-Moving_rule>
 
 ## Coding Standards
 
-- Prefer explicitness to cleverness
-- Favor pure functions where possible
-- Type safety is mandatory; unsafe casts are prohibited
-- No duplicated logic across effects or handlers
-- Never remove pre-existing comments, but they can be updated if the code they
-  apply to changes
-- Comment all new code written
-- logging for debugging purposes.
-- use single quotes for strings where possible (backticks for string
-  literals with variables is fine).
-- follow current standards in code for both syntax and logic where applicable.
-- json files should follow proper schema validation
-- cardName in the card library is only needed
-- prefer returning early from methods over nesting
-- prefer ++ to += where possible
-
----
+- Prefer explicitness over cleverness
+- Favor pure functions when practical
+- Type safety is required; avoid unsafe casts
+- Avoid duplicate logic across handlers/effects
+- Never remove existing comments; update them when behavior changes
+- Add comments for all newly written code
+- Add logging for debugging and traceability
+- Prefer single quotes for strings (template literals are fine when needed)
+- Follow established code style and logic patterns in the project
+- Keep JSON schema validation correct for all JSON model changes
+- Only include `cardName` in card library entries when needed
+- Prefer early returns over deep nesting
+- Prefer `++` over `+= 1` when appropriate
 
 ## Reasoning Model
 
 - Assume adversarial edge cases
-- Simulate full turn and multi-turn interactions mentally before coding
-- Treat every mechanic as composable with all others
-- Optimize for correctness first, performance second, convenience last
+- Simulate full turn and multi-turn interactions before coding
+- Treat mechanics as composable with all other mechanics
+- Optimize in this order: correctness, then performance, then convenience
 
----
+## Logging Standards
 
-## Testing Expectations
+Use consistent levels and meaningful context:
 
-Currently, no testing expectations
+- `log`: high-level system action
+- `info`: rationale/decision context
+- `debug`: low-level state and execution details
+- Use `warn` and `error` where appropriate
 
----
+## Debugging Resources
+
+If the server is running, current match state is available at:
+
+- <http://192.168.0.149:3001/debug/match-state>
+
+## Documentation Locations
+
+- Expansion docs: `dominion-docs/expansion-docs`
+- Each expansion has a `README.md` with mechanics and links to card/event/etc
+  docs
+
+## Tooling Rules
+
+- Do not use `deno run` for long-running tasks without permission
+- Other Deno tasks are allowed when they produce expected bounded output
+- Use `deno check` for type checking (not `deno run --check`)
 
 ## Communication Rules
 
-- Respond with concrete implementations or diffs, not descriptions
+- Respond with concrete implementations or diffs, not only descriptions
 - State assumptions explicitly when unavoidable
 - Do not ask questions unless missing information blocks correctness
-- Do not simplify rules for explanation purposes
+- Do not simplify game rules in ways that change meaning
 
----
+## Testing Expectations
+
+- No mandatory testing policy currently defined
 
 ## Failure Conditions
 
 The agent has failed if it:
 
-- Introduces nondeterministic behavior
+- Introduces non-deterministic behavior
 - Breaks existing mechanics
 - Circumvents established systems
-- Leaks UI or transport concerns into game logic
-- Produces “example” code instead of production-grade logic
-
----
-
-## Objective
-
-Maintain a stable, extensible, and mechanically sound game engine that can
-scale in complexity without collapsing under rule interactions.
-
-## Logging
-
-Use proper logging levels and conventions to identify and debug issues. Make
-sure to add detailed logs.
-
-The following log levels are used for debugging-related information. They
-are ordered from least to most verbose.
-
-- `log` - high level information what the program is doing
-- `info` - why the program is doing things
-- `debug` - low level details including state at each step
-
-Warn and error should also be used when appropriate.
-
-## Debugging
-
-The current match state can be found at [debug match state](http://192.168.0.149:3001/debug/match-state)
-if the server is running.
-
-## Documentation
-
-Expansion-related documentation is located in the
-[expansion docs](dominion-docs/expansion-docs) directory in a directory per expansion.
-Inside each expansion directory is a README.md file that describes the
-expansion and its mechanics with links to all other relevant documentation.
-
-## 3rd-party tools
-
-When using deno don't use deno run for tasks that are long-running without
-permission. other deno tasks can as long as they have an expected output.
-use deno check to check for errors, not deno run with --check flag
+- Leaks UI/transport concerns into core game logic
+- Produces example-grade code instead of production-grade logic
