@@ -16,7 +16,7 @@ import { MatchScopeFactory } from './core/match-scope-factory.ts';
 import { MatchConfiguratorFactory } from './core/match-configurator-factory.ts';
 import { MatchRuntimeFactory } from './core/match-runtime-factory.ts';
 import { MatchSocketBindings } from './core/match-socket-bindings.ts';
-import { loadExpansion } from './utils/load-expansion.ts';
+import { ServerStartupService } from './core/server-startup-service.ts';
 import { asClass, asValue, createContainer, InjectionMode } from 'awilix';
 
 // Default to disabling file logs unless explicitly enabled.
@@ -70,11 +70,13 @@ container.register({
   playerFactoryService: asClass(PlayerFactoryService).singleton(),
   playerRegistryService: asClass(PlayerRegistryService).singleton(),
   matchStartOrchestrator: asClass(MatchStartOrchestrator).singleton(),
+  serverStartupService: asClass(ServerStartupService).singleton(),
   game: asClass(Game).singleton(),
 });
 
 // Resolve the game singleton after all dependencies are registered.
 const game = container.resolve<Game>('game');
+const serverStartupService = container.resolve<ServerStartupService>('serverStartupService');
 
 io.on('connection', (socket) => {
   console.log('[SERVER] new client connected');
@@ -157,20 +159,9 @@ addEventListener('SIGINT', () => {
   Deno.exit();
 });
 
-(async () => {
-  try {
-    const expansionList = (await import('@expansions/expansion-list.json', {
-      with: { type: 'json' },
-    })).default;
-
-    for (const expansion of expansionList) {
-      console.info(`[SERVER] loading expansion card data for ${expansion.title}`);
-      await loadExpansion(expansion).then(() => game.expansionLoaded(expansion));
-    }
-  } catch (error) {
-    console.error('[SERVER] failed while loading expansions');
-    console.error(error);
-    game.dispose();
-    throw error;
-  }
-})();
+void serverStartupService.start().catch((error) => {
+  // Surface startup failures and stop the process so the host can restart.
+  console.error('[SERVER] startup failed');
+  console.error(error);
+  Deno.exit(1);
+});

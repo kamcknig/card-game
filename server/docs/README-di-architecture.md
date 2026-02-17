@@ -34,6 +34,7 @@ Defined in `server/src/server.ts`:
 | `playerFactoryService` | `asClass(PlayerFactoryService)` | singleton | `Game`, `PlayerRegistryService` |
 | `playerRegistryService` | `asClass(PlayerRegistryService)` | singleton | `Game` |
 | `matchStartOrchestrator` | `asClass(MatchStartOrchestrator)` | singleton | `Game` |
+| `serverStartupService` | `asClass(ServerStartupService)` | singleton | `server.ts` bootstrap |
 | `game` | `asClass(Game)` | singleton | `server.ts` bootstrap |
 
 ## Match Scope Tokens
