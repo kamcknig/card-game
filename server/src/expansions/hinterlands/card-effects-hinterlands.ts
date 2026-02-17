@@ -167,7 +167,7 @@ const expansion: CardExpansionModule = {
 
       const cardsToLookAt = deck.slice(-numToLookAt);
 
-      let result = await cardEffectArgs.actionService.run('userPrompt', {
+      let result = await cardEffectArgs.promptService.requestActionResult<CardId[]>({
         prompt: `May discard up to ${cardsToLookAt.length}`,
         playerId: cardEffectArgs.playerId,
         actionButtons: [
@@ -181,9 +181,9 @@ const expansion: CardExpansionModule = {
             count: cardsToLookAt.length,
           },
         },
-      }) as { action: number; result: CardId[] };
+      });
 
-      if (!result.result.length) {
+      if (!result?.result?.length) {
         console.warn(`[cartographer effect] no card selected`);
       } else {
         console.debug(`[cartographer effect] discarding ${result.result.length} cards`);
@@ -196,7 +196,7 @@ const expansion: CardExpansionModule = {
         }
       }
 
-      const cardsToRearrange = cardsToLookAt.filter((id) => !result.result.includes(id));
+      const cardsToRearrange = cardsToLookAt.filter((id) => !result?.result?.includes(id));
 
       if (!cardsToRearrange.length) {
         console.debug(`[cartographer effect] no cards to rearrange`);
@@ -204,7 +204,7 @@ const expansion: CardExpansionModule = {
       }
 
       console.debug(`[cartographer effect] rearranging ${cardsToRearrange.length} cards`);
-      result = await cardEffectArgs.actionService.run('userPrompt', {
+      result = await cardEffectArgs.promptService.requestActionResult<CardId[]>({
         prompt: 'Put back on top of deck in any order',
         playerId: cardEffectArgs.playerId,
         actionButtons: [
@@ -214,9 +214,9 @@ const expansion: CardExpansionModule = {
           type: 'rearrange',
           cardIds: cardsToRearrange,
         },
-      }) as { action: number; result: CardId[] };
+      });
 
-      for (const cardId of result.result) {
+      for (const cardId of result?.result ?? []) {
         await cardEffectArgs.actionService.run('moveCard', {
           cardId: cardId,
           toPlayerId: cardEffectArgs.playerId,
@@ -722,7 +722,7 @@ const expansion: CardExpansionModule = {
           return;
         }
 
-        const result = await args.actionService.run('userPrompt', {
+        const result = await args.promptService.requestActionResult<CardId[]>({
           prompt: 'Reveal actions to shuffle into deck?',
           playerId: eventArgs.playerId,
           actionButtons: [
@@ -736,9 +736,9 @@ const expansion: CardExpansionModule = {
               count: actionsInDiscard.length,
             },
           },
-        }) as { action: number; result: CardId[] };
+        });
 
-        if (!result.result.length) {
+        if (!result?.result?.length) {
           console.debug(`[inn onGained effect] no cards selected`);
           return;
         }
@@ -828,16 +828,16 @@ const expansion: CardExpansionModule = {
         const cardId = deck.slice(-1)[0];
         const card = cardEffectArgs.cardLibrary.getCard(cardId);
 
-        const result = await cardEffectArgs.actionService.run('userPrompt', {
+        const action = await cardEffectArgs.promptService.requestAction({
           prompt: `Discard ${card.cardName}`,
           playerId: cardEffectArgs.playerId,
           actionButtons: [
             { label: 'CANCEL', action: 1 },
             { label: 'DISCARD', action: 2 },
           ],
-        }) as { action: number; result: number[] };
+        });
 
-        if (result.action === 2) {
+        if (action === 2) {
           console.debug(`[jack-of-all-trades effect] discarding ${card}`);
           await cardEffectArgs.actionService.run('discardCard', {
             cardId,
@@ -1000,15 +1000,15 @@ const expansion: CardExpansionModule = {
           if (card.owner !== cardEffectArgs.playerId) return false;
           if (!card.type.includes('ACTION')) return false;
 
-          const result = await conditionArgs.actionService.run('userPrompt', {
+          const action = await conditionArgs.promptService.requestAction({
             prompt: `Top-deck ${card.cardName}?`,
             playerId: conditionArgs.trigger.args.playerId,
             actionButtons: [
               { label: 'CANCEL', action: 1 },
               { label: 'CONFIRM', action: 2 },
             ],
-          }) as { action: number; result: number[] };
-          if (result.action === 1) return false;
+          });
+          if (action === 1 || action === null) return false;
 
           return true;
         },
@@ -1100,16 +1100,16 @@ const expansion: CardExpansionModule = {
         cardId: card.id,
       });
 
-      const result = await cardEffectArgs.actionService.run('userPrompt', {
+      const action = await cardEffectArgs.promptService.requestAction({
         prompt: 'Choose one',
         playerId: cardEffectArgs.playerId,
         actionButtons: [
           { label: '+2 Cards, + 1 Action', action: 1 },
           { label: '+1 Buy, +2 Treasure', action: 2 },
         ],
-      }) as { action: number; result: number[] };
+      });
 
-      switch (result.action) {
+      switch (action) {
         case 1:
           console.debug(`[spice-merchant effect] drawing 2 cards and gaining 1 action`);
           await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
@@ -1286,16 +1286,16 @@ const expansion: CardExpansionModule = {
           return;
         }
 
-        const result = await args.actionService.run('userPrompt', {
+        const action = await args.promptService.requestAction({
           prompt: 'Play Trail?',
           playerId: eventArgs.playerId,
           actionButtons: [
             { label: 'CANCEL', action: 1 },
             { label: 'PLAY', action: 2 },
           ],
-        }) as { action: number; result: number[] };
+        });
 
-        if (result.action === 1) {
+        if (action === 1 || action === null) {
           console.debug(`[trail onGained/Trashed/Discarded event] not playing trail`);
           return;
         }
@@ -1337,16 +1337,16 @@ const expansion: CardExpansionModule = {
           return;
         }
 
-        const result = await args.actionService.run('userPrompt', {
+        const action = await args.promptService.requestAction({
           prompt: 'Reveal tunnel?',
           playerId: eventArgs.playerId,
           actionButtons: [
             { label: 'CANCEL', action: 1 },
             { label: 'REVEAL', action: 2 },
           ],
-        }) as { action: number; result: number[] };
+        });
 
-        if (result.action === 1) {
+        if (action === 1 || action === null) {
           console.debug(`[tunnel onDiscarded event] not revealing tunnel`);
           return;
         }
@@ -1388,16 +1388,16 @@ const expansion: CardExpansionModule = {
           return;
         }
 
-        const result = await args.actionService.run('userPrompt', {
+        const action = await args.promptService.requestAction({
           prompt: 'Play Weaver?',
           playerId: eventArgs.playerId,
           actionButtons: [
             { label: 'CANCEL', action: 1 },
             { label: 'PLAY', action: 2 },
           ],
-        }) as { action: number };
+        });
 
-        if (result.action === 1) {
+        if (action === 1 || action === null) {
           console.debug(`[weaver onDiscarded event] not playing weaver`);
           return;
         }
@@ -1411,16 +1411,16 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      const result = await cardEffectArgs.actionService.run('userPrompt', {
+      const action = await cardEffectArgs.promptService.requestAction({
         prompt: 'Choose two silvers, or gain a card costing up to $4',
         playerId: cardEffectArgs.playerId,
         actionButtons: [
           { label: 'SILVERS', action: 1 },
           { label: 'GAIN CARD', action: 2 },
         ],
-      }) as { action: number; result: number[] };
+      });
 
-      if (result.action === 1) {
+      if (action === 1) {
         console.debug(`[weaver effect] choosing silvers`);
 
         const silverCardIds = cardEffectArgs.findCardService.findCards([

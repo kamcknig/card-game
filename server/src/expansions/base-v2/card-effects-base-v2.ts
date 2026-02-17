@@ -2,7 +2,7 @@ import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
-import { Card } from 'shared/types/index.ts';
+import { Card, CardId } from 'shared/types/index.ts';
 import { isPlayerImmune, markPlayerImmune } from '../../utils/reaction-immunity.ts';
 
 const expansionModule: CardExpansionModule = {
@@ -168,7 +168,7 @@ const expansionModule: CardExpansionModule = {
           if (giveChoice) {
             console.debug(`[BANDIT EFFECT] prompt user to select card to trash...`);
 
-            const results = await actionService.run('userPrompt', {
+            const results = await args.promptService.requestResult<CardId[]>({
               playerId: targetPlayerId,
               prompt: 'Choose a treasure to trash',
               content: {
@@ -176,9 +176,9 @@ const expansionModule: CardExpansionModule = {
                 cardIds: possibleCardIdsToTrash,
                 selectCount: 1,
               },
-            }) as number[];
+            });
 
-            cardIdTrashed = results?.[0];
+            cardIdTrashed = results?.[0] ?? possibleCardIdsToTrash[0];
           } else {
             cardIdTrashed = possibleCardIdsToTrash[0];
             console.debug(

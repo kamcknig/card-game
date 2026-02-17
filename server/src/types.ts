@@ -342,6 +342,9 @@ export type ActionService = {
 export type PromptService = {
   request<TResult = unknown>(args: UserPromptActionArgs): Promise<TResult | null>;
   requestAction(args: UserPromptActionArgs): Promise<number | null>;
+  chooseOne(args: UserPromptActionArgs): Promise<number | null>;
+  confirm(args: UserPromptActionArgs, confirmAction?: number): Promise<boolean>;
+  selectCards(args: UserPromptActionArgs): Promise<CardId[]>;
   requestActionResult<TResult = unknown>(
     args: UserPromptActionArgs,
   ): Promise<{ action: number; result: TResult | undefined } | null>;

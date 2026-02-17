@@ -230,6 +230,7 @@ const registerMoonsGift = (registerBoonEffect: BoonEffectRegistrar) => {
   registerBoonEffect('the-moons-gift', async ({
     playerId,
     actionService,
+    promptService,
     findCardService,
   }) => {
     const discardCards = findCardService.findCards({ location: 'playerDiscard', playerId });
@@ -239,7 +240,7 @@ const registerMoonsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     }
 
     const discardIds = discardCards.map((card) => card.id);
-    const selectionResult = await actionService.run('userPrompt', {
+    const selectionResult = await promptService.requestActionResult<CardId[]>({
       prompt: 'You may put a card from your discard onto your deck',
       playerId: playerId,
       actionButtons: [{ label: 'DONE', action: 1 }],
@@ -248,7 +249,7 @@ const registerMoonsGift = (registerBoonEffect: BoonEffectRegistrar) => {
         cardIds: discardIds,
         selectCount: { kind: 'upTo', count: 1 },
       },
-    }) as { action: number; result?: CardId[] };
+    });
 
     const selectedCardId = selectionResult?.result?.[0];
     if (!selectedCardId) {
@@ -345,20 +346,21 @@ const registerSkysGift = (registerBoonEffect: BoonEffectRegistrar) => {
   registerBoonEffect('the-skys-gift', async ({
     playerId,
     actionService,
+    promptService,
     cardLibrary,
     supplyGainService,
     cardSourceController,
   }) => {
-    const confirm = await actionService.run('userPrompt', {
+    const confirmAction = await promptService.requestAction({
       playerId,
       prompt: 'Discard 3 cards to gain a Gold?',
       actionButtons: [
         { label: `DON'T DISCARD`, action: 1 },
         { label: 'DISCARD', action: 2 },
       ],
-    }) as { action: number };
+    });
 
-    if (confirm.action !== 2) {
+    if (confirmAction !== 2) {
       console.debug('[the-skys-gift boon] player declined to discard 3 cards');
       return;
     }
@@ -405,6 +407,7 @@ const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
   registerBoonEffect('the-suns-gift', async ({
     playerId,
     actionService,
+    promptService,
     cardSourceController,
   }) => {
     const deck = cardSourceController.getSource('playerDeck', playerId);
@@ -423,7 +426,7 @@ const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 
     const cardsToLookAt = deck.slice(-numToLookAt);
 
-    let result = await actionService.run('userPrompt', {
+    let result = await promptService.requestActionResult<CardId[]>({
       prompt: `Discard any number of the ${cardsToLookAt.length} cards`,
       playerId: playerId,
       actionButtons: [{ label: 'DONE', action: 1 }],
@@ -432,7 +435,7 @@ const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
         cardIds: cardsToLookAt,
         selectCount: { kind: 'upTo', count: cardsToLookAt.length },
       },
-    }) as { action: number; result: CardId[] };
+    });
 
     const cardsToDiscard = result?.result ?? [];
     if (cardsToDiscard.length > 0) {
@@ -458,7 +461,7 @@ const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
       return;
     }
 
-    result = await actionService.run('userPrompt', {
+    result = await promptService.requestActionResult<CardId[]>({
       prompt: 'Put the rest back on top of your deck in any order',
       playerId: playerId,
       actionButtons: [{ label: 'DONE', action: 1 }],
@@ -466,9 +469,9 @@ const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
         type: 'rearrange',
         cardIds: cardsToRearrange,
       },
-    }) as { action: number; result: CardId[] };
+    });
 
-    for (const cardId of result.result) {
+    for (const cardId of result?.result ?? []) {
       await actionService.run('moveCard', {
         cardId: cardId,
         toPlayerId: playerId,
