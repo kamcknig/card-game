@@ -27,6 +27,7 @@ import { cardLifecycleMap } from '../card-lifecycle-map.ts';
 import { LogManager } from '../log-manager.ts';
 import { CardPriceRulesController } from '../card-price-rules-controller.ts';
 import { CardSourceController } from '../card-source-controller.ts';
+import { CardInstanceFactoryService } from '../card-instance-factory-service.ts';
 
 export class ReactionManager {
   private _reactions: Reaction[] = [];
@@ -45,6 +46,7 @@ export class ReactionManager {
     private readonly logManager: LogManager,
     private readonly match: Match,
     private readonly cardLibrary: MatchCardLibrary,
+    private readonly cardInstanceFactoryService: CardInstanceFactoryService,
     private readonly runGameActionDelegate: RunGameActionDelegate,
   ) {}
 
@@ -211,6 +213,7 @@ export class ReactionManager {
         cardPriceController: this.cardPriceController,
         logManager: this.logManager,
         cardLibrary: this.cardLibrary,
+        cardInstanceFactoryService: this.cardInstanceFactoryService,
         match: this.match,
         reactionManager: this,
         runGameActionDelegate: this.runGameActionDelegate,

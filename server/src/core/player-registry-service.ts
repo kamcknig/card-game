@@ -1,6 +1,6 @@
 import {AppSocket} from '@server-types/index.ts';
 import {Player, PlayerId} from 'shared/types/index.ts';
-import {createNewPlayer} from '../utils/create-new-player.ts';
+import {PlayerFactoryService} from './player-factory-service.ts';
 
 export type RegisterPlayerJoinResult =
   | {status: 'rejected_capacity';}
@@ -10,6 +10,7 @@ export type RegisterPlayerJoinResult =
 // Owns player-record lifecycle updates for join/reconnect/disconnect operations.
 export class PlayerRegistryService {
   constructor(
+    private readonly playerFactoryService: PlayerFactoryService,
     // Keep player-cap policy configurable via DI while preserving the existing default.
     private readonly maxPlayers = 6,
   ) {
@@ -43,7 +44,7 @@ export class PlayerRegistryService {
       return {status: 'accepted', player: existingPlayer, created: false};
     }
 
-    const newPlayer = createNewPlayer(sessionId, socket);
+    const newPlayer = this.playerFactoryService.createPlayer(sessionId, socket);
     players.push(newPlayer);
     return {status: 'accepted', player: newPlayer, created: true};
   }

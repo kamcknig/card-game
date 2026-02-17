@@ -10,6 +10,7 @@ import { LobbySocketBindings } from './core/lobby-socket-bindings.ts';
 import { DisconnectedPlayerVoteService } from './core/disconnected-player-vote-service.ts';
 import { PlayerSessionService } from './core/player-session-service.ts';
 import { PlayerRegistryService } from './core/player-registry-service.ts';
+import { PlayerFactoryService } from './core/player-factory-service.ts';
 import { MatchStartOrchestrator } from './core/match-start-orchestrator.ts';
 import { MatchScopeFactory } from './core/match-scope-factory.ts';
 import { MatchConfiguratorFactory } from './core/match-configurator-factory.ts';
@@ -66,6 +67,7 @@ container.register({
   lobbySocketBindings: asClass(LobbySocketBindings).singleton(),
   disconnectedPlayerVoteService: asClass(DisconnectedPlayerVoteService).singleton(),
   playerSessionService: asClass(PlayerSessionService).singleton(),
+  playerFactoryService: asClass(PlayerFactoryService).singleton(),
   playerRegistryService: asClass(PlayerRegistryService).singleton(),
   matchStartOrchestrator: asClass(MatchStartOrchestrator).singleton(),
   game: asClass(Game).singleton(),

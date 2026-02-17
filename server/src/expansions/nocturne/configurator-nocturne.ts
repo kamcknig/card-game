@@ -10,7 +10,6 @@ import { configureWillOWisp } from './configure-will-o-wisp.ts';
 import { ComputedMatchConfiguration } from 'shared/types/index.ts';
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
-import { createCard } from '../../utils/create-card.ts';
 import { configureGhost } from './configure-ghost.ts';
 import { configureImp } from './configure-imp.ts';
 import { configureWish } from './configure-wish.ts';
@@ -311,7 +310,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         });
 
         // Create the Haunted Mirror and insert it in the same deck position.
-        const hauntedMirror = createCard('haunted-mirror', { owner: player.id, partOfSupply: false });
+        const hauntedMirror = args.cardInstanceFactoryService.createCard('haunted-mirror', { owner: player.id, partOfSupply: false });
         hauntedMirror.facing = 'back';
         args.cardLibrary.addCard(hauntedMirror);
         deck.splice(chosenIndex, 0, hauntedMirror.id);
@@ -354,7 +353,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         });
 
         // Create the Lucky Coin and insert it in the same deck position.
-        const luckyCoin = createCard('lucky-coin', { owner: player.id, partOfSupply: false });
+        const luckyCoin = args.cardInstanceFactoryService.createCard('lucky-coin', { owner: player.id, partOfSupply: false });
         luckyCoin.facing = 'back';
         args.cardLibrary.addCard(luckyCoin);
         deck.splice(chosenIndex, 0, luckyCoin.id);
@@ -397,7 +396,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         });
 
         // Create the Goat and insert it in the same deck position.
-        const goat = createCard('goat', { owner: player.id, partOfSupply: false });
+        const goat = args.cardInstanceFactoryService.createCard('goat', { owner: player.id, partOfSupply: false });
         goat.facing = 'back';
         args.cardLibrary.addCard(goat);
         deck.splice(chosenIndex, 0, goat.id);
@@ -440,7 +439,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         });
 
         // Create the Cursed Gold and insert it in the same deck position.
-        const cursedGold = createCard('cursed-gold', { owner: player.id, partOfSupply: false });
+        const cursedGold = args.cardInstanceFactoryService.createCard('cursed-gold', { owner: player.id, partOfSupply: false });
         cursedGold.facing = 'back';
         args.cardLibrary.addCard(cursedGold);
         deck.splice(chosenIndex, 0, cursedGold.id);
@@ -483,7 +482,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         });
 
         // Create the Magic Lamp and insert it in the same deck position.
-        const magicLamp = createCard('magic-lamp', { owner: player.id, partOfSupply: false });
+        const magicLamp = args.cardInstanceFactoryService.createCard('magic-lamp', { owner: player.id, partOfSupply: false });
         magicLamp.facing = 'back';
         args.cardLibrary.addCard(magicLamp);
         deck.splice(chosenIndex, 0, magicLamp.id);
@@ -526,7 +525,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         });
 
         // Create the Pasture and insert it in the same deck position.
-        const pasture = createCard('pasture', { owner: player.id, partOfSupply: false });
+        const pasture = args.cardInstanceFactoryService.createCard('pasture', { owner: player.id, partOfSupply: false });
         pasture.facing = 'back';
         args.cardLibrary.addCard(pasture);
         deck.splice(chosenIndex, 0, pasture.id);
@@ -569,7 +568,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         });
 
         // Create the Pouch and insert it in the same deck position.
-        const pouch = createCard('pouch', { owner: player.id, partOfSupply: false });
+        const pouch = args.cardInstanceFactoryService.createCard('pouch', { owner: player.id, partOfSupply: false });
         pouch.facing = 'back';
         args.cardLibrary.addCard(pouch);
         deck.splice(chosenIndex, 0, pouch.id);
@@ -626,7 +625,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
       // Create and place the three Zombies into the trash pile.
       const zombieKeys = ['zombie-apprentice', 'zombie-mason', 'zombie-spy'] as const;
       for (const zombieKey of zombieKeys) {
-        const zombieCard = createCard(zombieKey, { partOfSupply: false });
+        const zombieCard = args.cardInstanceFactoryService.createCard(zombieKey, { partOfSupply: false });
         args.cardLibrary.addCard(zombieCard);
         await args.runGameActionDelegate('moveCard', {
           cardId: zombieCard.id,

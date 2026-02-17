@@ -9,6 +9,7 @@ import { MatchRuntimeFactory } from './match-runtime-factory.ts';
 import { createInitialMatchState } from './match-state-factory.ts';
 import { MatchSetupService } from './match-setup-service.ts';
 import { EndGamePolicyRegistryService } from './end-game-policy-registry-service.ts';
+import { CardInstanceFactoryService } from './card-instance-factory-service.ts';
 
 export interface MatchScope {
   matchController: MatchController;
@@ -24,7 +25,6 @@ export class MatchScopeFactory {
 
   public create(socketMap: Map<PlayerId, AppSocket>): MatchScope {
     const match = createInitialMatchState();
-    const cardLibrary = new MatchCardLibrary();
 
     // Scope owns match-lifetime dependencies and instances.
     const scope: AwilixContainer = createContainer({
@@ -35,20 +35,25 @@ export class MatchScopeFactory {
       socketMap: asValue(socketMap),
       matchConfiguratorFactory: asValue(this.matchConfiguratorFactory),
       match: asValue(match),
-      cardLibrary: asValue(cardLibrary),
+      // Resolve card library from the match scope to avoid manual construction.
+      cardLibrary: asClass(MatchCardLibrary).singleton(),
       cardSourceController: asClass(CardSourceController).singleton(),
+      cardInstanceFactoryService: asClass(CardInstanceFactoryService).singleton(),
       endGamePolicyRegistryService: asClass(EndGamePolicyRegistryService).singleton(),
       matchSetupService: asClass(MatchSetupService).singleton(),
       matchController: asClass(MatchController).singleton(),
     });
 
     const matchController = scope.resolve<MatchController>('matchController');
+    const cardLibrary = scope.resolve<MatchCardLibrary>('cardLibrary');
+    const cardInstanceFactoryService = scope.resolve<CardInstanceFactoryService>('cardInstanceFactoryService');
     const endGamePolicyRegistryService = scope.resolve<EndGamePolicyRegistryService>('endGamePolicyRegistryService');
     const runtime = this.matchRuntimeFactory.create({
       socketMap,
       match,
       cardLibrary,
       cardSourceController: scope.resolve<CardSourceController>('cardSourceController'),
+      cardInstanceFactoryService,
       endGamePolicyRegistryService,
       runGameActionDelegate: (action, ...args) => matchController.runGameAction(action as any, ...(args as any)),
     });

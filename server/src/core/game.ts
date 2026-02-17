@@ -11,7 +11,6 @@ import {
   ServerEmitEvents,
   ServerListenEvents,
 } from 'shared/types/index.ts';
-import {createComputerPlayer} from '../utils/create-new-player.ts';
 import {MatchController} from './match-controller.ts';
 import jsonPatch from 'fast-json-patch';
 import {Server} from 'socket.io';
@@ -24,6 +23,7 @@ import {PlayerSessionService} from './player-session-service.ts';
 import {PlayerRegistryService} from './player-registry-service.ts';
 import {MatchStartOrchestrator} from './match-start-orchestrator.ts';
 import {MatchScope, MatchScopeFactory} from './match-scope-factory.ts';
+import {PlayerFactoryService} from './player-factory-service.ts';
 
 const defaultMatchConfiguration: MatchConfiguration = {
   expansions: [
@@ -98,6 +98,8 @@ export class Game {
     private readonly playerSessionService: PlayerSessionService,
     // Service that owns player record lifecycle mutations.
     private readonly playerRegistryService: PlayerRegistryService,
+    // Service that creates human/computer player entities.
+    private readonly playerFactoryService: PlayerFactoryService,
     // Service that runs the lobby->match startup sequence.
     private readonly matchStartOrchestrator: MatchStartOrchestrator,
   ) {
@@ -424,7 +426,7 @@ export class Game {
         break;
       }
 
-      const bot = createComputerPlayer();
+      const bot = this.playerFactoryService.createComputerPlayer();
       this.players.push(bot);
       this.io.in('game').emit('playerConnected', bot);
     }

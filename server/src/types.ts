@@ -37,6 +37,7 @@ import { ExpansionData } from '@expansions/expansion-library.ts';
 import { CardPriceRulesController } from './core/card-price-rules-controller.ts';
 import { CardSourceController } from './core/card-source-controller.ts';
 import { LogManager } from './core/log-manager.ts';
+import type { CardInstanceFactoryService } from './core/card-instance-factory-service.ts';
 
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
 
@@ -721,6 +722,7 @@ export type ReactionTemplateOptions = { idSuffix?: string };
 export type GameLifecycleCallbackContext = AppContext & {
   cardId: CardId;
   runGameActionDelegate: RunGameActionDelegate;
+  cardInstanceFactoryService: CardInstanceFactoryService;
 };
 
 export type GameLifecycleCallback = (
@@ -843,6 +845,7 @@ export type GameEventRegistrar = (event: GameLifecycleEvent, handler: GameLifecy
 
 export type InitializeExpansionContext = {
   cardSourceController: CardSourceController;
+  cardInstanceFactoryService: CardInstanceFactoryService;
   gameEventRegistrar: GameEventRegistrar;
   match: Match;
   clientEventRegistrar: ClientEventRegistrar;

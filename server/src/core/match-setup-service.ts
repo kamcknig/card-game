@@ -1,18 +1,9 @@
 import { Card, CardId, CardKey, CardNoId, ComputedMatchConfiguration, MatchConfiguration, Match } from 'shared/types/index.ts';
 import { MatchBaseConfiguration } from '@server-types/index.ts';
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
-import {
-  createArtifact,
-  createBoon,
-  createCard,
-  createEvent,
-  createHex,
-  createLandmark,
-  createProject,
-  createState,
-} from '../utils/create-card.ts';
 import { MatchCardLibrary } from './match-card-library.ts';
 import { CardSourceController } from './card-source-controller.ts';
+import { CardInstanceFactoryService } from './card-instance-factory-service.ts';
 
 // Owns deterministic match-state setup for supply/landscape/player-deck creation.
 export class MatchSetupService {
@@ -20,13 +11,14 @@ export class MatchSetupService {
     private readonly match: Match,
     private readonly cardLibrary: MatchCardLibrary,
     private readonly cardSourceController: CardSourceController,
+    private readonly cardInstanceFactoryService: CardInstanceFactoryService,
   ) {}
 
   // Loads a card library snapshot for a loaded match state.
   public loadCardLibraryFromState(cardLibrary: Record<CardId, Card>): void {
     for (const card of Object.values(cardLibrary)) {
       // Rehydrate card instances so downstream logic uses Card class methods.
-      this.cardLibrary.addCard(new Card({ ...card }));
+      this.cardLibrary.addCard(this.cardInstanceFactoryService.rehydrateCard(card));
     }
   }
 
@@ -40,7 +32,7 @@ export class MatchSetupService {
           throw new Error(`[match] no card data found for ${supply}`);
         }
 
-        const instance = createCard(card.cardKey, { ...card, kingdom: supply.name });
+        const instance = this.cardInstanceFactoryService.createCard(card.cardKey, { ...card, kingdom: supply.name });
         this.cardLibrary.addCard(instance);
         cardSource.push(instance.id);
       }
@@ -57,7 +49,7 @@ export class MatchSetupService {
           throw new Error(`[match] no card data found for ${kingdom}`);
         }
 
-        const instance = createCard(card.cardKey, { ...card, kingdom: kingdom.name });
+        const instance = this.cardInstanceFactoryService.createCard(card.cardKey, { ...card, kingdom: kingdom.name });
         this.cardLibrary.addCard(instance);
         cardSource.push(instance.id);
       }
@@ -74,7 +66,7 @@ export class MatchSetupService {
           throw new Error(`[match] no card data found for ${supply}`);
         }
 
-        const instance = createCard(card.cardKey, { ...card, kingdom: supply.name });
+        const instance = this.cardInstanceFactoryService.createCard(card.cardKey, { ...card, kingdom: supply.name });
         this.cardLibrary.addCard(instance);
         cardSource.push(instance.id);
       }
@@ -97,7 +89,7 @@ export class MatchSetupService {
       Object.entries(playerStartHand).forEach(([key, count]) => {
         deck.push(
           ...new Array(count).fill(0).map(() => {
-            const instance = createCard(key, { owner: player.id });
+            const instance = this.cardInstanceFactoryService.createCard(key, { owner: player.id });
             // Cards in the deck should start face down; client rendering uses facing.
             instance.facing = 'back';
             this.cardLibrary.addCard(instance);
@@ -112,21 +104,21 @@ export class MatchSetupService {
   public createEvents(config: ComputedMatchConfiguration): void {
     console.debug('[match] creating events');
     for (const event of config.events) {
-      this.match.events.push(createEvent(event));
+      this.match.events.push(this.cardInstanceFactoryService.createEvent(event));
     }
   }
 
   public createLandmarks(config: ComputedMatchConfiguration): void {
     console.debug('[match] creating landmarks');
     for (const landmark of config.landmarks ?? []) {
-      this.match.landmarks.push(createLandmark(landmark));
+      this.match.landmarks.push(this.cardInstanceFactoryService.createLandmark(landmark));
     }
   }
 
   public createProjects(config: ComputedMatchConfiguration): void {
     console.debug('[match] creating projects');
     for (const project of config.projects ?? []) {
-      this.match.projects.push(createProject(project));
+      this.match.projects.push(this.cardInstanceFactoryService.createProject(project));
     }
   }
 
@@ -146,7 +138,7 @@ export class MatchSetupService {
     };
 
     for (const boon of boons) {
-      const instance = createBoon(boon);
+      const instance = this.cardInstanceFactoryService.createBoon(boon);
       this.match.boons.cards.push(instance);
       this.match.boons.deck.push(instance.id);
     }
@@ -167,7 +159,7 @@ export class MatchSetupService {
     };
 
     for (const hex of hexes) {
-      const instance = createHex(hex);
+      const instance = this.cardInstanceFactoryService.createHex(hex);
       this.match.hexes.cards.push(instance);
       this.match.hexes.deck.push(instance.id);
     }
@@ -187,7 +179,7 @@ export class MatchSetupService {
     };
 
     for (const state of states) {
-      this.match.states.cards.push(createState(state));
+      this.match.states.cards.push(this.cardInstanceFactoryService.createState(state));
     }
   }
 
@@ -205,7 +197,7 @@ export class MatchSetupService {
     };
 
     for (const artifact of artifacts) {
-      this.match.artifacts.cards.push(createArtifact(artifact));
+      this.match.artifacts.cards.push(this.cardInstanceFactoryService.createArtifact(artifact));
     }
   }
 }

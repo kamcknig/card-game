@@ -43,6 +43,7 @@ import { PlayerReconnectOrchestrator } from './player-reconnect-orchestrator.ts'
 import type { MatchRuntime } from './match-runtime-factory.ts';
 import { MatchSetupService } from './match-setup-service.ts';
 import { EndGamePolicyRegistryService } from './end-game-policy-registry-service.ts';
+import { CardInstanceFactoryService } from './card-instance-factory-service.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardLibSnapshot = {};
@@ -93,6 +94,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     private readonly cardSourceController: CardSourceController,
     private readonly matchSetupService: MatchSetupService,
     private readonly endGamePolicyRegistryService: EndGamePolicyRegistryService,
+    private readonly cardInstanceFactoryService: CardInstanceFactoryService,
   ) {
     super();
   }
@@ -186,6 +188,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const { config: newConfig } = await this._matchConfigurator.createConfiguration({
       match: this.match,
       cardSourceController: this.cardSourceController,
+      cardInstanceFactoryService: this.cardInstanceFactoryService,
       gameEventRegistrar: (event: GameLifecycleEvent, handler: GameLifecycleCallback) =>
         this._reactionManager?.registerGameEvent(event, handler),
       clientEventRegistrar: (event, handler) => this.clientEventRegistrar(event, handler),
