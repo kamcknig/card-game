@@ -462,7 +462,7 @@ const expansionModule: CardExpansionModule = {
 
       console.debug(`[HARBINGER EFFECT] prompting user to select card from discard...`);
 
-      const results = await actionService.run('userPrompt', {
+      const results = await args.promptService.requestActionResult<number[]>({
         playerId,
         prompt: 'Choose card to put on deck?',
         actionButtons: [{ label: 'CANCEL', action: 2 }],
@@ -471,9 +471,9 @@ const expansionModule: CardExpansionModule = {
           cardIds: args.findCardService.findCards({ location: 'playerDiscard', playerId }).map((card) => card.id),
           selectCount: 1,
         },
-      }) as { action: number; result: number[] };
+      });
 
-      if (results.action === 2) {
+      if (!results || results.action === 2) {
         console.debug('[HARBINGER EFFECT] no card selected');
         return;
       }
@@ -534,13 +534,13 @@ const expansionModule: CardExpansionModule = {
         if (card.type.includes('ACTION')) {
           console.debug(`[LIBRARY EFFECT] ${card} is an action prompting user to set aside...`);
 
-          const setAsideResult = await actionService.run('userPrompt', {
+          const setAsideAction = await args.promptService.requestAction({
             playerId,
             prompt: `You drew ${card.cardName}. Set it aside (skip putting it in your hand)?`,
             actionButtons: [{ label: 'KEEP', action: 1 }, { label: 'SET ASIDE', action: 2 }],
-          }) as { action: number };
+          });
 
-          if (setAsideResult.action === 2) {
+          if (setAsideAction === 2) {
             console.debug(`[LIBRARY EFFECT] setting card aside`);
             await actionService.run('moveCard', {
               cardId: drawnCardId,
@@ -813,16 +813,16 @@ const expansionModule: CardExpansionModule = {
 
       console.debug(`[MONEYLENDER EFFECT] prompting user to trash a copper`);
 
-      const result = await actionService.run('userPrompt', {
+      const action = await args.promptService.requestAction({
         playerId,
         actionButtons: [
           { action: 1, label: `DON'T TRASH` },
           { action: 2, label: 'TRASH' },
         ],
         prompt: 'Trash a copper?',
-      }) as { action: number; result: number[] };
+      });
 
-      if (result.action === 1) {
+      if (action === 1 || action === null) {
         console.debug(`[MONEYLENDER EFFECT] player chose not to trash`);
         return;
       }
@@ -1033,7 +1033,7 @@ const expansionModule: CardExpansionModule = {
 
       console.debug(`[SENTRY EFFECT] prompting user to trash cards...`);
 
-      let result = await actionService.run('userPrompt', {
+      let result = await args.promptService.requestActionResult<number[]>({
         playerId,
         prompt: 'Choose card/s to trash?',
         validationAction: 1,
@@ -1046,11 +1046,11 @@ const expansionModule: CardExpansionModule = {
             count: cardsToLookAtIds.length,
           },
         },
-      }) as { action: number; result: number[] };
+      });
 
       const cardIdsToTrash = result?.result ?? [];
 
-      if (result.action === 1) {
+      if (result?.action === 1) {
         console.debug(`[SENTRY EFFECT] player selected ${
           cardIdsToTrash.map(
             (id) => cardLibrary.getCard(id),
@@ -1076,7 +1076,7 @@ const expansionModule: CardExpansionModule = {
         return;
       }
 
-      result = await actionService.run('userPrompt', {
+      result = await args.promptService.requestActionResult<number[]>({
         playerId,
         prompt: 'Choose card/s to discard?',
         validationAction: 1,
@@ -1089,10 +1089,10 @@ const expansionModule: CardExpansionModule = {
             count: possibleCardsToDiscard.length,
           },
         },
-      }) as { action: number; result: number[] };
+      });
 
       let cardsToDiscard: number[] = [];
-      if (result.action === 2) {
+      if (result?.action === 2 || !result) {
         console.debug(`[SENTRY EFFECT] player chose not to discard`);
       } else {
         cardsToDiscard = result?.result ?? [];
@@ -1123,7 +1123,7 @@ const expansionModule: CardExpansionModule = {
 
       console.debug(`[SENTRY EFFECT] prompting user to rearrange cards...`);
 
-      result = await actionService.run('userPrompt', {
+      result = await args.promptService.requestActionResult<number[]>({
         playerId,
         prompt: 'rearrange cards',
         actionButtons: [
@@ -1133,9 +1133,9 @@ const expansionModule: CardExpansionModule = {
           type: 'rearrange',
           cardIds: remainingCardIds,
         },
-      }) as { action: number; result: number[] };
+      });
 
-      const cardIds = result.result;
+      const cardIds = result?.result ?? [];
 
       for (const cardId of cardIds) {
         console.debug(`[SENTRY EFFECT] putting ${cardLibrary.getCard(cardId)} on top of deck...`);
@@ -1234,13 +1234,13 @@ const expansionModule: CardExpansionModule = {
 
       console.debug(`[VASSAL EFFECT] prompting user to play card or not...`);
 
-      const confirm = await actionService.run('userPrompt', {
+      const confirmAction = await args.promptService.requestAction({
         playerId,
         prompt: `Play card ${card.cardName}?`,
         actionButtons: [{ label: `DON'T PLAY`, action: 1 }, { label: 'PLAY', action: 2 }],
-      }) as { action: number };
+      });
 
-      if (confirm.action !== 2) {
+      if (confirmAction !== 2) {
         console.debug(`[VASSAL EFFECT] player chose not to play card`);
         return;
       }

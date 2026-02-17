@@ -3,6 +3,7 @@ import {
   CardLifecycleCallbackContext,
   FindCardService,
   GameLifecycleCallbackContext,
+  PromptService,
   Reaction,
   SupplyGainService,
   TriggeredEffectConditionContext,
@@ -29,6 +30,7 @@ export class ReactionContextFactory {
     private readonly cardLibrary: MatchCardLibrary,
     private readonly cardInstanceFactoryService: CardInstanceFactoryService,
     private readonly actionService: ActionService,
+    private readonly promptService: PromptService,
   ) {}
 
   // Creates context for reaction condition checks.
@@ -45,6 +47,7 @@ export class ReactionContextFactory {
       actionService: this.actionService,
       findCardService: this.findCardService,
       supplyGainService: this.supplyGainService,
+      promptService: this.promptService,
       match: this.match,
       cardLibrary: this.cardLibrary,
       trigger: args.trigger,
@@ -67,6 +70,7 @@ export class ReactionContextFactory {
       match: this.match,
       reactionManager: args.reactionManager,
       actionService: this.actionService,
+      promptService: this.promptService,
     };
   }
 
@@ -84,6 +88,7 @@ export class ReactionContextFactory {
       reactionManager: args.reactionManager,
       findCardService: this.findCardService,
       supplyGainService: this.supplyGainService,
+      promptService: this.promptService,
     };
   }
 
@@ -102,6 +107,7 @@ export class ReactionContextFactory {
       logManager: this.logManager,
       isRootLog: false,
       actionService: this.actionService,
+      promptService: this.promptService,
       trigger: args.trigger,
       cardLibrary: this.cardLibrary,
       match: this.match,

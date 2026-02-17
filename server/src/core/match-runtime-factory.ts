@@ -9,6 +9,7 @@ import {projectEffectFactoryMap} from './projects/project-effect-factory-map.ts'
 import {CardInteractivityController} from './card-interactivity-controller.ts';
 import {GameActionController} from './actions/game-action-controller.ts';
 import {CardEffectContextFactory} from './actions/card-effect-context-factory.ts';
+import {PromptService} from './prompt-service.ts';
 import {asClass, asValue, AwilixContainer} from 'awilix';
 import {FindCardsService} from './find-cards-service.ts';
 import {BuyOptionsResolver} from './actions/resolve-buy-options.ts';
@@ -65,6 +66,7 @@ export class MatchRuntimeFactory {
       cardPriceController: asClass(CardPriceRulesController).singleton(),
       findCardService: asClass(FindCardsService).singleton(),
       supplyGainService: asClass(DefaultSupplyGainService).singleton(),
+      promptService: asClass(PromptService).singleton(),
       cardEffectContextFactory: asClass(CardEffectContextFactory).singleton(),
       buyOptionsResolver: asClass(BuyOptionsResolver).singleton(),
       reactionContextFactory: asClass(ReactionContextFactory).singleton(),

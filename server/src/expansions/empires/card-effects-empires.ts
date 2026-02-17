@@ -312,7 +312,7 @@ const expansion: CardExpansionModule = {
       console.debug(
         `[charm effect] prompting player ${args.playerId} to choose an option`,
       );
-      const choice = await args.actionService.run('userPrompt', {
+      const choice = await args.promptService.requestAction({
         playerId: args.playerId,
         prompt: 'Choose one',
         actionButtons: [
@@ -322,9 +322,9 @@ const expansion: CardExpansionModule = {
             label: 'Next gain: different extra card with same cost',
           },
         ],
-      }) as { action: number };
+      });
 
-      if (choice.action === 1) {
+      if (choice === 1) {
         console.debug(`[charm effect] granting +1 buy and +2 treasure`);
         await args.actionService.run('gainBuy', { count: 1 });
         await args.actionService.run('gainTreasure', { count: 2 });
@@ -916,16 +916,16 @@ const expansion: CardExpansionModule = {
 
       await gainCard();
 
-      const result = await args.actionService.run('userPrompt', {
+      const result = await args.promptService.requestAction({
         playerId: args.playerId,
         prompt: 'Trash Engineer?',
         actionButtons: [
           { label: 'TRASH', action: 1 },
           { label: 'NO', action: 2 },
         ],
-      }) as { action: number; result: number[] };
+      });
 
-      if (result.action !== 1) {
+      if (result !== 1) {
         console.debug(`[engineer effect] user chose not to trash Engineer`);
         return;
       }
@@ -1213,16 +1213,16 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const result = await args.actionService.run('userPrompt', {
+      const result = await args.promptService.requestAction({
         playerId: leftPlayer.id,
         prompt: `Reveal ${selectedCard.cardName}?`,
         actionButtons: [
           { label: 'YES', action: 1 },
           { label: 'NO', action: 2 },
         ],
-      }) as { action: number; result: number[] };
+      });
 
-      if (result.action === 1) {
+      if (result === 1) {
         console.debug(`[gladiator effect] user chose to reveal card`);
         await args.actionService.run('revealCard', {
           playerId: leftPlayer.id,
@@ -1901,7 +1901,7 @@ const expansion: CardExpansionModule = {
       console.debug(
         `[wild hunt effect] prompting player ${args.playerId} to choose an option (pile VP: ${tokensOnPileCount})`,
       );
-      const choice = await args.actionService.run('userPrompt', {
+      const choice = await args.promptService.requestAction({
         playerId: args.playerId,
         prompt: 'Choose one',
         actionButtons: [
@@ -1911,9 +1911,9 @@ const expansion: CardExpansionModule = {
             label: `Gain an Estate and take the ${tokensOnPileCount}VP from the pile`,
           },
         ],
-      }) as { action: number };
+      });
 
-      if (choice.action === 1) {
+      if (choice === 1) {
         // Option 1: draw 3 cards, then gather a VP token on the Wild Hunt pile.
         console.debug(`[wild hunt effect] drawing 3 cards`);
         await args.actionService.run('drawCard', {
@@ -2213,16 +2213,16 @@ const expansion: CardExpansionModule = {
         console.debug(
           `[sprawling castle onGained] player ${eventArgs.playerId} gained Sprawling Castle`,
         );
-        const result = await args.actionService.run('userPrompt', {
+        const result = await args.promptService.requestAction({
           playerId: eventArgs.playerId,
           prompt: 'Gain a Duchy or 3 Estates?',
           actionButtons: [
             { action: 1, label: 'GAIN DUCHY' },
             { action: 2, label: 'GAIN 3 ESTATES' },
           ],
-        }) as { action: number };
+        });
 
-        if (result.action === 1) {
+        if (result === 1) {
           await gainTopSupplyCard(args, {
             playerId: eventArgs.playerId,
             cardKey: 'duchy',

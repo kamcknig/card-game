@@ -41,6 +41,7 @@ import {
   GameActions,
   ReactionTemplate,
   ReactionTrigger,
+  PromptService,
   SupplyGainService,
   TriggerEventType,
 } from '@server-types/index.ts';
@@ -92,6 +93,7 @@ export class GameActionController implements GameActionDefinitionMap {
     private interactivityController: CardInteractivityController,
     private buyOptionsResolver: BuyOptionsResolver,
     private supplyGainService: SupplyGainService,
+    private promptService: PromptService,
     private readonly actionService: ActionService,
     private readonly cardEffectContextFactory: CardEffectContextFactory,
   ) {}
@@ -1441,6 +1443,7 @@ export class GameActionController implements GameActionDefinitionMap {
         cardSourceController: this.cardSourceController,
         cardPriceController: this.cardPriceController,
         actionService: this.actionService,
+        promptService: this.promptService,
         reactionManager: this.reactionManager,
         logManager: this.logManager,
       });

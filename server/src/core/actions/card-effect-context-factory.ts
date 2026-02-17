@@ -2,6 +2,7 @@ import {
   ActionService,
   CardEffectFunctionContext,
   FindCardService,
+  PromptService,
   SupplyGainService,
 } from '@server-types/index.ts';
 import { CardLikeId, Match, PlayerId } from 'shared/types/index.ts';
@@ -30,6 +31,7 @@ export class CardEffectContextFactory {
     private readonly cardLibrary: MatchCardLibrary,
     private readonly findCardService: FindCardService,
     private readonly supplyGainService: SupplyGainService,
+    private readonly promptService: PromptService,
   ) {}
 
   // Creates a fully wired effect context for card-like effect execution.
@@ -47,6 +49,7 @@ export class CardEffectContextFactory {
       reactionContext: args.reactionContext,
       findCardService: this.findCardService,
       supplyGainService: this.supplyGainService,
+      promptService: this.promptService,
       registerDurationEffect: args.registerDurationEffect,
     };
   }

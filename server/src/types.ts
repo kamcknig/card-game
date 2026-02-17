@@ -339,6 +339,15 @@ export type ActionService = {
   run: RunGameActionDelegate;
 };
 
+export type PromptService = {
+  request<TResult = unknown>(args: UserPromptActionArgs): Promise<TResult | null>;
+  requestAction(args: UserPromptActionArgs): Promise<number | null>;
+  requestActionResult<TResult = unknown>(
+    args: UserPromptActionArgs,
+  ): Promise<{ action: number; result: TResult | undefined } | null>;
+  requestResult<TResult = unknown>(args: UserPromptActionArgs): Promise<TResult | null>;
+};
+
 export type ReactionContext = {
   // Track per-player immunity flags for the current trigger.
   immunityByPlayerId?: Partial<Record<PlayerId, true>>;
@@ -362,6 +371,7 @@ export interface AppContext {
   cardLibrary: MatchCardLibrary;
   findCardService: FindCardService;
   supplyGainService: SupplyGainService;
+  promptService: PromptService;
 }
 
 export type FindCardsFn = (filters: FindCardsFnInput) => Card[];
@@ -482,6 +492,7 @@ export type CardAlternateBuyOptionCanBuyContext = {
 // Runtime context for applying an alternate buy option.
 export type CardAlternateBuyOptionApplyContext = CardAlternateBuyOptionCanBuyContext & {
   actionService: ActionService;
+  promptService: PromptService;
   reactionManager: ReactionManager;
   logManager: LogManager;
 };

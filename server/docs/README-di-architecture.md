@@ -67,7 +67,7 @@ Defined in `server/src/core/match-runtime-factory.ts`:
   `artifactEffectFunctionMap`.
 - Class tokens (all match singletons):
   `logManager`, `cardPriceController`, `findCardService`, `supplyGainService`,
-  `cardEffectContextFactory`, `reactionContextFactory`,
+  `promptService`, `cardEffectContextFactory`, `reactionContextFactory`,
   `buyOptionsResolver`, `reactionManager`, `endGameEvaluator`,
   `interactivityController`, `playerReconnectOrchestrator`, `gameActionsController`.
 

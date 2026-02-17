@@ -7,6 +7,7 @@ import {
   GameLifecycleCallback,
   GameLifecycleEvent,
   GameLifeCycleEventArgsMap,
+  PromptService,
   Reaction,
   ReactionContext,
   ReactionSourceType,
@@ -49,6 +50,7 @@ export class ReactionManager {
     private readonly cardLibrary: MatchCardLibrary,
     private readonly cardInstanceFactoryService: CardInstanceFactoryService,
     private readonly actionService: ActionService,
+    private readonly promptService: PromptService,
     private readonly reactionContextFactory: ReactionContextFactory,
   ) {}
 
@@ -296,20 +298,20 @@ export class ReactionManager {
 
           console.info(`[REACTION MANAGER] prompting ${targetPlayer} to choose reaction`);
 
-          const result = await this.actionService.run<{ action: number }>('userPrompt', {
+          const action = await this.promptService.requestAction({
             playerId: targetPlayer.id,
             actionButtons,
             prompt: 'Choose reaction?',
           });
 
-          if (!result || result.action === 0) {
+          if (action === null || action === 0) {
             console.info(`[REACTION MANAGER] ${targetPlayer} chose not to react`);
             break;
           } else {
-            console.info(`[REACTION MANAGER] ${targetPlayer} reacts with ${actionMap.get(result.action)}`);
+            console.info(`[REACTION MANAGER] ${targetPlayer} reacts with ${actionMap.get(action)}`);
           }
 
-          selectedReaction = actionMap.get(result.action);
+          selectedReaction = actionMap.get(action);
         } else {
           selectedReaction = compulsoryReactions[0];
         }

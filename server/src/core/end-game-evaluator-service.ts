@@ -1,6 +1,7 @@
 import {
   EndGamePolicyFnOutcome,
   FindCardService,
+  PromptService,
   SupplyGainService,
 } from '@server-types/index.ts';
 import { Match } from 'shared/types/index.ts';
@@ -27,6 +28,7 @@ export class EndGameEvaluatorService {
     private readonly reactionManager: ReactionManager,
     private readonly findCardService: FindCardService,
     private readonly supplyGainService: SupplyGainService,
+    private readonly promptService: PromptService,
     private readonly endGamePolicyRegistryService: EndGamePolicyRegistryService,
   ) {}
 
@@ -43,6 +45,7 @@ export class EndGameEvaluatorService {
         reactionManager: this.reactionManager,
         findCardService: this.findCardService,
         supplyGainService: this.supplyGainService,
+        promptService: this.promptService,
         endTriggered,
       });
       const decision = this.applyOutcome(outcome);
