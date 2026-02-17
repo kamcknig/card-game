@@ -8,8 +8,8 @@ import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 
 const configurator: ExpansionConfiguratorFactory = () => async (args) => {
   configureReserve(args);
-  registerAdventuresTokenDefinitions(args.tokenDefinitionRegistrar);
-  registerAdventuresTokenTriggers(args.tokenCardPlayedHandlerRegistrar);
+  registerAdventuresTokenDefinitions(args.expansionRegistration.registerTokenDefinition);
+  registerAdventuresTokenTriggers(args.expansionRegistration.registerTokenCardPlayedHandler);
 
   return args.config;
 };

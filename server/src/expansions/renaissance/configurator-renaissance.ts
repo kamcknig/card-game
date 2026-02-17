@@ -1,4 +1,3 @@
-import { expansionLibrary } from '../expansion-library.ts';
 import { ComputedMatchConfiguration, PlayerId } from 'shared/types/index.ts';
 import { EndGamePolicyRegistrar, ExpansionConfiguratorFactory, GameEventRegistrar } from '@server-types/index.ts';
 import { uniqueByProp } from '../../core/match-configurator.ts';
@@ -24,9 +23,9 @@ const configurator: ExpansionConfiguratorFactory = () => {
   let artifactEffectsRegistered = false;
 
   return async (args) => {
-    registerRenaissanceTokenDefinitions(args.tokenDefinitionRegistrar);
+    registerRenaissanceTokenDefinitions(args.expansionRegistration.registerTokenDefinition);
     if (!artifactEffectsRegistered) {
-      registerArtifactEffects(args.artifactEffectRegistrar);
+      registerArtifactEffects(args.expansionRegistration.registerArtifactEffect);
       artifactEffectsRegistered = true;
     }
 
@@ -54,7 +53,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
     }
 
     const artifactDefinitions = Array.from(requiredArtifactKeys).flatMap((artifactKey) => {
-      const artifact = expansionLibrary['renaissance']?.artifacts?.[artifactKey];
+      const artifact = args.expansionCatalog['renaissance']?.artifacts?.[artifactKey];
       if (!artifact) {
         console.warn(`[renaissance configurator] missing artifact ${artifactKey}`);
         return [];

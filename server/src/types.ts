@@ -35,11 +35,12 @@ import { toNumber } from 'es-toolkit/compat';
 
 import { MatchCardLibrary } from './core/match-card-library.ts';
 import { ReactionManager } from './core/reactions/reaction-manager.ts';
-import { ExpansionData } from '@expansions/expansion-library.ts';
+import { ExpansionData, ExpansionDataLibrary } from '@expansions/expansion-library.ts';
 import { CardPriceRulesController } from './core/card-price-rules-controller.ts';
 import { CardSourceController } from './core/card-source-controller.ts';
 import { LogManager } from './core/log-manager.ts';
 import type { CardInstanceFactoryService } from './core/card-instance-factory-service.ts';
+import type { RngService } from './core/rng-service.ts';
 
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
 
@@ -390,6 +391,7 @@ export interface AppContext {
   cardSourceController: CardSourceController;
   cardPriceController: CardPriceRulesController;
   logManager: LogManager;
+  rngService: RngService;
   match: Match;
   reactionManager: ReactionManager;
   reactionContext?: ReactionContext;
@@ -491,6 +493,8 @@ export type ExpansionConfiguratorContext = InitializeExpansionContext & {
    * This is the *entire* library of cards. This *should* be pristine data loaded from expansions
    */
   cardLibrary: Record<CardKey, CardNoId>;
+  // Loaded expansion metadata keyed by expansion name.
+  expansionCatalog: ExpansionDataLibrary;
   expansionData: ExpansionData;
 };
 
@@ -888,6 +892,17 @@ export type TokenCardPlayedHandler = (context: {
 }) => Promise<void>;
 // Registers a token card-played handler for a token id.
 export type TokenCardPlayedHandlerRegistrar = (tokenId: TokenId, handler: TokenCardPlayedHandler) => void;
+// Aggregates all expansion-level effect/definition registration entrypoints.
+export type ExpansionRegistrationFacade = {
+  registerCardEffect: CardEffectRegistrar;
+  registerBoonEffect: BoonEffectRegistrar;
+  registerHexEffect: HexEffectRegistrar;
+  registerStateEffect: StateEffectRegistrar;
+  registerArtifactEffect: ArtifactEffectRegistrar;
+  registerProjectEffect: ProjectEffectRegistrar;
+  registerTokenDefinition: TokenDefinitionRegistrar;
+  registerTokenCardPlayedHandler: TokenCardPlayedHandlerRegistrar;
+};
 
 export type PlayerScoreDecoratorRegistrar = (decorator: PlayerScoreDecorator) => void;
 export type PlayerScoreDecorator = (playerId: PlayerId, match: Match, cardLibrary: MatchCardLibrary) => void;
@@ -918,17 +933,11 @@ export type GameEventRegistrar = (event: GameLifecycleEvent, handler: GameLifecy
 export type InitializeExpansionContext = {
   cardSourceController: CardSourceController;
   cardInstanceFactoryService: CardInstanceFactoryService;
+  rngService: RngService;
   gameEventRegistrar: GameEventRegistrar;
   match: Match;
   clientEventRegistrar: ClientEventRegistrar;
   endGamePolicyRegistrar: EndGamePolicyRegistrar;
   playerScoreDecoratorRegistrar: PlayerScoreDecoratorRegistrar;
-  cardEffectRegistrar: CardEffectRegistrar;
-  boonEffectRegistrar: BoonEffectRegistrar;
-  hexEffectRegistrar: HexEffectRegistrar;
-  stateEffectRegistrar: StateEffectRegistrar;
-  artifactEffectRegistrar: ArtifactEffectRegistrar;
-  projectEffectRegistrar: ProjectEffectRegistrar;
-  tokenDefinitionRegistrar: TokenDefinitionRegistrar;
-  tokenCardPlayedHandlerRegistrar: TokenCardPlayedHandlerRegistrar;
+  expansionRegistration: ExpansionRegistrationFacade;
 };

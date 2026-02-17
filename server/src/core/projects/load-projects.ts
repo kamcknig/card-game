@@ -1,14 +1,15 @@
-import { expansionLibrary } from '@expansions/expansion-library.ts';
 import { createCardLike } from '../../utils/create-card-data.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
 import { CardKey, ProjectNoId } from 'shared/types/index.ts';
 import { ExpansionEffectRegistryService } from '../expansion-effect-registry-service.ts';
+import { ExpansionCatalogService } from '../expansion-catalog-service.ts';
 
 export const loadProjects = async (
   expansionName: string,
   expansionEffectRegistryService: ExpansionEffectRegistryService,
+  expansionCatalogService: ExpansionCatalogService,
 ) => {
-  const expansionProjects = (expansionLibrary[expansionName].projects ??= {});
+  const expansionProjects = (expansionCatalogService.getRequiredExpansion(expansionName).projects ??= {});
 
   try {
     // Load the project library JSON for the expansion when present.

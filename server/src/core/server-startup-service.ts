@@ -3,6 +3,7 @@ import { Game } from './game.ts';
 import { loadExpansion } from '../utils/load-expansion.ts';
 import { ExpansionEffectRegistryService } from './expansion-effect-registry-service.ts';
 import { ExpansionCardMetadataRegistryService } from './expansion-card-metadata-registry-service.ts';
+import { ExpansionCatalogService } from './expansion-catalog-service.ts';
 
 // Owns one-time server startup tasks so server.ts can stay focused on composition and host wiring.
 export class ServerStartupService {
@@ -10,6 +11,7 @@ export class ServerStartupService {
     private readonly game: Game,
     private readonly expansionEffectRegistryService: ExpansionEffectRegistryService,
     private readonly expansionCardMetadataRegistryService: ExpansionCardMetadataRegistryService,
+    private readonly expansionCatalogService: ExpansionCatalogService,
   ) {}
 
   // Loads expansion data/effects and notifies the game when each expansion is ready.
@@ -25,6 +27,7 @@ export class ServerStartupService {
           expansion,
           this.expansionEffectRegistryService,
           this.expansionCardMetadataRegistryService,
+          this.expansionCatalogService,
         );
         this.game.expansionLoaded(expansion);
       }

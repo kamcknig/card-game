@@ -1,4 +1,3 @@
-import { expansionLibrary } from '../expansion-library.ts';
 import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 import { CardKey } from 'shared/types/index.ts';
 import { getDefaultKingdomSupplySize } from '../../utils/get-default-kingdom-supply-size.ts';
@@ -17,7 +16,7 @@ export const configureYoungWitch = (args: ExpansionConfiguratorContext) => {
   console.info(`[cornucopia configurator - configuring young-witch] young witch present in supply`);
 
   const availableKingdoms = args.config.expansions.reduce((acc, nextExpansion) => {
-    const exp = expansionLibrary[nextExpansion.name];
+    const exp = args.expansionCatalog[nextExpansion.name];
     if (!exp) return acc;
 
     for (const key of Object.keys(exp.cardData.kingdomSupply)) {
@@ -40,12 +39,12 @@ export const configureYoungWitch = (args: ExpansionConfiguratorContext) => {
     return;
   }
 
-  const chosenKey = availableKeys[Math.floor(Math.random() * availableKeys.length)];
+  const chosenKey = availableKeys[args.rngService.nextIndex(availableKeys.length)];
 
   console.info(`[cornucopia configurator - configuring young-witch] adding ${chosenKey} to kingdom as the "bane" card`);
 
   const chosenCard = structuredClone(
-    expansionLibrary[availableKingdoms[chosenKey].expansionName].cardData.kingdomSupply[chosenKey],
+    args.expansionCatalog[availableKingdoms[chosenKey].expansionName].cardData.kingdomSupply[chosenKey],
   );
   chosenCard.tags = ['bane'];
 

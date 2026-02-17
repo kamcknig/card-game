@@ -11,6 +11,7 @@ import { LogManager } from '../log-manager.ts';
 import { ReactionManager } from '../reactions/reaction-manager.ts';
 import { CardPriceRulesController } from '../card-price-rules-controller.ts';
 import { CardSourceController } from '../card-source-controller.ts';
+import { RngService } from '../rng-service.ts';
 
 export type CreateCardEffectContextArgs = {
   cardId: CardLikeId;
@@ -25,6 +26,7 @@ export class CardEffectContextFactory {
     private readonly cardSourceController: CardSourceController,
     private readonly cardPriceController: CardPriceRulesController,
     private readonly logManager: LogManager,
+    private readonly rngService: RngService,
     private readonly reactionManager: ReactionManager,
     private readonly actionService: ActionService,
     private readonly match: Match,
@@ -40,6 +42,7 @@ export class CardEffectContextFactory {
       cardSourceController: this.cardSourceController,
       cardPriceController: this.cardPriceController,
       logManager: this.logManager,
+      rngService: this.rngService,
       reactionManager: this.reactionManager,
       actionService: this.actionService,
       cardId: args.cardId,

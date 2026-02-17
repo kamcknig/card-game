@@ -1,14 +1,15 @@
-import { expansionLibrary } from '@expansions/expansion-library.ts';
 import { createCardLike } from '../../utils/create-card-data.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
 import { CardKey, LandmarkNoId } from 'shared/types/index.ts';
 import { ExpansionEffectRegistryService } from '../expansion-effect-registry-service.ts';
+import { ExpansionCatalogService } from '../expansion-catalog-service.ts';
 
 export const loadLandmarks = async (
   expansionName: string,
   expansionEffectRegistryService: ExpansionEffectRegistryService,
+  expansionCatalogService: ExpansionCatalogService,
 ) => {
-  const expansionLandmarks = (expansionLibrary[expansionName].landmarks ??= {});
+  const expansionLandmarks = (expansionCatalogService.getRequiredExpansion(expansionName).landmarks ??= {});
 
   try {
     // Load the landmark library JSON for the expansion when present.

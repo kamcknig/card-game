@@ -1,6 +1,5 @@
 import { Supply } from 'shared/types/index.ts';
 import { ExpansionConfiguratorContext } from '@server-types/index.ts';
-import { expansionLibrary } from '../expansion-library.ts';
 
 export const configureUrchin = async (args: ExpansionConfiguratorContext) => {
   if (!args.config.kingdomSupply.some((supply) => supply.name === 'urchin')) {
@@ -14,7 +13,7 @@ export const configureUrchin = async (args: ExpansionConfiguratorContext) => {
   console.info(`[dark-ages configurator - configuring urchin] urchin needs to be configured`);
 
   const cardData = {
-    ...structuredClone(expansionLibrary['dark-ages'].cardData.kingdomSupply['mercenary']) ?? {},
+    ...structuredClone(args.expansionCatalog['dark-ages']?.cardData.kingdomSupply['mercenary']) ?? {},
     partOfSupply: false,
   };
 

@@ -10,6 +10,7 @@ import {Server} from 'socket.io';
 import {fisherYatesShuffle} from '../utils/fisher-yates-shuffler.ts';
 import {LobbySocketBindings} from './lobby-socket-bindings.ts';
 import {MatchController} from './match-controller.ts';
+import {RngService} from './rng-service.ts';
 
 export interface MatchStartOrchestratorArgs {
   players: Player[];
@@ -26,6 +27,7 @@ export class MatchStartOrchestrator {
   constructor(
     private readonly io: Server<ServerListenEvents, ServerEmitEvents>,
     private readonly lobbySocketBindings: LobbySocketBindings,
+    private readonly rngService: RngService,
   ) {
   }
 
@@ -60,6 +62,8 @@ export class MatchStartOrchestrator {
           player.color = MatchStartOrchestrator._MATCH_PLAYER_COLORS[index];
           return player;
         }),
+      false,
+      () => this.rngService.nextFloat(),
     );
 
     this.io.in('game').emit('setPlayerList', activePlayers);

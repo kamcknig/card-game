@@ -4,6 +4,7 @@ import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
 import { MatchCardLibrary } from './match-card-library.ts';
 import { CardSourceController } from './card-source-controller.ts';
 import { CardInstanceFactoryService } from './card-instance-factory-service.ts';
+import { RngService } from './rng-service.ts';
 
 // Owns deterministic match-state setup for supply/landscape/player-deck creation.
 export class MatchSetupService {
@@ -12,6 +13,7 @@ export class MatchSetupService {
     private readonly cardLibrary: MatchCardLibrary,
     private readonly cardSourceController: CardSourceController,
     private readonly cardInstanceFactoryService: CardInstanceFactoryService,
+    private readonly rngService: RngService,
   ) {}
 
   // Loads a card library snapshot for a loaded match state.
@@ -96,7 +98,7 @@ export class MatchSetupService {
             return instance.id;
           }),
         );
-        fisherYatesShuffle(deck, true);
+        fisherYatesShuffle(deck, true, () => this.rngService.nextFloat());
       });
     }
   }

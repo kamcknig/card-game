@@ -17,12 +17,16 @@ import {
   State,
   StateNoId,
 } from 'shared/types/index.ts';
-import { rawCardLibrary } from '@expansions/expansion-library.ts';
 import { formatCardName } from '../utils/format-card-name.ts';
+import { ExpansionCatalogService } from './expansion-catalog-service.ts';
 
 // Creates all card/card-like match instances with a single id sequence per match scope.
 export class CardInstanceFactoryService {
   private _cardCount = 0;
+
+  constructor(
+    private readonly expansionCatalogService: ExpansionCatalogService,
+  ) {}
 
   // Rehydrates a card instance while preserving its existing id.
   public rehydrateCard(card: Card): Card {
@@ -31,6 +35,7 @@ export class CardInstanceFactoryService {
 
   // Creates a supply/non-supply card instance.
   public createCard(cardKey: CardKey, card?: Partial<CardNoId>): Card {
+    const rawCardLibrary = this.expansionCatalogService.getRawCardLibrary();
     const baseCardData = rawCardLibrary[cardKey] ?? {};
     return new Card({
       ...baseCardData,

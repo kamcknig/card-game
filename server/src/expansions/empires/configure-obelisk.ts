@@ -53,7 +53,7 @@ export const configureObelisk = (
     }
 
     // Choose a random Action pile and store its key on the landmark metadata.
-    const chosenPileKey = actionPileKeys[Math.floor(Math.random() * actionPileKeys.length)];
+    const chosenPileKey = actionPileKeys[args.rngService.nextIndex(actionPileKeys.length)];
     const metadata = obeliskLandmark.metadata as ObeliskMetadata;
     metadata.chosenPileKey = chosenPileKey;
 

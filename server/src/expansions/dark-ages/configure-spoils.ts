@@ -1,5 +1,4 @@
 import { ExpansionConfiguratorContext } from '@server-types/index.ts';
-import { expansionLibrary } from '../expansion-library.ts';
 
 export const configureSpoils = async (args: ExpansionConfiguratorContext) => {
   if (!args.config.kingdomSupply.some((kingdom) => ['marauder', 'pillage', 'bandit-camp'].includes(kingdom.name))) {
@@ -16,7 +15,7 @@ export const configureSpoils = async (args: ExpansionConfiguratorContext) => {
   args.config.nonSupply ??= [];
 
   const card = {
-    ...structuredClone(expansionLibrary['dark-ages'].cardData.kingdomSupply['spoils']),
+    ...structuredClone(args.expansionCatalog['dark-ages']?.cardData.kingdomSupply['spoils']),
     partOfSupply: false,
     tags: ['spoils'],
   };

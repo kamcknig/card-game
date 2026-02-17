@@ -9,7 +9,7 @@ import {
   ProjectNoId,
   Supply,
 } from 'shared/types/index.ts';
-import { ExpansionData, expansionLibrary, rawCardLibrary } from '@expansions/expansion-library.ts';
+import { ExpansionData } from '@expansions/expansion-library.ts';
 import {
   EndGamePolicyRegistrar,
   ExpansionConfigurator,
@@ -24,6 +24,8 @@ import type { Operation } from 'fast-json-patch';
 import { CardSourceController } from './card-source-controller.ts';
 import { getDefaultKingdomSupplySize } from '../utils/get-default-kingdom-supply-size.ts';
 import { getCardPileKey } from '../utils/get-card-pile-key.ts';
+import { ExpansionCatalogService } from './expansion-catalog-service.ts';
+import { RngService } from './rng-service.ts';
 
 /**
  * Return a new array with at most one element for every distinct `prop` value.
@@ -72,8 +74,15 @@ export class MatchConfigurator {
   private _bannedKingdoms: CardNoId[] = [];
   private readonly _config: ComputedMatchConfiguration;
   private readonly _initContext: InitializeExpansionContext;
+  private readonly _expansionCatalogService: ExpansionCatalogService;
+  private readonly _rngService: RngService;
 
-  constructor(config: MatchConfiguration, initContext: InitializeExpansionContext) {
+  constructor(
+    config: MatchConfiguration,
+    initContext: InitializeExpansionContext,
+    expansionCatalogService: ExpansionCatalogService,
+    rngService: RngService,
+  ) {
     // when creating the clone, it will break the custom Deno.customInspect symbols on classes so they won't
     // properly print. I'm not sure if we NEED the structured clone, might just remove it eventually. I tested
     // and that worked as well as of this fix. but i kind of want all changes to be self-contained in the configurator
@@ -90,6 +99,8 @@ export class MatchConfigurator {
     // Ensure artifacts array exists for downstream configuration logic.
     this._config.artifacts ??= [];
     this._initContext = initContext;
+    this._expansionCatalogService = expansionCatalogService;
+    this._rngService = rngService;
 
     console.info(`[match configurator] created`);
   }
@@ -123,7 +134,7 @@ export class MatchConfigurator {
         ...(this._config.preselectedKingdoms?.map((card) => card.cardKey) ?? []),
       ]),
     )
-      .map((key) => structuredClone(rawCardLibrary[key]))
+      .map((key) => structuredClone(this._expansionCatalogService.getRawCard(key)))
       .filter((card) => !!card);
 
     if (this._requestedKingdoms.length > MatchBaseConfiguration.numberOfKingdomPiles) {
@@ -195,7 +206,7 @@ export class MatchConfigurator {
     } else {
       // reduces the player-configured expansions into an array whose elements are the expansions' library data
       const selectedExpansions = this._config.expansions.reduce((acc, allowedExpansion) => {
-        const expansionData = expansionLibrary[allowedExpansion.name];
+        const expansionData = this._expansionCatalogService.getExpansion(allowedExpansion.name);
         if (!expansionData) {
           console.warn(`[match configurator] expansion ${allowedExpansion.name} not found`);
           return acc;
@@ -274,7 +285,7 @@ export class MatchConfigurator {
         (this._config.projects?.length ?? 0);
 
       for (let i = 0; i < numKingdomsToSelect; i++) {
-        const randomIndex = Math.floor(Math.random() * uniqueRandomizers.length);
+        const randomIndex = this._rngService.nextIndex(uniqueRandomizers.length);
         const selectedRandomizer = uniqueRandomizers[randomIndex];
 
         if (selectedRandomizer.type === 'card') {
@@ -409,6 +420,7 @@ export class MatchConfigurator {
     const basicCardCounts = {
       ...MatchBaseConfiguration.basicSupplyByPlayerCount[this._config.players.length - 1],
     } as Record<CardKey, number>;
+    const rawCardLibrary = this._expansionCatalogService.getRawCardLibrary();
 
     // coppers come from the supply, so they are removed here, because these represent the cards IN the supply at the
     // start of game. The coppers in a player's hand come from the supply, whereas the estates do not.
@@ -453,6 +465,8 @@ export class MatchConfigurator {
 
   private async runExpansionConfigurators() {
     const configuratorIterator = (await this.getExpansionConfigurators()).entries();
+    const expansionCatalog = this._expansionCatalogService.getExpansionLibrary();
+    const rawCardLibrary = this._expansionCatalogService.getRawCardLibrary();
 
     let iteration = 0;
     let changes: Operation[] = [];
@@ -466,7 +480,8 @@ export class MatchConfigurator {
           ...this._initContext,
           config: this._config,
           cardLibrary: rawCardLibrary,
-          expansionData: expansionLibrary[expansionName],
+          expansionCatalog,
+          expansionData: expansionCatalog[expansionName],
         });
       }
 

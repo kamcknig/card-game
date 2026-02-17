@@ -12,6 +12,7 @@ import { LogManager } from './log-manager.ts';
 import { ReactionManager } from './reactions/reaction-manager.ts';
 import { getStartingSupplyCount } from '../utils/get-starting-supply-count.ts';
 import { EndGamePolicyRegistryService } from './end-game-policy-registry-service.ts';
+import { RngService } from './rng-service.ts';
 
 export interface EndGameEvaluationResult {
   shouldEndNow: boolean;
@@ -25,6 +26,7 @@ export class EndGameEvaluatorService {
     private readonly cardLibrary: MatchCardLibrary,
     private readonly cardPriceController: CardPriceRulesController,
     private readonly logManager: LogManager,
+    private readonly rngService: RngService,
     private readonly reactionManager: ReactionManager,
     private readonly findCardService: FindCardService,
     private readonly supplyGainService: SupplyGainService,
@@ -42,6 +44,7 @@ export class EndGameEvaluatorService {
         cardLibrary: this.cardLibrary,
         cardPriceController: this.cardPriceController,
         logManager: this.logManager,
+        rngService: this.rngService,
         reactionManager: this.reactionManager,
         findCardService: this.findCardService,
         supplyGainService: this.supplyGainService,

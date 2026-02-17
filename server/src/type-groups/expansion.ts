@@ -12,6 +12,7 @@ export type {
   EndGamePolicyFnOutcome,
   EndGamePolicyRegistrationOptions,
   EndGamePolicyRegistrar,
+  ExpansionRegistrationFacade,
   ExpansionConfigurator,
   ExpansionConfiguratorContext,
   ExpansionConfiguratorFactory,

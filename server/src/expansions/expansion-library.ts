@@ -37,12 +37,27 @@ export type ExpansionData = {
 
 export type ExpansionDataLibrary = Record<string, ExpansionData>;
 
-/**
- * Global expansion data. Holds data about an expansion and the cards it loads.
- */
-export const expansionLibrary: ExpansionDataLibrary = {};
-
-/**
- * Holds the "raw" JSON data of all cards loaded.
- */
-export const rawCardLibrary: Record<CardKey, CardNoId> = {};
+// Creates empty expansion data storage for one expansion.
+export const createEmptyExpansionData = (expansionName: string): ExpansionData => {
+  return {
+    title: expansionName,
+    name: expansionName,
+    cardData: {
+      basicSupply: {},
+      kingdomSupply: {},
+    },
+    events: {},
+    // Landmarks live alongside events as landscape card-likes.
+    landmarks: {},
+    // Boons live alongside other non-supply card-likes.
+    boons: {},
+    // Hexes live alongside boons as non-supply card-likes.
+    hexes: {},
+    // States live alongside other non-supply card-likes.
+    states: {},
+    // Artifacts live alongside other non-supply card-likes.
+    artifacts: {},
+    // Projects live alongside other non-supply card-likes.
+    projects: {},
+  };
+};

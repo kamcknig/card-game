@@ -1,6 +1,5 @@
 import { Supply } from 'shared/types/index.ts';
 import { ExpansionConfiguratorContext } from '@server-types/index.ts';
-import { expansionLibrary } from '../expansion-library.ts';
 
 export const configureJoust = async (args: ExpansionConfiguratorContext) => {
   const joustPresent = args.config.kingdomSupply.some((supply) => supply.name === 'joust');
@@ -20,7 +19,7 @@ export const configureJoust = async (args: ExpansionConfiguratorContext) => {
 
   args.config.nonSupply.push(rewardsKingdom);
 
-  const expansionData = expansionLibrary['cornucopia-and-guilds'];
+  const expansionData = args.expansionCatalog['cornucopia-and-guilds'];
   const expansionKingdomCards = expansionData.cardData.kingdomSupply;
   const rewards = Object.keys(expansionKingdomCards).filter((key) =>
     expansionKingdomCards[key].type.includes('REWARD')

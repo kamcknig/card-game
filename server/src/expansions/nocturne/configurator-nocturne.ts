@@ -1,4 +1,3 @@
-import { expansionLibrary } from '../expansion-library.ts';
 import {
   ExpansionConfiguratorFactory,
   GameEventRegistrar,
@@ -29,17 +28,17 @@ const configurator: ExpansionConfiguratorFactory = () => {
   return async (args) => {
     if (!boonEffectsRegistered) {
       // Register all Nocturne boon effects once per match.
-      registerNocturneBoonEffects(args.boonEffectRegistrar);
+      registerNocturneBoonEffects(args.expansionRegistration.registerBoonEffect);
       boonEffectsRegistered = true;
     }
     if (!stateEffectsRegistered) {
       // Register all state effects once per match.
-      registerStateEffects(args.stateEffectRegistrar);
+      registerStateEffects(args.expansionRegistration.registerStateEffect);
       stateEffectsRegistered = true;
     }
     if (!hexEffectsRegistered) {
       // Register all Nocturne hex effects once per match.
-      registerNocturneHexEffects(args.hexEffectRegistrar);
+      registerNocturneHexEffects(args.expansionRegistration.registerHexEffect);
       hexEffectsRegistered = true;
     }
 
@@ -104,7 +103,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
       // Pull boon definitions from the expansion library.
       const boons = expansionsWithFate.flatMap((expansionName) =>
-        Object.values(expansionLibrary[expansionName]?.boons ?? {})
+        Object.values(args.expansionCatalog[expansionName]?.boons ?? {})
       );
       // De-duplicate boons across expansions by card key.
       const uniqueBoons = uniqueByProp(boons, 'cardKey');
@@ -148,7 +147,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
       // Pull hex definitions from the expansion library.
       const hexes = expansionsWithDoom.flatMap((expansionName) =>
-        Object.values(expansionLibrary[expansionName]?.hexes ?? {})
+        Object.values(args.expansionCatalog[expansionName]?.hexes ?? {})
       );
       // De-duplicate hexes across expansions by card key.
       const uniqueHexes = uniqueByProp(hexes, 'cardKey');
@@ -173,7 +172,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
     const existingStates = args.config.states ?? [];
     const nonDoomStates = existingStates.filter((state) => !doomStateKeys.has(state.cardKey));
     const doomStates = Array.from(doomStateKeys).flatMap((stateKey) => {
-      const state = expansionLibrary['nocturne']?.states?.[stateKey];
+      const state = args.expansionCatalog['nocturne']?.states?.[stateKey];
       if (!state) {
         console.warn(`[nocturne configurator] missing doom state ${stateKey}`);
         return [];
@@ -202,7 +201,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
       return args.config;
     }
 
-    const lostInTheWoods = expansionLibrary['nocturne']?.states?.['lost-in-the-woods'];
+    const lostInTheWoods = args.expansionCatalog['nocturne']?.states?.['lost-in-the-woods'];
     if (!lostInTheWoods) {
       console.warn('[nocturne configurator] Fool present but Lost in the Woods state not found');
       args.config.states = filteredStates;
@@ -301,7 +300,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         }
 
         // Choose a random Copper to swap so the heirloom position is uniformly random.
-        const chosenIndex = copperIndices[Math.floor(Math.random() * copperIndices.length)];
+        const chosenIndex = copperIndices[args.rngService.nextIndex(copperIndices.length)];
         const copperId = deck[chosenIndex];
 
         await args.actionService.run('moveCard', {
@@ -344,7 +343,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         }
 
         // Choose a random Copper to swap so the heirloom position is uniformly random.
-        const chosenIndex = copperIndices[Math.floor(Math.random() * copperIndices.length)];
+        const chosenIndex = copperIndices[args.rngService.nextIndex(copperIndices.length)];
         const copperId = deck[chosenIndex];
 
         await args.actionService.run('moveCard', {
@@ -387,7 +386,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         }
 
         // Choose a random Copper to swap so the heirloom position is uniformly random.
-        const chosenIndex = copperIndices[Math.floor(Math.random() * copperIndices.length)];
+        const chosenIndex = copperIndices[args.rngService.nextIndex(copperIndices.length)];
         const copperId = deck[chosenIndex];
 
         await args.actionService.run('moveCard', {
@@ -430,7 +429,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         }
 
         // Choose a random Copper to swap so the heirloom position is uniformly random.
-        const chosenIndex = copperIndices[Math.floor(Math.random() * copperIndices.length)];
+        const chosenIndex = copperIndices[args.rngService.nextIndex(copperIndices.length)];
         const copperId = deck[chosenIndex];
 
         await args.actionService.run('moveCard', {
@@ -473,7 +472,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         }
 
         // Choose a random Copper to swap so the heirloom position is uniformly random.
-        const chosenIndex = copperIndices[Math.floor(Math.random() * copperIndices.length)];
+        const chosenIndex = copperIndices[args.rngService.nextIndex(copperIndices.length)];
         const copperId = deck[chosenIndex];
 
         await args.actionService.run('moveCard', {
@@ -516,7 +515,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         }
 
         // Choose a random Copper to swap so the heirloom position is uniformly random.
-        const chosenIndex = copperIndices[Math.floor(Math.random() * copperIndices.length)];
+        const chosenIndex = copperIndices[args.rngService.nextIndex(copperIndices.length)];
         const copperId = deck[chosenIndex];
 
         await args.actionService.run('moveCard', {
@@ -559,7 +558,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         }
 
         // Choose a random Copper to swap so the heirloom position is uniformly random.
-        const chosenIndex = copperIndices[Math.floor(Math.random() * copperIndices.length)];
+        const chosenIndex = copperIndices[args.rngService.nextIndex(copperIndices.length)];
         const copperId = deck[chosenIndex];
 
         await args.actionService.run('moveCard', {

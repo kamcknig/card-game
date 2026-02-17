@@ -18,6 +18,8 @@ import { MatchSocketBindings } from './match-socket-bindings.ts';
 import { ExpansionEffectRegistryService } from './expansion-effect-registry-service.ts';
 import { ExpansionCardMetadataRegistryService } from './expansion-card-metadata-registry-service.ts';
 import { TokenRegistryService } from './tokens/token-registry-service.ts';
+import { ExpansionCatalogService } from './expansion-catalog-service.ts';
+import { RngService } from './rng-service.ts';
 
 // Builds the per-match runtime graph (controllers/managers/maps) used by MatchController.
 export class MatchRuntimeFactory {
@@ -27,6 +29,8 @@ export class MatchRuntimeFactory {
     private readonly expansionEffectRegistryService: ExpansionEffectRegistryService,
     private readonly expansionCardMetadataRegistryService: ExpansionCardMetadataRegistryService,
     private readonly tokenRegistryService: TokenRegistryService,
+    private readonly expansionCatalogService: ExpansionCatalogService,
+    private readonly rngService: RngService,
   ) {}
 
   // Registers runtime services into an existing match scope.
@@ -49,6 +53,8 @@ export class MatchRuntimeFactory {
       matchSocketBindings: asValue(this.matchSocketBindings),
       expansionCardMetadataRegistryService: asValue(this.expansionCardMetadataRegistryService),
       tokenRegistryService: asValue(this.tokenRegistryService),
+      expansionCatalogService: asValue(this.expansionCatalogService),
+      rngService: asValue(this.rngService),
       cardEffectFunctionMap: asValue(cardEffectFunctionMap),
       eventEffectFunctionMap: asValue(eventEffectFunctionMap),
       projectEffectFunctionMap: asValue(projectEffectFunctionMap),

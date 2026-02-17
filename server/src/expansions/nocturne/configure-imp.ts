@@ -1,5 +1,4 @@
 import { ExpansionConfiguratorContext } from '@server-types/index.ts';
-import { expansionLibrary } from '../expansion-library.ts';
 
 // Adds the Imp non-supply pile when cards that gain Imps are present.
 export const configureImp = (args: ExpansionConfiguratorContext) => {
@@ -13,7 +12,7 @@ export const configureImp = (args: ExpansionConfiguratorContext) => {
   args.config.nonSupply ??= [];
 
   const baseCard = structuredClone(
-    expansionLibrary['nocturne'].cardData.kingdomSupply['imp'],
+    args.expansionCatalog['nocturne']?.cardData.kingdomSupply['imp'],
   );
 
   if (!baseCard) {

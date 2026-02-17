@@ -44,6 +44,7 @@ import { CardInstanceFactoryService } from './card-instance-factory-service.ts';
 import { MatchEndService } from './match-end-service.ts';
 import { ExpansionCardMetadataRegistryService } from './expansion-card-metadata-registry-service.ts';
 import { TokenRegistryService } from './tokens/token-registry-service.ts';
+import { RngService } from './rng-service.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardLibSnapshot = {};
@@ -92,6 +93,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     private readonly matchEndService: MatchEndService,
     private readonly expansionCardMetadataRegistryService: ExpansionCardMetadataRegistryService,
     private readonly tokenRegistryService: TokenRegistryService,
+    private readonly rngService: RngService,
   ) {
     super();
   }
@@ -167,21 +169,24 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       match: this.match,
       cardSourceController: this.cardSourceController,
       cardInstanceFactoryService: this.cardInstanceFactoryService,
+      rngService: this.rngService,
       gameEventRegistrar: (event: GameLifecycleEvent, handler: GameLifecycleCallback) =>
         this.reactionManager.registerGameEvent(event, handler),
       clientEventRegistrar: (event, handler) => this.clientEventRegistrar(event, handler),
       endGamePolicyRegistrar: (val) => this.endGamePolicyRegistryService.register(val),
-      cardEffectRegistrar: (...args) => this.gameActionsController.registerCardEffect(...args),
-      boonEffectRegistrar: (cardKey, effectFn) => this.gameActionsController.registerBoonEffect(cardKey, effectFn),
-      hexEffectRegistrar: (cardKey, effectFn) => this.gameActionsController.registerHexEffect(cardKey, effectFn),
-      stateEffectRegistrar: (cardKey, effectFn) => this.gameActionsController.registerStateEffect(cardKey, effectFn),
-      artifactEffectRegistrar: (cardKey, effectFn) =>
-        this.gameActionsController.registerArtifactEffect(cardKey, effectFn),
-      projectEffectRegistrar: (cardKey, effectFn) =>
-        this.gameActionsController.registerProjectEffect(cardKey, effectFn),
-      tokenDefinitionRegistrar: (definition) => this.tokenRegistryService.registerTokenDefinition(definition),
-      tokenCardPlayedHandlerRegistrar: (tokenId, handler) =>
-        this.tokenRegistryService.registerTokenCardPlayedHandler(tokenId, handler),
+      expansionRegistration: {
+        registerCardEffect: (...args) => this.gameActionsController.registerCardEffect(...args),
+        registerBoonEffect: (cardKey, effectFn) => this.gameActionsController.registerBoonEffect(cardKey, effectFn),
+        registerHexEffect: (cardKey, effectFn) => this.gameActionsController.registerHexEffect(cardKey, effectFn),
+        registerStateEffect: (cardKey, effectFn) => this.gameActionsController.registerStateEffect(cardKey, effectFn),
+        registerArtifactEffect: (cardKey, effectFn) =>
+          this.gameActionsController.registerArtifactEffect(cardKey, effectFn),
+        registerProjectEffect: (cardKey, effectFn) =>
+          this.gameActionsController.registerProjectEffect(cardKey, effectFn),
+        registerTokenDefinition: (definition) => this.tokenRegistryService.registerTokenDefinition(definition),
+        registerTokenCardPlayedHandler: (tokenId, handler) =>
+          this.tokenRegistryService.registerTokenCardPlayedHandler(tokenId, handler),
+      },
       playerScoreDecoratorRegistrar: (val: PlayerScoreDecorator) => this._expansionScoringFns.push(val),
     });
     const { config: newConfig } = await this._matchConfigurator.createConfiguration();
@@ -601,6 +606,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
             cardSourceController: this.cardSourceController,
             cardPriceController: this.cardPriceController,
             logManager: this.logManager,
+            rngService: this.rngService,
             findCardService: this.findCardService,
             supplyGainService: this.supplyGainService,
             promptService: this.promptService,

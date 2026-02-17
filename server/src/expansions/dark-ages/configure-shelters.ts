@@ -1,7 +1,7 @@
 import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 
 export const configureShelters = async (args: ExpansionConfiguratorContext) => {
-  const idx = Math.floor(Math.random() * args.config.kingdomSupply.length);
+  const idx = args.rngService.nextIndex(args.config.kingdomSupply.length);
 
   if (args.config.kingdomSupply[idx].cards[0].expansionName !== 'dark-ages') {
     return;

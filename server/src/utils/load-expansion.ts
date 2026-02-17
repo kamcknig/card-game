@@ -1,4 +1,4 @@
-import { expansionLibrary, rawCardLibrary } from '@expansions/expansion-library.ts';
+import { createEmptyExpansionData } from '@expansions/expansion-library.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
 import { CardCost, CardKey, CardNoId, CardType } from 'shared/types/index.ts';
 import { createCardData, createCardLike } from './create-card-data.ts';
@@ -7,6 +7,7 @@ import { loadLandmarks } from '../core/landmarks/load-landmarks.ts';
 import { loadProjects } from '../core/projects/load-projects.ts';
 import { ExpansionEffectRegistryService } from '../core/expansion-effect-registry-service.ts';
 import { ExpansionCardMetadataRegistryService } from '../core/expansion-card-metadata-registry-service.ts';
+import { ExpansionCatalogService } from '../core/expansion-catalog-service.ts';
 
 // Randomizer pile definition for split piles in card libraries.
 type RandomizerPileDefinition = {
@@ -51,37 +52,19 @@ export const loadExpansion = async (
   expansion: { name: string },
   expansionEffectRegistryService: ExpansionEffectRegistryService,
   expansionCardMetadataRegistryService: ExpansionCardMetadataRegistryService,
+  expansionCatalogService: ExpansionCatalogService,
 ) => {
   const expansionPath = `@expansions/${expansion.name}`;
   const expansionName = expansion.name;
-  if (expansionLibrary[expansionName]) {
+  if (expansionCatalogService.hasExpansion(expansionName)) {
     console.info(`[expansion loader] expansion ${expansionName} already loaded`);
     return;
   }
 
   console.log(`[expansion loader] loading expansion ${expansionName}`);
 
-  expansionLibrary[expansionName] = {
-    title: expansionName,
-    name: expansionName,
-    cardData: {
-      basicSupply: {},
-      kingdomSupply: {},
-    },
-    events: {},
-    // Landmarks live alongside events as landscape card-likes.
-    landmarks: {},
-    // Boons live alongside other non-supply card-likes.
-    boons: {},
-    // Hexes live alongside boons as non-supply card-likes.
-    hexes: {},
-    // States live alongside other non-supply card-likes.
-    states: {},
-    // Artifacts live alongside other non-supply card-likes.
-    artifacts: {},
-    // Projects live alongside other non-supply card-likes.
-    projects: {},
-  };
+  const expansionData = createEmptyExpansionData(expansionName);
+  expansionCatalogService.setExpansion(expansionName, expansionData);
 
   let expansionConfiguration;
 
@@ -95,9 +78,9 @@ export const loadExpansion = async (
     expansionConfiguration = configModule.default;
     console.info(`[expansion loader] expansion configuration loaded`);
 
-    const currValue = expansionLibrary[expansionName].title;
-    expansionLibrary[expansionName].title = expansionConfiguration.title ? expansionConfiguration.title : currValue;
-    expansionLibrary[expansionName].mutuallyExclusive = expansionConfiguration.mutuallyExclusive ?? [];
+    const currValue = expansionData.title;
+    expansionData.title = expansionConfiguration.title ? expansionConfiguration.title : currValue;
+    expansionData.mutuallyExclusive = expansionConfiguration.mutuallyExclusive ?? [];
   } catch (error) {
     if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
       console.warn(`[expansion loader] failed to load configuration for expansion ${expansionName}`);
@@ -106,7 +89,7 @@ export const loadExpansion = async (
   }
 
   try {
-    const cardData = expansionLibrary[expansionName].cardData;
+    const cardData = expansionData.cardData;
 
     console.info(`[expansion loader] loading card library for ${expansionName}`);
 
@@ -141,7 +124,7 @@ export const loadExpansion = async (
               ...cardEntry,
               kingdomSelectable: cardEntry.kingdomSelectable ?? false,
             });
-            expansionLibrary[expansionName].boons[cardKey] = boonData as any;
+            expansionData.boons[cardKey] = boonData as any;
             continue;
           }
           if (isHexCardEntry(cardEntry)) {
@@ -150,7 +133,7 @@ export const loadExpansion = async (
               ...cardEntry,
               kingdomSelectable: cardEntry.kingdomSelectable ?? false,
             });
-            expansionLibrary[expansionName].hexes[cardKey] = hexData as any;
+            expansionData.hexes[cardKey] = hexData as any;
             continue;
           }
           if (isStateCardEntry(cardEntry)) {
@@ -159,7 +142,7 @@ export const loadExpansion = async (
               ...cardEntry,
               kingdomSelectable: cardEntry.kingdomSelectable ?? false,
             });
-            expansionLibrary[expansionName].states[cardKey] = stateData as any;
+            expansionData.states[cardKey] = stateData as any;
             continue;
           }
           if (isArtifactCardEntry(cardEntry)) {
@@ -168,7 +151,7 @@ export const loadExpansion = async (
               ...cardEntry,
               kingdomSelectable: cardEntry.kingdomSelectable ?? false,
             });
-            expansionLibrary[expansionName].artifacts[cardKey] = artifactData as any;
+            expansionData.artifacts[cardKey] = artifactData as any;
             continue;
           }
           // Apply pile-level randomizer metadata to each card in the pile.
@@ -180,7 +163,7 @@ export const loadExpansion = async (
           const newCardData = createCardData(cardKey, expansionName, templateData);
           const isBasic = newCardData.isBasic;
           cardData[isBasic ? 'basicSupply' : 'kingdomSupply'][cardKey] = newCardData as any;
-          rawCardLibrary[cardKey] = newCardData as any;
+          expansionCatalogService.setRawCard(cardKey, newCardData as any);
         }
         continue;
       }
@@ -192,7 +175,7 @@ export const loadExpansion = async (
           ...(entry as Partial<CardNoId>),
           kingdomSelectable: (entry as Partial<CardNoId>).kingdomSelectable ?? false,
         });
-        expansionLibrary[expansionName].boons[key] = boonData as any;
+        expansionData.boons[key] = boonData as any;
         continue;
       }
       if (isHexCardEntry(entry as Partial<CardNoId>)) {
@@ -201,7 +184,7 @@ export const loadExpansion = async (
           ...(entry as Partial<CardNoId>),
           kingdomSelectable: (entry as Partial<CardNoId>).kingdomSelectable ?? false,
         });
-        expansionLibrary[expansionName].hexes[key] = hexData as any;
+        expansionData.hexes[key] = hexData as any;
         continue;
       }
       if (isStateCardEntry(entry as Partial<CardNoId>)) {
@@ -210,7 +193,7 @@ export const loadExpansion = async (
           ...(entry as Partial<CardNoId>),
           kingdomSelectable: (entry as Partial<CardNoId>).kingdomSelectable ?? false,
         });
-        expansionLibrary[expansionName].states[key] = stateData as any;
+        expansionData.states[key] = stateData as any;
         continue;
       }
       if (isArtifactCardEntry(entry as Partial<CardNoId>)) {
@@ -219,7 +202,7 @@ export const loadExpansion = async (
           ...(entry as Partial<CardNoId>),
           kingdomSelectable: (entry as Partial<CardNoId>).kingdomSelectable ?? false,
         });
-        expansionLibrary[expansionName].artifacts[key] = artifactData as any;
+        expansionData.artifacts[key] = artifactData as any;
         continue;
       }
 
@@ -227,7 +210,7 @@ export const loadExpansion = async (
 
       const isBasic = newCardData.isBasic;
       cardData[isBasic ? 'basicSupply' : 'kingdomSupply'][key] = newCardData as any;
-      rawCardLibrary[key] = newCardData as any;
+      expansionCatalogService.setRawCard(key as CardKey, newCardData as any);
     }
 
     console.info('[expansion loader] card library loaded');
@@ -278,20 +261,20 @@ export const loadExpansion = async (
   } catch (error) {
     console.warn(`[expansion loader] Failed to load expansion: ${expansionName}`);
     console.error(error);
-    delete expansionLibrary[expansionName];
+    expansionCatalogService.removeExpansion(expansionName);
   }
 
   console.info(`[expansion loader] attempting to load events for ${expansionName}`);
-  await loadEvents(expansionName, expansionEffectRegistryService);
+  await loadEvents(expansionName, expansionEffectRegistryService, expansionCatalogService);
   console.log(`[expansion loader] finished loading events for ${expansionName}`);
 
   // Landmarks are loaded after events to mirror landscape loading order.
   console.info(`[expansion loader] attempting to load landmarks for ${expansionName}`);
-  await loadLandmarks(expansionName, expansionEffectRegistryService);
+  await loadLandmarks(expansionName, expansionEffectRegistryService, expansionCatalogService);
   console.log(`[expansion loader] finished loading landmarks for ${expansionName}`);
 
   // Projects are loaded after landmarks to mirror landscape loading order.
   console.info(`[expansion loader] attempting to load projects for ${expansionName}`);
-  await loadProjects(expansionName, expansionEffectRegistryService);
+  await loadProjects(expansionName, expansionEffectRegistryService, expansionCatalogService);
   console.log(`[expansion loader] finished loading projects for ${expansionName}`);
 };

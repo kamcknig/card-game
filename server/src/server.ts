@@ -13,12 +13,15 @@ import { PlayerRegistryService } from './core/player-registry-service.ts';
 import { PlayerFactoryService } from './core/player-factory-service.ts';
 import { MatchStartOrchestrator } from './core/match-start-orchestrator.ts';
 import { MatchScopeFactory } from './core/match-scope-factory.ts';
+import { MatchConfigurator } from './core/match-configurator.ts';
 import { MatchConfiguratorFactory } from './core/match-configurator-factory.ts';
 import { MatchRuntimeFactory } from './core/match-runtime-factory.ts';
 import { MatchSocketBindings } from './core/match-socket-bindings.ts';
 import { ServerStartupService } from './core/server-startup-service.ts';
 import { ExpansionEffectRegistryService } from './core/expansion-effect-registry-service.ts';
 import { ExpansionCardMetadataRegistryService } from './core/expansion-card-metadata-registry-service.ts';
+import { ExpansionCatalogService } from './core/expansion-catalog-service.ts';
+import { RngService } from './core/rng-service.ts';
 import { TokenRegistryService } from './core/tokens/token-registry-service.ts';
 import { asClass, asValue, createContainer, InjectionMode } from 'awilix';
 
@@ -58,12 +61,16 @@ const container = createContainer({
 
 // Register long-lived singleton dependencies used by the server runtime.
 container.register({
+  rootContainer: asValue(container),
   io: asValue(io),
   maxPlayers: asValue(6),
   matchScopeFactory: asClass(MatchScopeFactory).singleton(),
+  matchConfigurator: asClass(MatchConfigurator).scoped(),
   matchConfiguratorFactory: asClass(MatchConfiguratorFactory).singleton(),
   expansionSearchService: asClass(ExpansionSearchService).singleton(),
   expansionCompatibilityService: asClass(ExpansionCompatibilityService).singleton(),
+  expansionCatalogService: asClass(ExpansionCatalogService).singleton(),
+  rngService: asClass(RngService).singleton(),
   expansionEffectRegistryService: asClass(ExpansionEffectRegistryService).singleton(),
   expansionCardMetadataRegistryService: asClass(ExpansionCardMetadataRegistryService).singleton(),
   tokenRegistryService: asClass(TokenRegistryService).singleton(),

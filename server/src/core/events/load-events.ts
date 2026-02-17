@@ -1,11 +1,15 @@
-import { expansionLibrary } from '@expansions/expansion-library.ts';
 import { createCardLike } from '../../utils/create-card-data.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
 import { CardKey, EventNoId } from 'shared/types/index.ts';
 import { ExpansionEffectRegistryService } from '../expansion-effect-registry-service.ts';
+import { ExpansionCatalogService } from '../expansion-catalog-service.ts';
 
-export const loadEvents = async (expansionName: string, expansionEffectRegistryService: ExpansionEffectRegistryService) => {
-  const expansionEvents = (expansionLibrary[expansionName].events ??= {});
+export const loadEvents = async (
+  expansionName: string,
+  expansionEffectRegistryService: ExpansionEffectRegistryService,
+  expansionCatalogService: ExpansionCatalogService,
+) => {
+  const expansionEvents = (expansionCatalogService.getRequiredExpansion(expansionName).events ??= {});
 
   try {
     const eventLibraryModule = await import(`@expansions/${expansionName}/event-library-${expansionName}.json`, {

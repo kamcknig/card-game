@@ -1,5 +1,4 @@
 import { ExpansionConfiguratorContext } from '@server-types/index.ts';
-import { expansionLibrary } from '../expansion-library.ts';
 
 // Adds the Bat non-supply pile when Vampire is present.
 export const configureBat = (args: ExpansionConfiguratorContext) => {
@@ -13,7 +12,7 @@ export const configureBat = (args: ExpansionConfiguratorContext) => {
   args.config.nonSupply ??= [];
 
   const baseCard = structuredClone(
-    expansionLibrary['nocturne'].cardData.kingdomSupply['bat'],
+    args.expansionCatalog['nocturne']?.cardData.kingdomSupply['bat'],
   );
 
   if (!baseCard) {

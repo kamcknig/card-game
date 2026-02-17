@@ -66,6 +66,7 @@ import { getPlayerTurnIndex } from '@shared/get-player-position-utils.ts';
 import { BuyOptionsResolver } from './resolve-buy-options.ts';
 import { CardEffectContextFactory } from './card-effect-context-factory.ts';
 import { TokenRegistryService } from '../tokens/token-registry-service.ts';
+import { RngService } from '../rng-service.ts';
 
 export class GameActionController implements GameActionDefinitionMap {
   private _customActionHandlers: Partial<GameActionDefinitionMap> = {};
@@ -96,6 +97,7 @@ export class GameActionController implements GameActionDefinitionMap {
     private readonly actionService: ActionService,
     private readonly cardEffectContextFactory: CardEffectContextFactory,
     private readonly tokenRegistryService: TokenRegistryService,
+    private readonly rngService: RngService,
   ) {}
 
   public registerCardEffect(cardKey: CardKey, tag: string, fn: CardEffectFn) {
@@ -2775,12 +2777,12 @@ export class GameActionController implements GameActionDefinitionMap {
     const cardLikeIds = args.cardLikeIds ?? [];
 
     if (cardIds.length > 1) {
-      fisherYatesShuffle(cardIds, true);
+      fisherYatesShuffle(cardIds, true, () => this.rngService.nextFloat());
       console.debug(`[shuffle action] shuffled ${cardIds.length} card(s)`);
     }
 
     if (cardLikeIds.length > 1) {
-      fisherYatesShuffle(cardLikeIds, true);
+      fisherYatesShuffle(cardLikeIds, true, () => this.rngService.nextFloat());
       console.debug(`[shuffle action] shuffled ${cardLikeIds.length} card-like id(s)`);
     }
 

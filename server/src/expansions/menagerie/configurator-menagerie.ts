@@ -1,7 +1,6 @@
 import { ComputedMatchConfiguration } from 'shared/types/index.ts';
-import { ExpansionConfiguratorFactory, GameEventRegistrar } from '@server-types/index.ts';
+import { ExpansionConfiguratorContext, ExpansionConfiguratorFactory, GameEventRegistrar } from '@server-types/index.ts';
 import { addMatToMatchConfig } from '../../utils/add-mat-to-match-config.ts';
-import { expansionLibrary } from '../expansion-library.ts';
 
 // Menagerie cards that require the Horse non-supply pile to be configured.
 const horseSourcePiles = new Set([
@@ -32,7 +31,8 @@ const exileMatEvents = new Set([
 ]);
 
 // Ensures the Horse pile is present only when required by selected kingdom cards.
-const configureHorsePile = (config: ComputedMatchConfiguration) => {
+const configureHorsePile = (configuratorArgs: ExpansionConfiguratorContext) => {
+  const config = configuratorArgs.config;
   const hasHorseSource = config.kingdomSupply.some((supply) => horseSourcePiles.has(supply.name)) ||
     config.events.some((event) => horseSourceEvents.has(event.cardKey));
   const hasHorsePile = config.nonSupply?.some((supply) => supply.name === 'horse') ?? false;
@@ -50,7 +50,7 @@ const configureHorsePile = (config: ComputedMatchConfiguration) => {
     return;
   }
 
-  const baseHorse = structuredClone(expansionLibrary['menagerie']?.cardData.kingdomSupply['horse']);
+  const baseHorse = structuredClone(configuratorArgs.expansionCatalog['menagerie']?.cardData.kingdomSupply['horse']);
   if (!baseHorse) {
     console.warn('[menagerie configurator] horse card data not found');
     return;
@@ -77,7 +77,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
     ) || args.config.events.some((event) => exileMatEvents.has(event.cardKey));
 
     if (!requiresExileMat) {
-      configureHorsePile(args.config);
+      configureHorsePile(args);
       return args.config;
     }
 
@@ -93,13 +93,13 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
     if (exileZoneAlreadyRegisteredForAllPlayers) {
       console.debug('[menagerie configurator] exile mat already configured for all players');
-      configureHorsePile(args.config);
+      configureHorsePile(args);
       return args.config;
     }
 
     console.info('[menagerie configurator] adding exile mat zones for all players');
     addMatToMatchConfig('exile', args.config, args);
-    configureHorsePile(args.config);
+    configureHorsePile(args);
     return args.config;
   };
 };

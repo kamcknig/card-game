@@ -1,6 +1,5 @@
 import { Supply } from 'shared/types/index.ts';
 import { ExpansionConfiguratorContext } from '@server-types/index.ts';
-import { expansionLibrary } from '../expansion-library.ts';
 
 export const configureHermit = async (args: ExpansionConfiguratorContext) => {
   if (!args.config.kingdomSupply.some((supply) => supply.name === 'hermit')) {
@@ -14,7 +13,7 @@ export const configureHermit = async (args: ExpansionConfiguratorContext) => {
   console.info(`[dark-ages configurator - configuring hermit] hermit needs to be configured`);
 
   const cardData = {
-    ...structuredClone(expansionLibrary['dark-ages'].cardData.kingdomSupply['madman']) ?? {},
+    ...structuredClone(args.expansionCatalog['dark-ages']?.cardData.kingdomSupply['madman']) ?? {},
     partOfSupply: false,
   };
 
