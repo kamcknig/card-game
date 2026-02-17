@@ -1,10 +1,13 @@
 import { expansionLibrary } from '@expansions/expansion-library.ts';
 import { createCardLike } from '../../utils/create-card-data.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
-import { LandmarkNoId } from 'shared/types/index.ts';
-import { landmarkEffectFactoryMap } from './landmark-effect-factory-map.ts';
+import { CardKey, LandmarkNoId } from 'shared/types/index.ts';
+import { ExpansionEffectRegistryService } from '../expansion-effect-registry-service.ts';
 
-export const loadLandmarks = async (expansionName: string) => {
+export const loadLandmarks = async (
+  expansionName: string,
+  expansionEffectRegistryService: ExpansionEffectRegistryService,
+) => {
   const expansionLandmarks = (expansionLibrary[expansionName].landmarks ??= {});
 
   try {
@@ -41,9 +44,9 @@ export const loadLandmarks = async (expansionName: string) => {
     const landmarks = landmarkModule.default as CardExpansionModule;
 
     for (const cardKey of Object.keys(landmarks)) {
-      if (landmarkEffectFactoryMap[cardKey]) {
+      if (expansionEffectRegistryService.hasLandmarkEffectFactory(cardKey as CardKey)) {
         console.warn(
-          `[load-landmarks] landmark key ${cardKey} already exists in landmarkEffectFactoryMap, overwriting`,
+          `[load-landmarks] landmark key ${cardKey} already exists in landmark registry, overwriting`,
         );
       }
 
@@ -52,7 +55,10 @@ export const loadLandmarks = async (expansionName: string) => {
         console.info(
           `[load-landmarks] registering landmark effects for ${cardKey}`,
         );
-        landmarkEffectFactoryMap[cardKey] = landmarks[cardKey].registerEffects;
+        expansionEffectRegistryService.registerLandmarkEffectFactory(
+          cardKey as CardKey,
+          landmarks[cardKey].registerEffects,
+        );
       }
     }
   } catch (error) {

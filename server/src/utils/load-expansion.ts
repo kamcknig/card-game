@@ -1,15 +1,13 @@
-import { cardEffectFunctionMapFactory } from '../core/effects/card-effect-function-map-factory.ts';
 import { scoringFunctionMap } from '@expansions/scoring-function-map.ts';
 import { expansionLibrary, rawCardLibrary } from '@expansions/expansion-library.ts';
 import { cardLifecycleMap } from '../core/card-lifecycle-map.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
 import { CardCost, CardKey, CardNoId, CardType } from 'shared/types/index.ts';
-import { cardActionConditionMapFactory } from '../core/actions/card-action-condition-map-factory.ts';
-import { cardAlternateBuyOptionMapFactory } from '../core/actions/card-alternate-buy-option-map-factory.ts';
 import { createCardData, createCardLike } from './create-card-data.ts';
 import { loadEvents } from '../core/events/load-events.ts';
 import { loadLandmarks } from '../core/landmarks/load-landmarks.ts';
 import { loadProjects } from '../core/projects/load-projects.ts';
+import { ExpansionEffectRegistryService } from '../core/expansion-effect-registry-service.ts';
 
 // Randomizer pile definition for split piles in card libraries.
 type RandomizerPileDefinition = {
@@ -50,7 +48,10 @@ const isRandomizerPileDefinition = (entry: unknown): entry is RandomizerPileDefi
   return Array.isArray(maybeEntry.cards) && !!maybeEntry.pile;
 };
 
-export const loadExpansion = async (expansion: { name: string }) => {
+export const loadExpansion = async (
+  expansion: { name: string },
+  expansionEffectRegistryService: ExpansionEffectRegistryService,
+) => {
   const expansionPath = `@expansions/${expansion.name}`;
   const expansionName = expansion.name;
   if (expansionLibrary[expansionName]) {
@@ -249,16 +250,22 @@ export const loadExpansion = async (expansion: { name: string }) => {
 
       if (cardEffects[key].registerEffects) {
         console.debug(`[expansion loader] registering effects for ${key}`);
-        cardEffectFunctionMapFactory[key] = cardEffects[key].registerEffects;
+        expansionEffectRegistryService.registerCardEffectFactory(key as CardKey, cardEffects[key].registerEffects);
       }
 
       if (cardEffects[key].registerActionConditions) {
-        cardActionConditionMapFactory[key] = cardEffects[key].registerActionConditions();
+        expansionEffectRegistryService.registerCardActionConditions(
+          key as CardKey,
+          cardEffects[key].registerActionConditions(),
+        );
       }
 
       if (cardEffects[key].registerAlternateBuyOptions) {
         // Register expansion-provided alternate buy paths for this card key.
-        cardAlternateBuyOptionMapFactory[key] = cardEffects[key].registerAlternateBuyOptions();
+        expansionEffectRegistryService.registerCardAlternateBuyOptions(
+          key as CardKey,
+          cardEffects[key].registerAlternateBuyOptions(),
+        );
       }
     });
     console.log('[expansion loader] base supply card effects loaded');
@@ -269,16 +276,16 @@ export const loadExpansion = async (expansion: { name: string }) => {
   }
 
   console.info(`[expansion loader] attempting to load events for ${expansionName}`);
-  await loadEvents(expansionName);
+  await loadEvents(expansionName, expansionEffectRegistryService);
   console.log(`[expansion loader] finished loading events for ${expansionName}`);
 
   // Landmarks are loaded after events to mirror landscape loading order.
   console.info(`[expansion loader] attempting to load landmarks for ${expansionName}`);
-  await loadLandmarks(expansionName);
+  await loadLandmarks(expansionName, expansionEffectRegistryService);
   console.log(`[expansion loader] finished loading landmarks for ${expansionName}`);
 
   // Projects are loaded after landmarks to mirror landscape loading order.
   console.info(`[expansion loader] attempting to load projects for ${expansionName}`);
-  await loadProjects(expansionName);
+  await loadProjects(expansionName, expansionEffectRegistryService);
   console.log(`[expansion loader] finished loading projects for ${expansionName}`);
 };

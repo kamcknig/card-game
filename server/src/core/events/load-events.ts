@@ -1,10 +1,10 @@
 import { expansionLibrary } from '@expansions/expansion-library.ts';
 import { createCardLike } from '../../utils/create-card-data.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
-import { EventNoId } from 'shared/types/index.ts';
-import { eventEffectFactoryMap } from './event-effect-factory-map.ts';
+import { CardKey, EventNoId } from 'shared/types/index.ts';
+import { ExpansionEffectRegistryService } from '../expansion-effect-registry-service.ts';
 
-export const loadEvents = async (expansionName: string) => {
+export const loadEvents = async (expansionName: string, expansionEffectRegistryService: ExpansionEffectRegistryService) => {
   const expansionEvents = (expansionLibrary[expansionName].events ??= {});
 
   try {
@@ -33,13 +33,13 @@ export const loadEvents = async (expansionName: string) => {
     const events = eventModule.default as CardExpansionModule;
 
     for (const cardKey of Object.keys(events)) {
-      if (eventEffectFactoryMap[cardKey]) {
-        console.warn(`[load-events] card key ${cardKey} already exists in cardEffectFunctionMapFactory, overwriting`);
+      if (expansionEffectRegistryService.hasEventEffectFactory(cardKey as CardKey)) {
+        console.warn(`[load-events] card key ${cardKey} already exists in event registry, overwriting`);
       }
 
       if (events[cardKey].registerEffects) {
         console.info(`[load-events] registering event effects for ${cardKey}`);
-        eventEffectFactoryMap[cardKey] = events[cardKey].registerEffects;
+        expansionEffectRegistryService.registerEventEffectFactory(cardKey as CardKey, events[cardKey].registerEffects);
       }
     }
   } catch (error) {

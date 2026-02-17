@@ -3,8 +3,7 @@ import { CardAlternateBuyOption, FindCardService } from '@server-types/index.ts'
 import { MatchCardLibrary } from '../match-card-library.ts';
 import { CardPriceRulesController } from '../card-price-rules-controller.ts';
 import { CardSourceController } from '../card-source-controller.ts';
-import { cardActionConditionMapFactory } from './card-action-condition-map-factory.ts';
-import { cardAlternateBuyOptionMapFactory } from './card-alternate-buy-option-map-factory.ts';
+import { ExpansionEffectRegistryService } from '../expansion-effect-registry-service.ts';
 
 // Normalized buy option result used by interactivity and buy execution.
 export type ResolvedBuyOption = {
@@ -41,6 +40,7 @@ export class BuyOptionsResolver {
     private readonly cardPriceController: CardPriceRulesController,
     private readonly cardSourceController: CardSourceController,
     private readonly findCardService: FindCardService,
+    private readonly expansionEffectRegistryService: ExpansionEffectRegistryService,
   ) {}
 
   // Resolves all currently legal ways the player can buy the card.
@@ -55,7 +55,7 @@ export class BuyOptionsResolver {
     });
 
     // Respect card-level canBuy gates before considering any payment method.
-    const canBuyCondition = cardActionConditionMapFactory[card.cardKey]?.canBuy;
+    const canBuyCondition = this.expansionEffectRegistryService.getCardActionConditions(card.cardKey)?.canBuy;
     if (
       canBuyCondition && !canBuyCondition({
         match: this.match,
@@ -83,7 +83,7 @@ export class BuyOptionsResolver {
     }
 
     // Alternate options are card-specific and can add additional legal buy paths.
-    const alternateOptions = cardAlternateBuyOptionMapFactory[card.cardKey] ?? [];
+    const alternateOptions = this.expansionEffectRegistryService.getCardAlternateBuyOptions(card.cardKey);
     for (const option of alternateOptions) {
       if (
         !option.canBuy({

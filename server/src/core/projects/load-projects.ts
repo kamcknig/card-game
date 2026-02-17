@@ -1,10 +1,13 @@
 import { expansionLibrary } from '@expansions/expansion-library.ts';
 import { createCardLike } from '../../utils/create-card-data.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
-import { ProjectNoId } from 'shared/types/index.ts';
-import { projectEffectFactoryMap } from './project-effect-factory-map.ts';
+import { CardKey, ProjectNoId } from 'shared/types/index.ts';
+import { ExpansionEffectRegistryService } from '../expansion-effect-registry-service.ts';
 
-export const loadProjects = async (expansionName: string) => {
+export const loadProjects = async (
+  expansionName: string,
+  expansionEffectRegistryService: ExpansionEffectRegistryService,
+) => {
   const expansionProjects = (expansionLibrary[expansionName].projects ??= {});
 
   try {
@@ -41,9 +44,9 @@ export const loadProjects = async (expansionName: string) => {
     const projects = projectModule.default as CardExpansionModule;
 
     for (const cardKey of Object.keys(projects)) {
-      if (projectEffectFactoryMap[cardKey]) {
+      if (expansionEffectRegistryService.hasProjectEffectFactory(cardKey as CardKey)) {
         console.warn(
-          `[load-projects] project key ${cardKey} already exists in projectEffectFactoryMap, overwriting`,
+          `[load-projects] project key ${cardKey} already exists in project registry, overwriting`,
         );
       }
 
@@ -51,7 +54,7 @@ export const loadProjects = async (expansionName: string) => {
         console.info(
           `[load-projects] registering project effects for ${cardKey}`,
         );
-        projectEffectFactoryMap[cardKey] = projects[cardKey].registerEffects;
+        expansionEffectRegistryService.registerProjectEffectFactory(cardKey as CardKey, projects[cardKey].registerEffects);
       }
     }
   } catch (error) {

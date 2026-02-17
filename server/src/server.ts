@@ -17,6 +17,7 @@ import { MatchConfiguratorFactory } from './core/match-configurator-factory.ts';
 import { MatchRuntimeFactory } from './core/match-runtime-factory.ts';
 import { MatchSocketBindings } from './core/match-socket-bindings.ts';
 import { ServerStartupService } from './core/server-startup-service.ts';
+import { ExpansionEffectRegistryService } from './core/expansion-effect-registry-service.ts';
 import { asClass, asValue, createContainer, InjectionMode } from 'awilix';
 
 // Default to disabling file logs unless explicitly enabled.
@@ -61,6 +62,7 @@ container.register({
   matchConfiguratorFactory: asClass(MatchConfiguratorFactory).singleton(),
   expansionSearchService: asClass(ExpansionSearchService).singleton(),
   expansionCompatibilityService: asClass(ExpansionCompatibilityService).singleton(),
+  expansionEffectRegistryService: asClass(ExpansionEffectRegistryService).singleton(),
   matchRuntimeFactory: asClass(MatchRuntimeFactory).singleton(),
   matchSocketBindings: asClass(MatchSocketBindings).singleton(),
   configStore: asClass(FileGameConfigurationStore).singleton(),
