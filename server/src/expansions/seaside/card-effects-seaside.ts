@@ -1025,7 +1025,7 @@ const expansion: CardExpansionModule = {
             restrict: args.cardSourceController.getSource('playerHand', args.playerId),
             count: 2,
             playerId: args.playerId,
-          }) as number[];
+          });
 
           for (const selectedCardId of selectedCards) {
             await triggerArgs.actionService.run('discardCard', {
@@ -1325,7 +1325,7 @@ const expansion: CardExpansionModule = {
         playerId,
         restrict: effectArgs.cardSourceController.getSource('playerHand', playerId),
         count: 3,
-      })) as number[];
+      }));
 
       console.debug(`[warehouse effect] discarding cards...`);
 

@@ -29,6 +29,15 @@ export class PromptService implements PromptServiceContract {
     return action === confirmAction;
   }
 
+  // Returns submitted numeric input when the confirm action is selected; otherwise returns null.
+  public async requestNumberInput(args: UserPromptActionArgs, confirmAction = 1): Promise<number | null> {
+    const result = await this.requestActionResult<number>(args);
+    if (!result || result.action !== confirmAction) {
+      return null;
+    }
+    return typeof result.result === 'number' ? result.result : null;
+  }
+
   // Returns selected card ids from a prompt-result payload; returns an empty array when no selection result exists.
   public async selectCardsFromPrompt(args: UserPromptActionArgs): Promise<CardId[]> {
     const result = await this.requestActionResult<CardId[]>(args);

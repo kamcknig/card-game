@@ -79,7 +79,7 @@ export const configureMountainPass = (
         `[mountain pass bidding] prompting player ${bidderId} with min bid ${minBid}D`,
       );
 
-      const promptResult = await args.actionService.run('userPrompt', {
+      const bidValue = await args.promptService.requestNumberInput({
         playerId: bidderId,
         prompt: `Mountain Pass bid? Current high bid: ${highBid}D`,
         // Use a numeric input prompt instead of enumerating every bid option.
@@ -94,10 +94,10 @@ export const configureMountainPass = (
           cancelText: 'PASS',
         },
         validationAction: 1,
-      }) as { action?: number; result?: number } | null;
+      });
 
       // Treat non-submit actions as a pass.
-      if (promptResult?.action !== 1) {
+      if (bidValue === null) {
         console.info(
           `[mountain pass bidding] player ${bidderId} passes`,
         );
@@ -105,8 +105,7 @@ export const configureMountainPass = (
       }
 
       // Validate the submitted bid value against the current min/max.
-      const bidValue = promptResult?.result;
-      if (typeof bidValue !== 'number' || bidValue < minBid) {
+      if (bidValue < minBid) {
         console.warn(
           `[mountain pass bidding] player ${bidderId} submitted invalid bid ${bidValue}, treating as pass`,
         );

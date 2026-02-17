@@ -316,7 +316,7 @@ const expansionModule: CardExpansionModule = {
               playerId,
               restrict: args.cardSourceController.getSource('playerHand', playerId),
               count: 3,
-            }) as number[];
+            });
 
             for (const cardId of cardIds) {
               await actionService.run('discardCard', {
@@ -624,7 +624,7 @@ const expansionModule: CardExpansionModule = {
         playerId,
         restrict: hand,
         count: Math.min(2, hand.length),
-      }) as number[];
+      });
 
       for (const cardId of results) {
         console.debug(`[MILL EFFECT] discarding ${cardLibrary.getCard(cardId)}...`);
@@ -1144,7 +1144,7 @@ const expansionModule: CardExpansionModule = {
             playerId,
             restrict: hand,
             count,
-          }) as number[];
+          });
 
           for (const cardId of cardIds) {
             console.debug(`[STEWARD EFFECT] trashing ${cardLibrary.getCard(cardId)}...`);
@@ -1285,7 +1285,7 @@ const expansionModule: CardExpansionModule = {
             playerId: target,
             restrict: hand,
             count: Math.min(2, hand.length),
-          }) as number[];
+          });
 
           for (const cardId of cardIds) {
             console.debug(`[TORTURER EFFECT] ${player} discarding ${cardLibrary.getCard(cardId)}...`);
@@ -1336,7 +1336,7 @@ const expansionModule: CardExpansionModule = {
         playerId,
         restrict: hand,
         count,
-      }) as number[];
+      });
 
       for (const cardId of cardIds) {
         console.debug(`[TRADING POST EFFECT] trashing card ${cardLibrary.getCard(cardId)}`);
