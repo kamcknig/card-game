@@ -335,6 +335,7 @@ export interface AppContext {
   reactionContext?: ReactionContext;
   cardLibrary: MatchCardLibrary;
   findCardService: FindCardService;
+  supplyGainService: SupplyGainService;
 }
 
 export type FindCardsFn = (filters: FindCardsFnInput) => Card[];
@@ -346,6 +347,16 @@ export type FindCardService = {
     pileKey: CardKey;
     from?: ('basicSupply' | 'kingdomSupply') | ('basicSupply' | 'kingdomSupply')[];
   }) => Card | undefined;
+};
+
+export type SupplyGainService = {
+  gainTopSupplyCardForPileKey: (args: {
+    playerId: PlayerId;
+    pileKey: CardKey;
+    to: CardLocationSpec;
+    from?: ('basicSupply' | 'kingdomSupply') | ('basicSupply' | 'kingdomSupply')[];
+    logTag?: string;
+  }) => Promise<CardId | undefined>;
 };
 
 export function isSourceFindCardsFilter(filter: unknown): filter is SourceFindCardsFilter {

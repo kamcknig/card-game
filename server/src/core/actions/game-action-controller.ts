@@ -41,6 +41,7 @@ import {
   ReactionTemplate,
   ReactionTrigger,
   RunGameActionDelegate,
+  SupplyGainService,
   TriggerEventType,
 } from '@server-types/index.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
@@ -84,6 +85,7 @@ export interface GameActionControllerDependencies {
   runGameActionDelegate: RunGameActionDelegate;
   interactivityController: CardInteractivityController;
   buyOptionsResolver: BuyOptionsResolver;
+  supplyGainService: SupplyGainService;
 }
 
 export class GameActionController implements GameActionDefinitionMap {
@@ -109,6 +111,7 @@ export class GameActionController implements GameActionDefinitionMap {
   private runGameActionDelegate: RunGameActionDelegate;
   private readonly interactivityController: CardInteractivityController;
   private readonly buyOptionsResolver: BuyOptionsResolver;
+  private readonly _supplyGainService: SupplyGainService;
 
   constructor({
     cardSourceController,
@@ -129,6 +132,7 @@ export class GameActionController implements GameActionDefinitionMap {
     runGameActionDelegate,
     interactivityController,
     buyOptionsResolver,
+    supplyGainService,
   }: GameActionControllerDependencies) {
     this._cardSourceController = cardSourceController;
     this._findCardService = findCardService;
@@ -148,6 +152,7 @@ export class GameActionController implements GameActionDefinitionMap {
     this.runGameActionDelegate = runGameActionDelegate;
     this.interactivityController = interactivityController;
     this.buyOptionsResolver = buyOptionsResolver;
+    this._supplyGainService = supplyGainService;
   }
 
   public registerCardEffect(cardKey: CardKey, tag: string, fn: CardEffectFn) {
@@ -1572,6 +1577,7 @@ export class GameActionController implements GameActionDefinitionMap {
         cardLibrary: this.cardLibrary,
         reactionContext: {},
         findCardService: this._findCardService,
+        supplyGainService: this._supplyGainService,
       } as CardEffectFunctionContext;
 
       // Centralized duration registration with automatic cleanup on leave-play.
@@ -1687,6 +1693,7 @@ export class GameActionController implements GameActionDefinitionMap {
         cardLibrary: this.cardLibrary,
         reactionContext: {},
         findCardService: this._findCardService,
+        supplyGainService: this._supplyGainService,
       } as CardEffectFunctionContext;
 
       // Centralized duration registration with automatic cleanup on leave-play.
@@ -1803,6 +1810,7 @@ export class GameActionController implements GameActionDefinitionMap {
           cardLibrary: this.cardLibrary,
           reactionContext: {},
           findCardService: this._findCardService,
+          supplyGainService: this._supplyGainService,
         } as CardEffectFunctionContext;
 
         // Centralized duration registration with automatic cleanup on leave-play.
@@ -1953,6 +1961,7 @@ export class GameActionController implements GameActionDefinitionMap {
         cardLibrary: this.cardLibrary,
         reactionContext: {},
         findCardService: this._findCardService,
+        supplyGainService: this._supplyGainService,
       } as CardEffectFunctionContext;
 
       // Centralized duration registration with automatic cleanup on leave-play.
@@ -2036,6 +2045,7 @@ export class GameActionController implements GameActionDefinitionMap {
       cardLibrary: this.cardLibrary,
       reactionContext: {},
       findCardService: this._findCardService,
+        supplyGainService: this._supplyGainService,
     } as CardEffectFunctionContext;
 
     // Centralized duration registration with automatic cleanup on leave-play.
@@ -2136,6 +2146,7 @@ export class GameActionController implements GameActionDefinitionMap {
       cardLibrary: this.cardLibrary,
       reactionContext: {},
       findCardService: this._findCardService,
+        supplyGainService: this._supplyGainService,
     } as CardEffectFunctionContext;
 
     // Centralized duration registration with automatic cleanup on leave-play.
@@ -2836,6 +2847,7 @@ export class GameActionController implements GameActionDefinitionMap {
         cardLibrary: this.cardLibrary,
         reactionContext,
         findCardService: this._findCardService,
+        supplyGainService: this._supplyGainService,
       } as CardEffectFunctionContext;
 
       // Centralized duration registration with automatic cleanup on leave-play.

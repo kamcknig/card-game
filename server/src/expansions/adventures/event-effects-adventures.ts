@@ -7,7 +7,6 @@ import { adventuresTokenIds } from './token-ids-adventures.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
-import { gainTopSupplyCardForPileKey } from '../../utils/gain-top-supply-card-by-key.ts';
 import { findEventInMatch } from '@shared/find-card-like-in-match.ts';
 
 const effectMap: CardExpansionModule = {
@@ -671,7 +670,7 @@ const effectMap: CardExpansionModule = {
         const selectedCard = cardEffectArgs.cardLibrary.getCard(
           selectedCardId,
         );
-        await gainTopSupplyCardForPileKey(cardEffectArgs, {
+        await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
           playerId: cardEffectArgs.playerId,
           pileKey: getCardPileKey(selectedCard),
           to: { location: 'playerDiscard' },
@@ -936,7 +935,7 @@ const effectMap: CardExpansionModule = {
       }
 
       if (gainGold) {
-        await gainTopSupplyCardForPileKey(cardEffectArgs, {
+        await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
           playerId: cardEffectArgs.playerId,
           pileKey: 'gold',
           to: { location: 'playerDiscard' },
@@ -961,7 +960,7 @@ const effectMap: CardExpansionModule = {
         const gainCount = silversInPlay.length;
         console.debug(`[raid effect] gaining up to ${gainCount} silvers`);
         for (let i = 0; i < gainCount; i++) {
-          const gainedSilverCardId = await gainTopSupplyCardForPileKey(cardEffectArgs, {
+          const gainedSilverCardId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
             playerId: cardEffectArgs.playerId,
             pileKey: 'silver',
             to: { location: 'playerDiscard' },
@@ -1311,7 +1310,7 @@ const effectMap: CardExpansionModule = {
       );
 
       for (let i = 0; i < selectedCardIds.length; i++) {
-        const gainedSilverCardId = await gainTopSupplyCardForPileKey(cardEffectArgs, {
+        const gainedSilverCardId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
           playerId: cardEffectArgs.playerId,
           pileKey: 'silver',
           to: { location: 'playerDiscard' },

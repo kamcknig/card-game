@@ -13,6 +13,7 @@ import {
   ReactionTemplateOptions,
   ReactionTrigger,
   RunGameActionDelegate,
+  SupplyGainService,
   TriggeredEffectContext,
   TriggerEventType,
 } from '@server-types/index.ts';
@@ -30,6 +31,7 @@ import { CardSourceController } from '../card-source-controller.ts';
 export interface ReactionManagerDependencies {
   cardSourceController: CardSourceController;
   findCardService: FindCardService;
+  supplyGainService: SupplyGainService;
   cardPriceController: CardPriceRulesController;
   logManager: LogManager;
   match: Match;
@@ -48,6 +50,7 @@ export class ReactionManager {
 
   private readonly _cardSourceController: CardSourceController;
   private readonly _findCardService: FindCardService;
+  private readonly _supplyGainService: SupplyGainService;
   private readonly cardPriceController: CardPriceRulesController;
   private readonly logManager: LogManager;
   private readonly _match: Match;
@@ -57,6 +60,7 @@ export class ReactionManager {
   constructor({
     cardSourceController,
     findCardService,
+    supplyGainService,
     cardPriceController,
     logManager,
     match,
@@ -65,6 +69,7 @@ export class ReactionManager {
   }: ReactionManagerDependencies) {
     this._cardSourceController = cardSourceController;
     this._findCardService = findCardService;
+    this._supplyGainService = supplyGainService;
     this.cardPriceController = cardPriceController;
     this.logManager = logManager;
     this._match = match;
@@ -118,6 +123,7 @@ export class ReactionManager {
           reactionManager: this,
           runGameActionDelegate: this.runGameActionDelegate,
           findCardService: this._findCardService,
+          supplyGainService: this._supplyGainService,
           match: this._match,
           cardLibrary: this._cardLibrary,
           trigger,
@@ -230,6 +236,7 @@ export class ReactionManager {
       await handler({
         cardSourceController: this._cardSourceController,
         findCardService: this._findCardService,
+        supplyGainService: this._supplyGainService,
         cardPriceController: this.cardPriceController,
         logManager: this.logManager,
         cardLibrary: this._cardLibrary,
@@ -259,6 +266,7 @@ export class ReactionManager {
       match: this._match,
       reactionManager: this,
       findCardService: this._findCardService,
+      supplyGainService: this._supplyGainService,
     }, args as any);
   }
 
@@ -313,7 +321,7 @@ export class ReactionManager {
           for (const systemReaction of systemReactions) {
             console.info(`[REACTION MANAGER] running system reaction ${systemReaction.id} for ${targetPlayer}`);
             const systemContext = this.buildTriggeredEffectContext(trigger, systemReaction);
-            await this.runReaction(systemReaction, trigger, targetPlayer, systemContext, reactionContext);
+            await this.runReaction(systemReaction, systemContext, reactionContext);
           }
 
           continue;
@@ -366,8 +374,6 @@ export class ReactionManager {
         );
         await this.runReaction(
           selectedReaction,
-          trigger,
-          targetPlayer,
           reactionContextObject,
           reactionContext,
         );
@@ -392,8 +398,6 @@ export class ReactionManager {
         );
         await this.runReaction(
           autoReaction,
-          trigger,
-          targetPlayer,
           autoReactionContext,
           reactionContext,
         );
@@ -403,8 +407,6 @@ export class ReactionManager {
 
   private async runReaction<T extends TriggerEventType>(
     reaction: Reaction,
-    trigger: ReactionTrigger<T>,
-    targetPlayer: Player,
     context: TriggeredEffectContext<T>,
     reactionContext?: any,
   ) {
@@ -429,6 +431,7 @@ export class ReactionManager {
     return {
       cardSourceController: this._cardSourceController,
       findCardService: this._findCardService,
+      supplyGainService: this._supplyGainService,
       reactionManager: this,
       cardPriceController: this.cardPriceController,
       logManager: this.logManager,

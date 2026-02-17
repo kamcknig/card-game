@@ -25,6 +25,7 @@ import {
   AppSocket,
   EndGameConditionFn,
   FindCardService,
+  SupplyGainService,
   GameActionDefinitionMap,
   GameActionReturnTypeMap,
   GameActions,
@@ -84,6 +85,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     getCardsInPlay: () => [],
     getRemainingSupplyCount: () => 0,
     findTopSupplyCardForPileKey: () => undefined,
+  };
+  private _supplyGainService: SupplyGainService = {
+    gainTopSupplyCardForPileKey: async () => undefined,
   };
   private readonly _cardSourceController: CardSourceController;
   // Tracks nested runGameAction calls to avoid corrupting patch snapshots.
@@ -278,6 +282,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this._logManager = runtime.logManager;
     this._cardPriceController = runtime.cardPriceController;
     this._findCardService = runtime.findCardService;
+    this._supplyGainService = runtime.supplyGainService;
     this._reactionManager = runtime.reactionManager;
     this._interactivityController = runtime.interactivityController;
     this.gameActionsController = runtime.gameActionsController;
@@ -846,6 +851,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
             cardPriceController: this._cardPriceController!,
             logManager: this._logManager!,
             findCardService: this._findCardService,
+            supplyGainService: this._supplyGainService,
             reactionManager: this._reactionManager!,
             match: this._match,
             cardLibrary: this._cardLibrary,
@@ -955,6 +961,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           logManager: this._logManager!,
           reactionManager: this._reactionManager!,
           findCardService: this._findCardService,
+          supplyGainService: this._supplyGainService,
         });
         if (shouldEnd) {
           console.info('[match] expansion end-game condition met');

@@ -2,7 +2,6 @@ import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
-import { gainTopSupplyCardForPileKey } from '../../utils/gain-top-supply-card-by-key.ts';
 import { AppContext, CardEffectFunctionContext, CardExpansionModule } from '@server-types/index.ts';
 import { Card, CardCost, CardId, CardKey, PlayerId } from 'shared/types/index.ts';
 import { findEventInMatch } from '@shared/find-card-like-in-match.ts';
@@ -102,7 +101,7 @@ const effectMap: CardExpansionModule = {
       const gainOrder: CardKey[] = ['province', 'duchy', 'estate', 'gold', 'silver', 'copper'];
 
       for (const gainPileKey of gainOrder) {
-        await gainTopSupplyCardForPileKey(cardEffectArgs, {
+        await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
           playerId: cardEffectArgs.playerId,
           pileKey: gainPileKey,
           to: { location: 'playerDiscard' },
@@ -432,7 +431,7 @@ const effectMap: CardExpansionModule = {
   'enclave': {
     registerEffects: () => async (cardEffectArgs) => {
       // Enclave gains a Gold and Exiles a Duchy from the Supply.
-      await gainTopSupplyCardForPileKey(cardEffectArgs, {
+      await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
         playerId: cardEffectArgs.playerId,
         pileKey: 'gold',
         to: { location: 'playerDiscard' },

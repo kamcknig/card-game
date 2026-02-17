@@ -4,7 +4,6 @@ import { isLocationInPlay } from '../../utils/is-in-play.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { findArtifactInMatch } from '@shared/find-card-like-in-match.ts';
 import { renaissanceArtifactKeys } from './artifact-keys-renaissance.ts';
-import { gainTopSupplyCardForPileKey } from '../../utils/gain-top-supply-card-by-key.ts';
 
 // Registers Renaissance artifact effects.
 export const registerArtifactEffects = (registerArtifactEffect: ArtifactEffectRegistrar) => {
@@ -221,8 +220,8 @@ const registerTreasureChest = (registerArtifactEffect: ArtifactEffectRegistrar) 
         const ownedArtifacts = conditionArgs.match.artifacts?.byPlayer?.[playerId] ?? [];
         return ownedArtifacts.includes(cardId);
       },
-      triggeredEffectFn: async ({ logManager, runGameActionDelegate, match: triggeredMatch }) => {
-        const gainedGoldId = await gainTopSupplyCardForPileKey({ findCardService, runGameActionDelegate }, {
+      triggeredEffectFn: async ({ logManager, supplyGainService, match: triggeredMatch }) => {
+        const gainedGoldId = await supplyGainService.gainTopSupplyCardForPileKey({
           playerId,
           pileKey: 'gold',
           from: 'basicSupply',

@@ -16,7 +16,6 @@ import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
-import { gainTopSupplyCardForPileKey } from '../../utils/gain-top-supply-card-by-key.ts';
 
 const addTravellerEffect = async (
   card: Card,
@@ -164,7 +163,7 @@ const expansion: CardExpansionModule = {
             });
           }
         } else {
-          const gainedSilverId = await gainTopSupplyCardForPileKey(cardEffectArgs, {
+          const gainedSilverId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
             playerId: cardEffectArgs.playerId,
             pileKey: 'silver',
             from: 'basicSupply',
@@ -1515,7 +1514,7 @@ const expansion: CardExpansionModule = {
           `[magpie effect] action or victory revealed, gaining magpie`,
         );
 
-        const gainedMagpieId = await gainTopSupplyCardForPileKey(cardEffectArgs, {
+        const gainedMagpieId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
           playerId: cardEffectArgs.playerId,
           pileKey: 'magpie',
           from: 'kingdomSupply',
@@ -2639,7 +2638,7 @@ const expansion: CardExpansionModule = {
       console.debug(`[treasure-trove effect] gaining 2 treasure`);
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
 
-      const gainedGoldId = await gainTopSupplyCardForPileKey(cardEffectArgs, {
+      const gainedGoldId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
         playerId: cardEffectArgs.playerId,
         pileKey: 'gold',
         from: 'basicSupply',
@@ -2652,7 +2651,7 @@ const expansion: CardExpansionModule = {
         console.debug(`[treasure-trove effect] gaining gold ${gainedGoldId}`);
       }
 
-      const gainedCopperId = await gainTopSupplyCardForPileKey(cardEffectArgs, {
+      const gainedCopperId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
         playerId: cardEffectArgs.playerId,
         pileKey: 'copper',
         from: 'basicSupply',

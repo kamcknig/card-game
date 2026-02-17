@@ -7,7 +7,6 @@ import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
-import { gainTopSupplyCardForPileKey } from '../../utils/gain-top-supply-card-by-key.ts';
 
 const expansion: CardExpansionModule = {
   'animal-fair': {
@@ -220,7 +219,7 @@ const expansion: CardExpansionModule = {
 
       console.debug(`[black-cat effect] curse targets ${targetPlayerIds.join(', ')}`);
       for (const targetPlayerId of targetPlayerIds) {
-        const gainedCurseId = await gainTopSupplyCardForPileKey(cardEffectArgs, {
+        const gainedCurseId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
           playerId: targetPlayerId,
           pileKey: 'curse',
           from: 'basicSupply',
@@ -952,7 +951,7 @@ const expansion: CardExpansionModule = {
       }
 
       if (selectedCard.type.includes('TREASURE')) {
-        const gainedSilverId = await gainTopSupplyCardForPileKey(cardEffectArgs, {
+        const gainedSilverId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
           playerId: cardEffectArgs.playerId,
           pileKey: 'silver',
           from: 'basicSupply',
@@ -1545,7 +1544,7 @@ const expansion: CardExpansionModule = {
         }
 
         if (bonusId === 'silver') {
-          const gainedSilverId = await gainTopSupplyCardForPileKey(cardEffectArgs, {
+          const gainedSilverId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
             playerId: cardEffectArgs.playerId,
             pileKey: 'silver',
             from: 'basicSupply',
@@ -1993,7 +1992,7 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      await gainTopSupplyCardForPileKey(cardEffectArgs, {
+      await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
         playerId: cardEffectArgs.playerId,
         pileKey: 'silver',
         from: 'basicSupply',

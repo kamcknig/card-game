@@ -6,7 +6,6 @@ import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { renaissanceArtifactKeys } from './artifact-keys-renaissance.ts';
-import { gainTopSupplyCardForPileKey } from '../../utils/gain-top-supply-card-by-key.ts';
 
 // Renaissance card effects module (artifacts handled separately).
 const expansion: CardExpansionModule = {
@@ -554,7 +553,7 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const gainedCurseId = await gainTopSupplyCardForPileKey(cardEffectArgs, {
+      const gainedCurseId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
         playerId: cardEffectArgs.playerId,
         pileKey: 'curse',
         from: 'basicSupply',
@@ -763,7 +762,7 @@ const expansion: CardExpansionModule = {
 
       for (const targetPlayerId of targetPlayerIds) {
         // Gain a Curse if available.
-        const gainedCurseId = await gainTopSupplyCardForPileKey(cardEffectArgs, {
+        const gainedCurseId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
           playerId: targetPlayerId,
           pileKey: 'curse',
           from: 'basicSupply',

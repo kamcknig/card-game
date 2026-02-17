@@ -1,7 +1,6 @@
 import { BoonEffectRegistrar } from '@server-types/index.ts';
 import { CardId } from 'shared/types/index.ts';
 import { findBoonInMatch } from '@shared/find-card-like-in-match.ts';
-import { gainTopSupplyCardForPileKey } from '../../utils/gain-top-supply-card-by-key.ts';
 
 // Registers all Nocturne boon effects for the current match.
 export const registerNocturneBoonEffects = (registerBoonEffect: BoonEffectRegistrar) => {
@@ -270,10 +269,9 @@ const registerMoonsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 const registerMountainsGift = (registerBoonEffect: BoonEffectRegistrar) => {
   registerBoonEffect('the-mountains-gift', async ({
     playerId,
-    runGameActionDelegate,
-    findCardService,
+    supplyGainService,
   }) => {
-    const gainedSilverId = await gainTopSupplyCardForPileKey({ runGameActionDelegate, findCardService }, {
+    const gainedSilverId = await supplyGainService.gainTopSupplyCardForPileKey({
       playerId: playerId,
       pileKey: 'silver',
       from: 'basicSupply',
@@ -348,7 +346,7 @@ const registerSkysGift = (registerBoonEffect: BoonEffectRegistrar) => {
     playerId,
     runGameActionDelegate,
     cardLibrary,
-    findCardService,
+    supplyGainService,
     cardSourceController,
   }) => {
     const confirm = await runGameActionDelegate('userPrompt', {
@@ -386,7 +384,7 @@ const registerSkysGift = (registerBoonEffect: BoonEffectRegistrar) => {
       return;
     }
 
-    const gainedGoldId = await gainTopSupplyCardForPileKey({ runGameActionDelegate, findCardService }, {
+    const gainedGoldId = await supplyGainService.gainTopSupplyCardForPileKey({
       playerId: playerId,
       pileKey: 'gold',
       from: 'basicSupply',
