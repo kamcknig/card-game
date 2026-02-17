@@ -489,7 +489,7 @@ const expansionModule: CardExpansionModule = {
       } else {
         console.debug(`[LURKER EFFECT] prompting user to select action card to gain...`);
 
-        const chooseCardResult = await actionService.run('userPrompt', {
+        const selectedCardId = await args.promptService.selectSingleCardFromPrompt({
           prompt: 'Choose card to gain',
           playerId,
           content: {
@@ -497,9 +497,12 @@ const expansionModule: CardExpansionModule = {
             selectCount: 1,
             cardIds: actionCardIds.map((card) => card.id),
           },
-        }) as { result: number[] };
+        });
 
-        cardId = chooseCardResult.result[0];
+        if (!selectedCardId) {
+          return;
+        }
+        cardId = selectedCardId;
       }
 
       console.debug(`[LURKER EFFECT] gaining ${cardLibrary.getCard(cardId)}...`);

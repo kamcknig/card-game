@@ -362,8 +362,9 @@ export type PromptService = {
   requestAction(args: UserPromptActionArgs): Promise<number | null>;
   chooseOne(args: UserPromptActionArgs): Promise<number | null>;
   confirm(args: UserPromptActionArgs, confirmAction?: number): Promise<boolean>;
-  selectCards(args: UserPromptActionArgs): Promise<CardId[]>;
-  selectSingleCard(args: SelectSingleActionCardArgs): Promise<CardId | null>;
+  selectCardsFromPrompt(args: UserPromptActionArgs): Promise<CardId[]>;
+  selectSingleCardFromPrompt(args: UserPromptActionArgs): Promise<CardId | null>;
+  selectSingleCardFromAction(args: SelectSingleActionCardArgs): Promise<CardId | null>;
   requestActionResult<TResult = unknown>(
     args: UserPromptActionArgs,
   ): Promise<{ action: number; result: TResult | undefined } | null>;

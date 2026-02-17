@@ -505,7 +505,7 @@ const expansion: CardExpansionModule = {
         if (cardIds.length === 1) {
           selectedId = cardIds[0];
         } else {
-          const selectedIds = await actionService.run('userPrompt', {
+          const selectedIdFromPrompt = await args.promptService.selectSingleCardFromPrompt({
             playerId,
             prompt: prompts[i],
             content: {
@@ -513,9 +513,9 @@ const expansion: CardExpansionModule = {
               cardIds,
               selectCount: 1,
             },
-          }) as { result: number[] };
+          });
 
-          selectedId = selectedIds.result[0];
+          selectedId = selectedIdFromPrompt ?? undefined;
         }
 
         cardIds.splice(cardIds.findIndex((id) => id === selectedId), 1);

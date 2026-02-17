@@ -1218,11 +1218,11 @@ export class GameActionController implements GameActionDefinitionMap {
 
   // Wraps selectCard for single-card flows and returns null when no selection was made.
   async selectSingleCard(args: SelectSingleActionCardArgs): Promise<CardId | null> {
-    const selectedCardIds = await this.actionService.run('selectCard', {
+    const selectedCardIdList = await this.actionService.run('selectCard', {
       ...args,
       count: 1,
     });
-    return selectedCardIds[0] ?? null;
+    return selectedCardIdList[0] ?? null;
   }
 
   async trashCard(args: { cardId: CardId | Card; playerId: PlayerId }, context?: GameActionContext) {

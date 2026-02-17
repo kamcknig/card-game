@@ -29,14 +29,20 @@ export class PromptService implements PromptServiceContract {
     return action === confirmAction;
   }
 
-  // Returns selected card ids from prompt result payloads; returns an empty array when no selection result exists.
-  public async selectCards(args: UserPromptActionArgs): Promise<CardId[]> {
+  // Returns selected card ids from a prompt-result payload; returns an empty array when no selection result exists.
+  public async selectCardsFromPrompt(args: UserPromptActionArgs): Promise<CardId[]> {
     const result = await this.requestActionResult<CardId[]>(args);
     return result?.result ?? [];
   }
 
-  // Requests a single card selection and returns null when no card was selected.
-  public async selectSingleCard(args: SelectSingleActionCardArgs): Promise<CardId | null> {
+  // Returns a single selected card id from a prompt-result payload, or null when no card was selected.
+  public async selectSingleCardFromPrompt(args: UserPromptActionArgs): Promise<CardId | null> {
+    const selectedCardIds = await this.selectCardsFromPrompt(args);
+    return selectedCardIds[0] ?? null;
+  }
+
+  // Runs the action-layer single-card selection and returns null when no card was selected.
+  public async selectSingleCardFromAction(args: SelectSingleActionCardArgs): Promise<CardId | null> {
     return await this.actionService.run('selectSingleCard', args);
   }
 
