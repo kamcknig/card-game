@@ -45,6 +45,8 @@ import { MatchEndService } from './match-end-service.ts';
 import { ExpansionCardMetadataRegistryService } from './expansion-card-metadata-registry-service.ts';
 import { TokenRegistryService } from './tokens/token-registry-service.ts';
 import { RngService } from './rng-service.ts';
+import { ServerConfigService } from './server-config-service.ts';
+import { LoggerService } from './logger-service.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardLibSnapshot = {};
@@ -94,6 +96,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     private readonly expansionCardMetadataRegistryService: ExpansionCardMetadataRegistryService,
     private readonly tokenRegistryService: TokenRegistryService,
     private readonly rngService: RngService,
+    private readonly serverConfigService: ServerConfigService,
+    private readonly loggerService: LoggerService,
   ) {
     super();
   }
@@ -225,7 +229,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this.match.config = this._matchConfiguration;
     }
 
-    console.log(`[match] ready, sending to clients and listening for when clients are ready`);
+    this.loggerService.log(`[match] ready, sending to clients and listening for when clients are ready`);
 
     this.broadcastPatch(snapshot);
 
@@ -239,7 +243,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
   // Attempts to load a match state JSON override from disk for development.
   private async tryLoadMatchStateOverride(): Promise<{ match: Match; cardLibrary: Record<CardId, Card> } | null> {
-    const matchStatePath = Deno.env.get('MATCH_STATE_PATH');
+    const matchStatePath = this.serverConfigService.getMatchStatePath();
     if (!matchStatePath) return null;
     try {
       const contents = await Deno.readTextFile(matchStatePath);
@@ -247,11 +251,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       if (!parsed?.match || !parsed?.cardLibrary) {
         throw new Error('match state file must include match and cardLibrary');
       }
-      console.info(`[match] loaded match state override from ${matchStatePath}`);
+      this.loggerService.info(`[match] loaded match state override from ${matchStatePath}`);
       return parsed;
     } catch (error) {
-      console.warn(`[match] failed to load match state override from ${matchStatePath}`);
-      console.error(error);
+      this.loggerService.warn(`[match] failed to load match state override from ${matchStatePath}`);
+      this.loggerService.error(error);
       return null;
     }
   }
@@ -324,7 +328,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
     // There should always be at least one entry after a single disconnect
     const leaving = roster.find((p) => p.id === playerId);
-    console.info(`[match] ${leaving ?? `{id:${playerId}}`} has disconnected`);
+    this.loggerService.info(`[match] ${leaving ?? `{id:${playerId}}`} has disconnected`);
 
     this.socketMap.get(playerId)?.offAnyIncoming();
     this.interactivityController.playerRemoved(this.socketMap.get(playerId));
@@ -381,7 +385,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       }
     }
     if (validationErrors.length > 0) {
-      console.warn('[match] partial match update rejected due to unknown keys', validationErrors);
+      this.loggerService.warn('[match] partial match update rejected due to unknown keys', validationErrors);
       return { ok: false, errors: validationErrors };
     }
 
@@ -477,7 +481,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       }
 
       if (await this.checkGameEnd()) {
-        console.log(`[match] game ended`);
+        this.loggerService.log(`[match] game ended`);
       }
 
       return result as Promise<GameActionReturnTypeMap[K]>;
@@ -491,7 +495,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const cardLibraryPatch = jsonPatch.compare(this._cardLibSnapshot, this.cardLibrary.getAllCards());
 
     if (patch.length || cardLibraryPatch.length) {
-      console.debug(`[match] sending match update to clients`);
+      this.loggerService.debug(`[match] sending match update to clients`);
 
       if (playerId) {
         this.socketMap.get(playerId)?.emit('patchUpdate', patch, cardLibraryPatch);
@@ -504,26 +508,26 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private onClientReady = (playerId: number) => {
     const player = this.match.config?.players.find((player) => player.id === playerId);
 
-    console.info(`[match] received clientReady event from ${player}`);
+    this.loggerService.info(`[match] received clientReady event from ${player}`);
 
     if (!player) {
-      console.error(`[match] player not found`);
+      this.loggerService.error(`[match] player not found`);
       return;
     }
 
     if (!this.match.config) {
-      console.error(`[match] no match config`);
+      this.loggerService.error(`[match] no match config`);
       return;
     }
 
     player.ready = true;
 
     if (this.match.config.players.some((p) => !p.ready)) {
-      console.debug(`[match] not all players marked ready, waiting for everyone`);
+      this.loggerService.debug(`[match] not all players marked ready, waiting for everyone`);
       return;
     }
 
-    console.log('[match] all players ready');
+    this.loggerService.log('[match] all players ready');
 
     for (const socket of this.socketMap.values()) {
       socket.off('clientReady', this.onClientReady);
@@ -533,7 +537,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   };
 
   private async startMatch() {
-    console.log(`[match] starting match`);
+    this.loggerService.log(`[match] starting match`);
 
     await this.reactionManager.runGameLifecycleEvent('onGameStart', { match: this.match });
 
@@ -576,7 +580,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
 
   private calculateScores() {
-    console.info(`[match] calculating scores`);
+    this.loggerService.info(`[match] calculating scores`);
 
     const match = this.match;
     // Victory tokens now live as token instances; precompute counts per player for scoring.
@@ -601,7 +605,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
         const customScoringFn = this.expansionCardMetadataRegistryService.getScoringFunction(card.cardKey);
         if (customScoringFn) {
-          console.debug(`[match] processing scoring function for ${card}`);
+          this.loggerService.debug(`[match] processing scoring function for ${card}`);
           score += customScoringFn({
             cardSourceController: this.cardSourceController,
             cardPriceController: this.cardPriceController,
@@ -628,7 +632,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
 
   private async checkGameEnd() {
-    console.info(`[match] checking if the game has ended`);
+    this.loggerService.info(`[match] checking if the game has ended`);
     const endGameEvaluation = this.endGameEvaluator.evaluateEndGame();
     if (!endGameEvaluation) {
       return false;
@@ -643,7 +647,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
 
   private async endGame() {
-    console.log(`[match] ending the game`);
+    this.loggerService.log(`[match] ending the game`);
 
     await this.matchEndService.endMatch({
       reactionManager: this.reactionManager,

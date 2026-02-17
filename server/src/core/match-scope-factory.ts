@@ -1,6 +1,6 @@
 import { ActionService, AppSocket, GameActionDefinitionMap, GameActionReturnTypeMap, GameActions } from '@server-types/index.ts';
 import { PlayerId } from 'shared/types/index.ts';
-import { asClass, asFunction, asValue, AwilixContainer, createContainer, InjectionMode } from 'awilix';
+import { asClass, asFunction, asValue, AwilixContainer } from 'awilix';
 import { CardSourceController } from './card-source-controller.ts';
 import { MatchCardLibrary } from './match-card-library.ts';
 import { MatchConfiguratorFactory } from './match-configurator-factory.ts';
@@ -30,6 +30,7 @@ export interface MatchScope {
 // Builds the per-match scope and resolves match-lifetime services/controllers.
 export class MatchScopeFactory {
   constructor(
+    private readonly rootContainer: AwilixContainer,
     private readonly matchRuntimeFactory: MatchRuntimeFactory,
     private readonly matchConfiguratorFactory: MatchConfiguratorFactory,
   ) {}
@@ -38,9 +39,7 @@ export class MatchScopeFactory {
     const match = createInitialMatchState();
 
     // Scope owns match-lifetime dependencies and instances.
-    const scope: AwilixContainer = createContainer({
-      injectionMode: InjectionMode.CLASSIC,
-    });
+    const scope = this.rootContainer.createScope();
 
     scope.register({
       matchScopeContainer: asValue(scope),

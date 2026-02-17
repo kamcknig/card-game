@@ -9,6 +9,7 @@ import { LogManager } from './log-manager.ts';
 import { MatchCardLibrary } from './match-card-library.ts';
 import { MatchSocketBindings } from './match-socket-bindings.ts';
 import { TokenRegistryService } from './tokens/token-registry-service.ts';
+import { LoggerService } from './logger-service.ts';
 
 // Owns reconnect-time socket hydration and gameplay socket binding behavior.
 export class PlayerReconnectOrchestrator {
@@ -22,6 +23,7 @@ export class PlayerReconnectOrchestrator {
     private readonly matchSocketBindings: MatchSocketBindings,
     private readonly actionService: ActionService,
     private readonly tokenRegistryService: TokenRegistryService,
+    private readonly loggerService: LoggerService,
   ) {}
 
   // Binds gameplay-phase socket handlers for a connected socket.
@@ -43,7 +45,7 @@ export class PlayerReconnectOrchestrator {
 
   // Rehydrates a reconnecting client and resumes turn flow when appropriate.
   public playerReconnected(playerId: PlayerId, socket: AppSocket) {
-    console.info(`[match] player ${playerId} reconnecting`);
+    this.loggerService.info(`[match] player ${playerId} reconnecting`);
     this.socketMap.set(playerId, socket);
 
     // Send current match/card state only to the reconnecting player.
@@ -62,7 +64,7 @@ export class PlayerReconnectOrchestrator {
     }
 
     socket.on('clientReady', async (_playerId: number, _ready: boolean) => {
-      console.info(`[match] ${getPlayerById(this.match, playerId)} marked ready`);
+      this.loggerService.info(`[match] ${getPlayerById(this.match, playerId)} marked ready`);
       socket.emit('matchStarted');
       socket.off('clientReady');
 
@@ -81,7 +83,7 @@ export class PlayerReconnectOrchestrator {
   }
 
   private onSearchCards(playerId: PlayerId, searchStr: string) {
-    console.debug(`[match] ${getPlayerById(this.match, playerId)} searching for cards using term '${searchStr}'`);
+    this.loggerService.debug(`[match] ${getPlayerById(this.match, playerId)} searching for cards using term '${searchStr}'`);
     this.socketMap.get(playerId)?.emit(
       'searchCardResponse',
       this.expansionSearchService.searchKingdomCards(searchStr),

@@ -6,6 +6,7 @@ import {
   MatchConfiguration,
   Supply,
 } from 'shared/types/index.ts';
+import { LoggerService } from './logger-service.ts';
 
 // Represents the persisted lobby configuration read/write contract.
 export interface GameConfigurationStore {
@@ -25,13 +26,17 @@ export interface GameConfigurationStore {
 
 // File-backed implementation used by the production server runtime.
 export class FileGameConfigurationStore implements GameConfigurationStore {
+  constructor(
+    private readonly loggerService: LoggerService,
+  ) {}
+
   // Safely reads JSON from disk and returns undefined when unavailable.
   private readJson<T>(filePath: string, logLabel: string): T | undefined {
     try {
       return JSON.parse(Deno.readTextFileSync(filePath)) as T;
     } catch (error) {
-      console.warn(`[game config store] couldn't read ${logLabel}`);
-      console.error(error);
+      this.loggerService.warn(`[game config store] couldn't read ${logLabel}`);
+      this.loggerService.error(error);
       return undefined;
     }
   }
@@ -50,7 +55,7 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
     );
     if (preselectedKingdoms) {
       if (preselectedKingdoms.length > 0) {
-        console.debug(preselectedKingdoms);
+        this.loggerService.debug(preselectedKingdoms);
       }
       defaultConfig.preselectedKingdoms = preselectedKingdoms.map((supply) => supply.cards[0]);
     }
@@ -59,7 +64,7 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
     const preselectedEvents = this.readJson<EventNoId[]>('./preselected-events.json', 'preselected-events.json');
     if (preselectedEvents) {
       if (preselectedEvents.length > 0) {
-        console.debug(preselectedEvents);
+        this.loggerService.debug(preselectedEvents);
       }
       defaultConfig.events = preselectedEvents;
     }
@@ -71,7 +76,7 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
     );
     if (preselectedLandmarks) {
       if (preselectedLandmarks.length > 0) {
-        console.debug(preselectedLandmarks);
+        this.loggerService.debug(preselectedLandmarks);
       }
       defaultConfig.landmarks = preselectedLandmarks;
     }
@@ -83,7 +88,7 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
     );
     if (preselectedArtifacts) {
       if (preselectedArtifacts.length > 0) {
-        console.debug(preselectedArtifacts);
+        this.loggerService.debug(preselectedArtifacts);
       }
       defaultConfig.artifacts = preselectedArtifacts;
     }
@@ -109,4 +114,3 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
     Deno.writeTextFileSync('./preselected-artifacts.json', JSON.stringify(artifacts));
   }
 }
-

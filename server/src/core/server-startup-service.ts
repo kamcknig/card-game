@@ -4,6 +4,7 @@ import { loadExpansion } from '../utils/load-expansion.ts';
 import { ExpansionEffectRegistryService } from './expansion-effect-registry-service.ts';
 import { ExpansionCardMetadataRegistryService } from './expansion-card-metadata-registry-service.ts';
 import { ExpansionCatalogService } from './expansion-catalog-service.ts';
+import { LoggerService } from './logger-service.ts';
 
 // Owns one-time server startup tasks so server.ts can stay focused on composition and host wiring.
 export class ServerStartupService {
@@ -12,6 +13,7 @@ export class ServerStartupService {
     private readonly expansionEffectRegistryService: ExpansionEffectRegistryService,
     private readonly expansionCardMetadataRegistryService: ExpansionCardMetadataRegistryService,
     private readonly expansionCatalogService: ExpansionCatalogService,
+    private readonly loggerService: LoggerService,
   ) {}
 
   // Loads expansion data/effects and notifies the game when each expansion is ready.
@@ -22,7 +24,7 @@ export class ServerStartupService {
       })).default as ExpansionListElement[];
 
       for (const expansion of expansionList) {
-        console.info(`[SERVER] loading expansion card data for ${expansion.title}`);
+        this.loggerService.info(`[SERVER] loading expansion card data for ${expansion.title}`);
         await loadExpansion(
           expansion,
           this.expansionEffectRegistryService,
@@ -32,8 +34,8 @@ export class ServerStartupService {
         this.game.expansionLoaded(expansion);
       }
     } catch (error) {
-      console.error('[SERVER] failed while loading expansions');
-      console.error(error);
+      this.loggerService.error('[SERVER] failed while loading expansions');
+      this.loggerService.error(error);
       this.game.dispose();
       throw error;
     }

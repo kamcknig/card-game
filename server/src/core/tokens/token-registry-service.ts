@@ -1,5 +1,6 @@
 import type { ActionService } from '@server-types/index.ts';
 import { CardId, Match, PlayerId, TokenDefinition, TokenId } from 'shared/types/index.ts';
+import { LoggerService } from '../logger-service.ts';
 
 export type TokenCardPlayedContext = {
   match: Match;
@@ -18,10 +19,14 @@ export class TokenRegistryService {
     TokenCardPlayedHandler
   >;
 
+  constructor(
+    private readonly loggerService: LoggerService,
+  ) {}
+
   // Registers a token definition by token id.
   public registerTokenDefinition(definition: TokenDefinition): void {
     if (this._tokenDefinitions[definition.id]) {
-      console.warn(`[token registry] token definition for ${definition.id} already registered, overwriting`);
+      this.loggerService.warn(`[token registry] token definition for ${definition.id} already registered, overwriting`);
     }
     this._tokenDefinitions[definition.id] = definition;
   }
@@ -39,7 +44,7 @@ export class TokenRegistryService {
   // Registers a card-played handler for a token id.
   public registerTokenCardPlayedHandler(tokenId: TokenId, handler: TokenCardPlayedHandler): void {
     if (this._tokenCardPlayedHandlers[tokenId]) {
-      console.warn(`[token registry] token card-played handler for ${tokenId} already registered, overwriting`);
+      this.loggerService.warn(`[token registry] token card-played handler for ${tokenId} already registered, overwriting`);
     }
     this._tokenCardPlayedHandlers[tokenId] = handler;
   }

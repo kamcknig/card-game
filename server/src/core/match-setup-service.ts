@@ -5,6 +5,7 @@ import { MatchCardLibrary } from './match-card-library.ts';
 import { CardSourceController } from './card-source-controller.ts';
 import { CardInstanceFactoryService } from './card-instance-factory-service.ts';
 import { RngService } from './rng-service.ts';
+import { LoggerService } from './logger-service.ts';
 
 // Owns deterministic match-state setup for supply/landscape/player-deck creation.
 export class MatchSetupService {
@@ -14,6 +15,7 @@ export class MatchSetupService {
     private readonly cardSourceController: CardSourceController,
     private readonly cardInstanceFactoryService: CardInstanceFactoryService,
     private readonly rngService: RngService,
+    private readonly loggerService: LoggerService,
   ) {}
 
   // Loads a card library snapshot for a loaded match state.
@@ -25,7 +27,7 @@ export class MatchSetupService {
   }
 
   public createBaseSupply(config: ComputedMatchConfiguration): void {
-    console.info('[match] creating base supply cards');
+    this.loggerService.info('[match] creating base supply cards');
     const cardSource = this.cardSourceController.getSource('basicSupply');
 
     for (const supply of Object.values(config.basicSupply)) {
@@ -42,7 +44,7 @@ export class MatchSetupService {
   }
 
   public createKingdom(config: ComputedMatchConfiguration): void {
-    console.info('[match] creating kingdom cards');
+    this.loggerService.info('[match] creating kingdom cards');
     const cardSource = this.cardSourceController.getSource('kingdomSupply');
 
     for (const kingdom of Object.values(config.kingdomSupply)) {
@@ -59,7 +61,7 @@ export class MatchSetupService {
   }
 
   public createNonSupplyCards(config: ComputedMatchConfiguration): void {
-    console.info('[match] creating non-supply cards');
+    this.loggerService.info('[match] creating non-supply cards');
     const cardSource = this.cardSourceController.getSource('nonSupplyCards');
 
     for (const supply of Object.values(config.nonSupply ?? {})) {
@@ -76,10 +78,10 @@ export class MatchSetupService {
   }
 
   public createPlayerDecks(config: MatchConfiguration, playerHands: Record<CardKey, number>[] = []): void {
-    console.info('[match] creating player decks');
+    this.loggerService.info('[match] creating player decks');
 
     for (const [idx, player] of Object.values(config.players).entries()) {
-      console.debug('initializing player', player.id, 'cards...');
+      this.loggerService.debug('initializing player', player.id, 'cards...');
 
       let playerStartHand = playerHands.length > 0
         ? playerHands[idx]
@@ -104,21 +106,21 @@ export class MatchSetupService {
   }
 
   public createEvents(config: ComputedMatchConfiguration): void {
-    console.debug('[match] creating events');
+    this.loggerService.debug('[match] creating events');
     for (const event of config.events) {
       this.match.events.push(this.cardInstanceFactoryService.createEvent(event));
     }
   }
 
   public createLandmarks(config: ComputedMatchConfiguration): void {
-    console.debug('[match] creating landmarks');
+    this.loggerService.debug('[match] creating landmarks');
     for (const landmark of config.landmarks ?? []) {
       this.match.landmarks.push(this.cardInstanceFactoryService.createLandmark(landmark));
     }
   }
 
   public createProjects(config: ComputedMatchConfiguration): void {
-    console.debug('[match] creating projects');
+    this.loggerService.debug('[match] creating projects');
     for (const project of config.projects ?? []) {
       this.match.projects.push(this.cardInstanceFactoryService.createProject(project));
     }
@@ -127,11 +129,11 @@ export class MatchSetupService {
   public createBoons(config: ComputedMatchConfiguration): void {
     const boons = config.boons ?? [];
     if (boons.length < 1) {
-      console.info('[match] no boons configured for this match');
+      this.loggerService.info('[match] no boons configured for this match');
       return;
     }
 
-    console.info('[match] creating boons');
+    this.loggerService.info('[match] creating boons');
     this.match.boons = {
       cards: [],
       deck: [],
@@ -149,11 +151,11 @@ export class MatchSetupService {
   public createHexes(config: ComputedMatchConfiguration): void {
     const hexes = config.hexes ?? [];
     if (hexes.length < 1) {
-      console.info('[match] no hexes configured for this match');
+      this.loggerService.info('[match] no hexes configured for this match');
       return;
     }
 
-    console.info('[match] creating hexes');
+    this.loggerService.info('[match] creating hexes');
     this.match.hexes = {
       cards: [],
       deck: [],
@@ -170,11 +172,11 @@ export class MatchSetupService {
   public createStates(config: ComputedMatchConfiguration): void {
     const states = config.states ?? [];
     if (states.length < 1) {
-      console.info('[match] no states configured for this match');
+      this.loggerService.info('[match] no states configured for this match');
       return;
     }
 
-    console.info('[match] creating states');
+    this.loggerService.info('[match] creating states');
     this.match.states = {
       cards: [],
       byPlayer: {},
@@ -188,11 +190,11 @@ export class MatchSetupService {
   public createArtifacts(config: ComputedMatchConfiguration): void {
     const artifacts = config.artifacts ?? [];
     if (artifacts.length < 1) {
-      console.info('[match] no artifacts configured for this match');
+      this.loggerService.info('[match] no artifacts configured for this match');
       return;
     }
 
-    console.info('[match] creating artifacts');
+    this.loggerService.info('[match] creating artifacts');
     this.match.artifacts = {
       cards: [],
       byPlayer: {},

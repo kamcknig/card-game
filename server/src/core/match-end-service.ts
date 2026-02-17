@@ -7,6 +7,7 @@ import {
 } from 'shared/types/index.ts';
 import { CardSourceController } from './card-source-controller.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';
+import { LoggerService } from './logger-service.ts';
 import { ReactionManager } from './reactions/reaction-manager.ts';
 
 export interface EndMatchArgs {
@@ -23,6 +24,7 @@ export class MatchEndService {
     private readonly cardSourceController: CardSourceController,
     private readonly findCardService: FindCardService,
     private readonly actionService: ActionService,
+    private readonly loggerService: LoggerService,
   ) {}
 
   // Tears down runtime listeners/state and broadcasts final match summary.
@@ -34,7 +36,7 @@ export class MatchEndService {
     reactionManager?.endGame();
     interactivityController?.endGame();
 
-    console.debug(`[match] removing socket listeners for 'nextPhase'`);
+    this.loggerService.debug(`[match] removing socket listeners for 'nextPhase'`);
     this.socketMap.forEach((s) => s.off('nextPhase'));
 
     // Restore all set-aside cards to owners' decks before final scoring/deck snapshot.
@@ -56,8 +58,8 @@ export class MatchEndService {
 
     const summary = this.buildMatchSummary();
 
-    console.info(`[match] match summary created`);
-    console.debug(summary);
+    this.loggerService.info(`[match] match summary created`);
+    this.loggerService.debug(summary);
 
     this.socketMap.forEach((s) => s.emit('gameOver', summary));
     return summary;

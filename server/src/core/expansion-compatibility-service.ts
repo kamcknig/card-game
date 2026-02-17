@@ -1,7 +1,12 @@
 import { MatchConfiguration } from 'shared/types/index.ts';
+import { LoggerService } from './logger-service.ts';
 
 // Handles expansion compatibility checks during lobby configuration updates.
 export class ExpansionCompatibilityService {
+  constructor(
+    private readonly loggerService: LoggerService,
+  ) {}
+
   // Applies mutual-exclusion rules from newly added expansion config modules.
   public async applyMutualExclusions(
     currentConfig: MatchConfiguration,
@@ -18,18 +23,18 @@ export class ExpansionCompatibilityService {
       const configModule = await this.tryLoadExpansionConfig(expansion.name);
 
       if (!configModule) {
-        console.warn(`[expansion compatibility] could not find config module for expansion '${expansion.name}'`);
+        this.loggerService.warn(`[expansion compatibility] could not find config module for expansion '${expansion.name}'`);
         continue;
       }
 
       if (!configModule.mutuallyExclusiveExpansions?.length) {
-        console.debug(
+        this.loggerService.debug(
           `[expansion compatibility] module for expansion '${expansion.name}' contains no mutually exclusive expansions`,
         );
         continue;
       }
 
-      console.info(
+      this.loggerService.info(
         `[expansion compatibility] '${expansion.name}' is mutually exclusive with ${
           configModule.mutuallyExclusiveExpansions.join(', ')
         }`,
@@ -39,7 +44,7 @@ export class ExpansionCompatibilityService {
         const hasExclusiveExpansion = currentConfig.expansions
           .some((currentExpansion) => currentExpansion.name === exclusiveExpansionName);
         if (hasExclusiveExpansion && !expansionsToRemove.includes(exclusiveExpansionName)) {
-          console.info(
+          this.loggerService.info(
             `[expansion compatibility] removing expansion '${exclusiveExpansionName}' as it is not allowed with '${expansion.name}'`,
           );
           expansionsToRemove.push(exclusiveExpansionName);
@@ -69,4 +74,3 @@ export class ExpansionCompatibilityService {
     }
   }
 }
-

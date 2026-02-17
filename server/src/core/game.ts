@@ -24,6 +24,8 @@ import {PlayerRegistryService} from './player-registry-service.ts';
 import {MatchStartOrchestrator} from './match-start-orchestrator.ts';
 import {MatchScope, MatchScopeFactory} from './match-scope-factory.ts';
 import {PlayerFactoryService} from './player-factory-service.ts';
+import {ServerConfigService} from './server-config-service.ts';
+import {LoggerService} from './logger-service.ts';
 
 const defaultMatchConfiguration: MatchConfiguration = {
   expansions: [
@@ -102,11 +104,14 @@ export class Game {
     private readonly playerFactoryService: PlayerFactoryService,
     // Service that runs the lobby->match startup sequence.
     private readonly matchStartOrchestrator: MatchStartOrchestrator,
+    // Service that centralizes runtime configuration reads.
+    private readonly serverConfigService: ServerConfigService,
+    // Service that provides consistent logging.
+    private readonly loggerService: LoggerService,
   ) {
-    console.log(`[game] created`);
+    this.loggerService.log(`[game] created`);
     // Configure whether to end the match when all human players leave (default: true).
-    const endOnNoHumansEnv = Deno.env.get('END_MATCH_ON_NO_HUMANS') ?? 'true';
-    this._endMatchWhenNoHumans = endOnNoHumansEnv.toLowerCase() !== 'false';
+    this._endMatchWhenNoHumans = this.serverConfigService.shouldEndMatchOnNoHumans();
     // Hydrate lobby defaults from persisted local files.
     this.configStore.load(defaultMatchConfiguration);
 
@@ -125,7 +130,7 @@ export class Game {
 
   private onSearchCards = (searchStr: string) => {
     const filteredCards = this.expansionSearchService.searchKingdomCards(searchStr);
-    console.debug(
+    this.loggerService.debug(
       `[game] kingdom search '${searchStr}' returned ${filteredCards.length} eligible card(s)`,
     );
     return filteredCards;
@@ -152,7 +157,7 @@ export class Game {
   };
 
   public expansionLoaded(expansion: ExpansionListElement) {
-    console.log(`[game] expansion '${expansion.name}' loaded`);
+    this.loggerService.log(`[game] expansion '${expansion.name}' loaded`);
     this._availableExpansion.push(expansion);
     this.io.in('game').emit(
       'expansionList',
@@ -191,20 +196,20 @@ export class Game {
     });
 
     if (joinResult.status === 'rejected_capacity') {
-      console.info(`[game] game has ${this.maxPlayers} players, rejecting`);
+      this.loggerService.info(`[game] game has ${this.maxPlayers} players, rejecting`);
       socket.disconnect(true);
       return;
     }
 
     if (joinResult.status === 'rejected_started') {
-      console.info(`[game] match has already started, and player not found in game, rejecting`);
+      this.loggerService.info(`[game] match has already started, and player not found in game, rejecting`);
       socket.disconnect();
       return;
     }
 
     const player = joinResult.player;
     if (!joinResult.created) {
-      console.info(`[game] ${player} already in match - assigning socket ID`);
+      this.loggerService.info(`[game] ${player} already in match - assigning socket ID`);
     }
 
     socket.join('game');
@@ -217,7 +222,7 @@ export class Game {
 
     const nextOwner = this.playerSessionService.selectOwnerOnJoin(this.owner, player);
     if (nextOwner.id !== this.owner?.id) {
-      console.info(`[game] game owner does not exist, setting to ${nextOwner}`);
+      this.loggerService.info(`[game] game owner does not exist, setting to ${nextOwner}`);
     }
     this.owner = nextOwner;
 
@@ -227,10 +232,10 @@ export class Game {
 
     this.io.in('game').emit('gameOwnerUpdated', this.owner.id);
 
-    console.log(`[game] ${player} added to game`);
+    this.loggerService.log(`[game] ${player} added to game`);
 
     if (this.matchStarted) {
-      console.info('[game] game already started');
+      this.loggerService.info('[game] game already started');
       // Restore the current turn order for reconnecting clients.
       socket.emit('setPlayerList', this.players);
       // Remove any pending removal vote if the player reconnects.
@@ -243,7 +248,7 @@ export class Game {
         void this._matchController?.runGameAction('checkForRemainingPlayerActions');
       }
     } else {
-      console.info(`[game] not yet started, sending player to match configuration`);
+      this.loggerService.info(`[game] not yet started, sending player to match configuration`);
       socket.emit(
         'expansionList',
         this._availableExpansion.sort((a, b) => a.order - b.order),
@@ -263,18 +268,18 @@ export class Game {
   }
 
   private onPlayerDisconnected = (playerId: number, reason: string) => {
-    console.info(`[game] ${playerId} disconnected - ${reason}`);
+    this.loggerService.info(`[game] ${playerId} disconnected - ${reason}`);
 
     const player = this.playerRegistryService.markPlayerDisconnected(this.players, playerId);
     if (!player) {
       this._socketMap.delete(playerId);
-      console.warn(`[game] player disconnected, but cannot find player object`);
+      this.loggerService.warn(`[game] player disconnected, but cannot find player object`);
       return;
     }
 
     const hasConnectedHuman = this.playerSessionService.hasConnectedHumanPlayers(this.players);
     if (!hasConnectedHuman && this._endMatchWhenNoHumans) {
-      console.log('[game] no human players left in game, clearing game state completely');
+      this.loggerService.log('[game] no human players left in game, clearing game state completely');
       this.clearMatch();
       return;
     }
@@ -304,7 +309,7 @@ export class Game {
   };
 
   private clearMatch = () => {
-    console.log(`[game] clearing match`);
+    this.loggerService.log(`[game] clearing match`);
 
     this._socketMap.forEach((socket) => {
       socket.offAnyIncoming();
@@ -320,8 +325,8 @@ export class Game {
   };
 
   private onMatchConfigurationUpdated = async (newConfig: MatchConfiguration) => {
-    console.info(`[game] received expansionSelected socket event`);
-    console.debug(newConfig);
+    this.loggerService.info(`[game] received expansionSelected socket event`);
+    this.loggerService.debug(newConfig);
 
     const currentConfig = structuredClone(this._matchConfiguration ?? {}) as MatchConfiguration;
     // Enforce expansion mutual-exclusion rules before applying the updated lobby config.
@@ -372,15 +377,15 @@ export class Game {
   };
 
   private onUpdatePlayerName = (playerId: number, name: string) => {
-    console.info(
+    this.loggerService.info(
       `[game] player ${playerId} request to update name to '${name}'`,
     );
 
     const player = this.playerRegistryService.setPlayerName(this.players, playerId, name);
     if (player) {
-      console.info(`[game] ${player} name updated to '${name}'`);
+      this.loggerService.info(`[game] ${player} name updated to '${name}'`);
     } else {
-      console.info(`[game] player ${playerId} not found`);
+      this.loggerService.info(`[game] player ${playerId} not found`);
     }
 
     this.io.in('game').emit('playerNameUpdated', playerId, name);
@@ -390,18 +395,18 @@ export class Game {
     const player = this.players.find((player) => player.id === playerId);
 
     if (!player) {
-      console.warn(`[game] received player ready event from ${playerId} but could not find Player object`);
+      this.loggerService.warn(`[game] received player ready event from ${playerId} but could not find Player object`);
       return;
     }
 
-    console.info(`[game] received ready event from ${player}`);
+    this.loggerService.info(`[game] received ready event from ${player}`);
 
     player.ready = !player.ready;
-    console.info(`[game] marking ${player} as ${player.ready}`);
+    this.loggerService.info(`[game] marking ${player} as ${player.ready}`);
     this.io.in('game').except(player.socketId).emit('playerReady', playerId, player.ready);
 
     if (this.players.some((p) => !p.ready && p.connected)) {
-      console.debug(`[game] not all players ready yet`);
+      this.loggerService.debug(`[game] not all players ready yet`);
       return;
     }
 
@@ -411,18 +416,18 @@ export class Game {
   // Adds one or more computer players to the lobby, owned by the game owner.
   private onAddComputerPlayer = (ownerId: PlayerId, count: number = 1) => {
     if (!this.owner || this.owner.id !== ownerId) {
-      console.warn(`[game] ignoring addComputerPlayer from non-owner ${ownerId}`);
+      this.loggerService.warn(`[game] ignoring addComputerPlayer from non-owner ${ownerId}`);
       return;
     }
 
     if (this.matchStarted) {
-      console.warn('[game] match already started, cannot add computer players');
+      this.loggerService.warn('[game] match already started, cannot add computer players');
       return;
     }
 
     for (let i = 0; i < count; i++) {
       if (this.players.length >= this.maxPlayers) {
-        console.warn('[game] player limit reached, cannot add computer player');
+        this.loggerService.warn('[game] player limit reached, cannot add computer player');
         break;
       }
 
@@ -433,12 +438,12 @@ export class Game {
   };
 
   private startMatch() {
-    console.log(`[game] all connected players ready, proceeding to start match`);
+    this.loggerService.log(`[game] all connected players ready, proceeding to start match`);
 
     this.matchStarted = true;
 
     if (!this._matchController) {
-      console.warn('[game] cannot start match without match controller');
+      this.loggerService.warn('[game] cannot start match without match controller');
       return;
     }
 

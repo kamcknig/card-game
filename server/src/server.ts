@@ -1,6 +1,5 @@
 import { Server } from 'socket.io';
 import { ServerEmitEvents, ServerListenEvents } from 'shared/types/index.ts';
-import { toNumber } from 'es-toolkit/compat';
 import * as log from '@timepp/enhanced-deno-log';
 import { Game } from './core/game.ts';
 import { ExpansionSearchService } from './core/expansion-search-service.ts';
@@ -23,10 +22,14 @@ import { ExpansionCardMetadataRegistryService } from './core/expansion-card-meta
 import { ExpansionCatalogService } from './core/expansion-catalog-service.ts';
 import { RngService } from './core/rng-service.ts';
 import { TokenRegistryService } from './core/tokens/token-registry-service.ts';
+import { ServerConfigService } from './core/server-config-service.ts';
+import { LoggerService } from './core/logger-service.ts';
 import { asClass, asValue, createContainer, InjectionMode } from 'awilix';
 
+const serverConfigService = new ServerConfigService();
+
 // Default to disabling file logs unless explicitly enabled.
-const logToFileEnabled = Deno.env.get('LOG_TO_FILE')?.trim().toLowerCase() === 'true';
+const logToFileEnabled = serverConfigService.isFileLoggingEnabled();
 if (!logToFileEnabled) {
   log.setConfig({
     enabledLevels: [],
@@ -48,7 +51,7 @@ log.setConfig({
 
 log.init();
 
-const PORT = toNumber(Deno.env.get('PORT')) || 3001;
+const PORT = serverConfigService.getPort();
 
 export const io = new Server<ServerListenEvents, ServerEmitEvents>({
   pingTimeout: 1000 * 60 * 10,
@@ -63,6 +66,8 @@ const container = createContainer({
 container.register({
   rootContainer: asValue(container),
   io: asValue(io),
+  serverConfigService: asValue(serverConfigService),
+  loggerService: asClass(LoggerService).singleton(),
   maxPlayers: asValue(6),
   matchScopeFactory: asClass(MatchScopeFactory).singleton(),
   matchConfigurator: asClass(MatchConfigurator).scoped(),
@@ -116,7 +121,7 @@ Deno.serve({
     const url = new URL(req.url);
     // Debug-only endpoint to export a full match state snapshot.
     if (url.pathname === '/debug/match-state') {
-      if (Deno.env.get('MATCH_STATE_EXPORT_ENABLED') !== 'true') {
+      if (!serverConfigService.isMatchStateExportEnabled()) {
         return new Response('match state export disabled', { status: 403 });
       }
       const exportState = game.exportMatchState();
@@ -129,7 +134,7 @@ Deno.serve({
     }
     // Debug-only endpoint to merge a partial match state into the live match.
     if (url.pathname === '/debug/match-state/merge') {
-      if (Deno.env.get('MATCH_STATE_MERGE_ENABLED') !== 'true') {
+      if (!serverConfigService.isMatchStateMergeEnabled()) {
         return new Response('match state merge disabled', { status: 403 });
       }
       if (req.method !== 'POST') {

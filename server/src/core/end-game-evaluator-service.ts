@@ -13,6 +13,7 @@ import { ReactionManager } from './reactions/reaction-manager.ts';
 import { getStartingSupplyCount } from '../utils/get-starting-supply-count.ts';
 import { EndGamePolicyRegistryService } from './end-game-policy-registry-service.ts';
 import { RngService } from './rng-service.ts';
+import { LoggerService } from './logger-service.ts';
 
 export interface EndGameEvaluationResult {
   shouldEndNow: boolean;
@@ -32,6 +33,7 @@ export class EndGameEvaluatorService {
     private readonly supplyGainService: SupplyGainService,
     private readonly promptService: PromptService,
     private readonly endGamePolicyRegistryService: EndGamePolicyRegistryService,
+    private readonly loggerService: LoggerService,
   ) {}
 
   public evaluateEndGame(): EndGameEvaluationResult {
@@ -73,17 +75,17 @@ export class EndGameEvaluatorService {
         { cardKeys: 'province' },
       ]).length === 0
     ) {
-      console.info('[match] supply has no more provinces');
+      this.loggerService.info('[match] supply has no more provinces');
       return true;
     }
 
     const startingSupplyCount = getStartingSupplyCount(this.match);
     const remainingSupplyCount = this.findCardService.getRemainingSupplyCount();
     const emptyPileCount = startingSupplyCount - remainingSupplyCount;
-    console.debug(`[match] empty pile count ${emptyPileCount}`);
+    this.loggerService.debug(`[match] empty pile count ${emptyPileCount}`);
 
     if (emptyPileCount === 3) {
-      console.info('[match] three supply piles are empty');
+      this.loggerService.info('[match] three supply piles are empty');
       return true;
     }
 

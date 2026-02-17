@@ -7,6 +7,7 @@ import {
 } from 'shared/types/index.ts';
 import Fuse, { IFuseOptions } from 'fuse.js';
 import { ExpansionCatalogService } from './expansion-catalog-service.ts';
+import { LoggerService } from './logger-service.ts';
 
 // Owns all search indexes used by lobby selection UI.
 export class ExpansionSearchService {
@@ -18,6 +19,7 @@ export class ExpansionSearchService {
 
   constructor(
     private readonly expansionCatalogService: ExpansionCatalogService,
+    private readonly loggerService: LoggerService,
   ) {
     // Build initial indexes from whatever expansions are loaded at startup.
     this.rebuildIndexes();
@@ -25,7 +27,7 @@ export class ExpansionSearchService {
 
   // Rebuilds all search indexes after expansion data changes.
   public rebuildIndexes() {
-    console.info('[expansion search] rebuilding all indexes');
+    this.loggerService.info('[expansion search] rebuilding all indexes');
     const rawCardLibrary = this.expansionCatalogService.getRawCardLibrary();
     const expansionLibrary = this.expansionCatalogService.getExpansionLibrary();
     this._cardFuse = this.createFuse(Object.values(rawCardLibrary));

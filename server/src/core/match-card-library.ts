@@ -1,4 +1,5 @@
 import { Card, CardId, PlayerId } from 'shared/types/index.ts';
+import { LoggerService } from './logger-service.ts';
 
 /**
  * The CardLibrary class provides a way to add cards into a library that is used within a Match.
@@ -9,8 +10,12 @@ import { Card, CardId, PlayerId } from 'shared/types/index.ts';
 export class MatchCardLibrary {
   private readonly _library: Map<CardId, Card> = new Map();
 
+  constructor(
+    private readonly loggerService: LoggerService,
+  ) {}
+
   public addCard = (card: Card) => {
-    console.debug(`[CARD LIBRARY] adding ${card} to library`);
+    this.loggerService.debug(`[CARD LIBRARY] adding ${card} to library`);
     this._library.set(card.id, card);
   };
 
