@@ -10,6 +10,7 @@ import { createInitialMatchState } from './match-state-factory.ts';
 import { MatchSetupService } from './match-setup-service.ts';
 import { EndGamePolicyRegistryService } from './end-game-policy-registry-service.ts';
 import { CardInstanceFactoryService } from './card-instance-factory-service.ts';
+import { MatchEndService } from './match-end-service.ts';
 
 export interface MatchScope {
   matchController: MatchController;
@@ -41,6 +42,7 @@ export class MatchScopeFactory {
       cardInstanceFactoryService: asClass(CardInstanceFactoryService).singleton(),
       endGamePolicyRegistryService: asClass(EndGamePolicyRegistryService).singleton(),
       matchSetupService: asClass(MatchSetupService).singleton(),
+      matchEndService: asClass(MatchEndService).singleton(),
       matchController: asClass(MatchController).singleton(),
     });
 

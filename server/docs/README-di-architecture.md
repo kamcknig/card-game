@@ -50,6 +50,7 @@ Defined in `server/src/core/match-scope-factory.ts`:
 | `cardInstanceFactoryService` | `asClass(CardInstanceFactoryService)` | match singleton | setup/runtime/configuration events |
 | `endGamePolicyRegistryService` | `asClass(EndGamePolicyRegistryService)` | match singleton | `MatchController`, evaluator |
 | `matchSetupService` | `asClass(MatchSetupService)` | match singleton | `MatchController` |
+| `matchEndService` | `asClass(MatchEndService)` | match singleton | `MatchController` |
 | `matchController` | `asClass(MatchController)` | match singleton | `MatchScopeFactory` |
 
 ## Match Runtime Scope Tokens

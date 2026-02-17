@@ -5,7 +5,6 @@ import {
   ComputedMatchConfiguration,
   Match,
   MatchConfiguration,
-  MatchSummary,
   PlayerId,
   SelectActionCardArgs,
   ServerListenEvents,
@@ -44,6 +43,7 @@ import type { MatchRuntime } from './match-runtime-factory.ts';
 import { MatchSetupService } from './match-setup-service.ts';
 import { EndGamePolicyRegistryService } from './end-game-policy-registry-service.ts';
 import { CardInstanceFactoryService } from './card-instance-factory-service.ts';
+import { MatchEndService } from './match-end-service.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardLibSnapshot = {};
@@ -95,6 +95,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     private readonly matchSetupService: MatchSetupService,
     private readonly endGamePolicyRegistryService: EndGamePolicyRegistryService,
     private readonly cardInstanceFactoryService: CardInstanceFactoryService,
+    private readonly matchEndService: MatchEndService,
   ) {
     super();
   }
@@ -655,80 +656,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private async endGame() {
     console.log(`[match] ending the game`);
 
-    this._reactionManager?.endGame();
-    this._interactivityController?.endGame();
-
-    console.debug(`[match] removing socket listeners for 'nextPhase'`);
-    this.socketMap.forEach((s) => s.off('nextPhase'));
-
-    console.debug(`[match] removing listener for match state updates`);
-
-    const match = this.match;
-
-    for (const player of this.match.players) {
-      const setAsideCardIds = this.cardSourceController.getSource('set-aside', player.id);
-      // Iterate over a snapshot since move actions mutate the source array.
-      for (const cardId of [...setAsideCardIds]) {
-        await this.runGameAction('moveCard', {
-          toPlayerId: player.id,
-          cardId,
-          to: { location: 'playerDeck' },
-        });
-      }
-    }
-
-    for (const event of this._registeredEvents) {
-      this.socketMap.forEach((s) => s.off(event));
-    }
-
-    const summary: MatchSummary = {
-      playerSummary: match.players.reduce((prev, player) => {
-        const playerId = player.id;
-        // Tiebreaker turns are counted from recorded turn history.
-        // Seize the Day turns are excluded from this count per event FAQ.
-        const turnsTaken = match.stats.turns.filter((turnStats) => {
-          if (turnStats.playerId !== playerId) {
-            return false;
-          }
-
-          const sourceId = turnStats.sourceId;
-          if (sourceId === undefined) {
-            return true;
-          }
-
-          const sourceEvent = match.events.find((event) => event.id === sourceId);
-          if (!sourceEvent) {
-            return true;
-          }
-
-          return sourceEvent.cardKey !== 'seize-the-day';
-        }).length;
-
-        prev.push({
-          playerId,
-          turnsTaken,
-          score: match.scores[playerId],
-          deck: this._findCardService.findCards([{ owner: playerId }]).map((card) => card.id),
-        });
-        return prev;
-      }, [] as MatchSummary['playerSummary'])
-        .sort((a, b) => {
-          if (a.score < b.score) return 1;
-          if (b.score < a.score) return -1;
-          if (a.turnsTaken < b.turnsTaken) return -1;
-          if (b.turnsTaken < a.turnsTaken) return 1;
-          const aIdx = match.players.findIndex((player) => player.id === a.playerId);
-          const bIdx = match.players.findIndex((player) => player.id === b.playerId);
-          if (aIdx < bIdx) return -1;
-          if (bIdx < aIdx) return 1;
-          return 0;
-        }),
-    };
-
-    console.info(`[match] match summary created`);
-    console.debug(summary);
-
-    this.socketMap.forEach((s) => s.emit('gameOver', summary));
+    await this.matchEndService.endMatch({
+      reactionManager: this._reactionManager,
+      interactivityController: this._interactivityController,
+      registeredEvents: this._registeredEvents,
+      findCardService: this._findCardService,
+      runGameActionDelegate: (action, ...args) => this.runGameAction(action as any, ...(args as any)),
+    });
     this.emit('gameOver');
   }
 
