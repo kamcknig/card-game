@@ -11,7 +11,7 @@ import {
   ServerEmitEvents,
   ServerListenEvents,
 } from 'shared/types/index.ts';
-import {createComputerPlayer, createNewPlayer} from '../utils/create-new-player.ts';
+import {createComputerPlayer} from '../utils/create-new-player.ts';
 import {MatchController} from './match-controller.ts';
 import jsonPatch from 'fast-json-patch';
 import {fisherYatesShuffle} from '../utils/fisher-yates-shuffler.ts';
@@ -22,6 +22,7 @@ import {ExpansionSearchService} from './expansion-search-service.ts';
 import {ExpansionCompatibilityService} from './expansion-compatibility-service.ts';
 import {DisconnectedPlayerVoteService} from './disconnected-player-vote-service.ts';
 import {PlayerSessionService} from './player-session-service.ts';
+import {PlayerRegistryService} from './player-registry-service.ts';
 
 // Factory signature for creating a match controller instance.
 export type MatchControllerFactory = (
@@ -43,6 +44,7 @@ export interface GameDependencies {
   expansionCompatibilityService?: ExpansionCompatibilityService;
   disconnectedPlayerVoteService?: DisconnectedPlayerVoteService;
   playerSessionService?: PlayerSessionService;
+  playerRegistryService?: PlayerRegistryService;
 }
 
 const defaultMatchConfiguration: MatchConfiguration = {
@@ -106,6 +108,8 @@ export class Game {
   private readonly _disconnectedPlayerVoteService: DisconnectedPlayerVoteService;
   // Service that decides owner/session transitions.
   private readonly _playerSessionService: PlayerSessionService;
+  // Service that owns player record lifecycle mutations.
+  private readonly _playerRegistryService: PlayerRegistryService;
   private _matchController: MatchController | undefined;
   private _matchConfiguration: MatchConfiguration | undefined;
   private _availableExpansion: ExpansionListElement[] = [];
@@ -121,6 +125,7 @@ export class Game {
     expansionCompatibilityService = new ExpansionCompatibilityService(),
     disconnectedPlayerVoteService = new DisconnectedPlayerVoteService(),
     playerSessionService = new PlayerSessionService(),
+    playerRegistryService = new PlayerRegistryService(),
   }: GameDependencies) {
     console.log(`[game] created`);
     this._io = io;
@@ -131,6 +136,7 @@ export class Game {
     this._expansionCompatibilityService = expansionCompatibilityService;
     this._disconnectedPlayerVoteService = disconnectedPlayerVoteService;
     this._playerSessionService = playerSessionService;
+    this._playerRegistryService = playerRegistryService;
     // Configure whether to end the match when all human players leave (default: true).
     const endOnNoHumansEnv = Deno.env.get('END_MATCH_ON_NO_HUMANS') ?? 'true';
     this._endMatchWhenNoHumans = endOnNoHumansEnv.toLowerCase() !== 'false';
@@ -210,28 +216,28 @@ export class Game {
   }
 
   public addPlayer(sessionId: string, socket: AppSocket) {
-    if (this.players.length >= 6) {
+    const joinResult = this._playerRegistryService.registerPlayerJoin({
+      players: this.players,
+      sessionId,
+      socket,
+      matchStarted: this.matchStarted,
+    });
+
+    if (joinResult.status === 'rejected_capacity') {
       console.info(`[game] game has 6 players, rejecting`);
       socket.disconnect(true);
       return;
     }
 
-    let player = this.players.find((p) => p.sessionId === sessionId);
-
-    if (this.matchStarted && !player) {
+    if (joinResult.status === 'rejected_started') {
       console.info(`[game] match has already started, and player not found in game, rejecting`);
       socket.disconnect();
       return;
     }
 
-    if (player) {
+    const player = joinResult.player;
+    if (!joinResult.created) {
       console.info(`[game] ${player} already in match - assigning socket ID`);
-      player.socketId = socket.id;
-      player.sessionId = sessionId;
-      player.connected = true;
-    } else {
-      player = createNewPlayer(sessionId, socket);
-      this.players.push(player);
     }
 
     socket.join('game');
@@ -292,15 +298,12 @@ export class Game {
   private onPlayerDisconnected = (playerId: number, reason: string) => {
     console.info(`[game] ${playerId} disconnected - ${reason}`);
 
-    const player = this.players.find((player) => player.id === playerId);
+    const player = this._playerRegistryService.markPlayerDisconnected(this.players, playerId);
     if (!player) {
       this._socketMap.delete(playerId);
       console.warn(`[game] player disconnected, but cannot find player object`);
       return;
     }
-
-    player.connected = false;
-    player.ready = false;
 
     const hasConnectedHuman = this._playerSessionService.hasConnectedHumanPlayers(this.players);
     if (!hasConnectedHuman && this._endMatchWhenNoHumans) {
@@ -406,10 +409,8 @@ export class Game {
       `[game] player ${playerId} request to update name to '${name}'`,
     );
 
-    const player = this.players.find((player) => player.id === playerId);
-
+    const player = this._playerRegistryService.setPlayerName(this.players, playerId, name);
     if (player) {
-      player.name = name;
       console.info(`[game] ${player} name updated to '${name}'`);
     } else {
       console.info(`[game] player ${playerId} not found`);

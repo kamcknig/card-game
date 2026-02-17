@@ -9,6 +9,7 @@ import { FileGameConfigurationStore } from './core/game-configuration-store.ts';
 import { LobbySocketBindings } from './core/lobby-socket-bindings.ts';
 import { DisconnectedPlayerVoteService } from './core/disconnected-player-vote-service.ts';
 import { PlayerSessionService } from './core/player-session-service.ts';
+import { PlayerRegistryService } from './core/player-registry-service.ts';
 import { loadExpansion } from './utils/load-expansion.ts';
 import { asClass, asValue, createContainer, InjectionMode } from 'awilix';
 
@@ -49,6 +50,7 @@ const container = createContainer({
 // Register long-lived singleton dependencies used by the server runtime.
 container.register({
   io: asValue(io),
+  maxPlayers: asValue(6),
   matchControllerFactory: asValue(defaultMatchControllerFactory),
   expansionSearchService: asClass(ExpansionSearchService).singleton(),
   expansionCompatibilityService: asClass(ExpansionCompatibilityService).singleton(),
@@ -56,6 +58,7 @@ container.register({
   lobbySocketBindings: asClass(LobbySocketBindings).singleton(),
   disconnectedPlayerVoteService: asClass(DisconnectedPlayerVoteService).singleton(),
   playerSessionService: asClass(PlayerSessionService).singleton(),
+  playerRegistryService: asClass(PlayerRegistryService).singleton(),
   game: asClass(Game).singleton(),
 });
 
