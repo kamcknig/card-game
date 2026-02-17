@@ -1,8 +1,7 @@
 import {Match, PlayerId} from 'shared/types/index.ts';
-import {AppSocket, CardEffectFunctionMap, FindCardsFn} from '@server-types/index.ts';
+import {AppSocket, CardEffectFunctionMap, FindCardService} from '@server-types/index.ts';
 import {LogManager} from './log-manager.ts';
 import {CardPriceRulesController} from './card-price-rules-controller.ts';
-import {findCardsFactory} from '../utils/find-cards.ts';
 import {ReactionManager} from './reactions/reaction-manager.ts';
 import {cardEffectFunctionMapFactory} from './effects/card-effect-function-map-factory.ts';
 import {eventEffectFactoryMap} from './events/event-effect-factory-map.ts';
@@ -12,6 +11,7 @@ import {GameActionController} from './actions/game-action-controller.ts';
 import {CardSourceController} from './card-source-controller.ts';
 import {MatchCardLibrary} from './match-card-library.ts';
 import {asClass, asFunction, asValue, createContainer, InjectionMode} from 'awilix';
+import {FindCardsService} from './find-cards-service.ts';
 
 export interface MatchRuntimeFactoryArgs {
   socketMap: Map<PlayerId, AppSocket>;
@@ -24,7 +24,7 @@ export interface MatchRuntimeFactoryArgs {
 export interface MatchRuntime {
   logManager: LogManager;
   cardPriceController: CardPriceRulesController;
-  findCards: FindCardsFn;
+  findCardService: FindCardService;
   reactionManager: ReactionManager;
   interactivityController: CardInteractivityController;
   gameActionsController: GameActionController;
@@ -83,9 +83,8 @@ export class MatchRuntimeFactory {
       artifactEffectFunctionMap: asValue(artifactEffectFunctionMap),
       logManager: asClass(LogManager).singleton(),
       cardPriceController: asClass(CardPriceRulesController).singleton(),
-      findCards: asFunction(({cardSourceController, cardPriceController, cardLibrary}) =>
-        findCardsFactory(cardSourceController, cardPriceController, cardLibrary)
-      ).singleton(),
+      findCardsService: asClass(FindCardsService).singleton(),
+      findCardService: asFunction(({findCardsService}) => findCardsService).singleton(),
       reactionManager: asClass(ReactionManager).singleton(),
       interactivityController: asClass(CardInteractivityController).singleton(),
       gameActionsController: asClass(GameActionController).singleton(),
@@ -93,7 +92,7 @@ export class MatchRuntimeFactory {
 
     const logManager = scope.resolve<LogManager>('logManager');
     const cardPriceController = scope.resolve<CardPriceRulesController>('cardPriceController');
-    const findCards = scope.resolve<FindCardsFn>('findCards');
+    const findCardService = scope.resolve<FindCardService>('findCardService');
     const reactionManager = scope.resolve<ReactionManager>('reactionManager');
     const interactivityController = scope.resolve<CardInteractivityController>('interactivityController');
     const gameActionsController = scope.resolve<GameActionController>('gameActionsController');
@@ -101,7 +100,7 @@ export class MatchRuntimeFactory {
     return {
       logManager,
       cardPriceController,
-      findCards,
+      findCardService,
       reactionManager,
       interactivityController,
       gameActionsController,

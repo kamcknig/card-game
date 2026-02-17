@@ -1,4 +1,4 @@
-import { AppSocket, FindCardsFn, RunGameActionDelegate } from '@server-types/index.ts';
+import { AppSocket, FindCardService, RunGameActionDelegate } from '@server-types/index.ts';
 import { Card, CardId, CardLikeId, CardStats, Match, PlayerId, TurnPhaseOrderValues } from 'shared/types/index.ts';
 import { isUndefined } from 'es-toolkit/compat';
 import { MatchCardLibrary } from './match-card-library.ts';
@@ -17,7 +17,7 @@ export interface CardInteractivityControllerDependencies {
   socketMap: Map<PlayerId, AppSocket>;
   cardLibrary: MatchCardLibrary;
   runGameActionDelegate: RunGameActionDelegate;
-  findCards: FindCardsFn;
+  findCardService: FindCardService;
 }
 
 export class CardInteractivityController {
@@ -28,7 +28,7 @@ export class CardInteractivityController {
   private readonly _socketMap: Map<PlayerId, AppSocket>;
   private readonly _cardLibrary: MatchCardLibrary;
   private readonly runGameDelegate: RunGameActionDelegate;
-  private readonly _findCards: FindCardsFn;
+  private readonly _findCardService: FindCardService;
 
   constructor({
     cardSourceController,
@@ -37,7 +37,7 @@ export class CardInteractivityController {
     socketMap,
     cardLibrary,
     runGameActionDelegate,
-    findCards,
+    findCardService,
   }: CardInteractivityControllerDependencies) {
     this._cardSourceController = cardSourceController;
     this._cardPriceController = cardPriceController;
@@ -45,7 +45,7 @@ export class CardInteractivityController {
     this._socketMap = socketMap;
     this._cardLibrary = cardLibrary;
     this.runGameDelegate = runGameActionDelegate;
-    this._findCards = findCards;
+    this._findCardService = findCardService;
 
     this._socketMap.forEach((s) => {
       s.on('cardTapped', (pId, cId) => this.onCardTapped(pId, cId));
@@ -105,7 +105,7 @@ export class CardInteractivityController {
       // Only offer buys if the player has no debt tokens.
       if (currentDebt === 0) {
         // Supply lookups return full card data for purchase checks.
-        const supply: Card[] = this._findCards({ location: ['basicSupply', 'kingdomSupply'] });
+        const supply: Card[] = this._findCardService.findCards({ location: ['basicSupply', 'kingdomSupply'] });
 
         // a loop going backwards through the supply and kingdom. we only mark the last one as selectable (this should
         // be the top of any pile). a bit hacky to assume that.
@@ -124,7 +124,7 @@ export class CardInteractivityController {
             cardLibrary: this._cardLibrary,
             cardPriceController: this._cardPriceController,
             cardSourceController: this._cardSourceController,
-            findCards: this._findCards,
+            findCardService: this._findCardService,
           });
 
           if (buyOptions.options.length > 0) {
@@ -347,7 +347,7 @@ export class CardInteractivityController {
           cardLibrary: this._cardLibrary,
           cardPriceController: this._cardPriceController,
           cardSourceController: this._cardSourceController,
-          findCards: this._findCards,
+          findCardService: this._findCardService,
         });
         const { cost } = resolvedBuyOptions;
         const { options } = resolvedBuyOptions;

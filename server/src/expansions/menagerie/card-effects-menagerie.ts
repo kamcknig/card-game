@@ -2,13 +2,12 @@ import { CardExpansionModule } from '@server-types/index.ts';
 import { CardId } from 'shared/types/index.ts';
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { getPlayerStartingFrom } from '@shared/get-player-position-utils.ts';
-import { getRemainingSupplyCount, getStartingSupplyCount } from '../../utils/get-starting-supply-count.ts';
+import { getStartingSupplyCount } from '../../utils/get-starting-supply-count.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
-import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
-import { findTopSupplyCardForPileKey, gainTopSupplyCardForPileKey } from '../../utils/gain-top-supply-card-by-key.ts';
+import { gainTopSupplyCardForPileKey } from '../../utils/gain-top-supply-card-by-key.ts';
 
 const expansion: CardExpansionModule = {
   'animal-fair': {
@@ -49,7 +48,7 @@ const expansion: CardExpansionModule = {
     }],
     registerEffects: () => async (effectArgs) => {
       // Count only supply piles, matching Dominion's Animal Fair FAQ.
-      const emptySupplyPiles = getStartingSupplyCount(effectArgs.match) - getRemainingSupplyCount(effectArgs.findCards);
+      const emptySupplyPiles = getStartingSupplyCount(effectArgs.match) - effectArgs.findCardService.getRemainingSupplyCount();
 
       console.debug(
         `[animal-fair effect] gaining 4 treasure and ${emptySupplyPiles} buy(s) based on empty supply piles`,
@@ -292,7 +291,7 @@ const expansion: CardExpansionModule = {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
         // Camel Train always exiles a Gold from supply when gained.
-        const goldCard = findTopSupplyCardForPileKey(cardEffectArgs, {
+        const goldCard = cardEffectArgs.findCardService.findTopSupplyCardForPileKey({
           pileKey: 'gold',
           from: 'basicSupply',
         });
@@ -310,7 +309,7 @@ const expansion: CardExpansionModule = {
     }),
     registerEffects: () => async (cardEffectArgs) => {
       // Camel Train exiles exactly one non-Victory card from supply when possible.
-      const exileCandidates = cardEffectArgs.findCards([
+      const exileCandidates = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
       ]).filter((card) => !card.type.includes('VICTORY'));
 
@@ -449,7 +448,7 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       // Cavalry gains two Horses from the Horse non-supply pile.
       for (let index = 0; index < 2; index++) {
-        const horseCards = cardEffectArgs.findCards([
+        const horseCards = cardEffectArgs.findCardService.findCards([
           { location: 'nonSupplyCards' },
           { cardKeys: 'horse' },
         ]);
@@ -482,7 +481,7 @@ const expansion: CardExpansionModule = {
       }).filter((targetPlayerId) => !isPlayerImmune(cardEffectArgs.reactionContext, targetPlayerId));
 
       for (const targetPlayerId of targetPlayerIds) {
-        const curseCards = cardEffectArgs.findCards([
+        const curseCards = cardEffectArgs.findCardService.findCards([
           { location: 'basicSupply' },
           { cardKeys: 'curse' },
         ]);
@@ -559,7 +558,7 @@ const expansion: CardExpansionModule = {
       });
 
       // Gain a differently named card costing up to $2 more than the exiled card.
-      const gainCandidates = cardEffectArgs.findCards([
+      const gainCandidates = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
         {
           kind: 'upTo',
@@ -671,7 +670,7 @@ const expansion: CardExpansionModule = {
       });
 
       // Falconer gains from Supply only, and only cards costing less than Falconer.
-      const gainCandidates = cardEffectArgs.findCards([
+      const gainCandidates = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
       ]).filter((candidateCard) => {
         const { cost: candidateCost } = cardEffectArgs.cardPriceController.applyRules(candidateCard, {
@@ -901,7 +900,7 @@ const expansion: CardExpansionModule = {
   'groom': {
     registerEffects: () => async (cardEffectArgs) => {
       // Groom gains one card from the Supply costing up to $4.
-      const gainableCards = cardEffectArgs.findCards([
+      const gainableCards = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
         { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: { treasure: 4 } },
       ]);
@@ -934,7 +933,7 @@ const expansion: CardExpansionModule = {
 
       // Groom bonuses are cumulative when a gained card has multiple relevant types.
       if (selectedCard.type.includes('ACTION')) {
-        const horseCards = cardEffectArgs.findCards([
+        const horseCards = cardEffectArgs.findCardService.findCards([
           { location: 'nonSupplyCards' },
           { cardKeys: 'horse' },
         ]);
@@ -1023,7 +1022,7 @@ const expansion: CardExpansionModule = {
 
         // Gain one Horse per discarded Treasure from the Horse pile.
         for (let index = 0; index < selectedTreasureIds.length; index++) {
-          const horseCards = cardEffectArgs.findCards([
+          const horseCards = cardEffectArgs.findCardService.findCards([
             { location: 'nonSupplyCards' },
             { cardKeys: 'horse' },
           ]);
@@ -1114,7 +1113,7 @@ const expansion: CardExpansionModule = {
           condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
           triggeredEffectFn: async (triggeredArgs) => {
             const playedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
-            const copyCandidates = triggeredArgs.findCards([
+            const copyCandidates = triggeredArgs.findCardService.findCards([
               { location: ['basicSupply', 'kingdomSupply'] },
               { cardKeys: playedCard.cardKey },
             ]);
@@ -1201,7 +1200,7 @@ const expansion: CardExpansionModule = {
             return cost.treasure >= 4;
           },
           triggeredEffectFn: async (triggeredArgs) => {
-            const horseCards = triggeredArgs.findCards([
+            const horseCards = triggeredArgs.findCardService.findCards([
               { location: 'nonSupplyCards' },
               { cardKeys: 'horse' },
             ]);
@@ -1323,7 +1322,7 @@ const expansion: CardExpansionModule = {
           }
 
           const isReplayedDurationInPlay = () =>
-            getCardsInPlay(triggeredArgs.findCards).some((card) => card.id === selectedActionId);
+            triggeredArgs.findCardService.getCardsInPlay().some((card) => card.id === selectedActionId);
 
           if (!isReplayedDurationInPlay()) {
             console.debug('[mastermind startTurn effect] replayed Duration not in play, no hold needed');
@@ -1401,7 +1400,7 @@ const expansion: CardExpansionModule = {
 
       // Gain 2 Horses from the Horse pile.
       for (let index = 0; index < 2; index++) {
-        const horseCards = cardEffectArgs.findCards([
+        const horseCards = cardEffectArgs.findCardService.findCards([
           { location: 'nonSupplyCards' },
           { cardKeys: 'horse' },
         ]);
@@ -1421,7 +1420,7 @@ const expansion: CardExpansionModule = {
 
       // Empty pile count is evaluated at this point in resolution.
       const emptySupplyPiles = getStartingSupplyCount(cardEffectArgs.match) -
-        getRemainingSupplyCount(cardEffectArgs.findCards);
+        cardEffectArgs.findCardService.getRemainingSupplyCount();
 
       if (emptySupplyPiles < 1) {
         console.debug('[paddock effect] no empty supply piles, gaining 0 Actions');
@@ -1560,7 +1559,7 @@ const expansion: CardExpansionModule = {
           return;
         }
 
-        const horseCards = cardEffectArgs.findCards([
+        const horseCards = cardEffectArgs.findCardService.findCards([
           { location: 'nonSupplyCards' },
           { cardKeys: 'horse' },
         ]);
@@ -1753,7 +1752,7 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       // Sleigh gains 2 Horses from the Horse pile.
       for (let index = 0; index < 2; index++) {
-        const horseCards = cardEffectArgs.findCards([
+        const horseCards = cardEffectArgs.findCardService.findCards([
           { location: 'nonSupplyCards' },
           { cardKeys: 'horse' },
         ]);
@@ -1853,7 +1852,7 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
 
-      const horseCards = cardEffectArgs.findCards([
+      const horseCards = cardEffectArgs.findCardService.findCards([
         { location: 'nonSupplyCards' },
         { cardKeys: 'horse' },
       ]);
@@ -1967,7 +1966,7 @@ const expansion: CardExpansionModule = {
         count: 3,
       });
 
-      const topSilverCard = findTopSupplyCardForPileKey(cardEffectArgs, {
+      const topSilverCard = cardEffectArgs.findCardService.findTopSupplyCardForPileKey({
         pileKey: 'silver',
         from: 'basicSupply',
       });

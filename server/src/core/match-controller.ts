@@ -24,7 +24,7 @@ import { EventEmitter } from '@denosaurs/event';
 import {
   AppSocket,
   EndGameConditionFn,
-  FindCardsFn,
+  FindCardService,
   GameActionDefinitionMap,
   GameActionReturnTypeMap,
   GameActions,
@@ -43,7 +43,7 @@ import {
   createProject,
   createState,
 } from '../utils/create-card.ts';
-import { getRemainingSupplyCount, getStartingSupplyCount } from '../utils/get-starting-supply-count.ts';
+import { getStartingSupplyCount } from '../utils/get-starting-supply-count.ts';
 import { CardSourceController } from './card-source-controller.ts';
 import { tokenDefinitionMap } from './tokens/token-definition-map.ts';
 import { prosperityTokenIds } from '@expansions/prosperity/token-prosperity-ids.ts';
@@ -79,7 +79,12 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _matchConfigurator: MatchConfigurator | undefined;
   private _expansionScoringFns: PlayerScoreDecorator[] = [];
   private _registeredEvents: (keyof ServerListenEvents)[] = [];
-  private _findCards: FindCardsFn = (...args) => [];
+  private _findCardService: FindCardService = {
+    findCards: (...args) => [],
+    getCardsInPlay: () => [],
+    getRemainingSupplyCount: () => 0,
+    findTopSupplyCardForPileKey: () => undefined,
+  };
   private readonly _cardSourceController: CardSourceController;
   // Tracks nested runGameAction calls to avoid corrupting patch snapshots.
   private _actionDepth: number = 0;
@@ -272,7 +277,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
     this._logManager = runtime.logManager;
     this._cardPriceController = runtime.cardPriceController;
-    this._findCards = runtime.findCards;
+    this._findCardService = runtime.findCardService;
     this._reactionManager = runtime.reactionManager;
     this._interactivityController = runtime.interactivityController;
     this.gameActionsController = runtime.gameActionsController;
@@ -840,7 +845,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
             cardSourceController: this._cardSourceController,
             cardPriceController: this._cardPriceController!,
             logManager: this._logManager!,
-            findCards: this._findCards,
+            findCardService: this._findCardService,
             reactionManager: this._reactionManager!,
             match: this._match,
             cardLibrary: this._cardLibrary,
@@ -918,7 +923,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     let shouldEndGame = false;
 
     if (
-      this._findCards([
+      this._findCardService.findCards([
         { location: 'basicSupply' },
         { cardKeys: 'province' },
       ]).length === 0
@@ -928,7 +933,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }
     if (!shouldEndGame) {
       const startingSupplyCount = getStartingSupplyCount(match);
-      const remainingSupplyCount = getRemainingSupplyCount(this._findCards);
+      const remainingSupplyCount = this._findCardService.getRemainingSupplyCount();
       const emptyPileCount = startingSupplyCount - remainingSupplyCount;
 
       console.debug(`[match] empty pile count ${emptyPileCount}`);
@@ -949,7 +954,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           cardPriceController: this._cardPriceController!,
           logManager: this._logManager!,
           reactionManager: this._reactionManager!,
-          findCards: this._findCards,
+          findCardService: this._findCardService,
         });
         if (shouldEnd) {
           console.info('[match] expansion end-game condition met');
@@ -1044,7 +1049,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           playerId,
           turnsTaken,
           score: match.scores[playerId],
-          deck: this._findCards([{ owner: playerId }]).map((card) => card.id),
+          deck: this._findCardService.findCards([{ owner: playerId }]).map((card) => card.id),
         });
         return prev;
       }, [] as MatchSummary['playerSummary'])

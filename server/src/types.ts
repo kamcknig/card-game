@@ -334,16 +334,19 @@ export interface AppContext {
   reactionManager: ReactionManager;
   reactionContext?: ReactionContext;
   cardLibrary: MatchCardLibrary;
-  findCards: FindCardsFn;
+  findCardService: FindCardService;
 }
 
-export type FindCardsFnFactory = (
-  cardSourceController: CardSourceController,
-  cardCostController: CardPriceRulesController,
-  cardLibrary: MatchCardLibrary,
-) => FindCardsFn;
-
 export type FindCardsFn = (filters: FindCardsFnInput) => Card[];
+export type FindCardService = {
+  findCards: FindCardsFn;
+  getCardsInPlay: () => Card[];
+  getRemainingSupplyCount: () => number;
+  findTopSupplyCardForPileKey: (args: {
+    pileKey: CardKey;
+    from?: ('basicSupply' | 'kingdomSupply') | ('basicSupply' | 'kingdomSupply')[];
+  }) => Card | undefined;
+};
 
 export function isSourceFindCardsFilter(filter: unknown): filter is SourceFindCardsFilter {
   return (
@@ -434,7 +437,7 @@ export type CardAlternateBuyOptionCanBuyContext = {
   playerId: PlayerId;
   card: Card;
   cardLibrary: MatchCardLibrary;
-  findCards: FindCardsFn;
+  findCardService: FindCardService;
   cardSourceController: CardSourceController;
   cardPriceController: CardPriceRulesController;
 };

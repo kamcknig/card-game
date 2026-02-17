@@ -122,7 +122,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   registrar('onGameStart', async (args) => {
     if (hasFisherman) {
       console.info('[menagerie configurator] registering Fisherman cost rules');
-      const fishermanCards = args.findCards([
+      const fishermanCards = args.findCardService.findCards([
         { location: 'kingdomSupply' },
         { cardKeys: 'fisherman' },
       ]);
@@ -146,7 +146,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
     if (hasDestrier) {
       console.info('[menagerie configurator] registering Destrier cost rules');
-      const destrierCards = args.findCards([
+      const destrierCards = args.findCardService.findCards([
         { location: 'kingdomSupply' },
         { cardKeys: 'destrier' },
       ]);
@@ -181,7 +181,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
     if (hasWayfarer) {
       console.info('[menagerie configurator] registering Wayfarer cost rules');
-      const wayfarerCards = args.findCards([
+      const wayfarerCards = args.findCardService.findCards([
         { location: 'kingdomSupply' },
         { cardKeys: 'wayfarer' },
       ]);

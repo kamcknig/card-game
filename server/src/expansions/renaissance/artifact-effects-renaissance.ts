@@ -191,7 +191,7 @@ const registerTreasureChest = (registerArtifactEffect: ArtifactEffectRegistrar) 
     match,
     reactionManager,
     cardId,
-    findCards,
+    findCardService,
   }) => {
     const artifact = findArtifactInMatch(match, cardId);
     if (!artifact) {
@@ -222,7 +222,7 @@ const registerTreasureChest = (registerArtifactEffect: ArtifactEffectRegistrar) 
         return ownedArtifacts.includes(cardId);
       },
       triggeredEffectFn: async ({ logManager, runGameActionDelegate, match: triggeredMatch }) => {
-        const gainedGoldId = await gainTopSupplyCardForPileKey({ findCards, runGameActionDelegate }, {
+        const gainedGoldId = await gainTopSupplyCardForPileKey({ findCardService, runGameActionDelegate }, {
           playerId,
           pileKey: 'gold',
           from: 'basicSupply',

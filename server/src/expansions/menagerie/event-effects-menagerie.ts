@@ -1,9 +1,8 @@
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
-import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
-import { findTopSupplyCardForPileKey, gainTopSupplyCardForPileKey } from '../../utils/gain-top-supply-card-by-key.ts';
+import { gainTopSupplyCardForPileKey } from '../../utils/gain-top-supply-card-by-key.ts';
 import { AppContext, CardEffectFunctionContext, CardExpansionModule } from '@server-types/index.ts';
 import { Card, CardCost, CardId, CardKey, PlayerId } from 'shared/types/index.ts';
 import { findEventInMatch } from '@shared/find-card-like-in-match.ts';
@@ -47,7 +46,7 @@ const gainHorse = async (
   playerId: PlayerId,
   to: { location: 'playerDiscard' | 'playerDeck' },
 ) => {
-  const horseCards = args.findCards([
+  const horseCards = args.findCardService.findCards([
     { location: 'nonSupplyCards' },
     { cardKeys: 'horse' },
   ]);
@@ -178,7 +177,7 @@ const effectMap: CardExpansionModule = {
   'bargain': {
     registerEffects: () => async (cardEffectArgs) => {
       // Bargain gains a non-Victory card up to $5.
-      const gainableCards = cardEffectArgs.findCards([
+      const gainableCards = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
         { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: { treasure: 5 } },
       ]).filter((card) => !card.type.includes('VICTORY'));
@@ -244,7 +243,7 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      const goldCards = cardEffectArgs.findCards([
+      const goldCards = cardEffectArgs.findCardService.findCards([
         { location: 'basicSupply' },
         { cardKeys: 'gold' },
       ]);
@@ -334,7 +333,7 @@ const effectMap: CardExpansionModule = {
       // Demand gains a Horse onto deck before choosing the second gain.
       await gainHorse(cardEffectArgs, cardEffectArgs.playerId, { location: 'playerDeck' });
 
-      const gainableCards = cardEffectArgs.findCards([
+      const gainableCards = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
         { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: { treasure: 4 } },
       ]);
@@ -409,7 +408,7 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      const curseCards = cardEffectArgs.findCards([
+      const curseCards = cardEffectArgs.findCardService.findCards([
         { location: 'basicSupply' },
         { cardKeys: 'curse' },
       ]);
@@ -440,7 +439,7 @@ const effectMap: CardExpansionModule = {
         logTag: 'enclave effect',
       });
 
-      const duchyCards = cardEffectArgs.findCards([
+      const duchyCards = cardEffectArgs.findCardService.findCards([
         { location: 'basicSupply' },
         { cardKeys: 'duchy' },
       ]);
@@ -498,7 +497,7 @@ const effectMap: CardExpansionModule = {
         debt: trashedCardCost.debt ?? 0,
       };
 
-      const gainableCards = cardEffectArgs.findCards([
+      const gainableCards = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
         { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: maxGainCost },
       ]);
@@ -595,7 +594,7 @@ const effectMap: CardExpansionModule = {
       }
 
       // Invest Exiles an Action card from the Supply.
-      const actionCards = cardEffectArgs.findCards([
+      const actionCards = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
         { cardType: ['ACTION'] },
       ]);
@@ -734,7 +733,7 @@ const effectMap: CardExpansionModule = {
         const selectableTopCards = remainingPileKeys
           .map((pileKey) => ({
             pileKey,
-            card: findTopSupplyCardForPileKey(cardEffectArgs, { pileKey }),
+            card: cardEffectArgs.findCardService.findTopSupplyCardForPileKey({ pileKey }),
           }))
           .filter((entry): entry is { pileKey: string; card: Card } => !!entry.card);
 
@@ -845,7 +844,7 @@ const effectMap: CardExpansionModule = {
       }
 
       // Reap gains a Gold and sets it aside to auto-play at next turn start.
-      const goldCards = cardEffectArgs.findCards([
+      const goldCards = cardEffectArgs.findCardService.findCards([
         { location: 'basicSupply' },
         { cardKeys: 'gold' },
       ]);
@@ -925,7 +924,7 @@ const effectMap: CardExpansionModule = {
   'stampede': {
     registerEffects: () => async (cardEffectArgs) => {
       // Stampede checks cards currently in play and gains up to 5 Horses onto deck.
-      const cardsInPlay = getCardsInPlay(cardEffectArgs.findCards)
+      const cardsInPlay = cardEffectArgs.findCardService.getCardsInPlay()
         .filter((card) => card.owner === cardEffectArgs.playerId);
 
       if (cardsInPlay.length > 5) {
@@ -933,7 +932,7 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      const horseCards = cardEffectArgs.findCards([
+      const horseCards = cardEffectArgs.findCardService.findCards([
         { location: 'nonSupplyCards' },
         { cardKeys: 'horse' },
       ]);
@@ -992,7 +991,7 @@ const effectMap: CardExpansionModule = {
   'transport': {
     registerEffects: () => async (cardEffectArgs) => {
       // Transport can either Exile an Action from Supply or topdeck an Action from Exile.
-      const supplyActionCards = cardEffectArgs.findCards([
+      const supplyActionCards = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
         { cardType: ['ACTION'] },
       ]);

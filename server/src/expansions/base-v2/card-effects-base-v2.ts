@@ -86,7 +86,7 @@ const expansionModule: CardExpansionModule = {
       //Gain a Gold. Each other player reveals the top 2 cards of their deck,
       // trashes a revealed Treasure other than Copper, and discards the rest.
 
-      const goldCardId = args.findCards([{ location: 'basicSupply' }, { cardKeys: 'gold' }])
+      const goldCardId = args.findCardService.findCards([{ location: 'basicSupply' }, { cardKeys: 'gold' }])
         ?.slice(-1)?.[0].id;
 
       if (goldCardId) {
@@ -234,7 +234,7 @@ const expansionModule: CardExpansionModule = {
     }) => {
       // Gain a Silver onto your deck. Each other player reveals a Victory card
       // from their hand and puts it onto their deck (or reveals a hand with no Victory cards).
-      const silverCardId = args.findCards([{ location: 'basicSupply' }, { cardKeys: 'silver' }])
+      const silverCardId = args.findCardService.findCards([{ location: 'basicSupply' }, { cardKeys: 'silver' }])
         ?.slice(-1)?.[0].id;
 
       if (!silverCardId) {
@@ -258,7 +258,7 @@ const expansionModule: CardExpansionModule = {
       console.debug(`[BUREAUCRAT EFFECT] targeting ${targetPlayerIds.map((id) => getPlayerById(match, id))}`);
 
       for (const targetPlayerId of targetPlayerIds) {
-        const hand = args.findCards({ location: 'playerHand', playerId: targetPlayerId });
+        const hand = args.findCardService.findCards({ location: 'playerHand', playerId: targetPlayerId });
 
         const victoryCardsInHand = hand.filter((c) => c.type.includes('VICTORY'));
 
@@ -324,7 +324,7 @@ const expansionModule: CardExpansionModule = {
         count: 1,
       });
 
-      const hasCards = args.findCards({ location: 'playerHand', playerId }).length > 0;
+      const hasCards = args.findCardService.findCards({ location: 'playerHand', playerId }).length > 0;
 
       if (!hasCards) {
         console.debug('[CELLAR EFFECT] player has no cards to choose from');
@@ -437,7 +437,7 @@ const expansionModule: CardExpansionModule = {
   },
   'gardens': {
     registerScoringFunction: () => ({ match, ownerId, ...args }) => {
-      const cards = args.findCards({ owner: ownerId });
+      const cards = args.findCardService.findCards({ owner: ownerId });
       return Math.floor(cards.length / 10);
     },
     registerEffects: () => async () => {
@@ -455,7 +455,7 @@ const expansionModule: CardExpansionModule = {
         count: 1,
       });
 
-      if (args.findCards({ location: 'playerDiscard', playerId }).length === 0) {
+      if (args.findCardService.findCards({ location: 'playerDiscard', playerId }).length === 0) {
         console.debug('[HARBINGER EFFECT] player has no cards in discard');
         return;
       }
@@ -468,7 +468,7 @@ const expansionModule: CardExpansionModule = {
         actionButtons: [{ label: 'CANCEL', action: 2 }],
         content: {
           type: 'select',
-          cardIds: args.findCards({ location: 'playerDiscard', playerId }).map((card) => card.id),
+          cardIds: args.findCardService.findCards({ location: 'playerDiscard', playerId }).map((card) => card.id),
           selectCount: 1,
         },
       }) as { action: number; result: number[] };
@@ -867,7 +867,7 @@ const expansionModule: CardExpansionModule = {
 
       console.debug(`[POACHER EFFECT] original supply card piles ${allSupplyCardKeys}`);
 
-      const remainingSupplyCardKeys = args.findCards({ location: ['basicSupply', 'kingdomSupply'] })
+      const remainingSupplyCardKeys = args.findCardService.findCards({ location: ['basicSupply', 'kingdomSupply'] })
         .map((card) => card.cardKey)
         .reduce((prev, cardKey) => {
           if (prev.includes(cardKey)) {
@@ -1289,7 +1289,7 @@ const expansionModule: CardExpansionModule = {
       console.debug(`[WITCH EFFECT] targets ${playerIds.map((id) => getPlayerById(match, id))}`);
 
       for (const playerId of playerIds) {
-        const curseCards = args.findCards([{ location: 'basicSupply' }, { cardKeys: 'curse' }]);
+        const curseCards = args.findCardService.findCards([{ location: 'basicSupply' }, { cardKeys: 'curse' }]);
         if (!curseCards.length) {
           console.debug(`[WITCH EFFECT] no curse cards in supply`);
           return;

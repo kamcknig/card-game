@@ -3,7 +3,6 @@ import { CardId, CardKey, CardLocation, PlayerId } from 'shared/types/index.ts';
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
-import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
@@ -19,7 +18,7 @@ type ArchiveEffectContext = Pick<
 
 type GainTopSupplyContext = Pick<
   CardEffectFunctionContext,
-  'findCards' | 'runGameActionDelegate'
+  'findCardService' | 'runGameActionDelegate'
 >;
 
 // Count the number of Castle cards owned by a player for variable scoring.
@@ -35,9 +34,9 @@ const countOwnedCastles = (
 
 // Resolve the top Castle card ID from the Castle split pile in the kingdom supply.
 const getTopCastleCardId = (
-  findCards: CardEffectFunctionContext['findCards'],
+  findCardService: CardEffectFunctionContext['findCardService'],
 ) => {
-  const castleCards = findCards([{ location: 'kingdomSupply' }, {
+  const castleCards = findCardService.findCards([{ location: 'kingdomSupply' }, {
     cardType: ['CASTLE'],
   }]);
   return castleCards.slice(-1)[0]?.id;
@@ -54,7 +53,7 @@ const gainTopSupplyCard = async (
     logTag: string;
   },
 ) => {
-  const supplyCards = context.findCards([{ location: args.location }, {
+  const supplyCards = context.findCardService.findCards([{ location: args.location }, {
     cardKeys: [args.cardKey],
   }]);
   const topCardId = supplyCards.slice(-1)[0]?.id;
@@ -79,7 +78,7 @@ const gainTopCastleCard = async (
   context: GainTopSupplyContext,
   playerId: PlayerId,
 ) => {
-  const topCastleCardId = getTopCastleCardId(context.findCards);
+  const topCastleCardId = getTopCastleCardId(context.findCardService);
   if (!topCastleCardId) {
     console.debug(`[castle pile] no castles left to gain`);
     return;
@@ -117,7 +116,7 @@ const resolveCrumblingCastleBonus = async (
 const resolveRocksSilverGain = async (
   context: Pick<
     CardEffectFunctionContext,
-    'match' | 'findCards' | 'runGameActionDelegate'
+    'match' | 'findCardService' | 'runGameActionDelegate'
   >,
   args: { playerId: PlayerId; source: 'gained' | 'trashed' },
 ) => {
@@ -366,7 +365,7 @@ const expansion: CardExpansionModule = {
           );
 
           // Find supply cards with the exact same cost but a different name.
-          const matchingCards = triggeredArgs.findCards([
+          const matchingCards = triggeredArgs.findCardService.findCards([
             { location: ['basicSupply', 'kingdomSupply'] },
             { playerId: args.playerId, kind: 'exact', amount: gainedCost },
           ]).filter((card) => card.cardKey !== gainedCard.cardKey);
@@ -487,7 +486,7 @@ const expansion: CardExpansionModule = {
       // Apply curse gains in turn order when the trashed card costs $3+.
       if (triggersCurse) {
         for (const targetPlayerId of targetPlayerIds) {
-          const curseCards = args.findCards([{ location: 'basicSupply' }, {
+          const curseCards = args.findCardService.findCards([{ location: 'basicSupply' }, {
             cardKeys: 'curse',
           }]);
           if (!curseCards.length) {
@@ -803,7 +802,7 @@ const expansion: CardExpansionModule = {
       console.debug(`[encampment effect] gaining 2 actions`);
       await args.runGameActionDelegate('gainAction', { count: 2 });
 
-      const validCards = args.findCards([
+      const validCards = args.findCardService.findCards([
         { location: 'playerHand', playerId: args.playerId },
         { cardKeys: ['gold', 'plunder'] },
       ]);
@@ -884,7 +883,7 @@ const expansion: CardExpansionModule = {
   'engineer': {
     registerEffects: () => async (args) => {
       const gainCard = async () => {
-        const validCards = args.findCards([
+        const validCards = args.findCardService.findCards([
           { location: ['basicSupply', 'kingdomSupply'] },
           { amount: { treasure: 4 }, playerId: args.playerId, kind: 'upTo' },
         ]);
@@ -988,7 +987,7 @@ const expansion: CardExpansionModule = {
       onGained: async (args) => {
         console.debug(`[fortune onGained] running`);
 
-        const gladiatorsInPlay = getCardsInPlay(args.findCards).filter((card) => card.cardKey === 'gladiator');
+        const gladiatorsInPlay = args.findCardService.getCardsInPlay().filter((card) => card.cardKey === 'gladiator');
 
         if (!gladiatorsInPlay.length) {
           console.debug(`[fortune onGained] no gladiators in play`);
@@ -1023,7 +1022,7 @@ const expansion: CardExpansionModule = {
         autoResolve: true,
         allowMultipleInstances: false,
         condition: async (conditionArgs) => {
-          const fortuneCards = getCardsInPlay(conditionArgs.findCards).filter(
+          const fortuneCards = conditionArgs.findCardService.getCardsInPlay().filter(
             (c) => c.cardKey === 'fortune',
           );
           if (fortuneCards.length > 0) return false;
@@ -1150,7 +1149,7 @@ const expansion: CardExpansionModule = {
 
       const trashCard = async () => {
         await args.runGameActionDelegate('gainTreasure', { count: 1 });
-        const gladiators = args.findCards([
+        const gladiators = args.findCardService.findCards([
           { location: 'kingdomSupply' },
           { cardKeys: 'gladiator' },
         ]);
@@ -1314,7 +1313,7 @@ const expansion: CardExpansionModule = {
       console.debug(`[overlord effect] evaluating supply options for player ${args.playerId}`);
 
       const supplyLocations: CardLocation[] = ['kingdomSupply', 'basicSupply'];
-      const supplyCards = args.findCards([{ location: supplyLocations }]);
+      const supplyCards = args.findCardService.findCards([{ location: supplyLocations }]);
       const topCardByPile = new Map<string, typeof supplyCards[number]>();
       for (const card of supplyCards) {
         topCardByPile.set(card.kingdom, card);
@@ -1420,7 +1419,7 @@ const expansion: CardExpansionModule = {
         });
 
         for (const targetPlayerId of targetPlayerIds) {
-          const targetHand = args.findCards({
+          const targetHand = args.findCardService.findCards({
             location: 'playerHand',
             playerId: targetPlayerId,
           });
@@ -1477,12 +1476,12 @@ const expansion: CardExpansionModule = {
     registerLifeCycleMethods: () => ({
       onGained: async (args, eventArgs) => {
         // Grand Castle grants VP tokens based on Victory cards in hand and in play.
-        const victoryInHand = args.findCards({
+        const victoryInHand = args.findCardService.findCards({
           location: 'playerHand',
           playerId: eventArgs.playerId,
         })
           .filter((card) => card.type.includes('VICTORY'));
-        const victoryInPlay = getCardsInPlay(args.findCards)
+        const victoryInPlay = args.findCardService.getCardsInPlay()
           .filter((card) => card.type.includes('VICTORY'));
         // Reveal the gaining player's hand before awarding VP tokens.
         const handCardIds = args.cardSourceController.getSource(
@@ -1528,7 +1527,7 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (args) => {
       // Opulent Castle discards Victory cards for +$2 each.
       const { playerId } = args;
-      const victoryCardsInHand = args.findCards([{
+      const victoryCardsInHand = args.findCardService.findCards([{
         location: 'playerHand',
         playerId,
       }, { cardType: ['VICTORY'] }]);
@@ -1672,7 +1671,7 @@ const expansion: CardExpansionModule = {
     },
     registerLifeCycleMethods: () => ({
       onGained: async (args, eventArgs) => {
-        const actionCardsInPlay = getCardsInPlay(args.findCards).filter(
+        const actionCardsInPlay = args.findCardService.getCardsInPlay().filter(
           (card) => card.type.includes('ACTION') && card.owner === eventArgs.playerId,
         );
 
@@ -1707,7 +1706,7 @@ const expansion: CardExpansionModule = {
       });
       await args.runGameActionDelegate('gainAction', { count: 1 });
 
-      const copperInDiscard = args.findCards([{
+      const copperInDiscard = args.findCardService.findCards([{
         location: 'playerDiscard',
         playerId: args.playerId,
       }, { cardKeys: 'copper' }]);
@@ -1760,7 +1759,7 @@ const expansion: CardExpansionModule = {
       });
       await args.runGameActionDelegate('gainAction', { count: 3 });
 
-      const settlersInDiscard = args.findCards([{
+      const settlersInDiscard = args.findCardService.findCards([{
         location: 'playerDiscard',
         playerId: args.playerId,
       }, { cardKeys: 'settlers' }]);
@@ -1934,7 +1933,7 @@ const expansion: CardExpansionModule = {
       }
 
       // Option 2: gain an Estate; only if gained do we take VP tokens from the pile.
-      const estateCards = args.findCards([{ location: 'basicSupply' }, {
+      const estateCards = args.findCardService.findCards([{ location: 'basicSupply' }, {
         cardKeys: 'estate',
       }]);
       const estateCardId = estateCards.slice(-1)[0]?.id;
@@ -2144,7 +2143,7 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (args) => {
       // Small Castle allows trashing itself or a Castle from hand to gain a Castle.
       const { playerId, cardId } = args;
-      const castlesInHand = args.findCards([{
+      const castlesInHand = args.findCardService.findCards([{
         location: 'playerHand',
         playerId,
       }, { cardType: ['CASTLE'] }]);
@@ -2235,7 +2234,7 @@ const expansion: CardExpansionModule = {
           return;
         }
 
-        const estateCards = args.findCards([{ location: 'basicSupply' }, {
+        const estateCards = args.findCardService.findCards([{ location: 'basicSupply' }, {
           cardKeys: 'estate',
         }]);
         const estatesToGain = Math.min(3, estateCards.length);

@@ -33,9 +33,9 @@ export const registerNocturneBoonEffects = (registerBoonEffect: BoonEffectRegist
 
 // Registers The Earth's Gift boon effect logic.
 const registerEarthsGift = (registerBoonEffect: BoonEffectRegistrar) => {
-  registerBoonEffect('the-earths-gift', async ({ playerId, runGameActionDelegate, cardLibrary, findCards }) => {
+  registerBoonEffect('the-earths-gift', async ({ playerId, runGameActionDelegate, cardLibrary, findCardService }) => {
     // Determine if the player has any Treasures to discard.
-    const treasuresInHand = findCards([
+    const treasuresInHand = findCardService.findCards([
       { location: 'playerHand', playerId },
       { cardType: ['TREASURE'] },
     ]);
@@ -148,9 +148,9 @@ const registerFlamesGift = (registerBoonEffect: BoonEffectRegistrar) => {
     playerId,
     runGameActionDelegate,
     cardLibrary,
-    findCards,
+    findCardService,
   }) => {
-    const handCards = findCards({ location: 'playerHand', playerId });
+    const handCards = findCardService.findCards({ location: 'playerHand', playerId });
     if (handCards.length < 1) {
       console.info('[the-flames-gift boon] no cards in hand, skipping');
       return;
@@ -231,9 +231,9 @@ const registerMoonsGift = (registerBoonEffect: BoonEffectRegistrar) => {
   registerBoonEffect('the-moons-gift', async ({
     playerId,
     runGameActionDelegate,
-    findCards,
+    findCardService,
   }) => {
-    const discardCards = findCards({ location: 'playerDiscard', playerId });
+    const discardCards = findCardService.findCards({ location: 'playerDiscard', playerId });
     if (discardCards.length < 1) {
       console.info('[the-moons-gift boon] no cards in discard, skipping');
       return;
@@ -271,9 +271,9 @@ const registerMountainsGift = (registerBoonEffect: BoonEffectRegistrar) => {
   registerBoonEffect('the-mountains-gift', async ({
     playerId,
     runGameActionDelegate,
-    findCards,
+    findCardService,
   }) => {
-    const gainedSilverId = await gainTopSupplyCardForPileKey({ runGameActionDelegate, findCards }, {
+    const gainedSilverId = await gainTopSupplyCardForPileKey({ runGameActionDelegate, findCardService }, {
       playerId: playerId,
       pileKey: 'silver',
       from: 'basicSupply',
@@ -348,7 +348,7 @@ const registerSkysGift = (registerBoonEffect: BoonEffectRegistrar) => {
     playerId,
     runGameActionDelegate,
     cardLibrary,
-    findCards,
+    findCardService,
     cardSourceController,
   }) => {
     const confirm = await runGameActionDelegate('userPrompt', {
@@ -386,7 +386,7 @@ const registerSkysGift = (registerBoonEffect: BoonEffectRegistrar) => {
       return;
     }
 
-    const gainedGoldId = await gainTopSupplyCardForPileKey({ runGameActionDelegate, findCards }, {
+    const gainedGoldId = await gainTopSupplyCardForPileKey({ runGameActionDelegate, findCardService }, {
       playerId: playerId,
       pileKey: 'gold',
       from: 'basicSupply',
@@ -485,9 +485,9 @@ const registerSwampsGift = (registerBoonEffect: BoonEffectRegistrar) => {
   registerBoonEffect('the-swamps-gift', async ({
     playerId,
     runGameActionDelegate,
-    findCards,
+    findCardService,
   }) => {
-    const willOWispCards = findCards([
+    const willOWispCards = findCardService.findCards([
       { location: 'nonSupplyCards' },
       { cardKeys: 'will-o-wisp' },
     ]);

@@ -1,5 +1,5 @@
 import { Card, CardCost, CardId, Match, PlayerId } from 'shared/types/index.ts';
-import { CardAlternateBuyOption, FindCardsFn } from '@server-types/index.ts';
+import { CardAlternateBuyOption, FindCardService } from '@server-types/index.ts';
 import { MatchCardLibrary } from '../match-card-library.ts';
 import { CardPriceRulesController } from '../card-price-rules-controller.ts';
 import { CardSourceController } from '../card-source-controller.ts';
@@ -23,7 +23,7 @@ export type ResolveBuyOptionsArgs = {
   cardLibrary: MatchCardLibrary;
   cardPriceController: CardPriceRulesController;
   cardSourceController: CardSourceController;
-  findCards: FindCardsFn;
+  findCardService: FindCardService;
 };
 
 // Stringifies treasure/potion/debt cost for user-facing option labels.
@@ -87,7 +87,7 @@ export const resolveBuyOptions = (args: ResolveBuyOptionsArgs): {
         playerId: args.playerId,
         card,
         cardLibrary: args.cardLibrary,
-        findCards: args.findCards,
+        findCardService: args.findCardService,
         cardSourceController: args.cardSourceController,
         cardPriceController: args.cardPriceController,
       })

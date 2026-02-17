@@ -20,7 +20,7 @@ const expansionModule: CardExpansionModule = {
 
       const handEstateIdx = hand.findLast((cId) => cardLibrary.getCard(cId).cardKey === 'estate');
 
-      const supplyEstateIdx = args.findCards([{ location: 'basicSupply' }, { cardKeys: 'estate' }])
+      const supplyEstateIdx = args.findCardService.findCards([{ location: 'basicSupply' }, { cardKeys: 'estate' }])
         ?.slice(-1)?.[0].id;
 
       if (!handEstateIdx) {
@@ -228,7 +228,7 @@ const expansionModule: CardExpansionModule = {
             });
             break;
           case 4: {
-            const goldCardId = args.findCards([{ location: 'basicSupply' }, { cardKeys: 'gold' }])
+            const goldCardId = args.findCardService.findCards([{ location: 'basicSupply' }, { cardKeys: 'gold' }])
               ?.slice(-1)?.[0].id;
 
             if (!goldCardId) {
@@ -345,7 +345,7 @@ const expansionModule: CardExpansionModule = {
   },
   'duke': {
     registerScoringFunction: () => ({ match, cardLibrary, ownerId, ...args }) => {
-      const duchies = args.findCards([{ owner: ownerId }, { cardKeys: 'duchy' }]);
+      const duchies = args.findCardService.findCards([{ owner: ownerId }, { cardKeys: 'duchy' }]);
 
       console.debug(`[DUKE SCORING] player ${getPlayerById(match, ownerId)} has ${duchies.length} Duchies`);
 
@@ -459,7 +459,7 @@ const expansionModule: CardExpansionModule = {
         return;
       }
 
-      const trash = args.findCards({ location: 'trash' });
+      const trash = args.findCardService.findCards({ location: 'trash' });
       const actionCardIds = trash.filter((cardId) => cardId.type.includes('ACTION'));
 
       if (!actionCardIds.length) {
@@ -473,7 +473,7 @@ const expansionModule: CardExpansionModule = {
       }
 
       let cardId: CardId;
-      if (args.findCards({ location: 'trash' }).length === 1) {
+      if (args.findCardService.findCards({ location: 'trash' }).length === 1) {
         console.debug(`[LURKER EFFECT] only one card in trash, gaining automatically`);
         cardId = trash[0].id;
       } else {
@@ -774,7 +774,7 @@ const expansionModule: CardExpansionModule = {
         });
       }
 
-      const revealedCardIds: Card[] = args.findCards({ location: 'playerDeck', playerId }).slice(-numToReveal);
+      const revealedCardIds: Card[] = args.findCardService.findCards({ location: 'playerDeck', playerId }).slice(-numToReveal);
 
       for (const cardId of revealedCardIds) {
         console.debug(`[PATROL EFFECT] revealing ${cardId}...`);
@@ -962,7 +962,7 @@ const expansionModule: CardExpansionModule = {
         }).filter((id) => !isPlayerImmune(reactionContext, id));
 
         for (const targetId of targets) {
-          const curseCardId = args.findCards([{ location: 'basicSupply' }, { cardKeys: 'curse' }])
+          const curseCardId = args.findCardService.findCards([{ location: 'basicSupply' }, { cardKeys: 'curse' }])
             ?.slice(-1)?.[0].id;
 
           if (!curseCardId) {
@@ -1017,7 +1017,7 @@ const expansionModule: CardExpansionModule = {
 
       console.debug(`[SECRET PASSAGE EFFECT] player chose ${cardLibrary.getCard(cardId)}`);
 
-      if (args.findCards({ location: 'playerDeck', playerId }).length === 0) {
+      if (args.findCardService.findCards({ location: 'playerDeck', playerId }).length === 0) {
         console.debug(`[SECRET PASSAGE EFFECT] player has no cards in deck, so just putting card on deck`);
         await runGameActionDelegate('moveCard', {
           cardId,
@@ -1037,7 +1037,7 @@ const expansionModule: CardExpansionModule = {
         prompt: 'Position card',
         content: {
           type: 'blind-rearrange',
-          cardIds: args.findCards({ location: 'playerDeck', playerId }).map((card) => card.id),
+          cardIds: args.findCardService.findCards({ location: 'playerDeck', playerId }).map((card) => card.id),
         },
       }) as { action: number; result: number };
 
@@ -1274,7 +1274,7 @@ const expansionModule: CardExpansionModule = {
           return;
         }
 
-        const curseCardId = args.findCards([{ location: 'basicSupply' }, { cardKeys: 'curse' }])
+        const curseCardId = args.findCardService.findCards([{ location: 'basicSupply' }, { cardKeys: 'curse' }])
           ?.slice(-1)?.[0]?.id;
 
         if (!curseCardId) {
@@ -1323,7 +1323,7 @@ const expansionModule: CardExpansionModule = {
       }
 
       if (cardIds.length === 2) {
-        const silverCardId = args.findCards([{ location: 'basicSupply' }, { cardKeys: 'silver' }])
+        const silverCardId = args.findCardService.findCards([{ location: 'basicSupply' }, { cardKeys: 'silver' }])
           ?.slice(-1)?.[0].id;
         if (!silverCardId) {
           console.debug(`[TRADING POST EFFECT] no silver in supply`);
@@ -1438,7 +1438,7 @@ const expansionModule: CardExpansionModule = {
 
       console.debug(`[WISHING WELL EFFECT] player named '${cardKey}'`);
 
-      if (args.findCards({ location: 'playerDeck', playerId }).length === 0) {
+      if (args.findCardService.findCards({ location: 'playerDeck', playerId }).length === 0) {
         console.debug(`[WISHING WELL EFFECT] shuffling player's deck...`);
 
         await runGameActionDelegate('shuffleDeck', {
@@ -1446,7 +1446,7 @@ const expansionModule: CardExpansionModule = {
         });
       }
 
-      const cardId = args.findCards({ location: 'playerDeck', playerId }).slice(-1)[0]?.id;
+      const cardId = args.findCardService.findCards({ location: 'playerDeck', playerId }).slice(-1)[0]?.id;
 
       console.debug(`[WISHING WELL EFFECT] revealing card ${cardLibrary.getCard(cardId)}...`);
 

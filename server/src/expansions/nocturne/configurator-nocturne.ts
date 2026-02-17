@@ -700,7 +700,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           }
 
           // Ensure there is at least one Changeling in the supply pile.
-          const changelingCards = conditionArgs.findCards([
+          const changelingCards = conditionArgs.findCardService.findCards([
             { location: 'kingdomSupply' },
             { cardKeys: 'changeling' },
           ]);
@@ -765,7 +765,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           });
 
           // Move the top Changeling to the player's discard (exchange is not a gain).
-          const changelingCards = triggeredArgs.findCards([
+          const changelingCards = triggeredArgs.findCardService.findCards([
             { location: 'kingdomSupply' },
             { cardKeys: 'changeling' },
           ]);

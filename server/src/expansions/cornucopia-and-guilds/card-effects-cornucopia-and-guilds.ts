@@ -1,7 +1,6 @@
 import { Card, CardId, CardKey } from 'shared/types/index.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
-import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { getPlayerStartingFrom } from '@shared/get-player-position-utils.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
@@ -110,7 +109,7 @@ const expansion: CardExpansionModule = {
         playerId: cardEffectArgs.playerId,
       });
 
-      const cards = cardEffectArgs.findCards([
+      const cards = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
         {
           kind: 'upTo',
@@ -229,7 +228,7 @@ const expansion: CardExpansionModule = {
   },
   'coronet': {
     registerEffects: () => async (cardEffectArgs) => {
-      const handCards = cardEffectArgs.findCards({ location: 'playerHand', playerId: cardEffectArgs.playerId });
+      const handCards = cardEffectArgs.findCardService.findCards({ location: 'playerHand', playerId: cardEffectArgs.playerId });
 
       const cardSources = [
         handCards
@@ -338,7 +337,7 @@ const expansion: CardExpansionModule = {
             await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
             break;
           case 4: {
-            const silverCardIds = cardEffectArgs.findCards(
+            const silverCardIds = cardEffectArgs.findCardService.findCards(
               [{ location: 'basicSupply' }, { cardKeys: 'silver' }],
             );
 
@@ -359,7 +358,7 @@ const expansion: CardExpansionModule = {
   },
   'demesne': {
     registerScoringFunction: () => (args) => {
-      const ownedGoldCards = args.findCards(
+      const ownedGoldCards = args.findCardService.findCards(
         [{ owner: args.ownerId }],
       )
         .filter((card) => card.cardKey === 'gold');
@@ -370,7 +369,7 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
       await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 2 });
 
-      const goldCardIds = cardEffectArgs.findCards(
+      const goldCardIds = cardEffectArgs.findCardService.findCards(
         [{ location: 'basicSupply' }, { cardKeys: 'gold' }],
       );
 
@@ -511,7 +510,7 @@ const expansion: CardExpansionModule = {
   'ferryman': {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
-        const cardIds = cardEffectArgs.findCards(
+        const cardIds = cardEffectArgs.findCardService.findCards(
           [{ location: 'kingdomSupply' }, { tags: 'ferryman' }],
         );
 
@@ -671,7 +670,7 @@ const expansion: CardExpansionModule = {
 
             console.debug(`[herald triggered effect] ${eventArgs.playerId} overpaid for ${eventArgs.cardId}`);
 
-            const discardIds = triggerEffectArgs.findCards({ location: 'playerDiscard', playerId: eventArgs.playerId })
+            const discardIds = triggerEffectArgs.findCardService.findCards({ location: 'playerDiscard', playerId: eventArgs.playerId })
               .map((card) => card.id);
 
             const numToChoose = Math.min(overpaid, discardIds.length);
@@ -750,12 +749,12 @@ const expansion: CardExpansionModule = {
   'horn-of-plenty': {
     registerEffects: () => async (cardEffectArgs) => {
       const uniquelyNamesCardsInPlay = new Set(
-        getCardsInPlay(cardEffectArgs.findCards)
+        cardEffectArgs.findCardService.getCardsInPlay()
           .filter((card) => card.owner === cardEffectArgs.playerId)
           .map((card) => card.cardName),
       ).size;
 
-      const cards = cardEffectArgs.findCards([
+      const cards = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
         { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: { treasure: uniquelyNamesCardsInPlay } },
       ]);
@@ -799,7 +798,7 @@ const expansion: CardExpansionModule = {
   'housecarl': {
     registerEffects: () => async (cardEffectArgs) => {
       const uniqueActionCardsInPlay = Array.from(
-        getCardsInPlay(cardEffectArgs.findCards)
+        cardEffectArgs.findCardService.getCardsInPlay()
           .filter((card) => card.type.includes('ACTION'))
           .reduce((map, card) => {
             if (!map.has(card.cardKey)) {
@@ -998,7 +997,7 @@ const expansion: CardExpansionModule = {
 
         if (card.type.includes('VICTORY')) {
           console.debug(`[jester effect] card is a victory card, gaining curse`);
-          const curseCardIds = cardEffectArgs.findCards(
+          const curseCardIds = cardEffectArgs.findCardService.findCards(
             [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
           );
 
@@ -1013,7 +1012,7 @@ const expansion: CardExpansionModule = {
             to: { location: 'basicSupply' },
           });
         } else {
-          const copyIds = cardEffectArgs.findCards(
+          const copyIds = cardEffectArgs.findCardService.findCards(
             [{ location: ['basicSupply', 'kingdomSupply'] }, { cardKeys: card.cardKey }],
           );
 
@@ -1103,7 +1102,7 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
 
-      const provinceCardsInHand = cardEffectArgs.findCards({
+      const provinceCardsInHand = cardEffectArgs.findCardService.findCards({
         location: 'playerHand',
         playerId: cardEffectArgs.playerId,
       })
@@ -1160,7 +1159,7 @@ const expansion: CardExpansionModule = {
         },
       });
 
-      const rewardCardIds = cardEffectArgs.findCards([
+      const rewardCardIds = cardEffectArgs.findCardService.findCards([
         { location: 'nonSupplyCards' },
         { cardType: 'REWARD' },
       ]);
@@ -1335,7 +1334,7 @@ const expansion: CardExpansionModule = {
           playerId: cardEffectArgs.playerId,
         });
 
-        const availableCardIds = cardEffectArgs.findCards([
+        const availableCardIds = cardEffectArgs.findCardService.findCards([
           { location: ['basicSupply', 'kingdomSupply'] },
           {
             kind: 'exact',
@@ -1418,12 +1417,12 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
 
-      const cardsInPlay = getCardsInPlay(cardEffectArgs.findCards);
+      const cardsInPlay = cardEffectArgs.findCardService.getCardsInPlay();
 
       const uniqueInPlayCardNames = new Set(cardsInPlay
         .map((card) => card.cardName));
 
-      const cardsInHand = cardEffectArgs.findCards({ location: 'playerHand', playerId: cardEffectArgs.playerId })
+      const cardsInHand = cardEffectArgs.findCardService.findCards({ location: 'playerHand', playerId: cardEffectArgs.playerId })
         .filter((card) => !uniqueInPlayCardNames.has(card.cardKey) && card.type.includes('ACTION'));
 
       if (cardsInHand.length === 0) {
@@ -1458,7 +1457,7 @@ const expansion: CardExpansionModule = {
   },
   'soothsayer': {
     registerEffects: () => async (cardEffectArgs) => {
-      const goldCardIds = cardEffectArgs.findCards(
+      const goldCardIds = cardEffectArgs.findCardService.findCards(
         [{ location: 'basicSupply' }, { cardKeys: 'gold' }],
       );
 
@@ -1481,7 +1480,7 @@ const expansion: CardExpansionModule = {
       }).filter((playerId) => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
 
       for (const targetPlayerId of targetPlayerIds) {
-        const curseCardIds = cardEffectArgs.findCards(
+        const curseCardIds = cardEffectArgs.findCardService.findCards(
           [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
         );
 
@@ -1520,7 +1519,7 @@ const expansion: CardExpansionModule = {
           return;
         }
 
-        const cardIds = cardEffectArgs.findCards([
+        const cardIds = cardEffectArgs.findCardService.findCards([
           { location: ['basicSupply', 'kingdomSupply'] },
           { cardType: 'ACTION' },
           {
@@ -1598,7 +1597,7 @@ const expansion: CardExpansionModule = {
         playerId: cardEffectArgs.playerId,
       });
 
-      const cardIds = cardEffectArgs.findCards([
+      const cardIds = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
         {
           kind: 'upTo',
@@ -1687,7 +1686,7 @@ const expansion: CardExpansionModule = {
         const handCards = handIds.map((cardId) => cardEffectArgs.cardLibrary.getCard(cardId));
         const baneCards = handCards.filter((card) => card.tags?.includes('bane'));
 
-        const curseCardIds = cardEffectArgs.findCards(
+        const curseCardIds = cardEffectArgs.findCardService.findCards(
           [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
         );
 

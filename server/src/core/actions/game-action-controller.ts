@@ -30,7 +30,7 @@ import {
   CardEffectFunctionContext,
   CardEffectFunctionMap,
   DurationEffectOptions,
-  FindCardsFn,
+  FindCardService,
   FindCardsFnInput,
   GameActionContext,
   GameActionContextMap,
@@ -67,7 +67,7 @@ import { resolveBuyOptions } from './resolve-buy-options.ts';
 
 export interface GameActionControllerDependencies {
   cardSourceController: CardSourceController;
-  findCards: FindCardsFn;
+  findCardService: FindCardService;
   cardPriceController: CardPriceRulesController;
   cardEffectFunctionMap: CardEffectFunctionMap;
   eventEffectFunctionMap: CardEffectFunctionMap;
@@ -91,7 +91,7 @@ export class GameActionController implements GameActionDefinitionMap {
   // Guards against re-entrant computer turns triggered by nested game actions.
   private _computerTurnInProgress: boolean = false;
   private _cardSourceController: CardSourceController;
-  private _findCards: FindCardsFn;
+  private _findCardService: FindCardService;
   private cardPriceRuleController: CardPriceRulesController;
   private cardEffectFunctionMap: CardEffectFunctionMap;
   private eventEffectFunctionMap: CardEffectFunctionMap;
@@ -110,7 +110,7 @@ export class GameActionController implements GameActionDefinitionMap {
 
   constructor({
     cardSourceController,
-    findCards,
+    findCardService,
     cardPriceController,
     cardEffectFunctionMap,
     eventEffectFunctionMap,
@@ -128,7 +128,7 @@ export class GameActionController implements GameActionDefinitionMap {
     interactivityController,
   }: GameActionControllerDependencies) {
     this._cardSourceController = cardSourceController;
-    this._findCards = findCards;
+    this._findCardService = findCardService;
     this.cardPriceRuleController = cardPriceController;
     this.cardEffectFunctionMap = cardEffectFunctionMap;
     this.eventEffectFunctionMap = eventEffectFunctionMap;
@@ -1152,7 +1152,7 @@ export class GameActionController implements GameActionDefinitionMap {
       console.debug(`[selectCard action] restricted to set of cards ${restrict}`);
       selectableCardIds = restrict as CardId[];
     } else if (restrict !== undefined) {
-      selectableCardIds = this._findCards(restrict as FindCardsFnInput).map((card) => card.id);
+      selectableCardIds = this._findCardService.findCards(restrict as FindCardsFnInput).map((card) => card.id);
     }
 
     console.debug(`[selectCard action] found ${selectableCardIds.length} selectable cards`);
@@ -1412,7 +1412,7 @@ export class GameActionController implements GameActionDefinitionMap {
       cardLibrary: this.cardLibrary,
       cardPriceController: this.cardPriceRuleController,
       cardSourceController: this._cardSourceController,
-      findCards: this._findCards,
+      findCardService: this._findCardService,
     });
     const selectedBuyOption = args.buyOptionId
       ? resolvedBuyOptions.options.find((option) => option.id === args.buyOptionId)
@@ -1464,7 +1464,7 @@ export class GameActionController implements GameActionDefinitionMap {
         playerId: args.playerId,
         card,
         cardLibrary: this.cardLibrary,
-        findCards: this._findCards,
+        findCardService: this._findCardService,
         cardSourceController: this._cardSourceController,
         cardPriceController: this.cardPriceRuleController,
         runGameActionDelegate: this.runGameActionDelegate,
@@ -1572,7 +1572,7 @@ export class GameActionController implements GameActionDefinitionMap {
         match: this.match,
         cardLibrary: this.cardLibrary,
         reactionContext: {},
-        findCards: this._findCards,
+        findCardService: this._findCardService,
       } as CardEffectFunctionContext;
 
       // Centralized duration registration with automatic cleanup on leave-play.
@@ -1687,7 +1687,7 @@ export class GameActionController implements GameActionDefinitionMap {
         match: this.match,
         cardLibrary: this.cardLibrary,
         reactionContext: {},
-        findCards: this._findCards,
+        findCardService: this._findCardService,
       } as CardEffectFunctionContext;
 
       // Centralized duration registration with automatic cleanup on leave-play.
@@ -1803,7 +1803,7 @@ export class GameActionController implements GameActionDefinitionMap {
           match: this.match,
           cardLibrary: this.cardLibrary,
           reactionContext: {},
-          findCards: this._findCards,
+          findCardService: this._findCardService,
         } as CardEffectFunctionContext;
 
         // Centralized duration registration with automatic cleanup on leave-play.
@@ -1953,7 +1953,7 @@ export class GameActionController implements GameActionDefinitionMap {
         match: this.match,
         cardLibrary: this.cardLibrary,
         reactionContext: {},
-        findCards: this._findCards,
+        findCardService: this._findCardService,
       } as CardEffectFunctionContext;
 
       // Centralized duration registration with automatic cleanup on leave-play.
@@ -2036,7 +2036,7 @@ export class GameActionController implements GameActionDefinitionMap {
       match: this.match,
       cardLibrary: this.cardLibrary,
       reactionContext: {},
-      findCards: this._findCards,
+      findCardService: this._findCardService,
     } as CardEffectFunctionContext;
 
     // Centralized duration registration with automatic cleanup on leave-play.
@@ -2136,7 +2136,7 @@ export class GameActionController implements GameActionDefinitionMap {
       match: this.match,
       cardLibrary: this.cardLibrary,
       reactionContext: {},
-      findCards: this._findCards,
+      findCardService: this._findCardService,
     } as CardEffectFunctionContext;
 
     // Centralized duration registration with automatic cleanup on leave-play.
@@ -2275,7 +2275,7 @@ export class GameActionController implements GameActionDefinitionMap {
 
     if (turnPhase === 'action') {
       const hasActions = match.playerActions > 0;
-      const hasActionCards = this._findCards({ location: 'playerHand', playerId: currentPlayer.id })
+      const hasActionCards = this._findCardService.findCards({ location: 'playerHand', playerId: currentPlayer.id })
         .some((cardId) => cardId.type.includes('ACTION'));
 
       if (!hasActions || !hasActionCards) {
@@ -2299,7 +2299,7 @@ export class GameActionController implements GameActionDefinitionMap {
 
     if (turnPhase === 'night') {
       // Skip Night phase automatically if the player has no Night cards to play.
-      const hasNightCards = this._findCards({ location: 'playerHand', playerId: currentPlayer.id })
+      const hasNightCards = this._findCardService.findCards({ location: 'playerHand', playerId: currentPlayer.id })
         .some((cardId) => cardId.type.includes('NIGHT'));
 
       if (!hasNightCards) {
@@ -2534,9 +2534,9 @@ export class GameActionController implements GameActionDefinitionMap {
         }
 
         const currentPlayer = getCurrentPlayer(match);
-        const cardsToDiscard = this._findCards({ location: 'playArea' })
+        const cardsToDiscard = this._findCardService.findCards({ location: 'playArea' })
           .concat(
-            this._findCards({
+            this._findCardService.findCards({
               location: 'playerHand',
               playerId: currentPlayer.id,
             }),
@@ -2836,7 +2836,7 @@ export class GameActionController implements GameActionDefinitionMap {
         match: this.match,
         cardLibrary: this.cardLibrary,
         reactionContext,
-        findCards: this._findCards,
+        findCardService: this._findCardService,
       } as CardEffectFunctionContext;
 
       // Centralized duration registration with automatic cleanup on leave-play.

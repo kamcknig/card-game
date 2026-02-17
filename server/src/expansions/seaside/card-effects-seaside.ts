@@ -125,7 +125,7 @@ const expansion: CardExpansionModule = {
         compulsory: true,
         listeningFor: 'cardGained',
         triggeredEffectFn: async (args) => {
-          const curseCardIds = args.findCards([
+          const curseCardIds = args.findCardService.findCards([
             { location: 'basicSupply' },
             { cardKeys: 'curse' },
           ]);
@@ -803,7 +803,7 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const matCardIds = args.findCards({ location: 'native-village' });
+      const matCardIds = args.findCardService.findCards({ location: 'native-village' });
 
       console.debug(`[NATIVE VILLAGE EFFECT] moving ${matCardIds.length} cards from native village mat to hand...`);
       for (const cardId of matCardIds) {
@@ -987,7 +987,7 @@ const expansion: CardExpansionModule = {
         moveToSetAside: true,
       });
 
-      const copyInPlay = args.findCards({ location: 'playArea' })
+      const copyInPlay = args.findCardService.findCards({ location: 'playArea' })
         .find((playAreaCard) => playAreaCard.cardKey === card.cardKey && playAreaCard.owner === playerId);
 
       console.debug(`[SEA CHART EFFECT] ${copyInPlay ? 'copy is in play' : 'no copy in play'}...`);
@@ -1054,7 +1054,7 @@ const expansion: CardExpansionModule = {
       }).filter((playerId) => !isPlayerImmune(args.reactionContext, playerId));
 
       for (const targetPlayerId of targetPlayerIds) {
-        const curseCardIds = args.findCards([
+        const curseCardIds = args.findCardService.findCards([
           { location: 'basicSupply' },
           { cardKeys: 'curse' },
         ]);
@@ -1104,13 +1104,13 @@ const expansion: CardExpansionModule = {
           return gainStats.turnHistoryIndex === previousPlayerLastTurnHistoryIndex;
         });
 
-      let cards = cardEffectArgs.findCards({ kind: 'upTo', amount: { treasure: 6 }, playerId: cardEffectArgs.playerId })
+      let cards = cardEffectArgs.findCardService.findCards({ kind: 'upTo', amount: { treasure: 6 }, playerId: cardEffectArgs.playerId })
         .filter((card) => cardIdsGained.includes(card.id));
 
       console.debug(`[smugglers effect] found ${cards.length} costing up to 6 that were played`);
 
       const inSupply = (card: Card) =>
-        cardEffectArgs.findCards({ location: ['kingdomSupply', 'basicSupply'] })
+        cardEffectArgs.findCardService.findCards({ location: ['kingdomSupply', 'basicSupply'] })
           .find((supplyCard) => supplyCard.cardKey === card.cardKey);
 
       const cardsInSupply = cards.map(inSupply).filter((id) => id !== undefined);
@@ -1261,7 +1261,7 @@ const expansion: CardExpansionModule = {
         cardId: inHand,
       });
 
-      const goldCardIds = args.findCards([{ location: 'basicSupply' }, { cardKeys: 'gold' }]);
+      const goldCardIds = args.findCardService.findCards([{ location: 'basicSupply' }, { cardKeys: 'gold' }]);
 
       for (let i = 0; i < Math.min(goldCardIds.length, 4); i++) {
         await runGameActionDelegate('gainCard', {

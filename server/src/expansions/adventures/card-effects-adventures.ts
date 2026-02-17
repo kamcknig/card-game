@@ -9,7 +9,6 @@ import { isPlayerImmune, markPlayerImmune } from '../../utils/reaction-immunity.
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
 import { getPlayerStartingFrom } from '@shared/get-player-position-utils.ts';
-import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { adventuresTokenIds } from './token-ids-adventures.ts';
 import { tokenDefinitionMap } from '../../core/tokens/token-definition-map.ts';
@@ -17,7 +16,7 @@ import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
-import { findTopSupplyCardForPileKey, gainTopSupplyCardForPileKey } from '../../utils/gain-top-supply-card-by-key.ts';
+import { gainTopSupplyCardForPileKey } from '../../utils/gain-top-supply-card-by-key.ts';
 
 const addTravellerEffect = async (
   card: Card,
@@ -29,7 +28,7 @@ const addTravellerEffect = async (
     return;
   }
 
-  const newCards = context.findCards([
+  const newCards = context.findCardService.findCards([
     { location: ['basicSupply', 'kingdomSupply'] },
     { cardKeys: travelTo },
   ]);
@@ -251,7 +250,7 @@ const expansion: CardExpansionModule = {
         });
       }
 
-      const cardsToSelect = cardEffectArgs.findCards([
+      const cardsToSelect = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
         {
           kind: 'upTo',
@@ -681,7 +680,7 @@ const expansion: CardExpansionModule = {
         });
       }
 
-      const copies = cardEffectArgs.findCards([
+      const copies = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
         { cardKeys: selectedCardToPlay.cardKey },
       ]);
@@ -854,7 +853,7 @@ const expansion: CardExpansionModule = {
               triggeredArgs.trigger.args.cardId,
             );
 
-            const copies = triggeredArgs.findCards([
+            const copies = triggeredArgs.findCardService.findCards([
               { location: ['basicSupply', 'kingdomSupply'] },
               { cardKeys: cardGained.cardKey },
             ]);
@@ -1074,7 +1073,7 @@ const expansion: CardExpansionModule = {
         }
 
         const gainCurse = async () => {
-          const curseCards = cardEffectArgs.findCards([
+          const curseCards = cardEffectArgs.findCardService.findCards([
             { location: 'basicSupply' },
             { cardKeys: 'curse' },
           ]);
@@ -1360,7 +1359,7 @@ const expansion: CardExpansionModule = {
       console.debug(`[hero effect] gaining 2 treasure`);
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
 
-      const treasureCards = cardEffectArgs.findCards([
+      const treasureCards = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
         { cardType: 'TREASURE' },
       ]);
@@ -1576,7 +1575,7 @@ const expansion: CardExpansionModule = {
 
         console.debug(`[messenger onGained effect] selected ${selectedCard}`);
 
-        const copies = args.findCards([
+        const copies = args.findCardService.findCards([
           { location: ['basicSupply', 'kingdomSupply'] },
           { cardKeys: selectedCard.cardKey },
         ]);
@@ -1640,7 +1639,7 @@ const expansion: CardExpansionModule = {
   },
   'miser': {
     registerEffects: () => async (cardEffectArgs) => {
-      const copperCardsOnTreasureMat = cardEffectArgs.findCards([
+      const copperCardsOnTreasureMat = cardEffectArgs.findCardService.findCards([
         { location: 'tavern', playerId: cardEffectArgs.playerId },
         { cardKeys: 'copper' },
       ]);
@@ -1656,7 +1655,7 @@ const expansion: CardExpansionModule = {
 
       if (result.action === 1) {
         console.debug(`[miser effect] putting copper on tavern`);
-        const coppersInHand = cardEffectArgs.findCards([
+        const coppersInHand = cardEffectArgs.findCardService.findCards([
           { location: 'playerHand', playerId: cardEffectArgs.playerId },
           { cardKeys: 'copper' },
         ]);
@@ -1725,7 +1724,7 @@ const expansion: CardExpansionModule = {
           }
         }
 
-        const topPortCard = findTopSupplyCardForPileKey(args, {
+        const topPortCard = args.findCardService.findTopSupplyCardForPileKey({
           pileKey: 'port',
           from: 'kingdomSupply',
         });
@@ -2004,7 +2003,7 @@ const expansion: CardExpansionModule = {
             );
             if (!cardPlayed.type.includes('ACTION')) return false;
             // Only allow calling if the Action is still in play.
-            return getCardsInPlay(conditionArgs.findCards).includes(cardPlayed);
+            return conditionArgs.findCardService.getCardsInPlay().includes(cardPlayed);
           },
           triggeredEffectFn: async (triggeredArgs) => {
             const cardToPlay = triggeredArgs.cardLibrary.getCard(
@@ -2035,7 +2034,7 @@ const expansion: CardExpansionModule = {
             // If the replayed card is a Duration still in play, track Royal Carriage until cleanup.
             if (
               cardToPlay.type.includes('DURATION') &&
-              getCardsInPlay(triggeredArgs.findCards).includes(cardToPlay)
+              triggeredArgs.findCardService.getCardsInPlay().includes(cardToPlay)
             ) {
               // Keep Royal Carriage in the duration zone during cleanup.
               triggeredArgs.reactionManager.registerSystemTemplate(
@@ -2048,7 +2047,7 @@ const expansion: CardExpansionModule = {
                   condition: async (conditionArgs) =>
                     getTurnPhase(conditionArgs.trigger.args.phaseIndex) ===
                       'cleanup' &&
-                    getCardsInPlay(conditionArgs.findCards).includes(thisCard),
+                    conditionArgs.findCardService.getCardsInPlay().includes(thisCard),
                   triggeredEffectFn: async (durationArgs) => {
                     console.debug(
                       `[royal-carriage duration effect] moving ${thisCard} to activeDuration zone`,
@@ -2107,7 +2106,7 @@ const expansion: CardExpansionModule = {
       console.debug(`[soldier effect] gaining 2 treasure`);
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
 
-      const attacksInPlay = getCardsInPlay(cardEffectArgs.findCards)
+      const attacksInPlay = cardEffectArgs.findCardService.getCardsInPlay()
         .filter((card) => card.owner === cardEffectArgs.playerId && card.type.includes('ATTACK'));
 
       if (attacksInPlay.length > 0) {
@@ -2316,7 +2315,7 @@ const expansion: CardExpansionModule = {
             return conditionArgs.trigger.args.bought;
           },
           triggeredEffectFn: async (triggeredArgs) => {
-            const curseCards = triggeredArgs.findCards([
+            const curseCards = triggeredArgs.findCardService.findCards([
               { location: 'basicSupply' },
               { cardKeys: 'curse' },
             ]);
@@ -2534,7 +2533,7 @@ const expansion: CardExpansionModule = {
               { playerId: cardEffectArgs.playerId },
             );
 
-            const cards = triggeredArgs.findCards([
+            const cards = triggeredArgs.findCardService.findCards([
               { location: ['basicSupply', 'kingdomSupply'] },
               {
                 kind: 'upTo',
@@ -2601,7 +2600,7 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
 
-      const silverCards = cardEffectArgs.findCards([
+      const silverCards = cardEffectArgs.findCardService.findCards([
         { location: 'basicSupply' },
         { cardKeys: 'silver' },
       ]);
@@ -2681,7 +2680,7 @@ const expansion: CardExpansionModule = {
         count: 2,
       });
 
-      const travellersInPlay = getCardsInPlay(cardEffectArgs.findCards)
+      const travellersInPlay = cardEffectArgs.findCardService.getCardsInPlay()
         .filter((card) =>
           card.owner === cardEffectArgs.playerId &&
           card.type.includes('TRAVELLER')

@@ -1,6 +1,5 @@
 import { CardExpansionModule } from '@server-types/index.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
-import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { Card, CardId, CardKey, CountSpec } from 'shared/types/index.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
@@ -8,7 +7,7 @@ import { adventuresTokenIds } from './token-ids-adventures.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
-import { findTopSupplyCardForPileKey, gainTopSupplyCardForPileKey } from '../../utils/gain-top-supply-card-by-key.ts';
+import { gainTopSupplyCardForPileKey } from '../../utils/gain-top-supply-card-by-key.ts';
 import { findEventInMatch } from '@shared/find-card-like-in-match.ts';
 
 const effectMap: CardExpansionModule = {
@@ -40,7 +39,7 @@ const effectMap: CardExpansionModule = {
         },
       });
 
-      const treasuresInPlay = getCardsInPlay(cardEffectArgs.findCards)
+      const treasuresInPlay = cardEffectArgs.findCardService.getCardsInPlay()
         .filter((card) => card.type.includes('TREASURE'))
         .filter((card) => card.owner === cardEffectArgs.playerId);
 
@@ -51,7 +50,7 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      const cards = cardEffectArgs.findCards([
+      const cards = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
         {
           kind: 'upTo',
@@ -121,7 +120,7 @@ const effectMap: CardExpansionModule = {
         }, { loggingContext: { source: event.id } });
       }
 
-      const cards = cardEffectArgs.findCards([
+      const cards = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
         {
           kind: 'upTo',
@@ -165,7 +164,7 @@ const effectMap: CardExpansionModule = {
   },
   'bonfire': {
     registerEffects: () => async (cardEffectArgs) => {
-      const coppersInPlay = getCardsInPlay(cardEffectArgs.findCards)
+      const coppersInPlay = cardEffectArgs.findCardService.getCardsInPlay()
         .filter((card) => card.cardKey === 'copper' && card.owner === cardEffectArgs.playerId);
 
       if (!coppersInPlay.length) {
@@ -399,7 +398,7 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      const eligibleCards = cardEffectArgs.findCards([
+      const eligibleCards = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
         { cardType: ['ACTION'] },
         {
@@ -613,14 +612,14 @@ const effectMap: CardExpansionModule = {
       }
 
       // Collect unique in-play cards with supply copies available.
-      const inPlayCards = getCardsInPlay(cardEffectArgs.findCards)
+      const inPlayCards = cardEffectArgs.findCardService.getCardsInPlay()
         .filter((card) => card.owner === cardEffectArgs.playerId);
       const uniqueSupplyInPlay: Card[] = [];
       const seenCardKeys = new Set<CardKey>();
 
       for (const card of inPlayCards) {
         if (seenCardKeys.has(card.cardKey)) continue;
-        const supplyTopCard = findTopSupplyCardForPileKey(cardEffectArgs, { pileKey: getCardPileKey(card) });
+        const supplyTopCard = cardEffectArgs.findCardService.findTopSupplyCardForPileKey({ pileKey: getCardPileKey(card) });
         if (!supplyTopCard) continue;
         seenCardKeys.add(card.cardKey);
         uniqueSupplyInPlay.push(card);
@@ -950,7 +949,7 @@ const effectMap: CardExpansionModule = {
   'raid': {
     registerEffects: () => async (cardEffectArgs) => {
       // Count Silvers in play for the current player.
-      const silversInPlay = getCardsInPlay(cardEffectArgs.findCards)
+      const silversInPlay = cardEffectArgs.findCardService.getCardsInPlay()
         .filter((card) =>
           card.cardKey === 'silver' &&
           card.owner === cardEffectArgs.playerId
@@ -1093,7 +1092,7 @@ const effectMap: CardExpansionModule = {
   'seaway': {
     registerEffects: () => async (cardEffectArgs) => {
       // Gather Action cards in the Supply costing up to $4 with no potion cost.
-      const actionCards = cardEffectArgs.findCards([
+      const actionCards = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
         { cardType: ['ACTION'] },
         {

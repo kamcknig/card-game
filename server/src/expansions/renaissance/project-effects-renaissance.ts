@@ -655,7 +655,7 @@ const effectMap: CardExpansionModule = {
           return owned;
         },
         triggeredEffectFn: async (triggeredArgs) => {
-          const victoryCards = triggeredArgs.findCards([
+          const victoryCards = triggeredArgs.findCardService.findCards([
             { location: 'playerHand', playerId: cardEffectArgs.playerId },
             { cardType: ['VICTORY'] },
           ]);

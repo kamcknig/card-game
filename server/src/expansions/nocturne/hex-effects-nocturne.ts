@@ -200,8 +200,8 @@ const registerFear = (registerHexEffect: HexEffectRegistrar) => {
 
 // Registers Greed hex effect logic.
 const registerGreed = (registerHexEffect: HexEffectRegistrar) => {
-  registerHexEffect('greed', async ({ playerId, findCards, runGameActionDelegate, cardLibrary }) => {
-    const gainedCopperId = await gainTopSupplyCardForPileKey({ findCards, runGameActionDelegate }, {
+  registerHexEffect('greed', async ({ playerId, findCardService, runGameActionDelegate, cardLibrary }) => {
+    const gainedCopperId = await gainTopSupplyCardForPileKey({ findCardService, runGameActionDelegate }, {
       playerId,
       pileKey: 'copper',
       from: 'basicSupply',
@@ -254,7 +254,7 @@ const registerLocusts = (registerHexEffect: HexEffectRegistrar) => {
     cardSourceController,
     cardLibrary,
     cardPriceController,
-    findCards,
+    findCardService,
     runGameActionDelegate,
   }) => {
     let deck = cardSourceController.getSource('playerDeck', playerId);
@@ -281,7 +281,7 @@ const registerLocusts = (registerHexEffect: HexEffectRegistrar) => {
     });
 
     if (trashedCard.cardKey === 'copper' || trashedCard.cardKey === 'estate') {
-      const gainedCurseId = await gainTopSupplyCardForPileKey({ findCards, runGameActionDelegate }, {
+      const gainedCurseId = await gainTopSupplyCardForPileKey({ findCardService, runGameActionDelegate }, {
         playerId,
         pileKey: 'curse',
         from: 'basicSupply',
@@ -297,7 +297,7 @@ const registerLocusts = (registerHexEffect: HexEffectRegistrar) => {
     }
 
     const trashedCost = cardPriceController.applyRules(trashedCard, { playerId }).cost;
-    const eligibleCards = findCards([
+    const eligibleCards = findCardService.findCards([
       { location: ['basicSupply', 'kingdomSupply'] },
     ]).filter((card) => {
       if (!card.type.some((type) => trashedCard.type.includes(type))) {
@@ -368,8 +368,8 @@ const registerMisery = (registerHexEffect: HexEffectRegistrar) => {
 
 // Registers Plague hex effect logic.
 const registerPlague = (registerHexEffect: HexEffectRegistrar) => {
-  registerHexEffect('plague', async ({ playerId, findCards, runGameActionDelegate, cardLibrary }) => {
-    const gainedCurseId = await gainTopSupplyCardForPileKey({ findCards, runGameActionDelegate }, {
+  registerHexEffect('plague', async ({ playerId, findCardService, runGameActionDelegate, cardLibrary }) => {
+    const gainedCurseId = await gainTopSupplyCardForPileKey({ findCardService, runGameActionDelegate }, {
       playerId,
       pileKey: 'curse',
       from: 'basicSupply',

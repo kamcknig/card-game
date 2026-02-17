@@ -4,10 +4,9 @@ import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
-import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { renaissanceArtifactKeys } from './artifact-keys-renaissance.ts';
-import { findTopSupplyCardForPileKey, gainTopSupplyCardForPileKey } from '../../utils/gain-top-supply-card-by-key.ts';
+import { gainTopSupplyCardForPileKey } from '../../utils/gain-top-supply-card-by-key.ts';
 
 // Renaissance card effects module (artifacts handled separately).
 const expansion: CardExpansionModule = {
@@ -409,7 +408,7 @@ const expansion: CardExpansionModule = {
         }
 
         // Experiment gains one additional copy from supply without chaining further onGained effects.
-        const experimentToGain = findTopSupplyCardForPileKey(cardEffectArgs, {
+        const experimentToGain = cardEffectArgs.findCardService.findTopSupplyCardForPileKey({
           pileKey: 'experiment',
           from: ['kingdomSupply', 'basicSupply'],
         });
@@ -638,7 +637,7 @@ const expansion: CardExpansionModule = {
             });
 
             // If a card was trashed, gaining exactly $1 more is mandatory when possible.
-            const gainCandidates = triggeredArgs.findCards([
+            const gainCandidates = triggeredArgs.findCardService.findCards([
               { location: ['basicSupply', 'kingdomSupply'] },
               {
                 playerId: cardEffectArgs.playerId,
@@ -1102,7 +1101,7 @@ const expansion: CardExpansionModule = {
 
       // Scepter can replay a non-Command Action played this turn and still in play.
       const playedThisTurnSet = new Set(playedThisTurn);
-      const uniquePlayedActionIds = getCardsInPlay(cardEffectArgs.findCards)
+      const uniquePlayedActionIds = cardEffectArgs.findCardService.getCardsInPlay()
         .filter((card) => playedThisTurnSet.has(card.id))
         .filter((card) => card.type.includes('ACTION') && !card.type.includes('COMMAND'))
         .map((card) => card.id);
@@ -1166,7 +1165,7 @@ const expansion: CardExpansionModule = {
       }
 
       const isReplayedCardInPlay = () =>
-        getCardsInPlay(cardEffectArgs.findCards).some((card) => card.id === selectedActionCard.id);
+        cardEffectArgs.findCardService.getCardsInPlay().some((card) => card.id === selectedActionCard.id);
 
       if (!isReplayedCardInPlay()) {
         console.debug('[scepter effect] replayed Duration is not in play, no duration hold needed');
@@ -1264,7 +1263,7 @@ const expansion: CardExpansionModule = {
   'sculptor': {
     registerEffects: () => async (cardEffectArgs) => {
       // Sculptor gains a card to hand costing up to $4.
-      const gainableCards = cardEffectArgs.findCards([
+      const gainableCards = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
         { playerId: cardEffectArgs.playerId, kind: 'upTo', amount: { treasure: 4 } },
       ]);

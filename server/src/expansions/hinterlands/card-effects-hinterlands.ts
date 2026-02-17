@@ -1,6 +1,5 @@
 import { CardId, PlayerId } from 'shared/types/index.ts';
 import { CardExpansionModule, CardLifecycleCallbackContext } from '@server-types/index.ts';
-import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
@@ -13,7 +12,7 @@ const expansion: CardExpansionModule = {
   'berserker': {
     registerLifeCycleMethods: () => ({
       onGained: async (args, eventArgs) => {
-        const actionCardsInPlay = getCardsInPlay(args.findCards)
+        const actionCardsInPlay = args.findCardService.getCardsInPlay()
           .some((card) => card.type.includes('ACTION') && card.owner === eventArgs.playerId);
 
         if (!actionCardsInPlay) {
@@ -38,7 +37,7 @@ const expansion: CardExpansionModule = {
         { playerId: cardEffectArgs.playerId },
       );
 
-      const cardIds = cardEffectArgs.findCards([
+      const cardIds = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
         {
           playerId: cardEffectArgs.playerId,
@@ -109,7 +108,7 @@ const expansion: CardExpansionModule = {
           { playerId: eventArgs.playerId },
         );
 
-        const cardIds = args.findCards([
+        const cardIds = args.findCardService.findCards([
           { location: ['basicSupply', 'kingdomSupply'] },
           { playerId: eventArgs.playerId, kind: 'upTo', amount: { treasure: cost.treasure - 1 } },
         ]);
@@ -265,7 +264,7 @@ const expansion: CardExpansionModule = {
           }).filter((playerId) => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
 
           for (const targetPlayerId of targetPlayerIds) {
-            const curseIds = cardEffectArgs.findCards([
+            const curseIds = cardEffectArgs.findCardService.findCards([
               { location: 'basicSupply' },
               { cardKeys: 'curse' },
             ]);
@@ -362,12 +361,12 @@ const expansion: CardExpansionModule = {
         { playerId: cardEffectArgs.playerId },
       );
 
-      const oneLessCards = cardEffectArgs.findCards([
+      const oneLessCards = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
         { playerId: cardEffectArgs.playerId, kind: 'exact', amount: { treasure: cost.treasure - 1 } },
       ]);
 
-      const oneMoreCards = cardEffectArgs.findCards([
+      const oneMoreCards = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
         { playerId: cardEffectArgs.playerId, kind: 'exact', amount: { treasure: cost.treasure + 1 } },
       ]);
@@ -462,7 +461,7 @@ const expansion: CardExpansionModule = {
           playerId: rest.playerId,
         });
 
-        const nonFarmlandCards = args.findCards([
+        const nonFarmlandCards = args.findCardService.findCards([
           { location: ['basicSupply', 'kingdomSupply'] },
           { playerId: rest.playerId, kind: 'exact', amount: { treasure: cost.treasure + 2 } },
         ])
@@ -525,7 +524,7 @@ const expansion: CardExpansionModule = {
               cardId: eventArgs.cardId,
             });
 
-            const goldCardIds = triggeredEffectArgs.findCards([
+            const goldCardIds = triggeredEffectArgs.findCardService.findCards([
               { location: 'basicSupply' },
               { cardKeys: 'gold' },
             ]);
@@ -640,7 +639,7 @@ const expansion: CardExpansionModule = {
             playerId: cardEffectArgs.playerId,
           });
 
-          const cards = cardEffectArgs.findCards([
+          const cards = cardEffectArgs.findCardService.findCards([
             { location: ['basicSupply', 'kingdomSupply'] },
             {
               playerId: cardEffectArgs.playerId,
@@ -715,7 +714,7 @@ const expansion: CardExpansionModule = {
   'inn': {
     registerLifeCycleMethods: () => ({
       onGained: async (args, eventArgs) => {
-        const actionsInDiscard = args.findCards({ location: 'playerDiscard', playerId: eventArgs.playerId })
+        const actionsInDiscard = args.findCardService.findCards({ location: 'playerDiscard', playerId: eventArgs.playerId })
           .filter((card) => card.type.includes('ACTION'));
 
         if (!actionsInDiscard.length) {
@@ -775,7 +774,7 @@ const expansion: CardExpansionModule = {
         restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
         count: Math.min(
           2,
-          cardEffectArgs.findCards({
+          cardEffectArgs.findCardService.findCards({
             location: 'playerHand',
             playerId: cardEffectArgs.playerId,
           }).length,
@@ -799,7 +798,7 @@ const expansion: CardExpansionModule = {
   },
   'jack-of-all-trades': {
     registerEffects: () => async (cardEffectArgs) => {
-      const silverCardIds = cardEffectArgs.findCards([
+      const silverCardIds = cardEffectArgs.findCardService.findCards([
         { location: 'basicSupply' },
         { cardKeys: 'silver' },
       ]);
@@ -1202,7 +1201,7 @@ const expansion: CardExpansionModule = {
               console.warn(`[trader onEnterHand event] gained ${gainedCard} has no previous location`);
             }
 
-            const silverCardIds = triggerArgs.findCards([
+            const silverCardIds = triggerArgs.findCardService.findCards([
               { location: 'basicSupply' },
               { cardKeys: 'silver' },
             ]);
@@ -1256,7 +1255,7 @@ const expansion: CardExpansionModule = {
         { playerId: cardEffectArgs.playerId },
       );
 
-      const silverCardIds = cardEffectArgs.findCards([
+      const silverCardIds = cardEffectArgs.findCardService.findCards([
         { location: 'basicSupply' },
         { cardKeys: 'silver' },
       ]);
@@ -1359,7 +1358,7 @@ const expansion: CardExpansionModule = {
           playerId: eventArgs.playerId,
         });
 
-        const goldCardIds = args.findCards([
+        const goldCardIds = args.findCardService.findCards([
           { location: 'basicSupply' },
           { cardKeys: 'gold' },
         ]);
@@ -1424,7 +1423,7 @@ const expansion: CardExpansionModule = {
       if (result.action === 1) {
         console.debug(`[weaver effect] choosing silvers`);
 
-        const silverCardIds = cardEffectArgs.findCards([
+        const silverCardIds = cardEffectArgs.findCardService.findCards([
           { location: 'basicSupply' },
           { cardKeys: 'silver' },
         ]);
@@ -1500,7 +1499,7 @@ const expansion: CardExpansionModule = {
         playerId: cardEffectArgs.playerId,
       });
 
-      const actionCardIds = cardEffectArgs.findCards([
+      const actionCardIds = cardEffectArgs.findCardService.findCards([
         { location: ['kingdomSupply'] },
         { cardType: 'ACTION' },
         {
@@ -1575,7 +1574,7 @@ const expansion: CardExpansionModule = {
           }).filter((playerId) => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
 
           for (const targetPlayerId of targetPlayerIds) {
-            const curseCardIds = cardEffectArgs.findCards([
+            const curseCardIds = cardEffectArgs.findCardService.findCards([
               { location: 'basicSupply' },
               { cardKeys: 'curse' },
             ]);

@@ -1,6 +1,5 @@
 import { CardExpansionModule } from '@server-types/index.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
-import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { Card, CardId } from 'shared/types/index.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
@@ -45,7 +44,7 @@ const expansion: CardExpansionModule = {
             return false;
           }
 
-          const cardsInPlay = getCardsInPlay(args.findCards);
+          const cardsInPlay = args.findCardService.getCardsInPlay();
           const ownedCardsInPlay = cardsInPlay.filter((card) => card.owner === args.playerId);
           const potionCardsInPlay = ownedCardsInPlay.filter((card) => card.cardKey === 'potion');
 
@@ -195,7 +194,7 @@ const expansion: CardExpansionModule = {
       }).filter((id) => !isPlayerImmune(args.reactionContext, id));
 
       for (const targetId of targets) {
-        const curseCardId = args.findCards([{ location: 'basicSupply' }, { cardKeys: 'curse' }])?.slice(-1)?.[0]?.id;
+        const curseCardId = args.findCardService.findCards([{ location: 'basicSupply' }, { cardKeys: 'curse' }])?.slice(-1)?.[0]?.id;
 
         if (curseCardId === undefined) {
           console.debug(`[familiar effect] no curse card in basic supply`);
@@ -474,7 +473,7 @@ const expansion: CardExpansionModule = {
 
       let cards: Card[] = [];
       if (selectedCard.type.includes('ACTION')) {
-        cards = args.findCards([
+        cards = args.findCardService.findCards([
           { location: ['basicSupply'] },
           { cardKeys: 'duchy' },
         ]);
@@ -492,7 +491,7 @@ const expansion: CardExpansionModule = {
       }
 
       if (selectedCard.type.includes('TREASURE')) {
-        cards = args.findCards([
+        cards = args.findCardService.findCards([
           { location: 'kingdomSupply' },
           { cardKeys: 'transmute' },
         ]);
@@ -510,7 +509,7 @@ const expansion: CardExpansionModule = {
       }
 
       if (selectedCard.type.includes('VICTORY')) {
-        cards = args.findCards(
+        cards = args.findCardService.findCards(
           [
             { location: 'basicSupply' },
             { cardKeys: 'gold' },

@@ -2,7 +2,7 @@ import { Card, CardId, CardLike, Event, Landmark, Match, Player, Project } from 
 import {
   CardLifecycleEvent,
   CardLifecycleEventArgMap,
-  FindCardsFn,
+  FindCardService,
   GameLifecycleCallback,
   GameLifecycleEvent,
   GameLifeCycleEventArgsMap,
@@ -29,7 +29,7 @@ import { CardSourceController } from '../card-source-controller.ts';
 
 export interface ReactionManagerDependencies {
   cardSourceController: CardSourceController;
-  findCards: FindCardsFn;
+  findCardService: FindCardService;
   cardPriceController: CardPriceRulesController;
   logManager: LogManager;
   match: Match;
@@ -47,7 +47,7 @@ export class ReactionManager {
   private _durationTriggerIdsByCardId: Map<CardId, Set<string>> = new Map();
 
   private readonly _cardSourceController: CardSourceController;
-  private readonly _findCards: FindCardsFn;
+  private readonly _findCardService: FindCardService;
   private readonly cardPriceController: CardPriceRulesController;
   private readonly logManager: LogManager;
   private readonly _match: Match;
@@ -56,7 +56,7 @@ export class ReactionManager {
 
   constructor({
     cardSourceController,
-    findCards,
+    findCardService,
     cardPriceController,
     logManager,
     match,
@@ -64,7 +64,7 @@ export class ReactionManager {
     runGameActionDelegate,
   }: ReactionManagerDependencies) {
     this._cardSourceController = cardSourceController;
-    this._findCards = findCards;
+    this._findCardService = findCardService;
     this.cardPriceController = cardPriceController;
     this.logManager = logManager;
     this._match = match;
@@ -117,7 +117,7 @@ export class ReactionManager {
           logManager: this.logManager,
           reactionManager: this,
           runGameActionDelegate: this.runGameActionDelegate,
-          findCards: this._findCards,
+          findCardService: this._findCardService,
           match: this._match,
           cardLibrary: this._cardLibrary,
           trigger,
@@ -229,7 +229,7 @@ export class ReactionManager {
     for (const handler of this._expansionGameEventHandlers[trigger] ?? []) {
       await handler({
         cardSourceController: this._cardSourceController,
-        findCards: this._findCards,
+        findCardService: this._findCardService,
         cardPriceController: this.cardPriceController,
         logManager: this.logManager,
         cardLibrary: this._cardLibrary,
@@ -258,7 +258,7 @@ export class ReactionManager {
       cardLibrary: this._cardLibrary,
       match: this._match,
       reactionManager: this,
-      findCards: this._findCards,
+      findCardService: this._findCardService,
     }, args as any);
   }
 
@@ -428,7 +428,7 @@ export class ReactionManager {
   ): TriggeredEffectContext<T> {
     return {
       cardSourceController: this._cardSourceController,
-      findCards: this._findCards,
+      findCardService: this._findCardService,
       reactionManager: this,
       cardPriceController: this.cardPriceController,
       logManager: this.logManager,

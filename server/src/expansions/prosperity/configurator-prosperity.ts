@@ -2,7 +2,6 @@ import { EndGameConditionRegistrar, ExpansionConfiguratorFactory, GameEventRegis
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
-import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
 import { ComputedMatchConfiguration } from 'shared/types/index.ts';
 import { registerProsperityTokenDefinitions } from './token-definitions-prosperity.ts';
 
@@ -75,7 +74,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
 export const registerEndGameConditions = (
   registrar: EndGameConditionRegistrar,
 ) => {
-  registrar(({ findCards, match }) => {
+  registrar(({ findCardService, match }) => {
     const kingdomCards = match.config.kingdomSupply;
     const colonyPresent = kingdomCards.find((supply) => supply.name === 'colony');
 
@@ -83,7 +82,7 @@ export const registerEndGameConditions = (
       return false;
     }
 
-    const colonyCards = findCards([
+    const colonyCards = findCardService.findCards([
       { location: 'basicSupply' },
       { cardKeys: 'colony' },
     ]);
@@ -96,7 +95,7 @@ export const registerGameEvents: (
   config: ComputedMatchConfiguration,
 ) => void = (registrar) => {
   registrar('onGameStart', async (args) => {
-    const peddlerCardIds = args.findCards([
+    const peddlerCardIds = args.findCardService.findCards([
       { location: 'kingdomSupply' },
       { cardKeys: 'peddler' },
     ]).map((card) => card.id);
@@ -152,7 +151,7 @@ export const registerGameEvents: (
             );
 
             const rule: CardPriceRule = (ruleCard, ruleContext) => {
-              const cardsInPlay = getCardsInPlay(args.findCards);
+              const cardsInPlay = args.findCardService.getCardsInPlay();
               const actionsInPlay = cardsInPlay.filter((card) => card.type.includes('ACTION'));
               if (actionsInPlay.length === 0) {
                 return { restricted: false, cost: { treasure: 0 } };

@@ -31,7 +31,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
       );
 
       // todo hacky to use just any card by id for the source. eventually source needs to be more dynamic
-      const footpadCardIds = args.findCards({ cardKeys: 'footpad' });
+      const footpadCardIds = args.findCardService.findCards({ cardKeys: 'footpad' });
 
       await args.runGameActionDelegate('drawCard', { playerId: eventArgs.playerId }, {
         loggingContext: { source: footpadCardIds[0].id },

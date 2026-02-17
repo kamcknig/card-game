@@ -1,8 +1,7 @@
 import { Card, CardId, CardKey } from 'shared/types/index.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
-import { getRemainingSupplyCount, getStartingSupplyCount } from '../../utils/get-starting-supply-count.ts';
-import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
+import { getStartingSupplyCount } from '../../utils/get-starting-supply-count.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { getPlayerStartingFrom } from '@shared/get-player-position-utils.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
@@ -175,7 +174,7 @@ const expansion: CardExpansionModule = {
       console.debug(`[charlatan effect] targets ${targetPlayerIds} gaining a curse`);
 
       for (const targetPlayerId of targetPlayerIds) {
-        const curseCards = effectArgs.findCards([
+        const curseCards = effectArgs.findCardService.findCards([
           { location: 'basicSupply' },
           { cardKeys: 'curse' },
         ]);
@@ -199,7 +198,7 @@ const expansion: CardExpansionModule = {
       await effectArgs.runGameActionDelegate('drawCard', { playerId: effectArgs.playerId });
       await effectArgs.runGameActionDelegate('gainAction', { count: 2 });
 
-      const emptySupplyCount = getStartingSupplyCount(effectArgs.match) - getRemainingSupplyCount(effectArgs.findCards);
+      const emptySupplyCount = getStartingSupplyCount(effectArgs.match) - effectArgs.findCardService.getRemainingSupplyCount();
 
       if (emptySupplyCount > 0) {
         console.debug(`[city effect] empty supply count is greater than 0; drawing 1 card`);
@@ -518,7 +517,7 @@ const expansion: CardExpansionModule = {
           return true;
         },
         triggeredEffectFn: async (triggeredEffectArgs) => {
-          const goldCardIds = effectArgs.findCards([
+          const goldCardIds = effectArgs.findCardService.findCards([
             { location: 'basicSupply' },
             { cardKeys: 'gold' },
           ]);
@@ -650,7 +649,7 @@ const expansion: CardExpansionModule = {
   'mint': {
     registerLifeCycleMethods: () => ({
       onGained: async ({ runGameActionDelegate, cardLibrary, match, ...args }, { playerId }) => {
-        const cardsInPlay = getCardsInPlay(args.findCards);
+        const cardsInPlay = args.findCardService.getCardsInPlay();
         const nonDurationTreasures = cardsInPlay
           .filter((card) =>
             card.type.includes('TREASURE') &&
@@ -711,7 +710,7 @@ const expansion: CardExpansionModule = {
         playerId: effectArgs.playerId,
       });
 
-      const cardsInSupply = effectArgs.findCards([
+      const cardsInSupply = effectArgs.findCardService.findCards([
         { location: selectedCard.isBasic ? 'basicSupply' : 'kingdomSupply' },
         { cardKeys: selectedCard.cardKey },
       ]);
@@ -753,7 +752,7 @@ const expansion: CardExpansionModule = {
       console.debug(`[quarry effect] gaining 1 treasure`);
       await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
 
-      const actionCards = cardEffectArgs.findCards({ cardType: 'ACTION' });
+      const actionCards = cardEffectArgs.findCardService.findCards({ cardType: 'ACTION' });
 
       const unsubs: (() => void)[] = [];
       for (const actionCard of actionCards) {
@@ -1034,7 +1033,7 @@ const expansion: CardExpansionModule = {
         cardsNamedByTurn[turnStatsIndex] ??= [];
         cardsNamedByTurn[turnStatsIndex].push(cardKey);
 
-        const cardIds = cardEffectArgs.findCards([
+        const cardIds = cardEffectArgs.findCardService.findCards([
           { location: ['basicSupply', 'kingdomSupply'] },
           { kind: 'upTo', amount: { treasure: 5 }, playerId: cardEffectArgs.playerId },
         ])

@@ -2,8 +2,8 @@
 export { isCardDataFindCardsFilter, isCostFindCardsFilter, isSourceFindCardsFilter } from '../types.ts';
 
 export type {
+  FindCardService,
   FindCardsFn,
-  FindCardsFnFactory,
   FindCardsFnInput,
   NonLocationFilters,
   SourceFindCardsFilter,
