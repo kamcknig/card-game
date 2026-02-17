@@ -23,7 +23,7 @@ import {DisconnectedPlayerVoteService} from './disconnected-player-vote-service.
 import {PlayerSessionService} from './player-session-service.ts';
 import {PlayerRegistryService} from './player-registry-service.ts';
 import {MatchStartOrchestrator} from './match-start-orchestrator.ts';
-import {MatchControllerFactory} from './match-controller-factory.ts';
+import {MatchScope, MatchScopeFactory} from './match-scope-factory.ts';
 
 const defaultMatchConfiguration: MatchConfiguration = {
   expansions: [
@@ -70,6 +70,7 @@ export class Game {
   public matchStarted: boolean = false;
 
   private _socketMap: Map<PlayerId, AppSocket> = new Map();
+  private _matchScope: MatchScope | undefined;
   private _matchController: MatchController | undefined;
   private _matchConfiguration: MatchConfiguration | undefined;
   private _availableExpansion: ExpansionListElement[] = [];
@@ -81,8 +82,8 @@ export class Game {
     private readonly io: Server<ServerListenEvents, ServerEmitEvents>,
     // Max players allowed in a game.
     private readonly maxPlayers: number,
-    // Match controller factory injected from composition root for explicit wiring.
-    private readonly matchControllerFactory: MatchControllerFactory,
+    // Match scope factory injected from composition root for explicit wiring.
+    private readonly matchScopeFactory: MatchScopeFactory,
     // Store abstraction for persisted lobby configuration.
     private readonly configStore: GameConfigurationStore,
     // Socket binding helper that owns lobby transport event registrations.
@@ -113,7 +114,10 @@ export class Game {
   }
 
   private createNewMatch() {
-    this._matchController = this.matchControllerFactory.create(this._socketMap);
+    // Dispose any previous match scope before creating a fresh one.
+    this._matchScope?.dispose();
+    this._matchScope = this.matchScopeFactory.create(this._socketMap);
+    this._matchController = this._matchScope.matchController;
     this._matchConfiguration = { ...structuredClone(defaultMatchConfiguration) };
   }
 

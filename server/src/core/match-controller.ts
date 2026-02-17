@@ -63,10 +63,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _matchSnapshot: Match | null | undefined;
   private _reactionManager: ReactionManager | undefined;
   private _interactivityController: CardInteractivityController | undefined;
-  private readonly _cardLibrary: MatchCardLibrary = new MatchCardLibrary();
   private _logManager: LogManager | undefined;
   private _gameActionsController: GameActionController | undefined;
-  private readonly _match: Match = {} as Match;
   private _matchConfiguration: ComputedMatchConfiguration | undefined;
   private _expansionEndGameConditionFns: EndGameConditionFn[] = [];
   private _cardPriceController: CardPriceRulesController | undefined;
@@ -84,7 +82,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _supplyGainService: SupplyGainService = {
     gainTopSupplyCardForPileKey: async () => undefined,
   };
-  private readonly _cardSourceController: CardSourceController;
   // Tracks nested runGameAction calls to avoid corrupting patch snapshots.
   private _actionDepth: number = 0;
   // Cached match state override loaded from disk, if provided.
@@ -104,89 +101,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   ];
 
   constructor(
-    private readonly _socketMap: Map<PlayerId, AppSocket>,
-    private readonly _matchRuntimeFactory: MatchRuntimeFactory,
-    private readonly _matchConfiguratorFactory: MatchConfiguratorFactory,
+    private readonly socketMap: Map<PlayerId, AppSocket>,
+    private readonly matchRuntimeFactory: MatchRuntimeFactory,
+    private readonly matchConfiguratorFactory: MatchConfiguratorFactory,
+    private readonly match: Match,
+    private readonly cardLibrary: MatchCardLibrary,
+    private readonly cardSourceController: CardSourceController,
   ) {
     super();
-
-    this._match = {
-      cardOverrides: {},
-      cardSources: {},
-      cardSourceTagMap: {},
-      coffers: {},
-      // Per-player Villagers tokens for Renaissance.
-      villagers: {},
-      // Per-player debt tokens for Empires-style costs.
-      debt: {},
-      config: {} as ComputedMatchConfiguration,
-      currentPlayerTurnIndex: 0,
-      events: [],
-      // Active landmark card-likes in the match.
-      landmarks: [],
-      // Active project card-likes in the match.
-      projects: [],
-      // Boon deck state for Fate cards.
-      boons: {
-        cards: [],
-        deck: [],
-        discard: [],
-        setAside: [],
-      },
-      extraTurnQueue: [],
-      // Fleet round scheduler state for endgame extra-round handling.
-      fleetRound: {
-        active: false,
-        completed: false,
-        eligiblePlayerIdsInOrder: [],
-        nextFleetPlayerIndex: 0,
-      },
-      // Hex deck state for Doom cards.
-      hexes: {
-        cards: [],
-        deck: [],
-        discard: [],
-      },
-      // State instances and ownership tracking.
-      states: {
-        cards: [],
-        byPlayer: {},
-      },
-      // Artifact instances and ownership tracking.
-      artifacts: {
-        cards: [],
-        byPlayer: {},
-      },
-      mats: {},
-      playerActions: 0,
-      playerBuys: 0,
-      players: [],
-      playerPotions: 0,
-      playerTreasure: 0,
-      roundNumber: 0,
-      scores: {},
-      selectableCards: {},
-      stats: {
-        turns: [],
-        playedCardsByTurn: {},
-        cardsGainedByTurn: {},
-        playedCards: {},
-        cardsGained: {},
-        trashedCards: {},
-        trashedCardsByTurn: {},
-        cardsBought: {},
-        cardsBoughtByTurn: {},
-        cardLikesBought: {},
-        cardLikesBoughtByTurn: {},
-      },
-      // Token instances placed in the match.
-      tokens: {},
-      // Monotonic counter for deterministic token instance IDs.
-      tokenInstanceCounter: 0,
-      turnNumber: 0,
-      turnPhaseIndex: 0,
-    };
-    this._cardSourceController = new CardSourceController(this._match);
   }
 
   // Returns true for non-null plain object values.
@@ -256,11 +178,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     // Load an optional match override from disk for local dev/debugging.
     this._loadedMatchState = await this.tryLoadMatchStateOverride();
 
-    const runtime = this._matchRuntimeFactory.create({
-      socketMap: this._socketMap,
-      match: this._match,
-      cardLibrary: this._cardLibrary,
-      cardSourceController: this._cardSourceController,
+    const runtime = this.matchRuntimeFactory.create({
+      socketMap: this.socketMap,
+      match: this.match,
+      cardLibrary: this.cardLibrary,
+      cardSourceController: this.cardSourceController,
       runGameActionDelegate: (action, ...args) => this.runGameAction(action as any, ...(args as any)),
     });
 
@@ -274,11 +196,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this._playerReconnectOrchestrator = runtime.playerReconnectOrchestrator;
     this._gameActionsController = runtime.gameActionsController;
 
-    this._matchConfigurator = this._matchConfiguratorFactory.create(config);
+    this._matchConfigurator = this.matchConfiguratorFactory.create(config);
 
     const { config: newConfig } = await this._matchConfigurator.createConfiguration({
-      match: this._match,
-      cardSourceController: this._cardSourceController,
+      match: this.match,
+      cardSourceController: this.cardSourceController,
       gameEventRegistrar: (event: GameLifecycleEvent, handler: GameLifecycleCallback) =>
         this._reactionManager?.registerGameEvent(event, handler),
       clientEventRegistrar: (event, handler) => this.clientEventRegistrar(event, handler),
@@ -300,11 +222,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this.loadCardLibraryFromState(this._loadedMatchState.cardLibrary);
       this._matchConfiguration = this._loadedMatchState.match.config ?? newConfig;
       // Ensure match config is always populated for downstream logic.
-      this._match.config = this._match.config ?? this._matchConfiguration;
+      this.match.config = this.match.config ?? this._matchConfiguration;
     } else {
       this._matchConfiguration = newConfig;
 
-      this._match.players = this._matchConfiguration.players;
+      this.match.players = this._matchConfiguration.players;
       this.createBaseSupply(this._matchConfiguration);
       this.createKingdom(this._matchConfiguration);
       this.createEvents(this._matchConfiguration);
@@ -322,15 +244,15 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this.createArtifacts(this._matchConfiguration);
       this.createNonSupplyCards(this._matchConfiguration);
       this.createPlayerDecks(this._matchConfiguration);
-      this._match.config = this._matchConfiguration;
+      this.match.config = this._matchConfiguration;
     }
 
     console.log(`[match] ready, sending to clients and listening for when clients are ready`);
 
     this.broadcastPatch(snapshot);
 
-    this._socketMap.forEach((s) => {
-      s.emit('setCardLibrary', this._cardLibrary.getAllCards());
+    this.socketMap.forEach((s) => {
+      s.emit('setCardLibrary', this.cardLibrary.getAllCards());
       s.emit('setTokenDefinitions', tokenDefinitionMap);
       s.emit('matchReady');
       s.on('clientReady', this.onClientReady);
@@ -358,66 +280,66 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
   // Applies a loaded match state onto the current match instance.
   private applyLoadedMatchState(loadedMatch: Match): void {
-    Object.assign(this._match, loadedMatch);
+    Object.assign(this.match, loadedMatch);
     // Normalize persisted snapshots once at match load, not during gameplay actions.
-    this._match.coffers ??= {};
-    this._match.villagers ??= {};
-    this._match.debt ??= {};
-    this._match.boons ??= {
+    this.match.coffers ??= {};
+    this.match.villagers ??= {};
+    this.match.debt ??= {};
+    this.match.boons ??= {
       cards: [],
       deck: [],
       discard: [],
       setAside: [],
     };
-    this._match.boons.cards ??= [];
-    this._match.boons.deck ??= [];
-    this._match.boons.discard ??= [];
-    this._match.boons.setAside ??= [];
-    this._match.hexes ??= {
+    this.match.boons.cards ??= [];
+    this.match.boons.deck ??= [];
+    this.match.boons.discard ??= [];
+    this.match.boons.setAside ??= [];
+    this.match.hexes ??= {
       cards: [],
       deck: [],
       discard: [],
     };
-    this._match.hexes.cards ??= [];
-    this._match.hexes.deck ??= [];
-    this._match.hexes.discard ??= [];
-    this._match.states ??= {
+    this.match.hexes.cards ??= [];
+    this.match.hexes.deck ??= [];
+    this.match.hexes.discard ??= [];
+    this.match.states ??= {
       cards: [],
       byPlayer: {},
     };
-    this._match.states.cards ??= [];
-    this._match.states.byPlayer ??= {};
-    this._match.artifacts ??= {
+    this.match.states.cards ??= [];
+    this.match.states.byPlayer ??= {};
+    this.match.artifacts ??= {
       cards: [],
       byPlayer: {},
     };
-    this._match.artifacts.cards ??= [];
-    this._match.artifacts.byPlayer ??= {};
-    this._match.tokens ??= {};
-    this._match.tokenInstanceCounter ??= 0;
-    this._match.fleetRound ??= {
+    this.match.artifacts.cards ??= [];
+    this.match.artifacts.byPlayer ??= {};
+    this.match.tokens ??= {};
+    this.match.tokenInstanceCounter ??= 0;
+    this.match.fleetRound ??= {
       active: false,
       completed: false,
       eligiblePlayerIdsInOrder: [],
       nextFleetPlayerIndex: 0,
     };
-    this._match.fleetRound.active ??= false;
-    this._match.fleetRound.completed ??= false;
-    this._match.fleetRound.eligiblePlayerIdsInOrder ??= [];
-    this._match.fleetRound.nextFleetPlayerIndex ??= 0;
+    this.match.fleetRound.active ??= false;
+    this.match.fleetRound.completed ??= false;
+    this.match.fleetRound.eligiblePlayerIdsInOrder ??= [];
+    this.match.fleetRound.nextFleetPlayerIndex ??= 0;
   }
 
   // Loads a card library snapshot for a loaded match state.
   private loadCardLibraryFromState(cardLibrary: Record<CardId, Card>): void {
     for (const card of Object.values(cardLibrary)) {
       // Rehydrate card instances so downstream logic uses Card class methods.
-      this._cardLibrary.addCard(new Card({ ...card }));
+      this.cardLibrary.addCard(new Card({ ...card }));
     }
   }
 
   private clientEventRegistrar<T extends keyof ServerListenEvents>(event: T, handler: ServerListenEvents[T]) {
     this._registeredEvents.push(event);
-    this._socketMap.forEach((s) => {
+    this.socketMap.forEach((s) => {
       s.on(event, handler as any);
     });
   }
@@ -428,20 +350,20 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
   public playerDisconnected(playerId: number) {
     // Use whichever array is populated depending on phase
-    const roster = this._match.players?.length ? this._match.players : this._match.config.players;
+    const roster = this.match.players?.length ? this.match.players : this.match.config.players;
 
     // There should always be at least one entry after a single disconnect
     const leaving = roster.find((p) => p.id === playerId);
     console.info(`[match] ${leaving ?? `{id:${playerId}}`} has disconnected`);
 
-    this._socketMap.get(playerId)?.offAnyIncoming();
-    this._interactivityController?.playerRemoved(this._socketMap.get(playerId));
-    this._socketMap.delete(playerId);
+    this.socketMap.get(playerId)?.offAnyIncoming();
+    this._interactivityController?.playerRemoved(this.socketMap.get(playerId));
+    this.socketMap.delete(playerId);
   }
 
   private createBaseSupply(config: ComputedMatchConfiguration) {
     console.info(`[match] creating base supply cards`);
-    const cardSource = this._cardSourceController.getSource('basicSupply');
+    const cardSource = this.cardSourceController.getSource('basicSupply');
 
     if (!cardSource) {
       throw new Error(`[match] no basic supply card source found`);
@@ -454,7 +376,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         }
 
         const c = createCard(card.cardKey, { ...card, kingdom: supply.name });
-        this._cardLibrary.addCard(c);
+        this.cardLibrary.addCard(c);
         cardSource.push(c.id);
       }
     }
@@ -463,7 +385,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private createKingdom(config: ComputedMatchConfiguration) {
     console.info(`[match] creating kingdom cards`);
 
-    const cardSource = this._cardSourceController.getSource('kingdomSupply');
+    const cardSource = this.cardSourceController.getSource('kingdomSupply');
 
     if (!cardSource) {
       throw new Error(`[match] no basic supply card source found`);
@@ -476,7 +398,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         }
 
         const c = createCard(card.cardKey, { ...card, kingdom: kingdom.name });
-        this._cardLibrary.addCard(c);
+        this.cardLibrary.addCard(c);
         cardSource.push(c.id);
       }
     }
@@ -485,7 +407,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private createNonSupplyCards(config: ComputedMatchConfiguration) {
     console.info(`[match] creating non-supply cards`);
 
-    const cardSource = this._cardSourceController.getSource('nonSupplyCards');
+    const cardSource = this.cardSourceController.getSource('nonSupplyCards');
 
     if (!cardSource) {
       throw new Error(`[match] no basic supply card source found`);
@@ -498,7 +420,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         }
 
         const c = createCard(card.cardKey, { ...card, kingdom: supply.name });
-        this._cardLibrary.addCard(c);
+        this.cardLibrary.addCard(c);
         cardSource.push(c.id);
       }
     }
@@ -517,7 +439,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       console.debug(`[match] using player starting hand`);
       console.debug(Object.keys(playerStartHand).map((key) => `${key}: ${playerStartHand[key]}`).join(', '));
 
-      const deck = this._cardSourceController.getSource('playerDeck', player.id);
+      const deck = this.cardSourceController.getSource('playerDeck', player.id);
 
       Object.entries(playerStartHand).forEach(
         ([key, count]) => {
@@ -526,7 +448,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
               const c = createCard(key, { owner: player.id });
               // Cards in the deck should start face down; client rendering uses facing.
               c.facing = 'back';
-              this._cardLibrary.addCard(c);
+              this.cardLibrary.addCard(c);
               return c.id;
             }),
           );
@@ -537,15 +459,15 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
 
   public getMatchSnapshot(): Match {
-    this._cardLibSnapshot = structuredClone(this._cardLibrary.getAllCards());
-    return structuredClone(this._match);
+    this._cardLibSnapshot = structuredClone(this.cardLibrary.getAllCards());
+    return structuredClone(this.match);
   }
 
   // Returns a full match state export for debugging and local test setups.
   public exportMatchState(): { match: Match; cardLibrary: Record<CardId, Card> } {
     return {
-      match: structuredClone(this._match),
-      cardLibrary: structuredClone(this._cardLibrary.getAllCards()),
+      match: structuredClone(this.match),
+      cardLibrary: structuredClone(this.cardLibrary.getAllCards()),
     };
   }
 
@@ -573,11 +495,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           validationErrors.push(`${key}`);
           continue;
         }
-        if (!(key in this._match)) {
+        if (!(key in this.match)) {
           validationErrors.push(`${key}`);
           continue;
         }
-        const baseVal = (this._match as unknown as Record<string, unknown>)[key];
+        const baseVal = (this.match as unknown as Record<string, unknown>)[key];
         if (recordKeyAllowList.has(key)) {
           validationErrors.push(...MatchController.validatePartialMatch(val, baseVal, `${key}.`, true));
         } else if (MatchController.isPlainObject(val) && MatchController.isPlainObject(baseVal)) {
@@ -591,13 +513,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }
 
     MatchController.mergePartialMatch(
-      this._match as unknown as Record<string, unknown>,
+      this.match as unknown as Record<string, unknown>,
       partial as Record<string, unknown>,
     );
 
     this.calculateScores();
     this._interactivityController?.checkCardInteractivity();
-    this._match.cardOverrides = this._cardPriceController?.calculateOverrides() ?? {};
+    this.match.cardOverrides = this._cardPriceController?.calculateOverrides() ?? {};
 
     this.broadcastPatch(prev);
 
@@ -606,25 +528,25 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
   // Removes a player from the live match state and updates turn ordering.
   public removePlayerFromMatch(playerId: PlayerId): void {
-    const prev = structuredClone(this._match);
-    const playerIdx = this._match.players.findIndex((player) => player.id === playerId);
+    const prev = structuredClone(this.match);
+    const playerIdx = this.match.players.findIndex((player) => player.id === playerId);
     if (playerIdx === -1) return;
 
-    this._match.players.splice(playerIdx, 1);
-    if (this._match.config?.players) {
-      const configIdx = this._match.config.players.findIndex((player) => player.id === playerId);
+    this.match.players.splice(playerIdx, 1);
+    if (this.match.config?.players) {
+      const configIdx = this.match.config.players.findIndex((player) => player.id === playerId);
       if (configIdx !== -1) {
-        this._match.config.players.splice(configIdx, 1);
+        this.match.config.players.splice(configIdx, 1);
       }
     }
 
-    delete this._match.scores[playerId];
+    delete this.match.scores[playerId];
 
-    if (this._match.currentPlayerTurnIndex > playerIdx) {
-      this._match.currentPlayerTurnIndex -= 1;
+    if (this.match.currentPlayerTurnIndex > playerIdx) {
+      this.match.currentPlayerTurnIndex -= 1;
     }
-    if (this._match.currentPlayerTurnIndex >= this._match.players.length) {
-      this._match.currentPlayerTurnIndex = 0;
+    if (this.match.currentPlayerTurnIndex >= this.match.players.length) {
+      this.match.currentPlayerTurnIndex = 0;
     }
 
     this._interactivityController?.checkCardInteractivity();
@@ -657,7 +579,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         let pingTime = 30000;
 
         const pingUser = () => {
-          this._socketMap.get(promptPlayerId)?.emit('ping', ++pingCount);
+          this.socketMap.get(promptPlayerId)?.emit('ping', ++pingCount);
           pingTime -= 10000;
           pingTime = Math.max(pingTime, 10000);
           asyncTimeout = setTimeout(pingUser, pingTime);
@@ -673,7 +595,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
       this.calculateScores();
       this._interactivityController?.checkCardInteractivity();
-      this._match.cardOverrides = this._cardPriceController?.calculateOverrides() ?? {};
+      this.match.cardOverrides = this._cardPriceController?.calculateOverrides() ?? {};
 
       if (isTopLevel) {
         this.broadcastPatch({ ...this._matchSnapshot });
@@ -692,22 +614,22 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
 
   public broadcastPatch(prev: Match, playerId?: PlayerId) {
-    const patch: Operation[] = jsonPatch.compare(prev, this._match);
-    const cardLibraryPatch = jsonPatch.compare(this._cardLibSnapshot, this._cardLibrary.getAllCards());
+    const patch: Operation[] = jsonPatch.compare(prev, this.match);
+    const cardLibraryPatch = jsonPatch.compare(this._cardLibSnapshot, this.cardLibrary.getAllCards());
 
     if (patch.length || cardLibraryPatch.length) {
       console.debug(`[match] sending match update to clients`);
 
       if (playerId) {
-        this._socketMap.get(playerId)?.emit('patchUpdate', patch, cardLibraryPatch);
+        this.socketMap.get(playerId)?.emit('patchUpdate', patch, cardLibraryPatch);
       } else {
-        this._socketMap.forEach((s) => s.emit('patchUpdate', patch, cardLibraryPatch));
+        this.socketMap.forEach((s) => s.emit('patchUpdate', patch, cardLibraryPatch));
       }
     }
   }
 
   private onClientReady = (playerId: number) => {
-    const player = this._match.config?.players.find((player) => player.id === playerId);
+    const player = this.match.config?.players.find((player) => player.id === playerId);
 
     console.info(`[match] received clientReady event from ${player}`);
 
@@ -716,21 +638,21 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       return;
     }
 
-    if (!this._match.config) {
+    if (!this.match.config) {
       console.error(`[match] no match config`);
       return;
     }
 
     player.ready = true;
 
-    if (this._match.config.players.some((p) => !p.ready)) {
+    if (this.match.config.players.some((p) => !p.ready)) {
       console.debug(`[match] not all players marked ready, waiting for everyone`);
       return;
     }
 
     console.log('[match] all players ready');
 
-    for (const socket of this._socketMap.values()) {
+    for (const socket of this.socketMap.values()) {
       socket.off('clientReady', this.onClientReady);
     }
 
@@ -740,40 +662,40 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private async startMatch() {
     console.log(`[match] starting match`);
 
-    await this._reactionManager?.runGameLifecycleEvent('onGameStart', { match: this._match });
+    await this._reactionManager?.runGameLifecycleEvent('onGameStart', { match: this.match });
 
-    for (const socket of this._socketMap.values()) {
+    for (const socket of this.socketMap.values()) {
       this._playerReconnectOrchestrator?.bindGameplaySocketListeners(socket);
     }
 
     this._matchSnapshot = this.getMatchSnapshot();
-    this._match.playerBuys = 1;
-    this._match.playerActions = 1;
+    this.match.playerBuys = 1;
+    this.match.playerActions = 1;
 
-    this._socketMap.forEach((s) => s.emit('matchStarted'));
+    this.socketMap.forEach((s) => s.emit('matchStarted'));
 
-    for (const player of this._match.players!) {
+    for (const player of this.match.players!) {
       await this.runGameAction('drawHand', { playerId: player.id });
     }
 
     this._logManager?.addLogEntry({
       root: true,
       type: 'newTurn',
-      turn: Math.floor(this._match.turnNumber / this._match.players.length) + 1,
+      turn: Math.floor(this.match.turnNumber / this.match.players.length) + 1,
     });
 
     this._logManager?.addLogEntry({
       root: true,
       type: 'newPlayerTurn',
-      turn: Math.floor(this._match.turnNumber / this._match.players.length) + 1,
-      playerId: getCurrentPlayer(this._match).id,
+      turn: Math.floor(this.match.turnNumber / this.match.players.length) + 1,
+      playerId: getCurrentPlayer(this.match).id,
     });
 
     // Seed turn history with the initial started turn.
-    this._match.stats.turns = [{
-      turnNumber: this._match.turnNumber,
-      controllerId: getCurrentPlayer(this._match).id,
-      playerId: getCurrentPlayer(this._match).id,
+    this.match.stats.turns = [{
+      turnNumber: this.match.turnNumber,
+      controllerId: getCurrentPlayer(this.match).id,
+      playerId: getCurrentPlayer(this.match).id,
     }];
 
     // Kick off the first turn, including any computer player automation.
@@ -783,7 +705,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private calculateScores() {
     console.info(`[match] calculating scores`);
 
-    const match = this._match;
+    const match = this.match;
     // Victory tokens now live as token instances; precompute counts per player for scoring.
     const victoryTokenCounts = new Map<PlayerId, number>();
     const victoryTokenId = prosperityTokenIds.victory;
@@ -797,7 +719,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
     for (const player of match.players ?? []) {
       const playerId = player.id;
-      const cards = this._cardLibrary.getCardsByOwner(playerId);
+      const cards = this.cardLibrary.getCardsByOwner(playerId);
 
       let score = 0;
 
@@ -808,14 +730,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         if (customScoringFn) {
           console.debug(`[match] processing scoring function for ${card}`);
           score += customScoringFn({
-            cardSourceController: this._cardSourceController,
+            cardSourceController: this.cardSourceController,
             cardPriceController: this._cardPriceController!,
             logManager: this._logManager!,
             findCardService: this._findCardService,
             supplyGainService: this._supplyGainService,
             reactionManager: this._reactionManager!,
-            match: this._match,
-            cardLibrary: this._cardLibrary,
+            match: this.match,
+            cardLibrary: this.cardLibrary,
             ownerId: playerId,
           });
         }
@@ -825,14 +747,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       match.scores[playerId] = score;
 
       for (const expansionScoringFn of this._expansionScoringFns) {
-        expansionScoringFn(playerId, match, this._cardLibrary);
+        expansionScoringFn(playerId, match, this.cardLibrary);
       }
     }
   }
 
   // Returns the Fleet project id when Fleet is in the current project lineup.
   private getFleetProjectId(): CardId | undefined {
-    return this._match.projects.find((project) => project.cardKey === 'fleet')?.id;
+    return this.match.projects.find((project) => project.cardKey === 'fleet')?.id;
   }
 
   // Returns true when the given player currently owns Fleet via a cube token.
@@ -842,7 +764,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       return false;
     }
 
-    return Object.values(this._match.tokens ?? {}).some((token) =>
+    return Object.values(this.match.tokens ?? {}).some((token) =>
       token.tokenId === renaissanceTokenIds.cube &&
       token.ownerId === playerId &&
       token.location.type === 'cardLike' &&
@@ -852,7 +774,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
   // Builds Fleet turn order starting with the next player after the player ending the game.
   private getFleetEligiblePlayerIdsInOrder(endingPlayerIndex: number): PlayerId[] {
-    const players = this._match.players;
+    const players = this.match.players;
     const eligiblePlayerIds: PlayerId[] = [];
     if (!players.length) {
       return eligiblePlayerIds;
@@ -875,7 +797,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private async checkGameEnd() {
     console.info(`[match] checking if the game has ended`);
 
-    const match = this._match;
+    const match = this.match;
     // Fleet latches game-end state once activated; do not re-evaluate end conditions during Fleet turns.
     if (match.fleetRound.completed) {
       console.info('[match] Fleet round completed; finalizing game end');
@@ -925,14 +847,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this._interactivityController?.endGame();
 
     console.debug(`[match] removing socket listeners for 'nextPhase'`);
-    this._socketMap.forEach((s) => s.off('nextPhase'));
+    this.socketMap.forEach((s) => s.off('nextPhase'));
 
     console.debug(`[match] removing listener for match state updates`);
 
-    const match = this._match;
+    const match = this.match;
 
-    for (const player of this._match.players) {
-      const setAsideCardIds = this._cardSourceController.getSource('set-aside', player.id);
+    for (const player of this.match.players) {
+      const setAsideCardIds = this.cardSourceController.getSource('set-aside', player.id);
       // Iterate over a snapshot since move actions mutate the source array.
       for (const cardId of [...setAsideCardIds]) {
         await this.runGameAction('moveCard', {
@@ -944,7 +866,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }
 
     for (const event of this._registeredEvents) {
-      this._socketMap.forEach((s) => s.off(event));
+      this.socketMap.forEach((s) => s.off(event));
     }
 
     const summary: MatchSummary = {
@@ -994,14 +916,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     console.info(`[match] match summary created`);
     console.debug(summary);
 
-    this._socketMap.forEach((s) => s.emit('gameOver', summary));
+    this.socketMap.forEach((s) => s.emit('gameOver', summary));
     this.emit('gameOver');
   }
 
   private createEvents(config: ComputedMatchConfiguration) {
     console.debug(`[match] creating events`);
     for (const event of config.events) {
-      this._match.events.push(createEvent(event));
+      this.match.events.push(createEvent(event));
     }
   }
 
@@ -1015,7 +937,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
     console.info('[match] creating boons');
     // Initialize boon deck state before shuffling.
-    this._match.boons = {
+    this.match.boons = {
       cards: [],
       deck: [],
       discard: [],
@@ -1024,14 +946,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
     for (const boon of boons) {
       const boonInstance = createBoon(boon);
-      this._match.boons.cards.push(boonInstance);
-      this._match.boons.deck.push(boonInstance.id);
+      this.match.boons.cards.push(boonInstance);
+      this.match.boons.deck.push(boonInstance.id);
     }
 
     // Shuffle the boon deck for randomized draws.
     void this._gameActionsController?.shuffleCardLike({ kind: 'boon' });
 
-    console.debug(`[match] boon deck initialized with ${this._match.boons.deck.length} boons`);
+    console.debug(`[match] boon deck initialized with ${this.match.boons.deck.length} boons`);
   }
 
   // Creates and shuffles the hex deck when Doom cards are present.
@@ -1044,7 +966,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
     console.info('[match] creating hexes');
     // Initialize hex deck state before shuffling.
-    this._match.hexes = {
+    this.match.hexes = {
       cards: [],
       deck: [],
       discard: [],
@@ -1052,14 +974,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
     for (const hex of hexes) {
       const hexInstance = createHex(hex);
-      this._match.hexes.cards.push(hexInstance);
-      this._match.hexes.deck.push(hexInstance.id);
+      this.match.hexes.cards.push(hexInstance);
+      this.match.hexes.deck.push(hexInstance.id);
     }
 
     // Shuffle the hex deck for randomized draws.
-    fisherYatesShuffle(this._match.hexes.deck, true);
+    fisherYatesShuffle(this.match.hexes.deck, true);
 
-    console.debug(`[match] hex deck initialized with ${this._match.hexes.deck.length} hexes`);
+    console.debug(`[match] hex deck initialized with ${this.match.hexes.deck.length} hexes`);
   }
 
   // Creates state instances for the match when state cards are present.
@@ -1072,17 +994,17 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
     console.info('[match] creating states');
     // Initialize state storage before instantiating state cards.
-    this._match.states = {
+    this.match.states = {
       cards: [],
       byPlayer: {},
     };
 
     for (const state of states) {
       const stateInstance = createState(state);
-      this._match.states.cards.push(stateInstance);
+      this.match.states.cards.push(stateInstance);
     }
 
-    console.debug(`[match] states initialized with ${this._match.states.cards.length} state(s)`);
+    console.debug(`[match] states initialized with ${this.match.states.cards.length} state(s)`);
   }
 
   // Creates artifact instances for the match when artifact cards are present.
@@ -1095,24 +1017,24 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
     console.info('[match] creating artifacts');
     // Initialize artifact storage before instantiating artifact cards.
-    this._match.artifacts = {
+    this.match.artifacts = {
       cards: [],
       byPlayer: {},
     };
 
     for (const artifact of artifacts) {
       const artifactInstance = createArtifact(artifact);
-      this._match.artifacts.cards.push(artifactInstance);
+      this.match.artifacts.cards.push(artifactInstance);
     }
 
-    console.debug(`[match] artifacts initialized with ${this._match.artifacts.cards.length} artifact(s)`);
+    console.debug(`[match] artifacts initialized with ${this.match.artifacts.cards.length} artifact(s)`);
   }
 
   private createLandmarks(config: ComputedMatchConfiguration) {
     // Create landmark card-like instances for the active match.
     console.debug(`[match] creating landmarks`);
     for (const landmark of config.landmarks ?? []) {
-      this._match.landmarks.push(createLandmark(landmark));
+      this.match.landmarks.push(createLandmark(landmark));
     }
   }
 
@@ -1120,7 +1042,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     // Create project card-like instances for the active match.
     console.debug(`[match] creating projects`);
     for (const project of config.projects ?? []) {
-      this._match.projects.push(createProject(project));
+      this.match.projects.push(createProject(project));
     }
   }
 }

@@ -11,7 +11,7 @@ import { DisconnectedPlayerVoteService } from './core/disconnected-player-vote-s
 import { PlayerSessionService } from './core/player-session-service.ts';
 import { PlayerRegistryService } from './core/player-registry-service.ts';
 import { MatchStartOrchestrator } from './core/match-start-orchestrator.ts';
-import { MatchControllerFactory } from './core/match-controller-factory.ts';
+import { MatchScopeFactory } from './core/match-scope-factory.ts';
 import { MatchConfiguratorFactory } from './core/match-configurator-factory.ts';
 import { MatchRuntimeFactory } from './core/match-runtime-factory.ts';
 import { MatchSocketBindings } from './core/match-socket-bindings.ts';
@@ -56,7 +56,7 @@ const container = createContainer({
 container.register({
   io: asValue(io),
   maxPlayers: asValue(6),
-  matchControllerFactory: asClass(MatchControllerFactory).singleton(),
+  matchScopeFactory: asClass(MatchScopeFactory).singleton(),
   matchConfiguratorFactory: asClass(MatchConfiguratorFactory).singleton(),
   expansionSearchService: asClass(ExpansionSearchService).singleton(),
   expansionCompatibilityService: asClass(ExpansionCompatibilityService).singleton(),
