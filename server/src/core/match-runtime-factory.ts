@@ -14,6 +14,7 @@ import {asClass, asValue, createContainer, InjectionMode} from 'awilix';
 import {FindCardsService} from './find-cards-service.ts';
 import {BuyOptionsResolver} from './actions/resolve-buy-options.ts';
 import {DefaultSupplyGainService} from './supply-gain-service.ts';
+import {EndGameEvaluatorService} from './end-game-evaluator-service.ts';
 
 export interface MatchRuntimeFactoryArgs {
   socketMap: Map<PlayerId, AppSocket>;
@@ -28,6 +29,7 @@ export interface MatchRuntime {
   cardPriceController: CardPriceRulesController;
   findCardService: FindCardService;
   supplyGainService: SupplyGainService;
+  endGameEvaluator: EndGameEvaluatorService;
   reactionManager: ReactionManager;
   interactivityController: CardInteractivityController;
   gameActionsController: GameActionController;
@@ -90,6 +92,7 @@ export class MatchRuntimeFactory {
       supplyGainService: asClass(DefaultSupplyGainService).singleton(),
       buyOptionsResolver: asClass(BuyOptionsResolver).singleton(),
       reactionManager: asClass(ReactionManager).singleton(),
+      endGameEvaluator: asClass(EndGameEvaluatorService).singleton(),
       interactivityController: asClass(CardInteractivityController).singleton(),
       gameActionsController: asClass(GameActionController).singleton(),
     });
@@ -99,6 +102,7 @@ export class MatchRuntimeFactory {
     const findCardService = scope.resolve<FindCardService>('findCardService');
     const supplyGainService = scope.resolve<SupplyGainService>('supplyGainService');
     const reactionManager = scope.resolve<ReactionManager>('reactionManager');
+    const endGameEvaluator = scope.resolve<EndGameEvaluatorService>('endGameEvaluator');
     const interactivityController = scope.resolve<CardInteractivityController>('interactivityController');
     const gameActionsController = scope.resolve<GameActionController>('gameActionsController');
 
@@ -107,6 +111,7 @@ export class MatchRuntimeFactory {
       cardPriceController,
       findCardService,
       supplyGainService,
+      endGameEvaluator,
       reactionManager,
       interactivityController,
       gameActionsController,

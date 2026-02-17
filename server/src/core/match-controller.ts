@@ -44,7 +44,6 @@ import {
   createProject,
   createState,
 } from '../utils/create-card.ts';
-import { getStartingSupplyCount } from '../utils/get-starting-supply-count.ts';
 import { CardSourceController } from './card-source-controller.ts';
 import { tokenDefinitionMap } from './tokens/token-definition-map.ts';
 import { prosperityTokenIds } from '@expansions/prosperity/token-prosperity-ids.ts';
@@ -57,12 +56,15 @@ import { CardInteractivityController } from './card-interactivity-controller.ts'
 import { LogManager } from './log-manager.ts';
 import { CardPriceRulesController } from './card-price-rules-controller.ts';
 import { GameActionController } from './actions/game-action-controller.ts';
+import { MatchConfiguratorFactory } from './match-configurator-factory.ts';
+import { EndGameEvaluatorService } from './end-game-evaluator-service.ts';
 
 export interface MatchControllerDependencies {
   socketMap: Map<PlayerId, AppSocket>;
   expansionSearchService: ExpansionSearchService;
   matchRuntimeFactory: MatchRuntimeFactory;
   matchSocketBindings: MatchSocketBindings;
+  matchConfiguratorFactory: MatchConfiguratorFactory;
 }
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
@@ -78,6 +80,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _expansionEndGameConditionFns: EndGameConditionFn[] = [];
   private _cardPriceController: CardPriceRulesController | undefined;
   private _matchConfigurator: MatchConfigurator | undefined;
+  private _endGameEvaluator: EndGameEvaluatorService | undefined;
   private _expansionScoringFns: PlayerScoreDecorator[] = [];
   private _registeredEvents: (keyof ServerListenEvents)[] = [];
   private _findCardService: FindCardService = {
@@ -112,18 +115,21 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private readonly expansionSearchService: ExpansionSearchService;
   private readonly matchRuntimeFactory: MatchRuntimeFactory;
   private readonly matchSocketBindings: MatchSocketBindings;
+  private readonly matchConfiguratorFactory: MatchConfiguratorFactory;
 
   constructor({
     socketMap,
     expansionSearchService,
     matchRuntimeFactory,
     matchSocketBindings,
+    matchConfiguratorFactory,
   }: MatchControllerDependencies) {
     super();
     this._socketMap = socketMap;
     this.expansionSearchService = expansionSearchService;
     this.matchRuntimeFactory = matchRuntimeFactory;
     this.matchSocketBindings = matchSocketBindings;
+    this.matchConfiguratorFactory = matchConfiguratorFactory;
 
     this._match = {
       cardOverrides: {},
@@ -284,10 +290,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this._findCardService = runtime.findCardService;
     this._supplyGainService = runtime.supplyGainService;
     this._reactionManager = runtime.reactionManager;
+    this._endGameEvaluator = runtime.endGameEvaluator;
     this._interactivityController = runtime.interactivityController;
     this.gameActionsController = runtime.gameActionsController;
 
-    this._matchConfigurator = new MatchConfigurator(config);
+    this._matchConfigurator = this.matchConfiguratorFactory.create(config);
 
     const { config: newConfig } = await this._matchConfigurator.createConfiguration({
       match: this._match,
@@ -926,50 +933,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       return false;
     }
 
-    let shouldEndGame = false;
-
-    if (
-      this._findCardService.findCards([
-        { location: 'basicSupply' },
-        { cardKeys: 'province' },
-      ]).length === 0
-    ) {
-      console.info(`[match] supply has no more provinces`);
-      shouldEndGame = true;
-    }
-    if (!shouldEndGame) {
-      const startingSupplyCount = getStartingSupplyCount(match);
-      const remainingSupplyCount = this._findCardService.getRemainingSupplyCount();
-      const emptyPileCount = startingSupplyCount - remainingSupplyCount;
-
-      console.debug(`[match] empty pile count ${emptyPileCount}`);
-
-      if (emptyPileCount === 3) {
-        console.info(`[match] three supply piles are empty`);
-        shouldEndGame = true;
-      }
-    }
-
-    if (!shouldEndGame) {
-      for (const conditionFn of this._expansionEndGameConditionFns) {
-        // End immediately when any registered expansion end-game condition triggers.
-        const shouldEnd = conditionFn({
-          cardSourceController: this._cardSourceController,
-          match: this._match,
-          cardLibrary: this._cardLibrary,
-          cardPriceController: this._cardPriceController!,
-          logManager: this._logManager!,
-          reactionManager: this._reactionManager!,
-          findCardService: this._findCardService,
-          supplyGainService: this._supplyGainService,
-        });
-        if (shouldEnd) {
-          console.info('[match] expansion end-game condition met');
-          shouldEndGame = true;
-          break;
-        }
-      }
-    }
+    const shouldEndGame = this._endGameEvaluator?.shouldEndGame(this._expansionEndGameConditionFns) ?? false;
 
     if (!shouldEndGame) {
       return false;

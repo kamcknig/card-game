@@ -12,6 +12,7 @@ import { PlayerSessionService } from './core/player-session-service.ts';
 import { PlayerRegistryService } from './core/player-registry-service.ts';
 import { MatchStartOrchestrator } from './core/match-start-orchestrator.ts';
 import { MatchControllerFactory } from './core/match-controller-factory.ts';
+import { MatchConfiguratorFactory } from './core/match-configurator-factory.ts';
 import { MatchRuntimeFactory } from './core/match-runtime-factory.ts';
 import { MatchSocketBindings } from './core/match-socket-bindings.ts';
 import { loadExpansion } from './utils/load-expansion.ts';
@@ -56,6 +57,7 @@ container.register({
   io: asValue(io),
   maxPlayers: asValue(6),
   matchControllerFactory: asClass(MatchControllerFactory).singleton(),
+  matchConfiguratorFactory: asClass(MatchConfiguratorFactory).singleton(),
   expansionSearchService: asClass(ExpansionSearchService).singleton(),
   expansionCompatibilityService: asClass(ExpansionCompatibilityService).singleton(),
   matchRuntimeFactory: asClass(MatchRuntimeFactory).singleton(),
