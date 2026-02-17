@@ -27,12 +27,7 @@ import {MatchStartOrchestrator} from './match-start-orchestrator.ts';
 // Factory signature for creating a match controller instance.
 export type MatchControllerFactory = (
   socketMap: Map<PlayerId, AppSocket>,
-  cardSearchFn: (searchTerm: string) => CardNoId[],
 ) => MatchController;
-
-// Default match controller factory used by the composition root.
-export const defaultMatchControllerFactory: MatchControllerFactory = (socketMap, cardSearchFn) =>
-  new MatchController(socketMap, cardSearchFn);
 
 // Dependencies injected by the server composition root.
 export interface GameDependencies {
@@ -159,10 +154,7 @@ export class Game {
   }
 
   private createNewMatch() {
-    this._matchController = this._matchControllerFactory(
-      this._socketMap,
-      (searchTerm: string) => this.onSearchCards(searchTerm),
-    );
+    this._matchController = this._matchControllerFactory(this._socketMap);
     this._matchConfiguration = { ...structuredClone(defaultMatchConfiguration) };
   }
 

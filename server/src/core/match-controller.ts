@@ -14,20 +14,15 @@ import {
 } from 'shared/types/index.ts';
 import { MatchConfigurator } from './match-configurator.ts';
 import { getCurrentPlayer } from '../utils/get-current-player.ts';
-import { CardInteractivityController } from './card-interactivity-controller.ts';
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
-import { ReactionManager } from './reactions/reaction-manager.ts';
 import { scoringFunctionMap } from '@expansions/scoring-function-map.ts';
 import { MatchCardLibrary } from './match-card-library.ts';
 import jsonPatch from 'fast-json-patch';
 import type { Operation } from 'fast-json-patch';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
-import { cardEffectFunctionMapFactory } from './effects/card-effect-function-map-factory.ts';
 import { EventEmitter } from '@denosaurs/event';
-import { LogManager } from './log-manager.ts';
 import {
   AppSocket,
-  CardEffectFunctionMap,
   EndGameConditionFn,
   FindCardsFn,
   GameActionDefinitionMap,
@@ -49,15 +44,18 @@ import {
   createState,
 } from '../utils/create-card.ts';
 import { getRemainingSupplyCount, getStartingSupplyCount } from '../utils/get-starting-supply-count.ts';
-import { CardPriceRulesController } from './card-price-rules-controller.ts';
-import { findCardsFactory } from '../utils/find-cards.ts';
-import { GameActionController } from './actions/game-action-controller.ts';
 import { CardSourceController } from './card-source-controller.ts';
-import { eventEffectFactoryMap } from './events/event-effect-factory-map.ts';
-import { projectEffectFactoryMap } from './projects/project-effect-factory-map.ts';
 import { tokenDefinitionMap } from './tokens/token-definition-map.ts';
 import { prosperityTokenIds } from '@expansions/prosperity/token-prosperity-ids.ts';
 import { renaissanceTokenIds } from '@expansions/renaissance/token-ids-renaissance.ts';
+import { ExpansionSearchService } from './expansion-search-service.ts';
+import { MatchRuntimeFactory } from './match-runtime-factory.ts';
+import { MatchSocketBindings } from './match-socket-bindings.ts';
+import { ReactionManager } from './reactions/reaction-manager.ts';
+import { CardInteractivityController } from './card-interactivity-controller.ts';
+import { LogManager } from './log-manager.ts';
+import { CardPriceRulesController } from './card-price-rules-controller.ts';
+import { GameActionController } from './actions/game-action-controller.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardLibSnapshot = {};
@@ -96,7 +94,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
   constructor(
     private readonly _socketMap: Map<PlayerId, AppSocket>,
-    private readonly cardSearchFn: (searchTerm: string) => CardNoId[],
+    private readonly expansionSearchService: ExpansionSearchService,
+    private readonly matchRuntimeFactory: MatchRuntimeFactory,
+    private readonly matchSocketBindings: MatchSocketBindings,
   ) {
     super();
 
@@ -246,80 +246,20 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     // Load an optional match override from disk for local dev/debugging.
     this._loadedMatchState = await this.tryLoadMatchStateOverride();
 
-    this._logManager = new LogManager({
+    const runtime = this.matchRuntimeFactory.create({
       socketMap: this._socketMap,
+      match: this._match,
+      cardLibrary: this._cardLibrary,
+      cardSourceController: this._cardSourceController,
+      runGameActionDelegate: (action, ...args) => this.runGameAction(action as any, ...(args as any)),
     });
 
-    this._cardPriceController = new CardPriceRulesController(
-      this._cardLibrary,
-      this._match,
-    );
-
-    this._findCards = findCardsFactory(this._cardSourceController, this._cardPriceController, this._cardLibrary);
-
-    this._reactionManager = new ReactionManager(
-      this._cardSourceController,
-      this._findCards,
-      this._cardPriceController,
-      this._logManager,
-      this._match,
-      this._cardLibrary,
-      (action, ...args) => this.runGameAction(action, ...args),
-    );
-
-    const cardEffectFunctionMap = Object.keys(cardEffectFunctionMapFactory).reduce((acc, nextKey) => {
-      acc[nextKey] = cardEffectFunctionMapFactory[nextKey]();
-      return acc;
-    }, {} as CardEffectFunctionMap);
-
-    const eventEffectFunctionMap = Object.keys(eventEffectFactoryMap).reduce((acc, nextKey) => {
-      acc[nextKey] = eventEffectFactoryMap[nextKey]();
-      return acc;
-    }, {} as CardEffectFunctionMap);
-
-    const projectEffectFunctionMap = Object.keys(projectEffectFactoryMap).reduce((acc, nextKey) => {
-      acc[nextKey] = projectEffectFactoryMap[nextKey]();
-      return acc;
-    }, {} as CardEffectFunctionMap);
-
-    // Boon effects are registered per-match via expansion configurators.
-    const boonEffectFunctionMap = {} as CardEffectFunctionMap;
-    // Hex effects are registered per-match via expansion configurators.
-    const hexEffectFunctionMap = {} as CardEffectFunctionMap;
-    // State effects are registered per-match via expansion configurators.
-    const stateEffectFunctionMap = {} as CardEffectFunctionMap;
-    // Artifact effects are registered per-match via expansion configurators.
-    const artifactEffectFunctionMap = {} as CardEffectFunctionMap;
-
-    this._interactivityController = new CardInteractivityController(
-      this._cardSourceController,
-      this._cardPriceController,
-      this._match,
-      this._socketMap,
-      this._cardLibrary,
-      (action, ...args) => this.runGameAction(action, ...args),
-      this._findCards,
-    );
-
-    this.gameActionsController = new GameActionController(
-      this._cardSourceController,
-      this._findCards,
-      this._cardPriceController,
-      cardEffectFunctionMap,
-      eventEffectFunctionMap,
-      projectEffectFunctionMap,
-      boonEffectFunctionMap,
-      hexEffectFunctionMap,
-      stateEffectFunctionMap,
-      artifactEffectFunctionMap,
-      this._match,
-      this._cardLibrary,
-      this._logManager,
-      this._socketMap,
-      this._reactionManager,
-      (action, ...args) => this.runGameAction(action, ...args),
-      this._interactivityController,
-    );
+    this._logManager = runtime.logManager;
+    this._cardPriceController = runtime.cardPriceController;
+    this._findCards = runtime.findCards;
+    this._reactionManager = runtime.reactionManager;
+    this._interactivityController = runtime.interactivityController;
+    this.gameActionsController = runtime.gameActionsController;
 
     this._matchConfigurator = new MatchConfigurator(config);
 
@@ -489,7 +429,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       socket.emit('matchStarted');
       socket.off('clientReady');
 
-      this.initializeSocketListeners(socket);
+      this.bindGameplaySocketListeners(socket);
 
       this._interactivityController?.playerAdded(socket);
 
@@ -816,7 +756,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     await this._reactionManager?.runGameLifecycleEvent('onGameStart', { match: this._match });
 
     for (const socket of this._socketMap.values()) {
-      this.initializeSocketListeners(socket);
+      this.bindGameplaySocketListeners(socket);
     }
 
     this._matchSnapshot = this.getMatchSnapshot();
@@ -1117,19 +1057,19 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this._socketMap.forEach((s) => s.emit('nextPhaseComplete'));
   }
 
-  private initializeSocketListeners(socket: AppSocket) {
-    socket.on('nextPhase', () => this.onNextPhase());
-    socket.on('searchCards', (playerId, searchStr) => this.onSearchCards(playerId, searchStr));
-    socket.on('exchangeCoffer', async (playerId, count) => {
-      await this.runGameAction('exchangeCoffer', { playerId, count });
-    });
-    // Allows the current player to spend Villagers for actions.
-    socket.on('spendVillager', async (playerId, count) => {
-      await this.runGameAction('spendVillager', { playerId, count });
-    });
-    // Allows the current player to pay down debt using available treasure.
-    socket.on('payDebt', async (playerId, count) => {
-      await this.runGameAction('payDebt', { playerId, count });
+  private bindGameplaySocketListeners(socket: AppSocket) {
+    this.matchSocketBindings.bindGameplaySocketHandlers(socket, {
+      onNextPhase: () => this.onNextPhase(),
+      onSearchCards: (playerId, searchStr) => this.onSearchCards(playerId, searchStr),
+      onExchangeCoffer: async (playerId, count) => {
+        await this.runGameAction('exchangeCoffer', { playerId, count });
+      },
+      onSpendVillager: async (playerId, count) => {
+        await this.runGameAction('spendVillager', { playerId, count });
+      },
+      onPayDebt: async (playerId, count) => {
+        await this.runGameAction('payDebt', { playerId, count });
+      },
     });
   }
 
@@ -1138,7 +1078,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
     this._socketMap.get(playerId)?.emit(
       'searchCardResponse',
-      this.cardSearchFn(searchStr),
+      this.expansionSearchService.searchKingdomCards(searchStr),
     );
   }
 
