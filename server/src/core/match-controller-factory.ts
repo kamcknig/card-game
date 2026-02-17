@@ -6,38 +6,21 @@ import { MatchConfiguratorFactory } from './match-configurator-factory.ts';
 import { MatchRuntimeFactory } from './match-runtime-factory.ts';
 import { MatchSocketBindings } from './match-socket-bindings.ts';
 
-export interface MatchControllerFactoryDependencies {
-  expansionSearchService: ExpansionSearchService;
-  matchRuntimeFactory: MatchRuntimeFactory;
-  matchSocketBindings: MatchSocketBindings;
-  matchConfiguratorFactory: MatchConfiguratorFactory;
-}
-
 export class MatchControllerFactory {
-  private readonly expansionSearchService: ExpansionSearchService;
-  private readonly matchRuntimeFactory: MatchRuntimeFactory;
-  private readonly matchSocketBindings: MatchSocketBindings;
-  private readonly matchConfiguratorFactory: MatchConfiguratorFactory;
-
   constructor(
-    expansionSearchService: ExpansionSearchService,
-    matchRuntimeFactory: MatchRuntimeFactory,
-    matchSocketBindings: MatchSocketBindings,
-    matchConfiguratorFactory: MatchConfiguratorFactory,
-  ) {
-    this.expansionSearchService = expansionSearchService;
-    this.matchRuntimeFactory = matchRuntimeFactory;
-    this.matchSocketBindings = matchSocketBindings;
-    this.matchConfiguratorFactory = matchConfiguratorFactory;
-  }
+    private readonly _expansionSearchService: ExpansionSearchService,
+    private readonly _matchRuntimeFactory: MatchRuntimeFactory,
+    private readonly _matchSocketBindings: MatchSocketBindings,
+    private readonly _matchConfiguratorFactory: MatchConfiguratorFactory,
+  ) {}
 
   public create(socketMap: Map<PlayerId, AppSocket>): MatchController {
     return new MatchController(
       socketMap,
-      this.expansionSearchService,
-      this.matchRuntimeFactory,
-      this.matchSocketBindings,
-      this.matchConfiguratorFactory,
+      this._expansionSearchService,
+      this._matchRuntimeFactory,
+      this._matchSocketBindings,
+      this._matchConfiguratorFactory,
     );
   }
 }

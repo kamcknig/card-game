@@ -6,20 +6,13 @@ export type CardPriceRule = (
   context: { match: Match; playerId: PlayerId },
 ) => { restricted: boolean; cost: CardCost };
 
-export interface CardPriceRulesControllerDependencies {
-  cardLibrary: MatchCardLibrary;
-  match: Match;
-}
-
 export class CardPriceRulesController {
   private _rules: Record<CardId, CardPriceRule[]> = {};
-  private readonly cardLibrary: MatchCardLibrary;
-  private readonly match: Match;
 
-  constructor(cardLibrary: MatchCardLibrary, match: Match) {
-    this.cardLibrary = cardLibrary;
-    this.match = match;
-  }
+  constructor(
+    private readonly _cardLibrary: MatchCardLibrary,
+    private readonly _match: Match,
+  ) {}
 
   registerRule(card: CardLike, rule: CardPriceRule) {
     this._rules[card.id] ??= [];
@@ -44,7 +37,7 @@ export class CardPriceRulesController {
     }
 
     for (const rule of rules) {
-      const result = rule(card, { match: this.match, playerId });
+      const result = rule(card, { match: this._match, playerId });
 
       restricted ||= result.restricted;
 
@@ -62,8 +55,8 @@ export class CardPriceRulesController {
   calculateOverrides() {
     const costOverrides: Record<PlayerId, Record<CardId, Partial<Card>>> = {};
 
-    const cards = this.cardLibrary.getAllCardsAsArray();
-    for (const player of this.match.players) {
+    const cards = this._cardLibrary.getAllCardsAsArray();
+    for (const player of this._match.players) {
       let hasOverrides = false;
       for (const card of cards) {
         const { cost, restricted } = this.applyRules(card, { playerId: player.id });

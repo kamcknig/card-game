@@ -59,14 +59,6 @@ import { GameActionController } from './actions/game-action-controller.ts';
 import { MatchConfiguratorFactory } from './match-configurator-factory.ts';
 import { EndGameEvaluatorService } from './end-game-evaluator-service.ts';
 
-export interface MatchControllerDependencies {
-  socketMap: Map<PlayerId, AppSocket>;
-  expansionSearchService: ExpansionSearchService;
-  matchRuntimeFactory: MatchRuntimeFactory;
-  matchSocketBindings: MatchSocketBindings;
-  matchConfiguratorFactory: MatchConfiguratorFactory;
-}
-
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardLibSnapshot = {};
   private _matchSnapshot: Match | null | undefined;
@@ -74,7 +66,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _interactivityController: CardInteractivityController | undefined;
   private readonly _cardLibrary: MatchCardLibrary = new MatchCardLibrary();
   private _logManager: LogManager | undefined;
-  private gameActionsController: GameActionController | undefined;
+  private _gameActionsController: GameActionController | undefined;
   private readonly _match: Match = {} as Match;
   private _matchConfiguration: ComputedMatchConfiguration | undefined;
   private _expansionEndGameConditionFns: EndGameConditionFn[] = [];
@@ -111,25 +103,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     },*/
   ];
 
-  private readonly _socketMap: Map<PlayerId, AppSocket>;
-  private readonly expansionSearchService: ExpansionSearchService;
-  private readonly matchRuntimeFactory: MatchRuntimeFactory;
-  private readonly matchSocketBindings: MatchSocketBindings;
-  private readonly matchConfiguratorFactory: MatchConfiguratorFactory;
-
   constructor(
-    socketMap: Map<PlayerId, AppSocket>,
-    expansionSearchService: ExpansionSearchService,
-    matchRuntimeFactory: MatchRuntimeFactory,
-    matchSocketBindings: MatchSocketBindings,
-    matchConfiguratorFactory: MatchConfiguratorFactory,
+    private readonly _socketMap: Map<PlayerId, AppSocket>,
+    private readonly _expansionSearchService: ExpansionSearchService,
+    private readonly _matchRuntimeFactory: MatchRuntimeFactory,
+    private readonly _matchSocketBindings: MatchSocketBindings,
+    private readonly _matchConfiguratorFactory: MatchConfiguratorFactory,
   ) {
     super();
-    this._socketMap = socketMap;
-    this.expansionSearchService = expansionSearchService;
-    this.matchRuntimeFactory = matchRuntimeFactory;
-    this.matchSocketBindings = matchSocketBindings;
-    this.matchConfiguratorFactory = matchConfiguratorFactory;
 
     this._match = {
       cardOverrides: {},
@@ -277,7 +258,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     // Load an optional match override from disk for local dev/debugging.
     this._loadedMatchState = await this.tryLoadMatchStateOverride();
 
-    const runtime = this.matchRuntimeFactory.create({
+    const runtime = this._matchRuntimeFactory.create({
       socketMap: this._socketMap,
       match: this._match,
       cardLibrary: this._cardLibrary,
@@ -292,9 +273,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this._reactionManager = runtime.reactionManager;
     this._endGameEvaluator = runtime.endGameEvaluator;
     this._interactivityController = runtime.interactivityController;
-    this.gameActionsController = runtime.gameActionsController;
+    this._gameActionsController = runtime.gameActionsController;
 
-    this._matchConfigurator = this.matchConfiguratorFactory.create(config);
+    this._matchConfigurator = this._matchConfiguratorFactory.create(config);
 
     const { config: newConfig } = await this._matchConfigurator.createConfiguration({
       match: this._match,
@@ -303,14 +284,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         this._reactionManager?.registerGameEvent(event, handler),
       clientEventRegistrar: (event, handler) => this.clientEventRegistrar(event, handler),
       endGameConditionRegistrar: (val) => this._expansionEndGameConditionFns.push(val),
-      cardEffectRegistrar: (...args) => this.gameActionsController?.registerCardEffect(...args),
-      boonEffectRegistrar: (cardKey, effectFn) => this.gameActionsController?.registerBoonEffect(cardKey, effectFn),
-      hexEffectRegistrar: (cardKey, effectFn) => this.gameActionsController?.registerHexEffect(cardKey, effectFn),
-      stateEffectRegistrar: (cardKey, effectFn) => this.gameActionsController?.registerStateEffect(cardKey, effectFn),
+      cardEffectRegistrar: (...args) => this._gameActionsController?.registerCardEffect(...args),
+      boonEffectRegistrar: (cardKey, effectFn) => this._gameActionsController?.registerBoonEffect(cardKey, effectFn),
+      hexEffectRegistrar: (cardKey, effectFn) => this._gameActionsController?.registerHexEffect(cardKey, effectFn),
+      stateEffectRegistrar: (cardKey, effectFn) => this._gameActionsController?.registerStateEffect(cardKey, effectFn),
       artifactEffectRegistrar: (cardKey, effectFn) =>
-        this.gameActionsController?.registerArtifactEffect(cardKey, effectFn),
+        this._gameActionsController?.registerArtifactEffect(cardKey, effectFn),
       projectEffectRegistrar: (cardKey, effectFn) =>
-        this.gameActionsController?.registerProjectEffect(cardKey, effectFn),
+        this._gameActionsController?.registerProjectEffect(cardKey, effectFn),
       playerScoreDecoratorRegistrar: (val: PlayerScoreDecorator) => this._expansionScoringFns.push(val),
     });
 
@@ -712,7 +693,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         asyncTimeout = setTimeout(pingUser, pingTime);
       }
 
-      const result = await this.gameActionsController!.invokeAction(action, ...args);
+      const result = await this._gameActionsController!.invokeAction(action, ...args);
 
       clearTimeout(asyncTimeout);
       asyncTimeout = undefined;
@@ -1050,7 +1031,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
 
   private bindGameplaySocketListeners(socket: AppSocket) {
-    this.matchSocketBindings.bindGameplaySocketHandlers(socket, {
+    this._matchSocketBindings.bindGameplaySocketHandlers(socket, {
       onNextPhase: () => this.onNextPhase(),
       onSearchCards: (playerId, searchStr) => this.onSearchCards(playerId, searchStr),
       onExchangeCoffer: async (playerId, count) => {
@@ -1070,7 +1051,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
     this._socketMap.get(playerId)?.emit(
       'searchCardResponse',
-      this.expansionSearchService.searchKingdomCards(searchStr),
+      this._expansionSearchService.searchKingdomCards(searchStr),
     );
   }
 
@@ -1105,7 +1086,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }
 
     // Shuffle the boon deck for randomized draws.
-    void this.gameActionsController?.shuffleCardLike({ kind: 'boon' });
+    void this._gameActionsController?.shuffleCardLike({ kind: 'boon' });
 
     console.debug(`[match] boon deck initialized with ${this._match.boons.deck.length} boons`);
   }

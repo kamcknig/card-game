@@ -9,11 +9,10 @@ export type RegisterPlayerJoinResult =
 
 // Owns player-record lifecycle updates for join/reconnect/disconnect operations.
 export class PlayerRegistryService {
-  private readonly _maxPlayers: number;
-
-  constructor(maxPlayers = 6) {
+  constructor(
     // Keep player-cap policy configurable via DI while preserving the existing default.
-    this._maxPlayers = maxPlayers;
+    private readonly _maxPlayers = 6,
+  ) {
   }
 
   // Registers a player join attempt, creating a new player or reconnecting an existing one.

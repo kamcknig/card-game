@@ -15,26 +15,12 @@ import { CardSourceController } from './card-source-controller.ts';
 import { MatchCardLibrary } from './match-card-library.ts';
 import { getCardPileKey } from '../utils/get-card-pile-key.ts';
 
-export interface FindCardsServiceDependencies {
-  cardSourceController: CardSourceController;
-  cardPriceController: CardPriceRulesController;
-  cardLibrary: MatchCardLibrary;
-}
-
 export class FindCardsService implements FindCardService {
-  private readonly cardSourceController: CardSourceController;
-  private readonly cardPriceController: CardPriceRulesController;
-  private readonly cardLibrary: MatchCardLibrary;
-
   constructor(
-    cardSourceController: CardSourceController,
-    cardPriceController: CardPriceRulesController,
-    cardLibrary: MatchCardLibrary,
-  ) {
-    this.cardSourceController = cardSourceController;
-    this.cardPriceController = cardPriceController;
-    this.cardLibrary = cardLibrary;
-  }
+    private readonly _cardSourceController: CardSourceController,
+    private readonly _cardPriceController: CardPriceRulesController,
+    private readonly _cardLibrary: MatchCardLibrary,
+  ) {}
 
   // Public card lookup entrypoint injected throughout runtime systems.
   public readonly findCards: FindCardsFn = (filters) => {
@@ -61,10 +47,10 @@ export class FindCardsService implements FindCardService {
       locationFilter.location = castArray(locationFilter.location);
       cardIds = this.findCardsByLocation(locationFilter.location, locationFilter.playerId);
     } else {
-      cardIds = this.cardLibrary.getAllCardsAsArray().map((card) => card.id);
+      cardIds = this._cardLibrary.getAllCardsAsArray().map((card) => card.id);
     }
 
-    let sourceCards = cardIds.map(this.cardLibrary.getCard);
+    let sourceCards = cardIds.map(this._cardLibrary.getCard);
 
     for (const otherFilter of otherFilters) {
       sourceCards = this.applyFilter(sourceCards, otherFilter);
@@ -111,9 +97,9 @@ export class FindCardsService implements FindCardService {
     let cardIds: CardId[] = [];
 
     for (const location of locations) {
-      let source = this.cardSourceController.getSource(location, playerId);
+      let source = this._cardSourceController.getSource(location, playerId);
       if (!source) {
-        source = this.cardSourceController.getSource(location);
+        source = this._cardSourceController.getSource(location);
       }
 
       if (source) {
@@ -152,7 +138,7 @@ export class FindCardsService implements FindCardService {
 
     if (isCostFindCardsFilter(otherFilter)) {
       return sourceCards.filter((card) => {
-        const { cost: effectiveCost } = this.cardPriceController.applyRules(card, {
+        const { cost: effectiveCost } = this._cardPriceController.applyRules(card, {
           playerId: otherFilter.playerId,
         });
         return validateCostSpec(otherFilter, effectiveCost);

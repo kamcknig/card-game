@@ -10,47 +10,18 @@ import { findEventInMatch, findProjectInMatch } from '@shared/find-card-like-in-
 import { renaissanceTokenIds } from '@expansions/renaissance/token-ids-renaissance.ts';
 import { BuyOptionsResolver, ResolvedBuyOption } from './actions/resolve-buy-options.ts';
 
-export interface CardInteractivityControllerDependencies {
-  cardSourceController: CardSourceController;
-  cardPriceController: CardPriceRulesController;
-  match: Match;
-  socketMap: Map<PlayerId, AppSocket>;
-  cardLibrary: MatchCardLibrary;
-  runGameActionDelegate: RunGameActionDelegate;
-  findCardService: FindCardService;
-  buyOptionsResolver: BuyOptionsResolver;
-}
-
 export class CardInteractivityController {
   private _gameOver: boolean = false;
-  private readonly _cardSourceController: CardSourceController;
-  private readonly _cardPriceController: CardPriceRulesController;
-  private readonly match: Match;
-  private readonly _socketMap: Map<PlayerId, AppSocket>;
-  private readonly _cardLibrary: MatchCardLibrary;
-  private readonly runGameDelegate: RunGameActionDelegate;
-  private readonly _findCardService: FindCardService;
-  private readonly buyOptionsResolver: BuyOptionsResolver;
-
   constructor(
-    cardSourceController: CardSourceController,
-    cardPriceController: CardPriceRulesController,
-    match: Match,
-    socketMap: Map<PlayerId, AppSocket>,
-    cardLibrary: MatchCardLibrary,
-    runGameActionDelegate: RunGameActionDelegate,
-    findCardService: FindCardService,
-    buyOptionsResolver: BuyOptionsResolver,
+    private readonly _cardSourceController: CardSourceController,
+    private readonly _cardPriceController: CardPriceRulesController,
+    private readonly _match: Match,
+    private readonly _socketMap: Map<PlayerId, AppSocket>,
+    private readonly _cardLibrary: MatchCardLibrary,
+    private readonly _runGameDelegate: RunGameActionDelegate,
+    private readonly _findCardService: FindCardService,
+    private readonly _buyOptionsResolver: BuyOptionsResolver,
   ) {
-    this._cardSourceController = cardSourceController;
-    this._cardPriceController = cardPriceController;
-    this.match = match;
-    this._socketMap = socketMap;
-    this._cardLibrary = cardLibrary;
-    this.runGameDelegate = runGameActionDelegate;
-    this._findCardService = findCardService;
-    this.buyOptionsResolver = buyOptionsResolver;
-
     this._socketMap.forEach((s) => {
       s.on('cardTapped', (pId, cId) => this.onCardTapped(pId, cId));
       s.on('cardLikeTapped', (pId, cId) => this.onCardLikeTapped(pId, cId));
@@ -86,7 +57,7 @@ export class CardInteractivityController {
       return;
     }
 
-    const match = this.match;
+    const match = this._match;
 
     const currentPlayer = match.players[match.currentPlayerTurnIndex];
     const turnPhase = TurnPhaseOrderValues[match.turnPhaseIndex];
@@ -121,7 +92,7 @@ export class CardInteractivityController {
           }
 
           // Include cards if any legal purchase path exists (standard or alternate).
-          const buyOptions = this.buyOptionsResolver.resolveBuyOptions({
+          const buyOptions = this._buyOptionsResolver.resolveBuyOptions({
             cardId: card,
             playerId: currentPlayer.id,
           });
@@ -151,20 +122,20 @@ export class CardInteractivityController {
 
       // Only offer event buys if the player has no debt tokens.
       if (currentDebt === 0) {
-        const events = this.match.events;
+        const events = this._match.events;
         for (const event of events) {
           const { restricted, cost } = this._cardPriceController.applyRules(event, {
             playerId: currentPlayer.id,
           });
 
-          if (!restricted && cost.treasure <= this.match.playerTreasure) {
+          if (!restricted && cost.treasure <= this._match.playerTreasure) {
             selectableCards.push(event.id);
           }
         }
 
         // Projects are purchased for their printed cost and require available cube tokens.
         const cubeTokenId = renaissanceTokenIds.cube;
-        const tokens = Object.values(this.match.tokens ?? {});
+        const tokens = Object.values(this._match.tokens ?? {});
         const hasAvailableCube = tokens.some((token) =>
           token.tokenId === cubeTokenId &&
           token.ownerId === currentPlayer.id &&
@@ -173,7 +144,7 @@ export class CardInteractivityController {
         );
 
         if (hasAvailableCube) {
-          const projects = this.match.projects ?? [];
+          const projects = this._match.projects ?? [];
           for (const project of projects) {
             const alreadyOwned = tokens.some((token) =>
               token.tokenId === cubeTokenId &&
@@ -186,7 +157,7 @@ export class CardInteractivityController {
             }
 
             const cost = project.cost.treasure ?? 0;
-            if (cost <= this.match.playerTreasure) {
+            if (cost <= this._match.playerTreasure) {
               selectableCards.push(project.id);
             }
           }
@@ -230,7 +201,7 @@ export class CardInteractivityController {
       return;
     }
 
-    const player = getPlayerById(this.match, playerId);
+    const player = getPlayerById(this._match, playerId);
 
     if (isUndefined(player)) {
       console.warn(`[card interactivity] could not find current player`);
@@ -245,7 +216,7 @@ export class CardInteractivityController {
     }
 
     for (const cardId of treasureCards) {
-      await this.runGameDelegate('playCard', {
+      await this._runGameDelegate('playCard', {
         playerId,
         cardId,
         overrides: { actionCost: 0 },
@@ -256,7 +227,7 @@ export class CardInteractivityController {
   }
 
   private async onCardLikeTapped(playerId: PlayerId, cardId: CardLikeId) {
-    const player = getPlayerById(this.match, playerId);
+    const player = getPlayerById(this._match, playerId);
 
     if (!player) {
       throw new Error('could not find player');
@@ -269,23 +240,23 @@ export class CardInteractivityController {
       return;
     }
 
-    const phase = getTurnPhase(this.match.turnPhaseIndex);
+    const phase = getTurnPhase(this._match.turnPhaseIndex);
 
     if (phase === 'buy') {
       // Block buying events while the player has debt tokens.
-      if ((this.match.debt?.[playerId] ?? 0) > 0) {
+      if ((this._match.debt?.[playerId] ?? 0) > 0) {
         console.debug(`[card interactivity] ${player} has debt, blocking card-like buy`);
         return;
       }
       console.info(`[card interactivity] ${player} tapped card-like ${cardId} in phase ${phase}, processing`);
 
-      const event = findEventInMatch(this.match, cardId);
+      const event = findEventInMatch(this._match, cardId);
       if (event) {
-        await this.runGameDelegate('buyEvent', { playerId, cardLikeId: cardId });
+        await this._runGameDelegate('buyEvent', { playerId, cardLikeId: cardId });
       } else {
-        const project = findProjectInMatch(this.match, cardId);
+        const project = findProjectInMatch(this._match, cardId);
         if (project) {
-          await this.runGameDelegate('buyProject', { playerId, cardLikeId: cardId });
+          await this._runGameDelegate('buyProject', { playerId, cardLikeId: cardId });
         } else {
           console.debug(`[card interactivity] ${player} tapped non-buyable card-like ${cardId}`);
         }
@@ -294,13 +265,13 @@ export class CardInteractivityController {
       console.debug(`[card interactivity] ${player} tapped card-like ${cardId} in phase ${phase}, not processing`);
     }
 
-    await this.runGameDelegate('checkForRemainingPlayerActions');
+    await this._runGameDelegate('checkForRemainingPlayerActions');
 
     this._socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
   }
 
   private async onCardTapped(playerId: PlayerId, cardId: CardId) {
-    const player = getPlayerById(this.match, playerId);
+    const player = getPlayerById(this._match, playerId);
 
     if (!player) {
       throw new Error('could not find player');
@@ -313,7 +284,7 @@ export class CardInteractivityController {
       return;
     }
 
-    const phase = getTurnPhase(this.match.turnPhaseIndex);
+    const phase = getTurnPhase(this._match.turnPhaseIndex);
 
     if (phase === 'buy') {
       let overpay = { inTreasure: 0, inCoffer: 0 };
@@ -327,19 +298,19 @@ export class CardInteractivityController {
           return;
         }
 
-        await this.runGameDelegate('playCard', {
+        await this._runGameDelegate('playCard', {
           playerId,
           cardId,
           overrides: { actionCost: 0 },
         });
       } else {
         // Block buying cards while the player has debt tokens.
-        if ((this.match.debt?.[playerId] ?? 0) > 0) {
+        if ((this._match.debt?.[playerId] ?? 0) > 0) {
           console.debug(`[card interactivity] ${player} has debt, blocking buy`);
           return;
         }
         const card = this._cardLibrary.getCard(cardId);
-        const resolvedBuyOptions = this.buyOptionsResolver.resolveBuyOptions({
+        const resolvedBuyOptions = this._buyOptionsResolver.resolveBuyOptions({
           cardId: card,
           playerId,
         });
@@ -355,7 +326,7 @@ export class CardInteractivityController {
         let selectedBuyOption: ResolvedBuyOption | undefined = options[0];
         if (options.length > 1) {
           // Let the user choose the payment method when multiple paths are legal.
-          const buyOptionPrompt = await this.runGameDelegate('userPrompt', {
+          const buyOptionPrompt = await this._runGameDelegate('userPrompt', {
             playerId,
             prompt: `Choose how to buy ${card.cardName}`,
             actionButtons: options.map((option, index) => ({ label: option.label, action: index + 1 })),
@@ -373,8 +344,8 @@ export class CardInteractivityController {
         }
 
         if (selectedBuyOption.kind === 'standard' && card.tags?.includes('overpay')) {
-          if (this.match.playerTreasure > cost.treasure) {
-            const result = await this.runGameDelegate('userPrompt', {
+          if (this._match.playerTreasure > cost.treasure) {
+            const result = await this._runGameDelegate('userPrompt', {
               prompt: 'Overpay?',
               actionButtons: [{ label: 'DONE', action: 1 }],
               playerId: playerId,
@@ -384,7 +355,7 @@ export class CardInteractivityController {
           }
         }
 
-        await this.runGameDelegate('buyCard', {
+        await this._runGameDelegate('buyCard', {
           playerId,
           cardId,
           overpay,
@@ -393,14 +364,14 @@ export class CardInteractivityController {
         });
       }
     } else if (phase === 'action') {
-      await this.runGameDelegate('playCard', { playerId, cardId });
+      await this._runGameDelegate('playCard', { playerId, cardId });
     } else if (phase === 'night') {
       // Night phase allows playing Night cards from hand without action cost.
       const hand = this._cardSourceController.getSource('playerHand', playerId);
       if (hand.includes(cardId)) {
         const card = this._cardLibrary.getCard(cardId);
         if (card.type.includes('NIGHT')) {
-          await this.runGameDelegate('playCard', { playerId, cardId });
+          await this._runGameDelegate('playCard', { playerId, cardId });
           console.debug(`[card interactivity] played night card ${card}`);
         } else {
           console.debug(`[card interactivity] tapped non-night card ${card} during night phase`);
@@ -410,7 +381,7 @@ export class CardInteractivityController {
       }
     }
 
-    await this.runGameDelegate('checkForRemainingPlayerActions');
+    await this._runGameDelegate('checkForRemainingPlayerActions');
 
     this._socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
   }

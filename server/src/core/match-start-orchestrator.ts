@@ -24,13 +24,13 @@ export interface MatchStartOrchestratorArgs {
 // Encapsulates only the lobby->match startup pipeline.
 export class MatchStartOrchestrator {
   constructor(
-    private readonly io: Server<ServerListenEvents, ServerEmitEvents>,
-    private readonly lobbySocketBindings: LobbySocketBindings,
+    private readonly _io: Server<ServerListenEvents, ServerEmitEvents>,
+    private readonly _lobbySocketBindings: LobbySocketBindings,
   ) {
   }
 
   // Stable color assignment order used for active match players.
-  private static readonly MATCH_PLAYER_COLORS = ['#10FF19', '#3c69ff', '#FF0BF2', '#FFF114', '#FF1F11', '#FF9900'];
+  private static readonly _MATCH_PLAYER_COLORS = ['#10FF19', '#3c69ff', '#FF0BF2', '#FFF114', '#FF1F11', '#FF9900'];
 
   // Runs start-of-match orchestration and returns finalized player order.
   public startMatch(args: MatchStartOrchestratorArgs): Player[] {
@@ -46,8 +46,8 @@ export class MatchStartOrchestrator {
 
     // Remove lobby-only handlers before gameplay starts.
     socketMap.forEach((socket) => {
-      this.lobbySocketBindings.unbindPlayerLobbyHandlers(socket);
-      this.lobbySocketBindings.unbindOwnerLobbyHandlers(socket);
+      this._lobbySocketBindings.unbindPlayerLobbyHandlers(socket);
+      this._lobbySocketBindings.unbindOwnerLobbyHandlers(socket);
     });
 
     // Set per-match player fields, then randomize turn order.
@@ -57,12 +57,12 @@ export class MatchStartOrchestrator {
         .map((player, index) => {
           // Keep computer players ready so they do not block start.
           player.ready = player.isComputer;
-          player.color = MatchStartOrchestrator.MATCH_PLAYER_COLORS[index];
+          player.color = MatchStartOrchestrator._MATCH_PLAYER_COLORS[index];
           return player;
         }),
     );
 
-    this.io.in('game').emit('setPlayerList', activePlayers);
+    this._io.in('game').emit('setPlayerList', activePlayers);
 
     matchController.on('gameOver', onGameOver);
 

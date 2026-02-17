@@ -74,37 +74,37 @@ export class MatchRuntimeFactory {
     });
 
     scope.register({
-      socketMap: asValue(socketMap),
-      match: asValue(match),
-      cardLibrary: asValue(cardLibrary),
-      cardSourceController: asValue(cardSourceController),
-      runGameActionDelegate: asValue(runGameActionDelegate),
-      cardEffectFunctionMap: asValue(cardEffectFunctionMap),
-      eventEffectFunctionMap: asValue(eventEffectFunctionMap),
-      projectEffectFunctionMap: asValue(projectEffectFunctionMap),
-      boonEffectFunctionMap: asValue(boonEffectFunctionMap),
-      hexEffectFunctionMap: asValue(hexEffectFunctionMap),
-      stateEffectFunctionMap: asValue(stateEffectFunctionMap),
-      artifactEffectFunctionMap: asValue(artifactEffectFunctionMap),
-      logManager: asClass(LogManager).singleton(),
-      cardPriceController: asClass(CardPriceRulesController).singleton(),
-      findCardService: asClass(FindCardsService).singleton(),
-      supplyGainService: asClass(DefaultSupplyGainService).singleton(),
-      buyOptionsResolver: asClass(BuyOptionsResolver).singleton(),
-      reactionManager: asClass(ReactionManager).singleton(),
-      endGameEvaluator: asClass(EndGameEvaluatorService).singleton(),
-      interactivityController: asClass(CardInteractivityController).singleton(),
-      gameActionsController: asClass(GameActionController).singleton(),
+      _socketMap: asValue(socketMap),
+      _match: asValue(match),
+      _cardLibrary: asValue(cardLibrary),
+      _cardSourceController: asValue(cardSourceController),
+      _runGameActionDelegate: asValue(runGameActionDelegate),
+      _cardEffectFunctionMap: asValue(cardEffectFunctionMap),
+      _eventEffectFunctionMap: asValue(eventEffectFunctionMap),
+      _projectEffectFunctionMap: asValue(projectEffectFunctionMap),
+      _boonEffectFunctionMap: asValue(boonEffectFunctionMap),
+      _hexEffectFunctionMap: asValue(hexEffectFunctionMap),
+      _stateEffectFunctionMap: asValue(stateEffectFunctionMap),
+      _artifactEffectFunctionMap: asValue(artifactEffectFunctionMap),
+      _logManager: asClass(LogManager).singleton(),
+      _cardPriceController: asClass(CardPriceRulesController).singleton(),
+      _findCardService: asClass(FindCardsService).singleton(),
+      _supplyGainService: asClass(DefaultSupplyGainService).singleton(),
+      _buyOptionsResolver: asClass(BuyOptionsResolver).singleton(),
+      _reactionManager: asClass(ReactionManager).singleton(),
+      _endGameEvaluator: asClass(EndGameEvaluatorService).singleton(),
+      _interactivityController: asClass(CardInteractivityController).singleton(),
+      _gameActionsController: asClass(GameActionController).singleton(),
     });
 
-    const logManager = scope.resolve<LogManager>('logManager');
-    const cardPriceController = scope.resolve<CardPriceRulesController>('cardPriceController');
-    const findCardService = scope.resolve<FindCardService>('findCardService');
-    const supplyGainService = scope.resolve<SupplyGainService>('supplyGainService');
-    const reactionManager = scope.resolve<ReactionManager>('reactionManager');
-    const endGameEvaluator = scope.resolve<EndGameEvaluatorService>('endGameEvaluator');
-    const interactivityController = scope.resolve<CardInteractivityController>('interactivityController');
-    const gameActionsController = scope.resolve<GameActionController>('gameActionsController');
+    const logManager = scope.resolve<LogManager>('_logManager');
+    const cardPriceController = scope.resolve<CardPriceRulesController>('_cardPriceController');
+    const findCardService = scope.resolve<FindCardService>('_findCardService');
+    const supplyGainService = scope.resolve<SupplyGainService>('_supplyGainService');
+    const reactionManager = scope.resolve<ReactionManager>('_reactionManager');
+    const endGameEvaluator = scope.resolve<EndGameEvaluatorService>('_endGameEvaluator');
+    const interactivityController = scope.resolve<CardInteractivityController>('_interactivityController');
+    const gameActionsController = scope.resolve<GameActionController>('_gameActionsController');
 
     return {
       logManager,

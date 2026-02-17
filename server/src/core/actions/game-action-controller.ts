@@ -63,154 +63,94 @@ import {
   findHexInMatch,
   findProjectInMatch,
 } from '@shared/find-card-like-in-match.ts';
-import { getPlayerTurnIndex } from '../../../../shared/src/get-player-position-utils.ts';
+import { getPlayerTurnIndex } from "@shared/get-player-position-utils.ts";
 import { BuyOptionsResolver } from './resolve-buy-options.ts';
 
-export interface GameActionControllerDependencies {
-  cardSourceController: CardSourceController;
-  findCardService: FindCardService;
-  cardPriceController: CardPriceRulesController;
-  cardEffectFunctionMap: CardEffectFunctionMap;
-  eventEffectFunctionMap: CardEffectFunctionMap;
-  projectEffectFunctionMap: CardEffectFunctionMap;
-  boonEffectFunctionMap: CardEffectFunctionMap;
-  hexEffectFunctionMap: CardEffectFunctionMap;
-  stateEffectFunctionMap: CardEffectFunctionMap;
-  artifactEffectFunctionMap: CardEffectFunctionMap;
-  match: Match;
-  cardLibrary: MatchCardLibrary;
-  logManager: LogManager;
-  socketMap: Map<PlayerId, AppSocket>;
-  reactionManager: ReactionManager;
-  runGameActionDelegate: RunGameActionDelegate;
-  interactivityController: CardInteractivityController;
-  buyOptionsResolver: BuyOptionsResolver;
-  supplyGainService: SupplyGainService;
-}
-
 export class GameActionController implements GameActionDefinitionMap {
-  private customActionHandlers: Partial<GameActionDefinitionMap> = {};
-  private customCardEffectHandlers: Record<string, Partial<Record<CardKey, CardEffectFn>>> = {};
+  private _customActionHandlers: Partial<GameActionDefinitionMap> = {};
+  private _customCardEffectHandlers: Record<string, Partial<Record<CardKey, CardEffectFn>>> = {};
   // Guards against re-entrant computer turns triggered by nested game actions.
   private _computerTurnInProgress: boolean = false;
-  private _cardSourceController: CardSourceController;
-  private _findCardService: FindCardService;
-  private cardPriceRuleController: CardPriceRulesController;
-  private cardEffectFunctionMap: CardEffectFunctionMap;
-  private eventEffectFunctionMap: CardEffectFunctionMap;
-  private projectEffectFunctionMap: CardEffectFunctionMap;
-  private boonEffectFunctionMap: CardEffectFunctionMap;
-  private hexEffectFunctionMap: CardEffectFunctionMap;
-  private stateEffectFunctionMap: CardEffectFunctionMap;
-  private artifactEffectFunctionMap: CardEffectFunctionMap;
-  private match: Match;
-  private cardLibrary: MatchCardLibrary;
-  private logManager: LogManager;
-  private socketMap: Map<PlayerId, AppSocket>;
-  private reactionManager: ReactionManager;
-  private runGameActionDelegate: RunGameActionDelegate;
-  private readonly interactivityController: CardInteractivityController;
-  private readonly buyOptionsResolver: BuyOptionsResolver;
-  private readonly _supplyGainService: SupplyGainService;
 
   constructor(
-    cardSourceController: CardSourceController,
-    findCardService: FindCardService,
-    cardPriceController: CardPriceRulesController,
-    cardEffectFunctionMap: CardEffectFunctionMap,
-    eventEffectFunctionMap: CardEffectFunctionMap,
-    projectEffectFunctionMap: CardEffectFunctionMap,
-    boonEffectFunctionMap: CardEffectFunctionMap,
-    hexEffectFunctionMap: CardEffectFunctionMap,
-    stateEffectFunctionMap: CardEffectFunctionMap,
-    artifactEffectFunctionMap: CardEffectFunctionMap,
-    match: Match,
-    cardLibrary: MatchCardLibrary,
-    logManager: LogManager,
-    socketMap: Map<PlayerId, AppSocket>,
-    reactionManager: ReactionManager,
-    runGameActionDelegate: RunGameActionDelegate,
-    interactivityController: CardInteractivityController,
-    buyOptionsResolver: BuyOptionsResolver,
-    supplyGainService: SupplyGainService,
+    private _cardSourceController: CardSourceController,
+    private _findCardService: FindCardService,
+    private _cardPriceRuleController: CardPriceRulesController,
+    private readonly _cardEffectFunctionMap: CardEffectFunctionMap,
+    private readonly _eventEffectFunctionMap: CardEffectFunctionMap,
+    private readonly _projectEffectFunctionMap: CardEffectFunctionMap,
+    private readonly _boonEffectFunctionMap: CardEffectFunctionMap,
+    private readonly _hexEffectFunctionMap: CardEffectFunctionMap,
+    private readonly _stateEffectFunctionMap: CardEffectFunctionMap,
+    private readonly _artifactEffectFunctionMap: CardEffectFunctionMap,
+    private readonly _match: Match,
+    private readonly _cardLibrary: MatchCardLibrary,
+    private readonly _logManager: LogManager,
+    private _socketMap: Map<PlayerId, AppSocket>,
+    private readonly _reactionManager: ReactionManager,
+    private readonly _runGameActionDelegate: RunGameActionDelegate,
+    private _interactivityController: CardInteractivityController,
+    private _buyOptionsResolver: BuyOptionsResolver,
+    private _supplyGainService: SupplyGainService,
   ) {
-    this._cardSourceController = cardSourceController;
-    this._findCardService = findCardService;
-    this.cardPriceRuleController = cardPriceController;
-    this.cardEffectFunctionMap = cardEffectFunctionMap;
-    this.eventEffectFunctionMap = eventEffectFunctionMap;
-    this.projectEffectFunctionMap = projectEffectFunctionMap;
-    this.boonEffectFunctionMap = boonEffectFunctionMap;
-    this.hexEffectFunctionMap = hexEffectFunctionMap;
-    this.stateEffectFunctionMap = stateEffectFunctionMap;
-    this.artifactEffectFunctionMap = artifactEffectFunctionMap;
-    this.match = match;
-    this.cardLibrary = cardLibrary;
-    this.logManager = logManager;
-    this.socketMap = socketMap;
-    this.reactionManager = reactionManager;
-    this.runGameActionDelegate = runGameActionDelegate;
-    this.interactivityController = interactivityController;
-    this.buyOptionsResolver = buyOptionsResolver;
-    this._supplyGainService = supplyGainService;
   }
 
   public registerCardEffect(cardKey: CardKey, tag: string, fn: CardEffectFn) {
-    this.customCardEffectHandlers[tag] ??= {};
+    this._customCardEffectHandlers[tag] ??= {};
 
-    if (this.customCardEffectHandlers[tag][cardKey]) {
+    if (this._customCardEffectHandlers[tag][cardKey]) {
       console.warn(`[action controller] effect for ${cardKey} in ${tag} already exists, overwriting it`);
     }
 
-    this.customCardEffectHandlers[tag][cardKey] = fn;
+    this._customCardEffectHandlers[tag][cardKey] = fn;
   }
 
   // Registers boon effects for the current match.
   public registerBoonEffect(cardKey: CardKey, fn: CardEffectFn) {
-    if (this.boonEffectFunctionMap[cardKey]) {
+    if (this._boonEffectFunctionMap[cardKey]) {
       console.warn(`[action controller] boon effect for ${cardKey} already exists, overwriting it`);
     }
-    this.boonEffectFunctionMap[cardKey] = fn;
+    this._boonEffectFunctionMap[cardKey] = fn;
   }
 
   // Registers hex effects for the current match.
   public registerHexEffect(cardKey: CardKey, fn: CardEffectFn) {
-    if (this.hexEffectFunctionMap[cardKey]) {
+    if (this._hexEffectFunctionMap[cardKey]) {
       console.warn(`[action controller] hex effect for ${cardKey} already exists, overwriting it`);
     }
-    this.hexEffectFunctionMap[cardKey] = fn;
+    this._hexEffectFunctionMap[cardKey] = fn;
   }
 
   // Registers state effects for the current match.
   public registerStateEffect(cardKey: CardKey, fn: CardEffectFn) {
-    if (this.stateEffectFunctionMap[cardKey]) {
+    if (this._stateEffectFunctionMap[cardKey]) {
       console.warn(`[action controller] state effect for ${cardKey} already exists, overwriting it`);
     }
-    this.stateEffectFunctionMap[cardKey] = fn;
+    this._stateEffectFunctionMap[cardKey] = fn;
   }
 
   // Registers artifact effects for the current match.
   public registerArtifactEffect(cardKey: CardKey, fn: CardEffectFn) {
-    if (this.artifactEffectFunctionMap[cardKey]) {
+    if (this._artifactEffectFunctionMap[cardKey]) {
       console.warn(`[action controller] artifact effect for ${cardKey} already exists, overwriting it`);
     }
-    this.artifactEffectFunctionMap[cardKey] = fn;
+    this._artifactEffectFunctionMap[cardKey] = fn;
   }
 
   // Registers project effects for the current match.
   public registerProjectEffect(cardKey: CardKey, fn: CardEffectFn) {
-    if (this.projectEffectFunctionMap[cardKey]) {
+    if (this._projectEffectFunctionMap[cardKey]) {
       console.warn(`[action controller] project effect for ${cardKey} already exists, overwriting it`);
     }
-    this.projectEffectFunctionMap[cardKey] = fn;
+    this._projectEffectFunctionMap[cardKey] = fn;
   }
 
   // Returns the requested status-like store (state/artifact) from match state.
   private getStatusStore(kind: 'state' | 'artifact') {
     if (kind === 'state') {
-      return this.match.states;
+      return this._match.states;
     }
-    return this.match.artifacts;
+    return this._match.artifacts;
   }
 
   // Resolves a status-like card from its id or key.
@@ -246,7 +186,7 @@ export class GameActionController implements GameActionDefinitionMap {
     action: K,
     ...args: Parameters<GameActionDefinitionMap[K]>
   ): Promise<GameActionReturnTypeMap[K]> {
-    const handler = (this as any)[action] ?? this.customActionHandlers[action];
+    const handler = (this as any)[action] ?? this._customActionHandlers[action];
     if (!handler) {
       throw new Error(`No handler registered for action: ${action}`);
     }
@@ -256,14 +196,14 @@ export class GameActionController implements GameActionDefinitionMap {
   // Builds a deterministic token instance id for stable patch ordering.
   private buildTokenInstanceId(tokenId: TokenId): TokenInstanceId {
     // Monotonic counter lives on match state to keep determinism across runs.
-    const counter = this.match.tokenInstanceCounter;
-    this.match.tokenInstanceCounter += 1;
+    const counter = this._match.tokenInstanceCounter;
+    this._match.tokenInstanceCounter += 1;
     return `token:${tokenId}:${counter}`;
   }
 
   // Returns the token instance or throws if missing to keep token mutations explicit.
   private getTokenInstance(tokenInstanceId: TokenInstanceId): TokenInstance {
-    const token = this.match.tokens[tokenInstanceId];
+    const token = this._match.tokens[tokenInstanceId];
     if (!token) {
       throw new Error(`[token action] missing token instance ${tokenInstanceId}`);
     }
@@ -272,7 +212,7 @@ export class GameActionController implements GameActionDefinitionMap {
 
   // Returns the active turn-history index to disambiguate same-number extra turns.
   private getCurrentTurnHistoryIndex(): number | undefined {
-    const turnHistoryIndex = this.match.stats.turns.length - 1;
+    const turnHistoryIndex = this._match.stats.turns.length - 1;
     return turnHistoryIndex >= 0 ? turnHistoryIndex : undefined;
   }
 
@@ -308,16 +248,16 @@ export class GameActionController implements GameActionDefinitionMap {
 
     // Exile only allows discarding other copies of the gained card, never the gained card itself.
     const matchingExileCardIds = exileSource.filter((cardId) =>
-      cardId !== args.gainedCardId && this.cardLibrary.getCard(cardId).cardKey === args.gainedCardKey
+      cardId !== args.gainedCardId && this._cardLibrary.getCard(cardId).cardKey === args.gainedCardKey
     );
 
     if (matchingExileCardIds.length === 0) {
       return;
     }
 
-    const player = getPlayerById(this.match, args.playerId);
+    const player = getPlayerById(this._match, args.playerId);
     let shouldDiscardFromExile = false;
-    const gainedCardName = this.cardLibrary.getCard(args.gainedCardId).cardName;
+    const gainedCardName = this._cardLibrary.getCard(args.gainedCardId).cardName;
 
     if (player?.isComputer) {
       // Computer policy is deterministic: always discard all matching cards from Exile.
@@ -446,7 +386,7 @@ export class GameActionController implements GameActionDefinitionMap {
     console.info(`[${args.sourceType} effect] start ${args.source} for player ${args.playerId}`);
     console.debug(`[${args.sourceType} effect] context cardId ${args.context.cardId}`);
     try {
-      await this.logManager.withIndent(async () => {
+      await this._logManager.withIndent(async () => {
         await args.effectFn(args.context);
       });
     } catch (error) {
@@ -461,7 +401,7 @@ export class GameActionController implements GameActionDefinitionMap {
   private async runComputerTurnStep(): Promise<void> {
     if (this._computerTurnInProgress) return;
 
-    const match = this.match;
+    const match = this._match;
     const currentPlayer = getCurrentPlayer(match);
 
     if (!currentPlayer.isComputer) return;
@@ -473,13 +413,13 @@ export class GameActionController implements GameActionDefinitionMap {
       const selectable = match.selectableCards[currentPlayer.id] ?? [];
 
       if (turnPhase === 'action') {
-        const actionCardId = selectable.find((id) => this.cardLibrary.getCard(id).type.includes('ACTION'));
+        const actionCardId = selectable.find((id) => this._cardLibrary.getCard(id).type.includes('ACTION'));
         if (actionCardId) {
-          await this.runGameActionDelegate('playCard', { playerId: currentPlayer.id, cardId: actionCardId });
+          await this._runGameActionDelegate('playCard', { playerId: currentPlayer.id, cardId: actionCardId });
         }
         // Always move to the next phase after one action attempt.
         this._computerTurnInProgress = false;
-        await this.runGameActionDelegate('nextPhase');
+        await this._runGameActionDelegate('nextPhase');
         return;
       }
 
@@ -487,48 +427,48 @@ export class GameActionController implements GameActionDefinitionMap {
         const selectedId = selectable[0];
         if (selectedId === undefined) {
           this._computerTurnInProgress = false;
-          await this.runGameActionDelegate('nextPhase');
+          await this._runGameActionDelegate('nextPhase');
           return;
         }
 
         const event = findEventInMatch(match, selectedId);
         if (event) {
-          await this.runGameActionDelegate('buyEvent', {
+          await this._runGameActionDelegate('buyEvent', {
             playerId: currentPlayer.id,
             cardLikeId: selectedId,
           });
           this._computerTurnInProgress = false;
-          await this.runGameActionDelegate('nextPhase');
+          await this._runGameActionDelegate('nextPhase');
           return;
         }
 
         const project = findProjectInMatch(match, selectedId);
         if (project) {
-          await this.runGameActionDelegate('buyProject', {
+          await this._runGameActionDelegate('buyProject', {
             playerId: currentPlayer.id,
             cardLikeId: selectedId,
           });
           this._computerTurnInProgress = false;
-          await this.runGameActionDelegate('nextPhase');
+          await this._runGameActionDelegate('nextPhase');
           return;
         }
 
-        const card = this.cardLibrary.getCard(selectedId);
+        const card = this._cardLibrary.getCard(selectedId);
         const inHand = this._cardSourceController.getSource('playerHand', currentPlayer.id).includes(selectedId);
         if (inHand && card.type.includes('TREASURE')) {
-          await this.runGameActionDelegate('playCard', {
+          await this._runGameActionDelegate('playCard', {
             playerId: currentPlayer.id,
             cardId: selectedId,
             overrides: { actionCost: 0 },
           });
           this._computerTurnInProgress = false;
-          await this.runGameActionDelegate('nextPhase');
+          await this._runGameActionDelegate('nextPhase');
           return;
         }
 
-        const { restricted, cost } = this.cardPriceRuleController.applyRules(card, { playerId: currentPlayer.id });
+        const { restricted, cost } = this._cardPriceRuleController.applyRules(card, { playerId: currentPlayer.id });
         if (!restricted) {
-          await this.runGameActionDelegate('buyCard', {
+          await this._runGameActionDelegate('buyCard', {
             playerId: currentPlayer.id,
             cardId: card.id,
             cardCost: cost,
@@ -536,19 +476,19 @@ export class GameActionController implements GameActionDefinitionMap {
         }
 
         this._computerTurnInProgress = false;
-        await this.runGameActionDelegate('nextPhase');
+        await this._runGameActionDelegate('nextPhase');
         return;
       }
 
       if (turnPhase === 'night') {
         // Computer players play one Night card per Night phase, then advance.
-        const nightCardId = selectable.find((id) => this.cardLibrary.getCard(id).type.includes('NIGHT'));
+        const nightCardId = selectable.find((id) => this._cardLibrary.getCard(id).type.includes('NIGHT'));
         console.debug(`[computer turn] night phase selectable night card ${nightCardId ?? 'none'}`);
         if (nightCardId !== undefined) {
-          await this.runGameActionDelegate('playCard', { playerId: currentPlayer.id, cardId: nightCardId });
+          await this._runGameActionDelegate('playCard', { playerId: currentPlayer.id, cardId: nightCardId });
         }
         this._computerTurnInProgress = false;
-        await this.runGameActionDelegate('nextPhase');
+        await this._runGameActionDelegate('nextPhase');
         return;
       }
     } finally {
@@ -558,12 +498,12 @@ export class GameActionController implements GameActionDefinitionMap {
 
   // Applies any token bonuses for the player when a card is played from a tokened supply pile.
   private async applyTokenBonusesOnCardPlayed(playerId: PlayerId, cardId: CardId): Promise<void> {
-    const card = this.cardLibrary.getCard(cardId);
+    const card = this._cardLibrary.getCard(cardId);
     const pileKey = getCardPileKey(card);
-    const tokenInstanceIds = Object.keys(this.match.tokens).sort();
-    await this.logManager.withIndent(async () => {
+    const tokenInstanceIds = Object.keys(this._match.tokens).sort();
+    await this._logManager.withIndent(async () => {
       for (const tokenInstanceId of tokenInstanceIds) {
-        const token = this.match.tokens[tokenInstanceId];
+        const token = this._match.tokens[tokenInstanceId];
         if (token.ownerId !== playerId) continue;
         if (token.location.type !== 'supplyPile') continue;
         if (token.location.cardKey !== pileKey && token.location.cardKey !== card.cardKey) continue;
@@ -572,7 +512,7 @@ export class GameActionController implements GameActionDefinitionMap {
         const definition = tokenDefinitionMap[token.tokenId];
         const effectText = definition?.name ?? 'token bonus';
         // Log the token effect before applying its bonus for clarity in the log.
-        this.logManager.addLogEntry({
+        this._logManager.addLogEntry({
           type: 'tokenEffect',
           playerId,
           cardId,
@@ -580,10 +520,10 @@ export class GameActionController implements GameActionDefinitionMap {
           effectText,
         });
         await handler({
-          match: this.match,
+          match: this._match,
           playerId,
           cardId,
-          runGameAction: this.runGameActionDelegate,
+          runGameAction: this._runGameActionDelegate,
         });
       }
     });
@@ -591,25 +531,25 @@ export class GameActionController implements GameActionDefinitionMap {
 
   async gainPotion(args: { count: number }) {
     console.info(`[gainPotion action] gaining ${args.count} potions`);
-    this.match.playerPotions += args.count;
-    this.match.playerPotions = Math.max(0, this.match.playerPotions);
+    this._match.playerPotions += args.count;
+    this._match.playerPotions = Math.max(0, this._match.playerPotions);
 
-    console.info(`[gainPotion action] setting player potions to ${this.match.playerPotions}`);
+    console.info(`[gainPotion action] setting player potions to ${this._match.playerPotions}`);
   }
 
   async gainBuy(args: { count: number }, context?: GameActionContext) {
     console.info(`[gainBuy action] gaining ${args.count} buys`);
-    this.match.playerBuys += args.count;
-    this.match.playerBuys = Math.max(this.match.playerBuys, 0);
+    this._match.playerBuys += args.count;
+    this._match.playerBuys = Math.max(this._match.playerBuys, 0);
 
-    this.logManager.addLogEntry({
+    this._logManager.addLogEntry({
       type: 'gainBuy',
       count: args.count,
-      playerId: getCurrentPlayer(this.match).id,
+      playerId: getCurrentPlayer(this._match).id,
       source: context?.loggingContext?.source,
     });
 
-    console.info(`[gainBuy action] setting player guys to ${this.match.playerBuys}`);
+    console.info(`[gainBuy action] setting player guys to ${this._match.playerBuys}`);
   }
 
   async placeToken(args: {
@@ -633,12 +573,12 @@ export class GameActionController implements GameActionDefinitionMap {
       sourceCardId: args.sourceCardId,
     };
     // Persist the token instance on match state for patch broadcasting.
-    this.match.tokens[tokenInstanceId] = tokenInstance;
+    this._match.tokens[tokenInstanceId] = tokenInstance;
     console.debug(`[placeToken action] placed token ${args.tokenId} as ${tokenInstanceId}`);
     // Emit token placement logs only when callers provide logging context.
     if (context && !context.loggingContext?.suppress) {
-      const targetPlayerId = args.ownerId ?? getCurrentPlayer(this.match).id;
-      this.logManager.addLogEntry({
+      const targetPlayerId = args.ownerId ?? getCurrentPlayer(this._match).id;
+      this._logManager.addLogEntry({
         type: 'tokenPlaced',
         playerId: targetPlayerId,
         tokenId: args.tokenId,
@@ -667,12 +607,12 @@ export class GameActionController implements GameActionDefinitionMap {
   async removeToken(args: { tokenInstanceId: TokenInstanceId }, context?: GameActionContext): Promise<void> {
     // Ensure the token exists before removal for deterministic behavior.
     const token = this.getTokenInstance(args.tokenInstanceId);
-    delete this.match.tokens[args.tokenInstanceId];
+    delete this._match.tokens[args.tokenInstanceId];
     console.debug(`[removeToken action] removed token ${args.tokenInstanceId}`);
     // Emit token consumption logs only when callers provide logging context.
     if (context && !context.loggingContext?.suppress) {
-      const targetPlayerId = token.ownerId ?? getCurrentPlayer(this.match).id;
-      this.logManager.addLogEntry({
+      const targetPlayerId = token.ownerId ?? getCurrentPlayer(this._match).id;
+      this._logManager.addLogEntry({
         type: 'tokenConsumed',
         playerId: targetPlayerId,
         tokenId: token.tokenId,
@@ -693,7 +633,7 @@ export class GameActionController implements GameActionDefinitionMap {
     // Decrement counters and remove the token if exhausted.
     token.counters = Math.max(0, token.counters - amount);
     if (token.counters === 0) {
-      delete this.match.tokens[args.tokenInstanceId];
+      delete this._match.tokens[args.tokenInstanceId];
       console.debug(`[consumeToken action] consumed token ${args.tokenInstanceId}`);
       return;
     }
@@ -714,7 +654,7 @@ export class GameActionController implements GameActionDefinitionMap {
       card = args.cardId;
     } else if (typeof args.cardId === 'number') {
       try {
-        card = this.cardLibrary.getCard(args.cardId);
+        card = this._cardLibrary.getCard(args.cardId);
       } catch (error) {
         const cardLike = this.findCardLike(args.cardId);
         if (cardLike) {
@@ -758,7 +698,7 @@ export class GameActionController implements GameActionDefinitionMap {
         // Use the origin player ID for leave-hand events; destination can be undefined for play area moves.
         const fromPlayerId = oldSource?.playerId ?? args.toPlayerId;
         if (fromPlayerId !== undefined) {
-          await this.reactionManager.runCardLifecycleEvent('onLeaveHand', {
+          await this._reactionManager.runCardLifecycleEvent('onLeaveHand', {
             playerId: fromPlayerId,
             cardId,
           });
@@ -770,16 +710,16 @@ export class GameActionController implements GameActionDefinitionMap {
       case 'playArea':
       case 'activeDuration':
         if (args.to.location === 'playArea' || args.to.location === 'activeDuration') break;
-        await this.reactionManager.runCardLifecycleEvent('onLeavePlay', { cardId });
+        await this._reactionManager.runCardLifecycleEvent('onLeavePlay', { cardId });
         // Ensure global duration triggers are cleaned when the card leaves play.
-        this.reactionManager.cleanupDurationTriggers(cardId);
+        this._reactionManager.cleanupDurationTriggers(cardId);
     }
 
     newSource.push(cardId);
 
     switch (args.to.location) {
       case 'playerHand':
-        await this.reactionManager.runCardLifecycleEvent('onEnterHand', {
+        await this._reactionManager.runCardLifecycleEvent('onEnterHand', {
           playerId: args.toPlayerId!,
           cardId,
         });
@@ -799,7 +739,7 @@ export class GameActionController implements GameActionDefinitionMap {
 
     // Prevent card IDs from being moved through the card-like path.
     try {
-      const card = this.cardLibrary.getCard(args.cardLikeId);
+      const card = this._cardLibrary.getCard(args.cardLikeId);
       throw new Error(`[moveCardLike action] ${card} is a card; use moveCard instead`);
     } catch (error) {
       // Ignore missing card errors; those indicate a card-like ID.
@@ -829,8 +769,8 @@ export class GameActionController implements GameActionDefinitionMap {
     }
 
     // Remove from boon deck/discard piles if present.
-    const boonDeck = this.match.boons?.deck;
-    const boonDiscard = this.match.boons?.discard;
+    const boonDeck = this._match.boons?.deck;
+    const boonDiscard = this._match.boons?.discard;
     const deckIndex = boonDeck ? boonDeck.indexOf(cardLike.id) : -1;
     if (deckIndex !== -1 && boonDeck) {
       boonDeck.splice(deckIndex, 1);
@@ -843,8 +783,8 @@ export class GameActionController implements GameActionDefinitionMap {
     }
 
     // Remove from hex deck/discard piles if present.
-    const hexDeck = this.match.hexes?.deck;
-    const hexDiscard = this.match.hexes?.discard;
+    const hexDeck = this._match.hexes?.deck;
+    const hexDiscard = this._match.hexes?.discard;
     const hexDeckIndex = hexDeck ? hexDeck.indexOf(cardLike.id) : -1;
     if (hexDeckIndex !== -1 && hexDeck) {
       hexDeck.splice(hexDeckIndex, 1);
@@ -869,59 +809,59 @@ export class GameActionController implements GameActionDefinitionMap {
         break;
       }
       case 'boonDiscard': {
-        const isBoon = this.match.boons?.cards?.some((card) => card.id === cardLike.id);
+        const isBoon = this._match.boons?.cards?.some((card) => card.id === cardLike.id);
         if (!isBoon) {
           throw new Error(`[moveCardLike action] ${cardLike} is not a boon; cannot move to boonDiscard`);
         }
-        if (!this.match.boons?.discard) {
+        if (!this._match.boons?.discard) {
           throw new Error('[moveCardLike action] boon discard pile is not initialized');
         }
-        if (!this.match.boons.discard.includes(cardLike.id)) {
-          this.match.boons.discard.push(cardLike.id);
+        if (!this._match.boons.discard.includes(cardLike.id)) {
+          this._match.boons.discard.push(cardLike.id);
         }
         console.debug(`[moveCardLike action] moved ${cardLike} to boon discard`);
         break;
       }
       case 'boonDeck': {
-        const isBoon = this.match.boons?.cards?.some((card) => card.id === cardLike.id);
+        const isBoon = this._match.boons?.cards?.some((card) => card.id === cardLike.id);
         if (!isBoon) {
           throw new Error(`[moveCardLike action] ${cardLike} is not a boon; cannot move to boonDeck`);
         }
-        if (!this.match.boons?.deck) {
+        if (!this._match.boons?.deck) {
           throw new Error('[moveCardLike action] boon deck is not initialized');
         }
-        if (!this.match.boons.deck.includes(cardLike.id)) {
-          this.match.boons.deck.push(cardLike.id);
+        if (!this._match.boons.deck.includes(cardLike.id)) {
+          this._match.boons.deck.push(cardLike.id);
         }
         console.debug(`[moveCardLike action] moved ${cardLike} to boon deck`);
         break;
       }
       // Hex discard pile for Doom effects.
       case 'hexDiscard': {
-        const isHex = this.match.hexes?.cards?.some((card) => card.id === cardLike.id);
+        const isHex = this._match.hexes?.cards?.some((card) => card.id === cardLike.id);
         if (!isHex) {
           throw new Error(`[moveCardLike action] ${cardLike} is not a hex; cannot move to hexDiscard`);
         }
-        if (!this.match.hexes?.discard) {
+        if (!this._match.hexes?.discard) {
           throw new Error('[moveCardLike action] hex discard pile is not initialized');
         }
-        if (!this.match.hexes.discard.includes(cardLike.id)) {
-          this.match.hexes.discard.push(cardLike.id);
+        if (!this._match.hexes.discard.includes(cardLike.id)) {
+          this._match.hexes.discard.push(cardLike.id);
         }
         console.debug(`[moveCardLike action] moved ${cardLike} to hex discard`);
         break;
       }
       // Hex deck for Doom effects.
       case 'hexDeck': {
-        const isHex = this.match.hexes?.cards?.some((card) => card.id === cardLike.id);
+        const isHex = this._match.hexes?.cards?.some((card) => card.id === cardLike.id);
         if (!isHex) {
           throw new Error(`[moveCardLike action] ${cardLike} is not a hex; cannot move to hexDeck`);
         }
-        if (!this.match.hexes?.deck) {
+        if (!this._match.hexes?.deck) {
           throw new Error('[moveCardLike action] hex deck is not initialized');
         }
-        if (!this.match.hexes.deck.includes(cardLike.id)) {
-          this.match.hexes.deck.push(cardLike.id);
+        if (!this._match.hexes.deck.includes(cardLike.id)) {
+          this._match.hexes.deck.push(cardLike.id);
         }
         console.debug(`[moveCardLike action] moved ${cardLike} to hex deck`);
         break;
@@ -936,7 +876,7 @@ export class GameActionController implements GameActionDefinitionMap {
   // Finds a card-like instance by id in the current match.
   private findCardLike(cardLikeId: CardLikeId) {
     // moveCardLike only supports these movable card-like categories.
-    return findCardLikeInMatch(this.match, cardLikeId, {
+    return findCardLikeInMatch(this._match, cardLikeId, {
       includeKinds: ['boon', 'hex', 'event', 'landmark', 'project'],
     });
   }
@@ -956,26 +896,26 @@ export class GameActionController implements GameActionDefinitionMap {
     let gainAmount = args.count;
     // Allow reactions to modify incoming action gains (e.g., Snowy Village lockout).
     const trigger = new ReactionTrigger('actionGain', {
-      playerId: getCurrentPlayer(this.match).id,
+      playerId: getCurrentPlayer(this._match).id,
       count: gainAmount,
       source: context?.loggingContext?.source,
     });
-    await this.reactionManager.runTrigger({ trigger });
+    await this._reactionManager.runTrigger({ trigger });
     gainAmount = Math.max(0, trigger.args.count);
 
     console.info(`[gainAction action] gaining ${gainAmount} actions`);
 
-    this.match.playerActions += gainAmount;
-    this.match.playerActions = Math.max(0, this.match.playerActions);
+    this._match.playerActions += gainAmount;
+    this._match.playerActions = Math.max(0, this._match.playerActions);
 
-    this.logManager.addLogEntry({
+    this._logManager.addLogEntry({
       type: 'gainAction',
-      playerId: getCurrentPlayer(this.match).id,
+      playerId: getCurrentPlayer(this._match).id,
       count: gainAmount,
       source: context?.loggingContext?.source,
     });
 
-    console.info(`[gainAction action] setting player actions to ${this.match.playerActions}`);
+    console.info(`[gainAction action] setting player actions to ${this._match.playerActions}`);
   }
 
   async gainCard(args: {
@@ -983,7 +923,7 @@ export class GameActionController implements GameActionDefinitionMap {
     cardId: CardId | Card;
     to: CardLocationSpec;
   }, context?: GameActionContextMap['gainCard']) {
-    const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
+    const card = args.cardId instanceof Card ? args.cardId : this._cardLibrary.getCard(args.cardId);
     const cardId = card.id;
 
     const previousLocation = await this.moveCard({
@@ -993,21 +933,21 @@ export class GameActionController implements GameActionDefinitionMap {
     });
 
     const turnStatsIndex = this.getCurrentTurnStatsIndex();
-    this.match.stats.cardsGainedByTurn[turnStatsIndex] ??= [];
-    this.match.stats.cardsGainedByTurn[turnStatsIndex]!.push(cardId);
+    this._match.stats.cardsGainedByTurn[turnStatsIndex] ??= [];
+    this._match.stats.cardsGainedByTurn[turnStatsIndex]!.push(cardId);
 
-    this.match.stats.cardsGained[cardId] = {
-      turnPhase: getTurnPhase(this.match.turnPhaseIndex),
-      turnNumber: this.match.turnNumber,
+    this._match.stats.cardsGained[cardId] = {
+      turnPhase: getTurnPhase(this._match.turnPhaseIndex),
+      turnNumber: this._match.turnNumber,
       turnHistoryIndex: this.getCurrentTurnHistoryIndex(),
       playerId: args.playerId,
     };
 
     card.owner = args.playerId;
 
-    console.info(`[gainCard action] ${getPlayerById(this.match, args.playerId)} gained ${card}`);
+    console.info(`[gainCard action] ${getPlayerById(this._match, args.playerId)} gained ${card}`);
 
-    this.logManager.addLogEntry({
+    this._logManager.addLogEntry({
       playerId: args.playerId,
       cardId: cardId,
       type: 'gainCard',
@@ -1035,14 +975,14 @@ export class GameActionController implements GameActionDefinitionMap {
         },
     });
 
-    await this.reactionManager.runTrigger({ trigger });
+    await this._reactionManager.runTrigger({ trigger });
 
     const suppress = context?.suppressLifeCycle;
     const skipOnGain = suppress &&
       (suppress.events?.includes('onGained') || suppress.events === undefined);
 
     if (!skipOnGain) {
-      await this.reactionManager.runCardLifecycleEvent('onGained', {
+      await this._reactionManager.runCardLifecycleEvent('onGained', {
         playerId: args.playerId,
         cardId,
         bought: context?.bought ?? false,
@@ -1052,10 +992,10 @@ export class GameActionController implements GameActionDefinitionMap {
       console.debug('[gainCard action] lifecycle onGained event suppressed');
     }
 
-    await this.reactionManager.runGameLifecycleEvent('onCardGained', {
+    await this._reactionManager.runGameLifecycleEvent('onCardGained', {
       cardId: cardId,
       playerId: args.playerId,
-      match: this.match,
+      match: this._match,
     });
 
     // Exile rule: when you gain a card, you may discard all other copies of it from Exile.
@@ -1068,9 +1008,9 @@ export class GameActionController implements GameActionDefinitionMap {
   }
 
   async exileCard(args: { cardId: CardId | Card; playerId: PlayerId }, _context?: GameActionContext) {
-    const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
+    const card = args.cardId instanceof Card ? args.cardId : this._cardLibrary.getCard(args.cardId);
 
-    console.info(`[exileCard action] exiling ${card} for ${getPlayerById(this.match, args.playerId)}`);
+    console.info(`[exileCard action] exiling ${card} for ${getPlayerById(this._match, args.playerId)}`);
 
     await this.moveCard({
       cardId: card.id,
@@ -1089,7 +1029,7 @@ export class GameActionController implements GameActionDefinitionMap {
 
     const signalId = `userPrompt:${playerId}:${Date.now()}`;
 
-    const player = getPlayerById(this.match, playerId);
+    const player = getPlayerById(this._match, playerId);
     if (player?.isComputer) {
       // Computer players always pick the first available action button when prompted.
       if (args.content?.type === 'select-pile') {
@@ -1112,16 +1052,16 @@ export class GameActionController implements GameActionDefinitionMap {
       return { action: firstAction };
     }
 
-    const socket = this.socketMap.get(playerId);
+    const socket = this._socketMap.get(playerId);
     if (!socket) {
       console.debug(`[userPrompt] No socket for player ${playerId}`);
       return null;
     }
 
-    const currentPlayerId = getCurrentPlayer(this.match).id;
+    const currentPlayerId = getCurrentPlayer(this._match).id;
 
     if (playerId !== currentPlayerId) {
-      this.socketMap.forEach((socket, id) => {
+      this._socketMap.forEach((socket, id) => {
         if (id !== playerId) {
           socket.emit('waitingForPlayer', playerId);
         }
@@ -1135,7 +1075,7 @@ export class GameActionController implements GameActionDefinitionMap {
         socket.off('userInputReceived', onInput);
 
         if (playerId !== currentPlayerId) {
-          this.socketMap.forEach((socket, id) => {
+          this._socketMap.forEach((socket, id) => {
             if (id !== playerId) {
               socket.emit('doneWaitingForPlayer', playerId);
             }
@@ -1171,7 +1111,7 @@ export class GameActionController implements GameActionDefinitionMap {
       return [];
     }
 
-    const player = getPlayerById(this.match, playerId);
+    const player = getPlayerById(this._match, playerId);
     if (player?.isComputer) {
       // Computer players choose the first available card(s) from the selectable list.
       const count = this.resolveCountSpec(args.count ?? 1, selectableCardIds.length, args.optional ?? false);
@@ -1193,18 +1133,18 @@ export class GameActionController implements GameActionDefinitionMap {
       }
     }
 
-    const socket = this.socketMap.get(playerId);
+    const socket = this._socketMap.get(playerId);
 
     if (!socket) {
-      console.debug(`[selectCard action] no socket found for ${getPlayerById(this.match, playerId)}, skipping`);
+      console.debug(`[selectCard action] no socket found for ${getPlayerById(this._match, playerId)}, skipping`);
       return [];
     }
 
     const signalId = `selectCard:${playerId}:${Date.now()}`;
-    const currentPlayerId = getCurrentPlayer(this.match).id;
+    const currentPlayerId = getCurrentPlayer(this._match).id;
 
     if (playerId !== currentPlayerId) {
-      this.socketMap.forEach((socket, id) => {
+      this._socketMap.forEach((socket, id) => {
         if (id !== playerId) {
           socket.emit('waitingForPlayer', playerId);
         }
@@ -1219,7 +1159,7 @@ export class GameActionController implements GameActionDefinitionMap {
 
         // ✅ Clear "waiting" if needed
         if (playerId !== currentPlayerId) {
-          this.socketMap.forEach((socket, id) => {
+          this._socketMap.forEach((socket, id) => {
             if (id !== playerId) {
               socket.emit('doneWaitingForPlayer', playerId);
             }
@@ -1244,19 +1184,19 @@ export class GameActionController implements GameActionDefinitionMap {
       to: { location: 'trash' },
     });
 
-    const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
+    const card = args.cardId instanceof Card ? args.cardId : this._cardLibrary.getCard(args.cardId);
     const cardId = card.id;
 
-    this.match.stats.trashedCards[cardId] = {
-      turnPhase: getTurnPhase(this.match.turnPhaseIndex),
-      turnNumber: this.match.turnNumber,
+    this._match.stats.trashedCards[cardId] = {
+      turnPhase: getTurnPhase(this._match.turnPhaseIndex),
+      turnNumber: this._match.turnNumber,
       turnHistoryIndex: this.getCurrentTurnHistoryIndex(),
-      playerId: getCurrentPlayer(this.match).id,
+      playerId: getCurrentPlayer(this._match).id,
     };
 
     const turnStatsIndex = this.getCurrentTurnStatsIndex();
-    this.match.stats.trashedCardsByTurn[turnStatsIndex] ??= [];
-    this.match.stats.trashedCardsByTurn[turnStatsIndex]!.push(cardId);
+    this._match.stats.trashedCardsByTurn[turnStatsIndex] ??= [];
+    this._match.stats.trashedCardsByTurn[turnStatsIndex]!.push(cardId);
 
     console.info(`[trashCard action] trashed ${card}`);
 
@@ -1270,16 +1210,16 @@ export class GameActionController implements GameActionDefinitionMap {
         source: context?.loggingContext?.source,
       },
     };
-    await this.reactionManager.runTrigger({ trigger });
+    await this._reactionManager.runTrigger({ trigger });
 
-    await this.reactionManager.runCardLifecycleEvent('onTrashed', {
+    await this._reactionManager.runCardLifecycleEvent('onTrashed', {
       cardId: cardId,
       playerId: args.playerId,
       previousLocation: oldLocation,
     });
 
     card.owner = null;
-    this.logManager.addLogEntry({
+    this._logManager.addLogEntry({
       playerId: args.playerId,
       cardId: cardId,
       type: 'trashCard',
@@ -1310,48 +1250,48 @@ export class GameActionController implements GameActionDefinitionMap {
     console.info(
       `[queueExtraTurn action] queueing extra turn owner ${args.turn.controllerId} player ${args.turn.playerId}`,
     );
-    this.match.extraTurnQueue.push({ ...args.turn });
-    console.debug(`[queueExtraTurn action] queue size now ${this.match.extraTurnQueue.length}`);
+    this._match.extraTurnQueue.push({ ...args.turn });
+    console.debug(`[queueExtraTurn action] queue size now ${this._match.extraTurnQueue.length}`);
   }
 
   async gainCoffer(args: { playerId: PlayerId; count?: number }, _context?: GameActionContext) {
     console.log(`[gainCoffer action] player ${args.playerId} gained ${args.count} coffers`);
-    this.match.coffers[args.playerId] ??= 0;
-    this.match.coffers[args.playerId] += args.count ?? 1;
-    this.match.coffers[args.playerId] = Math.max(0, this.match.coffers[args.playerId]);
-    console.debug(`[gainCoffer action] player ${args.playerId} now has ${this.match.coffers[args.playerId]} coffers`);
+    this._match.coffers[args.playerId] ??= 0;
+    this._match.coffers[args.playerId] += args.count ?? 1;
+    this._match.coffers[args.playerId] = Math.max(0, this._match.coffers[args.playerId]);
+    console.debug(`[gainCoffer action] player ${args.playerId} now has ${this._match.coffers[args.playerId]} coffers`);
   }
 
   // Adds Villagers tokens (Renaissance) to a player.
   async gainVillager(args: { playerId: PlayerId; count?: number }, context?: GameActionContext) {
     console.log(`[gainVillager action] player ${args.playerId} gained ${args.count} villagers`);
-    this.match.villagers[args.playerId] ??= 0;
-    this.match.villagers[args.playerId] += args.count ?? 1;
-    this.match.villagers[args.playerId] = Math.max(0, this.match.villagers[args.playerId]);
+    this._match.villagers[args.playerId] ??= 0;
+    this._match.villagers[args.playerId] += args.count ?? 1;
+    this._match.villagers[args.playerId] = Math.max(0, this._match.villagers[args.playerId]);
     console.debug(
-      `[gainVillager action] player ${args.playerId} now has ${this.match.villagers[args.playerId]} villagers`,
+      `[gainVillager action] player ${args.playerId} now has ${this._match.villagers[args.playerId]} villagers`,
     );
   }
 
   // Adds debt tokens to a player without spending treasure.
   async gainDebt(args: { playerId: PlayerId; count: number }, context?: GameActionContext) {
     console.log(`[gainDebt action] player ${args.playerId} gained ${args.count} debt`);
-    this.match.debt[args.playerId] ??= 0;
-    this.match.debt[args.playerId] += args.count;
-    this.match.debt[args.playerId] = Math.max(0, this.match.debt[args.playerId]);
-    console.debug(`[gainDebt action] player ${args.playerId} now has ${this.match.debt[args.playerId]} debt`);
+    this._match.debt[args.playerId] ??= 0;
+    this._match.debt[args.playerId] += args.count;
+    this._match.debt[args.playerId] = Math.max(0, this._match.debt[args.playerId]);
+    console.debug(`[gainDebt action] player ${args.playerId} now has ${this._match.debt[args.playerId]} debt`);
   }
 
   async exchangeCoffer(args: { playerId: PlayerId; count: number }, context?: GameActionContext) {
     console.log(`[exchangeCoffer action] player ${args.playerId} exchanged ${args.count} coffers`);
-    this.match.coffers[args.playerId] -= args.count;
-    this.match.playerTreasure += args.count;
+    this._match.coffers[args.playerId] -= args.count;
+    this._match.playerTreasure += args.count;
   }
 
   // Spends Villagers to gain actions during the Action phase.
   async spendVillager(args: { playerId: PlayerId; count: number }, context?: GameActionContext) {
     console.log(`[spendVillager action] player ${args.playerId} spending ${args.count} villagers`);
-    const currentPhase = getTurnPhase(this.match.turnPhaseIndex);
+    const currentPhase = getTurnPhase(this._match.turnPhaseIndex);
     // Villagers can only be spent during the Action phase.
     if (currentPhase !== 'action') {
       console.warn(
@@ -1359,37 +1299,37 @@ export class GameActionController implements GameActionDefinitionMap {
       );
       return;
     }
-    const currentVillagers = this.match.villagers[args.playerId] ?? 0;
+    const currentVillagers = this._match.villagers[args.playerId] ?? 0;
     const spendCount = Math.min(args.count, currentVillagers);
     if (spendCount <= 0) {
       console.debug(`[spendVillager action] player ${args.playerId} has no villagers to spend`);
       return;
     }
-    this.match.villagers[args.playerId] = currentVillagers - spendCount;
+    this._match.villagers[args.playerId] = currentVillagers - spendCount;
     console.debug(
-      `[spendVillager action] player ${args.playerId} now has ${this.match.villagers[args.playerId]} villagers`,
+      `[spendVillager action] player ${args.playerId} now has ${this._match.villagers[args.playerId]} villagers`,
     );
     await this.gainAction({ count: spendCount }, context);
   }
 
   // Pays down debt tokens using the current treasure pool.
   async payDebt(args: { playerId: PlayerId; count: number }, context?: GameActionContext) {
-    const currentDebt = this.match.debt[args.playerId] ?? 0;
-    const payable = Math.min(args.count, currentDebt, this.match.playerTreasure);
+    const currentDebt = this._match.debt[args.playerId] ?? 0;
+    const payable = Math.min(args.count, currentDebt, this._match.playerTreasure);
     console.log(`[payDebt action] player ${args.playerId} paying ${payable} debt`);
     if (payable <= 0) {
       console.debug(`[payDebt action] player ${args.playerId} not enough payable ${payable} to pay debt`);
       return;
     }
-    this.match.debt[args.playerId] = currentDebt - payable;
-    this.match.playerTreasure = Math.max(0, this.match.playerTreasure - payable);
+    this._match.debt[args.playerId] = currentDebt - payable;
+    this._match.playerTreasure = Math.max(0, this._match.playerTreasure - payable);
     console.debug(
       `[payDebt action] player ${args.playerId} now has ${
-        this.match.debt[args.playerId]
-      } debt, treasure ${this.match.playerTreasure}`,
+        this._match.debt[args.playerId]
+      } debt, treasure ${this._match.playerTreasure}`,
     );
     // Log the debt payment for the UI log.
-    this.logManager.addLogEntry({
+    this._logManager.addLogEntry({
       type: 'payDebt',
       playerId: args.playerId,
       count: payable,
@@ -1405,16 +1345,16 @@ export class GameActionController implements GameActionDefinitionMap {
     buyOptionId?: string;
   }) {
     // Prevent buying if the player already has debt tokens.
-    const existingDebt = this.match.debt[args.playerId] ?? 0;
+    const existingDebt = this._match.debt[args.playerId] ?? 0;
     if (existingDebt > 0) {
       console.debug(`[buyCard action] player ${args.playerId} has debt (${existingDebt}), blocking buy`);
       return;
     }
-    const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
+    const card = args.cardId instanceof Card ? args.cardId : this._cardLibrary.getCard(args.cardId);
     const cardId = card.id;
 
     // Resolve legal buy options at execution time to avoid stale client-side choices.
-    const resolvedBuyOptions = this.buyOptionsResolver.resolveBuyOptions({
+    const resolvedBuyOptions = this._buyOptionsResolver.resolveBuyOptions({
       cardId: card,
       playerId: args.playerId,
     });
@@ -1447,14 +1387,14 @@ export class GameActionController implements GameActionDefinitionMap {
         `[buyCard action] reducing player ${args.playerId} treasure by card cost ${standardCost.treasure} treasure`,
       );
 
-      this.match.playerTreasure -= standardCost.treasure;
+      this._match.playerTreasure -= standardCost.treasure;
       paidTreasure = standardCost.treasure + (args.overpay?.inTreasure ?? 0) + (args.overpay?.inCoffer ?? 0);
 
       if (standardCost.potion !== undefined) {
         console.debug(
           `[buyCard action] reducing player ${args.playerId} potions by card cost ${standardCost.potion} potions`,
         );
-        this.match.playerPotions -= standardCost.potion;
+        this._match.playerPotions -= standardCost.potion;
       }
 
       if ((standardCost.debt ?? 0) > 0) {
@@ -1464,16 +1404,16 @@ export class GameActionController implements GameActionDefinitionMap {
     } else {
       // Alternate payments delegate their payment logic to the expansion-provided handler.
       const applyResult = await selectedBuyOption.option?.apply({
-        match: this.match,
+        match: this._match,
         playerId: args.playerId,
         card,
-        cardLibrary: this.cardLibrary,
+        cardLibrary: this._cardLibrary,
         findCardService: this._findCardService,
         cardSourceController: this._cardSourceController,
-        cardPriceController: this.cardPriceRuleController,
-        runGameActionDelegate: this.runGameActionDelegate,
-        reactionManager: this.reactionManager,
-        logManager: this.logManager,
+        cardPriceController: this._cardPriceRuleController,
+        runGameActionDelegate: this._runGameActionDelegate,
+        reactionManager: this._reactionManager,
+        logManager: this._logManager,
       });
       if (applyResult?.successful === false) {
         console.debug(`[buyCard action] alternate buy option ${selectedBuyOption.id} did not complete payment`);
@@ -1484,17 +1424,17 @@ export class GameActionController implements GameActionDefinitionMap {
 
     console.debug(`[buyCard action] reducing player ${args.playerId} buys by 1`);
 
-    this.match.playerBuys--;
+    this._match.playerBuys--;
 
     console.debug(`[buyCard action] adding bought stats to match`);
 
     const turnStatsIndex = this.getCurrentTurnStatsIndex();
-    this.match.stats.cardsBoughtByTurn[turnStatsIndex] ??= [];
-    this.match.stats.cardsBoughtByTurn[turnStatsIndex]!.push(cardId);
+    this._match.stats.cardsBoughtByTurn[turnStatsIndex] ??= [];
+    this._match.stats.cardsBoughtByTurn[turnStatsIndex]!.push(cardId);
 
-    this.match.stats.cardsBought[cardId] = {
-      turnPhase: getTurnPhase(this.match.turnPhaseIndex),
-      turnNumber: this.match.turnNumber,
+    this._match.stats.cardsBought[cardId] = {
+      turnPhase: getTurnPhase(this._match.turnPhaseIndex),
+      turnNumber: this._match.turnNumber,
       turnHistoryIndex: this.getCurrentTurnHistoryIndex(),
       playerId: args.playerId,
       cost: standardCost.treasure,
@@ -1518,12 +1458,12 @@ export class GameActionController implements GameActionDefinitionMap {
     playerId: PlayerId;
   }) {
     // Prevent buying card-likes if the player already has debt tokens.
-    const existingDebt = this.match.debt[args.playerId] ?? 0;
+    const existingDebt = this._match.debt[args.playerId] ?? 0;
     if (existingDebt > 0) {
       console.debug(`[buyEvent action] player ${args.playerId} has debt (${existingDebt}), blocking buy`);
       return;
     }
-    const event = findEventInMatch(this.match, args.cardLikeId);
+    const event = findEventInMatch(this._match, args.cardLikeId);
 
     if (!event) {
       console.warn(`[buyEvent action] could not find event ${args.cardLikeId}`);
@@ -1534,10 +1474,10 @@ export class GameActionController implements GameActionDefinitionMap {
 
     const cost = event.cost.treasure;
 
-    this.match.playerTreasure -= cost;
+    this._match.playerTreasure -= cost;
 
     console.debug(
-      `[buyEvent action] reducing player ${args.playerId} treasure ${cost} to ${this.match.playerTreasure}`,
+      `[buyEvent action] reducing player ${args.playerId} treasure ${cost} to ${this._match.playerTreasure}`,
     );
 
     if ((event.cost.debt ?? 0) > 0) {
@@ -1545,36 +1485,36 @@ export class GameActionController implements GameActionDefinitionMap {
       await this.gainDebt({ playerId: args.playerId, count: event.cost.debt! });
     }
 
-    this.match.playerBuys--;
+    this._match.playerBuys--;
 
-    console.debug(`[buyEvent action] reducing player ${args.playerId} buys by 1 to ${this.match.playerBuys}`);
+    console.debug(`[buyEvent action] reducing player ${args.playerId} buys by 1 to ${this._match.playerBuys}`);
 
     const turnStatsIndex = this.getCurrentTurnStatsIndex();
-    this.match.stats.cardLikesBoughtByTurn[turnStatsIndex] ??= [];
-    this.match.stats.cardLikesBoughtByTurn[turnStatsIndex]!.push(args.cardLikeId);
+    this._match.stats.cardLikesBoughtByTurn[turnStatsIndex] ??= [];
+    this._match.stats.cardLikesBoughtByTurn[turnStatsIndex]!.push(args.cardLikeId);
 
-    this.match.stats.cardLikesBought[args.cardLikeId] = {
+    this._match.stats.cardLikesBought[args.cardLikeId] = {
       playerId: args.playerId,
-      turnNumber: this.match.turnNumber,
+      turnNumber: this._match.turnNumber,
       turnHistoryIndex: this.getCurrentTurnHistoryIndex(),
-      turnPhase: getTurnPhase(this.match.turnPhaseIndex),
+      turnPhase: getTurnPhase(this._match.turnPhaseIndex),
     };
 
-    const effectFn = this.eventEffectFunctionMap[event.cardKey];
+    const effectFn = this._eventEffectFunctionMap[event.cardKey];
 
     if (effectFn) {
       console.debug(`[buyEvent action] running effect for ${event}`);
 
       const context = {
         cardSourceController: this._cardSourceController,
-        cardPriceController: this.cardPriceRuleController,
-        logManager: this.logManager,
-        reactionManager: this.reactionManager,
-        runGameActionDelegate: this.runGameActionDelegate,
+        cardPriceController: this._cardPriceRuleController,
+        logManager: this._logManager,
+        reactionManager: this._reactionManager,
+        runGameActionDelegate: this._runGameActionDelegate,
         cardId: args.cardLikeId,
         playerId: args.playerId,
-        match: this.match,
-        cardLibrary: this.cardLibrary,
+        match: this._match,
+        cardLibrary: this._cardLibrary,
         reactionContext: {},
         findCardService: this._findCardService,
         supplyGainService: this._supplyGainService,
@@ -1583,7 +1523,7 @@ export class GameActionController implements GameActionDefinitionMap {
       // Centralized duration registration with automatic cleanup on leave-play.
       context.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
         const triggerIds = this.registerDurationEffectInternal(durationCard, context, triggeredTemplate, options);
-        this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
+        this._reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
         return triggerIds;
       };
 
@@ -1603,13 +1543,13 @@ export class GameActionController implements GameActionDefinitionMap {
     playerId: PlayerId;
   }) {
     // Prevent buying projects if the player already has debt tokens.
-    const existingDebt = this.match.debt[args.playerId] ?? 0;
+    const existingDebt = this._match.debt[args.playerId] ?? 0;
     if (existingDebt > 0) {
       console.debug(`[buyProject action] player ${args.playerId} has debt (${existingDebt}), blocking buy`);
       return;
     }
 
-    const project = findProjectInMatch(this.match, args.cardLikeId);
+    const project = findProjectInMatch(this._match, args.cardLikeId);
     if (!project) {
       console.warn(`[buyProject action] could not find project ${args.cardLikeId}`);
       return;
@@ -1617,7 +1557,7 @@ export class GameActionController implements GameActionDefinitionMap {
 
     // Ensure the player has an available cube token to place.
     const cubeTokenId = renaissanceTokenIds.cube;
-    const tokens = Object.values(this.match.tokens);
+    const tokens = Object.values(this._match.tokens);
     const availableCube = tokens.find((token) =>
       token.tokenId === cubeTokenId &&
       token.ownerId === args.playerId &&
@@ -1646,26 +1586,26 @@ export class GameActionController implements GameActionDefinitionMap {
     console.debug(`[buyProject action] buying ${project}`);
 
     const cost = project.cost.treasure ?? 0;
-    this.match.playerTreasure -= cost;
+    this._match.playerTreasure -= cost;
     console.debug(
-      `[buyProject action] reducing player ${args.playerId} treasure ${cost} to ${this.match.playerTreasure}`,
+      `[buyProject action] reducing player ${args.playerId} treasure ${cost} to ${this._match.playerTreasure}`,
     );
 
-    this.match.playerBuys--;
-    console.debug(`[buyProject action] reducing player ${args.playerId} buys by 1 to ${this.match.playerBuys}`);
+    this._match.playerBuys--;
+    console.debug(`[buyProject action] reducing player ${args.playerId} buys by 1 to ${this._match.playerBuys}`);
 
     const turnStatsIndex = this.getCurrentTurnStatsIndex();
-    this.match.stats.cardLikesBoughtByTurn[turnStatsIndex] ??= [];
-    this.match.stats.cardLikesBoughtByTurn[turnStatsIndex]!.push(args.cardLikeId);
+    this._match.stats.cardLikesBoughtByTurn[turnStatsIndex] ??= [];
+    this._match.stats.cardLikesBoughtByTurn[turnStatsIndex]!.push(args.cardLikeId);
 
-    this.match.stats.cardLikesBought[args.cardLikeId] = {
+    this._match.stats.cardLikesBought[args.cardLikeId] = {
       playerId: args.playerId,
-      turnNumber: this.match.turnNumber,
+      turnNumber: this._match.turnNumber,
       turnHistoryIndex: this.getCurrentTurnHistoryIndex(),
-      turnPhase: getTurnPhase(this.match.turnPhaseIndex),
+      turnPhase: getTurnPhase(this._match.turnPhaseIndex),
     };
 
-    this.logManager.addLogEntry({
+    this._logManager.addLogEntry({
       type: 'buyProject',
       playerId: args.playerId,
       cardLikeId: project.id,
@@ -1677,20 +1617,20 @@ export class GameActionController implements GameActionDefinitionMap {
       location: { type: 'cardLike', cardLikeId: project.id },
     });
 
-    const effectFn = this.projectEffectFunctionMap[project.cardKey];
+    const effectFn = this._projectEffectFunctionMap[project.cardKey];
     if (effectFn) {
       console.debug(`[buyProject action] running effect for ${project}`);
 
       const context = {
         cardSourceController: this._cardSourceController,
-        cardPriceController: this.cardPriceRuleController,
-        logManager: this.logManager,
-        reactionManager: this.reactionManager,
-        runGameActionDelegate: this.runGameActionDelegate,
+        cardPriceController: this._cardPriceRuleController,
+        logManager: this._logManager,
+        reactionManager: this._reactionManager,
+        runGameActionDelegate: this._runGameActionDelegate,
         cardId: args.cardLikeId,
         playerId: args.playerId,
-        match: this.match,
-        cardLibrary: this.cardLibrary,
+        match: this._match,
+        cardLibrary: this._cardLibrary,
         reactionContext: {},
         findCardService: this._findCardService,
         supplyGainService: this._supplyGainService,
@@ -1699,7 +1639,7 @@ export class GameActionController implements GameActionDefinitionMap {
       // Centralized duration registration with automatic cleanup on leave-play.
       context.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
         const triggerIds = this.registerDurationEffectInternal(durationCard, context, triggeredTemplate, options);
-        this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
+        this._reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
         return triggerIds;
       };
 
@@ -1727,18 +1667,18 @@ export class GameActionController implements GameActionDefinitionMap {
       console.debug('[receiveBoon action] boon will be deferred until resolved');
     }
 
-    if (this.match.boons.cards.length < 1) {
+    if (this._match.boons.cards.length < 1) {
       console.info('[receiveBoon action] no boons configured, skipping');
       return;
     }
 
-    if (this.match.boons.deck.length < 1 && this.match.boons.discard.length > 0) {
+    if (this._match.boons.deck.length < 1 && this._match.boons.discard.length > 0) {
       console.info('[receiveBoon action] boon deck empty, reshuffling discard');
       await this.shuffleCardLike({ kind: 'boon', includeDiscard: true, playerId: args.playerId });
     }
 
     let boonId = args.boonId;
-    let boon = boonId !== undefined ? findBoonInMatch(this.match, boonId) : undefined;
+    let boon = boonId !== undefined ? findBoonInMatch(this._match, boonId) : undefined;
 
     if (boonId !== undefined && !boon) {
       console.warn(`[receiveBoon action] could not find boon ${boonId}`);
@@ -1746,33 +1686,33 @@ export class GameActionController implements GameActionDefinitionMap {
     }
 
     if (boonId === undefined || !boon) {
-      if (this.match.boons.deck.length < 1) {
+      if (this._match.boons.deck.length < 1) {
         console.info('[receiveBoon action] no boons available to draw');
         return;
       }
 
-      boonId = this.match.boons.deck.pop();
+      boonId = this._match.boons.deck.pop();
       if (boonId === undefined) {
         console.warn('[receiveBoon action] boon deck draw failed');
         return;
       }
 
-      boon = findBoonInMatch(this.match, boonId);
+      boon = findBoonInMatch(this._match, boonId);
       if (!boon) {
         console.warn(`[receiveBoon action] could not find boon ${boonId}`);
-        this.match.boons.discard.push(boonId);
+        this._match.boons.discard.push(boonId);
         return;
       }
     }
 
     // Remove the boon from deck/discard if it was already staged there.
-    const deckIndex = this.match.boons.deck.indexOf(boonId);
+    const deckIndex = this._match.boons.deck.indexOf(boonId);
     if (deckIndex !== -1) {
-      this.match.boons.deck.splice(deckIndex, 1);
+      this._match.boons.deck.splice(deckIndex, 1);
     }
-    const discardIndex = this.match.boons.discard.indexOf(boonId);
+    const discardIndex = this._match.boons.discard.indexOf(boonId);
     if (discardIndex !== -1) {
-      this.match.boons.discard.splice(discardIndex, 1);
+      this._match.boons.discard.splice(discardIndex, 1);
     }
 
     // Helper to remove a boon from set-aside before resolving its effect.
@@ -1793,21 +1733,21 @@ export class GameActionController implements GameActionDefinitionMap {
     // Helper to resolve the boon effect and handle discard logic.
     const resolveBoon = async (source: string) => {
       // TODO: Surface the received boon to the player via detail modal or prompt.
-      const effectFn = this.boonEffectFunctionMap[boon.cardKey];
+      const effectFn = this._boonEffectFunctionMap[boon.cardKey];
 
       if (effectFn) {
         console.debug(`[receiveBoon action] running effect for ${boon} (${source})`);
 
         const effectContext = {
           cardSourceController: this._cardSourceController,
-          cardPriceController: this.cardPriceRuleController,
-          logManager: this.logManager,
-          reactionManager: this.reactionManager,
-          runGameActionDelegate: this.runGameActionDelegate,
+          cardPriceController: this._cardPriceRuleController,
+          logManager: this._logManager,
+          reactionManager: this._reactionManager,
+          runGameActionDelegate: this._runGameActionDelegate,
           cardId: boonId,
           playerId: args.playerId,
-          match: this.match,
-          cardLibrary: this.cardLibrary,
+          match: this._match,
+          cardLibrary: this._cardLibrary,
           reactionContext: {},
           findCardService: this._findCardService,
           supplyGainService: this._supplyGainService,
@@ -1821,7 +1761,7 @@ export class GameActionController implements GameActionDefinitionMap {
             triggeredTemplate,
             options,
           );
-          this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
+          this._reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
           return triggerIds;
         };
 
@@ -1857,7 +1797,7 @@ export class GameActionController implements GameActionDefinitionMap {
         return;
       }
 
-      this.match.boons.discard.push(boonId);
+      this._match.boons.discard.push(boonId);
       console.debug(`[receiveBoon action] discarded ${boon}`);
     };
 
@@ -1897,18 +1837,18 @@ export class GameActionController implements GameActionDefinitionMap {
   async receiveHex(args: { playerId: PlayerId; hexId?: CardLikeId }, context?: GameActionContext) {
     console.log(`[receiveHex action] player ${args.playerId} receiving a hex`);
 
-    if (this.match.hexes.cards.length < 1) {
+    if (this._match.hexes.cards.length < 1) {
       console.info('[receiveHex action] no hexes configured, skipping');
       return;
     }
 
-    if (this.match.hexes.deck.length < 1 && this.match.hexes.discard.length > 0) {
+    if (this._match.hexes.deck.length < 1 && this._match.hexes.discard.length > 0) {
       console.info('[receiveHex action] hex deck empty, reshuffling discard');
       await this.shuffleCardLike({ kind: 'hex', includeDiscard: true, playerId: args.playerId });
     }
 
     let hexId = args.hexId;
-    let hex = hexId !== undefined ? findHexInMatch(this.match, hexId) : undefined;
+    let hex = hexId !== undefined ? findHexInMatch(this._match, hexId) : undefined;
 
     if (hexId !== undefined && !hex) {
       console.warn(`[receiveHex action] could not find hex ${hexId}`);
@@ -1916,49 +1856,49 @@ export class GameActionController implements GameActionDefinitionMap {
     }
 
     if (hexId === undefined || !hex) {
-      if (this.match.hexes.deck.length < 1) {
+      if (this._match.hexes.deck.length < 1) {
         console.info('[receiveHex action] no hexes available to draw');
         return;
       }
 
-      hexId = this.match.hexes.deck.pop();
+      hexId = this._match.hexes.deck.pop();
       if (hexId === undefined) {
         console.warn('[receiveHex action] hex deck draw failed');
         return;
       }
 
-      hex = findHexInMatch(this.match, hexId);
+      hex = findHexInMatch(this._match, hexId);
       if (!hex) {
         console.warn(`[receiveHex action] could not find hex ${hexId}`);
-        this.match.hexes.discard.push(hexId);
+        this._match.hexes.discard.push(hexId);
         return;
       }
     }
 
     // Remove the hex from deck/discard if it was already staged there.
-    const deckIndex = this.match.hexes.deck.indexOf(hexId);
+    const deckIndex = this._match.hexes.deck.indexOf(hexId);
     if (deckIndex !== -1) {
-      this.match.hexes.deck.splice(deckIndex, 1);
+      this._match.hexes.deck.splice(deckIndex, 1);
     }
-    const discardIndex = this.match.hexes.discard.indexOf(hexId);
+    const discardIndex = this._match.hexes.discard.indexOf(hexId);
     if (discardIndex !== -1) {
-      this.match.hexes.discard.splice(discardIndex, 1);
+      this._match.hexes.discard.splice(discardIndex, 1);
     }
 
-    const effectFn = this.hexEffectFunctionMap[hex.cardKey];
+    const effectFn = this._hexEffectFunctionMap[hex.cardKey];
     if (effectFn) {
       console.debug(`[receiveHex action] running effect for ${hex}`);
 
       const effectContext = {
         cardSourceController: this._cardSourceController,
-        cardPriceController: this.cardPriceRuleController,
-        logManager: this.logManager,
-        reactionManager: this.reactionManager,
-        runGameActionDelegate: this.runGameActionDelegate,
+        cardPriceController: this._cardPriceRuleController,
+        logManager: this._logManager,
+        reactionManager: this._reactionManager,
+        runGameActionDelegate: this._runGameActionDelegate,
         cardId: hexId,
         playerId: args.playerId,
-        match: this.match,
-        cardLibrary: this.cardLibrary,
+        match: this._match,
+        cardLibrary: this._cardLibrary,
         reactionContext: {},
         findCardService: this._findCardService,
         supplyGainService: this._supplyGainService,
@@ -1967,7 +1907,7 @@ export class GameActionController implements GameActionDefinitionMap {
       // Centralized duration registration with automatic cleanup on leave-play.
       effectContext.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
         const triggerIds = this.registerDurationEffectInternal(durationCard, effectContext, triggeredTemplate, options);
-        this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
+        this._reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
         return triggerIds;
       };
 
@@ -1984,7 +1924,7 @@ export class GameActionController implements GameActionDefinitionMap {
     }
 
     // Received hexes always go to the discard pile after resolving.
-    this.match.hexes.discard.push(hexId);
+    this._match.hexes.discard.push(hexId);
     console.debug(`[receiveHex action] discarded ${hex}`);
 
     return hexId;
@@ -2026,7 +1966,7 @@ export class GameActionController implements GameActionDefinitionMap {
 
     this.addStatusToPlayer(store, args.playerId, state.id);
 
-    const effectFn = this.stateEffectFunctionMap[state.cardKey];
+    const effectFn = this._stateEffectFunctionMap[state.cardKey];
     if (!effectFn) {
       console.debug(`[gainState action] no effect registered for ${state.cardKey}`);
       return state.id;
@@ -2035,14 +1975,14 @@ export class GameActionController implements GameActionDefinitionMap {
     console.debug(`[gainState action] registering effects for ${state}`);
     const effectContext = {
       cardSourceController: this._cardSourceController,
-      cardPriceController: this.cardPriceRuleController,
-      logManager: this.logManager,
-      reactionManager: this.reactionManager,
-      runGameActionDelegate: this.runGameActionDelegate,
+      cardPriceController: this._cardPriceRuleController,
+      logManager: this._logManager,
+      reactionManager: this._reactionManager,
+      runGameActionDelegate: this._runGameActionDelegate,
       cardId: state.id,
       playerId: args.playerId,
-      match: this.match,
-      cardLibrary: this.cardLibrary,
+      match: this._match,
+      cardLibrary: this._cardLibrary,
       reactionContext: {},
       findCardService: this._findCardService,
         supplyGainService: this._supplyGainService,
@@ -2051,7 +1991,7 @@ export class GameActionController implements GameActionDefinitionMap {
     // Centralized duration registration with automatic cleanup on leave-play.
     effectContext.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
       const triggerIds = this.registerDurationEffectInternal(durationCard, effectContext, triggeredTemplate, options);
-      this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
+      this._reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
       return triggerIds;
     };
 
@@ -2127,7 +2067,7 @@ export class GameActionController implements GameActionDefinitionMap {
 
     this.addStatusToPlayer(store, args.playerId, artifact.id);
 
-    const effectFn = this.artifactEffectFunctionMap[artifact.cardKey];
+    const effectFn = this._artifactEffectFunctionMap[artifact.cardKey];
     if (!effectFn) {
       console.debug(`[gainArtifact action] no effect registered for ${artifact.cardKey}`);
       return artifact.id;
@@ -2136,14 +2076,14 @@ export class GameActionController implements GameActionDefinitionMap {
     console.debug(`[gainArtifact action] registering effects for ${artifact}`);
     const effectContext = {
       cardSourceController: this._cardSourceController,
-      cardPriceController: this.cardPriceRuleController,
-      logManager: this.logManager,
-      reactionManager: this.reactionManager,
-      runGameActionDelegate: this.runGameActionDelegate,
+      cardPriceController: this._cardPriceRuleController,
+      logManager: this._logManager,
+      reactionManager: this._reactionManager,
+      runGameActionDelegate: this._runGameActionDelegate,
       cardId: artifact.id,
       playerId: args.playerId,
-      match: this.match,
-      cardLibrary: this.cardLibrary,
+      match: this._match,
+      cardLibrary: this._cardLibrary,
       reactionContext: {},
       findCardService: this._findCardService,
         supplyGainService: this._supplyGainService,
@@ -2152,7 +2092,7 @@ export class GameActionController implements GameActionDefinitionMap {
     // Centralized duration registration with automatic cleanup on leave-play.
     effectContext.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
       const triggerIds = this.registerDurationEffectInternal(durationCard, effectContext, triggeredTemplate, options);
-      this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
+      this._reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
       return triggerIds;
     };
 
@@ -2233,10 +2173,10 @@ export class GameActionController implements GameActionDefinitionMap {
       return undefined;
     }
 
-    const card = this.cardLibrary.getCard(cardId);
+    const card = this._cardLibrary.getCard(cardId);
     let previousLocation: { location: CardLocation; playerId?: PlayerId } | undefined;
 
-    console.debug(`[revealCard action] ${getPlayerById(this.match, args.playerId)} revealing ${card}`);
+    console.debug(`[revealCard action] ${getPlayerById(this._match, args.playerId)} revealing ${card}`);
 
     if (args.moveToSetAside) {
       console.debug(`[revealCard action] moving card to 'revealed' zone`);
@@ -2249,14 +2189,14 @@ export class GameActionController implements GameActionDefinitionMap {
       });
     }
 
-    this.logManager.addLogEntry({
+    this._logManager.addLogEntry({
       type: 'revealCard',
       cardId: cardId,
       playerId: args.playerId,
       source: context?.loggingContext?.source,
     });
 
-    await this.reactionManager.runCardLifecycleEvent('onRevealed', {
+    await this._reactionManager.runCardLifecycleEvent('onRevealed', {
       playerId: args.playerId,
       cardId,
       previousLocation,
@@ -2266,7 +2206,7 @@ export class GameActionController implements GameActionDefinitionMap {
   }
 
   async checkForRemainingPlayerActions(): Promise<void> {
-    const match = this.match;
+    const match = this._match;
     const currentPlayer = getCurrentPlayer(match);
     const turnPhase = getTurnPhase(match.turnPhaseIndex);
 
@@ -2281,7 +2221,7 @@ export class GameActionController implements GameActionDefinitionMap {
       return;
     }
 
-    this.interactivityController.checkCardInteractivity();
+    this._interactivityController.checkCardInteractivity();
 
     if (turnPhase === 'action') {
       const hasActions = match.playerActions > 0;
@@ -2330,10 +2270,10 @@ export class GameActionController implements GameActionDefinitionMap {
   }
 
   async discardCard(args: { cardId: CardId | Card; playerId: PlayerId }, context?: GameActionContext) {
-    const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
+    const card = args.cardId instanceof Card ? args.cardId : this._cardLibrary.getCard(args.cardId);
     const cardId = card.id;
 
-    console.info(`[discardCard action] discarding ${card} from ${getPlayerById(this.match, args.playerId)}`);
+    console.info(`[discardCard action] discarding ${card} from ${getPlayerById(this._match, args.playerId)}`);
 
     const oldLocation = await this.moveCard({
       cardId,
@@ -2345,7 +2285,7 @@ export class GameActionController implements GameActionDefinitionMap {
       throw new Error(`[discardCard action] could not find card ${cardId} in player ${args.playerId}'s discard pile`);
     }
 
-    this.logManager.addLogEntry({
+    this._logManager.addLogEntry({
       type: 'discard',
       playerId: args.playerId,
       cardId,
@@ -2358,9 +2298,9 @@ export class GameActionController implements GameActionDefinitionMap {
       cardId,
     });
 
-    await this.reactionManager.runTrigger({ trigger: r });
+    await this._reactionManager.runTrigger({ trigger: r });
 
-    await this.reactionManager.runCardLifecycleEvent('onDiscarded', {
+    await this._reactionManager.runCardLifecycleEvent('onDiscarded', {
       cardId: cardId,
       playerId: args.playerId,
       previousLocation: oldLocation,
@@ -2368,7 +2308,7 @@ export class GameActionController implements GameActionDefinitionMap {
   }
 
   async nextPhase() {
-    const match = this.match;
+    const match = this._match;
 
     let currentPlayer = getCurrentPlayer(match);
     let extraTurn: ExtraTurn | undefined;
@@ -2467,14 +2407,14 @@ export class GameActionController implements GameActionDefinitionMap {
 
       match.roundNumber = Math.floor(match.turnNumber / match.players.length) + 1;
 
-      this.logManager.addLogEntry({
+      this._logManager.addLogEntry({
         root: true,
         type: 'newTurn',
         turn: match.roundNumber,
         source: extraTurn?.sourceId,
       });
 
-      this.logManager.addLogEntry({
+      this._logManager.addLogEntry({
         type: 'newPlayerTurn',
         turn: match.roundNumber,
         playerId: match.players[match.currentPlayerTurnIndex].id,
@@ -2498,7 +2438,7 @@ export class GameActionController implements GameActionDefinitionMap {
         turnNumber: match.turnNumber,
       });
 
-      await this.reactionManager.runTrigger({ trigger: startTurnTrigger });
+      await this._reactionManager.runTrigger({ trigger: startTurnTrigger });
     }
 
     await this.enterPhase({
@@ -2514,19 +2454,19 @@ export class GameActionController implements GameActionDefinitionMap {
       phaseIndex,
       playerId,
     });
-    await this.reactionManager.runTrigger({ trigger });
+    await this._reactionManager.runTrigger({ trigger });
   }
 
   private async runStartTurnPhaseTrigger(phaseIndex: number) {
     const trigger = new ReactionTrigger('startTurnPhase', { phaseIndex });
-    await this.reactionManager.runTrigger({ trigger });
+    await this._reactionManager.runTrigger({ trigger });
   }
 
   private async handlePhaseEntryEffects(
     phase: TurnPhase,
     runStartPhaseTrigger: boolean,
   ) {
-    const match = this.match;
+    const match = this._match;
 
     switch (phase) {
       case 'action':
@@ -2579,7 +2519,7 @@ export class GameActionController implements GameActionDefinitionMap {
     runStartPhaseTrigger: boolean;
     logLabel: string;
   }) {
-    const match = this.match;
+    const match = this._match;
     const phase = getTurnPhase(args.phaseIndex);
 
     match.turnPhaseIndex = args.phaseIndex;
@@ -2604,7 +2544,7 @@ export class GameActionController implements GameActionDefinitionMap {
     endCurrentPhase?: boolean;
     startNewPhase?: boolean;
   }) {
-    const match = this.match;
+    const match = this._match;
     const currentPlayer = getCurrentPlayer(match);
     const targetPlayerId = args.playerId ?? currentPlayer.id;
 
@@ -2651,14 +2591,14 @@ export class GameActionController implements GameActionDefinitionMap {
     console.info('[endTurn action] removing overrides');
 
     const trigger = new ReactionTrigger('endTurn', {
-      playerId: getCurrentPlayer(this.match).id,
-      turnNumber: this.match.turnNumber,
+      playerId: getCurrentPlayer(this._match).id,
+      turnNumber: this._match.turnNumber,
     });
-    await this.reactionManager.runTrigger({ trigger });
+    await this._reactionManager.runTrigger({ trigger });
   }
 
   async gainTreasure(args: { count: number }, context?: GameActionContext) {
-    const currentPlayer = getCurrentPlayer(this.match);
+    const currentPlayer = getCurrentPlayer(this._match);
     let gainAmount = args.count;
     // Allow reactions to modify incoming treasure gains.
     // Include the source card so reactions can attribute token logs.
@@ -2667,15 +2607,15 @@ export class GameActionController implements GameActionDefinitionMap {
       count: gainAmount,
       source: context?.loggingContext?.source,
     });
-    await this.reactionManager.runTrigger({ trigger });
+    await this._reactionManager.runTrigger({ trigger });
     gainAmount = Math.max(0, trigger.args.count);
 
     console.info(`[gainTreasure action] gaining ${gainAmount} treasure`);
-    this.match.playerTreasure += gainAmount;
-    this.match.playerTreasure = Math.max(0, this.match.playerTreasure);
+    this._match.playerTreasure += gainAmount;
+    this._match.playerTreasure = Math.max(0, this._match.playerTreasure);
 
     if (!context?.loggingContext?.suppress) {
-      this.logManager.addLogEntry({
+      this._logManager.addLogEntry({
         type: 'gainTreasure',
         playerId: currentPlayer.id,
         count: gainAmount,
@@ -2701,7 +2641,7 @@ export class GameActionController implements GameActionDefinitionMap {
         count: drawCount,
         source: context?.loggingContext?.source,
       });
-      await this.reactionManager.runTrigger({ trigger });
+      await this._reactionManager.runTrigger({ trigger });
       drawCount = Math.max(0, trigger.args.count);
     }
 
@@ -2728,7 +2668,7 @@ export class GameActionController implements GameActionDefinitionMap {
         to: { location: 'playerHand' },
       });
 
-      this.logManager.addLogEntry({
+      this._logManager.addLogEntry({
         type: 'draw',
         playerId,
         cardId: drawnCardId,
@@ -2749,7 +2689,7 @@ export class GameActionController implements GameActionDefinitionMap {
     console.log(`[drawHand action] player ${playerId} drawing ${drawCount} card(s) for hand`);
 
     // Anchor draw-hand logs so reaction effects nest underneath.
-    this.logManager.addLogEntry({
+    this._logManager.addLogEntry({
       type: 'drawHand',
       playerId,
       source: context?.loggingContext?.source,
@@ -2760,7 +2700,7 @@ export class GameActionController implements GameActionDefinitionMap {
       count: drawCount,
       source: context?.loggingContext?.source,
     });
-    await this.reactionManager.runTrigger({ trigger });
+    await this._reactionManager.runTrigger({ trigger });
     drawCount = Math.max(0, trigger.args.count);
 
     if (drawCount < 1) {
@@ -2778,7 +2718,7 @@ export class GameActionController implements GameActionDefinitionMap {
     overrides?: GameActionOverrides;
   }, context?: GameActionContext) {
     const { playerId } = args;
-    const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
+    const card = args.cardId instanceof Card ? args.cardId : this._cardLibrary.getCard(args.cardId);
     const cardId = card.id;
 
     if (args.overrides?.moveCard === undefined || args.overrides.moveCard) {
@@ -2792,24 +2732,24 @@ export class GameActionController implements GameActionDefinitionMap {
       card.type.includes('ACTION') &&
       args.overrides?.actionCost !== 0
     ) {
-      this.match.playerActions -= args.overrides?.actionCost ?? 1;
+      this._match.playerActions -= args.overrides?.actionCost ?? 1;
 
-      console.info(`[playCard action] Reducing player's action count to ${this.match.playerActions}`);
+      console.info(`[playCard action] Reducing player's action count to ${this._match.playerActions}`);
     }
 
     const turnStatsIndex = this.getCurrentTurnStatsIndex();
-    this.match.stats.playedCardsByTurn[turnStatsIndex] ??= [];
-    this.match.stats.playedCardsByTurn[turnStatsIndex]!.push(cardId);
-    this.match.stats.playedCards[cardId] = {
-      turnPhase: getTurnPhase(this.match.turnPhaseIndex),
-      turnNumber: this.match.turnNumber,
+    this._match.stats.playedCardsByTurn[turnStatsIndex] ??= [];
+    this._match.stats.playedCardsByTurn[turnStatsIndex]!.push(cardId);
+    this._match.stats.playedCards[cardId] = {
+      turnPhase: getTurnPhase(this._match.turnPhaseIndex),
+      turnNumber: this._match.turnNumber,
       turnHistoryIndex: this.getCurrentTurnHistoryIndex(),
       playerId: playerId,
     };
 
-    console.info(`[playCard action] ${getPlayerById(this.match, playerId)} played card ${card}`);
+    console.info(`[playCard action] ${getPlayerById(this._match, playerId)} played card ${card}`);
 
-    this.logManager.addLogEntry({
+    this._logManager.addLogEntry({
       type: 'cardPlayed',
       cardId,
       playerId,
@@ -2824,27 +2764,27 @@ export class GameActionController implements GameActionDefinitionMap {
 
     // handle reactions for the card played
     let reactionContext = {};
-    await this.reactionManager.runTrigger({ trigger: cardPlayedTrigger, reactionContext });
+    await this._reactionManager.runTrigger({ trigger: cardPlayedTrigger, reactionContext });
 
     // Apply supply pile token bonuses before the card's own lifecycle/effects.
     await this.applyTokenBonusesOnCardPlayed(playerId, cardId);
 
     // now add any triggered effects from the card played
-    await this.reactionManager.runCardLifecycleEvent('onCardPlayed', { playerId: args.playerId, cardId });
+    await this._reactionManager.runCardLifecycleEvent('onCardPlayed', { playerId: args.playerId, cardId });
 
     // run the effects of the card played, note passing in the reaction context collected from running the trigger
     // above - e.g., could provide immunity to an attack card played
     const buildEffectContext = () => {
       const context = {
         cardSourceController: this._cardSourceController,
-        cardPriceController: this.cardPriceRuleController,
-        logManager: this.logManager,
-        reactionManager: this.reactionManager,
-        runGameActionDelegate: this.runGameActionDelegate,
+        cardPriceController: this._cardPriceRuleController,
+        logManager: this._logManager,
+        reactionManager: this._reactionManager,
+        runGameActionDelegate: this._runGameActionDelegate,
         cardId,
         playerId,
-        match: this.match,
-        cardLibrary: this.cardLibrary,
+        match: this._match,
+        cardLibrary: this._cardLibrary,
         reactionContext,
         findCardService: this._findCardService,
         supplyGainService: this._supplyGainService,
@@ -2853,14 +2793,14 @@ export class GameActionController implements GameActionDefinitionMap {
       // Centralized duration registration with automatic cleanup on leave-play.
       context.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
         const triggerIds = this.registerDurationEffectInternal(durationCard, context, triggeredTemplate, options);
-        this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
+        this._reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
         return triggerIds;
       };
 
       return context;
     };
 
-    let effectFn = this.cardEffectFunctionMap[card.cardKey];
+    let effectFn = this._cardEffectFunctionMap[card.cardKey];
     if (effectFn) {
       // Run base card effects with standardized logging.
       await this.runEffectWithLogging({
@@ -2872,8 +2812,8 @@ export class GameActionController implements GameActionDefinitionMap {
       });
     }
 
-    for (const expansion of Object.keys(this.customCardEffectHandlers)) {
-      const effects = this.customCardEffectHandlers[expansion];
+    for (const expansion of Object.keys(this._customCardEffectHandlers)) {
+      const effects = this._customCardEffectHandlers[expansion];
       effectFn = effects[card.cardKey];
       if (effectFn) {
         // Run expansion-registered card effects with standardized logging.
@@ -2894,7 +2834,7 @@ export class GameActionController implements GameActionDefinitionMap {
 
     // handle reactions for the card played
     reactionContext = {};
-    await this.reactionManager.runTrigger({ trigger: afterCardPlayedTrigger, reactionContext });
+    await this._reactionManager.runTrigger({ trigger: afterCardPlayedTrigger, reactionContext });
   }
 
   // Generic shuffle action used by card and card-like shuffles.
@@ -2932,7 +2872,7 @@ export class GameActionController implements GameActionDefinitionMap {
       cardLikeIds: cardLikeIds.length ? [...cardLikeIds] : undefined,
       source: context?.loggingContext?.source,
     });
-    await this.reactionManager.runTrigger({ trigger });
+    await this._reactionManager.runTrigger({ trigger });
   }
 
   // Helper method to shuffle a player's deck
@@ -2957,7 +2897,7 @@ export class GameActionController implements GameActionDefinitionMap {
       await this.shuffle({ playerId, cardIds: deck }, context);
     }
 
-    this.logManager.addLogEntry({
+    this._logManager.addLogEntry({
       type: 'shuffleDeck',
       playerId: args.playerId,
       source: context?.loggingContext?.source,
@@ -2972,7 +2912,7 @@ export class GameActionController implements GameActionDefinitionMap {
     const includeDiscard = args.includeDiscard ?? false;
 
     // Resolve the target piles based on kind.
-    const piles = args.kind === 'boon' ? this.match.boons : this.match.hexes;
+    const piles = args.kind === 'boon' ? this._match.boons : this._match.hexes;
 
     const deck = piles.deck;
     const discard = piles.discard;

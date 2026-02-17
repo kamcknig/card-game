@@ -25,21 +25,6 @@ import {PlayerRegistryService} from './player-registry-service.ts';
 import {MatchStartOrchestrator} from './match-start-orchestrator.ts';
 import {MatchControllerFactory} from './match-controller-factory.ts';
 
-// Dependencies injected by the server composition root.
-export interface GameDependencies {
-  io: Server<ServerListenEvents, ServerEmitEvents>;
-  maxPlayers: number;
-  matchControllerFactory: MatchControllerFactory;
-  configStore: GameConfigurationStore;
-  lobbySocketBindings: LobbySocketBindings;
-  expansionSearchService: ExpansionSearchService;
-  expansionCompatibilityService: ExpansionCompatibilityService;
-  disconnectedPlayerVoteService: DisconnectedPlayerVoteService;
-  playerSessionService: PlayerSessionService;
-  playerRegistryService: PlayerRegistryService;
-  matchStartOrchestrator: MatchStartOrchestrator;
-}
-
 const defaultMatchConfiguration: MatchConfiguration = {
   expansions: [
     {
@@ -85,59 +70,37 @@ export class Game {
   public matchStarted: boolean = false;
 
   private _socketMap: Map<PlayerId, AppSocket> = new Map();
-  // Socket.io server injected from composition root.
-  private readonly _io: Server<ServerListenEvents, ServerEmitEvents>;
-  // Match controller factory injected from composition root for explicit wiring.
-  private readonly _matchControllerFactory: MatchControllerFactory;
-  // Store abstraction for persisted lobby configuration.
-  private readonly _configStore: GameConfigurationStore;
-  // Socket binding helper that owns lobby transport event registrations.
-  private readonly _lobbySocketBindings: LobbySocketBindings;
-  // Search service that owns all lobby card-like indexes.
-  private readonly _expansionSearchService: ExpansionSearchService;
-  // Compatibility service that enforces expansion mutual-exclusion rules.
-  private readonly _expansionCompatibilityService: ExpansionCompatibilityService;
-  // Service that tracks disconnected-player removal voting state.
-  private readonly _disconnectedPlayerVoteService: DisconnectedPlayerVoteService;
-  // Service that decides owner/session transitions.
-  private readonly _playerSessionService: PlayerSessionService;
-  // Service that owns player record lifecycle mutations.
-  private readonly _playerRegistryService: PlayerRegistryService;
-  // Service that runs the lobby->match startup sequence.
-  private readonly _matchStartOrchestrator: MatchStartOrchestrator;
   private _matchController: MatchController | undefined;
   private _matchConfiguration: MatchConfiguration | undefined;
   private _availableExpansion: ExpansionListElement[] = [];
-  // Max players allowed in a game.
-  private readonly _maxPlayers: number;
   // When true, the game ends automatically if no human players remain connected.
   private readonly _endMatchWhenNoHumans: boolean;
 
   constructor(
-    io: Server<ServerListenEvents, ServerEmitEvents>,
-    maxPlayers: number,
-    matchControllerFactory: MatchControllerFactory,
-    configStore: GameConfigurationStore,
-    lobbySocketBindings: LobbySocketBindings,
-    expansionSearchService: ExpansionSearchService,
-    expansionCompatibilityService: ExpansionCompatibilityService,
-    disconnectedPlayerVoteService: DisconnectedPlayerVoteService,
-    playerSessionService: PlayerSessionService,
-    playerRegistryService: PlayerRegistryService,
-    matchStartOrchestrator: MatchStartOrchestrator,
+    // Socket.io server injected from composition root.
+    private readonly _io: Server<ServerListenEvents, ServerEmitEvents>,
+    // Max players allowed in a game.
+    private readonly _maxPlayers: number,
+    // Match controller factory injected from composition root for explicit wiring.
+    private readonly _matchControllerFactory: MatchControllerFactory,
+    // Store abstraction for persisted lobby configuration.
+    private readonly _configStore: GameConfigurationStore,
+    // Socket binding helper that owns lobby transport event registrations.
+    private readonly _lobbySocketBindings: LobbySocketBindings,
+    // Search service that owns all lobby card-like indexes.
+    private readonly _expansionSearchService: ExpansionSearchService,
+    // Compatibility service that enforces expansion mutual-exclusion rules.
+    private readonly _expansionCompatibilityService: ExpansionCompatibilityService,
+    // Service that tracks disconnected-player removal voting state.
+    private readonly _disconnectedPlayerVoteService: DisconnectedPlayerVoteService,
+    // Service that decides owner/session transitions.
+    private readonly _playerSessionService: PlayerSessionService,
+    // Service that owns player record lifecycle mutations.
+    private readonly _playerRegistryService: PlayerRegistryService,
+    // Service that runs the lobby->match startup sequence.
+    private readonly _matchStartOrchestrator: MatchStartOrchestrator,
   ) {
     console.log(`[game] created`);
-    this._io = io;
-    this._matchControllerFactory = matchControllerFactory;
-    this._configStore = configStore;
-    this._lobbySocketBindings = lobbySocketBindings;
-    this._expansionSearchService = expansionSearchService;
-    this._expansionCompatibilityService = expansionCompatibilityService;
-    this._disconnectedPlayerVoteService = disconnectedPlayerVoteService;
-    this._playerSessionService = playerSessionService;
-    this._playerRegistryService = playerRegistryService;
-    this._matchStartOrchestrator = matchStartOrchestrator;
-    this._maxPlayers = maxPlayers;
     // Configure whether to end the match when all human players leave (default: true).
     const endOnNoHumansEnv = Deno.env.get('END_MATCH_ON_NO_HUMANS') ?? 'true';
     this._endMatchWhenNoHumans = endOnNoHumansEnv.toLowerCase() !== 'false';

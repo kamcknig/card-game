@@ -4,7 +4,7 @@ export class CardSourceController {
   private readonly _sourceMap: Map<string, CardId[]> = new Map();
   private readonly _tagMap: Map<string, CardLocation[]> = new Map();
 
-  constructor(private match: Match) {
+  constructor(private readonly _match: Match) {
   }
 
   registerZone(sourceKey: CardLocation, source: CardId[], index: number = NaN, tags: string[] = []) {
@@ -15,16 +15,16 @@ export class CardSourceController {
     }
 
     const newSource = source ?? [];
-    this.match.cardSources[key] = newSource;
+    this._match.cardSources[key] = newSource;
     this._sourceMap.set(key, newSource);
 
     for (const tag of tags) {
       if (!this._tagMap.has(tag)) {
-        this.match.cardSourceTagMap[tag] = [key];
+        this._match.cardSourceTagMap[tag] = [key];
         this._tagMap.set(tag, [key]);
       } else {
         this._tagMap.get(tag)!.push(key);
-        this.match.cardSourceTagMap[tag].push(key);
+        this._match.cardSourceTagMap[tag].push(key);
       }
     }
 

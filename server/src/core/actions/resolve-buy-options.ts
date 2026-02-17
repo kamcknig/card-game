@@ -21,14 +21,6 @@ export type ResolveBuyOptionsArgs = {
   playerId: PlayerId;
 };
 
-export interface BuyOptionsResolverDependencies {
-  match: Match;
-  cardLibrary: MatchCardLibrary;
-  cardPriceController: CardPriceRulesController;
-  cardSourceController: CardSourceController;
-  findCardService: FindCardService;
-}
-
 // Stringifies treasure/potion/debt cost for user-facing option labels.
 const formatCostLabel = (cost: CardCost): string => {
   const parts: string[] = [];
@@ -43,25 +35,13 @@ const formatCostLabel = (cost: CardCost): string => {
 };
 
 export class BuyOptionsResolver {
-  private readonly match: Match;
-  private readonly cardLibrary: MatchCardLibrary;
-  private readonly cardPriceController: CardPriceRulesController;
-  private readonly cardSourceController: CardSourceController;
-  private readonly findCardService: FindCardService;
-
   constructor(
-    match: Match,
-    cardLibrary: MatchCardLibrary,
-    cardPriceController: CardPriceRulesController,
-    cardSourceController: CardSourceController,
-    findCardService: FindCardService,
-  ) {
-    this.match = match;
-    this.cardLibrary = cardLibrary;
-    this.cardPriceController = cardPriceController;
-    this.cardSourceController = cardSourceController;
-    this.findCardService = findCardService;
-  }
+    private readonly _match: Match,
+    private readonly _cardLibrary: MatchCardLibrary,
+    private readonly _cardPriceController: CardPriceRulesController,
+    private readonly _cardSourceController: CardSourceController,
+    private readonly _findCardService: FindCardService,
+  ) {}
 
   // Resolves all currently legal ways the player can buy the card.
   public resolveBuyOptions(args: ResolveBuyOptionsArgs): {
@@ -69,8 +49,8 @@ export class BuyOptionsResolver {
     cost: CardCost;
     options: ResolvedBuyOption[];
   } {
-    const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
-    const { restricted, cost } = this.cardPriceController.applyRules(card, {
+    const card = args.cardId instanceof Card ? args.cardId : this._cardLibrary.getCard(args.cardId);
+    const { restricted, cost } = this._cardPriceController.applyRules(card, {
       playerId: args.playerId,
     });
 
@@ -78,8 +58,8 @@ export class BuyOptionsResolver {
     const canBuyCondition = cardActionConditionMapFactory[card.cardKey]?.canBuy;
     if (
       canBuyCondition && !canBuyCondition({
-        match: this.match,
-        cardLibrary: this.cardLibrary,
+        match: this._match,
+        cardLibrary: this._cardLibrary,
         playerId: args.playerId,
       })
     ) {
@@ -91,8 +71,8 @@ export class BuyOptionsResolver {
     // Standard payment is available only when normal treasure/potion affordability passes.
     if (
       !restricted &&
-      cost.treasure <= this.match.playerTreasure &&
-      (cost.potion === undefined || cost.potion <= this.match.playerPotions)
+      cost.treasure <= this._match.playerTreasure &&
+      (cost.potion === undefined || cost.potion <= this._match.playerPotions)
     ) {
       options.push({
         id: 'standard',
@@ -107,13 +87,13 @@ export class BuyOptionsResolver {
     for (const option of alternateOptions) {
       if (
         !option.canBuy({
-          match: this.match,
+          match: this._match,
           playerId: args.playerId,
           card,
-          cardLibrary: this.cardLibrary,
-          findCardService: this.findCardService,
-          cardSourceController: this.cardSourceController,
-          cardPriceController: this.cardPriceController,
+          cardLibrary: this._cardLibrary,
+          findCardService: this._findCardService,
+          cardSourceController: this._cardSourceController,
+          cardPriceController: this._cardPriceController,
         })
       ) {
         continue;

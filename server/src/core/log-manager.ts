@@ -3,14 +3,10 @@ import { AppSocket, DistributiveOmit } from '@server-types/index.ts';
 
 export class LogManager {
   private _depth: number = 0;
-  private readonly _socketMap: Map<PlayerId, AppSocket>;
   private _history: LogEntry[] = [];
   // Cap history to prevent unbounded growth.
   private readonly _historyLimit = 5000;
-
-  constructor(socketMap: Map<PlayerId, AppSocket>) {
-    this._socketMap = socketMap;
-  }
+  constructor(private readonly _socketMap: Map<PlayerId, AppSocket>) {}
 
   public addLogEntry(entry: DistributiveOmit<LogEntry, 'depth'> & { root?: boolean }) {
     if (entry.root) {

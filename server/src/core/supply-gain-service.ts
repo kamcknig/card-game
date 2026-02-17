@@ -4,19 +4,11 @@ import { CardId, CardKey, CardLocationSpec, PlayerId } from 'shared/types/index.
 // Supply locations that can provide top cards for pile-key gain effects.
 type SupplyLocation = 'basicSupply' | 'kingdomSupply';
 
-export interface SupplyGainServiceDependencies {
-  findCardService: FindCardService;
-  runGameActionDelegate: RunGameActionDelegate;
-}
-
 export class DefaultSupplyGainService implements SupplyGainService {
-  private readonly findCardService: FindCardService;
-  private readonly runGameActionDelegate: RunGameActionDelegate;
-
-  constructor(findCardService: FindCardService, runGameActionDelegate: RunGameActionDelegate) {
-    this.findCardService = findCardService;
-    this.runGameActionDelegate = runGameActionDelegate;
-  }
+  constructor(
+    private readonly _findCardService: FindCardService,
+    private readonly _runGameActionDelegate: RunGameActionDelegate,
+  ) {}
 
   // Gains the current top card for a pile key from Supply to the specified destination.
   public async gainTopSupplyCardForPileKey(args: {
@@ -35,7 +27,7 @@ export class DefaultSupplyGainService implements SupplyGainService {
       `[${tag}] attempting top-supply gain for player ${args.playerId}: pileKey=${args.pileKey}, from=${fromLocations.join(',')}, to=${args.to.location}`,
     );
 
-    const topSupplyCard = this.findCardService.findTopSupplyCardForPileKey({
+    const topSupplyCard = this._findCardService.findTopSupplyCardForPileKey({
       pileKey: args.pileKey,
       from: args.from,
     });
@@ -46,7 +38,7 @@ export class DefaultSupplyGainService implements SupplyGainService {
 
     console.debug(`[${tag}] found top cardId=${topSupplyCard.id} for pile ${args.pileKey}, gaining now`);
 
-    await this.runGameActionDelegate('gainCard', {
+    await this._runGameActionDelegate('gainCard', {
       playerId: args.playerId,
       cardId: topSupplyCard.id,
       to: args.to,
