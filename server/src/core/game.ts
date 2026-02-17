@@ -20,6 +20,8 @@ import {FileGameConfigurationStore, GameConfigurationStore} from './game-configu
 import {LobbySocketBindings} from './lobby-socket-bindings.ts';
 import {ExpansionSearchService} from './expansion-search-service.ts';
 import {ExpansionCompatibilityService} from './expansion-compatibility-service.ts';
+import {DisconnectedPlayerVoteService} from './disconnected-player-vote-service.ts';
+import {PlayerSessionService} from './player-session-service.ts';
 
 // Factory signature for creating a match controller instance.
 export type MatchControllerFactory = (
@@ -39,6 +41,8 @@ export interface GameDependencies {
   lobbySocketBindings?: LobbySocketBindings;
   expansionSearchService?: ExpansionSearchService;
   expansionCompatibilityService?: ExpansionCompatibilityService;
+  disconnectedPlayerVoteService?: DisconnectedPlayerVoteService;
+  playerSessionService?: PlayerSessionService;
 }
 
 const defaultMatchConfiguration: MatchConfiguration = {
@@ -84,9 +88,6 @@ export class Game {
   public players: Player[] = [];
   public owner: Player | undefined;
   public matchStarted: boolean = false;
-  // Track pending removal votes for disconnected human players in queue order.
-  private _pendingRemovalQueue: PlayerId[] = [];
-  private _removalVotes: Map<PlayerId, Set<PlayerId>> = new Map();
 
   private _socketMap: Map<PlayerId, AppSocket> = new Map();
   // Socket.io server injected from composition root.
@@ -101,6 +102,10 @@ export class Game {
   private readonly _expansionSearchService: ExpansionSearchService;
   // Compatibility service that enforces expansion mutual-exclusion rules.
   private readonly _expansionCompatibilityService: ExpansionCompatibilityService;
+  // Service that tracks disconnected-player removal voting state.
+  private readonly _disconnectedPlayerVoteService: DisconnectedPlayerVoteService;
+  // Service that decides owner/session transitions.
+  private readonly _playerSessionService: PlayerSessionService;
   private _matchController: MatchController | undefined;
   private _matchConfiguration: MatchConfiguration | undefined;
   private _availableExpansion: ExpansionListElement[] = [];
@@ -114,6 +119,8 @@ export class Game {
     lobbySocketBindings = new LobbySocketBindings(),
     expansionSearchService = new ExpansionSearchService(),
     expansionCompatibilityService = new ExpansionCompatibilityService(),
+    disconnectedPlayerVoteService = new DisconnectedPlayerVoteService(),
+    playerSessionService = new PlayerSessionService(),
   }: GameDependencies) {
     console.log(`[game] created`);
     this._io = io;
@@ -122,6 +129,8 @@ export class Game {
     this._lobbySocketBindings = lobbySocketBindings;
     this._expansionSearchService = expansionSearchService;
     this._expansionCompatibilityService = expansionCompatibilityService;
+    this._disconnectedPlayerVoteService = disconnectedPlayerVoteService;
+    this._playerSessionService = playerSessionService;
     // Configure whether to end the match when all human players leave (default: true).
     const endOnNoHumansEnv = Deno.env.get('END_MATCH_ON_NO_HUMANS') ?? 'true';
     this._endMatchWhenNoHumans = endOnNoHumansEnv.toLowerCase() !== 'false';
@@ -233,10 +242,11 @@ export class Game {
     this._io.in('game').emit('playerConnected', player);
     socket.emit('setPlayer', player);
 
-    if (!this.owner || this.owner.isComputer) {
-      console.info(`[game] game owner does not exist, setting to ${player}`);
-      this.owner = player;
+    const nextOwner = this._playerSessionService.selectOwnerOnJoin(this.owner, player);
+    if (nextOwner.id !== this.owner?.id) {
+      console.info(`[game] game owner does not exist, setting to ${nextOwner}`);
     }
+    this.owner = nextOwner;
 
     if (this.owner?.id === player.id) {
       this.bindOwnerLobbyHandlers(socket, player.id);
@@ -251,11 +261,11 @@ export class Game {
       // Restore the current turn order for reconnecting clients.
       socket.emit('setPlayerList', this.players);
       // Remove any pending removal vote if the player reconnects.
-      this.removePendingRemovalPlayer(player.id);
+      this._disconnectedPlayerVoteService.removePendingRemovalPlayer(this.players, player.id);
       this._matchController?.playerReconnected(player.id, socket);
       this.registerRemovalVoteHandler(socket, player.id);
       // Resume flow if no human players remain disconnected.
-      const hasDisconnectedHuman = this.players.some((p) => !p.connected && !p.isComputer);
+      const hasDisconnectedHuman = this._playerSessionService.hasDisconnectedHumanPlayers(this.players);
       if (!hasDisconnectedHuman) {
         void this._matchController?.runGameAction('checkForRemainingPlayerActions');
       }
@@ -292,7 +302,7 @@ export class Game {
     player.connected = false;
     player.ready = false;
 
-    const hasConnectedHuman = this.players.some((p) => p.connected && !p.isComputer);
+    const hasConnectedHuman = this._playerSessionService.hasConnectedHumanPlayers(this.players);
     if (!hasConnectedHuman && this._endMatchWhenNoHumans) {
       console.log('[game] no human players left in game, clearing game state completely');
       this.clearMatch();
@@ -302,7 +312,7 @@ export class Game {
     if (player.id === this.owner?.id) {
       this._lobbySocketBindings.unbindOwnerLobbyHandlers(this._socketMap.get(player.id));
 
-      const replacement = this.players.find((p) => p.connected && !p.isComputer);
+      const replacement = this._playerSessionService.findReplacementOwner(this.players, player.id);
       if (replacement) {
         this.owner = replacement;
         this._io.in('game').emit('gameOwnerUpdated', replacement.id);
@@ -317,7 +327,7 @@ export class Game {
       this._matchController?.playerDisconnected(player.id);
       // Begin removal vote flow for disconnected humans.
       if (!player.isComputer) {
-        this.addPendingRemovalPlayer(player.id);
+        this._disconnectedPlayerVoteService.addPendingRemovalPlayer(this.players, player.id);
       }
     }
     this._io.in('game').emit('playerDisconnected', player);
@@ -335,6 +345,7 @@ export class Game {
     this.players = [];
     this.owner = undefined;
     this.matchStarted = false;
+    this._disconnectedPlayerVoteService.reset();
     this.createNewMatch();
   };
 
@@ -507,23 +518,10 @@ export class Game {
   private onRemoveDisconnectedPlayerVote(voterId: PlayerId, targetPlayerId: PlayerId) {
     if (!this.matchStarted) return;
     // Only allow voting for the current pending target.
-    if (this.getPendingRemovalPlayerId() !== targetPlayerId) return;
+    if (this._disconnectedPlayerVoteService.getPendingRemovalPlayerId() !== targetPlayerId) return;
 
-    const voter = this.players.find((p) => p.id === voterId);
-    const target = this.players.find((p) => p.id === targetPlayerId);
-    if (!voter || !target) return;
-    if (voter.isComputer || !voter.connected) return;
-    if (target.isComputer || target.connected) return;
-
-    const connectedHumans = this.players.filter((p) => p.connected && !p.isComputer && p.id !== targetPlayerId);
-    if (!connectedHumans.length) return;
-
-    const votes = this._removalVotes.get(targetPlayerId) ?? new Set<PlayerId>();
-    votes.add(voterId);
-    this._removalVotes.set(targetPlayerId, votes);
-
-    const allVoted = connectedHumans.every((p) => votes.has(p.id));
-    if (!allVoted) return;
+    const voteResult = this._disconnectedPlayerVoteService.registerRemovalVote(this.players, voterId, targetPlayerId);
+    if (!voteResult.accepted || !voteResult.allVoted) return;
 
     // Remove the player from the match and resume play.
     this.players = this.players.filter((p) => p.id !== targetPlayerId);
@@ -532,48 +530,15 @@ export class Game {
     this._io.in('game').emit('setPlayerList', this.players);
 
     if (this.owner?.id === targetPlayerId) {
-      const replacement = this.players.find((p) => p.connected && !p.isComputer);
+      const replacement = this._playerSessionService.findReplacementOwner(this.players, targetPlayerId);
       if (replacement) {
         this.owner = replacement;
         this._io.in('game').emit('gameOwnerUpdated', replacement.id);
       }
     }
 
-    this.removePendingRemovalPlayer(targetPlayerId);
+    this._disconnectedPlayerVoteService.removePendingRemovalPlayer(this.players, targetPlayerId);
     void this._matchController?.runGameAction('checkForRemainingPlayerActions');
-  }
-
-  // Returns the current pending removal target, if any.
-  private getPendingRemovalPlayerId(): PlayerId | undefined {
-    return this._pendingRemovalQueue[0];
-  }
-
-  // Adds a disconnected human player to the removal queue.
-  private addPendingRemovalPlayer(playerId: PlayerId) {
-    if (this._pendingRemovalQueue.includes(playerId)) return;
-    this._pendingRemovalQueue.push(playerId);
-    this.sortPendingRemovalQueue();
-    // Ensure we track votes for the pending player.
-    this._removalVotes.set(playerId, this._removalVotes.get(playerId) ?? new Set());
-  }
-
-  // Removes a player from the pending queue and clears their votes.
-  private removePendingRemovalPlayer(playerId: PlayerId) {
-    this._pendingRemovalQueue = this._pendingRemovalQueue.filter((id) => id !== playerId);
-    this._removalVotes.delete(playerId);
-    this.sortPendingRemovalQueue();
-  }
-
-  // Keeps the queue ordered by current player list while filtering out reconnected/computer players.
-  private sortPendingRemovalQueue() {
-    const disconnectedHumans = new Set(
-      this.players
-        .filter((p) => !p.connected && !p.isComputer)
-        .map((p) => p.id),
-    );
-    this._pendingRemovalQueue = this._pendingRemovalQueue.filter((id) => disconnectedHumans.has(id));
-    const order = new Map(this.players.map((p, idx) => [p.id, idx]));
-    this._pendingRemovalQueue.sort((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0));
   }
 
   // Binds owner-only lobby handlers for the provided owner socket.

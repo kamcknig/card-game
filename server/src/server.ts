@@ -7,6 +7,8 @@ import { ExpansionSearchService } from './core/expansion-search-service.ts';
 import { ExpansionCompatibilityService } from './core/expansion-compatibility-service.ts';
 import { FileGameConfigurationStore } from './core/game-configuration-store.ts';
 import { LobbySocketBindings } from './core/lobby-socket-bindings.ts';
+import { DisconnectedPlayerVoteService } from './core/disconnected-player-vote-service.ts';
+import { PlayerSessionService } from './core/player-session-service.ts';
 import { loadExpansion } from './utils/load-expansion.ts';
 import { asClass, asValue, createContainer, InjectionMode } from 'awilix';
 
@@ -52,6 +54,8 @@ container.register({
   expansionCompatibilityService: asClass(ExpansionCompatibilityService).singleton(),
   configStore: asClass(FileGameConfigurationStore).singleton(),
   lobbySocketBindings: asClass(LobbySocketBindings).singleton(),
+  disconnectedPlayerVoteService: asClass(DisconnectedPlayerVoteService).singleton(),
+  playerSessionService: asClass(PlayerSessionService).singleton(),
   game: asClass(Game).singleton(),
 });
 
