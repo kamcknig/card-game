@@ -60,6 +60,7 @@ When rules conflict, use this order:
 ### Code commits
 
 - No mention of AI use.
+- Do not commit without explicit approval.
 
 ### Out of Scope
 
