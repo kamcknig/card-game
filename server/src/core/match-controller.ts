@@ -43,6 +43,7 @@ import { EndGameEvaluatorService } from './end-game-evaluator-service.ts';
 import { PlayerReconnectOrchestrator } from './player-reconnect-orchestrator.ts';
 import type { MatchRuntime } from './match-runtime-factory.ts';
 import { MatchSetupService } from './match-setup-service.ts';
+import { EndGamePolicyRegistryService } from './end-game-policy-registry-service.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardLibSnapshot = {};
@@ -93,6 +94,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     private readonly cardLibrary: MatchCardLibrary,
     private readonly cardSourceController: CardSourceController,
     private readonly matchSetupService: MatchSetupService,
+    private readonly endGamePolicyRegistryService: EndGamePolicyRegistryService,
   ) {
     super();
   }
@@ -190,6 +192,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         this._reactionManager?.registerGameEvent(event, handler),
       clientEventRegistrar: (event, handler) => this.clientEventRegistrar(event, handler),
       endGameConditionRegistrar: (val) => this._expansionEndGameConditionFns.push(val),
+      endGamePolicyRegistrar: (val) => this.endGamePolicyRegistryService.register(val),
       cardEffectRegistrar: (...args) => this._gameActionsController?.registerCardEffect(...args),
       boonEffectRegistrar: (cardKey, effectFn) => this._gameActionsController?.registerBoonEffect(cardKey, effectFn),
       hexEffectRegistrar: (cardKey, effectFn) => this._gameActionsController?.registerHexEffect(cardKey, effectFn),

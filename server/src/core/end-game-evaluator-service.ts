@@ -1,19 +1,23 @@
-import { EndGameConditionFn, FindCardService, SupplyGainService } from '@server-types/index.ts';
-import { Match, PlayerId } from 'shared/types/index.ts';
+import {
+  EndGameConditionFn,
+  EndGamePolicyFnOutcome,
+  FindCardService,
+  SupplyGainService,
+} from '@server-types/index.ts';
+import { Match } from 'shared/types/index.ts';
 import { MatchCardLibrary } from './match-card-library.ts';
 import { CardPriceRulesController } from './card-price-rules-controller.ts';
 import { CardSourceController } from './card-source-controller.ts';
 import { LogManager } from './log-manager.ts';
 import { ReactionManager } from './reactions/reaction-manager.ts';
 import { getStartingSupplyCount } from '../utils/get-starting-supply-count.ts';
-import { renaissanceTokenIds } from '@expansions/renaissance/token-ids-renaissance.ts';
+import { EndGamePolicyRegistryService } from './end-game-policy-registry-service.ts';
 
 export interface EndGameEvaluationResult {
   shouldEndNow: boolean;
-  fleetActivated: boolean;
 }
 
-// Evaluates game-end conditions for a match while MatchController handles orchestration.
+// Evaluates endgame through base rules plus expansion-registered policy functions.
 export class EndGameEvaluatorService {
   constructor(
     private readonly match: Match,
@@ -24,7 +28,39 @@ export class EndGameEvaluatorService {
     private readonly reactionManager: ReactionManager,
     private readonly findCardService: FindCardService,
     private readonly supplyGainService: SupplyGainService,
+    private readonly endGamePolicyRegistryService: EndGamePolicyRegistryService,
   ) {}
+
+  public evaluateEndGame(expansionEndGameConditionFns: EndGameConditionFn[]): EndGameEvaluationResult {
+    let endTriggered = this.shouldEndGame(expansionEndGameConditionFns);
+
+    for (const policy of this.endGamePolicyRegistryService.getPolicies()) {
+      const outcome = policy({
+        cardSourceController: this.cardSourceController,
+        match: this.match,
+        cardLibrary: this.cardLibrary,
+        cardPriceController: this.cardPriceController,
+        logManager: this.logManager,
+        reactionManager: this.reactionManager,
+        findCardService: this.findCardService,
+        supplyGainService: this.supplyGainService,
+        expansionEndGameConditionFns,
+        endTriggered,
+      });
+      const decision = this.applyOutcome(outcome);
+      if (outcome.endTriggered !== undefined) {
+        endTriggered = outcome.endTriggered;
+      }
+      if (decision === 'end_now') {
+        return { shouldEndNow: true };
+      }
+      if (decision === 'defer') {
+        return { shouldEndNow: false };
+      }
+    }
+
+    return { shouldEndNow: endTriggered };
+  }
 
   public shouldEndGame(expansionEndGameConditionFns: EndGameConditionFn[]): boolean {
     if (
@@ -40,7 +76,6 @@ export class EndGameEvaluatorService {
     const startingSupplyCount = getStartingSupplyCount(this.match);
     const remainingSupplyCount = this.findCardService.getRemainingSupplyCount();
     const emptyPileCount = startingSupplyCount - remainingSupplyCount;
-
     console.debug(`[match] empty pile count ${emptyPileCount}`);
 
     if (emptyPileCount === 3) {
@@ -68,79 +103,13 @@ export class EndGameEvaluatorService {
     return false;
   }
 
-  // Resolves Fleet-aware endgame transition and mutates match Fleet state when needed.
-  public evaluateEndGame(expansionEndGameConditionFns: EndGameConditionFn[]): EndGameEvaluationResult {
-    // Fleet latches game-end state once activated; do not re-evaluate end conditions during Fleet turns.
-    if (this.match.fleetRound.completed) {
-      console.info('[match] Fleet round completed; finalizing game end');
-      return { shouldEndNow: true, fleetActivated: false };
+  private applyOutcome(outcome: EndGamePolicyFnOutcome): 'continue' | 'defer' | 'end_now' {
+    if (outcome.decision === 'defer') {
+      return 'defer';
     }
-
-    if (this.match.fleetRound.active) {
-      console.info('[match] game end latched; Fleet round still active');
-      return { shouldEndNow: false, fleetActivated: false };
+    if (outcome.decision === 'end_now') {
+      return 'end_now';
     }
-
-    if (!this.shouldEndGame(expansionEndGameConditionFns)) {
-      return { shouldEndNow: false, fleetActivated: false };
-    }
-
-    // Determine Fleet-eligible players once at game-end latch time.
-    const fleetEligiblePlayerIds = this.getFleetEligiblePlayerIdsInOrder(this.match.currentPlayerTurnIndex);
-    if (!fleetEligiblePlayerIds.length) {
-      console.info('[match] no Fleet owners; ending game immediately');
-      return { shouldEndNow: true, fleetActivated: false };
-    }
-
-    // Activate Fleet endgame round and defer final scoring until all Fleet turns are complete.
-    this.match.fleetRound.active = true;
-    this.match.fleetRound.completed = false;
-    this.match.fleetRound.eligiblePlayerIdsInOrder = fleetEligiblePlayerIds;
-    this.match.fleetRound.nextFleetPlayerIndex = 0;
-    this.match.fleetRound.endingPlayerId = this.match.players[this.match.currentPlayerTurnIndex]?.id;
-    this.match.fleetRound.startedAtTurnNumber = this.match.turnNumber;
-
-    console.info(
-      `[match] Fleet round activated by player ${this.match.fleetRound.endingPlayerId}; order: ${
-        fleetEligiblePlayerIds.join(', ')
-      }`,
-    );
-
-    return { shouldEndNow: false, fleetActivated: true };
-  }
-
-  // Returns true when the given player currently owns Fleet via a cube token.
-  private doesPlayerOwnFleet(playerId: PlayerId): boolean {
-    const fleetProjectId = this.match.projects.find((project) => project.cardKey === 'fleet')?.id;
-    if (fleetProjectId === undefined) {
-      return false;
-    }
-
-    return Object.values(this.match.tokens ?? {}).some((token) =>
-      token.tokenId === renaissanceTokenIds.cube &&
-      token.ownerId === playerId &&
-      token.location.type === 'cardLike' &&
-      token.location.cardLikeId === fleetProjectId
-    );
-  }
-
-  // Builds Fleet turn order starting with the next player after the player ending the game.
-  private getFleetEligiblePlayerIdsInOrder(endingPlayerIndex: number): PlayerId[] {
-    const players = this.match.players;
-    const eligiblePlayerIds: PlayerId[] = [];
-    if (!players.length) {
-      return eligiblePlayerIds;
-    }
-
-    for (let offset = 1; offset <= players.length; offset++) {
-      const playerIndex = (endingPlayerIndex + offset) % players.length;
-      const player = players[playerIndex];
-      if (!player) continue;
-      if (this.doesPlayerOwnFleet(player.id)) {
-        eligiblePlayerIds.push(player.id);
-      }
-    }
-
-    return eligiblePlayerIds;
+    return 'continue';
   }
 }

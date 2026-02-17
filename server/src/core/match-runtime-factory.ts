@@ -18,12 +18,14 @@ import {EndGameEvaluatorService} from './end-game-evaluator-service.ts';
 import {PlayerReconnectOrchestrator} from './player-reconnect-orchestrator.ts';
 import {ExpansionSearchService} from './expansion-search-service.ts';
 import {MatchSocketBindings} from './match-socket-bindings.ts';
+import {EndGamePolicyRegistryService} from './end-game-policy-registry-service.ts';
 
 export interface MatchRuntimeFactoryArgs {
   socketMap: Map<PlayerId, AppSocket>;
   match: Match;
   cardLibrary: MatchCardLibrary;
   cardSourceController: CardSourceController;
+  endGamePolicyRegistryService: EndGamePolicyRegistryService;
   runGameActionDelegate: <K extends string>(action: K, ...args: unknown[]) => Promise<unknown>;
 }
 
@@ -51,6 +53,7 @@ export class MatchRuntimeFactory {
     match,
     cardLibrary,
     cardSourceController,
+    endGamePolicyRegistryService,
     runGameActionDelegate,
   }: MatchRuntimeFactoryArgs): MatchRuntime {
     const cardEffectFunctionMap = Object.keys(cardEffectFunctionMapFactory).reduce((acc, nextKey) => {
@@ -87,6 +90,7 @@ export class MatchRuntimeFactory {
       match: asValue(match),
       cardLibrary: asValue(cardLibrary),
       cardSourceController: asValue(cardSourceController),
+      endGamePolicyRegistryService: asValue(endGamePolicyRegistryService),
       runGameActionDelegate: asValue(runGameActionDelegate),
       expansionSearchService: asValue(this.expansionSearchService),
       matchSocketBindings: asValue(this.matchSocketBindings),

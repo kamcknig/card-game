@@ -821,6 +821,17 @@ export type PlayerScoreDecorator = (playerId: PlayerId, match: Match, cardLibrar
 export type EndGameConditionFnContext = AppContext;
 export type EndGameConditionFn = (args: EndGameConditionFnContext) => boolean;
 export type EndGameConditionRegistrar = (endGameConditionFn: EndGameConditionFn) => void;
+export type EndGamePolicyDecision = 'continue' | 'end_now' | 'defer';
+export type EndGamePolicyFnContext = EndGameConditionFnContext & {
+  expansionEndGameConditionFns: EndGameConditionFn[];
+  endTriggered: boolean;
+};
+export type EndGamePolicyFnOutcome = {
+  endTriggered?: boolean;
+  decision?: EndGamePolicyDecision;
+};
+export type EndGamePolicyFn = (args: EndGamePolicyFnContext) => EndGamePolicyFnOutcome;
+export type EndGamePolicyRegistrar = (endGamePolicyFn: EndGamePolicyFn) => void;
 
 export type ClientEventRegistrar = <T extends keyof ServerListenEvents>(
   event: T,
@@ -835,6 +846,7 @@ export type InitializeExpansionContext = {
   match: Match;
   clientEventRegistrar: ClientEventRegistrar;
   endGameConditionRegistrar: EndGameConditionRegistrar;
+  endGamePolicyRegistrar: EndGamePolicyRegistrar;
   playerScoreDecoratorRegistrar: PlayerScoreDecoratorRegistrar;
   cardEffectRegistrar: CardEffectRegistrar;
   boonEffectRegistrar: BoonEffectRegistrar;

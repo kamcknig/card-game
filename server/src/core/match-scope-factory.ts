@@ -8,6 +8,7 @@ import { MatchController } from './match-controller.ts';
 import { MatchRuntimeFactory } from './match-runtime-factory.ts';
 import { createInitialMatchState } from './match-state-factory.ts';
 import { MatchSetupService } from './match-setup-service.ts';
+import { EndGamePolicyRegistryService } from './end-game-policy-registry-service.ts';
 
 export interface MatchScope {
   matchController: MatchController;
@@ -36,16 +37,19 @@ export class MatchScopeFactory {
       match: asValue(match),
       cardLibrary: asValue(cardLibrary),
       cardSourceController: asClass(CardSourceController).singleton(),
+      endGamePolicyRegistryService: asClass(EndGamePolicyRegistryService).singleton(),
       matchSetupService: asClass(MatchSetupService).singleton(),
       matchController: asClass(MatchController).singleton(),
     });
 
     const matchController = scope.resolve<MatchController>('matchController');
+    const endGamePolicyRegistryService = scope.resolve<EndGamePolicyRegistryService>('endGamePolicyRegistryService');
     const runtime = this.matchRuntimeFactory.create({
       socketMap,
       match,
       cardLibrary,
       cardSourceController: scope.resolve<CardSourceController>('cardSourceController'),
+      endGamePolicyRegistryService,
       runGameActionDelegate: (action, ...args) => matchController.runGameAction(action as any, ...(args as any)),
     });
     matchController.attachRuntime(runtime);
