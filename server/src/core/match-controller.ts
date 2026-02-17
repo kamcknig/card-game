@@ -2,7 +2,6 @@ import {
   Card,
   CardId,
   CardKey,
-  CardNoId,
   ComputedMatchConfiguration,
   Match,
   MatchConfiguration,
@@ -14,12 +13,10 @@ import {
 } from 'shared/types/index.ts';
 import { MatchConfigurator } from './match-configurator.ts';
 import { getCurrentPlayer } from '../utils/get-current-player.ts';
-import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
 import { scoringFunctionMap } from '@expansions/scoring-function-map.ts';
 import { MatchCardLibrary } from './match-card-library.ts';
 import jsonPatch from 'fast-json-patch';
 import type { Operation } from 'fast-json-patch';
-import { getPlayerById } from '../utils/get-player-by-id.ts';
 import { EventEmitter } from '@denosaurs/event';
 import {
   AppSocket,
@@ -31,24 +28,12 @@ import {
   GameActions,
   GameLifecycleCallback,
   GameLifecycleEvent,
-  MatchBaseConfiguration,
   PlayerScoreDecorator,
 } from '@server-types/index.ts';
-import {
-  createArtifact,
-  createBoon,
-  createCard,
-  createEvent,
-  createHex,
-  createLandmark,
-  createProject,
-  createState,
-} from '../utils/create-card.ts';
 import { CardSourceController } from './card-source-controller.ts';
 import { tokenDefinitionMap } from './tokens/token-definition-map.ts';
 import { prosperityTokenIds } from '@expansions/prosperity/token-prosperity-ids.ts';
 import { renaissanceTokenIds } from '@expansions/renaissance/token-ids-renaissance.ts';
-import { MatchRuntimeFactory } from './match-runtime-factory.ts';
 import { ReactionManager } from './reactions/reaction-manager.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';
 import { LogManager } from './log-manager.ts';
@@ -57,6 +42,8 @@ import { GameActionController } from './actions/game-action-controller.ts';
 import { MatchConfiguratorFactory } from './match-configurator-factory.ts';
 import { EndGameEvaluatorService } from './end-game-evaluator-service.ts';
 import { PlayerReconnectOrchestrator } from './player-reconnect-orchestrator.ts';
+import type { MatchRuntime } from './match-runtime-factory.ts';
+import { MatchSetupService } from './match-setup-service.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardLibSnapshot = {};
@@ -102,13 +89,26 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
   constructor(
     private readonly socketMap: Map<PlayerId, AppSocket>,
-    private readonly matchRuntimeFactory: MatchRuntimeFactory,
     private readonly matchConfiguratorFactory: MatchConfiguratorFactory,
     private readonly match: Match,
     private readonly cardLibrary: MatchCardLibrary,
     private readonly cardSourceController: CardSourceController,
+    private readonly matchSetupService: MatchSetupService,
   ) {
     super();
+  }
+
+  // Attaches runtime-scoped services resolved during match-scope composition.
+  public attachRuntime(runtime: MatchRuntime): void {
+    this._logManager = runtime.logManager;
+    this._cardPriceController = runtime.cardPriceController;
+    this._findCardService = runtime.findCardService;
+    this._supplyGainService = runtime.supplyGainService;
+    this._reactionManager = runtime.reactionManager;
+    this._endGameEvaluator = runtime.endGameEvaluator;
+    this._interactivityController = runtime.interactivityController;
+    this._playerReconnectOrchestrator = runtime.playerReconnectOrchestrator;
+    this._gameActionsController = runtime.gameActionsController;
   }
 
   // Returns true for non-null plain object values.
@@ -172,29 +172,15 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
 
   public async initialize(config: MatchConfiguration) {
+    if (!this._gameActionsController) {
+      throw new Error('[match] runtime not attached before initialize');
+    }
+
     this.broadcastPatch({} as Match);
 
     const snapshot = this.getMatchSnapshot();
     // Load an optional match override from disk for local dev/debugging.
     this._loadedMatchState = await this.tryLoadMatchStateOverride();
-
-    const runtime = this.matchRuntimeFactory.create({
-      socketMap: this.socketMap,
-      match: this.match,
-      cardLibrary: this.cardLibrary,
-      cardSourceController: this.cardSourceController,
-      runGameActionDelegate: (action, ...args) => this.runGameAction(action as any, ...(args as any)),
-    });
-
-    this._logManager = runtime.logManager;
-    this._cardPriceController = runtime.cardPriceController;
-    this._findCardService = runtime.findCardService;
-    this._supplyGainService = runtime.supplyGainService;
-    this._reactionManager = runtime.reactionManager;
-    this._endGameEvaluator = runtime.endGameEvaluator;
-    this._interactivityController = runtime.interactivityController;
-    this._playerReconnectOrchestrator = runtime.playerReconnectOrchestrator;
-    this._gameActionsController = runtime.gameActionsController;
 
     this._matchConfigurator = this.matchConfiguratorFactory.create(config);
 
@@ -219,7 +205,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     // Use the loaded match state if provided; otherwise build a fresh match state.
     if (this._loadedMatchState) {
       this.applyLoadedMatchState(this._loadedMatchState.match);
-      this.loadCardLibraryFromState(this._loadedMatchState.cardLibrary);
+      this.matchSetupService.loadCardLibraryFromState(this._loadedMatchState.cardLibrary);
       this._matchConfiguration = this._loadedMatchState.match.config ?? newConfig;
       // Ensure match config is always populated for downstream logic.
       this.match.config = this.match.config ?? this._matchConfiguration;
@@ -227,23 +213,26 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this._matchConfiguration = newConfig;
 
       this.match.players = this._matchConfiguration.players;
-      this.createBaseSupply(this._matchConfiguration);
-      this.createKingdom(this._matchConfiguration);
-      this.createEvents(this._matchConfiguration);
+      this.matchSetupService.createBaseSupply(this._matchConfiguration);
+      this.matchSetupService.createKingdom(this._matchConfiguration);
+      this.matchSetupService.createEvents(this._matchConfiguration);
       // Landmarks are landscape card-likes that should be created alongside events.
-      this.createLandmarks(this._matchConfiguration);
+      this.matchSetupService.createLandmarks(this._matchConfiguration);
       // Projects are landscape card-likes that should be created alongside events.
-      this.createProjects(this._matchConfiguration);
+      this.matchSetupService.createProjects(this._matchConfiguration);
       // Boons are initialized after events/landmarks if Fate cards are present.
-      this.createBoons(this._matchConfiguration);
+      this.matchSetupService.createBoons(this._matchConfiguration);
       // Hexes are initialized after boons if Doom cards are present.
-      this.createHexes(this._matchConfiguration);
+      this.matchSetupService.createHexes(this._matchConfiguration);
       // States are initialized after boons/hexes for any state-granting cards.
-      this.createStates(this._matchConfiguration);
+      this.matchSetupService.createStates(this._matchConfiguration);
       // Artifacts are initialized after states for any artifact-granting cards.
-      this.createArtifacts(this._matchConfiguration);
-      this.createNonSupplyCards(this._matchConfiguration);
-      this.createPlayerDecks(this._matchConfiguration);
+      this.matchSetupService.createArtifacts(this._matchConfiguration);
+      this.matchSetupService.createNonSupplyCards(this._matchConfiguration);
+      this.matchSetupService.createPlayerDecks(this._matchConfiguration, this._playerHands);
+      // Shuffle Boons/Hexes once setup has initialized their decks.
+      void this._gameActionsController?.shuffleCardLike({ kind: 'boon' });
+      void this._gameActionsController?.shuffleCardLike({ kind: 'hex' });
       this.match.config = this._matchConfiguration;
     }
 
@@ -329,14 +318,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this.match.fleetRound.nextFleetPlayerIndex ??= 0;
   }
 
-  // Loads a card library snapshot for a loaded match state.
-  private loadCardLibraryFromState(cardLibrary: Record<CardId, Card>): void {
-    for (const card of Object.values(cardLibrary)) {
-      // Rehydrate card instances so downstream logic uses Card class methods.
-      this.cardLibrary.addCard(new Card({ ...card }));
-    }
-  }
-
   private clientEventRegistrar<T extends keyof ServerListenEvents>(event: T, handler: ServerListenEvents[T]) {
     this._registeredEvents.push(event);
     this.socketMap.forEach((s) => {
@@ -359,103 +340,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this.socketMap.get(playerId)?.offAnyIncoming();
     this._interactivityController?.playerRemoved(this.socketMap.get(playerId));
     this.socketMap.delete(playerId);
-  }
-
-  private createBaseSupply(config: ComputedMatchConfiguration) {
-    console.info(`[match] creating base supply cards`);
-    const cardSource = this.cardSourceController.getSource('basicSupply');
-
-    if (!cardSource) {
-      throw new Error(`[match] no basic supply card source found`);
-    }
-
-    for (const supply of Object.values(config.basicSupply)) {
-      for (const card of supply.cards) {
-        if (!card) {
-          throw new Error(`[match] no card data found for ${supply}`);
-        }
-
-        const c = createCard(card.cardKey, { ...card, kingdom: supply.name });
-        this.cardLibrary.addCard(c);
-        cardSource.push(c.id);
-      }
-    }
-  }
-
-  private createKingdom(config: ComputedMatchConfiguration) {
-    console.info(`[match] creating kingdom cards`);
-
-    const cardSource = this.cardSourceController.getSource('kingdomSupply');
-
-    if (!cardSource) {
-      throw new Error(`[match] no basic supply card source found`);
-    }
-
-    for (const kingdom of Object.values(config.kingdomSupply)) {
-      for (const card of kingdom.cards) {
-        if (!card) {
-          throw new Error(`[match] no card data found for ${kingdom}`);
-        }
-
-        const c = createCard(card.cardKey, { ...card, kingdom: kingdom.name });
-        this.cardLibrary.addCard(c);
-        cardSource.push(c.id);
-      }
-    }
-  }
-
-  private createNonSupplyCards(config: ComputedMatchConfiguration) {
-    console.info(`[match] creating non-supply cards`);
-
-    const cardSource = this.cardSourceController.getSource('nonSupplyCards');
-
-    if (!cardSource) {
-      throw new Error(`[match] no basic supply card source found`);
-    }
-
-    for (const supply of Object.values(config.nonSupply ?? {})) {
-      for (const card of supply.cards) {
-        if (!card) {
-          throw new Error(`[match] no card data found for ${supply}`);
-        }
-
-        const c = createCard(card.cardKey, { ...card, kingdom: supply.name });
-        this.cardLibrary.addCard(c);
-        cardSource.push(c.id);
-      }
-    }
-  }
-
-  private createPlayerDecks(config: MatchConfiguration) {
-    console.info(`[match] creating player decks`);
-
-    return Object.values(config.players).forEach((player, idx) => {
-      console.debug('initializing player', player.id, 'cards...');
-
-      let playerStartHand = this._playerHands.length > 0
-        ? this._playerHands[idx]
-        : config.playerStartingHand as Record<string, number>;
-      playerStartHand ??= MatchBaseConfiguration.playerStartingHand;
-      console.debug(`[match] using player starting hand`);
-      console.debug(Object.keys(playerStartHand).map((key) => `${key}: ${playerStartHand[key]}`).join(', '));
-
-      const deck = this.cardSourceController.getSource('playerDeck', player.id);
-
-      Object.entries(playerStartHand).forEach(
-        ([key, count]) => {
-          deck.push(
-            ...new Array(count).fill(0).map((_) => {
-              const c = createCard(key, { owner: player.id });
-              // Cards in the deck should start face down; client rendering uses facing.
-              c.facing = 'back';
-              this.cardLibrary.addCard(c);
-              return c.id;
-            }),
-          );
-          fisherYatesShuffle(deck, true);
-        },
-      );
-    });
   }
 
   public getMatchSnapshot(): Match {
@@ -920,129 +804,4 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this.emit('gameOver');
   }
 
-  private createEvents(config: ComputedMatchConfiguration) {
-    console.debug(`[match] creating events`);
-    for (const event of config.events) {
-      this.match.events.push(createEvent(event));
-    }
-  }
-
-  // Creates and shuffles the boon deck when Fate cards are present.
-  private createBoons(config: ComputedMatchConfiguration) {
-    const boons = config.boons ?? [];
-    if (boons.length < 1) {
-      console.info('[match] no boons configured for this match');
-      return;
-    }
-
-    console.info('[match] creating boons');
-    // Initialize boon deck state before shuffling.
-    this.match.boons = {
-      cards: [],
-      deck: [],
-      discard: [],
-      setAside: [],
-    };
-
-    for (const boon of boons) {
-      const boonInstance = createBoon(boon);
-      this.match.boons.cards.push(boonInstance);
-      this.match.boons.deck.push(boonInstance.id);
-    }
-
-    // Shuffle the boon deck for randomized draws.
-    void this._gameActionsController?.shuffleCardLike({ kind: 'boon' });
-
-    console.debug(`[match] boon deck initialized with ${this.match.boons.deck.length} boons`);
-  }
-
-  // Creates and shuffles the hex deck when Doom cards are present.
-  private createHexes(config: ComputedMatchConfiguration) {
-    const hexes = config.hexes ?? [];
-    if (hexes.length < 1) {
-      console.info('[match] no hexes configured for this match');
-      return;
-    }
-
-    console.info('[match] creating hexes');
-    // Initialize hex deck state before shuffling.
-    this.match.hexes = {
-      cards: [],
-      deck: [],
-      discard: [],
-    };
-
-    for (const hex of hexes) {
-      const hexInstance = createHex(hex);
-      this.match.hexes.cards.push(hexInstance);
-      this.match.hexes.deck.push(hexInstance.id);
-    }
-
-    // Shuffle the hex deck for randomized draws.
-    fisherYatesShuffle(this.match.hexes.deck, true);
-
-    console.debug(`[match] hex deck initialized with ${this.match.hexes.deck.length} hexes`);
-  }
-
-  // Creates state instances for the match when state cards are present.
-  private createStates(config: ComputedMatchConfiguration) {
-    const states = config.states ?? [];
-    if (states.length < 1) {
-      console.info('[match] no states configured for this match');
-      return;
-    }
-
-    console.info('[match] creating states');
-    // Initialize state storage before instantiating state cards.
-    this.match.states = {
-      cards: [],
-      byPlayer: {},
-    };
-
-    for (const state of states) {
-      const stateInstance = createState(state);
-      this.match.states.cards.push(stateInstance);
-    }
-
-    console.debug(`[match] states initialized with ${this.match.states.cards.length} state(s)`);
-  }
-
-  // Creates artifact instances for the match when artifact cards are present.
-  private createArtifacts(config: ComputedMatchConfiguration) {
-    const artifacts = config.artifacts ?? [];
-    if (artifacts.length < 1) {
-      console.info('[match] no artifacts configured for this match');
-      return;
-    }
-
-    console.info('[match] creating artifacts');
-    // Initialize artifact storage before instantiating artifact cards.
-    this.match.artifacts = {
-      cards: [],
-      byPlayer: {},
-    };
-
-    for (const artifact of artifacts) {
-      const artifactInstance = createArtifact(artifact);
-      this.match.artifacts.cards.push(artifactInstance);
-    }
-
-    console.debug(`[match] artifacts initialized with ${this.match.artifacts.cards.length} artifact(s)`);
-  }
-
-  private createLandmarks(config: ComputedMatchConfiguration) {
-    // Create landmark card-like instances for the active match.
-    console.debug(`[match] creating landmarks`);
-    for (const landmark of config.landmarks ?? []) {
-      this.match.landmarks.push(createLandmark(landmark));
-    }
-  }
-
-  private createProjects(config: ComputedMatchConfiguration) {
-    // Create project card-like instances for the active match.
-    console.debug(`[match] creating projects`);
-    for (const project of config.projects ?? []) {
-      this.match.projects.push(createProject(project));
-    }
-  }
 }

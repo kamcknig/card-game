@@ -150,17 +150,25 @@ const controller = new AbortController();
 
 addEventListener('SIGINT', () => {
   console.log('Shutting down cleanly...');
+  game.dispose();
   controller.abort();
   Deno.exit();
 });
 
 (async () => {
-  const expansionList = (await import('@expansions/expansion-list.json', {
-    with: { type: 'json' },
-  })).default;
+  try {
+    const expansionList = (await import('@expansions/expansion-list.json', {
+      with: { type: 'json' },
+    })).default;
 
-  for (const expansion of expansionList) {
-    console.info(`[SERVER] loading expansion card data for ${expansion.title}`);
-    await loadExpansion(expansion).then(() => game.expansionLoaded(expansion));
+    for (const expansion of expansionList) {
+      console.info(`[SERVER] loading expansion card data for ${expansion.title}`);
+      await loadExpansion(expansion).then(() => game.expansionLoaded(expansion));
+    }
+  } catch (error) {
+    console.error('[SERVER] failed while loading expansions');
+    console.error(error);
+    game.dispose();
+    throw error;
   }
 })();

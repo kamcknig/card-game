@@ -174,6 +174,12 @@ export class Game {
     return this._matchController.applyPartialMatchUpdate(partial);
   }
 
+  // Disposes match-lifetime resources for clean process shutdown.
+  public dispose(): void {
+    this._matchScope?.dispose();
+    this._matchScope = undefined;
+  }
+
   public addPlayer(sessionId: string, socket: AppSocket) {
     const joinResult = this.playerRegistryService.registerPlayerJoin({
       players: this.players,

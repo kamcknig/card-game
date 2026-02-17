@@ -1,0 +1,211 @@
+import { Card, CardId, CardKey, CardNoId, ComputedMatchConfiguration, MatchConfiguration, Match } from 'shared/types/index.ts';
+import { MatchBaseConfiguration } from '@server-types/index.ts';
+import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
+import {
+  createArtifact,
+  createBoon,
+  createCard,
+  createEvent,
+  createHex,
+  createLandmark,
+  createProject,
+  createState,
+} from '../utils/create-card.ts';
+import { MatchCardLibrary } from './match-card-library.ts';
+import { CardSourceController } from './card-source-controller.ts';
+
+// Owns deterministic match-state setup for supply/landscape/player-deck creation.
+export class MatchSetupService {
+  constructor(
+    private readonly match: Match,
+    private readonly cardLibrary: MatchCardLibrary,
+    private readonly cardSourceController: CardSourceController,
+  ) {}
+
+  // Loads a card library snapshot for a loaded match state.
+  public loadCardLibraryFromState(cardLibrary: Record<CardId, Card>): void {
+    for (const card of Object.values(cardLibrary)) {
+      // Rehydrate card instances so downstream logic uses Card class methods.
+      this.cardLibrary.addCard(new Card({ ...card }));
+    }
+  }
+
+  public createBaseSupply(config: ComputedMatchConfiguration): void {
+    console.info('[match] creating base supply cards');
+    const cardSource = this.cardSourceController.getSource('basicSupply');
+
+    for (const supply of Object.values(config.basicSupply)) {
+      for (const card of supply.cards) {
+        if (!card) {
+          throw new Error(`[match] no card data found for ${supply}`);
+        }
+
+        const instance = createCard(card.cardKey, { ...card, kingdom: supply.name });
+        this.cardLibrary.addCard(instance);
+        cardSource.push(instance.id);
+      }
+    }
+  }
+
+  public createKingdom(config: ComputedMatchConfiguration): void {
+    console.info('[match] creating kingdom cards');
+    const cardSource = this.cardSourceController.getSource('kingdomSupply');
+
+    for (const kingdom of Object.values(config.kingdomSupply)) {
+      for (const card of kingdom.cards) {
+        if (!card) {
+          throw new Error(`[match] no card data found for ${kingdom}`);
+        }
+
+        const instance = createCard(card.cardKey, { ...card, kingdom: kingdom.name });
+        this.cardLibrary.addCard(instance);
+        cardSource.push(instance.id);
+      }
+    }
+  }
+
+  public createNonSupplyCards(config: ComputedMatchConfiguration): void {
+    console.info('[match] creating non-supply cards');
+    const cardSource = this.cardSourceController.getSource('nonSupplyCards');
+
+    for (const supply of Object.values(config.nonSupply ?? {})) {
+      for (const card of supply.cards) {
+        if (!card) {
+          throw new Error(`[match] no card data found for ${supply}`);
+        }
+
+        const instance = createCard(card.cardKey, { ...card, kingdom: supply.name });
+        this.cardLibrary.addCard(instance);
+        cardSource.push(instance.id);
+      }
+    }
+  }
+
+  public createPlayerDecks(config: MatchConfiguration, playerHands: Record<CardKey, number>[] = []): void {
+    console.info('[match] creating player decks');
+
+    for (const [idx, player] of Object.values(config.players).entries()) {
+      console.debug('initializing player', player.id, 'cards...');
+
+      let playerStartHand = playerHands.length > 0
+        ? playerHands[idx]
+        : config.playerStartingHand as Record<string, number>;
+
+      playerStartHand ??= MatchBaseConfiguration.playerStartingHand;
+
+      const deck = this.cardSourceController.getSource('playerDeck', player.id);
+      Object.entries(playerStartHand).forEach(([key, count]) => {
+        deck.push(
+          ...new Array(count).fill(0).map(() => {
+            const instance = createCard(key, { owner: player.id });
+            // Cards in the deck should start face down; client rendering uses facing.
+            instance.facing = 'back';
+            this.cardLibrary.addCard(instance);
+            return instance.id;
+          }),
+        );
+        fisherYatesShuffle(deck, true);
+      });
+    }
+  }
+
+  public createEvents(config: ComputedMatchConfiguration): void {
+    console.debug('[match] creating events');
+    for (const event of config.events) {
+      this.match.events.push(createEvent(event));
+    }
+  }
+
+  public createLandmarks(config: ComputedMatchConfiguration): void {
+    console.debug('[match] creating landmarks');
+    for (const landmark of config.landmarks ?? []) {
+      this.match.landmarks.push(createLandmark(landmark));
+    }
+  }
+
+  public createProjects(config: ComputedMatchConfiguration): void {
+    console.debug('[match] creating projects');
+    for (const project of config.projects ?? []) {
+      this.match.projects.push(createProject(project));
+    }
+  }
+
+  public createBoons(config: ComputedMatchConfiguration): void {
+    const boons = config.boons ?? [];
+    if (boons.length < 1) {
+      console.info('[match] no boons configured for this match');
+      return;
+    }
+
+    console.info('[match] creating boons');
+    this.match.boons = {
+      cards: [],
+      deck: [],
+      discard: [],
+      setAside: [],
+    };
+
+    for (const boon of boons) {
+      const instance = createBoon(boon);
+      this.match.boons.cards.push(instance);
+      this.match.boons.deck.push(instance.id);
+    }
+  }
+
+  public createHexes(config: ComputedMatchConfiguration): void {
+    const hexes = config.hexes ?? [];
+    if (hexes.length < 1) {
+      console.info('[match] no hexes configured for this match');
+      return;
+    }
+
+    console.info('[match] creating hexes');
+    this.match.hexes = {
+      cards: [],
+      deck: [],
+      discard: [],
+    };
+
+    for (const hex of hexes) {
+      const instance = createHex(hex);
+      this.match.hexes.cards.push(instance);
+      this.match.hexes.deck.push(instance.id);
+    }
+  }
+
+  public createStates(config: ComputedMatchConfiguration): void {
+    const states = config.states ?? [];
+    if (states.length < 1) {
+      console.info('[match] no states configured for this match');
+      return;
+    }
+
+    console.info('[match] creating states');
+    this.match.states = {
+      cards: [],
+      byPlayer: {},
+    };
+
+    for (const state of states) {
+      this.match.states.cards.push(createState(state));
+    }
+  }
+
+  public createArtifacts(config: ComputedMatchConfiguration): void {
+    const artifacts = config.artifacts ?? [];
+    if (artifacts.length < 1) {
+      console.info('[match] no artifacts configured for this match');
+      return;
+    }
+
+    console.info('[match] creating artifacts');
+    this.match.artifacts = {
+      cards: [],
+      byPlayer: {},
+    };
+
+    for (const artifact of artifacts) {
+      this.match.artifacts.cards.push(createArtifact(artifact));
+    }
+  }
+}
