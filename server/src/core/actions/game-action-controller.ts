@@ -63,7 +63,7 @@ import {
   findProjectInMatch,
 } from '@shared/find-card-like-in-match.ts';
 import { getPlayerTurnIndex } from '../../../../shared/src/get-player-position-utils.ts';
-import { resolveBuyOptions } from './resolve-buy-options.ts';
+import { BuyOptionsResolver } from './resolve-buy-options.ts';
 
 export interface GameActionControllerDependencies {
   cardSourceController: CardSourceController;
@@ -83,6 +83,7 @@ export interface GameActionControllerDependencies {
   reactionManager: ReactionManager;
   runGameActionDelegate: RunGameActionDelegate;
   interactivityController: CardInteractivityController;
+  buyOptionsResolver: BuyOptionsResolver;
 }
 
 export class GameActionController implements GameActionDefinitionMap {
@@ -107,6 +108,7 @@ export class GameActionController implements GameActionDefinitionMap {
   private reactionManager: ReactionManager;
   private runGameActionDelegate: RunGameActionDelegate;
   private readonly interactivityController: CardInteractivityController;
+  private readonly buyOptionsResolver: BuyOptionsResolver;
 
   constructor({
     cardSourceController,
@@ -126,6 +128,7 @@ export class GameActionController implements GameActionDefinitionMap {
     reactionManager,
     runGameActionDelegate,
     interactivityController,
+    buyOptionsResolver,
   }: GameActionControllerDependencies) {
     this._cardSourceController = cardSourceController;
     this._findCardService = findCardService;
@@ -144,6 +147,7 @@ export class GameActionController implements GameActionDefinitionMap {
     this.reactionManager = reactionManager;
     this.runGameActionDelegate = runGameActionDelegate;
     this.interactivityController = interactivityController;
+    this.buyOptionsResolver = buyOptionsResolver;
   }
 
   public registerCardEffect(cardKey: CardKey, tag: string, fn: CardEffectFn) {
@@ -1405,14 +1409,9 @@ export class GameActionController implements GameActionDefinitionMap {
     const cardId = card.id;
 
     // Resolve legal buy options at execution time to avoid stale client-side choices.
-    const resolvedBuyOptions = resolveBuyOptions({
-      match: this.match,
+    const resolvedBuyOptions = this.buyOptionsResolver.resolveBuyOptions({
       cardId: card,
       playerId: args.playerId,
-      cardLibrary: this.cardLibrary,
-      cardPriceController: this.cardPriceRuleController,
-      cardSourceController: this._cardSourceController,
-      findCardService: this._findCardService,
     });
     const selectedBuyOption = args.buyOptionId
       ? resolvedBuyOptions.options.find((option) => option.id === args.buyOptionId)

@@ -12,6 +12,7 @@ import {CardSourceController} from './card-source-controller.ts';
 import {MatchCardLibrary} from './match-card-library.ts';
 import {asClass, asFunction, asValue, createContainer, InjectionMode} from 'awilix';
 import {FindCardsService} from './find-cards-service.ts';
+import {BuyOptionsResolver} from './actions/resolve-buy-options.ts';
 
 export interface MatchRuntimeFactoryArgs {
   socketMap: Map<PlayerId, AppSocket>;
@@ -85,6 +86,7 @@ export class MatchRuntimeFactory {
       cardPriceController: asClass(CardPriceRulesController).singleton(),
       findCardsService: asClass(FindCardsService).singleton(),
       findCardService: asFunction(({findCardsService}) => findCardsService).singleton(),
+      buyOptionsResolver: asClass(BuyOptionsResolver).singleton(),
       reactionManager: asClass(ReactionManager).singleton(),
       interactivityController: asClass(CardInteractivityController).singleton(),
       gameActionsController: asClass(GameActionController).singleton(),

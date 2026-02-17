@@ -17,14 +17,17 @@ export type ResolvedBuyOption = {
 
 // Inputs for resolving all legal buy options for a card/player pair.
 export type ResolveBuyOptionsArgs = {
-  match: Match;
   cardId: CardId | Card;
   playerId: PlayerId;
+};
+
+export interface BuyOptionsResolverDependencies {
+  match: Match;
   cardLibrary: MatchCardLibrary;
   cardPriceController: CardPriceRulesController;
   cardSourceController: CardSourceController;
   findCardService: FindCardService;
-};
+}
 
 // Stringifies treasure/potion/debt cost for user-facing option labels.
 const formatCostLabel = (cost: CardCost): string => {
@@ -39,76 +42,98 @@ const formatCostLabel = (cost: CardCost): string => {
   return parts.join(', ');
 };
 
-// Resolves all currently legal ways the player can buy the card.
-export const resolveBuyOptions = (args: ResolveBuyOptionsArgs): {
-  card: Card;
-  cost: CardCost;
-  options: ResolvedBuyOption[];
-} => {
-  const card = args.cardId instanceof Card ? args.cardId : args.cardLibrary.getCard(args.cardId);
-  const { restricted, cost } = args.cardPriceController.applyRules(card, {
-    playerId: args.playerId,
-  });
+export class BuyOptionsResolver {
+  private readonly match: Match;
+  private readonly cardLibrary: MatchCardLibrary;
+  private readonly cardPriceController: CardPriceRulesController;
+  private readonly cardSourceController: CardSourceController;
+  private readonly findCardService: FindCardService;
 
-  // Respect card-level canBuy gates before considering any payment method.
-  const canBuyCondition = cardActionConditionMapFactory[card.cardKey]?.canBuy;
-  if (
-    canBuyCondition && !canBuyCondition({
-      match: args.match,
-      cardLibrary: args.cardLibrary,
+  constructor({
+    match,
+    cardLibrary,
+    cardPriceController,
+    cardSourceController,
+    findCardService,
+  }: BuyOptionsResolverDependencies) {
+    this.match = match;
+    this.cardLibrary = cardLibrary;
+    this.cardPriceController = cardPriceController;
+    this.cardSourceController = cardSourceController;
+    this.findCardService = findCardService;
+  }
+
+  // Resolves all currently legal ways the player can buy the card.
+  public resolveBuyOptions(args: ResolveBuyOptionsArgs): {
+    card: Card;
+    cost: CardCost;
+    options: ResolvedBuyOption[];
+  } {
+    const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
+    const { restricted, cost } = this.cardPriceController.applyRules(card, {
       playerId: args.playerId,
-    })
-  ) {
-    return { card, cost, options: [] };
-  }
-
-  const options: ResolvedBuyOption[] = [];
-
-  // Standard payment is available only when normal treasure/potion affordability passes.
-  if (
-    !restricted &&
-    cost.treasure <= args.match.playerTreasure &&
-    (cost.potion === undefined || cost.potion <= args.match.playerPotions)
-  ) {
-    options.push({
-      id: 'standard',
-      label: `Pay ${formatCostLabel(cost)}`,
-      kind: 'standard',
-      cost,
     });
-  }
 
-  // Alternate options are card-specific and can add additional legal buy paths.
-  const alternateOptions = cardAlternateBuyOptionMapFactory[card.cardKey] ?? [];
-  for (const option of alternateOptions) {
+    // Respect card-level canBuy gates before considering any payment method.
+    const canBuyCondition = cardActionConditionMapFactory[card.cardKey]?.canBuy;
     if (
-      !option.canBuy({
-        match: args.match,
+      canBuyCondition && !canBuyCondition({
+        match: this.match,
+        cardLibrary: this.cardLibrary,
         playerId: args.playerId,
-        card,
-        cardLibrary: args.cardLibrary,
-        findCardService: args.findCardService,
-        cardSourceController: args.cardSourceController,
-        cardPriceController: args.cardPriceController,
       })
     ) {
-      continue;
+      return { card, cost, options: [] };
     }
 
-    // Skip duplicate option ids to keep prompt/result mapping deterministic.
-    if (options.some((existingOption) => existingOption.id === option.id)) {
-      console.warn(`[buy options] duplicate buy option id '${option.id}' for ${card.cardKey}, skipping duplicate`);
-      continue;
+    const options: ResolvedBuyOption[] = [];
+
+    // Standard payment is available only when normal treasure/potion affordability passes.
+    if (
+      !restricted &&
+      cost.treasure <= this.match.playerTreasure &&
+      (cost.potion === undefined || cost.potion <= this.match.playerPotions)
+    ) {
+      options.push({
+        id: 'standard',
+        label: `Pay ${formatCostLabel(cost)}`,
+        kind: 'standard',
+        cost,
+      });
     }
 
-    options.push({
-      id: option.id,
-      label: option.label,
-      kind: 'alternate',
-      cost,
-      option,
-    });
+    // Alternate options are card-specific and can add additional legal buy paths.
+    const alternateOptions = cardAlternateBuyOptionMapFactory[card.cardKey] ?? [];
+    for (const option of alternateOptions) {
+      if (
+        !option.canBuy({
+          match: this.match,
+          playerId: args.playerId,
+          card,
+          cardLibrary: this.cardLibrary,
+          findCardService: this.findCardService,
+          cardSourceController: this.cardSourceController,
+          cardPriceController: this.cardPriceController,
+        })
+      ) {
+        continue;
+      }
+
+      // Skip duplicate option ids to keep prompt/result mapping deterministic.
+      if (options.some((existingOption) => existingOption.id === option.id)) {
+        console.warn(`[buy options] duplicate buy option id '${option.id}' for ${card.cardKey}, skipping duplicate`);
+        continue;
+      }
+
+      options.push({
+        id: option.id,
+        label: option.label,
+        kind: 'alternate',
+        cost,
+        option,
+      });
+    }
+
+    return { card, cost, options };
   }
-
-  return { card, cost, options };
-};
+}

@@ -8,7 +8,7 @@ import { CardPriceRulesController } from './card-price-rules-controller.ts';
 import { CardSourceController } from './card-source-controller.ts';
 import { findEventInMatch, findProjectInMatch } from '@shared/find-card-like-in-match.ts';
 import { renaissanceTokenIds } from '@expansions/renaissance/token-ids-renaissance.ts';
-import { resolveBuyOptions, ResolvedBuyOption } from './actions/resolve-buy-options.ts';
+import { BuyOptionsResolver, ResolvedBuyOption } from './actions/resolve-buy-options.ts';
 
 export interface CardInteractivityControllerDependencies {
   cardSourceController: CardSourceController;
@@ -18,6 +18,7 @@ export interface CardInteractivityControllerDependencies {
   cardLibrary: MatchCardLibrary;
   runGameActionDelegate: RunGameActionDelegate;
   findCardService: FindCardService;
+  buyOptionsResolver: BuyOptionsResolver;
 }
 
 export class CardInteractivityController {
@@ -29,6 +30,7 @@ export class CardInteractivityController {
   private readonly _cardLibrary: MatchCardLibrary;
   private readonly runGameDelegate: RunGameActionDelegate;
   private readonly _findCardService: FindCardService;
+  private readonly buyOptionsResolver: BuyOptionsResolver;
 
   constructor({
     cardSourceController,
@@ -38,6 +40,7 @@ export class CardInteractivityController {
     cardLibrary,
     runGameActionDelegate,
     findCardService,
+    buyOptionsResolver,
   }: CardInteractivityControllerDependencies) {
     this._cardSourceController = cardSourceController;
     this._cardPriceController = cardPriceController;
@@ -46,6 +49,7 @@ export class CardInteractivityController {
     this._cardLibrary = cardLibrary;
     this.runGameDelegate = runGameActionDelegate;
     this._findCardService = findCardService;
+    this.buyOptionsResolver = buyOptionsResolver;
 
     this._socketMap.forEach((s) => {
       s.on('cardTapped', (pId, cId) => this.onCardTapped(pId, cId));
@@ -117,14 +121,9 @@ export class CardInteractivityController {
           }
 
           // Include cards if any legal purchase path exists (standard or alternate).
-          const buyOptions = resolveBuyOptions({
-            match: this.match,
+          const buyOptions = this.buyOptionsResolver.resolveBuyOptions({
             cardId: card,
             playerId: currentPlayer.id,
-            cardLibrary: this._cardLibrary,
-            cardPriceController: this._cardPriceController,
-            cardSourceController: this._cardSourceController,
-            findCardService: this._findCardService,
           });
 
           if (buyOptions.options.length > 0) {
@@ -340,14 +339,9 @@ export class CardInteractivityController {
           return;
         }
         const card = this._cardLibrary.getCard(cardId);
-        const resolvedBuyOptions = resolveBuyOptions({
-          match: this.match,
+        const resolvedBuyOptions = this.buyOptionsResolver.resolveBuyOptions({
           cardId: card,
           playerId,
-          cardLibrary: this._cardLibrary,
-          cardPriceController: this._cardPriceController,
-          cardSourceController: this._cardSourceController,
-          findCardService: this._findCardService,
         });
         const { cost } = resolvedBuyOptions;
         const { options } = resolvedBuyOptions;
