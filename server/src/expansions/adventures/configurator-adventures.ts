@@ -255,16 +255,16 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
             // Offer to trash a card from hand when the token matches the gained pile.
             const hand = cardSourceController.getSource('playerHand', player.id);
             if (!hand.length) return;
-            const selectedCardIds = await actionService.run('selectCard', {
+            const selectedCardId = await actionService.run('selectSingleCard', {
               playerId: player.id,
               prompt: 'Trash a card',
               restrict: hand,
               count: { kind: 'upTo', count: 1 },
-            }) as number[];
-            if (!selectedCardIds.length) return;
+            });
+            if (!selectedCardId) return;
             await actionService.run('trashCard', {
               playerId: player.id,
-              cardId: selectedCardIds[0],
+              cardId: selectedCardId,
             });
           },
         });

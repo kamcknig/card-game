@@ -530,16 +530,22 @@ const expansionModule: CardExpansionModule = {
       for (const playerId of targets) {
         console.debug(`[masquerade effect] prompting ${getPlayerById(match, playerId)} to choose a card...`);
 
-        const cardIds = await actionService.run('selectCard', {
+        const selectedCardId = await actionService.run('selectSingleCard', {
           prompt: 'Confirm pass',
           playerId,
           count: 1,
           restrict: args.cardSourceController.getSource('playerHand', playerId),
-        }) as number[];
+        });
 
-        playerCardMap.set(playerId, cardIds[0]);
+        if (!selectedCardId) {
+          continue;
+        }
 
-        console.debug(`[masquerade effect] ${getPlayerById(match, playerId)} chose ${cardLibrary.getCard(cardIds[0])}`);
+        playerCardMap.set(playerId, selectedCardId);
+
+        console.debug(
+          `[masquerade effect] ${getPlayerById(match, playerId)} chose ${cardLibrary.getCard(selectedCardId)}`,
+        );
       }
 
       for (let i = 0; i < targets.length; i++) {
@@ -568,23 +574,23 @@ const expansionModule: CardExpansionModule = {
 
       console.debug(`[masquerade effect] prompting user to trash card from hand...`);
 
-      const cardIds = await actionService.run('selectCard', {
+      const selectedCardId = await actionService.run('selectSingleCard', {
         optional: true,
         prompt: 'Confirm trash',
         count: 1,
         playerId,
         restrict: args.cardSourceController.getSource('playerHand', playerId),
-      }) as number[];
+      });
 
       console.debug(
-        `[masquerade effect] player chose ${cardIds.length ? cardLibrary.getCard(cardIds[0]) : 'not to trash'}`,
+        `[masquerade effect] player chose ${selectedCardId ? cardLibrary.getCard(selectedCardId) : 'not to trash'}`,
       );
 
-      if (cardIds[0]) {
-        console.debug(`[masquerade effect] trashing ${cardLibrary.getCard(cardIds[0])}...`);
+      if (selectedCardId) {
+        console.debug(`[masquerade effect] trashing ${cardLibrary.getCard(selectedCardId)}...`);
 
         await actionService.run('trashCard', {
-          cardId: cardIds[0],
+          cardId: selectedCardId,
           playerId,
         });
       }

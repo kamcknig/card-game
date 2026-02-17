@@ -243,7 +243,7 @@ const expansion: CardExpansionModule = {
       });
 
       for (const targetPlayerId of targetPlayerIds) {
-        const selectedCardIds = await effectArgs.actionService.run('selectCard', {
+        const selectedCardIds = await effectArgs.actionService.run('selectSingleCard', {
           playerId: targetPlayerId,
           prompt: `Top-deck card`,
           restrict: effectArgs.cardSourceController.getSource('playerHand', effectArgs.playerId),
@@ -256,7 +256,7 @@ const expansion: CardExpansionModule = {
         }
 
         await effectArgs.actionService.run('moveCard', {
-          cardId: selectedCardIds[0],
+          cardId: selectedCardIds,
           toPlayerId: targetPlayerId,
           to: { location: 'playerDeck' },
         });
@@ -437,7 +437,7 @@ const expansion: CardExpansionModule = {
         }
       }
 
-      const selectedCardIds = await effectArgs.actionService.run('selectCard', {
+      const selectedCardIds = await effectArgs.actionService.run('selectSingleCard', {
         playerId: effectArgs.playerId,
         prompt: `Gain card`,
         restrict: [
@@ -451,14 +451,14 @@ const expansion: CardExpansionModule = {
         count: 1,
       });
 
-      if (selectedCardIds.length === 0) {
+      if (!selectedCardIds) {
         console.debug(`[forge effect] no card selected`);
         return;
       }
 
       await effectArgs.actionService.run('gainCard', {
         playerId: effectArgs.playerId,
-        cardId: selectedCardIds[0],
+        cardId: selectedCardIds,
         to: { location: 'playerDiscard' },
       });
     },

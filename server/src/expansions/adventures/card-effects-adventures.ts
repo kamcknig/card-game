@@ -1554,7 +1554,7 @@ const expansion: CardExpansionModule = {
           return;
         }
 
-        const selectedCardIds = await args.actionService.run('selectCard', {
+        const selectedCardIds = await args.actionService.run('selectSingleCard', {
           playerId: eventArgs.playerId,
           prompt: `Gain card`,
           restrict: [{ location: ['basicSupply', 'kingdomSupply'] }, {
@@ -1565,12 +1565,12 @@ const expansion: CardExpansionModule = {
           count: 1,
         });
 
-        if (!selectedCardIds.length) {
+        if (!selectedCardIds) {
           console.warn(`[messenger onGained effect] no card selected`);
           return;
         }
 
-        const selectedCard = args.cardLibrary.getCard(selectedCardIds[0]);
+        const selectedCard = args.cardLibrary.getCard(selectedCardIds);
 
         console.debug(`[messenger onGained effect] selected ${selectedCard}`);
 

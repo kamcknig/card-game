@@ -731,7 +731,7 @@ const expansion: CardExpansionModule = {
             to: { location: 'playArea' },
           });
           console.debug(`[pirate triggered effect] prompting user to select treasure costing up to 6...`);
-          const cardIds = (await triggeredArgs.actionService.run('selectCard', {
+          const selectedCardId = await triggeredArgs.actionService.run('selectSingleCard', {
             prompt: 'Gain card',
             validPrompt: '',
             playerId,
@@ -741,9 +741,7 @@ const expansion: CardExpansionModule = {
               { kind: 'upTo', amount: { treasure: 6 }, playerId },
             ],
             count: 1,
-          })) as number[];
-
-          const selectedCardId = cardIds[0];
+          });
           if (!selectedCardId) {
             console.warn(`[pirate triggered effect] no card selected...`);
             return;
@@ -929,14 +927,12 @@ const expansion: CardExpansionModule = {
       await actionService.run('gainBuy', { count: 1 });
 
       console.debug(`[salvager effect] prompting user to select a card from hand...`);
-      const cardIds = (await actionService.run('selectCard', {
+      const cardId = await actionService.run('selectSingleCard', {
         prompt: 'Trash card',
         playerId,
         restrict: effectArgs.cardSourceController.getSource('playerHand', playerId),
         count: 1,
-      })) as number[];
-
-      const cardId = cardIds[0];
+      });
 
       if (!cardId) {
         console.debug(`[salvager effect] no card selected...`);

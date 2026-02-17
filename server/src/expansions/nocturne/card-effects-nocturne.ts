@@ -342,7 +342,7 @@ const expansion: CardExpansionModule = {
             return;
           }
 
-          const gainCardIds = await triggeredArgs.actionService.run('selectCard', {
+          const gainCardIds = await triggeredArgs.actionService.run('selectSingleCard', {
             prompt: 'Gain a card to your hand costing up to $4',
             playerId: cardEffectArgs.playerId,
             count: 1,
@@ -352,7 +352,7 @@ const expansion: CardExpansionModule = {
             ],
           });
 
-          const gainCardId = gainCardIds[0];
+          const gainCardId = gainCardIds;
           if (!gainCardId) {
             console.debug('[cobbler startTurn] no eligible card selected to gain');
             return;
@@ -1258,14 +1258,14 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
+      const selectedCardIds = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Gain a Treasure',
         count: 1,
         restrict: treasureCards.map((card) => card.id),
       });
 
-      const selectedCardId = selectedCardIds[0];
+      const selectedCardId = selectedCardIds;
       if (!selectedCardId) {
         console.debug('[tragic-hero effect] no Treasure selected');
         return;
@@ -1307,14 +1307,14 @@ const expansion: CardExpansionModule = {
       if (!eligibleCards.length) {
         console.debug('[vampire effect] no eligible cards to gain');
       } else {
-        const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
+        const selectedCardIds = await cardEffectArgs.actionService.run('selectSingleCard', {
           playerId: cardEffectArgs.playerId,
           prompt: 'Gain a card costing up to $5 (not Vampire)',
           count: 1,
           restrict: eligibleCards.map((card) => card.id),
         });
 
-        const selectedCardId = selectedCardIds[0];
+        const selectedCardId = selectedCardIds;
         if (selectedCardId) {
           console.debug(`[vampire effect] gaining ${cardEffectArgs.cardLibrary.getCard(selectedCardId)}`);
           await cardEffectArgs.actionService.run('gainCard', {
@@ -1731,14 +1731,14 @@ const expansion: CardExpansionModule = {
       }
 
       // Prompt the player to choose a trashed Action to play.
-      const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
+      const selectedCardIds = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Choose a trashed Action to play',
         count: 1,
         restrict: eligibleCards.map((card) => card.id),
       });
 
-      const selectedCardId = selectedCardIds[0];
+      const selectedCardId = selectedCardIds;
       if (!selectedCardId) {
         console.debug('[necromancer effect] no card selected');
         return;
@@ -1791,7 +1791,7 @@ const expansion: CardExpansionModule = {
       }
 
       // Prompt the player to optionally trash an Action for the bonus.
-      const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
+      const selectedCardIds = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Trash an Action for +3 Cards and +1 Action',
         count: 1,
@@ -1799,7 +1799,7 @@ const expansion: CardExpansionModule = {
         restrict: actionCards.map((card) => card.id),
       });
 
-      const selectedCardId = selectedCardIds[0];
+      const selectedCardId = selectedCardIds;
       if (!selectedCardId) {
         console.debug('[zombie-apprentice effect] player declined to trash an Action');
         return;
@@ -1866,7 +1866,7 @@ const expansion: CardExpansionModule = {
       }
 
       // Prompt the player to optionally gain a card.
-      const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
+      const selectedCardIds = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Gain a card costing up to $1 more',
         count: 1,
@@ -1874,7 +1874,7 @@ const expansion: CardExpansionModule = {
         restrict: eligibleCards.map((card) => card.id),
       });
 
-      const selectedCardId = selectedCardIds[0];
+      const selectedCardId = selectedCardIds;
       if (!selectedCardId) {
         console.debug('[zombie-mason effect] player declined to gain a card');
         return;
@@ -1987,7 +1987,7 @@ const expansion: CardExpansionModule = {
           return;
         }
 
-        const gainCardIds = await cardEffectArgs.actionService.run('selectCard', {
+        const gainCardIds = await cardEffectArgs.actionService.run('selectSingleCard', {
           prompt: 'Gain a card costing up to $4',
           playerId: cardEffectArgs.playerId,
           count: 1,
@@ -1997,7 +1997,7 @@ const expansion: CardExpansionModule = {
           ],
         });
 
-        const gainCardId = gainCardIds[0];
+        const gainCardId = gainCardIds;
         if (!gainCardId) {
           console.debug('[devils-workshop effect] no card selected to gain');
           return;
