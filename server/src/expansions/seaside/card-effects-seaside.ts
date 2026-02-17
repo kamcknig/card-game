@@ -500,7 +500,8 @@ const expansion: CardExpansionModule = {
       const l = cardIds.length;
 
       for (let i = 0; i < l; i++) {
-        let selectedId: number | undefined = undefined;
+        // Track a concrete selected id each step so downstream actions always receive a valid card id.
+        let selectedId: CardId | undefined = undefined;
 
         if (cardIds.length === 1) {
           selectedId = cardIds[0];
@@ -515,22 +516,43 @@ const expansion: CardExpansionModule = {
             },
           });
 
-          selectedId = selectedIdFromPrompt ?? undefined;
+          if (selectedIdFromPrompt == null) {
+            // Fallback keeps resolution deterministic if prompt selection unexpectedly fails.
+            selectedId = cardIds[0];
+            console.warn(
+              `[lookout effect] prompt returned no selection for step ${i + 1}, defaulting to ${selectedId}`,
+            );
+          } else {
+            selectedId = selectedIdFromPrompt;
+          }
         }
 
-        cardIds.splice(cardIds.findIndex((id) => id === selectedId), 1);
+        if (selectedId === undefined) {
+          console.warn(`[lookout effect] no selectable card found at step ${i + 1}, stopping`);
+          break;
+        }
+
+        const selectedCardIndex = cardIds.findIndex((id) => id === selectedId);
+        if (selectedCardIndex === -1) {
+          console.warn(`[lookout effect] selected card ${selectedId} not in remaining set-aside cards`);
+          continue;
+        }
+        cardIds.splice(selectedCardIndex, 1);
 
         if (i === 0) {
+          console.debug(`[lookout effect] trashing selected card ${selectedId}`);
           await actionService.run('trashCard', {
             playerId,
             cardId: selectedId,
           });
         } else if (i === 1) {
+          console.debug(`[lookout effect] discarding selected card ${selectedId}`);
           await actionService.run('discardCard', {
             cardId: selectedId,
             playerId,
           });
         } else {
+          console.debug(`[lookout effect] putting selected card ${selectedId} on deck`);
           await actionService.run('moveCard', {
             cardId: selectedId,
             toPlayerId: playerId,
