@@ -67,6 +67,5 @@ Do not use this skill for:
 ```bash
 deno check --no-lock --config server/deno.json server/src/core/match-controller.ts
 deno check --no-lock --config server/deno.json server/src/core/game.ts
-deno check --no-lock --config server/deno.json server/src/server.ts
 ```
 

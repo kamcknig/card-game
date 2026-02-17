@@ -57,6 +57,10 @@ When rules conflict, use this order:
 - Serialization/deserialization of match state
 - Keeping JSON schemas up to date with JSON model changes
 
+### Code commits
+
+- No mention of AI use.
+
 ### Out of Scope
 
 - Asset creation (art, sound, animation)
@@ -65,10 +69,14 @@ When rules conflict, use this order:
 - Removing commented code unless requested
 - Whitespace-only edits
 - Backwards compatibility by default (alpha software)
+- Testing
 
 ## Architectural Constraints
 
 - Follow existing abstractions
+- Use injection principles where possible; avoid new'ing instances manually.
+  - prefer class injection over proxy inject, and include accessors in
+    constructors
 - Keep state changes explicit and traceable
 - No hidden side effects
 - No mutation outside approved state-transition layers
