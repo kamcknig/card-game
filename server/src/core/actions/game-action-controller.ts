@@ -65,6 +65,7 @@ import {
 } from '@shared/find-card-like-in-match.ts';
 import { getPlayerTurnIndex } from "@shared/get-player-position-utils.ts";
 import { BuyOptionsResolver } from './resolve-buy-options.ts';
+import { CardEffectContextFactory } from './card-effect-context-factory.ts';
 
 export class GameActionController implements GameActionDefinitionMap {
   private _customActionHandlers: Partial<GameActionDefinitionMap> = {};
@@ -92,6 +93,7 @@ export class GameActionController implements GameActionDefinitionMap {
     private buyOptionsResolver: BuyOptionsResolver,
     private supplyGainService: SupplyGainService,
     private readonly actionService: ActionService,
+    private readonly cardEffectContextFactory: CardEffectContextFactory,
   ) {}
 
   public registerCardEffect(cardKey: CardKey, tag: string, fn: CardEffectFn) {
@@ -372,6 +374,26 @@ export class GameActionController implements GameActionDefinitionMap {
     }
 
     return registeredTriggerIds;
+  }
+
+  // Builds a card-effect context with standardized duration registration wiring.
+  private createCardEffectContext(args: {
+    cardId: CardLikeId;
+    playerId: PlayerId;
+    reactionContext?: CardEffectFunctionContext['reactionContext'];
+  }): CardEffectFunctionContext {
+    let context: CardEffectFunctionContext;
+    context = this.cardEffectContextFactory.create({
+      cardId: args.cardId,
+      playerId: args.playerId,
+      reactionContext: args.reactionContext ?? {},
+      registerDurationEffect: (durationCard, triggeredTemplate, options) => {
+        const triggerIds = this.registerDurationEffectInternal(durationCard, context, triggeredTemplate, options);
+        this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
+        return triggerIds;
+      },
+    });
+    return context;
   }
 
   // Executes an effect with consistent logging and error reporting.
@@ -1504,28 +1526,10 @@ export class GameActionController implements GameActionDefinitionMap {
     if (effectFn) {
       console.debug(`[buyEvent action] running effect for ${event}`);
 
-      const context = {
-        cardSourceController: this.cardSourceController,
-        cardPriceController: this.cardPriceController,
-        logManager: this.logManager,
-        reactionManager: this.reactionManager,
-        actionService: this.actionService,
+      const context = this.createCardEffectContext({
         cardId: args.cardLikeId,
         playerId: args.playerId,
-        match: this.match,
-        cardLibrary: this.cardLibrary,
-        reactionContext: {},
-        findCardService: this.findCardService,
-        supplyGainService: this.supplyGainService,
-        registerDurationEffect: (() => []) as CardEffectFunctionContext['registerDurationEffect'],
-      } as CardEffectFunctionContext;
-
-      // Centralized duration registration with automatic cleanup on leave-play.
-      context.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
-        const triggerIds = this.registerDurationEffectInternal(durationCard, context, triggeredTemplate, options);
-        this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
-        return triggerIds;
-      };
+      });
 
       // Run event effects with standardized logging.
       await this.runEffectWithLogging({
@@ -1621,28 +1625,10 @@ export class GameActionController implements GameActionDefinitionMap {
     if (effectFn) {
       console.debug(`[buyProject action] running effect for ${project}`);
 
-      const context = {
-        cardSourceController: this.cardSourceController,
-        cardPriceController: this.cardPriceController,
-        logManager: this.logManager,
-        reactionManager: this.reactionManager,
-        actionService: this.actionService,
+      const context = this.createCardEffectContext({
         cardId: args.cardLikeId,
         playerId: args.playerId,
-        match: this.match,
-        cardLibrary: this.cardLibrary,
-        reactionContext: {},
-        findCardService: this.findCardService,
-        supplyGainService: this.supplyGainService,
-        registerDurationEffect: (() => []) as CardEffectFunctionContext['registerDurationEffect'],
-      } as CardEffectFunctionContext;
-
-      // Centralized duration registration with automatic cleanup on leave-play.
-      context.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
-        const triggerIds = this.registerDurationEffectInternal(durationCard, context, triggeredTemplate, options);
-        this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
-        return triggerIds;
-      };
+      });
 
       // Run project effects with standardized logging.
       await this.runEffectWithLogging({
@@ -1739,33 +1725,10 @@ export class GameActionController implements GameActionDefinitionMap {
       if (effectFn) {
         console.debug(`[receiveBoon action] running effect for ${boon} (${source})`);
 
-        const effectContext = {
-          cardSourceController: this.cardSourceController,
-          cardPriceController: this.cardPriceController,
-          logManager: this.logManager,
-          reactionManager: this.reactionManager,
-          actionService: this.actionService,
+        const effectContext = this.createCardEffectContext({
           cardId: boonId,
           playerId: args.playerId,
-          match: this.match,
-          cardLibrary: this.cardLibrary,
-          reactionContext: {},
-          findCardService: this.findCardService,
-          supplyGainService: this.supplyGainService,
-          registerDurationEffect: (() => []) as CardEffectFunctionContext['registerDurationEffect'],
-        } as CardEffectFunctionContext;
-
-        // Centralized duration registration with automatic cleanup on leave-play.
-        effectContext.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
-          const triggerIds = this.registerDurationEffectInternal(
-            durationCard,
-            effectContext,
-            triggeredTemplate,
-            options,
-          );
-          this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
-          return triggerIds;
-        };
+        });
 
         // Run boon effects with standardized logging.
         await this.runEffectWithLogging({
@@ -1891,28 +1854,10 @@ export class GameActionController implements GameActionDefinitionMap {
     if (effectFn) {
       console.debug(`[receiveHex action] running effect for ${hex}`);
 
-      const effectContext = {
-        cardSourceController: this.cardSourceController,
-        cardPriceController: this.cardPriceController,
-        logManager: this.logManager,
-        reactionManager: this.reactionManager,
-        actionService: this.actionService,
+      const effectContext = this.createCardEffectContext({
         cardId: hexId,
         playerId: args.playerId,
-        match: this.match,
-        cardLibrary: this.cardLibrary,
-        reactionContext: {},
-        findCardService: this.findCardService,
-        supplyGainService: this.supplyGainService,
-        registerDurationEffect: (() => []) as CardEffectFunctionContext['registerDurationEffect'],
-      } as CardEffectFunctionContext;
-
-      // Centralized duration registration with automatic cleanup on leave-play.
-      effectContext.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
-        const triggerIds = this.registerDurationEffectInternal(durationCard, effectContext, triggeredTemplate, options);
-        this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
-        return triggerIds;
-      };
+      });
 
       // Run hex effects with standardized logging.
       await this.runEffectWithLogging({
@@ -1976,28 +1921,10 @@ export class GameActionController implements GameActionDefinitionMap {
     }
 
     console.debug(`[gainState action] registering effects for ${state}`);
-    const effectContext = {
-      cardSourceController: this.cardSourceController,
-      cardPriceController: this.cardPriceController,
-      logManager: this.logManager,
-      reactionManager: this.reactionManager,
-      actionService: this.actionService,
+    const effectContext = this.createCardEffectContext({
       cardId: state.id,
       playerId: args.playerId,
-      match: this.match,
-      cardLibrary: this.cardLibrary,
-      reactionContext: {},
-      findCardService: this.findCardService,
-      supplyGainService: this.supplyGainService,
-      registerDurationEffect: (() => []) as CardEffectFunctionContext['registerDurationEffect'],
-    } as CardEffectFunctionContext;
-
-    // Centralized duration registration with automatic cleanup on leave-play.
-    effectContext.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
-      const triggerIds = this.registerDurationEffectInternal(durationCard, effectContext, triggeredTemplate, options);
-      this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
-      return triggerIds;
-    };
+    });
 
     // Run state effects with standardized logging.
     await this.runEffectWithLogging({
@@ -2078,28 +2005,10 @@ export class GameActionController implements GameActionDefinitionMap {
     }
 
     console.debug(`[gainArtifact action] registering effects for ${artifact}`);
-    const effectContext = {
-      cardSourceController: this.cardSourceController,
-      cardPriceController: this.cardPriceController,
-      logManager: this.logManager,
-      reactionManager: this.reactionManager,
-      actionService: this.actionService,
+    const effectContext = this.createCardEffectContext({
       cardId: artifact.id,
       playerId: args.playerId,
-      match: this.match,
-      cardLibrary: this.cardLibrary,
-      reactionContext: {},
-      findCardService: this.findCardService,
-      supplyGainService: this.supplyGainService,
-      registerDurationEffect: (() => []) as CardEffectFunctionContext['registerDurationEffect'],
-    } as CardEffectFunctionContext;
-
-    // Centralized duration registration with automatic cleanup on leave-play.
-    effectContext.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
-      const triggerIds = this.registerDurationEffectInternal(durationCard, effectContext, triggeredTemplate, options);
-      this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
-      return triggerIds;
-    };
+    });
 
     // Run artifact effects with standardized logging.
     await this.runEffectWithLogging({
@@ -2779,32 +2688,11 @@ export class GameActionController implements GameActionDefinitionMap {
 
     // run the effects of the card played, note passing in the reaction context collected from running the trigger
     // above - e.g., could provide immunity to an attack card played
-    const buildEffectContext = () => {
-      const context = {
-        cardSourceController: this.cardSourceController,
-        cardPriceController: this.cardPriceController,
-        logManager: this.logManager,
-        reactionManager: this.reactionManager,
-        actionService: this.actionService,
-        cardId,
-        playerId,
-        match: this.match,
-        cardLibrary: this.cardLibrary,
-        reactionContext,
-        findCardService: this.findCardService,
-        supplyGainService: this.supplyGainService,
-        registerDurationEffect: (() => []) as CardEffectFunctionContext['registerDurationEffect'],
-      } as CardEffectFunctionContext;
-
-      // Centralized duration registration with automatic cleanup on leave-play.
-      context.registerDurationEffect = (durationCard, triggeredTemplate, options) => {
-        const triggerIds = this.registerDurationEffectInternal(durationCard, context, triggeredTemplate, options);
-        this.reactionManager.registerDurationTriggers(durationCard.id, triggerIds);
-        return triggerIds;
-      };
-
-      return context;
-    };
+    const buildEffectContext = () => this.createCardEffectContext({
+      cardId,
+      playerId,
+      reactionContext,
+    });
 
     let effectFn = this.cardEffectFunctionMap[card.cardKey];
     if (effectFn) {
