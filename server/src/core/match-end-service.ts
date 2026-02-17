@@ -1,4 +1,4 @@
-import { AppSocket, FindCardService } from '@server-types/index.ts';
+import { ActionService, AppSocket, FindCardService } from '@server-types/index.ts';
 import {
   Match,
   MatchSummary,
@@ -8,7 +8,6 @@ import {
 import { CardSourceController } from './card-source-controller.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';
 import { ReactionManager } from './reactions/reaction-manager.ts';
-import { RuntimeActionGateway } from './runtime-action-gateway.ts';
 
 export interface EndMatchArgs {
   reactionManager?: ReactionManager;
@@ -23,7 +22,7 @@ export class MatchEndService {
     private readonly match: Match,
     private readonly cardSourceController: CardSourceController,
     private readonly findCardService: FindCardService,
-    private readonly runtimeActionGateway: RuntimeActionGateway,
+    private readonly actionService: ActionService,
   ) {}
 
   // Tears down runtime listeners/state and broadcasts final match summary.
@@ -43,7 +42,7 @@ export class MatchEndService {
       const setAsideCardIds = this.cardSourceController.getSource('set-aside', player.id);
       // Iterate over a snapshot since move actions mutate the source array.
       for (const cardId of [...setAsideCardIds]) {
-        await this.runtimeActionGateway.run('moveCard', {
+        await this.actionService.run('moveCard', {
           toPlayerId: player.id,
           cardId,
           to: { location: 'playerDeck' },

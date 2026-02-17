@@ -25,6 +25,7 @@ import { MatchCardLibrary } from '../match-card-library.ts';
 import { LogManager } from '../log-manager.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import {
+  ActionService,
   AppSocket,
   CardEffectFn,
   CardEffectFunctionContext,
@@ -64,7 +65,6 @@ import {
 } from '@shared/find-card-like-in-match.ts';
 import { getPlayerTurnIndex } from "@shared/get-player-position-utils.ts";
 import { BuyOptionsResolver } from './resolve-buy-options.ts';
-import { RuntimeActionGateway } from '../runtime-action-gateway.ts';
 
 export class GameActionController implements GameActionDefinitionMap {
   private _customActionHandlers: Partial<GameActionDefinitionMap> = {};
@@ -91,7 +91,7 @@ export class GameActionController implements GameActionDefinitionMap {
     private interactivityController: CardInteractivityController,
     private buyOptionsResolver: BuyOptionsResolver,
     private supplyGainService: SupplyGainService,
-    private readonly runtimeActionGateway: RuntimeActionGateway,
+    private readonly actionService: ActionService,
   ) {}
 
   public registerCardEffect(cardKey: CardKey, tag: string, fn: CardEffectFn) {
@@ -414,11 +414,11 @@ export class GameActionController implements GameActionDefinitionMap {
       if (turnPhase === 'action') {
         const actionCardId = selectable.find((id) => this.cardLibrary.getCard(id).type.includes('ACTION'));
         if (actionCardId) {
-          await this.runtimeActionGateway.run('playCard', { playerId: currentPlayer.id, cardId: actionCardId });
+          await this.actionService.run('playCard', { playerId: currentPlayer.id, cardId: actionCardId });
         }
         // Always move to the next phase after one action attempt.
         this._computerTurnInProgress = false;
-        await this.runtimeActionGateway.run('nextPhase');
+        await this.actionService.run('nextPhase');
         return;
       }
 
@@ -426,48 +426,48 @@ export class GameActionController implements GameActionDefinitionMap {
         const selectedId = selectable[0];
         if (selectedId === undefined) {
           this._computerTurnInProgress = false;
-          await this.runtimeActionGateway.run('nextPhase');
+          await this.actionService.run('nextPhase');
           return;
         }
 
         const event = findEventInMatch(match, selectedId);
         if (event) {
-          await this.runtimeActionGateway.run('buyEvent', {
+          await this.actionService.run('buyEvent', {
             playerId: currentPlayer.id,
             cardLikeId: selectedId,
           });
           this._computerTurnInProgress = false;
-          await this.runtimeActionGateway.run('nextPhase');
+          await this.actionService.run('nextPhase');
           return;
         }
 
         const project = findProjectInMatch(match, selectedId);
         if (project) {
-          await this.runtimeActionGateway.run('buyProject', {
+          await this.actionService.run('buyProject', {
             playerId: currentPlayer.id,
             cardLikeId: selectedId,
           });
           this._computerTurnInProgress = false;
-          await this.runtimeActionGateway.run('nextPhase');
+          await this.actionService.run('nextPhase');
           return;
         }
 
         const card = this.cardLibrary.getCard(selectedId);
         const inHand = this.cardSourceController.getSource('playerHand', currentPlayer.id).includes(selectedId);
         if (inHand && card.type.includes('TREASURE')) {
-          await this.runtimeActionGateway.run('playCard', {
+          await this.actionService.run('playCard', {
             playerId: currentPlayer.id,
             cardId: selectedId,
             overrides: { actionCost: 0 },
           });
           this._computerTurnInProgress = false;
-          await this.runtimeActionGateway.run('nextPhase');
+          await this.actionService.run('nextPhase');
           return;
         }
 
         const { restricted, cost } = this.cardPriceController.applyRules(card, { playerId: currentPlayer.id });
         if (!restricted) {
-          await this.runtimeActionGateway.run('buyCard', {
+          await this.actionService.run('buyCard', {
             playerId: currentPlayer.id,
             cardId: card.id,
             cardCost: cost,
@@ -475,7 +475,7 @@ export class GameActionController implements GameActionDefinitionMap {
         }
 
         this._computerTurnInProgress = false;
-        await this.runtimeActionGateway.run('nextPhase');
+        await this.actionService.run('nextPhase');
         return;
       }
 
@@ -484,10 +484,10 @@ export class GameActionController implements GameActionDefinitionMap {
         const nightCardId = selectable.find((id) => this.cardLibrary.getCard(id).type.includes('NIGHT'));
         console.debug(`[computer turn] night phase selectable night card ${nightCardId ?? 'none'}`);
         if (nightCardId !== undefined) {
-          await this.runtimeActionGateway.run('playCard', { playerId: currentPlayer.id, cardId: nightCardId });
+          await this.actionService.run('playCard', { playerId: currentPlayer.id, cardId: nightCardId });
         }
         this._computerTurnInProgress = false;
-        await this.runtimeActionGateway.run('nextPhase');
+        await this.actionService.run('nextPhase');
         return;
       }
     } finally {
@@ -522,7 +522,7 @@ export class GameActionController implements GameActionDefinitionMap {
           match: this.match,
           playerId,
           cardId,
-          actionService: this.runtimeActionGateway,
+          actionService: this.actionService,
         });
       }
     });
@@ -1410,7 +1410,7 @@ export class GameActionController implements GameActionDefinitionMap {
         findCardService: this.findCardService,
         cardSourceController: this.cardSourceController,
         cardPriceController: this.cardPriceController,
-        actionService: this.runtimeActionGateway,
+        actionService: this.actionService,
         reactionManager: this.reactionManager,
         logManager: this.logManager,
       });
@@ -1509,7 +1509,7 @@ export class GameActionController implements GameActionDefinitionMap {
         cardPriceController: this.cardPriceController,
         logManager: this.logManager,
         reactionManager: this.reactionManager,
-        actionService: this.runtimeActionGateway,
+        actionService: this.actionService,
         cardId: args.cardLikeId,
         playerId: args.playerId,
         match: this.match,
@@ -1626,7 +1626,7 @@ export class GameActionController implements GameActionDefinitionMap {
         cardPriceController: this.cardPriceController,
         logManager: this.logManager,
         reactionManager: this.reactionManager,
-        actionService: this.runtimeActionGateway,
+        actionService: this.actionService,
         cardId: args.cardLikeId,
         playerId: args.playerId,
         match: this.match,
@@ -1744,7 +1744,7 @@ export class GameActionController implements GameActionDefinitionMap {
           cardPriceController: this.cardPriceController,
           logManager: this.logManager,
           reactionManager: this.reactionManager,
-          actionService: this.runtimeActionGateway,
+          actionService: this.actionService,
           cardId: boonId,
           playerId: args.playerId,
           match: this.match,
@@ -1896,7 +1896,7 @@ export class GameActionController implements GameActionDefinitionMap {
         cardPriceController: this.cardPriceController,
         logManager: this.logManager,
         reactionManager: this.reactionManager,
-        actionService: this.runtimeActionGateway,
+        actionService: this.actionService,
         cardId: hexId,
         playerId: args.playerId,
         match: this.match,
@@ -1981,7 +1981,7 @@ export class GameActionController implements GameActionDefinitionMap {
       cardPriceController: this.cardPriceController,
       logManager: this.logManager,
       reactionManager: this.reactionManager,
-      actionService: this.runtimeActionGateway,
+      actionService: this.actionService,
       cardId: state.id,
       playerId: args.playerId,
       match: this.match,
@@ -2083,7 +2083,7 @@ export class GameActionController implements GameActionDefinitionMap {
       cardPriceController: this.cardPriceController,
       logManager: this.logManager,
       reactionManager: this.reactionManager,
-      actionService: this.runtimeActionGateway,
+      actionService: this.actionService,
       cardId: artifact.id,
       playerId: args.playerId,
       match: this.match,
@@ -2785,7 +2785,7 @@ export class GameActionController implements GameActionDefinitionMap {
         cardPriceController: this.cardPriceController,
         logManager: this.logManager,
         reactionManager: this.reactionManager,
-        actionService: this.runtimeActionGateway,
+        actionService: this.actionService,
         cardId,
         playerId,
         match: this.match,
