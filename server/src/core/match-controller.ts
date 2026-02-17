@@ -183,9 +183,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     // Load an optional match override from disk for local dev/debugging.
     this._loadedMatchState = await this.tryLoadMatchStateOverride();
 
-    this._matchConfigurator = this.matchConfiguratorFactory.create(config);
-
-    const { config: newConfig } = await this._matchConfigurator.createConfiguration({
+    this._matchConfigurator = this.matchConfiguratorFactory.create(config, {
       match: this.match,
       cardSourceController: this.cardSourceController,
       cardInstanceFactoryService: this.cardInstanceFactoryService,
@@ -203,6 +201,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         this._gameActionsController?.registerProjectEffect(cardKey, effectFn),
       playerScoreDecoratorRegistrar: (val: PlayerScoreDecorator) => this._expansionScoringFns.push(val),
     });
+    const { config: newConfig } = await this._matchConfigurator.createConfiguration();
 
     // Use the loaded match state if provided; otherwise build a fresh match state.
     if (this._loadedMatchState) {

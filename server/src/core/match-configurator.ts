@@ -5,7 +5,6 @@ import {
   ComputedMatchConfiguration,
   EventNoId,
   LandmarkNoId,
-  Match,
   MatchConfiguration,
   ProjectNoId,
   Supply,
@@ -72,8 +71,9 @@ export class MatchConfigurator {
   private _requestedKingdoms: CardNoId[] = [];
   private _bannedKingdoms: CardNoId[] = [];
   private readonly _config: ComputedMatchConfiguration;
+  private readonly _initContext: InitializeExpansionContext;
 
-  constructor(config: MatchConfiguration) {
+  constructor(config: MatchConfiguration, initContext: InitializeExpansionContext) {
     // when creating the clone, it will break the custom Deno.customInspect symbols on classes so they won't
     // properly print. I'm not sure if we NEED the structured clone, might just remove it eventually. I tested
     // and that worked as well as of this fix. but i kind of want all changes to be self-contained in the configurator
@@ -89,11 +89,12 @@ export class MatchConfigurator {
     this._config.states ??= [];
     // Ensure artifacts array exists for downstream configuration logic.
     this._config.artifacts ??= [];
+    this._initContext = initContext;
 
     console.info(`[match configurator] created`);
   }
 
-  public async createConfiguration(initContext: InitializeExpansionContext) {
+  public async createConfiguration() {
     const requisiteKingdomCardKeys = Deno.env.get('REQUISITE_KINGDOM_CARD_KEYS')
       ?.toLowerCase()
       ?.split(',')
@@ -142,9 +143,9 @@ export class MatchConfigurator {
     this.selectKingdomSupply();
     this.selectBasicSupply();
 
-    await this.runExpansionConfigurators(initContext);
+    await this.runExpansionConfigurators();
 
-    this.createCardSources(initContext.match, initContext.cardSourceController);
+    this.createCardSources(this._initContext.cardSourceController);
 
     return { config: this._config };
   }
@@ -166,7 +167,7 @@ export class MatchConfigurator {
     );
   }
 
-  private createCardSources(match: Match, cardSourceController: CardSourceController) {
+  private createCardSources(cardSourceController: CardSourceController) {
     // todo: right now these register locations that were previously hard-coded in the match state.
     // i'm converting to use this CardSourceController class and these might be able to be converted
     // into non-hardcoded locations.
@@ -450,7 +451,7 @@ export class MatchConfigurator {
     return configurators;
   }
 
-  private async runExpansionConfigurators(initContext: InitializeExpansionContext) {
+  private async runExpansionConfigurators() {
     const configuratorIterator = (await this.getExpansionConfigurators()).entries();
 
     let iteration = 0;
@@ -462,7 +463,7 @@ export class MatchConfigurator {
       for (const [expansionName, expansionConfigurator] of configuratorIterator) {
         console.info(`[match configurator] running expansion configurator for expansion '${expansionName}'`);
         await expansionConfigurator({
-          ...initContext,
+          ...this._initContext,
           config: this._config,
           cardLibrary: rawCardLibrary,
           expansionData: expansionLibrary[expansionName],
@@ -481,13 +482,13 @@ export class MatchConfigurator {
     }
 
     console.info(`[match configurator] registering expansion scoring effects`);
-    await this.registerExpansionPlayerScoreDecorators(initContext.playerScoreDecoratorRegistrar);
+    await this.registerExpansionPlayerScoreDecorators(this._initContext.playerScoreDecoratorRegistrar);
 
     console.info(`[match configurator] registering expansion end game policies`);
-    await this.registerExpansionEndGamePolicies(initContext.endGamePolicyRegistrar);
+    await this.registerExpansionEndGamePolicies(this._initContext.endGamePolicyRegistrar);
 
     console.info(`[match configurator] registering game event listeners`);
-    await this.registerGameEventListeners(initContext.gameEventRegistrar);
+    await this.registerGameEventListeners(this._initContext.gameEventRegistrar);
   }
 
   private async registerGameEventListeners(gameEventRegistrar: GameEventRegistrar) {
