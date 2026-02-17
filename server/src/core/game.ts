@@ -156,14 +156,8 @@ export class Game {
     this._matchConfiguration = { ...structuredClone(defaultMatchConfiguration) };
   }
 
-  // Returns the currently selected expansion names used by lobby card search filtering.
-  private getSelectedExpansionNames(): Set<string> {
-    const selectedExpansions = this._matchConfiguration?.expansions ?? defaultMatchConfiguration.expansions;
-    return new Set(selectedExpansions.map((expansion) => expansion.name));
-  }
-
   private onSearchCards = (searchStr: string) => {
-    const filteredCards = this._expansionSearchService.searchKingdomCards(searchStr, this.getSelectedExpansionNames());
+    const filteredCards = this._expansionSearchService.searchKingdomCards(searchStr);
     console.debug(
       `[game] kingdom search '${searchStr}' returned ${filteredCards.length} eligible card(s)`,
     );

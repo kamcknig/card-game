@@ -39,10 +39,10 @@ export class ExpansionSearchService {
     );
   }
 
-  // Returns kingdom-selectable cards from selected expansions for a search term.
-  public searchKingdomCards(searchStr: string, selectedExpansionNames: Set<string>): CardNoId[] {
+  // Returns kingdom-selectable cards across all loaded expansions for a search term.
+  public searchKingdomCards(searchStr: string): CardNoId[] {
     const cards = this._cardFuse?.search(searchStr).map((result) => result.item) ?? [];
-    return cards.filter((card) => this.isCardEligibleForKingdomSearch(card, selectedExpansionNames));
+    return cards.filter((card) => this.isCardEligibleForKingdomSearch(card));
   }
 
   // Returns matching events for a search term.
@@ -78,7 +78,7 @@ export class ExpansionSearchService {
   }
 
   // Ensures kingdom search only returns legal supply kingdom cards.
-  private isCardEligibleForKingdomSearch(card: CardNoId, selectedExpansionNames: Set<string>): boolean {
+  private isCardEligibleForKingdomSearch(card: CardNoId): boolean {
     if (card.isBasic) {
       return false;
     }
@@ -91,7 +91,6 @@ export class ExpansionSearchService {
       return false;
     }
 
-    return selectedExpansionNames.has(card.expansionName);
+    return true;
   }
 }
-
