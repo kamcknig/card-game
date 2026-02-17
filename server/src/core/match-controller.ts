@@ -20,7 +20,6 @@ import type { Operation } from 'fast-json-patch';
 import { EventEmitter } from '@denosaurs/event';
 import {
   AppSocket,
-  EndGameConditionFn,
   FindCardService,
   SupplyGainService,
   GameActionDefinitionMap,
@@ -53,7 +52,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _logManager: LogManager | undefined;
   private _gameActionsController: GameActionController | undefined;
   private _matchConfiguration: ComputedMatchConfiguration | undefined;
-  private _expansionEndGameConditionFns: EndGameConditionFn[] = [];
   private _cardPriceController: CardPriceRulesController | undefined;
   private _matchConfigurator: MatchConfigurator | undefined;
   private _endGameEvaluator: EndGameEvaluatorService | undefined;
@@ -191,7 +189,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       gameEventRegistrar: (event: GameLifecycleEvent, handler: GameLifecycleCallback) =>
         this._reactionManager?.registerGameEvent(event, handler),
       clientEventRegistrar: (event, handler) => this.clientEventRegistrar(event, handler),
-      endGameConditionRegistrar: (val) => this._expansionEndGameConditionFns.push(val),
       endGamePolicyRegistrar: (val) => this.endGamePolicyRegistryService.register(val),
       cardEffectRegistrar: (...args) => this._gameActionsController?.registerCardEffect(...args),
       boonEffectRegistrar: (cardKey, effectFn) => this._gameActionsController?.registerBoonEffect(cardKey, effectFn),
@@ -640,7 +637,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
   private async checkGameEnd() {
     console.info(`[match] checking if the game has ended`);
-    const endGameEvaluation = this._endGameEvaluator?.evaluateEndGame(this._expansionEndGameConditionFns);
+    const endGameEvaluation = this._endGameEvaluator?.evaluateEndGame();
     if (!endGameEvaluation) {
       return false;
     }

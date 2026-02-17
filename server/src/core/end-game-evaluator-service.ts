@@ -1,5 +1,4 @@
 import {
-  EndGameConditionFn,
   EndGamePolicyFnOutcome,
   FindCardService,
   SupplyGainService,
@@ -31,8 +30,8 @@ export class EndGameEvaluatorService {
     private readonly endGamePolicyRegistryService: EndGamePolicyRegistryService,
   ) {}
 
-  public evaluateEndGame(expansionEndGameConditionFns: EndGameConditionFn[]): EndGameEvaluationResult {
-    let endTriggered = this.shouldEndGame(expansionEndGameConditionFns);
+  public evaluateEndGame(): EndGameEvaluationResult {
+    let endTriggered = this.shouldEndGame();
 
     for (const policy of this.endGamePolicyRegistryService.getPolicies()) {
       const outcome = policy({
@@ -44,7 +43,6 @@ export class EndGameEvaluatorService {
         reactionManager: this.reactionManager,
         findCardService: this.findCardService,
         supplyGainService: this.supplyGainService,
-        expansionEndGameConditionFns,
         endTriggered,
       });
       const decision = this.applyOutcome(outcome);
@@ -62,7 +60,7 @@ export class EndGameEvaluatorService {
     return { shouldEndNow: endTriggered };
   }
 
-  public shouldEndGame(expansionEndGameConditionFns: EndGameConditionFn[]): boolean {
+  public shouldEndGame(): boolean {
     if (
       this.findCardService.findCards([
         { location: 'basicSupply' },
@@ -81,23 +79,6 @@ export class EndGameEvaluatorService {
     if (emptyPileCount === 3) {
       console.info('[match] three supply piles are empty');
       return true;
-    }
-
-    for (const conditionFn of expansionEndGameConditionFns) {
-      const shouldEnd = conditionFn({
-        cardSourceController: this.cardSourceController,
-        match: this.match,
-        cardLibrary: this.cardLibrary,
-        cardPriceController: this.cardPriceController,
-        logManager: this.logManager,
-        reactionManager: this.reactionManager,
-        findCardService: this.findCardService,
-        supplyGainService: this.supplyGainService,
-      });
-      if (shouldEnd) {
-        console.info('[match] expansion end-game condition met');
-        return true;
-      }
     }
 
     return false;

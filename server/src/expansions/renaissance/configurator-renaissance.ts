@@ -107,64 +107,67 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
 // Registers Fleet-specific endgame handling as an expansion policy.
 export const registerEndGamePolicies = (registrar: EndGamePolicyRegistrar): void => {
-  registrar(({ match, endTriggered }) => {
-    // Fleet latches game-end state once activated; do not re-evaluate base conditions during Fleet turns.
-    if (match.fleetRound.completed) {
-      console.info('[match] Fleet round completed; finalizing game end');
-      return { decision: 'end_now' };
-    }
-
-    if (match.fleetRound.active) {
-      console.info('[match] game end latched; Fleet round still active');
-      return { decision: 'continue' };
-    }
-
-    if (!endTriggered) {
-      return { decision: 'continue' };
-    }
-
-    const fleetProjectId = match.projects.find((project) => project.cardKey === 'fleet')?.id;
-    if (fleetProjectId === undefined) {
-      return { decision: 'end_now' };
-    }
-
-    const doesPlayerOwnFleet = (playerId: PlayerId): boolean => {
-      return Object.values(match.tokens ?? {}).some((token) =>
-        token.tokenId === renaissanceTokenIds.cube &&
-        token.ownerId === playerId &&
-        token.location.type === 'cardLike' &&
-        token.location.cardLikeId === fleetProjectId
-      );
-    };
-
-    const fleetEligiblePlayerIds: PlayerId[] = [];
-    for (let offset = 1; offset <= match.players.length; offset++) {
-      const playerIndex = (match.currentPlayerTurnIndex + offset) % match.players.length;
-      const player = match.players[playerIndex];
-      if (!player) continue;
-      if (doesPlayerOwnFleet(player.id)) {
-        fleetEligiblePlayerIds.push(player.id);
+  registrar(
+    ({ match, endTriggered }) => {
+      // Fleet latches game-end state once activated; do not re-evaluate base conditions during Fleet turns.
+      if (match.fleetRound.completed) {
+        console.info('[match] Fleet round completed; finalizing game end');
+        return { decision: 'end_now' };
       }
-    }
 
-    if (!fleetEligiblePlayerIds.length) {
-      console.info('[match] no Fleet owners; ending game immediately');
-      return { decision: 'end_now' };
-    }
+      if (match.fleetRound.active) {
+        console.info('[match] game end latched; Fleet round still active');
+        return { decision: 'continue' };
+      }
 
-    match.fleetRound.active = true;
-    match.fleetRound.completed = false;
-    match.fleetRound.eligiblePlayerIdsInOrder = fleetEligiblePlayerIds;
-    match.fleetRound.nextFleetPlayerIndex = 0;
-    match.fleetRound.endingPlayerId = match.players[match.currentPlayerTurnIndex]?.id;
-    match.fleetRound.startedAtTurnNumber = match.turnNumber;
+      if (!endTriggered) {
+        return { decision: 'continue' };
+      }
 
-    console.info(
-      `[match] Fleet round activated by player ${match.fleetRound.endingPlayerId}; order: ${
-        fleetEligiblePlayerIds.join(', ')
-      }`,
-    );
+      const fleetProjectId = match.projects.find((project) => project.cardKey === 'fleet')?.id;
+      if (fleetProjectId === undefined) {
+        return { decision: 'end_now' };
+      }
 
-    return { decision: 'defer' };
-  });
+      const doesPlayerOwnFleet = (playerId: PlayerId): boolean => {
+        return Object.values(match.tokens ?? {}).some((token) =>
+          token.tokenId === renaissanceTokenIds.cube &&
+          token.ownerId === playerId &&
+          token.location.type === 'cardLike' &&
+          token.location.cardLikeId === fleetProjectId
+        );
+      };
+
+      const fleetEligiblePlayerIds: PlayerId[] = [];
+      for (let offset = 1; offset <= match.players.length; offset++) {
+        const playerIndex = (match.currentPlayerTurnIndex + offset) % match.players.length;
+        const player = match.players[playerIndex];
+        if (!player) continue;
+        if (doesPlayerOwnFleet(player.id)) {
+          fleetEligiblePlayerIds.push(player.id);
+        }
+      }
+
+      if (!fleetEligiblePlayerIds.length) {
+        console.info('[match] no Fleet owners; ending game immediately');
+        return { decision: 'end_now' };
+      }
+
+      match.fleetRound.active = true;
+      match.fleetRound.completed = false;
+      match.fleetRound.eligiblePlayerIdsInOrder = fleetEligiblePlayerIds;
+      match.fleetRound.nextFleetPlayerIndex = 0;
+      match.fleetRound.endingPlayerId = match.players[match.currentPlayerTurnIndex]?.id;
+      match.fleetRound.startedAtTurnNumber = match.turnNumber;
+
+      console.info(
+        `[match] Fleet round activated by player ${match.fleetRound.endingPlayerId}; order: ${
+          fleetEligiblePlayerIds.join(', ')
+        }`,
+      );
+
+      return { decision: 'defer' };
+    },
+    { priority: 100 },
+  );
 };

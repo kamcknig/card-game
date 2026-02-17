@@ -3,6 +3,4 @@ export type {
   AppContext,
   CardEffectFunctionContext,
   CardScoringFnContext,
-  EndGameConditionFn,
-  EndGameConditionFnContext,
 } from '../types.ts';

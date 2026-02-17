@@ -12,7 +12,6 @@ import {
 } from 'shared/types/index.ts';
 import { ExpansionData, expansionLibrary, rawCardLibrary } from '@expansions/expansion-library.ts';
 import {
-  EndGameConditionRegistrar,
   EndGamePolicyRegistrar,
   ExpansionConfigurator,
   ExpansionConfiguratorFactory,
@@ -481,9 +480,6 @@ export class MatchConfigurator {
       throw new Error(`[match configurator] expansion configurator failed to converge after 10 iterations`);
     }
 
-    console.info(`[match configurator] registering expansion end game conditions`);
-    await this.registerExpansionEndGameConditions(initContext.endGameConditionRegistrar);
-
     console.info(`[match configurator] registering expansion scoring effects`);
     await this.registerExpansionPlayerScoreDecorators(initContext.playerScoreDecoratorRegistrar);
 
@@ -511,28 +507,6 @@ export class MatchConfigurator {
           continue;
         }
         console.warn(`[match configurator] failed to register expansion actions for ${expansion}`);
-        console.error(error);
-      }
-    }
-  }
-
-  private async registerExpansionEndGameConditions(registrar: EndGameConditionRegistrar) {
-    const uniqueExpansions = Array.from(
-      new Set(
-        this._config.kingdomSupply.map((supply) => supply.cards.map((card) => card.expansionName))
-          .flat(),
-      ),
-    );
-    for (const expansion of uniqueExpansions) {
-      try {
-        const module = await import(`@expansions/${expansion}/configurator-${expansion}.ts`);
-        if (!module.registerEndGameConditions) continue;
-        module.registerEndGameConditions(registrar);
-      } catch (error) {
-        if ((error as any)?.code === 'ERR_MODULE_NOT_FOUND') {
-          continue;
-        }
-        console.warn(`[match configurator] failed to register expansion end game conditions for ${expansion}`);
         console.error(error);
       }
     }

@@ -1,8 +1,13 @@
-import { EndGameConditionRegistrar, ExpansionConfiguratorFactory, GameEventRegistrar } from '@server-types/index.ts';
+import {
+  EndGamePolicyRegistrar,
+  ExpansionConfiguratorFactory,
+  FindCardService,
+  GameEventRegistrar,
+} from '@server-types/index.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
-import { ComputedMatchConfiguration } from 'shared/types/index.ts';
+import { ComputedMatchConfiguration, Match } from 'shared/types/index.ts';
 import { registerProsperityTokenDefinitions } from './token-definitions-prosperity.ts';
 
 const configurator: ExpansionConfiguratorFactory = () => {
@@ -71,24 +76,33 @@ const configurator: ExpansionConfiguratorFactory = () => {
   };
 };
 
-export const registerEndGameConditions = (
-  registrar: EndGameConditionRegistrar,
+export const registerEndGamePolicies = (
+  registrar: EndGamePolicyRegistrar,
 ) => {
-  registrar(({ findCardService, match }) => {
-    const kingdomCards = match.config.kingdomSupply;
-    const colonyPresent = kingdomCards.find((supply) => supply.name === 'colony');
-
-    if (!colonyPresent) {
-      return false;
-    }
-
-    const colonyCards = findCardService.findCards([
-      { location: 'basicSupply' },
-      { cardKeys: 'colony' },
-    ]);
-    return colonyCards.length === 0;
-  });
+  // Must run before Fleet policy so endTriggered is available to Fleet.
+  registrar(
+    ({ match, findCardService }) => ({
+      endTriggered: isColonyPileEmpty(match, findCardService),
+      decision: 'continue',
+    }),
+    { priority: 10 },
+  );
 };
+
+function isColonyPileEmpty(
+  match: Match,
+  findCardService: FindCardService,
+): boolean {
+  const colonyPresent = match.config.kingdomSupply.some((supply) => supply.name === 'colony');
+  if (!colonyPresent) {
+    return false;
+  }
+  const colonyCards = findCardService.findCards([
+    { location: 'basicSupply' },
+    { cardKeys: 'colony' },
+  ]);
+  return colonyCards.length === 0;
+}
 
 export const registerGameEvents: (
   registrar: GameEventRegistrar,
