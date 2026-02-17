@@ -48,9 +48,7 @@ import { CardSourceController } from './card-source-controller.ts';
 import { tokenDefinitionMap } from './tokens/token-definition-map.ts';
 import { prosperityTokenIds } from '@expansions/prosperity/token-prosperity-ids.ts';
 import { renaissanceTokenIds } from '@expansions/renaissance/token-ids-renaissance.ts';
-import { ExpansionSearchService } from './expansion-search-service.ts';
 import { MatchRuntimeFactory } from './match-runtime-factory.ts';
-import { MatchSocketBindings } from './match-socket-bindings.ts';
 import { ReactionManager } from './reactions/reaction-manager.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';
 import { LogManager } from './log-manager.ts';
@@ -58,6 +56,7 @@ import { CardPriceRulesController } from './card-price-rules-controller.ts';
 import { GameActionController } from './actions/game-action-controller.ts';
 import { MatchConfiguratorFactory } from './match-configurator-factory.ts';
 import { EndGameEvaluatorService } from './end-game-evaluator-service.ts';
+import { PlayerReconnectOrchestrator } from './player-reconnect-orchestrator.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardLibSnapshot = {};
@@ -73,6 +72,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardPriceController: CardPriceRulesController | undefined;
   private _matchConfigurator: MatchConfigurator | undefined;
   private _endGameEvaluator: EndGameEvaluatorService | undefined;
+  private _playerReconnectOrchestrator: PlayerReconnectOrchestrator | undefined;
   private _expansionScoringFns: PlayerScoreDecorator[] = [];
   private _registeredEvents: (keyof ServerListenEvents)[] = [];
   private _findCardService: FindCardService = {
@@ -105,9 +105,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
   constructor(
     private readonly _socketMap: Map<PlayerId, AppSocket>,
-    private readonly _expansionSearchService: ExpansionSearchService,
     private readonly _matchRuntimeFactory: MatchRuntimeFactory,
-    private readonly _matchSocketBindings: MatchSocketBindings,
     private readonly _matchConfiguratorFactory: MatchConfiguratorFactory,
   ) {
     super();
@@ -273,6 +271,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this._reactionManager = runtime.reactionManager;
     this._endGameEvaluator = runtime.endGameEvaluator;
     this._interactivityController = runtime.interactivityController;
+    this._playerReconnectOrchestrator = runtime.playerReconnectOrchestrator;
     this._gameActionsController = runtime.gameActionsController;
 
     this._matchConfigurator = this._matchConfiguratorFactory.create(config);
@@ -424,33 +423,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
 
   public playerReconnected(playerId: PlayerId, socket: AppSocket) {
-    console.info(`[match] player ${playerId} reconnecting`);
-    this._socketMap.set(playerId, socket);
-
-    this.broadcastPatch({} as Match, playerId);
-
-    socket.emit('setCardLibrary', this._cardLibrary.getAllCards());
-    socket.emit('setTokenDefinitions', tokenDefinitionMap);
-    socket.emit('matchReady');
-    // Rehydrate log history after reconnect so the client can rebuild the UI log.
-    const logHistory = this._logManager?.getHistory() ?? [];
-    if (logHistory.length > 0) {
-      socket.emit('addLogEntry', logHistory);
-    }
-
-    socket.on('clientReady', async (_playerId: number, _ready: boolean) => {
-      console.info(`[match] ${getPlayerById(this._match, playerId)} marked ready`);
-      socket.emit('matchStarted');
-      socket.off('clientReady');
-
-      this.bindGameplaySocketListeners(socket);
-
-      this._interactivityController?.playerAdded(socket);
-
-      if (getCurrentPlayer(this._match).id === playerId) {
-        await this.runGameAction('checkForRemainingPlayerActions');
-      }
-    });
+    this._playerReconnectOrchestrator?.playerReconnected(playerId, socket);
   }
 
   public playerDisconnected(playerId: number) {
@@ -770,7 +743,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     await this._reactionManager?.runGameLifecycleEvent('onGameStart', { match: this._match });
 
     for (const socket of this._socketMap.values()) {
-      this.bindGameplaySocketListeners(socket);
+      this._playerReconnectOrchestrator?.bindGameplaySocketListeners(socket);
     }
 
     this._matchSnapshot = this.getMatchSnapshot();
@@ -1023,36 +996,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
     this._socketMap.forEach((s) => s.emit('gameOver', summary));
     this.emit('gameOver');
-  }
-
-  private async onNextPhase() {
-    await this.runGameAction('nextPhase');
-    this._socketMap.forEach((s) => s.emit('nextPhaseComplete'));
-  }
-
-  private bindGameplaySocketListeners(socket: AppSocket) {
-    this._matchSocketBindings.bindGameplaySocketHandlers(socket, {
-      onNextPhase: () => this.onNextPhase(),
-      onSearchCards: (playerId, searchStr) => this.onSearchCards(playerId, searchStr),
-      onExchangeCoffer: async (playerId, count) => {
-        await this.runGameAction('exchangeCoffer', { playerId, count });
-      },
-      onSpendVillager: async (playerId, count) => {
-        await this.runGameAction('spendVillager', { playerId, count });
-      },
-      onPayDebt: async (playerId, count) => {
-        await this.runGameAction('payDebt', { playerId, count });
-      },
-    });
-  }
-
-  private onSearchCards(playerId: PlayerId, searchStr: string) {
-    console.debug(`[match] ${getPlayerById(this._match, playerId)} searching for cards using term '${searchStr}'`);
-
-    this._socketMap.get(playerId)?.emit(
-      'searchCardResponse',
-      this._expansionSearchService.searchKingdomCards(searchStr),
-    );
   }
 
   private createEvents(config: ComputedMatchConfiguration) {

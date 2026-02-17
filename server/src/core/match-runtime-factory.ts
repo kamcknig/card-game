@@ -15,6 +15,9 @@ import {FindCardsService} from './find-cards-service.ts';
 import {BuyOptionsResolver} from './actions/resolve-buy-options.ts';
 import {DefaultSupplyGainService} from './supply-gain-service.ts';
 import {EndGameEvaluatorService} from './end-game-evaluator-service.ts';
+import {PlayerReconnectOrchestrator} from './player-reconnect-orchestrator.ts';
+import {ExpansionSearchService} from './expansion-search-service.ts';
+import {MatchSocketBindings} from './match-socket-bindings.ts';
 
 export interface MatchRuntimeFactoryArgs {
   socketMap: Map<PlayerId, AppSocket>;
@@ -32,11 +35,17 @@ export interface MatchRuntime {
   endGameEvaluator: EndGameEvaluatorService;
   reactionManager: ReactionManager;
   interactivityController: CardInteractivityController;
+  playerReconnectOrchestrator: PlayerReconnectOrchestrator;
   gameActionsController: GameActionController;
 }
 
 // Builds the per-match runtime graph (controllers/managers/maps) used by MatchController.
 export class MatchRuntimeFactory {
+  constructor(
+    private readonly _expansionSearchService: ExpansionSearchService,
+    private readonly _matchSocketBindings: MatchSocketBindings,
+  ) {}
+
   public create({
     socketMap,
     match,
@@ -79,6 +88,8 @@ export class MatchRuntimeFactory {
       _cardLibrary: asValue(cardLibrary),
       _cardSourceController: asValue(cardSourceController),
       _runGameActionDelegate: asValue(runGameActionDelegate),
+      _expansionSearchService: asValue(this._expansionSearchService),
+      _matchSocketBindings: asValue(this._matchSocketBindings),
       _cardEffectFunctionMap: asValue(cardEffectFunctionMap),
       _eventEffectFunctionMap: asValue(eventEffectFunctionMap),
       _projectEffectFunctionMap: asValue(projectEffectFunctionMap),
@@ -94,6 +105,7 @@ export class MatchRuntimeFactory {
       _reactionManager: asClass(ReactionManager).singleton(),
       _endGameEvaluator: asClass(EndGameEvaluatorService).singleton(),
       _interactivityController: asClass(CardInteractivityController).singleton(),
+      _playerReconnectOrchestrator: asClass(PlayerReconnectOrchestrator).singleton(),
       _gameActionsController: asClass(GameActionController).singleton(),
     });
 
@@ -104,6 +116,7 @@ export class MatchRuntimeFactory {
     const reactionManager = scope.resolve<ReactionManager>('_reactionManager');
     const endGameEvaluator = scope.resolve<EndGameEvaluatorService>('_endGameEvaluator');
     const interactivityController = scope.resolve<CardInteractivityController>('_interactivityController');
+    const playerReconnectOrchestrator = scope.resolve<PlayerReconnectOrchestrator>('_playerReconnectOrchestrator');
     const gameActionsController = scope.resolve<GameActionController>('_gameActionsController');
 
     return {
@@ -114,6 +127,7 @@ export class MatchRuntimeFactory {
       endGameEvaluator,
       reactionManager,
       interactivityController,
+      playerReconnectOrchestrator,
       gameActionsController,
     };
   }
