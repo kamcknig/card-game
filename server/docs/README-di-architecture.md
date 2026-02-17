@@ -43,13 +43,14 @@ Defined in `server/src/core/match-scope-factory.ts`:
 
 | Token | Registration | Lifetime | Resolved By |
 | --- | --- | --- | --- |
+| `matchScopeContainer` | `asValue(scope)` | match | `actionService` factory |
 | `socketMap` | `asValue(socketMap)` | match | `MatchController` |
 | `matchConfiguratorFactory` | `asValue(this.matchConfiguratorFactory)` | match | `MatchController` |
 | `match` | `asValue(createInitialMatchState())` | match | runtime services |
 | `cardLibrary` | `asClass(MatchCardLibrary)` | match singleton | `MatchController`, setup/runtime |
 | `cardSourceController` | `asClass(CardSourceController)` | match singleton | setup/runtime |
 | `cardInstanceFactoryService` | `asClass(CardInstanceFactoryService)` | match singleton | setup/runtime/configuration events |
-| `runtimeActionGateway` | `asClass(RuntimeActionGateway)` | match singleton | runtime services, `MatchScopeFactory` bind step |
+| `actionService` | `asFunction(createActionService)` | match singleton | runtime services, effect/reaction contexts |
 | `endGamePolicyRegistryService` | `asClass(EndGamePolicyRegistryService)` | match singleton | `MatchController`, evaluator |
 | `matchSetupService` | `asClass(MatchSetupService)` | match singleton | `MatchController` |
 | `matchEndService` | `asClass(MatchEndService)` | match singleton | `MatchController` |
@@ -66,10 +67,11 @@ Defined in `server/src/core/match-runtime-factory.ts`:
   `artifactEffectFunctionMap`.
 - Class tokens (all match singletons):
   `logManager`, `cardPriceController`, `findCardService`, `supplyGainService`,
+  `cardEffectContextFactory`, `reactionContextFactory`,
   `buyOptionsResolver`, `reactionManager`, `endGameEvaluator`,
   `interactivityController`, `playerReconnectOrchestrator`, `gameActionsController`.
 
-These are match-lifetime runtime services resolved directly by constructor injection (no `attachRuntime(...)` phase).
+These are match-lifetime runtime services resolved directly by constructor injection (no `attachRuntime(...)` phase and no mutable action gateway bind step).
 
 ## Match Configurator Scope
 

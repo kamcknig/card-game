@@ -296,7 +296,7 @@ export interface GameActionDefinitionMap {
     context?: GameActionContext,
   ) => Promise<void>;
   trashCard: (args: { cardId: CardId | Card; playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
-  userPrompt: (args: UserPromptActionArgs) => Promise<unknown>;
+  userPrompt: (args: UserPromptActionArgs) => Promise<unknown | null>;
 }
 
 export type GameActions = keyof GameActionDefinitionMap;
@@ -325,6 +325,14 @@ export type RunGameActionDelegate = BaseRunGameActionDelegate & {
     args: { playerId: PlayerId; count: number; suppressReactions?: boolean },
     context?: GameActionContext,
   ): Promise<CardId[] | null>;
+  (
+    action: 'selectCard',
+    args: SelectActionCardArgs,
+  ): Promise<CardId[]>;
+  <TUserPromptResult = unknown>(
+    action: 'userPrompt',
+    args: UserPromptActionArgs,
+  ): Promise<TUserPromptResult | null>;
 };
 
 export type ActionService = {

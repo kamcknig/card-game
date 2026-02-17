@@ -187,11 +187,19 @@ export class GameActionController implements GameActionDefinitionMap {
     action: K,
     ...args: Parameters<GameActionDefinitionMap[K]>
   ): Promise<GameActionReturnTypeMap[K]> {
-    const handler = (this as any)[action] ?? this._customActionHandlers[action];
-    if (!handler) {
+    const controllerHandler = (this as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>)[
+      action as string
+    ];
+    if (controllerHandler) {
+      return await controllerHandler(...(args as unknown[])) as GameActionReturnTypeMap[K];
+    }
+
+    const customHandler = this._customActionHandlers[action];
+    if (!customHandler) {
       throw new Error(`No handler registered for action: ${action}`);
     }
-    return await handler.bind(this)(...args);
+    const customActionHandler = customHandler as (...args: unknown[]) => Promise<unknown>;
+    return await customActionHandler(...(args as unknown[])) as GameActionReturnTypeMap[K];
   }
 
   // Builds a deterministic token instance id for stable patch ordering.

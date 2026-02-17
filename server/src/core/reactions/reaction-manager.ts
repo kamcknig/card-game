@@ -28,6 +28,7 @@ import { LogManager } from '../log-manager.ts';
 import { CardPriceRulesController } from '../card-price-rules-controller.ts';
 import { CardSourceController } from '../card-source-controller.ts';
 import { CardInstanceFactoryService } from '../card-instance-factory-service.ts';
+import { ReactionContextFactory } from './reaction-context-factory.ts';
 
 export class ReactionManager {
   private _reactions: Reaction[] = [];
@@ -48,6 +49,7 @@ export class ReactionManager {
     private readonly cardLibrary: MatchCardLibrary,
     private readonly cardInstanceFactoryService: CardInstanceFactoryService,
     private readonly actionService: ActionService,
+    private readonly reactionContextFactory: ReactionContextFactory,
   ) {}
 
   public endGame() {
@@ -89,19 +91,11 @@ export class ReactionManager {
       let include = true;
 
       if (reaction.condition !== undefined) {
-        const result = await reaction.condition({
-          cardSourceController: this.cardSourceController,
-          cardPriceController: this.cardPriceController,
-          logManager: this.logManager,
+        const result = await reaction.condition(this.reactionContextFactory.createConditionContext({
           reactionManager: this,
-          actionService: this.actionService,
-          findCardService: this.findCardService,
-          supplyGainService: this.supplyGainService,
-          match: this.match,
-          cardLibrary: this.cardLibrary,
           trigger,
           reaction,
-        });
+        }));
 
         include = result;
       }
@@ -206,18 +200,9 @@ export class ReactionManager {
     ...args: GameLifeCycleEventArgsMap[T] extends void ? [] : [GameLifeCycleEventArgsMap[T]]
   ) {
     for (const handler of this._expansionGameEventHandlers[trigger] ?? []) {
-      await handler({
-        cardSourceController: this.cardSourceController,
-        findCardService: this.findCardService,
-        supplyGainService: this.supplyGainService,
-        cardPriceController: this.cardPriceController,
-        logManager: this.logManager,
-        cardLibrary: this.cardLibrary,
-        cardInstanceFactoryService: this.cardInstanceFactoryService,
-        match: this.match,
+      await handler(this.reactionContextFactory.createGameLifecycleContext({
         reactionManager: this,
-        actionService: this.actionService,
-      }, ...args);
+      }), ...args);
     }
   }
 
@@ -231,17 +216,9 @@ export class ReactionManager {
 
     console.info(`[REACTION MANAGER] running lifecycle trigger '${trigger}' for card ${card}`);
 
-    await fn({
-      cardSourceController: this.cardSourceController,
-      actionService: this.actionService,
-      cardPriceController: this.cardPriceController,
-      logManager: this.logManager,
-      cardLibrary: this.cardLibrary,
-      match: this.match,
+    await fn(this.reactionContextFactory.createCardLifecycleContext({
       reactionManager: this,
-      findCardService: this.findCardService,
-      supplyGainService: this.supplyGainService,
-    }, args as any);
+    }), args as any);
   }
 
   async runTrigger({ trigger, reactionContext }: { trigger: ReactionTrigger; reactionContext?: ReactionContext }) {
@@ -319,13 +296,13 @@ export class ReactionManager {
 
           console.info(`[REACTION MANAGER] prompting ${targetPlayer} to choose reaction`);
 
-          const result = await this.actionService.run('userPrompt', {
+          const result = await this.actionService.run<{ action: number }>('userPrompt', {
             playerId: targetPlayer.id,
             actionButtons,
             prompt: 'Choose reaction?',
-          }) as { action: number };
+          });
 
-          if (result.action === 0) {
+          if (!result || result.action === 0) {
             console.info(`[REACTION MANAGER] ${targetPlayer} chose not to react`);
             break;
           } else {
@@ -402,19 +379,10 @@ export class ReactionManager {
     trigger: ReactionTrigger<T>,
     reaction: Reaction,
   ): TriggeredEffectContext<T> {
-    return {
-      cardSourceController: this.cardSourceController,
-      findCardService: this.findCardService,
-      supplyGainService: this.supplyGainService,
+    return this.reactionContextFactory.createTriggeredEffectContext({
       reactionManager: this,
-      cardPriceController: this.cardPriceController,
-      logManager: this.logManager,
-      isRootLog: false,
-      actionService: this.actionService,
       trigger,
-      cardLibrary: this.cardLibrary,
-      match: this.match,
       reaction,
-    };
+    });
   }
 }

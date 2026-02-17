@@ -2,6 +2,7 @@ import {CardEffectFunctionMap} from '@server-types/index.ts';
 import {LogManager} from './log-manager.ts';
 import {CardPriceRulesController} from './card-price-rules-controller.ts';
 import {ReactionManager} from './reactions/reaction-manager.ts';
+import {ReactionContextFactory} from './reactions/reaction-context-factory.ts';
 import {cardEffectFunctionMapFactory} from './effects/card-effect-function-map-factory.ts';
 import {eventEffectFactoryMap} from './events/event-effect-factory-map.ts';
 import {projectEffectFactoryMap} from './projects/project-effect-factory-map.ts';
@@ -66,6 +67,7 @@ export class MatchRuntimeFactory {
       supplyGainService: asClass(DefaultSupplyGainService).singleton(),
       cardEffectContextFactory: asClass(CardEffectContextFactory).singleton(),
       buyOptionsResolver: asClass(BuyOptionsResolver).singleton(),
+      reactionContextFactory: asClass(ReactionContextFactory).singleton(),
       reactionManager: asClass(ReactionManager).singleton(),
       endGameEvaluator: asClass(EndGameEvaluatorService).singleton(),
       interactivityController: asClass(CardInteractivityController).singleton(),
