@@ -94,7 +94,7 @@ export class ReactionManager {
           cardPriceController: this.cardPriceController,
           logManager: this.logManager,
           reactionManager: this,
-          runGameActionDelegate: (action, ...args) => this.runtimeActionGateway.run(action, ...args),
+          actionService: this.runtimeActionGateway,
           findCardService: this.findCardService,
           supplyGainService: this.supplyGainService,
           match: this.match,
@@ -216,7 +216,7 @@ export class ReactionManager {
         cardInstanceFactoryService: this.cardInstanceFactoryService,
         match: this.match,
         reactionManager: this,
-        runGameActionDelegate: (action, ...args) => this.runtimeActionGateway.run(action, ...args),
+        actionService: this.runtimeActionGateway,
       }, ...args);
     }
   }
@@ -233,7 +233,7 @@ export class ReactionManager {
 
     await fn({
       cardSourceController: this.cardSourceController,
-      runGameActionDelegate: (action, ...args) => this.runtimeActionGateway.run(action, ...args),
+      actionService: this.runtimeActionGateway,
       cardPriceController: this.cardPriceController,
       logManager: this.logManager,
       cardLibrary: this.cardLibrary,
@@ -410,7 +410,7 @@ export class ReactionManager {
       cardPriceController: this.cardPriceController,
       logManager: this.logManager,
       isRootLog: false,
-      runGameActionDelegate: (action, ...args) => this.runtimeActionGateway.run(action, ...args),
+      actionService: this.runtimeActionGateway,
       trigger,
       cardLibrary: this.cardLibrary,
       match: this.match,

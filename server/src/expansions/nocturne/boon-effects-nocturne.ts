@@ -32,7 +32,7 @@ export const registerNocturneBoonEffects = (registerBoonEffect: BoonEffectRegist
 
 // Registers The Earth's Gift boon effect logic.
 const registerEarthsGift = (registerBoonEffect: BoonEffectRegistrar) => {
-  registerBoonEffect('the-earths-gift', async ({ playerId, runGameActionDelegate, cardLibrary, findCardService }) => {
+  registerBoonEffect('the-earths-gift', async ({ playerId, actionService, cardLibrary, findCardService }) => {
     // Determine if the player has any Treasures to discard.
     const treasuresInHand = findCardService.findCards([
       { location: 'playerHand', playerId },
@@ -45,7 +45,7 @@ const registerEarthsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     }
 
     // Prompt the player to optionally discard a Treasure.
-    const discardedTreasureIds = await runGameActionDelegate('selectCard', {
+    const discardedTreasureIds = await actionService.run('selectCard', {
       prompt: 'Discard a Treasure to gain a card costing up to $4',
       playerId: playerId,
       count: 1,
@@ -63,14 +63,14 @@ const registerEarthsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     }
 
     console.debug(`[the-earths-gift boon] discarding Treasure ${cardLibrary.getCard(discardedTreasureId)}`);
-    await runGameActionDelegate('moveCard', {
+    await actionService.run('moveCard', {
       cardId: discardedTreasureId,
       toPlayerId: playerId,
       to: { location: 'playerDiscard' },
     });
 
     console.debug('[the-earths-gift boon] selecting card to gain costing up to $4');
-    const gainCardIds = await runGameActionDelegate('selectCard', {
+    const gainCardIds = await actionService.run('selectCard', {
       prompt: 'Gain a card costing up to $4',
       playerId: playerId,
       count: 1,
@@ -87,7 +87,7 @@ const registerEarthsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     }
 
     console.debug(`[the-earths-gift boon] gaining card ${cardLibrary.getCard(gainCardId)}`);
-    await runGameActionDelegate('gainCard', {
+    await actionService.run('gainCard', {
       playerId: playerId,
       cardId: gainCardId,
       to: { location: 'playerDiscard' },
@@ -99,14 +99,14 @@ const registerEarthsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 const registerFieldsGift = (registerBoonEffect: BoonEffectRegistrar) => {
   registerBoonEffect('the-fields-gift', async ({
     playerId,
-    runGameActionDelegate,
+    actionService,
     match,
     reactionManager,
     cardId,
   }) => {
     // Apply the immediate +1 Action and +1 Treasure.
-    await runGameActionDelegate('gainAction', { count: 1 });
-    await runGameActionDelegate('gainTreasure', { count: 1 });
+    await actionService.run('gainAction', { count: 1 });
+    await actionService.run('gainTreasure', { count: 1 });
 
     // Resolve the boon instance for set-aside tracking.
     const boon = findBoonInMatch(match, cardId);
@@ -116,7 +116,7 @@ const registerFieldsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     }
 
     // Move the boon into the player's set-aside zone until cleanup.
-    await runGameActionDelegate('moveCardLike', {
+    await actionService.run('moveCardLike', {
       cardLikeId: boon.id,
       toPlayerId: playerId,
       to: { location: 'set-aside' },
@@ -128,9 +128,9 @@ const registerFieldsGift = (registerBoonEffect: BoonEffectRegistrar) => {
       once: true,
       compulsory: true,
       allowMultipleInstances: true,
-      triggeredEffectFn: async ({ runGameActionDelegate: runTriggerAction }) => {
+      triggeredEffectFn: async ({ actionService: runTriggerAction }) => {
         // Return the boon to the boon discard pile at cleanup.
-        await runTriggerAction('moveCardLike', {
+        await runTriggerAction.run('moveCardLike', {
           cardLikeId: boon.id,
           to: { location: 'boonDiscard' },
         });
@@ -145,7 +145,7 @@ const registerFieldsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 const registerFlamesGift = (registerBoonEffect: BoonEffectRegistrar) => {
   registerBoonEffect('the-flames-gift', async ({
     playerId,
-    runGameActionDelegate,
+    actionService,
     cardLibrary,
     findCardService,
   }) => {
@@ -155,7 +155,7 @@ const registerFlamesGift = (registerBoonEffect: BoonEffectRegistrar) => {
       return;
     }
 
-    const selectedCardIds = await runGameActionDelegate('selectCard', {
+    const selectedCardIds = await actionService.run('selectCard', {
       prompt: 'You may trash a card from your hand',
       playerId: playerId,
       count: 1,
@@ -172,7 +172,7 @@ const registerFlamesGift = (registerBoonEffect: BoonEffectRegistrar) => {
     }
 
     console.debug(`[the-flames-gift boon] trashing ${cardLibrary.getCard(selectedCardId)}`);
-    await runGameActionDelegate('trashCard', {
+    await actionService.run('trashCard', {
       playerId: playerId,
       cardId: selectedCardId,
     });
@@ -183,14 +183,14 @@ const registerFlamesGift = (registerBoonEffect: BoonEffectRegistrar) => {
 const registerForestsGift = (registerBoonEffect: BoonEffectRegistrar) => {
   registerBoonEffect('the-forests-gift', async ({
     playerId,
-    runGameActionDelegate,
+    actionService,
     match,
     reactionManager,
     cardId,
   }) => {
     // Apply the immediate +1 Buy and +1 Treasure.
-    await runGameActionDelegate('gainBuy', { count: 1 });
-    await runGameActionDelegate('gainTreasure', { count: 1 });
+    await actionService.run('gainBuy', { count: 1 });
+    await actionService.run('gainTreasure', { count: 1 });
 
     // Resolve the boon instance for set-aside tracking.
     const boon = findBoonInMatch(match, cardId);
@@ -200,7 +200,7 @@ const registerForestsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     }
 
     // Move the boon into the player's set-aside zone until cleanup.
-    await runGameActionDelegate('moveCardLike', {
+    await actionService.run('moveCardLike', {
       cardLikeId: boon.id,
       toPlayerId: playerId,
       to: { location: 'set-aside' },
@@ -212,9 +212,9 @@ const registerForestsGift = (registerBoonEffect: BoonEffectRegistrar) => {
       once: true,
       compulsory: true,
       allowMultipleInstances: true,
-      triggeredEffectFn: async ({ runGameActionDelegate: runTriggerAction }) => {
+      triggeredEffectFn: async ({ actionService: runTriggerAction }) => {
         // Return the boon to the boon discard pile at cleanup.
-        await runTriggerAction('moveCardLike', {
+        await runTriggerAction.run('moveCardLike', {
           cardLikeId: boon.id,
           to: { location: 'boonDiscard' },
         });
@@ -229,7 +229,7 @@ const registerForestsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 const registerMoonsGift = (registerBoonEffect: BoonEffectRegistrar) => {
   registerBoonEffect('the-moons-gift', async ({
     playerId,
-    runGameActionDelegate,
+    actionService,
     findCardService,
   }) => {
     const discardCards = findCardService.findCards({ location: 'playerDiscard', playerId });
@@ -239,7 +239,7 @@ const registerMoonsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     }
 
     const discardIds = discardCards.map((card) => card.id);
-    const selectionResult = await runGameActionDelegate('userPrompt', {
+    const selectionResult = await actionService.run('userPrompt', {
       prompt: 'You may put a card from your discard onto your deck',
       playerId: playerId,
       actionButtons: [{ label: 'DONE', action: 1 }],
@@ -257,7 +257,7 @@ const registerMoonsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     }
 
     console.debug(`[the-moons-gift boon] topdecking card ${selectedCardId}`);
-    await runGameActionDelegate('moveCard', {
+    await actionService.run('moveCard', {
       cardId: selectedCardId,
       toPlayerId: playerId,
       to: { location: 'playerDeck' },
@@ -290,7 +290,7 @@ const registerMountainsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 const registerRiversGift = (registerBoonEffect: BoonEffectRegistrar) => {
   registerBoonEffect('the-rivers-gift', async ({
     playerId,
-    runGameActionDelegate,
+    actionService,
     match,
     reactionManager,
     cardId,
@@ -303,7 +303,7 @@ const registerRiversGift = (registerBoonEffect: BoonEffectRegistrar) => {
     }
 
     // Move the boon into the player's set-aside zone until cleanup.
-    await runGameActionDelegate('moveCardLike', {
+    await actionService.run('moveCardLike', {
       cardLikeId: boon.id,
       toPlayerId: playerId,
       to: { location: 'set-aside' },
@@ -315,11 +315,11 @@ const registerRiversGift = (registerBoonEffect: BoonEffectRegistrar) => {
       once: true,
       compulsory: true,
       allowMultipleInstances: true,
-      triggeredEffectFn: async ({ runGameActionDelegate: runTriggerAction }) => {
+      triggeredEffectFn: async ({ actionService: runTriggerAction }) => {
         // Draw the extra card at end of turn.
-        await runTriggerAction('drawCard', { playerId, count: 1 });
+        await runTriggerAction.run('drawCard', { playerId, count: 1 });
         // Return the boon to the boon discard pile at cleanup.
-        await runTriggerAction('moveCardLike', {
+        await runTriggerAction.run('moveCardLike', {
           cardLikeId: boon.id,
           to: { location: 'boonDiscard' },
         });
@@ -334,9 +334,9 @@ const registerRiversGift = (registerBoonEffect: BoonEffectRegistrar) => {
 const registerSeasGift = (registerBoonEffect: BoonEffectRegistrar) => {
   registerBoonEffect('the-seas-gift', async ({
     playerId,
-    runGameActionDelegate,
+    actionService,
   }) => {
-    await runGameActionDelegate('drawCard', { playerId, count: 1 });
+    await actionService.run('drawCard', { playerId, count: 1 });
   });
 };
 
@@ -344,12 +344,12 @@ const registerSeasGift = (registerBoonEffect: BoonEffectRegistrar) => {
 const registerSkysGift = (registerBoonEffect: BoonEffectRegistrar) => {
   registerBoonEffect('the-skys-gift', async ({
     playerId,
-    runGameActionDelegate,
+    actionService,
     cardLibrary,
     supplyGainService,
     cardSourceController,
   }) => {
-    const confirm = await runGameActionDelegate('userPrompt', {
+    const confirm = await actionService.run('userPrompt', {
       playerId,
       prompt: 'Discard 3 cards to gain a Gold?',
       actionButtons: [
@@ -364,7 +364,7 @@ const registerSkysGift = (registerBoonEffect: BoonEffectRegistrar) => {
     }
 
     const hand = cardSourceController.getSource('playerHand', playerId);
-    const selectedCardIds = await runGameActionDelegate('selectCard', {
+    const selectedCardIds = await actionService.run('selectCard', {
       prompt: 'Discard 3 cards',
       playerId: playerId,
       count: 3,
@@ -373,7 +373,7 @@ const registerSkysGift = (registerBoonEffect: BoonEffectRegistrar) => {
 
     for (const cardId of selectedCardIds) {
       console.debug(`[the-skys-gift boon] discarding ${cardLibrary.getCard(cardId)}`);
-      await runGameActionDelegate('discardCard', {
+      await actionService.run('discardCard', {
         cardId: cardId,
         playerId: playerId,
       });
@@ -404,7 +404,7 @@ const registerSkysGift = (registerBoonEffect: BoonEffectRegistrar) => {
 const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
   registerBoonEffect('the-suns-gift', async ({
     playerId,
-    runGameActionDelegate,
+    actionService,
     cardSourceController,
   }) => {
     const deck = cardSourceController.getSource('playerDeck', playerId);
@@ -418,12 +418,12 @@ const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 
     if (deck.length < numToLookAt) {
       console.debug('[the-suns-gift boon] shuffling discard into deck');
-      await runGameActionDelegate('shuffleDeck', { playerId });
+      await actionService.run('shuffleDeck', { playerId });
     }
 
     const cardsToLookAt = deck.slice(-numToLookAt);
 
-    let result = await runGameActionDelegate('userPrompt', {
+    let result = await actionService.run('userPrompt', {
       prompt: `Discard any number of the ${cardsToLookAt.length} cards`,
       playerId: playerId,
       actionButtons: [{ label: 'DONE', action: 1 }],
@@ -438,7 +438,7 @@ const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     if (cardsToDiscard.length > 0) {
       console.debug(`[the-suns-gift boon] discarding ${cardsToDiscard.length} cards`);
       for (const cardId of cardsToDiscard) {
-        await runGameActionDelegate('discardCard', {
+        await actionService.run('discardCard', {
           cardId: cardId,
           playerId: playerId,
         });
@@ -448,7 +448,7 @@ const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     const cardsToRearrange = cardsToLookAt.filter((id) => !cardsToDiscard.includes(id));
     if (cardsToRearrange.length < 2) {
       if (cardsToRearrange.length === 1) {
-        await runGameActionDelegate('moveCard', {
+        await actionService.run('moveCard', {
           cardId: cardsToRearrange[0],
           toPlayerId: playerId,
           to: { location: 'playerDeck' },
@@ -458,7 +458,7 @@ const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
       return;
     }
 
-    result = await runGameActionDelegate('userPrompt', {
+    result = await actionService.run('userPrompt', {
       prompt: 'Put the rest back on top of your deck in any order',
       playerId: playerId,
       actionButtons: [{ label: 'DONE', action: 1 }],
@@ -469,7 +469,7 @@ const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     }) as { action: number; result: CardId[] };
 
     for (const cardId of result.result) {
-      await runGameActionDelegate('moveCard', {
+      await actionService.run('moveCard', {
         cardId: cardId,
         toPlayerId: playerId,
         to: { location: 'playerDeck' },
@@ -482,7 +482,7 @@ const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 const registerSwampsGift = (registerBoonEffect: BoonEffectRegistrar) => {
   registerBoonEffect('the-swamps-gift', async ({
     playerId,
-    runGameActionDelegate,
+    actionService,
     findCardService,
   }) => {
     const willOWispCards = findCardService.findCards([
@@ -497,7 +497,7 @@ const registerSwampsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 
     const willOWispId = willOWispCards.slice(-1)[0].id;
     console.debug(`[the-swamps-gift boon] gaining Will-o\'-Wisp ${willOWispId}`);
-    await runGameActionDelegate('gainCard', {
+    await actionService.run('gainCard', {
       playerId: playerId,
       cardId: willOWispId,
       to: { location: 'playerDiscard' },
@@ -509,12 +509,12 @@ const registerSwampsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 const registerWindsGift = (registerBoonEffect: BoonEffectRegistrar) => {
   registerBoonEffect('the-winds-gift', async ({
     playerId,
-    runGameActionDelegate,
+    actionService,
     cardLibrary,
     cardSourceController,
   }) => {
     // Draw two cards before discarding.
-    await runGameActionDelegate('drawCard', { playerId, count: 2 });
+    await actionService.run('drawCard', { playerId, count: 2 });
 
     const hand = cardSourceController.getSource('playerHand', playerId);
     if (hand.length < 1) {
@@ -522,7 +522,7 @@ const registerWindsGift = (registerBoonEffect: BoonEffectRegistrar) => {
       return;
     }
 
-    const cardIds = hand.length < 2 ? hand : await runGameActionDelegate('selectCard', {
+    const cardIds = hand.length < 2 ? hand : await actionService.run('selectCard', {
       prompt: 'Discard 2 cards',
       playerId: playerId,
       restrict: hand,
@@ -531,7 +531,7 @@ const registerWindsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 
     for (const cardId of cardIds) {
       console.debug(`[the-winds-gift boon] discarding ${cardLibrary.getCard(cardId)}`);
-      await runGameActionDelegate('discardCard', {
+      await actionService.run('discardCard', {
         cardId: cardId,
         playerId: playerId,
       });

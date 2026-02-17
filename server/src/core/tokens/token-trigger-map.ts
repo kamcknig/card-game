@@ -1,11 +1,11 @@
 import { CardId, Match, PlayerId, TokenId } from 'shared/types/index.ts';
-import { RunGameActionDelegate } from '@server-types/index.ts';
+import { ActionService } from '@server-types/index.ts';
 
 export type TokenCardPlayedContext = {
   match: Match;
   playerId: PlayerId;
   cardId: CardId;
-  runGameAction: RunGameActionDelegate;
+  actionService: ActionService;
 };
 
 export type TokenCardPlayedHandler = (context: TokenCardPlayedContext) => Promise<void>;

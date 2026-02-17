@@ -95,7 +95,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
       console.info(`[renaissance configurator] adding ${cubesToAdd} cube token(s) for player ${player.id}`);
       for (let i = 0; i < cubesToAdd; i++) {
-        await args.runGameActionDelegate('placeToken', {
+        await args.actionService.run('placeToken', {
           tokenId: renaissanceTokenIds.cube,
           ownerId: player.id,
           location: { type: 'playerAvailable', playerId: player.id },

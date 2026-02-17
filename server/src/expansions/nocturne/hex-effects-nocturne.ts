@@ -34,7 +34,7 @@ export const registerNocturneHexEffects = (registerHexEffect: HexEffectRegistrar
 
 // Registers Bad Omens hex effect logic.
 const registerBadOmens = (registerHexEffect: HexEffectRegistrar) => {
-  registerHexEffect('bad-omens', async ({ playerId, cardSourceController, runGameActionDelegate, cardLibrary }) => {
+  registerHexEffect('bad-omens', async ({ playerId, cardSourceController, actionService, cardLibrary }) => {
     const deck = cardSourceController.getSource('playerDeck', playerId);
     if (deck.length < 1) {
       console.debug('[bad-omens hex] no cards in deck to move');
@@ -44,7 +44,7 @@ const registerBadOmens = (registerHexEffect: HexEffectRegistrar) => {
     console.debug(`[bad-omens hex] moving ${deck.length} cards from deck to discard`);
     while (deck.length > 0) {
       const cardId = deck[deck.length - 1];
-      await runGameActionDelegate('moveCard', {
+      await actionService.run('moveCard', {
         cardId,
         toPlayerId: playerId,
         to: { location: 'playerDiscard' },
@@ -57,7 +57,7 @@ const registerBadOmens = (registerHexEffect: HexEffectRegistrar) => {
     if (copperIds.length < 1) {
       console.debug('[bad-omens hex] no Copper cards available, revealing discard');
       for (const cardId of discard) {
-        await runGameActionDelegate('revealCard', {
+        await actionService.run('revealCard', {
           playerId,
           cardId,
         });
@@ -68,7 +68,7 @@ const registerBadOmens = (registerHexEffect: HexEffectRegistrar) => {
     const coppersToTopdeck = copperIds.slice(-2);
     console.debug(`[bad-omens hex] topdecking ${coppersToTopdeck.length} Copper card(s)`);
     for (const cardId of coppersToTopdeck) {
-      await runGameActionDelegate('moveCard', {
+      await actionService.run('moveCard', {
         cardId,
         toPlayerId: playerId,
         to: { location: 'playerDeck' },
@@ -79,14 +79,14 @@ const registerBadOmens = (registerHexEffect: HexEffectRegistrar) => {
 
 // Registers Delusion hex effect logic.
 const registerDelusion = (registerHexEffect: HexEffectRegistrar) => {
-  registerHexEffect('delusion', async ({ playerId, match, runGameActionDelegate }) => {
+  registerHexEffect('delusion', async ({ playerId, match, actionService }) => {
     if (playerHasState(match, playerId, 'deluded') || playerHasState(match, playerId, 'envious')) {
       console.debug('[delusion hex] player already has Deluded or Envious');
       return;
     }
 
     console.debug('[delusion hex] gaining Deluded state');
-    await runGameActionDelegate('gainState', {
+    await actionService.run('gainState', {
       playerId,
       stateKey: 'deluded',
     });
@@ -95,14 +95,14 @@ const registerDelusion = (registerHexEffect: HexEffectRegistrar) => {
 
 // Registers Envy hex effect logic.
 const registerEnvy = (registerHexEffect: HexEffectRegistrar) => {
-  registerHexEffect('envy', async ({ playerId, match, runGameActionDelegate }) => {
+  registerHexEffect('envy', async ({ playerId, match, actionService }) => {
     if (playerHasState(match, playerId, 'deluded') || playerHasState(match, playerId, 'envious')) {
       console.debug('[envy hex] player already has Deluded or Envious');
       return;
     }
 
     console.debug('[envy hex] gaining Envious state');
-    await runGameActionDelegate('gainState', {
+    await actionService.run('gainState', {
       playerId,
       stateKey: 'envious',
     });
@@ -111,12 +111,12 @@ const registerEnvy = (registerHexEffect: HexEffectRegistrar) => {
 
 // Registers Famine hex effect logic.
 const registerFamine = (registerHexEffect: HexEffectRegistrar) => {
-  registerHexEffect('famine', async ({ playerId, cardSourceController, cardLibrary, runGameActionDelegate }) => {
+  registerHexEffect('famine', async ({ playerId, cardSourceController, cardLibrary, actionService }) => {
     let deck = cardSourceController.getSource('playerDeck', playerId);
     const discard = cardSourceController.getSource('playerDiscard', playerId);
     if (deck.length < 3 && discard.length > 0) {
       console.debug('[famine hex] deck has fewer than 3 cards, shuffling deck only');
-      await runGameActionDelegate('shuffleDeck', { playerId });
+      await actionService.run('shuffleDeck', { playerId });
       deck = cardSourceController.getSource('playerDeck', playerId);
     }
 
@@ -130,7 +130,7 @@ const registerFamine = (registerHexEffect: HexEffectRegistrar) => {
     console.debug(`[famine hex] revealing ${revealedIds.length} card(s)`);
 
     for (const revealId of revealedIds) {
-      await runGameActionDelegate('revealCard', {
+      await actionService.run('revealCard', {
         playerId,
         cardId: revealId,
       });
@@ -140,20 +140,20 @@ const registerFamine = (registerHexEffect: HexEffectRegistrar) => {
     console.debug(`[famine hex] discarding ${actionIds.length} Action card(s)`);
 
     for (const cardId of actionIds) {
-      await runGameActionDelegate('discardCard', {
+      await actionService.run('discardCard', {
         playerId,
         cardId,
       });
     }
 
     // Shuffle the deck using the game action to mix in the remaining cards.
-    await runGameActionDelegate('shuffleDeck', { playerId, includeDiscard: false });
+    await actionService.run('shuffleDeck', { playerId, includeDiscard: false });
   });
 };
 
 // Registers Fear hex effect logic.
 const registerFear = (registerHexEffect: HexEffectRegistrar) => {
-  registerHexEffect('fear', async ({ playerId, cardSourceController, cardLibrary, runGameActionDelegate }) => {
+  registerHexEffect('fear', async ({ playerId, cardSourceController, cardLibrary, actionService }) => {
     const hand = cardSourceController.getSource('playerHand', playerId);
     if (hand.length < 5) {
       console.debug('[fear hex] fewer than 5 cards in hand, no discard required');
@@ -168,7 +168,7 @@ const registerFear = (registerHexEffect: HexEffectRegistrar) => {
     if (!eligibleIds.length) {
       console.debug('[fear hex] no Action or Treasure cards to discard, revealing hand');
       for (const cardId of hand) {
-        await runGameActionDelegate('revealCard', {
+        await actionService.run('revealCard', {
           playerId,
           cardId,
         });
@@ -176,7 +176,7 @@ const registerFear = (registerHexEffect: HexEffectRegistrar) => {
       return;
     }
 
-    const selectedIds = await runGameActionDelegate('selectCard', {
+    const selectedIds = await actionService.run('selectCard', {
       playerId,
       prompt: 'Discard an Action or Treasure',
       count: 1,
@@ -190,7 +190,7 @@ const registerFear = (registerHexEffect: HexEffectRegistrar) => {
     }
 
     console.debug(`[fear hex] discarding ${cardLibrary.getCard(selectedId)}`);
-    await runGameActionDelegate('discardCard', {
+    await actionService.run('discardCard', {
       playerId,
       cardId: selectedId,
     });
@@ -217,14 +217,14 @@ const registerGreed = (registerHexEffect: HexEffectRegistrar) => {
 
 // Registers Haunting hex effect logic.
 const registerHaunting = (registerHexEffect: HexEffectRegistrar) => {
-  registerHexEffect('haunting', async ({ playerId, cardSourceController, runGameActionDelegate, cardLibrary }) => {
+  registerHexEffect('haunting', async ({ playerId, cardSourceController, actionService, cardLibrary }) => {
     const hand = cardSourceController.getSource('playerHand', playerId);
     if (hand.length < 4) {
       console.debug('[haunting hex] fewer than 4 cards in hand, skipping');
       return;
     }
 
-    const selectedIds = await runGameActionDelegate('selectCard', {
+    const selectedIds = await actionService.run('selectCard', {
       playerId,
       prompt: 'Put a card from your hand onto your deck',
       count: 1,
@@ -238,7 +238,7 @@ const registerHaunting = (registerHexEffect: HexEffectRegistrar) => {
     }
 
     console.debug(`[haunting hex] topdecking ${cardLibrary.getCard(selectedId)}`);
-    await runGameActionDelegate('moveCard', {
+    await actionService.run('moveCard', {
       cardId: selectedId,
       toPlayerId: playerId,
       to: { location: 'playerDeck' },
@@ -254,7 +254,7 @@ const registerLocusts = (registerHexEffect: HexEffectRegistrar) => {
     cardLibrary,
     cardPriceController,
     findCardService,
-    runGameActionDelegate,
+    actionService,
     supplyGainService
   }) => {
     let deck = cardSourceController.getSource('playerDeck', playerId);
@@ -262,7 +262,7 @@ const registerLocusts = (registerHexEffect: HexEffectRegistrar) => {
 
     if (!deck.length && discard.length) {
       console.debug('[locusts hex] deck empty, shuffling discard');
-      await runGameActionDelegate('shuffleDeck', { playerId });
+      await actionService.run('shuffleDeck', { playerId });
       deck = cardSourceController.getSource('playerDeck', playerId);
     }
 
@@ -275,7 +275,7 @@ const registerLocusts = (registerHexEffect: HexEffectRegistrar) => {
     const trashedCard = cardLibrary.getCard(topCardId);
     console.debug(`[locusts hex] trashing top card ${trashedCard}`);
 
-    await runGameActionDelegate('trashCard', {
+    await actionService.run('trashCard', {
       playerId,
       cardId: topCardId,
     });
@@ -312,7 +312,7 @@ const registerLocusts = (registerHexEffect: HexEffectRegistrar) => {
       return;
     }
 
-    const selectedIds = await runGameActionDelegate('selectCard', {
+    const selectedIds = await actionService.run('selectCard', {
       playerId,
       prompt: 'Gain a cheaper card sharing a type',
       count: 1,
@@ -326,7 +326,7 @@ const registerLocusts = (registerHexEffect: HexEffectRegistrar) => {
     }
 
     console.debug(`[locusts hex] gaining ${cardLibrary.getCard(selectedId)}`);
-    await runGameActionDelegate('gainCard', {
+    await actionService.run('gainCard', {
       playerId,
       cardId: selectedId,
       to: { location: 'playerDiscard' },
@@ -336,7 +336,7 @@ const registerLocusts = (registerHexEffect: HexEffectRegistrar) => {
 
 // Registers Misery hex effect logic.
 const registerMisery = (registerHexEffect: HexEffectRegistrar) => {
-  registerHexEffect('misery', async ({ playerId, match, runGameActionDelegate }) => {
+  registerHexEffect('misery', async ({ playerId, match, actionService }) => {
     const twiceMiserable = getPlayerStateByKey(match, playerId, 'twice-miserable');
     if (twiceMiserable) {
       console.debug('[misery hex] player already twice miserable');
@@ -346,7 +346,7 @@ const registerMisery = (registerHexEffect: HexEffectRegistrar) => {
     const miserable = getPlayerStateByKey(match, playerId, 'miserable');
     if (!miserable) {
       console.debug('[misery hex] gaining Miserable state');
-      await runGameActionDelegate('gainState', {
+      await actionService.run('gainState', {
         playerId,
         stateKey: 'miserable',
       });
@@ -354,12 +354,12 @@ const registerMisery = (registerHexEffect: HexEffectRegistrar) => {
     }
 
     console.debug('[misery hex] flipping to Twice Miserable');
-    await runGameActionDelegate('removeState', {
+    await actionService.run('removeState', {
       playerId,
       stateId: miserable.id,
     });
 
-    await runGameActionDelegate('gainState', {
+    await actionService.run('gainState', {
       playerId,
       stateKey: 'twice-miserable',
     });
@@ -401,7 +401,7 @@ const registerPoverty = (registerHexEffect: HexEffectRegistrar) => {
 const registerWar = (registerHexEffect: HexEffectRegistrar) => {
   registerHexEffect(
     'war',
-    async ({ playerId, cardSourceController, cardLibrary, cardPriceController, runGameActionDelegate }) => {
+    async ({ playerId, cardSourceController, cardLibrary, cardPriceController, actionService }) => {
       const deck = cardSourceController.getSource('playerDeck', playerId);
       if (!deck.length) {
         console.debug('[war hex] no cards in deck to reveal');
@@ -418,7 +418,7 @@ const registerWar = (registerHexEffect: HexEffectRegistrar) => {
 
         if (matchesCost) {
           console.debug(`[war hex] trashing ${card}`);
-          await runGameActionDelegate('trashCard', {
+          await actionService.run('trashCard', {
             playerId,
             cardId: topCardId,
           });
@@ -426,7 +426,7 @@ const registerWar = (registerHexEffect: HexEffectRegistrar) => {
         }
 
         console.debug(`[war hex] discarding ${card}`);
-        await runGameActionDelegate('discardCard', {
+        await actionService.run('discardCard', {
           playerId,
           cardId: topCardId,
         });

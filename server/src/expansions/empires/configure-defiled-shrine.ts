@@ -56,7 +56,7 @@ export const configureDefiledShrine = (
         `[defiled-shrine onGameStart] placing 2 VP token(s) on ${pileKey}`,
       );
       for (let i = 0; i < 2; i += 1) {
-        await args.runGameActionDelegate('placeToken', {
+        await args.actionService.run('placeToken', {
           tokenId: victoryTokenId,
           location: { type: 'supplyPile', cardKey: pileKey },
         });
@@ -88,7 +88,7 @@ export const configureDefiledShrine = (
         console.info(
           `[defiled-shrine onCardGained] moving 1 VP from ${pileKey} to Defiled Shrine`,
         );
-        await args.runGameActionDelegate('moveToken', {
+        await args.actionService.run('moveToken', {
           tokenInstanceId: tokenToMove.id,
           location: { type: 'supplyPile', cardKey: 'defiled-shrine' },
         });
@@ -132,7 +132,7 @@ export const configureDefiledShrine = (
     );
 
     for (const token of tokensOnShrine) {
-      await args.runGameActionDelegate('moveToken', {
+      await args.actionService.run('moveToken', {
         tokenInstanceId: token.id,
         location: { type: 'player', playerId: eventArgs.playerId },
         ownerId: eventArgs.playerId,

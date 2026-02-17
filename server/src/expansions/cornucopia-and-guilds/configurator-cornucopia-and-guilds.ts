@@ -33,7 +33,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
       // todo hacky to use just any card by id for the source. eventually source needs to be more dynamic
       const footpadCardIds = args.findCardService.findCards({ cardKeys: 'footpad' });
 
-      await args.runGameActionDelegate('drawCard', { playerId: eventArgs.playerId }, {
+      await args.actionService.run('drawCard', { playerId: eventArgs.playerId }, {
         loggingContext: { source: footpadCardIds[0].id },
       });
     });
@@ -45,7 +45,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     registrar('onGameStart', async (args) => {
       console.info(`[baker onGameStart event] setting up baker - +1 coffer to each player on game start`);
       for (const player of args.match.players) {
-        await args.runGameActionDelegate('gainCoffer', { playerId: player.id, count: 1 });
+        await args.actionService.run('gainCoffer', { playerId: player.id, count: 1 });
       }
     });
   }

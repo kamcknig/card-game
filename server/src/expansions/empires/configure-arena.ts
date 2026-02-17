@@ -78,7 +78,7 @@ export const configureArena = (
               return;
             }
 
-            const selectedCardIds = await triggeredArgs.runGameActionDelegate(
+            const selectedCardIds = await triggeredArgs.actionService.run(
               'selectCard',
               {
                 playerId: player.id,
@@ -104,7 +104,7 @@ export const configureArena = (
             console.info(
               `[arena startTurnPhase] discarding ${selectedCard} for 2 VP`,
             );
-            await triggeredArgs.runGameActionDelegate('discardCard', {
+            await triggeredArgs.actionService.run('discardCard', {
               playerId: player.id,
               cardId: selectedCard.id,
             });
@@ -132,7 +132,7 @@ export const configureArena = (
               `[arena startTurnPhase] moving ${tokensToMove.length} VP token(s) to player ${player.id}`,
             );
             for (const token of tokensToMove) {
-              await triggeredArgs.runGameActionDelegate('moveToken', {
+              await triggeredArgs.actionService.run('moveToken', {
                 tokenInstanceId: token.id,
                 location: { type: 'player', playerId: player.id },
                 ownerId: player.id,

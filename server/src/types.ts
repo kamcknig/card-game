@@ -314,6 +314,10 @@ export type RunGameActionDelegate = <K extends GameActions>(
   ...args: Parameters<GameActionDefinitionMap[K]>
 ) => Promise<GameActionReturnTypeMap[K]>;
 
+export type ActionService = {
+  run: RunGameActionDelegate;
+};
+
 export type ReactionContext = {
   // Track per-player immunity flags for the current trigger.
   immunityByPlayerId?: Partial<Record<PlayerId, true>>;
@@ -394,7 +398,7 @@ export function isCardDataFindCardsFilter(filter: unknown): filter is CardDataFi
 export interface CardEffectFunctionContext extends AppContext {
   playerId: PlayerId;
   cardId: CardId;
-  runGameActionDelegate: RunGameActionDelegate;
+  actionService: ActionService;
   // Registers duration triggers with engine-managed cleanup for the given card.
   registerDurationEffect: <T extends TriggerEventType>(
     card: Card,
@@ -456,7 +460,7 @@ export type CardAlternateBuyOptionCanBuyContext = {
 
 // Runtime context for applying an alternate buy option.
 export type CardAlternateBuyOptionApplyContext = CardAlternateBuyOptionCanBuyContext & {
-  runGameActionDelegate: RunGameActionDelegate;
+  actionService: ActionService;
   reactionManager: ReactionManager;
   logManager: LogManager;
 };
@@ -513,14 +517,14 @@ export class ReactionTrigger<T extends TriggerEventType = TriggerEventType> {
 export interface TriggeredEffectContext<T extends TriggerEventType> extends AppContext {
   trigger: ReactionTrigger<T>;
   reaction: Reaction;
-  runGameActionDelegate: RunGameActionDelegate;
+  actionService: ActionService;
   isRootLog?: boolean;
 }
 
 export interface TriggeredEffectConditionContext<T extends TriggerEventType> extends AppContext {
   trigger: ReactionTrigger<T>;
   reaction: Reaction;
-  runGameActionDelegate: RunGameActionDelegate;
+  actionService: ActionService;
 }
 
 export type TriggerEventTypeContext = {
@@ -721,7 +725,7 @@ export type ReactionTemplateOptions = { idSuffix?: string };
 
 export type GameLifecycleCallbackContext = AppContext & {
   cardId: CardId;
-  runGameActionDelegate: RunGameActionDelegate;
+  actionService: ActionService;
   cardInstanceFactoryService: CardInstanceFactoryService;
 };
 
@@ -740,7 +744,7 @@ export type GameLifeCycleEventArgsMap = {
 };
 
 export type CardLifecycleCallbackContext = AppContext & {
-  runGameActionDelegate: RunGameActionDelegate;
+  actionService: ActionService;
 };
 
 export type CardLifecycleEvent =

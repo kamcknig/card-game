@@ -23,7 +23,7 @@ const registerLostInTheWoods = (registerStateEffect: StateEffectRegistrar) => {
     playerId,
     match,
     reactionManager,
-    runGameActionDelegate,
+    actionService,
     cardId,
     cardSourceController,
   }) => {
@@ -55,7 +55,7 @@ const registerLostInTheWoods = (registerStateEffect: StateEffectRegistrar) => {
         }
 
         // Ask whether the player wants to discard for a boon.
-        const decision = await runGameActionDelegate('userPrompt', {
+        const decision = await actionService.run('userPrompt', {
           playerId,
           prompt: 'Discard a card to receive a Boon?',
           actionButtons: [
@@ -69,7 +69,7 @@ const registerLostInTheWoods = (registerStateEffect: StateEffectRegistrar) => {
           return;
         }
 
-        const selectedCardIds = await runGameActionDelegate('selectCard', {
+        const selectedCardIds = await actionService.run('selectCard', {
           prompt: 'Discard a card',
           playerId,
           count: 1,
@@ -84,13 +84,13 @@ const registerLostInTheWoods = (registerStateEffect: StateEffectRegistrar) => {
 
         // Discard the chosen card and receive a boon.
         console.debug(`[lost-in-the-woods state] discarding ${selectedCardId}`);
-        await runGameActionDelegate('discardCard', {
+        await actionService.run('discardCard', {
           playerId,
           cardId: selectedCardId,
         });
 
         console.debug('[lost-in-the-woods state] receiving a boon');
-        await runGameActionDelegate('receiveBoon', {
+        await actionService.run('receiveBoon', {
           playerId,
         });
       },
@@ -104,7 +104,7 @@ const registerDeluded = (registerStateEffect: StateEffectRegistrar) => {
     playerId,
     match,
     reactionManager,
-    runGameActionDelegate,
+    actionService,
     cardId,
     cardLibrary,
     cardPriceController,
@@ -135,7 +135,7 @@ const registerDeluded = (registerStateEffect: StateEffectRegistrar) => {
       },
       triggeredEffectFn: async () => {
         console.debug('[deluded state] entering buy phase, removing state and applying restriction');
-        await runGameActionDelegate('removeState', {
+        await actionService.run('removeState', {
           playerId,
           stateId: state.id,
         });
@@ -197,7 +197,7 @@ const registerEnvious = (registerStateEffect: StateEffectRegistrar) => {
     playerId,
     match,
     reactionManager,
-    runGameActionDelegate,
+    actionService,
     cardId,
     cardLibrary,
   }) => {
@@ -229,7 +229,7 @@ const registerEnvious = (registerStateEffect: StateEffectRegistrar) => {
       },
       triggeredEffectFn: async () => {
         console.debug('[envious state] entering buy phase, removing state and registering triggers');
-        await runGameActionDelegate('removeState', {
+        await actionService.run('removeState', {
           playerId,
           stateId: state.id,
         });

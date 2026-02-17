@@ -166,7 +166,7 @@ const effectMap: CardExpansionModule = {
             effectText: '+1 Villager',
           });
 
-          await triggeredArgs.runGameActionDelegate('gainVillager', {
+          await triggeredArgs.actionService.run('gainVillager', {
             playerId: cardEffectArgs.playerId,
             count: 1,
           });
@@ -215,7 +215,7 @@ const effectMap: CardExpansionModule = {
             effectText: '+1 Action',
           });
 
-          await triggeredArgs.runGameActionDelegate('gainAction', { count: 1 });
+          await triggeredArgs.actionService.run('gainAction', { count: 1 });
         },
       });
     },
@@ -442,7 +442,7 @@ const effectMap: CardExpansionModule = {
             effectText: 'Trash a card',
           });
 
-          const selectedCardIds = await triggeredArgs.runGameActionDelegate('selectCard', {
+          const selectedCardIds = await triggeredArgs.actionService.run('selectCard', {
             playerId: cardEffectArgs.playerId,
             prompt: 'Trash a card',
             restrict: hand,
@@ -456,7 +456,7 @@ const effectMap: CardExpansionModule = {
 
           // Log the selected card id before trashing.
           console.debug(`[cathedral project] trashing ${selectedCardIds[0]}`);
-          await triggeredArgs.runGameActionDelegate('trashCard', {
+          await triggeredArgs.actionService.run('trashCard', {
             playerId: cardEffectArgs.playerId,
             cardId: selectedCardIds[0],
           });
@@ -535,7 +535,7 @@ const effectMap: CardExpansionModule = {
             effectText: 'Replay Action',
           });
 
-          await triggeredArgs.runGameActionDelegate('playCard', {
+          await triggeredArgs.actionService.run('playCard', {
             playerId: cardEffectArgs.playerId,
             cardId: replayCard.id,
             overrides: {
@@ -585,7 +585,7 @@ const effectMap: CardExpansionModule = {
           });
 
           console.debug(`[city-gate project] drawing 1 card for player ${cardEffectArgs.playerId}`);
-          await triggeredArgs.runGameActionDelegate('drawCard', {
+          await triggeredArgs.actionService.run('drawCard', {
             playerId: cardEffectArgs.playerId,
             count: 1,
           });
@@ -604,7 +604,7 @@ const effectMap: CardExpansionModule = {
           });
 
           console.debug(`[city-gate project] prompting to topdeck from ${hand.length} card(s)`);
-          const selectedCardIds = await triggeredArgs.runGameActionDelegate('selectCard', {
+          const selectedCardIds = await triggeredArgs.actionService.run('selectCard', {
             playerId: cardEffectArgs.playerId,
             prompt: 'Put a card from your hand onto your deck',
             restrict: hand,
@@ -617,7 +617,7 @@ const effectMap: CardExpansionModule = {
           }
 
           console.debug(`[city-gate project] topdecking ${selectedCardIds[0]}`);
-          await triggeredArgs.runGameActionDelegate('moveCard', {
+          await triggeredArgs.actionService.run('moveCard', {
             cardId: selectedCardIds[0],
             toPlayerId: cardEffectArgs.playerId,
             to: { location: 'playerDeck' },
@@ -666,7 +666,7 @@ const effectMap: CardExpansionModule = {
           }
 
           console.debug(`[crop-rotation project] prompting discard from ${victoryCards.length} Victory card(s)`);
-          const selectedCardIds = await triggeredArgs.runGameActionDelegate('selectCard', {
+          const selectedCardIds = await triggeredArgs.actionService.run('selectCard', {
             playerId: cardEffectArgs.playerId,
             prompt: 'Discard a Victory card for +2 Cards?',
             restrict: victoryCards.map((card) => card.id),
@@ -687,7 +687,7 @@ const effectMap: CardExpansionModule = {
           });
 
           console.debug(`[crop-rotation project] discarding ${selectedCardIds[0]}`);
-          await triggeredArgs.runGameActionDelegate('discardCard', {
+          await triggeredArgs.actionService.run('discardCard', {
             playerId: cardEffectArgs.playerId,
             cardId: selectedCardIds[0],
           });
@@ -700,7 +700,7 @@ const effectMap: CardExpansionModule = {
           });
 
           console.debug(`[crop-rotation project] drawing 2 cards for player ${cardEffectArgs.playerId}`);
-          await triggeredArgs.runGameActionDelegate('drawCard', {
+          await triggeredArgs.actionService.run('drawCard', {
             playerId: cardEffectArgs.playerId,
             count: 2,
           });
@@ -816,11 +816,11 @@ const effectMap: CardExpansionModule = {
           console.debug(
             `[exploration project] granting +1 Coffer and +1 Villager to player ${cardEffectArgs.playerId}`,
           );
-          await triggeredArgs.runGameActionDelegate('gainCoffer', {
+          await triggeredArgs.actionService.run('gainCoffer', {
             playerId: cardEffectArgs.playerId,
             count: 1,
           });
-          await triggeredArgs.runGameActionDelegate('gainVillager', {
+          await triggeredArgs.actionService.run('gainVillager', {
             playerId: cardEffectArgs.playerId,
             count: 1,
           });
@@ -865,7 +865,7 @@ const effectMap: CardExpansionModule = {
           });
 
           console.debug(`[fair project] granting +1 Buy to player ${cardEffectArgs.playerId}`);
-          await triggeredArgs.runGameActionDelegate('gainBuy', { count: 1 });
+          await triggeredArgs.actionService.run('gainBuy', { count: 1 });
         },
       });
     },
@@ -926,7 +926,7 @@ const effectMap: CardExpansionModule = {
           });
 
           console.debug(`[guildhall project] granting +1 Coffer to player ${cardEffectArgs.playerId}`);
-          await triggeredArgs.runGameActionDelegate('gainCoffer', {
+          await triggeredArgs.actionService.run('gainCoffer', {
             playerId: cardEffectArgs.playerId,
             count: 1,
           });
@@ -997,7 +997,7 @@ const effectMap: CardExpansionModule = {
           const gainedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
           console.debug(`[innovation project] prompting to play gained card ${gainedCard}`);
 
-          const promptResult = await triggeredArgs.runGameActionDelegate('userPrompt', {
+          const promptResult = await triggeredArgs.actionService.run('userPrompt', {
             playerId: cardEffectArgs.playerId,
             prompt: `Play ${gainedCard.cardName}?`,
             actionButtons: [
@@ -1023,7 +1023,7 @@ const effectMap: CardExpansionModule = {
           });
 
           console.debug(`[innovation project] playing ${gainedCard}`);
-          await triggeredArgs.runGameActionDelegate('playCard', {
+          await triggeredArgs.actionService.run('playCard', {
             playerId: cardEffectArgs.playerId,
             cardId: gainedCard.id,
             overrides: {
@@ -1073,7 +1073,7 @@ const effectMap: CardExpansionModule = {
             return;
           }
 
-          const result = await triggeredArgs.runGameActionDelegate('userPrompt', {
+          const result = await triggeredArgs.actionService.run('userPrompt', {
             playerId: cardEffectArgs.playerId,
             prompt: 'Pay $1 for +1 Coffers? (Pageant)',
             actionButtons: [
@@ -1100,8 +1100,8 @@ const effectMap: CardExpansionModule = {
           });
 
           console.debug('[pageant project] paying $1 and granting +1 Coffer');
-          await triggeredArgs.runGameActionDelegate('gainTreasure', { count: -1 });
-          await triggeredArgs.runGameActionDelegate('gainCoffer', {
+          await triggeredArgs.actionService.run('gainTreasure', { count: -1 });
+          await triggeredArgs.actionService.run('gainCoffer', {
             playerId: cardEffectArgs.playerId,
             count: 1,
           });
@@ -1142,7 +1142,7 @@ const effectMap: CardExpansionModule = {
 
           if (!deck.length) {
             console.debug('[piazza project] deck empty, shuffling');
-            await triggeredArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+            await triggeredArgs.actionService.run('shuffleDeck', { playerId: cardEffectArgs.playerId });
             deck = triggeredArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
           }
 
@@ -1155,7 +1155,7 @@ const effectMap: CardExpansionModule = {
           const topCard = triggeredArgs.cardLibrary.getCard(topCardId);
           console.debug(`[piazza project] revealing ${topCard}`);
 
-          await triggeredArgs.runGameActionDelegate('revealCard', {
+          await triggeredArgs.actionService.run('revealCard', {
             playerId: cardEffectArgs.playerId,
             cardId: topCardId,
           });
@@ -1173,7 +1173,7 @@ const effectMap: CardExpansionModule = {
           });
 
           console.debug(`[piazza project] playing ${topCard}`);
-          await triggeredArgs.runGameActionDelegate('playCard', {
+          await triggeredArgs.actionService.run('playCard', {
             playerId: cardEffectArgs.playerId,
             cardId: topCardId,
           });
@@ -1222,7 +1222,7 @@ const effectMap: CardExpansionModule = {
           });
 
           console.debug(`[road-network project] drawing 1 card for player ${cardEffectArgs.playerId}`);
-          await triggeredArgs.runGameActionDelegate('drawCard', {
+          await triggeredArgs.actionService.run('drawCard', {
             playerId: cardEffectArgs.playerId,
             count: 1,
           });
@@ -1280,7 +1280,7 @@ const effectMap: CardExpansionModule = {
           }
 
           console.debug(`[sewers project] prompting to trash from ${hand.length} card(s)`);
-          const selectedCardIds = await triggeredArgs.runGameActionDelegate('selectCard', {
+          const selectedCardIds = await triggeredArgs.actionService.run('selectCard', {
             playerId: cardEffectArgs.playerId,
             prompt: 'Trash a card from your hand',
             restrict: hand,
@@ -1301,7 +1301,7 @@ const effectMap: CardExpansionModule = {
           });
 
           console.debug(`[sewers project] trashing ${selectedCardIds[0]}`);
-          await triggeredArgs.runGameActionDelegate('trashCard', {
+          await triggeredArgs.actionService.run('trashCard', {
             playerId: cardEffectArgs.playerId,
             cardId: selectedCardIds[0],
           }, {
@@ -1360,7 +1360,7 @@ const effectMap: CardExpansionModule = {
           }
 
           console.debug(`[silos project] prompting to discard from ${copperIds.length} Copper(s)`);
-          const selectedIds = await triggeredArgs.runGameActionDelegate('selectCard', {
+          const selectedIds = await triggeredArgs.actionService.run('selectCard', {
             playerId: cardEffectArgs.playerId,
             prompt: 'Discard any number of Coppers',
             count: { kind: 'upTo', count: copperIds.length },
@@ -1383,18 +1383,18 @@ const effectMap: CardExpansionModule = {
 
           console.debug(`[silos project] revealing and discarding ${selectedIds.length} Copper(s)`);
           for (const cardId of selectedIds) {
-            await triggeredArgs.runGameActionDelegate('revealCard', {
+            await triggeredArgs.actionService.run('revealCard', {
               playerId: cardEffectArgs.playerId,
               cardId,
             });
-            await triggeredArgs.runGameActionDelegate('discardCard', {
+            await triggeredArgs.actionService.run('discardCard', {
               playerId: cardEffectArgs.playerId,
               cardId,
             });
           }
 
           console.debug(`[silos project] drawing ${selectedIds.length} card(s) after discarding Coppers`);
-          await triggeredArgs.runGameActionDelegate('drawCard', {
+          await triggeredArgs.actionService.run('drawCard', {
             playerId: cardEffectArgs.playerId,
             count: selectedIds.length,
           });
@@ -1444,7 +1444,7 @@ const effectMap: CardExpansionModule = {
             .map((token) => token.id)
             .sort((a, b) => a.localeCompare(b));
 
-          const promptResult = await triggeredArgs.runGameActionDelegate('userPrompt', {
+          const promptResult = await triggeredArgs.actionService.run('userPrompt', {
             playerId: cardEffectArgs.playerId,
             prompt: `Sinister Plot: Add a token, or remove ${ownedTokenIds.length} token(s) to draw that many cards?`,
             actionButtons: [
@@ -1465,7 +1465,7 @@ const effectMap: CardExpansionModule = {
               `[sinister-plot project] removing ${removedCount} token(s) for player ${cardEffectArgs.playerId}`,
             );
             for (const tokenInstanceId of ownedTokenIds) {
-              await triggeredArgs.runGameActionDelegate('removeToken', { tokenInstanceId });
+              await triggeredArgs.actionService.run('removeToken', { tokenInstanceId });
             }
 
             if (removedCount <= 0) {
@@ -1483,7 +1483,7 @@ const effectMap: CardExpansionModule = {
             console.debug(
               `[sinister-plot project] drawing ${removedCount} card(s) for player ${cardEffectArgs.playerId}`,
             );
-            await triggeredArgs.runGameActionDelegate('drawCard', {
+            await triggeredArgs.actionService.run('drawCard', {
               playerId: cardEffectArgs.playerId,
               count: removedCount,
             });
@@ -1498,7 +1498,7 @@ const effectMap: CardExpansionModule = {
           });
 
           console.debug(`[sinister-plot project] adding token for player ${cardEffectArgs.playerId}`);
-          await triggeredArgs.runGameActionDelegate('placeToken', {
+          await triggeredArgs.actionService.run('placeToken', {
             tokenId: renaissanceTokenIds.sinisterPlot,
             ownerId: cardEffectArgs.playerId,
             location: { type: 'cardLike', cardLikeId: project.id },
@@ -1552,7 +1552,7 @@ const effectMap: CardExpansionModule = {
           console.debug(
             `[star-chart project] prompting player ${cardEffectArgs.playerId} to choose top card from ${shuffledCardIds.length} shuffled card(s)`,
           );
-          const selectedCardIds = await triggeredArgs.runGameActionDelegate('selectCard', {
+          const selectedCardIds = await triggeredArgs.actionService.run('selectCard', {
             playerId: cardEffectArgs.playerId,
             prompt: 'Choose a shuffled card to put on top (Star Chart)',
             restrict: shuffledCardIds,
@@ -1568,7 +1568,7 @@ const effectMap: CardExpansionModule = {
 
           const selectedCard = triggeredArgs.cardLibrary.getCard(selectedCardId);
           console.debug(`[star-chart project] moving ${selectedCard} to top of shuffled cards`);
-          await triggeredArgs.runGameActionDelegate('moveCard', {
+          await triggeredArgs.actionService.run('moveCard', {
             cardId: selectedCardId,
             toPlayerId: cardEffectArgs.playerId,
             to: { location: 'playerDeck' },

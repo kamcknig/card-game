@@ -58,7 +58,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
             token.location.playerId === player.id
           );
         },
-        triggeredEffectFn: async ({ match, runGameActionDelegate, trigger }) => {
+        triggeredEffectFn: async ({ match, actionService, trigger }) => {
           const tokenEntry = Object.entries(match.tokens ?? {}).find(([_tokenInstanceId, token]) =>
             token.tokenId === adventuresTokenIds.minusCoin &&
             token.ownerId === player.id &&
@@ -72,7 +72,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           // Consume the -$1 token once when a positive treasure gain occurs.
           trigger.args.count = Math.max(0, trigger.args.count - 1);
           // Carry the treasure source into the token consumption log.
-          await runGameActionDelegate('removeToken', { tokenInstanceId: tokenEntry[0] }, {
+          await actionService.run('removeToken', { tokenInstanceId: tokenEntry[0] }, {
             loggingContext: { source: trigger.args.source },
           });
         },
@@ -96,7 +96,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
             token.location.playerId === player.id
           );
         },
-        triggeredEffectFn: async ({ match, runGameActionDelegate, trigger }) => {
+        triggeredEffectFn: async ({ match, actionService, trigger }) => {
           const tokenEntry = Object.entries(match.tokens ?? {}).find(([_tokenInstanceId, token]) =>
             token.tokenId === adventuresTokenIds.minusCard &&
             token.ownerId === player.id &&
@@ -110,7 +110,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           // Consume the -1 Card token once when a draw is attempted.
           trigger.args.count = Math.max(0, trigger.args.count - 1);
           // Carry the draw source into the token consumption log.
-          await runGameActionDelegate('removeToken', { tokenInstanceId: tokenEntry[0] }, {
+          await actionService.run('removeToken', { tokenInstanceId: tokenEntry[0] }, {
             loggingContext: { source: trigger.args.source },
           });
         },
@@ -128,7 +128,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         );
         if (alreadyOwned) continue;
         // Place the Journey token in the player's area, face up to start.
-        await args.runGameActionDelegate('placeToken', {
+        await args.actionService.run('placeToken', {
           tokenId: adventuresTokenIds.journey,
           ownerId: player.id,
           location: { type: 'player', playerId: player.id },
@@ -144,7 +144,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           token.ownerId === player.id && token.tokenId === adventuresTokenIds.minusCostTwo
         );
         if (alreadyOwned) continue;
-        await args.runGameActionDelegate('placeToken', {
+        await args.actionService.run('placeToken', {
           tokenId: adventuresTokenIds.minusCostTwo,
           ownerId: player.id,
           location: { type: 'playerAvailable', playerId: player.id },
@@ -160,7 +160,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           token.ownerId === player.id && token.tokenId === adventuresTokenIds.plusAction
         );
         if (alreadyOwned) continue;
-        await args.runGameActionDelegate('placeToken', {
+        await args.actionService.run('placeToken', {
           tokenId: adventuresTokenIds.plusAction,
           ownerId: player.id,
           location: { type: 'playerAvailable', playerId: player.id },
@@ -176,7 +176,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           token.ownerId === player.id && token.tokenId === adventuresTokenIds.minusCard
         );
         if (alreadyOwned) continue;
-        await args.runGameActionDelegate('placeToken', {
+        await args.actionService.run('placeToken', {
           tokenId: adventuresTokenIds.minusCard,
           ownerId: player.id,
           location: { type: 'playerAvailable', playerId: player.id },
@@ -192,7 +192,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           token.ownerId === player.id && token.tokenId === adventuresTokenIds.plusBuy
         );
         if (alreadyOwned) continue;
-        await args.runGameActionDelegate('placeToken', {
+        await args.actionService.run('placeToken', {
           tokenId: adventuresTokenIds.plusBuy,
           ownerId: player.id,
           location: { type: 'playerAvailable', playerId: player.id },
@@ -208,7 +208,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           token.ownerId === player.id && token.tokenId === adventuresTokenIds.plusCoin
         );
         if (alreadyOwned) continue;
-        await args.runGameActionDelegate('placeToken', {
+        await args.actionService.run('placeToken', {
           tokenId: adventuresTokenIds.plusCoin,
           ownerId: player.id,
           location: { type: 'playerAvailable', playerId: player.id },
@@ -224,7 +224,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           token.ownerId === player.id && token.tokenId === adventuresTokenIds.trashing
         );
         if (!alreadyOwned) {
-          await args.runGameActionDelegate('placeToken', {
+          await args.actionService.run('placeToken', {
             tokenId: adventuresTokenIds.trashing,
             ownerId: player.id,
             location: { type: 'playerAvailable', playerId: player.id },
@@ -251,18 +251,18 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
               token.location.cardKey === pileKey
             );
           },
-          triggeredEffectFn: async ({ cardSourceController, runGameActionDelegate }) => {
+          triggeredEffectFn: async ({ cardSourceController, actionService }) => {
             // Offer to trash a card from hand when the token matches the gained pile.
             const hand = cardSourceController.getSource('playerHand', player.id);
             if (!hand.length) return;
-            const selectedCardIds = await runGameActionDelegate('selectCard', {
+            const selectedCardIds = await actionService.run('selectCard', {
               playerId: player.id,
               prompt: 'Trash a card',
               restrict: hand,
               count: { kind: 'upTo', count: 1 },
             }) as number[];
             if (!selectedCardIds.length) return;
-            await runGameActionDelegate('trashCard', {
+            await actionService.run('trashCard', {
               playerId: player.id,
               cardId: selectedCardIds[0],
             });
@@ -279,7 +279,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           token.ownerId === player.id && token.tokenId === adventuresTokenIds.plusCard
         );
         if (alreadyOwned) continue;
-        await args.runGameActionDelegate('placeToken', {
+        await args.actionService.run('placeToken', {
           tokenId: adventuresTokenIds.plusCard,
           ownerId: player.id,
           location: { type: 'playerAvailable', playerId: player.id },
@@ -295,7 +295,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           token.ownerId === player.id && token.tokenId === adventuresTokenIds.estate
         );
         if (!alreadyOwned) {
-          await args.runGameActionDelegate('placeToken', {
+          await args.actionService.run('placeToken', {
             tokenId: adventuresTokenIds.estate,
             ownerId: player.id,
             location: { type: 'playerAvailable', playerId: player.id },
@@ -320,14 +320,14 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
               token.location.type === 'card'
             );
           },
-          triggeredEffectFn: async ({ match, runGameActionDelegate }) => {
+          triggeredEffectFn: async ({ match, actionService }) => {
             const estateToken = Object.values(match.tokens ?? {}).find((token) =>
               token.tokenId === adventuresTokenIds.estate &&
               token.ownerId === player.id &&
               token.location.type === 'card'
             );
             if (!estateToken || estateToken.location.type !== 'card') return;
-            await runGameActionDelegate('playCard', {
+            await actionService.run('playCard', {
               playerId: player.id,
               cardId: estateToken.location.cardId,
               overrides: { actionCost: 0, moveCard: false },
@@ -361,7 +361,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         );
         if (alreadyOwned) continue;
         // Place unassigned tokens in the player's area until they are moved to a supply pile.
-        await args.runGameActionDelegate('placeToken', {
+        await args.actionService.run('placeToken', {
           tokenId,
           ownerId: player.id,
           location: { type: 'playerAvailable', playerId: player.id },

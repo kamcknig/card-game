@@ -27,7 +27,7 @@ export const configureAqueduct = (
 
     for (const pileKey of targetPiles) {
       for (let i = 0; i < 8; i += 1) {
-        await args.runGameActionDelegate('placeToken', {
+        await args.actionService.run('placeToken', {
           tokenId: victoryTokenId,
           location: { type: 'supplyPile', cardKey: pileKey },
         });
@@ -68,7 +68,7 @@ export const configureAqueduct = (
       console.debug(
         `[aqueduct onCardGained] moving 1 VP from ${pileKey} to Aqueduct`,
       );
-      await args.runGameActionDelegate('moveToken', {
+      await args.actionService.run('moveToken', {
         tokenInstanceId: token.id,
         location: { type: 'supplyPile', cardKey: 'aqueduct' },
       });
@@ -89,7 +89,7 @@ export const configureAqueduct = (
         `[aqueduct onCardGained] moving ${tokensOnAqueduct.length} VP token(s) to player ${eventArgs.playerId}`,
       );
       for (const token of tokensOnAqueduct) {
-        await args.runGameActionDelegate('moveToken', {
+        await args.actionService.run('moveToken', {
           tokenInstanceId: token.id,
           location: { type: 'player', playerId: eventArgs.playerId },
           ownerId: eventArgs.playerId,

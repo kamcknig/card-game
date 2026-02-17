@@ -13,7 +13,7 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       // Border Guard grants +1 Action on play.
       console.debug('[border-guard effect] gaining 1 action');
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
       // Resolve whether the player currently owns the Lantern artifact.
       const artifacts = cardEffectArgs.match.artifacts;
@@ -31,7 +31,7 @@ const expansion: CardExpansionModule = {
       for (let index = 0; index < revealCount; index++) {
         if (deck.length < 1) {
           console.debug('[border-guard effect] deck empty, shuffling discard');
-          await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+          await cardEffectArgs.actionService.run('shuffleDeck', { playerId: cardEffectArgs.playerId });
           if (deck.length < 1) {
             console.debug('[border-guard effect] no cards to reveal after shuffling');
             break;
@@ -41,7 +41,7 @@ const expansion: CardExpansionModule = {
         const cardId = deck.slice(-1)[0];
         const card = cardEffectArgs.cardLibrary.getCard(cardId);
         revealedCards.push(card);
-        await cardEffectArgs.runGameActionDelegate('revealCard', {
+        await cardEffectArgs.actionService.run('revealCard', {
           cardId,
           playerId: cardEffectArgs.playerId,
           moveToSetAside: true,
@@ -55,7 +55,7 @@ const expansion: CardExpansionModule = {
 
       // Prompt the player to choose one revealed card to put into hand.
       const revealedIds = revealedCards.map((card) => card.id);
-      const selectedIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+      const selectedIds = await cardEffectArgs.actionService.run('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Choose a card to put into your hand',
         restrict: revealedIds,
@@ -64,7 +64,7 @@ const expansion: CardExpansionModule = {
 
       const chosenId = selectedIds[0] ?? revealedIds[0];
       console.debug(`[border-guard effect] moving chosen card ${chosenId} to hand`);
-      await cardEffectArgs.runGameActionDelegate('moveCard', {
+      await cardEffectArgs.actionService.run('moveCard', {
         cardId: chosenId,
         toPlayerId: cardEffectArgs.playerId,
         to: { location: 'playerHand' },
@@ -74,7 +74,7 @@ const expansion: CardExpansionModule = {
       for (const card of revealedCards) {
         if (card.id === chosenId) continue;
         console.debug(`[border-guard effect] discarding revealed card ${card}`);
-        await cardEffectArgs.runGameActionDelegate('discardCard', {
+        await cardEffectArgs.actionService.run('discardCard', {
           cardId: card.id,
           playerId: cardEffectArgs.playerId,
         });
@@ -118,7 +118,7 @@ const expansion: CardExpansionModule = {
       if (availableArtifacts.length === 1) {
         const selectedArtifact = availableArtifacts[0];
         console.debug(`[border-guard effect] gaining artifact ${selectedArtifact.artifactId}`);
-        await cardEffectArgs.runGameActionDelegate('gainArtifact', {
+        await cardEffectArgs.actionService.run('gainArtifact', {
           playerId: cardEffectArgs.playerId,
           artifactId: selectedArtifact.artifactId,
         });
@@ -132,7 +132,7 @@ const expansion: CardExpansionModule = {
           action: index + 1,
         })),
       ];
-      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+      const result = await cardEffectArgs.actionService.run('userPrompt', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Take an Artifact?',
         actionButtons,
@@ -145,7 +145,7 @@ const expansion: CardExpansionModule = {
       }
 
       console.debug(`[border-guard effect] gaining artifact ${selectedArtifact.artifactId}`);
-      await cardEffectArgs.runGameActionDelegate('gainArtifact', {
+      await cardEffectArgs.actionService.run('gainArtifact', {
         playerId: cardEffectArgs.playerId,
         artifactId: selectedArtifact.artifactId,
       });
@@ -157,7 +157,7 @@ const expansion: CardExpansionModule = {
 
       // Acting Troupe always grants +4 Villagers even if the trash step later cannot happen.
       console.debug('[acting-troupe effect] granting +4 Villagers');
-      await cardEffectArgs.runGameActionDelegate('gainVillager', {
+      await cardEffectArgs.actionService.run('gainVillager', {
         playerId: cardEffectArgs.playerId,
         count: 4,
       });
@@ -181,7 +181,7 @@ const expansion: CardExpansionModule = {
       }
 
       console.debug(`[acting-troupe effect] trashing ${actingTroupeCard}`);
-      await cardEffectArgs.runGameActionDelegate('trashCard', {
+      await cardEffectArgs.actionService.run('trashCard', {
         playerId: cardEffectArgs.playerId,
         cardId: actingTroupeCard.id,
       });
@@ -201,7 +201,7 @@ const expansion: CardExpansionModule = {
 
       // Cargo Ship gives +$2 immediately when played.
       console.debug('[cargo-ship effect] gaining +2 treasure');
-      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+      await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
 
       // Track whether this instance already set a card aside.
       let hasSetAsideCard = false;
@@ -239,7 +239,7 @@ const expansion: CardExpansionModule = {
             const gainedCard = triggeredArgs.cardLibrary.getCard(gainedCardId);
 
             console.debug(`[cargo-ship cardGained effect] gained ${gainedCard}; prompting set-aside choice`);
-            const promptResult = await triggeredArgs.runGameActionDelegate('userPrompt', {
+            const promptResult = await triggeredArgs.actionService.run('userPrompt', {
               playerId: cardEffectArgs.playerId,
               prompt: `Set aside ${gainedCard.cardName} with Cargo Ship?`,
               actionButtons: [
@@ -261,7 +261,7 @@ const expansion: CardExpansionModule = {
             setAsideCardId = gainedCardId;
 
             console.debug(`[cargo-ship cardGained effect] setting aside ${gainedCard}`);
-            await triggeredArgs.runGameActionDelegate('moveCard', {
+            await triggeredArgs.actionService.run('moveCard', {
               cardId: gainedCardId,
               toPlayerId: cardEffectArgs.playerId,
               to: { location: 'set-aside' },
@@ -292,7 +292,7 @@ const expansion: CardExpansionModule = {
               condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
               triggeredEffectFn: async (startTurnArgs) => {
                 // Move Cargo Ship back to playArea so it discards normally in this turn's cleanup.
-                await startTurnArgs.runGameActionDelegate('moveCard', {
+                await startTurnArgs.actionService.run('moveCard', {
                   cardId: cargoShipCard.id,
                   to: { location: 'playArea' },
                 });
@@ -315,7 +315,7 @@ const expansion: CardExpansionModule = {
 
                 const cardToMove = startTurnArgs.cardLibrary.getCard(setAsideCardId);
                 console.debug(`[cargo-ship startTurn effect] moving ${cardToMove} to hand`);
-                await startTurnArgs.runGameActionDelegate('moveCard', {
+                await startTurnArgs.actionService.run('moveCard', {
                   cardId: setAsideCardId,
                   toPlayerId: cardEffectArgs.playerId,
                   to: { location: 'playerHand' },
@@ -357,7 +357,7 @@ const expansion: CardExpansionModule = {
         console.debug(
           `[ducat onGained effect] prompting whether to trash Copper from ${copperInHandIds.length} card(s)`,
         );
-        const promptResult = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        const promptResult = await cardEffectArgs.actionService.run('userPrompt', {
           playerId: eventArgs.playerId,
           prompt: 'Trash a Copper from your hand?',
           actionButtons: [
@@ -374,7 +374,7 @@ const expansion: CardExpansionModule = {
         const selectedCopperId = copperInHandIds[0];
         const selectedCopper = cardEffectArgs.cardLibrary.getCard(selectedCopperId);
         console.debug(`[ducat onGained effect] trashing ${selectedCopper}`);
-        await cardEffectArgs.runGameActionDelegate('trashCard', {
+        await cardEffectArgs.actionService.run('trashCard', {
           playerId: eventArgs.playerId,
           cardId: selectedCopperId,
         });
@@ -383,11 +383,11 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       // Ducat grants +1 Coffer and +1 Buy when played.
       console.debug('[ducat effect] gaining +1 Coffer and +1 Buy');
-      await cardEffectArgs.runGameActionDelegate('gainCoffer', {
+      await cardEffectArgs.actionService.run('gainCoffer', {
         playerId: cardEffectArgs.playerId,
         count: 1,
       });
-      await cardEffectArgs.runGameActionDelegate('gainBuy', {
+      await cardEffectArgs.actionService.run('gainBuy', {
         count: 1,
       });
     },
@@ -418,7 +418,7 @@ const expansion: CardExpansionModule = {
 
         const extraExperimentCard = cardEffectArgs.cardLibrary.getCard(experimentToGain.id);
         console.debug(`[experiment onGained effect] gaining additional ${extraExperimentCard}`);
-        await cardEffectArgs.runGameActionDelegate('gainCard', {
+        await cardEffectArgs.actionService.run('gainCard', {
           playerId: eventArgs.playerId,
           cardId: extraExperimentCard.id,
           to: { location: 'playerDiscard' },
@@ -437,13 +437,13 @@ const expansion: CardExpansionModule = {
 
       // Experiment gives +2 Cards and +1 Action every time it is played.
       console.debug('[experiment effect] drawing 2 cards and gaining 1 action');
-      await cardEffectArgs.runGameActionDelegate('drawCard', {
+      await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 2,
       }, {
         loggingContext: { source: cardEffectArgs.cardId },
       });
-      await cardEffectArgs.runGameActionDelegate('gainAction', {
+      await cardEffectArgs.actionService.run('gainAction', {
         count: 1,
       }, {
         loggingContext: { source: cardEffectArgs.cardId },
@@ -477,7 +477,7 @@ const expansion: CardExpansionModule = {
 
       const returnLocation = hasBasicPile ? 'basicSupply' : 'kingdomSupply';
       console.debug(`[experiment effect] returning ${experimentCard} to ${returnLocation}`);
-      await cardEffectArgs.runGameActionDelegate('moveCard', {
+      await cardEffectArgs.actionService.run('moveCard', {
         cardId: experimentCard.id,
         to: { location: returnLocation },
       });
@@ -488,7 +488,7 @@ const expansion: CardExpansionModule = {
       onGained: async (cardEffectArgs, eventArgs) => {
         // Flag Bearer grants the Flag artifact to the player that gained it.
         console.debug(`[flag-bearer onGained effect] player ${eventArgs.playerId} taking Flag`);
-        await cardEffectArgs.runGameActionDelegate('gainArtifact', {
+        await cardEffectArgs.actionService.run('gainArtifact', {
           playerId: eventArgs.playerId,
           artifactKey: renaissanceArtifactKeys.flag,
         });
@@ -496,7 +496,7 @@ const expansion: CardExpansionModule = {
       onTrashed: async (cardEffectArgs, eventArgs) => {
         // Flag Bearer grants the Flag artifact to the player that trashed it.
         console.debug(`[flag-bearer onTrashed effect] player ${eventArgs.playerId} taking Flag`);
-        await cardEffectArgs.runGameActionDelegate('gainArtifact', {
+        await cardEffectArgs.actionService.run('gainArtifact', {
           playerId: eventArgs.playerId,
           artifactKey: renaissanceArtifactKeys.flag,
         });
@@ -505,18 +505,18 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       // Flag Bearer gives +$2 when played.
       console.debug('[flag-bearer effect] gaining +2 treasure');
-      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+      await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
     },
   },
   'hideout': {
     registerEffects: () => async (cardEffectArgs) => {
       // Hideout gives +1 Card and +2 Actions before the mandatory trash.
       console.debug('[hideout effect] drawing 1 card and gaining 2 actions');
-      await cardEffectArgs.runGameActionDelegate('drawCard', {
+      await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 1,
       });
-      await cardEffectArgs.runGameActionDelegate('gainAction', {
+      await cardEffectArgs.actionService.run('gainAction', {
         count: 2,
       });
 
@@ -527,7 +527,7 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+      const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Trash a card from your hand',
         restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
@@ -542,7 +542,7 @@ const expansion: CardExpansionModule = {
 
       const trashedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
       console.debug(`[hideout effect] trashing ${trashedCard}`);
-      await cardEffectArgs.runGameActionDelegate('trashCard', {
+      await cardEffectArgs.actionService.run('trashCard', {
         playerId: cardEffectArgs.playerId,
         cardId: selectedCardId,
       });
@@ -581,7 +581,7 @@ const expansion: CardExpansionModule = {
 
       // Improve gives +$2 immediately when played.
       console.debug('[improve effect] gaining +2 treasure');
-      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+      await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
 
       // Register a one-time cleanup trigger for this play instance.
       cardEffectArgs.reactionManager.registerReactionTemplate(
@@ -610,7 +610,7 @@ const expansion: CardExpansionModule = {
               return;
             }
 
-            const selectedCardIds = await triggeredArgs.runGameActionDelegate('selectCard', {
+            const selectedCardIds = await triggeredArgs.actionService.run('selectCard', {
               playerId: cardEffectArgs.playerId,
               prompt: 'You may trash an Action card from play',
               restrict: actionCardsInPlay,
@@ -630,7 +630,7 @@ const expansion: CardExpansionModule = {
             });
 
             console.debug(`[improve cleanup effect] trashing ${selectedCard}`);
-            await triggeredArgs.runGameActionDelegate('trashCard', {
+            await triggeredArgs.actionService.run('trashCard', {
               playerId: cardEffectArgs.playerId,
               cardId: selectedCardId,
             });
@@ -654,7 +654,7 @@ const expansion: CardExpansionModule = {
               return;
             }
 
-            const gainCardIds = await triggeredArgs.runGameActionDelegate('selectCard', {
+            const gainCardIds = await triggeredArgs.actionService.run('selectCard', {
               playerId: cardEffectArgs.playerId,
               prompt: `Gain a card costing exactly $1 more than ${selectedCard.cardName}`,
               restrict: gainCandidates.map((card) => card.id),
@@ -669,7 +669,7 @@ const expansion: CardExpansionModule = {
 
             const gainedCard = triggeredArgs.cardLibrary.getCard(gainCardId);
             console.debug(`[improve cleanup effect] gaining ${gainedCard}`);
-            await triggeredArgs.runGameActionDelegate('gainCard', {
+            await triggeredArgs.actionService.run('gainCard', {
               playerId: cardEffectArgs.playerId,
               cardId: gainCardId,
               to: { location: 'playerDiscard' },
@@ -685,7 +685,7 @@ const expansion: CardExpansionModule = {
       onGained: async (cardEffectArgs, eventArgs) => {
         // Gaining Lackeys grants +2 Villagers to the player that gained it.
         console.debug(`[lackeys onGained effect] player ${eventArgs.playerId} gaining 2 Villagers`);
-        await cardEffectArgs.runGameActionDelegate('gainVillager', {
+        await cardEffectArgs.actionService.run('gainVillager', {
           playerId: eventArgs.playerId,
           count: 2,
         });
@@ -694,7 +694,7 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       // Playing Lackeys grants +2 Cards.
       console.debug('[lackeys effect] drawing 2 cards');
-      await cardEffectArgs.runGameActionDelegate('drawCard', {
+      await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 2,
       });
@@ -704,7 +704,7 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       // Mountain Village grants +2 Actions.
       console.debug('[mountain-village effect] gaining 2 actions');
-      await cardEffectArgs.runGameActionDelegate('gainAction', {
+      await cardEffectArgs.actionService.run('gainAction', {
         count: 2,
       });
 
@@ -712,7 +712,7 @@ const expansion: CardExpansionModule = {
       const discard = cardEffectArgs.cardSourceController.getSource('playerDiscard', cardEffectArgs.playerId);
       if (discard.length) {
         console.debug(`[mountain-village effect] selecting card from discard (${discard.length} card(s))`);
-        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
           playerId: cardEffectArgs.playerId,
           prompt: 'Choose a card from your discard pile to put into your hand',
           restrict: discard,
@@ -726,7 +726,7 @@ const expansion: CardExpansionModule = {
         }
 
         console.debug(`[mountain-village effect] moving card ${selectedCardId} from discard to hand`);
-        await cardEffectArgs.runGameActionDelegate('moveCard', {
+        await cardEffectArgs.actionService.run('moveCard', {
           cardId: selectedCardId,
           toPlayerId: cardEffectArgs.playerId,
           to: { location: 'playerHand' },
@@ -736,7 +736,7 @@ const expansion: CardExpansionModule = {
 
       // If discard is empty, draw one card.
       console.debug('[mountain-village effect] discard empty, drawing 1 card');
-      await cardEffectArgs.runGameActionDelegate('drawCard', {
+      await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 1,
       });
@@ -746,7 +746,7 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       // Old Witch grants +3 Cards first.
       console.debug('[old-witch effect] drawing 3 cards');
-      await cardEffectArgs.runGameActionDelegate('drawCard', {
+      await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 3,
       });
@@ -787,7 +787,7 @@ const expansion: CardExpansionModule = {
         }
 
         console.debug(`[old-witch effect] player ${targetPlayerId} may trash a Curse from hand`);
-        const promptResult = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        const promptResult = await cardEffectArgs.actionService.run('userPrompt', {
           playerId: targetPlayerId,
           prompt: 'Trash a Curse from your hand?',
           actionButtons: [
@@ -804,7 +804,7 @@ const expansion: CardExpansionModule = {
         const curseToTrashId = curseInHandIds[0];
         const curseToTrash = cardEffectArgs.cardLibrary.getCard(curseToTrashId);
         console.debug(`[old-witch effect] player ${targetPlayerId} trashing ${curseToTrash}`);
-        await cardEffectArgs.runGameActionDelegate('trashCard', {
+        await cardEffectArgs.actionService.run('trashCard', {
           playerId: targetPlayerId,
           cardId: curseToTrashId,
         });
@@ -822,7 +822,7 @@ const expansion: CardExpansionModule = {
         }
 
         console.debug(`[patron onRevealed effect] player ${eventArgs.playerId} gaining 1 Coffer`);
-        await cardEffectArgs.runGameActionDelegate('gainCoffer', {
+        await cardEffectArgs.actionService.run('gainCoffer', {
           playerId: eventArgs.playerId,
           count: 1,
         });
@@ -831,11 +831,11 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       // Patron grants +1 Villager and +$2 when played.
       console.debug('[patron effect] gaining 1 Villager and 2 treasure');
-      await cardEffectArgs.runGameActionDelegate('gainVillager', {
+      await cardEffectArgs.actionService.run('gainVillager', {
         playerId: cardEffectArgs.playerId,
         count: 1,
       });
-      await cardEffectArgs.runGameActionDelegate('gainTreasure', {
+      await cardEffectArgs.actionService.run('gainTreasure', {
         count: 2,
       });
     },
@@ -852,7 +852,7 @@ const expansion: CardExpansionModule = {
 
       // Priest gives +$2 immediately when played.
       console.debug('[priest effect] gaining 2 treasure');
-      await cardEffectArgs.runGameActionDelegate('gainTreasure', {
+      await cardEffectArgs.actionService.run('gainTreasure', {
         count: 2,
       });
 
@@ -861,7 +861,7 @@ const expansion: CardExpansionModule = {
       if (!hand.length) {
         console.debug('[priest effect] no cards in hand to trash');
       } else {
-        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
           playerId: cardEffectArgs.playerId,
           prompt: 'Trash a card from your hand',
           restrict: hand,
@@ -874,7 +874,7 @@ const expansion: CardExpansionModule = {
         } else {
           const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
           console.debug(`[priest effect] trashing ${selectedCard}`);
-          await cardEffectArgs.runGameActionDelegate('trashCard', {
+          await cardEffectArgs.actionService.run('trashCard', {
             playerId: cardEffectArgs.playerId,
             cardId: selectedCardId,
           });
@@ -893,7 +893,7 @@ const expansion: CardExpansionModule = {
           condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
           triggeredEffectFn: async (triggeredArgs) => {
             console.debug('[priest cardTrashed effect] gaining 2 treasure from trash trigger');
-            await triggeredArgs.runGameActionDelegate('gainTreasure', {
+            await triggeredArgs.actionService.run('gainTreasure', {
               count: 2,
             });
           },
@@ -924,7 +924,7 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       // Recruiter gives +2 Cards.
       console.debug('[recruiter effect] drawing 2 cards');
-      await cardEffectArgs.runGameActionDelegate('drawCard', {
+      await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 2,
       });
@@ -936,7 +936,7 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+      const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Trash a card from your hand',
         restrict: hand,
@@ -956,7 +956,7 @@ const expansion: CardExpansionModule = {
       const villagersToGain = Math.max(0, cost.treasure ?? 0);
 
       console.debug(`[recruiter effect] trashing ${selectedCard}`);
-      await cardEffectArgs.runGameActionDelegate('trashCard', {
+      await cardEffectArgs.actionService.run('trashCard', {
         playerId: cardEffectArgs.playerId,
         cardId: selectedCardId,
       });
@@ -967,7 +967,7 @@ const expansion: CardExpansionModule = {
       }
 
       console.debug(`[recruiter effect] gaining ${villagersToGain} Villagers`);
-      await cardEffectArgs.runGameActionDelegate('gainVillager', {
+      await cardEffectArgs.actionService.run('gainVillager', {
         playerId: cardEffectArgs.playerId,
         count: villagersToGain,
       });
@@ -985,7 +985,7 @@ const expansion: CardExpansionModule = {
 
       // Research gives +1 Action.
       console.debug('[research effect] gaining 1 action');
-      await cardEffectArgs.runGameActionDelegate('gainAction', {
+      await cardEffectArgs.actionService.run('gainAction', {
         count: 1,
       });
 
@@ -996,7 +996,7 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+      const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Trash a card from your hand',
         restrict: hand,
@@ -1016,7 +1016,7 @@ const expansion: CardExpansionModule = {
       const setAsideCount = Math.max(0, cost.treasure ?? 0);
 
       console.debug(`[research effect] trashing ${selectedCard}`);
-      await cardEffectArgs.runGameActionDelegate('trashCard', {
+      await cardEffectArgs.actionService.run('trashCard', {
         playerId: cardEffectArgs.playerId,
         cardId: selectedCardId,
       });
@@ -1027,7 +1027,7 @@ const expansion: CardExpansionModule = {
         const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
         if (!deck.length) {
           console.debug('[research effect] deck empty, shuffling discard');
-          await cardEffectArgs.runGameActionDelegate('shuffleDeck', {
+          await cardEffectArgs.actionService.run('shuffleDeck', {
             playerId: cardEffectArgs.playerId,
           });
         }
@@ -1041,7 +1041,7 @@ const expansion: CardExpansionModule = {
         const topCardId = updatedDeck.slice(-1)[0];
         setAsideCardIds.push(topCardId);
         console.debug(`[research effect] setting aside card ${topCardId} face down`);
-        await cardEffectArgs.runGameActionDelegate('moveCard', {
+        await cardEffectArgs.actionService.run('moveCard', {
           cardId: topCardId,
           toPlayerId: cardEffectArgs.playerId,
           to: { location: 'set-aside' },
@@ -1064,7 +1064,7 @@ const expansion: CardExpansionModule = {
           condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
           triggeredEffectFn: async (triggeredArgs) => {
             console.debug('[research startTurn effect] returning Research to play area');
-            await triggeredArgs.runGameActionDelegate('moveCard', {
+            await triggeredArgs.actionService.run('moveCard', {
               cardId: researchCard.id,
               to: { location: 'playArea' },
             });
@@ -1077,7 +1077,7 @@ const expansion: CardExpansionModule = {
               }
 
               console.debug(`[research startTurn effect] moving set-aside card ${setAsideCardId} to hand`);
-              await triggeredArgs.runGameActionDelegate('moveCard', {
+              await triggeredArgs.actionService.run('moveCard', {
                 cardId: setAsideCardId,
                 toPlayerId: cardEffectArgs.playerId,
                 to: { location: 'playerHand' },
@@ -1108,13 +1108,13 @@ const expansion: CardExpansionModule = {
       // If no replay target exists, Scepter must take +$2.
       if (!uniquePlayedActionIds.length) {
         console.debug('[scepter effect] no eligible Action card to replay, gaining 2 treasure');
-        await cardEffectArgs.runGameActionDelegate('gainTreasure', {
+        await cardEffectArgs.actionService.run('gainTreasure', {
           count: 2,
         });
         return;
       }
 
-      const promptResult = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+      const promptResult = await cardEffectArgs.actionService.run('userPrompt', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Choose one',
         actionButtons: [
@@ -1125,13 +1125,13 @@ const expansion: CardExpansionModule = {
 
       if (promptResult?.action !== 2) {
         console.debug('[scepter effect] player chose +2 treasure');
-        await cardEffectArgs.runGameActionDelegate('gainTreasure', {
+        await cardEffectArgs.actionService.run('gainTreasure', {
           count: 2,
         });
         return;
       }
 
-      const selectedActionIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+      const selectedActionIds = await cardEffectArgs.actionService.run('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Choose an Action card to replay',
         restrict: uniquePlayedActionIds,
@@ -1141,7 +1141,7 @@ const expansion: CardExpansionModule = {
       const selectedActionId = selectedActionIds[0];
       if (selectedActionId === undefined) {
         console.warn('[scepter effect] no Action selected to replay, gaining 2 treasure');
-        await cardEffectArgs.runGameActionDelegate('gainTreasure', {
+        await cardEffectArgs.actionService.run('gainTreasure', {
           count: 2,
         });
         return;
@@ -1149,7 +1149,7 @@ const expansion: CardExpansionModule = {
 
       const selectedActionCard = cardEffectArgs.cardLibrary.getCard(selectedActionId);
       console.debug(`[scepter effect] replaying ${selectedActionCard}`);
-      await cardEffectArgs.runGameActionDelegate('playCard', {
+      await cardEffectArgs.actionService.run('playCard', {
         playerId: cardEffectArgs.playerId,
         cardId: selectedActionId,
         overrides: {
@@ -1196,7 +1196,7 @@ const expansion: CardExpansionModule = {
           },
           triggeredEffectFn: async (triggeredArgs) => {
             console.debug('[scepter duration effect] moving Scepter to activeDuration');
-            await triggeredArgs.runGameActionDelegate('moveCard', {
+            await triggeredArgs.actionService.run('moveCard', {
               cardId: scepterCard.id,
               to: { location: 'activeDuration' },
             });
@@ -1228,7 +1228,7 @@ const expansion: CardExpansionModule = {
             }
 
             console.debug('[scepter duration effect] replayed Duration left play; returning Scepter to play area');
-            await triggeredArgs.runGameActionDelegate('moveCard', {
+            await triggeredArgs.actionService.run('moveCard', {
               cardId: scepterCard.id,
               to: { location: 'playArea' },
             });
@@ -1245,7 +1245,7 @@ const expansion: CardExpansionModule = {
       const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
       console.debug(`[scholar effect] discarding ${hand.length} card(s) from hand`);
       for (const cardId of [...hand]) {
-        await cardEffectArgs.runGameActionDelegate('discardCard', {
+        await cardEffectArgs.actionService.run('discardCard', {
           playerId: cardEffectArgs.playerId,
           cardId,
         });
@@ -1253,7 +1253,7 @@ const expansion: CardExpansionModule = {
 
       // Then it draws 7 cards.
       console.debug('[scholar effect] drawing 7 cards');
-      await cardEffectArgs.runGameActionDelegate('drawCard', {
+      await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 7,
       });
@@ -1272,7 +1272,7 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+      const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Gain a card to your hand',
         restrict: gainableCards.map((card) => card.id),
@@ -1287,7 +1287,7 @@ const expansion: CardExpansionModule = {
 
       const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
       console.debug(`[sculptor effect] gaining ${selectedCard} to hand`);
-      await cardEffectArgs.runGameActionDelegate('gainCard', {
+      await cardEffectArgs.actionService.run('gainCard', {
         playerId: cardEffectArgs.playerId,
         cardId: selectedCardId,
         to: { location: 'playerHand' },
@@ -1299,7 +1299,7 @@ const expansion: CardExpansionModule = {
       }
 
       console.debug('[sculptor effect] gained Treasure, gaining 1 Villager');
-      await cardEffectArgs.runGameActionDelegate('gainVillager', {
+      await cardEffectArgs.actionService.run('gainVillager', {
         playerId: cardEffectArgs.playerId,
         count: 1,
       });
@@ -1309,11 +1309,11 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       // Seer first gives +1 Card and +1 Action.
       console.debug('[seer effect] drawing 1 card and gaining 1 action');
-      await cardEffectArgs.runGameActionDelegate('drawCard', {
+      await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 1,
       });
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+      await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
       // Reveal up to the top 3 cards of deck, shuffling if needed.
       const revealedCardIds: CardId[] = [];
@@ -1321,7 +1321,7 @@ const expansion: CardExpansionModule = {
         let deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
         if (!deck.length) {
           console.debug('[seer effect] deck empty, shuffling discard');
-          await cardEffectArgs.runGameActionDelegate('shuffleDeck', {
+          await cardEffectArgs.actionService.run('shuffleDeck', {
             playerId: cardEffectArgs.playerId,
           });
           deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
@@ -1335,7 +1335,7 @@ const expansion: CardExpansionModule = {
         const topCardId = deck.slice(-1)[0];
         const topCard = cardEffectArgs.cardLibrary.getCard(topCardId);
         console.debug(`[seer effect] revealing ${topCard}`);
-        await cardEffectArgs.runGameActionDelegate('revealCard', {
+        await cardEffectArgs.actionService.run('revealCard', {
           cardId: topCardId,
           playerId: cardEffectArgs.playerId,
           moveToSetAside: true,
@@ -1375,7 +1375,7 @@ const expansion: CardExpansionModule = {
       for (const cardId of cardsToHand) {
         const card = cardEffectArgs.cardLibrary.getCard(cardId);
         console.debug(`[seer effect] moving ${card} to hand`);
-        await cardEffectArgs.runGameActionDelegate('moveCard', {
+        await cardEffectArgs.actionService.run('moveCard', {
           cardId,
           toPlayerId: cardEffectArgs.playerId,
           to: { location: 'playerHand' },
@@ -1389,7 +1389,7 @@ const expansion: CardExpansionModule = {
       // Put non-qualifying cards back on deck in player-chosen order.
       let orderedCardsToReturn = [...cardsToReturn];
       if (cardsToReturn.length > 1) {
-        const reorderResult = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+        const reorderResult = await cardEffectArgs.actionService.run('userPrompt', {
           playerId: cardEffectArgs.playerId,
           prompt: 'Put the rest back on top of your deck in any order',
           actionButtons: [{ label: 'DONE', action: 1 }],
@@ -1407,7 +1407,7 @@ const expansion: CardExpansionModule = {
       for (const cardId of orderedCardsToReturn) {
         const card = cardEffectArgs.cardLibrary.getCard(cardId);
         console.debug(`[seer effect] returning ${card} to top of deck`);
-        await cardEffectArgs.runGameActionDelegate('moveCard', {
+        await cardEffectArgs.actionService.run('moveCard', {
           cardId,
           toPlayerId: cardEffectArgs.playerId,
           to: { location: 'playerDeck' },
@@ -1420,11 +1420,11 @@ const expansion: CardExpansionModule = {
       onGained: async (cardEffectArgs, eventArgs) => {
         // Silk Merchant grants +1 Coffer and +1 Villager when gained.
         console.debug(`[silk-merchant onGained effect] player ${eventArgs.playerId} gaining 1 Coffer and 1 Villager`);
-        await cardEffectArgs.runGameActionDelegate('gainCoffer', {
+        await cardEffectArgs.actionService.run('gainCoffer', {
           playerId: eventArgs.playerId,
           count: 1,
         });
-        await cardEffectArgs.runGameActionDelegate('gainVillager', {
+        await cardEffectArgs.actionService.run('gainVillager', {
           playerId: eventArgs.playerId,
           count: 1,
         });
@@ -1432,11 +1432,11 @@ const expansion: CardExpansionModule = {
       onTrashed: async (cardEffectArgs, eventArgs) => {
         // Silk Merchant grants +1 Coffer and +1 Villager to the player who trashed it.
         console.debug(`[silk-merchant onTrashed effect] player ${eventArgs.playerId} gaining 1 Coffer and 1 Villager`);
-        await cardEffectArgs.runGameActionDelegate('gainCoffer', {
+        await cardEffectArgs.actionService.run('gainCoffer', {
           playerId: eventArgs.playerId,
           count: 1,
         });
-        await cardEffectArgs.runGameActionDelegate('gainVillager', {
+        await cardEffectArgs.actionService.run('gainVillager', {
           playerId: eventArgs.playerId,
           count: 1,
         });
@@ -1445,11 +1445,11 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       // Silk Merchant gives +2 Cards and +1 Buy on play.
       console.debug('[silk-merchant effect] drawing 2 cards and gaining 1 buy');
-      await cardEffectArgs.runGameActionDelegate('drawCard', {
+      await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 2,
       });
-      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+      await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
     },
   },
   'spices': {
@@ -1457,7 +1457,7 @@ const expansion: CardExpansionModule = {
       onGained: async (cardEffectArgs, eventArgs) => {
         // Spices grants +2 Coffers when gained.
         console.debug(`[spices onGained effect] player ${eventArgs.playerId} gaining 2 Coffers`);
-        await cardEffectArgs.runGameActionDelegate('gainCoffer', {
+        await cardEffectArgs.actionService.run('gainCoffer', {
           playerId: eventArgs.playerId,
           count: 2,
         });
@@ -1466,15 +1466,15 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       // Spices gives +$2 and +1 Buy on play.
       console.debug('[spices effect] gaining 2 treasure and 1 buy');
-      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
-      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
+      await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
+      await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
     },
   },
   'swashbuckler': {
     registerEffects: () => async (cardEffectArgs) => {
       // Swashbuckler gives +3 Cards first.
       console.debug('[swashbuckler effect] drawing 3 cards');
-      await cardEffectArgs.runGameActionDelegate('drawCard', {
+      await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 3,
       });
@@ -1487,7 +1487,7 @@ const expansion: CardExpansionModule = {
       }
 
       console.debug('[swashbuckler effect] discard pile has cards, gaining 1 Coffer');
-      await cardEffectArgs.runGameActionDelegate('gainCoffer', {
+      await cardEffectArgs.actionService.run('gainCoffer', {
         playerId: cardEffectArgs.playerId,
         count: 1,
       });
@@ -1500,7 +1500,7 @@ const expansion: CardExpansionModule = {
       }
 
       console.debug('[swashbuckler effect] player has at least 4 Coffers, taking Treasure Chest');
-      await cardEffectArgs.runGameActionDelegate('gainArtifact', {
+      await cardEffectArgs.actionService.run('gainArtifact', {
         playerId: cardEffectArgs.playerId,
         artifactKey: renaissanceArtifactKeys.treasureChest,
       });
@@ -1510,9 +1510,9 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       // Treasurer gives +$3 on play.
       console.debug('[treasurer effect] gaining 3 treasure');
-      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 3 });
+      await cardEffectArgs.actionService.run('gainTreasure', { count: 3 });
 
-      const promptResult = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+      const promptResult = await cardEffectArgs.actionService.run('userPrompt', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Choose one',
         actionButtons: [
@@ -1535,7 +1535,7 @@ const expansion: CardExpansionModule = {
           return;
         }
 
-        const selectedTreasureIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        const selectedTreasureIds = await cardEffectArgs.actionService.run('selectCard', {
           playerId: cardEffectArgs.playerId,
           prompt: 'Trash a Treasure from your hand',
           restrict: treasureIdsInHand,
@@ -1550,7 +1550,7 @@ const expansion: CardExpansionModule = {
 
         const selectedTreasure = cardEffectArgs.cardLibrary.getCard(selectedTreasureId);
         console.debug(`[treasurer effect] trashing ${selectedTreasure}`);
-        await cardEffectArgs.runGameActionDelegate('trashCard', {
+        await cardEffectArgs.actionService.run('trashCard', {
           playerId: cardEffectArgs.playerId,
           cardId: selectedTreasureId,
         });
@@ -1566,7 +1566,7 @@ const expansion: CardExpansionModule = {
           return;
         }
 
-        const selectedTreasureIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        const selectedTreasureIds = await cardEffectArgs.actionService.run('selectCard', {
           playerId: cardEffectArgs.playerId,
           prompt: 'Gain a Treasure from the trash to your hand',
           restrict: treasureIdsInTrash,
@@ -1581,7 +1581,7 @@ const expansion: CardExpansionModule = {
 
         const selectedTreasure = cardEffectArgs.cardLibrary.getCard(selectedTreasureId);
         console.debug(`[treasurer effect] gaining ${selectedTreasure} from trash to hand`);
-        await cardEffectArgs.runGameActionDelegate('gainCard', {
+        await cardEffectArgs.actionService.run('gainCard', {
           playerId: cardEffectArgs.playerId,
           cardId: selectedTreasureId,
           to: { location: 'playerHand' },
@@ -1591,7 +1591,7 @@ const expansion: CardExpansionModule = {
 
       // Option 3: take the Key artifact.
       console.debug('[treasurer effect] taking the Key artifact');
-      await cardEffectArgs.runGameActionDelegate('gainArtifact', {
+      await cardEffectArgs.actionService.run('gainArtifact', {
         playerId: cardEffectArgs.playerId,
         artifactKey: renaissanceArtifactKeys.key,
       });
@@ -1601,7 +1601,7 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       // Villain grants +2 Coffers.
       console.debug('[villain effect] gaining 2 Coffers');
-      await cardEffectArgs.runGameActionDelegate('gainCoffer', {
+      await cardEffectArgs.actionService.run('gainCoffer', {
         playerId: cardEffectArgs.playerId,
         count: 2,
       });
@@ -1633,7 +1633,7 @@ const expansion: CardExpansionModule = {
         if (!discardableIds.length) {
           console.debug(`[villain effect] player ${targetPlayerId} cannot discard, revealing hand`);
           for (const cardId of hand) {
-            await cardEffectArgs.runGameActionDelegate('revealCard', {
+            await cardEffectArgs.actionService.run('revealCard', {
               playerId: targetPlayerId,
               cardId,
             });
@@ -1641,7 +1641,7 @@ const expansion: CardExpansionModule = {
           continue;
         }
 
-        const selectedDiscardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+        const selectedDiscardIds = await cardEffectArgs.actionService.run('selectCard', {
           playerId: targetPlayerId,
           prompt: 'Discard a card costing $2 or more',
           restrict: discardableIds,
@@ -1651,7 +1651,7 @@ const expansion: CardExpansionModule = {
         const selectedDiscardId = selectedDiscardIds[0] ?? discardableIds[0];
         const selectedDiscardCard = cardEffectArgs.cardLibrary.getCard(selectedDiscardId);
         console.debug(`[villain effect] player ${targetPlayerId} discarding ${selectedDiscardCard}`);
-        await cardEffectArgs.runGameActionDelegate('discardCard', {
+        await cardEffectArgs.actionService.run('discardCard', {
           playerId: targetPlayerId,
           cardId: selectedDiscardId,
         });

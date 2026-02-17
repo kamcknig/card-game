@@ -65,7 +65,7 @@ export const configureBasilica = (
     );
 
     for (const token of tokensToMove) {
-      await args.runGameActionDelegate('moveToken', {
+      await args.actionService.run('moveToken', {
         tokenInstanceId: token.id,
         location: { type: 'player', playerId: eventArgs.playerId },
         ownerId: eventArgs.playerId,

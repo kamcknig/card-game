@@ -304,7 +304,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         const chosenIndex = copperIndices[Math.floor(Math.random() * copperIndices.length)];
         const copperId = deck[chosenIndex];
 
-        await args.runGameActionDelegate('moveCard', {
+        await args.actionService.run('moveCard', {
           cardId: copperId,
           to: { location: 'basicSupply' },
         });
@@ -347,7 +347,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         const chosenIndex = copperIndices[Math.floor(Math.random() * copperIndices.length)];
         const copperId = deck[chosenIndex];
 
-        await args.runGameActionDelegate('moveCard', {
+        await args.actionService.run('moveCard', {
           cardId: copperId,
           to: { location: 'basicSupply' },
         });
@@ -390,7 +390,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         const chosenIndex = copperIndices[Math.floor(Math.random() * copperIndices.length)];
         const copperId = deck[chosenIndex];
 
-        await args.runGameActionDelegate('moveCard', {
+        await args.actionService.run('moveCard', {
           cardId: copperId,
           to: { location: 'basicSupply' },
         });
@@ -433,7 +433,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         const chosenIndex = copperIndices[Math.floor(Math.random() * copperIndices.length)];
         const copperId = deck[chosenIndex];
 
-        await args.runGameActionDelegate('moveCard', {
+        await args.actionService.run('moveCard', {
           cardId: copperId,
           to: { location: 'basicSupply' },
         });
@@ -476,7 +476,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         const chosenIndex = copperIndices[Math.floor(Math.random() * copperIndices.length)];
         const copperId = deck[chosenIndex];
 
-        await args.runGameActionDelegate('moveCard', {
+        await args.actionService.run('moveCard', {
           cardId: copperId,
           to: { location: 'basicSupply' },
         });
@@ -519,7 +519,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         const chosenIndex = copperIndices[Math.floor(Math.random() * copperIndices.length)];
         const copperId = deck[chosenIndex];
 
-        await args.runGameActionDelegate('moveCard', {
+        await args.actionService.run('moveCard', {
           cardId: copperId,
           to: { location: 'basicSupply' },
         });
@@ -562,7 +562,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         const chosenIndex = copperIndices[Math.floor(Math.random() * copperIndices.length)];
         const copperId = deck[chosenIndex];
 
-        await args.runGameActionDelegate('moveCard', {
+        await args.actionService.run('moveCard', {
           cardId: copperId,
           to: { location: 'basicSupply' },
         });
@@ -627,7 +627,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
       for (const zombieKey of zombieKeys) {
         const zombieCard = args.cardInstanceFactoryService.createCard(zombieKey, { partOfSupply: false });
         args.cardLibrary.addCard(zombieCard);
-        await args.runGameActionDelegate('moveCard', {
+        await args.actionService.run('moveCard', {
           cardId: zombieCard.id,
           to: { location: 'trash' },
         });
@@ -717,7 +717,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           console.info(`[changeling exchange] prompting exchange for ${gainedCard}`);
 
           // Offer the exchange decision to the gaining player.
-          const decision = await triggeredArgs.runGameActionDelegate('userPrompt', {
+          const decision = await triggeredArgs.actionService.run('userPrompt', {
             playerId: player.id,
             prompt: `Exchange ${gainedCard.cardName} for Changeling?`,
             actionButtons: [
@@ -758,7 +758,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
           // Return the gained card to its original supply pile.
           console.debug(`[changeling exchange] returning ${gainedCard} to supply`);
-          await triggeredArgs.runGameActionDelegate('moveCard', {
+          await triggeredArgs.actionService.run('moveCard', {
             cardId: gainedCard.id,
             to: { location: returnLocation },
           });
@@ -776,7 +776,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
           const changelingCard = changelingCards.slice(-1)[0];
           console.debug(`[changeling exchange] moving ${changelingCard} to discard`);
-          await triggeredArgs.runGameActionDelegate('moveCard', {
+          await triggeredArgs.actionService.run('moveCard', {
             cardId: changelingCard.id,
             toPlayerId: player.id,
             to: { location: 'playerDiscard' },

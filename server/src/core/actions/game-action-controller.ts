@@ -345,7 +345,7 @@ export class GameActionController implements GameActionDefinitionMap {
             `[${card.cardKey} duration effect] moving to activeDuration zone`,
           );
 
-          await triggeredArgs.runGameActionDelegate('moveCard', {
+          await triggeredArgs.actionService.run('moveCard', {
             cardId: card.id,
             to: { location: 'activeDuration' },
           });
@@ -522,7 +522,7 @@ export class GameActionController implements GameActionDefinitionMap {
           match: this.match,
           playerId,
           cardId,
-          runGameAction: (action, ...args) => this.runtimeActionGateway.run(action, ...args),
+          actionService: this.runtimeActionGateway,
         });
       }
     });
@@ -1410,7 +1410,7 @@ export class GameActionController implements GameActionDefinitionMap {
         findCardService: this.findCardService,
         cardSourceController: this.cardSourceController,
         cardPriceController: this.cardPriceController,
-        runGameActionDelegate: (action, ...args) => this.runtimeActionGateway.run(action, ...args),
+        actionService: this.runtimeActionGateway,
         reactionManager: this.reactionManager,
         logManager: this.logManager,
       });
@@ -1509,7 +1509,7 @@ export class GameActionController implements GameActionDefinitionMap {
         cardPriceController: this.cardPriceController,
         logManager: this.logManager,
         reactionManager: this.reactionManager,
-        runGameActionDelegate: (action, ...args) => this.runtimeActionGateway.run(action, ...args),
+        actionService: this.runtimeActionGateway,
         cardId: args.cardLikeId,
         playerId: args.playerId,
         match: this.match,
@@ -1517,6 +1517,7 @@ export class GameActionController implements GameActionDefinitionMap {
         reactionContext: {},
         findCardService: this.findCardService,
         supplyGainService: this.supplyGainService,
+        registerDurationEffect: (() => []) as CardEffectFunctionContext['registerDurationEffect'],
       } as CardEffectFunctionContext;
 
       // Centralized duration registration with automatic cleanup on leave-play.
@@ -1625,7 +1626,7 @@ export class GameActionController implements GameActionDefinitionMap {
         cardPriceController: this.cardPriceController,
         logManager: this.logManager,
         reactionManager: this.reactionManager,
-        runGameActionDelegate: (action, ...args) => this.runtimeActionGateway.run(action, ...args),
+        actionService: this.runtimeActionGateway,
         cardId: args.cardLikeId,
         playerId: args.playerId,
         match: this.match,
@@ -1633,6 +1634,7 @@ export class GameActionController implements GameActionDefinitionMap {
         reactionContext: {},
         findCardService: this.findCardService,
         supplyGainService: this.supplyGainService,
+        registerDurationEffect: (() => []) as CardEffectFunctionContext['registerDurationEffect'],
       } as CardEffectFunctionContext;
 
       // Centralized duration registration with automatic cleanup on leave-play.
@@ -1742,7 +1744,7 @@ export class GameActionController implements GameActionDefinitionMap {
           cardPriceController: this.cardPriceController,
           logManager: this.logManager,
           reactionManager: this.reactionManager,
-          runGameActionDelegate: (action, ...args) => this.runtimeActionGateway.run(action, ...args),
+          actionService: this.runtimeActionGateway,
           cardId: boonId,
           playerId: args.playerId,
           match: this.match,
@@ -1750,6 +1752,7 @@ export class GameActionController implements GameActionDefinitionMap {
           reactionContext: {},
           findCardService: this.findCardService,
           supplyGainService: this.supplyGainService,
+          registerDurationEffect: (() => []) as CardEffectFunctionContext['registerDurationEffect'],
         } as CardEffectFunctionContext;
 
         // Centralized duration registration with automatic cleanup on leave-play.
@@ -1893,7 +1896,7 @@ export class GameActionController implements GameActionDefinitionMap {
         cardPriceController: this.cardPriceController,
         logManager: this.logManager,
         reactionManager: this.reactionManager,
-        runGameActionDelegate: (action, ...args) => this.runtimeActionGateway.run(action, ...args),
+        actionService: this.runtimeActionGateway,
         cardId: hexId,
         playerId: args.playerId,
         match: this.match,
@@ -1901,6 +1904,7 @@ export class GameActionController implements GameActionDefinitionMap {
         reactionContext: {},
         findCardService: this.findCardService,
         supplyGainService: this.supplyGainService,
+        registerDurationEffect: (() => []) as CardEffectFunctionContext['registerDurationEffect'],
       } as CardEffectFunctionContext;
 
       // Centralized duration registration with automatic cleanup on leave-play.
@@ -1977,14 +1981,15 @@ export class GameActionController implements GameActionDefinitionMap {
       cardPriceController: this.cardPriceController,
       logManager: this.logManager,
       reactionManager: this.reactionManager,
-      runGameActionDelegate: (action, ...args) => this.runtimeActionGateway.run(action, ...args),
+      actionService: this.runtimeActionGateway,
       cardId: state.id,
       playerId: args.playerId,
       match: this.match,
       cardLibrary: this.cardLibrary,
       reactionContext: {},
       findCardService: this.findCardService,
-        supplyGainService: this.supplyGainService,
+      supplyGainService: this.supplyGainService,
+      registerDurationEffect: (() => []) as CardEffectFunctionContext['registerDurationEffect'],
     } as CardEffectFunctionContext;
 
     // Centralized duration registration with automatic cleanup on leave-play.
@@ -2078,14 +2083,15 @@ export class GameActionController implements GameActionDefinitionMap {
       cardPriceController: this.cardPriceController,
       logManager: this.logManager,
       reactionManager: this.reactionManager,
-      runGameActionDelegate: (action, ...args) => this.runtimeActionGateway.run(action, ...args),
+      actionService: this.runtimeActionGateway,
       cardId: artifact.id,
       playerId: args.playerId,
       match: this.match,
       cardLibrary: this.cardLibrary,
       reactionContext: {},
       findCardService: this.findCardService,
-        supplyGainService: this.supplyGainService,
+      supplyGainService: this.supplyGainService,
+      registerDurationEffect: (() => []) as CardEffectFunctionContext['registerDurationEffect'],
     } as CardEffectFunctionContext;
 
     // Centralized duration registration with automatic cleanup on leave-play.
@@ -2779,7 +2785,7 @@ export class GameActionController implements GameActionDefinitionMap {
         cardPriceController: this.cardPriceController,
         logManager: this.logManager,
         reactionManager: this.reactionManager,
-        runGameActionDelegate: (action, ...args) => this.runtimeActionGateway.run(action, ...args),
+        actionService: this.runtimeActionGateway,
         cardId,
         playerId,
         match: this.match,
@@ -2787,6 +2793,7 @@ export class GameActionController implements GameActionDefinitionMap {
         reactionContext,
         findCardService: this.findCardService,
         supplyGainService: this.supplyGainService,
+        registerDurationEffect: (() => []) as CardEffectFunctionContext['registerDurationEffect'],
       } as CardEffectFunctionContext;
 
       // Centralized duration registration with automatic cleanup on leave-play.

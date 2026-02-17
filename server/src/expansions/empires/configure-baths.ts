@@ -91,7 +91,7 @@ export const configureBaths = (
             );
 
             for (const token of tokensToMove) {
-              await triggeredArgs.runGameActionDelegate('moveToken', {
+              await triggeredArgs.actionService.run('moveToken', {
                 tokenInstanceId: token.id,
                 location: { type: 'player', playerId: player.id },
                 ownerId: player.id,

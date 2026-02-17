@@ -30,7 +30,7 @@ export const placeVictoryTokensPerPlayer = async (
 
   // Place the computed number of victory tokens on the landmark supply pile.
   for (let i = 0; i < totalTokens; i += 1) {
-    await args.runGameActionDelegate('placeToken', {
+    await args.actionService.run('placeToken', {
       tokenId: victoryTokenId,
       location: { type: 'supplyPile', cardKey: options.landmarkKey },
     });

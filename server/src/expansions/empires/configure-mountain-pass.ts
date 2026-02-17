@@ -79,7 +79,7 @@ export const configureMountainPass = (
         `[mountain pass bidding] prompting player ${bidderId} with min bid ${minBid}D`,
       );
 
-      const promptResult = await args.runGameActionDelegate('userPrompt', {
+      const promptResult = await args.actionService.run('userPrompt', {
         playerId: bidderId,
         prompt: `Mountain Pass bid? Current high bid: ${highBid}D`,
         // Use a numeric input prompt instead of enumerating every bid option.
@@ -137,11 +137,11 @@ export const configureMountainPass = (
     );
 
     // Award the Mountain Pass prize to the winning bidder.
-    await args.runGameActionDelegate('gainVictoryToken', {
+    await args.actionService.run('gainVictoryToken', {
       playerId: highBidder,
       count: 8,
     });
-    await args.runGameActionDelegate('gainDebt', {
+    await args.actionService.run('gainDebt', {
       playerId: highBidder,
       count: highBid,
     });

@@ -49,7 +49,7 @@ export const configureTomb = (
             console.info(
               `[tomb cardTrashed] player ${player.id} trashed ${trashedCard}, gaining 1 VP`,
             );
-            await triggeredArgs.runGameActionDelegate('gainVictoryToken', {
+            await triggeredArgs.actionService.run('gainVictoryToken', {
               playerId: player.id,
               count: 1,
             });

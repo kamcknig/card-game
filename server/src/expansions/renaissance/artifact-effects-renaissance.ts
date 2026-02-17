@@ -119,7 +119,7 @@ const registerHorn = (registerArtifactEffect: ArtifactEffectRegistrar) => {
         console.debug(`[horn artifact] top-decking ${discardedCard}`);
 
         // Move the discarded Border Guard onto the top of the deck.
-        await triggeredArgs.runGameActionDelegate('moveCard', {
+        await triggeredArgs.actionService.run('moveCard', {
           cardId: discardedCard.id,
           toPlayerId: playerId,
           to: { location: 'playerDeck' },
@@ -167,7 +167,7 @@ const registerKey = (registerArtifactEffect: ArtifactEffectRegistrar) => {
         const ownedArtifacts = triggerMatch.artifacts?.byPlayer?.[playerId] ?? [];
         return ownedArtifacts.includes(cardId);
       },
-      triggeredEffectFn: async ({ logManager, runGameActionDelegate, match: triggeredMatch }) => {
+      triggeredEffectFn: async ({ logManager, actionService, match: triggeredMatch }) => {
         console.debug(`[key artifact] granting +$1 on turn ${triggeredMatch.turnNumber}`);
         logManager.addLogEntry({
           type: 'cardLikeEffect',
@@ -175,7 +175,7 @@ const registerKey = (registerArtifactEffect: ArtifactEffectRegistrar) => {
           cardLikeId: cardId,
           effectText: '+$1',
         });
-        await runGameActionDelegate('gainTreasure', { count: 1 });
+        await actionService.run('gainTreasure', { count: 1 });
       },
     });
   });

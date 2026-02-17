@@ -4,7 +4,7 @@ import { PlayerId } from 'shared/types/index.ts';
 // Shared helper context for discard-down-to effects.
 type DiscardDownToContext = Pick<
   CardEffectFunctionContext,
-  'cardSourceController' | 'runGameActionDelegate' | 'cardLibrary'
+  'cardSourceController' | 'actionService' | 'cardLibrary'
 >;
 
 // Force a player to discard down to a target hand size.
@@ -25,7 +25,7 @@ export const discardDownTo = async (
   const selectCount = handCount - args.targetHandSize;
   console.debug(`[${args.logTag}] prompting player ${args.playerId} to discard ${selectCount} cards`);
 
-  const cardIds = await context.runGameActionDelegate('selectCard', {
+  const cardIds = await context.actionService.run('selectCard', {
     prompt: args.prompt ?? 'Confirm discard',
     playerId: args.playerId,
     count: selectCount,
@@ -40,7 +40,7 @@ export const discardDownTo = async (
   // Discard each selected card.
   for (const cardId of cardIds) {
     console.debug(`[${args.logTag}] discarding ${context.cardLibrary.getCard(cardId)}...`);
-    await context.runGameActionDelegate('discardCard', {
+    await context.actionService.run('discardCard', {
       cardId,
       playerId: args.playerId,
     });

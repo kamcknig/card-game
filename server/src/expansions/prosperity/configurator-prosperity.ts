@@ -66,7 +66,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
       args.cardEffectRegistrar('curse', 'prosperity', async (args) => {
         console.info(`[curse effect - prosperity] curse effect called`);
-        await args.runGameActionDelegate('gainTreasure', { count: 1 });
+        await args.actionService.run('gainTreasure', { count: 1 });
       });
 
       charlatanConfigured = true;

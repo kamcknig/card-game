@@ -7,5 +7,6 @@ export type {
   GameActionReturnTypeMap,
   GameActions,
   LifecycleSuppression,
+  ActionService,
   RunGameActionDelegate,
 } from '../types.ts';
