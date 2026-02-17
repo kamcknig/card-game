@@ -531,10 +531,9 @@ const expansion: CardExpansionModule = {
 
       // Draw one card, then reveal it.
       console.debug(`[chariot race effect] drawing 1 card to reveal`);
-      const drawnCardIds = await args.actionService.run('drawCard', {
+      const drawnCardId = await args.actionService.run('drawCard', {
         playerId,
-      }) as CardId[] | null;
-      const drawnCardId = drawnCardIds?.[0];
+      });
       if (drawnCardId) {
         console.debug(
           `[chariot race effect] revealing drawn card ${drawnCardId}`,

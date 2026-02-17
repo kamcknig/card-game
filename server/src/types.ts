@@ -166,7 +166,7 @@ export interface GameActionDefinitionMap {
   drawCard: (
     args: { playerId: PlayerId; count?: number; suppressReactions?: boolean },
     context?: GameActionContext,
-  ) => Promise<CardId[] | null>;
+  ) => Promise<CardId | CardId[] | null>;
   // Draws a hand of cards (default 5), triggering drawHand reactions.
   drawHand: (args: { playerId: PlayerId; count?: number }, context?: GameActionContext) => Promise<CardId[] | null>;
   endTurn: () => Promise<void>;
@@ -309,10 +309,23 @@ export type GameActionReturnTypeMap = {
   [K in GameActions]: Awaited<ReturnType<GameActionDefinitionMap[K]>>;
 };
 
-export type RunGameActionDelegate = <K extends GameActions>(
+type BaseRunGameActionDelegate = <K extends GameActions>(
   action: K,
   ...args: Parameters<GameActionDefinitionMap[K]>
 ) => Promise<GameActionReturnTypeMap[K]>;
+
+export type RunGameActionDelegate = BaseRunGameActionDelegate & {
+  (
+    action: 'drawCard',
+    args: { playerId: PlayerId; count?: 1; suppressReactions?: boolean },
+    context?: GameActionContext,
+  ): Promise<CardId | null>;
+  (
+    action: 'drawCard',
+    args: { playerId: PlayerId; count: number; suppressReactions?: boolean },
+    context?: GameActionContext,
+  ): Promise<CardId[] | null>;
+};
 
 export type ActionService = {
   run: RunGameActionDelegate;

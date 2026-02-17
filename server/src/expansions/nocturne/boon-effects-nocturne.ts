@@ -128,9 +128,9 @@ const registerFieldsGift = (registerBoonEffect: BoonEffectRegistrar) => {
       once: true,
       compulsory: true,
       allowMultipleInstances: true,
-      triggeredEffectFn: async ({ actionService: runTriggerAction }) => {
+      triggeredEffectFn: async ({ actionService }) => {
         // Return the boon to the boon discard pile at cleanup.
-        await runTriggerAction.run('moveCardLike', {
+        await actionService.run('moveCardLike', {
           cardLikeId: boon.id,
           to: { location: 'boonDiscard' },
         });
@@ -212,9 +212,9 @@ const registerForestsGift = (registerBoonEffect: BoonEffectRegistrar) => {
       once: true,
       compulsory: true,
       allowMultipleInstances: true,
-      triggeredEffectFn: async ({ actionService: runTriggerAction }) => {
+      triggeredEffectFn: async ({ actionService }) => {
         // Return the boon to the boon discard pile at cleanup.
-        await runTriggerAction.run('moveCardLike', {
+        await actionService.run('moveCardLike', {
           cardLikeId: boon.id,
           to: { location: 'boonDiscard' },
         });
@@ -315,11 +315,11 @@ const registerRiversGift = (registerBoonEffect: BoonEffectRegistrar) => {
       once: true,
       compulsory: true,
       allowMultipleInstances: true,
-      triggeredEffectFn: async ({ actionService: runTriggerAction }) => {
+      triggeredEffectFn: async ({ actionService }) => {
         // Draw the extra card at end of turn.
-        await runTriggerAction.run('drawCard', { playerId, count: 1 });
+        await actionService.run('drawCard', { playerId, count: 1 });
         // Return the boon to the boon discard pile at cleanup.
-        await runTriggerAction.run('moveCardLike', {
+        await actionService.run('moveCardLike', {
           cardLikeId: boon.id,
           to: { location: 'boonDiscard' },
         });

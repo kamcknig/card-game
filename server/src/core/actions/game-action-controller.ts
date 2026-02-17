@@ -2544,6 +2544,7 @@ export class GameActionController implements GameActionDefinitionMap {
     context?: GameActionContext,
   ) {
     const { playerId, count } = args;
+    const returnSingleResult = count === undefined || count === 1;
 
     console.debug(`[drawCard action] player ${playerId} drawing ${count} card(s)`);
 
@@ -2569,7 +2570,10 @@ export class GameActionController implements GameActionDefinitionMap {
 
         if (deck.length < 1) {
           console.debug(`[drawCard action] No cards left in deck, returning null`);
-          return drawnCardIds.length > 0 ? drawnCardIds : null;
+          if (drawnCardIds.length < 1) {
+            return null;
+          }
+          return returnSingleResult ? drawnCardIds[0] : drawnCardIds;
         }
       }
 
@@ -2592,7 +2596,7 @@ export class GameActionController implements GameActionDefinitionMap {
       console.debug(`[drawCard action] Drew card ${drawnCardId}`);
     }
 
-    return drawnCardIds;
+    return returnSingleResult ? (drawnCardIds[0] ?? null) : drawnCardIds;
   }
 
   // Draws a full hand (default 5), allowing draw-hand reactions to adjust the count.
@@ -2623,7 +2627,11 @@ export class GameActionController implements GameActionDefinitionMap {
     }
 
     // Draw hands should not trigger drawCards reactions.
-    return await this.drawCard({ playerId, count: drawCount, suppressReactions: true }, context);
+    const drawn = await this.drawCard({ playerId, count: drawCount, suppressReactions: true }, context);
+    if (drawn === null) {
+      return null;
+    }
+    return Array.isArray(drawn) ? drawn : [drawn];
   }
 
   async playCard(args: {

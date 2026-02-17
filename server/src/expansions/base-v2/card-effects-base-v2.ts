@@ -522,8 +522,7 @@ const expansionModule: CardExpansionModule = {
       while (hand.length < 7 && (deck.length + discard.length > 0)) {
         console.debug(`[LIBRARY EFFECT] drawing card...`);
 
-        const drawnCardIds = await actionService.run('drawCard', { playerId });
-        const drawnCardId = drawnCardIds?.[0];
+        const drawnCardId = await actionService.run('drawCard', { playerId });
 
         if (!drawnCardId) {
           console.warn(`[library effect] no card drawn`);
