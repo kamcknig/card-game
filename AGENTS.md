@@ -149,6 +149,15 @@ If the server is running, current match state is available at:
 
 - No mandatory testing policy currently defined
 
+## Documentation Expectations
+
+- All code should be documented. Methods should be commented with a summary
+  and a description of their behavior.
+- Log entries should be added appropriately for all code changes including
+  all appropriate levels to show different levels of verbosity for debugging.
+- readme files and other documentation files should be updated appropriately
+  with new features or updates to existing features and architecture.
+
 ## Failure Conditions
 
 The agent has failed if it:
