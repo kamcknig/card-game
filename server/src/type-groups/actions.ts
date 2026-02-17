@@ -9,5 +9,5 @@ export type {
   LifecycleSuppression,
   ActionService,
   PromptService,
-  RunGameActionDelegate,
+  GameActionRunner,
 } from '../types.ts';

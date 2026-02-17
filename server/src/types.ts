@@ -311,12 +311,12 @@ export type GameActionReturnTypeMap = {
   [K in GameActions]: Awaited<ReturnType<GameActionDefinitionMap[K]>>;
 };
 
-type BaseRunGameActionDelegate = <K extends GameActions>(
+type GameActionRunnerBase = <K extends GameActions>(
   action: K,
   ...args: Parameters<GameActionDefinitionMap[K]>
 ) => Promise<GameActionReturnTypeMap[K]>;
 
-export type RunGameActionDelegate = BaseRunGameActionDelegate & {
+export type GameActionRunner = GameActionRunnerBase & {
   (
     action: 'drawCard',
     args: { playerId: PlayerId; count?: 1; suppressReactions?: boolean },
@@ -333,7 +333,19 @@ export type RunGameActionDelegate = BaseRunGameActionDelegate & {
   ): Promise<CardId[]>;
   (
     action: 'selectSingleCard',
-    args: SelectSingleActionCardArgs,
+    args: Omit<SelectSingleActionCardArgs, 'count'>,
+  ): Promise<CardId | null>;
+  (
+    action: 'selectSingleCard',
+    args: Omit<SelectSingleActionCardArgs, 'count'> & { count: 1 },
+  ): Promise<CardId | null>;
+  (
+    action: 'selectSingleCard',
+    args: Omit<SelectSingleActionCardArgs, 'count'> & { count: { kind: 'exact'; count: 1 } },
+  ): Promise<CardId | null>;
+  (
+    action: 'selectSingleCard',
+    args: Omit<SelectSingleActionCardArgs, 'count'> & { count: { kind: 'upTo'; count: 1 } },
   ): Promise<CardId | null>;
   <TUserPromptResult = unknown>(
     action: 'userPrompt',
@@ -342,7 +354,7 @@ export type RunGameActionDelegate = BaseRunGameActionDelegate & {
 };
 
 export type ActionService = {
-  run: RunGameActionDelegate;
+  run: GameActionRunner;
 };
 
 export type PromptService = {

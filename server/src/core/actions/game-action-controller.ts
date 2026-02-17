@@ -33,7 +33,6 @@ import {
   CardEffectFunctionMap,
   DurationEffectOptions,
   FindCardService,
-  FindCardsFnInput,
   GameActionContext,
   GameActionContextMap,
   GameActionDefinitionMap,
@@ -327,6 +326,11 @@ export class GameActionController implements GameActionDefinitionMap {
       return Math.min(1, available);
     }
     return Math.min(1, available);
+  }
+
+  // Identifies direct card-id restrictions (including empty arrays).
+  private isCardIdRestriction(restrict: SelectActionCardArgs['restrict']): restrict is CardId[] {
+    return Array.isArray(restrict) && restrict.every((entry) => typeof entry === 'number');
   }
 
   // Registers duration cleanup and effect triggers with centralized cleanup tracking.
@@ -1127,11 +1131,15 @@ export class GameActionController implements GameActionDefinitionMap {
 
     const { count, playerId, restrict } = args;
 
-    if (Array.isArray(restrict) && typeof restrict[0] === 'number') {
-      console.debug(`[selectCard action] restricted to set of cards ${restrict}`);
-      selectableCardIds = restrict as CardId[];
+    if (Array.isArray(restrict)) {
+      if (this.isCardIdRestriction(restrict)) {
+        console.debug(`[selectCard action] restricted to set of cards ${restrict}`);
+        selectableCardIds = restrict;
+      } else {
+        selectableCardIds = this.findCardService.findCards(restrict).map((card) => card.id);
+      }
     } else if (restrict !== undefined) {
-      selectableCardIds = this.findCardService.findCards(restrict as FindCardsFnInput).map((card) => card.id);
+      selectableCardIds = this.findCardService.findCards(restrict).map((card) => card.id);
     }
 
     console.debug(`[selectCard action] found ${selectableCardIds.length} selectable cards`);
