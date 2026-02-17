@@ -12,7 +12,6 @@ import {
   ReactionTemplate,
   ReactionTemplateOptions,
   ReactionTrigger,
-  RunGameActionDelegate,
   SupplyGainService,
   TriggeredEffectContext,
   TriggerEventType,
@@ -28,6 +27,7 @@ import { LogManager } from '../log-manager.ts';
 import { CardPriceRulesController } from '../card-price-rules-controller.ts';
 import { CardSourceController } from '../card-source-controller.ts';
 import { CardInstanceFactoryService } from '../card-instance-factory-service.ts';
+import { RuntimeActionGateway } from '../runtime-action-gateway.ts';
 
 export class ReactionManager {
   private _reactions: Reaction[] = [];
@@ -47,7 +47,7 @@ export class ReactionManager {
     private readonly match: Match,
     private readonly cardLibrary: MatchCardLibrary,
     private readonly cardInstanceFactoryService: CardInstanceFactoryService,
-    private readonly runGameActionDelegate: RunGameActionDelegate,
+    private readonly runtimeActionGateway: RuntimeActionGateway,
   ) {}
 
   public endGame() {
@@ -94,7 +94,7 @@ export class ReactionManager {
           cardPriceController: this.cardPriceController,
           logManager: this.logManager,
           reactionManager: this,
-          runGameActionDelegate: this.runGameActionDelegate,
+          runGameActionDelegate: (action, ...args) => this.runtimeActionGateway.run(action, ...args),
           findCardService: this.findCardService,
           supplyGainService: this.supplyGainService,
           match: this.match,
@@ -216,7 +216,7 @@ export class ReactionManager {
         cardInstanceFactoryService: this.cardInstanceFactoryService,
         match: this.match,
         reactionManager: this,
-        runGameActionDelegate: this.runGameActionDelegate,
+        runGameActionDelegate: (action, ...args) => this.runtimeActionGateway.run(action, ...args),
       }, ...args);
     }
   }
@@ -233,7 +233,7 @@ export class ReactionManager {
 
     await fn({
       cardSourceController: this.cardSourceController,
-      runGameActionDelegate: this.runGameActionDelegate,
+      runGameActionDelegate: (action, ...args) => this.runtimeActionGateway.run(action, ...args),
       cardPriceController: this.cardPriceController,
       logManager: this.logManager,
       cardLibrary: this.cardLibrary,
@@ -319,7 +319,7 @@ export class ReactionManager {
 
           console.info(`[REACTION MANAGER] prompting ${targetPlayer} to choose reaction`);
 
-          const result = await this.runGameActionDelegate('userPrompt', {
+          const result = await this.runtimeActionGateway.run('userPrompt', {
             playerId: targetPlayer.id,
             actionButtons,
             prompt: 'Choose reaction?',
@@ -410,7 +410,7 @@ export class ReactionManager {
       cardPriceController: this.cardPriceController,
       logManager: this.logManager,
       isRootLog: false,
-      runGameActionDelegate: this.runGameActionDelegate,
+      runGameActionDelegate: (action, ...args) => this.runtimeActionGateway.run(action, ...args),
       trigger,
       cardLibrary: this.cardLibrary,
       match: this.match,

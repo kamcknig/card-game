@@ -39,7 +39,6 @@ import { GameActionController } from './actions/game-action-controller.ts';
 import { MatchConfiguratorFactory } from './match-configurator-factory.ts';
 import { EndGameEvaluatorService } from './end-game-evaluator-service.ts';
 import { PlayerReconnectOrchestrator } from './player-reconnect-orchestrator.ts';
-import type { MatchRuntime } from './match-runtime-factory.ts';
 import { MatchSetupService } from './match-setup-service.ts';
 import { EndGamePolicyRegistryService } from './end-game-policy-registry-service.ts';
 import { CardInstanceFactoryService } from './card-instance-factory-service.ts';
@@ -48,26 +47,10 @@ import { MatchEndService } from './match-end-service.ts';
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardLibSnapshot = {};
   private _matchSnapshot: Match | null | undefined;
-  private _reactionManager: ReactionManager | undefined;
-  private _interactivityController: CardInteractivityController | undefined;
-  private _logManager: LogManager | undefined;
-  private _gameActionsController: GameActionController | undefined;
   private _matchConfiguration: ComputedMatchConfiguration | undefined;
-  private _cardPriceController: CardPriceRulesController | undefined;
   private _matchConfigurator: MatchConfigurator | undefined;
-  private _endGameEvaluator: EndGameEvaluatorService | undefined;
-  private _playerReconnectOrchestrator: PlayerReconnectOrchestrator | undefined;
   private _expansionScoringFns: PlayerScoreDecorator[] = [];
   private _registeredEvents: (keyof ServerListenEvents)[] = [];
-  private _findCardService: FindCardService = {
-    findCards: (...args) => [],
-    getCardsInPlay: () => [],
-    getRemainingSupplyCount: () => 0,
-    findTopSupplyCardForPileKey: () => undefined,
-  };
-  private _supplyGainService: SupplyGainService = {
-    gainTopSupplyCardForPileKey: async () => undefined,
-  };
   // Tracks nested runGameAction calls to avoid corrupting patch snapshots.
   private _actionDepth: number = 0;
   // Cached match state override loaded from disk, if provided.
@@ -95,22 +78,18 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     private readonly matchSetupService: MatchSetupService,
     private readonly endGamePolicyRegistryService: EndGamePolicyRegistryService,
     private readonly cardInstanceFactoryService: CardInstanceFactoryService,
+    private readonly reactionManager: ReactionManager,
+    private readonly interactivityController: CardInteractivityController,
+    private readonly logManager: LogManager,
+    private readonly gameActionsController: GameActionController,
+    private readonly cardPriceController: CardPriceRulesController,
+    private readonly endGameEvaluator: EndGameEvaluatorService,
+    private readonly playerReconnectOrchestrator: PlayerReconnectOrchestrator,
+    private readonly findCardService: FindCardService,
+    private readonly supplyGainService: SupplyGainService,
     private readonly matchEndService: MatchEndService,
   ) {
     super();
-  }
-
-  // Attaches runtime-scoped services resolved during match-scope composition.
-  public attachRuntime(runtime: MatchRuntime): void {
-    this._logManager = runtime.logManager;
-    this._cardPriceController = runtime.cardPriceController;
-    this._findCardService = runtime.findCardService;
-    this._supplyGainService = runtime.supplyGainService;
-    this._reactionManager = runtime.reactionManager;
-    this._endGameEvaluator = runtime.endGameEvaluator;
-    this._interactivityController = runtime.interactivityController;
-    this._playerReconnectOrchestrator = runtime.playerReconnectOrchestrator;
-    this._gameActionsController = runtime.gameActionsController;
   }
 
   // Returns true for non-null plain object values.
@@ -174,10 +153,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
 
   public async initialize(config: MatchConfiguration) {
-    if (!this._gameActionsController) {
-      throw new Error('[match] runtime not attached before initialize');
-    }
-
     this.broadcastPatch({} as Match);
 
     const snapshot = this.getMatchSnapshot();
@@ -189,17 +164,17 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       cardSourceController: this.cardSourceController,
       cardInstanceFactoryService: this.cardInstanceFactoryService,
       gameEventRegistrar: (event: GameLifecycleEvent, handler: GameLifecycleCallback) =>
-        this._reactionManager?.registerGameEvent(event, handler),
+        this.reactionManager.registerGameEvent(event, handler),
       clientEventRegistrar: (event, handler) => this.clientEventRegistrar(event, handler),
       endGamePolicyRegistrar: (val) => this.endGamePolicyRegistryService.register(val),
-      cardEffectRegistrar: (...args) => this._gameActionsController?.registerCardEffect(...args),
-      boonEffectRegistrar: (cardKey, effectFn) => this._gameActionsController?.registerBoonEffect(cardKey, effectFn),
-      hexEffectRegistrar: (cardKey, effectFn) => this._gameActionsController?.registerHexEffect(cardKey, effectFn),
-      stateEffectRegistrar: (cardKey, effectFn) => this._gameActionsController?.registerStateEffect(cardKey, effectFn),
+      cardEffectRegistrar: (...args) => this.gameActionsController.registerCardEffect(...args),
+      boonEffectRegistrar: (cardKey, effectFn) => this.gameActionsController.registerBoonEffect(cardKey, effectFn),
+      hexEffectRegistrar: (cardKey, effectFn) => this.gameActionsController.registerHexEffect(cardKey, effectFn),
+      stateEffectRegistrar: (cardKey, effectFn) => this.gameActionsController.registerStateEffect(cardKey, effectFn),
       artifactEffectRegistrar: (cardKey, effectFn) =>
-        this._gameActionsController?.registerArtifactEffect(cardKey, effectFn),
+        this.gameActionsController.registerArtifactEffect(cardKey, effectFn),
       projectEffectRegistrar: (cardKey, effectFn) =>
-        this._gameActionsController?.registerProjectEffect(cardKey, effectFn),
+        this.gameActionsController.registerProjectEffect(cardKey, effectFn),
       playerScoreDecoratorRegistrar: (val: PlayerScoreDecorator) => this._expansionScoringFns.push(val),
     });
     const { config: newConfig } = await this._matchConfigurator.createConfiguration();
@@ -233,8 +208,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this.matchSetupService.createNonSupplyCards(this._matchConfiguration);
       this.matchSetupService.createPlayerDecks(this._matchConfiguration, this._playerHands);
       // Shuffle Boons/Hexes once setup has initialized their decks.
-      void this._gameActionsController?.shuffleCardLike({ kind: 'boon' });
-      void this._gameActionsController?.shuffleCardLike({ kind: 'hex' });
+      void this.gameActionsController.shuffleCardLike({ kind: 'boon' });
+      void this.gameActionsController.shuffleCardLike({ kind: 'hex' });
       this.match.config = this._matchConfiguration;
     }
 
@@ -328,7 +303,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
 
   public playerReconnected(playerId: PlayerId, socket: AppSocket) {
-    this._playerReconnectOrchestrator?.playerReconnected(playerId, socket);
+    this.playerReconnectOrchestrator.playerReconnected(playerId, socket);
   }
 
   public playerDisconnected(playerId: number) {
@@ -340,7 +315,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     console.info(`[match] ${leaving ?? `{id:${playerId}}`} has disconnected`);
 
     this.socketMap.get(playerId)?.offAnyIncoming();
-    this._interactivityController?.playerRemoved(this.socketMap.get(playerId));
+    this.interactivityController.playerRemoved(this.socketMap.get(playerId));
     this.socketMap.delete(playerId);
   }
 
@@ -404,8 +379,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     );
 
     this.calculateScores();
-    this._interactivityController?.checkCardInteractivity();
-    this.match.cardOverrides = this._cardPriceController?.calculateOverrides() ?? {};
+    this.interactivityController.checkCardInteractivity();
+    this.match.cardOverrides = this.cardPriceController.calculateOverrides() ?? {};
 
     this.broadcastPatch(prev);
 
@@ -435,7 +410,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this.match.currentPlayerTurnIndex = 0;
     }
 
-    this._interactivityController?.checkCardInteractivity();
+    this.interactivityController.checkCardInteractivity();
     this.broadcastPatch(prev);
   }
 
@@ -453,7 +428,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       if (action === 'selectCard' || action === 'userPrompt') {
         // Always sync patches before prompting; advance the snapshot to avoid duplicate diffs.
         this.broadcastPatch(this._matchSnapshot);
-        this._logManager?.flushQueue();
+        this.logManager.flushQueue();
         this._matchSnapshot = this.getMatchSnapshot();
         const promptArgs = args[0] as SelectActionCardArgs | UserPromptActionArgs | undefined;
         if (!promptArgs) {
@@ -474,18 +449,18 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         asyncTimeout = setTimeout(pingUser, pingTime);
       }
 
-      const result = await this._gameActionsController!.invokeAction(action, ...args);
+      const result = await this.gameActionsController.invokeAction(action, ...args);
 
       clearTimeout(asyncTimeout);
       asyncTimeout = undefined;
 
       this.calculateScores();
-      this._interactivityController?.checkCardInteractivity();
-      this.match.cardOverrides = this._cardPriceController?.calculateOverrides() ?? {};
+      this.interactivityController.checkCardInteractivity();
+      this.match.cardOverrides = this.cardPriceController.calculateOverrides() ?? {};
 
       if (isTopLevel) {
         this.broadcastPatch({ ...this._matchSnapshot });
-        this._logManager?.flushQueue();
+        this.logManager.flushQueue();
         this._matchSnapshot = null;
       }
 
@@ -548,10 +523,10 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private async startMatch() {
     console.log(`[match] starting match`);
 
-    await this._reactionManager?.runGameLifecycleEvent('onGameStart', { match: this.match });
+    await this.reactionManager.runGameLifecycleEvent('onGameStart', { match: this.match });
 
     for (const socket of this.socketMap.values()) {
-      this._playerReconnectOrchestrator?.bindGameplaySocketListeners(socket);
+      this.playerReconnectOrchestrator.bindGameplaySocketListeners(socket);
     }
 
     this._matchSnapshot = this.getMatchSnapshot();
@@ -564,13 +539,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       await this.runGameAction('drawHand', { playerId: player.id });
     }
 
-    this._logManager?.addLogEntry({
+    this.logManager.addLogEntry({
       root: true,
       type: 'newTurn',
       turn: Math.floor(this.match.turnNumber / this.match.players.length) + 1,
     });
 
-    this._logManager?.addLogEntry({
+    this.logManager.addLogEntry({
       root: true,
       type: 'newPlayerTurn',
       turn: Math.floor(this.match.turnNumber / this.match.players.length) + 1,
@@ -617,11 +592,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           console.debug(`[match] processing scoring function for ${card}`);
           score += customScoringFn({
             cardSourceController: this.cardSourceController,
-            cardPriceController: this._cardPriceController!,
-            logManager: this._logManager!,
-            findCardService: this._findCardService,
-            supplyGainService: this._supplyGainService,
-            reactionManager: this._reactionManager!,
+            cardPriceController: this.cardPriceController,
+            logManager: this.logManager,
+            findCardService: this.findCardService,
+            supplyGainService: this.supplyGainService,
+            reactionManager: this.reactionManager,
             match: this.match,
             cardLibrary: this.cardLibrary,
             ownerId: playerId,
@@ -640,7 +615,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
   private async checkGameEnd() {
     console.info(`[match] checking if the game has ended`);
-    const endGameEvaluation = this._endGameEvaluator?.evaluateEndGame();
+    const endGameEvaluation = this.endGameEvaluator.evaluateEndGame();
     if (!endGameEvaluation) {
       return false;
     }
@@ -657,11 +632,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     console.log(`[match] ending the game`);
 
     await this.matchEndService.endMatch({
-      reactionManager: this._reactionManager,
-      interactivityController: this._interactivityController,
+      reactionManager: this.reactionManager,
+      interactivityController: this.interactivityController,
       registeredEvents: this._registeredEvents,
-      findCardService: this._findCardService,
-      runGameActionDelegate: (action, ...args) => this.runGameAction(action as any, ...(args as any)),
     });
     this.emit('gameOver');
   }

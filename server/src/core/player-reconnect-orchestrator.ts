@@ -1,4 +1,4 @@
-import { AppSocket, RunGameActionDelegate } from '@server-types/index.ts';
+import { AppSocket } from '@server-types/index.ts';
 import { Match, PlayerId } from 'shared/types/index.ts';
 import jsonPatch from 'fast-json-patch';
 import { getCurrentPlayer } from '../utils/get-current-player.ts';
@@ -9,6 +9,7 @@ import { LogManager } from './log-manager.ts';
 import { MatchCardLibrary } from './match-card-library.ts';
 import { MatchSocketBindings } from './match-socket-bindings.ts';
 import { tokenDefinitionMap } from './tokens/token-definition-map.ts';
+import { RuntimeActionGateway } from './runtime-action-gateway.ts';
 
 // Owns reconnect-time socket hydration and gameplay socket binding behavior.
 export class PlayerReconnectOrchestrator {
@@ -20,7 +21,7 @@ export class PlayerReconnectOrchestrator {
     private readonly interactivityController: CardInteractivityController,
     private readonly expansionSearchService: ExpansionSearchService,
     private readonly matchSocketBindings: MatchSocketBindings,
-    private readonly runGameActionDelegate: RunGameActionDelegate,
+    private readonly runtimeActionGateway: RuntimeActionGateway,
   ) {}
 
   // Binds gameplay-phase socket handlers for a connected socket.
@@ -29,13 +30,13 @@ export class PlayerReconnectOrchestrator {
       onNextPhase: async () => await this.onNextPhase(),
       onSearchCards: (playerId, searchStr) => this.onSearchCards(playerId, searchStr),
       onExchangeCoffer: async (playerId, count) => {
-        await this.runGameActionDelegate('exchangeCoffer', { playerId, count });
+        await this.runtimeActionGateway.run('exchangeCoffer', { playerId, count });
       },
       onSpendVillager: async (playerId, count) => {
-        await this.runGameActionDelegate('spendVillager', { playerId, count });
+        await this.runtimeActionGateway.run('spendVillager', { playerId, count });
       },
       onPayDebt: async (playerId, count) => {
-        await this.runGameActionDelegate('payDebt', { playerId, count });
+        await this.runtimeActionGateway.run('payDebt', { playerId, count });
       },
     });
   }
@@ -69,13 +70,13 @@ export class PlayerReconnectOrchestrator {
       this.interactivityController.playerAdded(socket);
 
       if (getCurrentPlayer(this.match).id === playerId) {
-        await this.runGameActionDelegate('checkForRemainingPlayerActions');
+        await this.runtimeActionGateway.run('checkForRemainingPlayerActions');
       }
     });
   }
 
   private async onNextPhase() {
-    await this.runGameActionDelegate('nextPhase');
+    await this.runtimeActionGateway.run('nextPhase');
     this.socketMap.forEach((socket) => socket.emit('nextPhaseComplete'));
   }
 

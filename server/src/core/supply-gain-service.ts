@@ -1,5 +1,6 @@
-import { RunGameActionDelegate, FindCardService, SupplyGainService } from '@server-types/index.ts';
+import { FindCardService, SupplyGainService } from '@server-types/index.ts';
 import { CardId, CardKey, CardLocationSpec, PlayerId } from 'shared/types/index.ts';
+import { RuntimeActionGateway } from './runtime-action-gateway.ts';
 
 // Supply locations that can provide top cards for pile-key gain effects.
 type SupplyLocation = 'basicSupply' | 'kingdomSupply';
@@ -7,7 +8,7 @@ type SupplyLocation = 'basicSupply' | 'kingdomSupply';
 export class DefaultSupplyGainService implements SupplyGainService {
   constructor(
     private readonly findCardService: FindCardService,
-    private readonly runGameActionDelegate: RunGameActionDelegate,
+    private readonly runtimeActionGateway: RuntimeActionGateway,
   ) {}
 
   // Gains the current top card for a pile key from Supply to the specified destination.
@@ -38,7 +39,7 @@ export class DefaultSupplyGainService implements SupplyGainService {
 
     console.debug(`[${tag}] found top cardId=${topSupplyCard.id} for pile ${args.pileKey}, gaining now`);
 
-    await this.runGameActionDelegate('gainCard', {
+    await this.runtimeActionGateway.run('gainCard', {
       playerId: args.playerId,
       cardId: topSupplyCard.id,
       to: args.to,

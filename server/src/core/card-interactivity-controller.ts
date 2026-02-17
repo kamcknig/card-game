@@ -1,4 +1,4 @@
-import { AppSocket, FindCardService, RunGameActionDelegate } from '@server-types/index.ts';
+import { AppSocket, FindCardService } from '@server-types/index.ts';
 import { Card, CardId, CardLikeId, CardStats, Match, PlayerId, TurnPhaseOrderValues } from 'shared/types/index.ts';
 import { isUndefined } from 'es-toolkit/compat';
 import { MatchCardLibrary } from './match-card-library.ts';
@@ -9,6 +9,7 @@ import { CardSourceController } from './card-source-controller.ts';
 import { findEventInMatch, findProjectInMatch } from '@shared/find-card-like-in-match.ts';
 import { renaissanceTokenIds } from '@expansions/renaissance/token-ids-renaissance.ts';
 import { BuyOptionsResolver, ResolvedBuyOption } from './actions/resolve-buy-options.ts';
+import { RuntimeActionGateway } from './runtime-action-gateway.ts';
 
 export class CardInteractivityController {
   private _gameOver: boolean = false;
@@ -18,9 +19,9 @@ export class CardInteractivityController {
     private readonly match: Match,
     private readonly socketMap: Map<PlayerId, AppSocket>,
     private readonly cardLibrary: MatchCardLibrary,
-    private readonly runGameActionDelegate: RunGameActionDelegate,
     private readonly findCardService: FindCardService,
     private readonly buyOptionsResolver: BuyOptionsResolver,
+    private readonly runtimeActionGateway: RuntimeActionGateway,
   ) {
     this.socketMap.forEach((s) => {
       s.on('cardTapped', (pId, cId) => this.onCardTapped(pId, cId));
@@ -216,7 +217,7 @@ export class CardInteractivityController {
     }
 
     for (const cardId of treasureCards) {
-      await this.runGameActionDelegate('playCard', {
+      await this.runtimeActionGateway.run('playCard', {
         playerId,
         cardId,
         overrides: { actionCost: 0 },
@@ -252,11 +253,11 @@ export class CardInteractivityController {
 
       const event = findEventInMatch(this.match, cardId);
       if (event) {
-        await this.runGameActionDelegate('buyEvent', { playerId, cardLikeId: cardId });
+        await this.runtimeActionGateway.run('buyEvent', { playerId, cardLikeId: cardId });
       } else {
         const project = findProjectInMatch(this.match, cardId);
         if (project) {
-          await this.runGameActionDelegate('buyProject', { playerId, cardLikeId: cardId });
+          await this.runtimeActionGateway.run('buyProject', { playerId, cardLikeId: cardId });
         } else {
           console.debug(`[card interactivity] ${player} tapped non-buyable card-like ${cardId}`);
         }
@@ -265,7 +266,7 @@ export class CardInteractivityController {
       console.debug(`[card interactivity] ${player} tapped card-like ${cardId} in phase ${phase}, not processing`);
     }
 
-    await this.runGameActionDelegate('checkForRemainingPlayerActions');
+    await this.runtimeActionGateway.run('checkForRemainingPlayerActions');
 
     this.socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
   }
@@ -298,7 +299,7 @@ export class CardInteractivityController {
           return;
         }
 
-        await this.runGameActionDelegate('playCard', {
+        await this.runtimeActionGateway.run('playCard', {
           playerId,
           cardId,
           overrides: { actionCost: 0 },
@@ -326,7 +327,7 @@ export class CardInteractivityController {
         let selectedBuyOption: ResolvedBuyOption | undefined = options[0];
         if (options.length > 1) {
           // Let the user choose the payment method when multiple paths are legal.
-          const buyOptionPrompt = await this.runGameActionDelegate('userPrompt', {
+          const buyOptionPrompt = await this.runtimeActionGateway.run('userPrompt', {
             playerId,
             prompt: `Choose how to buy ${card.cardName}`,
             actionButtons: options.map((option, index) => ({ label: option.label, action: index + 1 })),
@@ -345,7 +346,7 @@ export class CardInteractivityController {
 
         if (selectedBuyOption.kind === 'standard' && card.tags?.includes('overpay')) {
           if (this.match.playerTreasure > cost.treasure) {
-            const result = await this.runGameActionDelegate('userPrompt', {
+            const result = await this.runtimeActionGateway.run('userPrompt', {
               prompt: 'Overpay?',
               actionButtons: [{ label: 'DONE', action: 1 }],
               playerId: playerId,
@@ -355,7 +356,7 @@ export class CardInteractivityController {
           }
         }
 
-        await this.runGameActionDelegate('buyCard', {
+        await this.runtimeActionGateway.run('buyCard', {
           playerId,
           cardId,
           overpay,
@@ -364,14 +365,14 @@ export class CardInteractivityController {
         });
       }
     } else if (phase === 'action') {
-      await this.runGameActionDelegate('playCard', { playerId, cardId });
+      await this.runtimeActionGateway.run('playCard', { playerId, cardId });
     } else if (phase === 'night') {
       // Night phase allows playing Night cards from hand without action cost.
       const hand = this.cardSourceController.getSource('playerHand', playerId);
       if (hand.includes(cardId)) {
         const card = this.cardLibrary.getCard(cardId);
         if (card.type.includes('NIGHT')) {
-          await this.runGameActionDelegate('playCard', { playerId, cardId });
+          await this.runtimeActionGateway.run('playCard', { playerId, cardId });
           console.debug(`[card interactivity] played night card ${card}`);
         } else {
           console.debug(`[card interactivity] tapped non-night card ${card} during night phase`);
@@ -381,7 +382,7 @@ export class CardInteractivityController {
       }
     }
 
-    await this.runGameActionDelegate('checkForRemainingPlayerActions');
+    await this.runtimeActionGateway.run('checkForRemainingPlayerActions');
 
     this.socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
   }

@@ -8,13 +8,12 @@ import {
 import { CardSourceController } from './card-source-controller.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';
 import { ReactionManager } from './reactions/reaction-manager.ts';
+import { RuntimeActionGateway } from './runtime-action-gateway.ts';
 
 export interface EndMatchArgs {
   reactionManager?: ReactionManager;
   interactivityController?: CardInteractivityController;
   registeredEvents: (keyof ServerListenEvents)[];
-  findCardService: FindCardService;
-  runGameActionDelegate: <K extends string>(action: K, ...args: unknown[]) => Promise<unknown>;
 }
 
 // Owns end-of-match teardown and summary generation so MatchController can stay orchestration-focused.
@@ -23,6 +22,8 @@ export class MatchEndService {
     private readonly socketMap: Map<PlayerId, AppSocket>,
     private readonly match: Match,
     private readonly cardSourceController: CardSourceController,
+    private readonly findCardService: FindCardService,
+    private readonly runtimeActionGateway: RuntimeActionGateway,
   ) {}
 
   // Tears down runtime listeners/state and broadcasts final match summary.
@@ -30,8 +31,6 @@ export class MatchEndService {
     reactionManager,
     interactivityController,
     registeredEvents,
-    findCardService,
-    runGameActionDelegate,
   }: EndMatchArgs): Promise<MatchSummary> {
     reactionManager?.endGame();
     interactivityController?.endGame();
@@ -44,7 +43,7 @@ export class MatchEndService {
       const setAsideCardIds = this.cardSourceController.getSource('set-aside', player.id);
       // Iterate over a snapshot since move actions mutate the source array.
       for (const cardId of [...setAsideCardIds]) {
-        await runGameActionDelegate('moveCard', {
+        await this.runtimeActionGateway.run('moveCard', {
           toPlayerId: player.id,
           cardId,
           to: { location: 'playerDeck' },
@@ -56,7 +55,7 @@ export class MatchEndService {
       this.socketMap.forEach((s) => s.off(event));
     }
 
-    const summary = this.buildMatchSummary(findCardService);
+    const summary = this.buildMatchSummary();
 
     console.info(`[match] match summary created`);
     console.debug(summary);
@@ -66,7 +65,7 @@ export class MatchEndService {
   }
 
   // Builds final player ordering using score, then turns, then original seat order.
-  private buildMatchSummary(findCardService: FindCardService): MatchSummary {
+  private buildMatchSummary(): MatchSummary {
     return {
       playerSummary: this.match.players.reduce((prev, player) => {
         const playerId = player.id;
@@ -94,7 +93,7 @@ export class MatchEndService {
           playerId,
           turnsTaken,
           score: this.match.scores[playerId],
-          deck: findCardService.findCards([{ owner: playerId }]).map((card) => card.id),
+          deck: this.findCardService.findCards([{ owner: playerId }]).map((card) => card.id),
         });
         return prev;
       }, [] as MatchSummary['playerSummary'])

@@ -8,8 +8,8 @@ This document defines dependency-injection scope boundaries and token ownership 
   process lifetime (created in `server/src/server.ts`).
 - `match` scope:
   one active match lifetime (created in `server/src/core/match-scope-factory.ts`).
-- `match runtime` scope:
-  per-match runtime graph (created in `server/src/core/match-runtime-factory.ts`).
+- `match runtime` registrations:
+  per-match runtime services registered into the same match scope by `server/src/core/match-runtime-factory.ts`.
 - `match configurator` scope:
   short-lived scope per `MatchConfiguratorFactory.create(...)` call (created in `server/src/core/match-configurator-factory.ts`).
 
@@ -49,28 +49,27 @@ Defined in `server/src/core/match-scope-factory.ts`:
 | `cardLibrary` | `asClass(MatchCardLibrary)` | match singleton | `MatchController`, setup/runtime |
 | `cardSourceController` | `asClass(CardSourceController)` | match singleton | setup/runtime |
 | `cardInstanceFactoryService` | `asClass(CardInstanceFactoryService)` | match singleton | setup/runtime/configuration events |
+| `runtimeActionGateway` | `asClass(RuntimeActionGateway)` | match singleton | runtime services, `MatchScopeFactory` bind step |
 | `endGamePolicyRegistryService` | `asClass(EndGamePolicyRegistryService)` | match singleton | `MatchController`, evaluator |
 | `matchSetupService` | `asClass(MatchSetupService)` | match singleton | `MatchController` |
 | `matchEndService` | `asClass(MatchEndService)` | match singleton | `MatchController` |
 | `matchController` | `asClass(MatchController)` | match singleton | `MatchScopeFactory` |
 
-## Match Runtime Scope Tokens
+## Match Runtime Registrations
 
 Defined in `server/src/core/match-runtime-factory.ts`:
 
-- Value tokens from match scope:
-  `socketMap`, `match`, `cardLibrary`, `cardSourceController`,
-  `cardInstanceFactoryService`, `endGamePolicyRegistryService`,
-  `runGameActionDelegate`, `expansionSearchService`, `matchSocketBindings`,
+- Value tokens:
+  `expansionSearchService`, `matchSocketBindings`,
   `cardEffectFunctionMap`, `eventEffectFunctionMap`, `projectEffectFunctionMap`,
   `boonEffectFunctionMap`, `hexEffectFunctionMap`, `stateEffectFunctionMap`,
   `artifactEffectFunctionMap`.
-- Class tokens:
+- Class tokens (all match singletons):
   `logManager`, `cardPriceController`, `findCardService`, `supplyGainService`,
   `buyOptionsResolver`, `reactionManager`, `endGameEvaluator`,
   `interactivityController`, `playerReconnectOrchestrator`, `gameActionsController`.
 
-These are match-lifetime runtime services; `MatchController` receives them through `attachRuntime(...)`.
+These are match-lifetime runtime services resolved directly by constructor injection (no `attachRuntime(...)` phase).
 
 ## Match Configurator Scope
 
@@ -85,7 +84,7 @@ Defined in `server/src/core/match-configurator-factory.ts`:
 ## Rules
 
 - If a dependency needs process-wide data only, register it in `server` scope.
-- If it depends on `match` state, `cardLibrary`, per-match registries, or per-match IDs, register it in `match` scope (or `match runtime` scope).
+- If it depends on `match` state, `cardLibrary`, per-match registries, or per-match IDs, register it in `match` scope (including runtime registrations).
 - Prefer constructor injection over passing ad-hoc service bundles.
 - Avoid server singletons holding direct references to match-scoped instances.
 - Keep token names stable and descriptive; token rename requires updating this document.
@@ -94,7 +93,7 @@ Defined in `server/src/core/match-configurator-factory.ts`:
 
 When converting a class to DI:
 
-1. Choose scope (`server`, `match`, `match runtime`, or short-lived factory scope).
+1. Choose scope (`server`, `match`, runtime registration in match scope, or short-lived factory scope).
 2. Register token in the owning composition root.
 3. Inject dependencies via constructor (do not manually `new` in callers).
 4. Remove old utility/factory call sites if no longer needed.

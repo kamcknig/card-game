@@ -11,6 +11,7 @@ import { MatchSetupService } from './match-setup-service.ts';
 import { EndGamePolicyRegistryService } from './end-game-policy-registry-service.ts';
 import { CardInstanceFactoryService } from './card-instance-factory-service.ts';
 import { MatchEndService } from './match-end-service.ts';
+import { RuntimeActionGateway } from './runtime-action-gateway.ts';
 
 export interface MatchScope {
   matchController: MatchController;
@@ -40,26 +41,19 @@ export class MatchScopeFactory {
       cardLibrary: asClass(MatchCardLibrary).singleton(),
       cardSourceController: asClass(CardSourceController).singleton(),
       cardInstanceFactoryService: asClass(CardInstanceFactoryService).singleton(),
+      runtimeActionGateway: asClass(RuntimeActionGateway).singleton(),
       endGamePolicyRegistryService: asClass(EndGamePolicyRegistryService).singleton(),
       matchSetupService: asClass(MatchSetupService).singleton(),
       matchEndService: asClass(MatchEndService).singleton(),
       matchController: asClass(MatchController).singleton(),
     });
 
+    this.matchRuntimeFactory.register(scope);
+
     const matchController = scope.resolve<MatchController>('matchController');
-    const cardLibrary = scope.resolve<MatchCardLibrary>('cardLibrary');
-    const cardInstanceFactoryService = scope.resolve<CardInstanceFactoryService>('cardInstanceFactoryService');
-    const endGamePolicyRegistryService = scope.resolve<EndGamePolicyRegistryService>('endGamePolicyRegistryService');
-    const runtime = this.matchRuntimeFactory.create({
-      socketMap,
-      match,
-      cardLibrary,
-      cardSourceController: scope.resolve<CardSourceController>('cardSourceController'),
-      cardInstanceFactoryService,
-      endGamePolicyRegistryService,
-      runGameActionDelegate: (action, ...args) => matchController.runGameAction(action as any, ...(args as any)),
-    });
-    matchController.attachRuntime(runtime);
+    const runtimeActionGateway = scope.resolve<RuntimeActionGateway>('runtimeActionGateway');
+    // Bind runtime action delegation after MatchController is fully resolved.
+    runtimeActionGateway.bind((action, ...args) => matchController.runGameAction(action, ...args));
 
     return {
       matchController,

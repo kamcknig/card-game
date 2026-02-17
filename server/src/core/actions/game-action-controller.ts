@@ -40,7 +40,6 @@ import {
   GameActions,
   ReactionTemplate,
   ReactionTrigger,
-  RunGameActionDelegate,
   SupplyGainService,
   TriggerEventType,
 } from '@server-types/index.ts';
@@ -65,6 +64,7 @@ import {
 } from '@shared/find-card-like-in-match.ts';
 import { getPlayerTurnIndex } from "@shared/get-player-position-utils.ts";
 import { BuyOptionsResolver } from './resolve-buy-options.ts';
+import { RuntimeActionGateway } from '../runtime-action-gateway.ts';
 
 export class GameActionController implements GameActionDefinitionMap {
   private _customActionHandlers: Partial<GameActionDefinitionMap> = {};
@@ -88,12 +88,11 @@ export class GameActionController implements GameActionDefinitionMap {
     private readonly logManager: LogManager,
     private socketMap: Map<PlayerId, AppSocket>,
     private readonly reactionManager: ReactionManager,
-    private readonly runGameActionDelegate: RunGameActionDelegate,
     private interactivityController: CardInteractivityController,
     private buyOptionsResolver: BuyOptionsResolver,
     private supplyGainService: SupplyGainService,
-  ) {
-  }
+    private readonly runtimeActionGateway: RuntimeActionGateway,
+  ) {}
 
   public registerCardEffect(cardKey: CardKey, tag: string, fn: CardEffectFn) {
     this._customCardEffectHandlers[tag] ??= {};
@@ -415,11 +414,11 @@ export class GameActionController implements GameActionDefinitionMap {
       if (turnPhase === 'action') {
         const actionCardId = selectable.find((id) => this.cardLibrary.getCard(id).type.includes('ACTION'));
         if (actionCardId) {
-          await this.runGameActionDelegate('playCard', { playerId: currentPlayer.id, cardId: actionCardId });
+          await this.runtimeActionGateway.run('playCard', { playerId: currentPlayer.id, cardId: actionCardId });
         }
         // Always move to the next phase after one action attempt.
         this._computerTurnInProgress = false;
-        await this.runGameActionDelegate('nextPhase');
+        await this.runtimeActionGateway.run('nextPhase');
         return;
       }
 
@@ -427,48 +426,48 @@ export class GameActionController implements GameActionDefinitionMap {
         const selectedId = selectable[0];
         if (selectedId === undefined) {
           this._computerTurnInProgress = false;
-          await this.runGameActionDelegate('nextPhase');
+          await this.runtimeActionGateway.run('nextPhase');
           return;
         }
 
         const event = findEventInMatch(match, selectedId);
         if (event) {
-          await this.runGameActionDelegate('buyEvent', {
+          await this.runtimeActionGateway.run('buyEvent', {
             playerId: currentPlayer.id,
             cardLikeId: selectedId,
           });
           this._computerTurnInProgress = false;
-          await this.runGameActionDelegate('nextPhase');
+          await this.runtimeActionGateway.run('nextPhase');
           return;
         }
 
         const project = findProjectInMatch(match, selectedId);
         if (project) {
-          await this.runGameActionDelegate('buyProject', {
+          await this.runtimeActionGateway.run('buyProject', {
             playerId: currentPlayer.id,
             cardLikeId: selectedId,
           });
           this._computerTurnInProgress = false;
-          await this.runGameActionDelegate('nextPhase');
+          await this.runtimeActionGateway.run('nextPhase');
           return;
         }
 
         const card = this.cardLibrary.getCard(selectedId);
         const inHand = this.cardSourceController.getSource('playerHand', currentPlayer.id).includes(selectedId);
         if (inHand && card.type.includes('TREASURE')) {
-          await this.runGameActionDelegate('playCard', {
+          await this.runtimeActionGateway.run('playCard', {
             playerId: currentPlayer.id,
             cardId: selectedId,
             overrides: { actionCost: 0 },
           });
           this._computerTurnInProgress = false;
-          await this.runGameActionDelegate('nextPhase');
+          await this.runtimeActionGateway.run('nextPhase');
           return;
         }
 
         const { restricted, cost } = this.cardPriceController.applyRules(card, { playerId: currentPlayer.id });
         if (!restricted) {
-          await this.runGameActionDelegate('buyCard', {
+          await this.runtimeActionGateway.run('buyCard', {
             playerId: currentPlayer.id,
             cardId: card.id,
             cardCost: cost,
@@ -476,7 +475,7 @@ export class GameActionController implements GameActionDefinitionMap {
         }
 
         this._computerTurnInProgress = false;
-        await this.runGameActionDelegate('nextPhase');
+        await this.runtimeActionGateway.run('nextPhase');
         return;
       }
 
@@ -485,10 +484,10 @@ export class GameActionController implements GameActionDefinitionMap {
         const nightCardId = selectable.find((id) => this.cardLibrary.getCard(id).type.includes('NIGHT'));
         console.debug(`[computer turn] night phase selectable night card ${nightCardId ?? 'none'}`);
         if (nightCardId !== undefined) {
-          await this.runGameActionDelegate('playCard', { playerId: currentPlayer.id, cardId: nightCardId });
+          await this.runtimeActionGateway.run('playCard', { playerId: currentPlayer.id, cardId: nightCardId });
         }
         this._computerTurnInProgress = false;
-        await this.runGameActionDelegate('nextPhase');
+        await this.runtimeActionGateway.run('nextPhase');
         return;
       }
     } finally {
@@ -523,7 +522,7 @@ export class GameActionController implements GameActionDefinitionMap {
           match: this.match,
           playerId,
           cardId,
-          runGameAction: this.runGameActionDelegate,
+          runGameAction: (action, ...args) => this.runtimeActionGateway.run(action, ...args),
         });
       }
     });
@@ -1411,7 +1410,7 @@ export class GameActionController implements GameActionDefinitionMap {
         findCardService: this.findCardService,
         cardSourceController: this.cardSourceController,
         cardPriceController: this.cardPriceController,
-        runGameActionDelegate: this.runGameActionDelegate,
+        runGameActionDelegate: (action, ...args) => this.runtimeActionGateway.run(action, ...args),
         reactionManager: this.reactionManager,
         logManager: this.logManager,
       });
@@ -1510,7 +1509,7 @@ export class GameActionController implements GameActionDefinitionMap {
         cardPriceController: this.cardPriceController,
         logManager: this.logManager,
         reactionManager: this.reactionManager,
-        runGameActionDelegate: this.runGameActionDelegate,
+        runGameActionDelegate: (action, ...args) => this.runtimeActionGateway.run(action, ...args),
         cardId: args.cardLikeId,
         playerId: args.playerId,
         match: this.match,
@@ -1626,7 +1625,7 @@ export class GameActionController implements GameActionDefinitionMap {
         cardPriceController: this.cardPriceController,
         logManager: this.logManager,
         reactionManager: this.reactionManager,
-        runGameActionDelegate: this.runGameActionDelegate,
+        runGameActionDelegate: (action, ...args) => this.runtimeActionGateway.run(action, ...args),
         cardId: args.cardLikeId,
         playerId: args.playerId,
         match: this.match,
@@ -1743,7 +1742,7 @@ export class GameActionController implements GameActionDefinitionMap {
           cardPriceController: this.cardPriceController,
           logManager: this.logManager,
           reactionManager: this.reactionManager,
-          runGameActionDelegate: this.runGameActionDelegate,
+          runGameActionDelegate: (action, ...args) => this.runtimeActionGateway.run(action, ...args),
           cardId: boonId,
           playerId: args.playerId,
           match: this.match,
@@ -1894,7 +1893,7 @@ export class GameActionController implements GameActionDefinitionMap {
         cardPriceController: this.cardPriceController,
         logManager: this.logManager,
         reactionManager: this.reactionManager,
-        runGameActionDelegate: this.runGameActionDelegate,
+        runGameActionDelegate: (action, ...args) => this.runtimeActionGateway.run(action, ...args),
         cardId: hexId,
         playerId: args.playerId,
         match: this.match,
@@ -1978,7 +1977,7 @@ export class GameActionController implements GameActionDefinitionMap {
       cardPriceController: this.cardPriceController,
       logManager: this.logManager,
       reactionManager: this.reactionManager,
-      runGameActionDelegate: this.runGameActionDelegate,
+      runGameActionDelegate: (action, ...args) => this.runtimeActionGateway.run(action, ...args),
       cardId: state.id,
       playerId: args.playerId,
       match: this.match,
@@ -2079,7 +2078,7 @@ export class GameActionController implements GameActionDefinitionMap {
       cardPriceController: this.cardPriceController,
       logManager: this.logManager,
       reactionManager: this.reactionManager,
-      runGameActionDelegate: this.runGameActionDelegate,
+      runGameActionDelegate: (action, ...args) => this.runtimeActionGateway.run(action, ...args),
       cardId: artifact.id,
       playerId: args.playerId,
       match: this.match,
@@ -2780,7 +2779,7 @@ export class GameActionController implements GameActionDefinitionMap {
         cardPriceController: this.cardPriceController,
         logManager: this.logManager,
         reactionManager: this.reactionManager,
-        runGameActionDelegate: this.runGameActionDelegate,
+        runGameActionDelegate: (action, ...args) => this.runtimeActionGateway.run(action, ...args),
         cardId,
         playerId,
         match: this.match,
