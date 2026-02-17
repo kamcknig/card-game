@@ -274,16 +274,14 @@ export class GameActionController implements GameActionDefinitionMap {
       // Computer policy is deterministic: always discard all matching cards from Exile.
       shouldDiscardFromExile = true;
     } else {
-      const promptResult = await this.userPrompt({
+      shouldDiscardFromExile = await this.promptService.confirm({
         playerId: args.playerId,
         prompt: `Discard ${matchingExileCardIds.length} ${gainedCardName} card(s) from Exile?`,
         actionButtons: [
           { label: 'NO', action: 1 },
           { label: 'YES', action: 2 },
         ],
-      }) as { action?: number } | null;
-
-      shouldDiscardFromExile = promptResult?.action === 2;
+      }, 2);
     }
 
     if (!shouldDiscardFromExile) {

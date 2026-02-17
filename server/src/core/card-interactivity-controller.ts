@@ -1,4 +1,4 @@
-import { ActionService, AppSocket, FindCardService } from '@server-types/index.ts';
+import { ActionService, AppSocket, FindCardService, PromptService } from '@server-types/index.ts';
 import { Card, CardId, CardLikeId, CardStats, Match, PlayerId, TurnPhaseOrderValues } from 'shared/types/index.ts';
 import { isUndefined } from 'es-toolkit/compat';
 import { MatchCardLibrary } from './match-card-library.ts';
@@ -21,6 +21,7 @@ export class CardInteractivityController {
     private readonly findCardService: FindCardService,
     private readonly buyOptionsResolver: BuyOptionsResolver,
     private readonly actionService: ActionService,
+    private readonly promptService: PromptService,
   ) {
     this.socketMap.forEach((s) => {
       s.on('cardTapped', (pId, cId) => this.onCardTapped(pId, cId));
@@ -326,16 +327,16 @@ export class CardInteractivityController {
         let selectedBuyOption: ResolvedBuyOption | undefined = options[0];
         if (options.length > 1) {
           // Let the user choose the payment method when multiple paths are legal.
-          const buyOptionPrompt = await this.actionService.run('userPrompt', {
+          const selectedAction = await this.promptService.requestAction({
             playerId,
             prompt: `Choose how to buy ${card.cardName}`,
             actionButtons: options.map((option, index) => ({ label: option.label, action: index + 1 })),
-          }) as { action?: number };
-          if (buyOptionPrompt.action === undefined || buyOptionPrompt.action < 1) {
+          });
+          if (selectedAction === null || selectedAction < 1) {
             console.debug(`[card interactivity] buy option prompt cancelled`);
             return;
           }
-          selectedBuyOption = options[buyOptionPrompt.action - 1];
+          selectedBuyOption = options[selectedAction - 1];
         }
 
         if (!selectedBuyOption) {
@@ -345,13 +346,15 @@ export class CardInteractivityController {
 
         if (selectedBuyOption.kind === 'standard' && card.tags?.includes('overpay')) {
           if (this.match.playerTreasure > cost.treasure) {
-            const result = await this.actionService.run('userPrompt', {
+            const result = await this.promptService.requestActionResult<{ inTreasure: number; inCoffer: number }>({
               prompt: 'Overpay?',
               actionButtons: [{ label: 'DONE', action: 1 }],
               playerId: playerId,
               content: { type: 'overpay', cost: cost.treasure },
-            }) as { action: number; result: { inTreasure: number; inCoffer: number } };
-            overpay = result.result;
+            });
+            if (result?.result) {
+              overpay = result.result;
+            }
           }
         }
 
