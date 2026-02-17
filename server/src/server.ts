@@ -10,6 +10,7 @@ import { LobbySocketBindings } from './core/lobby-socket-bindings.ts';
 import { DisconnectedPlayerVoteService } from './core/disconnected-player-vote-service.ts';
 import { PlayerSessionService } from './core/player-session-service.ts';
 import { PlayerRegistryService } from './core/player-registry-service.ts';
+import { MatchStartOrchestrator } from './core/match-start-orchestrator.ts';
 import { loadExpansion } from './utils/load-expansion.ts';
 import { asClass, asValue, createContainer, InjectionMode } from 'awilix';
 
@@ -59,6 +60,7 @@ container.register({
   disconnectedPlayerVoteService: asClass(DisconnectedPlayerVoteService).singleton(),
   playerSessionService: asClass(PlayerSessionService).singleton(),
   playerRegistryService: asClass(PlayerRegistryService).singleton(),
+  matchStartOrchestrator: asClass(MatchStartOrchestrator).singleton(),
   game: asClass(Game).singleton(),
 });
 

@@ -14,15 +14,15 @@ import {
 import {createComputerPlayer} from '../utils/create-new-player.ts';
 import {MatchController} from './match-controller.ts';
 import jsonPatch from 'fast-json-patch';
-import {fisherYatesShuffle} from '../utils/fisher-yates-shuffler.ts';
 import {Server} from 'socket.io';
-import {FileGameConfigurationStore, GameConfigurationStore} from './game-configuration-store.ts';
+import {GameConfigurationStore} from './game-configuration-store.ts';
 import {LobbySocketBindings} from './lobby-socket-bindings.ts';
 import {ExpansionSearchService} from './expansion-search-service.ts';
 import {ExpansionCompatibilityService} from './expansion-compatibility-service.ts';
 import {DisconnectedPlayerVoteService} from './disconnected-player-vote-service.ts';
 import {PlayerSessionService} from './player-session-service.ts';
 import {PlayerRegistryService} from './player-registry-service.ts';
+import {MatchStartOrchestrator} from './match-start-orchestrator.ts';
 
 // Factory signature for creating a match controller instance.
 export type MatchControllerFactory = (
@@ -37,14 +37,16 @@ export const defaultMatchControllerFactory: MatchControllerFactory = (socketMap,
 // Dependencies injected by the server composition root.
 export interface GameDependencies {
   io: Server<ServerListenEvents, ServerEmitEvents>;
-  matchControllerFactory?: MatchControllerFactory;
-  configStore?: GameConfigurationStore;
-  lobbySocketBindings?: LobbySocketBindings;
-  expansionSearchService?: ExpansionSearchService;
-  expansionCompatibilityService?: ExpansionCompatibilityService;
-  disconnectedPlayerVoteService?: DisconnectedPlayerVoteService;
-  playerSessionService?: PlayerSessionService;
-  playerRegistryService?: PlayerRegistryService;
+  maxPlayers: number;
+  matchControllerFactory: MatchControllerFactory;
+  configStore: GameConfigurationStore;
+  lobbySocketBindings: LobbySocketBindings;
+  expansionSearchService: ExpansionSearchService;
+  expansionCompatibilityService: ExpansionCompatibilityService;
+  disconnectedPlayerVoteService: DisconnectedPlayerVoteService;
+  playerSessionService: PlayerSessionService;
+  playerRegistryService: PlayerRegistryService;
+  matchStartOrchestrator: MatchStartOrchestrator;
 }
 
 const defaultMatchConfiguration: MatchConfiguration = {
@@ -110,22 +112,28 @@ export class Game {
   private readonly _playerSessionService: PlayerSessionService;
   // Service that owns player record lifecycle mutations.
   private readonly _playerRegistryService: PlayerRegistryService;
+  // Service that runs the lobby->match startup sequence.
+  private readonly _matchStartOrchestrator: MatchStartOrchestrator;
   private _matchController: MatchController | undefined;
   private _matchConfiguration: MatchConfiguration | undefined;
   private _availableExpansion: ExpansionListElement[] = [];
+  // Max players allowed in a game.
+  private readonly _maxPlayers: number;
   // When true, the game ends automatically if no human players remain connected.
   private readonly _endMatchWhenNoHumans: boolean;
 
   constructor({
     io,
-    matchControllerFactory = defaultMatchControllerFactory,
-    configStore = new FileGameConfigurationStore(),
-    lobbySocketBindings = new LobbySocketBindings(),
-    expansionSearchService = new ExpansionSearchService(),
-    expansionCompatibilityService = new ExpansionCompatibilityService(),
-    disconnectedPlayerVoteService = new DisconnectedPlayerVoteService(),
-    playerSessionService = new PlayerSessionService(),
-    playerRegistryService = new PlayerRegistryService(),
+    maxPlayers,
+    matchControllerFactory,
+    configStore,
+    lobbySocketBindings,
+    expansionSearchService,
+    expansionCompatibilityService,
+    disconnectedPlayerVoteService,
+    playerSessionService,
+    playerRegistryService,
+    matchStartOrchestrator,
   }: GameDependencies) {
     console.log(`[game] created`);
     this._io = io;
@@ -137,6 +145,8 @@ export class Game {
     this._disconnectedPlayerVoteService = disconnectedPlayerVoteService;
     this._playerSessionService = playerSessionService;
     this._playerRegistryService = playerRegistryService;
+    this._matchStartOrchestrator = matchStartOrchestrator;
+    this._maxPlayers = maxPlayers;
     // Configure whether to end the match when all human players leave (default: true).
     const endOnNoHumansEnv = Deno.env.get('END_MATCH_ON_NO_HUMANS') ?? 'true';
     this._endMatchWhenNoHumans = endOnNoHumansEnv.toLowerCase() !== 'false';
@@ -218,7 +228,7 @@ export class Game {
     });
 
     if (joinResult.status === 'rejected_capacity') {
-      console.info(`[game] game has 6 players, rejecting`);
+      console.info(`[game] game has ${this._maxPlayers} players, rejecting`);
       socket.disconnect(true);
       return;
     }
@@ -448,7 +458,7 @@ export class Game {
     }
 
     for (let i = 0; i < count; i++) {
-      if (this.players.length >= 6) {
+      if (this.players.length >= this._maxPlayers) {
         console.warn('[game] player limit reached, cannot add computer player');
         break;
       }
@@ -464,42 +474,21 @@ export class Game {
 
     this.matchStarted = true;
 
-    this._socketMap.forEach((socket) => {
-      this._lobbySocketBindings.unbindPlayerLobbyHandlers(socket);
-      this._lobbySocketBindings.unbindOwnerLobbyHandlers(socket);
-    });
-
-    const colors = ['#10FF19', '#3c69ff', '#FF0BF2', '#FFF114', '#FF1F11', '#FF9900'];
-    const players = fisherYatesShuffle(
-      this.players
-        .filter((p) => p.connected)
-        .map((p, idx) => {
-          // Keep computer players ready to avoid blocking match start.
-          p.ready = p.isComputer;
-          p.color = colors[idx];
-          return p;
-        }),
-    );
-
-    // Lock in turn order for the active match.
-    this.players = players;
-
-    this._io.in('game').emit('setPlayerList', players);
-
-    this._matchController?.on('gameOver', this.clearMatch);
-
-    void this._matchController?.initialize(
-      {
-        ...structuredClone(defaultMatchConfiguration),
-        ...this._matchConfiguration,
-        players,
-      } as MatchConfiguration,
-    );
-
-    // Register removal vote handlers once the match is active.
-    for (const [playerId, socket] of this._socketMap.entries()) {
-      this.registerRemovalVoteHandler(socket, playerId);
+    if (!this._matchController) {
+      console.warn('[game] cannot start match without match controller');
+      return;
     }
+
+    // Lock in turn order and initialize match via dedicated startup orchestration.
+    this.players = this._matchStartOrchestrator.startMatch({
+      players: this.players,
+      socketMap: this._socketMap,
+      matchController: this._matchController,
+      defaultMatchConfiguration,
+      matchConfiguration: this._matchConfiguration,
+      onGameOver: this.clearMatch,
+      registerRemovalVoteHandler: (socket, playerId) => this.registerRemovalVoteHandler(socket, playerId),
+    });
   }
 
   // Registers the socket handler for removal votes.
