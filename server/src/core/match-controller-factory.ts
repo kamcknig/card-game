@@ -19,12 +19,12 @@ export class MatchControllerFactory {
   private readonly matchSocketBindings: MatchSocketBindings;
   private readonly matchConfiguratorFactory: MatchConfiguratorFactory;
 
-  constructor({
-    expansionSearchService,
-    matchRuntimeFactory,
-    matchSocketBindings,
-    matchConfiguratorFactory,
-  }: MatchControllerFactoryDependencies) {
+  constructor(
+    expansionSearchService: ExpansionSearchService,
+    matchRuntimeFactory: MatchRuntimeFactory,
+    matchSocketBindings: MatchSocketBindings,
+    matchConfiguratorFactory: MatchConfiguratorFactory,
+  ) {
     this.expansionSearchService = expansionSearchService;
     this.matchRuntimeFactory = matchRuntimeFactory;
     this.matchSocketBindings = matchSocketBindings;
@@ -32,12 +32,12 @@ export class MatchControllerFactory {
   }
 
   public create(socketMap: Map<PlayerId, AppSocket>): MatchController {
-    return new MatchController({
+    return new MatchController(
       socketMap,
-      expansionSearchService: this.expansionSearchService,
-      matchRuntimeFactory: this.matchRuntimeFactory,
-      matchSocketBindings: this.matchSocketBindings,
-      matchConfiguratorFactory: this.matchConfiguratorFactory,
-    });
+      this.expansionSearchService,
+      this.matchRuntimeFactory,
+      this.matchSocketBindings,
+      this.matchConfiguratorFactory,
+    );
   }
 }

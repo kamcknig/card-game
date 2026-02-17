@@ -113,19 +113,19 @@ export class Game {
   // When true, the game ends automatically if no human players remain connected.
   private readonly _endMatchWhenNoHumans: boolean;
 
-  constructor({
-    io,
-    maxPlayers,
-    matchControllerFactory,
-    configStore,
-    lobbySocketBindings,
-    expansionSearchService,
-    expansionCompatibilityService,
-    disconnectedPlayerVoteService,
-    playerSessionService,
-    playerRegistryService,
-    matchStartOrchestrator,
-  }: GameDependencies) {
+  constructor(
+    io: Server<ServerListenEvents, ServerEmitEvents>,
+    maxPlayers: number,
+    matchControllerFactory: MatchControllerFactory,
+    configStore: GameConfigurationStore,
+    lobbySocketBindings: LobbySocketBindings,
+    expansionSearchService: ExpansionSearchService,
+    expansionCompatibilityService: ExpansionCompatibilityService,
+    disconnectedPlayerVoteService: DisconnectedPlayerVoteService,
+    playerSessionService: PlayerSessionService,
+    playerRegistryService: PlayerRegistryService,
+    matchStartOrchestrator: MatchStartOrchestrator,
+  ) {
     console.log(`[game] created`);
     this._io = io;
     this._matchControllerFactory = matchControllerFactory;

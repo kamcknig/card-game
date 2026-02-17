@@ -49,7 +49,7 @@ export const io = new Server<ServerListenEvents, ServerEmitEvents>({
 
 // Build a single composition root so server dependencies are wired explicitly.
 const container = createContainer({
-  injectionMode: InjectionMode.PROXY,
+  injectionMode: InjectionMode.CLASSIC,
 });
 
 // Register long-lived singleton dependencies used by the server runtime.

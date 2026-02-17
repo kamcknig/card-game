@@ -16,7 +16,7 @@ export class CardPriceRulesController {
   private readonly cardLibrary: MatchCardLibrary;
   private readonly match: Match;
 
-  constructor({ cardLibrary, match }: CardPriceRulesControllerDependencies) {
+  constructor(cardLibrary: MatchCardLibrary, match: Match) {
     this.cardLibrary = cardLibrary;
     this.match = match;
   }

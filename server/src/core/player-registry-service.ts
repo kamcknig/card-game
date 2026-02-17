@@ -11,7 +11,7 @@ export type RegisterPlayerJoinResult =
 export class PlayerRegistryService {
   private readonly _maxPlayers: number;
 
-  constructor({maxPlayers = 6}: {maxPlayers?: number} = {}) {
+  constructor(maxPlayers = 6) {
     // Keep player-cap policy configurable via DI while preserving the existing default.
     this._maxPlayers = maxPlayers;
   }

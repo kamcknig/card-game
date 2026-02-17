@@ -117,13 +117,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private readonly matchSocketBindings: MatchSocketBindings;
   private readonly matchConfiguratorFactory: MatchConfiguratorFactory;
 
-  constructor({
-    socketMap,
-    expansionSearchService,
-    matchRuntimeFactory,
-    matchSocketBindings,
-    matchConfiguratorFactory,
-  }: MatchControllerDependencies) {
+  constructor(
+    socketMap: Map<PlayerId, AppSocket>,
+    expansionSearchService: ExpansionSearchService,
+    matchRuntimeFactory: MatchRuntimeFactory,
+    matchSocketBindings: MatchSocketBindings,
+    matchConfiguratorFactory: MatchConfiguratorFactory,
+  ) {
     super();
     this._socketMap = socketMap;
     this.expansionSearchService = expansionSearchService;

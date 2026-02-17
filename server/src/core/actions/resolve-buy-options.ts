@@ -49,13 +49,13 @@ export class BuyOptionsResolver {
   private readonly cardSourceController: CardSourceController;
   private readonly findCardService: FindCardService;
 
-  constructor({
-    match,
-    cardLibrary,
-    cardPriceController,
-    cardSourceController,
-    findCardService,
-  }: BuyOptionsResolverDependencies) {
+  constructor(
+    match: Match,
+    cardLibrary: MatchCardLibrary,
+    cardPriceController: CardPriceRulesController,
+    cardSourceController: CardSourceController,
+    findCardService: FindCardService,
+  ) {
     this.match = match;
     this.cardLibrary = cardLibrary;
     this.cardPriceController = cardPriceController;

@@ -29,16 +29,16 @@ export class EndGameEvaluatorService {
   private readonly findCardService: FindCardService;
   private readonly supplyGainService: SupplyGainService;
 
-  constructor({
-    match,
-    cardSourceController,
-    cardLibrary,
-    cardPriceController,
-    logManager,
-    reactionManager,
-    findCardService,
-    supplyGainService,
-  }: EndGameEvaluatorServiceDependencies) {
+  constructor(
+    match: Match,
+    cardSourceController: CardSourceController,
+    cardLibrary: MatchCardLibrary,
+    cardPriceController: CardPriceRulesController,
+    logManager: LogManager,
+    reactionManager: ReactionManager,
+    findCardService: FindCardService,
+    supplyGainService: SupplyGainService,
+  ) {
     this.match = match;
     this.cardSourceController = cardSourceController;
     this.cardLibrary = cardLibrary;

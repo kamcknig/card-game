@@ -113,27 +113,27 @@ export class GameActionController implements GameActionDefinitionMap {
   private readonly buyOptionsResolver: BuyOptionsResolver;
   private readonly _supplyGainService: SupplyGainService;
 
-  constructor({
-    cardSourceController,
-    findCardService,
-    cardPriceController,
-    cardEffectFunctionMap,
-    eventEffectFunctionMap,
-    projectEffectFunctionMap,
-    boonEffectFunctionMap,
-    hexEffectFunctionMap,
-    stateEffectFunctionMap,
-    artifactEffectFunctionMap,
-    match,
-    cardLibrary,
-    logManager,
-    socketMap,
-    reactionManager,
-    runGameActionDelegate,
-    interactivityController,
-    buyOptionsResolver,
-    supplyGainService,
-  }: GameActionControllerDependencies) {
+  constructor(
+    cardSourceController: CardSourceController,
+    findCardService: FindCardService,
+    cardPriceController: CardPriceRulesController,
+    cardEffectFunctionMap: CardEffectFunctionMap,
+    eventEffectFunctionMap: CardEffectFunctionMap,
+    projectEffectFunctionMap: CardEffectFunctionMap,
+    boonEffectFunctionMap: CardEffectFunctionMap,
+    hexEffectFunctionMap: CardEffectFunctionMap,
+    stateEffectFunctionMap: CardEffectFunctionMap,
+    artifactEffectFunctionMap: CardEffectFunctionMap,
+    match: Match,
+    cardLibrary: MatchCardLibrary,
+    logManager: LogManager,
+    socketMap: Map<PlayerId, AppSocket>,
+    reactionManager: ReactionManager,
+    runGameActionDelegate: RunGameActionDelegate,
+    interactivityController: CardInteractivityController,
+    buyOptionsResolver: BuyOptionsResolver,
+    supplyGainService: SupplyGainService,
+  ) {
     this._cardSourceController = cardSourceController;
     this._findCardService = findCardService;
     this.cardPriceRuleController = cardPriceController;

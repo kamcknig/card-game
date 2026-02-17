@@ -26,7 +26,11 @@ export class FindCardsService implements FindCardService {
   private readonly cardPriceController: CardPriceRulesController;
   private readonly cardLibrary: MatchCardLibrary;
 
-  constructor({ cardSourceController, cardPriceController, cardLibrary }: FindCardsServiceDependencies) {
+  constructor(
+    cardSourceController: CardSourceController,
+    cardPriceController: CardPriceRulesController,
+    cardLibrary: MatchCardLibrary,
+  ) {
     this.cardSourceController = cardSourceController;
     this.cardPriceController = cardPriceController;
     this.cardLibrary = cardLibrary;

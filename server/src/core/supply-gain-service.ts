@@ -13,7 +13,7 @@ export class DefaultSupplyGainService implements SupplyGainService {
   private readonly findCardService: FindCardService;
   private readonly runGameActionDelegate: RunGameActionDelegate;
 
-  constructor({ findCardService, runGameActionDelegate }: SupplyGainServiceDependencies) {
+  constructor(findCardService: FindCardService, runGameActionDelegate: RunGameActionDelegate) {
     this.findCardService = findCardService;
     this.runGameActionDelegate = runGameActionDelegate;
   }

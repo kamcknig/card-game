@@ -57,16 +57,16 @@ export class ReactionManager {
   private readonly _cardLibrary: MatchCardLibrary;
   private readonly runGameActionDelegate: RunGameActionDelegate;
 
-  constructor({
-    cardSourceController,
-    findCardService,
-    supplyGainService,
-    cardPriceController,
-    logManager,
-    match,
-    cardLibrary,
-    runGameActionDelegate,
-  }: ReactionManagerDependencies) {
+  constructor(
+    cardSourceController: CardSourceController,
+    findCardService: FindCardService,
+    supplyGainService: SupplyGainService,
+    cardPriceController: CardPriceRulesController,
+    logManager: LogManager,
+    match: Match,
+    cardLibrary: MatchCardLibrary,
+    runGameActionDelegate: RunGameActionDelegate,
+  ) {
     this._cardSourceController = cardSourceController;
     this._findCardService = findCardService;
     this._supplyGainService = supplyGainService;

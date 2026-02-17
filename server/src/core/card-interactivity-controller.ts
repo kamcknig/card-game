@@ -32,16 +32,16 @@ export class CardInteractivityController {
   private readonly _findCardService: FindCardService;
   private readonly buyOptionsResolver: BuyOptionsResolver;
 
-  constructor({
-    cardSourceController,
-    cardPriceController,
-    match,
-    socketMap,
-    cardLibrary,
-    runGameActionDelegate,
-    findCardService,
-    buyOptionsResolver,
-  }: CardInteractivityControllerDependencies) {
+  constructor(
+    cardSourceController: CardSourceController,
+    cardPriceController: CardPriceRulesController,
+    match: Match,
+    socketMap: Map<PlayerId, AppSocket>,
+    cardLibrary: MatchCardLibrary,
+    runGameActionDelegate: RunGameActionDelegate,
+    findCardService: FindCardService,
+    buyOptionsResolver: BuyOptionsResolver,
+  ) {
     this._cardSourceController = cardSourceController;
     this._cardPriceController = cardPriceController;
     this.match = match;

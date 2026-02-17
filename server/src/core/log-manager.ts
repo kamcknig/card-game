@@ -8,8 +8,8 @@ export class LogManager {
   // Cap history to prevent unbounded growth.
   private readonly _historyLimit = 5000;
 
-  constructor(args: { socketMap: Map<PlayerId, AppSocket> }) {
-    this._socketMap = args.socketMap;
+  constructor(socketMap: Map<PlayerId, AppSocket>) {
+    this._socketMap = socketMap;
   }
 
   public addLogEntry(entry: DistributiveOmit<LogEntry, 'depth'> & { root?: boolean }) {

@@ -70,7 +70,7 @@ export class MatchRuntimeFactory {
 
     // Build an isolated DI scope for this match runtime graph.
     const scope = createContainer({
-      injectionMode: InjectionMode.PROXY,
+      injectionMode: InjectionMode.CLASSIC,
     });
 
     scope.register({
