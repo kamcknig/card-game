@@ -15,7 +15,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
   let prosperityCheckConfigured: boolean = false;
 
   return async (args) => {
-    registerProsperityTokenDefinitions();
+    registerProsperityTokenDefinitions(args.tokenDefinitionRegistrar);
 
     const kingdomCards = args.config.kingdomSupply;
     // Standard Dominion rule: add Colony/Platinum when any Prosperity kingdom card is present.

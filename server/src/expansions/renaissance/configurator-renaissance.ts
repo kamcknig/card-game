@@ -24,7 +24,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
   let artifactEffectsRegistered = false;
 
   return async (args) => {
-    registerRenaissanceTokenDefinitions();
+    registerRenaissanceTokenDefinitions(args.tokenDefinitionRegistrar);
     if (!artifactEffectsRegistered) {
       registerArtifactEffects(args.artifactEffectRegistrar);
       artifactEffectsRegistered = true;

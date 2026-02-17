@@ -6,6 +6,7 @@ export type {
   CardAlternateBuyOptionCanBuyContext,
   CardExpansionActionConditionMap,
   CardExpansionModule,
+  CardScoringFunction,
   ClientEventRegistrar,
   EndGamePolicyFn,
   EndGamePolicyFnOutcome,
@@ -18,4 +19,7 @@ export type {
   InitializeExpansionContext,
   PlayerScoreDecorator,
   PlayerScoreDecoratorRegistrar,
+  TokenCardPlayedHandler,
+  TokenCardPlayedHandlerRegistrar,
+  TokenDefinitionRegistrar,
 } from '../types.ts';

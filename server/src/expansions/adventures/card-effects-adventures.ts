@@ -11,11 +11,17 @@ import { isLocationInPlay } from '../../utils/is-in-play.ts';
 import { getPlayerStartingFrom } from '@shared/get-player-position-utils.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { adventuresTokenIds } from './token-ids-adventures.ts';
-import { tokenDefinitionMap } from '../../core/tokens/token-definition-map.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
+
+const teacherTokenLabels: Record<string, string> = {
+  [adventuresTokenIds.plusBuy]: '+1 Buy token',
+  [adventuresTokenIds.plusAction]: '+1 Action token',
+  [adventuresTokenIds.plusCoin]: '+$1 token',
+  [adventuresTokenIds.plusCard]: '+1 Card token',
+};
 
 const addTravellerEffect = async (
   card: Card,
@@ -2386,7 +2392,7 @@ const expansion: CardExpansionModule = {
                 prompt: 'Which token?',
                 actionButtons: [
                   ...tokenInstanceIds.map((t, idx) => ({
-                    label: tokenDefinitionMap[tokens[t].tokenId].name,
+                    label: teacherTokenLabels[tokens[t].tokenId] ?? tokens[t].tokenId,
                     action: idx,
                   })),
                 ],

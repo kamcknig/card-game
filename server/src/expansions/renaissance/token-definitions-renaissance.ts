@@ -1,8 +1,8 @@
-import { registerTokenDefinition } from '../../core/tokens/token-definition-map.ts';
+import { TokenDefinitionRegistrar } from '@server-types/index.ts';
 import { renaissanceTokenIds } from './token-ids-renaissance.ts';
 
 // Registers Renaissance token definitions (e.g., Project cubes).
-export const registerRenaissanceTokenDefinitions = (): void => {
+export const registerRenaissanceTokenDefinitions = (registerTokenDefinition: TokenDefinitionRegistrar): void => {
   registerTokenDefinition({
     id: renaissanceTokenIds.cube,
     name: 'Cube',

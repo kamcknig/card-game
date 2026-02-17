@@ -1,6 +1,4 @@
-import { scoringFunctionMap } from '@expansions/scoring-function-map.ts';
 import { expansionLibrary, rawCardLibrary } from '@expansions/expansion-library.ts';
-import { cardLifecycleMap } from '../core/card-lifecycle-map.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
 import { CardCost, CardKey, CardNoId, CardType } from 'shared/types/index.ts';
 import { createCardData, createCardLike } from './create-card-data.ts';
@@ -8,6 +6,7 @@ import { loadEvents } from '../core/events/load-events.ts';
 import { loadLandmarks } from '../core/landmarks/load-landmarks.ts';
 import { loadProjects } from '../core/projects/load-projects.ts';
 import { ExpansionEffectRegistryService } from '../core/expansion-effect-registry-service.ts';
+import { ExpansionCardMetadataRegistryService } from '../core/expansion-card-metadata-registry-service.ts';
 
 // Randomizer pile definition for split piles in card libraries.
 type RandomizerPileDefinition = {
@@ -51,6 +50,7 @@ const isRandomizerPileDefinition = (entry: unknown): entry is RandomizerPileDefi
 export const loadExpansion = async (
   expansion: { name: string },
   expansionEffectRegistryService: ExpansionEffectRegistryService,
+  expansionCardMetadataRegistryService: ExpansionCardMetadataRegistryService,
 ) => {
   const expansionPath = `@expansions/${expansion.name}`;
   const expansionName = expansion.name;
@@ -240,12 +240,18 @@ export const loadExpansion = async (
     Object.keys(cardEffects).forEach((key) => {
       if (cardEffects[key].registerScoringFunction) {
         console.debug(`[expansion loader] registering scoring function for ${key}`);
-        scoringFunctionMap[key] = cardEffects[key].registerScoringFunction();
+        expansionCardMetadataRegistryService.registerScoringFunction(
+          key as CardKey,
+          cardEffects[key].registerScoringFunction(),
+        );
       }
 
       if (cardEffects[key].registerLifeCycleMethods) {
         console.debug(`[expansion loader] registering lifecycle methods for ${key}`);
-        cardLifecycleMap[key] = cardEffects[key].registerLifeCycleMethods();
+        expansionCardMetadataRegistryService.registerLifecycleMethods(
+          key as CardKey,
+          cardEffects[key].registerLifeCycleMethods(),
+        );
       }
 
       if (cardEffects[key].registerEffects) {

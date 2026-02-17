@@ -1,8 +1,10 @@
-import { registerTokenCardPlayedHandler } from '../../core/tokens/token-trigger-map.ts';
+import { TokenCardPlayedHandlerRegistrar } from '@server-types/index.ts';
 import { adventuresTokenIds } from './token-ids-adventures.ts';
 
 // Registers card-played triggers for Adventures vanilla bonus tokens.
-export const registerAdventuresTokenTriggers = (): void => {
+export const registerAdventuresTokenTriggers = (
+  registerTokenCardPlayedHandler: TokenCardPlayedHandlerRegistrar,
+): void => {
   registerTokenCardPlayedHandler(adventuresTokenIds.plusAction, async ({ actionService }) => {
     await actionService.run('gainAction', { count: 1 });
   });

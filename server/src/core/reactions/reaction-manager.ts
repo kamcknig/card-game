@@ -24,12 +24,12 @@ import { groupReactionsByCardKey } from './group-reactions-by-card-key.ts';
 import { initImmunityScope } from '../../utils/reaction-immunity.ts';
 import { buildActionButtons } from './build-action-buttons.ts';
 import { buildActionMap } from './build-action-map.ts';
-import { cardLifecycleMap } from '../card-lifecycle-map.ts';
 import { LogManager } from '../log-manager.ts';
 import { CardPriceRulesController } from '../card-price-rules-controller.ts';
 import { CardSourceController } from '../card-source-controller.ts';
 import { CardInstanceFactoryService } from '../card-instance-factory-service.ts';
 import { ReactionContextFactory } from './reaction-context-factory.ts';
+import { ExpansionCardMetadataRegistryService } from '../expansion-card-metadata-registry-service.ts';
 
 export class ReactionManager {
   private _reactions: Reaction[] = [];
@@ -52,6 +52,7 @@ export class ReactionManager {
     private readonly actionService: ActionService,
     private readonly promptService: PromptService,
     private readonly reactionContextFactory: ReactionContextFactory,
+    private readonly expansionCardMetadataRegistryService: ExpansionCardMetadataRegistryService,
   ) {}
 
   public endGame() {
@@ -211,7 +212,8 @@ export class ReactionManager {
   async runCardLifecycleEvent<T extends CardLifecycleEvent>(trigger: T, args: CardLifecycleEventArgMap[T]) {
     const card = this.cardLibrary.getCard(args.cardId);
 
-    const fn = cardLifecycleMap[card.cardKey]?.[trigger];
+    const lifecycleMethods = this.expansionCardMetadataRegistryService.getLifecycleMethods(card.cardKey);
+    const fn = lifecycleMethods?.[trigger];
     if (!fn) {
       return;
     }

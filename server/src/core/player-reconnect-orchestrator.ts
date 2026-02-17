@@ -8,7 +8,7 @@ import { CardInteractivityController } from './card-interactivity-controller.ts'
 import { LogManager } from './log-manager.ts';
 import { MatchCardLibrary } from './match-card-library.ts';
 import { MatchSocketBindings } from './match-socket-bindings.ts';
-import { tokenDefinitionMap } from './tokens/token-definition-map.ts';
+import { TokenRegistryService } from './tokens/token-registry-service.ts';
 
 // Owns reconnect-time socket hydration and gameplay socket binding behavior.
 export class PlayerReconnectOrchestrator {
@@ -21,6 +21,7 @@ export class PlayerReconnectOrchestrator {
     private readonly expansionSearchService: ExpansionSearchService,
     private readonly matchSocketBindings: MatchSocketBindings,
     private readonly actionService: ActionService,
+    private readonly tokenRegistryService: TokenRegistryService,
   ) {}
 
   // Binds gameplay-phase socket handlers for a connected socket.
@@ -51,7 +52,7 @@ export class PlayerReconnectOrchestrator {
     socket.emit('patchUpdate', matchPatch, cardLibraryPatch);
 
     socket.emit('setCardLibrary', this.cardLibrary.getAllCards());
-    socket.emit('setTokenDefinitions', tokenDefinitionMap);
+    socket.emit('setTokenDefinitions', this.tokenRegistryService.getTokenDefinitions());
     socket.emit('matchReady');
 
     // Rehydrate log history after reconnect so the client can rebuild the UI log.

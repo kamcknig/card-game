@@ -23,6 +23,7 @@ import {
   ServerListenEvents,
   SourceFindCardsFilter,
   TokenFacing,
+  TokenDefinition,
   TokenId,
   TokenInstance,
   TokenInstanceId,
@@ -876,6 +877,17 @@ export type StateEffectRegistrar = (cardKey: CardKey, fn: CardEffectFn) => void;
 export type ArtifactEffectRegistrar = (cardKey: CardKey, fn: CardEffectFn) => void;
 // Registers project effects by card key for the current match.
 export type ProjectEffectRegistrar = (cardKey: CardKey, fn: CardEffectFn) => void;
+// Registers a token definition for the server runtime.
+export type TokenDefinitionRegistrar = (definition: TokenDefinition) => void;
+// Runs when a tokened pile card is played by the token owner.
+export type TokenCardPlayedHandler = (context: {
+  match: Match;
+  playerId: PlayerId;
+  cardId: CardId;
+  actionService: ActionService;
+}) => Promise<void>;
+// Registers a token card-played handler for a token id.
+export type TokenCardPlayedHandlerRegistrar = (tokenId: TokenId, handler: TokenCardPlayedHandler) => void;
 
 export type PlayerScoreDecoratorRegistrar = (decorator: PlayerScoreDecorator) => void;
 export type PlayerScoreDecorator = (playerId: PlayerId, match: Match, cardLibrary: MatchCardLibrary) => void;
@@ -917,4 +929,6 @@ export type InitializeExpansionContext = {
   stateEffectRegistrar: StateEffectRegistrar;
   artifactEffectRegistrar: ArtifactEffectRegistrar;
   projectEffectRegistrar: ProjectEffectRegistrar;
+  tokenDefinitionRegistrar: TokenDefinitionRegistrar;
+  tokenCardPlayedHandlerRegistrar: TokenCardPlayedHandlerRegistrar;
 };

@@ -1,21 +1,23 @@
-import {CardEffectFunctionMap} from '@server-types/index.ts';
-import {LogManager} from './log-manager.ts';
-import {CardPriceRulesController} from './card-price-rules-controller.ts';
-import {ReactionManager} from './reactions/reaction-manager.ts';
-import {ReactionContextFactory} from './reactions/reaction-context-factory.ts';
-import {CardInteractivityController} from './card-interactivity-controller.ts';
-import {GameActionController} from './actions/game-action-controller.ts';
-import {CardEffectContextFactory} from './actions/card-effect-context-factory.ts';
-import {PromptService} from './prompt-service.ts';
-import {asClass, asValue, AwilixContainer} from 'awilix';
-import {FindCardsService} from './find-cards-service.ts';
-import {BuyOptionsResolver} from './actions/resolve-buy-options.ts';
-import {DefaultSupplyGainService} from './supply-gain-service.ts';
-import {EndGameEvaluatorService} from './end-game-evaluator-service.ts';
-import {PlayerReconnectOrchestrator} from './player-reconnect-orchestrator.ts';
-import {ExpansionSearchService} from './expansion-search-service.ts';
-import {MatchSocketBindings} from './match-socket-bindings.ts';
+import { CardEffectFunctionMap } from '@server-types/index.ts';
+import { LogManager } from './log-manager.ts';
+import { CardPriceRulesController } from './card-price-rules-controller.ts';
+import { ReactionManager } from './reactions/reaction-manager.ts';
+import { ReactionContextFactory } from './reactions/reaction-context-factory.ts';
+import { CardInteractivityController } from './card-interactivity-controller.ts';
+import { GameActionController } from './actions/game-action-controller.ts';
+import { CardEffectContextFactory } from './actions/card-effect-context-factory.ts';
+import { PromptService } from './prompt-service.ts';
+import { asClass, asValue, AwilixContainer } from 'awilix';
+import { FindCardsService } from './find-cards-service.ts';
+import { BuyOptionsResolver } from './actions/resolve-buy-options.ts';
+import { DefaultSupplyGainService } from './supply-gain-service.ts';
+import { EndGameEvaluatorService } from './end-game-evaluator-service.ts';
+import { PlayerReconnectOrchestrator } from './player-reconnect-orchestrator.ts';
+import { ExpansionSearchService } from './expansion-search-service.ts';
+import { MatchSocketBindings } from './match-socket-bindings.ts';
 import { ExpansionEffectRegistryService } from './expansion-effect-registry-service.ts';
+import { ExpansionCardMetadataRegistryService } from './expansion-card-metadata-registry-service.ts';
+import { TokenRegistryService } from './tokens/token-registry-service.ts';
 
 // Builds the per-match runtime graph (controllers/managers/maps) used by MatchController.
 export class MatchRuntimeFactory {
@@ -23,6 +25,8 @@ export class MatchRuntimeFactory {
     private readonly expansionSearchService: ExpansionSearchService,
     private readonly matchSocketBindings: MatchSocketBindings,
     private readonly expansionEffectRegistryService: ExpansionEffectRegistryService,
+    private readonly expansionCardMetadataRegistryService: ExpansionCardMetadataRegistryService,
+    private readonly tokenRegistryService: TokenRegistryService,
   ) {}
 
   // Registers runtime services into an existing match scope.
@@ -43,6 +47,8 @@ export class MatchRuntimeFactory {
     scope.register({
       expansionSearchService: asValue(this.expansionSearchService),
       matchSocketBindings: asValue(this.matchSocketBindings),
+      expansionCardMetadataRegistryService: asValue(this.expansionCardMetadataRegistryService),
+      tokenRegistryService: asValue(this.tokenRegistryService),
       cardEffectFunctionMap: asValue(cardEffectFunctionMap),
       eventEffectFunctionMap: asValue(eventEffectFunctionMap),
       projectEffectFunctionMap: asValue(projectEffectFunctionMap),

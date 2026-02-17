@@ -1,7 +1,7 @@
-import { registerTokenDefinition } from '../../core/tokens/token-definition-map.ts';
+import { TokenDefinitionRegistrar } from '@server-types/index.ts';
 import { prosperityTokenIds } from './token-prosperity-ids.ts';
 
-export const registerProsperityTokenDefinitions = () => {
+export const registerProsperityTokenDefinitions = (registerTokenDefinition: TokenDefinitionRegistrar) => {
   registerTokenDefinition({
     id: prosperityTokenIds.victory,
     name: 'Victory Token',

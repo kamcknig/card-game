@@ -1,8 +1,8 @@
-import { registerTokenDefinition } from '../../core/tokens/token-definition-map.ts';
+import { TokenDefinitionRegistrar } from '@server-types/index.ts';
 import { adventuresTokenIds } from './token-ids-adventures.ts';
 
 // Registers Adventures vanilla bonus token definitions.
-export const registerAdventuresTokenDefinitions = (): void => {
+export const registerAdventuresTokenDefinitions = (registerTokenDefinition: TokenDefinitionRegistrar): void => {
   // Register the Journey token used by Adventures cards that flip it.
   registerTokenDefinition({
     id: adventuresTokenIds.journey,

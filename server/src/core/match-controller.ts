@@ -12,7 +12,6 @@ import {
 } from 'shared/types/index.ts';
 import { MatchConfigurator } from './match-configurator.ts';
 import { getCurrentPlayer } from '../utils/get-current-player.ts';
-import { scoringFunctionMap } from '@expansions/scoring-function-map.ts';
 import { MatchCardLibrary } from './match-card-library.ts';
 import jsonPatch from 'fast-json-patch';
 import type { Operation } from 'fast-json-patch';
@@ -30,7 +29,6 @@ import {
   PromptService,
 } from '@server-types/index.ts';
 import { CardSourceController } from './card-source-controller.ts';
-import { tokenDefinitionMap } from './tokens/token-definition-map.ts';
 import { prosperityTokenIds } from '@expansions/prosperity/token-prosperity-ids.ts';
 import { ReactionManager } from './reactions/reaction-manager.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';
@@ -44,6 +42,8 @@ import { MatchSetupService } from './match-setup-service.ts';
 import { EndGamePolicyRegistryService } from './end-game-policy-registry-service.ts';
 import { CardInstanceFactoryService } from './card-instance-factory-service.ts';
 import { MatchEndService } from './match-end-service.ts';
+import { ExpansionCardMetadataRegistryService } from './expansion-card-metadata-registry-service.ts';
+import { TokenRegistryService } from './tokens/token-registry-service.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardLibSnapshot = {};
@@ -90,6 +90,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     private readonly supplyGainService: SupplyGainService,
     private readonly promptService: PromptService,
     private readonly matchEndService: MatchEndService,
+    private readonly expansionCardMetadataRegistryService: ExpansionCardMetadataRegistryService,
+    private readonly tokenRegistryService: TokenRegistryService,
   ) {
     super();
   }
@@ -177,6 +179,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         this.gameActionsController.registerArtifactEffect(cardKey, effectFn),
       projectEffectRegistrar: (cardKey, effectFn) =>
         this.gameActionsController.registerProjectEffect(cardKey, effectFn),
+      tokenDefinitionRegistrar: (definition) => this.tokenRegistryService.registerTokenDefinition(definition),
+      tokenCardPlayedHandlerRegistrar: (tokenId, handler) =>
+        this.tokenRegistryService.registerTokenCardPlayedHandler(tokenId, handler),
       playerScoreDecoratorRegistrar: (val: PlayerScoreDecorator) => this._expansionScoringFns.push(val),
     });
     const { config: newConfig } = await this._matchConfigurator.createConfiguration();
@@ -221,7 +226,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
     this.socketMap.forEach((s) => {
       s.emit('setCardLibrary', this.cardLibrary.getAllCards());
-      s.emit('setTokenDefinitions', tokenDefinitionMap);
+      s.emit('setTokenDefinitions', this.tokenRegistryService.getTokenDefinitions());
       s.emit('matchReady');
       s.on('clientReady', this.onClientReady);
     });
@@ -589,7 +594,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       for (const card of cards) {
         score += card.victoryPoints ?? 0;
 
-        const customScoringFn = scoringFunctionMap[card?.cardKey ?? ''];
+        const customScoringFn = this.expansionCardMetadataRegistryService.getScoringFunction(card.cardKey);
         if (customScoringFn) {
           console.debug(`[match] processing scoring function for ${card}`);
           score += customScoringFn({

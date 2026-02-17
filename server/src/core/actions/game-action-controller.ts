@@ -53,8 +53,6 @@ import { CardSourceController } from '../card-source-controller.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
-import { tokenCardPlayedHandlerMap } from '../tokens/token-trigger-map.ts';
-import { tokenDefinitionMap } from '../tokens/token-definition-map.ts';
 import { prosperityTokenIds } from '@expansions/prosperity/token-prosperity-ids.ts';
 import { renaissanceTokenIds } from '@expansions/renaissance/token-ids-renaissance.ts';
 import {
@@ -64,9 +62,10 @@ import {
   findHexInMatch,
   findProjectInMatch,
 } from '@shared/find-card-like-in-match.ts';
-import { getPlayerTurnIndex } from "@shared/get-player-position-utils.ts";
+import { getPlayerTurnIndex } from '@shared/get-player-position-utils.ts';
 import { BuyOptionsResolver } from './resolve-buy-options.ts';
 import { CardEffectContextFactory } from './card-effect-context-factory.ts';
+import { TokenRegistryService } from '../tokens/token-registry-service.ts';
 
 export class GameActionController implements GameActionDefinitionMap {
   private _customActionHandlers: Partial<GameActionDefinitionMap> = {};
@@ -96,6 +95,7 @@ export class GameActionController implements GameActionDefinitionMap {
     private promptService: PromptService,
     private readonly actionService: ActionService,
     private readonly cardEffectContextFactory: CardEffectContextFactory,
+    private readonly tokenRegistryService: TokenRegistryService,
   ) {}
 
   public registerCardEffect(cardKey: CardKey, tag: string, fn: CardEffectFn) {
@@ -541,9 +541,9 @@ export class GameActionController implements GameActionDefinitionMap {
         if (token.ownerId !== playerId) continue;
         if (token.location.type !== 'supplyPile') continue;
         if (token.location.cardKey !== pileKey && token.location.cardKey !== card.cardKey) continue;
-        const handler = tokenCardPlayedHandlerMap[token.tokenId];
+        const handler = this.tokenRegistryService.getTokenCardPlayedHandler(token.tokenId);
         if (!handler) continue;
-        const definition = tokenDefinitionMap[token.tokenId];
+        const definition = this.tokenRegistryService.getTokenDefinition(token.tokenId);
         const effectText = definition?.name ?? 'token bonus';
         // Log the token effect before applying its bonus for clarity in the log.
         this.logManager.addLogEntry({
