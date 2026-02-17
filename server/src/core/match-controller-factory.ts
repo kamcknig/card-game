@@ -6,15 +6,15 @@ import { MatchRuntimeFactory } from './match-runtime-factory.ts';
 
 export class MatchControllerFactory {
   constructor(
-    private readonly _matchRuntimeFactory: MatchRuntimeFactory,
-    private readonly _matchConfiguratorFactory: MatchConfiguratorFactory,
+    private readonly matchRuntimeFactory: MatchRuntimeFactory,
+    private readonly matchConfiguratorFactory: MatchConfiguratorFactory,
   ) {}
 
   public create(socketMap: Map<PlayerId, AppSocket>): MatchController {
     return new MatchController(
       socketMap,
-      this._matchRuntimeFactory,
-      this._matchConfiguratorFactory,
+      this.matchRuntimeFactory,
+      this.matchConfiguratorFactory,
     );
   }
 }

@@ -78,47 +78,47 @@ export class Game {
 
   constructor(
     // Socket.io server injected from composition root.
-    private readonly _io: Server<ServerListenEvents, ServerEmitEvents>,
+    private readonly io: Server<ServerListenEvents, ServerEmitEvents>,
     // Max players allowed in a game.
-    private readonly _maxPlayers: number,
+    private readonly maxPlayers: number,
     // Match controller factory injected from composition root for explicit wiring.
-    private readonly _matchControllerFactory: MatchControllerFactory,
+    private readonly matchControllerFactory: MatchControllerFactory,
     // Store abstraction for persisted lobby configuration.
-    private readonly _configStore: GameConfigurationStore,
+    private readonly configStore: GameConfigurationStore,
     // Socket binding helper that owns lobby transport event registrations.
-    private readonly _lobbySocketBindings: LobbySocketBindings,
+    private readonly lobbySocketBindings: LobbySocketBindings,
     // Search service that owns all lobby card-like indexes.
-    private readonly _expansionSearchService: ExpansionSearchService,
+    private readonly expansionSearchService: ExpansionSearchService,
     // Compatibility service that enforces expansion mutual-exclusion rules.
-    private readonly _expansionCompatibilityService: ExpansionCompatibilityService,
+    private readonly expansionCompatibilityService: ExpansionCompatibilityService,
     // Service that tracks disconnected-player removal voting state.
-    private readonly _disconnectedPlayerVoteService: DisconnectedPlayerVoteService,
+    private readonly disconnectedPlayerVoteService: DisconnectedPlayerVoteService,
     // Service that decides owner/session transitions.
-    private readonly _playerSessionService: PlayerSessionService,
+    private readonly playerSessionService: PlayerSessionService,
     // Service that owns player record lifecycle mutations.
-    private readonly _playerRegistryService: PlayerRegistryService,
+    private readonly playerRegistryService: PlayerRegistryService,
     // Service that runs the lobby->match startup sequence.
-    private readonly _matchStartOrchestrator: MatchStartOrchestrator,
+    private readonly matchStartOrchestrator: MatchStartOrchestrator,
   ) {
     console.log(`[game] created`);
     // Configure whether to end the match when all human players leave (default: true).
     const endOnNoHumansEnv = Deno.env.get('END_MATCH_ON_NO_HUMANS') ?? 'true';
     this._endMatchWhenNoHumans = endOnNoHumansEnv.toLowerCase() !== 'false';
     // Hydrate lobby defaults from persisted local files.
-    this._configStore.load(defaultMatchConfiguration);
+    this.configStore.load(defaultMatchConfiguration);
 
-    this._expansionSearchService.rebuildIndexes();
+    this.expansionSearchService.rebuildIndexes();
 
     this.createNewMatch();
   }
 
   private createNewMatch() {
-    this._matchController = this._matchControllerFactory.create(this._socketMap);
+    this._matchController = this.matchControllerFactory.create(this._socketMap);
     this._matchConfiguration = { ...structuredClone(defaultMatchConfiguration) };
   }
 
   private onSearchCards = (searchStr: string) => {
-    const filteredCards = this._expansionSearchService.searchKingdomCards(searchStr);
+    const filteredCards = this.expansionSearchService.searchKingdomCards(searchStr);
     console.debug(
       `[game] kingdom search '${searchStr}' returned ${filteredCards.length} eligible card(s)`,
     );
@@ -127,33 +127,33 @@ export class Game {
 
   // Returns event search results for the given query.
   private onSearchEvents = (searchStr: string) => {
-    return this._expansionSearchService.searchEvents(searchStr);
+    return this.expansionSearchService.searchEvents(searchStr);
   };
 
   // Returns landmark search results for the given query.
   private onSearchLandmarks = (searchStr: string) => {
-    return this._expansionSearchService.searchLandmarks(searchStr);
+    return this.expansionSearchService.searchLandmarks(searchStr);
   };
 
   // Returns artifact search results for the given query.
   private onSearchArtifacts = (searchStr: string) => {
-    return this._expansionSearchService.searchArtifacts(searchStr);
+    return this.expansionSearchService.searchArtifacts(searchStr);
   };
 
   // Returns project search results for the given query.
   private onSearchProjects = (searchStr: string) => {
-    return this._expansionSearchService.searchProjects(searchStr);
+    return this.expansionSearchService.searchProjects(searchStr);
   };
 
   public expansionLoaded(expansion: ExpansionListElement) {
     console.log(`[game] expansion '${expansion.name}' loaded`);
     this._availableExpansion.push(expansion);
-    this._io.in('game').emit(
+    this.io.in('game').emit(
       'expansionList',
       this._availableExpansion.sort((a, b) => b.order - a.order),
     );
 
-    this._expansionSearchService.rebuildIndexes();
+    this.expansionSearchService.rebuildIndexes();
   }
 
   // Exports the current match state and card library for local debug tooling.
@@ -171,7 +171,7 @@ export class Game {
   }
 
   public addPlayer(sessionId: string, socket: AppSocket) {
-    const joinResult = this._playerRegistryService.registerPlayerJoin({
+    const joinResult = this.playerRegistryService.registerPlayerJoin({
       players: this.players,
       sessionId,
       socket,
@@ -179,7 +179,7 @@ export class Game {
     });
 
     if (joinResult.status === 'rejected_capacity') {
-      console.info(`[game] game has ${this._maxPlayers} players, rejecting`);
+      console.info(`[game] game has ${this.maxPlayers} players, rejecting`);
       socket.disconnect(true);
       return;
     }
@@ -200,10 +200,10 @@ export class Game {
     this._socketMap.set(player.id, socket);
 
     socket.emit('setPlayerList', this.players);
-    this._io.in('game').emit('playerConnected', player);
+    this.io.in('game').emit('playerConnected', player);
     socket.emit('setPlayer', player);
 
-    const nextOwner = this._playerSessionService.selectOwnerOnJoin(this.owner, player);
+    const nextOwner = this.playerSessionService.selectOwnerOnJoin(this.owner, player);
     if (nextOwner.id !== this.owner?.id) {
       console.info(`[game] game owner does not exist, setting to ${nextOwner}`);
     }
@@ -213,7 +213,7 @@ export class Game {
       this.bindOwnerLobbyHandlers(socket, player.id);
     }
 
-    this._io.in('game').emit('gameOwnerUpdated', this.owner.id);
+    this.io.in('game').emit('gameOwnerUpdated', this.owner.id);
 
     console.log(`[game] ${player} added to game`);
 
@@ -222,11 +222,11 @@ export class Game {
       // Restore the current turn order for reconnecting clients.
       socket.emit('setPlayerList', this.players);
       // Remove any pending removal vote if the player reconnects.
-      this._disconnectedPlayerVoteService.removePendingRemovalPlayer(this.players, player.id);
+      this.disconnectedPlayerVoteService.removePendingRemovalPlayer(this.players, player.id);
       this._matchController?.playerReconnected(player.id, socket);
       this.registerRemovalVoteHandler(socket, player.id);
       // Resume flow if no human players remain disconnected.
-      const hasDisconnectedHuman = this._playerSessionService.hasDisconnectedHumanPlayers(this.players);
+      const hasDisconnectedHuman = this.playerSessionService.hasDisconnectedHumanPlayers(this.players);
       if (!hasDisconnectedHuman) {
         void this._matchController?.runGameAction('checkForRemainingPlayerActions');
       }
@@ -238,7 +238,7 @@ export class Game {
       );
 
       socket.emit('matchConfigurationUpdated', this._matchConfiguration!);
-      this._lobbySocketBindings.bindPlayerLobbyHandlers(socket, {
+      this.lobbySocketBindings.bindPlayerLobbyHandlers(socket, {
         onUpdatePlayerName: this.onUpdatePlayerName,
         onPlayerReady: this.onPlayerReady,
       });
@@ -253,14 +253,14 @@ export class Game {
   private onPlayerDisconnected = (playerId: number, reason: string) => {
     console.info(`[game] ${playerId} disconnected - ${reason}`);
 
-    const player = this._playerRegistryService.markPlayerDisconnected(this.players, playerId);
+    const player = this.playerRegistryService.markPlayerDisconnected(this.players, playerId);
     if (!player) {
       this._socketMap.delete(playerId);
       console.warn(`[game] player disconnected, but cannot find player object`);
       return;
     }
 
-    const hasConnectedHuman = this._playerSessionService.hasConnectedHumanPlayers(this.players);
+    const hasConnectedHuman = this.playerSessionService.hasConnectedHumanPlayers(this.players);
     if (!hasConnectedHuman && this._endMatchWhenNoHumans) {
       console.log('[game] no human players left in game, clearing game state completely');
       this.clearMatch();
@@ -268,12 +268,12 @@ export class Game {
     }
 
     if (player.id === this.owner?.id) {
-      this._lobbySocketBindings.unbindOwnerLobbyHandlers(this._socketMap.get(player.id));
+      this.lobbySocketBindings.unbindOwnerLobbyHandlers(this._socketMap.get(player.id));
 
-      const replacement = this._playerSessionService.findReplacementOwner(this.players, player.id);
+      const replacement = this.playerSessionService.findReplacementOwner(this.players, player.id);
       if (replacement) {
         this.owner = replacement;
-        this._io.in('game').emit('gameOwnerUpdated', replacement.id);
+        this.io.in('game').emit('gameOwnerUpdated', replacement.id);
         const replacementSocket = this._socketMap.get(replacement.id);
         if (replacementSocket) {
           this.bindOwnerLobbyHandlers(replacementSocket, replacement.id);
@@ -285,10 +285,10 @@ export class Game {
       this._matchController?.playerDisconnected(player.id);
       // Begin removal vote flow for disconnected humans.
       if (!player.isComputer) {
-        this._disconnectedPlayerVoteService.addPendingRemovalPlayer(this.players, player.id);
+        this.disconnectedPlayerVoteService.addPendingRemovalPlayer(this.players, player.id);
       }
     }
-    this._io.in('game').emit('playerDisconnected', player);
+    this.io.in('game').emit('playerDisconnected', player);
   };
 
   private clearMatch = () => {
@@ -303,7 +303,7 @@ export class Game {
     this.players = [];
     this.owner = undefined;
     this.matchStarted = false;
-    this._disconnectedPlayerVoteService.reset();
+    this.disconnectedPlayerVoteService.reset();
     this.createNewMatch();
   };
 
@@ -313,38 +313,38 @@ export class Game {
 
     const currentConfig = structuredClone(this._matchConfiguration ?? {}) as MatchConfiguration;
     // Enforce expansion mutual-exclusion rules before applying the updated lobby config.
-    await this._expansionCompatibilityService.applyMutualExclusions(currentConfig, newConfig);
+    await this.expansionCompatibilityService.applyMutualExclusions(currentConfig, newConfig);
 
     const kingdomPatch = jsonPatch.compare(currentConfig.kingdomSupply, newConfig.kingdomSupply);
     if (kingdomPatch.length) {
-      this._configStore.persistPreselectedKingdoms(newConfig.kingdomSupply);
+      this.configStore.persistPreselectedKingdoms(newConfig.kingdomSupply);
       defaultMatchConfiguration.kingdomSupply = structuredClone(newConfig.kingdomSupply);
     }
 
     const bannedKingdomsPatch = jsonPatch.compare(currentConfig.bannedKingdoms, newConfig.bannedKingdoms);
     if (bannedKingdomsPatch.length) {
-      this._configStore.persistBannedKingdoms(newConfig.bannedKingdoms);
+      this.configStore.persistBannedKingdoms(newConfig.bannedKingdoms);
       defaultMatchConfiguration.bannedKingdoms = structuredClone(newConfig.bannedKingdoms);
     }
 
     const eventsPatch = jsonPatch.compare(currentConfig.events, newConfig.events);
     if (eventsPatch.length) {
       // Persist selected events between sessions.
-      this._configStore.persistEvents(newConfig.events);
+      this.configStore.persistEvents(newConfig.events);
       defaultMatchConfiguration.events = structuredClone(newConfig.events);
     }
 
     const landmarksPatch = jsonPatch.compare(currentConfig.landmarks, newConfig.landmarks);
     if (landmarksPatch.length) {
       // Persist selected landmarks between sessions.
-      this._configStore.persistLandmarks(newConfig.landmarks);
+      this.configStore.persistLandmarks(newConfig.landmarks);
       defaultMatchConfiguration.landmarks = structuredClone(newConfig.landmarks);
     }
 
     const artifactsPatch = jsonPatch.compare(currentConfig.artifacts, newConfig.artifacts);
     if (artifactsPatch.length) {
       // Persist selected artifacts between sessions.
-      this._configStore.persistArtifacts(newConfig.artifacts);
+      this.configStore.persistArtifacts(newConfig.artifacts);
       defaultMatchConfiguration.artifacts = structuredClone(newConfig.artifacts);
     }
 
@@ -355,7 +355,7 @@ export class Game {
       defaultMatchConfiguration.preselectedKingdoms = newConfig.kingdomSupply.map((supply) => supply.cards[0]);
       this._matchConfiguration!.preselectedKingdoms = newConfig.kingdomSupply.map((supply) => supply.cards[0]);
       // lobby phase – raw object still useful for the config screen
-      this._io.in('game').emit('matchConfigurationUpdated', this._matchConfiguration!);
+      this.io.in('game').emit('matchConfigurationUpdated', this._matchConfiguration!);
     }
   };
 
@@ -364,14 +364,14 @@ export class Game {
       `[game] player ${playerId} request to update name to '${name}'`,
     );
 
-    const player = this._playerRegistryService.setPlayerName(this.players, playerId, name);
+    const player = this.playerRegistryService.setPlayerName(this.players, playerId, name);
     if (player) {
       console.info(`[game] ${player} name updated to '${name}'`);
     } else {
       console.info(`[game] player ${playerId} not found`);
     }
 
-    this._io.in('game').emit('playerNameUpdated', playerId, name);
+    this.io.in('game').emit('playerNameUpdated', playerId, name);
   };
 
   private onPlayerReady = (playerId: number) => {
@@ -386,7 +386,7 @@ export class Game {
 
     player.ready = !player.ready;
     console.info(`[game] marking ${player} as ${player.ready}`);
-    this._io.in('game').except(player.socketId).emit('playerReady', playerId, player.ready);
+    this.io.in('game').except(player.socketId).emit('playerReady', playerId, player.ready);
 
     if (this.players.some((p) => !p.ready && p.connected)) {
       console.debug(`[game] not all players ready yet`);
@@ -409,14 +409,14 @@ export class Game {
     }
 
     for (let i = 0; i < count; i++) {
-      if (this.players.length >= this._maxPlayers) {
+      if (this.players.length >= this.maxPlayers) {
         console.warn('[game] player limit reached, cannot add computer player');
         break;
       }
 
       const bot = createComputerPlayer();
       this.players.push(bot);
-      this._io.in('game').emit('playerConnected', bot);
+      this.io.in('game').emit('playerConnected', bot);
     }
   };
 
@@ -431,7 +431,7 @@ export class Game {
     }
 
     // Lock in turn order and initialize match via dedicated startup orchestration.
-    this.players = this._matchStartOrchestrator.startMatch({
+    this.players = this.matchStartOrchestrator.startMatch({
       players: this.players,
       socketMap: this._socketMap,
       matchController: this._matchController,
@@ -453,32 +453,32 @@ export class Game {
   private onRemoveDisconnectedPlayerVote(voterId: PlayerId, targetPlayerId: PlayerId) {
     if (!this.matchStarted) return;
     // Only allow voting for the current pending target.
-    if (this._disconnectedPlayerVoteService.getPendingRemovalPlayerId() !== targetPlayerId) return;
+    if (this.disconnectedPlayerVoteService.getPendingRemovalPlayerId() !== targetPlayerId) return;
 
-    const voteResult = this._disconnectedPlayerVoteService.registerRemovalVote(this.players, voterId, targetPlayerId);
+    const voteResult = this.disconnectedPlayerVoteService.registerRemovalVote(this.players, voterId, targetPlayerId);
     if (!voteResult.accepted || !voteResult.allVoted) return;
 
     // Remove the player from the match and resume play.
     this.players = this.players.filter((p) => p.id !== targetPlayerId);
     this._socketMap.delete(targetPlayerId);
     this._matchController?.removePlayerFromMatch(targetPlayerId);
-    this._io.in('game').emit('setPlayerList', this.players);
+    this.io.in('game').emit('setPlayerList', this.players);
 
     if (this.owner?.id === targetPlayerId) {
-      const replacement = this._playerSessionService.findReplacementOwner(this.players, targetPlayerId);
+      const replacement = this.playerSessionService.findReplacementOwner(this.players, targetPlayerId);
       if (replacement) {
         this.owner = replacement;
-        this._io.in('game').emit('gameOwnerUpdated', replacement.id);
+        this.io.in('game').emit('gameOwnerUpdated', replacement.id);
       }
     }
 
-    this._disconnectedPlayerVoteService.removePendingRemovalPlayer(this.players, targetPlayerId);
+    this.disconnectedPlayerVoteService.removePendingRemovalPlayer(this.players, targetPlayerId);
     void this._matchController?.runGameAction('checkForRemainingPlayerActions');
   }
 
   // Binds owner-only lobby handlers for the provided owner socket.
   private bindOwnerLobbyHandlers(socket: AppSocket, ownerId: PlayerId) {
-    this._lobbySocketBindings.bindOwnerLobbyHandlers(socket, {
+    this.lobbySocketBindings.bindOwnerLobbyHandlers(socket, {
       onMatchConfigurationUpdated: this.onMatchConfigurationUpdated,
       onAddComputerPlayer: (count?: number) => this.onAddComputerPlayer(ownerId, count),
       onSearchCards: (playerId, searchTerm) => {

@@ -17,9 +17,9 @@ import { getCardPileKey } from '../utils/get-card-pile-key.ts';
 
 export class FindCardsService implements FindCardService {
   constructor(
-    private readonly _cardSourceController: CardSourceController,
-    private readonly _cardPriceController: CardPriceRulesController,
-    private readonly _cardLibrary: MatchCardLibrary,
+    private readonly cardSourceController: CardSourceController,
+    private readonly cardPriceController: CardPriceRulesController,
+    private readonly cardLibrary: MatchCardLibrary,
   ) {}
 
   // Public card lookup entrypoint injected throughout runtime systems.
@@ -47,10 +47,10 @@ export class FindCardsService implements FindCardService {
       locationFilter.location = castArray(locationFilter.location);
       cardIds = this.findCardsByLocation(locationFilter.location, locationFilter.playerId);
     } else {
-      cardIds = this._cardLibrary.getAllCardsAsArray().map((card) => card.id);
+      cardIds = this.cardLibrary.getAllCardsAsArray().map((card) => card.id);
     }
 
-    let sourceCards = cardIds.map(this._cardLibrary.getCard);
+    let sourceCards = cardIds.map(this.cardLibrary.getCard);
 
     for (const otherFilter of otherFilters) {
       sourceCards = this.applyFilter(sourceCards, otherFilter);
@@ -97,9 +97,9 @@ export class FindCardsService implements FindCardService {
     let cardIds: CardId[] = [];
 
     for (const location of locations) {
-      let source = this._cardSourceController.getSource(location, playerId);
+      let source = this.cardSourceController.getSource(location, playerId);
       if (!source) {
-        source = this._cardSourceController.getSource(location);
+        source = this.cardSourceController.getSource(location);
       }
 
       if (source) {
@@ -138,7 +138,7 @@ export class FindCardsService implements FindCardService {
 
     if (isCostFindCardsFilter(otherFilter)) {
       return sourceCards.filter((card) => {
-        const { cost: effectiveCost } = this._cardPriceController.applyRules(card, {
+        const { cost: effectiveCost } = this.cardPriceController.applyRules(card, {
           playerId: otherFilter.playerId,
         });
         return validateCostSpec(otherFilter, effectiveCost);

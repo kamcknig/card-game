@@ -6,7 +6,7 @@ export class LogManager {
   private _history: LogEntry[] = [];
   // Cap history to prevent unbounded growth.
   private readonly _historyLimit = 5000;
-  constructor(private readonly _socketMap: Map<PlayerId, AppSocket>) {}
+  constructor(private readonly socketMap: Map<PlayerId, AppSocket>) {}
 
   public addLogEntry(entry: DistributiveOmit<LogEntry, 'depth'> & { root?: boolean }) {
     if (entry.root) {
@@ -35,7 +35,7 @@ export class LogManager {
     if (this._history.length > this._historyLimit) {
       this._history = this._history.slice(-this._historyLimit);
     }
-    this._socketMap.forEach((s) => s.emit('addLogEntry', entries));
+    this.socketMap.forEach((s) => s.emit('addLogEntry', entries));
     this._queue = [];
   }
 

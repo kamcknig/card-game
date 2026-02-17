@@ -24,8 +24,8 @@ export interface MatchStartOrchestratorArgs {
 // Encapsulates only the lobby->match startup pipeline.
 export class MatchStartOrchestrator {
   constructor(
-    private readonly _io: Server<ServerListenEvents, ServerEmitEvents>,
-    private readonly _lobbySocketBindings: LobbySocketBindings,
+    private readonly io: Server<ServerListenEvents, ServerEmitEvents>,
+    private readonly lobbySocketBindings: LobbySocketBindings,
   ) {
   }
 
@@ -46,8 +46,8 @@ export class MatchStartOrchestrator {
 
     // Remove lobby-only handlers before gameplay starts.
     socketMap.forEach((socket) => {
-      this._lobbySocketBindings.unbindPlayerLobbyHandlers(socket);
-      this._lobbySocketBindings.unbindOwnerLobbyHandlers(socket);
+      this.lobbySocketBindings.unbindPlayerLobbyHandlers(socket);
+      this.lobbySocketBindings.unbindOwnerLobbyHandlers(socket);
     });
 
     // Set per-match player fields, then randomize turn order.
@@ -62,7 +62,7 @@ export class MatchStartOrchestrator {
         }),
     );
 
-    this._io.in('game').emit('setPlayerList', activePlayers);
+    this.io.in('game').emit('setPlayerList', activePlayers);
 
     matchController.on('gameOver', onGameOver);
 

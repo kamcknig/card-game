@@ -38,14 +38,14 @@ export class ReactionManager {
   private _durationTriggerIdsByCardId: Map<CardId, Set<string>> = new Map();
 
   constructor(
-    private readonly _cardSourceController: CardSourceController,
-    private readonly _findCardService: FindCardService,
-    private readonly _supplyGainService: SupplyGainService,
-    private readonly _cardPriceController: CardPriceRulesController,
-    private readonly _logManager: LogManager,
-    private readonly _match: Match,
-    private readonly _cardLibrary: MatchCardLibrary,
-    private readonly _runGameActionDelegate: RunGameActionDelegate,
+    private readonly cardSourceController: CardSourceController,
+    private readonly findCardService: FindCardService,
+    private readonly supplyGainService: SupplyGainService,
+    private readonly cardPriceController: CardPriceRulesController,
+    private readonly logManager: LogManager,
+    private readonly match: Match,
+    private readonly cardLibrary: MatchCardLibrary,
+    private readonly runGameActionDelegate: RunGameActionDelegate,
   ) {}
 
   public endGame() {
@@ -88,15 +88,15 @@ export class ReactionManager {
 
       if (reaction.condition !== undefined) {
         const result = await reaction.condition({
-          cardSourceController: this._cardSourceController,
-          cardPriceController: this._cardPriceController,
-          logManager: this._logManager,
+          cardSourceController: this.cardSourceController,
+          cardPriceController: this.cardPriceController,
+          logManager: this.logManager,
           reactionManager: this,
-          runGameActionDelegate: this._runGameActionDelegate,
-          findCardService: this._findCardService,
-          supplyGainService: this._supplyGainService,
-          match: this._match,
-          cardLibrary: this._cardLibrary,
+          runGameActionDelegate: this.runGameActionDelegate,
+          findCardService: this.findCardService,
+          supplyGainService: this.supplyGainService,
+          match: this.match,
+          cardLibrary: this.cardLibrary,
           trigger,
           reaction,
         });
@@ -124,7 +124,7 @@ export class ReactionManager {
         this._reactions.splice(i, 1);
         console.info(
           `[REACTION MANAGER] removing trigger reaction ${triggerId} for player ${
-            this._match.players?.find((player) => player.id === trigger.playerId)
+            this.match.players?.find((player) => player.id === trigger.playerId)
           }`,
         );
       }
@@ -205,21 +205,21 @@ export class ReactionManager {
   ) {
     for (const handler of this._expansionGameEventHandlers[trigger] ?? []) {
       await handler({
-        cardSourceController: this._cardSourceController,
-        findCardService: this._findCardService,
-        supplyGainService: this._supplyGainService,
-        cardPriceController: this._cardPriceController,
-        logManager: this._logManager,
-        cardLibrary: this._cardLibrary,
-        match: this._match,
+        cardSourceController: this.cardSourceController,
+        findCardService: this.findCardService,
+        supplyGainService: this.supplyGainService,
+        cardPriceController: this.cardPriceController,
+        logManager: this.logManager,
+        cardLibrary: this.cardLibrary,
+        match: this.match,
         reactionManager: this,
-        runGameActionDelegate: this._runGameActionDelegate,
+        runGameActionDelegate: this.runGameActionDelegate,
       }, ...args);
     }
   }
 
   async runCardLifecycleEvent<T extends CardLifecycleEvent>(trigger: T, args: CardLifecycleEventArgMap[T]) {
-    const card = this._cardLibrary.getCard(args.cardId);
+    const card = this.cardLibrary.getCard(args.cardId);
 
     const fn = cardLifecycleMap[card.cardKey]?.[trigger];
     if (!fn) {
@@ -229,15 +229,15 @@ export class ReactionManager {
     console.info(`[REACTION MANAGER] running lifecycle trigger '${trigger}' for card ${card}`);
 
     await fn({
-      cardSourceController: this._cardSourceController,
-      runGameActionDelegate: this._runGameActionDelegate,
-      cardPriceController: this._cardPriceController,
-      logManager: this._logManager,
-      cardLibrary: this._cardLibrary,
-      match: this._match,
+      cardSourceController: this.cardSourceController,
+      runGameActionDelegate: this.runGameActionDelegate,
+      cardPriceController: this.cardPriceController,
+      logManager: this.logManager,
+      cardLibrary: this.cardLibrary,
+      match: this.match,
       reactionManager: this,
-      findCardService: this._findCardService,
-      supplyGainService: this._supplyGainService,
+      findCardService: this.findCardService,
+      supplyGainService: this.supplyGainService,
     }, args as any);
   }
 
@@ -249,8 +249,8 @@ export class ReactionManager {
     // now we get the order of players that could be affected by the play (including the current player),
     // then get reactions for them and run them
     const targetOrder = getOrderStartingFrom(
-      this._match.players,
-      this._match.currentPlayerTurnIndex,
+      this.match.players,
+      this.match.currentPlayerTurnIndex,
     );
 
     for (const targetPlayer of targetOrder) {
@@ -311,12 +311,12 @@ export class ReactionManager {
         // and the same card
         if (shouldPrompt || (promptReactions.length === 1 && compulsoryReactions.length === 0)) {
           const grouped = groupReactionsByCardKey(promptReactions);
-          const actionButtons = buildActionButtons(grouped, this._cardLibrary);
+          const actionButtons = buildActionButtons(grouped, this.cardLibrary);
           const actionMap = buildActionMap(grouped);
 
           console.info(`[REACTION MANAGER] prompting ${targetPlayer} to choose reaction`);
 
-          const result = await this._runGameActionDelegate('userPrompt', {
+          const result = await this.runGameActionDelegate('userPrompt', {
             playerId: targetPlayer.id,
             actionButtons,
             prompt: 'Choose reaction?',
@@ -381,7 +381,7 @@ export class ReactionManager {
     context: TriggeredEffectContext<T>,
     reactionContext?: any,
   ) {
-    await this._logManager.withIndent(async () => {
+    await this.logManager.withIndent(async () => {
       // Ensure reaction-caused logs are scoped and unwind cleanly.
       await reaction.triggeredEffectFn({
         ...context,
@@ -400,17 +400,17 @@ export class ReactionManager {
     reaction: Reaction,
   ): TriggeredEffectContext<T> {
     return {
-      cardSourceController: this._cardSourceController,
-      findCardService: this._findCardService,
-      supplyGainService: this._supplyGainService,
+      cardSourceController: this.cardSourceController,
+      findCardService: this.findCardService,
+      supplyGainService: this.supplyGainService,
       reactionManager: this,
-      cardPriceController: this._cardPriceController,
-      logManager: this._logManager,
+      cardPriceController: this.cardPriceController,
+      logManager: this.logManager,
       isRootLog: false,
-      runGameActionDelegate: this._runGameActionDelegate,
+      runGameActionDelegate: this.runGameActionDelegate,
       trigger,
-      cardLibrary: this._cardLibrary,
-      match: this._match,
+      cardLibrary: this.cardLibrary,
+      match: this.match,
       reaction,
     };
   }

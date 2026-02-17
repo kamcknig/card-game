@@ -36,11 +36,11 @@ const formatCostLabel = (cost: CardCost): string => {
 
 export class BuyOptionsResolver {
   constructor(
-    private readonly _match: Match,
-    private readonly _cardLibrary: MatchCardLibrary,
-    private readonly _cardPriceController: CardPriceRulesController,
-    private readonly _cardSourceController: CardSourceController,
-    private readonly _findCardService: FindCardService,
+    private readonly match: Match,
+    private readonly cardLibrary: MatchCardLibrary,
+    private readonly cardPriceController: CardPriceRulesController,
+    private readonly cardSourceController: CardSourceController,
+    private readonly findCardService: FindCardService,
   ) {}
 
   // Resolves all currently legal ways the player can buy the card.
@@ -49,8 +49,8 @@ export class BuyOptionsResolver {
     cost: CardCost;
     options: ResolvedBuyOption[];
   } {
-    const card = args.cardId instanceof Card ? args.cardId : this._cardLibrary.getCard(args.cardId);
-    const { restricted, cost } = this._cardPriceController.applyRules(card, {
+    const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
+    const { restricted, cost } = this.cardPriceController.applyRules(card, {
       playerId: args.playerId,
     });
 
@@ -58,8 +58,8 @@ export class BuyOptionsResolver {
     const canBuyCondition = cardActionConditionMapFactory[card.cardKey]?.canBuy;
     if (
       canBuyCondition && !canBuyCondition({
-        match: this._match,
-        cardLibrary: this._cardLibrary,
+        match: this.match,
+        cardLibrary: this.cardLibrary,
         playerId: args.playerId,
       })
     ) {
@@ -71,8 +71,8 @@ export class BuyOptionsResolver {
     // Standard payment is available only when normal treasure/potion affordability passes.
     if (
       !restricted &&
-      cost.treasure <= this._match.playerTreasure &&
-      (cost.potion === undefined || cost.potion <= this._match.playerPotions)
+      cost.treasure <= this.match.playerTreasure &&
+      (cost.potion === undefined || cost.potion <= this.match.playerPotions)
     ) {
       options.push({
         id: 'standard',
@@ -87,13 +87,13 @@ export class BuyOptionsResolver {
     for (const option of alternateOptions) {
       if (
         !option.canBuy({
-          match: this._match,
+          match: this.match,
           playerId: args.playerId,
           card,
-          cardLibrary: this._cardLibrary,
-          findCardService: this._findCardService,
-          cardSourceController: this._cardSourceController,
-          cardPriceController: this._cardPriceController,
+          cardLibrary: this.cardLibrary,
+          findCardService: this.findCardService,
+          cardSourceController: this.cardSourceController,
+          cardPriceController: this.cardPriceController,
         })
       ) {
         continue;

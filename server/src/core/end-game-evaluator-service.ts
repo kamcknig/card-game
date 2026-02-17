@@ -10,19 +10,19 @@ import { getStartingSupplyCount } from '../utils/get-starting-supply-count.ts';
 // Evaluates game-end conditions for a match while MatchController handles orchestration.
 export class EndGameEvaluatorService {
   constructor(
-    private readonly _match: Match,
-    private readonly _cardSourceController: CardSourceController,
-    private readonly _cardLibrary: MatchCardLibrary,
-    private readonly _cardPriceController: CardPriceRulesController,
-    private readonly _logManager: LogManager,
-    private readonly _reactionManager: ReactionManager,
-    private readonly _findCardService: FindCardService,
-    private readonly _supplyGainService: SupplyGainService,
+    private readonly match: Match,
+    private readonly cardSourceController: CardSourceController,
+    private readonly cardLibrary: MatchCardLibrary,
+    private readonly cardPriceController: CardPriceRulesController,
+    private readonly logManager: LogManager,
+    private readonly reactionManager: ReactionManager,
+    private readonly findCardService: FindCardService,
+    private readonly supplyGainService: SupplyGainService,
   ) {}
 
   public shouldEndGame(expansionEndGameConditionFns: EndGameConditionFn[]): boolean {
     if (
-      this._findCardService.findCards([
+      this.findCardService.findCards([
         { location: 'basicSupply' },
         { cardKeys: 'province' },
       ]).length === 0
@@ -31,8 +31,8 @@ export class EndGameEvaluatorService {
       return true;
     }
 
-    const startingSupplyCount = getStartingSupplyCount(this._match);
-    const remainingSupplyCount = this._findCardService.getRemainingSupplyCount();
+    const startingSupplyCount = getStartingSupplyCount(this.match);
+    const remainingSupplyCount = this.findCardService.getRemainingSupplyCount();
     const emptyPileCount = startingSupplyCount - remainingSupplyCount;
 
     console.debug(`[match] empty pile count ${emptyPileCount}`);
@@ -44,14 +44,14 @@ export class EndGameEvaluatorService {
 
     for (const conditionFn of expansionEndGameConditionFns) {
       const shouldEnd = conditionFn({
-        cardSourceController: this._cardSourceController,
-        match: this._match,
-        cardLibrary: this._cardLibrary,
-        cardPriceController: this._cardPriceController,
-        logManager: this._logManager,
-        reactionManager: this._reactionManager,
-        findCardService: this._findCardService,
-        supplyGainService: this._supplyGainService,
+        cardSourceController: this.cardSourceController,
+        match: this.match,
+        cardLibrary: this.cardLibrary,
+        cardPriceController: this.cardPriceController,
+        logManager: this.logManager,
+        reactionManager: this.reactionManager,
+        findCardService: this.findCardService,
+        supplyGainService: this.supplyGainService,
       });
       if (shouldEnd) {
         console.info('[match] expansion end-game condition met');

@@ -11,7 +11,7 @@ export type RegisterPlayerJoinResult =
 export class PlayerRegistryService {
   constructor(
     // Keep player-cap policy configurable via DI while preserving the existing default.
-    private readonly _maxPlayers = 6,
+    private readonly maxPlayers = 6,
   ) {
   }
 
@@ -25,7 +25,7 @@ export class PlayerRegistryService {
     const {players, sessionId, socket, matchStarted} = args;
 
     // Preserve existing behavior: reject once lobby has reached hard player cap.
-    if (players.length >= this._maxPlayers) {
+    if (players.length >= this.maxPlayers) {
       return {status: 'rejected_capacity'};
     }
 
