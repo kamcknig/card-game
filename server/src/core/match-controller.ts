@@ -33,7 +33,6 @@ import {
 import { CardSourceController } from './card-source-controller.ts';
 import { tokenDefinitionMap } from './tokens/token-definition-map.ts';
 import { prosperityTokenIds } from '@expansions/prosperity/token-prosperity-ids.ts';
-import { renaissanceTokenIds } from '@expansions/renaissance/token-ids-renaissance.ts';
 import { ReactionManager } from './reactions/reaction-manager.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';
 import { LogManager } from './log-manager.ts';
@@ -636,90 +635,17 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }
   }
 
-  // Returns the Fleet project id when Fleet is in the current project lineup.
-  private getFleetProjectId(): CardId | undefined {
-    return this.match.projects.find((project) => project.cardKey === 'fleet')?.id;
-  }
-
-  // Returns true when the given player currently owns Fleet via a cube token.
-  private doesPlayerOwnFleet(playerId: PlayerId): boolean {
-    const fleetProjectId = this.getFleetProjectId();
-    if (fleetProjectId === undefined) {
-      return false;
-    }
-
-    return Object.values(this.match.tokens ?? {}).some((token) =>
-      token.tokenId === renaissanceTokenIds.cube &&
-      token.ownerId === playerId &&
-      token.location.type === 'cardLike' &&
-      token.location.cardLikeId === fleetProjectId
-    );
-  }
-
-  // Builds Fleet turn order starting with the next player after the player ending the game.
-  private getFleetEligiblePlayerIdsInOrder(endingPlayerIndex: number): PlayerId[] {
-    const players = this.match.players;
-    const eligiblePlayerIds: PlayerId[] = [];
-    if (!players.length) {
-      return eligiblePlayerIds;
-    }
-
-    for (let offset = 1; offset <= players.length; offset++) {
-      const playerIndex = (endingPlayerIndex + offset) % players.length;
-      const player = players[playerIndex];
-      if (!player) {
-        continue;
-      }
-      if (this.doesPlayerOwnFleet(player.id)) {
-        eligiblePlayerIds.push(player.id);
-      }
-    }
-
-    return eligiblePlayerIds;
-  }
-
   private async checkGameEnd() {
     console.info(`[match] checking if the game has ended`);
-
-    const match = this.match;
-    // Fleet latches game-end state once activated; do not re-evaluate end conditions during Fleet turns.
-    if (match.fleetRound.completed) {
-      console.info('[match] Fleet round completed; finalizing game end');
-      await this.endGame();
-      return true;
-    }
-    if (match.fleetRound.active) {
-      console.info('[match] game end latched; Fleet round still active');
+    const endGameEvaluation = this._endGameEvaluator?.evaluateEndGame(this._expansionEndGameConditionFns);
+    if (!endGameEvaluation) {
       return false;
     }
 
-    const shouldEndGame = this._endGameEvaluator?.shouldEndGame(this._expansionEndGameConditionFns) ?? false;
-
-    if (!shouldEndGame) {
-      return false;
-    }
-
-    // Determine Fleet-eligible players once at game-end latch time.
-    const fleetEligiblePlayerIds = this.getFleetEligiblePlayerIdsInOrder(match.currentPlayerTurnIndex);
-    if (!fleetEligiblePlayerIds.length) {
-      console.info('[match] no Fleet owners; ending game immediately');
+    if (endGameEvaluation.shouldEndNow) {
       await this.endGame();
       return true;
     }
-
-    // Activate Fleet endgame round and defer final scoring until all Fleet turns are complete.
-    match.fleetRound.active = true;
-    match.fleetRound.completed = false;
-    match.fleetRound.eligiblePlayerIdsInOrder = fleetEligiblePlayerIds;
-    match.fleetRound.nextFleetPlayerIndex = 0;
-    match.fleetRound.endingPlayerId = getCurrentPlayer(match).id;
-    match.fleetRound.startedAtTurnNumber = match.turnNumber;
-
-    console.info(
-      `[match] Fleet round activated by player ${match.fleetRound.endingPlayerId}; order: ${
-        fleetEligiblePlayerIds.join(', ')
-      }`,
-    );
 
     return false;
   }
