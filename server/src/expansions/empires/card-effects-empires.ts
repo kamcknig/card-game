@@ -443,19 +443,19 @@ const expansion: CardExpansionModule = {
       console.debug(
         `[catapult effect] prompting player ${playerId} to trash a card`,
       );
-      const selectedCardIds = await args.actionService.run('selectSingleCard', {
+      const selectedCardId = await args.actionService.run('selectSingleCard', {
         playerId,
         prompt: 'Trash a card',
         restrict: { location: 'playerHand', playerId },
         count: 1,
       });
 
-      if (!selectedCardIds) {
+      if (!selectedCardId) {
         console.warn(`[catapult effect] no card selected to trash`);
         return;
       }
 
-      const trashedCard = cardLibrary.getCard(selectedCardIds);
+      const trashedCard = cardLibrary.getCard(selectedCardId);
       console.debug(`[catapult effect] trashing ${trashedCard}`);
       await args.actionService.run('trashCard', {
         playerId,
@@ -859,7 +859,7 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const selectedCardIds = await args.actionService.run('selectSingleCard', {
+      const selectedCardId = await args.actionService.run('selectSingleCard', {
         playerId: args.playerId,
         prompt: `Select Gold or Plunder to reveal?`,
         restrict: validCards.map((c) => c.id),
@@ -868,7 +868,7 @@ const expansion: CardExpansionModule = {
         cancelPrompt: 'NO',
       });
 
-      if (!selectedCardIds) {
+      if (!selectedCardId) {
         console.debug(`[encampment effect] no card selected`);
         await doSetAside();
         return;
@@ -890,7 +890,7 @@ const expansion: CardExpansionModule = {
         if (!validCards.length) {
           console.debug(`[engineer effect] no valid cards in supply`);
         } else {
-          const selectedCardIds = await args.actionService.run(
+          const selectedCardId = await args.actionService.run(
             'selectCard',
             {
               playerId: args.playerId,
@@ -901,13 +901,13 @@ const expansion: CardExpansionModule = {
             },
           );
 
-          if (!selectedCardIds.length) {
+          if (!selectedCardId.length) {
             console.debug(`[engineer effect] no card selected`);
           } else {
-            console.debug(`[engineer effect] gaining ${selectedCardIds[0]}`);
+            console.debug(`[engineer effect] gaining ${selectedCardId[0]}`);
             await args.actionService.run('gainCard', {
               playerId: args.playerId,
-              cardId: selectedCardIds[0],
+              cardId: selectedCardId[0],
               to: { location: 'playerDiscard' },
             });
           }
@@ -1175,7 +1175,7 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const selectedCardIds = await args.actionService.run('selectSingleCard', {
+      const selectedCardId = await args.actionService.run('selectSingleCard', {
         playerId: args.playerId,
         prompt: `Select card to reveal`,
         restrict: hand,
@@ -1183,13 +1183,13 @@ const expansion: CardExpansionModule = {
         optional: false,
       });
 
-      if (!selectedCardIds) {
+      if (!selectedCardId) {
         console.debug(`[gladiator effect] no card selected`);
         await trashCard();
         return;
       }
 
-      const selectedCard = args.cardLibrary.getCard(selectedCardIds);
+      const selectedCard = args.cardLibrary.getCard(selectedCardId);
 
       await args.actionService.run('revealCard', {
         playerId: args.playerId,
@@ -1334,24 +1334,24 @@ const expansion: CardExpansionModule = {
         `[overlord effect] player ${args.playerId} can play: ${eligibleCards.map((card) => card.cardKey).join(', ')}`,
       );
 
-      const selectedCardIds = await args.actionService.run('selectSingleCard', {
+      const selectedCardId = await args.actionService.run('selectSingleCard', {
         playerId: args.playerId,
         prompt: 'Select a supply action costing up to $5 to play',
         restrict: eligibleCards.map((card) => card.id),
         count: 1,
       });
 
-      if (!selectedCardIds) {
+      if (!selectedCardId) {
         console.debug(`[overlord effect] player declined to play a supply action`);
         return;
       }
 
-      const selectedCard = args.cardLibrary.getCard(selectedCardIds);
+      const selectedCard = args.cardLibrary.getCard(selectedCardId);
       console.info(`[overlord effect] playing ${selectedCard.cardKey} from supply`);
 
       await args.actionService.run('playCard', {
         playerId: args.playerId,
-        cardId: selectedCardIds,
+        cardId: selectedCardId,
         overrides: {
           actionCost: 0,
           moveCard: false,
@@ -1718,7 +1718,7 @@ const expansion: CardExpansionModule = {
       console.debug(
         `[settlers effect] prompting player ${args.playerId} to reveal Copper from discard`,
       );
-      const selectedCardIds = await args.actionService.run('selectSingleCard', {
+      const selectedCardId = await args.actionService.run('selectSingleCard', {
         playerId: args.playerId,
         prompt: 'Reveal a Copper to put into your hand',
         restrict: copperInDiscard.map((card) => card.id),
@@ -1726,12 +1726,12 @@ const expansion: CardExpansionModule = {
         optional: true,
       });
 
-      if (!selectedCardIds) {
+      if (!selectedCardId) {
         console.debug(`[settlers effect] player chose not to reveal Copper`);
         return;
       }
 
-      const selectedCard = args.cardLibrary.getCard(selectedCardIds);
+      const selectedCard = args.cardLibrary.getCard(selectedCardId);
       console.info(
         `[settlers effect] revealing ${selectedCard} from discard to hand`,
       );
@@ -1771,7 +1771,7 @@ const expansion: CardExpansionModule = {
       console.debug(
         `[bustling village effect] prompting player ${args.playerId} to reveal Settlers from discard`,
       );
-      const selectedCardIds = await args.actionService.run('selectSingleCard', {
+      const selectedCardId = await args.actionService.run('selectSingleCard', {
         playerId: args.playerId,
         prompt: 'Reveal a Settlers to put into your hand',
         restrict: settlersInDiscard.map((card) => card.id),
@@ -1779,12 +1779,12 @@ const expansion: CardExpansionModule = {
         optional: true,
       });
 
-      if (!selectedCardIds) {
+      if (!selectedCardId) {
         console.debug(`[bustling village effect] player chose not to reveal Settlers`);
         return;
       }
 
-      const selectedCard = args.cardLibrary.getCard(selectedCardIds);
+      const selectedCard = args.cardLibrary.getCard(selectedCardId);
       console.info(
         `[bustling village effect] revealing ${selectedCard} from discard to hand`,
       );
@@ -2043,19 +2043,19 @@ const expansion: CardExpansionModule = {
       console.debug(
         `[sacrifice effect] prompting player ${args.playerId} to trash a card`,
       );
-      const selectedCardIds = await args.actionService.run('selectSingleCard', {
+      const selectedCardId = await args.actionService.run('selectSingleCard', {
         playerId: args.playerId,
         prompt: 'Trash a card',
         restrict: { location: 'playerHand', playerId: args.playerId },
         count: 1,
       });
 
-      if (!selectedCardIds) {
+      if (!selectedCardId) {
         console.warn(`[sacrifice effect] no card selected to trash`);
         return;
       }
 
-      const trashedCard = args.cardLibrary.getCard(selectedCardIds);
+      const trashedCard = args.cardLibrary.getCard(selectedCardId);
       console.debug(`[sacrifice effect] trashing ${trashedCard}`);
       await args.actionService.run('trashCard', {
         playerId: args.playerId,

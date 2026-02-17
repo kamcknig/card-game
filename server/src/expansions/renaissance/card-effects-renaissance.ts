@@ -55,14 +55,14 @@ const expansion: CardExpansionModule = {
 
       // Prompt the player to choose one revealed card to put into hand.
       const revealedIds = revealedCards.map((card) => card.id);
-      const selectedIds = await cardEffectArgs.actionService.run('selectSingleCard', {
+      const selectedId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Choose a card to put into your hand',
         restrict: revealedIds,
         count: 1,
       });
 
-      const chosenId = selectedIds ?? revealedIds[0];
+      const chosenId = selectedId ?? revealedIds[0];
       console.debug(`[border-guard effect] moving chosen card ${chosenId} to hand`);
       await cardEffectArgs.actionService.run('moveCard', {
         cardId: chosenId,
@@ -1619,14 +1619,14 @@ const expansion: CardExpansionModule = {
           continue;
         }
 
-        const selectedDiscardIds = await cardEffectArgs.actionService.run('selectSingleCard', {
+        const selectedDiscardId = await cardEffectArgs.actionService.run('selectSingleCard', {
           playerId: targetPlayerId,
           prompt: 'Discard a card costing $2 or more',
           restrict: discardableIds,
           count: 1,
         });
 
-        const selectedDiscardId = selectedDiscardIds ?? discardableIds[0];
+        const selectedDiscardId = selectedDiscardId ?? discardableIds[0];
         const selectedDiscardCard = cardEffectArgs.cardLibrary.getCard(selectedDiscardId);
         console.debug(`[villain effect] player ${targetPlayerId} discarding ${selectedDiscardCard}`);
         await cardEffectArgs.actionService.run('discardCard', {

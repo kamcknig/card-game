@@ -136,7 +136,7 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      const selectedNameCardIds = await cardEffectArgs.actionService.run('selectSingleCard', {
+      const selectedNameCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Choose a duplicated card name to Exile',
         restrict: selectableNameCardIds,
@@ -144,12 +144,12 @@ const effectMap: CardExpansionModule = {
         optional: true,
       });
 
-      if (!selectedNameCardIds) {
+      if (!selectedNameCardId) {
         console.debug('[banish effect] player declined to choose a card name');
         return;
       }
 
-      const selectedNameCard = cardEffectArgs.cardLibrary.getCard(selectedNameCardIds);
+      const selectedNameCard = cardEffectArgs.cardLibrary.getCard(selectedNameCardId);
       const matchingCards = cardIdsByKey[selectedNameCard.cardKey] ?? [];
 
       const cardsToExile = await cardEffectArgs.actionService.run('selectCard', {
@@ -282,7 +282,7 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      const selectedActionCardIds = await cardEffectArgs.actionService.run('selectSingleCard', {
+      const selectedActionCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Set aside an Action card to play next turn?',
         restrict: actionCardsInHand.map((card) => card.id),
@@ -290,12 +290,12 @@ const effectMap: CardExpansionModule = {
         optional: true,
       });
 
-      if (!selectedActionCardIds) {
+      if (!selectedActionCardId) {
         console.debug('[delay effect] player declined to set aside an Action');
         return;
       }
 
-      const selectedActionCardId = selectedActionCardIds;
+      const selectedActionCardId = selectedActionCardId;
       await cardEffectArgs.actionService.run('moveCard', {
         toPlayerId: cardEffectArgs.playerId,
         cardId: selectedActionCardId,
@@ -342,21 +342,21 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      const selectedCardIds = await cardEffectArgs.actionService.run('selectSingleCard', {
+      const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Gain a card costing up to $4 onto your deck',
         restrict: gainableCards.map((card) => card.id),
         count: 1,
       });
 
-      if (!selectedCardIds) {
+      if (!selectedCardId) {
         console.warn('[demand effect] no card selected to gain');
         return;
       }
 
       await cardEffectArgs.actionService.run('gainCard', {
         playerId: cardEffectArgs.playerId,
-        cardId: selectedCardIds,
+        cardId: selectedCardId,
         to: { location: 'playerDeck' },
       });
     },
@@ -506,21 +506,21 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      const selectedGainIds = await cardEffectArgs.actionService.run('selectSingleCard', {
+      const selectedGainId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Gain a card costing up to $2 more than the trashed card',
         restrict: gainableCards.map((card) => card.id),
         count: 1,
       });
 
-      if (!selectedGainIds) {
+      if (!selectedGainId) {
         console.warn('[enhance effect] no gain card selected');
         return;
       }
 
       await cardEffectArgs.actionService.run('gainCard', {
         playerId: cardEffectArgs.playerId,
-        cardId: selectedGainIds,
+        cardId: selectedGainId,
         to: { location: 'playerDiscard' },
       });
     },
@@ -603,19 +603,19 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      const selectedCardIds = await cardEffectArgs.actionService.run('selectSingleCard', {
+      const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Exile an Action card from the Supply',
         restrict: actionCards.map((card) => card.id),
         count: 1,
       });
 
-      if (!selectedCardIds) {
+      if (!selectedCardId) {
         console.warn('[invest effect] no card selected');
         return;
       }
 
-      const selectedCardId = selectedCardIds;
+      const selectedCardId = selectedCardId;
       const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
 
       await cardEffectArgs.actionService.run('exileCard', {
@@ -697,7 +697,7 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      const selectedCardIds = await cardEffectArgs.actionService.run('selectSingleCard', {
+      const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Play an Action card from your discard?',
         restrict: actionCardsInDiscard.map((card) => card.id),
@@ -705,14 +705,14 @@ const effectMap: CardExpansionModule = {
         optional: true,
       });
 
-      if (!selectedCardIds) {
+      if (!selectedCardId) {
         console.debug('[march effect] player declined to play from discard');
         return;
       }
 
       await cardEffectArgs.actionService.run('playCard', {
         playerId: cardEffectArgs.playerId,
-        cardId: selectedCardIds,
+        cardId: selectedCardId,
         overrides: { actionCost: 0 },
       });
     },
@@ -741,7 +741,7 @@ const effectMap: CardExpansionModule = {
           return;
         }
 
-        const selectedCardIds = await cardEffectArgs.actionService.run('selectSingleCard', {
+        const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
           playerId: cardEffectArgs.playerId,
           prompt: 'Choose the next card to gain (Populate)',
           restrict: selectableTopCards.map((entry) => entry.card.id),
@@ -749,7 +749,7 @@ const effectMap: CardExpansionModule = {
         });
 
         // If selection unexpectedly fails, fall back to the first available option.
-        const selectedCardId = selectedCardIds ?? selectableTopCards[0].card.id;
+        const selectedCardId = selectedCardId ?? selectableTopCards[0].card.id;
         const selectedTopCard = selectableTopCards.find((entry) => entry.card.id === selectedCardId) ??
           selectableTopCards[0];
 
@@ -967,7 +967,7 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      const selectedCardIds = await cardEffectArgs.actionService.run('selectSingleCard', {
+      const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Play an Action card from your hand?',
         restrict: actionCardsInHand.map((card) => card.id),
@@ -975,14 +975,14 @@ const effectMap: CardExpansionModule = {
         optional: true,
       });
 
-      if (!selectedCardIds) {
+      if (!selectedCardId) {
         console.debug('[toil effect] player declined to play an Action');
         return;
       }
 
       await cardEffectArgs.actionService.run('playCard', {
         playerId: cardEffectArgs.playerId,
-        cardId: selectedCardIds,
+        cardId: selectedCardId,
         overrides: { actionCost: 0 },
       });
     },
@@ -1022,40 +1022,40 @@ const effectMap: CardExpansionModule = {
       }
 
       if (selectedMode === 'supply') {
-        const selectedCardIds = await cardEffectArgs.actionService.run('selectSingleCard', {
+        const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
           playerId: cardEffectArgs.playerId,
           prompt: 'Exile an Action card from the Supply',
           restrict: supplyActionCards.map((card) => card.id),
           count: 1,
         });
 
-        if (!selectedCardIds) {
+        if (!selectedCardId) {
           console.warn('[transport effect] no Supply Action selected to Exile');
           return;
         }
 
         await cardEffectArgs.actionService.run('exileCard', {
           playerId: cardEffectArgs.playerId,
-          cardId: selectedCardIds,
+          cardId: selectedCardId,
         });
         return;
       }
 
-      const selectedCardIds = await cardEffectArgs.actionService.run('selectSingleCard', {
+      const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Put an Action card from Exile onto your deck',
         restrict: exileActionCards.map((card) => card.id),
         count: 1,
       });
 
-      if (!selectedCardIds) {
+      if (!selectedCardId) {
         console.warn('[transport effect] no Exiled Action selected to topdeck');
         return;
       }
 
       await cardEffectArgs.actionService.run('moveCard', {
         toPlayerId: cardEffectArgs.playerId,
-        cardId: selectedCardIds,
+        cardId: selectedCardId,
         to: { location: 'playerDeck' },
       });
     },

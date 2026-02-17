@@ -1,5 +1,5 @@
 import { ActionService, PromptService as PromptServiceContract } from '@server-types/index.ts';
-import { CardId, SelectActionCardArgs, UserPromptActionArgs } from 'shared/types/index.ts';
+import { CardId, SelectSingleActionCardArgs, UserPromptActionArgs } from 'shared/types/index.ts';
 
 // Provides typed prompt helpers so effect code can avoid repetitive cast/parsing logic.
 export class PromptService implements PromptServiceContract {
@@ -36,7 +36,7 @@ export class PromptService implements PromptServiceContract {
   }
 
   // Requests a single card selection and returns null when no card was selected.
-  public async selectSingleCard(args: SelectActionCardArgs): Promise<CardId | null> {
+  public async selectSingleCard(args: SelectSingleActionCardArgs): Promise<CardId | null> {
     return await this.actionService.run('selectSingleCard', args);
   }
 

@@ -604,21 +604,21 @@ const effectMap: CardExpansionModule = {
           });
 
           console.debug(`[city-gate project] prompting to topdeck from ${hand.length} card(s)`);
-          const selectedCardIds = await triggeredArgs.actionService.run('selectSingleCard', {
+          const selectedCardId = await triggeredArgs.actionService.run('selectSingleCard', {
             playerId: cardEffectArgs.playerId,
             prompt: 'Put a card from your hand onto your deck',
             restrict: hand,
             count: 1,
           });
 
-          if (!selectedCardIds) {
+          if (!selectedCardId) {
             console.warn('[city-gate project] no card selected to topdeck');
             return;
           }
 
-          console.debug(`[city-gate project] topdecking ${selectedCardIds}`);
+          console.debug(`[city-gate project] topdecking ${selectedCardId}`);
           await triggeredArgs.actionService.run('moveCard', {
-            cardId: selectedCardIds,
+            cardId: selectedCardId,
             toPlayerId: cardEffectArgs.playerId,
             to: { location: 'playerDeck' },
           });
@@ -666,7 +666,7 @@ const effectMap: CardExpansionModule = {
           }
 
           console.debug(`[crop-rotation project] prompting discard from ${victoryCards.length} Victory card(s)`);
-          const selectedCardIds = await triggeredArgs.actionService.run('selectSingleCard', {
+          const selectedCardId = await triggeredArgs.actionService.run('selectSingleCard', {
             playerId: cardEffectArgs.playerId,
             prompt: 'Discard a Victory card for +2 Cards?',
             restrict: victoryCards.map((card) => card.id),
@@ -674,7 +674,7 @@ const effectMap: CardExpansionModule = {
             optional: true,
           });
 
-          if (!selectedCardIds) {
+          if (!selectedCardId) {
             console.debug('[crop-rotation project] player declined to discard a Victory card');
             return;
           }
@@ -686,10 +686,10 @@ const effectMap: CardExpansionModule = {
             effectText: 'Discard a Victory card',
           });
 
-          console.debug(`[crop-rotation project] discarding ${selectedCardIds}`);
+          console.debug(`[crop-rotation project] discarding ${selectedCardId}`);
           await triggeredArgs.actionService.run('discardCard', {
             playerId: cardEffectArgs.playerId,
-            cardId: selectedCardIds,
+            cardId: selectedCardId,
           });
 
           triggeredArgs.logManager.addLogEntry({
@@ -1280,7 +1280,7 @@ const effectMap: CardExpansionModule = {
           }
 
           console.debug(`[sewers project] prompting to trash from ${hand.length} card(s)`);
-          const selectedCardIds = await triggeredArgs.actionService.run('selectSingleCard', {
+          const selectedCardId = await triggeredArgs.actionService.run('selectSingleCard', {
             playerId: cardEffectArgs.playerId,
             prompt: 'Trash a card from your hand',
             restrict: hand,
@@ -1288,7 +1288,7 @@ const effectMap: CardExpansionModule = {
             optional: true,
           });
 
-          if (!selectedCardIds) {
+          if (!selectedCardId) {
             console.debug('[sewers project] player declined to trash');
             return;
           }
@@ -1300,10 +1300,10 @@ const effectMap: CardExpansionModule = {
             effectText: 'Trash a card',
           });
 
-          console.debug(`[sewers project] trashing ${selectedCardIds}`);
+          console.debug(`[sewers project] trashing ${selectedCardId}`);
           await triggeredArgs.actionService.run('trashCard', {
             playerId: cardEffectArgs.playerId,
-            cardId: selectedCardIds,
+            cardId: selectedCardId,
           }, {
             // Mark the source so Sewers can ignore its own trash trigger.
             loggingContext: { source: project.id },

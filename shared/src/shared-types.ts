@@ -287,6 +287,17 @@ export interface SelectActionCardArgs {
   cancelPrompt?: string;
 }
 
+// Single-card selection only allows one-card count shapes.
+export type SingleSelectCountSpec =
+  | 1
+  | { kind: 'upTo'; count: 1; }
+  | { kind: 'exact'; count: 1; };
+
+// Arguments accepted by selectSingleCard.
+export interface SelectSingleActionCardArgs extends Omit<SelectActionCardArgs, 'count'> {
+  count?: SingleSelectCountSpec;
+}
+
 export type UserPromptKinds =
   | { type: 'blind-rearrange'; cardIds: CardId[]; }
   | { type: 'rearrange'; cardIds: CardId[]; }

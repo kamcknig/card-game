@@ -3,6 +3,8 @@ export type {
   ActionButtons,
   EffectTarget,
   SelectActionCardArgs,
+  SelectSingleActionCardArgs,
+  SingleSelectCountSpec,
   UserPromptActionArgs,
   UserPromptKinds,
 } from "../shared-types.ts";

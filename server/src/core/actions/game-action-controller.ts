@@ -12,6 +12,7 @@ import {
   Match,
   PlayerId,
   SelectActionCardArgs,
+  SelectSingleActionCardArgs,
   TokenFacing,
   TokenId,
   TokenInstance,
@@ -1208,7 +1209,7 @@ export class GameActionController implements GameActionDefinitionMap {
   }
 
   // Wraps selectCard for single-card flows and returns null when no selection was made.
-  async selectSingleCard(args: SelectActionCardArgs): Promise<CardId | null> {
+  async selectSingleCard(args: SelectSingleActionCardArgs): Promise<CardId | null> {
     const selectedCardIds = await this.actionService.run('selectCard', {
       ...args,
       count: 1,

@@ -18,6 +18,7 @@ import {
   NonLocationFilters,
   PlayerId,
   SelectActionCardArgs,
+  SelectSingleActionCardArgs,
   ServerEmitEvents,
   ServerListenEvents,
   SourceFindCardsFilter,
@@ -284,7 +285,7 @@ export interface GameActionDefinitionMap {
     moveToSetAside?: boolean;
   }, context?: GameActionContext) => Promise<CardId | undefined>;
   selectCard: (args: SelectActionCardArgs) => Promise<CardId[]>;
-  selectSingleCard: (args: SelectActionCardArgs) => Promise<CardId | null>;
+  selectSingleCard: (args: SelectSingleActionCardArgs) => Promise<CardId | null>;
   // Generic shuffle action for cards and card-likes; does not add UI log entries.
   shuffle: (
     args: { playerId?: PlayerId; cardIds?: CardId[]; cardLikeIds?: CardLikeId[] },
@@ -332,7 +333,7 @@ export type RunGameActionDelegate = BaseRunGameActionDelegate & {
   ): Promise<CardId[]>;
   (
     action: 'selectSingleCard',
-    args: SelectActionCardArgs,
+    args: SelectSingleActionCardArgs,
   ): Promise<CardId | null>;
   <TUserPromptResult = unknown>(
     action: 'userPrompt',
@@ -350,7 +351,7 @@ export type PromptService = {
   chooseOne(args: UserPromptActionArgs): Promise<number | null>;
   confirm(args: UserPromptActionArgs, confirmAction?: number): Promise<boolean>;
   selectCards(args: UserPromptActionArgs): Promise<CardId[]>;
-  selectSingleCard(args: SelectActionCardArgs): Promise<CardId | null>;
+  selectSingleCard(args: SelectSingleActionCardArgs): Promise<CardId | null>;
   requestActionResult<TResult = unknown>(
     args: UserPromptActionArgs,
   ): Promise<{ action: number; result: TResult | undefined } | null>;
