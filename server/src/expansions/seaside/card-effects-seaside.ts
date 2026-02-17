@@ -64,7 +64,7 @@ const expansion: CardExpansionModule = {
     }),
     registerEffects: () => async (args) => {
       console.debug(`[BLOCKADE EFFECT] prompting user to select card...`);
-      const cardIds = await args.actionService.run('selectCard', {
+      const gainedCardId = await args.actionService.run('selectSingleCard', {
         prompt: 'Gain card',
         playerId: args.playerId,
         restrict: [
@@ -72,9 +72,11 @@ const expansion: CardExpansionModule = {
           { kind: 'upTo', amount: { treasure: 4 }, playerId: args.playerId },
         ],
         count: 1,
-      }) as number[];
-
-      const gainedCardId = cardIds[0];
+      }) as number | null;
+      if (!gainedCardId) {
+        console.warn('[BLOCKADE EFFECT] no card selected');
+        return;
+      }
 
       console.debug(`[BLOCKADE EFFECT] selected card ${args.cardLibrary.getCard(gainedCardId)}`);
 
@@ -332,14 +334,12 @@ const expansion: CardExpansionModule = {
       console.debug(`[haven effect] gaining 1 action...`);
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
-      const cardIds = await cardEffectArgs.actionService.run('selectCard', {
+      const cardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         prompt: 'Choose card to set aside',
         playerId: cardEffectArgs.playerId,
         restrict: cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId),
         count: 1,
-      }) as number[];
-
-      const cardId = cardIds[0];
+      }) as number | null;
 
       if (!cardId) {
         console.warn('[haven effect] no card selected');
@@ -383,13 +383,13 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async ({ actionService, playerId, cardId, ...effectArgs }) => {
       console.debug(`[ISLAND EFFECT] prompting user to select card...`);
 
-      const cardIds = (await actionService.run('selectCard', {
+      const selectedCardId = (await actionService.run('selectSingleCard', {
         prompt: 'Choose card',
         validPrompt: '',
         playerId,
         restrict: effectArgs.cardSourceController.getSource('playerHand', playerId),
         count: 1,
-      })) as number[];
+      })) as number | null;
 
       console.debug(`[ISLAND EFFECT] moving island to island mat...`);
 
@@ -398,8 +398,6 @@ const expansion: CardExpansionModule = {
         to: { location: 'island' },
         toPlayerId: playerId,
       });
-
-      const selectedCardId = cardIds[0];
 
       console.debug(`[ISLAND EFFECT] moving selected card to island mat...`);
 
@@ -892,16 +890,14 @@ const expansion: CardExpansionModule = {
             loggingContext: { source: args.cardId },
           });
 
-          const cardIds = await triggeredArgs.actionService.run('selectCard', {
+          const cardId = await triggeredArgs.actionService.run('selectSingleCard', {
             prompt: 'Trash card',
             playerId: args.playerId,
             restrict: args.cardSourceController.getSource('playerHand', args.playerId),
             count: 1,
             optional: true,
             cancelPrompt: `Don't trash`,
-          }) as number[];
-
-          const cardId = cardIds[0];
+          }) as number | null;
 
           if (!cardId) {
             console.debug(`[sailor triggered effect] no card chosen`);
@@ -1123,13 +1119,11 @@ const expansion: CardExpansionModule = {
 
       console.debug(`[smugglers effect] prompting user to select a card...`);
 
-      const results = await cardEffectArgs.actionService.run('selectCard', {
+      const cardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         restrict: cardsInSupply.map((card) => card.id),
         prompt: `Gain a card`,
-      }) as number[];
-
-      const cardId = results[0];
+      }) as number | null;
 
       if (!cardId) {
         console.warn(`[smugglers effect] no card selected`);

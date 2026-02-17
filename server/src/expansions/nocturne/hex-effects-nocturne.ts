@@ -176,14 +176,12 @@ const registerFear = (registerHexEffect: HexEffectRegistrar) => {
       return;
     }
 
-    const selectedIds = await actionService.run('selectCard', {
+    const selectedId = await actionService.run('selectSingleCard', {
       playerId,
       prompt: 'Discard an Action or Treasure',
       count: 1,
       restrict: eligibleIds,
-    }) as CardId[];
-
-    const selectedId = selectedIds[0];
+    }) as CardId | null;
     if (!selectedId) {
       console.debug('[fear hex] no card selected to discard');
       return;
@@ -224,14 +222,12 @@ const registerHaunting = (registerHexEffect: HexEffectRegistrar) => {
       return;
     }
 
-    const selectedIds = await actionService.run('selectCard', {
+    const selectedId = await actionService.run('selectSingleCard', {
       playerId,
       prompt: 'Put a card from your hand onto your deck',
       count: 1,
       restrict: hand,
-    }) as CardId[];
-
-    const selectedId = selectedIds[0];
+    }) as CardId | null;
     if (!selectedId) {
       console.debug('[haunting hex] no card selected to topdeck');
       return;
@@ -312,14 +308,12 @@ const registerLocusts = (registerHexEffect: HexEffectRegistrar) => {
       return;
     }
 
-    const selectedIds = await actionService.run('selectCard', {
+    const selectedId = await actionService.run('selectSingleCard', {
       playerId,
       prompt: 'Gain a cheaper card sharing a type',
       count: 1,
       restrict: eligibleCards.map((card) => card.id),
-    }) as CardId[];
-
-    const selectedId = selectedIds[0];
+    }) as CardId | null;
     if (!selectedId) {
       console.debug('[locusts hex] no card selected to gain');
       return;

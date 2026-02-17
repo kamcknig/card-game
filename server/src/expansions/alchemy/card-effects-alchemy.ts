@@ -151,19 +151,19 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const selectedCardIds = await args.actionService.run('selectCard', {
+      const selectedCardId = await args.actionService.run('selectSingleCard', {
         playerId: args.playerId,
         prompt: `Trash card`,
         restrict: hand,
         count: 1,
-      }) as CardId[];
+      }) as CardId | null;
 
-      if (!selectedCardIds.length) {
+      if (!selectedCardId) {
         console.warn(`[apprentice effect] no card selected`);
         return;
       }
 
-      const card = args.cardLibrary.getCard(selectedCardIds[0]);
+      const card = args.cardLibrary.getCard(selectedCardId);
 
       console.debug(`[apprentice effect] trashing selected card ${card}`);
 
@@ -451,14 +451,12 @@ const expansion: CardExpansionModule = {
   },
   'transmute': {
     registerEffects: () => async (args) => {
-      const selectedCardIds = await args.actionService.run('selectCard', {
+      const selectedCardId = await args.actionService.run('selectSingleCard', {
         playerId: args.playerId,
         prompt: `Trash card`,
         restrict: args.cardSourceController.getSource('playerHand', args.playerId),
         count: 1,
-      }) as CardId[];
-
-      const selectedCardId = selectedCardIds[0];
+      }) as CardId | null;
       if (!selectedCardId) {
         console.debug(`[transmute effect] no card selected`);
         return;
@@ -533,7 +531,7 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (args) => {
       await args.actionService.run('gainAction', { count: 2 });
 
-      const selectedCardIds = await args.actionService.run('selectCard', {
+      const selectedCardId = await args.actionService.run('selectSingleCard', {
         playerId: args.playerId,
         prompt: `Gain card`,
         restrict: [
@@ -543,9 +541,7 @@ const expansion: CardExpansionModule = {
         ],
         count: 1,
         optional: true,
-      }) as CardId[];
-
-      const selectedCardId = selectedCardIds[0];
+      }) as CardId | null;
 
       if (!selectedCardId) {
         console.debug(`[university effect] no card selected`);

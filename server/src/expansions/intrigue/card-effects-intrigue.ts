@@ -161,14 +161,16 @@ const expansionModule: CardExpansionModule = {
 
       console.debug(`[COURTIER EFFECT] prompting user to reveal a card...`);
 
-      const cardIds = await actionService.run('selectCard', {
+      const cardId = await actionService.run('selectSingleCard', {
         prompt: 'Reveal card',
         count: 1,
         playerId,
         restrict: hand,
-      }) as number[];
-
-      const cardId = cardIds[0];
+      }) as number | null;
+      if (!cardId) {
+        console.debug('[COURTIER EFFECT] no card selected to reveal');
+        return;
+      }
 
       console.debug(`[COURTIER EFFECT] revealing ${cardLibrary.getCard(cardId)}...`);
 
@@ -265,14 +267,16 @@ const expansionModule: CardExpansionModule = {
 
       console.debug(`[COURTYARD EFFECT] prompting user to put card onto deck...`);
 
-      const result = await actionService.run('selectCard', {
+      const cardId = await actionService.run('selectSingleCard', {
         prompt: 'Top deck',
         count: 1,
         playerId,
         restrict: args.cardSourceController.getSource('playerHand', playerId),
-      }) as number[];
-
-      const cardId = result[0];
+      }) as number | null;
+      if (!cardId) {
+        console.debug('[COURTYARD EFFECT] no card selected to top-deck');
+        return;
+      }
 
       console.debug(`[COURTYARD EFFECT] moving ${cardLibrary.getCard(cardId)} to top of deck...`);
 
@@ -368,7 +372,7 @@ const expansionModule: CardExpansionModule = {
     registerEffects: () => async ({ cardLibrary, actionService, playerId, ...args }) => {
       console.debug(`[IRONWORKS EFFECT] prompting user to choose card costing up to 4...`);
 
-      const cardIds = await actionService.run('selectCard', {
+      const cardId = await actionService.run('selectSingleCard', {
         prompt: 'Choose card',
         count: 1,
         restrict: [
@@ -376,17 +380,21 @@ const expansionModule: CardExpansionModule = {
           { playerId, amount: { treasure: 4 }, kind: 'upTo' },
         ],
         playerId,
-      }) as number[];
+      }) as number | null;
+      if (!cardId) {
+        console.debug('[IRONWORKS EFFECT] no card selected to gain');
+        return;
+      }
 
-      console.debug(`[IRONWORKS EFFECT] gaining ${cardLibrary.getCard(cardIds[0])}...`);
+      console.debug(`[IRONWORKS EFFECT] gaining ${cardLibrary.getCard(cardId)}...`);
 
       await actionService.run('gainCard', {
-        cardId: cardIds[0],
+        cardId,
         playerId,
         to: { location: 'playerDiscard' },
       });
 
-      const card = cardLibrary.getCard(cardIds[0]);
+      const card = cardLibrary.getCard(cardId);
 
       if (card.type.includes('ACTION')) {
         console.debug(`[IRONWORKS EFFECT] card is an action, gaining 1 action...`);
@@ -437,7 +445,7 @@ const expansionModule: CardExpansionModule = {
       if (result.action === 1) {
         console.debug(`[LURKER EFFECT] prompting user to select card to trash...`);
 
-        const result = await actionService.run('selectCard', {
+        const cardId = await actionService.run('selectSingleCard', {
           prompt: 'Confirm trash',
           playerId,
           count: 1,
@@ -445,9 +453,11 @@ const expansionModule: CardExpansionModule = {
             { location: ['basicSupply', 'kingdomSupply'] },
             { cardType: 'ACTION' },
           ],
-        }) as number[];
-
-        const cardId = result[0];
+        }) as number | null;
+        if (!cardId) {
+          console.debug('[LURKER EFFECT] no action card selected to trash');
+          return;
+        }
 
         console.debug(`[LURKER EFFECT] trashing ${cardLibrary.getCard(cardId)}...`);
 
@@ -909,14 +919,16 @@ const expansionModule: CardExpansionModule = {
 
       console.debug(`[REPLACE EFFECT] prompting user to trash card...`);
 
-      let result = await actionService.run('selectCard', {
+      let cardId = await actionService.run('selectSingleCard', {
         prompt: 'Trash card',
         playerId,
         restrict: hand,
         count: 1,
-      }) as number[];
-
-      let cardId = result[0];
+      }) as number | null;
+      if (!cardId) {
+        console.debug('[REPLACE EFFECT] no card selected to trash');
+        return;
+      }
       let card = cardLibrary.getCard(cardId);
 
       console.debug(`[REPLACE EFFECT] trashing ${cardLibrary.getCard(cardId)}...`);
@@ -930,7 +942,7 @@ const expansionModule: CardExpansionModule = {
 
       console.debug(`[REPLACE EFFECT] prompting user to gain a card costing up to ${cardCost.treasure + 2}...`);
 
-      result = await actionService.run('selectCard', {
+      cardId = await actionService.run('selectSingleCard', {
         prompt: 'Gain card',
         playerId,
         restrict: [
@@ -938,9 +950,11 @@ const expansionModule: CardExpansionModule = {
           { playerId, kind: 'upTo', amount: { treasure: cardCost.treasure + 2, potion: cardCost.potion } },
         ],
         count: 1,
-      }) as number[];
-
-      cardId = result[0];
+      }) as number | null;
+      if (!cardId) {
+        console.debug('[REPLACE EFFECT] no card selected to gain');
+        return;
+      }
       card = cardLibrary.getCard(cardId);
 
       const location = card.type.some((t) => ['ACTION', 'TREASURE'].includes(t)) ? 'playerDeck' : 'playerDiscard';
@@ -1001,14 +1015,12 @@ const expansionModule: CardExpansionModule = {
       }
 
       console.debug(`[SECRET PASSAGE EFFECT] prompting user to select card from hand`);
-      const cardIds = await actionService.run('selectCard', {
+      const cardId = await actionService.run('selectSingleCard', {
         prompt: 'Choose card',
         playerId,
         restrict: hand,
         count: 1,
-      }) as number[];
-
-      const cardId = cardIds?.[0];
+      }) as number | null;
 
       if (!cardId) {
         console.warn(`[SECRET PASSAGE EFFECT] player selected card, but result doesn't have it`);
@@ -1192,7 +1204,7 @@ const expansionModule: CardExpansionModule = {
 
         console.debug(`[SWINDLER EFFECT] prompting user to select card costing ${cost.treasure}...`);
 
-        const cardIds = await actionService.run('selectCard', {
+        const cardIdToGain = await actionService.run('selectSingleCard', {
           prompt: 'Choose card',
           playerId,
           restrict: [
@@ -1200,8 +1212,12 @@ const expansionModule: CardExpansionModule = {
             { playerId, kind: 'exact', amount: cost },
           ],
           count: 1,
-        }) as number[];
-        cardId = cardIds[0];
+        }) as number | null;
+        if (!cardIdToGain) {
+          console.debug('[SWINDLER EFFECT] no replacement card selected');
+          continue;
+        }
+        cardId = cardIdToGain;
 
         console.debug(`[SWINDLER EFFECT] ${getPlayerById(match, target)} gaining ${cardLibrary.getCard(cardId)}...`);
 
@@ -1374,27 +1390,31 @@ const expansionModule: CardExpansionModule = {
 
       console.debug(`[UPGRADE EFFECT] prompting user to trash card from hand...`);
 
-      let cardIds = await actionService.run('selectCard', {
+      let cardIdToTrash = await actionService.run('selectSingleCard', {
         prompt: 'Confirm trash',
         playerId,
         restrict: args.cardSourceController.getSource('playerHand', playerId),
         count: 1,
-      }) as number[];
+      }) as number | null;
+      if (!cardIdToTrash) {
+        console.debug('[UPGRADE EFFECT] no card selected to trash');
+        return;
+      }
 
-      const card = cardLibrary.getCard(cardIds[0]);
+      const card = cardLibrary.getCard(cardIdToTrash);
 
       console.debug(`[UPGRADE EFFECT] trashing ${card}...`);
 
       await actionService.run('trashCard', {
         playerId,
-        cardId: card.id,
+        cardId: cardIdToTrash,
       });
 
       const { cost: cardCost } = cardPriceController.applyRules(card, { playerId });
 
       console.debug(`[UPGRADE EFFECT] prompting user to select card costing ${cardCost.treasure + 2}...`);
 
-      cardIds = await actionService.run('selectCard', {
+      const cardId = await actionService.run('selectSingleCard', {
         prompt: 'Gain card',
         playerId,
         restrict: [
@@ -1402,9 +1422,11 @@ const expansionModule: CardExpansionModule = {
           { playerId, kind: 'exact', amount: { treasure: cardCost.treasure + 1, potion: cardCost.potion } },
         ],
         count: 1,
-      }) as number[];
-
-      const cardId = cardIds[0];
+      }) as number | null;
+      if (!cardId) {
+        console.debug('[UPGRADE EFFECT] no gain card selected');
+        return;
+      }
 
       console.debug(`[UPGRADE EFFECT] gaining ${cardLibrary.getCard(cardId)} to hand...`);
 

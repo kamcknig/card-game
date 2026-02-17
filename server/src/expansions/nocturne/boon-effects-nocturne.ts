@@ -45,7 +45,7 @@ const registerEarthsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     }
 
     // Prompt the player to optionally discard a Treasure.
-    const discardedTreasureIds = await actionService.run('selectCard', {
+    const discardedTreasureId = await actionService.run('selectSingleCard', {
       prompt: 'Discard a Treasure to gain a card costing up to $4',
       playerId: playerId,
       count: 1,
@@ -54,9 +54,7 @@ const registerEarthsGift = (registerBoonEffect: BoonEffectRegistrar) => {
         { location: 'playerHand', playerId },
         { cardType: ['TREASURE'] },
       ],
-    }) as CardId[];
-
-    const discardedTreasureId = discardedTreasureIds[0];
+    }) as CardId | null;
     if (!discardedTreasureId) {
       console.debug('[the-earths-gift boon] player declined to discard a Treasure');
       return;
@@ -70,7 +68,7 @@ const registerEarthsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     });
 
     console.debug('[the-earths-gift boon] selecting card to gain costing up to $4');
-    const gainCardIds = await actionService.run('selectCard', {
+    const gainCardId = await actionService.run('selectSingleCard', {
       prompt: 'Gain a card costing up to $4',
       playerId: playerId,
       count: 1,
@@ -78,9 +76,7 @@ const registerEarthsGift = (registerBoonEffect: BoonEffectRegistrar) => {
         { location: ['basicSupply', 'kingdomSupply'] },
         { playerId, kind: 'upTo', amount: { treasure: 4 } },
       ],
-    }) as CardId[];
-
-    const gainCardId = gainCardIds[0];
+    }) as CardId | null;
     if (!gainCardId) {
       console.info('[the-earths-gift boon] no eligible cards to gain');
       return;
@@ -155,7 +151,7 @@ const registerFlamesGift = (registerBoonEffect: BoonEffectRegistrar) => {
       return;
     }
 
-    const selectedCardIds = await actionService.run('selectCard', {
+    const selectedCardId = await actionService.run('selectSingleCard', {
       prompt: 'You may trash a card from your hand',
       playerId: playerId,
       count: 1,
@@ -163,9 +159,7 @@ const registerFlamesGift = (registerBoonEffect: BoonEffectRegistrar) => {
       restrict: [
         { location: 'playerHand', playerId },
       ],
-    }) as CardId[];
-
-    const selectedCardId = selectedCardIds[0];
+    }) as CardId | null;
     if (!selectedCardId) {
       console.debug('[the-flames-gift boon] player declined to trash a card');
       return;

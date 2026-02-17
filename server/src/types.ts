@@ -284,6 +284,7 @@ export interface GameActionDefinitionMap {
     moveToSetAside?: boolean;
   }, context?: GameActionContext) => Promise<CardId | undefined>;
   selectCard: (args: SelectActionCardArgs) => Promise<CardId[]>;
+  selectSingleCard: (args: SelectActionCardArgs) => Promise<CardId | null>;
   // Generic shuffle action for cards and card-likes; does not add UI log entries.
   shuffle: (
     args: { playerId?: PlayerId; cardIds?: CardId[]; cardLikeIds?: CardLikeId[] },
@@ -329,6 +330,10 @@ export type RunGameActionDelegate = BaseRunGameActionDelegate & {
     action: 'selectCard',
     args: SelectActionCardArgs,
   ): Promise<CardId[]>;
+  (
+    action: 'selectSingleCard',
+    args: SelectActionCardArgs,
+  ): Promise<CardId | null>;
   <TUserPromptResult = unknown>(
     action: 'userPrompt',
     args: UserPromptActionArgs,

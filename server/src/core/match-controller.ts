@@ -27,6 +27,7 @@ import {
   GameLifecycleCallback,
   GameLifecycleEvent,
   PlayerScoreDecorator,
+  PromptService,
 } from '@server-types/index.ts';
 import { CardSourceController } from './card-source-controller.ts';
 import { tokenDefinitionMap } from './tokens/token-definition-map.ts';
@@ -87,6 +88,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     private readonly playerReconnectOrchestrator: PlayerReconnectOrchestrator,
     private readonly findCardService: FindCardService,
     private readonly supplyGainService: SupplyGainService,
+    private readonly promptService: PromptService,
     private readonly matchEndService: MatchEndService,
   ) {
     super();
@@ -425,7 +427,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     let asyncTimeout: number | undefined = undefined;
 
     try {
-      if (action === 'selectCard' || action === 'userPrompt') {
+      if (action === 'selectCard' || action === 'selectSingleCard' || action === 'userPrompt') {
         // Always sync patches before prompting; advance the snapshot to avoid duplicate diffs.
         this.broadcastPatch(this._matchSnapshot);
         this.logManager.flushQueue();
@@ -596,6 +598,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
             logManager: this.logManager,
             findCardService: this.findCardService,
             supplyGainService: this.supplyGainService,
+            promptService: this.promptService,
             reactionManager: this.reactionManager,
             match: this.match,
             cardLibrary: this.cardLibrary,

@@ -69,14 +69,12 @@ const registerLostInTheWoods = (registerStateEffect: StateEffectRegistrar) => {
           return;
         }
 
-        const selectedCardIds = await actionService.run('selectCard', {
+        const selectedCardId = await actionService.run('selectSingleCard', {
           prompt: 'Discard a card',
           playerId,
           count: 1,
           restrict: hand,
-        }) as CardId[];
-
-        const selectedCardId = selectedCardIds[0];
+        }) as CardId | null;
         if (!selectedCardId) {
           console.debug('[lost-in-the-woods state] no card selected to discard');
           return;

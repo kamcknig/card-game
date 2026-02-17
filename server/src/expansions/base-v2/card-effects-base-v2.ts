@@ -28,7 +28,7 @@ const expansionModule: CardExpansionModule = {
       //Gain a card to your hand costing up to 5 Treasure.
       //Put a card from your hand onto your deck.
 
-      let results = await actionService.run('selectCard', {
+      let selectedCardId = await actionService.run('selectSingleCard', {
         prompt: 'Choose card to gain',
         playerId: playerId,
         restrict: [
@@ -37,7 +37,10 @@ const expansionModule: CardExpansionModule = {
         ],
       });
 
-      let selectedCardId = results[0];
+      if (!selectedCardId) {
+        console.debug('[ARTISAN EFFECT] no gain card selected');
+        return;
+      }
 
       console.debug(`[ARTISAN EFFECT] card chosen ${cardLibrary.getCard(selectedCardId)}`);
 
@@ -52,13 +55,16 @@ const expansionModule: CardExpansionModule = {
 
       console.debug(`[ARTISAN EFFECT] choosing card to put on deck...`);
 
-      results = await actionService.run('selectCard', {
+      selectedCardId = await actionService.run('selectSingleCard', {
         prompt: 'Choose card to top-deck',
         playerId: playerId,
         restrict: args.cardSourceController.getSource('playerHand', playerId),
       });
 
-      selectedCardId = results[0];
+      if (!selectedCardId) {
+        console.debug('[ARTISAN EFFECT] no top-deck card selected');
+        return;
+      }
 
       console.debug(`[ARTISAN EFFECT] card chosen ${cardLibrary.getCard(selectedCardId)}`);
 
@@ -284,7 +290,7 @@ const expansionModule: CardExpansionModule = {
           } else {
             console.debug(`[BUREAUCRAT EFFECT] prompting user to select card to reveal...`);
 
-            const cardIds = await actionService.run('selectCard', {
+            const selectedCardId = await actionService.run('selectSingleCard', {
               prompt: 'Reveal victory card',
               playerId: targetPlayerId,
               count: 1,
@@ -296,7 +302,11 @@ const expansionModule: CardExpansionModule = {
                 { cardType: 'VICTORY' },
               ],
             });
-            cardToReveal = cardLibrary.getCard(cardIds[0]);
+            if (!selectedCardId) {
+              console.debug('[BUREAUCRAT EFFECT] no victory card selected to reveal');
+              return;
+            }
+            cardToReveal = cardLibrary.getCard(selectedCardId);
           }
 
           console.debug(`[BUREAUCRAT EFFECT] revealing ${cardToReveal}...`);
@@ -697,7 +707,7 @@ const expansionModule: CardExpansionModule = {
 
       console.debug(`[MINE EFFECT] prompting player to trash a treasure`);
 
-      let cardIds = await actionService.run('selectCard', {
+      let cardId = await actionService.run('selectSingleCard', {
         optional: true,
         prompt: 'Confirm trash',
         playerId: playerId,
@@ -710,8 +720,6 @@ const expansionModule: CardExpansionModule = {
           { cardType: ['TREASURE'] },
         ],
       });
-
-      let cardId = cardIds?.[0];
 
       if (!cardId) {
         console.debug(`[MINE EFFECT] player selected no card`);
@@ -733,7 +741,7 @@ const expansionModule: CardExpansionModule = {
 
       console.debug(`[MINE EFFECT] prompting user to select treasure costing up to ${cardCost.treasure + 3}`);
 
-      cardIds = await actionService.run('selectCard', {
+      cardId = await actionService.run('selectSingleCard', {
         prompt: 'Confirm gain card',
         playerId: playerId,
         count: 1,
@@ -743,8 +751,6 @@ const expansionModule: CardExpansionModule = {
           { playerId, kind: 'upTo', amount: { treasure: cardCost.treasure + 3, potion: cardCost.potion } },
         ],
       });
-
-      cardId = cardIds?.[0];
 
       if (!cardId) {
         console.debug(`[MINE EFFECT] no card selected`);
@@ -941,14 +947,17 @@ const expansionModule: CardExpansionModule = {
         return;
       }
 
-      let cardIds = await actionService.run('selectCard', {
+      let cardId = await actionService.run('selectSingleCard', {
         prompt: 'Trash card',
         playerId: playerId,
         count: 1,
         restrict: args.cardSourceController.getSource('playerHand', playerId),
       });
 
-      let cardId = cardIds[0];
+      if (!cardId) {
+        console.debug('[REMODEL EFFECT] no card selected to trash');
+        return;
+      }
       const card = cardLibrary.getCard(cardId);
 
       console.debug(`[REMODEL EFFECT] trashing card ${card}...`);
@@ -962,7 +971,7 @@ const expansionModule: CardExpansionModule = {
 
       console.debug(`[REMODEL EFFECT] prompting user to select card costing up to ${cardCost.treasure}...`);
 
-      cardIds = await actionService.run('selectCard', {
+      cardId = await actionService.run('selectSingleCard', {
         prompt: 'Gain card',
         playerId,
         count: 1,
@@ -971,8 +980,10 @@ const expansionModule: CardExpansionModule = {
           { playerId, kind: 'upTo', amount: { treasure: cardCost.treasure + 2, potion: card.cost.potion } },
         ],
       });
-
-      cardId = cardIds[0];
+      if (!cardId) {
+        console.debug('[REMODEL EFFECT] no gain card selected');
+        return;
+      }
 
       console.debug(`[REMODEL EFFECT] gaining ${cardLibrary.getCard(cardId)} to discard...`);
 
@@ -1158,7 +1169,7 @@ const expansionModule: CardExpansionModule = {
     registerEffects: () => async ({ playerId, actionService, cardLibrary, ...args }) => {
       console.debug(`[THRONE ROOM EFFECT] prompting user to select action card from hand...`);
 
-      const cardIds = await actionService.run('selectCard', {
+      const cardId = await actionService.run('selectSingleCard', {
         optional: true,
         prompt: 'Choose action',
         playerId,
@@ -1171,8 +1182,6 @@ const expansionModule: CardExpansionModule = {
           { cardType: ['ACTION'] },
         ],
       });
-
-      const cardId = cardIds?.[0];
 
       if (!cardId) {
         console.debug(`[THRONE ROOM EFFECT] player chose no cards`);
@@ -1307,7 +1316,7 @@ const expansionModule: CardExpansionModule = {
     registerEffects: () => async ({ actionService, cardLibrary, playerId, ...args }) => {
       console.debug(`[WORKSHOP EFFECT] prompting player to select card to gain...`);
 
-      const cardIds = await actionService.run('selectCard', {
+      const cardId = await actionService.run('selectSingleCard', {
         prompt: 'Gain card',
         playerId: playerId,
         count: 1,
@@ -1316,8 +1325,10 @@ const expansionModule: CardExpansionModule = {
           { playerId, kind: 'upTo', amount: { treasure: 4 } },
         ],
       });
-
-      const cardId = cardIds[0];
+      if (!cardId) {
+        console.debug('[WORKSHOP EFFECT] no gain card selected');
+        return;
+      }
 
       console.debug(`[WORKSHOP EFFECT] gaining card ${cardLibrary.getCard(cardId)}`);
 
