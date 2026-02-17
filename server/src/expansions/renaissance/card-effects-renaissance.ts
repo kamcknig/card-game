@@ -60,7 +60,7 @@ const expansion: CardExpansionModule = {
         prompt: 'Choose a card to put into your hand',
         restrict: revealedIds,
         count: 1,
-      }) as CardId[];
+      });
 
       const chosenId = selectedIds[0] ?? revealedIds[0];
       console.debug(`[border-guard effect] moving chosen card ${chosenId} to hand`);
@@ -527,15 +527,13 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
+      const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Trash a card from your hand',
         restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
         count: 1,
-      }) as CardId[];
-
-      const selectedCardId = selectedCardIds[0];
-      if (selectedCardId === undefined) {
+      }) as CardId | null;
+      if (!selectedCardId) {
         console.warn('[hideout effect] no card selected to trash');
         return;
       }
@@ -610,16 +608,14 @@ const expansion: CardExpansionModule = {
               return;
             }
 
-            const selectedCardIds = await triggeredArgs.actionService.run('selectCard', {
+            const selectedCardId = await triggeredArgs.actionService.run('selectSingleCard', {
               playerId: cardEffectArgs.playerId,
               prompt: 'You may trash an Action card from play',
               restrict: actionCardsInPlay,
               count: 1,
               optional: true,
-            }) as CardId[];
-
-            const selectedCardId = selectedCardIds[0];
-            if (selectedCardId === undefined) {
+            }) as CardId | null;
+            if (!selectedCardId) {
               console.debug('[improve cleanup effect] player declined to trash an Action card');
               return;
             }
@@ -654,15 +650,13 @@ const expansion: CardExpansionModule = {
               return;
             }
 
-            const gainCardIds = await triggeredArgs.actionService.run('selectCard', {
+            const gainCardId = await triggeredArgs.actionService.run('selectSingleCard', {
               playerId: cardEffectArgs.playerId,
               prompt: `Gain a card costing exactly $1 more than ${selectedCard.cardName}`,
               restrict: gainCandidates.map((card) => card.id),
               count: 1,
-            }) as CardId[];
-
-            const gainCardId = gainCardIds[0];
-            if (gainCardId === undefined) {
+            }) as CardId | null;
+            if (!gainCardId) {
               console.warn('[improve cleanup effect] no card selected to gain');
               return;
             }
@@ -712,15 +706,13 @@ const expansion: CardExpansionModule = {
       const discard = cardEffectArgs.cardSourceController.getSource('playerDiscard', cardEffectArgs.playerId);
       if (discard.length) {
         console.debug(`[mountain-village effect] selecting card from discard (${discard.length} card(s))`);
-        const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
+        const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
           playerId: cardEffectArgs.playerId,
           prompt: 'Choose a card from your discard pile to put into your hand',
           restrict: discard,
           count: 1,
-        }) as CardId[];
-
-        const selectedCardId = selectedCardIds[0];
-        if (selectedCardId === undefined) {
+        }) as CardId | null;
+        if (!selectedCardId) {
           console.warn('[mountain-village effect] no card selected from discard');
           return;
         }
@@ -861,15 +853,13 @@ const expansion: CardExpansionModule = {
       if (!hand.length) {
         console.debug('[priest effect] no cards in hand to trash');
       } else {
-        const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
+        const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
           playerId: cardEffectArgs.playerId,
           prompt: 'Trash a card from your hand',
           restrict: hand,
           count: 1,
-        }) as CardId[];
-
-        const selectedCardId = selectedCardIds[0];
-        if (selectedCardId === undefined) {
+        }) as CardId | null;
+        if (!selectedCardId) {
           console.warn('[priest effect] no card selected to trash');
         } else {
           const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
@@ -936,15 +926,13 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
+      const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Trash a card from your hand',
         restrict: hand,
         count: 1,
-      }) as CardId[];
-
-      const selectedCardId = selectedCardIds[0];
-      if (selectedCardId === undefined) {
+      }) as CardId | null;
+      if (!selectedCardId) {
         console.warn('[recruiter effect] no card selected to trash');
         return;
       }
@@ -996,15 +984,13 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
+      const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Trash a card from your hand',
         restrict: hand,
         count: 1,
-      }) as CardId[];
-
-      const selectedCardId = selectedCardIds[0];
-      if (selectedCardId === undefined) {
+      }) as CardId | null;
+      if (!selectedCardId) {
         console.warn('[research effect] no card selected to trash');
         return;
       }
@@ -1131,15 +1117,13 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const selectedActionIds = await cardEffectArgs.actionService.run('selectCard', {
+      const selectedActionId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Choose an Action card to replay',
         restrict: uniquePlayedActionIds,
         count: 1,
-      }) as CardId[];
-
-      const selectedActionId = selectedActionIds[0];
-      if (selectedActionId === undefined) {
+      }) as CardId | null;
+      if (!selectedActionId) {
         console.warn('[scepter effect] no Action selected to replay, gaining 2 treasure');
         await cardEffectArgs.actionService.run('gainTreasure', {
           count: 2,
@@ -1272,15 +1256,13 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
+      const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Gain a card to your hand',
         restrict: gainableCards.map((card) => card.id),
         count: 1,
-      }) as CardId[];
-
-      const selectedCardId = selectedCardIds[0];
-      if (selectedCardId === undefined) {
+      }) as CardId | null;
+      if (!selectedCardId) {
         console.warn('[sculptor effect] no card selected to gain');
         return;
       }
@@ -1535,15 +1517,13 @@ const expansion: CardExpansionModule = {
           return;
         }
 
-        const selectedTreasureIds = await cardEffectArgs.actionService.run('selectCard', {
+        const selectedTreasureId = await cardEffectArgs.actionService.run('selectSingleCard', {
           playerId: cardEffectArgs.playerId,
           prompt: 'Trash a Treasure from your hand',
           restrict: treasureIdsInHand,
           count: 1,
-        }) as CardId[];
-
-        const selectedTreasureId = selectedTreasureIds[0];
-        if (selectedTreasureId === undefined) {
+        }) as CardId | null;
+        if (!selectedTreasureId) {
           console.warn('[treasurer effect] no Treasure selected to trash');
           return;
         }
@@ -1566,15 +1546,13 @@ const expansion: CardExpansionModule = {
           return;
         }
 
-        const selectedTreasureIds = await cardEffectArgs.actionService.run('selectCard', {
+        const selectedTreasureId = await cardEffectArgs.actionService.run('selectSingleCard', {
           playerId: cardEffectArgs.playerId,
           prompt: 'Gain a Treasure from the trash to your hand',
           restrict: treasureIdsInTrash,
           count: 1,
-        }) as CardId[];
-
-        const selectedTreasureId = selectedTreasureIds[0];
-        if (selectedTreasureId === undefined) {
+        }) as CardId | null;
+        if (!selectedTreasureId) {
           console.warn('[treasurer effect] no Treasure selected to gain');
           return;
         }
@@ -1646,7 +1624,7 @@ const expansion: CardExpansionModule = {
           prompt: 'Discard a card costing $2 or more',
           restrict: discardableIds,
           count: 1,
-        }) as CardId[];
+        });
 
         const selectedDiscardId = selectedDiscardIds[0] ?? discardableIds[0];
         const selectedDiscardCard = cardEffectArgs.cardLibrary.getCard(selectedDiscardId);

@@ -1213,7 +1213,7 @@ const expansion: CardExpansionModule = {
             prompt: `Discard cards`,
             restrict: args.cardSourceController.getSource('playerHand', args.playerId),
             count: 2,
-          }) as CardId[];
+          });
 
           if (!selectedCardIds.length) {
             return;

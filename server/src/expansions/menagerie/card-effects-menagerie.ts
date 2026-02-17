@@ -21,7 +21,7 @@ const expansion: CardExpansionModule = {
       },
       apply: async ({ playerId, actionService }) => {
         // Prompt for the Action to trash as payment.
-        const selectedCardIds = await actionService.run('selectCard', {
+        const selectedCardId = await actionService.run('selectSingleCard', {
           playerId,
           prompt: 'Choose an Action card from your hand to trash for Animal Fair',
           restrict: [
@@ -29,9 +29,9 @@ const expansion: CardExpansionModule = {
             { cardType: 'ACTION' },
           ],
           count: 1,
-        }) as CardId[];
+        });
 
-        if (selectedCardIds.length === 0) {
+        if (!selectedCardId) {
           // Abort the buy if payment could not be completed.
           return { successful: false, paidTreasure: 0 };
         }
@@ -39,7 +39,7 @@ const expansion: CardExpansionModule = {
         // Trashing resolves before gain effects because this happens during payment.
         await actionService.run('trashCard', {
           playerId,
-          cardId: selectedCardIds[0],
+          cardId: selectedCardId,
         });
 
         return { successful: true, paidTreasure: 0 };
@@ -245,15 +245,13 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
+      const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Choose a card from your hand to Exile',
         restrict: hand,
         count: 1,
-      }) as CardId[];
-
-      const selectedCardId = selectedCardIds[0];
-      if (selectedCardId === undefined) {
+      }) as CardId | null;
+      if (!selectedCardId) {
         console.debug('[bounty-hunter effect] no card selected to exile');
         return;
       }
@@ -317,15 +315,13 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
+      const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Choose a non-Victory card from the Supply to Exile',
         restrict: exileCandidates.map((card) => card.id),
         count: 1,
-      }) as CardId[];
-
-      const selectedCardId = selectedCardIds[0];
-      if (selectedCardId === undefined) {
+      }) as CardId | null;
+      if (!selectedCardId) {
         console.warn('[camel-train effect] no card selected to exile');
         return;
       }
@@ -385,13 +381,13 @@ const expansion: CardExpansionModule = {
           exileCardId = exileCandidateIds[0];
         } else if (exileCandidateIds.length > 1) {
           // When both cards are eligible, the attacked player chooses which one to exile.
-          const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
+          const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
             playerId: targetPlayerId,
             prompt: 'Choose a revealed card to Exile',
             restrict: exileCandidateIds,
             count: 1,
-          }) as CardId[];
-          exileCardId = selectedCardIds[0];
+          });
+          exileCardId = selectedCardId ?? undefined;
         }
 
         if (exileCardId !== undefined) {
@@ -533,15 +529,13 @@ const expansion: CardExpansionModule = {
       }
 
       // Displace requires exiling one card from hand first.
-      const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
+      const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Choose a card from your hand to Exile',
         restrict: hand,
         count: 1,
-      }) as CardId[];
-
-      const selectedCardId = selectedCardIds[0];
-      if (selectedCardId === undefined) {
+      }) as CardId | null;
+      if (!selectedCardId) {
         console.warn('[displace effect] no card selected to exile');
         return;
       }
@@ -575,15 +569,13 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const selectedGainCardIds = await cardEffectArgs.actionService.run('selectCard', {
+      const selectedGainCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Gain a differently named card costing up to $${exiledCardCost.treasure + 2}`,
         restrict: gainCandidates.map((card) => card.id),
         count: 1,
-      }) as CardId[];
-
-      const selectedGainCardId = selectedGainCardIds[0];
-      if (selectedGainCardId === undefined) {
+      }) as CardId | null;
+      if (!selectedGainCardId) {
         console.warn('[displace effect] no card selected to gain');
         return;
       }
@@ -683,15 +675,13 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
+      const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Gain a card to your hand costing less than Falconer',
         restrict: gainCandidates.map((card) => card.id),
         count: 1,
-      }) as CardId[];
-
-      const selectedCardId = selectedCardIds[0];
-      if (selectedCardId === undefined) {
+      }) as CardId | null;
+      if (!selectedCardId) {
         console.warn('[falconer effect] no card selected to gain');
         return;
       }
@@ -837,19 +827,17 @@ const expansion: CardExpansionModule = {
 
       const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
       if (hand.length > 0) {
-        const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
+        const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
           playerId: cardEffectArgs.playerId,
           prompt: 'You may trash a card from your hand',
           restrict: hand,
           count: 1,
           optional: true,
-        }) as CardId[];
-
-        const selectedCardId = selectedCardIds[0];
-        if (selectedCardId !== undefined) {
-          await cardEffectArgs.actionService.run('trashCard', {
-            playerId: cardEffectArgs.playerId,
-            cardId: selectedCardId,
+        }) as CardId | null;
+      if (selectedCardId) {
+        await cardEffectArgs.actionService.run('trashCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: selectedCardId,
           });
         }
       }
@@ -909,15 +897,13 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
+      const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Gain a card costing up to $4',
         restrict: gainableCards.map((card) => card.id),
         count: 1,
-      }) as CardId[];
-
-      const selectedCardId = selectedCardIds[0];
-      if (selectedCardId === undefined) {
+      }) as CardId | null;
+      if (!selectedCardId) {
         console.warn('[groom effect] no card selected to gain');
         return;
       }
@@ -993,7 +979,7 @@ const expansion: CardExpansionModule = {
           restrict: treasureInHand,
           count: { kind: 'upTo', count: treasureInHand.length },
           optional: true,
-        }) as CardId[];
+        });
 
         if (!selectedTreasureIds.length) {
           console.debug('[hostelry onGained effect] no Treasures selected to discard');
@@ -1270,16 +1256,14 @@ const expansion: CardExpansionModule = {
             return;
           }
 
-          const selectedCardIds = await triggeredArgs.actionService.run('selectCard', {
+          const selectedActionId = await triggeredArgs.actionService.run('selectSingleCard', {
             playerId: cardEffectArgs.playerId,
             prompt: 'You may play an Action card from your hand three times',
             restrict: actionCardIdsInHand,
             count: 1,
             optional: true,
-          }) as CardId[];
-
-          const selectedActionId = selectedCardIds[0];
-          if (selectedActionId === undefined) {
+          }) as CardId | null;
+          if (!selectedActionId) {
             console.debug('[mastermind startTurn effect] player declined to play an Action');
             return;
           }
@@ -1448,16 +1432,14 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
+      const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'You may Exile a card from your hand',
         restrict: hand,
         count: 1,
         optional: true,
-      }) as CardId[];
-
-      const selectedCardId = selectedCardIds[0];
-      if (selectedCardId === undefined) {
+      }) as CardId | null;
+      if (!selectedCardId) {
         console.debug('[sanctuary effect] player declined to exile a card');
         return;
       }
@@ -1479,15 +1461,13 @@ const expansion: CardExpansionModule = {
       }
 
       // Scrap starts by trashing exactly one card from hand.
-      const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
+      const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Trash a card from your hand',
         restrict: hand,
         count: 1,
-      }) as CardId[];
-
-      const selectedCardId = selectedCardIds[0];
-      if (selectedCardId === undefined) {
+      }) as CardId | null;
+      if (!selectedCardId) {
         console.warn('[scrap effect] no card selected to trash');
         return;
       }

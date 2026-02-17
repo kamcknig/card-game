@@ -142,7 +142,7 @@ const effectMap: CardExpansionModule = {
         restrict: selectableNameCardIds,
         count: 1,
         optional: true,
-      }) as CardId[];
+      });
 
       if (!selectedNameCardIds.length) {
         console.debug('[banish effect] player declined to choose a card name');
@@ -158,7 +158,7 @@ const effectMap: CardExpansionModule = {
         restrict: matchingCards,
         count: { kind: 'upTo', count: matchingCards.length },
         optional: true,
-      }) as CardId[];
+      });
 
       if (!cardsToExile.length) {
         console.debug('[banish effect] no cards selected to Exile');
@@ -187,7 +187,7 @@ const effectMap: CardExpansionModule = {
           prompt: 'Gain a non-Victory card costing up to $5',
           restrict: gainableCards.map((card) => card.id),
           count: 1,
-        }) as CardId[];
+        });
 
         if (selectedCardIds.length) {
           await cardEffectArgs.actionService.run('gainCard', {
@@ -288,7 +288,7 @@ const effectMap: CardExpansionModule = {
         restrict: actionCardsInHand.map((card) => card.id),
         count: 1,
         optional: true,
-      }) as CardId[];
+      });
 
       if (!selectedActionCardIds.length) {
         console.debug('[delay effect] player declined to set aside an Action');
@@ -347,7 +347,7 @@ const effectMap: CardExpansionModule = {
         prompt: 'Gain a card costing up to $4 onto your deck',
         restrict: gainableCards.map((card) => card.id),
         count: 1,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.warn('[demand effect] no card selected to gain');
@@ -473,7 +473,7 @@ const effectMap: CardExpansionModule = {
         restrict: nonVictoryCards.map((card) => card.id),
         count: 1,
         optional: true,
-      }) as CardId[];
+      });
 
       if (!cardsToTrash.length) {
         console.debug('[enhance effect] player declined to trash a card');
@@ -511,7 +511,7 @@ const effectMap: CardExpansionModule = {
         prompt: 'Gain a card costing up to $2 more than the trashed card',
         restrict: gainableCards.map((card) => card.id),
         count: 1,
-      }) as CardId[];
+      });
 
       if (!selectedGainIds.length) {
         console.warn('[enhance effect] no gain card selected');
@@ -608,7 +608,7 @@ const effectMap: CardExpansionModule = {
         prompt: 'Exile an Action card from the Supply',
         restrict: actionCards.map((card) => card.id),
         count: 1,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.warn('[invest effect] no card selected');
@@ -703,7 +703,7 @@ const effectMap: CardExpansionModule = {
         restrict: actionCardsInDiscard.map((card) => card.id),
         count: 1,
         optional: true,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.debug('[march effect] player declined to play from discard');
@@ -746,7 +746,7 @@ const effectMap: CardExpansionModule = {
           prompt: 'Choose the next card to gain (Populate)',
           restrict: selectableTopCards.map((entry) => entry.card.id),
           count: 1,
-        }) as CardId[];
+        });
 
         // If selection unexpectedly fails, fall back to the first available option.
         const selectedCardId = selectedCardIds[0] ?? selectableTopCards[0].card.id;
@@ -973,7 +973,7 @@ const effectMap: CardExpansionModule = {
         restrict: actionCardsInHand.map((card) => card.id),
         count: 1,
         optional: true,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.debug('[toil effect] player declined to play an Action');
@@ -1027,7 +1027,7 @@ const effectMap: CardExpansionModule = {
           prompt: 'Exile an Action card from the Supply',
           restrict: supplyActionCards.map((card) => card.id),
           count: 1,
-        }) as CardId[];
+        });
 
         if (!selectedCardIds.length) {
           console.warn('[transport effect] no Supply Action selected to Exile');
@@ -1046,7 +1046,7 @@ const effectMap: CardExpansionModule = {
         prompt: 'Put an Action card from Exile onto your deck',
         restrict: exileActionCards.map((card) => card.id),
         count: 1,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.warn('[transport effect] no Exiled Action selected to topdeck');

@@ -20,7 +20,7 @@ const cardEffects: CardExpansionModule = {
         prompt: `Trash card`,
         restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
         count: 1,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.warn(`[altar effect] no card selected`);
@@ -42,7 +42,7 @@ const cardEffects: CardExpansionModule = {
           { kind: 'upTo', amount: { treasure: 5 }, playerId: cardEffectArgs.playerId },
         ],
         count: 1,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds) {
         console.debug(`[altar effect] no card selected`);
@@ -74,7 +74,7 @@ const cardEffects: CardExpansionModule = {
           },
         ],
         count: 1,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.debug(`[armory effect] no card selected`);
@@ -110,7 +110,7 @@ const cardEffects: CardExpansionModule = {
         prompt: `Play card`,
         restrict: cardIds.map((card) => card.id),
         count: 1,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.debug(`[band of misfits effect] no card selected`);
@@ -340,7 +340,7 @@ const cardEffects: CardExpansionModule = {
             prompt: `Discard Cards`,
             restrict: hand,
             count: Math.min(2, hand.length),
-          }) as CardId[];
+          });
 
           if (!selectedCardIds.length) {
             console.warn(`[count effect] no card selected`);
@@ -363,7 +363,7 @@ const cardEffects: CardExpansionModule = {
             prompt: `Top-deck card`,
             restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
             count: 1,
-          }) as CardId[];
+          });
 
           if (!selectedCardIds.length) {
             console.warn(`[count effect] no card selected`);
@@ -467,7 +467,7 @@ const cardEffects: CardExpansionModule = {
         restrict: nonDurationTreasureCards.map((card) => card.id),
         count: 1,
         optional: true,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.debug(`[counterfeit effect] no card selected`);
@@ -578,7 +578,7 @@ const cardEffects: CardExpansionModule = {
         restrict: hand,
         count: { kind: 'upTo', count: 2 },
         optional: true,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.debug(`[dame-anna effect] no card selected`);
@@ -912,7 +912,7 @@ const cardEffects: CardExpansionModule = {
           restrict: cards.map((card) => card.id),
           count: 1,
           optional: true,
-        }) as CardId[];
+        });
 
         if (!selectedCardIds.length) {
           console.debug(`[dame-natalie effect] no card selected`);
@@ -1165,7 +1165,7 @@ const cardEffects: CardExpansionModule = {
         restrict: [...actionCardsInHand.map((card) => card.id), cardEffectArgs.cardId],
         count: 1,
         optional: true,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.debug(`[death cart effect] no card selected`);
@@ -1229,7 +1229,7 @@ const cardEffects: CardExpansionModule = {
         prompt: `Trash card`,
         restrict: hand,
         count: 1,
-      }) as CardId[];
+      });
 
       if (selectedCardIds.length === 0) {
         console.debug(`[forager effect] no card selected`);
@@ -1341,7 +1341,7 @@ const cardEffects: CardExpansionModule = {
           prompt: `Trash action`,
           restrict: actionsInHand.map((card) => card.id),
           count: 1,
-        }) as CardId[];
+        });
 
         if (!selectedCardIds.length) {
           console.warn(`[graverobber effect] no card selected`);
@@ -1380,7 +1380,7 @@ const cardEffects: CardExpansionModule = {
           prompt: `Gain card`,
           restrict: cards.map((card) => card.id),
           count: 1,
-        }) as CardId[];
+        });
 
         if (!selectedCardIds.length) {
           console.warn(`[graverobber effect] no card selected`);
@@ -1445,7 +1445,7 @@ const cardEffects: CardExpansionModule = {
           restrict: nonTreasureCards.map((card) => card.id),
           count: 1,
           optional: true,
-        }) as CardId[];
+        });
 
         if (!selectedCardIds.length) {
           console.debug(`[hermit effect] not trashing from hand`);
@@ -1478,7 +1478,7 @@ const cardEffects: CardExpansionModule = {
           prompt: `Gain card`,
           restrict: cards.map((card) => card.id),
           count: 1,
-        }) as CardId[];
+        });
 
         if (!selectedCardIds.length) {
           console.warn(`[hermit effect] no card selected`);
@@ -1715,7 +1715,7 @@ const cardEffects: CardExpansionModule = {
         prompt: `Trash card`,
         restrict: cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId),
         count: 1,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.debug(`[junk-dealer effect] no card selected`);
@@ -1874,7 +1874,7 @@ const cardEffects: CardExpansionModule = {
           count: Math.min(2, hand.length),
         },
         optional: true,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.debug(`[mercenary effect] no cards selected`);
@@ -1918,7 +1918,7 @@ const cardEffects: CardExpansionModule = {
           prompt: `Discard to 3`,
           restrict: hand,
           count: hand.length - 3,
-        }) as CardId[];
+        });
 
         if (selectedCardIds.length === 0) {
           console.warn(`[mercenary effect] no cards selected`);
@@ -2120,7 +2120,7 @@ const cardEffects: CardExpansionModule = {
         restrict: nonDurationActionCardsInHand.map((card) => card.id),
         count: 1,
         optional: true,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.debug(`[procession effect] no card selected`);
@@ -2163,7 +2163,7 @@ const cardEffects: CardExpansionModule = {
         prompt: `Gain card`,
         restrict: cards.map((card) => card.id),
         count: 1,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.warn(`[procession effect] no card selected`);
@@ -2241,7 +2241,7 @@ const cardEffects: CardExpansionModule = {
         prompt: 'Trash card',
         restrict: nonRatCardsInHand.map((card) => card.id),
         count: 1,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.warn(`[rats effect] no card selected`);
@@ -2342,7 +2342,7 @@ const cardEffects: CardExpansionModule = {
           prompt: `Gain card`,
           restrict: cards.map((card) => card.id),
           count: 1,
-        }) as CardId[];
+        });
 
         if (!selectedCardIds.length) {
           console.warn(`[rebuild effect] no card selected`);
@@ -2925,7 +2925,7 @@ const cardEffects: CardExpansionModule = {
           prompt: `Discard to 3`,
           restrict: hand,
           count: numToDiscard,
-        }) as CardId[];
+        });
 
         if (!selectedCardIds.length) {
           console.warn(`[sir-michael effect] no cards selected`);
@@ -3185,7 +3185,7 @@ const cardEffects: CardExpansionModule = {
           prompt: `Gain card`,
           restrict: attackCards.map((card) => card.id),
           count: 1,
-        }) as CardId[];
+        });
 
         if (!selectedCardIds.length) {
           console.warn(`[squire onTrashed effect] no card selected`);
@@ -3265,7 +3265,7 @@ const cardEffects: CardExpansionModule = {
           kind: 'upTo',
           count: hand.length,
         },
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.debug(`[storeroom effect] no card/s selected`);
@@ -3297,7 +3297,7 @@ const cardEffects: CardExpansionModule = {
           count: hand.length,
         },
         optional: true,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.debug(`[storeroom effect] no card/s selected`);
@@ -3336,7 +3336,7 @@ const cardEffects: CardExpansionModule = {
           prompt: `Discard card/s`,
           restrict: hand,
           count: hand.length - 4,
-        }) as CardId[];
+        });
 
         if (!selectedCardIds.length) {
           console.warn(`[urchin effect] no card/s selected for player ${targetPlayerId}`);

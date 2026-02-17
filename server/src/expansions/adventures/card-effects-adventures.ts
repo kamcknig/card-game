@@ -146,7 +146,7 @@ const expansion: CardExpansionModule = {
               restrict: hand,
               count: 1,
             },
-          ) as CardId[];
+          );
 
           if (!selectedCardIds.length) {
             console.debug(`[amulet effect] no card selected`);
@@ -231,7 +231,7 @@ const expansion: CardExpansionModule = {
           count: { kind: 'upTo', count: hand.length },
           optional: true,
         },
-      ) as CardId[];
+      );
 
       if (!selectedCardIds.length) {
         console.debug(`[artificer effect] no cards selected`);
@@ -274,7 +274,7 @@ const expansion: CardExpansionModule = {
           count: 1,
           optional: true,
         },
-      ) as CardId[];
+      );
 
       if (!selectedCardIds.length) {
         console.debug(`[artificer effect] no card selected`);
@@ -656,7 +656,7 @@ const expansion: CardExpansionModule = {
           count: 1,
           optional: true,
         },
-      ) as CardId[];
+      );
 
       if (!selectedCardIds.length) {
         console.debug(`[disciple effect] no card selected`);
@@ -759,7 +759,7 @@ const expansion: CardExpansionModule = {
             ),
             count: 2,
           },
-        ) as CardId[];
+        );
 
         if (!selectedCardIds.length) {
           console.debug(`[dungeon effect] no cards selected`);
@@ -904,7 +904,7 @@ const expansion: CardExpansionModule = {
           ),
           count: 1,
         },
-      ) as CardId[];
+      );
 
       if (!selectedCardIds.length) {
         console.debug(`[fugitive effect] no card selected`);
@@ -954,7 +954,7 @@ const expansion: CardExpansionModule = {
           },
           optional: true,
         },
-      ) as CardId[];
+      );
 
       if (!selectedCardIds.length) {
         console.debug(`[gear effect] no cards selected`);
@@ -1376,7 +1376,7 @@ const expansion: CardExpansionModule = {
           restrict: treasureCards.map((card) => card.id),
           count: 1,
         },
-      ) as CardId[];
+      );
 
       if (!selectedCardIds.length) {
         console.warn(`[hero effect] no card selected`);
@@ -1563,7 +1563,7 @@ const expansion: CardExpansionModule = {
             amount: { treasure: 4 },
           }],
           count: 1,
-        }) as CardId[];
+        });
 
         if (!selectedCardIds.length) {
           console.warn(`[messenger onGained effect] no card selected`);
@@ -1774,7 +1774,7 @@ const expansion: CardExpansionModule = {
             .concat(cardEffectArgs.cardId),
           count: 1,
         },
-      ) as CardId[];
+      );
 
       if (!selectedCardIds.length) {
         console.warn(`[raze effect] no card selected`);
@@ -1935,7 +1935,7 @@ const expansion: CardExpansionModule = {
                 ),
                 count: 1,
               },
-            ) as CardId[];
+            );
 
             if (!selectedCardIds.length) {
               console.debug(`[ratcatcher startTurn effect] no cards selected`);
@@ -2144,7 +2144,7 @@ const expansion: CardExpansionModule = {
             restrict: hand,
             count: 1,
           },
-        ) as CardId[];
+        );
 
         if (!selectedCardIds.length) {
           console.warn(`[soldier effect] no card selected`);
@@ -2200,7 +2200,7 @@ const expansion: CardExpansionModule = {
             count: 1,
             optional: true,
           },
-        ) as CardId[];
+        );
 
         if (!selectedCardIds.length) {
           console.debug(`[storyteller effect] no treasure selected`);
@@ -2511,7 +2511,7 @@ const expansion: CardExpansionModule = {
                 restrict: hand,
                 count: 1,
               },
-            ) as CardId[];
+            );
 
             if (!selectedCardIds.length) {
               console.warn(`[transmogrify startTurn effect] no card selected`);
@@ -2558,7 +2558,7 @@ const expansion: CardExpansionModule = {
                 restrict: cards.map((card) => card.id),
                 count: 1,
               },
-            ) as CardId[];
+            );
 
             if (!selectedCardIds.length) {
               console.warn(

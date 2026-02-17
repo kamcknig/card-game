@@ -442,23 +442,23 @@ const effectMap: CardExpansionModule = {
             effectText: 'Trash a card',
           });
 
-          const selectedCardIds = await triggeredArgs.actionService.run('selectCard', {
+          const selectedCardId = await triggeredArgs.actionService.run('selectSingleCard', {
             playerId: cardEffectArgs.playerId,
             prompt: 'Trash a card',
             restrict: hand,
             count: 1,
-          }) as CardId[];
+          });
 
-          if (!selectedCardIds.length) {
+          if (!selectedCardId) {
             console.warn('[cathedral project] no card selected to trash');
             return;
           }
 
           // Log the selected card id before trashing.
-          console.debug(`[cathedral project] trashing ${selectedCardIds[0]}`);
+          console.debug(`[cathedral project] trashing ${selectedCardId}`);
           await triggeredArgs.actionService.run('trashCard', {
             playerId: cardEffectArgs.playerId,
-            cardId: selectedCardIds[0],
+            cardId: selectedCardId,
           });
         },
       });
@@ -609,7 +609,7 @@ const effectMap: CardExpansionModule = {
             prompt: 'Put a card from your hand onto your deck',
             restrict: hand,
             count: 1,
-          }) as CardId[];
+          });
 
           if (!selectedCardIds.length) {
             console.warn('[city-gate project] no card selected to topdeck');
@@ -672,7 +672,7 @@ const effectMap: CardExpansionModule = {
             restrict: victoryCards.map((card) => card.id),
             count: 1,
             optional: true,
-          }) as CardId[];
+          });
 
           if (!selectedCardIds.length) {
             console.debug('[crop-rotation project] player declined to discard a Victory card');
@@ -1286,7 +1286,7 @@ const effectMap: CardExpansionModule = {
             restrict: hand,
             count: 1,
             optional: true,
-          }) as CardId[];
+          });
 
           if (!selectedCardIds.length) {
             console.debug('[sewers project] player declined to trash');
@@ -1366,7 +1366,7 @@ const effectMap: CardExpansionModule = {
             count: { kind: 'upTo', count: copperIds.length },
             optional: true,
             restrict: copperIds,
-          }) as CardId[];
+          });
 
           if (!selectedIds.length) {
             console.debug('[silos project] player declined to discard Coppers');
@@ -1552,15 +1552,13 @@ const effectMap: CardExpansionModule = {
           console.debug(
             `[star-chart project] prompting player ${cardEffectArgs.playerId} to choose top card from ${shuffledCardIds.length} shuffled card(s)`,
           );
-          const selectedCardIds = await triggeredArgs.actionService.run('selectCard', {
+          const selectedCardId = await triggeredArgs.actionService.run('selectSingleCard', {
             playerId: cardEffectArgs.playerId,
             prompt: 'Choose a shuffled card to put on top (Star Chart)',
             restrict: shuffledCardIds,
             count: 1,
             optional: true,
-          }) as CardId[];
-
-          const selectedCardId = selectedCardIds[0];
+          }) as CardId | null;
           if (!selectedCardId) {
             console.debug('[star-chart project] player declined to choose a top card');
             return;

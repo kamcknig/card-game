@@ -88,7 +88,7 @@ export const configureArena = (
                 optional: true,
                 cancelPrompt: 'NO',
               },
-            ) as CardId[];
+            );
 
             if (!selectedCardIds.length) {
               console.debug(

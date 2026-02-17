@@ -248,7 +248,7 @@ const expansion: CardExpansionModule = {
           prompt: `Top-deck card`,
           restrict: effectArgs.cardSourceController.getSource('playerHand', effectArgs.playerId),
           count: 1,
-        }) as CardId[];
+        });
 
         if (!selectedCardIds) {
           console.debug(`[clerk effect] target player ${targetPlayerId} selected no card`);
@@ -417,7 +417,7 @@ const expansion: CardExpansionModule = {
           count: effectArgs.cardSourceController.getSource('playerHand', effectArgs.playerId).length,
         },
         optional: true,
-      }) as CardId[];
+      });
 
       let cost = { treasure: 0, potion: 0 };
       if (!selectedCardIdsToTrash.length) {
@@ -449,7 +449,7 @@ const expansion: CardExpansionModule = {
           },
         ],
         count: 1,
-      }) as CardId[];
+      });
 
       if (selectedCardIds.length === 0) {
         console.debug(`[forge effect] no card selected`);
@@ -937,7 +937,7 @@ const expansion: CardExpansionModule = {
           kind: 'upTo',
           count: cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId).length,
         },
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.debug(`[vault effect] no cards selected`);
@@ -972,7 +972,7 @@ const expansion: CardExpansionModule = {
           restrict: cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId),
           count: Math.min(2, hand.length),
           optional: true,
-        }) as CardId[];
+        });
 
         console.debug(`[vault effect] discarding ${selectedCardIds.length} cards`);
         for (const selectedCardId of selectedCardIds) {

@@ -56,7 +56,7 @@ const expansion: CardExpansionModule = {
         prompt: `Gain card`,
         restrict: cardIds.map((card) => card.id),
         count: 1,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.warn(`[berserker effect] no card selected`);
@@ -340,7 +340,7 @@ const expansion: CardExpansionModule = {
         prompt: `Trash card`,
         restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
         count: 1,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.warn(`[develop effect] no card selected`);
@@ -383,7 +383,7 @@ const expansion: CardExpansionModule = {
         prompt: `Gain card costing 1 less, or 1 more`,
         restrict: combined.map((card) => card.id),
         count: 1,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.warn(`[develop effect] no card selected`);
@@ -413,7 +413,7 @@ const expansion: CardExpansionModule = {
         prompt: nextPrompt,
         restrict: combined.map((card) => card.id),
         count: 1,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.warn(`[develop effect] no card selected`);
@@ -441,7 +441,7 @@ const expansion: CardExpansionModule = {
           prompt: `Trash a card`,
           restrict: { location: 'playerHand', playerId: rest.playerId },
           count: 1,
-        }) as CardId[];
+        });
 
         if (!selectedCardIds.length) {
           console.warn(`[farmland onGained effect] no card selected`);
@@ -479,7 +479,7 @@ const expansion: CardExpansionModule = {
           prompt: `Gain card`,
           restrict: nonFarmlandCards.map((card) => card.id),
           count: 1,
-        }) as CardId[];
+        });
 
         if (!selectedCardIds.length) {
           console.warn(`[farmland onGained effect] no card selected`);
@@ -659,7 +659,7 @@ const expansion: CardExpansionModule = {
             prompt: `Gain non-Victory card`,
             restrict: cards.map((card) => card.id),
             count: 1,
-          }) as CardId[];
+          });
 
           if (!selectedCardIds.length) {
             console.debug(`[haggler triggered effect] no card selected`);
@@ -779,7 +779,7 @@ const expansion: CardExpansionModule = {
             playerId: cardEffectArgs.playerId,
           }).length,
         ),
-      }) as CardId[];
+      });
 
       if (!selectedCardIds) {
         console.warn(`[inn effect] no card selected`);
@@ -866,7 +866,7 @@ const expansion: CardExpansionModule = {
         restrict: nonTreasureCardsInHand.map((card) => card.id),
         count: 1,
         optional: true,
-      }) as CardId[];
+      });
 
       if (selectedCardIds.length === 0) {
         console.debug(`[jack-of-all-trades effect] no card selected`);
@@ -913,7 +913,7 @@ const expansion: CardExpansionModule = {
           prompt: `Discard card/s`,
           restrict: hand,
           count: numToDiscard,
-        }) as CardId[];
+        });
 
         if (!selectedCardIds.length) {
           console.warn(`[margrave effect] no card selected`);
@@ -966,7 +966,7 @@ const expansion: CardExpansionModule = {
         prompt: `Discard card`,
         restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
         count: 1,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.warn(`[oasis effect] no card selected`);
@@ -1039,7 +1039,7 @@ const expansion: CardExpansionModule = {
             count: numToTrash,
           },
           optional: true,
-        }) as CardId[];
+        });
 
         if (!selectedCardIds.length) {
           console.debug(`[souk onGained effect] no card selected`);
@@ -1084,7 +1084,7 @@ const expansion: CardExpansionModule = {
         restrict: treasuresInHand.map((card) => card.id),
         count: 1,
         optional: true,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.debug(`[spice-merchant effect] no card selected`);
@@ -1140,7 +1140,7 @@ const expansion: CardExpansionModule = {
         restrict: treasuresInHand.map((card) => card.id),
         count: 1,
         optional: true,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.debug(`[stables effect] no card selected`);
@@ -1234,7 +1234,7 @@ const expansion: CardExpansionModule = {
         prompt: `Trash card`,
         restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
         count: 1,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.warn(`[trader effect] no card selected`);
@@ -1455,7 +1455,7 @@ const expansion: CardExpansionModule = {
             { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: { treasure: 4 } },
           ],
           count: 1,
-        }) as CardId[];
+        });
 
         if (!selectedCardIds.length) {
           console.warn(`[weaver effect] no card selected`);
@@ -1482,7 +1482,7 @@ const expansion: CardExpansionModule = {
         restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
         count: 1,
         optional: true,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.debug(`[wheelwright effect] no card selected`);
@@ -1519,7 +1519,7 @@ const expansion: CardExpansionModule = {
         prompt: `Gain card`,
         restrict: actionCardIds.map((card) => card.id),
         count: 1,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.warn(`[wheelwright effect] no card selected`);
@@ -1547,7 +1547,7 @@ const expansion: CardExpansionModule = {
         prompt: `Discard cards`,
         restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
         count: Math.min(2, cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId).length),
-      }) as CardId[];
+      });
 
       console.debug(`[witchs-hut effect] revealing and discarding ${selectedCardIds.length} cards`);
 

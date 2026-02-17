@@ -92,7 +92,7 @@ const expansion: CardExpansionModule = {
         prompt: 'Trash up to 2 cards from your hand',
         count: { kind: 'upTo', count: maxTrashCount },
         restrict: hand,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.debug('[bat effect] no cards selected to trash');
@@ -350,7 +350,7 @@ const expansion: CardExpansionModule = {
               { location: ['basicSupply', 'kingdomSupply'] },
               { playerId: cardEffectArgs.playerId, kind: 'upTo', amount: { treasure: 4 } },
             ],
-          }) as CardId[];
+          });
 
           const gainCardId = gainCardIds[0];
           if (!gainCardId) {
@@ -862,7 +862,7 @@ const expansion: CardExpansionModule = {
         count: { kind: 'upTo', count: maxTrashCount },
         optional: true,
         restrict: eligibleIds,
-      }) as CardId[];
+      });
 
       if (!selectedIds.length) {
         console.debug('[monastery effect] player declined to trash');
@@ -892,15 +892,13 @@ const expansion: CardExpansionModule = {
       }
 
       // Prompt the player to optionally trash a Treasure for +4 Cards.
-      const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
+      const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Trash a Treasure to draw 4 cards?',
         count: 1,
         optional: true,
         restrict: treasuresInHand.map((card) => card.id),
-      }) as CardId[];
-
-      const selectedCardId = selectedCardIds[0];
+      }) as CardId | null;
       if (!selectedCardId) {
         console.debug('[pooka effect] player declined to trash a Treasure');
         return;
@@ -963,13 +961,13 @@ const expansion: CardExpansionModule = {
 
         let discardId = eligibleIds[0];
         if (eligibleIds.length > 1) {
-          const selectedIds = await cardEffectArgs.actionService.run('selectCard', {
+          const selectedId = await cardEffectArgs.actionService.run('selectSingleCard', {
             playerId: targetPlayerId,
             prompt: 'Discard a copy of a card in play',
             count: 1,
             restrict: eligibleIds,
-          }) as CardId[];
-          discardId = selectedIds[0];
+          });
+          discardId = selectedId ?? discardId;
         }
 
         if (!discardId) {
@@ -1092,7 +1090,7 @@ const expansion: CardExpansionModule = {
         count: { kind: 'upTo', count: victoryCards.length },
         optional: true,
         restrict: victoryCards.map((card) => card.id),
-      }) as CardId[];
+      });
 
       if (!selectedIds.length) {
         console.debug('[shepherd effect] player declined to discard Victory cards');
@@ -1265,7 +1263,7 @@ const expansion: CardExpansionModule = {
         prompt: 'Gain a Treasure',
         count: 1,
         restrict: treasureCards.map((card) => card.id),
-      }) as CardId[];
+      });
 
       const selectedCardId = selectedCardIds[0];
       if (!selectedCardId) {
@@ -1314,7 +1312,7 @@ const expansion: CardExpansionModule = {
           prompt: 'Gain a card costing up to $5 (not Vampire)',
           count: 1,
           restrict: eligibleCards.map((card) => card.id),
-        }) as CardId[];
+        });
 
         const selectedCardId = selectedCardIds[0];
         if (selectedCardId) {
@@ -1497,7 +1495,7 @@ const expansion: CardExpansionModule = {
           prompt: 'Discard 3 cards',
           count: 3,
           restrict: hand,
-        }) as CardId[];
+        });
       }
 
       if (!discardIds.length) {
@@ -1738,7 +1736,7 @@ const expansion: CardExpansionModule = {
         prompt: 'Choose a trashed Action to play',
         count: 1,
         restrict: eligibleCards.map((card) => card.id),
-      }) as CardId[];
+      });
 
       const selectedCardId = selectedCardIds[0];
       if (!selectedCardId) {
@@ -1799,7 +1797,7 @@ const expansion: CardExpansionModule = {
         count: 1,
         optional: true,
         restrict: actionCards.map((card) => card.id),
-      }) as CardId[];
+      });
 
       const selectedCardId = selectedCardIds[0];
       if (!selectedCardId) {
@@ -1874,7 +1872,7 @@ const expansion: CardExpansionModule = {
         count: 1,
         optional: true,
         restrict: eligibleCards.map((card) => card.id),
-      }) as CardId[];
+      });
 
       const selectedCardId = selectedCardIds[0];
       if (!selectedCardId) {
@@ -1997,7 +1995,7 @@ const expansion: CardExpansionModule = {
             { location: ['basicSupply', 'kingdomSupply'] },
             { playerId: cardEffectArgs.playerId, kind: 'upTo', amount: { treasure: 4 } },
           ],
-        }) as CardId[];
+        });
 
         const gainCardId = gainCardIds[0];
         if (!gainCardId) {
@@ -2080,14 +2078,12 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const selectedIds = await cardEffectArgs.actionService.run('selectCard', {
+      const trashedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         prompt: 'Trash a card from your hand',
         playerId: cardEffectArgs.playerId,
         count: 1,
         restrict: hand,
-      }) as CardId[];
-
-      const trashedCardId = selectedIds[0];
+      }) as CardId | null;
       if (!trashedCardId) {
         console.debug('[exorcist effect] no card selected to trash');
         return;
@@ -2127,14 +2123,12 @@ const expansion: CardExpansionModule = {
       }
 
       const eligibleIds = eligibleSpirits.map((spirit) => spirit.id);
-      const gainIds = await cardEffectArgs.actionService.run('selectCard', {
+      const gainId = await cardEffectArgs.actionService.run('selectSingleCard', {
         prompt: 'Gain a cheaper Spirit',
         playerId: cardEffectArgs.playerId,
         count: 1,
         restrict: eligibleIds,
-      }) as CardId[];
-
-      const gainId = gainIds[0];
+      }) as CardId | null;
       if (!gainId) {
         console.debug('[exorcist effect] no Spirit selected to gain');
         return;
@@ -2461,15 +2455,13 @@ const expansion: CardExpansionModule = {
         }
 
         // Prompt the player to discard an Action to gain a Ghost.
-        const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
+        const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
           playerId: eventArgs.playerId,
           prompt: 'Discard an Action to gain a Ghost?',
           restrict: actionCards.map((card) => card.id),
           count: 1,
           optional: true,
-        });
-
-        const selectedCardId = selectedCardIds[0];
+        }) as CardId | null;
         if (!selectedCardId) {
           console.debug('[haunted-mirror onTrashed] player declined to discard an Action');
           return;
@@ -2518,15 +2510,13 @@ const expansion: CardExpansionModule = {
       }
 
       // Prompt the player to optionally trash a card from hand.
-      const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
+      const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Trash a card from your hand?',
         count: 1,
         optional: true,
         restrict: hand,
-      }) as CardId[];
-
-      const selectedCardId = selectedCardIds[0];
+      }) as CardId | null;
       if (!selectedCardId) {
         console.debug('[goat effect] player declined to trash');
         return;
@@ -2649,7 +2639,7 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const gainCardIds = await cardEffectArgs.actionService.run('selectCard', {
+      const gainCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         prompt: 'Gain a card to your hand costing up to $6',
         playerId: cardEffectArgs.playerId,
         count: 1,
@@ -2657,9 +2647,7 @@ const expansion: CardExpansionModule = {
           { location: ['basicSupply', 'kingdomSupply'] },
           { playerId: cardEffectArgs.playerId, kind: 'upTo', amount: { treasure: 6 } },
         ],
-      }) as CardId[];
-
-      const gainCardId = gainCardIds[0];
+      }) as CardId | null;
       if (!gainCardId) {
         console.debug('[wish effect] no card selected to gain');
         return;

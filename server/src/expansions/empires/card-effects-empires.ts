@@ -389,7 +389,7 @@ const expansion: CardExpansionModule = {
               count: 1,
               optional: true,
             },
-          ) as CardId[];
+          );
 
           if (!selectedIds.length) {
             console.debug(`[charm cardGained] player chose not to gain a card`);
@@ -448,7 +448,7 @@ const expansion: CardExpansionModule = {
         prompt: 'Trash a card',
         restrict: { location: 'playerHand', playerId },
         count: 1,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds?.length) {
         console.warn(`[catapult effect] no card selected to trash`);
@@ -703,7 +703,7 @@ const expansion: CardExpansionModule = {
               optional: true,
               cancelPrompt: 'Cancel',
             },
-          ) as CardId[];
+          );
 
           if (!selectedCardIds.length) {
             console.debug(
@@ -747,7 +747,7 @@ const expansion: CardExpansionModule = {
               optional: true,
               cancelPrompt: 'Cancel',
             },
-          ) as CardId[];
+          );
 
           if (!selectedCardIds.length) {
             console.debug(
@@ -866,7 +866,7 @@ const expansion: CardExpansionModule = {
         count: 1,
         optional: true,
         cancelPrompt: 'NO',
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.debug(`[encampment effect] no card selected`);
@@ -899,7 +899,7 @@ const expansion: CardExpansionModule = {
               count: 1,
               optional: false,
             },
-          ) as CardId[];
+          );
 
           if (!selectedCardIds.length) {
             console.debug(`[engineer effect] no card selected`);
@@ -1066,7 +1066,7 @@ const expansion: CardExpansionModule = {
         restrict: hand,
         count: discardCount,
         optional: false,
-      }) as CardId[];
+      });
       for (const cardId of selectedCardIds) {
         await args.actionService.run('discardCard', {
           playerId: args.playerId,
@@ -1181,7 +1181,7 @@ const expansion: CardExpansionModule = {
         restrict: hand,
         count: 1,
         optional: false,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.debug(`[gladiator effect] no card selected`);
@@ -1251,20 +1251,20 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const selectedGold = await args.actionService.run('selectCard', {
+      const selectedGold = await args.actionService.run('selectSingleCard', {
         playerId: args.playerId,
         prompt: 'Reveal a Gold to hit each other player?',
         restrict: goldInHand,
         count: 1,
         optional: true,
-      }) as CardId[] | null;
+      }) as CardId | null;
 
-      if (!selectedGold?.length) {
+      if (!selectedGold) {
         console.debug(`[legionary effect] player declined to reveal Gold`);
         return;
       }
 
-      const goldCardId = selectedGold[0];
+      const goldCardId = selectedGold;
       console.debug(
         `[legionary effect] revealing Gold ${goldCardId} for player ${args.playerId}`,
       );
@@ -1339,7 +1339,7 @@ const expansion: CardExpansionModule = {
         prompt: 'Select a supply action costing up to $5 to play',
         restrict: eligibleCards.map((card) => card.id),
         count: 1,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.debug(`[overlord effect] player declined to play a supply action`);
@@ -1437,7 +1437,7 @@ const expansion: CardExpansionModule = {
             prompt: 'Put 2 cards from your hand onto your deck',
             restrict: { location: 'playerHand', playerId: targetPlayerId },
             count: 2,
-          }) as CardId[];
+          });
 
           for (const selectedId of selectedIds) {
             console.debug(
@@ -1546,7 +1546,7 @@ const expansion: CardExpansionModule = {
         restrict: victoryCardsInHand.map((card) => card.id),
         count: { kind: 'upTo', count: victoryCardsInHand.length },
         optional: true,
-      }) as CardId[];
+      });
 
       if (selectedIds.length === 0) {
         console.debug(`[opulent castle effect] no cards discarded`);
@@ -1724,7 +1724,7 @@ const expansion: CardExpansionModule = {
         restrict: copperInDiscard.map((card) => card.id),
         count: 1,
         optional: true,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.debug(`[settlers effect] player chose not to reveal Copper`);
@@ -1777,7 +1777,7 @@ const expansion: CardExpansionModule = {
         restrict: settlersInDiscard.map((card) => card.id),
         count: 1,
         optional: true,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds.length) {
         console.debug(`[bustling village effect] player chose not to reveal Settlers`);
@@ -1863,7 +1863,7 @@ const expansion: CardExpansionModule = {
           restrict: uniqueCandidates.map((candidate) => candidate.id),
           count: { kind: 'range', min: 1, max: maxSelectable },
           optional: false,
-        }) as CardId[];
+        });
 
         if (!selectedCardIds.length) {
           console.warn(`[temple effect] no card selected to trash`);
@@ -2048,7 +2048,7 @@ const expansion: CardExpansionModule = {
         prompt: 'Trash a card',
         restrict: { location: 'playerHand', playerId: args.playerId },
         count: 1,
-      }) as CardId[];
+      });
 
       if (!selectedCardIds?.length) {
         console.warn(`[sacrifice effect] no card selected to trash`);
@@ -2178,13 +2178,12 @@ const expansion: CardExpansionModule = {
         console.debug(
           `[small castle effect] prompting to trash one of ${trashableCastleIds.length} castles`,
         );
-        const selectedIds = await args.actionService.run('selectCard', {
+        const selectedId = await args.actionService.run('selectSingleCard', {
           playerId,
           prompt: 'Trash a Castle',
           restrict: trashableCastleIds,
           count: 1,
-        }) as CardId[];
-        const selectedId = selectedIds[0];
+        }) as CardId | null;
         if (selectedId) {
           console.debug(`[small castle effect] trashing Castle ${selectedId}`);
           await args.actionService.run('trashCard', {

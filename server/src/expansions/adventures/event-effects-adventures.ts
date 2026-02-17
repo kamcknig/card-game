@@ -71,7 +71,7 @@ const effectMap: CardExpansionModule = {
           restrict: cards.map((card) => card.id),
           count: 1,
         },
-      ) as CardId[];
+      );
 
       if (!selectedCardIds.length) {
         console.warn(`[alms effect] no card selected`);
@@ -143,7 +143,7 @@ const effectMap: CardExpansionModule = {
           restrict: cards.map((card) => card.id),
           count: gainCount,
         },
-      ) as CardId[];
+      );
 
       if (!selectedCardIds.length) {
         console.warn(`[ball effect] no card selected`);
@@ -179,7 +179,7 @@ const effectMap: CardExpansionModule = {
           restrict: coppersInPlay.map((card) => card.id),
           count: { kind: 'upTo', count: 2 },
         },
-      ) as CardId[];
+      );
 
       if (!selectedCardIds.length) {
         console.warn(`[bonfire effect] no card selected`);
@@ -420,7 +420,7 @@ const effectMap: CardExpansionModule = {
           restrict: eligibleCards.map((card) => card.id),
           count: 1,
         },
-      ) as CardId[];
+      );
 
       if (!selectedCardIds.length) {
         console.warn(`[inheritance effect] no card selected`);
@@ -638,7 +638,7 @@ const effectMap: CardExpansionModule = {
           restrict: uniqueSupplyInPlay.map((card) => card.id),
           count: { kind: 'upTo', count: Math.min(3, uniqueSupplyInPlay.length) },
         },
-      ) as CardId[];
+      );
 
       if (!selectedCardIds.length) {
         console.debug(`[pilgrimage effect] no cards selected`);
@@ -902,7 +902,7 @@ const effectMap: CardExpansionModule = {
               .map((card) => card.id),
             count: { kind: 'upTo', count: hand.length },
           },
-        ) as CardId[];
+        );
         gainGold = true;
       } else if (result.action === 2) {
         selectedCardIds = await cardEffectArgs.actionService.run(
@@ -914,7 +914,7 @@ const effectMap: CardExpansionModule = {
               .map((card) => card.id),
             count: { kind: 'upTo', count: hand.length },
           },
-        ) as CardId[];
+        );
         gainGold = selectedCardIds.length === 2;
       } else {
         selectedCardIds = await cardEffectArgs.actionService.run(
@@ -925,7 +925,7 @@ const effectMap: CardExpansionModule = {
             restrict: hand,
             count: 6,
           },
-        ) as CardId[];
+        );
         gainGold = selectedCardIds.length === 6;
       }
 
@@ -1024,7 +1024,7 @@ const effectMap: CardExpansionModule = {
           restrict: hand,
           count: 1,
         },
-      ) as CardId[];
+      );
 
       if (!selectedCardIds.length) {
         console.debug(`[save effect] no card selected`);
@@ -1114,7 +1114,7 @@ const effectMap: CardExpansionModule = {
           restrict: actionCards.map((card) => card.id),
           count: 1,
         },
-      ) as CardId[];
+      );
 
       if (!selectedCardIds.length) {
         console.warn(`[seaway effect] no card selected`);
@@ -1298,7 +1298,7 @@ const effectMap: CardExpansionModule = {
             count: 2,
           },
         },
-      ) as CardId[];
+      );
 
       if (!selectedCardIds.length) {
         console.debug(`[trade effect] no card selected`);

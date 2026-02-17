@@ -365,7 +365,7 @@ const registerSkysGift = (registerBoonEffect: BoonEffectRegistrar) => {
       playerId: playerId,
       count: 3,
       restrict: hand,
-    }) as CardId[];
+    });
 
     for (const cardId of selectedCardIds) {
       console.debug(`[the-skys-gift boon] discarding ${cardLibrary.getCard(cardId)}`);
@@ -524,7 +524,7 @@ const registerWindsGift = (registerBoonEffect: BoonEffectRegistrar) => {
       playerId: playerId,
       restrict: hand,
       count: 2,
-    }) as CardId[];
+    });
 
     for (const cardId of cardIds) {
       console.debug(`[the-winds-gift boon] discarding ${cardLibrary.getCard(cardId)}`);
