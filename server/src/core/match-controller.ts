@@ -57,6 +57,13 @@ import { LogManager } from './log-manager.ts';
 import { CardPriceRulesController } from './card-price-rules-controller.ts';
 import { GameActionController } from './actions/game-action-controller.ts';
 
+export interface MatchControllerDependencies {
+  socketMap: Map<PlayerId, AppSocket>;
+  expansionSearchService: ExpansionSearchService;
+  matchRuntimeFactory: MatchRuntimeFactory;
+  matchSocketBindings: MatchSocketBindings;
+}
+
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardLibSnapshot = {};
   private _matchSnapshot: Match | null | undefined;
@@ -92,13 +99,22 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     },*/
   ];
 
-  constructor(
-    private readonly _socketMap: Map<PlayerId, AppSocket>,
-    private readonly expansionSearchService: ExpansionSearchService,
-    private readonly matchRuntimeFactory: MatchRuntimeFactory,
-    private readonly matchSocketBindings: MatchSocketBindings,
-  ) {
+  private readonly _socketMap: Map<PlayerId, AppSocket>;
+  private readonly expansionSearchService: ExpansionSearchService;
+  private readonly matchRuntimeFactory: MatchRuntimeFactory;
+  private readonly matchSocketBindings: MatchSocketBindings;
+
+  constructor({
+    socketMap,
+    expansionSearchService,
+    matchRuntimeFactory,
+    matchSocketBindings,
+  }: MatchControllerDependencies) {
     super();
+    this._socketMap = socketMap;
+    this.expansionSearchService = expansionSearchService;
+    this.matchRuntimeFactory = matchRuntimeFactory;
+    this.matchSocketBindings = matchSocketBindings;
 
     this._match = {
       cardOverrides: {},

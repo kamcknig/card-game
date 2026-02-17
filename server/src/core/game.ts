@@ -23,11 +23,7 @@ import {DisconnectedPlayerVoteService} from './disconnected-player-vote-service.
 import {PlayerSessionService} from './player-session-service.ts';
 import {PlayerRegistryService} from './player-registry-service.ts';
 import {MatchStartOrchestrator} from './match-start-orchestrator.ts';
-
-// Factory signature for creating a match controller instance.
-export type MatchControllerFactory = (
-  socketMap: Map<PlayerId, AppSocket>,
-) => MatchController;
+import {MatchControllerFactory} from './match-controller-factory.ts';
 
 // Dependencies injected by the server composition root.
 export interface GameDependencies {
@@ -154,7 +150,7 @@ export class Game {
   }
 
   private createNewMatch() {
-    this._matchController = this._matchControllerFactory(this._socketMap);
+    this._matchController = this._matchControllerFactory.create(this._socketMap);
     this._matchConfiguration = { ...structuredClone(defaultMatchConfiguration) };
   }
 

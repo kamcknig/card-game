@@ -10,18 +10,43 @@ import { findEventInMatch, findProjectInMatch } from '@shared/find-card-like-in-
 import { renaissanceTokenIds } from '@expansions/renaissance/token-ids-renaissance.ts';
 import { resolveBuyOptions, ResolvedBuyOption } from './actions/resolve-buy-options.ts';
 
+export interface CardInteractivityControllerDependencies {
+  cardSourceController: CardSourceController;
+  cardPriceController: CardPriceRulesController;
+  match: Match;
+  socketMap: Map<PlayerId, AppSocket>;
+  cardLibrary: MatchCardLibrary;
+  runGameActionDelegate: RunGameActionDelegate;
+  findCards: FindCardsFn;
+}
+
 export class CardInteractivityController {
   private _gameOver: boolean = false;
+  private readonly _cardSourceController: CardSourceController;
+  private readonly _cardPriceController: CardPriceRulesController;
+  private readonly match: Match;
+  private readonly _socketMap: Map<PlayerId, AppSocket>;
+  private readonly _cardLibrary: MatchCardLibrary;
+  private readonly runGameDelegate: RunGameActionDelegate;
+  private readonly _findCards: FindCardsFn;
 
-  constructor(
-    private readonly _cardSourceController: CardSourceController,
-    private readonly _cardPriceController: CardPriceRulesController,
-    private readonly match: Match,
-    private readonly _socketMap: Map<PlayerId, AppSocket>,
-    private readonly _cardLibrary: MatchCardLibrary,
-    private readonly runGameDelegate: RunGameActionDelegate,
-    private readonly _findCards: FindCardsFn,
-  ) {
+  constructor({
+    cardSourceController,
+    cardPriceController,
+    match,
+    socketMap,
+    cardLibrary,
+    runGameActionDelegate,
+    findCards,
+  }: CardInteractivityControllerDependencies) {
+    this._cardSourceController = cardSourceController;
+    this._cardPriceController = cardPriceController;
+    this.match = match;
+    this._socketMap = socketMap;
+    this._cardLibrary = cardLibrary;
+    this.runGameDelegate = runGameActionDelegate;
+    this._findCards = findCards;
+
     this._socketMap.forEach((s) => {
       s.on('cardTapped', (pId, cId) => this.onCardTapped(pId, cId));
       s.on('cardLikeTapped', (pId, cId) => this.onCardLikeTapped(pId, cId));

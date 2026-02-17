@@ -1,4 +1,4 @@
-import {Card, CardId, Match, PlayerId} from 'shared/types/index.ts';
+import {Match, PlayerId} from 'shared/types/index.ts';
 import {AppSocket, CardEffectFunctionMap, FindCardsFn} from '@server-types/index.ts';
 import {LogManager} from './log-manager.ts';
 import {CardPriceRulesController} from './card-price-rules-controller.ts';
@@ -11,6 +11,7 @@ import {CardInteractivityController} from './card-interactivity-controller.ts';
 import {GameActionController} from './actions/game-action-controller.ts';
 import {CardSourceController} from './card-source-controller.ts';
 import {MatchCardLibrary} from './match-card-library.ts';
+import {asClass, asFunction, asValue, createContainer, InjectionMode} from 'awilix';
 
 export interface MatchRuntimeFactoryArgs {
   socketMap: Map<PlayerId, AppSocket>;
@@ -38,27 +39,6 @@ export class MatchRuntimeFactory {
     cardSourceController,
     runGameActionDelegate,
   }: MatchRuntimeFactoryArgs): MatchRuntime {
-    const logManager = new LogManager({
-      socketMap,
-    });
-
-    const cardPriceController = new CardPriceRulesController(
-      cardLibrary,
-      match,
-    );
-
-    const findCards = findCardsFactory(cardSourceController, cardPriceController, cardLibrary);
-
-    const reactionManager = new ReactionManager(
-      cardSourceController,
-      findCards,
-      cardPriceController,
-      logManager,
-      match,
-      cardLibrary,
-      runGameActionDelegate as any,
-    );
-
     const cardEffectFunctionMap = Object.keys(cardEffectFunctionMapFactory).reduce((acc, nextKey) => {
       acc[nextKey] = cardEffectFunctionMapFactory[nextKey]();
       return acc;
@@ -83,35 +63,40 @@ export class MatchRuntimeFactory {
     // Artifact effects are registered per-match via expansion configurators.
     const artifactEffectFunctionMap = {} as CardEffectFunctionMap;
 
-    const interactivityController = new CardInteractivityController(
-      cardSourceController,
-      cardPriceController,
-      match,
-      socketMap,
-      cardLibrary,
-      runGameActionDelegate as any,
-      findCards,
-    );
+    // Build an isolated DI scope for this match runtime graph.
+    const scope = createContainer({
+      injectionMode: InjectionMode.PROXY,
+    });
 
-    const gameActionsController = new GameActionController(
-      cardSourceController,
-      findCards,
-      cardPriceController,
-      cardEffectFunctionMap,
-      eventEffectFunctionMap,
-      projectEffectFunctionMap,
-      boonEffectFunctionMap,
-      hexEffectFunctionMap,
-      stateEffectFunctionMap,
-      artifactEffectFunctionMap,
-      match,
-      cardLibrary,
-      logManager,
-      socketMap,
-      reactionManager,
-      runGameActionDelegate as any,
-      interactivityController,
-    );
+    scope.register({
+      socketMap: asValue(socketMap),
+      match: asValue(match),
+      cardLibrary: asValue(cardLibrary),
+      cardSourceController: asValue(cardSourceController),
+      runGameActionDelegate: asValue(runGameActionDelegate),
+      cardEffectFunctionMap: asValue(cardEffectFunctionMap),
+      eventEffectFunctionMap: asValue(eventEffectFunctionMap),
+      projectEffectFunctionMap: asValue(projectEffectFunctionMap),
+      boonEffectFunctionMap: asValue(boonEffectFunctionMap),
+      hexEffectFunctionMap: asValue(hexEffectFunctionMap),
+      stateEffectFunctionMap: asValue(stateEffectFunctionMap),
+      artifactEffectFunctionMap: asValue(artifactEffectFunctionMap),
+      logManager: asClass(LogManager).singleton(),
+      cardPriceController: asClass(CardPriceRulesController).singleton(),
+      findCards: asFunction(({cardSourceController, cardPriceController, cardLibrary}) =>
+        findCardsFactory(cardSourceController, cardPriceController, cardLibrary)
+      ).singleton(),
+      reactionManager: asClass(ReactionManager).singleton(),
+      interactivityController: asClass(CardInteractivityController).singleton(),
+      gameActionsController: asClass(GameActionController).singleton(),
+    });
+
+    const logManager = scope.resolve<LogManager>('logManager');
+    const cardPriceController = scope.resolve<CardPriceRulesController>('cardPriceController');
+    const findCards = scope.resolve<FindCardsFn>('findCards');
+    const reactionManager = scope.resolve<ReactionManager>('reactionManager');
+    const interactivityController = scope.resolve<CardInteractivityController>('interactivityController');
+    const gameActionsController = scope.resolve<GameActionController>('gameActionsController');
 
     return {
       logManager,
@@ -123,4 +108,3 @@ export class MatchRuntimeFactory {
     };
   }
 }
-

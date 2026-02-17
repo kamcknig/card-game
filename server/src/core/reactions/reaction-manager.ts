@@ -27,6 +27,16 @@ import { LogManager } from '../log-manager.ts';
 import { CardPriceRulesController } from '../card-price-rules-controller.ts';
 import { CardSourceController } from '../card-source-controller.ts';
 
+export interface ReactionManagerDependencies {
+  cardSourceController: CardSourceController;
+  findCards: FindCardsFn;
+  cardPriceController: CardPriceRulesController;
+  logManager: LogManager;
+  match: Match;
+  cardLibrary: MatchCardLibrary;
+  runGameActionDelegate: RunGameActionDelegate;
+}
+
 export class ReactionManager {
   private _reactions: Reaction[] = [];
   private _expansionGameEventHandlers: Record<GameLifecycleEvent, GameLifecycleCallback[]> = {} as Record<
@@ -36,15 +46,30 @@ export class ReactionManager {
   // Tracks duration-trigger IDs so they can be cleaned up when a card leaves play.
   private _durationTriggerIdsByCardId: Map<CardId, Set<string>> = new Map();
 
-  constructor(
-    private readonly _cardSourceController: CardSourceController,
-    private readonly _findCards: FindCardsFn,
-    private readonly cardPriceController: CardPriceRulesController,
-    private readonly logManager: LogManager,
-    private readonly _match: Match,
-    private readonly _cardLibrary: MatchCardLibrary,
-    private readonly runGameActionDelegate: RunGameActionDelegate,
-  ) {
+  private readonly _cardSourceController: CardSourceController;
+  private readonly _findCards: FindCardsFn;
+  private readonly cardPriceController: CardPriceRulesController;
+  private readonly logManager: LogManager;
+  private readonly _match: Match;
+  private readonly _cardLibrary: MatchCardLibrary;
+  private readonly runGameActionDelegate: RunGameActionDelegate;
+
+  constructor({
+    cardSourceController,
+    findCards,
+    cardPriceController,
+    logManager,
+    match,
+    cardLibrary,
+    runGameActionDelegate,
+  }: ReactionManagerDependencies) {
+    this._cardSourceController = cardSourceController;
+    this._findCards = findCards;
+    this.cardPriceController = cardPriceController;
+    this.logManager = logManager;
+    this._match = match;
+    this._cardLibrary = cardLibrary;
+    this.runGameActionDelegate = runGameActionDelegate;
   }
 
   public endGame() {

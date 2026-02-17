@@ -3,7 +3,6 @@ import { ServerEmitEvents, ServerListenEvents } from 'shared/types/index.ts';
 import { toNumber } from 'es-toolkit/compat';
 import * as log from '@timepp/enhanced-deno-log';
 import { Game } from './core/game.ts';
-import { MatchController } from './core/match-controller.ts';
 import { ExpansionSearchService } from './core/expansion-search-service.ts';
 import { ExpansionCompatibilityService } from './core/expansion-compatibility-service.ts';
 import { FileGameConfigurationStore } from './core/game-configuration-store.ts';
@@ -12,10 +11,11 @@ import { DisconnectedPlayerVoteService } from './core/disconnected-player-vote-s
 import { PlayerSessionService } from './core/player-session-service.ts';
 import { PlayerRegistryService } from './core/player-registry-service.ts';
 import { MatchStartOrchestrator } from './core/match-start-orchestrator.ts';
+import { MatchControllerFactory } from './core/match-controller-factory.ts';
 import { MatchRuntimeFactory } from './core/match-runtime-factory.ts';
 import { MatchSocketBindings } from './core/match-socket-bindings.ts';
 import { loadExpansion } from './utils/load-expansion.ts';
-import { asClass, asFunction, asValue, createContainer, InjectionMode } from 'awilix';
+import { asClass, asValue, createContainer, InjectionMode } from 'awilix';
 
 // Default to disabling file logs unless explicitly enabled.
 const logToFileEnabled = Deno.env.get('LOG_TO_FILE')?.trim().toLowerCase() === 'true';
@@ -55,9 +55,7 @@ const container = createContainer({
 container.register({
   io: asValue(io),
   maxPlayers: asValue(6),
-  matchControllerFactory: asFunction(({ expansionSearchService, matchRuntimeFactory, matchSocketBindings }) =>
-    (socketMap) => new MatchController(socketMap, expansionSearchService, matchRuntimeFactory, matchSocketBindings)
-  ).singleton(),
+  matchControllerFactory: asClass(MatchControllerFactory).singleton(),
   expansionSearchService: asClass(ExpansionSearchService).singleton(),
   expansionCompatibilityService: asClass(ExpansionCompatibilityService).singleton(),
   matchRuntimeFactory: asClass(MatchRuntimeFactory).singleton(),

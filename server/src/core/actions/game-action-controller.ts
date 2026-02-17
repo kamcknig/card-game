@@ -65,31 +65,85 @@ import {
 import { getPlayerTurnIndex } from '../../../../shared/src/get-player-position-utils.ts';
 import { resolveBuyOptions } from './resolve-buy-options.ts';
 
+export interface GameActionControllerDependencies {
+  cardSourceController: CardSourceController;
+  findCards: FindCardsFn;
+  cardPriceController: CardPriceRulesController;
+  cardEffectFunctionMap: CardEffectFunctionMap;
+  eventEffectFunctionMap: CardEffectFunctionMap;
+  projectEffectFunctionMap: CardEffectFunctionMap;
+  boonEffectFunctionMap: CardEffectFunctionMap;
+  hexEffectFunctionMap: CardEffectFunctionMap;
+  stateEffectFunctionMap: CardEffectFunctionMap;
+  artifactEffectFunctionMap: CardEffectFunctionMap;
+  match: Match;
+  cardLibrary: MatchCardLibrary;
+  logManager: LogManager;
+  socketMap: Map<PlayerId, AppSocket>;
+  reactionManager: ReactionManager;
+  runGameActionDelegate: RunGameActionDelegate;
+  interactivityController: CardInteractivityController;
+}
+
 export class GameActionController implements GameActionDefinitionMap {
   private customActionHandlers: Partial<GameActionDefinitionMap> = {};
   private customCardEffectHandlers: Record<string, Partial<Record<CardKey, CardEffectFn>>> = {};
   // Guards against re-entrant computer turns triggered by nested game actions.
   private _computerTurnInProgress: boolean = false;
+  private _cardSourceController: CardSourceController;
+  private _findCards: FindCardsFn;
+  private cardPriceRuleController: CardPriceRulesController;
+  private cardEffectFunctionMap: CardEffectFunctionMap;
+  private eventEffectFunctionMap: CardEffectFunctionMap;
+  private projectEffectFunctionMap: CardEffectFunctionMap;
+  private boonEffectFunctionMap: CardEffectFunctionMap;
+  private hexEffectFunctionMap: CardEffectFunctionMap;
+  private stateEffectFunctionMap: CardEffectFunctionMap;
+  private artifactEffectFunctionMap: CardEffectFunctionMap;
+  private match: Match;
+  private cardLibrary: MatchCardLibrary;
+  private logManager: LogManager;
+  private socketMap: Map<PlayerId, AppSocket>;
+  private reactionManager: ReactionManager;
+  private runGameActionDelegate: RunGameActionDelegate;
+  private readonly interactivityController: CardInteractivityController;
 
-  constructor(
-    private _cardSourceController: CardSourceController,
-    private _findCards: FindCardsFn,
-    private cardPriceRuleController: CardPriceRulesController,
-    private cardEffectFunctionMap: CardEffectFunctionMap,
-    private eventEffectFunctionMap: CardEffectFunctionMap,
-    private projectEffectFunctionMap: CardEffectFunctionMap,
-    private boonEffectFunctionMap: CardEffectFunctionMap,
-    private hexEffectFunctionMap: CardEffectFunctionMap,
-    private stateEffectFunctionMap: CardEffectFunctionMap,
-    private artifactEffectFunctionMap: CardEffectFunctionMap,
-    private match: Match,
-    private cardLibrary: MatchCardLibrary,
-    private logManager: LogManager,
-    private socketMap: Map<PlayerId, AppSocket>,
-    private reactionManager: ReactionManager,
-    private runGameActionDelegate: RunGameActionDelegate,
-    private readonly interactivityController: CardInteractivityController,
-  ) {
+  constructor({
+    cardSourceController,
+    findCards,
+    cardPriceController,
+    cardEffectFunctionMap,
+    eventEffectFunctionMap,
+    projectEffectFunctionMap,
+    boonEffectFunctionMap,
+    hexEffectFunctionMap,
+    stateEffectFunctionMap,
+    artifactEffectFunctionMap,
+    match,
+    cardLibrary,
+    logManager,
+    socketMap,
+    reactionManager,
+    runGameActionDelegate,
+    interactivityController,
+  }: GameActionControllerDependencies) {
+    this._cardSourceController = cardSourceController;
+    this._findCards = findCards;
+    this.cardPriceRuleController = cardPriceController;
+    this.cardEffectFunctionMap = cardEffectFunctionMap;
+    this.eventEffectFunctionMap = eventEffectFunctionMap;
+    this.projectEffectFunctionMap = projectEffectFunctionMap;
+    this.boonEffectFunctionMap = boonEffectFunctionMap;
+    this.hexEffectFunctionMap = hexEffectFunctionMap;
+    this.stateEffectFunctionMap = stateEffectFunctionMap;
+    this.artifactEffectFunctionMap = artifactEffectFunctionMap;
+    this.match = match;
+    this.cardLibrary = cardLibrary;
+    this.logManager = logManager;
+    this.socketMap = socketMap;
+    this.reactionManager = reactionManager;
+    this.runGameActionDelegate = runGameActionDelegate;
+    this.interactivityController = interactivityController;
   }
 
   public registerCardEffect(cardKey: CardKey, tag: string, fn: CardEffectFn) {

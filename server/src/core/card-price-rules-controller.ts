@@ -6,13 +6,19 @@ export type CardPriceRule = (
   context: { match: Match; playerId: PlayerId },
 ) => { restricted: boolean; cost: CardCost };
 
+export interface CardPriceRulesControllerDependencies {
+  cardLibrary: MatchCardLibrary;
+  match: Match;
+}
+
 export class CardPriceRulesController {
   private _rules: Record<CardId, CardPriceRule[]> = {};
+  private readonly cardLibrary: MatchCardLibrary;
+  private readonly match: Match;
 
-  constructor(
-    private readonly cardLibrary: MatchCardLibrary,
-    private readonly match: Match,
-  ) {
+  constructor({ cardLibrary, match }: CardPriceRulesControllerDependencies) {
+    this.cardLibrary = cardLibrary;
+    this.match = match;
   }
 
   registerRule(card: CardLike, rule: CardPriceRule) {
