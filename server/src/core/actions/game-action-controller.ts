@@ -42,7 +42,6 @@ import {
   ReactionTemplate,
   ReactionTrigger,
   PromptService,
-  SupplyGainService,
   TriggerEventType,
 } from '@server-types/index.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
@@ -92,7 +91,6 @@ export class GameActionController implements GameActionDefinitionMap {
     private readonly reactionManager: ReactionManager,
     private interactivityController: CardInteractivityController,
     private buyOptionsResolver: BuyOptionsResolver,
-    private supplyGainService: SupplyGainService,
     private promptService: PromptService,
     private readonly actionService: ActionService,
     private readonly cardEffectContextFactory: CardEffectContextFactory,
