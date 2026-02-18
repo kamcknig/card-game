@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
@@ -51,7 +52,7 @@ const gainHorse = async (
   ]);
 
   if (!horseCards.length) {
-    console.debug('[menagerie event helper] no Horse cards remain to gain');
+    loggerService.debug('[menagerie event helper] no Horse cards remain to gain');
     return false;
   }
 
@@ -115,7 +116,7 @@ const effectMap: CardExpansionModule = {
       // Banish chooses a duplicated name in hand, then Exiles any number of that name.
       const hand = getPlayerSourceSafe(cardEffectArgs, 'playerHand', cardEffectArgs.playerId);
       if (!hand.length) {
-        console.debug('[banish effect] no cards in hand to Exile');
+        loggerService.debug('[banish effect] no cards in hand to Exile');
         return;
       }
 
@@ -132,7 +133,7 @@ const effectMap: CardExpansionModule = {
         .map((cardIds) => cardIds[0]);
 
       if (!selectableNameCardIds.length) {
-        console.debug('[banish effect] no duplicated card names in hand');
+        loggerService.debug('[banish effect] no duplicated card names in hand');
         return;
       }
 
@@ -145,7 +146,7 @@ const effectMap: CardExpansionModule = {
       });
 
       if (!selectedNameCardId) {
-        console.debug('[banish effect] player declined to choose a card name');
+        loggerService.debug('[banish effect] player declined to choose a card name');
         return;
       }
 
@@ -161,7 +162,7 @@ const effectMap: CardExpansionModule = {
       });
 
       if (!cardsToExile.length) {
-        console.debug('[banish effect] no cards selected to Exile');
+        loggerService.debug('[banish effect] no cards selected to Exile');
         return;
       }
 
@@ -196,10 +197,10 @@ const effectMap: CardExpansionModule = {
             to: { location: 'playerDiscard' },
           });
         } else {
-          console.warn('[bargain effect] no gain card selected');
+          loggerService.warn('[bargain effect] no gain card selected');
         }
       } else {
-        console.debug('[bargain effect] no non-Victory card costing up to $5 to gain');
+        loggerService.debug('[bargain effect] no non-Victory card costing up to $5 to gain');
       }
 
       // Bargain then gives each other player a Horse in turn order.
@@ -219,7 +220,7 @@ const effectMap: CardExpansionModule = {
       // Commerce counts differently named cards this player gained this turn.
       const turnHistoryIndex = getCurrentTurnHistoryIndex(cardEffectArgs);
       if (turnHistoryIndex === undefined) {
-        console.warn('[commerce effect] no active turn history index');
+        loggerService.warn('[commerce effect] no active turn history index');
         return;
       }
 
@@ -238,7 +239,7 @@ const effectMap: CardExpansionModule = {
       }
 
       if (uniqueCardKeys.size === 0) {
-        console.debug('[commerce effect] no differently named gained cards this turn');
+        loggerService.debug('[commerce effect] no differently named gained cards this turn');
         return;
       }
 
@@ -249,7 +250,7 @@ const effectMap: CardExpansionModule = {
       const goldGainCount = Math.min(uniqueCardKeys.size, goldCards.length);
 
       if (goldGainCount === 0) {
-        console.debug('[commerce effect] no Gold cards remain in Supply');
+        loggerService.debug('[commerce effect] no Gold cards remain in Supply');
         return;
       }
 
@@ -267,7 +268,7 @@ const effectMap: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
-        console.warn('[delay effect] event not found');
+        loggerService.warn('[delay effect] event not found');
         return;
       }
 
@@ -278,7 +279,7 @@ const effectMap: CardExpansionModule = {
         .filter((card) => card.type.includes('ACTION'));
 
       if (!actionCardsInHand.length) {
-        console.debug('[delay effect] no Action cards in hand to set aside');
+        loggerService.debug('[delay effect] no Action cards in hand to set aside');
         return;
       }
 
@@ -291,11 +292,10 @@ const effectMap: CardExpansionModule = {
       });
 
       if (!selectedActionCardId) {
-        console.debug('[delay effect] player declined to set aside an Action');
+        loggerService.debug('[delay effect] player declined to set aside an Action');
         return;
       }
 
-      const selectedActionCardId = selectedActionCardId;
       await cardEffectArgs.actionService.run('moveCard', {
         toPlayerId: cardEffectArgs.playerId,
         cardId: selectedActionCardId,
@@ -338,7 +338,7 @@ const effectMap: CardExpansionModule = {
       ]);
 
       if (!gainableCards.length) {
-        console.debug('[demand effect] no card costing up to $4 to gain');
+        loggerService.debug('[demand effect] no card costing up to $4 to gain');
         return;
       }
 
@@ -350,7 +350,7 @@ const effectMap: CardExpansionModule = {
       });
 
       if (!selectedCardId) {
-        console.warn('[demand effect] no card selected to gain');
+        loggerService.warn('[demand effect] no card selected to gain');
         return;
       }
 
@@ -365,7 +365,7 @@ const effectMap: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
-        console.warn('[desperation effect] event not found');
+        loggerService.warn('[desperation effect] event not found');
         return;
       }
 
@@ -403,7 +403,7 @@ const effectMap: CardExpansionModule = {
       }) as { action?: number } | null;
 
       if (promptResult?.action !== 2) {
-        console.debug('[desperation effect] player declined to gain a Curse');
+        loggerService.debug('[desperation effect] player declined to gain a Curse');
         return;
       }
 
@@ -413,7 +413,7 @@ const effectMap: CardExpansionModule = {
       ]);
 
       if (!curseCards.length) {
-        console.debug('[desperation effect] no Curse in Supply; no bonus granted');
+        loggerService.debug('[desperation effect] no Curse in Supply; no bonus granted');
         return;
       }
 
@@ -444,7 +444,7 @@ const effectMap: CardExpansionModule = {
       ]);
 
       if (!duchyCards.length) {
-        console.debug('[enclave effect] no Duchy in Supply to Exile');
+        loggerService.debug('[enclave effect] no Duchy in Supply to Exile');
         return;
       }
 
@@ -463,7 +463,7 @@ const effectMap: CardExpansionModule = {
         .filter((card) => !card.type.includes('VICTORY'));
 
       if (!nonVictoryCards.length) {
-        console.debug('[enhance effect] no non-Victory cards in hand');
+        loggerService.debug('[enhance effect] no non-Victory cards in hand');
         return;
       }
 
@@ -476,7 +476,7 @@ const effectMap: CardExpansionModule = {
       });
 
       if (!cardsToTrash) {
-        console.debug('[enhance effect] player declined to trash a card');
+        loggerService.debug('[enhance effect] player declined to trash a card');
         return;
       }
 
@@ -502,7 +502,7 @@ const effectMap: CardExpansionModule = {
       ]);
 
       if (!gainableCards.length) {
-        console.debug('[enhance effect] no card available to gain after trashing');
+        loggerService.debug('[enhance effect] no card available to gain after trashing');
         return;
       }
 
@@ -514,7 +514,7 @@ const effectMap: CardExpansionModule = {
       });
 
       if (!selectedGainId) {
-        console.warn('[enhance effect] no gain card selected');
+        loggerService.warn('[enhance effect] no gain card selected');
         return;
       }
 
@@ -528,25 +528,25 @@ const effectMap: CardExpansionModule = {
   'gamble': {
     registerEffects: () => async (cardEffectArgs) => {
       // Gamble grants +1 Buy, then discards and optionally plays the discarded top card.
-      console.debug('[gamble effect] resolving +1 Buy');
+      loggerService.debug('[gamble effect] resolving +1 Buy');
       await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
 
       // If the deck is empty, shuffle first to find a top card to discard.
       let deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
       if (!deck.length) {
-        console.debug('[gamble effect] deck empty, shuffling discard into deck');
+        loggerService.debug('[gamble effect] deck empty, shuffling discard into deck');
         await cardEffectArgs.actionService.run('shuffleDeck', { playerId: cardEffectArgs.playerId });
         deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
       }
 
       const discardedCardId = deck.slice(-1)[0];
       if (discardedCardId === undefined) {
-        console.debug('[gamble effect] no card to discard from deck');
+        loggerService.debug('[gamble effect] no card to discard from deck');
         return;
       }
 
       const discardedCard = cardEffectArgs.cardLibrary.getCard(discardedCardId);
-      console.debug(`[gamble effect] top card to discard is ${discardedCard}`);
+      loggerService.debug(`[gamble effect] top card to discard is ${discardedCard}`);
 
       // Discard first, matching the printed order of operations.
       await cardEffectArgs.actionService.run('discardCard', {
@@ -557,11 +557,11 @@ const effectMap: CardExpansionModule = {
       // Only Actions and Treasures are eligible for the optional play.
       const canPlayRevealed = discardedCard.type.includes('ACTION') || discardedCard.type.includes('TREASURE');
       if (!canPlayRevealed) {
-        console.debug('[gamble effect] discarded card is not an Action or Treasure');
+        loggerService.debug('[gamble effect] discarded card is not an Action or Treasure');
         return;
       }
 
-      console.debug(`[gamble effect] discarded card ${discardedCard} is playable; prompting player`);
+      loggerService.debug(`[gamble effect] discarded card ${discardedCard} is playable; prompting player`);
       const promptResult = await cardEffectArgs.actionService.run('userPrompt', {
         playerId: cardEffectArgs.playerId,
         prompt: `Play ${discardedCard.cardName}?`,
@@ -572,11 +572,11 @@ const effectMap: CardExpansionModule = {
       }) as { action?: number } | null;
 
       if (promptResult?.action !== 2) {
-        console.debug('[gamble effect] player declined to play discarded card');
+        loggerService.debug('[gamble effect] player declined to play discarded card');
         return;
       }
 
-      console.debug(`[gamble effect] player chose to play discarded card ${discardedCard}`);
+      loggerService.debug(`[gamble effect] player chose to play discarded card ${discardedCard}`);
       await cardEffectArgs.actionService.run('playCard', {
         playerId: cardEffectArgs.playerId,
         cardId: discardedCardId,
@@ -588,7 +588,7 @@ const effectMap: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
-        console.warn('[invest effect] event not found');
+        loggerService.warn('[invest effect] event not found');
         return;
       }
 
@@ -599,7 +599,7 @@ const effectMap: CardExpansionModule = {
       ]);
 
       if (!actionCards.length) {
-        console.debug('[invest effect] no Action card in Supply to Exile');
+        loggerService.debug('[invest effect] no Action card in Supply to Exile');
         return;
       }
 
@@ -611,11 +611,10 @@ const effectMap: CardExpansionModule = {
       });
 
       if (!selectedCardId) {
-        console.warn('[invest effect] no card selected');
+        loggerService.warn('[invest effect] no card selected');
         return;
       }
 
-      const selectedCardId = selectedCardId;
       const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
 
       await cardEffectArgs.actionService.run('exileCard', {
@@ -673,7 +672,7 @@ const effectMap: CardExpansionModule = {
             continue;
           }
 
-          console.debug(
+          loggerService.debug(
             `[invest effect] player ${player.id} drawing 2 for other player's Invest of ${selectedCard.cardKey}`,
           );
           await cardEffectArgs.actionService.run('drawCard', {
@@ -693,7 +692,7 @@ const effectMap: CardExpansionModule = {
         .filter((card) => card.type.includes('ACTION'));
 
       if (!actionCardsInDiscard.length) {
-        console.debug('[march effect] no Action cards in discard');
+        loggerService.debug('[march effect] no Action cards in discard');
         return;
       }
 
@@ -706,7 +705,7 @@ const effectMap: CardExpansionModule = {
       });
 
       if (!selectedCardId) {
-        console.debug('[march effect] player declined to play from discard');
+        loggerService.debug('[march effect] player declined to play from discard');
         return;
       }
 
@@ -722,7 +721,7 @@ const effectMap: CardExpansionModule = {
       // Populate gains one top card from each Action Supply pile.
       const actionSupplyPiles = getActionSupplyPileKeys(cardEffectArgs);
       if (!actionSupplyPiles.length) {
-        console.debug('[populate effect] no Action Supply piles available');
+        loggerService.debug('[populate effect] no Action Supply piles available');
         return;
       }
 
@@ -737,7 +736,7 @@ const effectMap: CardExpansionModule = {
           .filter((entry): entry is { pileKey: string; card: Card } => !!entry.card);
 
         if (!selectableTopCards.length) {
-          console.debug('[populate effect] no remaining top cards found to gain');
+          loggerService.debug('[populate effect] no remaining top cards found to gain');
           return;
         }
 
@@ -749,11 +748,11 @@ const effectMap: CardExpansionModule = {
         });
 
         // If selection unexpectedly fails, fall back to the first available option.
-        const selectedCardId = selectedCardId ?? selectableTopCards[0].card.id;
-        const selectedTopCard = selectableTopCards.find((entry) => entry.card.id === selectedCardId) ??
+        const resolvedCardId = selectedCardId ?? selectableTopCards[0].card.id;
+        const selectedTopCard = selectableTopCards.find((entry) => entry.card.id === resolvedCardId) ??
           selectableTopCards[0];
 
-        console.debug(
+        loggerService.debug(
           `[populate effect] selected ${selectedTopCard.card} from pile ${selectedTopCard.pileKey}; ${
             remainingPileKeys.length - 1
           } pile(s) remain`,
@@ -782,7 +781,7 @@ const effectMap: CardExpansionModule = {
 
       const namedCardKey = nameResult?.result;
       if (!namedCardKey) {
-        console.warn('[pursue effect] no card named');
+        loggerService.warn('[pursue effect] no card named');
         return;
       }
 
@@ -801,7 +800,7 @@ const effectMap: CardExpansionModule = {
       }
 
       if (!revealedCardIds.length) {
-        console.debug('[pursue effect] no cards revealed');
+        loggerService.debug('[pursue effect] no cards revealed');
         return;
       }
 
@@ -838,7 +837,7 @@ const effectMap: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
-        console.warn('[reap effect] event not found');
+        loggerService.warn('[reap effect] event not found');
         return;
       }
 
@@ -849,7 +848,7 @@ const effectMap: CardExpansionModule = {
       ]);
 
       if (!goldCards.length) {
-        console.debug('[reap effect] no Gold in Supply to gain');
+        loggerService.debug('[reap effect] no Gold in Supply to gain');
         return;
       }
 
@@ -894,7 +893,7 @@ const effectMap: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const event = findEventInMatch<SeizeTheDayEventMetadata>(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
-        console.warn('[seize-the-day effect] event not found');
+        loggerService.warn('[seize-the-day effect] event not found');
         return;
       }
 
@@ -902,12 +901,12 @@ const effectMap: CardExpansionModule = {
       event.metadata.menagerie ??= {};
       event.metadata.menagerie.usedByPlayerId ??= {};
       if (event.metadata.menagerie.usedByPlayerId[cardEffectArgs.playerId]) {
-        console.debug(`[seize-the-day effect] player ${cardEffectArgs.playerId} already used Seize the Day`);
+        loggerService.debug(`[seize-the-day effect] player ${cardEffectArgs.playerId} already used Seize the Day`);
         return;
       }
 
       event.metadata.menagerie.usedByPlayerId[cardEffectArgs.playerId] = true;
-      console.debug(`[seize-the-day effect] marking usage for player ${cardEffectArgs.playerId}`);
+      loggerService.debug(`[seize-the-day effect] marking usage for player ${cardEffectArgs.playerId}`);
 
       const lockRule: CardPriceRule = () => ({ restricted: true, cost: { treasure: 0 } });
       cardEffectArgs.cardPriceController.registerRule(event, lockRule);
@@ -927,7 +926,7 @@ const effectMap: CardExpansionModule = {
         .filter((card) => card.owner === cardEffectArgs.playerId);
 
       if (cardsInPlay.length > 5) {
-        console.debug('[stampede effect] player has more than 5 cards in play, no Horses gained');
+        loggerService.debug('[stampede effect] player has more than 5 cards in play, no Horses gained');
         return;
       }
 
@@ -938,7 +937,7 @@ const effectMap: CardExpansionModule = {
       const horseGainCount = Math.min(5, horseCards.length);
 
       if (horseGainCount === 0) {
-        console.debug('[stampede effect] no Horses remain to gain');
+        loggerService.debug('[stampede effect] no Horses remain to gain');
         return;
       }
 
@@ -963,7 +962,7 @@ const effectMap: CardExpansionModule = {
         .filter((card) => card.type.includes('ACTION'));
 
       if (!actionCardsInHand.length) {
-        console.debug('[toil effect] no Action cards in hand');
+        loggerService.debug('[toil effect] no Action cards in hand');
         return;
       }
 
@@ -976,7 +975,7 @@ const effectMap: CardExpansionModule = {
       });
 
       if (!selectedCardId) {
-        console.debug('[toil effect] player declined to play an Action');
+        loggerService.debug('[toil effect] player declined to play an Action');
         return;
       }
 
@@ -1002,7 +1001,7 @@ const effectMap: CardExpansionModule = {
       const canTopdeckFromExile = exileActionCards.length > 0;
 
       if (!canExileFromSupply && !canTopdeckFromExile) {
-        console.debug('[transport effect] no valid options available');
+        loggerService.debug('[transport effect] no valid options available');
         return;
       }
 
@@ -1030,7 +1029,7 @@ const effectMap: CardExpansionModule = {
         });
 
         if (!selectedCardId) {
-          console.warn('[transport effect] no Supply Action selected to Exile');
+          loggerService.warn('[transport effect] no Supply Action selected to Exile');
           return;
         }
 
@@ -1049,7 +1048,7 @@ const effectMap: CardExpansionModule = {
       });
 
       if (!selectedCardId) {
-        console.warn('[transport effect] no Exiled Action selected to topdeck');
+        loggerService.warn('[transport effect] no Exiled Action selected to topdeck');
         return;
       }
 

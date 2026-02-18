@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { Supply } from 'shared/types/index.ts';
 import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 
@@ -8,7 +9,7 @@ export const configureJoust = async (args: ExpansionConfiguratorContext) => {
     return;
   }
 
-  console.info(`[cornucopia configurator - configuring joust] joust present in supply`);
+  loggerService.info(`[cornucopia configurator - configuring joust] joust present in supply`);
 
   args.config.nonSupply ??= [];
 
@@ -33,5 +34,5 @@ export const configureJoust = async (args: ExpansionConfiguratorContext) => {
     const count = args.config.players.length > 2 ? 2 : 1;
     rewardsKingdom.cards = [...rewardsKingdom.cards, ...new Array(count).fill(cardData)];
   }
-  console.info(`[cornucopia configurator - configuring joust] joust configured`);
+  loggerService.info(`[cornucopia configurator - configuring joust] joust configured`);
 };

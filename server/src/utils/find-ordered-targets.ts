@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { EffectTarget, Match, Player, PlayerId } from 'shared/types/index.ts';
 import { isNull } from 'es-toolkit';
 
@@ -10,14 +11,14 @@ type FindTargetsArgs = {
 export const findOrderedTargets = (args: FindTargetsArgs): number[] => {
   const { startingPlayerId: currentPlayerTurnId, match } = args;
   let { appliesTo: target } = args;
-  console.info('findEffectTargetIds current player', currentPlayerTurnId, 'target', target);
+  loggerService.info('findEffectTargetIds current player', currentPlayerTurnId, 'target', target);
 
   const otherCountRegExResult = /(\d+)_OTHER/.exec(target);
   let otherCount;
   if (!isNull(otherCountRegExResult)) {
     target = 'X_OTHER';
     otherCount = otherCountRegExResult[1];
-    console.info('X_OTHER count', otherCount);
+    loggerService.info('X_OTHER count', otherCount);
   }
 
   let result: Player[] = [];
@@ -25,21 +26,21 @@ export const findOrderedTargets = (args: FindTargetsArgs): number[] => {
 
   switch (target) {
     case 'ALL': {
-      console.info('find targets for ALL');
+      loggerService.info('find targets for ALL');
       const startIndex = currentTurnOrder.findIndex((player) => player.id === currentPlayerTurnId);
       const l = currentTurnOrder.length;
       for (let i = 0; i < l; i++) {
         const idx = (startIndex + i) % currentTurnOrder.length;
         result.push(currentTurnOrder[idx]);
       }
-      console.info('target players in order starting from current player', result);
+      loggerService.info('target players in order starting from current player', result);
       break;
     }
     case 'ANY':
-      console.error('find targets for ANY not implemented');
+      loggerService.error('find targets for ANY not implemented');
       return [1];
     case 'ALL_OTHER': {
-      console.info('find targets for ALL_OTHER');
+      loggerService.info('find targets for ALL_OTHER');
       const currentIndex = currentTurnOrder.findIndex((player) => player.id === currentPlayerTurnId);
 
       const reordered = [];
@@ -50,11 +51,11 @@ export const findOrderedTargets = (args: FindTargetsArgs): number[] => {
       }
 
       result = reordered;
-      console.info('target players in order (ALL_OTHER)', result);
+      loggerService.info('target players in order (ALL_OTHER)', result);
       break;
     }
     case 'X_OTHER':
-      console.error('find targets for X_OTHER not implemented');
+      loggerService.error('find targets for X_OTHER not implemented');
       result = [];
       break;
     default:

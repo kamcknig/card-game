@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { ComputedMatchConfiguration } from 'shared/types/index.ts';
 import { GameEventRegistrar } from '@server-types/index.ts';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
@@ -15,7 +16,7 @@ export const configureBasilica = (
   );
   if (!hasBasilica) return;
 
-  console.info(
+  loggerService.info(
     `[empires configurator] setting up basilica landmark handlers`,
   );
 
@@ -38,7 +39,7 @@ export const configureBasilica = (
     // Basilica checks remaining treasure after the gain has resolved.
     const treasureRemaining = args.match.playerTreasure;
     if (treasureRemaining < 2) {
-      console.debug(
+      loggerService.debug(
         `[basilica onCardGained] player ${eventArgs.playerId} has ${treasureRemaining} treasure, skipping`,
       );
       return;
@@ -53,14 +54,14 @@ export const configureBasilica = (
     ).sort((a, b) => a.id.localeCompare(b.id));
 
     if (!tokensOnBasilica.length) {
-      console.debug(
+      loggerService.debug(
         `[basilica onCardGained] no VP tokens remaining on Basilica`,
       );
       return;
     }
 
     const tokensToMove = tokensOnBasilica.slice(0, 2);
-    console.info(
+    loggerService.info(
       `[basilica onCardGained] player ${eventArgs.playerId} has ${treasureRemaining} treasure, moving ${tokensToMove.length} VP token(s)`,
     );
 

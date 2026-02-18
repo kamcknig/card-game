@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { Supply } from 'shared/types/index.ts';
 import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
@@ -11,7 +12,7 @@ export const configureRuins = async (args: ExpansionConfiguratorContext) => {
     return;
   }
 
-  console.info(`[dark-ages configurator - configuring ruins] ruins needs to be configured`);
+  loggerService.info(`[dark-ages configurator - configuring ruins] ruins needs to be configured`);
 
   const expansionData = args.expansionCatalog['dark-ages'];
   const expansionKingdoms = expansionData.cardData.kingdomSupply;
@@ -42,5 +43,5 @@ export const configureRuins = async (args: ExpansionConfiguratorContext) => {
 
   args.config.kingdomSupply.push(ruinsKingdom);
 
-  console.info(`[dark-ages configurator - configuring ruins] ruins configured`);
+  loggerService.info(`[dark-ages configurator - configuring ruins] ruins configured`);
 };

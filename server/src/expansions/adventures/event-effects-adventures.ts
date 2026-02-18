@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { CardExpansionModule } from '@server-types/index.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { Card, CardId, CardKey, CountSpec } from 'shared/types/index.ts';
@@ -43,7 +44,7 @@ const effectMap: CardExpansionModule = {
         .filter((card) => card.owner === cardEffectArgs.playerId);
 
       if (treasuresInPlay.length > 0) {
-        console.debug(
+        loggerService.debug(
           `[alms effect] ${treasuresInPlay.length} treasures in play, not gaining card`,
         );
         return;
@@ -59,7 +60,7 @@ const effectMap: CardExpansionModule = {
       ]);
 
       if (!cards.length) {
-        console.debug(`[alms effect] no cards to gain`);
+        loggerService.debug(`[alms effect] no cards to gain`);
         return;
       }
 
@@ -74,7 +75,7 @@ const effectMap: CardExpansionModule = {
       );
 
       if (!selectedCardIds.length) {
-        console.warn(`[alms effect] no card selected`);
+        loggerService.warn(`[alms effect] no card selected`);
         return;
       }
 
@@ -82,7 +83,7 @@ const effectMap: CardExpansionModule = {
         selectedCardIds[0],
       );
 
-      console.debug(`[alms effect] gaining card ${selectedCard}`);
+      loggerService.debug(`[alms effect] gaining card ${selectedCard}`);
 
       await cardEffectArgs.actionService.run('gainCard', {
         playerId: cardEffectArgs.playerId,
@@ -95,7 +96,7 @@ const effectMap: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
-        console.warn(`[ball effect] event not found`);
+        loggerService.warn(`[ball effect] event not found`);
         return;
       }
 
@@ -108,7 +109,7 @@ const effectMap: CardExpansionModule = {
           token.location.playerId === cardEffectArgs.playerId
         );
       if (!alreadyHasToken) {
-        console.debug(
+        loggerService.debug(
           `[ball effect] placing -$1 token for player ${cardEffectArgs.playerId}`,
         );
         await cardEffectArgs.actionService.run('placeToken', {
@@ -129,7 +130,7 @@ const effectMap: CardExpansionModule = {
       ]);
 
       if (!cards.length) {
-        console.debug(`[ball effect] no cards to gain`);
+        loggerService.debug(`[ball effect] no cards to gain`);
         return;
       }
 
@@ -146,13 +147,13 @@ const effectMap: CardExpansionModule = {
       );
 
       if (!selectedCardIds.length) {
-        console.warn(`[ball effect] no card selected`);
+        loggerService.warn(`[ball effect] no card selected`);
         return;
       }
 
       for (const selectedCardId of selectedCardIds) {
         const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
-        console.debug(`[ball effect] gaining ${selectedCard}`);
+        loggerService.debug(`[ball effect] gaining ${selectedCard}`);
         await cardEffectArgs.actionService.run('gainCard', {
           playerId: cardEffectArgs.playerId,
           cardId: selectedCard.id,
@@ -167,7 +168,7 @@ const effectMap: CardExpansionModule = {
         .filter((card) => card.cardKey === 'copper' && card.owner === cardEffectArgs.playerId);
 
       if (!coppersInPlay.length) {
-        console.debug(`[bonfire effect] no coppers in play`);
+        loggerService.debug(`[bonfire effect] no coppers in play`);
         return;
       }
 
@@ -182,11 +183,11 @@ const effectMap: CardExpansionModule = {
       );
 
       if (!selectedCardIds.length) {
-        console.warn(`[bonfire effect] no card selected`);
+        loggerService.warn(`[bonfire effect] no card selected`);
         return;
       }
 
-      console.debug(
+      loggerService.debug(
         `[bonfire effect] trashing ${selectedCardIds.length} cards`,
       );
 
@@ -202,7 +203,7 @@ const effectMap: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
-        console.warn(`[expedition effect] event not found`);
+        loggerService.warn(`[expedition effect] event not found`);
         return;
       }
 
@@ -224,11 +225,11 @@ const effectMap: CardExpansionModule = {
             return true;
           },
           triggeredEffectFn: async (triggeredArgs) => {
-            console.warn(
+            loggerService.warn(
               `[expedition effect] i have programmed this to use the reaction system, but technically the effect should modify the amount of cards drawn, and not take place at the end of cleanup`,
             );
 
-            console.debug(`[expedition endTurnPhase effect] drawing 2 cards`);
+            loggerService.debug(`[expedition endTurnPhase effect] drawing 2 cards`);
             await cardEffectArgs.actionService.run('drawCard', {
               playerId: cardEffectArgs.playerId,
               count: 2,
@@ -242,7 +243,7 @@ const effectMap: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
-        console.warn(`[plan effect] event not found`);
+        loggerService.warn(`[plan effect] event not found`);
         return;
       }
 
@@ -256,7 +257,7 @@ const effectMap: CardExpansionModule = {
         .filter((pile): pile is string => !!pile);
 
       if (!actionSupplyPiles.length) {
-        console.warn(`[plan effect] no Action supply piles available`);
+        loggerService.warn(`[plan effect] no Action supply piles available`);
         return;
       }
 
@@ -275,11 +276,11 @@ const effectMap: CardExpansionModule = {
 
       const selectedPile = result?.[0];
       if (!selectedPile) {
-        console.warn(`[plan effect] no pile selected`);
+        loggerService.warn(`[plan effect] no pile selected`);
         return;
       }
 
-      console.debug(`[plan effect] moving Trashing token to ${selectedPile}`);
+      loggerService.debug(`[plan effect] moving Trashing token to ${selectedPile}`);
 
       const existingTokenEntry = Object.entries(
         cardEffectArgs.match.tokens ?? {},
@@ -290,7 +291,7 @@ const effectMap: CardExpansionModule = {
         );
 
       if (!existingTokenEntry) {
-        console.warn(`[plan effect] no Trashing token found for player`);
+        loggerService.warn(`[plan effect] no Trashing token found for player`);
         return;
       }
 
@@ -304,7 +305,7 @@ const effectMap: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
-        console.warn(`[ferry effect] event not found`);
+        loggerService.warn(`[ferry effect] event not found`);
         return;
       }
 
@@ -318,7 +319,7 @@ const effectMap: CardExpansionModule = {
         .filter((pile): pile is string => !!pile);
 
       if (!actionSupplyPiles.length) {
-        console.warn(`[ferry effect] no Action supply piles available`);
+        loggerService.warn(`[ferry effect] no Action supply piles available`);
         return;
       }
 
@@ -337,11 +338,11 @@ const effectMap: CardExpansionModule = {
 
       const selectedPile = result?.[0];
       if (!selectedPile) {
-        console.warn(`[ferry effect] no pile selected`);
+        loggerService.warn(`[ferry effect] no pile selected`);
         return;
       }
 
-      console.debug(`[ferry effect] moving -$2 cost token to ${selectedPile}`);
+      loggerService.debug(`[ferry effect] moving -$2 cost token to ${selectedPile}`);
 
       const existingTokenEntry = Object.entries(
         cardEffectArgs.match.tokens ?? {},
@@ -352,7 +353,7 @@ const effectMap: CardExpansionModule = {
         );
 
       if (!existingTokenEntry) {
-        console.warn(`[ferry effect] no -$2 cost token for player`);
+        loggerService.warn(`[ferry effect] no -$2 cost token for player`);
         return;
       }
 
@@ -393,7 +394,7 @@ const effectMap: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
-        console.warn(`[inheritance effect] event not found`);
+        loggerService.warn(`[inheritance effect] event not found`);
         return;
       }
 
@@ -408,7 +409,7 @@ const effectMap: CardExpansionModule = {
       ]).filter((card) => !card.type.includes('DURATION') && !card.type.includes('COMMAND'));
 
       if (!eligibleCards.length) {
-        console.warn(`[inheritance effect] no eligible Action cards in supply`);
+        loggerService.warn(`[inheritance effect] no eligible Action cards in supply`);
         return;
       }
 
@@ -423,7 +424,7 @@ const effectMap: CardExpansionModule = {
       );
 
       if (!selectedCardIds.length) {
-        console.warn(`[inheritance effect] no card selected`);
+        loggerService.warn(`[inheritance effect] no card selected`);
         return;
       }
 
@@ -431,7 +432,7 @@ const effectMap: CardExpansionModule = {
         selectedCardIds[0],
       );
 
-      console.debug(`[inheritance effect] setting aside ${selectedCard}`);
+      loggerService.debug(`[inheritance effect] setting aside ${selectedCard}`);
 
       await cardEffectArgs.actionService.run('moveCard', {
         toPlayerId: cardEffectArgs.playerId,
@@ -448,7 +449,7 @@ const effectMap: CardExpansionModule = {
         );
 
       if (!existingTokenEntry) {
-        console.warn(`[inheritance effect] no Estate token found for player`);
+        loggerService.warn(`[inheritance effect] no Estate token found for player`);
         return;
       }
 
@@ -493,11 +494,11 @@ const effectMap: CardExpansionModule = {
             );
 
             if (!token || token.location.type !== 'card') {
-              console.warn(`[inheritance] card played triggered - no estate token found or not on a card`);
+              loggerService.warn(`[inheritance] card played triggered - no estate token found or not on a card`);
               return;
             }
 
-            console.log(`[inheritance] card played trigger - player estate token card`);
+            loggerService.log(`[inheritance] card played trigger - player estate token card`);
 
             await triggerEffectArgs.actionService.run('playCard', {
               cardId: token.location.cardId,
@@ -535,14 +536,14 @@ const effectMap: CardExpansionModule = {
             condition: async (endTurnConditionEffectArgs) =>
               endTurnConditionEffectArgs.trigger.args.playerId === triggerEffectArgs.trigger.args.playerId,
             triggeredEffectFn: async (endTurnTriggerEffectArgs) => {
-              console.log(`[inheritance] end turn trigger - unregistering card played reaction`);
+              loggerService.log(`[inheritance] end turn trigger - unregistering card played reaction`);
               endTurnTriggerEffectArgs.reactionManager.unregisterTrigger(
                 `inheritance:${endTurnTriggerEffectArgs.trigger.args.playerId}:cardPlayed`,
               );
             },
           });
 
-          console.log(`[inheritance] registering card played reaction`);
+          loggerService.log(`[inheritance] registering card played reaction`);
 
           registerCardPlayedReaction();
         },
@@ -554,7 +555,7 @@ const effectMap: CardExpansionModule = {
       // Load the event instance so we can scope 'once per turn' price rules.
       const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
-        console.warn(`[pilgrimage effect] event not found`);
+        loggerService.warn(`[pilgrimage effect] event not found`);
         return;
       }
 
@@ -592,7 +593,7 @@ const effectMap: CardExpansionModule = {
       const journeyToken = existingJourneyTokenEntry?.[1];
 
       if (!journeyTokenInstanceId || !journeyToken) {
-        console.warn(`[pilgrimage effect] no journey token for player`);
+        loggerService.warn(`[pilgrimage effect] no journey token for player`);
         return;
       }
 
@@ -606,7 +607,7 @@ const effectMap: CardExpansionModule = {
       });
 
       if (nextFacing === 'faceDown') {
-        console.debug(`[pilgrimage effect] Journey face down, no gains`);
+        loggerService.debug(`[pilgrimage effect] Journey face down, no gains`);
         return;
       }
 
@@ -625,7 +626,7 @@ const effectMap: CardExpansionModule = {
       }
 
       if (!uniqueSupplyInPlay.length) {
-        console.debug(`[pilgrimage effect] no eligible cards in play`);
+        loggerService.debug(`[pilgrimage effect] no eligible cards in play`);
         return;
       }
 
@@ -641,7 +642,7 @@ const effectMap: CardExpansionModule = {
       );
 
       if (!selectedCardIds.length) {
-        console.debug(`[pilgrimage effect] no cards selected`);
+        loggerService.debug(`[pilgrimage effect] no cards selected`);
         return;
       }
 
@@ -691,7 +692,7 @@ const effectMap: CardExpansionModule = {
         .filter((pile): pile is string => !!pile);
 
       if (!actionSupplyPiles.length) {
-        console.warn(`[lost-arts effect] no Action supply piles available`);
+        loggerService.warn(`[lost-arts effect] no Action supply piles available`);
         return;
       }
 
@@ -710,11 +711,11 @@ const effectMap: CardExpansionModule = {
 
       const selectedPile = result?.[0];
       if (!selectedPile) {
-        console.warn(`[lost-arts effect] no pile selected`);
+        loggerService.warn(`[lost-arts effect] no pile selected`);
         return;
       }
 
-      console.debug(`[lost-arts effect] moving +1 Action token to ${selectedPile}`);
+      loggerService.debug(`[lost-arts effect] moving +1 Action token to ${selectedPile}`);
 
       // Find the player's +1 Action token instance to move.
       const existingTokenEntry = Object.entries(
@@ -726,7 +727,7 @@ const effectMap: CardExpansionModule = {
         );
 
       if (!existingTokenEntry) {
-        console.warn(`[lost-arts effect] no +1 Action token found for player`);
+        loggerService.warn(`[lost-arts effect] no +1 Action token found for player`);
         return;
       }
 
@@ -740,12 +741,12 @@ const effectMap: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
-        console.warn(`[mission effect] event not found`);
+        loggerService.warn(`[mission effect] event not found`);
         return;
       }
 
       // Queue the extra turn and tag it with the Mission event id so buy restrictions can be applied on that turn.
-      console.debug(`[mission effect] queueing extra turn for player ${cardEffectArgs.playerId}`);
+      loggerService.debug(`[mission effect] queueing extra turn for player ${cardEffectArgs.playerId}`);
       await cardEffectArgs.actionService.run('queueExtraTurn', {
         turn: {
           playerId: cardEffectArgs.playerId,
@@ -773,7 +774,7 @@ const effectMap: CardExpansionModule = {
           return currentTurnStats.playerId === cardEffectArgs.playerId && currentTurnStats.sourceId === event.id;
         },
         triggeredEffectFn: async (triggeredArgs) => {
-          console.debug(
+          loggerService.debug(
             `[mission startTurn effect] applying buy restriction for player ${cardEffectArgs.playerId}`,
           );
 
@@ -797,7 +798,7 @@ const effectMap: CardExpansionModule = {
             compulsory: true,
             condition: async (endTurnArgs) => endTurnArgs.trigger.args.playerId === cardEffectArgs.playerId,
             triggeredEffectFn: async () => {
-              console.debug(
+              loggerService.debug(
                 `[mission endTurn effect] removing buy restriction for player ${cardEffectArgs.playerId}`,
               );
               for (const ruleUnsub of ruleUnsubs) {
@@ -813,7 +814,7 @@ const effectMap: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
-        console.warn(`[pathfinding effect] event not found`);
+        loggerService.warn(`[pathfinding effect] event not found`);
         return;
       }
 
@@ -827,7 +828,7 @@ const effectMap: CardExpansionModule = {
         .filter((pile): pile is string => !!pile);
 
       if (!actionSupplyPiles.length) {
-        console.warn(`[pathfinding effect] no Action supply piles available`);
+        loggerService.warn(`[pathfinding effect] no Action supply piles available`);
         return;
       }
 
@@ -846,11 +847,11 @@ const effectMap: CardExpansionModule = {
 
       const selectedPile = result?.[0];
       if (!selectedPile) {
-        console.warn(`[pathfinding effect] no pile selected`);
+        loggerService.warn(`[pathfinding effect] no pile selected`);
         return;
       }
 
-      console.debug(`[pathfinding effect] moving +1 Card token to ${selectedPile}`);
+      loggerService.debug(`[pathfinding effect] moving +1 Card token to ${selectedPile}`);
 
       const existingTokenEntry = Object.entries(
         cardEffectArgs.match.tokens ?? {},
@@ -861,7 +862,7 @@ const effectMap: CardExpansionModule = {
         );
 
       if (!existingTokenEntry) {
-        console.warn(`[pathfinding effect] no +1 Card token found for player`);
+        loggerService.warn(`[pathfinding effect] no +1 Card token found for player`);
         return;
       }
 
@@ -930,7 +931,7 @@ const effectMap: CardExpansionModule = {
       }
 
       if (!selectedCardIds.length) {
-        console.debug(`[quest effect] no card selected`);
+        loggerService.debug(`[quest effect] no card selected`);
         return;
       }
 
@@ -955,10 +956,10 @@ const effectMap: CardExpansionModule = {
         );
 
       if (!silversInPlay.length) {
-        console.debug(`[raid effect] no silvers in play`);
+        loggerService.debug(`[raid effect] no silvers in play`);
       } else {
         const gainCount = silversInPlay.length;
-        console.debug(`[raid effect] gaining up to ${gainCount} silvers`);
+        loggerService.debug(`[raid effect] gaining up to ${gainCount} silvers`);
         for (let i = 0; i < gainCount; i++) {
           const gainedSilverCardId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
             playerId: cardEffectArgs.playerId,
@@ -989,7 +990,7 @@ const effectMap: CardExpansionModule = {
         );
 
         if (!existingTokenEntry) {
-          console.warn(`[raid effect] no -1 Card token for player`);
+          loggerService.warn(`[raid effect] no -1 Card token for player`);
           continue;
         }
 
@@ -1005,7 +1006,7 @@ const effectMap: CardExpansionModule = {
       const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
 
       if (!event) {
-        console.warn(`[save effect] event not found`);
+        loggerService.warn(`[save effect] event not found`);
         return;
       }
 
@@ -1027,7 +1028,7 @@ const effectMap: CardExpansionModule = {
       );
 
       if (!selectedCardIds.length) {
-        console.debug(`[save effect] no card selected`);
+        loggerService.debug(`[save effect] no card selected`);
         return;
       }
 
@@ -1035,7 +1036,7 @@ const effectMap: CardExpansionModule = {
         selectedCardIds[0],
       );
 
-      console.debug(`[save effect] setting aside card ${selectedCard}`);
+      loggerService.debug(`[save effect] setting aside card ${selectedCard}`);
 
       await cardEffectArgs.actionService.run('moveCard', {
         toPlayerId: cardEffectArgs.playerId,
@@ -1053,7 +1054,7 @@ const effectMap: CardExpansionModule = {
           compulsory: true,
           condition: async () => true,
           triggeredEffectFn: async (triggeredArgs) => {
-            console.debug(
+            loggerService.debug(
               `[save endTurn effect] moving ${selectedCard} to player ${cardEffectArgs.playerId} hand`,
             );
 
@@ -1102,7 +1103,7 @@ const effectMap: CardExpansionModule = {
       ]);
 
       if (!actionCards.length) {
-        console.warn(`[seaway effect] no Action cards costing up to $4`);
+        loggerService.warn(`[seaway effect] no Action cards costing up to $4`);
         return;
       }
 
@@ -1117,7 +1118,7 @@ const effectMap: CardExpansionModule = {
       );
 
       if (!selectedCardIds.length) {
-        console.warn(`[seaway effect] no card selected`);
+        loggerService.warn(`[seaway effect] no card selected`);
         return;
       }
 
@@ -1140,12 +1141,12 @@ const effectMap: CardExpansionModule = {
       );
 
       if (!existingTokenEntry) {
-        console.warn(`[seaway effect] no +1 Buy token for player`);
+        loggerService.warn(`[seaway effect] no +1 Buy token for player`);
         return;
       }
 
       const pileKey = getCardPileKey(selectedCard);
-      console.debug(`[seaway effect] moving +1 Buy token to ${pileKey}`);
+      loggerService.debug(`[seaway effect] moving +1 Buy token to ${pileKey}`);
 
       await cardEffectArgs.actionService.run('moveToken', {
         tokenInstanceId: existingTokenEntry[0],
@@ -1158,7 +1159,7 @@ const effectMap: CardExpansionModule = {
       const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
 
       if (!event) {
-        console.warn(`[scouting-party effect] event not found`);
+        loggerService.warn(`[scouting-party effect] event not found`);
         return;
       }
 
@@ -1173,14 +1174,14 @@ const effectMap: CardExpansionModule = {
 
       for (let i = 0; i < 5; i++) {
         if (!deck.length) {
-          console.debug(`[scouting-party effect] no cards in deck, shuffling`);
+          loggerService.debug(`[scouting-party effect] no cards in deck, shuffling`);
 
           await cardEffectArgs.actionService.run('shuffleDeck', {
             playerId: cardEffectArgs.playerId,
           });
 
           if (!deck.length) {
-            console.debug(`[scouting-party effect] no cards in deck still`);
+            loggerService.debug(`[scouting-party effect] no cards in deck still`);
             break;
           }
         }
@@ -1195,7 +1196,7 @@ const effectMap: CardExpansionModule = {
       }
 
       if (!cardIdsSetAside.length) {
-        console.debug(`[scouting-party effect] no cards set aside`);
+        loggerService.debug(`[scouting-party effect] no cards set aside`);
         return;
       }
 
@@ -1210,11 +1211,11 @@ const effectMap: CardExpansionModule = {
       }) as { action: number; result: CardId[] };
 
       if (!result.result.length) {
-        console.warn(`[scouting-party effect] no card selected`);
+        loggerService.warn(`[scouting-party effect] no card selected`);
         return;
       }
 
-      console.debug(
+      loggerService.debug(
         `[scouting-party effect] discarding ${result.result.length} cards`,
       );
 
@@ -1228,12 +1229,12 @@ const effectMap: CardExpansionModule = {
       const cardIdsToRearrange = cardIdsSetAside.filter((id) => !result.result.includes(id));
 
       if (!cardIdsToRearrange.length) {
-        console.debug(`[scouting-party effect] no cards to rearrange`);
+        loggerService.debug(`[scouting-party effect] no cards to rearrange`);
         return;
       }
 
       if (cardIdsToRearrange.length === 1) {
-        console.debug(`[scouting-party effect] one card left, moving to deck`);
+        loggerService.debug(`[scouting-party effect] one card left, moving to deck`);
 
         await cardEffectArgs.actionService.run('moveCard', {
           toPlayerId: cardEffectArgs.playerId,
@@ -1255,11 +1256,11 @@ const effectMap: CardExpansionModule = {
         ) as { action: number; result: number[] };
 
         if (!result.result.length) {
-          console.warn(`[scouting-party effect] no card selected`);
+          loggerService.warn(`[scouting-party effect] no card selected`);
           return;
         }
 
-        console.debug(
+        loggerService.debug(
           `[scouting-party effect] putting cards ${result.result} back on deck`,
         );
 
@@ -1278,7 +1279,7 @@ const effectMap: CardExpansionModule = {
       const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
 
       if (!event) {
-        console.warn(`[trade effect] event not found`);
+        loggerService.warn(`[trade effect] event not found`);
         return;
       }
 
@@ -1301,11 +1302,11 @@ const effectMap: CardExpansionModule = {
       );
 
       if (!selectedCardIds.length) {
-        console.debug(`[trade effect] no card selected`);
+        loggerService.debug(`[trade effect] no card selected`);
         return;
       }
 
-      console.debug(
+      loggerService.debug(
         `[trade effect] gaining ${selectedCardIds.length} silver cards`,
       );
 
@@ -1328,7 +1329,7 @@ const effectMap: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
-        console.warn(`[training effect] event not found`);
+        loggerService.warn(`[training effect] event not found`);
         return;
       }
 
@@ -1342,7 +1343,7 @@ const effectMap: CardExpansionModule = {
         .filter((pile): pile is string => !!pile);
 
       if (!actionSupplyPiles.length) {
-        console.warn(`[training effect] no Action supply piles available`);
+        loggerService.warn(`[training effect] no Action supply piles available`);
         return;
       }
 
@@ -1361,11 +1362,11 @@ const effectMap: CardExpansionModule = {
 
       const selectedPile = result?.[0];
       if (!selectedPile) {
-        console.warn(`[training effect] no pile selected`);
+        loggerService.warn(`[training effect] no pile selected`);
         return;
       }
 
-      console.debug(`[training effect] moving +$1 token to ${selectedPile}`);
+      loggerService.debug(`[training effect] moving +$1 token to ${selectedPile}`);
 
       const existingTokenEntry = Object.entries(
         cardEffectArgs.match.tokens ?? {},
@@ -1376,7 +1377,7 @@ const effectMap: CardExpansionModule = {
         );
 
       if (!existingTokenEntry) {
-        console.warn(`[training effect] no +$1 token found for player`);
+        loggerService.warn(`[training effect] no +$1 token found for player`);
         return;
       }
 
@@ -1391,7 +1392,7 @@ const effectMap: CardExpansionModule = {
       const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
 
       if (!event) {
-        console.warn(`[travelling-fair effect] event not found`);
+        loggerService.warn(`[travelling-fair effect] event not found`);
         return;
       }
 
@@ -1416,7 +1417,7 @@ const effectMap: CardExpansionModule = {
               triggeredArgs.trigger.args.cardId,
             );
 
-            console.debug(
+            loggerService.debug(
               `[travelling-fair cardGained effect] putting ${card} on deck`,
             );
 

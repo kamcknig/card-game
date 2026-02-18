@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { ComputedMatchConfiguration } from 'shared/types/index.ts';
 import { GameEventRegistrar } from '@server-types/index.ts';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
@@ -14,7 +15,7 @@ export const configureLabyrinth = (
   );
   if (!hasLabyrinth) return;
 
-  console.info(
+  loggerService.info(
     `[empires configurator] setting up labyrinth landmark handlers`,
   );
 
@@ -31,7 +32,7 @@ export const configureLabyrinth = (
     // Labyrinth only triggers on the current player's own turn (Possession turns excluded by design).
     const currentPlayer = getCurrentPlayer(args.match);
     if (currentPlayer.id !== eventArgs.playerId) {
-      console.debug(
+      loggerService.debug(
         `[labyrinth onCardGained] card gained by non-current player ${eventArgs.playerId}, skipping`,
       );
       return;
@@ -52,7 +53,7 @@ export const configureLabyrinth = (
     }
 
     if (selfGainedCount !== 2) {
-      console.debug(
+      loggerService.debug(
         `[labyrinth onCardGained] player ${eventArgs.playerId} has gained ${selfGainedCount} card(s) this turn, skipping`,
       );
       return;
@@ -67,14 +68,14 @@ export const configureLabyrinth = (
     ).sort((a, b) => a.id.localeCompare(b.id));
 
     if (!tokensOnLabyrinth.length) {
-      console.debug(
+      loggerService.debug(
         `[labyrinth onCardGained] no VP tokens remaining on Labyrinth`,
       );
       return;
     }
 
     const tokensToMove = tokensOnLabyrinth.slice(0, 2);
-    console.info(
+    loggerService.info(
       `[labyrinth onCardGained] player ${eventArgs.playerId} gained their 2nd card, moving ${tokensToMove.length} VP token(s)`,
     );
 

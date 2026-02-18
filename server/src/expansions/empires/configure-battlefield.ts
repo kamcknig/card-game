@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { ComputedMatchConfiguration } from 'shared/types/index.ts';
 import { GameEventRegistrar } from '@server-types/index.ts';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
@@ -13,7 +14,7 @@ export const configureBattlefield = (
   );
   if (!hasBattlefield) return;
 
-  console.info(
+  loggerService.info(
     `[empires configurator] setting up battlefield landmark handlers`,
   );
 
@@ -40,14 +41,14 @@ export const configureBattlefield = (
     ).sort((a, b) => a.id.localeCompare(b.id));
 
     if (!tokensOnBattlefield.length) {
-      console.debug(
+      loggerService.debug(
         `[battlefield onCardGained] no VP tokens remaining on Battlefield`,
       );
       return;
     }
 
     const tokensToMove = tokensOnBattlefield.slice(0, 2);
-    console.info(
+    loggerService.info(
       `[battlefield onCardGained] player ${eventArgs.playerId} gained ${gainedCard}, moving ${tokensToMove.length} VP token(s)`,
     );
 

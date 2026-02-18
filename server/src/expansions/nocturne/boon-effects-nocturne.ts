@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { BoonEffectRegistrar } from '@server-types/index.ts';
 import { CardId } from 'shared/types/index.ts';
 import { findBoonInMatch } from '@shared/find-card-like-in-match.ts';
@@ -40,7 +41,7 @@ const registerEarthsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     ]);
 
     if (treasuresInHand.length < 1) {
-      console.info('[the-earths-gift boon] no Treasures in hand, skipping discard');
+      loggerService.info('[the-earths-gift boon] no Treasures in hand, skipping discard');
       return;
     }
 
@@ -56,18 +57,18 @@ const registerEarthsGift = (registerBoonEffect: BoonEffectRegistrar) => {
       ],
     }) as CardId | null;
     if (!discardedTreasureId) {
-      console.debug('[the-earths-gift boon] player declined to discard a Treasure');
+      loggerService.debug('[the-earths-gift boon] player declined to discard a Treasure');
       return;
     }
 
-    console.debug(`[the-earths-gift boon] discarding Treasure ${cardLibrary.getCard(discardedTreasureId)}`);
+    loggerService.debug(`[the-earths-gift boon] discarding Treasure ${cardLibrary.getCard(discardedTreasureId)}`);
     await actionService.run('moveCard', {
       cardId: discardedTreasureId,
       toPlayerId: playerId,
       to: { location: 'playerDiscard' },
     });
 
-    console.debug('[the-earths-gift boon] selecting card to gain costing up to $4');
+    loggerService.debug('[the-earths-gift boon] selecting card to gain costing up to $4');
     const gainCardId = await actionService.run('selectSingleCard', {
       prompt: 'Gain a card costing up to $4',
       playerId: playerId,
@@ -78,11 +79,11 @@ const registerEarthsGift = (registerBoonEffect: BoonEffectRegistrar) => {
       ],
     }) as CardId | null;
     if (!gainCardId) {
-      console.info('[the-earths-gift boon] no eligible cards to gain');
+      loggerService.info('[the-earths-gift boon] no eligible cards to gain');
       return;
     }
 
-    console.debug(`[the-earths-gift boon] gaining card ${cardLibrary.getCard(gainCardId)}`);
+    loggerService.debug(`[the-earths-gift boon] gaining card ${cardLibrary.getCard(gainCardId)}`);
     await actionService.run('gainCard', {
       playerId: playerId,
       cardId: gainCardId,
@@ -107,7 +108,7 @@ const registerFieldsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     // Resolve the boon instance for set-aside tracking.
     const boon = findBoonInMatch(match, cardId);
     if (!boon) {
-      console.warn(`[the-fields-gift boon] could not find boon instance ${cardId}`);
+      loggerService.warn(`[the-fields-gift boon] could not find boon instance ${cardId}`);
       return;
     }
 
@@ -131,7 +132,7 @@ const registerFieldsGift = (registerBoonEffect: BoonEffectRegistrar) => {
           to: { location: 'boonDiscard' },
         });
 
-        console.debug(`[the-fields-gift boon] returned ${boon} to boon discard`);
+        loggerService.debug(`[the-fields-gift boon] returned ${boon} to boon discard`);
       },
     });
   });
@@ -147,7 +148,7 @@ const registerFlamesGift = (registerBoonEffect: BoonEffectRegistrar) => {
   }) => {
     const handCards = findCardService.findCards({ location: 'playerHand', playerId });
     if (handCards.length < 1) {
-      console.info('[the-flames-gift boon] no cards in hand, skipping');
+      loggerService.info('[the-flames-gift boon] no cards in hand, skipping');
       return;
     }
 
@@ -161,11 +162,11 @@ const registerFlamesGift = (registerBoonEffect: BoonEffectRegistrar) => {
       ],
     }) as CardId | null;
     if (!selectedCardId) {
-      console.debug('[the-flames-gift boon] player declined to trash a card');
+      loggerService.debug('[the-flames-gift boon] player declined to trash a card');
       return;
     }
 
-    console.debug(`[the-flames-gift boon] trashing ${cardLibrary.getCard(selectedCardId)}`);
+    loggerService.debug(`[the-flames-gift boon] trashing ${cardLibrary.getCard(selectedCardId)}`);
     await actionService.run('trashCard', {
       playerId: playerId,
       cardId: selectedCardId,
@@ -189,7 +190,7 @@ const registerForestsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     // Resolve the boon instance for set-aside tracking.
     const boon = findBoonInMatch(match, cardId);
     if (!boon) {
-      console.warn(`[the-forests-gift boon] could not find boon instance ${cardId}`);
+      loggerService.warn(`[the-forests-gift boon] could not find boon instance ${cardId}`);
       return;
     }
 
@@ -213,7 +214,7 @@ const registerForestsGift = (registerBoonEffect: BoonEffectRegistrar) => {
           to: { location: 'boonDiscard' },
         });
 
-        console.debug(`[the-forests-gift boon] returned ${boon} to boon discard`);
+        loggerService.debug(`[the-forests-gift boon] returned ${boon} to boon discard`);
       },
     });
   });
@@ -229,7 +230,7 @@ const registerMoonsGift = (registerBoonEffect: BoonEffectRegistrar) => {
   }) => {
     const discardCards = findCardService.findCards({ location: 'playerDiscard', playerId });
     if (discardCards.length < 1) {
-      console.info('[the-moons-gift boon] no cards in discard, skipping');
+      loggerService.info('[the-moons-gift boon] no cards in discard, skipping');
       return;
     }
 
@@ -247,11 +248,11 @@ const registerMoonsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 
     const selectedCardId = selectionResult?.result?.[0];
     if (!selectedCardId) {
-      console.debug('[the-moons-gift boon] player declined to topdeck a card');
+      loggerService.debug('[the-moons-gift boon] player declined to topdeck a card');
       return;
     }
 
-    console.debug(`[the-moons-gift boon] topdecking card ${selectedCardId}`);
+    loggerService.debug(`[the-moons-gift boon] topdecking card ${selectedCardId}`);
     await actionService.run('moveCard', {
       cardId: selectedCardId,
       toPlayerId: playerId,
@@ -274,10 +275,10 @@ const registerMountainsGift = (registerBoonEffect: BoonEffectRegistrar) => {
       logTag: 'the-mountains-gift boon',
     });
     if (!gainedSilverId) {
-      console.info('[the-mountains-gift boon] no silver cards in supply');
+      loggerService.info('[the-mountains-gift boon] no silver cards in supply');
       return;
     }
-    console.debug(`[the-mountains-gift boon] gaining silver ${gainedSilverId}`);
+    loggerService.debug(`[the-mountains-gift boon] gaining silver ${gainedSilverId}`);
   });
 };
 
@@ -293,7 +294,7 @@ const registerRiversGift = (registerBoonEffect: BoonEffectRegistrar) => {
     // Resolve the boon instance for set-aside tracking.
     const boon = findBoonInMatch(match, cardId);
     if (!boon) {
-      console.warn(`[the-rivers-gift boon] could not find boon instance ${cardId}`);
+      loggerService.warn(`[the-rivers-gift boon] could not find boon instance ${cardId}`);
       return;
     }
 
@@ -319,7 +320,7 @@ const registerRiversGift = (registerBoonEffect: BoonEffectRegistrar) => {
           to: { location: 'boonDiscard' },
         });
 
-        console.debug(`[the-rivers-gift boon] resolved and returned ${boon} to boon discard`);
+        loggerService.debug(`[the-rivers-gift boon] resolved and returned ${boon} to boon discard`);
       },
     });
   });
@@ -355,7 +356,7 @@ const registerSkysGift = (registerBoonEffect: BoonEffectRegistrar) => {
     });
 
     if (confirmAction !== 2) {
-      console.debug('[the-skys-gift boon] player declined to discard 3 cards');
+      loggerService.debug('[the-skys-gift boon] player declined to discard 3 cards');
       return;
     }
 
@@ -368,7 +369,7 @@ const registerSkysGift = (registerBoonEffect: BoonEffectRegistrar) => {
     });
 
     for (const cardId of selectedCardIds) {
-      console.debug(`[the-skys-gift boon] discarding ${cardLibrary.getCard(cardId)}`);
+      loggerService.debug(`[the-skys-gift boon] discarding ${cardLibrary.getCard(cardId)}`);
       await actionService.run('discardCard', {
         cardId: cardId,
         playerId: playerId,
@@ -376,7 +377,7 @@ const registerSkysGift = (registerBoonEffect: BoonEffectRegistrar) => {
     }
 
     if (selectedCardIds.length < 3) {
-      console.info('[the-skys-gift boon] discarded fewer than 3 cards, skipping Gold gain');
+      loggerService.info('[the-skys-gift boon] discarded fewer than 3 cards, skipping Gold gain');
       return;
     }
 
@@ -388,11 +389,11 @@ const registerSkysGift = (registerBoonEffect: BoonEffectRegistrar) => {
       logTag: 'the-skys-gift boon',
     });
     if (!gainedGoldId) {
-      console.info('[the-skys-gift boon] no gold cards in supply');
+      loggerService.info('[the-skys-gift boon] no gold cards in supply');
       return;
     }
 
-    console.debug(`[the-skys-gift boon] gaining gold ${gainedGoldId}`);
+    loggerService.debug(`[the-skys-gift boon] gaining gold ${gainedGoldId}`);
   });
 };
 
@@ -409,12 +410,12 @@ const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 
     const numToLookAt = Math.min(4, deck.length + discard.length);
     if (numToLookAt < 1) {
-      console.info('[the-suns-gift boon] no cards available to look at');
+      loggerService.info('[the-suns-gift boon] no cards available to look at');
       return;
     }
 
     if (deck.length < numToLookAt) {
-      console.debug('[the-suns-gift boon] shuffling discard into deck');
+      loggerService.debug('[the-suns-gift boon] shuffling discard into deck');
       await actionService.run('shuffleDeck', { playerId });
     }
 
@@ -433,7 +434,7 @@ const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 
     const cardsToDiscard = result?.result ?? [];
     if (cardsToDiscard.length > 0) {
-      console.debug(`[the-suns-gift boon] discarding ${cardsToDiscard.length} cards`);
+      loggerService.debug(`[the-suns-gift boon] discarding ${cardsToDiscard.length} cards`);
       for (const cardId of cardsToDiscard) {
         await actionService.run('discardCard', {
           cardId: cardId,
@@ -451,7 +452,7 @@ const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
           to: { location: 'playerDeck' },
         });
       }
-      console.debug('[the-suns-gift boon] not enough cards to rearrange');
+      loggerService.debug('[the-suns-gift boon] not enough cards to rearrange');
       return;
     }
 
@@ -488,12 +489,12 @@ const registerSwampsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     ]);
 
     if (willOWispCards.length < 1) {
-      console.info("[the-swamps-gift boon] no Will-o'-Wisps available to gain");
+      loggerService.info("[the-swamps-gift boon] no Will-o'-Wisps available to gain");
       return;
     }
 
     const willOWispId = willOWispCards.slice(-1)[0].id;
-    console.debug(`[the-swamps-gift boon] gaining Will-o\'-Wisp ${willOWispId}`);
+    loggerService.debug(`[the-swamps-gift boon] gaining Will-o\'-Wisp ${willOWispId}`);
     await actionService.run('gainCard', {
       playerId: playerId,
       cardId: willOWispId,
@@ -515,7 +516,7 @@ const registerWindsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 
     const hand = cardSourceController.getSource('playerHand', playerId);
     if (hand.length < 1) {
-      console.info('[the-winds-gift boon] no cards in hand to discard');
+      loggerService.info('[the-winds-gift boon] no cards in hand to discard');
       return;
     }
 
@@ -527,7 +528,7 @@ const registerWindsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     });
 
     for (const cardId of cardIds) {
-      console.debug(`[the-winds-gift boon] discarding ${cardLibrary.getCard(cardId)}`);
+      loggerService.debug(`[the-winds-gift boon] discarding ${cardLibrary.getCard(cardId)}`);
       await actionService.run('discardCard', {
         cardId: cardId,
         playerId: playerId,

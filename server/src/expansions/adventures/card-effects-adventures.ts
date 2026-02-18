@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { Card, CardId, CardKey, CountSpec } from 'shared/types/index.ts';
 import {
   CardEffectFunctionContext,
@@ -39,7 +40,7 @@ const addTravellerEffect = async (
   ]);
 
   if (!newCards.length) {
-    console.debug(
+    loggerService.debug(
       `[${card.cardKey} onDiscarded effect] no ${travelTo} cards in supply`,
     );
     return;
@@ -57,13 +58,13 @@ const addTravellerEffect = async (
   }) as { action: number; result: number[] };
 
   if (result.action === 1) {
-    console.debug(
+    loggerService.debug(
       `[${card.cardKey} onDiscarded effect] user chose not to exchange`,
     );
     return;
   }
 
-  console.debug(
+  loggerService.debug(
     `[${card.cardKey} onDiscarded effect] moving ${card} back to supply`,
   );
 
@@ -72,7 +73,7 @@ const addTravellerEffect = async (
     to: { location: 'kingdomSupply' },
   });
 
-  console.debug(
+  loggerService.debug(
     `[${card.cardKey} onDiscarded effect] moving ${newCard} to discard pile`,
   );
 
@@ -135,7 +136,7 @@ const expansion: CardExpansionModule = {
         ) as { action: number; result: number[] };
 
         if (result.action === 1) {
-          console.debug(`[amulet effect] gaining 1 treasure`);
+          loggerService.debug(`[amulet effect] gaining 1 treasure`);
           await cardEffectArgs.actionService.run('gainTreasure', {
             count: 1,
           });
@@ -155,13 +156,13 @@ const expansion: CardExpansionModule = {
           );
 
           if (!selectedCardIds.length) {
-            console.debug(`[amulet effect] no card selected`);
+            loggerService.debug(`[amulet effect] no card selected`);
           } else {
             const cardToTrash = cardEffectArgs.cardLibrary.getCard(
               selectedCardIds[0],
             );
 
-            console.debug(`[amulet effect] selected ${cardToTrash} to trash`);
+            loggerService.debug(`[amulet effect] selected ${cardToTrash} to trash`);
 
             await cardEffectArgs.actionService.run('trashCard', {
               playerId: cardEffectArgs.playerId,
@@ -177,7 +178,7 @@ const expansion: CardExpansionModule = {
             logTag: 'amulet effect',
           });
           if (!gainedSilverId) {
-            console.debug(`[amulet effect] no silver cards in supply`);
+            loggerService.debug(`[amulet effect] no silver cards in supply`);
           }
         }
       };
@@ -200,7 +201,7 @@ const expansion: CardExpansionModule = {
           return true;
         },
         triggeredEffectFn: async (triggeredArgs) => {
-          console.debug(`[amulet startTurn effect] re-running decision fn`);
+          loggerService.debug(`[amulet startTurn effect] re-running decision fn`);
 
           await triggeredArgs.actionService.run('moveCard', {
             cardId: card.id,
@@ -214,7 +215,7 @@ const expansion: CardExpansionModule = {
   },
   'artificer': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.debug(
+      loggerService.debug(
         `[artificer effect] drawing 1 card, gaining 1 action and 1 treasure`,
       );
       await cardEffectArgs.actionService.run('drawCard', {
@@ -240,11 +241,11 @@ const expansion: CardExpansionModule = {
       );
 
       if (!selectedCardIds.length) {
-        console.debug(`[artificer effect] no cards selected`);
+        loggerService.debug(`[artificer effect] no cards selected`);
         return;
       }
 
-      console.debug(
+      loggerService.debug(
         `[artificer effect] selected ${selectedCardIds.length} cards to discard`,
       );
 
@@ -265,7 +266,7 @@ const expansion: CardExpansionModule = {
       ]);
 
       if (!cardsToSelect.length) {
-        console.debug(
+        loggerService.debug(
           `[artificer effect] no cards in supply costing ${selectedCardIds.length ?? 0} treasure`,
         );
         return;
@@ -283,13 +284,13 @@ const expansion: CardExpansionModule = {
       );
 
       if (!selectedCardIds.length) {
-        console.debug(`[artificer effect] no card selected`);
+        loggerService.debug(`[artificer effect] no card selected`);
         return;
       }
 
       const cardToGain = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
 
-      console.debug(`[artificer effect] selected ${cardToGain} to gain`);
+      loggerService.debug(`[artificer effect] selected ${cardToGain} to gain`);
 
       await cardEffectArgs.actionService.run('gainCard', {
         playerId: cardEffectArgs.playerId,
@@ -308,10 +309,10 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[bridge-troll effect] gaining 1 buy`);
+      loggerService.debug(`[bridge-troll effect] gaining 1 buy`);
       await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
 
-      console.debug(
+      loggerService.debug(
         `[bridge-troll effect] applying cost reduction for this turn`,
       );
       const cleanupCurrentTurnRules = applyBridgeTrollCostReduction(
@@ -378,9 +379,9 @@ const expansion: CardExpansionModule = {
             cardId: card.id,
             to: { location: 'playArea' },
           });
-          console.debug(`[bridge-troll startTurn effect] gaining 1 buy`);
+          loggerService.debug(`[bridge-troll startTurn effect] gaining 1 buy`);
           await triggeredArgs.actionService.run('gainBuy', { count: 1 });
-          console.debug(
+          loggerService.debug(
             `[bridge-troll startTurn effect] applying cost reduction for this turn`,
           );
           const cleanupNextTurnRules = applyBridgeTrollCostReduction(
@@ -406,7 +407,7 @@ const expansion: CardExpansionModule = {
   },
   'relic': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[relic effect] gaining 2 treasure`);
+      loggerService.debug(`[relic effect] gaining 2 treasure`);
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
 
       const targetPlayerIds = findOrderedTargets({
@@ -464,7 +465,7 @@ const expansion: CardExpansionModule = {
             return cardPlayed.type.includes('ATTACK');
           },
           triggeredEffectFn: async (triggeredArgs) => {
-            console.debug(
+            loggerService.debug(
               `[caravan-guard cardPlayed effect] playing Caravan Guard`,
             );
 
@@ -477,7 +478,7 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[caravan-guard effect] drawing 1 card, gaining 1 action`);
+      loggerService.debug(`[caravan-guard effect] drawing 1 card, gaining 1 action`);
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
       });
@@ -502,7 +503,7 @@ const expansion: CardExpansionModule = {
             cardId: card.id,
             to: { location: 'playArea' },
           });
-          console.debug(`[caravan-guard startTurn effect] gaining 1 treasure`);
+          loggerService.debug(`[caravan-guard startTurn effect] gaining 1 treasure`);
           await triggeredArgs.actionService.run('gainTreasure', {
             count: 1,
           });
@@ -544,7 +545,7 @@ const expansion: CardExpansionModule = {
               cardEffectArgs.playerId;
           },
           triggeredEffectFn: async ({ reactionContext }) => {
-            console.debug(
+            loggerService.debug(
               `[champion cardPlayed effect] attack played, gaining immunity`,
             );
             // Record immunity so downstream attacks skip this player.
@@ -567,7 +568,7 @@ const expansion: CardExpansionModule = {
               cardEffectArgs.playerId;
           },
           triggeredEffectFn: async (triggeredArgs) => {
-            console.debug(
+            loggerService.debug(
               `[champion cardPlayed effect] action played, gaining 1 action`,
             );
             await triggeredArgs.actionService.run('gainAction', {
@@ -580,10 +581,10 @@ const expansion: CardExpansionModule = {
   },
   'coin-of-the-realm': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[coin-of-the-realm effect] gaining 1 treasure`);
+      loggerService.debug(`[coin-of-the-realm effect] gaining 1 treasure`);
       await cardEffectArgs.actionService.run('gainTreasure', { count: 1 });
 
-      console.debug(`[coin-of-the-realm effect] moving card to tavern mat`);
+      loggerService.debug(`[coin-of-the-realm effect] moving card to tavern mat`);
 
       await cardEffectArgs.actionService.run('moveCard', {
         toPlayerId: cardEffectArgs.playerId,
@@ -613,7 +614,7 @@ const expansion: CardExpansionModule = {
             return cardPlayed.type.includes('ACTION');
           },
           triggeredEffectFn: async (triggeredArgs) => {
-            console.debug(
+            loggerService.debug(
               `[coin-of-the-realm cardPlayed effect] calling back to play`,
             );
 
@@ -622,7 +623,7 @@ const expansion: CardExpansionModule = {
               to: { location: 'playArea' },
             });
 
-            console.debug(
+            loggerService.debug(
               `[coin-of-the-realm cardPlayed effect] gaining 2 actions`,
             );
             await triggeredArgs.actionService.run('gainAction', {
@@ -649,7 +650,7 @@ const expansion: CardExpansionModule = {
         .filter((card) => card.type.includes('ACTION'));
 
       if (!actionCardsInHand.length) {
-        console.debug(`[disciple effect] no action cards in hand`);
+        loggerService.debug(`[disciple effect] no action cards in hand`);
         return;
       }
 
@@ -665,7 +666,7 @@ const expansion: CardExpansionModule = {
       );
 
       if (!selectedCardIds.length) {
-        console.debug(`[disciple effect] no card selected`);
+        loggerService.debug(`[disciple effect] no card selected`);
         return;
       }
 
@@ -673,7 +674,7 @@ const expansion: CardExpansionModule = {
         selectedCardIds[0],
       );
 
-      console.debug(`[disciple effect] playing ${selectedCardToPlay} twice`);
+      loggerService.debug(`[disciple effect] playing ${selectedCardToPlay} twice`);
 
       for (let i = 0; i < 2; i++) {
         await cardEffectArgs.actionService.run('playCard', {
@@ -691,13 +692,13 @@ const expansion: CardExpansionModule = {
       ]);
 
       if (!copies.length) {
-        console.debug(
+        loggerService.debug(
           `[disciple effect] no copies of ${selectedCardToPlay} in supply`,
         );
         return;
       }
 
-      console.debug(`[disciple effect] gaining ${selectedCardToPlay}`);
+      loggerService.debug(`[disciple effect] gaining ${selectedCardToPlay}`);
 
       await cardEffectArgs.actionService.run('gainCard', {
         playerId: cardEffectArgs.playerId,
@@ -715,7 +716,7 @@ const expansion: CardExpansionModule = {
         .map(args.cardLibrary.getCard)
         .filter((card) => card.cardKey === 'distant-lands');
 
-      console.debug(
+      loggerService.debug(
         `[distant-lands scoring function] number of distant lands on tavern mat ${distantLandCards.length} for player ${args.ownerId}`,
       );
 
@@ -726,7 +727,7 @@ const expansion: CardExpansionModule = {
         cardEffectArgs.cardId,
       );
 
-      console.debug(`[distant-lands effect] moving ${thisCard} to tavern mat`);
+      loggerService.debug(`[distant-lands effect] moving ${thisCard} to tavern mat`);
 
       await cardEffectArgs.actionService.run('moveCard', {
         toPlayerId: cardEffectArgs.playerId,
@@ -744,11 +745,11 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[dungeon effect] gaining 1 action`);
+      loggerService.debug(`[dungeon effect] gaining 1 action`);
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
       const effects = async () => {
-        console.debug(`[dungeon effect] and drawing 2 cards`);
+        loggerService.debug(`[dungeon effect] and drawing 2 cards`);
         await cardEffectArgs.actionService.run('drawCard', {
           playerId: cardEffectArgs.playerId,
           count: 2,
@@ -768,11 +769,11 @@ const expansion: CardExpansionModule = {
         );
 
         if (!selectedCardIds.length) {
-          console.debug(`[dungeon effect] no cards selected`);
+          loggerService.debug(`[dungeon effect] no cards selected`);
           return;
         }
 
-        console.debug(
+        loggerService.debug(
           `[dungeon effect] discarding ${selectedCardIds.length} cards`,
         );
 
@@ -799,7 +800,7 @@ const expansion: CardExpansionModule = {
             cardEffectArgs.playerId;
         },
         triggeredEffectFn: async (triggeredArgs) => {
-          console.debug(`[dungeon startTurn effect] running`);
+          loggerService.debug(`[dungeon startTurn effect] running`);
           await triggeredArgs.actionService.run('moveCard', {
             cardId: card.id,
             to: { location: 'playArea' },
@@ -815,7 +816,7 @@ const expansion: CardExpansionModule = {
         cardEffectArgs.cardId,
       );
 
-      console.debug(`[duplicate effect] moving ${thisCard} to tavern mat`);
+      loggerService.debug(`[duplicate effect] moving ${thisCard} to tavern mat`);
 
       await cardEffectArgs.actionService.run('moveCard', {
         toPlayerId: cardEffectArgs.playerId,
@@ -845,7 +846,7 @@ const expansion: CardExpansionModule = {
             return !(cost.treasure <= 6 && (!cost.potion || cost.potion <= 0));
           },
           triggeredEffectFn: async (triggeredArgs) => {
-            console.debug(
+            loggerService.debug(
               `[duplicate cardGained] calling ${thisCard} to play area`,
             );
 
@@ -864,7 +865,7 @@ const expansion: CardExpansionModule = {
             ]);
 
             if (!copies.length) {
-              console.debug(
+              loggerService.debug(
                 `[duplicate cardGained], no copies of ${cardGained} in supply`,
               );
               return;
@@ -872,7 +873,7 @@ const expansion: CardExpansionModule = {
 
             const cardToGain = copies.slice(-1)[0];
 
-            console.debug(`[duplicate cardGained] gaining ${cardToGain}`);
+            loggerService.debug(`[duplicate cardGained] gaining ${cardToGain}`);
 
             await cardEffectArgs.actionService.run('gainCard', {
               playerId: cardEffectArgs.playerId,
@@ -892,7 +893,7 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[fugitive effect] drawing 2 cards and gaining 1 action`);
+      loggerService.debug(`[fugitive effect] drawing 2 cards and gaining 1 action`);
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 2,
@@ -913,7 +914,7 @@ const expansion: CardExpansionModule = {
       );
 
       if (!selectedCardIds.length) {
-        console.debug(`[fugitive effect] no card selected`);
+        loggerService.debug(`[fugitive effect] no card selected`);
         return;
       }
 
@@ -921,7 +922,7 @@ const expansion: CardExpansionModule = {
         selectedCardIds[0],
       );
 
-      console.debug(`[fugitive effect] discarding ${cardToDiscard}`);
+      loggerService.debug(`[fugitive effect] discarding ${cardToDiscard}`);
 
       await cardEffectArgs.actionService.run('discardCard', {
         playerId: cardEffectArgs.playerId,
@@ -963,11 +964,11 @@ const expansion: CardExpansionModule = {
       );
 
       if (!selectedCardIds.length) {
-        console.debug(`[gear effect] no cards selected`);
+        loggerService.debug(`[gear effect] no cards selected`);
         return;
       }
 
-      console.debug(`[gear effect] set aside ${selectedCardIds.length} cards`);
+      loggerService.debug(`[gear effect] set aside ${selectedCardIds.length} cards`);
 
       for (const selectedCardId of selectedCardIds) {
         await cardEffectArgs.actionService.run('moveCard', {
@@ -995,7 +996,7 @@ const expansion: CardExpansionModule = {
           return true;
         },
         triggeredEffectFn: async (triggeredArgs) => {
-          console.debug(
+          loggerService.debug(
             `[gear startTurn effect] moving ${selectedCardIds.length} to hand`,
           );
 
@@ -1031,7 +1032,7 @@ const expansion: CardExpansionModule = {
       const journeyToken = existingJourneyTokenEntry?.[1];
 
       if (!journeyToken) {
-        console.warn(`[giant effect] no journey token for user`);
+        loggerService.warn(`[giant effect] no journey token for user`);
         return;
       }
 
@@ -1046,7 +1047,7 @@ const expansion: CardExpansionModule = {
 
       if (nextFacing === 'faceDown') {
         // Face down: +$1 and no attack.
-        console.debug(`[giant effect] Journey face down, gaining 1 treasure`);
+        loggerService.debug(`[giant effect] Journey face down, gaining 1 treasure`);
         await cardEffectArgs.actionService.run('gainTreasure', {
           count: 1,
         });
@@ -1054,7 +1055,7 @@ const expansion: CardExpansionModule = {
       }
 
       // Face up: +$5 and attack all other players.
-      console.debug(`[giant effect] Journey face up, gaining 5 treasure`);
+      loggerService.debug(`[giant effect] Journey face up, gaining 5 treasure`);
       await cardEffectArgs.actionService.run('gainTreasure', { count: 5 });
 
       const targetPlayerIds = findOrderedTargets({
@@ -1071,7 +1072,7 @@ const expansion: CardExpansionModule = {
 
         if (deck.length === 0) {
           // Shuffle if the target has no cards in deck.
-          console.debug(`[giant effect] no cards in deck, shuffling`);
+          loggerService.debug(`[giant effect] no cards in deck, shuffling`);
           await cardEffectArgs.actionService.run('shuffleDeck', {
             playerId: targetPlayerId,
           });
@@ -1083,7 +1084,7 @@ const expansion: CardExpansionModule = {
             { cardKeys: 'curse' },
           ]);
           if (!curseCards.length) {
-            console.debug(`[giant effect] no curse cards in supply`);
+            loggerService.debug(`[giant effect] no curse cards in supply`);
             return false;
           }
           await cardEffectArgs.actionService.run('gainCard', {
@@ -1096,7 +1097,7 @@ const expansion: CardExpansionModule = {
 
         if (deck.length === 0) {
           // Still empty: target gains a Curse.
-          console.debug(`[giant effect] still no cards, gaining a Curse`);
+          loggerService.debug(`[giant effect] still no cards, gaining a Curse`);
           if (!await gainCurse()) {
             continue;
           }
@@ -1106,7 +1107,7 @@ const expansion: CardExpansionModule = {
         const revealedCardId = deck.slice(-1)[0];
         const revealedCard = cardEffectArgs.cardLibrary.getCard(revealedCardId);
 
-        console.debug(`[giant effect] revealing ${revealedCard}`);
+        loggerService.debug(`[giant effect] revealing ${revealedCard}`);
         await cardEffectArgs.actionService.run('revealCard', {
           playerId: targetPlayerId,
           cardId: revealedCardId,
@@ -1120,7 +1121,7 @@ const expansion: CardExpansionModule = {
 
         if (cost.treasure >= 3 && cost.treasure <= 6 && !cost.potion) {
           // Trash cards costing $3-$6 with no potion in their cost.
-          console.debug(`[giant effect] trashing ${revealedCard}`);
+          loggerService.debug(`[giant effect] trashing ${revealedCard}`);
           await cardEffectArgs.actionService.run('trashCard', {
             playerId: targetPlayerId,
             cardId: revealedCard.id,
@@ -1129,7 +1130,7 @@ const expansion: CardExpansionModule = {
         }
 
         // Otherwise discard it and gain a Curse.
-        console.debug(`[giant effect] discarding ${revealedCard}`);
+        loggerService.debug(`[giant effect] discarding ${revealedCard}`);
         await cardEffectArgs.actionService.run('discardCard', {
           playerId: targetPlayerId,
           cardId: revealedCard.id,
@@ -1141,7 +1142,7 @@ const expansion: CardExpansionModule = {
   },
   'guide': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[guide effect] drawing 1 card, and gaining 1 action`);
+      loggerService.debug(`[guide effect] drawing 1 card, and gaining 1 action`);
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
       });
@@ -1151,7 +1152,7 @@ const expansion: CardExpansionModule = {
         cardEffectArgs.cardId,
       );
 
-      console.debug(`[guide effect] moving ${thisCard} to tavern mat`);
+      loggerService.debug(`[guide effect] moving ${thisCard} to tavern mat`);
 
       await cardEffectArgs.actionService.run('moveCard', {
         toPlayerId: cardEffectArgs.playerId,
@@ -1172,7 +1173,7 @@ const expansion: CardExpansionModule = {
               cardEffectArgs.playerId;
           },
           triggeredEffectFn: async (triggeredArgs) => {
-            console.debug(
+            loggerService.debug(
               `[guide startTurn effect] calling ${thisCard} to playArea`,
             );
 
@@ -1186,7 +1187,7 @@ const expansion: CardExpansionModule = {
               cardEffectArgs.playerId,
             );
 
-            console.debug(`[guide startTurn effect] discarding hand`);
+            loggerService.debug(`[guide startTurn effect] discarding hand`);
 
             for (const cardId of [...hand]) {
               await triggeredArgs.actionService.run('discardCard', {
@@ -1195,7 +1196,7 @@ const expansion: CardExpansionModule = {
               });
             }
 
-            console.debug(`[guide startTurn effect] drawing 5 cards`);
+            loggerService.debug(`[guide startTurn effect] drawing 5 cards`);
 
             await triggeredArgs.actionService.run('drawCard', {
               playerId: cardEffectArgs.playerId,
@@ -1209,7 +1210,7 @@ const expansion: CardExpansionModule = {
   'ranger': {
     registerEffects: () => async (cardEffectArgs) => {
       // Ranger always grants +1 Buy first.
-      console.debug(`[ranger effect] gaining 1 buy`);
+      loggerService.debug(`[ranger effect] gaining 1 buy`);
       await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
 
       // Resolve the current player's Journey token, ensuring it exists.
@@ -1226,7 +1227,7 @@ const expansion: CardExpansionModule = {
       const journeyToken = existingJourneyTokenEntry?.[1];
 
       if (!journeyTokenInstanceId) {
-        console.warn(`[ranger effect] missing Journey token instance id`);
+        loggerService.warn(`[ranger effect] missing Journey token instance id`);
         return;
       }
 
@@ -1240,12 +1241,12 @@ const expansion: CardExpansionModule = {
       });
 
       if (nextFacing !== 'faceUp') {
-        console.debug(`[ranger effect] Journey face down, no draw`);
+        loggerService.debug(`[ranger effect] Journey face down, no draw`);
         return;
       }
 
       // Face up: draw 5 cards.
-      console.debug(`[ranger effect] Journey face up, drawing 5 cards`);
+      loggerService.debug(`[ranger effect] Journey face up, drawing 5 cards`);
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 5,
@@ -1279,7 +1280,7 @@ const expansion: CardExpansionModule = {
         },
         triggeredEffectFn: async (triggeredArgs) => {
           const triggeringPlayerId = triggeredArgs.trigger.args.playerId;
-          console.debug(
+          loggerService.debug(
             `[haunted-woods cardGained effect] player ${triggeringPlayerId} rearranging hand and top-decking`,
           );
           const hand = triggeredArgs.cardSourceController.getSource(
@@ -1300,13 +1301,13 @@ const expansion: CardExpansionModule = {
           ) as { action: number; result: number[] };
 
           if (!result.result.length) {
-            console.warn(
+            loggerService.warn(
               `[haunted-woods cardGained effect] no cards rearranged`,
             );
             return;
           }
 
-          console.warn(
+          loggerService.warn(
             `[haunted-woods cardGained effect] moving ${result.result.length} cards to deck`,
           );
 
@@ -1361,7 +1362,7 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[hero effect] gaining 2 treasure`);
+      loggerService.debug(`[hero effect] gaining 2 treasure`);
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
 
       const treasureCards = cardEffectArgs.findCardService.findCards([
@@ -1370,7 +1371,7 @@ const expansion: CardExpansionModule = {
       ]);
 
       if (!treasureCards.length) {
-        console.debug(`[hero effect] no treasure cards in supply`);
+        loggerService.debug(`[hero effect] no treasure cards in supply`);
         return;
       }
 
@@ -1385,7 +1386,7 @@ const expansion: CardExpansionModule = {
       );
 
       if (!selectedCardIds.length) {
-        console.warn(`[hero effect] no card selected`);
+        loggerService.warn(`[hero effect] no card selected`);
         return;
       }
 
@@ -1393,7 +1394,7 @@ const expansion: CardExpansionModule = {
         selectedCardIds[0],
       );
 
-      console.debug(`[hero effect] gaining ${selectedCardToGain}`);
+      loggerService.debug(`[hero effect] gaining ${selectedCardToGain}`);
 
       await cardEffectArgs.actionService.run('gainCard', {
         playerId: cardEffectArgs.playerId,
@@ -1429,7 +1430,7 @@ const expansion: CardExpansionModule = {
           return true;
         },
         triggeredEffectFn: async (triggeredArgs) => {
-          console.debug(`[hireling startTurn effect] drawing 1 card`);
+          loggerService.debug(`[hireling startTurn effect] drawing 1 card`);
           await triggeredArgs.actionService.run('drawCard', {
             playerId: cardEffectArgs.playerId,
           });
@@ -1447,7 +1448,7 @@ const expansion: CardExpansionModule = {
         });
 
         for (const targetPlayerId of targetPlayerIds) {
-          console.debug(
+          loggerService.debug(
             `[lost-city onGained effect] ${targetPlayerId} drawing 1 card`,
           );
           await args.actionService.run('drawCard', {
@@ -1466,7 +1467,7 @@ const expansion: CardExpansionModule = {
   },
   'magpie': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[magpie effect] drawing 1 card, gaining 1 action`);
+      loggerService.debug(`[magpie effect] drawing 1 card, gaining 1 action`);
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
       });
@@ -1478,13 +1479,13 @@ const expansion: CardExpansionModule = {
       );
 
       if (deck.length) {
-        console.debug(`[magpie effect] no cards in deck, shuffling deck`);
+        loggerService.debug(`[magpie effect] no cards in deck, shuffling deck`);
         await cardEffectArgs.actionService.run('shuffleDeck', {
           playerId: cardEffectArgs.playerId,
         });
 
         if (!deck.length) {
-          console.debug(
+          loggerService.debug(
             `[magpie effect] still no cards in deck, no cards to reveal`,
           );
           return;
@@ -1495,7 +1496,7 @@ const expansion: CardExpansionModule = {
         deck.slice(-1)[0],
       );
 
-      console.debug(`[magpie effect] revealing ${revealedCard}`);
+      loggerService.debug(`[magpie effect] revealing ${revealedCard}`);
 
       await cardEffectArgs.actionService.run('revealCard', {
         playerId: cardEffectArgs.playerId,
@@ -1504,7 +1505,7 @@ const expansion: CardExpansionModule = {
       });
 
       if (revealedCard.type.includes('TREASURE')) {
-        console.debug(
+        loggerService.debug(
           `[magpie effect] treasure revealed, moving revealed card to hand`,
         );
 
@@ -1516,7 +1517,7 @@ const expansion: CardExpansionModule = {
       } else if (
         revealedCard.type.some((t) => ['ACTION', 'VICTORY'].includes(t))
       ) {
-        console.debug(
+        loggerService.debug(
           `[magpie effect] action or victory revealed, gaining magpie`,
         );
 
@@ -1528,11 +1529,11 @@ const expansion: CardExpansionModule = {
           logTag: 'magpie effect',
         });
         if (!gainedMagpieId) {
-          console.debug(`[magpie effect] no magpie cards in supply`);
+          loggerService.debug(`[magpie effect] no magpie cards in supply`);
           return;
         }
 
-        console.debug(`[magpie effect] gained magpie ${gainedMagpieId}`);
+        loggerService.debug(`[magpie effect] gained magpie ${gainedMagpieId}`);
       }
     },
   },
@@ -1554,7 +1555,7 @@ const expansion: CardExpansionModule = {
           ?.length ?? 0;
 
         if (cardsGainedThisTurnBuyPhase !== 1) {
-          console.debug(
+          loggerService.debug(
             `[messenger onGained effect] player ${eventArgs.playerId} gained more than 1 card in buy phase`,
           );
           return;
@@ -1572,13 +1573,13 @@ const expansion: CardExpansionModule = {
         });
 
         if (!selectedCardId) {
-          console.warn(`[messenger onGained effect] no card selected`);
+          loggerService.warn(`[messenger onGained effect] no card selected`);
           return;
         }
 
         const selectedCard = args.cardLibrary.getCard(selectedCardId);
 
-        console.debug(`[messenger onGained effect] selected ${selectedCard}`);
+        loggerService.debug(`[messenger onGained effect] selected ${selectedCard}`);
 
         const copies = args.findCardService.findCards([
           { location: ['basicSupply', 'kingdomSupply'] },
@@ -1597,7 +1598,7 @@ const expansion: CardExpansionModule = {
         );
 
         for (let i = 0; i < targetPlayerIds.length; i++) {
-          console.debug(
+          loggerService.debug(
             `[messenger onGained effect] gaining ${copies.slice(-i - 1)[0]} to ${targetPlayerIds[i]}`,
           );
           await args.actionService.run('gainCard', {
@@ -1609,7 +1610,7 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[messenger effect] drawing 1 card, gaining 1 action`);
+      loggerService.debug(`[messenger effect] drawing 1 card, gaining 1 action`);
       await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
 
@@ -1623,10 +1624,10 @@ const expansion: CardExpansionModule = {
       }) as { action: number; result: number[] };
 
       if (result.action === 1) {
-        console.debug(`[messenger effect] user cancelled`);
+        loggerService.debug(`[messenger effect] user cancelled`);
         return;
       } else {
-        console.debug(`[messenger effect] putting deck into discard`);
+        loggerService.debug(`[messenger effect] putting deck into discard`);
         const deck = cardEffectArgs.cardSourceController.getSource(
           'playerDeck',
           cardEffectArgs.playerId,
@@ -1659,18 +1660,18 @@ const expansion: CardExpansionModule = {
       }) as { action: number; result: number[] };
 
       if (result.action === 1) {
-        console.debug(`[miser effect] putting copper on tavern`);
+        loggerService.debug(`[miser effect] putting copper on tavern`);
         const coppersInHand = cardEffectArgs.findCardService.findCards([
           { location: 'playerHand', playerId: cardEffectArgs.playerId },
           { cardKeys: 'copper' },
         ]);
 
         if (!coppersInHand.length) {
-          console.debug(`[miser effect] no coppers in hand`);
+          loggerService.debug(`[miser effect] no coppers in hand`);
           return;
         }
 
-        console.debug(`[miser effect] moving ${coppersInHand[0]} to tavern`);
+        loggerService.debug(`[miser effect] moving ${coppersInHand[0]} to tavern`);
 
         await cardEffectArgs.actionService.run('moveCard', {
           toPlayerId: cardEffectArgs.playerId,
@@ -1678,7 +1679,7 @@ const expansion: CardExpansionModule = {
           to: { location: 'tavern' },
         });
       } else {
-        console.debug(
+        loggerService.debug(
           `[miser effect] gaining ${copperCardsOnTreasureMat.length} treasure`,
         );
         await cardEffectArgs.actionService.run('gainTreasure', {
@@ -1695,7 +1696,7 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[page effect] drawing 1 card, gaining 1 action`);
+      loggerService.debug(`[page effect] drawing 1 card, gaining 1 action`);
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
       });
@@ -1710,7 +1711,7 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[peasant effect] gaining 1 buy, and 1 treasure`);
+      loggerService.debug(`[peasant effect] gaining 1 buy, and 1 treasure`);
       await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
       await cardEffectArgs.actionService.run('gainTreasure', { count: 1 });
     },
@@ -1724,7 +1725,7 @@ const expansion: CardExpansionModule = {
           const gainedCard = args.cardLibrary.getCard(eventArgs.cardId);
           const sourceCard = args.cardLibrary.getCard(eventArgs.gainContext.sourceCardId);
           if (gainedCard.cardKey === sourceCard.cardKey) {
-            console.debug('[port onGained effect] skipping chained extra gain for same card key source');
+            loggerService.debug('[port onGained effect] skipping chained extra gain for same card key source');
             return;
           }
         }
@@ -1734,13 +1735,13 @@ const expansion: CardExpansionModule = {
           from: 'kingdomSupply',
         });
         if (!topPortCard) {
-          console.debug(`[port onGained effect] no port cards in supply`);
+          loggerService.debug(`[port onGained effect] no port cards in supply`);
           return;
         }
 
         const extraPortCard = args.cardLibrary.getCard(topPortCard.id);
 
-        console.debug(`[port onGained effect] gaining ${extraPortCard}`);
+        loggerService.debug(`[port onGained effect] gaining ${extraPortCard}`);
 
         await args.actionService.run('gainCard', {
           playerId: eventArgs.playerId,
@@ -1756,7 +1757,7 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[port effect] drawing 1 card, gaining 2 action`);
+      loggerService.debug(`[port effect] drawing 1 card, gaining 2 action`);
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
       });
@@ -1765,7 +1766,7 @@ const expansion: CardExpansionModule = {
   },
   'raze': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[raze effect] gaining 1 action`);
+      loggerService.debug(`[raze effect] gaining 1 action`);
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
       const selectedCardIds = await cardEffectArgs.actionService.run(
@@ -1783,7 +1784,7 @@ const expansion: CardExpansionModule = {
       );
 
       if (!selectedCardIds.length) {
-        console.warn(`[raze effect] no card selected`);
+        loggerService.warn(`[raze effect] no card selected`);
         return;
       }
 
@@ -1791,7 +1792,7 @@ const expansion: CardExpansionModule = {
         selectedCardIds[0],
       );
 
-      console.debug(`[raze effect] trashing ${selectedCard}`);
+      loggerService.debug(`[raze effect] trashing ${selectedCard}`);
 
       await cardEffectArgs.actionService.run('trashCard', {
         playerId: cardEffectArgs.playerId,
@@ -1806,7 +1807,7 @@ const expansion: CardExpansionModule = {
       const numToLookAt = cost.treasure;
 
       if (numToLookAt === 0) {
-        console.debug(`[raze effect] cost is 0, not looking at deck`);
+        loggerService.debug(`[raze effect] cost is 0, not looking at deck`);
         return;
       }
 
@@ -1816,13 +1817,13 @@ const expansion: CardExpansionModule = {
       );
 
       if (deck.length === 0) {
-        console.debug(`[raze effect] deck is empty, shuffling deck`);
+        loggerService.debug(`[raze effect] deck is empty, shuffling deck`);
         await cardEffectArgs.actionService.run('shuffleDeck', {
           playerId: cardEffectArgs.playerId,
         });
 
         if (deck.length === 0) {
-          console.debug(`[raze effect] still empty, no cards to look at`);
+          loggerService.debug(`[raze effect] still empty, no cards to look at`);
           return;
         }
       }
@@ -1834,7 +1835,7 @@ const expansion: CardExpansionModule = {
           deck.slice(-i - 1)[0],
         );
 
-        console.debug(`[raze effect] looking at ${cardToLookAt}`);
+        loggerService.debug(`[raze effect] looking at ${cardToLookAt}`);
 
         lookingAtCards.push(cardToLookAt);
 
@@ -1859,7 +1860,7 @@ const expansion: CardExpansionModule = {
       }) as { action: number; result: number[] };
 
       if (!result.result.length) {
-        console.warn(`[raze effect] no card selected`);
+        loggerService.warn(`[raze effect] no card selected`);
         return;
       }
 
@@ -1867,7 +1868,7 @@ const expansion: CardExpansionModule = {
         result.result[0],
       );
 
-      console.debug(`[raze effect] putting ${selectedCardToPutInHand} in hand`);
+      loggerService.debug(`[raze effect] putting ${selectedCardToPutInHand} in hand`);
 
       await cardEffectArgs.actionService.run('moveCard', {
         toPlayerId: cardEffectArgs.playerId,
@@ -1875,7 +1876,7 @@ const expansion: CardExpansionModule = {
         to: { location: 'playerHand' },
       });
 
-      console.debug(
+      loggerService.debug(
         `[raze effect] discarding ${lookingAtCards.length - 1} cards`,
       );
 
@@ -1890,7 +1891,7 @@ const expansion: CardExpansionModule = {
   },
   'ratcatcher': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[ratcatcher effect] drawing 1 card, gaining 1 action`);
+      loggerService.debug(`[ratcatcher effect] drawing 1 card, gaining 1 action`);
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
       });
@@ -1900,7 +1901,7 @@ const expansion: CardExpansionModule = {
         cardEffectArgs.cardId,
       );
 
-      console.debug(`[ratcatcher effect] moving ${thisCard} to play area`);
+      loggerService.debug(`[ratcatcher effect] moving ${thisCard} to play area`);
 
       await cardEffectArgs.actionService.run('moveCard', {
         toPlayerId: cardEffectArgs.playerId,
@@ -1921,7 +1922,7 @@ const expansion: CardExpansionModule = {
               cardEffectArgs.playerId;
           },
           triggeredEffectFn: async (triggeredArgs) => {
-            console.debug(
+            loggerService.debug(
               `[ratcatcher startTurn effect] calling ${thisCard} to playArea`,
             );
 
@@ -1944,7 +1945,7 @@ const expansion: CardExpansionModule = {
             );
 
             if (!selectedCardIds.length) {
-              console.debug(`[ratcatcher startTurn effect] no cards selected`);
+              loggerService.debug(`[ratcatcher startTurn effect] no cards selected`);
               return;
             }
 
@@ -1952,7 +1953,7 @@ const expansion: CardExpansionModule = {
               selectedCardIds[0],
             );
 
-            console.debug(
+            loggerService.debug(
               `[ratcatcher startTurn effect] trashing ${selectedCard}`,
             );
 
@@ -1967,14 +1968,14 @@ const expansion: CardExpansionModule = {
   },
   'royal-carriage': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[royal-carriage effect] gaining 1 action`);
+      loggerService.debug(`[royal-carriage effect] gaining 1 action`);
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
       const thisCard = cardEffectArgs.cardLibrary.getCard(
         cardEffectArgs.cardId,
       );
 
-      console.debug(`[royal-carriage effect] moving ${thisCard} to tavern`);
+      loggerService.debug(`[royal-carriage effect] moving ${thisCard} to tavern`);
 
       await cardEffectArgs.actionService.run('moveCard', {
         toPlayerId: cardEffectArgs.playerId,
@@ -2015,7 +2016,7 @@ const expansion: CardExpansionModule = {
               triggeredArgs.trigger.args.cardId,
             );
 
-            console.debug(
+            loggerService.debug(
               `[royal-carriage afterCardPlayed effect] calling ${thisCard} to playArea`,
             );
 
@@ -2024,7 +2025,7 @@ const expansion: CardExpansionModule = {
               to: { location: 'playArea' },
             });
 
-            console.debug(
+            loggerService.debug(
               `[royal-carriage afterCardPlayed effect] re-playing ${cardToPlay}`,
             );
 
@@ -2054,7 +2055,7 @@ const expansion: CardExpansionModule = {
                       'cleanup' &&
                     conditionArgs.findCardService.getCardsInPlay().includes(thisCard),
                   triggeredEffectFn: async (durationArgs) => {
-                    console.debug(
+                    loggerService.debug(
                       `[royal-carriage duration effect] moving ${thisCard} to activeDuration zone`,
                     );
                     await durationArgs.actionService.run('moveCard', {
@@ -2085,7 +2086,7 @@ const expansion: CardExpansionModule = {
                   );
                 },
                 triggeredEffectFn: async (durationArgs) => {
-                  console.debug(
+                  loggerService.debug(
                     `[royal-carriage duration effect] returning ${thisCard} to playArea`,
                   );
                   await durationArgs.actionService.run('moveCard', {
@@ -2108,14 +2109,14 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[soldier effect] gaining 2 treasure`);
+      loggerService.debug(`[soldier effect] gaining 2 treasure`);
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
 
       const attacksInPlay = cardEffectArgs.findCardService.getCardsInPlay()
         .filter((card) => card.owner === cardEffectArgs.playerId && card.type.includes('ATTACK'));
 
       if (attacksInPlay.length > 0) {
-        console.debug(
+        loggerService.debug(
           `[soldier effect] ${attacksInPlay.length} attacks in play, gaining that much treasure`,
         );
         await cardEffectArgs.actionService.run('gainTreasure', {
@@ -2153,7 +2154,7 @@ const expansion: CardExpansionModule = {
         );
 
         if (!selectedCardIds.length) {
-          console.warn(`[soldier effect] no card selected`);
+          loggerService.warn(`[soldier effect] no card selected`);
           continue;
         }
 
@@ -2161,7 +2162,7 @@ const expansion: CardExpansionModule = {
           selectedCardIds[0],
         );
 
-        console.debug(
+        loggerService.debug(
           `[soldier effect] player ${targetPlayerId} discarding ${cardToDiscard}`,
         );
 
@@ -2174,7 +2175,7 @@ const expansion: CardExpansionModule = {
   },
   'storyteller': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[storyteller effect] gaining 1 action`);
+      loggerService.debug(`[storyteller effect] gaining 1 action`);
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
       const hand = cardEffectArgs.cardSourceController.getSource(
@@ -2193,7 +2194,7 @@ const expansion: CardExpansionModule = {
           .filter((card) => card.type.includes('TREASURE'));
 
         if (!treasuresInHand.length) {
-          console.debug(`[storyteller effect] no treasures in hand`);
+          loggerService.debug(`[storyteller effect] no treasures in hand`);
           break;
         }
 
@@ -2209,7 +2210,7 @@ const expansion: CardExpansionModule = {
         );
 
         if (!selectedCardIds.length) {
-          console.debug(`[storyteller effect] no treasure selected`);
+          loggerService.debug(`[storyteller effect] no treasure selected`);
           break;
         }
 
@@ -2217,7 +2218,7 @@ const expansion: CardExpansionModule = {
           selectedCardIds[0],
         );
 
-        console.debug(`[storyteller effect] playing ${selectedToPlay}`);
+        loggerService.debug(`[storyteller effect] playing ${selectedToPlay}`);
 
         await cardEffectArgs.actionService.run('playCard', {
           cardId: selectedCardIds[0],
@@ -2225,7 +2226,7 @@ const expansion: CardExpansionModule = {
         });
       }
 
-      console.debug(`[storyteller effect] drawing 1 card`);
+      loggerService.debug(`[storyteller effect] drawing 1 card`);
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
       });
@@ -2233,7 +2234,7 @@ const expansion: CardExpansionModule = {
       const playerTreasure = cardEffectArgs.match.playerTreasure;
 
       if (playerTreasure === 0) {
-        console.debug(
+        loggerService.debug(
           `[storyteller effect] no player treasure, not drawing more cards`,
         );
         return;
@@ -2243,7 +2244,7 @@ const expansion: CardExpansionModule = {
         count: -playerTreasure,
       }, { loggingContext: { suppress: true } });
 
-      console.debug(`[storyteller effect] drawing ${playerTreasure} cards`);
+      loggerService.debug(`[storyteller effect] drawing ${playerTreasure} cards`);
 
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
@@ -2290,7 +2291,7 @@ const expansion: CardExpansionModule = {
             triggeredArgs.reactionManager.unregisterTrigger(id);
           }
 
-          console.debug(`[swamp-hag startTurn effect] gaining 3 treasure`);
+          loggerService.debug(`[swamp-hag startTurn effect] gaining 3 treasure`);
           await triggeredArgs.actionService.run('gainTreasure', {
             count: 3,
           });
@@ -2326,13 +2327,13 @@ const expansion: CardExpansionModule = {
             ]);
 
             if (!curseCards.length) {
-              console.debug(
+              loggerService.debug(
                 `[swamp-hag cardGained effect] no curse cards in supply`,
               );
               return;
             }
 
-            console.debug(
+            loggerService.debug(
               `[swamp-hag cardGained effect] player ${targetPlayerId} gaining ${curseCards.slice(-1)[0]}`,
             );
 
@@ -2401,7 +2402,7 @@ const expansion: CardExpansionModule = {
 
             const selectedTokenInstanceId = tokenInstanceIds[tokenChoice.action];
             if (!selectedTokenInstanceId) {
-              console.warn(
+              loggerService.warn(
                 `[teacher effect] selected token instance not found`,
               );
               return;
@@ -2434,7 +2435,7 @@ const expansion: CardExpansionModule = {
               .filter((pile): pile is string => !!pile);
 
             if (!actionSupplyPiles.length) {
-              console.warn(`[teacher effect] no action supply piles available`);
+              loggerService.warn(`[teacher effect] no action supply piles available`);
               return;
             }
 
@@ -2453,11 +2454,11 @@ const expansion: CardExpansionModule = {
 
             const selectedPile = result?.[0];
             if (!selectedPile) {
-              console.warn(`[teacher effect] no pile selected`);
+              loggerService.warn(`[teacher effect] no pile selected`);
               return;
             }
 
-            console.debug(`[teacher effect] selected ${selectedPile}`);
+            loggerService.debug(`[teacher effect] selected ${selectedPile}`);
 
             await triggeredEffectArgs.actionService.run('moveToken', {
               tokenInstanceId: selectedTokenInstanceId,
@@ -2495,7 +2496,7 @@ const expansion: CardExpansionModule = {
               cardEffectArgs.playerId;
           },
           triggeredEffectFn: async (triggeredArgs) => {
-            console.debug(
+            loggerService.debug(
               `[transmogrify startTurn effect] calling ${thisCard} to playArea`,
             );
 
@@ -2520,7 +2521,7 @@ const expansion: CardExpansionModule = {
             );
 
             if (!selectedCardIds.length) {
-              console.warn(`[transmogrify startTurn effect] no card selected`);
+              loggerService.warn(`[transmogrify startTurn effect] no card selected`);
               return;
             }
 
@@ -2548,7 +2549,7 @@ const expansion: CardExpansionModule = {
             ]);
 
             if (!cards.length) {
-              console.debug(
+              loggerService.debug(
                 `[transmogrify startTurn effect] no cards costing less than ${
                   cost.treasure + 1
                 } treasure and ${cost.potion} potions`,
@@ -2567,7 +2568,7 @@ const expansion: CardExpansionModule = {
             );
 
             if (!selectedCardIds.length) {
-              console.warn(
+              loggerService.warn(
                 `[transmogrify startTurn effect] no cards selected to gain`,
               );
               return;
@@ -2577,7 +2578,7 @@ const expansion: CardExpansionModule = {
               selectedCardIds[0],
             );
 
-            console.warn(
+            loggerService.warn(
               `[transmogrify startTurn effect] gaining ${cardToGain} to hand`,
             );
 
@@ -2599,7 +2600,7 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      console.debug(
+      loggerService.debug(
         `[treasure-hunter effect] gaining 1 action, gaining 1 treasure`,
       );
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
@@ -2611,7 +2612,7 @@ const expansion: CardExpansionModule = {
       ]);
 
       if (!silverCards.length) {
-        console.debug(`[treasure-hunter effect] no silver cards in supply`);
+        loggerService.debug(`[treasure-hunter effect] no silver cards in supply`);
         return;
       }
 
@@ -2641,7 +2642,7 @@ const expansion: CardExpansionModule = {
   },
   'treasure-trove': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[treasure-trove effect] gaining 2 treasure`);
+      loggerService.debug(`[treasure-trove effect] gaining 2 treasure`);
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
 
       const gainedGoldId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
@@ -2652,9 +2653,9 @@ const expansion: CardExpansionModule = {
         logTag: 'treasure-trove effect',
       });
       if (!gainedGoldId) {
-        console.debug(`[treasure-trove effect] no gold cards in supply`);
+        loggerService.debug(`[treasure-trove effect] no gold cards in supply`);
       } else {
-        console.debug(`[treasure-trove effect] gaining gold ${gainedGoldId}`);
+        loggerService.debug(`[treasure-trove effect] gaining gold ${gainedGoldId}`);
       }
 
       const gainedCopperId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
@@ -2665,9 +2666,9 @@ const expansion: CardExpansionModule = {
         logTag: 'treasure-trove effect',
       });
       if (!gainedCopperId) {
-        console.debug(`[treasure-trove effect] no copper cards in supply`);
+        loggerService.debug(`[treasure-trove effect] no copper cards in supply`);
       } else {
-        console.debug(`[treasure-trove effect] gaining copper ${gainedCopperId}`);
+        loggerService.debug(`[treasure-trove effect] gaining copper ${gainedCopperId}`);
       }
     },
   },
@@ -2679,7 +2680,7 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[warrior effect] drawing 2 cards`);
+      loggerService.debug(`[warrior effect] drawing 2 cards`);
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 2,
@@ -2692,7 +2693,7 @@ const expansion: CardExpansionModule = {
         );
 
       if (!travellersInPlay.length) {
-        console.debug(`[warrior effect] no travellers in play`);
+        loggerService.debug(`[warrior effect] no travellers in play`);
         return;
       }
 
@@ -2710,14 +2711,14 @@ const expansion: CardExpansionModule = {
 
         for (let i = 0; i < travellersInPlay.length; i++) {
           if (deck.length === 0) {
-            console.debug(`[warrior effect] no cards in deck, shuffling`);
+            loggerService.debug(`[warrior effect] no cards in deck, shuffling`);
 
             await cardEffectArgs.actionService.run('shuffleDeck', {
               playerId: cardEffectArgs.playerId,
             });
 
             if (deck.length === 0) {
-              console.debug(
+              loggerService.debug(
                 `[warrior effect] still empty, no cards to look at`,
               );
               break;
@@ -2728,7 +2729,7 @@ const expansion: CardExpansionModule = {
             deck.slice(-1)[0],
           );
 
-          console.debug(`[warrior effect] discarding ${cardToDiscard}`);
+          loggerService.debug(`[warrior effect] discarding ${cardToDiscard}`);
 
           await cardEffectArgs.actionService.run('discardCard', {
             playerId: targetPlayerId,
@@ -2741,7 +2742,7 @@ const expansion: CardExpansionModule = {
           );
 
           if (cost.treasure === 3 || cost.treasure === 4) {
-            console.debug(
+            loggerService.debug(
               `[warrior effect] card costs 3 or 3, trashing ${cardToDiscard}`,
             );
 
@@ -2756,7 +2757,7 @@ const expansion: CardExpansionModule = {
   },
   'wine-merchant': {
     registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[wine-merchant effect] gaining 4 treasure, and 1 buy`);
+      loggerService.debug(`[wine-merchant effect] gaining 4 treasure, and 1 buy`);
 
       await cardEffectArgs.actionService.run('gainTreasure', { count: 4 });
       await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
@@ -2765,7 +2766,7 @@ const expansion: CardExpansionModule = {
         cardEffectArgs.cardId,
       );
 
-      console.debug(`[wine-merchant effect] moving ${thisCard} to tavern`);
+      loggerService.debug(`[wine-merchant effect] moving ${thisCard} to tavern`);
 
       await cardEffectArgs.actionService.run('moveCard', {
         toPlayerId: cardEffectArgs.playerId,
@@ -2791,7 +2792,7 @@ const expansion: CardExpansionModule = {
             return conditionArgs.match.playerTreasure >= 2;
           },
           triggeredEffectFn: async (triggeredArgs) => {
-            console.debug(
+            loggerService.debug(
               `[wine-merchant endTurnPhase effect] discarding ${thisCard}`,
             );
 

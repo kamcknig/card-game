@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { ComputedMatchConfiguration } from 'shared/types/index.ts';
 import { GameEventRegistrar } from '@server-types/index.ts';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
@@ -15,7 +16,7 @@ export const configureColonnade = (
   );
   if (!hasColonnade) return;
 
-  console.info(
+  loggerService.info(
     `[empires configurator] setting up colonnade landmark handlers`,
   );
 
@@ -46,7 +47,7 @@ export const configureColonnade = (
     ]).length > 0;
 
     if (!copyInPlay) {
-      console.debug(
+      loggerService.debug(
         `[colonnade onCardGained] no copy of ${gainedCard} in play, skipping`,
       );
       return;
@@ -61,14 +62,14 @@ export const configureColonnade = (
     ).sort((a, b) => a.id.localeCompare(b.id));
 
     if (!tokensOnColonnade.length) {
-      console.debug(
+      loggerService.debug(
         `[colonnade onCardGained] no VP tokens remaining on Colonnade`,
       );
       return;
     }
 
     const tokensToMove = tokensOnColonnade.slice(0, 2);
-    console.info(
+    loggerService.info(
       `[colonnade onCardGained] player ${eventArgs.playerId} gained ${gainedCard} with a copy in play, moving ${tokensToMove.length} VP token(s)`,
     );
 

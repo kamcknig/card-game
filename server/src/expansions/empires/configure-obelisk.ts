@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { CardKey, ComputedMatchConfiguration } from 'shared/types/index.ts';
 import { GameEventRegistrar } from '@server-types/index.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
@@ -16,7 +17,7 @@ export const configureObelisk = (
   );
   if (!hasObelisk) return;
 
-  console.info(`[empires configurator] setting up obelisk landmark handlers`);
+  loggerService.info(`[empires configurator] setting up obelisk landmark handlers`);
 
   registrar('onGameStart', async (args) => {
     // Locate the Obelisk landmark instance to store the chosen pile metadata.
@@ -24,7 +25,7 @@ export const configureObelisk = (
       (landmark) => landmark.cardKey === 'obelisk',
     );
     if (!obeliskLandmark) {
-      console.warn(
+      loggerService.warn(
         `[obelisk onGameStart] Obelisk landmark instance missing, skipping setup`,
       );
       return;
@@ -46,7 +47,7 @@ export const configureObelisk = (
     }
 
     if (!actionPileKeys.length) {
-      console.warn(
+      loggerService.warn(
         `[obelisk onGameStart] no Action supply piles available, skipping setup`,
       );
       return;
@@ -62,7 +63,7 @@ export const configureObelisk = (
       (supply) => supply.name === chosenPileKey,
     );
     const chosenCardKeys = chosenPile ? Array.from(new Set(chosenPile.cards.map((card) => card.cardKey))) : [];
-    console.info(
+    loggerService.info(
       `[obelisk onGameStart] chosen pile ${chosenPileKey} with cards ${chosenCardKeys.join(', ')}`,
     );
   });

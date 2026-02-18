@@ -23,18 +23,18 @@ import { ExpansionCatalogService } from './core/expansion-catalog-service.ts';
 import { RngService } from './core/rng-service.ts';
 import { TokenRegistryService } from './core/tokens/token-registry-service.ts';
 import { ServerConfigService } from './core/server-config-service.ts';
-import { LoggerBackend, LoggerService } from './core/logger-service.ts';
+import { LoggerBackend } from './core/logger-service.ts';
+import { loggerService } from '@logger';
 import { asClass, asValue, createContainer, InjectionMode } from 'awilix';
 
 const serverConfigService = new ServerConfigService();
-const loggerService = new LoggerService();
 
 try {
   // Fail fast when startup env values are malformed.
   serverConfigService.validate();
 } catch (error) {
-  console.error('[SERVER] invalid startup configuration');
-  console.error(error);
+  loggerService.error('[SERVER] invalid startup configuration');
+  loggerService.error(error);
   Deno.exit(1);
 }
 

@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { CardKey } from 'shared/types/index.ts';
 import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 import { getDefaultKingdomSupplySize } from '../../utils/get-default-kingdom-supply-size.ts';
@@ -13,7 +14,7 @@ export const configureFerryman = (args: ExpansionConfiguratorContext) => {
     return;
   }
 
-  console.info(`[cornucopia configurator - configuring ferryman] ferryman present in supply`);
+  loggerService.info(`[cornucopia configurator - configuring ferryman] ferryman present in supply`);
 
   const availableKingdoms = args.config.expansions.reduce((acc, nextExpansion) => {
     const exp = args.expansionCatalog[nextExpansion.name];
@@ -45,13 +46,13 @@ export const configureFerryman = (args: ExpansionConfiguratorContext) => {
     .filter((key) => !bannedKeys.includes(key) && !kingdomCardKeys.includes(key));
 
   if (!availableKeys.length) {
-    console.info(`[cornucopia configurator - configuring ferryman] no available kingdoms, not adding new kingdom`);
+    loggerService.info(`[cornucopia configurator - configuring ferryman] no available kingdoms, not adding new kingdom`);
     return;
   }
 
   const chosenKey = availableKeys[args.rngService.nextIndex(availableKeys.length)];
 
-  console.info(
+  loggerService.info(
     `[cornucopia configurator - configuring ferryman] adding ${chosenKey} to kingdom as the "ferryman" card`,
   );
 

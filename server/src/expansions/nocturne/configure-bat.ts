@@ -1,13 +1,14 @@
+import { loggerService } from '@logger';
 import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 
 // Adds the Bat non-supply pile when Vampire is present.
 export const configureBat = (args: ExpansionConfiguratorContext) => {
   if (args.config.nonSupply?.some((supply) => supply.name === 'bat')) {
-    console.info('[nocturne configurator - bat] pile already configured');
+    loggerService.info('[nocturne configurator - bat] pile already configured');
     return;
   }
 
-  console.info('[nocturne configurator - bat] configuring Bat pile');
+  loggerService.info('[nocturne configurator - bat] configuring Bat pile');
 
   args.config.nonSupply ??= [];
 
@@ -16,7 +17,7 @@ export const configureBat = (args: ExpansionConfiguratorContext) => {
   );
 
   if (!baseCard) {
-    console.warn('[nocturne configurator - bat] card data not found');
+    loggerService.warn('[nocturne configurator - bat] card data not found');
     return;
   }
 
@@ -31,5 +32,5 @@ export const configureBat = (args: ExpansionConfiguratorContext) => {
     cards: new Array(10).fill({ ...card }),
   });
 
-  console.info('[nocturne configurator - bat] Bat pile configured');
+  loggerService.info('[nocturne configurator - bat] Bat pile configured');
 };

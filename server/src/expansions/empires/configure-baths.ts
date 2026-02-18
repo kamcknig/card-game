@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { ComputedMatchConfiguration } from 'shared/types/index.ts';
 import { GameEventRegistrar } from '@server-types/index.ts';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
@@ -13,7 +14,7 @@ export const configureBaths = (
   );
   if (!hasBaths) return;
 
-  console.info(`[empires configurator] setting up baths landmark handlers`);
+  loggerService.info(`[empires configurator] setting up baths landmark handlers`);
 
   registrar('onGameStart', async (args) => {
     // Baths setup: put 6 VP tokens per player on the landmark using the shared helper.
@@ -28,7 +29,7 @@ export const configureBaths = (
       (landmark) => landmark.cardKey === 'baths',
     );
     if (!bathsLandmark) {
-      console.warn(
+      loggerService.warn(
         `[baths onGameStart] Baths landmark instance missing, skipping reaction registration`,
       );
       return;
@@ -57,7 +58,7 @@ export const configureBaths = (
             );
 
             if (selfGainedCardIds.length) {
-              console.debug(
+              loggerService.debug(
                 `[baths endTurn] player ${player.id} gained ${selfGainedCardIds.length} card(s), skipping`,
               );
               return false;
@@ -66,7 +67,7 @@ export const configureBaths = (
             return true;
           },
           triggeredEffectFn: async (triggeredArgs) => {
-            console.info(
+            loggerService.info(
               `[baths endTurn] player ${player.id} gained no cards, taking 2 VP`,
             );
 
@@ -81,12 +82,12 @@ export const configureBaths = (
             ).sort((a, b) => a.id.localeCompare(b.id));
 
             if (!tokensOnBaths.length) {
-              console.debug(`[baths endTurn] no VP tokens remaining on Baths`);
+              loggerService.debug(`[baths endTurn] no VP tokens remaining on Baths`);
               return;
             }
 
             const tokensToMove = tokensOnBaths.slice(0, 2);
-            console.info(
+            loggerService.info(
               `[baths endTurn] moving ${tokensToMove.length} VP token(s) to player ${player.id}`,
             );
 

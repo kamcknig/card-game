@@ -1,13 +1,14 @@
+import { loggerService } from '@logger';
 import { ExpansionConfiguratorFactory } from '@server-types/index.ts';
 
 const configurator: ExpansionConfiguratorFactory = () => {
   let potionConfigured = false;
 
   return async (args) => {
-    console.info(`configuring match for alchemy`);
+    loggerService.info(`configuring match for alchemy`);
 
     if (potionConfigured) {
-      console.info(`[alchemy match configurator] potion already configured`);
+      loggerService.info(`[alchemy match configurator] potion already configured`);
       return args.config;
     }
 
@@ -27,7 +28,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
           continue;
         }
 
-        console.info(`[alchemy match configurator] adding potion card because ${card.cardKey} has a potion cost`);
+        loggerService.info(`[alchemy match configurator] adding potion card because ${card.cardKey} has a potion cost`);
         args.config.basicSupply.push({
           name: 'potion',
           cards: new Array(16).fill(args.cardLibrary['potion']),

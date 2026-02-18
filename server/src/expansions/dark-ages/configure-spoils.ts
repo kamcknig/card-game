@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 
 export const configureSpoils = async (args: ExpansionConfiguratorContext) => {
@@ -6,11 +7,11 @@ export const configureSpoils = async (args: ExpansionConfiguratorContext) => {
   }
 
   if (args.config.nonSupply?.some((supply) => !supply.cards.some((card) => card.tags?.includes('spoils')))) {
-    console.info(`[dark-ages configurator - configuring spoils] spoils cards in kingdom already, not configuring`);
+    loggerService.info(`[dark-ages configurator - configuring spoils] spoils cards in kingdom already, not configuring`);
     return;
   }
 
-  console.info(`[dark-ages configurator - configuring spoils] spoils needs to be configured`);
+  loggerService.info(`[dark-ages configurator - configuring spoils] spoils needs to be configured`);
 
   args.config.nonSupply ??= [];
 
@@ -25,5 +26,5 @@ export const configureSpoils = async (args: ExpansionConfiguratorContext) => {
     cards: new Array(15).fill({ ...card }),
   });
 
-  console.info(`[dark-ages configurator - configuring spoils] spoils configured`);
+  loggerService.info(`[dark-ages configurator - configuring spoils] spoils configured`);
 };

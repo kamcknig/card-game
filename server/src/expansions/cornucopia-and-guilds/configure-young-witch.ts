@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 import { CardKey } from 'shared/types/index.ts';
 import { getDefaultKingdomSupplySize } from '../../utils/get-default-kingdom-supply-size.ts';
@@ -13,7 +14,7 @@ export const configureYoungWitch = (args: ExpansionConfiguratorContext) => {
     return;
   }
 
-  console.info(`[cornucopia configurator - configuring young-witch] young witch present in supply`);
+  loggerService.info(`[cornucopia configurator - configuring young-witch] young witch present in supply`);
 
   const availableKingdoms = args.config.expansions.reduce((acc, nextExpansion) => {
     const exp = args.expansionCatalog[nextExpansion.name];
@@ -35,13 +36,13 @@ export const configureYoungWitch = (args: ExpansionConfiguratorContext) => {
     .filter((key) => !bannedKeys.includes(key) && !kingdomCardKeys.includes(key));
 
   if (!availableKeys.length) {
-    console.info(`[cornucopia configurator - configuring young-witch] no available kingdoms, not adding new kingdom`);
+    loggerService.info(`[cornucopia configurator - configuring young-witch] no available kingdoms, not adding new kingdom`);
     return;
   }
 
   const chosenKey = availableKeys[args.rngService.nextIndex(availableKeys.length)];
 
-  console.info(`[cornucopia configurator - configuring young-witch] adding ${chosenKey} to kingdom as the "bane" card`);
+  loggerService.info(`[cornucopia configurator - configuring young-witch] adding ${chosenKey} to kingdom as the "bane" card`);
 
   const chosenCard = structuredClone(
     args.expansionCatalog[availableKingdoms[chosenKey].expansionName].cardData.kingdomSupply[chosenKey],

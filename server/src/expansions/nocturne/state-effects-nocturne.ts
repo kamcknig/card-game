@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { StateEffectRegistrar } from '@server-types/index.ts';
 import { Card, CardId } from 'shared/types/index.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
@@ -29,7 +30,7 @@ const registerLostInTheWoods = (registerStateEffect: StateEffectRegistrar) => {
   }) => {
     const state = findStateInMatch(match, cardId);
     if (!state) {
-      console.warn('[lost-in-the-woods state] state card not found');
+      loggerService.warn('[lost-in-the-woods state] state card not found');
       return;
     }
 
@@ -50,7 +51,7 @@ const registerLostInTheWoods = (registerStateEffect: StateEffectRegistrar) => {
       triggeredEffectFn: async (triggeredArgs) => {
         const hand = cardSourceController.getSource('playerHand', playerId);
         if (!hand.length) {
-          console.debug('[lost-in-the-woods state] no cards in hand to discard');
+          loggerService.debug('[lost-in-the-woods state] no cards in hand to discard');
           return;
         }
 
@@ -65,7 +66,7 @@ const registerLostInTheWoods = (registerStateEffect: StateEffectRegistrar) => {
         }) as { action: number };
 
         if (decision.action !== 2) {
-          console.debug('[lost-in-the-woods state] player declined to discard');
+          loggerService.debug('[lost-in-the-woods state] player declined to discard');
           return;
         }
 
@@ -76,18 +77,18 @@ const registerLostInTheWoods = (registerStateEffect: StateEffectRegistrar) => {
           restrict: hand,
         }) as CardId | null;
         if (!selectedCardId) {
-          console.debug('[lost-in-the-woods state] no card selected to discard');
+          loggerService.debug('[lost-in-the-woods state] no card selected to discard');
           return;
         }
 
         // Discard the chosen card and receive a boon.
-        console.debug(`[lost-in-the-woods state] discarding ${selectedCardId}`);
+        loggerService.debug(`[lost-in-the-woods state] discarding ${selectedCardId}`);
         await actionService.run('discardCard', {
           playerId,
           cardId: selectedCardId,
         });
 
-        console.debug('[lost-in-the-woods state] receiving a boon');
+        loggerService.debug('[lost-in-the-woods state] receiving a boon');
         await actionService.run('receiveBoon', {
           playerId,
         });
@@ -109,11 +110,11 @@ const registerDeluded = (registerStateEffect: StateEffectRegistrar) => {
   }) => {
     const state = findStateInMatch(match, cardId);
     if (!state) {
-      console.warn('[deluded state] state card not found');
+      loggerService.warn('[deluded state] state card not found');
       return;
     }
 
-    console.log(`[deluded state] registering buy-phase restriction for player ${playerId}`);
+    loggerService.log(`[deluded state] registering buy-phase restriction for player ${playerId}`);
 
     // Register a one-time trigger to apply the buy restriction at the start of the buy phase.
     reactionManager.registerSystemTemplate(state, 'startTurnPhase', {
@@ -132,7 +133,7 @@ const registerDeluded = (registerStateEffect: StateEffectRegistrar) => {
         return ownedStates.includes(state.id);
       },
       triggeredEffectFn: async () => {
-        console.debug('[deluded state] entering buy phase, removing state and applying restriction');
+        loggerService.debug('[deluded state] entering buy phase, removing state and applying restriction');
         await actionService.run('removeState', {
           playerId,
           stateId: state.id,
@@ -159,7 +160,7 @@ const registerDeluded = (registerStateEffect: StateEffectRegistrar) => {
           ruleUnsubs.push(cardPriceController.registerRule(card, rule));
         }
 
-        console.debug('[deluded state] registered Action buy restrictions for buy phase');
+        loggerService.debug('[deluded state] registered Action buy restrictions for buy phase');
 
         // Remove the restriction at the end of the buy phase.
         reactionManager.registerSystemTemplate(state, 'endTurnPhase', {
@@ -174,7 +175,7 @@ const registerDeluded = (registerStateEffect: StateEffectRegistrar) => {
             return getTurnPhase(conditionArgs.trigger.args.phaseIndex) === 'buy';
           },
           triggeredEffectFn: async () => {
-            console.debug('[deluded state] clearing buy restriction at end of buy phase');
+            loggerService.debug('[deluded state] clearing buy restriction at end of buy phase');
             for (const unsub of ruleUnsubs) {
               unsub();
             }
@@ -201,7 +202,7 @@ const registerEnvious = (registerStateEffect: StateEffectRegistrar) => {
   }) => {
     const state = findStateInMatch(match, cardId);
     if (!state) {
-      console.warn('[envious state] state card not found');
+      loggerService.warn('[envious state] state card not found');
       return;
     }
 
@@ -226,7 +227,7 @@ const registerEnvious = (registerStateEffect: StateEffectRegistrar) => {
         return ownedStates.includes(state.id);
       },
       triggeredEffectFn: async () => {
-        console.debug('[envious state] entering buy phase, removing state and registering triggers');
+        loggerService.debug('[envious state] entering buy phase, removing state and registering triggers');
         await actionService.run('removeState', {
           playerId,
           stateId: state.id,
@@ -266,7 +267,7 @@ const registerEnvious = (registerStateEffect: StateEffectRegistrar) => {
               return;
             }
             const sourceCard = cardLibrary.getCard(sourceId);
-            console.debug(`[envious state] forcing ${sourceCard.cardKey} to produce $1`);
+            loggerService.debug(`[envious state] forcing ${sourceCard.cardKey} to produce $1`);
             triggeredArgs.trigger.args.count = 1;
           },
         });
@@ -278,7 +279,7 @@ const registerEnvious = (registerStateEffect: StateEffectRegistrar) => {
           compulsory: true,
           condition: (conditionArgs) => conditionArgs.trigger.args.playerId === playerId,
           triggeredEffectFn: async () => {
-            console.debug('[envious state] clearing Envious triggers at end of turn');
+            loggerService.debug('[envious state] clearing Envious triggers at end of turn');
             if (treasureGainTriggerId) {
               reactionManager.unregisterTrigger(treasureGainTriggerId);
               treasureGainTriggerId = undefined;

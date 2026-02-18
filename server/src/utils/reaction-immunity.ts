@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { ReactionContext, ReactionTrigger } from '@server-types/index.ts';
 import { PlayerId } from 'shared/types/index.ts';
 
@@ -28,11 +29,11 @@ export function initImmunityScope(
   const scope = trigger.toString();
   if (!reactionContext.immunityScope) {
     reactionContext.immunityScope = scope;
-    console.debug(`[IMMUNITY] initialized scope ${scope}`);
+    loggerService.debug(`[IMMUNITY] initialized scope ${scope}`);
     return;
   }
   if (reactionContext.immunityScope !== scope) {
-    console.warn(
+    loggerService.warn(
       `[IMMUNITY] reactionContext reused across triggers: ${reactionContext.immunityScope} -> ${scope}`,
     );
   }

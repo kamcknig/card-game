@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { ComputedMatchConfiguration } from 'shared/types/index.ts';
 import { ExpansionConfiguratorContext, ExpansionConfiguratorFactory, GameEventRegistrar } from '@server-types/index.ts';
 import { addMatToMatchConfig } from '../../utils/add-mat-to-match-config.ts';
@@ -41,7 +42,7 @@ const configureHorsePile = (configuratorArgs: ExpansionConfiguratorContext) => {
     if (!hasHorsePile) {
       return;
     }
-    console.info('[menagerie configurator] removing Horse pile because no Horse source cards are present');
+    loggerService.info('[menagerie configurator] removing Horse pile because no Horse source cards are present');
     config.nonSupply = (config.nonSupply ?? []).filter((supply) => supply.name !== 'horse');
     return;
   }
@@ -52,7 +53,7 @@ const configureHorsePile = (configuratorArgs: ExpansionConfiguratorContext) => {
 
   const baseHorse = structuredClone(configuratorArgs.expansionCatalog['menagerie']?.cardData.kingdomSupply['horse']);
   if (!baseHorse) {
-    console.warn('[menagerie configurator] horse card data not found');
+    loggerService.warn('[menagerie configurator] horse card data not found');
     return;
   }
 
@@ -66,7 +67,7 @@ const configureHorsePile = (configuratorArgs: ExpansionConfiguratorContext) => {
       tags: ['horse'],
     }),
   });
-  console.info('[menagerie configurator] added Horse non-supply pile');
+  loggerService.info('[menagerie configurator] added Horse non-supply pile');
 };
 
 const configurator: ExpansionConfiguratorFactory = () => {
@@ -92,12 +93,12 @@ const configurator: ExpansionConfiguratorFactory = () => {
     });
 
     if (exileZoneAlreadyRegisteredForAllPlayers) {
-      console.debug('[menagerie configurator] exile mat already configured for all players');
+      loggerService.debug('[menagerie configurator] exile mat already configured for all players');
       configureHorsePile(args);
       return args.config;
     }
 
-    console.info('[menagerie configurator] adding exile mat zones for all players');
+    loggerService.info('[menagerie configurator] adding exile mat zones for all players');
     addMatToMatchConfig('exile', args.config, args);
     configureHorsePile(args);
     return args.config;
@@ -121,7 +122,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
   registrar('onGameStart', async (args) => {
     if (hasFisherman) {
-      console.info('[menagerie configurator] registering Fisherman cost rules');
+      loggerService.info('[menagerie configurator] registering Fisherman cost rules');
       const fishermanCards = args.findCardService.findCards([
         { location: 'kingdomSupply' },
         { cardKeys: 'fisherman' },
@@ -145,7 +146,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     }
 
     if (hasDestrier) {
-      console.info('[menagerie configurator] registering Destrier cost rules');
+      loggerService.info('[menagerie configurator] registering Destrier cost rules');
       const destrierCards = args.findCardService.findCards([
         { location: 'kingdomSupply' },
         { cardKeys: 'destrier' },
@@ -180,7 +181,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     }
 
     if (hasWayfarer) {
-      console.info('[menagerie configurator] registering Wayfarer cost rules');
+      loggerService.info('[menagerie configurator] registering Wayfarer cost rules');
       const wayfarerCards = args.findCardService.findCards([
         { location: 'kingdomSupply' },
         { cardKeys: 'wayfarer' },

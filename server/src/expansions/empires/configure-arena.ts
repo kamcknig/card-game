@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { GameEventRegistrar } from '@server-types/index.ts';
 import { CardId, ComputedMatchConfiguration } from 'shared/types/index.ts';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
@@ -13,7 +14,7 @@ export const configureArena = (
     (landmark) => landmark.cardKey === 'arena',
   );
 
-  console.info(`[empires configurator] setting up arena landmark handlers`);
+  loggerService.info(`[empires configurator] setting up arena landmark handlers`);
 
   registrar('onGameStart', async (args) => {
     // Arena setup: put 6 VP tokens per player on the landmark using the shared helper.
@@ -28,7 +29,7 @@ export const configureArena = (
       (landmark) => landmark.cardKey === 'arena',
     );
     if (!arenaLandmark) {
-      console.warn(
+      loggerService.warn(
         `[arena onGameStart] Arena landmark instance missing, skipping reaction registration`,
       );
       return;
@@ -62,7 +63,7 @@ export const configureArena = (
             return actionCards.length > 0;
           },
           triggeredEffectFn: async (triggeredArgs) => {
-            console.debug(
+            loggerService.debug(
               `[arena startTurnPhase] resolving for player ${player.id}`,
             );
 
@@ -72,7 +73,7 @@ export const configureArena = (
               { cardType: 'ACTION' },
             ]);
             if (!actionCards.length) {
-              console.debug(
+              loggerService.debug(
                 `[arena startTurnPhase] no Action cards available to discard`,
               );
               return;
@@ -91,7 +92,7 @@ export const configureArena = (
             );
 
             if (!selectedCardIds.length) {
-              console.debug(
+              loggerService.debug(
                 `[arena startTurnPhase] player chose not to discard`,
               );
               return;
@@ -101,7 +102,7 @@ export const configureArena = (
             const selectedCard = triggeredArgs.cardLibrary.getCard(
               selectedCardIds[0],
             );
-            console.info(
+            loggerService.info(
               `[arena startTurnPhase] discarding ${selectedCard} for 2 VP`,
             );
             await triggeredArgs.actionService.run('discardCard', {
@@ -121,14 +122,14 @@ export const configureArena = (
             ).sort((a, b) => a.id.localeCompare(b.id));
 
             if (!tokensOnArena.length) {
-              console.debug(
+              loggerService.debug(
                 `[arena startTurnPhase] no VP tokens remaining on Arena`,
               );
               return;
             }
 
             const tokensToMove = tokensOnArena.slice(0, 2);
-            console.info(
+            loggerService.info(
               `[arena startTurnPhase] moving ${tokensToMove.length} VP token(s) to player ${player.id}`,
             );
             for (const token of tokensToMove) {

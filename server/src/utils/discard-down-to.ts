@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { CardEffectFunctionContext } from '@server-types/index.ts';
 import { PlayerId } from 'shared/types/index.ts';
 
@@ -16,14 +17,14 @@ export const discardDownTo = async (
   const hand = context.cardSourceController.getSource('playerHand', args.playerId);
   const handCount = hand.length;
 
-  console.debug(`[${args.logTag}] player ${args.playerId} has ${handCount} cards in hand`);
+  loggerService.debug(`[${args.logTag}] player ${args.playerId} has ${handCount} cards in hand`);
   if (handCount <= args.targetHandSize) {
     return;
   }
 
   // Prompt the player to discard the excess cards.
   const selectCount = handCount - args.targetHandSize;
-  console.debug(`[${args.logTag}] prompting player ${args.playerId} to discard ${selectCount} cards`);
+  loggerService.debug(`[${args.logTag}] prompting player ${args.playerId} to discard ${selectCount} cards`);
 
   const cardIds = await context.actionService.run('selectCard', {
     prompt: args.prompt ?? 'Confirm discard',
@@ -33,13 +34,13 @@ export const discardDownTo = async (
   });
 
   if (!cardIds?.length) {
-    console.warn(`[${args.logTag}] no cards selected to discard`);
+    loggerService.warn(`[${args.logTag}] no cards selected to discard`);
     return;
   }
 
   // Discard each selected card.
   for (const cardId of cardIds) {
-    console.debug(`[${args.logTag}] discarding ${context.cardLibrary.getCard(cardId)}...`);
+    loggerService.debug(`[${args.logTag}] discarding ${context.cardLibrary.getCard(cardId)}...`);
     await context.actionService.run('discardCard', {
       cardId,
       playerId: args.playerId,

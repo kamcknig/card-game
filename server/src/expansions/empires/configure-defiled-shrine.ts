@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { CardKey, ComputedMatchConfiguration } from 'shared/types/index.ts';
 import { GameEventRegistrar } from '@server-types/index.ts';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
@@ -15,7 +16,7 @@ export const configureDefiledShrine = (
   );
   if (!hasDefiledShrine) return;
 
-  console.info(
+  loggerService.info(
     `[empires configurator] setting up defiled shrine landmark handlers`,
   );
 
@@ -34,7 +35,7 @@ export const configureDefiledShrine = (
       // Skip Gathering piles so Farmers' Market/Temple/Wild Hunt keep their own tokens.
       const hasGathering = pileCards.some((card) => card.type.includes('GATHERING'));
       if (hasGathering) {
-        console.debug(
+        loggerService.debug(
           `[defiled-shrine onGameStart] skipping Gathering pile ${supply.name}`,
         );
         continue;
@@ -44,7 +45,7 @@ export const configureDefiledShrine = (
     }
 
     if (!eligiblePileKeys.size) {
-      console.debug(
+      loggerService.debug(
         `[defiled-shrine onGameStart] no non-Gathering supply piles found`,
       );
       return;
@@ -52,7 +53,7 @@ export const configureDefiledShrine = (
 
     const victoryTokenId = prosperityTokenIds.victory;
     for (const pileKey of eligiblePileKeys) {
-      console.info(
+      loggerService.info(
         `[defiled-shrine onGameStart] placing 2 VP token(s) on ${pileKey}`,
       );
       for (let i = 0; i < 2; i += 1) {
@@ -81,11 +82,11 @@ export const configureDefiledShrine = (
 
       const tokenToMove = tokensOnPile[0];
       if (!tokenToMove) {
-        console.debug(
+        loggerService.debug(
           `[defiled-shrine onCardGained] no VP tokens on ${pileKey} pile to move`,
         );
       } else {
-        console.info(
+        loggerService.info(
           `[defiled-shrine onCardGained] moving 1 VP from ${pileKey} to Defiled Shrine`,
         );
         await args.actionService.run('moveToken', {
@@ -99,7 +100,7 @@ export const configureDefiledShrine = (
 
     // Only award Defiled Shrine VP when the Curse gain happens in the current player's buy phase.
     if (getTurnPhase(args.match.turnPhaseIndex) !== 'buy') {
-      console.debug(
+      loggerService.debug(
         `[defiled-shrine onCardGained] Curse gained outside buy phase, skipping`,
       );
       return;
@@ -107,7 +108,7 @@ export const configureDefiledShrine = (
 
     const currentPlayer = getCurrentPlayer(args.match);
     if (currentPlayer.id !== eventArgs.playerId) {
-      console.debug(
+      loggerService.debug(
         `[defiled-shrine onCardGained] Curse gained by non-current player, skipping`,
       );
       return;
@@ -121,13 +122,13 @@ export const configureDefiledShrine = (
     ).sort((a, b) => a.id.localeCompare(b.id));
 
     if (!tokensOnShrine.length) {
-      console.debug(
+      loggerService.debug(
         `[defiled-shrine onCardGained] no VP tokens remaining on Defiled Shrine`,
       );
       return;
     }
 
-    console.info(
+    loggerService.info(
       `[defiled-shrine onCardGained] player ${eventArgs.playerId} gained a Curse in buy phase, moving ${tokensOnShrine.length} VP token(s)`,
     );
 

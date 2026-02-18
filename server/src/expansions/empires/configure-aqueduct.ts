@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
 import { CardKey, ComputedMatchConfiguration } from 'shared/types/index.ts';
 import { GameEventRegistrar } from '@server-types/index.ts';
@@ -13,13 +14,13 @@ export const configureAqueduct = (
 
   if (!hasAqueduct) return;
 
-  console.info(
+  loggerService.info(
     `[empires configurator] setting up aqueduct landmark handlers`,
   );
 
   registrar('onGameStart', async (args) => {
     // Aqueduct setup: put 8 VP tokens on Silver and Gold piles.
-    console.info(
+    loggerService.info(
       `[aqueduct onGameStart] placing VP tokens on Silver and Gold piles`,
     );
     const victoryTokenId = prosperityTokenIds.victory;
@@ -59,13 +60,13 @@ export const configureAqueduct = (
       const tokensOnPile = getTokensOnPile(pileKey).sort((a, b) => a.id.localeCompare(b.id));
       const token = tokensOnPile[0];
       if (!token) {
-        console.debug(
+        loggerService.debug(
           `[aqueduct onCardGained] no victory tokens on ${pileKey} pile`,
         );
         return false;
       }
 
-      console.debug(
+      loggerService.debug(
         `[aqueduct onCardGained] moving 1 VP from ${pileKey} to Aqueduct`,
       );
       await args.actionService.run('moveToken', {
@@ -79,13 +80,13 @@ export const configureAqueduct = (
     const claimAqueductTokens = async (): Promise<void> => {
       const tokensOnAqueduct = getTokensOnPile('aqueduct').sort((a, b) => a.id.localeCompare(b.id));
       if (!tokensOnAqueduct.length) {
-        console.debug(
+        loggerService.debug(
           `[aqueduct onCardGained] no victory tokens on Aqueduct`,
         );
         return;
       }
 
-      console.info(
+      loggerService.info(
         `[aqueduct onCardGained] moving ${tokensOnAqueduct.length} VP token(s) to player ${eventArgs.playerId}`,
       );
       for (const token of tokensOnAqueduct) {

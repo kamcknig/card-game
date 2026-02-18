@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { ExpansionConfiguratorFactory, GameEventRegistrar } from '@server-types/index.ts';
 import { configureReserve } from './configure-reserve.ts';
 import { registerAdventuresTokenDefinitions } from './token-definitions-adventures.ts';
@@ -67,7 +68,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           );
           if (!tokenEntry) return;
 
-          console.info(`[adventures treasureGain trigger] - receiving one less treasure`);
+          loggerService.info(`[adventures treasureGain trigger] - receiving one less treasure`);
 
           // Consume the -$1 token once when a positive treasure gain occurs.
           trigger.args.count = Math.max(0, trigger.args.count - 1);
@@ -105,7 +106,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           );
           if (!tokenEntry) return;
 
-          console.info(`[adventures drawCards trigger] - drawing one less card`);
+          loggerService.info(`[adventures drawCards trigger] - drawing one less card`);
 
           // Consume the -1 Card token once when a draw is attempted.
           trigger.args.count = Math.max(0, trigger.args.count - 1);
@@ -342,7 +343,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     return;
   }
 
-  console.info(`[adventures configurator] setting up teacher onGameStart handler for vanilla tokens`);
+  loggerService.info(`[adventures configurator] setting up teacher onGameStart handler for vanilla tokens`);
 
   registrar('onGameStart', async (args) => {
     // Teacher grants one of each vanilla bonus token to every player.

@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { ArtifactEffectRegistrar } from '@server-types/index.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
@@ -29,7 +30,7 @@ const registerFlag = (registerArtifactEffect: ArtifactEffectRegistrar) => {
   }) => {
     const artifact = findArtifactInMatch(match, cardId);
     if (!artifact) {
-      console.warn('[flag artifact] artifact card not found');
+      loggerService.warn('[flag artifact] artifact card not found');
       return;
     }
 
@@ -38,7 +39,7 @@ const registerFlag = (registerArtifactEffect: ArtifactEffectRegistrar) => {
       drawHandTriggerId = undefined;
     }
 
-    console.info(`[flag artifact] registering triggers for player ${playerId}`);
+    loggerService.info(`[flag artifact] registering triggers for player ${playerId}`);
 
     drawHandTriggerId = reactionManager.registerSystemTemplate(artifact, 'drawHand', {
       playerId,
@@ -64,7 +65,7 @@ const registerFlag = (registerArtifactEffect: ArtifactEffectRegistrar) => {
           cardLikeId: cardId,
           effectText: '+1 Card',
         });
-        console.debug(`[flag artifact] granting +1 card for hand draw on turn ${triggeredMatch.turnNumber}`);
+        loggerService.debug(`[flag artifact] granting +1 card for hand draw on turn ${triggeredMatch.turnNumber}`);
       },
     });
   });
@@ -83,7 +84,7 @@ const registerHorn = (registerArtifactEffect: ArtifactEffectRegistrar) => {
   }) => {
     const artifact = findArtifactInMatch(match, cardId);
     if (!artifact) {
-      console.warn('[horn artifact] artifact card not found');
+      loggerService.warn('[horn artifact] artifact card not found');
       return;
     }
 
@@ -96,7 +97,7 @@ const registerHorn = (registerArtifactEffect: ArtifactEffectRegistrar) => {
     // Reset the once-per-turn tracker when reassigning the artifact.
     lastUsedTurnNumber = undefined;
 
-    console.info(`[horn artifact] registering triggers for player ${playerId}`);
+    loggerService.info(`[horn artifact] registering triggers for player ${playerId}`);
 
     discardTriggerId = reactionManager.registerReactionTemplate(artifact, 'discardCard', {
       playerId,
@@ -116,7 +117,7 @@ const registerHorn = (registerArtifactEffect: ArtifactEffectRegistrar) => {
       },
       triggeredEffectFn: async (triggeredArgs) => {
         const discardedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
-        console.debug(`[horn artifact] top-decking ${discardedCard}`);
+        loggerService.debug(`[horn artifact] top-decking ${discardedCard}`);
 
         // Move the discarded Border Guard onto the top of the deck.
         await triggeredArgs.actionService.run('moveCard', {
@@ -143,7 +144,7 @@ const registerKey = (registerArtifactEffect: ArtifactEffectRegistrar) => {
   }) => {
     const artifact = findArtifactInMatch(match, cardId);
     if (!artifact) {
-      console.warn('[key artifact] artifact card not found');
+      loggerService.warn('[key artifact] artifact card not found');
       return;
     }
 
@@ -153,7 +154,7 @@ const registerKey = (registerArtifactEffect: ArtifactEffectRegistrar) => {
       startTurnTriggerId = undefined;
     }
 
-    console.info(`[key artifact] registering triggers for player ${playerId}`);
+    loggerService.info(`[key artifact] registering triggers for player ${playerId}`);
 
     startTurnTriggerId = reactionManager.registerSystemTemplate(artifact, 'startTurn', {
       playerId,
@@ -168,7 +169,7 @@ const registerKey = (registerArtifactEffect: ArtifactEffectRegistrar) => {
         return ownedArtifacts.includes(cardId);
       },
       triggeredEffectFn: async ({ logManager, actionService, match: triggeredMatch }) => {
-        console.debug(`[key artifact] granting +$1 on turn ${triggeredMatch.turnNumber}`);
+        loggerService.debug(`[key artifact] granting +$1 on turn ${triggeredMatch.turnNumber}`);
         logManager.addLogEntry({
           type: 'cardLikeEffect',
           playerId,
@@ -194,7 +195,7 @@ const registerTreasureChest = (registerArtifactEffect: ArtifactEffectRegistrar) 
   }) => {
     const artifact = findArtifactInMatch(match, cardId);
     if (!artifact) {
-      console.warn('[treasure-chest artifact] artifact card not found');
+      loggerService.warn('[treasure-chest artifact] artifact card not found');
       return;
     }
 
@@ -203,7 +204,7 @@ const registerTreasureChest = (registerArtifactEffect: ArtifactEffectRegistrar) 
       startTurnPhaseTriggerId = undefined;
     }
 
-    console.info(`[treasure-chest artifact] registering triggers for player ${playerId}`);
+    loggerService.info(`[treasure-chest artifact] registering triggers for player ${playerId}`);
 
     startTurnPhaseTriggerId = reactionManager.registerSystemTemplate(artifact, 'startTurnPhase', {
       playerId,
@@ -229,10 +230,10 @@ const registerTreasureChest = (registerArtifactEffect: ArtifactEffectRegistrar) 
           logTag: 'treasure-chest artifact',
         });
         if (!gainedGoldId) {
-          console.debug('[treasure-chest artifact] no Gold cards available in supply');
+          loggerService.debug('[treasure-chest artifact] no Gold cards available in supply');
           return;
         }
-        console.debug(`[treasure-chest artifact] gaining Gold on turn ${triggeredMatch.turnNumber}`);
+        loggerService.debug(`[treasure-chest artifact] gaining Gold on turn ${triggeredMatch.turnNumber}`);
         logManager.addLogEntry({
           type: 'cardLikeEffect',
           playerId,

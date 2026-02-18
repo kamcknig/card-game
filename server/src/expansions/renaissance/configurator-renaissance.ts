@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { ComputedMatchConfiguration, PlayerId } from 'shared/types/index.ts';
 import { EndGamePolicyRegistrar, ExpansionConfiguratorFactory, GameEventRegistrar } from '@server-types/index.ts';
 import { uniqueByProp } from '../../core/match-configurator.ts';
@@ -46,7 +47,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
     if (requiredArtifactKeys.size < 1) {
       if (existingArtifacts.length !== nonManagedArtifacts.length) {
-        console.info('[renaissance configurator] removing artifacts because no source cards are present');
+        loggerService.info('[renaissance configurator] removing artifacts because no source cards are present');
       }
       args.config.artifacts = nonManagedArtifacts;
       return args.config;
@@ -55,7 +56,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
     const artifactDefinitions = Array.from(requiredArtifactKeys).flatMap((artifactKey) => {
       const artifact = args.expansionCatalog['renaissance']?.artifacts?.[artifactKey];
       if (!artifact) {
-        console.warn(`[renaissance configurator] missing artifact ${artifactKey}`);
+        loggerService.warn(`[renaissance configurator] missing artifact ${artifactKey}`);
         return [];
       }
       return structuredClone(artifact);
@@ -75,7 +76,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   registrar('onGameStart', async (args) => {
     const projectCount = config.projects?.length ?? 0;
     if (projectCount < 1) {
-      console.debug('[renaissance configurator] no projects configured, skipping cube placement');
+      loggerService.debug('[renaissance configurator] no projects configured, skipping cube placement');
       return;
     }
 
@@ -86,13 +87,13 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
       const cubesToAdd = Math.max(0, projectCount - existingCubes.length);
 
       if (cubesToAdd < 1) {
-        console.debug(
+        loggerService.debug(
           `[renaissance configurator] player ${player.id} already has ${existingCubes.length} cube token(s)`,
         );
         continue;
       }
 
-      console.info(`[renaissance configurator] adding ${cubesToAdd} cube token(s) for player ${player.id}`);
+      loggerService.info(`[renaissance configurator] adding ${cubesToAdd} cube token(s) for player ${player.id}`);
       for (let i = 0; i < cubesToAdd; i++) {
         await args.actionService.run('placeToken', {
           tokenId: renaissanceTokenIds.cube,
@@ -110,12 +111,12 @@ export const registerEndGamePolicies = (registrar: EndGamePolicyRegistrar): void
     ({ match, endTriggered }) => {
       // Fleet latches game-end state once activated; do not re-evaluate base conditions during Fleet turns.
       if (match.fleetRound.completed) {
-        console.info('[match] Fleet round completed; finalizing game end');
+        loggerService.info('[match] Fleet round completed; finalizing game end');
         return { decision: 'end_now' };
       }
 
       if (match.fleetRound.active) {
-        console.info('[match] game end latched; Fleet round still active');
+        loggerService.info('[match] game end latched; Fleet round still active');
         return { decision: 'continue' };
       }
 
@@ -148,7 +149,7 @@ export const registerEndGamePolicies = (registrar: EndGamePolicyRegistrar): void
       }
 
       if (!fleetEligiblePlayerIds.length) {
-        console.info('[match] no Fleet owners; ending game immediately');
+        loggerService.info('[match] no Fleet owners; ending game immediately');
         return { decision: 'end_now' };
       }
 
@@ -159,7 +160,7 @@ export const registerEndGamePolicies = (registrar: EndGamePolicyRegistrar): void
       match.fleetRound.endingPlayerId = match.players[match.currentPlayerTurnIndex]?.id;
       match.fleetRound.startedAtTurnNumber = match.turnNumber;
 
-      console.info(
+      loggerService.info(
         `[match] Fleet round activated by player ${match.fleetRound.endingPlayerId}; order: ${
           fleetEligiblePlayerIds.join(', ')
         }`,

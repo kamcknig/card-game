@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import { Card, CardCost, CardId, Match, PlayerId } from 'shared/types/index.ts';
 import { CardAlternateBuyOption, FindCardService } from '@server-types/index.ts';
 import { MatchCardLibrary } from '../match-card-library.ts';
@@ -101,7 +102,7 @@ export class BuyOptionsResolver {
 
       // Skip duplicate option ids to keep prompt/result mapping deterministic.
       if (options.some((existingOption) => existingOption.id === option.id)) {
-        console.warn(`[buy options] duplicate buy option id '${option.id}' for ${card.cardKey}, skipping duplicate`);
+        loggerService.warn(`[buy options] duplicate buy option id '${option.id}' for ${card.cardKey}, skipping duplicate`);
         continue;
       }
 

@@ -27,6 +27,7 @@
     "semiColons": true
   },
   "imports": {
+    "@logger": "./src/utils/logger.ts",
     "@shared/": "../shared/src/",
     "@server-types/": "./src/type-groups/",
     "@expansions/": "./src/expansions/",

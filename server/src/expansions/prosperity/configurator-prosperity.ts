@@ -1,3 +1,4 @@
+import { loggerService } from '@logger';
 import {
   EndGamePolicyRegistrar,
   ExpansionConfiguratorFactory,
@@ -26,7 +27,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
     const basicCards = args.config.basicSupply;
 
     if (hasProsperityKingdom && !prosperityCheckConfigured) {
-      console.log(
+      loggerService.log(
         `[prosperity configurator] adding prosperity and colony to config`,
       );
 
@@ -50,14 +51,14 @@ const configurator: ExpansionConfiguratorFactory = () => {
     const charlatanPresent = kingdomCards.find((supply) => supply.name === 'charlatan');
 
     if (charlatanPresent && !charlatanConfigured) {
-      console.log(
+      loggerService.log(
         `[prosperity configurator] charlatan is part of kingdom - curses gain the treasure type and +1 treasure effect`,
       );
 
       const curseCard = basicCards.find((supply) => supply.name === 'curse');
 
       if (!curseCard) {
-        console.warn(
+        loggerService.warn(
           `[prosperity configurator] curse card not found in config`,
         );
       }
@@ -65,7 +66,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
       curseCard?.cards?.forEach((card) => card.type.push('TREASURE'));
 
       args.expansionRegistration.registerCardEffect('curse', 'prosperity', async (args) => {
-        console.info(`[curse effect - prosperity] curse effect called`);
+        loggerService.info(`[curse effect - prosperity] curse effect called`);
         await args.actionService.run('gainTreasure', { count: 1 });
       });
 
@@ -118,7 +119,7 @@ export const registerGameEvents: (
       return;
     }
 
-    console.info(
+    loggerService.info(
       `[prosperity onGameStart event] registering peddler game events`,
     );
 
@@ -160,7 +161,7 @@ export const registerGameEvents: (
           triggeredEffectFn: async (triggerEffectArgs) => {
             const peddlerCard = triggerEffectArgs.cardLibrary.getCard(cardId);
 
-            console.info(
+            loggerService.info(
               `[peddler triggered effect] adding pricing rule for ${peddlerCard}`,
             );
 
