@@ -36,7 +36,6 @@ this can also be used for pile selection instead of using cards.
 - prosperity has the card that changes curses into a treasure card type, and also gains the effect to gain 1 treasure on
   play. need a way to visually denote this properly. also similar to inheritance in adventures
 - missing card abilities [file](../missing-card-abilities.md)
-- combine similar log entries like drawing multiple cards, discarding multiple, gaining treasure, etc. discarding could
   be a special case in that only the last discarded card is seen so ordering of when they go to disard could matter
 - TokenIds are defined in expansion modules; so they are hard-coded strings in the front-end application. can we share
   them somehow between both

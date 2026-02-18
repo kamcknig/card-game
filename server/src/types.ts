@@ -166,7 +166,10 @@ export interface GameActionDefinitionMap {
   }) => Promise<void>;
   checkForRemainingPlayerActions: () => Promise<void>;
   exchangeCoffer: (args: { playerId: PlayerId; count: number }) => Promise<void>;
-  discardCard: (args: { cardId: CardId | Card; playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
+  discardCard: (
+    args: { cardId: CardId | Card | Array<CardId | Card>; playerId: PlayerId },
+    context?: GameActionContext,
+  ) => Promise<void>;
   drawCard: (
     args: { playerId: PlayerId; count?: number; suppressReactions?: boolean },
     context?: GameActionContext,

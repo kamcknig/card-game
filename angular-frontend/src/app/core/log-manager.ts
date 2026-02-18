@@ -44,6 +44,14 @@ export const logManager = {
       }
       case 'discard': {
         const cardName = cardsById[logEntry.cardId]?.cardName;
+        const discardCount = logEntry.count ?? 1;
+        if (discardCount > 1) {
+          msg = selfId === playerId
+            ? `%Y% discards ${discardCount} cards and <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`
+            : `%P${player?.id}% discards ${discardCount} cards and <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`;
+          break;
+        }
+
         msg = selfId === playerId
           ? `%Y% discarded <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`
           : `%P${player?.id}% discarded a card`;

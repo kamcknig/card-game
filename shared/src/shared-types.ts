@@ -248,7 +248,8 @@ export type LogEntry =
   | { type: 'draw'; playerId: PlayerId; cardId: CardId; depth?: number; source?: LogEntrySource }
   // Hand draw log entry (no count; modifiers log separately).
   | { type: 'drawHand'; playerId: PlayerId; depth?: number; source?: LogEntrySource }
-  | { type: 'discard'; playerId: PlayerId; cardId: CardId; depth?: number; source?: LogEntrySource }
+  // Discard log entry; count > 1 indicates only the final cardId is revealed in log text.
+  | { type: 'discard'; playerId: PlayerId; cardId: CardId; count?: number; depth?: number; source?: LogEntrySource }
   | { type: 'gainAction'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'gainBuy'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'gainTreasure'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }

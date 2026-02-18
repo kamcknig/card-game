@@ -2245,41 +2245,63 @@ export class GameActionController implements GameActionDefinitionMap {
     await this.runComputerTurnStep();
   }
 
-  async discardCard(args: { cardId: CardId | Card; playerId: PlayerId }, context?: GameActionContext) {
-    const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
-    const cardId = card.id;
+  async discardCard(
+    args: { cardId: CardId | Card | Array<CardId | Card>; playerId: PlayerId },
+    context?: GameActionContext,
+  ) {
+    // Allow both single-card and multi-card discard calls while preserving input order.
+    const discardCards = (Array.isArray(args.cardId) ? args.cardId : [args.cardId])
+      .map((nextCard) => nextCard instanceof Card ? nextCard : this.cardLibrary.getCard(nextCard));
 
-    this.loggerService.info(`[discardCard action] discarding ${card} from ${getPlayerById(this.match, args.playerId)}`);
-
-    const oldLocation = await this.moveCard({
-      cardId,
-      to: { location: 'playerDiscard' },
-      toPlayerId: args.playerId,
-    });
-
-    if (!oldLocation) {
-      throw new Error(`[discardCard action] could not find card ${cardId} in player ${args.playerId}'s discard pile`);
+    if (discardCards.length < 1) {
+      this.loggerService.warn('[discardCard action] called with no cards to discard');
+      return;
     }
 
+    this.loggerService.info(
+      `[discardCard action] discarding ${discardCards.length} card(s) from ${getPlayerById(this.match, args.playerId)}`,
+    );
+
+    const lastDiscardCard = discardCards[discardCards.length - 1];
+
+    for (const [index, discardCard] of discardCards.entries()) {
+      const isLastDiscard = index === discardCards.length - 1;
+      const oldLocation = await this.moveCard({
+        cardId: discardCard.id,
+        to: { location: 'playerDiscard' },
+        toPlayerId: args.playerId,
+        // Reveal only the final discarded card; keep prior discarded cards face-down.
+        facing: isLastDiscard ? 'front' : 'back',
+      });
+
+      if (!oldLocation) {
+        throw new Error(
+          `[discardCard action] could not find card ${discardCard.id} in player ${args.playerId}'s discard pile`,
+        );
+      }
+
+      const r = new ReactionTrigger('discardCard', {
+        previousLocation: oldLocation,
+        playerId: args.playerId,
+        cardId: discardCard.id,
+      });
+
+      await this.reactionManager.runTrigger({ trigger: r });
+
+      await this.reactionManager.runCardLifecycleEvent('onDiscarded', {
+        cardId: discardCard.id,
+        playerId: args.playerId,
+        previousLocation: oldLocation,
+      });
+    }
+
+    // Emit a single log entry for grouped discards; only the final card remains face-up in the message.
     this.logManager.addLogEntry({
       type: 'discard',
       playerId: args.playerId,
-      cardId,
+      cardId: lastDiscardCard.id,
+      count: discardCards.length,
       source: context?.loggingContext?.source,
-    });
-
-    const r = new ReactionTrigger('discardCard', {
-      previousLocation: oldLocation,
-      playerId: args.playerId,
-      cardId,
-    });
-
-    await this.reactionManager.runTrigger({ trigger: r });
-
-    await this.reactionManager.runCardLifecycleEvent('onDiscarded', {
-      cardId: cardId,
-      playerId: args.playerId,
-      previousLocation: oldLocation,
     });
   }
 
