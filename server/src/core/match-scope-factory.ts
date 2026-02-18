@@ -34,6 +34,8 @@ import { ExpansionEffectRegistryService } from './expansion-effect-registry-serv
  * - `dispose` releases scope-owned resources when the match ends/resets.
  */
 export interface MatchScope {
+  // Monotonic scope id for this game's match scope lifetime.
+  matchScopeId: number;
   matchController: MatchController;
   dispose: () => void;
 }
@@ -78,7 +80,7 @@ export class MatchScopeFactory {
       socketMap: asValue(socketMap),
       match: asValue(match),
       loggerContext: asValue({ scope: 'match', gameId, matchScopeId }),
-      loggerService: asClass(LoggerService).singleton(),
+      loggerService: asClass(LoggerService).scoped(),
       matchConfiguratorFactory: asValue(this.matchConfiguratorFactory),
       cardEffectFunctionMap: asValue(cardEffectFunctionMap),
       eventEffectFunctionMap: asValue(eventEffectFunctionMap),
@@ -118,6 +120,7 @@ export class MatchScopeFactory {
     matchActionRunnerRef.bind(matchController.runGameAction.bind(matchController));
 
     return {
+      matchScopeId,
       matchController,
       dispose: () => {
         // Dispose registered resources in this match scope when the match ends/resets.

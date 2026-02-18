@@ -4,6 +4,7 @@ import { Game } from './game.ts';
 import { GameLobbySessionCoordinatorService } from './game-lobby-session-coordinator-service.ts';
 import { GameMatchLifecycleCoordinatorService } from './game-match-lifecycle-coordinator-service.ts';
 import { LoggerService } from './logger-service.ts';
+import { FileGameConfigurationStore } from './game-configuration-store.ts';
 
 export interface GameScopeFactoryArgs {
   gameId: string;
@@ -36,7 +37,9 @@ export class GameScopeFactory {
       onGameStateChanged: asValue(onGameStateChanged),
       // Build scoped logger instances so contextual values can include game identity.
       loggerContext: asValue({ scope: 'game', gameId }),
-      loggerService: asClass(LoggerService).singleton(),
+      loggerService: asClass(LoggerService).scoped(),
+      // Persist lobby configuration per game/match scope instead of process-global files.
+      configStore: asClass(FileGameConfigurationStore).scoped(),
       // These services maintain mutable state and must not be shared across games.
       disconnectedPlayerVoteService: asClass(DisconnectedPlayerVoteService).singleton(),
       gameMatchLifecycleCoordinatorService: asClass(GameMatchLifecycleCoordinatorService).singleton(),

@@ -83,10 +83,6 @@ export class ExpansionSearchService {
       return false;
     }
 
-    if (!card.partOfSupply) {
-      return false;
-    }
-
     if (card.kingdomSelectable === false) {
       return false;
     }

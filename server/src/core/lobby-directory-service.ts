@@ -169,6 +169,16 @@ export class LobbyDirectoryService {
 
   // Applies expansion-load events to existing games and future game templates.
   public expansionLoaded(expansion: ExpansionListElement): void {
+    const alreadyTracked = this.loadedExpansions.some(
+      (loadedExpansion) => loadedExpansion.name === expansion.name,
+    );
+    if (alreadyTracked) {
+      this.loggerService.debug(
+        `[lobby directory] expansion '${expansion.name}' already tracked globally, skipping duplicate load`,
+      );
+      return;
+    }
+
     this.loadedExpansions.push(expansion);
     this.loggerService.info(`[lobby directory] expansion '${expansion.name}' loaded globally`);
 

@@ -40,9 +40,10 @@ export class GameMatchLifecycleCoordinatorService {
   // Loads persisted config, rebuilds search indexes, and creates the first match runtime.
   public initialize(state: GameRuntimeState, defaultMatchConfiguration: MatchConfiguration): void {
     this.loggerService.info('[game] loading persisted lobby configuration');
-    this.configStore.load(defaultMatchConfiguration);
-    this.expansionSearchService.rebuildIndexes();
     this.createNewMatch(state, defaultMatchConfiguration);
+    this.configStore.load(defaultMatchConfiguration);
+    state.matchConfiguration = { ...structuredClone(defaultMatchConfiguration) };
+    this.expansionSearchService.rebuildIndexes();
   }
 
   // Creates a fresh match scope/controller and resets working lobby configuration.
@@ -52,12 +53,27 @@ export class GameMatchLifecycleCoordinatorService {
       socketMap: state.socketMap,
       gameId: state.gameId,
     });
+    state.matchScopeId = state.matchScope.matchScopeId;
+    this.configStore.setMatchScopeId(state.matchScopeId);
+    this.loggerService.info(
+      `[game] created match scope ${state.matchScopeId} for game '${state.gameId}'`,
+    );
     state.matchController = state.matchScope.matchController;
     state.matchConfiguration = { ...structuredClone(defaultMatchConfiguration) };
   }
 
   // Applies expansion-loaded side effects to runtime availability and search indexes.
   public expansionLoaded(state: GameRuntimeState, expansion: ExpansionListElement): void {
+    const alreadyAvailable = state.availableExpansion.some(
+      (availableExpansion) => availableExpansion.name === expansion.name,
+    );
+    if (alreadyAvailable) {
+      this.loggerService.debug(
+        `[game] expansion '${expansion.name}' already available for game '${state.gameId}', skipping duplicate`,
+      );
+      return;
+    }
+
     this.loggerService.log(`[game] expansion '${expansion.name}' loaded`);
     state.availableExpansion.push(expansion);
     this.io.in(state.roomName).emit(
@@ -90,6 +106,7 @@ export class GameMatchLifecycleCoordinatorService {
   public dispose(state: GameRuntimeState): void {
     state.matchScope?.dispose();
     state.matchScope = undefined;
+    state.matchScopeId = undefined;
   }
 
   // Clears all lobby+match runtime state and returns to a fresh lobby.

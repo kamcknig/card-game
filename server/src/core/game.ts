@@ -79,6 +79,7 @@ export class Game {
     players: [],
     owner: undefined,
     matchStarted: false,
+    matchScopeId: undefined,
     socketMap: new Map<PlayerId, AppSocket>(),
     matchScope: undefined,
     matchController: undefined,
@@ -259,6 +260,13 @@ export class Game {
       // Persist selected artifacts between sessions.
       this.configStore.persistArtifacts(newConfig.artifacts);
       this.defaultMatchConfiguration.artifacts = structuredClone(newConfig.artifacts);
+    }
+
+    const projectsPatch = jsonPatch.compare(currentConfig.projects, newConfig.projects);
+    if (projectsPatch.length) {
+      // Persist selected projects between sessions.
+      this.configStore.persistProjects(newConfig.projects);
+      this.defaultMatchConfiguration.projects = structuredClone(newConfig.projects);
     }
 
     const patch = jsonPatch.compare(currentConfig, newConfig);

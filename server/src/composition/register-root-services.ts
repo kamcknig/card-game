@@ -3,7 +3,6 @@ import { Server } from 'socket.io';
 import { ServerEmitEvents, ServerListenEvents } from 'shared/types/index.ts';
 import { ExpansionSearchService } from '../core/expansion-search-service.ts';
 import { ExpansionCompatibilityService } from '../core/expansion-compatibility-service.ts';
-import { FileGameConfigurationStore } from '../core/game-configuration-store.ts';
 import { LobbySocketBindings } from '../core/lobby-socket-bindings.ts';
 import { DisconnectedPlayerVoteService } from '../core/disconnected-player-vote-service.ts';
 import { PlayerSessionService } from '../core/player-session-service.ts';
@@ -55,6 +54,8 @@ export const registerRootServices = (
     io: asValue(args.io),
     serverConfigService: asClass(ServerConfigService).singleton(),
     loggerBackendProvider: asClass(LoggerBackendProvider).singleton(),
+    // Root/server logger context for non-game-specific startup/runtime services.
+    loggerContext: asValue({ scope: 'server' }),
     loggerService: asClass(LoggerService).singleton(),
     maxPlayers: asValue(6),
     matchScopeFactory: asClass(MatchScopeFactory).singleton(),
@@ -71,7 +72,6 @@ export const registerRootServices = (
     projectLoaderService: asClass(ProjectLoaderService).singleton(),
     expansionLoaderService: asClass(ExpansionLoaderService).singleton(),
     matchSocketBindings: asClass(MatchSocketBindings).singleton(),
-    configStore: asClass(FileGameConfigurationStore).singleton(),
     lobbySocketBindings: asClass(LobbySocketBindings).singleton(),
     disconnectedPlayerVoteService: asClass(DisconnectedPlayerVoteService).singleton(),
     playerSessionService: asClass(PlayerSessionService).singleton(),

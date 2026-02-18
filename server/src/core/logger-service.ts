@@ -1,5 +1,6 @@
 import * as log from '@timepp/enhanced-deno-log';
 import { ServerConfigService } from './server-config-service.ts';
+import { getGameLogDirectory, getMatchLogDirectory, getServerLogDirectory } from './game-data-paths.ts';
 
 // Logging backend contract used by the logger adapter.
 export type LoggerBackend = {
@@ -196,15 +197,13 @@ export class LoggerBackendProvider {
   private resolveBucketDirectory(context: LoggerContext): string {
     const rawGameId = context.gameId;
     if (typeof rawGameId === 'string' && rawGameId.trim().length > 0) {
-      const safeGameId = this.sanitizePathSegment(rawGameId.trim());
-      return `./logs/games/${safeGameId}`;
+      const rawMatchScopeId = context.matchScopeId;
+      if (typeof rawMatchScopeId === 'number' && Number.isFinite(rawMatchScopeId)) {
+        return getMatchLogDirectory(rawGameId, rawMatchScopeId);
+      }
+      return getGameLogDirectory(rawGameId);
     }
-    return './logs/server';
-  }
-
-  // Sanitizes context-derived path segments to keep directory paths safe.
-  private sanitizePathSegment(value: string): string {
-    return value.replace(/[^A-Za-z0-9_-]/g, '_');
+    return getServerLogDirectory();
   }
 
   // Rotates the active daily file when appending the next line would exceed the configured size.
@@ -267,7 +266,7 @@ export class LoggerBackendProvider {
 export class LoggerService {
   constructor(
     private readonly loggerBackendProvider: LoggerBackendProvider,
-    private readonly loggerContext: LoggerContext = {},
+    private readonly loggerContext: LoggerContext,
   ) {
   }
 
