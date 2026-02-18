@@ -24,6 +24,11 @@ export type AddPlayerResult =
   | { status: 'rejected_capacity' }
   | { status: 'rejected_started' };
 
+export type RemoveLobbyPlayerResult =
+  | { status: 'removed'; playerId: PlayerId; sessionId: string; socketId: string }
+  | { status: 'not_found' }
+  | { status: 'match_started' };
+
 // Coordinates lobby/session events such as join/disconnect/readiness/owner actions.
 export class GameLobbySessionCoordinatorService {
   constructor(
@@ -200,6 +205,63 @@ export class GameLobbySessionCoordinatorService {
 
     this.disconnectedPlayerVoteService.removePendingRemovalPlayer(state.players, targetPlayerId);
     void state.matchController?.runGameAction('checkForRemainingPlayerActions');
+  }
+
+  // Removes a player from a lobby game before match start (leave/kick/ban flow).
+  public removePlayerFromLobby(
+    state: GameRuntimeState,
+    args: { playerId: PlayerId; callbacks: GameLobbyCallbacks },
+  ): RemoveLobbyPlayerResult {
+    const { playerId, callbacks } = args;
+    this.loggerService.info(`[game] removing lobby player ${playerId}`);
+    if (state.matchStarted) {
+      this.loggerService.warn(`[game] cannot remove player ${playerId} from lobby after match start`);
+      return { status: 'match_started' };
+    }
+
+    const player = state.players.find((nextPlayer) => nextPlayer.id === playerId);
+    if (!player) {
+      this.loggerService.warn(`[game] cannot remove player ${playerId}; player not found`);
+      return { status: 'not_found' };
+    }
+
+    const socket = state.socketMap.get(player.id);
+    if (socket) {
+      this.lobbySocketBindings.unbindPlayerLobbyHandlers(socket);
+      this.lobbySocketBindings.unbindOwnerLobbyHandlers(socket);
+      socket.leave(state.roomName);
+    }
+
+    state.socketMap.delete(player.id);
+    state.players = state.players.filter((nextPlayer) => nextPlayer.id !== player.id);
+    player.connected = false;
+    player.ready = false;
+
+    if (state.owner?.id === player.id) {
+      const replacement = this.playerSessionService.findReplacementOwner(state.players, player.id);
+      if (replacement) {
+        state.owner = replacement;
+        this.io.in(state.roomName).emit('gameOwnerUpdated', replacement.id);
+        const replacementSocket = state.socketMap.get(replacement.id);
+        if (replacementSocket) {
+          this.bindOwnerLobbyHandlers(state, replacement.id, replacementSocket, callbacks);
+        }
+      } else {
+        state.owner = undefined;
+      }
+    }
+
+    this.io.in(state.roomName).emit('setPlayerList', state.players);
+    this.io.in(state.roomName).emit('playerDisconnected', player);
+    this.loggerService.info(`[game] removed ${player} from lobby game`);
+    callbacks.onGameStateChanged?.();
+
+    return {
+      status: 'removed',
+      playerId: player.id,
+      sessionId: player.sessionId,
+      socketId: player.socketId,
+    };
   }
 
   // Handles lobby display-name edits.

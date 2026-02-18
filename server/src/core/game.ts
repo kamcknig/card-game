@@ -17,7 +17,11 @@ import { ExpansionCompatibilityService } from './expansion-compatibility-service
 import { LoggerService } from './logger-service.ts';
 import { GameRuntimeState } from './game-runtime-state.ts';
 import { GameMatchLifecycleCoordinatorService } from './game-match-lifecycle-coordinator-service.ts';
-import { AddPlayerResult, GameLobbySessionCoordinatorService } from './game-lobby-session-coordinator-service.ts';
+import {
+  AddPlayerResult,
+  GameLobbySessionCoordinatorService,
+  RemoveLobbyPlayerResult,
+} from './game-lobby-session-coordinator-service.ts';
 
 const createDefaultMatchConfiguration = (): MatchConfiguration => ({
   expansions: [
@@ -150,6 +154,16 @@ export class Game {
     return this.runtimeState.players.filter((player) => player.connected && !player.isComputer).length;
   }
 
+  // Finds a player by session identifier in this game runtime.
+  public getPlayerBySession(sessionId: string): Player | undefined {
+    return this.runtimeState.players.find((player) => player.sessionId === sessionId);
+  }
+
+  // Finds a player by player identifier in this game runtime.
+  public getPlayerById(playerId: PlayerId): Player | undefined {
+    return this.runtimeState.players.find((player) => player.id === playerId);
+  }
+
   // Handles expansion-loaded events from startup loaders.
   public expansionLoaded(expansion: ExpansionListElement): void {
     this.gameMatchLifecycleCoordinatorService.expansionLoaded(this.runtimeState, expansion);
@@ -184,6 +198,19 @@ export class Game {
       registerRemovalVoteHandler: this.registerRemovalVoteHandler,
     });
     return result;
+  }
+
+  // Removes one player from this lobby game before match start.
+  public removePlayerFromLobby(playerId: PlayerId): RemoveLobbyPlayerResult {
+    return this.gameLobbySessionCoordinatorService.removePlayerFromLobby(this.runtimeState, {
+      playerId,
+      callbacks: {
+        onStartMatch: this.startMatch,
+        onClearMatch: this.clearMatch,
+        onMatchConfigurationUpdated: this.onMatchConfigurationUpdated,
+        onGameStateChanged: this.onGameStateChanged,
+      },
+    });
   }
 
   // Clears all current runtime state and resets to a new lobby match shell.

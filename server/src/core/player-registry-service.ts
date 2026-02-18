@@ -25,23 +25,24 @@ export class PlayerRegistryService {
   }): RegisterPlayerJoinResult {
     const { players, sessionId, socket, matchStarted } = args;
 
-    // Preserve existing behavior: reject once lobby has reached hard player cap.
-    if (players.length >= this.maxPlayers) {
-      return { status: 'rejected_capacity' };
-    }
-
     const existingPlayer = players.find((player) => player.sessionId === sessionId);
 
-    // Preserve existing behavior: unknown players cannot join once match has started.
-    if (matchStarted && !existingPlayer) {
-      return { status: 'rejected_started' };
-    }
-
+    // Existing players always keep their slot, even when the lobby is at max capacity.
     if (existingPlayer) {
       existingPlayer.socketId = socket.id;
       existingPlayer.sessionId = sessionId;
       existingPlayer.connected = true;
       return { status: 'accepted', player: existingPlayer, created: false };
+    }
+
+    // Preserve existing behavior: reject new joins once lobby has reached hard player cap.
+    if (players.length >= this.maxPlayers) {
+      return { status: 'rejected_capacity' };
+    }
+
+    // Preserve existing behavior: unknown players cannot join once match has started.
+    if (matchStarted) {
+      return { status: 'rejected_started' };
     }
 
     const newPlayer = this.playerFactoryService.createPlayer(sessionId, socket);

@@ -257,6 +257,7 @@ export class LobbyDirectoryService {
 
   // Handles a join request from the global lobby into a specific game.
   private joinLobbyGame(sessionId: string, socket: AppSocket, gameId: string): void {
+    this.loggerService.info(`[lobby directory] session ${sessionId} attempting to join ${gameId}`);
     const record = this.games.get(gameId);
     if (!record) {
       this.emitJoinRejected(socket, {
@@ -318,53 +319,211 @@ export class LobbyDirectoryService {
 
     socket.leave(LobbyDirectoryService.LOBBY_ROOM_NAME);
     this.sessionToGameId.set(sessionId, gameId);
+    this.loggerService.info(`[lobby directory] session ${sessionId} joined ${gameId}`);
     this.handleGameStateChanged(gameId);
   }
 
-  // Placeholder for phase-3 explicit leave flow.
+  // Handles explicit lobby leave requests from configuration-state games.
   private onLeaveLobbyGame(sessionId: string, socket: AppSocket, gameId: string): void {
-    this.loggerService.warn(`[lobby directory] leaveLobbyGame not implemented yet (${sessionId}, ${gameId})`);
-    socket.emit('joinLobbyRejected', {
-      gameId,
-      reason: 'invalidRequest',
-      message: 'Leave game flow is not implemented yet.',
-    });
+    const record = this.games.get(gameId);
+    if (!record) {
+      this.emitJoinRejected(socket, {
+        gameId,
+        reason: 'gameNotFound',
+        message: 'That game no longer exists.',
+      });
+      return;
+    }
+
+    const player = record.game.getPlayerBySession(sessionId);
+    if (!player) {
+      this.emitJoinRejected(socket, {
+        gameId,
+        reason: 'invalidRequest',
+        message: 'You are not in that game.',
+      });
+      return;
+    }
+
+    this.loggerService.info(`[lobby directory] session ${sessionId} leaving game ${gameId}`);
+    const removal = record.game.removePlayerFromLobby(player.id);
+    if (removal.status === 'match_started') {
+      this.emitJoinRejected(socket, {
+        gameId,
+        reason: 'gameNotJoinable',
+        message: 'You cannot leave from lobby once the match has started.',
+      });
+      return;
+    }
+    if (removal.status === 'not_found') {
+      this.emitJoinRejected(socket, {
+        gameId,
+        reason: 'invalidRequest',
+        message: 'Player not found in game.',
+      });
+      return;
+    }
+
+    this.sessionToGameId.delete(removal.sessionId);
+    socket.join(LobbyDirectoryService.LOBBY_ROOM_NAME);
+    this.handleGameStateChanged(gameId);
+    this.emitLobbySnapshot(socket);
   }
 
-  // Placeholder for phase-3 owner kick flow.
+  // Handles owner-initiated kick requests during lobby configuration.
   private onKickLobbyPlayer(sessionId: string, socket: AppSocket, gameId: string, targetPlayerId: PlayerId): void {
-    this.loggerService.warn(
-      `[lobby directory] kickLobbyPlayer not implemented yet (${sessionId}, ${gameId}, ${targetPlayerId})`,
-    );
-    socket.emit('joinLobbyRejected', {
-      gameId,
-      reason: 'invalidRequest',
-      message: 'Kick flow is not implemented yet.',
-    });
+    const record = this.games.get(gameId);
+    if (!record) {
+      this.emitJoinRejected(socket, {
+        gameId,
+        reason: 'gameNotFound',
+        message: 'That game no longer exists.',
+      });
+      return;
+    }
+
+    const ownerValidation = this.validateOwnerSession(record, sessionId);
+    if (!ownerValidation.valid) {
+      this.emitJoinRejected(socket, ownerValidation.rejection);
+      return;
+    }
+
+    if (ownerValidation.playerId === targetPlayerId) {
+      this.emitJoinRejected(socket, {
+        gameId,
+        reason: 'invalidRequest',
+        message: 'You cannot kick yourself.',
+      });
+      return;
+    }
+
+    this.loggerService.info(`[lobby directory] owner session ${sessionId} kicking player ${targetPlayerId} from ${gameId}`);
+    const removal = record.game.removePlayerFromLobby(targetPlayerId);
+    if (removal.status === 'match_started') {
+      this.emitJoinRejected(socket, {
+        gameId,
+        reason: 'gameNotJoinable',
+        message: 'Kick is only available during lobby configuration.',
+      });
+      return;
+    }
+    if (removal.status === 'not_found') {
+      this.emitJoinRejected(socket, {
+        gameId,
+        reason: 'invalidRequest',
+        message: 'Target player not found.',
+      });
+      return;
+    }
+
+    this.sessionToGameId.delete(removal.sessionId);
+    const targetSocket = this.findSocketById(removal.socketId);
+    if (targetSocket) {
+      targetSocket.join(LobbyDirectoryService.LOBBY_ROOM_NAME);
+      targetSocket.emit('kickedFromGame', {
+        gameId,
+        message: `You were kicked from ${record.gameName}.`,
+      });
+      this.emitLobbySnapshot(targetSocket);
+    }
+
+    this.handleGameStateChanged(gameId);
   }
 
-  // Placeholder for phase-3 owner ban flow.
+  // Handles owner-initiated ban requests during lobby configuration.
   private onBanLobbyPlayer(sessionId: string, socket: AppSocket, gameId: string, targetPlayerId: PlayerId): void {
-    this.loggerService.warn(
-      `[lobby directory] banLobbyPlayer not implemented yet (${sessionId}, ${gameId}, ${targetPlayerId})`,
-    );
-    socket.emit('joinLobbyRejected', {
-      gameId,
-      reason: 'invalidRequest',
-      message: 'Ban flow is not implemented yet.',
-    });
+    const record = this.games.get(gameId);
+    if (!record) {
+      this.emitJoinRejected(socket, {
+        gameId,
+        reason: 'gameNotFound',
+        message: 'That game no longer exists.',
+      });
+      return;
+    }
+
+    const ownerValidation = this.validateOwnerSession(record, sessionId);
+    if (!ownerValidation.valid) {
+      this.emitJoinRejected(socket, ownerValidation.rejection);
+      return;
+    }
+
+    if (ownerValidation.playerId === targetPlayerId) {
+      this.emitJoinRejected(socket, {
+        gameId,
+        reason: 'invalidRequest',
+        message: 'You cannot ban yourself.',
+      });
+      return;
+    }
+
+    this.loggerService.info(`[lobby directory] owner session ${sessionId} banning player ${targetPlayerId} from ${gameId}`);
+    const targetPlayer = record.game.getPlayerById(targetPlayerId);
+    if (!targetPlayer) {
+      this.emitJoinRejected(socket, {
+        gameId,
+        reason: 'invalidRequest',
+        message: 'Target player not found.',
+      });
+      return;
+    }
+
+    const removal = record.game.removePlayerFromLobby(targetPlayerId);
+    if (removal.status === 'match_started') {
+      this.emitJoinRejected(socket, {
+        gameId,
+        reason: 'gameNotJoinable',
+        message: 'Ban is only available during lobby configuration.',
+      });
+      return;
+    }
+    if (removal.status === 'not_found') {
+      this.emitJoinRejected(socket, {
+        gameId,
+        reason: 'invalidRequest',
+        message: 'Target player not found.',
+      });
+      return;
+    }
+
+    record.bannedSessionIds.add(removal.sessionId);
+    this.sessionToGameId.delete(removal.sessionId);
+    const targetSocket = this.findSocketById(removal.socketId);
+    if (targetSocket) {
+      targetSocket.join(LobbyDirectoryService.LOBBY_ROOM_NAME);
+      targetSocket.emit('bannedFromGame', {
+        gameId,
+        message: `You were banned from ${record.gameName}.`,
+      });
+      this.emitLobbySnapshot(targetSocket);
+    }
+
+    this.handleGameStateChanged(gameId);
   }
 
-  // Placeholder for phase-3 unban flow.
+  // Handles owner-initiated unban requests for one banned session.
   private onUnbanLobbyPlayer(sessionId: string, socket: AppSocket, gameId: string, targetSessionId: string): void {
-    this.loggerService.warn(
-      `[lobby directory] unbanLobbyPlayer not implemented yet (${sessionId}, ${gameId}, ${targetSessionId})`,
-    );
-    socket.emit('joinLobbyRejected', {
-      gameId,
-      reason: 'invalidRequest',
-      message: 'Unban flow is not implemented yet.',
-    });
+    const record = this.games.get(gameId);
+    if (!record) {
+      this.emitJoinRejected(socket, {
+        gameId,
+        reason: 'gameNotFound',
+        message: 'That game no longer exists.',
+      });
+      return;
+    }
+
+    const ownerValidation = this.validateOwnerSession(record, sessionId);
+    if (!ownerValidation.valid) {
+      this.emitJoinRejected(socket, ownerValidation.rejection);
+      return;
+    }
+
+    if (record.bannedSessionIds.delete(targetSessionId)) {
+      this.loggerService.info(`[lobby directory] unbanned session ${targetSessionId} from game ${gameId}`);
+    } else {
+      this.loggerService.debug(`[lobby directory] session ${targetSessionId} was not banned in game ${gameId}`);
+    }
   }
 
   // Recomputes lobby visibility and clean-up rules after one game state transition.
@@ -436,6 +595,9 @@ export class LobbyDirectoryService {
 
   // Emits a structured join rejection payload and keeps socket in lobby context.
   private emitJoinRejected(socket: AppSocket, payload: LobbyJoinRejectedPayload): void {
+    this.loggerService.warn(
+      `[lobby directory] rejecting lobby action for game ${payload.gameId} (${payload.reason}): ${payload.message}`,
+    );
     socket.join(LobbyDirectoryService.LOBBY_ROOM_NAME);
     socket.emit('joinLobbyRejected', payload);
   }
@@ -501,5 +663,43 @@ export class LobbyDirectoryService {
       }
       attempt++;
     }
+  }
+
+  // Finds a connected socket by id when available.
+  private findSocketById(socketId: string): AppSocket | undefined {
+    if (!socketId) return undefined;
+    return this.io.of('/').sockets.get(socketId) as AppSocket | undefined;
+  }
+
+  // Validates that the session belongs to the owner of the specified game.
+  private validateOwnerSession(
+    record: LobbyGameRecord,
+    sessionId: string,
+  ): { valid: true; playerId: PlayerId } | { valid: false; rejection: LobbyJoinRejectedPayload } {
+    const gameId = record.gameId;
+    const player = record.game.getPlayerBySession(sessionId);
+    if (!player) {
+      return {
+        valid: false,
+        rejection: {
+          gameId,
+          reason: 'invalidRequest',
+          message: 'You are not in that game.',
+        },
+      };
+    }
+
+    if (record.game.owner?.id !== player.id) {
+      return {
+        valid: false,
+        rejection: {
+          gameId,
+          reason: 'invalidRequest',
+          message: 'Only the game owner can perform that action.',
+        },
+      };
+    }
+
+    return { valid: true, playerId: player.id };
   }
 }
