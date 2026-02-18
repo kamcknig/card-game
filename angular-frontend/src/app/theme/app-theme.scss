@@ -1,0 +1,38 @@
+:root {
+  /* Text roles */
+  --theme-text-primary: #2a241a;
+  --theme-text-secondary: #544630;
+  --theme-text-on-dark: #ffffff;
+  --theme-text-banner: #f3e7c3;
+  --theme-text-banner-shadow-main: #1a3650;
+  --theme-text-banner-shadow-glow: rgba(12, 34, 52, 0.8);
+
+  /* Surface roles */
+  --theme-surface-app-start: #f4efe5;
+  --theme-surface-app-end: #ece2cf;
+  --theme-surface-header: #b6976d;
+  --theme-surface-nav: #efe5d5;
+  --theme-surface-panel: #f1e5d2;
+  --theme-surface-card: #f9f4eb;
+  --theme-surface-danger-soft: #f9dfd8;
+  --theme-surface-count-badge: #aaaaaa;
+
+  /* Border roles */
+  --theme-border-subtle: #bca98d;
+  --theme-border-strong: #7f6746;
+  --theme-border-action: #826a48;
+  --theme-border-danger: #b84d38;
+
+  /* Interactive/action roles */
+  --theme-action-secondary-bg: #f4ecde;
+  --theme-action-nav-selected-bg: #dbc39a;
+  --theme-action-primary-bg: #dcc093;
+  --theme-action-primary-muted-bg: #e1c89e;
+  --theme-action-danger-soft-bg: #f0cbcb;
+
+  /* Overlay roles */
+  --theme-overlay-color: #000000;
+  --theme-overlay-alpha-soft: 0.5;
+  --theme-overlay-alpha-medium: 0.6;
+  --theme-overlay-alpha-strong: 0.8;
+}

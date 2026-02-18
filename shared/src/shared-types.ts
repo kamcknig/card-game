@@ -415,6 +415,8 @@ export type ServerEmitEvents = {
   lobbyGameUpdated: (game: LobbyGameSummary) => void;
   // Removes one game from the lobby list.
   lobbyGameRemoved: (gameId: string) => void;
+  // Confirms that this client session is now attached to one specific lobby game.
+  joinedLobbyGame: (gameId: string) => void;
   // Join request failed; client remains in lobby view.
   joinLobbyRejected: (payload: LobbyJoinRejectedPayload) => void;
   // Client was removed from a lobby game by owner kick.

@@ -39,7 +39,8 @@ function updatePausedState() {
 export const gameOwnerIdStore = atom<PlayerId | undefined>();
 (globalThis as any).gameOwnerIdStore = gameOwnerIdStore;
 
-export type SceneNames = 'configuration' | 'match' | 'gameSummary';
+export type SceneNames = 'lobby' | 'configuration' | 'match' | 'gameSummary';
 
-export const sceneStore = atom<SceneNames>('configuration');
+// The application starts in the global lobby view until a game is joined.
+export const sceneStore = atom<SceneNames>('lobby');
 (globalThis as any).sceneStore = sceneStore;

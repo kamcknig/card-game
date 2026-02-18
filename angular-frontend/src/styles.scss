@@ -1,5 +1,15 @@
 /* You can add global styles to this file, and also import other style files */
 @import 'node_modules/modern-normalize/modern-normalize.css';
+@import './app/theme/app-theme.scss';
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: linear-gradient(150deg, var(--theme-surface-app-start) 0%, var(--theme-surface-app-end) 100%);
+  color: var(--theme-text-primary);
+}
 
 hr {
   all: unset;
@@ -20,8 +30,8 @@ html, body, input {
   right: 2px;
   z-index: 1;
   font-size: 24px;
-  color: white;
-  background: red;
+  color: var(--theme-text-on-dark);
+  background: var(--theme-border-danger);
   padding: 2px 4px;
   cursor: pointer;
   pointer-events: auto;

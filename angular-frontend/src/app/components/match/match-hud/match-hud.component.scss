@@ -25,15 +25,15 @@ app-score {
   pointer-events: none; /* optional: allows click-through outside mat */
 
   .mat-modal-content {
-    color: white;
+    color: var(--theme-text-on-dark);
     position: relative;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
     pointer-events: auto; /* re-enable interactivity inside */
     padding: 10px 10px 120px 10px;
   }
 
   .mat-modal-title {
-    color: white;
+    color: var(--theme-text-on-dark);
     margin-bottom: 20px;
     font-size: 24px;
   }
@@ -73,7 +73,7 @@ app-game-log {
 .disconnect-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, var(--theme-overlay-alpha-medium));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -82,7 +82,7 @@ app-game-log {
 
 .disconnect-card {
   background: rgba(20, 20, 20, 0.95);
-  color: #ffffff;
+  color: var(--theme-text-on-dark);
   padding: 18px 22px;
   border-radius: 10px;
   min-width: 280px;
@@ -109,8 +109,8 @@ app-game-log {
   border: none;
   border-radius: 6px;
   padding: 8px 12px;
-  background: #ff6b4a;
-  color: #ffffff;
+  background: var(--theme-action-danger-soft-bg);
+  color: var(--theme-text-primary);
   font-weight: 600;
   cursor: pointer;
 }

@@ -35,6 +35,7 @@ import {OtherCardLikeView} from '../other-card-like-view';
 import {CardLikeView} from '../card-like-view';
 import {PileView} from '../pile';
 import {tokenDefinitionStore} from '../../../../state/token-definition-state';
+import {getPixiSceneTheme} from '../../../../theme/pixi-theme';
 
 export class MatchScene extends Scene {
   private _board: Container = new Container();
@@ -52,6 +53,8 @@ export class MatchScene extends Scene {
   private _nonSupplyView: NonSupplyKingdomView | undefined;
   private _selfId: PlayerId = selfPlayerIdStore.get()!;
   private _otherCardLikes: OtherCardLikeView | undefined;
+  // Semantic Pixi color roles resolved from app-level CSS theme tokens.
+  private readonly _theme = getPixiSceneTheme();
 
   private get uiInteractive(): boolean {
     return !this._selecting && !this._selectingPiles && !awaitingServerLockReleaseStore.get();
@@ -129,12 +132,12 @@ export class MatchScene extends Scene {
       const c = new Container({ label: 'pause' });
       const g = new Graphics({ label: 'pause' });
       g.rect(0, 0, this._app.renderer.width, this._app.renderer.height)
-        .fill({ color: 'black', alpha: .5 });
+        .fill({ color: this._theme.overlay.color, alpha: this._theme.overlay.softAlpha });
       c.addChild(g);
 
       const t = new Text({
         text: 'PLAYER DISCONNECTED',
-        style: { fill: 'white', fontSize: 36 },
+        style: { fill: this._theme.text.onOverlay, fontSize: 36 },
         anchor: .5
       });
 
@@ -169,13 +172,13 @@ export class MatchScene extends Scene {
     const c = new Container();
     const g = c.addChild(new Graphics());
     g.rect(0, 0, this._app.renderer.width, this._app.renderer.height)
-      .fill({ color: 'black', alpha: .6 });
+      .fill({ color: this._theme.overlay.color, alpha: this._theme.overlay.mediumAlpha });
     let ellipsisCount = 0;
     const t = new Text({
       text: 'LOADING...',
       style: {
         fontSize: 24,
-        fill: 'white',
+        fill: this._theme.text.onOverlay,
       },
       x: this._app.renderer.width * .5,
       y: this._app.renderer.height * .5,
@@ -280,14 +283,14 @@ export class MatchScene extends Scene {
       text: `Waiting for ${playerStore(playerId).get()?.name}`,
       style: {
         fontSize: 36,
-        fill: 'white',
+        fill: this._theme.text.onOverlay,
       },
       anchor: .5,
     });
 
     const g = new Graphics();
     g.roundRect(0, 0, t.width + STANDARD_GAP * 2, t.height + STANDARD_GAP * 2)
-      .fill({ color: 'black', alpha: .8 });
+      .fill({ color: this._theme.overlay.color, alpha: this._theme.overlay.strongAlpha });
 
     c.addChild(g);
     t.x = c.width * .5;
@@ -453,7 +456,7 @@ export class MatchScene extends Scene {
     const button = createAppButton({
       text: arg.prompt,
       style: {
-        fill: 'white',
+        fill: this._theme.text.onOverlay,
         fontSize: 36,
       },
     });
@@ -468,7 +471,7 @@ export class MatchScene extends Scene {
       const cancelButton = createAppButton({
         text: arg.cancelPrompt ?? 'Cancel',
         style: {
-          fill: 'white',
+          fill: this._theme.text.onOverlay,
           fontSize: 36,
         },
       });
@@ -502,7 +505,7 @@ export class MatchScene extends Scene {
 
         const g = new Graphics();
         g.roundRect(0, 0, s.x + s.width + 5, s.y + s.height + 5, 5);
-        g.fill(0xaaaaaa);
+        g.fill(this._theme.surfaces.countBadge);
         c.addChildAt(g, 0);
       }
 
@@ -511,7 +514,7 @@ export class MatchScene extends Scene {
         text: isNumber(arg.count) ? count : 0,
         style: {
           fontSize: 26,
-          fill: 'white'
+          fill: this._theme.text.onOverlay
         }
       });
       countText.x = Math.floor(c.width - countText.width * .5);
@@ -648,7 +651,7 @@ export class MatchScene extends Scene {
     const button = createAppButton({
       text: args.prompt ?? 'Select pile',
       style: {
-        fill: 'white',
+        fill: this._theme.text.onOverlay,
         fontSize: 36,
       },
     });

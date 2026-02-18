@@ -1,4 +1,11 @@
 <main class="match-config">
+  <header class="match-config-header">
+    <h1>Match Configuration</h1>
+    @if (activeLobbyGameId$ | async; as activeGameId) {
+      <button class="leave-game-button" (click)="leaveGame(activeGameId)">Leave Game</button>
+    }
+  </header>
+
   <!-- ░░░  Player List  ░░░ -->
   <section class="players">
     <h2 class="section-title">Players</h2>

@@ -7,3 +7,17 @@
 input {
   margin-right: 10px;
 }
+
+.moderation-button {
+  border: 1px solid var(--theme-border-action);
+  border-radius: 4px;
+  background: var(--theme-action-secondary-bg);
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  color: var(--theme-text-primary);
+}
+
+.moderation-button.ban {
+  border-color: var(--theme-border-danger);
+  background: var(--theme-action-danger-soft-bg);
+}

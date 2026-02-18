@@ -5,7 +5,7 @@ This document tracks the planned multi-game lobby system and current implementat
 ## Goals
 
 - [x] Server startup should not auto-create a game.
-- [ ] Connected users should land on a global lobby screen.
+- [x] Connected users should land on a global lobby screen.
 - [x] Lobby should list only joinable games (pre-match configuration state).
 - [x] Each lobby game should be independently scoped for runtime state and logging.
 - [x] Each game should support owner moderation actions (kick/ban) before match start.
@@ -45,7 +45,7 @@ Phase 1 contract work is complete in shared types:
 - [x] Phase 1: shared contracts and documentation baseline
 - [x] Phase 2: server lobby directory and multi-game runtime scoping
 - [x] Phase 3: join/leave/reconnect/kick/ban flow implementation
-- [ ] Phase 4: frontend lobby UI and routing integration
+- [x] Phase 4: frontend lobby UI and routing integration
 
 ## Phase 2 Completion Notes
 
@@ -63,3 +63,13 @@ Phase 1 contract work is complete in shared types:
 - [x] Added owner-only `kickLobbyPlayer` flow with immediate target redirect/message to lobby.
 - [x] Added owner-only `banLobbyPlayer`/`unbanLobbyPlayer` flow keyed by `sessionId`.
 - [x] Preserved reconnect routing so sessions are automatically re-attached to their existing game context.
+
+## Phase 4 Completion Notes
+
+- [x] Added dedicated Angular lobby scene as default startup screen with top header, left nav, and games content panel.
+- [x] Added live lobby game list rendering with join button enable/disable based on joinability and capacity.
+- [x] Added lobby-side `Create Game` action and join actions wired to socket contracts.
+- [x] Added client handlers for lobby snapshot/update/remove/rejection/kick/ban events.
+- [x] Added active game tracking with `joinedLobbyGame` routing signal and persisted active game id state.
+- [x] Added `Leave Game` control to match configuration and routed leave flow back to lobby.
+- [x] Added owner moderation controls (kick/ban) in match configuration player rows.

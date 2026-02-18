@@ -16,6 +16,12 @@ import { ClientListenEventNames, ClientListenEvents } from '../../../types';
 import { logManager } from '../log-manager';
 import { cardSourceStore, cardSourceTagMapStore } from '../../state/card-source-store';
 import { basicSupplies, kingdomSupplies } from '../../state/match-logic';
+import {
+  activeLobbyGameIdStore,
+  lobbyGamesStore,
+  lobbyJoinRejectedStore,
+  lobbyStatusMessageStore,
+} from '../../state/lobby-state';
 
 export type SocketEventMap = Partial<{ [p in ClientListenEventNames]: ClientListenEvents[p] }>;
 
@@ -30,6 +36,13 @@ export const socketToGameEventMap = (): SocketEventMap => {
 
   map['matchConfigurationUpdated'] = config => {
     matchConfigurationStore.set(config);
+    // Enter configuration scene when one lobby game is actively joined.
+    sceneStore.set('configuration');
+  };
+
+  map['joinedLobbyGame'] = gameId => {
+    activeLobbyGameIdStore.set(gameId);
+    lobbyStatusMessageStore.set(undefined);
   };
 
   map['expansionList'] = val => {
@@ -49,6 +62,49 @@ export const socketToGameEventMap = (): SocketEventMap => {
 
   map['gameOwnerUpdated'] = playerId => {
     gameOwnerIdStore.set(playerId);
+  };
+
+  map['lobbySnapshot'] = games => {
+    lobbyGamesStore.set(games);
+    // Keep lobby as default scene while no active game is tracked.
+    if (!activeLobbyGameIdStore.get()) {
+      sceneStore.set('lobby');
+    }
+  };
+
+  map['lobbyGameUpdated'] = game => {
+    const currentGames = lobbyGamesStore.get();
+    const updatedGames = currentGames.filter((currentGame) => currentGame.gameId !== game.gameId);
+    updatedGames.push(game);
+    updatedGames.sort((a, b) => a.gameName.localeCompare(b.gameName));
+    lobbyGamesStore.set(updatedGames);
+  };
+
+  map['lobbyGameRemoved'] = gameId => {
+    const currentGames = lobbyGamesStore.get();
+    lobbyGamesStore.set(currentGames.filter((game) => game.gameId !== gameId));
+  };
+
+  map['joinLobbyRejected'] = payload => {
+    const activeGameId = activeLobbyGameIdStore.get();
+    if (payload.gameId && activeGameId === payload.gameId && payload.reason !== 'alreadyInGame') {
+      activeLobbyGameIdStore.set(undefined);
+    }
+    lobbyJoinRejectedStore.set(payload);
+    lobbyStatusMessageStore.set(payload.message);
+    sceneStore.set('lobby');
+  };
+
+  map['kickedFromGame'] = payload => {
+    activeLobbyGameIdStore.set(undefined);
+    lobbyStatusMessageStore.set(payload.message);
+    sceneStore.set('lobby');
+  };
+
+  map['bannedFromGame'] = payload => {
+    activeLobbyGameIdStore.set(undefined);
+    lobbyStatusMessageStore.set(payload.message);
+    sceneStore.set('lobby');
   };
 
   map['setCardLibrary'] = cards => {

@@ -319,6 +319,8 @@ export class LobbyDirectoryService {
 
     socket.leave(LobbyDirectoryService.LOBBY_ROOM_NAME);
     this.sessionToGameId.set(sessionId, gameId);
+    // Notify client-side routing/state which game is now active.
+    socket.emit('joinedLobbyGame', gameId);
     this.loggerService.info(`[lobby directory] session ${sessionId} joined ${gameId}`);
     this.handleGameStateChanged(gameId);
   }

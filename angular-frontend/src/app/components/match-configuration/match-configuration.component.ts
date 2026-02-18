@@ -16,7 +16,8 @@ import { AsyncPipe, NgClass, NgOptimizedImage, NgStyle } from '@angular/common';
 import { expansionListStore } from '../../state/expansion-list-state';
 import { matchConfigurationStore } from '../../state/match-state';
 import { SocketService } from '../../core/socket-service/socket.service';
-import { gameOwnerIdStore } from '../../state/game-state';
+import { gameOwnerIdStore, sceneStore } from '../../state/game-state';
+import { activeLobbyGameIdStore, lobbyStatusMessageStore } from '../../state/lobby-state';
 import { PlayerComponent } from './player-name-input/player-name-input.component';
 import { SelectKingdomModalComponent } from './select-kingdom-modal/select-kingdom-modal.component';
 import { SelectEventModalComponent } from './select-event-modal/select-event-modal.component';
@@ -46,6 +47,7 @@ export class MatchConfigurationComponent implements OnDestroy {
   playerIds$!: Observable<readonly PlayerId[]>;
   expansionList$!: Observable<readonly ExpansionListElement[]>;
   matchExpansions$!: Observable<readonly string[]>;
+  activeLobbyGameId$!: Observable<string | undefined>;
   isGameOwner: boolean = false;
   preSelectedKingdoms: (CardNoId | null)[] = [];
   // Tracks the fixed events selected for the match.
@@ -91,6 +93,8 @@ export class MatchConfigurationComponent implements OnDestroy {
         map(config => config?.expansions?.map(e => e.name)),
         map(expansions => expansions ?? [])
       );
+    // Exposes current joined game id for leave/moderation actions.
+    this.activeLobbyGameId$ = this._nanoStoreService.useStore(activeLobbyGameIdStore);
 
     this.bannedKingdoms$ = this._nanoStoreService.useStore(matchConfigurationStore).pipe(
       map(config => config?.bannedKingdoms ?? [])
@@ -190,6 +194,14 @@ export class MatchConfigurationComponent implements OnDestroy {
   // Adds a single computer player to the lobby.
   addComputerPlayer() {
     this._socketService.emit('addComputerPlayer', 1);
+  }
+
+  // Leaves the active lobby game and returns to the lobby screen.
+  leaveGame(gameId: string) {
+    activeLobbyGameIdStore.set(undefined);
+    lobbyStatusMessageStore.set(undefined);
+    sceneStore.set('lobby');
+    this._socketService.emit('leaveLobbyGame', gameId);
   }
 
   deleteKingdom(kingdom: CardNoId) {

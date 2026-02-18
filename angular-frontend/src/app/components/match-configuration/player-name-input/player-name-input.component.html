@@ -29,4 +29,11 @@
   @if (!player.connected) {
     <span>⚠️</span>
   }
+
+  @if ($canModeratePlayer | async) {
+    <button type="button" class="moderation-button" (click)="onKickPlayer()">Kick</button>
+    @if (!player.isComputer) {
+      <button type="button" class="moderation-button ban" (click)="onBanPlayer()">Ban</button>
+    }
+  }
 </div>

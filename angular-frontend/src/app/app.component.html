@@ -1,6 +1,7 @@
 <div #pixiContainer class="pixi-container"></div>
 
 <ng-container [ngSwitch]="scene$ | async">
+  <app-lobby *ngSwitchCase="'lobby'"></app-lobby>
   <app-match-configuration *ngSwitchCase="'configuration'"></app-match-configuration>
   <app-match-hud
     [ngClass]="{'match-started': matchStarted$ | async}"

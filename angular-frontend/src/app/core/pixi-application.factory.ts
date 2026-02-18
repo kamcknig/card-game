@@ -1,15 +1,17 @@
 import { Application, TexturePool } from 'pixi.js';
 import { applicationStore } from '../state/app-state';
 import { initDevtools } from '@pixi/devtools';
+import { getPixiAppTheme } from '../theme/pixi-theme';
 
 export let pixiInstance: Application = new Application();
 
 export const pixiFactory = async () => {
+  const pixiTheme = getPixiAppTheme();
   TexturePool.textureOptions.scaleMode = 'nearest';
   TexturePool.textureOptions.antialias = true;
   await pixiInstance.init({
     antialias: true,
-    background: "#1099bb"
+    background: pixiTheme.surface.canvasBackground,
   });
   pixiInstance.canvas.addEventListener('contextmenu', (e) => {
     e.preventDefault();

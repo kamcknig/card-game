@@ -21,6 +21,7 @@ import { GameSummaryComponent } from './components/game-summary/game-summary.com
 import { MatchSummary } from 'shared/types';
 import { matchStartedStore, matchSummaryStore } from './state/match-state';
 import { MatchHudComponent } from './components/match/match-hud/match-hud.component';
+import { LobbyComponent } from './components/lobby/lobby.component';
 
 @Component({
   selector: 'app-root',
@@ -32,6 +33,7 @@ import { MatchHudComponent } from './components/match/match-hud/match-hud.compon
     MatchConfigurationComponent,
     GameSummaryComponent,
     MatchHudComponent,
+    LobbyComponent,
     NgClass,
   ],
   templateUrl: './app.component.html',

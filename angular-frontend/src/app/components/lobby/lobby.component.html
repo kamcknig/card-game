@@ -1,0 +1,45 @@
+<section class="lobby-shell">
+  <header class="lobby-header">
+    <div class="lobby-banner" role="img" aria-label="Dominion Clone banner">
+      <h1>Dominion Clone</h1>
+    </div>
+  </header>
+
+  <aside class="lobby-nav">
+    <button class="nav-button selected" type="button" [attr.aria-pressed]="selectedNav === 'games'">
+      Games
+    </button>
+  </aside>
+
+  <main class="lobby-content">
+    <div class="content-header">
+      <h2>Open Games</h2>
+      <button type="button" class="create-button" (click)="createGame()">Create Game</button>
+    </div>
+
+    @if (statusMessage$ | async; as message) {
+      <p class="status-message">{{ message }}</p>
+    }
+
+    @let games = (games$ | async) ?? [];
+    @if (games.length === 0) {
+      <p class="empty-state">No open games yet. Create one to begin.</p>
+    } @else {
+      <ul class="game-list">
+        @for (game of games; track game.gameId) {
+          <li class="game-row">
+            <button
+              type="button"
+              class="join-button"
+              [disabled]="!game.isJoinable || game.playerCount >= game.maxPlayers"
+              (click)="joinGame(game.gameId)">
+              Join
+            </button>
+            <span class="game-name">{{ game.gameName }}</span>
+            <span class="game-count">{{ game.playerCount }}/{{ game.maxPlayers }}</span>
+          </li>
+        }
+      </ul>
+    }
+  </main>
+</section>
