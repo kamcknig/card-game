@@ -1,4 +1,4 @@
-import type { AppSocket, MatchBaseConfiguration } from '@server-types/index.ts';
+import type { AppSocket } from '@server-types/index.ts';
 import type {
   Card,
   CardId,
@@ -57,7 +57,7 @@ export class GameMatchLifecycleCoordinatorService {
   public expansionLoaded(state: GameRuntimeState, expansion: ExpansionListElement): void {
     this.loggerService.log(`[game] expansion '${expansion.name}' loaded`);
     state.availableExpansion.push(expansion);
-    this.io.in('game').emit(
+    this.io.in(state.roomName).emit(
       'expansionList',
       state.availableExpansion.sort((a, b) => b.order - a.order),
     );
@@ -95,7 +95,7 @@ export class GameMatchLifecycleCoordinatorService {
 
     state.socketMap.forEach((socket) => {
       socket.offAnyIncoming();
-      socket.leave('game');
+      socket.leave(state.roomName);
     });
 
     state.socketMap.clear();
@@ -117,6 +117,7 @@ export class GameMatchLifecycleCoordinatorService {
     }
 
     state.players = this.matchStartOrchestrator.startMatch({
+      gameRoomName: state.roomName,
       players: state.players,
       socketMap: state.socketMap,
       matchController: state.matchController,

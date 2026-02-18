@@ -1,6 +1,6 @@
 import { Server } from 'socket.io';
 import { ServerEmitEvents, ServerListenEvents } from 'shared/types/index.ts';
-import { Game } from './game.ts';
+import { LobbyDirectoryService } from './lobby-directory-service.ts';
 import { LoggerService } from './logger-service.ts';
 
 /**
@@ -15,7 +15,7 @@ export class ServerSocketGatewayService {
 
   constructor(
     private readonly io: Server<ServerListenEvents, ServerEmitEvents>,
-    private readonly game: Game,
+    private readonly lobbyDirectoryService: LobbyDirectoryService,
     private readonly loggerService: LoggerService,
   ) {
   }
@@ -42,7 +42,7 @@ export class ServerSocketGatewayService {
         return;
       }
 
-      this.game.addPlayer(sessionId, socket);
+      this.lobbyDirectoryService.registerConnection(sessionId, socket);
     });
   }
 }

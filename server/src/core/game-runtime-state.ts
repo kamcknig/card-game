@@ -10,6 +10,12 @@ import type { MatchScope } from './match-scope-factory.ts';
 
 // Mutable runtime state for the active game/lobby process.
 export interface GameRuntimeState {
+  // Stable game identifier used for routing and diagnostics.
+  gameId: string;
+  // Human-readable game name shown in lobby.
+  gameName: string;
+  // Socket room name for this game's traffic isolation.
+  roomName: string;
   players: Player[];
   owner: Player | undefined;
   matchStarted: boolean;

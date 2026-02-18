@@ -1,7 +1,6 @@
 import { asClass, asValue, AwilixContainer } from 'awilix';
 import { Server } from 'socket.io';
 import { ServerEmitEvents, ServerListenEvents } from 'shared/types/index.ts';
-import { Game } from '../core/game.ts';
 import { ExpansionSearchService } from '../core/expansion-search-service.ts';
 import { ExpansionCompatibilityService } from '../core/expansion-compatibility-service.ts';
 import { FileGameConfigurationStore } from '../core/game-configuration-store.ts';
@@ -30,8 +29,8 @@ import { EventLoaderService } from '../core/events/load-events.ts';
 import { LandmarkLoaderService } from '../core/landmarks/load-landmarks.ts';
 import { ProjectLoaderService } from '../core/projects/load-projects.ts';
 import { ExpansionLoaderService } from '../core/expansion-loader-service.ts';
-import { GameMatchLifecycleCoordinatorService } from '../core/game-match-lifecycle-coordinator-service.ts';
-import { GameLobbySessionCoordinatorService } from '../core/game-lobby-session-coordinator-service.ts';
+import { GameScopeFactory } from '../core/game-scope-factory.ts';
+import { LobbyDirectoryService } from '../core/lobby-directory-service.ts';
 
 export interface RegisterRootServicesArgs {
   io: Server<ServerListenEvents, ServerEmitEvents>;
@@ -79,13 +78,12 @@ export const registerRootServices = (
     playerFactoryService: asClass(PlayerFactoryService).singleton(),
     playerRegistryService: asClass(PlayerRegistryService).singleton(),
     matchStartOrchestrator: asClass(MatchStartOrchestrator).singleton(),
-    gameMatchLifecycleCoordinatorService: asClass(GameMatchLifecycleCoordinatorService).singleton(),
-    gameLobbySessionCoordinatorService: asClass(GameLobbySessionCoordinatorService).singleton(),
+    gameScopeFactory: asClass(GameScopeFactory).singleton(),
+    lobbyDirectoryService: asClass(LobbyDirectoryService).singleton(),
     serverStartupService: asClass(ServerStartupService).singleton(),
     serverSocketGatewayService: asClass(ServerSocketGatewayService).singleton(),
     serverDebugRouteHandlerService: asClass(ServerDebugRouteHandlerService).singleton(),
     serverShutdownHandlerService: asClass(ServerShutdownHandlerService).singleton(),
     serverBootstrapService: asClass(ServerBootstrapService).singleton(),
-    game: asClass(Game).singleton(),
   });
 };

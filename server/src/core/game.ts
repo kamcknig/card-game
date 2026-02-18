@@ -17,9 +17,9 @@ import { ExpansionCompatibilityService } from './expansion-compatibility-service
 import { LoggerService } from './logger-service.ts';
 import { GameRuntimeState } from './game-runtime-state.ts';
 import { GameMatchLifecycleCoordinatorService } from './game-match-lifecycle-coordinator-service.ts';
-import { GameLobbySessionCoordinatorService } from './game-lobby-session-coordinator-service.ts';
+import { AddPlayerResult, GameLobbySessionCoordinatorService } from './game-lobby-session-coordinator-service.ts';
 
-const defaultMatchConfiguration: MatchConfiguration = {
+const createDefaultMatchConfiguration = (): MatchConfiguration => ({
   expansions: [
     {
       'title': 'Base',
@@ -56,7 +56,7 @@ const defaultMatchConfiguration: MatchConfiguration = {
   // Default artifacts selection for new lobbies.
   artifacts: [],
   playerStartingHand: { ...MatchBaseConfiguration.playerStartingHand },
-};
+});
 
 /**
  * Game process orchestrator for lobby/match runtime state.
@@ -65,8 +65,13 @@ const defaultMatchConfiguration: MatchConfiguration = {
  * coordinators so startup and runtime behavior remain easy to reason about.
  */
 export class Game {
+  // Per-game default configuration template used for resets and persistence overlays.
+  private readonly defaultMatchConfiguration: MatchConfiguration = createDefaultMatchConfiguration();
   // Shared mutable runtime state used by coordinators.
   private readonly runtimeState: GameRuntimeState = {
+    gameId: '',
+    gameName: '',
+    roomName: '',
     players: [],
     owner: undefined,
     matchStarted: false,
@@ -77,6 +82,12 @@ export class Game {
     availableExpansion: [],
   };
   constructor(
+    // Stable game identifier used for socket room isolation and diagnostics.
+    private readonly gameId: string,
+    // Human-readable lobby name for this game.
+    private readonly gameName: string,
+    // Socket room name for all per-game traffic.
+    private readonly gameRoomName: string,
     // Socket.io server injected from composition root.
     private readonly io: Server<ServerListenEvents, ServerEmitEvents>,
     // Store abstraction for persisted lobby configuration.
@@ -89,9 +100,24 @@ export class Game {
     private readonly gameMatchLifecycleCoordinatorService: GameMatchLifecycleCoordinatorService,
     // Coordinator that owns lobby/session events and owner-only lobby handlers.
     private readonly gameLobbySessionCoordinatorService: GameLobbySessionCoordinatorService,
+    // Optional callback for outer lobby directory to refresh game summaries.
+    private readonly onGameStateChanged?: () => void,
   ) {
+    this.runtimeState.gameId = this.gameId;
+    this.runtimeState.gameName = this.gameName;
+    this.runtimeState.roomName = this.gameRoomName;
     this.loggerService.log('[game] created');
-    this.gameMatchLifecycleCoordinatorService.initialize(this.runtimeState, defaultMatchConfiguration);
+    this.gameMatchLifecycleCoordinatorService.initialize(this.runtimeState, this.defaultMatchConfiguration);
+  }
+
+  // Exposes the stable game identifier.
+  public get id(): string {
+    return this.gameId;
+  }
+
+  // Exposes the human-readable game name.
+  public get name(): string {
+    return this.gameName;
   }
 
   // Exposes current runtime players for callers that need readonly lobby state.
@@ -107,6 +133,21 @@ export class Game {
   // Exposes whether gameplay has started.
   public get matchStarted(): boolean {
     return this.runtimeState.matchStarted;
+  }
+
+  // Returns true when a player with the session already belongs to this game.
+  public hasSession(sessionId: string): boolean {
+    return this.runtimeState.players.some((player) => player.sessionId === sessionId);
+  }
+
+  // Returns the count of currently connected players.
+  public getConnectedPlayerCount(): number {
+    return this.runtimeState.players.filter((player) => player.connected).length;
+  }
+
+  // Returns the count of currently connected human players.
+  public getConnectedHumanCount(): number {
+    return this.runtimeState.players.filter((player) => player.connected && !player.isComputer).length;
   }
 
   // Handles expansion-loaded events from startup loaders.
@@ -130,22 +171,25 @@ export class Game {
   }
 
   // Adds or reconnects a player to the active lobby/match runtime.
-  public addPlayer(sessionId: string, socket: AppSocket): void {
-    this.gameLobbySessionCoordinatorService.addPlayer(this.runtimeState, {
+  public addPlayer(sessionId: string, socket: AppSocket): AddPlayerResult {
+    const result = this.gameLobbySessionCoordinatorService.addPlayer(this.runtimeState, {
       sessionId,
       socket,
       callbacks: {
         onStartMatch: this.startMatch,
         onClearMatch: this.clearMatch,
         onMatchConfigurationUpdated: this.onMatchConfigurationUpdated,
+        onGameStateChanged: this.onGameStateChanged,
       },
       registerRemovalVoteHandler: this.registerRemovalVoteHandler,
     });
+    return result;
   }
 
   // Clears all current runtime state and resets to a new lobby match shell.
   private clearMatch = (): void => {
-    this.gameMatchLifecycleCoordinatorService.clearMatch(this.runtimeState, defaultMatchConfiguration);
+    this.gameMatchLifecycleCoordinatorService.clearMatch(this.runtimeState, this.defaultMatchConfiguration);
+    this.onGameStateChanged?.();
   };
 
   // Persists and applies lobby configuration updates from the owner.
@@ -160,34 +204,34 @@ export class Game {
     const kingdomPatch = jsonPatch.compare(currentConfig.kingdomSupply, newConfig.kingdomSupply);
     if (kingdomPatch.length) {
       this.configStore.persistPreselectedKingdoms(newConfig.kingdomSupply);
-      defaultMatchConfiguration.kingdomSupply = structuredClone(newConfig.kingdomSupply);
+      this.defaultMatchConfiguration.kingdomSupply = structuredClone(newConfig.kingdomSupply);
     }
 
     const bannedKingdomsPatch = jsonPatch.compare(currentConfig.bannedKingdoms, newConfig.bannedKingdoms);
     if (bannedKingdomsPatch.length) {
       this.configStore.persistBannedKingdoms(newConfig.bannedKingdoms);
-      defaultMatchConfiguration.bannedKingdoms = structuredClone(newConfig.bannedKingdoms);
+      this.defaultMatchConfiguration.bannedKingdoms = structuredClone(newConfig.bannedKingdoms);
     }
 
     const eventsPatch = jsonPatch.compare(currentConfig.events, newConfig.events);
     if (eventsPatch.length) {
       // Persist selected events between sessions.
       this.configStore.persistEvents(newConfig.events);
-      defaultMatchConfiguration.events = structuredClone(newConfig.events);
+      this.defaultMatchConfiguration.events = structuredClone(newConfig.events);
     }
 
     const landmarksPatch = jsonPatch.compare(currentConfig.landmarks, newConfig.landmarks);
     if (landmarksPatch.length) {
       // Persist selected landmarks between sessions.
       this.configStore.persistLandmarks(newConfig.landmarks);
-      defaultMatchConfiguration.landmarks = structuredClone(newConfig.landmarks);
+      this.defaultMatchConfiguration.landmarks = structuredClone(newConfig.landmarks);
     }
 
     const artifactsPatch = jsonPatch.compare(currentConfig.artifacts, newConfig.artifacts);
     if (artifactsPatch.length) {
       // Persist selected artifacts between sessions.
       this.configStore.persistArtifacts(newConfig.artifacts);
-      defaultMatchConfiguration.artifacts = structuredClone(newConfig.artifacts);
+      this.defaultMatchConfiguration.artifacts = structuredClone(newConfig.artifacts);
     }
 
     const patch = jsonPatch.compare(currentConfig, newConfig);
@@ -196,19 +240,20 @@ export class Game {
     }
 
     jsonPatch.applyPatch(this.runtimeState.matchConfiguration, patch);
-    defaultMatchConfiguration.preselectedKingdoms = newConfig.kingdomSupply.map((supply) => supply.cards[0]);
+    this.defaultMatchConfiguration.preselectedKingdoms = newConfig.kingdomSupply.map((supply) => supply.cards[0]);
     this.runtimeState.matchConfiguration.preselectedKingdoms = newConfig.kingdomSupply.map((supply) => supply.cards[0]);
     // Lobby phase update for all clients.
-    this.io.in('game').emit('matchConfigurationUpdated', this.runtimeState.matchConfiguration);
+    this.io.in(this.runtimeState.roomName).emit('matchConfigurationUpdated', this.runtimeState.matchConfiguration);
   };
 
   // Starts gameplay after readiness checks have completed.
   private startMatch = (): void => {
     this.gameMatchLifecycleCoordinatorService.startMatch(this.runtimeState, {
-      defaultMatchConfiguration,
+      defaultMatchConfiguration: this.defaultMatchConfiguration,
       onGameOver: this.clearMatch,
       registerRemovalVoteHandler: this.registerRemovalVoteHandler,
     });
+    this.onGameStateChanged?.();
   };
 
   // Registers the socket handler for disconnected-player removal votes.
@@ -225,5 +270,6 @@ export class Game {
       voterId,
       targetPlayerId,
     );
+    this.onGameStateChanged?.();
   };
 }

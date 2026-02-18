@@ -1,4 +1,4 @@
-import { Game } from './game.ts';
+import { LobbyDirectoryService } from './lobby-directory-service.ts';
 import { LoggerService } from './logger-service.ts';
 
 /**
@@ -9,7 +9,7 @@ export class ServerShutdownHandlerService {
   private registered = false;
 
   constructor(
-    private readonly game: Game,
+    private readonly lobbyDirectoryService: LobbyDirectoryService,
     private readonly loggerService: LoggerService,
   ) {
   }
@@ -24,7 +24,7 @@ export class ServerShutdownHandlerService {
     this.registered = true;
     addEventListener('SIGINT', () => {
       this.loggerService.log('Shutting down cleanly...');
-      this.game.dispose();
+      this.lobbyDirectoryService.dispose();
       shutdownController.abort();
       Deno.exit();
     });

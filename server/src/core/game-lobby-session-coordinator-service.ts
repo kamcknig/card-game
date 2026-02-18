@@ -15,7 +15,14 @@ export interface GameLobbyCallbacks {
   onStartMatch: () => void;
   onClearMatch: () => void;
   onMatchConfigurationUpdated: (newConfig: MatchConfiguration) => void | Promise<void>;
+  // Notifies outer orchestrators that game state changed (players/owner/match status).
+  onGameStateChanged?: () => void;
 }
+
+export type AddPlayerResult =
+  | { status: 'accepted'; playerId: PlayerId }
+  | { status: 'rejected_capacity' }
+  | { status: 'rejected_started' };
 
 // Coordinates lobby/session events such as join/disconnect/readiness/owner actions.
 export class GameLobbySessionCoordinatorService {
@@ -42,7 +49,7 @@ export class GameLobbySessionCoordinatorService {
       callbacks: GameLobbyCallbacks;
       registerRemovalVoteHandler: (socket: AppSocket, playerId: PlayerId) => void;
     },
-  ): void {
+  ): AddPlayerResult {
     const { sessionId, socket, callbacks, registerRemovalVoteHandler } = args;
 
     const joinResult = this.playerRegistryService.registerPlayerJoin({
@@ -54,14 +61,12 @@ export class GameLobbySessionCoordinatorService {
 
     if (joinResult.status === 'rejected_capacity') {
       this.loggerService.info(`[game] game has ${this.maxPlayers} players, rejecting`);
-      socket.disconnect(true);
-      return;
+      return { status: 'rejected_capacity' };
     }
 
     if (joinResult.status === 'rejected_started') {
       this.loggerService.info('[game] match has already started, and player not found in game, rejecting');
-      socket.disconnect();
-      return;
+      return { status: 'rejected_started' };
     }
 
     const player = joinResult.player;
@@ -69,12 +74,12 @@ export class GameLobbySessionCoordinatorService {
       this.loggerService.info(`[game] ${player} already in match - assigning socket ID`);
     }
 
-    socket.join('game');
+    socket.join(state.roomName);
     player.connected = true;
     state.socketMap.set(player.id, socket);
 
     socket.emit('setPlayerList', state.players);
-    this.io.in('game').emit('playerConnected', player);
+    this.io.in(state.roomName).emit('playerConnected', player);
     socket.emit('setPlayer', player);
 
     const nextOwner = this.playerSessionService.selectOwnerOnJoin(state.owner, player);
@@ -87,7 +92,7 @@ export class GameLobbySessionCoordinatorService {
       this.bindOwnerLobbyHandlers(state, player.id, socket, callbacks);
     }
 
-    this.io.in('game').emit('gameOwnerUpdated', state.owner.id);
+    this.io.in(state.roomName).emit('gameOwnerUpdated', state.owner.id);
     this.loggerService.log(`[game] ${player} added to game`);
 
     if (state.matchStarted) {
@@ -117,6 +122,9 @@ export class GameLobbySessionCoordinatorService {
         callbacks,
       });
     });
+
+    callbacks.onGameStateChanged?.();
+    return { status: 'accepted', playerId: player.id };
   }
 
   // Handles socket disconnect behavior for lobby and active-match contexts.
@@ -150,7 +158,7 @@ export class GameLobbySessionCoordinatorService {
       const replacement = this.playerSessionService.findReplacementOwner(state.players, player.id);
       if (replacement) {
         state.owner = replacement;
-        this.io.in('game').emit('gameOwnerUpdated', replacement.id);
+        this.io.in(state.roomName).emit('gameOwnerUpdated', replacement.id);
         const replacementSocket = state.socketMap.get(replacement.id);
         if (replacementSocket) {
           this.bindOwnerLobbyHandlers(state, replacement.id, replacementSocket, callbacks);
@@ -165,7 +173,8 @@ export class GameLobbySessionCoordinatorService {
       }
     }
 
-    this.io.in('game').emit('playerDisconnected', player);
+    this.io.in(state.roomName).emit('playerDisconnected', player);
+    callbacks.onGameStateChanged?.();
   }
 
   // Handles owner votes to remove disconnected players after consensus.
@@ -179,13 +188,13 @@ export class GameLobbySessionCoordinatorService {
     state.players = state.players.filter((player) => player.id !== targetPlayerId);
     state.socketMap.delete(targetPlayerId);
     state.matchController?.removePlayerFromMatch(targetPlayerId);
-    this.io.in('game').emit('setPlayerList', state.players);
+    this.io.in(state.roomName).emit('setPlayerList', state.players);
 
     if (state.owner?.id === targetPlayerId) {
       const replacement = this.playerSessionService.findReplacementOwner(state.players, targetPlayerId);
       if (replacement) {
         state.owner = replacement;
-        this.io.in('game').emit('gameOwnerUpdated', replacement.id);
+        this.io.in(state.roomName).emit('gameOwnerUpdated', replacement.id);
       }
     }
 
@@ -204,7 +213,7 @@ export class GameLobbySessionCoordinatorService {
       this.loggerService.info(`[game] player ${playerId} not found`);
     }
 
-    this.io.in('game').emit('playerNameUpdated', playerId, name);
+    this.io.in(state.roomName).emit('playerNameUpdated', playerId, name);
   }
 
   // Toggles readiness and starts match when all connected players are ready.
@@ -218,7 +227,7 @@ export class GameLobbySessionCoordinatorService {
     this.loggerService.info(`[game] received ready event from ${player}`);
     player.ready = !player.ready;
     this.loggerService.info(`[game] marking ${player} as ${player.ready}`);
-    this.io.in('game').except(player.socketId).emit('playerReady', playerId, player.ready);
+    this.io.in(state.roomName).except(player.socketId).emit('playerReady', playerId, player.ready);
 
     if (state.players.some((nextPlayer) => !nextPlayer.ready && nextPlayer.connected)) {
       this.loggerService.debug('[game] not all players ready yet');
@@ -229,7 +238,12 @@ export class GameLobbySessionCoordinatorService {
   }
 
   // Adds one or more computer players to the lobby (owner-only).
-  public onAddComputerPlayer(state: GameRuntimeState, ownerId: PlayerId, count: number = 1): void {
+  public onAddComputerPlayer(
+    state: GameRuntimeState,
+    ownerId: PlayerId,
+    count: number = 1,
+    onGameStateChanged?: () => void,
+  ): void {
     if (!state.owner || state.owner.id !== ownerId) {
       this.loggerService.warn(`[game] ignoring addComputerPlayer from non-owner ${ownerId}`);
       return;
@@ -248,8 +262,11 @@ export class GameLobbySessionCoordinatorService {
 
       const bot = this.playerFactoryService.createComputerPlayer();
       state.players.push(bot);
-      this.io.in('game').emit('playerConnected', bot);
+      this.io.in(state.roomName).emit('playerConnected', bot);
     }
+
+    // Computer player changes affect lobby occupancy and joinability.
+    if (count > 0) onGameStateChanged?.();
   }
 
   // Binds owner-only handlers for the current lobby owner.
@@ -261,7 +278,7 @@ export class GameLobbySessionCoordinatorService {
   ): void {
     this.lobbySocketBindings.bindOwnerLobbyHandlers(socket, {
       onMatchConfigurationUpdated: callbacks.onMatchConfigurationUpdated,
-      onAddComputerPlayer: (count?: number) => this.onAddComputerPlayer(state, ownerId, count),
+      onAddComputerPlayer: (count?: number) => this.onAddComputerPlayer(state, ownerId, count, callbacks.onGameStateChanged),
       onSearchCards: (playerId, searchTerm) => {
         const cards = this.expansionSearchService.searchKingdomCards(searchTerm);
         this.loggerService.debug(

@@ -1,6 +1,6 @@
 import { Server } from 'socket.io';
 import { ServerEmitEvents, ServerListenEvents } from 'shared/types/index.ts';
-import { Game } from './game.ts';
+import { LobbyDirectoryService } from './lobby-directory-service.ts';
 import { ServerConfigService } from './server-config-service.ts';
 
 /**
@@ -14,7 +14,7 @@ export class ServerDebugRouteHandlerService {
 
   constructor(
     private readonly io: Server<ServerListenEvents, ServerEmitEvents>,
-    private readonly game: Game,
+    private readonly lobbyDirectoryService: LobbyDirectoryService,
     private readonly serverConfigService: ServerConfigService,
   ) {
     this.ioHandler = this.io.handler();
@@ -29,9 +29,10 @@ export class ServerDebugRouteHandlerService {
       if (!this.serverConfigService.isMatchStateExportEnabled()) {
         return new Response('match state export disabled', { status: 403 });
       }
-      const exportState = this.game.exportMatchState();
+      const gameId = url.searchParams.get('gameId') ?? undefined;
+      const exportState = this.lobbyDirectoryService.exportMatchState(gameId);
       if (!exportState) {
-        return new Response('match not initialized', { status: 400 });
+        return new Response('match not initialized for requested game', { status: 400 });
       }
       return new Response(JSON.stringify(exportState), {
         headers: { 'content-type': 'application/json' },
@@ -53,7 +54,8 @@ export class ServerDebugRouteHandlerService {
             return new Response('invalid match payload', { status: 400 });
           }
 
-          const result = this.game.mergeMatchState(body);
+          const gameId = url.searchParams.get('gameId') ?? undefined;
+          const result = this.lobbyDirectoryService.mergeMatchState(gameId, body);
           if (!result.ok) {
             return new Response(JSON.stringify({ error: 'invalid match update', errors: result.errors }), {
               status: 400,

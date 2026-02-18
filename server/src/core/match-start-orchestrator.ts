@@ -7,6 +7,8 @@ import { MatchController } from './match-controller.ts';
 import { RngService } from './rng-service.ts';
 
 export interface MatchStartOrchestratorArgs {
+  // Socket room for this game's isolated lobby/match traffic.
+  gameRoomName: string;
   players: Player[];
   socketMap: Map<PlayerId, AppSocket>;
   matchController: MatchController;
@@ -31,6 +33,7 @@ export class MatchStartOrchestrator {
   // Runs start-of-match orchestration and returns finalized player order.
   public startMatch(args: MatchStartOrchestratorArgs): Player[] {
     const {
+      gameRoomName,
       players,
       socketMap,
       matchController,
@@ -60,7 +63,7 @@ export class MatchStartOrchestrator {
       () => this.rngService.nextFloat(),
     );
 
-    this.io.in('game').emit('setPlayerList', activePlayers);
+    this.io.in(gameRoomName).emit('setPlayerList', activePlayers);
 
     matchController.on('gameOver', onGameOver);
 
