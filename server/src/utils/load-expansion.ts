@@ -8,6 +8,7 @@ import { loadProjects } from '../core/projects/load-projects.ts';
 import { ExpansionEffectRegistryService } from '../core/expansion-effect-registry-service.ts';
 import { ExpansionCardMetadataRegistryService } from '../core/expansion-card-metadata-registry-service.ts';
 import { ExpansionCatalogService } from '../core/expansion-catalog-service.ts';
+import { LoggerService } from '../core/logger-service.ts';
 
 // Randomizer pile definition for split piles in card libraries.
 type RandomizerPileDefinition = {
@@ -53,15 +54,16 @@ export const loadExpansion = async (
   expansionEffectRegistryService: ExpansionEffectRegistryService,
   expansionCardMetadataRegistryService: ExpansionCardMetadataRegistryService,
   expansionCatalogService: ExpansionCatalogService,
+  loggerService: LoggerService,
 ) => {
   const expansionPath = `@expansions/${expansion.name}`;
   const expansionName = expansion.name;
   if (expansionCatalogService.hasExpansion(expansionName)) {
-    console.info(`[expansion loader] expansion ${expansionName} already loaded`);
+    loggerService.info(`[expansion loader] expansion ${expansionName} already loaded`);
     return;
   }
 
-  console.log(`[expansion loader] loading expansion ${expansionName}`);
+  loggerService.log(`[expansion loader] loading expansion ${expansionName}`);
 
   const expansionData = createEmptyExpansionData(expansionName);
   expansionCatalogService.setExpansion(expansionName, expansionData);
@@ -70,28 +72,28 @@ export const loadExpansion = async (
 
   try {
     // loads the configuration file for the module if any
-    console.info(`[expansion loader] loading expansion configuration for ${expansionName}`);
+    loggerService.info(`[expansion loader] loading expansion configuration for ${expansionName}`);
 
     const configModule = await import(`${expansionPath}/configuration-${expansionName}.json`, {
       with: { type: 'json' },
     });
     expansionConfiguration = configModule.default;
-    console.info(`[expansion loader] expansion configuration loaded`);
+    loggerService.info(`[expansion loader] expansion configuration loaded`);
 
     const currValue = expansionData.title;
     expansionData.title = expansionConfiguration.title ? expansionConfiguration.title : currValue;
     expansionData.mutuallyExclusive = expansionConfiguration.mutuallyExclusive ?? [];
   } catch (error) {
     if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
-      console.warn(`[expansion loader] failed to load configuration for expansion ${expansionName}`);
-      console.error(error);
+      loggerService.warn(`[expansion loader] failed to load configuration for expansion ${expansionName}`);
+      loggerService.error(error);
     }
   }
 
   try {
     const cardData = expansionData.cardData;
 
-    console.info(`[expansion loader] loading card library for ${expansionName}`);
+    loggerService.info(`[expansion loader] loading card library for ${expansionName}`);
 
     const cardLibraryModule = await import(`${expansionPath}/card-library-${expansionName}.json`, {
       with: { type: 'json' },
@@ -108,18 +110,18 @@ export const loadExpansion = async (
           cost: entry.pile.cost,
           type: entry.pile.type,
         };
-        console.debug(
+        loggerService.debug(
           `[expansion loader] processing randomizer pile ${pileRandomizer} with ${entry.cards.length} cards`,
         );
         for (const cardEntry of entry.cards) {
           const cardKey = cardEntry.cardKey;
           if (!cardKey) {
-            console.warn(`[expansion loader] randomizer pile ${pileRandomizer} missing cardKey`);
+            loggerService.warn(`[expansion loader] randomizer pile ${pileRandomizer} missing cardKey`);
             continue;
           }
           // Route boon definitions to the boon library instead of the supply.
           if (isBoonCardEntry(cardEntry)) {
-            console.debug(`[expansion loader] registering boon ${cardKey} from pile ${pileRandomizer}`);
+            loggerService.debug(`[expansion loader] registering boon ${cardKey} from pile ${pileRandomizer}`);
             const boonData = createCardLike(cardKey, expansionName, {
               ...cardEntry,
               kingdomSelectable: cardEntry.kingdomSelectable ?? false,
@@ -128,7 +130,7 @@ export const loadExpansion = async (
             continue;
           }
           if (isHexCardEntry(cardEntry)) {
-            console.debug(`[expansion loader] registering hex ${cardKey} from pile ${pileRandomizer}`);
+            loggerService.debug(`[expansion loader] registering hex ${cardKey} from pile ${pileRandomizer}`);
             const hexData = createCardLike(cardKey, expansionName, {
               ...cardEntry,
               kingdomSelectable: cardEntry.kingdomSelectable ?? false,
@@ -137,7 +139,7 @@ export const loadExpansion = async (
             continue;
           }
           if (isStateCardEntry(cardEntry)) {
-            console.debug(`[expansion loader] registering state ${cardKey} from pile ${pileRandomizer}`);
+            loggerService.debug(`[expansion loader] registering state ${cardKey} from pile ${pileRandomizer}`);
             const stateData = createCardLike(cardKey, expansionName, {
               ...cardEntry,
               kingdomSelectable: cardEntry.kingdomSelectable ?? false,
@@ -146,7 +148,7 @@ export const loadExpansion = async (
             continue;
           }
           if (isArtifactCardEntry(cardEntry)) {
-            console.debug(`[expansion loader] registering artifact ${cardKey} from pile ${pileRandomizer}`);
+            loggerService.debug(`[expansion loader] registering artifact ${cardKey} from pile ${pileRandomizer}`);
             const artifactData = createCardLike(cardKey, expansionName, {
               ...cardEntry,
               kingdomSelectable: cardEntry.kingdomSelectable ?? false,
@@ -170,7 +172,7 @@ export const loadExpansion = async (
 
       // Route boon definitions to the boon library instead of the supply.
       if (isBoonCardEntry(entry as Partial<CardNoId>)) {
-        console.debug(`[expansion loader] registering boon ${key}`);
+        loggerService.debug(`[expansion loader] registering boon ${key}`);
         const boonData = createCardLike(key as CardKey, expansionName, {
           ...(entry as Partial<CardNoId>),
           kingdomSelectable: (entry as Partial<CardNoId>).kingdomSelectable ?? false,
@@ -179,7 +181,7 @@ export const loadExpansion = async (
         continue;
       }
       if (isHexCardEntry(entry as Partial<CardNoId>)) {
-        console.debug(`[expansion loader] registering hex ${key}`);
+        loggerService.debug(`[expansion loader] registering hex ${key}`);
         const hexData = createCardLike(key as CardKey, expansionName, {
           ...(entry as Partial<CardNoId>),
           kingdomSelectable: (entry as Partial<CardNoId>).kingdomSelectable ?? false,
@@ -188,7 +190,7 @@ export const loadExpansion = async (
         continue;
       }
       if (isStateCardEntry(entry as Partial<CardNoId>)) {
-        console.debug(`[expansion loader] registering state ${key}`);
+        loggerService.debug(`[expansion loader] registering state ${key}`);
         const stateData = createCardLike(key as CardKey, expansionName, {
           ...(entry as Partial<CardNoId>),
           kingdomSelectable: (entry as Partial<CardNoId>).kingdomSelectable ?? false,
@@ -197,7 +199,7 @@ export const loadExpansion = async (
         continue;
       }
       if (isArtifactCardEntry(entry as Partial<CardNoId>)) {
-        console.debug(`[expansion loader] registering artifact ${key}`);
+        loggerService.debug(`[expansion loader] registering artifact ${key}`);
         const artifactData = createCardLike(key as CardKey, expansionName, {
           ...(entry as Partial<CardNoId>),
           kingdomSelectable: (entry as Partial<CardNoId>).kingdomSelectable ?? false,
@@ -213,16 +215,16 @@ export const loadExpansion = async (
       expansionCatalogService.setRawCard(key as CardKey, newCardData as any);
     }
 
-    console.info('[expansion loader] card library loaded');
+    loggerService.info('[expansion loader] card library loaded');
 
-    console.info(`[expansion loader] loading ${expansionName} card effects`);
+    loggerService.info(`[expansion loader] loading ${expansionName} card effects`);
 
     const cardEffectsModule = await import(`${expansionPath}/card-effects-${expansionName}.ts`);
     const cardEffects = cardEffectsModule.default as CardExpansionModule;
 
     Object.keys(cardEffects).forEach((key) => {
       if (cardEffects[key].registerScoringFunction) {
-        console.debug(`[expansion loader] registering scoring function for ${key}`);
+        loggerService.debug(`[expansion loader] registering scoring function for ${key}`);
         expansionCardMetadataRegistryService.registerScoringFunction(
           key as CardKey,
           cardEffects[key].registerScoringFunction(),
@@ -230,7 +232,7 @@ export const loadExpansion = async (
       }
 
       if (cardEffects[key].registerLifeCycleMethods) {
-        console.debug(`[expansion loader] registering lifecycle methods for ${key}`);
+        loggerService.debug(`[expansion loader] registering lifecycle methods for ${key}`);
         expansionCardMetadataRegistryService.registerLifecycleMethods(
           key as CardKey,
           cardEffects[key].registerLifeCycleMethods(),
@@ -238,7 +240,7 @@ export const loadExpansion = async (
       }
 
       if (cardEffects[key].registerEffects) {
-        console.debug(`[expansion loader] registering effects for ${key}`);
+        loggerService.debug(`[expansion loader] registering effects for ${key}`);
         expansionEffectRegistryService.registerCardEffectFactory(key as CardKey, cardEffects[key].registerEffects);
       }
 
@@ -257,24 +259,24 @@ export const loadExpansion = async (
         );
       }
     });
-    console.log('[expansion loader] base supply card effects loaded');
+    loggerService.log('[expansion loader] base supply card effects loaded');
   } catch (error) {
-    console.warn(`[expansion loader] Failed to load expansion: ${expansionName}`);
-    console.error(error);
+    loggerService.warn(`[expansion loader] Failed to load expansion: ${expansionName}`);
+    loggerService.error(error);
     expansionCatalogService.removeExpansion(expansionName);
   }
 
-  console.info(`[expansion loader] attempting to load events for ${expansionName}`);
-  await loadEvents(expansionName, expansionEffectRegistryService, expansionCatalogService);
-  console.log(`[expansion loader] finished loading events for ${expansionName}`);
+  loggerService.info(`[expansion loader] attempting to load events for ${expansionName}`);
+  await loadEvents(expansionName, expansionEffectRegistryService, expansionCatalogService, loggerService);
+  loggerService.log(`[expansion loader] finished loading events for ${expansionName}`);
 
   // Landmarks are loaded after events to mirror landscape loading order.
-  console.info(`[expansion loader] attempting to load landmarks for ${expansionName}`);
-  await loadLandmarks(expansionName, expansionEffectRegistryService, expansionCatalogService);
-  console.log(`[expansion loader] finished loading landmarks for ${expansionName}`);
+  loggerService.info(`[expansion loader] attempting to load landmarks for ${expansionName}`);
+  await loadLandmarks(expansionName, expansionEffectRegistryService, expansionCatalogService, loggerService);
+  loggerService.log(`[expansion loader] finished loading landmarks for ${expansionName}`);
 
   // Projects are loaded after landmarks to mirror landscape loading order.
-  console.info(`[expansion loader] attempting to load projects for ${expansionName}`);
-  await loadProjects(expansionName, expansionEffectRegistryService, expansionCatalogService);
-  console.log(`[expansion loader] finished loading projects for ${expansionName}`);
+  loggerService.info(`[expansion loader] attempting to load projects for ${expansionName}`);
+  await loadProjects(expansionName, expansionEffectRegistryService, expansionCatalogService, loggerService);
+  loggerService.log(`[expansion loader] finished loading projects for ${expansionName}`);
 };

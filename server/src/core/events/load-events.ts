@@ -3,11 +3,13 @@ import { CardExpansionModule } from '@server-types/index.ts';
 import { CardKey, EventNoId } from 'shared/types/index.ts';
 import { ExpansionEffectRegistryService } from '../expansion-effect-registry-service.ts';
 import { ExpansionCatalogService } from '../expansion-catalog-service.ts';
+import { LoggerService } from '../logger-service.ts';
 
 export const loadEvents = async (
   expansionName: string,
   expansionEffectRegistryService: ExpansionEffectRegistryService,
   expansionCatalogService: ExpansionCatalogService,
+  loggerService: LoggerService,
 ) => {
   const expansionEvents = (expansionCatalogService.getRequiredExpansion(expansionName).events ??= {});
 
@@ -27,8 +29,8 @@ export const loadEvents = async (
     }
   } catch (error) {
     if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
-      console.warn(`[load-events] failed to load expansion event library for expansion ${expansionName}`);
-      console.error(error);
+      loggerService.warn(`[load-events] failed to load expansion event library for expansion ${expansionName}`);
+      loggerService.error(error);
     }
   }
 
@@ -38,18 +40,18 @@ export const loadEvents = async (
 
     for (const cardKey of Object.keys(events)) {
       if (expansionEffectRegistryService.hasEventEffectFactory(cardKey as CardKey)) {
-        console.warn(`[load-events] card key ${cardKey} already exists in event registry, overwriting`);
+        loggerService.warn(`[load-events] card key ${cardKey} already exists in event registry, overwriting`);
       }
 
       if (events[cardKey].registerEffects) {
-        console.info(`[load-events] registering event effects for ${cardKey}`);
+        loggerService.info(`[load-events] registering event effects for ${cardKey}`);
         expansionEffectRegistryService.registerEventEffectFactory(cardKey as CardKey, events[cardKey].registerEffects);
       }
     }
   } catch (error) {
     if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
-      console.warn(`[load-events] failed to load expansion event effects for expansion ${expansionName}`);
-      console.error(error);
+      loggerService.warn(`[load-events] failed to load expansion event effects for expansion ${expansionName}`);
+      loggerService.error(error);
     }
   }
 };

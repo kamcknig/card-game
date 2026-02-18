@@ -1,10 +1,12 @@
 import { Reaction } from '@server-types/index.ts';
 import { formatCardName } from '../../utils/format-card-name.ts';
 import { MatchCardLibrary } from '../match-card-library.ts';
+import { LoggerService } from '../logger-service.ts';
 
 export function buildActionButtons(
   grouped: Map<string, { count: number; reaction: Reaction }>,
   cardLibrary: MatchCardLibrary,
+  loggerService: LoggerService,
 ) {
   let actionId = 1;
   const buttons = [{ action: 0, label: 'Cancel' }];
@@ -18,14 +20,14 @@ export function buildActionButtons(
         resolvedName = cardLibrary.getCard(parsedId).cardName;
       } catch (error) {
         // Fall back when the reaction source isn't a regular card (events/landmarks/tokens).
-        console.debug(
+        loggerService.debug(
           `[buildActionButtons] unable to resolve card ${parsedId}, falling back to key`,
         );
       }
     }
     // Final fallback to a formatted key for non-card reactions.
     if (!resolvedName) {
-      console.debug(
+      loggerService.debug(
         `[buildActionButtons] unable to resolve reaction name, using source key`,
       );
       resolvedName = formatCardName(reaction.getSourceKey());

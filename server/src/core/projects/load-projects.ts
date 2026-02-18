@@ -3,11 +3,13 @@ import { CardExpansionModule } from '@server-types/index.ts';
 import { CardKey, ProjectNoId } from 'shared/types/index.ts';
 import { ExpansionEffectRegistryService } from '../expansion-effect-registry-service.ts';
 import { ExpansionCatalogService } from '../expansion-catalog-service.ts';
+import { LoggerService } from '../logger-service.ts';
 
 export const loadProjects = async (
   expansionName: string,
   expansionEffectRegistryService: ExpansionEffectRegistryService,
   expansionCatalogService: ExpansionCatalogService,
+  loggerService: LoggerService,
 ) => {
   const expansionProjects = (expansionCatalogService.getRequiredExpansion(expansionName).projects ??= {});
 
@@ -30,10 +32,10 @@ export const loadProjects = async (
     }
   } catch (error) {
     if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
-      console.warn(
+      loggerService.warn(
         `[load-projects] failed to load expansion project library for expansion ${expansionName}`,
       );
-      console.error(error);
+      loggerService.error(error);
     }
   }
 
@@ -46,13 +48,13 @@ export const loadProjects = async (
 
     for (const cardKey of Object.keys(projects)) {
       if (expansionEffectRegistryService.hasProjectEffectFactory(cardKey as CardKey)) {
-        console.warn(
+        loggerService.warn(
           `[load-projects] project key ${cardKey} already exists in project registry, overwriting`,
         );
       }
 
       if (projects[cardKey].registerEffects) {
-        console.info(
+        loggerService.info(
           `[load-projects] registering project effects for ${cardKey}`,
         );
         expansionEffectRegistryService.registerProjectEffectFactory(cardKey as CardKey, projects[cardKey].registerEffects);
@@ -60,10 +62,10 @@ export const loadProjects = async (
     }
   } catch (error) {
     if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
-      console.warn(
+      loggerService.warn(
         `[load-projects] failed to load expansion project effects for expansion ${expansionName}`,
       );
-      console.error(error);
+      loggerService.error(error);
     }
   }
 };

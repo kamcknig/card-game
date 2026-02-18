@@ -30,6 +30,7 @@ import { CardSourceController } from '../card-source-controller.ts';
 import { CardInstanceFactoryService } from '../card-instance-factory-service.ts';
 import { ReactionContextFactory } from './reaction-context-factory.ts';
 import { ExpansionCardMetadataRegistryService } from '../expansion-card-metadata-registry-service.ts';
+import { LoggerService } from '../logger-service.ts';
 
 export class ReactionManager {
   private _reactions: Reaction[] = [];
@@ -53,6 +54,7 @@ export class ReactionManager {
     private readonly promptService: PromptService,
     private readonly reactionContextFactory: ReactionContextFactory,
     private readonly expansionCardMetadataRegistryService: ExpansionCardMetadataRegistryService,
+    private readonly loggerService: LoggerService,
   ) {}
 
   public endGame() {
@@ -89,7 +91,7 @@ export class ReactionManager {
     for (const reaction of reactions) {
       if (reaction.listeningFor !== trigger.eventType) continue;
 
-      console.info(`[REACTION MANAGER] checking trigger ${trigger} condition for ${reaction.id} reaction`);
+      this.loggerService.info(`[REACTION MANAGER] checking trigger ${trigger} condition for ${reaction.id} reaction`);
 
       let include = true;
 
@@ -121,7 +123,7 @@ export class ReactionManager {
       const trigger = this._reactions[i];
       if (trigger.id === triggerId) {
         this._reactions.splice(i, 1);
-        console.info(
+        this.loggerService.info(
           `[REACTION MANAGER] removing trigger reaction ${triggerId} for player ${
             this.match.players?.find((player) => player.id === trigger.playerId)
           }`,
@@ -192,7 +194,7 @@ export class ReactionManager {
       } as ReactionTemplate<T>;
     }
 
-    console.info(`[REACTION MANAGER] registering trigger template ID ${template.id}, for player ${template.playerId}`);
+    this.loggerService.info(`[REACTION MANAGER] registering trigger template ID ${template.id}, for player ${template.playerId}`);
 
     this._reactions.push(new Reaction(template) as any);
     return template.id;
@@ -218,7 +220,7 @@ export class ReactionManager {
       return;
     }
 
-    console.info(`[REACTION MANAGER] running lifecycle trigger '${trigger}' for card ${card}`);
+    this.loggerService.info(`[REACTION MANAGER] running lifecycle trigger '${trigger}' for card ${card}`);
 
     await fn(this.reactionContextFactory.createCardLifecycleContext({
       reactionManager: this,
@@ -238,7 +240,7 @@ export class ReactionManager {
     );
 
     for (const targetPlayer of targetOrder) {
-      console.info(`[REACTION MANAGER] checking '${trigger.eventType}' reactions for ${targetPlayer}`);
+      this.loggerService.info(`[REACTION MANAGER] checking '${trigger.eventType}' reactions for ${targetPlayer}`);
 
       const usedReactionIds = new Set<string>();
       const blockedCardKeys = new Set<string>();
@@ -264,7 +266,7 @@ export class ReactionManager {
 
         const promptReactions = reactions.filter((reaction) => !reaction.autoResolve);
 
-        console.info(`[REACTION MANAGER] ${targetPlayer} has ${promptReactions.length} remaining reactions`);
+        this.loggerService.info(`[REACTION MANAGER] ${targetPlayer} has ${promptReactions.length} remaining reactions`);
 
         if (!promptReactions.length) break;
 
@@ -274,7 +276,7 @@ export class ReactionManager {
 
         if (systemReactions.length) {
           for (const systemReaction of systemReactions) {
-            console.info(`[REACTION MANAGER] running system reaction ${systemReaction.id} for ${targetPlayer}`);
+            this.loggerService.info(`[REACTION MANAGER] running system reaction ${systemReaction.id} for ${targetPlayer}`);
             const systemContext = this.buildTriggeredEffectContext(trigger, systemReaction);
             await this.runReaction(systemReaction, systemContext, reactionContext);
           }
@@ -295,10 +297,10 @@ export class ReactionManager {
         // and the same card
         if (shouldPrompt || (promptReactions.length === 1 && compulsoryReactions.length === 0)) {
           const grouped = groupReactionsByCardKey(promptReactions);
-          const actionButtons = buildActionButtons(grouped, this.cardLibrary);
+          const actionButtons = buildActionButtons(grouped, this.cardLibrary, this.loggerService);
           const actionMap = buildActionMap(grouped);
 
-          console.info(`[REACTION MANAGER] prompting ${targetPlayer} to choose reaction`);
+          this.loggerService.info(`[REACTION MANAGER] prompting ${targetPlayer} to choose reaction`);
 
           const action = await this.promptService.requestAction({
             playerId: targetPlayer.id,
@@ -307,10 +309,10 @@ export class ReactionManager {
           });
 
           if (action === null || action === 0) {
-            console.info(`[REACTION MANAGER] ${targetPlayer} chose not to react`);
+            this.loggerService.info(`[REACTION MANAGER] ${targetPlayer} chose not to react`);
             break;
           } else {
-            console.info(`[REACTION MANAGER] ${targetPlayer} reacts with ${actionMap.get(action)}`);
+            this.loggerService.info(`[REACTION MANAGER] ${targetPlayer} reacts with ${actionMap.get(action)}`);
           }
 
           selectedReaction = actionMap.get(action);
@@ -319,7 +321,7 @@ export class ReactionManager {
         }
 
         if (!selectedReaction) {
-          console.warn(`[REACTION MANAGER] reaction not found in action map`);
+          this.loggerService.warn(`[REACTION MANAGER] reaction not found in action map`);
           continue;
         }
 
@@ -346,7 +348,7 @@ export class ReactionManager {
         const stillValid = (await this.getReactions(trigger, [autoReaction])).length > 0;
         if (!stillValid) continue;
 
-        console.info(`[REACTION MANAGER] auto-resolving reaction ${autoReaction.id} for ${targetPlayer}`);
+        this.loggerService.info(`[REACTION MANAGER] auto-resolving reaction ${autoReaction.id} for ${targetPlayer}`);
         const autoReactionContext = this.buildTriggeredEffectContext(
           trigger,
           autoReaction,
@@ -374,7 +376,7 @@ export class ReactionManager {
     });
 
     if (reaction.once) {
-      console.info(`[REACTION MANAGER] selected reaction is single-use, unregistering it`);
+      this.loggerService.info(`[REACTION MANAGER] selected reaction is single-use, unregistering it`);
       this.unregisterTrigger(reaction.id);
     }
   }

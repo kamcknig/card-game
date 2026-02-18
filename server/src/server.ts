@@ -23,10 +23,20 @@ import { ExpansionCatalogService } from './core/expansion-catalog-service.ts';
 import { RngService } from './core/rng-service.ts';
 import { TokenRegistryService } from './core/tokens/token-registry-service.ts';
 import { ServerConfigService } from './core/server-config-service.ts';
-import { LoggerService } from './core/logger-service.ts';
+import { LoggerBackend, LoggerService } from './core/logger-service.ts';
 import { asClass, asValue, createContainer, InjectionMode } from 'awilix';
 
 const serverConfigService = new ServerConfigService();
+const loggerService = new LoggerService();
+
+try {
+  // Fail fast when startup env values are malformed.
+  serverConfigService.validate();
+} catch (error) {
+  console.error('[SERVER] invalid startup configuration');
+  console.error(error);
+  Deno.exit(1);
+}
 
 // Default to disabling file logs unless explicitly enabled.
 const logToFileEnabled = serverConfigService.isFileLoggingEnabled();
@@ -51,6 +61,16 @@ log.setConfig({
 
 log.init();
 
+// Route logger service output through enhanced-deno-log when available.
+const enhancedBackend = log as unknown as Partial<LoggerBackend>;
+loggerService.configureBackend({
+  log: (...args: unknown[]) => (enhancedBackend.log ?? console.log)(...args),
+  info: (...args: unknown[]) => (enhancedBackend.info ?? console.info)(...args),
+  debug: (...args: unknown[]) => (enhancedBackend.debug ?? console.debug)(...args),
+  warn: (...args: unknown[]) => (enhancedBackend.warn ?? console.warn)(...args),
+  error: (...args: unknown[]) => (enhancedBackend.error ?? console.error)(...args),
+});
+
 const PORT = serverConfigService.getPort();
 
 export const io = new Server<ServerListenEvents, ServerEmitEvents>({
@@ -67,7 +87,7 @@ container.register({
   rootContainer: asValue(container),
   io: asValue(io),
   serverConfigService: asValue(serverConfigService),
-  loggerService: asClass(LoggerService).singleton(),
+  loggerService: asValue(loggerService),
   maxPlayers: asValue(6),
   matchScopeFactory: asClass(MatchScopeFactory).singleton(),
   matchConfigurator: asClass(MatchConfigurator).scoped(),
@@ -97,16 +117,16 @@ const game = container.resolve<Game>('game');
 const serverStartupService = container.resolve<ServerStartupService>('serverStartupService');
 
 io.on('connection', (socket) => {
-  console.log('[SERVER] new client connected');
+  loggerService.log('[SERVER] new client connected');
 
   const sessionId = socket.handshake.query.get('sessionId');
 
-  console.info(
+  loggerService.info(
     `[SERVER] connection from ${socket.handshake.address} - session ID ${sessionId}`,
   );
 
   if (!sessionId) {
-    console.error('[SERVER] no session ID, rejecting');
+    loggerService.error('[SERVER] no session ID, rejecting');
     socket.disconnect();
     return;
   }
@@ -171,7 +191,7 @@ Deno.serve({
 const controller = new AbortController();
 
 addEventListener('SIGINT', () => {
-  console.log('Shutting down cleanly...');
+  loggerService.log('Shutting down cleanly...');
   game.dispose();
   controller.abort();
   Deno.exit();
@@ -179,7 +199,7 @@ addEventListener('SIGINT', () => {
 
 void serverStartupService.start().catch((error) => {
   // Surface startup failures and stop the process so the host can restart.
-  console.error('[SERVER] startup failed');
-  console.error(error);
+  loggerService.error('[SERVER] startup failed');
+  loggerService.error(error);
   Deno.exit(1);
 });

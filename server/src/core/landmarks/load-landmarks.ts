@@ -3,11 +3,13 @@ import { CardExpansionModule } from '@server-types/index.ts';
 import { CardKey, LandmarkNoId } from 'shared/types/index.ts';
 import { ExpansionEffectRegistryService } from '../expansion-effect-registry-service.ts';
 import { ExpansionCatalogService } from '../expansion-catalog-service.ts';
+import { LoggerService } from '../logger-service.ts';
 
 export const loadLandmarks = async (
   expansionName: string,
   expansionEffectRegistryService: ExpansionEffectRegistryService,
   expansionCatalogService: ExpansionCatalogService,
+  loggerService: LoggerService,
 ) => {
   const expansionLandmarks = (expansionCatalogService.getRequiredExpansion(expansionName).landmarks ??= {});
 
@@ -30,10 +32,10 @@ export const loadLandmarks = async (
     }
   } catch (error) {
     if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
-      console.warn(
+      loggerService.warn(
         `[load-landmarks] failed to load expansion landmark library for expansion ${expansionName}`,
       );
-      console.error(error);
+      loggerService.error(error);
     }
   }
 
@@ -46,14 +48,14 @@ export const loadLandmarks = async (
 
     for (const cardKey of Object.keys(landmarks)) {
       if (expansionEffectRegistryService.hasLandmarkEffectFactory(cardKey as CardKey)) {
-        console.warn(
+        loggerService.warn(
           `[load-landmarks] landmark key ${cardKey} already exists in landmark registry, overwriting`,
         );
       }
 
       if (landmarks[cardKey].registerEffects) {
         // Landmarks currently reuse card effect factories for future expansion support.
-        console.info(
+        loggerService.info(
           `[load-landmarks] registering landmark effects for ${cardKey}`,
         );
         expansionEffectRegistryService.registerLandmarkEffectFactory(
@@ -64,10 +66,10 @@ export const loadLandmarks = async (
     }
   } catch (error) {
     if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
-      console.warn(
+      loggerService.warn(
         `[load-landmarks] failed to load expansion landmark effects for expansion ${expansionName}`,
       );
-      console.error(error);
+      loggerService.error(error);
     }
   }
 };

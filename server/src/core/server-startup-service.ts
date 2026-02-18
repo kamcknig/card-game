@@ -30,6 +30,7 @@ export class ServerStartupService {
           this.expansionEffectRegistryService,
           this.expansionCardMetadataRegistryService,
           this.expansionCatalogService,
+          this.loggerService,
         );
         this.game.expansionLoaded(expansion);
       }

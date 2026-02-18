@@ -9,6 +9,7 @@ import { CardSourceController } from './card-source-controller.ts';
 import { findEventInMatch, findProjectInMatch } from '@shared/find-card-like-in-match.ts';
 import { renaissanceTokenIds } from '@expansions/renaissance/token-ids-renaissance.ts';
 import { BuyOptionsResolver, ResolvedBuyOption } from './actions/resolve-buy-options.ts';
+import { LoggerService } from './logger-service.ts';
 
 export class CardInteractivityController {
   private _gameOver: boolean = false;
@@ -22,6 +23,7 @@ export class CardInteractivityController {
     private readonly buyOptionsResolver: BuyOptionsResolver,
     private readonly actionService: ActionService,
     private readonly promptService: PromptService,
+    private readonly loggerService: LoggerService,
   ) {
     this.socketMap.forEach((s) => {
       s.on('cardTapped', (pId, cId) => this.onCardTapped(pId, cId));
@@ -43,7 +45,7 @@ export class CardInteractivityController {
   }
 
   public endGame() {
-    console.log(`[card interactivity] removing socket listeners and marking ended`);
+    this.loggerService.log(`[card interactivity] removing socket listeners and marking ended`);
     this.socketMap.forEach((s) => {
       s.off('cardTapped');
       s.off('cardLikeTapped');
@@ -54,7 +56,7 @@ export class CardInteractivityController {
 
   public checkCardInteractivity(): void {
     if (this._gameOver) {
-      console.debug(`[card interactivity] game is over, not processing match update`);
+      this.loggerService.debug(`[card interactivity] game is over, not processing match update`);
       return;
     }
 
@@ -65,7 +67,7 @@ export class CardInteractivityController {
     // Debt prevents buying but should not block treasure play.
     const currentDebt = match.debt?.[currentPlayer.id] ?? 0;
 
-    console.debug(
+    this.loggerService.debug(
       `[card interactivity] determining selectable cards - phase '${turnPhase}, player ${currentPlayer}', player Index '${match.currentPlayerTurnIndex}'`,
     );
 
@@ -177,7 +179,7 @@ export class CardInteractivityController {
           selectableCards.push(card.id);
         }
       }
-      console.debug(`[card interactivity] night phase selectable count ${selectableCards.length}`);
+      this.loggerService.debug(`[card interactivity] night phase selectable count ${selectableCards.length}`);
     }
 
     match.selectableCards = match.players.reduce((prev, { id }) => {
@@ -185,33 +187,33 @@ export class CardInteractivityController {
       return prev;
     }, {} as Record<PlayerId, CardId[]>);
 
-    console.debug(`[card interactivity] selectable cards`);
+    this.loggerService.debug(`[card interactivity] selectable cards`);
 
     for (const key of Object.keys(match.selectableCards)) {
       const tmp = match.selectableCards[+key]?.concat() ?? [];
       const p = getPlayerById(match, +key);
-      console.debug(`${p} can select ${tmp.length} cards`);
+      this.loggerService.debug(`${p} can select ${tmp.length} cards`);
     }
   }
 
   private async onPlayAllTreasure(playerId: PlayerId) {
-    console.info('[card interactivity] playing all treasures for current player');
+    this.loggerService.info('[card interactivity] playing all treasures for current player');
 
     if (this._gameOver) {
-      console.debug(`[card interactivity] game is over, not playing treasures`);
+      this.loggerService.debug(`[card interactivity] game is over, not playing treasures`);
       return;
     }
 
     const player = getPlayerById(this.match, playerId);
 
     if (isUndefined(player)) {
-      console.warn(`[card interactivity] could not find current player`);
+      this.loggerService.warn(`[card interactivity] could not find current player`);
       return;
     }
 
     const hand = this.cardSourceController.getSource('playerHand', player.id);
     const treasureCards = hand.filter((e) => this.cardLibrary.getCard(e).type.includes('TREASURE'));
-    console.debug(`[card interactivity] ${player} has ${treasureCards.length} treasure cards in hand`);
+    this.loggerService.debug(`[card interactivity] ${player} has ${treasureCards.length} treasure cards in hand`);
     if (hand.length === 0 || treasureCards.length === 0) {
       return;
     }
@@ -234,10 +236,10 @@ export class CardInteractivityController {
       throw new Error('could not find player');
     }
 
-    console.info(`[card interactivity] ${player} tapped card-like ${cardId}`);
+    this.loggerService.info(`[card interactivity] ${player} tapped card-like ${cardId}`);
 
     if (this._gameOver) {
-      console.debug(`[card interactivity] game is over, not processing card-like tap`);
+      this.loggerService.debug(`[card interactivity] game is over, not processing card-like tap`);
       return;
     }
 
@@ -246,10 +248,10 @@ export class CardInteractivityController {
     if (phase === 'buy') {
       // Block buying events while the player has debt tokens.
       if ((this.match.debt?.[playerId] ?? 0) > 0) {
-        console.debug(`[card interactivity] ${player} has debt, blocking card-like buy`);
+        this.loggerService.debug(`[card interactivity] ${player} has debt, blocking card-like buy`);
         return;
       }
-      console.info(`[card interactivity] ${player} tapped card-like ${cardId} in phase ${phase}, processing`);
+      this.loggerService.info(`[card interactivity] ${player} tapped card-like ${cardId} in phase ${phase}, processing`);
 
       const event = findEventInMatch(this.match, cardId);
       if (event) {
@@ -259,11 +261,11 @@ export class CardInteractivityController {
         if (project) {
           await this.actionService.run('buyProject', { playerId, cardLikeId: cardId });
         } else {
-          console.debug(`[card interactivity] ${player} tapped non-buyable card-like ${cardId}`);
+          this.loggerService.debug(`[card interactivity] ${player} tapped non-buyable card-like ${cardId}`);
         }
       }
     } else {
-      console.debug(`[card interactivity] ${player} tapped card-like ${cardId} in phase ${phase}, not processing`);
+      this.loggerService.debug(`[card interactivity] ${player} tapped card-like ${cardId} in phase ${phase}, not processing`);
     }
 
     await this.actionService.run('checkForRemainingPlayerActions');
@@ -278,10 +280,10 @@ export class CardInteractivityController {
       throw new Error('could not find player');
     }
 
-    console.info(`[card interactivity] pl${player} tapped card ${this.cardLibrary.getCard(cardId)}`);
+    this.loggerService.info(`[card interactivity] pl${player} tapped card ${this.cardLibrary.getCard(cardId)}`);
 
     if (this._gameOver) {
-      console.debug(`[card interactivity] game is over, not processing card tap`);
+      this.loggerService.debug(`[card interactivity] game is over, not processing card tap`);
       return;
     }
 
@@ -295,7 +297,7 @@ export class CardInteractivityController {
       if (hand.includes(cardId)) {
         const card = this.cardLibrary.getCard(cardId);
         if (!card.type.includes('TREASURE')) {
-          console.debug(`[card interactivity] tapped non-treasure hand card ${card} during buy phase`);
+          this.loggerService.debug(`[card interactivity] tapped non-treasure hand card ${card} during buy phase`);
           return;
         }
 
@@ -307,7 +309,7 @@ export class CardInteractivityController {
       } else {
         // Block buying cards while the player has debt tokens.
         if ((this.match.debt?.[playerId] ?? 0) > 0) {
-          console.debug(`[card interactivity] ${player} has debt, blocking buy`);
+          this.loggerService.debug(`[card interactivity] ${player} has debt, blocking buy`);
           return;
         }
         const card = this.cardLibrary.getCard(cardId);
@@ -320,7 +322,7 @@ export class CardInteractivityController {
 
         // Exit if there are currently no legal ways to buy this card.
         if (options.length === 0) {
-          console.debug(`[card interactivity] no legal buy options for ${card}`);
+          this.loggerService.debug(`[card interactivity] no legal buy options for ${card}`);
           return;
         }
 
@@ -333,14 +335,14 @@ export class CardInteractivityController {
             actionButtons: options.map((option, index) => ({ label: option.label, action: index + 1 })),
           });
           if (selectedAction === null || selectedAction < 1) {
-            console.debug(`[card interactivity] buy option prompt cancelled`);
+            this.loggerService.debug(`[card interactivity] buy option prompt cancelled`);
             return;
           }
           selectedBuyOption = options[selectedAction - 1];
         }
 
         if (!selectedBuyOption) {
-          console.debug(`[card interactivity] selected buy option missing`);
+          this.loggerService.debug(`[card interactivity] selected buy option missing`);
           return;
         }
 
@@ -375,12 +377,12 @@ export class CardInteractivityController {
         const card = this.cardLibrary.getCard(cardId);
         if (card.type.includes('NIGHT')) {
           await this.actionService.run('playCard', { playerId, cardId });
-          console.debug(`[card interactivity] played night card ${card}`);
+          this.loggerService.debug(`[card interactivity] played night card ${card}`);
         } else {
-          console.debug(`[card interactivity] tapped non-night card ${card} during night phase`);
+          this.loggerService.debug(`[card interactivity] tapped non-night card ${card} during night phase`);
         }
       } else {
-        console.debug(`[card interactivity] tapped card ${cardId} not in hand during night phase`);
+        this.loggerService.debug(`[card interactivity] tapped card ${cardId} not in hand during night phase`);
       }
     }
 
