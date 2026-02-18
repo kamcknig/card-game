@@ -44,8 +44,11 @@ this can also be used for pile selection instead of using cards.
   "bane" card. then you can add a custom tags property to track more custom ones.
 - possible keep the enhanced logging for console logs but switch to a buffered file logger solution later for
   production.
-- can the ruins pile be updated to use the newer randomizer and piles?
 - Lobby ban identity currently uses `sessionId`; replace with durable authenticated identity and provide a migration path.
+- on vote to remove player dialog, add a quit button. if quit, thenyou are
+  removed from teh game and are not voted for for disconnection and are sent
+  back to the lobby. (it should go through the current flow so that when all
+  users are gone the game is deleted or not based on env var)
 
 # Higher priority
 - safety so that when a game or mtach crashes, the ret of the server doesn't

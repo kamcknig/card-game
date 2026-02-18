@@ -32,9 +32,16 @@ export const configureRuins = async (args: ExpansionConfiguratorContext) => {
   const ruinsKingdom = {
     name: 'ruins',
     cards: ruinsCardKeys.map((cardKey) => {
+      const baseCard = structuredClone(args.cardLibrary[cardKey]);
+      // Model Ruins as a single pile so pile-key lookups resolve to "ruins" instead of per-card keys.
       const cardData = {
-        ...structuredClone(args.cardLibrary[cardKey]),
-        tags: ['ruins'],
+        ...baseCard,
+        kingdom: 'ruins',
+        randomizerData: {
+          ...(baseCard.randomizerData ?? {}),
+          randomizer: 'ruins',
+        },
+        tags: Array.from(new Set([...(baseCard.tags ?? []), 'ruins'])),
       };
       return cardData;
     }),
