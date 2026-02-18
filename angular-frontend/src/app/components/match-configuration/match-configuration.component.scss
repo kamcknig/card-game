@@ -6,7 +6,8 @@ $selection-board-single-column-breakpoint: 760px;
 
 .match-config-content {
   display: grid;
-  grid-template-columns: repeat(3, minmax(260px, 1fr));
+  // Keep top-row sections clustered left; trailing flexible column absorbs remaining space.
+  grid-template-columns: repeat(3, minmax(260px, max-content)) minmax(0, 1fr);
   grid-template-rows: auto auto;
   grid-column-gap: 20px;
   grid-row-gap: 20px;
@@ -141,7 +142,8 @@ $selection-board-single-column-breakpoint: 760px;
 
 @media (max-width: $match-config-two-column-breakpoint) {
   .match-config-content {
-    grid-template-columns: repeat(2, minmax(260px, 1fr));
+    // Keep first-row sections left-aligned while still reserving flexible space on the right.
+    grid-template-columns: repeat(2, minmax(260px, max-content)) minmax(0, 1fr);
     grid-template-rows: auto auto auto;
   }
 
