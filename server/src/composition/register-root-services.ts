@@ -16,6 +16,9 @@ import { MatchConfiguratorFactory } from '../core/match-configurator-factory.ts'
 import { MatchSocketBindings } from '../core/match-socket-bindings.ts';
 import { ServerStartupService } from '../core/server-startup-service.ts';
 import { ServerBootstrapService } from '../core/server-bootstrap-service.ts';
+import { ServerSocketGatewayService } from '../core/server-socket-gateway-service.ts';
+import { ServerDebugRouteHandlerService } from '../core/server-debug-route-handler-service.ts';
+import { ServerShutdownHandlerService } from '../core/server-shutdown-handler-service.ts';
 import { ExpansionEffectRegistryService } from '../core/expansion-effect-registry-service.ts';
 import { ExpansionCardMetadataRegistryService } from '../core/expansion-card-metadata-registry-service.ts';
 import { ExpansionCatalogService } from '../core/expansion-catalog-service.ts';
@@ -27,6 +30,8 @@ import { EventLoaderService } from '../core/events/load-events.ts';
 import { LandmarkLoaderService } from '../core/landmarks/load-landmarks.ts';
 import { ProjectLoaderService } from '../core/projects/load-projects.ts';
 import { ExpansionLoaderService } from '../core/expansion-loader-service.ts';
+import { GameMatchLifecycleCoordinatorService } from '../core/game-match-lifecycle-coordinator-service.ts';
+import { GameLobbySessionCoordinatorService } from '../core/game-lobby-session-coordinator-service.ts';
 
 export interface RegisterRootServicesArgs {
   io: Server<ServerListenEvents, ServerEmitEvents>;
@@ -74,7 +79,12 @@ export const registerRootServices = (
     playerFactoryService: asClass(PlayerFactoryService).singleton(),
     playerRegistryService: asClass(PlayerRegistryService).singleton(),
     matchStartOrchestrator: asClass(MatchStartOrchestrator).singleton(),
+    gameMatchLifecycleCoordinatorService: asClass(GameMatchLifecycleCoordinatorService).singleton(),
+    gameLobbySessionCoordinatorService: asClass(GameLobbySessionCoordinatorService).singleton(),
     serverStartupService: asClass(ServerStartupService).singleton(),
+    serverSocketGatewayService: asClass(ServerSocketGatewayService).singleton(),
+    serverDebugRouteHandlerService: asClass(ServerDebugRouteHandlerService).singleton(),
+    serverShutdownHandlerService: asClass(ServerShutdownHandlerService).singleton(),
     serverBootstrapService: asClass(ServerBootstrapService).singleton(),
     game: asClass(Game).singleton(),
   });

@@ -2,7 +2,6 @@ import { AppSocket, MatchBaseConfiguration } from '@server-types/index.ts';
 import {
   Card,
   CardId,
-  CardNoId,
   ExpansionListElement,
   Match,
   MatchConfiguration,
@@ -11,21 +10,14 @@ import {
   ServerEmitEvents,
   ServerListenEvents,
 } from 'shared/types/index.ts';
-import { MatchController } from './match-controller.ts';
 import jsonPatch from 'fast-json-patch';
 import { Server } from 'socket.io';
 import { GameConfigurationStore } from './game-configuration-store.ts';
-import { LobbySocketBindings } from './lobby-socket-bindings.ts';
-import { ExpansionSearchService } from './expansion-search-service.ts';
 import { ExpansionCompatibilityService } from './expansion-compatibility-service.ts';
-import { DisconnectedPlayerVoteService } from './disconnected-player-vote-service.ts';
-import { PlayerSessionService } from './player-session-service.ts';
-import { PlayerRegistryService } from './player-registry-service.ts';
-import { MatchStartOrchestrator } from './match-start-orchestrator.ts';
-import { MatchScope, MatchScopeFactory } from './match-scope-factory.ts';
-import { PlayerFactoryService } from './player-factory-service.ts';
-import { ServerConfigService } from './server-config-service.ts';
 import { LoggerService } from './logger-service.ts';
+import { GameRuntimeState } from './game-runtime-state.ts';
+import { GameMatchLifecycleCoordinatorService } from './game-match-lifecycle-coordinator-service.ts';
+import { GameLobbySessionCoordinatorService } from './game-lobby-session-coordinator-service.ts';
 
 const defaultMatchConfiguration: MatchConfiguration = {
   expansions: [
@@ -66,270 +58,102 @@ const defaultMatchConfiguration: MatchConfiguration = {
   playerStartingHand: { ...MatchBaseConfiguration.playerStartingHand },
 };
 
+/**
+ * Game process orchestrator for lobby/match runtime state.
+ *
+ * This class intentionally stays thin and delegates to lifecycle/session
+ * coordinators so startup and runtime behavior remain easy to reason about.
+ */
 export class Game {
-  public players: Player[] = [];
-  public owner: Player | undefined;
-  public matchStarted: boolean = false;
-
-  private _socketMap: Map<PlayerId, AppSocket> = new Map();
-  private _matchScope: MatchScope | undefined;
-  private _matchController: MatchController | undefined;
-  private _matchConfiguration: MatchConfiguration | undefined;
-  private _availableExpansion: ExpansionListElement[] = [];
-  // When true, the game ends automatically if no human players remain connected.
-  private readonly _endMatchWhenNoHumans: boolean;
-
+  // Shared mutable runtime state used by coordinators.
+  private readonly runtimeState: GameRuntimeState = {
+    players: [],
+    owner: undefined,
+    matchStarted: false,
+    socketMap: new Map<PlayerId, AppSocket>(),
+    matchScope: undefined,
+    matchController: undefined,
+    matchConfiguration: undefined,
+    availableExpansion: [],
+  };
   constructor(
     // Socket.io server injected from composition root.
     private readonly io: Server<ServerListenEvents, ServerEmitEvents>,
-    // Max players allowed in a game.
-    private readonly maxPlayers: number,
-    // Match scope factory injected from composition root for explicit wiring.
-    private readonly matchScopeFactory: MatchScopeFactory,
     // Store abstraction for persisted lobby configuration.
     private readonly configStore: GameConfigurationStore,
-    // Socket binding helper that owns lobby transport event registrations.
-    private readonly lobbySocketBindings: LobbySocketBindings,
-    // Search service that owns all lobby card-like indexes.
-    private readonly expansionSearchService: ExpansionSearchService,
     // Compatibility service that enforces expansion mutual-exclusion rules.
     private readonly expansionCompatibilityService: ExpansionCompatibilityService,
-    // Service that tracks disconnected-player removal voting state.
-    private readonly disconnectedPlayerVoteService: DisconnectedPlayerVoteService,
-    // Service that decides owner/session transitions.
-    private readonly playerSessionService: PlayerSessionService,
-    // Service that owns player record lifecycle mutations.
-    private readonly playerRegistryService: PlayerRegistryService,
-    // Service that creates human/computer player entities.
-    private readonly playerFactoryService: PlayerFactoryService,
-    // Service that runs the lobby->match startup sequence.
-    private readonly matchStartOrchestrator: MatchStartOrchestrator,
-    // Service that centralizes runtime configuration reads.
-    private readonly serverConfigService: ServerConfigService,
     // Service that provides consistent logging.
     private readonly loggerService: LoggerService,
+    // Coordinator that owns match lifecycle transitions and match scope creation.
+    private readonly gameMatchLifecycleCoordinatorService: GameMatchLifecycleCoordinatorService,
+    // Coordinator that owns lobby/session events and owner-only lobby handlers.
+    private readonly gameLobbySessionCoordinatorService: GameLobbySessionCoordinatorService,
   ) {
-    this.loggerService.log(`[game] created`);
-    // Configure whether to end the match when all human players leave (default: true).
-    this._endMatchWhenNoHumans = this.serverConfigService.shouldEndMatchOnNoHumans();
-    // Hydrate lobby defaults from persisted local files.
-    this.loggerService.info('[game] loading persisted lobby configuration');
-    this.configStore.load(defaultMatchConfiguration);
-
-    this.expansionSearchService.rebuildIndexes();
-
-    this.createNewMatch();
+    this.loggerService.log('[game] created');
+    this.gameMatchLifecycleCoordinatorService.initialize(this.runtimeState, defaultMatchConfiguration);
   }
 
-  private createNewMatch() {
-    // Dispose any previous match scope before creating a fresh one.
-    this._matchScope?.dispose();
-    this._matchScope = this.matchScopeFactory.create(this._socketMap);
-    this._matchController = this._matchScope.matchController;
-    this._matchConfiguration = { ...structuredClone(defaultMatchConfiguration) };
+  // Exposes current runtime players for callers that need readonly lobby state.
+  public get players(): Player[] {
+    return this.runtimeState.players;
   }
 
-  private onSearchCards = (searchStr: string) => {
-    const filteredCards = this.expansionSearchService.searchKingdomCards(searchStr);
-    this.loggerService.debug(
-      `[game] kingdom search '${searchStr}' returned ${filteredCards.length} eligible card(s)`,
-    );
-    return filteredCards;
-  };
+  // Exposes current runtime lobby owner.
+  public get owner(): Player | undefined {
+    return this.runtimeState.owner;
+  }
 
-  // Returns event search results for the given query.
-  private onSearchEvents = (searchStr: string) => {
-    return this.expansionSearchService.searchEvents(searchStr);
-  };
+  // Exposes whether gameplay has started.
+  public get matchStarted(): boolean {
+    return this.runtimeState.matchStarted;
+  }
 
-  // Returns landmark search results for the given query.
-  private onSearchLandmarks = (searchStr: string) => {
-    return this.expansionSearchService.searchLandmarks(searchStr);
-  };
-
-  // Returns artifact search results for the given query.
-  private onSearchArtifacts = (searchStr: string) => {
-    return this.expansionSearchService.searchArtifacts(searchStr);
-  };
-
-  // Returns project search results for the given query.
-  private onSearchProjects = (searchStr: string) => {
-    return this.expansionSearchService.searchProjects(searchStr);
-  };
-
-  public expansionLoaded(expansion: ExpansionListElement) {
-    this.loggerService.log(`[game] expansion '${expansion.name}' loaded`);
-    this._availableExpansion.push(expansion);
-    this.io.in('game').emit(
-      'expansionList',
-      this._availableExpansion.sort((a, b) => b.order - a.order),
-    );
-
-    this.expansionSearchService.rebuildIndexes();
+  // Handles expansion-loaded events from startup loaders.
+  public expansionLoaded(expansion: ExpansionListElement): void {
+    this.gameMatchLifecycleCoordinatorService.expansionLoaded(this.runtimeState, expansion);
   }
 
   // Exports the current match state and card library for local debug tooling.
   public exportMatchState(): { match: Match; cardLibrary: Record<CardId, Card> } | null {
-    if (!this._matchController) return null;
-    return this._matchController.exportMatchState();
+    return this.gameMatchLifecycleCoordinatorService.exportMatchState(this.runtimeState);
   }
 
   // Merges a partial match update into the live match state and broadcasts it.
   public mergeMatchState(partial: Partial<Match>): { ok: boolean; errors?: string[] } {
-    if (!this._matchController) {
-      return { ok: false, errors: ['match not initialized'] };
-    }
-    return this._matchController.applyPartialMatchUpdate(partial);
+    return this.gameMatchLifecycleCoordinatorService.mergeMatchState(this.runtimeState, partial);
   }
 
   // Disposes match-lifetime resources for clean process shutdown.
   public dispose(): void {
-    this._matchScope?.dispose();
-    this._matchScope = undefined;
+    this.gameMatchLifecycleCoordinatorService.dispose(this.runtimeState);
   }
 
-  public addPlayer(sessionId: string, socket: AppSocket) {
-    const joinResult = this.playerRegistryService.registerPlayerJoin({
-      players: this.players,
+  // Adds or reconnects a player to the active lobby/match runtime.
+  public addPlayer(sessionId: string, socket: AppSocket): void {
+    this.gameLobbySessionCoordinatorService.addPlayer(this.runtimeState, {
       sessionId,
       socket,
-      matchStarted: this.matchStarted,
+      callbacks: {
+        onStartMatch: this.startMatch,
+        onClearMatch: this.clearMatch,
+        onMatchConfigurationUpdated: this.onMatchConfigurationUpdated,
+      },
+      registerRemovalVoteHandler: this.registerRemovalVoteHandler,
     });
-
-    if (joinResult.status === 'rejected_capacity') {
-      this.loggerService.info(`[game] game has ${this.maxPlayers} players, rejecting`);
-      socket.disconnect(true);
-      return;
-    }
-
-    if (joinResult.status === 'rejected_started') {
-      this.loggerService.info(`[game] match has already started, and player not found in game, rejecting`);
-      socket.disconnect();
-      return;
-    }
-
-    const player = joinResult.player;
-    if (!joinResult.created) {
-      this.loggerService.info(`[game] ${player} already in match - assigning socket ID`);
-    }
-
-    socket.join('game');
-    player.connected = true;
-    this._socketMap.set(player.id, socket);
-
-    socket.emit('setPlayerList', this.players);
-    this.io.in('game').emit('playerConnected', player);
-    socket.emit('setPlayer', player);
-
-    const nextOwner = this.playerSessionService.selectOwnerOnJoin(this.owner, player);
-    if (nextOwner.id !== this.owner?.id) {
-      this.loggerService.info(`[game] game owner does not exist, setting to ${nextOwner}`);
-    }
-    this.owner = nextOwner;
-
-    if (this.owner?.id === player.id) {
-      this.bindOwnerLobbyHandlers(socket, player.id);
-    }
-
-    this.io.in('game').emit('gameOwnerUpdated', this.owner.id);
-
-    this.loggerService.log(`[game] ${player} added to game`);
-
-    if (this.matchStarted) {
-      this.loggerService.info('[game] game already started');
-      // Restore the current turn order for reconnecting clients.
-      socket.emit('setPlayerList', this.players);
-      // Remove any pending removal vote if the player reconnects.
-      this.disconnectedPlayerVoteService.removePendingRemovalPlayer(this.players, player.id);
-      this._matchController?.playerReconnected(player.id, socket);
-      this.registerRemovalVoteHandler(socket, player.id);
-      // Resume flow if no human players remain disconnected.
-      const hasDisconnectedHuman = this.playerSessionService.hasDisconnectedHumanPlayers(this.players);
-      if (!hasDisconnectedHuman) {
-        void this._matchController?.runGameAction('checkForRemainingPlayerActions');
-      }
-    } else {
-      this.loggerService.info(`[game] not yet started, sending player to match configuration`);
-      socket.emit(
-        'expansionList',
-        this._availableExpansion.sort((a, b) => a.order - b.order),
-      );
-
-      socket.emit('matchConfigurationUpdated', this._matchConfiguration!);
-      this.lobbySocketBindings.bindPlayerLobbyHandlers(socket, {
-        onUpdatePlayerName: this.onUpdatePlayerName,
-        onPlayerReady: this.onPlayerReady,
-      });
-    }
-
-    socket.on(
-      'disconnect',
-      (arg) => this.onPlayerDisconnected(player.id, arg.toString()),
-    );
   }
 
-  private onPlayerDisconnected = (playerId: number, reason: string) => {
-    this.loggerService.info(`[game] ${playerId} disconnected - ${reason}`);
-
-    const player = this.playerRegistryService.markPlayerDisconnected(this.players, playerId);
-    if (!player) {
-      this._socketMap.delete(playerId);
-      this.loggerService.warn(`[game] player disconnected, but cannot find player object`);
-      return;
-    }
-
-    const hasConnectedHuman = this.playerSessionService.hasConnectedHumanPlayers(this.players);
-    if (!hasConnectedHuman && this._endMatchWhenNoHumans) {
-      this.loggerService.log('[game] no human players left in game, clearing game state completely');
-      this.clearMatch();
-      return;
-    }
-
-    if (player.id === this.owner?.id) {
-      this.lobbySocketBindings.unbindOwnerLobbyHandlers(this._socketMap.get(player.id));
-
-      const replacement = this.playerSessionService.findReplacementOwner(this.players, player.id);
-      if (replacement) {
-        this.owner = replacement;
-        this.io.in('game').emit('gameOwnerUpdated', replacement.id);
-        const replacementSocket = this._socketMap.get(replacement.id);
-        if (replacementSocket) {
-          this.bindOwnerLobbyHandlers(replacementSocket, replacement.id);
-        }
-      }
-    }
-
-    if (this.matchStarted) {
-      this._matchController?.playerDisconnected(player.id);
-      // Begin removal vote flow for disconnected humans.
-      if (!player.isComputer) {
-        this.disconnectedPlayerVoteService.addPendingRemovalPlayer(this.players, player.id);
-      }
-    }
-    this.io.in('game').emit('playerDisconnected', player);
+  // Clears all current runtime state and resets to a new lobby match shell.
+  private clearMatch = (): void => {
+    this.gameMatchLifecycleCoordinatorService.clearMatch(this.runtimeState, defaultMatchConfiguration);
   };
 
-  private clearMatch = () => {
-    this.loggerService.log(`[game] clearing match`);
-
-    this._socketMap.forEach((socket) => {
-      socket.offAnyIncoming();
-      socket.leave('game');
-    });
-
-    this._socketMap.clear();
-    this.players = [];
-    this.owner = undefined;
-    this.matchStarted = false;
-    this.disconnectedPlayerVoteService.reset();
-    this.createNewMatch();
-  };
-
-  private onMatchConfigurationUpdated = async (newConfig: MatchConfiguration) => {
-    this.loggerService.info(`[game] received expansionSelected socket event`);
+  // Persists and applies lobby configuration updates from the owner.
+  private onMatchConfigurationUpdated = async (newConfig: MatchConfiguration): Promise<void> => {
+    this.loggerService.info('[game] received expansionSelected socket event');
     this.loggerService.debug(newConfig);
 
-    const currentConfig = structuredClone(this._matchConfiguration ?? {}) as MatchConfiguration;
+    const currentConfig = structuredClone(this.runtimeState.matchConfiguration ?? {}) as MatchConfiguration;
     // Enforce expansion mutual-exclusion rules before applying the updated lobby config.
     await this.expansionCompatibilityService.applyMutualExclusions(currentConfig, newConfig);
 
@@ -367,153 +191,39 @@ export class Game {
     }
 
     const patch = jsonPatch.compare(currentConfig, newConfig);
-
-    if (patch.length) {
-      jsonPatch.applyPatch(this._matchConfiguration, patch);
-      defaultMatchConfiguration.preselectedKingdoms = newConfig.kingdomSupply.map((supply) => supply.cards[0]);
-      this._matchConfiguration!.preselectedKingdoms = newConfig.kingdomSupply.map((supply) => supply.cards[0]);
-      // lobby phase – raw object still useful for the config screen
-      this.io.in('game').emit('matchConfigurationUpdated', this._matchConfiguration!);
+    if (!patch.length || !this.runtimeState.matchConfiguration) {
+      return;
     }
+
+    jsonPatch.applyPatch(this.runtimeState.matchConfiguration, patch);
+    defaultMatchConfiguration.preselectedKingdoms = newConfig.kingdomSupply.map((supply) => supply.cards[0]);
+    this.runtimeState.matchConfiguration.preselectedKingdoms = newConfig.kingdomSupply.map((supply) => supply.cards[0]);
+    // Lobby phase update for all clients.
+    this.io.in('game').emit('matchConfigurationUpdated', this.runtimeState.matchConfiguration);
   };
 
-  private onUpdatePlayerName = (playerId: number, name: string) => {
-    this.loggerService.info(
-      `[game] player ${playerId} request to update name to '${name}'`,
-    );
-
-    const player = this.playerRegistryService.setPlayerName(this.players, playerId, name);
-    if (player) {
-      this.loggerService.info(`[game] ${player} name updated to '${name}'`);
-    } else {
-      this.loggerService.info(`[game] player ${playerId} not found`);
-    }
-
-    this.io.in('game').emit('playerNameUpdated', playerId, name);
-  };
-
-  private onPlayerReady = (playerId: number) => {
-    const player = this.players.find((player) => player.id === playerId);
-
-    if (!player) {
-      this.loggerService.warn(`[game] received player ready event from ${playerId} but could not find Player object`);
-      return;
-    }
-
-    this.loggerService.info(`[game] received ready event from ${player}`);
-
-    player.ready = !player.ready;
-    this.loggerService.info(`[game] marking ${player} as ${player.ready}`);
-    this.io.in('game').except(player.socketId).emit('playerReady', playerId, player.ready);
-
-    if (this.players.some((p) => !p.ready && p.connected)) {
-      this.loggerService.debug(`[game] not all players ready yet`);
-      return;
-    }
-
-    this.startMatch();
-  };
-
-  // Adds one or more computer players to the lobby, owned by the game owner.
-  private onAddComputerPlayer = (ownerId: PlayerId, count: number = 1) => {
-    if (!this.owner || this.owner.id !== ownerId) {
-      this.loggerService.warn(`[game] ignoring addComputerPlayer from non-owner ${ownerId}`);
-      return;
-    }
-
-    if (this.matchStarted) {
-      this.loggerService.warn('[game] match already started, cannot add computer players');
-      return;
-    }
-
-    for (let i = 0; i < count; i++) {
-      if (this.players.length >= this.maxPlayers) {
-        this.loggerService.warn('[game] player limit reached, cannot add computer player');
-        break;
-      }
-
-      const bot = this.playerFactoryService.createComputerPlayer();
-      this.players.push(bot);
-      this.io.in('game').emit('playerConnected', bot);
-    }
-  };
-
-  private startMatch() {
-    this.loggerService.log(`[game] all connected players ready, proceeding to start match`);
-
-    this.matchStarted = true;
-
-    if (!this._matchController) {
-      this.loggerService.warn('[game] cannot start match without match controller');
-      return;
-    }
-
-    // Lock in turn order and initialize match via dedicated startup orchestration.
-    this.players = this.matchStartOrchestrator.startMatch({
-      players: this.players,
-      socketMap: this._socketMap,
-      matchController: this._matchController,
+  // Starts gameplay after readiness checks have completed.
+  private startMatch = (): void => {
+    this.gameMatchLifecycleCoordinatorService.startMatch(this.runtimeState, {
       defaultMatchConfiguration,
-      matchConfiguration: this._matchConfiguration,
       onGameOver: this.clearMatch,
-      registerRemovalVoteHandler: (socket, playerId) => this.registerRemovalVoteHandler(socket, playerId),
+      registerRemovalVoteHandler: this.registerRemovalVoteHandler,
     });
-  }
+  };
 
-  // Registers the socket handler for removal votes.
-  private registerRemovalVoteHandler(socket: AppSocket, playerId: PlayerId) {
+  // Registers the socket handler for disconnected-player removal votes.
+  private registerRemovalVoteHandler = (socket: AppSocket, playerId: PlayerId): void => {
     socket.on('removeDisconnectedPlayer', (targetPlayerId: PlayerId) => {
       this.onRemoveDisconnectedPlayerVote(playerId, targetPlayerId);
     });
-  }
+  };
 
   // Handles a connected human player's vote to remove a disconnected player.
-  private onRemoveDisconnectedPlayerVote(voterId: PlayerId, targetPlayerId: PlayerId) {
-    if (!this.matchStarted) return;
-    // Only allow voting for the current pending target.
-    if (this.disconnectedPlayerVoteService.getPendingRemovalPlayerId() !== targetPlayerId) return;
-
-    const voteResult = this.disconnectedPlayerVoteService.registerRemovalVote(this.players, voterId, targetPlayerId);
-    if (!voteResult.accepted || !voteResult.allVoted) return;
-
-    // Remove the player from the match and resume play.
-    this.players = this.players.filter((p) => p.id !== targetPlayerId);
-    this._socketMap.delete(targetPlayerId);
-    this._matchController?.removePlayerFromMatch(targetPlayerId);
-    this.io.in('game').emit('setPlayerList', this.players);
-
-    if (this.owner?.id === targetPlayerId) {
-      const replacement = this.playerSessionService.findReplacementOwner(this.players, targetPlayerId);
-      if (replacement) {
-        this.owner = replacement;
-        this.io.in('game').emit('gameOwnerUpdated', replacement.id);
-      }
-    }
-
-    this.disconnectedPlayerVoteService.removePendingRemovalPlayer(this.players, targetPlayerId);
-    void this._matchController?.runGameAction('checkForRemainingPlayerActions');
-  }
-
-  // Binds owner-only lobby handlers for the provided owner socket.
-  private bindOwnerLobbyHandlers(socket: AppSocket, ownerId: PlayerId) {
-    this.lobbySocketBindings.bindOwnerLobbyHandlers(socket, {
-      onMatchConfigurationUpdated: this.onMatchConfigurationUpdated,
-      onAddComputerPlayer: (count?: number) => this.onAddComputerPlayer(ownerId, count),
-      onSearchCards: (playerId, searchTerm) => {
-        this._socketMap.get(playerId)?.emit('searchCardResponse', this.onSearchCards(searchTerm));
-      },
-      onSearchEvents: (playerId, searchTerm) => {
-        this._socketMap.get(playerId)?.emit('searchEventResponse', this.onSearchEvents(searchTerm));
-      },
-      onSearchLandmarks: (playerId, searchTerm) => {
-        this._socketMap.get(playerId)?.emit('searchLandmarkResponse', this.onSearchLandmarks(searchTerm));
-      },
-      onSearchArtifacts: (playerId, searchTerm) => {
-        this._socketMap.get(playerId)?.emit('searchArtifactResponse', this.onSearchArtifacts(searchTerm));
-      },
-      onSearchProjects: (playerId, searchTerm) => {
-        this._socketMap.get(playerId)?.emit('searchProjectResponse', this.onSearchProjects(searchTerm));
-      },
-    });
-  }
+  private onRemoveDisconnectedPlayerVote = (voterId: PlayerId, targetPlayerId: PlayerId): void => {
+    this.gameLobbySessionCoordinatorService.onRemoveDisconnectedPlayerVote(
+      this.runtimeState,
+      voterId,
+      targetPlayerId,
+    );
+  };
 }

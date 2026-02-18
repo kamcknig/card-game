@@ -1,0 +1,21 @@
+import type { AppSocket } from '@server-types/index.ts';
+import type {
+  ExpansionListElement,
+  MatchConfiguration,
+  Player,
+  PlayerId,
+} from 'shared/types/index.ts';
+import type { MatchController } from './match-controller.ts';
+import type { MatchScope } from './match-scope-factory.ts';
+
+// Mutable runtime state for the active game/lobby process.
+export interface GameRuntimeState {
+  players: Player[];
+  owner: Player | undefined;
+  matchStarted: boolean;
+  socketMap: Map<PlayerId, AppSocket>;
+  matchScope: MatchScope | undefined;
+  matchController: MatchController | undefined;
+  matchConfiguration: MatchConfiguration | undefined;
+  availableExpansion: ExpansionListElement[];
+}

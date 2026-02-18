@@ -59,8 +59,8 @@ When rules conflict, use this order:
 
 ### Code commits
 
-- No mention of AI use.
-- Do not commit without explicit approval.
+- NEVER mention AI use without explicit permission.
+- NEVER commit without explicit approval.
 
 ### Out of Scope
 
@@ -70,7 +70,7 @@ When rules conflict, use this order:
 - Removing commented code unless requested
 - Whitespace-only edits
 - Backwards compatibility by default (alpha software)
-- Testing
+- NEVER add testing without explicit permission.
 
 ## Architectural Constraints
 
