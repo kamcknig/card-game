@@ -29,7 +29,6 @@ import { EventLoaderService } from './core/events/load-events.ts';
 import { LandmarkLoaderService } from './core/landmarks/load-landmarks.ts';
 import { ProjectLoaderService } from './core/projects/load-projects.ts';
 import { ExpansionLoaderService } from './core/expansion-loader-service.ts';
-import { LoggingBootstrapService } from './core/logging-bootstrap-service.ts';
 
 export const io = new Server<ServerListenEvents, ServerEmitEvents>({
   pingTimeout: 1000 * 60 * 10,
@@ -46,7 +45,6 @@ container.register({
   io: asValue(io),
   serverConfigService: asClass(ServerConfigService).singleton(),
   loggerService: asClass(LoggerService).singleton(),
-  loggingBootstrapService: asClass(LoggingBootstrapService).singleton(),
   maxPlayers: asValue(6),
   matchScopeFactory: asClass(MatchScopeFactory).singleton(),
   matchConfigurator: asClass(MatchConfigurator).scoped(),

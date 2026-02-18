@@ -23,6 +23,19 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
     private readonly loggerService: LoggerService,
   ) {}
 
+  // Emits a concise summary for loaded persisted config lists.
+  private logLoadedList(label: string, count: number, values: string[]): void {
+    if (count < 1) {
+      return;
+    }
+
+    const preview = values.slice(0, 10).join(', ');
+    const hasMore = values.length > 10;
+    this.loggerService.info(
+      `[game config store] loaded ${count} ${label}${preview ? ` (${preview}${hasMore ? ', ...' : ''})` : ''}`,
+    );
+  }
+
   // Safely reads JSON from disk and returns undefined when unavailable.
   private readJson<T>(filePath: string, logLabel: string): T | undefined {
     try {
@@ -35,10 +48,17 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
   }
 
   public load(defaultConfig: MatchConfiguration): void {
+    this.loggerService.info('[game config store] loading persisted match configuration');
+
     // Restore banned kingdoms when the file exists.
     const bannedKingdoms = this.readJson<CardNoId[]>('./banned-kingdoms.json', 'banned-kingdoms.json');
     if (bannedKingdoms) {
       defaultConfig.bannedKingdoms = bannedKingdoms;
+      this.logLoadedList(
+        'banned kingdom card(s)',
+        bannedKingdoms.length,
+        bannedKingdoms.map((card) => card.cardKey),
+      );
     }
 
     // Restore preselected kingdoms when the file exists.
@@ -47,19 +67,23 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
       'preselected-kingdoms.json',
     );
     if (preselectedKingdoms) {
-      if (preselectedKingdoms.length > 0) {
-        this.loggerService.debug(preselectedKingdoms);
-      }
       defaultConfig.preselectedKingdoms = preselectedKingdoms.map((supply) => supply.cards[0]);
+      this.logLoadedList(
+        'preselected kingdom pile(s)',
+        preselectedKingdoms.length,
+        preselectedKingdoms.map((supply) => supply.name),
+      );
     }
 
     // Restore preselected events when the file exists.
     const preselectedEvents = this.readJson<EventNoId[]>('./preselected-events.json', 'preselected-events.json');
     if (preselectedEvents) {
-      if (preselectedEvents.length > 0) {
-        this.loggerService.debug(preselectedEvents);
-      }
       defaultConfig.events = preselectedEvents;
+      this.logLoadedList(
+        'preselected event(s)',
+        preselectedEvents.length,
+        preselectedEvents.map((event) => event.cardKey),
+      );
     }
 
     // Restore preselected landmarks when the file exists.
@@ -68,10 +92,12 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
       'preselected-landmarks.json',
     );
     if (preselectedLandmarks) {
-      if (preselectedLandmarks.length > 0) {
-        this.loggerService.debug(preselectedLandmarks);
-      }
       defaultConfig.landmarks = preselectedLandmarks;
+      this.logLoadedList(
+        'preselected landmark(s)',
+        preselectedLandmarks.length,
+        preselectedLandmarks.map((landmark) => landmark.cardKey),
+      );
     }
 
     // Restore preselected artifacts when the file exists.
@@ -80,10 +106,12 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
       'preselected-artifacts.json',
     );
     if (preselectedArtifacts) {
-      if (preselectedArtifacts.length > 0) {
-        this.loggerService.debug(preselectedArtifacts);
-      }
       defaultConfig.artifacts = preselectedArtifacts;
+      this.logLoadedList(
+        'preselected artifact(s)',
+        preselectedArtifacts.length,
+        preselectedArtifacts.map((artifact) => artifact.cardKey),
+      );
     }
   }
 

@@ -113,6 +113,7 @@ export class Game {
     // Configure whether to end the match when all human players leave (default: true).
     this._endMatchWhenNoHumans = this.serverConfigService.shouldEndMatchOnNoHumans();
     // Hydrate lobby defaults from persisted local files.
+    this.loggerService.info('[game] loading persisted lobby configuration');
     this.configStore.load(defaultMatchConfiguration);
 
     this.expansionSearchService.rebuildIndexes();

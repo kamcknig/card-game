@@ -4,7 +4,6 @@ import { Game } from './game.ts';
 import { ServerStartupService } from './server-startup-service.ts';
 import { ServerConfigService } from './server-config-service.ts';
 import { LoggerService } from './logger-service.ts';
-import { LoggingBootstrapService } from './logging-bootstrap-service.ts';
 
 // Owns runtime host wiring so server.ts can remain a pure composition root.
 export class ServerBootstrapService {
@@ -17,7 +16,6 @@ export class ServerBootstrapService {
     private readonly game: Game,
     private readonly serverStartupService: ServerStartupService,
     private readonly serverConfigService: ServerConfigService,
-    private readonly loggingBootstrapService: LoggingBootstrapService,
     private readonly loggerService: LoggerService,
   ) {
     this.ioHandler = this.io.handler();
@@ -32,7 +30,8 @@ export class ServerBootstrapService {
     this.started = true;
 
     try {
-      this.loggingBootstrapService.initialize();
+      // Validate all startup environment inputs before binding listeners.
+      this.serverConfigService.validate();
     } catch (error) {
       this.loggerService.error('[SERVER] invalid startup configuration');
       this.loggerService.error(error);
