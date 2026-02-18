@@ -17,6 +17,7 @@ import { MatchConfiguratorFactory } from './core/match-configurator-factory.ts';
 import { MatchRuntimeFactory } from './core/match-runtime-factory.ts';
 import { MatchSocketBindings } from './core/match-socket-bindings.ts';
 import { ServerStartupService } from './core/server-startup-service.ts';
+import { ServerBootstrapService } from './core/server-bootstrap-service.ts';
 import { ExpansionEffectRegistryService } from './core/expansion-effect-registry-service.ts';
 import { ExpansionCardMetadataRegistryService } from './core/expansion-card-metadata-registry-service.ts';
 import { ExpansionCatalogService } from './core/expansion-catalog-service.ts';
@@ -26,6 +27,10 @@ import { ServerConfigService } from './core/server-config-service.ts';
 import { LoggerBackend } from './core/logger-service.ts';
 import { loggerService } from '@logger';
 import { asClass, asValue, createContainer, InjectionMode } from 'awilix';
+import { EventLoaderService } from './core/events/load-events.ts';
+import { LandmarkLoaderService } from './core/landmarks/load-landmarks.ts';
+import { ProjectLoaderService } from './core/projects/load-projects.ts';
+import { ExpansionLoaderService } from './core/expansion-loader-service.ts';
 
 const serverConfigService = new ServerConfigService();
 
@@ -71,8 +76,6 @@ loggerService.configureBackend({
   error: (...args: unknown[]) => (enhancedBackend.error ?? console.error)(...args),
 });
 
-const PORT = serverConfigService.getPort();
-
 export const io = new Server<ServerListenEvents, ServerEmitEvents>({
   pingTimeout: 1000 * 60 * 10,
 });
@@ -99,6 +102,10 @@ container.register({
   expansionEffectRegistryService: asClass(ExpansionEffectRegistryService).singleton(),
   expansionCardMetadataRegistryService: asClass(ExpansionCardMetadataRegistryService).singleton(),
   tokenRegistryService: asClass(TokenRegistryService).singleton(),
+  eventLoaderService: asClass(EventLoaderService).singleton(),
+  landmarkLoaderService: asClass(LandmarkLoaderService).singleton(),
+  projectLoaderService: asClass(ProjectLoaderService).singleton(),
+  expansionLoaderService: asClass(ExpansionLoaderService).singleton(),
   matchRuntimeFactory: asClass(MatchRuntimeFactory).singleton(),
   matchSocketBindings: asClass(MatchSocketBindings).singleton(),
   configStore: asClass(FileGameConfigurationStore).singleton(),
@@ -109,97 +116,9 @@ container.register({
   playerRegistryService: asClass(PlayerRegistryService).singleton(),
   matchStartOrchestrator: asClass(MatchStartOrchestrator).singleton(),
   serverStartupService: asClass(ServerStartupService).singleton(),
+  serverBootstrapService: asClass(ServerBootstrapService).singleton(),
   game: asClass(Game).singleton(),
 });
 
-// Resolve the game singleton after all dependencies are registered.
-const game = container.resolve<Game>('game');
-const serverStartupService = container.resolve<ServerStartupService>('serverStartupService');
-
-io.on('connection', (socket) => {
-  loggerService.log('[SERVER] new client connected');
-
-  const sessionId = socket.handshake.query.get('sessionId');
-
-  loggerService.info(
-    `[SERVER] connection from ${socket.handshake.address} - session ID ${sessionId}`,
-  );
-
-  if (!sessionId) {
-    loggerService.error('[SERVER] no session ID, rejecting');
-    socket.disconnect();
-    return;
-  }
-
-  game.addPlayer(sessionId, socket);
-});
-
-const ioHandler = io.handler();
-
-Deno.serve({
-  handler: (req, info) => {
-    const url = new URL(req.url);
-    // Debug-only endpoint to export a full match state snapshot.
-    if (url.pathname === '/debug/match-state') {
-      if (!serverConfigService.isMatchStateExportEnabled()) {
-        return new Response('match state export disabled', { status: 403 });
-      }
-      const exportState = game.exportMatchState();
-      if (!exportState) {
-        return new Response('match not initialized', { status: 400 });
-      }
-      return new Response(JSON.stringify(exportState), {
-        headers: { 'content-type': 'application/json' },
-      });
-    }
-    // Debug-only endpoint to merge a partial match state into the live match.
-    if (url.pathname === '/debug/match-state/merge') {
-      if (!serverConfigService.isMatchStateMergeEnabled()) {
-        return new Response('match state merge disabled', { status: 403 });
-      }
-      if (req.method !== 'POST') {
-        return new Response('method not allowed', { status: 405 });
-      }
-      return req.json()
-        .then((body) => {
-          // Require a JSON object as the partial match payload.
-          if (!body || typeof body !== 'object' || Array.isArray(body)) {
-            return new Response('invalid match payload', { status: 400 });
-          }
-
-          const result = game.mergeMatchState(body);
-          if (!result.ok) {
-            return new Response(JSON.stringify({ error: 'invalid match update', errors: result.errors }), {
-              status: 400,
-              headers: { 'content-type': 'application/json' },
-            });
-          }
-
-          return new Response(JSON.stringify({ ok: true }), {
-            headers: { 'content-type': 'application/json' },
-          });
-        })
-        .catch(() => {
-          return new Response('invalid json', { status: 400 });
-        });
-    }
-    return ioHandler(req, info);
-  },
-  port: PORT,
-});
-
-const controller = new AbortController();
-
-addEventListener('SIGINT', () => {
-  loggerService.log('Shutting down cleanly...');
-  game.dispose();
-  controller.abort();
-  Deno.exit();
-});
-
-void serverStartupService.start().catch((error) => {
-  // Surface startup failures and stop the process so the host can restart.
-  loggerService.error('[SERVER] startup failed');
-  loggerService.error(error);
-  Deno.exit(1);
-});
+const serverBootstrapService = container.resolve<ServerBootstrapService>('serverBootstrapService');
+serverBootstrapService.start();

@@ -5,67 +5,72 @@ import { ExpansionEffectRegistryService } from '../expansion-effect-registry-ser
 import { ExpansionCatalogService } from '../expansion-catalog-service.ts';
 import { LoggerService } from '../logger-service.ts';
 
-export const loadProjects = async (
-  expansionName: string,
-  expansionEffectRegistryService: ExpansionEffectRegistryService,
-  expansionCatalogService: ExpansionCatalogService,
-  loggerService: LoggerService,
-) => {
-  const expansionProjects = (expansionCatalogService.getRequiredExpansion(expansionName).projects ??= {});
+// Loads project data and effect factories for an expansion.
+export class ProjectLoaderService {
+  constructor(
+    private readonly expansionEffectRegistryService: ExpansionEffectRegistryService,
+    private readonly expansionCatalogService: ExpansionCatalogService,
+    private readonly loggerService: LoggerService,
+  ) {}
 
-  try {
-    // Load the project library JSON for the expansion when present.
-    const projectLibraryModule = await import(
-      `@expansions/${expansionName}/project-library-${expansionName}.json`,
-      { with: { type: 'json' } }
-    );
-    const projects = projectLibraryModule.default as Record<string, Partial<ProjectNoId>>;
+  // Loads project libraries and project effects for one expansion.
+  public async loadExpansionProjects(expansionName: string): Promise<void> {
+    const expansionProjects = (this.expansionCatalogService.getRequiredExpansion(expansionName).projects ??= {});
 
-    for (const cardKey of Object.keys(projects)) {
-      // Build project card-like data using shared image naming rules.
-      const projectTemplate = projects[cardKey];
-      const cardLike = createCardLike(cardKey, expansionName, projectTemplate);
-      expansionProjects[cardKey] = {
-        ...cardLike,
-        randomizer: projectTemplate.randomizer ?? null,
-      };
-    }
-  } catch (error) {
-    if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
-      loggerService.warn(
-        `[load-projects] failed to load expansion project library for expansion ${expansionName}`,
+    try {
+      // Load the project library JSON for the expansion when present.
+      const projectLibraryModule = await import(
+        `@expansions/${expansionName}/project-library-${expansionName}.json`,
+        { with: { type: 'json' } },
       );
-      loggerService.error(error);
-    }
-  }
+      const projects = projectLibraryModule.default as Record<string, Partial<ProjectNoId>>;
 
-  try {
-    // Register project effects if the expansion provides them.
-    const projectModule = await import(
-      `@expansions/${expansionName}/project-effects-${expansionName}.ts`
-    );
-    const projects = projectModule.default as CardExpansionModule;
-
-    for (const cardKey of Object.keys(projects)) {
-      if (expansionEffectRegistryService.hasProjectEffectFactory(cardKey as CardKey)) {
-        loggerService.warn(
-          `[load-projects] project key ${cardKey} already exists in project registry, overwriting`,
-        );
+      for (const cardKey of Object.keys(projects)) {
+        // Build project card-like data using shared image naming rules.
+        const projectTemplate = projects[cardKey];
+        const cardLike = createCardLike(cardKey, expansionName, projectTemplate);
+        expansionProjects[cardKey] = {
+          ...cardLike,
+          randomizer: projectTemplate.randomizer ?? null,
+        };
       }
-
-      if (projects[cardKey].registerEffects) {
-        loggerService.info(
-          `[load-projects] registering project effects for ${cardKey}`,
+    } catch (error) {
+      if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
+        this.loggerService.warn(
+          `[load-projects] failed to load expansion project library for expansion ${expansionName}`,
         );
-        expansionEffectRegistryService.registerProjectEffectFactory(cardKey as CardKey, projects[cardKey].registerEffects);
+        this.loggerService.error(error);
       }
     }
-  } catch (error) {
-    if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
-      loggerService.warn(
-        `[load-projects] failed to load expansion project effects for expansion ${expansionName}`,
+
+    try {
+      // Register project effects if the expansion provides them.
+      const projectModule = await import(
+        `@expansions/${expansionName}/project-effects-${expansionName}.ts`,
       );
-      loggerService.error(error);
+      const projects = projectModule.default as CardExpansionModule;
+
+      for (const cardKey of Object.keys(projects)) {
+        if (this.expansionEffectRegistryService.hasProjectEffectFactory(cardKey as CardKey)) {
+          this.loggerService.warn(
+            `[load-projects] project key ${cardKey} already exists in project registry, overwriting`,
+          );
+        }
+
+        if (projects[cardKey].registerEffects) {
+          this.loggerService.info(
+            `[load-projects] registering project effects for ${cardKey}`,
+          );
+          this.expansionEffectRegistryService.registerProjectEffectFactory(cardKey as CardKey, projects[cardKey].registerEffects);
+        }
+      }
+    } catch (error) {
+      if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
+        this.loggerService.warn(
+          `[load-projects] failed to load expansion project effects for expansion ${expansionName}`,
+        );
+        this.loggerService.error(error);
+      }
     }
   }
-};
+}

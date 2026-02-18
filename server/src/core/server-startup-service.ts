@@ -1,18 +1,13 @@
 import { ExpansionListElement } from 'shared/types/index.ts';
 import { Game } from './game.ts';
-import { loadExpansion } from '../utils/load-expansion.ts';
-import { ExpansionEffectRegistryService } from './expansion-effect-registry-service.ts';
-import { ExpansionCardMetadataRegistryService } from './expansion-card-metadata-registry-service.ts';
-import { ExpansionCatalogService } from './expansion-catalog-service.ts';
 import { LoggerService } from './logger-service.ts';
+import { ExpansionLoaderService } from './expansion-loader-service.ts';
 
 // Owns one-time server startup tasks so server.ts can stay focused on composition and host wiring.
 export class ServerStartupService {
   constructor(
     private readonly game: Game,
-    private readonly expansionEffectRegistryService: ExpansionEffectRegistryService,
-    private readonly expansionCardMetadataRegistryService: ExpansionCardMetadataRegistryService,
-    private readonly expansionCatalogService: ExpansionCatalogService,
+    private readonly expansionLoaderService: ExpansionLoaderService,
     private readonly loggerService: LoggerService,
   ) {}
 
@@ -25,13 +20,7 @@ export class ServerStartupService {
 
       for (const expansion of expansionList) {
         this.loggerService.info(`[SERVER] loading expansion card data for ${expansion.title}`);
-        await loadExpansion(
-          expansion,
-          this.expansionEffectRegistryService,
-          this.expansionCardMetadataRegistryService,
-          this.expansionCatalogService,
-          this.loggerService,
-        );
+        await this.expansionLoaderService.loadExpansion(expansion);
         this.game.expansionLoaded(expansion);
       }
     } catch (error) {
