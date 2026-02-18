@@ -1,4 +1,3 @@
-import { loggerService } from '@logger';
 import { ComputedMatchConfiguration } from 'shared/types/index.ts';
 import { GameEventRegistrar } from '@server-types/index.ts';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
@@ -16,12 +15,9 @@ export const configureColonnade = (
   );
   if (!hasColonnade) return;
 
-  loggerService.info(
-    `[empires configurator] setting up colonnade landmark handlers`,
-  );
 
   registrar('onGameStart', async (args) => {
-    // Colonnade setup: put 6 VP tokens per player on the landmark using the shared helper.
+          // Colonnade setup: put 6 VP tokens per player on the landmark using the shared helper.
     await placeVictoryTokensPerPlayer(args, {
       landmarkKey: 'colonnade',
       logKey: 'colonnade',
@@ -47,9 +43,6 @@ export const configureColonnade = (
     ]).length > 0;
 
     if (!copyInPlay) {
-      loggerService.debug(
-        `[colonnade onCardGained] no copy of ${gainedCard} in play, skipping`,
-      );
       return;
     }
 
@@ -62,16 +55,10 @@ export const configureColonnade = (
     ).sort((a, b) => a.id.localeCompare(b.id));
 
     if (!tokensOnColonnade.length) {
-      loggerService.debug(
-        `[colonnade onCardGained] no VP tokens remaining on Colonnade`,
-      );
       return;
     }
 
     const tokensToMove = tokensOnColonnade.slice(0, 2);
-    loggerService.info(
-      `[colonnade onCardGained] player ${eventArgs.playerId} gained ${gainedCard} with a copy in play, moving ${tokensToMove.length} VP token(s)`,
-    );
 
     for (const token of tokensToMove) {
       await args.actionService.run('moveToken', {

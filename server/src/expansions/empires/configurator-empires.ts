@@ -1,4 +1,3 @@
-import { loggerService } from '@logger';
 import { CardKey, ComputedMatchConfiguration, PlayerId } from 'shared/types/index.ts';
 import {
   ExpansionConfiguratorContext,
@@ -120,12 +119,12 @@ const settlersBustlingVillageOrder: CardKey[] = [
 
 const configurator: ExpansionConfiguratorFactory = () => {
   return async (args) => {
-    // Locate the Castles split pile in the kingdom supply, if present.
+              // Locate the Castles split pile in the kingdom supply, if present.
     const castlesSupply = args.config.kingdomSupply
       .find((supply) => supply.cards.some((card) => getCardPileKey(card) === 'castles'));
 
     if (!castlesSupply) {
-      loggerService.info(`[empires configurator] no castles pile in kingdom supply`);
+      args.loggerService.info(`[empires configurator] no castles pile in kingdom supply`);
     } else {
       // Choose the canonical order based on player count.
       const playerCount = args.config.players.length;
@@ -136,7 +135,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
         currentOrder.every((key, index) => key === desiredOrder[index]);
 
       if (orderMatches) {
-        loggerService.info(
+        args.loggerService.info(
           `[empires configurator] castles pile already configured for ${playerCount} players`,
         );
       } else {
@@ -145,7 +144,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
         for (const cardKey of desiredOrder) {
           const cardTemplate = args.cardLibrary[cardKey];
           if (!cardTemplate) {
-            loggerService.warn(
+            args.loggerService.warn(
               `[empires configurator] missing card template for ${cardKey}`,
             );
             continue;
@@ -154,7 +153,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
         }
         castlesSupply.cards = nextCastleCards;
 
-        loggerService.log(
+        args.loggerService.log(
           `[empires configurator] configured castles pile for ${playerCount} players`,
         );
       }
@@ -267,9 +266,6 @@ export const registerScoringFunctions = (
 
     const totalTreasures = silverCount + goldCount;
     const penalty = totalTreasures * -2;
-    loggerService.debug(
-      `[bandit fort scoring] player ${playerId} silver ${silverCount} gold ${goldCount} penalty ${penalty}`,
-    );
     if (penalty === 0) return;
 
     match.scores[playerId] = (match.scores[playerId] ?? 0) + penalty;
@@ -295,16 +291,10 @@ export const registerScoringFunctions = (
       if (copperCount >= 10) break;
     }
 
-    loggerService.debug(
-      `[fountain scoring] player ${playerId} copper ${copperCount}`,
-    );
 
     if (copperCount < 10) return;
 
     const bonus = 15;
-    loggerService.info(
-      `[fountain scoring] player ${playerId} qualifies, adding ${bonus} VP`,
-    );
     match.scores[playerId] = (match.scores[playerId] ?? 0) + bonus;
   });
 
@@ -325,7 +315,6 @@ export const registerScoringFunctions = (
     }
 
     if (treasureKeys.size === 0) {
-      loggerService.debug('[keep scoring] no treasure cards in game, skipping');
       return;
     }
 
@@ -359,36 +348,23 @@ export const registerScoringFunctions = (
       }
 
       if (maxCount === 0) {
-        loggerService.debug(
-          `[keep scoring] no players have ${treasureKey}, skipping`,
-        );
         continue;
       }
 
       const playerCount = currentPlayerCounts[treasureKey] ?? 0;
       // Keep only scores treasures the player has at least one copy of.
       if (playerCount === 0) {
-        loggerService.debug(
-          `[keep scoring] player ${playerId} has none of ${treasureKey}, skipping`,
-        );
         continue;
       }
       if (playerCount !== maxCount) {
-        loggerService.debug(
-          `[keep scoring] player ${playerId} does not qualify for ${treasureKey} (player ${playerCount}, max ${maxCount})`,
-        );
         continue;
       }
 
       bonus += 5;
-      loggerService.debug(
-        `[keep scoring] player ${playerId} qualifies for ${treasureKey} (player ${playerCount}, max ${maxCount})`,
-      );
     }
 
     if (bonus === 0) return;
 
-    loggerService.info(`[keep scoring] player ${playerId} earns ${bonus} VP`);
     match.scores[playerId] = (match.scores[playerId] ?? 0) + bonus;
   });
 
@@ -410,12 +386,8 @@ export const registerScoringFunctions = (
     // Museum awards 2 VP per differently named card.
     const uniqueCount = uniqueCardKeys.size;
     const bonus = uniqueCount * 2;
-    loggerService.debug(
-      `[museum scoring] player ${playerId} unique ${uniqueCount} bonus ${bonus}`,
-    );
     if (bonus === 0) return;
 
-    loggerService.info(`[museum scoring] player ${playerId} earns ${bonus} VP`);
     match.scores[playerId] = (match.scores[playerId] ?? 0) + bonus;
   });
 
@@ -444,18 +416,11 @@ export const registerScoringFunctions = (
       if (count < 3) continue;
 
       qualifyingActions++;
-      loggerService.debug(
-        `[orchard scoring] player ${playerId} qualifies for ${cardKey} (${count})`,
-      );
     }
 
     const bonus = qualifyingActions * 4;
-    loggerService.debug(
-      `[orchard scoring] player ${playerId} qualifying ${qualifyingActions} bonus ${bonus}`,
-    );
     if (bonus === 0) return;
 
-    loggerService.info(`[orchard scoring] player ${playerId} earns ${bonus} VP`);
     match.scores[playerId] = (match.scores[playerId] ?? 0) + bonus;
   });
 
@@ -485,12 +450,8 @@ export const registerScoringFunctions = (
     // Palace awards 3 VP per complete set of Copper, Silver, and Gold.
     const setCount = Math.min(copperCount, silverCount, goldCount);
     const bonus = setCount * 3;
-    loggerService.debug(
-      `[palace scoring] player ${playerId} copper ${copperCount} silver ${silverCount} gold ${goldCount} sets ${setCount} bonus ${bonus}`,
-    );
     if (bonus === 0) return;
 
-    loggerService.info(`[palace scoring] player ${playerId} earns ${bonus} VP`);
     match.scores[playerId] = (match.scores[playerId] ?? 0) + bonus;
   });
 
@@ -513,7 +474,6 @@ export const registerScoringFunctions = (
     }
 
     if (!supplyPileKeys.size) {
-      loggerService.debug('[tower scoring] no supply piles in match, skipping');
       return;
     }
 
@@ -541,7 +501,6 @@ export const registerScoringFunctions = (
     }
 
     if (!emptyPileKeys.size) {
-      loggerService.debug('[tower scoring] no empty supply piles, skipping');
       return;
     }
 
@@ -559,12 +518,8 @@ export const registerScoringFunctions = (
     }
 
     const bonus = qualifyingCards;
-    loggerService.debug(
-      `[tower scoring] player ${playerId} qualifying ${qualifyingCards} bonus ${bonus}`,
-    );
     if (bonus === 0) return;
 
-    loggerService.info(`[tower scoring] player ${playerId} earns ${bonus} VP`);
     match.scores[playerId] = (match.scores[playerId] ?? 0) + bonus;
   });
 
@@ -588,9 +543,6 @@ export const registerScoringFunctions = (
     }
 
     if (actionCounts.size < 2) {
-      loggerService.debug(
-        `[triumphal-arch scoring] player ${playerId} has fewer than 2 Action names`,
-      );
       return;
     }
 
@@ -598,12 +550,8 @@ export const registerScoringFunctions = (
     const sortedCounts = Array.from(actionCounts.values()).sort((a, b) => b - a);
     const secondMostCount = sortedCounts[1] ?? 0;
     const bonus = secondMostCount * 3;
-    loggerService.debug(
-      `[triumphal-arch scoring] player ${playerId} second-most ${secondMostCount} bonus ${bonus}`,
-    );
     if (bonus === 0) return;
 
-    loggerService.info(`[triumphal-arch scoring] player ${playerId} earns ${bonus} VP`);
     match.scores[playerId] = (match.scores[playerId] ?? 0) + bonus;
   });
 
@@ -620,12 +568,8 @@ export const registerScoringFunctions = (
     const totalCards = playerCards.length;
     const excessCards = Math.max(0, totalCards - 15);
     const penalty = excessCards * -1;
-    loggerService.debug(
-      `[wall scoring] player ${playerId} total ${totalCards} excess ${excessCards} penalty ${penalty}`,
-    );
     if (penalty === 0) return;
 
-    loggerService.info(`[wall scoring] player ${playerId} earns ${penalty} VP`);
     match.scores[playerId] = (match.scores[playerId] ?? 0) + penalty;
   });
 
@@ -654,12 +598,8 @@ export const registerScoringFunctions = (
     }
 
     const penalty = singletons * -3;
-    loggerService.debug(
-      `[wolf-den scoring] player ${playerId} singletons ${singletons} penalty ${penalty}`,
-    );
     if (penalty === 0) return;
 
-    loggerService.info(`[wolf-den scoring] player ${playerId} earns ${penalty} VP`);
     match.scores[playerId] = (match.scores[playerId] ?? 0) + penalty;
   });
 
@@ -674,9 +614,6 @@ export const registerScoringFunctions = (
     const metadata = obeliskLandmark.metadata as ObeliskMetadata;
     const chosenPileKey = metadata?.chosenPileKey;
     if (!chosenPileKey) {
-      loggerService.debug(
-        `[obelisk scoring] no chosen pile metadata found, skipping`,
-      );
       return;
     }
 
@@ -689,9 +626,6 @@ export const registerScoringFunctions = (
       (supply) => supply.name === chosenPileKey,
     );
     if (!chosenPile) {
-      loggerService.debug(
-        `[obelisk scoring] chosen pile ${chosenPileKey} not found in supply`,
-      );
       return;
     }
 
@@ -706,12 +640,8 @@ export const registerScoringFunctions = (
     }
 
     const bonus = qualifyingCards * 2;
-    loggerService.debug(
-      `[obelisk scoring] player ${playerId} qualifying ${qualifyingCards} bonus ${bonus}`,
-    );
     if (bonus === 0) return;
 
-    loggerService.info(`[obelisk scoring] player ${playerId} earns ${bonus} VP`);
     match.scores[playerId] = (match.scores[playerId] ?? 0) + bonus;
   });
 };

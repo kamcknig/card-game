@@ -1,14 +1,13 @@
-import { loggerService } from '@logger';
 import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 
 // Adds the Wish non-supply pile when cards that gain Wishes are present.
 export const configureWish = (args: ExpansionConfiguratorContext) => {
   if (args.config.nonSupply?.some((supply) => supply.name === 'wish')) {
-    loggerService.info('[nocturne configurator - wish] pile already configured');
+    args.loggerService.info('[nocturne configurator - wish] pile already configured');
     return;
   }
 
-  loggerService.info('[nocturne configurator - wish] configuring Wish pile');
+  args.loggerService.info('[nocturne configurator - wish] configuring Wish pile');
 
   args.config.nonSupply ??= [];
 
@@ -17,7 +16,7 @@ export const configureWish = (args: ExpansionConfiguratorContext) => {
   );
 
   if (!baseCard) {
-    loggerService.warn('[nocturne configurator - wish] card data not found');
+    args.loggerService.warn('[nocturne configurator - wish] card data not found');
     return;
   }
 
@@ -32,5 +31,5 @@ export const configureWish = (args: ExpansionConfiguratorContext) => {
     cards: new Array(12).fill({ ...card }),
   });
 
-  loggerService.info('[nocturne configurator - wish] Wish pile configured');
+  args.loggerService.info('[nocturne configurator - wish] Wish pile configured');
 };

@@ -1,6 +1,5 @@
 import { Server } from 'socket.io';
 import { ServerEmitEvents, ServerListenEvents } from 'shared/types/index.ts';
-import * as log from '@timepp/enhanced-deno-log';
 import { Game } from './core/game.ts';
 import { ExpansionSearchService } from './core/expansion-search-service.ts';
 import { ExpansionCompatibilityService } from './core/expansion-compatibility-service.ts';
@@ -24,57 +23,13 @@ import { ExpansionCatalogService } from './core/expansion-catalog-service.ts';
 import { RngService } from './core/rng-service.ts';
 import { TokenRegistryService } from './core/tokens/token-registry-service.ts';
 import { ServerConfigService } from './core/server-config-service.ts';
-import { LoggerBackend } from './core/logger-service.ts';
+import { LoggerService } from './core/logger-service.ts';
 import { asClass, asValue, createContainer, InjectionMode } from 'awilix';
 import { EventLoaderService } from './core/events/load-events.ts';
 import { LandmarkLoaderService } from './core/landmarks/load-landmarks.ts';
 import { ProjectLoaderService } from './core/projects/load-projects.ts';
 import { ExpansionLoaderService } from './core/expansion-loader-service.ts';
-import { loggerService } from '@logger';
-
-const serverConfigService = new ServerConfigService();
-
-try {
-  // Fail fast when startup env values are malformed.
-  serverConfigService.validate();
-} catch (error) {
-  loggerService.error('[SERVER] invalid startup configuration');
-  loggerService.error(error);
-  Deno.exit(1);
-}
-
-// Default to disabling file logs unless explicitly enabled.
-const logToFileEnabled = serverConfigService.isFileLoggingEnabled();
-if (!logToFileEnabled) {
-  log.setConfig({
-    enabledLevels: [],
-  }, 'file');
-}
-
-// Configure console colors to match desired log level styling.
-log.setConfig({
-  colors: {
-    log: 'white',
-    info: 'blue',
-    debug: 'cyan',
-    warn: 'yellow',
-    error: 'red',
-    func: '#f5f5f5',
-    timer: 'green',
-  },
-}, 'console');
-
-log.init();
-
-// Route logger service output through enhanced-deno-log when available.
-const enhancedBackend = log as unknown as Partial<LoggerBackend>;
-loggerService.configureBackend({
-  log: (...args: unknown[]) => (enhancedBackend.log ?? console.log)(...args),
-  info: (...args: unknown[]) => (enhancedBackend.info ?? console.info)(...args),
-  debug: (...args: unknown[]) => (enhancedBackend.debug ?? console.debug)(...args),
-  warn: (...args: unknown[]) => (enhancedBackend.warn ?? console.warn)(...args),
-  error: (...args: unknown[]) => (enhancedBackend.error ?? console.error)(...args),
-});
+import { LoggingBootstrapService } from './core/logging-bootstrap-service.ts';
 
 export const io = new Server<ServerListenEvents, ServerEmitEvents>({
   pingTimeout: 1000 * 60 * 10,
@@ -89,8 +44,9 @@ const container = createContainer({
 container.register({
   rootContainer: asValue(container),
   io: asValue(io),
-  serverConfigService: asValue(serverConfigService),
-  loggerService: asValue(loggerService),
+  serverConfigService: asClass(ServerConfigService).singleton(),
+  loggerService: asClass(LoggerService).singleton(),
+  loggingBootstrapService: asClass(LoggingBootstrapService).singleton(),
   maxPlayers: asValue(6),
   matchScopeFactory: asClass(MatchScopeFactory).singleton(),
   matchConfigurator: asClass(MatchConfigurator).scoped(),

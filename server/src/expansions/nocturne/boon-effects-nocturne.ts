@@ -1,4 +1,3 @@
-import { loggerService } from '@logger';
 import { BoonEffectRegistrar } from '@server-types/index.ts';
 import { CardId } from 'shared/types/index.ts';
 import { findBoonInMatch } from '@shared/find-card-like-in-match.ts';
@@ -33,7 +32,7 @@ export const registerNocturneBoonEffects = (registerBoonEffect: BoonEffectRegist
 
 // Registers The Earth's Gift boon effect logic.
 const registerEarthsGift = (registerBoonEffect: BoonEffectRegistrar) => {
-  registerBoonEffect('the-earths-gift', async ({ playerId, actionService, cardLibrary, findCardService }) => {
+  registerBoonEffect('the-earths-gift', async ({ loggerService,  playerId, actionService, cardLibrary, findCardService }) => {
     // Determine if the player has any Treasures to discard.
     const treasuresInHand = findCardService.findCards([
       { location: 'playerHand', playerId },
@@ -94,7 +93,7 @@ const registerEarthsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 
 // Registers The Field's Gift boon effect logic.
 const registerFieldsGift = (registerBoonEffect: BoonEffectRegistrar) => {
-  registerBoonEffect('the-fields-gift', async ({
+  registerBoonEffect('the-fields-gift', async ({ loggerService, 
     playerId,
     actionService,
     match,
@@ -125,7 +124,7 @@ const registerFieldsGift = (registerBoonEffect: BoonEffectRegistrar) => {
       once: true,
       compulsory: true,
       allowMultipleInstances: true,
-      triggeredEffectFn: async ({ actionService }) => {
+      triggeredEffectFn: async ({ loggerService,  actionService }) => {
         // Return the boon to the boon discard pile at cleanup.
         await actionService.run('moveCardLike', {
           cardLikeId: boon.id,
@@ -140,7 +139,7 @@ const registerFieldsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 
 // Registers The Flame's Gift boon effect logic.
 const registerFlamesGift = (registerBoonEffect: BoonEffectRegistrar) => {
-  registerBoonEffect('the-flames-gift', async ({
+  registerBoonEffect('the-flames-gift', async ({ loggerService, 
     playerId,
     actionService,
     cardLibrary,
@@ -176,7 +175,7 @@ const registerFlamesGift = (registerBoonEffect: BoonEffectRegistrar) => {
 
 // Registers The Forest's Gift boon effect logic.
 const registerForestsGift = (registerBoonEffect: BoonEffectRegistrar) => {
-  registerBoonEffect('the-forests-gift', async ({
+  registerBoonEffect('the-forests-gift', async ({ loggerService, 
     playerId,
     actionService,
     match,
@@ -207,7 +206,7 @@ const registerForestsGift = (registerBoonEffect: BoonEffectRegistrar) => {
       once: true,
       compulsory: true,
       allowMultipleInstances: true,
-      triggeredEffectFn: async ({ actionService }) => {
+      triggeredEffectFn: async ({ loggerService,  actionService }) => {
         // Return the boon to the boon discard pile at cleanup.
         await actionService.run('moveCardLike', {
           cardLikeId: boon.id,
@@ -222,7 +221,7 @@ const registerForestsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 
 // Registers The Moon's Gift boon effect logic.
 const registerMoonsGift = (registerBoonEffect: BoonEffectRegistrar) => {
-  registerBoonEffect('the-moons-gift', async ({
+  registerBoonEffect('the-moons-gift', async ({ loggerService, 
     playerId,
     actionService,
     promptService,
@@ -263,7 +262,7 @@ const registerMoonsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 
 // Registers The Mountain's Gift boon effect logic.
 const registerMountainsGift = (registerBoonEffect: BoonEffectRegistrar) => {
-  registerBoonEffect('the-mountains-gift', async ({
+  registerBoonEffect('the-mountains-gift', async ({ loggerService, 
     playerId,
     supplyGainService,
   }) => {
@@ -284,7 +283,7 @@ const registerMountainsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 
 // Registers The River's Gift boon effect logic.
 const registerRiversGift = (registerBoonEffect: BoonEffectRegistrar) => {
-  registerBoonEffect('the-rivers-gift', async ({
+  registerBoonEffect('the-rivers-gift', async ({ loggerService, 
     playerId,
     actionService,
     match,
@@ -311,7 +310,7 @@ const registerRiversGift = (registerBoonEffect: BoonEffectRegistrar) => {
       once: true,
       compulsory: true,
       allowMultipleInstances: true,
-      triggeredEffectFn: async ({ actionService }) => {
+      triggeredEffectFn: async ({ loggerService,  actionService }) => {
         // Draw the extra card at end of turn.
         await actionService.run('drawCard', { playerId, count: 1 });
         // Return the boon to the boon discard pile at cleanup.
@@ -328,8 +327,7 @@ const registerRiversGift = (registerBoonEffect: BoonEffectRegistrar) => {
 
 // Registers The Sea's Gift boon effect logic.
 const registerSeasGift = (registerBoonEffect: BoonEffectRegistrar) => {
-  registerBoonEffect('the-seas-gift', async ({
-    playerId,
+  registerBoonEffect('the-seas-gift', async ({     playerId,
     actionService,
   }) => {
     await actionService.run('drawCard', { playerId, count: 1 });
@@ -338,7 +336,7 @@ const registerSeasGift = (registerBoonEffect: BoonEffectRegistrar) => {
 
 // Registers The Sky's Gift boon effect logic.
 const registerSkysGift = (registerBoonEffect: BoonEffectRegistrar) => {
-  registerBoonEffect('the-skys-gift', async ({
+  registerBoonEffect('the-skys-gift', async ({ loggerService, 
     playerId,
     actionService,
     promptService,
@@ -399,7 +397,7 @@ const registerSkysGift = (registerBoonEffect: BoonEffectRegistrar) => {
 
 // Registers The Sun's Gift boon effect logic.
 const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
-  registerBoonEffect('the-suns-gift', async ({
+  registerBoonEffect('the-suns-gift', async ({ loggerService, 
     playerId,
     actionService,
     promptService,
@@ -478,7 +476,7 @@ const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 
 // Registers The Swamp's Gift boon effect logic.
 const registerSwampsGift = (registerBoonEffect: BoonEffectRegistrar) => {
-  registerBoonEffect('the-swamps-gift', async ({
+  registerBoonEffect('the-swamps-gift', async ({ loggerService, 
     playerId,
     actionService,
     findCardService,
@@ -505,7 +503,7 @@ const registerSwampsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 
 // Registers The Wind's Gift boon effect logic.
 const registerWindsGift = (registerBoonEffect: BoonEffectRegistrar) => {
-  registerBoonEffect('the-winds-gift', async ({
+  registerBoonEffect('the-winds-gift', async ({ loggerService, 
     playerId,
     actionService,
     cardLibrary,

@@ -1,4 +1,3 @@
-import { loggerService } from '@logger';
 import { ArtifactEffectRegistrar } from '@server-types/index.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
@@ -22,7 +21,7 @@ export const registerArtifactEffects = (registerArtifactEffect: ArtifactEffectRe
 const registerFlag = (registerArtifactEffect: ArtifactEffectRegistrar) => {
   let drawHandTriggerId: string | undefined;
 
-  registerArtifactEffect(renaissanceArtifactKeys.flag, async ({
+  registerArtifactEffect(renaissanceArtifactKeys.flag, async ({ loggerService, 
     playerId,
     match,
     reactionManager,
@@ -56,7 +55,7 @@ const registerFlag = (registerArtifactEffect: ArtifactEffectRegistrar) => {
         const ownedArtifacts = triggerMatch.artifacts?.byPlayer?.[playerId] ?? [];
         return ownedArtifacts.includes(cardId);
       },
-      triggeredEffectFn: async ({ trigger, match: triggeredMatch, logManager }) => {
+      triggeredEffectFn: async ({ loggerService,  trigger, match: triggeredMatch, logManager }) => {
         trigger.args.count = Math.max(0, trigger.args.count + 1);
         // Log the Flag modifier as a nested reaction under the draw-hand entry.
         logManager.addLogEntry({
@@ -76,7 +75,7 @@ const registerHorn = (registerArtifactEffect: ArtifactEffectRegistrar) => {
   let discardTriggerId: string | undefined;
   let lastUsedTurnNumber: number | undefined;
 
-  registerArtifactEffect(renaissanceArtifactKeys.horn, async ({
+  registerArtifactEffect(renaissanceArtifactKeys.horn, async ({ loggerService, 
     playerId,
     match,
     reactionManager,
@@ -136,7 +135,7 @@ const registerHorn = (registerArtifactEffect: ArtifactEffectRegistrar) => {
 const registerKey = (registerArtifactEffect: ArtifactEffectRegistrar) => {
   let startTurnTriggerId: string | undefined;
 
-  registerArtifactEffect(renaissanceArtifactKeys.key, async ({
+  registerArtifactEffect(renaissanceArtifactKeys.key, async ({ loggerService, 
     playerId,
     match,
     reactionManager,
@@ -168,7 +167,7 @@ const registerKey = (registerArtifactEffect: ArtifactEffectRegistrar) => {
         const ownedArtifacts = triggerMatch.artifacts?.byPlayer?.[playerId] ?? [];
         return ownedArtifacts.includes(cardId);
       },
-      triggeredEffectFn: async ({ logManager, actionService, match: triggeredMatch }) => {
+      triggeredEffectFn: async ({ loggerService,  logManager, actionService, match: triggeredMatch }) => {
         loggerService.debug(`[key artifact] granting +$1 on turn ${triggeredMatch.turnNumber}`);
         logManager.addLogEntry({
           type: 'cardLikeEffect',
@@ -186,7 +185,7 @@ const registerKey = (registerArtifactEffect: ArtifactEffectRegistrar) => {
 const registerTreasureChest = (registerArtifactEffect: ArtifactEffectRegistrar) => {
   let startTurnPhaseTriggerId: string | undefined;
 
-  registerArtifactEffect(renaissanceArtifactKeys.treasureChest, async ({
+  registerArtifactEffect(renaissanceArtifactKeys.treasureChest, async ({ loggerService, 
     playerId,
     match,
     reactionManager,
@@ -221,7 +220,7 @@ const registerTreasureChest = (registerArtifactEffect: ArtifactEffectRegistrar) 
         const ownedArtifacts = conditionArgs.match.artifacts?.byPlayer?.[playerId] ?? [];
         return ownedArtifacts.includes(cardId);
       },
-      triggeredEffectFn: async ({ logManager, supplyGainService, match: triggeredMatch }) => {
+      triggeredEffectFn: async ({ loggerService,  logManager, supplyGainService, match: triggeredMatch }) => {
         const gainedGoldId = await supplyGainService.gainTopSupplyCardForPileKey({
           playerId,
           pileKey: 'gold',

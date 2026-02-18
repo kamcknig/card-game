@@ -1,4 +1,3 @@
-import { loggerService } from '@logger';
 import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 
 export const configureShelters = async (args: ExpansionConfiguratorContext) => {
@@ -8,7 +7,7 @@ export const configureShelters = async (args: ExpansionConfiguratorContext) => {
     return;
   }
 
-  loggerService.info(`[dark-ages configurator - configuring shelters] shelters needs to be configured`);
+  args.loggerService.info(`[dark-ages configurator - configuring shelters] shelters needs to be configured`);
 
   delete args.config.playerStartingHand['estate'];
 

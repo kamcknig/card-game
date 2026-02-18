@@ -1,4 +1,3 @@
-import { loggerService } from '@logger';
 import { ExpansionConfiguratorFactory, GameEventRegistrar } from '@server-types/index.ts';
 import { configureYoungWitch } from './configure-young-witch.ts';
 import { configureFerryman } from './configure-ferryman.ts';
@@ -8,7 +7,7 @@ import { configureJoust } from './configure-joust.ts';
 
 export const configurator: ExpansionConfiguratorFactory = () => {
   return async (args) => {
-    configureYoungWitch(args);
+              configureYoungWitch(args);
     configureFerryman(args);
     await configureJoust(args);
     return args.config;
@@ -20,14 +19,13 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   config,
 ) => {
   if (config.kingdomSupply.some((supply) => supply.name === 'footpad')) {
-    loggerService.info(`[cornucopia configurator] setting up footpad onCardGained handler`);
 
     registrar('onCardGained', async (args, eventArgs) => {
       if (getTurnPhase(args.match.turnPhaseIndex) !== 'action') return;
 
       const card = args.cardLibrary.getCard(eventArgs.cardId);
 
-      loggerService.info(
+      args.loggerService.info(
         `[footpad onCardGained event] player ${eventArgs.playerId} gained ${card} during action phase, drawing card`,
       );
 
@@ -41,10 +39,9 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   }
 
   if (config.kingdomSupply.some((supply) => supply.name === 'baker')) {
-    loggerService.info(`[cornucopia configurator] setting up baker onGameStart handler`);
 
     registrar('onGameStart', async (args) => {
-      loggerService.info(`[baker onGameStart event] setting up baker - +1 coffer to each player on game start`);
+            args.loggerService.info(`[baker onGameStart event] setting up baker - +1 coffer to each player on game start`);
       for (const player of args.match.players) {
         await args.actionService.run('gainCoffer', { playerId: player.id, count: 1 });
       }

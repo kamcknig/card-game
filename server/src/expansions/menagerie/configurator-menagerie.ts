@@ -1,4 +1,3 @@
-import { loggerService } from '@logger';
 import { ComputedMatchConfiguration } from 'shared/types/index.ts';
 import { ExpansionConfiguratorContext, ExpansionConfiguratorFactory, GameEventRegistrar } from '@server-types/index.ts';
 import { addMatToMatchConfig } from '../../utils/add-mat-to-match-config.ts';
@@ -42,7 +41,7 @@ const configureHorsePile = (configuratorArgs: ExpansionConfiguratorContext) => {
     if (!hasHorsePile) {
       return;
     }
-    loggerService.info('[menagerie configurator] removing Horse pile because no Horse source cards are present');
+    configuratorArgs.loggerService.info('[menagerie configurator] removing Horse pile because no Horse source cards are present');
     config.nonSupply = (config.nonSupply ?? []).filter((supply) => supply.name !== 'horse');
     return;
   }
@@ -53,7 +52,7 @@ const configureHorsePile = (configuratorArgs: ExpansionConfiguratorContext) => {
 
   const baseHorse = structuredClone(configuratorArgs.expansionCatalog['menagerie']?.cardData.kingdomSupply['horse']);
   if (!baseHorse) {
-    loggerService.warn('[menagerie configurator] horse card data not found');
+    configuratorArgs.loggerService.warn('[menagerie configurator] horse card data not found');
     return;
   }
 
@@ -67,12 +66,12 @@ const configureHorsePile = (configuratorArgs: ExpansionConfiguratorContext) => {
       tags: ['horse'],
     }),
   });
-  loggerService.info('[menagerie configurator] added Horse non-supply pile');
+  configuratorArgs.loggerService.info('[menagerie configurator] added Horse non-supply pile');
 };
 
 const configurator: ExpansionConfiguratorFactory = () => {
   return async (args) => {
-    // Menagerie Exile mat is needed when selected Kingdom cards or Events use Exile.
+              // Menagerie Exile mat is needed when selected Kingdom cards or Events use Exile.
     const requiresExileMat = args.config.kingdomSupply.some((supply) =>
       supply.cards.some((card) => card.mat === 'exile')
     ) || args.config.events.some((event) => exileMatEvents.has(event.cardKey));
@@ -93,12 +92,12 @@ const configurator: ExpansionConfiguratorFactory = () => {
     });
 
     if (exileZoneAlreadyRegisteredForAllPlayers) {
-      loggerService.debug('[menagerie configurator] exile mat already configured for all players');
+      args.loggerService.debug('[menagerie configurator] exile mat already configured for all players');
       configureHorsePile(args);
       return args.config;
     }
 
-    loggerService.info('[menagerie configurator] adding exile mat zones for all players');
+    args.loggerService.info('[menagerie configurator] adding exile mat zones for all players');
     addMatToMatchConfig('exile', args.config, args);
     configureHorsePile(args);
     return args.config;
@@ -121,8 +120,8 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   }
 
   registrar('onGameStart', async (args) => {
-    if (hasFisherman) {
-      loggerService.info('[menagerie configurator] registering Fisherman cost rules');
+          if (hasFisherman) {
+      args.loggerService.info('[menagerie configurator] registering Fisherman cost rules');
       const fishermanCards = args.findCardService.findCards([
         { location: 'kingdomSupply' },
         { cardKeys: 'fisherman' },
@@ -146,7 +145,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     }
 
     if (hasDestrier) {
-      loggerService.info('[menagerie configurator] registering Destrier cost rules');
+      args.loggerService.info('[menagerie configurator] registering Destrier cost rules');
       const destrierCards = args.findCardService.findCards([
         { location: 'kingdomSupply' },
         { cardKeys: 'destrier' },
@@ -181,7 +180,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     }
 
     if (hasWayfarer) {
-      loggerService.info('[menagerie configurator] registering Wayfarer cost rules');
+      args.loggerService.info('[menagerie configurator] registering Wayfarer cost rules');
       const wayfarerCards = args.findCardService.findCards([
         { location: 'kingdomSupply' },
         { cardKeys: 'wayfarer' },

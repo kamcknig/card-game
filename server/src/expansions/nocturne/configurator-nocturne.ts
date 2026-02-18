@@ -1,4 +1,3 @@
-import { loggerService } from '@logger';
 import {
   ExpansionConfiguratorFactory,
   GameEventRegistrar,
@@ -27,7 +26,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
   let stateEffectsRegistered = false;
 
   return async (args) => {
-    if (!boonEffectsRegistered) {
+              if (!boonEffectsRegistered) {
       // Register all Nocturne boon effects once per match.
       registerNocturneBoonEffects(args.expansionRegistration.registerBoonEffect);
       boonEffectsRegistered = true;
@@ -60,7 +59,6 @@ const configurator: ExpansionConfiguratorFactory = () => {
     if (hasGhostSource) {
       configureGhost(args);
     } else if (args.config.nonSupply?.some((supply) => supply.name === 'ghost')) {
-      loggerService.info('[nocturne configurator] removing Ghost pile because Cemetery/Exorcist are absent');
       args.config.nonSupply = args.config.nonSupply.filter((supply) => supply.name !== 'ghost');
     }
 
@@ -68,7 +66,6 @@ const configurator: ExpansionConfiguratorFactory = () => {
     if (hasImpSource) {
       configureImp(args);
     } else if (args.config.nonSupply?.some((supply) => supply.name === 'imp')) {
-      loggerService.info('[nocturne configurator] removing Imp pile because no Imp gainers are present');
       args.config.nonSupply = args.config.nonSupply.filter((supply) => supply.name !== 'imp');
     }
 
@@ -76,7 +73,6 @@ const configurator: ExpansionConfiguratorFactory = () => {
     if (hasWishSource) {
       configureWish(args);
     } else if (args.config.nonSupply?.some((supply) => supply.name === 'wish')) {
-      loggerService.info('[nocturne configurator] removing Wish pile because no Wish gainers are present');
       args.config.nonSupply = args.config.nonSupply.filter((supply) => supply.name !== 'wish');
     }
 
@@ -84,7 +80,6 @@ const configurator: ExpansionConfiguratorFactory = () => {
     if (hasVampire) {
       configureBat(args);
     } else if (args.config.nonSupply?.some((supply) => supply.name === 'bat')) {
-      loggerService.info('[nocturne configurator] removing Bat pile because Vampire is absent');
       args.config.nonSupply = args.config.nonSupply.filter((supply) => supply.name !== 'bat');
     }
 
@@ -94,7 +89,6 @@ const configurator: ExpansionConfiguratorFactory = () => {
     if (fateCards.length < 1) {
       // Clear out boons when the match does not contain any Fate cards.
       if ((args.config.boons ?? []).length > 0) {
-        loggerService.info('[nocturne configurator] clearing boons because no Fate cards are present');
       }
       // Ensure boons are cleared when Fate cards are absent.
       args.config.boons = [];
@@ -111,7 +105,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
       if (uniqueBoons.length < 1) {
         // Log missing boon definitions so configuration issues are visible.
-        loggerService.warn(
+        args.loggerService.warn(
           `[nocturne configurator] Fate cards present but no boons found for expansions ${
             expansionsWithFate.join(', ')
           }`,
@@ -122,7 +116,6 @@ const configurator: ExpansionConfiguratorFactory = () => {
         configureWillOWisp(args);
 
         // Seed the computed configuration with the selected boons.
-        loggerService.info(`[nocturne configurator] Fate cards present, seeding ${uniqueBoons.length} boons`);
         args.config.boons = structuredClone(uniqueBoons);
       }
     }
@@ -138,7 +131,6 @@ const configurator: ExpansionConfiguratorFactory = () => {
     if (doomCards.length < 1) {
       // Clear out hexes when the match does not contain any Doom cards.
       if ((args.config.hexes ?? []).length > 0) {
-        loggerService.info('[nocturne configurator] clearing hexes because no Doom cards are present');
       }
       // Ensure hexes are cleared when Doom cards are absent.
       args.config.hexes = [];
@@ -155,7 +147,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
       if (uniqueHexes.length < 1) {
         // Log missing hex definitions so configuration issues are visible.
-        loggerService.warn(
+        args.loggerService.warn(
           `[nocturne configurator] Doom cards present but no hexes found for expansions ${
             expansionsWithDoom.join(', ')
           }`,
@@ -163,7 +155,6 @@ const configurator: ExpansionConfiguratorFactory = () => {
         args.config.hexes = [];
       } else {
         // Seed the computed configuration with the selected hexes.
-        loggerService.info(`[nocturne configurator] Doom cards present, seeding ${uniqueHexes.length} hexes`);
         args.config.hexes = structuredClone(uniqueHexes);
       }
     }
@@ -175,7 +166,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
     const doomStates = Array.from(doomStateKeys).flatMap((stateKey) => {
       const state = args.expansionCatalog['nocturne']?.states?.[stateKey];
       if (!state) {
-        loggerService.warn(`[nocturne configurator] missing doom state ${stateKey}`);
+        args.loggerService.warn(`[nocturne configurator] missing doom state ${stateKey}`);
         return [];
       }
       return structuredClone(state);
@@ -183,7 +174,6 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
     if (doomCards.length < 1) {
       if (existingStates.length !== nonDoomStates.length) {
-        loggerService.info('[nocturne configurator] removing Doom states because no Doom cards are present');
       }
       args.config.states = nonDoomStates;
     } else {
@@ -196,7 +186,6 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
     if (!hasFool) {
       if (updatedStates.length !== filteredStates.length) {
-        loggerService.info('[nocturne configurator] removing Lost in the Woods because Fool is absent');
       }
       args.config.states = filteredStates;
       return args.config;
@@ -204,12 +193,11 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
     const lostInTheWoods = args.expansionCatalog['nocturne']?.states?.['lost-in-the-woods'];
     if (!lostInTheWoods) {
-      loggerService.warn('[nocturne configurator] Fool present but Lost in the Woods state not found');
+      args.loggerService.warn('[nocturne configurator] Fool present but Lost in the Woods state not found');
       args.config.states = filteredStates;
       return args.config;
     }
 
-    loggerService.info('[nocturne configurator] Fool present, ensuring Lost in the Woods state');
     args.config.states = uniqueByProp(
       [...filteredStates, structuredClone(lostInTheWoods)],
       'cardKey',
@@ -278,10 +266,8 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     (supply) => supply.cards.some((card) => getCardPileKey(card) === 'necromancer'),
   );
   if (hasCemetery) {
-    loggerService.info('[nocturne configurator] setting up cemetery heirloom onGameStart handler');
 
     registrar('onGameStart', async (args) => {
-      loggerService.info('[nocturne onGameStart] replacing starting Copper with Haunted Mirror');
 
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
@@ -296,7 +282,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         }
 
         if (copperIndices.length < 1) {
-          loggerService.warn(`[nocturne onGameStart] player ${player.id} has no Copper to replace`);
+          args.loggerService.warn(`[nocturne onGameStart] player ${player.id} has no Copper to replace`);
           continue;
         }
 
@@ -315,16 +301,13 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         args.cardLibrary.addCard(hauntedMirror);
         deck.splice(chosenIndex, 0, hauntedMirror.id);
 
-        loggerService.info(`[nocturne onGameStart] player ${player.id} replaced Copper with Haunted Mirror`);
       }
     });
   }
 
   if (hasFool) {
-    loggerService.info('[nocturne configurator] setting up fool heirloom onGameStart handler');
 
     registrar('onGameStart', async (args) => {
-      loggerService.info('[nocturne onGameStart] replacing starting Copper with Lucky Coin');
 
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
@@ -339,7 +322,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         }
 
         if (copperIndices.length < 1) {
-          loggerService.warn(`[nocturne onGameStart] player ${player.id} has no Copper to replace with Lucky Coin`);
+          args.loggerService.warn(`[nocturne onGameStart] player ${player.id} has no Copper to replace with Lucky Coin`);
           continue;
         }
 
@@ -358,16 +341,13 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         args.cardLibrary.addCard(luckyCoin);
         deck.splice(chosenIndex, 0, luckyCoin.id);
 
-        loggerService.info(`[nocturne onGameStart] player ${player.id} replaced Copper with Lucky Coin`);
       }
     });
   }
 
   if (hasPixie) {
-    loggerService.info('[nocturne configurator] setting up pixie heirloom onGameStart handler');
 
     registrar('onGameStart', async (args) => {
-      loggerService.info('[nocturne onGameStart] replacing starting Copper with Goat');
 
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
@@ -382,7 +362,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         }
 
         if (copperIndices.length < 1) {
-          loggerService.warn(`[nocturne onGameStart] player ${player.id} has no Copper to replace with Goat`);
+          args.loggerService.warn(`[nocturne onGameStart] player ${player.id} has no Copper to replace with Goat`);
           continue;
         }
 
@@ -401,16 +381,13 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         args.cardLibrary.addCard(goat);
         deck.splice(chosenIndex, 0, goat.id);
 
-        loggerService.info(`[nocturne onGameStart] player ${player.id} replaced Copper with Goat`);
       }
     });
   }
 
   if (hasPooka) {
-    loggerService.info('[nocturne configurator] setting up pooka heirloom onGameStart handler');
 
     registrar('onGameStart', async (args) => {
-      loggerService.info('[nocturne onGameStart] replacing starting Copper with Cursed Gold');
 
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
@@ -425,7 +402,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         }
 
         if (copperIndices.length < 1) {
-          loggerService.warn(`[nocturne onGameStart] player ${player.id} has no Copper to replace with Cursed Gold`);
+          args.loggerService.warn(`[nocturne onGameStart] player ${player.id} has no Copper to replace with Cursed Gold`);
           continue;
         }
 
@@ -444,16 +421,13 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         args.cardLibrary.addCard(cursedGold);
         deck.splice(chosenIndex, 0, cursedGold.id);
 
-        loggerService.info(`[nocturne onGameStart] player ${player.id} replaced Copper with Cursed Gold`);
       }
     });
   }
 
   if (hasSecretCave) {
-    loggerService.info('[nocturne configurator] setting up secret cave heirloom onGameStart handler');
 
     registrar('onGameStart', async (args) => {
-      loggerService.info('[nocturne onGameStart] replacing starting Copper with Magic Lamp');
 
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
@@ -468,7 +442,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         }
 
         if (copperIndices.length < 1) {
-          loggerService.warn(`[nocturne onGameStart] player ${player.id} has no Copper to replace with Magic Lamp`);
+          args.loggerService.warn(`[nocturne onGameStart] player ${player.id} has no Copper to replace with Magic Lamp`);
           continue;
         }
 
@@ -487,16 +461,13 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         args.cardLibrary.addCard(magicLamp);
         deck.splice(chosenIndex, 0, magicLamp.id);
 
-        loggerService.info(`[nocturne onGameStart] player ${player.id} replaced Copper with Magic Lamp`);
       }
     });
   }
 
   if (hasShepherd) {
-    loggerService.info('[nocturne configurator] setting up shepherd heirloom onGameStart handler');
 
     registrar('onGameStart', async (args) => {
-      loggerService.info('[nocturne onGameStart] replacing starting Copper with Pasture');
 
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
@@ -511,7 +482,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         }
 
         if (copperIndices.length < 1) {
-          loggerService.warn(`[nocturne onGameStart] player ${player.id} has no Copper to replace with Pasture`);
+          args.loggerService.warn(`[nocturne onGameStart] player ${player.id} has no Copper to replace with Pasture`);
           continue;
         }
 
@@ -530,16 +501,13 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         args.cardLibrary.addCard(pasture);
         deck.splice(chosenIndex, 0, pasture.id);
 
-        loggerService.info(`[nocturne onGameStart] player ${player.id} replaced Copper with Pasture`);
       }
     });
   }
 
   if (hasTracker) {
-    loggerService.info('[nocturne configurator] setting up tracker heirloom onGameStart handler');
 
     registrar('onGameStart', async (args) => {
-      loggerService.info('[nocturne onGameStart] replacing starting Copper with Pouch');
 
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
@@ -554,7 +522,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         }
 
         if (copperIndices.length < 1) {
-          loggerService.warn(`[nocturne onGameStart] player ${player.id} has no Copper to replace with Pouch`);
+          args.loggerService.warn(`[nocturne onGameStart] player ${player.id} has no Copper to replace with Pouch`);
           continue;
         }
 
@@ -573,32 +541,28 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         args.cardLibrary.addCard(pouch);
         deck.splice(chosenIndex, 0, pouch.id);
 
-        loggerService.info(`[nocturne onGameStart] player ${player.id} replaced Copper with Pouch`);
       }
     });
   }
 
   if (hasDruid) {
-    loggerService.info('[nocturne configurator] setting up druid boon set-aside onGameStart handler');
 
     registrar('onGameStart', async (args) => {
-      loggerService.info('[nocturne onGameStart] setting aside top 3 boons for Druid');
 
       if (!args.match.boons) {
-        loggerService.warn('[nocturne onGameStart] no boons configured for Druid');
+        args.loggerService.warn('[nocturne onGameStart] no boons configured for Druid');
         return;
       }
 
       args.match.boons.setAside ??= [];
 
       if (args.match.boons.setAside.length > 0) {
-        loggerService.info('[nocturne onGameStart] boons already set aside for Druid');
         return;
       }
 
       const availableBoons = args.match.boons.deck.length;
       if (availableBoons < 1) {
-        loggerService.warn('[nocturne onGameStart] boon deck empty, cannot set aside for Druid');
+        args.loggerService.warn('[nocturne onGameStart] boon deck empty, cannot set aside for Druid');
         return;
       }
 
@@ -606,21 +570,18 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
       for (let index = 0; index < setAsideCount; index++) {
         const boonId = args.match.boons.deck.pop();
         if (boonId === undefined) {
-          loggerService.warn('[nocturne onGameStart] boon draw failed while setting aside for Druid');
+          args.loggerService.warn('[nocturne onGameStart] boon draw failed while setting aside for Druid');
           break;
         }
         args.match.boons.setAside.push(boonId);
       }
 
-      loggerService.info(`[nocturne onGameStart] set aside ${args.match.boons.setAside.length} boon(s) for Druid`);
     });
   }
 
   if (hasNecromancer) {
-    loggerService.info('[nocturne configurator] setting up Necromancer zombies onGameStart handler');
 
     registrar('onGameStart', async (args) => {
-      loggerService.info('[nocturne onGameStart] adding Zombies to the trash');
 
       // Create and place the three Zombies into the trash pile.
       const zombieKeys = ['zombie-apprentice', 'zombie-mason', 'zombie-spy'] as const;
@@ -631,7 +592,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           cardId: zombieCard.id,
           to: { location: 'trash' },
         });
-        loggerService.debug(`[nocturne onGameStart] moved ${zombieCard} to trash`);
+        args.loggerService.debug(`[nocturne onGameStart] moved ${zombieCard} to trash`);
       }
     });
   }
@@ -645,10 +606,8 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     return;
   }
 
-  loggerService.info('[nocturne configurator] setting up changeling exchange onGameStart handler');
 
   registrar('onGameStart', async (args) => {
-    loggerService.info('[nocturne onGameStart] registering changeling exchange reactions');
 
     for (const player of args.match.players) {
       // Listen for qualifying gains so the player can exchange for Changeling.
@@ -668,7 +627,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           const gainedCard = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
 
           if (!gainedCard.partOfSupply) {
-            loggerService.debug('[changeling exchange condition] gained card is not part of supply');
+            args.loggerService.debug('[changeling exchange condition] gained card is not part of supply');
             return false;
           }
 
@@ -683,7 +642,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           );
 
           if (!inBasicSupply && !inKingdomSupply) {
-            loggerService.debug('[changeling exchange condition] gained card has no supply pile in match');
+            args.loggerService.debug('[changeling exchange condition] gained card has no supply pile in match');
             return false;
           }
 
@@ -694,7 +653,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
           const costComparison = compareCardCosts(cost, { treasure: 3 });
           if (costComparison < 0 || (cost.treasure ?? 0) < 3) {
-            loggerService.debug('[changeling exchange condition] gained card costs less than $3');
+            args.loggerService.debug('[changeling exchange condition] gained card costs less than $3');
             return false;
           }
 
@@ -705,16 +664,15 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           ]);
 
           if (!changelingCards.length) {
-            loggerService.debug('[changeling exchange condition] no changelings in supply');
+            args.loggerService.debug('[changeling exchange condition] no changelings in supply');
             return false;
           }
 
-          loggerService.debug(`[changeling exchange condition] ${gainedCard} eligible for exchange`);
+          args.loggerService.debug(`[changeling exchange condition] ${gainedCard} eligible for exchange`);
           return changelingCards.length > 0;
         },
         triggeredEffectFn: async (triggeredArgs) => {
           const gainedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
-          loggerService.info(`[changeling exchange] prompting exchange for ${gainedCard}`);
 
           // Offer the exchange decision to the gaining player.
           const decision = await triggeredArgs.actionService.run('userPrompt', {
@@ -727,7 +685,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           }) as { action: number };
 
           if (decision.action === 1) {
-            loggerService.debug('[changeling exchange] player declined exchange');
+            args.loggerService.debug('[changeling exchange] player declined exchange');
             return;
           }
 
@@ -735,7 +693,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           try {
             triggeredArgs.cardSourceController.findCardSource(gainedCard.id);
           } catch (error) {
-            loggerService.warn('[changeling exchange] gained card source not found, skipping exchange');
+            args.loggerService.warn('[changeling exchange] gained card source not found, skipping exchange');
             return;
           }
 
@@ -749,7 +707,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           );
 
           if (!inBasicSupply && !inKingdomSupply) {
-            loggerService.warn('[changeling exchange] gained card has no supply pile in match, skipping exchange');
+            args.loggerService.warn('[changeling exchange] gained card has no supply pile in match, skipping exchange');
             return;
           }
 
@@ -757,7 +715,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           const returnLocation = inBasicSupply ? 'basicSupply' : 'kingdomSupply';
 
           // Return the gained card to its original supply pile.
-          loggerService.debug(`[changeling exchange] returning ${gainedCard} to supply`);
+          args.loggerService.debug(`[changeling exchange] returning ${gainedCard} to supply`);
           await triggeredArgs.actionService.run('moveCard', {
             cardId: gainedCard.id,
             to: { location: returnLocation },
@@ -770,19 +728,18 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           ]);
 
           if (!changelingCards.length) {
-            loggerService.warn('[changeling exchange] no changelings available to exchange');
+            args.loggerService.warn('[changeling exchange] no changelings available to exchange');
             return;
           }
 
           const changelingCard = changelingCards.slice(-1)[0];
-          loggerService.debug(`[changeling exchange] moving ${changelingCard} to discard`);
+          args.loggerService.debug(`[changeling exchange] moving ${changelingCard} to discard`);
           await triggeredArgs.actionService.run('moveCard', {
             cardId: changelingCard.id,
             toPlayerId: player.id,
             to: { location: 'playerDiscard' },
           });
 
-          loggerService.info(`[changeling exchange] exchanged ${gainedCard} for ${changelingCard}`);
         },
       });
     }

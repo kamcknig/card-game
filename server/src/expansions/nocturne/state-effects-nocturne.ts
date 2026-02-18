@@ -1,4 +1,3 @@
-import { loggerService } from '@logger';
 import { StateEffectRegistrar } from '@server-types/index.ts';
 import { Card, CardId } from 'shared/types/index.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
@@ -20,7 +19,7 @@ export const registerStateEffects = (registerStateEffect: StateEffectRegistrar) 
 const registerLostInTheWoods = (registerStateEffect: StateEffectRegistrar) => {
   let currentTriggerId: string;
 
-  registerStateEffect('lost-in-the-woods', async ({
+  registerStateEffect('lost-in-the-woods', async ({ loggerService, 
     playerId,
     match,
     reactionManager,
@@ -99,7 +98,7 @@ const registerLostInTheWoods = (registerStateEffect: StateEffectRegistrar) => {
 
 // Registers Deluded state effect logic.
 const registerDeluded = (registerStateEffect: StateEffectRegistrar) => {
-  registerStateEffect('deluded', async ({
+  registerStateEffect('deluded', async ({ loggerService, 
     playerId,
     match,
     reactionManager,
@@ -192,7 +191,7 @@ const registerEnvious = (registerStateEffect: StateEffectRegistrar) => {
   let treasureGainTriggerId: string | undefined;
   let endTurnTriggerId: string | undefined;
 
-  registerStateEffect('envious', async ({
+  registerStateEffect('envious', async ({ loggerService, 
     playerId,
     match,
     reactionManager,

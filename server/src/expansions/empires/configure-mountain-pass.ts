@@ -1,4 +1,3 @@
-import { loggerService } from '@logger';
 import { ComputedMatchConfiguration, PlayerId } from 'shared/types/index.ts';
 import { GameEventRegistrar } from '@server-types/index.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
@@ -13,9 +12,6 @@ export const configureMountainPass = (
   );
   if (!hasMountainPass) return;
 
-  loggerService.info(
-    `[empires configurator] setting up mountain pass landmark handlers`,
-  );
 
   registrar('onCardGained', async (args, eventArgs) => {
     // Mountain Pass only triggers on Province gains.
@@ -27,9 +23,6 @@ export const configureMountainPass = (
     for (const cardIdKey of Object.keys(args.match.stats.cardsGained ?? {})) {
       const cardId = Number(cardIdKey);
       if (!Number.isFinite(cardId)) {
-        loggerService.warn(
-          `[mountain pass onCardGained] invalid card id ${cardIdKey} in gain stats`,
-        );
         continue;
       }
 
@@ -41,15 +34,9 @@ export const configureMountainPass = (
     }
 
     if (provinceGainCount !== 1) {
-      loggerService.debug(
-        `[mountain pass onCardGained] province gain count ${provinceGainCount}, skipping`,
-      );
       return;
     }
 
-    loggerService.info(
-      `[mountain pass onCardGained] first Province gained by player ${eventArgs.playerId}, starting bidding`,
-    );
 
     // Determine the bidding order (left of the gainer, ending with the gainer).
     // Use the shared ordered-target helper for turn-order iteration.
@@ -68,17 +55,11 @@ export const configureMountainPass = (
 
     for (const bidderId of bidOrder) {
       if (highBid >= maxBid) {
-        loggerService.debug(
-          `[mountain pass bidding] max bid ${highBid} reached, skipping remaining bidders`,
-        );
         break;
       }
 
       const minBid = highBid + 1;
 
-      loggerService.debug(
-        `[mountain pass bidding] prompting player ${bidderId} with min bid ${minBid}D`,
-      );
 
       const bidValue = await args.promptService.requestNumberInput({
         playerId: bidderId,
@@ -99,42 +80,26 @@ export const configureMountainPass = (
 
       // Treat non-submit actions as a pass.
       if (bidValue === null) {
-        loggerService.info(
-          `[mountain pass bidding] player ${bidderId} passes`,
-        );
         continue;
       }
 
       // Validate the submitted bid value against the current min/max.
       if (bidValue < minBid) {
-        loggerService.warn(
-          `[mountain pass bidding] player ${bidderId} submitted invalid bid ${bidValue}, treating as pass`,
-        );
         continue;
       }
 
       if (bidValue > maxBid) {
-        loggerService.warn(
-          `[mountain pass bidding] player ${bidderId} bid ${bidValue} exceeds max ${maxBid}, treating as pass`,
-        );
         continue;
       }
 
       highBid = bidValue;
       highBidder = bidderId;
-      loggerService.info(
-        `[mountain pass bidding] player ${bidderId} bids ${bidValue}D`,
-      );
     }
 
     if (!highBidder || highBid <= 0) {
-      loggerService.info(`[mountain pass onCardGained] no bids made`);
       return;
     }
 
-    loggerService.info(
-      `[mountain pass onCardGained] player ${highBidder} wins with ${highBid}D, awarding 8 VP and ${highBid} debt`,
-    );
 
     // Award the Mountain Pass prize to the winning bidder.
     await args.actionService.run('gainVictoryToken', {

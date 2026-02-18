@@ -1,4 +1,3 @@
-import { loggerService } from '@logger';
 import {
   EndGamePolicyRegistrar,
   ExpansionConfiguratorFactory,
@@ -16,7 +15,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
   let prosperityCheckConfigured: boolean = false;
 
   return async (args) => {
-    registerProsperityTokenDefinitions(args.expansionRegistration.registerTokenDefinition);
+              registerProsperityTokenDefinitions(args.expansionRegistration.registerTokenDefinition);
 
     const kingdomCards = args.config.kingdomSupply;
     // Standard Dominion rule: add Colony/Platinum when any Prosperity kingdom card is present.
@@ -27,7 +26,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
     const basicCards = args.config.basicSupply;
 
     if (hasProsperityKingdom && !prosperityCheckConfigured) {
-      loggerService.log(
+      args.loggerService.log(
         `[prosperity configurator] adding prosperity and colony to config`,
       );
 
@@ -51,14 +50,14 @@ const configurator: ExpansionConfiguratorFactory = () => {
     const charlatanPresent = kingdomCards.find((supply) => supply.name === 'charlatan');
 
     if (charlatanPresent && !charlatanConfigured) {
-      loggerService.log(
+      args.loggerService.log(
         `[prosperity configurator] charlatan is part of kingdom - curses gain the treasure type and +1 treasure effect`,
       );
 
       const curseCard = basicCards.find((supply) => supply.name === 'curse');
 
       if (!curseCard) {
-        loggerService.warn(
+        args.loggerService.warn(
           `[prosperity configurator] curse card not found in config`,
         );
       }
@@ -66,7 +65,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
       curseCard?.cards?.forEach((card) => card.type.push('TREASURE'));
 
       args.expansionRegistration.registerCardEffect('curse', 'prosperity', async (args) => {
-        loggerService.info(`[curse effect - prosperity] curse effect called`);
+              args.loggerService.info(`[curse effect - prosperity] curse effect called`);
         await args.actionService.run('gainTreasure', { count: 1 });
       });
 
@@ -110,7 +109,7 @@ export const registerGameEvents: (
   config: ComputedMatchConfiguration,
 ) => void = (registrar) => {
   registrar('onGameStart', async (args) => {
-    const peddlerCardIds = args.findCardService.findCards([
+          const peddlerCardIds = args.findCardService.findCards([
       { location: 'kingdomSupply' },
       { cardKeys: 'peddler' },
     ]).map((card) => card.id);
@@ -119,7 +118,7 @@ export const registerGameEvents: (
       return;
     }
 
-    loggerService.info(
+    args.loggerService.info(
       `[prosperity onGameStart event] registering peddler game events`,
     );
 
@@ -161,7 +160,7 @@ export const registerGameEvents: (
           triggeredEffectFn: async (triggerEffectArgs) => {
             const peddlerCard = triggerEffectArgs.cardLibrary.getCard(cardId);
 
-            loggerService.info(
+            args.loggerService.info(
               `[peddler triggered effect] adding pricing rule for ${peddlerCard}`,
             );
 

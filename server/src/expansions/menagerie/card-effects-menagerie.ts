@@ -1,4 +1,3 @@
-import { loggerService } from '@logger';
 import { CardExpansionModule } from '@server-types/index.ts';
 import { CardId } from 'shared/types/index.ts';
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
@@ -47,7 +46,8 @@ const expansion: CardExpansionModule = {
       },
     }],
     registerEffects: () => async (effectArgs) => {
-      // Count only supply piles, matching Dominion's Animal Fair FAQ.
+      const loggerService = effectArgs.loggerService;
+            // Count only supply piles, matching Dominion's Animal Fair FAQ.
       const emptySupplyPiles = getStartingSupplyCount(effectArgs.match) - effectArgs.findCardService.getRemainingSupplyCount();
 
       loggerService.debug(
@@ -68,7 +68,8 @@ const expansion: CardExpansionModule = {
   },
   'barge': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Prompt for immediate effect vs delayed duration effect.
+      const loggerService = cardEffectArgs.loggerService;
+            // Prompt for immediate effect vs delayed duration effect.
       const choice = await cardEffectArgs.actionService.run('userPrompt', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Use Barge now or at the start of your next turn?',
@@ -124,7 +125,7 @@ const expansion: CardExpansionModule = {
   },
   'black-cat': {
     registerLifeCycleMethods: () => ({
-      onEnterHand: async ({ reactionManager, cardLibrary }, { playerId, cardId }) => {
+      onEnterHand: async ({ loggerService,  reactionManager, cardLibrary }, { playerId, cardId }) => {
         const blackCatCard = cardLibrary.getCard(cardId);
 
         reactionManager.registerReactionTemplate(blackCatCard, 'cardGained', {
@@ -195,7 +196,8 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      // Black Cat always draws +2 Cards first.
+      const loggerService = cardEffectArgs.loggerService;
+            // Black Cat always draws +2 Cards first.
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 2,
@@ -236,7 +238,8 @@ const expansion: CardExpansionModule = {
   },
   'bounty-hunter': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Bounty Hunter starts with +1 Action.
+      const loggerService = cardEffectArgs.loggerService;
+            // Bounty Hunter starts with +1 Action.
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
       const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
@@ -288,6 +291,7 @@ const expansion: CardExpansionModule = {
   'camel-train': {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
         // Camel Train always exiles a Gold from supply when gained.
         const goldCard = cardEffectArgs.findCardService.findTopSupplyCardForPileKey({
           pileKey: 'gold',
@@ -306,7 +310,8 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      // Camel Train exiles exactly one non-Victory card from supply when possible.
+      const loggerService = cardEffectArgs.loggerService;
+            // Camel Train exiles exactly one non-Victory card from supply when possible.
       const exileCandidates = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
       ]).filter((card) => !card.type.includes('VICTORY'));
@@ -337,7 +342,8 @@ const expansion: CardExpansionModule = {
   },
   'cardinal': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Cardinal grants +$2 before resolving its attack.
+      const loggerService = cardEffectArgs.loggerService;
+            // Cardinal grants +$2 before resolving its attack.
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
 
       // Attack each other player in turn order, respecting immunity reactions.
@@ -414,6 +420,7 @@ const expansion: CardExpansionModule = {
   'cavalry': {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
         // Cavalry always gives +2 Cards and +1 Buy when gained.
         await cardEffectArgs.actionService.run('drawCard', {
           playerId: eventArgs.playerId,
@@ -442,7 +449,8 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      // Cavalry gains two Horses from the Horse non-supply pile.
+      const loggerService = cardEffectArgs.loggerService;
+            // Cavalry gains two Horses from the Horse non-supply pile.
       for (let index = 0; index < 2; index++) {
         const horseCards = cardEffectArgs.findCardService.findCards([
           { location: 'nonSupplyCards' },
@@ -465,7 +473,8 @@ const expansion: CardExpansionModule = {
   },
   'coven': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Coven grants +1 Action and +$2 before its attack.
+      const loggerService = cardEffectArgs.loggerService;
+            // Coven grants +1 Action and +$2 before its attack.
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
 
@@ -513,7 +522,7 @@ const expansion: CardExpansionModule = {
   },
   'destrier': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Destrier is a simple non-terminal draw action.
+            // Destrier is a simple non-terminal draw action.
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 2,
@@ -523,7 +532,8 @@ const expansion: CardExpansionModule = {
   },
   'displace': {
     registerEffects: () => async (cardEffectArgs) => {
-      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      const loggerService = cardEffectArgs.loggerService;
+            const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
       if (!hand.length) {
         loggerService.debug('[displace effect] no cards in hand to exile');
         return;
@@ -590,7 +600,7 @@ const expansion: CardExpansionModule = {
   },
   'falconer': {
     registerLifeCycleMethods: () => ({
-      onEnterHand: async ({ reactionManager, cardLibrary }, { playerId, cardId }) => {
+      onEnterHand: async ({ loggerService,  reactionManager, cardLibrary }, { playerId, cardId }) => {
         const falconerCard = cardLibrary.getCard(cardId);
 
         // Register the optional "play from hand" reaction while Falconer remains in hand.
@@ -656,7 +666,8 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      const falconerCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const loggerService = cardEffectArgs.loggerService;
+            const falconerCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       const { cost: falconerCost } = cardEffectArgs.cardPriceController.applyRules(falconerCard, {
         playerId: cardEffectArgs.playerId,
       });
@@ -696,7 +707,7 @@ const expansion: CardExpansionModule = {
   },
   'fisherman': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Fisherman is a simple cantrip with +$1.
+            // Fisherman is a simple cantrip with +$1.
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 1,
@@ -714,7 +725,8 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      const gatekeeperCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const loggerService = cardEffectArgs.loggerService;
+            const gatekeeperCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
       // Register the "until then" gain attack effect.
       const gainAttackTriggerId = cardEffectArgs.reactionManager.registerSystemTemplate(
@@ -823,7 +835,8 @@ const expansion: CardExpansionModule = {
   },
   'goatherd': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Goatherd always gives +1 Action first.
+      const loggerService = cardEffectArgs.loggerService;
+            // Goatherd always gives +1 Action first.
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
       const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
@@ -887,7 +900,8 @@ const expansion: CardExpansionModule = {
   },
   'groom': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Groom gains one card from the Supply costing up to $4.
+      const loggerService = cardEffectArgs.loggerService;
+            // Groom gains one card from the Supply costing up to $4.
       const gainableCards = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
         { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: { treasure: 4 } },
@@ -965,6 +979,7 @@ const expansion: CardExpansionModule = {
   'hostelry': {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
         // Hostelry may discard any number of Treasures from hand when gained.
         const treasureInHand = cardEffectArgs.cardSourceController.getSource('playerHand', eventArgs.playerId)
           .filter((cardId) => cardEffectArgs.cardLibrary.getCard(cardId).type.includes('TREASURE'));
@@ -1028,7 +1043,7 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      // Hostelry is a +1 Card +2 Actions village.
+            // Hostelry is a +1 Card +2 Actions village.
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 1,
@@ -1038,7 +1053,8 @@ const expansion: CardExpansionModule = {
   },
   'hunting-lodge': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Hunting Lodge always resolves +1 Card and +2 Actions first.
+      const loggerService = cardEffectArgs.loggerService;
+            // Hunting Lodge always resolves +1 Card and +2 Actions first.
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 1,
@@ -1078,7 +1094,8 @@ const expansion: CardExpansionModule = {
   },
   'kiln': {
     registerEffects: () => async (cardEffectArgs) => {
-      const kilnCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const loggerService = cardEffectArgs.loggerService;
+            const kilnCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
       const playedThisTurn = cardEffectArgs.match.stats.playedCardsByTurn[turnHistoryIndex] ?? [];
       const kilnPlayInstance = playedThisTurn.filter((playedCardId) => playedCardId === cardEffectArgs.cardId).length;
@@ -1156,7 +1173,8 @@ const expansion: CardExpansionModule = {
   },
   'livery': {
     registerEffects: () => async (cardEffectArgs) => {
-      const liveryCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const loggerService = cardEffectArgs.loggerService;
+            const liveryCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
       const playedThisTurn = cardEffectArgs.match.stats.playedCardsByTurn[turnHistoryIndex] ?? [];
       const liveryPlayInstance = playedThisTurn.filter((playedCardId) => playedCardId === cardEffectArgs.cardId).length;
@@ -1225,7 +1243,8 @@ const expansion: CardExpansionModule = {
   },
   'mastermind': {
     registerEffects: () => async (cardEffectArgs) => {
-      const mastermindCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const loggerService = cardEffectArgs.loggerService;
+            const mastermindCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
       const playedThisTurn = cardEffectArgs.match.stats.playedCardsByTurn[turnHistoryIndex] ?? [];
       const mastermindPlayInstance = playedThisTurn.filter((playedCardId) => playedCardId === cardEffectArgs.cardId)
@@ -1379,7 +1398,8 @@ const expansion: CardExpansionModule = {
   },
   'paddock': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Paddock starts with +$2.
+      const loggerService = cardEffectArgs.loggerService;
+            // Paddock starts with +$2.
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
 
       // Gain 2 Horses from the Horse pile.
@@ -1419,7 +1439,8 @@ const expansion: CardExpansionModule = {
   },
   'sanctuary': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Sanctuary is a cantrip +Buy with an optional exile from hand.
+      const loggerService = cardEffectArgs.loggerService;
+            // Sanctuary is a cantrip +Buy with an optional exile from hand.
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 1,
@@ -1455,7 +1476,8 @@ const expansion: CardExpansionModule = {
   },
   'scrap': {
     registerEffects: () => async (cardEffectArgs) => {
-      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      const loggerService = cardEffectArgs.loggerService;
+            const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
       if (!hand.length) {
         loggerService.debug('[scrap effect] no cards in hand to trash');
         return;
@@ -1577,7 +1599,7 @@ const expansion: CardExpansionModule = {
   },
   'sheepdog': {
     registerLifeCycleMethods: () => ({
-      onEnterHand: async ({ reactionManager, cardLibrary }, { playerId, cardId }) => {
+      onEnterHand: async ({ loggerService,  reactionManager, cardLibrary }, { playerId, cardId }) => {
         const sheepdogCard = cardLibrary.getCard(cardId);
 
         reactionManager.registerReactionTemplate(sheepdogCard, 'cardGained', {
@@ -1637,7 +1659,7 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      // Sheepdog is a terminal +2 Cards.
+            // Sheepdog is a terminal +2 Cards.
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 2,
@@ -1646,7 +1668,7 @@ const expansion: CardExpansionModule = {
   },
   'sleigh': {
     registerLifeCycleMethods: () => ({
-      onEnterHand: async ({ reactionManager, cardLibrary }, { playerId, cardId }) => {
+      onEnterHand: async ({ loggerService,  reactionManager, cardLibrary }, { playerId, cardId }) => {
         const sleighCard = cardLibrary.getCard(cardId);
 
         reactionManager.registerReactionTemplate(sleighCard, 'cardGained', {
@@ -1730,7 +1752,8 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      // Sleigh gains 2 Horses from the Horse pile.
+      const loggerService = cardEffectArgs.loggerService;
+            // Sleigh gains 2 Horses from the Horse pile.
       for (let index = 0; index < 2; index++) {
         const horseCards = cardEffectArgs.findCardService.findCards([
           { location: 'nonSupplyCards' },
@@ -1752,7 +1775,8 @@ const expansion: CardExpansionModule = {
   },
   'snowy-village': {
     registerEffects: () => async (cardEffectArgs) => {
-      const snowyVillageCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const loggerService = cardEffectArgs.loggerService;
+            const snowyVillageCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
       const playedThisTurn = cardEffectArgs.match.stats.playedCardsByTurn[turnHistoryIndex] ?? [];
       const snowyVillagePlayInstance = playedThisTurn
@@ -1807,7 +1831,8 @@ const expansion: CardExpansionModule = {
   },
   'stockpile': {
     registerEffects: () => async (cardEffectArgs) => {
-      await cardEffectArgs.actionService.run('gainTreasure', { count: 3 });
+      const loggerService = cardEffectArgs.loggerService;
+            await cardEffectArgs.actionService.run('gainTreasure', { count: 3 });
       await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
 
       // Stockpile exiles itself if it is still a card in play when this resolves.
@@ -1830,7 +1855,8 @@ const expansion: CardExpansionModule = {
   },
   'supplies': {
     registerEffects: () => async (cardEffectArgs) => {
-      await cardEffectArgs.actionService.run('gainTreasure', { count: 1 });
+      const loggerService = cardEffectArgs.loggerService;
+            await cardEffectArgs.actionService.run('gainTreasure', { count: 1 });
 
       const horseCards = cardEffectArgs.findCardService.findCards([
         { location: 'nonSupplyCards' },
@@ -1853,6 +1879,7 @@ const expansion: CardExpansionModule = {
   'village-green': {
     registerLifeCycleMethods: () => ({
       onDiscarded: async (args, eventArgs) => {
+      const loggerService = args.loggerService;
         if (getTurnPhase(args.match.turnPhaseIndex) === 'cleanup') {
           loggerService.debug('[village-green onDiscarded] discarded during cleanup, skipping reaction');
           return;
@@ -1883,7 +1910,8 @@ const expansion: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      const villageGreenCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const loggerService = cardEffectArgs.loggerService;
+            const villageGreenCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
       const playedThisTurn = cardEffectArgs.match.stats.playedCardsByTurn[turnHistoryIndex] ?? [];
       const villageGreenPlayInstance = playedThisTurn
@@ -1941,7 +1969,8 @@ const expansion: CardExpansionModule = {
   },
   'wayfarer': {
     registerEffects: () => async (cardEffectArgs) => {
-      await cardEffectArgs.actionService.run('drawCard', {
+      const loggerService = cardEffectArgs.loggerService;
+            await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 3,
       });
@@ -1984,7 +2013,7 @@ const expansion: CardExpansionModule = {
   },
   'horse': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Horse draws 2 cards and then returns itself to the Horse pile.
+            // Horse draws 2 cards and then returns itself to the Horse pile.
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 2,

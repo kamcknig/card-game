@@ -1,4 +1,3 @@
-import { loggerService } from '@logger';
 import { CardExpansionModule } from '@server-types/index.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { Card, CardId, CardKey, CountSpec } from 'shared/types/index.ts';
@@ -13,7 +12,8 @@ import { findEventInMatch } from '@shared/find-card-like-in-match.ts';
 const effectMap: CardExpansionModule = {
   'alms': {
     registerEffects: () => async (cardEffectArgs) => {
-      const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const loggerService = cardEffectArgs.loggerService;
+            const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) return;
 
       const priceRule: CardPriceRule = (card, context) => {
@@ -94,7 +94,8 @@ const effectMap: CardExpansionModule = {
   },
   'ball': {
     registerEffects: () => async (cardEffectArgs) => {
-      const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const loggerService = cardEffectArgs.loggerService;
+            const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
         loggerService.warn(`[ball effect] event not found`);
         return;
@@ -164,7 +165,8 @@ const effectMap: CardExpansionModule = {
   },
   'bonfire': {
     registerEffects: () => async (cardEffectArgs) => {
-      const coppersInPlay = cardEffectArgs.findCardService.getCardsInPlay()
+      const loggerService = cardEffectArgs.loggerService;
+            const coppersInPlay = cardEffectArgs.findCardService.getCardsInPlay()
         .filter((card) => card.cardKey === 'copper' && card.owner === cardEffectArgs.playerId);
 
       if (!coppersInPlay.length) {
@@ -201,7 +203,8 @@ const effectMap: CardExpansionModule = {
   },
   'expedition': {
     registerEffects: () => async (cardEffectArgs) => {
-      const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const loggerService = cardEffectArgs.loggerService;
+            const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
         loggerService.warn(`[expedition effect] event not found`);
         return;
@@ -241,7 +244,8 @@ const effectMap: CardExpansionModule = {
   },
   'plan': {
     registerEffects: () => async (cardEffectArgs) => {
-      const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const loggerService = cardEffectArgs.loggerService;
+            const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
         loggerService.warn(`[plan effect] event not found`);
         return;
@@ -303,7 +307,8 @@ const effectMap: CardExpansionModule = {
   },
   'ferry': {
     registerEffects: () => async (cardEffectArgs) => {
-      const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const loggerService = cardEffectArgs.loggerService;
+            const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
         loggerService.warn(`[ferry effect] event not found`);
         return;
@@ -392,7 +397,8 @@ const effectMap: CardExpansionModule = {
   },
   'inheritance': {
     registerEffects: () => async (cardEffectArgs) => {
-      const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const loggerService = cardEffectArgs.loggerService;
+            const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
         loggerService.warn(`[inheritance effect] event not found`);
         return;
@@ -552,7 +558,8 @@ const effectMap: CardExpansionModule = {
   },
   'pilgrimage': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Load the event instance so we can scope 'once per turn' price rules.
+      const loggerService = cardEffectArgs.loggerService;
+            // Load the event instance so we can scope 'once per turn' price rules.
       const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
         loggerService.warn(`[pilgrimage effect] event not found`);
@@ -682,7 +689,8 @@ const effectMap: CardExpansionModule = {
   },
   'lost-arts': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Build the list of Action supply piles using the randomizer card types.
+      const loggerService = cardEffectArgs.loggerService;
+            // Build the list of Action supply piles using the randomizer card types.
       const actionSupplyPiles = cardEffectArgs.match.config.kingdomSupply
         .map((supply) => {
           const pileCard = getPileDefinitionCard(supply.cards, supply.name);
@@ -739,7 +747,8 @@ const effectMap: CardExpansionModule = {
   },
   'mission': {
     registerEffects: () => async (cardEffectArgs) => {
-      const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const loggerService = cardEffectArgs.loggerService;
+            const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
         loggerService.warn(`[mission effect] event not found`);
         return;
@@ -812,7 +821,8 @@ const effectMap: CardExpansionModule = {
   },
   'pathfinding': {
     registerEffects: () => async (cardEffectArgs) => {
-      const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const loggerService = cardEffectArgs.loggerService;
+            const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
         loggerService.warn(`[pathfinding effect] event not found`);
         return;
@@ -874,7 +884,8 @@ const effectMap: CardExpansionModule = {
   },
   'quest': {
     registerEffects: () => async (cardEffectArgs) => {
-      const hand = cardEffectArgs.cardSourceController.getSource(
+      const loggerService = cardEffectArgs.loggerService;
+            const hand = cardEffectArgs.cardSourceController.getSource(
         'playerHand',
         cardEffectArgs.playerId,
       );
@@ -948,7 +959,8 @@ const effectMap: CardExpansionModule = {
   },
   'raid': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Count Silvers in play for the current player.
+      const loggerService = cardEffectArgs.loggerService;
+            // Count Silvers in play for the current player.
       const silversInPlay = cardEffectArgs.findCardService.getCardsInPlay()
         .filter((card) =>
           card.cardKey === 'silver' &&
@@ -1003,7 +1015,8 @@ const effectMap: CardExpansionModule = {
   },
   'save': {
     registerEffects: () => async (cardEffectArgs) => {
-      const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const loggerService = cardEffectArgs.loggerService;
+            const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
 
       if (!event) {
         loggerService.warn(`[save effect] event not found`);
@@ -1091,7 +1104,8 @@ const effectMap: CardExpansionModule = {
   },
   'seaway': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Gather Action cards in the Supply costing up to $4 with no potion cost.
+      const loggerService = cardEffectArgs.loggerService;
+            // Gather Action cards in the Supply costing up to $4 with no potion cost.
       const actionCards = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
         { cardType: ['ACTION'] },
@@ -1156,7 +1170,8 @@ const effectMap: CardExpansionModule = {
   },
   'scouting-party': {
     registerEffects: () => async (cardEffectArgs) => {
-      const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const loggerService = cardEffectArgs.loggerService;
+            const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
 
       if (!event) {
         loggerService.warn(`[scouting-party effect] event not found`);
@@ -1276,7 +1291,8 @@ const effectMap: CardExpansionModule = {
   },
   'trade': {
     registerEffects: () => async (cardEffectArgs) => {
-      const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const loggerService = cardEffectArgs.loggerService;
+            const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
 
       if (!event) {
         loggerService.warn(`[trade effect] event not found`);
@@ -1327,7 +1343,8 @@ const effectMap: CardExpansionModule = {
   },
   'training': {
     registerEffects: () => async (cardEffectArgs) => {
-      const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const loggerService = cardEffectArgs.loggerService;
+            const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
         loggerService.warn(`[training effect] event not found`);
         return;
@@ -1389,7 +1406,8 @@ const effectMap: CardExpansionModule = {
   },
   'travelling-fair': {
     registerEffects: () => async (cardEffectArgs) => {
-      const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const loggerService = cardEffectArgs.loggerService;
+            const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
 
       if (!event) {
         loggerService.warn(`[travelling-fair effect] event not found`);

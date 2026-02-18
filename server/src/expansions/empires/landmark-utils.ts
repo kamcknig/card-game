@@ -1,4 +1,3 @@
-import { loggerService } from '@logger';
 import { CardKey } from 'shared/types/index.ts';
 import { GameLifecycleCallbackContext } from '@server-types/index.ts';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
@@ -25,7 +24,7 @@ export const placeVictoryTokensPerPlayer = async (
   const victoryTokenId = prosperityTokenIds.victory;
   const totalTokens = Math.max(0, args.match.players.length * tokensPerPlayer);
 
-  loggerService.info(
+  args.loggerService.info(
     `[${options.logKey} onGameStart] placing ${totalTokens} VP token(s) on ${options.landmarkName}`,
   );
 

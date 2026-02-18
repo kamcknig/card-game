@@ -1,4 +1,3 @@
-import { loggerService } from '@logger';
 import { ComputedMatchConfiguration } from 'shared/types/index.ts';
 import { GameEventRegistrar } from '@server-types/index.ts';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
@@ -16,12 +15,9 @@ export const configureBasilica = (
   );
   if (!hasBasilica) return;
 
-  loggerService.info(
-    `[empires configurator] setting up basilica landmark handlers`,
-  );
 
   registrar('onGameStart', async (args) => {
-    // Basilica setup: put 6 VP tokens per player on the landmark using the shared helper.
+          // Basilica setup: put 6 VP tokens per player on the landmark using the shared helper.
     await placeVictoryTokensPerPlayer(args, {
       landmarkKey: 'basilica',
       logKey: 'basilica',
@@ -39,9 +35,6 @@ export const configureBasilica = (
     // Basilica checks remaining treasure after the gain has resolved.
     const treasureRemaining = args.match.playerTreasure;
     if (treasureRemaining < 2) {
-      loggerService.debug(
-        `[basilica onCardGained] player ${eventArgs.playerId} has ${treasureRemaining} treasure, skipping`,
-      );
       return;
     }
 
@@ -54,16 +47,10 @@ export const configureBasilica = (
     ).sort((a, b) => a.id.localeCompare(b.id));
 
     if (!tokensOnBasilica.length) {
-      loggerService.debug(
-        `[basilica onCardGained] no VP tokens remaining on Basilica`,
-      );
       return;
     }
 
     const tokensToMove = tokensOnBasilica.slice(0, 2);
-    loggerService.info(
-      `[basilica onCardGained] player ${eventArgs.playerId} has ${treasureRemaining} treasure, moving ${tokensToMove.length} VP token(s)`,
-    );
 
     for (const token of tokensToMove) {
       await args.actionService.run('moveToken', {

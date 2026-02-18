@@ -1,4 +1,3 @@
-import { loggerService } from '@logger';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
 import { CardKey, ComputedMatchConfiguration } from 'shared/types/index.ts';
 import { GameEventRegistrar } from '@server-types/index.ts';
@@ -14,15 +13,9 @@ export const configureAqueduct = (
 
   if (!hasAqueduct) return;
 
-  loggerService.info(
-    `[empires configurator] setting up aqueduct landmark handlers`,
-  );
 
   registrar('onGameStart', async (args) => {
-    // Aqueduct setup: put 8 VP tokens on Silver and Gold piles.
-    loggerService.info(
-      `[aqueduct onGameStart] placing VP tokens on Silver and Gold piles`,
-    );
+          // Aqueduct setup: put 8 VP tokens on Silver and Gold piles.
     const victoryTokenId = prosperityTokenIds.victory;
     const targetPiles: CardKey[] = ['silver', 'gold'];
 
@@ -60,15 +53,9 @@ export const configureAqueduct = (
       const tokensOnPile = getTokensOnPile(pileKey).sort((a, b) => a.id.localeCompare(b.id));
       const token = tokensOnPile[0];
       if (!token) {
-        loggerService.debug(
-          `[aqueduct onCardGained] no victory tokens on ${pileKey} pile`,
-        );
         return false;
       }
 
-      loggerService.debug(
-        `[aqueduct onCardGained] moving 1 VP from ${pileKey} to Aqueduct`,
-      );
       await args.actionService.run('moveToken', {
         tokenInstanceId: token.id,
         location: { type: 'supplyPile', cardKey: 'aqueduct' },
@@ -80,15 +67,9 @@ export const configureAqueduct = (
     const claimAqueductTokens = async (): Promise<void> => {
       const tokensOnAqueduct = getTokensOnPile('aqueduct').sort((a, b) => a.id.localeCompare(b.id));
       if (!tokensOnAqueduct.length) {
-        loggerService.debug(
-          `[aqueduct onCardGained] no victory tokens on Aqueduct`,
-        );
         return;
       }
 
-      loggerService.info(
-        `[aqueduct onCardGained] moving ${tokensOnAqueduct.length} VP token(s) to player ${eventArgs.playerId}`,
-      );
       for (const token of tokensOnAqueduct) {
         await args.actionService.run('moveToken', {
           tokenInstanceId: token.id,

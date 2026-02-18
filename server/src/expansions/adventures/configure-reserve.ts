@@ -1,4 +1,3 @@
-import { loggerService } from '@logger';
 import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 import { addMatToMatchConfig } from '../../utils/add-mat-to-match-config.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
@@ -13,7 +12,7 @@ export const configureReserve = (args: ExpansionConfiguratorContext) => {
     return;
   }
 
-  loggerService.info(
+  args.loggerService.info(
     `[adventures configurator - configuring reserve] cards of type RESERVE included in supply, configuring tavern mat`,
   );
 

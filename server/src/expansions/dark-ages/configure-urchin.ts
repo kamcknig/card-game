@@ -1,4 +1,3 @@
-import { loggerService } from '@logger';
 import { Supply } from 'shared/types/index.ts';
 import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 
@@ -11,7 +10,7 @@ export const configureUrchin = async (args: ExpansionConfiguratorContext) => {
     return;
   }
 
-  loggerService.info(`[dark-ages configurator - configuring urchin] urchin needs to be configured`);
+  args.loggerService.info(`[dark-ages configurator - configuring urchin] urchin needs to be configured`);
 
   const cardData = {
     ...structuredClone(args.expansionCatalog['dark-ages']?.cardData.kingdomSupply['mercenary']) ?? {},
@@ -25,5 +24,5 @@ export const configureUrchin = async (args: ExpansionConfiguratorContext) => {
     cards: new Array(10).fill({ ...cardData }),
   } as Supply);
 
-  loggerService.info(`[dark-ages configurator - configuring urchin] urchin configured`);
+  args.loggerService.info(`[dark-ages configurator - configuring urchin] urchin configured`);
 };

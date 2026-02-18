@@ -1,4 +1,3 @@
-import { loggerService } from '@logger';
 import { ComputedMatchConfiguration, PlayerId } from 'shared/types/index.ts';
 import { EndGamePolicyRegistrar, ExpansionConfiguratorFactory, GameEventRegistrar } from '@server-types/index.ts';
 import { uniqueByProp } from '../../core/match-configurator.ts';
@@ -24,7 +23,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
   let artifactEffectsRegistered = false;
 
   return async (args) => {
-    registerRenaissanceTokenDefinitions(args.expansionRegistration.registerTokenDefinition);
+              registerRenaissanceTokenDefinitions(args.expansionRegistration.registerTokenDefinition);
     if (!artifactEffectsRegistered) {
       registerArtifactEffects(args.expansionRegistration.registerArtifactEffect);
       artifactEffectsRegistered = true;
@@ -47,7 +46,6 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
     if (requiredArtifactKeys.size < 1) {
       if (existingArtifacts.length !== nonManagedArtifacts.length) {
-        loggerService.info('[renaissance configurator] removing artifacts because no source cards are present');
       }
       args.config.artifacts = nonManagedArtifacts;
       return args.config;
@@ -56,7 +54,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
     const artifactDefinitions = Array.from(requiredArtifactKeys).flatMap((artifactKey) => {
       const artifact = args.expansionCatalog['renaissance']?.artifacts?.[artifactKey];
       if (!artifact) {
-        loggerService.warn(`[renaissance configurator] missing artifact ${artifactKey}`);
+        args.loggerService.warn(`[renaissance configurator] missing artifact ${artifactKey}`);
         return [];
       }
       return structuredClone(artifact);
@@ -74,9 +72,9 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   config,
 ) => {
   registrar('onGameStart', async (args) => {
-    const projectCount = config.projects?.length ?? 0;
+          const projectCount = config.projects?.length ?? 0;
     if (projectCount < 1) {
-      loggerService.debug('[renaissance configurator] no projects configured, skipping cube placement');
+      args.loggerService.debug('[renaissance configurator] no projects configured, skipping cube placement');
       return;
     }
 
@@ -87,13 +85,12 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
       const cubesToAdd = Math.max(0, projectCount - existingCubes.length);
 
       if (cubesToAdd < 1) {
-        loggerService.debug(
+        args.loggerService.debug(
           `[renaissance configurator] player ${player.id} already has ${existingCubes.length} cube token(s)`,
         );
         continue;
       }
 
-      loggerService.info(`[renaissance configurator] adding ${cubesToAdd} cube token(s) for player ${player.id}`);
       for (let i = 0; i < cubesToAdd; i++) {
         await args.actionService.run('placeToken', {
           tokenId: renaissanceTokenIds.cube,
@@ -111,12 +108,10 @@ export const registerEndGamePolicies = (registrar: EndGamePolicyRegistrar): void
     ({ match, endTriggered }) => {
       // Fleet latches game-end state once activated; do not re-evaluate base conditions during Fleet turns.
       if (match.fleetRound.completed) {
-        loggerService.info('[match] Fleet round completed; finalizing game end');
         return { decision: 'end_now' };
       }
 
       if (match.fleetRound.active) {
-        loggerService.info('[match] game end latched; Fleet round still active');
         return { decision: 'continue' };
       }
 
@@ -149,7 +144,6 @@ export const registerEndGamePolicies = (registrar: EndGamePolicyRegistrar): void
       }
 
       if (!fleetEligiblePlayerIds.length) {
-        loggerService.info('[match] no Fleet owners; ending game immediately');
         return { decision: 'end_now' };
       }
 
@@ -160,11 +154,6 @@ export const registerEndGamePolicies = (registrar: EndGamePolicyRegistrar): void
       match.fleetRound.endingPlayerId = match.players[match.currentPlayerTurnIndex]?.id;
       match.fleetRound.startedAtTurnNumber = match.turnNumber;
 
-      loggerService.info(
-        `[match] Fleet round activated by player ${match.fleetRound.endingPlayerId}; order: ${
-          fleetEligiblePlayerIds.join(', ')
-        }`,
-      );
 
       return { decision: 'defer' };
     },

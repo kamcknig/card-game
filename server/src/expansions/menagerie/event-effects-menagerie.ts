@@ -1,4 +1,3 @@
-import { loggerService } from '@logger';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
@@ -52,7 +51,7 @@ const gainHorse = async (
   ]);
 
   if (!horseCards.length) {
-    loggerService.debug('[menagerie event helper] no Horse cards remain to gain');
+    args.loggerService.debug('[menagerie event helper] no Horse cards remain to gain');
     return false;
   }
 
@@ -98,7 +97,7 @@ const isInvestedCardStillInOwnerExile = (
 const effectMap: CardExpansionModule = {
   'alliance': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Alliance gains fixed basic cards in printed order when present.
+            // Alliance gains fixed basic cards in printed order when present.
       const gainOrder: CardKey[] = ['province', 'duchy', 'estate', 'gold', 'silver', 'copper'];
 
       for (const gainPileKey of gainOrder) {
@@ -113,7 +112,8 @@ const effectMap: CardExpansionModule = {
   },
   'banish': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Banish chooses a duplicated name in hand, then Exiles any number of that name.
+      const loggerService = cardEffectArgs.loggerService;
+            // Banish chooses a duplicated name in hand, then Exiles any number of that name.
       const hand = getPlayerSourceSafe(cardEffectArgs, 'playerHand', cardEffectArgs.playerId);
       if (!hand.length) {
         loggerService.debug('[banish effect] no cards in hand to Exile');
@@ -176,7 +176,8 @@ const effectMap: CardExpansionModule = {
   },
   'bargain': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Bargain gains a non-Victory card up to $5.
+      const loggerService = cardEffectArgs.loggerService;
+            // Bargain gains a non-Victory card up to $5.
       const gainableCards = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
         { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: { treasure: 5 } },
@@ -217,7 +218,8 @@ const effectMap: CardExpansionModule = {
   },
   'commerce': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Commerce counts differently named cards this player gained this turn.
+      const loggerService = cardEffectArgs.loggerService;
+            // Commerce counts differently named cards this player gained this turn.
       const turnHistoryIndex = getCurrentTurnHistoryIndex(cardEffectArgs);
       if (turnHistoryIndex === undefined) {
         loggerService.warn('[commerce effect] no active turn history index');
@@ -266,7 +268,8 @@ const effectMap: CardExpansionModule = {
   },
   'delay': {
     registerEffects: () => async (cardEffectArgs) => {
-      const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const loggerService = cardEffectArgs.loggerService;
+            const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
         loggerService.warn('[delay effect] event not found');
         return;
@@ -329,7 +332,8 @@ const effectMap: CardExpansionModule = {
   },
   'demand': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Demand gains a Horse onto deck before choosing the second gain.
+      const loggerService = cardEffectArgs.loggerService;
+            // Demand gains a Horse onto deck before choosing the second gain.
       await gainHorse(cardEffectArgs, cardEffectArgs.playerId, { location: 'playerDeck' });
 
       const gainableCards = cardEffectArgs.findCardService.findCards([
@@ -363,7 +367,8 @@ const effectMap: CardExpansionModule = {
   },
   'desperation': {
     registerEffects: () => async (cardEffectArgs) => {
-      const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const loggerService = cardEffectArgs.loggerService;
+            const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
         loggerService.warn('[desperation effect] event not found');
         return;
@@ -430,7 +435,8 @@ const effectMap: CardExpansionModule = {
   },
   'enclave': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Enclave gains a Gold and Exiles a Duchy from the Supply.
+      const loggerService = cardEffectArgs.loggerService;
+            // Enclave gains a Gold and Exiles a Duchy from the Supply.
       await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
         playerId: cardEffectArgs.playerId,
         pileKey: 'gold',
@@ -456,7 +462,8 @@ const effectMap: CardExpansionModule = {
   },
   'enhance': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Enhance optionally trashes a non-Victory card to gain up to $2 more.
+      const loggerService = cardEffectArgs.loggerService;
+            // Enhance optionally trashes a non-Victory card to gain up to $2 more.
       const hand = getPlayerSourceSafe(cardEffectArgs, 'playerHand', cardEffectArgs.playerId);
       const nonVictoryCards = hand
         .map((cardId) => cardEffectArgs.cardLibrary.getCard(cardId))
@@ -527,7 +534,8 @@ const effectMap: CardExpansionModule = {
   },
   'gamble': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Gamble grants +1 Buy, then discards and optionally plays the discarded top card.
+      const loggerService = cardEffectArgs.loggerService;
+            // Gamble grants +1 Buy, then discards and optionally plays the discarded top card.
       loggerService.debug('[gamble effect] resolving +1 Buy');
       await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
 
@@ -586,7 +594,8 @@ const effectMap: CardExpansionModule = {
   },
   'invest': {
     registerEffects: () => async (cardEffectArgs) => {
-      const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const loggerService = cardEffectArgs.loggerService;
+            const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
         loggerService.warn('[invest effect] event not found');
         return;
@@ -685,7 +694,8 @@ const effectMap: CardExpansionModule = {
   },
   'march': {
     registerEffects: () => async (cardEffectArgs) => {
-      // March may play an Action card from discard without using an Action.
+      const loggerService = cardEffectArgs.loggerService;
+            // March may play an Action card from discard without using an Action.
       const discard = getPlayerSourceSafe(cardEffectArgs, 'playerDiscard', cardEffectArgs.playerId);
       const actionCardsInDiscard = discard
         .map((cardId) => cardEffectArgs.cardLibrary.getCard(cardId))
@@ -718,7 +728,8 @@ const effectMap: CardExpansionModule = {
   },
   'populate': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Populate gains one top card from each Action Supply pile.
+      const loggerService = cardEffectArgs.loggerService;
+            // Populate gains one top card from each Action Supply pile.
       const actionSupplyPiles = getActionSupplyPileKeys(cardEffectArgs);
       if (!actionSupplyPiles.length) {
         loggerService.debug('[populate effect] no Action Supply piles available');
@@ -770,7 +781,8 @@ const effectMap: CardExpansionModule = {
   },
   'pursue': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Pursue grants +1 Buy before naming a card.
+      const loggerService = cardEffectArgs.loggerService;
+            // Pursue grants +1 Buy before naming a card.
       await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
 
       const nameResult = await cardEffectArgs.actionService.run('userPrompt', {
@@ -835,7 +847,8 @@ const effectMap: CardExpansionModule = {
   },
   'reap': {
     registerEffects: () => async (cardEffectArgs) => {
-      const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const loggerService = cardEffectArgs.loggerService;
+            const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
         loggerService.warn('[reap effect] event not found');
         return;
@@ -885,13 +898,14 @@ const effectMap: CardExpansionModule = {
   },
   'ride': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Ride gains a Horse.
+            // Ride gains a Horse.
       await gainHorse(cardEffectArgs, cardEffectArgs.playerId, { location: 'playerDiscard' });
     },
   },
   'seize-the-day': {
     registerEffects: () => async (cardEffectArgs) => {
-      const event = findEventInMatch<SeizeTheDayEventMetadata>(cardEffectArgs.match, cardEffectArgs.cardId);
+      const loggerService = cardEffectArgs.loggerService;
+            const event = findEventInMatch<SeizeTheDayEventMetadata>(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
         loggerService.warn('[seize-the-day effect] event not found');
         return;
@@ -921,7 +935,8 @@ const effectMap: CardExpansionModule = {
   },
   'stampede': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Stampede checks cards currently in play and gains up to 5 Horses onto deck.
+      const loggerService = cardEffectArgs.loggerService;
+            // Stampede checks cards currently in play and gains up to 5 Horses onto deck.
       const cardsInPlay = cardEffectArgs.findCardService.getCardsInPlay()
         .filter((card) => card.owner === cardEffectArgs.playerId);
 
@@ -953,7 +968,8 @@ const effectMap: CardExpansionModule = {
   },
   'toil': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Toil grants +1 Buy and may play an Action card from hand.
+      const loggerService = cardEffectArgs.loggerService;
+            // Toil grants +1 Buy and may play an Action card from hand.
       await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
 
       const hand = getPlayerSourceSafe(cardEffectArgs, 'playerHand', cardEffectArgs.playerId);
@@ -988,7 +1004,8 @@ const effectMap: CardExpansionModule = {
   },
   'transport': {
     registerEffects: () => async (cardEffectArgs) => {
-      // Transport can either Exile an Action from Supply or topdeck an Action from Exile.
+      const loggerService = cardEffectArgs.loggerService;
+            // Transport can either Exile an Action from Supply or topdeck an Action from Exile.
       const supplyActionCards = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
         { cardType: ['ACTION'] },

@@ -1,4 +1,3 @@
-import { loggerService } from '@logger';
 import { ComputedMatchConfiguration } from 'shared/types/index.ts';
 import { GameEventRegistrar } from '@server-types/index.ts';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
@@ -14,10 +13,9 @@ export const configureBaths = (
   );
   if (!hasBaths) return;
 
-  loggerService.info(`[empires configurator] setting up baths landmark handlers`);
 
   registrar('onGameStart', async (args) => {
-    // Baths setup: put 6 VP tokens per player on the landmark using the shared helper.
+          // Baths setup: put 6 VP tokens per player on the landmark using the shared helper.
     await placeVictoryTokensPerPlayer(args, {
       landmarkKey: 'baths',
       logKey: 'baths',
@@ -29,9 +27,6 @@ export const configureBaths = (
       (landmark) => landmark.cardKey === 'baths',
     );
     if (!bathsLandmark) {
-      loggerService.warn(
-        `[baths onGameStart] Baths landmark instance missing, skipping reaction registration`,
-      );
       return;
     }
 
@@ -58,18 +53,12 @@ export const configureBaths = (
             );
 
             if (selfGainedCardIds.length) {
-              loggerService.debug(
-                `[baths endTurn] player ${player.id} gained ${selfGainedCardIds.length} card(s), skipping`,
-              );
               return false;
             }
 
             return true;
           },
           triggeredEffectFn: async (triggeredArgs) => {
-            loggerService.info(
-              `[baths endTurn] player ${player.id} gained no cards, taking 2 VP`,
-            );
 
             // Resolve the Victory token id for token filtering.
             const victoryTokenId = prosperityTokenIds.victory;
@@ -82,14 +71,10 @@ export const configureBaths = (
             ).sort((a, b) => a.id.localeCompare(b.id));
 
             if (!tokensOnBaths.length) {
-              loggerService.debug(`[baths endTurn] no VP tokens remaining on Baths`);
               return;
             }
 
             const tokensToMove = tokensOnBaths.slice(0, 2);
-            loggerService.info(
-              `[baths endTurn] moving ${tokensToMove.length} VP token(s) to player ${player.id}`,
-            );
 
             for (const token of tokensToMove) {
               await triggeredArgs.actionService.run('moveToken', {

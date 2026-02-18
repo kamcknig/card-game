@@ -1,4 +1,3 @@
-import { loggerService } from '@logger';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
@@ -24,7 +23,7 @@ const expansionModule: CardExpansionModule = {
     },
   },
   'artisan': {
-    registerEffects: () => async ({ cardLibrary, actionService, playerId, ...args }) => {
+    registerEffects: () => async ({ loggerService,  cardLibrary, actionService, playerId, ...args }) => {
       loggerService.debug(`[ARTISAN EFFECT] choosing card to gain...`);
       //Gain a card to your hand costing up to 5 Treasure.
       //Put a card from your hand onto your deck.
@@ -82,7 +81,7 @@ const expansionModule: CardExpansionModule = {
   },
   'bandit': {
     registerEffects: () =>
-    async ({
+    async ({ loggerService, 
       match,
       cardLibrary,
       playerId,
@@ -231,7 +230,7 @@ const expansionModule: CardExpansionModule = {
   },
   'bureaucrat': {
     registerEffects: () =>
-    async ({
+    async ({ loggerService, 
       reactionContext,
       match,
       cardLibrary,
@@ -329,7 +328,7 @@ const expansionModule: CardExpansionModule = {
     },
   },
   'cellar': {
-    registerEffects: () => async ({ match, actionService, playerId, cardLibrary, ...args }) => {
+    registerEffects: () => async ({ loggerService,  match, actionService, playerId, cardLibrary, ...args }) => {
       loggerService.debug(`[CELLAR EFFECT] gaining action...`);
       await actionService.run('gainAction', {
         count: 1,
@@ -372,7 +371,7 @@ const expansionModule: CardExpansionModule = {
     },
   },
   'chapel': {
-    registerEffects: () => async ({ match, actionService, cardLibrary, playerId, ...args }) => {
+    registerEffects: () => async ({ loggerService,  match, actionService, cardLibrary, playerId, ...args }) => {
       const hand = args.cardSourceController.getSource('playerHand', playerId);
 
       if (!hand.length) {
@@ -404,7 +403,7 @@ const expansionModule: CardExpansionModule = {
     },
   },
   'council-room': {
-    registerEffects: () => async ({ actionService, match, playerId }) => {
+    registerEffects: () => async ({ loggerService,  actionService, match, playerId }) => {
       loggerService.debug(`[COUNCIL ROOM EFFECT] drawing 4 cards...`);
       await actionService.run('drawCard', { playerId, count: 4 });
 
@@ -429,7 +428,7 @@ const expansionModule: CardExpansionModule = {
     },
   },
   'festival': {
-    registerEffects: () => async ({ actionService }) => {
+    registerEffects: () => async ({ loggerService,  actionService }) => {
       loggerService.debug(`[FESTIVAL EFFECT] gaining 2 actions...`);
       await actionService.run('gainAction', {
         count: 2,
@@ -451,12 +450,12 @@ const expansionModule: CardExpansionModule = {
       const cards = args.findCardService.findCards({ owner: ownerId });
       return Math.floor(cards.length / 10);
     },
-    registerEffects: () => async () => {
+    registerEffects: () => async ({ loggerService }) => {
       loggerService.debug(`[GARDENS EFFECT] garden has no effects`);
     },
   },
   'harbinger': {
-    registerEffects: () => async ({ cardLibrary, match, actionService, playerId, ...args }) => {
+    registerEffects: () => async ({ loggerService,  cardLibrary, match, actionService, playerId, ...args }) => {
       loggerService.debug(`[HARBINGER EFFECT] drawing card...`);
 
       await actionService.run('drawCard', { playerId });
@@ -507,7 +506,7 @@ const expansionModule: CardExpansionModule = {
     },
   },
   'laboratory': {
-    registerEffects: () => async ({ actionService, playerId }) => {
+    registerEffects: () => async ({ loggerService,  actionService, playerId }) => {
       loggerService.debug(`[LABORATORY EFFECT] drawing 2 cards...`);
       await actionService.run('drawCard', { playerId, count: 2 });
 
@@ -516,7 +515,7 @@ const expansionModule: CardExpansionModule = {
     },
   },
   'library': {
-    registerEffects: () => async ({ match, actionService, cardLibrary, playerId, ...args }) => {
+    registerEffects: () => async ({ loggerService,  match, actionService, cardLibrary, playerId, ...args }) => {
       // Draw until you have 7 cards in hand, skipping any Action cards
       // you choose to; set those aside, discarding them afterward.
       const setAside: number[] = [];
@@ -583,7 +582,7 @@ const expansionModule: CardExpansionModule = {
     },
   },
   'market': {
-    registerEffects: () => async ({ actionService, playerId }) => {
+    registerEffects: () => async ({ loggerService,  actionService, playerId }) => {
       loggerService.debug(`[MARKET EFFECT] drawing card...`);
       await actionService.run('drawCard', { playerId });
 
@@ -637,7 +636,7 @@ const expansionModule: CardExpansionModule = {
         reactionManager.unregisterTrigger(`merchant:${cardId}:cardPlayed`);
       },
     }),
-    registerEffects: () => async ({ actionService, playerId }) => {
+    registerEffects: () => async ({ loggerService,  actionService, playerId }) => {
       loggerService.debug(`[MERCHANT EFFECT] drawing card...`);
       await actionService.run('drawCard', { playerId });
 
@@ -647,7 +646,7 @@ const expansionModule: CardExpansionModule = {
   },
   'militia': {
     registerEffects: () =>
-    async ({
+    async ({ loggerService, 
       actionService,
       cardLibrary,
       match,
@@ -674,6 +673,7 @@ const expansionModule: CardExpansionModule = {
           cardSourceController: args.cardSourceController,
           actionService,
           cardLibrary,
+          loggerService,
         }, {
           playerId,
           targetHandSize: 3,
@@ -685,7 +685,7 @@ const expansionModule: CardExpansionModule = {
   },
   'mine': {
     registerEffects: () =>
-    async ({
+    async ({ loggerService, 
       actionService,
       match,
       cardLibrary,
@@ -773,7 +773,7 @@ const expansionModule: CardExpansionModule = {
   },
   'moat': {
     registerLifeCycleMethods: () => ({
-      onEnterHand: async ({ reactionManager }, { playerId, cardId }) => {
+      onEnterHand: async ({ loggerService,  reactionManager }, { playerId, cardId }) => {
         reactionManager.registerReactionTemplate({
           id: `moat:${cardId}:cardPlayed`,
           playerId,
@@ -808,7 +808,7 @@ const expansionModule: CardExpansionModule = {
     },
   },
   'moneylender': {
-    registerEffects: () => async ({ actionService, match, cardLibrary, playerId, ...args }) => {
+    registerEffects: () => async ({ loggerService,  actionService, match, cardLibrary, playerId, ...args }) => {
       const hand = args.cardSourceController.getSource('playerHand', playerId);
 
       const hasCopper = hand.some((c) => cardLibrary.getCard(c).cardKey === 'copper');
@@ -856,7 +856,7 @@ const expansionModule: CardExpansionModule = {
     },
   },
   'poacher': {
-    registerEffects: () => async ({ cardLibrary, match, playerId, actionService, ...args }) => {
+    registerEffects: () => async ({ loggerService,  cardLibrary, match, playerId, actionService, ...args }) => {
       loggerService.debug(`[POACHER EFFECT] drawing card...`);
 
       await actionService.run('drawCard', { playerId });
@@ -935,7 +935,7 @@ const expansionModule: CardExpansionModule = {
   },
   'remodel': {
     registerEffects: () =>
-    async ({
+    async ({ loggerService, 
       match,
       cardLibrary,
       playerId,
@@ -996,7 +996,7 @@ const expansionModule: CardExpansionModule = {
     },
   },
   'sentry': {
-    registerEffects: () => async ({ actionService, cardLibrary, match, playerId, ...args }) => {
+    registerEffects: () => async ({ loggerService,  actionService, cardLibrary, match, playerId, ...args }) => {
       // +1 Card
       // +1 Action
       // Look at the top 2 cards of your deck. Trash and/or discard any number of
@@ -1161,13 +1161,13 @@ const expansionModule: CardExpansionModule = {
     },
   },
   'smithy': {
-    registerEffects: () => async ({ actionService, playerId }) => {
+    registerEffects: () => async ({ loggerService,  actionService, playerId }) => {
       loggerService.debug(`[SMITHY EFFECT] drawing 3 cards...`);
       await actionService.run('drawCard', { playerId, count: 3 });
     },
   },
   'throne-room': {
-    registerEffects: () => async ({ playerId, actionService, cardLibrary, ...args }) => {
+    registerEffects: () => async ({ loggerService,  playerId, actionService, cardLibrary, ...args }) => {
       loggerService.debug(`[THRONE ROOM EFFECT] prompting user to select action card from hand...`);
 
       const cardId = await actionService.run('selectSingleCard', {
@@ -1205,7 +1205,7 @@ const expansionModule: CardExpansionModule = {
     },
   },
   'vassal': {
-    registerEffects: () => async ({ cardLibrary, match, playerId, actionService, ...args }) => {
+    registerEffects: () => async ({ loggerService,  cardLibrary, match, playerId, actionService, ...args }) => {
       loggerService.debug(`[VASSAL EFFECT] gain 2 treasure...`);
 
       await actionService.run('gainTreasure', {
@@ -1267,7 +1267,7 @@ const expansionModule: CardExpansionModule = {
     },
   },
   'village': {
-    registerEffects: () => async ({ playerId, actionService }) => {
+    registerEffects: () => async ({ loggerService,  playerId, actionService }) => {
       loggerService.debug(`[VILLAGE EFFECT] gaining 2 actions...`);
       await actionService.run('gainAction', { count: 2 });
 
@@ -1278,7 +1278,7 @@ const expansionModule: CardExpansionModule = {
   },
   'witch': {
     registerEffects: () =>
-    async ({
+    async ({ loggerService, 
       actionService,
       match,
       playerId,
@@ -1314,7 +1314,7 @@ const expansionModule: CardExpansionModule = {
     },
   },
   'workshop': {
-    registerEffects: () => async ({ actionService, cardLibrary, playerId, ...args }) => {
+    registerEffects: () => async ({ loggerService,  actionService, cardLibrary, playerId, ...args }) => {
       loggerService.debug(`[WORKSHOP EFFECT] prompting player to select card to gain...`);
 
       const cardId = await actionService.run('selectSingleCard', {

@@ -1,4 +1,3 @@
-import { loggerService } from '@logger';
 import { ComputedMatchConfiguration } from 'shared/types/index.ts';
 import { GameEventRegistrar } from '@server-types/index.ts';
 
@@ -12,17 +11,13 @@ export const configureTomb = (
   );
   if (!hasTomb) return;
 
-  loggerService.info(`[empires configurator] setting up tomb landmark handlers`);
 
   registrar('onGameStart', async (args) => {
-    // Locate the Tomb landmark instance to attach reaction metadata.
+          // Locate the Tomb landmark instance to attach reaction metadata.
     const tombLandmark = args.match.landmarks.find(
       (landmark) => landmark.cardKey === 'tomb',
     );
     if (!tombLandmark) {
-      loggerService.warn(
-        `[tomb onGameStart] Tomb landmark instance missing, skipping reaction registration`,
-      );
       return;
     }
 
@@ -46,9 +41,6 @@ export const configureTomb = (
             // Grant the Tomb victory token bonus for each trashed card.
             const trashedCard = triggeredArgs.cardLibrary.getCard(
               triggeredArgs.trigger.args.cardId,
-            );
-            loggerService.info(
-              `[tomb cardTrashed] player ${player.id} trashed ${trashedCard}, gaining 1 VP`,
             );
             await triggeredArgs.actionService.run('gainVictoryToken', {
               playerId: player.id,
