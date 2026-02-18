@@ -347,6 +347,46 @@ export type ExpansionListElement = {
   order: number;
 };
 
+// Lobby game status for pre-match discovery and lifecycle updates.
+export type LobbyGameStatus = 'configuring' | 'inMatch' | 'closed';
+
+// Summary payload displayed in the lobby game list.
+export type LobbyGameSummary = {
+  // Stable game identifier for joins, routing, and log partitioning.
+  gameId: string;
+  // Human-readable generated game name.
+  gameName: string;
+  // Owner player ID, when currently assigned.
+  ownerId?: PlayerId;
+  // Current connected+configured players in this game lobby.
+  playerCount: number;
+  // Maximum allowed players for this game.
+  maxPlayers: number;
+  // True when a new player can join from the global lobby list.
+  isJoinable: boolean;
+  // Current lifecycle status used by the lobby UI.
+  status: LobbyGameStatus;
+};
+
+// Canonical reasons a lobby join can be rejected.
+export type LobbyJoinRejectedReason =
+  | 'gameNotFound'
+  | 'gameNotJoinable'
+  | 'gameFull'
+  | 'banned'
+  | 'alreadyInGame'
+  | 'invalidRequest';
+
+// Structured join rejection payload for deterministic client UX.
+export type LobbyJoinRejectedPayload = {
+  // Requested game identifier when known.
+  gameId?: string;
+  // Machine-readable reason code.
+  reason: LobbyJoinRejectedReason;
+  // User-facing message rendered by the lobby UI.
+  message: string;
+};
+
 export type ServerEmitEvents = {
   addLogEntry: (logEntry: LogEntry[]) => void;
   cardEffectsComplete: (playerId: PlayerId, cardId?: CardId) => void;
@@ -369,6 +409,18 @@ export type ServerEmitEvents = {
   playerDisconnected: (player: Player) => void;
   playerNameUpdated: (playerId: PlayerId, name: string) => void;
   playerReady: (playerId: PlayerId, ready: boolean) => void;
+  // Full game-lobby snapshot sent on connect and on explicit request.
+  lobbySnapshot: (games: LobbyGameSummary[]) => void;
+  // Incremental game-lobby update for one game summary.
+  lobbyGameUpdated: (game: LobbyGameSummary) => void;
+  // Removes one game from the lobby list.
+  lobbyGameRemoved: (gameId: string) => void;
+  // Join request failed; client remains in lobby view.
+  joinLobbyRejected: (payload: LobbyJoinRejectedPayload) => void;
+  // Client was removed from a lobby game by owner kick.
+  kickedFromGame: (payload: { gameId: string; message: string }) => void;
+  // Client was removed and banned from a lobby game by owner action.
+  bannedFromGame: (payload: { gameId: string; message: string }) => void;
   searchCardResponse: (cardData: CardNoId[]) => void;
   // Sends event search results to the client.
   searchEventResponse: (eventData: EventNoId[]) => void;
@@ -388,6 +440,20 @@ export type ServerEmitEvents = {
 };
 
 export interface ServerListenEvents {
+  // Requests the current global lobby game list.
+  requestLobbySnapshot: () => void;
+  // Creates a new lobby game with a server-generated name.
+  createLobbyGame: () => void;
+  // Requests to join an existing lobby game.
+  joinLobbyGame: (gameId: string) => void;
+  // Leaves a lobby game and returns to the global lobby view.
+  leaveLobbyGame: (gameId: string) => void;
+  // Owner-only request to kick a player from a lobby game.
+  kickLobbyPlayer: (gameId: string, targetPlayerId: PlayerId) => void;
+  // Owner-only request to ban a player's session from a lobby game.
+  banLobbyPlayer: (gameId: string, targetPlayerId: PlayerId) => void;
+  // Owner-only request to unban a previously banned session from a lobby game.
+  unbanLobbyPlayer: (gameId: string, targetSessionId: string) => void;
   cardsSelected: (selected: CardId[]) => void
   cardLikeTapped: (playerId: PlayerId, cardId: CardId) => void;
   cardTapped: (playerId: PlayerId, cardId: CardId) => void;

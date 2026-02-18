@@ -45,6 +45,7 @@ this can also be used for pile selection instead of using cards.
 - possible keep the enhanced logging for console logs but switch to a buffered file logger solution later for
   production.
 - can the ruins pile be updated to use the newer randomizer and piles?
+- Lobby ban identity currently uses `sessionId`; replace with durable authenticated identity and provide a migration path.
 
 # Higher priority
 
