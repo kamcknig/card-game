@@ -29,7 +29,16 @@ export interface RegisterMatchScopeServicesArgs extends MatchScopeComposerArgs {
   expansionEffectRegistryService: ExpansionEffectRegistryService;
 }
 
-// Registers all per-match scoped services and runtime values into the match scope container.
+/**
+ * Registers every match-lifetime dependency into a child scope.
+ *
+ * Includes:
+ * - match state and socket bindings
+ * - effect maps (card/event/project/boon/hex/state/artifact)
+ * - controller/service graph used by `MatchController`
+ *
+ * Call this exactly once per created match scope before resolving `MatchController`.
+ */
 export const registerMatchScopeServices = (
   scope: AwilixContainer,
   args: RegisterMatchScopeServicesArgs,

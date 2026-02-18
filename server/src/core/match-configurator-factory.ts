@@ -6,7 +6,14 @@ import { RngService } from './rng-service.ts';
 import { ServerConfigService } from './server-config-service.ts';
 import { LoggerService } from './logger-service.ts';
 
-// Factory wrapper for creating match configurators from the root DI graph.
+/**
+ * Factory for `MatchConfigurator` instances.
+ *
+ * Why this exists:
+ * `MatchConfigurator` is intentionally transient and stateful per initialize call.
+ * This factory injects long-lived shared services and creates a fresh configurator for each
+ * configuration run so state does not leak across matches.
+ */
 export class MatchConfiguratorFactory {
   constructor(
     private readonly expansionCatalogService: ExpansionCatalogService,
@@ -16,6 +23,12 @@ export class MatchConfiguratorFactory {
   ) {
   }
 
+  /**
+   * Creates a fresh configurator for a single match configuration pass.
+   *
+   * @param config Base match configuration from lobby/persistence.
+   * @param initContext Callback/registrar context used by expansion configurators.
+   */
   public create(config: MatchConfiguration, initContext: InitializeExpansionContext): MatchConfigurator {
     // MatchConfigurator is a transient value object, so construct it directly with injected stable dependencies.
     return new MatchConfigurator(

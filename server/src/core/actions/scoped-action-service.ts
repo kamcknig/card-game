@@ -6,16 +6,33 @@ import {
   GameActionRunner,
 } from '@server-types/index.ts';
 
-// Stores the active match action runner once MatchController has been resolved in the scope.
+/**
+ * Mutable match-scoped reference to the active `GameActionRunner`.
+ *
+ * Consumers:
+ * - `AwilixMatchScopeComposer` binds the runner once the scope has resolved `MatchController`.
+ * - `ScopedActionService` delegates all action calls through this ref.
+ *
+ * Why this exists:
+ * It removes per-call container lookups from `actionService.run(...)` while still letting
+ * effects/reactions use a stable action-service dependency before concrete controller wiring.
+ */
 export class MatchActionRunnerRef {
   private runner: GameActionRunner | undefined;
 
-  // Binds the runner used by all action-service callers in this scope.
+  /**
+   * Binds the concrete action runner for the current match scope.
+   * Call this exactly once during scope composition.
+   */
   public bind(runner: GameActionRunner): void {
     this.runner = runner;
   }
 
-  // Executes a game action against the bound runner.
+  /**
+   * Executes a game action against the bound runner.
+   *
+   * Throws when called before `bind(...)` to prevent silently dropping actions.
+   */
   public async run<K extends GameActions>(
     action: K,
     ...args: Parameters<GameActionDefinitionMap[K]>
@@ -27,7 +44,18 @@ export class MatchActionRunnerRef {
   }
 }
 
-// Scoped action-service implementation used by effects/reactions to run game actions.
+/**
+ * Match-scoped implementation of the `ActionService` contract.
+ *
+ * Consumers:
+ * - Card effects
+ * - Reaction handlers
+ * - Token handlers
+ *
+ * Usage:
+ * Inject `ActionService` where needed; do not call `MatchController` directly from effect code.
+ * This preserves a single action execution path and consistent trigger/lifecycle behavior.
+ */
 export class ScopedActionService implements ActionService {
   constructor(
     private readonly matchActionRunnerRef: MatchActionRunnerRef,

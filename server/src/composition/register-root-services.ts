@@ -33,7 +33,16 @@ export interface RegisterRootServicesArgs {
   io: Server<ServerListenEvents, ServerEmitEvents>;
 }
 
-// Registers long-lived singleton dependencies used by the server runtime.
+/**
+ * Registers all application-lifetime services in the root container.
+ *
+ * Composition rule:
+ * - Only long-lived singletons belong here.
+ * - Match-lifetime dependencies are registered in `registerMatchScopeServices(...)`.
+ *
+ * @param container Root Awilix container created in `server.ts`.
+ * @param args Runtime host values that must be injected as constants.
+ */
 export const registerRootServices = (
   container: AwilixContainer,
   args: RegisterRootServicesArgs,

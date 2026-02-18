@@ -5,7 +5,18 @@ import { MatchActionRunnerRef } from '../core/actions/scoped-action-service.ts';
 import { ExpansionEffectRegistryService } from '../core/expansion-effect-registry-service.ts';
 import { registerMatchScopeServices } from './register-match-scope-services.ts';
 
-// Awilix-backed composer that creates and wires match scopes.
+/**
+ * Awilix-backed implementation of `MatchScopeComposer`.
+ *
+ * Responsibilities:
+ * - Create a child container for each match.
+ * - Register all match-scoped services/runtime maps.
+ * - Resolve and wire the `MatchController` + `ActionService` runner bridge.
+ * - Return a disposable `MatchScope` handle.
+ *
+ * This class is the only place in the match pipeline that knows about Awilix scope mechanics.
+ * Core factories consume the `MatchScopeComposer` abstraction instead.
+ */
 export class AwilixMatchScopeComposer implements MatchScopeComposer {
   constructor(
     private readonly rootContainer: AwilixContainer,
