@@ -227,8 +227,14 @@ export const socketToGameEventMap = (): SocketEventMap => {
 
   map['patchCardLibrary'] = patch => {
     const current = structuredClone(cardStore.get()) ?? {};
-    applyPatch(current, patch);
-    cardStore.set(current);
+    try {
+      applyPatch(current, patch);
+      cardStore.set(current);
+    } catch (error) {
+      // Guard against out-of-order/stale patches so one bad patch does not break client event processing.
+      console.warn('[socket event map] failed to apply card library patch');
+      console.debug(error);
+    }
   };
 
   map['patchUpdate'] = (patchMatch, patchCardLibrary) => {
@@ -238,10 +244,16 @@ export const socketToGameEventMap = (): SocketEventMap => {
 
   map['patchMatch'] = (patch: Operation[]) => {
     const current = structuredClone(matchStore.get()) ?? {} as Match;
-    applyPatch(current, patch);
-    cardSourceStore.set(current.cardSources);
-    cardSourceTagMapStore.set(current.cardSourceTagMap);
-    matchStore.set(current);
+    try {
+      applyPatch(current, patch);
+      cardSourceStore.set(current.cardSources);
+      cardSourceTagMapStore.set(current.cardSourceTagMap);
+      matchStore.set(current);
+    } catch (error) {
+      // Guard against out-of-order/stale patches so one bad patch does not break client event processing.
+      console.warn('[socket event map] failed to apply match patch');
+      console.debug(error);
+    }
   };
 
   map['playerConnected'] = (player) => {

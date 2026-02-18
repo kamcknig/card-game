@@ -48,7 +48,8 @@ this can also be used for pile selection instead of using cards.
 - Lobby ban identity currently uses `sessionId`; replace with durable authenticated identity and provide a migration path.
 
 # Higher priority
-
+- safety so that when a game or mtach crashes, the ret of the server doesn't
+  crash and can recover
 - check duration behvavior. the offical rules say this "Additionally, if a Duration card is played extra times by a card
   such as [Throne Room, Scepter, Mastermind, Specialist, Flagship, or Daimyo], that card also stays in play until the
   Duration card is discarded, to track the fact that the Duration card was played extra times." Just make sure cards

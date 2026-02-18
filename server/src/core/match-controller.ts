@@ -53,6 +53,10 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _matchSnapshot: Match | null | undefined;
   private _matchConfiguration: ComputedMatchConfiguration | undefined;
   private _matchConfigurator: MatchConfigurator | undefined;
+  // Prevents duplicate initialize runs for the same match controller instance.
+  private _isInitialized = false;
+  // Tracks the in-flight initialize operation so concurrent calls can coalesce safely.
+  private _initializePromise: Promise<void> | null = null;
   private _expansionScoringFns: PlayerScoreDecorator[] = [];
   private _registeredEvents: (keyof ServerListenEvents)[] = [];
   // Tracks nested runGameAction calls to avoid corrupting patch snapshots.
@@ -163,6 +167,34 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
 
   public async initialize(config: MatchConfiguration) {
+    if (this._isInitialized) {
+      this.loggerService.warn('[match] initialize ignored; controller already initialized');
+      return;
+    }
+
+    if (this._initializePromise) {
+      this.loggerService.warn('[match] initialize already in progress; awaiting existing initialization');
+      await this._initializePromise;
+      return;
+    }
+
+    this._initializePromise = this.initializeInternal(config);
+
+    try {
+      await this._initializePromise;
+      this._isInitialized = true;
+    } finally {
+      this._initializePromise = null;
+    }
+  }
+
+  // Exposes whether this controller has completed (or is running) match initialization.
+  public isInitialized(): boolean {
+    return this._isInitialized || this._initializePromise !== null;
+  }
+
+  // Runs the one-time match setup pipeline for this controller instance.
+  private async initializeInternal(config: MatchConfiguration) {
     this.broadcastPatch({} as Match);
 
     const snapshot = this.getMatchSnapshot();
@@ -235,10 +267,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this.broadcastPatch(snapshot);
 
     this.socketMap.forEach((s) => {
+      // Register readiness listener before notifying client that match data is ready.
+      s.on('clientReady', this.onClientReady);
       s.emit('setCardLibrary', this.cardLibrary.getAllCards());
       s.emit('setTokenDefinitions', this.tokenRegistryService.getTokenDefinitions());
       s.emit('matchReady');
-      s.on('clientReady', this.onClientReady);
     });
   }
 

@@ -15,7 +15,7 @@ export interface OwnerLobbyHandlers {
 // Lobby handlers shared by all connected lobby players before match start.
 export interface PlayerLobbyHandlers {
   onUpdatePlayerName: (playerId: PlayerId, name: string) => void;
-  onPlayerReady: (playerId: PlayerId) => void;
+  onPlayerReady: (playerId: PlayerId, ready: boolean) => void;
 }
 
 // Encapsulates lobby socket event binding and unbinding behavior.

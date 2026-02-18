@@ -116,13 +116,15 @@ export class GameLobbySessionCoordinatorService {
       socket.emit('matchConfigurationUpdated', state.matchConfiguration!);
       this.lobbySocketBindings.bindPlayerLobbyHandlers(socket, {
         onUpdatePlayerName: (playerId, name) => this.onUpdatePlayerName(state, playerId, name),
-        onPlayerReady: (playerId) => this.onPlayerReady(state, playerId, callbacks.onStartMatch),
+        onPlayerReady: (playerId, ready) =>
+          this.onPlayerReady(state, playerId, ready, callbacks.onStartMatch, socket.id),
       });
     }
 
     socket.on('disconnect', (disconnectReason) => {
       this.onPlayerDisconnected(state, {
         playerId: player.id,
+        socketId: socket.id,
         reason: disconnectReason.toString(),
         callbacks,
       });
@@ -137,12 +139,21 @@ export class GameLobbySessionCoordinatorService {
     state: GameRuntimeState,
     args: {
       playerId: PlayerId;
+      socketId: string;
       reason: string;
       callbacks: GameLobbyCallbacks;
     },
   ): void {
-    const { playerId, reason, callbacks } = args;
+    const { playerId, socketId, reason, callbacks } = args;
     this.loggerService.info(`[game] ${playerId} disconnected - ${reason}`);
+
+    const activePlayer = state.players.find((candidate) => candidate.id === playerId);
+    if (activePlayer && activePlayer.socketId !== socketId) {
+      this.loggerService.debug(
+        `[game] ignoring disconnect from stale socket ${socketId} for ${activePlayer}; active socket is ${activePlayer.socketId}`,
+      );
+      return;
+    }
 
     const player = this.playerRegistryService.markPlayerDisconnected(state.players, playerId);
     if (!player) {
@@ -278,16 +289,42 @@ export class GameLobbySessionCoordinatorService {
     this.io.in(state.roomName).emit('playerNameUpdated', playerId, name);
   }
 
-  // Toggles readiness and starts match when all connected players are ready.
-  public onPlayerReady(state: GameRuntimeState, playerId: PlayerId, onStartMatch: () => void): void {
+  // Updates readiness and starts match when all connected players are ready.
+  public onPlayerReady(
+    state: GameRuntimeState,
+    playerId: PlayerId,
+    ready: boolean,
+    onStartMatch: () => void,
+    sourceSocketId: string,
+  ): void {
+    // Ignore late or duplicate ready events once match startup has begun.
+    if (state.matchStarted) {
+      this.loggerService.debug(
+        `[game] ignoring ready event from ${playerId}; match has already started`,
+      );
+      return;
+    }
+
     const player = state.players.find((nextPlayer) => nextPlayer.id === playerId);
     if (!player) {
       this.loggerService.warn(`[game] received player ready event from ${playerId} but could not find Player object`);
       return;
     }
 
+    if (player.socketId !== sourceSocketId) {
+      this.loggerService.debug(
+        `[game] ignoring ready event from stale socket ${sourceSocketId} for ${player}; active socket is ${player.socketId}`,
+      );
+      return;
+    }
+
+    if (player.ready === ready) {
+      this.loggerService.debug(`[game] ignoring duplicate ready state ${ready} from ${player}`);
+      return;
+    }
+
     this.loggerService.info(`[game] received ready event from ${player}`);
-    player.ready = !player.ready;
+    player.ready = ready;
     this.loggerService.info(`[game] marking ${player} as ${player.ready}`);
     this.io.in(state.roomName).except(player.socketId).emit('playerReady', playerId, player.ready);
 

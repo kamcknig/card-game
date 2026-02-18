@@ -41,10 +41,10 @@ export class GameScopeFactory {
       // Persist lobby configuration per game/match scope instead of process-global files.
       configStore: asClass(FileGameConfigurationStore).scoped(),
       // These services maintain mutable state and must not be shared across games.
-      disconnectedPlayerVoteService: asClass(DisconnectedPlayerVoteService).singleton(),
-      gameMatchLifecycleCoordinatorService: asClass(GameMatchLifecycleCoordinatorService).singleton(),
-      gameLobbySessionCoordinatorService: asClass(GameLobbySessionCoordinatorService).singleton(),
-      game: asClass(Game).singleton(),
+      disconnectedPlayerVoteService: asClass(DisconnectedPlayerVoteService).scoped(),
+      gameMatchLifecycleCoordinatorService: asClass(GameMatchLifecycleCoordinatorService).scoped(),
+      gameLobbySessionCoordinatorService: asClass(GameLobbySessionCoordinatorService).scoped(),
+      game: asClass(Game).scoped(),
     });
 
     const game = scope.resolve<Game>('game');

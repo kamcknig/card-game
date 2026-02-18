@@ -48,6 +48,10 @@ export class PlayerReconnectOrchestrator {
     this.loggerService.info(`[match] player ${playerId} reconnecting`);
     this.socketMap.set(playerId, socket);
 
+    // Ensure gameplay socket handlers are active immediately on reconnect.
+    this.bindGameplaySocketListeners(socket);
+    this.interactivityController.playerAdded(socket);
+
     // Send current match/card state only to the reconnecting player.
     const matchPatch = jsonPatch.compare({} as Match, this.match);
     const cardLibraryPatch = jsonPatch.compare({}, this.cardLibrary.getAllCards());
@@ -63,18 +67,18 @@ export class PlayerReconnectOrchestrator {
       socket.emit('addLogEntry', logHistory);
     }
 
-    socket.on('clientReady', async (_playerId: number, _ready: boolean) => {
+    const onClientReady = async (_playerId: number, _ready: boolean) => {
       this.loggerService.info(`[match] ${getPlayerById(this.match, playerId)} marked ready`);
       socket.emit('matchStarted');
-      socket.off('clientReady');
-
-      this.bindGameplaySocketListeners(socket);
-      this.interactivityController.playerAdded(socket);
+      socket.off('clientReady', onClientReady);
 
       if (getCurrentPlayer(this.match).id === playerId) {
         await this.actionService.run('checkForRemainingPlayerActions');
       }
-    });
+    };
+
+    // Register readiness listener before matchReady to avoid races.
+    socket.on('clientReady', onClientReady);
   }
 
   private async onNextPhase() {

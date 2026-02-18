@@ -128,7 +128,23 @@ export class GameMatchLifecycleCoordinatorService {
 
   // Starts gameplay once lobby players are ready and initializes the match controller.
   public startMatch(state: GameRuntimeState, args: StartMatchArgs): void {
+    // Ignore duplicate start attempts from repeated ready events.
+    if (state.matchStarted) {
+      this.loggerService.debug('[game] startMatch ignored; match already started');
+      return;
+    }
+
     this.loggerService.log('[game] all connected players ready, proceeding to start match');
+
+    // Recover from stale lifecycle state by rotating to a fresh match scope before startup.
+    if (state.matchController?.isInitialized()) {
+      this.loggerService.warn(
+        '[game] detected initialized match controller during lobby start; creating a fresh match scope',
+      );
+      const pendingConfig = structuredClone(state.matchConfiguration ?? args.defaultMatchConfiguration);
+      this.createNewMatch(state, args.defaultMatchConfiguration);
+      state.matchConfiguration = pendingConfig;
+    }
 
     state.matchStarted = true;
     if (!state.matchController) {
