@@ -1,10 +1,9 @@
 <main class="match-config">
-  <header class="match-config-header">
-    <h1>Match Configuration</h1>
+  <app-scene-banner [subtitle]="activeGameName$ | async">
     @if (activeLobbyGameId$ | async; as activeGameId) {
       <button class="leave-game-button" (click)="leaveGame(activeGameId)">Leave Game</button>
     }
-  </header>
+  </app-scene-banner>
 
   <!-- ░░░  Player List  ░░░ -->
   <section class="players">
@@ -56,7 +55,7 @@
     </div>
   </section>
 
-  <section>
+  <section class="selection-board">
       <section class="kingdom-section">
         <h2 class="section-title">Kingdom</h2>
 
@@ -221,10 +220,18 @@
       <button (click)="selectingBannedCards = true">Select</button>
     }
 
-    <div class="banned-card-list">
-      @for (bannedCard of bannedKingdoms; track bannedCard.cardKey) {
-        <span class="banned-card-item">
-          <span>{{ bannedCard.cardName }}</span>
+    <div
+      class="banned-card-list"
+      [style.height.px]="bannedKingdoms.length > 0 ? 122 + ((bannedKingdoms.length - 1) * 25) : 122"
+    >
+      @for (bannedCard of bannedKingdoms; track bannedCard.cardKey; let i = $index) {
+        <span class="banned-card-item" [style.--banned-stack-index]="i">
+          <img
+            alt="{{bannedCard.cardName}} image"
+            ngSrc="{{bannedCard.halfImagePath}}"
+            height="122"
+            width="122"
+          />
           @if (isGameOwner) {
             <span (click)="deleteBannedKingdom(bannedCard)" class="close-button">X</span>
           }
@@ -237,7 +244,7 @@
 <!-- select banned kingdoms -->
 @if (selectingBannedCards) {
   <app-select-kingdom-modal
-    [excludedKingdoms]="preSelectedKingdoms"
+    [excludedKingdoms]="preSelectedKingdoms.concat(bannedKingdoms)"
     [ngStyle]="{'visibility': selectingBannedCards ? 'visible' : 'hidden'}"
     (close)="selectingBannedCards = false"
     autofocus

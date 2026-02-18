@@ -1,27 +1,34 @@
 /* ——— Layout ——————————————————————————————— */
+$match-config-two-column-breakpoint: 1360px;
+$match-config-single-column-breakpoint: 940px;
+$selection-board-two-column-breakpoint: 1200px;
+$selection-board-single-column-breakpoint: 760px;
+
 .match-config {
-  display: inline-grid;
-  grid-template-columns: auto auto auto;
-  grid-template-rows: auto auto;
+  display: grid;
+  // Three-pane top row (players, expansions, bans), full-width board below.
+  grid-template-columns: repeat(3, minmax(260px, 1fr));
+  grid-template-rows: auto auto auto;
   padding: 24px;
   font-family: system-ui, sans-serif;
   grid-column-gap: 20px;
   grid-row-gap: 20px;
   color: var(--theme-text-primary);
   background: var(--theme-surface-panel);
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 100%;
 }
 
-.match-config-header {
+app-scene-banner {
   grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-
-  h1 {
-    margin: 0;
-    font-size: 1.2rem;
-  }
+  // Match lobby: let the banner/header ignore the match-config outer padding.
+  margin: -24px -24px 0;
+  width: calc(100% + 48px);
+  // Keep configuration header visible while the page scrolls.
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
 
 .leave-game-button {
@@ -37,38 +44,80 @@
   font-size: 1.25rem;
 }
 
-.banned-cards-section {
+.players {
+  grid-row: 2;
+  grid-column: 1;
+}
+
+.expansions {
   grid-row: 2;
   grid-column: 2;
 }
 
+.banned-cards-section {
+  grid-row: 2;
+  grid-column: 3;
+}
+
+.selection-board {
+  grid-row: 3;
+  grid-column: 1 / -1;
+  display: grid;
+  // Keep card-like columns at fixed track width so they stay left-clustered instead of stretching.
+  grid-template-columns: repeat(3, minmax(280px, 280px));
+  justify-content: start;
+  align-items: start;
+  gap: 20px;
+}
+
 .banned-card-list {
   margin-top: 10px;
-  display: flex;
-  justify-content: start;
-  flex-direction: column;
-  gap: 5px;
-  height: 300px;
-  max-height: 500px;
-  overflow: auto;
+  // Cards are absolutely positioned to create a stacked/fanned pile.
+  position: relative;
+  width: 122px;
+  min-height: 122px;
 }
 
 .banned-card-item {
-  position: relative;
-  align-self: start;
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 122px;
+  height: 122px;
+  border: 2px solid var(--theme-border-strong);
+  background: var(--theme-surface-card);
+  // Stack cards with a positive Y offset for each subsequent card.
+  transform: translateY(calc(var(--banned-stack-index, 0) * 25px));
 
+  img {
+    display: block;
+    width: 122px;
+    height: 122px;
+    object-fit: cover;
+  }
+
+  // Keep hidden until hover so the stack remains clean.
   .close-button {
-    font-size: 6px;
-    right: -20px;
-    top: 5px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms ease;
+  }
+
+  &:hover .close-button {
+    opacity: 1;
+    pointer-events: auto;
   }
 }
 
 .kingdom-section {
+  // Kingdom stays full-width and cards inside control their own fixed tile sizing.
+  grid-column: 1 / -1;
+
   .kingdom-list {
     display: grid;
-    grid-template-columns: repeat(5, auto);
-    grid-template-rows: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(122px, 122px));
+    justify-content: start;
     gap: 10px;
   }
 
@@ -80,75 +129,79 @@
   }
 }
 
-/* Events selection layout */
-.events-section {
-  .events-list {
-    display: grid;
-    grid-template-columns: repeat(2, 280px);
-    grid-auto-flow: row;
-    gap: 10px;
-    justify-content: start;
+/* Card-like selection layout mirrors kingdom behavior and scales 1-3 columns. */
+.events-section .events-list,
+.landmarks-section .landmarks-list,
+.artifacts-section .artifacts-list,
+.projects-section .projects-list {
+  display: grid;
+  // Keep card-like slots fixed width and avoid horizontal stretching.
+  grid-template-columns: repeat(auto-fit, minmax(280px, 280px));
+  justify-content: start;
+  gap: 10px;
+}
+
+.events-section .event-slot,
+.landmarks-section .landmark-slot,
+.artifacts-section .artifact-slot,
+.projects-section .project-slot {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+@media (max-width: $match-config-two-column-breakpoint) {
+  .match-config {
+    grid-template-columns: repeat(2, minmax(260px, 1fr));
+    grid-template-rows: auto auto auto auto;
   }
 
-  .event-slot {
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  .players {
+    grid-row: 2;
+    grid-column: 1;
+  }
+
+  .expansions {
+    grid-row: 2;
+    grid-column: 2;
+  }
+
+  .banned-cards-section {
+    grid-row: 3;
+    grid-column: 1 / -1;
+  }
+
+  .selection-board {
+    grid-row: 4;
+    grid-column: 1 / -1;
   }
 }
 
-/* Landmarks selection layout */
-.landmarks-section {
-  .landmarks-list {
-    display: grid;
-    grid-template-columns: repeat(2, 280px);
-    grid-auto-flow: row;
-    gap: 10px;
-    justify-content: start;
-  }
-
-  .landmark-slot {
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+@media (max-width: $selection-board-two-column-breakpoint) {
+  .selection-board {
+    grid-template-columns: repeat(2, minmax(280px, 280px));
   }
 }
 
-/* Artifacts selection layout */
-.artifacts-section {
-  .artifacts-list {
-    display: grid;
-    grid-template-columns: repeat(2, 280px);
-    grid-auto-flow: row;
-    gap: 10px;
-    justify-content: start;
-  }
-
-  .artifact-slot {
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+@media (max-width: $selection-board-single-column-breakpoint) {
+  .selection-board {
+    grid-template-columns: minmax(280px, 280px);
   }
 }
 
-/* Projects selection layout */
-.projects-section {
-  .projects-list {
-    display: grid;
-    grid-template-columns: repeat(2, 280px);
-    grid-auto-flow: row;
-    gap: 10px;
-    justify-content: start;
+@media (max-width: $match-config-single-column-breakpoint) {
+  .match-config {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
   }
 
-  .project-slot {
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  .players,
+  .expansions,
+  .banned-cards-section,
+  .selection-board {
+    grid-column: 1;
+    grid-row: auto;
   }
 }
 
@@ -160,7 +213,10 @@
 
 .expansion-list {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  // Keep expansion icons tightly packed instead of stretching across the row.
+  grid-template-columns: repeat(auto-fit, minmax(50px, 50px));
+  justify-content: start;
+  gap: 10px;
 }
 
 /* ——— Expansion items ———————————————— */

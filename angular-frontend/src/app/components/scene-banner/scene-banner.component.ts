@@ -1,0 +1,13 @@
+import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+
+@Component({
+  selector: 'app-scene-banner',
+  standalone: true,
+  templateUrl: './scene-banner.component.html',
+  styleUrl: './scene-banner.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class SceneBannerComponent {
+  // Optional secondary line shown under the main title.
+  @Input() subtitle: string | null | undefined;
+}

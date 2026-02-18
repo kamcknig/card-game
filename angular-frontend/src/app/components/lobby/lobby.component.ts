@@ -5,11 +5,12 @@ import { Observable } from 'rxjs';
 import { LobbyGameSummary } from 'shared/types';
 import { SocketService } from '../../core/socket-service/socket.service';
 import { lobbyGamesStore, lobbyStatusMessageStore } from '../../state/lobby-state';
+import { SceneBannerComponent } from '../scene-banner/scene-banner.component';
 
 @Component({
   selector: 'app-lobby',
   standalone: true,
-  imports: [AsyncPipe],
+  imports: [AsyncPipe, SceneBannerComponent],
   templateUrl: './lobby.component.html',
   styleUrl: './lobby.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

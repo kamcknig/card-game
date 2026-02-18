@@ -17,13 +17,14 @@ import { expansionListStore } from '../../state/expansion-list-state';
 import { matchConfigurationStore } from '../../state/match-state';
 import { SocketService } from '../../core/socket-service/socket.service';
 import { gameOwnerIdStore, sceneStore } from '../../state/game-state';
-import { activeLobbyGameIdStore, lobbyStatusMessageStore } from '../../state/lobby-state';
+import { activeLobbyGameIdStore, lobbyGamesStore, lobbyStatusMessageStore } from '../../state/lobby-state';
 import { PlayerComponent } from './player-name-input/player-name-input.component';
 import { SelectKingdomModalComponent } from './select-kingdom-modal/select-kingdom-modal.component';
 import { SelectEventModalComponent } from './select-event-modal/select-event-modal.component';
 import { SelectLandmarkModalComponent } from './select-landmark-modal/select-landmark-modal.component';
 import { SelectArtifactModalComponent } from './select-artifact-modal/select-artifact-modal.component';
 import { SelectProjectModalComponent } from './select-project-modal/select-project-modal.component';
+import { SceneBannerComponent } from '../scene-banner/scene-banner.component';
 
 @Component({
   selector: 'app-match-configuration',
@@ -37,6 +38,7 @@ import { SelectProjectModalComponent } from './select-project-modal/select-proje
     SelectLandmarkModalComponent,
     SelectArtifactModalComponent,
     SelectProjectModalComponent,
+    SceneBannerComponent,
     NgStyle
   ],
   templateUrl: './match-configuration.component.html',
@@ -48,6 +50,7 @@ export class MatchConfigurationComponent implements OnDestroy {
   expansionList$!: Observable<readonly ExpansionListElement[]>;
   matchExpansions$!: Observable<readonly string[]>;
   activeLobbyGameId$!: Observable<string | undefined>;
+  activeGameName$!: Observable<string | undefined>;
   isGameOwner: boolean = false;
   preSelectedKingdoms: (CardNoId | null)[] = [];
   // Tracks the fixed events selected for the match.
@@ -95,6 +98,15 @@ export class MatchConfigurationComponent implements OnDestroy {
       );
     // Exposes current joined game id for leave/moderation actions.
     this.activeLobbyGameId$ = this._nanoStoreService.useStore(activeLobbyGameIdStore);
+    this.activeGameName$ = combineLatest([
+      this._nanoStoreService.useStore(activeLobbyGameIdStore),
+      this._nanoStoreService.useStore(lobbyGamesStore),
+    ]).pipe(
+      map(([activeGameId, games]) => {
+        if (!activeGameId) return undefined;
+        return games.find((game) => game.gameId === activeGameId)?.gameName ?? activeGameId;
+      }),
+    );
 
     this.bannedKingdoms$ = this._nanoStoreService.useStore(matchConfigurationStore).pipe(
       map(config => config?.bannedKingdoms ?? [])
@@ -354,17 +366,19 @@ export class MatchConfigurationComponent implements OnDestroy {
 
   onBannedKingdomSelected($event: CardNoId) {
     const idx = this.bannedKingdoms.findIndex(k => k.cardKey === $event.cardKey);
-    if (idx === -1) {
-      this.bannedKingdoms.push($event);
+    // Banned-card modal only adds; removal is handled explicitly via the stack close button.
+    if (idx !== -1) {
+      return;
     }
-    else {
-      this.bannedKingdoms.splice(idx, 1)
-    }
+    this.bannedKingdoms.push($event);
     this.bannedKingdoms = [...this.bannedKingdoms.sort((a, b) => a.cardKey.localeCompare(b.cardKey))];
     this.sendMatchConfigUpdate();
   }
 
   deleteBannedKingdom(bannedCard: CardNoId) {
-    this.onBannedKingdomSelected(bannedCard);
+    this.bannedKingdoms = this.bannedKingdoms
+      .filter((card) => card.cardKey !== bannedCard.cardKey)
+      .sort((a, b) => a.cardKey.localeCompare(b.cardKey));
+    this.sendMatchConfigUpdate();
   }
 }
