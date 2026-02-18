@@ -1,4 +1,3 @@
-import { loggerService } from '@logger';
 import { CardKey } from 'shared/types/index.ts';
 import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 import { getCardPileKey } from './get-card-pile-key.ts';
@@ -20,7 +19,7 @@ export const configureSplitPile = (
   );
 
   if (!splitPileSupply) {
-    loggerService.info(
+    args.loggerService.info(
       `[split pile configurator] no ${options.logLabel} pile in kingdom supply`,
     );
     return;
@@ -32,7 +31,7 @@ export const configureSplitPile = (
     currentOrder.every((key, index) => key === options.desiredOrder[index]);
 
   if (orderMatches) {
-    loggerService.info(
+    args.loggerService.info(
       `[split pile configurator] ${options.logLabel} pile already configured`,
     );
     return;
@@ -43,7 +42,7 @@ export const configureSplitPile = (
   for (const cardKey of options.desiredOrder) {
     const cardTemplate = args.cardLibrary[cardKey];
     if (!cardTemplate) {
-      loggerService.warn(
+      args.loggerService.warn(
         `[split pile configurator] missing card template for ${cardKey}`,
       );
       continue;
@@ -52,7 +51,7 @@ export const configureSplitPile = (
   }
   splitPileSupply.cards = nextCards;
 
-  loggerService.log(
+  args.loggerService.log(
     `[split pile configurator] configured ${options.logLabel} split pile`,
   );
 };

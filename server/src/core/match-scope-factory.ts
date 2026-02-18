@@ -11,6 +11,7 @@ import { MatchSetupService } from './match-setup-service.ts';
 import { EndGamePolicyRegistryService } from './end-game-policy-registry-service.ts';
 import { CardInstanceFactoryService } from './card-instance-factory-service.ts';
 import { MatchEndService } from './match-end-service.ts';
+import { LoggerService } from './logger-service.ts';
 
 const createActionService = (matchScopeContainer: AwilixContainer): ActionService => ({
   run: async <K extends GameActions>(
@@ -29,6 +30,8 @@ export interface MatchScope {
 
 // Builds the per-match scope and resolves match-lifetime services/controllers.
 export class MatchScopeFactory {
+  private nextMatchScopeId = 1;
+
   constructor(
     private readonly rootContainer: AwilixContainer,
     private readonly matchRuntimeFactory: MatchRuntimeFactory,
@@ -37,6 +40,7 @@ export class MatchScopeFactory {
 
   public create(socketMap: Map<PlayerId, AppSocket>): MatchScope {
     const match = createInitialMatchState();
+    const matchScopeId = this.nextMatchScopeId++;
 
     // Scope owns match-lifetime dependencies and instances.
     const scope = this.rootContainer.createScope();
@@ -44,6 +48,8 @@ export class MatchScopeFactory {
     scope.register({
       matchScopeContainer: asValue(scope),
       socketMap: asValue(socketMap),
+      loggerContext: asValue({ scope: 'match', matchScopeId }),
+      loggerService: asClass(LoggerService).singleton(),
       matchConfiguratorFactory: asValue(this.matchConfiguratorFactory),
       match: asValue(match),
       // Resolve card library from the match scope to avoid manual construction.

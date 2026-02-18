@@ -25,12 +25,12 @@ import { RngService } from './core/rng-service.ts';
 import { TokenRegistryService } from './core/tokens/token-registry-service.ts';
 import { ServerConfigService } from './core/server-config-service.ts';
 import { LoggerBackend } from './core/logger-service.ts';
-import { loggerService } from '@logger';
 import { asClass, asValue, createContainer, InjectionMode } from 'awilix';
 import { EventLoaderService } from './core/events/load-events.ts';
 import { LandmarkLoaderService } from './core/landmarks/load-landmarks.ts';
 import { ProjectLoaderService } from './core/projects/load-projects.ts';
 import { ExpansionLoaderService } from './core/expansion-loader-service.ts';
+import { loggerService } from '@logger';
 
 const serverConfigService = new ServerConfigService();
 

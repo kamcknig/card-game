@@ -1,10 +1,10 @@
-import { loggerService } from '@logger';
 import { Card, CardCost, CardId, Match, PlayerId } from 'shared/types/index.ts';
 import { CardAlternateBuyOption, FindCardService } from '@server-types/index.ts';
 import { MatchCardLibrary } from '../match-card-library.ts';
 import { CardPriceRulesController } from '../card-price-rules-controller.ts';
 import { CardSourceController } from '../card-source-controller.ts';
 import { ExpansionEffectRegistryService } from '../expansion-effect-registry-service.ts';
+import { LoggerService } from '../logger-service.ts';
 
 // Normalized buy option result used by interactivity and buy execution.
 export type ResolvedBuyOption = {
@@ -42,6 +42,7 @@ export class BuyOptionsResolver {
     private readonly cardSourceController: CardSourceController,
     private readonly findCardService: FindCardService,
     private readonly expansionEffectRegistryService: ExpansionEffectRegistryService,
+    private readonly loggerService: LoggerService,
   ) {}
 
   // Resolves all currently legal ways the player can buy the card.
@@ -102,7 +103,7 @@ export class BuyOptionsResolver {
 
       // Skip duplicate option ids to keep prompt/result mapping deterministic.
       if (options.some((existingOption) => existingOption.id === option.id)) {
-        loggerService.warn(`[buy options] duplicate buy option id '${option.id}' for ${card.cardKey}, skipping duplicate`);
+        this.loggerService.warn(`[buy options] duplicate buy option id '${option.id}' for ${card.cardKey}, skipping duplicate`);
         continue;
       }
 

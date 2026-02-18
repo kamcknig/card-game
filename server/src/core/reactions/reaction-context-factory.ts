@@ -17,6 +17,7 @@ import { CardPriceRulesController } from '../card-price-rules-controller.ts';
 import { CardSourceController } from '../card-source-controller.ts';
 import { LogManager } from '../log-manager.ts';
 import { RngService } from '../rng-service.ts';
+import { LoggerService } from '../logger-service.ts';
 import type { ReactionManager } from './reaction-manager.ts';
 
 // Centralized builder for reaction/lifecycle callback contexts.
@@ -27,6 +28,7 @@ export class ReactionContextFactory {
     private readonly supplyGainService: SupplyGainService,
     private readonly cardPriceController: CardPriceRulesController,
     private readonly logManager: LogManager,
+    private readonly loggerService: LoggerService,
     private readonly rngService: RngService,
     private readonly match: Match,
     private readonly cardLibrary: MatchCardLibrary,
@@ -45,6 +47,7 @@ export class ReactionContextFactory {
       cardSourceController: this.cardSourceController,
       cardPriceController: this.cardPriceController,
       logManager: this.logManager,
+      loggerService: this.loggerService,
       rngService: this.rngService,
       reactionManager: args.reactionManager,
       actionService: this.actionService,
@@ -68,6 +71,7 @@ export class ReactionContextFactory {
       supplyGainService: this.supplyGainService,
       cardPriceController: this.cardPriceController,
       logManager: this.logManager,
+      loggerService: this.loggerService,
       rngService: this.rngService,
       cardLibrary: this.cardLibrary,
       cardInstanceFactoryService: this.cardInstanceFactoryService,
@@ -87,6 +91,7 @@ export class ReactionContextFactory {
       actionService: this.actionService,
       cardPriceController: this.cardPriceController,
       logManager: this.logManager,
+      loggerService: this.loggerService,
       rngService: this.rngService,
       cardLibrary: this.cardLibrary,
       match: this.match,
@@ -110,6 +115,7 @@ export class ReactionContextFactory {
       reactionManager: args.reactionManager,
       cardPriceController: this.cardPriceController,
       logManager: this.logManager,
+      loggerService: this.loggerService,
       rngService: this.rngService,
       isRootLog: false,
       actionService: this.actionService,

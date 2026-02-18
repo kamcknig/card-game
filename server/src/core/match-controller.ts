@@ -173,6 +173,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       match: this.match,
       cardSourceController: this.cardSourceController,
       cardInstanceFactoryService: this.cardInstanceFactoryService,
+      loggerService: this.loggerService,
       rngService: this.rngService,
       gameEventRegistrar: (event: GameLifecycleEvent, handler: GameLifecycleCallback) =>
         this.reactionManager.registerGameEvent(event, handler),
@@ -434,6 +435,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     action: K,
     ...args: Parameters<GameActionDefinitionMap[K]>
   ): Promise<GameActionReturnTypeMap[K]> {
+    const actionLogContext = {
+      action: String(action),
+      turnNumber: this.match.turnNumber,
+      phaseIndex: this.match.turnPhaseIndex,
+    };
     const isTopLevel = this._actionDepth === 0;
     this._actionDepth += 1;
     this._matchSnapshot ??= this.getMatchSnapshot();
@@ -481,7 +487,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       }
 
       if (await this.checkGameEnd()) {
-        this.loggerService.log(`[match] game ended`);
+        this.loggerService.logWithContext(actionLogContext, `[match] game ended`);
       }
 
       return result as Promise<GameActionReturnTypeMap[K]>;
@@ -610,6 +616,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
             cardSourceController: this.cardSourceController,
             cardPriceController: this.cardPriceController,
             logManager: this.logManager,
+            loggerService: this.loggerService,
             rngService: this.rngService,
             findCardService: this.findCardService,
             supplyGainService: this.supplyGainService,

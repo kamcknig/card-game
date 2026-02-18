@@ -419,18 +419,26 @@ export class GameActionController implements GameActionDefinitionMap {
     effectFn: CardEffectFn;
     context: CardEffectFunctionContext;
   }): Promise<void> {
-    this.loggerService.info(`[${args.sourceType} effect] start ${args.source} for player ${args.playerId}`);
-    this.loggerService.debug(`[${args.sourceType} effect] context cardId ${args.context.cardId}`);
+    const effectContext = {
+      scope: 'effect',
+      sourceType: args.sourceType,
+      source: args.source,
+      playerId: args.playerId,
+      cardId: args.context.cardId,
+    } as const;
+
+    this.loggerService.infoWithContext(effectContext, `[${args.sourceType} effect] start ${args.source} for player ${args.playerId}`);
+    this.loggerService.debugWithContext(effectContext, `[${args.sourceType} effect] context cardId ${args.context.cardId}`);
     try {
       await this.logManager.withIndent(async () => {
         await args.effectFn(args.context);
       });
     } catch (error) {
-      this.loggerService.error(`[${args.sourceType} effect] error ${args.source} for player ${args.playerId}`);
-      this.loggerService.error(error);
+      this.loggerService.errorWithContext(effectContext, `[${args.sourceType} effect] error ${args.source} for player ${args.playerId}`);
+      this.loggerService.errorWithContext(effectContext, error);
       throw error;
     }
-    this.loggerService.info(`[${args.sourceType} effect] complete ${args.source} for player ${args.playerId}`);
+    this.loggerService.infoWithContext(effectContext, `[${args.sourceType} effect] complete ${args.source} for player ${args.playerId}`);
   }
 
   // Executes a single automatic action for the current computer player.

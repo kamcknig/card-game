@@ -41,6 +41,7 @@ import { CardSourceController } from './core/card-source-controller.ts';
 import { LogManager } from './core/log-manager.ts';
 import type { CardInstanceFactoryService } from './core/card-instance-factory-service.ts';
 import type { RngService } from './core/rng-service.ts';
+import type { LoggerService } from './core/logger-service.ts';
 
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
 
@@ -391,6 +392,7 @@ export interface AppContext {
   cardSourceController: CardSourceController;
   cardPriceController: CardPriceRulesController;
   logManager: LogManager;
+  loggerService: LoggerService;
   rngService: RngService;
   match: Match;
   reactionManager: ReactionManager;
@@ -933,6 +935,7 @@ export type GameEventRegistrar = (event: GameLifecycleEvent, handler: GameLifecy
 export type InitializeExpansionContext = {
   cardSourceController: CardSourceController;
   cardInstanceFactoryService: CardInstanceFactoryService;
+  loggerService: LoggerService;
   rngService: RngService;
   gameEventRegistrar: GameEventRegistrar;
   match: Match;

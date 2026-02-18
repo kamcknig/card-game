@@ -46,6 +46,7 @@ export class EndGameEvaluatorService {
         cardLibrary: this.cardLibrary,
         cardPriceController: this.cardPriceController,
         logManager: this.logManager,
+        loggerService: this.loggerService,
         rngService: this.rngService,
         reactionManager: this.reactionManager,
         findCardService: this.findCardService,

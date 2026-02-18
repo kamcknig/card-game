@@ -230,7 +230,7 @@ export class ReactionManager {
   async runTrigger({ trigger, reactionContext }: { trigger: ReactionTrigger; reactionContext?: ReactionContext }) {
     reactionContext ??= {};
     // Track immunity scope to ensure context is not reused across triggers.
-    initImmunityScope(reactionContext, trigger);
+    initImmunityScope(reactionContext, trigger, this.loggerService);
 
     // now we get the order of players that could be affected by the play (including the current player),
     // then get reactions for them and run them
