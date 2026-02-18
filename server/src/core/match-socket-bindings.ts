@@ -1,5 +1,5 @@
-import {AppSocket} from '@server-types/index.ts';
-import {PlayerId} from 'shared/types/index.ts';
+import { AppSocket } from '@server-types/index.ts';
+import { PlayerId } from 'shared/types/index.ts';
 
 export interface MatchSocketHandlers {
   onNextPhase: () => void | Promise<void>;
@@ -19,4 +19,3 @@ export class MatchSocketBindings {
     socket.on('payDebt', handlers.onPayDebt);
   }
 }
-

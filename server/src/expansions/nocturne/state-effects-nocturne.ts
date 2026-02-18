@@ -19,170 +19,163 @@ export const registerStateEffects = (registerStateEffect: StateEffectRegistrar) 
 const registerLostInTheWoods = (registerStateEffect: StateEffectRegistrar) => {
   let currentTriggerId: string;
 
-  registerStateEffect('lost-in-the-woods', async ({ loggerService, 
-    playerId,
-    match,
-    reactionManager,
-    actionService,
-    cardId,
-    cardSourceController,
-  }) => {
-    const state = findStateInMatch(match, cardId);
-    if (!state) {
-      loggerService.warn('[lost-in-the-woods state] state card not found');
-      return;
-    }
+  registerStateEffect(
+    'lost-in-the-woods',
+    async ({ loggerService, playerId, match, reactionManager, actionService, cardId, cardSourceController }) => {
+      const state = findStateInMatch(match, cardId);
+      if (!state) {
+        loggerService.warn('[lost-in-the-woods state] state card not found');
+        return;
+      }
 
-    if (currentTriggerId) reactionManager.unregisterTrigger(currentTriggerId);
+      if (currentTriggerId) reactionManager.unregisterTrigger(currentTriggerId);
 
-    currentTriggerId = reactionManager.registerReactionTemplate(state, 'startTurn', {
-      playerId,
-      once: false,
-      allowMultipleInstances: true,
-      compulsory: false,
-      condition: (conditionArgs) => {
-        if (conditionArgs.trigger.args.playerId !== playerId) {
-          return false;
-        }
-        const ownedStates = conditionArgs.match.states?.byPlayer?.[playerId] ?? [];
-        return ownedStates.includes(state.id);
-      },
-      triggeredEffectFn: async (triggeredArgs) => {
-        const hand = cardSourceController.getSource('playerHand', playerId);
-        if (!hand.length) {
-          loggerService.debug('[lost-in-the-woods state] no cards in hand to discard');
-          return;
-        }
+      currentTriggerId = reactionManager.registerReactionTemplate(state, 'startTurn', {
+        playerId,
+        once: false,
+        allowMultipleInstances: true,
+        compulsory: false,
+        condition: (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId !== playerId) {
+            return false;
+          }
+          const ownedStates = conditionArgs.match.states?.byPlayer?.[playerId] ?? [];
+          return ownedStates.includes(state.id);
+        },
+        triggeredEffectFn: async (triggeredArgs) => {
+          const hand = cardSourceController.getSource('playerHand', playerId);
+          if (!hand.length) {
+            loggerService.debug('[lost-in-the-woods state] no cards in hand to discard');
+            return;
+          }
 
-        // Ask whether the player wants to discard for a boon.
-        const decision = await actionService.run('userPrompt', {
-          playerId,
-          prompt: 'Discard a card to receive a Boon?',
-          actionButtons: [
-            { label: 'CANCEL', action: 1 },
-            { label: 'DISCARD', action: 2 },
-          ],
-        }) as { action: number };
+          // Ask whether the player wants to discard for a boon.
+          const decision = await actionService.run('userPrompt', {
+            playerId,
+            prompt: 'Discard a card to receive a Boon?',
+            actionButtons: [
+              { label: 'CANCEL', action: 1 },
+              { label: 'DISCARD', action: 2 },
+            ],
+          }) as { action: number };
 
-        if (decision.action !== 2) {
-          loggerService.debug('[lost-in-the-woods state] player declined to discard');
-          return;
-        }
+          if (decision.action !== 2) {
+            loggerService.debug('[lost-in-the-woods state] player declined to discard');
+            return;
+          }
 
-        const selectedCardId = await actionService.run('selectSingleCard', {
-          prompt: 'Discard a card',
-          playerId,
-          count: 1,
-          restrict: hand,
-        }) as CardId | null;
-        if (!selectedCardId) {
-          loggerService.debug('[lost-in-the-woods state] no card selected to discard');
-          return;
-        }
+          const selectedCardId = await actionService.run('selectSingleCard', {
+            prompt: 'Discard a card',
+            playerId,
+            count: 1,
+            restrict: hand,
+          }) as CardId | null;
+          if (!selectedCardId) {
+            loggerService.debug('[lost-in-the-woods state] no card selected to discard');
+            return;
+          }
 
-        // Discard the chosen card and receive a boon.
-        loggerService.debug(`[lost-in-the-woods state] discarding ${selectedCardId}`);
-        await actionService.run('discardCard', {
-          playerId,
-          cardId: selectedCardId,
-        });
+          // Discard the chosen card and receive a boon.
+          loggerService.debug(`[lost-in-the-woods state] discarding ${selectedCardId}`);
+          await actionService.run('discardCard', {
+            playerId,
+            cardId: selectedCardId,
+          });
 
-        loggerService.debug('[lost-in-the-woods state] receiving a boon');
-        await actionService.run('receiveBoon', {
-          playerId,
-        });
-      },
-    });
-  });
+          loggerService.debug('[lost-in-the-woods state] receiving a boon');
+          await actionService.run('receiveBoon', {
+            playerId,
+          });
+        },
+      });
+    },
+  );
 };
 
 // Registers Deluded state effect logic.
 const registerDeluded = (registerStateEffect: StateEffectRegistrar) => {
-  registerStateEffect('deluded', async ({ loggerService, 
-    playerId,
-    match,
-    reactionManager,
-    actionService,
-    cardId,
-    cardLibrary,
-    cardPriceController,
-  }) => {
-    const state = findStateInMatch(match, cardId);
-    if (!state) {
-      loggerService.warn('[deluded state] state card not found');
-      return;
-    }
+  registerStateEffect(
+    'deluded',
+    async (
+      { loggerService, playerId, match, reactionManager, actionService, cardId, cardLibrary, cardPriceController },
+    ) => {
+      const state = findStateInMatch(match, cardId);
+      if (!state) {
+        loggerService.warn('[deluded state] state card not found');
+        return;
+      }
 
-    loggerService.log(`[deluded state] registering buy-phase restriction for player ${playerId}`);
+      loggerService.log(`[deluded state] registering buy-phase restriction for player ${playerId}`);
 
-    // Register a one-time trigger to apply the buy restriction at the start of the buy phase.
-    reactionManager.registerSystemTemplate(state, 'startTurnPhase', {
-      playerId,
-      once: true,
-      allowMultipleInstances: true,
-      compulsory: true,
-      condition: (conditionArgs) => {
-        if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') {
-          return false;
-        }
-        if (getCurrentPlayer(conditionArgs.match).id !== playerId) {
-          return false;
-        }
-        const ownedStates = conditionArgs.match.states?.byPlayer?.[playerId] ?? [];
-        return ownedStates.includes(state.id);
-      },
-      triggeredEffectFn: async () => {
-        loggerService.debug('[deluded state] entering buy phase, removing state and applying restriction');
-        await actionService.run('removeState', {
-          playerId,
-          stateId: state.id,
-        });
-
-        const cards = cardLibrary.getAllCardsAsArray();
-        const ruleUnsubs: (() => void)[] = [];
-
-        // Restrict Action buys for the affected player during this buy phase only.
-        const rule: CardPriceRule = (card, context) => {
-          if (context.playerId !== playerId) {
-            return { restricted: false, cost: { treasure: 0 } };
+      // Register a one-time trigger to apply the buy restriction at the start of the buy phase.
+      reactionManager.registerSystemTemplate(state, 'startTurnPhase', {
+        playerId,
+        once: true,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: (conditionArgs) => {
+          if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') {
+            return false;
           }
-          if (!(card instanceof Card)) {
-            return { restricted: false, cost: { treasure: 0 } };
+          if (getCurrentPlayer(conditionArgs.match).id !== playerId) {
+            return false;
           }
-          return {
-            restricted: card.type.includes('ACTION'),
-            cost: { treasure: 0 },
+          const ownedStates = conditionArgs.match.states?.byPlayer?.[playerId] ?? [];
+          return ownedStates.includes(state.id);
+        },
+        triggeredEffectFn: async () => {
+          loggerService.debug('[deluded state] entering buy phase, removing state and applying restriction');
+          await actionService.run('removeState', {
+            playerId,
+            stateId: state.id,
+          });
+
+          const cards = cardLibrary.getAllCardsAsArray();
+          const ruleUnsubs: (() => void)[] = [];
+
+          // Restrict Action buys for the affected player during this buy phase only.
+          const rule: CardPriceRule = (card, context) => {
+            if (context.playerId !== playerId) {
+              return { restricted: false, cost: { treasure: 0 } };
+            }
+            if (!(card instanceof Card)) {
+              return { restricted: false, cost: { treasure: 0 } };
+            }
+            return {
+              restricted: card.type.includes('ACTION'),
+              cost: { treasure: 0 },
+            };
           };
-        };
 
-        for (const card of cards) {
-          ruleUnsubs.push(cardPriceController.registerRule(card, rule));
-        }
+          for (const card of cards) {
+            ruleUnsubs.push(cardPriceController.registerRule(card, rule));
+          }
 
-        loggerService.debug('[deluded state] registered Action buy restrictions for buy phase');
+          loggerService.debug('[deluded state] registered Action buy restrictions for buy phase');
 
-        // Remove the restriction at the end of the buy phase.
-        reactionManager.registerSystemTemplate(state, 'endTurnPhase', {
-          playerId,
-          once: true,
-          allowMultipleInstances: true,
-          compulsory: true,
-          condition: (conditionArgs) => {
-            if (conditionArgs.trigger.args.playerId !== playerId) {
-              return false;
-            }
-            return getTurnPhase(conditionArgs.trigger.args.phaseIndex) === 'buy';
-          },
-          triggeredEffectFn: async () => {
-            loggerService.debug('[deluded state] clearing buy restriction at end of buy phase');
-            for (const unsub of ruleUnsubs) {
-              unsub();
-            }
-          },
-        });
-      },
-    });
-  });
+          // Remove the restriction at the end of the buy phase.
+          reactionManager.registerSystemTemplate(state, 'endTurnPhase', {
+            playerId,
+            once: true,
+            allowMultipleInstances: true,
+            compulsory: true,
+            condition: (conditionArgs) => {
+              if (conditionArgs.trigger.args.playerId !== playerId) {
+                return false;
+              }
+              return getTurnPhase(conditionArgs.trigger.args.phaseIndex) === 'buy';
+            },
+            triggeredEffectFn: async () => {
+              loggerService.debug('[deluded state] clearing buy restriction at end of buy phase');
+              for (const unsub of ruleUnsubs) {
+                unsub();
+              }
+            },
+          });
+        },
+      });
+    },
+  );
 };
 
 // Registers Envious state effect logic.
@@ -191,105 +184,101 @@ const registerEnvious = (registerStateEffect: StateEffectRegistrar) => {
   let treasureGainTriggerId: string | undefined;
   let endTurnTriggerId: string | undefined;
 
-  registerStateEffect('envious', async ({ loggerService, 
-    playerId,
-    match,
-    reactionManager,
-    actionService,
-    cardId,
-    cardLibrary,
-  }) => {
-    const state = findStateInMatch(match, cardId);
-    if (!state) {
-      loggerService.warn('[envious state] state card not found');
-      return;
-    }
+  registerStateEffect(
+    'envious',
+    async ({ loggerService, playerId, match, reactionManager, actionService, cardId, cardLibrary }) => {
+      const state = findStateInMatch(match, cardId);
+      if (!state) {
+        loggerService.warn('[envious state] state card not found');
+        return;
+      }
 
-    if (startTurnPhaseTriggerId) {
-      reactionManager.unregisterTrigger(startTurnPhaseTriggerId);
-      startTurnPhaseTriggerId = undefined;
-    }
+      if (startTurnPhaseTriggerId) {
+        reactionManager.unregisterTrigger(startTurnPhaseTriggerId);
+        startTurnPhaseTriggerId = undefined;
+      }
 
-    startTurnPhaseTriggerId = reactionManager.registerSystemTemplate(state, 'startTurnPhase', {
-      playerId,
-      once: true,
-      allowMultipleInstances: true,
-      compulsory: true,
-      condition: (conditionArgs) => {
-        if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') {
-          return false;
-        }
-        if (getCurrentPlayer(conditionArgs.match).id !== playerId) {
-          return false;
-        }
-        const ownedStates = conditionArgs.match.states?.byPlayer?.[playerId] ?? [];
-        return ownedStates.includes(state.id);
-      },
-      triggeredEffectFn: async () => {
-        loggerService.debug('[envious state] entering buy phase, removing state and registering triggers');
-        await actionService.run('removeState', {
-          playerId,
-          stateId: state.id,
-        });
+      startTurnPhaseTriggerId = reactionManager.registerSystemTemplate(state, 'startTurnPhase', {
+        playerId,
+        once: true,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: (conditionArgs) => {
+          if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') {
+            return false;
+          }
+          if (getCurrentPlayer(conditionArgs.match).id !== playerId) {
+            return false;
+          }
+          const ownedStates = conditionArgs.match.states?.byPlayer?.[playerId] ?? [];
+          return ownedStates.includes(state.id);
+        },
+        triggeredEffectFn: async () => {
+          loggerService.debug('[envious state] entering buy phase, removing state and registering triggers');
+          await actionService.run('removeState', {
+            playerId,
+            stateId: state.id,
+          });
 
-        if (treasureGainTriggerId) {
-          reactionManager.unregisterTrigger(treasureGainTriggerId);
-          treasureGainTriggerId = undefined;
-        }
-        if (endTurnTriggerId) {
-          reactionManager.unregisterTrigger(endTurnTriggerId);
-          endTurnTriggerId = undefined;
-        }
+          if (treasureGainTriggerId) {
+            reactionManager.unregisterTrigger(treasureGainTriggerId);
+            treasureGainTriggerId = undefined;
+          }
+          if (endTurnTriggerId) {
+            reactionManager.unregisterTrigger(endTurnTriggerId);
+            endTurnTriggerId = undefined;
+          }
 
-        treasureGainTriggerId = reactionManager.registerSystemTemplate(state, 'treasureGain', {
-          playerId,
-          once: false,
-          allowMultipleInstances: true,
-          compulsory: true,
-          condition: (conditionArgs) => {
-            if (conditionArgs.trigger.args.playerId !== playerId) {
-              return false;
-            }
-            if (getCurrentPlayer(conditionArgs.match).id !== playerId) {
-              return false;
-            }
-            const sourceId = conditionArgs.trigger.args.source;
-            if (!sourceId) {
-              return false;
-            }
-            const sourceCard = conditionArgs.cardLibrary.getCard(sourceId);
-            return sourceCard.cardKey === 'silver' || sourceCard.cardKey === 'gold';
-          },
-          triggeredEffectFn: async (triggeredArgs) => {
-            const sourceId = triggeredArgs.trigger.args.source;
-            if (!sourceId) {
-              return;
-            }
-            const sourceCard = cardLibrary.getCard(sourceId);
-            loggerService.debug(`[envious state] forcing ${sourceCard.cardKey} to produce $1`);
-            triggeredArgs.trigger.args.count = 1;
-          },
-        });
+          treasureGainTriggerId = reactionManager.registerSystemTemplate(state, 'treasureGain', {
+            playerId,
+            once: false,
+            allowMultipleInstances: true,
+            compulsory: true,
+            condition: (conditionArgs) => {
+              if (conditionArgs.trigger.args.playerId !== playerId) {
+                return false;
+              }
+              if (getCurrentPlayer(conditionArgs.match).id !== playerId) {
+                return false;
+              }
+              const sourceId = conditionArgs.trigger.args.source;
+              if (!sourceId) {
+                return false;
+              }
+              const sourceCard = conditionArgs.cardLibrary.getCard(sourceId);
+              return sourceCard.cardKey === 'silver' || sourceCard.cardKey === 'gold';
+            },
+            triggeredEffectFn: async (triggeredArgs) => {
+              const sourceId = triggeredArgs.trigger.args.source;
+              if (!sourceId) {
+                return;
+              }
+              const sourceCard = cardLibrary.getCard(sourceId);
+              loggerService.debug(`[envious state] forcing ${sourceCard.cardKey} to produce $1`);
+              triggeredArgs.trigger.args.count = 1;
+            },
+          });
 
-        endTurnTriggerId = reactionManager.registerSystemTemplate(state, 'endTurn', {
-          playerId,
-          once: true,
-          allowMultipleInstances: true,
-          compulsory: true,
-          condition: (conditionArgs) => conditionArgs.trigger.args.playerId === playerId,
-          triggeredEffectFn: async () => {
-            loggerService.debug('[envious state] clearing Envious triggers at end of turn');
-            if (treasureGainTriggerId) {
-              reactionManager.unregisterTrigger(treasureGainTriggerId);
-              treasureGainTriggerId = undefined;
-            }
-            if (endTurnTriggerId) {
-              reactionManager.unregisterTrigger(endTurnTriggerId);
-              endTurnTriggerId = undefined;
-            }
-          },
-        });
-      },
-    });
-  });
+          endTurnTriggerId = reactionManager.registerSystemTemplate(state, 'endTurn', {
+            playerId,
+            once: true,
+            allowMultipleInstances: true,
+            compulsory: true,
+            condition: (conditionArgs) => conditionArgs.trigger.args.playerId === playerId,
+            triggeredEffectFn: async () => {
+              loggerService.debug('[envious state] clearing Envious triggers at end of turn');
+              if (treasureGainTriggerId) {
+                reactionManager.unregisterTrigger(treasureGainTriggerId);
+                treasureGainTriggerId = undefined;
+              }
+              if (endTurnTriggerId) {
+                reactionManager.unregisterTrigger(endTurnTriggerId);
+                endTurnTriggerId = undefined;
+              }
+            },
+          });
+        },
+      });
+    },
+  );
 };

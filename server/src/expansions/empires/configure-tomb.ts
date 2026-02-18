@@ -11,9 +11,8 @@ export const configureTomb = (
   );
   if (!hasTomb) return;
 
-
   registrar('onGameStart', async (args) => {
-          // Locate the Tomb landmark instance to attach reaction metadata.
+    // Locate the Tomb landmark instance to attach reaction metadata.
     const tombLandmark = args.match.landmarks.find(
       (landmark) => landmark.cardKey === 'tomb',
     );

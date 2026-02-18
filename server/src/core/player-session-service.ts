@@ -1,4 +1,4 @@
-import {Player, PlayerId} from 'shared/types/index.ts';
+import { Player, PlayerId } from 'shared/types/index.ts';
 
 // Encapsulates player-session and owner-selection decisions.
 export class PlayerSessionService {
@@ -25,4 +25,3 @@ export class PlayerSessionService {
     return players.find((player) => player.connected && !player.isComputer && player.id !== excludedPlayerId);
   }
 }
-

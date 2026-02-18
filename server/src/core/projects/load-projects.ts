@@ -21,7 +21,7 @@ export class ProjectLoaderService {
       // Load the project library JSON for the expansion when present.
       const projectLibraryModule = await import(
         `@expansions/${expansionName}/project-library-${expansionName}.json`,
-        { with: { type: 'json' } },
+        { with: { type: 'json' } }
       );
       const projects = projectLibraryModule.default as Record<string, Partial<ProjectNoId>>;
 
@@ -46,7 +46,7 @@ export class ProjectLoaderService {
     try {
       // Register project effects if the expansion provides them.
       const projectModule = await import(
-        `@expansions/${expansionName}/project-effects-${expansionName}.ts`,
+        `@expansions/${expansionName}/project-effects-${expansionName}.ts`
       );
       const projects = projectModule.default as CardExpansionModule;
 
@@ -61,7 +61,10 @@ export class ProjectLoaderService {
           this.loggerService.info(
             `[load-projects] registering project effects for ${cardKey}`,
           );
-          this.expansionEffectRegistryService.registerProjectEffectFactory(cardKey as CardKey, projects[cardKey].registerEffects);
+          this.expansionEffectRegistryService.registerProjectEffectFactory(
+            cardKey as CardKey,
+            projects[cardKey].registerEffects,
+          );
         }
       }
     } catch (error) {

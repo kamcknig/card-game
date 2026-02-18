@@ -15,9 +15,8 @@ export const configureColonnade = (
   );
   if (!hasColonnade) return;
 
-
   registrar('onGameStart', async (args) => {
-          // Colonnade setup: put 6 VP tokens per player on the landmark using the shared helper.
+    // Colonnade setup: put 6 VP tokens per player on the landmark using the shared helper.
     await placeVictoryTokensPerPlayer(args, {
       landmarkKey: 'colonnade',
       logKey: 'colonnade',

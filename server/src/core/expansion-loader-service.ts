@@ -217,7 +217,10 @@ export class ExpansionLoaderService {
 
         if (cardEffects[key].registerEffects) {
           this.loggerService.debug(`[expansion loader] registering effects for ${key}`);
-          this.expansionEffectRegistryService.registerCardEffectFactory(key as CardKey, cardEffects[key].registerEffects);
+          this.expansionEffectRegistryService.registerCardEffectFactory(
+            key as CardKey,
+            cardEffects[key].registerEffects,
+          );
         }
 
         if (cardEffects[key].registerActionConditions) {

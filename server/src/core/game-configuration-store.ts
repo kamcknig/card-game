@@ -1,11 +1,4 @@
-import {
-  ArtifactNoId,
-  CardNoId,
-  EventNoId,
-  LandmarkNoId,
-  MatchConfiguration,
-  Supply,
-} from 'shared/types/index.ts';
+import { ArtifactNoId, CardNoId, EventNoId, LandmarkNoId, MatchConfiguration, Supply } from 'shared/types/index.ts';
 import { LoggerService } from './logger-service.ts';
 
 // Represents the persisted lobby configuration read/write contract.

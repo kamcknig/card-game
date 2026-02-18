@@ -7,7 +7,7 @@ import { configureJoust } from './configure-joust.ts';
 
 export const configurator: ExpansionConfiguratorFactory = () => {
   return async (args) => {
-              configureYoungWitch(args);
+    configureYoungWitch(args);
     configureFerryman(args);
     await configureJoust(args);
     return args.config;
@@ -19,7 +19,6 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   config,
 ) => {
   if (config.kingdomSupply.some((supply) => supply.name === 'footpad')) {
-
     registrar('onCardGained', async (args, eventArgs) => {
       if (getTurnPhase(args.match.turnPhaseIndex) !== 'action') return;
 
@@ -39,9 +38,8 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   }
 
   if (config.kingdomSupply.some((supply) => supply.name === 'baker')) {
-
     registrar('onGameStart', async (args) => {
-            args.loggerService.info(`[baker onGameStart event] setting up baker - +1 coffer to each player on game start`);
+      args.loggerService.info(`[baker onGameStart event] setting up baker - +1 coffer to each player on game start`);
       for (const player of args.match.players) {
         await args.actionService.run('gainCoffer', { playerId: player.id, count: 1 });
       }

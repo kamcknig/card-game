@@ -12,7 +12,6 @@ export const configureMountainPass = (
   );
   if (!hasMountainPass) return;
 
-
   registrar('onCardGained', async (args, eventArgs) => {
     // Mountain Pass only triggers on Province gains.
     const gainedCard = args.cardLibrary.getCard(eventArgs.cardId);
@@ -37,7 +36,6 @@ export const configureMountainPass = (
       return;
     }
 
-
     // Determine the bidding order (left of the gainer, ending with the gainer).
     // Use the shared ordered-target helper for turn-order iteration.
     const bidOrder = findOrderedTargets({
@@ -59,7 +57,6 @@ export const configureMountainPass = (
       }
 
       const minBid = highBid + 1;
-
 
       const bidValue = await args.promptService.requestNumberInput({
         playerId: bidderId,
@@ -99,7 +96,6 @@ export const configureMountainPass = (
     if (!highBidder || highBid <= 0) {
       return;
     }
-
 
     // Award the Mountain Pass prize to the winning bidder.
     await args.actionService.run('gainVictoryToken', {

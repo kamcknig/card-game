@@ -41,7 +41,9 @@ const configureHorsePile = (configuratorArgs: ExpansionConfiguratorContext) => {
     if (!hasHorsePile) {
       return;
     }
-    configuratorArgs.loggerService.info('[menagerie configurator] removing Horse pile because no Horse source cards are present');
+    configuratorArgs.loggerService.info(
+      '[menagerie configurator] removing Horse pile because no Horse source cards are present',
+    );
     config.nonSupply = (config.nonSupply ?? []).filter((supply) => supply.name !== 'horse');
     return;
   }
@@ -71,10 +73,10 @@ const configureHorsePile = (configuratorArgs: ExpansionConfiguratorContext) => {
 
 const configurator: ExpansionConfiguratorFactory = () => {
   return async (args) => {
-              // Menagerie Exile mat is needed when selected Kingdom cards or Events use Exile.
-    const requiresExileMat = args.config.kingdomSupply.some((supply) =>
-      supply.cards.some((card) => card.mat === 'exile')
-    ) || args.config.events.some((event) => exileMatEvents.has(event.cardKey));
+    // Menagerie Exile mat is needed when selected Kingdom cards or Events use Exile.
+    const requiresExileMat =
+      args.config.kingdomSupply.some((supply) => supply.cards.some((card) => card.mat === 'exile')) ||
+      args.config.events.some((event) => exileMatEvents.has(event.cardKey));
 
     if (!requiresExileMat) {
       configureHorsePile(args);
@@ -120,7 +122,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   }
 
   registrar('onGameStart', async (args) => {
-          if (hasFisherman) {
+    if (hasFisherman) {
       args.loggerService.info('[menagerie configurator] registering Fisherman cost rules');
       const fishermanCards = args.findCardService.findCards([
         { location: 'kingdomSupply' },

@@ -194,7 +194,9 @@ export class ReactionManager {
       } as ReactionTemplate<T>;
     }
 
-    this.loggerService.info(`[REACTION MANAGER] registering trigger template ID ${template.id}, for player ${template.playerId}`);
+    this.loggerService.info(
+      `[REACTION MANAGER] registering trigger template ID ${template.id}, for player ${template.playerId}`,
+    );
 
     this._reactions.push(new Reaction(template) as any);
     return template.id;
@@ -205,9 +207,12 @@ export class ReactionManager {
     ...args: GameLifeCycleEventArgsMap[T] extends void ? [] : [GameLifeCycleEventArgsMap[T]]
   ) {
     for (const handler of this._expansionGameEventHandlers[trigger] ?? []) {
-      await handler(this.reactionContextFactory.createGameLifecycleContext({
-        reactionManager: this,
-      }), ...args);
+      await handler(
+        this.reactionContextFactory.createGameLifecycleContext({
+          reactionManager: this,
+        }),
+        ...args,
+      );
     }
   }
 
@@ -222,9 +227,12 @@ export class ReactionManager {
 
     this.loggerService.info(`[REACTION MANAGER] running lifecycle trigger '${trigger}' for card ${card}`);
 
-    await fn(this.reactionContextFactory.createCardLifecycleContext({
-      reactionManager: this,
-    }), args as any);
+    await fn(
+      this.reactionContextFactory.createCardLifecycleContext({
+        reactionManager: this,
+      }),
+      args as any,
+    );
   }
 
   async runTrigger({ trigger, reactionContext }: { trigger: ReactionTrigger; reactionContext?: ReactionContext }) {
@@ -276,7 +284,9 @@ export class ReactionManager {
 
         if (systemReactions.length) {
           for (const systemReaction of systemReactions) {
-            this.loggerService.info(`[REACTION MANAGER] running system reaction ${systemReaction.id} for ${targetPlayer}`);
+            this.loggerService.info(
+              `[REACTION MANAGER] running system reaction ${systemReaction.id} for ${targetPlayer}`,
+            );
             const systemContext = this.buildTriggeredEffectContext(trigger, systemReaction);
             await this.runReaction(systemReaction, systemContext, reactionContext);
           }

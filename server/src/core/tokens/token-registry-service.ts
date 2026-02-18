@@ -44,7 +44,9 @@ export class TokenRegistryService {
   // Registers a card-played handler for a token id.
   public registerTokenCardPlayedHandler(tokenId: TokenId, handler: TokenCardPlayedHandler): void {
     if (this._tokenCardPlayedHandlers[tokenId]) {
-      this.loggerService.warn(`[token registry] token card-played handler for ${tokenId} already registered, overwriting`);
+      this.loggerService.warn(
+        `[token registry] token card-played handler for ${tokenId} already registered, overwriting`,
+      );
     }
     this._tokenCardPlayedHandlers[tokenId] = handler;
   }

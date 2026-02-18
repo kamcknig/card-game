@@ -34,52 +34,55 @@ export const registerNocturneHexEffects = (registerHexEffect: HexEffectRegistrar
 
 // Registers Bad Omens hex effect logic.
 const registerBadOmens = (registerHexEffect: HexEffectRegistrar) => {
-  registerHexEffect('bad-omens', async ({ loggerService,  playerId, cardSourceController, actionService, cardLibrary }) => {
-    const deck = cardSourceController.getSource('playerDeck', playerId);
-    if (deck.length < 1) {
-      loggerService.debug('[bad-omens hex] no cards in deck to move');
-      return;
-    }
+  registerHexEffect(
+    'bad-omens',
+    async ({ loggerService, playerId, cardSourceController, actionService, cardLibrary }) => {
+      const deck = cardSourceController.getSource('playerDeck', playerId);
+      if (deck.length < 1) {
+        loggerService.debug('[bad-omens hex] no cards in deck to move');
+        return;
+      }
 
-    loggerService.debug(`[bad-omens hex] moving ${deck.length} cards from deck to discard`);
-    while (deck.length > 0) {
-      const cardId = deck[deck.length - 1];
-      await actionService.run('moveCard', {
-        cardId,
-        toPlayerId: playerId,
-        to: { location: 'playerDiscard' },
-      });
-    }
-
-    const discard = cardSourceController.getSource('playerDiscard', playerId);
-    const copperIds = discard.filter((cardId) => cardLibrary.getCard(cardId).cardKey === 'copper');
-
-    if (copperIds.length < 1) {
-      loggerService.debug('[bad-omens hex] no Copper cards available, revealing discard');
-      for (const cardId of discard) {
-        await actionService.run('revealCard', {
-          playerId,
+      loggerService.debug(`[bad-omens hex] moving ${deck.length} cards from deck to discard`);
+      while (deck.length > 0) {
+        const cardId = deck[deck.length - 1];
+        await actionService.run('moveCard', {
           cardId,
+          toPlayerId: playerId,
+          to: { location: 'playerDiscard' },
         });
       }
-      return;
-    }
 
-    const coppersToTopdeck = copperIds.slice(-2);
-    loggerService.debug(`[bad-omens hex] topdecking ${coppersToTopdeck.length} Copper card(s)`);
-    for (const cardId of coppersToTopdeck) {
-      await actionService.run('moveCard', {
-        cardId,
-        toPlayerId: playerId,
-        to: { location: 'playerDeck' },
-      });
-    }
-  });
+      const discard = cardSourceController.getSource('playerDiscard', playerId);
+      const copperIds = discard.filter((cardId) => cardLibrary.getCard(cardId).cardKey === 'copper');
+
+      if (copperIds.length < 1) {
+        loggerService.debug('[bad-omens hex] no Copper cards available, revealing discard');
+        for (const cardId of discard) {
+          await actionService.run('revealCard', {
+            playerId,
+            cardId,
+          });
+        }
+        return;
+      }
+
+      const coppersToTopdeck = copperIds.slice(-2);
+      loggerService.debug(`[bad-omens hex] topdecking ${coppersToTopdeck.length} Copper card(s)`);
+      for (const cardId of coppersToTopdeck) {
+        await actionService.run('moveCard', {
+          cardId,
+          toPlayerId: playerId,
+          to: { location: 'playerDeck' },
+        });
+      }
+    },
+  );
 };
 
 // Registers Delusion hex effect logic.
 const registerDelusion = (registerHexEffect: HexEffectRegistrar) => {
-  registerHexEffect('delusion', async ({ loggerService,  playerId, match, actionService }) => {
+  registerHexEffect('delusion', async ({ loggerService, playerId, match, actionService }) => {
     if (playerHasState(match, playerId, 'deluded') || playerHasState(match, playerId, 'envious')) {
       loggerService.debug('[delusion hex] player already has Deluded or Envious');
       return;
@@ -95,7 +98,7 @@ const registerDelusion = (registerHexEffect: HexEffectRegistrar) => {
 
 // Registers Envy hex effect logic.
 const registerEnvy = (registerHexEffect: HexEffectRegistrar) => {
-  registerHexEffect('envy', async ({ loggerService,  playerId, match, actionService }) => {
+  registerHexEffect('envy', async ({ loggerService, playerId, match, actionService }) => {
     if (playerHasState(match, playerId, 'deluded') || playerHasState(match, playerId, 'envious')) {
       loggerService.debug('[envy hex] player already has Deluded or Envious');
       return;
@@ -111,7 +114,7 @@ const registerEnvy = (registerHexEffect: HexEffectRegistrar) => {
 
 // Registers Famine hex effect logic.
 const registerFamine = (registerHexEffect: HexEffectRegistrar) => {
-  registerHexEffect('famine', async ({ loggerService,  playerId, cardSourceController, cardLibrary, actionService }) => {
+  registerHexEffect('famine', async ({ loggerService, playerId, cardSourceController, cardLibrary, actionService }) => {
     let deck = cardSourceController.getSource('playerDeck', playerId);
     const discard = cardSourceController.getSource('playerDiscard', playerId);
     if (deck.length < 3 && discard.length > 0) {
@@ -153,7 +156,7 @@ const registerFamine = (registerHexEffect: HexEffectRegistrar) => {
 
 // Registers Fear hex effect logic.
 const registerFear = (registerHexEffect: HexEffectRegistrar) => {
-  registerHexEffect('fear', async ({ loggerService,  playerId, cardSourceController, cardLibrary, actionService }) => {
+  registerHexEffect('fear', async ({ loggerService, playerId, cardSourceController, cardLibrary, actionService }) => {
     const hand = cardSourceController.getSource('playerHand', playerId);
     if (hand.length < 5) {
       loggerService.debug('[fear hex] fewer than 5 cards in hand, no discard required');
@@ -197,7 +200,7 @@ const registerFear = (registerHexEffect: HexEffectRegistrar) => {
 
 // Registers Greed hex effect logic.
 const registerGreed = (registerHexEffect: HexEffectRegistrar) => {
-  registerHexEffect('greed', async ({ loggerService,  playerId, supplyGainService, cardLibrary }) => {
+  registerHexEffect('greed', async ({ loggerService, playerId, supplyGainService, cardLibrary }) => {
     const gainedCopperId = await supplyGainService.gainTopSupplyCardForPileKey({
       playerId,
       pileKey: 'copper',
@@ -215,122 +218,131 @@ const registerGreed = (registerHexEffect: HexEffectRegistrar) => {
 
 // Registers Haunting hex effect logic.
 const registerHaunting = (registerHexEffect: HexEffectRegistrar) => {
-  registerHexEffect('haunting', async ({ loggerService,  playerId, cardSourceController, actionService, cardLibrary }) => {
-    const hand = cardSourceController.getSource('playerHand', playerId);
-    if (hand.length < 4) {
-      loggerService.debug('[haunting hex] fewer than 4 cards in hand, skipping');
-      return;
-    }
+  registerHexEffect(
+    'haunting',
+    async ({ loggerService, playerId, cardSourceController, actionService, cardLibrary }) => {
+      const hand = cardSourceController.getSource('playerHand', playerId);
+      if (hand.length < 4) {
+        loggerService.debug('[haunting hex] fewer than 4 cards in hand, skipping');
+        return;
+      }
 
-    const selectedId = await actionService.run('selectSingleCard', {
-      playerId,
-      prompt: 'Put a card from your hand onto your deck',
-      count: 1,
-      restrict: hand,
-    }) as CardId | null;
-    if (!selectedId) {
-      loggerService.debug('[haunting hex] no card selected to topdeck');
-      return;
-    }
+      const selectedId = await actionService.run('selectSingleCard', {
+        playerId,
+        prompt: 'Put a card from your hand onto your deck',
+        count: 1,
+        restrict: hand,
+      }) as CardId | null;
+      if (!selectedId) {
+        loggerService.debug('[haunting hex] no card selected to topdeck');
+        return;
+      }
 
-    loggerService.debug(`[haunting hex] topdecking ${cardLibrary.getCard(selectedId)}`);
-    await actionService.run('moveCard', {
-      cardId: selectedId,
-      toPlayerId: playerId,
-      to: { location: 'playerDeck' },
-    });
-  });
+      loggerService.debug(`[haunting hex] topdecking ${cardLibrary.getCard(selectedId)}`);
+      await actionService.run('moveCard', {
+        cardId: selectedId,
+        toPlayerId: playerId,
+        to: { location: 'playerDeck' },
+      });
+    },
+  );
 };
 
 // Registers Locusts hex effect logic.
 const registerLocusts = (registerHexEffect: HexEffectRegistrar) => {
-  registerHexEffect('locusts', async ({ loggerService, 
-    playerId,
-    cardSourceController,
-    cardLibrary,
-    cardPriceController,
-    findCardService,
-    actionService,
-    supplyGainService
-  }) => {
-    let deck = cardSourceController.getSource('playerDeck', playerId);
-    const discard = cardSourceController.getSource('playerDiscard', playerId);
-
-    if (!deck.length && discard.length) {
-      loggerService.debug('[locusts hex] deck empty, shuffling discard');
-      await actionService.run('shuffleDeck', { playerId });
-      deck = cardSourceController.getSource('playerDeck', playerId);
-    }
-
-    if (!deck.length) {
-      loggerService.debug('[locusts hex] no cards in deck to trash');
-      return;
-    }
-
-    const topCardId = deck[deck.length - 1];
-    const trashedCard = cardLibrary.getCard(topCardId);
-    loggerService.debug(`[locusts hex] trashing top card ${trashedCard}`);
-
-    await actionService.run('trashCard', {
-      playerId,
-      cardId: topCardId,
-    });
-
-    if (trashedCard.cardKey === 'copper' || trashedCard.cardKey === 'estate') {
-      const gainedCurseId = await supplyGainService.gainTopSupplyCardForPileKey({
+  registerHexEffect(
+    'locusts',
+    async (
+      {
+        loggerService,
         playerId,
-        pileKey: 'curse',
-        from: 'basicSupply',
-        to: { location: 'playerDiscard' },
-        logTag: 'locusts hex',
-      });
-      if (!gainedCurseId) {
-        loggerService.debug('[locusts hex] no Curse cards available to gain');
+        cardSourceController,
+        cardLibrary,
+        cardPriceController,
+        findCardService,
+        actionService,
+        supplyGainService,
+      },
+    ) => {
+      let deck = cardSourceController.getSource('playerDeck', playerId);
+      const discard = cardSourceController.getSource('playerDiscard', playerId);
+
+      if (!deck.length && discard.length) {
+        loggerService.debug('[locusts hex] deck empty, shuffling discard');
+        await actionService.run('shuffleDeck', { playerId });
+        deck = cardSourceController.getSource('playerDeck', playerId);
+      }
+
+      if (!deck.length) {
+        loggerService.debug('[locusts hex] no cards in deck to trash');
         return;
       }
-      loggerService.debug(`[locusts hex] gaining ${cardLibrary.getCard(gainedCurseId)}`);
-      return;
-    }
 
-    const trashedCost = cardPriceController.applyRules(trashedCard, { playerId }).cost;
-    const eligibleCards = findCardService.findCards([
-      { location: ['basicSupply', 'kingdomSupply'] },
-    ]).filter((card) => {
-      if (!card.type.some((type) => trashedCard.type.includes(type))) {
-        return false;
+      const topCardId = deck[deck.length - 1];
+      const trashedCard = cardLibrary.getCard(topCardId);
+      loggerService.debug(`[locusts hex] trashing top card ${trashedCard}`);
+
+      await actionService.run('trashCard', {
+        playerId,
+        cardId: topCardId,
+      });
+
+      if (trashedCard.cardKey === 'copper' || trashedCard.cardKey === 'estate') {
+        const gainedCurseId = await supplyGainService.gainTopSupplyCardForPileKey({
+          playerId,
+          pileKey: 'curse',
+          from: 'basicSupply',
+          to: { location: 'playerDiscard' },
+          logTag: 'locusts hex',
+        });
+        if (!gainedCurseId) {
+          loggerService.debug('[locusts hex] no Curse cards available to gain');
+          return;
+        }
+        loggerService.debug(`[locusts hex] gaining ${cardLibrary.getCard(gainedCurseId)}`);
+        return;
       }
-      const candidateCost = cardPriceController.applyRules(card, { playerId }).cost;
-      return compareCardCosts(candidateCost, trashedCost) === -1;
-    });
 
-    if (!eligibleCards.length) {
-      loggerService.debug('[locusts hex] no eligible cards to gain');
-      return;
-    }
+      const trashedCost = cardPriceController.applyRules(trashedCard, { playerId }).cost;
+      const eligibleCards = findCardService.findCards([
+        { location: ['basicSupply', 'kingdomSupply'] },
+      ]).filter((card) => {
+        if (!card.type.some((type) => trashedCard.type.includes(type))) {
+          return false;
+        }
+        const candidateCost = cardPriceController.applyRules(card, { playerId }).cost;
+        return compareCardCosts(candidateCost, trashedCost) === -1;
+      });
 
-    const selectedId = await actionService.run('selectSingleCard', {
-      playerId,
-      prompt: 'Gain a cheaper card sharing a type',
-      count: 1,
-      restrict: eligibleCards.map((card) => card.id),
-    }) as CardId | null;
-    if (!selectedId) {
-      loggerService.debug('[locusts hex] no card selected to gain');
-      return;
-    }
+      if (!eligibleCards.length) {
+        loggerService.debug('[locusts hex] no eligible cards to gain');
+        return;
+      }
 
-    loggerService.debug(`[locusts hex] gaining ${cardLibrary.getCard(selectedId)}`);
-    await actionService.run('gainCard', {
-      playerId,
-      cardId: selectedId,
-      to: { location: 'playerDiscard' },
-    });
-  });
+      const selectedId = await actionService.run('selectSingleCard', {
+        playerId,
+        prompt: 'Gain a cheaper card sharing a type',
+        count: 1,
+        restrict: eligibleCards.map((card) => card.id),
+      }) as CardId | null;
+      if (!selectedId) {
+        loggerService.debug('[locusts hex] no card selected to gain');
+        return;
+      }
+
+      loggerService.debug(`[locusts hex] gaining ${cardLibrary.getCard(selectedId)}`);
+      await actionService.run('gainCard', {
+        playerId,
+        cardId: selectedId,
+        to: { location: 'playerDiscard' },
+      });
+    },
+  );
 };
 
 // Registers Misery hex effect logic.
 const registerMisery = (registerHexEffect: HexEffectRegistrar) => {
-  registerHexEffect('misery', async ({ loggerService,  playerId, match, actionService }) => {
+  registerHexEffect('misery', async ({ loggerService, playerId, match, actionService }) => {
     const twiceMiserable = getPlayerStateByKey(match, playerId, 'twice-miserable');
     if (twiceMiserable) {
       loggerService.debug('[misery hex] player already twice miserable');
@@ -362,7 +374,7 @@ const registerMisery = (registerHexEffect: HexEffectRegistrar) => {
 
 // Registers Plague hex effect logic.
 const registerPlague = (registerHexEffect: HexEffectRegistrar) => {
-  registerHexEffect('plague', async ({ loggerService,  playerId, supplyGainService, cardLibrary }) => {
+  registerHexEffect('plague', async ({ loggerService, playerId, supplyGainService, cardLibrary }) => {
     const gainedCurseId = await supplyGainService.gainTopSupplyCardForPileKey({
       playerId,
       pileKey: 'curse',
@@ -381,7 +393,7 @@ const registerPlague = (registerHexEffect: HexEffectRegistrar) => {
 // Registers Poverty hex effect logic.
 const registerPoverty = (registerHexEffect: HexEffectRegistrar) => {
   registerHexEffect('poverty', async (cardEffectArgs) => {
-          // Discard down to 3 cards in hand.
+    // Discard down to 3 cards in hand.
     await discardDownTo(cardEffectArgs, {
       playerId: cardEffectArgs.playerId,
       targetHandSize: 3,
@@ -395,7 +407,7 @@ const registerPoverty = (registerHexEffect: HexEffectRegistrar) => {
 const registerWar = (registerHexEffect: HexEffectRegistrar) => {
   registerHexEffect(
     'war',
-    async ({ loggerService,  playerId, cardSourceController, cardLibrary, cardPriceController, actionService }) => {
+    async ({ loggerService, playerId, cardSourceController, cardLibrary, cardPriceController, actionService }) => {
       const deck = cardSourceController.getSource('playerDeck', playerId);
       if (!deck.length) {
         loggerService.debug('[war hex] no cards in deck to reveal');

@@ -145,7 +145,7 @@ const expansion: CardExpansionModule = {
   'archive': {
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            const { playerId, cardId } = args;
+      const { playerId, cardId } = args;
 
       loggerService.debug(`[archive effect] gaining 1 action...`);
       await args.actionService.run('gainAction', { count: 1 });
@@ -280,7 +280,7 @@ const expansion: CardExpansionModule = {
   'capital': {
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            // Capital grants treasure and buys immediately on play.
+      // Capital grants treasure and buys immediately on play.
       loggerService.debug(`[capital effect] gaining +6 treasure and +1 buy`);
       // Gain the $ from Capital.
       await args.actionService.run('gainTreasure', { count: 6 });
@@ -289,7 +289,7 @@ const expansion: CardExpansionModule = {
     },
     registerLifeCycleMethods: () => ({
       onDiscarded: async (args, eventArgs) => {
-      const loggerService = args.loggerService;
+        const loggerService = args.loggerService;
         // Only apply debt when Capital is discarded from play.
         const previousLocation = eventArgs.previousLocation?.location;
         if (previousLocation !== 'playArea') {
@@ -312,7 +312,7 @@ const expansion: CardExpansionModule = {
   'charm': {
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            // Charm offers a choice between immediate +Buy/+Treasure or a delayed gain trigger.
+      // Charm offers a choice between immediate +Buy/+Treasure or a delayed gain trigger.
       loggerService.debug(
         `[charm effect] prompting player ${args.playerId} to choose an option`,
       );
@@ -432,7 +432,7 @@ const expansion: CardExpansionModule = {
   'catapult': {
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            const { playerId, match, reactionContext, cardLibrary } = args;
+      const { playerId, match, reactionContext, cardLibrary } = args;
 
       // Catapult always grants +$1 on play.
       loggerService.debug(`[catapult effect] gaining 1 treasure`);
@@ -529,7 +529,7 @@ const expansion: CardExpansionModule = {
   'chariot-race': {
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            // Pull commonly used effect context fields.
+      // Pull commonly used effect context fields.
       const { playerId, match, cardLibrary } = args;
 
       // Chariot Race grants +1 Action.
@@ -647,7 +647,7 @@ const expansion: CardExpansionModule = {
   'city-quarter': {
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            const { playerId } = args;
+      const { playerId } = args;
 
       // City Quarter grants +2 Actions.
       loggerService.debug(`[city quarter effect] gaining 2 actions`);
@@ -681,7 +681,7 @@ const expansion: CardExpansionModule = {
   'crown': {
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            const currentPlayerId = getCurrentPlayer(args.match).id;
+      const currentPlayerId = getCurrentPlayer(args.match).id;
       if (args.playerId !== currentPlayerId) {
         loggerService.debug(`[crown effect] not current player's turn, skipping`);
         return;
@@ -784,7 +784,7 @@ const expansion: CardExpansionModule = {
   'crumbling-castle': {
     registerLifeCycleMethods: () => ({
       onGained: async (args, eventArgs) => {
-      const loggerService = args.loggerService;
+        const loggerService = args.loggerService;
         // Apply the Crumbling Castle bonus when gained.
         loggerService.debug(
           `[crumbling castle onGained] player ${eventArgs.playerId} gained Crumbling Castle`,
@@ -792,7 +792,7 @@ const expansion: CardExpansionModule = {
         await resolveCrumblingCastleBonus(args, eventArgs.playerId);
       },
       onTrashed: async (args, eventArgs) => {
-      const loggerService = args.loggerService;
+        const loggerService = args.loggerService;
         // Apply the Crumbling Castle bonus when trashed.
         loggerService.debug(
           `[crumbling castle onTrashed] player ${eventArgs.playerId} trashed Crumbling Castle`,
@@ -804,7 +804,7 @@ const expansion: CardExpansionModule = {
   'encampment': {
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            loggerService.debug(`[encampment effect] drawing 2 cards`);
+      loggerService.debug(`[encampment effect] drawing 2 cards`);
       await args.actionService.run('drawCard', {
         playerId: args.playerId,
         count: 2,
@@ -889,12 +889,12 @@ const expansion: CardExpansionModule = {
   },
   'enchantress': {
     registerEffects: () => async (args) => {
-          },
+    },
   },
   'engineer': {
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            const gainCard = async () => {
+      const gainCard = async () => {
         const validCards = args.findCardService.findCards([
           { location: ['basicSupply', 'kingdomSupply'] },
           { amount: { treasure: 4 }, playerId: args.playerId, kind: 'upTo' },
@@ -954,7 +954,7 @@ const expansion: CardExpansionModule = {
   'farmers-market': {
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            loggerService.debug(`[farmers market effect] gaining 1 buy`);
+      loggerService.debug(`[farmers market effect] gaining 1 buy`);
       await args.actionService.run('gainBuy', { count: 1 });
 
       const tokensOnPile = Object.values(args.match.tokens).filter((t) =>
@@ -998,8 +998,8 @@ const expansion: CardExpansionModule = {
   'fortune': {
     registerLifeCycleMethods: () => ({
       onGained: async (args) => {
-      const loggerService = args.loggerService;
-              loggerService.debug(`[fortune onGained] running`);
+        const loggerService = args.loggerService;
+        loggerService.debug(`[fortune onGained] running`);
 
         const gladiatorsInPlay = args.findCardService.getCardsInPlay().filter((card) => card.cardKey === 'gladiator');
 
@@ -1018,7 +1018,7 @@ const expansion: CardExpansionModule = {
     }),
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            loggerService.debug(`[fortune effect] gaining 1 buy`);
+      loggerService.debug(`[fortune effect] gaining 1 buy`);
       await args.actionService.run('gainBuy', { count: 1 });
 
       const thisCard = args.cardLibrary.getCard<FortuneMetadata>(args.cardId);
@@ -1053,7 +1053,7 @@ const expansion: CardExpansionModule = {
   'forum': {
     registerLifeCycleMethods: () => ({
       onGained: async (args, eventArgs) => {
-      const loggerService = args.loggerService;
+        const loggerService = args.loggerService;
         loggerService.debug(
           `[forum onGained] player ${eventArgs.playerId} gained Forum`,
         );
@@ -1062,7 +1062,7 @@ const expansion: CardExpansionModule = {
     }),
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            loggerService.debug(`[forum effect] gaining 3 cards`);
+      loggerService.debug(`[forum effect] gaining 3 cards`);
       await args.actionService.run('drawCard', {
         playerId: args.playerId,
         count: 3,
@@ -1096,7 +1096,7 @@ const expansion: CardExpansionModule = {
   'groundskeeper': {
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            loggerService.debug(`[groundskeeper effect] drawing 1 card and gaining 1 action`);
+      loggerService.debug(`[groundskeeper effect] drawing 1 card and gaining 1 action`);
       await args.actionService.run('drawCard', {
         playerId: args.playerId,
         count: 1,
@@ -1158,7 +1158,7 @@ const expansion: CardExpansionModule = {
   'gladiator': {
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            loggerService.debug(`[gladiator effect] gaining 2 treasure`);
+      loggerService.debug(`[gladiator effect] gaining 2 treasure`);
       await args.actionService.run('gainTreasure', { count: 2 });
 
       const hand = args.cardSourceController.getSource(
@@ -1258,7 +1258,7 @@ const expansion: CardExpansionModule = {
   'legionary': {
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            loggerService.debug(`[legionary effect] gaining 3 treasure`);
+      loggerService.debug(`[legionary effect] gaining 3 treasure`);
       await args.actionService.run('gainTreasure', { count: 3 });
 
       const hand = args.cardSourceController.getSource(
@@ -1331,7 +1331,7 @@ const expansion: CardExpansionModule = {
   'overlord': {
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            // Overlord plays one eligible supply Action at no extra action cost while leaving that pile in place.
+      // Overlord plays one eligible supply Action at no extra action cost while leaving that pile in place.
       loggerService.debug(`[overlord effect] evaluating supply options for player ${args.playerId}`);
 
       const supplyLocations: CardLocation[] = ['kingdomSupply', 'basicSupply'];
@@ -1383,14 +1383,14 @@ const expansion: CardExpansionModule = {
     },
   },
   'rocks': {
-    registerEffects: () => async ({ loggerService,  actionService }) => {
+    registerEffects: () => async ({ loggerService, actionService }) => {
       // Rocks provides +$1 when played.
       loggerService.debug(`[rocks effect] gaining 1 treasure`);
       await actionService.run('gainTreasure', { count: 1 });
     },
     registerLifeCycleMethods: () => ({
       onGained: async (args, eventArgs) => {
-      const loggerService = args.loggerService;
+        const loggerService = args.loggerService;
         // Apply the Rocks Silver gain when gained.
         loggerService.debug(
           `[rocks onGained] player ${eventArgs.playerId} gained Rocks`,
@@ -1401,7 +1401,7 @@ const expansion: CardExpansionModule = {
         });
       },
       onTrashed: async (args, eventArgs) => {
-      const loggerService = args.loggerService;
+        const loggerService = args.loggerService;
         // Apply the Rocks Silver gain when trashed.
         loggerService.debug(
           `[rocks onTrashed] player ${eventArgs.playerId} trashed Rocks`,
@@ -1416,7 +1416,7 @@ const expansion: CardExpansionModule = {
   'haunted-castle': {
     registerLifeCycleMethods: () => ({
       onGained: async (args, eventArgs) => {
-      const loggerService = args.loggerService;
+        const loggerService = args.loggerService;
         // Haunted Castle only triggers when gained on the current player's turn.
         const currentPlayerId = getCurrentPlayer(args.match).id;
         if (currentPlayerId !== eventArgs.playerId) {
@@ -1494,7 +1494,7 @@ const expansion: CardExpansionModule = {
     },
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            // Humble Castle is a Treasure that produces $1.
+      // Humble Castle is a Treasure that produces $1.
       loggerService.debug(`[humble castle effect] gaining 1 treasure`);
       await args.actionService.run('gainTreasure', { count: 1 });
     },
@@ -1502,7 +1502,7 @@ const expansion: CardExpansionModule = {
   'grand-castle': {
     registerLifeCycleMethods: () => ({
       onGained: async (args, eventArgs) => {
-      const loggerService = args.loggerService;
+        const loggerService = args.loggerService;
         // Grand Castle grants VP tokens based on Victory cards in hand and in play.
         const victoryInHand = args.findCardService.findCards({
           location: 'playerHand',
@@ -1555,7 +1555,7 @@ const expansion: CardExpansionModule = {
   'opulent-castle': {
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            // Opulent Castle discards Victory cards for +$2 each.
+      // Opulent Castle discards Victory cards for +$2 each.
       const { playerId } = args;
       const victoryCardsInHand = args.findCardService.findCards([{
         location: 'playerHand',
@@ -1602,7 +1602,7 @@ const expansion: CardExpansionModule = {
   'plunder': {
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            loggerService.debug(`[plunder effect] gaining 2 treasure`);
+      loggerService.debug(`[plunder effect] gaining 2 treasure`);
       await args.actionService.run('gainTreasure', { count: 2 });
 
       loggerService.debug(`[plunder effect] gaining 1 victory token`);
@@ -1615,7 +1615,7 @@ const expansion: CardExpansionModule = {
   'patrician': {
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            loggerService.debug(
+      loggerService.debug(
         `[patrician effect] drawing 1 card, gaining 1 action, and revealing top deck card`,
       );
       await args.actionService.run('drawCard', {
@@ -1692,7 +1692,7 @@ const expansion: CardExpansionModule = {
   'emporium': {
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            loggerService.debug(
+      loggerService.debug(
         `[emporium effect] drawing 1 card, gaining 1 action, and gaining 1 treasure`,
       );
       await args.actionService.run('drawCard', {
@@ -1704,7 +1704,7 @@ const expansion: CardExpansionModule = {
     },
     registerLifeCycleMethods: () => ({
       onGained: async (args, eventArgs) => {
-      const loggerService = args.loggerService;
+        const loggerService = args.loggerService;
         const actionCardsInPlay = args.findCardService.getCardsInPlay().filter(
           (card) => card.type.includes('ACTION') && card.owner === eventArgs.playerId,
         );
@@ -1731,7 +1731,7 @@ const expansion: CardExpansionModule = {
   'settlers': {
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            // Settlers draws a card, gains an action, then optionally retrieves a Copper from discard.
+      // Settlers draws a card, gains an action, then optionally retrieves a Copper from discard.
       loggerService.debug(
         `[settlers effect] drawing 1 card and gaining 1 action`,
       );
@@ -1785,7 +1785,7 @@ const expansion: CardExpansionModule = {
   'bustling-village': {
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            // Bustling Village draws a card, gains 3 actions, then optionally retrieves a Settlers from discard.
+      // Bustling Village draws a card, gains 3 actions, then optionally retrieves a Settlers from discard.
       loggerService.debug(
         `[bustling village effect] drawing 1 card and gaining 3 actions`,
       );
@@ -1839,7 +1839,7 @@ const expansion: CardExpansionModule = {
   'temple': {
     registerLifeCycleMethods: () => ({
       onGained: async (args, eventArgs) => {
-      const loggerService = args.loggerService;
+        const loggerService = args.loggerService;
         // Temple gathers VP tokens on its pile; gaining it transfers them to the player.
         const tokensOnPile = Object.values(args.match.tokens).filter((token) =>
           token.tokenId === prosperityTokenIds.victory &&
@@ -1867,7 +1867,7 @@ const expansion: CardExpansionModule = {
     }),
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            // Temple grants 1 VP, trashes 1-3 differently named cards, then adds a VP token to the pile.
+      // Temple grants 1 VP, trashes 1-3 differently named cards, then adds a VP token to the pile.
       loggerService.debug(`[temple effect] gaining 1 victory token`);
       await args.actionService.run('gainVictoryToken', {
         playerId: args.playerId,
@@ -1930,7 +1930,7 @@ const expansion: CardExpansionModule = {
   'wild-hunt': {
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            // Wild Hunt lets the player choose between drawing and gathering VP, or gaining an Estate to claim VP.
+      // Wild Hunt lets the player choose between drawing and gathering VP, or gaining an Estate to claim VP.
       const tokensOnPileCount =
         Object.values(args.match.tokens).filter((token) =>
           token.tokenId === prosperityTokenIds.victory &&
@@ -2017,7 +2017,7 @@ const expansion: CardExpansionModule = {
   'villa': {
     registerLifeCycleMethods: () => ({
       onGained: async (args, eventArgs) => {
-      const loggerService = args.loggerService;
+        const loggerService = args.loggerService;
         // Villa moves to hand, grants +1 Action, and can return you to the action phase.
         loggerService.debug(
           `[villa onGained] player ${eventArgs.playerId} gained Villa`,
@@ -2061,7 +2061,7 @@ const expansion: CardExpansionModule = {
     }),
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            // Villa grants actions, a buy, and treasure when played.
+      // Villa grants actions, a buy, and treasure when played.
       loggerService.debug(`[villa effect] gaining 2 actions`);
       await args.actionService.run('gainAction', { count: 2 });
       loggerService.debug(`[villa effect] gaining 1 buy`);
@@ -2073,7 +2073,7 @@ const expansion: CardExpansionModule = {
   'sacrifice': {
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            // Sacrifice trashes a card from hand and grants bonuses based on its types.
+      // Sacrifice trashes a card from hand and grants bonuses based on its types.
       const hand = args.cardSourceController.getSource(
         'playerHand',
         args.playerId,
@@ -2140,7 +2140,7 @@ const expansion: CardExpansionModule = {
   'royal-blacksmith': {
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            // Royal Blacksmith draws 5 cards, reveals hand, then discards all Coppers from hand.
+      // Royal Blacksmith draws 5 cards, reveals hand, then discards all Coppers from hand.
       loggerService.debug(`[royal blacksmith effect] drawing 5 cards`);
       await args.actionService.run('drawCard', {
         playerId: args.playerId,
@@ -2185,7 +2185,7 @@ const expansion: CardExpansionModule = {
   'small-castle': {
     registerEffects: () => async (args) => {
       const loggerService = args.loggerService;
-            // Small Castle allows trashing itself or a Castle from hand to gain a Castle.
+      // Small Castle allows trashing itself or a Castle from hand to gain a Castle.
       const { playerId, cardId } = args;
       const castlesInHand = args.findCardService.findCards([{
         location: 'playerHand',
@@ -2253,7 +2253,7 @@ const expansion: CardExpansionModule = {
   'sprawling-castle': {
     registerLifeCycleMethods: () => ({
       onGained: async (args, eventArgs) => {
-      const loggerService = args.loggerService;
+        const loggerService = args.loggerService;
         // Sprawling Castle lets the gainer choose Duchy or 3 Estates.
         loggerService.debug(
           `[sprawling castle onGained] player ${eventArgs.playerId} gained Sprawling Castle`,

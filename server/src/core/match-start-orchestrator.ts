@@ -1,16 +1,10 @@
-import {AppSocket} from '@server-types/index.ts';
-import {
-  MatchConfiguration,
-  Player,
-  PlayerId,
-  ServerEmitEvents,
-  ServerListenEvents,
-} from 'shared/types/index.ts';
-import {Server} from 'socket.io';
-import {fisherYatesShuffle} from '../utils/fisher-yates-shuffler.ts';
-import {LobbySocketBindings} from './lobby-socket-bindings.ts';
-import {MatchController} from './match-controller.ts';
-import {RngService} from './rng-service.ts';
+import { AppSocket } from '@server-types/index.ts';
+import { MatchConfiguration, Player, PlayerId, ServerEmitEvents, ServerListenEvents } from 'shared/types/index.ts';
+import { Server } from 'socket.io';
+import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
+import { LobbySocketBindings } from './lobby-socket-bindings.ts';
+import { MatchController } from './match-controller.ts';
+import { RngService } from './rng-service.ts';
 
 export interface MatchStartOrchestratorArgs {
   players: Player[];

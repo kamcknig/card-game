@@ -26,7 +26,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
   let stateEffectsRegistered = false;
 
   return async (args) => {
-              if (!boonEffectsRegistered) {
+    if (!boonEffectsRegistered) {
       // Register all Nocturne boon effects once per match.
       registerNocturneBoonEffects(args.expansionRegistration.registerBoonEffect);
       boonEffectsRegistered = true;
@@ -266,9 +266,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     (supply) => supply.cards.some((card) => getCardPileKey(card) === 'necromancer'),
   );
   if (hasCemetery) {
-
     registrar('onGameStart', async (args) => {
-
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
         const deck = args.cardSourceController.getSource('playerDeck', player.id);
@@ -296,19 +294,19 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         });
 
         // Create the Haunted Mirror and insert it in the same deck position.
-        const hauntedMirror = args.cardInstanceFactoryService.createCard('haunted-mirror', { owner: player.id, partOfSupply: false });
+        const hauntedMirror = args.cardInstanceFactoryService.createCard('haunted-mirror', {
+          owner: player.id,
+          partOfSupply: false,
+        });
         hauntedMirror.facing = 'back';
         args.cardLibrary.addCard(hauntedMirror);
         deck.splice(chosenIndex, 0, hauntedMirror.id);
-
       }
     });
   }
 
   if (hasFool) {
-
     registrar('onGameStart', async (args) => {
-
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
         const deck = args.cardSourceController.getSource('playerDeck', player.id);
@@ -322,7 +320,9 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         }
 
         if (copperIndices.length < 1) {
-          args.loggerService.warn(`[nocturne onGameStart] player ${player.id} has no Copper to replace with Lucky Coin`);
+          args.loggerService.warn(
+            `[nocturne onGameStart] player ${player.id} has no Copper to replace with Lucky Coin`,
+          );
           continue;
         }
 
@@ -336,19 +336,19 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         });
 
         // Create the Lucky Coin and insert it in the same deck position.
-        const luckyCoin = args.cardInstanceFactoryService.createCard('lucky-coin', { owner: player.id, partOfSupply: false });
+        const luckyCoin = args.cardInstanceFactoryService.createCard('lucky-coin', {
+          owner: player.id,
+          partOfSupply: false,
+        });
         luckyCoin.facing = 'back';
         args.cardLibrary.addCard(luckyCoin);
         deck.splice(chosenIndex, 0, luckyCoin.id);
-
       }
     });
   }
 
   if (hasPixie) {
-
     registrar('onGameStart', async (args) => {
-
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
         const deck = args.cardSourceController.getSource('playerDeck', player.id);
@@ -380,15 +380,12 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         goat.facing = 'back';
         args.cardLibrary.addCard(goat);
         deck.splice(chosenIndex, 0, goat.id);
-
       }
     });
   }
 
   if (hasPooka) {
-
     registrar('onGameStart', async (args) => {
-
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
         const deck = args.cardSourceController.getSource('playerDeck', player.id);
@@ -402,7 +399,9 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         }
 
         if (copperIndices.length < 1) {
-          args.loggerService.warn(`[nocturne onGameStart] player ${player.id} has no Copper to replace with Cursed Gold`);
+          args.loggerService.warn(
+            `[nocturne onGameStart] player ${player.id} has no Copper to replace with Cursed Gold`,
+          );
           continue;
         }
 
@@ -416,19 +415,19 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         });
 
         // Create the Cursed Gold and insert it in the same deck position.
-        const cursedGold = args.cardInstanceFactoryService.createCard('cursed-gold', { owner: player.id, partOfSupply: false });
+        const cursedGold = args.cardInstanceFactoryService.createCard('cursed-gold', {
+          owner: player.id,
+          partOfSupply: false,
+        });
         cursedGold.facing = 'back';
         args.cardLibrary.addCard(cursedGold);
         deck.splice(chosenIndex, 0, cursedGold.id);
-
       }
     });
   }
 
   if (hasSecretCave) {
-
     registrar('onGameStart', async (args) => {
-
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
         const deck = args.cardSourceController.getSource('playerDeck', player.id);
@@ -442,7 +441,9 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         }
 
         if (copperIndices.length < 1) {
-          args.loggerService.warn(`[nocturne onGameStart] player ${player.id} has no Copper to replace with Magic Lamp`);
+          args.loggerService.warn(
+            `[nocturne onGameStart] player ${player.id} has no Copper to replace with Magic Lamp`,
+          );
           continue;
         }
 
@@ -456,19 +457,19 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         });
 
         // Create the Magic Lamp and insert it in the same deck position.
-        const magicLamp = args.cardInstanceFactoryService.createCard('magic-lamp', { owner: player.id, partOfSupply: false });
+        const magicLamp = args.cardInstanceFactoryService.createCard('magic-lamp', {
+          owner: player.id,
+          partOfSupply: false,
+        });
         magicLamp.facing = 'back';
         args.cardLibrary.addCard(magicLamp);
         deck.splice(chosenIndex, 0, magicLamp.id);
-
       }
     });
   }
 
   if (hasShepherd) {
-
     registrar('onGameStart', async (args) => {
-
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
         const deck = args.cardSourceController.getSource('playerDeck', player.id);
@@ -496,19 +497,19 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         });
 
         // Create the Pasture and insert it in the same deck position.
-        const pasture = args.cardInstanceFactoryService.createCard('pasture', { owner: player.id, partOfSupply: false });
+        const pasture = args.cardInstanceFactoryService.createCard('pasture', {
+          owner: player.id,
+          partOfSupply: false,
+        });
         pasture.facing = 'back';
         args.cardLibrary.addCard(pasture);
         deck.splice(chosenIndex, 0, pasture.id);
-
       }
     });
   }
 
   if (hasTracker) {
-
     registrar('onGameStart', async (args) => {
-
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
         const deck = args.cardSourceController.getSource('playerDeck', player.id);
@@ -540,15 +541,12 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         pouch.facing = 'back';
         args.cardLibrary.addCard(pouch);
         deck.splice(chosenIndex, 0, pouch.id);
-
       }
     });
   }
 
   if (hasDruid) {
-
     registrar('onGameStart', async (args) => {
-
       if (!args.match.boons) {
         args.loggerService.warn('[nocturne onGameStart] no boons configured for Druid');
         return;
@@ -575,14 +573,11 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         }
         args.match.boons.setAside.push(boonId);
       }
-
     });
   }
 
   if (hasNecromancer) {
-
     registrar('onGameStart', async (args) => {
-
       // Create and place the three Zombies into the trash pile.
       const zombieKeys = ['zombie-apprentice', 'zombie-mason', 'zombie-spy'] as const;
       for (const zombieKey of zombieKeys) {
@@ -606,9 +601,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     return;
   }
 
-
   registrar('onGameStart', async (args) => {
-
     for (const player of args.match.players) {
       // Listen for qualifying gains so the player can exchange for Changeling.
       args.reactionManager.registerReactionTemplate({
@@ -739,7 +732,6 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
             toPlayerId: player.id,
             to: { location: 'playerDiscard' },
           });
-
         },
       });
     }

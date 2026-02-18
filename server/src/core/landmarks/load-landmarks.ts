@@ -21,7 +21,7 @@ export class LandmarkLoaderService {
       // Load the landmark library JSON for the expansion when present.
       const landmarkLibraryModule = await import(
         `@expansions/${expansionName}/landmark-library-${expansionName}.json`,
-        { with: { type: 'json' } },
+        { with: { type: 'json' } }
       );
       const landmarks = landmarkLibraryModule.default as Record<string, Partial<LandmarkNoId>>;
 
@@ -46,7 +46,7 @@ export class LandmarkLoaderService {
     try {
       // Register landmark effects if the expansion provides them.
       const landmarkModule = await import(
-        `@expansions/${expansionName}/landmark-effects-${expansionName}.ts`,
+        `@expansions/${expansionName}/landmark-effects-${expansionName}.ts`
       );
       const landmarks = landmarkModule.default as CardExpansionModule;
 

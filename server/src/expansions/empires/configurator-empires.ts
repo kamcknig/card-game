@@ -119,7 +119,7 @@ const settlersBustlingVillageOrder: CardKey[] = [
 
 const configurator: ExpansionConfiguratorFactory = () => {
   return async (args) => {
-              // Locate the Castles split pile in the kingdom supply, if present.
+    // Locate the Castles split pile in the kingdom supply, if present.
     const castlesSupply = args.config.kingdomSupply
       .find((supply) => supply.cards.some((card) => getCardPileKey(card) === 'castles'));
 
@@ -290,7 +290,6 @@ export const registerScoringFunctions = (
       // Stop once the Fountain threshold is reached to avoid extra iteration.
       if (copperCount >= 10) break;
     }
-
 
     if (copperCount < 10) return;
 

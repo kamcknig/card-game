@@ -13,9 +13,8 @@ export const configureArena = (
     (landmark) => landmark.cardKey === 'arena',
   );
 
-
   registrar('onGameStart', async (args) => {
-          // Arena setup: put 6 VP tokens per player on the landmark using the shared helper.
+    // Arena setup: put 6 VP tokens per player on the landmark using the shared helper.
     await placeVictoryTokensPerPlayer(args, {
       landmarkKey: 'arena',
       logKey: 'arena',
@@ -58,7 +57,6 @@ export const configureArena = (
             return actionCards.length > 0;
           },
           triggeredEffectFn: async (triggeredArgs) => {
-
             // Find Action cards in hand for the discard choice.
             const actionCards = triggeredArgs.findCardService.findCards([
               { location: 'playerHand', playerId: player.id },

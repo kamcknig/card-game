@@ -1,4 +1,4 @@
-import {AppSocket, MatchBaseConfiguration} from '@server-types/index.ts';
+import { AppSocket, MatchBaseConfiguration } from '@server-types/index.ts';
 import {
   Card,
   CardId,
@@ -11,21 +11,21 @@ import {
   ServerEmitEvents,
   ServerListenEvents,
 } from 'shared/types/index.ts';
-import {MatchController} from './match-controller.ts';
+import { MatchController } from './match-controller.ts';
 import jsonPatch from 'fast-json-patch';
-import {Server} from 'socket.io';
-import {GameConfigurationStore} from './game-configuration-store.ts';
-import {LobbySocketBindings} from './lobby-socket-bindings.ts';
-import {ExpansionSearchService} from './expansion-search-service.ts';
-import {ExpansionCompatibilityService} from './expansion-compatibility-service.ts';
-import {DisconnectedPlayerVoteService} from './disconnected-player-vote-service.ts';
-import {PlayerSessionService} from './player-session-service.ts';
-import {PlayerRegistryService} from './player-registry-service.ts';
-import {MatchStartOrchestrator} from './match-start-orchestrator.ts';
-import {MatchScope, MatchScopeFactory} from './match-scope-factory.ts';
-import {PlayerFactoryService} from './player-factory-service.ts';
-import {ServerConfigService} from './server-config-service.ts';
-import {LoggerService} from './logger-service.ts';
+import { Server } from 'socket.io';
+import { GameConfigurationStore } from './game-configuration-store.ts';
+import { LobbySocketBindings } from './lobby-socket-bindings.ts';
+import { ExpansionSearchService } from './expansion-search-service.ts';
+import { ExpansionCompatibilityService } from './expansion-compatibility-service.ts';
+import { DisconnectedPlayerVoteService } from './disconnected-player-vote-service.ts';
+import { PlayerSessionService } from './player-session-service.ts';
+import { PlayerRegistryService } from './player-registry-service.ts';
+import { MatchStartOrchestrator } from './match-start-orchestrator.ts';
+import { MatchScope, MatchScopeFactory } from './match-scope-factory.ts';
+import { PlayerFactoryService } from './player-factory-service.ts';
+import { ServerConfigService } from './server-config-service.ts';
+import { LoggerService } from './logger-service.ts';
 
 const defaultMatchConfiguration: MatchConfiguration = {
   expansions: [

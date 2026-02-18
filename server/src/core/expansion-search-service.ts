@@ -1,10 +1,4 @@
-import {
-  ArtifactNoId,
-  CardNoId,
-  EventNoId,
-  LandmarkNoId,
-  ProjectNoId,
-} from 'shared/types/index.ts';
+import { ArtifactNoId, CardNoId, EventNoId, LandmarkNoId, ProjectNoId } from 'shared/types/index.ts';
 import Fuse, { IFuseOptions } from 'fuse.js';
 import { ExpansionCatalogService } from './expansion-catalog-service.ts';
 import { LoggerService } from './logger-service.ts';

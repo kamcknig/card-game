@@ -8,6 +8,7 @@ this can also be used for pile selection instead of using cards.
 
 # Lower priority
 
+- add pre commit to lint and or fmt
 - do card-likes (boons, events, landmarks, hexes) actually need their own effect maps? or can they just be added to the
   card effect map that already exists? the effects they perform are no different. having different effect maps then
   hardcodes those effect maps with those names into the core functionality.

@@ -1,10 +1,5 @@
 import { ActionService, AppSocket, FindCardService } from '@server-types/index.ts';
-import {
-  Match,
-  MatchSummary,
-  PlayerId,
-  ServerListenEvents,
-} from 'shared/types/index.ts';
+import { Match, MatchSummary, PlayerId, ServerListenEvents } from 'shared/types/index.ts';
 import { CardSourceController } from './card-source-controller.ts';
 import { CardInteractivityController } from './card-interactivity-controller.ts';
 import { LoggerService } from './logger-service.ts';

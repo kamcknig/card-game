@@ -35,13 +35,17 @@ export const configureYoungWitch = (args: ExpansionConfiguratorContext) => {
     .filter((key) => !bannedKeys.includes(key) && !kingdomCardKeys.includes(key));
 
   if (!availableKeys.length) {
-    args.loggerService.info(`[cornucopia configurator - configuring young-witch] no available kingdoms, not adding new kingdom`);
+    args.loggerService.info(
+      `[cornucopia configurator - configuring young-witch] no available kingdoms, not adding new kingdom`,
+    );
     return;
   }
 
   const chosenKey = availableKeys[args.rngService.nextIndex(availableKeys.length)];
 
-  args.loggerService.info(`[cornucopia configurator - configuring young-witch] adding ${chosenKey} to kingdom as the "bane" card`);
+  args.loggerService.info(
+    `[cornucopia configurator - configuring young-witch] adding ${chosenKey} to kingdom as the "bane" card`,
+  );
 
   const chosenCard = structuredClone(
     args.expansionCatalog[availableKingdoms[chosenKey].expansionName].cardData.kingdomSupply[chosenKey],

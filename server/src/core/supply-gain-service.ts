@@ -26,7 +26,9 @@ export class DefaultSupplyGainService implements SupplyGainService {
       : ['basicSupply', 'kingdomSupply'];
 
     this.loggerService.debug(
-      `[${tag}] attempting top-supply gain for player ${args.playerId}: pileKey=${args.pileKey}, from=${fromLocations.join(',')}, to=${args.to.location}`,
+      `[${tag}] attempting top-supply gain for player ${args.playerId}: pileKey=${args.pileKey}, from=${
+        fromLocations.join(',')
+      }, to=${args.to.location}`,
     );
 
     const topSupplyCard = this.findCardService.findTopSupplyCardForPileKey({

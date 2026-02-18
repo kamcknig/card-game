@@ -1,4 +1,4 @@
-import {Player, PlayerId} from 'shared/types/index.ts';
+import { Player, PlayerId } from 'shared/types/index.ts';
 
 export type RemovalVoteResult = {
   accepted: boolean;
@@ -49,15 +49,15 @@ export class DisconnectedPlayerVoteService {
     const voter = players.find((player) => player.id === voterId);
 
     if (!target || !voter) {
-      return {accepted: false, allVoted: false};
+      return { accepted: false, allVoted: false };
     }
 
     if (target.isComputer || target.connected) {
-      return {accepted: false, allVoted: false};
+      return { accepted: false, allVoted: false };
     }
 
     if (voter.isComputer || !voter.connected) {
-      return {accepted: false, allVoted: false};
+      return { accepted: false, allVoted: false };
     }
 
     const connectedHumans = players.filter((player) =>
@@ -65,7 +65,7 @@ export class DisconnectedPlayerVoteService {
     );
 
     if (!connectedHumans.length) {
-      return {accepted: false, allVoted: false};
+      return { accepted: false, allVoted: false };
     }
 
     const votes = this._removalVotes.get(targetPlayerId) ?? new Set<PlayerId>();
@@ -73,7 +73,7 @@ export class DisconnectedPlayerVoteService {
     this._removalVotes.set(targetPlayerId, votes);
 
     const allVoted = connectedHumans.every((player) => votes.has(player.id));
-    return {accepted: true, allVoted};
+    return { accepted: true, allVoted };
   }
 
   // Keeps pending queue sorted by player order and removes invalid targets.
@@ -90,4 +90,3 @@ export class DisconnectedPlayerVoteService {
     this._pendingRemovalQueue.sort((a, b) => (orderById.get(a) ?? 0) - (orderById.get(b) ?? 0));
   }
 }
-

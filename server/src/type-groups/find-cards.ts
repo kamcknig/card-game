@@ -6,6 +6,6 @@ export type {
   FindCardsFn,
   FindCardsFnInput,
   NonLocationFilters,
-  SupplyGainService,
   SourceFindCardsFilter,
+  SupplyGainService,
 } from '../types.ts';

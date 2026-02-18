@@ -19,7 +19,6 @@ import { EventEmitter } from '@denosaurs/event';
 import {
   AppSocket,
   FindCardService,
-  SupplyGainService,
   GameActionDefinitionMap,
   GameActionReturnTypeMap,
   GameActions,
@@ -27,6 +26,7 @@ import {
   GameLifecycleEvent,
   PlayerScoreDecorator,
   PromptService,
+  SupplyGainService,
 } from '@server-types/index.ts';
 import { CardSourceController } from './card-source-controller.ts';
 import { prosperityTokenIds } from '@expansions/prosperity/token-prosperity-ids.ts';
@@ -663,5 +663,4 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     });
     this.emit('gameOver');
   }
-
 }

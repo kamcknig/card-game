@@ -16,9 +16,8 @@ export const configureObelisk = (
   );
   if (!hasObelisk) return;
 
-
   registrar('onGameStart', async (args) => {
-          // Locate the Obelisk landmark instance to store the chosen pile metadata.
+    // Locate the Obelisk landmark instance to store the chosen pile metadata.
     const obeliskLandmark = args.match.landmarks.find(
       (landmark) => landmark.cardKey === 'obelisk',
     );

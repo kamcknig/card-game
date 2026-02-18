@@ -23,7 +23,9 @@ export class ExpansionCompatibilityService {
       const configModule = await this.tryLoadExpansionConfig(expansion.name);
 
       if (!configModule) {
-        this.loggerService.warn(`[expansion compatibility] could not find config module for expansion '${expansion.name}'`);
+        this.loggerService.warn(
+          `[expansion compatibility] could not find config module for expansion '${expansion.name}'`,
+        );
         continue;
       }
 

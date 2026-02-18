@@ -23,7 +23,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
   let artifactEffectsRegistered = false;
 
   return async (args) => {
-              registerRenaissanceTokenDefinitions(args.expansionRegistration.registerTokenDefinition);
+    registerRenaissanceTokenDefinitions(args.expansionRegistration.registerTokenDefinition);
     if (!artifactEffectsRegistered) {
       registerArtifactEffects(args.expansionRegistration.registerArtifactEffect);
       artifactEffectsRegistered = true;
@@ -72,7 +72,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   config,
 ) => {
   registrar('onGameStart', async (args) => {
-          const projectCount = config.projects?.length ?? 0;
+    const projectCount = config.projects?.length ?? 0;
     if (projectCount < 1) {
       args.loggerService.debug('[renaissance configurator] no projects configured, skipping cube placement');
       return;
@@ -153,7 +153,6 @@ export const registerEndGamePolicies = (registrar: EndGamePolicyRegistrar): void
       match.fleetRound.nextFleetPlayerIndex = 0;
       match.fleetRound.endingPlayerId = match.players[match.currentPlayerTurnIndex]?.id;
       match.fleetRound.startedAtTurnNumber = match.turnNumber;
-
 
       return { decision: 'defer' };
     },

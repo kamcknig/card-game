@@ -45,7 +45,9 @@ export const configureFerryman = (args: ExpansionConfiguratorContext) => {
     .filter((key) => !bannedKeys.includes(key) && !kingdomCardKeys.includes(key));
 
   if (!availableKeys.length) {
-    args.loggerService.info(`[cornucopia configurator - configuring ferryman] no available kingdoms, not adding new kingdom`);
+    args.loggerService.info(
+      `[cornucopia configurator - configuring ferryman] no available kingdoms, not adding new kingdom`,
+    );
     return;
   }
 

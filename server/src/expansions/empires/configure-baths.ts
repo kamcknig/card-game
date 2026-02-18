@@ -13,9 +13,8 @@ export const configureBaths = (
   );
   if (!hasBaths) return;
 
-
   registrar('onGameStart', async (args) => {
-          // Baths setup: put 6 VP tokens per player on the landmark using the shared helper.
+    // Baths setup: put 6 VP tokens per player on the landmark using the shared helper.
     await placeVictoryTokensPerPlayer(args, {
       landmarkKey: 'baths',
       logKey: 'baths',
@@ -59,7 +58,6 @@ export const configureBaths = (
             return true;
           },
           triggeredEffectFn: async (triggeredArgs) => {
-
             // Resolve the Victory token id for token filtering.
             const victoryTokenId = prosperityTokenIds.victory;
             const tokensOnBaths = Object.values(

@@ -83,7 +83,9 @@ export class PlayerReconnectOrchestrator {
   }
 
   private onSearchCards(playerId: PlayerId, searchStr: string) {
-    this.loggerService.debug(`[match] ${getPlayerById(this.match, playerId)} searching for cards using term '${searchStr}'`);
+    this.loggerService.debug(
+      `[match] ${getPlayerById(this.match, playerId)} searching for cards using term '${searchStr}'`,
+    );
     this.socketMap.get(playerId)?.emit(
       'searchCardResponse',
       this.expansionSearchService.searchKingdomCards(searchStr),

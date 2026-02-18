@@ -15,7 +15,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
   let prosperityCheckConfigured: boolean = false;
 
   return async (args) => {
-              registerProsperityTokenDefinitions(args.expansionRegistration.registerTokenDefinition);
+    registerProsperityTokenDefinitions(args.expansionRegistration.registerTokenDefinition);
 
     const kingdomCards = args.config.kingdomSupply;
     // Standard Dominion rule: add Colony/Platinum when any Prosperity kingdom card is present.
@@ -65,7 +65,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
       curseCard?.cards?.forEach((card) => card.type.push('TREASURE'));
 
       args.expansionRegistration.registerCardEffect('curse', 'prosperity', async (args) => {
-              args.loggerService.info(`[curse effect - prosperity] curse effect called`);
+        args.loggerService.info(`[curse effect - prosperity] curse effect called`);
         await args.actionService.run('gainTreasure', { count: 1 });
       });
 
@@ -109,7 +109,7 @@ export const registerGameEvents: (
   config: ComputedMatchConfiguration,
 ) => void = (registrar) => {
   registrar('onGameStart', async (args) => {
-          const peddlerCardIds = args.findCardService.findCards([
+    const peddlerCardIds = args.findCardService.findCards([
       { location: 'kingdomSupply' },
       { cardKeys: 'peddler' },
     ]).map((card) => card.id);

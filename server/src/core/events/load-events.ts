@@ -49,7 +49,10 @@ export class EventLoaderService {
 
         if (events[cardKey].registerEffects) {
           this.loggerService.info(`[load-events] registering event effects for ${cardKey}`);
-          this.expansionEffectRegistryService.registerEventEffectFactory(cardKey as CardKey, events[cardKey].registerEffects);
+          this.expansionEffectRegistryService.registerEventEffectFactory(
+            cardKey as CardKey,
+            events[cardKey].registerEffects,
+          );
         }
       }
     } catch (error) {

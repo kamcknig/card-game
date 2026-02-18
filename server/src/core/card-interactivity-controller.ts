@@ -251,7 +251,9 @@ export class CardInteractivityController {
         this.loggerService.debug(`[card interactivity] ${player} has debt, blocking card-like buy`);
         return;
       }
-      this.loggerService.info(`[card interactivity] ${player} tapped card-like ${cardId} in phase ${phase}, processing`);
+      this.loggerService.info(
+        `[card interactivity] ${player} tapped card-like ${cardId} in phase ${phase}, processing`,
+      );
 
       const event = findEventInMatch(this.match, cardId);
       if (event) {
@@ -265,7 +267,9 @@ export class CardInteractivityController {
         }
       }
     } else {
-      this.loggerService.debug(`[card interactivity] ${player} tapped card-like ${cardId} in phase ${phase}, not processing`);
+      this.loggerService.debug(
+        `[card interactivity] ${player} tapped card-like ${cardId} in phase ${phase}, not processing`,
+      );
     }
 
     await this.actionService.run('checkForRemainingPlayerActions');

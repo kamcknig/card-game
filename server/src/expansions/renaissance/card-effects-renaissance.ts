@@ -12,7 +12,7 @@ const expansion: CardExpansionModule = {
   'border-guard': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            // Border Guard grants +1 Action on play.
+      // Border Guard grants +1 Action on play.
       loggerService.debug('[border-guard effect] gaining 1 action');
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
@@ -155,7 +155,7 @@ const expansion: CardExpansionModule = {
   'acting-troupe': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            const actingTroupeCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const actingTroupeCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
       // Acting Troupe always grants +4 Villagers even if the trash step later cannot happen.
       loggerService.debug('[acting-troupe effect] granting +4 Villagers');
@@ -192,7 +192,7 @@ const expansion: CardExpansionModule = {
   'cargo-ship': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            const cargoShipCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const cargoShipCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       // Build a per-play identifier so replaying Cargo Ship in one turn doesn't collide trigger IDs.
       const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
       const turnStatsIndex = turnHistoryIndex;
@@ -347,7 +347,7 @@ const expansion: CardExpansionModule = {
   'ducat': {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
-      const loggerService = cardEffectArgs.loggerService;
+        const loggerService = cardEffectArgs.loggerService;
         // Ducat lets you optionally trash one Copper from hand when gained.
         const hand = cardEffectArgs.cardSourceController.getSource('playerHand', eventArgs.playerId);
         const copperInHandIds = hand.filter((cardId) =>
@@ -386,7 +386,7 @@ const expansion: CardExpansionModule = {
     }),
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            // Ducat grants +1 Coffer and +1 Buy when played.
+      // Ducat grants +1 Coffer and +1 Buy when played.
       loggerService.debug('[ducat effect] gaining +1 Coffer and +1 Buy');
       await cardEffectArgs.actionService.run('gainCoffer', {
         playerId: cardEffectArgs.playerId,
@@ -400,7 +400,7 @@ const expansion: CardExpansionModule = {
   'experiment': {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
-      const loggerService = cardEffectArgs.loggerService;
+        const loggerService = cardEffectArgs.loggerService;
         // Extra copies still fire onGained, but must not chain another extra gain.
         // If the gain source is another Experiment instance, skip chaining.
         if (eventArgs.gainContext?.sourceCardId !== undefined) {
@@ -440,7 +440,7 @@ const expansion: CardExpansionModule = {
     }),
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            const experimentCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const experimentCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
       // Experiment gives +2 Cards and +1 Action every time it is played.
       loggerService.debug('[experiment effect] drawing 2 cards and gaining 1 action');
@@ -493,7 +493,7 @@ const expansion: CardExpansionModule = {
   'flag-bearer': {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
-      const loggerService = cardEffectArgs.loggerService;
+        const loggerService = cardEffectArgs.loggerService;
         // Flag Bearer grants the Flag artifact to the player that gained it.
         loggerService.debug(`[flag-bearer onGained effect] player ${eventArgs.playerId} taking Flag`);
         await cardEffectArgs.actionService.run('gainArtifact', {
@@ -502,7 +502,7 @@ const expansion: CardExpansionModule = {
         });
       },
       onTrashed: async (cardEffectArgs, eventArgs) => {
-      const loggerService = cardEffectArgs.loggerService;
+        const loggerService = cardEffectArgs.loggerService;
         // Flag Bearer grants the Flag artifact to the player that trashed it.
         loggerService.debug(`[flag-bearer onTrashed effect] player ${eventArgs.playerId} taking Flag`);
         await cardEffectArgs.actionService.run('gainArtifact', {
@@ -513,7 +513,7 @@ const expansion: CardExpansionModule = {
     }),
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            // Flag Bearer gives +$2 when played.
+      // Flag Bearer gives +$2 when played.
       loggerService.debug('[flag-bearer effect] gaining +2 treasure');
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
     },
@@ -521,7 +521,7 @@ const expansion: CardExpansionModule = {
   'hideout': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            // Hideout gives +1 Card and +2 Actions before the mandatory trash.
+      // Hideout gives +1 Card and +2 Actions before the mandatory trash.
       loggerService.debug('[hideout effect] drawing 1 card and gaining 2 actions');
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
@@ -581,7 +581,7 @@ const expansion: CardExpansionModule = {
   'improve': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            const improveCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const improveCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
       const turnStatsIndex = turnHistoryIndex;
       const playedThisTurn = cardEffectArgs.match.stats.playedCardsByTurn[turnStatsIndex] ?? [];
@@ -689,7 +689,7 @@ const expansion: CardExpansionModule = {
   'lackeys': {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
-      const loggerService = cardEffectArgs.loggerService;
+        const loggerService = cardEffectArgs.loggerService;
         // Gaining Lackeys grants +2 Villagers to the player that gained it.
         loggerService.debug(`[lackeys onGained effect] player ${eventArgs.playerId} gaining 2 Villagers`);
         await cardEffectArgs.actionService.run('gainVillager', {
@@ -700,7 +700,7 @@ const expansion: CardExpansionModule = {
     }),
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            // Playing Lackeys grants +2 Cards.
+      // Playing Lackeys grants +2 Cards.
       loggerService.debug('[lackeys effect] drawing 2 cards');
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
@@ -711,7 +711,7 @@ const expansion: CardExpansionModule = {
   'mountain-village': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            // Mountain Village grants +2 Actions.
+      // Mountain Village grants +2 Actions.
       loggerService.debug('[mountain-village effect] gaining 2 actions');
       await cardEffectArgs.actionService.run('gainAction', {
         count: 2,
@@ -752,7 +752,7 @@ const expansion: CardExpansionModule = {
   'old-witch': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            // Old Witch grants +3 Cards first.
+      // Old Witch grants +3 Cards first.
       loggerService.debug('[old-witch effect] drawing 3 cards');
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
@@ -822,7 +822,7 @@ const expansion: CardExpansionModule = {
   'patron': {
     registerLifeCycleMethods: () => ({
       onRevealed: async (cardEffectArgs, eventArgs) => {
-      const loggerService = cardEffectArgs.loggerService;
+        const loggerService = cardEffectArgs.loggerService;
         // Patron only grants Coffers when revealed during an Action phase.
         const turnPhase = getTurnPhase(cardEffectArgs.match.turnPhaseIndex);
         if (turnPhase !== 'action') {
@@ -839,7 +839,7 @@ const expansion: CardExpansionModule = {
     }),
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            // Patron grants +1 Villager and +$2 when played.
+      // Patron grants +1 Villager and +$2 when played.
       loggerService.debug('[patron effect] gaining 1 Villager and 2 treasure');
       await cardEffectArgs.actionService.run('gainVillager', {
         playerId: cardEffectArgs.playerId,
@@ -853,7 +853,7 @@ const expansion: CardExpansionModule = {
   'priest': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            const priestCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const priestCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
       const turnStatsIndex = turnHistoryIndex;
       const playedThisTurn = cardEffectArgs.match.stats.playedCardsByTurn[turnStatsIndex] ?? [];
@@ -932,7 +932,7 @@ const expansion: CardExpansionModule = {
   'recruiter': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            // Recruiter gives +2 Cards.
+      // Recruiter gives +2 Cards.
       loggerService.debug('[recruiter effect] drawing 2 cards');
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
@@ -984,7 +984,7 @@ const expansion: CardExpansionModule = {
   'research': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            const researchCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const researchCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
       const turnStatsIndex = turnHistoryIndex;
       const playedThisTurn = cardEffectArgs.match.stats.playedCardsByTurn[turnStatsIndex] ?? [];
@@ -1079,7 +1079,9 @@ const expansion: CardExpansionModule = {
             for (const setAsideCardId of setAsideCardIds) {
               const setAside = triggeredArgs.cardSourceController.getSource('set-aside', cardEffectArgs.playerId);
               if (!setAside.includes(setAsideCardId)) {
-                loggerService.debug(`[research startTurn effect] set-aside card ${setAsideCardId} is no longer set aside`);
+                loggerService.debug(
+                  `[research startTurn effect] set-aside card ${setAsideCardId} is no longer set aside`,
+                );
                 continue;
               }
 
@@ -1098,7 +1100,7 @@ const expansion: CardExpansionModule = {
   'scepter': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            const scepterCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const scepterCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
       const turnStatsIndex = turnHistoryIndex;
       const playedThisTurn = cardEffectArgs.match.stats.playedCardsByTurn[turnStatsIndex] ?? [];
@@ -1233,7 +1235,9 @@ const expansion: CardExpansionModule = {
               return;
             }
 
-            loggerService.debug('[scepter duration effect] replayed Duration left play; returning Scepter to play area');
+            loggerService.debug(
+              '[scepter duration effect] replayed Duration left play; returning Scepter to play area',
+            );
             await triggeredArgs.actionService.run('moveCard', {
               cardId: scepterCard.id,
               to: { location: 'playArea' },
@@ -1248,7 +1252,7 @@ const expansion: CardExpansionModule = {
   'scholar': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            // Scholar discards the entire hand first.
+      // Scholar discards the entire hand first.
       const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
       loggerService.debug(`[scholar effect] discarding ${hand.length} card(s) from hand`);
       for (const cardId of [...hand]) {
@@ -1269,7 +1273,7 @@ const expansion: CardExpansionModule = {
   'sculptor': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            // Sculptor gains a card to hand costing up to $4.
+      // Sculptor gains a card to hand costing up to $4.
       const gainableCards = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
         { playerId: cardEffectArgs.playerId, kind: 'upTo', amount: { treasure: 4 } },
@@ -1314,7 +1318,7 @@ const expansion: CardExpansionModule = {
   'seer': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            // Seer first gives +1 Card and +1 Action.
+      // Seer first gives +1 Card and +1 Action.
       loggerService.debug('[seer effect] drawing 1 card and gaining 1 action');
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
@@ -1425,9 +1429,11 @@ const expansion: CardExpansionModule = {
   'silk-merchant': {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
-      const loggerService = cardEffectArgs.loggerService;
+        const loggerService = cardEffectArgs.loggerService;
         // Silk Merchant grants +1 Coffer and +1 Villager when gained.
-        loggerService.debug(`[silk-merchant onGained effect] player ${eventArgs.playerId} gaining 1 Coffer and 1 Villager`);
+        loggerService.debug(
+          `[silk-merchant onGained effect] player ${eventArgs.playerId} gaining 1 Coffer and 1 Villager`,
+        );
         await cardEffectArgs.actionService.run('gainCoffer', {
           playerId: eventArgs.playerId,
           count: 1,
@@ -1438,9 +1444,11 @@ const expansion: CardExpansionModule = {
         });
       },
       onTrashed: async (cardEffectArgs, eventArgs) => {
-      const loggerService = cardEffectArgs.loggerService;
+        const loggerService = cardEffectArgs.loggerService;
         // Silk Merchant grants +1 Coffer and +1 Villager to the player who trashed it.
-        loggerService.debug(`[silk-merchant onTrashed effect] player ${eventArgs.playerId} gaining 1 Coffer and 1 Villager`);
+        loggerService.debug(
+          `[silk-merchant onTrashed effect] player ${eventArgs.playerId} gaining 1 Coffer and 1 Villager`,
+        );
         await cardEffectArgs.actionService.run('gainCoffer', {
           playerId: eventArgs.playerId,
           count: 1,
@@ -1453,7 +1461,7 @@ const expansion: CardExpansionModule = {
     }),
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            // Silk Merchant gives +2 Cards and +1 Buy on play.
+      // Silk Merchant gives +2 Cards and +1 Buy on play.
       loggerService.debug('[silk-merchant effect] drawing 2 cards and gaining 1 buy');
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
@@ -1465,7 +1473,7 @@ const expansion: CardExpansionModule = {
   'spices': {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
-      const loggerService = cardEffectArgs.loggerService;
+        const loggerService = cardEffectArgs.loggerService;
         // Spices grants +2 Coffers when gained.
         loggerService.debug(`[spices onGained effect] player ${eventArgs.playerId} gaining 2 Coffers`);
         await cardEffectArgs.actionService.run('gainCoffer', {
@@ -1476,7 +1484,7 @@ const expansion: CardExpansionModule = {
     }),
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            // Spices gives +$2 and +1 Buy on play.
+      // Spices gives +$2 and +1 Buy on play.
       loggerService.debug('[spices effect] gaining 2 treasure and 1 buy');
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
       await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
@@ -1485,7 +1493,7 @@ const expansion: CardExpansionModule = {
   'swashbuckler': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            // Swashbuckler gives +3 Cards first.
+      // Swashbuckler gives +3 Cards first.
       loggerService.debug('[swashbuckler effect] drawing 3 cards');
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
@@ -1522,7 +1530,7 @@ const expansion: CardExpansionModule = {
   'treasurer': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            // Treasurer gives +$3 on play.
+      // Treasurer gives +$3 on play.
       loggerService.debug('[treasurer effect] gaining 3 treasure');
       await cardEffectArgs.actionService.run('gainTreasure', { count: 3 });
 
@@ -1610,7 +1618,7 @@ const expansion: CardExpansionModule = {
   'villain': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            // Villain grants +2 Coffers.
+      // Villain grants +2 Coffers.
       loggerService.debug('[villain effect] gaining 2 Coffers');
       await cardEffectArgs.actionService.run('gainCoffer', {
         playerId: cardEffectArgs.playerId,

@@ -103,7 +103,9 @@ export class BuyOptionsResolver {
 
       // Skip duplicate option ids to keep prompt/result mapping deterministic.
       if (options.some((existingOption) => existingOption.id === option.id)) {
-        this.loggerService.warn(`[buy options] duplicate buy option id '${option.id}' for ${card.cardKey}, skipping duplicate`);
+        this.loggerService.warn(
+          `[buy options] duplicate buy option id '${option.id}' for ${card.cardKey}, skipping duplicate`,
+        );
         continue;
       }
 

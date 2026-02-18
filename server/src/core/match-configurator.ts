@@ -124,13 +124,17 @@ export class MatchConfigurator {
     this._config.preselectedKingdoms = this._config.preselectedKingdoms.filter((card) => !!card);
 
     if (this._config.preselectedKingdoms?.length > 0) {
-      this._loggerService.info(`[match configurator] requested kingdom cards ${this._config.preselectedKingdoms.length}`);
+      this._loggerService.info(
+        `[match configurator] requested kingdom cards ${this._config.preselectedKingdoms.length}`,
+      );
       this._loggerService.info(this._config.preselectedKingdoms?.map((card) => card.cardKey)?.join('\n'));
     } else {
       this._loggerService.info(`[match configurator] no cards requested in during match configuration`);
     }
 
-    this._loggerService.info(`[match configurator] removing possible duplicates from requested and hard-coded kingdoms`);
+    this._loggerService.info(
+      `[match configurator] removing possible duplicates from requested and hard-coded kingdoms`,
+    );
 
     this._requestedKingdoms = Array.from(
       new Set([
@@ -206,7 +210,9 @@ export class MatchConfigurator {
     const additionalKingdoms: { name: string; cards: CardNoId[] }[] = [];
 
     if (selectedKingdoms.length === MatchBaseConfiguration.numberOfKingdomPiles) {
-      this._loggerService.info(`[match configurator] number of requested kingdoms ${this._requestedKingdoms.length} is enough`);
+      this._loggerService.info(
+        `[match configurator] number of requested kingdoms ${this._requestedKingdoms.length} is enough`,
+      );
     } else {
       // reduces the player-configured expansions into an array whose elements are the expansions' library data
       const selectedExpansions = this._config.expansions.reduce((acc, allowedExpansion) => {
@@ -415,7 +421,9 @@ export class MatchConfigurator {
       }).concat(additionalKingdoms),
     );
 
-    this._loggerService.info(`[match configurator] finalized selected kingdoms count ${this._config.kingdomSupply.length}`);
+    this._loggerService.info(
+      `[match configurator] finalized selected kingdoms count ${this._config.kingdomSupply.length}`,
+    );
     this._loggerService.info(this._config.kingdomSupply.map((supply) => supply.name).join('\n'));
   }
 
@@ -479,7 +487,9 @@ export class MatchConfigurator {
     do {
       iteration++;
       for (const [expansionName, expansionConfigurator] of configuratorIterator) {
-        this._loggerService.info(`[match configurator] running expansion configurator for expansion '${expansionName}'`);
+        this._loggerService.info(
+          `[match configurator] running expansion configurator for expansion '${expansionName}'`,
+        );
         await expansionConfigurator({
           ...this._initContext,
           config: this._config,
@@ -491,7 +501,9 @@ export class MatchConfigurator {
 
       changes = jsonPatch.compare(configSnapshot, this._config);
 
-      this._loggerService.info(`[match configurator] expansion configurator iteration ${iteration} changes ${changes.length}`);
+      this._loggerService.info(
+        `[match configurator] expansion configurator iteration ${iteration} changes ${changes.length}`,
+      );
 
       configSnapshot = structuredClone(this._config);
     } while (changes.length > 0 && iteration < 10);
@@ -548,7 +560,9 @@ export class MatchConfigurator {
         if ((error as any)?.code === 'ERR_MODULE_NOT_FOUND') {
           continue;
         }
-        this._loggerService.warn(`[match configurator] failed to register expansion end game policies for ${expansion}`);
+        this._loggerService.warn(
+          `[match configurator] failed to register expansion end game policies for ${expansion}`,
+        );
         this._loggerService.error(error);
       }
     }
@@ -570,7 +584,9 @@ export class MatchConfigurator {
         if ((error as any)?.code === 'ERR_MODULE_NOT_FOUND') {
           continue;
         }
-        this._loggerService.warn(`[match configurator] failed to register expansion scoring functions for ${expansion}`);
+        this._loggerService.warn(
+          `[match configurator] failed to register expansion scoring functions for ${expansion}`,
+        );
         this._loggerService.error(error);
       }
     }

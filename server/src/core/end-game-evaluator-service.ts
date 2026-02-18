@@ -1,9 +1,4 @@
-import {
-  EndGamePolicyFnOutcome,
-  FindCardService,
-  PromptService,
-  SupplyGainService,
-} from '@server-types/index.ts';
+import { EndGamePolicyFnOutcome, FindCardService, PromptService, SupplyGainService } from '@server-types/index.ts';
 import { Match } from 'shared/types/index.ts';
 import { MatchCardLibrary } from './match-card-library.ts';
 import { CardPriceRulesController } from './card-price-rules-controller.ts';

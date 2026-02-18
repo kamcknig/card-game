@@ -6,7 +6,9 @@ export const configureSpoils = async (args: ExpansionConfiguratorContext) => {
   }
 
   if (args.config.nonSupply?.some((supply) => !supply.cards.some((card) => card.tags?.includes('spoils')))) {
-    args.loggerService.info(`[dark-ages configurator - configuring spoils] spoils cards in kingdom already, not configuring`);
+    args.loggerService.info(
+      `[dark-ages configurator - configuring spoils] spoils cards in kingdom already, not configuring`,
+    );
     return;
   }
 

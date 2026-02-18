@@ -59,10 +59,15 @@ const isCapitalismTextQualified = (
 };
 
 // Applies Capitalism's temporary Treasure type to all qualifying Action cards in the match library.
-const applyCapitalismTreasureTypes = (match: Match, cardLibrary: {
-  getAllCardsAsArray: () => Card[];
-  getCard: <M = unknown>(cardId: number) => Card<M>;
-}, playerId: PlayerId, logger: { debug: (message: string) => void }) => {
+const applyCapitalismTreasureTypes = (
+  match: Match,
+  cardLibrary: {
+    getAllCardsAsArray: () => Card[];
+    getCard: <M = unknown>(cardId: number) => Card<M>;
+  },
+  playerId: PlayerId,
+  logger: { debug: (message: string) => void },
+) => {
   let addedCount = 0;
   // Iterate in id order to keep deterministic type mutation/log order.
   const cards = cardLibrary.getAllCardsAsArray()
@@ -126,7 +131,7 @@ const effectMap: CardExpansionModule = {
   'academy': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
         loggerService.warn('[academy project] project card not found');
         return;
@@ -181,7 +186,7 @@ const effectMap: CardExpansionModule = {
   'barracks': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
         loggerService.warn('[barracks project] project card not found');
         return;
@@ -228,7 +233,7 @@ const effectMap: CardExpansionModule = {
   'canal': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
         loggerService.warn('[canal project] project card not found');
         return;
@@ -321,7 +326,7 @@ const effectMap: CardExpansionModule = {
   'capitalism': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
         loggerService.warn('[capitalism project] project card not found');
         return;
@@ -406,7 +411,7 @@ const effectMap: CardExpansionModule = {
   'cathedral': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
         loggerService.warn('[cathedral project] project card not found');
         return;
@@ -477,7 +482,7 @@ const effectMap: CardExpansionModule = {
   'citadel': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
         loggerService.warn('[citadel project] project card not found');
         return;
@@ -561,7 +566,7 @@ const effectMap: CardExpansionModule = {
   'city-gate': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
         loggerService.warn('[city-gate project] project card not found');
         return;
@@ -641,13 +646,15 @@ const effectMap: CardExpansionModule = {
   'crop-rotation': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
         loggerService.warn('[crop-rotation project] project card not found');
         return;
       }
 
-      loggerService.info(`[crop-rotation project] registering start turn trigger for player ${cardEffectArgs.playerId}`);
+      loggerService.info(
+        `[crop-rotation project] registering start turn trigger for player ${cardEffectArgs.playerId}`,
+      );
 
       cardEffectArgs.reactionManager.registerSystemTemplate(project, 'startTurn', {
         playerId: cardEffectArgs.playerId,
@@ -724,7 +731,7 @@ const effectMap: CardExpansionModule = {
   'exploration': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
         loggerService.warn('[exploration project] project card not found');
         return;
@@ -756,7 +763,9 @@ const effectMap: CardExpansionModule = {
         },
         triggeredEffectFn: async () => {
           gainedDuringBuyPhase = false;
-          loggerService.debug(`[exploration project] reset buy-phase gain tracking for player ${cardEffectArgs.playerId}`);
+          loggerService.debug(
+            `[exploration project] reset buy-phase gain tracking for player ${cardEffectArgs.playerId}`,
+          );
         },
       });
 
@@ -845,7 +854,7 @@ const effectMap: CardExpansionModule = {
   'fair': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
         loggerService.warn('[fair project] project card not found');
         return;
@@ -888,7 +897,7 @@ const effectMap: CardExpansionModule = {
   'fleet': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            // Resolve Fleet so project purchases still register an effect entry for consistent diagnostics.
+      // Resolve Fleet so project purchases still register an effect entry for consistent diagnostics.
       const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
         loggerService.warn('[fleet project] project card not found');
@@ -904,7 +913,7 @@ const effectMap: CardExpansionModule = {
   'guildhall': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
         loggerService.warn('[guildhall project] project card not found');
         return;
@@ -954,7 +963,7 @@ const effectMap: CardExpansionModule = {
   'innovation': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
         loggerService.warn('[innovation project] project card not found');
         return;
@@ -1057,7 +1066,7 @@ const effectMap: CardExpansionModule = {
   'pageant': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
         loggerService.warn('[pageant project] project card not found');
         return;
@@ -1131,7 +1140,7 @@ const effectMap: CardExpansionModule = {
   'piazza': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
         loggerService.warn('[piazza project] project card not found');
         return;
@@ -1204,13 +1213,15 @@ const effectMap: CardExpansionModule = {
   'road-network': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
         loggerService.warn('[road-network project] project card not found');
         return;
       }
 
-      loggerService.info(`[road-network project] registering victory gain trigger for player ${cardEffectArgs.playerId}`);
+      loggerService.info(
+        `[road-network project] registering victory gain trigger for player ${cardEffectArgs.playerId}`,
+      );
 
       cardEffectArgs.reactionManager.registerSystemTemplate(project, 'cardGained', {
         playerId: cardEffectArgs.playerId,
@@ -1254,7 +1265,7 @@ const effectMap: CardExpansionModule = {
   'sewers': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
         loggerService.warn('[sewers project] project card not found');
         return;
@@ -1337,7 +1348,7 @@ const effectMap: CardExpansionModule = {
   'silos': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            // Resolve the Silos project to attach start-of-turn behavior.
+      // Resolve the Silos project to attach start-of-turn behavior.
       const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
         loggerService.warn('[silos project] project card not found');
@@ -1428,14 +1439,16 @@ const effectMap: CardExpansionModule = {
   'sinister-plot': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            // Resolve the Sinister Plot project to attach start-of-turn behavior.
+      // Resolve the Sinister Plot project to attach start-of-turn behavior.
       const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
         loggerService.warn('[sinister-plot project] project card not found');
         return;
       }
 
-      loggerService.info(`[sinister-plot project] registering start turn trigger for player ${cardEffectArgs.playerId}`);
+      loggerService.info(
+        `[sinister-plot project] registering start turn trigger for player ${cardEffectArgs.playerId}`,
+      );
 
       cardEffectArgs.reactionManager.registerSystemTemplate(project, 'startTurn', {
         playerId: cardEffectArgs.playerId,
@@ -1534,7 +1547,7 @@ const effectMap: CardExpansionModule = {
   'star-chart': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-            const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
         loggerService.warn('[star-chart project] project card not found');
         return;

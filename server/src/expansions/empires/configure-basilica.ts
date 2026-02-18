@@ -15,9 +15,8 @@ export const configureBasilica = (
   );
   if (!hasBasilica) return;
 
-
   registrar('onGameStart', async (args) => {
-          // Basilica setup: put 6 VP tokens per player on the landmark using the shared helper.
+    // Basilica setup: put 6 VP tokens per player on the landmark using the shared helper.
     await placeVictoryTokensPerPlayer(args, {
       landmarkKey: 'basilica',
       logKey: 'basilica',

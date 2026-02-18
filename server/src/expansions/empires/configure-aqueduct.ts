@@ -13,9 +13,8 @@ export const configureAqueduct = (
 
   if (!hasAqueduct) return;
 
-
   registrar('onGameStart', async (args) => {
-          // Aqueduct setup: put 8 VP tokens on Silver and Gold piles.
+    // Aqueduct setup: put 8 VP tokens on Silver and Gold piles.
     const victoryTokenId = prosperityTokenIds.victory;
     const targetPiles: CardKey[] = ['silver', 'gold'];
 

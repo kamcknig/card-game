@@ -1,11 +1,11 @@
-import {AppSocket} from '@server-types/index.ts';
-import {Player, PlayerId} from 'shared/types/index.ts';
-import {PlayerFactoryService} from './player-factory-service.ts';
+import { AppSocket } from '@server-types/index.ts';
+import { Player, PlayerId } from 'shared/types/index.ts';
+import { PlayerFactoryService } from './player-factory-service.ts';
 
 export type RegisterPlayerJoinResult =
-  | {status: 'rejected_capacity';}
-  | {status: 'rejected_started';}
-  | {status: 'accepted'; player: Player; created: boolean;};
+  | { status: 'rejected_capacity' }
+  | { status: 'rejected_started' }
+  | { status: 'accepted'; player: Player; created: boolean };
 
 // Owns player-record lifecycle updates for join/reconnect/disconnect operations.
 export class PlayerRegistryService {
@@ -23,30 +23,30 @@ export class PlayerRegistryService {
     socket: AppSocket;
     matchStarted: boolean;
   }): RegisterPlayerJoinResult {
-    const {players, sessionId, socket, matchStarted} = args;
+    const { players, sessionId, socket, matchStarted } = args;
 
     // Preserve existing behavior: reject once lobby has reached hard player cap.
     if (players.length >= this.maxPlayers) {
-      return {status: 'rejected_capacity'};
+      return { status: 'rejected_capacity' };
     }
 
     const existingPlayer = players.find((player) => player.sessionId === sessionId);
 
     // Preserve existing behavior: unknown players cannot join once match has started.
     if (matchStarted && !existingPlayer) {
-      return {status: 'rejected_started'};
+      return { status: 'rejected_started' };
     }
 
     if (existingPlayer) {
       existingPlayer.socketId = socket.id;
       existingPlayer.sessionId = sessionId;
       existingPlayer.connected = true;
-      return {status: 'accepted', player: existingPlayer, created: false};
+      return { status: 'accepted', player: existingPlayer, created: false };
     }
 
     const newPlayer = this.playerFactoryService.createPlayer(sessionId, socket);
     players.push(newPlayer);
-    return {status: 'accepted', player: newPlayer, created: true};
+    return { status: 'accepted', player: newPlayer, created: true };
   }
 
   // Marks a player disconnected and returns the player when found.

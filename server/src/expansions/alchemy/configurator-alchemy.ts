@@ -4,7 +4,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
   let potionConfigured = false;
 
   return async (args) => {
-              args.loggerService.info(`configuring match for alchemy`);
+    args.loggerService.info(`configuring match for alchemy`);
 
     if (potionConfigured) {
       args.loggerService.info(`[alchemy match configurator] potion already configured`);
@@ -27,7 +27,9 @@ const configurator: ExpansionConfiguratorFactory = () => {
           continue;
         }
 
-        args.loggerService.info(`[alchemy match configurator] adding potion card because ${card.cardKey} has a potion cost`);
+        args.loggerService.info(
+          `[alchemy match configurator] adding potion card because ${card.cardKey} has a potion cost`,
+        );
         args.config.basicSupply.push({
           name: 'potion',
           cards: new Array(16).fill(args.cardLibrary['potion']),

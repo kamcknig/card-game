@@ -1,4 +1,12 @@
-import { Card, CardId, CardKey, CardNoId, ComputedMatchConfiguration, MatchConfiguration, Match } from 'shared/types/index.ts';
+import {
+  Card,
+  CardId,
+  CardKey,
+  CardNoId,
+  ComputedMatchConfiguration,
+  Match,
+  MatchConfiguration,
+} from 'shared/types/index.ts';
 import { MatchBaseConfiguration } from '@server-types/index.ts';
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
 import { MatchCardLibrary } from './match-card-library.ts';
