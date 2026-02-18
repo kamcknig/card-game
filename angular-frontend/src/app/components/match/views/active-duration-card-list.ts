@@ -7,8 +7,10 @@ import { createCardView } from '../../../core/card/create-card-view';
 import { applicationStore } from '../../../state/app-state';
 import { getCardSourceStore } from '../../../state/card-source-store';
 import { cardStore } from '../../../state/card-state';
+import { getPixiSceneTheme } from '../../../theme/pixi-theme';
 
 export class ActiveDurationCardList extends Container {
+  private readonly _pixiTheme = getPixiSceneTheme();
   private _tabContainer: Container = new Container({
     label: 'tabContainer',
     eventMode: 'static',
@@ -31,7 +33,7 @@ export class ActiveDurationCardList extends Container {
       label: 'tabText',
       text: 'Active duration cards',
       style: {
-        fill: 'white',
+        fill: this._pixiTheme.text.onOverlay,
         fontSize: 16
       }
     });
@@ -40,8 +42,8 @@ export class ActiveDurationCardList extends Container {
 
     const tabBackground = new Graphics({ label: 'tabBackground' });
     tabBackground.roundRect(0, 0, tabText.width + 10, tabText.height + 10, 5);
-    tabBackground.fill(new Color('0x000000'));
-    tabBackground.stroke('white');
+    tabBackground.fill({ color: this._pixiTheme.overlay.color, alpha: this._pixiTheme.overlay.mediumAlpha });
+    tabBackground.stroke({ color: this._pixiTheme.ui.panelBorder, width: 1.5 });
 
     this._tabContainer.addChild(tabBackground);
     this._tabContainer.addChild(tabText);
@@ -94,7 +96,7 @@ export class ActiveDurationCardList extends Container {
       const playerNameText = new Text({
         text: playerStore(+playerId).get()?.name,
         style: {
-          fill: 'white',
+          fill: this._pixiTheme.text.onOverlay,
           fontSize: 16
         }
       });
@@ -116,7 +118,8 @@ export class ActiveDurationCardList extends Container {
     const playersListBackground = this._container.getChildByLabel('playersListBackground') as Graphics;
     playersListBackground?.clear();
     playersListBackground?.roundRect(0, 0, this._playersList.width + STANDARD_GAP * 2, this._playersList.height + STANDARD_GAP * 2, 5);
-    playersListBackground?.fill({ color: 'black' });
+    playersListBackground?.stroke({ color: this._pixiTheme.ui.panelBorder, width: 1.5 });
+    playersListBackground?.fill({ color: this._pixiTheme.overlay.color, alpha: this._pixiTheme.overlay.mediumAlpha });
 
     const app = applicationStore.get();
 

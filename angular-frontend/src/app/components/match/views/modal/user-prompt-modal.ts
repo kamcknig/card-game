@@ -11,6 +11,7 @@ import { nameCardView } from './name-card-view';
 import { SocketService } from '../../../../core/socket-service/socket.service';
 import { overpayView } from './overpay-view';
 import { numberInputView } from './number-input-view';
+import { getPixiSceneTheme } from '../../../../theme/pixi-theme';
 
 export const userPromptModal = (
   app: Application,
@@ -18,6 +19,8 @@ export const userPromptModal = (
   args: UserPromptActionArgs,
   selfPlayerId: PlayerId,
 ): Promise<unknown> => {
+  const pixiTheme = getPixiSceneTheme();
+
   return new Promise((resolve) => {
     let validationBtn: AppButton;
     let contentView: Container;
@@ -33,7 +36,7 @@ export const userPromptModal = (
         text: args.prompt,
         style: {
           fontSize: 36,
-          fill: 'white',
+          fill: pixiTheme.text.onOverlay,
           wordWrap: true,
           wordWrapWidth: 400,
         }
@@ -154,7 +157,7 @@ export const userPromptModal = (
             style: {
               wordWrap: true,
               wordWrapWidth: 100,
-              fill: 'white',
+              fill: pixiTheme.ui.buttonText,
               fontSize: 24,
             }
           });
@@ -184,7 +187,7 @@ export const userPromptModal = (
         modalContainer.height + STANDARD_GAP * 4,
         5
       )
-        .fill({ color: 'black', alpha: .8 });
+        .fill({ color: pixiTheme.overlay.color, alpha: pixiTheme.overlay.strongAlpha });
 
       modalContainer.addChildAt(background, 0);
 
@@ -193,7 +196,7 @@ export const userPromptModal = (
       if (showCloseButton) {
         const closeButton = createAppButton({
           text: 'X',
-          style: { fill: 'white', fontSize: 18 }
+          style: { fill: pixiTheme.ui.buttonText, fontSize: 18 }
         });
         closeButton.button.on('pointerdown', () => actionButtonListener({ action: 0 }));
         closeButton.button.on('removed', () => closeButton.button.removeAllListeners());

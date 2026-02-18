@@ -4,8 +4,10 @@ import { createCardView } from '../../../../core/card/create-card-view';
 import { Application, Container, Text } from 'pixi.js';
 import { clientSelectableCardsOverrideStore, } from '../../../../state/interactive-state';
 import { CardView } from '../card-view';
+import { getPixiSceneTheme } from '../../../../theme/pixi-theme';
 
 export const cardRearrangeView = (app: Application, args: UserPromptKinds) => {
+  const pixiTheme = getPixiSceneTheme();
   if (args.type !== 'rearrange') throw new Error('card rearrange view requires type "rearrange"');
   if (!args.cardIds) throw new Error('Cards must be provided');
 
@@ -13,7 +15,7 @@ export const cardRearrangeView = (app: Application, args: UserPromptKinds) => {
   const bottomText = new Text({
     text: 'BOTTOM',
     style: {
-      fill: 'white',
+      fill: pixiTheme.text.onOverlay,
       fontSize: 24
     }
   });
@@ -21,7 +23,7 @@ export const cardRearrangeView = (app: Application, args: UserPromptKinds) => {
   const topText = new Text({
     text: 'TOP',
     style: {
-      fill: 'white',
+      fill: pixiTheme.text.onOverlay,
       fontSize: 24,
     },
   });

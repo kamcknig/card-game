@@ -2,7 +2,8 @@
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
   width: 100%;
-  min-height: 100%;
+  height: 100%;
+  min-height: 0;
   background: linear-gradient(150deg, var(--theme-surface-app-start) 0%, var(--theme-surface-app-end) 100%);
   color: var(--theme-text-primary);
 }

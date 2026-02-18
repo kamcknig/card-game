@@ -6,8 +6,10 @@ import { EVENT_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
 import { EventCard } from './event-card';
 import { LandmarkCard } from './landmark-card';
 import { ProjectCard } from './project-card';
+import { getPixiSceneTheme } from '../../../theme/pixi-theme';
 
 export class OtherCardLikeView extends Container {
+  private readonly _pixiTheme = getPixiSceneTheme();
   private background: Graphics = new Graphics({ label: 'background' });
   private cardContainer: Container = new Container({ label: 'cardContainer' });
   private eventContainer: Container = new Container({ label: 'eventContainer' });
@@ -58,7 +60,8 @@ export class OtherCardLikeView extends Container {
 
     if (this.currentEvents.length > 0 || this.currentLandmarks.length > 0 || this.currentProjects.length > 0) {
       this.background.roundRect(0, 0, this.cardContainer.width + STANDARD_GAP * 2, this.cardContainer.height + STANDARD_GAP * 2, 5);
-      this.background.fill({ color: 'black', alpha: .6 });
+      this.background.stroke({ color: this._pixiTheme.ui.panelBorder, width: 1.5 });
+      this.background.fill({ color: this._pixiTheme.overlay.color, alpha: this._pixiTheme.overlay.mediumAlpha });
     }
   }
 

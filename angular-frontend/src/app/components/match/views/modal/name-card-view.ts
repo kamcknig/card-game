@@ -5,6 +5,7 @@ import { CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP } from '../../../../core/app-cont
 import { SocketService } from '../../../../core/socket-service/socket.service';
 import { compare } from 'fast-json-patch/';
 import { displayCardDetail } from './display-card-detail';
+import { getPixiSceneTheme } from '../../../../theme/pixi-theme';
 
 export const nameCardView = (
   app: Application,
@@ -12,9 +13,11 @@ export const nameCardView = (
   socketService: SocketService,
   selfPlayerId: PlayerId,
 ) => {
+  const pixiTheme = getPixiSceneTheme();
   const inputBg = new Graphics();
   inputBg.roundRect(0, 0, 200, 50, 5);
-  inputBg.fill('white');
+  inputBg.fill({ color: pixiTheme.ui.inputBackground });
+  inputBg.stroke({ color: pixiTheme.ui.panelBorder, width: 1.5 });
 
   const cardListWidth = 1100;
 
@@ -23,7 +26,7 @@ export const nameCardView = (
     addMask: true,
     padding: STANDARD_GAP,
     textStyle: {
-      fill: 'black',
+      fill: pixiTheme.ui.inputText,
       fontSize: 24
     }
   });
@@ -31,13 +34,13 @@ export const nameCardView = (
   const cardListMask = new Graphics();
   cardListMask.x = STANDARD_GAP;
   cardListMask.rect(0, -60, cardListWidth, CARD_HEIGHT + 60);
-  cardListMask.fill('black');
+  cardListMask.fill({ color: pixiTheme.overlay.color });
 
   const cardListContainer = new Container();
 
   const cardListContainerBg = new Graphics();
   cardListContainerBg.rect(0, 0, cardListWidth + STANDARD_GAP * 2, CARD_HEIGHT + STANDARD_GAP * 2);
-  cardListContainerBg.fill(new Color('0x00000000'));
+  cardListContainerBg.fill({ color: pixiTheme.overlay.color, alpha: 0 });
 
   const cardList = new List({
     type: 'horizontal',

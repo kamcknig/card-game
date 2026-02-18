@@ -1,5 +1,7 @@
 export type PixiSceneTheme = {
   text: {
+    primary: string;
+    secondary: string;
     onOverlay: string;
   };
   overlay: {
@@ -10,6 +12,18 @@ export type PixiSceneTheme = {
   };
   surfaces: {
     countBadge: number;
+  };
+  ui: {
+    panelBackground: number;
+    panelBorder: number;
+    inputBackground: number;
+    inputText: string;
+    buttonBackground: number;
+    buttonBackgroundMuted: number;
+    buttonBorder: number;
+    buttonText: string;
+    accent: number;
+    danger: number;
   };
 };
 
@@ -47,6 +61,8 @@ const readCssAlpha = (name: string, fallback: number): number => {
 // Resolves Pixi-specific semantic theme values from shared app CSS tokens.
 export const getPixiSceneTheme = (): PixiSceneTheme => ({
   text: {
+    primary: readCssVar('--theme-text-primary', '#2a241a'),
+    secondary: readCssVar('--theme-text-secondary', '#544630'),
     onOverlay: readCssVar('--theme-text-on-dark', '#ffffff'),
   },
   overlay: {
@@ -57,6 +73,18 @@ export const getPixiSceneTheme = (): PixiSceneTheme => ({
   },
   surfaces: {
     countBadge: parseHexToNumber(readCssVar('--theme-surface-count-badge', '#aaaaaa'), 0xaaaaaa),
+  },
+  ui: {
+    panelBackground: parseHexToNumber(readCssVar('--theme-surface-panel', '#e8d8c1'), 0xe8d8c1),
+    panelBorder: parseHexToNumber(readCssVar('--theme-border-strong', '#7f6746'), 0x7f6746),
+    inputBackground: parseHexToNumber(readCssVar('--theme-surface-card', '#f2e9da'), 0xf2e9da),
+    inputText: readCssVar('--theme-text-primary', '#2a241a'),
+    buttonBackground: parseHexToNumber(readCssVar('--theme-action-primary-bg', '#dcc093'), 0xdcc093),
+    buttonBackgroundMuted: parseHexToNumber(readCssVar('--theme-action-primary-muted-bg', '#e1c89e'), 0xe1c89e),
+    buttonBorder: parseHexToNumber(readCssVar('--theme-border-action', '#826a48'), 0x826a48),
+    buttonText: readCssVar('--theme-text-primary', '#2a241a'),
+    accent: parseHexToNumber(readCssVar('--theme-border-strong', '#7f6746'), 0x7f6746),
+    danger: parseHexToNumber(readCssVar('--theme-border-danger', '#b84d38'), 0xb84d38),
   },
 });
 

@@ -5,6 +5,7 @@ import { STANDARD_GAP } from '../../../core/app-contants';
 import { nonSupplyKingdomMapStore } from '../../../state/card-source-logic';
 import { capitalize } from 'es-toolkit';
 import { concatMap, pipe, Subject, Subscription } from 'rxjs';
+import { getPixiSceneTheme } from '../../../theme/pixi-theme';
 
 type KingdomMap = Record<string, {
   startingCards: CardNoId[],
@@ -12,6 +13,7 @@ type KingdomMap = Record<string, {
 }>;
 
 export class NonSupplyKingdomView extends Container {
+  private readonly _pixiTheme = getPixiSceneTheme();
   private _container: Container;
   private _drawSubject: Subject<KingdomMap> = new Subject();
   private _drawSub: Subscription;
@@ -96,7 +98,7 @@ export class NonSupplyKingdomView extends Container {
       text = new Text({
         text: capitalize(kingdomName),
         label: 'text',
-        style: { fontSize: 18, fill: 'white' }
+        style: { fontSize: 18, fill: this._pixiTheme.text.onOverlay }
       });
       text.x = STANDARD_GAP;
       text.y = STANDARD_GAP;
@@ -134,7 +136,8 @@ export class NonSupplyKingdomView extends Container {
       setTimeout(() => {
         background.clear();
         background.roundRect(0, 0, container.width + STANDARD_GAP * 2, container.height + STANDARD_GAP * 2, 5);
-        background.fill({ color: 0, alpha: .6 });
+        background.stroke({ color: this._pixiTheme.ui.panelBorder, width: 1.5 });
+        background.fill({ color: this._pixiTheme.overlay.color, alpha: this._pixiTheme.overlay.mediumAlpha });
         resolve(container);
       }, 50);
     });

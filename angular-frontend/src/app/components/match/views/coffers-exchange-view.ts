@@ -6,8 +6,10 @@ import { OutlineFilter } from 'pixi-filters/outline';
 import { STANDARD_GAP } from '../../../core/app-contants';
 import { createAppButton } from '../../../core/create-app-button';
 import { currentPlayerStore } from '../../../state/turn-state';
+import { getPixiSceneTheme } from '../../../theme/pixi-theme';
 
 export class CoffersExchangeView extends Container {
+  private readonly _pixiTheme = getPixiSceneTheme();
   private _coffersIcon: Sprite | undefined;
   private readonly _countText: Text;
   private _controlsCollapsed = true;
@@ -18,13 +20,13 @@ export class CoffersExchangeView extends Container {
 
     this._countText = new Text({
       label: 'count',
-      style: { fill: 0xffffff, fontSize: 32 },
+      style: { fill: this._pixiTheme.text.onOverlay, fontSize: 32 },
       text: 0
     });
     this._countText.eventMode = 'none';
     this._countText.filters = [
       new OutlineFilter({
-        color: 'black',
+        color: this._pixiTheme.overlay.color,
         thickness: 3
       })
     ]
@@ -67,7 +69,7 @@ export class CoffersExchangeView extends Container {
       this._coffersIcon.on('mouseenter', () => {
         this._coffersIcon!.filters = [
           new OutlineFilter({
-            color: 'white',
+            color: this._pixiTheme.text.onOverlay,
             thickness: 2
           })
         ]
@@ -120,12 +122,12 @@ export class CoffersExchangeView extends Container {
 
     const cofferText = new Text({
       text: this._coffers,
-      style: { fill: 0xffffff, fontSize: 38 },
+      style: { fill: this._pixiTheme.text.onOverlay, fontSize: 38 },
       anchor: .5,
     });
     cofferText.filters = [
       new OutlineFilter({
-        color: 'black',
+        color: this._pixiTheme.overlay.color,
         thickness: 3
       })
     ];
@@ -135,12 +137,12 @@ export class CoffersExchangeView extends Container {
 
     const treasureText = new Text({
       text: 0,
-      style: { fill: 0xffffff, fontSize: 38 },
+      style: { fill: this._pixiTheme.text.onOverlay, fontSize: 38 },
       anchor: .5
     });
     treasureText.filters = [
       new OutlineFilter({
-        color: 'black',
+        color: this._pixiTheme.overlay.color,
         thickness: 3
       })
     ]
@@ -150,14 +152,14 @@ export class CoffersExchangeView extends Container {
     rightArrow.lineTo(0, 50);
     rightArrow.lineTo(15, 25);
     rightArrow.lineTo(0, 0);
-    rightArrow.fill({ color: 0xffffff });
+    rightArrow.fill({ color: this._pixiTheme.text.onOverlay });
 
     const leftArrow = rightArrow.clone();
     leftArrow.scale.x = -1;
 
     const appButton = createAppButton({
       text: 'CANCEL',
-      style: { fill: 0xffffff, fontSize: 24 },
+      style: { fill: this._pixiTheme.ui.buttonText, fontSize: 24 },
     });
     const executeButton = appButton.button;
 
@@ -212,7 +214,8 @@ export class CoffersExchangeView extends Container {
 
     const background = new Graphics();
     background.roundRect(0, 0, controlsContainer.width + STANDARD_GAP * 2, controlsContainer.height + STANDARD_GAP * 2, 5);
-    background.fill({ color: 0, alpha: .8 });
+    background.stroke({ color: this._pixiTheme.ui.panelBorder, width: 1.5 });
+    background.fill({ color: this._pixiTheme.overlay.color, alpha: this._pixiTheme.overlay.strongAlpha });
     background.x = -STANDARD_GAP;
     background.y = Math.floor(-background.height * .5);
     controlsContainer.addChildAt(background, 0);

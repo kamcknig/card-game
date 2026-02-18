@@ -2,8 +2,10 @@ import { Application, Container, Graphics, Text } from 'pixi.js';
 import { Input } from '@pixi/ui';
 import { UserPromptKinds } from 'shared/types';
 import { STANDARD_GAP } from '../../../../core/app-contants';
+import { getPixiSceneTheme } from '../../../../theme/pixi-theme';
 
 export const numberInputView = (app: Application, args: UserPromptKinds) => {
+  const pixiTheme = getPixiSceneTheme();
   if (args.type !== 'number-input') throw new Error(`number input view requires type 'number-input'`);
 
   // Container that hosts the numeric input field and helper text.
@@ -15,7 +17,8 @@ export const numberInputView = (app: Application, args: UserPromptKinds) => {
   // Build the input field background and text styling.
   const inputBg = new Graphics();
   inputBg.roundRect(0, 0, 220, 50, 5);
-  inputBg.fill('white');
+  inputBg.fill({ color: pixiTheme.ui.inputBackground });
+  inputBg.stroke({ color: pixiTheme.ui.panelBorder, width: 1.5 });
 
   const input = new Input({
     bg: inputBg,
@@ -24,7 +27,7 @@ export const numberInputView = (app: Application, args: UserPromptKinds) => {
     // Show a range hint or generic placeholder when not provided.
     placeholder: args.placeholder ?? buildPlaceholder(args),
     textStyle: {
-      fill: 'black',
+      fill: pixiTheme.ui.inputText,
       fontSize: 24,
     },
   });
@@ -36,7 +39,7 @@ export const numberInputView = (app: Application, args: UserPromptKinds) => {
     rangeText = new Text({
       text: rangeTextValue,
       style: {
-        fill: 'white',
+        fill: pixiTheme.text.onOverlay,
         fontSize: 18,
       },
     });

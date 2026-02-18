@@ -2,8 +2,10 @@ import { Container, Graphics } from 'pixi.js';
 import { Slider } from '@pixi/ui';
 import { UserPromptKinds } from 'shared/types';
 import { STANDARD_GAP } from '../../../../core/app-contants';
+import { getPixiSceneTheme } from '../../../../theme/pixi-theme';
 
 export const cardBlindRearrangeView = (args: UserPromptKinds) => {
+  const pixiTheme = getPixiSceneTheme();
   if (args.type !== 'blind-rearrange') {
     throw new Error('Card action type is not blind-rearrange');
   }
@@ -16,21 +18,22 @@ export const cardBlindRearrangeView = (args: UserPromptKinds) => {
   const bg = new Graphics();
   bg.rect(0, 0, sliderWidth + STANDARD_GAP * 2, 50);
   bg.fill({
-    color: 'white',
+    color: pixiTheme.ui.panelBackground,
     alpha: 0
   });
 
   const sliderBg = new Graphics();
   sliderBg.roundRect(0, 0, sliderWidth, 4, 2);
-  sliderBg.fill('white');
+  sliderBg.fill({ color: pixiTheme.ui.panelBorder });
 
   const sliderFill = new Graphics();
   sliderFill.roundRect(0, 0, sliderWidth, 4, 2);
-  sliderFill.fill('white');
+  sliderFill.fill({ color: pixiTheme.ui.accent });
 
   const sliderGraphics = new Graphics();
   sliderGraphics.circle(0, 0, 15);
-  sliderGraphics.fill('white');
+  sliderGraphics.fill({ color: pixiTheme.ui.buttonBackground });
+  sliderGraphics.stroke({ color: pixiTheme.ui.buttonBorder, width: 1.5 });
 
   const slider = new Slider({
     min: 0,
@@ -39,7 +42,7 @@ export const cardBlindRearrangeView = (args: UserPromptKinds) => {
     showValue: true,
     step: 1,
     valueTextStyle: {
-      fill: 'black',
+      fill: pixiTheme.ui.inputText,
       fontSize: 20,
     },
     bg: sliderBg,

@@ -2,8 +2,10 @@ import { Application, Assets, Container, Graphics, Sprite, Texture } from 'pixi.
 import { cardStore } from '../../../../state/card-state';
 import { CardNoId } from 'shared/types';
 import { applicationStore } from '../../../../state/app-state';
+import { getPixiSceneTheme } from '../../../../theme/pixi-theme';
 
 export async function displayCardDetail(arg: number | { detailImagePath: string; }) {
+  const pixiTheme = getPixiSceneTheme();
   const app = applicationStore.get();
 
   if (!app) throw new Error('Application is not initialized');
@@ -23,8 +25,8 @@ export async function displayCardDetail(arg: number | { detailImagePath: string;
   const background = new Graphics()
     .rect(0, 0, app.renderer.width, app.renderer.height)
     .fill({
-      color: 'black',
-      alpha: .6,
+      color: pixiTheme.overlay.color,
+      alpha: pixiTheme.overlay.mediumAlpha,
     });
 
   container.addChild(background);

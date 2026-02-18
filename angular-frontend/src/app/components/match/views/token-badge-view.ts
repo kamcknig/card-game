@@ -1,4 +1,5 @@
 import { Container, Graphics, Text } from 'pixi.js';
+import { getPixiSceneTheme } from '../../../theme/pixi-theme';
 
 type TokenBadgeArgs = {
   size: number;
@@ -7,6 +8,7 @@ type TokenBadgeArgs = {
 };
 
 export class TokenBadgeView extends Container {
+  private readonly _pixiTheme = getPixiSceneTheme();
   private _size: number;
   private _labelText: string;
   private _color: number;
@@ -38,7 +40,7 @@ export class TokenBadgeView extends Container {
     this._text = new Text({
       text: this._labelText,
       style: {
-        fill: 'black',
+        fill: this._pixiTheme.ui.inputText,
         fontSize: Math.max(10, Math.floor(this._size * 0.40)),
       }
     });
@@ -55,7 +57,7 @@ export class TokenBadgeView extends Container {
     
     this._bg.clear()
       .circle(radius, radius, radius)
-      .fill(0x000000)
+      .fill(this._pixiTheme.ui.panelBorder)
       .circle(radius, radius, radius - border)
       .fill(this._color);
     

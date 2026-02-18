@@ -1,3 +1,9 @@
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 app-score {
   position: fixed;
   top: 10px;
@@ -28,6 +34,7 @@ app-score {
     color: var(--theme-text-on-dark);
     position: relative;
     background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
+    border: 1px solid var(--theme-border-strong);
     pointer-events: auto; /* re-enable interactivity inside */
     padding: 10px 10px 120px 10px;
   }
@@ -81,8 +88,9 @@ app-game-log {
 }
 
 .disconnect-card {
-  background: rgba(20, 20, 20, 0.95);
-  color: var(--theme-text-on-dark);
+  background: var(--theme-surface-panel);
+  color: var(--theme-text-primary);
+  border: 1px solid var(--theme-border-strong);
   padding: 18px 22px;
   border-radius: 10px;
   min-width: 280px;
