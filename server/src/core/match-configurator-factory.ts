@@ -3,7 +3,6 @@ import { MatchConfigurator } from './match-configurator.ts';
 import { InitializeExpansionContext } from '@server-types/index.ts';
 import { ExpansionCatalogService } from './expansion-catalog-service.ts';
 import { RngService } from './rng-service.ts';
-import { ServerConfigService } from './server-config-service.ts';
 import { LoggerService } from './logger-service.ts';
 
 /**
@@ -18,7 +17,6 @@ export class MatchConfiguratorFactory {
   constructor(
     private readonly expansionCatalogService: ExpansionCatalogService,
     private readonly rngService: RngService,
-    private readonly serverConfigService: ServerConfigService,
     private readonly loggerService: LoggerService,
   ) {
   }
@@ -36,7 +34,6 @@ export class MatchConfiguratorFactory {
       initContext,
       this.expansionCatalogService,
       this.rngService,
-      this.serverConfigService,
       this.loggerService,
     );
   }

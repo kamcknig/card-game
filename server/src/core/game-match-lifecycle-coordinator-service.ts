@@ -48,7 +48,10 @@ export class GameMatchLifecycleCoordinatorService {
   // Creates a fresh match scope/controller and resets working lobby configuration.
   public createNewMatch(state: GameRuntimeState, defaultMatchConfiguration: MatchConfiguration): void {
     state.matchScope?.dispose();
-    state.matchScope = this.matchScopeFactory.create(state.socketMap);
+    state.matchScope = this.matchScopeFactory.create({
+      socketMap: state.socketMap,
+      gameId: state.gameId,
+    });
     state.matchController = state.matchScope.matchController;
     state.matchConfiguration = { ...structuredClone(defaultMatchConfiguration) };
   }

@@ -26,7 +26,6 @@ import { getDefaultKingdomSupplySize } from '../utils/get-default-kingdom-supply
 import { getCardPileKey } from '../utils/get-card-pile-key.ts';
 import { ExpansionCatalogService } from './expansion-catalog-service.ts';
 import { RngService } from './rng-service.ts';
-import { ServerConfigService } from './server-config-service.ts';
 import { LoggerService } from './logger-service.ts';
 
 /**
@@ -78,7 +77,6 @@ export class MatchConfigurator {
   private readonly _initContext: InitializeExpansionContext;
   private readonly _expansionCatalogService: ExpansionCatalogService;
   private readonly _rngService: RngService;
-  private readonly _serverConfigService: ServerConfigService;
   private readonly _loggerService: LoggerService;
 
   constructor(
@@ -86,7 +84,6 @@ export class MatchConfigurator {
     initContext: InitializeExpansionContext,
     expansionCatalogService: ExpansionCatalogService,
     rngService: RngService,
-    serverConfigService: ServerConfigService,
     loggerService: LoggerService,
   ) {
     // when creating the clone, it will break the custom Deno.customInspect symbols on classes so they won't
@@ -107,20 +104,12 @@ export class MatchConfigurator {
     this._initContext = initContext;
     this._expansionCatalogService = expansionCatalogService;
     this._rngService = rngService;
-    this._serverConfigService = serverConfigService;
     this._loggerService = loggerService;
 
     this._loggerService.info(`[match configurator] created`);
   }
 
   public async createConfiguration() {
-    const requisiteKingdomCardKeys = this._serverConfigService.getRequisiteKingdomCardKeys();
-
-    if (requisiteKingdomCardKeys && requisiteKingdomCardKeys.length > 0) {
-      this._loggerService.warn(`[match configurator] hard-coded keeper cards ${requisiteKingdomCardKeys}`);
-      this._loggerService.info(requisiteKingdomCardKeys?.join('\n'));
-    }
-
     this._config.preselectedKingdoms = this._config.preselectedKingdoms.filter((card) => !!card);
 
     if (this._config.preselectedKingdoms?.length > 0) {
@@ -133,12 +122,11 @@ export class MatchConfigurator {
     }
 
     this._loggerService.info(
-      `[match configurator] removing possible duplicates from requested and hard-coded kingdoms`,
+      `[match configurator] removing possible duplicates from requested kingdoms`,
     );
 
     this._requestedKingdoms = Array.from(
       new Set([
-        ...requisiteKingdomCardKeys,
         ...(this._config.preselectedKingdoms?.map((card) => card.cardKey) ?? []),
       ]),
     )

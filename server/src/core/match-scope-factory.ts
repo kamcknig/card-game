@@ -41,7 +41,7 @@ export interface MatchScope {
 /**
  * Builds and owns per-match Awilix scopes.
  *
- * This keeps one simple entrypoint (`create(socketMap)`) for match lifetime wiring while
+ * This keeps one simple entrypoint (`create({ socketMap, gameId })`) for match lifetime wiring while
  * still isolating match state/controllers from the root process container.
  */
 export class MatchScopeFactory {
@@ -54,8 +54,9 @@ export class MatchScopeFactory {
   ) {
   }
 
-  public create(socketMap: Map<PlayerId, AppSocket>): MatchScope {
+  public create(args: { socketMap: Map<PlayerId, AppSocket>; gameId: string }): MatchScope {
     const scope = this.rootContainer.createScope();
+    const { socketMap, gameId } = args;
     const match = createInitialMatchState();
     const matchScopeId = this.nextMatchScopeId++;
     const matchActionRunnerRef = new MatchActionRunnerRef();
@@ -76,7 +77,7 @@ export class MatchScopeFactory {
     scope.register({
       socketMap: asValue(socketMap),
       match: asValue(match),
-      loggerContext: asValue({ scope: 'match', matchScopeId }),
+      loggerContext: asValue({ scope: 'match', gameId, matchScopeId }),
       loggerService: asClass(LoggerService).singleton(),
       matchConfiguratorFactory: asValue(this.matchConfiguratorFactory),
       cardEffectFunctionMap: asValue(cardEffectFunctionMap),

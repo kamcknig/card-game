@@ -6,10 +6,10 @@ export class ServerConfigService {
   public validate(): void {
     this.getPort();
     this.isFileLoggingEnabled();
+    this.getLogFileMaxBytes();
     this.isMatchStateExportEnabled();
     this.isMatchStateMergeEnabled();
     this.shouldEndMatchOnNoHumans();
-    this.getRequisiteKingdomCardKeys();
   }
 
   // Returns the configured server port or default port 3001.
@@ -32,6 +32,22 @@ export class ServerConfigService {
     return this.parseBooleanEnv('LOG_TO_FILE', false);
   }
 
+  // Returns the maximum file size (in bytes) before rotating a log file.
+  public getLogFileMaxBytes(): number {
+    const rawValue = Deno.env.get('LOG_FILE_MAX_BYTES');
+    if (!rawValue) {
+      // Default to 5MB when not configured.
+      return 5 * 1024 * 1024;
+    }
+
+    const parsedValue = toNumber(rawValue);
+    if (!Number.isInteger(parsedValue) || parsedValue < 1) {
+      throw new Error(`[server config] LOG_FILE_MAX_BYTES must be a positive integer, received '${rawValue}'`);
+    }
+
+    return parsedValue;
+  }
+
   // Returns true when match state export debug endpoint is enabled.
   public isMatchStateExportEnabled(): boolean {
     return this.parseBooleanEnv('MATCH_STATE_EXPORT_ENABLED', false);
@@ -50,33 +66,6 @@ export class ServerConfigService {
   // Returns optional match state override path.
   public getMatchStatePath(): string | undefined {
     return Deno.env.get('MATCH_STATE_PATH');
-  }
-
-  // Returns optional hard-coded requisite kingdom card keys.
-  public getRequisiteKingdomCardKeys(): string[] {
-    const rawValue = Deno.env.get('REQUISITE_KINGDOM_CARD_KEYS');
-    if (!rawValue) {
-      return [];
-    }
-
-    const entries = rawValue
-      .toLowerCase()
-      .split(',')
-      .map((entry) => entry.trim());
-
-    const emptyEntries = entries.filter((entry) => entry.length === 0);
-    if (emptyEntries.length > 0) {
-      throw new Error('[server config] REQUISITE_KINGDOM_CARD_KEYS contains empty entries');
-    }
-
-    const invalidEntries = entries.filter((entry) => !/^[a-z0-9-]+$/.test(entry));
-    if (invalidEntries.length > 0) {
-      throw new Error(
-        `[server config] REQUISITE_KINGDOM_CARD_KEYS contains invalid keys: ${invalidEntries.join(', ')}`,
-      );
-    }
-
-    return entries;
   }
 
   // Parses strict boolean env values ('true' | 'false') with a default.

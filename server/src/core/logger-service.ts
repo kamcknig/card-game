@@ -14,6 +14,8 @@ export type LoggerBackend = {
 export type LoggerContextValue = string | number | boolean | null | undefined;
 export type LoggerContext = Record<string, LoggerContextValue>;
 
+type LogLevel = keyof LoggerBackend;
+
 /**
  * Lazily initializes and stores the process-wide logging backend.
  *
@@ -25,6 +27,9 @@ export type LoggerContext = Record<string, LoggerContextValue>;
  */
 export class LoggerBackendProvider {
   private initialized = false;
+  private fileLoggingEnabled = false;
+  private logFileMaxBytes = 5 * 1024 * 1024;
+  private readonly textEncoder = new TextEncoder();
   private readonly defaultBackend: LoggerBackend = {
     log: (...args: unknown[]) => console.log(...args),
     info: (...args: unknown[]) => console.info(...args),
@@ -61,19 +66,22 @@ export class LoggerBackendProvider {
     this.initialized = true;
 
     // Avoid crashing before explicit startup validation; invalid env values are validated later.
-    let logToFileEnabled = false;
     try {
-      logToFileEnabled = this.serverConfigService.isFileLoggingEnabled();
+      this.fileLoggingEnabled = this.serverConfigService.isFileLoggingEnabled();
     } catch {
-      logToFileEnabled = false;
+      this.fileLoggingEnabled = false;
     }
 
-    // Disable file output unless explicitly enabled.
-    if (!logToFileEnabled) {
-      log.setConfig({
-        enabledLevels: [],
-      }, 'file');
+    try {
+      this.logFileMaxBytes = this.serverConfigService.getLogFileMaxBytes();
+    } catch {
+      this.logFileMaxBytes = 5 * 1024 * 1024;
     }
+
+    // Always disable enhanced-deno-log file sink; we route files ourselves per game directory.
+    log.setConfig({
+      enabledLevels: [],
+    }, 'file');
 
     // Configure console level colors.
     log.setConfig({
@@ -91,7 +99,8 @@ export class LoggerBackendProvider {
     log.init();
 
     // Some terminals ignore `%c` styles from enhanced-deno-log; apply ANSI wrappers for level distinction.
-    const useAnsiMessageColors = !logToFileEnabled;
+    // Keep readable level colors in console regardless of file logging mode.
+    const useAnsiMessageColors = true;
     const enhancedBackend = log as unknown as Partial<LoggerBackend>;
     this.backend = {
       log: (...args: unknown[]) => (enhancedBackend.log ?? console.log)(...args),
@@ -112,6 +121,128 @@ export class LoggerBackendProvider {
           ...this.withAnsiColor(args, 31, useAnsiMessageColors),
         ),
     };
+  }
+
+  // Writes one formatted log line to the appropriate file bucket when file logging is enabled.
+  public writeToFile(level: LogLevel, context: LoggerContext, args: unknown[]): void {
+    this.initializeBackend();
+    if (!this.fileLoggingEnabled) {
+      return;
+    }
+
+    try {
+      const now = new Date();
+      const dateKey = this.formatDateKey(now);
+      const baseFileName = `${dateKey}.log`;
+      const bucketDirectory = this.resolveBucketDirectory(context);
+      const activeFilePath = `${bucketDirectory}/${baseFileName}`;
+
+      Deno.mkdirSync(bucketDirectory, { recursive: true });
+
+      const logLine = this.formatFileLine(now, level, args);
+      const pendingByteLength = this.textEncoder.encode(logLine).byteLength;
+      this.rotateIfFileTooLarge(activeFilePath, dateKey, pendingByteLength);
+
+      Deno.writeTextFileSync(activeFilePath, logLine, {
+        append: true,
+        create: true,
+      });
+    } catch (error) {
+      console.error('[logger] failed to write log file entry', error);
+    }
+  }
+
+  // Creates a stable YYYYMMDD date key used for active daily log files.
+  private formatDateKey(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}${month}${day}`;
+  }
+
+  // Creates one compact timestamped log line for file output.
+  private formatFileLine(date: Date, level: LogLevel, args: unknown[]): string {
+    const timestamp = [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, '0'),
+      String(date.getDate()).padStart(2, '0'),
+    ].join('-') + ` ` + [
+      String(date.getHours()).padStart(2, '0'),
+      String(date.getMinutes()).padStart(2, '0'),
+      String(date.getSeconds()).padStart(2, '0'),
+    ].join(':') + `.` + String(date.getMilliseconds()).padStart(3, '0');
+    const levelLabel = level.toUpperCase().padEnd(5, ' ');
+    const message = args.map((arg) => this.toLogString(arg)).join(' ');
+    return `[${timestamp}] [${levelLabel}] ${message}\n`;
+  }
+
+  // Converts arbitrary payloads to deterministic log strings.
+  private toLogString(value: unknown): string {
+    if (typeof value === 'string') {
+      return value;
+    }
+    if (value instanceof Error) {
+      return value.stack ?? `${value.name}: ${value.message}`;
+    }
+    return Deno.inspect(value, {
+      depth: 5,
+      colors: false,
+      compact: true,
+      sorted: true,
+    });
+  }
+
+  // Resolves the target directory for one log line based on logger context.
+  private resolveBucketDirectory(context: LoggerContext): string {
+    const rawGameId = context.gameId;
+    if (typeof rawGameId === 'string' && rawGameId.trim().length > 0) {
+      const safeGameId = this.sanitizePathSegment(rawGameId.trim());
+      return `./logs/games/${safeGameId}`;
+    }
+    return './logs/server';
+  }
+
+  // Sanitizes context-derived path segments to keep directory paths safe.
+  private sanitizePathSegment(value: string): string {
+    return value.replace(/[^A-Za-z0-9_-]/g, '_');
+  }
+
+  // Rotates the active daily file when appending the next line would exceed the configured size.
+  private rotateIfFileTooLarge(activeFilePath: string, dateKey: string, pendingByteLength: number): void {
+    const activeStat = this.safeStat(activeFilePath);
+    if (!activeStat) {
+      return;
+    }
+
+    // Keep writing to the active file when still within configured size.
+    if (activeStat.size + pendingByteLength <= this.logFileMaxBytes) {
+      return;
+    }
+
+    // Find the next available suffix for this day: _01, _02, _03, ...
+    let suffix = 1;
+    const activeName = `${dateKey}.log`;
+    const directoryPrefix = activeFilePath.endsWith(activeName)
+      ? activeFilePath.slice(0, -activeName.length)
+      : `${activeFilePath}.`;
+    while (true) {
+      const suffixLabel = String(suffix).padStart(2, '0');
+      const rotatedPath = `${directoryPrefix}${dateKey}_${suffixLabel}.log`;
+      if (!this.safeStat(rotatedPath)) {
+        Deno.renameSync(activeFilePath, rotatedPath);
+        return;
+      }
+      suffix++;
+    }
+  }
+
+  // Returns stat data when the path exists, otherwise undefined.
+  private safeStat(path: string): Deno.FileInfo | undefined {
+    try {
+      return Deno.statSync(path);
+    } catch {
+      return undefined;
+    }
   }
 
   // Adds ANSI color wrappers for terminals that do not apply CSS-style console coloring.
@@ -189,6 +320,8 @@ export class LoggerService {
   private emit(level: keyof LoggerBackend, context: LoggerContext, ...args: unknown[]): void {
     const backend = this.loggerBackendProvider.getBackend();
     const contextPrefix = this.buildContextPrefix(context);
+    const logArgs = contextPrefix ? [contextPrefix, ...args] : args;
+    this.loggerBackendProvider.writeToFile(level, context, logArgs);
     if (contextPrefix) {
       backend[level](contextPrefix, ...args);
       return;

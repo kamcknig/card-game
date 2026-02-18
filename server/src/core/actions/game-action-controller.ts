@@ -195,7 +195,8 @@ export class GameActionController implements GameActionDefinitionMap {
       action as string
     ];
     if (controllerHandler) {
-      return await controllerHandler(...(args as unknown[])) as GameActionReturnTypeMap[K];
+      // Invoke on the controller instance so action methods retain `this` access to injected services.
+      return await controllerHandler.apply(this, args as unknown[]) as GameActionReturnTypeMap[K];
     }
 
     const customHandler = this._customActionHandlers[action];
