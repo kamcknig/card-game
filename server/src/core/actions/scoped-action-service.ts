@@ -10,7 +10,7 @@ import {
  * Mutable match-scoped reference to the active `GameActionRunner`.
  *
  * Consumers:
- * - `AwilixMatchScopeComposer` binds the runner once the scope has resolved `MatchController`.
+ * - `MatchScopeFactory` binds the runner once the scope has resolved `MatchController`.
  * - `ScopedActionService` delegates all action calls through this ref.
  *
  * Why this exists:

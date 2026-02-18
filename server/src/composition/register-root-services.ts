@@ -22,12 +22,11 @@ import { ExpansionCatalogService } from '../core/expansion-catalog-service.ts';
 import { RngService } from '../core/rng-service.ts';
 import { TokenRegistryService } from '../core/tokens/token-registry-service.ts';
 import { ServerConfigService } from '../core/server-config-service.ts';
-import { LoggerService } from '../core/logger-service.ts';
+import { LoggerBackendProvider, LoggerService } from '../core/logger-service.ts';
 import { EventLoaderService } from '../core/events/load-events.ts';
 import { LandmarkLoaderService } from '../core/landmarks/load-landmarks.ts';
 import { ProjectLoaderService } from '../core/projects/load-projects.ts';
 import { ExpansionLoaderService } from '../core/expansion-loader-service.ts';
-import { AwilixMatchScopeComposer } from './awilix-match-scope-composer.ts';
 
 export interface RegisterRootServicesArgs {
   io: Server<ServerListenEvents, ServerEmitEvents>;
@@ -38,7 +37,7 @@ export interface RegisterRootServicesArgs {
  *
  * Composition rule:
  * - Only long-lived singletons belong here.
- * - Match-lifetime dependencies are registered in `registerMatchScopeServices(...)`.
+ * - Match-lifetime dependencies are created by `MatchScopeFactory`.
  *
  * @param container Root Awilix container created in `server.ts`.
  * @param args Runtime host values that must be injected as constants.
@@ -51,9 +50,9 @@ export const registerRootServices = (
     rootContainer: asValue(container),
     io: asValue(args.io),
     serverConfigService: asClass(ServerConfigService).singleton(),
+    loggerBackendProvider: asClass(LoggerBackendProvider).singleton(),
     loggerService: asClass(LoggerService).singleton(),
     maxPlayers: asValue(6),
-    matchScopeComposer: asClass(AwilixMatchScopeComposer).singleton(),
     matchScopeFactory: asClass(MatchScopeFactory).singleton(),
     matchConfiguratorFactory: asClass(MatchConfiguratorFactory).singleton(),
     expansionSearchService: asClass(ExpansionSearchService).singleton(),

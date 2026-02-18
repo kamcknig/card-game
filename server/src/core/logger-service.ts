@@ -14,31 +14,130 @@ export type LoggerBackend = {
 export type LoggerContextValue = string | number | boolean | null | undefined;
 export type LoggerContext = Record<string, LoggerContextValue>;
 
-// Small injectable logger wrapper for consistent logging and easier test substitution.
-export class LoggerService {
-  private static initialized = false;
-  private static readonly defaultBackend: LoggerBackend = {
+/**
+ * Lazily initializes and stores the process-wide logging backend.
+ *
+ * Lifetime:
+ * - Root singleton
+ *
+ * Consumers:
+ * - `LoggerService` instances delegate emission to this provider.
+ */
+export class LoggerBackendProvider {
+  private initialized = false;
+  private readonly defaultBackend: LoggerBackend = {
     log: (...args: unknown[]) => console.log(...args),
     info: (...args: unknown[]) => console.info(...args),
     debug: (...args: unknown[]) => console.debug(...args),
     warn: (...args: unknown[]) => console.warn(...args),
     error: (...args: unknown[]) => console.error(...args),
   };
-  private static backend: LoggerBackend = LoggerService.defaultBackend;
+  private backend: LoggerBackend = this.defaultBackend;
 
   constructor(
     private readonly serverConfigService: ServerConfigService,
-    private readonly loggerContext: LoggerContext = {},
   ) {
-    LoggerService.initializeBackend(this.serverConfigService);
+  }
+
+  // Returns the active backend, initializing it once when first requested.
+  public getBackend(): LoggerBackend {
+    this.initializeBackend();
+    return this.backend;
   }
 
   // Replaces backend handlers while preserving unspecified methods.
   public configureBackend(backend: Partial<LoggerBackend>): void {
-    LoggerService.backend = {
-      ...LoggerService.backend,
+    this.backend = {
+      ...this.getBackend(),
       ...backend ?? {},
     };
+  }
+
+  // Initializes enhanced-deno-log backend once, when first requested.
+  private initializeBackend(): void {
+    if (this.initialized) {
+      return;
+    }
+    this.initialized = true;
+
+    // Avoid crashing before explicit startup validation; invalid env values are validated later.
+    let logToFileEnabled = false;
+    try {
+      logToFileEnabled = this.serverConfigService.isFileLoggingEnabled();
+    } catch {
+      logToFileEnabled = false;
+    }
+
+    // Disable file output unless explicitly enabled.
+    if (!logToFileEnabled) {
+      log.setConfig({
+        enabledLevels: [],
+      }, 'file');
+    }
+
+    // Configure console level colors.
+    log.setConfig({
+      colors: {
+        log: 'white',
+        info: 'blue',
+        debug: 'cyan',
+        warn: 'yellow',
+        error: 'red',
+        func: '#f5f5f5',
+        timer: 'green',
+      },
+    }, 'console');
+
+    log.init();
+
+    // Some terminals ignore `%c` styles from enhanced-deno-log; apply ANSI wrappers for level distinction.
+    const useAnsiMessageColors = !logToFileEnabled;
+    const enhancedBackend = log as unknown as Partial<LoggerBackend>;
+    this.backend = {
+      log: (...args: unknown[]) => (enhancedBackend.log ?? console.log)(...args),
+      info: (...args: unknown[]) =>
+        (enhancedBackend.info ?? console.info)(
+          ...this.withAnsiColor(args, 36, useAnsiMessageColors),
+        ),
+      debug: (...args: unknown[]) =>
+        (enhancedBackend.debug ?? console.debug)(
+          ...this.withAnsiColor(args, 90, useAnsiMessageColors),
+        ),
+      warn: (...args: unknown[]) =>
+        (enhancedBackend.warn ?? console.warn)(
+          ...this.withAnsiColor(args, 33, useAnsiMessageColors),
+        ),
+      error: (...args: unknown[]) =>
+        (enhancedBackend.error ?? console.error)(
+          ...this.withAnsiColor(args, 31, useAnsiMessageColors),
+        ),
+    };
+  }
+
+  // Adds ANSI color wrappers for terminals that do not apply CSS-style console coloring.
+  private withAnsiColor(args: unknown[], colorCode: number, enabled: boolean): unknown[] {
+    if (!enabled || args.length < 1) {
+      return args;
+    }
+
+    const start = `\u001b[${colorCode}m`;
+    const reset = '\u001b[0m';
+    const [first, ...rest] = args;
+
+    if (typeof first === 'string') {
+      return [`${start}${first}${reset}`, ...rest];
+    }
+
+    return [start, first, ...rest, reset];
+  }
+}
+
+// Small injectable logger wrapper for consistent logging and easier test substitution.
+export class LoggerService {
+  constructor(
+    private readonly loggerBackendProvider: LoggerBackendProvider,
+    private readonly loggerContext: LoggerContext = {},
+  ) {
   }
 
   public log(...args: unknown[]): void {
@@ -88,12 +187,13 @@ export class LoggerService {
 
   // Emits a log line using the current backend, with context prefix when present.
   private emit(level: keyof LoggerBackend, context: LoggerContext, ...args: unknown[]): void {
+    const backend = this.loggerBackendProvider.getBackend();
     const contextPrefix = this.buildContextPrefix(context);
     if (contextPrefix) {
-      LoggerService.backend[level](contextPrefix, ...args);
+      backend[level](contextPrefix, ...args);
       return;
     }
-    LoggerService.backend[level](...args);
+    backend[level](...args);
   }
 
   // Serializes logger context as a compact stable prefix.
@@ -114,83 +214,5 @@ export class LoggerService {
       ...this.loggerContext,
       ...context,
     };
-  }
-
-  // Initializes enhanced-deno-log backend once, when LoggerService is first resolved.
-  private static initializeBackend(serverConfigService: ServerConfigService): void {
-    if (LoggerService.initialized) {
-      return;
-    }
-    LoggerService.initialized = true;
-
-    // Avoid crashing before explicit startup validation; invalid env values are validated later.
-    let logToFileEnabled = false;
-    try {
-      logToFileEnabled = serverConfigService.isFileLoggingEnabled();
-    } catch {
-      logToFileEnabled = false;
-    }
-
-    // Disable file output unless explicitly enabled.
-    if (!logToFileEnabled) {
-      log.setConfig({
-        enabledLevels: [],
-      }, 'file');
-    }
-
-    // Configure console level colors.
-    log.setConfig({
-      colors: {
-        log: 'white',
-        info: 'blue',
-        debug: 'cyan',
-        warn: 'yellow',
-        error: 'red',
-        func: '#f5f5f5',
-        timer: 'green',
-      },
-    }, 'console');
-
-    log.init();
-
-    // Some terminals ignore `%c` styles from enhanced-deno-log; apply ANSI wrappers for level distinction.
-    const useAnsiMessageColors = !logToFileEnabled;
-    const enhancedBackend = log as unknown as Partial<LoggerBackend>;
-    LoggerService.backend = {
-      log: (...args: unknown[]) => (enhancedBackend.log ?? console.log)(...args),
-      info: (...args: unknown[]) =>
-        (enhancedBackend.info ?? console.info)(
-          ...LoggerService.withAnsiColor(args, 36, useAnsiMessageColors),
-        ),
-      debug: (...args: unknown[]) =>
-        (enhancedBackend.debug ?? console.debug)(
-          ...LoggerService.withAnsiColor(args, 90, useAnsiMessageColors),
-        ),
-      warn: (...args: unknown[]) =>
-        (enhancedBackend.warn ?? console.warn)(
-          ...LoggerService.withAnsiColor(args, 33, useAnsiMessageColors),
-        ),
-      error: (...args: unknown[]) =>
-        (enhancedBackend.error ?? console.error)(
-          ...LoggerService.withAnsiColor(args, 31, useAnsiMessageColors),
-        ),
-    };
-  }
-
-  // Adds ANSI color wrappers for terminals that do not apply CSS-style console coloring.
-  private static withAnsiColor(args: unknown[], colorCode: number, enabled: boolean): unknown[] {
-    if (!enabled || args.length < 1) {
-      return args;
-    }
-
-    const start = `\u001b[${colorCode}m`;
-    const reset = '\u001b[0m';
-    const [first, ...rest] = args;
-
-    if (typeof first === 'string') {
-      return [`${start}${first}${reset}`, ...rest];
-    }
-
-    return [start, first, ...rest, reset];
   }
 }

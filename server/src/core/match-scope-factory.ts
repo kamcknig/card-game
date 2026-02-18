@@ -1,8 +1,31 @@
-import { AppSocket } from '@server-types/index.ts';
-import { Match, PlayerId } from 'shared/types/index.ts';
+import { AppSocket, CardEffectFunctionMap } from '@server-types/index.ts';
+import { PlayerId } from 'shared/types/index.ts';
+import { asClass, asValue, AwilixContainer } from 'awilix';
+import { CardSourceController } from './card-source-controller.ts';
+import { MatchCardLibrary } from './match-card-library.ts';
 import { MatchConfiguratorFactory } from './match-configurator-factory.ts';
 import { MatchController } from './match-controller.ts';
 import { createInitialMatchState } from './match-state-factory.ts';
+import { MatchSetupService } from './match-setup-service.ts';
+import { EndGamePolicyRegistryService } from './end-game-policy-registry-service.ts';
+import { CardInstanceFactoryService } from './card-instance-factory-service.ts';
+import { MatchEndService } from './match-end-service.ts';
+import { LoggerService } from './logger-service.ts';
+import { LogManager } from './log-manager.ts';
+import { CardPriceRulesController } from './card-price-rules-controller.ts';
+import { ReactionManager } from './reactions/reaction-manager.ts';
+import { ReactionContextFactory } from './reactions/reaction-context-factory.ts';
+import { CardInteractivityController } from './card-interactivity-controller.ts';
+import { GameActionController } from './actions/game-action-controller.ts';
+import { CardEffectContextFactory } from './actions/card-effect-context-factory.ts';
+import { PromptService } from './prompt-service.ts';
+import { FindCardsService } from './find-cards-service.ts';
+import { BuyOptionsResolver } from './actions/resolve-buy-options.ts';
+import { DefaultSupplyGainService } from './supply-gain-service.ts';
+import { EndGameEvaluatorService } from './end-game-evaluator-service.ts';
+import { PlayerReconnectOrchestrator } from './player-reconnect-orchestrator.ts';
+import { MatchActionRunnerRef, ScopedActionService } from './actions/scoped-action-service.ts';
+import { ExpansionEffectRegistryService } from './expansion-effect-registry-service.ts';
 
 /**
  * Runtime handle for one active match scope.
@@ -16,47 +39,89 @@ export interface MatchScope {
 }
 
 /**
- * Inputs required to compose one isolated match scope.
- */
-export interface MatchScopeComposerArgs {
-  socketMap: Map<PlayerId, AppSocket>;
-  match: Match;
-  matchScopeId: number;
-  matchConfiguratorFactory: MatchConfiguratorFactory;
-}
-
-/**
- * Abstraction over the concrete DI/container implementation used to build match scopes.
+ * Builds and owns per-match Awilix scopes.
  *
- * Implementations may use Awilix, a test double, or any other composition strategy.
- */
-export interface MatchScopeComposer {
-  create(args: MatchScopeComposerArgs): MatchScope;
-}
-
-/**
- * Creates match scopes without exposing container-specific APIs to game core code.
- *
- * Usage:
- * - Inject into game/session orchestration code.
- * - Call `create(socketMap)` per match start.
- * - Hold and dispose the returned `MatchScope` at match teardown.
+ * This keeps one simple entrypoint (`create(socketMap)`) for match lifetime wiring while
+ * still isolating match state/controllers from the root process container.
  */
 export class MatchScopeFactory {
   private nextMatchScopeId = 1;
 
   constructor(
-    private readonly matchScopeComposer: MatchScopeComposer,
+    private readonly rootContainer: AwilixContainer,
     private readonly matchConfiguratorFactory: MatchConfiguratorFactory,
+    private readonly expansionEffectRegistryService: ExpansionEffectRegistryService,
   ) {
   }
 
   public create(socketMap: Map<PlayerId, AppSocket>): MatchScope {
-    return this.matchScopeComposer.create({
-      socketMap,
-      match: createInitialMatchState(),
-      matchScopeId: this.nextMatchScopeId++,
-      matchConfiguratorFactory: this.matchConfiguratorFactory,
+    const scope = this.rootContainer.createScope();
+    const match = createInitialMatchState();
+    const matchScopeId = this.nextMatchScopeId++;
+    const matchActionRunnerRef = new MatchActionRunnerRef();
+
+    const cardEffectFunctionMap = this.expansionEffectRegistryService.createCardEffectFunctionMap();
+    const eventEffectFunctionMap = this.expansionEffectRegistryService.createEventEffectFunctionMap();
+    const projectEffectFunctionMap = this.expansionEffectRegistryService.createProjectEffectFunctionMap();
+
+    // Boon effects are registered per-match via expansion configurators.
+    const boonEffectFunctionMap = {} as CardEffectFunctionMap;
+    // Hex effects are registered per-match via expansion configurators.
+    const hexEffectFunctionMap = {} as CardEffectFunctionMap;
+    // State effects are registered per-match via expansion configurators.
+    const stateEffectFunctionMap = {} as CardEffectFunctionMap;
+    // Artifact effects are registered per-match via expansion configurators.
+    const artifactEffectFunctionMap = {} as CardEffectFunctionMap;
+
+    scope.register({
+      socketMap: asValue(socketMap),
+      match: asValue(match),
+      loggerContext: asValue({ scope: 'match', matchScopeId }),
+      loggerService: asClass(LoggerService).singleton(),
+      matchConfiguratorFactory: asValue(this.matchConfiguratorFactory),
+      cardEffectFunctionMap: asValue(cardEffectFunctionMap),
+      eventEffectFunctionMap: asValue(eventEffectFunctionMap),
+      projectEffectFunctionMap: asValue(projectEffectFunctionMap),
+      boonEffectFunctionMap: asValue(boonEffectFunctionMap),
+      hexEffectFunctionMap: asValue(hexEffectFunctionMap),
+      stateEffectFunctionMap: asValue(stateEffectFunctionMap),
+      artifactEffectFunctionMap: asValue(artifactEffectFunctionMap),
+      // Resolve card library from the match scope to avoid manual construction.
+      cardLibrary: asClass(MatchCardLibrary).singleton(),
+      cardSourceController: asClass(CardSourceController).singleton(),
+      cardInstanceFactoryService: asClass(CardInstanceFactoryService).singleton(),
+      matchActionRunnerRef: asValue(matchActionRunnerRef),
+      actionService: asClass(ScopedActionService).singleton(),
+      endGamePolicyRegistryService: asClass(EndGamePolicyRegistryService).singleton(),
+      matchSetupService: asClass(MatchSetupService).singleton(),
+      matchEndService: asClass(MatchEndService).singleton(),
+      logManager: asClass(LogManager).singleton(),
+      cardPriceController: asClass(CardPriceRulesController).singleton(),
+      findCardService: asClass(FindCardsService).singleton(),
+      supplyGainService: asClass(DefaultSupplyGainService).singleton(),
+      promptService: asClass(PromptService).singleton(),
+      cardEffectContextFactory: asClass(CardEffectContextFactory).singleton(),
+      buyOptionsResolver: asClass(BuyOptionsResolver).singleton(),
+      reactionContextFactory: asClass(ReactionContextFactory).singleton(),
+      reactionManager: asClass(ReactionManager).singleton(),
+      endGameEvaluator: asClass(EndGameEvaluatorService).singleton(),
+      interactivityController: asClass(CardInteractivityController).singleton(),
+      playerReconnectOrchestrator: asClass(PlayerReconnectOrchestrator).singleton(),
+      gameActionsController: asClass(GameActionController).singleton(),
+      matchController: asClass(MatchController).singleton(),
     });
+
+    const matchController = scope.resolve<MatchController>('matchController');
+
+    // Bind action-service calls to this match controller once the graph is fully resolved.
+    matchActionRunnerRef.bind(matchController.runGameAction.bind(matchController));
+
+    return {
+      matchController,
+      dispose: () => {
+        // Dispose registered resources in this match scope when the match ends/resets.
+        void scope.dispose();
+      },
+    };
   }
 }

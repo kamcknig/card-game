@@ -1,8 +1,8 @@
 import { Server } from 'socket.io';
 import { ServerEmitEvents, ServerListenEvents } from 'shared/types/index.ts';
-import { ServerBootstrapService } from './core/server-bootstrap-service.ts';
 import { createContainer, InjectionMode } from 'awilix';
 import { registerRootServices } from './composition/register-root-services.ts';
+import { startServer } from './composition/start-server.ts';
 
 export const io = new Server<ServerListenEvents, ServerEmitEvents>({
   pingTimeout: 1000 * 60 * 10,
@@ -14,6 +14,4 @@ const container = createContainer({
 });
 
 registerRootServices(container, { io });
-
-const serverBootstrapService = container.resolve<ServerBootstrapService>('serverBootstrapService');
-serverBootstrapService.start();
+startServer(container);
