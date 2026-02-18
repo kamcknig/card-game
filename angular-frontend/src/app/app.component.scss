@@ -1,7 +1,7 @@
 :host {
   display: block;
   height: 100vh;
-  width: 100vw;
+  width: 100%;
   position: relative;
   overflow: hidden;
 }
@@ -15,6 +15,7 @@
 }
 
 app-lobby, app-match-configuration, app-match-hud, app-game-summary {
+  display: block;
   position: relative;
   z-index: 1;
   max-height: 100%;
@@ -25,7 +26,27 @@ app-lobby, app-match-hud, app-game-summary {
 }
 
 app-match-configuration {
-  overflow: auto;
+  // Keep configuration content scrollable.
+  height: 100%;
+  max-height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  // Force a themed scrollbar so scrollability is visually obvious.
+  scrollbar-width: thin;
+  scrollbar-color: var(--theme-border-strong) transparent;
+}
+
+app-match-configuration::-webkit-scrollbar {
+  width: 10px;
+}
+
+app-match-configuration::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+app-match-configuration::-webkit-scrollbar-thumb {
+  background-color: var(--theme-border-strong);
+  border-radius: 8px;
 }
 
 app-match-hud {

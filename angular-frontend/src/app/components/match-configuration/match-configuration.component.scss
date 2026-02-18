@@ -24,7 +24,8 @@ app-scene-banner {
   grid-column: 1 / -1;
   // Match lobby: let the banner/header ignore the match-config outer padding.
   margin: -24px -24px 0;
-  width: calc(100% + 48px);
+  // Avoid width math so the sticky header aligns cleanly with scroll container edges.
+  width: auto;
   // Keep configuration header visible while the page scrolls.
   position: sticky;
   top: 0;
