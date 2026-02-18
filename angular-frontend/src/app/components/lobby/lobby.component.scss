@@ -1,15 +1,10 @@
 .lobby-shell {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
-  grid-template-rows: auto minmax(0, 1fr);
-  height: 100vh;
-  width: 100vw;
+  width: 100%;
+  min-height: 100%;
   background: linear-gradient(150deg, var(--theme-surface-app-start) 0%, var(--theme-surface-app-end) 100%);
   color: var(--theme-text-primary);
-}
-
-app-scene-banner {
-  grid-column: 1 / -1;
 }
 
 .lobby-nav {
@@ -35,7 +30,6 @@ app-scene-banner {
 
 .lobby-content {
   padding: 20px;
-  overflow: auto;
 }
 
 .content-header {
@@ -118,7 +112,7 @@ app-scene-banner {
 @media (max-width: 900px) {
   .lobby-shell {
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
   }
 
   .lobby-nav {

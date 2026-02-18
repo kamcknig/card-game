@@ -24,7 +24,7 @@ import { SelectEventModalComponent } from './select-event-modal/select-event-mod
 import { SelectLandmarkModalComponent } from './select-landmark-modal/select-landmark-modal.component';
 import { SelectArtifactModalComponent } from './select-artifact-modal/select-artifact-modal.component';
 import { SelectProjectModalComponent } from './select-project-modal/select-project-modal.component';
-import { SceneBannerComponent } from '../scene-banner/scene-banner.component';
+import { SceneContentComponent } from '../scene-content/scene-content.component';
 
 @Component({
   selector: 'app-match-configuration',
@@ -38,7 +38,7 @@ import { SceneBannerComponent } from '../scene-banner/scene-banner.component';
     SelectLandmarkModalComponent,
     SelectArtifactModalComponent,
     SelectProjectModalComponent,
-    SceneBannerComponent,
+    SceneContentComponent,
     NgStyle
   ],
   templateUrl: './match-configuration.component.html',

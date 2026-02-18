@@ -26,27 +26,10 @@ app-lobby, app-match-hud, app-game-summary {
 }
 
 app-match-configuration {
-  // Keep configuration content scrollable.
   height: 100%;
   max-height: 100%;
-  overflow-y: auto;
+  overflow-y: hidden;
   overflow-x: hidden;
-  // Force a themed scrollbar so scrollability is visually obvious.
-  scrollbar-width: thin;
-  scrollbar-color: var(--theme-border-strong) transparent;
-}
-
-app-match-configuration::-webkit-scrollbar {
-  width: 10px;
-}
-
-app-match-configuration::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-app-match-configuration::-webkit-scrollbar-thumb {
-  background-color: var(--theme-border-strong);
-  border-radius: 8px;
 }
 
 app-match-hud {

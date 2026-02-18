@@ -4,32 +4,19 @@ $match-config-single-column-breakpoint: 940px;
 $selection-board-two-column-breakpoint: 1200px;
 $selection-board-single-column-breakpoint: 760px;
 
-.match-config {
+.match-config-content {
   display: grid;
-  // Three-pane top row (players, expansions, bans), full-width board below.
   grid-template-columns: repeat(3, minmax(260px, 1fr));
-  grid-template-rows: auto auto auto;
-  padding: 24px;
-  font-family: system-ui, sans-serif;
+  grid-template-rows: auto auto;
   grid-column-gap: 20px;
   grid-row-gap: 20px;
+  padding: 24px;
+  font-family: system-ui, sans-serif;
   color: var(--theme-text-primary);
   background: var(--theme-surface-panel);
   width: 100%;
-  box-sizing: border-box;
   min-height: 100%;
-}
-
-app-scene-banner {
-  grid-column: 1 / -1;
-  // Match lobby: let the banner/header ignore the match-config outer padding.
-  margin: -24px -24px 0;
-  // Avoid width math so the sticky header aligns cleanly with scroll container edges.
-  width: auto;
-  // Keep configuration header visible while the page scrolls.
-  position: sticky;
-  top: 0;
-  z-index: 20;
+  box-sizing: border-box;
 }
 
 .leave-game-button {
@@ -46,22 +33,22 @@ app-scene-banner {
 }
 
 .players {
-  grid-row: 2;
+  grid-row: 1;
   grid-column: 1;
 }
 
 .expansions {
-  grid-row: 2;
+  grid-row: 1;
   grid-column: 2;
 }
 
 .banned-cards-section {
-  grid-row: 2;
+  grid-row: 1;
   grid-column: 3;
 }
 
 .selection-board {
-  grid-row: 3;
+  grid-row: 2;
   grid-column: 1 / -1;
   display: grid;
   // Keep card-like columns at fixed track width so they stay left-clustered instead of stretching.
@@ -153,28 +140,28 @@ app-scene-banner {
 }
 
 @media (max-width: $match-config-two-column-breakpoint) {
-  .match-config {
+  .match-config-content {
     grid-template-columns: repeat(2, minmax(260px, 1fr));
-    grid-template-rows: auto auto auto auto;
+    grid-template-rows: auto auto auto;
   }
 
   .players {
-    grid-row: 2;
+    grid-row: 1;
     grid-column: 1;
   }
 
   .expansions {
-    grid-row: 2;
+    grid-row: 1;
     grid-column: 2;
   }
 
   .banned-cards-section {
-    grid-row: 3;
+    grid-row: 2;
     grid-column: 1 / -1;
   }
 
   .selection-board {
-    grid-row: 4;
+    grid-row: 3;
     grid-column: 1 / -1;
   }
 }
@@ -192,7 +179,7 @@ app-scene-banner {
 }
 
 @media (max-width: $match-config-single-column-breakpoint) {
-  .match-config {
+  .match-config-content {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto;
   }
