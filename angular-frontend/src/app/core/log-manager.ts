@@ -139,10 +139,6 @@ export const logManager = {
           : `%P${player?.id}% trashed <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`;
         break;
       }
-      case 'newTurn': {
-        msg = `<hr class="new-turn"><br>NEW TURN<br>`;
-        break;
-      }
       case 'newPlayerTurn': {
         msg = `<br><span style="color: ${playerColor}">${playerName}</span> - turn ${logEntry.turn}<hr class="new-player-turn">`;
         break;

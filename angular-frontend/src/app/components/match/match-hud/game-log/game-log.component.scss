@@ -9,11 +9,15 @@
     display: flex;
     height: 100%;
     position: relative;
+    // Inset the scroll viewport from the parent edges.
+    padding-top: 6px;
+    padding-bottom: 6px;
+    box-sizing: border-box;
   }
 
   .resize-handle {
     width: 10px;
-    height: 100%;
+    height: auto;
     cursor: col-resize;
     box-shadow: inset 3px 0 4px -2px rgba(255, 255, 255, 1);
     z-index: 2;
@@ -27,8 +31,10 @@
     min-width: 300px;
     padding-left: 10px;
     padding-right: 10px;
+    // Keep a small breathing room inside the log content itself.
     padding-top: 6px;
-    height: 100%;
+    padding-bottom: 6px;
+    min-height: 0;
     overflow: auto;
     flex-grow: 1;
   }
