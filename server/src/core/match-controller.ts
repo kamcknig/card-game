@@ -581,6 +581,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     await this.reactionManager.runGameLifecycleEvent('onGameStart', { match: this.match });
 
     for (const socket of this.socketMap.values()) {
+      // Bind card interaction handlers for all active players at match start.
+      this.interactivityController.playerAdded(socket);
       this.playerReconnectOrchestrator.bindGameplaySocketListeners(socket);
     }
 
