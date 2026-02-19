@@ -5,7 +5,7 @@
     [backdropVariant]="'strong'"
     (close)="closeDetailDialog()"
   >
-    <div class="card-detail-panel">
+    <div class="card-detail-panel" (contextmenu)="$event.preventDefault()">
       <img class="card-detail-image" [src]="detailPath" alt="Card detail" draggable="false" />
     </div>
   </app-ui-dialog>
