@@ -49,7 +49,7 @@ export class MatchConfigurationSaveService {
     try {
       const entries: SavedMatchConfigurationEntry[] = [];
       for (const entry of Deno.readDirSync(saveDirectory)) {
-        if (!entry.isFile || !entry.name.endsWith(MatchConfigurationSaveService.FILE_EXTENSION)) {
+        if (!entry.isFile || !entry.name.toLowerCase().endsWith(MatchConfigurationSaveService.FILE_EXTENSION)) {
           continue;
         }
 
@@ -157,7 +157,13 @@ export class MatchConfigurationSaveService {
   // Reads one saved configuration payload file from disk.
   private readSavedConfiguration(filePath: string): PersistedMatchConfigurationSave | undefined {
     try {
-      const parsed = JSON.parse(Deno.readTextFileSync(filePath));
+      const raw = Deno.readTextFileSync(filePath);
+      if (raw.trim().length === 0) {
+        this.loggerService.warn(`[match config saves] save file '${filePath}' is empty`);
+        return undefined;
+      }
+
+      const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object' && 'configuration' in parsed) {
         const savePayload = parsed as PersistedMatchConfigurationSave;
         return {
@@ -175,6 +181,10 @@ export class MatchConfigurationSaveService {
       };
     } catch (error) {
       if (error instanceof Deno.errors.NotFound) {
+        return undefined;
+      }
+      if (error instanceof SyntaxError) {
+        this.loggerService.warn(`[match config saves] save file '${filePath}' contains invalid JSON`);
         return undefined;
       }
       this.loggerService.warn(`[match config saves] failed to read save file '${filePath}'`);

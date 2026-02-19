@@ -40,8 +40,8 @@ export class PromptService implements PromptServiceContract {
 
   // Returns selected card ids from a prompt-result payload; returns an empty array when no selection result exists.
   public async selectCardsFromPrompt(args: UserPromptActionArgs): Promise<CardId[]> {
-    const result = await this.requestActionResult<CardId[]>(args);
-    return result?.result ?? [];
+    const result = await this.request<unknown>(args);
+    return this.extractSelectedCardIds(result);
   }
 
   // Returns a single selected card id from a prompt-result payload, or null when no card was selected.
@@ -73,5 +73,31 @@ export class PromptService implements PromptServiceContract {
   public async requestResult<TResult = unknown>(args: UserPromptActionArgs): Promise<TResult | null> {
     const result = await this.request<{ result?: TResult }>(args);
     return result?.result ?? null;
+  }
+
+  // Normalizes prompt responses that may encode selected cards as raw arrays or wrapped result payloads.
+  private extractSelectedCardIds(result: unknown): CardId[] {
+    if (Array.isArray(result)) {
+      return result.filter((value): value is CardId => typeof value === 'number');
+    }
+
+    if (!result || typeof result !== 'object') {
+      return [];
+    }
+
+    const payload = result as {
+      selectedCardIds?: unknown;
+      result?: unknown;
+    };
+
+    if (Array.isArray(payload.selectedCardIds)) {
+      return payload.selectedCardIds.filter((value): value is CardId => typeof value === 'number');
+    }
+
+    if (payload.result !== undefined) {
+      return this.extractSelectedCardIds(payload.result);
+    }
+
+    return [];
   }
 }

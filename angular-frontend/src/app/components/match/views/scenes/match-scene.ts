@@ -6,11 +6,12 @@ import {matchStartedStore, matchStore} from '../../../../state/match-state';
 import {playerStore, selfPlayerIdStore,} from '../../../../state/player-state';
 import {PlayAreaView} from '../play-area';
 import {KingdomSupplyView} from '../kingdom-supply';
-import {CardId, CardKey, PlayerId, UserPromptActionArgs} from 'shared/types';
+import {CardId, CardKey, CardLikeId, PlayCardSelectionResult, PlayerId, UserPromptActionArgs} from 'shared/types';
 import {
   awaitingServerLockReleaseStore,
   clientSelectableCardsOverrideStore,
   clientSelectablePilesOverrideStore,
+  promptWaySelectableCardsOverrideStore,
   promptInteractionLockStore,
   selectedCardStore,
   selectedPileStore
@@ -38,6 +39,7 @@ import {PileView} from '../pile';
 import {tokenDefinitionStore} from '../../../../state/token-definition-state';
 import {getPixiSceneTheme} from '../../../../theme/pixi-theme';
 import { debugRuntimeContextStore } from '../../../../state/debug-runtime-state';
+import { cardStore } from '../../../../state/card-state';
 
 export class MatchScene extends Scene {
   private static readonly DEFAULT_TOOLTIP_CLOSE_DELAY_MS = 160;
@@ -59,6 +61,9 @@ export class MatchScene extends Scene {
   private readonly _wayPickerContainer: Container = new Container({ label: 'wayPickerContainer' });
   private _wayPickerCardId: CardId | null = null;
   private _wayPickerCloseTimeout: ReturnType<typeof setTimeout> | null = null;
+  private _promptPlaySelectedCardId: CardId | null = null;
+  private _promptPlaySelectedWayId: CardLikeId | null = null;
+  private _promptPlayWaySelectionResolver: ((selectedCardId: CardId, selectedWayId: CardLikeId) => void) | null = null;
   // Semantic Pixi color roles resolved from app-level CSS theme tokens.
   private readonly _theme = getPixiSceneTheme();
 
@@ -348,9 +353,18 @@ export class MatchScene extends Scene {
 
   private onRemoved = () => {
     this.closeWayPicker();
+    this.resetPromptPlaySelectionState();
     this._cleanup.forEach(c => c());
     awaitingServerLockReleaseStore.set(false);
     promptInteractionLockStore.set(false);
+  }
+
+  // Clears transient prompt-play selection state used for Way picks during select-card prompts.
+  private resetPromptPlaySelectionState() {
+    this._promptPlaySelectedCardId = null;
+    this._promptPlaySelectedWayId = null;
+    this._promptPlayWaySelectionResolver = null;
+    promptWaySelectableCardsOverrideStore.set(null);
   }
 
   private onUserPrompt = async (signalId: string, args: UserPromptActionArgs) => {
@@ -430,6 +444,24 @@ export class MatchScene extends Scene {
     }
 
     return MatchScene.DEFAULT_TOOLTIP_CLOSE_DELAY_MS;
+  }
+
+  // Infers whether a select-card prompt is expected to immediately play the chosen card.
+  private inferPromptIsPlaySelection(prompt?: string): boolean {
+    if (!prompt) {
+      return false;
+    }
+    const normalizedPrompt = prompt.toLowerCase();
+    if (normalizedPrompt === 'choose action' || normalizedPrompt.startsWith('choose action ')) {
+      return true;
+    }
+    return normalizedPrompt.includes('replay') ||
+      normalizedPrompt.startsWith('play ') ||
+      normalizedPrompt.includes('choose to play') ||
+      normalizedPrompt.includes('you may play ') ||
+      (normalizedPrompt.includes(' to play') &&
+        !normalizedPrompt.includes('next turn') &&
+        !normalizedPrompt.includes('set aside'));
   }
 
   // Reuses the standard card-tap lock flow for both normal and Way plays.
@@ -539,7 +571,17 @@ export class MatchScene extends Scene {
         }
 
         const selectedCardId = this._wayPickerCardId;
-        if (selectedCardId == null || !this.uiInteractive) {
+        if (selectedCardId == null) {
+          return;
+        }
+
+        if (this._promptPlayWaySelectionResolver) {
+          this._promptPlayWaySelectionResolver(selectedCardId, way.id);
+          this.closeWayPicker();
+          return;
+        }
+
+        if (!this.uiInteractive) {
           return;
         }
 
@@ -590,7 +632,12 @@ export class MatchScene extends Scene {
 
   // Tracks hover state and opens/closes the Way picker for eligible cards.
   private onPointerMove = (event: PointerEvent) => {
-    if (!this.uiInteractive || this._selecting || this._selectingPiles) {
+    const promptPlayWaySelectionActive = this._promptPlayWaySelectionResolver !== null;
+    if (
+      (!this.uiInteractive && !promptPlayWaySelectionActive) ||
+      this._selectingPiles ||
+      (this._selecting && !promptPlayWaySelectionActive)
+    ) {
       this.closeWayPicker();
       return;
     }
@@ -699,8 +746,84 @@ export class MatchScene extends Scene {
     }
   }
 
+  // Collects all currently rendered card ids in this scene by traversing CardView instances.
+  private collectRenderedCardIds(root: Container, renderedCardIds: Set<CardId>) {
+    for (const child of root.children) {
+      if (child instanceof CardView) {
+        renderedCardIds.add(child.card.id);
+      }
+
+      if (child instanceof Container && child.children.length > 0) {
+        this.collectRenderedCardIds(child, renderedCardIds);
+      }
+    }
+  }
+
+  // Determines whether select-card should use modal fallback because some selectable cards are not currently rendered.
+  private shouldUsePromptCardSelectionModal(selectableCardIds: CardId[]): boolean {
+    if (selectableCardIds.length < 1) {
+      return false;
+    }
+
+    const renderedCardIds = new Set<CardId>();
+    this.collectRenderedCardIds(this, renderedCardIds);
+
+    const nonRenderedSelectableIds = selectableCardIds.filter((cardId) => !renderedCardIds.has(cardId));
+    if (nonRenderedSelectableIds.length < 1) {
+      return false;
+    }
+
+    console.debug(
+      `[selectCard ui] using modal fallback for non-rendered selectable cards: ${nonRenderedSelectableIds.join(',')}`,
+    );
+    return true;
+  }
+
+  // Normalizes modal prompt responses to card-selection payloads used by server selectCard flow.
+  private parsePromptSelectionResult(response: unknown): PlayCardSelectionResult {
+    if (Array.isArray(response)) {
+      return {
+        selectedCardIds: response.filter((value): value is CardId => typeof value === 'number'),
+      };
+    }
+
+    if (!response || typeof response !== 'object') {
+      return { selectedCardIds: [] };
+    }
+
+    const payload = response as {
+      action?: unknown;
+      result?: unknown;
+      selectedCardIds?: unknown;
+      selectedWayId?: unknown;
+    };
+
+    // Action button cancel path from userPromptModal.
+    if (payload.action === 0) {
+      return { selectedCardIds: [] };
+    }
+
+    if (Array.isArray(payload.selectedCardIds)) {
+      return {
+        selectedCardIds: payload.selectedCardIds.filter((value): value is CardId => typeof value === 'number'),
+        selectedWayId: typeof payload.selectedWayId === 'number' ? payload.selectedWayId : null,
+      };
+    }
+
+    if (payload.result !== undefined) {
+      const nested = this.parsePromptSelectionResult(payload.result);
+      if (typeof payload.selectedWayId === 'number' || payload.selectedWayId === null) {
+        nested.selectedWayId = payload.selectedWayId;
+      }
+      return nested;
+    }
+
+    return { selectedCardIds: [] };
+  }
+
   private doSelectCards = async (signalId: string, arg: SelectCardArgs) => {
     this.closeWayPicker();
+    this.resetPromptPlaySelectionState();
     const cardIds = arg.selectableCardIds ?? [];
 
     let doSelectButtonContainer: Container | null;
@@ -711,6 +834,7 @@ export class MatchScene extends Scene {
       doSelectButtonContainer?.removeChildren().forEach(c => c.destroy());
       this._selecting = false;
       promptInteractionLockStore.set(false);
+      this.resetPromptPlaySelectionState();
       return;
     }
 
@@ -719,6 +843,67 @@ export class MatchScene extends Scene {
     const count = resolvedCountSpec.kind === 'fixed'
       ? resolvedCountSpec.count
       : undefined;
+    const isSingleSelection = resolvedCountSpec.kind === 'fixed'
+      ? resolvedCountSpec.count === 1
+      : resolvedCountSpec.min === 1 && resolvedCountSpec.max === 1;
+    const promptAllowsWaySelection = Boolean(arg.playCard) || this.inferPromptIsPlaySelection(arg.prompt);
+    // Way selection in select-card prompts only applies when there are active Ways in this match.
+    const activeWayCount = matchStore.get()?.ways?.length ?? 0;
+    const supportsWaySelection = promptAllowsWaySelection && isSingleSelection && activeWayCount > 0;
+    console.debug(
+      `[selectCard ui] prompt='${arg.prompt}' playCard=${String(arg.playCard)} supportsWaySelection=${supportsWaySelection} activeWays=${activeWayCount} selectable=${cardIds.length}`,
+    );
+
+    // Some selections target cards not rendered on the board (e.g., set-aside revealed cards).
+    // Use the existing modal selector for those cases so selection remains possible.
+    if (this.shouldUsePromptCardSelectionModal(cardIds)) {
+      this._selecting = true;
+      promptInteractionLockStore.set(true);
+      try {
+        const modalArgs: UserPromptActionArgs = {
+          playerId: this._selfId,
+          prompt: arg.prompt,
+          content: {
+            type: 'select',
+            cardIds,
+            selectableCardIds: [...cardIds],
+            selectCount: arg.count ?? 1,
+            playCard: supportsWaySelection,
+          },
+        };
+
+        if (arg.optional) {
+          modalArgs.actionButtons = [
+            { label: arg.cancelPrompt ?? 'Cancel', action: 0 },
+            { label: arg.validPrompt ?? arg.prompt, action: 1 },
+          ];
+          modalArgs.validationAction = 1;
+        }
+
+        const modalResult = await userPromptModal(
+          this._app,
+          this._socketService,
+          modalArgs,
+          this._selfId,
+        );
+        const parsedSelection = this.parsePromptSelectionResult(modalResult);
+        const payload: CardId[] | PlayCardSelectionResult = supportsWaySelection
+          ? {
+            selectedCardIds: parsedSelection.selectedCardIds,
+            selectedWayId: parsedSelection.selectedWayId ?? null,
+          }
+          : parsedSelection.selectedCardIds;
+
+        selectedCardStore.set([]);
+        clientSelectableCardsOverrideStore.set(null);
+        this.resetPromptPlaySelectionState();
+        this._socketService.emit('userInputReceived', signalId, payload);
+      } finally {
+        this._selecting = false;
+        promptInteractionLockStore.set(false);
+      }
+      return;
+    }
 
     if (currentPlayerTurnIdStore.get() !== this._selfId) {
       try {
@@ -811,6 +996,16 @@ export class MatchScene extends Scene {
     }
 
     const cardsSelectedComplete = (cardIds: number[]) => {
+      const selectedCardIds = cardIds as CardId[];
+      const payload: CardId[] | PlayCardSelectionResult = supportsWaySelection
+        ? {
+          selectedCardIds,
+          selectedWayId:
+            selectedCardIds.length === 1 && selectedCardIds[0] === this._promptPlaySelectedCardId
+              ? this._promptPlaySelectedWayId
+              : null,
+        }
+        : selectedCardIds;
       // reset selected card state
       selectedCardStore.set([]);
       c.removeFromParent();
@@ -819,7 +1014,8 @@ export class MatchScene extends Scene {
 
       // reset overrides so server can tell us now what cards are selectable
       clientSelectableCardsOverrideStore.set(null);
-      this._socketService.emit('userInputReceived', signalId, cardIds);
+      this.resetPromptPlaySelectionState();
+      this._socketService.emit('userInputReceived', signalId, payload);
     };
 
     const doneListener = (cancelled?: boolean) => {
@@ -856,11 +1052,16 @@ export class MatchScene extends Scene {
         }
 
         if (isNumber(arg.count) && !arg.optional) {
-          if (arg.count === selectedCardStore.get().length) doneListener();
+          // Keep prompt play-selection open so the player can choose a Way after selecting a card.
+          if (!supportsWaySelection && arg.count === selectedCardStore.get().length) doneListener();
         }
         if (!isNumber(arg.count) && !arg.optional && arg.count?.kind === 'range') {
           // Auto-complete when range is fixed to a single value.
-          if (arg.count.min === arg.count.max && arg.count.max === selectedCardStore.get().length) {
+          if (
+            !supportsWaySelection &&
+            arg.count.min === arg.count.max &&
+            arg.count.max === selectedCardStore.get().length
+          ) {
             doneListener();
           }
         }
@@ -880,13 +1081,32 @@ export class MatchScene extends Scene {
 
     // set the currently selectable cards
     clientSelectableCardsOverrideStore.set(arg.selectableCardIds);
+    promptWaySelectableCardsOverrideStore.set(supportsWaySelection ? [...cardIds] : null);
 
     this._selecting = true;
     // Hide turn action controls while card-selection prompt is active.
     promptInteractionLockStore.set(true);
+    if (supportsWaySelection) {
+      // Way selections are only meaningful for single-card play prompts.
+      this._promptPlayWaySelectionResolver = (selectedCardId: CardId, selectedWayId: CardLikeId) => {
+        selectedCardStore.set([selectedCardId]);
+        this._promptPlaySelectedCardId = selectedCardId;
+        this._promptPlaySelectedWayId = selectedWayId;
+        doneListener();
+      };
+    }
 
     // listen for cards being selected
     const selectedCardsListenerCleanup = selectedCardStore.subscribe(cardIds => {
+      if (
+        !supportsWaySelection ||
+        cardIds.length !== 1 ||
+        cardIds[0] !== this._promptPlaySelectedCardId
+      ) {
+        this._promptPlaySelectedCardId = null;
+        this._promptPlaySelectedWayId = null;
+      }
+
       const countText = this.getChildByLabel('cardCountContainer')?.getChildByLabel('count') as Text;
 
       if (countText) {

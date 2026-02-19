@@ -292,6 +292,8 @@ export interface SelectActionCardArgs {
   prompt: string;
   validPrompt?: string;
   cancelPrompt?: string;
+  // Marks selections that will immediately invoke playCard for the chosen card.
+  playCard?: boolean;
 }
 
 // Single-card selection only allows one-card count shapes.
@@ -304,6 +306,12 @@ export type SingleSelectCountSpec =
 export interface SelectSingleActionCardArgs extends Omit<SelectActionCardArgs, 'count'> {
   count?: SingleSelectCountSpec;
 }
+
+// Carries card-selection results for play flows that may include an alternate Way pick.
+export type PlayCardSelectionResult = {
+  selectedCardIds: CardId[];
+  selectedWayId?: CardLikeId | null;
+};
 
 export type UserPromptKinds =
   | { type: 'blind-rearrange'; cardIds: CardId[]; }
@@ -331,6 +339,8 @@ export type UserPromptKinds =
     cardIds: CardId[];
     selectCount: CountSpec;
     selectableCardIds?: CardId[];
+    // Marks selections that will immediately invoke playCard for the chosen card.
+    playCard?: boolean;
     // Optional card-like entries to include in the selection prompt.
     cardLikeIds?: CardLikeId[];
     selectableCardLikeIds?: CardLikeId[];

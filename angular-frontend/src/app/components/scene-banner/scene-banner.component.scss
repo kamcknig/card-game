@@ -32,7 +32,7 @@
 .scene-banner h1 {
   position: absolute;
   left: 50%;
-  top: 42%;
+  top: calc(42% + 8px);
   transform: translate(-50%, -50%);
   margin: 0;
   color: var(--theme-text-banner);
@@ -47,7 +47,7 @@
 .scene-banner p {
   position: absolute;
   left: 50%;
-  top: 63%;
+  top: calc(63% + 8px);
   transform: translate(-50%, -50%);
   margin: 0;
   max-width: 70%;

@@ -1137,7 +1137,9 @@ const expansionModule: CardExpansionModule = {
 
       const cardId = await actionService.run('selectSingleCard', {
         optional: true,
-        prompt: 'Choose action',
+        prompt: 'Play an Action card',
+        // Throne Room selection immediately plays the chosen Action card.
+        playCard: true,
         playerId,
         count: { kind: 'upTo', count: 1 },
         restrict: [

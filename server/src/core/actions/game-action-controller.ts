@@ -74,6 +74,11 @@ export class GameActionController implements GameActionDefinitionMap {
   private _customCardEffectHandlers: Record<string, Partial<Record<CardKey, CardEffectFn>>> = {};
   // Guards against re-entrant computer turns triggered by nested game actions.
   private _computerTurnInProgress: boolean = false;
+  // Stores one-shot Way choices captured during prompt-driven "select card to play" flows.
+  private _pendingPlaySelectionWayByPlayerAndCard = new Map<string, {
+    wayId: CardLikeId | null;
+    turnHistoryIndex: number | undefined;
+  }>();
 
   constructor(
     private cardSourceController: CardSourceController,
@@ -247,6 +252,146 @@ export class GameActionController implements GameActionDefinitionMap {
       throw new Error('[game action controller] turn history is not initialized');
     }
     return turnHistoryIndex;
+  }
+
+  // Builds a deterministic map key for pending prompt-driven play selections.
+  private getPendingPlaySelectionKey(playerId: PlayerId, cardId: CardId): string {
+    return `${playerId}:${cardId}`;
+  }
+
+  // Clears pending play-selection Way choices for one player.
+  private clearPendingPlaySelectionsForPlayer(playerId: PlayerId) {
+    const keyPrefix = `${playerId}:`;
+    for (const key of this._pendingPlaySelectionWayByPlayerAndCard.keys()) {
+      if (key.startsWith(keyPrefix)) {
+        this._pendingPlaySelectionWayByPlayerAndCard.delete(key);
+      }
+    }
+  }
+
+  // Parses prompt/select responses that can carry selected cards and an optional Way id.
+  private parsePlayCardSelectionResult(response: unknown): {
+    selectedCardIds: CardId[];
+    selectedWayId?: CardLikeId | null;
+  } | null {
+    if (Array.isArray(response)) {
+      if (!response.every((value) => typeof value === 'number')) {
+        return null;
+      }
+      return { selectedCardIds: response as CardId[] };
+    }
+
+    if (!response || typeof response !== 'object') {
+      return null;
+    }
+
+    const payload = response as {
+      selectedCardIds?: unknown;
+      selectedWayId?: unknown;
+      result?: unknown;
+    };
+
+    if (Array.isArray(payload.selectedCardIds)) {
+      if (!payload.selectedCardIds.every((value) => typeof value === 'number')) {
+        return null;
+      }
+      const selectedWayId = payload.selectedWayId;
+      if (selectedWayId !== undefined && selectedWayId !== null && typeof selectedWayId !== 'number') {
+        return null;
+      }
+      return {
+        selectedCardIds: payload.selectedCardIds as CardId[],
+        selectedWayId: selectedWayId as CardLikeId | null | undefined,
+      };
+    }
+
+    // userPrompt responses wrap payloads under `result` when action buttons are present.
+    if (payload.result !== undefined) {
+      const parsedNestedResult = this.parsePlayCardSelectionResult(payload.result);
+      if (!parsedNestedResult) {
+        return null;
+      }
+      const selectedWayId = payload.selectedWayId;
+      if (selectedWayId !== undefined && selectedWayId !== null && typeof selectedWayId !== 'number') {
+        return null;
+      }
+      if (selectedWayId !== undefined) {
+        return {
+          ...parsedNestedResult,
+          selectedWayId: selectedWayId as CardLikeId | null,
+        };
+      }
+      return parsedNestedResult;
+    }
+
+    return null;
+  }
+
+  // Queues a one-shot Way choice for the next playCard call of the selected card.
+  private queuePendingWaySelectionForPlay(args: {
+    playerId: PlayerId;
+    selectedCardIds: CardId[];
+    selectedWayId?: CardLikeId | null;
+  }) {
+    this.clearPendingPlaySelectionsForPlayer(args.playerId);
+    if (args.selectedCardIds.length !== 1) {
+      return;
+    }
+
+    const selectedCardId = args.selectedCardIds[0];
+    const wayId = args.selectedWayId ?? null;
+    const key = this.getPendingPlaySelectionKey(args.playerId, selectedCardId);
+    const turnHistoryIndex = this.getCurrentTurnHistoryIndex();
+    this._pendingPlaySelectionWayByPlayerAndCard.set(key, {
+      wayId,
+      turnHistoryIndex,
+    });
+    this.loggerService.debug(
+      `[playCard action] queued prompt Way selection player=${args.playerId} card=${selectedCardId} way=${wayId}`,
+    );
+  }
+
+  // Infers whether a selection prompt is intended to choose a card to play.
+  private inferPromptIsPlaySelection(prompt?: string): boolean {
+    if (!prompt) {
+      return false;
+    }
+    const normalizedPrompt = prompt.toLowerCase();
+    if (normalizedPrompt === 'choose action' || normalizedPrompt.startsWith('choose action ')) {
+      return true;
+    }
+    if (normalizedPrompt.includes('replay')) {
+      return true;
+    }
+
+    if (
+      normalizedPrompt.includes(' to play') &&
+      !normalizedPrompt.includes('next turn') &&
+      !normalizedPrompt.includes('set aside')
+    ) {
+      return true;
+    }
+
+    return normalizedPrompt.startsWith('play ') ||
+      normalizedPrompt.includes('choose to play') ||
+      normalizedPrompt.includes('you may play ');
+  }
+
+  // Consumes and returns a queued Way choice for one selected card, when still in the same turn.
+  private consumePendingWaySelectionForPlay(playerId: PlayerId, cardId: CardId): CardLikeId | null | undefined {
+    const key = this.getPendingPlaySelectionKey(playerId, cardId);
+    const entry = this._pendingPlaySelectionWayByPlayerAndCard.get(key);
+    if (!entry) {
+      return undefined;
+    }
+    this._pendingPlaySelectionWayByPlayerAndCard.delete(key);
+    if (entry.turnHistoryIndex !== this.getCurrentTurnHistoryIndex()) {
+      this.loggerService.debug(
+        `[playCard action] discarding stale queued Way selection player=${playerId} card=${cardId}`,
+      );
+      return undefined;
+    }
+    return entry.wayId;
   }
 
   // Returns the player's Exile zone source when available.
@@ -1212,6 +1357,19 @@ export class GameActionController implements GameActionDefinitionMap {
           });
         }
 
+        if (args.content?.type === 'select' && args.content.playCard) {
+          const parsedSelection = this.parsePlayCardSelectionResult(response);
+          if (!parsedSelection) {
+            this.loggerService.warn('[userPrompt] invalid play-card selection payload');
+          } else {
+            this.queuePendingWaySelectionForPlay({
+              playerId,
+              selectedCardIds: parsedSelection.selectedCardIds,
+              selectedWayId: parsedSelection.selectedWayId,
+            });
+          }
+        }
+
         resolve(response);
       };
 
@@ -1222,6 +1380,10 @@ export class GameActionController implements GameActionDefinitionMap {
 
   async selectCard(args: SelectActionCardArgs) {
     args.count ??= 1;
+    const playSelection = args.playCard ?? this.inferPromptIsPlaySelection(args.prompt);
+    this.loggerService.debug(
+      `[selectCard action] play-selection=${playSelection} prompt='${args.prompt}' explicit=${args.playCard}`,
+    );
 
     let selectableCardIds: CardId[] = [];
 
@@ -1302,15 +1464,26 @@ export class GameActionController implements GameActionDefinitionMap {
           });
         }
 
-        if (!Array.isArray(cardIds)) {
-          this.loggerService.warn(`[selectCard action] received invalid cardIds ${cardIds}`);
+        const parsedSelection = this.parsePlayCardSelectionResult(cardIds);
+        if (!parsedSelection) {
+          this.loggerService.warn(`[selectCard action] received invalid cardIds payload`);
+          resolve([]);
+          return;
         }
 
-        resolve(Array.isArray(cardIds) ? cardIds : []);
+        if (playSelection) {
+          this.queuePendingWaySelectionForPlay({
+            playerId,
+            selectedCardIds: parsedSelection.selectedCardIds,
+            selectedWayId: parsedSelection.selectedWayId,
+          });
+        }
+
+        resolve(parsedSelection.selectedCardIds);
       };
 
       socket.on('userInputReceived', onInput);
-      socket.emit('selectCard', signalId, { ...args, selectableCardIds });
+      socket.emit('selectCard', signalId, { ...args, playCard: playSelection, selectableCardIds });
     });
   }
 
@@ -2824,6 +2997,10 @@ export class GameActionController implements GameActionDefinitionMap {
     card: Card;
     requestedWayId?: CardLikeId | null;
   }): Promise<CardLikeId | null> {
+    const queuedWayId = args.requestedWayId === undefined
+      ? this.consumePendingWaySelectionForPlay(args.playerId, args.card.id)
+      : undefined;
+
     // Ways only apply to Action cards.
     if (!args.card.type.includes('ACTION')) {
       return null;
@@ -2839,42 +3016,14 @@ export class GameActionController implements GameActionDefinitionMap {
       return args.requestedWayId;
     }
 
-    const player = getPlayerById(this.match, args.playerId);
-    if (player?.isComputer) {
-      // AI policy remains normal play only for now.
-      return null;
+    if (queuedWayId !== undefined) {
+      return queuedWayId;
     }
-
-    const wayIds = activeWays.map((way) => way.id);
+    // No explicit or queued way choice: resolve to normal play without opening a fallback prompt.
     this.loggerService.debug(
-      `[playCard action] prompting player ${args.playerId} for normal vs way play of ${args.card}`,
+      `[playCard action] no explicit/queued way selection for ${args.card}; using normal play path`,
     );
-
-    const selectedIds = await this.promptService.requestResult<Array<CardId | CardLikeId>>({
-      playerId: args.playerId,
-      prompt: `Choose how to play ${args.card.cardName}`,
-      content: {
-        type: 'select',
-        cardIds: [args.card.id],
-        cardLikeIds: [...wayIds],
-        selectableCardIds: [args.card.id],
-        selectableCardLikeIds: [...wayIds],
-        selectCount: { kind: 'exact', count: 1 },
-      },
-    });
-
-    const selectedId = selectedIds?.[0];
-    if (selectedId === undefined || selectedId === args.card.id) {
-      return null;
-    }
-
-    const selectedWay = findWayInMatch(this.match, selectedId);
-    if (!selectedWay) {
-      this.loggerService.warn(`[playCard action] prompted way selection ${selectedId} was not found`);
-      return null;
-    }
-
-    return selectedWay.id;
+    return null;
   }
 
   async playCard(args: {

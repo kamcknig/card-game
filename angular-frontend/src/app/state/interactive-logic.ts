@@ -1,4 +1,9 @@
-import { awaitingServerLockReleaseStore, clientSelectableCardsOverrideStore, promptInteractionLockStore } from './interactive-state';
+import {
+  awaitingServerLockReleaseStore,
+  clientSelectableCardsOverrideStore,
+  promptInteractionLockStore,
+  promptWaySelectableCardsOverrideStore,
+} from './interactive-state';
 import { computed } from 'nanostores';
 import { matchStore } from './match-state';
 import { selfPlayerIdStore } from './player-state';
@@ -26,7 +31,8 @@ export const waySelectableCardStore = computed(
     cardSourceStore,
     cardStore,
     promptInteractionLockStore,
-    awaitingServerLockReleaseStore
+    awaitingServerLockReleaseStore,
+    promptWaySelectableCardsOverrideStore,
   ],
   (
     selectableCards,
@@ -35,9 +41,16 @@ export const waySelectableCardStore = computed(
     sourceMap,
     cardsById,
     promptInteractionLocked,
-    awaitingServerLockRelease
+    awaitingServerLockRelease,
+    promptWaySelectableCardsOverride,
   ) => {
-    if (promptInteractionLocked || awaitingServerLockRelease) {
+    // Keep normal lock behavior, but allow explicit prompt-driven Way selection to work while awaiting card resolution.
+    if (awaitingServerLockRelease && promptWaySelectableCardsOverride === null) {
+      return [];
+    }
+
+    // Prompt locking normally disables way hover, except explicit play-selection prompts.
+    if (promptInteractionLocked && promptWaySelectableCardsOverride === null) {
       return [];
     }
 
@@ -47,9 +60,11 @@ export const waySelectableCardStore = computed(
 
     const handCardIds = sourceMap[`playerHand:${selfPlayerId}`] ?? [];
     const handCardIdSet = new Set(handCardIds);
+    const candidateCards = promptWaySelectableCardsOverride ?? selectableCards;
+    const enforceHandSource = promptWaySelectableCardsOverride === null;
 
-    return selectableCards.filter((cardId) => {
-      if (!handCardIdSet.has(cardId)) {
+    return candidateCards.filter((cardId) => {
+      if (enforceHandSource && !handCardIdSet.has(cardId)) {
         return false;
       }
 

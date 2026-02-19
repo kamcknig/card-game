@@ -19,7 +19,6 @@ import {
   MatchConfigurationSaveNameCheckResult,
   MatchConfigurationSaveResult,
   MatchConfiguration,
-  PlayerId,
   ProjectNoId,
   SavedMatchConfigurationEntry,
   WayNoId

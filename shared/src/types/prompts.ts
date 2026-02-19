@@ -2,6 +2,7 @@
 export type {
   ActionButtons,
   EffectTarget,
+  PlayCardSelectionResult,
   SelectActionCardArgs,
   SelectSingleActionCardArgs,
   SingleSelectCountSpec,

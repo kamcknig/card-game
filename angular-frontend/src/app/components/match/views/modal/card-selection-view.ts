@@ -1,4 +1,4 @@
-import { Application, Assets, Container, FederatedPointerEvent, Sprite } from 'pixi.js'
+import { Application, Assets, Container, FederatedPointerEvent, Graphics, Sprite } from 'pixi.js'
 import { Card, CardId, CardLikeId, UserPromptKinds } from 'shared/types';
 import { CARD_WIDTH, STANDARD_GAP } from '../../../../core/app-contants';
 import { createCardView } from '../../../../core/card/create-card-view';
@@ -13,6 +13,8 @@ import { displayCardDetail } from './display-card-detail';
 import { selfPlayerIdStore } from '../../../../state/player-state';
 import { matchStore } from '../../../../state/match-state';
 import { getCardSourceStore } from '../../../../state/card-source-store';
+import { getPixiSceneTheme } from '../../../../theme/pixi-theme';
+import { debugRuntimeContextStore } from '../../../../state/debug-runtime-state';
 
 // Local id alias used for temporary selection mapping.
 type NewCardId = CardId;
@@ -35,6 +37,7 @@ const isCardViewLike = (target: Container): target is CardViewLike => 'card' in 
 const isSelectionView = (target: Container): target is SelectionView => 'selectionId' in target;
 
 export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
+  const DEFAULT_TOOLTIP_CLOSE_DELAY_MS = 160;
   if (args.type !== 'select' && args.type !== 'display-cards') {
     throw new Error('card selection modal requires card or landscape selection types');
   }
@@ -58,14 +61,35 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
 
   let newCardToOldCardMap = new Map<NewCardId, CardId | CardLikeId>();
   let maxId = toNumber(Object.keys(cardStore.get()).sort().slice(-1)[0]);
+  const selectionViewById = new Map<NewCardId, Container>();
 
   const cardCount = cardIds.length;
   const cardLikeCount = cardLikeIds.length;
   const selectCount = 'selectCount' in args ? args.selectCount ?? 1 : 0;
   // Normalize the selection count for auto-finish logic.
   const resolvedCountSpec = resolveCountSpec(selectCount);
+  const singleSelect = resolvedCountSpec.kind === 'fixed'
+    ? resolvedCountSpec.count === 1
+    : resolvedCountSpec.min === 1 && resolvedCountSpec.max === 1;
   // Parent container hosts card and landscape rows.
   const contentView = new Container();
+  const pixiTheme = getPixiSceneTheme();
+  const tooltipCloseDelayMs = Math.max(
+    0,
+    Math.floor(debugRuntimeContextStore.get()?.tooltipDefaultCloseDelayMs ?? DEFAULT_TOOLTIP_CLOSE_DELAY_MS),
+  );
+  const match = matchStore.get();
+  const activeWays = match?.ways ?? [];
+  const playCardSelectionEnabled = !displayOnly && args.type === 'select' && args.playCard === true && singleSelect;
+  const showWayPicker = playCardSelectionEnabled && activeWays.length > 0;
+  let selectedWayId: CardLikeId | null = null;
+  let selectedWaySelectionId: NewCardId | null = null;
+  const wayTooltipContainer = new Container({ label: 'promptWayTooltip' });
+  wayTooltipContainer.visible = false;
+  wayTooltipContainer.eventMode = 'static';
+  contentView.addChild(wayTooltipContainer);
+  let wayTooltipCardSelectionId: NewCardId | null = null;
+  let wayTooltipCloseTimeout: ReturnType<typeof setTimeout> | null = null;
 
   const validate = () => {
     let validated = displayOnly || validateCountSpec(selectCount, selectedCardStore.get().length);
@@ -73,18 +97,184 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
     contentView.emit('validationUpdated', validated);
 
     if (validated) {
-      contentView.emit('resultsUpdated', selectedCardStore.get().map(id => newCardToOldCardMap.get(id)));
+      const selectedCardIds = selectedCardStore.get()
+        .map((id) => newCardToOldCardMap.get(id))
+        .filter((id): id is CardId => typeof id === 'number');
+      contentView.emit('resultsUpdated', selectedCardIds);
+      if (playCardSelectionEnabled) {
+        contentView.emit(
+          'selectedWayUpdated',
+          selectedCardIds.length === 1 && selectedCardStore.get()[0] === selectedWaySelectionId
+            ? selectedWayId
+            : null,
+        );
+      }
 
-      if (!displayOnly && resolvedCountSpec.kind === 'fixed' && resolvedCountSpec.count === 1) {
+      // Keep play-selection prompts open so the player can pick a Way before finishing.
+      if (!displayOnly && !showWayPicker && resolvedCountSpec.kind === 'fixed' && resolvedCountSpec.count === 1) {
         contentView.emit('finished');
       }
-      if (!displayOnly && resolvedCountSpec.kind === 'range' && resolvedCountSpec.min === 1 && resolvedCountSpec.max === 1) {
+      if (
+        !displayOnly &&
+        !showWayPicker &&
+        resolvedCountSpec.kind === 'range' &&
+        resolvedCountSpec.min === 1 &&
+        resolvedCountSpec.max === 1
+      ) {
         // Auto-finish for a fixed range of 1.
         contentView.emit('finished');
       }
     }
     return validated;
   };
+
+  // Keeps selected-card offsets visually in sync with selectedCardStore.
+  const syncSelectionOffsets = () => {
+    const selectedIds = new Set(selectedCardStore.get());
+    selectionViewById.forEach((view, selectionId) => {
+      view.y = selectedIds.has(selectionId) ? -10 : 0;
+    });
+  };
+
+  // Clears any delayed tooltip close timer.
+  const cancelWayTooltipClose = () => {
+    if (wayTooltipCloseTimeout) {
+      clearTimeout(wayTooltipCloseTimeout);
+      wayTooltipCloseTimeout = null;
+    }
+  };
+
+  // Schedules delayed close so cursor can move from card to tooltip without flicker.
+  const scheduleWayTooltipClose = () => {
+    cancelWayTooltipClose();
+    wayTooltipCloseTimeout = setTimeout(() => {
+      wayTooltipCloseTimeout = null;
+      hideWayTooltip();
+    }, tooltipCloseDelayMs);
+  };
+
+  // Hides and destroys the prompt-local Way tooltip contents.
+  const hideWayTooltip = () => {
+    cancelWayTooltipClose();
+    wayTooltipCardSelectionId = null;
+    wayTooltipContainer.visible = false;
+    wayTooltipContainer.removeChildren().forEach((child) => {
+      child.removeAllListeners();
+      child.destroy({ children: true });
+    });
+  };
+
+  // Applies a Way selection to the selected card and re-runs prompt validation/auto-finish.
+  const selectCardAsWay = (selectionId: NewCardId, wayId: CardLikeId) => {
+    selectedCardStore.set([selectionId]);
+    selectedWaySelectionId = selectionId;
+    selectedWayId = wayId;
+    syncSelectionOffsets();
+    validate();
+    hideWayTooltip();
+  };
+
+  // Builds and displays the prompt-local Way tooltip for the hovered card.
+  const showWayTooltipForCard = (cardView: CardViewLike) => {
+    if (!showWayPicker) {
+      return;
+    }
+    const selectionId = cardView.card.id as NewCardId;
+    if (wayTooltipCardSelectionId === selectionId && wayTooltipContainer.visible) {
+      return;
+    }
+
+    hideWayTooltip();
+    wayTooltipContainer.visible = true;
+    wayTooltipCardSelectionId = selectionId;
+    const sortedWays = [...activeWays].sort((a, b) => a.cardKey.localeCompare(b.cardKey));
+    const pickerPadding = 8;
+    const wayGap = 8;
+    const wayScale = .75;
+    let y = pickerPadding;
+    let maxRowWidth = 0;
+
+    for (const way of sortedWays) {
+      const row = new Container({ label: `promptWayRow:${way.id}` });
+      row.eventMode = 'static';
+      row.cursor = 'pointer';
+      row.x = pickerPadding;
+      row.y = y;
+
+      const texture = Assets.get(`${way.cardKey}-full`);
+      const sprite = new Sprite({ texture: texture });
+      if (!texture) {
+        Assets.load(way.fullImagePath).then((loadedTexture) => {
+          sprite.texture = loadedTexture;
+        });
+      }
+      sprite.scale = wayScale;
+      row.addChild(sprite);
+
+      const hoverHighlight = new Graphics({ label: `promptWayHover:${way.cardKey}` });
+      row.addChildAt(hoverHighlight, 0);
+
+      // Draws row highlight state for tooltip item hover feedback.
+      const drawHoverState = (hovered: boolean) => {
+        hoverHighlight.clear();
+        if (!hovered) {
+          return;
+        }
+        hoverHighlight
+          .roundRect(-4, -4, sprite.width + 8, sprite.height + 8, 6)
+          .fill({ color: 0x00d5ff, alpha: .25 })
+          .stroke({ color: 0x00d5ff, width: 2 });
+      };
+
+      row.on('pointerover', () => {
+        cancelWayTooltipClose();
+        drawHoverState(true);
+      });
+      row.on('pointerout', () => {
+        drawHoverState(false);
+        scheduleWayTooltipClose();
+      });
+      row.on('pointerdown', (event) => {
+        event.stopPropagation();
+        if (event.button === 2) {
+          return;
+        }
+        selectCardAsWay(selectionId, way.id);
+      });
+
+      wayTooltipContainer.addChild(row);
+      maxRowWidth = Math.max(maxRowWidth, Math.floor(sprite.width));
+      y += Math.floor(sprite.height) + wayGap;
+    }
+
+    const panelHeight = y - wayGap + pickerPadding;
+    const panelWidth = maxRowWidth + pickerPadding * 2;
+    const panel = new Graphics({ label: 'promptWayPanel' });
+    panel.roundRect(0, 0, panelWidth, panelHeight, 8);
+    panel.fill({ color: pixiTheme.overlay.color, alpha: pixiTheme.overlay.mediumAlpha });
+    panel.stroke({ color: 0x00d5ff, width: 1.5 });
+    wayTooltipContainer.addChildAt(panel, 0);
+
+    const globalCardPosition = cardView.getGlobalPosition();
+    const localCardPosition = contentView.toLocal(globalCardPosition);
+    let tooltipX = Math.floor(localCardPosition.x + cardView.width + STANDARD_GAP);
+    let tooltipY = Math.floor(localCardPosition.y);
+    const maxX = app.renderer.width - panelWidth - STANDARD_GAP;
+    const maxY = app.renderer.height - panelHeight - STANDARD_GAP;
+
+    if (tooltipX > maxX) {
+      tooltipX = Math.floor(localCardPosition.x - panelWidth - STANDARD_GAP);
+    }
+
+    tooltipX = Math.max(STANDARD_GAP, Math.min(tooltipX, maxX));
+    tooltipY = Math.max(STANDARD_GAP, Math.min(tooltipY, maxY));
+    wayTooltipContainer.x = tooltipX;
+    wayTooltipContainer.y = tooltipY;
+  };
+
+  wayTooltipContainer.on('pointerover', () => cancelWayTooltipClose());
+  wayTooltipContainer.on('pointerout', () => scheduleWayTooltipClose());
+  contentView.on('removed', () => hideWayTooltip());
 
   const cardPointerDownListener = (event: FederatedPointerEvent) => {
     const target = event.currentTarget as Container;
@@ -114,13 +304,21 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
 
     if (selectedCardStore.get().includes(selectionId)) {
       selectedCardStore.set(selectedCardStore.get().filter(c => c !== selectionId));
-      target.y = 0;
+      if (selectedWaySelectionId === selectionId) {
+        selectedWaySelectionId = null;
+        selectedWayId = null;
+      }
     }
     else {
+      if (selectedWaySelectionId !== null && selectedWaySelectionId !== selectionId) {
+        selectedWaySelectionId = null;
+        selectedWayId = null;
+      }
       selectedCardStore.set(selectedCardStore.get().concat(selectionId));
-      target.y = -10;
     }
 
+    hideWayTooltip();
+    syncSelectionOffsets();
     validate();
   };
 
@@ -155,8 +353,18 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
     if (idx !== -1) {
       (selectableCardIds as CardId[])[idx] = tempCard.id;
       view.on('pointerdown', cardPointerDownListener)
+      if (showWayPicker && baseCard.type.includes('ACTION')) {
+        view.on('pointerover', () => {
+          cancelWayTooltipClose();
+          showWayTooltipForCard(view);
+        });
+        view.on('pointerout', () => {
+          scheduleWayTooltipClose();
+        });
+      }
       view.on('removed', cardRemovedListener);
     }
+    selectionViewById.set(tempCard.id, view);
     cardList.addChild(view);
   }
 
@@ -164,8 +372,6 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
   const cardLikeList = new List({ type: 'horizontal' });
   cardLikeList.elementsMargin = cardLikeCount > 6 ? -CARD_WIDTH * .5 : STANDARD_GAP;
 
-  // Snapshot match once for consistent landscape resolution during render.
-  const match = matchStore.get();
   for (const cardLikeId of cardLikeIds) {
     const cardLike = findCardLikeInMatch(match, cardLikeId);
 
@@ -201,6 +407,7 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
       view.on('pointerdown', cardPointerDownListener);
       view.on('removed', cardRemovedListener);
     }
+    selectionViewById.set(displayId, view);
     cardLikeList.addChild(view);
   }
 

@@ -25,6 +25,7 @@ export const userPromptModal = (
     let validationBtn: AppButton;
     let contentView: Container;
     let contentResults: unknown;
+    let selectedWayId: number | null | undefined = undefined;
     // Cache validation updates that happen before buttons render.
     let validationState: boolean | null = null;
 
@@ -63,11 +64,15 @@ export const userPromptModal = (
       const result = isNumberInput
         ? (shouldEmitValue ? (actionArgs?.result ?? contentResults) : actionArgs?.result)
         : (actionArgs?.result ?? contentResults);
-
-      resolve({
+      const response: { action?: string | number; result?: unknown; selectedWayId?: number | null } = {
         action: actionArgs?.action,
-        result
-      });
+        result,
+      };
+      if (selectedWayId !== undefined) {
+        response.selectedWayId = selectedWayId;
+      }
+
+      resolve(response);
 
       cleanup();
     }
@@ -121,6 +126,10 @@ export const userPromptModal = (
 
         contentView.on('resultsUpdated', result => {
           contentResults = result;
+        });
+
+        contentView.on('selectedWayUpdated', (wayId: number | null) => {
+          selectedWayId = wayId;
         });
 
         contentView.x = Math.floor(-contentView.width * .5);

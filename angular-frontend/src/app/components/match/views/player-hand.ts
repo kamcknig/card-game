@@ -1,4 +1,4 @@
-import { Container, Graphics, Text } from 'pixi.js';
+import { Container, FederatedPointerEvent, Graphics, Text } from 'pixi.js';
 import { cardStore } from '../../../state/card-state';
 import { Card, CardLikeId, CardType, Match, TokenDefinition, TokenId, TokenInstance } from 'shared/types';
 import { atom, computed } from 'nanostores';
@@ -54,6 +54,11 @@ export class PlayerHandView extends Container {
   private _currentStateIds: CardLikeId[] = [];
   // Track current artifact ids affecting this player for the artifacts modal.
   private _currentArtifactIds: CardLikeId[] = [];
+
+  // Restricts button interactions to primary-click/tap so right-click can be reserved for detail views.
+  private isPrimaryInteraction(event: FederatedPointerEvent) {
+    return event.button !== 2;
+  }
 
   constructor(
     private playerId: number,
@@ -125,12 +130,25 @@ export class PlayerHandView extends Container {
 
     this._playAllTreasuresButton.button.label = 'playAllTreasureButton';
     this._playAllTreasuresButton.button.visible = false;
-    this._playAllTreasuresButton.button.on('pointerdown', () => {
+    this._playAllTreasuresButton.button.on('pointerdown', (event: FederatedPointerEvent) => {
+      if (!this.isPrimaryInteraction(event)) {
+        return;
+      }
       this.emit('playAllTreasure');
     });
     this.addChild(this._playAllTreasuresButton.button);
-    this._statesButton.button.on('pointerdown', () => this.openStatesModal());
-    this._artifactsButton.button.on('pointerdown', () => this.openArtifactsModal());
+    this._statesButton.button.on('pointerdown', (event: FederatedPointerEvent) => {
+      if (!this.isPrimaryInteraction(event)) {
+        return;
+      }
+      this.openStatesModal();
+    });
+    this._artifactsButton.button.on('pointerdown', (event: FederatedPointerEvent) => {
+      if (!this.isPrimaryInteraction(event)) {
+        return;
+      }
+      this.openArtifactsModal();
+    });
 
     this.updatePlayAllTreasureVisibility();
     this.updateButtonLayout();
@@ -142,7 +160,10 @@ export class PlayerHandView extends Container {
         (match, tokenDefinitions) => ({ match, tokenDefinitions })
       ).subscribe(({ match, tokenDefinitions }) => this.drawTokenTray(match, tokenDefinitions))
     );
-    this._nextPhaseButton.button.on('pointerdown', () => {
+    this._nextPhaseButton.button.on('pointerdown', (event: FederatedPointerEvent) => {
+      if (!this.isPrimaryInteraction(event)) {
+        return;
+      }
       this.emit('nextPhase');
     });
     this.on('removed', this.onRemoved);
