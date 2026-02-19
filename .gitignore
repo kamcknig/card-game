@@ -3,6 +3,7 @@ node_modules/
 dist/
 *.tsbuildinfo
 logs/
+/server/game-data/
 .env
 server/.env
 banned-kingdoms.json
