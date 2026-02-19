@@ -323,6 +323,8 @@ export class MatchScene extends Scene {
   }
 
   private onUserPrompt = async (signalId: string, args: UserPromptActionArgs) => {
+    const waitForInput = args.waitForInput ?? true;
+
     if (currentPlayerTurnIdStore.get() !== this._selfId) {
       try {
         const s = new Audio(`./assets/sounds/your-turn.mp3`);
@@ -332,7 +334,7 @@ export class MatchScene extends Scene {
         console.error('Could not play start turn sound');
       }
     }
-    if (args.content?.type === 'select-pile') {
+    if (waitForInput && args.content?.type === 'select-pile') {
       await this.doSelectPiles(signalId, args);
       return;
     }
@@ -347,7 +349,9 @@ export class MatchScene extends Scene {
         args,
         this._selfId
       );
-      this._socketService.emit('userInputReceived', signalId, result);
+      if (waitForInput) {
+        this._socketService.emit('userInputReceived', signalId, result);
+      }
     } finally {
       this._selecting = false;
       promptInteractionLockStore.set(false);

@@ -1081,10 +1081,27 @@ export class GameActionController implements GameActionDefinitionMap {
 
   async userPrompt(args: UserPromptActionArgs) {
     const { playerId } = args;
+    // Default prompt behavior waits for input unless explicitly marked display-only.
+    const waitForInput = args.waitForInput ?? true;
 
     const signalId = `userPrompt:${playerId}:${Date.now()}`;
 
     const player = getPlayerById(this.match, playerId);
+    if (!waitForInput) {
+      // Display-only prompts are ignored for computer players.
+      if (player?.isComputer) {
+        return null;
+      }
+      const socket = this.socketMap.get(playerId);
+      if (!socket) {
+        this.loggerService.debug(`[userPrompt] No socket for player ${playerId}`);
+        return null;
+      }
+      this.loggerService.debug(`[userPrompt] dispatching display-only prompt to player ${playerId}`);
+      socket.emit('userPrompt', signalId, args);
+      return null;
+    }
+
     if (player?.isComputer) {
       // Computer players always pick the first available action button when prompted.
       if (args.content?.type === 'select-pile') {
@@ -1777,9 +1794,17 @@ export class GameActionController implements GameActionDefinitionMap {
       }
     };
 
+    // Show a non-blocking received-boon modal.
+    const receivedBoonPlayerName = getPlayerById(this.match, args.playerId)?.name ?? `Player ${args.playerId}`;
+    await this.actionService.run('userPrompt', {
+      playerId: args.playerId,
+      prompt: `${receivedBoonPlayerName} received a Boon`,
+      content: { type: 'display-cards', cardLikeIds: [boonId] },
+      waitForInput: false,
+    });
+
     // Helper to resolve the boon effect and handle discard logic.
     const resolveBoon = async (source: string) => {
-      // TODO: Surface the received boon to the player via detail modal or prompt.
       const effectFn = this.boonEffectFunctionMap[boon.cardKey];
 
       if (effectFn) {
@@ -1900,42 +1925,59 @@ export class GameActionController implements GameActionDefinitionMap {
       }
     }
 
+    // Narrow the resolved hex/hexId for the remaining resolution flow.
+    if (hexId === undefined || !hex) {
+      this.loggerService.warn('[receiveHex action] hex resolution incomplete, skipping');
+      return;
+    }
+    const resolvedHexId = hexId;
+    const resolvedHex = hex;
+
     // Remove the hex from deck/discard if it was already staged there.
-    const deckIndex = this.match.hexes.deck.indexOf(hexId);
+    const deckIndex = this.match.hexes.deck.indexOf(resolvedHexId);
     if (deckIndex !== -1) {
       this.match.hexes.deck.splice(deckIndex, 1);
     }
-    const discardIndex = this.match.hexes.discard.indexOf(hexId);
+    const discardIndex = this.match.hexes.discard.indexOf(resolvedHexId);
     if (discardIndex !== -1) {
       this.match.hexes.discard.splice(discardIndex, 1);
     }
 
-    const effectFn = this.hexEffectFunctionMap[hex.cardKey];
+    // Show a non-blocking received-hex modal before resolving hex effects.
+    const receivedHexPlayerName = getPlayerById(this.match, args.playerId)?.name ?? `Player ${args.playerId}`;
+    await this.actionService.run('userPrompt', {
+      playerId: args.playerId,
+      prompt: `${receivedHexPlayerName} received a Hex`,
+      content: { type: 'display-cards', cardLikeIds: [resolvedHexId] },
+      waitForInput: false,
+    });
+
+    const effectFn = this.hexEffectFunctionMap[resolvedHex.cardKey];
     if (effectFn) {
-      this.loggerService.debug(`[receiveHex action] running effect for ${hex}`);
+      this.loggerService.debug(`[receiveHex action] running effect for ${resolvedHex}`);
 
       const effectContext = this.createCardEffectContext({
-        cardId: hexId,
+        cardId: resolvedHexId,
         playerId: args.playerId,
       });
 
       // Run hex effects with standardized logging.
       await this.runEffectWithLogging({
-        source: hex.toString(),
+        source: resolvedHex.toString(),
         sourceType: 'hex',
         playerId: args.playerId,
         effectFn,
         context: effectContext,
       });
     } else {
-      this.loggerService.debug(`[receiveHex action] no effect registered for ${hex.cardKey}`);
+      this.loggerService.debug(`[receiveHex action] no effect registered for ${resolvedHex.cardKey}`);
     }
 
     // Received hexes always go to the discard pile after resolving.
-    this.match.hexes.discard.push(hexId);
-    this.loggerService.debug(`[receiveHex action] discarded ${hex}`);
+    this.match.hexes.discard.push(resolvedHexId);
+    this.loggerService.debug(`[receiveHex action] discarded ${resolvedHex}`);
 
-    return hexId;
+    return resolvedHexId;
   }
 
   // Assigns a state to a player and registers its effect triggers.

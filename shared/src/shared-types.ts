@@ -337,6 +337,8 @@ export type UserPromptActionArgs = {
   content?: UserPromptKinds;
   actionButtons?: ActionButtons;
   validationAction?: number;
+  // When false, the prompt is display-only and the server will not wait for user input.
+  waitForInput?: boolean;
 }
 
 export const TurnPhaseOrderValues = ['action', 'buy', 'night', 'cleanup'] as const;
