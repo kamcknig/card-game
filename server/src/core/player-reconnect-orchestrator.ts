@@ -43,6 +43,11 @@ export class PlayerReconnectOrchestrator {
     });
   }
 
+  // Unbinds gameplay listeners from a socket when that player leaves the active match.
+  public unbindGameplaySocketListeners(socket?: AppSocket) {
+    this.matchSocketBindings.unbindGameplaySocketHandlers(socket);
+  }
+
   // Rehydrates a reconnecting client and resumes turn flow when appropriate.
   public playerReconnected(playerId: PlayerId, socket: AppSocket) {
     this.loggerService.info(`[match] player ${playerId} reconnecting`);

@@ -18,4 +18,17 @@ export class MatchSocketBindings {
     socket.on('spendVillager', handlers.onSpendVillager);
     socket.on('payDebt', handlers.onPayDebt);
   }
+
+  // Removes gameplay-phase handlers so sockets can safely return to lobby context.
+  public unbindGameplaySocketHandlers(socket?: AppSocket) {
+    if (!socket) {
+      return;
+    }
+
+    socket.off('nextPhase');
+    socket.off('searchCards');
+    socket.off('exchangeCoffer');
+    socket.off('spendVillager');
+    socket.off('payDebt');
+  }
 }

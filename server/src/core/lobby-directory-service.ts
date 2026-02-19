@@ -235,8 +235,8 @@ export class LobbyDirectoryService {
       record.game.expansionLoaded(expansion);
     }
 
-    // Push refreshed landscape catalog so clients can update local search caches.
-    this.io.in(LobbyDirectoryService.LOBBY_ROOM_NAME).emit(
+    // Push refreshed searchable catalog to all connected clients, including those inside game rooms.
+    this.io.emit(
       'setSelectableSearchCatalog',
       this.expansionSearchService.getSelectableSearchCatalog(),
     );
@@ -512,6 +512,8 @@ export class LobbyDirectoryService {
     // Notify client-side routing/state which game is now active.
     socket.emit('joinedLobbyGame', gameId);
     socket.emit('debugRuntimeContext', record.game.getDebugRuntimeContext());
+    // Ensure clients entering a game room still receive the latest searchable catalog.
+    this.emitSelectableSearchCatalog(socket);
     this.loggerService.info(`[lobby directory] session ${sessionId} joined ${gameId}`);
     this.handleGameStateChanged(gameId);
   }

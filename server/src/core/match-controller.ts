@@ -372,6 +372,23 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this.socketMap.delete(playerId);
   }
 
+  // Detaches match gameplay listeners from one socket when the player leaves but remains connected.
+  public detachPlayerGameplaySocketListeners(playerId: PlayerId): void {
+    const socket = this.socketMap.get(playerId);
+    if (!socket) {
+      this.loggerService.debug(`[match] no socket found for player ${playerId} while detaching gameplay listeners`);
+      return;
+    }
+
+    this.loggerService.debug(`[match] detaching gameplay listeners for player ${playerId}`);
+    this.interactivityController.playerRemoved(socket);
+    this.playerReconnectOrchestrator.unbindGameplaySocketListeners(socket);
+    socket.off('clientReady', this.onClientReady);
+    for (const event of this._registeredEvents) {
+      socket.off(event);
+    }
+  }
+
   // Adds and flushes a player-left log entry so clients see resignation immediately.
   public logPlayerLeft(playerId: PlayerId): void {
     this.logManager.addLogEntry({

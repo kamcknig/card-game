@@ -237,7 +237,9 @@ export class CardInteractivityController {
     const player = getPlayerById(this.match, playerId);
 
     if (!player) {
-      throw new Error('could not find player');
+      // Stale socket events can arrive after a player leaves or a match is cleared.
+      this.loggerService.warn(`[card interactivity] could not find player ${playerId} for landscape tap ${cardId}`);
+      return;
     }
 
     this.loggerService.info(`[card interactivity] ${player} tapped landscape ${cardId}`);
@@ -285,7 +287,9 @@ export class CardInteractivityController {
     const player = getPlayerById(this.match, playerId);
 
     if (!player) {
-      throw new Error('could not find player');
+      // Stale socket events can arrive after a player leaves or a match is cleared.
+      this.loggerService.warn(`[card interactivity] could not find player ${playerId} for card tap ${cardId}`);
+      return;
     }
 
     this.loggerService.info(`[card interactivity] pl${player} tapped card ${this.cardLibrary.getCard(cardId)}`);
@@ -403,7 +407,11 @@ export class CardInteractivityController {
     const player = getPlayerById(this.match, playerId);
 
     if (!player) {
-      throw new Error('could not find player');
+      // Stale socket events can arrive after a player leaves or a match is cleared.
+      this.loggerService.warn(
+        `[card interactivity] could not find player ${playerId} for way tap card=${cardId} way=${wayId}`,
+      );
+      return;
     }
 
     this.loggerService.info(`[card interactivity] ${player} tapped card ${cardId} as way ${wayId}`);

@@ -248,6 +248,8 @@ export class GameLobbySessionCoordinatorService {
 
     const socket = state.socketMap.get(player.id);
     if (socket) {
+      // Remove gameplay listeners first so any in-flight client events from the old match are ignored.
+      state.matchController?.detachPlayerGameplaySocketListeners(player.id);
       this.lobbySocketBindings.unbindPlayerLobbyHandlers(socket);
       this.lobbySocketBindings.unbindOwnerLobbyHandlers(socket);
       socket.leave(state.roomName);

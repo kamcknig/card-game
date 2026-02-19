@@ -352,6 +352,8 @@ export class MatchConfigurationComponent implements OnDestroy {
   // Opens a single shared selection modal configured for the requested selection type.
   openSelectionModal(kind: SelectionModalKind) {
     if (!this.isGameOwner()) return;
+    // Refresh searchable catalog on demand so modal results remain valid even after reconnect or late expansion loads.
+    this._socketService.emit('requestSelectableSearchCatalog');
 
     switch (kind) {
       case 'bannedKingdom':
