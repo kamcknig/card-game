@@ -1,11 +1,12 @@
 import { Container, ContainerOptions, Graphics } from 'pixi.js';
-import { events, landmarks, projects } from '../../../state/match-logic';
-import { Event, Landmark, Project } from 'shared/types';
+import { events, landmarks, projects, ways } from '../../../state/match-logic';
+import { Event, Landmark, Project, Way } from 'shared/types';
 import { EVENT_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
 
 import { EventCard } from './event-card';
 import { LandmarkCard } from './landmark-card';
 import { ProjectCard } from './project-card';
+import { WayCard } from './way-card';
 import { getPixiSceneTheme } from '../../../theme/pixi-theme';
 
 export class OtherCardLikeView extends Container {
@@ -15,9 +16,11 @@ export class OtherCardLikeView extends Container {
   private eventContainer: Container = new Container({ label: 'eventContainer' });
   private landmarkContainer: Container = new Container({ label: 'landmarkContainer' });
   private projectContainer: Container = new Container({ label: 'projectContainer' });
+  private wayContainer: Container = new Container({ label: 'wayContainer' });
   private currentEvents: readonly Event[] = [];
   private currentLandmarks: readonly Landmark[] = [];
   private currentProjects: readonly Project[] = [];
+  private currentWays: readonly Way[] = [];
 
   constructor(args: ContainerOptions) {
     super(args);
@@ -34,6 +37,10 @@ export class OtherCardLikeView extends Container {
       this.currentProjects = projectList;
       this.draw();
     });
+    const waysSub = ways.subscribe(wayList => {
+      this.currentWays = wayList;
+      this.draw();
+    });
 
     this.addChild(this.background);
 
@@ -42,12 +49,14 @@ export class OtherCardLikeView extends Container {
     this.cardContainer.addChild(this.eventContainer);
     this.cardContainer.addChild(this.landmarkContainer);
     this.cardContainer.addChild(this.projectContainer);
+    this.cardContainer.addChild(this.wayContainer);
     this.addChild(this.cardContainer);
 
     this.on('removed', () => {
       eventsSub();
       landmarksSub();
       projectsSub();
+      waysSub();
     });
   }
 
@@ -55,10 +64,16 @@ export class OtherCardLikeView extends Container {
     this.drawEvents(this.currentEvents);
     this.drawLandmarks(this.currentLandmarks);
     this.drawProjects(this.currentProjects);
+    this.drawWays(this.currentWays);
 
     this.background.clear();
 
-    if (this.currentEvents.length > 0 || this.currentLandmarks.length > 0 || this.currentProjects.length > 0) {
+    if (
+      this.currentEvents.length > 0
+      || this.currentLandmarks.length > 0
+      || this.currentProjects.length > 0
+      || this.currentWays.length > 0
+    ) {
       this.background.roundRect(0, 0, this.cardContainer.width + STANDARD_GAP * 2, this.cardContainer.height + STANDARD_GAP * 2, 5);
       this.background.stroke({ color: this._pixiTheme.ui.panelBorder, width: 1.5 });
       this.background.fill({ color: this._pixiTheme.overlay.color, alpha: this._pixiTheme.overlay.mediumAlpha });
@@ -92,8 +107,8 @@ export class OtherCardLikeView extends Container {
         this.landmarkContainer.addChild(cardContainer);
       }
 
-    cardContainer.landmark = landmark;
-  }
+      cardContainer.landmark = landmark;
+    }
 
     this.landmarkContainer.y = this.eventContainer.height > 0
       ? this.eventContainer.height + STANDARD_GAP
@@ -117,9 +132,35 @@ export class OtherCardLikeView extends Container {
     const eventRowHeight = this.eventContainer.height > 0
       ? this.eventContainer.height + STANDARD_GAP
       : 0;
-    const baseY = this.landmarkContainer.height > 0
-      ? this.landmarkContainer.y + this.landmarkContainer.height + STANDARD_GAP
-      : eventRowHeight;
-    this.projectContainer.y = baseY;
+    const landmarkRowHeight = this.landmarkContainer.height > 0
+      ? this.landmarkContainer.height + STANDARD_GAP
+      : 0;
+    this.projectContainer.y = eventRowHeight + landmarkRowHeight;
+  }
+
+  // Draws the way row beneath projects when present.
+  private drawWays(wayList: readonly Way[]) {
+    for (const way of wayList) {
+      let cardContainer = this.wayContainer.getChildByLabel(way.cardKey) as WayCard;
+
+      if (!cardContainer) {
+        cardContainer = new WayCard({ label: way.cardKey, way });
+        cardContainer.x = this.wayContainer.children.length * (EVENT_WIDTH + STANDARD_GAP);
+        this.wayContainer.addChild(cardContainer);
+      }
+
+      cardContainer.way = way;
+    }
+
+    const eventRowHeight = this.eventContainer.height > 0
+      ? this.eventContainer.height + STANDARD_GAP
+      : 0;
+    const landmarkRowHeight = this.landmarkContainer.height > 0
+      ? this.landmarkContainer.height + STANDARD_GAP
+      : 0;
+    const projectRowHeight = this.projectContainer.height > 0
+      ? this.projectContainer.height + STANDARD_GAP
+      : 0;
+    this.wayContainer.y = eventRowHeight + landmarkRowHeight + projectRowHeight;
   }
 }

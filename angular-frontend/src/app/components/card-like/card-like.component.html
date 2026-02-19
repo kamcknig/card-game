@@ -2,7 +2,7 @@
 <div class="card-container" (contextmenu)="onContextMenu($event)">
   <img
     class="card-image"
-    [ngSrc]="path ?? ''"
+    [ngSrc]="path() ?? ''"
     (error)="onImageError()"
     width="{{CARD_WIDTH}}"
     height="20"

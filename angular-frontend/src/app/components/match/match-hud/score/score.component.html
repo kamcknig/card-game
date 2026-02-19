@@ -1,21 +1,20 @@
 <div class="content">
-  @let victoryTokens = victoryTokens$ | async;
+  @let victoryTokenCounts = victoryTokens();
 
   <div class="player-scores-container">
-    @for (playerScore of (getOrderedPlayerScores() | async); track playerScore?.id) {
-      @if (playerScore !== undefined) {
-        @let isCurrentPlayer = (currentPlayerTurnId$ | async) === playerScore.id;
+    @for (playerScore of orderedPlayerScores(); track playerScore.id) {
+        @let isCurrentPlayer = currentPlayerTurnId() === playerScore.id;
         <div
           class="player-score-container"
           [ngClass]="{'current-player': isCurrentPlayer}"
-          [style.borderColor]="isCurrentPlayer ? (getPlayerColor(playerScore.id) | async) : null"
-          [style.boxShadow]="isCurrentPlayer ? 'inset 10px 0 0 ' + (getPlayerColor(playerScore.id) | async) : null"
-          [style.backgroundColor]="getBackgroundColor(playerScore.id) | async"
+          [style.borderColor]="isCurrentPlayer ? playerScore.borderColor : null"
+          [style.boxShadow]="isCurrentPlayer ? 'inset 10px 0 0 ' + playerScore.borderColor : null"
+          [style.backgroundColor]="playerScore.backgroundColor"
         >
           <span class="player-name">{{ playerScore.name }}</span>
 
           <div style="display: flex; align-items: center; gap: 10px;">
-            @if ((victoryTokens?.[playerScore.id] ?? 0) > 0) {
+            @if ((victoryTokenCounts[playerScore.id] ?? 0) > 0) {
               <div style="position:relative; display: flex; align-items: center;">
                 <img
                   class="victory-token-icon"
@@ -24,13 +23,12 @@
                   height="24"
                   alt="victory point token"
                 >
-                <span class="victory-token-count">{{ (victoryTokens$ | async)?.[playerScore.id] ?? 0 }}</span>
+                <span class="victory-token-count">{{ victoryTokenCounts[playerScore.id] ?? 0 }}</span>
               </div>
             }
             <span style="font-size: 18px;">{{ playerScore.score }}</span>
           </div>
         </div>
-      }
     }
   </div>
 </div>

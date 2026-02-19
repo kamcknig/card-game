@@ -1,4 +1,4 @@
-import { ArtifactNoId, CardNoId, EventNoId, LandmarkNoId, ProjectNoId } from 'shared/types/index.ts';
+import { ArtifactNoId, CardNoId, EventNoId, LandmarkNoId, ProjectNoId, WayNoId } from 'shared/types/index.ts';
 import Fuse, { IFuseOptions } from 'fuse.js';
 import { ExpansionCatalogService } from './expansion-catalog-service.ts';
 import { LoggerService } from './logger-service.ts';
@@ -10,6 +10,7 @@ export class ExpansionSearchService {
   private _landmarkFuse: Fuse<LandmarkNoId> | undefined;
   private _artifactFuse: Fuse<ArtifactNoId> | undefined;
   private _projectFuse: Fuse<ProjectNoId> | undefined;
+  private _wayFuse: Fuse<WayNoId> | undefined;
 
   constructor(
     private readonly expansionCatalogService: ExpansionCatalogService,
@@ -24,19 +25,35 @@ export class ExpansionSearchService {
     this.loggerService.info('[expansion search] rebuilding all indexes');
     const rawCardLibrary = this.expansionCatalogService.getRawCardLibrary();
     const expansionLibrary = this.expansionCatalogService.getExpansionLibrary();
-    this._cardFuse = this.createFuse(Object.values(rawCardLibrary));
-    this._eventFuse = this.createFuse(
-      Object.values(expansionLibrary).flatMap((expansion) => Object.values(expansion.events ?? {})),
+    const cards = Object.values(rawCardLibrary);
+    const events = Object.values(expansionLibrary).flatMap((expansion) => Object.values(expansion.events ?? {}));
+    const landmarks = Object.values(expansionLibrary).flatMap((expansion) => Object.values(expansion.landmarks ?? {}));
+    const artifacts = Object.values(expansionLibrary).flatMap((expansion) => Object.values(expansion.artifacts ?? {}));
+    const projects = Object.values(expansionLibrary).flatMap((expansion) => Object.values(expansion.projects ?? {}));
+    this._cardFuse = this.createFuse(cards);
+    this._eventFuse = this.createFuse(events);
+    this._landmarkFuse = this.createFuse(landmarks);
+    this._artifactFuse = this.createFuse(artifacts);
+    this._projectFuse = this.createFuse(projects);
+    const expansionWays = Object.values(expansionLibrary).flatMap((expansion) => Object.values(expansion.ways ?? {}));
+    // Fallback source: allow WAY-typed entries from raw card templates so search still works
+    // while an expansion is transitioning to dedicated way-library files.
+    const rawWayCards = Object.values(rawCardLibrary)
+      .filter((card) => (card.type ?? []).includes('WAY'))
+      .map((card) => card as unknown as WayNoId);
+    const wayByKey = new Map<string, WayNoId>();
+    for (const way of [...expansionWays, ...rawWayCards]) {
+      wayByKey.set(way.cardKey, way);
+    }
+    const ways = [...wayByKey.values()];
+    this._wayFuse = this.createFuse(ways);
+    this.loggerService.debug(
+      `[expansion search] index sizes cards=${cards.length} events=${events.length} landmarks=${landmarks.length} artifacts=${artifacts.length} projects=${projects.length} ways=${ways.length}`,
     );
-    this._landmarkFuse = this.createFuse(
-      Object.values(expansionLibrary).flatMap((expansion) => Object.values(expansion.landmarks ?? {})),
-    );
-    this._artifactFuse = this.createFuse(
-      Object.values(expansionLibrary).flatMap((expansion) => Object.values(expansion.artifacts ?? {})),
-    );
-    this._projectFuse = this.createFuse(
-      Object.values(expansionLibrary).flatMap((expansion) => Object.values(expansion.projects ?? {})),
-    );
+    if (ways.length < 1) {
+      // Surface empty-way index explicitly to make way-search diagnostics obvious.
+      this.loggerService.warn('[expansion search] ways index is empty; way searches will return zero results');
+    }
   }
 
   // Returns kingdom-selectable cards across all loaded expansions for a search term.
@@ -63,6 +80,13 @@ export class ExpansionSearchService {
   // Returns matching projects for a search term.
   public searchProjects(searchStr: string): ProjectNoId[] {
     return this._projectFuse?.search(searchStr).map((result) => result.item) ?? [];
+  }
+
+  // Returns matching ways for a search term.
+  public searchWays(searchStr: string): WayNoId[] {
+    const ways = this._wayFuse?.search(searchStr).map((result) => result.item) ?? [];
+    this.loggerService.debug(`[expansion search] ways search '${searchStr}' returned ${ways.length} way card(s)`);
+    return ways;
   }
 
   // Builds a Fuse index for card-like search by display name.

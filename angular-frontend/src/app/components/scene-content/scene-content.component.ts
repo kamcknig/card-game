@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { SceneBannerComponent } from '../scene-banner/scene-banner.component';
 
 @Component({
@@ -11,6 +11,6 @@ import { SceneBannerComponent } from '../scene-banner/scene-banner.component';
 })
 export class SceneContentComponent {
   // Optional secondary line shown under the banner title.
-  @Input() subtitle: string | null | undefined;
+  subtitle = input<string | null | undefined>(undefined);
 }
 

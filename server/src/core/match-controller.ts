@@ -246,6 +246,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this.matchSetupService.createLandmarks(this._matchConfiguration);
       // Projects are landscape card-likes that should be created alongside events.
       this.matchSetupService.createProjects(this._matchConfiguration);
+      // Ways are landscape card-likes that should be created alongside events/projects.
+      this.matchSetupService.createWays(this._matchConfiguration);
       // Boons are initialized after events/landmarks if Fate cards are present.
       this.matchSetupService.createBoons(this._matchConfiguration);
       // Hexes are initialized after boons if Doom cards are present.
@@ -368,6 +370,17 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this.socketMap.get(playerId)?.offAnyIncoming();
     this.interactivityController.playerRemoved(this.socketMap.get(playerId));
     this.socketMap.delete(playerId);
+  }
+
+  // Adds and flushes a player-left log entry so clients see resignation immediately.
+  public logPlayerLeft(playerId: PlayerId): void {
+    this.logManager.addLogEntry({
+      root: true,
+      type: 'playerLeft',
+      playerId,
+      reason: 'resigned',
+    });
+    this.logManager.flushQueue();
   }
 
   public getMatchSnapshot(): Match {

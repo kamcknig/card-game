@@ -1,42 +1,75 @@
-<app-score #scoreView [playerScores]="playerScore$ | async"></app-score>
+<app-score #scoreView [playerScores]="playerScore()"></app-score>
 
 <div class="mat-tab-content">
-  @let trashMat = trashMat$ | async;
-  @if (trashMat) {
+  @let trashMatValue = trashMat();
+  @if (trashMatValue) {
     <app-mat-tab
-      [mat]="trashMat"
-      (click)="visibleMat === trashMat ? stickyMat = !stickyMat : visibleMat = trashMat"
-      (mouseenter)="!stickyMat ? visibleMat = trashMat : null"
-      (mouseleave)="!stickyMat ? visibleMat = null : null">
+      [mat]="trashMatValue"
+      (click)="onMatClick(trashMatValue)"
+      (mouseenter)="onMatMouseEnter(trashMatValue)"
+      (mouseleave)="onMatMouseLeave(trashMatValue)">
     </app-mat-tab>
   }
-  @let setAsideMat = setAsideMat$ | async;
-  @if (setAsideMat) {
+  @let setAsideMatValue = setAsideMat();
+  @if (setAsideMatValue) {
     <app-mat-tab
-      [mat]="setAsideMat"
-      (click)="visibleMat === setAsideMat ? stickyMat = !stickyMat : visibleMat = setAsideMat"
-      (mouseenter)="!stickyMat ? visibleMat = setAsideMat : null"
-      (mouseleave)="!stickyMat ? visibleMat = null : null">
+      [mat]="setAsideMatValue"
+      (click)="onMatClick(setAsideMatValue)"
+      (mouseenter)="onMatMouseEnter(setAsideMatValue)"
+      (mouseleave)="onMatMouseLeave(setAsideMatValue)">
     </app-mat-tab>
   }
-  @for (mat of selfMats$ | async; track mat.mat) {
+  @for (mat of selfMats(); track mat.mat) {
     <app-mat-tab
       [mat]="mat"
-      (click)="visibleMat === mat ? stickyMat = !stickyMat : visibleMat = mat"
-      (mouseenter)="!stickyMat ? visibleMat = mat : null"
-      (mouseleave)="!stickyMat ? visibleMat = null : null">
+      (click)="onMatClick(mat)"
+      (mouseenter)="onMatMouseEnter(mat)"
+      (mouseleave)="onMatMouseLeave(mat)">
     </app-mat-tab>
   }
 </div>
 
-<app-game-log [entries]="logEntries$ | async"></app-game-log>
+<app-game-log [entries]="logEntries()"></app-game-log>
 
-@if ((disconnectedHumans$ | async)?.length) {
+<div class="hud-menu">
+  <button
+    class="hud-menu-icon resign-button"
+    title="Resign and leave game"
+    aria-label="Resign and leave game"
+    (click)="onResignMatch()"
+  >
+    ⚑
+  </button>
+  <button
+    class="hud-menu-icon"
+    title="Toggle debug overlay"
+    aria-label="Toggle debug overlay"
+    (click)="toggleDebugOverlay()"
+  >
+    <span class="debug-icon-gear">⚙</span>
+    <span class="debug-icon-question">?</span>
+  </button>
+</div>
+
+@if (debugOverlayVisible()) {
+  @let runtimeContext = debugRuntimeContext();
+  @if (runtimeContext) {
+    <div class="debug-runtime-overlay">
+      <div class="debug-runtime-title">Debug Runtime</div>
+      <div class="debug-runtime-row"><span>Game:</span> <span>{{ runtimeContext.gameName }}</span></div>
+      <div class="debug-runtime-row"><span>Game ID:</span> <span>{{ runtimeContext.gameId }}</span></div>
+      <div class="debug-runtime-row"><span>Match ID:</span> <span>{{ runtimeContext.matchScopeId ?? 'n/a' }}</span></div>
+    </div>
+  }
+}
+
+@let disconnectedPlayers = disconnectedHumans();
+@if (disconnectedPlayers.length) {
   <div class="disconnect-overlay">
     <div class="disconnect-card">
       <div class="disconnect-title">Player disconnected</div>
       <div class="disconnect-names">
-        @for (player of disconnectedHumans$ | async; track player.id) {
+        @for (player of disconnectedPlayers; track player.id) {
           <div class="disconnect-name">{{ player.name }}</div>
         }
       </div>
@@ -47,12 +80,13 @@
   </div>
 }
 
-@if (visibleMat) {
+@let currentVisibleMat = visibleMat();
+@if (currentVisibleMat) {
   <div class="mat-modal-backdrop">
     <div class="mat-modal-content">
-      <div class="mat-modal-title">{{ visibleMat.mat }}</div>
+      <div class="mat-modal-title">{{ currentVisibleMat.mat }}</div>
       <div class="player-flex-container">
-        @for (playerMatContent of visibleMatContent; track playerMatContent.id) {
+        @for (playerMatContent of visibleMatContent(); track playerMatContent.id) {
           <div class="player-item">
             @if(playerMatContent.playerName) {
               <div class="player-name">{{ playerMatContent.playerName }}</div>
@@ -61,7 +95,7 @@
               @for (cardId of playerMatContent.cardIds; track cardId) {
               <div class="card-item">
                   <!-- Set-aside renders card-likes so boons are visible to all players. -->
-                  @if (visibleMat.mat === 'set-aside') {
+                  @if (currentVisibleMat.mat === 'set-aside') {
                     <app-card-like
                       [size]="'half'"
                       [cardLikeId]="cardId"
@@ -82,7 +116,7 @@
       </div>
       <div
         class="close-button"
-        (mousedown)="visibleMat = null; stickyMat = false"
+        (mousedown)="closeVisibleMat()"
       >X
       </div>
     </div>

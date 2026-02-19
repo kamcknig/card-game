@@ -16,6 +16,8 @@ import {
   ProjectNoId,
   State,
   StateNoId,
+  Way,
+  WayNoId,
 } from 'shared/types/index.ts';
 import { formatCardName } from '../utils/format-card-name.ts';
 import { ExpansionCatalogService } from './expansion-catalog-service.ts';
@@ -82,6 +84,14 @@ export class CardInstanceFactoryService {
   public createProject(project: ProjectNoId): Project {
     return new Project({
       ...project,
+      id: ++this._cardCount,
+    });
+  }
+
+  // Creates a way instance.
+  public createWay(way: WayNoId): Way {
+    return new Way({
+      ...way,
       id: ++this._cardCount,
     });
   }

@@ -1,10 +1,13 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Inject, Input, ViewChild } from '@angular/core';
-import { DomSanitizer } from '@angular/platform-browser';
+import { AfterViewInit, ChangeDetectionStrategy, Component, DestroyRef, ElementRef, computed, inject, input, ViewChild } from '@angular/core';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { NanostoresService } from '@nanostores/angular';
 import { logStore } from '../../../../state/log-state';
 import { finalize, fromEvent, merge, switchMap, takeUntil, throttleTime } from 'rxjs';
 import { LogEntryMessage } from '../../../../../types';
 import { DOCUMENT } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+type SanitizedLogEntry = LogEntryMessage & { safeMessage: SafeHtml; };
 
 @Component({
   selector: 'app-game-log',
@@ -14,22 +17,31 @@ import { DOCUMENT } from '@angular/common';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class GameLogComponent implements AfterViewInit {
+  private readonly _sanitizer = inject(DomSanitizer);
+  private readonly _nanoService = inject(NanostoresService);
+  private readonly _document = inject(DOCUMENT);
+  private readonly _destroyRef = inject(DestroyRef);
+
   @ViewChild('logContent', { read: ElementRef }) logContent!: ElementRef;
   @ViewChild('resizeHandle') resizeHandle!: ElementRef;
 
-  @Input() entries!: readonly LogEntryMessage[] | null;
+  entries = input<readonly LogEntryMessage[] | null>(null);
 
-  constructor(
-    private _sanitizer: DomSanitizer,
-    private _nanoService: NanostoresService,
-    @Inject(DOCUMENT) private _document: Document
-  ) {
-  }
+  // Sanitized log entries ready for innerHTML binding.
+  readonly sanitizedEntries = computed<readonly SanitizedLogEntry[]>(() => {
+    const entries = this.entries() ?? [];
+    return entries.map((entry) => ({
+      ...entry,
+      safeMessage: this._sanitizer.bypassSecurityTrustHtml(entry.message),
+    }));
+  });
 
   ngAfterViewInit() {
-    this._nanoService.useStore(logStore).subscribe(_ => {
-      setTimeout(() => this.logContent.nativeElement.scrollTop = this.logContent.nativeElement.scrollHeight, 10);
-    });
+    this._nanoService.useStore(logStore)
+      .pipe(takeUntilDestroyed(this._destroyRef))
+      .subscribe(() => {
+        setTimeout(() => this.logContent.nativeElement.scrollTop = this.logContent.nativeElement.scrollHeight, 10);
+      });
 
     let startDragX: number;
     let startWidth: number;
@@ -50,6 +62,7 @@ export class GameLogComponent implements AfterViewInit {
             })
           );
         }),
+        takeUntilDestroyed(this._destroyRef),
       )
       .subscribe((event) => {
         let diff = startDragX - event.clientX;
@@ -64,9 +77,5 @@ export class GameLogComponent implements AfterViewInit {
 
         (this.logContent.nativeElement as HTMLElement).style.width = `${newWidth}px`;
       });
-  }
-
-  public sanitize(msg: string) {
-    return this._sanitizer.bypassSecurityTrustHtml(msg);
   }
 }

@@ -58,6 +58,11 @@ When rules conflict, use this order:
 - Serialization/deserialization of match state
 - Keeping JSON schemas up to date with JSON model changes
 
+#### API
+
+- creating api endpoints for new features for debug purposes
+- follow restful principles.
+
 ### Code commits
 
 - NEVER mention AI use without explicit permission.

@@ -2,6 +2,7 @@ import { AppSocket, MatchBaseConfiguration } from '@server-types/index.ts';
 import {
   Card,
   CardId,
+  DebugRuntimeContext,
   ExpansionListElement,
   Match,
   MatchConfiguration,
@@ -127,6 +128,11 @@ export class Game {
     return this.gameName;
   }
 
+  // Exposes the per-game socket room name used for isolation.
+  public get roomName(): string {
+    return this.runtimeState.roomName;
+  }
+
   // Exposes current runtime players for callers that need readonly lobby state.
   public get players(): Player[] {
     return this.runtimeState.players;
@@ -140,6 +146,25 @@ export class Game {
   // Exposes whether gameplay has started.
   public get matchStarted(): boolean {
     return this.runtimeState.matchStarted;
+  }
+
+  // Exposes active match scope identifier for diagnostics.
+  public get matchScopeId(): number | undefined {
+    return this.runtimeState.matchScopeId;
+  }
+
+  // Returns true when the active match controller has completed initialization.
+  public isMatchControllerInitialized(): boolean {
+    return this.runtimeState.matchController?.isInitialized() ?? false;
+  }
+
+  // Returns game + match runtime identifiers used by debug overlays and APIs.
+  public getDebugRuntimeContext(): DebugRuntimeContext {
+    return {
+      gameId: this.runtimeState.gameId,
+      gameName: this.runtimeState.gameName,
+      matchScopeId: this.runtimeState.matchScopeId,
+    };
   }
 
   // Returns true when a player with the session already belongs to this game.
@@ -269,6 +294,13 @@ export class Game {
       // Persist selected projects between sessions.
       this.configStore.persistProjects(newConfig.projects);
       this.defaultMatchConfiguration.projects = structuredClone(newConfig.projects);
+    }
+
+    const waysPatch = jsonPatch.compare(currentConfig.ways, newConfig.ways);
+    if (waysPatch.length) {
+      // Persist selected ways between sessions.
+      this.configStore.persistWays(newConfig.ways);
+      this.defaultMatchConfiguration.ways = structuredClone(newConfig.ways);
     }
 
     const patch = jsonPatch.compare(currentConfig, newConfig);

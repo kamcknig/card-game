@@ -3,15 +3,16 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
-  Inject,
-  OnInit,
+  effect,
+  inject,
+  signal,
   ViewChild
 } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { AsyncPipe, NgClass, NgSwitch, NgSwitchCase } from '@angular/common';
+import { NgClass, NgSwitch, NgSwitchCase } from '@angular/common';
 import { SocketService } from './core/socket-service/socket.service';
 import { NanostoresService } from '@nanostores/angular';
-import { catchError, Observable, of, tap } from 'rxjs';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { Application, Rectangle } from 'pixi.js';
 import { SceneNames, sceneStore } from './state/game-state';
 import { MatchScene } from './components/match/views/scenes/match-scene';
@@ -29,7 +30,6 @@ import { LobbyComponent } from './components/lobby/lobby.component';
     RouterOutlet,
     NgSwitch,
     NgSwitchCase,
-    AsyncPipe,
     MatchConfigurationComponent,
     GameSummaryComponent,
     MatchHudComponent,
@@ -40,50 +40,56 @@ import { LobbyComponent } from './components/lobby/lobby.component';
   styleUrl: './app.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class AppComponent implements AfterViewInit, OnInit {
+export class AppComponent implements AfterViewInit {
   @ViewChild('pixiContainer', { static: true }) pixiContainer!: ElementRef;
 
+  private readonly _socketService = inject(SocketService);
+  private readonly _nanoStores = inject(NanostoresService);
+  private readonly _app = inject(PIXI_APP);
+
   title = 'Dominion Clone';
-  matchSummary: MatchSummary | undefined;
-  scene$: Observable<SceneNames> | undefined;
-  matchScene: MatchScene | undefined;
-  matchStarted$: Observable<boolean> | undefined;
+  matchScene = signal<MatchScene | undefined>(undefined);
+  scene = toSignal(this._nanoStores.useStore(sceneStore), { initialValue: sceneStore.get() as SceneNames });
+  matchStarted = toSignal(this._nanoStores.useStore(matchStartedStore), { initialValue: false });
+  matchSummary = toSignal<MatchSummary | undefined>(
+    this._nanoStores.useStore(matchSummaryStore),
+    { initialValue: undefined }
+  );
 
-  constructor(
-    private _socketService: SocketService,
-    private _nanoStores: NanostoresService,
-    @Inject(PIXI_APP) private _app: Application,
-  ) {
-  }
-
-  ngOnInit() {
-    this.matchStarted$ = this._nanoStores.useStore(matchStartedStore);
-
-    this.scene$ = this._nanoStores.useStore(sceneStore).pipe(
-      tap(async scene => {
-        if (scene === 'match') {
-          if (!this._app) throw new Error('App not found');
-          this.matchScene = new MatchScene(this._socketService, this._app);
-          await this.matchScene.initialize();
-          this._app.stage.addChild(this.matchScene);
-        } else if (scene === 'gameSummary') {
-          this.matchSummary = matchSummaryStore.get();
-
-          if (this.matchScene) {
-            this._app.stage.removeChild(this.matchScene);
-          }
-        }
-      }),
-      catchError(err => {
-        console.error(err);
-        return of(err);
-      })
-    );
-  }
+  // Keep Pixi scene lifecycle aligned to Angular scene state.
+  private readonly _syncSceneEffect = effect(() => {
+    const scene = this.scene();
+    void this.syncScene(scene);
+  });
 
   async ngAfterViewInit() {
     if (!this._app) throw new Error('No app is initialized');
     this._app.resizeTo = this.pixiContainer.nativeElement;
     this.pixiContainer.nativeElement.appendChild(this._app.canvas);
+  }
+
+  // Relays score view resize events to the active Pixi match scene.
+  onScoreViewResize(rect: Rectangle) {
+    this.matchScene()?.setScoreViewRect(rect);
+  }
+
+  // Creates/destroys the Pixi match scene when UI scene changes.
+  private async syncScene(scene: SceneNames) {
+    if (scene === 'match') {
+      if (this.matchScene()) {
+        return;
+      }
+      const sceneInstance = new MatchScene(this._socketService, this._app as Application);
+      await sceneInstance.initialize();
+      this._app.stage.addChild(sceneInstance);
+      this.matchScene.set(sceneInstance);
+      return;
+    }
+
+    const existingScene = this.matchScene();
+    if (existingScene) {
+      this._app.stage.removeChild(existingScene);
+      this.matchScene.set(undefined);
+    }
   }
 }

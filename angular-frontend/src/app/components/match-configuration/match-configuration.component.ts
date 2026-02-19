@@ -1,43 +1,54 @@
-import { ChangeDetectionStrategy, Component, OnDestroy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import {
   ArtifactNoId,
   CardNoId,
   EventNoId,
   ExpansionListElement,
   LandmarkNoId,
-  ProjectNoId,
   MatchConfiguration,
-  PlayerId
+  PlayerId,
+  ProjectNoId,
+  WayNoId
 } from 'shared/types';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
 import { playerIdStore, selfPlayerIdStore } from '../../state/player-state';
-import { combineLatest, map, Observable, Subscription } from 'rxjs';
-import { AsyncPipe, NgClass, NgOptimizedImage, NgStyle } from '@angular/common';
+import { NgClass, NgOptimizedImage, NgStyle } from '@angular/common';
 import { expansionListStore } from '../../state/expansion-list-state';
 import { matchConfigurationStore } from '../../state/match-state';
 import { SocketService } from '../../core/socket-service/socket.service';
 import { gameOwnerIdStore, sceneStore } from '../../state/game-state';
-import { activeLobbyGameIdStore, lobbyGamesStore, lobbyStatusMessageStore } from '../../state/lobby-state';
+import {
+  activeLobbyGameIdStore,
+  lobbyGamesStore,
+  lobbyStatusMessageStore
+} from '../../state/lobby-state';
 import { PlayerComponent } from './player-name-input/player-name-input.component';
-import { SelectKingdomModalComponent } from './select-kingdom-modal/select-kingdom-modal.component';
-import { SelectEventModalComponent } from './select-event-modal/select-event-modal.component';
-import { SelectLandmarkModalComponent } from './select-landmark-modal/select-landmark-modal.component';
-import { SelectArtifactModalComponent } from './select-artifact-modal/select-artifact-modal.component';
-import { SelectProjectModalComponent } from './select-project-modal/select-project-modal.component';
+import {
+  SearchRequestEventName,
+  SearchResponseEventName,
+  SelectCardLikeModalComponent,
+  SelectableSearchResult
+} from './select-card-like-modal/select-card-like-modal.component';
 import { SceneContentComponent } from '../scene-content/scene-content.component';
+
+type SelectionModalKind = 'bannedKingdom' | 'kingdom' | 'events' | 'landmarks' | 'artifacts' | 'projects' | 'ways';
+type SelectionModalState = {
+  kind: SelectionModalKind;
+  excludedItems: ({ cardKey: string; } | null)[];
+  searchRequestEvent: SearchRequestEventName;
+  searchResponseEvent: SearchResponseEventName;
+  imageSize: 'half' | 'full';
+  filterBasicCards: boolean;
+};
 
 @Component({
   selector: 'app-match-configuration',
   imports: [
-    AsyncPipe,
     NgOptimizedImage,
     NgClass,
     PlayerComponent,
-    SelectKingdomModalComponent,
-    SelectEventModalComponent,
-    SelectLandmarkModalComponent,
-    SelectArtifactModalComponent,
-    SelectProjectModalComponent,
+    SelectCardLikeModalComponent,
     SceneContentComponent,
     NgStyle
   ],
@@ -45,166 +56,96 @@ import { SceneContentComponent } from '../scene-content/scene-content.component'
   styleUrl: './match-configuration.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class MatchConfigurationComponent implements OnDestroy {
-  playerIds$!: Observable<readonly PlayerId[]>;
-  expansionList$!: Observable<readonly ExpansionListElement[]>;
-  matchExpansions$!: Observable<readonly string[]>;
-  activeLobbyGameId$!: Observable<string | undefined>;
-  activeGameName$!: Observable<string | undefined>;
-  isGameOwner: boolean = false;
-  preSelectedKingdoms: (CardNoId | null)[] = [];
-  // Tracks the fixed events selected for the match.
-  preSelectedEvents: (EventNoId | null)[] = [];
-  // Tracks the fixed landmarks selected for the match.
-  preSelectedLandmarks: (LandmarkNoId | null)[] = [];
-  // Tracks the fixed artifacts selected for the match.
-  preSelectedArtifacts: (ArtifactNoId | null)[] = [];
-  // Tracks the fixed projects selected for the match.
-  preSelectedProjects: (ProjectNoId | null)[] = [];
-  selectingKingdom: boolean = false;
-  // Controls the event selection modal visibility.
-  selectingEvents: boolean = false;
-  // Controls the landmark selection modal visibility.
-  selectingLandmarks: boolean = false;
-  // Controls the artifact selection modal visibility.
-  selectingArtifacts: boolean = false;
-  // Controls the project selection modal visibility.
-  selectingProjects: boolean = false;
-  selectingBannedCards: boolean = false
-  bannedKingdoms$: Observable<readonly CardNoId[]>;
+export class MatchConfigurationComponent {
+  private readonly _nanoStoreService = inject(NanostoresService);
+  private readonly _socketService = inject(SocketService);
 
-  private gameOwnerSub: Subscription;
-  private bannedKingdoms: CardNoId[] = [];
-  private selectedKingdomsSub: Subscription;
-  // Keeps the preselected events list in sync with configuration changes.
-  private selectedEventsSub: Subscription;
-  // Keeps the preselected landmarks list in sync with configuration changes.
-  private selectedLandmarksSub: Subscription;
-  // Keeps the preselected artifacts list in sync with configuration changes.
-  private selectedArtifactsSub: Subscription;
-  // Keeps the preselected projects list in sync with configuration changes.
-  private selectedProjectsSub: Subscription;
+  // Tracks active modal type and settings for a single reusable search dialog.
+  readonly activeSelectionModal = signal<SelectionModalState | undefined>(undefined);
 
-  constructor(
-    private _nanoStoreService: NanostoresService,
-    private _socketService: SocketService,
-  ) {
-    this.playerIds$ = this._nanoStoreService.useStore(playerIdStore);
-    this.expansionList$ = this._nanoStoreService.useStore(expansionListStore);
-    this.matchExpansions$ = this._nanoStoreService.useStore(matchConfigurationStore)
-      .pipe(
-        map(config => config?.expansions?.map(e => e.name)),
-        map(expansions => expansions ?? [])
-      );
-    // Exposes current joined game id for leave/moderation actions.
-    this.activeLobbyGameId$ = this._nanoStoreService.useStore(activeLobbyGameIdStore);
-    this.activeGameName$ = combineLatest([
-      this._nanoStoreService.useStore(activeLobbyGameIdStore),
-      this._nanoStoreService.useStore(lobbyGamesStore),
-    ]).pipe(
-      map(([activeGameId, games]) => {
-        if (!activeGameId) return undefined;
-        return games.find((game) => game.gameId === activeGameId)?.gameName ?? activeGameId;
-      }),
-    );
+  // Store-backed signals for template state.
+  readonly playerIds = toSignal(this._nanoStoreService.useStore(playerIdStore), {
+    initialValue: playerIdStore.get()
+  });
+  readonly expansionList = toSignal(this._nanoStoreService.useStore(expansionListStore), {
+    initialValue: expansionListStore.get()
+  });
+  readonly matchConfiguration = toSignal(this._nanoStoreService.useStore(matchConfigurationStore), {
+    initialValue: matchConfigurationStore.get()
+  });
+  readonly activeLobbyGameId = toSignal(this._nanoStoreService.useStore(activeLobbyGameIdStore), {
+    initialValue: activeLobbyGameIdStore.get()
+  });
+  private readonly _lobbyGames = toSignal(this._nanoStoreService.useStore(lobbyGamesStore), {
+    initialValue: lobbyGamesStore.get()
+  });
+  private readonly _gameOwnerId = toSignal(this._nanoStoreService.useStore(gameOwnerIdStore), {
+    initialValue: gameOwnerIdStore.get()
+  });
+  private readonly _selfPlayerId = toSignal(this._nanoStoreService.useStore(selfPlayerIdStore), {
+    initialValue: selfPlayerIdStore.get()
+  });
 
-    this.bannedKingdoms$ = this._nanoStoreService.useStore(matchConfigurationStore).pipe(
-      map(config => config?.bannedKingdoms ?? [])
-    );
-
-    this.selectedKingdomsSub = this._nanoStoreService.useStore(matchConfigurationStore)
-      .pipe(map(config => config?.preselectedKingdoms
-        ?.sort((a, b) => a.cardKey.localeCompare(b.cardKey))))
-      .subscribe(selectedKingdoms => {
-        selectedKingdoms ??= []
-        const remainingNulls = new Array(10 - (selectedKingdoms?.length ?? 0)).fill(null);
-
-        for (const _ of remainingNulls) {
-          selectedKingdoms.push(null as any);
-        }
-
-        this.preSelectedKingdoms = selectedKingdoms;
-      });
-    
-    this.selectedEventsSub = this._nanoStoreService.useStore(matchConfigurationStore)
-      .pipe(map(config => config?.events
-        ?.sort((a, b) => a.cardKey.localeCompare(b.cardKey))))
-      .subscribe(selectedEvents => {
-        selectedEvents ??= [];
-        // Always keep a single empty slot for adding additional events.
-        this.preSelectedEvents = [...selectedEvents, null];
-      });
-
-    this.selectedLandmarksSub = this._nanoStoreService.useStore(matchConfigurationStore)
-      .pipe(map(config => config?.landmarks
-        ?.sort((a, b) => a.cardKey.localeCompare(b.cardKey))))
-      .subscribe(selectedLandmarks => {
-        selectedLandmarks ??= [];
-        // Always keep a single empty slot for adding additional landmarks.
-        this.preSelectedLandmarks = [...selectedLandmarks, null];
-      });
-
-    this.selectedArtifactsSub = this._nanoStoreService.useStore(matchConfigurationStore)
-      .pipe(map(config => config?.artifacts
-        ?.sort((a, b) => a.cardKey.localeCompare(b.cardKey))))
-      .subscribe(selectedArtifacts => {
-        selectedArtifacts ??= [];
-        // Always keep a single empty slot for adding additional artifacts.
-        this.preSelectedArtifacts = [...selectedArtifacts, null];
-      });
-
-    // Keep project selections synced with the match configuration.
-    this.selectedProjectsSub = this._nanoStoreService.useStore(matchConfigurationStore)
-      .pipe(map(config => config?.projects
-        ?.sort((a, b) => a.cardKey.localeCompare(b.cardKey))))
-      .subscribe(selectedProjects => {
-        selectedProjects ??= [];
-        // Always keep a single empty slot for adding additional projects.
-        this.preSelectedProjects = [...selectedProjects, null];
-      });
-
-    this.gameOwnerSub = combineLatest([
-      this._nanoStoreService.useStore(gameOwnerIdStore),
-      this._nanoStoreService.useStore(selfPlayerIdStore)
-    ]).subscribe(([ownerId, playerId]) => this.isGameOwner = playerId === ownerId);
-
-    this.preSelectedKingdoms = new Array(10).fill(null);
-    // Initialize event and landmark slots with a single empty placeholder.
-    this.preSelectedEvents = [null];
-    this.preSelectedLandmarks = [null];
-    this.preSelectedArtifacts = [null];
-    this.preSelectedProjects = [null];
-  }
-
-  ngOnDestroy(): void {
-    this.gameOwnerSub.unsubscribe();
-    this.selectedKingdomsSub.unsubscribe()
-    this.selectedEventsSub.unsubscribe();
-    this.selectedLandmarksSub.unsubscribe();
-    this.selectedArtifactsSub.unsubscribe();
-    this.selectedProjectsSub.unsubscribe();
-  }
-
-  onToggleExpansion(expansion: ExpansionListElement) {
-    const currentConfig = matchConfigurationStore.get();
-    const currentExpansions = currentConfig?.expansions ?? [];
-    const currentIdx = currentExpansions?.findIndex(e => e.name === expansion.name);
-
-    if (currentIdx === undefined || currentIdx === -1) {
-      currentExpansions.push(expansion);
+  // Derived state for ownership, game title, and expansion selection.
+  readonly isGameOwner = computed(() => this._selfPlayerId() === this._gameOwnerId());
+  readonly playerCount = computed(() => this.playerIds().length);
+  readonly activeGameName = computed(() => {
+    const activeGameId = this.activeLobbyGameId();
+    if (!activeGameId) return undefined;
+    return this._lobbyGames().find((game) => game.gameId === activeGameId)?.gameName ?? activeGameId;
+  });
+  readonly selectedExpansions = computed(() => this.matchConfiguration()?.expansions?.map((expansion) => expansion.name) ?? []);
+  readonly selectedExpansionLookup = computed<Record<string, true>>(() => {
+    const lookup: Record<string, true> = {};
+    for (const expansionName of this.selectedExpansions()) {
+      lookup[expansionName] = true;
     }
-    else {
+    return lookup;
+  });
+
+  // Derived selection lists rendered by each card-like section.
+  readonly selectedKingdoms = computed(() => this.sortByCardKey(this.matchConfiguration()?.preselectedKingdoms ?? []));
+  readonly bannedKingdoms = computed(() => this.sortByCardKey(this.matchConfiguration()?.bannedKingdoms ?? []));
+  readonly selectedEvents = computed(() => this.sortByCardKey(this.matchConfiguration()?.events ?? []));
+  readonly selectedLandmarks = computed(() => this.sortByCardKey(this.matchConfiguration()?.landmarks ?? []));
+  readonly selectedArtifacts = computed(() => this.sortByCardKey(this.matchConfiguration()?.artifacts ?? []));
+  readonly selectedProjects = computed(() => this.sortByCardKey(this.matchConfiguration()?.projects ?? []));
+  readonly selectedWays = computed(() => this.sortByCardKey(this.matchConfiguration()?.ways ?? []));
+
+  // UI lists that include trailing empty slots for add-buttons.
+  readonly preSelectedKingdoms = computed(() => this.withKingdomPlaceholders(this.selectedKingdoms()));
+  readonly preSelectedEvents = computed(() => this.withTrailingEmptySlot(this.selectedEvents()));
+  readonly preSelectedLandmarks = computed(() => this.withTrailingEmptySlot(this.selectedLandmarks()));
+  readonly preSelectedArtifacts = computed(() => this.withTrailingEmptySlot(this.selectedArtifacts()));
+  readonly preSelectedProjects = computed(() => this.withTrailingEmptySlot(this.selectedProjects()));
+  readonly preSelectedWays = computed(() => this.withTrailingEmptySlot(this.selectedWays()));
+
+  // Banned-card stack height grows with card count for staggered overlap.
+  readonly bannedKingdomStackHeight = computed(() => {
+    const count = this.bannedKingdoms().length;
+    return count > 0 ? 122 + ((count - 1) * 25) : 122;
+  });
+
+  // Toggles expansion selection in match configuration.
+  onToggleExpansion(expansion: ExpansionListElement) {
+    if (!this.isGameOwner()) return;
+    const currentConfig = this.matchConfiguration();
+    if (!currentConfig) return;
+
+    const currentExpansions = [...(currentConfig.expansions ?? [])];
+    const currentIdx = currentExpansions.findIndex((entry) => entry.name === expansion.name);
+    if (currentIdx === -1) {
+      currentExpansions.push(expansion);
+    } else {
       currentExpansions.splice(currentIdx, 1);
     }
 
-    this._socketService.emit('matchConfigurationUpdated', {
-      ...currentConfig as MatchConfiguration,
-      expansions: currentExpansions
-    });
+    this.emitMatchConfigurationUpdate({ expansions: currentExpansions });
   }
 
   // Adds a single computer player to the lobby.
   addComputerPlayer() {
+    if (!this.isGameOwner()) return;
     this._socketService.emit('addComputerPlayer', 1);
   }
 
@@ -216,169 +157,271 @@ export class MatchConfigurationComponent implements OnDestroy {
     this._socketService.emit('leaveLobbyGame', gameId);
   }
 
-  deleteKingdom(kingdom: CardNoId) {
-    const idx = this.preSelectedKingdoms.findIndex(k => k !== null && k?.cardKey === kingdom.cardKey);
-    this.preSelectedKingdoms = this.preSelectedKingdoms
-      .toSpliced(idx, 1, null)
-      .sort((a, b) => {
-        if (a === null && b !== null) return 1;
-        if (a !== null && b === null) return -1;
-        else return 0;
-      });
+  // Opens a single shared selection modal configured for the requested selection type.
+  openSelectionModal(kind: SelectionModalKind) {
+    if (!this.isGameOwner()) return;
 
-    this.sendMatchConfigUpdate();
+    switch (kind) {
+      case 'bannedKingdom':
+        this.activeSelectionModal.set({
+          kind,
+          excludedItems: [...this.preSelectedKingdoms(), ...this.bannedKingdoms()],
+          searchRequestEvent: 'searchCards',
+          searchResponseEvent: 'searchCardResponse',
+          imageSize: 'half',
+          filterBasicCards: true,
+        });
+        return;
+      case 'kingdom':
+        this.activeSelectionModal.set({
+          kind,
+          excludedItems: [...this.preSelectedKingdoms(), ...this.bannedKingdoms()],
+          searchRequestEvent: 'searchCards',
+          searchResponseEvent: 'searchCardResponse',
+          imageSize: 'half',
+          filterBasicCards: true,
+        });
+        return;
+      case 'events':
+        this.activeSelectionModal.set({
+          kind,
+          excludedItems: this.preSelectedEvents(),
+          searchRequestEvent: 'searchEvents',
+          searchResponseEvent: 'searchEventResponse',
+          imageSize: 'full',
+          filterBasicCards: false,
+        });
+        return;
+      case 'landmarks':
+        this.activeSelectionModal.set({
+          kind,
+          excludedItems: this.preSelectedLandmarks(),
+          searchRequestEvent: 'searchLandmarks',
+          searchResponseEvent: 'searchLandmarkResponse',
+          imageSize: 'full',
+          filterBasicCards: false,
+        });
+        return;
+      case 'artifacts':
+        this.activeSelectionModal.set({
+          kind,
+          excludedItems: this.preSelectedArtifacts(),
+          searchRequestEvent: 'searchArtifacts',
+          searchResponseEvent: 'searchArtifactResponse',
+          imageSize: 'full',
+          filterBasicCards: false,
+        });
+        return;
+      case 'projects':
+        this.activeSelectionModal.set({
+          kind,
+          excludedItems: this.preSelectedProjects(),
+          searchRequestEvent: 'searchProjects',
+          searchResponseEvent: 'searchProjectResponse',
+          imageSize: 'full',
+          filterBasicCards: false,
+        });
+        return;
+      case 'ways':
+        this.activeSelectionModal.set({
+          kind,
+          excludedItems: this.preSelectedWays(),
+          searchRequestEvent: 'searchWays',
+          searchResponseEvent: 'searchWayResponse',
+          imageSize: 'full',
+          filterBasicCards: false,
+        });
+        return;
+    }
   }
-  
+
+  // Closes the active selection modal.
+  closeSelectionModal() {
+    this.activeSelectionModal.set(undefined);
+  }
+
+  // Routes selected modal item to the matching configuration handler.
+  onSelectionModalItemSelected(item: SelectableSearchResult) {
+    const modalKind = this.activeSelectionModal()?.kind;
+    if (!modalKind) return;
+
+    switch (modalKind) {
+      case 'bannedKingdom':
+        this.onBannedKingdomSelected(item as CardNoId);
+        break;
+      case 'kingdom':
+        this.onKingdomSelected(item as CardNoId);
+        break;
+      case 'events':
+        this.onEventSelected(item as EventNoId);
+        break;
+      case 'landmarks':
+        this.onLandmarkSelected(item as LandmarkNoId);
+        break;
+      case 'artifacts':
+        this.onArtifactSelected(item as ArtifactNoId);
+        break;
+      case 'projects':
+        this.onProjectSelected(item as ProjectNoId);
+        break;
+      case 'ways':
+        this.onWaySelected(item as WayNoId);
+        break;
+    }
+
+    this.closeSelectionModal();
+  }
+
+  // Removes one selected kingdom card from the fixed kingdom list.
+  deleteKingdom(kingdom: CardNoId) {
+    if (!this.isGameOwner()) return;
+    const kingdoms = this.selectedKingdoms().filter((entry) => entry.cardKey !== kingdom.cardKey);
+    this.updateKingdomSelections(kingdoms);
+  }
+
   // Removes a selected event from the fixed event list.
   deleteEvent(event: EventNoId) {
-    const remainingEvents = this.preSelectedEvents
-      .filter((entry): entry is EventNoId => !!entry)
-      .filter(entry => entry.cardKey !== event.cardKey)
-      .sort((a, b) => a.cardKey.localeCompare(b.cardKey));
-    // Keep one empty slot after removing the event.
-    this.preSelectedEvents = [...remainingEvents, null];
-    
-    this.sendMatchConfigUpdate();
+    if (!this.isGameOwner()) return;
+    const remainingEvents = this.selectedEvents().filter((entry) => entry.cardKey !== event.cardKey);
+    this.emitMatchConfigurationUpdate({ events: remainingEvents });
   }
 
   // Removes a selected landmark from the fixed landmark list.
   deleteLandmark(landmark: LandmarkNoId) {
-    const remainingLandmarks = this.preSelectedLandmarks
-      .filter((entry): entry is LandmarkNoId => !!entry)
-      .filter(entry => entry.cardKey !== landmark.cardKey)
-      .sort((a, b) => a.cardKey.localeCompare(b.cardKey));
-    // Keep one empty slot after removing the landmark.
-    this.preSelectedLandmarks = [...remainingLandmarks, null];
-
-    this.sendMatchConfigUpdate();
+    if (!this.isGameOwner()) return;
+    const remainingLandmarks = this.selectedLandmarks().filter((entry) => entry.cardKey !== landmark.cardKey);
+    this.emitMatchConfigurationUpdate({ landmarks: remainingLandmarks });
   }
 
   // Removes a selected artifact from the fixed artifact list.
   deleteArtifact(artifact: ArtifactNoId) {
-    const remainingArtifacts = this.preSelectedArtifacts
-      .filter((entry): entry is ArtifactNoId => !!entry)
-      .filter(entry => entry.cardKey !== artifact.cardKey)
-      .sort((a, b) => a.cardKey.localeCompare(b.cardKey));
-    // Keep one empty slot after removing the artifact.
-    this.preSelectedArtifacts = [...remainingArtifacts, null];
-
-    this.sendMatchConfigUpdate();
+    if (!this.isGameOwner()) return;
+    const remainingArtifacts = this.selectedArtifacts().filter((entry) => entry.cardKey !== artifact.cardKey);
+    this.emitMatchConfigurationUpdate({ artifacts: remainingArtifacts });
   }
 
   // Removes a selected project from the fixed project list.
   deleteProject(project: ProjectNoId) {
-    const remainingProjects = this.preSelectedProjects
-      .filter((entry): entry is ProjectNoId => !!entry)
-      .filter(entry => entry.cardKey !== project.cardKey)
-      .sort((a, b) => a.cardKey.localeCompare(b.cardKey));
-    // Keep one empty slot after removing the project.
-    this.preSelectedProjects = [...remainingProjects, null];
-
-    this.sendMatchConfigUpdate();
+    if (!this.isGameOwner()) return;
+    const remainingProjects = this.selectedProjects().filter((entry) => entry.cardKey !== project.cardKey);
+    this.emitMatchConfigurationUpdate({ projects: remainingProjects });
   }
 
-  /**
-   * user has selected a kingdom card from the modal to add to the starting kingdom
-   *
-   * @param $event
-   */
-  onKingdomSelected($event: CardNoId) {
-    const idx = this.preSelectedKingdoms.findIndex(k => k === null);
-    this.preSelectedKingdoms = this.preSelectedKingdoms.toSpliced(idx, 1, $event);
-    this.selectingKingdom = false;
-    this.sendMatchConfigUpdate();
-  }
-  
-  // Adds a selected event to the fixed event list.
-  onEventSelected($event: EventNoId) {
-    const selectedEvents = this.preSelectedEvents
-      .filter((entry): entry is EventNoId => !!entry);
-    selectedEvents.push($event);
-    // Keep one empty slot after adding the event.
-    this.preSelectedEvents = [...selectedEvents.sort((a, b) => a.cardKey.localeCompare(b.cardKey)), null];
-    this.selectingEvents = false;
-    this.sendMatchConfigUpdate();
+  // Removes a selected way from the fixed way list.
+  deleteWay(way: WayNoId) {
+    if (!this.isGameOwner()) return;
+    const remainingWays = this.selectedWays().filter((entry) => entry.cardKey !== way.cardKey);
+    this.emitMatchConfigurationUpdate({ ways: remainingWays });
   }
 
-  // Adds a selected landmark to the fixed landmark list.
-  onLandmarkSelected($event: LandmarkNoId) {
-    const selectedLandmarks = this.preSelectedLandmarks
-      .filter((entry): entry is LandmarkNoId => !!entry);
-    selectedLandmarks.push($event);
-    // Keep one empty slot after adding the landmark.
-    this.preSelectedLandmarks = [...selectedLandmarks.sort((a, b) => a.cardKey.localeCompare(b.cardKey)), null];
-    this.selectingLandmarks = false;
-    this.sendMatchConfigUpdate();
+  // Adds one kingdom card selected from the search modal.
+  onKingdomSelected(selectedCard: CardNoId) {
+    if (!this.isGameOwner()) return;
+    const kingdoms = [...this.selectedKingdoms(), selectedCard];
+    this.updateKingdomSelections(kingdoms);
   }
 
-  // Adds a selected artifact to the fixed artifact list.
-  onArtifactSelected($event: ArtifactNoId) {
-    const selectedArtifacts = this.preSelectedArtifacts
-      .filter((entry): entry is ArtifactNoId => !!entry);
-    selectedArtifacts.push($event);
-    // Keep one empty slot after adding the artifact.
-    this.preSelectedArtifacts = [...selectedArtifacts.sort((a, b) => a.cardKey.localeCompare(b.cardKey)), null];
-    this.selectingArtifacts = false;
-    this.sendMatchConfigUpdate();
+  // Adds one event selected from the search modal.
+  onEventSelected(selectedEvent: EventNoId) {
+    if (!this.isGameOwner()) return;
+    const selectedEvents = [...this.selectedEvents(), selectedEvent];
+    this.emitMatchConfigurationUpdate({ events: this.sortByCardKey(selectedEvents) });
   }
 
-  // Adds a selected project to the fixed project list.
-  onProjectSelected($event: ProjectNoId) {
-    const selectedProjects = this.preSelectedProjects
-      .filter((entry): entry is ProjectNoId => !!entry);
-    selectedProjects.push($event);
-    // Keep one empty slot after adding the project.
-    this.preSelectedProjects = [...selectedProjects.sort((a, b) => a.cardKey.localeCompare(b.cardKey)), null];
-    this.selectingProjects = false;
-    this.sendMatchConfigUpdate();
+  // Adds one landmark selected from the search modal.
+  onLandmarkSelected(selectedLandmark: LandmarkNoId) {
+    if (!this.isGameOwner()) return;
+    const selectedLandmarks = [...this.selectedLandmarks(), selectedLandmark];
+    this.emitMatchConfigurationUpdate({ landmarks: this.sortByCardKey(selectedLandmarks) });
   }
 
-  private sendMatchConfigUpdate() {
+  // Adds one artifact selected from the search modal.
+  onArtifactSelected(selectedArtifact: ArtifactNoId) {
+    if (!this.isGameOwner()) return;
+    const selectedArtifacts = [...this.selectedArtifacts(), selectedArtifact];
+    this.emitMatchConfigurationUpdate({ artifacts: this.sortByCardKey(selectedArtifacts) });
+  }
+
+  // Adds one project selected from the search modal.
+  onProjectSelected(selectedProject: ProjectNoId) {
+    if (!this.isGameOwner()) return;
+    const selectedProjects = [...this.selectedProjects(), selectedProject];
+    this.emitMatchConfigurationUpdate({ projects: this.sortByCardKey(selectedProjects) });
+  }
+
+  // Adds one way selected from the search modal.
+  onWaySelected(selectedWay: WayNoId) {
+    if (!this.isGameOwner()) return;
+    const selectedWays = [...this.selectedWays(), selectedWay];
+    this.emitMatchConfigurationUpdate({ ways: this.sortByCardKey(selectedWays) });
+  }
+
+  // Adds one banned kingdom card if it is not already banned.
+  onBannedKingdomSelected(selectedCard: CardNoId) {
+    if (!this.isGameOwner()) return;
+    const currentBanned = this.bannedKingdoms();
+    const exists = currentBanned.some((entry) => entry.cardKey === selectedCard.cardKey);
+    if (exists) return;
+
+    this.emitMatchConfigurationUpdate({ bannedKingdoms: this.sortByCardKey([...currentBanned, selectedCard]) });
+  }
+
+  // Removes one kingdom card from the banned list.
+  deleteBannedKingdom(bannedCard: CardNoId) {
+    if (!this.isGameOwner()) return;
+    const updatedBanned = this.bannedKingdoms().filter((card) => card.cardKey !== bannedCard.cardKey);
+    this.emitMatchConfigurationUpdate({ bannedKingdoms: this.sortByCardKey(updatedBanned) });
+  }
+
+  // Emits a match-configuration patch while preserving untouched fields.
+  private emitMatchConfigurationUpdate(updatedFields: Partial<MatchConfiguration>) {
+    const currentConfig = this.matchConfiguration();
+    if (!currentConfig) return;
+
     this._socketService.emit('matchConfigurationUpdated', {
-      ...matchConfigurationStore.get() as MatchConfiguration,
-      bannedKingdoms: this.bannedKingdoms,
-      // Pass the fixed events through the match configuration.
-      events: this.preSelectedEvents
-        .filter(event => !!event)
-        .map(event => event as EventNoId),
-      // Pass the fixed landmarks through the match configuration.
-      landmarks: this.preSelectedLandmarks
-        .filter(landmark => !!landmark)
-        .map(landmark => landmark as LandmarkNoId),
-      // Pass the fixed artifacts through the match configuration.
-      artifacts: this.preSelectedArtifacts
-        .filter(artifact => !!artifact)
-        .map(artifact => artifact as ArtifactNoId),
-      // Pass the fixed projects through the match configuration.
-      projects: this.preSelectedProjects
-        .filter(project => !!project)
-        .map(project => project as ProjectNoId),
-      kingdomSupply: this.preSelectedKingdoms
-        .filter(card => !card?.isBasic)
-        .filter(card => !!card)
-        .map(card => ({ name: card.cardKey, cards: [card] })),
-      basicSupply: this.preSelectedKingdoms
-        .filter(card => card?.isBasic)
-        .filter(card => !!card)
-        .map(card => ({ name: card.cardKey, cards: [card] }))
+      ...currentConfig,
+      ...updatedFields,
     });
   }
 
-  onBannedKingdomSelected($event: CardNoId) {
-    const idx = this.bannedKingdoms.findIndex(k => k.cardKey === $event.cardKey);
-    // Banned-card modal only adds; removal is handled explicitly via the stack close button.
-    if (idx !== -1) {
-      return;
-    }
-    this.bannedKingdoms.push($event);
-    this.bannedKingdoms = [...this.bannedKingdoms.sort((a, b) => a.cardKey.localeCompare(b.cardKey))];
-    this.sendMatchConfigUpdate();
+  // Applies selected kingdoms and recomputes basic/kingdom supply fields.
+  private updateKingdomSelections(kingdoms: CardNoId[]) {
+    const sortedKingdoms = this.sortByCardKey(kingdoms).slice(0, 10);
+    const { basicSupply, kingdomSupply } = this.buildSupplyFromKingdoms(sortedKingdoms);
+
+    this.emitMatchConfigurationUpdate({
+      preselectedKingdoms: sortedKingdoms,
+      basicSupply,
+      kingdomSupply,
+    });
   }
 
-  deleteBannedKingdom(bannedCard: CardNoId) {
-    this.bannedKingdoms = this.bannedKingdoms
-      .filter((card) => card.cardKey !== bannedCard.cardKey)
-      .sort((a, b) => a.cardKey.localeCompare(b.cardKey));
-    this.sendMatchConfigUpdate();
+  // Splits selected kingdoms into basic and non-basic piles for setup.
+  private buildSupplyFromKingdoms(kingdoms: CardNoId[]) {
+    const basicSupply = kingdoms
+      .filter((card) => card.isBasic)
+      .map((card) => ({ name: card.cardKey, cards: [card] }));
+
+    const kingdomSupply = kingdoms
+      .filter((card) => !card.isBasic)
+      .map((card) => ({ name: card.cardKey, cards: [card] }));
+
+    return { basicSupply, kingdomSupply };
+  }
+
+  // Returns a stable sorted copy of card-like entries keyed by cardKey.
+  private sortByCardKey<T extends { cardKey: string }>(items: readonly T[]): T[] {
+    return [...items].sort((a, b) => a.cardKey.localeCompare(b.cardKey));
+  }
+
+  // Pads selected kingdoms to exactly 10 entries for fixed slot rendering.
+  private withKingdomPlaceholders(kingdoms: CardNoId[]): (CardNoId | null)[] {
+    const placeholders = new Array(Math.max(0, 10 - kingdoms.length)).fill(null);
+    return [...kingdoms, ...placeholders];
+  }
+
+  // Appends one empty add-slot for card-like section rendering.
+  private withTrailingEmptySlot<T>(items: T[]): (T | null)[] {
+    return [...items, null];
   }
 }

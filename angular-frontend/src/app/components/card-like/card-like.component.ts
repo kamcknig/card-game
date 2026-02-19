@@ -1,6 +1,6 @@
-import { ChangeDetectionStrategy, Component, Input, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
-import { combineLatestWith, Subscription } from 'rxjs';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { NgOptimizedImage } from '@angular/common';
 import { CardLikeId } from 'shared/types';
@@ -20,78 +20,70 @@ import { displayCardDetail } from '../match/views/modal/display-card-detail';
   styleUrl: './card-like.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class CardLikeComponent implements OnInit, OnDestroy {
-  @Input() cardLikeId!: CardLikeId;
-  @Input() size: CardSize = 'half';
+export class CardLikeComponent {
+  private readonly _nanoStores = inject(NanostoresService);
+  private readonly _sanitizer = inject(DomSanitizer);
+
+  cardLikeId = input.required<CardLikeId>();
+  size = input<CardSize>('half');
+
+  private readonly _cards = toSignal(this._nanoStores.useStore(cardStore), { initialValue: cardStore.get() });
+  private readonly _match = toSignal(this._nanoStores.useStore(matchStore), { initialValue: matchStore.get() });
+  // Tracks a one-time image fallback after load error.
+  private readonly _fallbackOverridePath = signal<string | undefined>(undefined);
+
+  // Resolved card-like data from library or active match.
+  readonly cardLike = computed(() => {
+    const cards = this._cards();
+    const match = this._match();
+    const cardLikeId = this.cardLikeId();
+    return cards[cardLikeId] ?? findCardLikeInMatch(match, cardLikeId);
+  });
+
+  // Detail image path for right-click detail modal.
+  readonly detailPath = computed(() => this.cardLike()?.detailImagePath);
+
+  // Full-size fallback image path for missing half-size assets.
+  readonly fallbackPath = computed(() => this.cardLike()?.fullImagePath);
+
+  // Primary resolved image path before fallback override.
+  readonly resolvedPath = computed(() => {
+    const cardLike = this.cardLike();
+    if (!cardLike) return undefined;
+    return this.resolveImagePath(cardLike, this.size());
+  });
+
+  // Final image path honoring load-error fallback override.
+  readonly imagePath = computed(() => this._fallbackOverridePath() ?? this.resolvedPath());
 
   // Sanitized image path for UI binding.
-  path: SafeUrl | undefined;
-  // Detail image path for the right-click detail modal.
-  private _detailPath: string | undefined;
-  // Tracks the currently resolved image path for fallback handling.
-  private _resolvedPath: string | undefined;
-  // Stores the full-size fallback path for missing half-size images.
-  private _fallbackPath: string | undefined;
-  // Subscription to card and match stores for card-like updates.
-  private _cardSub: Subscription | undefined;
+  readonly path = computed<SafeUrl | undefined>(() => {
+    const imagePath = this.imagePath();
+    if (!imagePath) return undefined;
+    return this._sanitizer.bypassSecurityTrustUrl(imagePath);
+  });
 
-  constructor(
-    private _nanoStores: NanostoresService,
-    private _sanitizer: DomSanitizer,
-  ) {
-  }
-
-  ngOnInit() {
-    // Resolve the card-like from the card library or match state on each store update.
-    this._cardSub = this._nanoStores.useStore(cardStore).pipe(
-      combineLatestWith(this._nanoStores.useStore(matchStore))
-    ).subscribe(([cards, match]) => {
-      const card = cards[this.cardLikeId];
-      if (card) {
-        // Cards in the card library always have art paths available.
-        this._detailPath = card.detailImagePath;
-        const imagePath = this.resolveImagePath(card, this.size);
-        this._resolvedPath = imagePath;
-        this._fallbackPath = card.fullImagePath;
-        this.path = this._sanitizer.bypassSecurityTrustUrl(imagePath);
-        return;
-      }
-
-      const cardLike = findCardLikeInMatch(match, this.cardLikeId);
-      if (!cardLike) {
-        // Clear bindings when the card-like cannot be resolved.
-        this._detailPath = undefined;
-        this.path = undefined;
-        return;
-      }
-
-      // Resolve card-like art paths from the match state.
-      this._detailPath = cardLike.detailImagePath;
-      const imagePath = this.resolveImagePath(cardLike, this.size);
-      this._resolvedPath = imagePath;
-      this._fallbackPath = cardLike.fullImagePath;
-      this.path = this._sanitizer.bypassSecurityTrustUrl(imagePath);
-    });
-  }
-
-  ngOnDestroy() {
-    // Clean up the store subscription.
-    this._cardSub?.unsubscribe();
-  }
+  // Reset fallback override whenever source card-like or desired size changes.
+  private readonly _resetFallbackOverrideEffect = effect(() => {
+    this.cardLikeId();
+    this.size();
+    this._fallbackOverridePath.set(undefined);
+  });
 
   // Opens a detail view when right-clicking the card-like.
   onContextMenu(event: MouseEvent) {
     event.preventDefault();
-    if (!this._detailPath) return;
-    void displayCardDetail({ detailImagePath: this._detailPath });
+    if (!this.detailPath()) return;
+    void displayCardDetail({ detailImagePath: this.detailPath()! });
   }
 
   // Falls back to full-size art if the requested image fails to load.
   onImageError() {
-    if (!this._fallbackPath) return;
-    if (this._resolvedPath === this._fallbackPath) return;
-    this._resolvedPath = this._fallbackPath;
-    this.path = this._sanitizer.bypassSecurityTrustUrl(this._fallbackPath);
+    const fallbackPath = this.fallbackPath();
+    const resolvedPath = this.resolvedPath();
+    if (!fallbackPath) return;
+    if (resolvedPath === fallbackPath) return;
+    this._fallbackOverridePath.set(fallbackPath);
   }
 
   // Card-likes always use full-size art until half-size assets exist.

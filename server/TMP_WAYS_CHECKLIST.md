@@ -14,15 +14,15 @@
 - [x] 9. Inject way effect map into match-scope action controller wiring.
 
 ## Match Setup and Selection
-- [ ] 10. Create active match ways in setup (`createWays`).
-- [ ] 11. Include Ways in landscape randomizer selection/cap logic.
-- [ ] 12. Keep kingdom-only selectors (e.g. Bane) isolated from landscapes.
-- [ ] 13. Persist selected Ways per match scope (`preselected-ways.json`).
-- [ ] 14. Add server search index and socket endpoints for Ways.
+- [x] 10. Create active match ways in setup (`createWays`).
+- [x] 11. Include Ways in landscape randomizer selection/cap logic.
+- [x] 12. Keep kingdom-only selectors (e.g. Bane) isolated from landscapes.
+- [x] 13. Persist selected Ways per match scope (`preselected-ways.json`).
+- [x] 14. Add server search index and socket endpoints for Ways.
 
 ## Match Configuration and Scene UI
-- [ ] 15. Add Way selection UI in match configuration.
-- [ ] 16. Render active Ways in match scene card-like area/state.
+- [x] 15. Add Way selection UI in match configuration.
+- [x] 16. Render active Ways in match scene card-like area/state.
 
 ## Way Play Interaction (Non-Blocking UI)
 - [ ] 17. Add socket event `cardTappedAsWay(playerId, cardId, wayId)`.

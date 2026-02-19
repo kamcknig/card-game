@@ -140,6 +140,12 @@ export const logManager = {
           : `%P${player?.id}% shuffled their discard to their deck`;
         break;
       }
+      case 'playerLeft': {
+        msg = selfId === playerId
+          ? `%Y% resigned and left the game`
+          : `%P${player?.id}% resigned and left the game`;
+        break;
+      }
       case 'trashCard': {
         const cardName = cardsById[logEntry.cardId]?.cardName;
         msg = selfId === playerId

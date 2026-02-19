@@ -12,16 +12,16 @@
         <button type="button" class="create-button" (click)="createGame()">Create Game</button>
       </div>
 
-      @if (statusMessage$ | async; as message) {
+      @if (statusMessage(); as message) {
         <p class="status-message">{{ message }}</p>
       }
 
-      @let games = (games$ | async) ?? [];
-      @if (games.length === 0) {
+      @let lobbyGames = games();
+      @if (lobbyGames.length === 0) {
         <p class="empty-state">No open games yet. Create one to begin.</p>
       } @else {
         <ul class="game-list">
-          @for (game of games; track game.gameId) {
+          @for (game of lobbyGames; track game.gameId) {
             <li class="game-row">
               <button
                 type="button"

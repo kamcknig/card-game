@@ -3,8 +3,8 @@
     <div #resizeHandle class="resize-handle dragging"></div>
 
     <div #logContent class="log-content">
-      @for (entry of entries; track entry.id) {
-        <div class="log-entry" [innerHTML]="sanitize(entry.message)"></div>
+      @for (entry of sanitizedEntries(); track entry.id) {
+        <div class="log-entry" [innerHTML]="entry.safeMessage"></div>
       }
     </div>
   </div>

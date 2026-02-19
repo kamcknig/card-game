@@ -6,6 +6,7 @@ import {
   MatchConfiguration,
   ProjectNoId,
   Supply,
+  WayNoId,
 } from 'shared/types/index.ts';
 import { LoggerService } from './logger-service.ts';
 import { getMatchConfigDirectory } from './game-data-paths.ts';
@@ -28,6 +29,8 @@ export interface GameConfigurationStore {
   persistArtifacts(artifacts: ArtifactNoId[]): void;
   // Persists the current preselected projects.
   persistProjects(projects: ProjectNoId[]): void;
+  // Persists the current preselected ways.
+  persistWays(ways: WayNoId[]): void;
 }
 
 // File-backed implementation used by the production server runtime.
@@ -159,6 +162,17 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
         preselectedProjects.map((project) => project.cardKey),
       );
     }
+
+    // Restore preselected ways when the file exists.
+    const preselectedWays = this.readJson<WayNoId[]>('preselected-ways.json');
+    if (preselectedWays) {
+      defaultConfig.ways = preselectedWays;
+      this.logLoadedList(
+        'preselected way(s)',
+        preselectedWays.length,
+        preselectedWays.map((way) => way.cardKey),
+      );
+    }
   }
 
   public persistPreselectedKingdoms(kingdomSupply: Supply[]): void {
@@ -189,5 +203,10 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
   public persistProjects(projects: ProjectNoId[]): void {
     this.ensureMatchDirectory();
     Deno.writeTextFileSync(this.getFilePath('preselected-projects.json'), JSON.stringify(projects));
+  }
+
+  public persistWays(ways: WayNoId[]): void {
+    this.ensureMatchDirectory();
+    Deno.writeTextFileSync(this.getFilePath('preselected-ways.json'), JSON.stringify(ways));
   }
 }

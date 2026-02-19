@@ -1,17 +1,24 @@
 import type { AppSocket } from '@server-types/index.ts';
 import type {
+  ArtifactNoId,
+  CardNoId,
+  EventNoId,
   ExpansionListElement,
+  LandmarkNoId,
   LobbyGameSummary,
   LobbyJoinRejectedPayload,
   Match,
   PlayerId,
+  ProjectNoId,
   ServerEmitEvents,
   ServerListenEvents,
+  WayNoId,
 } from 'shared/types/index.ts';
 import { Server } from 'socket.io';
 import { Game } from './game.ts';
 import { GameScopeFactory } from './game-scope-factory.ts';
 import { LoggerService } from './logger-service.ts';
+import { ExpansionSearchService } from './expansion-search-service.ts';
 
 type LobbyGameRecord = {
   gameId: string;
@@ -21,6 +28,49 @@ type LobbyGameRecord = {
   bannedSessionIds: Set<string>;
   // Tracks whether this game is currently visible in the global lobby list.
   listedInLobby: boolean;
+};
+
+type DebugSearchType = 'cards' | 'events' | 'landmarks' | 'artifacts' | 'projects' | 'ways';
+type DebugSearchResult =
+  | CardNoId[]
+  | EventNoId[]
+  | LandmarkNoId[]
+  | ArtifactNoId[]
+  | ProjectNoId[]
+  | WayNoId[];
+
+// Debug-level game lifecycle status exposed by REST debug endpoints.
+export type DebugGameStatus = 'configuring' | 'inMatch';
+
+// Debug-level match lifecycle status exposed by REST debug endpoints.
+export type DebugMatchStatus = 'prepared' | 'active';
+
+// Summary payload for one running game process.
+export type DebugGameSummary = {
+  gameId: string;
+  gameName: string;
+  roomName: string;
+  status: DebugGameStatus;
+  listedInLobby: boolean;
+  ownerId?: PlayerId;
+  ownerName?: string;
+  playerCount: number;
+  connectedPlayerCount: number;
+  connectedHumanCount: number;
+  maxPlayers: number;
+  activeMatchScopeId?: number;
+  matchControllerInitialized: boolean;
+  bannedSessionCount: number;
+};
+
+// Summary payload for one running match scope in a game.
+export type DebugMatchSummary = {
+  gameId: string;
+  gameName: string;
+  matchScopeId: number;
+  status: DebugMatchStatus;
+  matchStarted: boolean;
+  controllerInitialized: boolean;
 };
 
 // Coordinates the global lobby and routes sessions to isolated per-game runtimes.
@@ -147,6 +197,7 @@ export class LobbyDirectoryService {
     private readonly io: Server<ServerListenEvents, ServerEmitEvents>,
     private readonly maxPlayers: number,
     private readonly gameScopeFactory: GameScopeFactory,
+    private readonly expansionSearchService: ExpansionSearchService,
     private readonly loggerService: LoggerService,
   ) {
   }
@@ -187,18 +238,131 @@ export class LobbyDirectoryService {
     }
   }
 
-  // Exports live match state for one game id, or auto-selects if exactly one game exists.
-  public exportMatchState(gameId?: string): ReturnType<Game['exportMatchState']> {
-    return this.resolveDebugGame(gameId)?.game.exportMatchState() ?? null;
+  // Returns debug summaries for all currently running games.
+  public getDebugGames(): DebugGameSummary[] {
+    const summaries = [...this.games.values()]
+      .map((record) => this.toDebugGameSummary(record))
+      .sort((a, b) => a.gameName.localeCompare(b.gameName));
+    this.loggerService.debug(`[lobby directory] debug games requested; returning ${summaries.length} game(s)`);
+    return summaries;
   }
 
-  // Applies partial live match state merge for one selected game.
-  public mergeMatchState(gameId: string | undefined, partial: Partial<Match>): { ok: boolean; errors?: string[] } {
-    const game = this.resolveDebugGame(gameId)?.game;
-    if (!game) {
-      return { ok: false, errors: ['game not found for debug merge'] };
+  // Returns a debug summary for one game when it exists.
+  public getDebugGame(gameId: string): DebugGameSummary | undefined {
+    const record = this.games.get(gameId);
+    if (!record) {
+      this.loggerService.warn(`[lobby directory] debug game request not found for game '${gameId}'`);
+      return undefined;
     }
-    return game.mergeMatchState(partial);
+    this.loggerService.debug(`[lobby directory] debug game requested for game '${gameId}'`);
+    return this.toDebugGameSummary(record);
+  }
+
+  // Returns debug summaries for match scopes in one game.
+  public getDebugMatches(gameId: string): DebugMatchSummary[] | undefined {
+    const record = this.games.get(gameId);
+    if (!record) {
+      this.loggerService.warn(`[lobby directory] debug match-list request not found for game '${gameId}'`);
+      return undefined;
+    }
+    const summaries = this.toDebugMatchSummaries(record);
+    this.loggerService.debug(
+      `[lobby directory] debug matches requested for game '${gameId}'; returning ${summaries.length} match(es)`,
+    );
+    return summaries;
+  }
+
+  // Returns one debug match summary when game and scope id are valid.
+  public getDebugMatch(gameId: string, matchScopeId: number): DebugMatchSummary | undefined {
+    const record = this.games.get(gameId);
+    if (!record) {
+      this.loggerService.warn(
+        `[lobby directory] debug match request not found for game '${gameId}' matchScopeId=${matchScopeId}`,
+      );
+      return undefined;
+    }
+    const summary = this.toDebugMatchSummaries(record)
+      .find((summary) => summary.matchScopeId === matchScopeId);
+    if (!summary) {
+      this.loggerService.warn(
+        `[lobby directory] debug match request not found for game '${gameId}' matchScopeId=${matchScopeId}`,
+      );
+      return undefined;
+    }
+    this.loggerService.debug(
+      `[lobby directory] debug match requested for game '${gameId}' matchScopeId=${matchScopeId}`,
+    );
+    return summary;
+  }
+
+  // Exports live match state for a specific game and match scope.
+  public exportMatchStateForMatch(
+    gameId: string,
+    matchScopeId: number,
+  ): ReturnType<Game['exportMatchState']> | { error: string } {
+    const resolved = this.resolveDebugGameAndMatch(gameId, matchScopeId);
+    if (!resolved.ok) {
+      this.loggerService.warn(
+        `[lobby directory] debug match-state export rejected for game '${gameId}' matchScopeId=${matchScopeId}: ${resolved.error}`,
+      );
+      return { error: resolved.error };
+    }
+    this.loggerService.debug(
+      `[lobby directory] debug match-state export for game '${gameId}' matchScopeId=${matchScopeId}`,
+    );
+    return resolved.record.game.exportMatchState();
+  }
+
+  // Applies partial live match state merge for a specific game and match scope.
+  public mergeMatchStateForMatch(
+    gameId: string,
+    matchScopeId: number,
+    partial: Partial<Match>,
+  ): { ok: boolean; errors?: string[] } {
+    const resolved = this.resolveDebugGameAndMatch(gameId, matchScopeId);
+    if (!resolved.ok) {
+      this.loggerService.warn(
+        `[lobby directory] debug match-state merge rejected for game '${gameId}' matchScopeId=${matchScopeId}: ${resolved.error}`,
+      );
+      return { ok: false, errors: [resolved.error] };
+    }
+    this.loggerService.debug(
+      `[lobby directory] debug match-state merge for game '${gameId}' matchScopeId=${matchScopeId}`,
+    );
+    return resolved.record.game.mergeMatchState(partial);
+  }
+
+  // Executes one debug expansion search for a specific game and match scope.
+  public debugSearchForMatch(
+    gameId: string,
+    matchScopeId: number,
+    type: DebugSearchType,
+    searchStr: string,
+  ): { ok: true; results: DebugSearchResult; gameId: string; matchScopeId: number; type: DebugSearchType; query: string }
+    | { ok: false; error: string } {
+    const resolved = this.resolveDebugGameAndMatch(gameId, matchScopeId);
+    if (!resolved.ok) {
+      return { ok: false, error: resolved.error };
+    }
+
+    const query = searchStr ?? '';
+    this.loggerService.info(
+      `[lobby directory] debug search request game=${resolved.record.gameId} matchScopeId=${matchScopeId} type=${type} query='${query}'`,
+    );
+
+    const results = this.performDebugSearch(type, query);
+    this.loggerService.debug(
+      `[lobby directory] debug search returned ${results.length} result(s) for type=${type}`,
+    );
+
+    return {
+      ok: true,
+      results,
+      gameId: resolved.record.gameId,
+      matchScopeId,
+      type,
+      query,
+    };
   }
 
   // Disposes all scoped game runtimes for clean server shutdown.
@@ -331,6 +495,7 @@ export class LobbyDirectoryService {
     this.sessionToGameId.set(sessionId, gameId);
     // Notify client-side routing/state which game is now active.
     socket.emit('joinedLobbyGame', gameId);
+    socket.emit('debugRuntimeContext', record.game.getDebugRuntimeContext());
     this.loggerService.info(`[lobby directory] session ${sessionId} joined ${gameId}`);
     this.handleGameStateChanged(gameId);
   }
@@ -605,6 +770,42 @@ export class LobbyDirectoryService {
     };
   }
 
+  // Converts one record into the debug game summary resource shape.
+  private toDebugGameSummary(record: LobbyGameRecord): DebugGameSummary {
+    return {
+      gameId: record.gameId,
+      gameName: record.gameName,
+      roomName: record.game.roomName,
+      status: record.game.matchStarted ? 'inMatch' : 'configuring',
+      listedInLobby: record.listedInLobby,
+      ownerId: record.game.owner?.id,
+      ownerName: record.game.owner?.name,
+      playerCount: record.game.players.length,
+      connectedPlayerCount: record.game.getConnectedPlayerCount(),
+      connectedHumanCount: record.game.getConnectedHumanCount(),
+      maxPlayers: this.maxPlayers,
+      activeMatchScopeId: record.game.matchScopeId,
+      matchControllerInitialized: record.game.isMatchControllerInitialized(),
+      bannedSessionCount: record.bannedSessionIds.size,
+    };
+  }
+
+  // Builds the active match summary list for a game (currently one active scope).
+  private toDebugMatchSummaries(record: LobbyGameRecord): DebugMatchSummary[] {
+    if (record.game.matchScopeId === undefined) {
+      return [];
+    }
+
+    return [{
+      gameId: record.game.id,
+      gameName: record.game.name,
+      matchScopeId: record.game.matchScopeId,
+      status: record.game.matchStarted ? 'active' : 'prepared',
+      matchStarted: record.game.matchStarted,
+      controllerInitialized: record.game.isMatchControllerInitialized(),
+    }];
+  }
+
   // Emits a structured join rejection payload and keeps socket in lobby context.
   private emitJoinRejected(socket: AppSocket, payload: LobbyJoinRejectedPayload): void {
     this.loggerService.warn(
@@ -652,11 +853,47 @@ export class LobbyDirectoryService {
     }
   }
 
-  // Resolves debug target game by explicit id or auto-select when only one game exists.
-  private resolveDebugGame(gameId?: string): LobbyGameRecord | undefined {
-    if (gameId) return this.games.get(gameId);
-    if (this.games.size === 1) return [...this.games.values()][0];
-    return undefined;
+  // Validates game and active match scope identity for debug operations.
+  private resolveDebugGameAndMatch(
+    gameId: string,
+    matchScopeId: number,
+  ): { ok: true; record: LobbyGameRecord } | { ok: false; error: string } {
+    const record = this.games.get(gameId);
+    if (!record) {
+      return { ok: false, error: `game '${gameId}' not found` };
+    }
+
+    const activeMatchScopeId = record.game.matchScopeId;
+    if (activeMatchScopeId === undefined) {
+      return { ok: false, error: `game '${gameId}' has no active match scope` };
+    }
+
+    if (activeMatchScopeId !== matchScopeId) {
+      return {
+        ok: false,
+        error: `requested matchScopeId ${matchScopeId} does not match active ${activeMatchScopeId}`,
+      };
+    }
+
+    return { ok: true, record };
+  }
+
+  // Runs one expansion search operation for debug HTTP tooling.
+  private performDebugSearch(type: DebugSearchType, searchStr: string): DebugSearchResult {
+    switch (type) {
+      case 'cards':
+        return this.expansionSearchService.searchKingdomCards(searchStr);
+      case 'events':
+        return this.expansionSearchService.searchEvents(searchStr);
+      case 'landmarks':
+        return this.expansionSearchService.searchLandmarks(searchStr);
+      case 'artifacts':
+        return this.expansionSearchService.searchArtifacts(searchStr);
+      case 'projects':
+        return this.expansionSearchService.searchProjects(searchStr);
+      case 'ways':
+        return this.expansionSearchService.searchWays(searchStr);
+    }
   }
 
   // Generates a unique random adjective-animal game name.

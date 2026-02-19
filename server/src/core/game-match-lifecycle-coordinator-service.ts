@@ -60,6 +60,13 @@ export class GameMatchLifecycleCoordinatorService {
     );
     state.matchController = state.matchScope.matchController;
     state.matchConfiguration = { ...structuredClone(defaultMatchConfiguration) };
+
+    // Broadcast debug runtime identifiers to connected clients in this game room.
+    this.io.in(state.roomName).emit('debugRuntimeContext', {
+      gameId: state.gameId,
+      gameName: state.gameName,
+      matchScopeId: state.matchScopeId,
+    });
   }
 
   // Applies expansion-loaded side effects to runtime availability and search indexes.

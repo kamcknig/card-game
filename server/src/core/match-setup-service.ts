@@ -134,6 +134,13 @@ export class MatchSetupService {
     }
   }
 
+  public createWays(config: ComputedMatchConfiguration): void {
+    this.loggerService.debug('[match] creating ways');
+    for (const way of config.ways ?? []) {
+      this.match.ways.push(this.cardInstanceFactoryService.createWay(way));
+    }
+  }
+
   public createBoons(config: ComputedMatchConfiguration): void {
     const boons = config.boons ?? [];
     if (boons.length < 1) {

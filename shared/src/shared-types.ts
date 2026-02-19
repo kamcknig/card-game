@@ -272,6 +272,8 @@ export type LogEntry =
   | { type: 'revealCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'trashCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'shuffleDeck'; playerId: PlayerId; depth?: number; source?: LogEntrySource }
+  // Logs when a player leaves the active match (e.g., resigns).
+  | { type: 'playerLeft'; playerId: PlayerId; reason: 'resigned'; depth?: number; source?: LogEntrySource }
   | { type: 'newTurn'; turn: number; depth?: number; source?: LogEntrySource }
   | { type: 'newPlayerTurn'; turn: number; playerId: PlayerId; depth?: number; source?: LogEntrySource };
 
@@ -394,6 +396,16 @@ export type LobbyJoinRejectedPayload = {
   message: string;
 };
 
+// Runtime debug identity for one game + active match scope.
+export type DebugRuntimeContext = {
+  // Stable game identifier used across lobby/match lifecycle.
+  gameId: string;
+  // Human-readable lobby game name.
+  gameName: string;
+  // Active match scope sequence identifier for this game.
+  matchScopeId?: number;
+};
+
 export type ServerEmitEvents = {
   addLogEntry: (logEntry: LogEntry[]) => void;
   cardEffectsComplete: (playerId: PlayerId, cardId?: CardId) => void;
@@ -430,6 +442,8 @@ export type ServerEmitEvents = {
   kickedFromGame: (payload: { gameId: string; message: string }) => void;
   // Client was removed and banned from a lobby game by owner action.
   bannedFromGame: (payload: { gameId: string; message: string }) => void;
+  // Runtime debug identity used by client-side diagnostic overlays.
+  debugRuntimeContext: (payload: DebugRuntimeContext) => void;
   searchCardResponse: (cardData: CardNoId[]) => void;
   // Sends event search results to the client.
   searchEventResponse: (eventData: EventNoId[]) => void;
@@ -439,6 +453,8 @@ export type ServerEmitEvents = {
   searchArtifactResponse: (artifactData: ArtifactNoId[]) => void;
   // Sends project search results to the client.
   searchProjectResponse: (projectData: ProjectNoId[]) => void;
+  // Sends way search results to the client.
+  searchWayResponse: (wayData: WayNoId[]) => void;
   selectCard: (signalId: string, selectCardArgs: SelectActionCardArgs & { selectableCardIds: CardId[] }) => void;
   setPlayerList: (players: Player[]) => void;
   setCardLibrary: (library: Record<CardKey, Card>) => void;
@@ -478,6 +494,8 @@ export interface ServerListenEvents {
   nextPhase: () => void;
   playerReady: (playerId: PlayerId, ready: boolean) => void;
   playAllTreasure: (playerId: PlayerId) => void;
+  // Voluntarily leaves an active match; remaining players continue.
+  resignMatch: () => void;
   // Vote to remove a disconnected human player and resume the match.
   removeDisconnectedPlayer: (playerId: PlayerId) => void;
   searchCards: (playerId: PlayerId, searchStr: string) => void;
@@ -489,6 +507,8 @@ export interface ServerListenEvents {
   searchArtifacts: (playerId: PlayerId, searchStr: string) => void;
   // Requests project search results from the server.
   searchProjects: (playerId: PlayerId, searchStr: string) => void;
+  // Requests way search results from the server.
+  searchWays: (playerId: PlayerId, searchStr: string) => void;
   updatePlayerName: (playerId: PlayerId, name: string) => void;
   userInputReceived: (signalId: string, input: unknown) => void;
 }

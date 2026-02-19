@@ -1,0 +1,44 @@
+:host {
+  height: 100vh;
+  width: 100vw;
+  position: fixed;
+  inset: 0;
+  /* Keep the selection modal above configuration close buttons. */
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(0, 0, 0, .8);
+  padding: 10px;
+  gap: 10px;
+}
+
+.card-container {
+  margin-top: 40px;
+  display: flex;
+  flex-wrap: wrap;
+  min-height: 180px;
+  max-height: 300px;
+  min-width: 600px;
+  max-width: 1000px;
+  overflow: auto;
+}
+
+.card-image {
+  cursor: pointer;
+}
+
+.no-results {
+  width: 100%;
+  padding: 16px;
+  color: var(--theme-text-on-dark);
+  text-align: center;
+  font-size: 16px;
+}

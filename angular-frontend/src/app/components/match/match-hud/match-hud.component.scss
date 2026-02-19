@@ -83,6 +83,77 @@ app-game-log {
   pointer-events: auto;
 }
 
+.hud-menu {
+  position: fixed;
+  top: calc(55vh + 20px);
+  right: 10px;
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+  z-index: 25;
+}
+
+.hud-menu-icon {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--theme-border-strong);
+  background: var(--theme-surface-panel);
+  color: var(--theme-text-primary);
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.2px;
+  padding: 0;
+  position: relative;
+}
+
+.resign-button {
+  font-size: 16px;
+}
+
+.debug-icon-gear {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.debug-icon-question {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.debug-runtime-overlay {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 80;
+  min-width: 210px;
+  max-width: 360px;
+  padding: 8px 10px;
+  border: 1px solid var(--theme-border-strong);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
+  color: var(--theme-text-on-dark);
+  font-size: 12px;
+  line-height: 1.35;
+  pointer-events: none;
+}
+
+.debug-runtime-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.debug-runtime-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .disconnect-overlay {
   position: fixed;
   inset: 0;

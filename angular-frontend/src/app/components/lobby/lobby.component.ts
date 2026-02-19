@@ -1,7 +1,6 @@
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
-import { AsyncPipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
 import { NanostoresService } from '@nanostores/angular';
-import { Observable } from 'rxjs';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { LobbyGameSummary } from 'shared/types';
 import { SocketService } from '../../core/socket-service/socket.service';
 import { lobbyGamesStore, lobbyStatusMessageStore } from '../../state/lobby-state';
@@ -10,27 +9,23 @@ import { SceneContentComponent } from '../scene-content/scene-content.component'
 @Component({
   selector: 'app-lobby',
   standalone: true,
-  imports: [AsyncPipe, SceneContentComponent],
+  imports: [SceneContentComponent],
   templateUrl: './lobby.component.html',
   styleUrl: './lobby.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LobbyComponent implements OnInit {
+  private readonly _nanoStores = inject(NanostoresService);
+  private readonly _socketService = inject(SocketService);
+
   // Streams the currently visible joinable games for the lobby list.
-  games$: Observable<readonly LobbyGameSummary[]>;
+  private readonly _games = toSignal(this._nanoStores.useStore(lobbyGamesStore));
+  readonly games = computed<readonly LobbyGameSummary[]>(() => this._games() ?? []);
   // Streams the latest lobby status/error message.
-  statusMessage$: Observable<string | undefined>;
+  statusMessage = toSignal(this._nanoStores.useStore(lobbyStatusMessageStore));
 
   // Current left-nav selection (single-tab for now).
   readonly selectedNav: 'games' = 'games';
-
-  constructor(
-    private readonly _nanoStores: NanostoresService,
-    private readonly _socketService: SocketService,
-  ) {
-    this.games$ = this._nanoStores.useStore(lobbyGamesStore);
-    this.statusMessage$ = this._nanoStores.useStore(lobbyStatusMessageStore);
-  }
 
   ngOnInit(): void {
     // Always request a fresh snapshot when entering lobby scene.

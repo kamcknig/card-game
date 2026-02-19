@@ -22,6 +22,7 @@ import {
   lobbyJoinRejectedStore,
   lobbyStatusMessageStore,
 } from '../../state/lobby-state';
+import { debugRuntimeContextStore } from '../../state/debug-runtime-state';
 
 export type SocketEventMap = Partial<{ [p in ClientListenEventNames]: ClientListenEvents[p] }>;
 
@@ -43,6 +44,10 @@ export const socketToGameEventMap = (): SocketEventMap => {
   map['joinedLobbyGame'] = gameId => {
     activeLobbyGameIdStore.set(gameId);
     lobbyStatusMessageStore.set(undefined);
+  };
+
+  map['debugRuntimeContext'] = payload => {
+    debugRuntimeContextStore.set(payload);
   };
 
   map['expansionList'] = val => {
@@ -68,6 +73,7 @@ export const socketToGameEventMap = (): SocketEventMap => {
     lobbyGamesStore.set(games);
     // Keep lobby as default scene while no active game is tracked.
     if (!activeLobbyGameIdStore.get()) {
+      debugRuntimeContextStore.set(undefined);
       sceneStore.set('lobby');
     }
   };
@@ -90,6 +96,7 @@ export const socketToGameEventMap = (): SocketEventMap => {
     if (payload.gameId && activeGameId === payload.gameId && payload.reason !== 'alreadyInGame') {
       activeLobbyGameIdStore.set(undefined);
     }
+    debugRuntimeContextStore.set(undefined);
     lobbyJoinRejectedStore.set(payload);
     lobbyStatusMessageStore.set(payload.message);
     sceneStore.set('lobby');
@@ -97,12 +104,14 @@ export const socketToGameEventMap = (): SocketEventMap => {
 
   map['kickedFromGame'] = payload => {
     activeLobbyGameIdStore.set(undefined);
+    debugRuntimeContextStore.set(undefined);
     lobbyStatusMessageStore.set(payload.message);
     sceneStore.set('lobby');
   };
 
   map['bannedFromGame'] = payload => {
     activeLobbyGameIdStore.set(undefined);
+    debugRuntimeContextStore.set(undefined);
     lobbyStatusMessageStore.set(payload.message);
     sceneStore.set('lobby');
   };
@@ -190,6 +199,12 @@ export const socketToGameEventMap = (): SocketEventMap => {
     for (const project of matchStore.get()?.projects ?? []) {
       finalBundle[`${project.cardKey}-full`] ??= project.fullImagePath;
       finalBundle[`${project.cardKey}-detail`] ??= project.detailImagePath;
+    }
+
+    // Ensure way images are loaded alongside other landscapes.
+    for (const way of matchStore.get()?.ways ?? []) {
+      finalBundle[`${way.cardKey}-full`] ??= way.fullImagePath;
+      finalBundle[`${way.cardKey}-detail`] ??= way.detailImagePath;
     }
 
     // Ensure boon images are loaded for card-like selection prompts.

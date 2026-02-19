@@ -1,16 +1,10 @@
 /* ——— Layout ——————————————————————————————— */
-$match-config-two-column-breakpoint: 1360px;
 $match-config-single-column-breakpoint: 940px;
-$selection-board-two-column-breakpoint: 1200px;
-$selection-board-single-column-breakpoint: 760px;
 
 .match-config-content {
-  display: grid;
-  // Keep top-row sections clustered left; trailing flexible column absorbs remaining space.
-  grid-template-columns: repeat(3, minmax(260px, max-content)) minmax(0, 1fr);
-  grid-template-rows: auto auto;
-  grid-column-gap: 20px;
-  grid-row-gap: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
   padding: 24px;
   font-family: system-ui, sans-serif;
   color: var(--theme-text-primary);
@@ -33,38 +27,57 @@ $selection-board-single-column-breakpoint: 760px;
   font-size: 1.25rem;
 }
 
-.players {
-  grid-row: 1;
-  grid-column: 1;
-}
-
-.expansions {
-  grid-row: 1;
-  grid-column: 2;
-}
-
-.banned-cards-section {
-  grid-row: 1;
-  grid-column: 3;
-}
-
-.selection-board {
-  grid-row: 2;
-  grid-column: 1 / -1;
-  display: grid;
-  // Keep card-like columns at fixed track width so they stay left-clustered instead of stretching.
-  grid-template-columns: repeat(3, minmax(280px, 280px));
-  justify-content: start;
-  align-items: start;
+.configuration-top-row {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
   gap: 20px;
 }
 
-.banned-card-list {
-  margin-top: 10px;
-  // Cards are absolutely positioned to create a stacked/fanned pile.
-  position: relative;
-  width: 122px;
-  min-height: 122px;
+.kingdom-row {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.card-like-row {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 20px;
+  // Cap card-like sections to 3 columns (Events/Landmarks/Artifacts/etc).
+  max-width: calc((280px * 3) + (20px * 2));
+}
+
+.players,
+.expansions,
+.banned-cards-section {
+  flex: 0 0 auto;
+}
+
+.players {
+  min-width: 280px;
+}
+
+.banned-cards-section {
+  min-width: 180px;
+}
+
+.expansions {
+  min-width: 280px;
+}
+
+.kingdom-section {
+  width: 100%;
+}
+
+.events-section,
+.landmarks-section,
+.artifacts-section,
+.projects-section,
+.ways-section {
+  flex: 0 0 280px;
 }
 
 .banned-card-item {
@@ -99,99 +112,59 @@ $selection-board-single-column-breakpoint: 760px;
   }
 }
 
-.kingdom-section {
-  // Kingdom stays full-width and cards inside control their own fixed tile sizing.
-  grid-column: 1 / -1;
-
-  .kingdom-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(122px, 122px));
-    justify-content: start;
-    gap: 10px;
-  }
-
-  .kingdom {
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
+.banned-card-list {
+  margin-top: 10px;
+  // Cards are absolutely positioned to create a stacked/fanned pile.
+  position: relative;
+  width: 122px;
+  min-height: 122px;
 }
 
-/* Card-like selection layout mirrors kingdom behavior and scales 1-3 columns. */
-.events-section .events-list,
-.landmarks-section .landmarks-list,
-.artifacts-section .artifacts-list,
-.projects-section .projects-list {
-  display: grid;
-  // Keep card-like slots fixed width and avoid horizontal stretching.
-  grid-template-columns: repeat(auto-fit, minmax(280px, 280px));
-  justify-content: start;
+.kingdom-section .kingdom-list {
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
+  justify-content: flex-start;
+  // Cap kingdom list width so at most 5 cards render per row.
+  max-width: calc((122px * 5) + (10px * 4));
 }
 
-.events-section .event-slot,
-.landmarks-section .landmark-slot,
-.artifacts-section .artifact-slot,
-.projects-section .project-slot {
+.kingdom-section .kingdom {
   position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-@media (max-width: $match-config-two-column-breakpoint) {
-  .match-config-content {
-    // Keep first-row sections left-aligned while still reserving flexible space on the right.
-    grid-template-columns: repeat(2, minmax(260px, max-content)) minmax(0, 1fr);
-    grid-template-rows: auto auto auto;
-  }
-
-  .players {
-    grid-row: 1;
-    grid-column: 1;
-  }
-
-  .expansions {
-    grid-row: 1;
-    grid-column: 2;
-  }
-
-  .banned-cards-section {
-    grid-row: 2;
-    grid-column: 1 / -1;
-  }
-
-  .selection-board {
-    grid-row: 3;
-    grid-column: 1 / -1;
-  }
+/* Card-like selection layout mirrors kingdom behavior and stays left-aligned. */
+.events-section .events-list,
+.landmarks-section .landmarks-list,
+.artifacts-section .artifacts-list,
+.projects-section .projects-list,
+.ways-section .ways-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-start;
+  // Cap card-like list width so at most 3 cards render per row.
+  max-width: calc((280px * 3) + (10px * 2));
 }
 
-@media (max-width: $selection-board-two-column-breakpoint) {
-  .selection-board {
-    grid-template-columns: repeat(2, minmax(280px, 280px));
-  }
-}
-
-@media (max-width: $selection-board-single-column-breakpoint) {
-  .selection-board {
-    grid-template-columns: minmax(280px, 280px);
-  }
+.events-section .event-slot,
+.landmarks-section .landmark-slot,
+.artifacts-section .artifact-slot,
+.projects-section .project-slot,
+.ways-section .way-slot {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 @media (max-width: $match-config-single-column-breakpoint) {
-  .match-config-content {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto;
-  }
-
-  .players,
-  .expansions,
-  .banned-cards-section,
-  .selection-board {
-    grid-column: 1;
-    grid-row: auto;
+  .configuration-top-row,
+  .card-like-row {
+    flex-direction: column;
   }
 }
 
@@ -202,11 +175,12 @@ $selection-board-single-column-breakpoint: 760px;
 }
 
 .expansion-list {
-  display: grid;
-  // Keep expansion icons tightly packed instead of stretching across the row.
-  grid-template-columns: repeat(auto-fit, minmax(50px, 50px));
-  justify-content: start;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
   gap: 10px;
+  // Cap expansion icon list so at most 5 icons render per row.
+  max-width: calc((50px * 5) + (10px * 4));
 }
 
 /* ——— Expansion items ———————————————— */
@@ -297,6 +271,21 @@ $selection-board-single-column-breakpoint: 760px;
   height: 124px;
 
   .no-project {
+    font-size: 32px;
+  }
+
+  .close-button {
+    font-size: 10px;
+  }
+}
+
+/* Way slot styling mirrors event slots */
+.way-slot {
+  border: 2px solid var(--theme-border-strong);
+  width: 280px;
+  height: 124px;
+
+  .no-way {
     font-size: 32px;
   }
 

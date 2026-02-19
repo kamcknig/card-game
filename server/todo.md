@@ -26,6 +26,7 @@ this can also be used for pile selection instead of using cards.
 - Lobby ban identity currently uses `sessionId`; replace with durable authenticated identity and provide a migration path.
 
 # Higher priority
+- logging is not nearly detailed enough
 - safety so that when a game or mtach crashes, the ret of the server doesn't
   crash and can recover
 - need to take a look at the stop move rule and how to implement it.

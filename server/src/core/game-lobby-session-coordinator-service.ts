@@ -31,6 +31,9 @@ export type RemoveLobbyPlayerResult =
 
 // Coordinates lobby/session events such as join/disconnect/readiness/owner actions.
 export class GameLobbySessionCoordinatorService {
+  // Shared lobby room name for returning resigned players to lobby updates.
+  private static readonly LOBBY_ROOM_NAME = 'lobby';
+
   constructor(
     private readonly io: Server<ServerListenEvents, ServerEmitEvents>,
     private readonly maxPlayers: number,
@@ -130,6 +133,14 @@ export class GameLobbySessionCoordinatorService {
       });
     });
 
+    socket.on('resignMatch', () => {
+      this.onPlayerResigned(state, {
+        playerId: player.id,
+        socketId: socket.id,
+        callbacks,
+      });
+    });
+
     callbacks.onGameStateChanged?.();
     return { status: 'accepted', playerId: player.id };
   }
@@ -190,6 +201,90 @@ export class GameLobbySessionCoordinatorService {
     }
 
     this.io.in(state.roomName).emit('playerDisconnected', player);
+    callbacks.onGameStateChanged?.();
+  }
+
+  // Handles voluntary resignations from active human players and keeps the match running.
+  public onPlayerResigned(
+    state: GameRuntimeState,
+    args: {
+      playerId: PlayerId;
+      socketId: string;
+      callbacks: GameLobbyCallbacks;
+    },
+  ): void {
+    const { playerId, socketId, callbacks } = args;
+    if (!state.matchStarted) {
+      this.loggerService.warn(`[game] ignoring resign from ${playerId}; match not started`);
+      return;
+    }
+
+    const activePlayer = state.players.find((candidate) => candidate.id === playerId);
+    if (activePlayer && activePlayer.socketId !== socketId) {
+      this.loggerService.debug(
+        `[game] ignoring resign from stale socket ${socketId} for ${activePlayer}; active socket is ${activePlayer.socketId}`,
+      );
+      return;
+    }
+
+    const player = state.players.find((candidate) => candidate.id === playerId);
+    if (!player) {
+      this.loggerService.warn(`[game] resign requested by unknown player ${playerId}`);
+      return;
+    }
+
+    if (player.isComputer) {
+      this.loggerService.warn(`[game] ignoring resign from computer player ${playerId}`);
+      return;
+    }
+
+    this.loggerService.log(`[game] ${player} resigned from active match`);
+
+    state.matchController?.logPlayerLeft(player.id);
+
+    const socket = state.socketMap.get(player.id);
+    if (socket) {
+      this.lobbySocketBindings.unbindPlayerLobbyHandlers(socket);
+      this.lobbySocketBindings.unbindOwnerLobbyHandlers(socket);
+      socket.leave(state.roomName);
+      socket.join(GameLobbySessionCoordinatorService.LOBBY_ROOM_NAME);
+      socket.emit('kickedFromGame', {
+        gameId: state.gameId,
+        message: 'You resigned and left the game.',
+      });
+    }
+
+    state.socketMap.delete(player.id);
+    player.connected = false;
+    player.ready = false;
+
+    state.players = state.players.filter((nextPlayer) => nextPlayer.id !== player.id);
+    state.matchController?.removePlayerFromMatch(player.id);
+
+    this.io.in(state.roomName).emit('setPlayerList', state.players);
+    this.io.in(state.roomName).emit('playerDisconnected', player);
+
+    if (state.owner?.id === player.id) {
+      const replacement = this.playerSessionService.findReplacementOwner(state.players, player.id);
+      state.owner = replacement;
+      if (replacement) {
+        this.io.in(state.roomName).emit('gameOwnerUpdated', replacement.id);
+      }
+    }
+
+    this.disconnectedPlayerVoteService.removePendingRemovalPlayer(state.players, player.id);
+
+    const hasConnectedHuman = this.playerSessionService.hasConnectedHumanPlayers(state.players);
+    if (!hasConnectedHuman && this.serverConfigService.shouldEndMatchOnNoHumans()) {
+      this.loggerService.log('[game] no human players left after resignation, clearing game state completely');
+      callbacks.onClearMatch();
+      return;
+    }
+
+    if (state.players.length > 0) {
+      void state.matchController?.runGameAction('checkForRemainingPlayerActions');
+    }
+
     callbacks.onGameStateChanged?.();
   }
 
@@ -402,6 +497,13 @@ export class GameLobbySessionCoordinatorService {
       },
       onSearchProjects: (playerId, searchTerm) => {
         state.socketMap.get(playerId)?.emit('searchProjectResponse', this.expansionSearchService.searchProjects(searchTerm));
+      },
+      onSearchWays: (playerId, searchTerm) => {
+        const ways = this.expansionSearchService.searchWays(searchTerm);
+        this.loggerService.debug(
+          `[game] way search '${searchTerm}' returned ${ways.length} way card(s) for player ${playerId}`,
+        );
+        state.socketMap.get(playerId)?.emit('searchWayResponse', ways);
       },
     });
   }
