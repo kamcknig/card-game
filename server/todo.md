@@ -24,9 +24,6 @@ this can also be used for pile selection instead of using cards.
 - The wiki for the Spoils card states. I don't have a solution for that and how to prevent yet
 - If you play an Ambassador and reveal a Spoils, the Spoils is not returned to the Supply (since it is not in the
   Supply) and other players do not gain Spoils.
-- create some sort of "card picking" function or class. The match configurator has an algorithm to get available cards
-  to choose to add to the kingdom. expansion configurators do this too such as the Ferryman card, or the Young Witch.
-  They need ways to uniformly get available kingdoms.
 - cards like throne room and disciple when making cards play multiple time need to stay in play as long as the card they
   played stays in play. so if you throne room a duration, it would say until the duration was gone. same with other
   cards that do the same like band of misfits. this was implemented with royal carriage in adventures expansion though
@@ -36,9 +33,6 @@ this can also be used for pile selection instead of using cards.
 - prosperity has the card that changes curses into a treasure card type, and also gains the effect to gain 1 treasure on
   play. need a way to visually denote this properly. also similar to inheritance in adventures
 - missing card abilities [file](../missing-card-abilities.md)
-  be a special case in that only the last discarded card is seen so ordering of when they go to disard could matter
-- TokenIds are defined in expansion modules; so they are hard-coded strings in the front-end application. can we share
-  them somehow between both
 - update usages of `tags` to use a hard-coded list. these will be known tags from cards like young witch that adds a
   "bane" card. then you can add a custom tags property to track more custom ones.
 - possible keep the enhanced logging for console logs but switch to a buffered file logger solution later for

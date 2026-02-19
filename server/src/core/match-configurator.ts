@@ -1,6 +1,5 @@
 import {
   CardKey,
-  CardLikeNoId,
   CardNoId,
   ComputedMatchConfiguration,
   EventNoId,
@@ -24,6 +23,7 @@ import type { Operation } from 'fast-json-patch';
 import { CardSourceController } from './card-source-controller.ts';
 import { getDefaultKingdomSupplySize } from '../utils/get-default-kingdom-supply-size.ts';
 import { getCardPileKey } from '../utils/get-card-pile-key.ts';
+import { getAvailableKingdomRandomizerGroups } from '../utils/get-available-kingdom-randomizer-groups.ts';
 import { ExpansionCatalogService } from './expansion-catalog-service.ts';
 import { RngService } from './rng-service.ts';
 import { LoggerService } from './logger-service.ts';
@@ -221,56 +221,56 @@ export class MatchConfigurator {
         `[match configurator] banned kingdoms ${bannedKingdomRandomizers.join(', ') ?? '- no banned kingdoms'}`,
       );
 
-      // loop over the selected expansions, and filter out any kingdom cards that
-      // are banned, are already included, or are not kingdom-selectable
-      const availableRandomizers = selectedExpansions.flatMap((nextExpansion) => [
-        ...Object
-          .values(nextExpansion.cardData.kingdomSupply)
-          .filter((card) => (card.kingdomSelectable ?? true))
-          .map((card) => {
-            const pileKey = getCardPileKey(card);
-            if (bannedKingdomRandomizers.includes(pileKey)) return null;
-            if (alreadyIncludedKingdomRandomizers.includes(pileKey)) return null;
-            return {
-              randomizer: pileKey,
-              cardLike: card,
-              type: 'card',
-            };
-          })
-          .filter((entry): entry is NonNullable<typeof entry> => !!entry),
+      // Build kingdom candidates once so all configurators can share pile-key selection semantics.
+      const availableKingdomRandomizerGroups = getAvailableKingdomRandomizerGroups({
+        expansions: selectedExpansions,
+        bannedPileKeys: bannedKingdomRandomizers,
+        excludedPileKeys: alreadyIncludedKingdomRandomizers,
+      });
+
+      type AvailableRandomizer =
+        | { randomizer: string; type: 'card'; cardsInRandomizer: CardNoId[] }
+        | { randomizer: string; type: 'event'; cardLike: EventNoId }
+        | { randomizer: string; type: 'landmark'; cardLike: LandmarkNoId }
+        | { randomizer: string; type: 'project'; cardLike: ProjectNoId };
+
+      const availableRandomizers: AvailableRandomizer[] = [
+        ...availableKingdomRandomizerGroups.map((group) => ({
+          randomizer: group.pileKey,
+          type: 'card' as const,
+          cardsInRandomizer: group.cards,
+        })),
+        ...selectedExpansions.flatMap((nextExpansion) => [
         ...Object.values(nextExpansion.events)
           .filter((event) => event.randomizer !== null)
           .map((event) => ({
-            randomizer: event.randomizer,
+            randomizer: event.randomizer!,
             cardLike: event,
-            type: 'event',
+            type: 'event' as const,
           })),
         // Landmarks participate in the shared "events and others" randomizer pool.
         ...Object.values(nextExpansion.landmarks)
           .filter((landmark) => landmark.randomizer !== null)
           .map((landmark) => ({
-            randomizer: landmark.randomizer,
+            randomizer: landmark.randomizer!,
             cardLike: landmark,
-            type: 'landmark',
+            type: 'landmark' as const,
           })),
         // Projects participate in the shared "events and others" randomizer pool.
         ...Object.values(nextExpansion.projects ?? {})
           .filter((project) => project.randomizer !== null)
           .map((project) => ({
-            randomizer: project.randomizer,
+            randomizer: project.randomizer!,
             cardLike: project,
-            type: 'project',
+            type: 'project' as const,
           })),
-      ]) as {
-        randomizer: string;
-        type: 'card' | 'event' | 'landmark' | 'project';
-        cardLike: CardLikeNoId | CardNoId;
-      }[];
+        ]),
+      ];
 
       const uniqueRandomizers = uniqueByProp(availableRandomizers, 'randomizer');
 
       this._loggerService.info(`[match configurator] available kingdoms ${uniqueRandomizers.length}`);
-      this._loggerService.info(uniqueRandomizers.join('\n'));
+      this._loggerService.info(uniqueRandomizers.map((randomizer) => randomizer.randomizer).join('\n'));
 
       const numKingdomsToSelect = MatchBaseConfiguration.numberOfKingdomPiles - this._requestedKingdoms.length;
 
@@ -288,10 +288,7 @@ export class MatchConfigurator {
 
         if (selectedRandomizer.type === 'card') {
           this._loggerService.info(`[match configurator] selected kingdom ${selectedRandomizer.randomizer}`);
-
-          const cardsInRandomizer = availableRandomizers
-            .filter((randomizer) => randomizer.randomizer === selectedRandomizer.randomizer)
-            .map((randomizer) => randomizer.cardLike) as CardNoId[];
+          const cardsInRandomizer = selectedRandomizer.cardsInRandomizer;
 
           // this makes an assumption that if there are more cards within a randomizer group (such as knights from dark
           // ages) that they will all be in the same kingdom.
@@ -322,9 +319,7 @@ export class MatchConfigurator {
             this._loggerService.info(
               `[match configurator] selected event ${selectedRandomizer.randomizer} is allowed, adding to match`,
             );
-            const event = availableRandomizers
-              .find((randomizer) => randomizer.randomizer === selectedRandomizer.randomizer)
-              ?.cardLike as EventNoId;
+            const event = selectedRandomizer.cardLike;
 
             if (!event) {
               throw new Error(`[match configurator] event not found for randomizer ${selectedRandomizer.randomizer}`);
@@ -347,9 +342,7 @@ export class MatchConfigurator {
             this._loggerService.info(
               `[match configurator] selected landmark ${selectedRandomizer.randomizer} is allowed, adding to match`,
             );
-            const landmark = availableRandomizers
-              .find((randomizer) => randomizer.randomizer === selectedRandomizer.randomizer)
-              ?.cardLike as LandmarkNoId;
+            const landmark = selectedRandomizer.cardLike;
 
             if (!landmark) {
               throw new Error(
@@ -375,9 +368,7 @@ export class MatchConfigurator {
             this._loggerService.info(
               `[match configurator] selected project ${selectedRandomizer.randomizer} is allowed, adding to match`,
             );
-            const project = availableRandomizers
-              .find((randomizer) => randomizer.randomizer === selectedRandomizer.randomizer)
-              ?.cardLike as ProjectNoId;
+            const project = selectedRandomizer.cardLike;
 
             if (!project) {
               throw new Error(`[match configurator] project not found for randomizer ${selectedRandomizer.randomizer}`);
