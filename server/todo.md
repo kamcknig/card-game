@@ -16,12 +16,6 @@ this can also be used for pile selection instead of using cards.
 - The wiki for the Spoils card states. I don't have a solution for that and how to prevent yet
 - If you play an Ambassador and reveal a Spoils, the Spoils is not returned to the Supply (since it is not in the
   Supply) and other players do not gain Spoils.
-- cards like throne room and disciple when making cards play multiple time need to stay in play as long as the card they
-  played stays in play. so if you throne room a duration, it would say until the duration was gone. same with other
-  cards that do the same like band of misfits. this was implemented with royal carriage in adventures expansion though
-  it's not great.
-- mats need a way to define who can view what cards exist on it e.g., the tavern mat i think all cards are visible to
-  all players, but native village and island mat cards face down and can only be viewed by the player that owns the mat
 - prosperity has the card that changes curses into a treasure card type, and also gains the effect to gain 1 treasure on
   play. need a way to visually denote this properly. also similar to inheritance in adventures
 - missing card abilities [file](../missing-card-abilities.md)
@@ -30,10 +24,6 @@ this can also be used for pile selection instead of using cards.
 - possible keep the enhanced logging for console logs but switch to a buffered file logger solution later for
   production.
 - Lobby ban identity currently uses `sessionId`; replace with durable authenticated identity and provide a migration path.
-- on vote to remove player dialog, add a quit button. if quit, thenyou are
-  removed from teh game and are not voted for for disconnection and are sent
-  back to the lobby. (it should go through the current flow so that when all
-  users are gone the game is deleted or not based on env var)
 
 # Higher priority
 - safety so that when a game or mtach crashes, the ret of the server doesn't

@@ -11,7 +11,7 @@ import {
 import { ScoreComponent } from './score/score.component';
 import { GameLogComponent } from './game-log/game-log.component';
 import { NanostoresService } from '@nanostores/angular';
-import { playerIdStore, playerStore, selfPlayerIdStore } from '../../../state/player-state';
+import { playerIdStore, playerStore } from '../../../state/player-state';
 import { combineLatest, combineLatestWith, filter, map, Observable, of, switchMap } from 'rxjs';
 import { AsyncPipe } from '@angular/common';
 import { CardLikeId, Mats, PlayerId } from 'shared/types';
@@ -87,7 +87,7 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
   playerIds$: Observable<readonly PlayerId[]> | undefined;
   playerScore$!: Observable<{ id: PlayerId; score: number; name: string }[]> | undefined;
   logEntries$!: Observable<readonly LogEntryMessage[]> | undefined;
-  selfMats$: Observable<{ mat: Mats, content: MatPlayerContent }[]> | undefined;
+  selfMats$: Observable<{ mat: Mats | string, content: MatPlayerContent }[]> | undefined;
   setAsideMat$: Observable<{ mat: Mats; content: MatPlayerContent } | undefined> | undefined;
   trashMat$: Observable<{ mat: string; content: CardLikeId[]; }> | undefined;
   disconnectedHumans$: Observable<{ id: PlayerId; name: string }[]> | undefined;
@@ -104,36 +104,67 @@ export class MatchHudComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnInit() {
     this.selfMats$ = this._nanoService.useStore(cardSourceTagMapStore).pipe(
       filter(store => store !== undefined),
-      map<any, Mats[]>(store => store['mat']),
+      map<any, string[]>(store => store['mat']),
       filter(sourceKeys => sourceKeys !== undefined),
-      combineLatestWith(this._nanoService.useStore(selfPlayerIdStore)),
-      switchMap(([sourceKeys, selfId]) => {
-        sourceKeys = sourceKeys.filter(key => +key.split(':')[1] === selfId);
+      combineLatestWith(this._nanoService.useStore(playerIdStore)),
+      switchMap(([sourceKeys, playerIds]) => {
+        const taggedMatKeys = [...new Set(sourceKeys)];
+        if (taggedMatKeys.length < 1 || playerIds.length < 1) {
+          return of([]);
+        }
 
-        return combineLatest(
-          sourceKeys.map(key => this._nanoService.useStore(getCardSourceStore(key))
+        const sources$ = combineLatest(
+          taggedMatKeys.map(key => this._nanoService.useStore(getCardSourceStore(key))
             .pipe(
               map(source => {
                 return { cardIds: source, sourceKey: key }
               })
             )
           )
-        ).pipe(
-          map(sources => {
-            return sources.filter(source => source.cardIds.length > 0)
-          }),
-          map(sources => {
-            return sources.map(source => ({
-              mat: source.sourceKey,
-              content: {
-                [selfId!]: {
-                  playerName: 'hello',
-                  cardIds: source.cardIds
-                }
-              },
+        );
+
+        const players$ = combineLatest(
+          playerIds.map(id => this._nanoService.useStore(playerStore(id)).pipe(
+            map(player => ({
+              id,
+              name: player?.name ?? `Player ${id}`
             }))
+          ))
+        );
+
+        return combineLatest([sources$, players$]).pipe(
+          map(([sources, players]) => {
+            const playerNameMap = players.reduce((acc, player) => {
+              acc[player.id] = player.name;
+              return acc;
+            }, {} as Record<PlayerId, string>);
+
+            // Group tagged sources by mat key so all players' mats are visible together.
+            const groupedByMat = sources.reduce((acc, source) => {
+              if (source.cardIds.length < 1) {
+                return acc;
+              }
+
+              const [matKey, playerIdRaw] = source.sourceKey.split(':');
+              const playerId = Number(playerIdRaw);
+              if (!Number.isFinite(playerId)) {
+                return acc;
+              }
+
+              const matContent = acc[matKey] ?? {};
+              matContent[playerId] = {
+                playerName: playerNameMap[playerId] ?? `Player ${playerId}`,
+                cardIds: source.cardIds
+              };
+              acc[matKey] = matContent;
+              return acc;
+            }, {} as Record<string, MatPlayerContent>);
+
+            return Object.entries(groupedByMat)
+              .map(([matKey, content]) => ({ mat: matKey, content }))
+              .filter((mat) => Object.values(mat.content).some(playerContent => playerContent.cardIds.length > 0));
           })
-        )
+        );
       })
     );
 
