@@ -13,7 +13,7 @@ export interface ProjectCardArgs {
 
 const sinisterPlotTokenId = 'renaissance:sinister-plot';
 
-// Renders a project card-like with optional highlight and cube overlays.
+// Renders a project landscape with optional highlight and cube overlays.
 export class ProjectCard extends CardLikeView {
   private readonly _highlight: Graphics = new Graphics({ label: 'highlight' });
   private readonly _costView: Container = new Container({ label: 'costView' });

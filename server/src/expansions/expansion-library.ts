@@ -50,19 +50,19 @@ export const createEmptyExpansionData = (expansionName: string): ExpansionData =
       kingdomSupply: {},
     },
     events: {},
-    // Landmarks live alongside events as landscape card-likes.
+    // Landmarks live alongside events as landscapes.
     landmarks: {},
-    // Boons live alongside other non-supply card-likes.
+    // Boons live alongside other non-supply landscapes.
     boons: {},
-    // Hexes live alongside boons as non-supply card-likes.
+    // Hexes live alongside boons as non-supply landscapes.
     hexes: {},
-    // States live alongside other non-supply card-likes.
+    // States live alongside other non-supply landscapes.
     states: {},
-    // Artifacts live alongside other non-supply card-likes.
+    // Artifacts live alongside other non-supply landscapes.
     artifacts: {},
-    // Projects live alongside other non-supply card-likes.
+    // Projects live alongside other non-supply landscapes.
     projects: {},
-    // Ways live alongside other non-supply card-likes.
+    // Ways live alongside other non-supply landscapes.
     ways: {},
   };
 };

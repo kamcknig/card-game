@@ -10,7 +10,7 @@ import { WayCard } from './way-card';
 import { getPixiSceneTheme } from '../../../theme/pixi-theme';
 import { createPanelShadowFilter } from './panel-shadow-filter';
 
-const MAX_CARD_LIKE_COLUMNS = 4;
+const MAX_LANDSCAPE_COLUMNS = 4;
 
 export class OtherCardLikeView extends Container {
   private readonly _pixiTheme = getPixiSceneTheme();
@@ -46,7 +46,7 @@ export class OtherCardLikeView extends Container {
     });
 
     this.addChild(this.background);
-    // Card-like panel shadow matches other board-area containers.
+    // Landscape panel shadow matches other board-area containers.
     this.background.filters = [createPanelShadowFilter()];
 
     this.cardContainer.x = STANDARD_GAP;
@@ -86,7 +86,7 @@ export class OtherCardLikeView extends Container {
     }
   }
 
-  // Draws and syncs the event cards in the card-like container.
+  // Draws and syncs the event cards in the landscape container.
   private drawEvents(events: readonly Event[]) {
     this.removeMissingCards(this.eventContainer, events.map(event => event.cardKey));
 
@@ -102,7 +102,7 @@ export class OtherCardLikeView extends Container {
     }
   }
 
-  // Draws and syncs the landmark cards in the card-like container.
+  // Draws and syncs the landmark cards in the landscape container.
   private drawLandmarks(landmarkList: readonly Landmark[]) {
     this.removeMissingCards(this.landmarkContainer, landmarkList.map(landmark => landmark.cardKey));
 
@@ -118,7 +118,7 @@ export class OtherCardLikeView extends Container {
     }
   }
 
-  // Draws and syncs the project cards in the card-like container.
+  // Draws and syncs the project cards in the landscape container.
   private drawProjects(projectList: readonly Project[]) {
     this.removeMissingCards(this.projectContainer, projectList.map(project => project.cardKey));
 
@@ -134,7 +134,7 @@ export class OtherCardLikeView extends Container {
     }
   }
 
-  // Draws and syncs the way cards in the card-like container.
+  // Draws and syncs the way cards in the landscape container.
   private drawWays(wayList: readonly Way[]) {
     this.removeMissingCards(this.wayContainer, wayList.map(way => way.cardKey));
 
@@ -150,7 +150,7 @@ export class OtherCardLikeView extends Container {
     }
   }
 
-  // Removes card-like views when their source entries are no longer present.
+  // Removes landscape views when their source entries are no longer present.
   private removeMissingCards(cardContainer: Container, cardKeys: readonly string[]) {
     const sourceKeys = new Set(cardKeys);
     for (const child of [...cardContainer.children]) {
@@ -160,7 +160,7 @@ export class OtherCardLikeView extends Container {
     }
   }
 
-  // Lays out all card-like cards in a wrapped grid with up to four columns.
+  // Lays out all landscape cards in a wrapped grid with up to four columns.
   private layoutCardLikes() {
     const allCardLikes = [
       ...this.currentEvents.map(event => this.eventContainer.getChildByLabel(event.cardKey)),
@@ -172,8 +172,8 @@ export class OtherCardLikeView extends Container {
     const rowHeight = (Math.max(0, ...allCardLikes.map(cardLike => cardLike.height))) + STANDARD_GAP;
 
     for (const [index, cardLike] of allCardLikes.entries()) {
-      const column = index % MAX_CARD_LIKE_COLUMNS;
-      const row = Math.floor(index / MAX_CARD_LIKE_COLUMNS);
+      const column = index % MAX_LANDSCAPE_COLUMNS;
+      const row = Math.floor(index / MAX_LANDSCAPE_COLUMNS);
       cardLike.x = column * (EVENT_WIDTH + STANDARD_GAP);
       cardLike.y = row * rowHeight;
     }

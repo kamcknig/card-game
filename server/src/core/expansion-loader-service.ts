@@ -21,7 +21,7 @@ type RandomizerPileDefinition = {
   cards: Array<Partial<CardNoId> & { cardKey: CardKey }>;
 };
 
-// Loads expansion card and card-like data, plus effect registrations, into the runtime catalog.
+// Loads expansion card and landscape data, plus effect registrations, into the runtime catalog.
 export class ExpansionLoaderService {
   constructor(
     private readonly expansionEffectRegistryService: ExpansionEffectRegistryService,
@@ -96,7 +96,7 @@ export class ExpansionLoaderService {
               continue;
             }
 
-            // Route card-like definitions to their dedicated catalogs.
+            // Route landscape definitions to their dedicated catalogs.
             if (ExpansionLoaderService.isBoonCardEntry(cardEntry)) {
               this.loggerService.debug(`[expansion loader] registering boon ${cardKey} from pile ${pileRandomizer}`);
               const boonData = createCardLike(cardKey, expansionName, {
@@ -150,7 +150,7 @@ export class ExpansionLoaderService {
           continue;
         }
 
-        // Route card-like definitions to their dedicated catalogs.
+        // Route landscape definitions to their dedicated catalogs.
         if (ExpansionLoaderService.isBoonCardEntry(entry as Partial<CardNoId>)) {
           this.loggerService.debug(`[expansion loader] registering boon ${key}`);
           const boonData = createCardLike(key as CardKey, expansionName, {

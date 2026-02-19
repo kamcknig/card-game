@@ -26,7 +26,7 @@ export class LandmarkLoaderService {
       const landmarks = landmarkLibraryModule.default as Record<string, Partial<LandmarkNoId>>;
 
       for (const cardKey of Object.keys(landmarks)) {
-        // Build landmark card-like data using shared image naming rules.
+        // Build landmark landscape data using shared image naming rules.
         const landmarkTemplate = landmarks[cardKey];
         const cardLike = createCardLike(cardKey, expansionName, landmarkTemplate);
         expansionLandmarks[cardKey] = {

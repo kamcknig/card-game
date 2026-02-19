@@ -26,7 +26,7 @@ export class WayLoaderService {
       const ways = wayLibraryModule.default as Record<string, Partial<WayNoId>>;
 
       for (const cardKey of Object.keys(ways)) {
-        // Build way card-like data using shared image naming rules.
+        // Build way landscape data using shared image naming rules.
         const wayTemplate = ways[cardKey];
         const cardLike = createCardLike(cardKey, expansionName, wayTemplate);
         expansionWays[cardKey] = {

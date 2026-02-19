@@ -242,11 +242,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this.matchSetupService.createBaseSupply(this._matchConfiguration);
       this.matchSetupService.createKingdom(this._matchConfiguration);
       this.matchSetupService.createEvents(this._matchConfiguration);
-      // Landmarks are landscape card-likes that should be created alongside events.
+      // Landmarks are landscapes that should be created alongside events.
       this.matchSetupService.createLandmarks(this._matchConfiguration);
-      // Projects are landscape card-likes that should be created alongside events.
+      // Projects are landscapes that should be created alongside events.
       this.matchSetupService.createProjects(this._matchConfiguration);
-      // Ways are landscape card-likes that should be created alongside events/projects.
+      // Ways are landscapes that should be created alongside events/projects.
       this.matchSetupService.createWays(this._matchConfiguration);
       // Boons are initialized after events/landmarks if Fate cards are present.
       this.matchSetupService.createBoons(this._matchConfiguration);

@@ -264,7 +264,7 @@ export interface GameActionDefinitionMap {
     // Optional facing update applied when the card moves.
     facing?: CardFacing;
   }) => Promise<{ location: CardLocation; playerId?: PlayerId } | undefined>;
-  // Moves a card-like (boon/event/landmark) to a supported location.
+  // Moves a landscape-like entry (boon/event/landmark) to a supported location.
   moveCardLike: (args: {
     toPlayerId?: PlayerId;
     cardLikeId: CardLikeId;
@@ -281,6 +281,9 @@ export interface GameActionDefinitionMap {
   playCard: (args: {
     playerId: PlayerId;
     cardId: CardId | Card;
+    // Optional way id to resolve alternate Action play behavior.
+    // undefined => resolve via prompt, null => explicit normal play.
+    wayId?: CardLikeId | null;
     overrides?: GameActionOverrides;
   }, context?: GameActionContext) => Promise<void>;
   revealCard: (args: {
@@ -292,13 +295,13 @@ export interface GameActionDefinitionMap {
   }, context?: GameActionContext) => Promise<CardId | undefined>;
   selectCard: (args: SelectActionCardArgs) => Promise<CardId[]>;
   selectSingleCard: (args: SelectSingleActionCardArgs) => Promise<CardId | null>;
-  // Generic shuffle action for cards and card-likes; does not add UI log entries.
+  // Generic shuffle action for cards and landscapes; does not add UI log entries.
   shuffle: (
     args: { playerId?: PlayerId; cardIds?: CardId[]; cardLikeIds?: CardLikeId[] },
     context?: GameActionContext,
   ) => Promise<void>;
   shuffleDeck: (args: { playerId: PlayerId; includeDiscard?: boolean }, context?: GameActionContext) => Promise<void>;
-  // Shuffles a card-like deck such as boons or hexes.
+  // Shuffles a landscape deck such as boons or hexes.
   shuffleCardLike: (
     args: { kind: 'boon' | 'hex'; includeDiscard?: boolean; playerId?: PlayerId },
     context?: GameActionContext,
@@ -626,7 +629,7 @@ export type TriggerEventTypeContext = {
     cardId: CardId;
     playerId: PlayerId;
     previousLocation: { location: CardLocation; playerId?: PlayerId };
-    // Optional source card-like for trigger attribution.
+    // Optional source landscape for trigger attribution.
     source?: CardId;
   };
   cardPlayed: { playerId: PlayerId; cardId: CardId };
@@ -644,7 +647,7 @@ export type TriggerEventTypeContext = {
   endTurnPhase: { phaseIndex: number; playerId: PlayerId };
   // Triggered on the start of each phase of a player's turn
   startTurnPhase: { phaseIndex: number };
-  // Triggered when cards/card-likes are shuffled for a specific player.
+  // Triggered when cards/landscapes are shuffled for a specific player.
   shuffle: {
     playerId: PlayerId;
     cardIds?: CardId[];

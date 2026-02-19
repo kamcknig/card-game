@@ -14,11 +14,11 @@ export function createInitialMatchState(): Match {
     config: {} as ComputedMatchConfiguration,
     currentPlayerTurnIndex: 0,
     events: [],
-    // Active landmark card-likes in the match.
+    // Active landmark landscapes in the match.
     landmarks: [],
-    // Active project card-likes in the match.
+    // Active project landscapes in the match.
     projects: [],
-    // Active way card-likes in the match.
+    // Active way landscapes in the match.
     ways: [],
     // Boon deck state for Fate cards.
     boons: {

@@ -41,6 +41,13 @@ $match-config-single-column-breakpoint: 940px;
   font-size: 1.25rem;
 }
 
+.config-section {
+  border: 1px solid var(--theme-border-section-light);
+  border-radius: 8px;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
 .configuration-top-row {
   display: flex;
   align-items: flex-start;
@@ -64,6 +71,11 @@ $match-config-single-column-breakpoint: 940px;
   max-width: calc((280px * 3) + (20px * 2));
 }
 
+.card-likes-section {
+  width: fit-content;
+  max-width: 100%;
+}
+
 .players,
 .expansions,
 .banned-cards-section {
@@ -83,7 +95,8 @@ $match-config-single-column-breakpoint: 940px;
 }
 
 .kingdom-section {
-  width: 100%;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .events-section,
@@ -179,6 +192,10 @@ $match-config-single-column-breakpoint: 940px;
   .configuration-top-row,
   .card-like-row {
     flex-direction: column;
+  }
+
+  .card-like-row {
+    max-width: 100%;
   }
 }
 

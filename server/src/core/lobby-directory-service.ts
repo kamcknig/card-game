@@ -235,7 +235,7 @@ export class LobbyDirectoryService {
       record.game.expansionLoaded(expansion);
     }
 
-    // Push refreshed card-like catalog so clients can update local search caches.
+    // Push refreshed landscape catalog so clients can update local search caches.
     this.io.in(LobbyDirectoryService.LOBBY_ROOM_NAME).emit(
       'setSelectableSearchCatalog',
       this.expansionSearchService.getSelectableSearchCatalog(),
@@ -516,7 +516,7 @@ export class LobbyDirectoryService {
     this.handleGameStateChanged(gameId);
   }
 
-  // Emits the current searchable card-like catalog to one socket.
+  // Emits the current searchable landscape catalog to one socket.
   private emitSelectableSearchCatalog(socket: AppSocket): void {
     socket.emit('setSelectableSearchCatalog', this.expansionSearchService.getSelectableSearchCatalog());
   }

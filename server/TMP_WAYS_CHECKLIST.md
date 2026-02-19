@@ -27,11 +27,11 @@
 ## Way Play Interaction (Non-Blocking UI)
 - [x] 17. Add socket event `cardTappedAsWay(playerId, cardId, wayId)`.
 - [x] 18. Handle `cardTappedAsWay` in server interactivity controller.
-- [ ] 19. Extend `playCard` args with optional `wayId`.
-- [ ] 20. Execute normal-vs-way effect path in `playCard` while preserving existing trigger/lifecycle order.
-- [ ] 21. Ensure Way context `this` points at the played Action card (`cardId` semantics).
-- [ ] 22. Add deterministic logging for `normal` vs `way:<key>` play path.
-- [ ] 23. Keep AI policy on normal play only for now.
+- [x] 19. Extend `playCard` args with optional `wayId`.
+- [x] 20. Execute normal-vs-way effect path in `playCard` while preserving existing trigger/lifecycle order.
+- [x] 21. Ensure Way context `this` points at the played Action card (`cardId` semantics).
+- [x] 22. Add deterministic logging for `normal` vs `way:<key>` play path.
+- [x] 23. Keep AI policy on normal play only for now.
 
 ## Pixi Way Picker UX
 - [x] 24. Add cyan playable border for Way-eligible cards.
@@ -42,4 +42,4 @@
 - [x] 29. Reuse existing client action lock patterns for way-click flow.
 
 ## Future Hooking
-- [ ] 30. Add TODO + explicit hook point for future top-vs-bottom effect split.
+- [x] 30. Add TODO + explicit hook point for future top-vs-bottom effect split.

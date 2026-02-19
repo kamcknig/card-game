@@ -198,7 +198,7 @@ export class ServerDebugRouteHandlerService {
     return new Response('debug resource not found', { status: 404 });
   }
 
-  // Routes /debug/expansions resources for expansion card/card-like inspection.
+  // Routes /debug/expansions resources for expansion card/landscape inspection.
   private handleExpansionDebugRoutes(req: Request, parts: string[]): Response {
     // GET /debug/expansions/card-data
     if (parts.length === 3 && parts[2] === 'card-data' && req.method === 'GET') {
@@ -264,7 +264,7 @@ export class ServerDebugRouteHandlerService {
     return expansionNames.map((name) => this.toExpansionDebugResource(name));
   }
 
-  // Builds one expansion resource with supply cards and all supported card-like categories.
+  // Builds one expansion resource with supply cards and all supported landscape categories.
   private toExpansionDebugResource(expansionName: string): {
     expansionName: string;
     title: string;
@@ -333,7 +333,7 @@ export class ServerDebugRouteHandlerService {
     };
   }
 
-  // Returns card/card-like catalog counts for search-index rebuild responses.
+  // Returns card/landscape catalog counts for search-index rebuild responses.
   private getExpansionIndexSizes(): Record<string, number> {
     const expansionLibrary = this.expansionCatalogService.getExpansionLibrary();
     const allExpansions = Object.values(expansionLibrary) as ExpansionData[];
@@ -352,7 +352,7 @@ export class ServerDebugRouteHandlerService {
     };
   }
 
-  // Creates a stable, cardKey-sorted list from a card/card-like keyed record.
+  // Creates a stable, cardKey-sorted list from a card/landscape keyed record.
   private sortCardLikeValues<T extends { cardKey: string }>(records: Record<string, T>): T[] {
     return Object.values(records).sort((a, b) => a.cardKey.localeCompare(b.cardKey));
   }

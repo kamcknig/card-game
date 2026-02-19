@@ -105,7 +105,7 @@
             <div class="card-flex-container">
               @for (cardId of playerMatContent.cardIds; track cardId) {
               <div class="card-item">
-                  <!-- Set-aside renders card-likes so boons are visible to all players. -->
+                  <!-- Set-aside renders landscapes so boons are visible to all players. -->
                   @if (currentVisibleMat.mat === 'set-aside') {
                     <app-card-like
                       [size]="'half'"

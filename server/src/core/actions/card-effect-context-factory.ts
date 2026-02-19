@@ -38,7 +38,7 @@ export class CardEffectContextFactory {
     private readonly promptService: PromptService,
   ) {}
 
-  // Creates a fully wired effect context for card-like effect execution.
+  // Creates a fully wired effect context for landscape effect execution.
   public create(args: CreateCardEffectContextArgs): CardEffectFunctionContext {
     return {
       cardSourceController: this.cardSourceController,

@@ -168,7 +168,7 @@ export class ReactionManager {
     if (!(cardLikeOrTemplate instanceof CardLike)) {
       template = cardLikeOrTemplate;
     } else {
-      // Resolve a stable source type for card-like reactions.
+      // Resolve a stable source type for landscape reactions.
       const sourceType: ReactionSourceType = cardLikeOrTemplate instanceof Event
         ? 'event'
         : cardLikeOrTemplate instanceof Landmark

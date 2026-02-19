@@ -60,6 +60,7 @@ import {
   findEventInMatch,
   findHexInMatch,
   findProjectInMatch,
+  findWayInMatch,
 } from '@shared/find-card-like-in-match.ts';
 import { getPlayerTurnIndex } from '@shared/get-player-position-utils.ts';
 import { BuyOptionsResolver } from './resolve-buy-options.ts';
@@ -481,6 +482,7 @@ export class GameActionController implements GameActionDefinitionMap {
       if (turnPhase === 'action') {
         const actionCardId = selectable.find((id) => this.cardLibrary.getCard(id).type.includes('ACTION'));
         if (actionCardId) {
+          // AI policy remains normal play only; way-choice heuristics are deferred.
           await this.actionService.run('playCard', { playerId: currentPlayer.id, cardId: actionCardId });
         }
         // Always move to the next phase after one action attempt.
@@ -724,7 +726,7 @@ export class GameActionController implements GameActionDefinitionMap {
       } catch (error) {
         const cardLike = this.findCardLike(args.cardId);
         if (cardLike) {
-          throw new Error(`[moveCard action] ${cardLike} is a card-like; use moveCardLike instead`);
+          throw new Error(`[moveCard action] ${cardLike} is a landscape; use moveCardLike instead`);
         }
         throw error;
       }
@@ -810,18 +812,18 @@ export class GameActionController implements GameActionDefinitionMap {
     return oldSource ? { location: oldSource?.sourceKey!, playerId: oldSource?.playerId } : undefined;
   }
 
-  // Moves a card-like (boon/hex/event/landmark) between supported locations.
+  // Moves a landscape-like entry (boon/hex/event/landmark) between supported locations.
   async moveCardLike(args: { toPlayerId?: PlayerId; cardLikeId: CardLikeId; to: CardLocationSpec }) {
     if (typeof args.cardLikeId !== 'number') {
       throw new Error('[moveCardLike action] invalid cardLikeId');
     }
 
-    // Prevent card IDs from being moved through the card-like path.
+    // Prevent card IDs from being moved through the landscape path.
     try {
       const card = this.cardLibrary.getCard(args.cardLikeId);
       throw new Error(`[moveCardLike action] ${card} is a card; use moveCard instead`);
     } catch (error) {
-      // Ignore missing card errors; those indicate a card-like ID.
+      // Ignore missing card errors; those indicate a landscape ID.
       if (!(error instanceof Error) || !error.message.includes('unable to locate card')) {
         throw error;
       }
@@ -829,11 +831,11 @@ export class GameActionController implements GameActionDefinitionMap {
 
     const cardLike = this.findCardLike(args.cardLikeId);
     if (!cardLike) {
-      throw new Error(`[moveCardLike action] could not find card-like ${args.cardLikeId}`);
+      throw new Error(`[moveCardLike action] could not find landscape ${args.cardLikeId}`);
     }
 
     if (Array.isArray(args.to.location)) {
-      throw new Error('[moveCardLike action] cannot move card-like to multiple locations');
+      throw new Error('[moveCardLike action] cannot move landscape to multiple locations');
     }
 
     let previousLocation: { location: CardLocation; playerId?: PlayerId } | undefined;
@@ -952,9 +954,9 @@ export class GameActionController implements GameActionDefinitionMap {
     return previousLocation;
   }
 
-  // Finds a card-like instance by id in the current match.
+  // Finds a landscape-like instance by id in the current match.
   private findCardLike(cardLikeId: CardLikeId) {
-    // moveCardLike only supports these movable card-like categories.
+    // moveCardLike only supports these movable landscape categories.
     return findCardLikeInMatch(this.match, cardLikeId, {
       includeKinds: ['boon', 'hex', 'event', 'landmark', 'project'],
     });
@@ -1607,7 +1609,7 @@ export class GameActionController implements GameActionDefinitionMap {
     cardLikeId: CardLikeId;
     playerId: PlayerId;
   }) {
-    // Prevent buying card-likes if the player already has debt tokens.
+    // Prevent buying landscapes if the player already has debt tokens.
     const existingDebt = this.match.debt[args.playerId] ?? 0;
     if (existingDebt > 0) {
       this.loggerService.debug(`[buyEvent action] player ${args.playerId} has debt (${existingDebt}), blocking buy`);
@@ -2816,14 +2818,92 @@ export class GameActionController implements GameActionDefinitionMap {
     return Array.isArray(drawn) ? drawn : [drawn];
   }
 
+  // Resolves which way id (if any) should apply for this card play.
+  private async resolveWaySelectionForPlay(args: {
+    playerId: PlayerId;
+    card: Card;
+    requestedWayId?: CardLikeId | null;
+  }): Promise<CardLikeId | null> {
+    // Ways only apply to Action cards.
+    if (!args.card.type.includes('ACTION')) {
+      return null;
+    }
+
+    const activeWays = this.match.ways ?? [];
+    if (activeWays.length < 1) {
+      return null;
+    }
+
+    // Explicit caller choices always win (null = normal, id = selected way).
+    if (args.requestedWayId !== undefined) {
+      return args.requestedWayId;
+    }
+
+    const player = getPlayerById(this.match, args.playerId);
+    if (player?.isComputer) {
+      // AI policy remains normal play only for now.
+      return null;
+    }
+
+    const wayIds = activeWays.map((way) => way.id);
+    this.loggerService.debug(
+      `[playCard action] prompting player ${args.playerId} for normal vs way play of ${args.card}`,
+    );
+
+    const selectedIds = await this.promptService.requestResult<Array<CardId | CardLikeId>>({
+      playerId: args.playerId,
+      prompt: `Choose how to play ${args.card.cardName}`,
+      content: {
+        type: 'select',
+        cardIds: [args.card.id],
+        cardLikeIds: [...wayIds],
+        selectableCardIds: [args.card.id],
+        selectableCardLikeIds: [...wayIds],
+        selectCount: { kind: 'exact', count: 1 },
+      },
+    });
+
+    const selectedId = selectedIds?.[0];
+    if (selectedId === undefined || selectedId === args.card.id) {
+      return null;
+    }
+
+    const selectedWay = findWayInMatch(this.match, selectedId);
+    if (!selectedWay) {
+      this.loggerService.warn(`[playCard action] prompted way selection ${selectedId} was not found`);
+      return null;
+    }
+
+    return selectedWay.id;
+  }
+
   async playCard(args: {
     playerId: PlayerId;
     cardId: CardId | Card;
+    // Optional way selection that replaces the card's on-play effect path.
+    // undefined => prompt, null => explicit normal play, cardLikeId => explicit way play.
+    wayId?: CardLikeId | null;
     overrides?: GameActionOverrides;
   }, context?: GameActionContext) {
     const { playerId } = args;
     const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
     const cardId = card.id;
+    // Resolve way selection once so all downstream logs and effect execution are deterministic.
+    const resolvedWayId = await this.resolveWaySelectionForPlay({
+      playerId,
+      card,
+      requestedWayId: args.wayId,
+    });
+    let selectedWay = resolvedWayId === null ? undefined : findWayInMatch(this.match, resolvedWayId);
+    if (resolvedWayId !== null && !selectedWay) {
+      this.loggerService.warn(`[playCard action] requested way ${resolvedWayId} was not found; using normal path`);
+    }
+    const missingWayEffect = selectedWay ? this.wayEffectFunctionMap[selectedWay.cardKey] === undefined : false;
+    const playPathLabel = selectedWay
+      ? missingWayEffect
+        ? `normal(fallback-way:${selectedWay.cardKey})`
+        : `way:${selectedWay.cardKey}`
+      : 'normal';
 
     if (args.overrides?.moveCard === undefined || args.overrides.moveCard) {
       await this.moveCard({
@@ -2852,6 +2932,7 @@ export class GameActionController implements GameActionDefinitionMap {
     };
 
     this.loggerService.info(`[playCard action] ${getPlayerById(this.match, playerId)} played card ${card}`);
+    this.loggerService.info(`[playCard action] resolved play path ${playPathLabel} for ${card}`);
 
     this.logManager.addLogEntry({
       type: 'cardPlayed',
@@ -2885,30 +2966,52 @@ export class GameActionController implements GameActionDefinitionMap {
         reactionContext,
       });
 
-    let effectFn = this.cardEffectFunctionMap[card.cardKey];
-    if (effectFn) {
-      // Run base card effects with standardized logging.
-      await this.runEffectWithLogging({
-        source: card.toString(),
-        sourceType: 'card',
-        playerId,
-        effectFn,
-        context: buildEffectContext(),
-      });
+    // TODO(ways): add an explicit hook here for top-vs-bottom effect split semantics when implemented.
+    if (selectedWay) {
+      const wayEffectFn = this.wayEffectFunctionMap[selectedWay.cardKey];
+      if (!wayEffectFn) {
+        this.loggerService.warn(
+          `[playCard action] no effect registered for ${selectedWay.cardKey}; falling back to normal path`,
+        );
+      } else {
+        // Execute way effects with the played card as context `this` (cardId semantics).
+        await this.runEffectWithLogging({
+          source: `[WAY ${selectedWay.id} - ${selectedWay.cardName}]`,
+          sourceType: 'way',
+          playerId,
+          effectFn: wayEffectFn,
+          context: buildEffectContext(),
+        });
+      }
     }
 
-    for (const expansion of Object.keys(this._customCardEffectHandlers)) {
-      const effects = this._customCardEffectHandlers[expansion];
-      effectFn = effects[card.cardKey];
+    // Normal path still runs if no way was selected, or if a selected way has no registered effect yet.
+    if (!selectedWay || missingWayEffect) {
+      let effectFn = this.cardEffectFunctionMap[card.cardKey];
       if (effectFn) {
-        // Run expansion-registered card effects with standardized logging.
+        // Run base card effects with standardized logging.
         await this.runEffectWithLogging({
           source: card.toString(),
-          sourceType: `card:${expansion}`,
+          sourceType: 'card',
           playerId,
           effectFn,
           context: buildEffectContext(),
         });
+      }
+
+      for (const expansion of Object.keys(this._customCardEffectHandlers)) {
+        const effects = this._customCardEffectHandlers[expansion];
+        effectFn = effects[card.cardKey];
+        if (effectFn) {
+          // Run expansion-registered card effects with standardized logging.
+          await this.runEffectWithLogging({
+            source: card.toString(),
+            sourceType: `card:${expansion}`,
+            playerId,
+            effectFn,
+            context: buildEffectContext(),
+          });
+        }
       }
     }
 
@@ -2922,7 +3025,7 @@ export class GameActionController implements GameActionDefinitionMap {
     await this.reactionManager.runTrigger({ trigger: afterCardPlayedTrigger, reactionContext });
   }
 
-  // Generic shuffle action used by card and card-like shuffles.
+  // Generic shuffle action used by card and landscape shuffles.
   async shuffle(
     args: { playerId?: PlayerId; cardIds?: CardId[]; cardLikeIds?: CardLikeId[] },
     context?: GameActionContext,
@@ -2937,7 +3040,7 @@ export class GameActionController implements GameActionDefinitionMap {
 
     if (cardLikeIds.length > 1) {
       fisherYatesShuffle(cardLikeIds, true, () => this.rngService.nextFloat());
-      this.loggerService.debug(`[shuffle action] shuffled ${cardLikeIds.length} card-like id(s)`);
+      this.loggerService.debug(`[shuffle action] shuffled ${cardLikeIds.length} landscape id(s)`);
     }
 
     if (args.playerId === undefined) {
@@ -2989,7 +3092,7 @@ export class GameActionController implements GameActionDefinitionMap {
     });
   }
 
-  // Shuffles a card-like deck (boons or hexes), optionally pulling in discards.
+  // Shuffles a landscape deck (boons or hexes), optionally pulling in discards.
   async shuffleCardLike(
     args: { kind: 'boon' | 'hex'; includeDiscard?: boolean; playerId?: PlayerId },
     context?: GameActionContext,

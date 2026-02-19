@@ -211,14 +211,14 @@ const getSourceColor = (source: LogEntrySource, cardsById: Record<CardId, Card>)
   return 'white';
 }
 
-// Resolves card-like names for log entries (events/landmarks/boons/hexes/states/artifacts).
+// Resolves landscape-style names for log entries (events/landmarks/boons/hexes/states/artifacts).
 const getCardLikeDisplay = (cardLikeId: number) => {
   const match = matchStore.get();
   if (!match) {
-    return { name: 'Card-like', color: 'white' };
+    return { name: 'Landscape', color: 'white' };
   }
 
   const cardLike = findCardLikeInMatch(match, cardLikeId);
 
-  return { name: cardLike?.cardName ?? 'Card-like', color: 'white' };
+  return { name: cardLike?.cardName ?? 'Landscape', color: 'white' };
 }

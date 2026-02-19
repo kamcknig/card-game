@@ -8,7 +8,7 @@ export interface WayCardArgs {
   way: Way;
 }
 
-// Renders a way card-like with optional highlight and detail-view support.
+// Renders a way landscape with optional highlight and detail-view support.
 export class WayCard extends CardLikeView {
   private readonly _highlight: Graphics = new Graphics({ label: 'highlight' });
   private _way: Way | undefined;

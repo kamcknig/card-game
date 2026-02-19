@@ -6,7 +6,7 @@ import { getPlayerById } from '../utils/get-player-by-id.ts';
 import { getTurnPhase } from '../utils/get-turn-phase.ts';
 import { CardPriceRulesController } from './card-price-rules-controller.ts';
 import { CardSourceController } from './card-source-controller.ts';
-import { findEventInMatch, findProjectInMatch } from '@shared/find-card-like-in-match.ts';
+import { findEventInMatch, findProjectInMatch, findWayInMatch } from '@shared/find-card-like-in-match.ts';
 import { renaissanceTokenIds } from '@expansions/renaissance/token-ids-renaissance.ts';
 import { BuyOptionsResolver, ResolvedBuyOption } from './actions/resolve-buy-options.ts';
 import { LoggerService } from './logger-service.ts';
@@ -240,10 +240,10 @@ export class CardInteractivityController {
       throw new Error('could not find player');
     }
 
-    this.loggerService.info(`[card interactivity] ${player} tapped card-like ${cardId}`);
+    this.loggerService.info(`[card interactivity] ${player} tapped landscape ${cardId}`);
 
     if (this._gameOver) {
-      this.loggerService.debug(`[card interactivity] game is over, not processing card-like tap`);
+      this.loggerService.debug(`[card interactivity] game is over, not processing landscape tap`);
       return;
     }
 
@@ -252,11 +252,11 @@ export class CardInteractivityController {
     if (phase === 'buy') {
       // Block buying events while the player has debt tokens.
       if ((this.match.debt?.[playerId] ?? 0) > 0) {
-        this.loggerService.debug(`[card interactivity] ${player} has debt, blocking card-like buy`);
+        this.loggerService.debug(`[card interactivity] ${player} has debt, blocking landscape buy`);
         return;
       }
       this.loggerService.info(
-        `[card interactivity] ${player} tapped card-like ${cardId} in phase ${phase}, processing`,
+        `[card interactivity] ${player} tapped landscape ${cardId} in phase ${phase}, processing`,
       );
 
       const event = findEventInMatch(this.match, cardId);
@@ -267,12 +267,12 @@ export class CardInteractivityController {
         if (project) {
           await this.actionService.run('buyProject', { playerId, cardLikeId: cardId });
         } else {
-          this.loggerService.debug(`[card interactivity] ${player} tapped non-buyable card-like ${cardId}`);
+          this.loggerService.debug(`[card interactivity] ${player} tapped non-buyable landscape ${cardId}`);
         }
       }
     } else {
       this.loggerService.debug(
-        `[card interactivity] ${player} tapped card-like ${cardId} in phase ${phase}, not processing`,
+        `[card interactivity] ${player} tapped landscape ${cardId} in phase ${phase}, not processing`,
       );
     }
 
@@ -377,7 +377,7 @@ export class CardInteractivityController {
         });
       }
     } else if (phase === 'action') {
-      await this.actionService.run('playCard', { playerId, cardId });
+      await this.actionService.run('playCard', { playerId, cardId, wayId: null });
     } else if (phase === 'night') {
       // Night phase allows playing Night cards from hand without action cost.
       const hand = this.cardSourceController.getSource('playerHand', playerId);
@@ -413,8 +413,43 @@ export class CardInteractivityController {
       return;
     }
 
-    // Acknowledge the tap so the client lock releases while full Way execution is still pending.
-    this.loggerService.warn(`[card interactivity] way play received before way execution path is implemented`);
+    // Ensure the selected way is active in the current match.
+    const way = findWayInMatch(this.match, wayId);
+    if (!way) {
+      this.loggerService.warn(`[card interactivity] could not find way ${wayId} in active match`);
+      this.socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
+      return;
+    }
+
+    // Require the tapped card to still be in hand and currently selectable.
+    const hand = this.cardSourceController.getSource('playerHand', playerId);
+    if (!hand.includes(cardId)) {
+      this.loggerService.debug(`[card interactivity] ignored way play for card ${cardId} not in hand`);
+      this.socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
+      return;
+    }
+
+    const selectableCards = this.match.selectableCards[playerId] ?? [];
+    if (!selectableCards.includes(cardId)) {
+      this.loggerService.debug(`[card interactivity] ignored way play for card ${cardId} not selectable`);
+      this.socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
+      return;
+    }
+
+    const card = this.cardLibrary.getCard(cardId);
+    if (!card.type.includes('ACTION')) {
+      this.loggerService.debug(`[card interactivity] ignored non-action card ${card} for way play`);
+      this.socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
+      return;
+    }
+
+    await this.actionService.run('playCard', {
+      playerId,
+      cardId,
+      wayId,
+    });
+
+    await this.actionService.run('checkForRemainingPlayerActions');
     this.socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
   }
 }

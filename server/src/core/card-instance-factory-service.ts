@@ -22,7 +22,7 @@ import {
 import { formatCardName } from '../utils/format-card-name.ts';
 import { ExpansionCatalogService } from './expansion-catalog-service.ts';
 
-// Creates all card/card-like match instances with a single id sequence per match scope.
+// Creates all card/landscape match instances with a single id sequence per match scope.
 export class CardInstanceFactoryService {
   private _cardCount = 0;
 

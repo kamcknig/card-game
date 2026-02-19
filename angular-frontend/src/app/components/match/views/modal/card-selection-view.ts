@@ -17,7 +17,7 @@ import { getCardSourceStore } from '../../../../state/card-source-store';
 // Local id alias used for temporary selection mapping.
 type NewCardId = CardId;
 
-// Container extension to track selection ids and detail art for card-like prompts.
+// Container extension to track selection ids and detail art for landscape prompts.
 type SelectionView = Container & {
   selectionId?: number;
   detailImagePath?: string;
@@ -31,17 +31,17 @@ type CardViewLike = Container & {
 
 // Type guard for card view containers.
 const isCardViewLike = (target: Container): target is CardViewLike => 'card' in target && 'facing' in target;
-// Type guard for card-like selection containers.
+// Type guard for landscape selection containers.
 const isSelectionView = (target: Container): target is SelectionView => 'selectionId' in target;
 
 export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
   if (args.type !== 'select' && args.type !== 'display-cards') {
-    throw new Error('card selection modal requires card or card-like selection types');
+    throw new Error('card selection modal requires card or landscape selection types');
   }
 
   const displayOnly = args.type === 'display-cards';
 
-  // Support combined card and card-like lists in a single prompt.
+  // Support combined card and landscape lists in a single prompt.
   const cardIds = args.cardIds ?? [];
   const cardLikeIds = args.cardLikeIds ?? [];
   if (!cardIds.length && !cardLikeIds.length) throw new Error('Cards cannot be empty');
@@ -64,7 +64,7 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
   const selectCount = 'selectCount' in args ? args.selectCount ?? 1 : 0;
   // Normalize the selection count for auto-finish logic.
   const resolvedCountSpec = resolveCountSpec(selectCount);
-  // Parent container hosts card and card-like rows.
+  // Parent container hosts card and landscape rows.
   const contentView = new Container();
 
   const validate = () => {
@@ -103,7 +103,7 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
         void displayCardDetail(cardId);
         return;
       }
-      // Card-like views expose a detail image path for right-click inspection.
+      // Landscape views expose a detail image path for right-click inspection.
       if (isSelectionView(target) && target.detailImagePath) {
         void displayCardDetail({ detailImagePath: target.detailImagePath });
         return;
@@ -160,24 +160,24 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
     cardList.addChild(view);
   }
 
-  // Build a separate row for card-like entries below the cards.
+  // Build a separate row for landscape entries below the cards.
   const cardLikeList = new List({ type: 'horizontal' });
   cardLikeList.elementsMargin = cardLikeCount > 6 ? -CARD_WIDTH * .5 : STANDARD_GAP;
 
-  // Snapshot match once for consistent card-like resolution during render.
+  // Snapshot match once for consistent landscape resolution during render.
   const match = matchStore.get();
   for (const cardLikeId of cardLikeIds) {
     const cardLike = findCardLikeInMatch(match, cardLikeId);
 
     if (!cardLike) {
-      console.warn(`[card-selection] missing card-like data for id ${cardLikeId}`);
+      console.warn(`[card-selection] missing landscape data for id ${cardLikeId}`);
       continue;
     }
 
     const displayId = ++maxId;
-    // Build a card-like sprite view for selection prompts.
+    // Build a landscape sprite view for selection prompts.
     const view = new Container() as SelectionView;
-    view.label = `card-like-${cardLike.cardKey}:${displayId}`;
+    view.label = `landscape-${cardLike.cardKey}:${displayId}`;
     view.eventMode = 'static';
     const sprite = new Sprite({ label: 'cardLikeSprite' });
     const texture = Assets.get(`${cardLike.cardKey}-full`);
@@ -204,7 +204,7 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
     cardLikeList.addChild(view);
   }
 
-  // Layout cards first, then card-likes beneath them using a positive-width container.
+  // Layout cards first, then landscapes beneath them using a positive-width container.
   // The modal container handles final centering, so rows should not use negative x offsets.
   const rowWidths = [
     cardList.children.length > 0 ? cardList.width : 0,

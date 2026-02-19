@@ -111,6 +111,17 @@ export class MatchConfigurationComponent implements OnDestroy {
       && this.hasConfigurationChanges();
   });
 
+  // True when any manually selected configuration entries can be cleared.
+  readonly canClearConfiguration = computed(() => {
+    return this.selectedKingdoms().length > 0
+      || this.bannedKingdoms().length > 0
+      || this.selectedEvents().length > 0
+      || this.selectedLandmarks().length > 0
+      || this.selectedArtifacts().length > 0
+      || this.selectedProjects().length > 0
+      || this.selectedWays().length > 0;
+  });
+
   // Store-backed signals for template state.
   readonly playerIds = toSignal(this._nanoStoreService.useStore(playerIdStore), {
     initialValue: playerIdStore.get()
@@ -151,7 +162,7 @@ export class MatchConfigurationComponent implements OnDestroy {
     return lookup;
   });
 
-  // Derived selection lists rendered by each card-like section.
+  // Derived selection lists rendered by each landscape section.
   readonly selectedKingdoms = computed(() => this.sortByCardKey(this.matchConfiguration()?.preselectedKingdoms ?? []));
   readonly bannedKingdoms = computed(() => this.sortByCardKey(this.matchConfiguration()?.bannedKingdoms ?? []));
   readonly selectedEvents = computed(() => this.sortByCardKey(this.matchConfiguration()?.events ?? []));
@@ -300,6 +311,22 @@ export class MatchConfigurationComponent implements OnDestroy {
     this.dialogStatusMessage.set(null);
     this.selectedLoadConfigurationKey.set(null);
     this._socketService.emit('requestSavedMatchConfigurationList');
+  }
+
+  // Clears manually selected kingdom and landscape configuration fields.
+  clearConfiguration() {
+    if (!this.isGameOwner() || !this.canClearConfiguration()) return;
+    this.emitMatchConfigurationUpdate({
+      bannedKingdoms: [],
+      preselectedKingdoms: [],
+      basicSupply: [],
+      kingdomSupply: [],
+      events: [],
+      landmarks: [],
+      artifacts: [],
+      projects: [],
+      ways: [],
+    });
   }
 
   // Closes the load-configuration dialog.
@@ -607,7 +634,7 @@ export class MatchConfigurationComponent implements OnDestroy {
     return { basicSupply, kingdomSupply };
   }
 
-  // Returns a stable sorted copy of card-like entries keyed by cardKey.
+  // Returns a stable sorted copy of landscape entries keyed by cardKey.
   private sortByCardKey<T extends { cardKey: string }>(items: readonly T[]): T[] {
     return [...items].sort((a, b) => a.cardKey.localeCompare(b.cardKey));
   }
@@ -618,7 +645,7 @@ export class MatchConfigurationComponent implements OnDestroy {
     return [...kingdoms, ...placeholders];
   }
 
-  // Appends one empty add-slot for card-like section rendering.
+  // Appends one empty add-slot for landscape section rendering.
   private withTrailingEmptySlot<T>(items: T[]): (T | null)[] {
     return [...items, null];
   }

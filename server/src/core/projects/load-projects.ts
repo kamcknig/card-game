@@ -26,7 +26,7 @@ export class ProjectLoaderService {
       const projects = projectLibraryModule.default as Record<string, Partial<ProjectNoId>>;
 
       for (const cardKey of Object.keys(projects)) {
-        // Build project card-like data using shared image naming rules.
+        // Build project landscape data using shared image naming rules.
         const projectTemplate = projects[cardKey];
         const cardLike = createCardLike(cardKey, expansionName, projectTemplate);
         expansionProjects[cardKey] = {

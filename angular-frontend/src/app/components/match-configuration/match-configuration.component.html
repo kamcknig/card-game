@@ -7,6 +7,11 @@
         [disabled]="!hasConfigurationChanges()"
       >Save Config</button>
       <button class="secondary-action-button" (click)="openLoadDialog()">Load Config</button>
+      <button
+        class="secondary-action-button"
+        (click)="clearConfiguration()"
+        [disabled]="!canClearConfiguration()"
+      >Clear Config</button>
     }
     @if (activeLobbyGameId(); as activeGameId) {
       <button class="leave-game-button" (click)="leaveGame(activeGameId)">Leave Game</button>
@@ -17,7 +22,7 @@
   <section class="match-config-content">
     <section class="configuration-top-row">
       <!-- ░░░  Player List  ░░░ -->
-      <section class="players">
+      <section class="players config-section">
         <h2 class="section-title">Players</h2>
 
         <div class="player-list">
@@ -28,7 +33,7 @@
 
         @if (isOwner) {
           <button
-            class="add-computer-player"
+            class="secondary-action-button"
             (click)="addComputerPlayer()"
             [disabled]="playerCount() >= 6"
           >
@@ -38,7 +43,7 @@
       </section>
 
       <!-- ░░░  Expansion List  ░░░ -->
-      <section class="expansions">
+      <section class="expansions config-section">
         <h2 class="section-title">Expansions</h2>
 
         <div class="expansion-list">
@@ -64,12 +69,12 @@
         </div>
       </section>
 
-      <section class="banned-cards-section">
+      <section class="banned-cards-section config-section">
         @let bannedCards = bannedKingdoms();
         <h2 class="section-title">Banned cards ({{ bannedCards.length }})</h2>
 
         @if (isOwner) {
-          <button (click)="openSelectionModal('bannedKingdom')">Select</button>
+          <button class="secondary-action-button" (click)="openSelectionModal('bannedKingdom')">Select</button>
         }
 
         <div class="banned-card-list" [style.height.px]="bannedKingdomStackHeight()">
@@ -91,7 +96,7 @@
     </section>
 
     <section class="kingdom-row">
-      <section class="kingdom-section">
+      <section class="kingdom-section config-section">
         <h2 class="section-title">Kingdom</h2>
 
         <div class="kingdom-list">
@@ -123,7 +128,9 @@
       </section>
     </section>
 
-    <section class="card-like-row">
+    <section class="card-likes-section config-section">
+      <h2 class="section-title">Landscapes</h2>
+      <section class="card-like-row">
       <!-- ░░░  Events  ░░░ -->
       <section class="events-section">
         <h2 class="section-title">Events</h2>
@@ -278,11 +285,12 @@
           }
         </div>
       </section>
+      </section>
     </section>
   </section>
 </app-scene-content>
 
-<!-- single shared selection modal for kingdoms and card-likes -->
+<!-- single shared selection modal for kingdoms and landscapes -->
 @if (activeSelectionModal(); as modal) {
   <app-ui-dialog
     [zIndex]="4300"

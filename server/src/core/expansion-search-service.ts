@@ -133,12 +133,12 @@ export class ExpansionSearchService {
     return ways;
   }
 
-  // Returns a structured clone of the current searchable card-like catalog.
+  // Returns a structured clone of the current searchable landscape catalog.
   public getSelectableSearchCatalog(): SelectableSearchCatalog {
     return structuredClone(this._selectableCatalog);
   }
 
-  // Builds a Fuse index for card-like search by display name.
+  // Builds a Fuse index for landscape search by display name.
   private createFuse<T extends { cardName: string }>(items: T[]): Fuse<T> {
     const index = Fuse.createIndex(['cardName'], items);
     const fuseOptions: IFuseOptions<T> = {
@@ -150,7 +150,7 @@ export class ExpansionSearchService {
     return new Fuse(items, fuseOptions, index);
   }
 
-  // Sorts card-like entries by display name and key for deterministic UI ordering.
+  // Sorts landscape entries by display name and key for deterministic UI ordering.
   private sortByName<T extends { cardName: string; cardKey: string }>(items: T[]): T[] {
     return [...items].sort((a, b) => {
       const nameCompare = a.cardName.localeCompare(b.cardName);

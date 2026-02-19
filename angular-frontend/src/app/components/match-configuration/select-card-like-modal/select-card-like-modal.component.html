@@ -1,6 +1,6 @@
 <div class="modal-container">
   <div class="card-content">
-    <!-- Close button for the card-like selection modal -->
+    <!-- Close button for the landscape selection modal -->
     <div (click)="searchTermInput.value = ''; onClose()" class="close-button">X</div>
     <div class="card-container">
       @for (item of displaySearchResults(); track item.cardKey) {
@@ -18,7 +18,7 @@
     </div>
   </div>
 
-  <!-- Search input for card-likes -->
+  <!-- Search input for landscapes -->
   <input
     #searchTermInput
     autofocus

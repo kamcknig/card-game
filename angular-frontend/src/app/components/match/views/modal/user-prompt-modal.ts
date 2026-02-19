@@ -191,7 +191,7 @@ export const userPromptModal = (
 
       modalContainer.addChildAt(background, 0);
 
-      // Display-only card-like modals use a close button for dismissal.
+      // Display-only landscape modals use a close button for dismissal.
       const showCloseButton = args.content?.type === 'display-cards';
       if (showCloseButton) {
         const closeButton = createAppButton({

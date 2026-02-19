@@ -8,7 +8,7 @@ export interface LandmarkCardArgs {
   landmark: Landmark;
 }
 
-// Renders a landmark card-like with optional highlight and detail-view support.
+// Renders a landmark landscape with optional highlight and detail-view support.
 export class LandmarkCard extends CardLikeView {
   private readonly _highlight: Graphics = new Graphics({ label: 'highlight' });
   private _landmark: Landmark | undefined;
