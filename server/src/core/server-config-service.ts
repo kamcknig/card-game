@@ -10,6 +10,7 @@ export class ServerConfigService {
     this.isMatchStateExportEnabled();
     this.isMatchStateMergeEnabled();
     this.shouldEndMatchOnNoHumans();
+    this.getTooltipDefaultCloseDelayMs();
   }
 
   // Returns the configured server port or default port 3001.
@@ -66,6 +67,23 @@ export class ServerConfigService {
   // Returns optional match state override path.
   public getMatchStatePath(): string | undefined {
     return Deno.env.get('MATCH_STATE_PATH');
+  }
+
+  // Returns optional default tooltip close delay (milliseconds) for client UI behavior.
+  public getTooltipDefaultCloseDelayMs(): number | undefined {
+    const rawValue = Deno.env.get('TOOLTIP_DEFAULT_CLOSE_DELAY_MS');
+    if (!rawValue) {
+      return undefined;
+    }
+
+    const parsedValue = toNumber(rawValue);
+    if (!Number.isInteger(parsedValue) || parsedValue < 0) {
+      throw new Error(
+        `[server config] TOOLTIP_DEFAULT_CLOSE_DELAY_MS must be a non-negative integer, received '${rawValue}'`,
+      );
+    }
+
+    return parsedValue;
   }
 
   // Parses strict boolean env values ('true' | 'false') with a default.

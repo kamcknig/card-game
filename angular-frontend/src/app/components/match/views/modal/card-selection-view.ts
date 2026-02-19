@@ -204,17 +204,24 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
     cardLikeList.addChild(view);
   }
 
-  // Layout cards first, then card-likes beneath them.
+  // Layout cards first, then card-likes beneath them using a positive-width container.
+  // The modal container handles final centering, so rows should not use negative x offsets.
+  const rowWidths = [
+    cardList.children.length > 0 ? cardList.width : 0,
+    cardLikeList.children.length > 0 ? cardLikeList.width : 0,
+  ];
+  const contentWidth = Math.max(...rowWidths);
+
   let yOffset = 0;
   if (cardList.children.length > 0) {
-    cardList.x = Math.floor(-cardList.width * .5);
+    cardList.x = Math.floor((contentWidth - cardList.width) * .5);
     cardList.y = yOffset;
     contentView.addChild(cardList);
     yOffset += cardList.height + STANDARD_GAP;
   }
 
   if (cardLikeList.children.length > 0) {
-    cardLikeList.x = Math.floor(-cardLikeList.width * .5);
+    cardLikeList.x = Math.floor((contentWidth - cardLikeList.width) * .5);
     cardLikeList.y = yOffset;
     contentView.addChild(cardLikeList);
   }

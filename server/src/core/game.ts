@@ -18,6 +18,7 @@ import { ExpansionCompatibilityService } from './expansion-compatibility-service
 import { LoggerService } from './logger-service.ts';
 import { GameRuntimeState } from './game-runtime-state.ts';
 import { GameMatchLifecycleCoordinatorService } from './game-match-lifecycle-coordinator-service.ts';
+import { ServerConfigService } from './server-config-service.ts';
 import {
   AddPlayerResult,
   GameLobbySessionCoordinatorService,
@@ -104,6 +105,8 @@ export class Game {
     private readonly expansionCompatibilityService: ExpansionCompatibilityService,
     // Service that provides consistent logging.
     private readonly loggerService: LoggerService,
+    // Centralized server env configuration provider.
+    private readonly serverConfigService: ServerConfigService,
     // Coordinator that owns match lifecycle transitions and match scope creation.
     private readonly gameMatchLifecycleCoordinatorService: GameMatchLifecycleCoordinatorService,
     // Coordinator that owns lobby/session events and owner-only lobby handlers.
@@ -164,6 +167,7 @@ export class Game {
       gameId: this.runtimeState.gameId,
       gameName: this.runtimeState.gameName,
       matchScopeId: this.runtimeState.matchScopeId,
+      tooltipDefaultCloseDelayMs: this.serverConfigService.getTooltipDefaultCloseDelayMs(),
     };
   }
 

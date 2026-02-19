@@ -16,6 +16,7 @@ import { ExpansionSearchService } from './expansion-search-service.ts';
 import { MatchStartOrchestrator } from './match-start-orchestrator.ts';
 import { DisconnectedPlayerVoteService } from './disconnected-player-vote-service.ts';
 import { LoggerService } from './logger-service.ts';
+import { ServerConfigService } from './server-config-service.ts';
 import type { GameRuntimeState } from './game-runtime-state.ts';
 
 export interface StartMatchArgs {
@@ -34,6 +35,7 @@ export class GameMatchLifecycleCoordinatorService {
     private readonly matchStartOrchestrator: MatchStartOrchestrator,
     private readonly disconnectedPlayerVoteService: DisconnectedPlayerVoteService,
     private readonly loggerService: LoggerService,
+    private readonly serverConfigService: ServerConfigService,
   ) {
   }
 
@@ -66,6 +68,7 @@ export class GameMatchLifecycleCoordinatorService {
       gameId: state.gameId,
       gameName: state.gameName,
       matchScopeId: state.matchScopeId,
+      tooltipDefaultCloseDelayMs: this.serverConfigService.getTooltipDefaultCloseDelayMs(),
     });
   }
 

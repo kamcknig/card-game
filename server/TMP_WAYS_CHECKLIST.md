@@ -25,8 +25,8 @@
 - [x] 16. Render active Ways in match scene card-like area/state.
 
 ## Way Play Interaction (Non-Blocking UI)
-- [ ] 17. Add socket event `cardTappedAsWay(playerId, cardId, wayId)`.
-- [ ] 18. Handle `cardTappedAsWay` in server interactivity controller.
+- [x] 17. Add socket event `cardTappedAsWay(playerId, cardId, wayId)`.
+- [x] 18. Handle `cardTappedAsWay` in server interactivity controller.
 - [ ] 19. Extend `playCard` args with optional `wayId`.
 - [ ] 20. Execute normal-vs-way effect path in `playCard` while preserving existing trigger/lifecycle order.
 - [ ] 21. Ensure Way context `this` points at the played Action card (`cardId` semantics).
@@ -34,12 +34,12 @@
 - [ ] 23. Keep AI policy on normal play only for now.
 
 ## Pixi Way Picker UX
-- [ ] 24. Add cyan playable border for Way-eligible cards.
-- [ ] 25. Add hover popover with active Ways (vertical, full art at 0.75 scale).
-- [ ] 26. Card body click keeps normal play behavior.
-- [ ] 27. Way click emits `cardTappedAsWay`.
-- [ ] 28. Close picker on leave/phase change/prompt/action completion.
-- [ ] 29. Reuse existing client action lock patterns for way-click flow.
+- [x] 24. Add cyan playable border for Way-eligible cards.
+- [x] 25. Add hover popover with active Ways (vertical, full art at 0.75 scale).
+- [x] 26. Card body click keeps normal play behavior.
+- [x] 27. Way click emits `cardTappedAsWay`.
+- [x] 28. Close picker on leave/phase change/prompt/action completion.
+- [x] 29. Reuse existing client action lock patterns for way-click flow.
 
 ## Future Hooking
 - [ ] 30. Add TODO + explicit hook point for future top-vs-bottom effect split.

@@ -1,4 +1,4 @@
-import {Application, Assets, Container, Graphics, Rectangle, Sprite, Text} from 'pixi.js';
+import {Application, Assets, Container, Graphics, Rectangle, Sprite, Text, Texture} from 'pixi.js';
 import {Scene} from '../../../../core/scene/scene';
 import {PlayerHandView} from '../player-hand';
 import {createAppButton} from '../../../../core/create-app-button';
@@ -17,16 +17,16 @@ import {
 } from '../../../../state/interactive-state';
 import {CardView} from '../card-view';
 import {userPromptModal} from '../modal/user-prompt-modal';
-import {CARD_HEIGHT, STANDARD_GAP} from '../../../../core/app-contants';
+import {CARD_HEIGHT, EVENT_WIDTH, STANDARD_GAP} from '../../../../core/app-contants';
 import {resolveCountSpec} from 'shared/resolve-count-spec';
 import {validateCountSpec} from 'shared/validate-count-spec';
 import {CardStackView} from '../card-stack';
-import {currentPlayerTurnIdStore} from '../../../../state/turn-state';
+import {currentPlayerTurnIdStore, turnPhaseStore} from '../../../../state/turn-state';
 import {isNumber, isUndefined} from 'es-toolkit/compat';
 import {AppList} from '../app-list';
 import {SocketService} from '../../../../core/socket-service/socket.service';
 import {gamePausedStore} from '../../../../state/game-logic';
-import {selectableCardStore} from '../../../../state/interactive-logic';
+import {selectableCardStore, waySelectableCardStore} from '../../../../state/interactive-logic';
 import {selectablePileStore} from '../../../../state/interactive-pile-logic';
 import {SelectCardArgs} from '../../../../../types';
 import {BasicSupplyView} from '../basic-supply';
@@ -37,8 +37,10 @@ import {CardLikeView} from '../card-like-view';
 import {PileView} from '../pile';
 import {tokenDefinitionStore} from '../../../../state/token-definition-state';
 import {getPixiSceneTheme} from '../../../../theme/pixi-theme';
+import { debugRuntimeContextStore } from '../../../../state/debug-runtime-state';
 
 export class MatchScene extends Scene {
+  private static readonly DEFAULT_TOOLTIP_CLOSE_DELAY_MS = 160;
   private _board: Container = new Container();
   private _baseSupply: Container = new Container({ scale: 1 });
   private _playerHand: PlayerHandView | undefined;
@@ -54,6 +56,9 @@ export class MatchScene extends Scene {
   private _nonSupplyView: NonSupplyKingdomView | undefined;
   private _selfId: PlayerId = selfPlayerIdStore.get()!;
   private _otherCardLikes: OtherCardLikeView | undefined;
+  private readonly _wayPickerContainer: Container = new Container({ label: 'wayPickerContainer' });
+  private _wayPickerCardId: CardId | null = null;
+  private _wayPickerCloseTimeout: ReturnType<typeof setTimeout> | null = null;
   // Semantic Pixi color roles resolved from app-level CSS theme tokens.
   private readonly _theme = getPixiSceneTheme();
 
@@ -103,10 +108,29 @@ export class MatchScene extends Scene {
       this._socketService.off('waitingForPlayer');
       this._socketService.off('doneWaitingForPlayer');
       this.off('pointerdown');
+      this.off('pointermove');
+      this.off('pointerleave');
     });
 
     this._cleanup.push(currentPlayerTurnIdStore.subscribe(this.onCurrentPlayerTurnUpdated));
     this._cleanup.push(gamePausedStore.subscribe(this.onPauseGameUpdated));
+    // Close any active Way picker when phase flow changes.
+    this._cleanup.push(turnPhaseStore.subscribe(() => this.closeWayPicker()));
+    this._cleanup.push(promptInteractionLockStore.subscribe((locked) => {
+      if (locked) {
+        this.closeWayPicker();
+      }
+    }));
+    this._cleanup.push(awaitingServerLockReleaseStore.subscribe((waiting) => {
+      if (waiting) {
+        this.closeWayPicker();
+      }
+    }));
+    this._cleanup.push(waySelectableCardStore.subscribe((selectableWayCards) => {
+      if (this._wayPickerCardId !== null && !selectableWayCards.includes(this._wayPickerCardId)) {
+        this.closeWayPicker();
+      }
+    }));
 
     setTimeout(() => {
       this._socketService.emit('clientReady', this._selfId, true);
@@ -263,6 +287,10 @@ export class MatchScene extends Scene {
     this._cleanup.push(() => this._playerHand?.off('playAllTreasure'));
 
     this.addChild(this._playerHand);
+    // Keep the Way picker above all board elements.
+    this.addChild(this._wayPickerContainer);
+    this._wayPickerContainer.visible = false;
+    this._wayPickerContainer.eventMode = 'passive';
   }
 
   private onNextPhasePressed = (e: PointerEvent) => {
@@ -314,9 +342,12 @@ export class MatchScene extends Scene {
 
     this.eventMode = 'static';
     this.on('pointerdown', this.onPointerDown);
+    this.on('pointermove', this.onPointerMove);
+    this.on('pointerleave', this.onPointerLeave);
   }
 
   private onRemoved = () => {
+    this.closeWayPicker();
     this._cleanup.forEach(c => c());
     awaitingServerLockReleaseStore.set(false);
     promptInteractionLockStore.set(false);
@@ -357,6 +388,247 @@ export class MatchScene extends Scene {
       promptInteractionLockStore.set(false);
     }
   }
+
+  // Clears and hides the Way picker container.
+  private closeWayPicker = () => {
+    this.cancelScheduledWayPickerClose();
+    this._wayPickerCardId = null;
+    this._wayPickerContainer.visible = false;
+    this._wayPickerContainer.removeChildren().forEach((child) => {
+      child.removeAllListeners();
+      child.destroy({ children: true });
+    });
+  };
+
+  // Cancels any in-flight delayed close for the Way picker.
+  private cancelScheduledWayPickerClose() {
+    if (this._wayPickerCloseTimeout) {
+      clearTimeout(this._wayPickerCloseTimeout);
+      this._wayPickerCloseTimeout = null;
+    }
+  }
+
+  // Schedules a delayed close so the cursor can move from card to picker without flicker.
+  private scheduleWayPickerClose(delayMsOverride?: number) {
+    const delayMs = this.resolveTooltipCloseDelayMs(delayMsOverride);
+    this.cancelScheduledWayPickerClose();
+    this._wayPickerCloseTimeout = setTimeout(() => {
+      this._wayPickerCloseTimeout = null;
+      this.closeWayPicker();
+    }, delayMs);
+  }
+
+  // Resolves close-delay precedence: call override -> server env payload -> default.
+  private resolveTooltipCloseDelayMs(delayMsOverride?: number): number {
+    if (delayMsOverride !== undefined) {
+      return Math.max(0, Math.floor(delayMsOverride));
+    }
+
+    const configuredDelay = debugRuntimeContextStore.get()?.tooltipDefaultCloseDelayMs;
+    if (configuredDelay !== undefined) {
+      return Math.max(0, Math.floor(configuredDelay));
+    }
+
+    return MatchScene.DEFAULT_TOOLTIP_CLOSE_DELAY_MS;
+  }
+
+  // Reuses the standard card-tap lock flow for both normal and Way plays.
+  private emitCardTapWithLock(cardId: CardId, emitTap: () => void) {
+    awaitingServerLockReleaseStore.set(true);
+    const updated = (finishedPlayerId: PlayerId, finishedCardId?: CardId) => {
+      if (finishedPlayerId !== this._selfId || finishedCardId !== cardId) return;
+      this._socketService.off('cardTappedComplete', updated);
+      awaitingServerLockReleaseStore.set(false);
+    };
+    this._socketService.on('cardTappedComplete', updated);
+    emitTap();
+  }
+
+  // Resolves the card view from any nested display object target.
+  private getCardViewFromTarget(target: any): CardView | null {
+    let current = target;
+    while (current) {
+      if (current instanceof CardView) {
+        return current;
+      }
+      current = current.parent;
+    }
+    return null;
+  }
+
+  // Checks whether a pointer target is inside the active Way picker UI.
+  private isTargetInWayPicker(target: any): boolean {
+    let current = target;
+    while (current) {
+      if (current === this._wayPickerContainer) {
+        return true;
+      }
+      current = current.parent;
+    }
+    return false;
+  }
+
+  // Creates and positions the Way picker for the currently hovered card.
+  private showWayPickerForCard(cardView: CardView) {
+    const match = matchStore.get();
+    const activeWays = match?.ways ?? [];
+    if (activeWays.length === 0) {
+      this.closeWayPicker();
+      return;
+    }
+
+    const cardId = cardView.card.id;
+    if (this._wayPickerCardId === cardId && this._wayPickerContainer.visible) {
+      return;
+    }
+
+    this.closeWayPicker();
+    this._wayPickerCardId = cardId;
+    this._wayPickerContainer.visible = true;
+
+    const sortedWays = [...activeWays].sort((a, b) => a.cardKey.localeCompare(b.cardKey));
+    const wayCardScale = .75;
+    const pickerPadding = 8;
+    const wayGap = 8;
+
+    const rowContainers: Container[] = [];
+    let y = pickerPadding;
+    let maxRowWidth = Math.floor(EVENT_WIDTH * wayCardScale);
+
+    for (const way of sortedWays) {
+      const row = new Container({ label: `wayPickerRow:${way.id}` });
+      row.eventMode = 'static';
+      row.cursor = 'pointer';
+      row.x = pickerPadding;
+      row.y = y;
+
+      const texture = Assets.get(`${way.cardKey}-full`) ?? Texture.EMPTY;
+      const waySprite = new Sprite({
+        label: `wayPickerSprite:${way.cardKey}`,
+        texture: texture,
+      });
+      waySprite.scale = wayCardScale;
+      row.addChild(waySprite);
+
+      const hoverHighlight = new Graphics({ label: `wayPickerHover:${way.cardKey}` });
+      row.addChildAt(hoverHighlight, 0);
+
+      const drawHoverState = (hovered: boolean) => {
+        hoverHighlight.clear();
+        if (!hovered) {
+          return;
+        }
+        hoverHighlight
+          .roundRect(-4, -4, waySprite.width + 8, waySprite.height + 8, 6)
+          .fill({ color: 0x00d5ff, alpha: .25 })
+          .stroke({ color: 0x00d5ff, width: 2 });
+      };
+
+      row.on('pointerover', () => drawHoverState(true));
+      row.on('pointerout', () => drawHoverState(false));
+      row.on('pointerdown', (event) => {
+        event.stopPropagation();
+
+        if (event.ctrlKey) {
+          console.debug('[way picker] selected way', way);
+          return;
+        }
+
+        if (event.button === 2) {
+          return;
+        }
+
+        const selectedCardId = this._wayPickerCardId;
+        if (selectedCardId == null || !this.uiInteractive) {
+          return;
+        }
+
+        console.debug(`[way picker] playing card ${selectedCardId} as way ${way.cardKey}`);
+        this.emitCardTapWithLock(selectedCardId, () => {
+          this._socketService.emit('cardTappedAsWay', this._selfId, selectedCardId, way.id);
+        });
+        this.closeWayPicker();
+      });
+
+      rowContainers.push(row);
+      maxRowWidth = Math.max(maxRowWidth, Math.floor(waySprite.width));
+      this._wayPickerContainer.addChild(row);
+      y += Math.floor(waySprite.height) + wayGap;
+    }
+
+    const totalHeight = y - wayGap + pickerPadding;
+    const panelWidth = maxRowWidth + pickerPadding * 2;
+    const panel = new Graphics({ label: 'wayPickerPanel' });
+    panel.roundRect(0, 0, panelWidth, totalHeight, 8);
+    panel.fill({ color: this._theme.overlay.color, alpha: this._theme.overlay.mediumAlpha });
+    panel.stroke({ color: 0x00d5ff, width: 1.5 });
+    this._wayPickerContainer.addChildAt(panel, 0);
+
+    // Keep rows aligned after final panel dimensions are known.
+    for (const row of rowContainers) {
+      row.x = pickerPadding;
+    }
+
+    const globalCardPosition = cardView.getGlobalPosition();
+    const localCardPosition = this.toLocal(globalCardPosition);
+    let pickerX = Math.floor(localCardPosition.x + cardView.width + STANDARD_GAP);
+    let pickerY = Math.floor(localCardPosition.y - Math.floor(pickerPadding * .5));
+
+    const maxX = this._app.renderer.width - panelWidth - STANDARD_GAP;
+    const maxY = this._app.renderer.height - totalHeight - STANDARD_GAP;
+
+    if (pickerX > maxX) {
+      pickerX = Math.floor(localCardPosition.x - panelWidth - STANDARD_GAP);
+    }
+
+    pickerX = Math.max(STANDARD_GAP, Math.min(pickerX, maxX));
+    pickerY = Math.max(STANDARD_GAP, Math.min(pickerY, maxY));
+
+    this._wayPickerContainer.x = pickerX;
+    this._wayPickerContainer.y = pickerY;
+  }
+
+  // Tracks hover state and opens/closes the Way picker for eligible cards.
+  private onPointerMove = (event: PointerEvent) => {
+    if (!this.uiInteractive || this._selecting || this._selectingPiles) {
+      this.closeWayPicker();
+      return;
+    }
+
+    const target = event.target as any;
+    const tooltipCloseDelayMs = this.resolveTooltipCloseDelayMs();
+    if (this.isTargetInWayPicker(target)) {
+      this.cancelScheduledWayPickerClose();
+      return;
+    }
+
+    const hoveredCardView = this.getCardViewFromTarget(target);
+    if (!hoveredCardView) {
+      if (this._wayPickerCardId !== null) {
+        this.scheduleWayPickerClose(tooltipCloseDelayMs);
+      } else {
+        this.closeWayPicker();
+      }
+      return;
+    }
+
+    if (!waySelectableCardStore.get().includes(hoveredCardView.card.id)) {
+      if (this._wayPickerCardId !== null) {
+        this.scheduleWayPickerClose(tooltipCloseDelayMs);
+      } else {
+        this.closeWayPicker();
+      }
+      return;
+    }
+
+    this.cancelScheduledWayPickerClose();
+    this.showWayPickerForCard(hoveredCardView);
+  };
+
+  // Closes the Way picker when pointer exits the scene canvas.
+  private onPointerLeave = () => {
+    this.closeWayPicker();
+  };
 
   // todo move the selection stuff to another class, SelectionManager?
   private onPointerDown(event: PointerEvent) {
@@ -419,19 +691,16 @@ export class MatchScene extends Scene {
 
       if (selectableCardStore.get()
         .includes(cardId)) {
-        awaitingServerLockReleaseStore.set(true);
-        const updated = (finishedPlayerId: PlayerId, finishedCardId?: CardId) => {
-          if (finishedPlayerId !== this._selfId || finishedCardId !== cardId) return;
-          this._socketService.off('cardTappedComplete', updated)
-          awaitingServerLockReleaseStore.set(false);
-        }
-        this._socketService.on('cardTappedComplete', updated);
-        this._socketService.emit(view instanceof CardView ? 'cardTapped' : 'cardLikeTapped', this._selfId, cardId);
+        this.closeWayPicker();
+        this.emitCardTapWithLock(cardId, () => {
+          this._socketService.emit(view instanceof CardView ? 'cardTapped' : 'cardLikeTapped', this._selfId, cardId);
+        });
       }
     }
   }
 
   private doSelectCards = async (signalId: string, arg: SelectCardArgs) => {
+    this.closeWayPicker();
     const cardIds = arg.selectableCardIds ?? [];
 
     let doSelectButtonContainer: Container | null;
@@ -640,6 +909,7 @@ export class MatchScene extends Scene {
 
   // Handles pile selection prompts by highlighting piles and capturing a selection.
   private doSelectPiles = async (signalId: string, args: UserPromptActionArgs) => {
+    this.closeWayPicker();
     const content = args.content;
     if (!content || content.type !== 'select-pile') {
       this._socketService.emit('userInputReceived', signalId, []);
@@ -757,7 +1027,8 @@ export class MatchScene extends Scene {
     const numEvents = matchStore.get()?.events.length ?? 0;
     const numLandmarks = matchStore.get()?.landmarks.length ?? 0;
     const numProjects = matchStore.get()?.projects.length ?? 0;
-    const numOtherCardLikes = numEvents + numLandmarks + numProjects;
+    const numWays = matchStore.get()?.ways.length ?? 0;
+    const numOtherCardLikes = numEvents + numLandmarks + numProjects + numWays;
 
     if (this._kingdomView && this._otherCardLikes && numOtherCardLikes > 0) {
       this._otherCardLikes.x = this._kingdomView.x;

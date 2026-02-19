@@ -2,7 +2,7 @@ import { Assets, Container, ContainerOptions, FederatedPointerEvent, Graphics, S
 import { Card, CardFacing } from 'shared/types';
 import { batched } from 'nanostores';
 import { CardSize } from '../../../../types';
-import { selectableCardStore } from '../../../state/interactive-logic';
+import { selectableCardStore, waySelectableCardStore } from '../../../state/interactive-logic';
 import { selectedCardStore } from '../../../state/interactive-state';
 import { cardOverrideStore } from '../../../state/card-logic';
 import { displayCardDetail } from './modal/display-card-detail';
@@ -25,6 +25,7 @@ type CardViewArgs = {
 
 export class CardView extends CardLikeView {
   private readonly _highlight: Graphics = new Graphics({ label: 'highlight' });
+  private readonly _wayHighlight: Graphics = new Graphics({ label: 'wayHighlight' });
   private readonly _cardView: Sprite = new Sprite({ label: 'caredView' });
   private readonly _costView: Container = new Container({ label: 'costView' });
   // Token container sits above the card image for badge overlays.
@@ -110,6 +111,7 @@ export class CardView extends CardLikeView {
     this.eventMode = 'static';
 
     this.addChild(this._highlight);
+    this.addChild(this._wayHighlight);
     this.addChild(this._cardView);
     this.addChild(this._tokenContainer);
 
@@ -176,7 +178,7 @@ export class CardView extends CardLikeView {
 
     this._cleanup.push(
       batched(
-        [selectableCardStore, selectedCardStore, cardOverrideStore],
+        [selectableCardStore, selectedCardStore, cardOverrideStore, waySelectableCardStore],
         (...args) => args
       ).subscribe(this.draw));
 
@@ -195,9 +197,11 @@ export class CardView extends CardLikeView {
   public draw = () => {
     const selected = selectedCardStore.get();
     const selectable = selectableCardStore.get().filter(s => !selected.includes(s));
+    const waySelectable = waySelectableCardStore.get();
     const overrides = cardOverrideStore.get();
 
     this._highlight.clear();
+    this._wayHighlight.clear();
 
     if (this._useHighlight) {
       for (const cardId of selectable) {
@@ -213,6 +217,15 @@ export class CardView extends CardLikeView {
           this._highlight
             .roundRect(-3, -3, this._cardView.width + 6, this._cardView.height + 6, 5)
             .fill(0x6DFF8C);
+        }
+      }
+
+      // Render a cyan border when this Action can be played using an active Way.
+      for (const cardId of waySelectable) {
+        if (cardId === this._card.id) {
+          this._wayHighlight
+            .roundRect(-6, -6, this._cardView.width + 12, this._cardView.height + 12, 7)
+            .stroke({ color: 0x00d5ff, width: 3 });
         }
       }
     }

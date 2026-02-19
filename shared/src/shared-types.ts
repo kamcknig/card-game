@@ -404,6 +404,8 @@ export type DebugRuntimeContext = {
   gameName: string;
   // Active match scope sequence identifier for this game.
   matchScopeId?: number;
+  // Optional server-configured default tooltip close delay used by client UI.
+  tooltipDefaultCloseDelayMs?: number;
 };
 
 export type ServerEmitEvents = {
@@ -482,6 +484,8 @@ export interface ServerListenEvents {
   cardsSelected: (selected: CardId[]) => void
   cardLikeTapped: (playerId: PlayerId, cardId: CardId) => void;
   cardTapped: (playerId: PlayerId, cardId: CardId) => void;
+  // Plays a hand Action card using an active Way instead of its printed effect.
+  cardTappedAsWay: (playerId: PlayerId, cardId: CardId, wayId: CardLikeId) => void;
   addComputerPlayer: (count?: number) => void;
   clientReady: (playerId: PlayerId, ready: boolean) => void;
   exchangeCoffer: (playerId: PlayerId, count: number) => void;

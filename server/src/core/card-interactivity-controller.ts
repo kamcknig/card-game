@@ -27,6 +27,7 @@ export class CardInteractivityController {
   ) {
     this.socketMap.forEach((s) => {
       s.on('cardTapped', (pId, cId) => this.onCardTapped(pId, cId));
+      s.on('cardTappedAsWay', (pId, cId, wId) => this.onCardTappedAsWay(pId, cId, wId));
       s.on('cardLikeTapped', (pId, cId) => this.onCardLikeTapped(pId, cId));
       s.on('playAllTreasure', async (pId) => await this.onPlayAllTreasure(pId));
     });
@@ -34,12 +35,14 @@ export class CardInteractivityController {
 
   public playerAdded(s: AppSocket | undefined) {
     s?.on('cardTapped', (pId, cId) => this.onCardTapped(pId, cId));
+    s?.on('cardTappedAsWay', (pId, cId, wId) => this.onCardTappedAsWay(pId, cId, wId));
     s?.on('cardLikeTapped', (pId, cId) => this.onCardLikeTapped(pId, cId));
     s?.on('playAllTreasure', async (pId) => await this.onPlayAllTreasure(pId));
   }
 
   public playerRemoved(socket: AppSocket | undefined) {
     socket?.off('cardTapped');
+    socket?.off('cardTappedAsWay');
     socket?.off('cardLikeTapped');
     socket?.off('playAllTreasure');
   }
@@ -48,6 +51,7 @@ export class CardInteractivityController {
     this.loggerService.log(`[card interactivity] removing socket listeners and marking ended`);
     this.socketMap.forEach((s) => {
       s.off('cardTapped');
+      s.off('cardTappedAsWay');
       s.off('cardLikeTapped');
       s.off('playAllTreasure');
     });
@@ -392,6 +396,25 @@ export class CardInteractivityController {
 
     await this.actionService.run('checkForRemainingPlayerActions');
 
+    this.socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
+  }
+
+  private async onCardTappedAsWay(playerId: PlayerId, cardId: CardId, wayId: CardLikeId) {
+    const player = getPlayerById(this.match, playerId);
+
+    if (!player) {
+      throw new Error('could not find player');
+    }
+
+    this.loggerService.info(`[card interactivity] ${player} tapped card ${cardId} as way ${wayId}`);
+
+    if (this._gameOver) {
+      this.loggerService.debug(`[card interactivity] game is over, not processing way card tap`);
+      return;
+    }
+
+    // Acknowledge the tap so the client lock releases while full Way execution is still pending.
+    this.loggerService.warn(`[card interactivity] way play received before way execution path is implemented`);
     this.socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
   }
 }

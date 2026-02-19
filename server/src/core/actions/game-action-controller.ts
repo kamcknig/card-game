@@ -745,7 +745,14 @@ export class GameActionController implements GameActionDefinitionMap {
       this.loggerService.warn(`[moveCard action] could not find source for ${card}`);
     }
 
-    const newSource = this.cardSourceController.getSource(args.to.location, args.toPlayerId);
+    // Some effects omit toPlayerId for player-scoped zones; infer from origin when possible.
+    const destinationPlayerId = this.resolveDestinationPlayerId({
+      location: args.to.location,
+      requestedPlayerId: args.toPlayerId,
+      fallbackPlayerId: oldSource?.playerId,
+      card,
+    });
+    const newSource = this.cardSourceController.getSource(args.to.location, destinationPlayerId);
 
     if (!newSource) {
       throw new Error(`[moveCard action] could not find source for ${card}`);
@@ -785,14 +792,20 @@ export class GameActionController implements GameActionDefinitionMap {
 
     switch (args.to.location) {
       case 'playerHand':
+        if (destinationPlayerId === undefined) {
+          throw new Error(`[moveCard action] playerHand requires destination player for ${card}`);
+        }
         await this.reactionManager.runCardLifecycleEvent('onEnterHand', {
-          playerId: args.toPlayerId!,
+          playerId: destinationPlayerId,
           cardId,
         });
         break;
     }
 
-    this.loggerService.debug(`[moveCard action] moved ${card} from ${oldSource?.sourceKey} to ${args.to.location}`);
+    const destinationLog = destinationPlayerId === undefined
+      ? `${args.to.location}`
+      : `${args.to.location}:${destinationPlayerId}`;
+    this.loggerService.debug(`[moveCard action] moved ${card} from ${oldSource?.sourceKey} to ${destinationLog}`);
 
     return oldSource ? { location: oldSource?.sourceKey!, playerId: oldSource?.playerId } : undefined;
   }
@@ -956,6 +969,40 @@ export class GameActionController implements GameActionDefinitionMap {
       return undefined;
     }
     return 'front';
+  }
+
+  // Resolves destination player ownership for player-scoped card locations.
+  private resolveDestinationPlayerId(args: {
+    location: CardLocation;
+    requestedPlayerId?: PlayerId;
+    fallbackPlayerId?: PlayerId;
+    card: Card;
+  }): PlayerId | undefined {
+    const playerScopedLocations = new Set<CardLocation>([
+      'playerHand',
+      'playerDiscard',
+      'playerDeck',
+      'set-aside',
+    ]);
+
+    if (!playerScopedLocations.has(args.location)) {
+      return args.requestedPlayerId;
+    }
+
+    if (args.requestedPlayerId !== undefined) {
+      return args.requestedPlayerId;
+    }
+
+    if (args.fallbackPlayerId !== undefined) {
+      this.loggerService.debug(
+        `[moveCard action] inferred destination player ${args.fallbackPlayerId} for ${args.card} to ${args.location}`,
+      );
+      return args.fallbackPlayerId;
+    }
+
+    throw new Error(
+      `[moveCard action] ${args.location} requires a player id for ${args.card}; provide toPlayerId or move from a player-owned source`,
+    );
   }
 
   async gainAction(args: { count: number }, context?: GameActionContext) {
