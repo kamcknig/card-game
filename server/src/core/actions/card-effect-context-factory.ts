@@ -18,6 +18,8 @@ export type CreateCardEffectContextArgs = {
   cardId: CardLikeId;
   playerId: PlayerId;
   reactionContext: CardEffectFunctionContext['reactionContext'];
+  cardEffectFunctionMap: CardEffectFunctionContext['cardEffectFunctionMap'];
+  customCardEffectHandlers: CardEffectFunctionContext['customCardEffectHandlers'];
   registerDurationEffect: CardEffectFunctionContext['registerDurationEffect'];
 };
 
@@ -56,6 +58,8 @@ export class CardEffectContextFactory {
       findCardService: this.findCardService,
       supplyGainService: this.supplyGainService,
       promptService: this.promptService,
+      cardEffectFunctionMap: args.cardEffectFunctionMap,
+      customCardEffectHandlers: args.customCardEffectHandlers,
       registerDurationEffect: args.registerDurationEffect,
     };
   }

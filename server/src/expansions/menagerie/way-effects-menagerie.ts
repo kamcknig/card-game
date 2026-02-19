@@ -106,6 +106,89 @@ const findTopSupplyCard = (
   });
 };
 
+// Runs the played card's normal effect pipeline from maps exposed on the effect context.
+const runOriginalCardEffectsFromContext = async (args: CardEffectFunctionContext): Promise<void> => {
+  const loggerService = args.loggerService;
+  const playedCard = args.cardLibrary.getCard(args.cardId);
+
+  const baseEffectFn = args.cardEffectFunctionMap[playedCard.cardKey];
+  if (baseEffectFn) {
+    loggerService.debug(`[way-of-the-chameleon effect] running base effect for ${playedCard}`);
+    await baseEffectFn(args);
+  }
+
+  for (const expansion of Object.keys(args.customCardEffectHandlers)) {
+    const expansionEffectFn = args.customCardEffectHandlers[expansion][playedCard.cardKey];
+    if (!expansionEffectFn) {
+      continue;
+    }
+
+    loggerService.debug(`[way-of-the-chameleon effect] running ${expansion} effect for ${playedCard}`);
+    await expansionEffectFn(args);
+  }
+};
+
+// Registers this-turn Chameleon conversion from +Cards into +$ for the current player.
+const registerWayOfTheChameleonDrawSwap = (args: CardEffectFunctionContext): void => {
+  const loggerService = args.loggerService;
+  const turnHistoryIndex = getCurrentTurnHistoryIndex(args);
+  const turnNumber = args.match.turnNumber;
+  const playInstance = getCurrentPlayInstanceCount(args);
+  const sourceCard = args.cardLibrary.getCard(args.cardId);
+
+  // This trigger edits draw counts before cards are moved, then grants matching treasure.
+  const drawSwapTriggerId = args.reactionManager.registerSystemTemplate(
+    sourceCard,
+    'drawCards',
+    {
+      playerId: args.playerId,
+      once: false,
+      allowMultipleInstances: true,
+      compulsory: true,
+      autoResolve: true,
+      condition: ({ trigger, match }) =>
+        trigger.args.playerId === args.playerId &&
+        trigger.args.count > 0 &&
+        match.turnNumber === turnNumber,
+      triggeredEffectFn: async (triggeredArgs) => {
+        const swappedCount = Math.max(0, triggeredArgs.trigger.args.count);
+        if (swappedCount < 1) {
+          loggerService.debug('[way-of-the-chameleon effect] draw swap skipped because draw count is 0');
+          return;
+        }
+
+        loggerService.info(`[way-of-the-chameleon effect] converting +${swappedCount} Cards into +$${swappedCount}`);
+        triggeredArgs.trigger.args.count = 0;
+        await triggeredArgs.actionService.run('gainTreasure', {
+          count: swappedCount,
+        }, {
+          loggingContext: {
+            source: triggeredArgs.trigger.args.source,
+          },
+        });
+      },
+    },
+    { idSuffix: `way-of-the-chameleon:draw:turn:${turnHistoryIndex}:play:${playInstance}` },
+  );
+
+  // Always remove the draw swap at end of turn so it cannot leak into future turns.
+  args.reactionManager.registerSystemTemplate(sourceCard, 'endTurn', {
+    playerId: args.playerId,
+    once: true,
+    allowMultipleInstances: true,
+    compulsory: true,
+    condition: ({ trigger }) =>
+      trigger.args.playerId === args.playerId &&
+      trigger.args.turnNumber === turnNumber,
+    triggeredEffectFn: async (triggeredArgs) => {
+      triggeredArgs.reactionManager.unregisterTrigger(drawSwapTriggerId);
+      loggerService.debug('[way-of-the-chameleon effect] removed draw swap trigger at end of turn');
+    },
+  }, {
+    idSuffix: `way-of-the-chameleon:cleanup:turn:${turnHistoryIndex}:play:${playInstance}`,
+  });
+};
+
 const expansion: CardExpansionModule = {
   'way-of-the-butterfly': {
     registerEffects: () => async (cardEffectArgs) => {
@@ -163,6 +246,16 @@ const expansion: CardExpansionModule = {
         cardId: selectedCardId,
         to: { location: 'playerDiscard' },
       });
+    },
+  },
+  'way-of-the-chameleon': {
+    registerEffects: () => async (cardEffectArgs) => {
+      cardEffectArgs.loggerService.debug(
+        '[way-of-the-chameleon effect] registering this-turn draw-to-treasure conversion trigger',
+      );
+      registerWayOfTheChameleonDrawSwap(cardEffectArgs);
+      // Chameleon follows the played card's instructions after the swap trigger is armed.
+      await runOriginalCardEffectsFromContext(cardEffectArgs);
     },
   },
   'way-of-the-camel': {

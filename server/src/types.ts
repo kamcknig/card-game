@@ -465,6 +465,10 @@ export interface CardEffectFunctionContext extends AppContext {
   playerId: PlayerId;
   cardId: CardId;
   actionService: ActionService;
+  // Base effect map for direct card on-play handlers.
+  cardEffectFunctionMap: CardEffectFunctionMap;
+  // Expansion-registered supplemental effect handlers grouped by expansion key.
+  customCardEffectHandlers: Record<string, Partial<Record<CardKey, CardEffectFn>>>;
   // Registers duration triggers with engine-managed cleanup for the given card.
   registerDurationEffect: <T extends TriggerEventType>(
     card: Card,

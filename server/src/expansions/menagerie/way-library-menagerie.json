@@ -2,6 +2,9 @@
   "way-of-the-butterfly": {
     "abilityText": "You may return this to its pile to gain a card costing exactly $1 more than it."
   },
+  "way-of-the-chameleon": {
+    "abilityText": "Follow this card's instructions; each time that would give you +Cards this turn, you get +$ instead, and vice-versa."
+  },
   "way-of-the-camel": {
     "abilityText": "Exile a Gold from the Supply."
   },
