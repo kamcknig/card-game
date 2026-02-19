@@ -6,9 +6,11 @@ import { cardStore } from '../../../state/card-state';
 import { Card, CardKey } from 'shared/types';
 import { PileView } from './pile';
 import { getCardSourceStore } from '../../../state/card-source-store';
+import { createPanelShadowFilter } from './panel-shadow-filter';
 
 export class BasicSupplyView extends Container {
   private _background: Container;
+  private readonly _backgroundGraphics: Graphics = new Graphics({ label: 'backgroundGraphics' });
   private _cardContainer: Container;
   private _cleanup: (() => void)[] = [];
 
@@ -16,7 +18,9 @@ export class BasicSupplyView extends Container {
     super();
 
     this._background = this.addChild(new Container());
-    this._background.addChild(new Graphics());
+    this._background.addChild(this._backgroundGraphics);
+    // Supply container uses a short board shadow for separation from the table.
+    this._backgroundGraphics.filters = [createPanelShadowFilter()];
 
     this._cardContainer = this.addChild(new Container({ x: STANDARD_GAP, y: STANDARD_GAP }));
 
@@ -106,9 +110,8 @@ export class BasicSupplyView extends Container {
       p.pile = pile;
     }
 
-    const g = this._background.getChildAt(0) as Graphics;
-    g.clear();
-    g.roundRect(
+    this._backgroundGraphics.clear();
+    this._backgroundGraphics.roundRect(
       0,
       0,
       this._cardContainer.x + this._cardContainer.width + STANDARD_GAP,

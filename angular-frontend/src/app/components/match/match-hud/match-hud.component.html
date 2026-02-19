@@ -41,13 +41,16 @@
     ⚑
   </button>
   <button
-    class="hud-menu-icon"
-    title="Toggle debug overlay"
+    class="hud-menu-icon debug-toggle"
+    [attr.aria-pressed]="debugOverlayVisible()"
+    [class.active]="debugOverlayVisible()"
+    [title]="debugOverlayVisible() ? 'Debug overlay: ON' : 'Debug overlay: OFF'"
     aria-label="Toggle debug overlay"
     (click)="toggleDebugOverlay()"
   >
     <span class="debug-icon-gear">⚙</span>
     <span class="debug-icon-question">?</span>
+    <span class="debug-icon-state">{{ debugOverlayVisible() ? 'ON' : 'OFF' }}</span>
   </button>
 </div>
 

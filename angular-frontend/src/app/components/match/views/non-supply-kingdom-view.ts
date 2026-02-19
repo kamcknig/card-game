@@ -6,6 +6,7 @@ import { nonSupplyKingdomMapStore } from '../../../state/card-source-logic';
 import { capitalize } from 'es-toolkit';
 import { concatMap, pipe, Subject, Subscription } from 'rxjs';
 import { getPixiSceneTheme } from '../../../theme/pixi-theme';
+import { createPanelShadowFilter } from './panel-shadow-filter';
 
 type KingdomMap = Record<string, {
   startingCards: CardNoId[],
@@ -89,6 +90,8 @@ export class NonSupplyKingdomView extends Container {
     let background = container.getChildByLabel('background') as Graphics;
     if (!background) {
       background = new Graphics({ label: 'background' });
+      // Non-supply panel keeps a compact drop shadow like other board panels.
+      background.filters = [createPanelShadowFilter()];
       container.addChild(background);
     }
 

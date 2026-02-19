@@ -8,6 +8,9 @@ import { LandmarkCard } from './landmark-card';
 import { ProjectCard } from './project-card';
 import { WayCard } from './way-card';
 import { getPixiSceneTheme } from '../../../theme/pixi-theme';
+import { createPanelShadowFilter } from './panel-shadow-filter';
+
+const MAX_CARD_LIKE_COLUMNS = 4;
 
 export class OtherCardLikeView extends Container {
   private readonly _pixiTheme = getPixiSceneTheme();
@@ -43,6 +46,8 @@ export class OtherCardLikeView extends Container {
     });
 
     this.addChild(this.background);
+    // Card-like panel shadow matches other board-area containers.
+    this.background.filters = [createPanelShadowFilter()];
 
     this.cardContainer.x = STANDARD_GAP;
     this.cardContainer.y = STANDARD_GAP;
@@ -65,6 +70,7 @@ export class OtherCardLikeView extends Container {
     this.drawLandmarks(this.currentLandmarks);
     this.drawProjects(this.currentProjects);
     this.drawWays(this.currentWays);
+    this.layoutCardLikes();
 
     this.background.clear();
 
@@ -80,87 +86,96 @@ export class OtherCardLikeView extends Container {
     }
   }
 
-  // Draws the event row in the card-like container.
+  // Draws and syncs the event cards in the card-like container.
   private drawEvents(events: readonly Event[]) {
+    this.removeMissingCards(this.eventContainer, events.map(event => event.cardKey));
+
     for (const event of events) {
       let cardContainer = this.eventContainer.getChildByLabel(event.cardKey) as EventCard;
 
       if (!cardContainer) {
         cardContainer = new EventCard({ label: event.cardKey, event });
-        cardContainer.x = this.eventContainer.children.length * (EVENT_WIDTH + STANDARD_GAP);
         this.eventContainer.addChild(cardContainer);
       }
 
       cardContainer.event = event;
     }
-    this.eventContainer.y = 0;
   }
 
-  // Draws the landmark row beneath events when present.
+  // Draws and syncs the landmark cards in the card-like container.
   private drawLandmarks(landmarkList: readonly Landmark[]) {
+    this.removeMissingCards(this.landmarkContainer, landmarkList.map(landmark => landmark.cardKey));
+
     for (const landmark of landmarkList) {
       let cardContainer = this.landmarkContainer.getChildByLabel(landmark.cardKey) as LandmarkCard;
 
       if (!cardContainer) {
         cardContainer = new LandmarkCard({ label: landmark.cardKey, landmark });
-        cardContainer.x = this.landmarkContainer.children.length * (EVENT_WIDTH + STANDARD_GAP);
         this.landmarkContainer.addChild(cardContainer);
       }
 
       cardContainer.landmark = landmark;
     }
-
-    this.landmarkContainer.y = this.eventContainer.height > 0
-      ? this.eventContainer.height + STANDARD_GAP
-      : 0;
   }
 
-  // Draws the project row beneath landmarks when present.
+  // Draws and syncs the project cards in the card-like container.
   private drawProjects(projectList: readonly Project[]) {
+    this.removeMissingCards(this.projectContainer, projectList.map(project => project.cardKey));
+
     for (const project of projectList) {
       let cardContainer = this.projectContainer.getChildByLabel(project.cardKey) as ProjectCard;
 
       if (!cardContainer) {
         cardContainer = new ProjectCard({ label: project.cardKey, project });
-        cardContainer.x = this.projectContainer.children.length * (EVENT_WIDTH + STANDARD_GAP);
         this.projectContainer.addChild(cardContainer);
       }
 
       cardContainer.project = project;
     }
-
-    const eventRowHeight = this.eventContainer.height > 0
-      ? this.eventContainer.height + STANDARD_GAP
-      : 0;
-    const landmarkRowHeight = this.landmarkContainer.height > 0
-      ? this.landmarkContainer.height + STANDARD_GAP
-      : 0;
-    this.projectContainer.y = eventRowHeight + landmarkRowHeight;
   }
 
-  // Draws the way row beneath projects when present.
+  // Draws and syncs the way cards in the card-like container.
   private drawWays(wayList: readonly Way[]) {
+    this.removeMissingCards(this.wayContainer, wayList.map(way => way.cardKey));
+
     for (const way of wayList) {
       let cardContainer = this.wayContainer.getChildByLabel(way.cardKey) as WayCard;
 
       if (!cardContainer) {
         cardContainer = new WayCard({ label: way.cardKey, way });
-        cardContainer.x = this.wayContainer.children.length * (EVENT_WIDTH + STANDARD_GAP);
         this.wayContainer.addChild(cardContainer);
       }
 
       cardContainer.way = way;
     }
+  }
 
-    const eventRowHeight = this.eventContainer.height > 0
-      ? this.eventContainer.height + STANDARD_GAP
-      : 0;
-    const landmarkRowHeight = this.landmarkContainer.height > 0
-      ? this.landmarkContainer.height + STANDARD_GAP
-      : 0;
-    const projectRowHeight = this.projectContainer.height > 0
-      ? this.projectContainer.height + STANDARD_GAP
-      : 0;
-    this.wayContainer.y = eventRowHeight + landmarkRowHeight + projectRowHeight;
+  // Removes card-like views when their source entries are no longer present.
+  private removeMissingCards(cardContainer: Container, cardKeys: readonly string[]) {
+    const sourceKeys = new Set(cardKeys);
+    for (const child of [...cardContainer.children]) {
+      if (!sourceKeys.has(child.label ?? '')) {
+        child.removeFromParent();
+      }
+    }
+  }
+
+  // Lays out all card-like cards in a wrapped grid with up to four columns.
+  private layoutCardLikes() {
+    const allCardLikes = [
+      ...this.currentEvents.map(event => this.eventContainer.getChildByLabel(event.cardKey)),
+      ...this.currentLandmarks.map(landmark => this.landmarkContainer.getChildByLabel(landmark.cardKey)),
+      ...this.currentProjects.map(project => this.projectContainer.getChildByLabel(project.cardKey)),
+      ...this.currentWays.map(way => this.wayContainer.getChildByLabel(way.cardKey))
+    ].filter((cardLike): cardLike is Container => cardLike != null);
+
+    const rowHeight = (Math.max(0, ...allCardLikes.map(cardLike => cardLike.height))) + STANDARD_GAP;
+
+    for (const [index, cardLike] of allCardLikes.entries()) {
+      const column = index % MAX_CARD_LIKE_COLUMNS;
+      const row = Math.floor(index / MAX_CARD_LIKE_COLUMNS);
+      cardLike.x = column * (EVENT_WIDTH + STANDARD_GAP);
+      cardLike.y = row * rowHeight;
+    }
   }
 }

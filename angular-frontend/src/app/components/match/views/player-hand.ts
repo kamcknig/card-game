@@ -18,8 +18,10 @@ import { getTokenShortLabel } from './token-utils';
 import { applicationStore } from '../../../state/app-state';
 import { userPromptModal } from './modal/user-prompt-modal';
 import { CubeTokenView } from './cube-token-view';
+import { createPanelShadowFilter } from './panel-shadow-filter';
 
 export class PlayerHandView extends Container {
+  private static readonly HAND_CORNER_RADIUS = 5;
   private readonly _phaseStatus: PhaseStatus;
   private readonly _nextPhaseButton: AppButton = createAppButton({ text: 'NEXT' });
   private readonly _playAllTreasuresButton: AppButton = createAppButton(
@@ -81,9 +83,9 @@ export class PlayerHandView extends Container {
     this._background.y = this._phaseStatus.y + this._phaseStatus.height;
     this._cardList.y = this._background.y + STANDARD_GAP;
 
-    this._background.clear();
-    this._background.roundRect(0, 0, (CARD_WIDTH + STANDARD_GAP) * 6, CARD_HEIGHT + STANDARD_GAP * 6, 5);
-    this._background.fill({ color: 0, alpha: .6 });
+    this.drawBackground(CARD_HEIGHT + STANDARD_GAP * 6);
+    // Keep hand tray visually separated from board elements.
+    this._background.filters = [createPanelShadowFilter()];
 
     this._cleanup.push(computed(
       [currentPlayerTurnIdStore, awaitingServerLockReleaseStore, promptInteractionLockStore],
@@ -307,10 +309,70 @@ export class PlayerHandView extends Container {
     const minHeight = CARD_HEIGHT + STANDARD_GAP * 4;
     const neededHeight = (this._cardList.y - this._background.y) + CARD_HEIGHT + STANDARD_GAP * 2;
     const height = Math.max(minHeight, neededHeight);
-    this._background.clear();
-    this._background.roundRect(0, 0, (CARD_WIDTH + STANDARD_GAP) * 6, height, 5);
-    this._background.fill({ color: 0, alpha: .6 });
+    this.drawBackground(height);
     this.updateButtonLayout();
+  }
+
+  // Draws the player-hand background while keeping only the top-left corner square.
+  private drawBackground(height: number) {
+    const width = (CARD_WIDTH + STANDARD_GAP) * 6;
+    const cornerRadius = PlayerHandView.HAND_CORNER_RADIUS;
+    this._background.clear();
+    // Use a single path so alpha is applied once without overlap darkening.
+    this.drawRoundedRectWithCornerRadii(this._background, 0, 0, width, height, {
+      topLeft: 0,
+      topRight: cornerRadius,
+      bottomRight: cornerRadius,
+      bottomLeft: cornerRadius
+    });
+    this._background.fill({ color: 0, alpha: .6 });
+  }
+
+  // Draws a rounded rectangle with per-corner radii using a single fill path.
+  private drawRoundedRectWithCornerRadii(
+    graphics: Graphics,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    radii: { topLeft: number; topRight: number; bottomRight: number; bottomLeft: number; }
+  ) {
+    const maxRadius = Math.max(0, Math.min(width, height) * 0.5);
+    const topLeft = Math.min(radii.topLeft, maxRadius);
+    const topRight = Math.min(radii.topRight, maxRadius);
+    const bottomRight = Math.min(radii.bottomRight, maxRadius);
+    const bottomLeft = Math.min(radii.bottomLeft, maxRadius);
+
+    graphics.moveTo(x + topLeft, y);
+    graphics.lineTo(x + width - topRight, y);
+    if (topRight > 0) {
+      graphics.arcTo(x + width, y, x + width, y + topRight, topRight);
+    } else {
+      graphics.lineTo(x + width, y);
+    }
+
+    graphics.lineTo(x + width, y + height - bottomRight);
+    if (bottomRight > 0) {
+      graphics.arcTo(x + width, y + height, x + width - bottomRight, y + height, bottomRight);
+    } else {
+      graphics.lineTo(x + width, y + height);
+    }
+
+    graphics.lineTo(x + bottomLeft, y + height);
+    if (bottomLeft > 0) {
+      graphics.arcTo(x, y + height, x, y + height - bottomLeft, bottomLeft);
+    } else {
+      graphics.lineTo(x, y + height);
+    }
+
+    graphics.lineTo(x, y + topLeft);
+    if (topLeft > 0) {
+      graphics.arcTo(x, y, x + topLeft, y, topLeft);
+    } else {
+      graphics.lineTo(x, y);
+    }
+
+    graphics.closePath();
   }
 
   // Controls the visibility of the "Play All Treasure" button based on current match state.

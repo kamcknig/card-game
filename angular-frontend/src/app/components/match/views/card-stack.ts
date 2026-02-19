@@ -191,7 +191,7 @@ export class CardStackView extends Container {
         h,
         5
       )
-        .fill({ color: 0x000000, alpha: .6 });
+        .fill({ color: 0x000000, alpha: .4 });
     }
     // Reposition token badges after the stack layout updates.
     this.drawTokenBadges();
@@ -235,7 +235,7 @@ export class CardStackView extends Container {
         h,
         5
       )
-        .fill({ color: 0x000000, alpha: .6 });
+        .fill({ color: 0x000000, alpha: .4 });
     }
   }
 

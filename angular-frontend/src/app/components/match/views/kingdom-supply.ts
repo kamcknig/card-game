@@ -10,9 +10,11 @@ import { computed } from 'nanostores';
 import { getCardSourceStore } from '../../../state/card-source-store';
 import { TokenBadgeData } from './pile';
 import { getTokenShortLabel } from './token-utils';
+import { createPanelShadowFilter } from './panel-shadow-filter';
 
 export class KingdomSupplyView extends Container {
   private _background: Container;
+  private readonly _backgroundGraphics: Graphics = new Graphics({ label: 'backgroundGraphics' });
   private _cardContainer: Container;
   private _cleanup: (() => void)[] = [];
 
@@ -20,7 +22,9 @@ export class KingdomSupplyView extends Container {
     super();
 
     this._background = this.addChild(new Container());
-    this._background.addChild(new Graphics());
+    this._background.addChild(this._backgroundGraphics);
+    // Kingdom supply panel uses a short board shadow for visual depth.
+    this._backgroundGraphics.filters = [createPanelShadowFilter()];
 
     this._cardContainer = this.addChild(new Container({ x: STANDARD_GAP, y: STANDARD_GAP }));
 
@@ -91,9 +95,8 @@ export class KingdomSupplyView extends Container {
       p.pile = pile;
     })
 
-    const g = this._background.getChildAt(0) as Graphics;
-    g.clear();
-    g.roundRect(
+    this._backgroundGraphics.clear();
+    this._backgroundGraphics.roundRect(
       0,
       0,
       this._cardContainer.x + this._cardContainer.width + STANDARD_GAP,

@@ -26,6 +26,9 @@ this can also be used for pile selection instead of using cards.
 - Lobby ban identity currently uses `sessionId`; replace with durable authenticated identity and provide a migration path.
 
 # Higher priority
+- need to handle cardlikes that have bottom/top text. when using ways, only
+  the top portion effects are replaced. the bottom portion of the original
+  card still happens
 - logging is not nearly detailed enough
 - safety so that when a game or mtach crashes, the ret of the server doesn't
   crash and can recover

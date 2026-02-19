@@ -10,6 +10,7 @@ import { DebtPayView } from './debt-pay-view';
 import { VillagersSpendView } from './villagers-spend-view';
 
 export class PhaseStatus extends Container {
+  private static readonly BAR_CORNER_RADIUS = 5;
   private _background: Graphics = new Graphics();
   private _cleanup: (() => void)[] = [];
   private _treasureLabel: Text = new Text({ style: { fill: 0xffffff, fontSize: 18 } });
@@ -62,9 +63,7 @@ export class PhaseStatus extends Container {
 
     this._debtPayView.on('pay', this._onPayDebt);
 
-    this._background
-      .roundRect(0, 0, PhaseStatus.BAR_WIDTH, PhaseStatus.BAR_HEIGHT, 5)
-      .fill({ color: 0, alpha: .6 });
+    this.drawBackground();
 
     this._cleanup.push(
       batched(
@@ -96,6 +95,67 @@ export class PhaseStatus extends Container {
     this._debtPayView.off('pay', this._onPayDebt);
     this._villagersSpendView.off('spend', this._onSpendVillager);
     this.off('removed', this.onRemoved);
+  }
+
+  // Draws the phase-status bar and keeps both bottom corners square.
+  private drawBackground() {
+    const cornerRadius = PhaseStatus.BAR_CORNER_RADIUS;
+    this._background.clear();
+    // Use a single path so alpha is applied once without overlap darkening.
+    this.drawRoundedRectWithCornerRadii(this._background, 0, 0, PhaseStatus.BAR_WIDTH, PhaseStatus.BAR_HEIGHT, {
+      topLeft: cornerRadius,
+      topRight: cornerRadius,
+      bottomRight: 0,
+      bottomLeft: 0
+    });
+    this._background.fill({ color: 0, alpha: .6 });
+  }
+
+  // Draws a rounded rectangle with per-corner radii using a single fill path.
+  private drawRoundedRectWithCornerRadii(
+    graphics: Graphics,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    radii: { topLeft: number; topRight: number; bottomRight: number; bottomLeft: number; }
+  ) {
+    const maxRadius = Math.max(0, Math.min(width, height) * 0.5);
+    const topLeft = Math.min(radii.topLeft, maxRadius);
+    const topRight = Math.min(radii.topRight, maxRadius);
+    const bottomRight = Math.min(radii.bottomRight, maxRadius);
+    const bottomLeft = Math.min(radii.bottomLeft, maxRadius);
+
+    graphics.moveTo(x + topLeft, y);
+    graphics.lineTo(x + width - topRight, y);
+    if (topRight > 0) {
+      graphics.arcTo(x + width, y, x + width, y + topRight, topRight);
+    } else {
+      graphics.lineTo(x + width, y);
+    }
+
+    graphics.lineTo(x + width, y + height - bottomRight);
+    if (bottomRight > 0) {
+      graphics.arcTo(x + width, y + height, x + width - bottomRight, y + height, bottomRight);
+    } else {
+      graphics.lineTo(x + width, y + height);
+    }
+
+    graphics.lineTo(x + bottomLeft, y + height);
+    if (bottomLeft > 0) {
+      graphics.arcTo(x, y + height, x, y + height - bottomLeft, bottomLeft);
+    } else {
+      graphics.lineTo(x, y + height);
+    }
+
+    graphics.lineTo(x, y + topLeft);
+    if (topLeft > 0) {
+      graphics.arcTo(x, y, x + topLeft, y, topLeft);
+    } else {
+      graphics.lineTo(x, y);
+    }
+
+    graphics.closePath();
   }
 
   private drawPhase({ treasure, buys, actions, potions, coffers, villagers, debt, selfId, currentPlayerId, turnPhase }: { treasure: number; buys: number; actions: number; potions: number; coffers: number; villagers: number; debt: number; selfId?: number; currentPlayerId?: number; turnPhase?: string; }) {
