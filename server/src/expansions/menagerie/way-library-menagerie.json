@@ -1,0 +1,62 @@
+{
+  "way-of-the-butterfly": {
+    "abilityText": "You may return this to its pile to gain a card costing exactly $1 more than it."
+  },
+  "way-of-the-camel": {
+    "abilityText": "Exile a Gold from the Supply."
+  },
+  "way-of-the-chameleon": {
+    "abilityText": "Follow this card's instructions; each time that would give you +Cards this turn, you get +$ instead, and vice-versa."
+  },
+  "way-of-the-frog": {
+    "abilityText": "+1 Action\n\nWhen you discard this from play this turn, put it onto your deck."
+  },
+  "way-of-the-goat": {
+    "abilityText": "Trash a card from your hand."
+  },
+  "way-of-the-horse": {
+    "abilityText": "+2 Cards\n\n+1 Action\n\nReturn this to its pile."
+  },
+  "way-of-the-mole": {
+    "abilityText": "+1 Action\n\nDiscard your hand. +3 Cards."
+  },
+  "way-of-the-monkey": {
+    "abilityText": "+1 Buy\n\n+$1"
+  },
+  "way-of-the-mouse": {
+    "abilityText": "Play the set-aside card, leaving it there.\n\n---\n\nSetup: Set aside an unused non-Duration Action costing $2 or $3."
+  },
+  "way-of-the-mule": {
+    "abilityText": "+1 Action\n\n+$1"
+  },
+  "way-of-the-otter": {
+    "abilityText": "+2 Cards"
+  },
+  "way-of-the-owl": {
+    "abilityText": "Draw until you have 6 cards in hand."
+  },
+  "way-of-the-ox": {
+    "abilityText": "+2 Actions"
+  },
+  "way-of-the-pig": {
+    "abilityText": "+1 Card\n\n+1 Action"
+  },
+  "way-of-the-rat": {
+    "abilityText": "You may discard a Treasure to gain a copy of this."
+  },
+  "way-of-the-seal": {
+    "abilityText": "+$1\n\nThis turn, when you gain a card, you may put it onto your deck."
+  },
+  "way-of-the-sheep": {
+    "abilityText": "+$2"
+  },
+  "way-of-the-squirrel": {
+    "abilityText": "+2 Cards at the end of this turn."
+  },
+  "way-of-the-turtle": {
+    "abilityText": "Set this aside. If you did, play it at the start of your next turn."
+  },
+  "way-of-the-worm": {
+    "abilityText": "Exile an Estate from the Supply."
+  }
+}

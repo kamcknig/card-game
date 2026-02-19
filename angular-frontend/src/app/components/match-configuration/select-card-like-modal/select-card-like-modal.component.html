@@ -12,7 +12,7 @@
           class="card-image">
       }
 
-      @if (searchTermValue().trim().length > 0 && displaySearchResults().length === 0) {
+      @if (shouldShowNoResults()) {
         <div class="no-results">No matching results.</div>
       }
     </div>

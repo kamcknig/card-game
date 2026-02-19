@@ -27,4 +27,6 @@ Laboratory, but becomes cheaper with each card you gain during your turn.
 
 +1 Action
 
+---
+
 During your turns, this costs $1 less per card you've gained this turn.

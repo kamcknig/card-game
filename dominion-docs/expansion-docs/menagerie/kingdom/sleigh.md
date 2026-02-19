@@ -30,5 +30,7 @@ default rule.
 
 Gain 2 Horses.
 
+---
+
 When you gain a card, you may discard this, to put that card into your hand or
 onto your deck.

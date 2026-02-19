@@ -23,4 +23,6 @@ card.
 
 +2 Cards
 
+---
+
 When you gain a card, you may play this from your hand.

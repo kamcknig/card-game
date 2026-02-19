@@ -33,5 +33,7 @@ play when any player (including you) gains a multi-type card.
 
 Gain a card to your hand costing less than this.
 
+---
+
 When any player gains a card with 2 or more types (Action, Attack, etc.), you
 may play this from your hand.

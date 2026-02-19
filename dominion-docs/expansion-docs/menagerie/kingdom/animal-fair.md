@@ -21,3 +21,13 @@ trashing an Action card from your hand.
   Rats, the card you draw will again be topdecked by Haunted Woods.
 - If you play a Haggler and then pay for an Animal Fair by trashing an Action
   card, you still gain a non-Victory card costing less than $7.
+
+## card text
+
++$4
+
++1 Buy per empty supply pile.
+
+---
+
+Instead of paying this card's cost, you may trash an Action card from your hand.

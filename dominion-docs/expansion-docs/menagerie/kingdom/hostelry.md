@@ -15,5 +15,7 @@ Treasures for Horses when you gain it.
 
 +2 Actions
 
+---
+
 When you gain this, you may discard any number of Treasures, revealed, to gain
 that many Horses.

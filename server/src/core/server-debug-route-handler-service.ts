@@ -2,6 +2,20 @@ import { Server } from 'socket.io';
 import { ServerEmitEvents, ServerListenEvents } from 'shared/types/index.ts';
 import { LobbyDirectoryService } from './lobby-directory-service.ts';
 import { ServerConfigService } from './server-config-service.ts';
+import { ExpansionCatalogService } from './expansion-catalog-service.ts';
+import { ExpansionSearchService } from './expansion-search-service.ts';
+import {
+  ArtifactNoId,
+  BoonNoId,
+  CardNoId,
+  EventNoId,
+  HexNoId,
+  LandmarkNoId,
+  ProjectNoId,
+  StateNoId,
+  WayNoId,
+} from 'shared/types/index.ts';
+import { ExpansionData } from '@expansions/expansion-library.ts';
 
 /**
  * Handles HTTP debug endpoints and delegates all other requests to socket.io.
@@ -15,6 +29,8 @@ export class ServerDebugRouteHandlerService {
   constructor(
     private readonly io: Server<ServerListenEvents, ServerEmitEvents>,
     private readonly lobbyDirectoryService: LobbyDirectoryService,
+    private readonly expansionCatalogService: ExpansionCatalogService,
+    private readonly expansionSearchService: ExpansionSearchService,
     private readonly serverConfigService: ServerConfigService,
   ) {
     this.ioHandler = this.io.handler();
@@ -32,7 +48,15 @@ export class ServerDebugRouteHandlerService {
     }
 
     const parts = url.pathname.split('/').filter(Boolean);
-    if (parts.length < 2 || parts[0] !== 'debug' || parts[1] !== 'games') {
+    if (parts.length < 2 || parts[0] !== 'debug') {
+      return new Response('debug resource not found', { status: 404 });
+    }
+
+    if (parts[1] === 'expansions') {
+      return this.handleExpansionDebugRoutes(req, parts);
+    }
+
+    if (parts[1] !== 'games') {
       return new Response('debug resource not found', { status: 404 });
     }
 
@@ -127,6 +151,24 @@ export class ServerDebugRouteHandlerService {
       return new Response('method not allowed', { status: 405 });
     }
 
+    // GET /debug/games/:gameId/matches/:matchScopeId/card-library
+    if (parts.length === 6 && parts[5] === 'card-library' && req.method === 'GET') {
+      const exportState = this.lobbyDirectoryService.exportMatchStateForMatch(gameId, matchScopeId);
+      if (!exportState) {
+        return new Response(`match '${matchScopeId}' not initialized for game '${gameId}'`, { status: 400 });
+      }
+      if ('error' in exportState) {
+        return new Response(exportState.error, { status: 404 });
+      }
+
+      return this.jsonResponse({
+        gameId,
+        matchScopeId,
+        cardLibrary: exportState.cardLibrary,
+        count: Object.keys(exportState.cardLibrary).length,
+      });
+    }
+
     // GET /debug/games/:gameId/matches/:matchScopeId/search
     if (parts.length === 6 && parts[5] === 'search' && req.method === 'GET') {
       const type = (url.searchParams.get('type') ?? 'ways') as
@@ -154,6 +196,165 @@ export class ServerDebugRouteHandlerService {
     }
 
     return new Response('debug resource not found', { status: 404 });
+  }
+
+  // Routes /debug/expansions resources for expansion card/card-like inspection.
+  private handleExpansionDebugRoutes(req: Request, parts: string[]): Response {
+    // GET /debug/expansions/card-data
+    if (parts.length === 3 && parts[2] === 'card-data' && req.method === 'GET') {
+      const expansions = this.getAllExpansionDebugResources();
+      return this.jsonResponse({
+        count: expansions.length,
+        expansions,
+      });
+    }
+
+    // GET /debug/expansions
+    if (parts.length === 2 && req.method === 'GET') {
+      const expansions = this.getAllExpansionDebugResources();
+      return this.jsonResponse({
+        count: expansions.length,
+        expansions,
+      });
+    }
+
+    // POST /debug/expansions/search-index/rebuild
+    if (parts.length === 4 && parts[2] === 'search-index' && parts[3] === 'rebuild' && req.method === 'POST') {
+      this.expansionSearchService.rebuildIndexes();
+      const indexSizes = this.getExpansionIndexSizes();
+      return this.jsonResponse({
+        ok: true,
+        rebuilt: true,
+        indexSizes,
+      });
+    }
+
+    const expansionName = parts[2];
+    if (!expansionName) {
+      return new Response('expansion name is required', { status: 400 });
+    }
+
+    // GET /debug/expansions/:expansionName
+    if (parts.length === 3 && req.method === 'GET') {
+      const expansion = this.expansionCatalogService.getExpansion(expansionName);
+      if (!expansion) {
+        return new Response(`expansion '${expansionName}' not found`, { status: 404 });
+      }
+      return this.jsonResponse(this.toExpansionDebugResource(expansionName));
+    }
+
+    // GET /debug/expansions/:expansionName/card-data
+    if (parts.length === 4 && parts[3] === 'card-data' && req.method === 'GET') {
+      const expansion = this.expansionCatalogService.getExpansion(expansionName);
+      if (!expansion) {
+        return new Response(`expansion '${expansionName}' not found`, { status: 404 });
+      }
+      return this.jsonResponse({
+        expansion: this.toExpansionDebugResource(expansionName),
+      });
+    }
+
+    return new Response('debug resource not found', { status: 404 });
+  }
+
+  // Returns all loaded expansions as stable, cardKey-sorted debug resources.
+  private getAllExpansionDebugResources(): ReturnType<ServerDebugRouteHandlerService['toExpansionDebugResource']>[] {
+    const expansionLibrary = this.expansionCatalogService.getExpansionLibrary();
+    const expansionNames = Object.keys(expansionLibrary).sort((a, b) => a.localeCompare(b));
+    return expansionNames.map((name) => this.toExpansionDebugResource(name));
+  }
+
+  // Builds one expansion resource with supply cards and all supported card-like categories.
+  private toExpansionDebugResource(expansionName: string): {
+    expansionName: string;
+    title: string;
+    mutuallyExclusive: string[];
+    cards: {
+      basicSupply: CardNoId[];
+      kingdomSupply: CardNoId[];
+      allSupply: CardNoId[];
+    };
+    cardLikes: {
+      events: EventNoId[];
+      landmarks: LandmarkNoId[];
+      artifacts: ArtifactNoId[];
+      projects: ProjectNoId[];
+      ways: WayNoId[];
+      boons: BoonNoId[];
+      hexes: HexNoId[];
+      states: StateNoId[];
+    };
+    counts: Record<string, number>;
+  } {
+    const expansion = this.expansionCatalogService.getRequiredExpansion(expansionName);
+    const basicSupply = this.sortCardLikeValues<CardNoId>(expansion.cardData.basicSupply);
+    const kingdomSupply = this.sortCardLikeValues<CardNoId>(expansion.cardData.kingdomSupply);
+    const events = this.sortCardLikeValues<EventNoId>(expansion.events);
+    const landmarks = this.sortCardLikeValues<LandmarkNoId>(expansion.landmarks);
+    const artifacts = this.sortCardLikeValues<ArtifactNoId>(expansion.artifacts);
+    const projects = this.sortCardLikeValues<ProjectNoId>(expansion.projects);
+    const ways = this.sortCardLikeValues<WayNoId>(expansion.ways);
+    const boons = this.sortCardLikeValues<BoonNoId>(expansion.boons);
+    const hexes = this.sortCardLikeValues<HexNoId>(expansion.hexes);
+    const states = this.sortCardLikeValues<StateNoId>(expansion.states);
+
+    return {
+      expansionName,
+      title: expansion.title,
+      mutuallyExclusive: expansion.mutuallyExclusive ?? [],
+      cards: {
+        basicSupply,
+        kingdomSupply,
+        allSupply: [...basicSupply, ...kingdomSupply],
+      },
+      cardLikes: {
+        events,
+        landmarks,
+        artifacts,
+        projects,
+        ways,
+        boons,
+        hexes,
+        states,
+      },
+      counts: {
+        basicSupply: basicSupply.length,
+        kingdomSupply: kingdomSupply.length,
+        allSupply: basicSupply.length + kingdomSupply.length,
+        events: events.length,
+        landmarks: landmarks.length,
+        artifacts: artifacts.length,
+        projects: projects.length,
+        ways: ways.length,
+        boons: boons.length,
+        hexes: hexes.length,
+        states: states.length,
+      },
+    };
+  }
+
+  // Returns card/card-like catalog counts for search-index rebuild responses.
+  private getExpansionIndexSizes(): Record<string, number> {
+    const expansionLibrary = this.expansionCatalogService.getExpansionLibrary();
+    const allExpansions = Object.values(expansionLibrary) as ExpansionData[];
+    const rawCardLibrary = this.expansionCatalogService.getRawCardLibrary();
+    return {
+      expansions: allExpansions.length,
+      rawCards: Object.keys(rawCardLibrary).length,
+      events: allExpansions.reduce((sum, expansion) => sum + Object.keys(expansion.events).length, 0),
+      landmarks: allExpansions.reduce((sum, expansion) => sum + Object.keys(expansion.landmarks).length, 0),
+      artifacts: allExpansions.reduce((sum, expansion) => sum + Object.keys(expansion.artifacts).length, 0),
+      projects: allExpansions.reduce((sum, expansion) => sum + Object.keys(expansion.projects).length, 0),
+      ways: allExpansions.reduce((sum, expansion) => sum + Object.keys(expansion.ways).length, 0),
+      boons: allExpansions.reduce((sum, expansion) => sum + Object.keys(expansion.boons).length, 0),
+      hexes: allExpansions.reduce((sum, expansion) => sum + Object.keys(expansion.hexes).length, 0),
+      states: allExpansions.reduce((sum, expansion) => sum + Object.keys(expansion.states).length, 0),
+    };
+  }
+
+  // Creates a stable, cardKey-sorted list from a card/card-like keyed record.
+  private sortCardLikeValues<T extends { cardKey: string }>(records: Record<string, T>): T[] {
+    return Object.values(records).sort((a, b) => a.cardKey.localeCompare(b.cardKey));
   }
 
   // Creates a consistent JSON HTTP response payload.

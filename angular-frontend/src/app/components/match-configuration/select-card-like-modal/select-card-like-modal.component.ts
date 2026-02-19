@@ -84,6 +84,10 @@ export class SelectCardLikeModalComponent implements AfterViewInit {
   readonly searchTermValue = signal('');
   // Raw search results from the socket response event.
   private readonly _rawSearchResults = signal<SelectableSearchResult[]>([]);
+  // Tracks whether a search request is currently waiting for a server response.
+  private readonly _searchRequestInFlight = signal(false);
+  // Tracks whether at least one response has arrived for the current non-empty query.
+  private readonly _hasReceivedSearchResponse = signal(false);
 
   // Template-ready result list with stable filtering and image sizing.
   readonly displaySearchResults = computed<readonly DisplaySearchResult[]>(() => {
@@ -109,13 +113,24 @@ export class SelectCardLikeModalComponent implements AfterViewInit {
       }));
   });
 
+  // Only show "no results" after an actual response for the active query.
+  readonly shouldShowNoResults = computed(() => {
+    const hasQuery = this.searchTermValue().trim().length > 0;
+    return hasQuery
+      && this._hasReceivedSearchResponse()
+      && !this._searchRequestInFlight()
+      && this.displaySearchResults().length === 0;
+  });
+
   // Emits debounced search requests scoped to the active player.
   private readonly _searchTermSubscription = this.searchTerm$.pipe(
     debounceTime(300),
     combineLatestWith(this._nanoService.useStore(selfPlayerIdStore)),
-    filter(([, selfId]) => selfId !== undefined),
+    filter(([searchTerm, selfId]) => selfId !== undefined && searchTerm.trim().length > 0),
     takeUntilDestroyed(),
   ).subscribe(([searchTerm, selfId]) => {
+    // Mark request pending so empty local results do not show as "no results" prematurely.
+    this._searchRequestInFlight.set(true);
     this._socketService.emit(this.searchRequestEvent() as keyof SearchRequestEvents, selfId!, searchTerm);
   });
 
@@ -123,7 +138,16 @@ export class SelectCardLikeModalComponent implements AfterViewInit {
   private readonly _searchResponseListenerEffect = effect((onCleanup) => {
     const responseEvent = this.searchResponseEvent();
     const responseHandler = (results: SelectableSearchResult[]) => {
+      // Ignore late responses when the active query has already been cleared.
+      if (this.searchTermValue().trim().length < 1) {
+        this._rawSearchResults.set([]);
+        this._searchRequestInFlight.set(false);
+        this._hasReceivedSearchResponse.set(false);
+        return;
+      }
       this._rawSearchResults.set(results);
+      this._searchRequestInFlight.set(false);
+      this._hasReceivedSearchResponse.set(true);
     };
 
     this._socketService.on(responseEvent, responseHandler as any);
@@ -139,6 +163,14 @@ export class SelectCardLikeModalComponent implements AfterViewInit {
   // Updates the search term used by the modal.
   updateSearchTerm(term: string) {
     this.searchTermValue.set(term);
+    // Reset visible state immediately when query changes.
+    this._hasReceivedSearchResponse.set(false);
+    const hasQuery = term.trim().length > 0;
+    this._searchRequestInFlight.set(hasQuery);
+    if (!hasQuery) {
+      this._rawSearchResults.set([]);
+      this._searchRequestInFlight.set(false);
+    }
     this.searchTerm$.next(term);
   }
 
@@ -146,12 +178,16 @@ export class SelectCardLikeModalComponent implements AfterViewInit {
   onItemSelected(item: SelectableSearchResult) {
     this.itemSelected.emit(item);
     this._rawSearchResults.set([]);
+    this._searchRequestInFlight.set(false);
+    this._hasReceivedSearchResponse.set(false);
     this.close.emit();
   }
 
   // Closes the modal and clears search results.
   onClose() {
     this._rawSearchResults.set([]);
+    this._searchRequestInFlight.set(false);
+    this._hasReceivedSearchResponse.set(false);
     this.close.emit();
   }
 }
