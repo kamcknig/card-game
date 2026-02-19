@@ -29,6 +29,7 @@ import { cardSourceTagMapStore, getCardSourceStore } from '../../../state/card-s
 import { disconnectedHumanIdsStore } from '../../../state/game-state';
 import { SocketService } from '../../../core/socket-service/socket.service';
 import { debugOverlayVisibleStore, debugRuntimeContextStore } from '../../../state/debug-runtime-state';
+import { UiDialogComponent } from '../../ui/dialog/ui-dialog.component';
 
 export interface Mat {
   // Mat identifier (standard mats or custom keys).
@@ -44,7 +45,8 @@ export interface Mat {
     GameLogComponent,
     MatTabComponent,
     CardComponent,
-    CardLikeComponent
+    CardLikeComponent,
+    UiDialogComponent,
   ],
   templateUrl: './match-hud.component.html',
   styleUrl: './match-hud.component.scss',

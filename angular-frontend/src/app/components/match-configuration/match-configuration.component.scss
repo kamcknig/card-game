@@ -22,6 +22,20 @@ $match-config-single-column-breakpoint: 940px;
   color: var(--theme-text-primary);
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.secondary-action-button {
+  border: 1px solid var(--theme-border-strong);
+  background: var(--theme-surface-card);
+  border-radius: 6px;
+  padding: 7px 12px;
+  color: var(--theme-text-primary);
+}
+
 .section-title {
   margin: 0 0 16px;
   font-size: 1.25rem;
@@ -292,4 +306,69 @@ $match-config-single-column-breakpoint: 940px;
   .close-button {
     font-size: 10px;
   }
+}
+
+.config-dialog {
+  min-width: min(560px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid var(--theme-border-strong);
+  background: var(--theme-surface-panel);
+  color: var(--theme-text-primary);
+}
+
+.config-dialog h3 {
+  margin: 0 0 12px;
+  font-size: 20px;
+}
+
+.config-dialog-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--theme-border-strong);
+  background: var(--theme-surface-card);
+  color: var(--theme-text-primary);
+}
+
+.config-dialog-meta {
+  margin-top: 8px;
+  color: var(--theme-text-secondary);
+  font-size: 12px;
+}
+
+.config-dialog-error {
+  margin-top: 8px;
+  color: #ffb3b3;
+  font-size: 12px;
+}
+
+.saved-config-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 320px;
+  overflow: auto;
+  padding: 2px;
+}
+
+.saved-config-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--theme-border-strong);
+  background: var(--theme-surface-card);
+}
+
+.config-dialog-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }

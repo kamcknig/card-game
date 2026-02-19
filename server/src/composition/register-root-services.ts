@@ -31,6 +31,7 @@ import { WayLoaderService } from '../core/ways/load-ways.ts';
 import { ExpansionLoaderService } from '../core/expansion-loader-service.ts';
 import { GameScopeFactory } from '../core/game-scope-factory.ts';
 import { LobbyDirectoryService } from '../core/lobby-directory-service.ts';
+import { MatchConfigurationSaveService } from '../core/match-configuration-save-service.ts';
 
 export interface RegisterRootServicesArgs {
   io: Server<ServerListenEvents, ServerEmitEvents>;
@@ -62,6 +63,7 @@ export const registerRootServices = (
     matchScopeFactory: asClass(MatchScopeFactory).singleton(),
     matchConfiguratorFactory: asClass(MatchConfiguratorFactory).singleton(),
     expansionSearchService: asClass(ExpansionSearchService).singleton(),
+    matchConfigurationSaveService: asClass(MatchConfigurationSaveService).singleton(),
     expansionCompatibilityService: asClass(ExpansionCompatibilityService).singleton(),
     expansionCatalogService: asClass(ExpansionCatalogService).singleton(),
     rngService: asClass(RngService).singleton(),

@@ -1,16 +1,20 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, computed, effect, inject, signal } from '@angular/core';
 import {
   ArtifactNoId,
   CardNoId,
   EventNoId,
   ExpansionListElement,
   LandmarkNoId,
+  MatchConfigurationLoadResult,
+  MatchConfigurationSaveNameCheckResult,
+  MatchConfigurationSaveResult,
   MatchConfiguration,
   PlayerId,
   ProjectNoId,
+  SavedMatchConfigurationEntry,
   WayNoId
 } from 'shared/types';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
 import { playerIdStore, selfPlayerIdStore } from '../../state/player-state';
 import { NgClass, NgOptimizedImage, NgStyle } from '@angular/common';
@@ -30,6 +34,9 @@ import {
   SelectableSearchResult
 } from './select-card-like-modal/select-card-like-modal.component';
 import { SceneContentComponent } from '../scene-content/scene-content.component';
+import { UiDialogComponent } from '../ui/dialog/ui-dialog.component';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { compare } from 'fast-json-patch';
 
 type SelectionModalKind = 'bannedKingdom' | 'kingdom' | 'events' | 'landmarks' | 'artifacts' | 'projects' | 'ways';
 type SelectionModalState = {
@@ -48,18 +55,61 @@ type SelectionModalState = {
     PlayerComponent,
     SelectCardLikeModalComponent,
     SceneContentComponent,
-    NgStyle
+    NgStyle,
+    UiDialogComponent,
   ],
   templateUrl: './match-configuration.component.html',
   styleUrl: './match-configuration.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class MatchConfigurationComponent {
+export class MatchConfigurationComponent implements OnDestroy {
   private readonly _nanoStoreService = inject(NanostoresService);
   private readonly _socketService = inject(SocketService);
+  private readonly _saveNameInput$ = new Subject<string>();
 
   // Tracks active modal type and settings for a single reusable search dialog.
   readonly activeSelectionModal = signal<SelectionModalState | undefined>(undefined);
+  // Controls save-configuration dialog visibility.
+  readonly saveDialogVisible = signal(false);
+  // Controls load-configuration dialog visibility.
+  readonly loadDialogVisible = signal(false);
+  // User-provided save name currently entered in save dialog.
+  readonly saveDialogName = signal('');
+  // Name-check response returned by server for current save dialog input.
+  readonly saveNameCheck = signal<MatchConfigurationSaveNameCheckResult | null>(null);
+  // Indicates whether the save-name check request is currently in flight.
+  readonly saveNameCheckPending = signal(false);
+  // Operation feedback shown in save/load dialogs.
+  readonly dialogStatusMessage = signal<string | null>(null);
+  // Latest saved configuration list returned by server.
+  readonly savedConfigurations = signal<SavedMatchConfigurationEntry[]>([]);
+  // Currently selected saved configuration key in load dialog.
+  readonly selectedLoadConfigurationKey = signal<string | null>(null);
+  // Baseline snapshot used to determine if configuration has changed since last save/load baseline.
+  readonly configurationSaveBaseline = signal<MatchConfiguration | null>(null);
+  // When true, baseline will be refreshed on next matchConfiguration update.
+  readonly refreshSaveBaselineOnNextConfigUpdate = signal(false);
+
+  // True when the current configuration differs from the saved baseline snapshot.
+  readonly hasConfigurationChanges = computed(() => {
+    const baseline = this.configurationSaveBaseline();
+    const current = this.matchConfiguration();
+    if (!baseline || !current) {
+      return false;
+    }
+    return compare(structuredClone(baseline), structuredClone(current)).length > 0;
+  });
+
+  // Save dialog submit state requires valid non-blank name not already taken.
+  readonly canSubmitSaveDialog = computed(() => {
+    const check = this.saveNameCheck();
+    if (!check || !check.isValid || check.exists) {
+      return false;
+    }
+    return this.saveDialogName().trim().length > 0
+      && !this.saveNameCheckPending()
+      && this.hasConfigurationChanges();
+  });
 
   // Store-backed signals for template state.
   readonly playerIds = toSignal(this._nanoStoreService.useStore(playerIdStore), {
@@ -124,6 +174,56 @@ export class MatchConfigurationComponent {
     return count > 0 ? 122 + ((count - 1) * 25) : 122;
   });
 
+  constructor() {
+    // Debounce save-name checks so server validation runs only after typing pauses.
+    this._saveNameInput$
+      .pipe(
+        debounceTime(250),
+        distinctUntilChanged(),
+        takeUntilDestroyed(),
+      )
+      .subscribe((name) => {
+        const trimmedName = name.trim();
+        if (trimmedName.length < 1) {
+          this.saveNameCheckPending.set(false);
+          this.saveNameCheck.set(null);
+          return;
+        }
+        this.saveNameCheckPending.set(true);
+        this._socketService.emit('checkMatchConfigurationSaveName', trimmedName);
+      });
+
+    this._socketService.on('matchConfigurationSaveNameChecked', this.onSaveNameChecked);
+    this._socketService.on('matchConfigurationSaveCompleted', this.onSaveCompleted);
+    this._socketService.on('savedMatchConfigurationList', this.onSavedConfigurationListReceived);
+    this._socketService.on('matchConfigurationLoadCompleted', this.onLoadCompleted);
+
+    // Initialize baseline from first loaded configuration, and refresh it after successful loads.
+    effect(() => {
+      const currentConfig = this.matchConfiguration();
+      if (!currentConfig) {
+        return;
+      }
+
+      if (!this.configurationSaveBaseline()) {
+        this.configurationSaveBaseline.set(structuredClone(currentConfig));
+        return;
+      }
+
+      if (this.refreshSaveBaselineOnNextConfigUpdate()) {
+        this.configurationSaveBaseline.set(structuredClone(currentConfig));
+        this.refreshSaveBaselineOnNextConfigUpdate.set(false);
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this._socketService.off('matchConfigurationSaveNameChecked', this.onSaveNameChecked);
+    this._socketService.off('matchConfigurationSaveCompleted', this.onSaveCompleted);
+    this._socketService.off('savedMatchConfigurationList', this.onSavedConfigurationListReceived);
+    this._socketService.off('matchConfigurationLoadCompleted', this.onLoadCompleted);
+  }
+
   // Toggles expansion selection in match configuration.
   onToggleExpansion(expansion: ExpansionListElement) {
     if (!this.isGameOwner()) return;
@@ -153,6 +253,73 @@ export class MatchConfigurationComponent {
     lobbyStatusMessageStore.set(undefined);
     sceneStore.set('lobby');
     this._socketService.emit('leaveLobbyGame', gameId);
+  }
+
+  // Opens the save-configuration dialog and resets previous save feedback.
+  openSaveDialog() {
+    if (!this.isGameOwner() || !this.hasConfigurationChanges()) return;
+    this.saveDialogVisible.set(true);
+    this.loadDialogVisible.set(false);
+    this.dialogStatusMessage.set(null);
+    const existingName = this.saveDialogName().trim();
+    if (existingName.length > 0) {
+      this.saveNameCheckPending.set(true);
+      this._socketService.emit('checkMatchConfigurationSaveName', existingName);
+    } else {
+      this.saveNameCheck.set(null);
+      this.saveNameCheckPending.set(false);
+    }
+  }
+
+  // Closes the save-configuration dialog.
+  closeSaveDialog() {
+    this.saveDialogVisible.set(false);
+    this.saveNameCheckPending.set(false);
+    this.dialogStatusMessage.set(null);
+  }
+
+  // Updates save name and triggers debounced server-side availability checks.
+  onSaveDialogNameInput(name: string) {
+    this.saveDialogName.set(name);
+    this.saveNameCheckPending.set(name.trim().length > 0);
+    this._saveNameInput$.next(name);
+  }
+
+  // Submits the current configuration save request when the name is valid.
+  submitSaveDialog() {
+    if (!this.canSubmitSaveDialog()) return;
+    this.dialogStatusMessage.set(null);
+    this._socketService.emit('saveMatchConfiguration', this.saveDialogName().trim());
+  }
+
+  // Opens the load-configuration dialog and requests current saved files from server.
+  openLoadDialog() {
+    if (!this.isGameOwner()) return;
+    this.loadDialogVisible.set(true);
+    this.saveDialogVisible.set(false);
+    this.dialogStatusMessage.set(null);
+    this.selectedLoadConfigurationKey.set(null);
+    this._socketService.emit('requestSavedMatchConfigurationList');
+  }
+
+  // Closes the load-configuration dialog.
+  closeLoadDialog() {
+    this.loadDialogVisible.set(false);
+    this.selectedLoadConfigurationKey.set(null);
+    this.dialogStatusMessage.set(null);
+  }
+
+  // Updates the selected saved-configuration key for the load dialog.
+  selectLoadConfiguration(key: string) {
+    this.selectedLoadConfigurationKey.set(key);
+  }
+
+  // Loads the currently selected saved configuration.
+  submitLoadDialog() {
+    const selectedKey = this.selectedLoadConfigurationKey();
+    if (!selectedKey) return;
+    this.dialogStatusMessage.set(null);
+    this._socketService.emit('loadSavedMatchConfiguration', selectedKey);
   }
 
   // Opens a single shared selection modal configured for the requested selection type.
@@ -363,6 +530,46 @@ export class MatchConfigurationComponent {
     const updatedBanned = this.bannedKingdoms().filter((card) => card.cardKey !== bannedCard.cardKey);
     this.emitMatchConfigurationUpdate({ bannedKingdoms: this.sortByCardKey(updatedBanned) });
   }
+
+  // Handles debounced save-name availability responses from server.
+  private onSaveNameChecked = (result: MatchConfigurationSaveNameCheckResult) => {
+    const currentName = this.saveDialogName().trim();
+    if (result.requestedName.trim() !== currentName) {
+      return;
+    }
+    this.saveNameCheckPending.set(false);
+    this.saveNameCheck.set(result);
+  };
+
+  // Handles save-completion responses from server.
+  private onSaveCompleted = (result: MatchConfigurationSaveResult) => {
+    if (result.ok) {
+      const currentConfig = this.matchConfiguration();
+      if (currentConfig) {
+        this.configurationSaveBaseline.set(structuredClone(currentConfig));
+      }
+      this.dialogStatusMessage.set(null);
+      this.closeSaveDialog();
+      return;
+    }
+    this.dialogStatusMessage.set(result.message ?? `Failed to save '${result.name}'.`);
+  };
+
+  // Handles saved configuration list updates from server.
+  private onSavedConfigurationListReceived = (entries: SavedMatchConfigurationEntry[]) => {
+    this.savedConfigurations.set([...entries]);
+  };
+
+  // Handles load-completion responses from server.
+  private onLoadCompleted = (result: MatchConfigurationLoadResult) => {
+    if (result.ok) {
+      this.refreshSaveBaselineOnNextConfigUpdate.set(true);
+      this.dialogStatusMessage.set(null);
+      this.closeLoadDialog();
+      return;
+    }
+    this.dialogStatusMessage.set(result.message ?? `Failed to load '${result.key}'.`);
+  };
 
   // Emits a match-configuration patch while preserving untouched fields.
   private emitMatchConfigurationUpdate(updatedFields: Partial<MatchConfiguration>) {

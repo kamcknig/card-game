@@ -1,4 +1,5 @@
 // Centralizes game/match filesystem layout so logs and persisted config stay co-located.
+import { fromFileUrl } from '@std/path';
 
 // Unified root folder for all persisted runtime data.
 const DATA_ROOT = './game-data';
@@ -41,4 +42,10 @@ export const getMatchLogDirectory = (gameId: string, matchScopeId: number): stri
 // Returns the per-match persisted configuration directory.
 export const getMatchConfigDirectory = (gameId: string, matchScopeId: number): string => {
   return `${getMatchDataDirectory(gameId, matchScopeId)}/config`;
+};
+
+// Returns the global saved match-configuration directory.
+export const getSavedMatchConfigurationDirectory = (): string => {
+  const serverRootUrl = new URL('../../', import.meta.url);
+  return fromFileUrl(new URL('game-data/saves/match-configurations', serverRootUrl));
 };

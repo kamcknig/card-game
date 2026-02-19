@@ -5,6 +5,10 @@ import { MatchConfiguration, PlayerId } from 'shared/types/index.ts';
 export interface OwnerLobbyHandlers {
   onMatchConfigurationUpdated: (newConfig: MatchConfiguration) => void | Promise<void>;
   onAddComputerPlayer: (count?: number) => void;
+  onCheckMatchConfigurationSaveName: (name: string) => void;
+  onSaveMatchConfiguration: (name: string) => void;
+  onRequestSavedMatchConfigurationList: () => void;
+  onLoadSavedMatchConfiguration: (key: string) => void;
   onSearchCards: (playerId: PlayerId, searchTerm: string) => void;
   onSearchEvents: (playerId: PlayerId, searchTerm: string) => void;
   onSearchLandmarks: (playerId: PlayerId, searchTerm: string) => void;
@@ -25,6 +29,10 @@ export class LobbySocketBindings {
   public bindOwnerLobbyHandlers(socket: AppSocket, handlers: OwnerLobbyHandlers) {
     socket.on('matchConfigurationUpdated', handlers.onMatchConfigurationUpdated);
     socket.on('addComputerPlayer', handlers.onAddComputerPlayer);
+    socket.on('checkMatchConfigurationSaveName', handlers.onCheckMatchConfigurationSaveName);
+    socket.on('saveMatchConfiguration', handlers.onSaveMatchConfiguration);
+    socket.on('requestSavedMatchConfigurationList', handlers.onRequestSavedMatchConfigurationList);
+    socket.on('loadSavedMatchConfiguration', handlers.onLoadSavedMatchConfiguration);
     socket.on('searchCards', handlers.onSearchCards);
     socket.on('searchEvents', handlers.onSearchEvents);
     socket.on('searchLandmarks', handlers.onSearchLandmarks);
@@ -41,6 +49,10 @@ export class LobbySocketBindings {
 
     socket.off('matchConfigurationUpdated');
     socket.off('addComputerPlayer');
+    socket.off('checkMatchConfigurationSaveName');
+    socket.off('saveMatchConfiguration');
+    socket.off('requestSavedMatchConfigurationList');
+    socket.off('loadSavedMatchConfiguration');
     socket.off('searchCards');
     socket.off('searchEvents');
     socket.off('searchLandmarks');

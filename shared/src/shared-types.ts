@@ -418,6 +418,36 @@ export type SelectableSearchCatalog = {
   ways: WayNoId[];
 };
 
+// Represents one persisted match-configuration save file visible to clients.
+export type SavedMatchConfigurationEntry = {
+  key: string;
+  name: string;
+  savedAtMs: number;
+};
+
+// Name-check result used by the save-configuration dialog.
+export type MatchConfigurationSaveNameCheckResult = {
+  requestedName: string;
+  normalizedName: string;
+  isValid: boolean;
+  exists: boolean;
+  reason?: string;
+};
+
+// Save-operation result payload for match-configuration persistence.
+export type MatchConfigurationSaveResult = {
+  ok: boolean;
+  name: string;
+  message?: string;
+};
+
+// Load-operation result payload for match-configuration persistence.
+export type MatchConfigurationLoadResult = {
+  ok: boolean;
+  key: string;
+  message?: string;
+};
+
 export type ServerEmitEvents = {
   addLogEntry: (logEntry: LogEntry[]) => void;
   cardEffectsComplete: (playerId: PlayerId, cardId?: CardId) => void;
@@ -458,6 +488,14 @@ export type ServerEmitEvents = {
   debugRuntimeContext: (payload: DebugRuntimeContext) => void;
   // Full searchable card-like catalog used for local UI filtering in match configuration.
   setSelectableSearchCatalog: (catalog: SelectableSearchCatalog) => void;
+  // Name-check response for the save-configuration dialog.
+  matchConfigurationSaveNameChecked: (result: MatchConfigurationSaveNameCheckResult) => void;
+  // List of persisted match-configuration saves available for loading.
+  savedMatchConfigurationList: (entries: SavedMatchConfigurationEntry[]) => void;
+  // Save result for a match-configuration save request.
+  matchConfigurationSaveCompleted: (result: MatchConfigurationSaveResult) => void;
+  // Load result for a match-configuration load request.
+  matchConfigurationLoadCompleted: (result: MatchConfigurationLoadResult) => void;
   searchCardResponse: (cardData: CardNoId[]) => void;
   // Sends event search results to the client.
   searchEventResponse: (eventData: EventNoId[]) => void;
@@ -516,6 +554,14 @@ export interface ServerListenEvents {
   removeDisconnectedPlayer: (playerId: PlayerId) => void;
   // Requests the preloaded selectable card-like catalog for match-configuration UI.
   requestSelectableSearchCatalog: () => void;
+  // Checks whether a match-configuration save name is available.
+  checkMatchConfigurationSaveName: (name: string) => void;
+  // Saves current match configuration under a user-provided name.
+  saveMatchConfiguration: (name: string) => void;
+  // Requests the list of saved match configurations.
+  requestSavedMatchConfigurationList: () => void;
+  // Loads a saved match configuration by key.
+  loadSavedMatchConfiguration: (key: string) => void;
   searchCards: (playerId: PlayerId, searchStr: string) => void;
   // Requests event search results from the server.
   searchEvents: (playerId: PlayerId, searchStr: string) => void;

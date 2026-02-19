@@ -1,0 +1,10 @@
+<div
+  class="ui-dialog-backdrop"
+  [ngClass]="'variant-' + backdropVariant()"
+  [ngStyle]="{ 'z-index': zIndex() }"
+  (mousedown)="onBackdropClick()"
+>
+  <div class="ui-dialog-panel" [ngClass]="panelClass()" (mousedown)="$event.stopPropagation()">
+    <ng-content></ng-content>
+  </div>
+</div>

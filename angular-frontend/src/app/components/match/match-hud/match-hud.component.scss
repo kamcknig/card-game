@@ -23,57 +23,44 @@ app-score {
   pointer-events: auto;
 }
 
-.mat-modal-backdrop {
-  position: fixed; /* or absolute */
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+.mat-modal-content {
+  color: var(--theme-text-on-dark);
+  position: relative;
+  background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
+  border: 1px solid var(--theme-border-strong);
+  pointer-events: auto;
+  padding: 10px 10px 120px 10px;
+}
 
+.mat-modal-title {
+  color: var(--theme-text-on-dark);
+  margin-bottom: 20px;
+  font-size: 24px;
+}
+
+.player-flex-container {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  pointer-events: none; /* optional: allows click-through outside mat */
+  justify-content: start;
+  min-width: 600px;
+  gap: 20px;
+}
 
-  .mat-modal-content {
-    color: var(--theme-text-on-dark);
-    position: relative;
-    background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
-    border: 1px solid var(--theme-border-strong);
-    pointer-events: auto; /* re-enable interactivity inside */
-    padding: 10px 10px 120px 10px;
-  }
+.player-item {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 
-  .mat-modal-title {
-    color: var(--theme-text-on-dark);
-    margin-bottom: 20px;
-    font-size: 24px;
-  }
+.card-flex-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: relative;
+  padding-bottom: 50px;
+}
 
-  .player-flex-container {
-    display: flex;
-    justify-content: start;
-    min-width: 600px;
-    gap: 20px;
-
-    .player-item {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .card-flex-container {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      position: relative;
-      padding-bottom: 50px;
-
-      .card-item {
-        margin-bottom: -150px;
-      }
-    }
-  }
+.card-item {
+  margin-bottom: -150px;
 }
 
 app-game-log {
@@ -181,18 +168,6 @@ app-game-log {
   display: flex;
   justify-content: space-between;
   gap: 10px;
-}
-
-.disconnect-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, var(--theme-overlay-alpha-medium));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 40;
-  // When shown, this intentionally blocks board interaction.
-  pointer-events: auto;
 }
 
 .disconnect-card {

@@ -2,6 +2,10 @@
 export type {
   DebugRuntimeContext,
   ExpansionListElement,
+  MatchConfigurationLoadResult,
+  MatchConfigurationSaveNameCheckResult,
+  MatchConfigurationSaveResult,
+  SavedMatchConfigurationEntry,
   SelectableSearchCatalog,
   ServerEmitEvents,
   ServerListenEvents,

@@ -15,6 +15,10 @@ export interface GameLobbyCallbacks {
   onStartMatch: () => void;
   onClearMatch: () => void;
   onMatchConfigurationUpdated: (newConfig: MatchConfiguration) => void | Promise<void>;
+  onCheckMatchConfigurationSaveName: (playerId: PlayerId, name: string) => void;
+  onSaveMatchConfiguration: (playerId: PlayerId, name: string) => void;
+  onRequestSavedMatchConfigurationList: (playerId: PlayerId) => void;
+  onLoadSavedMatchConfiguration: (playerId: PlayerId, key: string) => void | Promise<void>;
   // Notifies outer orchestrators that game state changed (players/owner/match status).
   onGameStateChanged?: () => void;
 }
@@ -473,6 +477,10 @@ export class GameLobbySessionCoordinatorService {
     this.lobbySocketBindings.bindOwnerLobbyHandlers(socket, {
       onMatchConfigurationUpdated: callbacks.onMatchConfigurationUpdated,
       onAddComputerPlayer: (count?: number) => this.onAddComputerPlayer(state, ownerId, count, callbacks.onGameStateChanged),
+      onCheckMatchConfigurationSaveName: (name: string) => callbacks.onCheckMatchConfigurationSaveName(ownerId, name),
+      onSaveMatchConfiguration: (name: string) => callbacks.onSaveMatchConfiguration(ownerId, name),
+      onRequestSavedMatchConfigurationList: () => callbacks.onRequestSavedMatchConfigurationList(ownerId),
+      onLoadSavedMatchConfiguration: (key: string) => callbacks.onLoadSavedMatchConfiguration(ownerId, key),
       onSearchCards: (playerId, searchTerm) => {
         const cards = this.expansionSearchService.searchKingdomCards(searchTerm);
         this.loggerService.debug(

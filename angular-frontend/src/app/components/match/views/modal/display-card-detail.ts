@@ -1,48 +1,18 @@
-import { Application, Assets, Container, Graphics, Sprite, Texture } from 'pixi.js';
 import { cardStore } from '../../../../state/card-state';
-import { CardNoId } from 'shared/types';
-import { applicationStore } from '../../../../state/app-state';
-import { getPixiSceneTheme } from '../../../../theme/pixi-theme';
+import { openCardDetailDialog } from '../../../../state/card-detail-dialog-state';
 
 export async function displayCardDetail(arg: number | { detailImagePath: string; }) {
-  const pixiTheme = getPixiSceneTheme();
-  const app = applicationStore.get();
-
-  if (!app) throw new Error('Application is not initialized');
-
-  let cardImg: Texture;
+  let detailImagePath: string | undefined;
   if (typeof arg === 'number') {
-    cardImg = await Assets.load(cardStore.get()[arg].detailImagePath);
+    detailImagePath = cardStore.get()[arg]?.detailImagePath;
   }
   else {
-    cardImg = await Assets.load(arg.detailImagePath);
+    detailImagePath = arg.detailImagePath;
   }
 
-  const s = Sprite.from(cardImg);
-  const container = new Container();
-  container.eventMode = 'static';
-
-  const background = new Graphics()
-    .rect(0, 0, app.renderer.width, app.renderer.height)
-    .fill({
-      color: pixiTheme.overlay.color,
-      alpha: pixiTheme.overlay.mediumAlpha,
-    });
-
-  container.addChild(background);
-  s.x = Math.floor(app.renderer.width * .5 - s.width * .5);
-  s.y = Math.floor(app.renderer.height * .5 - s.height * .5);
-  container.addChild(s);
-  app.stage.addChild(container);
-
-  const onPointerDown = () => {
-    app.stage.removeChild(container);
-  };
-  const onRemoved = () => {
-    container.off('pointerdown', onPointerDown);
-    container.off('removed', onRemoved);
+  if (!detailImagePath) {
+    return;
   }
 
-  container.on('pointerdown', onPointerDown);
-  container.on('removed', onRemoved)
+  openCardDetailDialog(detailImagePath);
 }

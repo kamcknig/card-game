@@ -4,10 +4,14 @@ import {
   CardId,
   DebugRuntimeContext,
   ExpansionListElement,
+  MatchConfigurationLoadResult,
+  MatchConfigurationSaveNameCheckResult,
+  MatchConfigurationSaveResult,
   Match,
   MatchConfiguration,
   Player,
   PlayerId,
+  SavedMatchConfigurationEntry,
   ServerEmitEvents,
   ServerListenEvents,
 } from 'shared/types/index.ts';
@@ -24,6 +28,7 @@ import {
   GameLobbySessionCoordinatorService,
   RemoveLobbyPlayerResult,
 } from './game-lobby-session-coordinator-service.ts';
+import { MatchConfigurationSaveService } from './match-configuration-save-service.ts';
 
 const createDefaultMatchConfiguration = (): MatchConfiguration => ({
   expansions: [
@@ -107,6 +112,8 @@ export class Game {
     private readonly loggerService: LoggerService,
     // Centralized server env configuration provider.
     private readonly serverConfigService: ServerConfigService,
+    // Stores named match-configuration save files for lobby owners.
+    private readonly matchConfigurationSaveService: MatchConfigurationSaveService,
     // Coordinator that owns match lifecycle transitions and match scope creation.
     private readonly gameMatchLifecycleCoordinatorService: GameMatchLifecycleCoordinatorService,
     // Coordinator that owns lobby/session events and owner-only lobby handlers.
@@ -225,6 +232,10 @@ export class Game {
         onStartMatch: this.startMatch,
         onClearMatch: this.clearMatch,
         onMatchConfigurationUpdated: this.onMatchConfigurationUpdated,
+        onCheckMatchConfigurationSaveName: this.onCheckMatchConfigurationSaveName,
+        onSaveMatchConfiguration: this.onSaveMatchConfiguration,
+        onRequestSavedMatchConfigurationList: this.onRequestSavedMatchConfigurationList,
+        onLoadSavedMatchConfiguration: this.onLoadSavedMatchConfiguration,
         onGameStateChanged: this.onGameStateChanged,
       },
       registerRemovalVoteHandler: this.registerRemovalVoteHandler,
@@ -240,6 +251,10 @@ export class Game {
         onStartMatch: this.startMatch,
         onClearMatch: this.clearMatch,
         onMatchConfigurationUpdated: this.onMatchConfigurationUpdated,
+        onCheckMatchConfigurationSaveName: this.onCheckMatchConfigurationSaveName,
+        onSaveMatchConfiguration: this.onSaveMatchConfiguration,
+        onRequestSavedMatchConfigurationList: this.onRequestSavedMatchConfigurationList,
+        onLoadSavedMatchConfiguration: this.onLoadSavedMatchConfiguration,
         onGameStateChanged: this.onGameStateChanged,
       },
     });
@@ -318,6 +333,59 @@ export class Game {
     // Lobby phase update for all clients.
     this.io.in(this.runtimeState.roomName).emit('matchConfigurationUpdated', this.runtimeState.matchConfiguration);
   };
+
+  // Sends save-name availability checks to one owner client.
+  private onCheckMatchConfigurationSaveName = (playerId: PlayerId, name: string): void => {
+    const result: MatchConfigurationSaveNameCheckResult = this.matchConfigurationSaveService.checkSaveName(name);
+    this.runtimeState.socketMap.get(playerId)?.emit('matchConfigurationSaveNameChecked', result);
+  };
+
+  // Persists current lobby match configuration as a named save file.
+  private onSaveMatchConfiguration = (playerId: PlayerId, name: string): void => {
+    const configuration = this.runtimeState.matchConfiguration ?? structuredClone(this.defaultMatchConfiguration);
+    const result: MatchConfigurationSaveResult = this.matchConfigurationSaveService.saveConfiguration(name, configuration);
+    this.runtimeState.socketMap.get(playerId)?.emit('matchConfigurationSaveCompleted', result);
+    if (result.ok) {
+      this.emitSavedConfigurationList(playerId);
+    }
+  };
+
+  // Sends the current saved-configuration list to one owner client.
+  private onRequestSavedMatchConfigurationList = (playerId: PlayerId): void => {
+    this.emitSavedConfigurationList(playerId);
+  };
+
+  // Loads one saved configuration and applies it through the existing update flow.
+  private onLoadSavedMatchConfiguration = async (playerId: PlayerId, key: string): Promise<void> => {
+    const loadResult = this.matchConfigurationSaveService.loadConfiguration(key);
+    if (!loadResult.ok) {
+      const result: MatchConfigurationLoadResult = {
+        ok: false,
+        key: loadResult.key,
+        message: loadResult.message,
+      };
+      this.runtimeState.socketMap.get(playerId)?.emit('matchConfigurationLoadCompleted', result);
+      return;
+    }
+
+    const baseConfiguration = structuredClone(this.runtimeState.matchConfiguration ?? this.defaultMatchConfiguration);
+    const mergedConfiguration = {
+      ...baseConfiguration,
+      ...loadResult.configuration,
+    } as MatchConfiguration;
+    await this.onMatchConfigurationUpdated(mergedConfiguration);
+    const result: MatchConfigurationLoadResult = {
+      ok: true,
+      key: loadResult.key,
+    };
+    this.runtimeState.socketMap.get(playerId)?.emit('matchConfigurationLoadCompleted', result);
+  };
+
+  // Emits the saved-configuration list to one owner client.
+  private emitSavedConfigurationList(playerId: PlayerId): void {
+    const saves: SavedMatchConfigurationEntry[] = this.matchConfigurationSaveService.listSavedConfigurations();
+    this.runtimeState.socketMap.get(playerId)?.emit('savedMatchConfigurationList', saves);
+  }
 
   // Starts gameplay after readiness checks have completed.
   private startMatch = (): void => {

@@ -1,0 +1,19 @@
+.card-detail-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: calc(100vw - 64px);
+  max-height: calc(100vh - 64px);
+}
+
+.card-detail-image {
+  display: block;
+  max-width: calc(100vw - 64px);
+  max-height: calc(100vh - 64px);
+  width: auto;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.6);
+  user-select: none;
+  pointer-events: none;
+}

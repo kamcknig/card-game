@@ -23,6 +23,7 @@ import { MatchSummary } from 'shared/types';
 import { matchStartedStore, matchSummaryStore } from './state/match-state';
 import { MatchHudComponent } from './components/match/match-hud/match-hud.component';
 import { LobbyComponent } from './components/lobby/lobby.component';
+import { CardDetailDialogComponent } from './components/card-detail-dialog/card-detail-dialog.component';
 
 @Component({
   selector: 'app-root',
@@ -34,6 +35,7 @@ import { LobbyComponent } from './components/lobby/lobby.component';
     GameSummaryComponent,
     MatchHudComponent,
     LobbyComponent,
+    CardDetailDialogComponent,
     NgClass,
   ],
   templateUrl: './app.component.html',

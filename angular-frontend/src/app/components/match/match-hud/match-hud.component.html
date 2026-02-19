@@ -68,7 +68,11 @@
 
 @let disconnectedPlayers = disconnectedHumans();
 @if (disconnectedPlayers.length) {
-  <div class="disconnect-overlay">
+  <app-ui-dialog
+    [zIndex]="4200"
+    [closeOnBackdrop]="false"
+    [backdropVariant]="'soft'"
+  >
     <div class="disconnect-card">
       <div class="disconnect-title">Player disconnected</div>
       <div class="disconnect-names">
@@ -80,12 +84,16 @@
         Remove player and keep playing
       </button>
     </div>
-  </div>
+  </app-ui-dialog>
 }
 
 @let currentVisibleMat = visibleMat();
 @if (currentVisibleMat) {
-  <div class="mat-modal-backdrop">
+  <app-ui-dialog
+    [zIndex]="4100"
+    [backdropVariant]="'soft'"
+    (close)="closeVisibleMat()"
+  >
     <div class="mat-modal-content">
       <div class="mat-modal-title">{{ currentVisibleMat.mat }}</div>
       <div class="player-flex-container">
@@ -123,5 +131,5 @@
       >X
       </div>
     </div>
-  </div>
+  </app-ui-dialog>
 }
