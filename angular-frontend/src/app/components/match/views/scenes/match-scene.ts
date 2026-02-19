@@ -743,7 +743,10 @@ export class MatchScene extends Scene {
 
   private onRendererResize = (): void => {
     if (this._kingdomView && this._baseSupply) {
-      this._baseSupply.y = this._scoreViewBottom + STANDARD_GAP;
+      // Keep basic supply below the score panel while preferring a mid-screen anchor.
+      const minBaseSupplyY = this._scoreViewBottom + STANDARD_GAP;
+      const centeredBaseSupplyY = Math.floor(this._app.renderer.height * .5 - this._baseSupply.height * .5);
+      this._baseSupply.y = Math.max(minBaseSupplyY, centeredBaseSupplyY);
       this._baseSupply.x = STANDARD_GAP;
 
       this._kingdomView.y = STANDARD_GAP;
