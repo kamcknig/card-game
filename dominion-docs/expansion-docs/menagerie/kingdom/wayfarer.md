@@ -50,6 +50,4 @@ a Wayfarer, Wayfarers then cost $3.
 
 You may gain a Silver.
 
----
-
 This has the same cost as the last other card gained this turn, if any.

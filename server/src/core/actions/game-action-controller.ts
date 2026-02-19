@@ -491,6 +491,58 @@ export class GameActionController implements GameActionDefinitionMap {
     return Array.isArray(restrict) && restrict.every((entry) => typeof entry === 'number');
   }
 
+  // Collapses supply candidates to visible top cards so board selection does not include hidden pile cards.
+  private collapseSupplySelectableCards(selectableCardIds: CardId[]): CardId[] {
+    if (selectableCardIds.length < 1) {
+      return selectableCardIds;
+    }
+
+    const selectableSet = new Set(selectableCardIds);
+    const collapsedSelectableIds: CardId[] = [];
+    const seenSupplyPiles = new Set<string>();
+
+    for (const selectableCardId of selectableCardIds) {
+      let sourceKey: CardLocation;
+      try {
+        sourceKey = this.cardSourceController.findCardSource(selectableCardId).sourceKey;
+      } catch {
+        // Preserve ids when source lookup fails.
+        if (!collapsedSelectableIds.includes(selectableCardId)) {
+          collapsedSelectableIds.push(selectableCardId);
+        }
+        continue;
+      }
+
+      if (sourceKey !== 'basicSupply' && sourceKey !== 'kingdomSupply') {
+        if (!collapsedSelectableIds.includes(selectableCardId)) {
+          collapsedSelectableIds.push(selectableCardId);
+        }
+        continue;
+      }
+
+      const pileKey = getCardPileKey(this.cardLibrary.getCard(selectableCardId));
+      if (seenSupplyPiles.has(pileKey)) {
+        continue;
+      }
+      seenSupplyPiles.add(pileKey);
+
+      const topSupplyCard = this.findCardService.findTopSupplyCardForPileKey({
+        pileKey: pileKey as CardKey,
+        from: ['basicSupply', 'kingdomSupply'],
+      });
+      if (!topSupplyCard) {
+        continue;
+      }
+
+      // Keep only top cards that also satisfy the original filter set.
+      if (selectableSet.has(topSupplyCard.id)) {
+        collapsedSelectableIds.push(topSupplyCard.id);
+      }
+    }
+
+    return collapsedSelectableIds;
+  }
+
   // Registers duration cleanup and effect triggers with centralized cleanup tracking.
   private registerDurationEffectInternal<T extends TriggerEventType>(
     card: Card,
@@ -1400,6 +1452,16 @@ export class GameActionController implements GameActionDefinitionMap {
       selectableCardIds = this.findCardService.findCards(restrict).map((card) => card.id);
     }
 
+    if (!this.isCardIdRestriction(restrict)) {
+      const originalSelectableCount = selectableCardIds.length;
+      selectableCardIds = this.collapseSupplySelectableCards(selectableCardIds);
+      if (selectableCardIds.length !== originalSelectableCount) {
+        this.loggerService.debug(
+          `[selectCard action] collapsed supply candidates from ${originalSelectableCount} to ${selectableCardIds.length} visible card(s)`,
+        );
+      }
+    }
+
     this.loggerService.debug(`[selectCard action] found ${selectableCardIds.length} selectable cards`);
 
     if (selectableCardIds?.length === 0) {
@@ -1421,7 +1483,16 @@ export class GameActionController implements GameActionDefinitionMap {
         `[selectCard action] selection count is an exact count ${count} checking if user has that many cards`,
       );
 
-      if (selectableCardIds.length <= count) {
+      const keepPromptForWayChoice = playSelection &&
+        count === 1 &&
+        (this.match.ways?.length ?? 0) > 0;
+      if (keepPromptForWayChoice) {
+        this.loggerService.debug(
+          '[selectCard action] keeping prompt open for explicit Way choice on single-card play selection',
+        );
+      }
+
+      if (selectableCardIds.length <= count && !keepPromptForWayChoice) {
         this.loggerService.debug(
           '[selectCard action] user does not have enough, or has exactly the amount of cards to select from, selecting all automatically',
         );
@@ -2902,7 +2973,6 @@ export class GameActionController implements GameActionDefinitionMap {
   ) {
     const { playerId, count } = args;
     const returnSingleResult = count === undefined || count === 1;
-
     this.loggerService.debug(`[drawCard action] player ${playerId} drawing ${count} card(s)`);
 
     let drawCount = count ?? 1;
@@ -3115,7 +3185,6 @@ export class GameActionController implements GameActionDefinitionMap {
         reactionContext,
       });
 
-    // TODO(ways): add an explicit hook here for top-vs-bottom effect split semantics when implemented.
     if (selectedWay) {
       const wayEffectFn = this.wayEffectFunctionMap[selectedWay.cardKey];
       if (!wayEffectFn) {
@@ -3134,7 +3203,7 @@ export class GameActionController implements GameActionDefinitionMap {
       }
     }
 
-    // Normal path still runs if no way was selected, or if a selected way has no registered effect yet.
+    // Normal path runs when no way is selected, or when a selected way has no effect yet.
     if (!selectedWay || missingWayEffect) {
       let effectFn = this.cardEffectFunctionMap[card.cardKey];
       if (effectFn) {

@@ -5,9 +5,6 @@
   "way-of-the-camel": {
     "abilityText": "Exile a Gold from the Supply."
   },
-  "way-of-the-chameleon": {
-    "abilityText": "Follow this card's instructions; each time that would give you +Cards this turn, you get +$ instead, and vice-versa."
-  },
   "way-of-the-frog": {
     "abilityText": "+1 Action\n\nWhen you discard this from play this turn, put it onto your deck."
   },
@@ -22,9 +19,6 @@
   },
   "way-of-the-monkey": {
     "abilityText": "+1 Buy\n\n+$1"
-  },
-  "way-of-the-mouse": {
-    "abilityText": "Play the set-aside card, leaving it there.\n\n---\n\nSetup: Set aside an unused non-Duration Action costing $2 or $3."
   },
   "way-of-the-mule": {
     "abilityText": "+1 Action\n\n+$1"

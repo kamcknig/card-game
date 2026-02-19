@@ -42,7 +42,5 @@ Villa.
 
 Gain 2 Horses.
 
----
-
 When you gain this, +2 Cards, +1 Buy, and if it's your Buy phase return to your
 Action phase.

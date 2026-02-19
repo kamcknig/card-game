@@ -46,6 +46,4 @@ village effect until your next turn.
 
 Either now or at the start of your next turn, +1 Card and +2 Actions.
 
----
-
 When you discard this other than during Clean-up, you may play it.

@@ -18,6 +18,4 @@ drops to $2 when your discard pile is empty.
 
 +$1
 
----
-
 During your turns, if your discard pile is empty, this costs $3 less.

@@ -37,6 +37,4 @@ a Curse to all your opponents when one of them gains a Victory card.
 
 If it isn't your turn, each other player gains a Curse.
 
----
-
 When another player gains a Victory card, you may play this from your hand.

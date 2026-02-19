@@ -734,6 +734,15 @@ export class CardLike<M = unknown> {
     const metadata = args.metadata ?? {};
     this.metadata = metadata as M;
   }
+
+  toString() {
+    return `[CARD-LIKE ${this.id} - ${this.cardKey}]`;
+  }
+
+  // @ts-ignore
+  [Symbol.for('Deno.customInspect')]() {
+    return this.toString();
+  }
 }
 
 export type CardLikeNoId = Omit<CardLike, 'id'>;

@@ -12,6 +12,4 @@ from the Exile mat.
 
 Exile a non-Victory card from the Supply.
 
----
-
 When you gain this, Exile a Gold from the Supply.

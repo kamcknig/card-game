@@ -32,7 +32,7 @@ import {selectablePileStore} from '../../../../state/interactive-pile-logic';
 import {SelectCardArgs} from '../../../../../types';
 import {BasicSupplyView} from '../basic-supply';
 import {NonSupplyKingdomView} from '../non-supply-kingdom-view';
-import {getCardSourceStore} from '../../../../state/card-source-store';
+import {cardSourceStore, getCardSourceStore} from '../../../../state/card-source-store';
 import {OtherCardLikeView} from '../other-card-like-view';
 import {CardLikeView} from '../card-like-view';
 import {PileView} from '../pile';
@@ -763,6 +763,25 @@ export class MatchScene extends Scene {
   private shouldUsePromptCardSelectionModal(selectableCardIds: CardId[]): boolean {
     if (selectableCardIds.length < 1) {
       return false;
+    }
+
+    // Set-aside selections are often context-specific reveals and can be hard to discover on the board.
+    // Force modal selection for these prompts so the player always gets an explicit chooser.
+    const setAsideCardIds = new Set<CardId>();
+    for (const [sourceKey, sourceCardIds] of Object.entries(cardSourceStore.get())) {
+      if (!sourceKey.startsWith('set-aside')) {
+        continue;
+      }
+      for (const sourceCardId of sourceCardIds ?? []) {
+        setAsideCardIds.add(sourceCardId);
+      }
+    }
+    const setAsideSelectableIds = selectableCardIds.filter((cardId) => setAsideCardIds.has(cardId));
+    if (setAsideSelectableIds.length > 0) {
+      console.debug(
+        `[selectCard ui] using modal fallback for set-aside selectable cards: ${setAsideSelectableIds.join(',')}`,
+      );
+      return true;
     }
 
     const renderedCardIds = new Set<CardId>();

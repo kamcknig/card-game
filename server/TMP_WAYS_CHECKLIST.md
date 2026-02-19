@@ -43,3 +43,9 @@
 
 ## Future Hooking
 - [x] 30. Add TODO + explicit hook point for future top-vs-bottom effect split.
+
+## Runtime Completion
+- [x] 31. Implement Menagerie way-effect module and run way effects when selected.
+- [x] 32. Remove scoped way-specific transform path from shared play/effect execution.
+- [x] 33. Keep single-card play prompts open when Ways are active so way choice can be explicit.
+- [x] 34. Add and later remove the dedicated bottom card-effect lane experiment.

@@ -28,6 +28,4 @@ trashing an Action card from your hand.
 
 +1 Buy per empty supply pile.
 
----
-
 Instead of paying this card's cost, you may trash an Action card from your hand.

@@ -26,6 +26,4 @@ that can be different from one game to the next.
 
 Play the set-aside card, leaving it there.
 
----
-
 Setup: Set aside an unused non-Duration Action costing $2 or $3.
