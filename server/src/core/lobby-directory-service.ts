@@ -77,9 +77,6 @@ export type DebugMatchSummary = {
 export class LobbyDirectoryService {
   private static readonly LOBBY_ROOM_NAME = 'lobby';
 
-  // Simple deterministic game id counter for this process lifetime.
-  private nextGameSequence = 1;
-
   // Session -> active game mapping used for reconnect and join validation.
   private readonly sessionToGameId = new Map<string, string>();
   private readonly games = new Map<string, LobbyGameRecord>();
@@ -409,7 +406,7 @@ export class LobbyDirectoryService {
 
   // Creates one new empty game and broadcasts the resulting lobby summary update.
   private createLobbyGame(): string {
-    const gameId = `game-${this.nextGameSequence++}`;
+    const gameId = this.generateUniqueGameId();
     const gameName = this.generateUniqueGameName();
 
     const scopeHandle = this.gameScopeFactory.create({
@@ -434,6 +431,17 @@ export class LobbyDirectoryService {
 
     this.loggerService.log(`[lobby directory] created game ${gameId} (${gameName})`);
     this.io.in(LobbyDirectoryService.LOBBY_ROOM_NAME).emit('lobbyGameUpdated', this.toLobbySummary(record));
+    return gameId;
+  }
+
+  // Generates a collision-resistant game id that remains unique across server restarts.
+  private generateUniqueGameId(): string {
+    let gameId: string;
+    do {
+      const timestamp = Date.now().toString(36);
+      const randomSuffix = crypto.randomUUID().slice(0, 8);
+      gameId = `game-${timestamp}-${randomSuffix}`;
+    } while (this.games.has(gameId));
     return gameId;
   }
 
