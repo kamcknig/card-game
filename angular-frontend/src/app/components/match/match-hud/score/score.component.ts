@@ -54,19 +54,39 @@ export class ScoreComponent {
       .map((id) => {
         const score = scores.find((entry) => entry.id === id);
         if (!score) return undefined;
-        const playerColor = tinycolor(playerStore(id).get()?.color ?? '#000000');
+        const playerColor = tinycolor(playerStore(id).get()?.color ?? '#7f6746');
+        const accentColor = playerColor.toHexString();
+        const accentSoft = playerColor.clone().setAlpha(.18).toRgbString();
+        const accentMuted = playerColor.clone().setAlpha(.10).toRgbString();
+        // Active row uses stronger color stops so turn ownership is visually obvious.
+        const accentActiveStrong = playerColor.clone().setAlpha(.46).toRgbString();
+        const accentActiveSoft = playerColor.clone().setAlpha(.28).toRgbString();
+        const accentGlow = playerColor.clone().setAlpha(.48).toRgbString();
+        const accentTextColor = tinycolor
+          .mostReadable(accentColor, ['#ffffff', '#2a241a'])
+          .toHexString();
         return {
           ...score,
-          borderColor: playerColor.clone().lighten(15).toRgbString(),
-          backgroundColor: playerColor.clone().setAlpha(.4).darken(15).toRgbString(),
+          accentColor,
+          accentSoft,
+          accentMuted,
+          accentActiveStrong,
+          accentActiveSoft,
+          accentGlow,
+          accentTextColor,
         };
       })
       .filter((row): row is {
         id: number;
         score: number;
         name: string;
-        borderColor: string;
-        backgroundColor: string;
+        accentColor: string;
+        accentSoft: string;
+        accentMuted: string;
+        accentActiveStrong: string;
+        accentActiveSoft: string;
+        accentGlow: string;
+        accentTextColor: string;
       } => row !== undefined);
   });
 }

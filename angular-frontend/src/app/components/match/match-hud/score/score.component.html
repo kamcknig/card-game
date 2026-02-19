@@ -1,34 +1,49 @@
-<div class="content">
+<div class="score-panel">
   @let victoryTokenCounts = victoryTokens();
 
   <div class="player-scores-container">
     @for (playerScore of orderedPlayerScores(); track playerScore.id) {
         @let isCurrentPlayer = currentPlayerTurnId() === playerScore.id;
-        <div
-          class="player-score-container"
+        <article
+          class="player-score-row"
           [ngClass]="{'current-player': isCurrentPlayer}"
-          [style.borderColor]="isCurrentPlayer ? playerScore.borderColor : null"
-          [style.boxShadow]="isCurrentPlayer ? 'inset 10px 0 0 ' + playerScore.borderColor : null"
-          [style.backgroundColor]="playerScore.backgroundColor"
+          [style.--player-accent]="playerScore.accentColor"
+          [style.--player-accent-soft]="playerScore.accentSoft"
+          [style.--player-accent-muted]="playerScore.accentMuted"
+          [style.--player-accent-active-strong]="playerScore.accentActiveStrong"
+          [style.--player-accent-active-soft]="playerScore.accentActiveSoft"
+          [style.--player-accent-glow]="playerScore.accentGlow"
+          [style.--player-accent-text]="playerScore.accentTextColor"
         >
-          <span class="player-name">{{ playerScore.name }}</span>
+          <span class="player-accent-dot" aria-hidden="true"></span>
 
-          <div style="display: flex; align-items: center; gap: 10px;">
-            @if ((victoryTokenCounts[playerScore.id] ?? 0) > 0) {
-              <div style="position:relative; display: flex; align-items: center;">
-                <img
-                  class="victory-token-icon"
-                  ngSrc="/assets/ui-icons/victory-shield.png"
-                  width="24"
-                  height="24"
-                  alt="victory point token"
-                >
-                <span class="victory-token-count">{{ victoryTokenCounts[playerScore.id] ?? 0 }}</span>
+          <div class="player-main">
+            <div class="player-topline">
+              <span class="player-name">{{ playerScore.name }}</span>
+              @if (isCurrentPlayer) {
+                <span class="active-chip">ACTIVE</span>
+              }
+            </div>
+
+            <div class="player-bottomline">
+              <div class="score-cluster">
+                <span class="score-value">{{ playerScore.score }}</span>
+                <div class="victory-token-wrap">
+                  <img
+                    class="victory-token-icon"
+                    ngSrc="/assets/ui-icons/victory-shield.png"
+                    width="24"
+                    height="24"
+                    alt="victory point token"
+                  >
+                  @if ((victoryTokenCounts[playerScore.id] ?? 0) > 0) {
+                    <span class="victory-token-count">{{ victoryTokenCounts[playerScore.id] ?? 0 }}</span>
+                  }
+                </div>
               </div>
-            }
-            <span style="font-size: 18px;">{{ playerScore.score }}</span>
+            </div>
           </div>
-        </div>
+        </article>
     }
   </div>
 </div>
