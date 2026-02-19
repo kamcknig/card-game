@@ -84,6 +84,8 @@ export interface MatchConfiguration {
   landmarks: LandmarkNoId[];
   // Projects are card-likes that grant permanent abilities.
   projects: ProjectNoId[];
+  // Ways are landscape card-likes that provide alternate Action play effects.
+  ways: WayNoId[];
   // Boons available for Fate cards in this match.
   boons: BoonNoId[];
   // Hexes available for Doom cards in this match.
@@ -178,6 +180,8 @@ export interface Match {
   landmarks: Landmark[];
   // Active projects in the match (not part of the supply).
   projects: Project[];
+  // Active ways in the match (not part of the supply).
+  ways: Way[];
   // Boon deck state for Fate cards in this match.
   boons: {
     cards: Boon[];
@@ -722,6 +726,34 @@ export class Project extends CardLike {
 }
 
 export type ProjectNoId = Omit<Project, 'id'>;
+
+type WayArgs = {
+  [p in keyof CardLike]: CardLike[p];
+} & {
+  randomizer?: string | null;
+};
+
+// Ways are landscape card-likes that provide alternate Action card play behavior.
+export class Way extends CardLike {
+  // Randomizer key used to group ways during selection.
+  randomizer: string | null;
+
+  constructor(args: WayArgs) {
+    super(args);
+
+    this.id = args.id;
+    this.cardName = args.cardName;
+    this.fullImagePath = args.fullImagePath;
+    this.detailImagePath = args.detailImagePath;
+    this.randomizer = args.randomizer ?? null;
+  }
+
+  override toString() {
+    return `[WAY ${this.id} - ${this.cardKey}]`;
+  }
+}
+
+export type WayNoId = Omit<Way, 'id'>;
 
 // Boon constructor args mirror base CardLike fields.
 type BoonArgs = {

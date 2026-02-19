@@ -8,6 +8,7 @@ import type {
   Match,
   Project,
   State,
+  Way,
 } from './shared-types.ts';
 
 // Card-like kinds that can be resolved from match state.
@@ -15,6 +16,7 @@ export type MatchCardLikeKind =
   | 'event'
   | 'landmark'
   | 'project'
+  | 'way'
   | 'boon'
   | 'hex'
   | 'state'
@@ -25,6 +27,7 @@ export type MatchCardLike =
   | MatchEvent
   | Landmark
   | Project
+  | Way
   | Boon
   | Hex
   | State
@@ -35,6 +38,7 @@ export type MatchCardLikeByKind = {
   event: MatchEvent;
   landmark: Landmark;
   project: Project;
+  way: Way;
   boon: Boon;
   hex: Hex;
   state: State;
@@ -63,6 +67,7 @@ const getCardLikeCollections = (match: Match): { kind: MatchCardLikeKind; cards:
     { kind: 'event', cards: match.events ?? [] },
     { kind: 'landmark', cards: match.landmarks ?? [] },
     { kind: 'project', cards: match.projects ?? [] },
+    { kind: 'way', cards: match.ways ?? [] },
     { kind: 'boon', cards: match.boons?.cards ?? [] },
     { kind: 'hex', cards: match.hexes?.cards ?? [] },
     { kind: 'state', cards: match.states?.cards ?? [] },
@@ -82,6 +87,8 @@ const getCardLikeCollectionByKind = <K extends MatchCardLikeKind>(
       return (match.landmarks ?? []) as MatchCardLikeByKind[K][];
     case 'project':
       return (match.projects ?? []) as MatchCardLikeByKind[K][];
+    case 'way':
+      return (match.ways ?? []) as MatchCardLikeByKind[K][];
     case 'boon':
       return (match.boons?.cards ?? []) as MatchCardLikeByKind[K][];
     case 'hex':
@@ -158,6 +165,9 @@ export const findLandmarkInMatch = <M = unknown>(match: Match | null | undefined
 
 export const findProjectInMatch = <M = unknown>(match: Match | null | undefined, cardLikeId: CardLikeId) =>
   findCardLikeByKindInMatchWithMetadata<'project', M>(match, cardLikeId, 'project');
+
+export const findWayInMatch = <M = unknown>(match: Match | null | undefined, cardLikeId: CardLikeId) =>
+  findCardLikeByKindInMatchWithMetadata<'way', M>(match, cardLikeId, 'way');
 
 export const findBoonInMatch = <M = unknown>(match: Match | null | undefined, cardLikeId: CardLikeId) =>
   findCardLikeByKindInMatchWithMetadata<'boon', M>(match, cardLikeId, 'boon');

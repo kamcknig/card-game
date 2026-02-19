@@ -8,10 +8,10 @@
 - [x] 5. Add `ways` to expansion catalog data structures.
 
 ## Loading and Registry
-- [ ] 6. Create way loader service (`load-ways.ts`) for JSON + optional effects.
-- [ ] 7. Wire way loader into expansion loader pipeline.
-- [ ] 8. Add way effect factory registry/materialization map.
-- [ ] 9. Inject way effect map into match-scope action controller wiring.
+- [x] 6. Create way loader service (`load-ways.ts`) for JSON + optional effects.
+- [x] 7. Wire way loader into expansion loader pipeline.
+- [x] 8. Add way effect factory registry/materialization map.
+- [x] 9. Inject way effect map into match-scope action controller wiring.
 
 ## Match Setup and Selection
 - [ ] 10. Create active match ways in setup (`createWays`).

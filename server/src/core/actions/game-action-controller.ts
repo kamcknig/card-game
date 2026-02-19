@@ -81,6 +81,7 @@ export class GameActionController implements GameActionDefinitionMap {
     private readonly cardEffectFunctionMap: CardEffectFunctionMap,
     private readonly eventEffectFunctionMap: CardEffectFunctionMap,
     private readonly projectEffectFunctionMap: CardEffectFunctionMap,
+    private readonly wayEffectFunctionMap: CardEffectFunctionMap,
     private readonly boonEffectFunctionMap: CardEffectFunctionMap,
     private readonly hexEffectFunctionMap: CardEffectFunctionMap,
     private readonly stateEffectFunctionMap: CardEffectFunctionMap,
@@ -148,6 +149,14 @@ export class GameActionController implements GameActionDefinitionMap {
       this.loggerService.warn(`[action controller] project effect for ${cardKey} already exists, overwriting it`);
     }
     this.projectEffectFunctionMap[cardKey] = fn;
+  }
+
+  // Registers way effects for the current match.
+  public registerWayEffect(cardKey: CardKey, fn: CardEffectFn) {
+    if (this.wayEffectFunctionMap[cardKey]) {
+      this.loggerService.warn(`[action controller] way effect for ${cardKey} already exists, overwriting it`);
+    }
+    this.wayEffectFunctionMap[cardKey] = fn;
   }
 
   // Returns the requested status-like store (state/artifact) from match state.

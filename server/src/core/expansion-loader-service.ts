@@ -9,6 +9,7 @@ import { LoggerService } from './logger-service.ts';
 import { EventLoaderService } from './events/load-events.ts';
 import { LandmarkLoaderService } from './landmarks/load-landmarks.ts';
 import { ProjectLoaderService } from './projects/load-projects.ts';
+import { WayLoaderService } from './ways/load-ways.ts';
 
 // Randomizer pile definition for split piles in card libraries.
 type RandomizerPileDefinition = {
@@ -29,6 +30,7 @@ export class ExpansionLoaderService {
     private readonly eventLoaderService: EventLoaderService,
     private readonly landmarkLoaderService: LandmarkLoaderService,
     private readonly projectLoaderService: ProjectLoaderService,
+    private readonly wayLoaderService: WayLoaderService,
     private readonly loggerService: LoggerService,
   ) {}
 
@@ -258,6 +260,11 @@ export class ExpansionLoaderService {
     this.loggerService.info(`[expansion loader] attempting to load projects for ${expansionName}`);
     await this.projectLoaderService.loadExpansionProjects(expansionName);
     this.loggerService.log(`[expansion loader] finished loading projects for ${expansionName}`);
+
+    // Ways are loaded after projects to keep landscape loading grouped.
+    this.loggerService.info(`[expansion loader] attempting to load ways for ${expansionName}`);
+    await this.wayLoaderService.loadExpansionWays(expansionName);
+    this.loggerService.log(`[expansion loader] finished loading ways for ${expansionName}`);
   }
 
   // Type guard for boon entries in card libraries.

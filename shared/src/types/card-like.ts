@@ -1,4 +1,4 @@
-// Card-like entities (events, landmarks, projects, boons, hexes, states, artifacts).
+// Card-like entities (events, landmarks, projects, ways, boons, hexes, states, artifacts).
 export {
   Artifact,
   Boon,
@@ -8,6 +8,7 @@ export {
   Landmark,
   Project,
   State,
+  Way,
 } from "../shared-types.ts";
 
 export type {
@@ -19,4 +20,5 @@ export type {
   LandmarkNoId,
   ProjectNoId,
   StateNoId,
+  WayNoId,
 } from "../shared-types.ts";

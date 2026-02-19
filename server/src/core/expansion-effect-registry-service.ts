@@ -12,6 +12,7 @@ export class ExpansionEffectRegistryService {
   private readonly _eventEffectFactories: CardEffectFactoryMap = {};
   private readonly _projectEffectFactories: CardEffectFactoryMap = {};
   private readonly _landmarkEffectFactories: CardEffectFactoryMap = {};
+  private readonly _wayEffectFactories: CardEffectFactoryMap = {};
   private readonly _cardActionConditions: Record<CardKey, CardExpansionActionConditionMap> = {};
   private readonly _cardAlternateBuyOptions: Record<CardKey, CardAlternateBuyOption[]> = {};
 
@@ -48,6 +49,16 @@ export class ExpansionEffectRegistryService {
   // Returns true when a project effect factory already exists for this key.
   public hasProjectEffectFactory(cardKey: CardKey): boolean {
     return this._projectEffectFactories[cardKey] !== undefined;
+  }
+
+  // Registers a way effect factory by key.
+  public registerWayEffectFactory(cardKey: CardKey, factory: CardEffectFactoryMap[CardKey]): void {
+    this._wayEffectFactories[cardKey] = factory;
+  }
+
+  // Returns true when a way effect factory already exists for this key.
+  public hasWayEffectFactory(cardKey: CardKey): boolean {
+    return this._wayEffectFactories[cardKey] !== undefined;
   }
 
   // Registers buy action conditions for a card key.
@@ -88,6 +99,11 @@ export class ExpansionEffectRegistryService {
   // Builds a fresh per-match map of landmark effect functions.
   public createLandmarkEffectFunctionMap(): CardEffectFunctionMap {
     return this.materializeEffectMap(this._landmarkEffectFactories);
+  }
+
+  // Builds a fresh per-match map of way effect functions.
+  public createWayEffectFunctionMap(): CardEffectFunctionMap {
+    return this.materializeEffectMap(this._wayEffectFactories);
   }
 
   // Instantiates effect functions from registered factories.

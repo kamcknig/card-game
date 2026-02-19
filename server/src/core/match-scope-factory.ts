@@ -66,6 +66,7 @@ export class MatchScopeFactory {
     const cardEffectFunctionMap = this.expansionEffectRegistryService.createCardEffectFunctionMap();
     const eventEffectFunctionMap = this.expansionEffectRegistryService.createEventEffectFunctionMap();
     const projectEffectFunctionMap = this.expansionEffectRegistryService.createProjectEffectFunctionMap();
+    const wayEffectFunctionMap = this.expansionEffectRegistryService.createWayEffectFunctionMap();
 
     // Boon effects are registered per-match via expansion configurators.
     const boonEffectFunctionMap = {} as CardEffectFunctionMap;
@@ -85,6 +86,7 @@ export class MatchScopeFactory {
       cardEffectFunctionMap: asValue(cardEffectFunctionMap),
       eventEffectFunctionMap: asValue(eventEffectFunctionMap),
       projectEffectFunctionMap: asValue(projectEffectFunctionMap),
+      wayEffectFunctionMap: asValue(wayEffectFunctionMap),
       boonEffectFunctionMap: asValue(boonEffectFunctionMap),
       hexEffectFunctionMap: asValue(hexEffectFunctionMap),
       stateEffectFunctionMap: asValue(stateEffectFunctionMap),
