@@ -18,6 +18,8 @@ export function createInitialMatchState(): Match {
     landmarks: [],
     // Active project card-likes in the match.
     projects: [],
+    // Active way card-likes in the match.
+    ways: [],
     // Boon deck state for Fate cards.
     boons: {
       cards: [],

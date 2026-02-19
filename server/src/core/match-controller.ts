@@ -311,6 +311,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this.match.boons.deck ??= [];
     this.match.boons.discard ??= [];
     this.match.boons.setAside ??= [];
+    this.match.ways ??= [];
     this.match.hexes ??= {
       cards: [],
       deck: [],

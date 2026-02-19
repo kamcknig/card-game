@@ -8,6 +8,7 @@ import {
   LandmarkNoId,
   ProjectNoId,
   StateNoId,
+  WayNoId,
 } from 'shared/types/index.ts';
 
 export type ExpansionCardData = {
@@ -32,6 +33,8 @@ export type ExpansionData = {
   artifacts: Record<CardKey, ArtifactNoId>;
   // Projects are stored separately from supply cards.
   projects: Record<CardKey, ProjectNoId>;
+  // Ways are stored separately from supply cards.
+  ways: Record<CardKey, WayNoId>;
   mutuallyExclusive?: string[];
 };
 
@@ -59,5 +62,7 @@ export const createEmptyExpansionData = (expansionName: string): ExpansionData =
     artifacts: {},
     // Projects live alongside other non-supply card-likes.
     projects: {},
+    // Ways live alongside other non-supply card-likes.
+    ways: {},
   };
 };

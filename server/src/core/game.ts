@@ -51,6 +51,8 @@ const createDefaultMatchConfiguration = (): MatchConfiguration => ({
   landmarks: [],
   // Default project selection for new lobbies.
   projects: [],
+  // Default way selection for new lobbies.
+  ways: [],
   // Default boons selection for new lobbies.
   boons: [],
   // Default hexes selection for new lobbies.

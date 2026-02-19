@@ -97,6 +97,8 @@ export class MatchConfigurator {
     this._config.landmarks ??= [];
     // Ensure projects array exists for downstream selection logic.
     this._config.projects ??= [];
+    // Ensure ways array exists for downstream selection logic.
+    this._config.ways ??= [];
     // Ensure states array exists for downstream configuration logic.
     this._config.states ??= [];
     // Ensure artifacts array exists for downstream configuration logic.
