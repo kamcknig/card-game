@@ -4,6 +4,7 @@ import { LobbyDirectoryService } from './lobby-directory-service.ts';
 import { ServerConfigService } from './server-config-service.ts';
 import { ExpansionCatalogService } from './expansion-catalog-service.ts';
 import { ExpansionSearchService } from './expansion-search-service.ts';
+import { MatchConfigurationSaveService } from './match-configuration-save-service.ts';
 import {
   ArtifactNoId,
   BoonNoId,
@@ -12,6 +13,7 @@ import {
   HexNoId,
   LandmarkNoId,
   ProjectNoId,
+  MatchConfiguration,
   StateNoId,
   WayNoId,
 } from 'shared/types/index.ts';
@@ -31,6 +33,7 @@ export class ServerDebugRouteHandlerService {
     private readonly lobbyDirectoryService: LobbyDirectoryService,
     private readonly expansionCatalogService: ExpansionCatalogService,
     private readonly expansionSearchService: ExpansionSearchService,
+    private readonly matchConfigurationSaveService: MatchConfigurationSaveService,
     private readonly serverConfigService: ServerConfigService,
   ) {
     this.ioHandler = this.io.handler();
@@ -54,6 +57,10 @@ export class ServerDebugRouteHandlerService {
 
     if (parts[1] === 'expansions') {
       return this.handleExpansionDebugRoutes(req, parts);
+    }
+
+    if (parts[1] === 'saved-match-configurations') {
+      return this.handleSavedMatchConfigurationDebugRoutes(req, parts);
     }
 
     if (parts[1] !== 'games') {
@@ -193,6 +200,128 @@ export class ServerDebugRouteHandlerService {
         ...result,
         count: result.results.length,
       });
+    }
+
+    return new Response('debug resource not found', { status: 404 });
+  }
+
+  // Routes /debug/saved-match-configurations resources for save-file CRUD operations.
+  private handleSavedMatchConfigurationDebugRoutes(req: Request, parts: string[]): Response | Promise<Response> {
+    // GET /debug/saved-match-configurations
+    if (parts.length === 2 && req.method === 'GET') {
+      const entries = this.matchConfigurationSaveService.listSavedConfigurations();
+      return this.jsonResponse({
+        count: entries.length,
+        entries,
+      });
+    }
+
+    // DELETE /debug/saved-match-configurations
+    if (parts.length === 2 && req.method === 'DELETE') {
+      const deleteAllResult = this.matchConfigurationSaveService.deleteAllConfigurations();
+      if (!deleteAllResult.ok) {
+        return this.jsonResponse(deleteAllResult, 500);
+      }
+      return this.jsonResponse(deleteAllResult);
+    }
+
+    // POST /debug/saved-match-configurations
+    if (parts.length === 2 && req.method === 'POST') {
+      return req.json()
+        .then((body) => {
+          if (!body || typeof body !== 'object' || Array.isArray(body)) {
+            return new Response('invalid save payload', { status: 400 });
+          }
+
+          const saveName = typeof body.name === 'string' ? body.name : '';
+          const configuration = body.configuration;
+          if (!configuration || typeof configuration !== 'object' || Array.isArray(configuration)) {
+            return new Response('configuration payload is required', { status: 400 });
+          }
+
+          const saveResult = this.matchConfigurationSaveService.saveConfiguration(
+            saveName,
+            configuration as MatchConfiguration,
+          );
+          return this.jsonResponse(saveResult, saveResult.ok ? 200 : 400);
+        })
+        .catch(() => new Response('invalid json', { status: 400 }));
+    }
+
+    const key = parts[2];
+    if (!key) {
+      return new Response('saved configuration key is required', { status: 400 });
+    }
+
+    const decodedKey = decodeURIComponent(key);
+
+    // GET /debug/saved-match-configurations/:key
+    if (parts.length === 3 && req.method === 'GET') {
+      const getResult = this.matchConfigurationSaveService.getSavedConfiguration(decodedKey);
+      if (!getResult.ok) {
+        return this.jsonResponse(getResult, this.getSavedConfigurationErrorStatus(getResult.message));
+      }
+      return this.jsonResponse(getResult);
+    }
+
+    // DELETE /debug/saved-match-configurations/:key
+    if (parts.length === 3 && req.method === 'DELETE') {
+      const deleteResult = this.matchConfigurationSaveService.deleteConfiguration(decodedKey);
+      if (!deleteResult.ok) {
+        return this.jsonResponse(deleteResult, this.getSavedConfigurationErrorStatus(deleteResult.message));
+      }
+      return this.jsonResponse(deleteResult);
+    }
+
+    // PATCH /debug/saved-match-configurations/:key
+    if (parts.length === 3 && req.method === 'PATCH') {
+      return req.json()
+        .then((body) => {
+          if (!body || typeof body !== 'object' || Array.isArray(body)) {
+            return new Response('invalid patch payload', { status: 400 });
+          }
+
+          const existing = this.matchConfigurationSaveService.getSavedConfiguration(decodedKey);
+          if (!existing.ok) {
+            return this.jsonResponse(existing, this.getSavedConfigurationErrorStatus(existing.message));
+          }
+
+          const patchSource = (
+            'configuration' in body && body.configuration && typeof body.configuration === 'object' && !Array.isArray(body.configuration)
+          )
+            ? body.configuration
+            : body;
+          const requestedName = typeof body.name === 'string' ? body.name : undefined;
+          const { name: _ignoredName, ...configurationPatch } = patchSource as Record<string, unknown>;
+          if (Object.keys(configurationPatch).length < 1 && !requestedName) {
+            return new Response('patch payload did not include any configuration fields', { status: 400 });
+          }
+
+          // PATCH applies top-level partial updates and leaves unspecified fields unchanged.
+          const mergedConfiguration: MatchConfiguration = {
+            ...existing.configuration,
+            ...(configurationPatch as Partial<MatchConfiguration>),
+          };
+          const updateResult = this.matchConfigurationSaveService.updateConfiguration(
+            existing.entry.key,
+            mergedConfiguration,
+            requestedName,
+          );
+          if (!updateResult.ok) {
+            return this.jsonResponse(updateResult, this.getSavedConfigurationErrorStatus(updateResult.message));
+          }
+
+          const refreshedSave = this.matchConfigurationSaveService.getSavedConfiguration(existing.entry.key);
+          if (!refreshedSave.ok) {
+            return this.jsonResponse(refreshedSave, this.getSavedConfigurationErrorStatus(refreshedSave.message));
+          }
+
+          return this.jsonResponse({
+            ok: true,
+            save: refreshedSave,
+          });
+        })
+        .catch(() => new Response('invalid json', { status: 400 }));
     }
 
     return new Response('debug resource not found', { status: 404 });
@@ -363,6 +492,17 @@ export class ServerDebugRouteHandlerService {
       status,
       headers: { 'content-type': 'application/json' },
     });
+  }
+
+  // Maps saved-configuration service error messages to stable HTTP status codes.
+  private getSavedConfigurationErrorStatus(message: string): number {
+    if (message.toLowerCase().includes('invalid')) {
+      return 400;
+    }
+    if (message.toLowerCase().includes('not found') || message.toLowerCase().includes('unreadable')) {
+      return 404;
+    }
+    return 500;
   }
 
   // Parses a positive integer route segment for ids such as matchScopeId.

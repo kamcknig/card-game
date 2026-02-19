@@ -154,6 +154,175 @@ export class MatchConfigurationSaveService {
     };
   }
 
+  // Loads one saved configuration by key with metadata needed by debug CRUD endpoints.
+  public getSavedConfiguration(key: string):
+    | { ok: true; entry: SavedMatchConfigurationEntry; configuration: MatchConfiguration }
+    | { ok: false; key: string; message: string } {
+    const normalizedKey = this.normalizeSaveName(key);
+    if (!normalizedKey) {
+      return {
+        ok: false,
+        key,
+        message: 'Invalid saved configuration key.',
+      };
+    }
+
+    const saveFilePath = this.getSaveFilePath(normalizedKey);
+    const saved = this.readSavedConfiguration(saveFilePath);
+    if (!saved) {
+      return {
+        ok: false,
+        key: normalizedKey,
+        message: 'Saved configuration was not found or is unreadable.',
+      };
+    }
+
+    return {
+      ok: true,
+      entry: {
+        key: normalizedKey,
+        name: saved.name,
+        savedAtMs: saved.savedAtMs,
+      },
+      configuration: structuredClone(saved.configuration),
+    };
+  }
+
+  // Updates one existing saved configuration by key.
+  public updateConfiguration(
+    key: string,
+    configuration: MatchConfiguration,
+    requestedName?: string,
+  ): { ok: true; key: string; name: string } | { ok: false; key: string; message: string } {
+    const normalizedKey = this.normalizeSaveName(key);
+    if (!normalizedKey) {
+      return {
+        ok: false,
+        key,
+        message: 'Invalid saved configuration key.',
+      };
+    }
+
+    const saveFilePath = this.getSaveFilePath(normalizedKey);
+    const existingSave = this.readSavedConfiguration(saveFilePath);
+    if (!existingSave) {
+      return {
+        ok: false,
+        key: normalizedKey,
+        message: 'Saved configuration was not found or is unreadable.',
+      };
+    }
+
+    const trimmedRequestedName = requestedName?.trim() ?? '';
+    const resolvedName = trimmedRequestedName.length > 0
+      ? trimmedRequestedName
+      : (existingSave.name.trim().length > 0 ? existingSave.name : normalizedKey);
+
+    const payload: PersistedMatchConfigurationSave = {
+      name: resolvedName,
+      savedAtMs: Date.now(),
+      configuration: structuredClone(configuration),
+    };
+
+    try {
+      Deno.mkdirSync(getSavedMatchConfigurationDirectory(), { recursive: true });
+      Deno.writeTextFileSync(saveFilePath, JSON.stringify(payload, null, 2));
+      this.loggerService.info(`[match config saves] updated configuration '${resolvedName}' (${normalizedKey})`);
+      return {
+        ok: true,
+        key: normalizedKey,
+        name: resolvedName,
+      };
+    } catch (error) {
+      this.loggerService.warn(`[match config saves] failed to update configuration '${normalizedKey}'`);
+      this.loggerService.error(error);
+      return {
+        ok: false,
+        key: normalizedKey,
+        message: 'Failed to update saved configuration on server.',
+      };
+    }
+  }
+
+  // Deletes one saved configuration by key.
+  public deleteConfiguration(key: string):
+    | { ok: true; key: string }
+    | { ok: false; key: string; message: string } {
+    const normalizedKey = this.normalizeSaveName(key);
+    if (!normalizedKey) {
+      return {
+        ok: false,
+        key,
+        message: 'Invalid saved configuration key.',
+      };
+    }
+
+    const saveFilePath = this.getSaveFilePath(normalizedKey);
+    if (!this.fileExists(saveFilePath)) {
+      return {
+        ok: false,
+        key: normalizedKey,
+        message: 'Saved configuration was not found.',
+      };
+    }
+
+    try {
+      Deno.removeSync(saveFilePath);
+      this.loggerService.info(`[match config saves] deleted configuration '${normalizedKey}'`);
+      return {
+        ok: true,
+        key: normalizedKey,
+      };
+    } catch (error) {
+      this.loggerService.warn(`[match config saves] failed to delete configuration '${normalizedKey}'`);
+      this.loggerService.error(error);
+      return {
+        ok: false,
+        key: normalizedKey,
+        message: 'Failed to delete saved configuration on server.',
+      };
+    }
+  }
+
+  // Deletes all saved configurations and returns the number of files removed.
+  public deleteAllConfigurations():
+    | { ok: true; removed: number }
+    | { ok: false; removed: number; message: string } {
+    const saveDirectory = getSavedMatchConfigurationDirectory();
+    let removedCount = 0;
+    try {
+      for (const entry of Deno.readDirSync(saveDirectory)) {
+        if (!entry.isFile || !entry.name.toLowerCase().endsWith(MatchConfigurationSaveService.FILE_EXTENSION)) {
+          continue;
+        }
+
+        Deno.removeSync(`${saveDirectory}/${entry.name}`);
+        removedCount++;
+      }
+
+      this.loggerService.info(`[match config saves] deleted all saved configurations (${removedCount} file(s))`);
+      return {
+        ok: true,
+        removed: removedCount,
+      };
+    } catch (error) {
+      if (error instanceof Deno.errors.NotFound) {
+        return {
+          ok: true,
+          removed: 0,
+        };
+      }
+
+      this.loggerService.warn('[match config saves] failed to delete all saved configurations');
+      this.loggerService.error(error);
+      return {
+        ok: false,
+        removed: removedCount,
+        message: 'Failed to delete all saved configurations.',
+      };
+    }
+  }
+
   // Reads one saved configuration payload file from disk.
   private readSavedConfiguration(filePath: string): PersistedMatchConfigurationSave | undefined {
     try {
