@@ -276,8 +276,7 @@
 @if (activeSelectionModal(); as modal) {
   <app-select-card-like-modal
     [excludedItems]="modal.excludedItems"
-    [searchRequestEvent]="modal.searchRequestEvent"
-    [searchResponseEvent]="modal.searchResponseEvent"
+    [catalogKind]="modal.catalogKind"
     [imageSize]="modal.imageSize"
     [filterBasicCards]="modal.filterBasicCards"
     [ngStyle]="{'visibility': 'visible'}"

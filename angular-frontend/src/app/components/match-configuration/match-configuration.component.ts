@@ -25,8 +25,7 @@ import {
 } from '../../state/lobby-state';
 import { PlayerComponent } from './player-name-input/player-name-input.component';
 import {
-  SearchRequestEventName,
-  SearchResponseEventName,
+  SearchCatalogKind,
   SelectCardLikeModalComponent,
   SelectableSearchResult
 } from './select-card-like-modal/select-card-like-modal.component';
@@ -36,8 +35,7 @@ type SelectionModalKind = 'bannedKingdom' | 'kingdom' | 'events' | 'landmarks' |
 type SelectionModalState = {
   kind: SelectionModalKind;
   excludedItems: ({ cardKey: string; } | null)[];
-  searchRequestEvent: SearchRequestEventName;
-  searchResponseEvent: SearchResponseEventName;
+  catalogKind: SearchCatalogKind;
   imageSize: 'half' | 'full';
   filterBasicCards: boolean;
 };
@@ -166,8 +164,7 @@ export class MatchConfigurationComponent {
         this.activeSelectionModal.set({
           kind,
           excludedItems: [...this.preSelectedKingdoms(), ...this.bannedKingdoms()],
-          searchRequestEvent: 'searchCards',
-          searchResponseEvent: 'searchCardResponse',
+          catalogKind: 'cards',
           imageSize: 'half',
           filterBasicCards: true,
         });
@@ -176,8 +173,7 @@ export class MatchConfigurationComponent {
         this.activeSelectionModal.set({
           kind,
           excludedItems: [...this.preSelectedKingdoms(), ...this.bannedKingdoms()],
-          searchRequestEvent: 'searchCards',
-          searchResponseEvent: 'searchCardResponse',
+          catalogKind: 'cards',
           imageSize: 'half',
           filterBasicCards: true,
         });
@@ -186,8 +182,7 @@ export class MatchConfigurationComponent {
         this.activeSelectionModal.set({
           kind,
           excludedItems: this.preSelectedEvents(),
-          searchRequestEvent: 'searchEvents',
-          searchResponseEvent: 'searchEventResponse',
+          catalogKind: 'events',
           imageSize: 'full',
           filterBasicCards: false,
         });
@@ -196,8 +191,7 @@ export class MatchConfigurationComponent {
         this.activeSelectionModal.set({
           kind,
           excludedItems: this.preSelectedLandmarks(),
-          searchRequestEvent: 'searchLandmarks',
-          searchResponseEvent: 'searchLandmarkResponse',
+          catalogKind: 'landmarks',
           imageSize: 'full',
           filterBasicCards: false,
         });
@@ -206,8 +200,7 @@ export class MatchConfigurationComponent {
         this.activeSelectionModal.set({
           kind,
           excludedItems: this.preSelectedArtifacts(),
-          searchRequestEvent: 'searchArtifacts',
-          searchResponseEvent: 'searchArtifactResponse',
+          catalogKind: 'artifacts',
           imageSize: 'full',
           filterBasicCards: false,
         });
@@ -216,8 +209,7 @@ export class MatchConfigurationComponent {
         this.activeSelectionModal.set({
           kind,
           excludedItems: this.preSelectedProjects(),
-          searchRequestEvent: 'searchProjects',
-          searchResponseEvent: 'searchProjectResponse',
+          catalogKind: 'projects',
           imageSize: 'full',
           filterBasicCards: false,
         });
@@ -226,8 +218,7 @@ export class MatchConfigurationComponent {
         this.activeSelectionModal.set({
           kind,
           excludedItems: this.preSelectedWays(),
-          searchRequestEvent: 'searchWays',
-          searchResponseEvent: 'searchWayResponse',
+          catalogKind: 'ways',
           imageSize: 'full',
           filterBasicCards: false,
         });

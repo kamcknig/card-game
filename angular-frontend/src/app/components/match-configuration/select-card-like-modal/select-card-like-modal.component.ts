@@ -5,14 +5,11 @@ import {
   ElementRef,
   ViewChild,
   computed,
-  effect,
   inject,
   input,
   output,
   signal
 } from '@angular/core';
-import { combineLatestWith, debounceTime, filter, Subject } from 'rxjs';
-import { SocketService } from '../../../core/socket-service/socket.service';
 import { NanostoresService } from '@nanostores/angular';
 import {
   CardNoId,
@@ -20,31 +17,17 @@ import {
   EventNoId,
   LandmarkNoId,
   ProjectNoId,
-  ServerListenEvents,
-  WayNoId
+  SelectableSearchCatalog,
+  WayNoId,
 } from 'shared/types';
 import { NgOptimizedImage } from '@angular/common';
 import { EVENT_CARD_HEIGHT, EVENT_CARD_WIDTH, SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH } from '../../../core/app-contants';
-import { selfPlayerIdStore } from '../../../state/player-state';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { selectableSearchCatalogStore } from '../../../state/selectable-search-state';
 
 export type SelectableCardLikeNoId = EventNoId | LandmarkNoId | ArtifactNoId | ProjectNoId | WayNoId;
 export type SelectableSearchResult = CardNoId | SelectableCardLikeNoId;
-export type SearchRequestEventName =
-  'searchCards'
-  | 'searchEvents'
-  | 'searchLandmarks'
-  | 'searchArtifacts'
-  | 'searchProjects'
-  | 'searchWays';
-export type SearchResponseEventName =
-  'searchCardResponse'
-  | 'searchEventResponse'
-  | 'searchLandmarkResponse'
-  | 'searchArtifactResponse'
-  | 'searchProjectResponse'
-  | 'searchWayResponse';
-type SearchRequestEvents = Pick<ServerListenEvents, SearchRequestEventName>;
+export type SearchCatalogKind = keyof SelectableSearchCatalog;
 
 type DisplaySearchResult = SelectableSearchResult & {
   imagePath: string;
@@ -62,12 +45,10 @@ type DisplaySearchResult = SelectableSearchResult & {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SelectCardLikeModalComponent implements AfterViewInit {
-  private readonly _socketService = inject(SocketService);
   private readonly _nanoService = inject(NanostoresService);
 
   excludedItems = input<({ cardKey: string; } | null)[]>([]);
-  searchRequestEvent = input.required<SearchRequestEventName>();
-  searchResponseEvent = input.required<SearchResponseEventName>();
+  catalogKind = input.required<SearchCatalogKind>();
   // When true, removes basic cards from search results (used for kingdom/banned selection).
   filterBasicCards = input(false);
   // Controls whether this modal renders half-image or full-image cards.
@@ -78,30 +59,35 @@ export class SelectCardLikeModalComponent implements AfterViewInit {
 
   @ViewChild('searchTermInput', { static: true }) searchTerm!: ElementRef<HTMLInputElement>;
 
-  // Drives the search term stream for card-like lookup.
-  searchTerm$ = new Subject<string>();
   // Latest raw search term entered by the user.
   readonly searchTermValue = signal('');
-  // Raw search results from the socket response event.
-  private readonly _rawSearchResults = signal<SelectableSearchResult[]>([]);
-  // Tracks whether a search request is currently waiting for a server response.
-  private readonly _searchRequestInFlight = signal(false);
-  // Tracks whether at least one response has arrived for the current non-empty query.
-  private readonly _hasReceivedSearchResponse = signal(false);
+  private readonly _searchCatalog = toSignal(this._nanoService.useStore(selectableSearchCatalogStore), {
+    initialValue: selectableSearchCatalogStore.get()
+  });
 
   // Template-ready result list with stable filtering and image sizing.
   readonly displaySearchResults = computed<readonly DisplaySearchResult[]>(() => {
+    const catalog = this._searchCatalog();
+    const catalogKind = this.catalogKind();
     const excludedKeys = this.excludedItems()
       .map((cardLike) => cardLike?.cardKey)
       .filter((cardKey): cardKey is string => !!cardKey);
     const filterBasicCards = this.filterBasicCards();
+    const searchTerm = this.searchTermValue().trim().toLowerCase();
     const imageSize = this.imageSize();
     const imageWidth = imageSize === 'half' ? SMALL_CARD_WIDTH : EVENT_CARD_WIDTH;
     const imageHeight = imageSize === 'half' ? SMALL_CARD_HEIGHT : EVENT_CARD_HEIGHT;
+    const allCatalogResults = this.getCatalogResults(catalog, catalogKind);
+    const matchingResults = searchTerm.length < 1
+      ? allCatalogResults
+      : allCatalogResults.filter((result) =>
+        result.cardName.toLowerCase().includes(searchTerm)
+        || result.cardKey.toLowerCase().includes(searchTerm)
+      );
 
     const filteredResults = filterBasicCards
-      ? this._rawSearchResults().filter((result) => !('isBasic' in result) || !result.isBasic)
-      : this._rawSearchResults();
+      ? matchingResults.filter((result) => !('isBasic' in result) || !result.isBasic)
+      : matchingResults;
 
     return filteredResults
       .filter((result) => !excludedKeys.some((cardKey) => cardKey === result.cardKey))
@@ -113,47 +99,9 @@ export class SelectCardLikeModalComponent implements AfterViewInit {
       }));
   });
 
-  // Only show "no results" after an actual response for the active query.
+  // Shows "no results" only when a non-empty local filter has no matches.
   readonly shouldShowNoResults = computed(() => {
-    const hasQuery = this.searchTermValue().trim().length > 0;
-    return hasQuery
-      && this._hasReceivedSearchResponse()
-      && !this._searchRequestInFlight()
-      && this.displaySearchResults().length === 0;
-  });
-
-  // Emits debounced search requests scoped to the active player.
-  private readonly _searchTermSubscription = this.searchTerm$.pipe(
-    debounceTime(300),
-    combineLatestWith(this._nanoService.useStore(selfPlayerIdStore)),
-    filter(([searchTerm, selfId]) => selfId !== undefined && searchTerm.trim().length > 0),
-    takeUntilDestroyed(),
-  ).subscribe(([searchTerm, selfId]) => {
-    // Mark request pending so empty local results do not show as "no results" prematurely.
-    this._searchRequestInFlight.set(true);
-    this._socketService.emit(this.searchRequestEvent() as keyof SearchRequestEvents, selfId!, searchTerm);
-  });
-
-  // Re-binds socket listener whenever the response-event input changes.
-  private readonly _searchResponseListenerEffect = effect((onCleanup) => {
-    const responseEvent = this.searchResponseEvent();
-    const responseHandler = (results: SelectableSearchResult[]) => {
-      // Ignore late responses when the active query has already been cleared.
-      if (this.searchTermValue().trim().length < 1) {
-        this._rawSearchResults.set([]);
-        this._searchRequestInFlight.set(false);
-        this._hasReceivedSearchResponse.set(false);
-        return;
-      }
-      this._rawSearchResults.set(results);
-      this._searchRequestInFlight.set(false);
-      this._hasReceivedSearchResponse.set(true);
-    };
-
-    this._socketService.on(responseEvent, responseHandler as any);
-    onCleanup(() => {
-      this._socketService.off(responseEvent, responseHandler as any);
-    });
+    return this.searchTermValue().trim().length > 0 && this.displaySearchResults().length === 0;
   });
 
   ngAfterViewInit(): void {
@@ -163,31 +111,38 @@ export class SelectCardLikeModalComponent implements AfterViewInit {
   // Updates the search term used by the modal.
   updateSearchTerm(term: string) {
     this.searchTermValue.set(term);
-    // Reset visible state immediately when query changes.
-    this._hasReceivedSearchResponse.set(false);
-    const hasQuery = term.trim().length > 0;
-    this._searchRequestInFlight.set(hasQuery);
-    if (!hasQuery) {
-      this._rawSearchResults.set([]);
-      this._searchRequestInFlight.set(false);
-    }
-    this.searchTerm$.next(term);
   }
 
   // Emits the selected item and closes the modal.
   onItemSelected(item: SelectableSearchResult) {
     this.itemSelected.emit(item);
-    this._rawSearchResults.set([]);
-    this._searchRequestInFlight.set(false);
-    this._hasReceivedSearchResponse.set(false);
     this.close.emit();
   }
 
   // Closes the modal and clears search results.
   onClose() {
-    this._rawSearchResults.set([]);
-    this._searchRequestInFlight.set(false);
-    this._hasReceivedSearchResponse.set(false);
     this.close.emit();
+  }
+
+  // Returns the cached selectable results for the requested catalog kind.
+  private getCatalogResults(
+    catalog: SelectableSearchCatalog,
+    catalogKind: SearchCatalogKind
+  ): SelectableSearchResult[] {
+    switch (catalogKind) {
+      case 'cards':
+        return catalog.cards;
+      case 'events':
+        return catalog.events;
+      case 'landmarks':
+        return catalog.landmarks;
+      case 'artifacts':
+        return catalog.artifacts;
+      case 'projects':
+        return catalog.projects;
+      case 'ways':
+        return catalog.ways;
+    }
+    return [];
   }
 }

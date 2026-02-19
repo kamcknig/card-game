@@ -13,16 +13,14 @@
           [style.--player-accent-active-strong]="playerScore.accentActiveStrong"
           [style.--player-accent-active-soft]="playerScore.accentActiveSoft"
           [style.--player-accent-glow]="playerScore.accentGlow"
-          [style.--player-accent-text]="playerScore.accentTextColor"
+          [style.--player-accent-dot-inactive]="playerScore.accentDotInactive"
+          [style.--player-accent-dot-active]="playerScore.accentDotActive"
         >
           <span class="player-accent-dot" aria-hidden="true"></span>
 
           <div class="player-main">
             <div class="player-topline">
               <span class="player-name">{{ playerScore.name }}</span>
-              @if (isCurrentPlayer) {
-                <span class="active-chip">ACTIVE</span>
-              }
             </div>
 
             <div class="player-bottomline">

@@ -62,9 +62,9 @@ export class ScoreComponent {
         const accentActiveStrong = playerColor.clone().setAlpha(.46).toRgbString();
         const accentActiveSoft = playerColor.clone().setAlpha(.28).toRgbString();
         const accentGlow = playerColor.clone().setAlpha(.48).toRgbString();
-        const accentTextColor = tinycolor
-          .mostReadable(accentColor, ['#ffffff', '#2a241a'])
-          .toHexString();
+        // The score-row dot uses brightness to signal active turn ownership.
+        const accentDotInactive = playerColor.clone().darken(24).setAlpha(.55).toRgbString();
+        const accentDotActive = playerColor.clone().brighten(16).setAlpha(.95).toRgbString();
         return {
           ...score,
           accentColor,
@@ -73,7 +73,8 @@ export class ScoreComponent {
           accentActiveStrong,
           accentActiveSoft,
           accentGlow,
-          accentTextColor,
+          accentDotInactive,
+          accentDotActive,
         };
       })
       .filter((row): row is {
@@ -86,7 +87,8 @@ export class ScoreComponent {
         accentActiveStrong: string;
         accentActiveSoft: string;
         accentGlow: string;
-        accentTextColor: string;
+        accentDotInactive: string;
+        accentDotActive: string;
       } => row !== undefined);
   });
 }

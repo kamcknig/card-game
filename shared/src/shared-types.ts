@@ -408,6 +408,16 @@ export type DebugRuntimeContext = {
   tooltipDefaultCloseDelayMs?: number;
 };
 
+// Preloaded selectable card-like catalog used by match-configuration search UI.
+export type SelectableSearchCatalog = {
+  cards: CardNoId[];
+  events: EventNoId[];
+  landmarks: LandmarkNoId[];
+  artifacts: ArtifactNoId[];
+  projects: ProjectNoId[];
+  ways: WayNoId[];
+};
+
 export type ServerEmitEvents = {
   addLogEntry: (logEntry: LogEntry[]) => void;
   cardEffectsComplete: (playerId: PlayerId, cardId?: CardId) => void;
@@ -446,6 +456,8 @@ export type ServerEmitEvents = {
   bannedFromGame: (payload: { gameId: string; message: string }) => void;
   // Runtime debug identity used by client-side diagnostic overlays.
   debugRuntimeContext: (payload: DebugRuntimeContext) => void;
+  // Full searchable card-like catalog used for local UI filtering in match configuration.
+  setSelectableSearchCatalog: (catalog: SelectableSearchCatalog) => void;
   searchCardResponse: (cardData: CardNoId[]) => void;
   // Sends event search results to the client.
   searchEventResponse: (eventData: EventNoId[]) => void;
@@ -502,6 +514,8 @@ export interface ServerListenEvents {
   resignMatch: () => void;
   // Vote to remove a disconnected human player and resume the match.
   removeDisconnectedPlayer: (playerId: PlayerId) => void;
+  // Requests the preloaded selectable card-like catalog for match-configuration UI.
+  requestSelectableSearchCatalog: () => void;
   searchCards: (playerId: PlayerId, searchStr: string) => void;
   // Requests event search results from the server.
   searchEvents: (playerId: PlayerId, searchStr: string) => void;

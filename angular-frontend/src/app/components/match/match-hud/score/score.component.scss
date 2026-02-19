@@ -29,7 +29,8 @@
   --player-accent-active-strong: rgba(127, 103, 70, 0.46);
   --player-accent-active-soft: rgba(127, 103, 70, 0.28);
   --player-accent-glow: rgba(127, 103, 70, 0.48);
-  --player-accent-text: #ffffff;
+  --player-accent-dot-inactive: rgba(127, 103, 70, 0.55);
+  --player-accent-dot-active: rgba(188, 168, 125, 0.95);
 
   display: grid;
   grid-template-columns: 12px 1fr;
@@ -55,8 +56,13 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--player-accent);
+  background: var(--player-accent-dot-inactive);
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.22);
+}
+
+.player-score-row.current-player .player-accent-dot {
+  background: var(--player-accent-dot-active);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.32), 0 0 10px var(--player-accent-glow);
 }
 
 .player-main {
@@ -90,17 +96,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.active-chip {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.4px;
-  color: var(--player-accent-text);
-  border: 1px solid var(--player-accent);
-  border-radius: 999px;
-  background: var(--player-accent);
-  padding: 2px 8px;
 }
 
 .victory-token-wrap {

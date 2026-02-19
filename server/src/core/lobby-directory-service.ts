@@ -209,6 +209,7 @@ export class LobbyDirectoryService {
 
     this.registerLobbyHandlers(sessionId, socket);
     this.emitLobbySnapshot(socket);
+    this.emitSelectableSearchCatalog(socket);
 
     // Preserve reconnect behavior: if the session already belongs to a game, resume it automatically.
     const gameId = this.findGameIdForSession(sessionId);
@@ -236,6 +237,12 @@ export class LobbyDirectoryService {
     for (const record of this.games.values()) {
       record.game.expansionLoaded(expansion);
     }
+
+    // Push refreshed card-like catalog so clients can update local search caches.
+    this.io.in(LobbyDirectoryService.LOBBY_ROOM_NAME).emit(
+      'setSelectableSearchCatalog',
+      this.expansionSearchService.getSelectableSearchCatalog(),
+    );
   }
 
   // Returns debug summaries for all currently running games.
@@ -375,6 +382,7 @@ export class LobbyDirectoryService {
   // Registers all global-lobby socket handlers for one session.
   private registerLobbyHandlers(sessionId: string, socket: AppSocket): void {
     socket.on('requestLobbySnapshot', () => this.emitLobbySnapshot(socket));
+    socket.on('requestSelectableSearchCatalog', () => this.emitSelectableSearchCatalog(socket));
     socket.on('createLobbyGame', () => {
       const gameId = this.createLobbyGame();
       this.joinLobbyGame(sessionId, socket, gameId);
@@ -498,6 +506,11 @@ export class LobbyDirectoryService {
     socket.emit('debugRuntimeContext', record.game.getDebugRuntimeContext());
     this.loggerService.info(`[lobby directory] session ${sessionId} joined ${gameId}`);
     this.handleGameStateChanged(gameId);
+  }
+
+  // Emits the current searchable card-like catalog to one socket.
+  private emitSelectableSearchCatalog(socket: AppSocket): void {
+    socket.emit('setSelectableSearchCatalog', this.expansionSearchService.getSelectableSearchCatalog());
   }
 
   // Handles explicit lobby leave requests from configuration-state games.

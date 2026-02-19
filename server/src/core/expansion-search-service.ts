@@ -1,16 +1,34 @@
-import { ArtifactNoId, CardNoId, EventNoId, LandmarkNoId, ProjectNoId, WayNoId } from 'shared/types/index.ts';
+import {
+  ArtifactNoId,
+  CardNoId,
+  EventNoId,
+  LandmarkNoId,
+  ProjectNoId,
+  SelectableSearchCatalog,
+  WayNoId,
+} from 'shared/types/index.ts';
 import Fuse, { IFuseOptions } from 'fuse.js';
 import { ExpansionCatalogService } from './expansion-catalog-service.ts';
 import { LoggerService } from './logger-service.ts';
 
 // Owns all search indexes used by lobby selection UI.
 export class ExpansionSearchService {
+  private static readonly EMPTY_CATALOG: SelectableSearchCatalog = {
+    cards: [],
+    events: [],
+    landmarks: [],
+    artifacts: [],
+    projects: [],
+    ways: [],
+  };
+
   private _cardFuse: Fuse<CardNoId> | undefined;
   private _eventFuse: Fuse<EventNoId> | undefined;
   private _landmarkFuse: Fuse<LandmarkNoId> | undefined;
   private _artifactFuse: Fuse<ArtifactNoId> | undefined;
   private _projectFuse: Fuse<ProjectNoId> | undefined;
   private _wayFuse: Fuse<WayNoId> | undefined;
+  private _selectableCatalog: SelectableSearchCatalog = structuredClone(ExpansionSearchService.EMPTY_CATALOG);
 
   constructor(
     private readonly expansionCatalogService: ExpansionCatalogService,
@@ -47,6 +65,14 @@ export class ExpansionSearchService {
     }
     const ways = [...wayByKey.values()];
     this._wayFuse = this.createFuse(ways);
+    this._selectableCatalog = {
+      cards: this.sortByName(cards.filter((card) => this.isCardEligibleForKingdomSearch(card))),
+      events: this.sortByName(events),
+      landmarks: this.sortByName(landmarks),
+      artifacts: this.sortByName(artifacts),
+      projects: this.sortByName(projects),
+      ways: this.sortByName(ways),
+    };
     this.loggerService.debug(
       `[expansion search] index sizes cards=${cards.length} events=${events.length} landmarks=${landmarks.length} artifacts=${artifacts.length} projects=${projects.length} ways=${ways.length}`,
     );
@@ -58,35 +84,58 @@ export class ExpansionSearchService {
 
   // Returns kingdom-selectable cards across all loaded expansions for a search term.
   public searchKingdomCards(searchStr: string): CardNoId[] {
+    if (searchStr.trim().length < 1) {
+      return this._selectableCatalog.cards;
+    }
     const cards = this._cardFuse?.search(searchStr).map((result) => result.item) ?? [];
     return cards.filter((card) => this.isCardEligibleForKingdomSearch(card));
   }
 
   // Returns matching events for a search term.
   public searchEvents(searchStr: string): EventNoId[] {
+    if (searchStr.trim().length < 1) {
+      return this._selectableCatalog.events;
+    }
     return this._eventFuse?.search(searchStr).map((result) => result.item) ?? [];
   }
 
   // Returns matching landmarks for a search term.
   public searchLandmarks(searchStr: string): LandmarkNoId[] {
+    if (searchStr.trim().length < 1) {
+      return this._selectableCatalog.landmarks;
+    }
     return this._landmarkFuse?.search(searchStr).map((result) => result.item) ?? [];
   }
 
   // Returns matching artifacts for a search term.
   public searchArtifacts(searchStr: string): ArtifactNoId[] {
+    if (searchStr.trim().length < 1) {
+      return this._selectableCatalog.artifacts;
+    }
     return this._artifactFuse?.search(searchStr).map((result) => result.item) ?? [];
   }
 
   // Returns matching projects for a search term.
   public searchProjects(searchStr: string): ProjectNoId[] {
+    if (searchStr.trim().length < 1) {
+      return this._selectableCatalog.projects;
+    }
     return this._projectFuse?.search(searchStr).map((result) => result.item) ?? [];
   }
 
   // Returns matching ways for a search term.
   public searchWays(searchStr: string): WayNoId[] {
+    if (searchStr.trim().length < 1) {
+      return this._selectableCatalog.ways;
+    }
     const ways = this._wayFuse?.search(searchStr).map((result) => result.item) ?? [];
     this.loggerService.debug(`[expansion search] ways search '${searchStr}' returned ${ways.length} way card(s)`);
     return ways;
+  }
+
+  // Returns a structured clone of the current searchable card-like catalog.
+  public getSelectableSearchCatalog(): SelectableSearchCatalog {
+    return structuredClone(this._selectableCatalog);
   }
 
   // Builds a Fuse index for card-like search by display name.
@@ -99,6 +148,17 @@ export class ExpansionSearchService {
       keys: ['cardName'],
     };
     return new Fuse(items, fuseOptions, index);
+  }
+
+  // Sorts card-like entries by display name and key for deterministic UI ordering.
+  private sortByName<T extends { cardName: string; cardKey: string }>(items: T[]): T[] {
+    return [...items].sort((a, b) => {
+      const nameCompare = a.cardName.localeCompare(b.cardName);
+      if (nameCompare !== 0) {
+        return nameCompare;
+      }
+      return a.cardKey.localeCompare(b.cardKey);
+    });
   }
 
   // Ensures kingdom search only returns legal supply kingdom cards.

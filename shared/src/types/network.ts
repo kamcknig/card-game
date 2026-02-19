@@ -2,6 +2,7 @@
 export type {
   DebugRuntimeContext,
   ExpansionListElement,
+  SelectableSearchCatalog,
   ServerEmitEvents,
   ServerListenEvents,
 } from "../shared-types.ts";

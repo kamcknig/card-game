@@ -23,6 +23,7 @@ import {
   lobbyStatusMessageStore,
 } from '../../state/lobby-state';
 import { debugRuntimeContextStore } from '../../state/debug-runtime-state';
+import { selectableSearchCatalogStore } from '../../state/selectable-search-state';
 
 export type SocketEventMap = Partial<{ [p in ClientListenEventNames]: ClientListenEvents[p] }>;
 
@@ -52,6 +53,10 @@ export const socketToGameEventMap = (): SocketEventMap => {
 
   map['expansionList'] = val => {
     expansionListStore.set(val);
+  };
+
+  map['setSelectableSearchCatalog'] = catalog => {
+    selectableSearchCatalogStore.set(catalog);
   };
 
   map['gameOver'] = async summary => {
