@@ -9,15 +9,7 @@ this can also be used for pile selection instead of using cards.
 # Lower priority
 
 - add pre commit to lint and or fmt
-- do card-likes (boons, events, landmarks, hexes) actually need their own effect maps? or can they just be added to the
-  card effect map that already exists? the effects they perform are no different. having different effect maps then
-  hardcodes those effect maps with those names into the core functionality.
 - undo turn/steps
-- when can't load assets (expansion modules) it still just goes on rather than stopping
-- when select card effect happens, the UI needs to remove the play all treasure cards button
-- seaside expansion - i haven't built outpost - taking an extra turn. the rules are so incredibly complicated it's jus
-  tnot worth it right now.
-- adventures expansion - havent' done the mission event as it also takes an extra turn
 - alchemy expansion - haven't built possession
 - when using overpay feature, you can overpay with potions. this matters for stone mason. don't know how to do the UI
   for this yet, and doesn't seem super important to get done right away

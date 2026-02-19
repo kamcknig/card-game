@@ -10,9 +10,12 @@ export const selectedCardStore = atom<CardId[]>([]);
 export const selectedPileStore = atom<CardKey[]>([]);
 
 export const awaitingServerLockReleaseStore = atom<boolean>(false);
+// Tracks whether the UI is currently handling a client prompt (select-card/select-pile/user-prompt).
+export const promptInteractionLockStore = atom<boolean>(false);
 
 
 (globalThis as any).awaitingServerLockReleaseStore = awaitingServerLockReleaseStore;
+(globalThis as any).promptInteractionLockStore = promptInteractionLockStore;
 (globalThis as any).selectedCardStore = selectedCardStore;
 (globalThis as any).clientSelectableCardsOverrideStore = clientSelectableCardsOverrideStore;
 (globalThis as any).selectedPileStore = selectedPileStore;

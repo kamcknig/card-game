@@ -11,6 +11,7 @@ import {
   awaitingServerLockReleaseStore,
   clientSelectableCardsOverrideStore,
   clientSelectablePilesOverrideStore,
+  promptInteractionLockStore,
   selectedCardStore,
   selectedPileStore
 } from '../../../../state/interactive-state';
@@ -84,6 +85,7 @@ export class MatchScene extends Scene {
     this.createBoard();
     // Ensure UI lock state doesn't persist across page refreshes.
     awaitingServerLockReleaseStore.set(false);
+    promptInteractionLockStore.set(false);
 
     this._cleanup.push(matchStartedStore.subscribe(val => this.onMatchStarted(val)));
 
@@ -317,6 +319,7 @@ export class MatchScene extends Scene {
   private onRemoved = () => {
     this._cleanup.forEach(c => c());
     awaitingServerLockReleaseStore.set(false);
+    promptInteractionLockStore.set(false);
   }
 
   private onUserPrompt = async (signalId: string, args: UserPromptActionArgs) => {
@@ -335,14 +338,20 @@ export class MatchScene extends Scene {
     }
 
     this._selecting = true;
-    const result = await userPromptModal(
-      this._app,
-      this._socketService,
-      args,
-      this._selfId
-    );
-    this._selecting = false;
-    this._socketService.emit('userInputReceived', signalId, result);
+    // Lock turn action controls while prompt input is active.
+    promptInteractionLockStore.set(true);
+    try {
+      const result = await userPromptModal(
+        this._app,
+        this._socketService,
+        args,
+        this._selfId
+      );
+      this._socketService.emit('userInputReceived', signalId, result);
+    } finally {
+      this._selecting = false;
+      promptInteractionLockStore.set(false);
+    }
   }
 
   // todo move the selection stuff to another class, SelectionManager?
@@ -427,6 +436,8 @@ export class MatchScene extends Scene {
     if (cardIds.length === 0 && this.getChildByLabel('doSelectButtonContainer')) {
       doSelectButtonContainer = this.getChildByLabel('doSelectButtonContainer');
       doSelectButtonContainer?.removeChildren().forEach(c => c.destroy());
+      this._selecting = false;
+      promptInteractionLockStore.set(false);
       return;
     }
 
@@ -540,6 +551,7 @@ export class MatchScene extends Scene {
 
     const doneListener = (cancelled?: boolean) => {
       this._selecting = false;
+      promptInteractionLockStore.set(false);
       cardsSelectedComplete(!!cancelled ? [] : selectedCardStore.get());
     }
 
@@ -597,6 +609,8 @@ export class MatchScene extends Scene {
     clientSelectableCardsOverrideStore.set(arg.selectableCardIds);
 
     this._selecting = true;
+    // Hide turn action controls while card-selection prompt is active.
+    promptInteractionLockStore.set(true);
 
     // listen for cards being selected
     const selectedCardsListenerCleanup = selectedCardStore.subscribe(cardIds => {
@@ -640,6 +654,8 @@ export class MatchScene extends Scene {
     clientSelectablePilesOverrideStore.set(pileNames);
     selectedPileStore.set([]);
     this._selectingPiles = true;
+    // Hide turn action controls while pile-selection prompt is active.
+    promptInteractionLockStore.set(true);
 
     const doSelectButtonContainer = new AppList({
       type: 'horizontal',
@@ -693,6 +709,7 @@ export class MatchScene extends Scene {
       selectedPileStore.set([]);
       clientSelectablePilesOverrideStore.set(null);
       this._selectingPiles = false;
+      promptInteractionLockStore.set(false);
       doSelectButtonContainer.removeChildren();
       doSelectButtonContainer.removeFromParent();
     };

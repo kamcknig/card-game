@@ -8,7 +8,7 @@ import { AppButton, createAppButton } from '../../../core/create-app-button';
 import { currentPlayerTurnIdStore, turnPhaseStore } from '../../../state/turn-state';
 import { CardStackView } from './card-stack';
 import { List } from '@pixi/ui';
-import { awaitingServerLockReleaseStore } from '../../../state/interactive-state';
+import { awaitingServerLockReleaseStore, promptInteractionLockStore } from '../../../state/interactive-state';
 import { SocketService } from '../../../core/socket-service/socket.service';
 import { getCardSourceStore } from '../../../state/card-source-store';
 import { matchStore } from '../../../state/match-state';
@@ -86,18 +86,20 @@ export class PlayerHandView extends Container {
     this._background.fill({ color: 0, alpha: .6 });
 
     this._cleanup.push(computed(
-      [currentPlayerTurnIdStore, awaitingServerLockReleaseStore],
-      (currentPlayerTurnId, waitingServerLockRelease) => currentPlayerTurnId === playerId && !waitingServerLockRelease
+      [currentPlayerTurnIdStore, awaitingServerLockReleaseStore, promptInteractionLockStore],
+      (currentPlayerTurnId, waitingServerLockRelease, promptInteractionLocked) =>
+        currentPlayerTurnId === playerId && !waitingServerLockRelease && !promptInteractionLocked
     ).subscribe(visible => {
       this._nextPhaseButton.button.visible = visible
     }));
 
     this._cleanup.push(
       computed(
-        [awaitingServerLockReleaseStore, turnPhaseStore, currentPlayerTurnIdStore, getCardSourceStore('playerHand', playerId), cardStore],
+        [awaitingServerLockReleaseStore, promptInteractionLockStore, turnPhaseStore, currentPlayerTurnIdStore, getCardSourceStore('playerHand', playerId), cardStore],
         // Emit a new object so visibility updates when any dependency changes.
-        (waiting, phase, currentPlayerTurnId, hand, cardsById) => ({
+        (waiting, promptInteractionLocked, phase, currentPlayerTurnId, hand, cardsById) => ({
           waiting,
+          promptInteractionLocked,
           phase,
           currentPlayerTurnId,
           hand,
@@ -314,12 +316,14 @@ export class PlayerHandView extends Container {
   // Controls the visibility of the "Play All Treasure" button based on current match state.
   private updatePlayAllTreasureVisibility = (args?: {
     waiting: boolean;
+    promptInteractionLocked: boolean;
     phase: string | undefined;
     currentPlayerTurnId: number | undefined;
     hand: ReadonlyArray<number>;
     cardsById: Record<number, Card>;
   }) => {
     const waiting = args?.waiting ?? awaitingServerLockReleaseStore.get();
+    const promptInteractionLocked = args?.promptInteractionLocked ?? promptInteractionLockStore.get();
     const turnPhase = (args?.phase ?? turnPhaseStore.get()) as string;
     const currentPlayerTurnId = args?.currentPlayerTurnId ?? currentPlayerTurnIdStore.get();
     const hand = args?.hand ?? getCardSourceStore('playerHand', this.playerId).get();
@@ -327,6 +331,7 @@ export class PlayerHandView extends Container {
 
     if (
       waiting ||
+      promptInteractionLocked ||
       turnPhase !== 'buy' ||
       !this.playerId ||
       currentPlayerTurnId !== this.playerId ||
