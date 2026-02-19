@@ -1,4 +1,14 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, computed, effect, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  OnDestroy,
+  ViewChild,
+  computed,
+  effect,
+  inject,
+  signal
+} from '@angular/core';
 import {
   ArtifactNoId,
   CardNoId,
@@ -66,6 +76,7 @@ export class MatchConfigurationComponent implements OnDestroy {
   private readonly _nanoStoreService = inject(NanostoresService);
   private readonly _socketService = inject(SocketService);
   private readonly _saveNameInput$ = new Subject<string>();
+  @ViewChild('saveDialogNameInput') private readonly _saveDialogNameInput?: ElementRef<HTMLInputElement>;
 
   // Tracks active modal type and settings for a single reusable search dialog.
   readonly activeSelectionModal = signal<SelectionModalState | undefined>(undefined);
@@ -270,6 +281,8 @@ export class MatchConfigurationComponent implements OnDestroy {
   openSaveDialog() {
     if (!this.isGameOwner() || !this.hasConfigurationChanges()) return;
     this.saveDialogVisible.set(true);
+    // Dialog input is conditionally rendered, so focus it on the next task after visibility flips.
+    setTimeout(() => this._saveDialogNameInput?.nativeElement.focus(), 0);
     this.loadDialogVisible.set(false);
     this.dialogStatusMessage.set(null);
     const existingName = this.saveDialogName().trim();

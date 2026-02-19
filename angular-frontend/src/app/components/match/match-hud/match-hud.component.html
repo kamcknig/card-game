@@ -91,6 +91,7 @@
 @if (currentVisibleMat) {
   <app-ui-dialog
     [zIndex]="4100"
+    [hasBackdrop]="false"
     [backdropVariant]="'soft'"
     (close)="closeVisibleMat()"
   >
