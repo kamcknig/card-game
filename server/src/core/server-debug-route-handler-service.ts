@@ -5,6 +5,7 @@ import { ServerConfigService } from './server-config-service.ts';
 import { ExpansionCatalogService } from './expansion-catalog-service.ts';
 import { ExpansionSearchService } from './expansion-search-service.ts';
 import { MatchConfigurationSaveService } from './match-configuration-save-service.ts';
+import { debugOpenApiSpec } from './debug-openapi-spec.ts';
 import {
   ArtifactNoId,
   BoonNoId,
@@ -53,6 +54,30 @@ export class ServerDebugRouteHandlerService {
     const parts = url.pathname.split('/').filter(Boolean);
     if (parts.length < 2 || parts[0] !== 'debug') {
       return new Response('debug resource not found', { status: 404 });
+    }
+
+    // GET /debug/openapi.json
+    if (parts.length === 2 && parts[1] === 'openapi.json') {
+      if (req.method !== 'GET') {
+        return new Response('method not allowed', { status: 405 });
+      }
+      return this.jsonResponse(debugOpenApiSpec);
+    }
+
+    // GET /debug/docs
+    if (parts.length === 2 && parts[1] === 'docs') {
+      if (req.method !== 'GET') {
+        return new Response('method not allowed', { status: 405 });
+      }
+      return this.swaggerUiHtmlResponse();
+    }
+
+    // GET /debug/reference
+    if (parts.length === 2 && parts[1] === 'reference') {
+      if (req.method !== 'GET') {
+        return new Response('method not allowed', { status: 405 });
+      }
+      return this.scalarHtmlResponse();
     }
 
     if (parts[1] === 'expansions') {
@@ -491,6 +516,62 @@ export class ServerDebugRouteHandlerService {
     return new Response(JSON.stringify(payload), {
       status,
       headers: { 'content-type': 'application/json' },
+    });
+  }
+
+  // Serves a Swagger UI page that reads the debug OpenAPI JSON document.
+  private swaggerUiHtmlResponse(): Response {
+    return this.htmlResponse(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Debug API Docs</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+  <style>
+    html, body { margin: 0; padding: 0; background: #f7f8fa; }
+    #swagger-ui { min-height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script>
+    window.ui = SwaggerUIBundle({
+      url: '/debug/openapi.json',
+      dom_id: '#swagger-ui',
+      deepLinking: true,
+      persistAuthorization: false,
+    });
+  </script>
+</body>
+</html>`);
+  }
+
+  // Serves a Scalar API reference page that reads the debug OpenAPI JSON document.
+  private scalarHtmlResponse(): Response {
+    return this.htmlResponse(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Debug API Reference</title>
+  <style>
+    html, body { margin: 0; padding: 0; background: #f7f8fa; min-height: 100%; }
+  </style>
+</head>
+<body>
+  <script id="api-reference" data-url="/debug/openapi.json"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+</body>
+</html>`);
+  }
+
+  // Creates a consistent HTML HTTP response payload.
+  private htmlResponse(html: string, status: number = 200): Response {
+    return new Response(html, {
+      status,
+      headers: { 'content-type': 'text/html; charset=utf-8' },
     });
   }
 
