@@ -1,5 +1,24 @@
 import { AppContext, CardEffectFunctionContext, CardExpansionModule } from '@server-types/index.ts';
 import { CardCost, CardId, CardLocation, PlayerId } from 'shared/types/index.ts';
+import { findWayInMatch } from '@shared/find-card-like-in-match.ts';
+
+type WayOfTheMouseWayMetadata = {
+  menagerie?: {
+    wayOfTheMouse?: {
+      runtimeSetAsidePileKey?: string;
+      setAsideCardKey?: string;
+    };
+  };
+};
+
+// Resolves the configured Way of the Mouse metadata from active match ways.
+const getWayOfTheMouseMetadata = (args: CardEffectFunctionContext) => {
+  const wayOfTheMouse = args.match.ways.find((way) => way.cardKey === 'way-of-the-mouse');
+  if (!wayOfTheMouse) {
+    return undefined;
+  }
+  return findWayInMatch<WayOfTheMouseWayMetadata>(args.match, wayOfTheMouse.id)?.metadata?.menagerie?.wayOfTheMouse;
+};
 
 // Returns a player zone source when available; otherwise returns an empty list.
 const getPlayerSourceSafe = (
@@ -395,6 +414,47 @@ const expansion: CardExpansionModule = {
       // Way of the Mule gives +1 Action and +$1.
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
       await cardEffectArgs.actionService.run('gainTreasure', { count: 1 });
+    },
+  },
+  'way-of-the-mouse': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
+      const metadata = getWayOfTheMouseMetadata(cardEffectArgs);
+      const runtimeSetAsidePileKey = metadata?.runtimeSetAsidePileKey;
+      if (!runtimeSetAsidePileKey) {
+        loggerService.warn('[way-of-the-mouse effect] missing runtime set-aside pile metadata');
+        return;
+      }
+
+      // Resolve the runtime set-aside card id from the shared set-aside area using the synthetic pile key.
+      const setAsideCardIds = cardEffectArgs.cardSourceController.getSource('set-aside');
+      const setAsideCardId = setAsideCardIds.find((candidateId) => {
+        const candidate = cardEffectArgs.cardLibrary.getCard(candidateId);
+        return candidate.kingdom === runtimeSetAsidePileKey;
+      });
+      if (setAsideCardId === undefined) {
+        loggerService.warn(`[way-of-the-mouse effect] no set-aside card found in pile ${runtimeSetAsidePileKey}`);
+        return;
+      }
+
+      const setAsideCard = cardEffectArgs.cardLibrary.getCard(setAsideCardId);
+      if (metadata?.setAsideCardKey && setAsideCard.cardKey !== metadata.setAsideCardKey) {
+        loggerService.warn(
+          `[way-of-the-mouse effect] expected ${metadata.setAsideCardKey} but found ${setAsideCard.cardKey}`,
+        );
+      }
+
+      // Play the set-aside card without moving it and force the normal path (cannot recurse into Way of the Mouse).
+      loggerService.info(`[way-of-the-mouse effect] playing set-aside card ${setAsideCard}`);
+      await cardEffectArgs.actionService.run('playCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: setAsideCardId,
+        wayId: null,
+        overrides: {
+          actionCost: 0,
+          moveCard: false,
+        },
+      });
     },
   },
   'way-of-the-otter': {

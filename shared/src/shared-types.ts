@@ -747,6 +747,16 @@ export class CardLike<M = unknown> {
 
 export type CardLikeNoId = Omit<CardLike, 'id'>;
 
+// Shared metadata keys available to all expansions for card/card-like runtime behavior.
+export type BaseCardMetadata = {
+  base?: {
+    // When true, the engine blocks all card movement attempts for this card.
+    immovable?: true;
+    // Marks temporary setup-only kingdom proxy cards that should be removed before final config output.
+    setupProxyKingdomPile?: true;
+  };
+};
+
 type EventArgs = {
   [p in keyof CardLike]: CardLike[p];
 } & {

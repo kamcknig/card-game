@@ -21,6 +21,7 @@ import {
   TurnPhase,
   TurnPhaseOrderValues,
   UserPromptActionArgs,
+  BaseCardMetadata,
 } from 'shared/types/index.ts';
 import { MatchCardLibrary } from '../match-card-library.ts';
 import { LogManager } from '../log-manager.ts';
@@ -944,6 +945,15 @@ export class GameActionController implements GameActionDefinitionMap {
       oldSource = this.cardSourceController.findCardSource(cardId);
     } catch (e) {
       this.loggerService.warn(`[moveCard action] could not find source for ${card}`);
+    }
+
+    // Global base metadata can mark cards as immovable regardless of expansion source.
+    const moveMetadata = card.metadata as BaseCardMetadata | undefined;
+    if (moveMetadata?.base?.immovable === true) {
+      this.loggerService.debug(
+        `[moveCard action] blocked move for immovable card ${card} to ${args.to.location}`,
+      );
+      return oldSource ? { location: oldSource.sourceKey, playerId: oldSource.playerId } : undefined;
     }
 
     // Some effects omit toPlayerId for player-scoped zones; infer from origin when possible.

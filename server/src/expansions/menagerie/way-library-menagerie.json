@@ -26,6 +26,9 @@
   "way-of-the-mule": {
     "abilityText": "+1 Action\n\n+$1"
   },
+  "way-of-the-mouse": {
+    "abilityText": "Play the set-aside card, leaving it there.\n\nSetup: Set aside an unused non-Duration Action costing $2 or $3."
+  },
   "way-of-the-otter": {
     "abilityText": "+2 Cards"
   },

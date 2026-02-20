@@ -2,6 +2,7 @@
 export { Card } from "../shared-types.ts";
 
 export type {
+  BaseCardMetadata,
   CardArgs,
   CardCost,
   CardFacing,

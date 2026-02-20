@@ -1,4 +1,5 @@
 import {
+  BaseCardMetadata,
   CardKey,
   CardNoId,
   ComputedMatchConfiguration,
@@ -154,10 +155,35 @@ export class MatchConfigurator {
     this.selectBasicSupply();
 
     await this.runExpansionConfigurators();
+    // Remove temporary setup-only proxy piles after configurators have converged.
+    this.removeTemporarySetupProxyKingdomPiles();
 
     this.createCardSources(this._initContext.cardSourceController);
 
     return { config: this._config };
+  }
+
+  // Returns true when all cards in the pile are tagged as temporary setup proxies.
+  private isTemporarySetupProxySupply(supply: Supply): boolean {
+    if (!supply.cards.length) {
+      return false;
+    }
+    return supply.cards.every((card) => {
+      const metadata = card.metadata as BaseCardMetadata | undefined;
+      return metadata?.base?.setupProxyKingdomPile === true;
+    });
+  }
+
+  // Removes temporary setup proxy piles before finalizing config.
+  private removeTemporarySetupProxyKingdomPiles(): void {
+    const before = this._config.kingdomSupply.length;
+    this._config.kingdomSupply = this._config.kingdomSupply.filter((supply) =>
+      !this.isTemporarySetupProxySupply(supply)
+    );
+    const removed = before - this._config.kingdomSupply.length;
+    if (removed > 0) {
+      this._loggerService.info(`[match configurator] removed ${removed} temporary setup proxy kingdom pile(s)`);
+    }
   }
 
   // Logs when preselected landscapes exceed the configured cap; random selection handles limits.
@@ -188,6 +214,8 @@ export class MatchConfigurator {
     cardSourceController.registerZone('activeDuration', []);
     cardSourceController.registerZone('playArea', []);
     cardSourceController.registerZone('trash', []);
+    // Shared set-aside zone for match-level cards (e.g., Way of the Mouse setup card).
+    cardSourceController.registerZone('set-aside', []);
 
     for (const player of this._config.players) {
       cardSourceController.registerZone('playerHand', [], player.id);
@@ -473,13 +501,7 @@ export class MatchConfigurator {
 
   private async getExpansionConfigurators() {
     const configurators = new Map<string, ExpansionConfigurator>();
-    const uniqueExpansions = Array.from(
-      new Set(
-        this._config.kingdomSupply
-          .map((supply) => supply.cards.map((card) => card.expansionName))
-          .flat(),
-      ),
-    );
+    const uniqueExpansions = this.getConfiguredExpansionNames();
     for (const expansionName of uniqueExpansions) {
       try {
         this._loggerService.info(`[match configurator] loading configurator for expansion '${expansionName}'`);
@@ -493,8 +515,19 @@ export class MatchConfigurator {
     return configurators;
   }
 
+  // Resolves all expansion names relevant to this configuration, including selected expansion toggles.
+  private getConfiguredExpansionNames(): string[] {
+    const configuredExpansionNames = this._config.expansions.map((expansion) => expansion.name);
+    const selectedKingdomExpansions = this._config.kingdomSupply
+      .flatMap((supply) => supply.cards.map((card) => card.expansionName));
+    return Array.from(new Set([
+      ...configuredExpansionNames,
+      ...selectedKingdomExpansions,
+    ]));
+  }
+
   private async runExpansionConfigurators() {
-    const configuratorIterator = (await this.getExpansionConfigurators()).entries();
+    const configurators = await this.getExpansionConfigurators();
     const expansionCatalog = this._expansionCatalogService.getExpansionLibrary();
     const rawCardLibrary = this._expansionCatalogService.getRawCardLibrary();
 
@@ -504,7 +537,7 @@ export class MatchConfigurator {
 
     do {
       iteration++;
-      for (const [expansionName, expansionConfigurator] of configuratorIterator) {
+      for (const [expansionName, expansionConfigurator] of configurators.entries()) {
         this._loggerService.info(
           `[match configurator] running expansion configurator for expansion '${expansionName}'`,
         );
@@ -541,12 +574,7 @@ export class MatchConfigurator {
   }
 
   private async registerGameEventListeners(gameEventRegistrar: GameEventRegistrar) {
-    const uniqueExpansions = Array.from(
-      new Set(
-        this._config.kingdomSupply.map((supply) => supply.cards.map((card) => card.expansionName))
-          .flat(),
-      ),
-    );
+    const uniqueExpansions = this.getConfiguredExpansionNames();
     for (const expansion of uniqueExpansions) {
       try {
         const module = await import(`@expansions/${expansion}/configurator-${expansion}.ts`);
@@ -563,12 +591,7 @@ export class MatchConfigurator {
   }
 
   private async registerExpansionEndGamePolicies(registrar: EndGamePolicyRegistrar) {
-    const uniqueExpansions = Array.from(
-      new Set(
-        this._config.kingdomSupply.map((supply) => supply.cards.map((card) => card.expansionName))
-          .flat(),
-      ),
-    );
+    const uniqueExpansions = this.getConfiguredExpansionNames();
     for (const expansion of uniqueExpansions) {
       try {
         const module = await import(`@expansions/${expansion}/configurator-${expansion}.ts`);
@@ -587,12 +610,7 @@ export class MatchConfigurator {
   }
 
   private async registerExpansionPlayerScoreDecorators(registrar: PlayerScoreDecoratorRegistrar) {
-    const uniqueExpansions = Array.from(
-      new Set(
-        this._config.kingdomSupply.map((supply) => supply.cards.map((card) => card.expansionName))
-          .flat(),
-      ),
-    );
+    const uniqueExpansions = this.getConfiguredExpansionNames();
     for (const expansion of uniqueExpansions) {
       try {
         const module = await import(`@expansions/${expansion}/configurator-${expansion}.ts`);

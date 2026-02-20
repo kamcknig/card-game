@@ -10,7 +10,8 @@ export class CardSourceController {
   registerZone(sourceKey: CardLocation, source: CardId[], index: number = NaN, tags: string[] = []) {
     const key = `${sourceKey}${isNaN(index) ? '' : ':' + index}`;
 
-    if (this._sourceMap.has(sourceKey) || this._sourceMap.has(key)) {
+    // Only reject duplicate concrete keys; allow both global and indexed zones for the same sourceKey.
+    if (this._sourceMap.has(key)) {
       throw new Error(`Zone ${key} already exists`);
     }
 
@@ -35,8 +36,10 @@ export class CardSourceController {
     for (const [sourceKey, source] of this._sourceMap) {
       const idx = source.findIndex((id) => id === cardId);
       if (idx !== -1) {
-        const [key, playerId] = sourceKey.split(':');
-        return { sourceKey: key, source, index: idx, playerId: Number(playerId) };
+        const [key, playerIdToken] = sourceKey.split(':');
+        const parsedPlayerId = playerIdToken === undefined ? undefined : Number(playerIdToken);
+        const playerId = parsedPlayerId !== undefined && !Number.isNaN(parsedPlayerId) ? parsedPlayerId : undefined;
+        return { sourceKey: key, source, index: idx, playerId };
       }
     }
 

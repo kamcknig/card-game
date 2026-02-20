@@ -15,6 +15,21 @@ import { CardInstanceFactoryService } from './card-instance-factory-service.ts';
 import { RngService } from './rng-service.ts';
 import { LoggerService } from './logger-service.ts';
 
+type CardMouseMetadata = {
+  menagerie?: {
+    wayOfTheMouse?: {
+      // Marker used by setup to place the shared Way of the Mouse card in set-aside.
+      runtimeSetAsideCard?: true;
+    };
+  };
+};
+
+// Returns true when the card template is the runtime set-aside card for Way of the Mouse.
+const isWayOfTheMouseRuntimeSetAsideCard = (card: CardNoId): boolean => {
+  const metadata = card.metadata as CardMouseMetadata | undefined;
+  return metadata?.menagerie?.wayOfTheMouse?.runtimeSetAsideCard === true;
+};
+
 // Owns deterministic match-state setup for supply/landscape/player-deck creation.
 export class MatchSetupService {
   constructor(
@@ -71,6 +86,7 @@ export class MatchSetupService {
   public createNonSupplyCards(config: ComputedMatchConfiguration): void {
     this.loggerService.info('[match] creating non-supply cards');
     const cardSource = this.cardSourceController.getSource('nonSupplyCards');
+    const globalSetAsideSource = this.cardSourceController.getSource('set-aside');
 
     for (const supply of Object.values(config.nonSupply ?? {})) {
       for (const card of supply.cards) {
@@ -80,6 +96,11 @@ export class MatchSetupService {
 
         const instance = this.cardInstanceFactoryService.createCard(card.cardKey, { ...card, kingdom: supply.name });
         this.cardLibrary.addCard(instance);
+        if (isWayOfTheMouseRuntimeSetAsideCard(card)) {
+          // Way of the Mouse setup card lives in the shared set-aside area, not in non-supply.
+          globalSetAsideSource.push(instance.id);
+          continue;
+        }
         cardSource.push(instance.id);
       }
     }
