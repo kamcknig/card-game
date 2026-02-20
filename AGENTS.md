@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 See `GAME_SUMMARY.md` for a high-level overview of the project.
 
 See <https://wiki.dominionstrategy.com/index.php/Main_Page> for Dominion rules,
@@ -168,3 +169,46 @@ The agent has failed if it:
 - Circumvents established systems
 - Leaks UI/transport concerns into core game logic
 - Produces example-grade code instead of production-grade logic
+=======
+# Repository Guidelines
+
+## Project Structure & Module Organization
+This repository is a small monorepo with three main packages:
+- `server/`: Deno TypeScript game server (`src/core`, `src/expansions`, `src/utils`, `scripts/`).
+- `angular-frontend/`: Angular 19 client (`src/app`, `src/environments`, `public/assets`).
+- `shared/`: shared TypeScript utilities/types used by server and client.
+
+Top-level files like `docker-compose.yaml`, `Dockerfile`, and `GAME_SUMMARY.md` support local orchestration and game/domain context.
+
+## Build, Test, and Development Commands
+Install dependencies in each package before running:
+- `npm install` (root), `cd server && npm install`, `cd angular-frontend && npm install`.
+
+Key commands:
+- `cd server && deno task dev:watch`: run server with file watch and required permissions.
+- `cd angular-frontend && npm run start`: run Angular dev server (`http://localhost:4200`).
+- `cd angular-frontend && npm run build`: production client build.
+- `cd angular-frontend && npm test`: run unit tests (Karma/Jasmine).
+- `cd server && deno lint src/`: lint server TypeScript.
+
+## Coding Style & Naming Conventions
+- Follow `.editorconfig`: 2-space indentation, trim trailing whitespace, final newline.
+- Prefer single quotes in `.ts` and `.js` files.
+- TypeScript filenames use kebab-case (examples: `match-controller.ts`, `card-effects-intrigue.ts`).
+- Keep expansion assets/config grouped under `server/src/expansions/<expansion-name>/`.
+
+## Testing Guidelines
+- Frontend unit tests live next to source as `*.spec.ts` under `angular-frontend/src/app/**`.
+- Use `npm test` in `angular-frontend` for local verification.
+- For routine code changes, do not start the frontend or backend apps just to validate changes; type checking is sufficient.
+- Server currently has lint/task-based validation but no established unit test suite; add targeted tests with new frontend behavior and regression-prone logic.
+
+## Commit & Pull Request Guidelines
+Recent commits use short, imperative, lowercase summaries (examples: `added raid event`, `inheritance completed`). Keep subject lines concise and feature-scoped.
+
+For pull requests:
+- Explain gameplay/logic impact and touched areas (`server`, `angular-frontend`, `shared`).
+- Link related issue(s) when available.
+- Include screenshots/GIFs for UI changes and reproduction steps for bug fixes.
+- List commands run locally (build, tests, lint) before requesting review.
+>>>>>>> Stashed changes
