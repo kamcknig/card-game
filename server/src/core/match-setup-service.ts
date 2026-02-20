@@ -2,7 +2,6 @@ import {
   Card,
   CardId,
   CardKey,
-  CardNoId,
   ComputedMatchConfiguration,
   Match,
   MatchConfiguration,
@@ -16,19 +15,27 @@ import { CardInstanceFactoryService } from './card-instance-factory-service.ts';
 import { RngService } from './rng-service.ts';
 import { LoggerService } from './logger-service.ts';
 
-type CardMouseMetadata = {
+type WayOfTheMouseWayCardLikeMetadata = {
   menagerie?: {
     wayOfTheMouse?: {
-      // Marker used by setup to place the shared Way of the Mouse card in set-aside.
-      runtimeSetAsideCard?: true;
+      setAsideCardKey?: CardKey;
+      setAsidePileKey?: string;
+      runtimeSetAsidePileKey?: string;
     };
   };
 };
 
-// Returns true when the card template is the runtime set-aside card for Way of the Mouse.
-const isWayOfTheMouseRuntimeSetAsideCard = (card: CardNoId): boolean => {
-  const metadata = card.metadata as CardMouseMetadata | undefined;
-  return metadata?.menagerie?.wayOfTheMouse?.runtimeSetAsideCard === true;
+type WayOfTheMouseRuntimeSetAsideCardMetadata = {
+  base?: {
+    immovable?: true;
+  };
+  menagerie?: {
+    wayOfTheMouse?: {
+      runtimeSetAsideCard?: true;
+      runtimeSetAsidePileKey?: string;
+      selectedPileKey?: string;
+    };
+  };
 };
 
 // Owns deterministic match-state setup for supply/landscape/player-deck creation.
@@ -87,7 +94,6 @@ export class MatchSetupService {
   public createNonSupplyCards(config: ComputedMatchConfiguration): void {
     this.loggerService.info('[match] creating non-supply cards');
     const cardSource = this.cardSourceController.getSource('nonSupplyCards');
-    const globalSetAsideSource = this.cardSourceController.getSource('set-aside');
 
     for (const supply of Object.values(config.nonSupply ?? {})) {
       for (const card of supply.cards) {
@@ -97,18 +103,56 @@ export class MatchSetupService {
 
         const instance = this.cardInstanceFactoryService.createCard(card.cardKey, { ...card, kingdom: supply.name });
         this.cardLibrary.addCard(instance);
-        if (isWayOfTheMouseRuntimeSetAsideCard(card)) {
-          // Way of the Mouse setup card lives in the shared set-aside area, not in non-supply.
-          globalSetAsideSource.push(instance.id);
-          this.match.setAsideSourceById[instance.id] = {
-            sourceKind: 'way',
-            sourceCardKey: 'way-of-the-mouse',
-          } satisfies SetAsideSourceDescriptor;
-          continue;
-        }
         cardSource.push(instance.id);
       }
     }
+
+    // Way of the Mouse runtime card is setup-only and belongs in shared set-aside, not in non-supply.
+    this.createWayOfTheMouseSetAsideCard(config);
+  }
+
+  // Creates the Way of the Mouse runtime set-aside card directly into shared set-aside.
+  private createWayOfTheMouseSetAsideCard(config: ComputedMatchConfiguration): void {
+    const wayOfTheMouse = config.ways.find((way) => way.cardKey === 'way-of-the-mouse');
+    if (!wayOfTheMouse) {
+      return;
+    }
+
+    const wayMetadata = (wayOfTheMouse.metadata as WayOfTheMouseWayCardLikeMetadata | undefined)?.menagerie
+      ?.wayOfTheMouse;
+    const setAsideCardKey = wayMetadata?.setAsideCardKey;
+    const runtimeSetAsidePileKey = wayMetadata?.runtimeSetAsidePileKey;
+    if (!setAsideCardKey || !runtimeSetAsidePileKey) {
+      this.loggerService.warn('[match] Way of the Mouse metadata missing set-aside setup details');
+      return;
+    }
+
+    const instance = this.cardInstanceFactoryService.createCard(setAsideCardKey, {
+      kingdom: runtimeSetAsidePileKey,
+      partOfSupply: false,
+      kingdomSelectable: false,
+    });
+
+    const runtimeMetadata = (instance.metadata as WayOfTheMouseRuntimeSetAsideCardMetadata | undefined) ?? {};
+    runtimeMetadata.base ??= {};
+    runtimeMetadata.base.immovable = true;
+    runtimeMetadata.menagerie ??= {};
+    runtimeMetadata.menagerie.wayOfTheMouse ??= {};
+    runtimeMetadata.menagerie.wayOfTheMouse.runtimeSetAsideCard = true;
+    runtimeMetadata.menagerie.wayOfTheMouse.runtimeSetAsidePileKey = runtimeSetAsidePileKey;
+    runtimeMetadata.menagerie.wayOfTheMouse.selectedPileKey = wayMetadata?.setAsidePileKey;
+    instance.metadata = runtimeMetadata;
+
+    this.cardLibrary.addCard(instance);
+    const globalSetAsideSource = this.cardSourceController.getSource('set-aside');
+    globalSetAsideSource.push(instance.id);
+    this.match.setAsideSourceById[instance.id] = {
+      sourceKind: 'way',
+      sourceCardKey: 'way-of-the-mouse',
+    } satisfies SetAsideSourceDescriptor;
+    this.loggerService.info(
+      `[match] Way of the Mouse set-aside card created ${instance.cardKey} (${runtimeSetAsidePileKey})`,
+    );
   }
 
   public createPlayerDecks(config: MatchConfiguration, playerHands: Record<CardKey, number>[] = []): void {

@@ -126,7 +126,7 @@ const isWayOfTheMouseRuntimeSetAsideSupply = (supply: Supply, expectedPileKey?: 
 // Removes setup/runtime synthetic piles created for Way of the Mouse.
 const cleanupWayOfTheMouseSyntheticPiles = (
   args: ExpansionConfiguratorContext,
-  keep?: { setupProxyPileKey?: string; runtimeSetAsidePileKey?: string },
+  keep?: { setupProxyPileKey?: string },
 ): void => {
   const config = args.config;
   const nextKingdomSupply = config.kingdomSupply.filter((supply) =>
@@ -145,11 +145,8 @@ const cleanupWayOfTheMouseSyntheticPiles = (
   if (!existingNonSupply) {
     return;
   }
-  const nextNonSupply = existingNonSupply.filter((supply) =>
-    !isWayOfTheMouseRuntimeSetAsideSupply(supply) ||
-    (keep?.runtimeSetAsidePileKey !== undefined &&
-      isWayOfTheMouseRuntimeSetAsideSupply(supply, keep.runtimeSetAsidePileKey))
-  );
+  // Way of the Mouse runtime set-aside card should never exist as a non-supply pile.
+  const nextNonSupply = existingNonSupply.filter((supply) => !isWayOfTheMouseRuntimeSetAsideSupply(supply));
   const removedRuntimeSetAsideCount = existingNonSupply.length - nextNonSupply.length;
   if (removedRuntimeSetAsideCount > 0) {
     args.loggerService.info(
@@ -192,7 +189,7 @@ const resolveWayOfTheMouseSelectedCard = (args: ExpansionConfiguratorContext, wa
   return card;
 };
 
-// Adds or validates Way of the Mouse setup state: selected card, setup proxy pile, and runtime set-aside pile.
+// Adds or validates Way of the Mouse setup state: selected card, setup proxy pile, and runtime set-aside metadata.
 const configureWayOfTheMouse = (args: ExpansionConfiguratorContext): void => {
   const config = args.config;
   const wayOfTheMouse = config.ways.find((way) => way.cardKey === WAY_OF_THE_MOUSE_CARD_KEY);
@@ -262,7 +259,6 @@ const configureWayOfTheMouse = (args: ExpansionConfiguratorContext): void => {
 
   cleanupWayOfTheMouseSyntheticPiles(args, {
     setupProxyPileKey: wayMetadata.setupProxyPileKey,
-    runtimeSetAsidePileKey: wayMetadata.runtimeSetAsidePileKey,
   });
 
   const hasSetupProxy = config.kingdomSupply.some((supply) =>
@@ -291,32 +287,7 @@ const configureWayOfTheMouse = (args: ExpansionConfiguratorContext): void => {
     );
   }
 
-  const hasRuntimeSetAsidePile = (config.nonSupply ?? []).some((supply) =>
-    isWayOfTheMouseRuntimeSetAsideSupply(supply, wayMetadata.runtimeSetAsidePileKey)
-  );
-  if (!hasRuntimeSetAsidePile) {
-    const runtimeSetAsideCard = structuredClone(selectedCard);
-    const runtimeMetadata = (runtimeSetAsideCard.metadata as WayOfTheMouseCardMetadata | undefined) ?? {};
-    runtimeMetadata.menagerie ??= {};
-    runtimeMetadata.menagerie.wayOfTheMouse ??= {};
-    runtimeMetadata.menagerie.wayOfTheMouse.runtimeSetAsideCard = true;
-    runtimeMetadata.menagerie.wayOfTheMouse.runtimeSetAsidePileKey = wayMetadata.runtimeSetAsidePileKey;
-    runtimeMetadata.menagerie.wayOfTheMouse.selectedPileKey = wayMetadata.setAsidePileKey;
-    runtimeMetadata.base ??= {};
-    runtimeMetadata.base.immovable = true;
-    runtimeSetAsideCard.metadata = runtimeMetadata;
-    runtimeSetAsideCard.partOfSupply = false;
-    runtimeSetAsideCard.kingdomSelectable = false;
-
-    config.nonSupply ??= [];
-    config.nonSupply.push({
-      name: wayMetadata.runtimeSetAsidePileKey,
-      cards: [runtimeSetAsideCard],
-    });
-    args.loggerService.info(
-      `[menagerie configurator] added Way of the Mouse runtime set-aside pile ${wayMetadata.runtimeSetAsidePileKey}`,
-    );
-  }
+  // Runtime set-aside card is created directly into shared set-aside during match setup.
 };
 
 // Ensures the Horse pile is present only when required by selected kingdom cards.
