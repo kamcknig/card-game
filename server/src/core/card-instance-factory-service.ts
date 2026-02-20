@@ -1,4 +1,6 @@
 import {
+  Ally,
+  AllyNoId,
   Artifact,
   ArtifactNoId,
   Boon,
@@ -52,6 +54,14 @@ export class CardInstanceFactoryService {
   public createEvent(event: EventNoId): Event {
     return new Event({
       ...event,
+      id: ++this._cardCount,
+    });
+  }
+
+  // Creates an ally instance.
+  public createAlly(ally: AllyNoId): Ally {
+    return new Ally({
+      ...ally,
       id: ++this._cardCount,
     });
   }

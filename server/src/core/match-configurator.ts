@@ -101,6 +101,8 @@ export class MatchConfigurator {
     this._config.projects ??= [];
     // Ensure ways array exists for downstream selection logic.
     this._config.ways ??= [];
+    // Ensure allies array exists for downstream configuration logic.
+    this._config.allies ??= [];
     // Ensure states array exists for downstream configuration logic.
     this._config.states ??= [];
     // Ensure artifacts array exists for downstream configuration logic.
@@ -521,6 +523,7 @@ export class MatchConfigurator {
     for (const [expansionName, expansionData] of Object.entries(expansionLibrary)) {
       if (
         expansionData.events[cardLikeKey] ||
+        expansionData.allies[cardLikeKey] ||
         expansionData.landmarks[cardLikeKey] ||
         expansionData.projects[cardLikeKey] ||
         expansionData.ways[cardLikeKey]
@@ -539,6 +542,7 @@ export class MatchConfigurator {
     // Card-likes can require expansion configurators even when no kingdom card from that expansion is selected.
     const selectedCardLikeKeys = [
       ...(this._config.events ?? []).map((event) => event.cardKey),
+      ...(this._config.allies ?? []).map((ally) => ally.cardKey),
       ...(this._config.landmarks ?? []).map((landmark) => landmark.cardKey),
       ...(this._config.projects ?? []).map((project) => project.cardKey),
       ...(this._config.ways ?? []).map((way) => way.cardKey),

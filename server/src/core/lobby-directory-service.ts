@@ -1,5 +1,6 @@
 import type { AppSocket } from '@server-types/index.ts';
 import type {
+  AllyNoId,
   ArtifactNoId,
   CardNoId,
   EventNoId,
@@ -30,14 +31,15 @@ type LobbyGameRecord = {
   listedInLobby: boolean;
 };
 
-type DebugSearchType = 'cards' | 'events' | 'landmarks' | 'artifacts' | 'projects' | 'ways';
+type DebugSearchType = 'cards' | 'events' | 'landmarks' | 'artifacts' | 'projects' | 'ways' | 'allies';
 type DebugSearchResult =
   | CardNoId[]
   | EventNoId[]
   | LandmarkNoId[]
   | ArtifactNoId[]
   | ProjectNoId[]
-  | WayNoId[];
+  | WayNoId[]
+  | AllyNoId[];
 
 // Debug-level game lifecycle status exposed by REST debug endpoints.
 export type DebugGameStatus = 'configuring' | 'inMatch';
@@ -916,6 +918,8 @@ export class LobbyDirectoryService {
         return this.expansionSearchService.searchProjects(searchStr);
       case 'ways':
         return this.expansionSearchService.searchWays(searchStr);
+      case 'allies':
+        return this.expansionSearchService.searchAllies(searchStr);
     }
   }
 

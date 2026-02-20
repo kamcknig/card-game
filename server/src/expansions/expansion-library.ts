@@ -1,4 +1,5 @@
 import {
+  AllyNoId,
   ArtifactNoId,
   BoonNoId,
   CardKey,
@@ -21,6 +22,8 @@ export type ExpansionData = {
   name: string;
   cardData: ExpansionCardData;
   events: Record<CardKey, EventNoId>;
+  // Allies are stored separately from events.
+  allies: Record<CardKey, AllyNoId>;
   // Landmarks are stored separately from events.
   landmarks: Record<CardKey, LandmarkNoId>;
   // Boons are stored separately from supply cards.
@@ -50,6 +53,8 @@ export const createEmptyExpansionData = (expansionName: string): ExpansionData =
       kingdomSupply: {},
     },
     events: {},
+    // Allies live alongside events as setup-only landscapes.
+    allies: {},
     // Landmarks live alongside events as landscapes.
     landmarks: {},
     // Boons live alongside other non-supply landscapes.

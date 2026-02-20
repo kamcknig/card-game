@@ -242,6 +242,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this.matchSetupService.createBaseSupply(this._matchConfiguration);
       this.matchSetupService.createKingdom(this._matchConfiguration);
       this.matchSetupService.createEvents(this._matchConfiguration);
+      // Allies are landscapes selected in Liaison games.
+      this.matchSetupService.createAllies(this._matchConfiguration);
       // Landmarks are landscapes that should be created alongside events.
       this.matchSetupService.createLandmarks(this._matchConfiguration);
       // Projects are landscapes that should be created alongside events.
@@ -303,7 +305,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this.match.coffers ??= {};
     this.match.villagers ??= {};
     this.match.debt ??= {};
+    this.match.favors ??= {};
     this.match.setAsideSourceById ??= {};
+    this.match.allies ??= [];
     this.match.boons ??= {
       cards: [],
       deck: [],
@@ -347,6 +351,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this.match.fleetRound.completed ??= false;
     this.match.fleetRound.eligiblePlayerIdsInOrder ??= [];
     this.match.fleetRound.nextFleetPlayerIndex ??= 0;
+    this.match.config ??= {} as ComputedMatchConfiguration;
+    this.match.config.allies ??= [];
   }
 
   private clientEventRegistrar<T extends keyof ServerListenEvents>(event: T, handler: ServerListenEvents[T]) {

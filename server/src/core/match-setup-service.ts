@@ -190,6 +190,19 @@ export class MatchSetupService {
     }
   }
 
+  public createAllies(config: ComputedMatchConfiguration): void {
+    const allies = config.allies ?? [];
+    if (allies.length < 1) {
+      this.loggerService.info('[match] no allies configured for this match');
+      return;
+    }
+
+    this.loggerService.info('[match] creating allies');
+    for (const ally of allies) {
+      this.match.allies.push(this.cardInstanceFactoryService.createAlly(ally));
+    }
+  }
+
   public createLandmarks(config: ComputedMatchConfiguration): void {
     this.loggerService.debug('[match] creating landmarks');
     for (const landmark of config.landmarks ?? []) {

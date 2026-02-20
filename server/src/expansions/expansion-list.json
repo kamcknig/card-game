@@ -58,5 +58,10 @@
     "title": "Menagerie",
     "name": "menagerie",
     "order": 12
+  },
+  {
+    "title": "Allies",
+    "name": "allies",
+    "order": 13
   }
 ]

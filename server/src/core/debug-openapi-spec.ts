@@ -741,7 +741,7 @@ export const debugOpenApiSpec = {
         required: false,
         schema: {
           type: 'string',
-          enum: ['cards', 'events', 'landmarks', 'artifacts', 'projects', 'ways'],
+          enum: ['cards', 'events', 'landmarks', 'artifacts', 'projects', 'ways', 'allies'],
           default: 'ways',
         },
         description: 'Expansion resource type to query.',

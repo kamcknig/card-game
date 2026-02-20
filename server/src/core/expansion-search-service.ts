@@ -1,4 +1,5 @@
 import {
+  AllyNoId,
   ArtifactNoId,
   CardNoId,
   EventNoId,
@@ -20,6 +21,7 @@ export class ExpansionSearchService {
     artifacts: [],
     projects: [],
     ways: [],
+    allies: [],
   };
 
   private _cardFuse: Fuse<CardNoId> | undefined;
@@ -28,6 +30,7 @@ export class ExpansionSearchService {
   private _artifactFuse: Fuse<ArtifactNoId> | undefined;
   private _projectFuse: Fuse<ProjectNoId> | undefined;
   private _wayFuse: Fuse<WayNoId> | undefined;
+  private _allyFuse: Fuse<AllyNoId> | undefined;
   private _selectableCatalog: SelectableSearchCatalog = structuredClone(ExpansionSearchService.EMPTY_CATALOG);
 
   constructor(
@@ -48,11 +51,13 @@ export class ExpansionSearchService {
     const landmarks = Object.values(expansionLibrary).flatMap((expansion) => Object.values(expansion.landmarks ?? {}));
     const artifacts = Object.values(expansionLibrary).flatMap((expansion) => Object.values(expansion.artifacts ?? {}));
     const projects = Object.values(expansionLibrary).flatMap((expansion) => Object.values(expansion.projects ?? {}));
+    const allies = Object.values(expansionLibrary).flatMap((expansion) => Object.values(expansion.allies ?? {}));
     this._cardFuse = this.createFuse(cards);
     this._eventFuse = this.createFuse(events);
     this._landmarkFuse = this.createFuse(landmarks);
     this._artifactFuse = this.createFuse(artifacts);
     this._projectFuse = this.createFuse(projects);
+    this._allyFuse = this.createFuse(allies);
     const expansionWays = Object.values(expansionLibrary).flatMap((expansion) => Object.values(expansion.ways ?? {}));
     // Fallback source: allow WAY-typed entries from raw card templates so search still works
     // while an expansion is transitioning to dedicated way-library files.
@@ -72,9 +77,10 @@ export class ExpansionSearchService {
       artifacts: this.sortByName(artifacts),
       projects: this.sortByName(projects),
       ways: this.sortByName(ways),
+      allies: this.sortByName(allies),
     };
     this.loggerService.debug(
-      `[expansion search] index sizes cards=${cards.length} events=${events.length} landmarks=${landmarks.length} artifacts=${artifacts.length} projects=${projects.length} ways=${ways.length}`,
+      `[expansion search] index sizes cards=${cards.length} events=${events.length} landmarks=${landmarks.length} artifacts=${artifacts.length} projects=${projects.length} ways=${ways.length} allies=${allies.length}`,
     );
     if (ways.length < 1) {
       // Surface empty-way index explicitly to make way-search diagnostics obvious.
@@ -131,6 +137,14 @@ export class ExpansionSearchService {
     const ways = this._wayFuse?.search(searchStr).map((result) => result.item) ?? [];
     this.loggerService.debug(`[expansion search] ways search '${searchStr}' returned ${ways.length} way card(s)`);
     return ways;
+  }
+
+  // Returns matching allies for a search term.
+  public searchAllies(searchStr: string): AllyNoId[] {
+    if (searchStr.trim().length < 1) {
+      return this._selectableCatalog.allies;
+    }
+    return this._allyFuse?.search(searchStr).map((result) => result.item) ?? [];
   }
 
   // Returns a structured clone of the current searchable landscape catalog.

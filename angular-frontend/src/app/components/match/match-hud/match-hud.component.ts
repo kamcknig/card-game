@@ -244,6 +244,7 @@ export class MatchHudComponent implements AfterViewInit, OnDestroy {
     }
     const entry = [
       ...match.events.map((cardLike) => ({ kind: 'event' as const, cardLike })),
+      ...match.allies.map((cardLike) => ({ kind: 'ally' as const, cardLike })),
       ...match.landmarks.map((cardLike) => ({ kind: 'landmark' as const, cardLike })),
       ...match.projects.map((cardLike) => ({ kind: 'project' as const, cardLike })),
       ...match.ways.map((cardLike) => ({ kind: 'way' as const, cardLike })),

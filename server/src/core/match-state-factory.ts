@@ -12,6 +12,8 @@ export function createInitialMatchState(): Match {
     villagers: {},
     // Per-player debt tokens for Empires-style costs.
     debt: {},
+    // Per-player Favor resources for Allies.
+    favors: {},
     config: {} as ComputedMatchConfiguration,
     currentPlayerTurnIndex: 0,
     events: [],
@@ -21,6 +23,8 @@ export function createInitialMatchState(): Match {
     projects: [],
     // Active way landscapes in the match.
     ways: [],
+    // Active ally landscapes in the match.
+    allies: [],
     // Boon deck state for Fate cards.
     boons: {
       cards: [],

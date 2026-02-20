@@ -86,6 +86,8 @@ export interface MatchConfiguration {
   projects: ProjectNoId[];
   // Ways are landscape card-likes that provide alternate Action play effects.
   ways: WayNoId[];
+  // Allies are landscape card-likes that define Favor spend behavior.
+  allies: AllyNoId[];
   // Boons available for Fate cards in this match.
   boons: BoonNoId[];
   // Hexes available for Doom cards in this match.
@@ -197,6 +199,8 @@ export interface Match {
   villagers: Record<PlayerId, number>;
   // Tracks per-player debt tokens for Empires-style costs.
   debt: Record<PlayerId, number>;
+  // Tracks per-player Favor resources from Allies.
+  favors: Record<PlayerId, number>;
   config: ComputedMatchConfiguration,
   currentPlayerTurnIndex: number;
   events: Event[];
@@ -206,6 +210,8 @@ export interface Match {
   projects: Project[];
   // Active ways in the match (not part of the supply).
   ways: Way[];
+  // Active ally landscape in the match (at most one in standard games).
+  allies: Ally[];
   // Boon deck state for Fate cards in this match.
   boons: {
     cards: Boon[];
@@ -450,6 +456,7 @@ export type SelectableSearchCatalog = {
   artifacts: ArtifactNoId[];
   projects: ProjectNoId[];
   ways: WayNoId[];
+  allies: AllyNoId[];
 };
 
 // Represents one persisted match-configuration save file visible to clients.
@@ -807,6 +814,34 @@ export class Event extends CardLike {
 }
 
 export type EventNoId = Omit<Event, 'id'>;
+
+type AllyArgs = {
+  [p in keyof CardLike]: CardLike[p];
+} & {
+  randomizer?: string | null;
+};
+
+// Allies are landscape card-likes that define Favor behavior in Liaison games.
+export class Ally extends CardLike {
+  // Randomizer key used to group allies during setup selection.
+  randomizer: string | null;
+
+  constructor(args: AllyArgs) {
+    super(args);
+
+    this.id = args.id;
+    this.cardName = args.cardName;
+    this.fullImagePath = args.fullImagePath;
+    this.detailImagePath = args.detailImagePath;
+    this.randomizer = args.randomizer ?? null;
+  }
+
+  override toString() {
+    return `[ALLY ${this.id} - ${this.cardKey}]`;
+  }
+}
+
+export type AllyNoId = Omit<Ally, 'id'>;
 
 type LandmarkArgs = {
   [p in keyof CardLike]: CardLike[p];

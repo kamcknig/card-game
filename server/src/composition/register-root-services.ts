@@ -28,6 +28,7 @@ import { EventLoaderService } from '../core/events/load-events.ts';
 import { LandmarkLoaderService } from '../core/landmarks/load-landmarks.ts';
 import { ProjectLoaderService } from '../core/projects/load-projects.ts';
 import { WayLoaderService } from '../core/ways/load-ways.ts';
+import { AllyLoaderService } from '../core/allies/load-allies.ts';
 import { ExpansionLoaderService } from '../core/expansion-loader-service.ts';
 import { GameScopeFactory } from '../core/game-scope-factory.ts';
 import { LobbyDirectoryService } from '../core/lobby-directory-service.ts';
@@ -74,6 +75,7 @@ export const registerRootServices = (
     landmarkLoaderService: asClass(LandmarkLoaderService).singleton(),
     projectLoaderService: asClass(ProjectLoaderService).singleton(),
     wayLoaderService: asClass(WayLoaderService).singleton(),
+    allyLoaderService: asClass(AllyLoaderService).singleton(),
     expansionLoaderService: asClass(ExpansionLoaderService).singleton(),
     matchSocketBindings: asClass(MatchSocketBindings).singleton(),
     lobbySocketBindings: asClass(LobbySocketBindings).singleton(),

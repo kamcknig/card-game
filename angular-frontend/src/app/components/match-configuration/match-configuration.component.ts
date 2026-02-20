@@ -129,7 +129,8 @@ export class MatchConfigurationComponent implements OnDestroy {
       || this.selectedLandmarks().length > 0
       || this.selectedArtifacts().length > 0
       || this.selectedProjects().length > 0
-      || this.selectedWays().length > 0;
+      || this.selectedWays().length > 0
+      || (this.matchConfiguration()?.allies?.length ?? 0) > 0;
   });
 
   // Store-backed signals for template state.
@@ -338,6 +339,7 @@ export class MatchConfigurationComponent implements OnDestroy {
       artifacts: [],
       projects: [],
       ways: [],
+      allies: [],
     });
   }
 

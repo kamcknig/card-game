@@ -1,4 +1,5 @@
 import {
+  AllyNoId,
   ArtifactNoId,
   CardNoId,
   EventNoId,
@@ -31,6 +32,8 @@ export interface GameConfigurationStore {
   persistProjects(projects: ProjectNoId[]): void;
   // Persists the current preselected ways.
   persistWays(ways: WayNoId[]): void;
+  // Persists the current preselected allies.
+  persistAllies(allies: AllyNoId[]): void;
 }
 
 // File-backed implementation used by the production server runtime.
@@ -173,6 +176,17 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
         preselectedWays.map((way) => way.cardKey),
       );
     }
+
+    // Restore preselected allies when the file exists.
+    const preselectedAllies = this.readJson<AllyNoId[]>('preselected-allies.json');
+    if (preselectedAllies) {
+      defaultConfig.allies = preselectedAllies;
+      this.logLoadedList(
+        'preselected ally(s)',
+        preselectedAllies.length,
+        preselectedAllies.map((ally) => ally.cardKey),
+      );
+    }
   }
 
   public persistPreselectedKingdoms(kingdomSupply: Supply[]): void {
@@ -208,5 +222,10 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
   public persistWays(ways: WayNoId[]): void {
     this.ensureMatchDirectory();
     Deno.writeTextFileSync(this.getFilePath('preselected-ways.json'), JSON.stringify(ways));
+  }
+
+  public persistAllies(allies: AllyNoId[]): void {
+    this.ensureMatchDirectory();
+    Deno.writeTextFileSync(this.getFilePath('preselected-allies.json'), JSON.stringify(allies));
   }
 }

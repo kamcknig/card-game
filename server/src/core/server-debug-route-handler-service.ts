@@ -7,6 +7,7 @@ import { ExpansionSearchService } from './expansion-search-service.ts';
 import { MatchConfigurationSaveService } from './match-configuration-save-service.ts';
 import { debugOpenApiSpec } from './debug-openapi-spec.ts';
 import {
+  AllyNoId,
   ArtifactNoId,
   BoonNoId,
   CardNoId,
@@ -209,8 +210,9 @@ export class ServerDebugRouteHandlerService {
         | 'landmarks'
         | 'artifacts'
         | 'projects'
-        | 'ways';
-      const allowedTypes = new Set(['cards', 'events', 'landmarks', 'artifacts', 'projects', 'ways']);
+        | 'ways'
+        | 'allies';
+      const allowedTypes = new Set(['cards', 'events', 'landmarks', 'artifacts', 'projects', 'ways', 'allies']);
       if (!allowedTypes.has(type)) {
         return new Response('unsupported search type', { status: 400 });
       }
@@ -430,6 +432,7 @@ export class ServerDebugRouteHandlerService {
     };
     cardLikes: {
       events: EventNoId[];
+      allies: AllyNoId[];
       landmarks: LandmarkNoId[];
       artifacts: ArtifactNoId[];
       projects: ProjectNoId[];
@@ -444,6 +447,7 @@ export class ServerDebugRouteHandlerService {
     const basicSupply = this.sortCardLikeValues<CardNoId>(expansion.cardData.basicSupply);
     const kingdomSupply = this.sortCardLikeValues<CardNoId>(expansion.cardData.kingdomSupply);
     const events = this.sortCardLikeValues<EventNoId>(expansion.events);
+    const allies = this.sortCardLikeValues<AllyNoId>(expansion.allies);
     const landmarks = this.sortCardLikeValues<LandmarkNoId>(expansion.landmarks);
     const artifacts = this.sortCardLikeValues<ArtifactNoId>(expansion.artifacts);
     const projects = this.sortCardLikeValues<ProjectNoId>(expansion.projects);
@@ -463,6 +467,7 @@ export class ServerDebugRouteHandlerService {
       },
       cardLikes: {
         events,
+        allies,
         landmarks,
         artifacts,
         projects,
@@ -476,6 +481,7 @@ export class ServerDebugRouteHandlerService {
         kingdomSupply: kingdomSupply.length,
         allSupply: basicSupply.length + kingdomSupply.length,
         events: events.length,
+        allies: allies.length,
         landmarks: landmarks.length,
         artifacts: artifacts.length,
         projects: projects.length,
@@ -496,6 +502,7 @@ export class ServerDebugRouteHandlerService {
       expansions: allExpansions.length,
       rawCards: Object.keys(rawCardLibrary).length,
       events: allExpansions.reduce((sum, expansion) => sum + Object.keys(expansion.events).length, 0),
+      allies: allExpansions.reduce((sum, expansion) => sum + Object.keys(expansion.allies).length, 0),
       landmarks: allExpansions.reduce((sum, expansion) => sum + Object.keys(expansion.landmarks).length, 0),
       artifacts: allExpansions.reduce((sum, expansion) => sum + Object.keys(expansion.artifacts).length, 0),
       projects: allExpansions.reduce((sum, expansion) => sum + Object.keys(expansion.projects).length, 0),
