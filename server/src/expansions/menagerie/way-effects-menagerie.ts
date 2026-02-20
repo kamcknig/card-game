@@ -168,6 +168,7 @@ const registerWayOfTheChameleonDrawSwap = (args: CardEffectFunctionContext): voi
       condition: ({ trigger, match }) =>
         trigger.args.playerId === args.playerId &&
         trigger.args.count > 0 &&
+        trigger.args.source === sourceCard.id &&
         match.turnNumber === turnNumber,
       triggeredEffectFn: async (triggeredArgs) => {
         const swappedCount = Math.max(0, triggeredArgs.trigger.args.count);
