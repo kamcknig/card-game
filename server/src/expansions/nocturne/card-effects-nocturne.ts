@@ -1231,7 +1231,7 @@ const expansion: CardExpansionModule = {
 
       // Unregister the gain trigger at end of turn.
       const trackerCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const turnPlayed = cardEffectArgs.match.turnNumber;
+      const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
       cardEffectArgs.reactionManager.registerSystemTemplate(trackerCard, 'endTurn', {
         playerId: cardEffectArgs.playerId,
         once: true,
@@ -1239,7 +1239,7 @@ const expansion: CardExpansionModule = {
         compulsory: true,
         condition: (conditionArgs) =>
           conditionArgs.trigger.args.playerId === cardEffectArgs.playerId &&
-          conditionArgs.trigger.args.turnNumber === turnPlayed,
+          conditionArgs.match.stats.turns.length - 1 === turnHistoryIndex,
         triggeredEffectFn: async (triggeredArgs) => {
           triggeredArgs.reactionManager.unregisterTrigger(gainTriggerId);
           loggerService.debug('[tracker effect] end turn cleanup, removed gain trigger');
@@ -1783,13 +1783,13 @@ const expansion: CardExpansionModule = {
       loggerService.debug(`[necromancer effect] turned ${selectedCard} face down`);
 
       // Flip the card back face up at end of turn.
-      const turnNumber = cardEffectArgs.match.turnNumber;
+      const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
       cardEffectArgs.reactionManager.registerReactionTemplate(selectedCard, 'endTurn', {
         playerId: cardEffectArgs.playerId,
         once: true,
         allowMultipleInstances: true,
         compulsory: true,
-        condition: (conditionArgs) => conditionArgs.trigger.args.turnNumber === turnNumber,
+        condition: (conditionArgs) => conditionArgs.match.stats.turns.length - 1 === turnHistoryIndex,
         triggeredEffectFn: async (triggeredArgs) => {
           const faceUpCard = triggeredArgs.cardLibrary.getCard(selectedCardId);
           faceUpCard.facing = 'front';
@@ -2307,7 +2307,7 @@ const expansion: CardExpansionModule = {
         });
 
         // Return it to hand at the end of the current turn.
-        const discardTurnNumber = args.match.turnNumber;
+        const discardTurnHistoryIndex = args.match.stats.turns.length - 1;
         args.reactionManager.registerReactionTemplate(
           faithfulHound,
           'endTurn',
@@ -2316,7 +2316,8 @@ const expansion: CardExpansionModule = {
             once: true,
             allowMultipleInstances: true,
             compulsory: true,
-            condition: (conditionArgs) => conditionArgs.trigger.args.turnNumber === discardTurnNumber,
+            condition: (conditionArgs) =>
+              conditionArgs.match.stats.turns.length - 1 === discardTurnHistoryIndex,
             triggeredEffectFn: async (triggeredArgs) => {
               loggerService.debug(`[faithful-hound endTurn] moving ${faithfulHound} to hand`);
               await triggeredArgs.actionService.run('moveCard', {
@@ -2425,7 +2426,7 @@ const expansion: CardExpansionModule = {
 
       // Move the set-aside Action card to active duration at cleanup to keep it in play.
       const actionCard = cardEffectArgs.cardLibrary.getCard(actionCardId);
-      const turnPlayed = cardEffectArgs.match.turnNumber;
+      const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
       cardEffectArgs.reactionManager.registerSystemTemplate(actionCard, 'startTurnPhase', {
         playerId: cardEffectArgs.playerId,
         once: true,
@@ -2434,7 +2435,7 @@ const expansion: CardExpansionModule = {
         autoResolve: true,
         condition: ({ trigger, match }) =>
           getTurnPhase(trigger.args.phaseIndex) === 'cleanup' &&
-          match.turnNumber === turnPlayed,
+          match.stats.turns.length - 1 === turnHistoryIndex,
         triggeredEffectFn: async (triggeredArgs) => {
           loggerService.debug(`[ghost cleanup effect] moving ${actionCard} to active duration`);
           await triggeredArgs.actionService.run('moveCard', {

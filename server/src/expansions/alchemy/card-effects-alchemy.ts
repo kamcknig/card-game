@@ -41,7 +41,8 @@ const expansion: CardExpansionModule = {
             return false;
           }
 
-          if (conditionArgs.match.stats.playedCards[args.cardId]?.turnNumber !== conditionArgs.match.turnNumber) {
+          const currentTurnHistoryIndex = conditionArgs.match.stats.turns.length - 1;
+          if (conditionArgs.match.stats.playedCards[args.cardId]?.turnHistoryIndex !== currentTurnHistoryIndex) {
             return false;
           }
 

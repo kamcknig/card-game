@@ -59,11 +59,16 @@ export class PlayAreaView extends Container {
     this._background.roundRect(0, 0, 1000, this._verticalSpace ?? 400, 5);
     this._background.fill({ color: 0, alpha: .4 });
 
+    const currentTurnHistoryIndex = match ? match.stats.turns.length - 1 : -1;
+
     for (const card of cards) {
       const view = this._cardView.addChild(createCardView(card));
       view.size = 'full';
       if (!match?.stats?.playedCards?.[card.id]) continue;
-      if (card.type.includes('DURATION') && match.stats.playedCards[card.id].turnNumber < match.turnNumber) {
+      if (
+        card.type.includes('DURATION') &&
+        match.stats.playedCards[card.id].turnHistoryIndex !== currentTurnHistoryIndex
+      ) {
         view.filters = [new AdjustmentFilter({
           saturation: .4
         })]

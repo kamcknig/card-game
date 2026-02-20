@@ -151,7 +151,6 @@ const runOriginalCardEffectsFromContext = async (args: CardEffectFunctionContext
 const registerWayOfTheChameleonDrawSwap = (args: CardEffectFunctionContext): void => {
   const loggerService = args.loggerService;
   const turnHistoryIndex = getCurrentTurnHistoryIndex(args);
-  const turnNumber = args.match.turnNumber;
   const playInstance = getCurrentPlayInstanceCount(args);
   const sourceCard = args.cardLibrary.getCard(args.cardId);
 
@@ -169,7 +168,7 @@ const registerWayOfTheChameleonDrawSwap = (args: CardEffectFunctionContext): voi
         trigger.args.playerId === args.playerId &&
         trigger.args.count > 0 &&
         trigger.args.source === sourceCard.id &&
-        match.turnNumber === turnNumber,
+        match.stats.turns.length - 1 === turnHistoryIndex,
       triggeredEffectFn: async (triggeredArgs) => {
         const swappedCount = Math.max(0, triggeredArgs.trigger.args.count);
         if (swappedCount < 1) {
@@ -197,9 +196,9 @@ const registerWayOfTheChameleonDrawSwap = (args: CardEffectFunctionContext): voi
     once: true,
     allowMultipleInstances: true,
     compulsory: true,
-    condition: ({ trigger }) =>
+    condition: ({ trigger, match }) =>
       trigger.args.playerId === args.playerId &&
-      trigger.args.turnNumber === turnNumber,
+      match.stats.turns.length - 1 === turnHistoryIndex,
     triggeredEffectFn: async (triggeredArgs) => {
       triggeredArgs.reactionManager.unregisterTrigger(drawSwapTriggerId);
       loggerService.debug('[way-of-the-chameleon effect] removed draw swap trigger at end of turn');
@@ -304,7 +303,6 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
       const turnHistoryIndex = getCurrentTurnHistoryIndex(cardEffectArgs);
-      const turnNumber = cardEffectArgs.match.turnNumber;
       const playInstance = getCurrentPlayInstanceCount(cardEffectArgs);
       const sourceCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
@@ -320,7 +318,7 @@ const expansion: CardExpansionModule = {
           condition: ({ trigger, match }) =>
             trigger.args.playerId === cardEffectArgs.playerId &&
             trigger.args.cardId === cardEffectArgs.cardId &&
-            match.turnNumber === turnNumber &&
+            match.stats.turns.length - 1 === turnHistoryIndex &&
             (
               trigger.args.previousLocation.location === 'playArea' ||
               trigger.args.previousLocation.location === 'activeDuration'
@@ -545,7 +543,6 @@ const expansion: CardExpansionModule = {
 
       // Then it enables a rest-of-turn "topdeck gained card" choice.
       const turnHistoryIndex = getCurrentTurnHistoryIndex(cardEffectArgs);
-      const turnNumber = cardEffectArgs.match.turnNumber;
       const playInstance = getCurrentPlayInstanceCount(cardEffectArgs);
       const gainTriggerId =
         `way-of-the-seal:${cardEffectArgs.playerId}:turn:${turnHistoryIndex}:source:${cardEffectArgs.cardId}:play:${playInstance}`;
@@ -596,9 +593,9 @@ const expansion: CardExpansionModule = {
         once: true,
         allowMultipleInstances: true,
         compulsory: true,
-        condition: ({ trigger }) =>
+        condition: ({ trigger, match }) =>
           trigger.args.playerId === cardEffectArgs.playerId &&
-          trigger.args.turnNumber === turnNumber,
+          match.stats.turns.length - 1 === turnHistoryIndex,
         triggeredEffectFn: async (triggeredArgs) => {
           triggeredArgs.reactionManager.unregisterTrigger(gainTriggerId);
           loggerService.debug('[way-of-the-seal effect] removed gain trigger at end of turn');
@@ -617,7 +614,6 @@ const expansion: CardExpansionModule = {
   'way-of-the-squirrel': {
     registerEffects: () => async (cardEffectArgs) => {
       const turnHistoryIndex = getCurrentTurnHistoryIndex(cardEffectArgs);
-      const turnNumber = cardEffectArgs.match.turnNumber;
       const playInstance = getCurrentPlayInstanceCount(cardEffectArgs);
       const sourceCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
@@ -627,9 +623,9 @@ const expansion: CardExpansionModule = {
         once: true,
         allowMultipleInstances: true,
         compulsory: true,
-        condition: ({ trigger }) =>
+        condition: ({ trigger, match }) =>
           trigger.args.playerId === cardEffectArgs.playerId &&
-          trigger.args.turnNumber === turnNumber,
+          match.stats.turns.length - 1 === turnHistoryIndex,
         triggeredEffectFn: async (triggeredArgs) => {
           await triggeredArgs.actionService.run('drawCard', {
             playerId: cardEffectArgs.playerId,

@@ -510,9 +510,10 @@ const expansion: CardExpansionModule = {
         allowMultipleInstances: true,
         once: false,
         condition: (conditionArgs) => {
+          const currentTurnHistoryIndex = conditionArgs.match.stats.turns.length - 1;
           if (
-            conditionArgs.match.turnNumber !==
-              conditionArgs.match.stats.cardsGained[conditionArgs.trigger.args.cardId]?.turnNumber
+            conditionArgs.match.stats.cardsGained[conditionArgs.trigger.args.cardId]?.turnHistoryIndex !==
+              currentTurnHistoryIndex
           ) return false;
 
           if (!conditionArgs.trigger.args.bought) return false;

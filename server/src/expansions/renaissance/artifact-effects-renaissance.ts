@@ -71,7 +71,7 @@ const registerFlag = (registerArtifactEffect: ArtifactEffectRegistrar) => {
 // Registers the Horn artifact effect.
 const registerHorn = (registerArtifactEffect: ArtifactEffectRegistrar) => {
   let discardTriggerId: string | undefined;
-  let lastUsedTurnNumber: number | undefined;
+  let lastUsedTurnHistoryIndex: number | undefined;
 
   registerArtifactEffect(
     renaissanceArtifactKeys.horn,
@@ -89,7 +89,7 @@ const registerHorn = (registerArtifactEffect: ArtifactEffectRegistrar) => {
       }
 
       // Reset the once-per-turn tracker when reassigning the artifact.
-      lastUsedTurnNumber = undefined;
+      lastUsedTurnHistoryIndex = undefined;
 
       loggerService.info(`[horn artifact] registering triggers for player ${playerId}`);
 
@@ -100,7 +100,8 @@ const registerHorn = (registerArtifactEffect: ArtifactEffectRegistrar) => {
         compulsory: false,
         condition: (conditionArgs) => {
           if (conditionArgs.trigger.args.playerId !== playerId) return false;
-          if (lastUsedTurnNumber === conditionArgs.match.turnNumber) return false;
+          const currentTurnHistoryIndex = conditionArgs.match.stats.turns.length - 1;
+          if (lastUsedTurnHistoryIndex === currentTurnHistoryIndex) return false;
           if (!isLocationInPlay(conditionArgs.trigger.args.previousLocation?.location)) return false;
 
           const discardedCard = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
@@ -120,7 +121,7 @@ const registerHorn = (registerArtifactEffect: ArtifactEffectRegistrar) => {
             to: { location: 'playerDeck' },
           });
 
-          lastUsedTurnNumber = triggeredArgs.match.turnNumber;
+          lastUsedTurnHistoryIndex = triggeredArgs.match.stats.turns.length - 1;
         },
       });
     },
