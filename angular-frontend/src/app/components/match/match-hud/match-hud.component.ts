@@ -16,30 +16,30 @@ import { GameLogComponent } from './game-log/game-log.component';
 import { NanostoresService } from '@nanostores/angular';
 import { playerIdStore, playerStore } from '../../../state/player-state';
 import { combineLatest, combineLatestWith, filter, map, of, switchMap } from 'rxjs';
-import { CardLikeId, Mats, PlayerId } from 'shared/types';
+import { Card, CardLikeId, Match, Mats, PlayerId, SetAsideSourceDescriptor } from 'shared/types';
 import { logEntryIdsStore, logStore } from '../../../state/log-state';
-import { MatTabComponent } from './mat-zone/mat-tab.component';
+import { MatTabComponent, MatTabModel } from './mat-zone/mat-tab.component';
 import { CardComponent } from '../../card/card.component';
 import { CardLikeComponent } from '../../card-like/card-like.component';
 import { playerScoreStore } from '../../../state/player-logic';
 import { LogEntryMessage } from '../../../../types';
 import { MatPlayerContent } from './types';
 import { Rectangle } from 'pixi.js';
-import { cardSourceTagMapStore, getCardSourceStore } from '../../../state/card-source-store';
+import { cardSourceStore, cardSourceTagMapStore, getCardSourceStore } from '../../../state/card-source-store';
 import { disconnectedHumanIdsStore } from '../../../state/game-state';
 import { SocketService } from '../../../core/socket-service/socket.service';
 import { debugOverlayVisibleStore, debugRuntimeContextStore } from '../../../state/debug-runtime-state';
 import { UiDialogComponent } from '../../ui/dialog/ui-dialog.component';
+import { cardStore } from '../../../state/card-state';
+import { matchStore } from '../../../state/match-state';
+import { findCardLikeEntryInMatch, MatchCardLikeEntry } from 'shared/find-card-like-in-match';
+import {
+  getSourceAccentColorForCard,
+  getSourceAccentColorForCardLikeKind,
+  getSourceAccentColorForSetAsideSourceKind
+} from '../../../core/source-accent-colors';
 
-export interface Mat {
-  // Mat identifier (standard mats or custom keys).
-  mat: Mats | string;
-  // Mat content can be grouped by player or flat for global piles.
-  content: MatPlayerContent | CardLikeId[];
-}
-
-// Synthetic row id used to display match-global set-aside cards in the set-aside mat modal.
-const SHARED_SET_ASIDE_ROW_ID = -1 as PlayerId;
+type Mat = MatTabModel;
 
 @Component({
   selector: 'app-match-hud',
@@ -65,6 +65,10 @@ export class MatchHudComponent implements AfterViewInit, OnDestroy {
   readonly visibleMat = signal<Mat | null>(null);
   stickyMat = false;
 
+  private readonly _cards = toSignal(this._nanoService.useStore(cardStore), {
+    initialValue: cardStore.get()
+  });
+
   // Normalized mat content for modal display.
   readonly visibleMatContent = computed<{ id: PlayerId | null; playerName: string | null; cardIds: CardLikeId[] }[]>(() => {
     const value = this.visibleMat();
@@ -84,6 +88,12 @@ export class MatchHudComponent implements AfterViewInit, OnDestroy {
     }];
   });
 
+  // Human-friendly title for the currently visible mat modal.
+  readonly visibleMatTitle = computed(() => {
+    const mat = this.visibleMat();
+    return mat ? this.getMatLabel(mat) : '';
+  });
+
   scoreViewResize = output<Rectangle>();
   scoreViewResizer: ResizeObserver | undefined;
 
@@ -94,19 +104,31 @@ export class MatchHudComponent implements AfterViewInit, OnDestroy {
   });
 
   readonly selfMats = toSignal(this.createSelfMatsStream(), {
-    initialValue: [] as { mat: Mats | string; content: MatPlayerContent; }[],
+    initialValue: [] as Mat[],
   });
 
-  readonly setAsideMat = toSignal<{ mat: 'set-aside'; content: MatPlayerContent; } | undefined>(
-    this.createSetAsideMatStream(),
-    { initialValue: undefined }
+  readonly setAsideMats = toSignal(
+    this.createSetAsideMatsStream(),
+    {
+      initialValue: [] as {
+        id: string;
+        mat: 'set-aside';
+        content: CardLikeId[];
+        labelPrefix: string;
+        labelSource: string;
+        labelSuffix: string;
+        sourceColor: string;
+      }[]
+    }
   );
 
-  readonly trashMat = toSignal<{ mat: 'trash'; content: CardLikeId[]; } | undefined>(
+  readonly trashMat = toSignal<Mat | undefined>(
     this._nanoService.useStore(getCardSourceStore('trash')).pipe(
       map((trash) => ({
+        id: 'mat:trash',
         mat: 'trash' as const,
-        content: trash
+        content: trash,
+        labelPrefix: 'Trash',
       }))
     ),
     { initialValue: undefined }
@@ -155,7 +177,7 @@ export class MatchHudComponent implements AfterViewInit, OnDestroy {
 
   // Handles click behavior for mat tabs (toggle sticky on repeat click).
   onMatClick(mat: Mat) {
-    if (this.visibleMat()?.mat === mat.mat) {
+    if (this.visibleMat()?.id === mat.id) {
       this.stickyMat = !this.stickyMat;
       return;
     }
@@ -171,7 +193,7 @@ export class MatchHudComponent implements AfterViewInit, OnDestroy {
 
   // Clears mat preview on hover out when sticky mode is disabled.
   onMatMouseLeave(mat: Mat) {
-    if (!this.stickyMat && this.visibleMat()?.mat === mat.mat) {
+    if (!this.stickyMat && this.visibleMat()?.id === mat.id) {
       this.visibleMat.set(null);
     }
   }
@@ -192,6 +214,114 @@ export class MatchHudComponent implements AfterViewInit, OnDestroy {
   // Toggles the HUD debug identity overlay.
   toggleDebugOverlay() {
     debugOverlayVisibleStore.set(!debugOverlayVisibleStore.get());
+  }
+
+  // Returns true when the id is a concrete card instance (not a card-like).
+  isCardInstance(cardLikeId: CardLikeId): boolean {
+    return !!this._cards()?.[cardLikeId];
+  }
+
+  // Builds a stable label string from tab display segments.
+  getMatLabel(mat: Mat): string {
+    return `${mat.labelPrefix}${mat.labelSource ?? ''}${mat.labelSuffix ?? ''}`;
+  }
+
+  // Resolves display text for built-in mat keys.
+  private formatMatName(matKey: string): string {
+    if (matKey === 'set-aside') {
+      return 'Set aside';
+    }
+    return matKey
+      .split('-')
+      .map((part) => `${part[0]?.toUpperCase() ?? ''}${part.slice(1)}`)
+      .join(' ');
+  }
+
+  // Resolves a card-like entry by cardKey for setup metadata fallback names.
+  private findCardLikeEntryByKey(match: Match | null, cardKey: string): MatchCardLikeEntry | undefined {
+    if (!match) {
+      return undefined;
+    }
+    const entry = [
+      ...match.events.map((cardLike) => ({ kind: 'event' as const, cardLike })),
+      ...match.landmarks.map((cardLike) => ({ kind: 'landmark' as const, cardLike })),
+      ...match.projects.map((cardLike) => ({ kind: 'project' as const, cardLike })),
+      ...match.ways.map((cardLike) => ({ kind: 'way' as const, cardLike })),
+      ...(match.boons?.cards ?? []).map((cardLike) => ({ kind: 'boon' as const, cardLike })),
+      ...(match.hexes?.cards ?? []).map((cardLike) => ({ kind: 'hex' as const, cardLike })),
+      ...(match.states?.cards ?? []).map((cardLike) => ({ kind: 'state' as const, cardLike })),
+      ...(match.artifacts?.cards ?? []).map((cardLike) => ({ kind: 'artifact' as const, cardLike })),
+    ].find((candidate) => candidate.cardLike.cardKey === cardKey);
+    return entry;
+  }
+
+  // Resolves source label/color for a set-aside entry from source metadata.
+  private resolveSetAsideSourceDisplay(args: {
+    cardId: CardLikeId;
+    source: SetAsideSourceDescriptor | undefined;
+    cardsById: Record<number, Card>;
+    match: Match | null;
+    ownerPlayerId?: PlayerId;
+  }): { key: string; name: string; color: string } {
+    const { source, cardsById, match, ownerPlayerId } = args;
+    if (source?.sourceCardId !== undefined) {
+      const sourceCard = cardsById[source.sourceCardId];
+      return {
+        key: `card:${source.sourceCardId}`,
+        name: sourceCard?.cardName ?? `Card ${source.sourceCardId}`,
+        color: getSourceAccentColorForCard(sourceCard),
+      };
+    }
+    if (source?.sourceCardLikeId !== undefined) {
+      const sourceCardLike = findCardLikeEntryInMatch(match, source.sourceCardLikeId);
+      return {
+        key: `card-like:${source.sourceCardLikeId}`,
+        name: sourceCardLike?.cardLike.cardName ?? `Card-like ${source.sourceCardLikeId}`,
+        color: getSourceAccentColorForCardLikeKind(sourceCardLike?.kind),
+      };
+    }
+    if (source?.sourceCardKey) {
+      const sourceCard = Object.values(cardsById).find((card) => card.cardKey === source.sourceCardKey);
+      if (sourceCard) {
+        return {
+          key: `card-key:${source.sourceCardKey}`,
+          name: sourceCard.cardName,
+          color: getSourceAccentColorForCard(sourceCard),
+        };
+      }
+      const sourceCardLike = this.findCardLikeEntryByKey(match, source.sourceCardKey);
+      if (sourceCardLike) {
+        return {
+          key: `card-like-key:${source.sourceCardKey}`,
+          name: sourceCardLike.cardLike.cardName,
+          color: getSourceAccentColorForCardLikeKind(sourceCardLike.kind),
+        };
+      }
+      return {
+        key: `card-key:${source.sourceCardKey}`,
+        name: source.sourceCardKey,
+        color: getSourceAccentColorForSetAsideSourceKind(source.sourceKind),
+      };
+    }
+    if (source?.sourceLabel) {
+      return {
+        key: `label:${source.sourceLabel}`,
+        name: source.sourceLabel,
+        color: getSourceAccentColorForSetAsideSourceKind(source.sourceKind),
+      };
+    }
+    if (ownerPlayerId !== undefined) {
+      return {
+        key: `player:${ownerPlayerId}`,
+        name: `Player ${ownerPlayerId}`,
+        color: getSourceAccentColorForSetAsideSourceKind(source?.sourceKind),
+      };
+    }
+    return {
+      key: `card-id:${args.cardId}`,
+      name: 'Set aside',
+      color: getSourceAccentColorForSetAsideSourceKind(source?.sourceKind),
+    };
   }
 
   // Prompts the user to confirm resigning from the current match.
@@ -264,50 +394,109 @@ export class MatchHudComponent implements AfterViewInit, OnDestroy {
             }, {} as Record<string, MatPlayerContent>);
 
             return Object.entries(groupedByMat)
-              .map(([matKey, content]) => ({ mat: matKey, content }))
-              .filter((mat) => Object.values(mat.content).some((playerContent) => playerContent.cardIds.length > 0));
+              .map(([matKey, content]) => ({
+                id: `mat:${matKey}`,
+                mat: matKey,
+                content,
+                labelPrefix: this.formatMatName(matKey),
+              }))
+              .filter((mat) => Object.values(mat.content).some((playerContent) => playerContent.cardIds.length > 0)) as Mat[];
           })
         );
       })
     );
   }
 
-  // Builds set-aside mat content grouped by player id for card-like rendering.
-  private createSetAsideMatStream() {
+  // Builds set-aside tabs grouped by owner + source, plus source-only groups.
+  private createSetAsideMatsStream() {
     return this._nanoService.useStore(playerIdStore).pipe(
-      switchMap((ids) => combineLatest([
-        combineLatest(ids.map((id) => this._nanoService.useStore(playerStore(id)))),
-        combineLatest(ids.map((id) =>
-          this._nanoService.useStore(getCardSourceStore('set-aside', id))
-            .pipe(map((cardIds) => ({ playerId: id, cardIds })))
-        )),
-        this._nanoService.useStore(getCardSourceStore('set-aside')),
-      ])),
-      map(([players, setAsideSources, sharedSetAsideCardIds]) => {
-        const matContent = setAsideSources.reduce((acc, source) => {
-          if (source.cardIds.length < 1) return acc;
-          const playerName = players.find((p) => p?.id === source.playerId)?.name;
-          if (!playerName) return acc;
-          acc[source.playerId] = {
-            playerName: playerName,
-            cardIds: source.cardIds
-          };
-          return acc;
-        }, {} as MatPlayerContent);
+      switchMap((ids) => {
+        const players$ = ids.length < 1
+          ? of([] as { id: PlayerId; name: string }[])
+          : combineLatest(ids.map((id) => this._nanoService.useStore(playerStore(id)).pipe(
+            map((player) => ({
+              id,
+              name: player?.name ?? `Player ${id}`,
+            }))
+          )));
 
-        if (sharedSetAsideCardIds.length > 0) {
-          matContent[SHARED_SET_ASIDE_ROW_ID] = {
-            playerName: 'Shared',
-            cardIds: sharedSetAsideCardIds,
-          };
+        return combineLatest([
+          players$,
+          this._nanoService.useStore(cardSourceStore),
+          this._nanoService.useStore(matchStore),
+          this._nanoService.useStore(cardStore),
+        ]);
+      }),
+      map(([players, cardSources, match, cardsById]) => {
+        const playerNameById = players.reduce((acc, player) => {
+          acc[player.id] = player.name;
+          return acc;
+        }, {} as Record<PlayerId, string>);
+
+        const grouped = new Map<string, {
+          ownerPlayerId?: PlayerId;
+          sourceName: string;
+          sourceColor: string;
+          cardIds: CardLikeId[];
+        }>();
+
+        for (const [sourceKey, cardIds] of Object.entries(cardSources ?? {})) {
+          if (sourceKey !== 'set-aside' && !sourceKey.startsWith('set-aside:')) {
+            continue;
+          }
+
+          const playerIdToken = sourceKey.split(':')[1];
+          const zonePlayerId = playerIdToken === undefined ? undefined : Number(playerIdToken);
+          const zoneOwnerPlayerId = Number.isFinite(zonePlayerId) ? zonePlayerId as PlayerId : undefined;
+
+          for (const cardId of cardIds) {
+            const source = match?.setAsideSourceById?.[cardId];
+            const ownerPlayerId = source?.ownerPlayerId ?? zoneOwnerPlayerId;
+            const sourceDisplay = this.resolveSetAsideSourceDisplay({
+              cardId,
+              source,
+              cardsById,
+              match,
+              ownerPlayerId,
+            });
+
+            const groupKey = ownerPlayerId === undefined
+              ? `source:${sourceDisplay.key}`
+              : `player:${ownerPlayerId}:source:${sourceDisplay.key}`;
+
+            const existing = grouped.get(groupKey);
+            if (existing) {
+              existing.cardIds.push(cardId);
+              continue;
+            }
+
+            grouped.set(groupKey, {
+              ownerPlayerId,
+              sourceName: sourceDisplay.name,
+              sourceColor: sourceDisplay.color,
+              cardIds: [cardId],
+            });
+          }
         }
 
-        const cardCount = Object.values(matContent).reduce((acc, next) => acc + next.cardIds.length, 0);
+        const tabs = Array.from(grouped.entries()).map(([groupKey, group]) => {
+          const playerName = group.ownerPlayerId === undefined
+            ? undefined
+            : (playerNameById[group.ownerPlayerId] ?? `Player ${group.ownerPlayerId}`);
+          const sourceLabel = playerName ? `${playerName} - ${group.sourceName}` : group.sourceName;
 
-        return cardCount > 0 ? {
-          mat: 'set-aside' as const,
-          content: matContent
-        } : undefined;
+          return {
+            id: `mat:set-aside:${groupKey}`,
+            mat: 'set-aside' as const,
+            content: group.cardIds,
+            labelPrefix: 'Set aside (',
+            labelSource: sourceLabel,
+            labelSuffix: ')',
+            sourceColor: group.sourceColor,
+          } satisfies Mat;
+        });
+
+        return tabs.sort((left, right) => this.getMatLabel(left).localeCompare(this.getMatLabel(right)));
       })
     );
   }

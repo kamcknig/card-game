@@ -164,10 +164,34 @@ export type FleetRoundState = {
   startedAtTurnNumber?: number;
 };
 
+export type SetAsideSourceKind =
+  | 'card'
+  | 'event'
+  | 'landmark'
+  | 'project'
+  | 'way'
+  | 'boon'
+  | 'hex'
+  | 'state'
+  | 'artifact'
+  | 'system';
+
+// Describes why a card/card-like is currently in set-aside and who owns that staging.
+export type SetAsideSourceDescriptor = {
+  ownerPlayerId?: PlayerId;
+  sourceKind: SetAsideSourceKind;
+  sourceCardId?: CardId;
+  sourceCardLikeId?: CardLikeId;
+  sourceCardKey?: CardKey;
+  sourceLabel?: string;
+};
+
 export interface Match {
   cardOverrides: CardOverrides;
   cardSources: Record<CardLocation, CardId[]>;
   cardSourceTagMap: Record<string, CardLocation[]>;
+  // Source metadata for active set-aside entries, keyed by card/card-like id.
+  setAsideSourceById: Record<CardLikeId, SetAsideSourceDescriptor>;
   coffers: Record<PlayerId, number>;
   // Tracks per-player Villagers tokens from Renaissance.
   villagers: Record<PlayerId, number>;

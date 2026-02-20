@@ -6,6 +6,7 @@ export function createInitialMatchState(): Match {
     cardOverrides: {},
     cardSources: {},
     cardSourceTagMap: {},
+    setAsideSourceById: {},
     coffers: {},
     // Per-player Villagers tokens for Renaissance.
     villagers: {},

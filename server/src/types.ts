@@ -19,6 +19,7 @@ import {
   PlayerId,
   SelectActionCardArgs,
   SelectSingleActionCardArgs,
+  SetAsideSourceKind,
   ServerEmitEvents,
   ServerListenEvents,
   SourceFindCardsFilter,
@@ -135,6 +136,16 @@ export interface OnGainedLifecycleContext {
   // Card that initiated the gain, if any.
   sourceCardId?: CardId;
 }
+
+// Optional metadata describing why a card/card-like is placed in set-aside.
+export type SetAsideSourceInput = {
+  ownerPlayerId?: PlayerId;
+  sourceKind?: SetAsideSourceKind;
+  sourceCardId?: CardId;
+  sourceCardLikeId?: CardLikeId;
+  sourceCardKey?: CardKey;
+  sourceLabel?: string;
+};
 
 export type GameActionContext = {
   loggingContext?: {
@@ -263,12 +274,16 @@ export interface GameActionDefinitionMap {
     to: CardLocationSpec;
     // Optional facing update applied when the card moves.
     facing?: CardFacing;
+    // Optional source metadata used when the destination is set-aside.
+    setAsideSource?: SetAsideSourceInput;
   }) => Promise<{ location: CardLocation; playerId?: PlayerId } | undefined>;
   // Moves a landscape-like entry (boon/event/landmark) to a supported location.
   moveCardLike: (args: {
     toPlayerId?: PlayerId;
     cardLikeId: CardLikeId;
     to: CardLocationSpec;
+    // Optional source metadata used when the destination is set-aside.
+    setAsideSource?: SetAsideSourceInput;
   }) => Promise<{ location: CardLocation; playerId?: PlayerId } | undefined>;
   // Sets the current turn phase without advancing the turn counter.
   setTurnPhase: (args: {

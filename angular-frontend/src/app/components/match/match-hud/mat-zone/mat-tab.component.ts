@@ -2,6 +2,16 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import { CardLikeId, Mats } from 'shared/types';
 import { MatPlayerContent } from '../types';
 
+export type MatTabModel = {
+  id: string;
+  mat: Mats | string;
+  content: MatPlayerContent | CardLikeId[];
+  labelPrefix: string;
+  labelSource?: string;
+  labelSuffix?: string;
+  sourceColor?: string;
+};
+
 @Component({
   selector: 'app-mat-tab',
   imports: [],
@@ -10,7 +20,7 @@ import { MatPlayerContent } from '../types';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MatTabComponent {
-  mat = input.required<{ mat: Mats | string; content: MatPlayerContent | CardLikeId[]  }>();
+  mat = input.required<MatTabModel>();
 
   // Cached badge count for this mat tab.
   readonly matCount = computed(() => {

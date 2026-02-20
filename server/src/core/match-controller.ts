@@ -303,6 +303,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this.match.coffers ??= {};
     this.match.villagers ??= {};
     this.match.debt ??= {};
+    this.match.setAsideSourceById ??= {};
     this.match.boons ??= {
       cards: [],
       deck: [],
@@ -421,6 +422,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       'cardOverrides',
       'cardSources',
       'cardSourceTagMap',
+      'setAsideSourceById',
       'coffers',
       'villagers',
       'debt',

@@ -4,7 +4,8 @@ import { playerStore, selfPlayerIdStore } from '../state/player-state';
 import { logEntryIdsStore, logStore } from '../state/log-state';
 import { tokenDefinitionStore } from '../state/token-definition-state';
 import { matchStore } from '../state/match-state';
-import { findCardLikeInMatch } from 'shared/find-card-like-in-match';
+import { findCardLikeEntryInMatch } from 'shared/find-card-like-in-match';
+import { getSourceAccentColorForCard, getSourceAccentColorForCardLikeKind } from './source-accent-colors';
 
 export const logManager = {
   addLogEntry(logEntry: LogEntry) {
@@ -182,43 +183,21 @@ export const logManager = {
   }
 };
 
-const SourceColors = {
-  treasure: '#fdda56',
-  victory: '#8efb49',
-  curse: '#d45ffb',
-  duration: '#ff8d34'
-}
-
 const getSourceColor = (source: LogEntrySource, cardsById: Record<CardId, Card>) => {
   const sourceCard = cardsById[source];
-
-  if (sourceCard.cardKey === 'curse') {
-    return SourceColors.curse;
-  }
-
-  if (sourceCard.type.includes('TREASURE')) {
-    return SourceColors.treasure;
-  }
-
-  if (sourceCard.type.includes('VICTORY')) {
-    return SourceColors.victory;
-  }
-
-  if (sourceCard.type.includes('DURATION')) {
-    return SourceColors.duration;
-  }
-
-  return 'white';
+  return getSourceAccentColorForCard(sourceCard);
 }
 
 // Resolves landscape-style names for log entries (events/landmarks/boons/hexes/states/artifacts).
 const getCardLikeDisplay = (cardLikeId: number) => {
   const match = matchStore.get();
   if (!match) {
-    return { name: 'Landscape', color: 'white' };
+    return { name: 'Landscape', color: getSourceAccentColorForCardLikeKind(undefined) };
   }
 
-  const cardLike = findCardLikeInMatch(match, cardLikeId);
-
-  return { name: cardLike?.cardName ?? 'Landscape', color: 'white' };
+  const entry = findCardLikeEntryInMatch(match, cardLikeId);
+  return {
+    name: entry?.cardLike.cardName ?? 'Landscape',
+    color: getSourceAccentColorForCardLikeKind(entry?.kind),
+  };
 }

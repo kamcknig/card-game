@@ -8,5 +8,7 @@ export type {
   MatchConfiguration,
   MatchStats,
   MatchSummary,
+  SetAsideSourceDescriptor,
+  SetAsideSourceKind,
   Supply,
 } from "../shared-types.ts";

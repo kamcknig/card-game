@@ -1,4 +1,14 @@
-<div class="mat-tab">
-  <span>{{ mat().mat }}</span>
+<div class="mat-tab" [title]="mat().labelPrefix + (mat().labelSource ?? '') + (mat().labelSuffix ?? '')">
+  <span class="mat-label">
+    <span>{{ mat().labelPrefix }}</span>
+    @if (mat().labelSource) {
+      <span class="mat-source" [style.color]="mat().sourceColor ?? 'var(--theme-color-source-default)'">
+        {{ mat().labelSource }}
+      </span>
+    }
+    @if (mat().labelSuffix) {
+      <span>{{ mat().labelSuffix }}</span>
+    }
+  </span>
   <div class="badge-count">{{ matCount() }}</div>
 </div>

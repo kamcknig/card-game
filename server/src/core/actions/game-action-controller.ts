@@ -22,6 +22,8 @@ import {
   TurnPhaseOrderValues,
   UserPromptActionArgs,
   BaseCardMetadata,
+  SetAsideSourceDescriptor,
+  SetAsideSourceKind,
 } from 'shared/types/index.ts';
 import { MatchCardLibrary } from '../match-card-library.ts';
 import { LogManager } from '../log-manager.ts';
@@ -43,6 +45,7 @@ import {
   PromptService,
   ReactionTemplate,
   ReactionTrigger,
+  SetAsideSourceInput,
   TriggerEventType,
 } from '@server-types/index.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
@@ -57,6 +60,7 @@ import { prosperityTokenIds } from '@expansions/prosperity/token-prosperity-ids.
 import { renaissanceTokenIds } from '@expansions/renaissance/token-ids-renaissance.ts';
 import {
   findBoonInMatch,
+  findCardLikeEntryInMatch,
   findCardLikeInMatch,
   findEventInMatch,
   findHexInMatch,
@@ -915,7 +919,62 @@ export class GameActionController implements GameActionDefinitionMap {
     this.loggerService.debug(`[flipToken action] set token ${args.tokenInstanceId} to ${args.facing}`);
   }
 
-  async moveCard(args: { toPlayerId?: PlayerId; cardId: CardId | Card; to: CardLocationSpec; facing?: CardFacing }) {
+  // Removes set-aside source metadata for a card/card-like id.
+  private clearSetAsideSource(cardLikeId: CardLikeId): void {
+    this.match.setAsideSourceById ??= {};
+    if (this.match.setAsideSourceById[cardLikeId] !== undefined) {
+      delete this.match.setAsideSourceById[cardLikeId];
+      this.loggerService.debug(`[set-aside source] cleared source metadata for ${cardLikeId}`);
+    }
+  }
+
+  // Persists set-aside source metadata for a card/card-like id.
+  private setSetAsideSource(cardLikeId: CardLikeId, source: SetAsideSourceDescriptor): void {
+    this.match.setAsideSourceById ??= {};
+    this.match.setAsideSourceById[cardLikeId] = source;
+    this.loggerService.debug(`[set-aside source] set source metadata for ${cardLikeId}`, source);
+  }
+
+  // Resolves a source kind from a card-like id when the caller omitted an explicit source kind.
+  private resolveSetAsideSourceKindFromCardLikeId(cardLikeId: CardLikeId): SetAsideSourceKind {
+    const entry = findCardLikeEntryInMatch(this.match, cardLikeId);
+    if (!entry) {
+      return 'system';
+    }
+    return entry.kind;
+  }
+
+  // Resolves source metadata for a move into set-aside.
+  private buildSetAsideSourceDescriptor(args: {
+    destinationPlayerId?: PlayerId;
+    setAsideSource?: SetAsideSourceInput;
+  }): SetAsideSourceDescriptor {
+    const setAsideSource = args.setAsideSource;
+
+    let sourceKind: SetAsideSourceKind = setAsideSource?.sourceKind ?? 'system';
+    if (!setAsideSource?.sourceKind && setAsideSource?.sourceCardLikeId !== undefined) {
+      sourceKind = this.resolveSetAsideSourceKindFromCardLikeId(setAsideSource.sourceCardLikeId);
+    } else if (!setAsideSource?.sourceKind && setAsideSource?.sourceCardId !== undefined) {
+      sourceKind = 'card';
+    }
+
+    return {
+      ownerPlayerId: setAsideSource?.ownerPlayerId ?? args.destinationPlayerId,
+      sourceKind,
+      sourceCardId: setAsideSource?.sourceCardId,
+      sourceCardLikeId: setAsideSource?.sourceCardLikeId,
+      sourceCardKey: setAsideSource?.sourceCardKey,
+      sourceLabel: setAsideSource?.sourceLabel,
+    };
+  }
+
+  async moveCard(args: {
+    toPlayerId?: PlayerId;
+    cardId: CardId | Card;
+    to: CardLocationSpec;
+    facing?: CardFacing;
+    setAsideSource?: SetAsideSourceInput;
+  }) {
     // Ensure we are only moving actual cards with moveCard.
     let card: Card;
     if (args.cardId instanceof Card) {
@@ -970,6 +1029,9 @@ export class GameActionController implements GameActionDefinitionMap {
     }
 
     oldSource?.source.splice(oldSource?.index, 1);
+    if (oldSource?.sourceKey === 'set-aside') {
+      this.clearSetAsideSource(cardId);
+    }
 
     // Apply default facing rules or explicit facing updates for the destination.
     const destinationFacing = args.facing ?? this.getDefaultFacingForLocation(args.to.location);
@@ -1002,6 +1064,14 @@ export class GameActionController implements GameActionDefinitionMap {
     newSource.push(cardId);
 
     switch (args.to.location) {
+      case 'set-aside': {
+        const sourceDescriptor = this.buildSetAsideSourceDescriptor({
+          destinationPlayerId,
+          setAsideSource: args.setAsideSource,
+        });
+        this.setSetAsideSource(cardId, sourceDescriptor);
+        break;
+      }
       case 'playerHand':
         if (destinationPlayerId === undefined) {
           throw new Error(`[moveCard action] playerHand requires destination player for ${card}`);
@@ -1022,7 +1092,12 @@ export class GameActionController implements GameActionDefinitionMap {
   }
 
   // Moves a landscape-like entry (boon/hex/event/landmark) between supported locations.
-  async moveCardLike(args: { toPlayerId?: PlayerId; cardLikeId: CardLikeId; to: CardLocationSpec }) {
+  async moveCardLike(args: {
+    toPlayerId?: PlayerId;
+    cardLikeId: CardLikeId;
+    to: CardLocationSpec;
+    setAsideSource?: SetAsideSourceInput;
+  }) {
     if (typeof args.cardLikeId !== 'number') {
       throw new Error('[moveCardLike action] invalid cardLikeId');
     }
@@ -1053,6 +1128,9 @@ export class GameActionController implements GameActionDefinitionMap {
     try {
       const existingSource = this.cardSourceController.findCardSource(cardLike.id);
       existingSource.source.splice(existingSource.index, 1);
+      if (existingSource.sourceKey === 'set-aside') {
+        this.clearSetAsideSource(cardLike.id);
+      }
       previousLocation = { location: existingSource.sourceKey, playerId: existingSource.playerId };
     } catch (error) {
       // No existing card-source location found; this is expected for boons in deck/discard.
@@ -1095,6 +1173,11 @@ export class GameActionController implements GameActionDefinitionMap {
         if (!setAside.includes(cardLike.id)) {
           setAside.push(cardLike.id);
         }
+        const sourceDescriptor = this.buildSetAsideSourceDescriptor({
+          destinationPlayerId: args.toPlayerId,
+          setAsideSource: args.setAsideSource,
+        });
+        this.setSetAsideSource(cardLike.id, sourceDescriptor);
         this.loggerService.debug(`[moveCardLike action] set aside ${cardLike} for player ${args.toPlayerId}`);
         break;
       }
@@ -2100,6 +2183,7 @@ export class GameActionController implements GameActionDefinitionMap {
         const setAsideIndex = setAsideSource.indexOf(boonId);
         if (setAsideIndex !== -1) {
           setAsideSource.splice(setAsideIndex, 1);
+          this.clearSetAsideSource(boonId);
           this.loggerService.debug(`[receiveBoon action] removed ${boon} from set-aside for ${source}`);
         }
       } catch (error) {
@@ -2181,6 +2265,11 @@ export class GameActionController implements GameActionDefinitionMap {
           cardLikeId: boonId,
           toPlayerId: args.playerId,
           to: { location: 'set-aside' },
+          setAsideSource: {
+            ownerPlayerId: args.playerId,
+            sourceKind: 'boon',
+            sourceCardLikeId: boonId,
+          },
         });
       }
 

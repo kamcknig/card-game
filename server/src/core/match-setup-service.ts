@@ -6,6 +6,7 @@ import {
   ComputedMatchConfiguration,
   Match,
   MatchConfiguration,
+  SetAsideSourceDescriptor,
 } from 'shared/types/index.ts';
 import { MatchBaseConfiguration } from '@server-types/index.ts';
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
@@ -99,6 +100,10 @@ export class MatchSetupService {
         if (isWayOfTheMouseRuntimeSetAsideCard(card)) {
           // Way of the Mouse setup card lives in the shared set-aside area, not in non-supply.
           globalSetAsideSource.push(instance.id);
+          this.match.setAsideSourceById[instance.id] = {
+            sourceKind: 'way',
+            sourceCardKey: 'way-of-the-mouse',
+          } satisfies SetAsideSourceDescriptor;
           continue;
         }
         cardSource.push(instance.id);

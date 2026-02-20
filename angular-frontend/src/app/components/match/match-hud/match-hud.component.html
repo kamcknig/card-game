@@ -10,16 +10,15 @@
       (mouseleave)="onMatMouseLeave(trashMatValue)">
     </app-mat-tab>
   }
-  @let setAsideMatValue = setAsideMat();
-  @if (setAsideMatValue) {
+  @for (setAsideMat of setAsideMats(); track setAsideMat.id) {
     <app-mat-tab
-      [mat]="setAsideMatValue"
-      (click)="onMatClick(setAsideMatValue)"
-      (mouseenter)="onMatMouseEnter(setAsideMatValue)"
-      (mouseleave)="onMatMouseLeave(setAsideMatValue)">
+      [mat]="setAsideMat"
+      (click)="onMatClick(setAsideMat)"
+      (mouseenter)="onMatMouseEnter(setAsideMat)"
+      (mouseleave)="onMatMouseLeave(setAsideMat)">
     </app-mat-tab>
   }
-  @for (mat of selfMats(); track mat.mat) {
+  @for (mat of selfMats(); track mat.id) {
     <app-mat-tab
       [mat]="mat"
       (click)="onMatClick(mat)"
@@ -98,7 +97,7 @@
     (close)="closeVisibleMat()"
   >
     <div class="mat-modal-content">
-      <div class="mat-modal-title">{{ currentVisibleMat.mat }}</div>
+      <div class="mat-modal-title">{{ visibleMatTitle() }}</div>
       <div class="player-flex-container">
         @for (playerMatContent of visibleMatContent(); track playerMatContent.id) {
           <div class="player-item">
@@ -108,8 +107,7 @@
             <div class="card-flex-container">
               @for (cardId of playerMatContent.cardIds; track cardId) {
               <div class="card-item">
-                  <!-- Set-aside renders landscapes so boons are visible to all players. -->
-                  @if (currentVisibleMat.mat === 'set-aside') {
+                  @if (currentVisibleMat.mat === 'set-aside' && !isCardInstance(cardId)) {
                     <app-card-like
                       [size]="'half'"
                       [cardLikeId]="cardId"
@@ -119,7 +117,7 @@
                     <app-card
                       [size]="'half'"
                       [cardId]="cardId"
-                      [forceFacing]="'front'"
+                      [forceFacing]="currentVisibleMat.mat === 'set-aside' ? undefined : 'front'"
                     ></app-card>
                   }
                 </div>

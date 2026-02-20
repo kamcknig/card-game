@@ -10,4 +10,5 @@ export type {
   GameActions,
   LifecycleSuppression,
   PromptService,
+  SetAsideSourceInput,
 } from '../types.ts';
