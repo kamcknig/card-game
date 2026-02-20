@@ -11,6 +11,7 @@ import { selfPlayerIdStore } from '../../state/player-state';
 import { matchStore } from '../../state/match-state';
 import { tokenDefinitionStore } from '../../state/token-definition-state';
 import { getTokenShortLabel } from '../match/views/token-utils';
+import { displayCardDetail } from '../match/views/modal/display-card-detail';
 
 type CardTokenBadge = {
   id: string;
@@ -43,6 +44,8 @@ export class CardComponent {
 
   // Active card model for this component instance.
   readonly card = computed(() => this._cards()?.[this.cardId()]);
+  // Detail image path for right-click detail modal.
+  readonly detailPath = computed(() => this.card()?.detailImagePath);
 
   // Sanitized card image URL resolved from ownership/facing.
   readonly path = computed<SafeUrl | undefined>(() => {
@@ -79,6 +82,13 @@ export class CardComponent {
 
   // Token size mirrors pile badges: smaller for half-sized cards.
   readonly tokenSizePx = computed(() => this.size() === 'half' ? 25 : 35);
+
+  // Opens a detail view when right-clicking the card.
+  onContextMenu(event: MouseEvent) {
+    event.preventDefault();
+    if (!this.detailPath()) return;
+    void displayCardDetail(this.cardId());
+  }
 
   // Computes token badge data for tokens located on this card.
   private buildTokenBadges(

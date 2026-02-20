@@ -32,6 +32,11 @@ export class CardSourceController {
     return newSource;
   }
 
+  hasSource(sourceKey: CardLocation, index: number = NaN) {
+    const key = `${sourceKey}${isNaN(index) ? '' : ':' + index}`;
+    return this._sourceMap.has(key);
+  }
+
   findCardSource(cardId: CardId) {
     for (const [sourceKey, source] of this._sourceMap) {
       const idx = source.findIndex((id) => id === cardId);

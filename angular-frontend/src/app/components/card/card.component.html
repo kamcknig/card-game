@@ -1,4 +1,4 @@
-<div class="card-container" [style.--token-size.px]="tokenSizePx()">
+<div class="card-container" [style.--token-size.px]="tokenSizePx()" (contextmenu)="onContextMenu($event)">
   <img
     class="card-image"
     [ngSrc]="path() ?? ''"
