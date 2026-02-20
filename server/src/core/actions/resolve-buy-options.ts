@@ -5,6 +5,7 @@ import { CardPriceRulesController } from '../card-price-rules-controller.ts';
 import { CardSourceController } from '../card-source-controller.ts';
 import { ExpansionEffectRegistryService } from '../expansion-effect-registry-service.ts';
 import { LoggerService } from '../logger-service.ts';
+import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 
 // Normalized buy option result used by interactivity and buy execution.
 export type ResolvedBuyOption = {
@@ -55,6 +56,24 @@ export class BuyOptionsResolver {
     const { restricted, cost } = this.cardPriceController.applyRules(card, {
       playerId: args.playerId,
     });
+
+    // Split-pile legality: supply cards must be the visible top card of their pile to be buyable.
+    try {
+      const sourceEntry = this.cardSourceController.findCardSource(card.id);
+      if (sourceEntry.sourceKey === 'basicSupply' || sourceEntry.sourceKey === 'kingdomSupply') {
+        const pileKey = getCardPileKey(card);
+        const topSupplyCard = this.findCardService.findTopSupplyCardForPileKey({
+          pileKey,
+          from: ['basicSupply', 'kingdomSupply'],
+        });
+        if (!topSupplyCard || topSupplyCard.id !== card.id) {
+          this.loggerService.debug(`[buy options] blocked non-top supply card ${card} in pile ${pileKey}`);
+          return { card, cost, options: [] };
+        }
+      }
+    } catch {
+      // Non-supply cards (or stale IDs) are validated by downstream checks.
+    }
 
     // Respect card-level canBuy gates before considering any payment method.
     const canBuyCondition = this.expansionEffectRegistryService.getCardActionConditions(card.cardKey)?.canBuy;

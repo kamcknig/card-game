@@ -4,6 +4,7 @@ export type {
   EffectTarget,
   PlayCardSelectionResult,
   SelectActionCardArgs,
+  SelectSingleCardPromptArgs,
   SelectSingleActionCardArgs,
   SingleSelectCountSpec,
   UserPromptActionArgs,

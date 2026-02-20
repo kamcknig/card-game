@@ -17,6 +17,7 @@ import {
   Match,
   NonLocationFilters,
   PlayerId,
+  SelectSingleCardPromptArgs,
   SelectActionCardArgs,
   SelectSingleActionCardArgs,
   SetAsideSourceKind,
@@ -285,6 +286,10 @@ export interface GameActionDefinitionMap {
     // Optional source metadata used when the destination is set-aside.
     setAsideSource?: SetAsideSourceInput;
   }) => Promise<{ location: CardLocation; playerId?: PlayerId } | undefined>;
+  // Rotates a split pile by moving all copies of the current top card to the bottom.
+  rotateSplitPile: (args: {
+    pileKey: CardKey;
+  }) => Promise<void>;
   // Sets the current turn phase without advancing the turn counter.
   setTurnPhase: (args: {
     phase: TurnPhase;
@@ -388,7 +393,7 @@ export type PromptService = {
   confirm(args: UserPromptActionArgs, confirmAction?: number): Promise<boolean>;
   requestNumberInput(args: UserPromptActionArgs, confirmAction?: number): Promise<number | null>;
   selectCardsFromPrompt(args: UserPromptActionArgs): Promise<CardId[]>;
-  selectSingleCardFromPrompt(args: UserPromptActionArgs): Promise<CardId | null>;
+  selectSingleCardFromPrompt(args: SelectSingleCardPromptArgs): Promise<CardId | null>;
   selectSingleCardFromAction(args: SelectSingleActionCardArgs): Promise<CardId | null>;
   requestActionResult<TResult = unknown>(
     args: UserPromptActionArgs,

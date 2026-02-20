@@ -1,1 +1,62 @@
-{}
+{
+  "augurs": {
+    "pile": {
+      "randomizer": "augurs",
+      "cost": {
+        "treasure": 3
+      },
+      "type": [
+        "ACTION",
+        "AUGUR"
+      ]
+    },
+    "cards": [
+      {
+        "cardKey": "herb-gatherer",
+        "cost": {
+          "treasure": 3
+        },
+        "type": [
+          "ACTION",
+          "AUGUR"
+        ],
+        "abilityText": "+1 Buy\nPut your deck into your discard pile. Look through it and you may play a Treasure from it.\nYou may rotate the Augurs."
+      },
+      {
+        "cardKey": "acolyte",
+        "cost": {
+          "treasure": 4
+        },
+        "type": [
+          "ACTION",
+          "AUGUR"
+        ],
+        "abilityText": "You may trash an Action or Victory card from your hand to gain a Gold.\nYou may trash this to gain an Augur."
+      },
+      {
+        "cardKey": "sorceress",
+        "cost": {
+          "treasure": 5
+        },
+        "type": [
+          "ACTION",
+          "ATTACK",
+          "AUGUR"
+        ],
+        "targetScheme": "ALL_OTHER",
+        "abilityText": "+1 Action\nName a card. Reveal the top card of your deck and put it into your hand. If it's the named card, each other player gains a Curse."
+      },
+      {
+        "cardKey": "sibyl",
+        "cost": {
+          "treasure": 6
+        },
+        "type": [
+          "ACTION",
+          "AUGUR"
+        ],
+        "abilityText": "+4 Cards\n+1 Action\nPut a card from your hand on top of your deck, and another on the bottom."
+      }
+    ]
+  }
+}

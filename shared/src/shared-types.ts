@@ -388,6 +388,13 @@ export type UserPromptActionArgs = {
   waitForInput?: boolean;
 }
 
+// Prompt arguments for single-card selection helpers with optional selectCount defaulting to 1.
+export type SelectSingleCardPromptArgs = Omit<UserPromptActionArgs, 'content'> & {
+  content: Omit<Extract<UserPromptKinds, { type: 'select'; }>, 'selectCount'> & {
+    selectCount?: SingleSelectCountSpec;
+  };
+};
+
 export const TurnPhaseOrderValues = ['action', 'buy', 'night', 'cleanup'] as const;
 export type TurnPhase = typeof TurnPhaseOrderValues[number];
 

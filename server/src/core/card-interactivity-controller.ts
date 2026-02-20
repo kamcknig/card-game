@@ -4,6 +4,7 @@ import { isUndefined } from 'es-toolkit/compat';
 import { MatchCardLibrary } from './match-card-library.ts';
 import { getPlayerById } from '../utils/get-player-by-id.ts';
 import { getTurnPhase } from '../utils/get-turn-phase.ts';
+import { getCardPileKey } from '../utils/get-card-pile-key.ts';
 import { CardPriceRulesController } from './card-price-rules-controller.ts';
 import { CardSourceController } from './card-source-controller.ts';
 import { findEventInMatch, findProjectInMatch, findWayInMatch } from '@shared/find-card-like-in-match.ts';
@@ -83,7 +84,7 @@ export class CardInteractivityController {
     const currentTurnHistoryIndex = match.stats.turns.length - 1;
 
     if (turnPhase === 'buy' && match.playerBuys > 0) {
-      const cardKeysAdded: string[] = [];
+      const pileKeysAdded: string[] = [];
       // Only offer buys if the player has no debt tokens.
       if (currentDebt === 0) {
         // Supply lookups return full card data for purchase checks.
@@ -93,20 +94,29 @@ export class CardInteractivityController {
         // be the top of any pile). a bit hacky to assume that.
         for (let i = supply.length - 1; i >= 0; i--) {
           const card = supply[i];
-          // we already marked this type of card as selectable based on cost
-          if (cardKeysAdded.includes(card.cardKey)) {
+          const pileKey = getCardPileKey(card);
+          // Split piles expose only one visible top card for interactivity.
+          if (pileKeysAdded.includes(pileKey)) {
+            continue;
+          }
+          pileKeysAdded.push(pileKey);
+
+          const topSupplyCard = this.findCardService.findTopSupplyCardForPileKey({
+            pileKey,
+            from: ['basicSupply', 'kingdomSupply'],
+          });
+          if (!topSupplyCard) {
             continue;
           }
 
           // Include cards if any legal purchase path exists (standard or alternate).
           const buyOptions = this.buyOptionsResolver.resolveBuyOptions({
-            cardId: card,
+            cardId: topSupplyCard,
             playerId: currentPlayer.id,
           });
 
           if (buyOptions.options.length > 0) {
-            selectableCards.push(card.id);
-            cardKeysAdded.push(card.cardKey);
+            selectableCards.push(topSupplyCard.id);
           }
         }
       }

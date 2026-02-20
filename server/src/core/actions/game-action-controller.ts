@@ -496,6 +496,19 @@ export class GameActionController implements GameActionDefinitionMap {
     return Array.isArray(restrict) && restrict.every((entry) => typeof entry === 'number');
   }
 
+  // True when the location is one of the two Supply zones.
+  private isSupplyLocation(location: CardLocation): location is 'basicSupply' | 'kingdomSupply' {
+    return location === 'basicSupply' || location === 'kingdomSupply';
+  }
+
+  // Resolves the current visible top card for the supplied card's pile.
+  private findTopSupplyCardForCard(card: Card): Card | undefined {
+    return this.findCardService.findTopSupplyCardForPileKey({
+      pileKey: getCardPileKey(card) as CardKey,
+      from: ['basicSupply', 'kingdomSupply'],
+    });
+  }
+
   // Collapses supply candidates to visible top cards so board selection does not include hidden pile cards.
   private collapseSupplySelectableCards(selectableCardIds: CardId[]): CardId[] {
     if (selectableCardIds.length < 1) {
@@ -1061,7 +1074,13 @@ export class GameActionController implements GameActionDefinitionMap {
         this.reactionManager.cleanupDurationTriggers(cardId);
     }
 
-    newSource.push(cardId);
+    // Insert at a requested index when supplied; otherwise append to destination top/end.
+    if (args.to.index === undefined) {
+      newSource.push(cardId);
+    } else {
+      const clampedIndex = Math.max(0, Math.min(args.to.index, newSource.length));
+      newSource.splice(clampedIndex, 0, cardId);
+    }
 
     switch (args.to.location) {
       case 'set-aside': {
@@ -1244,6 +1263,49 @@ export class GameActionController implements GameActionDefinitionMap {
     }
 
     return previousLocation;
+  }
+
+  // Rotates a split pile by moving all copies of the current top card to the bottom.
+  async rotateSplitPile(args: { pileKey: CardKey }): Promise<void> {
+    const supplySources = [
+      this.cardSourceController.getSource('kingdomSupply'),
+      this.cardSourceController.getSource('basicSupply'),
+    ];
+
+    // Locate all cards belonging to the requested pile key.
+    const pileEntries: { source: CardId[]; index: number; cardId: CardId }[] = [];
+    for (const source of supplySources) {
+      for (let i = 0; i < source.length; i++) {
+        const cardId = source[i];
+        const card = this.cardLibrary.getCard(cardId);
+        if (getCardPileKey(card) !== args.pileKey) {
+          continue;
+        }
+        pileEntries.push({ source, index: i, cardId });
+      }
+    }
+
+    if (pileEntries.length < 1) {
+      this.loggerService.debug(`[rotateSplitPile action] no pile found for ${args.pileKey}`);
+      return;
+    }
+
+    const topCardId = pileEntries[pileEntries.length - 1].cardId;
+    const topCardKey = this.cardLibrary.getCard(topCardId).cardKey;
+    const topCardEntries = pileEntries.filter((entry) => this.cardLibrary.getCard(entry.cardId).cardKey === topCardKey);
+    const nonTopEntries = pileEntries.filter((entry) => this.cardLibrary.getCard(entry.cardId).cardKey !== topCardKey);
+    const rotatedCardIds = [...topCardEntries.map((entry) => entry.cardId), ...nonTopEntries.map((entry) => entry.cardId)];
+
+    // Reapply rotated pile order into original pile slots while preserving non-pile cards.
+    for (const [entryIndex, entry] of pileEntries.entries()) {
+      entry.source[entry.index] = rotatedCardIds[entryIndex];
+    }
+
+    const newTopCardId = rotatedCardIds[rotatedCardIds.length - 1];
+    const newTopCardKey = this.cardLibrary.getCard(newTopCardId).cardKey;
+    this.loggerService.info(
+      `[rotateSplitPile action] rotated pile ${args.pileKey} top ${topCardKey} -> ${newTopCardKey}`,
+    );
   }
 
   // Finds a landscape-like instance by id in the current match.

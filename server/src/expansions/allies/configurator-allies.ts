@@ -1,9 +1,30 @@
 import { ExpansionConfiguratorFactory, GameEventRegistrar } from '@server-types/index.ts';
-import { ComputedMatchConfiguration } from 'shared/types/index.ts';
+import { CardKey, ComputedMatchConfiguration } from 'shared/types/index.ts';
 import { uniqueByProp } from '../../core/match-configurator.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
+import { configureSplitPile } from '../../utils/configure-split-pile.ts';
 
 const IMPORTER_PILE_KEY = 'importer';
+const AUGURS_PILE_KEY = 'augurs';
+// Canonical Augurs split-pile order (bottom -> top).
+const AUGURS_ORDER: CardKey[] = [
+  'sibyl',
+  'sibyl',
+  'sibyl',
+  'sibyl',
+  'sorceress',
+  'sorceress',
+  'sorceress',
+  'sorceress',
+  'acolyte',
+  'acolyte',
+  'acolyte',
+  'acolyte',
+  'herb-gatherer',
+  'herb-gatherer',
+  'herb-gatherer',
+  'herb-gatherer',
+];
 
 // Returns true when at least one selected kingdom pile contains a Liaison card.
 const hasLiaisonInKingdom = (config: ComputedMatchConfiguration): boolean => {
@@ -12,6 +33,13 @@ const hasLiaisonInKingdom = (config: ComputedMatchConfiguration): boolean => {
 
 const configurator: ExpansionConfiguratorFactory = () => {
   return async (args) => {
+    // Keep Augurs split pile in canonical order whenever selected.
+    configureSplitPile(args, {
+      pileKey: AUGURS_PILE_KEY,
+      desiredOrder: AUGURS_ORDER,
+      logLabel: AUGURS_PILE_KEY,
+    });
+
     const hasLiaison = hasLiaisonInKingdom(args.config);
     if (!hasLiaison) {
       if ((args.config.allies ?? []).length > 0) {
