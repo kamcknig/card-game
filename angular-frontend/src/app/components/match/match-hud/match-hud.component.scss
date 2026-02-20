@@ -166,7 +166,9 @@ app-game-log {
   color: var(--theme-text-on-dark);
   font-size: 12px;
   line-height: 1.35;
-  pointer-events: none;
+  // Keep runtime ids copyable when the debug overlay is visible.
+  pointer-events: auto;
+  user-select: text;
 }
 
 .debug-runtime-title {

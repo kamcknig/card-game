@@ -515,14 +515,42 @@ export class MatchConfigurator {
     return configurators;
   }
 
+  // Resolves a card-like key (event/landmark/project/way/etc) back to its owning expansion name.
+  private resolveCardLikeExpansionName(cardLikeKey: string): string | undefined {
+    const expansionLibrary = this._expansionCatalogService.getExpansionLibrary();
+    for (const [expansionName, expansionData] of Object.entries(expansionLibrary)) {
+      if (
+        expansionData.events[cardLikeKey] ||
+        expansionData.landmarks[cardLikeKey] ||
+        expansionData.projects[cardLikeKey] ||
+        expansionData.ways[cardLikeKey]
+      ) {
+        return expansionName;
+      }
+    }
+    return undefined;
+  }
+
   // Resolves all expansion names relevant to this configuration, including selected expansion toggles.
   private getConfiguredExpansionNames(): string[] {
     const configuredExpansionNames = this._config.expansions.map((expansion) => expansion.name);
     const selectedKingdomExpansions = this._config.kingdomSupply
       .flatMap((supply) => supply.cards.map((card) => card.expansionName));
+    // Card-likes can require expansion configurators even when no kingdom card from that expansion is selected.
+    const selectedCardLikeKeys = [
+      ...(this._config.events ?? []).map((event) => event.cardKey),
+      ...(this._config.landmarks ?? []).map((landmark) => landmark.cardKey),
+      ...(this._config.projects ?? []).map((project) => project.cardKey),
+      ...(this._config.ways ?? []).map((way) => way.cardKey),
+    ];
+    const selectedCardLikeExpansions = selectedCardLikeKeys
+      .map((cardLikeKey) => this.resolveCardLikeExpansionName(cardLikeKey))
+      .filter((expansionName): expansionName is string => !!expansionName);
+
     return Array.from(new Set([
       ...configuredExpansionNames,
       ...selectedKingdomExpansions,
+      ...selectedCardLikeExpansions,
     ]));
   }
 

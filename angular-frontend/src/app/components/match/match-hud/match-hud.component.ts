@@ -38,6 +38,9 @@ export interface Mat {
   content: MatPlayerContent | CardLikeId[];
 }
 
+// Synthetic row id used to display match-global set-aside cards in the set-aside mat modal.
+const SHARED_SET_ASIDE_ROW_ID = -1 as PlayerId;
+
 @Component({
   selector: 'app-match-hud',
   imports: [
@@ -278,8 +281,9 @@ export class MatchHudComponent implements AfterViewInit, OnDestroy {
           this._nanoService.useStore(getCardSourceStore('set-aside', id))
             .pipe(map((cardIds) => ({ playerId: id, cardIds })))
         )),
+        this._nanoService.useStore(getCardSourceStore('set-aside')),
       ])),
-      map(([players, setAsideSources]) => {
+      map(([players, setAsideSources, sharedSetAsideCardIds]) => {
         const matContent = setAsideSources.reduce((acc, source) => {
           if (source.cardIds.length < 1) return acc;
           const playerName = players.find((p) => p?.id === source.playerId)?.name;
@@ -290,6 +294,13 @@ export class MatchHudComponent implements AfterViewInit, OnDestroy {
           };
           return acc;
         }, {} as MatPlayerContent);
+
+        if (sharedSetAsideCardIds.length > 0) {
+          matContent[SHARED_SET_ASIDE_ROW_ID] = {
+            playerName: 'Shared',
+            cardIds: sharedSetAsideCardIds,
+          };
+        }
 
         const cardCount = Object.values(matContent).reduce((acc, next) => acc + next.cardIds.length, 0);
 
