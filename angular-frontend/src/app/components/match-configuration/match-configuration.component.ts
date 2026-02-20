@@ -10,6 +10,7 @@ import {
   signal
 } from '@angular/core';
 import {
+  AllyNoId,
   ArtifactNoId,
   CardNoId,
   EventNoId,
@@ -47,7 +48,15 @@ import { UiDialogComponent } from '../ui/dialog/ui-dialog.component';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { compare } from 'fast-json-patch';
 
-type SelectionModalKind = 'bannedKingdom' | 'kingdom' | 'events' | 'landmarks' | 'artifacts' | 'projects' | 'ways';
+type SelectionModalKind =
+  | 'bannedKingdom'
+  | 'kingdom'
+  | 'events'
+  | 'landmarks'
+  | 'artifacts'
+  | 'projects'
+  | 'ways'
+  | 'allies';
 type SelectionModalState = {
   kind: SelectionModalKind;
   excludedItems: ({ cardKey: string; } | null)[];
@@ -181,6 +190,18 @@ export class MatchConfigurationComponent implements OnDestroy {
   readonly selectedArtifacts = computed(() => this.sortByCardKey(this.matchConfiguration()?.artifacts ?? []));
   readonly selectedProjects = computed(() => this.sortByCardKey(this.matchConfiguration()?.projects ?? []));
   readonly selectedWays = computed(() => this.sortByCardKey(this.matchConfiguration()?.ways ?? []));
+  // Allies are capped to one preselected card in UI.
+  readonly selectedAllies = computed(() => this.sortByCardKey(this.matchConfiguration()?.allies ?? []).slice(0, 1));
+  // Determines if the currently selected kingdom includes at least one Liaison card.
+  readonly hasSelectedLiaisonKingdom = computed(() =>
+    this.selectedKingdoms().some((card) => card.type.includes('LIAISON'))
+  );
+  // Ally add slot is only interactive when Liaison is selected and no ally is currently preselected.
+  readonly canAddAlly = computed(() => this.hasSelectedLiaisonKingdom() && this.selectedAllies().length < 1);
+  // Shows users why ally selection is locked.
+  readonly allySelectionDisabledReason = computed(() =>
+    this.hasSelectedLiaisonKingdom() ? null : 'Select at least one Liaison kingdom card to add an Ally.'
+  );
 
   // UI lists that include trailing empty slots for add-buttons.
   readonly preSelectedKingdoms = computed(() => this.withKingdomPlaceholders(this.selectedKingdoms()));
@@ -189,6 +210,7 @@ export class MatchConfigurationComponent implements OnDestroy {
   readonly preSelectedArtifacts = computed(() => this.withTrailingEmptySlot(this.selectedArtifacts()));
   readonly preSelectedProjects = computed(() => this.withTrailingEmptySlot(this.selectedProjects()));
   readonly preSelectedWays = computed(() => this.withTrailingEmptySlot(this.selectedWays()));
+  readonly preSelectedAllies = computed(() => this.withTrailingEmptySlot(this.selectedAllies()));
 
   // Banned-card stack height grows with card count for staggered overlap.
   readonly bannedKingdomStackHeight = computed(() => {
@@ -433,6 +455,18 @@ export class MatchConfigurationComponent implements OnDestroy {
           filterBasicCards: false,
         });
         return;
+      case 'allies':
+        if (!this.canAddAlly()) {
+          return;
+        }
+        this.activeSelectionModal.set({
+          kind,
+          excludedItems: this.preSelectedAllies(),
+          catalogKind: 'allies',
+          imageSize: 'full',
+          filterBasicCards: false,
+        });
+        return;
     }
   }
 
@@ -467,6 +501,9 @@ export class MatchConfigurationComponent implements OnDestroy {
         break;
       case 'ways':
         this.onWaySelected(item as WayNoId);
+        break;
+      case 'allies':
+        this.onAllySelected(item as AllyNoId);
         break;
     }
 
@@ -515,6 +552,13 @@ export class MatchConfigurationComponent implements OnDestroy {
     this.emitMatchConfigurationUpdate({ ways: remainingWays });
   }
 
+  // Removes a selected ally from the fixed ally list.
+  deleteAlly(ally: AllyNoId) {
+    if (!this.isGameOwner()) return;
+    const remainingAllies = this.selectedAllies().filter((entry) => entry.cardKey !== ally.cardKey);
+    this.emitMatchConfigurationUpdate({ allies: remainingAllies });
+  }
+
   // Adds one kingdom card selected from the search modal.
   onKingdomSelected(selectedCard: CardNoId) {
     if (!this.isGameOwner()) return;
@@ -555,6 +599,12 @@ export class MatchConfigurationComponent implements OnDestroy {
     if (!this.isGameOwner()) return;
     const selectedWays = [...this.selectedWays(), selectedWay];
     this.emitMatchConfigurationUpdate({ ways: this.sortByCardKey(selectedWays) });
+  }
+
+  // Adds one ally selected from the search modal.
+  onAllySelected(selectedAlly: AllyNoId) {
+    if (!this.isGameOwner() || !this.canAddAlly()) return;
+    this.emitMatchConfigurationUpdate({ allies: [selectedAlly] });
   }
 
   // Adds one banned kingdom card if it is not already banned.

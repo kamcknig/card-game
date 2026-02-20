@@ -285,6 +285,45 @@
           }
         </div>
       </section>
+
+      <!-- ░░░  Allies  ░░░ -->
+      <section class="allies-section">
+        <h2 class="section-title">Allies</h2>
+        @let canAddAllySelection = canAddAlly();
+
+        <div class="allies-list">
+          @for (ally of preSelectedAllies(); track ally?.cardKey ?? $index) {
+            <div
+              class="ally-slot"
+              [ngClass]="{'disabled-add-slot': ally === null && !canAddAllySelection}"
+              [ngStyle]="{
+                'cursor': isOwner && ally === null ? (canAddAllySelection ? 'pointer' : 'not-allowed') : 'default'
+              }"
+              (click)="ally === null && isOwner && canAddAllySelection ? openSelectionModal('allies') : null"
+            >
+              @if (ally !== null && isOwner) {
+                <div (click)="deleteAlly(ally)" class="close-button">X</div>
+              }
+              <div>
+                @if (ally !== null) {
+                  <img
+                    alt="{{ally.cardName}} image"
+                    ngSrc="{{ally.fullImagePath}}"
+                    height="124"
+                    width="280"
+                  />
+                } @else {
+                  <span class="no-ally">?</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+        @if (allySelectionDisabledReason(); as reason) {
+          <p class="selection-helper">{{ reason }}</p>
+        }
+      </section>
       </section>
     </section>
   </section>

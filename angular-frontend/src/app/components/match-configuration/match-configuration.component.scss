@@ -103,7 +103,8 @@ $match-config-single-column-breakpoint: 940px;
 .landmarks-section,
 .artifacts-section,
 .projects-section,
-.ways-section {
+.ways-section,
+.allies-section {
   flex: 0 0 280px;
 }
 
@@ -168,7 +169,8 @@ $match-config-single-column-breakpoint: 940px;
 .landmarks-section .landmarks-list,
 .artifacts-section .artifacts-list,
 .projects-section .projects-list,
-.ways-section .ways-list {
+.ways-section .ways-list,
+.allies-section .allies-list {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -181,7 +183,8 @@ $match-config-single-column-breakpoint: 940px;
 .landmarks-section .landmark-slot,
 .artifacts-section .artifact-slot,
 .projects-section .project-slot,
-.ways-section .way-slot {
+.ways-section .way-slot,
+.allies-section .ally-slot {
   position: relative;
   display: flex;
   justify-content: center;
@@ -323,6 +326,32 @@ $match-config-single-column-breakpoint: 940px;
   .close-button {
     font-size: 10px;
   }
+}
+
+/* Ally slot styling mirrors event slots */
+.ally-slot {
+  border: 2px solid var(--theme-border-strong);
+  width: 280px;
+  height: 124px;
+
+  .no-ally {
+    font-size: 32px;
+  }
+
+  .close-button {
+    font-size: 10px;
+  }
+}
+
+.disabled-add-slot {
+  border-style: dashed;
+  opacity: 0.6;
+}
+
+.selection-helper {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--theme-text-secondary);
 }
 
 .config-dialog {

@@ -172,6 +172,7 @@ export type SetAsideSourceKind =
   | 'landmark'
   | 'project'
   | 'way'
+  | 'ally'
   | 'boon'
   | 'hex'
   | 'state'
