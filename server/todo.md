@@ -18,7 +18,6 @@ this can also be used for pile selection instead of using cards.
   Supply) and other players do not gain Spoils.
 - prosperity has the card that changes curses into a treasure card type, and also gains the effect to gain 1 treasure on
   play. need a way to visually denote this properly. also similar to inheritance in adventures
-- missing card abilities [file](../missing-card-abilities.md)
 - update usages of `tags` to use a hard-coded list. these will be known tags from cards like young witch that adds a
   "bane" card. then you can add a custom tags property to track more custom ones.
 - possible keep the enhanced logging for console logs but switch to a buffered file logger solution later for
@@ -26,13 +25,9 @@ this can also be used for pile selection instead of using cards.
 - Lobby ban identity currently uses `sessionId`; replace with durable authenticated identity and provide a migration path.
 
 # Higher priority
-- need to handle cardlikes that have bottom/top text. when using ways, only
-  the top portion effects are replaced. the bottom portion of the original
-  card still happens
 - logging is not nearly detailed enough
 - safety so that when a game or mtach crashes, the ret of the server doesn't
   crash and can recover
-- need to take a look at the stop move rule and how to implement it.
 - check duration behvavior. the offical rules say this "Additionally, if a Duration card is played extra times by a card
   such as [Throne Room, Scepter, Mastermind, Specialist, Flagship, or Daimyo], that card also stays in play until the
   Duration card is discarded, to track the fact that the Duration card was played extra times." Just make sure cards
@@ -45,8 +40,6 @@ this can also be used for pile selection instead of using cards.
     need to be asked for their input again
 - when "waiting on player input" displays, cards are selectable. i played warchest, and while waiting on someone to name
   cards, it showed highlights on cards. don't know if they were selectable
-- as noted in the gameplay wiki page here https://wiki.dominionstrategy.com/index.php/Gameplay, create game zones as
-  noted. revealed area is a separate zone.
 - some mats have rules that indicate cards are moved to the deck at the end of the game before scoring e.g., native
   village mat. others don't like the tavern mat
 - there are a lot of reactions that happen where a condition and a trigger query the exact same data. one example is
