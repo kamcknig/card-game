@@ -20,6 +20,7 @@ const IMPORTER_PILE_KEY = 'importer';
 const AUGURS_PILE_KEY = 'augurs';
 const CLASHES_PILE_KEY = 'clashes';
 const FORTS_PILE_KEY = 'forts';
+const ODYSSEYS_PILE_KEY = 'odysseys';
 const TOWNSFOLK_PILE_KEY = 'townsfolk';
 const WIZARDS_PILE_KEY = 'wizards';
 const PLATEAU_SHEPHERDS_KEY = 'plateau-shepherds';
@@ -85,6 +86,25 @@ const FORTS_ORDER: CardKey[] = [
   'tent',
   'tent',
   'tent',
+];
+// Canonical Odysseys split-pile order (bottom -> top).
+const ODYSSEYS_ORDER: CardKey[] = [
+  'distant-shore',
+  'distant-shore',
+  'distant-shore',
+  'distant-shore',
+  'sunken-treasure',
+  'sunken-treasure',
+  'sunken-treasure',
+  'sunken-treasure',
+  'voyage',
+  'voyage',
+  'voyage',
+  'voyage',
+  'old-map',
+  'old-map',
+  'old-map',
+  'old-map',
 ];
 // Canonical Townsfolk split-pile order (bottom -> top).
 const TOWNSFOLK_ORDER: CardKey[] = [
@@ -160,6 +180,12 @@ const configurator: ExpansionConfiguratorFactory = () => {
       pileKey: FORTS_PILE_KEY,
       desiredOrder: FORTS_ORDER,
       logLabel: FORTS_PILE_KEY,
+    });
+    // Keep Odysseys split pile in canonical order whenever selected.
+    configureSplitPile(args, {
+      pileKey: ODYSSEYS_PILE_KEY,
+      desiredOrder: ODYSSEYS_ORDER,
+      logLabel: ODYSSEYS_PILE_KEY,
     });
     // Keep Townsfolk split pile in canonical order whenever selected.
     configureSplitPile(args, {

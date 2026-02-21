@@ -210,6 +210,8 @@ export interface GameActionDefinitionMap {
   }, context?: GameActionContext & { bought?: boolean; overpay?: number }) => Promise<void>;
   gainPotion: (args: { count: number }) => Promise<void>;
   gainTreasure: (args: { count: number }, context?: GameActionContext) => Promise<void>;
+  // Spends treasure from the current player's pool (cannot go below zero).
+  spendTreasure: (args: { count: number }, context?: GameActionContext) => Promise<void>;
   gainVictoryToken: (args: { playerId: PlayerId; count: number }, context?: GameActionContext) => Promise<void>;
   // adds a turn to the extra turn queue
   queueExtraTurn: (args: { turn: ExtraTurn }) => Promise<void>;

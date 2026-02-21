@@ -3273,6 +3273,25 @@ export class GameActionController implements GameActionDefinitionMap {
     }
   }
 
+  // Spends treasure from the current player's pool without allowing negatives.
+  async spendTreasure(args: { count: number }, _context?: GameActionContext) {
+    const currentPlayer = getCurrentPlayer(this.match);
+    const requestedAmount = Math.max(0, args.count);
+    const spendAmount = Math.min(requestedAmount, this.match.playerTreasure);
+    this.loggerService.info(`[spendTreasure action] player ${currentPlayer.id} spending ${spendAmount} treasure`);
+
+    if (spendAmount < 1) {
+      this.loggerService.debug('[spendTreasure action] no treasure spent');
+      return;
+    }
+
+    this.match.playerTreasure -= spendAmount;
+    this.match.playerTreasure = Math.max(0, this.match.playerTreasure);
+    this.loggerService.debug(
+      `[spendTreasure action] player ${currentPlayer.id} treasure now ${this.match.playerTreasure}`,
+    );
+  }
+
   // Single, focused implementation of drawCard
   async drawCard(
     args: { playerId: PlayerId; count?: number; suppressReactions?: boolean },
