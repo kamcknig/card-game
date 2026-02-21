@@ -1,10 +1,13 @@
-import { CardId, CardKey, PlayerId } from 'shared/types/index.ts';
+import { CardId, CardKey, CardLocation, PlayerId, TokenInstanceId } from 'shared/types/index.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
+import { baseV2TokenIds } from '@expansions/base-v2/token-ids-base-v2.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
+import { isLocationInPlay } from '../../utils/is-in-play.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 
 const AUGURS_PILE_KEY: CardKey = 'augurs';
+const FORTS_PILE_KEY: CardKey = 'forts';
 
 // Gains the current top card of a supply pile to discard.
 const gainTopSupplyCardToDiscard = async (args: {
@@ -26,6 +29,62 @@ const gainTopSupplyCardToDiscard = async (args: {
     to: { location: 'playerDiscard' },
     logTag: args.logTag,
   });
+};
+
+// Gets the count of how many times this card key has been played this turn.
+const getPlayInstanceForCardKeyThisTurn = (args: {
+  cardKey: CardKey;
+  match: {
+    stats: {
+      turns: unknown[];
+      playedCardsByTurn: Record<number, CardId[] | undefined>;
+    };
+  };
+  cardLibrary: {
+    getCard: (cardId: CardId) => { cardKey: CardKey };
+  };
+}): number => {
+  const currentTurnHistoryIndex = args.match.stats.turns.length - 1;
+  const playedCardIdsThisTurn = args.match.stats.playedCardsByTurn[currentTurnHistoryIndex] ?? [];
+  return playedCardIdsThisTurn
+    .map((playedCardId) => args.cardLibrary.getCard(playedCardId))
+    .filter((playedCard) => playedCard.cardKey === args.cardKey)
+    .length;
+};
+
+// Returns true when the card currently occupies an in-play zone.
+const isCardStillInPlay = (args: {
+  cardId: CardId;
+  cardSourceController: {
+    findCardSource: (cardId: CardId) => { sourceKey: CardLocation };
+  };
+}): boolean => {
+  try {
+    const sourceKey = args.cardSourceController.findCardSource(args.cardId).sourceKey;
+    return isLocationInPlay(sourceKey);
+  } catch {
+    return false;
+  }
+};
+
+// Finds generic coin token instances currently on a specific card.
+const getCoinTokenInstanceIdsOnCard = (args: {
+  match: {
+    tokens?: Record<string, {
+      tokenId: string;
+      location: { type: string; cardId?: CardId };
+    }>;
+  };
+  cardId: CardId;
+}): TokenInstanceId[] => {
+  return Object.entries(args.match.tokens ?? {})
+    .filter(([_tokenInstanceId, token]) =>
+      token.tokenId === baseV2TokenIds.coin &&
+      token.location.type === 'card' &&
+      token.location.cardId === args.cardId
+    )
+    .map(([tokenInstanceId]) => tokenInstanceId)
+    .sort((left, right) => left.localeCompare(right));
 };
 
 const cardEffects: CardExpansionModule = {
@@ -274,6 +333,381 @@ const cardEffects: CardExpansionModule = {
         cardId: bottomDeckCardId,
         toPlayerId: playerId,
         to: { location: 'playerDeck', index: 0 },
+      });
+    },
+  },
+  'tent': {
+    registerLifeCycleMethods: () => ({
+      onDiscarded: async (cardEffectArgs, eventArgs) => {
+        const loggerService = cardEffectArgs.loggerService;
+        if (!isLocationInPlay(eventArgs.previousLocation?.location)) {
+          loggerService.debug('[tent onDiscarded effect] not discarded from play, skipping top-deck option');
+          return;
+        }
+
+        const prompt = await cardEffectArgs.actionService.run('userPrompt', {
+          playerId: eventArgs.playerId,
+          prompt: 'Put this onto your deck?',
+          actionButtons: [
+            { label: 'NO', action: 1 },
+            { label: 'YES', action: 2 },
+          ],
+        }) as { action?: number } | null;
+
+        if (prompt?.action !== 2) {
+          loggerService.debug('[tent onDiscarded effect] player declined to top-deck Tent');
+          return;
+        }
+
+        loggerService.debug('[tent onDiscarded effect] moving Tent from discard to deck');
+        await cardEffectArgs.actionService.run('moveCard', {
+          cardId: eventArgs.cardId,
+          toPlayerId: eventArgs.playerId,
+          to: { location: 'playerDeck' },
+        });
+      },
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
+
+      loggerService.debug('[tent effect] gaining 2 treasure');
+      await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
+
+      // Tent optionally rotates the Forts split pile.
+      const rotatePrompt = await cardEffectArgs.actionService.run('userPrompt', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Rotate the Forts?',
+        actionButtons: [
+          { label: 'NO', action: 1 },
+          { label: 'ROTATE', action: 2 },
+        ],
+      }) as { action?: number } | null;
+
+      if (rotatePrompt?.action !== 2) {
+        loggerService.debug('[tent effect] player declined to rotate Forts');
+        return;
+      }
+
+      loggerService.debug('[tent effect] rotating Forts split pile');
+      await cardEffectArgs.actionService.run('rotateSplitPile', {
+        pileKey: FORTS_PILE_KEY,
+      });
+    },
+  },
+  'garrison': {
+    registerLifeCycleMethods: () => ({
+      onLeavePlay: async (cardEffectArgs, eventArgs) => {
+        const loggerService = cardEffectArgs.loggerService;
+        const garrisonTokenIds = getCoinTokenInstanceIdsOnCard({
+          match: cardEffectArgs.match,
+          cardId: eventArgs.cardId,
+        });
+
+        if (garrisonTokenIds.length < 1) {
+          loggerService.debug('[garrison onLeavePlay effect] no coin tokens on Garrison to remove');
+          return;
+        }
+
+        loggerService.debug(`[garrison onLeavePlay effect] removing ${garrisonTokenIds.length} coin token(s)`);
+        for (const tokenInstanceId of garrisonTokenIds) {
+          await cardEffectArgs.actionService.run('removeToken', { tokenInstanceId });
+        }
+      },
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
+      const playerId = cardEffectArgs.playerId;
+      const garrisonCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const playInstance = getPlayInstanceForCardKeyThisTurn({
+        cardKey: garrisonCard.cardKey,
+        match: cardEffectArgs.match,
+        cardLibrary: cardEffectArgs.cardLibrary,
+      });
+      let durationRegistered = false;
+      let durationTriggerIds: string[] = [];
+
+      loggerService.debug('[garrison effect] gaining 2 treasure');
+      await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
+
+      // Track gains for this specific Garrison play instance.
+      const cardGainedTriggerId = `garrison:${garrisonCard.id}:cardGained:${playInstance}`;
+      cardEffectArgs.reactionManager.registerReactionTemplate({
+        id: cardGainedTriggerId,
+        listeningFor: 'cardGained',
+        playerId,
+        once: false,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: (conditionArgs) => {
+          if (conditionArgs.trigger.args.playerId !== playerId) {
+            return false;
+          }
+
+          // Limit tracking to this turn only and only while this card is in play.
+          const gainedCardStats = conditionArgs.match.stats.cardsGained[conditionArgs.trigger.args.cardId];
+          const currentTurnHistoryIndex = conditionArgs.match.stats.turns.length - 1;
+          if (gainedCardStats?.turnHistoryIndex !== currentTurnHistoryIndex) {
+            return false;
+          }
+
+          return isCardStillInPlay({
+            cardId: garrisonCard.id,
+            cardSourceController: conditionArgs.cardSourceController,
+          });
+        },
+        triggeredEffectFn: async () => {
+          await cardEffectArgs.actionService.run('placeToken', {
+            tokenId: baseV2TokenIds.coin,
+            ownerId: playerId,
+            location: { type: 'card', cardId: garrisonCard.id },
+            sourceCardId: garrisonCard.id,
+          }, {
+            loggingContext: { source: garrisonCard.id },
+          });
+          const garrisonTokenCount = getCoinTokenInstanceIdsOnCard({
+            match: cardEffectArgs.match,
+            cardId: garrisonCard.id,
+          }).length;
+
+          loggerService.debug(
+            `[garrison cardGained effect] garrison ${garrisonCard.id} now has ${garrisonTokenCount} token(s)`,
+          );
+          if (durationRegistered) {
+            return;
+          }
+
+          durationRegistered = true;
+          // Register duration handling only when the first token is gained.
+          durationTriggerIds = cardEffectArgs.registerDurationEffect(garrisonCard, {
+            id: `garrison:${garrisonCard.id}:startTurn:${playInstance}`,
+            listeningFor: 'startTurn',
+            playerId,
+            once: true,
+            compulsory: true,
+            system: true,
+            allowMultipleInstances: true,
+            condition: (conditionArgs) => conditionArgs.trigger.args.playerId === playerId,
+            triggeredEffectFn: async (triggeredArgs) => {
+              const tokenInstanceIds = getCoinTokenInstanceIdsOnCard({
+                match: triggeredArgs.match,
+                cardId: garrisonCard.id,
+              });
+              const drawCount = tokenInstanceIds.length;
+
+              loggerService.debug(
+                `[garrison startTurn effect] removing ${drawCount} token(s) for +${drawCount} Card(s)`,
+              );
+              await triggeredArgs.actionService.run('moveCard', {
+                cardId: garrisonCard.id,
+                to: { location: 'playArea' },
+              });
+
+              for (const tokenInstanceId of tokenInstanceIds) {
+                await triggeredArgs.actionService.run('removeToken', { tokenInstanceId }, {
+                  loggingContext: { source: garrisonCard.id },
+                });
+              }
+
+              if (drawCount < 1) {
+                return;
+              }
+
+              await triggeredArgs.actionService.run('drawCard', {
+                playerId,
+                count: drawCount,
+              });
+            },
+          });
+          loggerService.debug('[garrison cardGained effect] registered deferred duration effect');
+        },
+      });
+
+      // Always remove this-turn gain tracking at end turn.
+      const endTurnTriggerId = cardEffectArgs.reactionManager.registerReactionTemplate({
+        id: `garrison:${garrisonCard.id}:endTurn:${playInstance}`,
+        listeningFor: 'endTurn',
+        playerId,
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: ({ trigger }) => trigger.args.playerId === playerId,
+        triggeredEffectFn: async (triggeredArgs) => {
+          triggeredArgs.reactionManager.unregisterTrigger(cardGainedTriggerId);
+          const garrisonTokenCount = getCoinTokenInstanceIdsOnCard({
+            match: triggeredArgs.match,
+            cardId: garrisonCard.id,
+          }).length;
+
+          if (garrisonTokenCount > 0) {
+            loggerService.debug(
+              `[garrison endTurn effect] preserving duration triggers for ${garrisonTokenCount} token(s)`,
+            );
+            return;
+          }
+
+          // No tokens means there should be no deferred duration effect to keep.
+          loggerService.debug('[garrison endTurn effect] no coin tokens on Garrison, clearing deferred duration triggers');
+          for (const triggerId of durationTriggerIds) {
+            triggeredArgs.reactionManager.unregisterTrigger(triggerId);
+          }
+        },
+      });
+
+      // Tie Garrison's always-on this-turn tracking triggers to leave-play cleanup.
+      cardEffectArgs.reactionManager.registerDurationTriggers(garrisonCard.id, [
+        cardGainedTriggerId,
+        endTurnTriggerId,
+      ]);
+    },
+  },
+  'hill-fort': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
+      const playerId = cardEffectArgs.playerId;
+
+      // Resolve the gain first, then resolve the choice.
+      const gainableCards = cardEffectArgs.findCardService.findCards([
+        { location: ['basicSupply', 'kingdomSupply'] },
+        { playerId, kind: 'upTo', amount: { treasure: 4 } },
+      ]);
+      let gainedCardId: CardId | undefined;
+      let gainedCardLocation: { sourceKey: CardLocation; playerId?: PlayerId } | undefined;
+
+      if (gainableCards.length > 0) {
+        const selectedGainId = await cardEffectArgs.actionService.run('selectSingleCard', {
+          playerId,
+          prompt: 'Gain a card costing up to $4',
+          restrict: gainableCards.map((card) => card.id),
+          count: 1,
+        }) as CardId | null;
+
+        if (selectedGainId) {
+          loggerService.debug(`[hill-fort effect] gaining ${cardEffectArgs.cardLibrary.getCard(selectedGainId)}`);
+          gainedCardId = selectedGainId;
+          await cardEffectArgs.actionService.run('gainCard', {
+            playerId,
+            cardId: selectedGainId,
+            to: { location: 'playerDiscard' },
+          });
+
+          // Record where the card ended up after all gain reactions resolve.
+          try {
+            gainedCardLocation = cardEffectArgs.cardSourceController.findCardSource(selectedGainId);
+          } catch {
+            gainedCardLocation = undefined;
+          }
+        } else {
+          loggerService.warn('[hill-fort effect] no card selected to gain');
+        }
+      } else {
+        loggerService.debug('[hill-fort effect] no gainable cards in supply costing up to 4');
+      }
+
+      const choicePrompt = await cardEffectArgs.actionService.run('userPrompt', {
+        playerId,
+        prompt: 'Choose one',
+        actionButtons: [
+          { label: 'PUT IT INTO HAND', action: 1 },
+          { label: '+1 CARD AND +1 ACTION', action: 2 },
+        ],
+      }) as { action?: number } | null;
+
+      if (choicePrompt?.action === 1) {
+        if (!gainedCardId) {
+          loggerService.debug('[hill-fort effect] no gained card available to move to hand');
+          return;
+        }
+        if (!gainedCardLocation) {
+          loggerService.debug('[hill-fort effect] gained card location is unknown, cannot move to hand');
+          return;
+        }
+
+        let gainedCardSource: { sourceKey: CardLocation; playerId?: PlayerId };
+        try {
+          gainedCardSource = cardEffectArgs.cardSourceController.findCardSource(gainedCardId);
+        } catch {
+          loggerService.debug('[hill-fort effect] gained card no longer found in any source');
+          return;
+        }
+
+        if (
+          gainedCardSource.sourceKey !== gainedCardLocation.sourceKey ||
+          gainedCardSource.playerId !== gainedCardLocation.playerId
+        ) {
+          loggerService.debug('[hill-fort effect] gained card is no longer where it was gained to, cannot move to hand');
+          return;
+        }
+
+        loggerService.debug('[hill-fort effect] moving gained card to hand');
+        await cardEffectArgs.actionService.run('moveCard', {
+          cardId: gainedCardId,
+          toPlayerId: playerId,
+          to: { location: 'playerHand' },
+        });
+        return;
+      }
+
+      if (choicePrompt?.action === 2) {
+        loggerService.debug('[hill-fort effect] resolving +1 Card and +1 Action branch');
+        await cardEffectArgs.actionService.run('drawCard', {
+          playerId,
+          count: 1,
+        });
+        await cardEffectArgs.actionService.run('gainAction', { count: 1 });
+        return;
+      }
+
+      loggerService.warn('[hill-fort effect] no valid branch selected');
+    },
+  },
+  'stronghold': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
+      const playerId = cardEffectArgs.playerId;
+      const strongholdCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const playInstance = getPlayInstanceForCardKeyThisTurn({
+        cardKey: strongholdCard.cardKey,
+        match: cardEffectArgs.match,
+        cardLibrary: cardEffectArgs.cardLibrary,
+      });
+
+      const choicePrompt = await cardEffectArgs.actionService.run('userPrompt', {
+        playerId,
+        prompt: 'Choose one',
+        actionButtons: [
+          { label: '+$3', action: 1 },
+          { label: 'NEXT TURN +3 CARDS', action: 2 },
+        ],
+      }) as { action?: number } | null;
+
+      if (choicePrompt?.action === 1) {
+        loggerService.debug('[stronghold effect] resolving +3 treasure branch');
+        await cardEffectArgs.actionService.run('gainTreasure', { count: 3 });
+        return;
+      }
+
+      if (choicePrompt?.action !== 2) {
+        loggerService.warn('[stronghold effect] no valid branch selected');
+        return;
+      }
+
+      loggerService.debug('[stronghold effect] registering next-turn +3 cards duration branch');
+      cardEffectArgs.registerDurationEffect(strongholdCard, {
+        id: `stronghold:${strongholdCard.id}:startTurn:${playInstance}`,
+        playerId,
+        listeningFor: 'startTurn',
+        once: true,
+        compulsory: true,
+        system: true,
+        allowMultipleInstances: true,
+        condition: ({ trigger }) => trigger.args.playerId === playerId,
+        triggeredEffectFn: async (triggeredArgs) => {
+          await triggeredArgs.actionService.run('moveCard', {
+            cardId: strongholdCard.id,
+            to: { location: 'playArea' },
+          });
+          await triggeredArgs.actionService.run('drawCard', { playerId, count: 3 });
+        },
       });
     },
   },

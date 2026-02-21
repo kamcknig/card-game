@@ -18,6 +18,8 @@ export const getTokenShortLabel = (tokenId: TokenId, tokenDefinition?: TokenDefi
     'adventures:minus-card': '-1C',
     // Inheritance estate token
     'adventures:estate': 'E',
+    // Generic coin counter token.
+    'base-v2:coin': '$',
   };
   return labelMap[tokenId] ?? tokenDefinition?.name ?? 'T';
 };

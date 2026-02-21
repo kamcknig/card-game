@@ -121,5 +121,67 @@
         "abilityText": "Worth 1VP per differently named Victory card you have.\nWhen you gain this, gain a Gold per empty Supply pile."
       }
     ]
+  },
+  "forts": {
+    "pile": {
+      "randomizer": "forts",
+      "cost": {
+        "treasure": 3
+      },
+      "type": [
+        "ACTION",
+        "FORT"
+      ]
+    },
+    "cards": [
+      {
+        "cardKey": "tent",
+        "cost": {
+          "treasure": 3
+        },
+        "type": [
+          "ACTION",
+          "FORT"
+        ],
+        "abilityText": "+$2\nYou may rotate the Forts.\nWhen you discard this from play, you may put it onto your deck."
+      },
+      {
+        "cardKey": "garrison",
+        "cost": {
+          "treasure": 4
+        },
+        "type": [
+          "ACTION",
+          "DURATION",
+          "FORT"
+        ],
+        "abilityText": "+$2\nThis turn, when you gain a card, add a token here. At the start of your next turn, remove them for +1 Card each."
+      },
+      {
+        "cardKey": "hill-fort",
+        "cost": {
+          "treasure": 5
+        },
+        "type": [
+          "ACTION",
+          "FORT"
+        ],
+        "abilityText": "Gain a card costing up to $4. Choose one: Put it into your hand; or +1 Card and +1 Action."
+      },
+      {
+        "cardKey": "stronghold",
+        "cost": {
+          "treasure": 6
+        },
+        "type": [
+          "ACTION",
+          "DURATION",
+          "VICTORY",
+          "FORT"
+        ],
+        "abilityText": "Choose one: +$3; or at the start of your next turn, +3 Cards.",
+        "victoryPoints": 2
+      }
+    ]
   }
 }
