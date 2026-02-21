@@ -6,6 +6,7 @@ import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { renaissanceArtifactKeys } from './artifact-keys-renaissance.ts';
+import { resolveChooseAbilities } from '../../utils/resolve-choose-abilities.ts';
 
 // Renaissance card effects module (artifacts handled separately).
 const expansion: CardExpansionModule = {
@@ -1534,84 +1535,90 @@ const expansion: CardExpansionModule = {
       loggerService.debug('[treasurer effect] gaining 3 treasure');
       await cardEffectArgs.actionService.run('gainTreasure', { count: 3 });
 
-      const promptResult = await cardEffectArgs.actionService.run('userPrompt', {
-        playerId: cardEffectArgs.playerId,
+      await resolveChooseAbilities({
+        context: cardEffectArgs,
+        logTag: 'treasurer effect',
         prompt: 'Choose one',
-        actionButtons: [
-          { label: 'TRASH TREASURE FROM HAND', action: 1 },
-          { label: 'GAIN TREASURE FROM TRASH', action: 2 },
-          { label: 'TAKE THE KEY', action: 3 },
+        baseChoiceCount: 1,
+        options: [
+          {
+            label: 'TRASH TREASURE FROM HAND',
+            action: 1,
+            resolve: async () => {
+              // Option 1: trash a Treasure from hand.
+              const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+              const treasureIdsInHand = hand.filter((cardId) =>
+                cardEffectArgs.cardLibrary.getCard(cardId).type.includes('TREASURE')
+              );
+              if (!treasureIdsInHand.length) {
+                loggerService.debug('[treasurer effect] no Treasure in hand to trash');
+                return;
+              }
+
+              const selectedTreasureId = await cardEffectArgs.actionService.run('selectSingleCard', {
+                playerId: cardEffectArgs.playerId,
+                prompt: 'Trash a Treasure from your hand',
+                restrict: treasureIdsInHand,
+                count: 1,
+              }) as CardId | null;
+              if (!selectedTreasureId) {
+                loggerService.warn('[treasurer effect] no Treasure selected to trash');
+                return;
+              }
+
+              const selectedTreasure = cardEffectArgs.cardLibrary.getCard(selectedTreasureId);
+              loggerService.debug(`[treasurer effect] trashing ${selectedTreasure}`);
+              await cardEffectArgs.actionService.run('trashCard', {
+                playerId: cardEffectArgs.playerId,
+                cardId: selectedTreasureId,
+              });
+            },
+          },
+          {
+            label: 'GAIN TREASURE FROM TRASH',
+            action: 2,
+            resolve: async () => {
+              // Option 2: gain a Treasure from trash to hand.
+              const treasureIdsInTrash = cardEffectArgs.cardSourceController.getSource('trash')
+                .filter((cardId) => cardEffectArgs.cardLibrary.getCard(cardId).type.includes('TREASURE'));
+              if (!treasureIdsInTrash.length) {
+                loggerService.debug('[treasurer effect] no Treasure in trash to gain');
+                return;
+              }
+
+              const selectedTreasureId = await cardEffectArgs.actionService.run('selectSingleCard', {
+                playerId: cardEffectArgs.playerId,
+                prompt: 'Gain a Treasure from the trash to your hand',
+                restrict: treasureIdsInTrash,
+                count: 1,
+              }) as CardId | null;
+              if (!selectedTreasureId) {
+                loggerService.warn('[treasurer effect] no Treasure selected to gain');
+                return;
+              }
+
+              const selectedTreasure = cardEffectArgs.cardLibrary.getCard(selectedTreasureId);
+              loggerService.debug(`[treasurer effect] gaining ${selectedTreasure} from trash to hand`);
+              await cardEffectArgs.actionService.run('gainCard', {
+                playerId: cardEffectArgs.playerId,
+                cardId: selectedTreasureId,
+                to: { location: 'playerHand' },
+              });
+            },
+          },
+          {
+            label: 'TAKE THE KEY',
+            action: 3,
+            resolve: async () => {
+              // Option 3: take the Key artifact.
+              loggerService.debug('[treasurer effect] taking the Key artifact');
+              await cardEffectArgs.actionService.run('gainArtifact', {
+                playerId: cardEffectArgs.playerId,
+                artifactKey: renaissanceArtifactKeys.key,
+              });
+            },
+          },
         ],
-      }) as { action?: number } | null;
-
-      const selectedAction = promptResult?.action ?? 1;
-
-      if (selectedAction === 1) {
-        // Option 1: trash a Treasure from hand.
-        const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
-        const treasureIdsInHand = hand.filter((cardId) =>
-          cardEffectArgs.cardLibrary.getCard(cardId).type.includes('TREASURE')
-        );
-        if (!treasureIdsInHand.length) {
-          loggerService.debug('[treasurer effect] no Treasure in hand to trash');
-          return;
-        }
-
-        const selectedTreasureId = await cardEffectArgs.actionService.run('selectSingleCard', {
-          playerId: cardEffectArgs.playerId,
-          prompt: 'Trash a Treasure from your hand',
-          restrict: treasureIdsInHand,
-          count: 1,
-        }) as CardId | null;
-        if (!selectedTreasureId) {
-          loggerService.warn('[treasurer effect] no Treasure selected to trash');
-          return;
-        }
-
-        const selectedTreasure = cardEffectArgs.cardLibrary.getCard(selectedTreasureId);
-        loggerService.debug(`[treasurer effect] trashing ${selectedTreasure}`);
-        await cardEffectArgs.actionService.run('trashCard', {
-          playerId: cardEffectArgs.playerId,
-          cardId: selectedTreasureId,
-        });
-        return;
-      }
-
-      if (selectedAction === 2) {
-        // Option 2: gain a Treasure from trash to hand.
-        const treasureIdsInTrash = cardEffectArgs.cardSourceController.getSource('trash')
-          .filter((cardId) => cardEffectArgs.cardLibrary.getCard(cardId).type.includes('TREASURE'));
-        if (!treasureIdsInTrash.length) {
-          loggerService.debug('[treasurer effect] no Treasure in trash to gain');
-          return;
-        }
-
-        const selectedTreasureId = await cardEffectArgs.actionService.run('selectSingleCard', {
-          playerId: cardEffectArgs.playerId,
-          prompt: 'Gain a Treasure from the trash to your hand',
-          restrict: treasureIdsInTrash,
-          count: 1,
-        }) as CardId | null;
-        if (!selectedTreasureId) {
-          loggerService.warn('[treasurer effect] no Treasure selected to gain');
-          return;
-        }
-
-        const selectedTreasure = cardEffectArgs.cardLibrary.getCard(selectedTreasureId);
-        loggerService.debug(`[treasurer effect] gaining ${selectedTreasure} from trash to hand`);
-        await cardEffectArgs.actionService.run('gainCard', {
-          playerId: cardEffectArgs.playerId,
-          cardId: selectedTreasureId,
-          to: { location: 'playerHand' },
-        });
-        return;
-      }
-
-      // Option 3: take the Key artifact.
-      loggerService.debug('[treasurer effect] taking the Key artifact');
-      await cardEffectArgs.actionService.run('gainArtifact', {
-        playerId: cardEffectArgs.playerId,
-        artifactKey: renaissanceArtifactKeys.key,
       });
     },
   },

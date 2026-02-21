@@ -8,6 +8,7 @@ const IMPORTER_PILE_KEY = 'importer';
 const AUGURS_PILE_KEY = 'augurs';
 const CLASHES_PILE_KEY = 'clashes';
 const FORTS_PILE_KEY = 'forts';
+const TOWNSFOLK_PILE_KEY = 'townsfolk';
 // Canonical Augurs split-pile order (bottom -> top).
 const AUGURS_ORDER: CardKey[] = [
   'sibyl',
@@ -65,6 +66,25 @@ const FORTS_ORDER: CardKey[] = [
   'tent',
   'tent',
 ];
+// Canonical Townsfolk split-pile order (bottom -> top).
+const TOWNSFOLK_ORDER: CardKey[] = [
+  'elder',
+  'elder',
+  'elder',
+  'elder',
+  'miller',
+  'miller',
+  'miller',
+  'miller',
+  'blacksmith',
+  'blacksmith',
+  'blacksmith',
+  'blacksmith',
+  'town-crier',
+  'town-crier',
+  'town-crier',
+  'town-crier',
+];
 
 // Returns true when at least one selected kingdom pile contains a Liaison card.
 const hasLiaisonInKingdom = (config: ComputedMatchConfiguration): boolean => {
@@ -90,6 +110,12 @@ const configurator: ExpansionConfiguratorFactory = () => {
       pileKey: FORTS_PILE_KEY,
       desiredOrder: FORTS_ORDER,
       logLabel: FORTS_PILE_KEY,
+    });
+    // Keep Townsfolk split pile in canonical order whenever selected.
+    configureSplitPile(args, {
+      pileKey: TOWNSFOLK_PILE_KEY,
+      desiredOrder: TOWNSFOLK_ORDER,
+      logLabel: TOWNSFOLK_PILE_KEY,
     });
 
     const hasLiaison = hasLiaisonInKingdom(args.config);

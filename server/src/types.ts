@@ -407,6 +407,8 @@ export type ReactionContext = {
   immunityByPlayerId?: Partial<Record<PlayerId, true>>;
   // Captures the trigger scope that initialized the reaction context.
   immunityScope?: string;
+  // Stores per-card choose-list modifiers for one play resolution context.
+  chooseAbilityModifiersByCardId?: Partial<Record<CardId, { additionalChoices: number; sourceCardId?: CardId }>>;
 };
 
 export type CardEffectFn = (context: CardEffectFunctionContext) => Promise<void>;

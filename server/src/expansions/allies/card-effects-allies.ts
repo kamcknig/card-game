@@ -1,13 +1,15 @@
 import { CardId, CardKey, CardLocation, PlayerId, TokenInstanceId } from 'shared/types/index.ts';
-import { CardExpansionModule } from '@server-types/index.ts';
+import { CardEffectFunctionContext, CardExpansionModule } from '@server-types/index.ts';
 import { baseV2TokenIds } from '@expansions/base-v2/token-ids-base-v2.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
+import { resolveChooseAbilities } from '../../utils/resolve-choose-abilities.ts';
 
 const AUGURS_PILE_KEY: CardKey = 'augurs';
 const FORTS_PILE_KEY: CardKey = 'forts';
+const TOWNSFOLK_PILE_KEY: CardKey = 'townsfolk';
 
 // Gains the current top card of a supply pile to discard.
 const gainTopSupplyCardToDiscard = async (args: {
@@ -85,6 +87,38 @@ const getCoinTokenInstanceIdsOnCard = (args: {
     )
     .map(([tokenInstanceId]) => tokenInstanceId)
     .sort((left, right) => left.localeCompare(right));
+};
+
+// Registers a one-shot cardPlayed reaction that grants one Elder choice bonus to a specific card play.
+const registerElderChoiceBonusForCardPlay = (args: {
+  cardEffectArgs: CardEffectFunctionContext;
+  sourceCardId: CardId;
+  playerId: PlayerId;
+  targetCardId: CardId;
+  playInstance: number;
+}): string => {
+  return args.cardEffectArgs.reactionManager.registerReactionTemplate({
+    id: `elder:${args.sourceCardId}:cardPlayed:${args.targetCardId}:${args.playInstance}`,
+    listeningFor: 'cardPlayed',
+    playerId: args.playerId,
+    once: true,
+    compulsory: true,
+    allowMultipleInstances: true,
+    condition: ({ trigger }) => trigger.args.playerId === args.playerId && trigger.args.cardId === args.targetCardId,
+    triggeredEffectFn: async (triggeredArgs) => {
+      triggeredArgs.reactionContext ??= {};
+      triggeredArgs.reactionContext.chooseAbilityModifiersByCardId ??= {};
+      const existingBonus =
+        triggeredArgs.reactionContext.chooseAbilityModifiersByCardId[args.targetCardId]?.additionalChoices ?? 0;
+      triggeredArgs.reactionContext.chooseAbilityModifiersByCardId[args.targetCardId] = {
+        additionalChoices: existingBonus + 1,
+        sourceCardId: args.sourceCardId,
+      };
+      triggeredArgs.loggerService.debug(
+        `[elder effect] applied +1 extra choice bonus to card ${args.targetCardId} (total bonus: ${existingBonus + 1})`,
+      );
+    },
+  });
 };
 
 const cardEffects: CardExpansionModule = {
@@ -333,6 +367,221 @@ const cardEffects: CardExpansionModule = {
         cardId: bottomDeckCardId,
         toPlayerId: playerId,
         to: { location: 'playerDeck', index: 0 },
+      });
+    },
+  },
+  'town-crier': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
+      const playerId = cardEffectArgs.playerId;
+
+      await resolveChooseAbilities({
+        context: cardEffectArgs,
+        logTag: 'town-crier effect',
+        prompt: 'Choose one',
+        baseChoiceCount: 1,
+        options: [
+          {
+            action: 1,
+            label: '+$2',
+            resolve: async () => {
+              await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
+            },
+          },
+          {
+            action: 2,
+            label: 'GAIN A SILVER',
+            resolve: async () => {
+              await gainTopSupplyCardToDiscard({
+                playerId,
+                pileKey: 'silver',
+                logTag: 'town-crier gain silver',
+                supplyGainService: cardEffectArgs.supplyGainService,
+              });
+            },
+          },
+          {
+            action: 3,
+            label: '+1 CARD AND +1 ACTION',
+            resolve: async () => {
+              await cardEffectArgs.actionService.run('drawCard', { playerId, count: 1 });
+              await cardEffectArgs.actionService.run('gainAction', { count: 1 });
+            },
+          },
+        ],
+      });
+
+      // Town Crier rotates the Townsfolk split pile independently of the chosen branch.
+      const rotatePrompt = await cardEffectArgs.actionService.run('userPrompt', {
+        playerId,
+        prompt: 'Rotate the Townsfolk?',
+        actionButtons: [
+          { label: 'NO', action: 1 },
+          { label: 'ROTATE', action: 2 },
+        ],
+      }) as { action?: number } | null;
+      if (rotatePrompt?.action !== 2) {
+        loggerService.debug('[town-crier effect] player declined to rotate Townsfolk');
+        return;
+      }
+
+      loggerService.debug('[town-crier effect] rotating Townsfolk split pile');
+      await cardEffectArgs.actionService.run('rotateSplitPile', {
+        pileKey: TOWNSFOLK_PILE_KEY,
+      });
+    },
+  },
+  'blacksmith': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const playerId = cardEffectArgs.playerId;
+
+      await resolveChooseAbilities({
+        context: cardEffectArgs,
+        logTag: 'blacksmith effect',
+        prompt: 'Choose one',
+        baseChoiceCount: 1,
+        options: [
+          {
+            action: 1,
+            label: 'DRAW UNTIL 6 CARDS',
+            resolve: async () => {
+              while (cardEffectArgs.cardSourceController.getSource('playerHand', playerId).length < 6) {
+                const drawnCardId = await cardEffectArgs.actionService.run('drawCard', { playerId, count: 1 });
+                if (!drawnCardId) {
+                  break;
+                }
+              }
+            },
+          },
+          {
+            action: 2,
+            label: '+2 CARDS',
+            resolve: async () => {
+              await cardEffectArgs.actionService.run('drawCard', { playerId, count: 2 });
+            },
+          },
+          {
+            action: 3,
+            label: '+1 CARD AND +1 ACTION',
+            resolve: async () => {
+              await cardEffectArgs.actionService.run('drawCard', { playerId, count: 1 });
+              await cardEffectArgs.actionService.run('gainAction', { count: 1 });
+            },
+          },
+        ],
+      });
+    },
+  },
+  'miller': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
+      const playerId = cardEffectArgs.playerId;
+
+      loggerService.debug('[miller effect] gaining 1 action');
+      await cardEffectArgs.actionService.run('gainAction', { count: 1 });
+
+      // Miller looks at up to the top four cards, with a shuffle fallback when needed.
+      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', playerId);
+      const discard = cardEffectArgs.cardSourceController.getSource('playerDiscard', playerId);
+      if (deck.length < 4 && discard.length > 0) {
+        loggerService.debug('[miller effect] not enough cards in deck, shuffling discard');
+        await cardEffectArgs.actionService.run('shuffleDeck', { playerId });
+      }
+
+      const cardsToLookAt = cardEffectArgs.cardSourceController.getSource('playerDeck', playerId).slice(-4);
+      if (cardsToLookAt.length < 1) {
+        loggerService.debug('[miller effect] no cards available to look at');
+        return;
+      }
+
+      // Miller only looks at the cards; they are not revealed.
+
+      const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
+        playerId,
+        prompt: 'Put one of the looked-at cards into your hand',
+        restrict: cardsToLookAt,
+        count: 1,
+      }) ?? cardsToLookAt[0];
+
+      loggerService.debug(`[miller effect] moving selected card ${selectedCardId} to hand`);
+      await cardEffectArgs.actionService.run('moveCard', {
+        cardId: selectedCardId,
+        toPlayerId: playerId,
+        to: { location: 'playerHand' },
+      });
+
+      const cardsToDiscard = cardsToLookAt.filter((cardId) => cardId !== selectedCardId);
+      loggerService.debug(`[miller effect] discarding ${cardsToDiscard.length} non-selected card(s)`);
+      for (const cardId of cardsToDiscard) {
+        await cardEffectArgs.actionService.run('discardCard', {
+          playerId,
+          cardId,
+        });
+      }
+    },
+  },
+  'elder': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
+      const playerId = cardEffectArgs.playerId;
+      const elderCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const elderPlayInstance = getPlayInstanceForCardKeyThisTurn({
+        cardKey: elderCard.cardKey,
+        match: cardEffectArgs.match,
+        cardLibrary: cardEffectArgs.cardLibrary,
+      });
+
+      loggerService.debug('[elder effect] gaining 2 treasure');
+      await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
+
+      const actionCardsInHand = cardEffectArgs.cardSourceController.getSource('playerHand', playerId)
+        .filter((cardId) => cardEffectArgs.cardLibrary.getCard(cardId).type.includes('ACTION'));
+      if (actionCardsInHand.length < 1) {
+        loggerService.debug('[elder effect] no Action cards in hand to play');
+        return;
+      }
+
+      const selectedActionCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
+        playerId,
+        prompt: 'You may play an Action card from your hand',
+        restrict: actionCardsInHand,
+        count: 1,
+        optional: true,
+      });
+      if (!selectedActionCardId) {
+        loggerService.debug('[elder effect] player declined to play an Action card');
+        return;
+      }
+
+      loggerService.debug(
+        `[elder effect] preparing +1 extra choose-option bonus for played card ${selectedActionCardId}`,
+      );
+      const choiceBonusTriggerId = registerElderChoiceBonusForCardPlay({
+        cardEffectArgs,
+        sourceCardId: elderCard.id,
+        playerId,
+        targetCardId: selectedActionCardId,
+        playInstance: elderPlayInstance,
+      });
+
+      // Ensure any unused Elder bonus trigger cannot leak beyond this turn.
+      cardEffectArgs.reactionManager.registerReactionTemplate({
+        id: `elder:${elderCard.id}:endTurnCleanup:${selectedActionCardId}:${elderPlayInstance}`,
+        listeningFor: 'endTurn',
+        playerId,
+        once: true,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: ({ trigger }) => trigger.args.playerId === playerId,
+        triggeredEffectFn: async (triggeredArgs) => {
+          triggeredArgs.reactionManager.unregisterTrigger(choiceBonusTriggerId);
+        },
+      });
+
+      await cardEffectArgs.actionService.run('playCard', {
+        playerId,
+        cardId: selectedActionCardId,
+        overrides: { actionCost: 0 },
       });
     },
   },
@@ -603,61 +852,65 @@ const cardEffects: CardExpansionModule = {
         loggerService.debug('[hill-fort effect] no gainable cards in supply costing up to 4');
       }
 
-      const choicePrompt = await cardEffectArgs.actionService.run('userPrompt', {
-        playerId,
+      await resolveChooseAbilities({
+        context: cardEffectArgs,
+        logTag: 'hill-fort effect',
         prompt: 'Choose one',
-        actionButtons: [
-          { label: 'PUT IT INTO HAND', action: 1 },
-          { label: '+1 CARD AND +1 ACTION', action: 2 },
+        baseChoiceCount: 1,
+        options: [
+          {
+            action: 1,
+            label: 'PUT IT INTO HAND',
+            resolve: async () => {
+              if (!gainedCardId) {
+                loggerService.debug('[hill-fort effect] no gained card available to move to hand');
+                return;
+              }
+              if (!gainedCardLocation) {
+                loggerService.debug('[hill-fort effect] gained card location is unknown, cannot move to hand');
+                return;
+              }
+
+              let gainedCardSource: { sourceKey: CardLocation; playerId?: PlayerId };
+              try {
+                gainedCardSource = cardEffectArgs.cardSourceController.findCardSource(gainedCardId);
+              } catch {
+                loggerService.debug('[hill-fort effect] gained card no longer found in any source');
+                return;
+              }
+
+              if (
+                gainedCardSource.sourceKey !== gainedCardLocation.sourceKey ||
+                gainedCardSource.playerId !== gainedCardLocation.playerId
+              ) {
+                loggerService.debug(
+                  '[hill-fort effect] gained card is no longer where it was gained to, cannot move to hand',
+                );
+                return;
+              }
+
+              loggerService.debug('[hill-fort effect] moving gained card to hand');
+              await cardEffectArgs.actionService.run('moveCard', {
+                cardId: gainedCardId,
+                toPlayerId: playerId,
+                to: { location: 'playerHand' },
+              });
+            },
+          },
+          {
+            action: 2,
+            label: '+1 CARD AND +1 ACTION',
+            resolve: async () => {
+              loggerService.debug('[hill-fort effect] resolving +1 Card and +1 Action branch');
+              await cardEffectArgs.actionService.run('drawCard', {
+                playerId,
+                count: 1,
+              });
+              await cardEffectArgs.actionService.run('gainAction', { count: 1 });
+            },
+          },
         ],
-      }) as { action?: number } | null;
-
-      if (choicePrompt?.action === 1) {
-        if (!gainedCardId) {
-          loggerService.debug('[hill-fort effect] no gained card available to move to hand');
-          return;
-        }
-        if (!gainedCardLocation) {
-          loggerService.debug('[hill-fort effect] gained card location is unknown, cannot move to hand');
-          return;
-        }
-
-        let gainedCardSource: { sourceKey: CardLocation; playerId?: PlayerId };
-        try {
-          gainedCardSource = cardEffectArgs.cardSourceController.findCardSource(gainedCardId);
-        } catch {
-          loggerService.debug('[hill-fort effect] gained card no longer found in any source');
-          return;
-        }
-
-        if (
-          gainedCardSource.sourceKey !== gainedCardLocation.sourceKey ||
-          gainedCardSource.playerId !== gainedCardLocation.playerId
-        ) {
-          loggerService.debug('[hill-fort effect] gained card is no longer where it was gained to, cannot move to hand');
-          return;
-        }
-
-        loggerService.debug('[hill-fort effect] moving gained card to hand');
-        await cardEffectArgs.actionService.run('moveCard', {
-          cardId: gainedCardId,
-          toPlayerId: playerId,
-          to: { location: 'playerHand' },
-        });
-        return;
-      }
-
-      if (choicePrompt?.action === 2) {
-        loggerService.debug('[hill-fort effect] resolving +1 Card and +1 Action branch');
-        await cardEffectArgs.actionService.run('drawCard', {
-          playerId,
-          count: 1,
-        });
-        await cardEffectArgs.actionService.run('gainAction', { count: 1 });
-        return;
-      }
-
-      loggerService.warn('[hill-fort effect] no valid branch selected');
+      });
     },
   },
   'stronghold': {
@@ -671,43 +924,45 @@ const cardEffects: CardExpansionModule = {
         cardLibrary: cardEffectArgs.cardLibrary,
       });
 
-      const choicePrompt = await cardEffectArgs.actionService.run('userPrompt', {
-        playerId,
+      await resolveChooseAbilities({
+        context: cardEffectArgs,
+        logTag: 'stronghold effect',
         prompt: 'Choose one',
-        actionButtons: [
-          { label: '+$3', action: 1 },
-          { label: 'NEXT TURN +3 CARDS', action: 2 },
+        baseChoiceCount: 1,
+        options: [
+          {
+            action: 1,
+            label: '+$3',
+            resolve: async () => {
+              loggerService.debug('[stronghold effect] resolving +3 treasure branch');
+              await cardEffectArgs.actionService.run('gainTreasure', { count: 3 });
+            },
+          },
+          {
+            action: 2,
+            label: 'NEXT TURN +3 CARDS',
+            resolve: async () => {
+              loggerService.debug('[stronghold effect] registering next-turn +3 cards duration branch');
+              cardEffectArgs.registerDurationEffect(strongholdCard, {
+                id: `stronghold:${strongholdCard.id}:startTurn:${playInstance}`,
+                playerId,
+                listeningFor: 'startTurn',
+                once: true,
+                compulsory: true,
+                system: true,
+                allowMultipleInstances: true,
+                condition: ({ trigger }) => trigger.args.playerId === playerId,
+                triggeredEffectFn: async (triggeredArgs) => {
+                  await triggeredArgs.actionService.run('moveCard', {
+                    cardId: strongholdCard.id,
+                    to: { location: 'playArea' },
+                  });
+                  await triggeredArgs.actionService.run('drawCard', { playerId, count: 3 });
+                },
+              });
+            },
+          },
         ],
-      }) as { action?: number } | null;
-
-      if (choicePrompt?.action === 1) {
-        loggerService.debug('[stronghold effect] resolving +3 treasure branch');
-        await cardEffectArgs.actionService.run('gainTreasure', { count: 3 });
-        return;
-      }
-
-      if (choicePrompt?.action !== 2) {
-        loggerService.warn('[stronghold effect] no valid branch selected');
-        return;
-      }
-
-      loggerService.debug('[stronghold effect] registering next-turn +3 cards duration branch');
-      cardEffectArgs.registerDurationEffect(strongholdCard, {
-        id: `stronghold:${strongholdCard.id}:startTurn:${playInstance}`,
-        playerId,
-        listeningFor: 'startTurn',
-        once: true,
-        compulsory: true,
-        system: true,
-        allowMultipleInstances: true,
-        condition: ({ trigger }) => trigger.args.playerId === playerId,
-        triggeredEffectFn: async (triggeredArgs) => {
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: strongholdCard.id,
-            to: { location: 'playArea' },
-          });
-          await triggeredArgs.actionService.run('drawCard', { playerId, count: 3 });
-        },
       });
     },
   },

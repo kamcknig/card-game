@@ -1,8 +1,9 @@
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
-import { ActionButtons, Card, CardId, CardKey, PlayerId } from 'shared/types/index.ts';
+import { Card, CardId, CardKey, PlayerId } from 'shared/types/index.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
+import { resolveChooseAbilities } from '../../utils/resolve-choose-abilities.ts';
 
 const expansionModule: CardExpansionModule = {
   'baron': {
@@ -183,71 +184,72 @@ const expansionModule: CardExpansionModule = {
 
       loggerService.debug(`[COURTIER EFFECT] final choice count ${cardTypeCount}`);
 
-      const choices = [
-        { label: '+1 Action', action: 1 },
-        { label: '+1 Buy', action: 2 },
-        { label: '+3 Treasure', action: 3 },
-        { label: 'Gain a gold', action: 4 },
-      ];
-
-      for (let i = 0; i < cardTypeCount; i++) {
-        loggerService.debug(`[COURTIER EFFECT] prompting user to select an action...`);
-
-        const result = await actionService.run('userPrompt', {
+      await resolveChooseAbilities({
+        context: {
+          cardId: args.cardId,
           playerId,
-          prompt: 'Choose one',
-          actionButtons: choices,
-        }) as { action: number };
+          promptService: args.promptService,
+          loggerService,
+          reactionContext: args.reactionContext,
+        },
+        logTag: 'COURTIER EFFECT',
+        prompt: 'Choose one',
+        baseChoiceCount: cardTypeCount,
+        options: [
+          {
+            label: '+1 Action',
+            action: 1,
+            resolve: async () => {
+              loggerService.debug('[COURTIER EFFECT] gaining 1 action...');
+              await actionService.run('gainAction', {
+                count: 1,
+              });
+            },
+          },
+          {
+            label: '+1 Buy',
+            action: 2,
+            resolve: async () => {
+              loggerService.debug('[COURTIER EFFECT] gaining 1 buy...');
+              await actionService.run('gainBuy', {
+                count: 1,
+              });
+            },
+          },
+          {
+            label: '+3 Treasure',
+            action: 3,
+            resolve: async () => {
+              loggerService.debug('[COURTIER EFFECT] gaining 3 treasure...');
+              await actionService.run('gainTreasure', {
+                count: 3,
+              });
+            },
+          },
+          {
+            label: 'Gain a gold',
+            action: 4,
+            resolve: async () => {
+              const goldCardId = args.findCardService.findCards([{ location: 'basicSupply' }, { cardKeys: 'gold' }])
+                ?.slice(-1)?.[0].id;
 
-        const resultAction = result.action;
+              if (!goldCardId) {
+                loggerService.debug('[COURTIER EFFECT] no gold in supply...');
+                return;
+              }
 
-        loggerService.debug(
-          `[COURTIER EFFECT] player chose '${choices.find((c) => c.action === resultAction)?.label}'`,
-        );
-
-        const idx = choices.findIndex((c) => c.action === resultAction);
-        choices.splice(idx, 1);
-
-        switch (resultAction) {
-          case 1:
-            loggerService.debug(`[COURTIER EFFECT] gaining 1 action...`);
-            await actionService.run('gainAction', {
-              count: 1,
-            });
-            break;
-          case 2:
-            loggerService.debug(`[COURTIER EFFECT] gaining 1 buy...`);
-            await actionService.run('gainBuy', {
-              count: 1,
-            });
-            break;
-          case 3:
-            loggerService.debug(`[COURTIER EFFECT] gaining 1 treasure...`);
-            await actionService.run('gainTreasure', {
-              count: 3,
-            });
-            break;
-          case 4: {
-            const goldCardId = args.findCardService.findCards([{ location: 'basicSupply' }, { cardKeys: 'gold' }])
-              ?.slice(-1)?.[0].id;
-
-            if (!goldCardId) {
-              loggerService.debug(`[COURTIER EFFECT] no gold in supply...`);
-              break;
-            }
-
-            loggerService.debug(`[COURTIER EFFECT] gaining ${cardLibrary.getCard(goldCardId)}...`);
-            await actionService.run('gainCard', {
-              cardId: goldCardId,
-              playerId,
-              to: {
-                location: 'playerDiscard',
-              },
-            });
-            break;
-          }
-        }
-      }
+              loggerService.debug(`[COURTIER EFFECT] gaining ${cardLibrary.getCard(goldCardId)}...`);
+              await actionService.run('gainCard', {
+                cardId: goldCardId,
+                playerId,
+                to: {
+                  location: 'playerDiscard',
+                },
+              });
+            },
+          },
+        ],
+      });
     },
   },
   'courtyard': {
@@ -425,92 +427,96 @@ const expansionModule: CardExpansionModule = {
 
       await actionService.run('gainAction', { count: 1 });
 
-      let result = { action: 1 };
-
-      const actionButtons: ActionButtons = [
-        { action: 1, label: 'TRASH CARD' },
-        { action: 2, label: 'GAIN CARD' },
-      ];
-
-      result = await actionService.run('userPrompt', {
-        playerId,
-        prompt: 'Trash Action card from supply, or gain Action card from trash?',
-        actionButtons,
-      }) as { action: number };
-
-      loggerService.debug(
-        `[LURKER EFFECT] user choose action ${actionButtons.find((a) => a.action === result.action)?.label}`,
-      );
-
-      if (result.action === 1) {
-        loggerService.debug(`[LURKER EFFECT] prompting user to select card to trash...`);
-
-        const cardId = await actionService.run('selectSingleCard', {
-          prompt: 'Confirm trash',
+      await resolveChooseAbilities({
+        context: {
+          cardId: args.cardId,
           playerId,
-          count: 1,
-          restrict: [
-            { location: ['basicSupply', 'kingdomSupply'] },
-            { cardType: 'ACTION' },
-          ],
-        }) as number | null;
-        if (!cardId) {
-          loggerService.debug('[LURKER EFFECT] no action card selected to trash');
-          return;
-        }
+          promptService: args.promptService,
+          loggerService,
+          reactionContext: args.reactionContext,
+        },
+        logTag: 'LURKER EFFECT',
+        prompt: 'Choose one',
+        baseChoiceCount: 1,
+        options: [
+          {
+            action: 1,
+            label: 'TRASH CARD',
+            resolve: async () => {
+              loggerService.debug('[LURKER EFFECT] prompting user to select card to trash...');
 
-        loggerService.debug(`[LURKER EFFECT] trashing ${cardLibrary.getCard(cardId)}...`);
+              const cardId = await actionService.run('selectSingleCard', {
+                prompt: 'Confirm trash',
+                playerId,
+                count: 1,
+                restrict: [
+                  { location: ['basicSupply', 'kingdomSupply'] },
+                  { cardType: 'ACTION' },
+                ],
+              }) as number | null;
+              if (!cardId) {
+                loggerService.debug('[LURKER EFFECT] no action card selected to trash');
+                return;
+              }
 
-        await actionService.run('trashCard', {
-          cardId,
-          playerId,
-        });
+              loggerService.debug(`[LURKER EFFECT] trashing ${cardLibrary.getCard(cardId)}...`);
 
-        return;
-      }
-
-      const trash = args.findCardService.findCards({ location: 'trash' });
-      const actionCardIds = trash.filter((cardId) => cardId.type.includes('ACTION'));
-
-      if (!actionCardIds.length) {
-        loggerService.debug(`[LURKER EFFECT] trash has no action cards`);
-        return;
-      }
-
-      if (!trash.some((cId) => cId.type.includes('ACTION'))) {
-        loggerService.debug(`[LURKER EFFECT] no action cards in trash, skipping gaining`);
-        return;
-      }
-
-      let cardId: CardId;
-      if (args.findCardService.findCards({ location: 'trash' }).length === 1) {
-        loggerService.debug(`[LURKER EFFECT] only one card in trash, gaining automatically`);
-        cardId = trash[0].id;
-      } else {
-        loggerService.debug(`[LURKER EFFECT] prompting user to select action card to gain...`);
-
-        const selectedCardId = await args.promptService.selectSingleCardFromPrompt({
-          prompt: 'Choose card to gain',
-          playerId,
-          content: {
-            type: 'select',
-            selectCount: 1,
-            cardIds: actionCardIds.map((card) => card.id),
+              await actionService.run('trashCard', {
+                cardId,
+                playerId,
+              });
+            },
           },
-        });
+          {
+            action: 2,
+            label: 'GAIN CARD',
+            resolve: async () => {
+              const trash = args.findCardService.findCards({ location: 'trash' });
+              const actionCardIds = trash.filter((cardId) => cardId.type.includes('ACTION'));
 
-        if (!selectedCardId) {
-          return;
-        }
-        cardId = selectedCardId;
-      }
+              if (!actionCardIds.length) {
+                loggerService.debug('[LURKER EFFECT] trash has no action cards');
+                return;
+              }
 
-      loggerService.debug(`[LURKER EFFECT] gaining ${cardLibrary.getCard(cardId)}...`);
+              if (!trash.some((cId) => cId.type.includes('ACTION'))) {
+                loggerService.debug('[LURKER EFFECT] no action cards in trash, skipping gaining');
+                return;
+              }
 
-      await actionService.run('gainCard', {
-        cardId,
-        playerId,
-        to: { location: 'playerDiscard' },
+              let cardId: CardId;
+              if (args.findCardService.findCards({ location: 'trash' }).length === 1) {
+                loggerService.debug('[LURKER EFFECT] only one card in trash, gaining automatically');
+                cardId = trash[0].id;
+              } else {
+                loggerService.debug('[LURKER EFFECT] prompting user to select action card to gain...');
+
+                const selectedCardId = await args.promptService.selectSingleCardFromPrompt({
+                  prompt: 'Choose card to gain',
+                  playerId,
+                  content: {
+                    type: 'select',
+                    selectCount: 1,
+                    cardIds: actionCardIds.map((card) => card.id),
+                  },
+                });
+
+                if (!selectedCardId) {
+                  return;
+                }
+                cardId = selectedCardId;
+              }
+
+              loggerService.debug(`[LURKER EFFECT] gaining ${cardLibrary.getCard(cardId)}...`);
+
+              await actionService.run('gainCard', {
+                cardId,
+                playerId,
+                to: { location: 'playerDiscard' },
+              });
+            },
+          },
+        ],
       });
     },
   },
@@ -691,81 +697,105 @@ const expansionModule: CardExpansionModule = {
 
         await actionService.run('gainAction', { count: 1 });
 
-        loggerService.debug(`[MINION EFFECT] prompting user to gain treasure or discard hand...`);
+        await resolveChooseAbilities({
+          context: {
+            cardId: args.cardId,
+            playerId,
+            promptService: args.promptService,
+            loggerService,
+            reactionContext: args.reactionContext,
+          },
+          logTag: 'MINION EFFECT',
+          prompt: 'Choose one',
+          baseChoiceCount: 1,
+          options: [
+            {
+              action: 1,
+              label: '+2 Treasure',
+              resolve: async () => {
+                loggerService.debug('[MINION EFFECT] gaining 2 treasure...');
+                await actionService.run('gainTreasure', {
+                  count: 2,
+                });
+              },
+            },
+            {
+              action: 2,
+              label: 'Discard hand',
+              resolve: async () => {
+                const attackerPlayerId = playerId;
+                const targets = findOrderedTargets({
+                  startingPlayerId: attackerPlayerId,
+                  appliesTo: 'ALL',
+                  match,
+                }).filter((targetPlayerId) => {
+                  const hand = args.cardSourceController.getSource('playerHand', targetPlayerId);
+                  const handCount = hand.length;
+                  return targetPlayerId === attackerPlayerId ||
+                    (handCount >= 5 && !isPlayerImmune(reactionContext, targetPlayerId));
+                });
 
-        const results = await actionService.run('userPrompt', {
-          playerId,
-          actionButtons: [
-            { action: 1, label: '+2 Treasure' },
-            { action: 2, label: 'Discard hand' },
+                for (const targetPlayerId of targets) {
+                  const player = getPlayerById(match, targetPlayerId);
+                  const hand = args.cardSourceController.getSource('playerHand', targetPlayerId);
+                  const l = hand.length;
+                  for (let i = l - 1; i >= 0; i--) {
+                    const cardId = hand[i];
+
+                    loggerService.debug(`[MINION EFFECT] ${player} discarding ${cardLibrary.getCard(cardId)}...`);
+
+                    await actionService.run('discardCard', {
+                      cardId,
+                      playerId: targetPlayerId,
+                    });
+                  }
+
+                  loggerService.debug(`[MINION EFFECT] ${player} drawing 4 cards...`);
+
+                  await actionService.run('drawCard', { playerId: targetPlayerId, count: 4 });
+                }
+              },
+            },
           ],
-        }) as { action: number };
-
-        if (results.action === 1) {
-          loggerService.debug(`[MINION EFFECT] gaining 2 treasure...`);
-
-          await actionService.run('gainTreasure', {
-            count: 2,
-          });
-        } else {
-          const targets = findOrderedTargets({
-            startingPlayerId: playerId,
-            appliesTo: 'ALL',
-            match,
-          }).filter((playerId) => {
-            const hand = args.cardSourceController.getSource('playerHand', playerId);
-            const handCount = hand.length;
-            return playerId === playerId ||
-              (handCount >= 5 && !isPlayerImmune(reactionContext, playerId));
-          });
-
-          for (const playerId of targets) {
-            const player = getPlayerById(match, playerId);
-            const hand = args.cardSourceController.getSource('playerHand', playerId);
-            const l = hand.length;
-            for (let i = l - 1; i >= 0; i--) {
-              const cardId = hand[i];
-
-              loggerService.debug(`[MINION EFFECT] ${player} discarding ${cardLibrary.getCard(cardId)}...`);
-
-              await actionService.run('discardCard', {
-                cardId,
-                playerId,
-              });
-            }
-
-            loggerService.debug(`[MINION EFFECT] ${player} drawing 4 cards...`);
-
-            await actionService.run('drawCard', { playerId, count: 4 });
-          }
-        }
+        });
       },
   },
   'nobles': {
-    registerEffects: () => async ({ loggerService, actionService, playerId }) => {
+    registerEffects: () => async ({ loggerService, actionService, playerId, ...args }) => {
       loggerService.debug(`[NOBLES EFFECT] prompting user to select actions or treasure`);
 
-      const result = await actionService.run('userPrompt', {
-        playerId,
-        actionButtons: [
-          { action: 1, label: '+3 Cards' },
-          { action: 2, label: '+2 Actions' },
-        ],
+      await resolveChooseAbilities({
+        context: {
+          cardId: args.cardId,
+          playerId,
+          promptService: args.promptService,
+          loggerService,
+          reactionContext: args.reactionContext,
+        },
+        logTag: 'NOBLES EFFECT',
         prompt: 'Choose one',
-      }) as { action: number };
-
-      loggerService.debug(`[NOBLES EFFECT] player chose ${result.action}`);
-
-      if (result.action === 1) {
-        loggerService.debug(`[NOBLES EFFECT] drawing 3 cards...`);
-
-        await actionService.run('drawCard', { playerId, count: 3 });
-      } else {
-        loggerService.debug(`[NOBLES EFFECT] gaining 2 actions`);
-        await actionService.run('gainAction', {
-          count: 2,
-        });
-      }
+        baseChoiceCount: 1,
+        options: [
+          {
+            action: 1,
+            label: '+3 Cards',
+            resolve: async () => {
+              loggerService.debug('[NOBLES EFFECT] drawing 3 cards...');
+              await actionService.run('drawCard', { playerId, count: 3 });
+            },
+          },
+          {
+            action: 2,
+            label: '+2 Actions',
+            resolve: async () => {
+              loggerService.debug('[NOBLES EFFECT] gaining 2 actions');
+              await actionService.run('gainAction', {
+                count: 2,
+              });
+            },
+          },
+        ],
+      });
     },
   },
   'patrol': {
@@ -869,50 +899,59 @@ const expansionModule: CardExpansionModule = {
     },
   },
   'pawn': {
-    registerEffects: () => async ({ loggerService, actionService, playerId }) => {
-      const actions = [
-        { action: 1, label: '+1 Card' },
-        { action: 2, label: '+1 Action' },
-        { action: 3, label: '+1 Buy' },
-        { action: 4, label: '+1 Treasure' },
-      ];
-
-      for (let i = 0; i < 2; i++) {
-        loggerService.debug(`[PAWN EFFECT] prompting user to choose...`);
-
-        const result = await actionService.run('userPrompt', {
+    registerEffects: () => async ({ loggerService, actionService, playerId, ...args }) => {
+      await resolveChooseAbilities({
+        context: {
+          cardId: args.cardId,
           playerId,
-          actionButtons: actions,
-          prompt: 'Choose one',
-        }) as { action: number };
-
-        switch (result.action) {
-          case 1:
-            loggerService.debug(`[PAWN EFFECT] drawing card...`);
-            await actionService.run('drawCard', { playerId });
-            break;
-          case 2:
-            loggerService.debug(`[PAWN EFFECT] gaining 1 action...`);
-            await actionService.run('gainAction', {
-              count: 1,
-            });
-            break;
-          case 3:
-            loggerService.debug(`[PAWN EFFECT] gaining 1 buy...`);
-            await actionService.run('gainBuy', {
-              count: 1,
-            });
-            break;
-          case 4:
-            loggerService.debug(`[PAWN EFFECT] gaining 1 treasure...`);
-            await actionService.run('gainTreasure', {
-              count: 1,
-            });
-            break;
-        }
-
-        actions.splice(actions.findIndex((a) => a.action === result.action), 1);
-      }
+          promptService: args.promptService,
+          loggerService,
+          reactionContext: args.reactionContext,
+        },
+        logTag: 'PAWN EFFECT',
+        prompt: 'Choose one',
+        baseChoiceCount: 2,
+        options: [
+          {
+            action: 1,
+            label: '+1 Card',
+            resolve: async () => {
+              loggerService.debug('[PAWN EFFECT] drawing card...');
+              await actionService.run('drawCard', { playerId });
+            },
+          },
+          {
+            action: 2,
+            label: '+1 Action',
+            resolve: async () => {
+              loggerService.debug('[PAWN EFFECT] gaining 1 action...');
+              await actionService.run('gainAction', {
+                count: 1,
+              });
+            },
+          },
+          {
+            action: 3,
+            label: '+1 Buy',
+            resolve: async () => {
+              loggerService.debug('[PAWN EFFECT] gaining 1 buy...');
+              await actionService.run('gainBuy', {
+                count: 1,
+              });
+            },
+          },
+          {
+            action: 4,
+            label: '+1 Treasure',
+            resolve: async () => {
+              loggerService.debug('[PAWN EFFECT] gaining 1 treasure...');
+              await actionService.run('gainTreasure', {
+                count: 1,
+              });
+            },
+          },
+        ],
+      });
     },
   },
   'replace': {
@@ -1106,57 +1145,70 @@ const expansionModule: CardExpansionModule = {
     registerEffects: () => async ({ loggerService, match, cardLibrary, actionService, playerId, ...args }) => {
       loggerService.debug(`[STEWARD EFFECT] prompting user to choose cards, treasure, or trashing cards`);
 
-      const result = await actionService.run('userPrompt', {
-        playerId,
-        actionButtons: [
-          { action: 1, label: '+2 Card' },
-          { action: 2, label: '+2 Treasure' },
-          { action: 3, label: 'Trash 2 cards' },
-        ],
+      await resolveChooseAbilities({
+        context: {
+          cardId: args.cardId,
+          playerId,
+          promptService: args.promptService,
+          loggerService,
+          reactionContext: args.reactionContext,
+        },
+        logTag: 'STEWARD EFFECT',
         prompt: 'Choose one',
-      }) as { action: number };
+        baseChoiceCount: 1,
+        options: [
+          {
+            action: 1,
+            label: '+2 Card',
+            resolve: async () => {
+              loggerService.debug('[STEWARD EFFECT] drawing 2 cards...');
+              await actionService.run('drawCard', { playerId, count: 2 });
+            },
+          },
+          {
+            action: 2,
+            label: '+2 Treasure',
+            resolve: async () => {
+              loggerService.debug('[STEWARD EFFECT] gaining 2 treasure...');
+              await actionService.run('gainTreasure', {
+                count: 2,
+              });
+            },
+          },
+          {
+            action: 3,
+            label: 'Trash 2 cards',
+            resolve: async () => {
+              const hand = args.cardSourceController.getSource('playerHand', playerId);
 
-      switch (result.action) {
-        case 1:
-          loggerService.debug(`[STEWARD EFFECT] drawing 2 carda...`);
-          await actionService.run('drawCard', { playerId, count: 2 });
-          break;
-        case 2:
-          loggerService.debug(`[STEWARD EFFECT] gaining 2 treasure...`);
-          await actionService.run('gainTreasure', {
-            count: 2,
-          });
-          break;
-        case 3: {
-          const hand = args.cardSourceController.getSource('playerHand', playerId);
+              if (hand.length === 0) {
+                loggerService.debug('[STEWARD EFFECT] no cards in hand to trash');
+                return;
+              }
 
-          if (hand.length === 0) {
-            loggerService.debug(`[STEWARD EFFECT] no cards in hand to trash`);
-            break;
-          }
+              const count = Math.min(2, hand.length);
 
-          const count = Math.min(2, hand.length);
+              loggerService.debug(`[STEWARD EFFECT] prompting user to trash ${count} cards...`);
 
-          loggerService.debug(`[STEWARD EFFECT] prompting user to trash ${count} cards...`);
+              const cardIds = await actionService.run('selectCard', {
+                prompt: 'Confirm trash',
+                playerId,
+                restrict: hand,
+                count,
+              });
 
-          const cardIds = await actionService.run('selectCard', {
-            prompt: 'Confirm trash',
-            playerId,
-            restrict: hand,
-            count,
-          });
+              for (const cardId of cardIds) {
+                loggerService.debug(`[STEWARD EFFECT] trashing ${cardLibrary.getCard(cardId)}...`);
 
-          for (const cardId of cardIds) {
-            loggerService.debug(`[STEWARD EFFECT] trashing ${cardLibrary.getCard(cardId)}...`);
-
-            await actionService.run('trashCard', {
-              playerId,
-              cardId,
-            });
-          }
-          break;
-        }
-      }
+                await actionService.run('trashCard', {
+                  playerId,
+                  cardId,
+                });
+              }
+            },
+          },
+        ],
+      });
     },
   },
   'swindler': {

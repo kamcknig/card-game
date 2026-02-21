@@ -7,6 +7,7 @@ import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
+import { resolveChooseAbilities } from '../../utils/resolve-choose-abilities.ts';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
 import { FortuneMetadata } from '../prosperity/types.ts';
 import { getPlayerStartingFrom } from '@shared/get-player-position-utils.ts';
@@ -1943,77 +1944,81 @@ const expansion: CardExpansionModule = {
       loggerService.debug(
         `[wild hunt effect] prompting player ${args.playerId} to choose an option (pile VP: ${tokensOnPileCount})`,
       );
-      const choice = await args.promptService.requestAction({
-        playerId: args.playerId,
+      await resolveChooseAbilities({
+        context: args,
+        logTag: 'wild hunt effect',
         prompt: 'Choose one',
-        actionButtons: [
-          { action: 1, label: '+3 Cards and add 1VP to the pile' },
+        baseChoiceCount: 1,
+        options: [
+          {
+            action: 1,
+            label: '+3 Cards and add 1VP to the pile',
+            resolve: async () => {
+              // Option 1: draw 3 cards, then gather a VP token on the Wild Hunt pile.
+              loggerService.debug('[wild hunt effect] drawing 3 cards');
+              await args.actionService.run('drawCard', {
+                playerId: args.playerId,
+                count: 3,
+              });
+
+              loggerService.debug(
+                '[wild hunt effect] placing 1 victory token on Wild Hunt pile',
+              );
+              await args.actionService.run('placeToken', {
+                tokenId: prosperityTokenIds.victory,
+                location: { type: 'supplyPile', cardKey: 'wild-hunt' },
+              });
+            },
+          },
           {
             action: 2,
             label: `Gain an Estate and take the ${tokensOnPileCount}VP from the pile`,
+            resolve: async () => {
+              // Option 2: gain an Estate; only if gained do we take VP tokens from the pile.
+              const estateCards = args.findCardService.findCards([{ location: 'basicSupply' }, {
+                cardKeys: 'estate',
+              }]);
+              const estateCardId = estateCards.slice(-1)[0]?.id;
+              if (!estateCardId) {
+                loggerService.debug(
+                  '[wild hunt effect] no Estates left to gain, skipping VP tokens',
+                );
+                return;
+              }
+
+              loggerService.info('[wild hunt effect] gaining an Estate');
+              await args.actionService.run('gainCard', {
+                playerId: args.playerId,
+                cardId: estateCardId,
+                to: { location: 'playerDiscard' },
+              });
+
+              // Move any gathered VP tokens from the Wild Hunt pile to the player.
+              const tokensOnPile = Object.values(args.match.tokens).filter((token) =>
+                token.tokenId === prosperityTokenIds.victory &&
+                token.location.type === 'supplyPile' &&
+                token.location.cardKey === 'wild-hunt'
+              );
+
+              if (!tokensOnPile.length) {
+                loggerService.debug('[wild hunt effect] no victory tokens on pile');
+                return;
+              }
+
+              loggerService.info(
+                `[wild hunt effect] moving ${tokensOnPile.length} victory token(s) to player ${args.playerId}`,
+              );
+              for (const token of tokensOnPile) {
+                await args.actionService.run('moveToken', {
+                  tokenInstanceId: token.id,
+                  location: { type: 'player', playerId: args.playerId },
+                  ownerId: args.playerId,
+                });
+              }
+            },
           },
         ],
       });
-
-      if (choice === 1) {
-        // Option 1: draw 3 cards, then gather a VP token on the Wild Hunt pile.
-        loggerService.debug(`[wild hunt effect] drawing 3 cards`);
-        await args.actionService.run('drawCard', {
-          playerId: args.playerId,
-          count: 3,
-        });
-
-        loggerService.debug(
-          `[wild hunt effect] placing 1 victory token on Wild Hunt pile`,
-        );
-        await args.actionService.run('placeToken', {
-          tokenId: prosperityTokenIds.victory,
-          location: { type: 'supplyPile', cardKey: 'wild-hunt' },
-        });
-        return;
-      }
-
-      // Option 2: gain an Estate; only if gained do we take VP tokens from the pile.
-      const estateCards = args.findCardService.findCards([{ location: 'basicSupply' }, {
-        cardKeys: 'estate',
-      }]);
-      const estateCardId = estateCards.slice(-1)[0]?.id;
-      if (!estateCardId) {
-        loggerService.debug(
-          `[wild hunt effect] no Estates left to gain, skipping VP tokens`,
-        );
-        return;
-      }
-
-      loggerService.info(`[wild hunt effect] gaining an Estate`);
-      await args.actionService.run('gainCard', {
-        playerId: args.playerId,
-        cardId: estateCardId,
-        to: { location: 'playerDiscard' },
-      });
-
-      // Move any gathered VP tokens from the Wild Hunt pile to the player.
-      const tokensOnPile = Object.values(args.match.tokens).filter((token) =>
-        token.tokenId === prosperityTokenIds.victory &&
-        token.location.type === 'supplyPile' &&
-        token.location.cardKey === 'wild-hunt'
-      );
-
-      if (!tokensOnPile.length) {
-        loggerService.debug(`[wild hunt effect] no victory tokens on pile`);
-        return;
-      }
-
-      loggerService.info(
-        `[wild hunt effect] moving ${tokensOnPile.length} victory token(s) to player ${args.playerId}`,
-      );
-      for (const token of tokensOnPile) {
-        await args.actionService.run('moveToken', {
-          tokenInstanceId: token.id,
-          location: { type: 'player', playerId: args.playerId },
-          ownerId: args.playerId,
-        });
-      }
     },
   },
   'villa': {

@@ -183,5 +183,63 @@
         "victoryPoints": 2
       }
     ]
+  },
+  "townsfolk": {
+    "pile": {
+      "randomizer": "townsfolk",
+      "cost": {
+        "treasure": 2
+      },
+      "type": [
+        "ACTION",
+        "TOWNSFOLK"
+      ]
+    },
+    "cards": [
+      {
+        "cardKey": "town-crier",
+        "cost": {
+          "treasure": 2
+        },
+        "type": [
+          "ACTION",
+          "TOWNSFOLK"
+        ],
+        "abilityText": "Choose one: +$2; or gain a Silver; or +1 Card and +1 Action.\nYou may rotate the Townsfolk."
+      },
+      {
+        "cardKey": "blacksmith",
+        "cost": {
+          "treasure": 3
+        },
+        "type": [
+          "ACTION",
+          "TOWNSFOLK"
+        ],
+        "abilityText": "Choose one: Draw until you have 6 cards in hand; or +2 Cards; or +1 Card and +1 Action."
+      },
+      {
+        "cardKey": "miller",
+        "cost": {
+          "treasure": 4
+        },
+        "type": [
+          "ACTION",
+          "TOWNSFOLK"
+        ],
+        "abilityText": "+1 Action\nLook at the top 4 cards of your deck. Put one into your hand and discard the rest."
+      },
+      {
+        "cardKey": "elder",
+        "cost": {
+          "treasure": 5
+        },
+        "type": [
+          "ACTION",
+          "TOWNSFOLK"
+        ],
+        "abilityText": "+$2\nYou may play an Action card from your hand. When it gives you a choice of abilities (with \"choose\") this turn, you may choose an extra (different) option."
+      }
+    ]
   }
 }
