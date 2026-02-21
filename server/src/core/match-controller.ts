@@ -305,7 +305,6 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this.match.coffers ??= {};
     this.match.villagers ??= {};
     this.match.debt ??= {};
-    this.match.favors ??= {};
     this.match.skippedTurns ??= {};
     this.match.setAsideSourceById ??= {};
     this.match.allies ??= [];

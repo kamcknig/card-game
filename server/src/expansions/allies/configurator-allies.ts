@@ -5,6 +5,7 @@ import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { configureSplitPile } from '../../utils/configure-split-pile.ts';
 import { registerAlliesTokenDefinitions } from './token-definitions-allies.ts';
 import { registerActiveAllyEffects, skippedAllyImplementations } from './ally-effects-allies.ts';
+import { alliesTokenIds } from './token-ids-allies.ts';
 
 const IMPORTER_PILE_KEY = 'importer';
 const AUGURS_PILE_KEY = 'augurs';
@@ -213,7 +214,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
 export default configurator;
 
-// Seeds starting Favor resources when Liaison cards are present.
+// Seeds starting Favor tokens when Liaison cards are present.
 export const registerGameEvents: (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => void = (
   registrar,
   config,
@@ -229,14 +230,19 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   const startingFavors = hasImporter ? 5 : 1;
 
   registrar('onGameStart', async (args) => {
-    args.loggerService.info(`[allies onGameStart] initializing Favor counts to ${startingFavors}`);
-    args.match.favors ??= {};
+    args.loggerService.info(`[allies onGameStart] initializing Favor tokens to ${startingFavors}`);
     for (const player of args.match.players) {
-      args.match.favors[player.id] = startingFavors;
-      args.loggerService.debug(`[allies onGameStart] player ${player.id} favors=${args.match.favors[player.id]}`);
+      for (let index = 0; index < startingFavors; index += 1) {
+        await args.actionService.run('placeToken', {
+          tokenId: alliesTokenIds.favor,
+          ownerId: player.id,
+          location: { type: 'player', playerId: player.id },
+        });
+      }
+      args.loggerService.debug(`[allies onGameStart] player ${player.id} favorTokens=${startingFavors}`);
     }
 
-    // Register active Ally behavior after Favor resources are initialized.
+    // Register active Ally behavior after Favor tokens are initialized.
     registerActiveAllyEffects(args, config);
   });
 };

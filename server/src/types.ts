@@ -195,7 +195,7 @@ export interface GameActionDefinitionMap {
   gainAction: (args: { count: number }, context?: GameActionContext) => Promise<void>;
   gainBuy: (args: { count: number }, context?: GameActionContext) => Promise<void>;
   gainCoffer: (args: { playerId: PlayerId; count: number }, context?: GameActionContext) => Promise<void>;
-  // Adds Favor resources to a player (Allies).
+  // Adds or removes Favor tokens for a player (Allies).
   gainFavor: (args: { playerId: PlayerId; count?: number }, context?: GameActionContext) => Promise<void>;
   // Adds Villagers tokens to a player (Renaissance).
   gainVillager: (args: { playerId: PlayerId; count: number }, context?: GameActionContext) => Promise<void>;

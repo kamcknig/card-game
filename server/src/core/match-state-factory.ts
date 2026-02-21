@@ -12,8 +12,6 @@ export function createInitialMatchState(): Match {
     villagers: {},
     // Per-player debt tokens for Empires-style costs.
     debt: {},
-    // Per-player Favor resources for Allies.
-    favors: {},
     // Per-player pending skipped turns (e.g., from Lich).
     skippedTurns: {},
     config: {} as ComputedMatchConfiguration,

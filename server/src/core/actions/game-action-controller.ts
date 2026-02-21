@@ -58,6 +58,7 @@ import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { prosperityTokenIds } from '@expansions/prosperity/token-prosperity-ids.ts';
 import { renaissanceTokenIds } from '@expansions/renaissance/token-ids-renaissance.ts';
+import { alliesTokenIds } from '@expansions/allies/token-ids-allies.ts';
 import {
   findBoonInMatch,
   findCardLikeEntryInMatch,
@@ -1825,14 +1826,69 @@ export class GameActionController implements GameActionDefinitionMap {
     );
   }
 
-  // Adds Favor resources (Allies) to a player.
+  // Adds or removes Favor tokens (Allies) for a player.
   async gainFavor(args: { playerId: PlayerId; count?: number }, _context?: GameActionContext) {
-    this.loggerService.log(`[gainFavor action] player ${args.playerId} gained ${args.count} Favor`);
-    this.match.favors[args.playerId] ??= 0;
-    this.match.favors[args.playerId] += args.count ?? 1;
-    this.match.favors[args.playerId] = Math.max(0, this.match.favors[args.playerId]);
+    const count = args.count ?? 1;
+    this.loggerService.log(`[gainFavor action] player ${args.playerId} delta ${count} Favor`);
+
+    if (count === 0) {
+      this.loggerService.debug('[gainFavor action] zero Favor delta, skipping');
+      return;
+    }
+
+    if (count > 0) {
+      for (let i = 0; i < count; i += 1) {
+        await this.placeToken({
+          tokenId: alliesTokenIds.favor,
+          ownerId: args.playerId,
+          location: { type: 'player', playerId: args.playerId },
+        });
+      }
+      this.loggerService.debug(`[gainFavor action] player ${args.playerId} gained ${count} Favor token(s)`);
+      return;
+    }
+
+    let remainingToSpend = Math.abs(count);
+    const favorTokens = Object.values(this.match.tokens ?? {})
+      .filter((token) =>
+        token.tokenId === alliesTokenIds.favor &&
+        token.location.type === 'player' &&
+        token.location.playerId === args.playerId
+      )
+      .sort((left, right) => left.id.localeCompare(right.id));
+
+    for (const token of favorTokens) {
+      if (remainingToSpend < 1) {
+        break;
+      }
+
+      const tokenAvailableCount = Math.max(1, token.counters ?? 1);
+      const spendFromToken = Math.min(remainingToSpend, tokenAvailableCount);
+
+      if ((token.counters ?? 0) > spendFromToken) {
+        await this.consumeToken({ tokenInstanceId: token.id, amount: spendFromToken });
+      } else {
+        await this.removeToken({ tokenInstanceId: token.id });
+      }
+
+      remainingToSpend -= spendFromToken;
+    }
+
+    if (remainingToSpend > 0) {
+      this.loggerService.warn(
+        `[gainFavor action] player ${args.playerId} missing ${remainingToSpend} Favor while spending`,
+      );
+    }
+
+    const updatedFavorCount = Object.values(this.match.tokens ?? {})
+      .filter((token) =>
+        token.tokenId === alliesTokenIds.favor &&
+        token.location.type === 'player' &&
+        token.location.playerId === args.playerId
+      )
+      .reduce((total, token) => total + Math.max(1, token.counters ?? 1), 0);
     this.loggerService.debug(
-      `[gainFavor action] player ${args.playerId} now has ${this.match.favors[args.playerId]} Favor`,
+      `[gainFavor action] player ${args.playerId} now has ${updatedFavorCount} Favor token(s)`,
     );
   }
 

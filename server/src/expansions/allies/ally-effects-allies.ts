@@ -30,7 +30,13 @@ export const skippedAllyImplementations: Array<{ cardKey: CardKey; reason: strin
 
 // Returns current Favor count for one player.
 const getPlayerFavorCount = (match: Match, playerId: PlayerId): number => {
-  return Math.max(0, match.favors?.[playerId] ?? 0);
+  return Object.values(match.tokens ?? {})
+    .filter((token) =>
+      token.tokenId === alliesTokenIds.favor &&
+      token.location.type === 'player' &&
+      token.location.playerId === playerId
+    )
+    .reduce((total, token) => total + Math.max(1, token.counters ?? 1), 0);
 };
 
 // Spends Favor from a player if they have enough, returning whether the spend succeeded.
