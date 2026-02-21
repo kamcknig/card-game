@@ -1,4 +1,4 @@
-// Card-like entities (events, allies, landmarks, projects, ways, boons, hexes, states, artifacts).
+// Card-like entities (events, ally, landmarks, projects, ways, boons, hexes, states, artifacts).
 export {
   Ally,
   Artifact,

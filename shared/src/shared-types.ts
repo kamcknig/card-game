@@ -833,7 +833,7 @@ type AllyArgs = {
 
 // Allies are landscape card-likes that define Favor behavior in Liaison games.
 export class Ally extends CardLike {
-  // Randomizer key used to group allies during setup selection.
+  // Randomizer key used to group ally during setup selection.
   randomizer: string | null;
 
   constructor(args: AllyArgs) {

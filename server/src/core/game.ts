@@ -326,7 +326,7 @@ export class Game {
 
     const alliesPatch = jsonPatch.compare(currentConfig.allies, newConfig.allies);
     if (alliesPatch.length) {
-      // Persist selected allies between sessions.
+      // Persist selected ally between sessions.
       this.configStore.persistAllies(newConfig.allies);
       this.defaultMatchConfiguration.allies = structuredClone(newConfig.allies);
     }

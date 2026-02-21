@@ -101,7 +101,7 @@ export class MatchConfigurator {
     this._config.projects ??= [];
     // Ensure ways array exists for downstream selection logic.
     this._config.ways ??= [];
-    // Ensure allies array exists for downstream configuration logic.
+    // Ensure ally array exists for downstream configuration logic.
     this._config.allies ??= [];
     // Ensure states array exists for downstream configuration logic.
     this._config.states ??= [];

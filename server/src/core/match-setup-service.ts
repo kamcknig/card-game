@@ -193,11 +193,11 @@ export class MatchSetupService {
   public createAllies(config: ComputedMatchConfiguration): void {
     const allies = config.allies ?? [];
     if (allies.length < 1) {
-      this.loggerService.info('[match] no allies configured for this match');
+      this.loggerService.info('[match] no ally configured for this match');
       return;
     }
 
-    this.loggerService.info('[match] creating allies');
+    this.loggerService.info('[match] creating ally');
     for (const ally of allies) {
       this.match.allies.push(this.cardInstanceFactoryService.createAlly(ally));
     }

@@ -147,7 +147,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
     const hasLiaison = hasLiaisonInKingdom(args.config);
     if (!hasLiaison) {
       if ((args.config.allies ?? []).length > 0) {
-        args.loggerService.info('[allies configurator] no Liaison cards in kingdom; clearing computed allies');
+        args.loggerService.info('[ally configurator] no Liaison cards in kingdom; clearing computed ally');
       }
       args.config.allies = [];
       return args.config;
@@ -173,7 +173,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
     );
     const uniqueCandidates = uniqueByProp(candidateAllies, 'cardKey');
     if (uniqueCandidates.length < 1) {
-      args.loggerService.warn('[allies configurator] Liaison present but no ally data available in loaded expansions');
+      args.loggerService.warn('[ally configurator] Liaison present but no ally data available in loaded expansions');
       args.config.allies = [];
       return args.config;
     }

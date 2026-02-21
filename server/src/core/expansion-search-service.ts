@@ -139,7 +139,7 @@ export class ExpansionSearchService {
     return ways;
   }
 
-  // Returns matching allies for a search term.
+  // Returns matching ally for a search term.
   public searchAllies(searchStr: string): AllyNoId[] {
     if (searchStr.trim().length < 1) {
       return this._selectableCatalog.allies;
