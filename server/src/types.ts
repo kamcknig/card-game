@@ -635,6 +635,13 @@ export type TriggerEventTypeContext = {
     cardId: CardId;
     playerId: PlayerId;
   };
+  // Triggered after a card is played but before its on-play lifecycle/effect pipeline resolves.
+  beforePlayedCardEffect: {
+    cardId: CardId;
+    playerId: PlayerId;
+    // Reactions can set true to skip this played card's on-play lifecycle/effects.
+    skipPlayEffect: boolean;
+  };
   treasureGain: {
     playerId: PlayerId;
     count: number;

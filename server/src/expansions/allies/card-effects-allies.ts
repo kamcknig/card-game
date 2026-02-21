@@ -1,5 +1,10 @@
 import { CardId, CardKey, CardLocation, PlayerId, TokenInstanceId } from 'shared/types/index.ts';
-import { CardEffectFunctionContext, CardExpansionModule } from '@server-types/index.ts';
+import {
+  CardEffectFunctionContext,
+  CardExpansionModule,
+  TriggeredEffectConditionContext,
+  TriggeredEffectContext,
+} from '@server-types/index.ts';
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { baseV2TokenIds } from '@expansions/base-v2/token-ids-base-v2.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
@@ -160,6 +165,27 @@ const getCurrentTurnHistoryIndex = (args: {
   };
 }): number => {
   return Math.max(args.match.stats.turns.length - 1, 0);
+};
+
+// Counts Treasure cards played by a player in the current turn-history index.
+const getTreasurePlayCountForPlayerThisTurn = (args: {
+  match: {
+    stats: {
+      playedCardsByTurn: Record<number, CardId[] | undefined>;
+      playedCards: Record<number, { playerId: PlayerId }>;
+    };
+  };
+  cardLibrary: {
+    getCard: (cardId: CardId) => { type: string[] };
+  };
+  playerId: PlayerId;
+  turnHistoryIndex: number;
+}): number => {
+  const playedCardIdsThisTurn = args.match.stats.playedCardsByTurn[args.turnHistoryIndex] ?? [];
+  return playedCardIdsThisTurn
+    .filter((playedCardId) => args.match.stats.playedCards[playedCardId]?.playerId === args.playerId)
+    .filter((playedCardId) => args.cardLibrary.getCard(playedCardId).type.includes('TREASURE'))
+    .length;
 };
 
 // Resolves which pile location should receive a returned card by key.
@@ -2168,6 +2194,96 @@ const cardEffects: CardExpansionModule = {
           triggeredArgs.reactionManager.unregisterTrigger(gainTriggerId);
         },
       });
+    },
+  },
+  'highwayman': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
+      const playerId = cardEffectArgs.playerId;
+      const highwaymanCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const playInstance = getPlayInstanceForCardKeyThisTurn({
+        cardKey: highwaymanCard.cardKey,
+        match: cardEffectArgs.match,
+        cardLibrary: cardEffectArgs.cardLibrary,
+      });
+      const targetPlayerIds = findOrderedTargets({
+        match: cardEffectArgs.match,
+        appliesTo: 'ALL_OTHER',
+        startingPlayerId: playerId,
+      }).filter((targetPlayerId) => !isPlayerImmune(cardEffectArgs.reactionContext, targetPlayerId));
+
+      cardEffectArgs.registerDurationEffect(highwaymanCard, {
+        id: `highwayman:${highwaymanCard.id}:startTurn:${playInstance}`,
+        listeningFor: 'startTurn',
+        playerId,
+        once: true,
+        compulsory: true,
+        system: true,
+        allowMultipleInstances: true,
+        autoResolve: true,
+        condition: ({ trigger }) => trigger.args.playerId === playerId,
+        triggeredEffectFn: async (triggeredArgs) => {
+          if (isCardStillInPlay({
+            cardId: highwaymanCard.id,
+            cardSourceController: triggeredArgs.cardSourceController,
+          })) {
+            await triggeredArgs.actionService.run('discardCard', {
+              playerId,
+              cardId: highwaymanCard.id,
+            });
+            loggerService.debug('[highwayman startTurn effect] discarded Highwayman from play');
+          } else {
+            loggerService.debug('[highwayman startTurn effect] Highwayman not in play, skipping discard');
+          }
+
+          await triggeredArgs.actionService.run('drawCard', { playerId, count: 3 });
+        },
+      });
+
+      const attackTriggerIds = targetPlayerIds.map((targetPlayerId) => {
+        return cardEffectArgs.reactionManager.registerReactionTemplate({
+          id: `highwayman:${highwaymanCard.id}:beforePlayedCardEffect:${targetPlayerId}:${playInstance}`,
+          listeningFor: 'beforePlayedCardEffect',
+          playerId: targetPlayerId,
+          once: false,
+          compulsory: true,
+          system: true,
+          allowMultipleInstances: true,
+          autoResolve: true,
+          condition: (conditionArgs: TriggeredEffectConditionContext<'beforePlayedCardEffect'>) => {
+            if (conditionArgs.trigger.args.playerId !== targetPlayerId) {
+              return false;
+            }
+            if (conditionArgs.trigger.args.skipPlayEffect) {
+              return false;
+            }
+
+            const playedCard = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
+            if (!playedCard.type.includes('TREASURE')) {
+              return false;
+            }
+
+            const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: conditionArgs.match });
+            const treasurePlayCount = getTreasurePlayCountForPlayerThisTurn({
+              match: conditionArgs.match,
+              cardLibrary: conditionArgs.cardLibrary,
+              playerId: targetPlayerId,
+              turnHistoryIndex,
+            });
+            return treasurePlayCount === 1;
+          },
+          triggeredEffectFn: async (triggeredArgs: TriggeredEffectContext<'beforePlayedCardEffect'>) => {
+            triggeredArgs.trigger.args.skipPlayEffect = true;
+            loggerService.debug(
+              `[highwayman effect] player ${targetPlayerId} first Treasure this turn does nothing`,
+            );
+          },
+        });
+      });
+
+      if (attackTriggerIds.length > 0) {
+        cardEffectArgs.reactionManager.registerDurationTriggers(highwaymanCard.id, attackTriggerIds);
+      }
     },
   },
   'hunter': {

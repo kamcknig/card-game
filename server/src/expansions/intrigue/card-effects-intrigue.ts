@@ -703,7 +703,7 @@ const expansionModule: CardExpansionModule = {
             playerId,
             promptService: args.promptService,
             loggerService,
-            reactionContext: args.reactionContext,
+            reactionContext,
           },
           logTag: 'MINION EFFECT',
           prompt: 'Choose one',

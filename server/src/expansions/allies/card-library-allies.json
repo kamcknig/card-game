@@ -540,6 +540,18 @@
     ],
     "abilityText": "+$3\nThis turn, when you gain a card, +1 Favor."
   },
+  "highwayman": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION",
+      "DURATION",
+      "ATTACK"
+    ],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "At the start of your next turn, discard this from play and +3 Cards.\nUntil then, the first Treasure each other player plays each turn does nothing."
+  },
   "hunter": {
     "cost": {
       "treasure": 5
