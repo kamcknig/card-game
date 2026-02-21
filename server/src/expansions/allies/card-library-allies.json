@@ -58,5 +58,68 @@
         "abilityText": "+4 Cards\n+1 Action\nPut a card from your hand on top of your deck, and another on the bottom."
       }
     ]
+  },
+  "clashes": {
+    "pile": {
+      "randomizer": "clashes",
+      "cost": {
+        "treasure": 3
+      },
+      "type": [
+        "ACTION",
+        "CLASH"
+      ]
+    },
+    "cards": [
+      {
+        "cardKey": "battle-plan",
+        "cost": {
+          "treasure": 3
+        },
+        "type": [
+          "ACTION",
+          "CLASH"
+        ],
+        "abilityText": "+1 Card\n+1 Action\nYou may reveal an Attack card from your hand for +1 Card.\nYou may rotate any Supply pile."
+      },
+      {
+        "cardKey": "archer",
+        "cost": {
+          "treasure": 4
+        },
+        "type": [
+          "ACTION",
+          "ATTACK",
+          "CLASH"
+        ],
+        "targetScheme": "ALL_OTHER",
+        "abilityText": "+$2\nEach other player with 5 or more cards in hand reveals all but one, and discards one of those you choose."
+      },
+      {
+        "cardKey": "warlord",
+        "cost": {
+          "treasure": 5
+        },
+        "type": [
+          "ACTION",
+          "DURATION",
+          "ATTACK",
+          "CLASH"
+        ],
+        "targetScheme": "ALL_OTHER",
+        "abilityText": "+1 Action\nAt the start of your next turn, +2 Cards. Until then, other players can't play an Action from their hand that they have 2 or more copies of in play."
+      },
+      {
+        "cardKey": "territory",
+        "cost": {
+          "treasure": 6
+        },
+        "type": [
+          "VICTORY",
+          "CLASH"
+        ],
+        "abilityText": "Worth 1VP per differently named Victory card you have.\nWhen you gain this, gain a Gold per empty Supply pile."
+      }
+    ]
   }
 }

@@ -1,6 +1,7 @@
 import { CardId, CardKey, PlayerId } from 'shared/types/index.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
+import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 
 const AUGURS_PILE_KEY: CardKey = 'augurs';
@@ -274,6 +275,210 @@ const cardEffects: CardExpansionModule = {
         toPlayerId: playerId,
         to: { location: 'playerDeck', index: 0 },
       });
+    },
+  },
+  'battle-plan': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
+      const playerId = cardEffectArgs.playerId;
+
+      loggerService.debug('[battle-plan effect] gaining 1 card and 1 action');
+      await cardEffectArgs.actionService.run('drawCard', { playerId, count: 1 });
+      await cardEffectArgs.actionService.run('gainAction', { count: 1 });
+
+      // Optional reveal of an Attack card from hand for +1 Card.
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', playerId);
+      const attackCardIds = hand.filter((cardId) => cardEffectArgs.cardLibrary.getCard(cardId).type.includes('ATTACK'));
+      if (attackCardIds.length > 0) {
+        const revealedAttackCardId = await cardEffectArgs.promptService.selectSingleCardFromPrompt({
+          playerId,
+          prompt: 'You may reveal an Attack card from your hand for +1 Card',
+          content: {
+            type: 'select',
+            cardIds: attackCardIds,
+          },
+          actionButtons: [
+            { label: 'CANCEL', action: 0 },
+            { label: 'REVEAL', action: 1 },
+          ],
+          validationAction: 1,
+        });
+
+        if (revealedAttackCardId) {
+          loggerService.debug(`[battle-plan effect] revealing Attack card ${revealedAttackCardId} for +1 Card`);
+          await cardEffectArgs.actionService.run('revealCard', {
+            playerId,
+            cardId: revealedAttackCardId,
+          });
+          await cardEffectArgs.actionService.run('drawCard', { playerId, count: 1 });
+        } else {
+          loggerService.debug('[battle-plan effect] no Attack card revealed');
+        }
+      } else {
+        loggerService.debug('[battle-plan effect] no Attack cards in hand to reveal');
+      }
+
+      // Optional rotation of any pile currently in Supply.
+      const supplyPileKeys = [...new Set(
+        cardEffectArgs.findCardService.findCards({ location: ['basicSupply', 'kingdomSupply'] })
+          .map((card) => getCardPileKey(card))
+          .filter((pileKey) => pileKey.length > 0),
+      )].sort((left, right) => left.localeCompare(right));
+
+      if (supplyPileKeys.length < 1) {
+        loggerService.debug('[battle-plan effect] no Supply piles available to rotate');
+        return;
+      }
+
+      const selectedPileKeys = await cardEffectArgs.promptService.request<CardKey[]>({
+        playerId,
+        prompt: 'You may rotate a Supply pile',
+        content: {
+          type: 'select-pile',
+          pileNames: supplyPileKeys,
+          selectCount: { kind: 'upTo', count: 1 },
+          optional: true,
+        },
+      }) ?? [];
+
+      const selectedPileKey = selectedPileKeys[0];
+      if (!selectedPileKey) {
+        loggerService.debug('[battle-plan effect] no pile selected to rotate');
+        return;
+      }
+
+      loggerService.debug(`[battle-plan effect] rotating pile ${selectedPileKey}`);
+      await cardEffectArgs.actionService.run('rotateSplitPile', {
+        pileKey: selectedPileKey,
+      });
+    },
+  },
+  'archer': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
+      const playerId = cardEffectArgs.playerId;
+
+      loggerService.debug('[archer effect] gaining 2 treasure');
+      await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
+
+      const targetPlayerIds = findOrderedTargets({
+        match: cardEffectArgs.match,
+        appliesTo: 'ALL_OTHER',
+        startingPlayerId: playerId,
+      }).filter((targetPlayerId) => !isPlayerImmune(cardEffectArgs.reactionContext, targetPlayerId));
+
+      for (const targetPlayerId of targetPlayerIds) {
+        const targetHand = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
+        if (targetHand.length < 5) {
+          loggerService.debug(`[archer effect] player ${targetPlayerId} has fewer than 5 cards, skipping`);
+          continue;
+        }
+
+        // Target chooses one card to keep secret.
+        const keptCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
+          playerId: targetPlayerId,
+          prompt: 'Choose a card to keep hidden',
+          restrict: targetHand,
+          count: 1,
+        }) ?? targetHand[0];
+
+        // Reveal all remaining cards.
+        const revealedCardIds = targetHand.filter((cardId) => cardId !== keptCardId);
+        for (const revealedCardId of revealedCardIds) {
+          await cardEffectArgs.actionService.run('revealCard', {
+            playerId: targetPlayerId,
+            cardId: revealedCardId,
+          });
+        }
+
+        if (revealedCardIds.length < 1) {
+          loggerService.debug(`[archer effect] player ${targetPlayerId} revealed no cards to discard`);
+          continue;
+        }
+
+        // Attacker chooses one revealed card for the target to discard.
+        const selectedDiscardId = revealedCardIds.length === 1
+          ? revealedCardIds[0]
+          : await cardEffectArgs.promptService.selectSingleCardFromPrompt({
+            playerId,
+            prompt: `Choose a revealed card for player ${targetPlayerId} to discard`,
+            content: {
+              type: 'select',
+              cardIds: revealedCardIds,
+            },
+          }) ?? revealedCardIds[0];
+
+        loggerService.debug(`[archer effect] player ${targetPlayerId} discarding card ${selectedDiscardId}`);
+        await cardEffectArgs.actionService.run('discardCard', {
+          playerId: targetPlayerId,
+          cardId: selectedDiscardId,
+        });
+      }
+    },
+  },
+  'warlord': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
+      const playerId = cardEffectArgs.playerId;
+      const warlordCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+
+      loggerService.debug('[warlord effect] gaining 1 action');
+      await cardEffectArgs.actionService.run('gainAction', { count: 1 });
+
+      // At the start of your next turn, draw 2 cards.
+      cardEffectArgs.registerDurationEffect(warlordCard, {
+        id: `warlord:${cardEffectArgs.cardId}:startTurn`,
+        playerId,
+        listeningFor: 'startTurn',
+        once: true,
+        compulsory: true,
+        system: true,
+        allowMultipleInstances: true,
+        condition: ({ trigger }) => trigger.args.playerId === playerId,
+        triggeredEffectFn: async (triggeredArgs) => {
+          await triggeredArgs.actionService.run('moveCard', {
+            cardId: warlordCard.id,
+            to: { location: 'playArea' },
+          });
+          await triggeredArgs.actionService.run('drawCard', { playerId, count: 2 });
+        },
+      });
+    },
+  },
+  'territory': {
+    registerScoringFunction: () => (cardEffectArgs) => {
+      const victoryCardKeys = new Set(
+        cardEffectArgs.findCardService.findCards([
+          { owner: cardEffectArgs.ownerId },
+          { cardType: ['VICTORY'] },
+        ]).map((card) => card.cardKey),
+      );
+      cardEffectArgs.loggerService.debug(
+        `[territory scoring] player ${cardEffectArgs.ownerId} has ${victoryCardKeys.size} differently named Victory cards`,
+      );
+      return victoryCardKeys.size;
+    },
+    registerLifeCycleMethods: () => ({
+      onGained: async (cardEffectArgs, eventArgs) => {
+        const loggerService = cardEffectArgs.loggerService;
+        const totalSupplyPiles = cardEffectArgs.match.config.basicSupply.length + cardEffectArgs.match.config.kingdomSupply.length;
+        const emptySupplyPileCount = Math.max(0, totalSupplyPiles - cardEffectArgs.findCardService.getRemainingSupplyCount());
+        loggerService.debug(
+          `[territory onGained effect] ${emptySupplyPileCount} empty Supply pile(s); gaining that many Golds`,
+        );
+
+        for (let i = 0; i < emptySupplyPileCount; i++) {
+          await gainTopSupplyCardToDiscard({
+            playerId: eventArgs.playerId,
+            pileKey: 'gold',
+            logTag: 'territory onGained gain gold',
+            supplyGainService: cardEffectArgs.supplyGainService,
+          });
+        }
+      },
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      cardEffectArgs.loggerService.debug('[territory effect] no on-play effect');
     },
   },
 };

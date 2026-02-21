@@ -6,6 +6,7 @@ import { configureSplitPile } from '../../utils/configure-split-pile.ts';
 
 const IMPORTER_PILE_KEY = 'importer';
 const AUGURS_PILE_KEY = 'augurs';
+const CLASHES_PILE_KEY = 'clashes';
 // Canonical Augurs split-pile order (bottom -> top).
 const AUGURS_ORDER: CardKey[] = [
   'sibyl',
@@ -25,6 +26,25 @@ const AUGURS_ORDER: CardKey[] = [
   'herb-gatherer',
   'herb-gatherer',
 ];
+// Canonical Clashes split-pile order (bottom -> top).
+const CLASHES_ORDER: CardKey[] = [
+  'territory',
+  'territory',
+  'territory',
+  'territory',
+  'warlord',
+  'warlord',
+  'warlord',
+  'warlord',
+  'archer',
+  'archer',
+  'archer',
+  'archer',
+  'battle-plan',
+  'battle-plan',
+  'battle-plan',
+  'battle-plan',
+];
 
 // Returns true when at least one selected kingdom pile contains a Liaison card.
 const hasLiaisonInKingdom = (config: ComputedMatchConfiguration): boolean => {
@@ -38,6 +58,12 @@ const configurator: ExpansionConfiguratorFactory = () => {
       pileKey: AUGURS_PILE_KEY,
       desiredOrder: AUGURS_ORDER,
       logLabel: AUGURS_PILE_KEY,
+    });
+    // Keep Clashes split pile in canonical order whenever selected.
+    configureSplitPile(args, {
+      pileKey: CLASHES_PILE_KEY,
+      desiredOrder: CLASHES_ORDER,
+      logLabel: CLASHES_PILE_KEY,
     });
 
     const hasLiaison = hasLiaisonInKingdom(args.config);
