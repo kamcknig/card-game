@@ -202,6 +202,8 @@ export interface Match {
   debt: Record<PlayerId, number>;
   // Tracks per-player Favor resources from Allies.
   favors: Record<PlayerId, number>;
+  // Tracks pending skipped turns by player (used by effects like Lich).
+  skippedTurns: Record<PlayerId, number>;
   config: ComputedMatchConfiguration,
   currentPlayerTurnIndex: number;
   events: Event[];

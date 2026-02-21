@@ -1,0 +1,4 @@
+interface:
+  display_name: "Expansion Effects Authoring"
+  short_description: "Implement deterministic expansion effects"
+  default_prompt: "Use $expansion-effects-authoring to implement the requested Dominion expansion effect(s) from docs with deterministic engine behavior."

@@ -241,5 +241,67 @@
         "abilityText": "+$2\nYou may play an Action card from your hand. When it gives you a choice of abilities (with \"choose\") this turn, you may choose an extra (different) option."
       }
     ]
+  },
+  "wizards": {
+    "pile": {
+      "randomizer": "wizards",
+      "cost": {
+        "treasure": 3
+      },
+      "type": [
+        "ACTION",
+        "WIZARD"
+      ]
+    },
+    "cards": [
+      {
+        "cardKey": "student",
+        "cost": {
+          "treasure": 3
+        },
+        "type": [
+          "ACTION",
+          "WIZARD",
+          "LIAISON"
+        ],
+        "abilityText": "+1 Action\nYou may rotate the Wizards.\nTrash a card from your hand. If it's a Treasure, +1 Favor and put this onto your deck."
+      },
+      {
+        "cardKey": "conjurer",
+        "cost": {
+          "treasure": 4
+        },
+        "type": [
+          "ACTION",
+          "DURATION",
+          "WIZARD"
+        ],
+        "abilityText": "Gain a card costing up to $4.\nAt the start of your next turn, put this into your hand."
+      },
+      {
+        "cardKey": "sorcerer",
+        "cost": {
+          "treasure": 5
+        },
+        "type": [
+          "ACTION",
+          "ATTACK",
+          "WIZARD"
+        ],
+        "targetScheme": "ALL_OTHER",
+        "abilityText": "+1 Card\n+1 Action\nEach other player names a card, then reveals the top card of their deck. If wrong, they gain a Curse."
+      },
+      {
+        "cardKey": "lich",
+        "cost": {
+          "treasure": 6
+        },
+        "type": [
+          "ACTION",
+          "WIZARD"
+        ],
+        "abilityText": "+6 Cards\n+2 Actions\nSkip a turn.\nWhen you trash this, discard it and gain a cheaper card from the trash."
+      }
+    ]
   }
 }

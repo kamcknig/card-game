@@ -1,24 +1,13 @@
 ---
 name: expansion-effects-authoring
-description: Implement and update Dominion expansion card and card-like effects (cards, events, projects, landmarks, artifacts, boons, hexes, states) with deterministic behavior, correct trigger ordering, stable match configuration changes, and codebase conventions.
+description: Implement or update Dominion expansion card and card-like effects (cards, events, projects, landmarks, artifacts, boons, hexes, states) in this repository with deterministic behavior, correct trigger ordering, stable setup/configuration changes, and codebase conventions. Use when requests mention `dominion-docs/expansion-docs/...`, implementing expansion mechanics, fixing rule interactions, or correcting lifecycle/ordering behavior.
 ---
 
 # Expansion Effects Authoring
 
-Use this skill when implementing or updating expansion mechanics in this codebase.
-
-## When To Use
-
-Use for requests like:
-
-- Implement card effects from `dominion-docs/expansion-docs/...`
-- Implement card-like effects (event/project/landmark/artifact/boon/hex/state)
-- Add or update expansion setup/configuration caused by cards/card-likes
-- Fix rule interactions, trigger ordering, or lifecycle behavior
+Implement expansion mechanics through existing engine abstractions while preserving deterministic gameplay and rule fidelity.
 
 ## Inputs You Need
-
-Collect these first:
 
 1. Exact docs path(s) for the mechanic being implemented.
 2. Expansion/module target file(s) in `server/src/expansions/...`.
@@ -37,14 +26,16 @@ Collect these first:
    - Prefer existing shared helpers before adding new ones.
 4. Locate nearest existing pattern in same expansion first, then adjacent expansions.
 5. Implement with existing abstractions:
-   - `runGameActionDelegate(...)`
    - `registerEffects`, `registerLifeCycleMethods`
    - `reactionManager.registerReactionTemplate/registerSystemTemplate`
-   - price/token/state controllers
-6. Add/update metadata typing (no unsafe casts):
+   - Prefer framework-generated reaction IDs; only provide manual `id` values when required for explicit lifecycle cleanup or deterministic multi-instance disambiguation.
+   - `registerDurationEffect(...)`
+   - action service and price/token/state controllers
+6. Add/update metadata typing:
    - Prefer generic typed accessors (`getCard<T>`, typed card-like match finders).
+   - Avoid unsafe casts when a typed path is available.
 7. Add/update configuration side effects:
-   - If a card/card-like adds config (mat/non-supply/token/source), ensure removal logic is also stable when the source is absent.
+   - If a card/card-like adds config (mat/non-supply/token/source), ensure removal logic is stable when the source is absent.
 8. Add debug/info/log messages that explain:
    - decision branches
    - skipped branches
@@ -57,8 +48,8 @@ Collect these first:
 - Preserve determinism.
 - Follow existing architecture; do not bypass action/reaction pipelines.
 - No hidden state mutation outside approved controllers/actions.
-- Do not add custom reaction ids unless necessary.
-- Follow Lose Track and Stop-Moving rules.
+- Do not create reaction/trigger IDs manually unless absolutely necessary.
+- Follow Dominion Lose Track and Stop-Moving rules.
 - Prefer pile-key semantics over card-key semantics for supply-top effects (split pile safe).
 - Keep comments for all new code.
 - Do not remove pre-existing comments.
@@ -93,10 +84,9 @@ Run targeted checks for changed files:
 ```bash
 deno check --no-lock --config server/deno.json server/src/expansions/<expansion>/<file>.ts
 deno check --no-lock --config server/deno.json shared/src/<shared-file>.ts
-deno check --no-lock --config server/deno.json server/src/server.ts
 ```
 
-When changing multiple files, check each touched module file directly.
+When changing multiple files, run checks for each touched module file directly.
 
 ## Completion Checklist
 

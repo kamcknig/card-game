@@ -14,6 +14,8 @@ export function createInitialMatchState(): Match {
     debt: {},
     // Per-player Favor resources for Allies.
     favors: {},
+    // Per-player pending skipped turns (e.g., from Lich).
+    skippedTurns: {},
     config: {} as ComputedMatchConfiguration,
     currentPlayerTurnIndex: 0,
     events: [],

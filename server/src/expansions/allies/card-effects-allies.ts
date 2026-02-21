@@ -1,5 +1,6 @@
 import { CardId, CardKey, CardLocation, PlayerId, TokenInstanceId } from 'shared/types/index.ts';
 import { CardEffectFunctionContext, CardExpansionModule } from '@server-types/index.ts';
+import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { baseV2TokenIds } from '@expansions/base-v2/token-ids-base-v2.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
@@ -10,6 +11,7 @@ import { resolveChooseAbilities } from '../../utils/resolve-choose-abilities.ts'
 const AUGURS_PILE_KEY: CardKey = 'augurs';
 const FORTS_PILE_KEY: CardKey = 'forts';
 const TOWNSFOLK_PILE_KEY: CardKey = 'townsfolk';
+const WIZARDS_PILE_KEY: CardKey = 'wizards';
 
 // Gains the current top card of a supply pile to discard.
 const gainTopSupplyCardToDiscard = async (args: {
@@ -87,6 +89,31 @@ const getCoinTokenInstanceIdsOnCard = (args: {
     )
     .map(([tokenInstanceId]) => tokenInstanceId)
     .sort((left, right) => left.localeCompare(right));
+};
+
+// Finds trash cards that currently cost strictly less than the source card.
+const getCheaperTrashCardIds = <T extends {
+  cardLibrary: { getCard: (cardId: CardId) => unknown };
+  cardPriceController: { applyRules: (...args: any[]) => { cost: { treasure: number; potion?: number; debt?: number } } };
+  cardSourceController: { getSource: (source: 'trash') => CardId[] };
+}>(args: {
+  cardEffectArgs: T;
+  playerId: PlayerId;
+  sourceCardId: CardId;
+}): CardId[] => {
+  const sourceCard = args.cardEffectArgs.cardLibrary.getCard(args.sourceCardId);
+  const { cost: sourceCost } = args.cardEffectArgs.cardPriceController.applyRules(sourceCard, {
+    playerId: args.playerId,
+  });
+
+  return args.cardEffectArgs.cardSourceController.getSource('trash')
+    .filter((trashCardId) => {
+      const trashCard = args.cardEffectArgs.cardLibrary.getCard(trashCardId);
+      const { cost: trashCardCost } = args.cardEffectArgs.cardPriceController.applyRules(trashCard, {
+        playerId: args.playerId,
+      });
+      return compareCardCosts(trashCardCost, sourceCost) === -1;
+    });
 };
 
 // Registers a one-shot cardPlayed reaction that grants one Elder choice bonus to a specific card play.
@@ -368,6 +395,245 @@ const cardEffects: CardExpansionModule = {
         toPlayerId: playerId,
         to: { location: 'playerDeck', index: 0 },
       });
+    },
+  },
+  'student': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
+      const playerId = cardEffectArgs.playerId;
+
+      loggerService.debug('[student effect] gaining 1 action');
+      await cardEffectArgs.actionService.run('gainAction', { count: 1 });
+
+      // Student can optionally rotate the Wizards split pile before the mandatory trash.
+      const rotatePrompt = await cardEffectArgs.actionService.run('userPrompt', {
+        playerId,
+        prompt: 'Rotate the Wizards?',
+        actionButtons: [
+          { label: 'NO', action: 1 },
+          { label: 'ROTATE', action: 2 },
+        ],
+      }) as { action?: number } | null;
+      if (rotatePrompt?.action === 2) {
+        loggerService.debug('[student effect] rotating Wizards split pile');
+        await cardEffectArgs.actionService.run('rotateSplitPile', {
+          pileKey: WIZARDS_PILE_KEY,
+        });
+      }
+
+      // Trashing is mandatory; when no cards remain in hand, no trash occurs.
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', playerId);
+      if (hand.length < 1) {
+        loggerService.debug('[student effect] no cards in hand to trash');
+        return;
+      }
+
+      const selectedTrashCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
+        playerId,
+        prompt: 'Trash a card from your hand',
+        restrict: hand,
+        count: 1,
+      }) ?? hand[0];
+      const trashedCard = cardEffectArgs.cardLibrary.getCard(selectedTrashCardId);
+
+      loggerService.debug(`[student effect] trashing ${trashedCard}`);
+      await cardEffectArgs.actionService.run('trashCard', {
+        playerId,
+        cardId: selectedTrashCardId,
+      });
+
+      if (!trashedCard.type.includes('TREASURE')) {
+        loggerService.debug('[student effect] trashed card is not a Treasure; no Favor or top-deck');
+        return;
+      }
+
+      loggerService.debug('[student effect] trashed Treasure; gaining 1 Favor');
+      await cardEffectArgs.actionService.run('gainFavor', {
+        playerId,
+        count: 1,
+      });
+
+      // "Put this onto your deck" only works while this card is still in play.
+      if (!isCardStillInPlay({
+        cardId: cardEffectArgs.cardId,
+        cardSourceController: cardEffectArgs.cardSourceController,
+      })) {
+        loggerService.debug('[student effect] this card is no longer in play; skipping top-deck move');
+        return;
+      }
+
+      loggerService.debug('[student effect] moving this card onto deck');
+      await cardEffectArgs.actionService.run('moveCard', {
+        cardId: cardEffectArgs.cardId,
+        toPlayerId: playerId,
+        to: { location: 'playerDeck' },
+      });
+    },
+  },
+  'conjurer': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
+      const playerId = cardEffectArgs.playerId;
+
+      // Conjurer gains any card from Supply costing up to $4.
+      const gainableCards = cardEffectArgs.findCardService.findCards([
+        { location: ['basicSupply', 'kingdomSupply'] },
+        { playerId, kind: 'upTo', amount: { treasure: 4 } },
+      ]);
+      if (gainableCards.length > 0) {
+        const selectedGainCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
+          playerId,
+          prompt: 'Gain a card costing up to $4',
+          restrict: gainableCards.map((card) => card.id),
+          count: 1,
+        }) ?? gainableCards[0].id;
+
+        await cardEffectArgs.actionService.run('gainCard', {
+          playerId,
+          cardId: selectedGainCardId,
+          to: { location: 'playerDiscard' },
+        });
+      } else {
+        loggerService.debug('[conjurer effect] no gainable Supply cards costing up to 4');
+      }
+
+      const conjurerCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const playInstance = getPlayInstanceForCardKeyThisTurn({
+        cardKey: conjurerCard.cardKey,
+        match: cardEffectArgs.match,
+        cardLibrary: cardEffectArgs.cardLibrary,
+      });
+      cardEffectArgs.registerDurationEffect(conjurerCard, {
+        id: `conjurer:${conjurerCard.id}:startTurn:${playInstance}`,
+        playerId,
+        listeningFor: 'startTurn',
+        once: true,
+        compulsory: true,
+        system: true,
+        allowMultipleInstances: true,
+        condition: ({ trigger }) => trigger.args.playerId === playerId,
+        triggeredEffectFn: async (triggeredArgs) => {
+          if (!isCardStillInPlay({
+            cardId: conjurerCard.id,
+            cardSourceController: triggeredArgs.cardSourceController,
+          })) {
+            triggeredArgs.loggerService.debug('[conjurer startTurn effect] card is no longer in play; skipping');
+            return;
+          }
+
+          await triggeredArgs.actionService.run('moveCard', {
+            cardId: conjurerCard.id,
+            toPlayerId: playerId,
+            to: { location: 'playerHand' },
+          });
+        },
+      });
+    },
+  },
+  'sorcerer': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
+      const playerId = cardEffectArgs.playerId;
+
+      loggerService.debug('[sorcerer effect] drawing 1 card and gaining 1 action');
+      await cardEffectArgs.actionService.run('drawCard', { playerId, count: 1 });
+      await cardEffectArgs.actionService.run('gainAction', { count: 1 });
+
+      const targetPlayerIds = findOrderedTargets({
+        match: cardEffectArgs.match,
+        appliesTo: 'ALL_OTHER',
+        startingPlayerId: playerId,
+      }).filter((targetPlayerId) => !isPlayerImmune(cardEffectArgs.reactionContext, targetPlayerId));
+
+      for (const targetPlayerId of targetPlayerIds) {
+        const namedCardPrompt = await cardEffectArgs.actionService.run('userPrompt', {
+          playerId: targetPlayerId,
+          prompt: 'Name a card',
+          content: { type: 'name-card' },
+        }) as { result?: CardKey } | null;
+        const namedCardKey = namedCardPrompt?.result;
+        const revealedCardId = await cardEffectArgs.actionService.run('revealCard', {
+          playerId: targetPlayerId,
+          source: 'playerDeck',
+        });
+        if (!revealedCardId) {
+          loggerService.debug(`[sorcerer effect] player ${targetPlayerId} had no card to reveal`);
+          continue;
+        }
+
+        const revealedCard = cardEffectArgs.cardLibrary.getCard(revealedCardId);
+        if (namedCardKey && revealedCard.cardKey === namedCardKey) {
+          loggerService.debug(`[sorcerer effect] player ${targetPlayerId} named correctly`);
+          continue;
+        }
+
+        loggerService.debug(`[sorcerer effect] player ${targetPlayerId} guessed wrong; gaining Curse`);
+        await gainTopSupplyCardToDiscard({
+          playerId: targetPlayerId,
+          pileKey: 'curse',
+          logTag: 'sorcerer attack',
+          supplyGainService: cardEffectArgs.supplyGainService,
+        });
+      }
+    },
+  },
+  'lich': {
+    registerLifeCycleMethods: () => ({
+      onTrashed: async (cardEffectArgs, eventArgs) => {
+        const loggerService = cardEffectArgs.loggerService;
+
+        // Lich first leaves the trash and is discarded by the player that trashed it.
+        let sourceKey: CardLocation | undefined;
+        try {
+          sourceKey = cardEffectArgs.cardSourceController.findCardSource(eventArgs.cardId).sourceKey;
+        } catch {
+          sourceKey = undefined;
+        }
+        if (sourceKey === 'trash') {
+          loggerService.debug('[lich onTrashed effect] moving trashed Lich to discard');
+          await cardEffectArgs.actionService.run('moveCard', {
+            cardId: eventArgs.cardId,
+            toPlayerId: eventArgs.playerId,
+            to: { location: 'playerDiscard' },
+          });
+        } else {
+          loggerService.debug('[lich onTrashed effect] Lich is not in trash; skipping discard move');
+        }
+
+        // Gaining a cheaper card from trash is mandatory when any valid card exists.
+        const cheaperTrashCardIds = getCheaperTrashCardIds({
+          cardEffectArgs,
+          playerId: eventArgs.playerId,
+          sourceCardId: eventArgs.cardId,
+        });
+        if (cheaperTrashCardIds.length < 1) {
+          loggerService.debug('[lich onTrashed effect] no cheaper cards in trash to gain');
+          return;
+        }
+
+        const selectedGainCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
+          playerId: eventArgs.playerId,
+          prompt: 'Gain a cheaper card from the trash',
+          restrict: cheaperTrashCardIds,
+          count: 1,
+        }) ?? cheaperTrashCardIds[0];
+
+        loggerService.debug(`[lich onTrashed effect] gaining cheaper trash card ${selectedGainCardId}`);
+        await cardEffectArgs.actionService.run('gainCard', {
+          playerId: eventArgs.playerId,
+          cardId: selectedGainCardId,
+          to: { location: 'playerDiscard' },
+        });
+      },
+    }),
+    registerEffects: () => async (cardEffectArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
+      const playerId = cardEffectArgs.playerId;
+
+      loggerService.debug('[lich effect] drawing 6 cards, gaining 2 actions, and skipping a future turn');
+      await cardEffectArgs.actionService.run('drawCard', { playerId, count: 6 });
+      await cardEffectArgs.actionService.run('gainAction', { count: 2 });
+      await cardEffectArgs.actionService.run('skipTurn', { playerId, count: 1 });
     },
   },
   'town-crier': {

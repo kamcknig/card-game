@@ -9,6 +9,7 @@ const AUGURS_PILE_KEY = 'augurs';
 const CLASHES_PILE_KEY = 'clashes';
 const FORTS_PILE_KEY = 'forts';
 const TOWNSFOLK_PILE_KEY = 'townsfolk';
+const WIZARDS_PILE_KEY = 'wizards';
 // Canonical Augurs split-pile order (bottom -> top).
 const AUGURS_ORDER: CardKey[] = [
   'sibyl',
@@ -85,6 +86,25 @@ const TOWNSFOLK_ORDER: CardKey[] = [
   'town-crier',
   'town-crier',
 ];
+// Canonical Wizards split-pile order (bottom -> top).
+const WIZARDS_ORDER: CardKey[] = [
+  'lich',
+  'lich',
+  'lich',
+  'lich',
+  'sorcerer',
+  'sorcerer',
+  'sorcerer',
+  'sorcerer',
+  'conjurer',
+  'conjurer',
+  'conjurer',
+  'conjurer',
+  'student',
+  'student',
+  'student',
+  'student',
+];
 
 // Returns true when at least one selected kingdom pile contains a Liaison card.
 const hasLiaisonInKingdom = (config: ComputedMatchConfiguration): boolean => {
@@ -116,6 +136,12 @@ const configurator: ExpansionConfiguratorFactory = () => {
       pileKey: TOWNSFOLK_PILE_KEY,
       desiredOrder: TOWNSFOLK_ORDER,
       logLabel: TOWNSFOLK_PILE_KEY,
+    });
+    // Keep Wizards split pile in canonical order whenever selected.
+    configureSplitPile(args, {
+      pileKey: WIZARDS_PILE_KEY,
+      desiredOrder: WIZARDS_ORDER,
+      logLabel: WIZARDS_PILE_KEY,
     });
 
     const hasLiaison = hasLiaisonInKingdom(args.config);

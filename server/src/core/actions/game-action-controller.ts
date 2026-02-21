@@ -1800,6 +1800,21 @@ export class GameActionController implements GameActionDefinitionMap {
     this.loggerService.debug(`[queueExtraTurn action] queue size now ${this.match.extraTurnQueue.length}`);
   }
 
+  // Adds pending skipped turns for a player (used by effects like Lich).
+  async skipTurn(args: { playerId: PlayerId; count?: number }, _context?: GameActionContext) {
+    const skipCount = Math.max(0, args.count ?? 1);
+    if (skipCount <= 0) {
+      this.loggerService.debug(`[skipTurn action] non-positive skip count ${skipCount}, skipping`);
+      return;
+    }
+
+    this.match.skippedTurns[args.playerId] ??= 0;
+    this.match.skippedTurns[args.playerId] += skipCount;
+    this.loggerService.info(
+      `[skipTurn action] player ${args.playerId} will skip ${this.match.skippedTurns[args.playerId]} future turn(s)`,
+    );
+  }
+
   async gainCoffer(args: { playerId: PlayerId; count?: number }, _context?: GameActionContext) {
     this.loggerService.log(`[gainCoffer action] player ${args.playerId} gained ${args.count} coffers`);
     this.match.coffers[args.playerId] ??= 0;
@@ -1807,6 +1822,17 @@ export class GameActionController implements GameActionDefinitionMap {
     this.match.coffers[args.playerId] = Math.max(0, this.match.coffers[args.playerId]);
     this.loggerService.debug(
       `[gainCoffer action] player ${args.playerId} now has ${this.match.coffers[args.playerId]} coffers`,
+    );
+  }
+
+  // Adds Favor resources (Allies) to a player.
+  async gainFavor(args: { playerId: PlayerId; count?: number }, _context?: GameActionContext) {
+    this.loggerService.log(`[gainFavor action] player ${args.playerId} gained ${args.count} Favor`);
+    this.match.favors[args.playerId] ??= 0;
+    this.match.favors[args.playerId] += args.count ?? 1;
+    this.match.favors[args.playerId] = Math.max(0, this.match.favors[args.playerId]);
+    this.loggerService.debug(
+      `[gainFavor action] player ${args.playerId} now has ${this.match.favors[args.playerId]} Favor`,
     );
   }
 
@@ -2816,8 +2842,11 @@ export class GameActionController implements GameActionDefinitionMap {
     const match = this.match;
 
     let currentPlayer = getCurrentPlayer(match);
-    let extraTurn: ExtraTurn | undefined;
-    let fleetTurnPlayerId: PlayerId | undefined;
+    type ScheduledTurn = {
+      kind: 'extra' | 'fleet' | 'normal';
+      turn: ExtraTurn;
+    };
+    let scheduledTurn: ScheduledTurn | undefined;
 
     await this.runEndTurnPhaseTrigger(match.turnPhaseIndex, currentPlayer.id);
 
@@ -2846,48 +2875,109 @@ export class GameActionController implements GameActionDefinitionMap {
         return;
       }
 
-      // Resolve the next valid extra turn, skipping entries that would create a third consecutive turn.
-      while (match.extraTurnQueue.length > 0) {
-        const queuedExtraTurn = match.extraTurnQueue.shift();
-        if (!queuedExtraTurn) {
+      // Resolves the next scheduled turn source in priority order: valid extra turn, Fleet turn, then normal turn.
+      const resolveNextScheduledTurn = (): ScheduledTurn => {
+        // Resolve the next valid extra turn, skipping entries that would create a third consecutive turn.
+        while (match.extraTurnQueue.length > 0) {
+          const queuedExtraTurn = match.extraTurnQueue.shift();
+          if (!queuedExtraTurn) {
+            break;
+          }
+
+          const turns = match.stats.turns;
+          const previousTurn = turns.length >= 1 ? turns[turns.length - 1] : undefined;
+          const secondPreviousTurn = turns.length >= 2 ? turns[turns.length - 2] : undefined;
+          const wouldBeThirdTurnInARow = previousTurn?.playerId === queuedExtraTurn.playerId &&
+            secondPreviousTurn?.playerId === queuedExtraTurn.playerId;
+
+          if (wouldBeThirdTurnInARow) {
+            this.loggerService.info(
+              `[nextPhase action] skipping extra turn for player ${queuedExtraTurn.playerId}; would be a third consecutive turn`,
+            );
+            continue;
+          }
+
+          return {
+            kind: 'extra',
+            turn: queuedExtraTurn,
+          };
+        }
+
+        // Fleet turns happen after normal extra turns while Fleet round is active.
+        if (match.fleetRound.active) {
+          const nextFleetTurnIndex = match.fleetRound.nextFleetPlayerIndex;
+          const nextFleetPlayerId = match.fleetRound.eligiblePlayerIdsInOrder[nextFleetTurnIndex];
+          if (nextFleetPlayerId !== undefined) {
+            match.fleetRound.nextFleetPlayerIndex++;
+            this.loggerService.info(
+              `[nextPhase action] scheduling Fleet turn for player ${nextFleetPlayerId} (${
+                nextFleetTurnIndex + 1
+              }/${match.fleetRound.eligiblePlayerIdsInOrder.length})`,
+            );
+            return {
+              kind: 'fleet',
+              turn: { playerId: nextFleetPlayerId },
+            };
+          }
+        }
+
+        const nextPlayerIndex = (match.currentPlayerTurnIndex + 1) % match.players.length;
+        return {
+          kind: 'normal',
+          turn: { playerId: match.players[nextPlayerIndex].id },
+        };
+      };
+
+      // Consume pending skipped turns before starting a real turn.
+      while (!scheduledTurn) {
+        const candidateTurn = resolveNextScheduledTurn();
+        const candidatePlayerId = candidateTurn.turn.playerId;
+        const pendingSkips = match.skippedTurns[candidatePlayerId] ?? 0;
+
+        if (pendingSkips < 1) {
+          scheduledTurn = candidateTurn;
           break;
         }
 
-        const turns = match.stats.turns;
-        const previousTurn = turns.length >= 1 ? turns[turns.length - 1] : undefined;
-        const secondPreviousTurn = turns.length >= 2 ? turns[turns.length - 2] : undefined;
-        const wouldBeThirdTurnInARow = previousTurn?.playerId === queuedExtraTurn.playerId &&
-          secondPreviousTurn?.playerId === queuedExtraTurn.playerId;
+        match.skippedTurns[candidatePlayerId] = pendingSkips - 1;
+        this.loggerService.info(
+          `[nextPhase action] player ${candidatePlayerId} skips a turn (${match.skippedTurns[candidatePlayerId]} remaining)`,
+        );
 
-        if (wouldBeThirdTurnInARow) {
-          this.loggerService.info(
-            `[nextPhase action] skipping extra turn for player ${queuedExtraTurn.playerId}; would be a third consecutive turn`,
-          );
-          continue;
+        // Skipped turns still count for turn history and tiebreaking even though no phases run.
+        const isSamePlayerExtraTurn = candidateTurn.kind === 'extra' && candidatePlayerId === currentPlayer.id;
+        if (!isSamePlayerExtraTurn) {
+          match.turnNumber += 1;
         }
+        match.currentPlayerTurnIndex = getPlayerTurnIndex({ match, playerId: candidatePlayerId });
+        match.roundNumber = Math.floor(match.turnNumber / match.players.length) + 1;
 
-        extraTurn = queuedExtraTurn;
-        break;
+        this.logManager.addLogEntry({
+          root: true,
+          type: 'newTurn',
+          turn: match.roundNumber,
+          source: candidateTurn.turn.sourceId,
+        });
+
+        this.logManager.addLogEntry({
+          type: 'newPlayerTurn',
+          turn: match.roundNumber,
+          playerId: candidatePlayerId,
+        });
+
+        match.stats.turns.push({
+          turnNumber: match.turnNumber,
+          controllerId: candidateTurn.turn.controllerId ?? candidatePlayerId,
+          playerId: candidatePlayerId,
+          sourceId: candidateTurn.turn.sourceId,
+        });
+
+        currentPlayer = getCurrentPlayer(match);
       }
 
-      // Fleet turns happen after normal extra turns while Fleet round is active.
-      if (!extraTurn && match.fleetRound.active) {
-        const nextFleetTurnIndex = match.fleetRound.nextFleetPlayerIndex;
-        const nextFleetPlayerId = match.fleetRound.eligiblePlayerIdsInOrder[nextFleetTurnIndex];
-        if (nextFleetPlayerId !== undefined) {
-          fleetTurnPlayerId = nextFleetPlayerId;
-          match.fleetRound.nextFleetPlayerIndex++;
-          this.loggerService.info(
-            `[nextPhase action] scheduling Fleet turn for player ${fleetTurnPlayerId} (${
-              nextFleetTurnIndex + 1
-            }/${match.fleetRound.eligiblePlayerIdsInOrder.length})`,
-          );
-        }
-      }
-
-      // if there is an extra turn in the queue, and it's the same player as the current player, then the turn number
-      // remains the same, only if it actually is a new player do we increase the turn.
-      match.turnNumber = extraTurn && extraTurn.playerId === currentPlayer.id ? match.turnNumber : match.turnNumber + 1;
+      // If there is an extra turn in the queue and it's the same player, keep turnNumber stable.
+      const isSamePlayerExtraTurn = scheduledTurn.kind === 'extra' && scheduledTurn.turn.playerId === currentPlayer.id;
+      match.turnNumber = isSamePlayerExtraTurn ? match.turnNumber : match.turnNumber + 1;
     }
 
     const newPhase = getTurnPhase(match.turnPhaseIndex);
@@ -2898,10 +2988,8 @@ export class GameActionController implements GameActionDefinitionMap {
       match.playerTreasure = 0;
       match.playerPotions = 0;
 
-      if (extraTurn) {
-        match.currentPlayerTurnIndex = getPlayerTurnIndex({ match, playerId: extraTurn.playerId });
-      } else if (fleetTurnPlayerId !== undefined) {
-        match.currentPlayerTurnIndex = getPlayerTurnIndex({ match, playerId: fleetTurnPlayerId });
+      if (scheduledTurn) {
+        match.currentPlayerTurnIndex = getPlayerTurnIndex({ match, playerId: scheduledTurn.turn.playerId });
       } else {
         match.currentPlayerTurnIndex++;
       }
@@ -2916,7 +3004,7 @@ export class GameActionController implements GameActionDefinitionMap {
         root: true,
         type: 'newTurn',
         turn: match.roundNumber,
-        source: extraTurn?.sourceId,
+        source: scheduledTurn?.turn.sourceId,
       });
 
       this.logManager.addLogEntry({
@@ -2929,9 +3017,9 @@ export class GameActionController implements GameActionDefinitionMap {
       // Track every started turn, including extra turns and owner/controller overrides.
       match.stats.turns.push({
         turnNumber: match.turnNumber,
-        controllerId: extraTurn?.controllerId ?? currentPlayer.id,
+        controllerId: scheduledTurn?.turn.controllerId ?? currentPlayer.id,
         playerId: currentPlayer.id,
-        sourceId: extraTurn?.sourceId,
+        sourceId: scheduledTurn?.turn.sourceId,
       });
 
       this.loggerService.info(

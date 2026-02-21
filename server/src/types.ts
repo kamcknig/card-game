@@ -195,6 +195,8 @@ export interface GameActionDefinitionMap {
   gainAction: (args: { count: number }, context?: GameActionContext) => Promise<void>;
   gainBuy: (args: { count: number }, context?: GameActionContext) => Promise<void>;
   gainCoffer: (args: { playerId: PlayerId; count: number }, context?: GameActionContext) => Promise<void>;
+  // Adds Favor resources to a player (Allies).
+  gainFavor: (args: { playerId: PlayerId; count?: number }, context?: GameActionContext) => Promise<void>;
   // Adds Villagers tokens to a player (Renaissance).
   gainVillager: (args: { playerId: PlayerId; count: number }, context?: GameActionContext) => Promise<void>;
   // Adds debt tokens to a player (used by Empires-style costs/effects).
@@ -211,6 +213,8 @@ export interface GameActionDefinitionMap {
   gainVictoryToken: (args: { playerId: PlayerId; count: number }, context?: GameActionContext) => Promise<void>;
   // adds a turn to the extra turn queue
   queueExtraTurn: (args: { turn: ExtraTurn }) => Promise<void>;
+  // Adds one or more pending skipped turns to a player.
+  skipTurn: (args: { playerId: PlayerId; count?: number }, context?: GameActionContext) => Promise<void>;
   // Receives a boon from the shared boon deck (used by Fate cards).
   receiveBoon: (
     args: { playerId: PlayerId; immediate?: boolean; boonId?: CardLikeId; keepSetAside?: boolean },
