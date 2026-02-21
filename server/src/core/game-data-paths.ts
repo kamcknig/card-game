@@ -1,8 +1,6 @@
 // Centralizes game/match filesystem layout so logs and persisted config stay co-located.
-import { fromFileUrl } from '@std/path';
-
 // Unified root folder for all persisted runtime data.
-const DATA_ROOT = './game-data';
+const DATA_ROOT = Deno.env.get('GAME_DATA_ROOT')?.trim() || './game-data';
 // Root folder for all game-scoped and match-scoped persisted runtime data.
 const GAME_DATA_ROOT = `${DATA_ROOT}/games`;
 
@@ -46,6 +44,5 @@ export const getMatchConfigDirectory = (gameId: string, matchScopeId: number): s
 
 // Returns the global saved match-configuration directory.
 export const getSavedMatchConfigurationDirectory = (): string => {
-  const serverRootUrl = new URL('../../', import.meta.url);
-  return fromFileUrl(new URL('game-data/saves/match-configurations', serverRootUrl));
+  return `${DATA_ROOT}/saves/match-configurations`;
 };

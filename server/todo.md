@@ -1,52 +1,78 @@
-# randomzier
-
-each kingdom card has a randomizer card which is typcally how a kingdom is chosen. but the randomizer card also gives
-you things like the supply's types (action, reaction, etc). Some kingdom piles could have different cards with different
-types, but the randomzier is what says what that pile actually is; this also applies to costs of a pile or cards in it.
-
-this can also be used for pile selection instead of using cards.
-
 # Lower priority
 
 - add pre commit to lint and or fmt
 - undo turn/steps
 - alchemy expansion - haven't built possession
-- when using overpay feature, you can overpay with potions. this matters for stone mason. don't know how to do the UI
+- when using overpay feature, you can overpay with potions. this matters for
+  stone mason. don't know how to do the UI
   for this yet, and doesn't seem super important to get done right away
-- The wiki for the Spoils card states. I don't have a solution for that and how to prevent yet
-- If you play an Ambassador and reveal a Spoils, the Spoils is not returned to the Supply (since it is not in the
+- The wiki for the Spoils card states. I don't have a solution for that and how
+  to prevent yet
+- If you play an Ambassador and reveal a Spoils, the Spoils is not returned to
+  the Supply (since it is not in the
   Supply) and other players do not gain Spoils.
-- prosperity has the card that changes curses into a treasure card type, and also gains the effect to gain 1 treasure on
-  play. need a way to visually denote this properly. also similar to inheritance in adventures
-- update usages of `tags` to use a hard-coded list. these will be known tags from cards like young witch that adds a
-  "bane" card. then you can add a custom tags property to track more custom ones.
-- possible keep the enhanced logging for console logs but switch to a buffered file logger solution later for
+- prosperity has the card that changes curses into a treasure card type, and
+  also gains the effect to gain 1 treasure on
+  play. need a way to visually denote this properly. also similar to inheritance
+  in adventures
+- update usages of `tags` to use a hard-coded list. these will be known tags
+  from cards like young witch that adds a
+  "bane" card. then you can add a custom tags property to track more custom
+  ones.
+- possible keep the enhanced logging for console logs but switch to a buffered
+  file logger solution later for
   production.
-- Lobby ban identity currently uses `sessionId`; replace with durable authenticated identity and provide a migration path.
+- Lobby ban identity currently uses `sessionId`; replace with durable
+  authenticated identity and provide a migration path.
+- cards like throne room need to have log entries updated so that the cards
+  they play show the source (the throne room) in paranethesis. maybe then they
+  dont need to be indented?
+- document application from developers point of view
+- once all game data is added, update all effects that set aside cards to add
+  source and properly be face up or down so that they are sorted correctly in
+  tabs
+- once all game data is added, need to make sure to update all
+  card/landscapes effects to use the new choose ability functionality from edler
+  from allies expansion.
+- need to be able to search for and select split piles. shouldn't be able to
+  search for individual cards in a split pile. i think i'll need images for the
+  piles for this
 
 # Higher priority
+
 - logging is not nearly detailed enough
 - safety so that when a game or mtach crashes, the ret of the server doesn't
   crash and can recover
-- check duration behvavior. the offical rules say this "Additionally, if a Duration card is played extra times by a card
-  such as [Throne Room, Scepter, Mastermind, Specialist, Flagship, or Daimyo], that card also stays in play until the
-  Duration card is discarded, to track the fact that the Duration card was played extra times." Just make sure cards
-  stay in play that need to stay in play. some has already been done, but ensure duration cards from the past before
+- check duration behvavior. the offical rules say this "Additionally, if a
+  Duration card is played extra times by a card
+  such as [Throne Room, Scepter, Mastermind, Specialist, Flagship, or Daimyo],
+  that card also stays in play until the
+  Duration card is discarded, to track the fact that the Duration card was
+  played extra times." Just make sure cards
+  stay in play that need to stay in play. some has already been done, but ensure
+  duration cards from the past before
   something like the nocturne expansion work the same
-- boon and hex indicator views need to be displayed. they have been created, but not displayed to the user
+- boon and hex indicator views need to be displayed. they have been created, but
+  not displayed to the user
   boon-indicator-view and hex-indicator-view
 - player disconnection
-  - work on the use-case when a player disconnects while waiting on input for that player - when they reconnected they
+  - work on the use-case when a player disconnects while waiting on input for
+    that player - when they reconnected they
     need to be asked for their input again
-- when "waiting on player input" displays, cards are selectable. i played warchest, and while waiting on someone to name
+- when "waiting on player input" displays, cards are selectable. i played
+  warchest, and while waiting on someone to name
   cards, it showed highlights on cards. don't know if they were selectable
-- some mats have rules that indicate cards are moved to the deck at the end of the game before scoring e.g., native
+- some mats have rules that indicate cards are moved to the deck at the end of
+  the game before scoring e.g., native
   village mat. others don't like the tavern mat
-- there are a lot of reactions that happen where a condition and a trigger query the exact same data. one example is
-  [arena](../dominion-docs/expansion-docs/empires/cardlikes/arena.md). I think maybe we can pass some data from the
+- there are a lot of reactions that happen where a condition and a trigger query
+  the exact same data. one example is
+  [arena](../dominion-docs/expansion-docs/empires/cardlikes/arena.md). I think
+  maybe we can pass some data from the
   condition to the trigger.
 
-need to show the context of the kingdom card for something like young witch, and ferryman
+need to show the context of the kingdom card for something like young witch, and
+ferryman
 
 - young witch (new kingdom)
 - ferryman (new kingdom)
@@ -60,17 +86,25 @@ need to show the context of the kingdom card for something like young witch, and
 - hermit (madman kingdom)
 - urchin (mercenary kingdom)
 
-the rules state that "set aside" cards do not discard. you made that complicated logic for active duration cards. but
-you can just use set-aside and then schedule a movecard reaction at the start of next turn, and then they'll be in play
-and will be discarded. and the gray effect can be checked by seeing if they are in the play area on the turn they were
+the rules state that "set aside" cards do not discard. you made that complicated
+logic for active duration cards. but
+you can just use set-aside and then schedule a movecard reaction at the start of
+next turn, and then they'll be in play
+and will be discarded. and the gray effect can be checked by seeing if they are
+in the play area on the turn they were
 played or not
 
-update knights. i used that stupid randomizer. but there is a knights "card" on the dominion wiki. you can still use
-randomizer null to remove cards like the individual knights. then you can add a "dummy" "knights" card to the library
-json. when this card is picked the expansion configurator can check for that kingdom in the config and replace it with
-the individual knight. this will remove the need for the randomizer other than removing cards from it.
+update knights. i used that stupid randomizer. but there is a knights "card" on
+the dominion wiki. you can still use
+randomizer null to remove cards like the individual knights. then you can add
+a "dummy" "knights" card to the library
+json. when this card is picked the expansion configurator can check for that
+kingdom in the config and replace it with
+the individual knight. this will remove the need for the randomizer other than
+removing cards from it.
 
 empires
 
 - for encampment/plunder, not sure if moving back to a kingdom supply works
-- enchantress - need to replace a cards effects instead of just adding to them like we currently can.
+- enchantress - need to replace a cards effects instead of just adding to them
+  like we currently can.
