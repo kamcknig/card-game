@@ -10,6 +10,7 @@ import { MatchCardLibrary } from '../match-card-library.ts';
 import { LogManager } from '../log-manager.ts';
 import { ReactionManager } from '../reactions/reaction-manager.ts';
 import { CardPriceRulesController } from '../card-price-rules-controller.ts';
+import { PlayRulesController } from '../play-rules-controller.ts';
 import { CardSourceController } from '../card-source-controller.ts';
 import { RngService } from '../rng-service.ts';
 import { LoggerService } from '../logger-service.ts';
@@ -28,6 +29,7 @@ export class CardEffectContextFactory {
   constructor(
     private readonly cardSourceController: CardSourceController,
     private readonly cardPriceController: CardPriceRulesController,
+    private readonly playRulesController: PlayRulesController,
     private readonly logManager: LogManager,
     private readonly loggerService: LoggerService,
     private readonly rngService: RngService,
@@ -45,6 +47,7 @@ export class CardEffectContextFactory {
     return {
       cardSourceController: this.cardSourceController,
       cardPriceController: this.cardPriceController,
+      playRulesController: this.playRulesController,
       logManager: this.logManager,
       loggerService: this.loggerService,
       rngService: this.rngService,

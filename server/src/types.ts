@@ -39,6 +39,7 @@ import { MatchCardLibrary } from './core/match-card-library.ts';
 import { ReactionManager } from './core/reactions/reaction-manager.ts';
 import { ExpansionData, ExpansionDataLibrary } from '@expansions/expansion-library.ts';
 import { CardPriceRulesController } from './core/card-price-rules-controller.ts';
+import { PlayRulesController } from './core/play-rules-controller.ts';
 import { CardSourceController } from './core/card-source-controller.ts';
 import { LogManager } from './core/log-manager.ts';
 import type { CardInstanceFactoryService } from './core/card-instance-factory-service.ts';
@@ -485,6 +486,7 @@ export interface CardEffectFunctionContext extends AppContext {
   playerId: PlayerId;
   cardId: CardId;
   actionService: ActionService;
+  playRulesController: PlayRulesController;
   // Base effect map for direct card on-play handlers.
   cardEffectFunctionMap: CardEffectFunctionMap;
   // Expansion-registered supplemental effect handlers grouped by expansion key.

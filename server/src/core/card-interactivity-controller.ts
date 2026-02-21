@@ -10,6 +10,7 @@ import { CardSourceController } from './card-source-controller.ts';
 import { findEventInMatch, findProjectInMatch, findWayInMatch } from '@shared/find-card-like-in-match.ts';
 import { renaissanceTokenIds } from '@expansions/renaissance/token-ids-renaissance.ts';
 import { BuyOptionsResolver, ResolvedBuyOption } from './actions/resolve-buy-options.ts';
+import { PlayOptionsResolver } from './actions/resolve-play-options.ts';
 import { LoggerService } from './logger-service.ts';
 
 export class CardInteractivityController {
@@ -22,6 +23,7 @@ export class CardInteractivityController {
     private readonly cardLibrary: MatchCardLibrary,
     private readonly findCardService: FindCardService,
     private readonly buyOptionsResolver: BuyOptionsResolver,
+    private readonly playOptionsResolver: PlayOptionsResolver,
     private readonly actionService: ActionService,
     private readonly promptService: PromptService,
     private readonly loggerService: LoggerService,
@@ -182,8 +184,20 @@ export class CardInteractivityController {
       }
     } else if (turnPhase === 'action') {
       for (const card of hand) {
-        if (card.type.includes('ACTION') && match.playerActions > 0) {
+        const canPlayResult = this.playOptionsResolver.resolveCanPlay({
+          cardId: card,
+          playerId: currentPlayer.id,
+          phase: turnPhase,
+        });
+        if (canPlayResult.canPlay) {
           selectableCards.push(card.id);
+          continue;
+        }
+
+        if (canPlayResult.reasons.length > 0) {
+          this.loggerService.debug(
+            `[card interactivity] ${currentPlayer} cannot play ${card}: ${canPlayResult.reasons.join('; ')}`,
+          );
         }
       }
     } else if (turnPhase === 'night') {
@@ -391,6 +405,17 @@ export class CardInteractivityController {
         });
       }
     } else if (phase === 'action') {
+      const canPlayResult = this.playOptionsResolver.resolveCanPlay({
+        cardId,
+        playerId,
+        phase,
+      });
+      if (!canPlayResult.canPlay) {
+        this.loggerService.debug(
+          `[card interactivity] blocked action play for ${canPlayResult.card}: ${canPlayResult.reasons.join('; ')}`,
+        );
+        return;
+      }
       await this.actionService.run('playCard', { playerId, cardId, wayId: null });
     } else if (phase === 'night') {
       // Night phase allows playing Night cards from hand without action cost.

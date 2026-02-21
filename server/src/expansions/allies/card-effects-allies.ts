@@ -425,6 +425,43 @@ const cardEffects: CardExpansionModule = {
       loggerService.debug('[warlord effect] gaining 1 action');
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
+      const unregisterPlayRestriction = cardEffectArgs.playRulesController.registerRule((card, context) => {
+        if (context.playerId === playerId) {
+          return { canPlay: true };
+        }
+        if (context.sourceLocation !== 'playerHand' || context.sourcePlayerId !== context.playerId) {
+          return { canPlay: true };
+        }
+        // Warlord only restricts Action cards played from hand.
+        if (!card.type.includes('ACTION')) {
+          return { canPlay: true };
+        }
+
+        let inPlayCardIds: CardId[] = [];
+        try {
+          inPlayCardIds = [
+            ...cardEffectArgs.cardSourceController.getSource('playArea', context.playerId),
+            ...cardEffectArgs.cardSourceController.getSource('activeDuration', context.playerId),
+          ];
+        } catch {
+          return { canPlay: true };
+        }
+
+        const matchingActionCardsInPlay = inPlayCardIds
+          .map((cardId) => cardEffectArgs.cardLibrary.getCard(cardId))
+          .filter((inPlayCard) => inPlayCard.cardKey === card.cardKey && inPlayCard.type.includes('ACTION')).length;
+
+        if (matchingActionCardsInPlay < 2) {
+          return { canPlay: true };
+        }
+
+        return {
+          canPlay: false,
+          reasons: ['Blocked by Warlord: cannot play an Action card when two matching copies are in play.'],
+        };
+      });
+      loggerService.debug('[warlord effect] registered temporary Action play restriction for other players');
+
       // At the start of your next turn, draw 2 cards.
       cardEffectArgs.registerDurationEffect(warlordCard, {
         id: `warlord:${cardEffectArgs.cardId}:startTurn`,
@@ -436,6 +473,8 @@ const cardEffects: CardExpansionModule = {
         allowMultipleInstances: true,
         condition: ({ trigger }) => trigger.args.playerId === playerId,
         triggeredEffectFn: async (triggeredArgs) => {
+          unregisterPlayRestriction();
+          loggerService.debug('[warlord effect] removed temporary Action play restriction');
           await triggeredArgs.actionService.run('moveCard', {
             cardId: warlordCard.id,
             to: { location: 'playArea' },

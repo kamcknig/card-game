@@ -21,11 +21,13 @@ import { CardEffectContextFactory } from './actions/card-effect-context-factory.
 import { PromptService } from './prompt-service.ts';
 import { FindCardsService } from './find-cards-service.ts';
 import { BuyOptionsResolver } from './actions/resolve-buy-options.ts';
+import { PlayOptionsResolver } from './actions/resolve-play-options.ts';
 import { DefaultSupplyGainService } from './supply-gain-service.ts';
 import { EndGameEvaluatorService } from './end-game-evaluator-service.ts';
 import { PlayerReconnectOrchestrator } from './player-reconnect-orchestrator.ts';
 import { MatchActionRunnerRef, ScopedActionService } from './actions/scoped-action-service.ts';
 import { ExpansionEffectRegistryService } from './expansion-effect-registry-service.ts';
+import { PlayRulesController } from './play-rules-controller.ts';
 
 /**
  * Runtime handle for one active match scope.
@@ -102,11 +104,13 @@ export class MatchScopeFactory {
       matchEndService: asClass(MatchEndService).scoped(),
       logManager: asClass(LogManager).scoped(),
       cardPriceController: asClass(CardPriceRulesController).scoped(),
+      playRulesController: asClass(PlayRulesController).scoped(),
       findCardService: asClass(FindCardsService).scoped(),
       supplyGainService: asClass(DefaultSupplyGainService).scoped(),
       promptService: asClass(PromptService).scoped(),
       cardEffectContextFactory: asClass(CardEffectContextFactory).scoped(),
       buyOptionsResolver: asClass(BuyOptionsResolver).scoped(),
+      playOptionsResolver: asClass(PlayOptionsResolver).scoped(),
       reactionContextFactory: asClass(ReactionContextFactory).scoped(),
       reactionManager: asClass(ReactionManager).scoped(),
       endGameEvaluator: asClass(EndGameEvaluatorService).scoped(),

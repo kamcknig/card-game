@@ -383,6 +383,16 @@ export class LobbyDirectoryService {
     socket.on('requestLobbySnapshot', () => this.emitLobbySnapshot(socket));
     socket.on('requestSelectableSearchCatalog', () => this.emitSelectableSearchCatalog(socket));
     socket.on('createLobbyGame', () => {
+      // Prevent orphan lobby games when the same session issues repeated create requests.
+      const existingGameId = this.findGameIdForSession(sessionId);
+      if (existingGameId) {
+        this.loggerService.info(
+          `[lobby directory] session ${sessionId} requested create while already in ${existingGameId}; rejoining existing game`,
+        );
+        this.joinLobbyGame(sessionId, socket, existingGameId);
+        return;
+      }
+
       const gameId = this.createLobbyGame();
       this.joinLobbyGame(sessionId, socket, gameId);
     });
