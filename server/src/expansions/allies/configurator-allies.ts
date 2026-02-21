@@ -3,6 +3,8 @@ import { CardKey, ComputedMatchConfiguration } from 'shared/types/index.ts';
 import { uniqueByProp } from '../../core/match-configurator.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { configureSplitPile } from '../../utils/configure-split-pile.ts';
+import { registerAlliesTokenDefinitions } from './token-definitions-allies.ts';
+import { registerActiveAllyEffects, skippedAllyImplementations } from './ally-effects-allies.ts';
 
 const IMPORTER_PILE_KEY = 'importer';
 const AUGURS_PILE_KEY = 'augurs';
@@ -111,8 +113,19 @@ const hasLiaisonInKingdom = (config: ComputedMatchConfiguration): boolean => {
   return config.kingdomSupply.some((supply) => supply.cards.some((card) => card.type.includes('LIAISON')));
 };
 
+// Ally effects with known missing engine support are excluded from setup selection.
+const skippedAllyKeys = new Set(skippedAllyImplementations.map((entry) => entry.cardKey));
+
 const configurator: ExpansionConfiguratorFactory = () => {
+  // Ensures Ally token definitions are only registered once per match scope.
+  let tokenDefinitionsRegistered = false;
+
   return async (args) => {
+    if (!tokenDefinitionsRegistered) {
+      registerAlliesTokenDefinitions(args.expansionRegistration.registerTokenDefinition);
+      tokenDefinitionsRegistered = true;
+    }
+
     // Keep Augurs split pile in canonical order whenever selected.
     configureSplitPile(args, {
       pileKey: AUGURS_PILE_KEY,
@@ -154,16 +167,26 @@ const configurator: ExpansionConfiguratorFactory = () => {
     }
 
     const configuredAllies = uniqueByProp(args.config.allies ?? [], 'cardKey');
+    const supportedConfiguredAllies = configuredAllies.filter((ally) => !skippedAllyKeys.has(ally.cardKey));
+    if (supportedConfiguredAllies.length !== configuredAllies.length) {
+      const skippedConfigured = configuredAllies
+        .filter((ally) => skippedAllyKeys.has(ally.cardKey))
+        .map((ally) => ally.cardKey);
+      args.loggerService.warn(
+        `[allies configurator] removing unsupported ally selection(s): ${skippedConfigured.join(', ')}`,
+      );
+    }
+
     if (configuredAllies.length > 1) {
       args.loggerService.warn(
         `[allies configurator] ${configuredAllies.length} allies configured; trimming to one deterministic ally`,
       );
     }
 
-    if (configuredAllies.length > 0) {
-      args.config.allies = [configuredAllies[0]];
+    if (supportedConfiguredAllies.length > 0) {
+      args.config.allies = [supportedConfiguredAllies[0]];
       args.loggerService.info(
-        `[allies configurator] using preselected ally ${configuredAllies[0].cardKey}`,
+        `[allies configurator] using preselected ally ${supportedConfiguredAllies[0].cardKey}`,
       );
       return args.config;
     }
@@ -171,9 +194,12 @@ const configurator: ExpansionConfiguratorFactory = () => {
     const candidateAllies = args.config.expansions.flatMap((expansion) =>
       Object.values(args.expansionCatalog[expansion.name]?.allies ?? {})
     );
-    const uniqueCandidates = uniqueByProp(candidateAllies, 'cardKey');
+    const uniqueCandidates = uniqueByProp(candidateAllies, 'cardKey')
+      .filter((ally) => !skippedAllyKeys.has(ally.cardKey));
     if (uniqueCandidates.length < 1) {
-      args.loggerService.warn('[ally configurator] Liaison present but no ally data available in loaded expansions');
+      args.loggerService.warn(
+        '[ally configurator] Liaison present but no supported ally data available in loaded expansions',
+      );
       args.config.allies = [];
       return args.config;
     }
@@ -209,5 +235,8 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
       args.match.favors[player.id] = startingFavors;
       args.loggerService.debug(`[allies onGameStart] player ${player.id} favors=${args.match.favors[player.id]}`);
     }
+
+    // Register active Ally behavior after Favor resources are initialized.
+    registerActiveAllyEffects(args, config);
   });
 };

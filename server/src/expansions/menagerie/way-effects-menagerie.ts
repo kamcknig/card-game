@@ -1,6 +1,7 @@
 import { AppContext, CardEffectFunctionContext, CardExpansionModule } from '@server-types/index.ts';
 import { CardCost, CardId, CardLocation, PlayerId } from 'shared/types/index.ts';
 import { findWayInMatch } from '@shared/find-card-like-in-match.ts';
+import { isCardStillAtGainedLocation } from '../../utils/is-card-still-at-gained-location.ts';
 
 type WayOfTheMouseWayMetadata = {
   menagerie?: {
@@ -94,24 +95,6 @@ const returnCardToPile = async (args: CardEffectFunctionContext, logTag: string)
   });
   loggerService.debug(`[${logTag}] returned ${card} to ${destination}`);
   return true;
-};
-
-// Returns true when the gained card is still where it was gained to.
-const isCardStillAtGainedLocation = (
-  args: AppContext,
-  cardId: CardId,
-  gainedLocation?: { location: CardLocation; playerId?: PlayerId },
-): boolean => {
-  if (!gainedLocation) {
-    return true;
-  }
-
-  try {
-    const source = args.cardSourceController.findCardSource(cardId);
-    return source.sourceKey === gainedLocation.location && source.playerId === gainedLocation.playerId;
-  } catch {
-    return false;
-  }
 };
 
 // Returns the top card in supply for a pile key.
@@ -574,7 +557,11 @@ const expansion: CardExpansionModule = {
           }
 
           // Stop-moving guard: only move the card if it has not moved since being gained.
-          if (!isCardStillAtGainedLocation(triggeredArgs, gainedCardId, triggeredArgs.trigger.args.gainedLocation)) {
+          if (!isCardStillAtGainedLocation(
+            triggeredArgs.cardSourceController,
+            gainedCardId,
+            triggeredArgs.trigger.args.gainedLocation,
+          )) {
             loggerService.debug('[way-of-the-seal effect] gained card moved before topdeck choice resolved');
             return;
           }

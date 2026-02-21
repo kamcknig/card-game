@@ -1,1 +1,76 @@
-{}
+{
+  "architects-guild": {
+    "cardName": "Architects' Guild",
+    "abilityText": "When you gain a card, you may spend 2 Favors to gain a cheaper non-Victory card."
+  },
+  "band-of-nomads": {
+    "abilityText": "When you gain a card costing $3 or more, you may spend a Favor, for +1 Card, or +1 Action, or +1 Buy."
+  },
+  "cave-dwellers": {
+    "abilityText": "At the start of your turn, you may spend a Favor, to discard a card then draw a card. Repeat as desired."
+  },
+  "circle-of-witches": {
+    "abilityText": "After playing a Liaison, you may spend 3 Favors to have each other player gain a Curse."
+  },
+  "city-state": {
+    "cardName": "City-state",
+    "abilityText": "When you gain an Action card during your turn, you may spend 2 Favors to play it."
+  },
+  "coastal-haven": {
+    "abilityText": "When discarding your hand in Clean-up, you may spend any number of Favors to keep that many cards in hand for next turn (you still draw 5)."
+  },
+  "crafters-guild": {
+    "cardName": "Crafters' Guild",
+    "abilityText": "At the start of your turn, you may spend 2 Favors to gain a card costing up to $4 onto your deck."
+  },
+  "desert-guides": {
+    "abilityText": "At the start of your turn, you may spend a Favor to discard your hand and draw 5 cards. Repeat as desired."
+  },
+  "family-of-inventors": {
+    "abilityText": "At the start of your Buy phase, you may put a Favor token you have on a non-Victory Supply pile. Cards cost $1 less per Favor token on their piles."
+  },
+  "fellowship-of-scribes": {
+    "abilityText": "After playing an Action, if you have 4 or fewer cards in hand, you may spend a Favor for +1 Card."
+  },
+  "forest-dwellers": {
+    "abilityText": "At the start of your turn, you may spend a Favor to look at the top 3 cards of your deck, discard any number and put the rest back in any order."
+  },
+  "gang-of-pickpockets": {
+    "abilityText": "At the start of your turn, discard down to 4 cards in hand unless you spend a Favor."
+  },
+  "island-folk": {
+    "abilityText": "At the end of your turn, you may spend 5 Favors to take an extra turn after this one (but not a 3rd turn in a row)."
+  },
+  "league-of-bankers": {
+    "abilityText": "At the start of your Buy phase, +$1 per 4 Favors you have (round down)."
+  },
+  "league-of-shopkeepers": {
+    "abilityText": "After playing a Liaison, if you have 5 or more Favors, +$1, and if 10 or more, +1 Action and +1 Buy."
+  },
+  "market-towns": {
+    "abilityText": "At the start of your Buy phase, you may spend a Favor to play an Action card from your hand. Repeat as desired."
+  },
+  "mountain-folk": {
+    "abilityText": "At the start of your turn, you may spend 5 Favors for +3 Cards."
+  },
+  "order-of-astrologers": {
+    "abilityText": "When shuffling, you may pick one card per Favor you spend to go on top."
+  },
+  "order-of-masons": {
+    "abilityText": "When shuffling, you may pick up to 2 cards per Favor you spend to put into your discard pile."
+  },
+  "peaceful-cult": {
+    "abilityText": "At the start of your Buy phase, you may spend any number of Favors to trash that many cards from your hand."
+  },
+  "plateau-shepherds": {
+    "abilityText": "When scoring, pair up your Favors with cards you have costing $2, for 2VP per pair."
+  },
+  "trappers-lodge": {
+    "cardName": "Trappers' Lodge",
+    "abilityText": "When you gain a card, you may spend a Favor to put it onto your deck."
+  },
+  "woodworkers-guild": {
+    "cardName": "Woodworkers' Guild",
+    "abilityText": "At the start of your Buy phase, you may spend a Favor to trash an Action card from your hand. If you did, gain an Action card."
+  }
+}

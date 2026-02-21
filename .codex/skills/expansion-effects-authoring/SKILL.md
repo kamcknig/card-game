@@ -13,6 +13,7 @@ Implement expansion mechanics through existing engine abstractions while preserv
 2. Expansion/module target file(s) in `server/src/expansions/...`.
 3. Any utility constraints or preferences from the requester (optional).
 4. Whether AI support is required now or deferred.
+5. Existing utility candidates already known by the requester (optional).
 
 ## Implementation Workflow
 
@@ -22,8 +23,13 @@ Implement expansion mechanics through existing engine abstractions while preserv
    - Card-like effect (`event-effects-*`, `project-effects-*`, etc.)
    - Match setup/configurator updates (`configurator-*.ts`)
 3. Discover reusable helpers/utilities in the codebase:
-   - Search in `server/src/utils` and expansion-local helpers first.
-   - Prefer existing shared helpers before adding new ones.
+   - Search `server/src/utils`, `server/src/core`, and `shared/src` before writing helper logic.
+   - Search expansion-local helpers in the same expansion directory.
+   - Use targeted discovery commands first:
+     - `rg -n "<behavior keyword>" server/src/utils server/src/core shared/src server/src/expansions/<expansion>`
+     - `rg -n "export .*<helper name>|function <helper name>|const <helper name>" server/src shared/src`
+   - Reuse an existing helper when behavior is equivalent or near-equivalent.
+   - If behavior is near-equivalent, extend the shared helper instead of creating a duplicate local helper.
 4. Locate nearest existing pattern in same expansion first, then adjacent expansions.
 5. Implement with existing abstractions:
    - `registerEffects`, `registerLifeCycleMethods`
@@ -43,6 +49,16 @@ Implement expansion mechanics through existing engine abstractions while preserv
    - registration/unregistration points
 9. Validate with `deno check` on touched files.
 
+## Shared Utility Reuse Gate
+
+Before introducing any new helper function, apply this gate in order:
+
+1. Confirm no existing utility already provides the behavior (`server/src/utils`, `server/src/core`, `shared/src`, and expansion-local helpers).
+2. If a close helper exists, modify or generalize that helper and reuse it.
+3. Add a new helper only when behavior is genuinely new and cannot be expressed safely by existing utilities.
+4. Place reusable helpers in shared locations (`server/src/utils` or `shared/src`) rather than file-local scope.
+5. Keep local helpers only when they are intentionally one-off and not suitable for cross-module reuse.
+
 ## Hard Rules
 
 - Preserve determinism.
@@ -53,6 +69,7 @@ Implement expansion mechanics through existing engine abstractions while preserv
 - Prefer pile-key semantics over card-key semantics for supply-top effects (split pile safe).
 - Keep comments for all new code.
 - Do not remove pre-existing comments.
+- Do not create new local helpers that duplicate existing shared behavior.
 
 ## Effect Authoring Conventions
 
@@ -96,3 +113,4 @@ When changing multiple files, run checks for each touched module file directly.
 - Config additions/removals remain stable.
 - Logs and comments are sufficient for debugging.
 - All touched files pass `deno check`.
+- Shared utility reuse was evaluated first, and no duplicate local helper behavior was introduced.
