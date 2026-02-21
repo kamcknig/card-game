@@ -22,14 +22,10 @@ type AlliesGameContext = Omit<GameLifecycleCallbackContext, 'cardId'>;
 
 // Ally implementations intentionally deferred until missing engine capabilities are modeled.
 export const skippedAllyImplementations: Array<{ cardKey: CardKey; reason: string }> = [
-  {
-    cardKey: 'plateau-shepherds',
-    reason: 'Scoring decorators do not currently receive card-price controller access for score-time modified costs.',
-  },
 ];
 
 // Returns current Favor count for one player.
-const getPlayerFavorCount = (match: Match, playerId: PlayerId): number => {
+export const getPlayerFavorCount = (match: Match, playerId: PlayerId): number => {
   return Object.values(match.tokens ?? {})
     .filter((token) =>
       token.tokenId === alliesTokenIds.favor &&
@@ -1803,6 +1799,9 @@ export const registerActiveAllyEffects = (
       return;
     case 'peaceful-cult':
       registerPeacefulCult(args, ally);
+      return;
+    case 'plateau-shepherds':
+      args.loggerService.debug('[plateau-shepherds ally] no runtime reactions to register');
       return;
     case 'trappers-lodge':
       registerTrappersLodge(args, ally);

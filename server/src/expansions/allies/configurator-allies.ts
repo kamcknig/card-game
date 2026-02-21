@@ -1,10 +1,19 @@
-import { ExpansionConfiguratorFactory, GameEventRegistrar } from '@server-types/index.ts';
-import { CardKey, ComputedMatchConfiguration } from 'shared/types/index.ts';
+import {
+  ExpansionConfiguratorFactory,
+  GameEventRegistrar,
+  PlayerScoreDecoratorRegistrar,
+} from '@server-types/index.ts';
+import { validateCostSpec } from '@shared/validate-cost-spec.ts';
+import { CardCost, CardKey, ComputedMatchConfiguration, CostSpec } from 'shared/types/index.ts';
 import { uniqueByProp } from '../../core/match-configurator.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { configureSplitPile } from '../../utils/configure-split-pile.ts';
 import { registerAlliesTokenDefinitions } from './token-definitions-allies.ts';
-import { registerActiveAllyEffects, skippedAllyImplementations } from './ally-effects-allies.ts';
+import {
+  getPlayerFavorCount,
+  registerActiveAllyEffects,
+  skippedAllyImplementations,
+} from './ally-effects-allies.ts';
 import { alliesTokenIds } from './token-ids-allies.ts';
 
 const IMPORTER_PILE_KEY = 'importer';
@@ -13,6 +22,13 @@ const CLASHES_PILE_KEY = 'clashes';
 const FORTS_PILE_KEY = 'forts';
 const TOWNSFOLK_PILE_KEY = 'townsfolk';
 const WIZARDS_PILE_KEY = 'wizards';
+const PLATEAU_SHEPHERDS_KEY = 'plateau-shepherds';
+// Plateau Shepherds pairs Favor with cards costing exactly $2.
+const EXACT_TWO_COST: CardCost = {
+  treasure: 2,
+  potion: 0,
+  debt: 0,
+};
 // Canonical Augurs split-pile order (bottom -> top).
 const AUGURS_ORDER: CardKey[] = [
   'sibyl',
@@ -244,5 +260,41 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
     // Register active Ally behavior after Favor tokens are initialized.
     registerActiveAllyEffects(args, config);
+  });
+};
+
+// Registers Allies end-game scoring decorators for score-only allies.
+export const registerScoringFunctions = (registrar: PlayerScoreDecoratorRegistrar) => {
+  registrar((playerId, match, cardLibrary) => {
+    // Plateau Shepherds scores only when it is the active ally in the match.
+    if (match.allies?.[0]?.cardKey !== PLATEAU_SHEPHERDS_KEY) {
+      return;
+    }
+
+    // Favor is modeled as player-owned Favor tokens.
+    const favorCount = getPlayerFavorCount(match, playerId);
+    if (favorCount < 1) {
+      return;
+    }
+
+    // Count all cards the player owns with printed cost exactly $2.
+    const exactTwoCostSpec: CostSpec = { kind: 'exact', playerId, amount: EXACT_TWO_COST };
+    const playerCards = cardLibrary.getCardsByOwner(playerId);
+    let costTwoCardCount = 0;
+    for (const card of playerCards) {
+      if (!validateCostSpec(exactTwoCostSpec, card.cost)) {
+        continue;
+      }
+      costTwoCardCount++;
+    }
+
+    if (costTwoCardCount < 1) {
+      return;
+    }
+
+    // Score 2 VP per Favor/card pair.
+    const pairCount = Math.min(favorCount, costTwoCardCount);
+    const bonus = pairCount * 2;
+    match.scores[playerId] = (match.scores[playerId] ?? 0) + bonus;
   });
 };

@@ -21,11 +21,7 @@
 - mountain-folk
 - order-of-astrologers
 - order-of-masons
+- plateau-shepherds
 - peaceful-cult
 - trappers-lodge
 - woodworkers-guild
-
-## Skipped (requires new modeling/features)
-
-- plateau-shepherds
-  - Reason: score decorators currently do not receive card-price-controller context, so scoring-time cost-modifier interactions cannot be modeled correctly.
