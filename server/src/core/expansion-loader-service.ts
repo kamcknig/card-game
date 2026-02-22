@@ -11,6 +11,7 @@ import { LandmarkLoaderService } from './landmarks/load-landmarks.ts';
 import { ProjectLoaderService } from './projects/load-projects.ts';
 import { WayLoaderService } from './ways/load-ways.ts';
 import { AllyLoaderService } from './allies/load-allies.ts';
+import { TraitLoaderService } from './traits/load-traits.ts';
 
 // Randomizer pile definition for split piles in card libraries.
 type RandomizerPileDefinition = {
@@ -32,6 +33,7 @@ export class ExpansionLoaderService {
     private readonly landmarkLoaderService: LandmarkLoaderService,
     private readonly projectLoaderService: ProjectLoaderService,
     private readonly wayLoaderService: WayLoaderService,
+    private readonly traitLoaderService: TraitLoaderService,
     private readonly allyLoaderService: AllyLoaderService,
     private readonly loggerService: LoggerService,
   ) {}
@@ -267,6 +269,11 @@ export class ExpansionLoaderService {
     this.loggerService.info(`[expansion loader] attempting to load ways for ${expansionName}`);
     await this.wayLoaderService.loadExpansionWays(expansionName);
     this.loggerService.log(`[expansion loader] finished loading ways for ${expansionName}`);
+
+    // Traits are loaded after ways so all landscape pools are available together.
+    this.loggerService.info(`[expansion loader] attempting to load traits for ${expansionName}`);
+    await this.traitLoaderService.loadExpansionTraits(expansionName);
+    this.loggerService.log(`[expansion loader] finished loading traits for ${expansionName}`);
 
     // Allies are loaded after other landscapes to keep setup card-like loading grouped.
     this.loggerService.info(`[expansion loader] attempting to load allies for ${expansionName}`);

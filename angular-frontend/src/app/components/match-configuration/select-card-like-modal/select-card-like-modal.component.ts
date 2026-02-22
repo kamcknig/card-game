@@ -19,6 +19,7 @@ import {
   LandmarkNoId,
   ProjectNoId,
   SelectableSearchCatalog,
+  TraitNoId,
   WayNoId,
 } from 'shared/types';
 import { NgOptimizedImage } from '@angular/common';
@@ -26,7 +27,14 @@ import { EVENT_CARD_HEIGHT, EVENT_CARD_WIDTH, SMALL_CARD_HEIGHT, SMALL_CARD_WIDT
 import { toSignal } from '@angular/core/rxjs-interop';
 import { selectableSearchCatalogStore } from '../../../state/selectable-search-state';
 
-export type SelectableCardLikeNoId = EventNoId | LandmarkNoId | ArtifactNoId | ProjectNoId | WayNoId | AllyNoId;
+export type SelectableCardLikeNoId =
+  | EventNoId
+  | LandmarkNoId
+  | ArtifactNoId
+  | ProjectNoId
+  | WayNoId
+  | TraitNoId
+  | AllyNoId;
 export type SelectableSearchResult = CardNoId | SelectableCardLikeNoId;
 export type SearchCatalogKind = keyof SelectableSearchCatalog;
 
@@ -143,6 +151,8 @@ export class SelectCardLikeModalComponent implements AfterViewInit {
         return catalog.projects;
       case 'ways':
         return catalog.ways;
+      case 'traits':
+        return catalog.traits;
       case 'allies':
         return catalog.allies;
     }

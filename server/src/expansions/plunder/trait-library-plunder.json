@@ -1,0 +1,47 @@
+{
+  "cheap": {
+    "randomizer": "cheap"
+  },
+  "cursed": {
+    "randomizer": "cursed"
+  },
+  "fated": {
+    "randomizer": "fated"
+  },
+  "fawning": {
+    "randomizer": "fawning"
+  },
+  "friendly": {
+    "randomizer": "friendly"
+  },
+  "hasty": {
+    "randomizer": "hasty"
+  },
+  "inherited": {
+    "randomizer": "inherited"
+  },
+  "inspiring": {
+    "randomizer": "inspiring"
+  },
+  "nearby": {
+    "randomizer": "nearby"
+  },
+  "patient": {
+    "randomizer": "patient"
+  },
+  "pious": {
+    "randomizer": "pious"
+  },
+  "reckless": {
+    "randomizer": "reckless"
+  },
+  "rich": {
+    "randomizer": "rich"
+  },
+  "shy": {
+    "randomizer": "shy"
+  },
+  "tireless": {
+    "randomizer": "tireless"
+  }
+}

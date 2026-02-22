@@ -17,6 +17,7 @@ import {
   ProjectNoId,
   MatchConfiguration,
   StateNoId,
+  TraitNoId,
   WayNoId,
 } from 'shared/types/index.ts';
 import { ExpansionData } from '@expansions/expansion-library.ts';
@@ -211,8 +212,9 @@ export class ServerDebugRouteHandlerService {
         | 'artifacts'
         | 'projects'
         | 'ways'
+        | 'traits'
         | 'allies';
-      const allowedTypes = new Set(['cards', 'events', 'landmarks', 'artifacts', 'projects', 'ways', 'allies']);
+      const allowedTypes = new Set(['cards', 'events', 'landmarks', 'artifacts', 'projects', 'ways', 'traits', 'allies']);
       if (!allowedTypes.has(type)) {
         return new Response('unsupported search type', { status: 400 });
       }
@@ -437,6 +439,7 @@ export class ServerDebugRouteHandlerService {
       artifacts: ArtifactNoId[];
       projects: ProjectNoId[];
       ways: WayNoId[];
+      traits: TraitNoId[];
       boons: BoonNoId[];
       hexes: HexNoId[];
       states: StateNoId[];
@@ -452,6 +455,7 @@ export class ServerDebugRouteHandlerService {
     const artifacts = this.sortCardLikeValues<ArtifactNoId>(expansion.artifacts);
     const projects = this.sortCardLikeValues<ProjectNoId>(expansion.projects);
     const ways = this.sortCardLikeValues<WayNoId>(expansion.ways);
+    const traits = this.sortCardLikeValues<TraitNoId>(expansion.traits);
     const boons = this.sortCardLikeValues<BoonNoId>(expansion.boons);
     const hexes = this.sortCardLikeValues<HexNoId>(expansion.hexes);
     const states = this.sortCardLikeValues<StateNoId>(expansion.states);
@@ -472,6 +476,7 @@ export class ServerDebugRouteHandlerService {
         artifacts,
         projects,
         ways,
+        traits,
         boons,
         hexes,
         states,
@@ -486,6 +491,7 @@ export class ServerDebugRouteHandlerService {
         artifacts: artifacts.length,
         projects: projects.length,
         ways: ways.length,
+        traits: traits.length,
         boons: boons.length,
         hexes: hexes.length,
         states: states.length,
@@ -507,6 +513,7 @@ export class ServerDebugRouteHandlerService {
       artifacts: allExpansions.reduce((sum, expansion) => sum + Object.keys(expansion.artifacts).length, 0),
       projects: allExpansions.reduce((sum, expansion) => sum + Object.keys(expansion.projects).length, 0),
       ways: allExpansions.reduce((sum, expansion) => sum + Object.keys(expansion.ways).length, 0),
+      traits: allExpansions.reduce((sum, expansion) => sum + Object.keys(expansion.traits).length, 0),
       boons: allExpansions.reduce((sum, expansion) => sum + Object.keys(expansion.boons).length, 0),
       hexes: allExpansions.reduce((sum, expansion) => sum + Object.keys(expansion.hexes).length, 0),
       states: allExpansions.reduce((sum, expansion) => sum + Object.keys(expansion.states).length, 0),

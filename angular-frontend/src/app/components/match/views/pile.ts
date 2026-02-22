@@ -1,7 +1,7 @@
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, Text } from 'pixi.js';
 import { createCardView } from '../../../core/card/create-card-view';
 import { CountBadgeView } from './count-badge-view';
-import { Card, CardFacing, CardKey } from 'shared/types';
+import { Card, CardFacing, CardKey, Trait } from 'shared/types';
 import { CardSize } from '../../../../types';
 import { CardView } from './card-view';
 import { AdjustmentFilter } from 'pixi-filters';
@@ -9,6 +9,7 @@ import { TokenBadgeView } from './token-badge-view';
 import { selectablePileStore } from '../../../state/interactive-pile-logic';
 import { selectedPileStore } from '../../../state/interactive-state';
 import { CARD_HEIGHT, CARD_WIDTH, SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH } from '../../../core/app-contants';
+import { displayCardDetail } from './modal/display-card-detail';
 
 type PileArgs = {
   cards?: Card[];
@@ -33,6 +34,10 @@ export class PileView extends Container {
   private readonly _highlight: Graphics = new Graphics({ label: 'pileHighlight' });
   private _cardView: CardView | undefined | null;
   private _pileKey: CardKey | undefined;
+  private _trait: Trait | null = null;
+  private readonly _traitTagContainer: Container;
+  private readonly _traitTagBackground: Graphics = new Graphics({ label: 'traitTagBackground' });
+  private readonly _traitTagText: Text = new Text({ label: 'traitTagText', text: '' });
   private _tokenBadges: TokenBadgeData[] = [];
   private _cleanup: (() => void)[] = [];
 
@@ -50,6 +55,12 @@ export class PileView extends Container {
   
   get pileKey(): CardKey | undefined {
     return this._pileKey;
+  }
+
+  // Sets the active trait displayed beside this pile.
+  set trait(value: Trait | null | undefined) {
+    this._trait = value ?? null;
+    this.drawTraitTag();
   }
   
   // Updates the tokens rendered on top of the pile view.
@@ -74,6 +85,20 @@ export class PileView extends Container {
     // Token container sits above the card view for token indicators.
     this._tokenContainer = new Container({ label: 'tokenContainer' });
     this.addChild(this._tokenContainer);
+    this._traitTagContainer = new Container({ label: 'traitTagContainer' });
+    this._traitTagContainer.addChild(this._traitTagBackground);
+    this._traitTagContainer.addChild(this._traitTagText);
+    this.addChild(this._traitTagContainer);
+    this._traitTagContainer.eventMode = 'none';
+    this._traitTagContainer.cursor = 'pointer';
+    this._traitTagContainer.on('pointerdown', (event) => {
+      if (event.button !== 2 || !this._trait) {
+        return;
+      }
+      event.preventDefault?.();
+      event.stopPropagation?.();
+      void displayCardDetail({ detailImagePath: this._trait.detailImagePath });
+    });
 
     if (this._cards.length > 0) {
       this.draw();
@@ -89,6 +114,7 @@ export class PileView extends Container {
 
     this.on('removed', () => {
       this._cleanup.forEach(cb => cb());
+      this._traitTagContainer.removeAllListeners();
       this.removeAllListeners();
       this.destroy();
     });
@@ -114,6 +140,7 @@ export class PileView extends Container {
 
       badge = this._cardViewContainer.getChildByLabel('countBadge') as CountBadgeView;
       badge?.removeFromParent();
+      this.drawTraitTag();
       return;
     }
     else {
@@ -148,6 +175,7 @@ export class PileView extends Container {
     }
     
     this.drawTokenBadges();
+    this.drawTraitTag();
   }
   
   // Draws highlight around the pile if selectable or selected.
@@ -212,5 +240,42 @@ export class PileView extends Container {
       view.x = baseX;
       view.y = baseY + idx * (tokenSize + gap);
     });
+  }
+
+  // Renders a vertical trait tag attached to the right edge of the pile.
+  private drawTraitTag() {
+    const fallbackWidth = this._size === 'half' ? SMALL_CARD_WIDTH : CARD_WIDTH;
+    const fallbackHeight = this._size === 'half' ? SMALL_CARD_HEIGHT : CARD_HEIGHT;
+    const width = this._cardView?.width ?? fallbackWidth;
+    const height = this._cardView?.height ?? fallbackHeight;
+
+    if (!this._trait) {
+      this._traitTagContainer.visible = false;
+      this._traitTagContainer.eventMode = 'none';
+      return;
+    }
+
+    const tagWidth = this._size === 'half' ? 22 : 30;
+    this._traitTagBackground.clear();
+    this._traitTagBackground.roundRect(0, 0, tagWidth, height, 4);
+    this._traitTagBackground.stroke({ color: 0xf3dfb4, width: 1.25 });
+    this._traitTagBackground.fill({ color: 0x3a2e1c, alpha: 0.95 });
+
+    this._traitTagText.text = this._trait.cardName.toUpperCase().split('').join('\n');
+    this._traitTagText.style = {
+      fontSize: this._size === 'half' ? 8 : 10,
+      fill: 0xf9efda,
+      fontWeight: '700',
+      align: 'center',
+    };
+    this._traitTagText.anchor.set(0.5);
+    this._traitTagText.x = Math.floor(tagWidth / 2);
+    this._traitTagText.y = Math.floor(height / 2);
+
+    // Align trait tag so its left edge is exactly on the pile's right edge.
+    this._traitTagContainer.x = width;
+    this._traitTagContainer.y = 0;
+    this._traitTagContainer.visible = true;
+    this._traitTagContainer.eventMode = 'static';
   }
 }

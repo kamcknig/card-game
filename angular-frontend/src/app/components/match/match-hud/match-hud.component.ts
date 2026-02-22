@@ -248,6 +248,7 @@ export class MatchHudComponent implements AfterViewInit, OnDestroy {
       ...match.landmarks.map((cardLike) => ({ kind: 'landmark' as const, cardLike })),
       ...match.projects.map((cardLike) => ({ kind: 'project' as const, cardLike })),
       ...match.ways.map((cardLike) => ({ kind: 'way' as const, cardLike })),
+      ...match.traits.map((cardLike) => ({ kind: 'trait' as const, cardLike })),
       ...(match.boons?.cards ?? []).map((cardLike) => ({ kind: 'boon' as const, cardLike })),
       ...(match.hexes?.cards ?? []).map((cardLike) => ({ kind: 'hex' as const, cardLike })),
       ...(match.states?.cards ?? []).map((cardLike) => ({ kind: 'state' as const, cardLike })),

@@ -8,6 +8,7 @@ import {
   HexNoId,
   LandmarkNoId,
   ProjectNoId,
+  TraitNoId,
   StateNoId,
   WayNoId,
 } from 'shared/types/index.ts';
@@ -38,6 +39,8 @@ export type ExpansionData = {
   projects: Record<CardKey, ProjectNoId>;
   // Ways are stored separately from supply cards.
   ways: Record<CardKey, WayNoId>;
+  // Traits are stored separately from supply cards.
+  traits: Record<CardKey, TraitNoId>;
   mutuallyExclusive?: string[];
 };
 
@@ -69,5 +72,7 @@ export const createEmptyExpansionData = (expansionName: string): ExpansionData =
     projects: {},
     // Ways live alongside other non-supply landscapes.
     ways: {},
+    // Traits live alongside other non-supply landscapes.
+    traits: {},
   };
 };

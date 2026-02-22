@@ -22,6 +22,7 @@ import {
   MatchConfiguration,
   ProjectNoId,
   SavedMatchConfigurationEntry,
+  TraitNoId,
   WayNoId
 } from 'shared/types';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
@@ -56,6 +57,7 @@ type SelectionModalKind =
   | 'artifacts'
   | 'projects'
   | 'ways'
+  | 'traits'
   | 'allies';
 type SelectionModalState = {
   kind: SelectionModalKind;
@@ -139,6 +141,7 @@ export class MatchConfigurationComponent implements OnDestroy {
       || this.selectedArtifacts().length > 0
       || this.selectedProjects().length > 0
       || this.selectedWays().length > 0
+      || this.selectedTraits().length > 0
       || (this.matchConfiguration()?.allies?.length ?? 0) > 0;
   });
 
@@ -190,6 +193,7 @@ export class MatchConfigurationComponent implements OnDestroy {
   readonly selectedArtifacts = computed(() => this.sortByCardKey(this.matchConfiguration()?.artifacts ?? []));
   readonly selectedProjects = computed(() => this.sortByCardKey(this.matchConfiguration()?.projects ?? []));
   readonly selectedWays = computed(() => this.sortByCardKey(this.matchConfiguration()?.ways ?? []));
+  readonly selectedTraits = computed(() => this.sortByCardKey(this.matchConfiguration()?.traits ?? []));
   // Allies are capped to one preselected card in UI.
   readonly selectedAllies = computed(() => this.sortByCardKey(this.matchConfiguration()?.allies ?? []).slice(0, 1));
   // Determines if the currently selected kingdom includes at least one Liaison card.
@@ -210,6 +214,7 @@ export class MatchConfigurationComponent implements OnDestroy {
   readonly preSelectedArtifacts = computed(() => this.withTrailingEmptySlot(this.selectedArtifacts()));
   readonly preSelectedProjects = computed(() => this.withTrailingEmptySlot(this.selectedProjects()));
   readonly preSelectedWays = computed(() => this.withTrailingEmptySlot(this.selectedWays()));
+  readonly preSelectedTraits = computed(() => this.withTrailingEmptySlot(this.selectedTraits()));
   readonly preSelectedAllies = computed(() => this.withTrailingEmptySlot(this.selectedAllies()));
 
   // Banned-card stack height grows with card count for staggered overlap.
@@ -361,6 +366,7 @@ export class MatchConfigurationComponent implements OnDestroy {
       artifacts: [],
       projects: [],
       ways: [],
+      traits: [],
       allies: [],
     });
   }
@@ -467,6 +473,15 @@ export class MatchConfigurationComponent implements OnDestroy {
           filterBasicCards: false,
         });
         return;
+      case 'traits':
+        this.activeSelectionModal.set({
+          kind,
+          excludedItems: this.preSelectedTraits(),
+          catalogKind: 'traits',
+          imageSize: 'full',
+          filterBasicCards: false,
+        });
+        return;
     }
   }
 
@@ -504,6 +519,9 @@ export class MatchConfigurationComponent implements OnDestroy {
         break;
       case 'allies':
         this.onAllySelected(item as AllyNoId);
+        break;
+      case 'traits':
+        this.onTraitSelected(item as TraitNoId);
         break;
     }
 
@@ -550,6 +568,13 @@ export class MatchConfigurationComponent implements OnDestroy {
     if (!this.isGameOwner()) return;
     const remainingWays = this.selectedWays().filter((entry) => entry.cardKey !== way.cardKey);
     this.emitMatchConfigurationUpdate({ ways: remainingWays });
+  }
+
+  // Removes a selected trait from the fixed trait list.
+  deleteTrait(trait: TraitNoId) {
+    if (!this.isGameOwner()) return;
+    const remainingTraits = this.selectedTraits().filter((entry) => entry.cardKey !== trait.cardKey);
+    this.emitMatchConfigurationUpdate({ traits: remainingTraits });
   }
 
   // Removes a selected ally from the fixed ally list.
@@ -599,6 +624,13 @@ export class MatchConfigurationComponent implements OnDestroy {
     if (!this.isGameOwner()) return;
     const selectedWays = [...this.selectedWays(), selectedWay];
     this.emitMatchConfigurationUpdate({ ways: this.sortByCardKey(selectedWays) });
+  }
+
+  // Adds one trait selected from the search modal.
+  onTraitSelected(selectedTrait: TraitNoId) {
+    if (!this.isGameOwner()) return;
+    const selectedTraits = [...this.selectedTraits(), selectedTrait];
+    this.emitMatchConfigurationUpdate({ traits: this.sortByCardKey(selectedTraits) });
   }
 
   // Adds one ally selected from the search modal.

@@ -63,5 +63,10 @@
     "title": "Allies",
     "name": "allies",
     "order": 13
+  },
+  {
+    "title": "Plunder",
+    "name": "plunder",
+    "order": 14
   }
 ]

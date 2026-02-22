@@ -1,12 +1,13 @@
-@let detailPath = detailImagePath();
-@if (detailPath) {
+@if (isOpen()) {
   <app-ui-dialog
     [zIndex]="5000"
     [backdropVariant]="'strong'"
     (close)="closeDetailDialog()"
   >
     <div class="card-detail-panel" (contextmenu)="$event.preventDefault()">
-      <img class="card-detail-image" [src]="detailPath" alt="Card detail" draggable="false" />
+      @for (detailPath of detailImagePaths(); track detailPath) {
+        <img class="card-detail-image" [src]="detailPath" alt="Card detail" draggable="false" />
+      }
     </div>
   </app-ui-dialog>
 }

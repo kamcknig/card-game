@@ -7,6 +7,7 @@ import {
   MatchConfiguration,
   ProjectNoId,
   Supply,
+  TraitNoId,
   WayNoId,
 } from 'shared/types/index.ts';
 import { LoggerService } from './logger-service.ts';
@@ -32,6 +33,8 @@ export interface GameConfigurationStore {
   persistProjects(projects: ProjectNoId[]): void;
   // Persists the current preselected ways.
   persistWays(ways: WayNoId[]): void;
+  // Persists the current preselected traits.
+  persistTraits(traits: TraitNoId[]): void;
   // Persists the current preselected ally.
   persistAllies(allies: AllyNoId[]): void;
 }
@@ -177,6 +180,17 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
       );
     }
 
+    // Restore preselected traits when the file exists.
+    const preselectedTraits = this.readJson<TraitNoId[]>('preselected-traits.json');
+    if (preselectedTraits) {
+      defaultConfig.traits = preselectedTraits;
+      this.logLoadedList(
+        'preselected trait(s)',
+        preselectedTraits.length,
+        preselectedTraits.map((trait) => trait.cardKey),
+      );
+    }
+
     // Restore preselected ally when the file exists.
     const preselectedAllies = this.readJson<AllyNoId[]>('preselected-ally.json');
     if (preselectedAllies) {
@@ -222,6 +236,11 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
   public persistWays(ways: WayNoId[]): void {
     this.ensureMatchDirectory();
     Deno.writeTextFileSync(this.getFilePath('preselected-ways.json'), JSON.stringify(ways));
+  }
+
+  public persistTraits(traits: TraitNoId[]): void {
+    this.ensureMatchDirectory();
+    Deno.writeTextFileSync(this.getFilePath('preselected-traits.json'), JSON.stringify(traits));
   }
 
   public persistAllies(allies: AllyNoId[]): void {

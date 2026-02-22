@@ -60,6 +60,8 @@ const createDefaultMatchConfiguration = (): MatchConfiguration => ({
   projects: [],
   // Default way selection for new lobbies.
   ways: [],
+  // Default trait selection for new lobbies.
+  traits: [],
   // Default ally selection for new lobbies.
   allies: [],
   // Default boons selection for new lobbies.
@@ -322,6 +324,13 @@ export class Game {
       // Persist selected ways between sessions.
       this.configStore.persistWays(newConfig.ways);
       this.defaultMatchConfiguration.ways = structuredClone(newConfig.ways);
+    }
+
+    const traitsPatch = jsonPatch.compare(currentConfig.traits, newConfig.traits);
+    if (traitsPatch.length) {
+      // Persist selected traits between sessions.
+      this.configStore.persistTraits(newConfig.traits);
+      this.defaultMatchConfiguration.traits = structuredClone(newConfig.traits);
     }
 
     const alliesPatch = jsonPatch.compare(currentConfig.allies, newConfig.allies);

@@ -250,6 +250,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this.matchSetupService.createProjects(this._matchConfiguration);
       // Ways are landscapes that should be created alongside events/projects.
       this.matchSetupService.createWays(this._matchConfiguration);
+      // Traits are landscapes attached to kingdom piles at setup.
+      this.matchSetupService.createTraits(this._matchConfiguration);
       // Boons are initialized after events/landmarks if Fate cards are present.
       this.matchSetupService.createBoons(this._matchConfiguration);
       // Hexes are initialized after boons if Doom cards are present.
@@ -353,6 +355,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this.match.fleetRound.nextFleetPlayerIndex ??= 0;
     this.match.config ??= {} as ComputedMatchConfiguration;
     this.match.config.allies ??= [];
+    this.match.config.traits ??= [];
+    this.match.traits ??= [];
   }
 
   private clientEventRegistrar<T extends keyof ServerListenEvents>(event: T, handler: ServerListenEvents[T]) {

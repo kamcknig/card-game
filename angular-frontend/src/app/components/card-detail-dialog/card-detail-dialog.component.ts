@@ -17,8 +17,9 @@ export class CardDetailDialogComponent {
     initialValue: cardDetailDialogStore.get(),
   });
 
-  // Current detail image path for the global card detail dialog.
-  readonly detailImagePath = computed(() => this._dialogState().detailImagePath);
+  // Current detail image paths for the global card detail dialog.
+  readonly detailImagePaths = computed(() => this._dialogState().detailImagePaths);
+  readonly isOpen = computed(() => this.detailImagePaths().length > 0);
 
   // Closes the global detail dialog.
   closeDetailDialog() {

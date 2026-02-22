@@ -18,6 +18,8 @@ import {
   ProjectNoId,
   State,
   StateNoId,
+  Trait,
+  TraitNoId,
   Way,
   WayNoId,
 } from 'shared/types/index.ts';
@@ -102,6 +104,14 @@ export class CardInstanceFactoryService {
   public createWay(way: WayNoId): Way {
     return new Way({
       ...way,
+      id: ++this._cardCount,
+    });
+  }
+
+  // Creates a trait instance.
+  public createTrait(trait: TraitNoId): Trait {
+    return new Trait({
+      ...trait,
       id: ++this._cardCount,
     });
   }

@@ -3,7 +3,7 @@ import { PileView } from './pile';
 import { cardStore } from '../../../state/card-state';
 import { matchStore } from '../../../state/match-state';
 import { tokenDefinitionStore } from '../../../state/token-definition-state';
-import { Card, CardKey, Match, TokenDefinition, TokenId, TokenInstance } from 'shared/types';
+import { Card, CardKey, Match, TokenDefinition, TokenId, TokenInstance, Trait } from 'shared/types';
 import { SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
 import { kingdomSupplies } from '../../../state/match-logic';
 import { computed } from 'nanostores';
@@ -16,6 +16,7 @@ export class KingdomSupplyView extends Container {
   private _background: Container;
   private readonly _backgroundGraphics: Graphics = new Graphics({ label: 'backgroundGraphics' });
   private _cardContainer: Container;
+  private _traitByPile: Record<CardKey, Trait> = {};
   private _cleanup: (() => void)[] = [];
 
   constructor() {
@@ -67,7 +68,10 @@ export class KingdomSupplyView extends Container {
       computed(
         [matchStore, tokenDefinitionStore],
         (match, tokenDefinitions) => ({ match, tokenDefinitions })
-      ).subscribe(({ match, tokenDefinitions }) => this.updateTokenBadges(match, tokenDefinitions))
+      ).subscribe(({ match, tokenDefinitions }) => {
+        this.updateTraitBadges(match);
+        this.updateTokenBadges(match, tokenDefinitions);
+      })
     );
     this.off('removed', this.onRemoved);
   }
@@ -93,6 +97,7 @@ export class KingdomSupplyView extends Container {
         return;
       }
       p.pile = pile;
+      p.trait = this._traitByPile[pileKey] ?? null;
     })
 
     this._backgroundGraphics.clear();
@@ -113,24 +118,52 @@ export class KingdomSupplyView extends Container {
     this._cardContainer.removeChildren();
 
     const numColumns = 5;
+    const traitTagWidth = 22;
 
     for (const [idx, cardKey] of cardKeys.entries()) {
       const p = new PileView({ size: 'half' });
       p.label = `pile:${cardKey.pileKey}`;
       p.pileKey = cardKey.pileKey;
+      p.trait = this._traitByPile[cardKey.pileKey] ?? null;
 
       const col = numColumns - 1 - (idx % numColumns);
       const row = Math.floor(idx / numColumns);
 
-      p.x = col * (SMALL_CARD_WIDTH + STANDARD_GAP);
+      p.x = col * (SMALL_CARD_WIDTH + traitTagWidth + STANDARD_GAP);
       p.y = row * (SMALL_CARD_HEIGHT + STANDARD_GAP);
       this._cardContainer.addChild(p);
+    }
+  }
+
+  // Returns only pile views created by this component.
+  private getPileViews(): PileView[] {
+    return this._cardContainer.children
+      .filter((child) => typeof child.label === 'string' && child.label.startsWith('pile:'))
+      .map((child) => child as PileView);
+  }
+
+  // Updates trait assignments for each pile key and refreshes rendered pile tags.
+  private updateTraitBadges(match: Match | null) {
+    this._traitByPile = {};
+    for (const trait of match?.traits ?? []) {
+      if (!trait.pileKey) {
+        continue;
+      }
+      this._traitByPile[trait.pileKey] = trait;
+    }
+
+    const piles = this.getPileViews();
+    for (const pile of piles) {
+      if (!pile.pileKey) {
+        continue;
+      }
+      pile.trait = this._traitByPile[pile.pileKey] ?? null;
     }
   }
   
   // Updates token badges on each pile based on match token state.
   private updateTokenBadges(match: Match | null, tokenDefinitions: Record<TokenId, TokenDefinition>) {
-    const piles = this._cardContainer.children.filter(child => child instanceof PileView) as PileView[];
+    const piles = this.getPileViews();
     if (!match) {
       piles.forEach(pile => pile.tokenBadges = []);
       return;

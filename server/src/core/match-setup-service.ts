@@ -6,6 +6,7 @@ import {
   Match,
   MatchConfiguration,
   SetAsideSourceDescriptor,
+  TraitNoId,
 } from 'shared/types/index.ts';
 import { MatchBaseConfiguration } from '@server-types/index.ts';
 import { fisherYatesShuffle } from '../utils/fisher-yates-shuffler.ts';
@@ -227,6 +228,71 @@ export class MatchSetupService {
     this.loggerService.info('[match] creating ways');
     for (const way of ways) {
       this.match.ways.push(this.cardInstanceFactoryService.createWay(way));
+    }
+  }
+
+  // Returns true when a kingdom pile can receive a Trait (Action/Treasure piles only).
+  private isTraitEligiblePile(cards: ReadonlyArray<{ type: string[]; kingdom: CardKey }>): boolean {
+    return cards.some((card) => card.type.includes('ACTION') || card.type.includes('TREASURE'));
+  }
+
+  // Assigns each configured trait to a unique eligible kingdom pile.
+  private assignTraitPileKeys(
+    traits: ReadonlyArray<TraitNoId>,
+    kingdomPileCards: ReadonlyArray<ReadonlyArray<{ type: string[]; kingdom: CardKey }>>,
+  ): Array<CardKey | null> {
+    const eligiblePileKeys = kingdomPileCards
+      .filter((pileCards) => pileCards.length > 0 && this.isTraitEligiblePile(pileCards))
+      .map((pileCards) => pileCards[0].kingdom);
+    const availablePileKeys = [...eligiblePileKeys];
+    const usedPileKeys = new Set<CardKey>();
+
+    return traits.map((trait) => {
+      const requestedPileKey = trait.pileKey ?? null;
+      if (requestedPileKey && eligiblePileKeys.includes(requestedPileKey) && !usedPileKeys.has(requestedPileKey)) {
+        usedPileKeys.add(requestedPileKey);
+        const index = availablePileKeys.indexOf(requestedPileKey);
+        if (index !== -1) {
+          availablePileKeys.splice(index, 1);
+        }
+        return requestedPileKey;
+      }
+
+      if (availablePileKeys.length < 1) {
+        return null;
+      }
+
+      const randomIndex = this.rngService.nextIndex(availablePileKeys.length);
+      const selectedPileKey = availablePileKeys.splice(randomIndex, 1)[0];
+      usedPileKeys.add(selectedPileKey);
+      return selectedPileKey;
+    });
+  }
+
+  public createTraits(config: ComputedMatchConfiguration): void {
+    const traits = config.traits ?? [];
+    if (traits.length < 1) {
+      this.loggerService.info('[match] no traits configured for this match');
+      return;
+    }
+
+    const kingdomPiles = (config.kingdomSupply ?? []).map((supply) => supply.cards);
+    const assignedPileKeys = this.assignTraitPileKeys(traits, kingdomPiles);
+
+    this.loggerService.info('[match] creating traits');
+    for (const [index, trait] of traits.entries()) {
+      const pileKey = assignedPileKeys[index];
+      if (!pileKey) {
+        this.loggerService.warn(`[match] could not assign trait '${trait.cardKey}' to an eligible kingdom pile`);
+        continue;
+      }
+
+      this.match.traits.push(
+        this.cardInstanceFactoryService.createTrait({
+          ...trait,
+          pileKey,
+        }),
+      );
     }
   }
 

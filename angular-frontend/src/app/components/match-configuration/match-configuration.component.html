@@ -286,6 +286,37 @@
         </div>
       </section>
 
+      <!-- ░░░  Traits  ░░░ -->
+      <section class="traits-section">
+        <h2 class="section-title">Traits</h2>
+
+        <div class="traits-list">
+          @for (trait of preSelectedTraits(); track trait?.cardKey ?? $index) {
+            <div
+              class="trait-slot"
+              [ngStyle]="{'cursor': isOwner && trait === null ? 'pointer' : 'default'}"
+              (click)="trait === null && isOwner ? openSelectionModal('traits') : null"
+            >
+              @if (trait !== null && isOwner) {
+                <div (click)="deleteTrait(trait)" class="close-button">X</div>
+              }
+              <div>
+                @if (trait !== null) {
+                  <img
+                    alt="{{trait.cardName}} image"
+                    ngSrc="{{trait.fullImagePath}}"
+                    height="124"
+                    width="280"
+                  />
+                } @else {
+                  <span class="no-trait">?</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+
       <!-- ░░░  Allies  ░░░ -->
       <section class="allies-section">
         <h2 class="section-title">Allies</h2>

@@ -1,5 +1,7 @@
 .card-detail-panel {
   display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   max-width: calc(100vw - 64px);

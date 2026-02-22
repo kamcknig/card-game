@@ -9,6 +9,7 @@ const EMPTY_SELECTABLE_SEARCH_CATALOG: SelectableSearchCatalog = {
   artifacts: [],
   projects: [],
   ways: [],
+  traits: [],
   allies: [],
 };
 

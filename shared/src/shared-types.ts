@@ -86,6 +86,8 @@ export interface MatchConfiguration {
   projects: ProjectNoId[];
   // Ways are landscape card-likes that provide alternate Action play effects.
   ways: WayNoId[];
+  // Traits are landscape card-likes that attach to one Action/Treasure kingdom pile.
+  traits: TraitNoId[];
   // Allies are landscape card-likes that define Favor spend behavior.
   allies: AllyNoId[];
   // Boons available for Fate cards in this match.
@@ -169,6 +171,7 @@ export type FleetRoundState = {
 export type SetAsideSourceKind =
   | 'card'
   | 'event'
+  | 'trait'
   | 'landmark'
   | 'project'
   | 'way'
@@ -211,6 +214,8 @@ export interface Match {
   projects: Project[];
   // Active ways in the match (not part of the supply).
   ways: Way[];
+  // Active trait landscapes in the match (each attaches to a kingdom pile).
+  traits: Trait[];
   // Active ally landscape in the match (at most one in standard games).
   allies: Ally[];
   // Boon deck state for Fate cards in this match.
@@ -464,6 +469,7 @@ export type SelectableSearchCatalog = {
   artifacts: ArtifactNoId[];
   projects: ProjectNoId[];
   ways: WayNoId[];
+  traits: TraitNoId[];
   allies: AllyNoId[];
 };
 
@@ -934,6 +940,39 @@ export class Way extends CardLike {
 }
 
 export type WayNoId = Omit<Way, 'id'>;
+
+type TraitArgs = {
+  [p in keyof CardLike]: CardLike[p];
+} & {
+  randomizer?: string | null;
+  // Pile key this trait is attached to at runtime; null/undefined when unassigned.
+  pileKey?: CardKey | null;
+};
+
+// Traits are landscape card-likes that modify one Action/Treasure kingdom pile.
+export class Trait extends CardLike {
+  // Randomizer key used to group traits during selection.
+  randomizer: string | null;
+  // Runtime pile key this trait is attached to.
+  pileKey: CardKey | null;
+
+  constructor(args: TraitArgs) {
+    super(args);
+
+    this.id = args.id;
+    this.cardName = args.cardName;
+    this.fullImagePath = args.fullImagePath;
+    this.detailImagePath = args.detailImagePath;
+    this.randomizer = args.randomizer ?? null;
+    this.pileKey = args.pileKey ?? null;
+  }
+
+  override toString() {
+    return `[TRAIT ${this.id} - ${this.cardKey}]`;
+  }
+}
+
+export type TraitNoId = Omit<Trait, 'id'>;
 
 // Boon constructor args mirror base CardLike fields.
 type BoonArgs = {

@@ -9,6 +9,7 @@ import type {
   Match,
   Project,
   State,
+  Trait,
   Way,
 } from './shared-types.ts';
 
@@ -16,6 +17,7 @@ import type {
 export type MatchCardLikeKind =
   | 'event'
   | 'ally'
+  | 'trait'
   | 'landmark'
   | 'project'
   | 'way'
@@ -28,6 +30,7 @@ export type MatchCardLikeKind =
 export type MatchCardLike =
   | MatchEvent
   | Ally
+  | Trait
   | Landmark
   | Project
   | Way
@@ -40,6 +43,7 @@ export type MatchCardLike =
 export type MatchCardLikeByKind = {
   event: MatchEvent;
   ally: Ally;
+  trait: Trait;
   landmark: Landmark;
   project: Project;
   way: Way;
@@ -70,6 +74,7 @@ const getCardLikeCollections = (match: Match): { kind: MatchCardLikeKind; cards:
   return [
     { kind: 'event', cards: match.events ?? [] },
     { kind: 'ally', cards: match.allies ?? [] },
+    { kind: 'trait', cards: match.traits ?? [] },
     { kind: 'landmark', cards: match.landmarks ?? [] },
     { kind: 'project', cards: match.projects ?? [] },
     { kind: 'way', cards: match.ways ?? [] },
@@ -90,6 +95,8 @@ const getCardLikeCollectionByKind = <K extends MatchCardLikeKind>(
       return (match.events ?? []) as MatchCardLikeByKind[K][];
     case 'ally':
       return (match.allies ?? []) as MatchCardLikeByKind[K][];
+    case 'trait':
+      return (match.traits ?? []) as MatchCardLikeByKind[K][];
     case 'landmark':
       return (match.landmarks ?? []) as MatchCardLikeByKind[K][];
     case 'project':
@@ -172,6 +179,9 @@ export const findLandmarkInMatch = <M = unknown>(match: Match | null | undefined
 
 export const findAllyInMatch = <M = unknown>(match: Match | null | undefined, cardLikeId: CardLikeId) =>
   findCardLikeByKindInMatchWithMetadata<'ally', M>(match, cardLikeId, 'ally');
+
+export const findTraitInMatch = <M = unknown>(match: Match | null | undefined, cardLikeId: CardLikeId) =>
+  findCardLikeByKindInMatchWithMetadata<'trait', M>(match, cardLikeId, 'trait');
 
 export const findProjectInMatch = <M = unknown>(match: Match | null | undefined, cardLikeId: CardLikeId) =>
   findCardLikeByKindInMatchWithMetadata<'project', M>(match, cardLikeId, 'project');

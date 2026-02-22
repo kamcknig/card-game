@@ -8,6 +8,7 @@ type SourceAccentToken =
   | 'curse'
   | 'duration'
   | 'event'
+  | 'trait'
   | 'landmark'
   | 'project'
   | 'way'
@@ -23,6 +24,7 @@ const sourceAccentThemeVars: Record<SourceAccentToken, string> = {
   curse: '--theme-color-source-curse',
   duration: '--theme-color-source-duration',
   event: '--theme-color-source-event',
+  trait: '--theme-color-source-event',
   landmark: '--theme-color-source-landmark',
   project: '--theme-color-source-project',
   way: '--theme-color-way',
@@ -34,18 +36,19 @@ const sourceAccentThemeVars: Record<SourceAccentToken, string> = {
 
 const sourceAccentFallbacks: Record<SourceAccentToken, string> = {
   default: '#ffffff',
-  treasure: '#fdda56',
-  victory: '#8efb49',
-  curse: '#d45ffb',
-  duration: '#ff8d34',
-  event: '#ffe0a8',
-  landmark: '#ffd09d',
-  project: '#b6f1ad',
-  way: '#9fc6ff',
-  boon: '#a4f0ff',
-  hex: '#f2a9ff',
-  state: '#c4d4ff',
-  artifact: '#ffdca8',
+  treasure: '#f6e094',
+  victory: '#9cc17e',
+  curse: '#a379b2',
+  duration: '#e58c4a',
+  event: '#b1b1af',
+  trait: '#b9b4d4',
+  landmark: '#8db984',
+  project: '#ecada4',
+  way: '#b7ebff',
+  boon: '#e8d065',
+  hex: '#a5a4c3',
+  state: '#ccad9d',
+  artifact: '#ca9b6d',
 };
 
 // Reads a theme color token with a stable fallback for early boot and tests.
@@ -83,6 +86,8 @@ export const getSourceAccentColorForCardLikeKind = (kind: MatchCardLikeKind | un
   switch (kind) {
     case 'event':
       return readThemeColor('event');
+    case 'trait':
+      return readThemeColor('trait');
     case 'landmark':
       return readThemeColor('landmark');
     case 'project':
@@ -109,6 +114,8 @@ export const getSourceAccentColorForSetAsideSourceKind = (kind: SetAsideSourceKi
       return readThemeColor('default');
     case 'event':
       return readThemeColor('event');
+    case 'trait':
+      return readThemeColor('trait');
     case 'landmark':
       return readThemeColor('landmark');
     case 'project':

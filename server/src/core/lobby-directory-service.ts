@@ -11,6 +11,7 @@ import type {
   Match,
   PlayerId,
   ProjectNoId,
+  TraitNoId,
   ServerEmitEvents,
   ServerListenEvents,
   WayNoId,
@@ -31,7 +32,7 @@ type LobbyGameRecord = {
   listedInLobby: boolean;
 };
 
-type DebugSearchType = 'cards' | 'events' | 'landmarks' | 'artifacts' | 'projects' | 'ways' | 'allies';
+type DebugSearchType = 'cards' | 'events' | 'landmarks' | 'artifacts' | 'projects' | 'ways' | 'traits' | 'allies';
 type DebugSearchResult =
   | CardNoId[]
   | EventNoId[]
@@ -39,6 +40,7 @@ type DebugSearchResult =
   | ArtifactNoId[]
   | ProjectNoId[]
   | WayNoId[]
+  | TraitNoId[]
   | AllyNoId[];
 
 // Debug-level game lifecycle status exposed by REST debug endpoints.
@@ -928,6 +930,8 @@ export class LobbyDirectoryService {
         return this.expansionSearchService.searchProjects(searchStr);
       case 'ways':
         return this.expansionSearchService.searchWays(searchStr);
+      case 'traits':
+        return this.expansionSearchService.searchTraits(searchStr);
       case 'allies':
         return this.expansionSearchService.searchAllies(searchStr);
     }

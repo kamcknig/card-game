@@ -212,6 +212,12 @@ export const socketToGameEventMap = (): SocketEventMap => {
       finalBundle[`${way.cardKey}-detail`] ??= way.detailImagePath;
     }
 
+    // Ensure trait images are loaded for pile-attached trait badges and detail dialogs.
+    for (const trait of matchStore.get()?.traits ?? []) {
+      finalBundle[`${trait.cardKey}-full`] ??= trait.fullImagePath;
+      finalBundle[`${trait.cardKey}-detail`] ??= trait.detailImagePath;
+    }
+
     // Ensure boon images are loaded for card-like selection prompts.
     for (const boon of matchStore.get()?.boons?.cards ?? []) {
       finalBundle[`${boon.cardKey}-full`] ??= boon.fullImagePath;

@@ -23,6 +23,8 @@ export function createInitialMatchState(): Match {
     projects: [],
     // Active way landscapes in the match.
     ways: [],
+    // Active trait landscapes in the match.
+    traits: [],
     // Active ally landscapes in the match.
     allies: [],
     // Boon deck state for Fate cards.
