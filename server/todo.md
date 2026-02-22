@@ -86,23 +86,6 @@ ferryman
 - hermit (madman kingdom)
 - urchin (mercenary kingdom)
 
-the rules state that "set aside" cards do not discard. you made that complicated
-logic for active duration cards. but
-you can just use set-aside and then schedule a movecard reaction at the start of
-next turn, and then they'll be in play
-and will be discarded. and the gray effect can be checked by seeing if they are
-in the play area on the turn they were
-played or not
-
-update knights. i used that stupid randomizer. but there is a knights "card" on
-the dominion wiki. you can still use
-randomizer null to remove cards like the individual knights. then you can add
-a "dummy" "knights" card to the library
-json. when this card is picked the expansion configurator can check for that
-kingdom in the config and replace it with
-the individual knight. this will remove the need for the randomizer other than
-removing cards from it.
-
 empires
 
 - for encampment/plunder, not sure if moving back to a kingdom supply works
