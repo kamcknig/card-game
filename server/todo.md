@@ -88,6 +88,5 @@ ferryman
 
 empires
 
-- for encampment/plunder, not sure if moving back to a kingdom supply works
 - enchantress - need to replace a cards effects instead of just adding to them
   like we currently can.
