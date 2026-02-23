@@ -13,6 +13,7 @@ import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { isCardStillAtGainedLocation } from '../../utils/is-card-still-at-gained-location.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
 import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
+import { returnCardToConfiguredPileTop } from '../../utils/return-card-to-configured-pile-top.ts';
 
 const LOOT_PILE_NAME = 'loot';
 const CHEAP_TRAIT_CARD_KEY: CardKey = 'cheap';
@@ -26,6 +27,7 @@ const INSPIRING_TRAIT_CARD_KEY: CardKey = 'inspiring';
 const NEARBY_TRAIT_CARD_KEY: CardKey = 'nearby';
 const PATIENT_TRAIT_CARD_KEY: CardKey = 'patient';
 const PIOUS_TRAIT_CARD_KEY: CardKey = 'pious';
+const RECKLESS_TRAIT_CARD_KEY: CardKey = 'reckless';
 const RICH_TRAIT_CARD_KEY: CardKey = 'rich';
 const SHY_TRAIT_CARD_KEY: CardKey = 'shy';
 const TIRELESS_TRAIT_CARD_KEY: CardKey = 'tireless';
@@ -1072,6 +1074,113 @@ const registerRichTraitEvents = (
   });
 };
 
+// Registers Reckless behavior: replay played card instructions, and return discarded cards from play to their pile.
+const registerRecklessTraitEvents = (
+  registrar: GameEventRegistrar,
+  config: ComputedMatchConfiguration,
+) => {
+  const hasRecklessTrait = (config.traits ?? []).some((trait) => trait.cardKey === RECKLESS_TRAIT_CARD_KEY);
+  if (!hasRecklessTrait) {
+    return;
+  }
+
+  registrar('onGameStartSetup', async (args) => {
+    const recklessTraits = getRuntimeTraitsByCardKey(args.match, RECKLESS_TRAIT_CARD_KEY);
+    if (recklessTraits.length < 1) {
+      args.loggerService.warn('[plunder reckless trait] no runtime Reckless traits found at game start');
+      return;
+    }
+
+    const recklessPileKeys = getTraitPileKeySet(recklessTraits);
+    for (const player of args.match.players) {
+      args.reactionManager.registerSystemTemplate(recklessTraits[0], 'afterCardPlayed', {
+        playerId: player.id,
+        once: false,
+        compulsory: true,
+        allowMultipleInstances: false,
+        condition: ({ trigger }) => {
+          if (trigger.args.playerId !== player.id) {
+            return false;
+          }
+          if (!trigger.args.followedPlayedCardInstructions) {
+            return false;
+          }
+          const playedCard = args.cardLibrary.getCard(trigger.args.cardId);
+          return recklessPileKeys.has(getCardPileKey(playedCard));
+        },
+        triggeredEffectFn: async (triggeredArgs) => {
+          const replayCardId = triggeredArgs.trigger.args.cardId;
+          const wayId = triggeredArgs.trigger.args.wayId ?? null;
+          const replayCard = triggeredArgs.cardLibrary.getCard(replayCardId);
+          triggeredArgs.loggerService.info(`[plunder reckless trait] replaying instructions for ${replayCard}`);
+          await triggeredArgs.actionService.run('activateCardEffects', {
+            playerId: player.id,
+            cardId: replayCardId,
+            wayId,
+          });
+        },
+      }, {
+        idSuffix: `reckless:${player.id}:afterCardPlayed`,
+      });
+    }
+
+    for (const recklessTrait of recklessTraits) {
+      if (!recklessTrait.pileKey) {
+        args.loggerService.warn(`[plunder reckless trait] Reckless trait ${recklessTrait.id} has no assigned pile key`);
+        continue;
+      }
+
+      for (const player of args.match.players) {
+        args.reactionManager.registerSystemTemplate(recklessTrait, 'discardCard', {
+          playerId: player.id,
+          once: false,
+          compulsory: true,
+          allowMultipleInstances: false,
+          condition: ({ trigger }) => {
+            if (trigger.args.playerId !== player.id) {
+              return false;
+            }
+            if (!isLocationInPlay(trigger.args.previousLocation.location)) {
+              return false;
+            }
+            const discardedCard = args.cardLibrary.getCard(trigger.args.cardId);
+            return getCardPileKey(discardedCard) === recklessTrait.pileKey;
+          },
+          triggeredEffectFn: async (triggeredArgs) => {
+            const discardedCardId = triggeredArgs.trigger.args.cardId;
+            let sourceInfo: { sourceKey: string; playerId?: PlayerId } | null = null;
+            try {
+              sourceInfo = triggeredArgs.cardSourceController.findCardSource(discardedCardId);
+            } catch {
+              sourceInfo = null;
+            }
+
+            // Stop-Moving: if another effect moved it away from discard, Reckless cannot return it.
+            const stillInPlayerDiscard = sourceInfo?.sourceKey === 'playerDiscard' && sourceInfo?.playerId === player.id;
+            if (!stillInPlayerDiscard) {
+              triggeredArgs.loggerService.debug(
+                `[plunder reckless trait] discarded card ${discardedCardId} moved before return-to-pile step`,
+              );
+              return;
+            }
+
+            const discardedCard = triggeredArgs.cardLibrary.getCard(discardedCardId);
+            await returnCardToConfiguredPileTop({
+              actionService: triggeredArgs.actionService,
+              loggerService: triggeredArgs.loggerService,
+              match: triggeredArgs.match,
+              card: discardedCard,
+              logTag: 'plunder reckless trait',
+            });
+          },
+        }, {
+          idSuffix: `reckless:${recklessTrait.id}:${player.id}:discard`,
+        });
+      }
+    }
+  });
+};
+
 // Registers Shy: at start of turn, may discard one Shy card from hand for +2 Cards.
 const registerShyTraitEvents = (
   registrar: GameEventRegistrar,
@@ -1300,6 +1409,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   registerNearbyTraitEvents(registrar, config);
   registerPatientTraitEvents(registrar, config);
   registerPiousTraitEvents(registrar, config);
+  registerRecklessTraitEvents(registrar, config);
   registerRichTraitEvents(registrar, config);
   registerShyTraitEvents(registrar, config);
   registerTirelessTraitEvents(registrar, config);

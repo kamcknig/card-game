@@ -3548,6 +3548,89 @@ export class GameActionController implements GameActionDefinitionMap {
     return null;
   }
 
+  // Activates a card's instruction pipeline without counting as a new play.
+  async activateCardEffects(args: {
+    playerId: PlayerId;
+    cardId: CardId | Card;
+    wayId?: CardLikeId | null;
+    reactionContext?: CardEffectFunctionContext['reactionContext'];
+  }): Promise<void> {
+    const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
+    const cardId = card.id;
+    const playerId = args.playerId;
+
+    const resolvedWayId = args.wayId ?? null;
+    let selectedWay = resolvedWayId === null ? undefined : findWayInMatch(this.match, resolvedWayId);
+    if (resolvedWayId !== null && !selectedWay) {
+      this.loggerService.warn(
+        `[activateCardEffects action] requested way ${resolvedWayId} was not found; using normal path`,
+      );
+    }
+    const missingWayEffect = selectedWay ? this.wayEffectFunctionMap[selectedWay.cardKey] === undefined : false;
+
+    const reactionContext = args.reactionContext ?? {};
+    await this.reactionManager.runCardLifecycleEvent('onCardPlayed', { playerId, cardId });
+
+    const buildEffectContext = () => this.createCardEffectContext({
+      cardId,
+      playerId,
+      reactionContext,
+    });
+
+    // Runs the card's normal effect pipeline (base + expansion handlers).
+    const runNormalCardEffectPipeline = async (): Promise<void> => {
+      let effectFn = this.cardEffectFunctionMap[card.cardKey];
+      if (effectFn) {
+        // Run base card effects with standardized logging.
+        await this.runEffectWithLogging({
+          source: card.toString(),
+          sourceType: 'card',
+          playerId,
+          effectFn,
+          context: buildEffectContext(),
+        });
+      }
+
+      for (const expansion of Object.keys(this._customCardEffectHandlers)) {
+        const effects = this._customCardEffectHandlers[expansion];
+        effectFn = effects[card.cardKey];
+        if (effectFn) {
+          // Run expansion-registered card effects with standardized logging.
+          await this.runEffectWithLogging({
+            source: card.toString(),
+            sourceType: `card:${expansion}`,
+            playerId,
+            effectFn,
+            context: buildEffectContext(),
+          });
+        }
+      }
+    };
+
+    if (selectedWay) {
+      const wayEffectFn = this.wayEffectFunctionMap[selectedWay.cardKey];
+      if (!wayEffectFn) {
+        this.loggerService.warn(
+          `[activateCardEffects action] no effect registered for ${selectedWay.cardKey}; falling back to normal path`,
+        );
+      } else {
+        await this.runEffectWithLogging({
+          source: `[WAY ${selectedWay.id} - ${selectedWay.cardName}]`,
+          sourceType: 'way',
+          playerId,
+          effectFn: wayEffectFn,
+          context: buildEffectContext(),
+        });
+      }
+    }
+
+    // Normal path runs when no way is selected, or when a selected way has no effect yet.
+    if (!selectedWay || missingWayEffect) {
+      await runNormalCardEffectPipeline();
+    }
+
+  }
+
   async playCard(args: {
     playerId: PlayerId;
     cardId: CardId | Card;
@@ -3633,79 +3716,26 @@ export class GameActionController implements GameActionDefinitionMap {
     });
     await this.reactionManager.runTrigger({ trigger: beforePlayedCardEffectTrigger, reactionContext });
     const skipPlayedCardEffect = beforePlayedCardEffectTrigger.args.skipPlayEffect === true;
-
-    if (!skipPlayedCardEffect) {
-      // now add any triggered effects from the card played
-      await this.reactionManager.runCardLifecycleEvent('onCardPlayed', { playerId: args.playerId, cardId });
-    } else {
+    let followedPlayedCardInstructions = false;
+    if (skipPlayedCardEffect) {
       this.loggerService.debug(`[playCard action] suppressing on-play effects for ${card}`);
-    }
-
-    // Runs the card's normal effect pipeline (base + expansion handlers).
-    const runNormalCardEffectPipeline = async (): Promise<void> => {
-      let effectFn = this.cardEffectFunctionMap[card.cardKey];
-      if (effectFn) {
-        // Run base card effects with standardized logging.
-        await this.runEffectWithLogging({
-          source: card.toString(),
-          sourceType: 'card',
-          playerId,
-          effectFn,
-          context: buildEffectContext(),
-        });
-      }
-
-      for (const expansion of Object.keys(this._customCardEffectHandlers)) {
-        const effects = this._customCardEffectHandlers[expansion];
-        effectFn = effects[card.cardKey];
-        if (effectFn) {
-          // Run expansion-registered card effects with standardized logging.
-          await this.runEffectWithLogging({
-            source: card.toString(),
-            sourceType: `card:${expansion}`,
-            playerId,
-            effectFn,
-            context: buildEffectContext(),
-          });
-        }
-      }
-    };
-
-    // Builds an effect context that keeps reaction context in sync with triggered effects.
-    const buildEffectContext = () => this.createCardEffectContext({
-      cardId,
-      playerId,
-      reactionContext,
-    });
-
-    if (!skipPlayedCardEffect) {
-      if (selectedWay) {
-        const wayEffectFn = this.wayEffectFunctionMap[selectedWay.cardKey];
-        if (!wayEffectFn) {
-          this.loggerService.warn(
-            `[playCard action] no effect registered for ${selectedWay.cardKey}; falling back to normal path`,
-          );
-        } else {
-          // Execute way effects with the played card as context `this` (cardId semantics).
-          await this.runEffectWithLogging({
-            source: `[WAY ${selectedWay.id} - ${selectedWay.cardName}]`,
-            sourceType: 'way',
-            playerId,
-            effectFn: wayEffectFn,
-            context: buildEffectContext(),
-          });
-        }
-      }
-
-      // Normal path runs when no way is selected, or when a selected way has no effect yet.
-      if (!selectedWay || missingWayEffect) {
-        await runNormalCardEffectPipeline();
-      }
+    } else {
+      await this.actionService.run('activateCardEffects', {
+        playerId,
+        cardId,
+        wayId: selectedWay?.id ?? null,
+        reactionContext,
+      });
+      followedPlayedCardInstructions = !selectedWay ||
+        selectedWay.cardKey === 'way-of-the-chameleon' ||
+        missingWayEffect;
     }
 
     const afterCardPlayedTrigger = new ReactionTrigger('afterCardPlayed', {
       playerId,
       cardId,
+      wayId: selectedWay?.id ?? null,
+      followedPlayedCardInstructions,
     });
 
     // handle reactions for the card played

@@ -322,6 +322,15 @@ export interface GameActionDefinitionMap {
     wayId?: CardLikeId | null;
     overrides?: GameActionOverrides;
   }, context?: GameActionContext) => Promise<void>;
+  // Activates a card's instruction pipeline without counting as a new play.
+  activateCardEffects: (args: {
+    playerId: PlayerId;
+    cardId: CardId | Card;
+    // null/undefined => normal instructions, cardLikeId => selected Way path.
+    wayId?: CardLikeId | null;
+    // Optional reaction context to preserve current trigger-scope state.
+    reactionContext?: ReactionContext;
+  }) => Promise<void>;
   revealCard: (args: {
     cardId?: CardId | Card;
     playerId: PlayerId;
@@ -661,6 +670,10 @@ export type TriggerEventTypeContext = {
   afterCardPlayed: {
     cardId: CardId;
     playerId: PlayerId;
+    // Way chosen for this play path; null means normal instruction path.
+    wayId: CardLikeId | null;
+    // True when this play followed the played card's own instructions.
+    followedPlayedCardInstructions: boolean;
   };
   // Triggered after a card is played but before its on-play lifecycle/effect pipeline resolves.
   beforePlayedCardEffect: {
