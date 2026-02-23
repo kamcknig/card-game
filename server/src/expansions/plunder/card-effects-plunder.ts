@@ -5,14 +5,11 @@ import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { isCardStillAtGainedLocation } from '../../utils/is-card-still-at-gained-location.ts';
 import { isPlayerImmune, markPlayerImmune } from '../../utils/reaction-immunity.ts';
-
-const getTurnHistoryIndex = (args: { match: { stats: { turns: unknown[] } } }): number => {
-  return Math.max(0, args.match.stats.turns.length - 1);
-};
+import { getCurrentTurnHistoryIndex } from '../../utils/get-current-turn-history-index.ts';
 
 const registerThisTurnTopdeckOnGain = (cardEffectArgs: CardEffectFunctionContext) => {
   const loggerService = cardEffectArgs.loggerService;
-  const turnHistoryIndex = getTurnHistoryIndex(cardEffectArgs);
+  const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: cardEffectArgs.match }) ?? 0;
   const sourceCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
   const triggerId = cardEffectArgs.reactionManager.registerReactionTemplate(sourceCard, 'cardGained', {
     playerId: cardEffectArgs.playerId,
@@ -61,7 +58,8 @@ const registerThisTurnTopdeckOnGain = (cardEffectArgs: CardEffectFunctionContext
     allowMultipleInstances: true,
     compulsory: true,
     condition: ({ trigger, match }) =>
-      trigger.args.playerId === cardEffectArgs.playerId && getTurnHistoryIndex({ match }) === turnHistoryIndex,
+      trigger.args.playerId === cardEffectArgs.playerId &&
+      getCurrentTurnHistoryIndex({ match }) === turnHistoryIndex,
     triggeredEffectFn: async (triggeredArgs) => {
       triggeredArgs.reactionManager.unregisterTrigger(triggerId);
     },

@@ -1,0 +1,92 @@
+{
+  "avoid": {
+    "cost": {
+      "treasure": 2
+    },
+    "abilityText": "+1 Buy\nThe next time you shuffle this turn, pick up to 3 of those cards to put into your discard pile."
+  },
+  "bury": {
+    "cost": {
+      "treasure": 1
+    },
+    "abilityText": "+1 Buy\nPut any card from your discard pile on the bottom of your deck."
+  },
+  "deliver": {
+    "cost": {
+      "treasure": 2
+    },
+    "abilityText": "+1 Buy\nThis turn, each time you gain a card, set it aside, and put it into your hand at end of turn."
+  },
+  "foray": {
+    "cost": {
+      "treasure": 3
+    },
+    "abilityText": "Discard 3 cards, revealing them. If they have 3 different names, gain a Loot."
+  },
+  "invasion": {
+    "cost": {
+      "treasure": 10
+    },
+    "abilityText": "You may play an Attack from your hand. Gain a Duchy. Gain an Action onto your deck. Gain a Loot; play it."
+  },
+  "journey": {
+    "cost": {
+      "treasure": 4
+    },
+    "abilityText": "You don't discard cards from play in Clean-up this turn. Take an extra turn after this one (but not a 3rd turn in a row)."
+  },
+  "launch": {
+    "cost": {
+      "treasure": 3
+    },
+    "abilityText": "Once per turn: Return to your Action phase. +1 Card, +1 Action, and +1 Buy."
+  },
+  "looting": {
+    "cost": {
+      "treasure": 6
+    },
+    "abilityText": "Gain a Loot."
+  },
+  "maelstrom": {
+    "cost": {
+      "treasure": 4
+    },
+    "abilityText": "Trash 3 cards from your hand. Each other player with 5 or more cards in hand trashes one of them."
+  },
+  "mirror": {
+    "cost": {
+      "treasure": 3
+    },
+    "abilityText": "+1 Buy\nThe next time you gain an Action card this turn, gain a copy of it."
+  },
+  "peril": {
+    "cost": {
+      "treasure": 2
+    },
+    "abilityText": "You may trash an Action card from your hand to gain a Loot."
+  },
+  "prepare": {
+    "cost": {
+      "treasure": 3
+    },
+    "abilityText": "Set aside your hand face up. At the start of your next turn, play those Actions and Treasures in any order, then discard the rest."
+  },
+  "prosper": {
+    "cost": {
+      "treasure": 10
+    },
+    "abilityText": "Gain a Loot, plus any number of differently named Treasures."
+  },
+  "rush": {
+    "cost": {
+      "treasure": 2
+    },
+    "abilityText": "+1 Buy\nThe next time you gain an Action card this turn, play it."
+  },
+  "scrounge": {
+    "cost": {
+      "treasure": 3
+    },
+    "abilityText": "Choose one: Trash a card from your hand; or gain an Estate from the trash, and if you did, gain a card costing up to $5."
+  }
+}

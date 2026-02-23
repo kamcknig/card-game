@@ -1,7 +1,10 @@
-import { AppContext, CardEffectFunctionContext, CardExpansionModule } from '@server-types/index.ts';
+import { CardEffectFunctionContext, CardExpansionModule } from '@server-types/index.ts';
 import { CardCost, CardId, CardLocation, PlayerId } from 'shared/types/index.ts';
 import { findWayInMatch } from '@shared/find-card-like-in-match.ts';
 import { isCardStillAtGainedLocation } from '../../utils/is-card-still-at-gained-location.ts';
+import { getCurrentTurnHistoryIndex } from '../../utils/get-current-turn-history-index.ts';
+import { getPlayerSourceSafe } from '../../utils/get-player-source-safe.ts';
+import { resolvePileDestinationForCardKey } from '../../utils/resolve-pile-destination-for-card-key.ts';
 
 type WayOfTheMouseWayMetadata = {
   menagerie?: {
@@ -21,45 +24,11 @@ const getWayOfTheMouseMetadata = (args: CardEffectFunctionContext) => {
   return findWayInMatch<WayOfTheMouseWayMetadata>(args.match, wayOfTheMouse.id)?.metadata?.menagerie?.wayOfTheMouse;
 };
 
-// Returns a player zone source when available; otherwise returns an empty list.
-const getPlayerSourceSafe = (
-  args: AppContext,
-  source: 'playerHand' | 'playerDeck' | 'playerDiscard' | 'set-aside' | 'exile',
-  playerId: PlayerId,
-): CardId[] => {
-  try {
-    return args.cardSourceController.getSource(source, playerId);
-  } catch {
-    return [];
-  }
-};
-
-// Returns the current turn-history index for deterministic trigger ids.
-const getCurrentTurnHistoryIndex = (args: CardEffectFunctionContext): number => {
-  return Math.max(args.match.stats.turns.length - 1, 0);
-};
-
 // Returns the number of times this card id has been played this turn.
 const getCurrentPlayInstanceCount = (args: CardEffectFunctionContext): number => {
-  const turnHistoryIndex = getCurrentTurnHistoryIndex(args);
+  const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: args.match }) ?? 0;
   const playedThisTurn = args.match.stats.playedCardsByTurn[turnHistoryIndex] ?? [];
   return playedThisTurn.filter((playedCardId) => playedCardId === args.cardId).length;
-};
-
-// Resolves a destination pile location for returning "this" to its pile.
-const resolvePileDestinationForCardKey = (args: CardEffectFunctionContext, cardKey: string): CardLocation | null => {
-  const pileLocations: CardLocation[] = ['kingdomSupply', 'basicSupply', 'nonSupplyCards'];
-  for (const location of pileLocations) {
-    const matches = args.findCardService.findCards([
-      { location },
-      { cardKeys: cardKey },
-    ]);
-    if (matches.length > 0) {
-      return location;
-    }
-  }
-
-  return null;
 };
 
 // Best-effort return helper used by Ways that return the played card to a pile.
@@ -83,7 +52,10 @@ const returnCardToPile = async (args: CardEffectFunctionContext, logTag: string)
     return false;
   }
 
-  const destination = resolvePileDestinationForCardKey(args, card.cardKey);
+  const destination = resolvePileDestinationForCardKey({
+    findCardService: args.findCardService,
+    cardKey: card.cardKey,
+  });
   if (!destination) {
     loggerService.debug(`[${logTag}] no destination pile found for ${card.cardKey}`);
     return false;
@@ -133,7 +105,7 @@ const runOriginalCardEffectsFromContext = async (args: CardEffectFunctionContext
 // Registers this-turn Chameleon conversion from +Cards into +$ for the current player.
 const registerWayOfTheChameleonDrawSwap = (args: CardEffectFunctionContext): void => {
   const loggerService = args.loggerService;
-  const turnHistoryIndex = getCurrentTurnHistoryIndex(args);
+  const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: args.match }) ?? 0;
   const playInstance = getCurrentPlayInstanceCount(args);
   const sourceCard = args.cardLibrary.getCard(args.cardId);
 
@@ -285,7 +257,7 @@ const expansion: CardExpansionModule = {
       // Way of the Frog gives +1 Action immediately.
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
-      const turnHistoryIndex = getCurrentTurnHistoryIndex(cardEffectArgs);
+      const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: cardEffectArgs.match }) ?? 0;
       const playInstance = getCurrentPlayInstanceCount(cardEffectArgs);
       const sourceCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
@@ -525,7 +497,7 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainTreasure', { count: 1 });
 
       // Then it enables a rest-of-turn "topdeck gained card" choice.
-      const turnHistoryIndex = getCurrentTurnHistoryIndex(cardEffectArgs);
+      const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: cardEffectArgs.match }) ?? 0;
       const playInstance = getCurrentPlayInstanceCount(cardEffectArgs);
       const gainTriggerId =
         `way-of-the-seal:${cardEffectArgs.playerId}:turn:${turnHistoryIndex}:source:${cardEffectArgs.cardId}:play:${playInstance}`;
@@ -600,7 +572,7 @@ const expansion: CardExpansionModule = {
   },
   'way-of-the-squirrel': {
     registerEffects: () => async (cardEffectArgs) => {
-      const turnHistoryIndex = getCurrentTurnHistoryIndex(cardEffectArgs);
+      const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: cardEffectArgs.match }) ?? 0;
       const playInstance = getCurrentPlayInstanceCount(cardEffectArgs);
       const sourceCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
@@ -635,7 +607,7 @@ const expansion: CardExpansionModule = {
         to: { location: 'set-aside' },
       });
 
-      const turnHistoryIndex = getCurrentTurnHistoryIndex(cardEffectArgs);
+      const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: cardEffectArgs.match }) ?? 0;
       const playInstance = getCurrentPlayInstanceCount(cardEffectArgs);
       // Then it plays that card at the start of the next turn.
       cardEffectArgs.reactionManager.registerReactionTemplate(

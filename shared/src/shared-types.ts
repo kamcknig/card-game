@@ -799,6 +799,8 @@ export type BaseCardMetadata = {
     immovable?: true;
     // Marks temporary setup-only kingdom proxy cards that should be removed before final config output.
     setupProxyKingdomPile?: true;
+    // Prevents this card from being discarded from play during cleanup for the specified turn-history index.
+    skipDiscardFromPlayAtCleanupTurnHistoryIndex?: number;
   };
 };
 

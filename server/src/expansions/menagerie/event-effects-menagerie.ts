@@ -2,6 +2,8 @@ import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
+import { getCurrentTurnHistoryIndex } from '../../utils/get-current-turn-history-index.ts';
+import { getPlayerSourceSafe } from '../../utils/get-player-source-safe.ts';
 import { AppContext, CardEffectFunctionContext, CardExpansionModule } from '@server-types/index.ts';
 import { Card, CardCost, CardId, CardKey, PlayerId } from 'shared/types/index.ts';
 import { findEventInMatch } from '@shared/find-card-like-in-match.ts';
@@ -18,25 +20,6 @@ type SeizeTheDayEventMetadata = {
   menagerie?: {
     usedByPlayerId?: Partial<Record<PlayerId, boolean>>;
   };
-};
-
-// Returns the active turn-history index for this effect context.
-const getCurrentTurnHistoryIndex = (args: CardEffectFunctionContext) => {
-  const turnHistoryIndex = args.match.stats.turns.length - 1;
-  return turnHistoryIndex >= 0 ? turnHistoryIndex : undefined;
-};
-
-// Returns a player source when available; otherwise an empty list.
-const getPlayerSourceSafe = (
-  args: AppContext,
-  source: 'playerHand' | 'playerDeck' | 'playerDiscard' | 'set-aside' | 'exile',
-  playerId: PlayerId,
-): CardId[] => {
-  try {
-    return args.cardSourceController.getSource(source, playerId);
-  } catch {
-    return [];
-  }
 };
 
 // Gains one Horse from the non-supply Horse pile when available.
@@ -220,7 +203,10 @@ const effectMap: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
       // Commerce counts differently named cards this player gained this turn.
-      const turnHistoryIndex = getCurrentTurnHistoryIndex(cardEffectArgs);
+      const turnHistoryIndex = getCurrentTurnHistoryIndex(
+        { match: cardEffectArgs.match },
+        { fallbackToZero: false },
+      );
       if (turnHistoryIndex === undefined) {
         loggerService.warn('[commerce effect] no active turn history index');
         return;

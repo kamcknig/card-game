@@ -3210,7 +3210,27 @@ export class GameActionController implements GameActionDefinitionMap {
         }
 
         const currentPlayer = getCurrentPlayer(match);
-        const cardsToDiscard = this.findCardService.findCards({ location: 'playArea' })
+        const currentTurnHistoryIndex = match.stats.turns.length - 1;
+        const cardsInPlay = this.findCardService.findCards({ location: 'playArea' })
+          .filter((card) => card.owner === currentPlayer.id);
+        const cardsToKeepInPlayAtCleanup = new Set<CardId>(
+          cardsInPlay
+            .filter((card) => {
+              const metadata = card.metadata as BaseCardMetadata | undefined;
+              return metadata?.base?.skipDiscardFromPlayAtCleanupTurnHistoryIndex === currentTurnHistoryIndex;
+            })
+            .map((card) => card.id),
+        );
+        // Clear one-cleanup base metadata now that this cleanup pass is resolving.
+        for (const card of cardsInPlay) {
+          const metadata = card.metadata as BaseCardMetadata | undefined;
+          if (metadata?.base?.skipDiscardFromPlayAtCleanupTurnHistoryIndex === currentTurnHistoryIndex) {
+            delete metadata.base.skipDiscardFromPlayAtCleanupTurnHistoryIndex;
+          }
+        }
+
+        const cardsToDiscard = cardsInPlay
+          .filter((card) => !cardsToKeepInPlayAtCleanup.has(card.id))
           .concat(
             this.findCardService.findCards({
               location: 'playerHand',
@@ -3678,17 +3698,15 @@ export class GameActionController implements GameActionDefinitionMap {
     const cardIds = args.cardIds ?? [];
     const cardLikeIds = args.cardLikeIds ?? [];
 
-    if (cardIds.length > 1) {
-      fisherYatesShuffle(cardIds, true, () => this.rngService.nextFloat());
-      this.loggerService.debug(`[shuffle action] shuffled ${cardIds.length} card(s)`);
-    }
-
-    if (cardLikeIds.length > 1) {
-      fisherYatesShuffle(cardLikeIds, true, () => this.rngService.nextFloat());
-      this.loggerService.debug(`[shuffle action] shuffled ${cardLikeIds.length} landscape id(s)`);
-    }
-
     if (args.playerId === undefined) {
+      if (cardIds.length > 1) {
+        fisherYatesShuffle(cardIds, true, () => this.rngService.nextFloat());
+        this.loggerService.debug(`[shuffle action] shuffled ${cardIds.length} card(s)`);
+      }
+      if (cardLikeIds.length > 1) {
+        fisherYatesShuffle(cardLikeIds, true, () => this.rngService.nextFloat());
+        this.loggerService.debug(`[shuffle action] shuffled ${cardLikeIds.length} landscape id(s)`);
+      }
       return;
     }
 
@@ -3697,7 +3715,7 @@ export class GameActionController implements GameActionDefinitionMap {
       return;
     }
 
-    // Emit a generic shuffle trigger so reactions can respond to all player shuffles.
+    // Emit a generic pre-shuffle trigger so reactions can alter which cards are shuffled.
     const trigger = new ReactionTrigger('shuffle', {
       playerId: args.playerId,
       // Pass snapshots for reaction inspection/selection.
@@ -3706,6 +3724,25 @@ export class GameActionController implements GameActionDefinitionMap {
       source: context?.loggingContext?.source,
     });
     await this.reactionManager.runTrigger({ trigger });
+
+    // Trust trigger-modified shuffle lists directly.
+    if (trigger.args.cardIds !== undefined) {
+      cardIds.length = 0;
+      cardIds.push(...trigger.args.cardIds);
+    }
+    if (trigger.args.cardLikeIds !== undefined) {
+      cardLikeIds.length = 0;
+      cardLikeIds.push(...trigger.args.cardLikeIds);
+    }
+
+    if (cardIds.length > 1) {
+      fisherYatesShuffle(cardIds, true, () => this.rngService.nextFloat());
+      this.loggerService.debug(`[shuffle action] shuffled ${cardIds.length} card(s)`);
+    }
+    if (cardLikeIds.length > 1) {
+      fisherYatesShuffle(cardLikeIds, true, () => this.rngService.nextFloat());
+      this.loggerService.debug(`[shuffle action] shuffled ${cardLikeIds.length} landscape id(s)`);
+    }
   }
 
   // Helper method to shuffle a player's deck
@@ -3722,10 +3759,17 @@ export class GameActionController implements GameActionDefinitionMap {
     const discard = this.cardSourceController.getSource('playerDiscard', playerId);
 
     if (includeDiscard) {
-      // Shuffle the cards being recycled into the deck.
-      await this.shuffle({ playerId, cardIds: discard }, context);
-      deck.unshift(...discard);
-      discard.length = 0;
+      // Shuffle a copy so reactions can remove cards from the shuffled subset without erasing discard state.
+      const discardCardsToShuffle = [...discard];
+      await this.shuffle({ playerId, cardIds: discardCardsToShuffle }, context);
+
+      for (const shuffledCardId of discardCardsToShuffle) {
+        const discardIndex = discard.indexOf(shuffledCardId);
+        if (discardIndex >= 0) {
+          discard.splice(discardIndex, 1);
+        }
+      }
+      deck.unshift(...discardCardsToShuffle);
     } else {
       await this.shuffle({ playerId, cardIds: deck }, context);
     }

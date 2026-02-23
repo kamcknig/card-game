@@ -14,6 +14,8 @@ import { isLocationInPlay } from '../../utils/is-in-play.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { resolveChooseAbilities } from '../../utils/resolve-choose-abilities.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
+import { getCurrentTurnHistoryIndex } from '../../utils/get-current-turn-history-index.ts';
+import { resolvePileDestinationForCardKey } from '../../utils/resolve-pile-destination-for-card-key.ts';
 
 const AUGURS_PILE_KEY: CardKey = 'augurs';
 const FORTS_PILE_KEY: CardKey = 'forts';
@@ -155,17 +157,6 @@ const registerElderChoiceBonusForCardPlay = (args: {
   });
 };
 
-// Returns the current turn-history index used by played-card stats and this-turn reaction scopes.
-const getCurrentTurnHistoryIndex = (args: {
-  match: {
-    stats: {
-      turns: unknown[];
-    };
-  };
-}): number => {
-  return Math.max(args.match.stats.turns.length - 1, 0);
-};
-
 // Counts Treasure cards played by a player in the current turn-history index.
 const getTreasurePlayCountForPlayerThisTurn = (args: {
   match: {
@@ -187,24 +178,6 @@ const getTreasurePlayCountForPlayerThisTurn = (args: {
     .length;
 };
 
-// Resolves which pile location should receive a returned card by key.
-const resolvePileDestinationForCardKey = (args: {
-  cardEffectArgs: CardEffectFunctionContext;
-  cardKey: CardKey;
-}): CardLocation | null => {
-  const pileLocations: CardLocation[] = ['kingdomSupply', 'basicSupply', 'nonSupplyCards'];
-  for (const location of pileLocations) {
-    const matches = args.cardEffectArgs.findCardService.findCards([
-      { location },
-      { cardKeys: args.cardKey },
-    ]);
-    if (matches.length > 0) {
-      return location;
-    }
-  }
-  return null;
-};
-
 // Returns a card to its pile when the card still exists and a matching pile can be resolved.
 const returnCardToPile = async (args: {
   cardEffectArgs: CardEffectFunctionContext;
@@ -213,7 +186,7 @@ const returnCardToPile = async (args: {
 }): Promise<boolean> => {
   const card = args.cardEffectArgs.cardLibrary.getCard(args.cardId);
   const destination = resolvePileDestinationForCardKey({
-    cardEffectArgs: args.cardEffectArgs,
+    findCardService: args.cardEffectArgs.findCardService,
     cardKey: card.cardKey,
   });
   if (!destination) {
@@ -579,11 +552,6 @@ const cardEffects: CardExpansionModule = {
       }
 
       const conjurerCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const playInstance = getPlayInstanceForCardKeyThisTurn({
-        cardKey: conjurerCard.cardKey,
-        match: cardEffectArgs.match,
-        cardLibrary: cardEffectArgs.cardLibrary,
-      });
       cardEffectArgs.registerDurationEffect(conjurerCard, {
         playerId,
         listeningFor: 'startTurn',
@@ -1011,11 +979,6 @@ const cardEffects: CardExpansionModule = {
       const loggerService = cardEffectArgs.loggerService;
       const playerId = cardEffectArgs.playerId;
       const garrisonCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const playInstance = getPlayInstanceForCardKeyThisTurn({
-        cardKey: garrisonCard.cardKey,
-        match: cardEffectArgs.match,
-        cardLibrary: cardEffectArgs.cardLibrary,
-      });
       let durationRegistered = false;
       let durationTriggerIds: string[] = [];
 
@@ -1256,11 +1219,6 @@ const cardEffects: CardExpansionModule = {
       const loggerService = cardEffectArgs.loggerService;
       const playerId = cardEffectArgs.playerId;
       const strongholdCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const playInstance = getPlayInstanceForCardKeyThisTurn({
-        cardKey: strongholdCard.cardKey,
-        match: cardEffectArgs.match,
-        cardLibrary: cardEffectArgs.cardLibrary,
-      });
 
       await resolveChooseAbilities({
         context: cardEffectArgs,
@@ -1912,11 +1870,6 @@ const cardEffects: CardExpansionModule = {
       const playerId = cardEffectArgs.playerId;
       const loggerService = cardEffectArgs.loggerService;
       const contractCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const playInstance = getPlayInstanceForCardKeyThisTurn({
-        cardKey: contractCard.cardKey,
-        match: cardEffectArgs.match,
-        cardLibrary: cardEffectArgs.cardLibrary,
-      });
 
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
       await cardEffectArgs.actionService.run('gainFavor', { playerId, count: 1 });
@@ -2044,11 +1997,6 @@ const cardEffects: CardExpansionModule = {
       const playerId = cardEffectArgs.playerId;
       let thisDrawShuffled = false;
       const emissaryCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const playInstance = getPlayInstanceForCardKeyThisTurn({
-        cardKey: emissaryCard.cardKey,
-        match: cardEffectArgs.match,
-        cardLibrary: cardEffectArgs.cardLibrary,
-      });
 
       // Track whether Emissary's draw effect caused a shuffle for this player.
       const shuffleTriggerId = cardEffectArgs.reactionManager.registerReactionTemplate(emissaryCard, 'shuffle', {
@@ -2084,11 +2032,6 @@ const cardEffects: CardExpansionModule = {
       const loggerService = cardEffectArgs.loggerService;
       const playerId = cardEffectArgs.playerId;
       const galleriaCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const playInstance = getPlayInstanceForCardKeyThisTurn({
-        cardKey: galleriaCard.cardKey,
-        match: cardEffectArgs.match,
-        cardLibrary: cardEffectArgs.cardLibrary,
-      });
       const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: cardEffectArgs.match });
 
       await cardEffectArgs.actionService.run('gainTreasure', { count: 3 });
@@ -2132,11 +2075,6 @@ const cardEffects: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const playerId = cardEffectArgs.playerId;
       const guildmasterCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const playInstance = getPlayInstanceForCardKeyThisTurn({
-        cardKey: guildmasterCard.cardKey,
-        match: cardEffectArgs.match,
-        cardLibrary: cardEffectArgs.cardLibrary,
-      });
       const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: cardEffectArgs.match });
 
       await cardEffectArgs.actionService.run('gainTreasure', { count: 3 });
@@ -2174,11 +2112,6 @@ const cardEffects: CardExpansionModule = {
       const loggerService = cardEffectArgs.loggerService;
       const playerId = cardEffectArgs.playerId;
       const highwaymanCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const playInstance = getPlayInstanceForCardKeyThisTurn({
-        cardKey: highwaymanCard.cardKey,
-        match: cardEffectArgs.match,
-        cardLibrary: cardEffectArgs.cardLibrary,
-      });
       const targetPlayerIds = findOrderedTargets({
         match: cardEffectArgs.match,
         appliesTo: 'ALL_OTHER',
@@ -2232,7 +2165,7 @@ const cardEffects: CardExpansionModule = {
               return false;
             }
 
-            const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: conditionArgs.match });
+            const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: conditionArgs.match }) ?? 0;
             const treasurePlayCount = getTreasurePlayCountForPlayerThisTurn({
               match: conditionArgs.match,
               cardLibrary: conditionArgs.cardLibrary,
@@ -2327,11 +2260,6 @@ const cardEffects: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const playerId = cardEffectArgs.playerId;
       const importerCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const playInstance = getPlayInstanceForCardKeyThisTurn({
-        cardKey: importerCard.cardKey,
-        match: cardEffectArgs.match,
-        cardLibrary: cardEffectArgs.cardLibrary,
-      });
 
       cardEffectArgs.registerDurationEffect(importerCard, {
         playerId,
@@ -2605,11 +2533,6 @@ const cardEffects: CardExpansionModule = {
       const playerId = cardEffectArgs.playerId;
       const loggerService = cardEffectArgs.loggerService;
       const royalGalleryCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const playInstance = getPlayInstanceForCardKeyThisTurn({
-        cardKey: royalGalleryCard.cardKey,
-        match: cardEffectArgs.match,
-        cardLibrary: cardEffectArgs.cardLibrary,
-      });
 
       await cardEffectArgs.actionService.run('drawCard', { playerId, count: 1 });
 
@@ -2765,11 +2688,6 @@ const cardEffects: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const playerId = cardEffectArgs.playerId;
       const skirmisherCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const playInstance = getPlayInstanceForCardKeyThisTurn({
-        cardKey: skirmisherCard.cardKey,
-        match: cardEffectArgs.match,
-        cardLibrary: cardEffectArgs.cardLibrary,
-      });
       const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: cardEffectArgs.match });
       const targetPlayerIds = findOrderedTargets({
         match: cardEffectArgs.match,
@@ -2956,7 +2874,7 @@ const cardEffects: CardExpansionModule = {
       const returnableActionCardsInHand = actionCardsInHand.filter((cardId) => {
         const card = cardEffectArgs.cardLibrary.getCard(cardId);
         return resolvePileDestinationForCardKey({
-          cardEffectArgs,
+          findCardService: cardEffectArgs.findCardService,
           cardKey: card.cardKey,
         }) !== null;
       });
@@ -3106,11 +3024,6 @@ const cardEffects: CardExpansionModule = {
       const loggerService = cardEffectArgs.loggerService;
       const playerId = cardEffectArgs.playerId;
       const voyageCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const playInstance = getPlayInstanceForCardKeyThisTurn({
-        cardKey: voyageCard.cardKey,
-        match: cardEffectArgs.match,
-        cardLibrary: cardEffectArgs.cardLibrary,
-      });
 
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
       await cardEffectArgs.actionService.run('queueExtraTurn', {
@@ -3142,7 +3055,7 @@ const cardEffects: CardExpansionModule = {
             return;
           }
 
-          const extraTurnHistoryIndex = getCurrentTurnHistoryIndex({ match: triggeredArgs.match });
+          const extraTurnHistoryIndex = getCurrentTurnHistoryIndex({ match: triggeredArgs.match }) ?? 0;
           const unregisterPlayLimit = cardEffectArgs.playRulesController.registerRule((_card, context) => {
             if (context.playerId !== playerId) {
               return { canPlay: true };
