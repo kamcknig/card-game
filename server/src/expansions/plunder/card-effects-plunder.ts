@@ -13,11 +13,8 @@ const getTurnHistoryIndex = (args: { match: { stats: { turns: unknown[] } } }): 
 const registerThisTurnTopdeckOnGain = (cardEffectArgs: CardEffectFunctionContext) => {
   const loggerService = cardEffectArgs.loggerService;
   const turnHistoryIndex = getTurnHistoryIndex(cardEffectArgs);
-  const triggerId = `insignia:${cardEffectArgs.cardId}:cardGained:turn:${turnHistoryIndex}`;
-
-  cardEffectArgs.reactionManager.registerReactionTemplate({
-    id: triggerId,
-    listeningFor: 'cardGained',
+  const sourceCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+  const triggerId = cardEffectArgs.reactionManager.registerReactionTemplate(sourceCard, 'cardGained', {
     playerId: cardEffectArgs.playerId,
     once: false,
     allowMultipleInstances: true,
@@ -58,7 +55,6 @@ const registerThisTurnTopdeckOnGain = (cardEffectArgs: CardEffectFunctionContext
     },
   });
 
-  const sourceCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
   cardEffectArgs.reactionManager.registerSystemTemplate(sourceCard, 'endTurn', {
     playerId: cardEffectArgs.playerId,
     once: true,
@@ -106,7 +102,6 @@ const cardEffects: CardExpansionModule = {
 
       const amphoraCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       cardEffectArgs.registerDurationEffect(amphoraCard, {
-        id: `amphora:${cardEffectArgs.cardId}:startTurn`,
         playerId: cardEffectArgs.playerId,
         once: true,
         compulsory: true,
@@ -153,7 +148,6 @@ const cardEffects: CardExpansionModule = {
 
       const chaliceCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       cardEffectArgs.registerDurationEffect(chaliceCard, {
-        id: `endless-chalice:${cardEffectArgs.cardId}:startTurn`,
         playerId: cardEffectArgs.playerId,
         once: false,
         compulsory: true,
@@ -167,6 +161,9 @@ const cardEffects: CardExpansionModule = {
           });
           await gainTreasureAndBuy({ actionService: triggeredArgs.actionService, treasure: 1, buy: 1 });
         },
+      }, {
+        // Endless Chalice repeats "for the rest of the game"; keep duration cleanup tracking effectively permanent.
+        cleanupCount: Number.MAX_SAFE_INTEGER,
       });
     },
   },
@@ -176,7 +173,6 @@ const cardEffects: CardExpansionModule = {
 
       const figureheadCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       cardEffectArgs.registerDurationEffect(figureheadCard, {
-        id: `figurehead:${cardEffectArgs.cardId}:startTurn`,
         playerId: cardEffectArgs.playerId,
         once: true,
         compulsory: true,
@@ -241,7 +237,6 @@ const cardEffects: CardExpansionModule = {
 
       const jewelsCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       cardEffectArgs.registerDurationEffect(jewelsCard, {
-        id: `jewels:${cardEffectArgs.cardId}:startTurn`,
         playerId: cardEffectArgs.playerId,
         once: true,
         compulsory: true,
@@ -260,24 +255,24 @@ const cardEffects: CardExpansionModule = {
   },
   'orb': {
     registerEffects: () => async (cardEffectArgs) => {
+      const discard = cardEffectArgs.cardSourceController.getSource('playerDiscard', cardEffectArgs.playerId);
       const discardPlayable = cardEffectArgs.cardSourceController.getSource('playerDiscard', cardEffectArgs.playerId)
         .filter((cardId) => {
           const card = cardEffectArgs.cardLibrary.getCard(cardId);
           return card.type.includes('ACTION') || card.type.includes('TREASURE');
         });
 
-      if (!discardPlayable.length) {
-        await gainTreasureAndBuy({ actionService: cardEffectArgs.actionService, treasure: 3, buy: 1 });
-        return;
-      }
-
       const decision = await cardEffectArgs.actionService.run('userPrompt', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Choose one',
         actionButtons: [
-          { label: 'PLAY FROM DISCARD', action: 1 },
+          { label: 'PLAY ACTION/TREASURE', action: 1 },
           { label: '+$3 AND +1 BUY', action: 2 },
         ],
+        content: {
+          type: 'display-cards',
+          cardIds: discard,
+        },
       }) as { action: number };
 
       if (decision.action === 2) {
@@ -285,15 +280,30 @@ const cardEffects: CardExpansionModule = {
         return;
       }
 
-      const selectedCardId = await cardEffectArgs.promptService.selectSingleCardFromPrompt({
+      if (!discardPlayable.length) {
+        cardEffectArgs.loggerService.debug('[orb effect] no Action/Treasure in discard to play');
+        return;
+      }
+
+      const selectPrompt = await cardEffectArgs.actionService.run('userPrompt', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Play an Action or Treasure from your discard',
+        actionButtons: [
+          { label: 'CANCEL', action: 1 },
+          { label: 'PLAY', action: 2 },
+        ],
         content: {
           type: 'select',
           cardIds: discardPlayable,
           selectCount: 1,
         },
-      });
+      }) as { action?: number; result?: CardId[] } | null;
+
+      if (selectPrompt?.action !== 2) {
+        return;
+      }
+
+      const selectedCardId = selectPrompt?.result?.[0];
 
       if (!selectedCardId) {
         return;
@@ -334,6 +344,7 @@ const cardEffects: CardExpansionModule = {
   },
   'puzzle-box': {
     registerEffects: () => async (cardEffectArgs) => {
+      const puzzleBoxCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       await gainTreasureAndBuy({ actionService: cardEffectArgs.actionService, treasure: 3, buy: 1 });
 
       const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
@@ -365,9 +376,7 @@ const cardEffects: CardExpansionModule = {
         },
       });
 
-      cardEffectArgs.reactionManager.registerReactionTemplate({
-        id: `puzzle-box:${cardEffectArgs.cardId}:${selectedCardId}:endTurn`,
-        listeningFor: 'endTurn',
+      cardEffectArgs.reactionManager.registerReactionTemplate(puzzleBoxCard, 'endTurn', {
         playerId: cardEffectArgs.playerId,
         once: true,
         compulsory: true,
@@ -426,6 +435,15 @@ const cardEffects: CardExpansionModule = {
 
       const remainingCards = cardsToLookAt.filter((cardId) => !(promptResult?.result ?? []).includes(cardId));
       if (!remainingCards.length) {
+        return;
+      }
+
+      if (remainingCards.length === 1) {
+        await cardEffectArgs.actionService.run('moveCard', {
+          cardId: remainingCards[0],
+          toPlayerId: playerId,
+          to: { location: 'playerDeck' },
+        });
         return;
       }
 

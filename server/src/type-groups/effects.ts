@@ -9,6 +9,7 @@ export type {
   CardEffectFunctionMap,
   CardEffectRegistrar,
   DurationEffectOptions,
+  DurationReactionTemplate,
   HexEffectRegistrar,
   ProjectEffectRegistrar,
   StateEffectRegistrar,

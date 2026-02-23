@@ -34,6 +34,7 @@ import {
   CardEffectFn,
   CardEffectFunctionContext,
   CardEffectFunctionMap,
+  DurationReactionTemplate,
   DurationEffectOptions,
   FindCardService,
   GameActionContext,
@@ -566,7 +567,7 @@ export class GameActionController implements GameActionDefinitionMap {
   private registerDurationEffectInternal<T extends TriggerEventType>(
     card: Card,
     context: CardEffectFunctionContext,
-    triggeredTemplate: ReactionTemplate<T> | ReactionTemplate<T>[],
+    triggeredTemplate: DurationReactionTemplate<T> | DurationReactionTemplate<T>[],
     options?: DurationEffectOptions,
   ): string[] {
     // Track trigger ids to enable cleanup when a card leaves play.
@@ -604,14 +605,57 @@ export class GameActionController implements GameActionDefinitionMap {
             }
           }
         },
+      }, {
+        idSuffix: options?.idSuffix ? `${options.idSuffix}:durationCleanup` : undefined,
       });
       registeredTriggerIds.push(systemTriggerId);
     }
 
-    // Register the trigger to run when the duration card triggers.
+    // Register each duration effect template.
+    // Three paths exist:
+    // 1) Explicit id provided: register exactly as-is (caller owns the id).
+    // 2) System template without id: use registerSystemTemplate so id/source metadata are generated consistently.
+    // 3) Normal template without id: use card-scoped registerReactionTemplate with optional id suffix.
     const templates = Array.isArray(triggeredTemplate) ? triggeredTemplate : [triggeredTemplate];
-    for (const triggeredTemplateElement of templates) {
-      const triggerId = context.reactionManager.registerReactionTemplate(triggeredTemplateElement);
+    for (let templateIndex = 0; templateIndex < templates.length; templateIndex++) {
+      const triggeredTemplateElement = templates[templateIndex];
+      if (!triggeredTemplateElement) {
+        continue;
+      }
+
+      // Keep generated ids stable per template slot when an idSuffix is provided.
+      const templateIdSuffix = options?.idSuffix ? `${options.idSuffix}:duration:${templateIndex}` : undefined;
+
+      // Explicit id path: preserve caller-defined id and register directly.
+      if (triggeredTemplateElement.id) {
+        const triggerId = context.reactionManager.registerReactionTemplate(
+          triggeredTemplateElement as ReactionTemplate<T>,
+        );
+        registeredTriggerIds.push(triggerId);
+        continue;
+      }
+
+      // System-trigger path: preserve system semantics while generating default ids from the source card.
+      if (triggeredTemplateElement.system) {
+        const { listeningFor, id: _id, ...systemTemplate } = triggeredTemplateElement;
+        const triggerId = context.reactionManager.registerSystemTemplate(
+          card,
+          listeningFor,
+          systemTemplate,
+          { idSuffix: templateIdSuffix },
+        );
+        registeredTriggerIds.push(triggerId);
+        continue;
+      }
+
+      // Standard trigger path: generate id/source metadata from the duration card and event.
+      const { listeningFor, id: _id, system: _system, ...reactionTemplate } = triggeredTemplateElement;
+      const triggerId = context.reactionManager.registerReactionTemplate(
+        card,
+        listeningFor,
+        reactionTemplate,
+        { idSuffix: templateIdSuffix },
+      );
       registeredTriggerIds.push(triggerId);
     }
 

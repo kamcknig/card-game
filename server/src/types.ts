@@ -518,16 +518,23 @@ export interface CardEffectFunctionContext extends AppContext {
   // Registers duration triggers with engine-managed cleanup for the given card.
   registerDurationEffect: <T extends TriggerEventType>(
     card: Card,
-    triggeredTemplate: ReactionTemplate<T> | ReactionTemplate<T>[],
+    triggeredTemplate: DurationReactionTemplate<T> | DurationReactionTemplate<T>[],
     options?: DurationEffectOptions,
   ) => string[];
 }
+
+// Duration registration template where id is optional and can be auto-generated.
+export type DurationReactionTemplate<T extends TriggerEventType> =
+  & Omit<ReactionTemplate<T>, 'id'>
+  & { id?: string };
 
 // Options for duration cards that persist across multiple cleanup phases.
 export type DurationEffectOptions = {
   cleanupCount?: number;
   // When true, remove all registered duration triggers once cleanup is exhausted.
   autoRemoveTriggersOnExhaust?: boolean;
+  // Optional suffix appended to auto-generated duration reaction ids.
+  idSuffix?: string;
 };
 
 export type CardTriggeredEffectFn<T extends TriggerEventType> = (context: TriggeredEffectContext<T>) => Promise<void>;

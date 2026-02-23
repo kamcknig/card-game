@@ -132,9 +132,8 @@ const registerElderChoiceBonusForCardPlay = (args: {
   targetCardId: CardId;
   playInstance: number;
 }): string => {
-  return args.cardEffectArgs.reactionManager.registerReactionTemplate({
-    id: `elder:${args.sourceCardId}:cardPlayed:${args.targetCardId}:${args.playInstance}`,
-    listeningFor: 'cardPlayed',
+  const sourceCard = args.cardEffectArgs.cardLibrary.getCard(args.sourceCardId);
+  return args.cardEffectArgs.reactionManager.registerReactionTemplate(sourceCard, 'cardPlayed', {
     playerId: args.playerId,
     once: true,
     compulsory: true,
@@ -586,7 +585,6 @@ const cardEffects: CardExpansionModule = {
         cardLibrary: cardEffectArgs.cardLibrary,
       });
       cardEffectArgs.registerDurationEffect(conjurerCard, {
-        id: `conjurer:${conjurerCard.id}:startTurn:${playInstance}`,
         playerId,
         listeningFor: 'startTurn',
         once: true,
@@ -913,9 +911,7 @@ const cardEffects: CardExpansionModule = {
       });
 
       // Ensure any unused Elder bonus trigger cannot leak beyond this turn.
-      cardEffectArgs.reactionManager.registerReactionTemplate({
-        id: `elder:${elderCard.id}:endTurnCleanup:${selectedActionCardId}:${elderPlayInstance}`,
-        listeningFor: 'endTurn',
+      cardEffectArgs.reactionManager.registerReactionTemplate(elderCard, 'endTurn', {
         playerId,
         once: true,
         compulsory: true,
@@ -1027,10 +1023,7 @@ const cardEffects: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
 
       // Track gains for this specific Garrison play instance.
-      const cardGainedTriggerId = `garrison:${garrisonCard.id}:cardGained:${playInstance}`;
-      cardEffectArgs.reactionManager.registerReactionTemplate({
-        id: cardGainedTriggerId,
-        listeningFor: 'cardGained',
+      const cardGainedTriggerId = cardEffectArgs.reactionManager.registerReactionTemplate(garrisonCard, 'cardGained', {
         playerId,
         once: false,
         compulsory: true,
@@ -1076,7 +1069,6 @@ const cardEffects: CardExpansionModule = {
           durationRegistered = true;
           // Register duration handling only when the first token is gained.
           durationTriggerIds = cardEffectArgs.registerDurationEffect(garrisonCard, {
-            id: `garrison:${garrisonCard.id}:startTurn:${playInstance}`,
             listeningFor: 'startTurn',
             playerId,
             once: true,
@@ -1120,9 +1112,7 @@ const cardEffects: CardExpansionModule = {
       });
 
       // Always remove this-turn gain tracking at end turn.
-      const endTurnTriggerId = cardEffectArgs.reactionManager.registerReactionTemplate({
-        id: `garrison:${garrisonCard.id}:endTurn:${playInstance}`,
-        listeningFor: 'endTurn',
+      const endTurnTriggerId = cardEffectArgs.reactionManager.registerReactionTemplate(garrisonCard, 'endTurn', {
         playerId,
         once: true,
         compulsory: true,
@@ -1292,7 +1282,6 @@ const cardEffects: CardExpansionModule = {
             resolve: async () => {
               loggerService.debug('[stronghold effect] registering next-turn +3 cards duration branch');
               cardEffectArgs.registerDurationEffect(strongholdCard, {
-                id: `stronghold:${strongholdCard.id}:startTurn:${playInstance}`,
                 playerId,
                 listeningFor: 'startTurn',
                 once: true,
@@ -1491,7 +1480,6 @@ const cardEffects: CardExpansionModule = {
 
       // At the start of your next turn, draw 2 cards.
       cardEffectArgs.registerDurationEffect(warlordCard, {
-        id: `warlord:${cardEffectArgs.cardId}:startTurn`,
         playerId,
         listeningFor: 'startTurn',
         once: true,
@@ -1959,7 +1947,6 @@ const cardEffects: CardExpansionModule = {
       });
 
       cardEffectArgs.registerDurationEffect(contractCard, {
-        id: `contract:${contractCard.id}:startTurn:${playInstance}`,
         playerId,
         listeningFor: 'startTurn',
         once: true,
@@ -2062,16 +2049,12 @@ const cardEffects: CardExpansionModule = {
         match: cardEffectArgs.match,
         cardLibrary: cardEffectArgs.cardLibrary,
       });
-      const shuffleTriggerId = `emissary:${emissaryCard.id}:shuffle:${playInstance}`;
 
       // Track whether Emissary's draw effect caused a shuffle for this player.
-      cardEffectArgs.reactionManager.registerReactionTemplate({
-        id: shuffleTriggerId,
-        listeningFor: 'shuffle',
+      const shuffleTriggerId = cardEffectArgs.reactionManager.registerReactionTemplate(emissaryCard, 'shuffle', {
         playerId,
         once: true,
         compulsory: true,
-        system: true,
         allowMultipleInstances: true,
         condition: ({ trigger }) => trigger.args.playerId === playerId,
         triggeredEffectFn: async () => {
@@ -2107,13 +2090,10 @@ const cardEffects: CardExpansionModule = {
         cardLibrary: cardEffectArgs.cardLibrary,
       });
       const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: cardEffectArgs.match });
-      const gainTriggerId = `galleria:${galleriaCard.id}:cardGained:${playInstance}`;
 
       await cardEffectArgs.actionService.run('gainTreasure', { count: 3 });
 
-      cardEffectArgs.reactionManager.registerReactionTemplate({
-        id: gainTriggerId,
-        listeningFor: 'cardGained',
+      const gainTriggerId = cardEffectArgs.reactionManager.registerReactionTemplate(galleriaCard, 'cardGained', {
         playerId,
         once: false,
         compulsory: true,
@@ -2136,9 +2116,7 @@ const cardEffects: CardExpansionModule = {
         },
       });
 
-      cardEffectArgs.reactionManager.registerReactionTemplate({
-        id: `galleria:${galleriaCard.id}:endTurn:${playInstance}`,
-        listeningFor: 'endTurn',
+      cardEffectArgs.reactionManager.registerReactionTemplate(galleriaCard, 'endTurn', {
         playerId,
         once: true,
         compulsory: true,
@@ -2160,13 +2138,10 @@ const cardEffects: CardExpansionModule = {
         cardLibrary: cardEffectArgs.cardLibrary,
       });
       const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: cardEffectArgs.match });
-      const gainTriggerId = `guildmaster:${guildmasterCard.id}:cardGained:${playInstance}`;
 
       await cardEffectArgs.actionService.run('gainTreasure', { count: 3 });
 
-      cardEffectArgs.reactionManager.registerReactionTemplate({
-        id: gainTriggerId,
-        listeningFor: 'cardGained',
+      const gainTriggerId = cardEffectArgs.reactionManager.registerReactionTemplate(guildmasterCard, 'cardGained', {
         playerId,
         once: false,
         compulsory: true,
@@ -2182,9 +2157,7 @@ const cardEffects: CardExpansionModule = {
         },
       });
 
-      cardEffectArgs.reactionManager.registerReactionTemplate({
-        id: `guildmaster:${guildmasterCard.id}:endTurn:${playInstance}`,
-        listeningFor: 'endTurn',
+      cardEffectArgs.reactionManager.registerReactionTemplate(guildmasterCard, 'endTurn', {
         playerId,
         once: true,
         compulsory: true,
@@ -2213,7 +2186,6 @@ const cardEffects: CardExpansionModule = {
       }).filter((targetPlayerId) => !isPlayerImmune(cardEffectArgs.reactionContext, targetPlayerId));
 
       cardEffectArgs.registerDurationEffect(highwaymanCard, {
-        id: `highwayman:${highwaymanCard.id}:startTurn:${playInstance}`,
         listeningFor: 'startTurn',
         playerId,
         once: true,
@@ -2241,13 +2213,10 @@ const cardEffects: CardExpansionModule = {
       });
 
       const attackTriggerIds = targetPlayerIds.map((targetPlayerId) => {
-        return cardEffectArgs.reactionManager.registerReactionTemplate({
-          id: `highwayman:${highwaymanCard.id}:beforePlayedCardEffect:${targetPlayerId}:${playInstance}`,
-          listeningFor: 'beforePlayedCardEffect',
+        return cardEffectArgs.reactionManager.registerReactionTemplate(highwaymanCard, 'beforePlayedCardEffect', {
           playerId: targetPlayerId,
           once: false,
           compulsory: true,
-          system: true,
           allowMultipleInstances: true,
           autoResolve: true,
           condition: (conditionArgs: TriggeredEffectConditionContext<'beforePlayedCardEffect'>) => {
@@ -2365,7 +2334,6 @@ const cardEffects: CardExpansionModule = {
       });
 
       cardEffectArgs.registerDurationEffect(importerCard, {
-        id: `importer:${importerCard.id}:startTurn:${playInstance}`,
         playerId,
         listeningFor: 'startTurn',
         once: true,
@@ -2691,7 +2659,6 @@ const cardEffects: CardExpansionModule = {
       });
 
       cardEffectArgs.registerDurationEffect(royalGalleryCard, {
-        id: `royal-gallery:${royalGalleryCard.id}:startTurn:${playInstance}`,
         playerId,
         listeningFor: 'startTurn',
         once: true,
@@ -2809,16 +2776,13 @@ const cardEffects: CardExpansionModule = {
         appliesTo: 'ALL_OTHER',
         startingPlayerId: playerId,
       }).filter((targetPlayerId) => !isPlayerImmune(cardEffectArgs.reactionContext, targetPlayerId));
-      const cardGainedTriggerId = `skirmisher:${skirmisherCard.id}:cardGained:${playInstance}`;
 
       await cardEffectArgs.actionService.run('drawCard', { playerId, count: 1 });
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
       await cardEffectArgs.actionService.run('gainTreasure', { count: 1 });
 
       // The attack window persists only for this turn and only for this Skirmisher play.
-      cardEffectArgs.reactionManager.registerReactionTemplate({
-        id: cardGainedTriggerId,
-        listeningFor: 'cardGained',
+      const cardGainedTriggerId = cardEffectArgs.reactionManager.registerReactionTemplate(skirmisherCard, 'cardGained', {
         playerId,
         once: false,
         compulsory: true,
@@ -2853,9 +2817,7 @@ const cardEffects: CardExpansionModule = {
         },
       });
 
-      cardEffectArgs.reactionManager.registerReactionTemplate({
-        id: `skirmisher:${skirmisherCard.id}:endTurn:${playInstance}`,
-        listeningFor: 'endTurn',
+      cardEffectArgs.reactionManager.registerReactionTemplate(skirmisherCard, 'endTurn', {
         playerId,
         once: true,
         compulsory: true,
@@ -3160,7 +3122,6 @@ const cardEffects: CardExpansionModule = {
 
       // Keep Voyage in play through cleanup and arm the extra-turn hand-play limiter for its queued turn.
       cardEffectArgs.registerDurationEffect(voyageCard, {
-        id: `voyage:${voyageCard.id}:startTurn:${playInstance}`,
         playerId,
         listeningFor: 'startTurn',
         once: true,
@@ -3201,9 +3162,7 @@ const cardEffects: CardExpansionModule = {
             };
           });
 
-          triggeredArgs.reactionManager.registerReactionTemplate({
-            id: `voyage:${voyageCard.id}:endTurn:${playInstance}:${extraTurnHistoryIndex}`,
-            listeningFor: 'endTurn',
+          triggeredArgs.reactionManager.registerReactionTemplate(voyageCard, 'endTurn', {
             playerId,
             once: true,
             compulsory: true,
