@@ -16,6 +16,7 @@ import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
 const LOOT_PILE_NAME = 'loot';
 const CHEAP_TRAIT_CARD_KEY: CardKey = 'cheap';
 const CURSED_TRAIT_CARD_KEY: CardKey = 'cursed';
+const FATED_TRAIT_CARD_KEY: CardKey = 'fated';
 const FAWNING_TRAIT_CARD_KEY: CardKey = 'fawning';
 const FRIENDLY_TRAIT_CARD_KEY: CardKey = 'friendly';
 const HASTY_TRAIT_CARD_KEY: CardKey = 'hasty';
@@ -295,6 +296,125 @@ const registerFawningTraitEvents = (
           `[plunder fawning trait] no cards remained in pile '${fawningTrait.pileKey}' to gain`,
         );
       }
+    }
+  });
+};
+
+// Registers Fated: after shuffle randomization, reveal and place chosen Fated cards on top/bottom of packet.
+const registerFatedTraitEvents = (
+  registrar: GameEventRegistrar,
+  config: ComputedMatchConfiguration,
+) => {
+  const hasFatedTrait = (config.traits ?? []).some((trait) => trait.cardKey === FATED_TRAIT_CARD_KEY);
+  if (!hasFatedTrait) {
+    return;
+  }
+
+  registrar('onGameStart', async (args) => {
+    const fatedTraits = getRuntimeTraitsByCardKey(args.match, FATED_TRAIT_CARD_KEY);
+    if (fatedTraits.length < 1) {
+      args.loggerService.warn('[plunder fated trait] no runtime Fated traits found at game start');
+      return;
+    }
+    const fatedPileKeys = getTraitPileKeySet(fatedTraits);
+
+    for (const player of args.match.players) {
+      args.reactionManager.registerSystemTemplate(fatedTraits[0], 'afterShuffle', {
+        playerId: player.id,
+        once: false,
+        compulsory: true,
+        allowMultipleInstances: false,
+        condition: ({ trigger }) => {
+          if (trigger.args.playerId !== player.id) {
+            return false;
+          }
+          const shuffledCardIds = trigger.args.cardIds ?? [];
+          if (shuffledCardIds.length < 1) {
+            return false;
+          }
+
+          return shuffledCardIds.some((cardId) => {
+            const shuffledCard = args.cardLibrary.getCard(cardId);
+            return fatedPileKeys.has(getCardPileKey(shuffledCard));
+          });
+        },
+        triggeredEffectFn: async (triggeredArgs) => {
+          const shuffledCardIds = [...(triggeredArgs.trigger.args.cardIds ?? [])];
+          if (shuffledCardIds.length < 1) {
+            return;
+          }
+
+          const fatedCardIds = shuffledCardIds.filter((cardId) => {
+            const shuffledCard = triggeredArgs.cardLibrary.getCard(cardId);
+            return fatedPileKeys.has(getCardPileKey(shuffledCard));
+          });
+          if (fatedCardIds.length < 1) {
+            return;
+          }
+
+          const topSelectionPrompt = await triggeredArgs.promptService.requestActionResult<CardId[]>({
+            playerId: player.id,
+            prompt: 'Choose Fated cards to put on top',
+            actionButtons: [{ label: 'DONE', action: 1 }],
+            content: {
+              type: 'select',
+              cardIds: fatedCardIds,
+              selectCount: fatedCardIds.length,
+            },
+          });
+          const selectedTopCardIds = topSelectionPrompt?.result?.filter((cardId) => fatedCardIds.includes(cardId)) ?? [];
+
+          let orderedTopCardIds = [...selectedTopCardIds];
+          if (selectedTopCardIds.length > 1) {
+            orderedTopCardIds = await getOrderedCardIds({
+              promptService: triggeredArgs.promptService,
+              playerId: player.id,
+            }, selectedTopCardIds, 'Order selected Fated cards to put on top');
+          }
+
+          const remainingFatedCardIds = fatedCardIds.filter((cardId) => !selectedTopCardIds.includes(cardId));
+          const selectedBottomCardIds = remainingFatedCardIds.length > 0
+            ? (
+              await triggeredArgs.promptService.requestActionResult<CardId[]>({
+                playerId: player.id,
+                prompt: 'Choose Fated cards to put on bottom',
+                actionButtons: [{ label: 'DONE', action: 1 }],
+                content: {
+                  type: 'select',
+                  cardIds: remainingFatedCardIds,
+                  selectCount: remainingFatedCardIds.length,
+                },
+              })
+            )?.result?.filter((cardId) => remainingFatedCardIds.includes(cardId)) ?? []
+            : [];
+
+          let orderedBottomCardIds = [...selectedBottomCardIds];
+          if (selectedBottomCardIds.length > 1) {
+            orderedBottomCardIds = await getOrderedCardIds({
+              promptService: triggeredArgs.promptService,
+              playerId: player.id,
+            }, selectedBottomCardIds, 'Order selected Fated cards to put on bottom');
+          }
+
+          const selectedFatedIds = new Set<CardId>([
+            ...orderedTopCardIds,
+            ...orderedBottomCardIds,
+          ]);
+
+          const middleShuffledCardIds = shuffledCardIds.filter((cardId) => !selectedFatedIds.has(cardId));
+          // Build the final packet order as: bottom cards, shuffled middle, top cards.
+          triggeredArgs.trigger.args.cardIds = [...orderedBottomCardIds, ...middleShuffledCardIds, ...orderedTopCardIds];
+
+          for (const selectedCardId of selectedFatedIds) {
+            await triggeredArgs.actionService.run('revealCard', {
+              playerId: player.id,
+              cardId: selectedCardId,
+            });
+          }
+        },
+      }, {
+        idSuffix: `fated:${player.id}:afterShuffle`,
+      });
     }
   });
 };
@@ -1082,6 +1202,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 ) => {
   registerCheapTraitEvents(registrar, config);
   registerCursedTraitEvents(registrar, config);
+  registerFatedTraitEvents(registrar, config);
   registerFawningTraitEvents(registrar, config);
   registerFriendlyTraitEvents(registrar, config);
   registerHastyTraitEvents(registrar, config);

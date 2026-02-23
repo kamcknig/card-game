@@ -3743,6 +3743,25 @@ export class GameActionController implements GameActionDefinitionMap {
       fisherYatesShuffle(cardLikeIds, true, () => this.rngService.nextFloat());
       this.loggerService.debug(`[shuffle action] shuffled ${cardLikeIds.length} landscape id(s)`);
     }
+
+    // Emit a post-shuffle trigger so effects can reorder/partition the randomized packet before merge.
+    const postShuffleTrigger = new ReactionTrigger('afterShuffle', {
+      playerId: args.playerId,
+      cardIds: cardIds.length ? [...cardIds] : undefined,
+      cardLikeIds: cardLikeIds.length ? [...cardLikeIds] : undefined,
+      source: context?.loggingContext?.source,
+    });
+    await this.reactionManager.runTrigger({ trigger: postShuffleTrigger });
+
+    // Trust post-shuffle trigger packet mutation directly as final packet content/order.
+    if (postShuffleTrigger.args.cardIds !== undefined) {
+      cardIds.length = 0;
+      cardIds.push(...postShuffleTrigger.args.cardIds);
+    }
+    if (postShuffleTrigger.args.cardLikeIds !== undefined) {
+      cardLikeIds.length = 0;
+      cardLikeIds.push(...postShuffleTrigger.args.cardLikeIds);
+    }
   }
 
   // Helper method to shuffle a player's deck

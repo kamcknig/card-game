@@ -719,6 +719,14 @@ export type TriggerEventTypeContext = {
     // Optional source card for token/log attribution.
     source?: CardId;
   };
+  // Triggered after randomization so reactions can reshape the shuffled packet before merge.
+  afterShuffle: {
+    playerId: PlayerId;
+    cardIds?: CardId[];
+    cardLikeIds?: CardLikeId[];
+    // Optional source card for token/log attribution.
+    source?: CardId;
+  };
   // Triggered at the end of each player's turn
   endTurn: {
     playerId: PlayerId;
