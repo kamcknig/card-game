@@ -117,20 +117,35 @@ export class NonSupplyKingdomView extends Container {
       container.addChild(cardContainer);
     }
 
-    for (const [idx, card] of kingdom.startingCards.entries()) {
-      const cardKey = card.cardKey;
-      let pile = cardContainer.getChildByLabel(cardKey) as PileView;
+    const isLootPile = kingdomName === 'loot';
+    const displayRows = kingdom.startingCards;
+    const rowIds = displayRows.map((card, idx) => isLootPile ? `loot:${idx}` : card.cardKey);
+
+    // Remove stale rows that are no longer present in the current pile view model.
+    for (const row of [...cardContainer.children]) {
+      if (!row.label || rowIds.includes(row.label)) {
+        continue;
+      }
+      row.destroy({ children: true });
+    }
+
+    for (const [idx, card] of displayRows.entries()) {
+      const rowId = isLootPile ? `loot:${idx}` : card.cardKey;
+      let pile = cardContainer.getChildByLabel(rowId) as PileView;
       if (!pile) {
         pile = new PileView({
           size: 'half',
-          facing: 'front',
+          // Loot remains face-down while in the non-supply pile.
+          facing: isLootPile ? 'back' : 'front',
         });
-        pile.label = cardKey;
-        pile.y = idx * 30;
+        pile.label = rowId;
         cardContainer.addChild(pile);
       }
 
-      pile.pile = kingdom.cards.filter(c => c.cardKey === cardKey);
+      pile.y = isLootPile ? 0 : idx * 30;
+      pile.pile = isLootPile
+        ? [...kingdom.cards]
+        : kingdom.cards.filter(c => c.cardKey === card.cardKey);
     }
 
     parent.addChild(container);

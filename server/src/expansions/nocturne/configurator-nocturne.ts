@@ -15,6 +15,8 @@ import { configureWish } from './configure-wish.ts';
 import { registerStateEffects } from './state-effects-nocturne.ts';
 import { configureBat } from './configure-bat.ts';
 import { registerNocturneHexEffects } from './hex-effects-nocturne.ts';
+import { getConfiguredCardPileLocation } from '../../utils/get-configured-card-pile-location.ts';
+import { returnCardToConfiguredPileTop } from '../../utils/return-card-to-configured-pile-top.ts';
 
 // Seeds boons when Fate cards are present in the selected kingdom.
 const configurator: ExpansionConfiguratorFactory = () => {
@@ -618,24 +620,10 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           }
 
           const gainedCard = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
-
-          if (!gainedCard.partOfSupply) {
-            args.loggerService.debug('[changeling exchange condition] gained card is not part of supply');
-            return false;
-          }
-
-          // Only allow exchanging when the gained card has a supply pile in the match.
-          const pileKey = getCardPileKey(gainedCard);
-          // Check match configuration to ensure the pile exists, regardless of where it was gained from.
-          const inBasicSupply = conditionArgs.match.config.basicSupply.some((supply) =>
-            supply.cards.some((card) => getCardPileKey(card) === pileKey)
-          );
-          const inKingdomSupply = conditionArgs.match.config.kingdomSupply.some((supply) =>
-            supply.cards.some((card) => getCardPileKey(card) === pileKey)
-          );
-
-          if (!inBasicSupply && !inKingdomSupply) {
-            args.loggerService.debug('[changeling exchange condition] gained card has no supply pile in match');
+          // Exchange is allowed when the gained card can be returned to a configured pile.
+          const returnLocation = getConfiguredCardPileLocation(conditionArgs.match, gainedCard);
+          if (!returnLocation) {
+            args.loggerService.debug('[changeling exchange condition] gained card has no configured pile in match');
             return false;
           }
 
@@ -661,7 +649,9 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
             return false;
           }
 
-          args.loggerService.debug(`[changeling exchange condition] ${gainedCard} eligible for exchange`);
+          args.loggerService.debug(
+            `[changeling exchange condition] ${gainedCard} eligible for exchange via ${returnLocation.location}`,
+          );
           return changelingCards.length > 0;
         },
         triggeredEffectFn: async (triggeredArgs) => {
@@ -690,29 +680,18 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
             return;
           }
 
-          const pileKey = getCardPileKey(gainedCard);
-          // Resolve the pile location from the match configuration for the return.
-          const inBasicSupply = triggeredArgs.match.config.basicSupply.some((supply) =>
-            supply.cards.some((card) => getCardPileKey(card) === pileKey)
-          );
-          const inKingdomSupply = triggeredArgs.match.config.kingdomSupply.some((supply) =>
-            supply.cards.some((card) => getCardPileKey(card) === pileKey)
-          );
-
-          if (!inBasicSupply && !inKingdomSupply) {
-            args.loggerService.warn('[changeling exchange] gained card has no supply pile in match, skipping exchange');
+          // Return the gained card to the top of its configured pile.
+          const returnSucceeded = await returnCardToConfiguredPileTop({
+            actionService: triggeredArgs.actionService,
+            loggerService: triggeredArgs.loggerService,
+            match: triggeredArgs.match,
+            card: gainedCard,
+            logTag: 'changeling exchange',
+          });
+          if (!returnSucceeded) {
+            args.loggerService.warn('[changeling exchange] gained card has no configured pile in match, skipping exchange');
             return;
           }
-
-          // Prefer basic supply if both are present (should not happen in normal setups).
-          const returnLocation = inBasicSupply ? 'basicSupply' : 'kingdomSupply';
-
-          // Return the gained card to its original supply pile.
-          args.loggerService.debug(`[changeling exchange] returning ${gainedCard} to supply`);
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: gainedCard.id,
-            to: { location: returnLocation },
-          });
 
           // Move the top Changeling to the player's discard (exchange is not a gain).
           const changelingCards = triggeredArgs.findCardService.findCards([

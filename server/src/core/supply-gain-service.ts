@@ -52,4 +52,39 @@ export class DefaultSupplyGainService implements SupplyGainService {
 
     return topSupplyCard.id;
   }
+
+  // Gains the current top card for a named non-supply pile to the specified destination.
+  public async gainTopNonSupplyCardForPileName(args: {
+    playerId: PlayerId;
+    pileName: string;
+    to: CardLocationSpec;
+    logTag?: string;
+  }): Promise<CardId | undefined> {
+    const tag = args.logTag ?? 'gainTopNonSupplyCardForPileName';
+    this.loggerService.debug(
+      `[${tag}] attempting top non-supply gain for player ${args.playerId}: pileName=${args.pileName}, to=${args.to.location}`,
+    );
+
+    const topNonSupplyCard = this.findCardService.findTopNonSupplyCardForPileName({
+      pileName: args.pileName,
+    });
+    if (!topNonSupplyCard) {
+      this.loggerService.debug(`[${tag}] no top card found in non-supply pile ${args.pileName}`);
+      return undefined;
+    }
+
+    this.loggerService.debug(
+      `[${tag}] found top cardId=${topNonSupplyCard.id} in non-supply pile ${args.pileName}, gaining now`,
+    );
+
+    await this.actionService.run('gainCard', {
+      playerId: args.playerId,
+      cardId: topNonSupplyCard.id,
+      to: args.to,
+    });
+
+    this.loggerService.debug(`[${tag}] gained cardId=${topNonSupplyCard.id} for player ${args.playerId}`);
+
+    return topNonSupplyCard.id;
+  }
 }

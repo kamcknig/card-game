@@ -208,6 +208,11 @@ export interface GameActionDefinitionMap {
     cardId: CardId | Card;
     to: CardLocationSpec;
   }, context?: GameActionContext & { bought?: boolean; overpay?: number }) => Promise<void>;
+  // Gains the top card from the Loot non-supply pile, then reveals it.
+  gainLoot: (
+    args: { playerId: PlayerId; to?: CardLocationSpec },
+    context?: GameActionContext,
+  ) => Promise<CardId | undefined>;
   gainPotion: (args: { count: number }) => Promise<void>;
   gainTreasure: (args: { count: number }, context?: GameActionContext) => Promise<void>;
   // Spends treasure from the current player's pool (cannot go below zero).
@@ -447,6 +452,10 @@ export type FindCardService = {
     pileKey: CardKey;
     from?: ('basicSupply' | 'kingdomSupply') | ('basicSupply' | 'kingdomSupply')[];
   }) => Card | undefined;
+  // Finds the current top card in a named non-supply pile (by pile/kingdom name).
+  findTopNonSupplyCardForPileName: (args: {
+    pileName: string;
+  }) => Card | undefined;
 };
 
 export type SupplyGainService = {
@@ -455,6 +464,13 @@ export type SupplyGainService = {
     pileKey: CardKey;
     to: CardLocationSpec;
     from?: ('basicSupply' | 'kingdomSupply') | ('basicSupply' | 'kingdomSupply')[];
+    logTag?: string;
+  }) => Promise<CardId | undefined>;
+  // Gains the current top card from a named non-supply pile.
+  gainTopNonSupplyCardForPileName: (args: {
+    playerId: PlayerId;
+    pileName: string;
+    to: CardLocationSpec;
     logTag?: string;
   }) => Promise<CardId | undefined>;
 };

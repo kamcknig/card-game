@@ -92,6 +92,15 @@ export class FindCardsService implements FindCardService {
       .slice(-1)[0];
   }
 
+  // Finds the current top card in a named non-supply pile (using kingdom as pile name).
+  public findTopNonSupplyCardForPileName(args: {
+    pileName: string;
+  }): Card | undefined {
+    return this.findCards([{ location: 'nonSupplyCards' }])
+      .filter((card) => card.kingdom === args.pileName)
+      .slice(-1)[0];
+  }
+
   // Resolves card IDs from source locations with optional player-scoped zones.
   private findCardsByLocation(locations: CardLocation[], playerId?: PlayerId) {
     let cardIds: CardId[] = [];

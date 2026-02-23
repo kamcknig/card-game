@@ -1,1 +1,175 @@
-{}
+{
+  "amphora": {
+    "cost": {
+      "treasure": 7
+    },
+    "type": [
+      "TREASURE",
+      "DURATION",
+      "LOOT"
+    ],
+    "kingdomSelectable": false,
+    "abilityText": "Either now or at the start of your next turn: +1 Buy and +$3."
+  },
+  "doubloons": {
+    "cost": {
+      "treasure": 7
+    },
+    "type": [
+      "TREASURE",
+      "LOOT"
+    ],
+    "kingdomSelectable": false,
+    "abilityText": "+$3\nWhen you gain this, gain a Gold."
+  },
+  "endless-chalice": {
+    "cost": {
+      "treasure": 7
+    },
+    "type": [
+      "TREASURE",
+      "DURATION",
+      "LOOT"
+    ],
+    "kingdomSelectable": false,
+    "abilityText": "Now and at the start of each of your turns for the rest of the game:\n+$1\n+1 Buy"
+  },
+  "figurehead": {
+    "cost": {
+      "treasure": 7
+    },
+    "type": [
+      "TREASURE",
+      "DURATION",
+      "LOOT"
+    ],
+    "kingdomSelectable": false,
+    "abilityText": "+$3\nAt the start of your next turn, +2 Cards."
+  },
+  "hammer": {
+    "cost": {
+      "treasure": 7
+    },
+    "type": [
+      "TREASURE",
+      "LOOT"
+    ],
+    "kingdomSelectable": false,
+    "abilityText": "+$3\nGain a card costing up to $4."
+  },
+  "insignia": {
+    "cost": {
+      "treasure": 7
+    },
+    "type": [
+      "TREASURE",
+      "LOOT"
+    ],
+    "kingdomSelectable": false,
+    "abilityText": "+$3\nThis turn, when you gain a card, you may put it onto your deck."
+  },
+  "jewels": {
+    "cost": {
+      "treasure": 7
+    },
+    "type": [
+      "TREASURE",
+      "DURATION",
+      "LOOT"
+    ],
+    "kingdomSelectable": false,
+    "abilityText": "+$3\n+1 Buy\nAt the start of your next turn, put this on the bottom of your deck."
+  },
+  "orb": {
+    "cost": {
+      "treasure": 7
+    },
+    "type": [
+      "TREASURE",
+      "LOOT"
+    ],
+    "kingdomSelectable": false,
+    "abilityText": "Look through your discard pile. Choose one: Play an Action or Treasure from it; or +1 Buy and +$3."
+  },
+  "prize-goat": {
+    "cost": {
+      "treasure": 7
+    },
+    "type": [
+      "TREASURE",
+      "LOOT"
+    ],
+    "kingdomSelectable": false,
+    "abilityText": "+$3\n+1 Buy\nYou may trash a card from your hand."
+  },
+  "puzzle-box": {
+    "cost": {
+      "treasure": 7
+    },
+    "type": [
+      "TREASURE",
+      "LOOT"
+    ],
+    "kingdomSelectable": false,
+    "abilityText": "+$3\n+1 Buy\nYou may set aside a card from your hand face down. Put it into your hand at end of turn."
+  },
+  "sextant": {
+    "cost": {
+      "treasure": 7
+    },
+    "type": [
+      "TREASURE",
+      "LOOT"
+    ],
+    "kingdomSelectable": false,
+    "abilityText": "+$3\n+1 Buy\nLook at the top 5 cards of your deck. Discard any number. Put the rest back in any order."
+  },
+  "shield": {
+    "cost": {
+      "treasure": 7
+    },
+    "type": [
+      "TREASURE",
+      "REACTION",
+      "LOOT"
+    ],
+    "kingdomSelectable": false,
+    "abilityText": "+$3\n+1 Buy\nWhen another player plays an Attack, you may first reveal this from your hand to be unaffected."
+  },
+  "spell-scroll": {
+    "cost": {
+      "treasure": 7
+    },
+    "type": [
+      "ACTION",
+      "TREASURE",
+      "LOOT"
+    ],
+    "kingdomSelectable": false,
+    "abilityText": "Trash this to gain a cheaper card. If it's an Action or Treasure, you may play it."
+  },
+  "staff": {
+    "cost": {
+      "treasure": 7
+    },
+    "type": [
+      "TREASURE",
+      "LOOT"
+    ],
+    "kingdomSelectable": false,
+    "abilityText": "+$3\n+1 Buy\nYou may play an Action from your hand."
+  },
+  "sword": {
+    "cost": {
+      "treasure": 7
+    },
+    "type": [
+      "TREASURE",
+      "ATTACK",
+      "LOOT"
+    ],
+    "targetScheme": "ALL_OTHER",
+    "kingdomSelectable": false,
+    "abilityText": "+$3\n+1 Buy\nEach other player discards down to 4 cards in hand."
+  }
+}

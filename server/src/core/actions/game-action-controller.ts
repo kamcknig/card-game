@@ -1475,6 +1475,39 @@ export class GameActionController implements GameActionDefinitionMap {
     });
   }
 
+  // Gains and reveals the current top card from the Loot non-supply pile.
+  async gainLoot(
+    args: { playerId: PlayerId; to?: CardLocationSpec },
+    context?: GameActionContext,
+  ): Promise<CardId | undefined> {
+    const destination = args.to ?? { location: 'playerDiscard' };
+    const topLootCard = this.findCardService.findTopNonSupplyCardForPileName({
+      pileName: 'loot',
+    });
+
+    if (!topLootCard) {
+      this.loggerService.debug('[gainLoot action] no Loot cards remain to gain');
+      return undefined;
+    }
+
+    this.loggerService.info(
+      `[gainLoot action] ${getPlayerById(this.match, args.playerId)} gaining top Loot ${topLootCard.id}`,
+    );
+    await this.gainCard({
+      playerId: args.playerId,
+      cardId: topLootCard.id,
+      to: destination,
+    }, context);
+
+    // Loot gains are always revealed after being gained.
+    await this.revealCard({
+      playerId: args.playerId,
+      cardId: topLootCard.id,
+    }, context);
+
+    return topLootCard.id;
+  }
+
   async exileCard(args: { cardId: CardId | Card; playerId: PlayerId }, _context?: GameActionContext) {
     const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
 
